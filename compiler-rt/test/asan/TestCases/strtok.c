@@ -36,7 +36,7 @@ void test1() {
   char token_delimiter[2] = "b";
   __asan_poison_memory_region ((char *)&token_delimiter[1], 2);
   token = strtok(s, token_delimiter);
-  // CHECK1: 'token_delimiter'{{.*}} <== Memory access at offset {{[0-9]+}} partially overflows this variable
+  // CHECK1: 'token_delimiter'{{.*}} <== Memory access at offset {{[0-9]+}} is inside this variable
 }
 
 // Check that we find overflows in the delimiters on the second call (str == NULL)
@@ -49,7 +49,7 @@ void test2() {
   assert(strcmp(token, "a") == 0);
   __asan_poison_memory_region ((char *)&token_delimiter[1], 2);
   token = strtok(NULL, token_delimiter);
-  // CHECK2: 'token_delimiter'{{.*}} <== Memory access at offset {{[0-9]+}} partially overflows this variable
+  // CHECK2: 'token_delimiter'{{.*}} <== Memory access at offset {{[0-9]+}} is inside this variable
 }
 
 // Check that we find overflows in the string (only on the first call) with strict_string_checks.
@@ -59,7 +59,7 @@ void test3() {
   char token_delimiter[2] = "b";
   __asan_poison_memory_region ((char *)&s[3], 2);
   token = strtok(s, token_delimiter);
-  // CHECK3: 's'{{.*}} <== Memory access at offset {{[0-9]+}} partially overflows this variable
+  // CHECK3: 's'{{.*}} <== Memory access at offset {{[0-9]+}} is inside this variable
 }
 
 // Check that we do not crash when strtok returns NULL with strict_string_checks.
@@ -79,7 +79,7 @@ void test5() {
   __asan_poison_memory_region ((char *)&s[2], 2);
   __asan_poison_memory_region ((char *)&token_delimiter[1], 2);
   token = strtok(s, token_delimiter);
-  // CHECK5: 's'{{.*}} <== Memory access at offset {{[0-9]+}} partially overflows this variable
+  // CHECK5: 's'{{.*}} <== Memory access at offset {{[0-9]+}} is inside this variable
 }
 
 // Check that we find overflows in the delimiters (only on the first call) with !strict_string_checks.
