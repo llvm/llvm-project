@@ -2529,7 +2529,11 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
             .addExternalSymbol(SpillLibCall, RISCVII::MO_CALL)
             .setMIFlag(MachineInstr::FrameSetup)
             .addUse(RISCV::X2, RegState::Implicit)
-            .addDef(RISCV::X2, RegState::ImplicitDefine);
+            .addDef(RISCV::X2, RegState::ImplicitDefine)
+            // The libcall may use t1 as a scratch register.
+            .addDef(RISCV::X6, RegState::ImplicitDefine | RegState::Dead)
+            // libgcc may emit an lui t2, 0 to set a landing pad label.
+            .addDef(RISCV::X7, RegState::ImplicitDefine | RegState::Dead);
 
     // Add registers spilled as implicit used.
     for (auto &CS : CSI)
