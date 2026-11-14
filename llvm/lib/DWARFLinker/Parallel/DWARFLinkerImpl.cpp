@@ -289,10 +289,12 @@ Error DWARFLinkerImpl::validateAndUpdateOptions() {
   return Error::success();
 }
 
-/// Resolve the relative path to a build artifact referenced by DWARF by
-/// applying DW_AT_comp_dir.
-static void resolveRelativeObjectPath(SmallVectorImpl<char> &Buf, DWARFDie CU) {
-  sys::path::append(Buf, dwarf::toString(CU.find(dwarf::DW_AT_comp_dir), ""));
+/// Resolve the relative path to a build artifact referenced by DWARF of \p File
+/// by applying DW_AT_comp_dir.
+static void resolveRelativeObjectPath(SmallVectorImpl<char> &Buf, DWARFDie CU,
+                                      const DWARFFile &File) {
+  sys::path::append(
+      Buf, File.remapPath(dwarf::toStringRef(CU.find(dwarf::DW_AT_comp_dir))));
 }
 
 static uint64_t getDwoId(const DWARFDie &CUDie) {
@@ -317,7 +319,8 @@ remapPath(StringRef Path,
 }
 
 static std::string getPCMFile(const DWARFDie &CUDie,
-                              DWARFLinker::ObjectPrefixMapTy *ObjectPrefixMap) {
+                              DWARFLinker::ObjectPrefixMapTy *ObjectPrefixMap,
+                              const DWARFFile &File) {
   std::string PCMFile = dwarf::toString(
       CUDie.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}), "");
 
@@ -327,7 +330,7 @@ static std::string getPCMFile(const DWARFDie &CUDie,
   if (ObjectPrefixMap)
     PCMFile = remapPath(PCMFile, *ObjectPrefixMap);
 
-  return PCMFile;
+  return File.remapPath(PCMFile);
 }
 
 std::pair<bool, bool> DWARFLinkerImpl::LinkContext::isClangModuleRef(
@@ -379,8 +382,8 @@ std::pair<bool, bool> DWARFLinkerImpl::LinkContext::isClangModuleRef(
 bool DWARFLinkerImpl::LinkContext::registerModuleReference(
     const DWARFDie &CUDie, ObjFileLoaderTy Loader,
     CompileUnitHandlerTy OnCUDieLoaded, unsigned Indent) {
-  std::string PCMFile =
-      getPCMFile(CUDie, GlobalData.getOptions().ObjectPrefixMap);
+  std::string PCMFile = getPCMFile(
+      CUDie, GlobalData.getOptions().ObjectPrefixMap, InputDWARFFile);
   std::pair<bool, bool> IsClangModuleRef =
       isClangModuleRef(CUDie, PCMFile, Indent, false);
 
@@ -415,7 +418,7 @@ Error DWARFLinkerImpl::LinkContext::loadClangModule(
   /// Using a SmallString<0> because loadClangModule() is recursive.
   SmallString<0> Path(GlobalData.getOptions().PrependPath);
   if (sys::path::is_relative(PCMFile))
-    resolveRelativeObjectPath(Path, CUDie);
+    resolveRelativeObjectPath(Path, CUDie, InputDWARFFile);
   sys::path::append(Path, PCMFile);
   // Don't use the cached binary holder because we have no thread-safety
   // guarantee and the lifetime is limited.
@@ -429,6 +432,11 @@ Error DWARFLinkerImpl::LinkContext::loadClangModule(
   auto ErrOrObj = Loader(InputDWARFFile.FileName, Path);
   if (!ErrOrObj)
     return Error::success();
+
+  // The module was built by the same build as the object file referencing it,
+  // so the same prefix map applies.
+  if (!ErrOrObj->PrefixMap)
+    ErrOrObj->PrefixMap = InputDWARFFile.PrefixMap;
 
   std::unique_ptr<CompileUnit> Unit;
   for (const auto &CU : ErrOrObj->Dwarf->compile_units()) {
@@ -521,8 +529,8 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
   for (const auto &OrigCU : InputDWARFFile.Dwarf->compile_units()) {
     // Load only unit DIE at this stage.
     auto CUDie = OrigCU->getUnitDIE();
-    std::string PCMFile =
-        getPCMFile(CUDie, GlobalData.getOptions().ObjectPrefixMap);
+    std::string PCMFile = getPCMFile(
+        CUDie, GlobalData.getOptions().ObjectPrefixMap, InputDWARFFile);
 
     // The !isClangModuleRef condition effectively skips over fully resolved
     // skeleton units.

@@ -243,10 +243,12 @@ bool DWARFLinker::DIECloner::getDIENames(
   return Info.Name || Info.MangledName;
 }
 
-/// Resolve the relative path to a build artifact referenced by DWARF by
-/// applying DW_AT_comp_dir.
-static void resolveRelativeObjectPath(SmallVectorImpl<char> &Buf, DWARFDie CU) {
-  sys::path::append(Buf, dwarf::toString(CU.find(dwarf::DW_AT_comp_dir), ""));
+/// Resolve the relative path to a build artifact referenced by DWARF of \p File
+/// by applying DW_AT_comp_dir.
+static void resolveRelativeObjectPath(SmallVectorImpl<char> &Buf, DWARFDie CU,
+                                      const DWARFFile &File) {
+  sys::path::append(
+      Buf, File.remapPath(dwarf::toStringRef(CU.find(dwarf::DW_AT_comp_dir))));
 }
 
 /// Collect references to parseable Swift interfaces in imported
@@ -264,10 +266,16 @@ static void analyzeImportedModule(
   StringRef Path = dwarf::toStringRef(DIE.find(dwarf::DW_AT_LLVM_include_path));
   if (!Path.ends_with(".swiftinterface"))
     return;
+  // Undo prefix mapping before comparing against the SDK and toolchain.
+  const DWARFFile &File = CU.getContainingFile();
+  std::string RemappedPath = File.remapPath(Path);
+  Path = RemappedPath;
   // Don't track interfaces that are part of the SDK.
   StringRef SysRoot = dwarf::toStringRef(DIE.find(dwarf::DW_AT_LLVM_sysroot));
   if (SysRoot.empty())
     SysRoot = CU.getSysRoot();
+  std::string RemappedSysRoot = File.remapPath(SysRoot);
+  SysRoot = RemappedSysRoot;
   if (!SysRoot.empty() && Path.starts_with(SysRoot))
     return;
   // Don't track interfaces that are part of the toolchain.
@@ -285,8 +293,8 @@ static void analyzeImportedModule(
   // The prepend path is applied later when copying.
   DWARFDie CUDie = CU.getOrigUnit().getUnitDIE();
   SmallString<128> ResolvedPath;
-  if (sys::path::is_relative(Path))
-    resolveRelativeObjectPath(ResolvedPath, CUDie);
+  if (!isPathAbsoluteOnWindowsOrPosix(Path))
+    resolveRelativeObjectPath(ResolvedPath, CUDie, File);
   sys::path::append(ResolvedPath, Path);
   if (!Entry.empty() && Entry != ResolvedPath)
     ReportWarning(Twine("Conflicting parseable interfaces for Swift Module ") +
@@ -1130,6 +1138,11 @@ unsigned DWARFLinker::DIECloner::cloneStringAttribute(DIE &Die,
   std::optional<const char *> String = dwarf::toString(Val);
   if (!String)
     return 0;
+  std::string RemappedPath;
+  if (ObjFile.PrefixMap && isPathAttribute(Die.getTag(), AttrSpec.Attr)) {
+    RemappedPath = ObjFile.remapPath(*String);
+    String = RemappedPath.c_str();
+  }
   DwarfStringPoolEntryRef StringEntry;
   if (AttrSpec.Form == dwarf::DW_FORM_line_strp) {
     StringEntry = DebugLineStrPool.getEntry(*String);
@@ -2728,7 +2741,8 @@ remapPath(StringRef Path,
 
 static std::string
 getPCMFile(const DWARFDie &CUDie,
-           const DWARFLinkerBase::ObjectPrefixMapTy *ObjectPrefixMap) {
+           const DWARFLinkerBase::ObjectPrefixMapTy *ObjectPrefixMap,
+           const DWARFFile &File) {
   std::string PCMFile = dwarf::toString(
       CUDie.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}), "");
 
@@ -2738,7 +2752,7 @@ getPCMFile(const DWARFDie &CUDie,
   if (ObjectPrefixMap)
     PCMFile = remapPath(PCMFile, *ObjectPrefixMap);
 
-  return PCMFile;
+  return File.remapPath(PCMFile);
 }
 
 std::pair<bool, bool> DWARFLinker::isClangModuleRef(const DWARFDie &CUDie,
@@ -2788,7 +2802,8 @@ bool DWARFLinker::registerModuleReference(const DWARFDie &CUDie,
                                           ObjFileLoaderTy Loader,
                                           CompileUnitHandlerTy OnCUDieLoaded,
                                           unsigned Indent) {
-  std::string PCMFile = getPCMFile(CUDie, Options.ObjectPrefixMap);
+  std::string PCMFile =
+      getPCMFile(CUDie, Options.ObjectPrefixMap, Context.File);
   std::pair<bool, bool> IsClangModuleRef =
       isClangModuleRef(CUDie, PCMFile, Context, Indent, false);
 
@@ -2823,7 +2838,7 @@ Error DWARFLinker::loadClangModule(
   /// Using a SmallString<0> because loadClangModule() is recursive.
   SmallString<0> Path(Options.PrependPath);
   if (sys::path::is_relative(PCMFile))
-    resolveRelativeObjectPath(Path, CUDie);
+    resolveRelativeObjectPath(Path, CUDie, Context.File);
   sys::path::append(Path, PCMFile);
   // Don't use the cached binary holder because we have no thread-safety
   // guarantee and the lifetime is limited.
@@ -2837,6 +2852,11 @@ Error DWARFLinker::loadClangModule(
   auto ErrOrObj = Loader(Context.File.FileName, Path);
   if (!ErrOrObj)
     return Error::success();
+
+  // The module was built by the same build as the object file referencing it,
+  // so the same prefix map applies.
+  if (!ErrOrObj->PrefixMap)
+    ErrOrObj->PrefixMap = Context.File.PrefixMap;
 
   std::unique_ptr<CompileUnit> Unit;
   for (const auto &CU : ErrOrObj->Dwarf->compile_units()) {
@@ -2870,8 +2890,8 @@ Error DWARFLinker::loadClangModule(
       }
 
       // Add this module.
-      Unit = std::make_unique<CompileUnit>(*CU, UniqueUnitID++, !Options.NoODR,
-                                           ModuleName);
+      Unit = std::make_unique<CompileUnit>(*CU, *ErrOrObj, UniqueUnitID++,
+                                           !Options.NoODR, ModuleName);
     }
   }
 
@@ -3111,12 +3131,14 @@ Error DWARFLinker::link() {
       // Previously we only extracted the unit DIEs. We need the full debug info
       // now.
       auto CUDie = CU->getUnitDIE(/*ExtractUnitDIEOnly=*/false);
-      std::string PCMFile = getPCMFile(CUDie, Options.ObjectPrefixMap);
+      std::string PCMFile =
+          getPCMFile(CUDie, Options.ObjectPrefixMap, Context.File);
 
       if (!CUDie || LLVM_UNLIKELY(Options.Update) ||
           !isClangModuleRef(CUDie, PCMFile, Context, 0, true).first) {
         Context.CompileUnits.push_back(std::make_unique<CompileUnit>(
-            *CU, UniqueUnitID++, !Options.NoODR && !Options.Update, ""));
+            *CU, Context.File, UniqueUnitID++,
+            !Options.NoODR && !Options.Update, ""));
       }
     }
 

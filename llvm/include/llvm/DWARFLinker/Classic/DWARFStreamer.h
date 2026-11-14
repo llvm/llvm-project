@@ -263,21 +263,27 @@ private:
   /// \defgroup Line table emission
   /// @{
   void emitLineTablePrologue(const DWARFDebugLine::Prologue &P,
+                             const CompileUnit &Unit,
                              OffsetsStringPool &DebugStrPool,
                              OffsetsStringPool &DebugLineStrPool);
+  /// Emit \p String. If \p PathUnit is provided, \p String is a path from
+  /// the input line table of \p PathUnit and the prefix map of its input
+  /// file is undone.
   void emitLineTableString(const DWARFDebugLine::Prologue &P,
                            const DWARFFormValue &String,
                            OffsetsStringPool &DebugStrPool,
-                           OffsetsStringPool &DebugLineStrPool);
+                           OffsetsStringPool &DebugLineStrPool,
+                           const CompileUnit *PathUnit = nullptr);
   void emitLineTableProloguePayload(const DWARFDebugLine::Prologue &P,
+                                    const CompileUnit &Unit,
                                     OffsetsStringPool &DebugStrPool,
                                     OffsetsStringPool &DebugLineStrPool);
   void emitLineTablePrologueV2IncludeAndFileTable(
-      const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
-      OffsetsStringPool &DebugLineStrPool);
+      const DWARFDebugLine::Prologue &P, const CompileUnit &Unit,
+      OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool);
   void emitLineTablePrologueV5IncludeAndFileTable(
-      const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
-      OffsetsStringPool &DebugLineStrPool);
+      const DWARFDebugLine::Prologue &P, const CompileUnit &Unit,
+      OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool);
   void emitLineTableRows(const DWARFDebugLine::LineTable &LineTable,
                          MCSymbol *LineEndSym, unsigned AddressByteSize,
                          std::vector<uint64_t> *RowOffsets = nullptr);

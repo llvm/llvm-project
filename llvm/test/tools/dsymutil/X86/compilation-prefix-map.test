@@ -1,0 +1,58 @@
+# Test that paths in prefix-mapped debug info are restored in the linked debug
+# info using the compilation-prefix-map.json closest to the object file.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir/build/Objects
+# RUN: llvm-mc -triple x86_64-apple-macos -filetype=obj \
+# RUN:    -o %t.dir/build/Objects/1.o %p/../Inputs/compilation-prefix-map.s
+# RUN: echo '{"/^src": "/src", "/^sdk": "/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"}' \
+# RUN:    > %t.dir/build/compilation-prefix-map.json
+
+## The DWARF 5 line table refers to paths in .debug_line_str. The parallel
+## linker also moves the type into an artificial type unit with its own line
+## table. No remapped path may be left anywhere.
+# RUN: dsymutil --linker classic -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/classic.dSYM
+# RUN: llvm-dwarfdump -a -v %t.dir/classic.dSYM \
+# RUN:    | FileCheck %s --check-prefixes=CHECK,CLASSIC --implicit-check-not=/^
+# RUN: dsymutil --linker parallel -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/parallel.dSYM
+# RUN: llvm-dwarfdump -a -v %t.dir/parallel.dSYM \
+# RUN:    | FileCheck %s --check-prefixes=CHECK,PARALLEL --implicit-check-not=/^
+
+# PARALLEL: DW_TAG_compile_unit
+# PARALLEL: DW_AT_name [DW_FORM_strp] {{.*}} "__artificial_type_unit"
+# PARALLEL: DW_TAG_structure_type
+# PARALLEL: DW_AT_decl_file {{.*}} ("/src{{[/\\]}}include{{[/\\]}}foo.h")
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name {{.*}} "main.cpp"
+# CHECK: DW_AT_LLVM_sysroot {{.*}} "/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+# CHECK: DW_AT_comp_dir {{.*}} "/src"
+# CHECK: DW_AT_decl_file {{.*}} ("/src{{[/\\]}}main.cpp")
+
+# CLASSIC: DW_TAG_structure_type
+# CLASSIC: DW_AT_decl_file {{.*}} ("/src{{[/\\]}}include{{[/\\]}}foo.h")
+
+# PARALLEL: include_directories[  0] = {{.*}}"/src{{[/\\]}}include"
+# CHECK: include_directories[  0] = .debug_line_str[{{.*}}] = "/src"
+# CHECK: include_directories[  1] = .debug_line_str[{{.*}}] = "/src{{[/\\]}}include"
+
+## Paths without an entry in the closest compilation prefix map are left alone.
+## The prefix map passed on the command line only applies to looking up Clang
+## modules.
+# RUN: echo '{}' > %t.dir/build/compilation-prefix-map.json
+# RUN: dsymutil --linker classic -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/unmapped.dSYM -object-prefix-map '/^src=/src'
+# RUN: llvm-dwarfdump --debug-info %t.dir/unmapped.dSYM \
+# RUN:    | FileCheck %s --check-prefix=UNMAPPED
+
+# UNMAPPED: DW_AT_comp_dir ("/^src")
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: build/Objects/1.o
+    symbols:
+      - { sym: _main, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+...

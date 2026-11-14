@@ -14,6 +14,8 @@
 #include "LinkUtils.h"
 #include "MachOUtils.h"
 #include "RelocationMap.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/DWARFLinker/DWARFFile.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkLinker.h"
@@ -289,6 +291,10 @@ private:
       std::vector<MachOUtils::DwarfRelocationApplicationInfo>
           &RelocationsToApply) const;
 
+  /// Find the compilation-prefix-map.json closest to \p ObjectPath, which
+  /// describes how the compiler remapped paths in the object's debug info.
+  std::shared_ptr<PrefixMapper> findCompilationPrefixMap(StringRef ObjectPath);
+
   Error copySwiftInterfaces(StringRef Architecture) const;
 
   Error copyEmbeddedResources() const;
@@ -320,6 +326,10 @@ private:
   /// be uniqued and sorted and there are only few entries expected
   /// per compile unit, which is why this is a std::map.
   std::map<std::string, std::string> ParseableSwiftInterfaces;
+
+  /// The compilation prefix map of the objects in each directory, or nullptr
+  /// if there is none.
+  StringMap<std::shared_ptr<PrefixMapper>> CompilationPrefixMaps;
 
   bool ModuleCacheHintDisplayed = false;
   bool ArchiveHintDisplayed = false;
