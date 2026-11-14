@@ -11,7 +11,7 @@ define <4 x i32> @atomicrmw_add_elementwise(ptr %p, <4 x i32> %v) {
 ; CHECK-LABEL: define <4 x i32> @atomicrmw_add_elementwise(
 ; CHECK-SAME: ptr [[P:%.*]], <4 x i32> [[V:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[V]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = call i128 @__atomic_fetch_add_16(ptr [[P]], i128 [[TMP1]], i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i128 @__atomic_fetch_add_16(ptr captures(none) [[P]], i128 [[TMP1]], i32 0) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i128 [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 ;
@@ -31,7 +31,7 @@ define <4 x float> @atomicrmw_fadd_elementwise(ptr %p, <4 x float> %v) {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store <4 x float> [[LOADED]], ptr [[TMP1]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[NEW]] to i128
-; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_16(ptr [[P]], ptr [[TMP1]], i128 [[TMP3]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_16(ptr captures(none) [[P]], ptr captures(none) [[TMP1]], i128 [[TMP3]], i32 0, i32 0) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x float>, ptr [[TMP1]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { <4 x float>, i1 } poison, <4 x float> [[TMP5]], 0
@@ -58,7 +58,7 @@ define <4 x float> @atomicrmw_fadd(ptr %p, <4 x float> %v) {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store <4 x float> [[LOADED]], ptr [[TMP1]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[NEW]] to i128
-; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_16(ptr [[P]], ptr [[TMP1]], i128 [[TMP3]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_16(ptr captures(none) [[P]], ptr captures(none) [[TMP1]], i128 [[TMP3]], i32 0, i32 0) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x float>, ptr [[TMP1]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { <4 x float>, i1 } poison, <4 x float> [[TMP5]], 0
