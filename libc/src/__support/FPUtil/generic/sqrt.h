@@ -71,6 +71,8 @@ LIBC_INLINE constexpr void normalize<long double>(int &exponent,
 
 } // namespace internal
 
+namespace generic {
+
 // Correctly rounded IEEE 754 SQRT for all rounding modes.
 // Shift-and-add algorithm.
 template <typename OutType, typename InType>
@@ -170,6 +172,20 @@ sqrt(InType x) {
       return yd.template as<OutType, /*ShouldSignalExceptions=*/true>();
     }
   }
+}
+
+} // namespace generic
+
+// Targets with a square root instruction specialize this for the supported
+// types in the target specific headers, dispatching to generic::sqrt during
+// constant evaluation.
+template <typename OutType, typename InType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                           cpp::is_floating_point_v<InType> &&
+                                           sizeof(OutType) <= sizeof(InType),
+                                       OutType>
+sqrt(InType x) {
+  return generic::sqrt<OutType>(x);
 }
 
 } // namespace fputil
