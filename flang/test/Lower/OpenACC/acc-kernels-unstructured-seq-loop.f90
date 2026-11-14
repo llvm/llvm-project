@@ -1,13 +1,14 @@
 ! An `acc loop seq` with an early EXIT inside an `acc kernels` region. The EXIT
-! makes the seq loop unstructured, but its enclosing loop keeps its branching
-! inside its body, so the seq loop's control flow is contained there: the
-! enclosing loop stays a structured acc.loop with bounds, and the seq acc.loop
-! privatizes the induction variables of the DOs it owns and of the
+! makes the seq loop and its `acc loop` construct unstructured (!). The seq
+! acc.loop privatizes the induction variables of the DOs it owns and of the
 ! unstructured DOs nested in its body.
 !
-! In the pre-FIR tree, the seq loop and its `acc loop` construct are
-! unstructured (!), while the enclosing loop and the kernels construct are
-! structured with unstructured internals (~).
+! In the first cases, the seq loop is nested in a loop that keeps the branching
+! inside its body: that loop and the kernels construct are structured with
+! unstructured internals (~), and the loop stays a structured acc.loop with
+! bounds. In the last cases, the seq loop is directly in the kernels region:
+! the kernels construct stays unstructured, and the seq loop's control flow
+! stays in the acc.kernels region.
 
 ! RUN: bbc -fopenacc -pft-test -o /dev/null %s | FileCheck %s --check-prefix=PFT
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
@@ -293,6 +294,110 @@ end subroutine
 ! CHECK:               } collapse([2]) collapseDeviceType([#acc.device_type<none>]) seq  unstructured
 ! CHECK:               scf.yield
 ! CHECK:             }
+! CHECK:             acc.yield
+! CHECK:           } inclusiveUpperbound(array<i1: true>) auto_
+! CHECK:           acc.terminator
+! CHECK:         }
+
+! A seq loop with an early EXIT directly in the kernels region. Nothing
+! encloses it but the kernels construct, which stays unstructured; the seq
+! loop's control flow stays in the acc.kernels region.
+subroutine seq_exit_in_kernels(m, b, kfirst)
+  integer :: m
+  real :: b(m)
+  integer :: kfirst
+  integer :: k
+  !$acc kernels
+  kfirst = 0
+  !$acc loop seq
+  do k = 1, m
+    if (b(k) > 0.0) then
+      kfirst = k
+      exit
+    end if
+  end do
+  !$acc end kernels
+end subroutine
+
+! PFT-LABEL: Subroutine seq_exit_in_kernels
+! PFT:         <<OpenACCConstruct!>>
+! PFT:           <<OpenACCConstruct!>>
+! PFT-NEXT:        <<DoConstruct!>>
+! PFT-NEXT:          NonLabelDoStmt {{.*}}: do k = 1, m
+! PFT:               ExitStmt! {{.*}}: exit
+! PFT:             <<End DoConstruct!>>
+! PFT:           <<End OpenACCConstruct!>>
+! PFT:         <<End OpenACCConstruct!>>
+
+! The PFT nodes above lower to:
+!   <<OpenACCConstruct!>> kernels  -> acc.kernels
+!   <<OpenACCConstruct!>> loop seq -> acc.loop private(k) without bounds
+!                                     (seq unstructured)
+!   <<DoConstruct!>> do k          -> CFG blocks inside that acc.loop
+! CHECK-LABEL: func.func @_QPseq_exit_in_kernels
+! CHECK:         %[[K_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFseq_exit_in_kernelsEk")
+! CHECK:         acc.kernels {
+! CHECK:           %[[K_PRIV:.*]] = acc.private varPtr(%[[K_DECL]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("k")
+! CHECK:           acc.loop private(%[[K_PRIV]] : !fir.ref<i32>) {
+! CHECK:             hlfir.declare %[[K_PRIV]] uniq_name("_QFseq_exit_in_kernelsEk")
+! CHECK:             acc.yield
+! CHECK:           } seq  unstructured
+! CHECK:           acc.terminator
+! CHECK:         }
+
+! The same seq loop followed by a parallelizable loop in the kernels region.
+! The following loop stays a structured acc.loop with bounds.
+subroutine seq_exit_then_loop(n, m, a, b, kfirst)
+  integer :: n, m
+  real :: a(n), b(m)
+  integer :: kfirst
+  integer :: i, k
+  !$acc kernels
+  kfirst = 0
+  !$acc loop seq
+  do k = 1, m
+    if (b(k) > 0.0) then
+      kfirst = k
+      exit
+    end if
+  end do
+  do i = 1, n
+    a(i) = a(i) + kfirst
+  end do
+  !$acc end kernels
+end subroutine
+
+! PFT-LABEL: Subroutine seq_exit_then_loop
+! PFT:         <<OpenACCConstruct!>>
+! PFT:           <<OpenACCConstruct!>>
+! PFT-NEXT:        <<DoConstruct!>>
+! PFT-NEXT:          NonLabelDoStmt {{.*}}: do k = 1, m
+! PFT:               ExitStmt! {{.*}}: exit
+! PFT:             <<End DoConstruct!>>
+! PFT:           <<End OpenACCConstruct!>>
+! PFT-NEXT:      <<DoConstruct>>
+! PFT-NEXT:        NonLabelDoStmt {{.*}}: do i = 1, n
+! PFT:           <<End DoConstruct>>
+! PFT:         <<End OpenACCConstruct!>>
+
+! The PFT nodes above lower to:
+!   <<OpenACCConstruct!>> kernels  -> acc.kernels
+!   <<OpenACCConstruct!>> loop seq -> acc.loop private(k) without bounds
+!                                     (seq unstructured)
+!   <<DoConstruct!>> do k          -> CFG blocks inside that acc.loop
+!   <<DoConstruct>> do i           -> acc.loop with bounds (auto_)
+! CHECK-LABEL: func.func @_QPseq_exit_then_loop
+! CHECK:         %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFseq_exit_then_loopEi")
+! CHECK:         %[[K_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFseq_exit_then_loopEk")
+! CHECK:         acc.kernels {
+! CHECK:           %[[K_PRIV:.*]] = acc.private varPtr(%[[K_DECL]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("k")
+! CHECK:           acc.loop private(%[[K_PRIV]] : !fir.ref<i32>) {
+! CHECK:             hlfir.declare %[[K_PRIV]] uniq_name("_QFseq_exit_then_loopEk")
+! CHECK:             acc.yield
+! CHECK:           } seq  unstructured
+! CHECK:           %[[I_PRIV:.*]] = acc.private varPtr(%[[I_DECL]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i")
+! CHECK:           acc.loop private(%[[I_PRIV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32)  step (%{{.*}} : i32) {
+! CHECK:             hlfir.declare %[[I_PRIV]] uniq_name("_QFseq_exit_then_loopEi")
 ! CHECK:             acc.yield
 ! CHECK:           } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:           acc.terminator

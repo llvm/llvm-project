@@ -5747,8 +5747,8 @@ std::pair<uint64_t, bool> Fortran::lower::getCollapseSizeAndForce(
 /// Return true if \p doConstruct, which \p eval holds and which is lowered as
 /// unstructured, is a DO of an `acc loop seq` construct whose control flow is
 /// contained: the construct's acc.loop privatizes the DO's induction variable,
-/// and the construct sits in an enclosing construct that is lowered
-/// structurally.
+/// and the construct sits either in an enclosing construct that is lowered
+/// structurally or directly in a kernels construct.
 ///
 /// Running example, with each construct's PFT classification and what it
 /// lowers to:
@@ -5773,6 +5773,13 @@ std::pair<uint64_t, bool> Fortran::lower::getCollapseSizeAndForce(
 /// currentLoop, which privatizes k and l. The DO over i holds the branching in
 /// its body, so the seq loop's CFG is contained there, and the DOs over j and
 /// i stay parallelizable loops.
+///
+/// Were the `acc loop seq` directly in the kernels construct, with no DOs over
+/// j and i, nothing would enclose it but the kernels region, which stays
+/// unstructured. The seq loop's CFG is then contained in the acc.kernels
+/// region, and no parallel loop runs it on more than one thread. As for a
+/// structured seq loop there, the seq loop runs as a sequential part of the
+/// region, and code following it in the region runs after it.
 ///
 /// genOpenACCLoopFromDoConstruct calls this once for the DO over k and once for
 /// the DO over l. Both times the builder inserts into currentLoop's region: an
@@ -5823,13 +5830,31 @@ static bool isDoOfContainedUnstructuredSeqLoop(
   // lowered structurally. In the example that is the DO over i, which the PFT
   // reclassified from unstructured to structured with unstructured internals
   // (~); the DO over j and the kernels construct above it never become
-  // unstructured. Two variations do not qualify: with `exit kloop` changed to
-  // an EXIT of the DO over i, that DO stays unstructured; and were `acc loop
-  // seq` directly in the kernels construct, the kernels construct would stay
-  // unstructured.
+  // unstructured. With `exit kloop` changed to an EXIT of the DO over i, that
+  // DO stays unstructured and the seq loop does not qualify: the DO over i
+  // could run in parallel, and its own branching would leave its body.
   const Fortran::lower::pft::Evaluation *container =
       accEval ? accEval->parentConstruct : nullptr;
-  return container && !container->lowerAsUnstructured();
+  if (!container)
+    return false;
+  if (!container->lowerAsUnstructured())
+    return true;
+
+  // The seq loop is also contained when the `acc loop seq` is directly in the
+  // kernels construct: the kernels construct stays unstructured, but the seq
+  // loop's control flow stays in the acc.kernels region.
+  const auto *accConstruct =
+      container->getIf<Fortran::parser::OpenACCConstruct>();
+  const auto *blockConstruct =
+      accConstruct ? std::get_if<Fortran::parser::OpenACCBlockConstruct>(
+                         &accConstruct->u)
+                   : nullptr;
+  return blockConstruct &&
+         std::get<Fortran::parser::AccBlockDirective>(
+             std::get<Fortran::parser::AccBeginBlockDirective>(
+                 blockConstruct->t)
+                 .t)
+                 .v == llvm::acc::ACCD_kernels;
 }
 
 /// Create an ACC loop operation for a DO construct when inside ACC compute
