@@ -52,6 +52,42 @@ declare void @fn_errnomem_write() memory(errnomem: write)
 ; CHECK: @fn_errnomem_readwrite()
 declare void @fn_errnomem_readwrite() memory(errnomem: readwrite)
 
+; CHECK: Function Attrs: memory(threadid: read)
+; CHECK: @fn_threadid_read()
+declare void @fn_threadid_read() memory(threadid: read)
+
+; CHECK: Function Attrs: memory(threadid: write)
+; CHECK: @fn_threadid_write()
+declare void @fn_threadid_write() memory(threadid: write)
+
+; CHECK: Function Attrs: memory(threadid: readwrite)
+; CHECK: @fn_threadid_readwrite()
+declare void @fn_threadid_readwrite() memory(threadid: readwrite)
+
+; The default access kind applies to threadid as well.
+; CHECK: Function Attrs: memory(read)
+; CHECK: @fn_read_threadid_read()
+declare void @fn_read_threadid_read() memory(read, threadid: read)
+
+; CHECK: Function Attrs: memory(readwrite, threadid: read)
+; CHECK: @fn_readwrite_threadid_read()
+declare void @fn_readwrite_threadid_read() memory(readwrite, threadid: read)
+
+; CHECK: Function Attrs: memory(read, inaccessiblemem: none, threadid: none)
+; CHECK: @fn_read_inaccessiblemem_none_threadid_none()
+declare void @fn_read_inaccessiblemem_none_threadid_none()
+    memory(read, threadid: none, inaccessiblemem: none)
+
+; CHECK: Function Attrs: memory(argmem: read, threadid: write, target_mem: read)
+; CHECK: @fn_argmem_read_threadid_write_target_mem_read()
+declare void @fn_argmem_read_threadid_write_target_mem_read()
+    memory(target_mem: read, threadid: write, argmem: read)
+
+; CHECK: Function Attrs: memory(write, threadid: read, target_mem0: none)
+; CHECK: @fn_write_threadid_read_target_mem0_none()
+declare void @fn_write_threadid_read_target_mem0_none()
+    memory(write, threadid: read, target_mem0: none)
+
 ; CHECK: Function Attrs: memory(read, argmem: readwrite)
 ; CHECK: @fn_read_argmem_readwrite()
 declare void @fn_read_argmem_readwrite() memory(read, argmem: readwrite)

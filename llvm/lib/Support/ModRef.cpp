@@ -49,6 +49,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
     case IRMemLocation::Other:
       OS << "Other: ";
       break;
+    case IRMemLocation::ThreadIdMem:
+      OS << "ThreadIdMem: ";
+      break;
     case IRMemLocation::TargetMem0:
       OS << "TargetMem0: ";
       break;

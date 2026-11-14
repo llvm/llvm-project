@@ -263,6 +263,23 @@ define void @func_memory() memory(readwrite, argmem: none) {
 
 ; // -----
 
+; The thread identity is not modeled separately and is folded into other memory.
+; CHECK-LABEL: @func_memory_threadid_write
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = write, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}
+define void @func_memory_threadid_write() memory(threadid: write) {
+  ret void
+}
+
+; // -----
+
+; CHECK-LABEL: @func_memory_read_threadid_write
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = read, errnoMem = read, targetMem0 = read, targetMem1 = read>}
+define void @func_memory_read_threadid_write() memory(read, threadid: write) {
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @passthrough_combined
 ; CHECK-SAME: attributes {passthrough = [
 ; CHECK-DAG: ["alignstack", "16"]

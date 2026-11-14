@@ -637,6 +637,7 @@ static std::optional<uint32_t> getMemoryEffects(const Record *R) {
       {IRMemLocation::InaccessibleMem, "InaccessibleMem"},
       {IRMemLocation::ErrnoMem, "ErrnoMem"},
       {IRMemLocation::Other, "Other"},
+      {IRMemLocation::ThreadIdMem, "ThreadIdMem"},
       {IRMemLocation::TargetMem0, "TargetMem0"},
       {IRMemLocation::TargetMem1, "TargetMem1"},
   };
