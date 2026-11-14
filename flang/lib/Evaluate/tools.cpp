@@ -2066,8 +2066,10 @@ std::optional<Expr<SomeType>> HollerithToBOZ(FoldingContext &context,
     auto bytes{static_cast<std::size_t>(
         ToInt64(type.MeasureSizeInBytes(context, false)).value())};
     BOZLiteralConstant bits{LargestRealKind, 0};
+    // The first character goes to the lowest address in target memory.
+    bool bigEndian{context.targetCharacteristics().isBigEndian()};
     for (std::size_t j{0}; j < bytes; ++j) {
-      auto idx{isHostLittleEndian ? j : bytes - j - 1};
+      auto idx{bigEndian ? bytes - j - 1 : j};
       char ch{idx >= chValue->size() ? ' ' : chValue->at(idx)};
       BOZLiteralConstant chBOZ{LargestRealKind, static_cast<unsigned char>(ch)};
       bits = bits.IOR(chBOZ.SHIFTL(8 * j));
