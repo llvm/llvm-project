@@ -894,6 +894,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   bit-field access. (#GH221542)
 - Fixed a crash when a C++ bit-field is declared 32768 or more bits wide. (#GH119207)
 - No longer crashing due to follow-on diagnostics when there is an invalid operand in a logical operator involving a vector operand. (#GH227588)
+- Fixed a crash when a string literal follows a designated initializer for an element of a character array subobject. (#GH139511)
 - Fixed assertion failures caused by stale linkage information when an extern variable or function declaration is merged with a preceding static declaration. (#GH204759, #GH204754)
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
 - Clang no longer treats a file-scope `thread_local` declaration without an initializer as a tentative definition in C23 mode. As specified by C23 6.9.3, such a declaration is a definition, so declaring the same variable more that once is now diagnosed as a redefinition. (#GH217636)

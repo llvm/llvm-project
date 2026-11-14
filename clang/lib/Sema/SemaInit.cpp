@@ -2157,8 +2157,9 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     IList->setInit(0, Embed->getDataStringLiteral());
   }
 
-  // Check for the special-case of initializing an array with a string.
-  if (Index < IList->getNumInits()) {
+  // Check for the special-case of initializing an array with a string. After a
+  // designator the string is the initializer of the next element instead.
+  if (Index < IList->getNumInits() && elementIndex.isZero()) {
     if (IsStringInit(IList->getInit(Index), arrayType, SemaRef.Context) ==
         SIF_None) {
       // We place the string literal directly into the resulting
