@@ -86,7 +86,8 @@ namespace llvm {
 
     /// Determine whether the specified value is known to be a constant at the
     /// specified instruction. Return null if not.
-    LLVM_ABI Constant *getConstant(Value *V, Instruction *CtxI);
+    LLVM_ABI Constant *getConstant(Value *V, Instruction *CtxI,
+                                   const Use *U = nullptr);
 
     /// Return the ConstantRange constraint that is known to hold for the
     /// specified value at the specified instruction. This may only be called
@@ -103,7 +104,8 @@ namespace llvm {
     /// constant on the specified edge.  Return null if not.
     LLVM_ABI Constant *getConstantOnEdge(Value *V, BasicBlock *FromBB,
                                          BasicBlock *ToBB,
-                                         Instruction *CtxI = nullptr);
+                                         Instruction *CtxI = nullptr,
+                                         const Use *U = nullptr);
 
     /// Return the ConstantRage constraint that is known to hold for the
     /// specified value on the specified edge. This may be only be called
