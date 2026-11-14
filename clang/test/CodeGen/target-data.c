@@ -267,7 +267,7 @@
 
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=SPIRVVULKAN
-// SPIRVVULKAN: target datalayout = "e-ve-i64:64-n8:16:32:64-G10"
+// SPIRVVULKAN: target datalayout = "e-p:32:32-ve-i64:64-n8:16:32:64-G10"
 
 // RUN: %clang_cc1 -triple spirv32-unknown-vulkan -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=SPIRV32VULKAN
