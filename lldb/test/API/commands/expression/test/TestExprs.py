@@ -89,25 +89,12 @@ class BasicExprCommandsTestCase(TestBase):
             substrs=["main.cpp", str(self.line)],
         )
 
-        # Launch the process, and do not stop at the entry point.
         # Pass 'X Y Z' as the args, which makes argc == 4.
-        process = target.LaunchSimple(
-            ["X", "Y", "Z"], None, self.get_process_working_directory()
-        )
-
-        if not process:
-            self.fail("SBTarget.LaunchProcess() failed")
-
-        if process.GetState() != lldb.eStateStopped:
-            self.fail(
-                "Process should be in the 'stopped' state, "
-                "instead the actual state is: '%s'"
-                % lldbutil.state_type_to_str(process.GetState())
-            )
-
-        thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, breakpoint)
-        self.assertIsNotNone(
-            thread, "Expected one thread to be stopped at the breakpoint"
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetArguments(["X", "Y", "Z"], True)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        _, _, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, breakpoint, launch_info
         )
 
         # The filename of frame #0 should be 'main.cpp' and function is main.

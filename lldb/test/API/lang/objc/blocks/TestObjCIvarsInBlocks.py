@@ -24,30 +24,17 @@ class TestObjCIvarsInBlocks(TestBase):
     def test_with_python_api(self):
         """Test printing the ivars of the self when captured in blocks"""
         self.build()
-        exe = self.getBuildArtifact("a.out")
 
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            "// Break here inside the block.", self.class_source_file_spec
+        target, process, thread, breakpoint = lldbutil.run_to_source_breakpoint(
+            self, "// Break here inside the block.", self.class_source_file_spec
         )
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         breakpoint_two = target.BreakpointCreateBySourceRegex(
             "// Break here inside the class method block.", self.class_source_file_spec
         )
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, "Created a process.")
-        self.assertEqual(process.GetState(), lldb.eStateStopped, "Stopped it too.")
-
         self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
-
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(len(thread_list), 1)
-        thread = thread_list[0]
 
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame, "frame 0 is valid")

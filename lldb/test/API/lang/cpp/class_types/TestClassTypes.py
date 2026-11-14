@@ -85,22 +85,9 @@ class ClassTypesTestCase(TestBase):
             substrs=["main.cpp", str(self.line)],
         )
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        if not process:
-            self.fail("SBTarget.Launch() failed")
-
-        if process.GetState() != lldb.eStateStopped:
-            self.fail(
-                "Process should be in the 'stopped' state, "
-                "instead the actual state is: '%s'"
-                % lldbutil.state_type_to_str(process.GetState())
-            )
-
-        # The stop reason of the thread should be breakpoint.
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertIsNotNone(thread)
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, breakpoint
+        )
 
         # The filename of frame #0 should be 'main.cpp' and the line number
         # should be 93.
@@ -214,22 +201,7 @@ class ClassTypesTestCase(TestBase):
             substrs=["main.cpp", str(self.line)],
         )
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        if not process:
-            self.fail("SBTarget.Launch() failed")
-
-        if process.GetState() != lldb.eStateStopped:
-            self.fail(
-                "Process should be in the 'stopped' state, "
-                "instead the actual state is: '%s'"
-                % lldbutil.state_type_to_str(process.GetState())
-            )
-
-        # The stop reason of the thread should be breakpoint.
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertIsNotNone(thread)
+        _, _, thread, _ = lldbutil.run_to_breakpoint_do_run(self, target, breakpoint)
 
         frame = thread.frames[0]
         self.assertTrue(frame.IsValid(), "Got a valid frame.")

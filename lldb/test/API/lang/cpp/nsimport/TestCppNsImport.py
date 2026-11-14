@@ -18,32 +18,14 @@ class TestCppNsImport(TestBase):
         src_file_spec = lldb.SBFileSpec(src_file)
         self.assertTrue(src_file_spec.IsValid(), "Main source file")
 
-        # Get the path of the executable
-        exe_path = self.getBuildArtifact("a.out")
-
-        # Load the executable
-        target = self.dbg.CreateTarget(exe_path)
-        self.assertTrue(target.IsValid(), VALID_TARGET)
-
         # Break on main function
-        break_0 = target.BreakpointCreateBySourceRegex("// break 0", src_file_spec)
-        self.assertTrue(
-            break_0.IsValid() and break_0.GetNumLocations() >= 1, VALID_BREAKPOINT
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// break 0", src_file_spec
         )
         break_1 = target.BreakpointCreateBySourceRegex("// break 1", src_file_spec)
         self.assertTrue(
             break_1.IsValid() and break_1.GetNumLocations() >= 1, VALID_BREAKPOINT
         )
-
-        # Launch the process
-        args = None
-        env = None
-        process = target.LaunchSimple(args, env, self.get_process_working_directory())
-        self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
-
-        # Get the thread of the process
-        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
 
         # Get current fream of the thread at the breakpoint
         frame = thread.GetSelectedFrame()

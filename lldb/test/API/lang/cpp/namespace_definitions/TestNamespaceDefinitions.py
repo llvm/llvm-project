@@ -45,7 +45,7 @@ class NamespaceDefinitionsTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Break inside the foo function which takes a bar_ptr argument.
-        lldbutil.run_break_set_by_file_and_line(
+        bkpt_id = lldbutil.run_break_set_by_file_and_line(
             self, self.source, self.line, num_expected_locations=1, loc_exact=True
         )
 
@@ -53,18 +53,11 @@ class NamespaceDefinitionsTestCase(TestBase):
         # automatically uploaded
         environment = self.registerSharedLibrariesWithTarget(target, self.shlib_names)
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            None, environment, self.get_process_working_directory()
-        )
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(environment, False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        lldbutil.run_to_breakpoint_do_run(
+            self, target, target.FindBreakpointByID(bkpt_id), launch_info
         )
 
-        # The breakpoint should have a hit count of 1.
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)

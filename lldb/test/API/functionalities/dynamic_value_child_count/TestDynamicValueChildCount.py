@@ -34,19 +34,12 @@ class DynamicValueChildCountTestCase(TestBase):
         """Test fetching C++ dynamic values from pointers & references."""
         """Get argument vals for the call stack when stopped on a breakpoint."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target from the debugger.
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
 
         # Set up our breakpoints:
 
-        third_call_bpt = target.BreakpointCreateByLocation(
-            "pass-to-base.cpp", self.main_third_call_line
+        target, _, _, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("pass-to-base.cpp", False), self.main_third_call_line
         )
-        self.assertTrue(third_call_bpt, VALID_BREAKPOINT)
         fourth_call_bpt = target.BreakpointCreateByLocation(
             "pass-to-base.cpp", self.main_fourth_call_line
         )
@@ -60,10 +53,6 @@ class DynamicValueChildCountTestCase(TestBase):
         )
         self.assertTrue(sixth_call_bpt, VALID_BREAKPOINT)
 
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
         b = self.frame().FindVariable("b").GetDynamicValue(lldb.eDynamicCanRunTarget)
         self.assertEqual(b.GetNumChildren(), 0, "b has 0 children")
         self.runCmd("continue")

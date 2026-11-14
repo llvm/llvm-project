@@ -10,27 +10,16 @@ class TestWithLimitDebugInfo(TestBase):
     def _run_test(self, build_dict):
         self.build(dictionary=build_dict)
 
-        # Get the path of the executable
-        exe_path = self.getBuildArtifact("a.out")
-
-        # Load the executable
-        target = self.dbg.CreateTarget(exe_path)
-        self.assertTrue(target.IsValid(), VALID_TARGET)
-
         # Break on main function
-        lldbutil.run_break_set_by_file_and_line(
-            self, "derived.h", line_number("derived.h", "// break1")
+        _, _, _, bkpt = lldbutil.run_to_line_breakpoint(
+            self,
+            lldb.SBFileSpec("derived.h", False),
+            line_number("derived.h", "// break1"),
         )
+        self.assertEqual(bkpt.GetNumLocations(), 1)
         lldbutil.run_break_set_by_file_and_line(
             self, "derived.h", line_number("derived.h", "// break2")
         )
-
-        # Launch the process
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
-
-        # Get the thread of the process
-        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
         self.expect_expr("1", result_type="int", result_value="1")
         self.expect_expr("this", result_type="Foo *")

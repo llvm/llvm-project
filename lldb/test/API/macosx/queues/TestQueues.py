@@ -167,18 +167,10 @@ class TestQueues(TestBase):
 
     def queues(self):
         """Test queues inspection SB APIs without libBacktraceRecording."""
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
-        break1 = target.BreakpointCreateByName("stopper", "a.out")
-        self.assertTrue(break1, VALID_BREAKPOINT)
-        process = target.LaunchSimple([], None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, break1)
-        if len(threads) != 1:
-            self.fail("Failed to stop at breakpoint 1.")
+        _, process, _, _ = lldbutil.run_to_name_breakpoint(
+            self, "stopper", bkpt_module="a.out"
+        )
 
         self.inferior_process = process
 
@@ -327,21 +319,18 @@ class TestQueues(TestBase):
         break1 = target.BreakpointCreateByName("stopper", "a.out")
         self.assertTrue(break1, VALID_BREAKPOINT)
 
-        process = target.LaunchSimple(
-            [],
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(
             [
                 "DYLD_INSERT_LIBRARIES=%s" % (libbtr_path),
                 "DYLD_LIBRARY_PATH=/usr/lib/system/introspection",
             ],
-            self.get_process_working_directory(),
+            False,
         )
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, break1)
-        if len(threads) != 1:
-            self.fail("Failed to stop at breakpoint 1.")
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        _, process, _, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, break1, launch_info
+        )
 
         self.inferior_process = process
 

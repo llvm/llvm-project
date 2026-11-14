@@ -31,10 +31,11 @@ class TestBreakpointInGlobalConstructors(TestBase):
             self, "foo.cpp", self.line_foo, num_expected_locations=-2
         )
 
-        process = target.LaunchSimple(None, env, self.get_process_working_directory())
-
-        self.assertIsNotNone(
-            lldbutil.get_one_thread_stopped_at_breakpoint_id(self.process(), bp_foo)
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(env, False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        lldbutil.run_to_breakpoint_do_run(
+            self, target, target.FindBreakpointByID(bp_foo), launch_info
         )
 
         self.runCmd("continue")

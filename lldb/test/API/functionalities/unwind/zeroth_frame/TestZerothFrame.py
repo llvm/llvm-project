@@ -36,22 +36,13 @@ class ZerothFrame(TestBase):
         self.build()
         self.setTearDownCleanup()
 
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
         main_dot_c = lldb.SBFileSpec("main.c")
-        bp1 = target.BreakpointCreateBySourceRegex(
-            "// Set breakpoint 1 here", main_dot_c
+        target, process, thread, bp1 = lldbutil.run_to_source_breakpoint(
+            self, "// Set breakpoint 1 here", main_dot_c
         )
         bp2 = target.BreakpointCreateBySourceRegex(
             "// Set breakpoint 2 here", main_dot_c
         )
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, VALID_PROCESS)
-
-        thread = self.thread()
 
         if self.TraceOn():
             print("Backtrace at the first breakpoint:")

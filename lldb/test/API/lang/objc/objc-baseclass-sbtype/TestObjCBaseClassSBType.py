@@ -24,19 +24,8 @@ class ObjCDynamicValueTestCase(TestBase):
             self.skipTest("Dynamic types for ObjC V1 runtime not implemented")
 
         self.build()
-        exe = self.getBuildArtifact("a.out")
 
-        # Create a target from the debugger.
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set up our breakpoints:
-
-        target.BreakpointCreateByLocation("main.m", self.line)
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+        lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec("main.m"), self.line)
 
         var = self.frame().FindVariable("foo")
         var_ptr_type = var.GetType()
