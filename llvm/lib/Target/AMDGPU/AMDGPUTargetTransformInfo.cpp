@@ -2145,29 +2145,6 @@ static unsigned getNumMemoryInsts(unsigned Bytes, unsigned MaxBytes,
   return NumInsts + llvm::popcount(Rem);
 }
 
-static unsigned getNumWidenedSMEMLoads(unsigned Bytes, uint64_t Alignment,
-                                       unsigned EltBytes, unsigned MaxBytes,
-                                       bool HasDwordx3) {
-  unsigned MaxPiece = EltBytes == 1 ? 8 : MaxBytes;
-  unsigned WideBytes = PowerOf2Ceil(Bytes);
-  unsigned NumWide = 0, SmallBytes = 0;
-  for (unsigned Off = 0; Off < Bytes;) {
-    unsigned Rem = Bytes - Off;
-    unsigned Span = Rem;
-    if (Rem <= Alignment)
-      Span = std::min<uint64_t>(Alignment, WideBytes - Off);
-    unsigned Piece = std::min(llvm::bit_floor(Span), MaxPiece);
-    if (Rem <= EltBytes)
-      Piece = 4;
-    if (Piece >= MaxBytes)
-      ++NumWide;
-    else
-      SmallBytes += std::max(Piece, 4u);
-    Off += Piece;
-  }
-  return NumWide + getNumMemoryInsts(SmallBytes, 32, HasDwordx3);
-}
-
 static bool hasUniformPointerOperand(const Instruction *I) {
   const auto *LI = dyn_cast_or_null<LoadInst>(I);
   if (!LI)
@@ -2262,12 +2239,6 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     // The last byte of a 7-byte remainder is not widened into the scalar load.
     if (!VecTy && Bytes % 4)
       return getNumMemoryInsts(Dwords * 4, 32, HasDwordx3) + (Bytes % 8 == 7);
-    if (Bytes % 4 || !TLI->isTypeLegal(EVT::getVectorVT(Src->getContext(),
-                                                        MVT::i32, Dwords))) {
-      unsigned EltBytes = Bytes % 4 ? EltBits / 8 : 4;
-      return getNumWidenedSMEMLoads(Bytes, Alignment.value(), EltBytes,
-                                    MaxBytes, HasDwordx3);
-    }
     if (!HasDwordx3 && Alignment >= 8 && Dwords % 4 == 3)
       ++Dwords;
     return getNumMemoryInsts(Dwords * 4, MaxBytes, HasDwordx3);
