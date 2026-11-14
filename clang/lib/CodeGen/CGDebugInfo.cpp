@@ -425,6 +425,19 @@ llvm::DIScope *CGDebugInfo::getContextDescriptor(const Decl *Context,
   return Default;
 }
 
+void CGDebugInfo::recordDeclarationLexicalScope(const Decl &D) {
+  if (LexicalBlockStack.empty())
+    return;
+  LexicalBlockMap[D.getCanonicalDecl()].reset(LexicalBlockStack.back());
+}
+
+llvm::DIScope *CGDebugInfo::getDeclarationLexicalScope(const Decl *D) {
+  D = D->getCanonicalDecl();
+  if (llvm::DIScope *S = LexicalBlockMap.lookup(D))
+    return S;
+  return getDeclContextDescriptor(cast<Decl>(D));
+}
+
 PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   PrintingPolicy PP = CGM.getContext().getPrintingPolicy();
 
@@ -1784,6 +1797,7 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
   // declared.
   SourceLocation Loc = Ty->getDecl()->getLocation();
 
+  llvm::DIScope *TDContext = getDeclarationLexicalScope(Ty->getDecl());
   uint32_t Align = getDeclAlignIfRequired(Ty->getDecl(), CGM.getContext());
 
   // Typedefs are derived from some other type. Collect both btf_decl_tag
@@ -1804,8 +1818,7 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
 
   return DBuilder.createTypedef(Underlying, Ty->getDecl()->getName(),
                                 getOrCreateFile(Loc), getLineNumber(Loc),
-                                getDeclContextDescriptor(Ty->getDecl()), Align,
-                                Flags, Annotations);
+                                TDContext, Align, Flags, Annotations);
 }
 
 static unsigned getDwarfCC(CallingConv CC, const llvm::Triple &T) {
@@ -3377,7 +3390,7 @@ llvm::DIType *CGDebugInfo::CreateType(const RecordType *Ty) {
   if (T || shouldOmitDefinition(DebugKind, DebugTypeExtRefs, RD,
                                 CGM.getLangOpts())) {
     if (!T)
-      T = getOrCreateRecordFwdDecl(Ty, getDeclContextDescriptor(RD));
+      T = getOrCreateRecordFwdDecl(Ty, getDeclarationLexicalScope(RD));
     return T;
   }
 
@@ -4152,7 +4165,7 @@ llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
     // entered into the ReplaceMap: finalize() will replace the first
     // FwdDecl with the second and then replace the second with
     // complete type.
-    llvm::DIScope *EDContext = getDeclContextDescriptor(ED);
+    llvm::DIScope *EDContext = getDeclarationLexicalScope(ED);
     llvm::DIFile *DefUnit = getOrCreateFile(ED->getLocation());
     llvm::TempDIScope TmpContext(DBuilder.createReplaceableCompositeType(
         llvm::dwarf::DW_TAG_enumeration_type, "", TheCU, DefUnit, 0));
@@ -4192,7 +4205,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
 
   llvm::DIFile *DefUnit = getOrCreateFile(ED->getLocation());
   unsigned Line = getLineNumber(ED->getLocation());
-  llvm::DIScope *EnumContext = getDeclContextDescriptor(ED);
+  llvm::DIScope *EnumContext = getDeclarationLexicalScope(ED);
   llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
   return DBuilder.createEnumerationType(
       EnumContext, ED->getName(), DefUnit, Line, Size, Align, EltArray, ClassTy,
@@ -4553,7 +4566,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
     Line = getLineNumber(Loc);
   }
 
-  llvm::DIScope *RDContext = getDeclContextDescriptor(RD);
+  llvm::DIScope *RDContext = getDeclarationLexicalScope(RD);
 
   // If we ended up creating the type during the context chain construction,
   // just return that.
