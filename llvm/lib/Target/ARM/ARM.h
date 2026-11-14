@@ -41,6 +41,7 @@ FunctionPass *createARMISelDag(ARMBaseTargetMachine &TM,
 FunctionPass *createA15SDOptimizerPass();
 FunctionPass *createARMLoadStoreOptLegacyPass(bool PreAlloc = false);
 FunctionPass *createARMExpandPseudoPass();
+FunctionPass *createARMAvoidTrailingCallPass();
 FunctionPass *createARMBranchTargetsPass();
 FunctionPass *createARMConstantIslandPass();
 FunctionPass *createMLxExpansionPass();
@@ -63,6 +64,7 @@ void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                   ARMAsmPrinter &AP);
 
 void initializeARMAsmPrinterPass(PassRegistry &);
+void initializeARMAvoidTrailingCallPass(PassRegistry &);
 void initializeARMBlockPlacementPass(PassRegistry &);
 void initializeARMBranchTargetsPass(PassRegistry &);
 void initializeARMConstantIslandsPass(PassRegistry &);

@@ -439,6 +439,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the Windows Target
 
+* On 32-bit Arm, a trap now follows a noreturn call that would otherwise end
+  a function or funclet, so the unwinder finds the right frame.
+
 ### Changes to the X86 Backend
 
 * Added assembler and code generation support for the `AVX10_V2_AUX`
