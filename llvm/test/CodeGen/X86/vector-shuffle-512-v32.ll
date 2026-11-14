@@ -515,3 +515,38 @@ define <32 x i16> @shuffle_v32i16_07_zz_05_zz_03_zz_01_zz_15_zz_13_zz_11_zz_09_z
   %shuffle = shufflevector <32 x i16> zeroinitializer, <32 x i16> %a, <32 x i32> <i32 39, i32 0, i32 37, i32 0, i32 35, i32 0, i32 33, i32 0, i32 47, i32 0, i32 45, i32 0, i32 43, i32 0, i32 41, i32 0, i32 55, i32 0, i32 53, i32 0, i32 51, i32 0, i32 49, i32 0, i32 63, i32 0, i32 61, i32 0, i32 59, i32 0, i32 58, i32 0>
   ret <32 x i16> %shuffle
 }
+
+define i16 @extract_subvector_from_multiuse_narrow_shuffle(<32 x i16> %v, ptr %out0, ptr %out1) {
+; KNL-LABEL: extract_subvector_from_multiuse_narrow_shuffle:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vpmovdw %zmm0, %ymm0
+; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; KNL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm1
+; KNL-NEXT:    vpternlogq $15, %zmm1, %zmm1, %zmm1
+; KNL-NEXT:    vpmovsxwd %ymm1, %zmm1
+; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    vmovdqu %xmm0, (%rdi)
+; KNL-NEXT:    vextracti128 $1, %ymm0, (%rsi)
+; KNL-NEXT:    ## kill: def $ax killed $ax killed $eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: extract_subvector_from_multiuse_narrow_shuffle:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovdw %zmm0, %ymm0
+; SKX-NEXT:    vptestmw %ymm0, %ymm0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    vmovdqu %xmm0, (%rdi)
+; SKX-NEXT:    vextracti128 $1, %ymm0, (%rsi)
+; SKX-NEXT:    ## kill: def $ax killed $ax killed $eax
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %even = shufflevector <32 x i16> %v, <32 x i16> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+  %cmp = icmp ne <16 x i16> %even, zeroinitializer
+  %mask = bitcast <16 x i1> %cmp to i16
+  %lo = shufflevector <16 x i16> %even, <16 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %hi = shufflevector <16 x i16> %even, <16 x i16> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <8 x i16> %lo, ptr %out0, align 2
+  store <8 x i16> %hi, ptr %out1, align 2
+  ret i16 %mask
+}
