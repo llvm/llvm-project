@@ -247,7 +247,8 @@ static bool ContainsProtectableArray(Type *Ty, Module *M, unsigned SSPBufferSize
 
     // If an array has more than SSPBufferSize bytes of allocated space, then we
     // emit stack protectors.
-    if (SSPBufferSize <= M->getDataLayout().getTypeAllocSize(AT)) {
+    if (TypeSize::isKnownGE(M->getDataLayout().getTypeAllocSize(AT),
+                            TypeSize::getFixed(SSPBufferSize))) {
       IsLarge = true;
       return true;
     }
