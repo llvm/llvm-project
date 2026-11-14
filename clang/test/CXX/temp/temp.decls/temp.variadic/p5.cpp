@@ -152,6 +152,22 @@ void test_unexpanded_in_exprs() {
   // FIXME: continue this...
 }
 
+#if __cplusplus >= 201703L
+namespace GH162198 {
+template <typename... T>
+void conditionalPack(T... Values) {
+  ((void)(Values ?: 0), ...);
+}
+
+template void conditionalPack<int, int, int>(int, int, int);
+
+template <typename... T>
+void unexpandedConditionalPack(T... Values) {
+  (void)(Values ?: 0); // expected-error {{expression contains unexpanded parameter pack 'Values'}}
+}
+} // namespace GH162198
+#endif
+
 template<typename ... Types>
 void TestPPNameFunc(int i) {
   f(static_cast<Types>(i)); // expected-error{{expression contains unexpanded parameter pack 'Types'}}

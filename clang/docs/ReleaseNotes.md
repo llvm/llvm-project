@@ -1122,6 +1122,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   dependent `co_return` operand that inits to `void`, instead of using
   `promise.return_void()`. (#GH218368)
 
+- Fixed a crash when `co_yield`, `co_await`, or GNU `?:` expressions used
+  parameter packs. (#GH162198)
+
 - Fixed merging of lambdas across modules in the case where neither lambda is
   imported from an AST file. (#GH214560)
 
