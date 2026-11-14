@@ -31,6 +31,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1511,6 +1512,12 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     return emitOpError("storage class cannot be '")
            << stringifyStorageClass(storageClass) << "'";
   }
+
+  if (storageClass != spirv::StorageClass::Private &&
+      containsMicroscalingType(
+          cast<spirv::PointerType>(getType()).getPointeeType(),
+          /*subByteOnly=*/true))
+    return emitOpError("FP4 and FP6 types require Function or Private storage");
 
   // SPIR-V spec: "A module-scope OpVariable with an Initializer operand must
   // not be decorated with the Import Linkage Type."

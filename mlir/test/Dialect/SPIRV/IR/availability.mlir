@@ -1,4 +1,4 @@
-// RUN: mlir-opt -mlir-disable-threading -test-spirv-op-availability %s | FileCheck %s
+// RUN: mlir-opt --mlir-disable-threading --test-spirv-op-availability %s | FileCheck %s
 
 // CHECK-LABEL: iadd
 func.func @iadd(%arg: i32) -> i32 {
@@ -301,6 +301,16 @@ func.func @set_mesh_outputs(%0 : i32, %1 : i32) -> () {
   // CHECK: capabilities: [ [MeshShadingEXT] ]
   spirv.EXT.SetMeshOutputs %0, %1 : i32, i32
   spirv.Return
+}
+
+// CHECK-LABEL: bitcast_extract_ext
+func.func @bitcast_extract_ext(%base: i32, %offset: i32) -> f4E2M1FN {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_EXT_ocp_microscaling_types] [SPV_EXT_float8] ]
+  // CHECK: capabilities: [ [BitcastExtractEXT] ]
+  %0 = spirv.BitcastExtractEXT %base, %offset : i32, i32 to f4E2M1FN
+  return %0 : f4E2M1FN
 }
 
 //===----------------------------------------------------------------------===//
