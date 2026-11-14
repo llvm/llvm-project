@@ -184,6 +184,33 @@ static bool checkCompatibility(const InputFile *input) {
   return true;
 }
 
+// The CPU subtype of an arm64e object also holds its pointer authentication
+// ABI version. ld-prime names each version as a separate architecture.
+static StringRef getArm64eArchName(uint32_t cpuSubtype) {
+  if (!CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpuSubtype))
+    return "arm64e.old";
+  bool isKernel = CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpuSubtype);
+  switch (CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpuSubtype)) {
+  case 0:
+    return isKernel ? "arm64e.kernel" : "arm64e";
+  case 1:
+    return isKernel ? "arm64e.kernel.v1" : "arm64e.v1";
+  default:
+    return "unknown";
+  }
+}
+
+// Like ld-prime, take only userland pointer authentication ABI version 0, even
+// on macOS, whose executables are marked version 1. Static and preload links
+// also take unversioned and kernel objects.
+static bool hasCompatiblePtrAuthABI(uint32_t cpuSubtype) {
+  if (CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpuSubtype) != 0)
+    return false;
+  bool isUserland = CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpuSubtype) &&
+                    !CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpuSubtype);
+  return isUserland || config->staticLink || config->preload;
+}
+
 template <class Header>
 static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   uint32_t cpuType;
@@ -192,18 +219,22 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   // arm64 and arm64e are ABI incompatible. arm64e.x1 has the arm64e ABI but
   // needs a newer CPU, so neither takes it.
   uint32_t subtype = hdr->cpusubtype & ~CPU_SUBTYPE_MASK;
-  bool isArm64e = subtype == CPU_SUBTYPE_ARM64E;
+  bool isArm64e =
+      hdr->cputype == CPU_TYPE_ARM64 && subtype == CPU_SUBTYPE_ARM64E;
   if (hdr->cputype != cpuType ||
       (is_contained({AK_arm64, AK_arm64e}, config->arch()) &&
        (subtype == CPU_SUBTYPE_ARM64E_X1 ||
-        isArm64e != (config->arch() == AK_arm64e)))) {
+        isArm64e != (config->arch() == AK_arm64e))) ||
+      (isArm64e && !hasCompatiblePtrAuthABI(hdr->cpusubtype))) {
     Architecture arch =
         getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
+    StringRef archName = isArm64e ? getArm64eArchName(hdr->cpusubtype)
+                                  : getArchitectureName(arch);
     auto msg = config->errorForArchMismatch
                    ? static_cast<void (*)(const Twine &)>(error)
                    : warn;
 
-    msg(toString(file) + " has architecture " + getArchitectureName(arch) +
+    msg(toString(file) + " has architecture " + archName +
         " which is incompatible with target architecture " +
         getArchitectureName(config->arch()));
     return false;
