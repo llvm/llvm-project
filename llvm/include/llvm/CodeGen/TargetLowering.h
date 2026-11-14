@@ -27,6 +27,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
@@ -1283,6 +1284,14 @@ public:
 
     // value representing memory location
     PointerUnion<const Value *, const PseudoSourceValue *> ptrVal;
+
+    // Cache hint metadata for this memory access.
+    const MDNode *memCacheHint = nullptr;
+
+    void setPointerOperand(const CallBase &I, unsigned ArgNo) {
+      ptrVal = I.getArgOperand(ArgNo);
+      memCacheHint = getMemCacheHintMetadata(I, ArgNo);
+    }
 
     // Fallback address space for use if ptrVal is nullptr. std::nullopt means
     // unknown address space.
