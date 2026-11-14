@@ -24,8 +24,8 @@
 #include <__format/range_formatter.h>
 #include <__fwd/format.h>
 #include <__iterator/back_insert_iterator.h>
+#include <__ranges/access.h>
 #include <__ranges/concepts.h>
-#include <__ranges/data.h>
 #include <__ranges/from_range.h>
 #include <__ranges/size.h>
 #include <__type_traits/conditional.h>
