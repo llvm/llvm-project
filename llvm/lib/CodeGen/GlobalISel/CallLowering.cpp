@@ -574,7 +574,8 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
       assert(NumElts > Regs.size());
       LLT SrcEltTy = MRI.getType(Regs[0]);
 
-      LLT OriginalEltTy = MRI.getType(OrigRegs[0]).getElementType();
+      LLT OriginalEltTy =
+          MRI.getType(OrigRegs[0]).getElementType().changeToInteger();
 
       // Input registers contain packed elements.
       // Determine how many elements per reg.
@@ -598,7 +599,12 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
       }
       BuildVec = B.buildBuildVector(BVType, BVRegs).getReg(0);
     }
-    B.buildTrunc(OrigRegs[0], BuildVec);
+    LLT OrigTy = MRI.getType(OrigRegs[0]);
+    if (OrigTy.isFloatOrFloatVector())
+      B.buildBitcast(OrigRegs[0],
+                     B.buildTrunc(OrigTy.changeToInteger(), BuildVec));
+    else
+      B.buildTrunc(OrigRegs[0], BuildVec);
   }
 }
 

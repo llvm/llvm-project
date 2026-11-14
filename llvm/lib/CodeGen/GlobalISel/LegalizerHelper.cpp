@@ -2207,8 +2207,21 @@ Register LegalizerHelper::coerceToInteger(Register Val) {
 void LegalizerHelper::widenScalarSrc(MachineInstr &MI, LLT WideTy,
                                      unsigned OpIdx, unsigned ExtOpcode) {
   MachineOperand &MO = MI.getOperand(OpIdx);
-  auto ExtB = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {MO});
-  MO.setReg(ExtB.getReg(0));
+  Register Src = MO.getReg();
+  LLT SrcTy = MRI.getType(Src);
+  LLT ExtTy = WideTy;
+  // Any-extension widens the bit pattern, including for floating-point loads,
+  // stores and other operations that do not interpret the value.
+  if (ExtOpcode == TargetOpcode::G_ANYEXT) {
+    if (SrcTy.isFloatOrFloatVector())
+      Src = MIRBuilder.buildBitcast(SrcTy.changeToInteger(), Src).getReg(0);
+    if (WideTy.isFloatOrFloatVector())
+      ExtTy = WideTy.changeToInteger();
+  }
+  Register Ext = MIRBuilder.buildInstr(ExtOpcode, {ExtTy}, {Src}).getReg(0);
+  if (ExtTy != WideTy)
+    Ext = MIRBuilder.buildBitcast(WideTy, Ext).getReg(0);
+  MO.setReg(Ext);
 }
 
 void LegalizerHelper::widenScalarSrcUsingFPExt(MachineInstr &MI, LLT WideTy,
@@ -2231,7 +2244,20 @@ void LegalizerHelper::widenScalarDst(MachineInstr &MI, LLT WideTy,
   MachineOperand &MO = MI.getOperand(OpIdx);
   Register DstExt = MRI.createGenericVirtualRegister(WideTy);
   MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
-  MIRBuilder.buildInstr(TruncOpcode, {MO}, {DstExt});
+  Register Src = DstExt;
+  LLT DstTy = MRI.getType(MO.getReg());
+  LLT TruncTy = DstTy;
+  // Restore the original bit pattern without a floating-point conversion.
+  if (TruncOpcode == TargetOpcode::G_TRUNC) {
+    if (WideTy.isFloatOrFloatVector())
+      Src = MIRBuilder.buildBitcast(WideTy.changeToInteger(), Src).getReg(0);
+    if (DstTy.isFloatOrFloatVector())
+      TruncTy = DstTy.changeToInteger();
+  }
+  auto Trunc = MIRBuilder.buildInstr(
+      TruncOpcode, {TruncTy == DstTy ? DstOp(MO) : DstOp(TruncTy)}, {Src});
+  if (TruncTy != DstTy)
+    MIRBuilder.buildBitcast(MO, Trunc);
   MO.setReg(DstExt);
 }
 
@@ -4012,7 +4038,15 @@ LegalizerHelper::bitcastExtractVectorElt(MachineInstr &MI, unsigned TypeIdx,
 
     // Shift the wide element to get the target element.
     auto ExtractedBits = MIRBuilder.buildLShr(NewEltTy, WideElt, OffsetBits);
-    MIRBuilder.buildTrunc(Dst, ExtractedBits);
+    if (DstTy.isFloatOrFloatVector()) {
+      Register R0 =
+          MIRBuilder
+              .buildTrunc(LLT::integer(DstTy.getSizeInBits()), ExtractedBits)
+              .getReg(0);
+      MIRBuilder.buildBitcast(Dst, R0);
+    } else {
+      MIRBuilder.buildTrunc(Dst, ExtractedBits);
+    }
     MI.eraseFromParent();
     return Legalized;
   }
@@ -9123,7 +9157,8 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   // Insert the sign bit
   V = MIRBuilder.buildOr(I32, Sign, V);
 
-  MIRBuilder.buildTrunc(Dst, V);
+  MIRBuilder.buildBitcast(Dst,
+                          MIRBuilder.buildTrunc(LLT::integer(16), V).getReg(0));
   MI.eraseFromParent();
   return Legalized;
 }
@@ -9673,14 +9708,28 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
   // Expand scalarizing unmerge as bitcast to integer and shift.
   LLT IntTy = MRI.getType(SrcReg);
 
-  MIRBuilder.buildTrunc(Dst0Reg, SrcReg);
+  LLT Ty = MRI.getType(Dst0Reg);
+  if (Ty.isFloat()) {
+    Register R0 = MIRBuilder.buildTrunc(Ty.changeToInteger(), SrcReg).getReg(0);
+    MIRBuilder.buildBitcast(Dst0Reg, R0);
+  } else {
+    MIRBuilder.buildTrunc(Dst0Reg, SrcReg);
+  }
 
   const unsigned DstSize = DstTy.getSizeInBits();
   unsigned Offset = DstSize;
   for (unsigned I = 1; I != NumDst; ++I, Offset += DstSize) {
     auto ShiftAmt = MIRBuilder.buildConstant(IntTy, Offset);
     auto Shift = MIRBuilder.buildLShr(IntTy, SrcReg, ShiftAmt);
-    MIRBuilder.buildTrunc(MI.getOperand(I), Shift);
+    Register DstNReg = MI.getOperand(I).getReg();
+    LLT Ty = MRI.getType(DstNReg);
+    if (Ty.isFloat()) {
+      Register R0 =
+          MIRBuilder.buildTrunc(Ty.changeToInteger(), Shift).getReg(0);
+      MIRBuilder.buildBitcast(DstNReg, R0);
+    } else {
+      MIRBuilder.buildTrunc(DstNReg, Shift);
+    }
   }
 
   MI.eraseFromParent();

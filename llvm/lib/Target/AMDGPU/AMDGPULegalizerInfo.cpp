@@ -914,10 +914,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_BITCAST)
       // Don't worry about the size constraint.
       .legalIf(all(isRegisterClassType(ST, 0), isRegisterClassType(ST, 1)))
-      .widenScalarIf(all(typeInSet(0, {I16, F16, BF16}), isScalar(1)),
-                     changeTo(0, LLT::integer(32)))
-      .widenScalarIf(all(isScalar(0), typeInSet(1, {I16, F16, BF16})),
-                     changeTo(1, LLT::integer(32)))
+      .legalIf(
+          all(typeInSet(0, {I16, F16, BF16}), typeInSet(1, {I16, F16, BF16})))
       .lower();
 
   getActionDefinitionsBuilder(G_CONSTANT)
@@ -6962,6 +6960,19 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   const bool IsD16 = IsFormat && (EltTy.getSizeInBits() == 16);
   const bool Unpacked = ST.hasUnpackedD16VMem();
 
+  // Sub-dword results are truncated from i32. Unpacked D16 vector results
+  // likewise need each i32 component truncated before rebuilding the vector.
+  if (EltTy.isFloat() && EltTy.getSizeInBits() == 16 &&
+      (!Ty.isVector() || (IsD16 && Unpacked))) {
+    Ty = Ty.changeToInteger();
+    EltTy = Ty.getScalarType();
+    Observer.changingInstr(MI);
+    Helper.bitcastDst(MI, Ty, 0);
+    Observer.changedInstr(MI);
+    Dst = MI.getOperand(0).getReg();
+    B.setInsertPt(B.getMBB(), MI);
+  }
+
   if (IsFormat && !IsTyped && !IsD16 && MemTy.getSizeInBits() < 32) {
     const Function &Fn = B.getMF().getFunction();
     Fn.getContext().diagnose(DiagnosticInfoUnsupported(
@@ -7706,6 +7717,10 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   // For an f16 scalar result, we form an i32 result with a truncate regardless
   // of packed vs. unpacked.
   if (IsD16 && !Ty.isVector()) {
+    if (Ty.isFloat()) {
+      B.buildBitcast(DstReg, B.buildTrunc(Ty.changeToInteger(), ResultRegs[0]));
+      return true;
+    }
     B.buildTrunc(DstReg, ResultRegs[0]);
     return true;
   }
@@ -7862,7 +7877,11 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   if (Dst != OrigDst) {
     MI.getOperand(0).setReg(Dst);
     B.setInsertPt(B.getMBB(), ++B.getInsertPt());
-    B.buildTrunc(OrigDst, Dst);
+    LLT OrigTy = B.getMRI()->getType(OrigDst);
+    if (OrigTy.isFloat())
+      B.buildBitcast(OrigDst, B.buildTrunc(OrigTy.changeToInteger(), Dst));
+    else
+      B.buildTrunc(OrigDst, Dst);
   }
 
   // If we don't have 96-bit result scalar loads, widening to 128-bit should
