@@ -1699,7 +1699,7 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
           .constrainAllUses(TII, TRI, RBI);
     return true;
   }
-  return false;
+  llvm_unreachable("no extended instruction set available for frexp");
 }
 
 bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,
