@@ -15,6 +15,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include <climits>
 
 using namespace llvm;
 
@@ -69,6 +70,39 @@ KnownFPClass KnownFPClass::applyOutputDenormalMode(const KnownFPClass &KnownSrc,
       Known |= fcPosZero;
     if (!KnownSrc.isKnownNever(fcNegSubnormal))
       Known |= fcNegZero;
+    return Known;
+  }
+
+  llvm_unreachable("covered switch over denormal mode");
+}
+
+KnownFPClass KnownFPClass::applyOutputDenormalTininess(
+    const KnownFPClass &Src, DenormalMode Mode, bool NeverPosTinyBeforeRounding,
+    bool NeverNegTinyBeforeRounding) {
+  KnownFPClass Known = applyOutputDenormalMode(Src, Mode);
+  switch (Mode.Output) {
+  case DenormalMode::IEEE:
+    return Known;
+  case DenormalMode::PreserveSign:
+    if (!NeverPosTinyBeforeRounding)
+      Known |= fcPosZero;
+    if (!NeverNegTinyBeforeRounding)
+      Known |= fcNegZero;
+    return Known;
+  case DenormalMode::PositiveZero:
+    if (!NeverPosTinyBeforeRounding)
+      Known |= fcPosZero;
+    // Tiny values may be a negative subnormal that flushes to positive zero, or
+    // negative underflow that becomes negative zero.
+    if (!NeverNegTinyBeforeRounding)
+      Known |= fcZero;
+    return Known;
+  default:
+    if (!NeverPosTinyBeforeRounding)
+      Known |= fcPosZero;
+    // Ditto above.
+    if (!NeverNegTinyBeforeRounding)
+      Known |= fcZero;
     return Known;
   }
 
@@ -493,6 +527,99 @@ KnownBits KnownFPClass::toKnownBits(const fltSemantics &FltSemantics) const {
   return Known;
 }
 
+static KnownFPClass scaleByExpRange(const KnownFPClass &KnownSrc_, int MinExp,
+                                    int MaxExp, bool Negate,
+                                    const fltSemantics &Flt, RoundingMode RM,
+                                    DenormalMode Mode) {
+  // Return unknown if the range contradicts itself.
+  if (MinExp > MaxExp)
+    return KnownFPClass();
+
+  // We are assuming that fcNormal has a magnitude strictly larger than
+  // fcSubnormal, which does not hold for PPCDoubleDouble.
+  if (&Flt == &APFloat::PPCDoubleDouble())
+    return KnownFPClass();
+
+  KnownFPClass KnownSrc = KnownFPClass::applyInputDenormalMode(KnownSrc_, Mode);
+
+  // We need to negate first to properly handle asymmetric rounding modes such
+  // as TowardsPositive and TowardsNegative.
+  if (Negate)
+    KnownSrc.fneg();
+
+  const bool IsRNE = RM == RoundingMode::NearestTiesToEven;
+
+  KnownFPClass Known;
+
+  Known.propagateNonNaN(KnownSrc);
+
+  const int Precision = APFloat::semanticsPrecision(Flt);
+
+  const int MinNormalExp = APFloat::semanticsMinExponent(Flt);
+  const int MinSubnormalExp = MinNormalExp - Precision + 1;
+  const int UnderflowExp = MinSubnormalExp - 1;
+  const int OverflowExp = APFloat::semanticsMaxExponent(Flt) + 1;
+
+  const bool RaisedAllSubnormals = MinExp >= Precision - 1;
+
+  const bool SubnormalNeverZero = MinExp >= 0;
+  const bool SubnormalNeverSubnormal =
+      RaisedAllSubnormals || (IsRNE && MaxExp <= UnderflowExp - MinNormalExp);
+  const bool SubnormalNeverNormal =
+      MaxExp <= 0 || (IsRNE && MinExp >= OverflowExp - MinSubnormalExp);
+  const bool SubnormalNeverInfinity = MaxExp <= OverflowExp - MinNormalExp;
+
+  const bool NormalNeverZero = MinExp >= 1 - Precision;
+  const bool NormalNeverSubnormal =
+      MinExp >= 0 || (IsRNE && MaxExp <= UnderflowExp - OverflowExp);
+  const bool NormalNeverNormal =
+      MaxExp < MinNormalExp - OverflowExp ||
+      (IsRNE && MinExp >= OverflowExp - MinNormalExp);
+  const bool NormalNeverInfinity = MaxExp <= 0;
+
+  const bool NeverPosTinyBeforeRounding =
+      (KnownSrc.isKnownNever(fcPosNormal) || MinExp >= 0) &&
+      (KnownSrc.isKnownNever(fcPosSubnormal) || RaisedAllSubnormals);
+  const bool NeverNegTinyBeforeRounding =
+      (KnownSrc.isKnownNever(fcNegNormal) || MinExp >= 0) &&
+      (KnownSrc.isKnownNever(fcNegSubnormal) || RaisedAllSubnormals);
+
+  if (KnownSrc.isKnownNever(fcPosZero) &&
+      (KnownSrc.isKnownNever(fcPosSubnormal) || SubnormalNeverZero) &&
+      (KnownSrc.isKnownNever(fcPosNormal) || NormalNeverZero))
+    Known.knownNot(fcPosZero);
+  if (KnownSrc.isKnownNever(fcNegZero) &&
+      (KnownSrc.isKnownNever(fcNegSubnormal) || SubnormalNeverZero) &&
+      (KnownSrc.isKnownNever(fcNegNormal) || NormalNeverZero))
+    Known.knownNot(fcNegZero);
+
+  if ((KnownSrc.isKnownNever(fcPosSubnormal) || SubnormalNeverSubnormal) &&
+      (KnownSrc.isKnownNever(fcPosNormal) || NormalNeverSubnormal))
+    Known.knownNot(fcPosSubnormal);
+  if ((KnownSrc.isKnownNever(fcNegSubnormal) || SubnormalNeverSubnormal) &&
+      (KnownSrc.isKnownNever(fcNegNormal) || NormalNeverSubnormal))
+    Known.knownNot(fcNegSubnormal);
+
+  if ((KnownSrc.isKnownNever(fcPosSubnormal) || SubnormalNeverNormal) &&
+      (KnownSrc.isKnownNever(fcPosNormal) || NormalNeverNormal))
+    Known.knownNot(fcPosNormal);
+  if ((KnownSrc.isKnownNever(fcNegSubnormal) || SubnormalNeverNormal) &&
+      (KnownSrc.isKnownNever(fcNegNormal) || NormalNeverNormal))
+    Known.knownNot(fcNegNormal);
+
+  if (KnownSrc.isKnownNever(fcPosInf) &&
+      (KnownSrc.isKnownNever(fcPosSubnormal) || SubnormalNeverInfinity) &&
+      (KnownSrc.isKnownNever(fcPosNormal) || NormalNeverInfinity))
+    Known.knownNot(fcPosInf);
+  if (KnownSrc.isKnownNever(fcNegInf) &&
+      (KnownSrc.isKnownNever(fcNegSubnormal) || SubnormalNeverInfinity) &&
+      (KnownSrc.isKnownNever(fcNegNormal) || NormalNeverInfinity))
+    Known.knownNot(fcNegInf);
+
+  return KnownFPClass::applyOutputDenormalTininess(
+      Known, Mode, NeverPosTinyBeforeRounding, NeverNegTinyBeforeRounding);
+}
+
 // Handle known sign bit and NaN cases for fadd and fsub. Invalid for fma.
 static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
                               const KnownFPClass &KnownRHS, RoundingMode RM) {
@@ -644,22 +771,25 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS_,
   return applyOutputDenormalMode(Known, Mode);
 }
 
-// TODO: This generalizes to known ranges
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
                                 const APFloat &CRHS, DenormalMode Mode) {
-  // Match denormal scaling pattern, similar to the case in ldexp. If the
-  // constant's exponent is sufficiently large, the result cannot be subnormal.
-
   const fltSemantics &Flt = CRHS.getSemantics();
-  unsigned Precision = APFloat::semanticsPrecision(Flt);
-  const int MantissaBits = Precision - 1;
 
-  int MinKnownExponent = ilogb(CRHS);
-  bool CannotBeSubnormal = (MinKnownExponent >= MantissaBits);
+  // TODO: Handle subnormal CRHS (which may flush to zero).
+  if (CRHS.isNormal() && &Flt != &APFloat::PPCDoubleDouble()) {
+    const int Exp = ilogb(CRHS);
+    const bool IsPow2 = CRHS.getExactLog2Abs() != INT_MIN;
 
-  KnownFPClass Known = KnownFPClass::fmul(KnownLHS, KnownFPClass(CRHS), Mode);
-  if (CannotBeSubnormal)
-    Known.knownNot(fcSubnormal);
+    // |C| in [2^Exp, 2^Exp] exactly when C is power of two
+    // |C| in [2^Exp, 2^(Exp+1)) otherwise
+    return scaleByExpRange(KnownLHS, Exp, IsPow2 ? Exp : Exp + 1,
+                           CRHS.isNegative(), Flt,
+                           RoundingMode::NearestTiesToEven, Mode);
+  }
+
+  KnownFPClass Known = fmul(KnownLHS, KnownFPClass(CRHS), Mode);
+
+  const int MinKnownExponent = ilogb(CRHS);
 
   // Multiply of values <= 1 cannot introduce overflow.
   if (KnownLHS.isKnownNever(fcInf)) {
@@ -730,6 +860,25 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS_,
     Known.knownNot(fcNegZero);
 
   return applyOutputDenormalMode(Known, Mode);
+}
+
+KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
+                                const APFloat &CRHS, DenormalMode Mode) {
+  const fltSemantics &Flt = CRHS.getSemantics();
+
+  // TODO: Handle subnormal CRHS (which may flush to zero).
+  if (CRHS.isNormal() && &Flt != &APFloat::PPCDoubleDouble()) {
+    const int Exp = ilogb(CRHS);
+    const bool IsPow2 = CRHS.getExactLog2Abs() != INT_MIN;
+
+    // |1 / C| in [2^-Exp, 2^-Exp] exactly when C is power of two
+    // |1 / C| in (2^(-Exp-1), 2^-Exp] otherwise
+    return scaleByExpRange(KnownLHS, IsPow2 ? -Exp : -Exp - 1, -Exp,
+                           CRHS.isNegative(), Flt,
+                           RoundingMode::NearestTiesToEven, Mode);
+  }
+
+  return fdiv(KnownLHS, KnownFPClass(CRHS), Mode);
 }
 
 KnownFPClass KnownFPClass::fdiv_self(const KnownFPClass &KnownSrc_,
@@ -1428,20 +1577,26 @@ KnownFPClass KnownFPClass::frexp_mant(const KnownFPClass &KnownSrc_,
   return Known;
 }
 
-KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc_,
-                                 const APInt &ConstantRangeExpMin,
-                                 const APInt &ConstantRangeExpMax,
-                                 const fltSemantics &Flt, DenormalMode Mode) {
+// The pre-existing ldexp code path, kept frozen for PPCDoubleDouble because
+// scaleByExpRange does not work for PPCDoubleDouble.
+static KnownFPClass ldexpPPCDoubleDouble(const KnownFPClass &KnownSrc_,
+                                         const APInt &ConstantRangeExpMin,
+                                         const APInt &ConstantRangeExpMax,
+                                         DenormalMode Mode) {
+  // Return unknown if the range contradicts itself.
+  if (ConstantRangeExpMin.sgt(ConstantRangeExpMax))
+    return KnownFPClass();
+
   KnownFPClass Known;
 
-  KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
+  KnownFPClass KnownSrc = KnownFPClass::applyInputDenormalMode(KnownSrc_, Mode);
 
   if (ConstantRangeExpMin.isZero() && ConstantRangeExpMax.isZero()) {
     // ldexp(x, 0) -> x
     // Here we make sure to properly propagate sNaN and denormals.
     Known.setKnownFPClasses(KnownSrc.getKnownFPClasses() | fcNan);
     Known.propagateNonNaN(KnownSrc);
-    return applyOutputDenormalMode(Known, Mode);
+    return KnownFPClass::applyOutputDenormalMode(Known, Mode);
   }
 
   Known.propagateNonNaN(KnownSrc);
@@ -1450,20 +1605,12 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc_,
   if (KnownSrc.isKnownNever(fcNegative))
     Known.knownNot(fcNegative);
   else if (KnownSrc.cannotBeOrderedLessThanZero())
-    Known.knownNot(OrderedLessThanZeroMask);
+    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
 
   if (KnownSrc.isKnownNever(fcPositive))
     Known.knownNot(fcPositive);
   else if (KnownSrc.cannotBeOrderedGreaterThanZero())
-    Known.knownNot(OrderedGreaterThanZeroMask);
-
-  // TODO: determine when it is safe to rule out subnormal for ppcf128.
-  if (&Flt != &APFloat::PPCDoubleDouble()) {
-    unsigned Precision = APFloat::semanticsPrecision(Flt);
-    const int MantissaBits = Precision - 1;
-    if (ConstantRangeExpMin.sge(MantissaBits))
-      Known.knownNot(fcSubnormal);
-  }
+    Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
 
   if (ConstantRangeExpMax.isNonPositive()) {
     // If we know the power is <= 0, can't introduce inf
@@ -1483,7 +1630,30 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc_,
       Known.knownNot(fcNegZero);
   }
 
-  return applyOutputDenormalMode(Known, Mode);
+  return KnownFPClass::applyOutputDenormalMode(Known, Mode);
+}
+
+KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
+                                 const APInt &ConstantRangeExpMin,
+                                 const APInt &ConstantRangeExpMax,
+                                 const fltSemantics &Flt, DenormalMode Mode) {
+  // Use frozen code path for PPCDoubleDouble.
+  if (&Flt == &APFloat::PPCDoubleDouble())
+    return ldexpPPCDoubleDouble(KnownSrc, ConstantRangeExpMin,
+                                ConstantRangeExpMax, Mode);
+
+  // The exponent operand can be any integer width. Truncating it could map a
+  // huge exponent onto a small one and invert the tests below.
+  auto SaturatedIntExp = [](const APInt &Exp) {
+    if (Exp.isSignedIntN(sizeof(int) * CHAR_BIT))
+      return static_cast<int>(Exp.getSExtValue());
+    return Exp.isNegative() ? INT_MIN : INT_MAX;
+  };
+
+  return scaleByExpRange(KnownSrc, SaturatedIntExp(ConstantRangeExpMin),
+                         SaturatedIntExp(ConstantRangeExpMax),
+                         /*Negate=*/false, Flt, RoundingMode::NearestTiesToEven,
+                         Mode);
 }
 
 KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
