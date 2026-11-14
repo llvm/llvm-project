@@ -351,7 +351,9 @@ defm : BWWriteResPair<WriteFShuffle256, [BWPort5], 3, [1], 1, 6>; // Fp 256-bit 
 defm : BWWriteResPair<WriteFVarShuffle256, [BWPort5], 3, [1], 1, 6>; // Fp 256-bit width vector variable shuffles.
 defm : BWWriteResPair<WriteFVarBlend,  [BWPort5], 2, [2], 2, 5>; // Fp vector variable blends.
 defm : BWWriteResPair<WriteFVarBlendY, [BWPort5], 2, [2], 2, 6>; // Fp vector variable blends.
-defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
+defm : BWWriteResPair<WriteFMaskBlendX, [BWPort5], 2, [2], 2, 5>; // Fp vector masked blends.
+defm : BWWriteResPair<WriteFMaskBlendY, [BWPort5], 2, [2], 2, 6>; // Fp vector masked blends.
+defm : X86WriteResPairUnsupported<WriteFMaskBlendZ>;
 
 // FMA Scheduling helper class.
 // class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
@@ -465,7 +467,9 @@ defm : BWWriteResPair<WriteVPMOV256, [BWPort5], 3, [1], 1, 6>;  // 256-bit width
 defm : BWWriteResPair<WriteVarShuffle256, [BWPort5], 3, [1], 1, 6>;  // 256-bit width vector variable shuffles.
 defm : BWWriteResPair<WriteVarBlend,  [BWPort5], 2, [2], 2, 5>; // Vector variable blends.
 defm : BWWriteResPair<WriteVarBlendY, [BWPort5], 2, [2], 2, 6>; // Vector variable blends (YMM/ZMM).
-defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
+defm : BWWriteResPair<WriteMaskBlendX, [BWPort5], 2, [2], 2, 5>; // Vector masked blends.
+defm : BWWriteResPair<WriteMaskBlendY, [BWPort5], 2, [2], 2, 6>; // Vector masked blends (YMM).
+defm : X86WriteResPairUnsupported<WriteMaskBlendZ>;
 defm : BWWriteResPair<WriteMPSAD,  [BWPort0, BWPort5], 7, [1, 2], 3, 5>; // Vector MPSAD.
 defm : BWWriteResPair<WriteMPSADY, [BWPort0, BWPort5], 7, [1, 2], 3, 6>; // Vector MPSAD.
 defm : X86WriteResPairUnsupported<WriteMPSADZ>;
