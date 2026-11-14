@@ -156,84 +156,16 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
     Info.NumAGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass,
                                           /*IncludeCalls=*/false);
 
-  // If there are no calls, MachineRegisterInfo can tell us the used register
-  // count easily.
-  // A tail call isn't considered a call for MachineFrameInfo's purposes.
-  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
-    Info.NumVGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass,
-                                          /*IncludeCalls=*/false);
-    return Info;
-  }
+  Info.NumVGPR = TRI.getNumReportedVGPRs(MF);
 
-  int32_t MaxVGPR = -1;
+  // A tail call isn't considered a call for MachineFrameInfo's purposes.
+  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall())
+    return Info;
+
   Info.CalleeSegmentSize = 0;
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
-      for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
-        const MachineOperand &MO = MI.getOperand(I);
-
-        if (!MO.isReg())
-          continue;
-
-        Register Reg = MO.getReg();
-        switch (Reg) {
-        case AMDGPU::NoRegister:
-          assert(MI.isDebugInstr() &&
-                 "Instruction uses invalid noreg register");
-          continue;
-
-        case AMDGPU::XNACK_MASK:
-        case AMDGPU::XNACK_MASK_LO:
-        case AMDGPU::XNACK_MASK_HI:
-          llvm_unreachable("xnack_mask registers should not be used");
-
-        case AMDGPU::LDS_DIRECT:
-          llvm_unreachable("lds_direct register should not be used");
-
-        case AMDGPU::TBA:
-        case AMDGPU::TBA_LO:
-        case AMDGPU::TBA_HI:
-        case AMDGPU::TMA:
-        case AMDGPU::TMA_LO:
-        case AMDGPU::TMA_HI:
-          llvm_unreachable("trap handler registers should not be used");
-
-        case AMDGPU::SRC_VCCZ:
-          llvm_unreachable("src_vccz register should not be used");
-
-        case AMDGPU::SRC_EXECZ:
-          llvm_unreachable("src_execz register should not be used");
-
-        case AMDGPU::SRC_SCC:
-          llvm_unreachable("src_scc register should not be used");
-
-        default:
-          break;
-        }
-
-        const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(Reg);
-        assert((!RC || TRI.isVGPRClass(RC) || TRI.isSGPRClass(RC) ||
-                TRI.isAGPRClass(RC) || AMDGPU::TTMP_32RegClass.contains(Reg) ||
-                AMDGPU::TTMP_64RegClass.contains(Reg) ||
-                AMDGPU::TTMP_128RegClass.contains(Reg) ||
-                AMDGPU::TTMP_256RegClass.contains(Reg) ||
-                AMDGPU::TTMP_512RegClass.contains(Reg)) &&
-               "Unknown register class");
-
-        if (!RC || !TRI.isVGPRClass(RC))
-          continue;
-
-        if (MI.isCall() || MI.isMetaInstruction())
-          continue;
-
-        unsigned Width =
-            static_cast<unsigned>(divideCeil(TRI.getRegSizeInBits(*RC), 32));
-        unsigned HWReg = TRI.getHWRegIndex(Reg);
-        int MaxUsed = HWReg + Width - 1;
-        MaxVGPR = std::max(MaxUsed, MaxVGPR);
-      }
-
       if (MI.isCall()) {
         // Pseudo used just to encode the underlying global. Is there a better
         // way to track this?
@@ -299,8 +231,6 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
       }
     }
   }
-
-  Info.NumVGPR = MaxVGPR + 1;
 
   return Info;
 }

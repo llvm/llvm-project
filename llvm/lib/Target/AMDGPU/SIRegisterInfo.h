@@ -501,6 +501,13 @@ public:
                               const TargetRegisterClass &RC,
                               bool IncludeCalls = true) const;
 
+  /// \returns the number of VGPRs \p MF reports in its resource usage, which
+  /// the wave running it is given at least. In a function with calls, a VGPR
+  /// named only by calls or meta instructions, such as the inactive lanes kept
+  /// for a chain call, does not count: each callee reports the VGPRs it uses,
+  /// and unlike SGPRs, no VGPR is read or written by the call itself.
+  unsigned getNumReportedVGPRs(const MachineFunction &MF) const;
+
   std::optional<uint8_t> getVRegFlagValue(StringRef Name) const override {
     return Name == "WWM_REG" ? AMDGPU::VirtRegFlag::WWM_REG
                              : std::optional<uint8_t>{};

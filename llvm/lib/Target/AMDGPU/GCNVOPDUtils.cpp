@@ -125,11 +125,11 @@ static bool canMapVOP3PToVOPD(const SIInstrInfo &TII, const MachineInstr &MI,
 // back the wrong value if it is the last VGPR the wave owns.
 // A wave always owns a whole number of VGPR allocation granules, so only a
 // register just below a granule boundary can be the last one. The wave also
-// owns at least as many VGPRs as this function uses, so a source which has a
-// register above it in use here cannot be the last one either.
+// owns at least as many VGPRs as this function reports, so a source which has
+// a reported register above it cannot be the last one either.
 // The number of VGPRs the wave is actually given is not available until the
 // assembler has seen the whole module, but that can only come out above this
-// function's own usage, so this is conservatively correct.
+// function's own count, so this is conservatively correct.
 static bool isVOPD3F64OPYSrcHazard(const SIInstrInfo &TII,
                                    const MachineInstr &MIX,
                                    const MachineInstr &MIY) {
@@ -148,8 +148,6 @@ static bool isVOPD3F64OPYSrcHazard(const SIInstrInfo &TII,
   unsigned Granule =
       AMDGPU::getVGPRAllocGranule(ST.getTargetID().getGPUKind(), ST.isWave32());
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  unsigned NumVGPRs = TRI->getNumUsedPhysRegs(
-      MF.getRegInfo(), AMDGPU::VGPR_32RegClass, /*IncludeCalls=*/false);
   for (AMDGPU::OpName Name :
        {AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
     const MachineOperand *Src = TII.getNamedOperand(MIY, Name);
@@ -158,7 +156,7 @@ static bool isVOPD3F64OPYSrcHazard(const SIInstrInfo &TII,
         !AMDGPU::VGPR_32RegClass.contains(Src->getReg()))
       continue;
     unsigned Idx = TRI->getHWRegIndex(Src->getReg());
-    if ((Idx + 1) % Granule == 0 && Idx + 1 >= NumVGPRs)
+    if ((Idx + 1) % Granule == 0 && Idx + 1 >= TRI->getNumReportedVGPRs(MF))
       return true;
   }
   return false;
