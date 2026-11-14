@@ -1485,6 +1485,52 @@ See the OpenCL documentation for some more complete examples.
   }];
 }
 
+def CoopMatrixTypeDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "coop_mat";
+  let Content = [{
+The `coop_mat` attribute declares an OpenCL cooperative matrix type. Cooperative
+matrix operations are distributed across a set of invocations, such as a
+subgroup, allowing the implementation to optimize matrix multiply operations.
+
+The attribute is applied to a scalar numerical component type and takes four
+arguments:
+
+```c
+__attribute__((coop_mat(scope, rows, columns, use)))
+```
+- scope specifies the memory scope of the cooperative matrix.
+  Only one of the OpenCL memory scopes (memory_scope_sub_group) is supported for cooperative matrix.
+- rows specifies the number of rows in the matrix. It must be a constant expression.
+- columns specifies the number of columns in the matrix. It must be a constant expression.
+- use specifies the operand role of the matrix in coop_mat_muladd. It must be one of:
+  CLK_COOPERATIVE_MATRIX_A
+  CLK_COOPERATIVE_MATRIX_B
+  CLK_COOPERATIVE_MATRIX_ACCUMULATOR
+
+The coop_mat attribute can be used to declare local variables, function parameters, and function return values. Cooperative matrix types must not be used as kernel arguments.
+
+```c
+float vmat1 __attribute__((coop_mat(
+    memory_scope_sub_group,
+    8,
+    8,
+    CLK_COOPERATIVE_MATRIX_A)));
+
+typedef half chmat44 __attribute__((coop_mat(
+    memory_scope_sub_group,
+    4,
+    4,
+    CLK_COOPERATIVE_MATRIX_B)));
+chmat44 vmat2;
+```
+See [OpenCL C cl_khr_cooperative_matrix extension](https://github.com/KhronosGroup/OpenCL-Docs/pull/1627)
+for more details about the cooperative matrix usage and limitations.
+The OpenCL cooperative matrix extension is experimental, and its specification is still in draft form.
+This implementation and its interfaces may change.
+  }];
+}
+
 def DiagnoseIfDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
