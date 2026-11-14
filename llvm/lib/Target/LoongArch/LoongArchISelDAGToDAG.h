@@ -36,6 +36,7 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
+  void PreprocessISelDAG() override;
   void Select(SDNode *Node) override;
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,

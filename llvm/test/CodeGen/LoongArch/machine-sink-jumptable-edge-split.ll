@@ -24,7 +24,7 @@ define void @f(i32 %x, i32 %a) nounwind {
 ; LA64-NEXT:    slli.d $a0, $a0, 3
 ; LA64-NEXT:    pcalau12i $a2, %pc_hi20(.LJTI0_0)
 ; LA64-NEXT:    addi.d $a2, $a2, %pc_lo12(.LJTI0_0)
-; LA64-NEXT:    ldx.d $a0, $a2, $a0
+; LA64-NEXT:    ldx.d $a0, $a0, $a2
 ; LA64-NEXT:    jr $a0
 ; LA64-NEXT:  .LBB0_2: # %c0
 ; LA64-NEXT:    ori $a0, $zero, 10
@@ -61,7 +61,7 @@ define void @f(i32 %x, i32 %a) nounwind {
 ; LA64-PIC-NEXT:    slli.d $a0, $a0, 2
 ; LA64-PIC-NEXT:    pcalau12i $a2, %pc_hi20(.LJTI0_0)
 ; LA64-PIC-NEXT:    addi.d $a2, $a2, %pc_lo12(.LJTI0_0)
-; LA64-PIC-NEXT:    ldx.w $a0, $a2, $a0
+; LA64-PIC-NEXT:    ldx.w $a0, $a0, $a2
 ; LA64-PIC-NEXT:    add.d $a0, $a2, $a0
 ; LA64-PIC-NEXT:    jr $a0
 ; LA64-PIC-NEXT:  .LBB0_2: # %c0

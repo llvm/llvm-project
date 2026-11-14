@@ -32,6 +32,62 @@ LoongArchDAGToDAGISelLegacy::LoongArchDAGToDAGISelLegacy(
 INITIALIZE_PASS(LoongArchDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false,
                 false)
 
+// Return true if V is available on entry to the block: it is live-in from
+// another block (including function arguments and loop PHIs), a constant or
+// symbol, or materialized from leaves only (e.g. the address of a jump table).
+static bool isAvailableAtBlockEntry(SDValue V) {
+  switch (V.getOpcode()) {
+  case ISD::CopyFromReg:
+  case ISD::Constant:
+  case ISD::TargetConstant:
+  case ISD::GlobalAddress:
+  case ISD::TargetGlobalAddress:
+  case ISD::ExternalSymbol:
+  case ISD::TargetExternalSymbol:
+  case ISD::ConstantPool:
+  case ISD::TargetConstantPool:
+  case ISD::JumpTable:
+  case ISD::TargetJumpTable:
+  case ISD::BlockAddress:
+  case ISD::TargetBlockAddress:
+    return true;
+  default:
+    break;
+  }
+  if (isa<MemSDNode>(V.getNode()))
+    return false;
+  return all_of(V->ops(), [](SDValue Op) { return Op->getNumOperands() == 0; });
+}
+
+void LoongArchDAGToDAGISel::PreprocessISelDAG() {
+  if (!Subtarget->is64Bit() || OptLevel == CodeGenOptLevel::None)
+    return;
+
+  // RegReg loads and stores take their address operands from (add rj, rk) in
+  // operand order. On LA664 and earlier micro-architectures, a value computed
+  // shortly before (by an ALU instruction or a reg + imm load) reaches rk
+  // one cycle later than rj. When only the second operand of the address add is
+  // computed in this block, commute the add so that this operand ends up in rj.
+  for (SDNode &N : CurDAG->allnodes()) {
+    SDValue Addr;
+    if (auto *Ld = dyn_cast<LoadSDNode>(&N)) {
+      if (Ld->isUnindexed())
+        Addr = Ld->getBasePtr();
+    } else if (auto *St = dyn_cast<StoreSDNode>(&N)) {
+      if (St->isUnindexed())
+        Addr = St->getBasePtr();
+    }
+    if (!Addr || Addr.getOpcode() != ISD::ADD)
+      continue;
+    SDValue Op0 = Addr.getOperand(0), Op1 = Addr.getOperand(1);
+    if (!isAvailableAtBlockEntry(Op0) || isAvailableAtBlockEntry(Op1))
+      continue;
+    // If the commuted add already exists, UpdateNodeOperands returns it and
+    // leaves Addr unchanged.
+    CurDAG->UpdateNodeOperands(Addr.getNode(), Op1, Op0);
+  }
+}
+
 void LoongArchDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
