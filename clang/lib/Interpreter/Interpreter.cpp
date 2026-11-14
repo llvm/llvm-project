@@ -569,10 +569,9 @@ llvm::Expected<std::unique_ptr<Interpreter>> Interpreter::create(
   return std::move(Interp);
 }
 
-llvm::Expected<std::unique_ptr<Interpreter>>
-Interpreter::createWithDevice(std::unique_ptr<CompilerInstance> CI,
-                              std::unique_ptr<CompilerInstance> DCI,
-                              OffloadType Type) {
+llvm::Expected<std::unique_ptr<Interpreter>> Interpreter::createWithDevice(
+    std::unique_ptr<CompilerInstance> CI, std::unique_ptr<CompilerInstance> DCI,
+    OffloadType Type, llvm::ArrayRef<const char *> DriverArgs) {
   if (Type == OffloadType::Detect)
     return llvm::make_error<llvm::StringError>(
         "Detecting the device vendor is not supported yet.",
@@ -618,7 +617,7 @@ Interpreter::createWithDevice(std::unique_ptr<CompilerInstance> CI,
   if (Type == OffloadType::HIP)
     DeviceParser = std::make_unique<IncrementalHIPDeviceParser>(
         *Interp->DeviceCI, *Interp->getCompilerInstance(),
-        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs, DriverArgs);
   else
     DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
         *Interp->DeviceCI, *Interp->getCompilerInstance(),
