@@ -655,6 +655,9 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
+  // FIXME: Device ASan is provided by the ROCm device library, not compiler-rt.
+  if (!getToolChain().getSanitizerArgs(Args).needsAsanRt())
+    addSanitizerRuntimes(getToolChain(), Args, CmdArgs, C);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   // Always pass the target-id features to the LTO job.
@@ -667,9 +670,6 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   getToolChain().addProfileRTLibs(Args, CmdArgs);
-  // FIXME: Device ASan is provided by the ROCm device library, not compiler-rt.
-  if (!getToolChain().getSanitizerArgs(Args).needsAsanRt())
-    addSanitizerRuntimes(getToolChain(), Args, CmdArgs, C);
 
   if (Args.hasArg(options::OPT_stdlib))
     CmdArgs.append({"-lc", "-lm"});
@@ -1396,6 +1396,10 @@ SanitizerMask AMDGPUToolChain::getSupportedSanitizers(
   // Watchpoint probes do not require xnack, but the runtime requires HSA.
   if (getTriple().isAMDGCN() && getTriple().getOS() == llvm::Triple::AMDHSA)
     SupportedMask |= SanitizerKind::Concurrency;
+
+  // The device sanitizer is supported on all HSA devices.
+  if (getTriple().isAMDGCN())
+    SupportedMask |= SanitizerKind::DeviceAddress;
 
   return SupportedMask;
 }

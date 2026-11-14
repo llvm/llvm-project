@@ -133,6 +133,9 @@ public:
     return Sanitizers.has(SanitizerKind::NumericalStability);
   }
   bool needsRtsanRt() const { return Sanitizers.has(SanitizerKind::Realtime); }
+  bool needsDasanRt() const {
+    return Sanitizers.has(SanitizerKind::DeviceAddress);
+  }
 
   bool hasMemTag() const {
     return hasMemtagHeap() || hasMemtagStack() || hasMemtagGlobals();

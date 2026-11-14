@@ -1541,6 +1541,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.Sanitize.hasOneOf(SanitizerKind::HWAddress |
                                  SanitizerKind::KernelHWAddress))
     Builder.defineMacro("__SANITIZE_HWADDRESS__");
+  if (LangOpts.Sanitize.has(SanitizerKind::DeviceAddress))
+    Builder.defineMacro("__SANITIZE_DEVICE_ADDRESS__");
   if (LangOpts.Sanitize.has(SanitizerKind::Thread))
     Builder.defineMacro("__SANITIZE_THREAD__");
   if (LangOpts.Sanitize.has(SanitizerKind::Concurrency))
