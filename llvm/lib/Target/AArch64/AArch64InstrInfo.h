@@ -933,7 +933,23 @@ int32_t getSVERevInstr(uint32_t Opcode);
 int32_t getSVENonRevInstr(uint32_t Opcode);
 
 int32_t getSMEPseudoMap(uint32_t Opcode);
+
+struct KCFICheckRegs {
+  Register AddrReg;
+  Register TargetHashReg;
+  Register ExpectedTypeReg;
+};
+
+inline KCFICheckRegs getKCFICheckRegs(Register TargetReg) {
+  if (TargetReg == AArch64::XZR)
+    return {AArch64::X16, AArch64::W16, AArch64::W17};
+  return {
+      TargetReg,
+      TargetReg == AArch64::X16 ? AArch64::W9 : AArch64::W16,
+      TargetReg == AArch64::X17 ? AArch64::W9 : AArch64::W17,
+  };
 }
+} // namespace AArch64
 
 } // end namespace llvm
 

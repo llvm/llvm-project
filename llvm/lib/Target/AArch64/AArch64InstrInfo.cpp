@@ -1649,6 +1649,9 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     return true;
 
   switch (MI.getOpcode()) {
+  case AArch64::KCFI_CMP:
+    // Keep KCFI_CMP immediately before its conditional branch terminator.
+    return true;
   case AArch64::PAUTH_EPILOGUE:
     // Keep authentication after the other epilogue instructions and close to
     // the return, allowing them to combine into an authenticated return.
@@ -11321,9 +11324,15 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
                                        unsigned Flags) const {
   MachineInstr &MI = *MIT;
 
-  // Don't outline anything used for return address signing. The outlined
-  // function will get signed later if needed
+  // Don't outline anything used for return address signing or KCFI
+  // checks/traps. Signed functions will get signed later if needed, whereas
+  // outlining a KCFI check loses patchable-function-prefix from its caller (or
+  // risks linker veneers clobbering X16/X17/NZCV), and outlining a trap merges
+  // distinct check failure sites.
   switch (MI.getOpcode()) {
+  case AArch64::KCFI_CHECK:
+  case AArch64::KCFI_CMP:
+  case AArch64::KCFI_TRAP:
   case AArch64::PACM:
   case AArch64::PACIASP:
   case AArch64::PACIBSP:
@@ -11908,6 +11917,13 @@ bool AArch64InstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
   return TargetInstrInfo::isFunctionSafeToSplit(MF);
 }
 
+static bool endsWithKCFICmp(const MachineBasicBlock &MBB) {
+  MachineBasicBlock::const_iterator FirstTerm = MBB.getFirstTerminator();
+  if (FirstTerm == MBB.begin() || FirstTerm == MBB.end())
+    return false;
+  return prev_nodbg(FirstTerm, MBB.begin())->getOpcode() == AArch64::KCFI_CMP;
+}
+
 bool AArch64InstrInfo::isMBBSafeToSplitToCold(
     const MachineBasicBlock &MBB) const {
   // Asm Goto blocks can contain conditional branches to goto labels, which can
@@ -11916,6 +11932,15 @@ bool AArch64InstrInfo::isMBBSafeToSplitToCold(
     return MI.getOpcode() == AArch64::INLINEASM_BR;
   };
   if (llvm::any_of(MBB, isAsmGoto) || MBB.isInlineAsmBrIndirectTarget())
+    return false;
+
+  // Keep KCFI checks, split call blocks, and trap blocks together out of cold
+  // sections so cold splitting never separates KCFI_CMP from its trap or
+  // fallthrough call (avoiding cross-section veneers/spills of X16/X17).
+  MachineBasicBlock::const_iterator LastI = MBB.getLastNonDebugInstr();
+  if ((LastI != MBB.end() && LastI->getOpcode() == AArch64::KCFI_TRAP) ||
+      endsWithKCFICmp(MBB) ||
+      (MBB.pred_size() == 1 && endsWithKCFICmp(**MBB.pred_begin())))
     return false;
 
   // Because jump tables are label-relative instead of table-relative, they all

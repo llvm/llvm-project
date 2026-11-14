@@ -128,6 +128,8 @@ private:
   uint32_t MaskKCFIType(uint32_t Value);
   void EmitKCFITypePadding(const MachineFunction &MF, bool HasType = true);
   void LowerKCFI_CHECK(const MachineInstr &MI);
+  void LowerKCFI_TRAP(const MachineInstr &MI);
+  void emitKCFITrap(const MachineFunction &MF);
 
   // Address sanitizer specific lowering for X86.
   void LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI);

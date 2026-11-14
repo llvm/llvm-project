@@ -519,6 +519,12 @@ public:
                               MachineBasicBlock::instr_iterator &MBBI,
                               const TargetInstrInfo *TII) const override;
 
+  bool supportKCFIOutOfLineTraps(const MachineFunction &MF) const override;
+
+  MachineInstr *
+  EmitKCFIOutOfLineTrap(MachineInstr &Check, MachineBasicBlock &TrapMBB,
+                        const TargetInstrInfo *TII) const override;
+
   bool shallExtractConstSplatVectorElementToStore(
       Type *VectorTy, unsigned ElemSizeInBits, unsigned &Index) const override;
 

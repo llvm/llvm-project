@@ -377,6 +377,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### New Compiler Flags
 
+- Added `-fsanitize-kcfi-out-of-line-traps` (and
+  `-fno-sanitize-kcfi-out-of-line-traps`, the default) on x86-64 and AArch64 to
+  emit `-fsanitize=kcfi` failure traps in separate cold blocks instead of
+  inline before each indirect call, avoiding a taken branch on every passing
+  check when inline trap layout is not required.
+
 - Added `-fpch-base-dir-is-cwd` to serialize precompiled header input paths
   relative to the current working directory. Paths resolve against the
   consumer's working directory when loading the PCH, allowing a build tree

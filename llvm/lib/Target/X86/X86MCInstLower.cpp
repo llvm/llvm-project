@@ -914,8 +914,18 @@ void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
 }
 
 void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
-  assert(std::next(MI.getIterator())->isCall() &&
-         "KCFI_CHECK not followed by a call instruction");
+  // KCFI_CMP is KCFI_CHECK without the trap: it's followed by the branch to
+  // its KCFI_TRAP, which falls through to the call.
+  bool IsCmp = MI.getOpcode() == X86::KCFI_CMP;
+  if (IsCmp) {
+    MachineBasicBlock::const_instr_iterator Next =
+        next_nodbg(MI.getIterator(), MI.getParent()->instr_end());
+    assert(Next != MI.getParent()->instr_end() && Next->isConditionalBranch() &&
+           "KCFI_CMP not followed by a conditional branch");
+  } else {
+    assert(std::next(MI.getIterator())->isCall() &&
+           "KCFI_CHECK not followed by a call instruction");
+  }
 
   // Adjust the offset for patchable-function-prefix. X86InstrInfo::getNop()
   // returns a 1-byte X86::NOOP, which means the offset is the same in
@@ -930,11 +940,11 @@ void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   // and thus emitting potential call target gadgets at each indirect call
   // site, load a negated constant to a register and compare that to the
   // expected value at the call target.
-  const Register AddrReg = MI.getOperand(0).getReg();
-  const uint32_t Type = MI.getOperand(1).getImm();
+  Register AddrReg = MI.getOperand(0).getReg();
+  uint32_t Type = MI.getOperand(1).getImm();
   // The check is immediately before the call. If the call target is in R10,
   // we can clobber R11 for the check instead.
-  unsigned TempReg = AddrReg == X86::R10 ? X86::R11D : X86::R10D;
+  Register TempReg = AddrReg == X86::R10 ? X86::R11D : X86::R10D;
   EmitAndCountInstruction(
       MCInstBuilder(X86::MOV32ri).addReg(TempReg).addImm(-MaskKCFIType(Type)));
   EmitAndCountInstruction(MCInstBuilder(X86::ADD32rm)
@@ -946,17 +956,28 @@ void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
                               .addImm(-(PrefixNops + 4))
                               .addReg(X86::NoRegister));
 
+  if (IsCmp)
+    return;
+
   MCSymbol *Pass = OutContext.createTempSymbol();
   EmitAndCountInstruction(
       MCInstBuilder(X86::JCC_1)
           .addExpr(MCSymbolRefExpr::create(Pass, OutContext))
           .addImm(X86::COND_E));
 
+  emitKCFITrap(MF);
+  OutStreamer->emitLabel(Pass);
+}
+
+void X86AsmPrinter::emitKCFITrap(const MachineFunction &MF) {
   MCSymbol *Trap = OutContext.createTempSymbol();
   OutStreamer->emitLabel(Trap);
   EmitAndCountInstruction(MCInstBuilder(X86::TRAP));
   emitKCFITrapEntry(MF, Trap);
-  OutStreamer->emitLabel(Pass);
+}
+
+void X86AsmPrinter::LowerKCFI_TRAP(const MachineInstr &MI) {
+  emitKCFITrap(*MI.getMF());
 }
 
 void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
@@ -2561,7 +2582,11 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case X86::KCFI_CHECK:
+  case X86::KCFI_CMP:
     return LowerKCFI_CHECK(*MI);
+
+  case X86::KCFI_TRAP:
+    return LowerKCFI_TRAP(*MI);
 
   case X86::ASAN_CHECK_MEMACCESS:
     return LowerASAN_CHECK_MEMACCESS(*MI);

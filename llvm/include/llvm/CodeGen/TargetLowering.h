@@ -2486,6 +2486,23 @@ public:
     llvm_unreachable("KCFI is not supported on this target");
   }
 
+  /// Return true if the target implements EmitKCFIOutOfLineTrap for \p MF.
+  virtual bool supportKCFIOutOfLineTraps(const MachineFunction &MF) const {
+    return false;
+  }
+
+  /// Moves the trap of \p Check, which EmitKCFICheck emitted, out of line:
+  /// rewrites \p Check to not trap, emits a branch after it that goes to
+  /// \p TrapMBB if the check fails, and emits the trap into \p TrapMBB.
+  /// \p Check must already be inserted in a basic block and \p TrapMBB must be
+  /// a newly created empty block.
+  /// \returns the branch, after which the caller splits the block.
+  virtual MachineInstr *
+  EmitKCFIOutOfLineTrap(MachineInstr &Check, MachineBasicBlock &TrapMBB,
+                        const TargetInstrInfo *TII) const {
+    llvm_unreachable("Out-of-line KCFI traps are not supported on this target");
+  }
+
   /// @}
 
   //===--------------------------------------------------------------------===//

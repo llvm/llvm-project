@@ -65946,6 +65946,29 @@ X86TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
       .getInstr();
 }
 
+bool X86TargetLowering::supportKCFIOutOfLineTraps(
+    const MachineFunction & /*MF*/) const {
+  return Subtarget.is64Bit();
+}
+
+MachineInstr *
+X86TargetLowering::EmitKCFIOutOfLineTrap(MachineInstr &Check,
+                                         MachineBasicBlock &TrapMBB,
+                                         const TargetInstrInfo *TII) const {
+  assert(Check.getOpcode() == X86::KCFI_CHECK && "Unexpected KCFI check");
+  MIMetadata MIMD(Check);
+  Check.setDesc(TII->get(X86::KCFI_CMP));
+  // Don't let the traps get merged, so that the address of one still says
+  // which check failed, as it does when they're inline.
+  BuildMI(&TrapMBB, MIMD, TII->get(X86::KCFI_TRAP))
+      .setMIFlag(MachineInstr::NoMerge);
+  return BuildMI(*Check.getParent(), std::next(Check.getIterator()), MIMD,
+                 TII->get(X86::JCC_1))
+      .addMBB(&TrapMBB)
+      .addImm(X86::COND_NE)
+      .getInstr();
+}
+
 /// Returns true if stack probing through a function call is requested.
 bool X86TargetLowering::hasStackProbeSymbol(const MachineFunction &MF) const {
   return !getStackProbeSymbolName(MF).empty();

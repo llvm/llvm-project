@@ -9289,7 +9289,7 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // ENDBR instructions should not be scheduled around.
   unsigned Opcode = MI.getOpcode();
   if (Opcode == X86::ENDBR64 || Opcode == X86::ENDBR32 ||
-      Opcode == X86::PLDTILECFGV)
+      Opcode == X86::PLDTILECFGV || Opcode == X86::KCFI_CMP)
     return true;
 
   // Frame setup and destroy can't be scheduled around.
@@ -10793,6 +10793,13 @@ X86InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
                                    MachineBasicBlock::iterator &MIT,
                                    unsigned Flags) const {
   MachineInstr &MI = *MIT;
+
+  // Don't outline KCFI checks or traps: LowerKCFI_CHECK reads
+  // patchable-function-prefix from the parent function, and each trap must
+  // remain a distinct site in its caller's section.
+  if (MI.getOpcode() == X86::KCFI_CHECK || MI.getOpcode() == X86::KCFI_CMP ||
+      MI.getOpcode() == X86::KCFI_TRAP)
+    return outliner::InstrType::Illegal;
 
   // Is this a terminator for a basic block?
   if (MI.isTerminator())

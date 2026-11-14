@@ -3031,6 +3031,12 @@ def fsanitize_kcfi_arity : Flag<["-"], "fsanitize-kcfi-arity">,
                            Group<f_clang_Group>,
                            HelpText<"Embed function arity information into the KCFI patchable function prefix">,
                            MarshallingInfoFlag<CodeGenOpts<"SanitizeKcfiArity">>;
+defm sanitize_kcfi_out_of_line_traps : BoolOption<"f", "sanitize-kcfi-out-of-line-traps",
+  CodeGenOpts<"SanitizeKcfiOutOfLineTraps">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Move">,
+  NegFlag<SetFalse, [], [ClangOption], "Do not move">,
+  BothFlags<[], [ClangOption], " the traps of KCFI indirect call checks out of line">>,
+  Group<f_clang_Group>;
 def fsanitize_kcfi_hash_EQ
     : Joined<["-"], "fsanitize-kcfi-hash=">,
       HelpText<"Select hash algorithm for KCFI type IDs (xxHash64, FNV-1a)">,
