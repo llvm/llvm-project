@@ -640,6 +640,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       return false;
     // X | true -> true
     // X & false -> false
+    // false | false -> false
+    // true & true -> true
     Value *Op0, *Op1;
     if (match(I, m_LogicalOr(m_Value(Op0), m_Value(Op1))) ||
         match(I, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
@@ -653,13 +655,11 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       if (LHSVals.empty() && RHSVals.empty())
         return false;
 
-      ConstantInt *InterestingVal;
-      if (match(I, m_LogicalOr()))
-        InterestingVal = ConstantInt::getTrue(I->getContext());
-      else
-        InterestingVal = ConstantInt::getFalse(I->getContext());
+      bool IsOr = match(I, m_LogicalOr());
+      ConstantInt *InterestingVal = ConstantInt::getBool(I->getContext(), IsOr);
+      ConstantInt *OtherVal = ConstantInt::getBool(I->getContext(), !IsOr);
 
-      SmallPtrSet<BasicBlock*, 4> LHSKnownBBs;
+      SmallPtrSet<BasicBlock *, 4> LHSKnownBBs, LHSOtherBBs;
 
       // Scan for the sentinel.  If we find an undef, force it to the
       // interesting value: x|undef -> true and x&undef -> false.
@@ -667,6 +667,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
         if (LHSVal.first == InterestingVal || isa<UndefValue>(LHSVal.first)) {
           Result.emplace_back(InterestingVal, LHSVal.second);
           LHSKnownBBs.insert(LHSVal.second);
+        } else if (LHSVal.first == OtherVal) {
+          LHSOtherBBs.insert(LHSVal.second);
         }
       for (const auto &RHSVal : RHSVals)
         if (RHSVal.first == InterestingVal || isa<UndefValue>(RHSVal.first)) {
@@ -674,6 +676,12 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
           // re-add it.
           if (!LHSKnownBBs.count(RHSVal.second))
             Result.emplace_back(InterestingVal, RHSVal.second);
+        } else if (RHSVal.first == OtherVal &&
+                   LHSOtherBBs.count(RHSVal.second)) {
+          // Neither operand is the interesting value; both are the same
+          // (other) constant, so the result is that constant too. Neither is
+          // undef, so this also holds for the select forms.
+          Result.emplace_back(OtherVal, RHSVal.second);
         }
 
       return !Result.empty();
