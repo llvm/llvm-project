@@ -49,7 +49,7 @@ void test() {
     assert(spSt.span().size() == 0);
 
     // Test after move
-    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().data() == nullptr);
     assert(rhsSpSt.span().size() == 0);
   }
   // Mode `out`
@@ -65,7 +65,7 @@ void test() {
     assert(spSt.span().size() == 0);
 
     // Test after move
-    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().data() == nullptr);
     assert(rhsSpSt.span().size() == 0);
   }
   // Mode `ate`
@@ -79,8 +79,8 @@ void test() {
     assert(spSt.span().size() == 4);
 
     // Test after move
-    assert(rhsSpSt.span().data() == arr);
-    assert(rhsSpSt.span().size() == 4);
+    assert(rhsSpSt.span().data() == nullptr);
+    assert(rhsSpSt.span().size() == 0);
   }
 }
 
