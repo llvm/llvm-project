@@ -2925,6 +2925,8 @@ sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
 void sema::AnalysisBasedWarnings::clearPolicyCache() {
   for (auto &M : PolicyCache)
     M.clear();
+  for (auto &M : UnsafeBufferUsageCache)
+    M.clear();
 }
 
 void sema::AnalysisBasedWarnings::clearOverrides() {
@@ -3103,8 +3105,8 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
   }
 }
 
-static bool shouldRunUnsafeBufferUsageAnalysis(const Sema &S,
-                                               SourceLocation Loc) {
+static bool isUnsafeBufferUsageAnalysisEnabledAt(const Sema &S,
+                                                 SourceLocation Loc) {
   const DiagnosticsEngine &Diags = S.getDiagnostics();
   return !Diags.isIgnored(diag::warn_unsafe_buffer_operation, Loc) ||
          !Diags.isIgnored(diag::warn_unsafe_buffer_variable, Loc) ||
@@ -3114,6 +3116,23 @@ static bool shouldRunUnsafeBufferUsageAnalysis(const Sema &S,
                UnsafeLibcCallDiagIDs,
                [&](unsigned ID) { return !Diags.isIgnored(ID, Loc); }) ||
            !Diags.isIgnored(diag::warn_unsafe_buffer_format_attr_call, Loc)));
+}
+
+// This runs at the end of every function definition, so the answer is cached
+// on the diagnostic state at Loc like getPolicyInEffectAt().
+bool sema::AnalysisBasedWarnings::shouldRunUnsafeBufferUsageAnalysis(
+    SourceLocation Loc) {
+  DiagnosticsEngine &D = S.getDiagnostics();
+  if (D.hasDiagSuppressionMapping() || Loc.isInvalid())
+    return isUnsafeBufferUsageAnalysisEnabledAt(S, Loc);
+
+  const void *StateKey = D.getDiagStateKeyForLoc(Loc);
+  auto &Cache = UnsafeBufferUsageCache[static_cast<unsigned>(
+      D.getDiagStateSystemClassForLoc(Loc))];
+  auto [It, Inserted] = Cache.try_emplace(StateKey);
+  if (Inserted)
+    It->second = isUnsafeBufferUsageAnalysisEnabledAt(S, Loc);
+  return It->second;
 }
 
 /// \return true iff fix-its should be emitted along with -Wunsafe-buffer-usage
@@ -3156,7 +3175,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
         return;
 
       // Perform unsafe buffer usage analysis:
-      if (shouldRunUnsafeBufferUsageAnalysis(S, Node->getBeginLoc())) {
+      if (shouldRunUnsafeBufferUsageAnalysis(Node->getBeginLoc())) {
         clang::checkUnsafeBufferUsage(Node, R,
                                       /*EmitSuggestion =*/true);
       }
@@ -3166,7 +3185,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     // Emit per-function analysis-based warnings that require the whole-TU
     // reasoning. Check if any of them is enabled at all before scanning the
     // AST:
-    if (shouldRunUnsafeBufferUsageAnalysis(S, SourceLocation())) {
+    if (shouldRunUnsafeBufferUsageAnalysis(SourceLocation())) {
       CallableVisitor(CallAnalyzers, TU->getOwningModule())
           .TraverseTranslationUnitDecl(TU);
     }
@@ -3445,7 +3464,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
                                 shouldSuggestUnsafeBufferUsageSuggestions(S));
 
     // Perform unsafe buffer usage analysis:
-    if (shouldRunUnsafeBufferUsageAnalysis(S, D->getBeginLoc())) {
+    if (shouldRunUnsafeBufferUsageAnalysis(D->getBeginLoc())) {
       clang::checkUnsafeBufferUsage(
           D, R, /*UnsafeBufferUsageShouldEmitSuggestions=*/false);
     }
