@@ -644,12 +644,12 @@ enum class SignedBound { Upper, Lower };
 /// across its operands, and returns whether \p IsKnown holds for the
 /// substituted decompositions, or std::nullopt if \p D has no such min/max.
 ///
-/// \p IsKnown tests a property that is monotonic in \p D: if \p Upper, it is an
-/// upper bound on \p D, otherwise a lower bound. D is an affine function of the
-/// min/max result with slope E.Coefficient. If the slope is positive, then
-/// D(max(a, b)) = max(D(a), D(b)) and D(min(a, b)) = min(D(a), D(b)). If it is
-/// negative, max and min swap roles. An upper bound on a maximum holds if it
-/// holds on both sides, and a lower bound if it holds on either side.
+/// \p IsKnown tests a property that is monotonic in \p D: either an upper or lower \p Bound.
+/// D is an affine function of the min/max result with slope E.Coefficient. If
+/// the slope is positive, then D(max(a, b)) = max(D(a), D(b)) and D(min(a, b))
+/// = min(D(a), D(b)). If it is negative, max and min swap roles. An upper bound
+/// on a maximum holds if it holds on both sides, and a lower bound if it holds
+/// on either side.
 static std::optional<bool>
 splitSignedMinMax(const Decomposition &D, ConstraintInfo &Info, Type *Ty,
                   SignedBound Bound,
