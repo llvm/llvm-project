@@ -18848,8 +18848,12 @@ static void EvaluateAndDiagnoseImmediateInvocation(
   CE->MoveIntoResult(Eval.Val, SemaRef.getASTContext());
 }
 
+/// \p DRSet and \p IISet must not be part of an element of
+/// Sema::ExprEvalContexts: the transform below can push evaluation contexts,
+/// which may reallocate ExprEvalContexts.
 static void RemoveNestedImmediateInvocation(
-    Sema &SemaRef, Sema::ExpressionEvaluationContextRecord &Rec,
+    Sema &SemaRef, llvm::SmallPtrSetImpl<DeclRefExpr *> &DRSet,
+    SmallVector<Sema::ImmediateInvocationCandidate, 4> &IISet,
     SmallVector<Sema::ImmediateInvocationCandidate, 4>::reverse_iterator It) {
   struct ComplexRemove : TreeTransform<ComplexRemove> {
     using Base = TreeTransform<ComplexRemove>;
@@ -18938,8 +18942,7 @@ static void RemoveNestedImmediateInvocation(
       return Res;
     }
     bool AllowSkippingFirstCXXConstructExpr = true;
-  } Transformer(SemaRef, Rec.ReferenceToConsteval,
-                Rec.ImmediateInvocationCandidates, It);
+  } Transformer(SemaRef, DRSet, IISet, It);
 
   /// CXXConstructExpr with a single argument are getting skipped by
   /// TreeTransform in some situtation because they could be implicit. This
@@ -18987,13 +18990,23 @@ HandleImmediateInvocations(Sema &SemaRef,
     }
   }
 
+  // The tree transform and the constant evaluation below can push evaluation
+  // contexts, which may reallocate ExprEvalContexts and leave Rec dangling.
+  // Take what we need from Rec now, and don't use it after this point.
+  SmallVector<Sema::ImmediateInvocationCandidate, 4> Candidates =
+      std::move(Rec.ImmediateInvocationCandidates);
+  llvm::SmallPtrSet<DeclRefExpr *, 4> ReferenceToConsteval =
+      std::move(Rec.ReferenceToConsteval);
+  const Sema::ExpressionEvaluationContext RecContext = Rec.Context;
+  const bool InImmediateEscalatingFunctionContext =
+      Rec.InImmediateEscalatingFunctionContext;
+
   /// When we have more than 1 ImmediateInvocationCandidates or previously
   /// failed immediate invocations, we need to check for nested
   /// ImmediateInvocationCandidates in order to avoid duplicate diagnostics.
   /// Otherwise we only need to remove ReferenceToConsteval in the immediate
   /// invocation.
-  if (Rec.ImmediateInvocationCandidates.size() > 1 ||
-      !SemaRef.FailedImmediateInvocations.empty()) {
+  if (Candidates.size() > 1 || !SemaRef.FailedImmediateInvocations.empty()) {
 
     /// Prevent sema calls during the tree transform from adding pointers that
     /// are already in the sets.
@@ -19003,12 +19016,11 @@ HandleImmediateInvocations(Sema &SemaRef,
     /// Prevent diagnostic during tree transfrom as they are duplicates
     Sema::TentativeAnalysisScope DisableDiag(SemaRef);
 
-    for (auto It = Rec.ImmediateInvocationCandidates.rbegin();
-         It != Rec.ImmediateInvocationCandidates.rend(); It++)
+    for (auto It = Candidates.rbegin(); It != Candidates.rend(); It++)
       if (!It->getInt())
-        RemoveNestedImmediateInvocation(SemaRef, Rec, It);
-  } else if (Rec.ImmediateInvocationCandidates.size() == 1 &&
-             Rec.ReferenceToConsteval.size()) {
+        RemoveNestedImmediateInvocation(SemaRef, ReferenceToConsteval,
+                                        Candidates, It);
+  } else if (Candidates.size() == 1 && ReferenceToConsteval.size()) {
     struct SimpleRemove : DynamicRecursiveASTVisitor {
       llvm::SmallPtrSetImpl<DeclRefExpr *> &DRSet;
       SimpleRemove(llvm::SmallPtrSetImpl<DeclRefExpr *> &S) : DRSet(S) {}
@@ -19016,14 +19028,13 @@ HandleImmediateInvocations(Sema &SemaRef,
         DRSet.erase(E);
         return DRSet.size();
       }
-    } Visitor(Rec.ReferenceToConsteval);
-    Visitor.TraverseStmt(
-        Rec.ImmediateInvocationCandidates.front().getPointer()->getSubExpr());
+    } Visitor(ReferenceToConsteval);
+    Visitor.TraverseStmt(Candidates.front().getPointer()->getSubExpr());
   }
-  for (auto CE : Rec.ImmediateInvocationCandidates)
+  for (auto CE : Candidates)
     if (!CE.getInt())
       EvaluateAndDiagnoseImmediateInvocation(SemaRef, CE);
-  for (auto *DR : Rec.ReferenceToConsteval) {
+  for (auto *DR : ReferenceToConsteval) {
     // If the expression is immediate escalating, it is not an error;
     // The outer context itself becomes immediate and further errors,
     // if any, will be handled by DiagnoseImmediateEscalatingReason.
@@ -19042,14 +19053,13 @@ HandleImmediateInvocations(Sema &SemaRef,
     // that is not a subexpression of an immediate invocation.
     bool ImmediateEscalating = false;
     bool IsPotentiallyEvaluated =
-        Rec.Context ==
-            Sema::ExpressionEvaluationContext::PotentiallyEvaluated ||
-        Rec.Context ==
+        RecContext == Sema::ExpressionEvaluationContext::PotentiallyEvaluated ||
+        RecContext ==
             Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed;
     if (SemaRef.inTemplateInstantiation() && IsPotentiallyEvaluated)
-      ImmediateEscalating = Rec.InImmediateEscalatingFunctionContext;
+      ImmediateEscalating = InImmediateEscalatingFunctionContext;
 
-    if (!Rec.InImmediateEscalatingFunctionContext ||
+    if (!InImmediateEscalatingFunctionContext ||
         (SemaRef.inTemplateInstantiation() && !ImmediateEscalating)) {
       SemaRef.Diag(DR->getBeginLoc(), diag::err_invalid_consteval_take_address)
           << ND << isa<CXXRecordDecl>(ND) << FD->isConsteval();
@@ -19112,12 +19122,20 @@ void Sema::PopExpressionEvaluationContext() {
   }
 
   WarnOnPendingNoDerefs(Rec);
+
+  [[maybe_unused]] size_t Depth = ExprEvalContexts.size();
   HandleImmediateInvocations(*this, Rec);
+  // HandleImmediateInvocations can push and pop evaluation contexts, which may
+  // reallocate ExprEvalContexts, so Rec may now be dangling. Since everything
+  // pushed was popped again, the innermost element is still the same context.
+  assert(ExprEvalContexts.size() == Depth &&
+         "HandleImmediateInvocations left evaluation contexts pushed");
+  ExpressionEvaluationContextRecord &CurRec = ExprEvalContexts.back();
 
   // Warn on any volatile-qualified simple-assignments that are not discarded-
   // value expressions nor unevaluated operands (those cases get removed from
   // this list by CheckUnusedVolatileAssignment).
-  for (auto *BO : Rec.VolatileAssignmentLHSs)
+  for (auto *BO : CurRec.VolatileAssignmentLHSs)
     Diag(BO->getBeginLoc(), diag::warn_deprecated_simple_assign_volatile)
         << BO->getType();
 
@@ -19125,16 +19143,17 @@ void Sema::PopExpressionEvaluationContext() {
   // temporaries that we may have created as part of the evaluation of
   // the expression in that context: they aren't relevant because they
   // will never be constructed.
-  if (Rec.isUnevaluated() || Rec.isConstantEvaluated()) {
-    ExprCleanupObjects.erase(ExprCleanupObjects.begin() + Rec.NumCleanupObjects,
+  if (CurRec.isUnevaluated() || CurRec.isConstantEvaluated()) {
+    ExprCleanupObjects.erase(ExprCleanupObjects.begin() +
+                                 CurRec.NumCleanupObjects,
                              ExprCleanupObjects.end());
-    Cleanup = Rec.ParentCleanup;
+    Cleanup = CurRec.ParentCleanup;
     CleanupVarDeclMarking();
-    std::swap(MaybeODRUseExprs, Rec.SavedMaybeODRUseExprs);
-  // Otherwise, merge the contexts together.
+    std::swap(MaybeODRUseExprs, CurRec.SavedMaybeODRUseExprs);
+    // Otherwise, merge the contexts together.
   } else {
-    Cleanup.mergeFrom(Rec.ParentCleanup);
-    MaybeODRUseExprs.insert_range(Rec.SavedMaybeODRUseExprs);
+    Cleanup.mergeFrom(CurRec.ParentCleanup);
+    MaybeODRUseExprs.insert_range(CurRec.SavedMaybeODRUseExprs);
   }
 
   DiagnoseMisalignedMembers();
