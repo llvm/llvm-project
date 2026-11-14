@@ -262,6 +262,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds continued instructions to allow composites with a large number of constituents.
    * - ``SPV_INTEL_masked_gather_scatter``
      - Adds masked gather and scatter instructions for vectors of pointers.
+   * - ``SPV_INTEL_rounded_divide_sqrt``
+     - Allows an FPRoundingMode decoration on floating-point divide and square root instructions.
    * - ``SPV_INTEL_tensor_float32_conversion``
      - Adds an instruction to round a floating-point value to TensorFloat32.
    * - ``SPV_INTEL_unstructured_loop_controls``

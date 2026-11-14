@@ -1969,6 +1969,17 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitCallInst(CallInst &Call) {
 // Use a tip about rounding mode to create a decoration.
 void SPIRVEmitIntrinsicsImpl::useRoundingMode(ConstrainedFPIntrinsic *FPI,
                                               IRBuilder<> &B) {
+  // FPRoundingMode on OpFDiv and the OpenCL sqrt requires
+  // SPV_INTEL_rounded_divide_sqrt and an IEEE 754 type (half, float, double).
+  if (FPI->getIntrinsicID() == Intrinsic::experimental_constrained_fdiv ||
+      FPI->getIntrinsicID() == Intrinsic::experimental_constrained_sqrt) {
+    Type *ElemTy = FPI->getType()->getScalarType();
+    if (!TM.getSubtargetImpl(*CurrF)->canUseExtension(
+            SPIRV::Extension::SPV_INTEL_rounded_divide_sqrt) ||
+        !(ElemTy->isHalfTy() || ElemTy->isFloatTy() || ElemTy->isDoubleTy()))
+      return;
+  }
+
   std::optional<RoundingMode> RM = FPI->getRoundingMode();
   if (!RM.has_value())
     return;
