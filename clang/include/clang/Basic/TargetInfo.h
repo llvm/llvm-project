@@ -1973,6 +1973,9 @@ public:
   /// Whether to support HIP image/texture API's.
   virtual bool hasHIPImageSupport() const { return true; }
 
+  /// Whether to support OpenCL image and sampler types and features.
+  virtual bool hasOpenCLImageSupport() const { return true; }
+
   /// The first value in the pair is the minimum offset between two objects to
   /// avoid false sharing (destructive interference). The second value in the
   /// pair is maximum size of contiguous memory to promote true sharing

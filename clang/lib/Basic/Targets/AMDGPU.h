@@ -316,17 +316,18 @@ public:
       Opts["cl_khr_fp16"] = true;
       Opts["cl_khr_int64_base_atomics"] = true;
       Opts["cl_khr_int64_extended_atomics"] = true;
-      Opts["cl_khr_mipmap_image"] = true;
-      Opts["cl_khr_mipmap_image_writes"] = true;
       Opts["cl_khr_subgroups"] = true;
       Opts["cl_amd_media_ops"] = true;
       Opts["cl_amd_media_ops2"] = true;
 
-      // FIXME: Check subtarget for image support.
-      Opts["__opencl_c_images"] = true;
-      Opts["__opencl_c_3d_image_writes"] = true;
-      Opts["__opencl_c_read_write_images"] = true;
-      Opts["cl_khr_3d_image_writes"] = true;
+      if (hasOpenCLImageSupport()) {
+        Opts["cl_khr_mipmap_image"] = true;
+        Opts["cl_khr_mipmap_image_writes"] = true;
+        Opts["__opencl_c_images"] = true;
+        Opts["__opencl_c_3d_image_writes"] = true;
+        Opts["__opencl_c_read_write_images"] = true;
+        Opts["cl_khr_3d_image_writes"] = true;
+      }
       Opts["__opencl_c_program_scope_global_variables"] = true;
       Opts["__opencl_c_atomic_order_acq_rel"] = true;
       Opts["__opencl_c_atomic_order_seq_cst"] = true;
@@ -491,6 +492,11 @@ public:
   }
 
   bool hasHIPImageSupport() const override { return HasImage; }
+
+  bool hasOpenCLImageSupport() const override {
+    return !getTriple().isAMDGCN() || GPUKind == llvm::AMDGPU::GK_NONE ||
+           HasImage;
+  }
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     // This is imprecise as the value can vary between 64, 128 (even 256!) bytes
