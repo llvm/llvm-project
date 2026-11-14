@@ -854,4 +854,63 @@ TEST(PointerUnionLargeTierJump, BasicOperations) {
   EXPECT_NE(nc0, nc1);
 }
 
+struct PolymorphicBase {
+  int Value = 0;
+  explicit PolymorphicBase(int V = 0) : Value(V) {}
+  virtual ~PolymorphicBase() = default;
+  virtual int get() const { return Value; }
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using PolymorphicBase::PolymorphicBase;
+  int get() const override { return Value * 2; }
+};
+
+struct PolymorphicOther {
+  int OtherValue = 0;
+  explicit PolymorphicOther(int V = 0) : OtherValue(V) {}
+  virtual ~PolymorphicOther() = default;
+  virtual int getOther() const { return OtherValue; }
+};
+
+TEST(PointerUnionPolymorphicTest, PolymorphicPointers) {
+  PolymorphicDerived D(21);
+  PolymorphicOther O(99);
+
+  using PolyUnion = PointerUnion<PolymorphicBase *, PolymorphicOther *>;
+  PolyUnion PU(&D);
+  ASSERT_TRUE(isa<PolymorphicBase *>(PU));
+  EXPECT_FALSE(isa<PolymorphicOther *>(PU));
+  EXPECT_EQ(42, cast<PolymorphicBase *>(PU)->get());
+  EXPECT_EQ(&D, *PU.getAddrOfPtr1());
+  EXPECT_EQ(nullptr, dyn_cast<PolymorphicOther *>(PU));
+
+  void *Opaque = PU.getOpaqueValue();
+  PolyUnion Restored = PolyUnion::getFromOpaqueValue(Opaque);
+  ASSERT_TRUE(isa<PolymorphicBase *>(Restored));
+  EXPECT_EQ(42, cast<PolymorphicBase *>(Restored)->get());
+
+  // Switch to the second polymorphic type (which sets a non-zero tag bit in the
+  // underlying pointer representation).
+  PU = &O;
+  ASSERT_TRUE(isa<PolymorphicOther *>(PU));
+  EXPECT_FALSE(isa<PolymorphicBase *>(PU));
+  EXPECT_EQ(99, cast<PolymorphicOther *>(PU)->getOther());
+  EXPECT_EQ(nullptr, dyn_cast<PolymorphicBase *>(PU));
+
+  Opaque = PU.getOpaqueValue();
+  Restored = PolyUnion::getFromOpaqueValue(Opaque);
+  ASSERT_TRUE(isa<PolymorphicOther *>(Restored));
+  EXPECT_EQ(99, cast<PolymorphicOther *>(Restored)->getOther());
+
+  // Also test nesting in PointerIntPair with a non-zero integer tag.
+  PointerIntPair<PolyUnion, 1, unsigned> Pair(PU, 1U);
+  void *PairOpaque = Pair.getOpaqueValue();
+  auto PairRestored = decltype(Pair)::getFromOpaqueValue(PairOpaque);
+  EXPECT_EQ(1U, PairRestored.getInt());
+  ASSERT_TRUE(isa<PolymorphicOther *>(PairRestored.getPointer()));
+  EXPECT_EQ(99,
+            cast<PolymorphicOther *>(PairRestored.getPointer())->getOther());
+}
+
 } // end anonymous namespace

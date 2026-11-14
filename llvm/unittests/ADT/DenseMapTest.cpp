@@ -1403,4 +1403,67 @@ TEST(DenseMapCustomTest, SmallRemoveIf) {
   }
 }
 
+struct PolymorphicBase {
+  int Value = 0;
+  PolymorphicBase() = default;
+  explicit PolymorphicBase(int V) : Value(V) {}
+  PolymorphicBase(const PolymorphicBase &) = default;
+  PolymorphicBase(PolymorphicBase &&) noexcept = default;
+  PolymorphicBase &operator=(const PolymorphicBase &) = default;
+  PolymorphicBase &operator=(PolymorphicBase &&) noexcept = default;
+  virtual ~PolymorphicBase() = default;
+  virtual int get() const { return Value; }
+  bool operator==(const PolymorphicBase &RHS) const {
+    return Value == RHS.Value;
+  }
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using PolymorphicBase::PolymorphicBase;
+  int get() const override { return Value * 2; }
+};
+
+struct PolymorphicMapInfo {
+  static unsigned getHashValue(const PolymorphicBase &Val) {
+    return static_cast<unsigned>(Val.Value) * 37U;
+  }
+  static bool isEqual(const PolymorphicBase &LHS, const PolymorphicBase &RHS) {
+    return LHS == RHS;
+  }
+};
+
+TEST(DenseMapCustomTest, PolymorphicTypes) {
+  DenseMap<PolymorphicBase, PolymorphicBase, PolymorphicMapInfo> Map;
+  SmallDenseMap<PolymorphicBase, PolymorphicBase, 4, PolymorphicMapInfo>
+      SmallMap;
+  for (int I = 0; I < 16; ++I) {
+    Map.try_emplace(PolymorphicBase(I), I + 100);
+    SmallMap.try_emplace(PolymorphicBase(I), I + 100);
+  }
+  EXPECT_EQ(16u, Map.size());
+  EXPECT_EQ(16u, SmallMap.size());
+  EXPECT_EQ(105, Map.find(PolymorphicBase(5))->second.get());
+  EXPECT_EQ(105, SmallMap.find(PolymorphicBase(5))->second.get());
+
+  EXPECT_TRUE(Map.erase(PolymorphicBase(5)));
+  EXPECT_TRUE(SmallMap.erase(PolymorphicBase(5)));
+  EXPECT_FALSE(Map.contains(PolymorphicBase(5)));
+  EXPECT_FALSE(SmallMap.contains(PolymorphicBase(5)));
+
+  PolymorphicBase B(1);
+  PolymorphicDerived D(2);
+  DenseMap<PolymorphicBase *, PolymorphicBase *> PtrMap;
+  SmallDenseMap<PolymorphicBase *, PolymorphicBase *, 2> SmallPtrMap;
+  PtrMap.try_emplace(&B, &D);
+  PtrMap.try_emplace(&D, &B);
+  SmallPtrMap.try_emplace(&B, &D);
+  SmallPtrMap.try_emplace(&D, &B);
+
+  const PolymorphicBase *ConstB = &B;
+  EXPECT_EQ(4, PtrMap.lookup(ConstB)->get());
+  EXPECT_EQ(1, PtrMap.lookup(&D)->get());
+  EXPECT_EQ(4, SmallPtrMap.lookup(ConstB)->get());
+  EXPECT_EQ(1, SmallPtrMap.lookup(&D)->get());
+}
+
 } // namespace

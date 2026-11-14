@@ -926,4 +926,45 @@ TEST(StringMapCustomTest, InsertInvalidatesIteratorComparison) {
 }
 #endif
 
+struct PolymorphicBase {
+  int Value = 0;
+  PolymorphicBase() = default;
+  explicit PolymorphicBase(int V) : Value(V) {}
+  PolymorphicBase(const PolymorphicBase &) = default;
+  PolymorphicBase(PolymorphicBase &&) noexcept = default;
+  PolymorphicBase &operator=(const PolymorphicBase &) = default;
+  PolymorphicBase &operator=(PolymorphicBase &&) noexcept = default;
+  virtual ~PolymorphicBase() = default;
+  virtual int get() const { return Value; }
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using PolymorphicBase::PolymorphicBase;
+  int get() const override { return Value * 2; }
+};
+
+TEST(StringMapCustomTest, PolymorphicTypes) {
+  StringMap<PolymorphicBase> Map;
+  Map.try_emplace("one", 1);
+  Map.try_emplace("two", 2);
+  Map.insert_or_assign("one", PolymorphicBase(10));
+  EXPECT_EQ(2u, Map.size());
+  EXPECT_EQ(10, Map["one"].get());
+  EXPECT_EQ(2, Map.find("two")->second.get());
+
+  EXPECT_TRUE(Map.remove_if([](const StringMapEntry<PolymorphicBase> &E) {
+    return E.getValue().get() == 2;
+  }));
+  EXPECT_EQ(1u, Map.size());
+  EXPECT_FALSE(Map.contains("two"));
+
+  PolymorphicBase B(3);
+  PolymorphicDerived D(4);
+  StringMap<PolymorphicBase *> PtrMap;
+  PtrMap.try_emplace("base", &B);
+  PtrMap.try_emplace("derived", &D);
+  EXPECT_EQ(3, PtrMap.lookup("base")->get());
+  EXPECT_EQ(8, PtrMap.lookup("derived")->get());
+}
+
 } // end anonymous namespace
