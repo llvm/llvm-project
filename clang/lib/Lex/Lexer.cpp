@@ -2663,7 +2663,7 @@ bool Lexer::SkipWhitespace(Token &Result, const char *CurPtr) {
       IsAtStartOfLine = true;
       IsAtPhysicalStartOfLine = true;
     }
-    // FIXME: The next token will not have LeadingSpace set.
+    HasLeadingSpace = !isVerticalWhitespace(CurPtr[-1]);
     return true;
   }
 
@@ -3875,7 +3875,7 @@ LexStart:
     // whitespace.
     if (isKeepWhitespaceMode()) {
       FormTokenWithChars(Result, CurPtr, tok::unknown);
-      // FIXME: The next token will not have LeadingSpace set.
+      HasLeadingSpace = true;
       return true;
     }
 
