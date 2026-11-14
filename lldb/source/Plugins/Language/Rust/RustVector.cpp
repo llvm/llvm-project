@@ -124,7 +124,8 @@ lldb_private::formatters::RustVectorSyntheticFrontEnd::Update() {
 
   m_element_size = *size_or_err;
   if (m_element_size == 0) {
-    m_start = m_len = nullptr;
+    // Don't reset m_len; Vec<T> can validly have a 0-sized T.
+    m_start = nullptr;
     return lldb::ChildCacheState::eRefetch;
   }
 
