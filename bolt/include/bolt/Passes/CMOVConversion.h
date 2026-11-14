@@ -17,7 +17,7 @@
 //   cmovcc src, dst
 //
 // The advantage of performing this conversion in BOLT (compared to compiler
-// heuristic driven instruction selection) is that BOLT can use LBR
+// heuristic driven instruction selection) is that BOLT can use brstack
 // misprediction information and only convert poorly predictable branches.
 // Note that branch misprediction rate is different from branch bias.
 // For well-predictable branches, it might be beneficial to leave jcc+mov as is

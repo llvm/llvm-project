@@ -280,13 +280,13 @@ protected:
   float evaluateProfileData(BinaryFunction &BF,
                             const FuncBranchData &BranchData) const;
 
-  /// If our profile data comes from sample addresses instead of LBR entries,
-  /// collect sample count for all addresses in this function address space,
-  /// aggregating them per basic block and assigning an execution count to each
-  /// basic block based on the number of samples recorded at those addresses.
-  /// The last step is to infer edge counts based on BB execution count. Note
-  /// this is the opposite of the LBR way, where we infer BB execution count
-  /// based on edge counts.
+  /// If our profile data comes from sample addresses instead of brstack
+  /// entries, collect sample count for all addresses in this function address
+  /// space, aggregating them per basic block and assigning an execution count
+  /// to each basic block based on the number of samples recorded at those
+  /// addresses. The last step is to infer edge counts based on BB execution
+  /// count. Note this is the opposite of the brstack way, where we infer BB
+  /// execution count based on edge counts.
   void readBasicSampleData(BinaryFunction &BF);
 
   /// Convert function-level branch data into instruction annotations.
@@ -333,10 +333,10 @@ protected:
   /// offset d.
   std::error_code parse();
 
-  /// When no_lbr is the first line of the file, activate No LBR mode. In this
-  /// mode we read the addresses where samples were recorded directly instead of
-  /// LBR entries. The line format is almost the same, except for a missing <to>
-  /// triple and a missing mispredictions field:
+  /// When no_lbr is the first line of the file, activate non-brstack mode. In
+  /// this mode we read the addresses where samples were recorded directly
+  /// instead of brstack entries. The line format is almost the same, except for
+  /// a missing <to> triple and a missing mispredictions field:
   ///
   /// no_lbr
   /// <is symbol?> <closest elf symbol or DSO name> <relative address> <count>
@@ -424,7 +424,8 @@ protected:
   /// Dumps the entire data structures parsed. Used for debugging.
   void dump() const;
 
-  /// Return false only if we are running with profiling data that lacks LBR.
+  /// Return false only if we are running with profiling data that lacks
+  /// brstack.
   bool hasLBR() const { return !NoLBRMode; }
 
   /// Return true if the profiling data was collected in a bolted binary. This

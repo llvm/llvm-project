@@ -1,5 +1,5 @@
 ## Check that merge-fdata tool correctly reports error message
-## when trying to merge 'no-lbr' and 'lbr' profiles
+## when trying to merge profiles with and without brstack data.
 
 # REQUIRES: system-linux
 

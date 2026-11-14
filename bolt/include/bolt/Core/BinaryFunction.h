@@ -2493,7 +2493,7 @@ public:
   /// edge frequency for fall-throughs.
   ///
   /// Assumes the CFG has been built and edge frequency for taken branches
-  /// has been filled with LBR data.
+  /// has been filled with brstack data.
   void inferFallThroughCounts();
 
   /// Clear execution profile of the function.

@@ -1,4 +1,4 @@
-## Check if short and long form perf-script LBR entries are parsed correctly.
+## Check if short and long form perf-script brstack entries are parsed correctly.
 
 # REQUIRES: system-linux
 
