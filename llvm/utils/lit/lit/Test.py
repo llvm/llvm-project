@@ -271,6 +271,9 @@ class Test:
         # must be True for the test to run.
         self.requires = []
 
+        # Optional requirement matching, independent of available features.
+        self.filter_requires = None
+
         # A list of conditions that prevent execution of the test.
         # Each condition is a boolean expression of features. All of them
         # must be False for the test to run.
