@@ -6295,16 +6295,20 @@ static void printBoolAttr(OpAsmPrinter &printer, Operation *, BoolAttr attr) {
   printer.printAttribute(attr);
 }
 
-static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
-                                                 VectorType vecTy,
-                                                 MemRefType memRefTy) {
+bool vector::isValidLoadStoreMemRefLayout(VectorType vecTy,
+                                          MemRefType memRefTy) {
   // If rank==0 or size==1 it's equivalent to scalar load/store, so we don't
   // need any strides limitations.
   if (!vecTy.isScalable() &&
       (vecTy.getRank() == 0 || vecTy.getNumElements() == 1))
-    return success();
+    return true;
+  return memRefTy.isLastDimUnitStride();
+}
 
-  if (!memRefTy.isLastDimUnitStride())
+static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
+                                                 VectorType vecTy,
+                                                 MemRefType memRefTy) {
+  if (!isValidLoadStoreMemRefLayout(vecTy, memRefTy))
     return op->emitOpError("most minor memref dim must have unit stride");
   return success();
 }
