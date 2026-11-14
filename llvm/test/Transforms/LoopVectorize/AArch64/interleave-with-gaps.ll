@@ -290,16 +290,66 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-TF-NEXT:  [[ENTRY:.*:]]
 ; CHECK-TF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-TF:       [[VECTOR_PH]]:
-; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 8)
-; CHECK-TF-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
-; CHECK-TF-NEXT:    [[TMP1:%.*]] = mul <vscale x 8 x i64> [[TMP0]], splat (i64 2)
 ; CHECK-TF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF:       [[VECTOR_BODY]]:
-; CHECK-TF-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [8 x i8], ptr [[J]], <vscale x 8 x i64> [[TMP1]]
-; CHECK-TF-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 8 x i64> @llvm.masked.gather.nxv8i64.nxv8p0(<vscale x 8 x ptr> align 8 [[WIDE_GEP]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK_ENTRY]], <vscale x 8 x i64> poison)
-; CHECK-TF-NEXT:    [[TMP2:%.*]] = trunc <vscale x 8 x i64> [[WIDE_MASKED_GATHER]] to <vscale x 8 x i16>
-; CHECK-TF-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr [2 x i8], ptr [[K]], <vscale x 8 x i64> [[TMP1]]
-; CHECK-TF-NEXT:    call void @llvm.masked.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> [[TMP2]], <vscale x 8 x ptr> align 2 [[WIDE_GEP1]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK_ENTRY]])
+; CHECK-TF-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [8 x i8], ptr [[J]], <8 x i64> <i64 0, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14>
+; CHECK-TF-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 [[WIDE_GEP]], <8 x i1> splat (i1 true), <8 x i64> poison)
+; CHECK-TF-NEXT:    [[TMP0:%.*]] = trunc <8 x i64> [[WIDE_MASKED_GATHER]] to <8 x i16>
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK-TF:       [[PRED_STORE_IF]]:
+; CHECK-TF-NEXT:    [[TMP1:%.*]] = extractelement <8 x i16> [[TMP0]], i64 0
+; CHECK-TF-NEXT:    store i16 [[TMP1]], ptr [[K]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; CHECK-TF:       [[PRED_STORE_IF1]]:
+; CHECK-TF-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[K]], i64 2
+; CHECK-TF-NEXT:    [[TMP3:%.*]] = extractelement <8 x i16> [[TMP0]], i64 1
+; CHECK-TF-NEXT:    store i16 [[TMP3]], ptr [[TMP2]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE2]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; CHECK-TF:       [[PRED_STORE_IF3]]:
+; CHECK-TF-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[K]], i64 4
+; CHECK-TF-NEXT:    [[TMP5:%.*]] = extractelement <8 x i16> [[TMP0]], i64 2
+; CHECK-TF-NEXT:    store i16 [[TMP5]], ptr [[TMP4]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE4]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
+; CHECK-TF:       [[PRED_STORE_IF5]]:
+; CHECK-TF-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[K]], i64 6
+; CHECK-TF-NEXT:    [[TMP7:%.*]] = extractelement <8 x i16> [[TMP0]], i64 3
+; CHECK-TF-NEXT:    store i16 [[TMP7]], ptr [[TMP6]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE6]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
+; CHECK-TF:       [[PRED_STORE_IF7]]:
+; CHECK-TF-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[K]], i64 8
+; CHECK-TF-NEXT:    [[TMP9:%.*]] = extractelement <8 x i16> [[TMP0]], i64 4
+; CHECK-TF-NEXT:    store i16 [[TMP9]], ptr [[TMP8]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE8]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
+; CHECK-TF:       [[PRED_STORE_IF9]]:
+; CHECK-TF-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[K]], i64 10
+; CHECK-TF-NEXT:    [[TMP11:%.*]] = extractelement <8 x i16> [[TMP0]], i64 5
+; CHECK-TF-NEXT:    store i16 [[TMP11]], ptr [[TMP10]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE10]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
+; CHECK-TF:       [[PRED_STORE_IF11]]:
+; CHECK-TF-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[K]], i64 12
+; CHECK-TF-NEXT:    [[TMP13:%.*]] = extractelement <8 x i16> [[TMP0]], i64 6
+; CHECK-TF-NEXT:    store i16 [[TMP13]], ptr [[TMP12]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE12]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
+; CHECK-TF:       [[PRED_STORE_IF13]]:
+; CHECK-TF-NEXT:    [[TMP14:%.*]] = getelementptr i16, ptr [[K]], i64 14
+; CHECK-TF-NEXT:    [[TMP15:%.*]] = extractelement <8 x i16> [[TMP0]], i64 7
+; CHECK-TF-NEXT:    store i16 [[TMP15]], ptr [[TMP14]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE14]]:
 ; CHECK-TF-NEXT:    store i64 0, ptr [[A]], align 8
 ; CHECK-TF-NEXT:    store i64 0, ptr [[B]], align 8
 ; CHECK-TF-NEXT:    store i64 0, ptr [[C]], align 8
