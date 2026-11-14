@@ -19,6 +19,8 @@ emitc.class @foo {
 // CHECK-NEXT:    float fieldName1[1];
 // CHECK-NEXT:    const std::map<std::string, char*> reflectionMap = { { "another_feature", reinterpret_cast<char*>(&fieldName0) },
 // CHECK-SAME:                                                         { "some_feature", reinterpret_cast<char*>(&fieldName1) } };
+// CHECK-NEXT:    const std::map<std::string, size_t> reflectionSizeMap = { { "another_feature", sizeof(fieldName0) },
+// CHECK-SAME:                                                              { "some_feature", sizeof(fieldName1) } };
 // CHECK-NEXT:    char* getBufferForName(std::string [[ARG:v[0-9]+]]) {
 // CHECK-NEXT:      char* [[VAR:v[0-9]+]] = reflectionMap.at([[ARG]]);
 // CHECK-NEXT:      return [[VAR]];
@@ -48,6 +50,7 @@ emitc.class @foo_unsupported_attrs {
 // CHECK-NEXT:    float fieldName0[1];
 // CHECK-NEXT:    float fieldName1[1];
 // CHECK-NEXT:    const std::map<std::string, char*> reflectionMap = { { "another_feature", reinterpret_cast<char*>(&fieldName0) } };
+// CHECK-NEXT:    const std::map<std::string, size_t> reflectionSizeMap = { { "another_feature", sizeof(fieldName0) } };
 // CHECK-NEXT:    char* getBufferForName(std::string [[VAL_1:v[0-9]+]]) {
 // CHECK-NEXT:      char* [[VAL_2:v[0-9]+]] = reflectionMap.at([[VAL_1]]);
 // CHECK-NEXT:      return [[VAL_2]];
