@@ -842,9 +842,11 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
 
 bool SimplifyIndvar::strengthenBinaryOp(BinaryOperator *BO,
                                         Instruction *IVOperand) {
-  return (isa<OverflowingBinaryOperator>(BO) &&
-          strengthenOverflowingOperation(BO, IVOperand)) ||
-         (isa<ShlOperator>(BO) && strengthenRightShift(BO, IVOperand));
+  bool Changed = isa<OverflowingBinaryOperator>(BO) &&
+                 strengthenOverflowingOperation(BO, IVOperand);
+  if (isa<ShlOperator>(BO))
+    Changed |= strengthenRightShift(BO, IVOperand);
+  return Changed;
 }
 
 /// Annotate BO with nsw / nuw if it provably does not signed-overflow /

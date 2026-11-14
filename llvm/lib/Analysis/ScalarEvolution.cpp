@@ -2177,6 +2177,26 @@ CollectAddOperandsWithScales(SmallDenseMap<const SCEV *, APInt, 16> &M,
 bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
                                       const SCEV *LHS, const SCEV *RHS,
                                       const Instruction *CtxI) {
+  if (BinOp == Instruction::Shl) {
+    unsigned NoWrapKind = Signed ? OverflowingBinaryOperator::NoSignedWrap
+                                 : OverflowingBinaryOperator::NoUnsignedWrap;
+    ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
+        Instruction::Shl, getUnsignedRange(RHS), NoWrapKind);
+    if (NWRegion.contains(Signed ? getSignedRange(LHS) : getUnsignedRange(LHS)))
+      return true;
+
+    auto *RHSC = dyn_cast<SCEVConstant>(RHS);
+    if (!RHSC)
+      return false;
+    const APInt &ShiftAmt = RHSC->getAPInt();
+    unsigned BitWidth = ShiftAmt.getBitWidth();
+    // Cannot rewrite signed shl by BitWidth - 1 as mul, since
+    // 1 << (BitWidth - 1) is negative.
+    if (ShiftAmt.uge(BitWidth) || (Signed && ShiftAmt.uge(BitWidth - 1)))
+      return false;
+    BinOp = Instruction::Mul;
+    RHS = getConstant(APInt::getOneBitSet(BitWidth, ShiftAmt.getZExtValue()));
+  }
   auto Operation = [this, BinOp](SCEVUse L, SCEVUse R) -> const SCEV * {
     switch (BinOp) {
     default:
@@ -2265,23 +2285,6 @@ std::optional<SCEVFlags> ScalarEvolution::getStrengthenedNoWrapFlagsFromBinOp(
   const SCEV *LHS = getSCEV(OBO->getOperand(0));
   const SCEV *RHS = getSCEV(OBO->getOperand(1));
 
-  bool CanUseNSW = true;
-  const APInt *ShiftAmt;
-  // Treat `shl %a, C` as `mul %a, 1 << C`.
-  if (match(OBO, m_Shl(m_Value(), m_APInt(ShiftAmt)))) {
-    unsigned BitWidth = ShiftAmt->getBitWidth();
-    if (ShiftAmt->uge(BitWidth))
-      return std::nullopt;
-    // NSW only transfers if the shift amount is < BitWidth - 1, as INT_MIN * -1
-    // overflows.
-    CanUseNSW = ShiftAmt->ult(BitWidth - 1);
-    Opcode = Instruction::Mul;
-    RHS = getConstant(APInt::getOneBitSet(BitWidth, ShiftAmt->getZExtValue()));
-  } else if (Opcode != Instruction::Add && Opcode != Instruction::Sub &&
-             Opcode != Instruction::Mul) {
-    return std::nullopt;
-  }
-
   const Instruction *CtxI =
       Opts.scalar_evolution_use_context_for_no_wrap_flag_strenghening
           ? dyn_cast<Instruction>(OBO)
@@ -2292,7 +2295,7 @@ std::optional<SCEVFlags> ScalarEvolution::getStrengthenedNoWrapFlagsFromBinOp(
     Deduced = true;
   }
 
-  if (CanUseNSW && !OBO->hasNoSignedWrap() &&
+  if (!OBO->hasNoSignedWrap() &&
       willNotOverflow(Opcode, /* Signed */ true, LHS, RHS, CtxI)) {
     Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
     Deduced = true;
