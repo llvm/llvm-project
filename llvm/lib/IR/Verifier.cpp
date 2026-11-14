@@ -2342,79 +2342,83 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
           "Attribute '" + Attr.getAsString() + "' does not apply to parameters",
           V);
 
-  if (Attrs.hasAttribute(Attribute::ImmArg)) {
-    unsigned AttrCount =
-        Attrs.getNumAttributes() - Attrs.hasAttribute(Attribute::Range);
-    Check(AttrCount == 1,
+  // The remaining checks are for combinations of attributes.
+  if (Attrs.getNumAttributes() > 1) {
+    if (Attrs.hasAttribute(Attribute::ImmArg)) {
+      unsigned AttrCount =
+          Attrs.getNumAttributes() - Attrs.hasAttribute(Attribute::Range);
+      Check(
+          AttrCount == 1,
           "Attribute 'immarg' is incompatible with other attributes except the "
           "'range' attribute",
           V);
+    }
+
+    // Check for mutually incompatible attributes.  Only inreg is compatible
+    // with sret.
+    unsigned AttrCount = 0;
+    AttrCount += Attrs.hasAttribute(Attribute::ByVal);
+    AttrCount += Attrs.hasAttribute(Attribute::InAlloca);
+    AttrCount += Attrs.hasAttribute(Attribute::Preallocated);
+    AttrCount += Attrs.hasAttribute(Attribute::StructRet) ||
+                 Attrs.hasAttribute(Attribute::InReg);
+    AttrCount += Attrs.hasAttribute(Attribute::Nest);
+    AttrCount += Attrs.hasAttribute(Attribute::ByRef);
+    Check(AttrCount <= 1,
+          "Attributes 'byval', 'inalloca', 'preallocated', 'inreg', 'nest', "
+          "'byref', and 'sret' are incompatible!",
+          V);
+
+    Check(!(Attrs.hasAttribute(Attribute::InAlloca) &&
+            Attrs.hasAttribute(Attribute::ReadOnly)),
+          "Attributes "
+          "'inalloca and readonly' are incompatible!",
+          V);
+
+    Check(!(Attrs.hasAttribute(Attribute::StructRet) &&
+            Attrs.hasAttribute(Attribute::Returned)),
+          "Attributes "
+          "'sret and returned' are incompatible!",
+          V);
+
+    Check(!(Attrs.hasAttribute(Attribute::ZExt) &&
+            Attrs.hasAttribute(Attribute::SExt)),
+          "Attributes "
+          "'zeroext and signext' are incompatible!",
+          V);
+
+    Check(!(Attrs.hasAttribute(Attribute::ReadNone) &&
+            Attrs.hasAttribute(Attribute::ReadOnly)),
+          "Attributes "
+          "'readnone and readonly' are incompatible!",
+          V);
+
+    Check(!(Attrs.hasAttribute(Attribute::ReadNone) &&
+            Attrs.hasAttribute(Attribute::WriteOnly)),
+          "Attributes "
+          "'readnone and writeonly' are incompatible!",
+          V);
+
+    Check(!(Attrs.hasAttribute(Attribute::ReadOnly) &&
+            Attrs.hasAttribute(Attribute::WriteOnly)),
+          "Attributes "
+          "'readonly and writeonly' are incompatible!",
+          V);
+
+    Check(!(Attrs.hasAttribute(Attribute::NoInline) &&
+            Attrs.hasAttribute(Attribute::AlwaysInline)),
+          "Attributes "
+          "'noinline and alwaysinline' are incompatible!",
+          V);
+
+    Check(!(Attrs.hasAttribute(Attribute::Writable) &&
+            Attrs.hasAttribute(Attribute::ReadNone)),
+          "Attributes writable and readnone are incompatible!", V);
+
+    Check(!(Attrs.hasAttribute(Attribute::Writable) &&
+            Attrs.hasAttribute(Attribute::ReadOnly)),
+          "Attributes writable and readonly are incompatible!", V);
   }
-
-  // Check for mutually incompatible attributes.  Only inreg is compatible with
-  // sret.
-  unsigned AttrCount = 0;
-  AttrCount += Attrs.hasAttribute(Attribute::ByVal);
-  AttrCount += Attrs.hasAttribute(Attribute::InAlloca);
-  AttrCount += Attrs.hasAttribute(Attribute::Preallocated);
-  AttrCount += Attrs.hasAttribute(Attribute::StructRet) ||
-               Attrs.hasAttribute(Attribute::InReg);
-  AttrCount += Attrs.hasAttribute(Attribute::Nest);
-  AttrCount += Attrs.hasAttribute(Attribute::ByRef);
-  Check(AttrCount <= 1,
-        "Attributes 'byval', 'inalloca', 'preallocated', 'inreg', 'nest', "
-        "'byref', and 'sret' are incompatible!",
-        V);
-
-  Check(!(Attrs.hasAttribute(Attribute::InAlloca) &&
-          Attrs.hasAttribute(Attribute::ReadOnly)),
-        "Attributes "
-        "'inalloca and readonly' are incompatible!",
-        V);
-
-  Check(!(Attrs.hasAttribute(Attribute::StructRet) &&
-          Attrs.hasAttribute(Attribute::Returned)),
-        "Attributes "
-        "'sret and returned' are incompatible!",
-        V);
-
-  Check(!(Attrs.hasAttribute(Attribute::ZExt) &&
-          Attrs.hasAttribute(Attribute::SExt)),
-        "Attributes "
-        "'zeroext and signext' are incompatible!",
-        V);
-
-  Check(!(Attrs.hasAttribute(Attribute::ReadNone) &&
-          Attrs.hasAttribute(Attribute::ReadOnly)),
-        "Attributes "
-        "'readnone and readonly' are incompatible!",
-        V);
-
-  Check(!(Attrs.hasAttribute(Attribute::ReadNone) &&
-          Attrs.hasAttribute(Attribute::WriteOnly)),
-        "Attributes "
-        "'readnone and writeonly' are incompatible!",
-        V);
-
-  Check(!(Attrs.hasAttribute(Attribute::ReadOnly) &&
-          Attrs.hasAttribute(Attribute::WriteOnly)),
-        "Attributes "
-        "'readonly and writeonly' are incompatible!",
-        V);
-
-  Check(!(Attrs.hasAttribute(Attribute::NoInline) &&
-          Attrs.hasAttribute(Attribute::AlwaysInline)),
-        "Attributes "
-        "'noinline and alwaysinline' are incompatible!",
-        V);
-
-  Check(!(Attrs.hasAttribute(Attribute::Writable) &&
-          Attrs.hasAttribute(Attribute::ReadNone)),
-        "Attributes writable and readnone are incompatible!", V);
-
-  Check(!(Attrs.hasAttribute(Attribute::Writable) &&
-          Attrs.hasAttribute(Attribute::ReadOnly)),
-        "Attributes writable and readonly are incompatible!", V);
 
   AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty, Attrs);
   for (Attribute Attr : Attrs) {
