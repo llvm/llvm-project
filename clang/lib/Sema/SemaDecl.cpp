@@ -2475,6 +2475,14 @@ FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
 NamedDecl *Sema::LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
                                      Scope *S, bool ForRedeclaration,
                                      SourceLocation Loc) {
+  // Defer LibBuiltins with target- or header-dependent prototypes to
+  // ActOnFunctionDeclarator on redeclarations so unrelated user functions do
+  // not trigger -Wincompatible-library-redeclaration or linkage conflicts, and
+  // GNU C transparent_union parameters are not overwritten by merging.
+  if (ForRedeclaration && Context.BuiltinInfo.isPredefinedLibFunction(ID) &&
+      Context.BuiltinInfo.hasTargetDependentPrototype(ID))
+    return nullptr;
+
   LookupNecessaryTypesForBuiltin(S, ID);
 
   ASTContext::GetBuiltinTypeError Error;
@@ -11286,10 +11294,20 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
               LookupNecessaryTypesForBuiltin(S, BuiltinID);
               QualType BuiltinType = Context.GetBuiltinType(BuiltinID, Error);
 
-              if (!Error && !BuiltinType.isNull() &&
-                  Context.hasSameFunctionTypeIgnoringExceptionSpec(
-                      NewFD->getType(), BuiltinType))
-                NewFD->addAttr(BuiltinAttr::CreateImplicit(Context, BuiltinID));
+              if (!Error && !BuiltinType.isNull() && NewFD->hasPrototype()) {
+                BuiltinType = QualType(
+                    Context.adjustFunctionType(
+                        BuiltinType->castAs<FunctionType>(),
+                        NewFD->getType()->castAs<FunctionType>()->getExtInfo()),
+                    0);
+                if (getLangOpts().CPlusPlus
+                        ? Context.hasSameFunctionTypeIgnoringExceptionSpec(
+                              NewFD->getType(), BuiltinType)
+                        : Context.typesAreCompatible(NewFD->getType(),
+                                                     BuiltinType))
+                  NewFD->addAttr(
+                      BuiltinAttr::CreateImplicit(Context, BuiltinID));
+              }
             }
           }
         } else if (InStdNamespace && NewFD->isInStdNamespace() &&

@@ -188,6 +188,7 @@ class AtomicBuiltin : Builtin;
 class LibBuiltin<string header, string languages = "ALL_LANGUAGES"> : Builtin {
   string Header = header;
   string Languages = languages;
+  string WindowsPrototype;
   bit AddBuiltinPrefixedAlias = 0;
   bit OnlyBuiltinPrefixedAliasIsConstexpr = 0;
 }

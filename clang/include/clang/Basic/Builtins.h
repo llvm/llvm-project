@@ -380,6 +380,12 @@ public:
            strchr(getTypeString(ID), 'A') != nullptr;
   }
 
+  /// Return true if this builtin has a target- or header-dependent prototype
+  /// ('|' for WindowsPrototype, 'u' for struct tags, or 't' for typedefs).
+  bool hasTargetDependentPrototype(unsigned ID) const {
+    return strpbrk(getTypeString(ID), "|ut") != nullptr;
+  }
+
   /// If this is a library function that comes from a specific
   /// header, retrieve that header name.
   const char *getHeaderName(unsigned ID) const {
