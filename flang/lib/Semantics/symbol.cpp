@@ -10,6 +10,7 @@
 
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
@@ -1025,6 +1026,13 @@ bool SymbolOffsetCompare::operator()(
 bool SymbolOffsetCompare::operator()(
     const MutableSymbolRef &x, const MutableSymbolRef &y) const {
   return (*this)(SymbolRef{*x}, SymbolRef{*y});
+}
+
+bool UserReductionDetails::SupportsType(const DeclTypeSpec &type) const {
+  // We have to compare the actual type, not the pointer, as some
+  // types are not guaranteed to be the same object.
+  return llvm::any_of(typeList_,
+      [&](const DeclTypeSpec *t) { return omp::IsTypeCompatible(*t, type); });
 }
 
 } // namespace Fortran::semantics

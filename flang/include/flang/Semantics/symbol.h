@@ -861,32 +861,7 @@ public:
   void AddType(const DeclTypeSpec &type) { typeList_.push_back(&type); }
   const TypeVector &GetTypeList() const { return typeList_; }
 
-  bool SupportsType(const DeclTypeSpec &type) const {
-    // We have to compare the actual type, not the pointer, as some
-    // types are not guaranteed to be the same object.
-    for (auto t : typeList_) {
-      if (*t == type) {
-        return true;
-      }
-    }
-    // For derived and class-derived types, match on the type symbol pointer.
-    if (type.category() == DeclTypeSpec::TypeDerived ||
-        type.category() == DeclTypeSpec::ClassDerived) {
-      const auto &rhs = type.derivedTypeSpec();
-      const auto &rhsSym = rhs.typeSymbol();
-      for (auto t : typeList_) {
-        if (t->category() == DeclTypeSpec::TypeDerived ||
-            t->category() == DeclTypeSpec::ClassDerived) {
-          const auto &lhs = t->derivedTypeSpec();
-          const auto &lhsSym = lhs.typeSymbol();
-          if (&lhsSym == &rhsSym) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
+  bool SupportsType(const DeclTypeSpec &type) const;
 
   void AddDecl(const parser::OpenMPDeclarativeConstruct *decl) {
     declList_.emplace_back(decl);
