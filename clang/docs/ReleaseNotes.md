@@ -1562,6 +1562,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 %   - Moved checkers
 %   - Diagnostic changes
 
+#### New checkers and features
+
+- Added the ``cplusplus.DestroyedAsWrongType`` checker, which reports storage
+  reused by placement new for an object of a different type that is then
+  destroyed or deleted as the original type.
+
 #### Improvements
 
 - `unix.StdCLibraryFunctions` now ignores `restrict` qualifiers in C library

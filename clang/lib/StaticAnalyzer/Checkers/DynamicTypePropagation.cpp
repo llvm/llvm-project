@@ -278,6 +278,12 @@ void DynamicTypePropagation::checkPreCall(const CallEvent &Call,
     return;
   }
 
+  if (const auto *Ctor = dyn_cast<CXXInheritedConstructorCall>(&Call)) {
+    if (const MemRegion *Target = Ctor->getCXXThisVal().getAsRegion())
+      recordFixedType(Target, Ctor->getDecl(), C);
+    return;
+  }
+
   if (const CXXDestructorCall *Dtor = dyn_cast<CXXDestructorCall>(&Call)) {
     // C++11 [class.cdtor]p4 (see above)
     if (!Dtor->isBaseDestructor())
@@ -386,6 +392,26 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
       return;
     }
   }
+
+  if (const auto *Ctor = dyn_cast<CXXInheritedConstructorCall>(&Call)) {
+    const MemRegion *Target = Ctor->getCXXThisVal().getAsRegion();
+    const auto *Outer =
+        dyn_cast_if_present<CXXConstructorDecl>(C.getStackFrame()->getDecl());
+    if (Target && Outer)
+      recordFixedType(Target, Outer, C);
+    return;
+  }
+
+  if (const CXXDestructorCall *Dtor = dyn_cast<CXXDestructorCall>(&Call)) {
+    // After a base destructor, use the subclass's type again.
+    if (!Dtor->isBaseDestructor())
+      return;
+    const MemRegion *Target = Dtor->getCXXThisVal().getAsRegion();
+    const auto *Outer =
+        dyn_cast_if_present<CXXDestructorDecl>(C.getStackFrame()->getDecl());
+    if (Target && Outer)
+      recordFixedType(Target, Outer, C);
+  }
 }
 
 /// TODO: Handle explicit casts.
@@ -411,15 +437,26 @@ ExplodedNode *DynamicTypePropagation::dynamicTypePropagationOnCasts(
 
 void DynamicTypePropagation::checkPostStmt(const CXXNewExpr *NewE,
                                            CheckerContext &C) const {
-  if (NewE->isArray())
-    return;
+  ProgramStateRef State = C.getState();
+  const MemRegion *MR = getPlacementNewStorage(State, NewE, C.getStackFrame());
+  if (MR) {
+    State = removeDynamicTypeInfoWithin(State, MR);
+  } else {
+    // An operator new that is not inlined may have placed the object there.
+    for (const Expr *Arg : NewE->placement_arguments())
+      if (Arg->getType()->isVoidPointerType())
+        if (const MemRegion *Storage = C.getSVal(Arg).getAsRegion())
+          State = removeDynamicTypeInfoWithin(State, Storage);
+    MR = C.getSVal(NewE).getAsRegion();
+  }
 
   // We only track dynamic type info for regions.
-  const MemRegion *MR = C.getSVal(NewE).getAsRegion();
-  if (!MR)
+  if (NewE->isArray() || !MR) {
+    C.addTransition(State);
     return;
+  }
 
-  C.addTransition(setDynamicTypeInfo(C.getState(), MR, NewE->getType(),
+  C.addTransition(setDynamicTypeInfo(State, MR, NewE->getType(),
                                      /*CanBeSubClassed=*/false));
 }
 
