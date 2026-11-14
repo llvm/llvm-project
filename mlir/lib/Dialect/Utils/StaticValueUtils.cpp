@@ -91,10 +91,19 @@ void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
 }
 
 /// Given a value, try to extract a constant Attribute. If this fails, return
-/// the original value.
-OpFoldResult getAsOpFoldResult(Value val) {
+/// the original value. If `onlyIntegerConstant` is set, only integer constants
+/// are extracted. For other constants, the original value is returned.
+OpFoldResult getAsOpFoldResult(Value val, bool onlyIntegerConstant) {
   if (!val)
     return OpFoldResult();
+
+  if (onlyIntegerConstant) {
+    IntegerAttr intAttr;
+    if (matchPattern(val, m_Constant(&intAttr)))
+      return intAttr;
+    return val;
+  }
+
   Attribute attr;
   if (matchPattern(val, m_Constant(&attr)))
     return attr;
@@ -102,10 +111,14 @@ OpFoldResult getAsOpFoldResult(Value val) {
 }
 
 /// Given an array of values, try to extract a constant Attribute from each
-/// value. If this fails, return the original value.
-SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values) {
-  return llvm::map_to_vector(values,
-                             [](Value v) { return getAsOpFoldResult(v); });
+/// value. If this fails, return the original value. If `onlyIntegerConstant`
+/// is set, only integer constants are extracted. For other constants, the
+/// original value is returned.
+SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values,
+                                            bool onlyIntegerConstant) {
+  return llvm::map_to_vector(values, [onlyIntegerConstant](Value v) {
+    return getAsOpFoldResult(v, onlyIntegerConstant);
+  });
 }
 
 /// Convert `arrayAttr` to a vector of OpFoldResult.

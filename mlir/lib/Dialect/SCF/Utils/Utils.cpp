@@ -912,7 +912,8 @@ static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
                                        ArrayRef<Value> values) {
   assert(!values.empty() && "unexpected empty list");
   if (getType(values.front()).isIndex()) {
-    SmallVector<OpFoldResult> ofrs = getAsOpFoldResult(values);
+    SmallVector<OpFoldResult> ofrs =
+        getAsOpFoldResult(values, /*onlyIntegerConstant=*/true);
     OpFoldResult product = getProductOfIndexes(rewriter, loc, ofrs);
     return getValueOrCreateConstantIndexOp(rewriter, loc, product);
   }
