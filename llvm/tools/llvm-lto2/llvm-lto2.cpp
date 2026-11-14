@@ -216,10 +216,6 @@ static cl::opt<LTO::LTOKind> UnifiedLTOMode(
                           "Any LTO mode without Unified LTO")),
     cl::value_desc("mode"), cl::init(LTO::LTOK_Default));
 
-static cl::opt<bool>
-    EnableLoopInterchange("enable-loopinterchange", cl::init(true),
-                          cl::desc("Enable the LoopInterchange Pass"));
-
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding",
     cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"),
@@ -412,7 +408,6 @@ static int run(int argc, char **argv) {
   Conf.StatsFile = StatsFile;
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
-  Conf.PTO.LoopInterchange = EnableLoopInterchange;
 
   if (WholeProgramVisibilityEnabledInLTO.getNumOccurrences() > 0)
     Conf.HasWholeProgramVisibility = WholeProgramVisibilityEnabledInLTO;
