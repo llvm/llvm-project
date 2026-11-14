@@ -504,7 +504,11 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_check_features, OPT_no_check_features, true);
   ctx.arg.compressRelocations = args.hasArg(OPT_compress_relocations);
   ctx.arg.demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
+#ifdef NDEBUG
+  ctx.arg.disableVerify = true;
+#else
   ctx.arg.disableVerify = args.hasArg(OPT_disable_verify);
+#endif
   ctx.arg.emitRelocs = args.hasArg(OPT_emit_relocs);
   ctx.arg.entry = getEntry(args);
   ctx.arg.exportAll = args.hasArg(OPT_export_all);
