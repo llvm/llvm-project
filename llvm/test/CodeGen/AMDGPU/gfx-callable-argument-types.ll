@@ -1106,7 +1106,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX9-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX9-NEXT:    global_load_ushort v0, v[0:1], off glc
+; GFX9-NEXT:    global_load_sshort v0, v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s35, external_void_func_i16_signext@abs32@hi
 ; GFX9-NEXT:    s_mov_b32 s34, external_void_func_i16_signext@abs32@lo
@@ -1135,7 +1135,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GFX10-NEXT:    s_addk_i32 s32, 0x200
 ; GFX10-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX10-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX10-NEXT:    global_load_ushort v0, v[0:1], off glc dlc
+; GFX10-NEXT:    global_load_sshort v0, v[0:1], off glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_mov_b32 s35, external_void_func_i16_signext@abs32@hi
 ; GFX10-NEXT:    s_mov_b32 s34, external_void_func_i16_signext@abs32@lo
@@ -1193,7 +1193,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GFX11-FAKE16-NEXT:    s_add_i32 s32, s32, 16
 ; GFX11-FAKE16-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-FAKE16-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX11-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off glc dlc
+; GFX11-FAKE16-NEXT:    global_load_i16 v0, v[0:1], off glc dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s1, external_void_func_i16_signext@abs32@hi
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, external_void_func_i16_signext@abs32@lo
@@ -1223,7 +1223,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    s_add_i32 s32, s32, 16
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX10-SCRATCH-NEXT:    global_load_ushort v0, v[0:1], off glc dlc
+; GFX10-SCRATCH-NEXT:    global_load_sshort v0, v[0:1], off glc dlc
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s1, external_void_func_i16_signext@abs32@hi
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, external_void_func_i16_signext@abs32@lo
