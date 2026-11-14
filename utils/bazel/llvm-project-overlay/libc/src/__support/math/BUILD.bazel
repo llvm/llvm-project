@@ -3373,8 +3373,8 @@ libc_support_library(
     name = "dmulf128",
     hdrs = ["dmulf128.h"],
     deps = [
-        "//libc:llvm_libc_types_float128",
         "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
         "//libc/src/__support/macros:config",
     ],
 )
