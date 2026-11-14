@@ -4895,6 +4895,65 @@ Instruction *InstCombinerImpl::visitBitInsertInst(BitInsertInst &BI) {
   return nullptr;
 }
 
+/// bitextract ty, (bitcast x to bM), off
+///   -> extractelement (bitcast x to <M/W x ty>), off/W
+/// where ty is W bits wide, if x is a vector and W divides M and off.
+static Instruction *foldBitExtractBitCast(BitExtractInst &BE,
+                                          InstCombinerImpl &IC) {
+  Value *X;
+  uint64_t Off;
+  if (!match(&BE, m_BitExtract(m_BitCast(m_Value(X)), m_ConstantInt(Off))))
+    return nullptr;
+
+  // TODO: Fold vector bitextracts.
+  if (BE.getType()->isVectorTy())
+    return nullptr;
+
+  Type *SrcTy = X->getType();
+  if (!isa<FixedVectorType>(SrcTy))
+    return nullptr;
+
+  // If the only user is a bitcast to a vector, use its element type, so that
+  // the bitcast folds away.
+  Type *EltTy = BE.getType();
+  if (BE.hasOneUse() && isa<BitCastInst>(BE.user_back()) &&
+      BE.user_back()->getType()->isVectorTy())
+    EltTy = BE.user_back()->getType()->getScalarType();
+
+  Type *SrcEltTy = SrcTy->getScalarType();
+  // Pointers can only be bitcast to or from bytes.
+  if (SrcEltTy->isPointerTy() != EltTy->isPointerTy() &&
+      !SrcEltTy->isByteTy() && !EltTy->isByteTy())
+    return nullptr;
+
+  // Pointers cannot be bitcast to other address spaces.
+  if (SrcEltTy->isPointerTy() && EltTy->isPointerTy() && SrcEltTy != EltTy)
+    return nullptr;
+
+  const DataLayout &DL = IC.getDataLayout();
+  uint64_t SrcBits = DL.getTypeSizeInBits(SrcTy);
+  uint64_t RangeBits = DL.getTypeSizeInBits(BE.getType());
+  uint64_t EltBits = DL.getTypeSizeInBits(EltTy);
+  if (SrcBits % EltBits != 0 || Off % EltBits != 0)
+    return nullptr;
+
+  assert(Off + RangeBits <= SrcBits &&
+         "Expected out of range offset to simplify to poison");
+  uint64_t NumElts = SrcBits / EltBits;
+  uint64_t NumRangeElts = RangeBits / EltBits;
+  uint64_t First = Off / EltBits;
+  if (DL.isBigEndian())
+    First = NumElts - NumRangeElts - First;
+  auto *VecTy = FixedVectorType::get(EltTy, NumElts);
+  Value *Vec = IC.Builder.CreateBitCast(X, VecTy);
+  if (EltTy != BE.getType())
+    return new BitCastInst(
+        IC.Builder.CreateShuffleVector(
+            Vec, createSequentialMask(First, NumRangeElts, 0)),
+        BE.getType());
+  return ExtractElementInst::Create(Vec, IC.Builder.getInt64(First));
+}
+
 Instruction *InstCombinerImpl::visitBitExtractInst(BitExtractInst &BE) {
   Value *Src = BE.getOperand(0);
   Value *Offset = BE.getOperand(1);
@@ -4906,6 +4965,9 @@ Instruction *InstCombinerImpl::visitBitExtractInst(BitExtractInst &BE) {
   if (match(Offset, m_Zero()) && DL.getTypeSizeInBits(BE.getType()) ==
                                      DL.getTypeSizeInBits(Src->getType()))
     return new BitCastInst(Src, BE.getType());
+
+  if (Instruction *I = foldBitExtractBitCast(BE, *this))
+    return I;
 
   return nullptr;
 }
