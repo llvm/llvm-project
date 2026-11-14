@@ -5398,3 +5398,29 @@ define i8 @neg_add_or(i8 %x) {
   %ret = add i8 %or, %x
   ret i8 %ret
 }
+
+; The unsigned range of %s is [1, 254), which proves the add does not wrap
+; unsigned.
+define i8 @add_select_of_ranges_nuw(i1 %c, i8 range(i8 1, 10) %a, i8 range(i8 -10, -2) %b) {
+; CHECK-LABEL: @add_select_of_ranges_nuw(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[S]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  %r = add i8 %s, 2
+  ret i8 %r
+}
+
+; The signed range of %s is [-100, 100), which proves the add does not wrap
+; signed.
+define i8 @add_select_of_ranges_nsw(i1 %c, i8 range(i8 -100, -90) %a, i8 range(i8 90, 100) %b) {
+; CHECK-LABEL: @add_select_of_ranges_nsw(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add nuw i8 [[S]], 27
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  %r = add i8 %s, 27
+  ret i8 %r
+}
