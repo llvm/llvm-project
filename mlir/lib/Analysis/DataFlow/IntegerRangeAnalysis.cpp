@@ -15,6 +15,8 @@
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/Dialect/Arith/IR/ArithAttributes.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -81,9 +83,122 @@ ChangeResult IntegerValueRangeLattice::join(const AbstractSparseLattice &rhs) {
   return changed;
 }
 
+/// Return a range bounding the values in `lhs` that satisfy `pred` wrt. to the
+/// constant `rhs`. Return std::nullopt if a contradiction is detected. The
+/// result may include values excluded by `ne` because a range cannot represent
+/// arbitrary holes.
+/// The operands must have the same bitwidth.
+static std::optional<ConstantIntRanges>
+refineWithComparison(arith::CmpIPredicate pred, const ConstantIntRanges &lhs,
+                     const APInt &rhs) {
+  assert(rhs.getBitWidth() != 0 &&
+         lhs.umin().getBitWidth() == rhs.getBitWidth() &&
+         "expected matching, non-zero bitwidths");
+  APInt umin = lhs.umin(), umax = lhs.umax();
+  APInt smin = lhs.smin(), smax = lhs.smax();
+  if (umin.ugt(umax) || smin.sgt(smax))
+    return std::nullopt;
+
+  auto maxU = [](const APInt &a, const APInt &b) { return a.ugt(b) ? a : b; };
+  auto minU = [](const APInt &a, const APInt &b) { return a.ult(b) ? a : b; };
+  auto maxS = [](const APInt &a, const APInt &b) { return a.sgt(b) ? a : b; };
+  auto minS = [](const APInt &a, const APInt &b) { return a.slt(b) ? a : b; };
+
+  switch (pred) {
+  case arith::CmpIPredicate::eq:
+    if (rhs.ult(umin) || rhs.ugt(umax) || rhs.slt(smin) || rhs.sgt(smax))
+      return std::nullopt;
+    return ConstantIntRanges::constant(rhs);
+  case arith::CmpIPredicate::ne:
+    if ((umin == rhs && umax == rhs) || (smin == rhs && smax == rhs))
+      return std::nullopt;
+    // Excluding an endpoint can tighten either interpretation.
+    if (umin == rhs)
+      ++umin;
+    if (umax == rhs)
+      --umax;
+    if (smin == rhs)
+      ++smin;
+    if (smax == rhs)
+      --smax;
+    break;
+  case arith::CmpIPredicate::slt:
+    if (rhs.isMinSignedValue())
+      return std::nullopt;
+    smax = minS(smax, rhs - 1);
+    break;
+  case arith::CmpIPredicate::sle:
+    smax = minS(smax, rhs);
+    break;
+  case arith::CmpIPredicate::sgt:
+    if (rhs.isMaxSignedValue())
+      return std::nullopt;
+    smin = maxS(smin, rhs + 1);
+    break;
+  case arith::CmpIPredicate::sge:
+    smin = maxS(smin, rhs);
+    break;
+  case arith::CmpIPredicate::ult:
+    if (rhs.isZero())
+      return std::nullopt;
+    umax = minU(umax, rhs - 1);
+    break;
+  case arith::CmpIPredicate::ule:
+    umax = minU(umax, rhs);
+    break;
+  case arith::CmpIPredicate::ugt:
+    if (rhs.isAllOnes())
+      return std::nullopt;
+    umin = maxU(umin, rhs + 1);
+    break;
+  case arith::CmpIPredicate::uge:
+    umin = maxU(umin, rhs);
+    break;
+  }
+
+  if (umin.ugt(umax) || smin.sgt(smax))
+    return std::nullopt;
+
+  // Derive bounds for the other interpretation and intersect the two ranges.
+  ConstantIntRanges unsignedRange = ConstantIntRanges::fromUnsigned(umin, umax);
+  ConstantIntRanges signedRange = ConstantIntRanges::fromSigned(smin, smax);
+  ConstantIntRanges result = unsignedRange.intersection(signedRange);
+  if (result.umin().ugt(result.umax()) || result.smin().sgt(result.smax()))
+    return std::nullopt;
+  return result;
+}
+
 LogicalResult IntegerRangeAnalysis::visitOperation(
     Operation *op, ArrayRef<const IntegerValueRangeLattice *> operands,
     ArrayRef<IntegerValueRangeLattice *> results) {
+  if (auto assume = dyn_cast<ub::AssumeOp>(op)) {
+    const IntegerValueRange &inputRange = operands.front()->getValue();
+    if (inputRange.isUninitialized())
+      return success();
+
+    auto predicate = dyn_cast<arith::AssumeCmpIAttr>(assume.getPredicate());
+    if (!predicate) {
+      // Even without understanding the predicate, a non-poison result equals
+      // the predicated value and therefore preserves its range.
+      propagateIfChanged(results.front(), results.front()->join(inputRange));
+      return success();
+    }
+
+    std::optional<ConstantIntRanges> range = refineWithComparison(
+        predicate.getPredicate(), inputRange.getValue(),
+        predicate.getRhs().getValue());
+    // Contradictory assumptions produce poison, not unreachable control flow.
+    // The lattice cannot represent a poison-only value. Use a conservative
+    // range instead of publishing inverted bounds or an uninitialized
+    // state. Only the result is refined, never the predicated value or other
+    // operands.
+    IntegerValueRange inferred =
+        range ? IntegerValueRange(*range)
+              : IntegerValueRange::getMaxRange(assume.getResult());
+    propagateIfChanged(results.front(), results.front()->join(inferred));
+    return success();
+  }
+
   auto inferrable = dyn_cast<InferIntRangeInterface>(op);
   if (!inferrable) {
     setAllToEntryStates(results);

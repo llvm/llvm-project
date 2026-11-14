@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_ARITH_IR_ARITHATTRIBUTES_H
 
 #include "mlir/Dialect/Arith/IR/ArithDialect.h"
+#include "mlir/Dialect/UB/IR/UBOpsInterfaces.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/StringExtras.h"

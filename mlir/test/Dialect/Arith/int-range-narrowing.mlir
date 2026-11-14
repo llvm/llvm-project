@@ -50,19 +50,24 @@ func.func @test_addi_vec() -> vector<4xindex> {
   return %2 : vector<4xindex>
 }
 
-// CHECK-LABEL: func @test_addi_i64
-//       CHECK:  %[[A:.*]] = test.with_bounds <umin = 4 : i64, umax = 5 : i64, smin = 4 : i64, smax = 5 : i64> : i64
-//       CHECK:  %[[B:.*]] = test.with_bounds <umin = 6 : i64, umax = 7 : i64, smin = 6 : i64, smax = 7 : i64> : i64
-//       CHECK:  %[[A_CASTED:.*]] = arith.trunci %[[A]] : i64 to i8
-//       CHECK:  %[[B_CASTED:.*]] = arith.trunci %[[B]] : i64 to i8
-//       CHECK:  %[[RES:.*]] = arith.addi %[[A_CASTED]], %[[B_CASTED]] : i8
-//       CHECK:  %[[RES_CASTED:.*]] = arith.extui %[[RES]] : i8 to i64
-//       CHECK:  return %[[RES_CASTED]] : i64
-func.func @test_addi_i64() -> i64 {
-  %0 = test.with_bounds < umin = 4 : i64, umax = 5 : i64, smin = 4 : i64, smax = 5 : i64 > : i64
-  %1 = test.with_bounds < umin = 6 : i64, umax = 7 : i64, smin = 6 : i64, smax = 7 : i64 > : i64
-  %2 = arith.addi %0, %1 : i64
-  return %2 : i64
+// CHECK-LABEL: func.func @test_addi_i64(
+//  CHECK-SAME: %[[INPUT_A:[^:]+]]: i64, %[[INPUT_B:[^:]+]]: i64) -> i64 {
+//  CHECK-NEXT:   %[[A_LOWER:.*]] = ub.assume %[[INPUT_A]], #arith.assume_cmpi<uge, 4 : i64>() : i64
+//  CHECK-NEXT:   %[[A:.*]] = ub.assume %[[A_LOWER]], #arith.assume_cmpi<ule, 5 : i64>() : i64
+//  CHECK-NEXT:   %[[B_LOWER:.*]] = ub.assume %[[INPUT_B]], #arith.assume_cmpi<uge, 6 : i64>() : i64
+//  CHECK-NEXT:   %[[B:.*]] = ub.assume %[[B_LOWER]], #arith.assume_cmpi<ule, 7 : i64>() : i64
+//  CHECK-NEXT:   %[[A_CASTED:.*]] = arith.trunci %[[A]] : i64 to i8
+//  CHECK-NEXT:   %[[B_CASTED:.*]] = arith.trunci %[[B]] : i64 to i8
+//  CHECK-NEXT:   %[[SUM:.*]] = arith.addi %[[A_CASTED]], %[[B_CASTED]] : i8
+//  CHECK-NEXT:   %[[RESULT:.*]] = arith.extui %[[SUM]] : i8 to i64
+//  CHECK-NEXT:   return %[[RESULT]] : i64
+func.func @test_addi_i64(%input_a: i64, %input_b: i64) -> i64 {
+  %a_lower = ub.assume %input_a, #arith.assume_cmpi<uge, 4 : i64>() : i64
+  %a = ub.assume %a_lower, #arith.assume_cmpi<ule, 5 : i64>() : i64
+  %b_lower = ub.assume %input_b, #arith.assume_cmpi<uge, 6 : i64>() : i64
+  %b = ub.assume %b_lower, #arith.assume_cmpi<ule, 7 : i64>() : i64
+  %sum = arith.addi %a, %b : i64
+  return %sum : i64
 }
 
 // CHECK-LABEL: func @test_cmpi

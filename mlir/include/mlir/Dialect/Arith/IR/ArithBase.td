@@ -9,6 +9,7 @@
 #ifndef ARITH_BASE
 #define ARITH_BASE
 
+include "mlir/Dialect/UB/IR/UBOpsInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
@@ -83,6 +84,25 @@ def Arith_CmpIPredicateAttr : I64EnumAttr<
       I64EnumAttrCase<"uge", 9>,
     ]> {
   let cppNamespace = "::mlir::arith";
+}
+
+def Arith_AssumeCmpIAttr : AttrDef<Arith_Dialect, "AssumeCmpI", [
+    DeclareAttrInterfaceMethods<AssumePredicateAttrInterface, ["evaluate"]>]> {
+  let mnemonic = "assume_cmpi";
+  let summary = "Integer comparison predicate for ub.assume";
+  let description = [{
+    Bounds the range of the predicated value by `rhs`. The predicated value and
+    `rhs` must have the same scalar, signless integer type.
+
+    ```mlir
+    %positive = ub.assume %x, #arith.assume_cmpi<sgt, 0 : i32>() : i32
+    %bounded = ub.assume %positive, #arith.assume_cmpi<ult, 100 : i32>() : i32
+    ```
+  }];
+  let parameters = (ins EnumParameter<Arith_CmpIPredicateAttr>:$predicate,
+                        "::mlir::IntegerAttr":$rhs);
+  let assemblyFormat = "`<` $predicate `,` $rhs `>`";
+  let genVerifyDecl = 1;
 }
 
 def ATOMIC_RMW_KIND_ADDF     : I64EnumAttrCase<"addf", 0>;
