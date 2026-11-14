@@ -495,17 +495,20 @@ static LinearExpression GetLinearExpression(
       case Instruction::Add: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
-        E.Offset += RHS;
+        // Folding the constants can overflow even if each add is nsw.
+        bool Overflow;
+        E.Offset = E.Offset.sadd_ov(RHS, Overflow);
         E.IsNUW &= NUW;
-        E.IsNSW &= NSW;
+        E.IsNSW &= NSW && !Overflow;
         break;
       }
       case Instruction::Sub: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
-        E.Offset -= RHS;
+        bool Overflow;
+        E.Offset = E.Offset.ssub_ov(RHS, Overflow);
         E.IsNUW = false; // sub nuw x, y is not add nuw x, -y.
-        E.IsNSW &= NSW;
+        E.IsNSW &= NSW && !Overflow;
         break;
       }
       case Instruction::Mul:
