@@ -1,0 +1,224 @@
+! RUN: bbc -fcuda -emit-hlfir %s -o - | FileCheck %s
+
+! Rank the passed object separately, ahead of the effective argument list,
+! regardless of its position in the specific's full dummy argument list.
+module pass_ranking
+  type :: t
+  contains
+    procedure :: device_first, managed_first
+    procedure, pass(this) :: device_last, managed_last
+    procedure, pass(this) :: managed_last_device, managed_last_unified
+    procedure, nopass :: device_argument, managed_argument
+    procedure :: elemental_pass
+    procedure, nopass :: array_nopass
+    generic :: first => device_first, managed_first
+    generic :: first_reversed => managed_first, device_first
+    generic :: last => device_last, managed_last
+    generic :: last_reversed => managed_last, device_last
+    generic :: tied_objects => managed_last_device, managed_last_unified
+    generic :: no_object => device_argument, managed_argument
+    generic :: no_object_reversed => managed_argument, device_argument
+    generic :: elemental_fallback => elemental_pass, array_nopass
+    generic :: elemental_fallback_reversed => array_nopass, elemental_pass
+  end type
+contains
+  subroutine device_first(this, x)
+    class(t), device :: this
+    integer, managed :: x
+  end subroutine
+  subroutine managed_first(this, x)
+    class(t), managed :: this
+    integer, device :: x
+  end subroutine
+  subroutine device_last(x, this, omitted)
+    integer, managed :: x
+    class(t), device :: this
+    real, optional :: omitted
+  end subroutine
+  subroutine managed_last(x, this)
+    integer, device :: x
+    class(t), managed :: this
+  end subroutine
+  subroutine managed_last_device(x, this)
+    integer, device :: x
+    class(t), managed :: this
+  end subroutine
+  subroutine managed_last_unified(x, this, omitted)
+    integer, unified :: x
+    class(t), managed :: this
+    real, optional :: omitted
+  end subroutine
+  subroutine device_argument(x)
+    integer, device :: x
+  end subroutine
+  subroutine managed_argument(x)
+    integer, managed :: x
+  end subroutine
+  pure elemental subroutine elemental_pass(this, x)
+    class(t), managed, intent(in) :: this
+    integer, device, intent(in) :: x
+  end subroutine
+  subroutine array_nopass(x)
+    integer, managed :: x(:)
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMpass_rankingPcaller(
+  subroutine caller(obj, x)
+    type(t), managed :: obj
+    integer, managed :: x
+    integer, managed :: y(2)
+    ! A better object match wins over a better explicit argument match.
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_first(
+    call obj%first(x)
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_first(
+    call obj%first_reversed(x=x)
+    ! Nonfirst PASS, omitted optionals, and keywords use the same ranking.
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_last(
+    call obj%last(x)
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_last(
+    call obj%last_reversed(x=x)
+    ! Equal object scores are broken by the effective argument distances.
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_last_unified(
+    call obj%tied_objects(x)
+    ! With NOPASS, only explicit arguments take part in the ranking.
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_argument(
+    call obj%no_object(x)
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_argument(
+    call obj%no_object_reversed(x=x)
+    ! Apply the non-elemental preference before checking for a mixture of
+    ! PASS and NOPASS. The elemental PASS candidate is only a fallback here.
+    ! CHECK: fir.call @_QMpass_rankingParray_nopass(
+    call obj%elemental_fallback(y)
+    ! CHECK: fir.call @_QMpass_rankingParray_nopass(
+    call obj%elemental_fallback_reversed(x=y)
+  end subroutine
+end module
+
+! A type-bound operator ranks its passed operand first, as a type-bound call does.
+module operator_ranking
+  type :: t
+  contains
+    procedure, pass(this) :: device_obj, managed_obj
+    generic :: choose => device_obj, managed_obj
+    generic :: operator(.choose.) => device_obj, managed_obj
+  end type
+contains
+  integer function device_obj(x, this)
+    integer, managed, intent(in) :: x
+    class(t), device, intent(in) :: this
+    device_obj = 1
+  end function
+  integer function managed_obj(x, this)
+    integer, device, intent(in) :: x
+    class(t), managed, intent(in) :: this
+    managed_obj = 2
+  end function
+
+  ! CHECK-LABEL: func.func @_QMoperator_rankingPcaller(
+  subroutine caller(obj, x, r)
+    type(t), managed :: obj
+    integer, managed :: x
+    integer :: r
+    ! CHECK: fir.call @_QMoperator_rankingPmanaged_obj(
+    r = obj%choose(x)
+    ! CHECK: fir.call @_QMoperator_rankingPmanaged_obj(
+    r = x .choose. obj
+  end subroutine
+end module
+
+! Candidates are ranked together: a tie between earlier specifics does not hide
+! a better later one, and the result does not depend on declaration order.
+module tie_then_better
+  interface first_tie
+    module procedure int_device, real_device, int_managed
+  end interface
+  interface last_tie
+    module procedure int_managed, int_device, real_device
+  end interface
+  interface fallback
+    module procedure device_array, elemental_managed, managed_array
+  end interface
+  type :: u
+  contains
+    procedure :: object_first
+    procedure, pass(this) :: object_last
+    generic :: mixed => object_first, object_last
+    generic :: mixed_reversed => object_last, object_first
+  end type
+contains
+  subroutine int_device(p, x)
+    integer, pointer, intent(in) :: p
+    integer, device :: x
+  end subroutine
+  subroutine real_device(p, x)
+    real, pointer, intent(in) :: p
+    integer, device :: x
+  end subroutine
+  subroutine int_managed(p, x)
+    integer, pointer, intent(in) :: p
+    integer, managed :: x
+  end subroutine
+  subroutine device_array(x)
+    integer, device :: x(:)
+  end subroutine
+  pure elemental subroutine elemental_managed(x)
+    integer, managed, intent(in) :: x
+  end subroutine
+  subroutine managed_array(x)
+    integer, managed :: x(:)
+  end subroutine
+  subroutine object_first(this, x)
+    class(u), device :: this
+    integer, managed :: x
+  end subroutine
+  subroutine object_last(x, this)
+    integer, device :: x
+    class(u), managed :: this
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMtie_then_betterPcaller(
+  subroutine caller(obj, x)
+    type(u), managed :: obj
+    integer, managed :: x
+    integer, managed :: y(2)
+    ! CHECK: fir.call @_QMtie_then_betterPint_managed(
+    call first_tie(null(), x)
+    ! CHECK: fir.call @_QMtie_then_betterPint_managed(
+    call last_tie(null(), x)
+    ! Apply the non-elemental preference before ranking the remaining candidates.
+    ! CHECK: fir.call @_QMtie_then_betterPmanaged_array(
+    call fallback(y)
+    ! A PASS object in different positions is compared with its own score.
+    ! CHECK: fir.call @_QMtie_then_betterPobject_last(
+    call obj%mixed(x)
+    ! CHECK: fir.call @_QMtie_then_betterPobject_last(
+    call obj%mixed_reversed(x)
+  end subroutine
+end module
+
+! A defined assignment is not ranked as a type-bound call: its right-hand side
+! is passed in parentheses, so it is not ranked as the passed object.
+module assignment_ranking
+  type :: t
+  contains
+    procedure, pass(rhs) :: from_managed_lhs, from_managed_rhs
+    generic :: assignment(=) => from_managed_lhs, from_managed_rhs
+  end type
+contains
+  subroutine from_managed_lhs(lhs, rhs)
+    integer, managed, intent(out) :: lhs
+    class(t), intent(in) :: rhs
+  end subroutine
+  subroutine from_managed_rhs(lhs, rhs)
+    integer, device, intent(out) :: lhs
+    class(t), managed, intent(in) :: rhs
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMassignment_rankingPcaller(
+  subroutine caller(obj, x)
+    type(t), managed :: obj
+    integer, managed :: x
+    ! CHECK: fir.call @_QMassignment_rankingPfrom_managed_lhs(
+    x = obj
+  end subroutine
+end module
