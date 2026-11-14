@@ -118,7 +118,7 @@ entry:
 ; Verify that a function returning an array-typed call result compiles without
 ; crash. No standard intrinsic returns an array type, so this uses a regular
 ; declared function. The array path in reconstructAggregateReturns is not
-; triggered here (regular calls are not rewritten by SPIRVPrepareFunctions);
+; triggered here (regular calls are not rewritten by SPIRVRemoveAggregateTypes);
 ; the test ensures no crash and correct OpReturnValue emission for this case.
 ; CHECK: OpFunction
 ; CHECK: %[[#ResA:]] = OpFunctionCall %[[#Arr2Int]]

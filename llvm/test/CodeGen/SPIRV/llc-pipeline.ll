@@ -46,6 +46,7 @@
 ; SPIRV-O0-NEXT:      Natural Loop Information
 ; SPIRV-O0-NEXT:      Canonicalize natural loops
 ; SPIRV-O0-NEXT:      Strip convergence intrinsics and operand bundles
+; SPIRV-O0-NEXT:    SPIRV remove aggregate types
 ; SPIRV-O0-NEXT:    SPIRV Legalize Resource Binding
 ; SPIRV-O0-NEXT:    SPIRV Legalize Zero-Size Arrays
 ; SPIRV-O0-NEXT:    SPIRV CBuffer Access
@@ -148,6 +149,7 @@
 ; SPIRV-Opt-NEXT:      Natural Loop Information
 ; SPIRV-Opt-NEXT:      Canonicalize natural loops
 ; SPIRV-Opt-NEXT:      Strip convergence intrinsics and operand bundles
+; SPIRV-Opt-NEXT:    SPIRV remove aggregate types
 ; SPIRV-Opt-NEXT:    SPIRV Legalize Resource Binding
 ; SPIRV-Opt-NEXT:    SPIRV Legalize Zero-Size Arrays
 ; SPIRV-Opt-NEXT:    SPIRV CBuffer Access

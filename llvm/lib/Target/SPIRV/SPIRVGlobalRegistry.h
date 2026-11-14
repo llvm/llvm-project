@@ -53,7 +53,7 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   DenseMap<const Function *, SmallPtrSet<MachineInstr *, 8>> ForwardCalls;
   // map a Function to its original return type before the clone function was
   // created during substitution of aggregate arguments
-  // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`)
+  // (see `SPIRVRemoveAggregateTypes`)
   DenseMap<Value *, Type *> MutatedAggRet;
   // map an instruction to its value's attributes (type, name)
   DenseMap<MachineInstr *, std::pair<Type *, std::string>> ValueAttrs;
@@ -176,7 +176,7 @@ public:
   }
 
   // A registry of mutated values
-  // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`):
+  // (see `SPIRVRemoveAggregateTypes`):
   // - Add a record.
   void addMutated(Value *Val, Type *Ty) { MutatedAggRet[Val] = Ty; }
   // - Find a record.

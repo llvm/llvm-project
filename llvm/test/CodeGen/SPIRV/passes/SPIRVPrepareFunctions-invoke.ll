@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=spirv-prepare-functions -mtriple=spirv64-unknown-unknown < %s | FileCheck %s
+; RUN: opt -S -passes=spirv-remove-aggregate-types -mtriple=spirv64-unknown-unknown < %s | FileCheck %s
 
 declare i32 @__gxx_personality_v0(...)
 

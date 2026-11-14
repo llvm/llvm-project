@@ -2582,7 +2582,7 @@ SPIRVEmitIntrinsicsImpl::visitExtractValueInst(ExtractValueInst &I) {
   }
   replaceAllUsesWithAndErase(B, &I, NewI);
   // If the aggregate result feeds a return or callsite whose type was rewritten
-  // to an i32 value-id by SPIRVPrepareFunctions, mutate it to match.
+  // to an i32 value-id by SPIRVRemoveAggregateTypes, mutate it to match.
   if (NewI->getType()->isAggregateType()) {
     for (const Use &U : NewI->uses()) {
       User *Usr = U.getUser();
@@ -2919,7 +2919,7 @@ Value *SPIRVEmitIntrinsicsImpl::buildSpvUndefComposite(Type *AggrTy,
 
 // If a function directly returns an aggregate-typed call result,
 // the ReturnInst carries an aggregate while the function signature
-// was rewritten to i32 by SPIRVPrepareFunctions. Rebuild the return value
+// was rewritten to i32 by SPIRVRemoveAggregateTypes. Rebuild the return value
 // via extractvalue/insertvalue so the regular spv_extractv/spv_insertv
 // lowering produces a valid OpReturnValue.
 void SPIRVEmitIntrinsicsImpl::reconstructAggregateReturns(Function &Func,
