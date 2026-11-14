@@ -74,9 +74,25 @@ struct InputFileInfo {
   bool TopLevel;
   bool ModuleMap;
 
+  /// The first source location entry this module file wrote for the file, and
+  /// the offset that entry starts at. \c SLocIndex is a FileID, so it counts
+  /// from one, and is zero when it wrote none.
+  unsigned SLocIndex;
+  SourceLocation::UIntTy SLocOffset;
+
   bool isValid() const {
     return !UnresolvedImportedFilenameAsRequested.empty();
   }
+};
+
+/// Where a module file keeps an input file. \c FID names the file and
+/// \c Offset is where its locations start. \c FID is invalid if the module
+/// file wrote no source location entries for the input file.
+struct InputFileLoc {
+  FileID FID;
+  SourceLocation::UIntTy Offset = 0;
+
+  bool isValid() const { return FID.isValid(); }
 };
 
 /// The input file that has been loaded from this AST file, along with
