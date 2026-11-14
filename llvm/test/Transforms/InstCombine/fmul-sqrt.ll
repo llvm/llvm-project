@@ -72,8 +72,8 @@ define double @sqrt_a_sqrt_b_reassoc(double %a, double %b) {
 
 define double @sqrt_a_sqrt_b_sqrt_c_sqrt_d_reassoc(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @sqrt_a_sqrt_b_sqrt_c_sqrt_d_reassoc(
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nnan ninf arcp double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nnan ninf double [[TMP2]], [[D:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nnan arcp double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nnan double [[TMP1]], [[C:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul reassoc nnan ninf double [[TMP3]], [[D1:%.*]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = call reassoc nnan ninf double @llvm.sqrt.f64(double [[TMP4]])
 ; CHECK-NEXT:    ret double [[MUL2]]

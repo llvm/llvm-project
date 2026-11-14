@@ -1298,6 +1298,17 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   Results.clear();
 }
 
+// computeKnownFPClass can only model what Alive2 models. The afn, arcp,
+// contract and reassoc fast-math flags permit the operation to be replaced
+// with an arbitrarily different computation, so none of the deductions below
+// hold. nsz, ninf and nnan are fine to analyze: they are value assumptions,
+// not license to change the operation.
+static bool hasUnmodeledFastMathFlags(const MachineInstr &MI) {
+  return MI.getFlag(MachineInstr::FmAfn) || MI.getFlag(MachineInstr::FmArcp) ||
+         MI.getFlag(MachineInstr::FmContract) ||
+         MI.getFlag(MachineInstr::FmReassoc);
+}
+
 void GISelValueTracking::computeKnownFPClass(Register R, KnownFPClass &Known,
                                              FPClassTest InterestedClasses,
                                              unsigned Depth) {
@@ -1484,6 +1495,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_FMAD: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     if ((InterestedClasses & (fcNegative | fcNan)) == fcNone)
       break;
 
@@ -1545,6 +1559,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_STRICT_FSQRT: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     KnownFPClass KnownSrc;
     FPClassTest InterestedSrcs = InterestedClasses;
     if (InterestedClasses & fcQNan)
@@ -1575,6 +1592,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FATAN2: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     FPClassTest InterestedY = InterestedClasses;
     FPClassTest InterestedX = InterestedClasses;
 
@@ -1601,6 +1621,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FSINH: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
@@ -1609,6 +1632,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FCOSH: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
@@ -1617,6 +1643,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FTANH: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
@@ -1625,6 +1654,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FASIN: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
@@ -1633,6 +1665,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FACOS: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
@@ -1641,6 +1676,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FATAN: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
@@ -1649,6 +1687,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FTAN: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
@@ -1658,6 +1699,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FCOS: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     // Return NaN on infinite inputs.
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
@@ -1668,6 +1712,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FSINCOS: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     // Operand layout: (sin_dst, cos_dst, src)
     Register Src = MI.getOperand(2).getReg();
     KnownFPClass KnownSrc;
@@ -1687,6 +1734,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FMAXNUM_IEEE:
   case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FMINIMUMNUM: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
     KnownFPClass KnownLHS, KnownRHS;
@@ -1728,6 +1778,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FCANONICALIZE: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
@@ -1745,6 +1798,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_VECREDUCE_FMINIMUM:
   case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:
   case TargetOpcode::G_VECREDUCE_FMINIMUMNUM: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Val = MI.getOperand(1).getReg();
     // reduce min/max will choose an element from one of the vector elements,
     // so we can infer and class information that is common to all elements.
@@ -1763,6 +1819,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_INTRINSIC_ROUND:
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
   case TargetOpcode::G_INTRINSIC_TRUNC: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     FPClassTest InterestedSrcs = InterestedClasses;
@@ -1801,6 +1860,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FEXP:
   case TargetOpcode::G_FEXP2:
   case TargetOpcode::G_FEXP10: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
@@ -1811,6 +1873,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
   case TargetOpcode::G_FLOG10: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     FPClassTest InterestedSrcs = fcNone;
 
     // log(negative) produces NaN.
@@ -1847,6 +1912,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FPOW: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     const bool WantNaN = (InterestedClasses & fcNan) != fcNone;
     const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
     if (!WantNaN && !WantNegative)
@@ -1883,6 +1951,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FPOWI: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
       break;
 
@@ -1912,6 +1983,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FLDEXP: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
@@ -1935,6 +2009,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
     bool IsAdd = Opcode == TargetOpcode::G_FADD;
@@ -1985,6 +2062,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FMUL: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
     DenormalMode Mode =
@@ -2020,6 +2100,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FDIV: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     const bool WantNan = (InterestedClasses & fcNan) != fcNone;
 
     Register LHS = MI.getOperand(1).getReg();
@@ -2064,6 +2147,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_STRICT_FREM: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     FPClassTest InterestedLHS = fcNone;
     FPClassTest InterestedRHS = fcNone;
 
@@ -2121,6 +2207,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FFREXP: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     // Only handle the mantissa output (operand 0); the exponent is an integer.
     if (R != MI.getOperand(0).getReg())
       break;
@@ -2149,6 +2238,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FPEXT: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     Register Src = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     computeKnownFPClass(Src, DemandedElts, InterestedClasses, KnownSrc,
@@ -2166,12 +2258,18 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     computeKnownFPClassForFPTrunc(MI, DemandedElts, InterestedClasses, Known,
                                   Depth);
     break;
   }
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP: {
+    if (hasUnmodeledFastMathFlags(MI))
+      break;
+
     // Cannot produce nan
     Known.knownNot(fcNan);
 

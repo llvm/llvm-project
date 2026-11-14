@@ -5346,6 +5346,21 @@ static void computeKnownFPClass(const Value *V, KnownFPClass &Known,
   computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, Q, Depth);
 }
 
+// computeKnownFPClass can only model what Alive2 models. The afn, arcp,
+// contract and reassoc fast-math flags permit the operation to be replaced
+// with an arbitrarily different computation, so none of the deductions below
+// hold. nsz, ninf and nnan are fine to analyze: they are value assumptions,
+// not license to change the operation.
+static bool hasUnmodeledFastMathFlags(const Operator *Op) {
+  const auto *FPOp = dyn_cast<FPMathOperator>(Op);
+  if (!FPOp)
+    return false;
+
+  FastMathFlags FMF = FPOp->getFastMathFlags();
+  return FMF.approxFunc() || FMF.allowReciprocal() || FMF.allowContract() ||
+         FMF.allowReassoc();
+}
+
 static void computeKnownFPClassForFPTrunc(const Operator *Op,
                                           const APInt &DemandedElts,
                                           FPClassTest InterestedClasses,
@@ -5652,6 +5667,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
     case Intrinsic::fma:
     case Intrinsic::fmuladd: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       if ((InterestedClasses & (fcNegative | fcNan)) == fcNone)
         break;
 
@@ -5721,12 +5739,18 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::experimental_constrained_frem: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       computeKnownFPClassForFRem(Op, DemandedElts, InterestedClasses, Known, Q,
                                  Depth);
       break;
     }
     case Intrinsic::sqrt:
     case Intrinsic::experimental_constrained_sqrt: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       FPClassTest InterestedSrcs = InterestedClasses;
       if (InterestedClasses & fcQNan)
@@ -5755,6 +5779,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::sin: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
@@ -5762,6 +5789,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::cos: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
@@ -5769,6 +5799,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::tan: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
@@ -5776,6 +5809,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::sinh: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
@@ -5783,6 +5819,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::cosh: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
@@ -5790,6 +5829,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::tanh: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
@@ -5797,6 +5839,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::asin: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
@@ -5804,6 +5849,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::acos: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
@@ -5811,6 +5859,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::atan: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
@@ -5818,6 +5869,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::atan2: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       FPClassTest InterestedY = InterestedClasses;
       FPClassTest InterestedX = InterestedClasses;
 
@@ -5853,6 +5907,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::maximum:
     case Intrinsic::minimumnum:
     case Intrinsic::maximumnum: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownLHS, KnownRHS;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownLHS, Q, Depth + 1);
@@ -5871,6 +5928,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::canonicalize: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
@@ -5889,6 +5949,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::vector_reduce_fminimum:
     case Intrinsic::vector_reduce_fmaximumnum:
     case Intrinsic::vector_reduce_fminimumnum: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       // reduce min/max will choose an element from one of the vector elements,
       // so we can infer and class information that is common to all elements.
       Known = computeKnownFPClass(II->getArgOperand(0), II->getFastMathFlags(),
@@ -5911,6 +5974,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::nearbyint:
     case Intrinsic::round:
     case Intrinsic::roundeven: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       FPClassTest InterestedSrcs = InterestedClasses;
 
@@ -5954,6 +6020,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::exp2:
     case Intrinsic::exp10:
     case Intrinsic::amdgcn_exp2: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
@@ -5967,6 +6036,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::fptrunc_round: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       computeKnownFPClassForFPTrunc(Op, DemandedElts, InterestedClasses, Known,
                                     Q, Depth);
       break;
@@ -5978,6 +6050,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::experimental_constrained_log10:
     case Intrinsic::experimental_constrained_log2:
     case Intrinsic::amdgcn_log: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       FPClassTest InterestedSrcs = fcNone;
 
       // log(negative) produces NaN.
@@ -6015,6 +6090,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::pow: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       const bool WantNaN = (InterestedClasses & fcNan) != fcNone;
       const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
       if (!WantNaN && !WantNegative)
@@ -6052,6 +6130,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::powi: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
         break;
 
@@ -6080,6 +6161,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::ldexp: {
+      if (hasUnmodeledFastMathFlags(Op))
+        break;
+
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
@@ -6262,6 +6346,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::FAdd:
   case Instruction::FSub: {
+    if (hasUnmodeledFastMathFlags(Op))
+      break;
+
     KnownFPClass KnownLHS, KnownRHS;
     bool WantNegative =
         Op->getOpcode() == Instruction::FAdd &&
@@ -6318,6 +6405,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FMul: {
+    if (hasUnmodeledFastMathFlags(Op))
+      break;
+
     const Function *F = cast<Instruction>(Op)->getFunction();
     DenormalMode Mode =
         F ? F->getDenormalMode(
@@ -6365,6 +6455,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FDiv: {
+    if (hasUnmodeledFastMathFlags(Op))
+      break;
+
     const bool WantNan = (InterestedClasses & fcNan) != fcNone;
 
     const Function *F = cast<Instruction>(Op)->getFunction();
@@ -6412,11 +6505,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FRem: {
+    if (hasUnmodeledFastMathFlags(Op))
+      break;
+
     computeKnownFPClassForFRem(Op, DemandedElts, InterestedClasses, Known, Q,
                                Depth);
     break;
   }
   case Instruction::FPExt: {
+    if (hasUnmodeledFastMathFlags(Op))
+      break;
+
     KnownFPClass KnownSrc;
     computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
                         KnownSrc, Q, Depth + 1);
@@ -6437,12 +6536,18 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FPTrunc: {
+    if (hasUnmodeledFastMathFlags(Op))
+      break;
+
     computeKnownFPClassForFPTrunc(Op, DemandedElts, InterestedClasses, Known, Q,
                                   Depth);
     break;
   }
   case Instruction::SIToFP:
   case Instruction::UIToFP: {
+    if (hasUnmodeledFastMathFlags(Op))
+      break;
+
     // Cannot produce nan
     Known.knownNot(fcNan);
 
