@@ -428,6 +428,114 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// The value combined into the accumulator is invariant across the iteration
+// space, but it is still combined once per iteration, so it has to be
+// broadcast and reduced like any other operand.
+
+func.func @vectorize_reduction_with_invariant_operand(%arg0: tensor<4x8xf32>,
+                                                      %arg1: tensor<4xf32>,
+                                                      %arg2: f32) -> tensor<4xf32> {
+  %0 = linalg.generic { indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                         affine_map<(d0, d1) -> (d0)>],
+                        iterator_types = ["parallel", "reduction"] }
+    ins(%arg0 : tensor<4x8xf32>)
+    outs(%arg1 : tensor<4xf32>) {
+    ^bb(%in: f32, %out: f32) :
+      %0 = arith.addf %out, %arg2 : f32
+      linalg.yield %0 : f32
+    } -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// CHECK-LABEL:   @vectorize_reduction_with_invariant_operand(
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<4x8xf32>, %[[ARG1:.*]]: tensor<4xf32>, %[[ARG2:.*]]: f32)
+// CHECK:           %[[ACC:.*]] = vector.transfer_read %[[ARG1]]{{.*}} : tensor<4xf32>, vector<4xf32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ARG2]] : f32 to vector<4x8xf32>
+// CHECK:           %[[RED:.*]] = vector.multi_reduction <add>, %[[BCAST]], %[[ACC]] [1] : vector<4x8xf32> to vector<4xf32>
+// CHECK:           vector.transfer_write %[[RED]], %[[ARG1]]
+
+// -----
+
+func.func @vectorize_dynamic_reduction_with_invariant_operand(%arg0: tensor<?xf32>,
+                                                              %arg1: tensor<f32>,
+                                                              %arg2: f32) -> tensor<f32> {
+  %0 = linalg.generic { indexing_maps = [affine_map<(d0) -> (d0)>,
+                                         affine_map<(d0) -> ()>],
+                        iterator_types = ["reduction"] }
+    ins(%arg0 : tensor<?xf32>)
+    outs(%arg1 : tensor<f32>) {
+    ^bb(%in: f32, %out: f32) :
+      %0 = arith.addf %out, %arg2 : f32
+      linalg.yield %0 : f32
+    } -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [8] : !transform.any_op
+    transform.yield
+  }
+}
+
+// CHECK-LABEL:   @vectorize_dynamic_reduction_with_invariant_operand(
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<?xf32>, %[[ARG1:.*]]: tensor<f32>, %[[ARG2:.*]]: f32)
+// CHECK:           %[[DIM:.*]] = tensor.dim %[[ARG0]]
+// CHECK:           %[[MASK:.*]] = vector.create_mask %[[DIM]] : vector<8xi1>
+// CHECK:           %[[ACC:.*]] = vector.extract %{{.*}}[] : f32 from vector<f32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ARG2]] : f32 to vector<8xf32>
+// CHECK:           %[[RED:.*]] = vector.mask %[[MASK]] { vector.multi_reduction <add>, %[[BCAST]], %[[ACC]] [0] : vector<8xf32> to f32 } : vector<8xi1> -> f32
+// CHECK:           vector.broadcast %[[RED]] : f32 to vector<f32>
+
+// -----
+
+// Same combiner, but without reduction loops: this is a plain elementwise op.
+// It must not be turned into a reduction, and the invariant operand is only
+// broadcast once, by the elementwise vectorization.
+
+func.func @vectorize_parallel_with_invariant_operand(%arg0: tensor<4x8xf32>,
+                                                     %arg1: tensor<4x8xf32>,
+                                                     %arg2: f32) -> tensor<4x8xf32> {
+  %0 = linalg.generic { indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                         affine_map<(d0, d1) -> (d0, d1)>],
+                        iterator_types = ["parallel", "parallel"] }
+    ins(%arg0 : tensor<4x8xf32>)
+    outs(%arg1 : tensor<4x8xf32>) {
+    ^bb(%in: f32, %out: f32) :
+      %0 = arith.addf %out, %arg2 : f32
+      linalg.yield %0 : f32
+    } -> tensor<4x8xf32>
+  return %0 : tensor<4x8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// CHECK-LABEL:   @vectorize_parallel_with_invariant_operand(
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<4x8xf32>, %[[ARG1:.*]]: tensor<4x8xf32>, %[[ARG2:.*]]: f32)
+// CHECK-NOT:       vector.multi_reduction
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ARG2]] : f32 to vector<4x8xf32>
+// CHECK-NOT:       vector.broadcast
+// CHECK:           arith.addf %{{.*}}, %[[BCAST]] : vector<4x8xf32>
+// CHECK-NOT:       vector.multi_reduction
+// CHECK:           vector.transfer_write
+
+// -----
+
 func.func @vectorize_dynamic_transpose_reduction(%arg0: tensor<?x?x?xf32>,
                                                  %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.generic { indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,

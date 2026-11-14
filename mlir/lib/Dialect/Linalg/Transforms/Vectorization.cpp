@@ -1327,11 +1327,20 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
 /// that the result shape.
 // Note: this is a true builder that notifies the OpBuilder listener.
 // TODO: Consider moving as a static helper on the ReduceOp.
-static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp, Operation *op,
+static Operation *reduceIfNeeded(OpBuilder &b, const VectorizationState &state,
+                                 LinalgOp linalgOp, Operation *op,
                                  Value reduceValue, Value initialValue,
                                  const IRMapping &bvm) {
   Value reduceVec = bvm.lookup(reduceValue);
   Value outputVec = bvm.lookup(initialValue);
+  // A scalar value to reduce (e.g. a constant or a value defined above the op)
+  // is invariant across the iteration space, but it is still combined into the
+  // accumulator once per iteration. Broadcast it to the iteration space so that
+  // the reduction accounts for every iteration.
+  if (!isa<VectorType>(reduceVec.getType()) &&
+      linalgOp.getNumReductionLoops() > 0)
+    reduceVec = broadcastIfNeeded(
+        b, reduceVec, state.getCanonicalVecType(reduceVec.getType()));
   auto reduceType = dyn_cast<VectorType>(reduceVec.getType());
   auto outputType = dyn_cast<VectorType>(outputVec.getType());
   // Reduce only if needed as the value may already have been reduce for
@@ -1405,9 +1414,9 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
   }
   if (!reductionOperands.empty()) {
     assert(reductionOperands.size() == 1);
-    Operation *reduceOp =
-        reduceIfNeeded(rewriter, linalgOp, op, reductionOperands[0].first,
-                       reductionOperands[0].second, bvm);
+    Operation *reduceOp = reduceIfNeeded(rewriter, state, linalgOp, op,
+                                         reductionOperands[0].first,
+                                         reductionOperands[0].second, bvm);
     if (reduceOp)
       return VectorizationHookResult{VectorizationHookStatus::NewOp, reduceOp};
   }
