@@ -570,6 +570,10 @@ public:
 
   std::string getAsString(const ASTContext &Ctx, QualType Ty) const;
 
+  /// Returns the contents of an array of integers (e.g. an evaluated character
+  /// array) as a string, with each element truncated to a char.
+  std::string getCharArrayAsString() const;
+
   APSInt &getInt() {
     assert(isInt() && "Invalid accessor");
     return *(APSInt *)(char *)&Data;
