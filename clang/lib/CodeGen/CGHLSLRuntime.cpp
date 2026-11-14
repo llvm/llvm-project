@@ -37,6 +37,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
@@ -1185,8 +1186,10 @@ static llvm::Value *createSPIRVInputLoad(
     llvm::hlsl::InterpolationMode InterpMode) {
   // SPIR-V integer built-ins are 32-bit, so a narrower integer declaration
   // loads the 32-bit built-in and truncates it. Other types are loaded as is.
+  // i1 is excluded: bool built-ins such as FrontFacing are OpTypeBool.
   bool Truncate = Decoration == llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn &&
-                  Ty->isIntegerTy() && Ty->getIntegerBitWidth() < 32;
+                  Ty->isIntegerTy() && Ty->getIntegerBitWidth() > 1 &&
+                  Ty->getIntegerBitWidth() < 32;
   llvm::Type *LoadTy = Truncate ? B.getInt32Ty() : Ty;
   auto *GV = new llvm::GlobalVariable(
       M, LoadTy, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
@@ -1197,6 +1200,23 @@ static llvm::Value *createSPIRVInputLoad(
   addSPIRVInterfaceDecorations(GV, Decoration, Operand, InterpMode);
   llvm::Value *Value = B.CreateLoad(LoadTy, GV);
   return Truncate ? B.CreateTrunc(Value, Ty) : Value;
+}
+
+// For Vulkan builtins which begin counting from a driver-supplied base offset,
+// where the corresponding HLSL system value is always zero-based within the
+// current draw call.
+static llvm::Value *
+createSPIRVBuiltinDelta(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
+                        const Twine &Name, unsigned BuiltInID,
+                        unsigned BaseBuiltInID,
+                        llvm::hlsl::InterpolationMode InterpMode) {
+  llvm::Value *Value = createSPIRVInputLoad(
+      B, M, Ty, Name, llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn, BuiltInID,
+      InterpMode);
+  llvm::Value *Base = createSPIRVInputLoad(
+      B, M, Ty, Name + Twine(".base"),
+      llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn, BaseBuiltInID, InterpMode);
+  return B.CreateSub(Value, Base);
 }
 
 llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
@@ -1666,11 +1686,38 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     assert(Stage == llvm::Triple::Vertex &&
            "SV_InstanceID is in an unavailable stage and should have been "
            "diagnosed by Sema");
-    if (CGM.getTarget().getTriple().isSPIRV())
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      // Matches DXC: only subtract BaseInstance when
+      // -fvk-support-nonzero-base-instance is given.
+      if (CGM.getLangOpts().HLSLSpvSupportNonzeroBaseInstance)
+        return createSPIRVBuiltinDelta(
+            B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
+            /* InstanceIndex */ 43, /* BaseInstance */ 4425, InterpMode);
       return createSPIRVInputLoad(B, CGM.getModule(), Type,
                                   Semantic->getAttrName()->getName(),
                                   llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
                                   /* InstanceIndex */ 43, InterpMode);
+    }
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
+  case llvm::dxbc::PSV::SemanticKind::IsFrontFace:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_IsFrontFace is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      // The FrontFacing BuiltIn is always a bool in SPIR-V, whatever type the
+      // entry point declares. Load it as bool, then convert below.
+      llvm::Type *BoolTy = B.getInt1Ty();
+      // Integer pixel inputs cannot be interpolated and must be Flat.
+      llvm::Value *FF = createSPIRVInputLoad(
+          B, CGM.getModule(), BoolTy, Semantic->getAttrName()->getName(),
+          llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+          /* FrontFacing */ 17, llvm::hlsl::InterpolationMode::Constant);
+      // Convert to the declared parameter type (eg uint).
+      return Type == BoolTy ? FF : B.CreateZExt(FF, Type);
+    }
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1786,6 +1833,18 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       "Load hasn't been implemented yet for this system semantic. FIXME");
 }
 
+// Maps a [[vk::builtin(...)]] name to its SPIR-V spec `BuiltIn` decoration.
+// Deliberately not creating dependency on llvm::SPIRV::BuiltIn in front end.
+// Sema's handleVkBuiltInAttr only allows names handled here to reach CodeGen.
+static unsigned getSPIRVVkBuiltinID(StringRef BuiltIn) {
+  unsigned ID = llvm::StringSwitch<unsigned>(BuiltIn)
+                    .Case("PointSize", /* BuiltIn::PointSize */ 1)
+                    .Default(-1);
+  assert(ID != static_cast<unsigned>(-1) &&
+         "Sema should only allow builtin names implemented here");
+  return ID;
+}
+
 void CGHLSLRuntime::emitSystemSemanticStore(
     IRBuilder<> &B, llvm::Value *Source, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic,
@@ -1862,6 +1921,15 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
     SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
 
+  // [[vk::builtin(...)]] takes precedence over the recognized-semantic
+  // dispatch, so without this check they'd always be treated as an arbitrary
+  // user semantic. The attribute is only ever attached when targeting SPIR-V.
+  if (const auto *BuiltInAttr = Decl->getAttr<HLSLVkBuiltInAttr>())
+    return createSPIRVInputLoad(
+        B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
+        llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+        getSPIRVVkBuiltinID(BuiltInAttr->getBuiltIn()), InterpMode);
+
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   llvm::dxbc::PSV::SemanticKind SemanticKind =
       llvm::hlsl::getSemanticKind(Semantic->getAttrName()->getName());
@@ -1887,6 +1955,15 @@ void CGHLSLRuntime::handleScalarSemanticStore(
     IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
     SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
+  // See the matching comment in `handleScalarSemanticLoad`
+  if (const auto *BuiltInAttr = Decl->getAttr<HLSLVkBuiltInAttr>()) {
+    createSPIRVOutputStore(
+        B, CGM.getModule(), Source, Semantic->getAttrName()->getName(),
+        llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+        getSPIRVVkBuiltinID(BuiltInAttr->getBuiltIn()), InterpMode);
+    return;
+  }
+
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   llvm::dxbc::PSV::SemanticKind SemanticKind =
       llvm::hlsl::getSemanticKind(Semantic->getAttrName()->getName());

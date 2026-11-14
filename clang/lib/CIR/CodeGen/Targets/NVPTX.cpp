@@ -120,6 +120,31 @@ public:
   mlir::Type getCUDADeviceBuiltinTextureDeviceType() const override {
     return cir::CUDADeviceTextureType::get(&getABIInfo().cgt.getMLIRContext());
   }
+
+  // A null pointer in the local address space is materialized via an address
+  // space cast from null in the generic address space, so that it converts
+  // back to a generic null pointer.
+  mlir::Value getNullPointer(CIRGenModule &cgm, cir::PointerType ptrTy,
+                             QualType qt, mlir::Location loc) const override {
+    CIRGenBuilderTy &builder = cgm.getBuilder();
+    // The local address space is either a language address space or an
+    // explicit target address space at this point.
+    mlir::ptr::MemorySpaceAttrInterface addrSpace = ptrTy.getAddrSpace();
+    auto targetAS =
+        mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(addrSpace);
+    bool isLocal =
+        cir::isMatchingAddressSpace(addrSpace, LangAS::opencl_local) ||
+        (targetAS &&
+         targetAS.getValue() ==
+             cgm.getASTContext().getTargetAddressSpace(LangAS::opencl_local));
+    if (!isLocal)
+      return builder.getNullPtr(ptrTy, loc);
+
+    cir::PointerType genericPtrTy =
+        builder.getPointerTo(ptrTy.getPointee(), LangAS::opencl_generic);
+    return builder.createAddrSpaceCast(
+        loc, builder.getNullPtr(genericPtrTy, loc), ptrTy);
+  }
 };
 
 } // namespace

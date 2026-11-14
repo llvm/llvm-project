@@ -6,7 +6,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ;; See ../early_exit_store_legality.ll for reasons why a particular loop doesn't
 ;; vectorize yet.
 
-define i64 @loop_contains_store(ptr dereferenceable(1024) %p1, ptr noalias %dest) {
+define i64 @loop_contains_store(ptr dereferenceable(1024) %p1, ptr noalias %dest) vscale_range(1,16) {
 ; CHECK-LABEL: define i64 @loop_contains_store(
 ; CHECK-SAME: ptr dereferenceable(1024) [[P1:%.*]], ptr noalias [[DEST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -49,7 +49,7 @@ loop.end:
   ret i64 %retval
 }
 
-define void @loop_contains_store_condition_load_has_single_user(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+define void @loop_contains_store_condition_load_has_single_user(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_condition_load_has_single_user(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[SCALAR_PH1:.*]]:
@@ -125,7 +125,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_fcmp_condition(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+define void @loop_contains_store_fcmp_condition(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_fcmp_condition(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -201,7 +201,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_safe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(96) %pred) {
+define void @loop_contains_store_safe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(96) %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_safe_dependency(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr align 2 dereferenceable(96) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -252,7 +252,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_unsafe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(80) %pred) {
+define void @loop_contains_store_unsafe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(80) %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_unsafe_dependency(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr align 2 dereferenceable(80) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -309,7 +309,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i64 %n) {
+define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_assumed_bounds(
 ; CHECK-SAME: ptr noalias [[ARRAY:%.*]], ptr readonly [[PRED:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -358,7 +358,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 dereferenceable(40) readonly %load.array, ptr align 2 noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 dereferenceable(40) readonly %load.array, ptr align 2 noalias %array, ptr align 2 dereferenceable(40) readonly %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_to_pointer_with_no_deref_info(
 ; CHECK-SAME: ptr readonly align 2 dereferenceable(40) [[LOAD_ARRAY:%.*]], ptr noalias align 2 [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[SCALAR_PH:.*]]:
@@ -437,7 +437,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_unknown_bounds(ptr align 2 dereferenceable(100) noalias %array, ptr align 2 dereferenceable(100) readonly %pred, i64 %n) {
+define void @loop_contains_store_unknown_bounds(ptr align 2 dereferenceable(100) noalias %array, ptr align 2 dereferenceable(100) readonly %pred, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_unknown_bounds(
 ; CHECK-SAME: ptr noalias align 2 dereferenceable(100) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(100) [[PRED:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[SCALAR_PH:.*]]:
@@ -482,7 +482,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_in_latch_block(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+define void @loop_contains_store_in_latch_block(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_in_latch_block(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[SCALAR_PH1:.*]]:
@@ -558,7 +558,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_requiring_alias_check(ptr dereferenceable(40) %array, ptr align 2 dereferenceable(40) %pred) {
+define void @loop_contains_store_requiring_alias_check(ptr dereferenceable(40) %array, ptr align 2 dereferenceable(40) %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_requiring_alias_check(
 ; CHECK-SAME: ptr dereferenceable(40) [[ARRAY:%.*]], ptr align 2 dereferenceable(40) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -603,7 +603,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_decrementing_iv(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+define void @loop_contains_store_decrementing_iv(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_decrementing_iv(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -648,7 +648,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_condition_load_requires_gather(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(512) readonly %pred, ptr align 1 dereferenceable(20) readonly %offsets) {
+define void @loop_contains_store_condition_load_requires_gather(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(512) readonly %pred, ptr align 1 dereferenceable(20) readonly %offsets) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_condition_load_requires_gather(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(512) [[PRED:%.*]], ptr readonly align 1 dereferenceable(20) [[OFFSETS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -699,7 +699,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_uncounted_exit_is_a_switch(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+define void @loop_contains_store_uncounted_exit_is_a_switch(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_uncounted_exit_is_a_switch(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -744,7 +744,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_uncounted_exit_is_not_guaranteed_to_execute(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+define void @loop_contains_store_uncounted_exit_is_not_guaranteed_to_execute(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_uncounted_exit_is_not_guaranteed_to_execute(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -798,7 +798,7 @@ exit:
   ret void
 }
 
-define void @histogram_with_uncountable_exit(ptr noalias %buckets, ptr readonly %indices, ptr align 2 dereferenceable(40) readonly %pred) {
+define void @histogram_with_uncountable_exit(ptr noalias %buckets, ptr readonly %indices, ptr align 2 dereferenceable(40) readonly %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @histogram_with_uncountable_exit(
 ; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -849,7 +849,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_between_two_early_exits(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred, ptr align 2 dereferenceable(40) readonly %pred2) {
+define void @loop_contains_store_between_two_early_exits(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred, ptr align 2 dereferenceable(40) readonly %pred2) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_between_two_early_exits(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -905,7 +905,7 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_before_two_early_exits(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred, ptr align 2 dereferenceable(40) readonly %pred2) {
+define void @loop_contains_store_before_two_early_exits(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred, ptr align 2 dereferenceable(40) readonly %pred2) vscale_range(1,16) {
 ; CHECK-LABEL: define void @loop_contains_store_before_two_early_exits(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -961,7 +961,7 @@ exit:
   ret void
 }
 
-define void @one_uncountable_two_countable_exits(ptr dereferenceable(1024) noalias %array, ptr dereferenceable(1024) readonly %pred) {
+define void @one_uncountable_two_countable_exits(ptr dereferenceable(1024) noalias %array, ptr dereferenceable(1024) readonly %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @one_uncountable_two_countable_exits(
 ; CHECK-SAME: ptr noalias dereferenceable(1024) [[ARRAY:%.*]], ptr readonly dereferenceable(1024) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -1013,7 +1013,7 @@ loop.end:
   ret void
 }
 
-define i16 @uncountable_exit_with_reduction(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+define i16 @uncountable_exit_with_reduction(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define i16 @uncountable_exit_with_reduction(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -1064,7 +1064,7 @@ exit:
   ret i16 %res
 }
 
-define void @uncountable_exit_with_constant_nonunit_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred) {
+define void @uncountable_exit_with_constant_nonunit_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define void @uncountable_exit_with_constant_nonunit_stride(
 ; CHECK-SAME: ptr noalias dereferenceable(4000) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(4000) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -1109,7 +1109,7 @@ exit:
   ret void
 }
 
-define void @uncountable_exit_with_invariant_but_unknown_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred, i64 %stride) {
+define void @uncountable_exit_with_invariant_but_unknown_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred, i64 %stride) vscale_range(1,16) {
 ; CHECK-LABEL: define void @uncountable_exit_with_invariant_but_unknown_stride(
 ; CHECK-SAME: ptr noalias dereferenceable(4000) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(4000) [[PRED:%.*]], i64 [[STRIDE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -1154,7 +1154,7 @@ exit:
   ret void
 }
 
-define i32 @uncountable_exit_with_separate_exit_block(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+define i32 @uncountable_exit_with_separate_exit_block(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) vscale_range(1,16) {
 ; CHECK-LABEL: define i32 @uncountable_exit_with_separate_exit_block(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[SCALAR_PH:.*]]:

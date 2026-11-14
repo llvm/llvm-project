@@ -1252,6 +1252,9 @@ llvm.func @zeroextattr(%arg0: i1 {llvm.zeroext}) {
 // CHECK-LABEL: declare void @zeroextattr_decl(i1 zeroext)
 llvm.func @zeroextattr_decl(i1 {llvm.zeroext})
 
+// CHECK-LABEL: declare void @noextattr_decl(i32 noext)
+llvm.func @noextattr_decl(i32 {llvm.noext})
+
 // CHECK-LABEL: declare void @alignattr_decl(ptr align 64)
 llvm.func @alignattr_decl(!llvm.ptr {llvm.align = 64 : i64})
 
@@ -1340,6 +1343,9 @@ llvm.func @signextattr_ret_decl() -> (i1 {llvm.signext})
 
 // CHECK-LABEL: declare zeroext i1 @zeroextattr_ret_decl()
 llvm.func @zeroextattr_ret_decl() -> (i1 {llvm.zeroext})
+
+// CHECK-LABEL: declare noext i32 @noextattr_ret_decl()
+llvm.func @noextattr_ret_decl() -> (i32 {llvm.noext})
 
 // CHECK-LABEL: declare nonnull ptr @nonnullattr_ret_decl()
 llvm.func @nonnullattr_ret_decl() -> (!llvm.ptr {llvm.nonnull})
@@ -1926,7 +1932,7 @@ llvm.func @callFenceInst() {
 
 // CHECK-LABEL: @passthrough
 // CHECK: #[[ATTR_GROUP:[0-9]*]]
-llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"], ["llvm.assume", "omp_no_openmp,absent(barrier),absent(critical),absent(parallel)"]]} {
+llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"], ["llvm.assume", "omp_no_openmp,omp_no_parallelism,absent(barrier),absent(critical),absent(parallel)"]]} {
   llvm.return
 }
 
@@ -1934,7 +1940,7 @@ llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_p
 // CHECK-DAG: alignstack=4
 // CHECK-DAG: null_pointer_is_valid
 // CHECK-DAG: "foo"="bar"
-// CHECK-DAG: "llvm.assume"="omp_no_openmp,absent(barrier),absent(critical),absent(parallel)"
+// CHECK-DAG: "llvm.assume"="omp_no_openmp,omp_no_parallelism,absent(barrier),absent(critical),absent(parallel)"
 
 // -----
 

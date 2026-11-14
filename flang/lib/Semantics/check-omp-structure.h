@@ -145,6 +145,7 @@ public:
 
   void Enter(const parser::OmpDeclareVariantDirective &);
   void Enter(const parser::OmpDeclareSimdDirective &);
+  void Enter(const parser::OmpAssumesDirective &);
   void Enter(const parser::OmpAllocateDirective &);
   void Leave(const parser::OmpAllocateDirective &);
   void Enter(const parser::OmpDeclareMapperDirective &);
@@ -235,6 +236,7 @@ public:
   void Enter(const parser::OmpClause::Map &x);
   void Enter(const parser::OmpClause::Message &x);
   void Enter(const parser::OmpClause::NoOpenmp &x);
+  void Enter(const parser::OmpClause::NoParallelism &clause);
   void Enter(const parser::OmpClause::NumTeams &x);
   void Enter(const parser::OmpClause::NumThreads &x);
   void Enter(const parser::OmpClause::OmpxBare &x);
@@ -275,9 +277,11 @@ private:
       bool isError = false);
   void ErrorShouldBeVariable(const MaybeExpr &expr, parser::CharBlock source);
   void CheckAtomicType(SymbolRef sym, parser::CharBlock source,
-      std::string_view name, bool checkTypeOnPointer = true);
+      std::string_view what, std::string_view name,
+      bool checkTypeOnPointer = true);
   void CheckAtomicVariable(const evaluate::Expr<evaluate::SomeType> &,
-      parser::CharBlock, bool checkTypeOnPointer = true);
+      parser::CharBlock, bool checkTypeOnPointer = true,
+      bool isCapture = false);
   std::pair<const parser::ExecutionPartConstruct *,
       const parser::ExecutionPartConstruct *>
   CheckUpdateCapture(const parser::ExecutionPartConstruct *ec1,

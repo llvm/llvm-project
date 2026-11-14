@@ -38,6 +38,7 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1078,11 +1079,17 @@ static LogicalResult verifyOutputShape(
     expectedResultDims.push_back(rhsType.getDimSize(i));
   }
 
+  // The accumulator and the result must agree, regardless of the rank.
+  if (resType != accType)
+    return op.emitOpError("expected same accumulator and result type");
+
   // Verify 'expectedResultDims'.
   if (expectedResultDims.empty()) {
-    // No batch or free dimension implies a scalar result.
-    if (llvm::isa<VectorType>(resType) || llvm::isa<VectorType>(accType))
-      return op.emitOpError("invalid accumulator/result vector shape");
+    // No batch or free dimension implies a scalar or 0-D vector result.
+    if (auto resVectorType = llvm::dyn_cast<VectorType>(resType))
+      if (resVectorType.getRank() != 0)
+        return op.emitOpError("expected scalar or 0-D vector result when "
+                              "there are no batch or free dimensions");
   } else {
     // At least one batch or free dimension implies a vector result.
     auto resVectorType = llvm::dyn_cast<VectorType>(resType);
@@ -4055,7 +4062,7 @@ static Value foldInsertUseChain(InsertOp insertOp) {
     return {};
 
   insertOp.setOperand(1, destInsert.getDest());
-  return insertOp.getDest();
+  return insertOp.getResult();
 }
 
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -4988,7 +4995,10 @@ public:
           getI64SubArray(op.getOffsets(), /*dropFront=*/rankDiff);
       SmallVector<int64_t> sizes =
           getI64SubArray(op.getSizes(), /*dropFront=*/rankDiff);
-      for (unsigned i = 0; i < srcRank; i++) {
+      // Slice attributes (i.e. offsets, sizes, etc) are only required for the
+      // leading/prefix source dimensions. This is why we use
+      // `offset.size()` instead of `srcRank` below.
+      for (unsigned i = 0; i < offsets.size(); i++) {
         if (srcVecType.getDimSize(i) == 1) {
           // In case this dimension was broadcasted *and* sliced, the offset
           // and size need to be updated now that there is no broadcast before
@@ -6574,15 +6584,6 @@ LogicalResult GatherOp::verify() {
 
 // MaskableOpInterface methods.
 
-/// Returns the mask type expected by this operation. Mostly used for
-/// verification purposes. It requires the operation to be vectorized."
-Type GatherOp::getExpectedMaskType() {
-  auto vecType = this->getIndexVectorType();
-  return VectorType::get(vecType.getShape(),
-                         IntegerType::get(vecType.getContext(), /*width=*/1),
-                         vecType.getScalableDims());
-}
-
 std::optional<SmallVector<int64_t, 4>> GatherOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
@@ -7198,22 +7199,6 @@ public:
   }
 };
 
-// vector.broadcast has two distinct semantic modes: duplication across leading
-// dimensions, and stretching across inner dimensions. This helper returns the
-// product of the inner-dimension stretching factors.
-int64_t getBroadcastStretchingFactor(ArrayRef<int64_t> srcShape,
-                                     ArrayRef<int64_t> dstShape) {
-  int stretchingFactor = 1;
-  int numLeadingDims = dstShape.size() - srcShape.size();
-  for (int i = 0, e = srcShape.size(); i < e; i++) {
-    int64_t dstDim = dstShape[numLeadingDims + i];
-    if (srcShape[i] == 1 && dstDim != 1) {
-      stretchingFactor *= dstDim;
-    }
-  }
-  return stretchingFactor;
-}
-
 /// Pattern to rewrite Y = ShapeCast(Broadcast(X)) as Y = Broadcast(X)
 class ShapeCastBroadcastFolder final : public OpRewritePattern<ShapeCastOp> {
 public:
@@ -7221,47 +7206,75 @@ public:
 
   LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
                                 PatternRewriter &rewriter) const override {
-    auto broadcastOp =
-        shapeCastOp.getSource().getDefiningOp<vector::BroadcastOp>();
-    if (!broadcastOp)
+    auto oldBcOp = shapeCastOp.getSource().getDefiningOp<vector::BroadcastOp>();
+    if (!oldBcOp)
       return failure();
-
-    auto srcVectorType = dyn_cast<VectorType>(broadcastOp.getSourceType());
-    bool srcIsScalar = !srcVectorType;
 
     // Replace Y = ShapeCast(Broadcast(X)) with Y = Broadcast(X)
     // Example
-    // %0 = vector.broadcast %in : vector<3xf32> to vector<2x4x3xf32>
-    // %1 = vector.shape_cast %0 : vector<2x4x3xf32> to vector<8x3xf32>
+    // %oldBc = vector.broadcast %src : vector<3xf32> to vector<2x4x3xf32>
+    // %res = vector.shape_cast %oldBc : vector<2x4x3xf32> to vector<8x3xf32>
     // to
-    // %1 = vector.broadcast %in : vector<3xf32> to vector<8x3xf32>
-    VectorType dstVectorType = shapeCastOp.getResultVectorType();
-    ArrayRef<int64_t> dstShape = dstVectorType.getShape();
-    ArrayRef<int64_t> srcShape =
-        srcIsScalar ? ArrayRef<int64_t>{} : srcVectorType.getShape();
-    ArrayRef<int64_t> broadcastShape =
-        broadcastOp.getResultVectorType().getShape();
+    // %newBc = vector.broadcast %src : vector<3xf32> to vector<8x3xf32>
+    VectorType resVectorType = shapeCastOp.getResultVectorType();
+
+    // Limit this pattern to vectors with at most one scalable dimension for
+    // now.
+    if (resVectorType.getNumScalableDims() > 1)
+      return failure();
+
+    auto srcVectorType = dyn_cast<VectorType>(oldBcOp.getSourceType());
+    bool srcIsScalar = !srcVectorType;
 
     if (!srcIsScalar) {
-      if (isBroadcastableTo(srcVectorType, dstVectorType) !=
+      if (isBroadcastableTo(srcVectorType, resVectorType) !=
           BroadcastableToResult::Success) {
         return failure();
       }
-      // Avoid folding if this would result in switching between the two
-      // distinct semantic modes of vector.broadcast (duplication vs
-      // stretching). See https://github.com/llvm/llvm-project/issues/190614.
-      // This is detected by a change in the stretching factor. However if the
-      // source has a single element, there is no ambiguity.
-      if (srcVectorType.getNumElements() != 1) {
-        if (getBroadcastStretchingFactor(srcShape, dstShape) !=
-            getBroadcastStretchingFactor(srcShape, broadcastShape)) {
+      // For a fixed source shape, the result strides determine which source
+      // element supplies each linear position in the broadcast result (see the
+      // `BroadcastOp` definition for the closed-form mapping). Since
+      // `shape_cast` preserves the flattened 1-D (row-major) element order,
+      // folding into `%newBc` is valid when every non-unit `%src` dimension has
+      // the same stride (both static product and scalability) in `%oldBc` and
+      // `%res`. Note that a scalable `[1]` has runtime size `vscale` and is not
+      // a unit dimension.
+      VectorType oldBcVectorType = oldBcOp.getResultVectorType();
+      int64_t srcRank = srcVectorType.getRank();
+      int64_t oldBcRank = oldBcVectorType.getRank();
+      int64_t resRank = resVectorType.getRank();
+      ArrayRef<int64_t> srcShape = srcVectorType.getShape();
+      ArrayRef<int64_t> oldBcShape = oldBcVectorType.getShape();
+      ArrayRef<int64_t> resShape = resVectorType.getShape();
+      ArrayRef<bool> srcScalable = srcVectorType.getScalableDims();
+      ArrayRef<bool> oldBcScalable = oldBcVectorType.getScalableDims();
+      ArrayRef<bool> resScalable = resVectorType.getScalableDims();
+
+      // Iterate from the innermost (trailing) dimension outward, aligning each
+      // `%src` dimension with the corresponding trailing dimension of `%oldBc`
+      // and `%res`.
+      int64_t oldBcStride = 1, resStride = 1;
+      bool isOldBcStrideScalable = false, isResStrideScalable = false;
+      for (int64_t i = 0; i < srcRank; ++i) {
+        int64_t srcDim = srcRank - 1 - i;
+        int64_t oldBcDim = oldBcRank - 1 - i;
+        int64_t resDim = resRank - 1 - i;
+
+        bool isUnitDim = srcShape[srcDim] == 1 && !srcScalable[srcDim];
+        if (!isUnitDim && (oldBcStride != resStride ||
+                           isOldBcStrideScalable != isResStrideScalable)) {
           return failure();
         }
+
+        oldBcStride *= oldBcShape[oldBcDim];
+        resStride *= resShape[resDim];
+        isOldBcStrideScalable |= oldBcScalable[oldBcDim];
+        isResStrideScalable |= resScalable[resDim];
       }
     }
 
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shapeCastOp, dstVectorType,
-                                                     broadcastOp.getSource());
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shapeCastOp, resVectorType,
+                                                     oldBcOp.getSource());
     return success();
   }
 };
@@ -7829,10 +7842,12 @@ void ConstantMaskOp::build(OpBuilder &builder, OperationState &result,
                            VectorType type, ConstantMaskKind kind) {
   assert(kind == ConstantMaskKind::AllTrue ||
          kind == ConstantMaskKind::AllFalse);
-  build(builder, result, type,
-        kind == ConstantMaskKind::AllTrue
-            ? type.getShape()
-            : SmallVector<int64_t>(type.getRank(), 0));
+  auto maskDimSizes = llvm::to_vector(type.getShape());
+  if (maskDimSizes.empty())
+    maskDimSizes.push_back(1);
+  if (kind == ConstantMaskKind::AllFalse)
+    maskDimSizes.assign(maskDimSizes.size(), 0);
+  build(builder, result, type, maskDimSizes);
 }
 
 LogicalResult ConstantMaskOp::verify() {
@@ -8216,6 +8231,12 @@ LogicalResult MaskOp::verify() {
   if (getMask().getType() != expectedMaskType)
     return emitOpError("expects a ")
            << expectedMaskType << " mask for the maskable operation";
+
+  auto transferOp =
+      dyn_cast<VectorTransferOpInterface>(maskableOp.getOperation());
+  if (transferOp && transferOp.getMask())
+    return emitOpError(
+        "doesn't expect a mask operand for the masked transfer operation");
 
   // Passthru checks.
   Value passthru = getPassthru();

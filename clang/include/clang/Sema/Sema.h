@@ -1467,6 +1467,18 @@ public:
   /// OpenMP, and SYCL.
   SemaDiagnosticBuilder::DeferredDiagnosticsType DeviceDeferredDiags;
 
+  /// An inverse call graph, mapping known-emitted functions to their
+  /// known-emitted callers (plus the location of the call).  It is populated
+  /// while emitting deferred diagnostics and is used to print call stack notes
+  /// for all offload languages.
+  ///
+  /// Functions that we can tell a priori must be emitted aren't added to this
+  /// map. A function may have multiple callers that force it into device
+  /// context, so we store all of them to produce complete diagnostics.
+  llvm::DenseMap</* Callee = */ CanonicalDeclPtr<const FunctionDecl>,
+                 /* Callers = */ llvm::SmallVector<FunctionDeclAndLoc, 1>>
+      DeviceKnownEmittedFns;
+
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
@@ -7642,8 +7654,10 @@ public:
                            bool AllowRecovery = false);
 
   /// BuildBuiltinCallExpr - Create a call to a builtin function specified by Id
-  //  with the specified CallArgs
-  Expr *BuildBuiltinCallExpr(SourceLocation Loc, Builtin::ID Id,
+  /// with the specified CallArgs. Id is unsigned rather than Builtin::ID, so
+  /// that it can also be a target-specific builtin ID, which is not in
+  /// Builtin::ID, e.g., BPF::BI__builtin_preserve_enum_value.
+  Expr *BuildBuiltinCallExpr(SourceLocation Loc, unsigned Id,
                              MultiExprArg CallArgs);
 
   using ADLCallKind = CallExpr::ADLCallKind;

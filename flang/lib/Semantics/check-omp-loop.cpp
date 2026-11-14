@@ -831,11 +831,23 @@ void OmpStructureChecker::CheckDoacross(
     }
   }
   for (const parser::OmpIteration &iter : vec) {
-    auto &name{std::get<parser::Name>(iter.t)};
+    auto &[name, offset] = iter.t;
     if (!inductionVars.count(name.symbol)) {
       context_.Say(name.source,
           "The iteration vector element '%s' is not an induction variable within the ORDERED loop nest"_err_en_US,
           name.ToString());
+    }
+    if (offset) {
+      // The operation in the offset should be + or -.
+      using IntrinsicOperator = parser::DefinedOperator::IntrinsicOperator;
+      auto &defOp = std::get<parser::DefinedOperator>(offset->t);
+      auto *intOp = std::get_if<IntrinsicOperator>(&defOp.u);
+      if (!intOp ||
+          (*intOp != IntrinsicOperator::Add &&
+              *intOp != IntrinsicOperator::Subtract)) {
+        context_.Say(iter.source,
+            "The operation in the iteration offset must be + or -"_err_en_US);
+      }
     }
   }
 }

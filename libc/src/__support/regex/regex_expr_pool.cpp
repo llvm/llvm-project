@@ -13,13 +13,10 @@
 
 #include "src/__support/regex/regex_expr_pool.h"
 #include "hdr/regex_macros.h"
-#include "src/__support/CPP/new.h"
-#include "src/__support/CPP/scope.h"
 #include "src/__support/CPP/utility.h"
-#include "src/__support/alloc-checker.h"
+#include "src/__support/checked_ptr.h"
 #include "src/__support/hash.h"
 #include "src/__support/macros/config.h"
-#include "src/string/memory_utils/inline_memset.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace regex {
@@ -97,33 +94,16 @@ public:
 
 } // namespace
 
-// TODO: When cpp::unique_ptr and cpp::make_unique are added to
-// src/__support/CPP/, replace the manual AllocChecker + new[]/delete[] calls in
-// ensure_initialized(), ~ExprPool(), allocate_block(), make_byte_set(), and
-// grow_hashtable() with cpp::make_unique<ExprId[]>(...) and
-// cpp::make_unique<Block>(), eliminating explicit zeroing via inline_memset and
-// the destructor cleanup loop.
-ExprPool::~ExprPool() {
-  delete[] byte_sets.data();
-  delete[] hashtable.data();
-  for (Block *blk : active_blocks())
-    delete blk;
-  delete[] blocks.data();
-}
-
 bool ExprPool::ensure_initialized() {
   if (block_count > 0)
     return true;
-  AllocChecker ac;
-  ExprId *raw_table = new (ac) ExprId[INITIAL_HASH_CAPACITY];
-  if (!ac)
+  auto table = make_unique<ExprId[]>(INITIAL_HASH_CAPACITY);
+  if (!table)
     return false;
-  cpp::scope_exit table_guard([raw_table] { delete[] raw_table; });
   if (!allocate_block())
     return false;
-  table_guard.release();
-  hashtable = cpp::span<ExprId>(raw_table, INITIAL_HASH_CAPACITY);
-  inline_memset(hashtable.data(), 0, hashtable.size_bytes());
+  hashtable = table.take_unique();
+  hashtable_capacity = INITIAL_HASH_CAPACITY;
 
   [[maybe_unused]] auto empty_set_id = intern(Expr::make_empty_set());
   [[maybe_unused]] auto empty_str_id = intern(Expr::make_empty_str());
@@ -144,44 +124,38 @@ ExprId &ExprPool::find_bucket(cpp::span<ExprId> table, const Expr &e) const {
 }
 
 bool ExprPool::allocate_block() {
-  AllocChecker ac;
-  if (block_count == blocks.size()) {
-    size_t new_cap = blocks.empty() ? INITIAL_BLOCKS_CAPACITY
-                                    : blocks.size() * GROWTH_FACTOR;
-    Block **new_blocks = new (ac) Block *[new_cap];
-    if (!ac)
+  if (block_count == block_capacity) {
+    size_t new_cap = block_capacity == 0 ? INITIAL_BLOCKS_CAPACITY
+                                         : block_capacity * GROWTH_FACTOR;
+    auto new_blocks = make_unique<cpp::unique_ptr<Block>[]>(new_cap);
+    if (!new_blocks)
       return false;
-    Block **dst = new_blocks;
-    for (Block *blk : active_blocks()) {
-      *dst = blk;
-      ++dst;
-    }
-    delete[] blocks.data();
-    blocks = cpp::span<Block *>(new_blocks, new_cap);
+    for (size_t i = 0; i < block_count; ++i)
+      new_blocks[i] = cpp::move(blocks[i]);
+    blocks = new_blocks.take_unique();
+    block_capacity = new_cap;
   }
-  Block *blk = new (ac) Block();
-  if (!ac)
+  auto blk = make_unique<Block>();
+  if (!blk)
     return false;
-  blocks[block_count] = blk;
+  blocks[block_count] = blk.take_unique();
   ++block_count;
   return true;
 }
 
 bool ExprPool::grow_hashtable() {
-  size_t new_cap = hashtable.size() * GROWTH_FACTOR;
-  AllocChecker ac;
-  ExprId *raw_table = new (ac) ExprId[new_cap];
-  if (!ac)
+  size_t new_cap = hashtable_capacity * GROWTH_FACTOR;
+  auto new_table = make_unique<ExprId[]>(new_cap);
+  if (!new_table)
     return false;
-  cpp::span<ExprId> new_table(raw_table, new_cap);
-  inline_memset(new_table.data(), 0, new_table.size_bytes());
 
-  for (ExprId id : hashtable)
+  cpp::span<ExprId> new_slots(new_table.get(), new_cap);
+  for (ExprId id : hashtable_slots())
     if (id != INVALID_EXPR_ID)
-      find_bucket(new_table, get(id)) = id;
+      find_bucket(new_slots, get(id)) = id;
 
-  delete[] hashtable.data();
-  hashtable = new_table;
+  hashtable = new_table.take_unique();
+  hashtable_capacity = new_cap;
   return true;
 }
 
@@ -191,7 +165,7 @@ ErrorOr<ExprId> ExprPool::intern(Expr e) {
 
   // Probe for an existing node with identical content.
   e.hash = hash_expr(e);
-  ExprId *bucket = &find_bucket(hashtable, e);
+  ExprId *bucket = &find_bucket(hashtable_slots(), e);
   if (*bucket != INVALID_EXPR_ID)
     return *bucket;
 
@@ -202,7 +176,7 @@ ErrorOr<ExprId> ExprPool::intern(Expr e) {
   if (node_count >= max_hashtable_nodes()) {
     if (!grow_hashtable())
       return Error(REG_ESPACE);
-    bucket = &find_bucket(hashtable, e);
+    bucket = &find_bucket(hashtable_slots(), e);
   }
 
   // Arena Allocation: If no matching node found, allocate a stable slot.
@@ -257,20 +231,16 @@ ErrorOr<ExprId> ExprPool::make_byte_set(const ByteSet &bs) {
     ++bs_id;
   }
 
-  if (byte_set_count == byte_sets.size()) {
-    size_t new_cap = byte_sets.empty() ? INITIAL_BYTE_SETS_CAPACITY
-                                       : byte_sets.size() * GROWTH_FACTOR;
-    AllocChecker ac;
-    ByteSet *new_sets = new (ac) ByteSet[new_cap];
-    if (!ac)
+  if (byte_set_count == byte_set_capacity) {
+    size_t new_cap = byte_set_capacity == 0 ? INITIAL_BYTE_SETS_CAPACITY
+                                            : byte_set_capacity * GROWTH_FACTOR;
+    auto new_sets = make_unique<ByteSet[]>(new_cap);
+    if (!new_sets)
       return Error(REG_ESPACE);
-    ByteSet *dst = new_sets;
-    for (const ByteSet &existing : active_byte_sets()) {
-      *dst = existing;
-      ++dst;
-    }
-    delete[] byte_sets.data();
-    byte_sets = cpp::span<ByteSet>(new_sets, new_cap);
+    for (size_t i = 0; i < byte_set_count; ++i)
+      new_sets[i] = byte_sets[i];
+    byte_sets = new_sets.take_unique();
+    byte_set_capacity = new_cap;
   }
 
   ErrorOr<ExprId> id = intern(Expr::make_byte_set(bs_id));

@@ -317,6 +317,7 @@ protected:
     static const int kHeightAtLeast1[] = {1, 2, 4, 8, 16, 32};
     static const int kHeightAtLeast8[] = {8, 16, 32};
     static const int kHeightAtLeast16[] = {16, 32};
+    static const int kHeight16[] = {16};
     static const int kHeight32[] = {32};
     static const int kHeight64[] = {64};
 
@@ -346,9 +347,10 @@ protected:
         {{8, true, false, false}, {kWidth16, kHeight32, kCount4}},
         {{16, true, false, false}, {kWidth16, kHeightAtLeast16, kCount2}},
         // Block Loads with Transpose:
-        {{8, false, true, false}, {kWidth32, kHeightAtLeast16, kCount1}},
-        {{16, false, true, false}, {kWidth16, kHeightAtLeast16, kCount1}},
-        {{32, false, true, false}, {kWidth8, kHeightAtLeast16, kCount1}},
+        // HW supports kHeight 32 but layout not aligned with dpas, limit to 16
+        {{8, false, true, false}, {kWidth32, kHeight16, kCount1}},
+        {{16, false, true, false}, {kWidth16, kHeight16, kCount1}},
+        {{32, false, true, false}, {kWidth8, kHeight16, kCount1}},
         // 4-bit elements (sub-byte):
         {{4, false, false, false}, {kWidth64, kHeightAtLeast1, kCount2}},
         {{4, false, false, true}, {kWidth32, kHeightAtLeast8, kCount4Only}},

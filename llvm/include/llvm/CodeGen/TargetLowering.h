@@ -2265,10 +2265,17 @@ public:
                                   const LibcallLoweringInfo &Libcalls) const;
 
 protected:
-  Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
-                                            bool UseTLS) const;
+  Value *
+  getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
+                                     const LibcallLoweringInfo &Libcalls) const;
 
 public:
+  /// Emits a call to the libcall returning the address of the unsafe stack
+  /// pointer. Returns nullptr if the libcall is unavailable.
+  Value *
+  getSafeStackPointerAddressCall(IRBuilderBase &IRB,
+                                 const LibcallLoweringInfo &Libcalls) const;
+
   /// Returns the target-specific address of the unsafe stack pointer.
   virtual Value *
   getSafeStackPointerLocation(IRBuilderBase &IRB,
@@ -3745,6 +3752,12 @@ public:
   virtual bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const {
     return isOperationLegalOrCustom(Op, VT);
   }
+
+  /// Return true if an ISD::SINT_TO_FP or ISD::UINT_TO_FP of an i1 or i1 vector
+  /// to \p VT should be replaced by a select of the two exact results before
+  /// operation legalization. The DAGCombiner folds for scalar SETCC results do
+  /// not query this hook.
+  virtual bool shouldConvertBoolToFPWithSelect(EVT VT) const { return false; }
 
   /// Should we prefer selects to doing arithmetic on boolean types
   virtual bool preferSelectsOverBooleanArithmetic(EVT VT) const {
@@ -6144,6 +6157,9 @@ public:
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_SHUFFLE_VAR into variable-index element extracts.
+  SDValue expandVECTOR_SHUFFLE_VAR(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expand a CTTZ_ELTS or CTTZ_ELTS_ZERO_POISON by calculating (VL - i) for
   /// each active lane (i), getting the maximum and subtracting it from VL.
