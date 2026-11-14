@@ -791,7 +791,8 @@ foreach MemSize = [1, 2, 4, 8, 16] in {
       : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
     let FnAttrs = CommonFnAttrs;
     let Memory = ArgMemOnly;
-    let ParamAttrs = [[WriteOnly, CapturesNone], ReadPtrAttrs];
+    let ParamAttrs = [[NoAlias, WriteOnly, CapturesNone],
+                      [NoAlias, ReadOnly, CapturesNone]];
   }
   def MEMMOVE_ELEMENT_UNORDERED_ATOMIC_#MemSize
       : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
