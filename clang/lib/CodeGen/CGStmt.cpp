@@ -2556,9 +2556,13 @@ std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
     if (CodeGenFunction::hasScalarEvaluationKind(InputType))
       return {EmitLoadOfLValue(InputValue, Loc).getScalarVal(), nullptr};
 
+    // Load a 128-bit value only when it has to be in registers, or when it's
+    // tied to an output. Otherwise, the asm can use the object itself rather
+    // than a copy of it.
     llvm::Type *Ty = ConvertType(InputType);
     uint64_t Size = CGM.getDataLayout().getTypeSizeInBits(Ty);
     if ((Size <= 64 && llvm::isPowerOf2_64(Size)) ||
+        (Size == 128 && (!Info.allowsMemory() || Info.hasTiedOperand())) ||
         getTargetHooks().isScalarizableAsmOperand(*this, Ty)) {
       Ty = llvm::IntegerType::get(getLLVMContext(), Size);
 
@@ -2953,11 +2957,7 @@ void AsmConstraintsInfo::HandleOutputConstraints() {
     // If this is a register output, then make the inline asm return it
     // by-value.  If this is a memory result, return the value by-reference.
     QualType QTy = OutExpr->getType();
-    const bool IsScalarOrAggregate =
-        CodeGenFunction::hasScalarEvaluationKind(QTy) ||
-        CodeGenFunction::hasAggregateEvaluationKind(QTy);
-
-    if (!Info.allowsMemory() && IsScalarOrAggregate) {
+    if (!Info.allowsMemory()) {
       Constraints += "=" + OutputConstraint;
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
@@ -3139,7 +3139,13 @@ void AsmConstraintsInfo::HandleInputConstraints() {
         if (isa<llvm::PointerType>(Arg->getType()))
           Arg = Builder.CreatePtrToInt(Arg, CGF.IntPtrTy);
 
+        // A struct or _Complex output is returned as an integer of its size,
+        // so that's the type to extend the input to.
         llvm::Type *OutputTy = CGF.ConvertType(OutputType);
+        if (OutputTy->isAggregateType())
+          OutputTy = llvm::IntegerType::get(getLLVMContext(),
+                                            Ctx.getTypeSize(OutputType));
+
         if (isa<llvm::IntegerType>(OutputTy))
           Arg = Builder.CreateZExt(Arg, OutputTy);
         else if (isa<llvm::PointerType>(OutputTy))
