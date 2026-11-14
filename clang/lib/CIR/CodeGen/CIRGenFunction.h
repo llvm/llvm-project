@@ -2497,6 +2497,10 @@ public:
   std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
 
+  /// Emit a call to a SPIR-V builtin function.
+  std::optional<mlir::Value> emitSPIRVBuiltinExpr(unsigned builtinID,
+                                                  const CallExpr *expr);
+
   /// Emit a device-side printf call for GPU targets.
   mlir::Value emitDevicePrintfCallExpr(const CallExpr *expr);
 
