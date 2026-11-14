@@ -3164,6 +3164,7 @@ FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
 
 void FunctionDecl::setDefaultedOrDeletedInfo(
     DefaultedOrDeletedFunctionInfo *Info) {
+  assert(Info && "expected defaulted or deleted function info");
   assert(!FunctionDeclBits.HasDefaultedOrDeletedInfo && "already have this");
   assert(!Body && "can't replace function body with defaulted function info");
 
@@ -4971,6 +4972,34 @@ const FieldDecl *FieldDecl::findCountedByField() const {
     CountDecl = IFD->getAnonField();
 
   return dyn_cast<FieldDecl>(CountDecl);
+}
+
+static bool initializationHasSideEffects(const FieldDecl &FD) {
+  const Type *T = FD.getType()->getBaseElementTypeUnsafe();
+  // FIXME: Destruction of ObjC lifetime types has side-effects.
+  if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
+    return !RD->isCompleteDefinition() || !RD->hasTrivialDefaultConstructor() ||
+           !RD->hasTrivialDestructor();
+  return false;
+}
+
+template <typename AttrType> static bool hasAttribute(QualType T) {
+  if (const TagDecl *TD = T->getAsTagDecl())
+    return TD->hasAttr<AttrType>();
+  if (const TypedefType *TDT = T->getAs<TypedefType>())
+    return TDT->getDecl()->hasAttr<AttrType>();
+  return false;
+}
+
+bool FieldDecl::isUnusedPrivateField() const {
+  if (isImplicit() || !getDeclName() || getAccess() != AS_private ||
+      hasAttr<UnusedAttr>() || getParent()->isDependentContext())
+    return false;
+
+  QualType FieldType = getType();
+  return !hasAttribute<UnusedAttr>(FieldType) &&
+         (hasAttribute<WarnUnusedAttr>(FieldType) ||
+          !initializationHasSideEffects(*this));
 }
 
 //===----------------------------------------------------------------------===//

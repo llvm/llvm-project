@@ -2518,6 +2518,13 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
       (Op == ISD::SINT_TO_FP || Op == ISD::UINT_TO_FP))
     return false;
 
+  // The DAGCombiner replaces a conversion from i1 with a select of the two
+  // exact results. The select avoids an f32 conversion plus rounding for
+  // f16/bf16, a 64-bit conversion for f64 and a missing libcall for f128, and
+  // is the same single v_cndmask for f32.
+  if (VT == MVT::i1 && (Op == ISD::SINT_TO_FP || Op == ISD::UINT_TO_FP))
+    return false;
+
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
 
@@ -20326,15 +20333,27 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'v':
     case 'a':
       return C_RegisterClass;
+    case 'm':
+      return C_Memory;
     }
   } else if (Constraint.size() == 2) {
     if (Constraint == "VA")
       return C_RegisterClass;
+    if (Constraint == "RF")
+      return C_Memory;
   }
   if (isImmConstraint(Constraint)) {
     return C_Other;
   }
   return TargetLowering::getConstraintType(Constraint);
+}
+
+InlineAsm::ConstraintCode
+SITargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
+  if (ConstraintCode == "RF")
+    return InlineAsm::ConstraintCode::RF;
+
+  return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
 }
 
 static uint64_t clearUnusedBits(uint64_t Val, unsigned Size) {

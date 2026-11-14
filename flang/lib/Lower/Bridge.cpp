@@ -4522,13 +4522,9 @@ private:
           Fortran::semantics::GetExpr(caseValue.thing);
       if (isCharSelector)
         valueList.push_back(charValue(expr));
-      else if (isLogicalSelector)
+      else
         valueList.push_back(builder->createConvert(
             loc, selectType, createFIRExpr(toLocation(), expr, stmtCtx)));
-      else {
-        valueList.push_back(builder->createIntegerConstant(
-            loc, selectType, *Fortran::evaluate::ToInt64(*expr)));
-      }
     };
     for (Fortran::lower::pft::Evaluation *e = eval.controlSuccessor; e;
          e = e->controlSuccessor) {
@@ -6568,23 +6564,38 @@ private:
     const auto &langOptions = bridge.getSemanticsContext().langOptions();
     if (langOptions.OpenMPSimd)
       return;
+    bool noOpenmp = false;
+    bool noParallelism = false;
     const auto *assumptionScopeEnd =
         &Fortran::semantics::omp::GetProgramUnit(scope).parent();
-    bool noOpenmp = false;
-    std::set<llvm::omp::Directive> absent;
+    llvm::omp::Directives absent;
     for (const auto *assumptionScope = &scope;
          !assumptionScope->IsGlobal() && assumptionScope != assumptionScopeEnd;
          assumptionScope = &assumptionScope->parent()) {
-      if (const auto *symbol = assumptionScope->symbol();
-          symbol &&
-          symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
-        noOpenmp = true;
-      const auto &directives = assumptionScope->ompAssumesAbsent();
-      absent.insert(directives.begin(), directives.end());
+      if (const auto *symbol = assumptionScope->symbol()) {
+        Fortran::common::visit(
+            [&](const auto &details) {
+              if constexpr (std::is_convertible_v<decltype(details),
+                                                  const Fortran::semantics::
+                                                      WithOmpDeclarative &>) {
+                noOpenmp |= details.ompAssumes().test(
+                    llvm::omp::Clause::OMPC_no_openmp);
+                noParallelism |= details.ompAssumes().test(
+                    llvm::omp::Clause::OMPC_no_parallelism);
+                absent |= details.ompAssumesAbsent();
+              }
+            },
+            symbol->details());
+      }
     }
-    if (!noOpenmp && absent.empty())
+    if (!noOpenmp && !noParallelism && absent.empty())
       return;
     std::string assumptions = noOpenmp ? "omp_no_openmp" : "";
+    if (noParallelism) {
+      if (!assumptions.empty())
+        assumptions += ',';
+      assumptions += "omp_no_parallelism";
+    }
     for (llvm::omp::Directive directive : absent) {
       if (!assumptions.empty())
         assumptions += ',';
@@ -6689,31 +6700,42 @@ private:
 
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;
-    for (const Fortran::lower::pft::Variable &var :
-         Fortran::lower::pft::getScopeVariableList(scope)) {
-      // Always instantiate aggregate storage blocks.
-      if (var.isAggregateStore()) {
-        instantiateVar(var, storeMap);
-        continue;
+    {
+      // Reuse the host list to avoid repeating dependency analysis.
+      Fortran::lower::pft::VariableList localVariables;
+      const Fortran::lower::pft::VariableList *variables;
+      if (funit.getHostAssoc().hasGlobalAssociations()) {
+        variables = &Fortran::lower::pft::getScopeVariableList(
+            scope, Fortran::lower::pft::getScopeVariableListMap(funit));
+      } else {
+        localVariables = Fortran::lower::pft::getScopeVariableList(scope);
+        variables = &localVariables;
       }
-      const Fortran::semantics::Symbol &sym = var.getSymbol();
-      if (funit.parentHasHostAssoc()) {
-        // Never instantiate host associated variables, as they are already
-        // instantiated from an argument tuple. Instead, just bind the symbol
-        // to the host variable, which must be in the map.
-        const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
-        if (funit.parentHostAssoc().isAssociated(ultimate)) {
-          copySymbolBinding(ultimate, sym);
+      for (const Fortran::lower::pft::Variable &var : *variables) {
+        // Always instantiate aggregate storage blocks.
+        if (var.isAggregateStore()) {
+          instantiateVar(var, storeMap);
           continue;
         }
-      }
-      if (!sym.IsFuncResult() || !funit.primaryResult) {
-        instantiateVar(var, storeMap);
-      } else if (&sym == funit.primaryResult) {
-        instantiateVar(var, storeMap);
-        primaryFuncResultStorage = getSymbolAddress(sym);
-      } else {
-        deferredFuncResultList.push_back(var);
+        const Fortran::semantics::Symbol &sym = var.getSymbol();
+        if (funit.parentHasHostAssoc()) {
+          // Never instantiate host associated variables, as they are already
+          // instantiated from an argument tuple. Instead, just bind the symbol
+          // to the host variable, which must be in the map.
+          const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+          if (funit.parentHostAssoc().isAssociated(ultimate)) {
+            copySymbolBinding(ultimate, sym);
+            continue;
+          }
+        }
+        if (!sym.IsFuncResult() || !funit.primaryResult) {
+          instantiateVar(var, storeMap);
+        } else if (&sym == funit.primaryResult) {
+          instantiateVar(var, storeMap);
+          primaryFuncResultStorage = getSymbolAddress(sym);
+        } else {
+          deferredFuncResultList.push_back(var);
+        }
       }
     }
 
@@ -7101,6 +7123,10 @@ private:
 
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
+    auto &hostAssociations = funit.getHostAssoc();
+    const bool hasGlobals = hostAssociations.hasGlobalAssociations();
+    if (hasGlobals)
+      hostAssociations.prepareGlobalBindings(funit);
     setCurrentPosition(funit.getStartingSourceLoc());
     setCurrentFunctionUnit(&funit);
     assert(visibleCrayPointerTargets.empty() &&
@@ -7134,6 +7160,8 @@ private:
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
+    if (hasGlobals)
+      hostAssociations.releaseGlobalBindings(funit);
   }
 
   /// Lower module variable definitions to fir::globalOp and OpenMP/OpenACC

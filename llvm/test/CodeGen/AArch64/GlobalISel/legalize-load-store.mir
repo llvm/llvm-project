@@ -2,7 +2,6 @@
 # RUN: llc -O0 -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1 %s -o - | FileCheck %s
 ---
 name:            test_load
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0
@@ -60,7 +59,6 @@ body: |
 
 ---
 name:            test_store
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $w1
@@ -495,13 +493,12 @@ body:             |
 ...
 ---
 name:            test_trunc_store
-tracksRegLiveness: false
 body: |
   bb.0:
-    liveins: $x0, $w1
+    liveins: $w1, $x0, $x2
 
     ; CHECK-LABEL: name: test_trunc_store
-    ; CHECK: liveins: $x0, $w1
+    ; CHECK: liveins: $w1, $x0, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1

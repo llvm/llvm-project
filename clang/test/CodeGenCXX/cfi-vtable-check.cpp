@@ -104,7 +104,7 @@ extern "C" void test(S *s) {
 // TRAP_CUTOFF: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 // TRAP_CUTOFF: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 // TRAP_CUTOFF: attributes #[[ATTR3:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
-// TRAP_CUTOFF: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
+// TRAP_CUTOFF: attributes #[[ATTR4]] = { nomerge }
 //.
 // XDSO_TRAP: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // XDSO_TRAP: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
@@ -112,12 +112,12 @@ extern "C" void test(S *s) {
 // XDSO_TRAP: attributes #[[ATTR3:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 // XDSO_TRAP: attributes #[[ATTR4:[0-9]+]] = { noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // XDSO_TRAP: attributes #[[ATTR5]] = { nounwind }
-// XDSO_TRAP: attributes #[[ATTR6:[0-9]+]] = { nomerge noreturn nounwind }
+// XDSO_TRAP: attributes #[[ATTR6:[0-9]+]] = { nomerge }
 //.
 // SPEC_TRAP: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // SPEC_TRAP: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 // SPEC_TRAP: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
-// SPEC_TRAP: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
+// SPEC_TRAP: attributes #[[ATTR3]] = { nomerge }
 //.
 // MIN: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // MIN: [[META1]] = !{}
