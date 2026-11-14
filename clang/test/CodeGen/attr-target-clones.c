@@ -343,7 +343,5 @@ int isa_level(int) { return 0; }
 
 
 // CHECK: attributes #[[ATTR_RESOLVER]] = { disable_sanitizer_instrumentation }
-// CHECK: attributes #[[SSE42]] =
-// CHECK-SAME: "target-features"="+crc32,+cx8,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87"
-// CHECK: attributes #[[SB]] =
-// CHECK-SAME: "target-features"="+avx,+cmov,+crc32,+cx16,+cx8,+fxsr,+mmx,+pclmul,+popcnt,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
+// CHECK-DAG: attributes #[[SSE42]] = {{.*}} "target-features"="+crc32,+cx8,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87"
+// CHECK-DAG: attributes #[[SB]] = {{.*}} "target-features"="+avx,+cmov,+crc32,+cx16,+cx8,+fxsr,+mmx,+pclmul,+popcnt,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"

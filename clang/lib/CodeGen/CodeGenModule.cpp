@@ -3605,7 +3605,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       AddedAttr = true;
     }
   }
-  // Add metadata for AArch64 Function Multi Versioning.
+  // Add metadata for Function Multi Versioning.
   if (getTarget().getTriple().isAArch64()) {
     llvm::SmallVector<StringRef, 8> Feats;
     bool IsDefault = false;
@@ -3628,6 +3628,34 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       Attrs.addAttribute("fmv-features", FMVFeatures.substr(1));
       AddedAttr = true;
     }
+  } else if (getTarget().getTriple().isX86() && getTarget().supportsIFunc() &&
+             TC) {
+    std::optional<StringRef> Arch =
+        TC->getX86Architecture(GD.getMultiVersionIndex());
+    // Preserve CPU-identity predicates separately from feature predicates.
+    // In particular, arch=haswell must not mean "supports Haswell's ISA".
+    StringRef Feature =
+        Arch.value_or(TC->getFeatureStr(GD.getMultiVersionIndex()));
+    std::string Predicate = Arch && !Arch->starts_with("x86-64")
+                                ? ("arch=" + *Arch).str()
+                                : Feature.str();
+    Attrs.addAttribute("fmv-features", Predicate == "default" ? "" : Predicate);
+    bool HasCPUModel = false;
+    for (unsigned I = 0, E = TC->featuresStrs_size(); I != E; ++I) {
+      std::optional<StringRef> CPU = TC->getX86Architecture(I);
+      HasCPUModel |= CPU && !CPU->starts_with("x86-64");
+    }
+    if (HasCPUModel) {
+      // Runtime dispatch is stable for equal-priority predicates. Preserve the
+      // target_clones source order in the low bits for static resolution too.
+      uint64_t Priority =
+          Feature == "default"
+              ? 0
+              : getTarget().getFMVPriority({Feature}).getZExtValue();
+      Priority = (Priority << 32) | (UINT32_MAX - GD.getMultiVersionIndex());
+      Attrs.addAttribute("fmv-priority", std::to_string(Priority));
+    }
+    AddedAttr = true;
   }
   return AddedAttr;
 }
@@ -3667,6 +3695,7 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
         RemoveAttrs.addAttribute("target-cpu");
         RemoveAttrs.addAttribute("target-features");
         RemoveAttrs.addAttribute("fmv-features");
+        RemoveAttrs.addAttribute("fmv-priority");
         RemoveAttrs.addAttribute("tune-cpu");
         F->removeFnAttrs(RemoveAttrs);
         F->addFnAttrs(Attrs);

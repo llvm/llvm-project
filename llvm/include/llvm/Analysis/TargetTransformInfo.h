@@ -2178,7 +2178,9 @@ public:
   LLVM_ABI APInt getFeatureMask(const Function &F) const;
 
   /// Returns a bitmask constructed from the target-features or fmv-features
-  /// metadata of a function corresponding to its FMV priority.
+  /// metadata of a function corresponding to its FMV priority. Results with
+  /// different bit widths use incompatible encodings and cannot be ordered
+  /// together for static IFUNC resolution.
   LLVM_ABI APInt getPriorityMask(const Function &F) const;
 
   /// Returns true if this is an instance of a function with multiple versions.

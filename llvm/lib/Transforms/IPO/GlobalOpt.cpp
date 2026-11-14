@@ -2264,7 +2264,6 @@ static bool OptimizeNonTrivialIFuncs(
       continue;
 
     for (Function *V : Versions) {
-      VersionOf.insert({V, &IF});
       auto [FeatIt, FeatInserted] = FeatureMask.try_emplace(V);
       if (FeatInserted)
         FeatIt->second = GetTTI(*V).getFeatureMask(*V);
@@ -2272,6 +2271,17 @@ static bool OptimizeNonTrivialIFuncs(
       if (PriorInserted)
         PriorIt->second = GetTTI(*V).getPriorityMask(*V);
     }
+
+    // Different priority encodings cannot be compared. For example, LTO can
+    // combine versions with and without target-specific resolver ordering.
+    unsigned PriorityWidth = PriorityMask[Versions.front()].getBitWidth();
+    if (any_of(Versions, [&](Function *V) {
+          return PriorityMask[V].getBitWidth() != PriorityWidth;
+        }))
+      continue;
+
+    for (Function *V : Versions)
+      VersionOf.insert({V, &IF});
 
     // Sort function versions in decreasing priority order.
     sort(Versions, [&](auto *LHS, auto *RHS) {
