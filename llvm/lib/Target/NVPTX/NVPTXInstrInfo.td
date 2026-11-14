@@ -2252,6 +2252,65 @@ def : Pat<(i64 (zext i32:$a)), (CVT_u64_u32 reg_or_imm:$a, CvtNONE)>;
 def : Pat<(i64 (anyext i32:$a)), (CVT_u64_u32 reg_or_imm:$a, CvtNONE)>;
 
 
+// Match integer saturation directly, including when legalization promotes i8
+// results or folds the truncation into a store. Both clamp orders are valid;
+// an unsigned upper bound is also valid after clamping a signed input to zero.
+class IntSatClamp<bit Signed, int Min, int Max> : PatFrags<(ops node:$a),
+    !if(Signed,
+        !listconcat([(smin (smax node:$a, Min), Max),
+                     (smax (smin node:$a, Max), Min)],
+                    !if(!eq(Min, 0), [(umin (smax node:$a, 0), Max)], [])),
+        [(umin node:$a, Max)])>;
+
+foreach SrcVT = [i16, i32, i64] in {
+  foreach DstBits = [8, 16, 32] in {
+    if !gt(SrcVT.Size, DstBits) then {
+      foreach DstSign = ["s", "u"] in {
+        defvar Min = !if(!eq(DstSign, "s"),
+                         !sub(0, !shl(1, !sub(DstBits, 1))), 0);
+        defvar Max = !sub(!shl(1, !sub(DstBits, !eq(DstSign, "s"))), 1);
+        foreach SrcSign = ["s", "u"] in {
+          defvar Clamp = IntSatClamp<!eq(SrcSign, "s"), Min, Max>;
+          foreach RegVT = [i16, i32, i64] in {
+            if !and(!ge(RegVT.Size, DstBits), !le(RegVT.Size, SrcVT.Size)) then {
+              defvar Name = "CVT_SAT_" # DstSign # DstBits # "_" #
+                            SrcSign # SrcVT.Size # "_" # RegVT;
+              defvar RC = !cast<RegisterClass>("B" # RegVT.Size);
+              defvar SrcOp = !cast<NVPTXRegOrImm>("B" # SrcVT.Size # "Op");
+              // PTX extends to the register width according to the destination
+              // format, so the register may be wider than the saturated type.
+              let hasSideEffects = false in
+              def Name : BasicNVPTXInst<(outs RC:$dst), (ins SrcOp:$src),
+                  "cvt.sat." # DstSign # DstBits # "." # SrcSign # SrcVT.Size>;
+              defvar Input = (SrcVT (Clamp SrcVT:$a));
+              def : Pat<!if(!eq(RegVT, SrcVT), Input, (RegVT (trunc Input))),
+                        (!cast<NVPTXInst>(Name) reg_or_imm:$a)>;
+              if !and(!eq(RegVT.Size, DstBits),
+                      !or(!eq(SrcSign, "s"), !eq(DstSign, "u"))) then {
+                defvar SatOp = !if(!eq(SrcSign, "u"), truncusat_u,
+                                   !if(!eq(DstSign, "s"), truncssat_s, truncssat_u));
+                def : Pat<(RegVT (SatOp SrcVT:$a)),
+                          (!cast<NVPTXInst>(Name) reg_or_imm:$a)>;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Widening a signed input to an unsigned result still needs to clamp negative
+// values to zero.
+foreach SrcVT = [i16, i32, i64] in {
+  foreach DstVT = [i32, i64] in {
+    if !gt(DstVT.Size, SrcVT.Size) then
+      def : Pat<(DstVT (zext (SrcVT (smax SrcVT:$a, 0)))),
+                (!cast<NVPTXInst>("CVT_u" # DstVT.Size # "_s" # SrcVT.Size)
+                    reg_or_imm:$a, CvtSAT)>;
+  }
+}
+
 // truncate i64
 def : Pat<(i32 (trunc i64:$a)), (CVT_u32_u64 reg_or_imm:$a, CvtNONE)>;
 def : Pat<(i16 (trunc i64:$a)), (CVT_u16_u64 reg_or_imm:$a, CvtNONE)>;
