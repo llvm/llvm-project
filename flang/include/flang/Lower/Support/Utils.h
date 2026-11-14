@@ -86,6 +86,10 @@ inline Fortran::lower::SomeExpr ignoreEvConvert(
 }
 
 namespace Fortran::lower {
+/// Privatizer name suffixes, including the trailing '_' separator.
+inline constexpr llvm::StringLiteral privatizerSuffixes[] = {
+    "_private_", "_firstprivate_", "_linear_"};
+
 unsigned getHashValue(const Fortran::lower::SomeExpr *x);
 unsigned getHashValue(const Fortran::evaluate::Component *x);
 

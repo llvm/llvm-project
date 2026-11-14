@@ -1658,6 +1658,9 @@ bool IsObjectPointer(const Symbol *);
 bool IsAllocatableOrObjectPointer(const Symbol *);
 bool IsAutomatic(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
+// True for a MAIN-program symbol whose storage size is at most 32 bytes.
+// Resolve USE/host associations first; SAVE and object kind are not tested.
+bool IsSmallMainProgramVariable(const Symbol &);
 bool IsDummy(const Symbol &);
 
 bool IsAssumedRank(const Symbol &);

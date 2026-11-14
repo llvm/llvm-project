@@ -444,6 +444,11 @@ def fcoarray : Flag<["-"], "fcoarray">,
 
 let Visibility = [FC1Option] in {
 
+def fno_openmp_main_program_globals : Flag<["-"], "fno-openmp-main-program-globals">,
+  Group<f_Group>,
+  HelpText<"Disable promotion to static storage for small main-program scalars "
+           "referenced directly in explicit host OpenMP PARALLEL regions">;
+
 def ffp_maxmin_behavior_EQ
     : Joined<["-"], "ffp-maxmin-behavior=">,
       Flags<[HelpHidden]>,

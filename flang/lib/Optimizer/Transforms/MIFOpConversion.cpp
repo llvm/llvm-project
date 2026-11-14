@@ -123,7 +123,7 @@ mlir::Value getCoarrayHandle(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Type handleTy = getCoarrayHandleType(builder, loc);
   std::string uniqName = mif::getFullUniqName(coarray);
   if (!uniqName.empty()) {
-    std::string globalName = uniqName + coarrayHandleSuffix.str();
+    std::string globalName = uniqName + fir::coarrayHandleSuffix.str();
     mlir::SymbolRefAttr symAttr =
         mlir::SymbolRefAttr::get(builder.getContext(), globalName);
     mlir::Value coarrayHandle = fir::AddrOfOp::create(
@@ -139,7 +139,7 @@ mlir::Value getCoarrayHandle(fir::FirOpBuilder &builder, mlir::Location loc,
 void storeCoarrayHandle(fir::FirOpBuilder &builder, mlir::Location loc,
                         mlir::Value coarrayHandle, std::string uniqName) {
   mlir::Type handleTy = getCoarrayHandleType(builder, loc);
-  std::string globalName = uniqName + coarrayHandleSuffix.str();
+  std::string globalName = uniqName + fir::coarrayHandleSuffix.str();
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   if (!global) {
     global = builder.createGlobal(loc, handleTy, globalName,
@@ -1681,7 +1681,7 @@ static void genCoarrayHandle(fir::FirOpBuilder &builder, mlir::ModuleOp mod,
     if (boxTy.isCoarray()) {
       mlir::Type handleTy = getCoarrayHandleType(builder, loc);
       std::string globalName =
-          op.getUniqName().str() + coarrayHandleSuffix.str();
+          op.getUniqName().str() + fir::coarrayHandleSuffix.str();
       if (builder.getNamedGlobal(globalName))
         return;
       fir::GlobalOp global = builder.createGlobal(

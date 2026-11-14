@@ -557,14 +557,16 @@ namespace {
 /// Traverse the pre-FIR tree (PFT) to generate the FIR dialect of MLIR.
 class FirConverter : public Fortran::lower::AbstractConverter {
 public:
-  explicit FirConverter(Fortran::lower::LoweringBridge &bridge)
-      : Fortran::lower::AbstractConverter(bridge.getLoweringOptions()),
+  FirConverter(Fortran::lower::LoweringBridge &bridge,
+               Fortran::lower::pft::Program &program)
+      : Fortran::lower::AbstractConverter(bridge.getLoweringOptions(), program),
         bridge{bridge}, foldingContext{bridge.createFoldingContext()},
         mlirSymbolTable{bridge.getModule()} {}
   virtual ~FirConverter() = default;
 
   /// Convert the PFT to FIR.
-  void run(Fortran::lower::pft::Program &pft) {
+  void run() {
+    auto &pft = getPft();
     // Preliminary translation pass.
 
     // Lower common blocks, taking into account initialization and the largest
@@ -4690,7 +4692,7 @@ private:
         scopeBlockIdMap.try_emplace(&scope, ++blockId);
         Fortran::lower::AggregateStoreMap storeMap;
         for (const Fortran::lower::pft::Variable &var :
-             Fortran::lower::pft::getScopeVariableList(scope)) {
+             Fortran::lower::pft::getScopeVariableList(scope, getPft())) {
           // Do no instantiate again variables from the block host
           // that appears in specification of block variables.
           if (!var.hasSymbol() || !lookupSymbol(var.getSymbol()))
@@ -6705,10 +6707,10 @@ private:
       Fortran::lower::pft::VariableList localVariables;
       const Fortran::lower::pft::VariableList *variables;
       if (funit.getHostAssoc().hasGlobalAssociations()) {
-        variables = &Fortran::lower::pft::getScopeVariableList(
-            scope, Fortran::lower::pft::getScopeVariableListMap(funit));
+        variables = &getPft().getScopeVariableList(scope);
       } else {
-        localVariables = Fortran::lower::pft::getScopeVariableList(scope);
+        localVariables =
+            Fortran::lower::pft::getScopeVariableList(scope, getPft());
         variables = &localVariables;
       }
       for (const Fortran::lower::pft::Variable &var : *variables) {
@@ -6719,9 +6721,9 @@ private:
         }
         const Fortran::semantics::Symbol &sym = var.getSymbol();
         if (funit.parentHasHostAssoc()) {
-          // Never instantiate host associated variables, as they are already
-          // instantiated from an argument tuple. Instead, just bind the symbol
-          // to the host variable, which must be in the map.
+          // Host-associated storage is already bound through a global address
+          // or the host tuple. Reuse it for the current procedure's symbol
+          // instead of allocating another variable.
           const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
           if (funit.parentHostAssoc().isAssociated(ultimate)) {
             copySymbolBinding(ultimate, sym);
@@ -7057,7 +7059,8 @@ private:
       if (modName != "__fortran_ieee_exceptions" &&
           modName != "iso_fortran_env")
         continue;
-      for (auto &var : Fortran::lower::pft::getScopeVariableList(scope)) {
+      for (auto &var :
+           Fortran::lower::pft::getScopeVariableList(scope, getPft())) {
         const Fortran::semantics::Symbol &sym = var.getSymbol();
         if (sym.test(Fortran::semantics::Symbol::Flag::CompilerCreated))
           continue;
@@ -7169,10 +7172,7 @@ private:
   void lowerModuleDeclScope(Fortran::lower::pft::ModuleLikeUnit &mod) {
     setCurrentPosition(mod.getStartingSourceLoc());
     emitModuleDebugImports(*this, *builder, toLocation(), mod);
-    auto &scopeVariableListMap =
-        Fortran::lower::pft::getScopeVariableListMap(mod);
-    for (const auto &var : Fortran::lower::pft::getScopeVariableList(
-             mod.getScope(), scopeVariableListMap)) {
+    for (const auto &var : getPft().getScopeVariableList(mod.getScope())) {
 
       // Only define the variables owned by this module.
       const Fortran::semantics::Scope *owningScope = var.getOwningScope();
@@ -7440,8 +7440,8 @@ void Fortran::lower::LoweringBridge::lower(
     const Fortran::semantics::SemanticsContext &semanticsContext) {
   std::unique_ptr<Fortran::lower::pft::Program> pft =
       Fortran::lower::createPFT(prg, semanticsContext, getLoweringOptions());
-  FirConverter converter{*this};
-  converter.run(*pft);
+  FirConverter converter{*this, *pft};
+  converter.run();
 }
 
 void Fortran::lower::LoweringBridge::parseSourceFile(llvm::SourceMgr &srcMgr) {

@@ -65,6 +65,7 @@ namespace lower {
 class SymMap;
 struct SymbolBox;
 namespace pft {
+struct Program;
 struct Variable;
 struct FunctionLikeUnit;
 } // namespace pft
@@ -376,8 +377,10 @@ public:
   genStatAndErrmsg(mlir::Location loc,
                    const std::list<Fortran::parser::StatOrErrmsg> &) = 0;
 
-  AbstractConverter(const Fortran::lower::LoweringOptions &loweringOptions)
-      : loweringOptions(loweringOptions) {}
+  /// The options and program must outlive the converter.
+  AbstractConverter(const Fortran::lower::LoweringOptions &loweringOptions,
+                    pft::Program &program)
+      : loweringOptions(loweringOptions), program(program) {}
   virtual ~AbstractConverter() = default;
 
   //===--------------------------------------------------------------------===//
@@ -395,6 +398,9 @@ public:
   /// DO itself and so never reaches genFIR(DoConstruct), where a plain loop's
   /// body is wrapped.
   virtual void genLoopBodyEvaluations(pft::Evaluation &loopEval) = 0;
+
+  /// Return the PFT being lowered.
+  pft::Program &getPft() { return program; }
 
   /// Return options controlling lowering behavior.
   const Fortran::lower::LoweringOptions &getLoweringOptions() const {
@@ -424,6 +430,8 @@ public:
 private:
   /// Options controlling lowering behavior.
   const Fortran::lower::LoweringOptions &loweringOptions;
+  /// PFT owned by LoweringBridge::lower for this converter's entire lifetime.
+  pft::Program &program;
 };
 
 } // namespace lower

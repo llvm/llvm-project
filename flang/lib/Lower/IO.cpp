@@ -394,7 +394,7 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
   stringAddress(symbol);
   for (const Fortran::semantics::Symbol &s : details.objects()) {
     stringAddress(s);
-    if (!Fortran::lower::symbolIsGlobal(s)) {
+    if (!Fortran::lower::symbolIsGlobal(s, converter.getPft())) {
       groupIsLocal = true;
       continue;
     }
