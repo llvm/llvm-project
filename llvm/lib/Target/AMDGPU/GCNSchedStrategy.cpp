@@ -1268,6 +1268,15 @@ void GCNScheduleDAGMILive::runSchedStages() {
     Stage->finalizeGCNSchedStage();
   }
 
+  // Record the function's peak ArchVGPR pressure from the per-region pressure
+  // we just computed, so later passes (e.g. the WMMA bank-conflict hint in
+  // SIRegisterInfo) can anchor to the real VGPR demand without constructing a
+  // standalone register-pressure tracker.
+  unsigned PeakVGPRPressure = 0;
+  for (const GCNRegPressure &RP : Pressure)
+    PeakVGPRPressure = std::max(PeakVGPRPressure, RP.getArchVGPRNum());
+  MFI.setPeakVGPRPressure(PeakVGPRPressure);
+
 #ifndef NDEBUG
   if (ST.getCLOpts().print_max_reg_pressure_regusage_after_scheduler) {
     dumpMaxRegPressure(MF, GCNRegPressure::VGPR, *LIS, MLI);
