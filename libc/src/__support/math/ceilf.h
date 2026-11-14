@@ -9,16 +9,20 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_CEILF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_CEILF_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float ceilf(float x) {
-#if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
-    !defined(LIBC_USE_CONSTEXPR)
-  return __builtin_ceilf(x);
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float ceilf(float x) {
+#if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC)
+  if (cpp::is_constant_evaluated()) {
+    return fputil::ceil(x);
+  } else {
+    return __builtin_ceilf(x);
+  }
 #else
   return fputil::ceil(x);
 #endif

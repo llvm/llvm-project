@@ -62,7 +62,7 @@ LIBC_INLINE_VAR constexpr double SINH_SMALL_P_COEFFS[6] = {
 
 // Evaluate P_rem(x^2) ~ (sinh(x) - x) / x^3 - 0x1.554p-3 using Estrin's
 // scheme:
-LIBC_ALWAYS_INLINE double sinh_small_poly(double x2) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT double sinh_small_poly(double x2) {
   double x4 = x2 * x2;
   double x8 = x4 * x4;
   double c0 =
@@ -79,7 +79,8 @@ LIBC_ALWAYS_INLINE double sinh_small_poly(double x2) {
 
 // Evaluate sinh(x) for |x| < SMALL_BOUND (2^-26 + ulp(2^-26) when
 // LIBC_MATH_HAS_SKIP_ACCURATE_PASS is defined, or 2^-2 otherwise):
-LIBC_INLINE double sinh_small_eval(double x, uint64_t x_abs) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double sinh_small_eval(double x,
+                                                          uint64_t x_abs) {
   // Tiny and subnormal range: |x| <= 2^-26.
   // For 0 < |x| <= 2^-26:
   //   0 < (sinh(|x|) - |x|) / |x| ~ x^2 / 6 < 2^-54 < 2^-1 * ulp(x),
@@ -169,7 +170,8 @@ LIBC_INLINE double sinh_small_eval(double x, uint64_t x_abs) {
 }
 
 // Handle overflow, inf, and nan for sinh(x) when |x| >= 0x1.633ce8fb9f87ep+9:
-LIBC_NOINLINE LIBC_INLINE double sinh_exceptional(double x) {
+LIBC_NOINLINE LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+sinh_exceptional(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -182,7 +184,7 @@ LIBC_NOINLINE LIBC_INLINE double sinh_exceptional(double x) {
   return fputil::set_overflow<double>(xbits.sign());
 }
 
-LIBC_ALWAYS_INLINE double sinh(double x) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT double sinh(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 

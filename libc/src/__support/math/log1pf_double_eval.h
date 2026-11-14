@@ -40,7 +40,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace double_eval {
 
-LIBC_INLINE float log1pf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float log1pf(float x) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
   uint32_t x_u = xbits.uintval();

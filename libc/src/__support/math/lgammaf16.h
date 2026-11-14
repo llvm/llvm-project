@@ -34,7 +34,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float16 lgammaf16(float16 x) {
+LIBC_INLINE constexpr float16 lgammaf16(float16 x) {
   using namespace gamma_internal;
   using FPBits = fputil::FPBits<float16>;
 
@@ -73,7 +73,7 @@ LIBC_INLINE float16 lgammaf16(float16 x) {
 
   double xd = fputil::cast<double>(x);
   double abs_xd = xd < 0.0 ? -xd : xd;
-  double lgamma_val;
+  double lgamma_val{};
 
   if (LIBC_UNLIKELY(x_abs < 0x3948u)) {
     // Small path: |x| < 0.66015625

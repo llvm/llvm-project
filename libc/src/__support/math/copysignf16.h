@@ -13,15 +13,20 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float16 copysignf16(float16 x, float16 y) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float16 copysignf16(float16 x, float16 y) {
 #if defined(__LIBC_MISC_MATH_BASIC_OPS_OPT) && !defined(LIBC_USE_CONSTEXPR)
-  return __builtin_copysignf16(x, y);
+  if (cpp::is_constant_evaluated()) {
+    return fputil::copysign(x, y);
+  } else {
+    return __builtin_copysignf16(x, y);
+  }
 #else
   return fputil::copysign(x, y);
 #endif

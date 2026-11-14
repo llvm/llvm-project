@@ -31,7 +31,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace float_eval {
 
-LIBC_INLINE float expf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float expf(float x) {
   using FPBits = fputil::FPBits<float>;
   using FPBounds = math::check::exp_internal::Bounds<float>;
 
@@ -115,7 +115,7 @@ namespace float_eval_cr_rn {
 // Designed for GPU performance. Correctly rounded only in round-to-nearest,
 // ties-to-even mode. Requires single-precision FMA. Does not support errno
 // or floating-point exception reporting.
-LIBC_INLINE float expf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float expf(float x) {
   using FPBits = fputil::FPBits<float>;
   using FPBounds = math::check::exp_internal::Bounds<float>;
 
@@ -174,7 +174,7 @@ LIBC_INLINE float expf(float x) {
   float res = expf_internal::scale_result(exp_u, k, produces_subnormal);
 
   // Special cases
-  constexpr float INF = FPBits::inf().get_val();
+  LIBC_BIT_CAST_CONSTEXPR_VAR float INF = FPBits::inf().get_val();
 
   res = is_tiny ? 1.0f : res;
   res = should_overflow ? x + INF : res;

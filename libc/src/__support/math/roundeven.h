@@ -9,15 +9,20 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ROUNDEVEN_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ROUNDEVEN_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR double roundeven(double x) {
-#if defined(__LIBC_USE_BUILTIN_ROUNDEVEN) && !defined(LIBC_USE_CONSTEXPR)
-  return __builtin_roundeven(x);
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double roundeven(double x) {
+#if defined(__LIBC_USE_BUILTIN_ROUNDEVEN)
+  if (cpp::is_constant_evaluated()) {
+    return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
+  } else {
+    return __builtin_roundeven(x);
+  }
 #else
   return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
 #endif

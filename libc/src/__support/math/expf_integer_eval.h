@@ -34,8 +34,8 @@ namespace static_rounding {
 // LSB(LOG2_E) = 2^-63
 LIBC_INLINE_VAR constexpr Frac64 LOG2_E = Frac64(0xb8aa'3b29'5c17'f0bc);
 
-LIBC_ALWAYS_INLINE uint32_t expf_bits(uint32_t x_u,
-                                      [[maybe_unused]] int rounding) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT uint32_t
+expf_bits(uint32_t x_u, [[maybe_unused]] int rounding) {
   using FPBits = fputil::FPBits<float>;
   using FPBounds = math::check::exp_internal::Bounds<float>;
 
@@ -100,7 +100,8 @@ LIBC_ALWAYS_INLINE uint32_t expf_bits(uint32_t x_u,
 
 // Statically rounded, no-except implementation of expf using integer-only
 // arithmetic.
-LIBC_ALWAYS_INLINE float expf(float x, [[maybe_unused]] int rounding) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT float
+expf(float x, [[maybe_unused]] int rounding) {
   return cpp::bit_cast<float>(expf_bits(cpp::bit_cast<uint32_t>(x), rounding));
 }
 
@@ -108,7 +109,7 @@ LIBC_ALWAYS_INLINE float expf(float x, [[maybe_unused]] int rounding) {
 
 namespace integer_eval {
 
-LIBC_ALWAYS_INLINE float expf(float x) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT float expf(float x) {
   return static_rounding::expf(x, FE_TONEAREST);
 }
 

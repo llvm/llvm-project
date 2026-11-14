@@ -9,16 +9,20 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_TRUNC_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_TRUNC_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR double trunc(double x) {
-#if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
-    !defined(LIBC_USE_CONSTEXPR)
-  return __builtin_trunc(x);
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double trunc(double x) {
+#if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC)
+  if (cpp::is_constant_evaluated()) {
+    return fputil::trunc(x);
+  } else {
+    return __builtin_trunc(x);
+  }
 #else
   return fputil::trunc(x);
 #endif
