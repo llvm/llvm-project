@@ -139,6 +139,8 @@ private:
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
 
 public:
+  DeviceTy &getDeviceTy() { return Device; }
+
   /// Synchronization method to be used.
   SyncTy SyncType;
 
@@ -424,6 +426,12 @@ void __tgt_target_data_update_nowait_mapper(
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList);
 
+AsyncInfoTy *__tgt_async_info_create(int64_t DeviceId);
+
+int __tgt_async_info_synchronize(AsyncInfoTy *Handle);
+
+void __tgt_async_info_destroy(AsyncInfoTy *Handle);
+
 // Performs the same actions as data_begin in case ArgNum is non-zero
 // and initiates run of offloaded region on target platform; if ArgNum
 // is non-zero after the region execution is done it also performs the
@@ -432,6 +440,10 @@ void __tgt_target_data_update_nowait_mapper(
 // target and an int different from zero otherwise.
 int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                         int32_t ThreadLimit, void *HostPtr, KernelArgsTy *Args);
+
+int __tgt_target_kernel_async(ident_t *Loc, int32_t NumTeams,
+                              int32_t ThreadLimit, void *HostPtr,
+                              KernelArgsTy *Args, AsyncInfoTy *Handle);
 
 // Non-blocking synchronization for target nowait regions. This function
 // acquires the asynchronous context from task data of the current task being

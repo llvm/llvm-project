@@ -31,6 +31,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #ifdef OMPT_SUPPORT
@@ -74,6 +75,34 @@ bool checkDevice(int64_t &DeviceID, ident_t *Loc) {
     return true;
   }
   return false;
+}
+
+EXTERN AsyncInfoTy *__tgt_async_info_create(int64_t DeviceId) {
+  assert(PM && "Runtime not initialized");
+
+  if (checkDevice(DeviceId, nullptr))
+    return nullptr;
+
+  auto DeviceOrErr = PM->getDevice(DeviceId);
+  if (!DeviceOrErr)
+    return nullptr;
+
+  return new AsyncInfoTy(*DeviceOrErr, AsyncInfoTy::SyncTy::BLOCKING);
+}
+
+EXTERN int __tgt_async_info_synchronize(AsyncInfoTy *Handle) {
+  if (!Handle)
+    return OFFLOAD_SUCCESS;
+
+  return Handle->synchronize();
+}
+
+EXTERN void __tgt_async_info_destroy(AsyncInfoTy *Handle) {
+  if (!Handle)
+    return;
+
+  Handle->synchronize();
+  delete Handle;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -373,14 +402,15 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
 template <typename TargetAsyncInfoTy>
 static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                int32_t ThreadLimit, void *HostPtr,
-                               KernelArgsTy *KernelArgs) {
+                               KernelArgsTy *KernelArgs,
+                               AsyncInfoTy *ExternalAsyncInfo = nullptr) {
   assert(PM && "Runtime not initialized");
   static_assert(std::is_convertible_v<TargetAsyncInfoTy &, AsyncInfoTy &>,
                 "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
   ODBG(ODT_Interface) << "Entering target region for device " << DeviceId
                       << " with entry point " << HostPtr;
 
-  if (checkDevice(DeviceId, Loc)) {
+  if (!ExternalAsyncInfo && checkDevice(DeviceId, Loc)) {
     ODBG(ODT_Interface) << "Not offloading to device " << DeviceId;
     return OMP_TGT_FAIL;
   }
@@ -427,19 +457,37 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
     }
   });
 
-  auto DeviceOrErr = PM->getDevice(DeviceId);
-  if (!DeviceOrErr)
-    FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
+  DeviceTy *Device = nullptr;
+  if (ExternalAsyncInfo) {
+    Device = &ExternalAsyncInfo->getDeviceTy();
+  } else {
+    auto DeviceOrErr = PM->getDevice(DeviceId);
+    if (!DeviceOrErr)
+      FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
+    Device = &*DeviceOrErr;
+  }
 
-  TargetAsyncInfoTy TargetAsyncInfo(*DeviceOrErr);
-  AsyncInfoTy &AsyncInfo = TargetAsyncInfo;
+  std::optional<TargetAsyncInfoTy> OwnedAsyncInfo;
+  if (!ExternalAsyncInfo) {
+    OwnedAsyncInfo.emplace(*Device);
+  }
+
+  AsyncInfoTy &AsyncInfo =
+      ExternalAsyncInfo ? *ExternalAsyncInfo : *OwnedAsyncInfo;
+
   /// RAII to establish tool anchors before and after target region
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
                     RegionInterface.getCallbacks<ompt_target>(), DeviceId,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   int Rc = OFFLOAD_SUCCESS;
-  Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
+  Rc = target(Loc, *Device, HostPtr, *KernelArgs, AsyncInfo);
+
+  if (ExternalAsyncInfo) {
+    handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
+    return Rc == OFFLOAD_SUCCESS ? OMP_TGT_SUCCESS : OMP_TGT_FAIL;
+  }
+
   { // required to show synchronization
     TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: synchronize", "", Loc);
     if (Rc == OFFLOAD_SUCCESS) {
@@ -473,6 +521,22 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
         Loc, DeviceId, NumTeams, ThreadLimit, HostPtr, KernelArgs);
   return targetKernel<AsyncInfoTy>(Loc, DeviceId, NumTeams, ThreadLimit,
                                    HostPtr, KernelArgs);
+}
+
+EXTERN int __tgt_target_kernel_async(ident_t *Loc, int32_t NumTeams,
+                                     int32_t ThreadLimit, void *HostPtr,
+                                     KernelArgsTy *KernelArgs,
+                                     AsyncInfoTy *Handle) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
+
+  if (!Handle || !KernelArgs) {
+    handleTargetOutcome(false, Loc);
+    return OMP_TGT_FAIL;
+  }
+
+  return targetKernel<AsyncInfoTy>(Loc, Handle->getDeviceTy().DeviceID,
+                                   NumTeams, ThreadLimit, HostPtr, KernelArgs,
+                                   Handle);
 }
 
 /// Activates the record replay mechanism.
