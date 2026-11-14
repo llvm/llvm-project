@@ -527,8 +527,14 @@ public:
   /// Report known values for sin
   LLVM_ABI static KnownFPClass sin(const KnownFPClass &Src);
 
+  /// Report known values for sinpi
+  LLVM_ABI static KnownFPClass sinpi(const KnownFPClass &Src);
+
   /// Report known values for cos
   LLVM_ABI static KnownFPClass cos(const KnownFPClass &Src);
+  
+  /// Report known values for cospi
+  LLVM_ABI static KnownFPClass cospi(const KnownFPClass &Src);
 
   /// Report known values for tan
   LLVM_ABI static KnownFPClass tan(const KnownFPClass &Src);
