@@ -248,10 +248,15 @@ bool isLinearizableVector(VectorType type);
 /// instead of explicit masks.
 ///
 /// When `permutationMap` is provided the in_bounds attribute is inferred from
-/// it: dimension i is in-bounds when the map result is an AffineDimExpr
-/// pointing to a static memref dimension divisible by the vector size, or an
-/// AffineConstantExpr (broadcast). Custom`indices` must also be supplied in
-/// that case; if `indices` is empty, all offsets default to 0.
+/// it and from `indices`: dimension i is in-bounds when the map result is an
+/// AffineDimExpr pointing to a static memref dimension divisible by the vector
+/// size whose index is a known multiple of the vector size, or an
+/// AffineConstantExpr (broadcast). A scalable dimension is not in-bounds, as
+/// its size is not known. This assumes that the index itself is in range for
+/// the dimension, as it is for any valid access: a multiple of the vector size
+/// below a size divisible by it leaves room for a whole vector. Custom
+/// `indices` must also be supplied in that case; if `indices` is empty, all
+/// offsets default to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              const VectorType &vecToReadTy,
                              std::optional<Value> padValue = std::nullopt,
@@ -273,7 +278,8 @@ Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
 /// instead of explicit masks.
 /// `writeIndices` specifies the offsets to use. If empty, all indices are set
 /// to 0. When `permutationMap` is provided, the in_bounds attribute is
-/// inferred from the map instead of the destination shape.
+/// inferred from the map and `writeIndices` instead of the destination shape,
+/// as for createReadOrMaskedRead.
 Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
                                     Value vecToStore, Value dest,
                                     SmallVector<Value> writeIndices = {},
