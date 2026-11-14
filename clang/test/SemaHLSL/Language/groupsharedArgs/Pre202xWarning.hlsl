@@ -3,7 +3,7 @@
 groupshared uint SharedData;
 
 void fn1(groupshared uint Sh) {
-// expected-warning@-1{{support for groupshared parameter annotation not added until HLSL 202x}}
+// expected-warning@-1{{'groupshared' parameter annotation is an HLSL 202x extension}}
 // expected-warning@*{{support for HLSL language version hlsl2018 is incomplete, recommend using hlsl202x instead}}
   Sh = 5;
 }
@@ -14,8 +14,8 @@ void fnT(T A, T B) {
 }
 
 template void fnT<groupshared int>(groupshared int A, groupshared int B);
-// expected-warning@-1{{support for groupshared parameter annotation not added until HLSL 202x}}
-// expected-warning@-2{{support for groupshared parameter annotation not added until HLSL 202x}}
+// expected-warning@-1{{'groupshared' parameter annotation is an HLSL 202x extension}}
+// expected-warning@-2{{'groupshared' parameter annotation is an HLSL 202x extension}}
 
 void fn2() {
   fn1(SharedData);
@@ -23,6 +23,6 @@ void fn2() {
 
 template<typename T>
 T fn3(groupshared T A) {
-// expected-warning@-1{{support for groupshared parameter annotation not added until HLSL 202x}}
+// expected-warning@-1{{'groupshared' parameter annotation is an HLSL 202x extension}}
   return A;
 }

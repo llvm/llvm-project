@@ -13959,9 +13959,9 @@ def err_hlsl_rootsignature_entry: Error<
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
 
-def warn_hlsl_groupshared_202x : Warning<
-  "support for groupshared parameter annotation not added until HLSL 202x">,
-  InGroup<HLSLAvailability>;
+def ext_hlsl_groupshared_202x : ExtWarn<
+  "'groupshared' parameter annotation is an HLSL 202x extension">,
+  InGroup<HLSL202x>;
 def warn_hlsl_groupshared_inout : Warning<
   "passing groupshared variable to a parameter annotated with inout. "
   "See 'groupshared' parameter annotation added in 202x">,
