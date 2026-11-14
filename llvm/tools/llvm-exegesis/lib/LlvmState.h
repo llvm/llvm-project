@@ -44,9 +44,11 @@ public:
   // If `UseDummyPerfCounters` is set, does not query the kernel
   // for event counts.
   // `UseDummyPerfCounters` and `Features` are intended for tests.
-  static Expected<LLVMState> Create(std::string TripleName, std::string CpuName,
-                                    StringRef Features = "",
-                                    bool UseDummyPerfCounters = false);
+  // `LibraryOptions` must outlive the returned state.
+  static Expected<LLVMState>
+  create(const cl::LibraryOptionsContext &LibraryOptions,
+         std::string TripleName, std::string CpuName, StringRef Features = "",
+         bool UseDummyPerfCounters = false);
 
   const TargetMachine &getTargetMachine() const { return *TheTargetMachine; }
   std::unique_ptr<TargetMachine> createTargetMachine() const;

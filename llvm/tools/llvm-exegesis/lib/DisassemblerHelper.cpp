@@ -16,13 +16,12 @@ namespace exegesis {
 DisassemblerHelper::DisassemblerHelper(const LLVMState &State) : State_(State) {
   const auto &TM = State.getTargetMachine();
   const auto &Triple = TM.getTargetTriple();
-  AsmInfo_.reset(
-      TM.getTarget().createMCAsmInfo(State_.getRegInfo(), Triple, MCOptions_));
+  const MCAsmInfo &AsmInfo = TM.getMCAsmInfo();
   InstPrinter_.reset(TM.getTarget().createMCInstPrinter(
-      Triple, 0 /*default variant*/, *AsmInfo_, State_.getInstrInfo(),
+      Triple, 0 /*default variant*/, AsmInfo, State_.getInstrInfo(),
       State_.getRegInfo()));
 
-  Context_ = std::make_unique<MCContext>(Triple, *AsmInfo_, State_.getRegInfo(),
+  Context_ = std::make_unique<MCContext>(Triple, AsmInfo, State_.getRegInfo(),
                                          State_.getSubtargetInfo());
   Disasm_.reset(TM.getTarget().createMCDisassembler(State_.getSubtargetInfo(),
                                                     *Context_));
