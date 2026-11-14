@@ -602,6 +602,13 @@ def mif_DeallocCoarrayOp
 //   consistency semantics of surrounding accesses in the multi-image execution. 
 //   For now we've modeled this by *deliberately* omitting mlir::MemoryEffects
 //   on these operations, to ensure analysis treats these ops conservatively.
+//
+//   A call to EVENT_QUERY is not an image control statement, but is an atomic
+//   observation of the event variable (F23 16.9.82 p3), whose value other
+//   images may change at any time.
+//   Two queries therefore don't necessarily return the same value, and an
+//   unused query cannot be erased either, since it must still error-terminate
+//   when it fails without STAT. It follows the same modeling as above.
 //===----------------------------------------------------------------------===//
 def mif_EventPostOp : mif_Op<"event_post", [AttrSizedOperandSegments]> {
   let summary = "Posts an event.";
@@ -640,6 +647,25 @@ def mif_EventWaitOp : mif_Op<"event_wait", [AttrSizedOperandSegments]> {
     $event 
     (`until_count` $until_count^ )?
     (`stat` $stat^ )?  (`errmsg` $errmsg^ )?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_EventQueryOp : mif_Op<"event_query", []> {
+  let summary = "Query the count of an event on the calling image.";
+  let description = [{
+    Argument: `event` shall be a noncoindexed variable of type EVENT_TYPE from the 
+      intrinsic module ISO_FORTRAN_ENV.
+    Result: `count` shall be an integer scalar and indicate the current count
+      of EVENT.
+  }];
+
+  let arguments = (ins Arg<AnyRefOrBoxType>:$event,
+                       Arg<Optional<AnyReferenceLike>>:$stat);
+  let results = (outs AnyInteger:$count);
+  let assemblyFormat = [{
+    $event 
+    (`stat` $stat^ )?
     attr-dict `:` functional-type(operands, results)
   }];
 }
