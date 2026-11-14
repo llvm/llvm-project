@@ -98,10 +98,9 @@ define double @test20(i32 %a, ...) {
 ; CHECK-NEXT:    sub sp, sp, #96
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    mov w8, #-56 // =0xffffffc8
-; CHECK-NEXT:    add x10, sp, #8
 ; CHECK-NEXT:    add x9, sp, #96
+; CHECK-NEXT:    add x10, sp, #64
 ; CHECK-NEXT:    str x8, [sp, #88]
-; CHECK-NEXT:    add x10, x10, #56
 ; CHECK-NEXT:    ldrsw x8, [sp, #88]
 ; CHECK-NEXT:    stp x1, x2, [sp, #8]
 ; CHECK-NEXT:    stp x3, x4, [sp, #24]

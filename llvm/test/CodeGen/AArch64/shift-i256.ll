@@ -8,13 +8,12 @@ define i256 @shl_i256(i256 %a, i256 %amt) nounwind {
 ; CHECK-NEXT:    sub sp, sp, #64
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ubfx x8, x4, #6, #2
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    add x9, x9, #32
+; CHECK-NEXT:    add x9, sp, #32
 ; CHECK-NEXT:    stp x2, x3, [sp, #48]
 ; CHECK-NEXT:    and x11, x4, #0x3f
+; CHECK-NEXT:    mvn w12, w4
 ; CHECK-NEXT:    sub x8, x9, x8, lsl #3
 ; CHECK-NEXT:    stp x0, x1, [sp, #32]
-; CHECK-NEXT:    mvn w12, w4
 ; CHECK-NEXT:    eor x11, x11, #0x3f
 ; CHECK-NEXT:    stp q0, q0, [sp]
 ; CHECK-NEXT:    ldp x10, x9, [x8]

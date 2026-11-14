@@ -8,14 +8,12 @@ define preserve_nonecc i32 @callee(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #192
 ; CHECK-NEXT:    mov x8, #-24 // =0xffffffffffffffe8
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    add x10, sp, #136
+; CHECK-NEXT:    add x9, sp, #128
+; CHECK-NEXT:    add x10, sp, #192
 ; CHECK-NEXT:    movk x8, #65408, lsl #32
-; CHECK-NEXT:    add x9, x9, #128
 ; CHECK-NEXT:    stp x6, x7, [sp, #144]
 ; CHECK-NEXT:    stp x9, x8, [sp, #176]
-; CHECK-NEXT:    add x9, x10, #24
-; CHECK-NEXT:    add x10, sp, #192
+; CHECK-NEXT:    add x9, sp, #160
 ; CHECK-NEXT:    mov w8, #-24 // =0xffffffe8
 ; CHECK-NEXT:    str x5, [sp, #136]
 ; CHECK-NEXT:    stp q0, q1, [sp]
