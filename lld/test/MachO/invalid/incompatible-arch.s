@@ -10,6 +10,13 @@
 # CHECK-ERROR: error: {{.*}}[[FILE]] has architecture arm64 which is incompatible with target architecture x86_64
 # CHECK-WARNING: warning: {{.*}}[[FILE]] has architecture arm64 which is incompatible with target architecture x86_64
 
+## Dylibs are checked too.
+# RUN: %lld -dylib -arch x86_64 %t/native.o -o %t/native.dylib
+# RUN: not %no-fatal-warnings-lld -arch arm64 -lSystem %t/test.o %t/native.dylib -o /dev/null -arch_errors_fatal 2>&1 | FileCheck %s -DFILE=%t/native.dylib --check-prefix=CHECK-DYLIB-ERROR
+# RUN: %no-fatal-warnings-lld -arch arm64 -lSystem %t/test.o %t/native.dylib -o /dev/null 2>&1 | FileCheck %s -DFILE=%t/native.dylib --check-prefix=CHECK-DYLIB-WARNING
+# CHECK-DYLIB-ERROR: error: {{.*}}[[FILE]] has architecture x86_64 which is incompatible with target architecture arm64
+# CHECK-DYLIB-WARNING: warning: {{.*}}[[FILE]] has architecture x86_64 which is incompatible with target architecture arm64
+
 # RUN: %lld -dylib -arch arm64 -platform_version macOS 10.14 10.15 -o %t/out.dylib %t/test.o
 
 # RUN: not %no-arg-lld -dylib -arch arm64 -platform_version iOS 9.0 11.0 \

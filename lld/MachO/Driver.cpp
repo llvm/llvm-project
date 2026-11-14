@@ -791,7 +791,7 @@ static bool compileBitcodeFiles() {
   auto *lto = make<BitcodeCompiler>();
   for (InputFile *file : inputFiles)
     if (auto *bitcodeFile = dyn_cast<BitcodeFile>(file))
-      if (!file->lazy)
+      if (!file->lazy && file->compatArch)
         lto->add(*bitcodeFile);
 
   std::vector<ObjFile *> compiled = lto->compile();

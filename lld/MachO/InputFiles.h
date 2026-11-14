@@ -133,15 +133,15 @@ public:
   // True if this is a lazy ObjFile or BitcodeFile.
   bool lazy = false;
 
+  // If true, this input's arch is compatible with target.
+  bool compatArch = true;
+
 protected:
   InputFile(Kind kind, MemoryBufferRef mb, bool lazy = false)
       : mb(mb), id(idCount++), lazy(lazy), fileKind(kind),
         name(mb.getBufferIdentifier()) {}
 
   InputFile(Kind, const llvm::MachO::InterfaceFile &);
-
-  // If true, this input's arch is compatible with target.
-  bool compatArch = true;
 
 private:
   const Kind fileKind;
