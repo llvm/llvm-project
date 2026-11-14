@@ -144,8 +144,11 @@ int volatile_member(Volatile* v) {
 // CHECK-NEXT:   %x7 = alloca ptr, align 8
 // CHECK-NEXT:   %x11 = alloca ptr, align 8
 // CHECK-NEXT:   %x15 = alloca ptr, align 8
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %c, ptr align 4 @__const._Z24references_destructuringv.c, i64 12, i1 false)
 // CHECK-NEXT:   call void @_ZN1CC1Ev(ptr {{.*}} %c)
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %0, align 8
 // CHECK-NEXT:   store ptr %c, ptr %0, align 8
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %x, align 8
 // CHECK-NEXT:   %2 = load ptr, ptr %0, align 8
 // CHECK-NEXT:   %a = getelementptr inbounds nuw %struct.C, ptr %2, i32 0, i32 0
 // CHECK-NEXT:   store ptr %a, ptr %x, align 8
@@ -155,6 +158,7 @@ int volatile_member(Volatile* v) {
 // CHECK-NEXT:   store i32 %inc, ptr %3, align 4
 // CHECK-NEXT:   br label %expand.next
 // CHECK: expand.next:
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %x1, align 8
 // CHECK-NEXT:   %5 = load ptr, ptr %0, align 8
 // CHECK-NEXT:   %b = getelementptr inbounds nuw %struct.C, ptr %5, i32 0, i32 1
 // CHECK-NEXT:   store ptr %b, ptr %x1, align 8
@@ -164,6 +168,7 @@ int volatile_member(Volatile* v) {
 // CHECK-NEXT:   store i32 %inc2, ptr %6, align 4
 // CHECK-NEXT:   br label %expand.next3
 // CHECK: expand.next3:
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %x4, align 8
 // CHECK-NEXT:   %8 = load ptr, ptr %0, align 8
 // CHECK-NEXT:   %c5 = getelementptr inbounds nuw %struct.C, ptr %8, i32 0, i32 2
 // CHECK-NEXT:   store ptr %c5, ptr %x4, align 8
@@ -173,7 +178,9 @@ int volatile_member(Volatile* v) {
 // CHECK-NEXT:   store i32 %inc6, ptr %9, align 4
 // CHECK-NEXT:   br label %expand.end
 // CHECK: expand.end:
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %1, align 8
 // CHECK-NEXT:   store ptr %c, ptr %1, align 8
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %x7, align 8
 // CHECK-NEXT:   %11 = load ptr, ptr %1, align 8
 // CHECK-NEXT:   %a8 = getelementptr inbounds nuw %struct.C, ptr %11, i32 0, i32 0
 // CHECK-NEXT:   store ptr %a8, ptr %x7, align 8
@@ -183,6 +190,7 @@ int volatile_member(Volatile* v) {
 // CHECK-NEXT:   store i32 %inc9, ptr %12, align 4
 // CHECK-NEXT:   br label %expand.next10
 // CHECK: expand.next10:
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %x11, align 8
 // CHECK-NEXT:   %14 = load ptr, ptr %1, align 8
 // CHECK-NEXT:   %b12 = getelementptr inbounds nuw %struct.C, ptr %14, i32 0, i32 1
 // CHECK-NEXT:   store ptr %b12, ptr %x11, align 8
@@ -192,6 +200,7 @@ int volatile_member(Volatile* v) {
 // CHECK-NEXT:   store i32 %inc13, ptr %15, align 4
 // CHECK-NEXT:   br label %expand.next14
 // CHECK: expand.next14:
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %x15, align 8
 // CHECK-NEXT:   %17 = load ptr, ptr %1, align 8
 // CHECK-NEXT:   %c16 = getelementptr inbounds nuw %struct.C, ptr %17, i32 0, i32 2
 // CHECK-NEXT:   store ptr %c16, ptr %x15, align 8
@@ -376,8 +385,10 @@ int volatile_member(Volatile* v) {
 // CHECK-NEXT:   %2 = alloca ptr, align 8
 // CHECK-NEXT:   %ref.tmp1 = alloca %struct.A, align 1
 // CHECK-NEXT:   %3 = alloca ptr, align 8
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %0, align 8
 // CHECK-NEXT:   store ptr %ref.tmp, ptr %0, align 8
 // CHECK-NEXT:   store ptr @_ZZ5emptyvE1a, ptr %1, align 8
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %2, align 8
 // CHECK-NEXT:   store ptr %ref.tmp1, ptr %2, align 8
 // CHECK-NEXT:   store ptr @_ZZ5emptyvE1a, ptr %3, align 8
 // CHECK-NEXT:   ret void
@@ -514,8 +525,10 @@ int volatile_member(Volatile* v) {
 // CHECK-NEXT:   %x = alloca ptr, align 8
 // CHECK-NEXT:   store ptr %v, ptr %v.addr, align 8
 // CHECK-NEXT:   store i32 0, ptr %sum, align 4
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %0, align 8
 // CHECK-NEXT:   %1 = load ptr, ptr %v.addr, align 8
 // CHECK-NEXT:   store ptr %1, ptr %0, align 8
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %x, align 8
 // CHECK-NEXT:   %2 = load ptr, ptr %0, align 8
 // CHECK-NEXT:   %x1 = getelementptr inbounds nuw %struct.Volatile, ptr %2, i32 0, i32 0
 // CHECK-NEXT:   store ptr %x1, ptr %x, align 8

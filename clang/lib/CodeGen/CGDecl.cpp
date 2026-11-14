@@ -1663,7 +1663,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
             continue;
           llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
           Builder.SetInsertPoint(FG.Block->getTerminator());
-          emitZeroOrPatternForAutoVarInit(Ty, D, address);
+          emitZeroOrPatternForAutoVarInit(Ty, D, address,
+                                          getAutoVarInitKind(Ty, D));
         }
       } else {
         // A computed goto can jump anywhere, so we can't identify the jumps
@@ -1671,7 +1672,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
         // function's entry block.
         llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
         Builder.SetInsertPoint(getPostAllocaInsertPoint());
-        emitZeroOrPatternForAutoVarInit(Ty, D, address);
+        emitZeroOrPatternForAutoVarInit(Ty, D, address,
+                                        getAutoVarInitKind(Ty, D));
       }
     }
 
@@ -1877,11 +1879,23 @@ CodeGenFunction::getAutoVarInitKind(QualType Ty, const VarDecl &D) {
   auto hasNoTrivialAutoVarInitAttr = [](const Decl *D) {
     return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
   };
+  // Note: constexpr already initializes everything correctly.
+  // C++26 [[indeterminate]] attribute opts out of erroneous initialization,
+  // restoring indeterminate (undefined) behavior.
   if (D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
+      D.hasAttr<IndeterminateAttr>() ||
       hasNoTrivialAutoVarInitAttr(Ty->getAsTagDecl()) ||
       hasNoTrivialAutoVarInitAttr(CurFuncDecl))
     return LangOptions::TrivialAutoVarInitKind::Uninitialized;
-  return getContext().getLangOpts().getTrivialAutoVarInit();
+  auto Kind = getContext().getLangOpts().getTrivialAutoVarInit();
+  // C++26 [basic.indet]: reading an erroneously initialized object has
+  // erroneous behavior with an implementation-defined (but fixed) value.
+  // LLVM's `undef` doesn't model this, so default to a fixed pattern when
+  // the user has not requested a specific auto-var-init kind.
+  if (Kind == LangOptions::TrivialAutoVarInitKind::Uninitialized &&
+      getContext().getLangOpts().CPlusPlus26)
+    Kind = LangOptions::TrivialAutoVarInitKind::Pattern;
+  return Kind;
 }
 
 void CodeGenFunction::emitBypassedVarInitsForSource(const Stmt *Source) {
@@ -1897,14 +1911,15 @@ void CodeGenFunction::emitBypassedVarInitsForSource(const Stmt *Source) {
   for (const VarDecl *VD : *Vars) {
     auto It = BypassedVarInits.find(VD);
     if (It != BypassedVarInits.end())
-      emitZeroOrPatternForAutoVarInit(VD->getType(), *VD, It->second);
+      emitZeroOrPatternForAutoVarInit(VD->getType(), *VD, It->second,
+                                      getAutoVarInitKind(VD->getType(), *VD));
   }
 }
 
-void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
-                                                      const VarDecl &D,
-                                                      Address Loc) {
-  auto trivialAutoVarInit = getContext().getLangOpts().getTrivialAutoVarInit();
+void CodeGenFunction::emitZeroOrPatternForAutoVarInit(
+    QualType type, const VarDecl &D, Address Loc,
+    LangOptions::TrivialAutoVarInitKind Kind) {
+  auto trivialAutoVarInit = Kind;
   auto trivialAutoVarInitMaxSize =
       getContext().getLangOpts().TrivialAutoVarInitMaxSize;
   CharUnits Size = getContext().getTypeSizeInChars(type);
@@ -2073,7 +2088,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     if (emission.IsEscapingByRef && !locIsByrefHeader)
       Loc = emitBlockByrefAddress(Loc, &D, /*follow=*/false);
 
-    return emitZeroOrPatternForAutoVarInit(type, D, Loc);
+    return emitZeroOrPatternForAutoVarInit(type, D, Loc, trivialAutoVarInit);
   };
 
   if (isTrivialInitializer(Init))

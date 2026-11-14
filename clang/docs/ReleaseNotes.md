@@ -273,6 +273,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   and deprecate `memory_order::consume`) by removing support for the
   `[[carries_dependency]]` attribute.
 
+- Clang now supports [P2795R5](https://wg21.link/p2795r5) (Erroneous behaviour for
+  uninitialized reads).
+
 #### C++23 Feature Support
 
 #### C++20 Feature Support

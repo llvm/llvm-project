@@ -2657,6 +2657,10 @@ def warn_uninit_const_pointer : Warning<
   "variable %0 is uninitialized when passed as a const pointer argument here">,
   InGroup<UninitializedConstPointer>, DefaultIgnore;
 
+def err_indeterminate_attr_not_on_first_decl : Error<
+  "'[[indeterminate]]' attribute on parameter %0 must appear on the "
+  "first declaration of the function">;
+
 def warn_unsequenced_mod_mod : Warning<
   "multiple unsequenced modifications to %0">, InGroup<Unsequenced>;
 def warn_unsequenced_mod_use : Warning<
@@ -10088,6 +10092,8 @@ def ext_cxx20_attr : Extension<
   "use of the %0 attribute is a C++20 extension">, InGroup<CXX20Attrs>;
 def ext_cxx23_attr : Extension<
   "use of the %0 attribute is a C++23 extension">, InGroup<CXX23Attrs>;
+def ext_cxx26_attr : Extension<
+  "use of the %0 attribute is a C++26 extension">, InGroup<CXX26Attrs>;
 
 def warn_unused_comparison : Warning<
   "%select{equality|inequality|relational|three-way}0 comparison result unused">,

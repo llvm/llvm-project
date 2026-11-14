@@ -3515,6 +3515,25 @@ static void propagateAttributes(ParmVarDecl *To, const ParmVarDecl *From,
 /// to the new one.
 static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
                                      const ParmVarDecl *oldDecl, Sema &S) {
+  // C++26 [dcl.attr.indet]/p2:
+  // If a function parameter is declared with the indeterminate attribute, it
+  // shall be so declared in the first declaration of its function. If a
+  // function parameter is declared with the indeterminate attribute in the
+  // first declaration of its function in one translation unit and the same
+  // function is declared without the indeterminate attribute on the same
+  // parameter in its first declaration in another translation unit, the program
+  // is ill-formed, no diagnostic required.
+  if (const auto *IA = newDecl->getAttr<IndeterminateAttr>();
+      IA && !oldDecl->hasAttr<IndeterminateAttr>()) {
+    S.Diag(IA->getLocation(), diag::err_indeterminate_attr_not_on_first_decl)
+        << newDecl;
+    const FunctionDecl *FirstFD =
+        cast<FunctionDecl>(oldDecl->getDeclContext())->getFirstDecl();
+    const ParmVarDecl *FirstVD =
+        FirstFD->getParamDecl(oldDecl->getFunctionScopeIndex());
+    S.Diag(FirstVD->getLocation(), diag::note_previous_declaration);
+  }
+
   propagateAttributes(
       newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
         unsigned found = 0;

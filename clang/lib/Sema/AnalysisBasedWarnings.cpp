@@ -977,6 +977,11 @@ static void CreateIfFixit(Sema &S, const Stmt *If, const Stmt *Then,
 /// uninitialized use of a variable.
 static void DiagUninitUse(Sema &S, const VarDecl *VD, const UninitUse &Use,
                           bool IsCapturedByBlock) {
+  // [[indeterminate]] explicitly opts into indeterminate values, so
+  // suppress uninitialized warnings for such variables.
+  if (VD->hasAttr<IndeterminateAttr>())
+    return;
+
   bool Diagnosed = false;
 
   switch (Use.getKind()) {
