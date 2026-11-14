@@ -79,8 +79,9 @@ void NVVMAttachTarget::runOnOperation() {
   OpBuilder builder(&getContext());
   ArrayRef<std::string> libs(linkLibs);
   SmallVector<StringRef> filesToLink(libs);
-  // `getChecked` reports invalid options instead of asserting. It takes its
-  // arguments by value, hence the conversions: pass options are not copyable.
+  // Build the target attribute, failing the pass if the options are invalid.
+  // `getChecked` takes its arguments by value and pass options are not
+  // copyable, hence the conversions.
   auto emitError = [op = getOperation()]() { return op->emitError(); };
   auto target = NVVMTargetAttr::getChecked(
       emitError, &getContext(), static_cast<int>(optLevel), StringRef(triple),
