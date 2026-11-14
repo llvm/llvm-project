@@ -22,19 +22,11 @@
 
 #include "AMDGPUBarrierLatency.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/AtomicScope.h"
 
 using namespace llvm;
-
-static cl::opt<unsigned> BarrierSignalWaitLatencyOpt(
-    "amdgpu-barrier-signal-wait-latency",
-    cl::desc("Synthetic latency between S_BARRIER_SIGNAL and S_BARRIER_WAIT "
-             "to encourage scheduling independent work between them"),
-    cl::init(16), cl::Hidden);
 
 namespace {
 
@@ -99,7 +91,9 @@ void setLatencyForEdge(SDep &PredDep, SUnit &SU, unsigned Latency) {
 void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
   const SIInstrInfo *TII = static_cast<const SIInstrInfo *>(DAG->TII);
   constexpr unsigned FenceLatency = 2000;
-  const unsigned BarrierSignalWaitLatency = BarrierSignalWaitLatencyOpt;
+  const unsigned BarrierSignalWaitLatency = DAG->MF.getSubtarget<GCNSubtarget>()
+                                                .getCLOpts()
+                                                .barrier_signal_wait_latency;
   SmallVector<SUnit *, 8> RegionTDM;
   SmallVector<SUnit *, 8> RegionAsync;
   const TargetSchedModel *SchedModel = DAG->getSchedModel();
@@ -138,9 +132,9 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
         }
       }
     } else if (TII->isLDSDMA(*MI)) {
-      if (MI->getDesc().TSFlags & SIInstrFlags::TENSOR_CNT)
+      if (SIInstrFlags::usesTENSOR_CNT(*MI))
         RegionTDM.push_back(&SU);
-      else if (MI->getDesc().TSFlags & SIInstrFlags::ASYNC_CNT)
+      else if (SIInstrFlags::usesASYNC_CNT(*MI))
         RegionAsync.push_back(&SU);
     } else if (Op == AMDGPU::S_WAIT_TENSORCNT ||
                Op == AMDGPU::S_WAIT_ASYNCCNT) {
@@ -170,12 +164,8 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
           continue;
 
         Register DepReg = PredDep.getReg();
-        Register LDSDMACnt = AMDGPU::TENSORcnt;
-        uint64_t LDSDMAFlags = SIInstrFlags::TENSOR_CNT;
-        if (Op == AMDGPU::S_WAIT_ASYNCCNT) {
-          LDSDMACnt = AMDGPU::ASYNCcnt;
-          LDSDMAFlags = SIInstrFlags::ASYNC_CNT;
-        }
+        bool IsAsync = Op == AMDGPU::S_WAIT_ASYNCCNT;
+        Register LDSDMACnt = IsAsync ? AMDGPU::ASYNCcnt : AMDGPU::TENSORcnt;
 
         if (DepReg != LDSDMACnt)
           continue;
@@ -185,7 +175,9 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
         // The data dep can be carried by a non-LDSDMA SU
         // (e.g. an intervening COPY or pseudo). Such predecessors are not
         // tracked, so needWaitFor cannot reason about them.
-        if (!(PredSU->getInstr()->getDesc().TSFlags & LDSDMAFlags))
+        const MachineInstr &PredMI = *PredSU->getInstr();
+        if (IsAsync ? !SIInstrFlags::usesASYNC_CNT(PredMI)
+                    : !SIInstrFlags::usesTENSOR_CNT(PredMI))
           continue;
 
         if (!needWaitFor(Op == AMDGPU::S_WAIT_ASYNCCNT ? RegionAsync

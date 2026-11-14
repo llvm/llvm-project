@@ -18,6 +18,7 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
@@ -66,20 +67,28 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
                                SmallVectorImpl<MVT> &Results) {
   computeLegalValueVTs(ContextFunc, TM, Ty->getReturnType(), Results);
 
-  MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
+  const DataLayout &DL = ContextFunc.getDataLayout();
+  MVT PtrVT = MVT::getIntegerVT(DL.getPointerSizeInBits());
   if (!WebAssembly::canLowerReturn(
           Results.size(),
           &TM.getSubtarget<WebAssemblySubtarget>(ContextFunc))) {
     // WebAssembly can't lower returns of multiple values without demoting to
     // sret unless multivalue is enabled (see
     // WebAssemblyTargetLowering::CanLowerReturn). So replace multiple return
-    // values with a poitner parameter.
+    // values with a pointer parameter.
     Results.clear();
     Params.push_back(PtrVT);
   }
 
-  for (auto *Param : Ty->params())
+  std::optional<size_t> SwiftAsyncIdx;
+  for (auto [I, Param] : enumerate(Ty->params())) {
+    if (TargetFunc && TargetFunc->hasParamAttribute(I, Attribute::SwiftAsync))
+      SwiftAsyncIdx = Params.size();
     computeLegalValueVTs(ContextFunc, TM, Param, Params);
+  }
+  // ABI contract: the async context must always be available in local 0.
+  if (SwiftAsyncIdx)
+    WebAssembly::moveToFront(Params, *SwiftAsyncIdx);
   if (Ty->isVarArg())
     Params.push_back(PtrVT);
 
@@ -90,7 +99,7 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
 
   if (TargetFunc && (TargetFunc->getCallingConv() == CallingConv::Swift ||
                      TargetFunc->getCallingConv() == CallingConv::SwiftTail)) {
-    MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
+    MVT PtrVT = MVT::getIntegerVT(DL.getPointerSizeInBits());
     bool HasSwiftErrorArg = false;
     bool HasSwiftSelfArg = false;
     bool HasSwiftAsyncArg = false;
@@ -105,7 +114,7 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
       Params.push_back(PtrVT);
     if (TargetFunc->getCallingConv() == CallingConv::SwiftTail &&
         !HasSwiftAsyncArg)
-      Params.push_back(PtrVT);
+      Params.insert(Params.begin(), PtrVT);
   }
 }
 

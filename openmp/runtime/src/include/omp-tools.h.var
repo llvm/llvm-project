@@ -302,6 +302,24 @@ typedef uint64_t ompt_device_time_t;
 
 typedef uint64_t ompt_buffer_cursor_t;
 
+    /* OpenMP 6.1: Define in omp.h and omp-tools.h */
+#ifndef OMPCONTROLENUM
+#define OMPCONTROLENUM
+typedef enum omp_control_tool_result_t {
+  omp_control_tool_notool             = -2,
+  omp_control_tool_nocallback         = -1,
+  omp_control_tool_success            = 0,
+  omp_control_tool_ignored            = 1
+} omp_control_tool_result_t;
+
+typedef enum omp_control_tool_t {
+  omp_control_tool_start              = 1,
+  omp_control_tool_pause              = 2,
+  omp_control_tool_flush              = 3,
+  omp_control_tool_end                = 4
+} omp_control_tool_t;
+#endif /* OMPCONTROLENUM */
+
 typedef enum ompt_thread_t {
   ompt_thread_initial                 = 1,
   ompt_thread_worker                  = 2,

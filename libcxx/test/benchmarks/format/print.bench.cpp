@@ -15,7 +15,7 @@
 #include "test_macros.h"
 
 template <class CharT>
-static void BM_string_without_formatting(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_string_without_formatting(benchmark::State& state) {
   std::FILE* devnull = std::fopen("/dev/null", "w");
   for (auto _ : state) {
     std::print(devnull, "Hello, World!");
@@ -25,7 +25,7 @@ BENCHMARK(BM_string_without_formatting<char>)->Name("std::print(\"Hello, World!\
 
 #ifndef TEST_HAS_NO_UNICODE
 template <class CharT>
-static void BM_string_without_formatting_opaque(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_string_without_formatting_opaque(benchmark::State& state) {
   std::FILE* devnull = std::fopen("/dev/null", "w");
   for (auto _ : state) {
     const char* format_string = "Hello, World!";

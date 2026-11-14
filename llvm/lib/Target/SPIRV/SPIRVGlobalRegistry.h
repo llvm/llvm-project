@@ -20,6 +20,7 @@
 #include "SPIRVIRMapping.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVTypeInst.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/TypedPointerType.h"
@@ -60,6 +61,10 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   SmallPtrSet<const Type *, 4> TypesInProcessing;
   DenseMap<const Type *, SPIRVTypeInst> ForwardPointerTypes;
 
+  // Struct types decorated with Block, recorded at the point the decoration
+  // is emitted.
+  DenseSet<SPIRVTypeInst> BlockDecoratedTypes;
+
   // Stores for each function the last inserted SPIR-V Type.
   // See: SPIRVGlobalRegistry::createOpType.
   DenseMap<const MachineFunction *, MachineInstr *> LastInsertedTypeMap;
@@ -92,8 +97,11 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Maps OpVariable and OpFunction-related v-regs to its LLVM IR definition.
   DenseMap<std::pair<const MachineFunction *, Register>, const Value *> Reg2GO;
 
-  // map of aliasing decorations to aliasing metadata
-  DenseMap<const MDNode *, MachineInstr *> AliasInstMDMap;
+  // map of aliasing decorations to aliasing metadata, keyed per
+  // MachineFunction: the cached instructions define virtual registers, which
+  // are only valid in the function that created them.
+  DenseMap<std::pair<const MachineFunction *, const MDNode *>, MachineInstr *>
+      AliasInstMDMap;
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVTypeInst createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
@@ -147,6 +155,10 @@ public:
   // - Add a record.
   void addAssignPtrTypeInstr(Value *Val, CallInst *AssignPtrTyCI) {
     AssignPtrTypeInstr[Val] = AssignPtrTyCI;
+  }
+  // - Remove a record.
+  void removeAssignPtrTypeInstr(Value *OldVal) {
+    AssignPtrTypeInstr.erase(OldVal);
   }
   // - Find a record.
   CallInst *findAssignPtrTypeInstr(const Value *Val) {
@@ -472,10 +484,15 @@ private:
   SPIRVTypeInst getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder,
                                SPIRV::FPEncoding::FPEncoding FPEncode);
 
-  SPIRVTypeInst getOpTypeVoid(MachineIRBuilder &MIRBuilder);
+  SPIRVTypeInst getOpTypeVectorImpl(uint32_t NumElems, SPIRVTypeInst ElemType,
+                                    MachineIRBuilder &MIRBuilder,
+                                    bool IsLongVectorEXT = false);
 
   SPIRVTypeInst getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
                                 MachineIRBuilder &MIRBuilder);
+
+  SPIRVTypeInst getOpTypeVectorIdEXT(uint32_t NumElems, SPIRVTypeInst ElemType,
+                                     MachineIRBuilder &MIRBuilder);
 
   SPIRVTypeInst getOpTypeArray(uint32_t NumElems, SPIRVTypeInst ElemType,
                                MachineIRBuilder &MIRBuilder,
@@ -535,7 +552,6 @@ private:
                                   MachineIRBuilder &MIRBuilder);
   void addArrayStrideDecorations(Register Reg, Type *ElementType,
                                  MachineIRBuilder &MIRBuilder);
-  bool hasBlockDecoration(SPIRVTypeInst Type) const;
 
   void constrainSelectedInstRegOperands(MachineInstrBuilder &MIB) const;
 
@@ -626,6 +642,7 @@ public:
                                            unsigned NumElements,
                                            MachineInstr &I,
                                            const SPIRVInstrInfo &TII);
+  SPIRVTypeInst getOpTypeVoid(MachineIRBuilder &MIRBuilder);
 
   // Returns a pointer to a SPIR-V pointer type with the given base type and
   // storage class. The base type will be translated to a SPIR-V type, and the
@@ -729,7 +746,8 @@ public:
   // mappings.
   void replaceAllUsesWith(Value *Old, Value *New, bool DeleteOld = true);
 
-  void buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg);
+  void buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg,
+                       bool CanUseAnyVectorRank);
   void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
   void updateAssignType(CallInst *AssignCI, Value *Arg, Value *OfType);
 };

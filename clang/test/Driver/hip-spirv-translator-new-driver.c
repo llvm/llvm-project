@@ -1,7 +1,7 @@
-// The --offload-new-driver was crashing when using -save-temps due to a failure in clang-linker-wrapper.
+// The offloading driver was crashing when using -save-temps due to a failure in clang-linker-wrapper.
 // The input and output files cannot be the same.
 
-// RUN: %clang --offload-new-driver -### -save-temps -nogpuinc -nogpulib \
+// RUN: %clang -### -save-temps -nogpuinc -nogpulib \
 // RUN: --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv -x hip %s 2>&1 \
 // RUN: | FileCheck %s
 

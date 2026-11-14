@@ -278,14 +278,15 @@ Example usage for a project using a compile commands database:
   if (FTimeTrace)
     llvm::timeTraceProfilerInitialize(200, "clang-doc");
   {
-    llvm::TimeTraceScope("main");
+    llvm::TimeTraceScope TimeTrace("main");
 
     // Fail early if an invalid format was provided.
     llvm::StringRef Format = getFormatString();
     llvm::outs() << "Emiting docs in " << Format << " format.\n";
     auto G = ExitOnErr(doc::findGeneratorByName(Format));
 
-    ArgumentsAdjuster ArgAdjuster;
+    ArgumentsAdjuster ArgAdjuster = getInsertArgumentAdjuster(
+        "-fretain-comments", tooling::ArgumentInsertPosition::END);
     if (!DoxygenOnly)
       ArgAdjuster = combineAdjusters(
           getInsertArgumentAdjuster("-fparse-all-comments",

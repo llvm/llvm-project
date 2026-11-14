@@ -1,4 +1,4 @@
-; RUN: llc -mattr=harden-sls-retbr -mattr=harden-sls-blr -verify-machineinstrs -mtriple=armv8-linux-gnueabi -stop-after=arm-sls-hardening %s -o - | FileCheck %s
+; RUN: llc -mattr=harden-sls-retbr -mattr=harden-sls-blr -mtriple=armv8-linux-gnueabi -stop-after=arm-sls-hardening %s -o - | FileCheck %s
 
 ; Given both Arm and Thumb functions in the same compilation unit, we should
 ; get both arm and thumb thunks.

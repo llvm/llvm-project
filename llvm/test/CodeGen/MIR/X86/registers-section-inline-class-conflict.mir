@@ -1,0 +1,30 @@
+# RUN: split-file %s %t
+# RUN: not llc -mtriple=x86_64 -run-pass=none -filetype=null %t/class.mir 2>&1 | FileCheck --check-prefix=CLASS %s
+# RUN: not llc -mtriple=x86_64 -run-pass=none -filetype=null %t/bank.mir 2>&1 | FileCheck --check-prefix=BANK %s
+
+# An inline register class or bank must match the registers section.
+
+#--- class.mir
+---
+name:            class_conflict
+registers:
+  - { id: 0, class: gr32 }
+body: |
+  bb.0:
+    liveins: $edi
+    ; CLASS: :[[#]]:8: conflicting register classes, previously: GR32
+    %0:gr64 = COPY $edi
+    RET64
+...
+#--- bank.mir
+---
+name:            bank_conflict
+registers:
+  - { id: 0, class: gpr }
+body: |
+  bb.0:
+    liveins: $edi
+    ; BANK: :[[#]]:8: conflicting generic register banks
+    %0:vecr(s32) = COPY $edi
+    RET64
+...

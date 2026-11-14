@@ -59,7 +59,6 @@ MATCHER_P(snippet, S, "") {
   return (arg.Name + arg.CompletionSnippetSuffix).str() == S;
 }
 MATCHER_P(qName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
-MATCHER_P(hasName, Name, "") { return arg.Name == Name; }
 MATCHER_P(templateArgs, TemplArgs, "") {
   return arg.TemplateSpecializationArgs == TemplArgs;
 }
@@ -2212,6 +2211,79 @@ TEST_F(SymbolCollectorTest, Concepts) {
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(AllOf(
                   qName("A"), hasKind(clang::index::SymbolKind::Concept))));
+}
+
+TEST_F(SymbolCollectorTest, ExportedDeclarations) {
+  const char *Main = R"cpp(
+    export module m;
+    export void f();
+    export int v;
+    export {
+      void g();
+      struct S { void m(); };
+    }
+    namespace ns {
+    export void h();
+    void not_exported();
+    }
+  )cpp";
+
+  runSymbolCollector("", Main, {"-std=c++20", "-xc++-module"});
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(qName("f"), qName("v"), qName("g"),
+                                   qName("S"), qName("S::m"), qName("ns"),
+                                   qName("ns::h"), qName("ns::not_exported")));
+}
+
+TEST_F(SymbolCollectorTest, ExportedDeclarationsForCodeCompletion) {
+  // Symbols declared in the main file are never used for code completion, so
+  // the exported declarations live in a header included into the purview.
+  InMemoryFileSystem->addFile(testPath("exports.h"), 0,
+                              llvm::MemoryBuffer::getMemBuffer(R"cpp(
+    export void f();
+    export {
+      struct S { void m(); };
+      enum E { A };
+    }
+    namespace ns {
+    export void h();
+    }
+  )cpp"));
+  const char *Main = R"cpp(
+    export module m;
+    #include "exports.h"
+  )cpp";
+
+  runSymbolCollector("", Main,
+                     {"-std=c++20", "-xc++-module", "-I", testRoot()});
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           AllOf(qName("f"), forCodeCompletion(true)),
+                           AllOf(qName("S"), forCodeCompletion(true)),
+                           AllOf(qName("S::m"), forCodeCompletion(false)),
+                           AllOf(qName("E"), forCodeCompletion(true)),
+                           AllOf(qName("A"), forCodeCompletion(true)),
+                           AllOf(qName("ns"), forCodeCompletion(true)),
+                           AllOf(qName("ns::h"), forCodeCompletion(true))));
+}
+
+TEST_F(SymbolCollectorTest, ExportedDeclarationsHaveDistinctIDs) {
+  // The enclosing namespace must be part of an exported symbol's USR, or these
+  // functions would share one SymbolID and be merged.
+  const char *Main = R"cpp(
+    export module m;
+    void f();
+    namespace a {
+    export void f();
+    }
+    namespace b {
+    export void f();
+    }
+  )cpp";
+
+  runSymbolCollector("", Main, {"-std=c++20", "-xc++-module"});
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(qName("f"), qName("a"), qName("a::f"),
+                                   qName("b"), qName("b::f")));
 }
 
 TEST_F(SymbolCollectorTest, IncludeHeaderForwardDecls) {

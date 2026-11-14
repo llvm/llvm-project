@@ -115,3 +115,87 @@ struct Point singleDesig4 = {
 // CHECK-FIXES: struct Point singleDesig4 = {
 // CHECK-FIXES-NEXT:   .x = 10,
 // CHECK-FIXES-NEXT: };
+
+struct AnonUnion {
+  int x;
+  union { struct { int a; int b; }; };
+};
+
+struct AnonUnion au1 = {
+  .x = 1,
+  .a = 2,
+  .b = 3,
+};
+
+struct AnonUnion au2 = {
+  .x = 1,
+  .a = 2,
+  .b = 3
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:9: warning: initializer list should have a trailing comma
+// CHECK-FIXES: struct AnonUnion au2 = {
+// CHECK-FIXES-NEXT:   .x = 1,
+// CHECK-FIXES-NEXT:   .a = 2,
+// CHECK-FIXES-NEXT:   .b = 3,
+// CHECK-FIXES-NEXT: };
+
+struct Inner { int v; };
+struct Outer { struct Inner x; struct Inner y; };
+
+struct Outer nd1 = {
+  .x = {.v = 1},
+  .y.v = 2,
+};
+
+struct Outer nd2 = {
+  .x = {.v = 1},
+  .y.v = 2
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:11: warning: initializer list should have a trailing comma
+// CHECK-FIXES: struct Outer nd2 = {
+// CHECK-FIXES-NEXT:   .x = {.v = 1},
+// CHECK-FIXES-NEXT:   .y.v = 2,
+// CHECK-FIXES-NEXT: };
+
+struct Outer nd3 = {
+  .x = {.v = 1},
+  .y = {.v = 2,},
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:15: warning: initializer list should not have a trailing comma
+// CHECK-FIXES: struct Outer nd3 = {
+// CHECK-FIXES-NEXT:   .x = {.v = 1},
+// CHECK-FIXES-NEXT:   .y = {.v = 2},
+// CHECK-FIXES-NEXT: };
+
+union Big {
+  unsigned long long u64[2];
+  unsigned char u8[16];
+};
+
+union Big big1 = {
+  .u64[0] = 0x0000000000000002,
+  .u64[1] = 0x0100000000000000,
+};
+
+union Big big2 = {
+  .u64[0] = 0x0000000000000002,
+  .u64[1] = 0x0100000000000000
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:31: warning: initializer list should have a trailing comma
+// CHECK-FIXES: union Big big2 = {
+// CHECK-FIXES-NEXT:   .u64[0] = 0x0000000000000002,
+// CHECK-FIXES-NEXT:   .u64[1] = 0x0100000000000000,
+// CHECK-FIXES-NEXT: };
+
+struct Addr { int family; };
+
+typedef union {
+  struct Addr *a;
+} AddrArg __attribute__((__transparent_union__));
+
+int bindAddr(AddrArg addr, int len);
+
+void transparentUnionArg(void) {
+  struct Addr a;
+  bindAddr(&a, 0);
+}

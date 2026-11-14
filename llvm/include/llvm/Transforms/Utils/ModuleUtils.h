@@ -124,9 +124,19 @@ LLVM_ABI void removeFromUsedLists(Module &M,
 LLVM_ABI void
 filterDeadComdatFunctions(SmallVectorImpl<Function *> &DeadComdatFunctions);
 
+/// Replace the body of the dead function \p F with a single unreachable block.
+///
+/// Within a CGSCC walk, dead functions are only erased in a batch at the end of
+/// the walk, and their LazyCallGraph nodes stay valid until then. Use this
+/// instead of `Function::deleteBody` so such a function remains a definition
+/// until it is erased.
+LLVM_ABI void makeFunctionBodyUnreachable(Function &F);
+
 /// Produce a unique identifier for this module by taking the MD5 sum of
 /// the names of the module's strong external symbols that are not comdat
 /// members.
+///
+/// The result is a hex string without a leading separator.
 ///
 /// This identifier is normally guaranteed to be unique, or the program would
 /// fail to link due to multiply defined symbols.
@@ -138,10 +148,14 @@ LLVM_ABI std::string getUniqueModuleId(Module *M);
 
 /// Embed the memory buffer \p Buf into the module \p M as a global using the
 /// specified section name. Also provide a metadata entry to identify it in the
-/// module using the same section name.
-LLVM_ABI void embedBufferInModule(Module &M, MemoryBufferRef Buf,
-                                  StringRef SectionName,
-                                  Align Alignment = Align(1));
+/// module using the same section name. If \p SectionExclude is true !exclude
+/// is applied to the global in order to apply necessary linkage flags to
+/// exclude the section from a link. If false, apply !metadata_section_kind
+/// which results in no additional section linkage flags.
+LLVM_ABI GlobalVariable *embedBufferInModule(Module &M, MemoryBufferRef Buf,
+                                             StringRef SectionName,
+                                             Align Alignment = Align(1),
+                                             bool SectionExclude = true);
 
 /// Lower all calls to ifuncs by replacing uses with indirect calls loaded out
 /// of a global table initialized in a global constructor. This will introduce

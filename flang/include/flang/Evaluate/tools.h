@@ -22,6 +22,7 @@
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
+#include <algorithm>
 #include <array>
 #include <optional>
 #include <set>
@@ -54,8 +55,14 @@ struct IsVariableHelper
     return false;
   }
   template <typename T> Result operator()(const Expr<T> &x) const {
-    if constexpr (common::HasMember<T, AllIntrinsicTypes> ||
-        std::is_same_v<T, SomeDerived>) {
+    if constexpr (std::is_same_v<T, SomeType>) {
+      if (std::holds_alternative<ProcedureDesignator>(x.u) ||
+          std::holds_alternative<ProcedureRef>(x.u)) {
+        return false; // procedure pointer
+      } else {
+        return (*this)(x.u);
+      }
+    } else {
       // Expression with a specific type
       if (std::holds_alternative<Designator<T>>(x.u) ||
           std::holds_alternative<FunctionRef<T>>(x.u)) {
@@ -64,15 +71,6 @@ struct IsVariableHelper
         }
       }
       return false;
-    } else if constexpr (std::is_same_v<T, SomeType>) {
-      if (std::holds_alternative<ProcedureDesignator>(x.u) ||
-          std::holds_alternative<ProcedureRef>(x.u)) {
-        return false; // procedure pointer
-      } else {
-        return (*this)(x.u);
-      }
-    } else {
-      return (*this)(x.u);
     }
   }
 };
@@ -115,7 +113,7 @@ template <typename A> common::IfNoLvalue<Expr<ResultType<A>>, A> AsExpr(A &&x) {
 
 template <typename T, typename U = typename Relational<T>::Result>
 Expr<U> AsExpr(Relational<T> &&x) {
-  // The variant in Expr<Type<TypeCategory::Logical, KIND>> only contains
+  // The variant in Expr<Type<TypeCategory::Logical>> only contains
   // Relational<SomeType>, not other Relational<T>s. Wrap the Relational<T>
   // in Relational<SomeType> before creating Expr<>.
   return Expr<U>(Relational<SomeType>{std::move(x)});
@@ -127,7 +125,7 @@ template <typename T> Expr<T> AsExpr(Expr<T> &&x) {
 }
 
 template <TypeCategory CATEGORY>
-Expr<SomeKind<CATEGORY>> AsCategoryExpr(Expr<SomeKind<CATEGORY>> &&x) {
+Expr<Type<CATEGORY>> AsCategoryExpr(Expr<Type<CATEGORY>> &&x) {
   return std::move(x);
 }
 
@@ -158,9 +156,9 @@ std::optional<Expr<SomeType>> AsGenericExpr(std::optional<A> &&x) {
 }
 
 template <typename A>
-common::IfNoLvalue<Expr<SomeKind<ResultType<A>::category>>, A> AsCategoryExpr(
+common::IfNoLvalue<Expr<Type<ResultType<A>::category>>, A> AsCategoryExpr(
     A &&x) {
-  return Expr<SomeKind<ResultType<A>::category>>{AsExpr(std::move(x))};
+  return AsExpr(std::move(x));
 }
 
 Expr<SomeType> Parenthesize(Expr<SomeType> &&);
@@ -169,7 +167,7 @@ template <typename A> constexpr bool IsNumericCategoryExpr() {
   if constexpr (common::HasMember<A, TypelessExpression>) {
     return false;
   } else {
-    return common::HasMember<ResultType<A>, NumericCategoryTypes>;
+    return common::HasMember<ResultType<A>, NumericTypes>;
   }
 }
 
@@ -188,8 +186,7 @@ auto UnwrapExpr(B &x) -> common::Constify<A, B> * {
   } else if constexpr (std::is_same_v<Ty, Expr<SomeType>>) {
     return common::visit([](auto &x) { return UnwrapExpr<A>(x); }, x.u);
   } else if constexpr (!common::HasMember<A, TypelessExpression>) {
-    if constexpr (std::is_same_v<Ty, Expr<ResultType<A>>> ||
-        std::is_same_v<Ty, Expr<SomeKind<ResultType<A>::category>>>) {
+    if constexpr (std::is_same_v<Ty, Expr<ResultType<A>>>) {
       return common::visit([](auto &x) { return UnwrapExpr<A>(x); }, x.u);
     }
   }
@@ -229,6 +226,16 @@ template <typename A, typename B> A *UnwrapExpr(B *x) {
   }
 }
 
+/// A variant of UnwrapExpr that also requires a specific kind of the
+/// expression.
+template <typename A, typename B> auto UnwrapExpr(int kind, B &x) {
+  auto *result{UnwrapExpr<A>(x)};
+  if (result && result->kind() != kind) {
+    result = nullptr;
+  }
+  return result;
+}
+
 // A variant of UnwrapExpr above that also skips through (parentheses)
 // and conversions of kinds within a category.  Useful for extracting LEN
 // type parameter inquiries, at least.
@@ -246,8 +253,7 @@ auto UnwrapConvertedExpr(B &x) -> common::Constify<A, B> * {
         [](auto &x) { return UnwrapConvertedExpr<A>(x); }, x.u);
   } else {
     using DesiredResult = ResultType<A>;
-    if constexpr (std::is_same_v<Ty, Expr<DesiredResult>> ||
-        std::is_same_v<Ty, Expr<SomeKind<DesiredResult::category>>>) {
+    if constexpr (std::is_same_v<Ty, Expr<DesiredResult>>) {
       return common::visit(
           [](auto &x) { return UnwrapConvertedExpr<A>(x); }, x.u);
     } else {
@@ -545,50 +551,40 @@ const Symbol *GetLastPointerSymbol(const evaluate::DataRef &);
 // one arbitrary expression to the type of another with ConvertTo(to, from).
 
 template <typename TO, TypeCategory FROMCAT>
-Expr<TO> ConvertToType(Expr<SomeKind<FROMCAT>> &&x) {
+Expr<TO> ConvertToType(int toKind, Expr<Type<FROMCAT>> &&x) {
   static_assert(IsSpecificIntrinsicType<TO>);
   if constexpr (FROMCAT == TO::category) {
-    if (auto *already{std::get_if<Expr<TO>>(&x.u)}) {
-      return std::move(*already);
+    if (x.kind() == toKind) {
+      return std::move(x);
     } else {
-      return Expr<TO>{Convert<TO, FROMCAT>{std::move(x)}};
+      return Expr<TO>{Convert<TO, FROMCAT>{toKind, std::move(x)}};
     }
   } else if constexpr (TO::category == TypeCategory::Complex) {
     using Part = typename TO::Part;
-    Scalar<Part> zero;
-    return Expr<TO>{ComplexConstructor<TO::kind>{
-        ConvertToType<Part>(std::move(x)), Expr<Part>{Constant<Part>{zero}}}};
+    return Expr<TO>{ComplexConstructor{
+        ConvertToType<Part>(toKind, std::move(x)), MakeZeroExpr<Part>(toKind)}};
   } else if constexpr (FROMCAT == TypeCategory::Complex) {
     // Extract and convert the real component of a complex value
-    return common::visit(
-        [&](auto &&z) {
-          using ZType = ResultType<decltype(z)>;
-          using Part = typename ZType::Part;
-          return ConvertToType<TO, TypeCategory::Real>(Expr<SomeReal>{
-              Expr<Part>{ComplexComponent<Part::kind>{false, std::move(z)}}});
-        },
-        std::move(x.u));
+    using Part = typename Type<FROMCAT>::Part;
+    return ConvertToType<TO, TypeCategory::Real>(
+        toKind, Expr<Part>{ComplexComponent{false, std::move(x)}});
   } else {
-    return Expr<TO>{Convert<TO, FROMCAT>{std::move(x)}};
+    return Expr<TO>{Convert<TO, FROMCAT>{toKind, std::move(x)}};
   }
 }
 
-template <typename TO, TypeCategory FROMCAT, int FROMKIND>
-Expr<TO> ConvertToType(Expr<Type<FROMCAT, FROMKIND>> &&x) {
-  return ConvertToType<TO, FROMCAT>(Expr<SomeKind<FROMCAT>>{std::move(x)});
-}
-
-template <typename TO> Expr<TO> ConvertToType(BOZLiteralConstant &&x) {
+template <typename TO>
+Expr<TO> ConvertToType(int toKind, BOZLiteralConstant &&x) {
   static_assert(IsSpecificIntrinsicType<TO>);
   if constexpr (TO::category == TypeCategory::Integer ||
       TO::category == TypeCategory::Unsigned) {
-    return Expr<TO>{
-        Constant<TO>{Scalar<TO>::ConvertUnsigned(std::move(x)).value}};
+    return MakeConstantExpr<TO>(
+        toKind, Scalar<TO>::ConvertUnsigned(toKind, std::move(x)).value);
   } else {
     static_assert(TO::category == TypeCategory::Real);
-    using Word = typename Scalar<TO>::Word;
-    return Expr<TO>{
-        Constant<TO>{Scalar<TO>{Word::ConvertUnsigned(std::move(x)).value}}};
+    using Word = value::IntegerValue;
+    return MakeConstantExpr<TO>(toKind,
+        Scalar<TO>{toKind, Word::ConvertUnsigned(toKind, std::move(x)).value});
   }
 }
 
@@ -606,22 +602,10 @@ std::optional<Expr<SomeType>> ConvertToType(
     const Symbol &, std::optional<Expr<SomeType>> &&);
 
 // Conversions to the type of another expression
-template <TypeCategory TC, int TK, typename FROM>
-common::IfNoLvalue<Expr<Type<TC, TK>>, FROM> ConvertTo(
-    const Expr<Type<TC, TK>> &, FROM &&x) {
-  return ConvertToType<Type<TC, TK>>(std::move(x));
-}
-
 template <TypeCategory TC, typename FROM>
-common::IfNoLvalue<Expr<SomeKind<TC>>, FROM> ConvertTo(
-    const Expr<SomeKind<TC>> &to, FROM &&from) {
-  return common::visit(
-      [&](const auto &toKindExpr) {
-        using KindExpr = std::decay_t<decltype(toKindExpr)>;
-        return AsCategoryExpr(
-            ConvertToType<ResultType<KindExpr>>(std::move(from)));
-      },
-      to.u);
+common::IfNoLvalue<Expr<Type<TC>>, FROM> ConvertTo(
+    const Expr<Type<TC>> &to, FROM &&x) {
+  return ConvertToType<Type<TC>>(to.kind(), std::move(x));
 }
 
 template <typename FROM>
@@ -636,33 +620,15 @@ common::IfNoLvalue<Expr<SomeType>, FROM> ConvertTo(
 
 // Convert an expression of some known category to a dynamically chosen
 // kind of some category (usually but not necessarily distinct).
-template <TypeCategory TOCAT, typename VALUE> struct ConvertToKindHelper {
-  using Result = std::optional<Expr<SomeKind<TOCAT>>>;
-  using Types = CategoryTypes<TOCAT>;
-  ConvertToKindHelper(int k, VALUE &&x) : kind{k}, value{std::move(x)} {}
-  template <typename T> Result Test() {
-    if (kind == T::kind) {
-      return std::make_optional(
-          AsCategoryExpr(ConvertToType<T>(std::move(value))));
-    }
-    return std::nullopt;
-  }
-  int kind;
-  VALUE value;
-};
-
 template <TypeCategory TOCAT, typename VALUE>
-common::IfNoLvalue<Expr<SomeKind<TOCAT>>, VALUE> ConvertToKind(
+common::IfNoLvalue<Expr<Type<TOCAT>>, VALUE> ConvertToKind(
     int kind, VALUE &&x) {
-  auto result{common::SearchTypes(
-      ConvertToKindHelper<TOCAT, VALUE>{kind, std::move(x)})};
-  CHECK(result.has_value());
-  return *result;
+  CHECK(common::IsValidKindOfIntrinsicType(TOCAT, kind));
+  return AsCategoryExpr(ConvertToType<Type<TOCAT>>(kind, std::move(x)));
 }
 
-// Given a type category CAT, SameKindExprs<CAT, N> is a variant that
-// holds an arrays of expressions of the same supported kind in that
-// category.
+// Given a type category CAT, SameKindExprs<CAT, N> contains an array of
+// expressions in that category. Callers ensure that their runtime kinds match.
 template <typename A, int N = 2> using SameExprs = std::array<Expr<A>, N>;
 template <int N = 2> struct SameKindExprsHelper {
   template <typename A> using SameExprs = std::array<Expr<A>, N>;
@@ -677,26 +643,18 @@ using SameKindExprs =
 // then return them in a type-safe package.
 template <TypeCategory CAT>
 SameKindExprs<CAT, 2> AsSameKindExprs(
-    Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {
-  return common::visit(
-      [&](auto &&kx, auto &&ky) -> SameKindExprs<CAT, 2> {
-        using XTy = ResultType<decltype(kx)>;
-        using YTy = ResultType<decltype(ky)>;
-        if constexpr (std::is_same_v<XTy, YTy>) {
-          return {SameExprs<XTy>{std::move(kx), std::move(ky)}};
-        } else if constexpr (XTy::kind < YTy::kind) {
-          return {SameExprs<YTy>{ConvertTo(ky, std::move(kx)), std::move(ky)}};
-        } else {
-          return {SameExprs<XTy>{std::move(kx), ConvertTo(kx, std::move(ky))}};
-        }
-#if !__clang__ && 100 * __GNUC__ + __GNUC_MINOR__ == 801
-        // Silence a bogus warning about a missing return with G++ 8.1.0.
-        // Doesn't execute, but must be correctly typed.
-        CHECK(!"can't happen");
-        return {SameExprs<XTy>{std::move(kx), std::move(kx)}};
-#endif
-      },
-      std::move(x.u), std::move(y.u));
+    Expr<Type<CAT>> &&x, Expr<Type<CAT>> &&y) {
+  int xKind{x.kind()};
+  int yKind{y.kind()};
+  if (xKind == yKind) {
+    return {SameExprs<Type<CAT>>{std::move(x), std::move(y)}};
+  } else if (xKind < yKind) {
+    return {SameExprs<Type<CAT>>{ConvertTo(y, std::move(x)), std::move(y)}};
+  } else {
+    // Must be computed before x is moved into the first array element.
+    auto converted{ConvertTo(x, std::move(y))};
+    return {SameExprs<Type<CAT>>{std::move(x), std::move(converted)}};
+  }
 }
 
 // Ensure that both operands of an intrinsic REAL operation (or CMPLX()
@@ -711,17 +669,19 @@ ConvertRealOperandsResult ConvertRealOperands(parser::ContextualMessages &,
 // to default REAL and the result is default COMPLEX.  Otherwise, the
 // kind of the result is the kind of most precise REAL component, and the other
 // component is converted if necessary to its type.
-std::optional<Expr<SomeComplex>> ConstructComplex(parser::ContextualMessages &,
-    Expr<SomeType> &&, Expr<SomeType> &&, int defaultRealKind);
-std::optional<Expr<SomeComplex>> ConstructComplex(parser::ContextualMessages &,
-    std::optional<Expr<SomeType>> &&, std::optional<Expr<SomeType>> &&,
+std::optional<Expr<Type<TypeCategory::Complex>>> ConstructComplex(
+    parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
     int defaultRealKind);
+std::optional<Expr<Type<TypeCategory::Complex>>> ConstructComplex(
+    parser::ContextualMessages &, std::optional<Expr<SomeType>> &&,
+    std::optional<Expr<SomeType>> &&, int defaultRealKind);
 
 template <typename A> Expr<TypeOf<A>> ScalarConstantToExpr(const A &x) {
   using Ty = TypeOf<A>;
+  const int kind{x.kind()};
   static_assert(
       std::is_same_v<Scalar<Ty>, std::decay_t<A>>, "TypeOf<> is broken");
-  return Expr<TypeOf<A>>{Constant<Ty>{x}};
+  return MakeConstantExpr<Ty>(kind, x);
 }
 
 // Combine two expressions of the same specific numeric type with an operation
@@ -729,7 +689,8 @@ template <typename A> Expr<TypeOf<A>> ScalarConstantToExpr(const A &x) {
 template <template <typename> class OPR, typename SPECIFIC>
 Expr<SPECIFIC> Combine(Expr<SPECIFIC> &&x, Expr<SPECIFIC> &&y) {
   static_assert(IsSpecificIntrinsicType<SPECIFIC>);
-  return AsExpr(OPR<SPECIFIC>{std::move(x), std::move(y)});
+  CHECK(x.kind() == y.kind());
+  return AsExpr(OPR<SPECIFIC>{x.kind(), std::move(x), std::move(y)});
 }
 
 // Given two expressions of arbitrary kind in the same intrinsic type
@@ -737,8 +698,7 @@ Expr<SPECIFIC> Combine(Expr<SPECIFIC> &&x, Expr<SPECIFIC> &&y) {
 // other, then combine the resulting homogenized operands with a given
 // operation, returning a new expression in the same type category.
 template <template <typename> class OPR, TypeCategory CAT>
-Expr<SomeKind<CAT>> PromoteAndCombine(
-    Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {
+Expr<Type<CAT>> PromoteAndCombine(Expr<Type<CAT>> &&x, Expr<Type<CAT>> &&y) {
   return common::visit(
       [](auto &&xy) {
         using Ty = ResultType<decltype(xy[0])>;
@@ -791,104 +751,43 @@ Expr<LogicalResult> PackageRelation(
       Relational<SomeType>{Relational<T>{opr, std::move(x), std::move(y)}}};
 }
 
-template <int K>
-Expr<Type<TypeCategory::Logical, K>> LogicalNegation(
-    Expr<Type<TypeCategory::Logical, K>> &&x) {
-  return AsExpr(Not<K>{std::move(x)});
+inline Expr<Type<TypeCategory::Logical>> LogicalNegation(
+    Expr<Type<TypeCategory::Logical>> &&x) {
+  const int kind{x.kind()};
+  return AsExpr(Not{kind, std::move(x)});
 }
 
-Expr<SomeLogical> LogicalNegation(Expr<SomeLogical> &&);
-
-template <int K>
-Expr<Type<TypeCategory::Logical, K>> BinaryLogicalOperation(LogicalOperator opr,
-    Expr<Type<TypeCategory::Logical, K>> &&x,
-    Expr<Type<TypeCategory::Logical, K>> &&y) {
-  return AsExpr(LogicalOperation<K>{opr, std::move(x), std::move(y)});
-}
-
-Expr<SomeLogical> BinaryLogicalOperation(
-    LogicalOperator, Expr<SomeLogical> &&, Expr<SomeLogical> &&);
+Expr<Type<TypeCategory::Logical>> BinaryLogicalOperation(LogicalOperator,
+    Expr<Type<TypeCategory::Logical>> &&, Expr<Type<TypeCategory::Logical>> &&);
 
 // Convenience functions and operator overloadings for expression construction.
 // These interfaces are defined only for those situations that can never
 // emit any message.  Use the more general templates (above) in other
 // situations.
 
-template <TypeCategory C, int K>
-Expr<Type<C, K>> operator-(Expr<Type<C, K>> &&x) {
-  return AsExpr(Negate<Type<C, K>>{std::move(x)});
-}
-
-template <TypeCategory C, int K>
-Expr<Type<C, K>> operator+(Expr<Type<C, K>> &&x, Expr<Type<C, K>> &&y) {
-  return AsExpr(Combine<Add, Type<C, K>>(std::move(x), std::move(y)));
-}
-
-template <TypeCategory C, int K>
-Expr<Type<C, K>> operator-(Expr<Type<C, K>> &&x, Expr<Type<C, K>> &&y) {
-  return AsExpr(Combine<Subtract, Type<C, K>>(std::move(x), std::move(y)));
-}
-
-template <TypeCategory C, int K>
-Expr<Type<C, K>> operator*(Expr<Type<C, K>> &&x, Expr<Type<C, K>> &&y) {
-  return AsExpr(Combine<Multiply, Type<C, K>>(std::move(x), std::move(y)));
-}
-
-template <TypeCategory C, int K>
-Expr<Type<C, K>> operator/(Expr<Type<C, K>> &&x, Expr<Type<C, K>> &&y) {
-  return AsExpr(Combine<Divide, Type<C, K>>(std::move(x), std::move(y)));
-}
-
-template <TypeCategory C> Expr<SomeKind<C>> operator-(Expr<SomeKind<C>> &&x) {
-  return common::visit(
-      [](auto &xk) { return Expr<SomeKind<C>>{-std::move(xk)}; }, x.u);
+template <TypeCategory C> Expr<Type<C>> operator-(Expr<Type<C>> &&x) {
+  return AsExpr(Negate<Type<C>>{std::move(x)});
 }
 
 template <TypeCategory CAT>
-Expr<SomeKind<CAT>> operator+(
-    Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {
+Expr<Type<CAT>> operator+(Expr<Type<CAT>> &&x, Expr<Type<CAT>> &&y) {
   return PromoteAndCombine<Add, CAT>(std::move(x), std::move(y));
 }
 
 template <TypeCategory CAT>
-Expr<SomeKind<CAT>> operator-(
-    Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {
+Expr<Type<CAT>> operator-(Expr<Type<CAT>> &&x, Expr<Type<CAT>> &&y) {
   return PromoteAndCombine<Subtract, CAT>(std::move(x), std::move(y));
 }
 
 template <TypeCategory CAT>
-Expr<SomeKind<CAT>> operator*(
-    Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {
+Expr<Type<CAT>> operator*(Expr<Type<CAT>> &&x, Expr<Type<CAT>> &&y) {
   return PromoteAndCombine<Multiply, CAT>(std::move(x), std::move(y));
 }
 
 template <TypeCategory CAT>
-Expr<SomeKind<CAT>> operator/(
-    Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {
+Expr<Type<CAT>> operator/(Expr<Type<CAT>> &&x, Expr<Type<CAT>> &&y) {
   return PromoteAndCombine<Divide, CAT>(std::move(x), std::move(y));
 }
-
-// A utility for use with common::SearchTypes to create generic expressions
-// when an intrinsic type category for (say) a variable is known
-// but the kind parameter value is not.
-template <TypeCategory CAT, template <typename> class TEMPLATE, typename VALUE>
-struct TypeKindVisitor {
-  using Result = std::optional<Expr<SomeType>>;
-  using Types = CategoryTypes<CAT>;
-
-  TypeKindVisitor(int k, VALUE &&x) : kind{k}, value{std::move(x)} {}
-  TypeKindVisitor(int k, const VALUE &x) : kind{k}, value{x} {}
-
-  template <typename T> Result Test() {
-    if (kind == T::kind) {
-      return AsGenericExpr(TEMPLATE<T>{std::move(value)});
-    }
-    return std::nullopt;
-  }
-
-  int kind;
-  VALUE value;
-};
 
 // TypedWrapper() wraps a object in an explicitly typed representation
 // (e.g., Designator<> or FunctionRef<>) that has been instantiated on
@@ -897,8 +796,10 @@ template <TypeCategory CATEGORY, template <typename> typename WRAPPER,
     typename WRAPPED>
 common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> WrapperHelper(
     int kind, WRAPPED &&x) {
-  return common::SearchTypes(
-      TypeKindVisitor<CATEGORY, WRAPPER, WRAPPED>{kind, std::move(x)});
+  if (!common::IsValidKindOfIntrinsicType(CATEGORY, kind)) {
+    return std::nullopt;
+  }
+  return AsGenericExpr(WRAPPER<Type<CATEGORY>>{kind, std::move(x)});
 }
 
 template <template <typename> typename WRAPPER, typename WRAPPED>
@@ -925,7 +826,8 @@ common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> TypedWrapper(
     return WrapperHelper<TypeCategory::Logical, WRAPPER, WRAPPED>(
         dyType.kind(), std::move(x));
   case TypeCategory::Derived:
-    return AsGenericExpr(Expr<SomeDerived>{WRAPPER<SomeDerived>{std::move(x)}});
+    return AsGenericExpr(Expr<Type<TypeCategory::Derived>>{
+        WRAPPER<Type<TypeCategory::Derived>>{/*kind=*/0, std::move(x)}});
   }
 }
 
@@ -946,8 +848,7 @@ struct GetLastSymbolHelper
     return x.GetSymbol();
   }
   template <typename T> Result operator()(const Expr<T> &x) const {
-    if constexpr (common::HasMember<T, AllIntrinsicTypes> ||
-        std::is_same_v<T, SomeDerived>) {
+    if constexpr (!std::is_same_v<T, SomeType>) {
       if (const auto *designator{std::get_if<Designator<T>>(&x.u)}) {
         if (auto known{(*this)(*designator)}) {
           return known;
@@ -979,28 +880,7 @@ template <typename A> semantics::Attrs GetAttrs(const A &x) {
   }
 }
 
-template <>
-inline semantics::Attrs GetAttrs<Expr<SomeType>>(const Expr<SomeType> &x) {
-  if (IsVariable(x)) {
-    if (const auto *procRef{UnwrapProcedureRef(x)}) {
-      if (const Symbol * interface{procRef->proc().GetInterfaceSymbol()}) {
-        if (const auto *details{
-                interface->detailsIf<semantics::SubprogramDetails>()}) {
-          if (details->isFunction() &&
-              details->result().attrs().test(semantics::Attr::POINTER)) {
-            // N.B.: POINTER becomes TARGET in SetAttrsFromAssociation()
-            return details->result().attrs();
-          }
-        }
-      }
-    }
-  }
-  if (const Symbol * symbol{GetLastSymbol(x)}) {
-    return symbol->attrs();
-  } else {
-    return {};
-  }
-}
+template <> semantics::Attrs GetAttrs<Expr<SomeType>>(const Expr<SomeType> &x);
 
 template <typename A> semantics::Attrs GetAttrs(const std::optional<A> &x) {
   if (x) {
@@ -1079,6 +959,10 @@ template <typename A> SymbolVector GetSymbolVector(const A &x) {
   return GetSymbolVectorHelper{}(x);
 }
 
+// The selector of an associate name when it is a variable that is not a
+// pointer returned by a function, else nullptr.
+const Expr<SomeType> *GetVariableSelector(const Symbol &);
+
 // GetLastTarget() returns the rightmost symbol in an object designator's
 // SymbolVector that has the POINTER or TARGET attribute, or a null pointer
 // when none is found.
@@ -1089,21 +973,32 @@ template <typename A> semantics::UnorderedSymbolSet CollectSymbols(const A &);
 extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SomeType> &);
 extern template semantics::UnorderedSymbolSet CollectSymbols(
-    const Expr<SomeInteger> &);
-extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
 extern template semantics::UnorderedSymbolSet CollectSymbols(
     const ProcedureDesignator &);
 extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Assignment &);
 
+// Collects the originating arrays named by the ubound()/lbound() provenance of
+// the RankOneBoundElements in an expression.  Traverse() visits only an
+// element's base, so CollectSymbols() never sees these; the module file writer
+// needs them so that a bound serialized as ubound(a,dim) also declares 'a'.
+// This is deliberately not part of Traverse(): an element's value depends only
+// on its base, and visiting the originating array there would make an element
+// whose array is an INTENT(OUT) or INTENT(INOUT) dummy fail
+// IsScopeInvariantExpr() and block folding that is valid today.
+template <typename A>
+semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(const A &);
+extern template semantics::UnorderedSymbolSet
+CollectRankOneBoundProvenanceSymbols(const Expr<SomeType> &);
+extern template semantics::UnorderedSymbolSet
+CollectRankOneBoundProvenanceSymbols(const Expr<SubscriptInteger> &);
+
 // Collects Symbols of interest for the CUDA data transfer in an expression
 template <typename A>
 semantics::UnorderedSymbolSet CollectCudaSymbols(const A &);
 extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SomeType> &);
-extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
-    const Expr<SomeInteger> &);
 extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SubscriptInteger> &);
 
@@ -1129,10 +1024,11 @@ bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr);
 // Can a scalar real or complex RHS expression in an assignment be rewritten
 // as a split sum expression tree?
 bool CanBuildSplitSumExpressionTree(
-    const Expr<SomeType> &lhs, const Expr<SomeType> &rhs);
+    FoldingContext &, const Expr<SomeType> &lhs, const Expr<SomeType> &rhs);
 
-// Try to rewrite a scalar real or complex sum as a split sum expression tree.
-std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTree(
+// Try to rewrite eligible scalar real or complex sums within an expression as
+// split sum expression trees.
+std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTrees(
     const Expr<SomeType> &expr);
 
 // Utilities for attaching the location of the declaration of a symbol
@@ -1250,16 +1146,16 @@ private:
 // If the type is Character or a derived type, take the length or type
 // (resp.) from a another Constant.
 template <typename T>
-Constant<T> PackageConstant(std::vector<Scalar<T>> &&elements,
+Constant<T> PackageConstant(int kind, std::vector<Scalar<T>> &&elements,
     const Constant<T> &reference, const ConstantSubscripts &shape) {
   if constexpr (T::category == TypeCategory::Character) {
     return Constant<T>{
-        reference.LEN(), std::move(elements), ConstantSubscripts{shape}};
+        kind, reference.LEN(), std::move(elements), ConstantSubscripts{shape}};
   } else if constexpr (T::category == TypeCategory::Derived) {
     return Constant<T>{reference.GetType().GetDerivedTypeSpec(),
         std::move(elements), ConstantSubscripts{shape}};
   } else {
-    return Constant<T>{std::move(elements), ConstantSubscripts{shape}};
+    return Constant<T>{kind, std::move(elements), ConstantSubscripts{shape}};
   }
 }
 
@@ -1307,8 +1203,6 @@ template <typename T>
 std::optional<bool> AreEquivalentInInterface(const Expr<T> &, const Expr<T> &);
 extern template std::optional<bool> AreEquivalentInInterface<SubscriptInteger>(
     const Expr<SubscriptInteger> &, const Expr<SubscriptInteger> &);
-extern template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
-    const Expr<SomeInteger> &, const Expr<SomeInteger> &);
 
 bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
@@ -1324,24 +1218,13 @@ std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr);
 bool IsCUDADeviceSymbol(const Symbol &sym);
 bool IsCUDADeviceOnlySymbol(const Symbol &sym);
 
-inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        (*details->cudaDataAttr() == common::CUDADataAttr::Managed ||
-            *details->cudaDataAttr() == common::CUDADataAttr::Unified)) {
-      return true;
-    }
-  }
-  return false;
-}
+// True if the data designated by the symbol has the CUDA data attribute. An
+// associate name takes the attribute of the variable its selector designates.
+bool IsCUDADataAttrSymbol(const Symbol &sym, common::CUDADataAttr attr);
 
-inline bool IsCUDADataAttrSymbol(const Symbol &sym, common::CUDADataAttr attr) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    return details->cudaDataAttr() && *details->cudaDataAttr() == attr;
-  }
-  return false;
+inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
+  return IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Managed) ||
+      IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Unified);
 }
 
 inline bool IsCUDAManagedSymbol(const Symbol &sym) {
@@ -1350,6 +1233,72 @@ inline bool IsCUDAManagedSymbol(const Symbol &sym) {
 
 inline bool IsCUDAUnifiedSymbol(const Symbol &sym) {
   return IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Unified);
+}
+
+inline bool HasCUDADataAttr(const Symbol &sym) {
+  const auto *details{
+      sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()};
+  return details && details->cudaDataAttr().has_value();
+}
+
+// Replace each associate name whose selector is a variable by the CUDA symbols
+// of its selector, the same way GetSymbolVector expands it.
+semantics::UnorderedSymbolSet ExpandCudaAssociations(
+    semantics::UnorderedSymbolSet &&symbols);
+
+// The data attribute of a component describes the data that the component
+// designates, so it hides the attribute of the object that the component is
+// taken from: in a%b, where a is managed and b is device, a%b designates
+// device data. Collect the symbols of the expression, leaving out the ones
+// that a component with an attribute hides.
+template <typename A>
+semantics::UnorderedSymbolSet CollectEffectiveCudaSymbols(const A &expr) {
+  // Associate names are expanded so that the set holds the symbols that
+  // GetSymbolVector lists, which the hiding below relies on.
+  semantics::UnorderedSymbolSet result{
+      ExpandCudaAssociations(CollectCudaSymbols(expr))};
+  SymbolVector symbols{GetSymbolVector(expr)};
+  // GetSymbolVector lists the base of a component chain before its components.
+  // Reverse it to visit the innermost component of a chain first.
+  std::reverse(symbols.begin(), symbols.end());
+  bool hidden{false};
+  for (const Symbol &sym : symbols) {
+    bool isComponent{sym.owner().IsDerivedType()};
+    if (hidden) {
+      result.erase(sym);
+    } else if (isComponent && HasCUDADataAttr(sym)) {
+      hidden = true;
+    }
+    if (!isComponent) {
+      hidden = false; // The base ends the component chain.
+    }
+  }
+  return result;
+}
+
+// Get the number of symbols with the CUDA managed attribute in a set.
+inline int CountCUDAManagedSymbols(
+    const semantics::UnorderedSymbolSet &symbols) {
+  int count{0};
+  for (const Symbol &sym : symbols) {
+    if (IsCUDAManagedSymbol(sym)) {
+      ++count;
+    }
+  }
+  return count;
+}
+
+// Get the number of symbols with a CUDA device attribute other than unified in
+// a set.
+inline int CountCUDANonUnifiedSymbols(
+    const semantics::UnorderedSymbolSet &symbols) {
+  int count{0};
+  for (const Symbol &sym : symbols) {
+    if (IsCUDADeviceSymbol(sym) && !IsCUDAUnifiedSymbol(sym)) {
+      ++count;
+    }
+  }
+  return count;
 }
 
 // Non-allocatable module-level managed/unified variables use pointer
@@ -1389,6 +1338,11 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
 // Get the number of unique symbols with CUDA device attribute.
 int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr);
 
+// Get the number of unique symbols with CUDA device attribute that are managed
+// or unified. Symbols are counted the same way as in
+// GetNbOfUniqueCUDADeviceSymbols so the two counts can be compared.
+int GetNbOfUniqueCUDAManagedOrUnifiedSymbols(const Expr<SomeType> &expr);
+
 // Get the number of distinct symbols with CUDA managed or unified
 // attribute in the expression.
 template <typename A>
@@ -1402,46 +1356,10 @@ inline int GetNbOfCUDAManagedOrUnifiedSymbols(const A &expr) {
   return symbols.size();
 }
 
-// Get the number of distinct symbols with the CUDA managed attribute in the
-// expression.
-template <typename A> inline int GetNbOfCUDAManagedSymbols(const A &expr) {
-  semantics::UnorderedSymbolSet symbols;
-  for (const Symbol &sym : CollectCudaSymbols(expr)) {
-    if (IsCUDAManagedSymbol(sym)) {
-      symbols.insert(sym);
-    }
-  }
-  return symbols.size();
-}
-
-// Get the number of distinct symbols with a CUDA device attribute other than
-// unified in the expression.
-template <typename A> inline int GetNbOfCUDANonUnifiedSymbols(const A &expr) {
-  semantics::UnorderedSymbolSet symbols;
-  for (const Symbol &sym : CollectCudaSymbols(expr)) {
-    if (IsCUDADeviceSymbol(sym) && !IsCUDAUnifiedSymbol(sym)) {
-      symbols.insert(sym);
-    }
-  }
-  return symbols.size();
-}
-
 // Check if any of the symbols part of the expression has a CUDA device
 // attribute.
 template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
-}
-
-// Check if any of the symbols part of the expression has the CUDA managed
-// attribute.
-template <typename A> inline bool HasCUDAManagedSymbols(const A &expr) {
-  return GetNbOfCUDAManagedSymbols(expr) > 0;
-}
-
-// Check if any of the symbols part of the expression has a CUDA device
-// attribute other than unified.
-template <typename A> inline bool HasCUDANonUnifiedSymbols(const A &expr) {
-  return GetNbOfCUDANonUnifiedSymbols(expr) > 0;
 }
 
 // True for a whole reference to a managed array: a whole array variable, or a
@@ -1469,15 +1387,20 @@ template <typename A> inline bool IsWholeManagedArray(const A &expr) {
 // Unified data is host memory that the device can also access, so it takes the
 // place of host data in the rules above and an assignment between unified sides
 // is host code.
+// The side of an assignment is classified from the data it designates, so the
+// attribute of a component prevails over the attribute of the object it is
+// taken from.
 // Return true if the assignment is one of the copies above.
 template <typename A, typename B>
 inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
+  semantics::UnorderedSymbolSet lhsSymbols{CollectEffectiveCudaSymbols(lhs)};
+  semantics::UnorderedSymbolSet rhsSymbols{CollectEffectiveCudaSymbols(rhs)};
   // Unified data is left out of these counts and checks so that it is handled
   // as host data.
-  bool lhsHasManaged{HasCUDAManagedSymbols(lhs)};
-  bool lhsIsHost{!HasCUDANonUnifiedSymbols(lhs)};
-  int rhsNbManagedSymbols{GetNbOfCUDAManagedSymbols(rhs)};
-  int rhsNbSymbols{GetNbOfCUDANonUnifiedSymbols(rhs)};
+  bool lhsHasManaged{CountCUDAManagedSymbols(lhsSymbols) > 0};
+  bool lhsIsHost{CountCUDANonUnifiedSymbols(lhsSymbols) == 0};
+  int rhsNbManagedSymbols{CountCUDAManagedSymbols(rhsSymbols)};
+  int rhsNbSymbols{CountCUDANonUnifiedSymbols(rhsSymbols)};
 
   if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
     return false;
@@ -1521,8 +1444,8 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   return !lhsIsHost || rhsNbSymbols > 0;
 }
 
-/// Check if the expression is a mix of host and device variables that require
-/// implicit data transfer.
+/// Check if the expression uses device data in an operation evaluated on the
+/// host, which requires an implicit data transfer.
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
 
 /// Check if the expression is a mix of host and constant variables.
@@ -1569,7 +1492,7 @@ using OperatorSet = common::EnumSet<Operator, 32>;
 
 std::string ToString(Operator op);
 
-template <int Kind> Operator OperationCode(const LogicalOperation<Kind> &op) {
+inline Operator OperationCode(const LogicalOperation &op) {
   switch (op.logicalOperator) {
   case common::LogicalOperator::And:
     return Operator::And;
@@ -1692,7 +1615,12 @@ std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
 // For an expression of enumeration type, extract the value of the hidden
 // __ordinal component.  Returns std::nullopt if the expression is not a
 // constant or structure constructor of an enumeration-type value.
-std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &);
+std::optional<Expr<SomeType>> GetEnumerationOrdinal(
+    Expr<Type<TypeCategory::Derived>> &);
+
+// Build INT(x), a default INTEGER reference to x's ordinal. The caller must
+// ensure x is of enumeration type.
+Expr<SomeType> MakeEnumerationIntCall(Expr<Type<TypeCategory::Derived>> &&);
 
 } // namespace Fortran::evaluate
 

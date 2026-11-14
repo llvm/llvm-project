@@ -10,7 +10,21 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-using olCreateContextTest = OffloadDeviceTest;
+// OffloadDeviceTest creates an ol_context_handle_t in SetUp; this fixture
+// stops at the device so the tests below can exercise olCreateContext.
+struct olCreateContextTest : OffloadTest,
+                             ::testing::WithParamInterface<OffloadParam<int>> {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(OffloadTest::SetUp());
+    auto &DevicesParam = std::get<0>(GetParam());
+    if (!DevicesParam.empty())
+      Device = DevicesParam.front().Handle;
+    if (Device == nullptr)
+      GTEST_SKIP() << "No available devices.";
+  }
+
+  ol_device_handle_t Device = nullptr;
+};
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olCreateContextTest);
 
 TEST_P(olCreateContextTest, Success) {

@@ -54,7 +54,6 @@ HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT,
 
   MinInstAlignment = 4;
   UsesELFSectionDirectiveForBSS  = true;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
   UseLogicalShr = false;
 
   initializeAtSpecifiers(atSpecifiers);

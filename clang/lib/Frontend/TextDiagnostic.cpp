@@ -17,6 +17,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
+#include "llvm/Support/Path.h"
 #include <algorithm>
 #include <optional>
 
@@ -1543,12 +1544,13 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
   bool PrintReversed = false;
   std::optional<llvm::raw_ostream::Colors> CurrentColor;
   size_t I = 0; // Bytes.
+  const bool ShowColors = DiagOpts.showColors(OS.has_colors());
   while (I < SourceLine.size()) {
     auto [Str, WasPrintable] =
         printableTextForNextCharacter(SourceLine, &I, DiagOpts.TabStop);
 
     // Toggle inverted colors on or off for this character.
-    if (DiagOpts.showColors(OS.has_colors())) {
+    if (ShowColors) {
       if (WasPrintable == PrintReversed) {
         PrintReversed = !PrintReversed;
         if (PrintReversed)
@@ -1579,7 +1581,7 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
     OS << Str;
   }
 
-  if (DiagOpts.showColors(OS.has_colors()))
+  if (ShowColors)
     OS.resetColor();
 
   OS << '\n';

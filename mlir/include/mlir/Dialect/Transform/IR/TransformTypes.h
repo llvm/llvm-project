@@ -11,7 +11,6 @@
 
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Utils/DiagnosedSilenceableFailure.h"
-#include "mlir/IR/Types.h"
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {

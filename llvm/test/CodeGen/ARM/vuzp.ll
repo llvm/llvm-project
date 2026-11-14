@@ -22,9 +22,9 @@ define <16 x i8> @vuzpi8_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vuzpi8_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vuzp.8 d18, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vuzp.8 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i8>, ptr %A
@@ -54,9 +54,9 @@ define <8 x i16> @vuzpi16_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vuzpi16_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vuzp.16 d18, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vuzp.16 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <4 x i16>, ptr %A
@@ -222,9 +222,9 @@ define <16 x i8> @vuzpi8_undef_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vuzpi8_undef_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vuzp.8 d18, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vuzp.8 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i8>, ptr %A
@@ -288,10 +288,10 @@ define <4 x i32> @vuzp_lower_shufflemask_zeroed(ptr %A, ptr %B) {
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vorr d18, d17, d17
 ; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vdup.32 d17, d17[0]
 ; CHECK-NEXT:    vtrn.32 d18, d16
-; CHECK-NEXT:    vdup.32 d18, d17[0]
+; CHECK-NEXT:    vmov r0, r1, d17
 ; CHECK-NEXT:    vmov r2, r3, d16
-; CHECK-NEXT:    vmov r0, r1, d18
 ; CHECK-NEXT:    mov pc, lr
 entry:
   %tmp1 = load <2 x i32>, ptr %A
@@ -539,39 +539,39 @@ define %struct.uint8x8x2_t @vuzp_extract_subvector(<16 x i8> %t) #0 {
 define void @test_15xi16(ptr %next.gep, ptr %next.gep13) {
 ; CHECK-LABEL: test_15xi16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    add r2, r0, #2
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    add r3, r0, #6
+; CHECK-NEXT:    add r2, r0, #2
+; CHECK-NEXT:    vld1.16 {d20, d21}, [r3]!
+; CHECK-NEXT:    vmov.u16 r4, d20[0]
 ; CHECK-NEXT:    vld1.16 {d16, d17}, [r2]!
 ; CHECK-NEXT:    vld1.16 {d18}, [r2]!
 ; CHECK-NEXT:    vmov.u16 r12, d18[0]
 ; CHECK-NEXT:    ldr r2, [r2]
-; CHECK-NEXT:    vmov.u16 r4, d16[0]
-; CHECK-NEXT:    vld1.16 {d20, d21}, [r3]!
 ; CHECK-NEXT:    vld1.16 {d19}, [r3]!
-; CHECK-NEXT:    vmov.u16 r5, d20[0]
 ; CHECK-NEXT:    vmov.u16 lr, d18[2]
-; CHECK-NEXT:    vmov.u16 r6, d17[0]
-; CHECK-NEXT:    vmov.16 d23[0], r12
-; CHECK-NEXT:    vmov.16 d22[0], r4
-; CHECK-NEXT:    vmov.u16 r4, d19[0]
-; CHECK-NEXT:    vmov.u16 r12, d19[2]
-; CHECK-NEXT:    vmov.16 d24[0], r5
 ; CHECK-NEXT:    vmov.u16 r5, d16[2]
-; CHECK-NEXT:    vmov.16 d23[1], lr
-; CHECK-NEXT:    vmov.u16 lr, d21[0]
+; CHECK-NEXT:    vmov.u16 r8, d19[2]
+; CHECK-NEXT:    vmov.u16 r6, d21[0]
+; CHECK-NEXT:    vmov.u16 r7, d17[0]
+; CHECK-NEXT:    vmov.16 d24[0], r4
+; CHECK-NEXT:    vmov.u16 r4, d19[0]
+; CHECK-NEXT:    vmov.16 d23[0], r12
+; CHECK-NEXT:    vmov.u16 r12, d16[0]
 ; CHECK-NEXT:    vmov.16 d25[0], r4
 ; CHECK-NEXT:    vmov.u16 r4, d20[2]
+; CHECK-NEXT:    vmov.16 d22[0], r12
+; CHECK-NEXT:    vmov.16 d23[1], lr
 ; CHECK-NEXT:    vmov.16 d22[1], r5
 ; CHECK-NEXT:    vmov.u16 r5, d17[2]
 ; CHECK-NEXT:    vmov.16 d23[2], r2
 ; CHECK-NEXT:    ldr r2, [r3]
-; CHECK-NEXT:    vmov.16 d22[2], r6
+; CHECK-NEXT:    vmov.16 d22[2], r7
 ; CHECK-NEXT:    vmov.16 d24[1], r4
 ; CHECK-NEXT:    vmov.u16 r4, d21[2]
-; CHECK-NEXT:    vmov.16 d25[1], r12
-; CHECK-NEXT:    vmov.16 d24[2], lr
+; CHECK-NEXT:    vmov.16 d25[1], r8
+; CHECK-NEXT:    vmov.16 d24[2], r6
 ; CHECK-NEXT:    vmov.16 d25[2], r2
 ; CHECK-NEXT:    add r2, r0, #30
 ; CHECK-NEXT:    add r0, r0, #34
@@ -581,7 +581,7 @@ define void @test_15xi16(ptr %next.gep, ptr %next.gep13) {
 ; CHECK-NEXT:    vld1.16 {d25[3]}, [r0:16]
 ; CHECK-NEXT:    vst1.16 {d22, d23}, [r1]!
 ; CHECK-NEXT:    vst1.16 {d24, d25}, [r1]
-; CHECK-NEXT:    pop {r4, r5, r6, lr}
+; CHECK-NEXT:    pop {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    mov pc, lr
   %a = getelementptr inbounds nuw i8, ptr %next.gep, i32 2
   %b = load <15 x i16>, ptr %a, align 2

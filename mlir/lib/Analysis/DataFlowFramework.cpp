@@ -146,8 +146,7 @@ LogicalResult DataFlowSolver::initializeAndRun(
   // Iterate until all states are in some initialized state and the worklist
   // is exhausted.
   while (!worklist.empty()) {
-    auto [point, analysis] = worklist.front();
-    worklist.pop();
+    auto [point, analysis] = dequeue();
 
     DATAFLOW_DEBUG(LDBG() << "Invoking '" << analysis->debugName
                           << "' on: " << *point);

@@ -370,16 +370,39 @@ FrontendAction::FrontendAction() : Instance(nullptr) {}
 
 FrontendAction::~FrontendAction() {}
 
+TranslationUnitKind FrontendAction::getTranslationUnitKind() {
+  // The ASTContext, if exists, knows the exact TUKind of the frondend.
+  if (Instance && Instance->hasASTContext())
+    return Instance->getASTContext().TUKind;
+  return TU_Complete;
+}
+
+bool FrontendAction::BeginSourceFileAction(CompilerInstance &CI) {
+  if (CurrentInput.isPreprocessed())
+    CI.getPreprocessor().SetMacroExpansionOnlyInDirectives();
+  return true;
+}
+
+void FrontendAction::EndSourceFileAction() {
+  if (CurrentInput.isPreprocessed())
+    // Reset the preprocessor macro expansion to the default.
+    getCompilerInstance().getPreprocessor().SetEnableMacroExpansion();
+}
+
 void FrontendAction::setCurrentInput(const FrontendInputFile &CurrentInput,
                                      std::unique_ptr<ASTUnit> AST) {
   this->CurrentInput = CurrentInput;
   CurrentASTUnit = std::move(AST);
 }
 
+std::unique_ptr<ASTUnit> FrontendAction::takeCurrentASTUnit() {
+  return std::move(CurrentASTUnit);
+}
+
 Module *FrontendAction::getCurrentModule() const {
   CompilerInstance &CI = getCompilerInstance();
   return CI.getPreprocessor().getHeaderSearchInfo().lookupModule(
-      CI.getLangOpts().CurrentModule, SourceLocation(), /*AllowSearch*/false);
+      CI.getLangOpts().CurrentModule, SourceLocation(), /*AllowSearch=*/false);
 }
 
 std::unique_ptr<ASTConsumer>
@@ -805,6 +828,11 @@ static std::unique_ptr<llvm::MemoryBuffer>
 getInputBufferForModule(CompilerInstance &CI, Module *M) {
   FileManager &FileMgr = CI.getFileManager();
 
+  // Merge in directories the requesting instance enumerated on this module's
+  // behalf.
+  for (StringRef Dir : CI.getInheritedDirectoryDependencies())
+    M->addDirectoryDependency(Dir);
+
   // Collect the set of #includes we need to build the module.
   SmallString<256> HeaderContents;
   std::error_code Err = std::error_code();
@@ -1004,10 +1032,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (CI.getFrontendOpts().ModulesEmbedAllFiles)
     CI.getSourceManager().setAllFilesAreTransient(true);
 
-  // IR files bypass the rest of initialization.
-  if (Input.getKind().getLanguage() == Language::LLVM_IR) {
-    if (!hasIRSupport()) {
-      CI.getDiagnostics().Report(diag::err_ast_action_on_llvm_ir)
+  // IR files (LLVM IR or ClangIR) bypass the rest of initialization.
+  Language InputLang = Input.getKind().getLanguage();
+  if (InputLang == Language::LLVM_IR || InputLang == Language::CIR) {
+    bool IsCIR = InputLang == Language::CIR;
+    if (IsCIR ? !hasCIRSupport() : !hasIRSupport()) {
+      CI.getDiagnostics().Report(IsCIR ? diag::err_ast_action_on_cir
+                                       : diag::err_ast_action_on_llvm_ir)
           << Input.getFile();
       return false;
     }
@@ -1519,6 +1550,9 @@ bool WrapperFrontendAction::hasASTFileSupport() const {
 }
 bool WrapperFrontendAction::hasIRSupport() const {
   return WrappedAction->hasIRSupport();
+}
+bool WrapperFrontendAction::hasCIRSupport() const {
+  return WrappedAction->hasCIRSupport();
 }
 bool WrapperFrontendAction::hasCodeCompletionSupport() const {
   return WrappedAction->hasCodeCompletionSupport();

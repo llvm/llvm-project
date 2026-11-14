@@ -81,10 +81,12 @@ func.func @xfer_write_minor_identity_transposed_with_mask_scalable(
   return
 }
 
-// Masked version is not supported
-
 // CHECK-LABEL:   func.func @xfer_write_minor_identity_transposed_map_masked
-// CHECK-NOT: vector.transpose
+// CHECK-SAME:      %[[VEC:.*]]: vector<4x8xi16>,
+// CHECK-SAME:      %[[MEM:.*]]: memref<2x2x8x4xi16>,
+// CHECK-SAME:      %[[MASK:.*]]: vector<8x4xi1>
+// CHECK:           %[[TR:.*]] = vector.transpose %[[VEC]], [1, 0] : vector<4x8xi16> to vector<8x4xi16>
+// CHECK:           vector.mask %[[MASK]] { vector.transfer_write %[[TR]], %[[MEM]]{{.*}} {in_bounds = [true, true]} : vector<8x4xi16>, memref<2x2x8x4xi16> } : vector<8x4xi1>
 func.func @xfer_write_minor_identity_transposed_map_masked(
     %vec: vector<4x8xi16>,
     %mem: memref<2x2x8x4xi16>,
@@ -156,6 +158,57 @@ func.func @xfer_write_non_minor_identity_with_mask_out_of_bounds(
     permutation_map = affine_map<(d0, d1) -> (d0)>,
     in_bounds = [false]
   } : vector<7xf32>, memref<?x?xf32>
+
+  return
+}
+
+// The missing dim (d2) is between the dims that are written to, so the mask
+// gets its unit dim in the middle as well.
+
+// CHECK-LABEL:   func.func @xfer_write_non_minor_identity_with_mask_missing_inner_dim(
+// CHECK-SAME:      %[[MEM:.*]]: memref<?x?x?x?xf32>,
+// CHECK-SAME:      %[[VEC:.*]]: vector<7x8xf32>,
+// CHECK-SAME:      %[[MASK:.*]]: vector<7x8xi1>,
+// CHECK-SAME:      %[[IDX:.*]]: index) {
+// CHECK:           %[[BC_VEC:.*]] = vector.broadcast %[[VEC]] : vector<7x8xf32> to vector<1x7x8xf32>
+// CHECK:           %[[BC_MASK:.*]] = vector.broadcast %[[MASK]] : vector<7x8xi1> to vector<1x7x8xi1>
+// CHECK:           %[[TR_MASK:.*]] = vector.transpose %[[BC_MASK]], [1, 0, 2] : vector<1x7x8xi1> to vector<7x1x8xi1>
+// CHECK:           %[[TR_VEC:.*]] = vector.transpose %[[BC_VEC]], [1, 0, 2] : vector<1x7x8xf32> to vector<7x1x8xf32>
+// CHECK:           vector.transfer_write %[[TR_VEC]], %[[MEM]]{{\[}}%[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]]], %[[TR_MASK]] {in_bounds = [false, true, false]} : vector<7x1x8xf32>, memref<?x?x?x?xf32>
+func.func @xfer_write_non_minor_identity_with_mask_missing_inner_dim(
+    %mem : memref<?x?x?x?xf32>,
+    %vec : vector<7x8xf32>,
+    %mask : vector<7x8xi1>,
+    %idx : index) {
+
+  vector.transfer_write %vec, %mem[%idx, %idx, %idx, %idx], %mask {
+    permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, d3)>
+  } : vector<7x8xf32>, memref<?x?x?x?xf32>
+
+  return
+}
+
+// Two missing dims (d1 and d3) that are not next to each other.
+
+// CHECK-LABEL:   func.func @xfer_write_non_minor_identity_with_mask_two_missing_inner_dims(
+// CHECK-SAME:      %[[MEM:.*]]: memref<?x?x?x?x?xf32>,
+// CHECK-SAME:      %[[VEC:.*]]: vector<6x7x8xf32>,
+// CHECK-SAME:      %[[MASK:.*]]: vector<6x7x8xi1>,
+// CHECK-SAME:      %[[IDX:.*]]: index) {
+// CHECK:           %[[BC_VEC:.*]] = vector.broadcast %[[VEC]] : vector<6x7x8xf32> to vector<1x1x6x7x8xf32>
+// CHECK:           %[[BC_MASK:.*]] = vector.broadcast %[[MASK]] : vector<6x7x8xi1> to vector<1x1x6x7x8xi1>
+// CHECK:           %[[TR_MASK:.*]] = vector.transpose %[[BC_MASK]], [2, 0, 3, 1, 4] : vector<1x1x6x7x8xi1> to vector<6x1x7x1x8xi1>
+// CHECK:           %[[TR_VEC:.*]] = vector.transpose %[[BC_VEC]], [2, 0, 3, 1, 4] : vector<1x1x6x7x8xf32> to vector<6x1x7x1x8xf32>
+// CHECK:           vector.transfer_write %[[TR_VEC]], %[[MEM]]{{\[}}%[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]]], %[[TR_MASK]] {in_bounds = [false, true, false, true, false]} : vector<6x1x7x1x8xf32>, memref<?x?x?x?x?xf32>
+func.func @xfer_write_non_minor_identity_with_mask_two_missing_inner_dims(
+    %mem : memref<?x?x?x?x?xf32>,
+    %vec : vector<6x7x8xf32>,
+    %mask : vector<6x7x8xi1>,
+    %idx : index) {
+
+  vector.transfer_write %vec, %mem[%idx, %idx, %idx, %idx, %idx], %mask {
+    permutation_map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d2, d4)>
+  } : vector<6x7x8xf32>, memref<?x?x?x?x?xf32>
 
   return
 }
@@ -315,14 +368,12 @@ func.func @xfer_read_minor_identity_transposed_with_mask_scalable(
   return %res : vector<8x[4]x2xf32>
 }
 
-// Masked version is not supported
-
 // CHECK-LABEL: func @xfer_read_minor_identity_transposed_masked(
 //  CHECK-SAME:   %[[DEST:.*]]: tensor<?x?xf32>,
 //  CHECK-SAME:   %[[MASK:.*]]: vector<2x4xi1>
 //  CHECK-SAME:   %[[IDX:.*]]: index
-//   CHECK-NOT:   vector.transpose
-//       CHECK:   vector.mask %[[MASK]] { vector.transfer_read %[[DEST]]{{.*}}: tensor<?x?xf32>, vector<8x4x2xf32> } : vector<2x4xi1> -> vector<8x4x2xf32>
+//       CHECK:   %[[T_READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[DEST]]{{.*}}: tensor<?x?xf32>, vector<8x2x4xf32> } : vector<2x4xi1> -> vector<8x2x4xf32>
+//       CHECK:   vector.transpose %[[T_READ]], [0, 2, 1] : vector<8x2x4xf32> to vector<8x4x2xf32>
 func.func @xfer_read_minor_identity_transposed_masked(
     %dest: tensor<?x?xf32>,
     %mask: vector<2x4xi1>,
@@ -343,8 +394,8 @@ func.func @xfer_read_minor_identity_transposed_masked(
 // CHECK-LABEL:  func.func @xfer_read_minor_identity_transposed_masked_scalable(
 //  CHECK-SAME:    %[[DEST:.*]]: tensor<?x?xf32>,
 //  CHECK-SAME:    %[[MASK:.*]]: vector<2x[4]xi1>
-//   CHECK-NOT:    vector.transpose
-//       CHECK:    %[[T_READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[DEST]]{{.*}} : tensor<?x?xf32>, vector<8x[4]x2xf32> } : vector<2x[4]xi1> -> vector<8x[4]x2xf32>
+//       CHECK:    %[[T_READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[DEST]]{{.*}} : tensor<?x?xf32>, vector<8x2x[4]xf32> } : vector<2x[4]xi1> -> vector<8x2x[4]xf32>
+//       CHECK:    vector.transpose %[[T_READ]], [0, 2, 1] : vector<8x2x[4]xf32> to vector<8x[4]x2xf32>
 func.func @xfer_read_minor_identity_transposed_masked_scalable(
   %dest: tensor<?x?xf32>,
   %mask: vector<2x[4]xi1>,
@@ -360,6 +411,34 @@ func.func @xfer_read_minor_identity_transposed_masked_scalable(
   } :vector<2x[4]xi1> -> vector<8x[4]x2xf32>
 
   return %res : vector<8x[4]x2xf32>
+}
+
+// The permutation is a rotation rather than a swap, so the passthru transpose
+// is not its own inverse.
+// CHECK-LABEL: func @xfer_read_minor_identity_transposed_masked_with_passthru(
+//  CHECK-SAME:   %[[DEST:.*]]: tensor<?x?x?xf32>,
+//  CHECK-SAME:   %[[MASK:.*]]: vector<3x4x2xi1>,
+//  CHECK-SAME:   %[[PASSTHRU:.*]]: vector<2x3x4xf32>,
+//  CHECK-SAME:   %[[IDX:.*]]: index
+//       CHECK:   %[[PT:.*]] = vector.transpose %[[PASSTHRU]], [1, 2, 0] : vector<2x3x4xf32> to vector<3x4x2xf32>
+//       CHECK:   %[[T_READ:.*]] = vector.mask %[[MASK]], %[[PT]] { vector.transfer_read %[[DEST]]{{.*}} : tensor<?x?x?xf32>, vector<3x4x2xf32> } : vector<3x4x2xi1> -> vector<3x4x2xf32>
+//       CHECK:   vector.transpose %[[T_READ]], [2, 0, 1] : vector<3x4x2xf32> to vector<2x3x4xf32>
+func.func @xfer_read_minor_identity_transposed_masked_with_passthru(
+    %dest: tensor<?x?x?xf32>,
+    %mask: vector<3x4x2xi1>,
+    %passthru: vector<2x3x4xf32>,
+    %idx: index) -> (vector<2x3x4xf32>) {
+
+  %pad = arith.constant 0.000000e+00 : f32
+
+  %res = vector.mask %mask, %passthru {
+    vector.transfer_read %dest[%idx, %idx, %idx], %pad {
+      in_bounds = [true, true, true],
+      permutation_map = affine_map<(d0, d1, d2) -> (d2, d0, d1)>
+    } : tensor<?x?x?xf32>, vector<2x3x4xf32>
+  } : vector<3x4x2xi1> -> vector<2x3x4xf32>
+
+  return %res : vector<2x3x4xf32>
 }
 
 ///----------------------------------------------------------------------------------------

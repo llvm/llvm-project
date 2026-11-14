@@ -68,7 +68,7 @@ static llvm::Value *FindEntryInstruction(llvm::Function *function) {
   if (function->empty())
     return nullptr;
 
-  return &*function->getEntryBlock().getFirstNonPHIOrDbg();
+  return &*function->getEntryBlock().getFirstNonPHIOrPseudoProbe();
 }
 
 IRForTarget::IRForTarget(lldb_private::ClangExpressionDeclMap *decl_map,
@@ -368,7 +368,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     // there's nothing to put into its equivalent persistent variable.
 
     BasicBlock &entry_block(llvm_function.getEntryBlock());
-    Instruction *first_entry_instruction(&*entry_block.getFirstNonPHIOrDbg());
+    Instruction *first_entry_instruction(
+        &*entry_block.getFirstNonPHIOrPseudoProbe());
 
     if (!first_entry_instruction)
       return false;
@@ -432,7 +433,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
       return false;
     }
 
-    LLDB_LOG(log, "Found CFStringCreateWithBytes at {0}",
+    LLDB_LOG(log, "Found CFStringCreateWithBytes at {0:x}",
              CFStringCreateWithBytes_addr);
 
     // Build the function type:
@@ -807,7 +808,7 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
     if (sel_registerName_addr == LLDB_INVALID_ADDRESS || missing_weak)
       return false;
 
-    LLDB_LOG(log, "Found sel_registerName at {0}", sel_registerName_addr);
+    LLDB_LOG(log, "Found sel_registerName at {0:x}", sel_registerName_addr);
 
     // Build the function type: struct objc_selector
     // *sel_registerName(uint8_t*)
@@ -1094,7 +1095,7 @@ bool IRForTarget::HandleSymbol(Value *symbol) {
     return false;
   }
 
-  LLDB_LOG(log, "Found \"{0}\" at {1}", name, symbol_addr);
+  LLDB_LOG(log, "Found \"{0}\" at {1:x}", name, symbol_addr);
 
   Type *symbol_type = symbol->getType();
 
@@ -1151,7 +1152,7 @@ bool IRForTarget::HandleObjCClass(Value *classlist_reference) {
   lldb::addr_t class_ptr =
       m_decl_map->GetSymbolAddress(name_cstr, lldb::eSymbolTypeObjCClass);
 
-  LLDB_LOG(log, "Found reference to Objective-C class {0} ({1})", name,
+  LLDB_LOG(log, "Found reference to Objective-C class {0} ({1:x})", name,
            (unsigned long long)class_ptr);
 
   if (class_ptr == LLDB_INVALID_ADDRESS)
@@ -1545,7 +1546,8 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   LLDB_LOG(log, "Arg: \"{0}\"", PrintValue(argument));
 
   BasicBlock &entry_block(llvm_function.getEntryBlock());
-  Instruction *FirstEntryInstruction(&*entry_block.getFirstNonPHIOrDbg());
+  Instruction *FirstEntryInstruction(
+      &*entry_block.getFirstNonPHIOrPseudoProbe());
 
   if (!FirstEntryInstruction) {
     m_error_stream.Printf("Internal error [IRForTarget]: Couldn't find the "

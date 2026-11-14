@@ -90,9 +90,7 @@ OffloadTargetInfo::OffloadTargetInfo(const StringRef Target,
 
   this->OffloadKind = Components.front();
   ArrayRef<StringRef> TripleSlice{&Components[1], /*length=*/4};
-  llvm::Triple T = llvm::Triple(llvm::join(TripleSlice, "-"));
-  this->Triple = llvm::Triple(T.getArchName(), T.getVendorName(), T.getOSName(),
-                              T.getEnvironmentName());
+  this->Triple = llvm::Triple(llvm::join(TripleSlice, "-"));
 }
 
 bool OffloadTargetInfo::hasHostKind() const {
@@ -357,8 +355,10 @@ public:
   ~BinaryFileHandler() final {}
 
   Error ReadHeader(StringRef FC) final {
-    // Initialize the current bundle with the end of the container.
+    // Ensure iterators indicate an empty bundle range in case header parsing
+    // exits early.
     CurBundleInfo = BundlesInfo.end();
+    NextBundleInfo = BundlesInfo.end();
 
     // Check if buffer is smaller than magic string.
     size_t ReadChars = sizeof(OFFLOAD_BUNDLER_MAGIC_STR) - 1;
@@ -912,32 +912,19 @@ CreateFileHandler(MemoryBuffer &FirstInput,
                   const OffloadBundlerConfig &BundlerConfig) {
   std::string FilesType = BundlerConfig.FilesType;
 
-  if (FilesType == "i")
-    return std::make_unique<TextFileHandler>(/*Comment=*/"//");
-  if (FilesType == "ii")
-    return std::make_unique<TextFileHandler>(/*Comment=*/"//");
-  if (FilesType == "cui")
-    return std::make_unique<TextFileHandler>(/*Comment=*/"//");
-  if (FilesType == "hipi")
+  if (FilesType == "i" || FilesType == "ii" || FilesType == "cui" ||
+      FilesType == "hipi")
     return std::make_unique<TextFileHandler>(/*Comment=*/"//");
   // TODO: `.d` should be eventually removed once `-M` and its variants are
   // handled properly in offload compilation.
-  if (FilesType == "d")
+  if (FilesType == "d" || FilesType == "s")
     return std::make_unique<TextFileHandler>(/*Comment=*/"#");
   if (FilesType == "ll")
     return std::make_unique<TextFileHandler>(/*Comment=*/";");
-  if (FilesType == "bc")
+  if (FilesType == "bc" || FilesType == "gch" || FilesType == "ast")
     return std::make_unique<BinaryFileHandler>(BundlerConfig);
-  if (FilesType == "s")
-    return std::make_unique<TextFileHandler>(/*Comment=*/"#");
-  if (FilesType == "o")
+  if (FilesType == "o" || FilesType == "a")
     return CreateObjectFileHandler(FirstInput, BundlerConfig);
-  if (FilesType == "a")
-    return CreateObjectFileHandler(FirstInput, BundlerConfig);
-  if (FilesType == "gch")
-    return std::make_unique<BinaryFileHandler>(BundlerConfig);
-  if (FilesType == "ast")
-    return std::make_unique<BinaryFileHandler>(BundlerConfig);
 
   return createStringError(errc::invalid_argument,
                            "'" + FilesType + "': invalid file type specified");

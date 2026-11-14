@@ -7,39 +7,29 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file implements the SSAF entity linker tool. Its default behavior is to
-//  link N TU summaries into one LU summary via the EntityLinker framework. It
-//  also provides the `static-library` subcommand for bundling TU summaries into
-//  a StaticLibrary, and the `multi-arch` subcommand for bundling StaticLibrary
+//  link N inputs (TU summaries, static libraries, and multi-arch static
+//  libraries) into one LU summary via the EntityLinker framework. It also
+//  provides the `static-library` subcommand for bundling TU summaries into a
+//  StaticLibrary, and the `multi-arch` subcommand for bundling StaticLibrary
 //  and SharedLibrary members (or existing multi-arch bundles) into
 //  MultiArchStaticLibrary or MultiArchSharedLibrary.
 //
 //===----------------------------------------------------------------------===//
 
+#include "LinkCLI.h"
 #include "MultiArchCreateCLI.h"
 #include "StaticLibraryCreateCLI.h"
 
-#include "clang/ScalableStaticAnalysis/Core/EntityLinker/EntityLinker.h"
-#include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
-#include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"
-#include "clang/ScalableStaticAnalysis/Core/Support/ErrorBuilder.h"
 #include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
 #include "clang/ScalableStaticAnalysis/Tool/Utils.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <memory>
 #include <string>
 
 using namespace llvm;
 using namespace clang::ssaf;
-
-namespace path = llvm::sys::path;
 
 namespace {
 
@@ -65,6 +55,14 @@ cl::list<std::string> InputPaths(cl::Positional, cl::desc("<input files>"),
 cl::opt<std::string> OutputPath("o", cl::desc("Output file path"),
                                 cl::value_desc("path"), cl::Required,
                                 cl::cat(SsafLinkerCategory));
+
+cl::opt<std::string> TargetTriple(
+    "target-triple",
+    cl::desc(
+        "Target triple of the link unit (defaults to the first input's; "
+        "required when the first input is a multi-arch static library with "
+        "several members)"),
+    cl::value_desc("triple"), cl::cat(SsafLinkerCategory));
 
 // --verbose and --time apply to every subcommand.
 cl::opt<bool> Verbose("verbose", cl::desc("Enable verbose output"),
@@ -152,8 +150,6 @@ constexpr const char *MultiArchCreateVerb = "create";
 
 namespace LocalErrorMessages {
 
-constexpr const char *LinkingSummary = "Linking summary '{0}'";
-
 constexpr const char *UnknownStaticLibraryVerb =
     "unknown static-library verb '{0}': expected 'create'";
 
@@ -163,110 +159,12 @@ constexpr const char *UnknownMultiArchVerb =
 } // namespace LocalErrorMessages
 
 //===----------------------------------------------------------------------===//
-// link action
+// default (no subcommand) link action
 //===----------------------------------------------------------------------===//
 
-struct LinkerInput {
-  std::vector<FormatFile> InputFiles;
-  FormatFile OutputFile;
-  std::string LinkUnitName;
-};
-
-LinkerInput validateLinkInput(llvm::TimerGroup &TG) {
-  llvm::Timer TValidate("validate", "Validate Input", TG);
-  LinkerInput LI;
-
-  {
-    llvm::TimeRegion _(Time ? &TValidate : nullptr);
-
-    LI.OutputFile = FormatFile::fromOutputPath(OutputPath);
-    LI.LinkUnitName = path::stem(LI.OutputFile.Path).str();
-  }
-
-  info(Verbose, 2, "Validated output summary path '{0}'.", LI.OutputFile.Path);
-
-  {
-    llvm::TimeRegion _(Time ? &TValidate : nullptr);
-    for (const auto &InputPath : InputPaths) {
-      LI.InputFiles.push_back(FormatFile::fromInputPath(InputPath));
-    }
-  }
-
-  info(Verbose, 2, "Validated {0} input summary paths.", LI.InputFiles.size());
-
-  return LI;
-}
-
 void runLink(llvm::TimerGroup &TG) {
-  info(Verbose, 0, "Linking started.");
-
-  LinkerInput LI;
-  {
-    info(Verbose, 1, "Validating input.");
-    LI = validateLinkInput(TG);
-  }
-
-  info(Verbose, 1, "Linking input.");
-  info(Verbose, 2, "Constructing linker.");
-
-  // TODO: The linker currently uses a hardcoded target triple. Architecture
-  // tracking in the linker will be handled properly in a separate PR.
-  EntityLinker EL(llvm::Triple("arm64-apple-macosx"),
-                  NestedBuildNamespace(BuildNamespace(
-                      BuildNamespaceKind::LinkUnit, LI.LinkUnitName)));
-
-  llvm::Timer TRead("read", "Read Summaries", TG);
-  llvm::Timer TLink("link", "Link Summaries", TG);
-  llvm::Timer TWrite("write", "Write Summary", TG);
-
-  info(Verbose, 2, "Linking summaries.");
-
-  for (auto [Index, InputFile] : llvm::enumerate(LI.InputFiles)) {
-    std::unique_ptr<TUSummaryEncoding> Summary;
-
-    {
-      info(Verbose, 3, "[{0}/{1}] Reading '{2}'.", (Index + 1),
-           LI.InputFiles.size(), InputFile.Path);
-
-      llvm::TimeRegion _(Time ? &TRead : nullptr);
-
-      auto ExpectedSummaryEncoding =
-          InputFile.Format->readTUSummaryEncoding(InputFile.Path);
-      if (!ExpectedSummaryEncoding) {
-        fail(ExpectedSummaryEncoding.takeError());
-      }
-
-      Summary = std::make_unique<TUSummaryEncoding>(
-          std::move(*ExpectedSummaryEncoding));
-    }
-
-    {
-      info(Verbose, 3, "[{0}/{1}] Linking '{2}'.", (Index + 1),
-           LI.InputFiles.size(), InputFile.Path);
-
-      llvm::TimeRegion _(Time ? &TLink : nullptr);
-
-      if (auto Err = EL.link(std::move(Summary))) {
-        fail(ErrorBuilder::wrap(std::move(Err))
-                 .context(LocalErrorMessages::LinkingSummary, InputFile.Path)
-                 .build());
-      }
-    }
-  }
-
-  {
-    info(Verbose, 2, "Writing output summary to '{0}'.", LI.OutputFile.Path);
-
-    llvm::TimeRegion _(Time ? &TWrite : nullptr);
-
-    auto Output = std::move(EL).takeOutput();
-    if (auto Err = LI.OutputFile.Format->writeLUSummaryEncoding(
-            Output, LI.OutputFile.Path)) {
-      fail(std::move(Err));
-    }
-  }
-
-  info(Verbose, 0, "Linking finished.");
+  LinkCLI LC;
+  LC.run(TG, InputPaths, OutputPath, TargetTriple, Verbose, Time);
 }
 
 //===----------------------------------------------------------------------===//

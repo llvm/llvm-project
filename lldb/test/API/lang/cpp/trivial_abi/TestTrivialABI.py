@@ -9,15 +9,12 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # return value is unrecoverable from the operand stack at a step-out
+@requireNotWasm("return value is unrecoverable from the operand stack at a step-out")
 class TestTrivialABI(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessSupportedTypeAttribute("trivial_abi")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
-    @expectedFailureAll(
-        archs=["aarch64"], oslist=["freebsd", "linux"], bugnumber="llvm.org/pr44161"
-    )
     def test_call_trivial(self):
         """Test that we can print a variable & call a function with a trivial ABI class."""
         self.build()

@@ -12,9 +12,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Edit/Commit.h"
 #include "clang/Edit/EditedSource.h"
-#include "clang/Edit/EditsReceiver.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -55,54 +53,6 @@ clang::getExpansionRangeInFile(CharSourceRange Range, FileID FID,
   return Expansion;
 }
 
-namespace {
-
-class FixitReceiver : public edit::EditsReceiver {
-  SmallVectorImpl<FixItHint> &MergedFixits;
-
-public:
-  FixitReceiver(SmallVectorImpl<FixItHint> &MergedFixits)
-      : MergedFixits(MergedFixits) {}
-
-  void insert(SourceLocation loc, StringRef text) override {
-    MergedFixits.push_back(FixItHint::CreateInsertion(loc, text));
-  }
-
-  void replace(CharSourceRange range, StringRef text) override {
-    MergedFixits.push_back(FixItHint::CreateReplacement(range, text));
-  }
-};
-
-} // namespace
-
-static void mergeFixits(ArrayRef<FixItHint> FixItHints,
-                        const SourceManager &SM, const LangOptions &LangOpts,
-                        SmallVectorImpl<FixItHint> &MergedFixits) {
-  edit::Commit commit(SM, LangOpts);
-  for (const auto &Hint : FixItHints)
-    if (Hint.CodeToInsert.empty()) {
-      if (Hint.InsertFromRange.isValid())
-        commit.insertFromRange(Hint.RemoveRange.getBegin(),
-                           Hint.InsertFromRange, /*afterToken=*/false,
-                           Hint.BeforePreviousInsertions);
-      else
-        commit.remove(Hint.RemoveRange);
-    } else {
-      if (Hint.RemoveRange.isTokenRange() ||
-          Hint.RemoveRange.getBegin() != Hint.RemoveRange.getEnd())
-        commit.replace(Hint.RemoveRange, Hint.CodeToInsert);
-      else
-        commit.insert(Hint.RemoveRange.getBegin(), Hint.CodeToInsert,
-                    /*afterToken=*/false, Hint.BeforePreviousInsertions);
-    }
-
-  edit::EditedSource Editor(SM, LangOpts);
-  if (Editor.commit(commit)) {
-    FixitReceiver Rec(MergedFixits);
-    Editor.applyRewrites(Rec);
-  }
-}
-
 void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
                                         DiagnosticsEngine::Level Level,
                                         StringRef Message,
@@ -122,7 +72,7 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
 
     SmallVector<FixItHint, 8> MergedFixits;
     if (!FixItHints.empty()) {
-      mergeFixits(FixItHints, Loc.getManager(), LangOpts, MergedFixits);
+      edit::mergeFixits(FixItHints, Loc.getManager(), LangOpts, MergedFixits);
       FixItHints = MergedFixits;
     }
 

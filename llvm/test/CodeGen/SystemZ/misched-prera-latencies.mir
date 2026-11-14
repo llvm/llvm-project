@@ -1,12 +1,12 @@
-# RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z16 -verify-machineinstrs \
+# RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z16 \
 # RUN:   -run-pass=machine-scheduler -debug-only=machine-scheduler 2>&1\
 # RUN:   | FileCheck %s
 # REQUIRES: asserts
 
 # This function has two long independent chains of instructions that should be interleaved.
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun0:%bb.0
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun0:%bb.1
 # CHECK:      *** Final schedule for %bb.1 ***
 # CHECK-NEXT: SU(0):   %4:fp64bit = LZDR
@@ -23,7 +23,6 @@
 # CHECK-NEXT: SU(11):   VST64 %14:vr64bit, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
 ---
 name:            fun0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f0d, $f2d, $f4d, $f6d
@@ -50,7 +49,7 @@ body:             |
 ...
 
 # This function has a data flow sequence and latency scheduling puts the WFDDB high.
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun1:%bb.0
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK-NEXT: SU(1):   undef %1.subreg_h64:vr128bit = WFDDB undef %2:fp64bit, undef %3:fp64bit, implicit $fpc
@@ -60,7 +59,6 @@ body:             |
 # CHECK-NEXT: SU(4):   VST64 %5:fp64bit, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
 ---
 name:            fun1
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:fp64bit = LZDR
@@ -72,12 +70,11 @@ body:             |
 ...
 
 # Single block loop that should also have latency enabled.
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun2:%bb.1
-# CHECK: Pick Bot BOT-HEIGHT [pre-RA]
+# CHECK: Pick Bot Cand SU(12) BOT-HEIGHT [pre-RA]
 ---
 name:            fun2
-tracksRegLiveness: true
 body:             |
   bb.0:
     %19:vr128bit = VREPIF 1
@@ -104,7 +101,7 @@ body:             |
 # This region has many nodes compared to the maximum height - the DAG is
 # "wide".  Don't interleave the data flows in cases like this, as it could
 # result in too much ILP and spilling.
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun3:%bb.0
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK-NEXT: SU(0):   %0:gr64bit = COPY undef %1:gr64bit
@@ -121,7 +118,6 @@ body:             |
 # CHECK-NEXT: SU(11):  dead %12:gr64bit = AGRK %11:gr64bit, %11:gr64bit,
 ---
 name:            fun3
-tracksRegLiveness: true
 body:             |
   bb.0:
     %1:gr64bit = COPY undef %0:gr64bit
@@ -141,9 +137,9 @@ body:             |
 
 # The MSGFI should be scheduled first even though the LA is available and of
 # lesser height, because the MSGFI Depth equals the remaining latency (on CP).
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun4:%bb.0
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun4:%bb.1
 # CHECK:      SU(0):   dead %2:addr64bit = LA %0:addr64bit, 1, $noreg
 # CHECK-NEXT:   # preds left       : 0
@@ -159,7 +155,7 @@ body:             |
 # CHECK-NEXT:   Latency            : 5
 # CHECK-NEXT:   Depth              : 3
 # CHECK-NEXT:   Height             : 4
-# CHECK:      Queue BotQ.A: 0 4
+# CHECK:      Queue BotQ.A: SU(0) SU(4)
 # CHECK:      *** Final schedule for %bb.1 ***
 # CHECK-NEXT: SU(0):   dead %2:addr64bit = LA %0:addr64bit, 1, $noreg
 # CHECK-NEXT: SU(1):   %3:gr64bit = COPY %1:gr32bit
@@ -168,7 +164,6 @@ body:             |
 # CHECK-NEXT: SU(4):   dead %5:gr64bit = MSGFI %5:gr64bit(tied-def 0), 1
 ---
 name:            fun4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r2d, $r3l

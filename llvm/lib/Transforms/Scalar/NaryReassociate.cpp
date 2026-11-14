@@ -300,8 +300,10 @@ Instruction *NaryReassociatePass::tryReassociate(Instruction *I,
 static bool isGEPFoldable(GetElementPtrInst *GEP,
                           const TargetTransformInfo *TTI) {
   SmallVector<const Value *, 4> Indices(GEP->indices());
-  return TTI->getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
-                         Indices) == TargetTransformInfo::TCC_Free;
+  return TTI->getGEPCost(
+             GEP->getSourceElementType(), GEP->getPointerOperand(), Indices,
+             /*CostKind*/ TTI::TargetCostKind::TCK_SizeAndLatency) ==
+         TargetTransformInfo::TCC_Free;
 }
 
 Instruction *NaryReassociatePass::tryReassociateGEP(GetElementPtrInst *GEP) {
@@ -393,6 +395,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     return nullptr;
 
   IRBuilder<> Builder(GEP);
+  Builder.disableGEPCanonicalization();
   // Candidate should have the same pointer type as GEP.
   assert(Candidate->getType() == GEP->getType());
 

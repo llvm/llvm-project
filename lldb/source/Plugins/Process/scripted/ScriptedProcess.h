@@ -67,7 +67,7 @@ public:
 
   bool IsAlive() override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  size_t DoReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                       Status &error) override;
 
   size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
@@ -114,6 +114,10 @@ protected:
                                MemoryRegionInfo &range_info) override;
 
   Status DoAttach(const ProcessAttachInfo &attach_info);
+
+  /// Pick up the process state that has to be in place before the first stop
+  /// is reported, since the threads and stack frames are built from it.
+  void DidLaunchOrAttach();
 
 private:
   friend class ScriptedThread;

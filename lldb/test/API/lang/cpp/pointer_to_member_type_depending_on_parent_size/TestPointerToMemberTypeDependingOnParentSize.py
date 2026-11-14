@@ -8,9 +8,10 @@ class TestCase(TestBase):
     # GCC rejects the test code because `ToLayout` is not complete when
     # pointer_to_member_member is declared.
     @skipIf(compiler="gcc")
-    # On Windows both MSVC and Clang are rejecting the test code because
-    # `ToLayout` is not complete when pointer_to_member_member is declared.
-    @skipIfWindows
+    @requireNotWindows(
+        "On Windows both MSVC and Clang are rejecting the test code because"
+        "`ToLayout` is not complete when pointer_to_member_member is declared."
+    )
     @no_debug_info_test
     def test(self):
         """

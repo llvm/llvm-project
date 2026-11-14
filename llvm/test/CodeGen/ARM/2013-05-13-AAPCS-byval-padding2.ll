@@ -1,5 +1,5 @@
 ;PR15293: ARM codegen ice - expected larger existing stack allocation
-;RUN: llc -mtriple=arm-linux-gnueabihf < %s | FileCheck %s
+;RUN: llc -mtriple=arm-linux-gnueabi < %s | FileCheck %s
 
 %struct4bytes = type { i32 }
 %struct20bytes = type { i32, i32, i32, i32, i32 }

@@ -36,8 +36,8 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[CONV3]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP2]])
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP2]], [[UMIN1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP11]], 1
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP11]], [[UMIN1]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 24
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
@@ -67,7 +67,7 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[DOTPROMOTED]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i32 [[TMP20]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i64 4
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr [[TMP22]], i64 16
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP22]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP25]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8

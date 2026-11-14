@@ -8,3 +8,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.select
 )
+
+add_entrypoint_object(
+  pselect
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pselect
+)

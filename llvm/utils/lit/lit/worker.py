@@ -49,6 +49,19 @@ def execute(test):
     return test
 
 
+def execute_batch(tests):
+    """Run a batch of tests in a worker process.
+
+    Batching multiple tests per task dispatch reduces inter-process IPC round-trips,
+    serialization overhead, and management thread wakeups on high core count systems.
+    """
+    for test in tests:
+        with _get_parallelism_semaphore(test):
+            result = _execute(test, _lit_config)
+        test.setResult(result)
+    return tests
+
+
 # TODO(python3): replace with contextlib.nullcontext
 @contextlib.contextmanager
 def NopSemaphore():

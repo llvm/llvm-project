@@ -23,12 +23,9 @@
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LineIterator.h"
-#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
-#include <memory>
 #include <utility>
 
 using namespace llvm;
@@ -135,8 +132,6 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
   LLVMContext &C = M.getContext();
   auto [EntriesB, EntriesE] = EntryArray;
 
-  auto *Zero = ConstantInt::get(getSizeTTy(M), 0u);
-
   // Create initializer for the images array.
   SmallVector<Constant *, 4u> ImagesInits;
   ImagesInits.reserve(Bufs.size());
@@ -145,7 +140,7 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
     auto *Data = ConstantDataArray::get(C, Buf);
     auto *Image = new GlobalVariable(M, Data->getType(), /*isConstant=*/true,
                                      GlobalVariable::InternalLinkage, Data,
-                                     ".omp_offloading.device_image" + Suffix);
+                                     ".llvm_offloading.device_image" + Suffix);
     Image->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
     Image->setSection(Relocatable ? ".llvm.offloading.relocatable"
                                   : ".llvm.offloading");
@@ -173,13 +168,8 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
 
     auto *Begin = ConstantInt::get(getSizeTTy(M), BeginOffset);
     auto *Size = ConstantInt::get(getSizeTTy(M), EndOffset);
-    Constant *ZeroBegin[] = {Zero, Begin};
-    Constant *ZeroSize[] = {Zero, Size};
-
-    auto *ImageB =
-        ConstantExpr::getGetElementPtr(Image->getValueType(), Image, ZeroBegin);
-    auto *ImageE =
-        ConstantExpr::getGetElementPtr(Image->getValueType(), Image, ZeroSize);
+    auto *ImageB = ConstantExpr::getPtrAdd(Image, Begin);
+    auto *ImageE = ConstantExpr::getPtrAdd(Image, Size);
 
     ImagesInits.push_back(ConstantStruct::get(getDeviceImageTy(M), ImageB,
                                               ImageE, EntriesB, EntriesE));
@@ -192,7 +182,7 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
   auto *Images =
       new GlobalVariable(M, ImagesData->getType(), /*isConstant*/ true,
                          GlobalValue::InternalLinkage, ImagesData,
-                         ".omp_offloading.device_images" + Suffix);
+                         ".llvm_offloading.device_images" + Suffix);
   Images->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
   // And finally create the binary descriptor object.
@@ -203,23 +193,22 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
 
   return new GlobalVariable(M, DescInit->getType(), /*isConstant=*/true,
                             GlobalValue::InternalLinkage, DescInit,
-                            ".omp_offloading.descriptor" + Suffix);
+                            ".llvm_offloading.descriptor" + Suffix);
 }
 
 Function *createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
-                                   StringRef Suffix) {
+                                   StringRef Suffix, StringRef UnregFuncName) {
   LLVMContext &C = M.getContext();
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *Func =
       Function::Create(FuncTy, GlobalValue::InternalLinkage,
-                       ".omp_offloading.descriptor_unreg" + Suffix, &M);
+                       ".llvm_offloading.descriptor_unreg" + Suffix, &M);
   Func->setSection(getStartupSection(M.getTargetTriple()));
 
-  // Get __tgt_unregister_lib function declaration.
+  // Get the unregister function declaration.
   auto *UnRegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
                                         /*isVarArg*/ false);
-  FunctionCallee UnRegFuncC =
-      M.getOrInsertFunction("__tgt_unregister_lib", UnRegFuncTy);
+  FunctionCallee UnRegFuncC = M.getOrInsertFunction(UnregFuncName, UnRegFuncTy);
 
   // Construct function body
   IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
@@ -230,24 +219,25 @@ Function *createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
 }
 
 void createRegisterFunction(Module &M, GlobalVariable *BinDesc,
-                            StringRef Suffix) {
+                            StringRef Suffix, StringRef RegFuncName,
+                            StringRef UnregFuncName) {
   LLVMContext &C = M.getContext();
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
-                                ".omp_offloading.descriptor_reg" + Suffix, &M);
+                                ".llvm_offloading.descriptor_reg" + Suffix, &M);
   Func->setSection(getStartupSection(M.getTargetTriple()));
 
-  // Get __tgt_register_lib function declaration.
+  // Get the register function declaration.
   auto *RegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
                                       /*isVarArg*/ false);
-  FunctionCallee RegFuncC =
-      M.getOrInsertFunction("__tgt_register_lib", RegFuncTy);
+  FunctionCallee RegFuncC = M.getOrInsertFunction(RegFuncName, RegFuncTy);
 
   auto *AtExitTy = FunctionType::get(
       Type::getInt32Ty(C), PointerType::getUnqual(C), /*isVarArg=*/false);
   FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
 
-  Function *UnregFunc = createUnregisterFunction(M, BinDesc, Suffix);
+  Function *UnregFunc =
+      createUnregisterFunction(M, BinDesc, Suffix, UnregFuncName);
 
   // Construct function body
   IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
@@ -414,6 +404,7 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
 
   // Create the loop to register all the entries.
   IRBuilder<> Builder(BasicBlock::Create(C, "entry", RegGlobalsFn));
+  Builder.disableGEPCanonicalization();
   auto *EntryBB = BasicBlock::Create(C, "while.entry", RegGlobalsFn);
   auto *IfKindBB = BasicBlock::Create(C, "if.kind", RegGlobalsFn);
   auto *IfThenBB = BasicBlock::Create(C, "if.then", RegGlobalsFn);
@@ -635,8 +626,9 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
 /// SYCLWrapper helper class that creates all LLVM IRs wrapping given images.
 class SYCLWrapper {
 public:
-  SYCLWrapper(Module &M, const SYCLJITOptions &Options)
-      : M(M), C(M.getContext()), Options(Options) {}
+  SYCLWrapper(Module &M, const SYCLJITOptions &Options, bool IsFinalizedImage)
+      : M(M), C(M.getContext()), Options(Options),
+        IsFinalizedImage(IsFinalizedImage) {}
 
   /// Embeds \p Buffer (a raw OffloadBinary) as a global constant and returns
   /// a pair of (Start, Size), where Start points to the beginning of the
@@ -647,17 +639,17 @@ public:
         M, Arr->getType(), /*isConstant=*/true, GlobalValue::InternalLinkage,
         Arr, ".sycl_offloading.binary");
     BinaryGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-    BinaryGV->setSection(".llvm.offloading");
+    // The linker wrapper scans ".llvm.offloading" for device code to link, so
+    // an already finalized image must go elsewhere to avoid being linked again.
+    BinaryGV->setSection(IsFinalizedImage ? ".sycl_fatbin"
+                                          : ".llvm.offloading");
 
     IntegerType *Int64Ty = Type::getInt64Ty(C);
-    Constant *Zero = ConstantInt::get(Int64Ty, 0);
     Constant *Size = ConstantInt::get(Int64Ty, Buffer.size());
-    Constant *Start = ConstantExpr::getGetElementPtr(
-        BinaryGV->getValueType(), BinaryGV, ArrayRef<Constant *>{Zero, Zero});
-    return {Start, Size};
+    return {BinaryGV, Size};
   }
 
-  void createRegisterFatbinFunction(Constant *Start, Constant *Size) {
+  Function *createRegisterFatbinFunction(Constant *Start, Constant *Size) {
     FunctionType *FuncTy =
         FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
     Function *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
@@ -672,14 +664,26 @@ public:
     FunctionCallee RegFuncC =
         M.getOrInsertFunction("__sycl_register_lib", RegFuncTy);
 
+    FunctionType *AtExitTy =
+        FunctionType::get(Type::getInt32Ty(C), PtrTy, /*isVarArg=*/false);
+    FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
+
+    Function *UnregFunc = createUnregisterFunction(Start, Size);
+
     IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
     Builder.CreateCall(RegFuncC, {Start, Size});
+
+    // Unregister with 'atexit'. The handler is installed after
+    // __sycl_register_lib has brought the runtime's own exit-time cleanup into
+    // the atexit chain, so it is ordered ahead of that cleanup.
+    Builder.CreateCall(AtExit, UnregFunc);
     Builder.CreateRetVoid();
 
-    appendToGlobalCtors(M, Func, /*Priority*/ 1);
+    return Func;
   }
 
-  void createUnregisterFunction(Constant *Start, Constant *Size) {
+private:
+  Function *createUnregisterFunction(Constant *Start, Constant *Size) {
     FunctionType *FuncTy =
         FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
     Function *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
@@ -698,27 +702,48 @@ public:
     Builder.CreateCall(UnRegFuncC, {Start, Size});
     Builder.CreateRetVoid();
 
-    appendToGlobalDtors(M, Func, /*Priority*/ 1);
+    return Func;
   }
 
-private:
   Module &M;
   LLVMContext &C;
   SYCLJITOptions Options;
+  bool IsFinalizedImage;
 }; // end of SYCLWrapper
 
 } // namespace
 
-Error offloading::wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
-                                     EntryArrayTy EntryArray,
-                                     llvm::StringRef Suffix, bool Relocatable) {
+/// Wraps the images and registers them with the runtime through the given
+/// registration entry points. Shared by the OpenMP and OpenACC wrappers, which
+/// differ only in the names of those entry points.
+static Error wrapOmpAccBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
+                                offloading::EntryArrayTy EntryArray,
+                                StringRef Suffix, bool Relocatable,
+                                StringRef RegFuncName,
+                                StringRef UnregFuncName) {
   GlobalVariable *Desc =
       createBinDesc(M, Images, EntryArray, Suffix, Relocatable);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No binary descriptors created.");
-  createRegisterFunction(M, Desc, Suffix);
+  createRegisterFunction(M, Desc, Suffix, RegFuncName, UnregFuncName);
   return Error::success();
+}
+
+Error offloading::wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
+                                     EntryArrayTy EntryArray,
+                                     llvm::StringRef Suffix, bool Relocatable) {
+  return wrapOmpAccBinaries(M, Images, EntryArray, Suffix, Relocatable,
+                            "__tgt_register_lib", "__tgt_unregister_lib");
+}
+
+Error offloading::wrapOpenACCBinaries(Module &M,
+                                      ArrayRef<ArrayRef<char>> Images,
+                                      EntryArrayTy EntryArray,
+                                      bool Relocatable) {
+  return wrapOmpAccBinaries(M, Images, EntryArray, /*Suffix=*/"", Relocatable,
+                            "__tgt_acc_register_lib",
+                            "__tgt_acc_unregister_lib");
 }
 
 Error offloading::wrapCudaBinary(Module &M, ArrayRef<char> Image,
@@ -749,10 +774,17 @@ Error offloading::wrapHIPBinary(Module &M, ArrayRef<char> Image,
 }
 
 Error llvm::offloading::wrapSYCLBinaries(llvm::Module &M, ArrayRef<char> Buffer,
-                                         SYCLJITOptions Options) {
-  SYCLWrapper W(M, Options);
+                                         SYCLJITOptions Options,
+                                         bool IsFinalizedImage,
+                                         Function **RegistrationFunc) {
+  SYCLWrapper W(M, Options, IsFinalizedImage);
   auto [Start, Size] = W.embedBinary(Buffer);
-  W.createRegisterFatbinFunction(Start, Size);
-  W.createUnregisterFunction(Start, Size);
+  Function *RegisterFunc = W.createRegisterFatbinFunction(Start, Size);
+  if (RegistrationFunc) {
+    *RegistrationFunc = RegisterFunc;
+    return Error::success();
+  }
+
+  appendToGlobalCtors(M, RegisterFunc, /*Priority=*/101);
   return Error::success();
 }

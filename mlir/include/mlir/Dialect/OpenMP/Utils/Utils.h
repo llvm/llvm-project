@@ -67,6 +67,9 @@ void setOffloadModuleInterfaceAttributes(ModuleOp module,
 /// Adds or updates the omp.version attribute.
 void setOpenMPVersionAttribute(ModuleOp module, int64_t version);
 
+/// Add the omp.integer_wrap_around attribute.
+void setOpenMPIntegerWrapAround(ModuleOp module, bool value);
+
 /// Returns the value of the omp.version attribute, if present, or the fallback.
 int64_t getOpenMPVersionAttribute(ModuleOp module, int64_t fallback = -1);
 

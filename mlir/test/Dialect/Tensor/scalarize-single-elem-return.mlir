@@ -136,7 +136,7 @@ func.func private @non_scalarizeable_caller_with_multiple_returns(
 
 // -----
 
-/// Positive tests: only callee updated, with callsite reboxing.
+/// Positive tests: both caller and callee updated, with callsite reboxing.
 ///
 /// Some existing uses in the caller still expect the old tensor type.
 func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
@@ -148,7 +148,7 @@ func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
 //       CHECK:   %[[EXT:.*]] = tensor.extract %[[SRC]][%[[C0]]] : tensor<1xi64>
 //       CHECK:   return %[[EXT]] : i64
 
-func.func private @non_scalarizeable_caller_expecting_tensor_type(
+func.func private @caller_with_tensor_consumer(
     %arg0: tensor<1xi64>, %arg1: tensor<1xi64>) -> (tensor<1xi64>) {
   %0 = call @callee(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
   %init = tensor.empty() : tensor<1xi64>
@@ -156,7 +156,7 @@ func.func private @non_scalarizeable_caller_expecting_tensor_type(
     outs(%init : tensor<1xi64>)
   return %1 : tensor<1xi64>
 }
-// CHECK-LABEL: func.func private @non_scalarizeable_caller_expecting_tensor_type
+// CHECK-LABEL: func.func private @caller_with_tensor_consumer
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<1xi64>,
 //  CHECK-SAME:     %[[ARG1:.*]]: tensor<1xi64>) -> i64
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
@@ -252,21 +252,47 @@ func.func @public_function(%arg0: tensor<1xi64>) -> tensor<1xi64> {
 //   CHECK-NOT:   tensor.extract
 //       CHECK:   return %arg0 : tensor<1xi64>
 
+// -----
+
+/// Positive tests: private callees updated while public caller signatures and
+/// calls to public functions remain unchanged through reboxing.
+
 func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   return %arg0 : tensor<1xi64>
 }
 // CHECK-LABEL: func.func private @callee
-//  CHECK-SAME:     -> tensor<1xi64>
-//   CHECK-NOT:   tensor.extract
-//       CHECK:   return %arg0 : tensor<1xi64>
+//  CHECK-SAME:     %[[SRC:.*]]: tensor<1xi64>) -> i64
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[EXT:.*]] = tensor.extract %[[SRC]][%[[C0]]] : tensor<1xi64>
+//       CHECK:   return %[[EXT]] : i64
 
-func.func @public_caller(%arg0: tensor<1xi64>) -> tensor<1xi64> {
+func.func private @private_caller(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   %0 = call @callee(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
   return %0 : tensor<1xi64>
 }
-// CHECK-LABEL: func.func @public_caller
+// CHECK-LABEL: func.func private @private_caller
+//  CHECK-SAME:     -> i64
+//       CHECK:   %[[CALL:.*]] = call @callee(%arg0) : (tensor<1xi64>) -> i64
+//       CHECK:   return %[[CALL]] : i64
+
+func.func @public_caller_of_private_function(%arg0: tensor<1xi64>) -> tensor<1xi64> {
+  %0 = call @private_caller(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
+  return %0 : tensor<1xi64>
+}
+// CHECK-LABEL: func.func @public_caller_of_private_function
 //  CHECK-SAME:     -> tensor<1xi64>
-//       CHECK:   %[[CALL:.*]] = call @callee(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
+//       CHECK:   %[[CALL:.*]] = call @private_caller(%arg0) : (tensor<1xi64>) -> i64
+//       CHECK:   %[[BOX:.*]] = tensor.from_elements %[[CALL]] : tensor<1xi64>
+//   CHECK-NOT:   tensor.extract
+//       CHECK:   return %[[BOX]] : tensor<1xi64>
+
+func.func @public_caller_of_public_function(%arg0: tensor<1xi64>) -> tensor<1xi64> {
+  %0 = call @public_caller_of_private_function(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
+  return %0 : tensor<1xi64>
+}
+// CHECK-LABEL: func.func @public_caller_of_public_function
+//  CHECK-SAME:     -> tensor<1xi64>
+//       CHECK:   %[[CALL:.*]] = call @public_caller_of_private_function(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
 //   CHECK-NOT:   tensor.extract
 //       CHECK:   return %[[CALL]] : tensor<1xi64>
 

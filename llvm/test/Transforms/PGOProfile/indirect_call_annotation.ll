@@ -1,5 +1,8 @@
-; RUN: llvm-profdata merge %S/Inputs/indirect_call.proftext -o %t.profdata
-; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=VP-ANNOTATION
+; RUN: split-file %s %t
+; RUN: llvm-profdata merge %t/a.proftext -o %t/a.profdata
+; RUN: opt < %t/a.ll -passes=pgo-instr-use -pgo-test-profile-file=%t/a.profdata -S | FileCheck %s --check-prefix=VP-ANNOTATION
+
+;--- a.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -32,4 +35,46 @@ entry:
   ret i32 %call
 }
 
+;--- a.proftext
+:ir
+bar
+# Func Hash:
+170957022131388415
+# Num Counters:
+1
+# Counter Values:
+140
+# Num Value Kinds:
+1
+# ValueKind = IPVK_IndirectCallTarget:
+0
+# NumValueSites:
+1
+3
+func2:80
+func1:40
+func3:20
 
+func1
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+40
+
+func2
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+80
+
+func3
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+20

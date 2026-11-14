@@ -17,7 +17,7 @@
 
 ! CHECK-LABEL: func.func @_QQmain() {
 ! CHECK:    %[[VAL_14:.*]] = fir.address_of(@_QFEdd1) : !fir.ref<!fir.type<_QFTdt{r1:f32,pp1:!fir.boxproc<() -> f32>,rp1:!fir.box<!fir.ptr<f32>>,pp2:!fir.boxproc<() -> ()>}>>
-! CHECK:    %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] {uniq_name = "_QFEdd1"} : (!fir.ref<!fir.type<_QFTdt{r1:f32,pp1:!fir.boxproc<() -> f32>,rp1:!fir.box<!fir.ptr<f32>>,pp2:!fir.boxproc<() -> ()>}>>) -> (!fir.ref<!fir.type<_QFTdt{r1:f32,pp1:!fir.boxproc<() -> f32>,rp1:!fir.box<!fir.ptr<f32>>,pp2:!fir.boxproc<() -> ()>}>>, !fir.ref<!fir.type<_QFTdt{r1:f32,pp1:!fir.boxproc<() -> f32>,rp1:!fir.box<!fir.ptr<f32>>,pp2:!fir.boxproc<() -> ()>}>>)
+! CHECK:    %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] uniq_name("_QFEdd1") : (!fir.ref<!fir.type<_QFTdt{r1:f32,pp1:!fir.boxproc<() -> f32>,rp1:!fir.box<!fir.ptr<f32>>,pp2:!fir.boxproc<() -> ()>}>>) -> (!fir.ref<!fir.type<_QFTdt{r1:f32,pp1:!fir.boxproc<() -> f32>,rp1:!fir.box<!fir.ptr<f32>>,pp2:!fir.boxproc<() -> ()>}>>, !fir.ref<!fir.type<_QFTdt{r1:f32,pp1:!fir.boxproc<() -> f32>,rp1:!fir.box<!fir.ptr<f32>>,pp2:!fir.boxproc<() -> ()>}>>)
 ! CHECK:  }
 
 ! CHECK-LABEL:  fir.global internal @_QFEdd1 : !fir.type<_QFTdt{r1:f32,pp1:!fir.boxproc<() -> f32>,rp1:!fir.box<!fir.ptr<f32>>,pp2:!fir.boxproc<() -> ()>}> {

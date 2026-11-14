@@ -5,7 +5,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
-define void @cmpsel_i32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
+define void @cmpsel_i32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @cmpsel_i32(
 ; CHECK-NEXT:  entry:
 ; CHECK:       vector.body:
@@ -36,7 +36,7 @@ for.end:
   ret void
 }
 
-define void @cmpsel_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
+define void @cmpsel_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @cmpsel_f32(
 ; CHECK-NEXT:  entry:
 ; CHECK:       vector.body:
@@ -64,7 +64,7 @@ for.end:
   ret void
 }
 
-define void @fneg_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
+define void @fneg_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @fneg_f32(
 ; CHECK-NEXT:  entry:
 ; CHECK:       vector.body:
@@ -93,6 +93,6 @@ for.end:
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
 !4 = !{!"llvm.loop.interleave.count", i32 1}
 !5 = !{!"llvm.loop.vectorize.enable"}

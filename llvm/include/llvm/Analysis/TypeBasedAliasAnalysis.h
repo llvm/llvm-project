@@ -23,21 +23,23 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 class CallBase;
 class Function;
+class LLVMContext;
 class MDNode;
 class MemoryLocation;
 
 /// A simple AA result that uses TBAA metadata to answer queries.
 class TypeBasedAAResult : public AAResultBase {
+  const AnalysisOptions &Opts;
   /// True if type sanitizer is enabled. When TypeSanitizer is used, don't use
   /// TBAA information for alias analysis as  this might cause us to remove
   /// memory accesses that we need to verify at runtime.
   bool UsingTypeSanitizer;
 
 public:
-  TypeBasedAAResult(bool UsingTypeSanitizer)
-      : UsingTypeSanitizer(UsingTypeSanitizer) {}
+  LLVM_ABI TypeBasedAAResult(const LLVMContext &C, bool UsingTypeSanitizer);
 
   /// Handle invalidation events from the new pass manager.
   ///
@@ -50,7 +52,8 @@ public:
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI);
-  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M);
+  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc,
+                                  const Instruction *CtxI);
   LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                         AAQueryInfo &AAQI, bool IgnoreLocals);
 

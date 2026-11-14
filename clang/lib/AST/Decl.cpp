@@ -32,6 +32,7 @@
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Redeclarable.h"
+#include "clang/AST/SemaProxy.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -60,6 +61,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -1566,9 +1568,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
   //   one such matching entity, the program is ill-formed. Otherwise,
   //   if no matching entity is found, the block scope entity receives
   //   external linkage.
-  if (D->getDeclContext()
-          ->getEnclosingNonExpansionStatementContext()
-          ->isFunctionOrMethod())
+  if (D->getDeclContext()->isFunctionOrMethod())
     return getLVForLocalDecl(D, computation);
 
   // C++ [basic.link]p6:
@@ -2237,6 +2237,21 @@ bool VarDecl::isInExternCXXContext() const {
 
 VarDecl *VarDecl::getCanonicalDecl() { return getFirstDecl(); }
 
+static bool isStaticDataMemberOutOfLine(const VarDecl *VD) {
+  // A static data member is out-of-line if and only if it is not declared in
+  // the definition of a class. ([class.mem.general] says all declarations
+  // in a class are members outside of a specific list of exceptions.)
+  //
+  // For invalid decls, this shortcut can produce different results from a full
+  // check of the lexical and semantic contexts, but nothing should care about
+  // that.
+  //
+  // It might be possible to implement a similar shortcut for other member
+  // declarations, but it would need to account for friend declarations.
+  assert(VD->isStaticDataMember());
+  return !isa<CXXRecordDecl>(VD->getLexicalDeclContext());
+}
+
 VarDecl::DefinitionKind
 VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   if (isThisDeclarationADemotedDefinition())
@@ -2256,20 +2271,21 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   // FIXME: How do you declare (but not define) a partial specialization of
   // a static data member template outside the containing class?
   if (isStaticDataMember()) {
-    if (isOutOfLine() &&
-        !(getCanonicalDecl()->isInline() &&
-          getCanonicalDecl()->isConstexpr()) &&
+    bool IsOutOfLine = isStaticDataMemberOutOfLine(this);
+    if (IsOutOfLine &&
+        !(getCanonicalDecl()->isInline() && getCanonicalDecl()->isConstexpr() &&
+          !isStaticDataMemberOutOfLine(getCanonicalDecl())) &&
         (hasInit() ||
          // If the first declaration is out-of-line, this may be an
          // instantiation of an out-of-line partial specialization of a variable
          // template for which we have not yet instantiated the initializer.
-         (getFirstDecl()->isOutOfLine()
+         (isStaticDataMemberOutOfLine(getFirstDecl())
               ? getTemplateSpecializationKind() == TSK_Undeclared
               : getTemplateSpecializationKind() !=
                     TSK_ExplicitSpecialization) ||
          isa<VarTemplatePartialSpecializationDecl>(this)))
       return Definition;
-    if (!isOutOfLine() && isInline())
+    if (!IsOutOfLine && (isInline() || hasDefiningAttr()))
       return Definition;
     return DeclarationOnly;
   }
@@ -2310,16 +2326,21 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   if (isSingleLineLanguageLinkage(*this))
     return DeclarationOnly;
 
-  // C99 6.9.2p2:
-  //   A declaration of an object that has file scope without an initializer,
-  //   and without a storage class specifier or the scs 'static', constitutes
-  //   a tentative definition.
-  // No such thing in C++.
-  if (!C.getLangOpts().CPlusPlus && isFileVarDecl())
+  // C23 6.9.3p2:
+  //   A declaration of an identifier for an object that has file scope
+  //   without an initializer, and without the storage-class specifier extern
+  //   or thread_local, constitutes a tentative definition.
+  // In C23 and later, file-scope thread_local / _Thread_local / __thread
+  // declarations without initializers are full external definitions
+  // (C23 6.9.3p1). Pre-C23 standards allowed tentative TLS definitions, so we
+  // preserve that behavior in earlier language modes.
+  if (!C.getLangOpts().CPlusPlus && isFileVarDecl() &&
+      (getTLSKind() == TLS_None || !C.getLangOpts().C23))
     return TentativeDefinition;
 
-  // What's left is (in C, block-scope) declarations without initializers or
-  // external storage. These are definitions.
+  // What's left is (in C) block-scope declarations and, in C23, file-scope
+  // thread_local declarations without initializers or external storage. These
+  // are definitions.
   return Definition;
 }
 
@@ -2401,7 +2422,7 @@ Expr *VarDecl::getInit() {
 }
 
 Stmt **VarDecl::getInitAddress() {
-  if (auto *ES = Init.dyn_cast<EvaluatedStmt *>())
+  if (auto *ES = dyn_cast<EvaluatedStmt *>(Init))
     return ES->Value.getAddressOfPointer(getASTContext().getExternalSource());
 
   return Init.getAddrOfPtr1();
@@ -2440,19 +2461,10 @@ bool VarDecl::hasInitWithSideEffects() const {
 }
 
 bool VarDecl::isOutOfLine() const {
-  if (Decl::isOutOfLine())
-    return true;
+  if (isStaticDataMember())
+    return isStaticDataMemberOutOfLine(this);
 
-  if (!isStaticDataMember())
-    return false;
-
-  // If this static data member was instantiated from a static data member of
-  // a class template, check whether that static data member was defined
-  // out-of-line.
-  if (VarDecl *VD = getInstantiatedFromStaticDataMember())
-    return VD->isOutOfLine();
-
-  return false;
+  return Decl::isOutOfLine();
 }
 
 void VarDecl::setInit(Expr *I) {
@@ -2554,11 +2566,13 @@ EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
 }
 
 const APValue *VarDecl::evaluateValue() const {
-  return evaluateValueImpl(/*Notes=*/nullptr, hasConstantInitialization());
+  return evaluateValueImpl(/*Notes=*/nullptr, /*SProxy=*/nullptr,
+                           hasConstantInitialization());
 }
 
 const APValue *
 VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                           SemaProxy *SProxy,
                            bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
 
@@ -2578,11 +2592,20 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
 
   Eval->IsEvaluating = true;
 
+  SmallVector<PartialDiagnosticAt> MSWarning;
   ASTContext &Ctx = getASTContext();
   Expr::EvalResult EStatus;
   EStatus.Diag = Notes;
+  EStatus.ExtendedDiag = &MSWarning;
+
+  // VarDecl::evaluateValue is used in a great many places, but we only want to
+  // allow AST mutation during the initial check for constant initialization.
   bool Result =
-      Init->EvaluateAsInitializer(Ctx, this, EStatus, IsConstantInitialization);
+      (SProxy && IsConstantInitialization && Ctx.getLangOpts().CPlusPlus)
+          ? Init->EvaluateAsMandatedConstantInitializer(EStatus, Ctx, *SProxy,
+                                                        this)
+          : Init->EvaluateAsInitializer(Ctx, this, EStatus,
+                                        IsConstantInitialization);
   Eval->Evaluated = std::move(EStatus.Val);
 
   // In C++, or in C23 if we're initialising a 'constexpr' variable, this isn't
@@ -2600,8 +2623,14 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
   // failed.
   if (!Result)
     Eval->Evaluated = APValue();
-  else if (Eval->Evaluated.needsCleanup())
-    Ctx.addDestruction(&Eval->Evaluated);
+  else {
+    if (!MSWarning.empty())
+      for (auto &Info : MSWarning)
+        getASTContext().getDiagnostics().Report(Info.first,
+                                                Info.second.getDiagID());
+    if (Eval->Evaluated.needsCleanup())
+      Ctx.addDestruction(&Eval->Evaluated);
+  }
 
   Eval->IsEvaluating = false;
   Eval->WasEvaluated = true;
@@ -2646,7 +2675,7 @@ bool VarDecl::hasConstantInitialization() const {
 }
 
 bool VarDecl::checkForConstantInitialization(
-    SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+    SmallVectorImpl<PartialDiagnosticAt> &Notes, SemaProxy &SProxy) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
   // If we ask for the value before we know whether we have a constant
   // initializer, we can compute the wrong value (for example, due to
@@ -2661,7 +2690,7 @@ bool VarDecl::checkForConstantInitialization(
 
   // Evaluate the initializer to check whether it's a constant expression.
   Eval->HasConstantInitialization =
-      evaluateValueImpl(&Notes, true) && Notes.empty();
+      evaluateValueImpl(&Notes, &SProxy, true) && Notes.empty();
 
   // If evaluation as a constant initializer failed, allow re-evaluation as a
   // non-constant initializer if we later find we want the value.
@@ -2705,7 +2734,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
   if (auto *VDTemplSpec = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
     if (isTemplateInstantiation(VDTemplSpec->getTemplateSpecializationKind())) {
       auto From = VDTemplSpec->getInstantiatedFrom();
-      if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
+      if (auto *VTD = dyn_cast<VarTemplateDecl *>(From)) {
         while (!VTD->isMemberSpecialization()) {
           auto *NewVTD = VTD->getInstantiatedFromMemberTemplate();
           if (!NewVTD)
@@ -2715,7 +2744,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
         return VTD->getTemplatedDecl();
       }
       if (auto *VTPSD =
-              From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+              dyn_cast<VarTemplatePartialSpecializationDecl *>(From)) {
         while (!VTPSD->isMemberSpecialization()) {
           auto *NewVTPSD = VTPSD->getInstantiatedFromMember();
           if (!NewVTPSD)
@@ -2860,8 +2889,6 @@ CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
 
 MemberSpecializationInfo *VarDecl::getMemberSpecializationInfo() const {
   if (isStaticDataMember())
-    // FIXME: Remove ?
-    // return getASTContext().getInstantiatedFromStaticDataMember(this);
     return dyn_cast_if_present<MemberSpecializationInfo *>(
         getASTContext().getTemplateOrSpecializationInfo(this));
   return nullptr;
@@ -3092,8 +3119,6 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.HasSkippedBody = false;
   FunctionDeclBits.WillHaveBody = false;
   FunctionDeclBits.IsMultiVersion = false;
-  FunctionDeclBits.DeductionCandidateKind =
-      static_cast<unsigned char>(DeductionCandidate::Normal);
   FunctionDeclBits.HasODRHash = false;
   FunctionDeclBits.FriendConstraintRefersToEnclosingTemplate = false;
 
@@ -3273,6 +3298,74 @@ void FunctionDecl::setBody(Stmt *B) {
   Body = LazyDeclStmtPtr(B);
   if (B)
     EndRangeLoc = B->getEndLoc();
+}
+
+FunctionDecl::DefaultedFunctionKind
+FunctionDecl::getDefaultedFunctionKind() const {
+  if (auto *MD = dyn_cast<CXXMethodDecl>(this)) {
+    if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(this)) {
+      if (Ctor->isDefaultConstructor())
+        return CXXSpecialMemberKind::DefaultConstructor;
+
+      if (Ctor->isCopyConstructor())
+        return CXXSpecialMemberKind::CopyConstructor;
+
+      if (Ctor->isMoveConstructor())
+        return CXXSpecialMemberKind::MoveConstructor;
+    }
+
+    if (MD->isCopyAssignmentOperator())
+      return CXXSpecialMemberKind::CopyAssignment;
+
+    if (MD->isMoveAssignmentOperator())
+      return CXXSpecialMemberKind::MoveAssignment;
+
+    if (isa<CXXDestructorDecl>(this))
+      return CXXSpecialMemberKind::Destructor;
+  }
+
+  // Only the postfix forms of ++ and -- can be defaulted. They are
+  // distinguished from the prefix forms by their trailing 'int' parameter, so
+  // they have exactly two parameters including implicit or explicit 'this'.
+  switch (getDeclName().getCXXOverloadedOperator()) {
+  case OO_PlusPlus:
+    if (getNumParamsIncludingThis() == 2)
+      return PostfixOperatorKind::Increment;
+    break;
+
+  case OO_MinusMinus:
+    if (getNumParamsIncludingThis() == 2)
+      return PostfixOperatorKind::Decrement;
+    break;
+
+  case OO_EqualEqual:
+    return DefaultedComparisonKind::Equal;
+
+  case OO_ExclaimEqual:
+    return DefaultedComparisonKind::NotEqual;
+
+  case OO_Spaceship:
+    // No point in allowing this if <=> doesn't exist in the current language
+    // mode.
+    if (!getASTContext().getLangOpts().CPlusPlus20)
+      break;
+    return DefaultedComparisonKind::ThreeWay;
+
+  case OO_Less:
+  case OO_LessEqual:
+  case OO_Greater:
+  case OO_GreaterEqual:
+    // No point in allowing this if <=> doesn't exist in the current language
+    // mode.
+    if (!getASTContext().getLangOpts().CPlusPlus20)
+      break;
+    return DefaultedComparisonKind::Relational;
+  default:
+    break;
+  }
+
+  // Not defaultable.
+  return DefaultedFunctionKind();
 }
 
 void FunctionDecl::setIsPureVirtual(bool P) {
@@ -3808,6 +3901,11 @@ unsigned FunctionDecl::getNumParams() const {
   return FPT ? FPT->getNumParams() : 0;
 }
 
+unsigned FunctionDecl::getNumParamsIncludingThis() const {
+  const auto *MD = dyn_cast<CXXMethodDecl>(this);
+  return getNumParams() + (MD && MD->isImplicitObjectMemberFunction());
+}
+
 void FunctionDecl::setParams(ASTContext &C,
                              ArrayRef<ParmVarDecl *> NewParamInfo) {
   assert(!ParamInfo && "Already has param info!");
@@ -4006,12 +4104,9 @@ SourceRange FunctionDecl::getReturnTypeSourceRange() const {
   if (!FTL)
     return SourceRange();
 
-  // Skip self-referential return types.
-  const SourceManager &SM = getASTContext().getSourceManager();
   SourceRange RTRange = FTL.getReturnLoc().getSourceRange();
   SourceLocation Boundary = getNameInfo().getBeginLoc();
-  if (RTRange.isInvalid() || Boundary.isInvalid() ||
-      !SM.isBeforeInTranslationUnit(RTRange.getEnd(), Boundary))
+  if (RTRange.isInvalid() || Boundary.isInvalid())
     return SourceRange();
 
   return RTRange;
@@ -4196,7 +4291,7 @@ void FunctionDecl::setInstantiatedFromDecl(FunctionDecl *FD) {
 
 FunctionDecl *FunctionDecl::getInstantiatedFromDecl() const {
   return dyn_cast_if_present<FunctionDecl>(
-      TemplateOrSpecialization.dyn_cast<NamedDecl *>());
+      dyn_cast<NamedDecl *>(TemplateOrSpecialization));
 }
 
 bool FunctionDecl::isImplicitlyInstantiable() const {
@@ -4332,7 +4427,7 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
 
 void FunctionDecl::setFunctionTemplateSpecialization(
     ASTContext &C, FunctionTemplateDecl *Template,
-    TemplateArgumentList *TemplateArgs, void *InsertPos,
+    TemplateArgumentList *TemplateArgs, llvm::FoldingSetInsertToken InsertToken,
     TemplateSpecializationKind TSK,
     const TemplateArgumentListInfo *TemplateArgsAsWritten,
     SourceLocation PointOfInstantiation) {
@@ -4352,7 +4447,7 @@ void FunctionDecl::setFunctionTemplateSpecialization(
           dyn_cast_if_present<MemberSpecializationInfo *>(
               TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
-  Template->addSpecialization(Info, InsertPos);
+  Template->addSpecialization(Info, InsertToken);
 }
 
 void FunctionDecl::setDependentTemplateSpecialization(
@@ -4512,12 +4607,13 @@ bool FunctionDecl::isImplicitHDExplicitInstantiation() const {
 }
 
 SourceLocation FunctionDecl::getPointOfInstantiation() const {
-  if (FunctionTemplateSpecializationInfo *FTSInfo
-        = TemplateOrSpecialization.dyn_cast<
-                                        FunctionTemplateSpecializationInfo*>())
+  if (FunctionTemplateSpecializationInfo *FTSInfo =
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization))
     return FTSInfo->getPointOfInstantiation();
   if (MemberSpecializationInfo *MSInfo =
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+          dyn_cast_if_present<MemberSpecializationInfo *>(
+              TemplateOrSpecialization))
     return MSInfo->getPointOfInstantiation();
 
   return SourceLocation();
@@ -4579,10 +4675,12 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BImemmove:
     return Builtin::BImemmove;
 
+  case Builtin::BI__builtin_strlcpy:
   case Builtin::BIstrlcpy:
   case Builtin::BI__builtin___strlcpy_chk:
     return Builtin::BIstrlcpy;
 
+  case Builtin::BI__builtin_strlcat:
   case Builtin::BIstrlcat:
   case Builtin::BI__builtin___strlcat_chk:
     return Builtin::BIstrlcat;
@@ -4662,6 +4760,10 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
         return Builtin::BIbzero;
       if (FnInfo->isStr("bcopy"))
         return Builtin::BIbcopy;
+      if (FnInfo->isStr("strlcat"))
+        return Builtin::BIstrlcat;
+      if (FnInfo->isStr("strlcpy"))
+        return Builtin::BIstrlcpy;
     } else if (isInStdNamespace()) {
       if (FnInfo->isStr("free"))
         return Builtin::BIfree;
@@ -4857,12 +4959,46 @@ const FieldDecl *FieldDecl::findCountedByField() const {
   if (!CAT)
     return nullptr;
 
-  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
+  // A late-parsed attribute whose argument was rejected keeps the node with the
+  // raw argument as its count (see Sema::ActOnLateParsedTypeAttrArgument). That
+  // argument may not be a simple declaration reference (e.g. it may be an error
+  // expression or a `sizeof`), in which case it refers to no field.
+  const auto *CountDRE = dyn_cast<DeclRefExpr>(CAT->getCountExpr());
+  if (!CountDRE)
+    return nullptr;
   const auto *CountDecl = CountDRE->getDecl();
   if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
     CountDecl = IFD->getAnonField();
 
   return dyn_cast<FieldDecl>(CountDecl);
+}
+
+static bool initializationHasSideEffects(const FieldDecl &FD) {
+  const Type *T = FD.getType()->getBaseElementTypeUnsafe();
+  // FIXME: Destruction of ObjC lifetime types has side-effects.
+  if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
+    return !RD->isCompleteDefinition() || !RD->hasTrivialDefaultConstructor() ||
+           !RD->hasTrivialDestructor();
+  return false;
+}
+
+template <typename AttrType> static bool hasAttribute(QualType T) {
+  if (const TagDecl *TD = T->getAsTagDecl())
+    return TD->hasAttr<AttrType>();
+  if (const TypedefType *TDT = T->getAs<TypedefType>())
+    return TDT->getDecl()->hasAttr<AttrType>();
+  return false;
+}
+
+bool FieldDecl::isUnusedPrivateField() const {
+  if (isImplicit() || !getDeclName() || getAccess() != AS_private ||
+      hasAttr<UnusedAttr>() || getParent()->isDependentContext())
+    return false;
+
+  QualType FieldType = getType();
+  return !hasAttribute<UnusedAttr>(FieldType) &&
+         (hasAttribute<WarnUnusedAttr>(FieldType) ||
+          !initializationHasSideEffects(*this));
 }
 
 //===----------------------------------------------------------------------===//
@@ -5871,7 +6007,9 @@ TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, Stmt *Statement) {
   SourceLocation Loc = Statement ? Statement->getBeginLoc() : SourceLocation();
   DeclContext *DC = C.getTranslationUnitDecl();
 
-  return new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
+  auto *D = new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
+  D->Ordinal = C.NumTopLevelStmtDecls++;
+  return D;
 }
 
 TopLevelStmtDecl *TopLevelStmtDecl::CreateDeserialized(ASTContext &C,

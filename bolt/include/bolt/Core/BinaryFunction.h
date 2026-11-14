@@ -54,6 +54,7 @@
 #include <algorithm>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -277,6 +278,9 @@ private:
   const MCSymbol *PersonalityFunction{nullptr};
   uint8_t PersonalityEncoding{dwarf::DW_EH_PE_sdata4 | dwarf::DW_EH_PE_pcrel};
 
+  /// The function's CIE has the 'S' augmentation (.cfi_signal_frame).
+  bool IsSignalFrame{false};
+
   BinaryContext &BC;
 
   std::unique_ptr<BinaryLoopInfo> BLI;
@@ -308,11 +312,20 @@ private:
   /// function is done.
   SparseBitVector<> DebugScopeBoundaryOffsets;
 
+  struct SecondaryEntryPoint {
+    /// Global symbol corresponding to the external entry point.
+    MCSymbol *Symbol{nullptr};
+    /// Number of addEntryPoint() and addEntryPointAtOffset() requests for the
+    /// entry point. Lets releaseEntryPoint() tell whether anything else still
+    /// needs it.
+    unsigned RefCount{0};
+  };
+
   /// A set of local and global symbols corresponding to secondary entry points.
   /// Each additional function entry point has a corresponding entry in the map.
   /// The key is a local symbol corresponding to a basic block and the value
-  /// is a global symbol corresponding to an external entry point.
-  DenseMap<const MCSymbol *, MCSymbol *> SecondaryEntryPoints;
+  /// holds a global symbol corresponding to an external entry point.
+  DenseMap<const MCSymbol *, SecondaryEntryPoint> SecondaryEntryPoints;
 
   /// False if the function is too complex to reconstruct its control
   /// flow graph.
@@ -393,6 +406,9 @@ private:
   /// True if the function is used for patching code at a fixed address.
   bool IsPatch{false};
 
+  /// True if the function is a synthetic branch/call thunk.
+  bool IsThunk{false};
+
   /// True if the original entry point of the function may get called, but the
   /// original body cannot be executed and needs to be patched with code that
   /// redirects execution to the new function body.
@@ -401,15 +417,15 @@ private:
   /// True if the function should not have an associated symbol table entry.
   bool IsAnonymous{false};
 
-  /// Indicates whether branch validation has already been performed,
-  /// to avoid redundant processing.
-  bool NeedBranchValidation{true};
+  /// Name for the section this function code should reside in. When unset, the
+  /// default name is derived on demand from the function's name (see
+  /// getMainSectionName()). Deferring this avoids eagerly storing a copy of the
+  /// (potentially large, mangled) function name for every function, which is a
+  /// significant source of memory use on large binaries.
+  std::optional<std::string> CodeSectionName;
 
-  /// Name for the section this function code should reside in.
-  std::string CodeSectionName;
-
-  /// Name for the corresponding cold code section.
-  std::string ColdCodeSectionName;
+  /// Name for the corresponding cold code section. See CodeSectionName.
+  std::optional<std::string> ColdCodeSectionName;
 
   /// Parent function fragment for split function fragments.
   using FragmentsSetTy = SmallPtrSet<BinaryFunction *, 1>;
@@ -749,12 +765,24 @@ private:
   static std::string buildColdCodeSectionName(StringRef Name,
                                               const BinaryContext &BC);
 
+  /// Return the name of the main code section, using the default derived from
+  /// the function's name when no name has been explicitly assigned.
+  std::string getMainSectionName() const {
+    return CodeSectionName ? *CodeSectionName
+                           : buildCodeSectionName(getOneName(), BC);
+  }
+
+  /// Return the name of the cold code section, using the default derived from
+  /// the function's name when no name has been explicitly assigned.
+  std::string getColdSectionName() const {
+    return ColdCodeSectionName ? *ColdCodeSectionName
+                               : buildColdCodeSectionName(getOneName(), BC);
+  }
+
   /// Creation should be handled by RewriteInstance or BinaryContext
   BinaryFunction(const std::string &Name, BinarySection &Section,
                  uint64_t Address, uint64_t Size, BinaryContext &BC)
       : OriginSection(&Section), Address(Address), Size(Size), BC(BC),
-        CodeSectionName(buildCodeSectionName(Name, BC)),
-        ColdCodeSectionName(buildColdCodeSectionName(Name, BC)),
         FunctionNumber(++Count) {
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
   }
@@ -887,6 +915,12 @@ public:
 
   /// Returns whether there are any labels at Offset.
   bool hasLabelAt(unsigned Offset) const { return Labels.count(Offset) != 0; }
+
+  /// Return the label at \p Offset, or nullptr if none exists.
+  MCSymbol *getLabelAtOffset(unsigned Offset) const {
+    auto It = Labels.find(Offset);
+    return It == Labels.end() ? nullptr : It->second;
+  }
 
   /// Iterate over all jump tables associated with this function.
   iterator_range<std::map<uint64_t, JumpTable *>::const_iterator>
@@ -1262,7 +1296,7 @@ public:
   /// secondary entry point into the function, then return a global symbol
   /// that represents the secondary entry point. Otherwise return nullptr.
   MCSymbol *getSecondaryEntryPointSymbol(const MCSymbol *BBLabel) const {
-    return SecondaryEntryPoints.lookup(BBLabel);
+    return SecondaryEntryPoints.lookup(BBLabel).Symbol;
   }
 
   /// If the basic block serves as a secondary entry point to the function,
@@ -1400,12 +1434,12 @@ public:
   SmallString<32>
   getCodeSectionName(const FragmentNum Fragment = FragmentNum::main()) const {
     if (Fragment == FragmentNum::main())
-      return SmallString<32>(CodeSectionName);
+      return SmallString<32>(getMainSectionName());
     if (Fragment == FragmentNum::cold())
-      return SmallString<32>(ColdCodeSectionName);
+      return SmallString<32>(getColdSectionName());
     if (BC.HasWarmSection && Fragment == FragmentNum::warm())
       return SmallString<32>(BC.getWarmCodeSectionName());
-    return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
+    return formatv("{0}.{1}", getColdSectionName(), Fragment.get() - 1);
   }
 
   /// Assign a code section name to the function.
@@ -1487,6 +1521,9 @@ public:
   /// Return true if this function is used for patching existing code.
   bool isPatch() const { return IsPatch; }
 
+  /// Return true if this function is a synthetic branch/call thunk.
+  bool isThunk() const { return IsThunk; }
+
   /// Return true if the function requires a patch.
   bool needsPatch() const { return NeedsPatch; }
 
@@ -1521,6 +1558,8 @@ public:
   const MCSymbol *getPersonalityFunction() const { return PersonalityFunction; }
 
   uint8_t getPersonalityEncoding() const { return PersonalityEncoding; }
+
+  bool isSignalFrame() const { return IsSignalFrame; }
 
   CallSitesRange getCallSites(const FragmentNum F) const {
     return make_range(std::equal_range(CallSites.begin(), CallSites.end(),
@@ -1610,6 +1649,11 @@ public:
   /// Register secondary entry point at a given \p Offset into the function.
   /// Return global symbol for use by extern function references.
   MCSymbol *addEntryPointAtOffset(uint64_t Offset);
+
+  /// Withdraw one request for the secondary entry point at \p BB, made when
+  /// whatever needed it goes away. The entry point is removed once no requests
+  /// are left.
+  void releaseEntryPoint(const BinaryBasicBlock &BB);
 
   /// Mark all blocks that are unreachable from a root (entry point
   /// or landing pad) as invalid.
@@ -1924,6 +1968,12 @@ public:
     IsPatch = V;
   }
 
+  /// Indicate that this function is a synthetic branch/call thunk.
+  void setIsThunk(bool V) {
+    assert(isInjected() && "Only injected functions can be used as thunks");
+    IsThunk = V;
+  }
+
   /// Mark the function for patching.
   void setNeedsPatch(bool V) { NeedsPatch = V; }
 
@@ -1946,6 +1996,11 @@ public:
 
   BinaryFunction &setPersonalityEncoding(uint8_t Encoding) {
     PersonalityEncoding = Encoding;
+    return *this;
+  }
+
+  BinaryFunction &setIsSignalFrame(bool V) {
+    IsSignalFrame = V;
     return *this;
   }
 

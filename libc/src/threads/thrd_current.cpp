@@ -20,7 +20,7 @@ static_assert(sizeof(thrd_t) == sizeof(LIBC_NAMESPACE::Thread),
 
 LLVM_LIBC_FUNCTION(thrd_t, thrd_current, ()) {
   thrd_t th;
-  th.__attrib = self.attrib;
+  th.__attrib = current_thread().attrib;
   return th;
 }
 

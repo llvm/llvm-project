@@ -10,3 +10,13 @@ define <2 x i32> @load_elementwise(ptr %p) {
   %v = load atomic elementwise <2 x i32>, ptr %p monotonic, align 4
   ret <2 x i32> %v
 }
+
+define void @store_elementwise(ptr %p, <2 x i32> %v) {
+; CHECK-LABEL: define void @store_elementwise(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i32> [[V:%.*]]) {
+; CHECK-NEXT:    store <2 x i32> [[V]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic elementwise <2 x i32> %v, ptr %p monotonic, align 4
+  ret void
+}

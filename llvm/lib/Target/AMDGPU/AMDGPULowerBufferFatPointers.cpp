@@ -51,10 +51,10 @@
 // including aggregates containing such pointers, to ones that use `i160`. This
 // is handled by `StoreFatPtrsAsIntsAndExpandMemcpyVisitor` , which visits
 // loads, stores, and allocas and, if the loaded or stored type contains `ptr
-// addrspace(7)`, rewrites that type to one where the p7s are replaced by i160s,
-// copying other parts of aggregates as needed. In the case of a store, each
-// pointer is `ptrtoint`d to i160 before storing, and load integers are
-// `inttoptr`d back. This same transformation is applied to vectors of pointers.
+// addrspace(7)`, rewrites it to use i160, `ptrtoint`ing before stores and
+// `inttoptr`ing after loads. Vectors of pointers work the same way. Since i160
+// and p7 differ in size and alignment, aggregates are split into one access per
+// leaf, and allocas and GEPs use byte offsets and sizes from the original type.
 //
 // Such a transformation allows the later phases of the pass to not need
 // to handle buffer fat pointers moving to and from memory, where we load
@@ -63,7 +63,7 @@
 // of resources and vectors of offsets are concatentated before being stored to
 // memory) are handled through implementing `inttoptr` and `ptrtoint` only.
 //
-// Atomics operations on `ptr addrspace(7)` values are not suppported, as the
+// Atomics operations on `ptr addrspace(7)` values are not supported, as the
 // hardware does not include a 160-bit atomic.
 //
 // In order to save on O(N) work and to ensure that the contents type
@@ -242,11 +242,9 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ReplaceConstant.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -435,27 +433,29 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
     : public InstVisitor<StoreFatPtrsAsIntsAndExpandMemcpyVisitor, bool> {
   BufferFatPtrToIntTypeMap *TypeMap;
 
-  ValueToValueMapTy ConvertedForStore;
-
   IRBuilder<InstSimplifyFolder> IRB;
+
+  const DataLayout &DL;
 
   // Used for memcpy() lowering.
   const TargetTransformInfo *TTI;
   ScalarEvolution *SE;
 
-  // Convert all the buffer fat pointers within the input value to inttegers
-  // so that it can be stored in memory.
-  Value *fatPtrsToInts(Value *V, Type *From, Type *To, const Twine &Name);
-  // Convert all the i160s that need to be buffer fat pointers (as specified)
-  // by the To type) into those pointers to preserve the semantics of the rest
-  // of the program.
-  Value *intsToFatPtrs(Value *V, Type *From, Type *To, const Twine &Name);
+  Value *applyOffset(Value *Ptr, uint64_t Off);
+  // Visits each maximal subtree of `Ty` that is fat-ptr-free or is itself a
+  // [vector of] fat pointer(s), at its offset in `Ty`'s original layout.
+  void forEachAggLeaf(
+      Type *Ty, SmallVectorImpl<unsigned> &AggIdxs, uint64_t Off,
+      const Twine &Name,
+      function_ref<void(Type *LeafTy, Type *IntLeafTy, ArrayRef<unsigned> Idxs,
+                        uint64_t Off, const Twine &Name)>
+          Visit);
 
 public:
   StoreFatPtrsAsIntsAndExpandMemcpyVisitor(BufferFatPtrToIntTypeMap *TypeMap,
-                                           const DataLayout &DL,
-                                           LLVMContext &Ctx)
-      : TypeMap(TypeMap), IRB(Ctx, InstSimplifyFolder(DL)) {}
+                                           Module &M)
+      : TypeMap(TypeMap), IRB(M, InstSimplifyFolder(M.getDataLayout())),
+        DL(M.getDataLayout()) {}
   bool processFunction(Function &F, const TargetTransformInfo *TTI,
                        ScalarEvolution *SE);
 
@@ -472,75 +472,45 @@ public:
 };
 } // namespace
 
-Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::fatPtrsToInts(
-    Value *V, Type *From, Type *To, const Twine &Name) {
-  if (From == To)
-    return V;
-  ValueToValueMapTy::iterator Find = ConvertedForStore.find(V);
-  if (Find != ConvertedForStore.end())
-    return Find->second;
-  if (isBufferFatPtrOrVector(From)) {
-    Value *Cast = IRB.CreatePtrToInt(V, To, Name + ".int");
-    ConvertedForStore[V] = Cast;
-    return Cast;
-  }
-  if (From->getNumContainedTypes() == 0)
-    return V;
-  // Structs, arrays, and other compound types.
-  Value *Ret = PoisonValue::get(To);
-  if (auto *AT = dyn_cast<ArrayType>(From)) {
-    Type *FromPart = AT->getArrayElementType();
-    Type *ToPart = cast<ArrayType>(To)->getElementType();
-    for (uint64_t I = 0, E = AT->getArrayNumElements(); I < E; ++I) {
-      Value *Field = IRB.CreateExtractValue(V, I);
-      Value *NewField =
-          fatPtrsToInts(Field, FromPart, ToPart, Name + "." + Twine(I));
-      Ret = IRB.CreateInsertValue(Ret, NewField, I);
-    }
-  } else {
-    for (auto [Idx, FromPart, ToPart] :
-         enumerate(From->subtypes(), To->subtypes())) {
-      Value *Field = IRB.CreateExtractValue(V, Idx);
-      Value *NewField =
-          fatPtrsToInts(Field, FromPart, ToPart, Name + "." + Twine(Idx));
-      Ret = IRB.CreateInsertValue(Ret, NewField, Idx);
-    }
-  }
-  ConvertedForStore[V] = Ret;
-  return Ret;
+Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::applyOffset(Value *Ptr,
+                                                             uint64_t Off) {
+  // The InstSimplifyFolder gives back `Ptr` itself when `Off` is 0.
+  return IRB.CreatePtrAddWithUnsignedOffset(
+      Ptr, Off, Ptr->getName() + ".off." + Twine(Off),
+      GEPNoWrapFlags::noUnsignedWrap());
 }
 
-Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::intsToFatPtrs(
-    Value *V, Type *From, Type *To, const Twine &Name) {
-  if (From == To)
-    return V;
-  if (isBufferFatPtrOrVector(To)) {
-    Value *Cast = IRB.CreateIntToPtr(V, To, Name + ".ptr");
-    return Cast;
+void StoreFatPtrsAsIntsAndExpandMemcpyVisitor::forEachAggLeaf(
+    Type *Ty, SmallVectorImpl<unsigned> &AggIdxs, uint64_t Off,
+    const Twine &Name,
+    function_ref<void(Type *LeafTy, Type *IntLeafTy, ArrayRef<unsigned> Idxs,
+                      uint64_t Off, const Twine &Name)>
+        Visit) {
+  Type *IntTy = TypeMap->remapType(Ty);
+  if (isBufferFatPtrOrVector(Ty) || Ty == IntTy) {
+    // Zero-sized leaves ({} or [0 x T]) access no bytes; skip them.
+    if (DL.getTypeStoreSize(Ty) != 0)
+      Visit(Ty, IntTy, AggIdxs, Off, Name);
+    return;
   }
-  if (From->getNumContainedTypes() == 0)
-    return V;
-  // Structs, arrays, and other compound types.
-  Value *Ret = PoisonValue::get(To);
-  if (auto *AT = dyn_cast<ArrayType>(From)) {
-    Type *FromPart = AT->getArrayElementType();
-    Type *ToPart = cast<ArrayType>(To)->getElementType();
-    for (uint64_t I = 0, E = AT->getArrayNumElements(); I < E; ++I) {
-      Value *Field = IRB.CreateExtractValue(V, I);
-      Value *NewField =
-          intsToFatPtrs(Field, FromPart, ToPart, Name + "." + Twine(I));
-      Ret = IRB.CreateInsertValue(Ret, NewField, I);
-    }
-  } else {
-    for (auto [Idx, FromPart, ToPart] :
-         enumerate(From->subtypes(), To->subtypes())) {
-      Value *Field = IRB.CreateExtractValue(V, Idx);
-      Value *NewField =
-          intsToFatPtrs(Field, FromPart, ToPart, Name + "." + Twine(Idx));
-      Ret = IRB.CreateInsertValue(Ret, NewField, Idx);
-    }
+  auto Recurse = [&](unsigned I, Type *ElemTy, uint64_t ElemOff) {
+    AggIdxs.push_back(I);
+    forEachAggLeaf(ElemTy, AggIdxs, Off + ElemOff, Name + "." + Twine(I),
+                   Visit);
+    AggIdxs.pop_back();
+  };
+  if (auto *ST = dyn_cast<StructType>(Ty)) {
+    const StructLayout *Layout = DL.getStructLayout(ST);
+    for (auto [I, ElemTy, ElemOff] :
+         enumerate(ST->elements(), Layout->getMemberOffsets()))
+      Recurse(I, ElemTy, ElemOff.getFixedValue());
+    return;
   }
-  return Ret;
+  auto *AT = cast<ArrayType>(Ty);
+  Type *ElemTy = AT->getElementType();
+  uint64_t Stride = DL.getTypeAllocSize(ElemTy).getFixedValue();
+  for (unsigned I : seq<unsigned>(AT->getNumElements()))
+    Recurse(I, ElemTy, I * Stride);
 }
 
 bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::processFunction(
@@ -560,7 +530,6 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::processFunction(
   for (WeakTrackingVH VH : make_early_inc_range(CanBecomeLoops)) {
     Changed |= visit(cast<Instruction>(VH));
   }
-  ConvertedForStore.clear();
   this->TTI = nullptr;
   this->SE = nullptr;
   return Changed;
@@ -571,6 +540,11 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitAllocaInst(AllocaInst &I) {
   Type *NewTy = TypeMap->remapType(Ty);
   if (Ty == NewTy)
     return false;
+  // i160 is smaller than ptr addrspace(7) (24 bytes vs. 32); fall back to a
+  // byte array of the original size so sizes computed from Ty stay in bounds.
+  TypeSize AllocSize = DL.getTypeAllocSize(Ty);
+  if (AllocSize.isFixed() && DL.getTypeAllocSize(NewTy) != AllocSize)
+    NewTy = ArrayType::get(IRB.getInt8Ty(), AllocSize.getFixedValue());
   I.setAllocatedType(NewTy);
   return true;
 }
@@ -578,13 +552,16 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitAllocaInst(AllocaInst &I) {
 bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitGetElementPtrInst(
     GetElementPtrInst &I) {
   Type *Ty = I.getSourceElementType();
-  Type *NewTy = TypeMap->remapType(Ty);
-  if (Ty == NewTy)
+  if (Ty == TypeMap->remapType(Ty))
     return false;
-  // We'll be rewriting the type `ptr addrspace(7)` out of existence soon, so
-  // make sure GEPs don't have different semantics with the new type.
-  I.setSourceElementType(NewTy);
-  I.setResultElementType(TypeMap->remapType(I.getResultElementType()));
+  // Lower to a byte offset now, before remapping changes p7's layout (see file
+  // header).
+  IRB.SetInsertPoint(&I);
+  Value *Off = emitGEPOffset(&IRB, DL, &I);
+  Value *NewGEP = IRB.CreatePtrAdd(I.getPointerOperand(), Off, I.getName(),
+                                   I.getNoWrapFlags());
+  I.replaceAllUsesWith(NewGEP);
+  I.eraseFromParent();
   return true;
 }
 
@@ -595,12 +572,37 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitLoadInst(LoadInst &LI) {
     return false;
 
   IRB.SetInsertPoint(&LI);
+  if (!isBufferFatPtrOrVector(Ty)) {
+    // i160 has the same 20-byte store size as p7, so loading each leaf at
+    // its original-layout offset accesses the same bytes as the unlowered load.
+    Value *Agg = PoisonValue::get(Ty);
+    AAMDNodes AATags = LI.getAAMetadata();
+    SmallVector<unsigned> AggIdxs;
+    forEachAggLeaf(
+        Ty, AggIdxs, 0, LI.getName(),
+        [&](Type *LeafTy, Type *IntLeafTy, ArrayRef<unsigned> Idxs,
+            uint64_t Off, const Twine &Name) {
+          Value *Ptr = applyOffset(LI.getPointerOperand(), Off);
+          LoadInst *NewLI = IRB.CreateAlignedLoad(
+              IntLeafTy, Ptr, commonAlignment(LI.getAlign(), Off), Name);
+          NewLI->setVolatile(LI.isVolatile());
+          copyMetadataForLoad(*NewLI, LI);
+          NewLI->setAAMetadata(AATags.adjustForAccess(Off, IntLeafTy, DL));
+          Value *V = NewLI;
+          if (LeafTy != IntLeafTy)
+            V = IRB.CreateIntToPtr(NewLI, LeafTy, Name + ".ptr");
+          Agg = IRB.CreateInsertValue(Agg, V, Idxs, Name + ".agg");
+        });
+    LI.replaceAllUsesWith(Agg);
+    LI.eraseFromParent();
+    return true;
+  }
   auto *NLI = cast<LoadInst>(LI.clone());
   NLI->mutateType(IntTy);
   NLI = IRB.Insert(NLI);
   NLI->takeName(&LI);
 
-  Value *CastBack = intsToFatPtrs(NLI, IntTy, Ty, NLI->getName());
+  Value *CastBack = IRB.CreateIntToPtr(NLI, Ty, NLI->getName() + ".ptr");
   LI.replaceAllUsesWith(CastBack);
   LI.eraseFromParent();
   return true;
@@ -614,7 +616,31 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitStoreInst(StoreInst &SI) {
     return false;
 
   IRB.SetInsertPoint(&SI);
-  Value *IntV = fatPtrsToInts(V, Ty, IntTy, V->getName());
+  if (!isBufferFatPtrOrVector(Ty)) {
+    // Store each leaf at its byte offset in the original layout; see
+    // visitLoadInst.
+    AAMDNodes AATags = SI.getAAMetadata();
+    SmallVector<unsigned> AggIdxs;
+    forEachAggLeaf(
+        Ty, AggIdxs, 0, V->getName(),
+        [&](Type *LeafTy, Type *IntLeafTy, ArrayRef<unsigned> Idxs,
+            uint64_t Off, const Twine &Name) {
+          Value *Leaf = IRB.CreateExtractValue(V, Idxs, Name);
+          if (LeafTy != IntLeafTy)
+            Leaf = IRB.CreatePtrToInt(Leaf, IntLeafTy, Name + ".int");
+          auto *NewSI = cast<StoreInst>(SI.clone());
+          NewSI->setAlignment(commonAlignment(SI.getAlign(), Off));
+          NewSI->setOperand(0, Leaf);
+          NewSI->setOperand(1, applyOffset(SI.getPointerOperand(), Off));
+          // Each leaf covers only part of the original assignment.
+          NewSI->setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+          IRB.Insert(NewSI);
+          NewSI->setAAMetadata(AATags.adjustForAccess(Off, IntLeafTy, DL));
+        });
+    SI.eraseFromParent();
+    return true;
+  }
+  Value *IntV = IRB.CreatePtrToInt(V, IntTy, V->getName() + ".int");
   for (auto *Dbg : at::getDVRAssignmentMarkers(&SI))
     Dbg->setRawLocation(ValueAsMetadata::get(IntV));
 
@@ -727,32 +753,6 @@ class LegalizeBufferContentTypesVisitor
 
   /// Break up the loads of a struct into the loads of its components
 
-  /// Return the maximum allowed load/store width for the given type and
-  /// alignment combination based on subtarget flags.
-  /// 1. If unaligned accesses are not enabled, then any load/store that is less
-  /// than word-aligned has to be handled one byte or ushort at a time.
-  /// 2. If relaxed OOB mode is not set, we must ensure that the in-bounds
-  /// part of a partially out of bounds read/write is performed correctly. This
-  /// means that any load that isn't naturally aligned has to be split into
-  /// parts that are naturally aligned, so that, after bitcasting, we don't have
-  /// unaligned loads that could discard valid data.
-  ///
-  /// For example, if we're loading a <8 x i8>, that's actually a load of a <2 x
-  /// i32>, and if we load from an align(2) address, that address might be 2
-  /// bytes from the end of the buffer. The hardware will, when performing the
-  /// <2 x i32> load, mask off the entire first word, causing the two in-bounds
-  /// bytes to be masked off. However,if we know the offset can't be too close
-  /// to the number of records in the buffer (if known), we can skip this
-  /// expansion.
-  ///
-  /// Unlike the complete disablement of unaligned accesses from point 1,
-  /// this does not apply to unaligned scalars, but will apply to cases like
-  /// `load <2 x i32>, align 4` since the left elemenvt might be out of bounds.
-  /// Note that if the we know that the base offset is known to be
-  /// less than `uint32_max - byte_size(Ty)`, we can skip these alignment
-  /// checks.
-  uint64_t maxIntrinsicWidth(Type *Ty, Align A, OobProperties OobProps);
-
   /// Convert a vector or scalar type that can't be operated on by buffer
   /// intrinsics to one that would be legal through bitcasts and/or truncation.
   /// Uses the wider of i32, i16, or i8 where possible, clamping to the maximum
@@ -806,9 +806,9 @@ class LegalizeBufferContentTypesVisitor
   bool visitAddrSpaceCastInst(AddrSpaceCastInst &ASCI);
 
 public:
-  LegalizeBufferContentTypesVisitor(const DataLayout &DL, LLVMContext &Ctx,
-                                    const TargetMachine *TM)
-      : IRB(Ctx, InstSimplifyFolder(DL)), DL(DL), TM(TM) {}
+  LegalizeBufferContentTypesVisitor(Module &M, const TargetMachine *TM)
+      : IRB(M, InstSimplifyFolder(M.getDataLayout())), DL(M.getDataLayout()),
+        TM(TM) {}
   bool processFunction(Function &F, ScalarEvolution *SE);
 };
 } // namespace
@@ -896,68 +896,32 @@ LegalizeBufferContentTypesVisitor::analyzeOobProperties(Value *Ptr, Type *Ty,
   if (!NumRecordsIfKnown->second)
     return Result;
   const SCEV *NumRecords = SE->getSCEV(NumRecordsIfKnown->second);
-  // All-1s is (per ISA or as a consequence of the bonud)check rules, depending
-  // on arcihtecture) no bounds check.
-  if (NumRecords->isAllOnesValue())
+
+  // We'll normalize all bounds to the num_records width on the hardware.
+  std::optional<unsigned> MaybeNumRecordsWidth =
+      ST->getBufferResourceNumRecordsWidth();
+  if (!MaybeNumRecordsWidth)
+    return Result;
+  unsigned NumRecordsWidth = *MaybeNumRecordsWidth;
+  Type *NumRecordsTy = IRB.getIntNTy(NumRecordsWidth);
+  // Compare in i64 so wraparound is visible as a negative.
+  Type *CompareTy = IRB.getInt64Ty();
+  const SCEV *Bound = SE->getNoopOrZeroExtend(
+      SE->getTruncateOrZeroExtend(NumRecords, NumRecordsTy), CompareTy);
+
+  // All-1s is (per ISA or as a consequence of the bounds check rules, depending
+  // on architecture) no bounds check.
+  if (Bound == SE->getConstant(APInt::getMaxValue(NumRecordsWidth)
+                                   .zext(CompareTy->getIntegerBitWidth())))
     Result.NoPartialOOB = true;
 
-  const SCEV *BoundsDiff;
-  if (ST->has45BitNumRecordsBufferResource()) {
-    const SCEV *PtrDiffExt =
-        SE->getNoopOrZeroExtend(PtrDiff, NumRecords->getType());
-    BoundsDiff = SE->getMinusSCEV(NumRecords, PtrDiffExt);
-  } else {
-    const SCEV *NumRecordsI32 =
-        SE->getTruncateOrNoop(NumRecords, IRB.getInt32Ty());
-    BoundsDiff = SE->getMinusSCEV(NumRecordsI32, PtrDiff);
-  }
+  const SCEV *BoundsDiff =
+      SE->getMinusSCEV(Bound, SE->getNoopOrZeroExtend(PtrDiff, CompareTy));
 
   if (SE->getSignedRangeMin(BoundsDiff).sge(TypeSize) ||
       SE->isKnownNonPositive(BoundsDiff))
     Result.NoPartialOOB = true;
   return Result;
-}
-
-uint64_t
-LegalizeBufferContentTypesVisitor::maxIntrinsicWidth(Type *T, Align A,
-                                                     OobProperties OobProps) {
-  Align Result(16);
-  if (!ST->hasUnalignedBufferAccessEnabled() && A < Align(4))
-    Result = A;
-  auto *VT = dyn_cast<VectorType>(T);
-  if (!ST->hasRelaxedBufferOOBMode() && VT) {
-    TypeSize ElemBits = DL.getTypeSizeInBits(VT->getElementType());
-    if (ElemBits.isKnownMultipleOf(32)) {
-      // Word-sized operations are bounds-checked per word. So, the only case we
-      // have to worry about is stores that start out of bounds and then go in,
-      // and those can only become in-bounds on a multiple of their alignment.
-      // Therefore, we can use the declared alignment of the operation as the
-      // maximum width, rounding up to 4.
-      if (!OobProps.NoWrapFromMax)
-        Result = std::min(Result, std::max(A, Align(4)));
-    } else if ((ElemBits.isKnownMultipleOf(8) ||
-                isPowerOf2_64(ElemBits.getKnownMinValue()))) {
-      // To ensure correct behavior for sub-word types, we must always scalarize
-      // unaligned loads of sub-word types. For example, if you load
-      // a <4 x i8> from offset 7 in an 8-byte buffer, expecting the vector
-      // to be padded out with 0s after that last byte, you'll get all 0s
-      // instead. To prevent this behavior when not requested, de-vectorize such
-      // loads.
-      //
-      // If we knew that the value that triggers bounds checks was a multiple of
-      // 4 along with the access being word-aligned, we could avoid the
-      // scalarization here, as the bitcast wouldn't change any check behavior,
-      // but we don't currently try to analyze this.
-      //
-      // Strict OOB checking isn't supported if the size of each element is a
-      // non-power-of-2 value less than 8, since there's no feasible way to
-      // apply such a strict bounds check.
-      if (!OobProps.NoPartialOOB)
-        Result =
-            commonAlignment(Result, divideCeil(ElemBits.getKnownMinValue(), 8));
-    }
-  }
-  return Result.value() * 8;
 }
 
 Type *LegalizeBufferContentTypesVisitor::legalNonAggregateForMemOp(
@@ -1179,7 +1143,9 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
   Type *ArrayAsVecType = scalarArrayTypeAsVector(PartType);
   OobProperties OobProps =
       analyzeOobProperties(OrigLI.getPointerOperand(), PartType, AggByteOff);
-  uint64_t MaxWidth = maxIntrinsicWidth(ArrayAsVecType, PartAlign, OobProps);
+  uint64_t MaxWidth = ST->getMaxBufferIntrinsicWidth(
+      DL, ArrayAsVecType, PartAlign, OobProps.NoWrapFromMax,
+      OobProps.NoPartialOOB);
   Type *LegalType = legalNonAggregateForMemOp(ArrayAsVecType, MaxWidth);
 
   SmallVector<VecSlice> Slices;
@@ -1273,9 +1239,10 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
     for (auto [I, ElemTy, Offset] :
          llvm::enumerate(ST->elements(), Layout->getMemberOffsets())) {
       AggIdxs.push_back(I);
-      Changed |= std::get<0>(visitStoreImpl(OrigSI, ElemTy, AggIdxs,
-                                            AggByteOff + Offset.getFixedValue(),
-                                            Name + "." + Twine(I)));
+      Changed |= visitStoreImpl(OrigSI, ElemTy, AggIdxs,
+                                AggByteOff + Offset.getFixedValue(),
+                                Name + "." + Twine(I))
+                     .first;
       AggIdxs.pop_back();
     }
     return std::make_pair(Changed, /*ModifiedInPlace=*/false);
@@ -1289,9 +1256,11 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
-        Changed |= std::get<0>(visitStoreImpl(
-            OrigSI, ElemTy, AggIdxs,
-            AggByteOff + I * ElemAllocSize.getFixedValue(), Name + Twine(I)));
+        Changed |=
+            visitStoreImpl(OrigSI, ElemTy, AggIdxs,
+                           AggByteOff + I * ElemAllocSize.getFixedValue(),
+                           Name + Twine(I))
+                .first;
         AggIdxs.pop_back();
       }
       return std::make_pair(Changed, /*ModifiedInPlace=*/false);
@@ -1313,7 +1282,9 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
   Align PartAlign = commonAlignment(OrigSI.getAlign(), AggByteOff);
   OobProperties OobProps =
       analyzeOobProperties(OrigSI.getPointerOperand(), PartType, AggByteOff);
-  uint64_t MaxWidth = maxIntrinsicWidth(ArrayAsVecType, PartAlign, OobProps);
+  uint64_t MaxWidth = ST->getMaxBufferIntrinsicWidth(
+      DL, ArrayAsVecType, PartAlign, OobProps.NoWrapFromMax,
+      OobProps.NoPartialOOB);
   Type *LegalType = legalNonAggregateForMemOp(ArrayAsVecType, MaxWidth);
   if (LegalType != ArrayAsVecType) {
     NewData = makeLegalNonAggregate(NewData, LegalType, Name);
@@ -1571,9 +1542,8 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
                           bool IsVolatile, SyncScope::ID SSID);
 
 public:
-  SplitPtrStructs(const DataLayout &DL, LLVMContext &Ctx,
-                  const TargetMachine *TM)
-      : TM(TM), IRB(Ctx, InstSimplifyFolder(DL)) {}
+  SplitPtrStructs(Module &M, const TargetMachine *TM)
+      : TM(TM), IRB(M, InstSimplifyFolder(M.getDataLayout())) {}
 
   void processFunction(Function &F);
 
@@ -1728,7 +1698,7 @@ void SplitPtrStructs::processConditionals() {
           // Handle the case where previous loops already looked through
           // an addrspacecast.
           if (isSplitFatPtr(RootVal->getType()))
-            MaybeRsrc = std::get<0>(getPtrParts(RootVal));
+            MaybeRsrc = getPtrParts(RootVal).first;
           else
             MaybeRsrc = RootVal;
         }
@@ -1747,7 +1717,7 @@ void SplitPtrStructs::processConditionals() {
         auto *RsrcPHI = IRB.CreatePHI(RsrcTy, PHI->getNumIncomingValues());
         RsrcPHI->takeName(Rsrc);
         for (auto [V, BB] : llvm::zip(PHI->incoming_values(), PHI->blocks())) {
-          Value *VRsrc = std::get<0>(getPtrParts(V));
+          Value *VRsrc = getPtrParts(V).first;
           RsrcPHI->addIncoming(VRsrc, BB);
         }
         copyMetadata(RsrcPHI, PHI);
@@ -1759,7 +1729,7 @@ void SplitPtrStructs::processConditionals() {
       NewOff->takeName(Off);
       for (auto [V, BB] : llvm::zip(PHI->incoming_values(), PHI->blocks())) {
         assert(OffParts.count(V) && "An offset part had to be created by now");
-        Value *VOff = std::get<1>(getPtrParts(V));
+        Value *VOff = getPtrParts(V).second;
         NewOff->addIncoming(VOff, BB);
       }
       copyMetadata(NewOff, PHI);
@@ -2224,10 +2194,16 @@ PtrParts SplitPtrStructs::visitIntToPtrInst(IntToPtrInst &IP) {
   auto *RetTy = cast<StructType>(IP.getType());
   Type *RsrcTy = RetTy->getElementType(0);
   Type *OffTy = RetTy->getElementType(1);
-  Value *RsrcPart = IRB.CreateLShr(
-      Int,
-      ConstantExpr::getIntegerValue(IntTy, APInt(Width, BufferOffsetWidth)));
-  Value *RsrcInt = IRB.CreateIntCast(RsrcPart, RsrcIntTy, /*isSigned=*/false);
+  // inttoptr zero-extends, so narrow inputs contribute nothing to the resource
+  // part.
+  Value *RsrcInt;
+  if (Width <= BufferOffsetWidth) {
+    RsrcInt = Constant::getNullValue(RsrcIntTy);
+  } else {
+    Value *RsrcPart =
+        IRB.CreateLShr(Int, ConstantInt::get(IntTy, BufferOffsetWidth));
+    RsrcInt = IRB.CreateIntCast(RsrcPart, RsrcIntTy, /*isSigned=*/false);
+  }
   Value *Rsrc = IRB.CreateIntToPtr(RsrcInt, RsrcTy, IP.getName() + ".rsrc");
   Value *Off =
       IRB.CreateIntCast(Int, OffTy, /*IsSigned=*/false, IP.getName() + ".off");
@@ -2430,7 +2406,6 @@ static bool isRemovablePointerIntrinsic(Intrinsic::ID IID) {
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
@@ -2459,8 +2434,9 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     Type *RsrcType = SplitType->getElementType(0);
     Type *OffType = SplitType->getElementType(1);
     IRB.SetInsertPoint(&I);
-    Value *Rsrc = IRB.CreateIntrinsic(IID, {RsrcType, Base->getType()},
-                                      {Base, Stride, NumRecords, Flags});
+    Value *Rsrc = IRB.CreateIntrinsic(
+        IID, {RsrcType, Base->getType(), NumRecords->getType()},
+        {Base, Stride, NumRecords, Flags});
     copyMetadata(Rsrc, &I);
     Rsrc->takeName(&I);
     Value *Zero = Constant::getNullValue(OffType);
@@ -2514,8 +2490,7 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     I.replaceAllUsesWith(NewRsrc);
     return {nullptr, nullptr};
   }
-  case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group: {
+  case Intrinsic::launder_invariant_group: {
     Value *Ptr = I.getArgOperand(0);
     if (!isSplitFatPtr(Ptr->getType()))
       return {nullptr, nullptr};
@@ -2550,6 +2525,36 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     I.replaceAllUsesWith(NewLoad);
     return {nullptr, nullptr};
   }
+  case Intrinsic::prefetch: {
+    Value *Ptr = I.getArgOperand(0);
+    if (!isSplitFatPtr(Ptr->getType()))
+      return {nullptr, nullptr};
+    // s_buffer_prefetch_data only takes an immediate offset, so only a data
+    // prefetch at a constant offset can use it. Drop the others: a prefetch is
+    // only a hint.
+    if (ST->hasSafeSmemPrefetch() &&
+        cast<ConstantInt>(I.getArgOperand(3))->isOne()) {
+      IRB.SetInsertPoint(&I);
+      auto [Rsrc, Off] = getPtrParts(Ptr);
+      auto *ConstOff = dyn_cast<ConstantInt>(Off);
+      if (ConstOff && AMDGPU::isLegalSMRDEncodedSignedOffset(
+                          *ST, ConstOff->getZExtValue(), /*IsBuffer=*/true)) {
+        Value *NewPrefetch =
+            IRB.CreateIntrinsic(Intrinsic::amdgcn_s_buffer_prefetch_data, {},
+                                {Rsrc, ConstOff, IRB.getInt32(0)});
+        copyMetadata(NewPrefetch, &I);
+      }
+    }
+    SplitUsers.insert(&I);
+    return {nullptr, nullptr};
+  }
+  case Intrinsic::amdgcn_s_prefetch_data:
+  case Intrinsic::amdgcn_s_prefetch_inst:
+    if (!isSplitFatPtr(I.getArgOperand(0)->getType()))
+      return {nullptr, nullptr};
+    // Instruction selection drops these for every other non-global pointer.
+    SplitUsers.insert(&I);
+    return {nullptr, nullptr};
   }
   return {nullptr, nullptr};
 }
@@ -2752,10 +2757,8 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM,
         /*RemoveDeadConstants=*/false, /*IncludeSelf=*/true);
   }
 
-  StoreFatPtrsAsIntsAndExpandMemcpyVisitor MemOpsRewrite(&IntTM, DL,
-                                                         M.getContext());
-  LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(
-      DL, M.getContext(), &TM);
+  StoreFatPtrsAsIntsAndExpandMemcpyVisitor MemOpsRewrite(&IntTM, M);
+  LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(M, &TM);
   for (Function &F : M.functions()) {
     bool InterfaceChange = hasFatPointerInterface(F, &StructTM);
     bool BodyChanges = containsBufferFatPointers(F, &StructTM);
@@ -2800,7 +2803,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM,
   IntTM.clear();
   CloneMap.clear();
 
-  SplitPtrStructs Splitter(DL, M.getContext(), &TM);
+  SplitPtrStructs Splitter(M, &TM);
   for (Function *F : NeedsPostProcess)
     Splitter.processFunction(*F);
   for (Function *F : Intrinsics) {

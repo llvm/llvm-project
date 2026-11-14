@@ -10,4 +10,4 @@
 
 #include "src/math/nextdownl.h"
 
-LIST_NEXTDOWN_TESTS(long double, LIBC_NAMESPACE::nextdownl)
+LIST_NEXTDOWN_TESTS(Nextdownl, long double, LIBC_NAMESPACE::nextdownl)

@@ -50,7 +50,7 @@ body:             |
   ; CHECK-NEXT:   BL @f, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
-  ; CHECK-NEXT:   BL @f, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+  ; CHECK-NEXT:   BL @f, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $sp
   ; CHECK-NEXT:   frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit killed $lr, implicit $sp
   ; CHECK-NEXT:   TCRETURNdi @f, 0, csr_aarch64_aapcs, implicit $sp
   bb.0.entry:
@@ -83,7 +83,7 @@ body:             |
     BL @f, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
 
   bb.5:
-    BL @f, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    BL @f, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $sp
     frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit killed $lr, implicit $sp
     TCRETURNdi @f, 0, csr_aarch64_aapcs, implicit $sp
 ...

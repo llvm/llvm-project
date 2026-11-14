@@ -702,7 +702,7 @@ define i32 @test16(i8 %a) {
 ; CHECK-LABEL: define i32 @test16(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i8 [[A]] to i32
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
@@ -748,7 +748,7 @@ define i8 @test17(i8 %a) {
 ; CHECK-LABEL: define i8 @test17(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], 3
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[A]], 3
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
@@ -772,7 +772,7 @@ define i8 @test17_2(i8 %a) {
 ; CHECK-LABEL: define i8 @test17_2(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], [[A]]
+; CHECK-NEXT:    [[C:%.*]] = add nuw i8 [[A]], [[A]]
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
@@ -817,7 +817,7 @@ define i32 @test18(i8 %a) {
 ; CHECK-LABEL: define i32 @test18(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i8 [[A]] to i32
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    switch i8 [[A]], label %[[DISPATCH]] [
@@ -845,7 +845,7 @@ define i8 @test19(i8 %a) {
 ; CHECK-LABEL: define i8 @test19(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], 3
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[A]], 3
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    switch i8 [[A]], label %[[DISPATCH]] [
@@ -1239,7 +1239,7 @@ define i16 @return_range_for_edge_value_zext(i8 %a) {
 ; CHECK-LABEL: define range(i16 0, 98) i16 @return_range_for_edge_value_zext(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i8 [[A]] to i16
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[A]], 98
@@ -1287,7 +1287,7 @@ define i8 @return_range_for_edge_value_trunc(i16 %a) {
 ; CHECK-LABEL: define range(i8 0, 98) i8 @return_range_for_edge_value_trunc(
 ; CHECK-SAME: i16 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B:%.*]] = trunc i16 [[A]] to i8
+; CHECK-NEXT:    [[B:%.*]] = trunc nuw nsw i16 [[A]] to i8
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[A]], 98
@@ -1353,6 +1353,93 @@ dispatch:
 
 target:
   ret i8 %b
+}
+
+define i8 @ushl_sat_unknown_rhs(i8 range(i8 0, 2) %x, i8 %y) {
+; CHECK-LABEL: define range(i8 0, -127) i8 @ushl_sat_unknown_rhs(
+; CHECK-SAME: i8 range(i8 0, 2) [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = call i8 @llvm.ushl.sat.i8(i8 %x, i8 %y)
+  ret i8 %res
+}
+
+define i8 @sshl_sat_pos_unknown_rhs(i8 range(i8 3, 10) %x, i8 %y) {
+; CHECK-LABEL: define range(i8 3, -128) i8 @sshl_sat_pos_unknown_rhs(
+; CHECK-SAME: i8 range(i8 3, 10) [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.sshl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = call i8 @llvm.sshl.sat.i8(i8 %x, i8 %y)
+  ret i8 %res
+}
+
+define i8 @sshl_sat_neg_unknown_rhs(i8 range(i8 -10, -2) %x, i8 %y) {
+; CHECK-LABEL: define range(i8 -128, -2) i8 @sshl_sat_neg_unknown_rhs(
+; CHECK-SAME: i8 range(i8 -10, -2) [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.sshl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = call i8 @llvm.sshl.sat.i8(i8 %x, i8 %y)
+  ret i8 %res
+}
+
+define i8 @sshl_sat_partial_oob_rhs(i8 range(i8 -10, 3) %x, i8 range(i8 8, 3) %y) {
+; CHECK-LABEL: define range(i8 -40, 9) i8 @sshl_sat_partial_oob_rhs(
+; CHECK-SAME: i8 range(i8 -10, 3) [[X:%.*]], i8 range(i8 8, 3) [[Y:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.sshl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = call i8 @llvm.sshl.sat.i8(i8 %x, i8 %y)
+  ret i8 %res
+}
+
+define i1 @ushl_sat_fold(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @ushl_sat_fold(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X]], 5
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i1 true
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp uge i8 %x, 5
+  br i1 %cmp, label %if, label %else
+
+if:
+  %sat = call i8 @llvm.ushl.sat.i8(i8 %x, i8 %y)
+  %res = icmp uge i8 %sat, 5
+  ret i1 %res
+
+else:
+  ret i1 true
+}
+
+define i1 @ushl_sat_nofold(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @ushl_sat_nofold(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X]], 5
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp uge i8 [[SAT]], 6
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp uge i8 %x, 5
+  br i1 %cmp, label %if, label %else
+
+if:
+  %sat = call i8 @llvm.ushl.sat.i8(i8 %x, i8 %y)
+  %res = icmp uge i8 %sat, 6
+  ret i1 %res
+
+else:
+  ret i1 true
 }
 
 declare i16 @llvm.ctlz.i16(i16, i1)

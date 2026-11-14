@@ -30,7 +30,7 @@ define i64 @test_constant(ptr %rdata) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.land.lhs.true.i:
   ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOV32r0_]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOV32r0_]], %subreg.sub_32bit
   ; CHECK-NEXT:   $rax = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   RET 0, $rax
 entry:
@@ -61,13 +61,13 @@ define i64 @test_non_constant(ptr %rdata, i64 %i.194) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r [[COPY]], 2, [[COPY]], 0, $noreg
   ; CHECK-NEXT:   [[SHL64ri:%[0-9]+]]:gr64_nosp = SHL64ri [[LEA64r]], 4, implicit-def dead $eflags
-  ; CHECK-NEXT:   CMP64mi32 [[COPY1]], 1, killed [[SHL64ri]], 0, $noreg, 0, implicit-def $eflags :: (load (s64) from %ir.arrayidx33, align 1)
+  ; CHECK-NEXT:   CMP64mi32 [[COPY1]], 1, [[SHL64ri]], 0, $noreg, 0, implicit-def $eflags :: (load (s64) from %ir.arrayidx33, align 1)
   ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.land.lhs.true.i:
   ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOV32r0_]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOV32r0_]], %subreg.sub_32bit
   ; CHECK-NEXT:   $rax = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   RET 0, $rax
 entry:

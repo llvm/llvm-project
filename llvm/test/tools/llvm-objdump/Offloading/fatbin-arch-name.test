@@ -1,0 +1,35 @@
+## Test that --offloading extracts every bundle entry by default, and that
+## --arch-name restricts extraction to the entries whose ID contains the
+## requested architecture.
+
+# RUN: yaml2obj %s -o %t.elf
+
+# RUN: llvm-objdump --offloading %t.elf | FileCheck %s --check-prefix=ALL
+# RUN: FileCheck %s --check-prefix=DEV908 \
+# RUN:   --input-file=%t.elf.0.hip-amdgcn-amd-amdhsa--gfx908
+
+# ALL: Extracting offload bundle: {{.*}}.elf.0.host-x86_64-unknown-linux-gnu-
+# ALL: Extracting offload bundle: {{.*}}.elf.0.hip-amdgcn-amd-amdhsa--gfx906
+# ALL: Extracting offload bundle: {{.*}}.elf.0.hip-amdgcn-amd-amdhsa--gfx908
+# DEV908: Content of device file 908
+
+# RUN: llvm-objdump --offloading --arch-name=gfx908 %t.elf \
+# RUN:   | FileCheck %s --check-prefix=FILTER
+
+# FILTER-NOT: Extracting offload bundle:
+# FILTER: Extracting offload bundle: {{.*}}.elf.0.hip-amdgcn-amd-amdhsa--gfx908
+# FILTER-NOT: Extracting offload bundle:
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .hip_fatbin
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x1000
+    Content:         5F5F434C414E475F4F46464C4F41445F42554E444C455F5F0300000000000000C0000000000000000D000000000000001E00000000000000686F73742D7838365F36342D756E6B6E6F776E2D6C696E75782D676E752DCD000000000000001B000000000000001D000000000000006869702D616D6467636E2D616D642D616D646873612D2D676678393036E8000000000000001B000000000000001D000000000000006869702D616D6467636E2D616D642D616D646873612D2D676678393038686F737420636F6E74656E740A436F6E74656E74206F66206465766963652066696C65203930360A436F6E74656E74206F66206465766963652066696C65203930380A
+...

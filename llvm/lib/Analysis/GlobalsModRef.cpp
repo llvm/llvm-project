@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -28,7 +29,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
@@ -40,20 +40,6 @@ STATISTIC(NumNonAddrTakenFunctions,"Number of functions without address taken");
 STATISTIC(NumNoMemFunctions, "Number of functions that do not access memory");
 STATISTIC(NumReadMemFunctions, "Number of functions that only read memory");
 STATISTIC(NumIndirectGlobalVars, "Number of indirect global objects");
-
-// An option to enable unsafe alias results from the GlobalsModRef analysis.
-// When enabled, GlobalsModRef will provide no-alias results which in extremely
-// rare cases may not be conservatively correct. In particular, in the face of
-// transforms which cause asymmetry between how effective getUnderlyingObject
-// is for two pointers, it may produce incorrect results.
-//
-// These unsafe results have been returned by GMR for many years without
-// causing significant issues in the wild and so we provide a mechanism to
-// re-enable them for users of LLVM that have a particular performance
-// sensitivity and no known issues. The option also makes it easy to evaluate
-// the performance impact of these results.
-static cl::opt<bool> EnableUnsafeGlobalsModRefAliasResults(
-    "enable-unsafe-globalsmodref-alias-results", cl::init(false), cl::Hidden);
 
 /// The mod/ref information collected for a particular function.
 ///
@@ -498,29 +484,34 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     const std::vector<CallGraphNode *> &SCC = *I;
     assert(!SCC.empty() && "SCC with no functions?");
 
-    Function *F = SCC[0]->getFunction();
-
-    if (!F || !F->isDefinitionExact()) {
-      // Calls externally or not exact - can't say anything useful. Remove any
-      // existing function records (may have been created when scanning
-      // globals).
+    if (any_of(SCC, [](CallGraphNode *Node) { return !Node->getFunction(); })) {
+      // Calls externally - can't say anything useful. Remove any existing
+      // function records (may have been created when scanning globals).
       for (auto *Node : SCC)
         FunctionInfos.erase(Node->getFunction());
       continue;
     }
 
-    FunctionInfo &FI = FunctionInfos[F];
-    Handles.emplace_front(*this, F);
+    Function *FirstF = SCC[0]->getFunction();
+    FunctionInfo &FI = FunctionInfos[FirstF];
+    Handles.emplace_front(*this, FirstF);
     Handles.front().I = Handles.begin();
     bool KnowNothing = false;
+
+    // Only the attributes of declarations, functions without an exact
+    // definition (which may be replaced at link time), and optnone functions
+    // can be relied on, not their bodies.
+    auto UseAttributesOnly = [](const Function &F) {
+      return F.isDeclaration() || !F.isDefinitionExact() || F.hasOptNone();
+    };
 
     // Intrinsics, like any other synchronizing function, can make effects
     // of other threads visible. Without nosync we know nothing really.
     // Similarly, if `nocallback` is missing the function, or intrinsic,
     // can call into the module arbitrarily. If both are set the function
     // has an effect but will not interact with accesses of internal
-    // globals inside the module. We are conservative here for optnone
-    // functions, might not be necessary.
+    // globals inside the module. We are conservative here for definitions
+    // (optnone or non-exact), might not be necessary.
     auto MaySyncOrCallIntoModule = [](const Function &F) {
       return !F.isDeclaration() || !F.hasNoSync() ||
              !F.hasFnAttribute(Attribute::NoCallback);
@@ -529,12 +520,13 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     // Collect the mod/ref properties due to called functions.  We only compute
     // one mod-ref set.
     for (unsigned i = 0, e = SCC.size(); i != e && !KnowNothing; ++i) {
+      Function *F = SCC[i]->getFunction();
       if (!F) {
         KnowNothing = true;
         break;
       }
 
-      if (F->isDeclaration() || F->hasOptNone()) {
+      if (UseAttributesOnly(*F)) {
         // Try to get mod/ref behaviour from function attributes.
         if (F->doesNotAccessMemory()) {
           // Can't do better than that!
@@ -587,10 +579,10 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
       if (isModAndRefSet(FI.getModRefInfo()))
         break; // The mod/ref lattice saturates here.
 
-      // Don't prove any properties based on the implementation of an optnone
-      // function. Function attributes were already used as a best approximation
-      // above.
-      if (Node->getFunction()->hasOptNone())
+      // Don't prove any properties based on the body of a function whose body
+      // can't be relied on. Function attributes were already used as a best
+      // approximation above.
+      if (UseAttributesOnly(*Node->getFunction()))
         continue;
 
       for (Instruction &I : instructions(Node->getFunction())) {
@@ -861,9 +853,9 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
     // If one is and the other isn't, it isn't strictly safe but we can fake
     // this result if necessary for performance. This does not appear to be
     // a common problem in practice.
-    if (EnableUnsafeGlobalsModRefAliasResults)
-      if ((GV1 || GV2) && GV1 != GV2)
-        return AliasResult::NoAlias;
+    if ((GV1 || GV2) && GV1 != GV2 &&
+        Opts.enable_unsafe_globalsmodref_alias_results)
+      return AliasResult::NoAlias;
 
     // Check for a special case where a non-escaping global can be used to
     // conclude no-alias.
@@ -907,9 +899,9 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
   // If one is based on an indirect global and the other isn't, it isn't
   // strictly safe but we can fake this result if necessary for performance.
   // This does not appear to be a common problem in practice.
-  if (EnableUnsafeGlobalsModRefAliasResults)
-    if ((GV1 || GV2) && GV1 != GV2)
-      return AliasResult::NoAlias;
+  if ((GV1 || GV2) && GV1 != GV2 &&
+      Opts.enable_unsafe_globalsmodref_alias_results)
+    return AliasResult::NoAlias;
 
   return AliasResult::MayAlias;
 }
@@ -968,12 +960,13 @@ ModRefInfo GlobalsAAResult::getModRefInfo(const CallBase *Call,
 }
 
 GlobalsAAResult::GlobalsAAResult(
-    const DataLayout &DL,
+    const AnalysisOptions &Opts, const DataLayout &DL,
     std::function<const TargetLibraryInfo &(Function &F)> GetTLI)
-    : DL(DL), GetTLI(std::move(GetTLI)) {}
+    : Opts(Opts), DL(DL), GetTLI(std::move(GetTLI)) {}
 
 GlobalsAAResult::GlobalsAAResult(GlobalsAAResult &&Arg)
-    : AAResultBase(std::move(Arg)), DL(Arg.DL), GetTLI(std::move(Arg.GetTLI)),
+    : AAResultBase(std::move(Arg)), Opts(Arg.Opts), DL(Arg.DL),
+      GetTLI(std::move(Arg.GetTLI)),
       NonAddressTakenGlobals(std::move(Arg.NonAddressTakenGlobals)),
       IndirectGlobals(std::move(Arg.IndirectGlobals)),
       AllocsForIndirectGlobals(std::move(Arg.AllocsForIndirectGlobals)),
@@ -991,7 +984,7 @@ GlobalsAAResult::~GlobalsAAResult() = default;
 /*static*/ GlobalsAAResult GlobalsAAResult::analyzeModule(
     Module &M, std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
     CallGraph &CG) {
-  GlobalsAAResult Result(M.getDataLayout(), GetTLI);
+  GlobalsAAResult Result(getAnalysisOptions(M), M.getDataLayout(), GetTLI);
 
   // Discover which functions aren't recursive, to feed into AnalyzeGlobals.
   Result.CollectSCCMembership(CG);

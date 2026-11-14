@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=arm-- -run-pass prolog-epilog | FileCheck %s
+# RUN: llc -o - %s -mtriple=arm-- -mattr=+vfp2 -run-pass prolog-epilog | FileCheck %s
 --- |
   define swiftcc ptr @need_emergency_slot(ptr swiftself %v) {
     ; Just a dummy to add a swiftself bit. The real code is in the MI below.
@@ -11,7 +11,6 @@
 # is free to use. Callee saved parameters may still be used if they were used
 # to pass arguments (as in swiftself).
 name: need_emergency_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 8, alignment: 8 }
   - { id: 1, type: default, size: 4096, alignment: 8 }

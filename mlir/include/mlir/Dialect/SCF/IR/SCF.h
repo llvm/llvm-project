@@ -15,16 +15,10 @@
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
+#include "mlir/Dialect/SCF/IR/SCFDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/RegionKindInterface.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/DestinationStyleOpInterface.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/MemorySlotInterfaces.h"
-#include "mlir/Interfaces/ParallelCombiningOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
 namespace mlir {
@@ -32,8 +26,6 @@ namespace scf {
 void buildTerminatedBody(OpBuilder &builder, Location loc);
 } // namespace scf
 } // namespace mlir
-
-#include "mlir/Dialect/SCF/IR/SCFOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/SCF/IR/SCFOps.h.inc"
@@ -59,7 +51,9 @@ ForallOp getForallOpThreadIndexOwner(Value val);
 bool insideMutuallyExclusiveBranches(Operation *a, Operation *b);
 
 /// Promotes the loop body of a scf::ForallOp to its containing block.
-void promote(RewriterBase &rewriter, scf::ForallOp forallOp);
+/// Only tensor.parallel_insert_slice combining ops are supported.
+/// Returns failure without modifying the IR if a combining op is unsupported.
+LogicalResult promote(RewriterBase &rewriter, scf::ForallOp forallOp);
 
 /// An owning vector of values, handy to return from functions.
 using ValueVector = SmallVector<Value>;
@@ -112,6 +106,12 @@ SmallVector<Value> replaceAndCastForOpIterArg(RewriterBase &rewriter,
                                               OpOperand &operand,
                                               Value replacement,
                                               const ValueTypeCastFnTy &castFn);
+
+/// A simple, conservative analysis to determine if the loop is shape
+/// preserving. I.e., the arg-th yielded value has the same shape as the
+/// corresponding region iter_arg: it is the iter_arg, or derives from it
+/// through tied results of destination-style ops and of shape-preserving loops.
+bool isShapePreserving(ForOp forOp, int64_t arg);
 
 /// Helper function to compute the difference between two values. This is used
 /// by the loop implementations to compute the trip count.

@@ -11,11 +11,13 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 
 #include "ForwardDecl.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/windows/windows.h"
+#include "lldb/Utility/Locked.h"
 #include "lldb/Utility/Predicate.h"
 
 namespace lldb_private {
@@ -32,11 +34,17 @@ public:
   Status DebugLaunch(const ProcessLaunchInfo &launch_info);
   Status DebugAttach(lldb::pid_t pid, const ProcessAttachInfo &attach_info);
 
-  HostProcess GetProcess() const { return m_process; }
+  HostProcess GetProcess() const { return *m_process.LockShared(); }
   HostThread GetMainThread() const { return m_main_thread; }
-  std::weak_ptr<ExceptionRecord> GetActiveException() {
-    return m_active_exception;
-  }
+
+  /// The path the process was created with, as recorded in its process
+  /// parameters, or an empty string if it could not be read. Set by the
+  /// create-process event.
+  const std::string &GetImagePath() const { return m_image_path; }
+
+  /// Returns the exception the debug loop is currently reporting, or null if
+  /// there is none. Safe to call from any thread.
+  ExceptionRecordSP GetActiveException();
 
   Status StopDebugging(bool terminate);
 
@@ -48,6 +56,10 @@ public:
   void ContinueAsyncDllEvent();
 
 private:
+  /// Have the delegate report the stop it collected, then wait until the
+  /// client resumes before taking the next debug event.
+  void ReportDeferredStopAndWaitForResume();
+
   void FreeProcessHandles();
   void DebugLoop();
   ExceptionResult HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
@@ -68,14 +80,16 @@ private:
 
   DebugDelegateSP m_debug_delegate;
 
-  HostProcess m_process;    // The process being debugged.
+  Guarded<HostProcess> m_process; // The process being debugged.
   HostThread m_main_thread; // The main thread of the inferior.
 
   // The image file of the process being debugged.
   HANDLE m_image_file = nullptr;
+  std::string m_image_path;
 
-  // The current exception waiting to be handled
+  // The current exception waiting to be handled.
   ExceptionRecordSP m_active_exception;
+  std::mutex m_active_exception_mutex;
 
   // A predicate which gets signalled when an exception is finished processing
   // and the debug loop can be continued.

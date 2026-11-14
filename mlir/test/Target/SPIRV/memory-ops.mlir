@@ -5,6 +5,21 @@
 // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
 // RUN: %if spirv-tools %{ spirv-val %t %}
 
+// Alignment decorations on function-local variables survive round-tripping,
+// including unsigned literals whose high bit is set.
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Addresses, Kernel, Linkage], []> {
+  // CHECK-LABEL: spirv.func @aligned_variables()
+  spirv.func @aligned_variables() "None" {
+    // CHECK-NEXT: %{{.*}} = spirv.Variable {alignment = 16 : i32} : !spirv.ptr<f32, Function>
+    // CHECK-NEXT: %{{.*}} = spirv.Variable {alignment = -2147483648 : i32} : !spirv.ptr<f32, Function>
+    %aligned = spirv.Variable {alignment = 16 : i32} : !spirv.ptr<f32, Function>
+    %high_bit = spirv.Variable {alignment = 2147483648 : i32} : !spirv.ptr<f32, Function>
+    spirv.Return
+  }
+}
+
+// -----
+
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
   // CHECK-LABEL: spirv.func @load_store
   //  CHECK-SAME: ([[ARG1:%.*]]: !spirv.ptr<f32, Input>, [[ARG2:%.*]]: !spirv.ptr<f32, Output>)
@@ -18,8 +33,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 
   // CHECK-LABEL: spirv.func @load_store_memory_operands
   spirv.func @load_store_memory_operands(%arg0 : !spirv.ptr<f32, Input>, %arg1 : !spirv.ptr<f32, Output>) "None" {
-    // CHECK: spirv.Load "Input" %{{.+}} ["Volatile|Aligned", 4] : f32
-    %1 = spirv.Load "Input" %arg0 ["Volatile|Aligned", 4]: f32
+    // CHECK: spirv.Load "Input" %{{.+}} ["Volatile|Aligned", 4] {relaxed_precision} : f32
+    %1 = spirv.Load "Input" %arg0 ["Volatile|Aligned", 4] {relaxed_precision} : f32
     // CHECK: spirv.Store "Output" %{{.+}}, %{{.+}} ["Volatile|Aligned", 4] : f32
     spirv.Store "Output" %arg1, %1 ["Volatile|Aligned", 4]: f32
     spirv.Return
@@ -34,6 +49,17 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     // CHECK-NEXT: {{%.*}} = spirv.AccessChain {{%.*}}[{{%.*}}, {{%.*}}] : !spirv.ptr<!spirv.array<4 x !spirv.array<4 x f32>>, Function>
     %1 = spirv.AccessChain %arg0[%arg1] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<!spirv.array<4xf32>, Function>
     %2 = spirv.AccessChain %arg0[%arg1, %arg2] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  spirv.func @inbounds_access_chain(%arg0 : !spirv.ptr<!spirv.array<4xf32>, Function>, %arg1 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.InBoundsAccessChain {{%.*}}[{{%.*}}] : !spirv.ptr<!spirv.array<4 x f32>, Function>
+    %0 = spirv.InBoundsAccessChain %arg0[%arg1] : !spirv.ptr<!spirv.array<4xf32>, Function>, i32 -> !spirv.ptr<f32, Function>
+    %1 = spirv.Load "Function" %0 : f32
     spirv.Return
   }
 }
@@ -122,4 +148,3 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage], []> {
     spirv.Return
   }
 }
-

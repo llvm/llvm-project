@@ -7,7 +7,7 @@
 ---
 # Check that the instructions are not dependent on each other, even though
 # they all read/write to the zero register.
-# CHECK-LABEL: MI Scheduling
+# CHECK-LABEL: Current Schedule Region
 # CHECK: SU(0): dead $wzr = SUBSWri $w1, 0, 0, implicit-def dead $nzcv
 # CHECK: # succs left : 0
 # CHECK-NOT: Successors:
@@ -23,6 +23,7 @@
 name: func
 body: |
   bb.0:
+    liveins: $w1, $w3
     dead $wzr = SUBSWri $w1, 0, 0, implicit-def dead $nzcv
     $w2 = COPY $wzr
     dead $wzr = SUBSWri $w3, 0, 0, implicit-def dead $nzcv

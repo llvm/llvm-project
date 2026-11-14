@@ -115,9 +115,9 @@ body: |
 name:            widen_v2s16
 body: |
   bb.0:
-    liveins: $x0, $x1
+    liveins: $h0, $h1, $x0, $x1
     ; CHECK-LABEL: name: widen_v2s16
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $h0, $h1, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i16) = COPY $h0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i16) = COPY $h1

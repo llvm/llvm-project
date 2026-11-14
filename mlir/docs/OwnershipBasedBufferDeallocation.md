@@ -494,7 +494,7 @@ booleans as arguments:
   represent the condition under which the MemRef at the corresponding
   position in A should be deallocated.
   * The fifth argument E is used to pass results to the caller. It
-  provides the ownership value corresponding the the MemRef at the same
+  provides the ownership value corresponding to the MemRef at the same
   position in B
 
 This helper function is supposed to be called once for each

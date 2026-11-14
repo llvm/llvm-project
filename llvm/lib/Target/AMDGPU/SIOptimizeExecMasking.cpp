@@ -10,7 +10,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
@@ -43,7 +42,6 @@ private:
 
   DenseMap<MachineInstr *, MachineInstr *> SaveExecVCmpMapping;
   SmallVector<std::pair<MachineInstr *, MachineInstr *>, 1> OrXors;
-  SmallVector<MachineOperand *, 1> KillFlagCandidates;
 
   Register isCopyFromExec(const MachineInstr &MI) const;
   Register isCopyToExec(const MachineInstr &MI) const;
@@ -60,10 +58,11 @@ private:
   MachineInstr *findInstrBackwards(
       MachineInstr &Origin, std::function<bool(MachineInstr *)> Pred,
       ArrayRef<MCRegister> NonModifiableRegs,
-      MachineInstr *Terminator = nullptr,
-      SmallVectorImpl<MachineOperand *> *KillFlagCandidates = nullptr,
       unsigned MaxInstructions = 20) const;
   bool optimizeExecSequence();
+  bool blocksAndN2Sink(const MachineInstr &MI, Register Dst) const;
+  bool optimizeAndN2WrExecSequence(MachineInstr &CopyToExecInst,
+                                   Register Dst) const;
   void tryRecordVCmpxAndSaveexecSequence(MachineInstr &MI);
   bool optimizeVCMPSaveExecSequence(MachineInstr &SaveExecInstr,
                                     MachineInstr &VCmp) const;
@@ -333,7 +332,11 @@ MachineBasicBlock::reverse_iterator SIOptimizeExecMasking::findExecCopy(
   const unsigned InstLimit = 25;
 
   auto E = MBB.rend();
-  for (unsigned N = 0; N <= InstLimit && I != E; ++I, ++N) {
+  for (unsigned N = 0; N <= InstLimit && I != E; ++I) {
+    if (I->isDebugInstr())
+      continue;
+    ++N;
+
     Register CopyFromExec = isCopyFromExec(*I);
     if (CopyFromExec.isValid())
       return I;
@@ -361,9 +364,7 @@ static bool isLiveOut(const MachineBasicBlock &MBB, unsigned Reg) {
 // registers given in NonModifiableRegs is modified by the current instruction.
 MachineInstr *SIOptimizeExecMasking::findInstrBackwards(
     MachineInstr &Origin, std::function<bool(MachineInstr *)> Pred,
-    ArrayRef<MCRegister> NonModifiableRegs, MachineInstr *Terminator,
-    SmallVectorImpl<MachineOperand *> *KillFlagCandidates,
-    unsigned MaxInstructions) const {
+    ArrayRef<MCRegister> NonModifiableRegs, unsigned MaxInstructions) const {
   MachineBasicBlock::reverse_iterator A = Origin.getReverseIterator(),
                                       E = Origin.getParent()->rend();
   unsigned CurrentIteration = 0;
@@ -378,21 +379,6 @@ MachineInstr *SIOptimizeExecMasking::findInstrBackwards(
     for (MCRegister Reg : NonModifiableRegs) {
       if (A->modifiesRegister(Reg, TRI))
         return nullptr;
-
-      // Check for kills that appear after the terminator instruction, that
-      // would not be detected by clearKillFlags, since they will cause the
-      // register to be dead at a later place, causing the verifier to fail.
-      // We use the candidates to clear the kill flags later.
-      if (Terminator && KillFlagCandidates && A != Terminator &&
-          A->killsRegister(Reg, TRI)) {
-        for (MachineOperand &MO : A->operands()) {
-          if (MO.isReg() && MO.isKill()) {
-            Register Candidate = MO.getReg();
-            if (Candidate != Reg && TRI->regsOverlap(Candidate, Reg))
-              KillFlagCandidates->push_back(&MO);
-          }
-        }
-      }
     }
 
     ++CurrentIteration;
@@ -458,13 +444,14 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
     // can happen if control flow pseudos had their outputs used by phis.
     Register CopyToExec;
 
-    unsigned SearchCount = 0;
-    const unsigned SearchLimit = 5;
-    while (I != E && SearchCount++ < SearchLimit) {
+    for (unsigned SearchCount = 0, SearchLimit = 5;
+         I != E && SearchCount < SearchLimit; ++I) {
+      if (I->isDebugInstr())
+        continue;
+      ++SearchCount;
       CopyToExec = isCopyToExec(*I);
       if (CopyToExec)
         break;
-      ++I;
     }
 
     if (!CopyToExec)
@@ -487,6 +474,8 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
         LLVM_DEBUG(dbgs() << "into: " << *PrepareExecInst << '\n');
 
         CopyToExecInst->eraseFromParent();
+        Changed = true;
+      } else if (optimizeAndN2WrExecSequence(*CopyToExecInst, CopyToExec)) {
         Changed = true;
       }
 
@@ -604,6 +593,84 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
   return Changed;
 }
 
+bool SIOptimizeExecMasking::blocksAndN2Sink(const MachineInstr &MI,
+                                            Register Dst) const {
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg())
+      continue;
+    // Any access to Dst would see a stale value once the def sinks past it,
+    // and a use of SCC would see the s_andn2 result.
+    if (TRI->regsOverlap(MO.getReg(), Dst))
+      return true;
+    if (MO.isUse() && MO.getReg() == AMDGPU::SCC)
+      return true;
+  }
+  return false;
+}
+
+// Fold
+//
+//     sdst = S_ANDN2_B32 ssrc, exec
+//     exec = COPY sdst
+// =>
+//     sdst = S_ANDN2_WREXEC_B32 ssrc
+//
+// The waterfall loop emits the two operations separately so that spill code
+// for sdst can be inserted before exec is narrowed.
+bool SIOptimizeExecMasking::optimizeAndN2WrExecSequence(
+    MachineInstr &CopyToExecInst, Register Dst) const {
+  if (!ST->hasNoSdstCMPX() || TII->pseudoToMCOpcode(LMC.AndN2WrExecOpc) == -1)
+    return false;
+
+  MachineBasicBlock &MBB = *CopyToExecInst.getParent();
+
+  // Keep the fused instruction ahead of any trailing debug instructions, so
+  // DBG_VALUEs of Dst stay after its def.
+  MachineBasicBlock::iterator InsertPt = CopyToExecInst.getIterator();
+  if (InsertPt != MBB.begin())
+    InsertPt = std::next(prev_nodbg(InsertPt, MBB.begin()));
+
+  // Scan back for the s_andn2 computing the new exec value. The scheduler may
+  // have moved it away from the exec write, so allow instructions in between
+  // as long as sinking the s_andn2 past them is safe.
+  auto IsAndN2Def = [&](const MachineInstr &MI) {
+    return MI.getOpcode() == LMC.AndN2Opc && MI.getOperand(0).getReg() == Dst;
+  };
+  MachineInstr *AndN2Inst = findInstrBackwards(
+      CopyToExecInst,
+      [&](MachineInstr *Check) {
+        return IsAndN2Def(*Check) || blocksAndN2Sink(*Check, Dst);
+      },
+      /*NonModifiableRegs=*/{});
+  if (!AndN2Inst || !IsAndN2Def(*AndN2Inst))
+    return false;
+
+  const MachineOperand &Src = AndN2Inst->getOperand(1);
+  const MachineOperand &Mask = AndN2Inst->getOperand(2);
+  if (!Src.isReg() || !Mask.isReg() || Mask.getReg() != LMC.ExecReg)
+    return false;
+
+  for (MachineInstr &MI : make_range(
+           std::next(MachineBasicBlock::iterator(AndN2Inst)), InsertPt)) {
+    if (MI.modifiesRegister(Src.getReg(), TRI))
+      return false;
+  }
+
+  // The fused form also clobbers SCC, at the point the s_andn2 is moved to.
+  if (isRegisterInUseAfter(CopyToExecInst, AMDGPU::SCC))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Fold exec write: " << *AndN2Inst);
+
+  BuildMI(MBB, InsertPt, AndN2Inst->getDebugLoc(), TII->get(LMC.AndN2WrExecOpc),
+          Dst)
+      .addReg(Src.getReg());
+
+  AndN2Inst->eraseFromParent();
+  CopyToExecInst.eraseFromParent();
+  return true;
+}
+
 // Inserts the optimized s_mov_b32 / v_cmpx sequence based on the
 // operands extracted from a v_cmp ..., s_and_saveexec pattern.
 bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
@@ -615,6 +682,19 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
 
   MachineOperand *Src0 = TII->getNamedOperand(VCmp, AMDGPU::OpName::src0);
   MachineOperand *Src1 = TII->getNamedOperand(VCmp, AMDGPU::OpName::src1);
+
+  // Kills of the sources between the v_cmp and the saveexec are no longer
+  // valid once the compare is moved to the saveexec.
+  for (MachineInstr &MI :
+       make_range(std::next(VCmp.getIterator()), SaveExecInstr.getIterator())) {
+    for (MachineOperand &MO : MI.all_uses()) {
+      if (MO.isKill() &&
+          any_of(std::array{Src0, Src1}, [&](const MachineOperand *Src) {
+            return Src->isReg() && TRI->regsOverlap(MO.getReg(), Src->getReg());
+          }))
+        MO.setIsKill(false);
+    }
+  }
 
   Register MoveDest = SaveExecInstr.getOperand(0).getReg();
 
@@ -647,15 +727,6 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
   TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::clamp);
 
   TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::op_sel);
-
-  // The kill flags may no longer be correct.
-  if (Src0->isReg())
-    MRI->clearKillFlags(Src0->getReg());
-  if (Src1->isReg())
-    MRI->clearKillFlags(Src1->getReg());
-
-  for (MachineOperand *MO : KillFlagCandidates)
-    MO->setIsKill(false);
 
   SaveExecInstr.eraseFromParent();
   VCmp.eraseFromParent();
@@ -745,12 +816,10 @@ void SIOptimizeExecMasking::tryRecordVCmpxAndSaveexecSequence(
     NonDefRegs.push_back(Src1->getReg());
 
   if (!findInstrBackwards(
-          MI, [&](MachineInstr *Check) { return Check == VCmp; }, NonDefRegs,
-          VCmp, &KillFlagCandidates))
+          MI, [&](MachineInstr *Check) { return Check == VCmp; }, NonDefRegs))
     return;
 
-  if (VCmp)
-    SaveExecVCmpMapping[&MI] = VCmp;
+  SaveExecVCmpMapping[&MI] = VCmp;
 }
 
 // Record occurences of
@@ -825,7 +894,6 @@ bool SIOptimizeExecMasking::run() {
 
   OrXors.clear();
   SaveExecVCmpMapping.clear();
-  KillFlagCandidates.clear();
   static unsigned SearchWindow = 10;
   for (MachineBasicBlock &MBB : *MF) {
     unsigned SearchCount = 0;

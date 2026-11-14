@@ -6,15 +6,24 @@
 define amdgpu_kernel void @fence_barrier_latency_test(ptr addrspace(1) %global_ptr, i32 %offset, <8 x i32> %tdesc, <4 x i32> %src_desc) #0 {
 ; CHECK-LABEL: fence_barrier_latency_test:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-NEXT:    s_mov_b64 s[64:65], 0
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_IB_STS2, 21, 4)
+; CHECK-NEXT:    s_mov_b32 s1, 0xffff0000
+; CHECK-NEXT:    s_cmp_eq_u32 s0, 15
+; CHECK-NEXT:    s_cselect_b32 s6, s1, 0xffff7fff
 ; CHECK-NEXT:    s_clause 0x2
-; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x40 nv
 ; CHECK-NEXT:    s_load_b96 s[16:18], s[4:5], 0x0 nv
 ; CHECK-NEXT:    s_load_b256 s[8:15], s[4:5], 0x20 nv
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x40 nv
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v28, s18
+; CHECK-NEXT:    s_and_b32 s5, s8, 0xffff
+; CHECK-NEXT:    s_and_b32 s4, s6, s8
+; CHECK-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; CHECK-NEXT:    s_cselect_b32 s8, s4, s8
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1

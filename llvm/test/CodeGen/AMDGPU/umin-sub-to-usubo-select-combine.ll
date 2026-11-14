@@ -101,8 +101,8 @@ define i64 @v_underflow_compare_fold_i64(i64 %a, i64 %b) #0 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_co_ci_u32_e64 v3, null, v1, v3, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[2:3], v[0:1]
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v2 :: v_dual_cndmask_b32 v1, v1, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -126,8 +126,8 @@ define i64 @v_underflow_compare_fold_i64_commute(i64 %a, i64 %b) #0 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_co_ci_u32_e64 v3, null, v1, v3, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -153,8 +153,8 @@ define i64 @v_underflow_compare_fold_i64_multi_use(i64 %a, i64 %b, ptr addrspace
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_co_ci_u32_e64 v3, null, v1, v3, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[2:3], v[0:1]
 ; GFX11-NEXT:    global_store_b64 v[4:5], v[2:3], off
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v2 :: v_dual_cndmask_b32 v1, v1, v3
@@ -213,7 +213,7 @@ define amdgpu_ps i64 @s_underflow_compare_fold_i64(i64 inreg %a, i64 inreg %b) #
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[0:1]
-; GFX9-NEXT:    s_and_b64 s[4:5], vcc, exec
+; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-NEXT:    s_cselect_b32 s1, s3, s1
 ; GFX9-NEXT:    s_cselect_b32 s0, s2, s0
 ; GFX9-NEXT:    ; return to shader part epilog
@@ -224,7 +224,7 @@ define amdgpu_ps i64 @s_underflow_compare_fold_i64(i64 inreg %a, i64 inreg %b) #
 ; GFX11-NEXT:    s_subb_u32 s3, s1, s3
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cmp_lt_u64_e64 s4, s[2:3], s[0:1]
-; GFX11-NEXT:    s_and_b32 s4, s4, exec_lo
+; GFX11-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX11-NEXT:    s_cselect_b32 s0, s2, s0
 ; GFX11-NEXT:    s_cselect_b32 s1, s3, s1
 ; GFX11-NEXT:    ; return to shader part epilog

@@ -1,0 +1,5 @@
+Name: RedeclAnnotation
+Functions:
+- Name: redeclaredAfterDefinition
+  Availability: none
+  AvailabilityMsg: not available

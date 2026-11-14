@@ -28,9 +28,9 @@
 ;;	return result;
 ;;}
 
-; CHECK:      "#source variables with location": 10,
-; CHECK:      "#variables with 0% of parent scope covered by DW_AT_location": 1,
-; CHECK:      "#params with 0% of parent scope covered by DW_AT_location": 1,
+; CHECK:      "#source variables with location": 9,
+; CHECK:      "#variables with 0% of parent scope covered by DW_AT_location": 2,
+; CHECK:      "#params with 0% of parent scope covered by DW_AT_location": 2,
 
 ; ModuleID = 'linked.ll'
 source_filename = "llvm-link"

@@ -1,0 +1,123 @@
+# RUN: not llc -mtriple=bpfel -mcpu=v3 -run-pass=bpf-mi-checking %s -o /dev/null 2>&1 | FileCheck %s
+#
+# The locked atomic insns do not return the old value, so a live result is a
+# selection error. Check that BPFMIChecking reports it for every such insn.
+
+# CHECK: in function xaddw {{.*}}: Invalid usage of the XADD return value
+# CHECK: in function xaddd {{.*}}: Invalid usage of the XADD return value
+# CHECK: in function xandd {{.*}}: Invalid usage of the XADD return value
+# CHECK: in function xord {{.*}}: Invalid usage of the XADD return value
+# CHECK: in function xxord {{.*}}: Invalid usage of the XADD return value
+# CHECK: in function xaddw32 {{.*}}: Invalid usage of the XADD return value
+# CHECK: in function xandw32 {{.*}}: Invalid usage of the XADD return value
+# CHECK: in function xorw32 {{.*}}: Invalid usage of the XADD return value
+# CHECK: in function xxorw32 {{.*}}: Invalid usage of the XADD return value
+
+---
+name: xaddw
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r1' }
+body: |
+  bb.0:
+    liveins: $r1
+    $r0 = MOV_ri 10
+    $r0 = XADDW killed $r1, 0, killed $r0
+    RET implicit $r0
+...
+---
+name: xaddd
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r1' }
+body: |
+  bb.0:
+    liveins: $r1
+    $r0 = MOV_ri 10
+    $r0 = XADDD killed $r1, 0, killed $r0
+    RET implicit $r0
+...
+---
+name: xandd
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r1' }
+body: |
+  bb.0:
+    liveins: $r1
+    $r0 = MOV_ri 10
+    $r0 = XANDD killed $r1, 0, killed $r0
+    RET implicit $r0
+...
+---
+name: xord
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r1' }
+body: |
+  bb.0:
+    liveins: $r1
+    $r0 = MOV_ri 10
+    $r0 = XORD killed $r1, 0, killed $r0
+    RET implicit $r0
+...
+---
+name: xxord
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r1' }
+body: |
+  bb.0:
+    liveins: $r1
+    $r0 = MOV_ri 10
+    $r0 = XXORD killed $r1, 0, killed $r0
+    RET implicit $r0
+...
+---
+name: xaddw32
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r1' }
+body: |
+  bb.0:
+    liveins: $r1
+    $w0 = MOV_ri_32 10
+    $w0 = XADDW32 killed $r1, 0, killed $w0
+    RET implicit $w0
+...
+---
+name: xandw32
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r1' }
+body: |
+  bb.0:
+    liveins: $r1
+    $w0 = MOV_ri_32 10
+    $w0 = XANDW32 killed $r1, 0, killed $w0
+    RET implicit $w0
+...
+---
+name: xorw32
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r1' }
+body: |
+  bb.0:
+    liveins: $r1
+    $w0 = MOV_ri_32 10
+    $w0 = XORW32 killed $r1, 0, killed $w0
+    RET implicit $w0
+...
+---
+name: xxorw32
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r1' }
+body: |
+  bb.0:
+    liveins: $r1
+    $w0 = MOV_ri_32 10
+    $w0 = XXORW32 killed $r1, 0, killed $w0
+    RET implicit $w0
+...

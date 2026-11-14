@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -203,7 +202,6 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
 
     // Propagate SrcReg of copies to MI.
     MO.setReg(SrcReg);
-    MRI->clearKillFlags(SrcReg);
     // Coalesce single use copies.
     if (OnlyOneUse) {
       // If (and only if) we've eliminated all uses of the copy, also
@@ -257,7 +255,8 @@ bool MachineCSEImpl::isPhysDefTriviallyDead(
 }
 
 static bool isCallerPreservedOrConstPhysReg(MCRegister Reg,
-                                            const MachineOperand &MO,
+                                            const MachineInstr &MI,
+                                            unsigned OpIdx,
                                             const MachineFunction &MF,
                                             const TargetRegisterInfo &TRI,
                                             const TargetInstrInfo &TII) {
@@ -269,7 +268,8 @@ static bool isCallerPreservedOrConstPhysReg(MCRegister Reg,
   // It does cause issues mid-GlobalISel, however, hence the additional
   // reservedRegsFrozen check.
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  return TRI.isCallerPreservedPhysReg(Reg, MF) || TII.isIgnorableUse(MO) ||
+  return TRI.isCallerPreservedPhysReg(Reg, MF) ||
+         TII.isIgnorableUse(MI, OpIdx) ||
          (MRI.reservedRegsFrozen() && MRI.isConstantPhysReg(Reg));
 }
 
@@ -290,8 +290,9 @@ bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
     if (Reg.isVirtual())
       continue;
     // Reading either caller preserved or constant physregs is ok.
-    if (!isCallerPreservedOrConstPhysReg(Reg.asMCReg(), MO, *MI->getMF(), *TRI,
-                                         *TII))
+    if (!isCallerPreservedOrConstPhysReg(Reg.asMCReg(), *MI,
+                                         MI->getOperandNo(&MO), *MI->getMF(),
+                                         *TRI, *TII))
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
         PhysRefs.insert(*AI);
   }
@@ -673,9 +674,7 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
         MachineInstr *Def = MRI->getUniqueVRegDef(NewReg);
         assert(Def != nullptr && "CSEd register has no unique definition?");
         Def->clearRegisterDeads(NewReg);
-        // Replace with NewReg and clear kill flags which may be wrong now.
         MRI->replaceRegWith(OldReg, NewReg);
-        MRI->clearKillFlags(NewReg);
       }
 
       // Go through implicit defs of CSMI and MI, if a def is not dead at MI,

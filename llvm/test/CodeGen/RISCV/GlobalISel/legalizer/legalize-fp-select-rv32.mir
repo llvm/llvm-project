@@ -4,7 +4,6 @@
 
 ---
 name:            select_f64
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10, $f10_d, $f11_d

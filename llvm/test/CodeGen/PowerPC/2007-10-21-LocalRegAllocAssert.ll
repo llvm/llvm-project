@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -regalloc=fast -optimize-regalloc=0 -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -regalloc=fast -relocation-model=pic | FileCheck %s
 
 	%struct.NSError = type opaque
 	%struct.NSManagedObjectContext = type opaque

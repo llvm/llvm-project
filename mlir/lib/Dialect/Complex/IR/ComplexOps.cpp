@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
 
@@ -252,14 +251,23 @@ void ReOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
   // complex.add(complex.sub(a, b), b) -> a
-  if (auto sub = getLhs().getDefiningOp<SubOp>())
-    if (getRhs() == sub.getRhs())
-      return sub.getLhs();
-
   // complex.add(b, complex.sub(a, b)) -> a
-  if (auto sub = getRhs().getDefiningOp<SubOp>())
-    if (getLhs() == sub.getRhs())
-      return sub.getLhs();
+  // The intermediate result is rounded, so both ops need `reassoc`, and
+  // (-0.0 - b) + b is +0.0, so the add also needs `nsz`.
+  if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::reassoc |
+                                                   arith::FastMathFlags::nsz)) {
+    if (auto sub = getLhs().getDefiningOp<SubOp>())
+      if (getRhs() == sub.getRhs() &&
+          arith::bitEnumContainsAll(sub.getFastmath(),
+                                    arith::FastMathFlags::reassoc))
+        return sub.getLhs();
+
+    if (auto sub = getRhs().getDefiningOp<SubOp>())
+      if (getLhs() == sub.getRhs() &&
+          arith::bitEnumContainsAll(sub.getFastmath(),
+                                    arith::FastMathFlags::reassoc))
+        return sub.getLhs();
+  }
 
   // complex.add(a, complex.constant<-0.0, -0.0>) -> a
   if (auto constantOp = getRhs().getDefiningOp<ConstantOp>()) {
@@ -279,9 +287,15 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
   // complex.sub(complex.add(a, b), b) -> a
-  if (auto add = getLhs().getDefiningOp<AddOp>())
-    if (getRhs() == add.getRhs())
-      return add.getLhs();
+  // The intermediate result is rounded, so both ops need `reassoc`, and
+  // (-0.0 + b) - b is +0.0, so the sub also needs `nsz`.
+  if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::reassoc |
+                                                   arith::FastMathFlags::nsz))
+    if (auto add = getLhs().getDefiningOp<AddOp>())
+      if (getRhs() == add.getRhs() &&
+          arith::bitEnumContainsAll(add.getFastmath(),
+                                    arith::FastMathFlags::reassoc))
+        return add.getLhs();
 
   // complex.sub(a, complex.constant<0.0, 0.0>) -> a
   if (auto constantOp = getRhs().getDefiningOp<ConstantOp>()) {
@@ -308,25 +322,21 @@ OpFoldResult NegOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
-// LogOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult LogOp::fold(FoldAdaptor adaptor) {
-  // complex.log(complex.exp(a)) -> a
-  if (auto expOp = getOperand().getDefiningOp<ExpOp>())
-    return expOp.getOperand();
-
-  return {};
-}
-
-//===----------------------------------------------------------------------===//
 // ExpOp
 //===----------------------------------------------------------------------===//
 
 OpFoldResult ExpOp::fold(FoldAdaptor adaptor) {
   // complex.exp(complex.log(a)) -> a
-  if (auto logOp = getOperand().getDefiningOp<LogOp>())
-    return logOp.getOperand();
+  // exp(log(a)) is only an approximation of a, so both ops need `reassoc`.
+  // log(a) is not finite for a zero or non-finite a, so the log also needs
+  // `nnan` and `ninf`.
+  if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::reassoc))
+    if (auto logOp = getOperand().getDefiningOp<LogOp>())
+      if (arith::bitEnumContainsAll(logOp.getFastmath(),
+                                    arith::FastMathFlags::reassoc |
+                                        arith::FastMathFlags::nnan |
+                                        arith::FastMathFlags::ninf))
+        return logOp.getOperand();
 
   return {};
 }

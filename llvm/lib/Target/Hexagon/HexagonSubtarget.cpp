@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -184,6 +185,34 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   return *this;
 }
 
+void HexagonSubtarget::initLibcallLoweringInfo(
+    LibcallLoweringInfo &Info) const {
+  // The generic arithmetic/division helper routines (__adddf3, __divsi3, ...)
+  // exist in Hexagon's compiler-rt alongside the preferred __hexagon_*
+  // variants, so both are available. The __hexagon_* variant is the one that
+  // must be used; select it explicitly here.
+  static const struct {
+    const RTLIB::Libcall Op;
+    const RTLIB::LibcallImpl Impl;
+  } LibraryCalls[] = {
+      {RTLIB::SDIV_I32, RTLIB::impl___hexagon_divsi3},
+      {RTLIB::SDIV_I64, RTLIB::impl___hexagon_divdi3},
+      {RTLIB::UDIV_I32, RTLIB::impl___hexagon_udivsi3},
+      {RTLIB::UDIV_I64, RTLIB::impl___hexagon_udivdi3},
+      {RTLIB::SREM_I32, RTLIB::impl___hexagon_modsi3},
+      {RTLIB::SREM_I64, RTLIB::impl___hexagon_moddi3},
+      {RTLIB::UREM_I32, RTLIB::impl___hexagon_umodsi3},
+      {RTLIB::UREM_I64, RTLIB::impl___hexagon_umoddi3},
+      {RTLIB::ADD_F64, RTLIB::impl___hexagon_adddf3},
+      {RTLIB::SUB_F64, RTLIB::impl___hexagon_subdf3},
+      {RTLIB::MUL_F64, RTLIB::impl___hexagon_muldf3},
+      {RTLIB::DIV_F64, RTLIB::impl___hexagon_divdf3},
+      {RTLIB::DIV_F32, RTLIB::impl___hexagon_divsf3},
+  };
+  for (const auto &LC : LibraryCalls)
+    Info.setLibcallImpl(LC.Op, LC.Impl);
+}
+
 bool HexagonSubtarget::isHVXElementType(MVT Ty, bool IncludeBool) const {
   if (!useHVXOps())
     return false;
@@ -226,6 +255,9 @@ bool HexagonSubtarget::isHVXVectorType(EVT VecTy, bool IncludeBool) const {
 bool HexagonSubtarget::isTypeForHVX(Type *VecTy, bool IncludeBool) const {
   if (!VecTy->isVectorTy() || isa<ScalableVectorType>(VecTy))
     return false;
+  // HLX types have their own legalization path and never go through HVX.
+  if (useHLXOps() && isTypeForHLX(VecTy))
+    return false;
   // Avoid types like <2 x i32*>.
   Type *ScalTy = VecTy->getScalarType();
   if (!ScalTy->isIntegerTy() &&
@@ -251,6 +283,65 @@ bool HexagonSubtarget::isTypeForHVX(Type *VecTy, bool IncludeBool) const {
   while (VecLen > 1) {
     MVT SimpleTy = MVT::getVectorVT(ElemTy, VecLen);
     if (SimpleTy.isValid() && isHvxTy(SimpleTy))
+      return true;
+    VecLen /= 2;
+  }
+
+  return false;
+}
+
+bool HexagonSubtarget::isHLXElementType(MVT Ty) const {
+  if (!useHLXOps())
+    return false;
+  if (Ty.isVector())
+    Ty = Ty.getVectorElementType();
+  ArrayRef<MVT> ElemTypes = getHLXElementTypes();
+  return llvm::is_contained(ElemTypes, Ty);
+}
+
+bool HexagonSubtarget::isHLXVectorType(EVT VecTy) const {
+  if (!VecTy.isSimple())
+    return false;
+  if (!VecTy.isVector() || !useHLXOps() || VecTy.isScalableVector())
+    return false;
+  MVT ElemTy = VecTy.getSimpleVT().getVectorElementType();
+
+  unsigned HwLen = getHLXVectorLength();
+  ArrayRef<MVT> ElemTypes = getHLXElementTypes();
+
+  unsigned VecWidth = VecTy.getSizeInBits();
+  if (VecWidth != 8 * HwLen && VecWidth != 16 * HwLen)
+    return false;
+  return llvm::is_contained(ElemTypes, ElemTy);
+}
+
+bool HexagonSubtarget::isTypeForHLX(Type *VecTy) const {
+  if (!VecTy->isVectorTy() || isa<ScalableVectorType>(VecTy))
+    return false;
+  // Avoid types like <2 x i32*>.
+  Type *ScalTy = VecTy->getScalarType();
+  if (!ScalTy->isIntegerTy() && !ScalTy->isFloatingPointTy())
+    return false;
+  // The given type may be something like <17 x i32>, which is not MVT,
+  // but can be represented as (non-simple) EVT.
+  EVT Ty = EVT::getEVT(VecTy, /*HandleUnknown*/ false);
+  if (!Ty.getVectorElementType().isSimple())
+    return false;
+
+  auto isHLXTy = [this](MVT SimpleTy) {
+    if (isHLXVectorType(SimpleTy))
+      return true;
+    // No widening for now
+    return false;
+  };
+
+  // Round up EVT to have power-of-2 elements, and keep checking if it
+  // qualifies for HLX, dividing it in half after each step.
+  MVT ElemTy = Ty.getVectorElementType().getSimpleVT();
+  unsigned VecLen = PowerOf2Ceil(Ty.getVectorNumElements());
+  while (VecLen > 1) {
+    MVT SimpleTy = MVT::getVectorVT(ElemTy, VecLen);
+    if (SimpleTy.isValid() && isHLXTy(SimpleTy))
       return true;
     VecLen /= 2;
   }
@@ -440,6 +531,38 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
   }
 }
 
+void HexagonSubtarget::HLXPseudoMutation::apply(ScheduleDAGInstrs *DAG) {
+  const auto &HII = static_cast<const HexagonInstrInfo &>(*DAG->TII);
+  const auto &HST = DAG->MF.getSubtarget<HexagonSubtarget>();
+  if (!HST.useHLXOps())
+    return;
+
+  auto setLatency = [](SUnit &From, SUnit &To) {
+    for (SDep &Dep : From.Succs)
+      if (Dep.getSUnit() == &To && Dep.getKind() == SDep::Data)
+        Dep.setLatency(0);
+    for (SDep &Dep : To.Preds)
+      if (Dep.getSUnit() == &From && Dep.getKind() == SDep::Data)
+        Dep.setLatency(0);
+  };
+
+  for (SUnit &SU : DAG->SUnits) {
+    if (!SU.isInstr())
+      continue;
+
+    MachineInstr &MI = *SU.getInstr();
+    if (HII.isTmpLoadPseudo(MI)) {
+      for (SDep &Dep : SU.Succs)
+        if (Dep.getKind() == SDep::Data)
+          setLatency(SU, *Dep.getSUnit());
+    } else if (HII.isNewStorePseudo(MI)) {
+      for (SDep &Dep : SU.Preds)
+        if (Dep.getKind() == SDep::Data)
+          setLatency(*Dep.getSUnit(), SU);
+    }
+  }
+}
+
 /// Enable use of alias analysis during code generation (during MI
 /// scheduling, DAGCombine, etc.).
 bool HexagonSubtarget::useAA() const {
@@ -532,6 +655,7 @@ void HexagonSubtarget::getPostRAMutations(
   Mutations.push_back(std::make_unique<UsrOverflowMutation>());
   Mutations.push_back(std::make_unique<HVXMemLatencyMutation>());
   Mutations.push_back(std::make_unique<BankConflictMutation>());
+  Mutations.push_back(std::make_unique<HLXPseudoMutation>());
 }
 
 void HexagonSubtarget::getSMSMutations(

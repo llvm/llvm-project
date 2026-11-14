@@ -27,6 +27,8 @@ struct Derived : public Base_1, Base_2 {
 
 Base *MakeADerivedReportABase() { return (Base *)((Base_1 *)new Derived()); }
 
+Base *ReportABase(Base *input) { return input; }
+
 int main() {
   Derived my_derived;
   int call_it = my_derived.method_of_derived();
@@ -40,6 +42,7 @@ int main() {
 
   // Call this to make sure the compiler makes it.
   Base *fake_base = MakeADerivedReportABase();
+  Base *reported_base = ReportABase(fake_base);
 
   uint64_t base_through_1_addr = (uint64_t)base_through_1;
   uint64_t base_through_2_addr = (uint64_t)base_through_2;

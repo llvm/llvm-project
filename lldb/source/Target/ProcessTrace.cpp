@@ -13,7 +13,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Target/ABI.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -93,14 +92,9 @@ void ProcessTrace::RefreshStateAfterStop() {}
 
 Status ProcessTrace::DoDestroy() { return Status(); }
 
-size_t ProcessTrace::ReadMemory(addr_t addr, void *buf, size_t size,
-                                Status &error) {
-  if (const ABISP &abi = GetABI())
-    addr = abi->FixAnyAddress(addr);
-
-  // Don't allow the caching that lldb_private::Process::ReadMemory does since
-  // we have it all cached in the trace files.
-  return DoReadMemory(addr, buf, size, error);
+bool ProcessTrace::ShouldUseMemoryCache(const ProcessAddress &process_addr) {
+  // The trace files are already a local copy of this memory.
+  return false;
 }
 
 void ProcessTrace::Clear() { m_thread_list.Clear(); }
@@ -127,8 +121,9 @@ bool ProcessTrace::GetProcessInfo(ProcessInstanceInfo &info) {
   return true;
 }
 
-size_t ProcessTrace::DoReadMemory(addr_t addr, void *buf, size_t size,
-                                  Status &error) {
+size_t ProcessTrace::DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                                  size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   Address resolved_address;
   GetTarget().ResolveLoadAddress(addr, resolved_address);
 

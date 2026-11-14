@@ -266,6 +266,7 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
     MachineIRBuilder &MIRBuilder,
     std::function<MachineInstr *(MachineIRBuilder &)> Op) {
   auto oldInsertPoint = MIRBuilder.getInsertPt();
+  assert(oldInsertPoint.isValid() && "Builder must have insertion point set!");
   MachineBasicBlock *OldMBB = &MIRBuilder.getMBB();
   MachineBasicBlock *NewMBB = &*MIRBuilder.getMF().begin();
 
@@ -313,11 +314,9 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
   return ConstOrType;
 }
 
-SPIRVTypeInst
-SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
-                                     MachineIRBuilder &MIRBuilder) {
-  assert(NumElems >= 2 && "SPIR-V OpTypeVector requires at least 2 components");
-
+SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVectorImpl(
+    uint32_t NumElems, SPIRVTypeInst ElemType, MachineIRBuilder &MIRBuilder,
+    bool IsLongVectorEXT) {
   if (ElemType.isPointer()) {
     if (!cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
              .canUseExtension(
@@ -338,11 +337,35 @@ SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
 
   return createConstOrTypeAtFunctionEntry(
       MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        return MIRBuilder.buildInstr(SPIRV::OpTypeVector)
-            .addDef(createTypeVReg(MIRBuilder))
-            .addUse(getSPIRVTypeID(ElemType))
-            .addImm(NumElems);
+        unsigned Op =
+            IsLongVectorEXT ? SPIRV::OpTypeVectorIdEXT : SPIRV::OpTypeVector;
+        Register VTy = createTypeVReg(MIRBuilder);
+        Register Ty = getSPIRVTypeID(ElemType);
+        auto MIB = MIRBuilder.buildInstr(Op).addDef(VTy).addUse(Ty);
+        if (!IsLongVectorEXT)
+          return MIB.addImm(NumElems);
+
+        const auto &ST = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
+        SPIRVTypeInst Int32Ty = getOrCreateSPIRVIntegerType(32, MIRBuilder);
+        return MIB.addUse(getOrCreateConstInt(NumElems, *MIB.getInstr(),
+                                              Int32Ty, *ST.getInstrInfo()));
       });
+}
+
+SPIRVTypeInst
+SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
+                                     MachineIRBuilder &MIRBuilder) {
+  assert(NumElems >= 2 && "SPIR-V OpTypeVector requires at least 2 components");
+  return getOpTypeVectorImpl(NumElems, ElemType, MIRBuilder);
+}
+
+SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVectorIdEXT(
+    uint32_t NumElems, SPIRVTypeInst ElemType, MachineIRBuilder &MIRBuilder) {
+  assert(NumElems != 2 && NumElems != 3 && NumElems != 4 &&
+         (!MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>().isKernel() ||
+          (NumElems != 8 && NumElems != 16)) &&
+         "SPIR-V OpTypeVectorIdExt should only be used for extended vectors");
+  return getOpTypeVectorImpl(NumElems, ElemType, MIRBuilder, true);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateConstFP(APFloat Val, MachineInstr &I,
@@ -538,8 +561,7 @@ Register SPIRVGlobalRegistry::getOrCreateBaseRegister(
     Constant *Val, MachineInstr &I, SPIRVTypeInst SpvType,
     const SPIRVInstrInfo &TII, unsigned BitWidth, bool ZeroAsNull) {
   SPIRVTypeInst Type = SpvType;
-  if (SpvType->getOpcode() == SPIRV::OpTypeVector ||
-      SpvType->getOpcode() == SPIRV::OpTypeArray) {
+  if (isVectorType(SpvType) || SpvType->getOpcode() == SPIRV::OpTypeArray) {
     auto EleTypeReg = SpvType->getOperand(1).getReg();
     Type = getSPIRVTypeForVReg(EleTypeReg);
   }
@@ -615,9 +637,23 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(const APInt &Val,
          "Expected vector type for constant vector creation");
   const FixedVectorType *LLVMVecTy = cast<FixedVectorType>(LLVMTy);
   Type *LLVMBaseTy = LLVMVecTy->getElementType();
-  assert(LLVMBaseTy->isIntegerTy() &&
-         "Expected integer element type for APInt constant vector");
-  auto *ConstVal = cast<ConstantInt>(ConstantInt::get(LLVMBaseTy, Val));
+  [[maybe_unused]] const auto &ST = I.getMF()->getSubtarget<SPIRVSubtarget>();
+  assert((LLVMBaseTy->isIntegerTy() ||
+          (LLVMBaseTy->isPointerTy() &&
+           ST.canUseExtension(
+               SPIRV::Extension::SPV_INTEL_masked_gather_scatter))) &&
+         "Expected either integer element type for APInt constant vector or "
+         "pointer type if the SPV_INTEL_masked_gather_scatter extension is "
+         "enabled!");
+  Constant *ConstVal = nullptr;
+  if (LLVMBaseTy->isIntegerTy()) {
+    ConstVal = ConstantInt::get(LLVMBaseTy, Val);
+  } else {
+    if (Val.isZero())
+      ConstVal = ConstantPointerNull::get(LLVMBaseTy);
+    else
+      llvm_unreachable("Vectors of non-null constant pointers unimplemented!");
+  }
   auto *ConstVec =
       ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
@@ -1144,9 +1180,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::findSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual,
     bool ExplicitLayoutRequired, bool EmitIR) {
-  // Treat <1 x T> as T.
+  const auto &STI = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
+  // Treat <1 x T> as T if the SPV_EXT_long_vector extension is not available.
   if (auto *FVT = dyn_cast<FixedVectorType>(Ty);
-      FVT && FVT->getNumElements() == 1)
+      FVT && FVT->getNumElements() == 1 &&
+      !STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
     return findSPIRVType(FVT->getElementType(), MIRBuilder, AccQual,
                          ExplicitLayoutRequired, EmitIR);
   Ty = adjustIntTypeByWidth(Ty);
@@ -1221,8 +1259,12 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
     SPIRVTypeInst El =
         findSPIRVType(cast<FixedVectorType>(Ty)->getElementType(), MIRBuilder,
                       AccQual, ExplicitLayoutRequired, EmitIR);
-    return getOpTypeVector(cast<FixedVectorType>(Ty)->getNumElements(), El,
-                           MIRBuilder);
+    unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
+    const auto &STI = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
+    if (isLongVectorEXT(Ty, STI.isKernel()) &&
+        STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
+      return getOpTypeVectorIdEXT(NumElts, El, MIRBuilder);
+    return getOpTypeVector(NumElts, El, MIRBuilder);
   }
   if (Ty->isArrayTy()) {
     SPIRVTypeInst El = findSPIRVType(Ty->getArrayElementType(), MIRBuilder,
@@ -1306,6 +1348,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::restOfCreateSPIRVType(
   SPIRVToLLVMType[SpirvType] = unifyPtrType(Ty);
 
   if (SpirvType->getOpcode() == SPIRV::OpTypeForwardPointer ||
+      SpirvType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR ||
       findMI(Ty, false, &MIRBuilder.getMF()) || isSpecialOpaqueType(Ty))
     return SpirvType;
 
@@ -1347,9 +1390,12 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual,
     bool ExplicitLayoutRequired, bool EmitIR) {
-  // SPIR-V doesn't support single-element vectors. Treat <1 x T> as T.
+  // SPIR-V doesn't support single-element vectors. Treat <1 x T> as T if the
+  // SPV_EXT_long_vector extension is not available.
+  const auto &STI = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
   if (auto *FVT = dyn_cast<FixedVectorType>(Ty);
-      FVT && FVT->getNumElements() == 1)
+      FVT && FVT->getNumElements() == 1 &&
+      !STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
     return getOrCreateSPIRVType(FVT->getElementType(), MIRBuilder, AccessQual,
                                 ExplicitLayoutRequired, EmitIR);
   const MachineFunction *MF = &MIRBuilder.getMF();
@@ -1403,12 +1449,11 @@ bool SPIRVGlobalRegistry::isScalarOrVectorOfType(Register VReg,
   assert(Type && "isScalarOrVectorOfType VReg has no type assigned");
   if (Type->getOpcode() == TypeOpcode)
     return true;
-  if (Type->getOpcode() == SPIRV::OpTypeVector) {
-    Register ScalarTypeVReg = Type->getOperand(1).getReg();
-    SPIRVTypeInst ScalarType = getSPIRVTypeForVReg(ScalarTypeVReg);
-    return ScalarType->getOpcode() == TypeOpcode;
-  }
-  return false;
+  if (!isVectorType(Type))
+    return false;
+  Register ScalarTypeVReg = Type->getOperand(1).getReg();
+  SPIRVTypeInst ScalarType = getSPIRVTypeForVReg(ScalarTypeVReg);
+  return ScalarType->getOpcode() == TypeOpcode;
 }
 
 bool SPIRVGlobalRegistry::isResourceType(SPIRVTypeInst Type) const {
@@ -1418,7 +1463,7 @@ bool SPIRVGlobalRegistry::isResourceType(SPIRVTypeInst Type) const {
   case SPIRV::OpTypeSampledImage:
     return true;
   case SPIRV::OpTypeStruct:
-    return hasBlockDecoration(Type);
+    return BlockDecoratedTypes.contains(Type);
   default:
     return false;
   }
@@ -1433,18 +1478,19 @@ unsigned
 SPIRVGlobalRegistry::getScalarOrVectorComponentCount(SPIRVTypeInst Type) const {
   if (!Type)
     return 0;
-  return Type->getOpcode() == SPIRV::OpTypeVector
-             ? static_cast<unsigned>(Type->getOperand(2).getImm())
-             : 1;
+  if (isVectorType(Type))
+    return (Type->getOpcode() == SPIRV::OpTypeVector)
+               ? static_cast<unsigned>(Type->getOperand(2).getImm())
+               : foldImm(Type->getOperand(2), &CurMF->getRegInfo());
+  return 1;
 }
 
 SPIRVTypeInst
 SPIRVGlobalRegistry::getScalarOrVectorComponentType(SPIRVTypeInst Type) const {
   if (!Type)
     return nullptr;
-  Register ScalarReg = Type->getOpcode() == SPIRV::OpTypeVector
-                           ? Type->getOperand(1).getReg()
-                           : Type->getOperand(0).getReg();
+  Register ScalarReg = (isVectorType(Type)) ? Type->getOperand(1).getReg()
+                                            : Type->getOperand(0).getReg();
   SPIRVTypeInst ScalarType = getSPIRVTypeForVReg(ScalarReg);
   assert(isScalarOrVectorOfType(Type->getOperand(0).getReg(),
                                 ScalarType->getOpcode()));
@@ -1460,7 +1506,10 @@ SPIRVGlobalRegistry::getScalarOrVectorBitWidth(SPIRVTypeInst Type) const {
     return ScalarType->getOperand(1).getImm();
   if (ScalarType->getOpcode() == SPIRV::OpTypeBool)
     return 1;
-  llvm_unreachable("Attempting to get bit width of non-integer/float type.");
+  if (ScalarType->getOpcode() == SPIRV::OpTypePointer)
+    return getPointerSize(); // TODO: does not work for different per AS sizes.
+  llvm_unreachable(
+      "Attempting to get bit width of non-integer/float/pointer type.");
 }
 
 unsigned SPIRVGlobalRegistry::getNumScalarOrVectorTotalBitWidth(
@@ -1558,6 +1607,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateVulkanBufferType(
 
   buildOpDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
                   SPIRV::Decoration::Block, {});
+  BlockDecoratedTypes.insert(BlockType);
 
   if (!IsWritable) {
     buildOpMemberDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
@@ -1598,6 +1648,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateVulkanPushConstantType(
 
   buildOpDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
                   SPIRV::Decoration::Block, {});
+  BlockDecoratedTypes.insert(BlockType);
   SPIRVTypeInst R = BlockType;
   add(Key, R);
   return R;
@@ -1981,9 +2032,12 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
     SPIRVTypeInst BaseType, unsigned NumElements, MachineInstr &I,
     const SPIRVInstrInfo &TII) {
-  // At this point of time all 1-element vectors are resolved. Add assertion
-  // to fire if anything changes.
-  assert(NumElements >= 2 && "SPIR-V vectors must have at least 2 components");
+  const auto &STI = I.getMF()->getSubtarget<SPIRVSubtarget>();
+  if (!STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
+    // At this point of time all 1-element vectors are resolved. Add assertion
+    // to fire if anything changes.
+    assert(NumElements >= 2 &&
+           "SPIR-V vectors must have at least 2 components");
   Type *Ty = FixedVectorType::get(
       const_cast<Type *>(getTypeForSPIRVType(BaseType)), NumElements);
   if (const MachineInstr *MI = findMI(Ty, false, CurMF))
@@ -1993,11 +2047,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
   MachineIRBuilder MIRBuilder(*DepMI->getParent(), DepMI->getIterator());
   const MachineInstr *NewMI = createConstOrTypeAtFunctionEntry(
       MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        return BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
-                       MIRBuilder.getDL(), TII.get(SPIRV::OpTypeVector))
-            .addDef(createTypeVReg(CurMF->getRegInfo()))
-            .addUse(getSPIRVTypeID(BaseType))
-            .addImm(NumElements);
+        // TODO: consider adding non-const accessors to SPIRVTypeInst, which
+        //       would remove the need for the gash casting here.
+        return const_cast<MachineInstr *>(
+            static_cast<const MachineInstr *>(getOpTypeVectorImpl(
+                NumElements, BaseType, MIRBuilder, isLongVectorEXT(Ty))));
       });
   add(Ty, false, NewMI);
   return finishCreatingSPIRVType(Ty, NewMI);
@@ -2149,13 +2203,15 @@ SPIRVGlobalRegistry::getRegClass(SPIRVTypeInst SpvType) const {
   case SPIRV::OpTypeFloat:
     return &SPIRV::fIDRegClass;
   case SPIRV::OpTypePointer:
+  case SPIRV::OpTypeUntypedPointerKHR:
     return &SPIRV::pIDRegClass;
-  case SPIRV::OpTypeVector: {
+  case SPIRV::OpTypeVector:
+  case SPIRV::OpTypeVectorIdEXT: {
     SPIRVTypeInst ElemType = getScalarOrVectorComponentType(SpvType);
     unsigned ElemOpcode = ElemType ? ElemType->getOpcode() : 0;
     if (ElemOpcode == SPIRV::OpTypeFloat)
       return &SPIRV::vfIDRegClass;
-    if (ElemOpcode == SPIRV::OpTypePointer)
+    if (ElemType && ElemType.isPointer())
       return &SPIRV::vpIDRegClass;
     return &SPIRV::viIDRegClass;
   }
@@ -2179,7 +2235,8 @@ LLT SPIRVGlobalRegistry::getRegType(SPIRVTypeInst SpvType) const {
   case SPIRV::OpTypePointer:
   case SPIRV::OpTypeUntypedPointerKHR:
     return LLT::pointer(getAS(SpvType), getPointerSize());
-  case SPIRV::OpTypeVector: {
+  case SPIRV::OpTypeVector:
+  case SPIRV::OpTypeVectorIdEXT: {
     SPIRVTypeInst ElemType = getScalarOrVectorComponentType(SpvType);
     LLT ET;
     switch (ElemType ? ElemType->getOpcode() : 0) {
@@ -2195,7 +2252,8 @@ LLT SPIRVGlobalRegistry::getRegType(SPIRVTypeInst SpvType) const {
     default:
       ET = LLT::scalar(64);
     }
-    return LLT::fixed_vector(getScalarOrVectorComponentCount(SpvType), ET);
+    auto EC = ElementCount::getFixed(getScalarOrVectorComponentCount(SpvType));
+    return LLT::scalarOrVector(EC, ET);
   }
   }
   return LLT::scalar(64);
@@ -2211,7 +2269,9 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
     MachineIRBuilder &MIRBuilder, const MDNode *AliasingListMD) {
   if (AliasingListMD->getNumOperands() == 0)
     return nullptr;
-  if (auto L = AliasInstMDMap.find(AliasingListMD); L != AliasInstMDMap.end())
+  const MachineFunction *MF = &MIRBuilder.getMF();
+  if (auto L = AliasInstMDMap.find({MF, AliasingListMD});
+      L != AliasInstMDMap.end())
     return L->second;
 
   SmallVector<MachineInstr *> ScopeList;
@@ -2224,7 +2284,7 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
       if (!DomainMD)
         return nullptr;
       auto *Domain = [&] {
-        auto D = AliasInstMDMap.find(DomainMD);
+        auto D = AliasInstMDMap.find({MF, DomainMD});
         if (D != AliasInstMDMap.end())
           return D->second;
         const Register Ret = MRI->createVirtualRegister(&SPIRV::IDRegClass);
@@ -2232,9 +2292,10 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
             MIRBuilder.buildInstr(SPIRV::OpAliasDomainDeclINTEL).addDef(Ret);
         return MIB.getInstr();
       }();
-      AliasInstMDMap.insert(std::make_pair(DomainMD, Domain));
+      AliasInstMDMap.insert(
+          std::make_pair(std::make_pair(MF, DomainMD), Domain));
       auto *Scope = [&] {
-        auto S = AliasInstMDMap.find(ScopeMD);
+        auto S = AliasInstMDMap.find({MF, ScopeMD});
         if (S != AliasInstMDMap.end())
           return S->second;
         const Register Ret = MRI->createVirtualRegister(&SPIRV::IDRegClass);
@@ -2243,7 +2304,7 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
                        .addUse(Domain->getOperand(0).getReg());
         return MIB.getInstr();
       }();
-      AliasInstMDMap.insert(std::make_pair(ScopeMD, Scope));
+      AliasInstMDMap.insert(std::make_pair(std::make_pair(MF, ScopeMD), Scope));
       ScopeList.push_back(Scope);
     }
   }
@@ -2254,7 +2315,8 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
   for (auto *Scope : ScopeList)
     MIB.addUse(Scope->getOperand(0).getReg());
   auto List = MIB.getInstr();
-  AliasInstMDMap.insert(std::make_pair(AliasingListMD, List));
+  AliasInstMDMap.insert(
+      std::make_pair(std::make_pair(MF, AliasingListMD), List));
   return List;
 }
 
@@ -2277,9 +2339,9 @@ void SPIRVGlobalRegistry::replaceAllUsesWith(Value *Old, Value *New,
   updateIfExistAssignPtrTypeInstr(Old, New, DeleteOld);
 }
 
-void SPIRVGlobalRegistry::buildAssignType(IRBuilder<> &B, Type *Ty,
-                                          Value *Arg) {
-  Value *OfType = getNormalizedPoisonValue(Ty);
+void SPIRVGlobalRegistry::buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg,
+                                          bool CanUseAnyVectorRank) {
+  Value *OfType = getNormalizedPoisonValue(Ty, CanUseAnyVectorRank);
   CallInst *AssignCI = nullptr;
   if (Arg->getType()->isAggregateType() && Ty->isAggregateType() &&
       allowEmitFakeUse(Arg)) {
@@ -2343,17 +2405,4 @@ void SPIRVGlobalRegistry::addArrayStrideDecorations(
   uint32_t SizeInBytes = DL.getTypeAllocSize(ElementType);
   buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::ArrayStride,
                   {SizeInBytes});
-}
-
-bool SPIRVGlobalRegistry::hasBlockDecoration(SPIRVTypeInst Type) const {
-  Register Def = getSPIRVTypeID(Type);
-  for (const MachineInstr &Use :
-       Type->getMF()->getRegInfo().use_instructions(Def)) {
-    if (Use.getOpcode() != SPIRV::OpDecorate)
-      continue;
-
-    if (Use.getOperand(1).getImm() == SPIRV::Decoration::Block)
-      return true;
-  }
-  return false;
 }

@@ -77,6 +77,8 @@ macros:
     macro_value: 0
   - macro_name: EM_386
     macro_value: 3
+  - macro_name: EM_PPC64
+    macro_value: 21
   - macro_name: EM_ARM
     macro_value: 40
   - macro_name: EM_X86_64
@@ -227,6 +229,10 @@ macros:
     macro_value: 6
   - macro_name: STT_LOOS
     macro_value: 10
+  - macro_name: STT_GNU_IFUNC
+    macro_value: 10
+    standards:
+      - gnu
   - macro_name: STT_HIOS
     macro_value: 12
   - macro_name: STT_LOPROC

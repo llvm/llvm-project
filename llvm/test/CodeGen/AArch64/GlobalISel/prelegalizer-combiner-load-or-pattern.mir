@@ -14,7 +14,6 @@
 ...
 ---
 name:            s8_loads_to_s32_little_endian_pat
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -81,7 +80,6 @@ body:             |
 ...
 ---
 name:            s8_loads_to_s32_big_endian_pat
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -139,7 +137,6 @@ body:             |
 ...
 ---
 name:            different_or_pattern
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -208,7 +205,6 @@ body:             |
 ...
 ---
 name:            s16_loads_to_s32_little_endian_pat
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -251,7 +247,6 @@ body:             |
 ...
 ---
 name:            s16_loads_to_s32_big_endian_pat
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -294,7 +289,6 @@ body:             |
 ...
 ---
 name:            s16_loads_to_s64_little_endian_pat
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -353,7 +347,6 @@ body:             |
 ...
 ---
 name:            s16_loads_to_s64_big_endian_pat
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -412,7 +405,6 @@ body:             |
 ...
 ---
 name:            nonzero_start_idx_positive_little_endian_pat
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -476,7 +468,6 @@ body:             |
 ...
 ---
 name:            nonzero_start_idx_positive_big_endian_pat
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -540,7 +531,6 @@ body:             |
 ...
 ---
 name:            nonzero_start_idx_negative_little_endian_pat
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -602,7 +592,6 @@ body:             |
 ...
 ---
 name:            nonzero_start_idx_negative_big_endian_pat
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -665,7 +654,6 @@ body:             |
 ...
 ---
 name:            dont_combine_volatile
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -716,7 +704,6 @@ body:             |
 ...
 ---
 name:            dont_wrong_memop_size
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -767,7 +754,6 @@ body:             |
 ...
 ---
 name:            dont_combine_wrong_offset
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -820,7 +806,6 @@ body:             |
 ...
 ---
 name:            dont_combine_wrong_offset_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -873,7 +858,6 @@ body:             |
 ...
 ---
 name:            dont_combine_missing_load
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -948,7 +932,6 @@ body:             |
 ...
 ---
 name:            dont_combine_different_addr_spaces
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -999,7 +982,6 @@ body:             |
 ...
 ---
 name:            dont_combine_duplicate_idx
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -1088,7 +1070,6 @@ body:             |
 ...
 ---
 name:            dont_combine_duplicate_offset
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -1178,7 +1159,6 @@ body:             |
 ...
 ---
 name:            dont_combine_lowest_index_not_zero_offset
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -1273,7 +1253,6 @@ body:             |
 ...
 ---
 name:            dont_combine_more_than_one_use_load
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -1328,7 +1307,6 @@ body:             |
 ...
 ---
 name:            dont_combine_more_than_one_use_shl
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -1383,7 +1361,6 @@ body:             |
 ...
 ---
 name:            dont_combine_store_between_same_mbb
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -1444,7 +1421,6 @@ body:             |
 ...
 ---
 name:            dont_combine_store_between_different_mbb
-tracksRegLiveness: true
 body:             |
   ; LITTLE-LABEL: name: dont_combine_store_between_different_mbb
   ; LITTLE: bb.0:
@@ -1537,7 +1513,6 @@ body:             |
 ...
 ---
 name:            different_mbb
-tracksRegLiveness: true
 body:             |
   ; LITTLE-LABEL: name: different_mbb
   ; LITTLE: bb.0:
@@ -1604,7 +1579,6 @@ body:             |
 ...
 ---
 name:            load_first
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -1644,7 +1618,6 @@ body:             |
 ---
 name:            store_between_loads_and_or
 alignment:       4
-tracksRegLiveness: true
 
 liveins:
   - { reg: '$x0' }

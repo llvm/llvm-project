@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
 
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                    \
+    !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 #include "src/sys/auxv/getauxval.h"
 #endif
 
@@ -113,7 +116,8 @@ void __cxa_pure_virtual() {
 // __dso_handle when -nostdlib is used.
 void *__dso_handle = nullptr;
 
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                    \
+    !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 // Due to historical reasons, libgcc on aarch64 may expect __getauxval to be
 // defined. See also https://gcc.gnu.org/pipermail/gcc-cvs/2020-June/300635.html
 unsigned long __getauxval(unsigned long id) {
@@ -121,19 +125,44 @@ unsigned long __getauxval(unsigned long id) {
 }
 #endif
 
+void *calloc(size_t num, size_t size) {
+  if (num == 0 || size == 0)
+    return nullptr;
+  size_t total = 0;
+  if (__builtin_mul_overflow(num, size, &total)) {
+    LIBC_NAMESPACE::libc_errno = ENOMEM;
+    return nullptr;
+  }
+  void *mem = malloc(total);
+  if (mem == nullptr) {
+    LIBC_NAMESPACE::libc_errno = ENOMEM;
+    return nullptr;
+  }
+  LIBC_NAMESPACE::memset(mem, 0, total);
+  return mem;
+}
+
 } // extern "C"
 
-void *operator new([[maybe_unused]] size_t size, void *ptr) { return ptr; }
+void *operator new([[maybe_unused]] size_t size, void *ptr) noexcept {
+  return ptr;
+}
+
+void *operator new[]([[maybe_unused]] size_t size, void *ptr) noexcept {
+  return ptr;
+}
 
 void *operator new(size_t size) { return malloc(size); }
 
 void *operator new[](size_t size) { return malloc(size); }
 
-void operator delete(void *ptr) { free(ptr); }
+void operator delete(void *ptr) noexcept { free(ptr); }
 
-void operator delete[](void *ptr) { free(ptr); }
+void operator delete(void *ptr, size_t) noexcept { free(ptr); }
 
-void operator delete(void *ptr, size_t) { free(ptr); }
+void operator delete[](void *ptr) noexcept { free(ptr); }
+
+void operator delete[](void *ptr, size_t) noexcept { free(ptr); }
 
 // Defining members in the std namespace is not preferred. But, we do it here
 // so that we can use it to define the operator new which takes std::align_val_t
@@ -142,8 +171,22 @@ namespace std {
 enum class align_val_t : size_t {};
 } // namespace std
 
+void *operator new(size_t size, std::align_val_t align) {
+  return aligned_alloc(static_cast<size_t>(align), size);
+}
+
+void *operator new[](size_t size, std::align_val_t align) {
+  return aligned_alloc(static_cast<size_t>(align), size);
+}
+
 void operator delete(void *ptr, std::align_val_t) noexcept { free(ptr); }
 
 void operator delete(void *ptr, size_t, std::align_val_t) noexcept {
+  free(ptr);
+}
+
+void operator delete[](void *ptr, std::align_val_t) noexcept { free(ptr); }
+
+void operator delete[](void *ptr, size_t, std::align_val_t) noexcept {
   free(ptr);
 }

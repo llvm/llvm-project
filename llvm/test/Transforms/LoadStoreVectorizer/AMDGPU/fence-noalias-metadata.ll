@@ -110,7 +110,7 @@ declare void @use(i32)
 ; Metadata: three noalias scopes in the same domain.
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"arg_scope"}
-!2 = distinct !{!2, !"kernel_domain"}
+!2 = distinct !{!2, i1 false, !"kernel_domain"}
 !3 = !{!4}
 !4 = distinct !{!4, !2, !"other_arg_scope"}
 !5 = !{!1, !4}
@@ -119,7 +119,7 @@ declare void @use(i32)
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"arg_scope"}
-; CHECK: [[META2]] = distinct !{[[META2]], !"kernel_domain"}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"kernel_domain"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]], !"other_arg_scope"}
 ; CHECK: [[META5]] = !{[[META1]], [[META4]]}

@@ -13,6 +13,7 @@
 
 #include "StatepointLowering.h"
 #include "SelectionDAGBuilder.h"
+#include "SelectionDAGOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -61,17 +62,9 @@ STATISTIC(NumOfStatepoints, "Number of statepoint nodes encountered");
 STATISTIC(StatepointMaxSlotsRequired,
           "Maximum number of stack slots required for a singe statepoint");
 
-static cl::opt<bool> UseRegistersForDeoptValues(
-    "use-registers-for-deopt-values", cl::Hidden, cl::init(false),
-    cl::desc("Allow using registers for non pointer deopt args"));
-
-static cl::opt<bool> UseRegistersForGCPointersInLandingPad(
-    "use-registers-for-gc-values-in-landing-pad", cl::Hidden, cl::init(false),
-    cl::desc("Allow using registers for gc pointer in landing pad"));
-
-static cl::opt<unsigned> MaxRegistersForGCPointers(
-    "max-registers-for-gc-values", cl::Hidden, cl::init(0),
-    cl::desc("Max number of VRegs allowed to pass GC pointer meta args in"));
+// Lowering relocate(undef) as arbitrary constant. Current constant value is
+// chosen such that it's unlikely to be a valid pointer.
+static constexpr uint32_t UndefStackMapValue = 0xFEFEFEFE;
 
 typedef FunctionLoweringInfo::StatepointRelocationRecord RecordType;
 
@@ -258,6 +251,32 @@ static bool willLowerDirectly(SDValue Incoming) {
     return false;
 
   return isIntOrFPConstant(Incoming) || Incoming.isUndef();
+}
+
+FunctionLoweringInfo::StatepointDirectLeaf::StatepointDirectLeaf(SDValue V) {
+  assert(willLowerDirectly(V) && "not a directly-lowered leaf");
+  if (V.isUndef()) {
+    Kind = Undef;
+  } else if (auto *FI = dyn_cast<FrameIndexSDNode>(V)) {
+    Kind = FrameIndex;
+    FrameIndexValue = FI->getIndex();
+  } else {
+    Kind = Constant;
+    IntValue = cast<ConstantSDNode>(V)->getAPIntValue();
+  }
+}
+
+SDValue FunctionLoweringInfo::StatepointDirectLeaf::rematerialize(
+    SelectionDAG &DAG, const SDLoc &DL, EVT VT) const {
+  switch (Kind) {
+  case FrameIndex:
+    return DAG.getFrameIndex(FrameIndexValue, VT);
+  case Constant:
+    return DAG.getConstant(IntValue, DL, VT);
+  case Undef:
+    return DAG.getConstant(UndefStackMapValue, DL, VT);
+  }
+  llvm_unreachable("unhandled directly-lowered leaf kind");
 }
 
 /// Try to find existing copies of the incoming values in stack slots used for
@@ -540,12 +559,14 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     SI.StatepointFlags & (uint64_t)StatepointFlags::DeoptLiveIn;
 
   // Decide which deriver pointers will go on VRegs
-  unsigned MaxVRegPtrs = MaxRegistersForGCPointers.getValue();
+  unsigned MaxVRegPtrs =
+      Builder.DAG.getSelectionDAGOptions().max_registers_for_gc_values;
 
   // Pointers used on exceptional path of invoke statepoint.
   // We cannot assing them to VRegs.
   SmallSet<SDValue, 8> LPadPointers;
-  if (!UseRegistersForGCPointersInLandingPad)
+  if (!Builder.DAG.getSelectionDAGOptions()
+           .use_registers_for_gc_values_in_landing_pad) {
     if (const auto *StInvoke =
             dyn_cast_or_null<InvokeInst>(SI.StatepointInstr)) {
       LandingPadInst *LPI = StInvoke->getLandingPadInst();
@@ -555,6 +576,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
           LPadPointers.insert(Builder.getValue(Relocate->getDerivedPtr()));
         }
     }
+  }
 
   LLVM_DEBUG(dbgs() << "Deciding how to lower GC Pointers:\n");
 
@@ -606,7 +628,9 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
       return true;
     if (isGCValue(V, Builder))
       return !LowerAsVReg.count(Builder.getValue(V));
-    return !(LiveInDeopt || UseRegistersForDeoptValues);
+    return !(
+        LiveInDeopt ||
+        Builder.DAG.getSelectionDAGOptions().use_registers_for_deopt_values);
   };
 
   // Before we actually start lowering (and allocating spill slots for values),
@@ -931,17 +955,17 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
       Record.payload.FI = cast<FrameIndexSDNode>(Loc)->getIndex();
     } else {
       Record.type = RecordType::NoRelocate;
-      // If we didn't relocate a value, we'll essentialy end up inserting an
-      // additional use of the original value when lowering the gc.relocate.
-      // We need to make sure the value is available at the new use, which
-      // might be in another block.
+      assert(willLowerDirectly(SDV) && "NoRelocate value must lower directly");
+
+      // A gc.relocate in another block needs the value there. Exporting it
+      // would define a vreg after the call that does not dominate a use on the
+      // unwind edge, so record the leaf and rebuild it in visitGCRelocate
+      // instead.
       if (Relocate->getParent() != StatepointInstr->getParent())
-        ExportFromCurrentBlock(V);
+        Record.RematLeaf.emplace(SDV);
     }
     RelocationMap[Relocate] = Record;
   }
-
-  
 
   SDNode *SinkNode = StatepointMCNode;
 
@@ -1291,12 +1315,22 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   }
 
   assert(Record.type == RecordType::NoRelocate);
+
+  // Rebuild a leaf recorded for a cross-block gc.relocate instead of using a
+  // value from the statepoint's block.
+  if (Record.RematLeaf) {
+    EVT VT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
+                                                      Relocate.getType());
+    setValue(&Relocate,
+             Record.RematLeaf->rematerialize(DAG, getCurSDLoc(), VT));
+    return;
+  }
+
   SDValue SD = getValue(DerivedPtr);
 
   if (SD.isUndef() && SD.getValueType().getSizeInBits() <= 64) {
-    // Lowering relocate(undef) as arbitrary constant. Current constant value
-    // is chosen such that it's unlikely to be a valid pointer.
-    setValue(&Relocate, DAG.getConstant(0xFEFEFEFE, SDLoc(SD), MVT::i64));
+    setValue(&Relocate,
+             DAG.getConstant(UndefStackMapValue, SDLoc(SD), MVT::i64));
     return;
   }
 

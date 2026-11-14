@@ -9,19 +9,19 @@
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   // CHECK: define hidden void @device_any()
-  llvm.func @device_any() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
+  llvm.func @device_any() attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} {
     llvm.return
   }
 
   // CHECK: define hidden void @device_nohost()
-  llvm.func @device_nohost() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>} {
+  llvm.func @device_nohost() attributes {omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = to>} {
     llvm.return
   }
 
   // A function with an explicitly requested (non-default) visibility is left
   // untouched.
   // CHECK: define protected void @device_protected()
-  llvm.func protected @device_protected() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
+  llvm.func protected @device_protected() attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} {
     llvm.return
   }
 
@@ -34,5 +34,5 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
   // A declaration (no definition) is left untouched: there is nothing to
   // internalize, and hiding it could over-constrain the symbol's visibility.
   // CHECK: declare void @device_decl()
-  llvm.func @device_decl() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>}
+  llvm.func @device_decl() attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>}
 }

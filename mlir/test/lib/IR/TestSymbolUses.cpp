@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
@@ -118,7 +118,8 @@ struct SymbolReplacementPass
     SymbolTableCollection symbolTable;
     SymbolUserMap symbolUsers(symbolTable, module);
     module.getBodyRegion().walk([&](Operation *nestedOp) {
-      StringAttr newName = nestedOp->getAttrOfType<StringAttr>("sym.new_name");
+      StringAttr newName =
+          nestedOp->getDiscardableAttrOfType<StringAttr>("sym.new_name");
       if (!newName)
         return;
       symbolUsers.replaceAllUsesWith(nestedOp, newName);

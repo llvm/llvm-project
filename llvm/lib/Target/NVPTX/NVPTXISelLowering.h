@@ -21,6 +21,8 @@
 
 namespace llvm {
 
+class MCContext;
+class MCSymbol;
 class NVPTXSubtarget;
 
 //===--------------------------------------------------------------------===//
@@ -39,7 +41,7 @@ public:
   // Helper for getting a function parameter name. Name is composed from
   // its index and the function name. Negative index corresponds to special
   // parameter (unsized array) used for passing variable arguments.
-  std::string getParamName(const Function *F, int Idx) const;
+  MCSymbol *getParamSymbol(MCContext &Ctx, const Function *F, int Idx) const;
 
   /// isLegalAddressingMode - Return true if the addressing mode represented
   /// by AM is legal for this target, for a load/store of the specified type
@@ -92,8 +94,6 @@ public:
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 
-  const NVPTXTargetMachine *nvTM;
-
   // PTX always uses 32-bit shift amounts
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
     return MVT::i32;
@@ -113,6 +113,7 @@ public:
 
   // Get whether we should use instructions that flush floating-point denormals
   // to sign-preserving zero.
+  bool useF16FTZ(const MachineFunction &MF) const;
   bool useF32FTZ(const MachineFunction &MF) const;
 
   SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
@@ -158,6 +159,12 @@ public:
     return true;
   }
 
+  bool shouldConvertBoolToFPWithSelect(EVT VT) const override {
+    // A selp of the exact result replaces selp.b32 plus a conversion.
+    return VT == MVT::f16 || VT == MVT::bf16 || VT == MVT::f32 ||
+           VT == MVT::f64;
+  }
+
   bool shouldInsertFencesForAtomic(const Instruction *) const override;
 
   AtomicOrdering
@@ -185,8 +192,8 @@ private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   mutable unsigned GlobalUniqueCallSite;
 
-  SDValue getParamSymbol(SelectionDAG &DAG, int I, EVT T) const;
-  SDValue getCallParamSymbol(SelectionDAG &DAG, int I, EVT T) const;
+  SDValue getParamSymbolNode(SelectionDAG &DAG, int I, EVT T) const;
+  SDValue getCallParamSymbolNode(SelectionDAG &DAG, int I, EVT T) const;
   SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
 

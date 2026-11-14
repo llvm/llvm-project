@@ -88,6 +88,10 @@ public:
   /// removing all the TypeSystems from the TypeSystemMap.
   virtual void Finalize() {}
 
+  /// Called on a target's scratch type systems when the target loads the
+  /// modules in \p module_list.
+  virtual void ModulesDidLoad(ModuleList &module_list) {}
+
   virtual plugin::dwarf::DWARFASTParser *GetDWARFParser() { return nullptr; }
 
   virtual PDBASTParser *GetPDBParser() { return nullptr; }
@@ -207,6 +211,13 @@ public:
     return false;
   }
 
+  /// Returns the target address space of \p type,
+  /// or std::nullopt if it lives in the default address space.
+  virtual std::optional<uint32_t>
+  GetTargetAddressSpace(lldb::opaque_compiler_type_t type) const {
+    return std::nullopt;
+  }
+
   virtual bool CanPassInRegisters(const CompilerType &type) = 0;
 
   // TypeSystems can support more than one language
@@ -226,6 +237,8 @@ public:
   virtual uint32_t GetPointerByteSize() = 0;
 
   virtual CompilerType GetPointerDiffType(bool is_signed) = 0;
+
+  virtual CompilerType GetSizeType() = 0;
 
   virtual unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) = 0;
 
@@ -305,6 +318,10 @@ public:
 
   virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                           uint32_t payload);
+
+  virtual CompilerType
+  AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                          uint32_t address_space);
 
   /// \param opaque_payload      The m_payload field of Type, which may
   /// carry TypeSystem-specific extra information.

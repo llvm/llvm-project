@@ -15,20 +15,9 @@ class ObjCiVarIMPTestCase(TestBase):
     def test_imp_ivar_type(self):
         """Test that dynamically discovered ivars of type IMP do not crash LLDB"""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target from the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set up our breakpoint
-
-        bkpt = lldbutil.run_break_set_by_source_regexp(self, "break here")
-
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("repro.m")
+        )
 
         self.expect(
             "frame variable --ptr-depth=1 --show-types -d run -- object",

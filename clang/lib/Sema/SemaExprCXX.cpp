@@ -537,10 +537,21 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
   llvm_unreachable("unknown nested name specifier kind");
 }
 
+/// RTTI is not available in CUDA/HIP device code, so typeid can't be used
+/// there. A dependent operand is checked once the template is instantiated.
+static void diagnoseCUDADeviceTypeid(Sema &S, SourceLocation TypeidLoc,
+                                     bool IsDependent) {
+  if (S.getLangOpts().CUDA && !IsDependent)
+    S.CUDA().checkRTTIUse(TypeidLoc, "typeid");
+}
+
 ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 TypeSourceInfo *Operand,
                                 SourceLocation RParenLoc) {
+  diagnoseCUDADeviceTypeid(*this, TypeidLoc,
+                           Operand->getType()->isDependentType());
+
   // C++ [expr.typeid]p4:
   //   The top-level cv-qualifiers of the lvalue expression or the type-id
   //   that is the operand of typeid are always ignored.
@@ -568,6 +579,8 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 Expr *E,
                                 SourceLocation RParenLoc) {
+  diagnoseCUDADeviceTypeid(*this, TypeidLoc, E && E->isTypeDependent());
+
   bool WasEvaluated = false;
   if (E && !E->isTypeDependent()) {
     if (E->hasPlaceholderType()) {
@@ -858,23 +871,7 @@ Sema::ActOnCXXThrow(Scope *S, SourceLocation OpLoc, Expr *Ex) {
 
 ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
                                bool IsThrownVarInScope) {
-  const llvm::Triple &T = Context.getTargetInfo().getTriple();
-  const bool IsOpenMPGPUTarget =
-      getLangOpts().OpenMPIsTargetDevice && T.isGPU();
-
   DiagnoseExceptionUse(OpLoc, /* IsTry= */ false);
-
-  // In OpenMP target regions, we replace 'throw' with a trap on GPU targets.
-  if (IsOpenMPGPUTarget)
-    targetDiag(OpLoc, diag::warn_throw_not_valid_on_target) << T.str();
-
-  // Exceptions aren't allowed in CUDA device code.
-  if (getLangOpts().CUDA)
-    CUDA().DiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
-        << "throw" << CUDA().CurrentTarget();
-
-  if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
-    Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
 
   // Exceptions that escape a compute construct are ill-formed.
   if (getLangOpts().OpenACC && getCurScope() &&
@@ -990,6 +987,14 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
   // Cannot throw WebAssembly table.
   if (isPointer && Ty.isWebAssemblyReferenceType()) {
     Diag(ThrowLoc, diag::err_wasm_table_art) << 2 << E->getSourceRange();
+    return true;
+  }
+
+  // Reject throwing of ptr's involving non-default address spaces runtimes
+  // cannot perform cross-address-space conversions yet.
+  if (isPointer && Ty.getAddressSpace() != LangAS::Default) {
+    Diag(ThrowLoc, diag::err_throw_or_catch_address_space_qualified_ptr)
+        << /*IsCatch=*/0 << /*IsRef=*/0 << E->getType() << E->getSourceRange();
     return true;
   }
 
@@ -1567,6 +1572,9 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
       Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
     }
 
+    if (Ty->getAs<AutoType>())
+      DiagCompat(TyBeginLoc, diag_compat::auto_expr) << FullRange;
+
     if (Inits.empty())
       return ExprError(Diag(TyBeginLoc, diag::err_auto_expr_init_no_expression)
                        << Ty << FullRange);
@@ -1575,10 +1583,6 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
       return ExprError(Diag(FirstBad->getBeginLoc(),
                             diag::err_auto_expr_init_multiple_expressions)
                        << Ty << FullRange);
-    }
-    if (getLangOpts().CPlusPlus23) {
-      if (Ty->getAs<AutoType>())
-        Diag(TyBeginLoc, diag::warn_cxx20_compat_auto_expr) << FullRange;
     }
     Expr *Deduce = Inits[0];
     if (isa<InitListExpr>(Deduce))
@@ -2320,7 +2324,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
       if (!ConvertedSize.isInvalid() && (*ArraySize)->getType()->isRecordType())
         // Diagnose the compatibility of this conversion.
-        Diag(StartLoc, diag::warn_cxx98_compat_array_size_conversion)
+        Diag(StartLoc, diag::compat_cxx11_array_size_conversion)
           << (*ArraySize)->getType() << 0 << "'size_t'";
     } else {
       class SizeConvertDiagnoser : public ICEConvertDiagnoser {
@@ -2369,11 +2373,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
         SemaDiagnosticBuilder diagnoseConversion(Sema &S, SourceLocation Loc,
                                                  QualType T,
                                                  QualType ConvTy) override {
-          return S.Diag(Loc,
-                        S.getLangOpts().CPlusPlus11
-                          ? diag::warn_cxx98_compat_array_size_conversion
-                          : diag::ext_array_size_conversion)
-                   << T << ConvTy->isEnumeralType() << ConvTy;
+          return S.DiagCompat(Loc, diag_compat::array_size_conversion)
+                 << T << ConvTy->isEnumeralType() << ConvTy;
         }
       } SizeDiagnoser(*ArraySize);
 
@@ -2410,17 +2411,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                          << (*ArraySize)->getSourceRange());
       }
 
-      if (!AllocType->isDependentType()) {
-        unsigned ActiveSizeBits =
-            ConstantArrayType::getNumAddressingBits(Context, AllocType, *Value);
-        if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context))
-          return ExprError(
-              Diag((*ArraySize)->getBeginLoc(), diag::err_array_too_large)
-              << toString(*Value, 10, Value->isSigned(),
-                          /*formatAsCLiteral=*/false, /*UpperCase=*/false,
-                          /*InsertSeparators=*/true)
-              << (*ArraySize)->getSourceRange());
-      }
+      if (checkArrayTooLarge(AllocType, *Value, (*ArraySize)->getBeginLoc(),
+                             (*ArraySize)->getSourceRange()))
+        return ExprError();
 
       KnownArraySize = Value->getZExtValue();
     } else if (TypeIdParens.isValid()) {
@@ -2637,6 +2630,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       } else {
         Diag(TypeRange.getEnd(), diag::err_new_array_size_unknown_from_init)
             << Initializer->getSourceRange();
+        return ExprError();
       }
     }
   }
@@ -2728,7 +2722,7 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
 static void diagnoseNoViableFunctionForAllocationOverloadResolution(
     Sema &S, const LookupResult &R, SourceRange Range, ArrayRef<Expr *> Args,
     OverloadCandidateSet &Candidates, OverloadCandidateSet *AlignedCandidates,
-    Expr *AlignArg, bool IncludedMSVCFallback) {
+    Expr *AlignArg, bool IncludedMSVCFallback, bool AlignedBeforeUnaligned) {
   // If this is an allocation of the form 'new (p) X' for some object
   // pointer p (or an expression that will decay to such a pointer),
   // diagnose the reason for the error.
@@ -2784,10 +2778,13 @@ static void diagnoseNoViableFunctionForAllocationOverloadResolution(
 
   S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
       << R.getLookupName() << Range;
-  if (AlignedCandidates)
+  if (AlignedCandidates && AlignedBeforeUnaligned)
     AlignedCandidates->NoteCandidates(S, AlignedArgs, AlignedCands, "",
                                       R.getNameLoc());
   Candidates.NoteCandidates(S, Args, Cands, "", R.getNameLoc());
+  if (AlignedCandidates && !AlignedBeforeUnaligned)
+    AlignedCandidates->NoteCandidates(S, AlignedArgs, AlignedCands, "",
+                                      R.getNameLoc());
   if (IncludedMSVCFallback)
     S.Diag(R.getNameLoc(), diag::note_ovl_ms_allocation_fallback_failed)
         << Range;
@@ -2896,6 +2893,7 @@ DiagnoseAllocationLookupFailure(Sema &SemaRef, const LookupResult &R,
   ImplicitAllocationArguments *UnalignedArgumentList = nullptr;
   ImplicitAllocationArguments *AlignedArgumentList = nullptr;
   bool IncludedMSVCFallback = false;
+  bool AlignedBeforeUnaligned = true;
   for (ImplicitAllocationArguments &AllocationArguments : ArgumentCandidates) {
     if (AllocationArguments.IsMSVCCompatibilityFallback) {
       IncludedMSVCFallback = true;
@@ -2903,10 +2901,12 @@ DiagnoseAllocationLookupFailure(Sema &SemaRef, const LookupResult &R,
     }
     if (AllocationArguments.PassTypeIdentity == TypeAwareAllocationMode::Yes)
       continue;
-    if (AllocationArguments.PassAlignment == AlignedAllocationMode::Yes)
+    if (AllocationArguments.PassAlignment == AlignedAllocationMode::Yes) {
       AlignedArgumentList = &AllocationArguments;
-    else
+      AlignedBeforeUnaligned = !UnalignedArgumentList;
+    } else {
       UnalignedArgumentList = &AllocationArguments;
+    }
   }
   if (!UnalignedArgumentList)
     return;
@@ -2939,7 +2939,7 @@ DiagnoseAllocationLookupFailure(Sema &SemaRef, const LookupResult &R,
   diagnoseNoViableFunctionForAllocationOverloadResolution(
       SemaRef, R, Range, UnalignedArgs, UnalignedCandidates,
       AlignedCandidates ? &*AlignedCandidates : nullptr, AlignArg,
-      IncludedMSVCFallback);
+      IncludedMSVCFallback, AlignedBeforeUnaligned);
 }
 
 Expr *Sema::tryGetTypeIdentityArgument(QualType Type, SourceLocation Loc) {
@@ -3045,13 +3045,20 @@ Sema::resolveAllocationArguments(LookupResult &R,
       *this, /*TypeIdentityArg=*/nullptr, AllocationSizeExpr,
       AllocationAlignmentExpr, /*IsMSVCCompatibilityFallback=*/false);
 
-  // C++17 [expr.new]p13:
-  //   If no matching function is found and the allocated object type has
-  //   new-extended alignment, the alignment argument is removed from the
-  //   argument list, and overload resolution is performed again.
+  // C++20 [expr.new]p18:
+  //   If no matching function is found then
+  //     — if the allocated object type has new-extended alignment, the
+  //       alignment argument is removed from the argument list;
+  //     — otherwise, an argument that is the type’s alignment and has type
+  //       std::align_val_t is added into the argument list immediately after
+  //       the first argument;
+  //   and then overload resolution is performed again.
   if (IAP.PassAlignment == AlignedAllocationMode::Yes)
     FoundArguments.push_back(AlignedArguments);
   FoundArguments.push_back(UnalignedArguments);
+  if (IAP.PassAlignment == AlignedAllocationMode::No &&
+      AllocationAlignmentExpr && getLangOpts().AlignedAllocation)
+    FoundArguments.push_back(AlignedArguments);
 
   // The MSVC global fallback path
   if (getLangOpts().MSVCCompat &&
@@ -4277,10 +4284,16 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
         }
       }
 
-      CheckVirtualDtorCall(PointeeRD->getDestructor(), StartLoc,
-                           /*IsDelete=*/true, /*CallCanBeVirtual=*/true,
-                           /*WarnOnNonAbstractTypes=*/!ArrayForm,
-                           SourceLocation());
+      // C++20 [expr.delete]p3: deleting through a static type whose
+      // destructor is not virtual is only undefined behavior when the
+      // selected deallocation function is not a destroying operator delete.
+      // A destroying operator delete takes over destruction of the object,
+      // so the delete expression never calls the destructor itself.
+      if (!OperatorDelete || !OperatorDelete->isDestroyingOperatorDelete())
+        CheckVirtualDtorCall(PointeeRD->getDestructor(), StartLoc,
+                             /*IsDelete=*/true, /*CallCanBeVirtual=*/true,
+                             /*WarnOnNonAbstractTypes=*/!ArrayForm,
+                             SourceLocation());
     }
 
     if (!OperatorDelete) {
@@ -5383,6 +5396,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                              From->getValueKind()).get();
     break;
 
+  case ICK_HLSL_Packed_Type_Conversion: {
+    From = ImpCastExprToType(From, ToType, CK_IntegralCast,
+                             From->getValueKind(), nullptr, CCK)
+               .get();
+    break;
+  }
   case ICK_Lvalue_To_Rvalue:
   case ICK_Array_To_Pointer:
   case ICK_Function_To_Pointer:
@@ -5945,8 +5964,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
       ResultType = CheckVectorOperands(
           LHS, RHS, QuestionLoc, /*isCompAssign*/ false, /*AllowBothBool*/ true,
           /*AllowBoolConversions*/ false,
-          /*AllowBoolOperation*/ true,
-          /*ReportInvalid*/ true);
+          /*AllowBoolOperation*/ true);
     if (ResultType.isNull())
       return {};
   } else {
@@ -6245,8 +6263,7 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     return CheckVectorOperands(LHS, RHS, QuestionLoc, /*isCompAssign*/ false,
                                /*AllowBothBool*/ true,
                                /*AllowBoolConversions*/ false,
-                               /*AllowBoolOperation*/ false,
-                               /*ReportInvalid*/ true);
+                               /*AllowBoolOperation*/ false);
 
   //   -- The second and third operands have arithmetic or enumeration type;
   //      the usual arithmetic conversions are performed to bring them to a
@@ -6910,6 +6927,14 @@ ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
              ExpressionEvaluationContextRecord::EK_Decltype &&
          "not in a decltype expression");
 
+  // RecoveryExpr is always instantiation-dependent regardless of its
+  // type. If the type is essentially non-dependent, we continue to build
+  // a dependent decltype expression to avoid confusing diagnostics with wrong
+  // type. If the type is dependent, we will recover with int.
+  // FIXME: Maybe RecoveryExpr shouldn't be always instantiation-dependent.
+  if (isa<RecoveryExpr>(E) && E->isTypeDependent())
+    return ExprError();
+
   ExprResult Result = CheckPlaceholderExpr(E);
   if (Result.isInvalid())
     return ExprError();
@@ -7528,11 +7553,10 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
     break;
   }
   case DeclSpec::TST_typename_pack_indexing: {
-    T = ActOnPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
-                              DS.getBeginLoc(), DS.getEllipsisLoc());
-    TLB.pushTrivial(getASTContext(),
-                    cast<PackIndexingType>(T.getTypePtr())->getPattern(),
-                    DS.getBeginLoc());
+    TypeSourceInfo *TSI = nullptr;
+    T = GetTypeFromParser(DS.getRepAsType(), &TSI);
+    T = ActOnPackIndexingType(T, DS.getPackIndexingExpr(), DS.getBeginLoc());
+    TLB.pushFullCopy(TSI->getTypeLoc());
     PackIndexingTypeLoc PITL = TLB.push<PackIndexingTypeLoc>(T);
     PITL.setEllipsisLoc(DS.getEllipsisLoc());
     break;
@@ -8101,12 +8125,12 @@ Sema::BuildExprRequirement(
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
 
     SFINAETrap Trap(*this);
-    ExprResult Constraint = SubstExpr(IDC, MLTAL);
+    ExprResult Constraint = SubstConstraintExpr(IDC, MLTAL);
     bool HasError = Constraint.isInvalid();
     if (!HasError) {
       SubstitutedConstraintExpr =
           cast<ConceptSpecializationExpr>(Constraint.get());
-      if (SubstitutedConstraintExpr->getSatisfaction().ContainsErrors)
+      if (SubstitutedConstraintExpr->getSatisfaction().containsErrors())
         HasError = true;
     }
     if (HasError) {
@@ -8163,16 +8187,17 @@ Sema::BuildNestedRequirement(Expr *Constraint) {
                                   /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))
     return nullptr;
+
+  if (Satisfaction.HasSubstitutionFailure()) {
+    SmallString<128> Entity;
+    llvm::raw_svector_ostream OS(Entity);
+    Constraint->printPretty(OS, nullptr, SemaRef.getPrintingPolicy());
+    return new (Context) concepts::NestedRequirement(
+        Context, Context.backupStr(Entity), std::move(Satisfaction));
+  }
+
   return new (Context) concepts::NestedRequirement(Context, Constraint,
                                                    Satisfaction);
-}
-
-concepts::NestedRequirement *
-Sema::BuildNestedRequirement(StringRef InvalidConstraintEntity,
-                       const ASTConstraintSatisfaction &Satisfaction) {
-  return new (Context) concepts::NestedRequirement(
-      InvalidConstraintEntity,
-      ASTConstraintSatisfaction::Rebuild(Context, Satisfaction));
 }
 
 RequiresExprBodyDecl *

@@ -1,7 +1,7 @@
 ; RUN: opt -passes=loop-vectorize -mtriple aarch64-linux-gnu -mattr=+sve \
 ; RUN:   -tail-folding-policy=dont-fold-tail -S %s -o - | FileCheck %s
 
-define void @mloadstore_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
+define void @mloadstore_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @mloadstore_f32
 ; CHECK: vector.body:
 ; CHECK:       %[[LOAD1:.*]] = load <vscale x 4 x float>, ptr
@@ -36,7 +36,7 @@ exit:
   ret void
 }
 
-define void @mloadstore_i32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
+define void @mloadstore_i32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @mloadstore_i32
 ; CHECK: vector.body:
 ; CHECK:       %[[LOAD1:.*]] = load <vscale x 4 x i32>, ptr
@@ -74,6 +74,6 @@ exit:
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
 !4 = !{!"llvm.loop.interleave.count", i32 1}
 !5 = !{!"llvm.loop.vectorize.enable"}

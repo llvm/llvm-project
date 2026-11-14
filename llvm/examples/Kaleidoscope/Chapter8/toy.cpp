@@ -732,8 +732,7 @@ Function *getFunction(std::string Name) {
 /// the function.  This is used for mutable variables etc.
 static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
                                           StringRef VarName) {
-  IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
-                   TheFunction->getEntryBlock().begin());
+  IRBuilder<> TmpB(TheFunction->getEntryBlock().begin());
   return TmpB.CreateAlloca(Type::getDoubleTy(*TheContext), nullptr, VarName);
 }
 
@@ -1112,7 +1111,7 @@ static void InitializeModuleAndPassManager() {
   TheModule = std::make_unique<Module>("my cool jit", *TheContext);
 
   // Create a new builder for the module.
-  Builder = std::make_unique<IRBuilder<>>(*TheContext);
+  Builder = std::make_unique<IRBuilder<>>(*TheModule);
 }
 
 static void HandleDefinition() {
@@ -1246,7 +1245,8 @@ int main() {
   auto TheTargetMachine = Target->createTargetMachine(
       Triple(TargetTriple), CPU, Features, opt, Reloc::PIC_);
 
-  TheModule->setDataLayout(TheTargetMachine->createDataLayout());
+  TheModule->setDataLayout(
+      TheTargetMachine->getTargetTriple().computeDataLayout());
 
   auto Filename = "output.o";
   std::error_code EC;

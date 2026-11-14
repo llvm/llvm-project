@@ -13,7 +13,6 @@
 #include "allocator_config.h"
 #include "chunk.h"
 #include "combined.h"
-#include "condition_variable.h"
 #include "mem_map.h"
 #include "size_class_map.h"
 
@@ -50,15 +49,36 @@ template <class AllocatorT>
 void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
                              scudo::uptr Alignment) {
   const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
-  Size = scudo::roundUp(Size, MinAlignment);
+  const scudo::uptr PageSize = scudo::getPageSizeCached();
   if (Allocator->useMemoryTaggingTestOnly()) {
     SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[-1] = 'A', "");
   }
-  if (isPrimaryAllocation<AllocatorT>(Size, Alignment)
-          ? Allocator->useMemoryTaggingTestOnly()
-          : Alignment == MinAlignment &&
-                AllocatorT::SecondaryT::getGuardPageSize() > 0) {
-    SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[Size] = 'A', "");
+  bool ShouldDie = false;
+  scudo::uptr DeathOffset = Size;
+
+  if (isPrimaryAllocation<AllocatorT>(Size, Alignment)) {
+    if (Allocator->useMemoryTaggingTestOnly()) {
+      ShouldDie = true;
+      DeathOffset = scudo::roundUp(Size, MinAlignment);
+    }
+  } else {
+    // Secondary allocation
+    if (Alignment == MinAlignment &&
+        AllocatorT::SecondaryT::getGuardPageSize() > 0) {
+      ShouldDie = true;
+      if (Allocator->useMemoryTaggingTestOnly()) {
+        // If MTE is enabled, Secondary allocator forces PageSize alignment,
+        // so the guard page starts at the next PageSize boundary.
+        DeathOffset = scudo::roundUp(Size, PageSize);
+      } else {
+        // Otherwise, it starts at the next MinAlignment boundary.
+        DeathOffset = scudo::roundUp(Size, MinAlignment);
+      }
+    }
+  }
+
+  if (ShouldDie) {
+    SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[DeathOffset] = 'A', "");
   }
 }
 
@@ -243,6 +263,89 @@ struct TestNoCacheConfig {
   template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
 };
 
+struct TestDeallocZeroFillConfig {
+  static const bool MaySupportMemoryTagging = true;
+  static const bool DeallocZeroFill = true;
+
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 8U, 4U>;
+
+  struct Primary {
+    using SizeClassMap = scudo::AndroidSizeClassMap;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr RegionSizeLog = 28U;
+    typedef scudo::u32 CompactPtrT;
+    static const scudo::uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
+    static const scudo::uptr GroupSizeLog = 20U;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#else
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+    typedef scudo::uptr CompactPtrT;
+#endif
+    static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
+  };
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+#else
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+struct TestDeallocNoZeroFillConfig {
+  static const bool MaySupportMemoryTagging = true;
+  static const bool DeallocZeroFill = false;
+
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 8U, 4U>;
+
+  struct Primary {
+    using SizeClassMap = scudo::AndroidSizeClassMap;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr RegionSizeLog = 28U;
+    typedef scudo::u32 CompactPtrT;
+    static const scudo::uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
+    static const scudo::uptr GroupSizeLog = 20U;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#else
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+    typedef scudo::uptr CompactPtrT;
+#endif
+    static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
+  };
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+#else
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    struct Cache {
+      static const scudo::u32 EntriesArraySize = 128U;
+      static const scudo::u32 QuarantineSize = 0U;
+      static const scudo::u32 DefaultMaxEntriesCount = 64U;
+      static const scudo::uptr DefaultMaxEntrySize = 1UL << 20;
+      static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+      static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    };
+    template <typename Config> using CacheT = scudo::MapAllocatorCache<Config>;
+  };
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
 } // namespace scudo
 
 #if SCUDO_FUCHSIA
@@ -286,12 +389,13 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, IsOwned) {
   auto *Allocator = this->Allocator.get();
   static scudo::u8 StaticBuffer[scudo::Chunk::getHeaderSize() + 1];
   EXPECT_FALSE(
-      Allocator->isOwned(&StaticBuffer[scudo::Chunk::getHeaderSize()]));
+      Allocator->isOwnedTestOnly(&StaticBuffer[scudo::Chunk::getHeaderSize()]));
 
   scudo::u8 StackBuffer[scudo::Chunk::getHeaderSize() + 1];
   for (scudo::uptr I = 0; I < sizeof(StackBuffer); I++)
     StackBuffer[I] = 0x42U;
-  EXPECT_FALSE(Allocator->isOwned(&StackBuffer[scudo::Chunk::getHeaderSize()]));
+  EXPECT_FALSE(
+      Allocator->isOwnedTestOnly(&StackBuffer[scudo::Chunk::getHeaderSize()]));
   for (scudo::uptr I = 0; I < sizeof(StackBuffer); I++)
     EXPECT_EQ(StackBuffer[I], 0x42U);
 }
@@ -312,7 +416,7 @@ void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLog) {
           static_cast<scudo::uptr>((1LL << SizeLog) + Delta);
       void *P = Allocator->allocate(Size, Origin, Align);
       EXPECT_NE(P, nullptr);
-      EXPECT_TRUE(Allocator->isOwned(P));
+      EXPECT_TRUE(Allocator->isOwnedTestOnly(P));
       EXPECT_TRUE(scudo::isAligned(reinterpret_cast<scudo::uptr>(P), Align));
       EXPECT_LE(Size, Allocator->getUsableSize(P));
       memset(P, 0xaa, Size);
@@ -387,6 +491,56 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroFill) {
       Allocator->deallocateSized(P, Origin, Size);
     }
   }
+}
+
+TEST(ScudoCombinedTest, DeallocZeroFill) {
+  auto Allocator =
+      std::make_unique<TestAllocator<scudo::TestDeallocZeroFillConfig>>();
+  Allocator->setFillContents(scudo::ZeroFill);
+
+  const scudo::uptr Size = 1024U;
+  void *P = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P, nullptr);
+  memset(P, 0xaa, Size);
+  Allocator->deallocateSized(P, Origin, Size);
+
+  void *P2 = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P2, nullptr);
+  for (scudo::uptr I = 0; I < Size; I++)
+    ASSERT_EQ((reinterpret_cast<char *>(P2))[I], '\0');
+
+  Allocator->deallocateSized(P2, Origin, Size);
+}
+
+TEST(ScudoCombinedTest, DeallocNoZeroFill) {
+  auto Allocator =
+      std::make_unique<TestAllocator<scudo::TestDeallocNoZeroFillConfig>>();
+  // MTE zeroes the allocations even when turned off.
+  if (Allocator->useMemoryTaggingTestOnly())
+    TEST_SKIP("Doesn't work on MTE");
+
+  Allocator->setFillContents(scudo::NoFill);
+
+  const scudo::uptr Size = 1024U;
+  void *P = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P, nullptr);
+  memset(P, 0xaa, Size);
+  Allocator->deallocateSized(P, Origin, Size);
+
+  void *P2 = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P2, nullptr);
+  if (Allocator->useMemoryTaggingTestOnly()) {
+    EXPECT_EQ(scudo::untagPointer(P), scudo::untagPointer(P2));
+  } else {
+    EXPECT_EQ(P, P2);
+  }
+
+  for (scudo::uptr I = 0; I < Size; I++) {
+    EXPECT_EQ(0xaa, (reinterpret_cast<unsigned char *>(P2))[I])
+        << "Failed on index " << I;
+  }
+
+  Allocator->deallocateSized(P2, Origin, Size);
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, PatternOrZeroFill) {
@@ -611,6 +765,41 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DoubleFreeFromPrimary) {
   }
 }
 
+SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DoubleFreeFromSecondary) {
+  auto *Allocator = this->Allocator.get();
+
+  using SecondaryConfig = scudo::SecondaryConfig<TypeParam>;
+  using CacheConfig = typename SecondaryConfig::CacheConfig;
+  using CacheT = typename SecondaryConfig::template CacheT<CacheConfig>;
+  // A secondary double free is only guaranteed to fail with "invalid chunk
+  // state" (like Primary) if the freed block remains mapped in the secondary
+  // cache. Uncached blocks are unmapped on the first deallocate(), so the
+  // second deallocate() faults when loading the chunk header instead.
+  if (!std::is_same_v<CacheT, scudo::MapAllocatorNoCache<CacheConfig>> &&
+      CacheConfig::getDefaultMaxEntriesCount() != 0U &&
+      CacheConfig::getDefaultMaxEntrySize() > 0U) {
+
+    EXPECT_GE(CacheConfig::getDefaultMaxEntrySize(),
+              scudo::getPageSizeCached());
+    scudo::uptr SecondarySize =
+        CacheConfig::getDefaultMaxEntrySize() - scudo::getPageSizeCached();
+    EXPECT_FALSE(
+        isPrimaryAllocation<TestAllocator<TypeParam>>(SecondarySize, 0));
+
+    // Verify that a double free results in a chunk state error (or a SIGSEGV
+    // under MTE, which marks cached secondary entries MAP_NOACCESS).
+    SCUDO_EXPECT_DEATH(
+        {
+          // Allocate from secondary
+          void *Ptr = Allocator->allocate(SecondarySize, Origin);
+          ASSERT_TRUE(Ptr != nullptr);
+          Allocator->deallocate(Ptr, Origin);
+          Allocator->deallocate(Ptr, Origin);
+        },
+        Allocator->useMemoryTaggingTestOnly() ? "" : "invalid chunk state");
+  }
+}
+
 SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DisableMemoryTagging) {
   auto *Allocator = this->Allocator.get();
 
@@ -618,7 +807,7 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DisableMemoryTagging) {
     // Check that disabling memory tagging works correctly.
     void *P = Allocator->allocate(2048, Origin);
     SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[2048] = 'A', "");
-    scudo::ScopedDisableMemoryTagChecks NoTagChecks;
+    scudo::ScopedTestOnlyDisableMemoryTagChecks NoTagChecks;
     Allocator->disableMemoryTagging();
     reinterpret_cast<char *>(P)[2048] = 'A';
     Allocator->deallocate(P, Origin);
@@ -1229,6 +1418,10 @@ struct TestQuarantineDisabledConfig : TestQuarantineConfig {
 
 TEST(ScudoCombinedTest, QuarantineDisabled) {
   using AllocatorT = TestAllocator<TestQuarantineDisabledConfig>;
+  EXPECT_LT(sizeof(scudo::Allocator<TestQuarantineDisabledConfig>),
+            sizeof(scudo::Allocator<TestQuarantineConfig>));
+  EXPECT_LT(sizeof(scudo::TSD<scudo::Allocator<TestQuarantineDisabledConfig>>),
+            sizeof(scudo::TSD<scudo::Allocator<TestQuarantineConfig>>));
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   const scudo::uptr Size = 1000U;

@@ -4,9 +4,9 @@
 
 target triple = "aarch64-linux-gnu"
 
-define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
+define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @simple_csa_int_select(
-; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i32 [[A:%.*]]) {
+; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -31,8 +31,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -46,9 +45,9 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[TMP13:%.*]] = icmp slt <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; SVE-NEXT:    [[TMP7:%.*]] = freeze <vscale x 4 x i1> [[TMP13]]
 ; SVE-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP7]])
-; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -91,9 +90,9 @@ exit:
   ret i32 %select.data
 }
 
-define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
+define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) vscale_range(1,16) {
 ; NEON-LABEL: define ptr @simple_csa_ptr_select(
-; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i64 [[A:%.*]], ptr [[INIT:%.*]]) {
+; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i64 [[A:%.*]], ptr [[INIT:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -119,8 +118,7 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[A]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
@@ -137,19 +135,18 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; SVE-NEXT:    [[TMP7:%.*]] = icmp slt <vscale x 2 x i64> [[BROADCAST_SPLAT]], [[TMP6]]
 ; SVE-NEXT:    [[TMP8:%.*]] = freeze <vscale x 2 x i1> [[TMP7]]
 ; SVE-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[TMP8]])
-; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP11]] = select i1 [[TMP9]], <vscale x 2 x ptr> [[WIDE_LOAD]], <vscale x 2 x ptr> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; SVE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
-; SVE-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 2 x ptr> [[BROADCAST_SPLAT2]], i64 0
-; SVE-NEXT:    [[TMP14:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.nxv2p0(<vscale x 2 x ptr> [[TMP11]], <vscale x 2 x i1> [[TMP10]], ptr [[TMP13]])
+; SVE-NEXT:    [[TMP13:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.nxv2p0(<vscale x 2 x ptr> [[TMP11]], <vscale x 2 x i1> [[TMP10]], ptr [[INIT]])
 ; SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; SVE:       [[SCALAR_PH]]:
 ; SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi ptr [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi ptr [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
 ; SVE-NEXT:    br label %[[LOOP1:.*]]
 ; SVE:       [[LOOP1]]:
 ; SVE-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
@@ -163,7 +160,7 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; SVE-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; SVE-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP5:![0-9]+]]
 ; SVE:       [[EXIT]]:
-; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi ptr [ [[SELECT_DATA]], %[[LOOP1]] ], [ [[TMP14]], %[[MIDDLE_BLOCK]] ]
+; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi ptr [ [[SELECT_DATA]], %[[LOOP1]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
 ; SVE-NEXT:    ret ptr [[SELECT_DATA_LCSSA]]
 ;
 entry:
@@ -185,9 +182,9 @@ exit:
   ret ptr %select.data
 }
 
-define float @simple_csa_float_select(i64 %N, ptr %data, float %a) {
+define float @simple_csa_float_select(i64 %N, ptr %data, float %a) vscale_range(1,16) {
 ; NEON-LABEL: define float @simple_csa_float_select(
-; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], float [[A:%.*]]) {
+; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], float [[A:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 20
 ; NEON-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -206,7 +203,7 @@ define float @simple_csa_float_select(i64 %N, ptr %data, float %a) {
 ; NEON-NEXT:    [[TMP2:%.*]] = fcmp olt <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; NEON-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
 ; NEON-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
-; NEON-NEXT:    [[TMP5]] = select i1 [[TMP4]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; NEON-NEXT:    [[TMP5]] = select i1 [[TMP4]], <4 x i1> [[TMP3]], <4 x i1> [[TMP0]]
 ; NEON-NEXT:    [[TMP6]] = select i1 [[TMP4]], <4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI]]
 ; NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; NEON-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -241,8 +238,7 @@ define float @simple_csa_float_select(i64 %N, ptr %data, float %a) {
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[A]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x float> [[BROADCAST_SPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
@@ -256,9 +252,9 @@ define float @simple_csa_float_select(i64 %N, ptr %data, float %a) {
 ; SVE-NEXT:    [[TMP6:%.*]] = fcmp olt <vscale x 4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; SVE-NEXT:    [[TMP7:%.*]] = freeze <vscale x 4 x i1> [[TMP6]]
 ; SVE-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP7]])
-; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -301,9 +297,9 @@ exit:
   ret float %select.data
 }
 
-define i32 @multi_user_csa_int_select(i64 %N, ptr %data, ptr %results, i32 %a) {
+define i32 @multi_user_csa_int_select(i64 %N, ptr %data, ptr %results, i32 %a) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @multi_user_csa_int_select(
-; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], ptr [[RESULTS:%.*]], i32 [[A:%.*]]) {
+; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], ptr [[RESULTS:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -363,9 +359,9 @@ exit:
 }
 
 
-define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) {
+define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @multi_use_cmp_for_csa_int_select(
-; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i32 [[A:%.*]]) {
+; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -395,13 +391,12 @@ define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; SVE-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; SVE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP3]], i64 0
+; SVE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; SVE-NEXT:    br label %[[LOOP:.*]]
 ; SVE:       [[LOOP]]:
@@ -415,10 +410,10 @@ define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[TMP7:%.*]] = icmp slt <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; SVE-NEXT:    [[TMP8:%.*]] = freeze <vscale x 4 x i1> [[TMP7]]
 ; SVE-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP8]])
-; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP5]]
+; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> [[TMP5]]
 ; SVE-NEXT:    [[TMP11]] = select i1 [[TMP9]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[TMP12]] = select <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i64> [[VEC_IND]], <vscale x 4 x i64> [[VEC_PHI3]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; SVE-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; SVE-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -476,9 +471,9 @@ exit:
 }
 
 
-define i32 @chained_select_for_csa_int_select(i64 %N, ptr %data1, ptr %data2, i32 %a, i32 %b) {
+define i32 @chained_select_for_csa_int_select(i64 %N, ptr %data1, ptr %data2, i32 %a, i32 %b) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @chained_select_for_csa_int_select(
-; NEON-SAME: i64 [[N:%.*]], ptr [[DATA1:%.*]], ptr [[DATA2:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
+; NEON-SAME: i64 [[N:%.*]], ptr [[DATA1:%.*]], ptr [[DATA2:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -543,9 +538,9 @@ exit:
   ret i32 %select.data
 }
 
-define i32 @csa_with_extra_use_of_select(i64 %N, ptr readonly %data, ptr noalias %out, i32 %a) {
+define i32 @csa_with_extra_use_of_select(i64 %N, ptr readonly %data, ptr noalias %out, i32 %a) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @csa_with_extra_use_of_select(
-; NEON-SAME: i64 [[N:%.*]], ptr readonly [[DATA:%.*]], ptr noalias [[OUT:%.*]], i32 [[A:%.*]]) {
+; NEON-SAME: i64 [[N:%.*]], ptr readonly [[DATA:%.*]], ptr noalias [[OUT:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -605,9 +600,9 @@ exit:
 }
 
 ;; Add more work to the loop besides the CSA to check cost modelling for NEON.
-define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr readonly %B, ptr noalias %C, i32 %threshold) {
+define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr readonly %B, ptr noalias %C, i32 %threshold) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @int_select_with_extra_arith_payload(
-; NEON-SAME: i64 [[N:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]], ptr noalias [[C:%.*]], i32 [[THRESHOLD:%.*]]) {
+; NEON-SAME: i64 [[N:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]], ptr noalias [[C:%.*]], i32 [[THRESHOLD:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; NEON-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -633,7 +628,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; NEON-NEXT:    [[TMP7:%.*]] = icmp slt <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; NEON-NEXT:    [[TMP8:%.*]] = freeze <4 x i1> [[TMP7]]
 ; NEON-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP8]])
-; NEON-NEXT:    [[TMP10]] = select i1 [[TMP9]], <4 x i1> [[TMP7]], <4 x i1> [[TMP0]]
+; NEON-NEXT:    [[TMP10]] = select i1 [[TMP9]], <4 x i1> [[TMP8]], <4 x i1> [[TMP0]]
 ; NEON-NEXT:    [[TMP11]] = select i1 [[TMP9]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
 ; NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; NEON-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -675,8 +670,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -697,9 +691,9 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp slt <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; SVE-NEXT:    [[TMP12:%.*]] = freeze <vscale x 4 x i1> [[TMP11]]
 ; SVE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP12]])
-; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 4 x i1> [[TMP11]], <vscale x 4 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP15]] = select i1 [[TMP13]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -756,9 +750,9 @@ exit:
   ret i32 %select.A
 }
 
-define i8 @simple_csa_byte_select(i64 %N, ptr %data, i8 %a) {
+define i8 @simple_csa_byte_select(i64 %N, ptr %data, i8 %a) vscale_range(1,16) {
 ; NEON-LABEL: define i8 @simple_csa_byte_select(
-; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i8 [[A:%.*]]) {
+; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i8 [[A:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -783,8 +777,7 @@ define i8 @simple_csa_byte_select(i64 %N, ptr %data, i8 %a) {
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 4
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -798,9 +791,9 @@ define i8 @simple_csa_byte_select(i64 %N, ptr %data, i8 %a) {
 ; SVE-NEXT:    [[TMP6:%.*]] = icmp slt <vscale x 16 x i8> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; SVE-NEXT:    [[TMP7:%.*]] = freeze <vscale x 16 x i1> [[TMP6]]
 ; SVE-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP7]])
-; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 16 x i8> [[WIDE_LOAD]], <vscale x 16 x i8> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -843,9 +836,9 @@ exit:
   ret i8 %select.data
 }
 
-define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
+define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @simple_csa_int_select_use_interleave(
-; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i32 [[A:%.*]]) {
+; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; NEON-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -862,7 +855,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; NEON-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; NEON-NEXT:    [[TMP1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; NEON-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
-; NEON-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[LD_ADDR]], i64 4
+; NEON-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[LD_ADDR]], i64 16
 ; NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[LD_ADDR]], align 4
 ; NEON-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP9]], align 4
 ; NEON-NEXT:    [[TMP2:%.*]] = icmp slt <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
@@ -871,8 +864,8 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; NEON-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP10]]
 ; NEON-NEXT:    [[TMP14:%.*]] = or <4 x i1> [[TMP3]], [[TMP12]]
 ; NEON-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP14]])
-; NEON-NEXT:    [[TMP5]] = select i1 [[TMP4]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
-; NEON-NEXT:    [[TMP11]] = select i1 [[TMP4]], <4 x i1> [[TMP10]], <4 x i1> [[TMP1]]
+; NEON-NEXT:    [[TMP5]] = select i1 [[TMP4]], <4 x i1> [[TMP3]], <4 x i1> [[TMP0]]
+; NEON-NEXT:    [[TMP11]] = select i1 [[TMP4]], <4 x i1> [[TMP12]], <4 x i1> [[TMP1]]
 ; NEON-NEXT:    [[TMP6]] = select i1 [[TMP4]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
 ; NEON-NEXT:    [[TMP13]] = select i1 [[TMP4]], <4 x i32> [[WIDE_LOAD2]], <4 x i32> [[VEC_PHI1]]
 ; NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
@@ -910,8 +903,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
 ; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP3]], 1
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP14]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -923,7 +915,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP15:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[INDEX]]
-; SVE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 [[TMP3]]
+; SVE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP5]], i64 [[TMP3]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 4
 ; SVE-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i32>, ptr [[TMP17]], align 4
 ; SVE-NEXT:    [[TMP6:%.*]] = icmp slt <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
@@ -932,11 +924,11 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[TMP20:%.*]] = freeze <vscale x 4 x i1> [[TMP19]]
 ; SVE-NEXT:    [[TMP13:%.*]] = or <vscale x 4 x i1> [[TMP7]], [[TMP20]]
 ; SVE-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP13]])
-; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
-; SVE-NEXT:    [[TMP16]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP19]], <vscale x 4 x i1> [[TMP15]]
+; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP16]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP20]], <vscale x 4 x i1> [[TMP15]]
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[TMP18]] = select i1 [[TMP8]], <vscale x 4 x i32> [[WIDE_LOAD2]], <vscale x 4 x i32> [[VEC_PHI1]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP14]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -988,9 +980,9 @@ exit:
 ;       result = b[i];
 ;   return result;
 ; }
-define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val, i64 %N, i32 %threshold) {
+define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val, i64 %N, i32 %threshold) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @simple_csa_int_load(
-; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) {
+; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -1021,8 +1013,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -1040,19 +1031,18 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP7]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i32> poison)
 ; SVE-NEXT:    [[TMP8:%.*]] = freeze <vscale x 4 x i1> [[TMP6]]
 ; SVE-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP8]])
-; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP11]] = select i1 [[TMP9]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
-; SVE-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 4 x i32> [[BROADCAST_SPLAT2]], i64 0
-; SVE-NEXT:    [[TMP14:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP11]], <vscale x 4 x i1> [[TMP10]], i32 [[TMP13]])
+; SVE-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP11]], <vscale x 4 x i1> [[TMP10]], i32 [[DEFAULT_VAL]])
 ; SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; SVE:       [[SCALAR_PH]]:
 ; SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ [[DEFAULT_VAL]], %[[ENTRY]] ]
+; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ [[DEFAULT_VAL]], %[[ENTRY]] ]
 ; SVE-NEXT:    br label %[[LOOP:.*]]
 ; SVE:       [[LOOP]]:
 ; SVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -1071,7 +1061,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; SVE-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP17:![0-9]+]]
 ; SVE:       [[EXIT]]:
-; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LATCH]] ], [ [[TMP14]], %[[MIDDLE_BLOCK]] ]
+; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LATCH]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
 ; SVE-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]
 ;
 entry:
@@ -1108,9 +1098,9 @@ exit:
 ;         result = 42 / a[i]
 ;     return result;
 ;   }
-define i32 @simple_csa_int_divide(ptr noalias %a, ptr noalias %b, i32 %default_val, i64 %N, i32 %threshold) {
+define i32 @simple_csa_int_divide(ptr noalias %a, ptr noalias %b, i32 %default_val, i64 %N, i32 %threshold) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @simple_csa_int_divide(
-; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) {
+; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -1140,8 +1130,7 @@ define i32 @simple_csa_int_divide(ptr noalias %a, ptr noalias %b, i32 %default_v
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -1158,19 +1147,18 @@ define i32 @simple_csa_int_divide(ptr noalias %a, ptr noalias %b, i32 %default_v
 ; SVE-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i32> @llvm.masked.sdiv.nxv4i32(<vscale x 4 x i32> splat (i32 42), <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i1> [[TMP6]])
 ; SVE-NEXT:    [[TMP9:%.*]] = freeze <vscale x 4 x i1> [[TMP6]]
 ; SVE-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP9]])
-; SVE-NEXT:    [[TMP11]] = select i1 [[TMP10]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP11]] = select i1 [[TMP10]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP12]] = select i1 [[TMP10]], <vscale x 4 x i32> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
-; SVE-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 4 x i32> [[BROADCAST_SPLAT2]], i64 0
-; SVE-NEXT:    [[TMP15:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP12]], <vscale x 4 x i1> [[TMP11]], i32 [[TMP14]])
+; SVE-NEXT:    [[TMP14:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP12]], <vscale x 4 x i1> [[TMP11]], i32 [[DEFAULT_VAL]])
 ; SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; SVE:       [[SCALAR_PH]]:
 ; SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ [[DEFAULT_VAL]], %[[ENTRY]] ]
+; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ [[DEFAULT_VAL]], %[[ENTRY]] ]
 ; SVE-NEXT:    br label %[[LOOP:.*]]
 ; SVE:       [[LOOP]]:
 ; SVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -1188,7 +1176,7 @@ define i32 @simple_csa_int_divide(ptr noalias %a, ptr noalias %b, i32 %default_v
 ; SVE-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; SVE-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP19:![0-9]+]]
 ; SVE:       [[EXIT]]:
-; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LATCH]] ], [ [[TMP15]], %[[MIDDLE_BLOCK]] ]
+; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LATCH]] ], [ [[TMP14]], %[[MIDDLE_BLOCK]] ]
 ; SVE-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]
 ;
 entry:
@@ -1225,9 +1213,9 @@ exit:
 ;    }
 ;  }
 ;  return result;
-define i32 @csa_load_nested_ifs(ptr noalias %a, ptr noalias %b, i32 %default_val, i64 %N, i32 %threshold) {
+define i32 @csa_load_nested_ifs(ptr noalias %a, ptr noalias %b, i32 %default_val, i64 %N, i32 %threshold) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @csa_load_nested_ifs(
-; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) {
+; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -1261,15 +1249,14 @@ define i32 @csa_load_nested_ifs(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[DEFAULT_VAL]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; SVE-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; SVE-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP3]], i64 0
+; SVE-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SVE:       [[VECTOR_BODY]]:
@@ -1286,20 +1273,19 @@ define i32 @csa_load_nested_ifs(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP10]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i32> poison)
 ; SVE-NEXT:    [[TMP11:%.*]] = freeze <vscale x 4 x i1> [[TMP9]]
 ; SVE-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP11]])
-; SVE-NEXT:    [[TMP13]] = select i1 [[TMP12]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i1> [[TMP5]]
+; SVE-NEXT:    [[TMP13]] = select i1 [[TMP12]], <vscale x 4 x i1> [[TMP11]], <vscale x 4 x i1> [[TMP5]]
 ; SVE-NEXT:    [[TMP14]] = select i1 [[TMP12]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD5]], <vscale x 4 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
 ; SVE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
-; SVE-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 4 x i32> [[BROADCAST_SPLAT2]], i64 0
-; SVE-NEXT:    [[TMP17:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP14]], <vscale x 4 x i1> [[TMP13]], i32 [[TMP16]])
+; SVE-NEXT:    [[TMP16:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP14]], <vscale x 4 x i1> [[TMP13]], i32 [[DEFAULT_VAL]])
 ; SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; SVE:       [[SCALAR_PH]]:
 ; SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP17]], %[[MIDDLE_BLOCK]] ], [ [[DEFAULT_VAL]], %[[ENTRY]] ]
+; SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ [[DEFAULT_VAL]], %[[ENTRY]] ]
 ; SVE-NEXT:    br label %[[LOOP:.*]]
 ; SVE:       [[LOOP]]:
 ; SVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -1321,7 +1307,7 @@ define i32 @csa_load_nested_ifs(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; SVE-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP21:![0-9]+]]
 ; SVE:       [[EXIT]]:
-; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LATCH]] ], [ [[TMP17]], %[[MIDDLE_BLOCK]] ]
+; SVE-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LATCH]] ], [ [[TMP16]], %[[MIDDLE_BLOCK]] ]
 ; SVE-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]
 ;
 entry:
@@ -1363,9 +1349,9 @@ exit:
 ;      result = c[i];
 ;  }
 ;  return result;
-define i32 @chained_csa_int_load(ptr noalias %a, ptr noalias %b,  ptr noalias %c, i32 %default_val, i64 %N, i32 %threshold) {
+define i32 @chained_csa_int_load(ptr noalias %a, ptr noalias %b,  ptr noalias %c, i32 %default_val, i64 %N, i32 %threshold) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @chained_csa_int_load(
-; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) {
+; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -1472,9 +1458,9 @@ exit:
 ;    res[i] = result;
 ;  }
 ;  return result;
-define i32 @simple_csa_int_load_multi_user(ptr noalias %a, ptr noalias %b, ptr noalias %results, i32 %default_val, i64 %N, i32 %threshold) {
+define i32 @simple_csa_int_load_multi_user(ptr noalias %a, ptr noalias %b, ptr noalias %results, i32 %default_val, i64 %N, i32 %threshold) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @simple_csa_int_load_multi_user(
-; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[RESULTS:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) {
+; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[RESULTS:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -1562,9 +1548,9 @@ exit:
 ;    foo += result; // Fails as CSA has an extra user.
 ;  }
 ;  return result ^ foo;
-define i32 @csa_load_used_in_add_reduction(ptr noalias %a, ptr noalias %b, i32 %default_val, i64 %N, i32 %threshold) {
+define i32 @csa_load_used_in_add_reduction(ptr noalias %a, ptr noalias %b, i32 %default_val, i64 %N, i32 %threshold) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @csa_load_used_in_add_reduction(
-; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) {
+; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -1652,9 +1638,9 @@ exit:
 ;    sum  += src[i];
 ;  }
 ;  return lastsum;
-define i32 @csa_find_last_phi_use_other_reduction(ptr noalias %mask, ptr noalias %src, ptr noalias %b, i64 %N) {
+define i32 @csa_find_last_phi_use_other_reduction(ptr noalias %mask, ptr noalias %src, ptr noalias %b, i64 %N) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @csa_find_last_phi_use_other_reduction(
-; NEON-SAME: ptr noalias [[MASK:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) {
+; NEON-SAME: ptr noalias [[MASK:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -1755,9 +1741,9 @@ exit:
 ;      lastsum = i + b[i];
 ;  }
 ;  return lastsum;
-define i32 @csa_find_last_phi_use_iv(ptr noalias %mask, ptr noalias %src, ptr noalias %b, i64 %N) {
+define i32 @csa_find_last_phi_use_iv(ptr noalias %mask, ptr noalias %src, ptr noalias %b, i64 %N) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @csa_find_last_phi_use_iv(
-; NEON-SAME: ptr noalias [[MASK:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) {
+; NEON-SAME: ptr noalias [[MASK:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -1791,11 +1777,10 @@ define i32 @csa_find_last_phi_use_iv(ptr noalias %mask, ptr noalias %src, ptr no
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 4
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
-; SVE-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
+; SVE-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP1]] to i32
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP5]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1813,9 +1798,9 @@ define i32 @csa_find_last_phi_use_iv(ptr noalias %mask, ptr noalias %src, ptr no
 ; SVE-NEXT:    [[TMP11:%.*]] = add nuw nsw <vscale x 16 x i32> [[VEC_IND]], [[TMP10]]
 ; SVE-NEXT:    [[TMP12:%.*]] = freeze <vscale x 16 x i1> [[TMP8]]
 ; SVE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP12]])
-; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP8]], <vscale x 16 x i1> [[TMP6]]
+; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP12]], <vscale x 16 x i1> [[TMP6]]
 ; SVE-NEXT:    [[TMP15]] = select i1 [[TMP13]], <vscale x 16 x i32> [[TMP11]], <vscale x 16 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; SVE-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
@@ -1889,9 +1874,9 @@ exit:
 ;    }
 ;  }
 ;  return last_a ^ last_b;
-define i32 @csa_multiple_find_last_phi_reductions(ptr noalias %mask, ptr noalias %a, ptr noalias %b, i64 %N) {
+define i32 @csa_multiple_find_last_phi_reductions(ptr noalias %mask, ptr noalias %a, ptr noalias %b, i64 %N) vscale_range(1,16) {
 ; NEON-LABEL: define i32 @csa_multiple_find_last_phi_reductions(
-; NEON-SAME: ptr noalias [[MASK:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) {
+; NEON-SAME: ptr noalias [[MASK:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -1930,8 +1915,7 @@ define i32 @csa_multiple_find_last_phi_reductions(ptr noalias %mask, ptr noalias
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 4
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SVE:       [[VECTOR_BODY]]:
@@ -1951,11 +1935,11 @@ define i32 @csa_multiple_find_last_phi_reductions(ptr noalias %mask, ptr noalias
 ; SVE-NEXT:    [[TMP11:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD2]] to <vscale x 16 x i32>
 ; SVE-NEXT:    [[TMP12:%.*]] = freeze <vscale x 16 x i1> [[TMP7]]
 ; SVE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP12]])
-; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP12]], <vscale x 16 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP15]] = select i1 [[TMP13]], <vscale x 16 x i32> [[TMP9]], <vscale x 16 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[TMP16]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP5]]
+; SVE-NEXT:    [[TMP16]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP12]], <vscale x 16 x i1> [[TMP5]]
 ; SVE-NEXT:    [[TMP17]] = select i1 [[TMP13]], <vscale x 16 x i32> [[TMP11]], <vscale x 16 x i32> [[VEC_PHI1]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -2032,7 +2016,7 @@ exit:
 ; Negative test for a find-last-like phi fed into a find-last select.
 define i32 @find_last_phi_fed_into_find_last_select(
 ; NEON-LABEL: define i32 @find_last_phi_fed_into_find_last_select(
-; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) {
+; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) #[[ATTR0]] {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    br label %[[LOOP:.*]]
 ; NEON:       [[LOOP]]:
@@ -2087,7 +2071,7 @@ define i32 @find_last_phi_fed_into_find_last_select(
 ; SVE-NEXT:    [[SELECT_DATA_1_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA_1]], %[[LATCH]] ]
 ; SVE-NEXT:    ret i32 [[SELECT_DATA_1_LCSSA]]
 ;
-  ptr noalias %a, ptr noalias %b, ptr noalias %c, i32 %default_val, i64 %N, i32 %threshold) {
+  ptr noalias %a, ptr noalias %b, ptr noalias %c, i32 %default_val, i64 %N, i32 %threshold) vscale_range(1,16) {
 entry:
   br label %loop
 

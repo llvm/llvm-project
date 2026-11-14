@@ -34,7 +34,7 @@ cmake -G Ninja -S runtimes -B build \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DLLVM_LIBC_INCLUDE_SCUDO=ON \
-  -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON \
+  -DRUNTIMES_USE_LIBC=llvm-libc \
   -DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
   -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -52,7 +52,7 @@ ninja -C build libc libm check-libc
 To run a specific test, such as `isalpha` in `ctype.h`:
 
 ```sh
-ninja -C build libc.test.src.ctype.isalpha_test.__unit__
+ninja -C build libc.test.src.ctype.isalpha_test
 ```
 
 ## 4. Verify with Hello World

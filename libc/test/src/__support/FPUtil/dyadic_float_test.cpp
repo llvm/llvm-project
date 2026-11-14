@@ -44,6 +44,18 @@ TEST(LlvmLibcDyadicFloatTest, QuickAdd) {
 
   Float192 z = quick_add(x, y);
   EXPECT_FP_EQ_ALL_ROUNDING(double(x) + double(y), double(z));
+
+  DFloat128 a(0x1.0p0);
+  ASSERT_FP_EQ(0x1.0p0, double(a));
+
+  DFloat128 b(0x1.0p128);
+  ASSERT_FP_EQ(0x1.0p128, double(b));
+
+  DFloat128 c1 = quick_add(a, b);
+  EXPECT_FP_EQ(double(a) + double(b), double(c1));
+
+  DFloat128 c2 = quick_add(b, a);
+  EXPECT_FP_EQ(double(b) + double(a), double(c2));
 }
 
 TEST(LlvmLibcDyadicFloatTest, QuickMul) {

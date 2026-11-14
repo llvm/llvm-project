@@ -8,7 +8,7 @@
 // CHECK-NEXT:     Name: .xdata (2E 78 64 61 74 61 00 00)
 // CHECK-NEXT:     VirtualSize: 0x0
 // CHECK-NEXT:     VirtualAddress: 0x0
-// CHECK-NEXT:     RawDataSize: 52
+// CHECK-NEXT:     RawDataSize: 0x34
 // CHECK-NEXT:     PointerToRawData: 0x3D0A20
 // CHECK-NEXT:     PointerToRelocations: 0x0
 // CHECK-NEXT:     PointerToLineNumbers: 0x0
@@ -25,7 +25,7 @@
 // CHECK-NEXT:     Name: .pdata (2E 70 64 61 74 61 00 00)
 // CHECK-NEXT:     VirtualSize: 0x0
 // CHECK-NEXT:     VirtualAddress: 0x0
-// CHECK-NEXT:     RawDataSize: 40
+// CHECK-NEXT:     RawDataSize: 0x28
 // CHECK-NEXT:     PointerToRawData: 0x3D0A54
 // CHECK-NEXT:     PointerToRelocations: 0x3D0A7C
 // CHECK-NEXT:     PointerToLineNumbers: 0x0

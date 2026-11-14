@@ -43,6 +43,7 @@ template <class T, size_t N> class PODSmallVector {
                 "T is required to be a trivially copyable type");
   static_assert(std::is_trivially_default_constructible<T>::value,
                 "T is required to be trivially default constructible");
+  static_assert(N > 0, "PODSmallVector requires a non-zero inline capacity");
   T *First = nullptr;
   T *Last = nullptr;
   T *Cap = nullptr;
@@ -2086,7 +2087,7 @@ public:
     {
       ScopedOverride<bool> LT(OB.TemplateTracker.InsideTemplate, true);
       OB += "<";
-      OB.printLeft(*To);
+      To->print(OB);
       OB += ">";
     }
     OB.printOpen();
@@ -4913,10 +4914,6 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
       return make<StringLiteral>(T);
     return nullptr;
   }
-  case 'D':
-    if (consumeIf("Dn") && (consumeIf('0'), consumeIf('E')))
-      return make<NameType>("nullptr");
-    return nullptr;
   case 'T':
     // Invalid mangled name per
     //   http://sourcerytools.com/pipermail/cxx-abi-dev/2011-August/002422.html
@@ -4930,6 +4927,14 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
       return nullptr;
     return make<LambdaExpr>(T);
   }
+  case 'D':
+    if (look(1) == 'n') {
+      if (consumeIf("Dn") && (consumeIf('0'), consumeIf('E')))
+        return make<NameType>("nullptr");
+      return nullptr;
+    }
+    // Other D-prefixed types (DB<n>_, Du, Di, Ds, ...) are ordinary types.
+    DEMANGLE_FALLTHROUGH;
   default: {
     // might be named type
     Node *T = getDerived().parseType();

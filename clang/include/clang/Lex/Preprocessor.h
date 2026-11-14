@@ -376,10 +376,6 @@ private:
   /// lexed, if any.
   SourceLocation ModuleImportLoc;
 
-  /// The source location of the \c module contextual keyword we just
-  /// lexed, if any.
-  SourceLocation ModuleDeclLoc;
-
   llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
   unsigned CheckPointCounter = 0;
 
@@ -710,6 +706,25 @@ private:
   ///
   /// This is used when loading a precompiled preamble.
   std::pair<int, bool> SkipMainFilePreamble;
+
+  /// Implicit input directives waiting to be entered after a global module
+  /// fragment introducer, if the main file starts a module unit.
+  std::string DeferredGMFInputs;
+
+  /// The synthesized buffer used to enter deferred implicit input files.
+  FileID DeferredGMFInputsFileID;
+
+  /// Whether the predefines buffer contains a synthesized GMF introducer.
+  bool HasSynthesizedGMF = false;
+
+  /// Whether setPredefines() replaced a previously initialized buffer.
+  bool PredefinesWereReplaced = false;
+  bool PredefinesInitialized = false;
+
+  bool hasDeferredGMFInputs() const { return !DeferredGMFInputs.empty(); }
+
+  /// Enter implicit input files after the global module fragment introducer.
+  void EnterDeferredGMFInputs(SourceLocation IncludeLoc);
 
   /// Whether we hit an error due to reaching max allowed include depth. Allows
   /// to avoid hitting the same error over and over again.
@@ -1072,7 +1087,7 @@ private:
   llvm::SmallSetVector<Module *, 2> AffectingClangModules;
 
   /// The set of known macros exported from modules.
-  llvm::FoldingSet<ModuleMacro> ModuleMacros;
+  llvm::UniquingSet<ModuleMacro> ModuleMacros;
 
   /// The names of potential module macros that we've not yet processed.
   llvm::SmallVector<IdentifierInfo *, 32> PendingModuleMacroNames;
@@ -1569,7 +1584,18 @@ public:
   /// Set the predefines for this Preprocessor.
   ///
   /// These predefines are automatically injected when parsing the main file.
-  void setPredefines(std::string P) { Predefines = std::move(P); }
+  void setPredefines(std::string P) {
+    PredefinesWereReplaced |= PredefinesInitialized;
+    PredefinesInitialized = true;
+    Predefines = std::move(P);
+  }
+
+  /// Record implicit macro, PCH, and regular include directives to be entered
+  /// before the main file or inside its global module fragment.
+  void setDeferredGMFInputs(std::string Inputs) {
+    assert(DeferredGMFInputs.empty());
+    DeferredGMFInputs = std::move(Inputs);
+  }
 
   /// Return information about the specified preprocessor
   /// identifier token.
@@ -2162,6 +2188,15 @@ public:
     return Diags->Report(Tok.getLocation(), DiagID);
   }
 
+  DiagnosticBuilder DiagCompat(SourceLocation Loc,
+                               unsigned CompatDiagID) const {
+    return Diag(Loc, DiagnosticIDs::getCompatDiagId(LangOpts, CompatDiagID));
+  }
+
+  DiagnosticBuilder DiagCompat(const Token &Tok, unsigned CompatDiagID) const {
+    return Diag(Tok, DiagnosticIDs::getCompatDiagId(LangOpts, CompatDiagID));
+  }
+
   /// Return the 'spelling' of the token at the given
   /// location; does not go up to the spelling location or down to the
   /// expansion location.
@@ -2705,17 +2740,19 @@ private:
   /// Evaluate an integer constant expression that may occur after a
   /// \#if or \#elif directive and return a \p DirectiveEvalResult object.
   ///
-  /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
-  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+  /// If the expression is equivalent to "!defined(X)", return X and its
+  /// location in IfNDefMacro.
+  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierLoc &IfNDefMacro,
                                                   bool CheckForEoD = true);
 
   /// Evaluate an integer constant expression that may occur after a
   /// \#if or \#elif directive and return a \p DirectiveEvalResult object.
   ///
-  /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
+  /// If the expression is equivalent to "!defined(X)", return X and its
+  /// location in IfNDefMacro.
   /// \p EvaluatedDefined will contain the result of whether "defined" appeared
   /// in the evaluated expression or not.
-  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierLoc &IfNDefMacro,
                                                   Token &Tok,
                                                   bool &EvaluatedDefined,
                                                   bool CheckForEoD = true);

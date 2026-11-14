@@ -35,13 +35,13 @@ unwrap_opt(cpp::optional<cpp::string_view> str_opt) {
 
 /// Converts string-based format specifiers (like %a, %Z) and writes to writer.
 ///
-/// \tparam write_mode The write mode for the writer.
+/// \tparam overflow_mode The write overflow mode for the writer.
 /// \param writer The writer to write the output to.
 /// \param to_conv The format section to convert.
 /// \param timeptr Pointer to the tm structure.
 /// \return WRITE_OK on success, or negative value on error.
-template <printf_core::WriteMode write_mode>
-LIBC_INLINE int convert_str(printf_core::Writer<write_mode> *writer,
+template <printf_core::OverflowMode overflow_mode>
+LIBC_INLINE int convert_str(printf_core::Writer<overflow_mode> *writer,
                             const FormatSection &to_conv, const tm *timeptr) {
   cpp::string_view str;
   cpp::optional<cpp::string_view> str_opt;

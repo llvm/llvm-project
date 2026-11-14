@@ -37,7 +37,7 @@ LIBC_INLINE_VAR constexpr bool K_USE_SOFTWARE_PREFETCHING =
     LLVM_LIBC_IS_DEFINED(LIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING);
 
 // Whether to use NTA stores and what threshold for switching to NTA
-#ifdef LIBC_COPT_MEMCPY_X86_USE_NTA_STORES
+#if defined(LIBC_COPT_MEMCPY_X86_USE_NTA_STORES) && defined(__AVX__)
 // Mostly based on empirical data. Theoretical justification:
 // upper bound of L2 size is 1MB on most x86 machines.
 LIBC_INLINE_VAR constexpr size_t K_NTA_THRESHOLD = 1 << 20;

@@ -17,8 +17,8 @@ template <class K>
 struct support::adapt_operations<std::multiset<K>> {
   using ValueType = typename std::multiset<K>::value_type;
   using KeyType   = typename std::multiset<K>::key_type;
-  static ValueType value_from_key(KeyType const& k) { return k; }
-  static KeyType key_from_value(ValueType const& value) { return value; }
+  static ValueType make_value_from_key(KeyType const& k) { return k; }
+  static KeyType const& key_from_value(ValueType const& value) { return value; }
 
   using InsertionResult = typename std::multiset<K>::iterator;
   static auto get_iterator(InsertionResult const& result) { return result; }

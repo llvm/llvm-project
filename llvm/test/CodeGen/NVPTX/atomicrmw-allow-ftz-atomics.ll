@@ -2,16 +2,16 @@
 ; -nvptx-allow-ftz-atomics forces atomicrmw fadd to lower to atom.add even when
 ; the hardware's FTZ behavior doesn't match the function's denormal mode, where
 ; we'd otherwise emit a CAS loop. Compare the lowering with the option disabled
-; (DISALLOW) against the option enabled or default (ALLOW).
+; or default (DISALLOW) against the option enabled (ALLOW).
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=CHECK,DISALLOW
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=CHECK,ALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 | FileCheck %s --check-prefixes=CHECK,ALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 | FileCheck %s --check-prefixes=CHECK,DISALLOW
 ; RUN: %if ptxas-sm_90 && ptxas-isa-8.7 %{ llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_90 %}
 ; RUN: %if ptxas-sm_90 && ptxas-isa-8.7 %{ llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_90 %}
 ; RUN: %if ptxas-sm_90 && ptxas-isa-8.7 %{ llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 | %ptxas-verify -arch=sm_90 %}
 
 ; global f32: atom.add flushes, so we'd normally use a CAS loop (function is not FTZ)
-; when the option is disabled; when enabled (default), it lowers to atom.add.
+; when the option is disabled (default); when enabled, it lowers to atom.add.
 define float @fadd_f32_global(ptr addrspace(1) %addr, float %val) {
 ;
 ; DISALLOW-LABEL: fadd_f32_global(
@@ -21,8 +21,8 @@ define float @fadd_f32_global(ptr addrspace(1) %addr, float %val) {
 ; DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; DISALLOW-EMPTY:
 ; DISALLOW-NEXT:  // %bb.0:
-; DISALLOW-NEXT:    ld.param.b32 %r2, [fadd_f32_global_param_1];
-; DISALLOW-NEXT:    ld.param.b64 %rd1, [fadd_f32_global_param_0];
+; DISALLOW-NEXT:    ld.param::func.b32 %r2, [fadd_f32_global_param_1];
+; DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_f32_global_param_0];
 ; DISALLOW-NEXT:    ld.relaxed.sys.global.b32 %r4, [%rd1];
 ; DISALLOW-NEXT:  $L__BB0_1: // %atomicrmw.start
 ; DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -32,7 +32,7 @@ define float @fadd_f32_global(ptr addrspace(1) %addr, float %val) {
 ; DISALLOW-NEXT:    mov.b32 %r4, %r1;
 ; DISALLOW-NEXT:    @%p1 bra $L__BB0_1;
 ; DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; DISALLOW-NEXT:    st.param.b32 [func_retval0], %r1;
+; DISALLOW-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; DISALLOW-NEXT:    ret;
 ;
 ; ALLOW-LABEL: fadd_f32_global(
@@ -41,17 +41,17 @@ define float @fadd_f32_global(ptr addrspace(1) %addr, float %val) {
 ; ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; ALLOW-EMPTY:
 ; ALLOW-NEXT:  // %bb.0:
-; ALLOW-NEXT:    ld.param.b64 %rd1, [fadd_f32_global_param_0];
-; ALLOW-NEXT:    ld.param.b32 %r1, [fadd_f32_global_param_1];
+; ALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_f32_global_param_0];
+; ALLOW-NEXT:    ld.param::func.b32 %r1, [fadd_f32_global_param_1];
 ; ALLOW-NEXT:    atom.relaxed.sys.global.add.f32 %r2, [%rd1], %r1;
-; ALLOW-NEXT:    st.param.b32 [func_retval0], %r2;
+; ALLOW-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; ALLOW-NEXT:    ret;
   %r = atomicrmw fadd ptr addrspace(1) %addr, float %val monotonic
   ret float %r
 }
 
 ; generic f32: we can't know the memory space, so we'd normally use a CAS loop
-; when the option is disabled; when enabled (default), it lowers to atom.add.
+; when the option is disabled (default); when enabled, it lowers to atom.add.
 define float @fadd_f32_generic(ptr %addr, float %val) {
 ;
 ; DISALLOW-LABEL: fadd_f32_generic(
@@ -61,8 +61,8 @@ define float @fadd_f32_generic(ptr %addr, float %val) {
 ; DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; DISALLOW-EMPTY:
 ; DISALLOW-NEXT:  // %bb.0:
-; DISALLOW-NEXT:    ld.param.b32 %r2, [fadd_f32_generic_param_1];
-; DISALLOW-NEXT:    ld.param.b64 %rd1, [fadd_f32_generic_param_0];
+; DISALLOW-NEXT:    ld.param::func.b32 %r2, [fadd_f32_generic_param_1];
+; DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_f32_generic_param_0];
 ; DISALLOW-NEXT:    ld.relaxed.sys.b32 %r4, [%rd1];
 ; DISALLOW-NEXT:  $L__BB1_1: // %atomicrmw.start
 ; DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -72,7 +72,7 @@ define float @fadd_f32_generic(ptr %addr, float %val) {
 ; DISALLOW-NEXT:    mov.b32 %r4, %r1;
 ; DISALLOW-NEXT:    @%p1 bra $L__BB1_1;
 ; DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; DISALLOW-NEXT:    st.param.b32 [func_retval0], %r1;
+; DISALLOW-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; DISALLOW-NEXT:    ret;
 ;
 ; ALLOW-LABEL: fadd_f32_generic(
@@ -81,10 +81,10 @@ define float @fadd_f32_generic(ptr %addr, float %val) {
 ; ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; ALLOW-EMPTY:
 ; ALLOW-NEXT:  // %bb.0:
-; ALLOW-NEXT:    ld.param.b64 %rd1, [fadd_f32_generic_param_0];
-; ALLOW-NEXT:    ld.param.b32 %r1, [fadd_f32_generic_param_1];
+; ALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_f32_generic_param_0];
+; ALLOW-NEXT:    ld.param::func.b32 %r1, [fadd_f32_generic_param_1];
 ; ALLOW-NEXT:    atom.relaxed.sys.add.f32 %r2, [%rd1], %r1;
-; ALLOW-NEXT:    st.param.b32 [func_retval0], %r2;
+; ALLOW-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; ALLOW-NEXT:    ret;
   %r = atomicrmw fadd ptr %addr, float %val monotonic
   ret float %r
@@ -99,10 +99,10 @@ define float @fadd_f32_shared(ptr addrspace(3) %addr, float %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [fadd_f32_shared_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [fadd_f32_shared_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [fadd_f32_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [fadd_f32_shared_param_1];
 ; CHECK-NEXT:    atom.relaxed.sys.shared.add.f32 %r2, [%rd1], %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %r = atomicrmw fadd ptr addrspace(3) %addr, float %val monotonic
   ret float %r

@@ -54,6 +54,7 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
@@ -277,10 +278,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
   Loop *NewOuter = LI->AllocateLoop();
 
   // Change the parent loop to use the outer loop as its child now.
-  if (Loop *Parent = L->getParentLoop())
-    Parent->replaceChildLoopWith(L, NewOuter);
-  else
-    LI->changeTopLevelLoop(L, NewOuter);
+  LI->replaceLoop(L, NewOuter);
 
   // L is now a subloop of our outer loop.
   NewOuter->addChildLoop(L);
@@ -368,6 +366,10 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   // The header is not an EH pad; preheader insertion should ensure this.
   assert(!Header->isEHPad() && "Can't insert backedge to EH pad");
 
+  // Only keep llvm.loop metadata that is shared by all backedges. Backedges
+  // with different metadata may come from different source loops.
+  MDNode *LoopMD = L->getLoopID();
+
   // Figure out which basic blocks contain back-edges to the loop header.
   std::vector<BasicBlock*> BackedgeBlocks;
   for (BasicBlock *P : predecessors(Header)) {
@@ -443,13 +445,9 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
 
   // Now that all of the PHI nodes have been inserted and adjusted, modify the
   // backedge blocks to jump to the BEBlock instead of the header.
-  // If one of the backedges has llvm.loop metadata attached, we remove
-  // it from the backedge and add it to BEBlock.
-  MDNode *LoopMD = nullptr;
+  // The llvm.loop metadata is moved from the backedges to BEBlock.
   for (BasicBlock *BB : BackedgeBlocks) {
     Instruction *TI = BB->getTerminator();
-    if (!LoopMD)
-      LoopMD = TI->getMetadata(LLVMContext::MD_loop);
     TI->setMetadata(LLVMContext::MD_loop, nullptr);
     TI->replaceSuccessorWith(Header, BEBlock);
   }
@@ -471,11 +469,33 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   return BEBlock;
 }
 
+/// Replace PHI nodes in the loop header that simplify to a single value.
+static bool simplifyHeaderPHIs(Loop *L, DominatorTree *DT, LoopInfo *LI,
+                               ScalarEvolution *SE, AssumptionCache *AC,
+                               bool PreserveLCSSA) {
+  bool Changed = false;
+  const DataLayout &DL = L->getHeader()->getDataLayout();
+  PHINode *PN;
+  for (BasicBlock::iterator I = L->getHeader()->begin();
+       (PN = dyn_cast<PHINode>(I++));)
+    if (Value *V = simplifyInstruction(PN, {DL, nullptr, DT, AC})) {
+      if (SE)
+        SE->forgetValue(PN);
+      if (!PreserveLCSSA || LI->replacementPreservesLCSSAForm(PN, V)) {
+        PN->replaceAllUsesWith(V);
+        PN->eraseFromParent();
+        Changed = true;
+      }
+    }
+  return Changed;
+}
+
 /// Simplify one loop and queue further loops for simplification.
 static bool simplifyOneLoop(Loop *L, SmallVectorImpl<Loop *> &Worklist,
                             DominatorTree *DT, LoopInfo *LI,
                             ScalarEvolution *SE, AssumptionCache *AC,
-                            MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
+                            MemorySSAUpdater *MSSAU, bool PreserveLCSSA,
+                            const TargetTransformInfo *TTI) {
   bool Changed = false;
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
@@ -490,7 +510,7 @@ ReprocessLoop:
     if (BB == L->getHeader())
       continue;
 
-    SmallPtrSet<BasicBlock*, 4> BadPreds;
+    SmallSetVector<BasicBlock *, 4> BadPreds;
     for (BasicBlock *P : predecessors(BB))
       if (!L->contains(P))
         BadPreds.insert(P);
@@ -557,7 +577,12 @@ ReprocessLoop:
     // If this is really a nested loop, rip it out into a child loop.  Don't do
     // this for loops with a giant number of backedges, just factor them into a
     // common backedge instead.
-    if (L->getNumBackEdges() < 8) {
+    // On targets with branch divergence, a backedge taken by only some threads
+    // (e.g. a divergent "continue") would become a divergent inner loop, which
+    // can turn otherwise uniform loop state into per-thread state.
+    bool AllowSeparate =
+        !TTI || !TTI->hasBranchDivergence(L->getHeader()->getParent());
+    if (AllowSeparate && L->getNumBackEdges() < 8) {
       if (Loop *OuterL = separateNestedLoop(L, Preheader, DT, LI, SE,
                                             PreserveLCSSA, AC, MSSAU)) {
         ++NumNested;
@@ -575,7 +600,10 @@ ReprocessLoop:
 
     // If we either couldn't, or didn't want to, identify nesting of the loops,
     // insert a new block that all backedges target, then make it jump to the
-    // loop header.
+    // loop header. Fold degenerate header PHIs first, so they don't turn into
+    // a PHI cycle through the new backedge block.
+    if (simplifyHeaderPHIs(L, DT, LI, SE, AC, PreserveLCSSA))
+      Changed = true;
     LoopLatch = insertUniqueBackedgeBlock(L, Preheader, DT, LI, MSSAU);
     if (LoopLatch)
       Changed = true;
@@ -584,22 +612,11 @@ ReprocessLoop:
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 
-  const DataLayout &DL = L->getHeader()->getDataLayout();
-
   // Scan over the PHI nodes in the loop header.  Since they now have only two
   // incoming values (the loop is canonicalized), we may have simplified the PHI
   // down to 'X = phi [X, Y]', which should be replaced with 'Y'.
-  PHINode *PN;
-  for (BasicBlock::iterator I = L->getHeader()->begin();
-       (PN = dyn_cast<PHINode>(I++)); )
-    if (Value *V = simplifyInstruction(PN, {DL, nullptr, DT, AC})) {
-      if (SE) SE->forgetValue(PN);
-      if (!PreserveLCSSA || LI->replacementPreservesLCSSAForm(PN, V)) {
-        PN->replaceAllUsesWith(V);
-        PN->eraseFromParent();
-        Changed = true;
-      }
-    }
+  if (simplifyHeaderPHIs(L, DT, LI, SE, AC, PreserveLCSSA))
+    Changed = true;
 
   // If this loop has multiple exits and the exits all go to the same
   // block, attempt to merge the exits. This helps several passes, such
@@ -694,7 +711,8 @@ ReprocessLoop:
 
 bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                         ScalarEvolution *SE, AssumptionCache *AC,
-                        MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
+                        MemorySSAUpdater *MSSAU, bool PreserveLCSSA,
+                        const TargetTransformInfo *TTI) {
   bool Changed = false;
 
 #ifndef NDEBUG
@@ -722,7 +740,7 @@ bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
 
   while (!Worklist.empty())
     Changed |= simplifyOneLoop(Worklist.pop_back_val(), Worklist, DT, LI, SE,
-                               AC, MSSAU, PreserveLCSSA);
+                               AC, MSSAU, PreserveLCSSA, TTI);
 
   // Changing exit conditions for blocks may affect exit counts of this loop and
   // any of its parents, so we must invalidate the entire subtree if we've made
@@ -801,11 +819,14 @@ bool LoopSimplify::runOnFunction(Function &F) {
     MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
 
+  auto *TTIWP = getAnalysisIfAvailable<TargetTransformInfoWrapperPass>();
+  const TargetTransformInfo *TTI = TTIWP ? &TTIWP->getTTI(F) : nullptr;
+
   bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
   // Simplify each loop nest in the function.
   for (auto *L : *LI)
-    Changed |= simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), PreserveLCSSA);
+    Changed |= simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), PreserveLCSSA, TTI);
 
 #ifndef NDEBUG
   if (PreserveLCSSA) {
@@ -824,6 +845,7 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   ScalarEvolution *SE = AM.getCachedResult<ScalarEvolutionAnalysis>(F);
   AssumptionCache *AC = &AM.getResult<AssumptionAnalysis>(F);
+  const TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
   auto *MSSAAnalysis = AM.getCachedResult<MemorySSAAnalysis>(F);
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (MSSAAnalysis) {
@@ -835,8 +857,8 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   // Note that we don't preserve LCSSA in the new PM, if you need it run LCSSA
   // after simplifying the loops. MemorySSA is preserved if it exists.
   for (auto *L : *LI)
-    Changed |=
-        simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), /*PreserveLCSSA*/ false);
+    Changed |= simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(),
+                            /*PreserveLCSSA*/ false, TTI);
 
   if (!Changed)
     return PreservedAnalyses::all();

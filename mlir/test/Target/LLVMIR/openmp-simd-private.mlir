@@ -68,7 +68,7 @@ llvm.func @test_loop_var_privatization() attributes {fir.internal_name = "_QPtes
       %8 = llvm.load %3 : !llvm.ptr -> f32
       %9 = llvm.load %arg0 : !llvm.ptr -> i32
       %10 = llvm.sitofp %9 : i32 to f32
-      %11 = llvm.fadd %8, %10 {fastmathFlags = #llvm.fastmath<contract>} : f32
+      %11 = llvm.fadd %8, %10 fastmath<contract> : f32
       llvm.store %11, %3 : f32, !llvm.ptr
       omp.yield
     }
@@ -104,7 +104,7 @@ llvm.func @test_private_clause() attributes {fir.internal_name = "_QPtest_privat
       %8 = llvm.load %arg0 : !llvm.ptr -> f32
       %9 = llvm.load %arg1 : !llvm.ptr -> i32
       %10 = llvm.sitofp %9 : i32 to f32
-      %11 = llvm.fadd %8, %10 {fastmathFlags = #llvm.fastmath<contract>} : f32
+      %11 = llvm.fadd %8, %10 fastmath<contract> : f32
       llvm.store %11, %arg0 : f32, !llvm.ptr
       omp.yield
     }

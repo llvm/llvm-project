@@ -530,7 +530,7 @@ static bool isFusionProfitable(AffineForOp srcForOp,
   // producer scenarios will still go through profitability analysis
   // if only one of the stores is involved in the producer-consumer
   // relationship of the candidate loops.
-  // TODO: Suppport multiple producer stores in profitability
+  // TODO: Support multiple producer stores in profitability
   // analysis.
   if (producerStores.size() > 1) {
     LDBG() << "Limited profitability analysis. Not "
@@ -1395,13 +1395,11 @@ public:
     // Search for siblings which load the same memref block argument.
     Block *block = dstNode->op->getBlock();
     for (unsigned i = 0, e = block->getNumArguments(); i != e; ++i) {
-      for (Operation *user : block->getArgument(i).getUsers()) {
-        auto loadOp = dyn_cast<AffineReadOpInterface>(user);
-        if (!loadOp)
-          continue;
+      for (auto loadOp : llvm::make_isa_range<AffineReadOpInterface>(
+               block->getArgument(i).getUsers())) {
         // Gather loops surrounding 'use'.
         SmallVector<AffineForOp, 4> loops;
-        getAffineForIVs(*user, &loops);
+        getAffineForIVs(*loadOp.getOperation(), &loops);
         // Skip 'use' if it is not within a loop nest.
         // Find the surrounding affine.for nested immediately within the
         // block.

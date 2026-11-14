@@ -225,20 +225,26 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
     if (!TII->unfoldMemoryOperand(*DAG, N, NewNodes))
       return nullptr;
 
-    LLVM_DEBUG(dbgs() << "Unfolding SU # " << SU->NodeNum << "\n");
     assert(NewNodes.size() == 2 && "Expected a load folding node!");
 
     N = NewNodes[1];
     SDNode *LoadNode = NewNodes[0];
     unsigned NumVals = N->getNumValues();
     unsigned OldNumVals = SU->getNode()->getNumValues();
+
+    // Give up if LoadNode already exists, see ScheduleDAGRRList::TryUnfoldSU.
+    if (LoadNode->getNodeId() != -1)
+      return nullptr;
+    assert(N->getNodeId() == -1 && "Node using a new load can't exist yet!");
+
+    LLVM_DEBUG(dbgs() << "Unfolding " << *SU << "\n");
+
     for (unsigned i = 0; i != NumVals; ++i)
       DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), i), SDValue(N, i));
-    DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), OldNumVals-1),
+    DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), OldNumVals - 1),
                                    SDValue(LoadNode, 1));
 
     SUnit *NewSU = newSUnit(N);
-    assert(N->getNodeId() == -1 && "Node already inserted!");
     N->setNodeId(NewSU->NodeNum);
 
     const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
@@ -251,18 +257,8 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
     if (MCID.isCommutable())
       NewSU->isCommutable = true;
 
-    // LoadNode may already exist. This can happen when there is another
-    // load from the same location and producing the same type of value
-    // but it has different alignment or volatileness.
-    bool isNewLoad = true;
-    SUnit *LoadSU;
-    if (LoadNode->getNodeId() != -1) {
-      LoadSU = &SUnits[LoadNode->getNodeId()];
-      isNewLoad = false;
-    } else {
-      LoadSU = newSUnit(LoadNode);
-      LoadNode->setNodeId(LoadSU->NodeNum);
-    }
+    SUnit *LoadSU = newSUnit(LoadNode);
+    LoadNode->setNodeId(LoadSU->NodeNum);
 
     SDep ChainPred;
     SmallVector<SDep, 4> ChainSuccs;
@@ -287,14 +283,11 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
 
     if (ChainPred.getSUnit()) {
       RemovePred(SU, ChainPred);
-      if (isNewLoad)
-        AddPred(LoadSU, ChainPred);
+      AddPred(LoadSU, ChainPred);
     }
     for (const SDep &Pred : LoadPreds) {
       RemovePred(SU, Pred);
-      if (isNewLoad) {
-        AddPred(LoadSU, Pred);
-      }
+      AddPred(LoadSU, Pred);
     }
     for (const SDep &Pred : NodePreds) {
       RemovePred(SU, Pred);
@@ -311,16 +304,12 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
       SUnit *SuccDep = D.getSUnit();
       D.setSUnit(SU);
       RemovePred(SuccDep, D);
-      if (isNewLoad) {
-        D.setSUnit(LoadSU);
-        AddPred(SuccDep, D);
-      }
+      D.setSUnit(LoadSU);
+      AddPred(SuccDep, D);
     }
-    if (isNewLoad) {
-      SDep D(LoadSU, SDep::Barrier);
-      D.setLatency(LoadSU->Latency);
-      AddPred(NewSU, D);
-    }
+    SDep D(LoadSU, SDep::Barrier);
+    D.setLatency(LoadSU->Latency);
+    AddPred(NewSU, D);
 
     ++NumUnfolds;
 
@@ -331,7 +320,7 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
     SU = NewSU;
   }
 
-  LLVM_DEBUG(dbgs() << "Duplicating SU # " << SU->NodeNum << "\n");
+  LLVM_DEBUG(dbgs() << "Duplicating " << *SU << "\n");
   NewSU = Clone(SU);
 
   // New SUnit has the exact same predecessors.
@@ -570,14 +559,14 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
           // Issue copies, these can be expensive cross register class copies.
           SmallVector<SUnit*, 2> Copies;
           InsertCopiesAndMoveSuccs(LRDef, Reg, DestRC, RC, Copies);
-          LLVM_DEBUG(dbgs() << "Adding an edge from SU # " << TrySU->NodeNum
-                            << " to SU #" << Copies.front()->NodeNum << "\n");
+          LLVM_DEBUG(dbgs() << "Adding an edge from " << *TrySU << " to "
+                            << *Copies.front() << "\n");
           AddPred(TrySU, SDep(Copies.front(), SDep::Artificial));
           NewDef = Copies.back();
         }
 
-        LLVM_DEBUG(dbgs() << "Adding an edge from SU # " << NewDef->NodeNum
-                          << " to SU #" << TrySU->NodeNum << "\n");
+        LLVM_DEBUG(dbgs() << "Adding an edge from " << *NewDef << " to "
+                          << *TrySU << "\n");
         LiveRegDefs[Reg] = NewDef;
         AddPred(NewDef, SDep(TrySU, SDep::Artificial));
         TrySU->isAvailable = false;

@@ -287,5 +287,98 @@ define <2 x i32> @align_up_vec_poison_elt(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
+;
+; ((X - 1) | C) + 1 -> (X + C) & ~C, for power-of-two C
+;
+
+define i32 @align_up_via_or(i32 %x) {
+; CHECK-LABEL: @align_up_via_or(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 4095
+; CHECK-NEXT:    [[ADD:%.*]] = and i32 [[TMP1]], -4096
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %sub = add i32 %x, -1
+  %or = or i32 %sub, 4095
+  %add = add i32 %or, 1
+  ret i32 %add
+}
+
+define <2 x i32> @align_up_via_or_vec(<2 x i32> %x) {
+; CHECK-LABEL: @align_up_via_or_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], splat (i32 4095)
+; CHECK-NEXT:    [[ADD:%.*]] = and <2 x i32> [[TMP1]], splat (i32 -4096)
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+  %sub = add <2 x i32> %x, splat (i32 -1)
+  %or = or  <2 x i32> %sub, splat (i32 4095)
+  %add = add  <2 x i32> %or, splat (i32 1)
+  ret <2 x i32>  %add
+}
+
+; negative test - the mask is not a low bit mask
+
+
+define i32 @align_up_via_or_not_lowbitmask(i32 %x) {
+; CHECK-LABEL: @align_up_via_or_not_lowbitmask(
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SUB]], 13
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], 1
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %sub = add i32 %x, -1
+  %or = or i32 %sub, 13
+  %add = add i32 %or, 1
+  ret i32 %add
+}
+
+; negative test - extra use of the or
+
+define i32 @align_up_via_or_multiuse_or(i32 %x) {
+; CHECK-LABEL: @align_up_via_or_multiuse_or(
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SUB]], 4095
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], 1
+; CHECK-NEXT:    call void @use(i32 [[OR]])
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %sub = add i32 %x, -1
+  %or = or i32 %sub, 4095
+  %add = add i32 %or, 1
+  call void @use(i32 %or)
+  ret i32 %add
+}
+
+; extra use of the sub is not affecting
+
+define i32 @align_up_via_or_multiuse_sub(i32 %x) {
+; CHECK-LABEL: @align_up_via_or_multiuse_sub(
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 4095
+; CHECK-NEXT:    [[ADD:%.*]] = and i32 [[TMP1]], -4096
+; CHECK-NEXT:    call void @use(i32 [[SUB]])
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %sub = add i32 %x, -1
+  %or = or i32 %sub, 4095
+  %add = add i32 %or, 1
+  call void @use(i32 %sub)
+  ret i32 %add
+}
+
+; nuw and nsw on the source add are dropped
+
+define i32 @align_up_via_or_nsw_nuw(i32 %x){
+; CHECK-LABEL: @align_up_via_or_nsw_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 4095
+; CHECK-NEXT:    [[ADD:%.*]] = and i32 [[TMP1]], -4096
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %sub = add nsw i32 %x, -1
+  %or = or i32 %sub, 4095
+  %add = add nuw nsw i32 %or, 1
+  ret i32 %add
+}
+
+
 declare void @use(i32)
 declare void @usev(<2 x i32>)

@@ -29,6 +29,12 @@
 #define PTHREAD_PROCESS_PRIVATE 0
 #define PTHREAD_PROCESS_SHARED 1
 
+#define PTHREAD_SCOPE_SYSTEM 0
+#define PTHREAD_SCOPE_PROCESS 1
+
+#define PTHREAD_INHERIT_SCHED 0
+#define PTHREAD_EXPLICIT_SCHED 1
+
 #ifdef __linux__
 #define PTHREAD_MUTEX_INITIALIZER                                              \
   {                                                                            \
@@ -71,10 +77,23 @@
       /* .__write_tid = */ 0,                                                  \
   }
 
+#define pthread_cleanup_push(routine, arg)                                     \
+  do {                                                                         \
+    struct __pthread_cleanup_frame __cleanup_frame;                            \
+  __pthread_cleanup_push(&__cleanup_frame, (routine), (arg))
+
+#define pthread_cleanup_pop(execute)                                           \
+  __pthread_cleanup_pop((execute));                                            \
+  }                                                                            \
+  while (0)
+
 // glibc extensions
 #define PTHREAD_STACK_MIN (1 << 14) // 16KB
 #define PTHREAD_RWLOCK_PREFER_READER_NP 0
 #define PTHREAD_RWLOCK_PREFER_WRITER_NP 1
 #define PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP 2
+
+// llvm libc extensions
+#define PTHREAD_STACK_DYNAMIC_NP 0
 
 #endif // LLVM_LIBC_MACROS_PTHREAD_MACRO_H

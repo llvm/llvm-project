@@ -1,4 +1,4 @@
-from lldbsuite.test.decorators import expectedFailureAll, skipIfWasm
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
@@ -34,10 +34,10 @@ class TestDAP_variables_children(DAPTestCaseBase):
         self.assertEqual(indexed_var.indexedVariables, 1)
         self.assertIsNone(not_indexed_var.indexedVariables)
 
-        resp_body = session.evaluate(
-            "`script formatter.num_children_calls", context="repl"
-        )
-        self.assertIn("['Indexed']", resp_body.result)
+        # `script` output goes to the console only, not the evaluate response.
+        event_before = session.last_event()
+        session.evaluate("`script formatter.num_children_calls", context="repl")
+        session.collect_console(until="['Indexed']", after=event_before)
 
     @expectedFailureAll(archs=["arm$", "arm64", "aarch64"])
     @skipIfWasm  # there is no ABI plugin for Wasm to find a return value with

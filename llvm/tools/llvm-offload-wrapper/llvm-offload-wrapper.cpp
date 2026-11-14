@@ -18,19 +18,14 @@
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
-
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
 static cl::OptionCategory
     OffloadWrapeprCategory("llvm-offload-wrapper options");
@@ -41,7 +36,9 @@ static cl::opt<object::OffloadKind> Kind(
     cl::values(clEnumValN(object::OFK_OpenMP, "openmp", "Wrap OpenMP binaries"),
                clEnumValN(object::OFK_Cuda, "cuda", "Wrap CUDA binaries"),
                clEnumValN(object::OFK_HIP, "hip", "Wrap HIP binaries"),
-               clEnumValN(object::OFK_SYCL, "sycl", "Wrap SYCL binaries")));
+               clEnumValN(object::OFK_SYCL, "sycl", "Wrap SYCL binaries"),
+               clEnumValN(object::OFK_OpenACC, "openacc",
+                          "Wrap OpenACC binaries")));
 
 static cl::opt<bool> Relocatable(
     "relocatable",
@@ -79,6 +76,12 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
             /*Suffix=*/"", /*Relocatable=*/Relocatable))
       return Err;
     break;
+  case llvm::object::OFK_OpenACC:
+    if (Error Err = offloading::wrapOpenACCBinaries(
+            M, BuffersToWrap, offloading::getOffloadEntryArray(M),
+            /*Relocatable=*/Relocatable))
+      return Err;
+    break;
   case llvm::object::OFK_Cuda:
     if (Error Err = offloading::wrapCudaBinary(
             M, BuffersToWrap.front(), offloading::getOffloadEntryArray(M),
@@ -114,11 +117,6 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(
       argc, argv,
       "Generate runtime registration code for a device binary image\n");
-
-  if (Help) {
-    cl::PrintHelpMessage();
-    return EXIT_SUCCESS;
-  }
 
   auto ReportError = [argv](Error E) {
     logAllUnhandledErrors(std::move(E), WithColor::error(errs(), argv[0]));

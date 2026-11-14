@@ -27,7 +27,7 @@
 /*** Back inserter ***/
 
 template <class Container>
-static void BM_format_to_n_string_back_inserter(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_format_to_n_string_back_inserter(benchmark::State& state) {
   using CharT = typename Container::value_type;
   size_t size = state.range(0);
   auto str    = std::basic_string<CharT>(2 * size, CharT('*'));
@@ -42,7 +42,7 @@ static void BM_format_to_n_string_back_inserter(benchmark::State& state) {
 /*** Begin ***/
 
 template <class Container>
-static void BM_format_to_n_string_begin(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_format_to_n_string_begin(benchmark::State& state) {
   using CharT = typename Container::value_type;
   size_t size = state.range(0);
   auto str    = std::basic_string<CharT>(2 * size, CharT('*'));
@@ -57,7 +57,7 @@ static void BM_format_to_n_string_begin(benchmark::State& state) {
 /*** Pointer ***/
 
 template <class CharT>
-static void BM_format_to_n_string_span(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_format_to_n_string_span(benchmark::State& state) {
   size_t size = state.range(0);
   auto str    = std::basic_string<CharT>(2 * size, CharT('*'));
 
@@ -70,7 +70,7 @@ static void BM_format_to_n_string_span(benchmark::State& state) {
 }
 
 template <class CharT>
-static void BM_format_to_n_string_pointer(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_format_to_n_string_pointer(benchmark::State& state) {
   size_t size = state.range(0);
   auto str    = std::basic_string<CharT>(2 * size, CharT('*'));
 
