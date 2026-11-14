@@ -7458,6 +7458,16 @@ static LValueOrRValue emitPseudoObjectExpr(CodeGenFunction &CGF,
   const Expr *resultExpr = E->getResultExpr();
   LValueOrRValue result;
 
+  // Without debug info, e.g., in a nodebug function, an enumerator of a BPF
+  // preserve_access_index enum cannot be relocated, so use its value.
+  if (!forLValue && CGF.getTarget().getTriple().isBPF() &&
+      (!CGF.CGM.getCodeGenOpts().hasReducedDebugInfo() || !CGF.getDebugInfo()))
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E->getSyntacticForm());
+        DRE && isa<EnumConstantDecl>(DRE->getDecl())) {
+      result.RV = RValue::get(CGF.EmitScalarExpr(DRE));
+      return result;
+    }
+
   for (PseudoObjectExpr::const_semantics_iterator
          i = E->semantics_begin(), e = E->semantics_end(); i != e; ++i) {
     const Expr *semantic = *i;

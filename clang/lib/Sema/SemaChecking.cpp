@@ -7094,8 +7094,10 @@ bool Sema::BuiltinConstantArg(CallExpr *TheCall, unsigned ArgNum,
   if (!R) {
     auto *DRE = cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
     auto *FDecl = cast<FunctionDecl>(DRE->getDecl());
-    return Diag(TheCall->getBeginLoc(), diag::err_constant_integer_arg_type)
-           << FDecl->getDeclName() << Arg->getSourceRange();
+    Diag(TheCall->getBeginLoc(), diag::err_constant_integer_arg_type)
+        << FDecl->getDeclName() << Arg->getSourceRange();
+    BPF().notePreserveAIEnumerator(Arg);
+    return true;
   }
   Result = *R;
 

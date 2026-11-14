@@ -48,6 +48,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaHexagon.h"
@@ -14334,6 +14335,9 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   if (getLangOpts().HLSL)
     if (!HLSL().handleInitialization(VDecl, Init))
       return;
+
+  if (Context.getTargetInfo().getTriple().isBPF())
+    Init = BPF().checkLocalConstantInitializer(VDecl, Init);
 
   // Get the decls type and save a reference for later, since
   // CheckInitializerTypes may change it.
