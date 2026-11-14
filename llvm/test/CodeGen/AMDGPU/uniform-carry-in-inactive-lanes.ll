@@ -7,7 +7,8 @@
 ; non-zero. Uniformity only means that the active lanes agree. The xor of a
 ; VALU compare (0 in inactive lanes) and a SALU compare materialized with
 ; s_cselect -1, 0 (-1 in inactive lanes) can be 0 in all active lanes and
-; non-zero in the inactive ones, so it must be masked with EXEC first.
+; non-zero in the inactive ones, so it must not become the carry-in of a
+; uniform carry op.
 
 define i32 @select_inc_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i32 inreg %p, i32 inreg %q) {
 ; GFX6-LABEL: select_inc_xor_cond:
@@ -18,8 +19,9 @@ define i32 @select_inc_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i3
 ; GFX6-NEXT:    v_cmp_lt_f32_e32 vcc, s17, v0
 ; GFX6-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX6-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX6-NEXT:    s_add_i32 s6, s16, 1
 ; GFX6-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX6-NEXT:    s_addc_u32 s4, s16, 0
+; GFX6-NEXT:    s_cselect_b32 s4, s6, s16
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -31,8 +33,9 @@ define i32 @select_inc_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i3
 ; GFX9-NEXT:    v_cmp_lt_f32_e32 vcc, s17, v0
 ; GFX9-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX9-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_add_i32 s6, s16, 1
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX9-NEXT:    s_addc_u32 s4, s16, 0
+; GFX9-NEXT:    s_cselect_b32 s4, s6, s16
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -42,11 +45,11 @@ define i32 @select_inc_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i3
 ; GFX11-NEXT:    v_cmp_lt_f32_e64 s1, s1, s2
 ; GFX11-NEXT:    s_cmp_eq_u32 s3, s16
 ; GFX11-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b32 s1, s1, s2
+; GFX11-NEXT:    s_add_i32 s2, s0, 1
 ; GFX11-NEXT:    s_and_b32 s1, s1, exec_lo
-; GFX11-NEXT:    s_addc_u32 s0, s0, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_cselect_b32 s0, s2, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fc = fcmp olt float %a, %b
@@ -66,8 +69,9 @@ define i32 @select_dec_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i3
 ; GFX6-NEXT:    v_cmp_lt_f32_e32 vcc, s17, v0
 ; GFX6-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX6-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX6-NEXT:    s_add_i32 s6, s16, -1
 ; GFX6-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX6-NEXT:    s_addc_u32 s4, s16, -1
+; GFX6-NEXT:    s_cselect_b32 s4, s16, s6
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -79,8 +83,9 @@ define i32 @select_dec_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i3
 ; GFX9-NEXT:    v_cmp_lt_f32_e32 vcc, s17, v0
 ; GFX9-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX9-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_add_i32 s6, s16, -1
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX9-NEXT:    s_addc_u32 s4, s16, -1
+; GFX9-NEXT:    s_cselect_b32 s4, s16, s6
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -90,11 +95,11 @@ define i32 @select_dec_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i3
 ; GFX11-NEXT:    v_cmp_lt_f32_e64 s1, s1, s2
 ; GFX11-NEXT:    s_cmp_eq_u32 s3, s16
 ; GFX11-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b32 s1, s1, s2
+; GFX11-NEXT:    s_add_i32 s2, s0, -1
 ; GFX11-NEXT:    s_and_b32 s1, s1, exec_lo
-; GFX11-NEXT:    s_addc_u32 s0, s0, -1
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_cselect_b32 s0, s0, s2
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fc = fcmp olt float %a, %b
@@ -114,9 +119,11 @@ define i64 @select_inc_xor_cond_i64(i64 inreg %x, float inreg %a, float inreg %b
 ; GFX6-NEXT:    v_cmp_lt_f32_e32 vcc, s18, v0
 ; GFX6-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX6-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX6-NEXT:    s_add_u32 s6, s16, 1
+; GFX6-NEXT:    s_addc_u32 s7, s17, 0
 ; GFX6-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX6-NEXT:    s_addc_u32 s4, s16, 0
-; GFX6-NEXT:    s_addc_u32 s5, s17, 0
+; GFX6-NEXT:    s_cselect_b32 s4, s6, s16
+; GFX6-NEXT:    s_cselect_b32 s5, s7, s17
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
@@ -129,9 +136,11 @@ define i64 @select_inc_xor_cond_i64(i64 inreg %x, float inreg %a, float inreg %b
 ; GFX9-NEXT:    v_cmp_lt_f32_e32 vcc, s18, v0
 ; GFX9-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX9-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_add_u32 s6, s16, 1
+; GFX9-NEXT:    s_addc_u32 s7, s17, 0
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX9-NEXT:    s_addc_u32 s4, s16, 0
-; GFX9-NEXT:    s_addc_u32 s5, s17, 0
+; GFX9-NEXT:    s_cselect_b32 s4, s6, s16
+; GFX9-NEXT:    s_cselect_b32 s5, s7, s17
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -142,11 +151,13 @@ define i64 @select_inc_xor_cond_i64(i64 inreg %x, float inreg %a, float inreg %b
 ; GFX11-NEXT:    v_cmp_lt_f32_e64 s2, s2, s3
 ; GFX11-NEXT:    s_cmp_eq_u32 s16, s17
 ; GFX11-NEXT:    s_cselect_b32 s3, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b32 s2, s2, s3
+; GFX11-NEXT:    s_add_u32 s3, s0, 1
+; GFX11-NEXT:    s_addc_u32 s4, s1, 0
 ; GFX11-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX11-NEXT:    s_addc_u32 s0, s0, 0
-; GFX11-NEXT:    s_addc_u32 s1, s1, 0
+; GFX11-NEXT:    s_cselect_b32 s0, s3, s0
+; GFX11-NEXT:    s_cselect_b32 s1, s4, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -168,8 +179,9 @@ define i32 @add_zext_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i32 
 ; GFX6-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX6-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GFX6-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX6-NEXT:    s_addc_u32 s4, s16, 0
-; GFX6-NEXT:    v_mov_b32_e32 v0, s4
+; GFX6-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX6-NEXT:    s_add_i32 s16, s16, s4
+; GFX6-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: add_zext_xor_cond:
@@ -181,8 +193,9 @@ define i32 @add_zext_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i32 
 ; GFX9-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX9-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX9-NEXT:    s_addc_u32 s4, s16, 0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX9-NEXT:    s_add_i32 s16, s16, s4
+; GFX9-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: add_zext_xor_cond:
@@ -194,8 +207,9 @@ define i32 @add_zext_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i32 
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b32 s1, s1, s2
 ; GFX11-NEXT:    s_and_b32 s1, s1, exec_lo
-; GFX11-NEXT:    s_addc_u32 s0, s0, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_i32 s0, s0, s1
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fc = fcmp olt float %a, %b
@@ -216,7 +230,8 @@ define i32 @sub_zext_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i32 
 ; GFX6-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX6-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GFX6-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX6-NEXT:    s_subb_u32 s4, s16, 0
+; GFX6-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX6-NEXT:    s_sub_i32 s4, s16, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -229,7 +244,8 @@ define i32 @sub_zext_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i32 
 ; GFX9-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX9-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX9-NEXT:    s_subb_u32 s4, s16, 0
+; GFX9-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX9-NEXT:    s_sub_i32 s4, s16, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -242,8 +258,9 @@ define i32 @sub_zext_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i32 
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b32 s1, s1, s2
 ; GFX11-NEXT:    s_and_b32 s1, s1, exec_lo
-; GFX11-NEXT:    s_subb_u32 s0, s0, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_sub_i32 s0, s0, s1
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fc = fcmp olt float %a, %b
@@ -254,7 +271,7 @@ define i32 @sub_zext_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i32 
   ret i32 %r
 }
 
-; A VALU compare is 0 in the inactive lanes, so no masking is needed.
+; A VALU compare is 0 in the inactive lanes, so it can be the carry-in.
 define i32 @select_inc_fcmp(i32 inreg %x, float inreg %a, float inreg %b) {
 ; GFX6-LABEL: select_inc_fcmp:
 ; GFX6:       ; %bb.0:
@@ -291,8 +308,7 @@ define i32 @select_inc_fcmp(i32 inreg %x, float inreg %a, float inreg %b) {
   ret i32 %r
 }
 
-; A SALU compare sets every bit of the lane mask the same, so no masking is
-; needed.
+; A SALU compare is 0 in all lanes when false, so it can be the carry-in.
 define i32 @select_inc_icmp(i32 inreg %x, i32 inreg %p, i32 inreg %q) {
 ; GFX6-LABEL: select_inc_icmp:
 ; GFX6:       ; %bb.0:
@@ -324,7 +340,7 @@ define i32 @select_inc_icmp(i32 inreg %x, i32 inreg %p, i32 inreg %q) {
   ret i32 %r
 }
 
-; The and of two SALU compares also sets every bit the same.
+; So can the and of two compares.
 define i32 @add_zext_and_icmp(i32 inreg %x, i32 inreg %p, i32 inreg %q, i32 inreg %d) {
 ; GFX6-LABEL: add_zext_and_icmp:
 ; GFX6:       ; %bb.0:
@@ -368,5 +384,153 @@ define i32 @add_zext_and_icmp(i32 inreg %x, i32 inreg %p, i32 inreg %q, i32 inre
   %c = and i1 %c1, %c2
   %ext = zext i1 %c to i32
   %r = add i32 %x, %ext
+  ret i32 %r
+}
+
+; So can the or of a VALU compare and a SALU compare.
+define i32 @select_inc_or_fcmp_icmp(i32 inreg %x, float inreg %a, float inreg %b, i32 inreg %p, i32 inreg %q) {
+; GFX6-LABEL: select_inc_or_fcmp_icmp:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_mov_b32_e32 v0, s18
+; GFX6-NEXT:    s_cmp_eq_u32 s19, s20
+; GFX6-NEXT:    v_cmp_lt_f32_e32 vcc, s17, v0
+; GFX6-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GFX6-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX6-NEXT:    s_or_b32 s4, s4, s5
+; GFX6-NEXT:    s_addc_u32 s4, s16, 0
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: select_inc_or_fcmp_icmp:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, s18
+; GFX9-NEXT:    s_cmp_eq_u32 s19, s20
+; GFX9-NEXT:    v_cmp_lt_f32_e32 vcc, s17, v0
+; GFX9-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_addc_u32 s4, s16, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: select_inc_or_fcmp_icmp:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_lt_f32_e64 s1, s1, s2
+; GFX11-NEXT:    s_cmp_eq_u32 s3, s16
+; GFX11-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_or_b32 s1, s1, s2
+; GFX11-NEXT:    s_addc_u32 s0, s0, 0
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %fc = fcmp olt float %a, %b
+  %ic = icmp eq i32 %p, %q
+  %c = or i1 %fc, %ic
+  %inc = add i32 %x, 1
+  %r = select i1 %c, i32 %inc, i32 %x
+  ret i32 %r
+}
+
+; The and of a compare and an xor is not folded: a true SALU compare is -1 in
+; the inactive lanes, so the and keeps the inactive bits of the xor.
+define i32 @select_inc_and_icmp_xor_cond(i32 inreg %x, float inreg %a, float inreg %b, i32 inreg %p, i32 inreg %q, i32 inreg %d) {
+; GFX6-LABEL: select_inc_and_icmp_xor_cond:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_mov_b32_e32 v0, s18
+; GFX6-NEXT:    s_cmp_eq_u32 s19, s20
+; GFX6-NEXT:    v_cmp_lt_f32_e32 vcc, s17, v0
+; GFX6-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GFX6-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX6-NEXT:    s_cmp_lg_u32 s21, 0
+; GFX6-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GFX6-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
+; GFX6-NEXT:    s_add_i32 s6, s16, 1
+; GFX6-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GFX6-NEXT:    s_cselect_b32 s4, s6, s16
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: select_inc_and_icmp_xor_cond:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, s18
+; GFX9-NEXT:    s_cmp_eq_u32 s19, s20
+; GFX9-NEXT:    v_cmp_lt_f32_e32 vcc, s17, v0
+; GFX9-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GFX9-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_cmp_lg_u32 s21, 0
+; GFX9-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GFX9-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
+; GFX9-NEXT:    s_add_i32 s6, s16, 1
+; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GFX9-NEXT:    s_cselect_b32 s4, s6, s16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: select_inc_and_icmp_xor_cond:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_lt_f32_e64 s1, s1, s2
+; GFX11-NEXT:    s_cmp_eq_u32 s3, s16
+; GFX11-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_xor_b32 s1, s1, s2
+; GFX11-NEXT:    s_cmp_lg_u32 s17, 0
+; GFX11-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX11-NEXT:    s_and_b32 s1, s2, s1
+; GFX11-NEXT:    s_add_i32 s2, s0, 1
+; GFX11-NEXT:    s_and_b32 s1, s1, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s0, s2, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %fc = fcmp olt float %a, %b
+  %ic = icmp eq i32 %p, %q
+  %xc = xor i1 %fc, %ic
+  %dc = icmp ne i32 %d, 0
+  %c = and i1 %dc, %xc
+  %inc = add i32 %x, 1
+  %r = select i1 %c, i32 %inc, i32 %x
+  ret i32 %r
+}
+
+; A divergent select becomes a VALU carry op, which reads the carry-in bit of
+; each lane, so any condition can be used.
+define i32 @select_inc_xor_cond_divergent(i32 %x, float %a, float %b, i32 %p, i32 %q) {
+; GFX6-LABEL: select_inc_xor_cond_divergent:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_cmp_lt_f32_e32 vcc, v1, v2
+; GFX6-NEXT:    v_cmp_eq_u32_e64 s[4:5], v3, v4
+; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
+; GFX6-NEXT:    v_addc_u32_e32 v0, vcc, 0, v0, vcc
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: select_inc_xor_cond_divergent:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_lt_f32_e32 vcc, v1, v2
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[4:5], v3, v4
+; GFX9-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
+; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: select_inc_xor_cond_divergent:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v1, v2
+; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, v3, v4
+; GFX11-NEXT:    s_xor_b32 vcc_lo, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v0, vcc_lo
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %fc = fcmp olt float %a, %b
+  %ic = icmp eq i32 %p, %q
+  %c = xor i1 %fc, %ic
+  %inc = add i32 %x, 1
+  %r = select i1 %c, i32 %inc, i32 %x
   ret i32 %r
 }

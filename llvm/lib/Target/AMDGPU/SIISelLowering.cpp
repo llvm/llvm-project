@@ -6935,36 +6935,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   return RetBB;
 }
 
-/// Return true if all bits of the lane mask \p Reg are known to be the same,
-/// so that the bits of the inactive lanes match those of the active lanes.
-static bool isAllOrNoneLaneMask(Register Reg, const MachineRegisterInfo &MRI,
-                                const AMDGPU::LaneMaskConstants &LMC,
-                                unsigned Depth = 0) {
-  constexpr unsigned MaxDepth = 6;
-  if (Depth >= MaxDepth || !Reg.isVirtual())
-    return false;
-  const MachineInstr *Def = MRI.getVRegDef(Reg);
-  if (!Def)
-    return false;
-
-  auto IsAllOrNone = [&](const MachineOperand &MO) {
-    if (MO.isImm())
-      return MO.getImm() == 0 || MO.getImm() == -1;
-    return MO.isReg() && !MO.getSubReg() &&
-           isAllOrNoneLaneMask(MO.getReg(), MRI, LMC, Depth + 1);
-  };
-
-  unsigned Opc = Def->getOpcode();
-  // SIFixSGPRCopies lowers a copy from SCC to S_CSELECT -1, 0.
-  if (Opc == AMDGPU::COPY)
-    return Def->getOperand(1).getReg() == AMDGPU::SCC ||
-           IsAllOrNone(Def->getOperand(1));
-  if (Opc == LMC.CSelectOpc || Opc == LMC.AndOpc || Opc == LMC.OrOpc ||
-      Opc == LMC.XorOpc)
-    return IsAllOrNone(Def->getOperand(1)) && IsAllOrNone(Def->getOperand(2));
-  return false;
-}
-
 MachineBasicBlock *
 SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                               MachineBasicBlock *BB) const {
@@ -7189,18 +7159,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       Src2.setReg(RegOp2);
     }
 
-    // Src2 is the lane mask of a uniform condition. Uniformity only means that
-    // the active lanes agree, so the bits of the inactive lanes may differ.
-    // Unless they are known to be 0 or to match the active lanes, mask Src2
-    // with EXEC. S_AND sets SCC to whether the result is non-zero.
-    const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
-    if (!TII->isMaskedByExec(Src2.getReg(), MI, MRI) &&
-        !isAllOrNoneLaneMask(Src2.getReg(), MRI, LMC)) {
-      BuildMI(*BB, MII, DL, TII->get(LMC.AndOpc),
-              MRI.createVirtualRegister(TRI->getWaveMaskRegClass()))
-          .add(Src2)
-          .addReg(LMC.ExecReg);
-    } else if (ST.isWave64()) {
+    if (ST.isWave64()) {
       if (ST.hasScalarCompareEq64()) {
         BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
             .addReg(Src2.getReg())
@@ -18118,18 +18077,60 @@ static bool isConditionalCarryOpType(EVT VT) {
   return VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64;
 }
 
+/// Return true if the lane mask of the uniform i1 value \p V is known to be 0
+/// in all lanes, including the inactive ones, whenever \p V is false. A
+/// compare, a truncate to i1, a class test, or the overflow of an unsigned
+/// add/sub becomes either a VALU instruction that writes a lane mask (a compare
+/// or a carry-out), which zeroes the bits of the inactive lanes, or a SALU
+/// instruction that sets SCC, from which the lane mask is materialized as 0 in
+/// all lanes when false. An AND or OR of such values keeps this property, but
+/// an XOR does not: the XOR of a true VALU compare and a true SALU compare is 0
+/// in the active lanes and 1 in the inactive ones. Operations on illegal types
+/// are not used, because they may be expanded into other operations.
+static bool isLaneMaskZeroIfFalse(const SelectionDAG &DAG, SDValue V,
+                                  unsigned Depth = 0) {
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return false;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  switch (V.getOpcode()) {
+  case ISD::SETCC:
+  case ISD::TRUNCATE: {
+    EVT OpVT = V.getOperand(0).getValueType();
+    return OpVT != MVT::i1 && TLI.isTypeLegal(OpVT);
+  }
+  case ISD::IS_FPCLASS:
+    return TLI.isOperationLegal(ISD::IS_FPCLASS,
+                                V.getOperand(0).getValueType());
+  case ISD::UADDO:
+  case ISD::USUBO:
+    return V.getResNo() == 1 &&
+           TLI.isOperationLegal(V.getOpcode(), V->getValueType(0));
+  case AMDGPUISD::FP_CLASS:
+    return true;
+  case ISD::AND:
+  case ISD::OR:
+    return isLaneMaskZeroIfFalse(DAG, V.getOperand(0), Depth + 1) &&
+           isLaneMaskZeroIfFalse(DAG, V.getOperand(1), Depth + 1);
+  default:
+    return false;
+  }
+}
+
 /// Return true if \p Cond can be the carry-in of the carry op that replaces
-/// \p N without being saved for its other users. A uniform \p N becomes a
-/// scalar carry op, which takes its carry-in in SCC and clobbers SCC, so
-/// another user of a uniform condition would need it saved and copied back
-/// to SCC. A divergent \p N becomes a VALU carry op, which does not use SCC.
-/// If \p N reads \p Cond through the extend \p Ext, \p Ext must have no other
+/// \p N. A divergent \p N becomes a VALU carry op, which reads the carry-in
+/// bit of each lane and does not use SCC. A uniform \p N becomes a scalar
+/// carry op, which takes its carry-in in SCC, set from whether the whole lane
+/// mask of \p Cond is non-zero, so \p Cond must be 0 in the inactive lanes
+/// whenever it is false. The scalar carry op also clobbers SCC, so another
+/// user of a uniform condition would need it saved and copied back to SCC. If
+/// \p N reads \p Cond through the extend \p Ext, \p Ext must have no other
 /// users either, because it then stays as a second user of \p Cond.
-static bool canFoldCarryIn(const SDNode *N, SDValue Cond,
-                           SDValue Ext = SDValue()) {
+static bool canFoldCarryIn(const SelectionDAG &DAG, const SDNode *N,
+                           SDValue Cond, SDValue Ext = SDValue()) {
   if (N->isDivergent())
     return true;
-  if (!Cond.hasOneUse() || (Ext && !Ext.hasOneUse()))
+  if (!Cond.hasOneUse() || (Ext && !Ext.hasOneUse()) ||
+      !isLaneMaskZeroIfFalse(DAG, Cond))
     return false;
   // DAGCombiner folds (add X, (uaddo_carry Y, 0, C)) into a new carry op on C
   // and keeps the old one for its other users, so C would have two users.
@@ -18330,7 +18331,7 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
     // extra instruction anyway.
     if (!isBoolSGPR(Cond))
       break;
-    if (!canFoldCarryIn(N, Cond, RHS))
+    if (!canFoldCarryIn(DAG, N, Cond, RHS))
       break;
     return buildConditionalCarryOp(DAG, SL, VT, Opc != ISD::SIGN_EXTEND, LHS,
                                    /*K=*/0, Cond);
@@ -18462,7 +18463,7 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
     // extra instruction anyway.
     if (!isBoolSGPR(Cond))
       break;
-    if (!canFoldCarryIn(N, Cond, RHS))
+    if (!canFoldCarryIn(DAG, N, Cond, RHS))
       break;
     return buildConditionalCarryOp(DAG, SL, VT, Opc == ISD::SIGN_EXTEND, LHS,
                                    /*K=*/0, Cond);
@@ -19468,10 +19469,9 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
 ///   select c, x, (add x, 1)  => x - (-1) - c
 ///   select c, (add x, -1), x => x - 0 - c
 ///   select c, x, (add x, -1) => x + (-1) + c
-/// The select already needs its condition in SCC or VCC, which is also where
-/// the carry-in operand is read from. Like the condition of a uniform select, a
-/// uniform carry-in is masked with EXEC when it may be non-zero in inactive
-/// lanes, so any condition can be used.
+/// The select already needs its condition in SCC or VCC, which is the form
+/// that the carry-in operand needs. See canFoldCarryIn for the conditions that
+/// a uniform select can use.
 static SDValue
 foldSelectOfIncDecToCarryOp(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   EVT VT = N->getValueType(0);
@@ -19481,7 +19481,8 @@ foldSelectOfIncDecToCarryOp(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   // narrowed back to an illegal 16-bit node, so 16-bit and 32-bit selects are
   // matched after legalization only.
   if (!isConditionalCarryOpType(VT) || Cond.getValueType() != MVT::i1 ||
-      (VT != MVT::i64 && !DCI.isAfterLegalizeDAG()) || !canFoldCarryIn(N, Cond))
+      (VT != MVT::i64 && !DCI.isAfterLegalizeDAG()) ||
+      !canFoldCarryIn(DCI.DAG, N, Cond))
     return SDValue();
 
   auto Match = [&](SDValue Step, SDValue Base, bool StepIfTrue) -> SDValue {
