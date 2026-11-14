@@ -95,6 +95,16 @@
 # define ASM_PREEMPTIBLE_SYM(sym) sym
 #endif
 
+#if defined(__ELF__) && defined(__x86_64__) && defined(__code_model_large__)
+// The interceptor can be more than 2 GiB away under -mcmodel=large.
+#  define C_ASM_TAIL_CALL_INTERCEPTOR(t_func, func)                            \
+    "jmp *__interceptor_" SANITIZER_STRINGIFY(func) "@GOTPCREL(%rip)"
+#else
+#  define C_ASM_TAIL_CALL_INTERCEPTOR(t_func, func)                            \
+    C_ASM_TAIL_CALL(t_func, "__interceptor_" SANITIZER_STRINGIFY(              \
+                                ASM_PREEMPTIBLE_SYM(func)))
+#endif
+
 #if !defined(__APPLE__)
 # define ASM_HIDDEN(symbol) .hidden symbol
 # if defined(__arm__) || defined(__aarch64__)
