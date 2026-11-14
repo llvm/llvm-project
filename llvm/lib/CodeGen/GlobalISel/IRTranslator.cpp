@@ -4917,19 +4917,16 @@ bool IRTranslatorImpl::translate(const Constant &C, Register Reg) {
 }
 
 bool IRTranslatorImpl::mayTranslateUserTypes(const User &U) const {
-  const TargetMachine &TM = TLI->getTargetMachine();
   if (LLT::getUseExtended())
     return true;
 
   // BF16 cannot currently be represented by default LLT. To avoid miscompiles
   // we prevent any instructions using them by default in all targets that do
   // not explicitly enable it via LLT::setUseExtended(true).
-  // SPIRV target is exception.
-  return TM.getTargetTriple().isSPIRV() ||
-         (!U.getType()->getScalarType()->isBFloatTy() &&
-          !any_of(U.operands(), [](Value *V) {
-            return V->getType()->getScalarType()->isBFloatTy();
-          }));
+  return !U.getType()->getScalarType()->isBFloatTy() &&
+         !any_of(U.operands(), [](Value *V) {
+           return V->getType()->getScalarType()->isBFloatTy();
+         });
 }
 
 bool IRTranslatorImpl::finalizeBasicBlock(const BasicBlock &BB,

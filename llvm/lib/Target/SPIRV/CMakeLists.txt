@@ -3,7 +3,7 @@ add_llvm_component_group(SPIRV)
 set(LLVM_TARGET_DEFINITIONS SPIRV.td)
 
 llvm_tablegen(SPIRVGenAsmWriter.inc -gen-asm-writer)
-llvm_tablegen(SPIRVGenGlobalISel.inc -gen-global-isel)
+llvm_tablegen(SPIRVGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
 llvm_tablegen(SPIRVGenInstrInfo.inc -gen-instr-info)
 llvm_tablegen(SPIRVGenMCCodeEmitter.inc -gen-emitter)
 llvm_tablegen(SPIRVGenRegisterBank.inc -gen-register-bank)
@@ -11,7 +11,7 @@ llvm_tablegen(SPIRVGenRegisterInfo.inc -gen-register-info)
 llvm_tablegen(SPIRVGenSubtargetInfo.inc -gen-subtarget)
 llvm_tablegen(SPIRVGenTables.inc -gen-searchable-tables)
 llvm_tablegen(SPIRVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
-              -combiners="SPIRVPreLegalizerCombiner")
+              -combiners="SPIRVPreLegalizerCombiner" -gisel-extended-llt)
 
 set(LLVM_TARGET_DEFINITIONS SPIRVOptions.td)
 llvm_tablegen(SPIRVOptions.inc -gen-opt-parser-defs)
