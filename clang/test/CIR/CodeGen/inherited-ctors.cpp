@@ -18,6 +18,11 @@ struct VirtDerived : virtual Base {
   using Base::Base;
 };
 
+struct VariadicBase { VariadicBase(...); };
+struct VariadicDerived : VariadicBase { using VariadicBase::VariadicBase; };
+
+VariadicDerived globalVariadic(4);
+
 struct VirtualDelegatingCtor : VirtDerived {
   VirtualDelegatingCtor(int x) : Base(x), VirtDerived(x){}
 };
@@ -53,6 +58,22 @@ void inheritedFromVBase() {
 }
 
 
+// CIR: cir.global external @globalVariadic
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init()
+// CIR: %[[TMP_ALLOCA:.*]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!cir.ptr<!rec_VariadicDerived>>
+// CIR: %[[GLOBAL:.*]] = cir.get_global @globalVariadic : !cir.ptr<!rec_VariadicDerived>
+// CIR: %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
+// CIR: cir.store align(8) %[[GLOBAL]], %[[TMP_ALLOCA]]
+// CIR: %[[TMP_LOAD:.*]] = cir.load %[[TMP_ALLOCA]]
+// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[TMP_LOAD]] [0] : !cir.ptr<!rec_VariadicDerived> -> !cir.ptr<!rec_VariadicBase>
+// CIR: cir.call @_ZN12VariadicBaseC2Ez(%[[BASE_ADDR]], %[[FOUR]]) : (!cir.ptr<!rec_VariadicBase>{{.*}}, !s32i{{.*}}) -> ()
+//
+// LLVM: @globalVariadic = global %struct.VariadicDerived zeroinitializer
+// LLVM-LABEL: define internal void @__cxx_global_var_init(){{.*}}
+// LLVM: store ptr @globalVariadic, ptr %[[TMP_ALLOCA:.*]], align 8
+// LLVM: %[[THIS:.*]] = load ptr, ptr %[[TMP_ALLOCA]]
+// LLVM: call void (ptr, ...) @_ZN12VariadicBaseC2Ez(ptr {{.*}}%[[THIS]], i32 {{.*}}4)
+//
 // CIR-LABEL: cir.func no_inline dso_local @_Z20emitDelegateCallArgsv()
 // CIR: cir.call @_ZN7DerivedCI14BaseEi(%{{.*}}, %{{.*}}) : (!cir.ptr<!rec_Derived>{{.*}}, !s32i{{.*}}) -> ()
 // LLVM-LABEL: define dso_local void @_Z20emitDelegateCallArgsv()
