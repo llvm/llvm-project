@@ -725,6 +725,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "coshbf16",
+    additional_deps = [
+        "//libc/src/__support/math:coshbf16",
+    ],
+)
+
+libc_math_function(
     name = "coshf",
     additional_deps = ["//libc/src/__support/math:coshf"],
 )

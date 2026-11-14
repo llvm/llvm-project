@@ -116,6 +116,7 @@ else()
       libc.src.__support.math.cosf
       libc.src.__support.math.cosf16
       libc.src.__support.math.cosh
+      libc.src.__support.math.coshbf16
       libc.src.__support.math.coshf
       libc.src.__support.math.coshf16
       libc.src.__support.math.cospif
