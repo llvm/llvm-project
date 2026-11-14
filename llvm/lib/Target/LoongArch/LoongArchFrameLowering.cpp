@@ -29,6 +29,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loongarch-frame-lowering"
 
+// With inline stack probing, the maximum number of bytes above SP that may be
+// left unprobed at an ABI boundary (function entry or a call), as for AArch64
+// (StackProbeMaxUnprobedStack).
+static constexpr unsigned StackProbeMaxUnprobedStack = 1024;
+
 // Return true if the specified function should have a dedicated frame
 // pointer register.  This is true if frame pointer elimination is
 // disabled, if it needs dynamic stack realignment, if the function has
@@ -183,13 +188,53 @@ void LoongArchFrameLowering::processFunctionBeforeFrameFinalized(
   }
 }
 
-// Allocate stack space and probe it if necessary.
+// Return a general-purpose register that is free at MBBI: not live there, not
+// reserved and not callee-saved (it may not have been saved). Prefer
+// PreferredReg. Return no register if there is none.
+static Register
+findScratchNonCalleeSaveRegister(const MachineBasicBlock &MBB,
+                                 MachineBasicBlock::const_iterator MBBI,
+                                 Register PreferredReg) {
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  LivePhysRegs LiveRegs(*MF.getSubtarget().getRegisterInfo());
+  LiveRegs.addLiveOuts(MBB);
+  for (MachineBasicBlock::const_iterator I = MBB.end(); I != MBBI;)
+    LiveRegs.stepBackward(*--I);
+  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); *CSR; ++CSR)
+    LiveRegs.addReg(*CSR);
+
+  if (LiveRegs.available(MRI, PreferredReg))
+    return PreferredReg;
+  for (MCPhysReg Reg : LoongArch::GPRRegClass)
+    if (LiveRegs.available(MRI, Reg))
+      return Reg;
+  return Register();
+}
+
+// Return true if the prologue realigns SP with a probing loop: with inline
+// stack probing, when realigning may move SP down by the probe size or more.
+static bool realignsWithProbeLoop(const MachineFunction &MF) {
+  const auto &STI = MF.getSubtarget<LoongArchSubtarget>();
+  const LoongArchTargetLowering *TLI = STI.getTargetLowering();
+  const Align StackAlign = STI.getFrameLowering()->getStackAlign();
+  const Align MaxAlign = MF.getFrameInfo().getMaxAlign();
+  return TLI->hasInlineStackProbe(MF) &&
+         STI.getRegisterInfo()->hasStackRealignment(MF) &&
+         MaxAlign > StackAlign &&
+         MaxAlign.value() - StackAlign.value() >=
+             TLI->getStackProbeSize(MF, StackAlign);
+}
+
+// Allocate stack space and probe it if necessary. When probing, at most
+// StackProbeMaxUnprobedStack bytes above the new SP are left unprobed, and none
+// if FollowupAllocs is set, so that later allocations start from a probed SP.
 void LoongArchFrameLowering::allocateStack(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MBBI,
                                            MachineFunction &MF, uint64_t Offset,
                                            uint64_t RealStackSize, bool EmitCFI,
                                            bool NeedProbe, uint64_t ProbeSize,
-                                           bool DynAllocation,
+                                           bool FollowupAllocs,
                                            MachineInstr::MIFlag Flag) const {
   DebugLoc DL;
   const LoongArchInstrInfo *TII = STI.getInstrInfo();
@@ -197,13 +242,13 @@ void LoongArchFrameLowering::allocateStack(MachineBasicBlock &MBB,
   const Register SPReg = LoongArch::R3;
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
 
-  // Simply allocate the stack if it's not big enough to require a probe.
+  // Simply allocate the stack if it's not big enough to require a probe loop.
   if (!NeedProbe || Offset <= ProbeSize) {
     adjustReg(MBB, MBBI, DL, SPReg, SPReg, -Offset, Flag);
     if (EmitCFI)
       CFIBuilder.buildDefCFAOffset(RealStackSize);
 
-    if (NeedProbe && DynAllocation) {
+    if (NeedProbe && (FollowupAllocs || Offset > StackProbeMaxUnprobedStack)) {
       // st.{w/d} $zero, $sp, 0
       BuildMI(MBB, MBBI, DL,
               TII->get(IsLA64 ? LoongArch::ST_D : LoongArch::ST_W))
@@ -242,7 +287,7 @@ void LoongArchFrameLowering::allocateStack(MachineBasicBlock &MBB,
       if (EmitCFI)
         CFIBuilder.buildDefCFAOffset(RealStackSize);
 
-      if (DynAllocation) {
+      if (FollowupAllocs || Residual > StackProbeMaxUnprobedStack) {
         // st.{w/d} $zero, $sp, 0
         BuildMI(MBB, MBBI, DL,
                 TII->get(IsLA64 ? LoongArch::ST_D : LoongArch::ST_W))
@@ -278,21 +323,20 @@ void LoongArchFrameLowering::allocateStack(MachineBasicBlock &MBB,
     CFIBuilder.buildDefCFARegister(SPReg);
   }
 
-  if (Residual) {
+  if (Residual)
     adjustReg(MBB, MBBI, DL, SPReg, SPReg, -Residual, Flag);
-    if (DynAllocation) {
-      // st.{w/d} $zero, $sp, 0
-      BuildMI(MBB, MBBI, DL,
-              TII->get(IsLA64 ? LoongArch::ST_D : LoongArch::ST_W))
-          .addReg(LoongArch::R0)
-          .addReg(SPReg)
-          .addImm(0)
-          .setMIFlag(Flag);
-    }
-  }
 
   if (EmitCFI)
     CFIBuilder.buildDefCFAOffset(RealStackSize);
+
+  if (Residual && (FollowupAllocs || Residual > StackProbeMaxUnprobedStack)) {
+    // st.{w/d} $zero, $sp, 0
+    BuildMI(MBB, MBBI, DL, TII->get(IsLA64 ? LoongArch::ST_D : LoongArch::ST_W))
+        .addReg(LoongArch::R0)
+        .addReg(SPReg)
+        .addImm(0)
+        .setMIFlag(Flag);
+  }
 }
 
 void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
@@ -334,11 +378,18 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
   const LoongArchTargetLowering *TLI = STI.getTargetLowering();
   const bool NeedProbe = TLI->hasInlineStackProbe(MF);
   const uint64_t ProbeSize = TLI->getStackProbeSize(MF, getStackAlign());
-  const bool DynAllocation =
-      MF.getInfo<LoongArchMachineFunctionInfo>()->hasDynamicAllocation();
+  // Allocations after the prologue (dynamic allocations, and call frames that
+  // are not reserved) expect to start from a probed SP, and so do the later
+  // allocations of the prologue itself.
+  const bool FollowupAllocs =
+      LoongArchFI->hasDynamicAllocation() ||
+      (!hasReservedCallFrame(MF) &&
+       (!MFI.isMaxCallFrameSizeComputed() || MFI.getMaxCallFrameSize() != 0));
+  const bool RealignStack = hasFP(MF) && RI->hasStackRealignment(MF);
   if (StackSize != 0)
     allocateStack(MBB, MBBI, MF, StackSize, StackSize,
-                  /*EmitCFI=*/true, NeedProbe, ProbeSize, DynAllocation,
+                  /*EmitCFI=*/true, NeedProbe, ProbeSize,
+                  FollowupAllocs || FirstSPAdjustAmount || RealignStack,
                   MachineInstr::FrameSetup);
 
   const auto &CSI = MFI.getCalleeSavedInfo();
@@ -381,8 +432,8 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
     assert(SecondSPAdjustAmount > 0 &&
            "SecondSPAdjustAmount should be greater than zero");
     allocateStack(MBB, MBBI, MF, SecondSPAdjustAmount, RealStackSize,
-                  !hasFP(MF), NeedProbe, ProbeSize, DynAllocation,
-                  MachineInstr::FrameSetup);
+                  !hasFP(MF), NeedProbe, ProbeSize,
+                  FollowupAllocs || RealignStack, MachineInstr::FrameSetup);
   }
 
   if (hasFP(MF)) {
@@ -390,14 +441,58 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
     if (RI->hasStackRealignment(MF)) {
       unsigned Align = Log2(MFI.getMaxAlign());
       assert(Align > 0 && "The stack realignment size is invalid!");
-      BuildMI(MBB, MBBI, DL,
-              TII->get(IsLA64 ? LoongArch::BSTRINS_D : LoongArch::BSTRINS_W),
-              SPReg)
-          .addReg(SPReg)
-          .addReg(LoongArch::R0)
-          .addImm(Align - 1)
-          .addImm(0)
-          .setMIFlag(MachineInstr::FrameSetup);
+      const unsigned BstrinsOpc =
+          IsLA64 ? LoongArch::BSTRINS_D : LoongArch::BSTRINS_W;
+      // The stack may be realigned to less than its alignment (stackrealign).
+      const uint64_t RealignPadding =
+          MFI.getMaxAlign() > getStackAlign()
+              ? MFI.getMaxAlign().value() - getStackAlign().value()
+              : 0;
+      if (realignsWithProbeLoop(MF)) {
+        // Realigning may move SP down by the probe size or more: compute the
+        // aligned SP in a free register and move SP down to it with a probing
+        // loop. Without a free register, use BP, saved above and set below.
+        // canUseAsPrologue keeps the prologue out of blocks with neither; the
+        // entry block has a free register if there is no BP.
+        Register TargetReg =
+            findScratchNonCalleeSaveRegister(MBB, MBBI, LoongArch::R13);
+        if (!TargetReg.isValid() && hasBP(MF))
+          TargetReg = LoongArchABI::getBPReg();
+        assert(TargetReg.isValid() && "No free register to realign the stack");
+        // move TargetReg, $sp
+        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::OR), TargetReg)
+            .addReg(SPReg)
+            .addReg(LoongArch::R0)
+            .setMIFlag(MachineInstr::FrameSetup);
+        BuildMI(MBB, MBBI, DL, TII->get(BstrinsOpc), TargetReg)
+            .addReg(TargetReg)
+            .addReg(LoongArch::R0)
+            .addImm(Align - 1)
+            .addImm(0)
+            .setMIFlag(MachineInstr::FrameSetup);
+        // It will be expanded to a probe loop in inlineStackProbe().
+        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PROBED_STACKALLOC_VAR))
+            .addReg(TargetReg);
+      } else {
+        BuildMI(MBB, MBBI, DL, TII->get(BstrinsOpc), SPReg)
+            .addReg(SPReg)
+            .addReg(LoongArch::R0)
+            .addImm(Align - 1)
+            .addImm(0)
+            .setMIFlag(MachineInstr::FrameSetup);
+        // The allocations before the realignment end with a probe, so it
+        // leaves at most RealignPadding bytes above SP unprobed.
+        if (NeedProbe &&
+            (FollowupAllocs || RealignPadding > StackProbeMaxUnprobedStack)) {
+          // st.{w/d} $zero, $sp, 0
+          BuildMI(MBB, MBBI, DL,
+                  TII->get(IsLA64 ? LoongArch::ST_D : LoongArch::ST_W))
+              .addReg(LoongArch::R0)
+              .addReg(SPReg)
+              .addImm(0)
+              .setMIFlag(MachineInstr::FrameSetup);
+        }
+      }
       // FP will be used to restore the frame in the epilogue, so we need
       // another base register BP to record SP after re-alignment. SP will
       // track the current stack after allocating variable sized objects.
@@ -458,9 +553,13 @@ void LoongArchFrameLowering::emitEpilogue(MachineFunction &MF,
   adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackSize, MachineInstr::FrameDestroy);
 }
 
-// Synthesize the probe loop.
+// Synthesize the probe loop. With IsVar, TargetReg need not be a multiple of
+// the probe size below SP; as for dynamic allocations, the last probe may then
+// be below TargetReg, and SP is set to TargetReg after the loop. That loop uses
+// no register but TargetReg: it moves SP down by at most 2048 bytes, what one
+// ADDI can subtract, between probes.
 static void emitStackProbeInline(MachineBasicBlock::iterator MBBI, DebugLoc DL,
-                                 Register TargetReg) {
+                                 Register TargetReg, bool IsVar) {
   assert(TargetReg != LoongArch::R3 &&
          "New top of stack cannot already be in $sp");
 
@@ -484,16 +583,26 @@ static void emitStackProbeInline(MachineBasicBlock::iterator MBBI, DebugLoc DL,
   const Register ScratchReg = LoongArch::R14;
   const MachineInstr::MIFlag Flags = MachineInstr::FrameSetup;
 
-  // ScratchReg = ProbeSize
-  TII->movImm(MBB, MBBI, DL, ScratchReg, ProbeSize, Flags);
+  if (IsVar) {
+    // LoopTest:
+    //   addi.{w/d} $sp, $sp, -min(ProbeSize, 2048)
+    BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
+            TII->get(IsLA64 ? LoongArch::ADDI_D : LoongArch::ADDI_W), SPReg)
+        .addReg(SPReg)
+        .addImm(-static_cast<int64_t>(std::min<uint64_t>(ProbeSize, 2048)))
+        .setMIFlag(Flags);
+  } else {
+    // ScratchReg = ProbeSize
+    TII->movImm(MBB, MBBI, DL, ScratchReg, ProbeSize, Flags);
 
-  // LoopTest:
-  //   sub.{w/d} $sp, $sp, ScratchReg
-  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
-          TII->get(IsLA64 ? LoongArch::SUB_D : LoongArch::SUB_W), SPReg)
-      .addReg(SPReg)
-      .addReg(ScratchReg)
-      .setMIFlag(Flags);
+    // LoopTest:
+    //   sub.{w/d} $sp, $sp, ScratchReg
+    BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
+            TII->get(IsLA64 ? LoongArch::SUB_D : LoongArch::SUB_W), SPReg)
+        .addReg(SPReg)
+        .addReg(ScratchReg)
+        .setMIFlag(Flags);
+  }
 
   //   st.{w/d} $zero, $sp, 0
   BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
@@ -503,12 +612,27 @@ static void emitStackProbeInline(MachineBasicBlock::iterator MBBI, DebugLoc DL,
       .addImm(0)
       .setMIFlag(Flags);
 
-  //   bne $sp, TargetReg, LoopTest
-  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(LoongArch::BNE))
-      .addReg(SPReg)
-      .addReg(TargetReg)
-      .addMBB(LoopTestMBB)
-      .setMIFlag(Flags);
+  if (IsVar) {
+    //   bltu TargetReg, $sp, LoopTest
+    BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(LoongArch::BLTU))
+        .addReg(TargetReg)
+        .addReg(SPReg)
+        .addMBB(LoopTestMBB)
+        .setMIFlag(Flags);
+
+    // move $sp, TargetReg
+    BuildMI(*ExitMBB, ExitMBB->end(), DL, TII->get(LoongArch::OR), SPReg)
+        .addReg(TargetReg)
+        .addReg(LoongArch::R0)
+        .setMIFlag(Flags);
+  } else {
+    //   bne $sp, TargetReg, LoopTest
+    BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(LoongArch::BNE))
+        .addReg(SPReg)
+        .addReg(TargetReg)
+        .addMBB(LoopTestMBB)
+        .setMIFlag(Flags);
+  }
 
   ExitMBB->splice(ExitMBB->end(), &MBB, std::next(MBBI), MBB.end());
   ExitMBB->transferSuccessorsAndUpdatePHIs(&MBB);
@@ -527,16 +651,20 @@ void LoongArchFrameLowering::inlineStackProbe(MachineFunction &MF,
   // to traverse the block while potentially creating more blocks.
   SmallVector<MachineInstr *, 2> ToReplace;
   for (MachineInstr &MI : MBB) {
-    if (MI.getOpcode() == LoongArch::PROBED_STACKALLOC) {
+    if (MI.getOpcode() == LoongArch::PROBED_STACKALLOC ||
+        MI.getOpcode() == LoongArch::PROBED_STACKALLOC_VAR) {
       ToReplace.push_back(&MI);
     }
   }
 
   for (MachineInstr *MI : ToReplace) {
+    // Expanding an earlier one moved MI to a new block.
+    MachineBasicBlock &MIBB = *MI->getParent();
     MachineBasicBlock::iterator MBBI = MI->getIterator();
-    DebugLoc DL = MBB.findDebugLoc(MBBI);
+    DebugLoc DL = MIBB.findDebugLoc(MBBI);
     Register TargetReg = MI->getOperand(0).getReg();
-    emitStackProbeInline(MBBI, DL, TargetReg);
+    emitStackProbeInline(MBBI, DL, TargetReg,
+                         MI->getOpcode() == LoongArch::PROBED_STACKALLOC_VAR);
     MBBI->eraseFromParent();
   }
 }
@@ -616,15 +744,17 @@ LoongArchFrameLowering::eliminateCallFramePseudoInstr(
       const LoongArchTargetLowering *TLI =
           MF.getSubtarget<LoongArchSubtarget>().getTargetLowering();
       const int64_t ProbeSize = TLI->getStackProbeSize(MF, getStackAlign());
-      if (TLI->hasInlineStackProbe(MF) && -Amount >= ProbeSize) {
+      if (TLI->hasInlineStackProbe(MF) &&
+          -Amount > StackProbeMaxUnprobedStack) {
         // When stack probing is enabled, the decrement of SP may need to be
-        // probed. We can handle both the decrement and the probing in
+        // probed. We only need to do this if the call frame is larger than
+        // what may be left unprobed at the call, as SP has been probed at
+        // this point, either by the prologue or by the most recent dynamic
+        // allocation. We can handle both the decrement and the probing in
         // allocateStack.
-        const bool DynAllocation =
-            MF.getInfo<LoongArchMachineFunctionInfo>()->hasDynamicAllocation();
         allocateStack(MBB, MI, MF, -Amount, -Amount,
                       MF.needsFrameMoves() && !hasFP(MF),
-                      /*NeedProbe=*/true, ProbeSize, DynAllocation,
+                      /*NeedProbe=*/true, ProbeSize, /*FollowupAllocs=*/false,
                       MachineInstr::NoFlags);
         inlineStackProbe(MF, MBB);
       } else {
@@ -713,4 +843,14 @@ bool LoongArchFrameLowering::enableShrinkWrapping(
     return false;
 
   return true;
+}
+
+bool LoongArchFrameLowering::canUseAsPrologue(
+    const MachineBasicBlock &MBB) const {
+  // Realigning SP with a probing loop needs a free register, or BP.
+  const MachineFunction &MF = *MBB.getParent();
+  if (!realignsWithProbeLoop(MF) || hasBP(MF))
+    return true;
+  return findScratchNonCalleeSaveRegister(MBB, MBB.begin(), LoongArch::R13)
+      .isValid();
 }

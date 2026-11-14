@@ -80,6 +80,7 @@ body:             |
   ; LA64-NEXT: {{  $}}
   ; LA64-NEXT:   $r3 = frame-setup ADDI_D $r3, -16
   ; LA64-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
+  ; LA64-NEXT:   frame-setup ST_D $r0, $r3, 0
   ; LA64-NEXT:   ST_D killed $r1, $r3, 8 :: (store (s64) into %stack.1)
   ; LA64-NEXT:   ST_D killed $r22, $r3, 0 :: (store (s64) into %stack.2)
   ; LA64-NEXT:   frame-setup CFI_INSTRUCTION offset $r1, -8
@@ -106,6 +107,7 @@ body:             |
   ; LA64-NEXT:   $r3 = OR renamable $r4, $r0
   ; LA64-NEXT:   $r5 = LU12I_W 1
   ; LA64-NEXT:   $r3 = SUB_D $r3, killed $r5
+  ; LA64-NEXT:   ST_D $r0, $r3, 0
   ; LA64-NEXT:   PseudoCALL_MEDIUM target-flags(loongarch-call-plt) @callee_stack_args, csr_ilp32d_lp64d, implicit-def dead $r1, implicit-def dead $r20, implicit $r4, implicit undef $r5, implicit undef $r6, implicit undef $r7, implicit undef $r8, implicit undef $r9, implicit undef $r10, implicit undef $r11, implicit-def $r3
   ; LA64-NEXT:   $r4 = LU12I_W 1
   ; LA64-NEXT:   $r3 = ADD_D $r3, killed $r4
@@ -122,6 +124,7 @@ body:             |
   ; LA32-NEXT: {{  $}}
   ; LA32-NEXT:   $r3 = frame-setup ADDI_W $r3, -16
   ; LA32-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
+  ; LA32-NEXT:   frame-setup ST_W $r0, $r3, 0
   ; LA32-NEXT:   ST_W killed $r1, $r3, 12 :: (store (s32) into %stack.1)
   ; LA32-NEXT:   ST_W killed $r22, $r3, 8 :: (store (s32) into %stack.2)
   ; LA32-NEXT:   frame-setup CFI_INSTRUCTION offset $r1, -4
@@ -148,6 +151,7 @@ body:             |
   ; LA32-NEXT:   $r3 = OR renamable $r4, $r0
   ; LA32-NEXT:   $r5 = LU12I_W 1
   ; LA32-NEXT:   $r3 = SUB_W $r3, killed $r5
+  ; LA32-NEXT:   ST_W $r0, $r3, 0
   ; LA32-NEXT:   PseudoCALL_MEDIUM target-flags(loongarch-call-plt) @callee_stack_args, csr_ilp32d_lp64d, implicit-def dead $r1, implicit-def dead $r20, implicit $r4, implicit undef $r5, implicit undef $r6, implicit undef $r7, implicit undef $r8, implicit undef $r9, implicit undef $r10, implicit undef $r11, implicit-def $r3
   ; LA32-NEXT:   $r4 = LU12I_W 1
   ; LA32-NEXT:   $r3 = ADD_W $r3, killed $r4

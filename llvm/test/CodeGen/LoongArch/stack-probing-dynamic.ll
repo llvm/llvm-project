@@ -166,6 +166,7 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; LA64-NEXT:    addi.d $fp, $sp, 128
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 5, 0
+; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    move $s8, $sp
 ; LA64-NEXT:    addi.d $a0, $a0, 15
 ; LA64-NEXT:    bstrins.d $a0, $zero, 3, 0
@@ -200,6 +201,7 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; LA32-NEXT:    addi.w $fp, $sp, 64
 ; LA32-NEXT:    .cfi_def_cfa 22, 0
 ; LA32-NEXT:    bstrins.w $sp, $zero, 5, 0
+; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    move $s8, $sp
 ; LA32-NEXT:    addi.w $a0, $a0, 15
 ; LA32-NEXT:    addi.w $a1, $zero, -16
@@ -255,17 +257,25 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; LA64-NEXT:    addi.d $sp, $sp, -2048
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $zero, $sp, 0
-; LA64-NEXT:    bstrins.d $sp, $zero, 12, 0
+; LA64-NEXT:    move $t1, $sp
+; LA64-NEXT:    bstrins.d $t1, $zero, 12, 0
+; LA64-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    addi.d $sp, $sp, -2048
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    bltu $t1, $sp, .LBB3_1
+; LA64-NEXT:  # %bb.2:
+; LA64-NEXT:    move $sp, $t1
 ; LA64-NEXT:    move $s8, $sp
 ; LA64-NEXT:    addi.d $a0, $a0, 15
 ; LA64-NEXT:    bstrins.d $a0, $zero, 3, 0
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 12, 0
-; LA64-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    lu12i.w $a2, 1
+; LA64-NEXT:  .LBB3_3: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    sub.d $sp, $sp, $a2
 ; LA64-NEXT:    st.d $zero, $sp, 0
-; LA64-NEXT:    bltu $a0, $sp, .LBB3_1
-; LA64-NEXT:  # %bb.2:
+; LA64-NEXT:    bltu $a0, $sp, .LBB3_3
+; LA64-NEXT:  # %bb.4:
 ; LA64-NEXT:    move $sp, $a0
 ; LA64-NEXT:    st.d $a0, $a1, 0
 ; LA64-NEXT:    lu12i.w $a0, 4
@@ -302,7 +312,14 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; LA32-NEXT:    addi.w $sp, $sp, -2048
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $zero, $sp, 0
-; LA32-NEXT:    bstrins.w $sp, $zero, 12, 0
+; LA32-NEXT:    move $t1, $sp
+; LA32-NEXT:    bstrins.w $t1, $zero, 12, 0
+; LA32-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    addi.w $sp, $sp, -2048
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bltu $t1, $sp, .LBB3_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    move $sp, $t1
 ; LA32-NEXT:    move $s8, $sp
 ; LA32-NEXT:    addi.w $a0, $a0, 15
 ; LA32-NEXT:    addi.w $a1, $zero, -16
@@ -311,11 +328,11 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; LA32-NEXT:    lu12i.w $a1, -2
 ; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    lu12i.w $a1, 1
-; LA32-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB3_3: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    sub.w $sp, $sp, $a1
 ; LA32-NEXT:    st.w $zero, $sp, 0
-; LA32-NEXT:    bltu $a0, $sp, .LBB3_1
-; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    bltu $a0, $sp, .LBB3_3
+; LA32-NEXT:  # %bb.4:
 ; LA32-NEXT:    move $sp, $a0
 ; LA32-NEXT:    st.w $a0, $a2, 0
 ; LA32-NEXT:    lu12i.w $a0, 4
@@ -402,7 +419,6 @@ define void @no_reserved_call_frame(i64 %n) #0 {
 ; LA32-NEXT:    sub.w $sp, $sp, $a1
 ; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    addi.w $sp, $sp, -32
-; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    bl callee_stack_args
 ; LA32-NEXT:    lu12i.w $a0, 1
 ; LA32-NEXT:    ori $a0, $a0, 32
@@ -426,6 +442,7 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    addi.d $sp, $sp, -2032
 ; LA64-NEXT:    .cfi_def_cfa_offset 2032
+; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    lu12i.w $a0, 1
@@ -449,6 +466,7 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -2032
 ; LA32-NEXT:    .cfi_def_cfa_offset 2032
+; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    st.w $ra, $sp, 2028 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    lu12i.w $a0, 1
