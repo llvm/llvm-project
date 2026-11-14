@@ -79,7 +79,8 @@ class RelocationMap {
   std::string BinaryPath;
   using RelocContainer = std::vector<ValidReloc>;
 
-  RelocContainer Relocations;
+  RelocContainer DebugInfoRelocations;
+  RelocContainer DebugAddrRelocations;
 
   /// For YAML IO support.
   ///@{
@@ -95,19 +96,21 @@ public:
 
   using const_iterator = RelocContainer::const_iterator;
 
-  iterator_range<const_iterator> relocations() const {
-    return make_range(begin(), end());
+  iterator_range<const_iterator> debugInfoRelocations() const {
+    return make_range(DebugInfoRelocations.begin(), DebugInfoRelocations.end());
   }
 
-  const_iterator begin() const { return Relocations.begin(); }
+  iterator_range<const_iterator> debugAddrRelocations() const {
+    return make_range(DebugAddrRelocations.begin(), DebugAddrRelocations.end());
+  }
 
-  const_iterator end() const { return Relocations.end(); }
+  size_t getNumberOfEntries() const {
+    return DebugInfoRelocations.size() + DebugAddrRelocations.size();
+  }
 
-  size_t getNumberOfEntries() const { return Relocations.size(); }
+  void addDebugInfoRelocationMapEntry(const ValidReloc &Relocation);
 
-  /// This function adds a ValidReloc to the list owned by this
-  /// relocation map.
-  void addRelocationMapEntry(const ValidReloc &Relocation);
+  void addDebugAddrRelocationMapEntry(const ValidReloc &Relocation);
 
   const Triple &getTriple() const { return BinaryTriple; }
 

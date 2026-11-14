@@ -1,0 +1,200 @@
+The dSYM of a mergeable library holds a relocation map, which lets dsymutil
+carry the debug info of the library into the binaries merging it. Check that
+both DWARF linkers write the map, for DWARF 4 and 5, and that merging with it
+puts the debug info at the merged addresses, through two levels of merging:
+libfoo and libbar are merged into libclient, itself merged into libtop.
+
+Instructions to reproduce
+-------------------------
+
+$ cd llvm/test/tools/dsymutil
+$ for V in 4 5; do
+    D=Inputs/mergeable-libs/dwarf$V
+    LINK="clang -target arm64-apple-macos15 -dynamiclib \
+      -Wl,-oso_prefix,$(pwd -P)/ -Wl,-segalign,0x1000"
+    for f in foo bar client top; do
+      clang -target arm64-apple-macos15 -isysroot / -g -gdwarf-$V -O1 \
+        -fdebug-compilation-dir=/tmp -c Inputs/mergeable-libs/$f.c -o $D/$f.o
+    done
+    for f in foo bar; do
+      ZERO_AR_DATE=1 $LINK -Wl,-make_mergeable \
+        -install_name /path/to/lib$f.dylib $D/$f.o -o $D/lib$f.dylib
+    done
+    ZERO_AR_DATE=1 $LINK -Wl,-make_mergeable \
+      -install_name /path/to/libclient.dylib $D/client.o \
+      -Wl,-merge_library,$D/libfoo.dylib -Wl,-merge_library,$D/libbar.dylib \
+      -o $D/libclient.dylib
+    ZERO_AR_DATE=1 $LINK $D/top.o -Wl,-merge_library,$D/libclient.dylib \
+      -o $D/libtop.dylib
+  done
+
+Every level is linked with the same DWARF linker. dsymutil is expected to be
+silent: it warns when the relocations of an object file were all lost.
+
+DEFINE: %{version} =
+DEFINE: %{linker} =
+DEFINE: %{in} = %p/../Inputs/mergeable-libs/dwarf%{version}
+DEFINE: %{out} = %t/%{version}/%{linker}
+DEFINE: %{dsymutil} = dsymutil --linker %{linker} -oso-prepend-path=%p/..
+DEFINE: %{map} = Contents/Resources/Relocations/aarch64
+DEFINE: %{link} = \
+DEFINE:   mkdir -p %{out}/libs %{out}/client \
+DEFINE:   && %{dsymutil} %{in}/libfoo.dylib \
+DEFINE:        -o %{out}/libs/libfoo.dylib.dSYM 2>&1 | count 0 \
+DEFINE:   && %{dsymutil} %{in}/libbar.dylib \
+DEFINE:        -o %{out}/libs/libbar.dylib.dSYM 2>&1 | count 0 \
+DEFINE:   && %{dsymutil} -D %{out}/libs %{in}/libclient.dylib \
+DEFINE:        -o %{out}/client/libclient.dylib.dSYM 2>&1 | count 0 \
+DEFINE:   && %{dsymutil} -D %{out}/client %{in}/libtop.dylib \
+DEFINE:        -o %{out}/libtop.dylib.dSYM 2>&1 | count 0 \
+DEFINE:   && cat %{out}/libs/libfoo.dylib.dSYM/%{map}/libfoo.dylib.yml \
+DEFINE:        %{out}/libs/libbar.dylib.dSYM/%{map}/libbar.dylib.yml \
+DEFINE:        %{out}/client/libclient.dylib.dSYM/%{map}/libclient.dylib.yml \
+DEFINE:      | FileCheck %s --check-prefix=MAPS%{version} \
+DEFINE:   && llvm-dwarfdump --debug-info %{out}/libtop.dylib.dSYM \
+DEFINE:      | FileCheck %s --check-prefix=TOP
+
+RUN: rm -rf %t
+
+REDEFINE: %{version} = 4
+REDEFINE: %{linker} = classic
+RUN: %{link}
+REDEFINE: %{linker} = parallel
+RUN: %{link}
+
+REDEFINE: %{version} = 5
+REDEFINE: %{linker} = classic
+RUN: %{link}
+REDEFINE: %{linker} = parallel
+RUN: %{link}
+
+With DWARF 4, the addresses are in .debug_info.
+
+MAPS4:      binary-path: {{.*}}libfoo.dylib
+MAPS4-NEXT: relocations:
+MAPS4-NEXT:   symName: _foo,{{.*}} symBinAddr: 0x470,
+MAPS4-NEXT:   symName: _foo_global,{{.*}} symBinAddr: 0x1000,
+MAPS4-NEXT:   symName: _foo_tls,{{.*}} symBinAddr: 0x1008,
+MAPS4-NEXT:   symName: _foo,{{.*}} symBinAddr: 0x470,
+MAPS4-NEXT:   symName: _foo.foo_calls,{{.*}} symBinAddr: 0x1024,
+MAPS4-NEXT:   symName: _foo_static,{{.*}} symBinAddr: 0x1004,
+MAPS4-NEXT:   symName: _foo_unused,{{.*}} symBinAddr: 0x4CC,
+MAPS4-NEXT: ...
+MAPS4:      binary-path: {{.*}}libbar.dylib
+MAPS4-NEXT: relocations:
+MAPS4-NEXT:   symName: _bar,{{.*}} symBinAddr: 0x380,
+MAPS4-NEXT:   symName: _bar_counter,{{.*}} symBinAddr: 0x1000,
+MAPS4-NEXT:   symName: _bar,{{.*}} symBinAddr: 0x380,
+MAPS4-NEXT: ...
+
+The relocations of the merged libraries now point at libclient.
+
+MAPS4:      binary-path: {{.*}}libclient.dylib
+MAPS4-NEXT: relocations:
+MAPS4-NEXT:   symName: _display,{{.*}} symBinAddr: 0x4C8,
+MAPS4-NEXT:   symName: _display,{{.*}} symBinAddr: 0x4C8,
+MAPS4-NEXT:   symName: _foo,{{.*}} symBinAddr: 0x4F4,
+MAPS4-NEXT:   symName: _foo_global,{{.*}} symBinAddr: 0x1000,
+MAPS4-NEXT:   symName: _foo_tls,{{.*}} symBinAddr: 0x1008,
+MAPS4-NEXT:   symName: _foo,{{.*}} symBinAddr: 0x4F4,
+MAPS4-NEXT:   symName: _foo.foo_calls,{{.*}} symBinAddr: 0x1024,
+MAPS4-NEXT:   symName: _foo_static,{{.*}} symBinAddr: 0x1004,
+MAPS4-NEXT:   symName: _foo_unused,{{.*}} symBinAddr: 0x550,
+MAPS4-NEXT:   symName: _bar,{{.*}} symBinAddr: 0x558,
+MAPS4-NEXT:   symName: _bar_counter,{{.*}} symBinAddr: 0x1028,
+MAPS4-NEXT:   symName: _bar,{{.*}} symBinAddr: 0x558,
+MAPS4-NEXT: ...
+
+With DWARF 5, the code addresses are in .debug_addr, while the variable
+addresses moved out of .debug_addr into the location expressions in
+.debug_info.
+
+MAPS5:      binary-path: {{.*}}libfoo.dylib
+MAPS5-NEXT: relocations:
+MAPS5-NEXT:   symName: _foo_global,{{.*}} symBinAddr: 0x1000,
+MAPS5-NEXT:   symName: _foo_tls,{{.*}} symBinAddr: 0x1008,
+MAPS5-NEXT:   symName: _foo.foo_calls,{{.*}} symBinAddr: 0x1024,
+MAPS5-NEXT:   symName: _foo_static,{{.*}} symBinAddr: 0x1004,
+MAPS5-NEXT: debug-addr-relocations:
+MAPS5-NEXT:   symName: _foo,{{.*}} symBinAddr: 0x470,
+MAPS5-NEXT:   symName: _foo_unused,{{.*}} symBinAddr: 0x4CC,
+MAPS5-NEXT: ...
+MAPS5:      binary-path: {{.*}}libbar.dylib
+MAPS5-NEXT: relocations:
+MAPS5-NEXT:   symName: _bar_counter,{{.*}} symBinAddr: 0x1000,
+MAPS5-NEXT: debug-addr-relocations:
+MAPS5-NEXT:   symName: _bar,{{.*}} symBinAddr: 0x380,
+MAPS5-NEXT: ...
+MAPS5:      binary-path: {{.*}}libclient.dylib
+MAPS5-NEXT: relocations:
+MAPS5-NEXT:   symName: _foo_global,{{.*}} symBinAddr: 0x1000,
+MAPS5-NEXT:   symName: _foo_tls,{{.*}} symBinAddr: 0x1008,
+MAPS5-NEXT:   symName: _foo.foo_calls,{{.*}} symBinAddr: 0x1024,
+MAPS5-NEXT:   symName: _foo_static,{{.*}} symBinAddr: 0x1004,
+MAPS5-NEXT:   symName: _bar_counter,{{.*}} symBinAddr: 0x1028,
+MAPS5-NEXT: debug-addr-relocations:
+MAPS5-NEXT:   symName: _display,{{.*}} symBinAddr: 0x4C8,
+MAPS5-NEXT:   symName: _foo,{{.*}} symBinAddr: 0x4F4,
+MAPS5-NEXT:   symName: _foo_unused,{{.*}} symBinAddr: 0x550,
+MAPS5-NEXT:   symName: _bar,{{.*}} symBinAddr: 0x558,
+MAPS5-NEXT: ...
+
+The debug info of libtop is at the addresses of libtop, whatever the DWARF
+version: the code is the same.
+
+TOP:       DW_AT_name ("Inputs/mergeable-libs/top.c")
+TOP-NOT:   DW_AT_APPLE_origin
+TOP:       DW_TAG_subprogram
+TOP-NEXT:    DW_AT_low_pc (0x00000000000004c8)
+TOP:         DW_AT_name ("top")
+TOP:       DW_TAG_call_site{{$}}
+TOP-NEXT:    DW_AT_call_origin
+TOP-NEXT:    DW_AT_call_return_pc (0x00000000000004d4)
+
+TOP:       DW_AT_name ("Inputs/mergeable-libs/client.c")
+TOP:       DW_AT_APPLE_origin ("/path/to/libclient.dylib")
+TOP:       DW_TAG_subprogram
+TOP-NEXT:    DW_AT_low_pc (0x00000000000004e0)
+TOP:         DW_AT_name ("display")
+TOP:       DW_TAG_call_site{{$}}
+TOP-NEXT:    DW_AT_call_origin {{.*}} "foo"
+TOP-NEXT:    DW_AT_call_return_pc (0x00000000000004f4)
+TOP:       DW_TAG_call_site{{$}}
+TOP-NEXT:    DW_AT_call_origin {{.*}} "bar"
+TOP-NEXT:    DW_AT_call_return_pc (0x00000000000004fc)
+
+TOP:       DW_AT_name ("Inputs/mergeable-libs/foo.c")
+TOP:       DW_AT_APPLE_origin ("/path/to/libclient.dylib")
+TOP:       DW_TAG_variable
+TOP-NEXT:    DW_AT_name ("foo_global")
+TOP:         DW_AT_location (DW_OP_addr 0x1000)
+TOP:       DW_TAG_variable
+TOP-NEXT:    DW_AT_name ("foo_tls")
+TOP:         DW_AT_location (DW_OP_const8u 0x1008, DW_OP_form_tls_address)
+TOP:       DW_TAG_subprogram
+TOP-NEXT:    DW_AT_low_pc (0x000000000000050c)
+TOP:         DW_AT_name ("foo")
+TOP:       DW_TAG_variable
+TOP-NEXT:    DW_AT_name ("foo_calls")
+TOP:         DW_AT_location (DW_OP_addr 0x1024)
+TOP:       DW_TAG_inlined_subroutine
+TOP-NEXT:    DW_AT_abstract_origin {{.*}} "foo_helper"
+TOP-NEXT:    DW_AT_low_pc (0x0000000000000528)
+TOP:       DW_TAG_call_site{{$}}
+TOP:         DW_AT_call_return_pc (0x0000000000000550)
+TOP:       DW_TAG_variable
+TOP-NEXT:    DW_AT_name ("foo_static")
+TOP:         DW_AT_location (DW_OP_addr 0x1004)
+TOP:       DW_AT_name ("foo_helper")
+TOP:       DW_TAG_subprogram
+TOP-NEXT:    DW_AT_low_pc (0x0000000000000568)
+TOP:         DW_AT_name ("foo_unused")
+
+TOP:       DW_AT_name ("Inputs/mergeable-libs/bar.c")
+TOP:       DW_AT_APPLE_origin ("/path/to/libclient.dylib")
+TOP:       DW_TAG_variable
+TOP-NEXT:    DW_AT_name ("bar_counter")
+TOP:         DW_AT_location (DW_OP_addr 0x1028)
+TOP:       DW_TAG_subprogram
+TOP-NEXT:    DW_AT_low_pc (0x0000000000000570)
+TOP:         DW_AT_name ("bar")

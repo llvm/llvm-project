@@ -23,6 +23,9 @@ namespace dwarf_linker {
 /// linked address.
 using RangesTy = AddressRangesMap;
 
+/// The debug sections holding relocations which the linker can save.
+enum class RelocSectionKind : uint8_t { DebugInfo, DebugAddr };
+
 /// AddressesMap represents information about valid addresses used
 /// by debug information. Valid addresses are those which points to
 /// live code sections. i.e. relocations for these addresses point
@@ -84,17 +87,17 @@ public:
   /// Check if the linker needs to gather and save relocation info.
   virtual bool needToSaveValidRelocs() = 0;
 
-  /// Update and save relocation values to be serialized
-  virtual void updateAndSaveValidRelocs(bool IsDWARF5,
+  /// Save the valid relocations in [\p StartOffset, \p EndOffset) of
+  /// \p InSection, moved by \p LinkedOffset into \p OutSection, for the unit at
+  /// \p OriginalUnitOffset in the input.
+  ///
+  /// \returns true if any relocation was saved.
+  virtual bool updateAndSaveValidRelocs(RelocSectionKind InSection,
+                                        RelocSectionKind OutSection,
                                         uint64_t OriginalUnitOffset,
                                         int64_t LinkedOffset,
                                         uint64_t StartOffset,
                                         uint64_t EndOffset) = 0;
-
-  /// Update the valid relocations that used OriginalUnitOffset as the compile
-  /// unit offset, and update their values to reflect OutputUnitOffset.
-  virtual void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
-                                               uint64_t OutputUnitOffset) = 0;
 
   /// Erases all data.
   virtual void clear() = 0;
