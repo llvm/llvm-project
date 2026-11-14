@@ -1728,8 +1728,8 @@ static std::optional<ModuleCheckSumType> VerifyHeader(
   }
 }
 
-static void GetModuleDependences(
-    ModuleDependences &dependences, llvm::ArrayRef<char> content) {
+static void GetModuleDependences(ModuleDependences &dependences,
+    llvm::ArrayRef<char> content, const std::string &requiredBy) {
   std::size_t limit{content.size()};
   std::string_view str{content.data(), limit};
   for (std::size_t j{ModHeader::len};
@@ -1752,11 +1752,29 @@ static void GetModuleDependences(
     }
     if (j > start && j < limit && str.at(j) == '\n') {
       std::string depModName{str.substr(start, j - start)};
-      dependences.AddDependence(std::move(depModName), intrinsic, *checkSum);
+      dependences.AddDependence(
+          std::move(depModName), intrinsic, *checkSum, std::string{requiredBy});
     } else {
       break;
     }
   }
+}
+
+// Returns another already-read module with the same name as 'module' but a
+// checksum other than 'requiredHash', if any.
+static const Symbol *FindOtherHomonym(
+    const ModuleDetails &module, ModuleCheckSumType requiredHash) {
+  for (const Symbol *other{module.previous()}; other;) {
+    const auto *details{other->detailsIf<ModuleDetails>()};
+    if (!details) {
+      break;
+    }
+    if (details->moduleFileHash() != requiredHash) {
+      return other;
+    }
+    other = details->previous();
+  }
+  return nullptr;
 }
 
 Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
@@ -1782,6 +1800,13 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     requiredHash = context_.moduleDependences().GetRequiredHash(
         name.ToString(), isIntrinsic.value_or(false));
   }
+  // A USE statement in the source being compiled (not in a module file)
+  // that is resolved by a checksum that another module file requires may
+  // silently get a different module than the one it would otherwise find.
+  // Remember enough to warn about that.
+  bool fromModuleFile{context_.foldingContext().moduleFileName().has_value()};
+  const Symbol *homonymInUse{nullptr}; // already-read module, other checksum
+  std::optional<std::string> homonymPath; // earlier in search path
 
   if (!isIntrinsic.value_or(false) && !ancestor) {
     // Already present in the symbol table as a usable non-intrinsic module?
@@ -1800,7 +1825,19 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
             if (!requiredHash ||
                 *requiredHash ==
                     module->moduleFileHash().value_or(*requiredHash)) {
+              // A module defined in the source being compiled has no
+              // checksum and was not selected by one.
+              if (requiredHash && module->moduleFileHash() && !fromModuleFile &&
+                  !silent) {
+                if (!homonymInUse) {
+                  homonymInUse = FindOtherHomonym(*module, *requiredHash);
+                }
+                WarnAboutEarlierHomonym(name, *requiredHash, homonymInUse);
+              }
               return const_cast<Scope *>(found->scope());
+            }
+            if (!homonymInUse) {
+              homonymInUse = found;
             }
             found = module->previous(); // same name, distinct hash
           } else {
@@ -1841,14 +1878,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     // The search for this module file will scan non-intrinsic module
     // directories.  If a directory is in both the intrinsic and non-intrinsic
     // directory lists, the intrinsic module directory takes precedence.
-    options.searchDirectories = context_.searchDirectories();
-    for (const auto &dir : context_.intrinsicModuleDirectories()) {
-      options.searchDirectories.erase(
-          std::remove(options.searchDirectories.begin(),
-              options.searchDirectories.end(), dir),
-          options.searchDirectories.end());
-    }
-    options.searchDirectories.insert(options.searchDirectories.begin(), "."s);
+    options.searchDirectories = NonIntrinsicSearchDirectories();
   }
   bool foundNonIntrinsicModuleFile{false};
   if (!isIntrinsic) {
@@ -1890,6 +1920,8 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
             checkSum && *checkSum == *requiredHash) {
           path = maybe;
           break;
+        } else if (checkSum && !homonymPath) {
+          homonymPath = maybe;
         }
       }
     }
@@ -2016,7 +2048,8 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
       ref->set(Symbol::Flag::ModFile);
     }
   }
-  GetModuleDependences(context_.moduleDependences(), sourceFile->content());
+  GetModuleDependences(
+      context_.moduleDependences(), sourceFile->content(), name.ToString());
   ResolveNames(context_, parseTree, topScope);
   context_.foldingContext().set_moduleFileName(wasModuleFileName);
   context_.set_currentHermeticModuleFileScope(previousHermetic);
@@ -2031,6 +2064,15 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
         moduleSymbol->set(Symbol::Flag::ModFile);
       }
     }
+  }
+  if (moduleSymbol && !fromModuleFile && !silent && !ancestor) {
+    if (requiredHash) {
+      // Later USEs of this module don't need to scan the search path again.
+      context_.moduleDependences().MarkHomonymSearchDone(
+          name.ToString(), *requiredHash);
+    }
+    WarnAboutHomonym(name, isIntrinsic.value_or(false), sourceFile->path(),
+        homonymInUse, homonymPath);
   }
   if (moduleSymbol) {
     CHECK(moduleSymbol->test(Symbol::Flag::ModFile));
@@ -2064,6 +2106,77 @@ parser::Message &ModFileReader::Say(const char *verb, SourceName name,
           name, ancestor}
           .MoveString(),
       parser::MessageFormattedText{std::move(msg), arg}.MoveString());
+}
+
+// The directories to search for a non-intrinsic module file.  If a
+// directory is in both the intrinsic and non-intrinsic directory lists,
+// the intrinsic module directory takes precedence.
+std::vector<std::string> ModFileReader::NonIntrinsicSearchDirectories() const {
+  std::vector<std::string> dirs{context_.searchDirectories()};
+  for (const auto &dir : context_.intrinsicModuleDirectories()) {
+    dirs.erase(std::remove(dirs.begin(), dirs.end(), dir), dirs.end());
+  }
+  dirs.insert(dirs.begin(), "."s);
+  return dirs;
+}
+
+// A USE statement in the source being compiled has been resolved to the
+// module that was read from 'path' because another module file requires its
+// checksum.  Warn if a different module with the same name has already been
+// used or appears earlier in the module search path, since the program then
+// silently gets a module that it might not expect.
+void ModFileReader::WarnAboutHomonym(SourceName name, bool isIntrinsic,
+    const std::string &path, const Symbol *homonymInUse,
+    const std::optional<std::string> &homonymPath) {
+  if ((!homonymInUse && !homonymPath) || !context_.FindScopeIfAny(name)) {
+    return;
+  }
+  const std::string *requiredBy{
+      context_.moduleDependences().GetRequiredBy(name.ToString(), isIntrinsic)};
+  std::string requirer{requiredBy ? *requiredBy : "another module"s};
+  if (homonymInUse) {
+    if (auto *msg{context_.Warn(common::UsageWarning::HomonymousModule, name,
+            "Module '%s' from '%s' is used because module '%s' depends on it, but a different module '%s' is already in use; a program must not have two modules with the same name"_warn_en_US,
+            name, path, requirer, name)}) {
+      msg->Attach(homonymInUse->name(), "Module '%s' already in use"_en_US,
+          homonymInUse->name());
+    }
+  } else {
+    context_.Warn(common::UsageWarning::HomonymousModuleSearchOrder, name,
+        "Module '%s' from '%s' is used because module '%s' depends on it, but a different module file for '%s' appears earlier in the module search path in '%s'"_warn_en_US,
+        name, path, requirer, name, *homonymPath);
+  }
+}
+
+// A USE statement in the source being compiled is resolved to an
+// already-read module whose checksum another module file requires.  Warn if
+// a different module with the same name appears earlier in the module
+// search path.
+void ModFileReader::WarnAboutEarlierHomonym(SourceName name,
+    ModuleCheckSumType requiredHash, const Symbol *homonymInUse) {
+  if (!context_.ShouldWarn(homonymInUse
+              ? common::UsageWarning::HomonymousModule
+              : common::UsageWarning::HomonymousModuleSearchOrder) ||
+      !context_.moduleDependences().MarkHomonymSearchDone(
+          name.ToString(), requiredHash)) {
+    return; // disabled, or already checked and warned if needed
+  }
+  std::optional<std::string> homonymPath;
+  for (const std::string &maybe : parser::LocateSourceFileAll(
+           ModFileName(name, ""s, context_.moduleFileSuffix()),
+           NonIntrinsicSearchDirectories())) {
+    if (const auto *srcFile{context_.allCookedSources().allSources().OpenPath(
+            maybe, llvm::errs())}) {
+      if (auto checkSum{VerifyHeader(srcFile->content())}) {
+        if (*checkSum == requiredHash) {
+          WarnAboutHomonym(name, false, maybe, homonymInUse, homonymPath);
+          return;
+        } else if (!homonymPath) {
+          homonymPath = maybe;
+        }
+      }
+    }
+  }
 }
 
 // program was read from a .mod file for a submodule; return the name of the

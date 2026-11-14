@@ -110,6 +110,12 @@ private:
 
   parser::Message &Say(const char *verb, SourceName, const std::string &,
       parser::MessageFixedText &&, const std::string &);
+  std::vector<std::string> NonIntrinsicSearchDirectories() const;
+  void WarnAboutHomonym(SourceName, bool isIntrinsic, const std::string &path,
+      const Symbol *homonymInUse,
+      const std::optional<std::string> &homonymPath);
+  void WarnAboutEarlierHomonym(
+      SourceName, ModuleCheckSumType requiredHash, const Symbol *homonymInUse);
 };
 
 } // namespace Fortran::semantics

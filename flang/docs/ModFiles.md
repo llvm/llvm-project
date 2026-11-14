@@ -159,6 +159,12 @@ The known hashes of dependent modules are used to disambiguate modules whose
 names match module files in multiple search directories, as well as to
 detect dependent modules whose recompilation has rendered a module file
 obsolete.
+When a `USE` statement in the source being compiled is resolved this way to
+a module other than one with the same name that is already in use, the
+compiler warns (`-Whomonymous-module`), since the program may not get the
+module it expects. With `-Whomonymous-module-search-order`, it also warns when
+the module file is not the first one for that name in the search path; that
+is not the default, since it is the case the checksums exist to handle.
 
 The hash codes used in module files also serve as a means of protection from
 updates to code in other packages.
