@@ -289,29 +289,16 @@ entry:
 }
 
 define i32 @ui32_7(i32 %a, i32 %b) {
-; CHECK-SD-LABEL: ui32_7:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, #2684354560 // =0xa0000000
-; CHECK-SD-NEXT:    mov w9, w0
-; CHECK-SD-NEXT:    movk x8, #18724, lsl #32
-; CHECK-SD-NEXT:    movk x8, #9362, lsl #48
-; CHECK-SD-NEXT:    umulh x8, x9, x8
-; CHECK-SD-NEXT:    sub w8, w8, w8, lsl #3
-; CHECK-SD-NEXT:    add w0, w0, w8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ui32_7:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #18725 // =0x4925
-; CHECK-GI-NEXT:    movk w8, #9362, lsl #16
-; CHECK-GI-NEXT:    umull x8, w0, w8
-; CHECK-GI-NEXT:    lsr x8, x8, #32
-; CHECK-GI-NEXT:    sub w9, w0, w8
-; CHECK-GI-NEXT:    add w8, w8, w9, lsr #1
-; CHECK-GI-NEXT:    lsr w8, w8, #2
-; CHECK-GI-NEXT:    sub w8, w8, w8, lsl #3
-; CHECK-GI-NEXT:    add w0, w0, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ui32_7:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, #2684354560 // =0xa0000000
+; CHECK-NEXT:    mov w9, w0
+; CHECK-NEXT:    movk x8, #18724, lsl #32
+; CHECK-NEXT:    movk x8, #9362, lsl #48
+; CHECK-NEXT:    umulh x8, x9, x8
+; CHECK-NEXT:    sub w8, w8, w8, lsl #3
+; CHECK-NEXT:    add w0, w0, w8
+; CHECK-NEXT:    ret
 entry:
   %s = urem i32 %a, 7
   ret i32 %s
