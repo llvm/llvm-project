@@ -18,7 +18,7 @@ void S::key() {}
 // CHECK-DAG: !rec_anon_struct = !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 4>}>
 
 // The definition of the key function should result in the vtable being emitted.
-// CHECK:      cir.global constant external @_ZTV1S = #cir.vtable<{
+// CHECK:      cir.global constant external unnamed_addr @_ZTV1S = #cir.vtable<{
 // CHECK-SAME:     #cir.const_array<[
 // CHECK-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CHECK-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,

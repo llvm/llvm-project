@@ -657,6 +657,11 @@ public:
   /// necessary, caching the result for the given function.
   cir::FuncOp getFunctionPointer(GlobalDecl GD);
 
+  /// Return true if a vtable with the given linkage may have more than one
+  /// address in the program, in which case its address is insignificant and it
+  /// can be marked unnamed_addr.
+  bool mayVTableBeDuplicated(cir::GlobalLinkageKind linkage) const;
+
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool forEH = false) {
     return (forEH || getLangOpts().RTTI) &&

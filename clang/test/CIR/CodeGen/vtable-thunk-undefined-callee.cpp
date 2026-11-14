@@ -22,7 +22,7 @@ int Derived::f(int x) { return x; }
 
 // The Middle-in-Derived construction vtable reaches Right::f through a virtual
 // thunk, and this translation unit only declares Right::f.
-// CIR: cir.global constant external @_ZTCN23ConstructionVTableThunk7DerivedE0_NS_6MiddleE = #cir.vtable<{{{.*}}#cir.global_view<@_ZTv0_n24_N23ConstructionVTableThunk5Right1fEi>
+// CIR: cir.global constant external unnamed_addr @_ZTCN23ConstructionVTableThunk7DerivedE0_NS_6MiddleE = #cir.vtable<{{{.*}}#cir.global_view<@_ZTv0_n24_N23ConstructionVTableThunk5Right1fEi>
 
 // Emitting that thunk creates the Right::f declaration on demand.  It must
 // become a sibling of the thunk rather than nesting inside its body, so the
