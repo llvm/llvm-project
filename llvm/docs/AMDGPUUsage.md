@@ -1606,7 +1606,7 @@ Modules that do not use buffer operations or are indifferent to OOB semantics
 
 ### Target ID
 
-AMDGPU supports target IDs. See [Clang Offload Bundler](https://clang.llvm.org/docs/ClangOffloadBundler.html) for a general
+AMDGPU supports target IDs. See [Clang Offload Bundler](inv:clang:std:doc#ClangOffloadBundler) for a general
 description. The AMDGPU target specific information is:
 
 **processor**
@@ -1632,7 +1632,7 @@ description. The AMDGPU target specific information is:
 #### Code Object V2 to V3 Target ID
 
 The target ID syntax for code object V2 to V3 is the same as defined in [Clang
-Offload Bundler](https://clang.llvm.org/docs/ClangOffloadBundler.html) except
+Offload Bundler](inv:clang:std:doc#ClangOffloadBundler) except
 when used in the {ref}`amdgpu-assembler-directive-amdgcn-target` assembler
 directive and the bundle entry ID. In those cases it has the following BNF
 syntax:
@@ -1653,7 +1653,7 @@ The code object V2 to V3 cannot represent *Any* and treats it the same as
 ### Embedding Bundled Code Objects
 
 AMDGPU supports the HIP and OpenMP languages that perform code object embedding
-as described in [Clang Offload Bundler](https://clang.llvm.org/docs/ClangOffloadBundler.html).
+as described in [Clang Offload Bundler](inv:clang:std:doc#ClangOffloadBundler).
 
 :::{note}
 The target ID syntax used for code object V2 to V3 for a bundle entry ID
@@ -18231,7 +18231,7 @@ effort required to accurately calculate GPR usage.
 [AMD-ROCm-Release-Notes] [AMD ROCm Release Notes](https://github.com/ROCm/ROCm)
 
 (clang-attr)=
-[CLANG-ATTR] [Attributes in Clang](https://clang.llvm.org/docs/AttributeReference.html)
+[CLANG-ATTR] [Attributes in Clang](inv:clang:std:doc#AttributeReference)
 
 (dwarf)=
 [DWARF] [DWARF Debugging Information Format](http://dwarfstd.org/)

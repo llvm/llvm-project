@@ -277,6 +277,6 @@ Other parts of the vtable (RTTI, offset-to-top, ...) can still be accessed with
 normal loads.
 
 [address point]: https://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-general
-[control flow integrity]: https://clang.llvm.org/docs/ControlFlowIntegrity.html
-[control flow integrity design document]: https://clang.llvm.org/docs/ControlFlowIntegrityDesign.html
+[control flow integrity]: inv:clang:std:doc#ControlFlowIntegrity
+[control flow integrity design document]: inv:clang:std:doc#ControlFlowIntegrityDesign
 [globallayoutbuilder]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Transforms/IPO/LowerTypeTests.h
