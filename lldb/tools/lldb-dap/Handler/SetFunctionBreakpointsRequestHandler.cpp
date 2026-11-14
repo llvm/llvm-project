@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "RequestHandler.h"
+#include <set>
 
 namespace lldb_dap {
 
@@ -25,28 +26,32 @@ SetFunctionBreakpointsRequestHandler::Run(
   // Disable any function breakpoints that aren't in this request.
   // There is no call to remove function breakpoints other than calling this
   // function with a smaller or empty "breakpoints" list.
-  const auto name_iter = dap.function_breakpoints.keys();
-  llvm::DenseSet<llvm::StringRef> seen(name_iter.begin(), name_iter.end());
+  std::set<FunctionBreakpoint::Key> seen;
+  for (const auto &entry : dap.function_breakpoints)
+    seen.insert(entry.first);
   for (const auto &fb : args.breakpoints) {
     FunctionBreakpoint fn_bp(dap, fb);
+    // A function breakpoint is identified by its function name and its set of
+    // modules (empty if the lookup isn't restricted).
+    const FunctionBreakpoint::Key key = fn_bp.GetKey();
     const auto [it, inserted] =
-        dap.function_breakpoints.try_emplace(fn_bp.GetFunctionName(), dap, fb);
+        dap.function_breakpoints.try_emplace(key, dap, fb);
     if (inserted)
       it->second.SetBreakpoint();
     else
       it->second.UpdateBreakpoint(fn_bp);
 
     response_breakpoints.push_back(it->second.ToProtocolBreakpoint());
-    seen.erase(fn_bp.GetFunctionName());
+    seen.erase(key);
   }
 
   // Remove any breakpoints that are no longer in our list
-  for (const auto &name : seen) {
-    auto fn_bp = dap.function_breakpoints.find(name);
+  for (const auto &key : seen) {
+    auto fn_bp = dap.function_breakpoints.find(key);
     if (fn_bp == dap.function_breakpoints.end())
       continue;
     dap.target.BreakpointDelete(fn_bp->second.GetID());
-    dap.function_breakpoints.erase(name);
+    dap.function_breakpoints.erase(fn_bp);
   }
 
   return protocol::SetFunctionBreakpointsResponseBody{

@@ -692,10 +692,23 @@ class SourceBreakpoint:
 
 
 @dataclass(frozen=True)
+class ModuleByName:
+    name: str
+
+
+@dataclass(frozen=True)
+class ModuleById:
+    id: str
+
+
+@dataclass(frozen=True)
 class FunctionBreakpoint:
     name: str
     condition: Optional[str] = None
     hitCondition: Optional[str] = None
+    modules: Optional[List[Union[ModuleByName, ModuleById]]] = field(
+        metadata={"alias": "$__lldb_modules"}, default=None
+    )
 
 
 @dataclass(frozen=True)

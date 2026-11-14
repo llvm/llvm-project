@@ -879,12 +879,77 @@ llvm::json::Value toJSON(const SourceBreakpoint &SB) {
   return result;
 }
 
+bool fromJSON(const llvm::json::Value &Params, ModuleByName &M,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("name", M.name);
+}
+
+llvm::json::Value toJSON(const ModuleByName &M) {
+  return llvm::json::Object{{"name", M.name}};
+}
+
+bool fromJSON(const llvm::json::Value &Params, ModuleById &M,
+              llvm::json::Path P) {
+  const llvm::json::Object *O = Params.getAsObject();
+  if (!O) {
+    P.report("expected object");
+    return false;
+  }
+  const llvm::json::Value *id = O->get("id");
+  if (!id) {
+    P.field("id").report("missing value");
+    return false;
+  }
+  String string;
+  if (!fromJSON(*id, string, P.field("id")))
+    return false;
+  M.id = std::move(string);
+  return true;
+}
+
+llvm::json::Value toJSON(const ModuleById &M) {
+  return llvm::json::Object{{"id", M.id}};
+}
+
+bool fromJSON(const llvm::json::Value &Params, FunctionBreakpointModule &M,
+              llvm::json::Path P) {
+  const llvm::json::Object *O = Params.getAsObject();
+  if (!O) {
+    P.report("expected object");
+    return false;
+  }
+  const bool has_name = O->get("name") != nullptr;
+  const bool has_id = O->get("id") != nullptr;
+  if (has_name == has_id) {
+    P.report("expected exactly one of 'name' or 'id'");
+    return false;
+  }
+  if (has_name) {
+    ModuleByName by_name;
+    if (!fromJSON(Params, by_name, P))
+      return false;
+    M = std::move(by_name);
+  } else {
+    ModuleById by_id;
+    if (!fromJSON(Params, by_id, P))
+      return false;
+    M = std::move(by_id);
+  }
+  return true;
+}
+
+llvm::json::Value toJSON(const FunctionBreakpointModule &M) {
+  return std::visit([](const auto &module) { return toJSON(module); }, M);
+}
+
 bool fromJSON(const llvm::json::Value &Params, FunctionBreakpoint &FB,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
   return O && O.map("name", FB.name) &&
          O.mapOptional("condition", FB.condition) &&
-         O.mapOptional("hitCondition", FB.hitCondition);
+         O.mapOptional("hitCondition", FB.hitCondition) &&
+         O.mapOptional("$__lldb_modules", FB.modules);
 }
 
 llvm::json::Value toJSON(const FunctionBreakpoint &FB) {
@@ -894,6 +959,9 @@ llvm::json::Value toJSON(const FunctionBreakpoint &FB) {
     result.insert({"condition", *FB.condition});
   if (!FB.hitCondition.empty())
     result.insert({"hitCondition", FB.hitCondition});
+  // lldb-dap extensions
+  if (!FB.modules.empty())
+    result.insert({"$__lldb_modules", FB.modules});
 
   return result;
 }
