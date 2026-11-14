@@ -1040,30 +1040,23 @@ def p2i_to_i2p: GICombineRule<
   (apply (GIReplaceReg $dst, $x))
 >;
 
-// Fold ptr2int(int2ptr(x)) to x, extending or truncating when needed.
-def i2p_to_p2i_same_size: GICombineRule<
-  (defs root:$dst),
-  (match (G_INTTOPTR $t, $ptr),
-         (G_PTRTOINT $dst, $t):$mi,
-    [{ return MRI.getType(${dst}.getReg()).getSizeInBits() ==
-              MRI.getType(${ptr}.getReg()).getSizeInBits(); }]),
-  (apply (COPY $dst, $ptr))>;
-def i2p_to_p2i_zext: GICombineRule<
-  (defs root:$dst),
-  (match (G_INTTOPTR $t, $ptr),
-         (G_PTRTOINT $dst, $t):$mi,
-    [{ return MRI.getType(${dst}.getReg()).getSizeInBits() >
-              MRI.getType(${ptr}.getReg()).getSizeInBits(); }]),
-  (apply (G_ZEXT $dst, $ptr))>;
-def i2p_to_p2i_trunc: GICombineRule<
-  (defs root:$dst),
-  (match (G_INTTOPTR $t, $ptr),
-         (G_PTRTOINT $dst, $t):$mi,
-    [{ return MRI.getType(${dst}.getReg()).getSizeInBits() <
-              MRI.getType(${ptr}.getReg()).getSizeInBits(); }]),
-  (apply (G_TRUNC $dst, $ptr))>;
-def i2p_to_p2i : GICombineGroup<[
-  i2p_to_p2i_same_size, i2p_to_p2i_zext, i2p_to_p2i_trunc]>;
+// Fold ptr2int(int2ptr(x)), preserving truncation to the pointer width.
+def i2p_to_p2i: GICombineRule<
+  (defs root:$root),
+  (combine (G_INTTOPTR $t, $ptr),
+           (G_PTRTOINT $dst, $t):$root,
+    [{ unsigned PtrSize = MRI.getType(${t}.getReg()).getScalarSizeInBits();
+       Register Src = ${ptr}.getReg();
+       LLT SrcTy = MRI.getType(Src);
+       LLT DstTy = MRI.getType(${dst}.getReg());
+       if (PtrSize < SrcTy.getScalarSizeInBits() &&
+           PtrSize < DstTy.getScalarSizeInBits()) {
+         LLT TruncTy = SrcTy.changeElementSize(PtrSize);
+         Src = Helper.getBuilder().buildTrunc(TruncTy, Src).getReg(0);
+       }
+       Helper.getBuilder().buildZExtOrTrunc(${dst}.getReg(), Src);
+       ${root}->eraseFromParent();
+       return true; }])>;
 
 // Fold add ptrtoint(x), y -> ptrtoint (ptr_add x), y
 // !foreach covers both G_ADD operand orders; residue checks equal bitwidths.
