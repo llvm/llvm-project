@@ -7960,6 +7960,38 @@ static bool getMaddPatterns(MachineInstr &Root,
   return Found;
 }
 
+std::optional<TargetInstrInfo::FMAChainLinkInfo>
+AArch64InstrInfo::getFMAChainLinkInfo(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default:
+    return std::nullopt;
+  // Rd = Rn * Rm + Ra.
+  case AArch64::FMADDSrrr:
+    return FMAChainLinkInfo{AArch64::FADDSrr, AArch64::FMULSrr, 3};
+  case AArch64::FMADDDrrr:
+    return FMAChainLinkInfo{AArch64::FADDDrr, AArch64::FMULDrr, 3};
+  // Vd += Vn * Vm.
+  case AArch64::FMLAv2f32:
+    return FMAChainLinkInfo{AArch64::FADDv2f32, AArch64::FMULv2f32, 1};
+  case AArch64::FMLAv4f32:
+    return FMAChainLinkInfo{AArch64::FADDv4f32, AArch64::FMULv4f32, 1};
+  case AArch64::FMLAv2f64:
+    return FMAChainLinkInfo{AArch64::FADDv2f64, AArch64::FMULv2f64, 1};
+  case AArch64::FMLAv2i32_indexed:
+    return FMAChainLinkInfo{AArch64::FADDv2f32, AArch64::FMULv2i32_indexed, 1};
+  case AArch64::FMLAv4i32_indexed:
+    return FMAChainLinkInfo{AArch64::FADDv4f32, AArch64::FMULv4i32_indexed, 1};
+  case AArch64::FMLAv2i64_indexed:
+    return FMAChainLinkInfo{AArch64::FADDv2f64, AArch64::FMULv2i64_indexed, 1};
+  case AArch64::FADDSrr:
+  case AArch64::FADDDrr:
+  case AArch64::FADDv2f32:
+  case AArch64::FADDv4f32:
+  case AArch64::FADDv2f64:
+    return FMAChainLinkInfo{MI.getOpcode(), 0, -1};
+  }
+}
+
 bool AArch64InstrInfo::isAccumulationOpcode(unsigned Opcode) const {
   switch (Opcode) {
   default:
@@ -8797,6 +8829,11 @@ bool AArch64InstrInfo::getMachineCombinerPatterns(
   // Integer patterns
   if (getMaddPatterns(Root, Patterns))
     return true;
+
+  // Try the FMA chain split before the FMUL+FADD fusion, which otherwise
+  // always wins at the chain end, and keep the fusion as a fallback.
+  bool FoundFMAChain = getFMAChainPatterns(Root, Patterns, DoRegPressureReduce);
+
   // Floating point patterns
   if (getFMULPatterns(Root, Patterns))
     return true;
@@ -8814,7 +8851,8 @@ bool AArch64InstrInfo::getMachineCombinerPatterns(
     return true;
 
   return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
-                                                     DoRegPressureReduce);
+                                                     DoRegPressureReduce) ||
+         FoundFMAChain;
 }
 
 enum class FMAInstKind { Default, Indexed, Accumulator };
