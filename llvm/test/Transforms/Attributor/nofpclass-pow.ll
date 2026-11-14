@@ -7,7 +7,7 @@ declare <2 x float> @llvm.pow.v2f32(<2 x float>, <2 x float>)
 define float @ret_pow_nonneg_base(float nofpclass(ninf nzero nsub nnorm) %base, float %exp) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_pow_nonneg_base(
 ; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[BASE:%.*]], float [[EXP:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(ninf nzero nsub nnorm) [[BASE]], float [[EXP]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(ninf nzero nsub nnorm) [[BASE]], float [[EXP]]) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -17,7 +17,7 @@ define float @ret_pow_nonneg_base(float nofpclass(ninf nzero nsub nnorm) %base, 
 define float @ret_pow_nonneg_nonan(float nofpclass(nan ninf nzero nsub nnorm) %base, float nofpclass(nan) %exp) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_pow_nonneg_nonan(
 ; CHECK-SAME: float nofpclass(nan ninf nzero nsub nnorm) [[BASE:%.*]], float nofpclass(nan) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan ninf nzero nsub nnorm) [[BASE]], float nofpclass(nan) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan ninf nzero nsub nnorm) [[BASE]], float nofpclass(nan) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -27,7 +27,7 @@ define float @ret_pow_nonneg_nonan(float nofpclass(nan ninf nzero nsub nnorm) %b
 define float @ret_pow_base_no_nsub_nnorm_exponent_any(float nofpclass(nsub nnorm) %base, float %exp) {
 ; CHECK-LABEL: define nofpclass(nsub nnorm) float @ret_pow_base_no_nsub_nnorm_exponent_any(
 ; CHECK-SAME: float nofpclass(nsub nnorm) [[BASE:%.*]], float [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nsub nnorm) float @llvm.pow.f32(float nofpclass(nsub nnorm) [[BASE]], float [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nsub nnorm) float @llvm.pow.f32(float nofpclass(nsub nnorm) [[BASE]], float [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -37,7 +37,7 @@ define float @ret_pow_base_no_nsub_nnorm_exponent_any(float nofpclass(nsub nnorm
 define float @ret_pow_base_no_nan_nsub_nnorm_exponent_no_nan(float nofpclass(nan nsub nnorm) %base, float nofpclass(nan) %exp) {
 ; CHECK-LABEL: define nofpclass(nan nsub nnorm) float @ret_pow_base_no_nan_nsub_nnorm_exponent_no_nan(
 ; CHECK-SAME: float nofpclass(nan nsub nnorm) [[BASE:%.*]], float nofpclass(nan) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nan nsub nnorm) float @llvm.pow.f32(float nofpclass(nan nsub nnorm) [[BASE]], float nofpclass(nan) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nan nsub nnorm) float @llvm.pow.f32(float nofpclass(nan nsub nnorm) [[BASE]], float nofpclass(nan) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -50,7 +50,7 @@ define float @ret_pow_base_no_nan_nsub_nnorm_exponent_no_nan(float nofpclass(nan
 define float @ret_pow_base_any_exponent_no_norm(float %base, float nofpclass(norm) %exp) {
 ; CHECK-LABEL: define float @ret_pow_base_any_exponent_no_norm(
 ; CHECK-SAME: float [[BASE:%.*]], float nofpclass(norm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call float @llvm.pow.f32(float [[BASE]], float nofpclass(norm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call float @llvm.pow.f32(float [[BASE]], float nofpclass(norm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -62,7 +62,7 @@ define float @ret_pow_base_any_exponent_no_norm(float %base, float nofpclass(nor
 define float @ret_pow_base_no_nsub_nnorm_exponent_no_norm(float nofpclass(nsub nnorm) %base, float nofpclass(norm) %exp) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_pow_base_no_nsub_nnorm_exponent_no_norm(
 ; CHECK-SAME: float nofpclass(nsub nnorm) [[BASE:%.*]], float nofpclass(norm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nsub nnorm) [[BASE]], float nofpclass(norm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nsub nnorm) [[BASE]], float nofpclass(norm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -72,7 +72,7 @@ define float @ret_pow_base_no_nsub_nnorm_exponent_no_norm(float nofpclass(nsub n
 define float @ret_pow_base_no_nan_nsub_nnorm_exponent_no_nan_norm(float nofpclass(nan nsub nnorm) %base, float nofpclass(nan norm) %exp) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_pow_base_no_nan_nsub_nnorm_exponent_no_nan_norm(
 ; CHECK-SAME: float nofpclass(nan nsub nnorm) [[BASE:%.*]], float nofpclass(nan norm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan nsub nnorm) [[BASE]], float nofpclass(nan norm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan nsub nnorm) [[BASE]], float nofpclass(nan norm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -83,7 +83,7 @@ define float @ret_pow_base_no_nan_nsub_nnorm_exponent_no_nan_norm(float nofpclas
 define float @ret_pow_neg_base_nonan(float nofpclass(nan inf zero sub pnorm) %base, float nofpclass(nan) %exp) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_pow_neg_base_nonan(
 ; CHECK-SAME: float nofpclass(nan inf zero sub pnorm) [[BASE:%.*]], float nofpclass(nan) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan inf zero sub pnorm) [[BASE]], float nofpclass(nan) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan inf zero sub pnorm) [[BASE]], float nofpclass(nan) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -93,7 +93,7 @@ define float @ret_pow_neg_base_nonan(float nofpclass(nan inf zero sub pnorm) %ba
 define float @ret_pow_non_snan_inputs(float nofpclass(snan) %base, float nofpclass(snan) %exp) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_pow_non_snan_inputs(
 ; CHECK-SAME: float nofpclass(snan) [[BASE:%.*]], float nofpclass(snan) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(snan) [[BASE]], float nofpclass(snan) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(snan) [[BASE]], float nofpclass(snan) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -103,7 +103,7 @@ define float @ret_pow_non_snan_inputs(float nofpclass(snan) %base, float nofpcla
 define float @ret_pow_subnormal_posnormal(float nofpclass(nan inf norm zero) %base, float nofpclass(nan inf sub nnorm zero) %exp) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_pow_subnormal_posnormal(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[BASE:%.*]], float nofpclass(nan inf zero sub nnorm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan inf zero norm) [[BASE]], float nofpclass(nan inf zero sub nnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan inf zero norm) [[BASE]], float nofpclass(nan inf zero sub nnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -113,7 +113,7 @@ define float @ret_pow_subnormal_posnormal(float nofpclass(nan inf norm zero) %ba
 define float @ret_pow_subnormal_possubnormal(float nofpclass(nan inf norm zero) %base, float nofpclass(nan inf nsub norm zero) %exp) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_pow_subnormal_possubnormal(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[BASE:%.*]], float nofpclass(nan inf zero nsub norm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan inf zero norm) [[BASE]], float nofpclass(nan inf zero nsub norm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan inf zero norm) [[BASE]], float nofpclass(nan inf zero nsub norm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -123,7 +123,7 @@ define float @ret_pow_subnormal_possubnormal(float nofpclass(nan inf norm zero) 
 define float @ret_pow_subnormal_negsubnormal(float nofpclass(nan inf norm zero) %base, float nofpclass(nan inf psub norm zero) %exp) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_pow_subnormal_negsubnormal(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[BASE:%.*]], float nofpclass(nan inf zero psub norm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan inf zero norm) [[BASE]], float nofpclass(nan inf zero psub norm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan inf zero norm) [[BASE]], float nofpclass(nan inf zero psub norm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -133,7 +133,7 @@ define float @ret_pow_subnormal_negsubnormal(float nofpclass(nan inf norm zero) 
 define float @ret_pow_subnormal_negnormal(float nofpclass(nan inf norm zero) %base, float nofpclass(nan inf sub pnorm zero) %exp) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_pow_subnormal_negnormal(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[BASE:%.*]], float nofpclass(nan inf zero sub pnorm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan inf zero norm) [[BASE]], float nofpclass(nan inf zero sub pnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan inf zero norm) [[BASE]], float nofpclass(nan inf zero sub pnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -144,7 +144,7 @@ define float @ret_pow_subnormal_negnormal(float nofpclass(nan inf norm zero) %ba
 define float @ret_pow_neg_negsubnormal(float nofpclass(nan pinf psub pnorm pzero) %base, float nofpclass(nan inf psub norm zero) %exp) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_pow_neg_negsubnormal(
 ; CHECK-SAME: float nofpclass(nan pinf pzero psub pnorm) [[BASE:%.*]], float nofpclass(nan inf zero psub norm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan pinf pzero psub pnorm) [[BASE]], float nofpclass(nan inf zero psub norm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan pinf pzero psub pnorm) [[BASE]], float nofpclass(nan inf zero psub norm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -154,7 +154,7 @@ define float @ret_pow_neg_negsubnormal(float nofpclass(nan pinf psub pnorm pzero
 define float @ret_pow_negnormalsubnormal_negsubnormal(float nofpclass(nan inf psub pnorm zero) %base, float nofpclass(nan inf psub norm zero) %exp) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_pow_negnormalsubnormal_negsubnormal(
 ; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[BASE:%.*]], float nofpclass(nan inf zero psub norm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan inf zero psub pnorm) [[BASE]], float nofpclass(nan inf zero psub norm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(snan) float @llvm.pow.f32(float nofpclass(nan inf zero psub pnorm) [[BASE]], float nofpclass(nan inf zero psub norm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -164,7 +164,7 @@ define float @ret_pow_negnormalsubnormal_negsubnormal(float nofpclass(nan inf ps
 define float @ret_pow_negzero_negative(float nofpclass(nan inf pzero sub norm) %base, float nofpclass(pnorm) %exp) {
 ; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @ret_pow_negzero_negative(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[BASE:%.*]], float nofpclass(pnorm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -174,7 +174,7 @@ define float @ret_pow_negzero_negative(float nofpclass(nan inf pzero sub norm) %
 define float @ret_pow_negzero_positive(float nofpclass(nan inf pzero sub norm) %base, float nofpclass(nnorm) %exp) {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_pow_negzero_positive(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[BASE:%.*]], float nofpclass(nnorm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -184,7 +184,7 @@ define float @ret_pow_negzero_positive(float nofpclass(nan inf pzero sub norm) %
 define float @ret_pow_neginf_positive(float nofpclass(nan pinf zero sub norm) %base, float nofpclass(nnorm) %exp) {
 ; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @ret_pow_neginf_positive(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[BASE:%.*]], float nofpclass(nnorm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -194,7 +194,7 @@ define float @ret_pow_neginf_positive(float nofpclass(nan pinf zero sub norm) %b
 define float @ret_pow_neginf_negative(float nofpclass(nan pinf zero sub norm) %base, float nofpclass(pnorm) %exp) {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_pow_neginf_negative(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[BASE:%.*]], float nofpclass(pnorm) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -204,7 +204,7 @@ define float @ret_pow_neginf_negative(float nofpclass(nan pinf zero sub norm) %b
 define float @ret_pow_negzero_negative_daz(float nofpclass(nan inf pzero sub norm) %base, float nofpclass(pnorm) %exp) denormal_fpenv(preservesign|ieee) {
 ; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @ret_pow_negzero_negative_daz(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[BASE:%.*]], float nofpclass(pnorm) [[EXP:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -214,7 +214,7 @@ define float @ret_pow_negzero_negative_daz(float nofpclass(nan inf pzero sub nor
 define float @ret_pow_negzero_positive_daz(float nofpclass(nan inf pzero sub norm) %base, float nofpclass(nnorm) %exp) denormal_fpenv(preservesign|ieee) {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_pow_negzero_positive_daz(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[BASE:%.*]], float nofpclass(nnorm) [[EXP:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -224,7 +224,7 @@ define float @ret_pow_negzero_positive_daz(float nofpclass(nan inf pzero sub nor
 define float @ret_pow_neginf_positive_daz(float nofpclass(nan pinf zero sub norm) %base, float nofpclass(nnorm) %exp) denormal_fpenv(preservesign|ieee) {
 ; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @ret_pow_neginf_positive_daz(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[BASE:%.*]], float nofpclass(nnorm) [[EXP:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -234,7 +234,7 @@ define float @ret_pow_neginf_positive_daz(float nofpclass(nan pinf zero sub norm
 define float @ret_pow_neginf_negative_daz(float nofpclass(nan pinf zero sub norm) %base, float nofpclass(pnorm) %exp) denormal_fpenv(preservesign|ieee) {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_pow_neginf_negative_daz(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[BASE:%.*]], float nofpclass(pnorm) [[EXP:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -244,7 +244,7 @@ define float @ret_pow_neginf_negative_daz(float nofpclass(nan pinf zero sub norm
 define float @ret_pow_negzero_negative_dapz(float nofpclass(nan inf pzero sub norm) %base, float nofpclass(pnorm) %exp) denormal_fpenv(positivezero|ieee) {
 ; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @ret_pow_negzero_negative_dapz(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[BASE:%.*]], float nofpclass(pnorm) [[EXP:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -254,7 +254,7 @@ define float @ret_pow_negzero_negative_dapz(float nofpclass(nan inf pzero sub no
 define float @ret_pow_negzero_positive_dapz(float nofpclass(nan inf pzero sub norm) %base, float nofpclass(nnorm) %exp) denormal_fpenv(positivezero|ieee) {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_pow_negzero_positive_dapz(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[BASE:%.*]], float nofpclass(nnorm) [[EXP:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -264,7 +264,7 @@ define float @ret_pow_negzero_positive_dapz(float nofpclass(nan inf pzero sub no
 define float @ret_pow_neginf_positive_dapz(float nofpclass(nan pinf zero sub norm) %base, float nofpclass(nnorm) %exp) denormal_fpenv(positivezero|ieee) {
 ; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @ret_pow_neginf_positive_dapz(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[BASE:%.*]], float nofpclass(nnorm) [[EXP:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -274,7 +274,7 @@ define float @ret_pow_neginf_positive_dapz(float nofpclass(nan pinf zero sub nor
 define float @ret_pow_neginf_negative_dapz(float nofpclass(nan pinf zero sub norm) %base, float nofpclass(pnorm) %exp) denormal_fpenv(positivezero|ieee) {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_pow_neginf_negative_dapz(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[BASE:%.*]], float nofpclass(pnorm) [[EXP:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -284,7 +284,7 @@ define float @ret_pow_neginf_negative_dapz(float nofpclass(nan pinf zero sub nor
 define float @ret_pow_negzero_negative_dynamic(float nofpclass(nan inf pzero sub norm) %base, float nofpclass(pnorm) %exp) denormal_fpenv(dynamic) {
 ; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @ret_pow_negzero_negative_dynamic(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[BASE:%.*]], float nofpclass(pnorm) [[EXP:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -294,7 +294,7 @@ define float @ret_pow_negzero_negative_dynamic(float nofpclass(nan inf pzero sub
 define float @ret_pow_negzero_positive_dynamic(float nofpclass(nan inf pzero sub norm) %base, float nofpclass(nnorm) %exp) denormal_fpenv(dynamic) {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_pow_negzero_positive_dynamic(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[BASE:%.*]], float nofpclass(nnorm) [[EXP:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan inf pzero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -304,7 +304,7 @@ define float @ret_pow_negzero_positive_dynamic(float nofpclass(nan inf pzero sub
 define float @ret_pow_neginf_positive_dynamic(float nofpclass(nan pinf zero sub norm) %base, float nofpclass(nnorm) %exp) denormal_fpenv(dynamic) {
 ; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @ret_pow_neginf_positive_dynamic(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[BASE:%.*]], float nofpclass(nnorm) [[EXP:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(nnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -314,7 +314,7 @@ define float @ret_pow_neginf_positive_dynamic(float nofpclass(nan pinf zero sub 
 define float @ret_pow_neginf_negative_dynamic(float nofpclass(nan pinf zero sub norm) %base, float nofpclass(pnorm) %exp) denormal_fpenv(dynamic) {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_pow_neginf_negative_dynamic(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[BASE:%.*]], float nofpclass(pnorm) [[EXP:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.pow.f32(float nofpclass(nan pinf zero sub norm) [[BASE]], float nofpclass(pnorm) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call float @llvm.pow.f32(float %base, float %exp)
@@ -324,9 +324,50 @@ define float @ret_pow_neginf_negative_dynamic(float nofpclass(nan pinf zero sub 
 define <2 x float> @ret_pow_nonneg_nonan_v2f32(<2 x float> nofpclass(nan ninf nzero nsub nnorm) %base, <2 x float> nofpclass(nan) %exp) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) <2 x float> @ret_pow_nonneg_nonan_v2f32(
 ; CHECK-SAME: <2 x float> nofpclass(nan ninf nzero nsub nnorm) [[BASE:%.*]], <2 x float> nofpclass(nan) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) <2 x float> @llvm.pow.v2f32(<2 x float> nofpclass(nan ninf nzero nsub nnorm) [[BASE]], <2 x float> nofpclass(nan) [[EXP]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POW:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) <2 x float> @llvm.pow.v2f32(<2 x float> nofpclass(nan ninf nzero nsub nnorm) [[BASE]], <2 x float> nofpclass(nan) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret <2 x float> [[POW]]
 ;
   %pow = call <2 x float> @llvm.pow.v2f32(<2 x float> %base, <2 x float> %exp)
   ret <2 x float> %pow
 }
+
+define float @ret_pow_nsz__qnan_pzero__norm(float nofpclass(snan inf nzero sub norm) %base, float nofpclass(nan inf zero sub) %exp) {
+; CHECK-LABEL: define nofpclass(snan nsub nnorm) float @ret_pow_nsz__qnan_pzero__norm(
+; CHECK-SAME: float nofpclass(snan inf nzero sub norm) [[BASE:%.*]], float nofpclass(nan inf zero sub) [[EXP:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[POW:%.*]] = call nsz nofpclass(snan nsub nnorm) float @llvm.pow.f32(float nofpclass(snan inf nzero sub norm) [[BASE]], float nofpclass(nan inf zero sub) [[EXP]]) #[[ATTR7]]
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = call nsz float @llvm.pow.f32(float %base, float %exp)
+  ret float %pow
+}
+
+define float @ret_pow_nsz__qnan_nzero__norm(float nofpclass(snan inf pzero sub norm) %base, float nofpclass(nan inf zero sub) %exp) {
+; CHECK-LABEL: define nofpclass(snan nsub nnorm) float @ret_pow_nsz__qnan_nzero__norm(
+; CHECK-SAME: float nofpclass(snan inf pzero sub norm) [[BASE:%.*]], float nofpclass(nan inf zero sub) [[EXP:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[POW:%.*]] = call nsz nofpclass(snan nsub nnorm) float @llvm.pow.f32(float nofpclass(snan inf pzero sub norm) [[BASE]], float nofpclass(nan inf zero sub) [[EXP]]) #[[ATTR7]]
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = call nsz float @llvm.pow.f32(float %base, float %exp)
+  ret float %pow
+}
+
+define float @ret_pow_nsz__qnan_psub__norm__ieee_dynamic(float nofpclass(snan inf zero nsub norm) %base, float nofpclass(nan inf zero sub) %exp) denormal_fpenv(ieee|dynamic) {
+; CHECK-LABEL: define nofpclass(snan nsub nnorm) float @ret_pow_nsz__qnan_psub__norm__ieee_dynamic(
+; CHECK-SAME: float nofpclass(snan inf zero nsub norm) [[BASE:%.*]], float nofpclass(nan inf zero sub) [[EXP:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:    [[POW:%.*]] = call nsz nofpclass(snan nsub nnorm) float @llvm.pow.f32(float nofpclass(snan inf zero nsub norm) [[BASE]], float nofpclass(nan inf zero sub) [[EXP]]) #[[ATTR7]]
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = call nsz float @llvm.pow.f32(float %base, float %exp)
+  ret float %pow
+}
+
+define float @ret_pow_nsz__qnan_nsub__norm__ieee_daz(float nofpclass(snan inf zero psub norm) %base, float nofpclass(nan inf zero sub) %exp) denormal_fpenv(ieee|preservesign) {
+; CHECK-LABEL: define nofpclass(snan) float @ret_pow_nsz__qnan_nsub__norm__ieee_daz(
+; CHECK-SAME: float nofpclass(snan inf zero psub norm) [[BASE:%.*]], float nofpclass(nan inf zero sub) [[EXP:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-NEXT:    [[POW:%.*]] = call nsz nofpclass(snan) float @llvm.pow.f32(float nofpclass(snan inf zero psub norm) [[BASE]], float nofpclass(nan inf zero sub) [[EXP]]) #[[ATTR7]]
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = call nsz float @llvm.pow.f32(float %base, float %exp)
+  ret float %pow
+}
+

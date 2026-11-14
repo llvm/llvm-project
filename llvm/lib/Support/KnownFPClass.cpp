@@ -48,6 +48,20 @@ KnownFPClass KnownFPClass::applyInputDenormalMode(const KnownFPClass &KnownSrc,
   llvm_unreachable("covered switch over denormal mode");
 }
 
+KnownFPClass KnownFPClass::applyInputSemantics(const KnownFPClass &KnownSrc,
+                                               DenormalMode Mode,
+                                               bool MayBeNSZ) {
+  // We flush denormals first since it may add zeroes to the input classes.
+  KnownFPClass Known = applyInputDenormalMode(KnownSrc, Mode);
+
+  // NSZ means that a +0.0 or -0.0 input may be treated as a zero of the
+  // opposite sign.
+  if (MayBeNSZ && !Known.isKnownNever(fcZero))
+    Known |= fcZero;
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::applyOutputDenormalMode(const KnownFPClass &KnownSrc,
                                                    DenormalMode Mode) {
   KnownFPClass Known = KnownSrc;
@@ -750,8 +764,9 @@ KnownFPClass KnownFPClass::fdiv_self(const KnownFPClass &KnownSrc_,
 
 KnownFPClass KnownFPClass::frem(const KnownFPClass &KnownLHS_,
                                 const KnownFPClass &KnownRHS_,
-                                DenormalMode Mode) {
-  KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
+                                DenormalMode Mode, bool MayBeNSZ) {
+  // frem can ignore the sign bit of RHS.
+  KnownFPClass KnownLHS = applyInputSemantics(KnownLHS_, Mode, MayBeNSZ);
   KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
   KnownFPClass Known;
 
@@ -1038,7 +1053,9 @@ KnownFPClass KnownFPClass::tan(const KnownFPClass &KnownSrc) {
   return Known;
 }
 
-KnownFPClass KnownFPClass::sinh(const KnownFPClass &KnownSrc) {
+KnownFPClass KnownFPClass::sinh(const KnownFPClass &KnownSrc_,
+                                DenormalMode Mode, bool MayBeNSZ) {
+  KnownFPClass KnownSrc = applyInputSemantics(KnownSrc_, Mode, MayBeNSZ);
   KnownFPClass Known;
 
   // sinh is sign-preserving: sinh(x) < 0 iff x < 0.
@@ -1068,7 +1085,9 @@ KnownFPClass KnownFPClass::cosh(const KnownFPClass &KnownSrc) {
   return Known;
 }
 
-KnownFPClass KnownFPClass::tanh(const KnownFPClass &KnownSrc) {
+KnownFPClass KnownFPClass::tanh(const KnownFPClass &KnownSrc_,
+                                DenormalMode Mode, bool MayBeNSZ) {
+  KnownFPClass KnownSrc = applyInputSemantics(KnownSrc_, Mode, MayBeNSZ);
   KnownFPClass Known;
 
   // tanh is bounded to (-1, 1), never Inf.
@@ -1093,7 +1112,9 @@ KnownFPClass KnownFPClass::tanh(const KnownFPClass &KnownSrc) {
   return Known;
 }
 
-KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
+KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc_,
+                                DenormalMode Mode, bool MayBeNSZ) {
+  KnownFPClass KnownSrc = applyInputSemantics(KnownSrc_, Mode, MayBeNSZ);
   KnownFPClass Known;
 
   // asin is bounded to [-pi/2, pi/2], never Inf.
@@ -1134,7 +1155,9 @@ KnownFPClass KnownFPClass::acos(const KnownFPClass &KnownSrc) {
   return Known;
 }
 
-KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc) {
+KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc_,
+                                DenormalMode Mode, bool MayBeNSZ) {
+  KnownFPClass KnownSrc = applyInputSemantics(KnownSrc_, Mode, MayBeNSZ);
   KnownFPClass Known;
 
   // atan is bounded to (-pi/2, pi/2), never Inf. atan(+-Inf) = +-pi/2 (finite).
@@ -1160,10 +1183,10 @@ KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc) {
 }
 
 KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownY_,
-                                 const KnownFPClass &KnownX_,
-                                 DenormalMode Mode) {
-  KnownFPClass KnownY = applyInputDenormalMode(KnownY_, Mode);
-  KnownFPClass KnownX = applyInputDenormalMode(KnownX_, Mode);
+                                 const KnownFPClass &KnownX_, DenormalMode Mode,
+                                 bool MayBeNSZ) {
+  KnownFPClass KnownY = applyInputSemantics(KnownY_, Mode, MayBeNSZ);
+  KnownFPClass KnownX = applyInputSemantics(KnownX_, Mode, MayBeNSZ);
   KnownFPClass Known;
 
   // Even though these deductions are correct, we are ignoring the following
@@ -1493,8 +1516,12 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
                ExpBits.getSignedMaxValue(), Flt, Mode);
 }
 
-KnownFPClass KnownFPClass::pow(const KnownFPClass &KnownLHS,
-                               const KnownFPClass &KnownRHS) {
+KnownFPClass KnownFPClass::pow(const KnownFPClass &KnownLHS_,
+                               const KnownFPClass &KnownRHS, DenormalMode Mode,
+                               bool MayBeNSZ) {
+  // pow(x, +-0.0) == +1.0 or NaN
+  KnownFPClass KnownLHS = applyInputSemantics(KnownLHS_, Mode, MayBeNSZ);
+
   KnownFPClass Known;
 
   Known.propagateNonSNaN(KnownLHS, KnownRHS);
@@ -1535,8 +1562,11 @@ KnownFPClass KnownFPClass::pow(const KnownFPClass &KnownLHS,
   return Known;
 }
 
-KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
-                                const KnownBits &ExponentKnownBits) {
+KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc_,
+                                const KnownBits &ExponentKnownBits,
+                                DenormalMode Mode, bool MayBeNSZ) {
+  KnownFPClass KnownSrc = applyInputSemantics(KnownSrc_, Mode, MayBeNSZ);
+
   KnownFPClass Known;
   Known.propagateNonNaN(KnownSrc);
 
