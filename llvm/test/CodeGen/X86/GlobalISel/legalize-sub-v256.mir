@@ -32,10 +32,6 @@ name:            test_sub_v32i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -74,9 +70,9 @@ body:             |
     ; AVX2-NEXT: [[SUB:%[0-9]+]]:_(<32 x s8>) = G_SUB [[DEF]], [[DEF1]]
     ; AVX2-NEXT: $ymm0 = COPY [[SUB]](<32 x s8>)
     ; AVX2-NEXT: RET 0
-    %0(<32 x s8>) = IMPLICIT_DEF
-    %1(<32 x s8>) = IMPLICIT_DEF
-    %2(<32 x s8>) = G_SUB %0, %1
+    %0:_(<32 x s8>) = IMPLICIT_DEF
+    %1:_(<32 x s8>) = IMPLICIT_DEF
+    %2:_(<32 x s8>) = G_SUB %0, %1
     $ymm0 = COPY %2
     RET 0
 
@@ -86,10 +82,6 @@ name:            test_sub_v16i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -128,9 +120,9 @@ body:             |
     ; AVX2-NEXT: [[SUB:%[0-9]+]]:_(<16 x s16>) = G_SUB [[DEF]], [[DEF1]]
     ; AVX2-NEXT: $ymm0 = COPY [[SUB]](<16 x s16>)
     ; AVX2-NEXT: RET 0
-    %0(<16 x s16>) = IMPLICIT_DEF
-    %1(<16 x s16>) = IMPLICIT_DEF
-    %2(<16 x s16>) = G_SUB %0, %1
+    %0:_(<16 x s16>) = IMPLICIT_DEF
+    %1:_(<16 x s16>) = IMPLICIT_DEF
+    %2:_(<16 x s16>) = G_SUB %0, %1
     $ymm0 = COPY %2
     RET 0
 
@@ -140,10 +132,6 @@ name:            test_sub_v8i32
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -182,9 +170,9 @@ body:             |
     ; AVX2-NEXT: [[SUB:%[0-9]+]]:_(<8 x s32>) = G_SUB [[DEF]], [[DEF1]]
     ; AVX2-NEXT: $ymm0 = COPY [[SUB]](<8 x s32>)
     ; AVX2-NEXT: RET 0
-    %0(<8 x s32>) = IMPLICIT_DEF
-    %1(<8 x s32>) = IMPLICIT_DEF
-    %2(<8 x s32>) = G_SUB %0, %1
+    %0:_(<8 x s32>) = IMPLICIT_DEF
+    %1:_(<8 x s32>) = IMPLICIT_DEF
+    %2:_(<8 x s32>) = G_SUB %0, %1
     $ymm0 = COPY %2
     RET 0
 
@@ -194,10 +182,6 @@ name:            test_sub_v4i64
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -236,9 +220,9 @@ body:             |
     ; AVX2-NEXT: [[SUB:%[0-9]+]]:_(<4 x s64>) = G_SUB [[DEF]], [[DEF1]]
     ; AVX2-NEXT: $ymm0 = COPY [[SUB]](<4 x s64>)
     ; AVX2-NEXT: RET 0
-    %0(<4 x s64>) = IMPLICIT_DEF
-    %1(<4 x s64>) = IMPLICIT_DEF
-    %2(<4 x s64>) = G_SUB %0, %1
+    %0:_(<4 x s64>) = IMPLICIT_DEF
+    %1:_(<4 x s64>) = IMPLICIT_DEF
+    %2:_(<4 x s64>) = G_SUB %0, %1
     $ymm0 = COPY %2
     RET 0
 

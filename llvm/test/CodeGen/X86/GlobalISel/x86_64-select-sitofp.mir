@@ -49,10 +49,6 @@ name:            int32_to_float
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1.entry:
     liveins: $edi
@@ -76,10 +72,6 @@ name:            int64_to_float
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1.entry:
     liveins: $rdi
@@ -103,10 +95,6 @@ name:            int32_to_double
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1.entry:
     liveins: $edi
@@ -130,10 +118,6 @@ name:            int64_to_double
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1.entry:
     liveins: $rdi

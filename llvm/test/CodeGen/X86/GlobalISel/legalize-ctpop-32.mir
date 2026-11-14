@@ -8,9 +8,6 @@ name:            test_ctpop8
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_ctpop8
@@ -31,9 +28,6 @@ name:            test_ctpop32
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_ctpop32
@@ -52,9 +46,6 @@ name:            test_ctpop16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_ctpop16

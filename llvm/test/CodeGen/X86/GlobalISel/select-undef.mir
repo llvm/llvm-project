@@ -20,8 +20,6 @@ name:            test
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -32,7 +30,7 @@ body:             |
     ; ALL: [[DEF:%[0-9]+]]:gr8 = IMPLICIT_DEF
     ; ALL-NEXT: $al = COPY [[DEF]]
     ; ALL-NEXT: RET 0, implicit $al
-    %0(s8) = G_IMPLICIT_DEF
+    %0:gpr(s8) = G_IMPLICIT_DEF
     $al = COPY %0(s8)
     RET 0, implicit $al
 
@@ -42,10 +40,6 @@ name:            test2
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -62,9 +56,9 @@ body:             |
     ; ALL-NEXT: [[ADD8rr:%[0-9]+]]:gr8 = ADD8rr [[COPY]], [[DEF]], implicit-def dead $eflags
     ; ALL-NEXT: $al = COPY [[ADD8rr]]
     ; ALL-NEXT: RET 0, implicit $al
-    %0(s8) = COPY $dil
-    %1(s8) = G_IMPLICIT_DEF
-    %2(s8) = G_ADD %0, %1
+    %0:gpr(s8) = COPY $dil
+    %1:gpr(s8) = G_IMPLICIT_DEF
+    %2:gpr(s8) = G_ADD %0, %1
     $al = COPY %2(s8)
     RET 0, implicit $al
 
@@ -74,8 +68,6 @@ name:            test3
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 1, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test3

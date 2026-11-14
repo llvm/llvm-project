@@ -53,11 +53,6 @@ name:            test_ashr_i64
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -76,10 +71,10 @@ body:             |
     ; ALL-NEXT: [[SAR64rCL:%[0-9]+]]:gr64 = SAR64rCL [[COPY]], implicit-def dead $eflags, implicit $cl
     ; ALL-NEXT: $rax = COPY [[SAR64rCL]]
     ; ALL-NEXT: RET 0, implicit $rax
-    %0(s64) = COPY $rdi
-    %1(s64) = COPY $rsi
-    %2(s8) = G_TRUNC %1
-    %3(s64) = G_ASHR %0, %2
+    %0:gpr(s64) = COPY $rdi
+    %1:gpr(s64) = COPY $rsi
+    %2:gpr(s8) = G_TRUNC %1
+    %3:gpr(s64) = G_ASHR %0, %2
     $rax = COPY %3(s64)
     RET 0, implicit $rax
 
@@ -89,10 +84,6 @@ name:            test_ashr_i64_imm
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -108,9 +99,9 @@ body:             |
     ; ALL-NEXT: [[SAR64ri:%[0-9]+]]:gr64 = SAR64ri [[COPY]], 5, implicit-def dead $eflags
     ; ALL-NEXT: $rax = COPY [[SAR64ri]]
     ; ALL-NEXT: RET 0, implicit $rax
-    %0(s64) = COPY $rdi
-    %1(s8) = G_CONSTANT i8 5
-    %2(s64) = G_ASHR %0, %1
+    %0:gpr(s64) = COPY $rdi
+    %1:gpr(s8) = G_CONSTANT i8 5
+    %2:gpr(s64) = G_ASHR %0, %1
     $rax = COPY %2(s64)
     RET 0, implicit $rax
 
@@ -120,11 +111,6 @@ name:            test_ashr_i32
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -143,10 +129,10 @@ body:             |
     ; ALL-NEXT: [[SAR32rCL:%[0-9]+]]:gr32 = SAR32rCL [[COPY]], implicit-def dead $eflags, implicit $cl
     ; ALL-NEXT: $eax = COPY [[SAR32rCL]]
     ; ALL-NEXT: RET 0, implicit $eax
-    %0(s32) = COPY $edi
-    %1(s32) = COPY $esi
-    %2(s8) = G_TRUNC %1
-    %3(s32) = G_ASHR %0, %2
+    %0:gpr(s32) = COPY $edi
+    %1:gpr(s32) = COPY $esi
+    %2:gpr(s8) = G_TRUNC %1
+    %3:gpr(s32) = G_ASHR %0, %2
     $eax = COPY %3(s32)
     RET 0, implicit $eax
 
@@ -156,10 +142,6 @@ name:            test_ashr_i32_imm
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -175,9 +157,9 @@ body:             |
     ; ALL-NEXT: [[SAR32ri:%[0-9]+]]:gr32 = SAR32ri [[COPY]], 5, implicit-def dead $eflags
     ; ALL-NEXT: $eax = COPY [[SAR32ri]]
     ; ALL-NEXT: RET 0, implicit $eax
-    %0(s32) = COPY $edi
-    %1(s8) = G_CONSTANT i8 5
-    %2(s32) = G_ASHR %0, %1
+    %0:gpr(s32) = COPY $edi
+    %1:gpr(s8) = G_CONSTANT i8 5
+    %2:gpr(s32) = G_ASHR %0, %1
     $eax = COPY %2(s32)
     RET 0, implicit $eax
 
@@ -187,12 +169,6 @@ name:            test_ashr_i16
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -212,11 +188,11 @@ body:             |
     ; ALL-NEXT: [[SAR16rCL:%[0-9]+]]:gr16 = SAR16rCL [[COPY2]], implicit-def dead $eflags, implicit $cl
     ; ALL-NEXT: $ax = COPY [[SAR16rCL]]
     ; ALL-NEXT: RET 0, implicit $ax
-    %0(s32) = COPY $edi
-    %1(s32) = COPY $esi
-    %2(s16) = G_TRUNC %0(s32)
-    %3(s8) = G_TRUNC %1(s32)
-    %4(s16) = G_ASHR %2, %3
+    %0:gpr(s32) = COPY $edi
+    %1:gpr(s32) = COPY $esi
+    %2:gpr(s16) = G_TRUNC %0(s32)
+    %3:gpr(s8) = G_TRUNC %1(s32)
+    %4:gpr(s16) = G_ASHR %2, %3
     $ax = COPY %4(s16)
     RET 0, implicit $ax
 
@@ -226,11 +202,6 @@ name:            test_ashr_i16_imm
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -247,10 +218,10 @@ body:             |
     ; ALL-NEXT: [[SAR16ri:%[0-9]+]]:gr16 = SAR16ri [[COPY1]], 5, implicit-def dead $eflags
     ; ALL-NEXT: $ax = COPY [[SAR16ri]]
     ; ALL-NEXT: RET 0, implicit $ax
-    %0(s32) = COPY $edi
-    %2(s8) = G_CONSTANT i8 5
-    %1(s16) = G_TRUNC %0(s32)
-    %3(s16) = G_ASHR %1, %2
+    %0:gpr(s32) = COPY $edi
+    %2:gpr(s8) = G_CONSTANT i8 5
+    %1:gpr(s16) = G_TRUNC %0(s32)
+    %3:gpr(s16) = G_ASHR %1, %2
     $ax = COPY %3(s16)
     RET 0, implicit $ax
 
@@ -260,12 +231,6 @@ name:            test_ashr_i8
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -285,11 +250,11 @@ body:             |
     ; ALL-NEXT: [[SAR8rCL:%[0-9]+]]:gr8 = SAR8rCL [[COPY2]], implicit-def dead $eflags, implicit $cl
     ; ALL-NEXT: $al = COPY [[SAR8rCL]]
     ; ALL-NEXT: RET 0, implicit $al
-    %0(s32) = COPY $edi
-    %1(s32) = COPY $esi
-    %2(s8) = G_TRUNC %0(s32)
-    %3(s8) = G_TRUNC %1(s32)
-    %4(s8) = G_ASHR %2, %3
+    %0:gpr(s32) = COPY $edi
+    %1:gpr(s32) = COPY $esi
+    %2:gpr(s8) = G_TRUNC %0(s32)
+    %3:gpr(s8) = G_TRUNC %1(s32)
+    %4:gpr(s8) = G_ASHR %2, %3
     $al = COPY %4(s8)
     RET 0, implicit $al
 
@@ -299,11 +264,6 @@ name:            test_ashr_i8_imm
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -320,10 +280,10 @@ body:             |
     ; ALL-NEXT: [[SAR8ri:%[0-9]+]]:gr8 = SAR8ri [[COPY1]], 5, implicit-def dead $eflags
     ; ALL-NEXT: $al = COPY [[SAR8ri]]
     ; ALL-NEXT: RET 0, implicit $al
-    %0(s32) = COPY $edi
-    %2(s8) = G_CONSTANT i8 5
-    %1(s8) = G_TRUNC %0(s32)
-    %3(s8) = G_ASHR %1, %2
+    %0:gpr(s32) = COPY $edi
+    %2:gpr(s8) = G_CONSTANT i8 5
+    %1:gpr(s8) = G_TRUNC %0(s32)
+    %3:gpr(s8) = G_ASHR %1, %2
     $al = COPY %3(s8)
     RET 0, implicit $al
 

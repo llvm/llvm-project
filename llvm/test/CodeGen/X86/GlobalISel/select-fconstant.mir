@@ -22,8 +22,6 @@ name:            test_float
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr, preferred-register: '' }
 #
 #
 body:             |
@@ -68,8 +66,6 @@ legalized:       true
 regBankSelected: true
 #
 #
-registers:
-  - { id: 0, class: vecr, preferred-register: '' }
 #
 #
 body:             |

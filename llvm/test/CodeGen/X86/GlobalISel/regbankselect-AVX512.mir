@@ -35,14 +35,11 @@ regBankSelected: false
 # CHECK:       registers:
 # CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
 # CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
 
-    %0(<16 x s32>) = IMPLICIT_DEF
-    %1(<16 x s32>) = G_MUL %0, %0
+    %0:_(<16 x s32>) = IMPLICIT_DEF
+    %1:_(<16 x s32>) = G_MUL %0, %0
     RET 0
 
 ...
@@ -55,14 +52,11 @@ regBankSelected: false
 # CHECK:       registers:
 # CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
 # CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
 
-    %0(<16 x s32>) = IMPLICIT_DEF
-    %1(<16 x s32>) = G_ADD %0, %0
+    %0:_(<16 x s32>) = IMPLICIT_DEF
+    %1:_(<16 x s32>) = G_ADD %0, %0
     RET 0
 
 ...
@@ -75,14 +69,11 @@ regBankSelected: false
 # CHECK:       registers:
 # CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
 # CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
 
-    %0(<16 x s32>) = IMPLICIT_DEF
-    %1(<16 x s32>) = G_SUB %0, %0
+    %0:_(<16 x s32>) = IMPLICIT_DEF
+    %1:_(<16 x s32>) = G_SUB %0, %0
     RET 0
 ...
 ---
@@ -95,15 +86,12 @@ regBankSelected: false
 # CHECK:       registers:
 # CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '', flags: [   ] }
 # CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi
 
-    %0(p0) = COPY $rdi
-    %1(<16 x s32>) = G_LOAD %0(p0) :: (load (<16 x s32>) from %ir.p1, align 1)
+    %0:_(p0) = COPY $rdi
+    %1:_(<16 x s32>) = G_LOAD %0(p0) :: (load (<16 x s32>) from %ir.p1, align 1)
     $zmm0 = COPY %1(<16 x s32>)
     RET 0, implicit $zmm0
 
@@ -117,15 +105,12 @@ regBankSelected: false
 # CHECK:       registers:
 # CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
 # CHECK-NEXT:    - { id: 1, class: gpr, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi, $zmm0
 
-    %0(<16 x s32>) = COPY $zmm0
-    %1(p0) = COPY $rdi
+    %0:_(<16 x s32>) = COPY $zmm0
+    %1:_(p0) = COPY $rdi
     G_STORE %0(<16 x s32>), %1(p0) :: (store (<16 x s32>) into %ir.p1, align 1)
     RET 0
 

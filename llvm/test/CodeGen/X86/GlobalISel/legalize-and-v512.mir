@@ -35,10 +35,6 @@ name:            test_and_v64i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
@@ -63,9 +59,9 @@ body:             |
     ; AVX512-NEXT: [[AND:%[0-9]+]]:_(<64 x s8>) = G_AND [[DEF]], [[DEF1]]
     ; AVX512-NEXT: $zmm0 = COPY [[AND]](<64 x s8>)
     ; AVX512-NEXT: RET 0
-    %0(<64 x s8>) = IMPLICIT_DEF
-    %1(<64 x s8>) = IMPLICIT_DEF
-    %2(<64 x s8>) = G_AND %0, %1
+    %0:_(<64 x s8>) = IMPLICIT_DEF
+    %1:_(<64 x s8>) = IMPLICIT_DEF
+    %2:_(<64 x s8>) = G_AND %0, %1
     $zmm0 = COPY %2
     RET 0
 ...
@@ -74,10 +70,6 @@ name:            test_and_v32i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
@@ -102,9 +94,9 @@ body:             |
     ; AVX512-NEXT: [[AND:%[0-9]+]]:_(<32 x s16>) = G_AND [[DEF]], [[DEF1]]
     ; AVX512-NEXT: $zmm0 = COPY [[AND]](<32 x s16>)
     ; AVX512-NEXT: RET 0
-    %0(<32 x s16>) = IMPLICIT_DEF
-    %1(<32 x s16>) = IMPLICIT_DEF
-    %2(<32 x s16>) = G_AND %0, %1
+    %0:_(<32 x s16>) = IMPLICIT_DEF
+    %1:_(<32 x s16>) = IMPLICIT_DEF
+    %2:_(<32 x s16>) = G_AND %0, %1
     $zmm0 = COPY %2
     RET 0
 ...
@@ -113,10 +105,6 @@ name:            test_and_v16i32
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
@@ -141,9 +129,9 @@ body:             |
     ; AVX512-NEXT: [[AND:%[0-9]+]]:_(<16 x s32>) = G_AND [[DEF]], [[DEF1]]
     ; AVX512-NEXT: $zmm0 = COPY [[AND]](<16 x s32>)
     ; AVX512-NEXT: RET 0
-    %0(<16 x s32>) = IMPLICIT_DEF
-    %1(<16 x s32>) = IMPLICIT_DEF
-    %2(<16 x s32>) = G_AND %0, %1
+    %0:_(<16 x s32>) = IMPLICIT_DEF
+    %1:_(<16 x s32>) = IMPLICIT_DEF
+    %2:_(<16 x s32>) = G_AND %0, %1
     $zmm0 = COPY %2
     RET 0
 ...
@@ -152,10 +140,6 @@ name:            test_and_v8i64
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
@@ -180,9 +164,9 @@ body:             |
     ; AVX512-NEXT: [[AND:%[0-9]+]]:_(<8 x s64>) = G_AND [[DEF]], [[DEF1]]
     ; AVX512-NEXT: $zmm0 = COPY [[AND]](<8 x s64>)
     ; AVX512-NEXT: RET 0
-    %0(<8 x s64>) = IMPLICIT_DEF
-    %1(<8 x s64>) = IMPLICIT_DEF
-    %2(<8 x s64>) = G_AND %0, %1
+    %0:_(<8 x s64>) = IMPLICIT_DEF
+    %1:_(<8 x s64>) = IMPLICIT_DEF
+    %2:_(<8 x s64>) = G_AND %0, %1
     $zmm0 = COPY %2
     RET 0
 ...
@@ -191,16 +175,6 @@ name:            test_and_v64i8_2
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
 #
 #
 body:             |
@@ -232,14 +206,14 @@ body:             |
     ; AVX512-NEXT: $ymm0 = COPY [[UV]](<32 x s8>)
     ; AVX512-NEXT: $ymm1 = COPY [[UV1]](<32 x s8>)
     ; AVX512-NEXT: RET 0, implicit $ymm0, implicit $ymm1
-    %2(<32 x s8>) = COPY $ymm0
-    %3(<32 x s8>) = COPY $ymm1
-    %4(<32 x s8>) = COPY $ymm2
-    %5(<32 x s8>) = COPY $ymm3
-    %0(<64 x s8>) = G_CONCAT_VECTORS %2(<32 x s8>), %3(<32 x s8>)
-    %1(<64 x s8>) = G_CONCAT_VECTORS %4(<32 x s8>), %5(<32 x s8>)
-    %6(<64 x s8>) = G_AND %0, %1
-    %7(<32 x s8>), %8(<32 x s8>) = G_UNMERGE_VALUES %6(<64 x s8>)
+    %2:_(<32 x s8>) = COPY $ymm0
+    %3:_(<32 x s8>) = COPY $ymm1
+    %4:_(<32 x s8>) = COPY $ymm2
+    %5:_(<32 x s8>) = COPY $ymm3
+    %0:_(<64 x s8>) = G_CONCAT_VECTORS %2(<32 x s8>), %3(<32 x s8>)
+    %1:_(<64 x s8>) = G_CONCAT_VECTORS %4(<32 x s8>), %5(<32 x s8>)
+    %6:_(<64 x s8>) = G_AND %0, %1
+    %7:_(<32 x s8>), %8:_(<32 x s8>) = G_UNMERGE_VALUES %6(<64 x s8>)
     $ymm0 = COPY %7(<32 x s8>)
     $ymm1 = COPY %8(<32 x s8>)
     RET 0, implicit $ymm0, implicit $ymm1

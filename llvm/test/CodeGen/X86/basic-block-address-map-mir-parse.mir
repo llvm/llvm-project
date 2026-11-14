@@ -70,7 +70,6 @@ hasEHScopes:     false
 hasEHFunclets:   false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$edi', virtual-reg: '' }
 frameInfo:

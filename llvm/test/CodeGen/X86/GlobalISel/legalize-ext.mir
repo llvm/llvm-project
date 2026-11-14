@@ -95,10 +95,6 @@ name:            test_zext_i1toi8
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -134,9 +130,6 @@ name:            test_zext_i1toi16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -172,10 +165,6 @@ name:            test_zext_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -199,9 +188,9 @@ body:             |
     ; X64-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
     ; X64-NEXT: $eax = COPY [[AND]](s32)
     ; X64-NEXT: RET 0, implicit $eax
-    %0(s8) = COPY $dil
-    %1(s1) = G_TRUNC %0(s8)
-    %2(s32) = G_ZEXT %1(s1)
+    %0:_(s8) = COPY $dil
+    %1:_(s1) = G_TRUNC %0(s8)
+    %2:_(s32) = G_ZEXT %1(s1)
     $eax = COPY %2(s32)
     RET 0, implicit $eax
 
@@ -211,9 +200,6 @@ name:            test_zext_i8toi16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -233,8 +219,8 @@ body:             |
     ; X64-NEXT: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[COPY]](s8)
     ; X64-NEXT: $ax = COPY [[ZEXT]](s16)
     ; X64-NEXT: RET 0, implicit $ax
-    %0(s8) = COPY $dil
-    %1(s16) = G_ZEXT %0(s8)
+    %0:_(s8) = COPY $dil
+    %1:_(s16) = G_ZEXT %0(s8)
     $ax = COPY %1(s16)
     RET 0, implicit $ax
 
@@ -244,9 +230,6 @@ name:            test_zext_i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -266,8 +249,8 @@ body:             |
     ; X64-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s8)
     ; X64-NEXT: $eax = COPY [[ZEXT]](s32)
     ; X64-NEXT: RET 0, implicit $eax
-    %0(s8) = COPY $dil
-    %1(s32) = G_ZEXT %0(s8)
+    %0:_(s8) = COPY $dil
+    %1:_(s32) = G_ZEXT %0(s8)
     $eax = COPY %1(s32)
     RET 0, implicit $eax
 
@@ -277,9 +260,6 @@ name:            test_zext_i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -299,8 +279,8 @@ body:             |
     ; X64-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s16)
     ; X64-NEXT: $eax = COPY [[ZEXT]](s32)
     ; X64-NEXT: RET 0, implicit $eax
-    %0(s16) = COPY $di
-    %1(s32) = G_ZEXT %0(s16)
+    %0:_(s16) = COPY $di
+    %1:_(s32) = G_ZEXT %0(s16)
     $eax = COPY %1(s32)
     RET 0, implicit $eax
 
@@ -310,9 +290,6 @@ name:            test_sext_i1toi8
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -330,8 +307,8 @@ body:             |
     ; X64-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; X64-NEXT: $al = COPY [[C]](s8)
     ; X64-NEXT: RET 0, implicit $al
-    %0(s1) = G_IMPLICIT_DEF
-    %1(s8) = G_SEXT %0(s1)
+    %0:_(s1) = G_IMPLICIT_DEF
+    %1:_(s8) = G_SEXT %0(s1)
     $al = COPY %1(s8)
     RET 0, implicit $al
 
@@ -341,9 +318,6 @@ name:            test_sext_i1toi16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -361,8 +335,8 @@ body:             |
     ; X64-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
     ; X64-NEXT: $ax = COPY [[C]](s16)
     ; X64-NEXT: RET 0, implicit $ax
-    %0(s1) = G_IMPLICIT_DEF
-    %1(s16) = G_SEXT %0(s1)
+    %0:_(s1) = G_IMPLICIT_DEF
+    %1:_(s16) = G_SEXT %0(s1)
     $ax = COPY %1(s16)
     RET 0, implicit $ax
 
@@ -372,10 +346,6 @@ name:            test_sext_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -393,8 +363,8 @@ body:             |
     ; X64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; X64-NEXT: $eax = COPY [[C]](s32)
     ; X64-NEXT: RET 0, implicit $eax
-    %0(s1) = G_IMPLICIT_DEF
-    %2(s32) = G_SEXT %0(s1)
+    %0:_(s1) = G_IMPLICIT_DEF
+    %2:_(s32) = G_SEXT %0(s1)
     $eax = COPY %2(s32)
     RET 0, implicit $eax
 
@@ -404,9 +374,6 @@ name:            test_sext_i8toi16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -426,8 +393,8 @@ body:             |
     ; X64-NEXT: [[SEXT:%[0-9]+]]:_(s16) = G_SEXT [[COPY]](s8)
     ; X64-NEXT: $ax = COPY [[SEXT]](s16)
     ; X64-NEXT: RET 0, implicit $ax
-    %0(s8) = COPY $dil
-    %1(s16) = G_SEXT %0(s8)
+    %0:_(s8) = COPY $dil
+    %1:_(s16) = G_SEXT %0(s8)
     $ax = COPY %1(s16)
     RET 0, implicit $ax
 
@@ -437,9 +404,6 @@ name:            test_sext_i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -459,8 +423,8 @@ body:             |
     ; X64-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s8)
     ; X64-NEXT: $eax = COPY [[SEXT]](s32)
     ; X64-NEXT: RET 0, implicit $eax
-    %0(s8) = COPY $dil
-    %1(s32) = G_SEXT %0(s8)
+    %0:_(s8) = COPY $dil
+    %1:_(s32) = G_SEXT %0(s8)
     $eax = COPY %1(s32)
     RET 0, implicit $eax
 
@@ -470,9 +434,6 @@ name:            test_sext_i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -492,8 +453,8 @@ body:             |
     ; X64-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s16)
     ; X64-NEXT: $eax = COPY [[SEXT]](s32)
     ; X64-NEXT: RET 0, implicit $eax
-    %0(s16) = COPY $di
-    %1(s32) = G_SEXT %0(s16)
+    %0:_(s16) = COPY $di
+    %1:_(s32) = G_SEXT %0(s16)
     $eax = COPY %1(s32)
     RET 0, implicit $eax
 
@@ -503,10 +464,6 @@ name:            test_anyext_i1toi8
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -526,9 +483,9 @@ body:             |
     ; X64-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; X64-NEXT: $al = COPY [[TRUNC]](s8)
     ; X64-NEXT: RET 0, implicit $al
-    %0(s32) = COPY $edi
-    %1(s1) = G_TRUNC %0(s32)
-    %2(s8) = G_ANYEXT %1(s1)
+    %0:_(s32) = COPY $edi
+    %1:_(s1) = G_TRUNC %0(s32)
+    %2:_(s8) = G_ANYEXT %1(s1)
     $al = COPY %2(s8)
     RET 0, implicit $al
 
@@ -538,10 +495,6 @@ name:            test_anyext_i1toi16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -561,9 +514,9 @@ body:             |
     ; X64-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; X64-NEXT: $ax = COPY [[TRUNC]](s16)
     ; X64-NEXT: RET 0, implicit $ax
-    %0(s32) = COPY $edi
-    %1(s1) = G_TRUNC %0(s32)
-    %2(s16) = G_ANYEXT %1(s1)
+    %0:_(s32) = COPY $edi
+    %1:_(s1) = G_TRUNC %0(s32)
+    %2:_(s16) = G_ANYEXT %1(s1)
     $ax = COPY %2(s16)
     RET 0, implicit $ax
 
@@ -573,10 +526,6 @@ name:            test_anyext_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -596,9 +545,9 @@ body:             |
     ; X64-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
     ; X64-NEXT: $eax = COPY [[ANYEXT]](s32)
     ; X64-NEXT: RET 0, implicit $eax
-    %0(s8) = COPY $dil
-    %1(s1) = G_TRUNC %0(s8)
-    %2(s32) = G_ANYEXT %1(s1)
+    %0:_(s8) = COPY $dil
+    %1:_(s1) = G_TRUNC %0(s8)
+    %2:_(s32) = G_ANYEXT %1(s1)
     $eax = COPY %2(s32)
     RET 0, implicit $eax
 
@@ -608,9 +557,6 @@ name:            test_anyext_i8toi16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -630,8 +576,8 @@ body:             |
     ; X64-NEXT: [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[COPY]](s8)
     ; X64-NEXT: $ax = COPY [[ANYEXT]](s16)
     ; X64-NEXT: RET 0, implicit $ax
-    %0(s8) = COPY $dil
-    %1(s16) = G_ANYEXT %0(s8)
+    %0:_(s8) = COPY $dil
+    %1:_(s16) = G_ANYEXT %0(s8)
     $ax = COPY %1(s16)
     RET 0, implicit $ax
 
@@ -641,9 +587,6 @@ name:            test_anyext_i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -663,8 +606,8 @@ body:             |
     ; X64-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
     ; X64-NEXT: $eax = COPY [[ANYEXT]](s32)
     ; X64-NEXT: RET 0, implicit $eax
-    %0(s8) = COPY $dil
-    %1(s32) = G_ANYEXT %0(s8)
+    %0:_(s8) = COPY $dil
+    %1:_(s32) = G_ANYEXT %0(s8)
     $eax = COPY %1(s32)
     RET 0, implicit $eax
 
@@ -674,9 +617,6 @@ name:            test_anyext_i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -696,8 +636,8 @@ body:             |
     ; X64-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s16)
     ; X64-NEXT: $eax = COPY [[ANYEXT]](s32)
     ; X64-NEXT: RET 0, implicit $eax
-    %0(s16) = COPY $di
-    %1(s32) = G_ANYEXT %0(s16)
+    %0:_(s16) = COPY $di
+    %1:_(s32) = G_ANYEXT %0(s16)
     $eax = COPY %1(s32)
     RET 0, implicit $eax
 

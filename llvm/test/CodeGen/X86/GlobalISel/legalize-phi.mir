@@ -121,16 +121,6 @@ name:            test_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
-  - { id: 4, class: _, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
-  - { id: 6, class: _, preferred-register: '' }
-  - { id: 7, class: _, preferred-register: '' }
-  - { id: 8, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -192,15 +182,6 @@ name:            test_i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
-  - { id: 4, class: _, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
-  - { id: 6, class: _, preferred-register: '' }
-  - { id: 7, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -259,15 +240,6 @@ name:            test_i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
-  - { id: 4, class: _, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
-  - { id: 6, class: _, preferred-register: '' }
-  - { id: 7, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -326,13 +298,6 @@ name:            test_i32
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
-  - { id: 4, class: _, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -371,11 +336,11 @@ body:             |
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
     liveins: $edi, $edx, $esi
 
-    %0(s32) = COPY $edi
-    %1(s32) = COPY $esi
-    %2(s32) = COPY $edx
-    %3(s32) = G_CONSTANT i32 0
-    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    %0:_(s32) = COPY $edi
+    %1:_(s32) = COPY $esi
+    %2:_(s32) = COPY $edx
+    %3:_(s32) = G_CONSTANT i32 0
+    %4:_(s1) = G_ICMP intpred(sgt), %0(s32), %3
     G_BRCOND %4(s1), %bb.2
     G_BR %bb.3
 
@@ -389,7 +354,7 @@ body:             |
 
 
   bb.4.cond.end:
-    %5(s32) = G_PHI %1(s32), %bb.2, %2(s32), %bb.3
+    %5:_(s32) = G_PHI %1(s32), %bb.2, %2(s32), %bb.3
     $eax = COPY %5(s32)
     RET 0, implicit $eax
 
@@ -399,13 +364,6 @@ name:            test_i64
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
-  - { id: 4, class: _, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -444,11 +402,11 @@ body:             |
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
     liveins: $edi, $rdx, $rsi
 
-    %0(s32) = COPY $edi
-    %1(s64) = COPY $rsi
-    %2(s64) = COPY $rdx
-    %3(s32) = G_CONSTANT i32 0
-    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    %0:_(s32) = COPY $edi
+    %1:_(s64) = COPY $rsi
+    %2:_(s64) = COPY $rdx
+    %3:_(s32) = G_CONSTANT i32 0
+    %4:_(s1) = G_ICMP intpred(sgt), %0(s32), %3
     G_BRCOND %4(s1), %bb.2
     G_BR %bb.3
 
@@ -462,7 +420,7 @@ body:             |
 
 
   bb.4.cond.end:
-    %5(s64) = G_PHI %1(s64), %bb.2, %2(s64), %bb.3
+    %5:_(s64) = G_PHI %1(s64), %bb.2, %2(s64), %bb.3
     $rax = COPY %5(s64)
     RET 0, implicit $rax
 
@@ -472,16 +430,6 @@ name:            test_float
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
-  - { id: 4, class: _, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
-  - { id: 6, class: _, preferred-register: '' }
-  - { id: 7, class: _, preferred-register: '' }
-  - { id: 8, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -542,16 +490,6 @@ name:            test_double
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
-  - { id: 4, class: _, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
-  - { id: 6, class: _, preferred-register: '' }
-  - { id: 7, class: _, preferred-register: '' }
-  - { id: 8, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:

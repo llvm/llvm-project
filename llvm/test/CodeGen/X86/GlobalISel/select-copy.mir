@@ -34,9 +34,6 @@ name:            test_copy
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $eax
@@ -48,8 +45,8 @@ body:             |
     ; CHECK-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY]]
     ; CHECK-NEXT: $eax = COPY [[MOVZX32rr8_]]
     ; CHECK-NEXT: RET 0, implicit $eax
-    %0(s8) = COPY $al
-    %1(s32) = G_ZEXT %0(s8)
+    %0:gpr(s8) = COPY $al
+    %1:gpr(s32) = G_ZEXT %0(s8)
     $eax = COPY %1(s32)
     RET 0, implicit $eax
 
@@ -59,9 +56,6 @@ name:            test_copy2
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $eax
@@ -73,8 +67,8 @@ body:             |
     ; CHECK-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY]]
     ; CHECK-NEXT: $eax = COPY [[MOVZX32rr8_]]
     ; CHECK-NEXT: RET 0, implicit $eax
-    %0(s8) = COPY $al
-    %1(s32) = G_ZEXT %0(s8)
+    %0:gpr(s8) = COPY $al
+    %1:gpr(s32) = G_ZEXT %0(s8)
     $eax = COPY %1(s32)
     RET 0, implicit $eax
 
@@ -84,10 +78,6 @@ name:            test_copy3
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $eax
@@ -110,9 +100,9 @@ body:             |
     ; X64-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]]
     ; X64-NEXT: $eax = COPY [[MOVZX32rr8_]]
     ; X64-NEXT: RET 0, implicit $eax
-    %0(s16) = COPY $ax
-    %1(s8) = G_TRUNC %0(s16)
-    %2(s32) = G_ZEXT %1(s8)
+    %0:gpr(s16) = COPY $ax
+    %1:gpr(s8) = G_TRUNC %0(s16)
+    %2:gpr(s32) = G_ZEXT %1(s8)
     $eax = COPY %2(s32)
     RET 0, implicit $eax
 
@@ -122,10 +112,6 @@ name:            test_copy4
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $eax
@@ -138,9 +124,9 @@ body:             |
     ; CHECK-NEXT: [[MOVZX32rr16_:%[0-9]+]]:gr32 = MOVZX32rr16 [[COPY1]]
     ; CHECK-NEXT: $eax = COPY [[MOVZX32rr16_]]
     ; CHECK-NEXT: RET 0, implicit $eax
-    %0(s32) = COPY $eax
-    %1(s16) = G_TRUNC %0(s32)
-    %2(s32) = G_ZEXT %1(s16)
+    %0:gpr(s32) = COPY $eax
+    %1:gpr(s16) = G_TRUNC %0(s32)
+    %2:gpr(s32) = G_ZEXT %1(s16)
     $eax = COPY %2(s32)
     RET 0, implicit $eax
 
@@ -150,10 +136,6 @@ name:            test_copy5
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $eax,$edx
@@ -176,9 +158,9 @@ body:             |
     ; X64-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]]
     ; X64-NEXT: $eax = COPY [[MOVZX32rr8_]]
     ; X64-NEXT: RET 0, implicit $eax
-    %0(s32) = COPY $edx
-    %1(s8) = G_TRUNC %0(s32)
-    %2(s32) = G_ANYEXT %1(s8)
+    %0:gpr(s32) = COPY $edx
+    %1:gpr(s8) = G_TRUNC %0(s32)
+    %2:gpr(s32) = G_ANYEXT %1(s8)
     $eax = COPY %2(s32)
     RET 0, implicit $eax
 
@@ -188,10 +170,6 @@ name:            test_copy6
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $eax,$edx
@@ -205,9 +183,9 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:low32_addr_access_rbp = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_16bit
     ; CHECK-NEXT: $eax = COPY [[INSERT_SUBREG]]
     ; CHECK-NEXT: RET 0, implicit $eax
-    %0(s32) = COPY $edx
-    %1(s16) = G_TRUNC %0(s32)
-    %2(s32) = G_ANYEXT %1(s16)
+    %0:gpr(s32) = COPY $edx
+    %1:gpr(s16) = G_TRUNC %0(s32)
+    %2:gpr(s32) = G_ANYEXT %1(s16)
     $eax = COPY %2(s32)
     RET 0, implicit $eax
 

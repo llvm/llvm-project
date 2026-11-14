@@ -20,8 +20,6 @@ name:            stack_fold_addpd
 alignment:       16
 registers:
   - { id: 0, class: vr128 }
-  - { id: 1, class: vr128 }
-  - { id: 2, class: vr128 }
 liveins:
   - { reg: '$xmm0', virtual-reg: '%0' }
   - { reg: '$xmm1', virtual-reg: '%1' }

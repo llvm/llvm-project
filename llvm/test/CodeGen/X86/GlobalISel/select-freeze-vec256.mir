@@ -4,9 +4,6 @@
 name:            select_freeze_vec256
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr, preferred-register: '', flags: [  ] }
-  - { id: 1, class: vecr, preferred-register: '', flags: [  ] }
 body:             |
   bb.0:
     liveins: $ymm0

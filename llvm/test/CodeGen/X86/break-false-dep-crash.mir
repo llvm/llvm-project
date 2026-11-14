@@ -71,7 +71,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$ecx', virtual-reg: '' }
 frameInfo:

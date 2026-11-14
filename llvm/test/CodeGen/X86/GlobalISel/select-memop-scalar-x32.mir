@@ -48,10 +48,6 @@ name:            test_load_i8
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 fixedStack:
   - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
 body:             |
@@ -61,9 +57,9 @@ body:             |
     ; ALL: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm [[MOV32rm]], 1, $noreg, 0, $noreg :: (load (s8) from %ir.p1)
     ; ALL: $al = COPY [[MOV8rm]]
     ; ALL: RET 0, implicit $al
-    %1(p0) = G_FRAME_INDEX %fixed-stack.0
-    %0(p0) = G_LOAD %1(p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
-    %2(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.p1)
+    %1:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
+    %0:gpr(p0) = G_LOAD %1(p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
+    %2:gpr(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.p1)
     $al = COPY %2(s8)
     RET 0, implicit $al
 
@@ -73,10 +69,6 @@ name:            test_load_i16
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 fixedStack:
   - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
 body:             |
@@ -86,9 +78,9 @@ body:             |
     ; ALL: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm [[MOV32rm]], 1, $noreg, 0, $noreg :: (load (s16) from %ir.p1)
     ; ALL: $ax = COPY [[MOV16rm]]
     ; ALL: RET 0, implicit $ax
-    %1(p0) = G_FRAME_INDEX %fixed-stack.0
-    %0(p0) = G_LOAD %1(p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
-    %2(s16) = G_LOAD %0(p0) :: (load (s16) from %ir.p1)
+    %1:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
+    %0:gpr(p0) = G_LOAD %1(p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
+    %2:gpr(s16) = G_LOAD %0(p0) :: (load (s16) from %ir.p1)
     $ax = COPY %2(s16)
     RET 0, implicit $ax
 
@@ -98,10 +90,6 @@ name:            test_load_i32
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 fixedStack:
   - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
 body:             |
@@ -111,9 +99,9 @@ body:             |
     ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm [[MOV32rm]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.p1)
     ; ALL: $eax = COPY [[MOV32rm1]]
     ; ALL: RET 0, implicit $eax
-    %1(p0) = G_FRAME_INDEX %fixed-stack.0
-    %0(p0) = G_LOAD %1(p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
-    %2(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.p1)
+    %1:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
+    %0:gpr(p0) = G_LOAD %1(p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
+    %2:gpr(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.p1)
     $eax = COPY %2(s32)
     RET 0, implicit $eax
 
@@ -123,11 +111,6 @@ name:            test_store_i8
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
 fixedStack:
   - { id: 0, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
   - { id: 1, offset: 0, size: 1, alignment: 16, isImmutable: true, isAliased: false }
@@ -139,10 +122,10 @@ body:             |
     ; ALL: MOV8mr [[MOV32rm]], 1, $noreg, 0, $noreg, [[MOV8rm]] :: (store (s8) into %ir.p1)
     ; ALL: $eax = COPY [[MOV32rm]]
     ; ALL: RET 0, implicit $eax
-    %2(p0) = G_FRAME_INDEX %fixed-stack.1
-    %0(s8) = G_LOAD %2(p0) :: (invariant load (s8) from %fixed-stack.1, align 16)
-    %3(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1(p0) = G_LOAD %3(p0) :: (invariant load (p0) from %fixed-stack.0, align 4)
+    %2:gpr(p0) = G_FRAME_INDEX %fixed-stack.1
+    %0:gpr(s8) = G_LOAD %2(p0) :: (invariant load (s8) from %fixed-stack.1, align 16)
+    %3:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
+    %1:gpr(p0) = G_LOAD %3(p0) :: (invariant load (p0) from %fixed-stack.0, align 4)
     G_STORE %0(s8), %1(p0) :: (store (s8) into %ir.p1)
     $eax = COPY %1(p0)
     RET 0, implicit $eax
@@ -153,11 +136,6 @@ name:            test_store_i16
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
 fixedStack:
   - { id: 0, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
   - { id: 1, offset: 0, size: 2, alignment: 16, isImmutable: true, isAliased: false }
@@ -169,10 +147,10 @@ body:             |
     ; ALL: MOV16mr [[MOV32rm]], 1, $noreg, 0, $noreg, [[MOV16rm]] :: (store (s16) into %ir.p1)
     ; ALL: $eax = COPY [[MOV32rm]]
     ; ALL: RET 0, implicit $eax
-    %2(p0) = G_FRAME_INDEX %fixed-stack.1
-    %0(s16) = G_LOAD %2(p0) :: (invariant load (s16) from %fixed-stack.1, align 16)
-    %3(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1(p0) = G_LOAD %3(p0) :: (invariant load (p0) from %fixed-stack.0, align 4)
+    %2:gpr(p0) = G_FRAME_INDEX %fixed-stack.1
+    %0:gpr(s16) = G_LOAD %2(p0) :: (invariant load (s16) from %fixed-stack.1, align 16)
+    %3:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
+    %1:gpr(p0) = G_LOAD %3(p0) :: (invariant load (p0) from %fixed-stack.0, align 4)
     G_STORE %0(s16), %1(p0) :: (store (s16) into %ir.p1)
     $eax = COPY %1(p0)
     RET 0, implicit $eax
@@ -183,11 +161,6 @@ name:            test_store_i32
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
 fixedStack:
   - { id: 0, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
   - { id: 1, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
@@ -199,10 +172,10 @@ body:             |
     ; ALL: MOV32mr [[MOV32rm1]], 1, $noreg, 0, $noreg, [[MOV32rm]] :: (store (s32) into %ir.p1)
     ; ALL: $eax = COPY [[MOV32rm1]]
     ; ALL: RET 0, implicit $eax
-    %2(p0) = G_FRAME_INDEX %fixed-stack.1
-    %0(s32) = G_LOAD %2(p0) :: (invariant load (s32) from %fixed-stack.1, align 16)
-    %3(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1(p0) = G_LOAD %3(p0) :: (invariant load (p0) from %fixed-stack.0, align 4)
+    %2:gpr(p0) = G_FRAME_INDEX %fixed-stack.1
+    %0:gpr(s32) = G_LOAD %2(p0) :: (invariant load (s32) from %fixed-stack.1, align 16)
+    %3:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
+    %1:gpr(p0) = G_LOAD %3(p0) :: (invariant load (p0) from %fixed-stack.0, align 4)
     G_STORE %0(s32), %1(p0) :: (store (s32) into %ir.p1)
     $eax = COPY %1(p0)
     RET 0, implicit $eax
@@ -213,10 +186,6 @@ name:            test_load_ptr
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 fixedStack:
   - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
 body:             |
@@ -226,9 +195,9 @@ body:             |
     ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm [[MOV32rm]], 1, $noreg, 0, $noreg :: (load (p0) from %ir.ptr1)
     ; ALL: $eax = COPY [[MOV32rm1]]
     ; ALL: RET 0, implicit $eax
-    %1(p0) = G_FRAME_INDEX %fixed-stack.0
-    %0(p0) = G_LOAD %1(p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
-    %2(p0) = G_LOAD %0(p0) :: (load (p0) from %ir.ptr1)
+    %1:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
+    %0:gpr(p0) = G_LOAD %1(p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
+    %2:gpr(p0) = G_LOAD %0(p0) :: (load (p0) from %ir.ptr1)
     $eax = COPY %2(p0)
     RET 0, implicit $eax
 
@@ -238,11 +207,6 @@ name:            test_store_ptr
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
 fixedStack:
   - { id: 0, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
   - { id: 1, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
@@ -253,10 +217,10 @@ body:             |
     ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load (p0) from %fixed-stack.1)
     ; ALL: MOV32mr [[MOV32rm]], 1, $noreg, 0, $noreg, [[MOV32rm1]] :: (store (p0) into %ir.ptr1)
     ; ALL: RET 0
-    %2(p0) = G_FRAME_INDEX %fixed-stack.1
-    %0(p0) = G_LOAD %2(p0) :: (invariant load (p0) from %fixed-stack.1, align 16)
-    %3(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1(p0) = G_LOAD %3(p0) :: (invariant load (p0) from %fixed-stack.0, align 4)
+    %2:gpr(p0) = G_FRAME_INDEX %fixed-stack.1
+    %0:gpr(p0) = G_LOAD %2(p0) :: (invariant load (p0) from %fixed-stack.1, align 16)
+    %3:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
+    %1:gpr(p0) = G_LOAD %3(p0) :: (invariant load (p0) from %fixed-stack.0, align 4)
     G_STORE %1(p0), %0(p0) :: (store (p0) into %ir.ptr1)
     RET 0
 

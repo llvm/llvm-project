@@ -42,14 +42,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
-  - { id: 1, class: gr32, preferred-register: '' }
-  - { id: 2, class: vr256, preferred-register: '' }
-  - { id: 3, class: vr256, preferred-register: '' }
-  - { id: 4, class: vr256, preferred-register: '' }
-  - { id: 5, class: gr64, preferred-register: '' }
-  - { id: 6, class: vr256, preferred-register: '' }
 liveins:
 frameInfo:
   isFrameAddressTaken: false

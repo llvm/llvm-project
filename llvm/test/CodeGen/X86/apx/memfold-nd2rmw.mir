@@ -73,30 +73,6 @@ isOutlined:      false
 debugInstrRef:   true
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
-  - { id: 1, class: gr32, preferred-register: '' }
-  - { id: 2, class: gr32, preferred-register: '' }
-  - { id: 3, class: gr32, preferred-register: '' }
-  - { id: 4, class: gr32, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr64, preferred-register: '' }
-  - { id: 8, class: gr64, preferred-register: '' }
-  - { id: 9, class: gr32, preferred-register: '' }
-  - { id: 10, class: gr8, preferred-register: '' }
-  - { id: 11, class: gr8, preferred-register: '' }
-  - { id: 12, class: gr8, preferred-register: '' }
-  - { id: 13, class: gr8, preferred-register: '' }
-  - { id: 14, class: gr8, preferred-register: '' }
-  - { id: 15, class: gr32, preferred-register: '' }
-  - { id: 16, class: gr32, preferred-register: '' }
-  - { id: 17, class: gr64_with_sub_8bit, preferred-register: '' }
-  - { id: 18, class: fr64, preferred-register: '' }
-  - { id: 19, class: gr8, preferred-register: '' }
-  - { id: 20, class: gr32, preferred-register: '' }
-  - { id: 21, class: gr32, preferred-register: '' }
-  - { id: 22, class: gr32, preferred-register: '' }
 liveins:
   - { reg: '$edi', virtual-reg: '%4' }
   - { reg: '$esi', virtual-reg: '%5' }

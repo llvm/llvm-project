@@ -40,7 +40,6 @@ isOutlined:      false
 debugInstrRef:   true
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$rcx', virtual-reg: '' }
 frameInfo:

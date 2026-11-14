@@ -13,9 +13,6 @@
 ---
 name:            inttoptr_p0_s64
 alignment:       16
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1.entry:
     liveins: $rdi

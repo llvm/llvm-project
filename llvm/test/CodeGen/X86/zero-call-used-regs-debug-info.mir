@@ -95,7 +95,6 @@ hasEHFunclets:   false
 debugInstrRef:   true
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
