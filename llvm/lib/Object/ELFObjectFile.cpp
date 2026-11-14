@@ -387,6 +387,21 @@ SubtargetFeatures ELFObjectFileBase::getLoongArchFeatures() const {
   return Features;
 }
 
+SubtargetFeatures ELFObjectFileBase::getSparcFeatures() const {
+  SubtargetFeatures Features;
+  unsigned PlatformFlags = getPlatformFlags();
+
+  if (getEMachine() == ELF::EM_SPARC32PLUS ||
+      (PlatformFlags & ELF::EF_SPARC_32PLUS))
+    Features.AddFeature("v9");
+  if (PlatformFlags & ELF::EF_SPARC_SUN_US1)
+    Features.AddFeature("vis");
+  if (PlatformFlags & ELF::EF_SPARC_SUN_US3)
+    Features.AddFeature("vis2");
+
+  return Features;
+}
+
 Expected<SubtargetFeatures> ELFObjectFileBase::getFeatures() const {
   switch (getEMachine()) {
   case ELF::EM_MIPS:
@@ -399,6 +414,10 @@ Expected<SubtargetFeatures> ELFObjectFileBase::getFeatures() const {
     return getLoongArchFeatures();
   case ELF::EM_HEXAGON:
     return getHexagonFeatures();
+  case ELF::EM_SPARC:
+  case ELF::EM_SPARC32PLUS:
+  case ELF::EM_SPARCV9:
+    return getSparcFeatures();
   default:
     return SubtargetFeatures();
   }
