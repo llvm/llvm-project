@@ -3548,10 +3548,22 @@ bool GVNPassImpl::propagateEquality(
 
     // Now try to deduce additional equalities from this one. For example, if
     // the known equality was "(A != B)" == "false" then it follows that A and B
-    // are equal in the scope. Only boolean equalities with an explicit true or
-    // false RHS are currently supported.
+    // are equal in the scope.
+
+    // If a bitwise OR is zero, both operands are zero. If a bitwise AND is
+    // all ones, both operands are all ones.
+    Value *A, *B;
+    if ((match(RHS, m_ZeroInt()) && match(LHS, m_Or(m_Value(A), m_Value(B)))) ||
+        (match(RHS, m_AllOnes()) &&
+         match(LHS, m_And(m_Value(A), m_Value(B))))) {
+      Worklist.emplace_back(A, RHS);
+      Worklist.emplace_back(B, RHS);
+      continue;
+    }
+
+    // The remaining deductions require a boolean equality with an explicit
+    // true or false RHS.
     if (!RHS->getType()->isIntegerTy(1))
-      // Not a boolean equality - bail out.
       continue;
     ConstantInt *CI = dyn_cast<ConstantInt>(RHS);
     if (!CI)
@@ -3563,7 +3575,6 @@ bool GVNPassImpl::propagateEquality(
 
     // If "A && B" is known true then both A and B are known true.  If "A || B"
     // is known false then both A and B are known false.
-    Value *A, *B;
     if ((IsKnownTrue && match(LHS, m_LogicalAnd(m_Value(A), m_Value(B)))) ||
         (IsKnownFalse && match(LHS, m_LogicalOr(m_Value(A), m_Value(B))))) {
       Worklist.push_back(std::make_pair(A, RHS));
