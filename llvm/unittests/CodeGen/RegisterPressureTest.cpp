@@ -8,8 +8,12 @@
 
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "CodeGenTestBase.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/Targets.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -17,6 +21,58 @@
 #include "gtest/gtest.h"
 
 using namespace llvm;
+
+namespace {
+#include "MFCommon.inc"
+
+TEST(RegPressureTrackerTest, RecedePartialLiveOut) {
+  LLVMContext Ctx;
+  Module M("RecedePartialLiveOut", Ctx);
+  auto MF = createMachineFunction(Ctx, M);
+  MachineBasicBlock *MBB = MF->CreateMachineBasicBlock();
+  MF->push_back(MBB);
+
+  static const MCInstrDesc InstrDesc = {};
+  MBB->push_back(MF->CreateMachineInstr(InstrDesc, DebugLoc()));
+  MBB->push_back(MF->CreateMachineInstr(InstrDesc, DebugLoc()));
+
+  const LaneBitmask Lane0 = LaneBitmask::getLane(0);
+  const LaneBitmask Lane1 = LaneBitmask::getLane(1);
+  const MCRegisterClass RC = createRegisterClass(Lane0 | Lane1);
+  const VirtRegOrUnit VReg(MF->getRegInfo().createVirtualRegister(&RC));
+
+  RegionPressure Pressure;
+  RegPressureTracker Tracker(Pressure);
+  Tracker.init(MF.get(), /*RCI=*/nullptr, /*LIS=*/nullptr, MBB, MBB->end(),
+               /*TrackLaneMasks=*/true, /*TrackUntiedDefs=*/false);
+  Tracker.addLiveRegs({VRegMaskOrUnit(VReg, Lane0)});
+  Tracker.closeBottom();
+
+  ASSERT_EQ(Tracker.getRegSetPressureAtPos().size(), 1u);
+  EXPECT_EQ(Tracker.getRegSetPressureAtPos()[0], 1u);
+  ASSERT_EQ(Pressure.LiveOutRegs.size(), 1u);
+  EXPECT_EQ(Pressure.LiveOutRegs[0].LaneMask, Lane0);
+
+  // Discover Lane1 as live-out when receding over its definition. Pressure
+  // stays at one because Lane0 of the same register is already live.
+  RegisterOperands DefLane1;
+  DefLane1.Defs.emplace_back(VReg, Lane1);
+  Tracker.setPos(std::prev(MBB->end()));
+  Tracker.recede(DefLane1);
+
+  ASSERT_EQ(Pressure.LiveOutRegs.size(), 1u);
+  EXPECT_EQ(Pressure.LiveOutRegs[0].LaneMask, Lane0 | Lane1);
+  EXPECT_EQ(Tracker.getRegSetPressureAtPos()[0], 1u);
+
+  // Killing the remaining lane must remove the register's pressure entirely.
+  RegisterOperands DefLane0;
+  DefLane0.Defs.emplace_back(VReg, Lane0);
+  Tracker.setPos(MBB->begin());
+  Tracker.recede(DefLane0);
+  EXPECT_EQ(Tracker.getRegSetPressureAtPos()[0], 0u);
+}
+
+} // namespace
 
 class RegisterPressureTest : public CodeGenTestBase {
 public:
