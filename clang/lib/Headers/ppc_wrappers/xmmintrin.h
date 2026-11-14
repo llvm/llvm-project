@@ -1311,6 +1311,9 @@ extern __inline int
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))
     _mm_movemask_ps(__m128 __A) {
 #ifdef _ARCH_PWR10
+#ifdef __BIG_ENDIAN__
+  __A = vec_reve(__A);
+#endif
   return vec_extractm((__vector unsigned int)__A);
 #else
   __vector unsigned long long __result;
@@ -1318,7 +1321,7 @@ extern __inline int
 #ifdef __LITTLE_ENDIAN__
       0x00204060, 0x80808080, 0x80808080, 0x80808080
 #else
-      0x80808080, 0x80808080, 0x80808080, 0x00204060
+      0x80808080, 0x80808080, 0x80808080, 0x60402000
 #endif
   };
 
