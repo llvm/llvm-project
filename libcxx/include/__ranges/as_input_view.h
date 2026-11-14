@@ -157,14 +157,12 @@ public:
     return __x.__current_ == __y;
   }
 
-  [[nodiscard]] friend constexpr difference_type
-  operator-(const sentinel_t<_Base>& __y, const __iterator& __x)
+  [[nodiscard]] friend constexpr difference_type operator-(const sentinel_t<_Base>& __y, const __iterator& __x)
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
   {
     return __y - __x.__current_;
   }
-  [[nodiscard]] friend constexpr difference_type
-  operator-(const __iterator& __x, const sentinel_t<_Base>& __y)
+  [[nodiscard]] friend constexpr difference_type operator-(const __iterator& __x, const sentinel_t<_Base>& __y)
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
   {
     return __x.__current_ - __y;
