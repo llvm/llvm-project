@@ -2403,6 +2403,9 @@ AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {
     addDereferenceableAttr(CI->getZExtValue());
   }
 
+  if (I.hasMetadata(LLVMContext::MD_nofreeobj))
+    addAttribute(Attribute::NoFreeObj);
+
   if (const MDNode *Range = I.getMetadata(LLVMContext::MD_range))
     addRangeAttr(getConstantRangeFromMetadata(*Range));
 

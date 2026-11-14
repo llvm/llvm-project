@@ -8076,8 +8076,9 @@ The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable''
 attribute on parameters and return values.
 
-The `!deferenceable` metadata can be combined with the `!nofree` metadata
-to indicate that the pointer will stay dereferenceable forever.
+The `!dereferenceable` metadata can be combined with the `!nofreeobj` metadata
+{ref}`nofreeobj <md_nofreeobj>` to indicate that the pointer will stay
+dereferenceable forever.
 
 (md_dereferenceable_or_null)=
 
@@ -8090,6 +8091,21 @@ undefined.
 The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable_or_null''
 attribute on parameters and return values.
+
+(md_nofreeobj)=
+
+#### '`nofreeobj`' Metadata
+
+The `!nofreeobj` metadata can only be applied to `load` and `inttoptr`
+instructions with a pointer-typed result. It must reference a metadata node
+with no entries.
+
+The existence of the `!nofreeobj` metadata on the instruction tells the
+optimizer that the underlying object of the resulting pointer is never freed,
+neither through this pointer nor through any other. If the instruction is
+executed and the underlying object is freed, whether before or after the
+instruction, the behavior is undefined. This is analogous to the `nofreeobj`
+attribute on return values.
 
 #### '`captures`' Metadata
 
@@ -12392,7 +12408,7 @@ behavior.
 ##### Syntax:
 
 ```
-<result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.load !<empty_node>][, !invariant.group !<empty_node>][, !nonnull !<empty_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !align !<align_node>][, !noundef !<empty_node>]
+<result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.load !<empty_node>][, !invariant.group !<empty_node>][, !nonnull !<empty_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !nofreeobj !<empty_node>][, !align !<align_node>][, !noundef !<empty_node>]
 <result> = load atomic [volatile] [elementwise] <ty>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>]
 !<nontemp_node> = !{ i32 1 }
 !<empty_node> = !{}
@@ -12479,6 +12495,10 @@ The optional `!dereferenceable_or_null` metadata must reference a single
 metadata name `<deref_bytes_node>` corresponding to a metadata node with one
 `i64` entry.
 See `dereferenceable_or_null` metadata {ref}`dereferenceable_or_null <md_dereferenceable_or_null>`.
+
+The optional `!nofreeobj` metadata must reference a single metadata name
+`<empty_node>` corresponding to a metadata node with no entries.
+See `nofreeobj` metadata {ref}`nofreeobj <md_nofreeobj>`.
 
 The optional `!align` metadata must reference a single metadata name
 `<align_node>` corresponding to a metadata node with one `i64` entry.
@@ -13641,9 +13661,7 @@ See `dereferenceable_or_null` metadata.
 
 The optional `!nofreeobj` metadata must reference a single metadata name
 `<empty_node>` corresponding to a metadata node with no entries.
-The existence of the `!nofreeobj` metadata on the instruction tells the
-optimizer that the memory pointed by the pointer will not be freed after this
-point.
+See `nofreeobj` metadata {ref}`nofreeobj <md_nofreeobj>`.
 
 ##### Semantics:
 
