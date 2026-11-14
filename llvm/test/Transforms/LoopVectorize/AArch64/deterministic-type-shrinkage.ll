@@ -287,7 +287,7 @@ define void @trunc_invariant_sdiv_result(i32 %a, i32 %b, ptr noalias %src, ptr %
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <16 x i16> [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <16 x i16> [[TMP0]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[TMP7]], i64 16
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 32
 ; CHECK-NEXT:    store <16 x i16> [[TMP5]], ptr [[TMP7]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP6]], ptr [[TMP8]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
@@ -413,7 +413,7 @@ define void @old_and_new_size_equalko(ptr noalias %src, ptr noalias %dst) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 32
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[WIDE_LOAD]] to <4 x i1>
@@ -427,7 +427,7 @@ define void @old_and_new_size_equalko(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i64> [[TMP8]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc <4 x i64> [[TMP9]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i64 4
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 16
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8

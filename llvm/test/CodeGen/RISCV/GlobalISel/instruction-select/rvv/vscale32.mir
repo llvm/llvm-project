@@ -6,7 +6,6 @@
 name:            test_1_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_1_s32
@@ -25,7 +24,6 @@ body:             |
 name:            test_2_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_2_s32
@@ -44,7 +42,6 @@ body:             |
 name:            test_3_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_3_s32
@@ -67,7 +64,6 @@ body:             |
 name:            test_4_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_4_s32
@@ -86,7 +82,6 @@ body:             |
 name:            test_8_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_8_s32
@@ -102,7 +97,6 @@ body:             |
 name:            test_16_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_16_s32
@@ -121,7 +115,6 @@ body:             |
 name:            test_40_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_40_s32
@@ -141,7 +134,6 @@ body:             |
 name:            test_1_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_1_s64
@@ -164,7 +156,6 @@ body:             |
 name:            test_2_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_2_s64
@@ -187,7 +178,6 @@ body:             |
 name:            test_3_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_3_s64
@@ -210,7 +200,6 @@ body:             |
 name:            test_4_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_4_s64
@@ -233,7 +222,6 @@ body:             |
 name:            test_8_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_8_s64
@@ -256,7 +244,6 @@ body:             |
 name:            test_16_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_16_s64
@@ -279,7 +266,6 @@ body:             |
 name:            test_40_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_40_s64

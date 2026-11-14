@@ -5,7 +5,6 @@ name:            strwrow
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -31,7 +30,6 @@ name:            strxrow
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -57,7 +55,6 @@ name:            strxrow_p0
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:

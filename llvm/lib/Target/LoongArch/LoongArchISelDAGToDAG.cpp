@@ -71,6 +71,7 @@ void LoongArchDAGToDAGISel::Select(SDNode *Node) {
       case LoongArch::ORI:
       case LoongArch::LU32I_D:
       case LoongArch::LU52I_D:
+      case LoongArch::SLLI_D:
         Result = CurDAG->getMachineNode(Inst.Opc, DL, GRLenVT, SrcReg, SDImm);
         break;
       case LoongArch::BSTRINS_D:

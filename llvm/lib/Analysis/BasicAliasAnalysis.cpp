@@ -437,7 +437,14 @@ struct LinearExpression {
     // (X +nsw Y) *nsw Z does not imply (X *nsw Z) +nsw (Y *nsw Z).
     bool NSW = IsNSW && (Other.isOne() || (MulIsNSW && Offset.isZero()));
     bool NUW = IsNUW && (Other.isOne() || MulIsNUW);
-    return LinearExpression(Val, Scale * Other, Offset * Other, NUW, NSW);
+    // (V *nsw Scale) *nsw Other is V *nsw (Scale * Other) only if the new
+    // scale does not overflow. Otherwise the scale we record is not the value
+    // V is multiplied by: V * 2^32 * 2^31 is V * 2^63 and is defined for
+    // V == -1, while V *nsw INT64_MIN is not.
+    bool ScaleOverflow;
+    APInt NewScale = Scale.smul_ov(Other, ScaleOverflow);
+    NSW &= !ScaleOverflow;
+    return LinearExpression(Val, NewScale, Offset * Other, NUW, NSW);
   }
 };
 }
@@ -506,7 +513,7 @@ static LinearExpression GetLinearExpression(
                                 Depth + 1, AC, DT)
                 .mul(RHS, NUW, NSW);
         break;
-      case Instruction::Shl:
+      case Instruction::Shl: {
         // We're trying to linearize an expression of the kind:
         //   shl i8 -128, 36
         // where the shift count exceeds the bitwidth of the type.
@@ -515,13 +522,19 @@ static LinearExpression GetLinearExpression(
         if (RHS.getLimitedValue() > Val.getBitWidth())
           return Val;
 
+        // X << C is X * (1 << C). Treat it as a multiplication, so that nsw
+        // is dropped in the cases where mul drops it. In addition, 1 << C is
+        // INT_MIN when C is the bit width minus one, so shl nsw is not mul
+        // nsw by that constant: shl nsw -1, C is defined, mul nsw -1, INT_MIN
+        // is not.
+        unsigned BitWidth = Val.getBitWidth();
+        unsigned ShAmt = RHS.getLimitedValue();
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), NSW), DL,
-                                Depth + 1, AC, DT);
-        E.Offset <<= RHS.getLimitedValue();
-        E.Scale <<= RHS.getLimitedValue();
-        E.IsNUW &= NUW;
-        E.IsNSW &= NSW;
+                                Depth + 1, AC, DT)
+                .mul(APInt(BitWidth, 1).shl(ShAmt), NUW,
+                     NSW && ShAmt < BitWidth - 1);
         break;
+      }
       }
       return E;
     }
@@ -753,8 +766,9 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           CastedValue(Index, 0, SExtBits, TruncBits, NonNeg), DL, 0, AC, DT);
 
       // Scale by the type size.
-      unsigned TypeSize = AllocTypeSize.getFixedValue();
-      LE = LE.mul(APInt(IndexSize, TypeSize), NUW, NUSW);
+      APInt TypeSize(IndexSize, AllocTypeSize.getFixedValue(),
+                     /*isSigned=*/false, /*implicitTrunc=*/true);
+      LE = LE.mul(TypeSize, NUW, NUSW);
       Decomposed.Offset += LE.Offset;
       APInt Scale = LE.Scale;
       if (!LE.IsNUW)

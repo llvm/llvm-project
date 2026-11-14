@@ -663,8 +663,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       if (keepGroup) {
         keptGroups.push_back(i);
         if (!ctx.arg.resolveGroups)
-          sections[i] = createInputSection(
-              i, sec, check(obj.getSectionName(sec, shstrtab)));
+          sections[i] = makeThreadLocal<InputSection>(
+              *this, sec, check(obj.getSectionName(sec, shstrtab)));
       } else {
         // Otherwise, discard group members.
         for (uint32_t secIndex : entries.slice(1)) {
@@ -830,8 +830,7 @@ static bool isKnownSpecificSectionType(uint32_t t, uint32_t flags) {
 }
 
 template <class ELFT>
-void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
-                                       const llvm::object::ELFFile<ELFT> &obj) {
+void ObjFile<ELFT>::initializeSections(const llvm::object::ELFFile<ELFT> &obj) {
   ArrayRef<Elf_Shdr> objSections = getELFShdrs<ELFT>();
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
@@ -1054,7 +1053,7 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
     uint32_t type = read32<ELFT::Endianness>(desc.data());
     uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
     desc = desc.slice(8);
-    if (desc.size() < size)
+    if (desc.size() < alignTo<(ELFT::Is64Bits ? 8 : 4)>(size))
       return void(err(place) << "program property is too short");
 
     if (type == featureAndType) {
@@ -1383,10 +1382,9 @@ template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
   }
 }
 
-template <class ELFT>
-void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
+template <class ELFT> void ObjFile<ELFT>::initSectionsAndLocalSyms() {
   if (!justSymbols)
-    initializeSections(ignoreComdats, getObj());
+    initializeSections(getObj());
 
   if (!firstGlobal)
     return;
@@ -2083,7 +2081,6 @@ std::unique_ptr<ELFFileBase> elf::createObjFile(Ctx &ctx, MemoryBufferRef mb,
 
 template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   const ArrayRef<typename ELFT::Sym> eSyms = this->getELFSyms<ELFT>();
-  numSymbols = eSyms.size();
   if (!symbols)
     symbols = std::make_unique<Symbol *[]>(numSymbols);
 

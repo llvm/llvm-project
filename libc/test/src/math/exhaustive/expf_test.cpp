@@ -78,10 +78,13 @@ TEST_F(LlvmLibcExpfFloatCrRnExhaustiveTest, NegativeRange) {
 
 // Statically rounded implementation: tested against double_eval across all
 // roundings.
+static float expf_static_rounding(float x, int rounding) {
+  return LIBC_NAMESPACE::math::static_rounding::expf(x, rounding);
+}
+
 using LlvmLibcExpfStaticRoundingExhaustiveTest =
     LlvmLibcStaticallyRoundedUnaryOpExhaustiveMathTest<
-        float, LIBC_NAMESPACE::math::double_eval::expf,
-        LIBC_NAMESPACE::math::static_rounding::expf>;
+        float, LIBC_NAMESPACE::math::double_eval::expf, expf_static_rounding>;
 
 TEST_F(LlvmLibcExpfStaticRoundingExhaustiveTest, PositiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP);

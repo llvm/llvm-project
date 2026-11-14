@@ -13,7 +13,6 @@ name:            _0xABCD0000
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: _0xABCD0000
@@ -30,7 +29,6 @@ name:            _0x00008000
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: _0x00008000
@@ -47,7 +45,6 @@ name:            _0xFFFFFFF6
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: _0xFFFFFFF6
@@ -64,7 +61,6 @@ name:            _0x0A0B0C0D
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: _0x0A0B0C0D

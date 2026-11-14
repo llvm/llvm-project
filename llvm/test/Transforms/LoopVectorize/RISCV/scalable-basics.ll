@@ -149,7 +149,7 @@ define void @indexed_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP6]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP10]])
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], <vscale x 2 x i64> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[A:%.*]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x ptr> align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP10]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP11]], [[INDEX]]
@@ -191,7 +191,7 @@ define i64 @indexed_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP6]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], <vscale x 2 x i64> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[A:%.*]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i64> @llvm.vp.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <vscale x 2 x i64> [[VEC_PHI]], [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    [[TMP9]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP13]], <vscale x 2 x i64> [[VEC_PHI]], i32 [[TMP12]])

@@ -994,14 +994,14 @@ define void @decreasing_inner_iv(ptr nocapture noundef %dst, ptr nocapture nound
 ; CHECK-NEXT:    [[TMP21:%.*]] = sub i64 [[TMP0]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = add nsw i64 [[TMP21]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP23]], i64 -3
-; CHECK-NEXT:    [[REVERSE:%.*]] = load <4 x i32>, ptr [[TMP24]], align 4, !alias.scope [[META46:![0-9]+]]
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr [[TMP23]], i64 -12
+; CHECK-NEXT:    [[REVERSE:%.*]] = load <4 x i32>, ptr [[TMP27]], align 4, !alias.scope [[META46:![0-9]+]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = add nsw i64 [[TMP21]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP25]]
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[TMP26]], i64 -3
-; CHECK-NEXT:    [[REVERSE4:%.*]] = load <4 x i32>, ptr [[TMP27]], align 4, !alias.scope [[META49:![0-9]+]], !noalias [[META46]]
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr [[TMP26]], i64 -12
+; CHECK-NEXT:    [[REVERSE4:%.*]] = load <4 x i32>, ptr [[TMP34]], align 4, !alias.scope [[META49:![0-9]+]], !noalias [[META46]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = add nsw <4 x i32> [[REVERSE4]], [[REVERSE]]
-; CHECK-NEXT:    store <4 x i32> [[TMP28]], ptr [[TMP27]], align 4, !alias.scope [[META49]], !noalias [[META46]]
+; CHECK-NEXT:    store <4 x i32> [[TMP28]], ptr [[TMP34]], align 4, !alias.scope [[META49]], !noalias [[META46]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP51:![0-9]+]]
@@ -1797,11 +1797,11 @@ define void @udiv_known_nonzero(ptr %dst, ptr %src, i64 %n, i64 noundef %x) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[OUTER_LATCH]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ 0, %[[OUTER]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[OUTER]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[OUTER]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
-; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[BC_RESUME_VAL6]], %[[SCALAR_PH]] ], [ [[K_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[K_NEXT:%.*]], %[[INNER]] ]
 ; CHECK-NEXT:    [[K_2:%.*]] = shl nuw nsw i64 [[K]], 1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[K_2]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
@@ -1922,11 +1922,11 @@ define void @udiv_known_nonzero_maybe_poison(ptr %dst, ptr %src, i64 %n, i64 %x,
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[OUTER_LATCH_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ 0, %[[INNER_PH]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[INNER_PH]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[INNER_PH]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
-; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[K_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[K_NEXT:%.*]], %[[INNER]] ]
 ; CHECK-NEXT:    [[K_2:%.*]] = shl nuw nsw i64 [[K]], 1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[K_2]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
@@ -2293,6 +2293,9 @@ define void @invariant_base_and_constant_offset_hoisted(ptr %A, ptr %B, ptr %Off
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[M]], 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP0]], 4
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP16]]
+; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[B]], i64 4
+; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
@@ -2303,12 +2306,9 @@ define void @invariant_base_and_constant_offset_hoisted(ptr %A, ptr %B, ptr %Off
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[OFF]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP16]], [[TMP1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SCEVGEP8]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SCEVGEP7]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[TMP2]], [[TMP8]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TMP6]], [[TMP4]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]

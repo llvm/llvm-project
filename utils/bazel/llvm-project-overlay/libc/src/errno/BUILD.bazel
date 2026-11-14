@@ -1,0 +1,47 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_function", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "errno",
+    srcs = ["libc_errno.cpp"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "program_invocation_name",
+    srcs = ["program_invocation_name.cpp"],
+    hdrs = ["program_invocation_name.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "program_invocation_short_name",
+    srcs = ["program_invocation_short_name.cpp"],
+    hdrs = ["program_invocation_short_name.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)

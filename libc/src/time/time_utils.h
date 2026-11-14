@@ -110,6 +110,81 @@ LIBC_INLINE constexpr int get_days_in_year(const int year) {
                             : time_constants::DAYS_PER_NON_LEAP_YEAR;
 }
 
+// Returns the day of the week [0=Sun, 1=Mon, ..., 6=Sat] for a count of days
+// since the Unix epoch (1970-01-01, a Thursday), i.e. (unix_days + 4) mod 7
+// with a non-negative result.
+//
+// Uses Ben Joffe's "Unreasonably Fast Mul-Add-Shift" algorithm (Article 5).
+// https://www.benjoffe.com/fast-day-of-week
+//
+// Since 7 = 2^3 - 1 is a Mersenne number, x mod 7 == floor(x * 8 / 7) mod 8.
+// Multiplying by M = ceil(2^64 / 7) and keeping the low 64 bits places
+// floor(x * 8 / 7) mod 8 in the top 3 bits; the final mod 8 is free. Adding Z
+// before the shift rotates the result so that day 0 maps to Thursday (4).
+//
+// Valid for unix_days in [-230471710930685136, 230696890912053658], which is
+// about +/-631 trillion years and far exceeds the range accepted by
+// update_from_seconds (about +/-7.9e11 days).
+LIBC_INLINE constexpr int get_weekday(const int64_t unix_days) {
+  // M = ceil(2^64 / 7).
+  constexpr uint64_t M = (UINT64_MAX / time_constants::DAYS_PER_WEEK) + 1;
+  // Z rotates the result so that day 0 maps to Thursday: its top 3 bits
+  // (0x9492 >> 13 == 4) encode Thursday, and the remaining low bits are a
+  // rounding bias (from Joffe's article) that positions the window of exact
+  // results to give the valid range documented above.
+  constexpr uint64_t Z = 0x9492ULL << 48;
+  return static_cast<int>((static_cast<uint64_t>(unix_days) * M + Z) >> 61);
+}
+
+// Hour, minute and second within a day.
+struct TimeOfDay {
+  // Hour of the day [0, 23].
+  int hour;
+  // Minute of the hour [0, 59].
+  int minute;
+  // Second of the minute [0, 59].
+  int second;
+};
+
+// Splits the number of seconds elapsed within a day [0, 86399] into hours,
+// minutes and seconds.
+//
+// Uses Ben Joffe's "V2 - Fixed-Point Hi/Low Bits" algorithm (Article 6).
+// https://www.benjoffe.com/fast-time-of-day
+//
+// Instead of the sequential chain hour -> remainder -> minute -> second, both
+// fixed-point products are computed directly from seconds_of_day so they can
+// run in parallel:
+//   - The high 32 bits of seconds_of_day * ceil(2^32 / 3600) are the hour,
+//     and the low 32 bits are the fraction of the current hour elapsed;
+//     scaling that fraction by 60 yields the minute.
+//   - The low 32 bits of seconds_of_day * ceil(2^32 / 60) are the fraction of
+//     the current minute elapsed; scaling it by 60 yields the second.
+//
+// This compiles to four multiplications (two pairs that can overlap) and no
+// division.
+// Valid for seconds_of_day in [0, 2255818] (up to 626:36:58), which covers a
+// full day with a wide margin.
+LIBC_INLINE constexpr TimeOfDay get_time_of_day(const uint32_t seconds_of_day) {
+  // H_MUL = ceil(2^32 / 3600) = 1193047.
+  constexpr uint64_t H_MUL =
+      ((1ULL << 32) / time_constants::SECONDS_PER_HOUR) + 1;
+  // M_MUL = ceil(2^32 / 60) = 71582789.
+  constexpr uint64_t M_MUL =
+      ((1ULL << 32) / time_constants::SECONDS_PER_MIN) + 1;
+  const uint64_t HOUR_PRODUCT = static_cast<uint64_t>(seconds_of_day) * H_MUL;
+  const uint32_t MINUTE_FRACTION = static_cast<uint32_t>(HOUR_PRODUCT);
+  const uint32_t SECOND_FRACTION =
+      static_cast<uint32_t>(seconds_of_day * M_MUL);
+  return {static_cast<int>(HOUR_PRODUCT >> 32),
+          static_cast<int>((static_cast<uint64_t>(MINUTE_FRACTION) *
+                            time_constants::MINUTES_PER_HOUR) >>
+                           32),
+          static_cast<int>((static_cast<uint64_t>(SECOND_FRACTION) *
+                            time_constants::SECONDS_PER_MIN) >>
+                           32)};
+}
+
 // This is a helper class that takes a struct tm and lets you inspect its
 // values. Where relevant, results are bounds checked and returned as optionals.
 /// Class to read fields from tm structure.
