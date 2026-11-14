@@ -134,28 +134,28 @@ define void @gather_identical_hints(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x ptr> poison, ptr [[SRC]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x ptr> [[TMP1]], <8 x ptr> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, <8 x ptr> [[TMP2]], <8 x i64> <i64 0, i64 3, i64 7, i64 11, i64 18, i64 21, i64 27, i64 32>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [8 x i8], <8 x ptr> [[TMP2]], <8 x i64> <i64 0, i64 3, i64 7, i64 11, i64 18, i64 21, i64 27, i64 32>
 ; CHECK-NEXT:    [[DST0:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 [[TMP3]], <8 x i1> splat (i1 true), <8 x double> poison), !mem.cache_hint [[META0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <8 x double> [[TMP4]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    store <8 x double> [[TMP5]], ptr [[DST0]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %src0 = getelementptr inbounds double, ptr %src, i64 0
+  %src0 = getelementptr inbounds [8 x i8], ptr %src, i64 0
   %v0 = load double, ptr %src0, align 8, !mem.cache_hint !0
-  %src1 = getelementptr inbounds double, ptr %src, i64 3
+  %src1 = getelementptr inbounds [8 x i8], ptr %src, i64 3
   %v1 = load double, ptr %src1, align 8, !mem.cache_hint !0
-  %src2 = getelementptr inbounds double, ptr %src, i64 7
+  %src2 = getelementptr inbounds [8 x i8], ptr %src, i64 7
   %v2 = load double, ptr %src2, align 8, !mem.cache_hint !0
-  %src3 = getelementptr inbounds double, ptr %src, i64 11
+  %src3 = getelementptr inbounds [8 x i8], ptr %src, i64 11
   %v3 = load double, ptr %src3, align 8, !mem.cache_hint !0
-  %src4 = getelementptr inbounds double, ptr %src, i64 18
+  %src4 = getelementptr inbounds [8 x i8], ptr %src, i64 18
   %v4 = load double, ptr %src4, align 8, !mem.cache_hint !0
-  %src5 = getelementptr inbounds double, ptr %src, i64 21
+  %src5 = getelementptr inbounds [8 x i8], ptr %src, i64 21
   %v5 = load double, ptr %src5, align 8, !mem.cache_hint !0
-  %src6 = getelementptr inbounds double, ptr %src, i64 27
+  %src6 = getelementptr inbounds [8 x i8], ptr %src, i64 27
   %v6 = load double, ptr %src6, align 8, !mem.cache_hint !0
-  %src7 = getelementptr inbounds double, ptr %src, i64 32
+  %src7 = getelementptr inbounds [8 x i8], ptr %src, i64 32
   %v7 = load double, ptr %src7, align 8, !mem.cache_hint !0
   %a0 = fadd double %v0, 1.0
   %a1 = fadd double %v1, 1.0
