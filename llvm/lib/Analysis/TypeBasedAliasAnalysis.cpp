@@ -479,10 +479,18 @@ static const MDNode *getLeastCommonType(const MDNode *A, const MDNode *B) {
   return Ret;
 }
 
+AAMDNodes AAMDNodes::extendTo(Value *Size) const {
+  if (auto *CI = dyn_cast<ConstantInt>(Size)) {
+    return extendTo(CI->getZExtValue());
+  } else {
+    return extendTo(-1);
+  }
+}
+
 AAMDNodes AAMDNodes::merge(const AAMDNodes &Other) const {
   AAMDNodes Result;
   Result.TBAA = MDNode::getMostGenericTBAA(TBAA, Other.TBAA);
-  Result.TBAAStruct = nullptr;
+  Result.TBAAStruct = TBAAStruct == Other.TBAAStruct ? TBAAStruct : nullptr;
   Result.Scope = MDNode::getMostGenericAliasScope(Scope, Other.Scope);
   Result.NoAlias = MDNode::intersect(NoAlias, Other.NoAlias);
   Result.NoAliasAddrSpace = MDNode::getMostGenericNoaliasAddrspace(
