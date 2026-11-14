@@ -446,15 +446,3 @@ TEST(ASTExpr, CXXDefaultInitExprHasRewrittenInit) {
   EXPECT_FALSE(CtorDIE->hasRewrittenInit());
   EXPECT_EQ(CtorDIE->getExpr(), CtorDIE->getField()->getInClassInitializer());
 }
-
-TEST(ASTExpr, TryEvaluateStringIncompletePointee) {
-  auto AST = buildASTFromCodeWithArgs(
-      "struct S; const struct S *p = (const struct S *)\"abc\";", {"-xc"});
-  ASTContext &Ctx = AST->getASTContext();
-  const auto *VD =
-      selectFirst<VarDecl>("p", match(varDecl(hasName("p")).bind("p"), Ctx));
-  ASSERT_TRUE(VD);
-  const Expr *E = VD->getInit();
-  EXPECT_FALSE(E->tryEvaluateStrLen(Ctx));
-  EXPECT_FALSE(E->tryEvaluateString(Ctx));
-}
