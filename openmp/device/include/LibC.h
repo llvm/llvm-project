@@ -18,6 +18,10 @@ namespace ompx {
 
 int printf(const char *Format, ...);
 
+/// Writes \p Message where the user will see it even if the kernel then
+/// aborts: to stderr when the GPU libc is available, otherwise with printf.
+void reportError(const char *Message);
+
 } // namespace ompx
 
 #endif

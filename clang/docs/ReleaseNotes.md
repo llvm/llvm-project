@@ -1701,6 +1701,13 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   a time with a loop over the warp's active lanes, instead of a loop over every
   thread of the team.
 
+- The OpenMP simple lock routines `omp_init_lock`, `omp_set_lock`,
+  `omp_unset_lock` and `omp_destroy_lock` are now implemented in AMDGPU
+  device code, where they previously trapped. The lanes of a wavefront share
+  one instruction stream, so a lane holding a lock cannot release it while
+  another lane of the same wavefront spins for it; `omp_set_lock` traps in
+  that case rather than hang.
+
 ### SYCL Support
 
 - On a `spirv32-unknown-unknown` or `spirv64-unknown-unknown` offload target,

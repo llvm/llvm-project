@@ -91,14 +91,42 @@ void syncThreadsAligned(atomic::OrderingTy Ordering) {
   synchronize::threads(Ordering);
 }
 
-// TODO: Don't have wavefront lane locks. Possibly can't have them.
-void unsetLock(omp_lock_t *) { __builtin_trap(); }
-void initLock(omp_lock_t *) { __builtin_trap(); }
-void destroyLock(omp_lock_t *) { __builtin_trap(); }
-void setLock(omp_lock_t *) { __builtin_trap(); }
-
 constexpr uint32_t UNSET = 0;
 constexpr uint32_t SET = 1;
+
+void unsetLock(omp_lock_t *Lock) {
+  [[maybe_unused]] uint32_t Before = atomicExchange(
+      reinterpret_cast<uint32_t *>(Lock), UNSET, atomic::seq_cst);
+}
+
+void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
+
+void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
+
+// The lanes of a wavefront share one instruction stream. A lane that wins the
+// lock is masked off until every other active lane has left the spin loop, so
+// it cannot reach its omp_unset_lock while another lane of the same wavefront
+// is still waiting for the lock: two such lanes never make progress. OpenMP 6.0
+// permits this (divergent threads that synchronize within one progress unit may
+// deadlock), but a hung kernel is far harder to diagnose than a trap, so report
+// it. Lanes that want different locks, and lanes arriving one at a time (for
+// instance because the compiler has serialized them), wait only for other
+// wavefronts, which do make progress.
+void setLock(omp_lock_t *Lock) {
+  LaneMaskTy Active = mapping::activemask();
+  if (utils::popc(Active) > 1 &&
+      utils::popc(
+          __gpu_match_any_u64(Active, reinterpret_cast<uint64_t>(Lock))) > 1) {
+    if (mapping::isLeaderInWarp())
+      reportError("omp_set_lock: threads of one wavefront are contending for "
+                  "the same lock, which can never be released; aborting\n");
+    __builtin_trap();
+  }
+  // Back off as setCriticalLock does.
+  while (!atomic::cas(reinterpret_cast<uint32_t *>(Lock), UNSET, SET,
+                      atomic::seq_cst, atomic::seq_cst))
+    __builtin_amdgcn_s_sleep(32);
+}
 
 void unsetCriticalLock(omp_lock_t *Lock) {
   [[maybe_unused]] uint32_t before =
