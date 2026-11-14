@@ -3206,9 +3206,19 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
       T = cast<ArrayType>(T)->getElementType().getTypePtr();
       continue;
 
-    //     -- If T is a fundamental type, its associated sets of
-    //        namespaces and classes are both empty.
     case Type::Builtin:
+      // C++26 [basic.lookup.argdep] p3.1
+      //       -- If T is std::meta::info ([meta.syn]), its associated set of
+      //          entities is the singleton containing the enumeration type
+      //          std::meta::operators ([meta.reflection.operators]).
+      if (T->isMetaInfoType()) {
+        NamespaceDecl *StdMeta = Result.S.lookupStdMetaNamespace();
+        if (StdMeta)
+          Result.Namespaces.insert(StdMeta);
+      }
+
+      //     -- If T is any other fundamental type, its associated set of
+      //        entities is empty.
       break;
 
     //     -- If T is a class type (including unions), its associated

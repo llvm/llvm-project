@@ -12706,6 +12706,27 @@ NamespaceDecl *Sema::getStdNamespace() const {
                                  StdNamespace.get(Context.getExternalSource()));
 }
 
+NamespaceDecl *Sema::lookupStdMetaNamespace() {
+  NamespaceDecl *StdMeta = cast_or_null<NamespaceDecl>(
+      StdMetaNamespace.get(Context.getExternalSource()));
+  if (StdMeta)
+    return StdMeta;
+
+  NamespaceDecl *Std = getStdNamespace();
+  if (!Std)
+    return Std;
+
+  LookupResult Result(*this, &PP.getIdentifierTable().get("meta"),
+                      SourceLocation(), LookupNamespaceName);
+  if (!LookupQualifiedName(Result, Std) ||
+      !(StdMeta = Result.getAsSingle<NamespaceDecl>()))
+    Result.suppressDiagnostics();
+  else
+    StdMetaNamespace = StdMeta;
+
+  return StdMeta;
+}
+
 namespace {
 
 enum UnsupportedSTLSelect {
