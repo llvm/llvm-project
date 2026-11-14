@@ -1320,7 +1320,14 @@ def exp_vm : NamedBitOperand<"vm", "ExpVM", 1>;
 def exp_done : NamedBitOperand<"done", "Done", 1>;
 def exp_row_en : NamedBitOperand<"row_en", "RowEn", 1>;
 
-def FORMAT : CustomOperand<type=i8>;
+// The MTBUF format modifier, as in "s[0:3], s1 format:[BUF_FMT_32_FLOAT]".
+def format : CustomOperand<1, "Format", i8> {
+  let DefaultValue = "MTBUFFormat::getDefaultFormatEncoding(getSTI())";
+}
+
+// The legacy MTBUF format operand, as in "s[0:3], format:22, s1" or
+// "s[0:3], dfmt:15, nfmt:2, s1".
+def format_op : CustomOperand<0, "FormatOp", i8>;
 
 let PrintInHex = 1 in
 def DMask : NamedIntOperand<"dmask">;

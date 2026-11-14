@@ -310,19 +310,10 @@ void AMDGPUInstPrinter::printR128A16(const MCInst *MI, unsigned OpNo,
     printNamedBit(MI, OpNo, O, "r128");
 }
 
-void AMDGPUInstPrinter::printFORMAT(const MCInst *MI, unsigned OpNo,
+void AMDGPUInstPrinter::printFormat(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
-}
-
-void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
-                                            const MCSubtargetInfo &STI,
-                                            raw_ostream &O) {
   using namespace llvm::AMDGPU::MTBUFFormat;
-
-  int OpNo =
-    AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::format);
-  assert(OpNo != -1);
 
   unsigned Val = MI->getOperand(OpNo).getImm();
   if (AMDGPU::isGFX10Plus(STI)) {
@@ -1015,14 +1006,6 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
                                                 AMDGPU::OpName::src1))
       printDefaultVccOperand(OpNo == 0, STI, O);
     break;
-  }
-
-  if (SIInstrFlags::isMTBUF(Desc)) {
-    int SOffsetIdx =
-      AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::soffset);
-    assert(SOffsetIdx != -1);
-    if ((int)OpNo == SOffsetIdx)
-      printSymbolicFormat(MI, STI, O);
   }
 }
 
