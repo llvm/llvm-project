@@ -304,6 +304,29 @@ struct LinalgOpTilingInterfaceImpl {
     // iteration space values.
     SmallVector<Range> iterationDomain =
         cast<TilingInterface>(linalgOp.getOperation()).getIterationDomain(b);
+    // Inferring a consumer tile by intersecting unrelated operand projections
+    // can correlate otherwise independent iteration dimensions. For example,
+    // slices b[i] accessed through (d0, d1) -> (d0) and (d0, d1) -> (d1)
+    // would only compute diagonal tiles. Require one operand to account for all
+    // restricted dimensions. Full-domain dimensions impose no restriction, and
+    // other operands may still broadcast along a subset of the dimensions.
+    SmallVector<unsigned> restrictedDimensions;
+    for (auto [index, domain] : llvm::enumerate(iterationDomain)) {
+      auto it = mappedOffsets.find(index);
+      if (it != mappedOffsets.end() &&
+          (!isEqualConstantIntOrValue(it->second, domain.offset) ||
+           !isEqualConstantIntOrValue(mappedSizes.lookup(index), domain.size)))
+        restrictedDimensions.push_back(index);
+    }
+    if (!llvm::any_of(indexingMaps, [&](AffineMap map) {
+          return llvm::all_of(restrictedDimensions, [&](unsigned position) {
+            return llvm::any_of(map.getResults(), [&](AffineExpr expr) {
+              return cast<AffineDimExpr>(expr).getPosition() == position;
+            });
+          });
+        }))
+      return failure();
+
     mappedOffsetsVec.resize(iterationDomain.size());
     mappedSizesVec.resize(iterationDomain.size());
     for (auto [index, domain] : llvm::enumerate(iterationDomain)) {
