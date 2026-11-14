@@ -27,7 +27,8 @@ using TestCharTypesUTF16 = LIBC_NAMESPACE::testing::Types<char16_t>;
 template <typename T>
 class LlvmLibcTypedCharacterConverterUTF16To8Test
     : public LIBC_NAMESPACE::testing::Test {};
-TYPED_TEST_SUITE(LlvmLibcTypedCharacterConverterUTF16To8Test, TestCharTypesUTF16);
+TYPED_TEST_SUITE(LlvmLibcTypedCharacterConverterUTF16To8Test,
+                 TestCharTypesUTF16);
 
 TYPED_TEST(LlvmLibcTypedCharacterConverterUTF16To8Test, OneByte) {
   using CharType16 = TypeParam;
