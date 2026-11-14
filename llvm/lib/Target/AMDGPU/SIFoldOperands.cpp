@@ -2473,10 +2473,16 @@ bool SIFoldOperandsImpl::tryFoldClamp(MachineInstr &MI) {
   if (!ClampSrc->getReg().isVirtual())
     return false;
 
-  // Look through COPY. COPY only observed with True16.
-  Register DefSrcReg = TRI->lookThruCopyLike(ClampSrc->getReg(), MRI);
-  MachineInstr *Def =
-      MRI->getVRegDef(DefSrcReg.isVirtual() ? DefSrcReg : ClampSrc->getReg());
+  // Look through COPY. COPY only observed with True16. Setting the clamp bit on
+  // Def changes the value of every register in the chain, so each of them must
+  // have no other users.
+  MachineInstr *Def = MRI->getVRegDef(ClampSrc->getReg());
+  while (Def->isCopy()) {
+    Register CopySrcReg = Def->getOperand(1).getReg();
+    if (!CopySrcReg.isVirtual() || !MRI->hasOneNonDBGUser(CopySrcReg))
+      return false;
+    Def = MRI->getVRegDef(CopySrcReg);
+  }
 
   // The type of clamp must be compatible.
   if (!SIInstrInfo::hasSameClamp(*Def, MI))
