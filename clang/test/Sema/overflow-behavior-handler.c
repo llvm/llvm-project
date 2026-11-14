@@ -93,3 +93,41 @@ int local_label(int __ob_trap n) {
   v[0] = r;
   return v[0];
 }
+
+// Checked conversions jump too.
+int conv_into_vla(unsigned long long __ob_trap v, int n) {
+  unsigned char c = v; // expected-error {{cannot jump from this overflow-checked operation to its overflow handler label}}
+  int vla[n];          // expected-note {{jump bypasses initialization of variable length array}}
+  vla[0] = c;
+  return vla[0];
+__overflow:
+  return -1;
+}
+
+int sign_into_vla(int __ob_trap v, int n) {
+  unsigned u = v; // expected-error {{cannot jump from this overflow-checked operation to its overflow handler label}}
+  int vla[n];     // expected-note {{jump bypasses initialization of variable length array}}
+  vla[0] = u;
+  return vla[0];
+__overflow:
+  return -1;
+}
+
+int shift_into_vla(unsigned char __ob_trap x, int n) {
+  x <<= 4; // expected-error {{cannot jump from this overflow-checked operation to its overflow handler label}}
+  int vla[n]; // expected-note {{jump bypasses initialization of variable length array}}
+  vla[0] = x;
+  return vla[0];
+__overflow:
+  return -1;
+}
+
+// Widening conversions are never checked.
+long widen(int __ob_trap v, int n) {
+  long l = v;
+  int vla[n];
+  vla[0] = 0;
+  return l + vla[0];
+__overflow: // expected-warning {{unused label '__overflow'}}
+  return -1;
+}
