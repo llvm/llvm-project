@@ -2557,6 +2557,18 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
   if (Node->getOpcode() == ISD::STRICT_FLDEXP) // TODO
     return SDValue();
 
+  // For f16, the two scaling steps below clamp the exponent to -20, which
+  // does not guarantee underflow for large inputs. Expand in f32 instead,
+  // rounding only the final result back to f16.
+  if (VT == MVT::f16) {
+    if (!TLI.isTypeLegal(MVT::f32))
+      return SDValue();
+    SDValue Ext = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f32, X);
+    SDValue Result = DAG.getNode(ISD::FLDEXP, dl, MVT::f32, Ext, N);
+    return DAG.getNode(ISD::FP_ROUND, dl, VT, Result,
+                       DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+  }
+
   SDNodeFlags NSW;
   NSW.setNoSignedWrap(true);
   SDNodeFlags NUW_NSW;
