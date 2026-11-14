@@ -492,9 +492,10 @@ define <29 x bfloat> @fuse_v19bf16_load(<29 x bfloat> %x, <29 x bfloat> %y, ptr 
 ; AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %ymm0, %xmm0
 ; AVXNECONVERT-NEXT:    vmovaps %xmm0, 32(%rdi)
 ; AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %ymm2, %xmm0
-; AVXNECONVERT-NEXT:    vpextrw $4, %xmm0, 56(%rdi)
-; AVXNECONVERT-NEXT:    vmovq %xmm0, 48(%rdi)
+; AVXNECONVERT-NEXT:    vmovlpd %xmm0, 48(%rdi)
 ; AVXNECONVERT-NEXT:    vmovaps %ymm1, (%rdi)
+; AVXNECONVERT-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVXNECONVERT-NEXT:    vpextrw $0, %xmm0, 56(%rdi)
 ; AVXNECONVERT-NEXT:    vzeroupper
 ; AVXNECONVERT-NEXT:    retq
 entry:

@@ -335,8 +335,6 @@ define bfloat @strict_sitofp_load_i64_to_bf16(ptr %p) strictfp nounwind {
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movss %xmm0, (%esp)
 ; SSE2-NEXT:    calll __truncsfbf2
-; SSE2-NEXT:    # kill: def $ax killed $ax def $eax
-; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    addl $28, %esp
 ; SSE2-NEXT:    retl
 ;
@@ -349,8 +347,6 @@ define bfloat @strict_sitofp_load_i64_to_bf16(ptr %p) strictfp nounwind {
 ; DQ-NEXT:    vmovss %xmm0, (%esp)
 ; DQ-NEXT:    vzeroupper
 ; DQ-NEXT:    calll __truncsfbf2
-; DQ-NEXT:    # kill: def $ax killed $ax def $eax
-; DQ-NEXT:    vmovd %eax, %xmm0
 ; DQ-NEXT:    addl $12, %esp
 ; DQ-NEXT:    retl
 ;
@@ -359,8 +355,6 @@ define bfloat @strict_sitofp_load_i64_to_bf16(ptr %p) strictfp nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    cvtsi2ssq (%rdi), %xmm0
 ; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    movd %eax, %xmm0
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
   %a = load i64, ptr %p
@@ -406,8 +400,6 @@ define bfloat @strict_uitofp_i64_to_bf16(i64 %a) strictfp nounwind {
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movss %xmm0, (%esp)
 ; SSE2-NEXT:    calll __truncsfbf2
-; SSE2-NEXT:    # kill: def $ax killed $ax def $eax
-; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    addl $28, %esp
 ; SSE2-NEXT:    retl
 ;
@@ -419,8 +411,6 @@ define bfloat @strict_uitofp_i64_to_bf16(i64 %a) strictfp nounwind {
 ; DQ-NEXT:    vmovss %xmm0, (%esp)
 ; DQ-NEXT:    vzeroupper
 ; DQ-NEXT:    calll __truncsfbf2
-; DQ-NEXT:    # kill: def $ax killed $ax def $eax
-; DQ-NEXT:    vmovd %eax, %xmm0
 ; DQ-NEXT:    addl $12, %esp
 ; DQ-NEXT:    retl
 ;
@@ -442,8 +432,6 @@ define bfloat @strict_uitofp_i64_to_bf16(i64 %a) strictfp nounwind {
 ; X64-NEXT:  .LBB5_2:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    movd %eax, %xmm0
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
   %cvt = call bfloat @llvm.experimental.constrained.uitofp.bf16.i64(i64 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")

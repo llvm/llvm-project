@@ -649,6 +649,19 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
 
+    // bf16 lives in the SSE registers like f16 and is promoted to f32.
+    addRegisterClass(MVT::bf16, Subtarget.hasAVX512() ? &X86::FR16XRegClass
+                                                      : &X86::FR16RegClass);
+    setF16Action(MVT::bf16, Promote);
+    for (unsigned Opc :
+         {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::STRICT_FADD,
+          ISD::STRICT_FSUB, ISD::STRICT_FMUL, ISD::STRICT_FDIV, ISD::STRICT_FMA,
+          ISD::STRICT_FSQRT, ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS})
+      setOperationAction(Opc, MVT::bf16, Promote);
+    setOperationAction(ISD::FP_ROUND, MVT::bf16, Custom);
+    setOperationAction({ISD::LLROUND, ISD::LROUND, ISD::LRINT, ISD::LLRINT},
+                       MVT::bf16, Expand);
+
     // Lower this to MOVMSK plus an AND.
     setOperationAction(ISD::FGETSIGN, MVT::i64, Custom);
     setOperationAction(ISD::FGETSIGN, MVT::i32, Custom);
@@ -2376,8 +2389,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FROUNDEVEN,    MVT::f16, Legal);
     setOperationAction(ISD::FP_ROUND,             MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FP_ROUND,      MVT::f16, Custom);
-    setOperationAction(ISD::FP_EXTEND,            MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FP_EXTEND,     MVT::f32, Legal);
+    setOperationAction(ISD::FP_EXTEND, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::LRINT,                MVT::f16, Legal);
     setOperationAction(ISD::LLRINT,               MVT::f16, Legal);
 
@@ -2490,21 +2503,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  // Keep v8bf16 legal with AVX even without native bf16 instructions so that
-  // f32-to-bf16 conversions can be expanded in the vector domain.
-  if (!Subtarget.useSoftFloat() && Subtarget.hasAVX()) {
-    addRegisterClass(MVT::v8bf16, Subtarget.hasAVX512() ? &X86::VR128XRegClass
-                                                        : &X86::VR128RegClass);
-    if (Subtarget.hasAVXNECONVERT() || Subtarget.hasBWI()) {
-      addRegisterClass(MVT::v16bf16, Subtarget.hasAVX512()
-                                         ? &X86::VR256XRegClass
-                                         : &X86::VR256RegClass);
-      addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
-    }
-    // We set the type action of bf16 to TypeSoftPromoteHalf, but we don't
-    // provide the method to promote BUILD_VECTOR. Set the operation action
-    // Custom to do the customization later.
-    setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
+  // bf16 vectors are legal wherever the equivalent i16 vector is.
+  if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
+    addRegisterClass(MVT::v8bf16, Subtarget.hasVLX() ? &X86::VR128XRegClass
+                                                     : &X86::VR128RegClass);
+    if (Subtarget.hasAVX())
+      addRegisterClass(MVT::v16bf16, Subtarget.hasVLX() ? &X86::VR256XRegClass
+                                                        : &X86::VR256RegClass);
+    addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
     for (MVT VT : {MVT::v8bf16, MVT::v16bf16}) {
       if (!isTypeLegal(VT))
         continue;
@@ -2513,6 +2519,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::VSELECT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+      if (VT != MVT::v8bf16)
+        setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
@@ -2527,12 +2537,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
   }
 
-  if (!Subtarget.useSoftFloat() && Subtarget.hasBWI() &&
-      Subtarget.useAVX512Regs()) {
+  if (!Subtarget.useSoftFloat() && Subtarget.useAVX512Regs()) {
     addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     setF16Action(MVT::v32bf16, Expand);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v32bf16, Custom);
+    setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v32bf16, Custom);
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v32bf16, Custom);
+    setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v32bf16, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v32bf16, Legal);
     setOperationAction(ISD::CONCAT_VECTORS, MVT::v32bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
@@ -2800,10 +2812,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::f16, MVT::i16);
+  setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::bf16, MVT::i16);
   setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::f32, MVT::i32);
   setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::f64, MVT::i64);
 
   setOperationPromotedToType(ISD::ATOMIC_STORE, MVT::f16, MVT::i16);
+  setOperationPromotedToType(ISD::ATOMIC_STORE, MVT::bf16, MVT::i16);
   setOperationPromotedToType(ISD::ATOMIC_STORE, MVT::f32, MVT::i32);
   setOperationPromotedToType(ISD::ATOMIC_STORE, MVT::f64, MVT::i64);
 
@@ -2948,10 +2962,11 @@ X86TargetLowering::getPreferredVectorAction(MVT VT) const {
       !Subtarget.hasBWI())
     return TypeSplitVector;
 
-  // Since v8f16 is legal, widen anything over v4f16.
+  // Since v8f16 and v8bf16 are legal, widen anything over v4f16 and v4bf16.
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
-      VT.getVectorNumElements() <= 4 && !Subtarget.hasF16C() &&
-      VT.getVectorElementType() == MVT::f16)
+      VT.getVectorNumElements() <= 4 &&
+      ((VT.getVectorElementType() == MVT::f16 && !Subtarget.hasF16C()) ||
+       (VT.getVectorElementType() == MVT::bf16 && !Subtarget.hasAVX())))
     return TypeSplitVector;
 
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
@@ -8729,18 +8744,6 @@ static SDValue buildFromShuffleMostly(SDValue Op, const SDLoc &DL,
 }
 
 // Lower BUILD_VECTOR operation for v8bf16, v16bf16 and v32bf16 types.
-static SDValue LowerBUILD_VECTORvXbf16(SDValue Op, SelectionDAG &DAG,
-                                       const X86Subtarget &Subtarget) {
-  MVT VT = Op.getSimpleValueType();
-  MVT SVT = Subtarget.hasFP16() ? MVT::f16 : MVT::i16;
-  MVT IVT = VT.changeVectorElementType(SVT);
-  SmallVector<SDValue, 16> NewOps;
-  for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I)
-    NewOps.push_back(DAG.getBitcast(SVT, Op.getOperand(I)));
-  SDValue Res = DAG.getNode(ISD::BUILD_VECTOR, SDLoc(), IVT, NewOps);
-  return DAG.getBitcast(VT, Res);
-}
-
 // Lower BUILD_VECTOR operation for vXi1 types.
 static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
                                      SelectionDAG &DAG,
@@ -9490,9 +9493,6 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // Generate vectors for predicate vectors.
   if (VT.getVectorElementType() == MVT::i1 && Subtarget.hasAVX512())
     return LowerBUILD_VECTORvXi1(Op, dl, DAG, Subtarget);
-
-  if (VT.getVectorElementType() == MVT::bf16 && Subtarget.hasAVX())
-    return LowerBUILD_VECTORvXbf16(Op, DAG, Subtarget);
 
   if (SDValue VectorCst = materializeVectorConstant(Op, dl, DAG, Subtarget))
     return VectorCst;
@@ -19266,7 +19266,7 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     }
   }
 
-  if (VT == MVT::f16 || VT.getSizeInBits() == 32) {
+  if (VT == MVT::f16 || VT == MVT::bf16 || VT.getSizeInBits() == 32) {
     if (IdxVal == 0)
       return Op;
 
@@ -22750,6 +22750,11 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
       (SVT == MVT::v16f16 && Subtarget.useAVX512Regs()))
     return Op;
 
+  if (SVT == MVT::bf16) {
+    SDValue Res = DAG.getNode(ISD::BF16_TO_FP, DL, VT, In);
+    return IsStrict ? DAG.getMergeValues({Res, Chain}, DL) : Res;
+  }
+
   if (SVT == MVT::f16) {
     if (Subtarget.hasFP16())
       return Op;
@@ -22876,6 +22881,14 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::FP_ROUND, DL, VT, F32, Rnd);
   }
 
+  if (VT == MVT::bf16 && SVT != MVT::f32) {
+    RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, MVT::bf16);
+    MakeLibCallOptions CallOptions;
+    auto [Res, OutChain] =
+        makeLibCall(DAG, LC, MVT::bf16, In, CallOptions, DL, Chain);
+    return IsStrict ? DAG.getMergeValues({Res, OutChain}, DL) : Res;
+  }
+
   if (SVT == MVT::f128 || (VT == MVT::f16 && SVT == MVT::f80))
     return SDValue();
 
@@ -22923,11 +22936,17 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   if (VT.getScalarType() == MVT::bf16) {
     if (SVT.getScalarType() == MVT::f32 &&
         ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
-         Subtarget.hasAVXNECONVERT()))
-      return Op;
+         Subtarget.hasAVXNECONVERT())) {
+      if (VT.isVector())
+        return Op;
+      SDValue Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, In);
+      Res = DAG.getNode(X86ISD::CVTNEPS2BF16, DL, MVT::v8bf16, Res);
+      Res = DAG.getExtractVectorElt(DL, MVT::bf16, Res, 0);
+      return IsStrict ? DAG.getMergeValues({Res, Chain}, DL) : Res;
+    }
     // Without native conversions, round in vector registers instead of
     // unrolling to libcalls.
-    if (!IsStrict && SVT.getScalarType() == MVT::f32)
+    if (!IsStrict && SVT.getScalarType() == MVT::f32 && isTypeLegal(SVT))
       return expandFP_ROUND(Op.getNode(), DAG);
     return SDValue();
   }
@@ -23034,22 +23053,22 @@ static SDValue LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) {
 SDValue X86TargetLowering::LowerBF16_TO_FP(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  // Bitcast incase the Operand has not been legalized into a i16 already
-  SDValue Src = DAG.getBitcast(MVT::i16, Op.getOperand(0));
+  SDValue In = Op.getOperand(0);
 
   SDValue Res;
-  if (!Subtarget.hasFP16() && ISD::isNormalLoad(Src.getNode())) {
+  if (!Subtarget.hasFP16() && ISD::isNormalLoad(In.getNode())) {
     // Without AVX512FP16 we need a GPR to load Src anyway (there's no direct
     // memory-to-XMM move for a 16-bit value), so do the shift in GPR
     // instead of in the vector domain, since SHL has better throughput
     // than a vector shift.
-    SDValue Wide = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
+    SDValue Wide =
+        DAG.getZExtOrTrunc(DAG.getBitcast(MVT::i16, In), DL, MVT::i32);
     Wide = DAG.getNode(ISD::SHL, DL, MVT::i32, Wide,
                        DAG.getShiftAmountConstant(16, MVT::i32, DL));
     Res = DAG.getBitcast(MVT::f32, Wide);
   } else {
     // Shift the bf16 bits into the high half of the f32.
-    SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8i16, Src);
+    SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8bf16, In);
     Vec = DAG.getBitcast(MVT::v4i32, Vec);
     Vec =
         getTargetVShiftByConstNode(X86ISD::VSHLI, DL, MVT::v4i32, Vec, 16, DAG);
@@ -23068,22 +23087,9 @@ SDValue X86TargetLowering::LowerFP_TO_BF16(SDValue Op,
   SDLoc DL(Op);
 
   MVT SVT = Op.getOperand(0).getSimpleValueType();
-  if (SVT == MVT::f32 && ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
-                          Subtarget.hasAVXNECONVERT())) {
-    SDValue Res;
-    Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, Op.getOperand(0));
-    Res = DAG.getNode(X86ISD::CVTNEPS2BF16, DL, MVT::v8bf16, Res);
-    Res = DAG.getBitcast(MVT::v8i16, Res);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, Res,
-                       DAG.getVectorIdxConstant(0, DL));
-  }
-
-  if (SVT == MVT::f32 && !Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
-    // FP_TO_BF16 has an integer result after bf16 is softened. Form the
-    // equivalent FP_ROUND node to reuse the generic bf16 rounding expansion.
-    SDValue Round = DAG.getFPExtendOrRound(Op.getOperand(0), DL, MVT::bf16);
-    return DAG.getBitcast(MVT::i16, expandFP_ROUND(Round.getNode(), DAG));
-  }
+  if (Op.getValueType() == MVT::bf16)
+    return DAG.getNode(ISD::FP_ROUND, DL, MVT::bf16, Op.getOperand(0),
+                       DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
 
   MakeLibCallOptions CallOptions;
   RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, MVT::bf16);
@@ -34909,6 +34915,31 @@ static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
 
 /// Provide custom lowering hooks for some operations.
 SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
+  if (Op.getValueType() == MVT::bf16) {
+    switch (Op.getOpcode()) {
+    default:
+      break;
+    case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL:
+    case ISD::FDIV:
+    case ISD::FSQRT:
+    case ISD::FMA:
+    case ISD::FROUNDEVEN: {
+      // AVX10.2 has no scalar bf16 arithmetic, so use the packed operation on
+      // the low element.
+      SDLoc DL(Op);
+      SmallVector<SDValue, 3> VecOps;
+      for (const SDValue &V : Op->ops())
+        VecOps.push_back(
+            DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8bf16, V));
+      SDValue Vec =
+          DAG.getNode(Op.getOpcode(), DL, MVT::v8bf16, VecOps, Op->getFlags());
+      return DAG.getExtractVectorElt(DL, MVT::bf16, Vec, 0);
+    }
+    }
+  }
+
   switch (Op.getOpcode()) {
   // clang-format off
   default: llvm_unreachable("Should not custom lower this!");
@@ -35108,30 +35139,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     N->dump(&DAG);
 #endif
     llvm_unreachable("Do not know how to custom type legalize this operation!");
-  case ISD::FADD:
-  case ISD::FSUB:
-  case ISD::FMUL:
-  case ISD::FSQRT:
-  case ISD::FDIV:
-  case ISD::FMA:
-  case ISD::FROUNDEVEN: {
-    assert(N->getValueType(0) == MVT::bf16 && "Expected scalar bf16 result");
-    // AVX10.2 has no scalar bf16 arithmetic or round-to-integer instructions,
-    // and bf16 is a soft-promoted-half type, so scalar ops would otherwise be
-    // promoted to f32. Instead widen each operand to a v8bf16 vector, perform
-    // the legal packed operation, and extract the low element afterwards.
-    SmallVector<SDValue, 3> VecOps;
-    for (const SDValue &Op : N->ops()) {
-      SDValue AsF16 = DAG.getBitcast(MVT::f16, Op);
-      SDValue VecF16 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v8f16, AsF16);
-      VecOps.push_back(DAG.getBitcast(MVT::v8bf16, VecF16));
-    }
-    SDValue Vec =
-        DAG.getNode(N->getOpcode(), dl, MVT::v8bf16, VecOps, N->getFlags());
-    Results.push_back(DAG.getExtractVectorElt(dl, MVT::bf16, Vec, 0));
-    return;
-  }
   case X86ISD::CVTPH2PS: {
     EVT VT = N->getValueType(0);
     SDValue Lo, Hi;

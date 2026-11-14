@@ -99,8 +99,6 @@ define bfloat @fptrunc_f32_strict(float %x) strictfp {
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movss %xmm0, (%esp)
 ; SSE2-NEXT:    calll __truncsfbf2
-; SSE2-NEXT:    # kill: def $ax killed $ax def $eax
-; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    addl $12, %esp
 ; SSE2-NEXT:    .cfi_def_cfa_offset 4
 ; SSE2-NEXT:    retl
