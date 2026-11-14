@@ -1037,7 +1037,7 @@ public:
   ///
   /// Virtual shares DivMod's type and trip-count limits. Intervening code stays
   /// at its level, once per range touching that row; empty ranges skip it.
-  /// Two constant-count loops and direct body-to-preheader/after-to-latch edges
+  /// Two loops and direct body-to-preheader/after-to-latch edges
   /// are required. Controls must retain form and be unobserved after the nest.
   /// Only host static worksharing without chunk or ordered is supported.
   /// SIMD, transforms of the result and logical body/IV access are unsupported.

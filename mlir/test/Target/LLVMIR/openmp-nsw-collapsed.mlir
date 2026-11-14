@@ -77,12 +77,22 @@ module attributes {omp.integer_wrap_around = #omp.integer_wrap_around<integer_wr
 // Case 3: Collapsed loop with dynamic trip count
 //-------------------------------------------------------------------------//
 
-// COMMON-LABEL: define void @collapsed_dynamic_no_nsw
-// COMMON: omp_collapsed.inc:
-// COMMON: %omp_collapsed.next = add nuw i32 %omp_collapsed.iv, 1
-// COMMON-NOT: nsw
+// CHECK-LABEL: define void @collapsed_dynamic
+// CHECK: omp_collapsed.inc:
+// CHECK: %omp_collapsed.next = add nuw i32 %omp_collapsed.iv, 1
+// CHECK-NOT: nsw
+// Runtime counts have no signed-range guarantee, so retain only nuw.
+// VIRTUAL-LABEL: define void @collapsed_dynamic
+// VIRTUAL: omp_collapsed.decode:
+// VIRTUAL: %[[OUTER_IV:omp_loop.iv[0-9]*]] = phi i32
+// VIRTUAL-SAME: {{.*}}, [ %[[OUTER_NEXT:[^ ]+]], %{{[^ ]+}} ]
+// VIRTUAL: %[[INNER_IV:omp_loop.iv[0-9]*]] = phi i32
+// VIRTUAL-SAME: {{.*}}, [ %[[INNER_NEXT:[^ ]+]], %{{[^ ]+}} ]
+// VIRTUAL: %[[INNER_NEXT]] = add nuw i32 %[[INNER_IV]], 1{{(,|$)}}
+// VIRTUAL: %[[OUTER_NEXT]] = add nuw i32 %[[OUTER_IV]], 1{{(,|$)}}
+// VIRTUAL: ret void
 module attributes {omp.integer_wrap_around = #omp.integer_wrap_around<integer_wrap_around = false>} {
-  llvm.func @collapsed_dynamic_no_nsw(%lb : i32, %ub1 : i32, %ub2 : i32, %step : i32) {
+  llvm.func @collapsed_dynamic(%lb : i32, %ub1 : i32, %ub2 : i32, %step : i32) {
     omp.wsloop {
       omp.loop_nest (%iv1, %iv2) : i32 = (%lb, %lb) to (%ub1, %ub2) step (%step, %step) collapse(2) {
         omp.yield
