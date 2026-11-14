@@ -8445,6 +8445,13 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
       return ChangeStatus::UNCHANGED;
     MemoryEffects ME = DeducedAttrs[0].getMemoryEffects();
 
+    // Clear conflicting writable attributes of the function arguments.
+    if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION &&
+        !isModSet(ME.getModRef(IRMemLocation::ArgMem))) {
+      for (Argument &Arg : IRP.getAnchorScope()->args())
+        A.removeAttrs(IRPosition::argument(Arg), Attribute::Writable);
+    }
+
     return A.manifestAttrs(IRP, Attribute::getWithMemoryEffects(
                                     IRP.getAnchorValue().getContext(), ME));
   }
