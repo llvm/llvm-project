@@ -85,6 +85,10 @@ static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Analysis Pass */);
 
 static Error parseArguments(ArrayRef<const char *> Args) {
+  // ParseCommandLineOptions only acts on the options it receives, so empty Args
+  // wouldn't reset any cl::opts. Just keep the defaults.
+  if (Args.empty())
+    return Error::success();
   SmallVector<const char *, 0> Argv = {"Bye"};
   append_range(Argv, Args);
   std::string Msg;

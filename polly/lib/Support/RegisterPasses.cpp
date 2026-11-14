@@ -695,6 +695,10 @@ void registerPollyPasses(PassBuilder &PB) {
 } // namespace polly
 
 static Error parseArguments(ArrayRef<const char *> Args) {
+  // ParseCommandLineOptions only acts on the options it receives, so empty Args
+  // wouldn't reset any cl::opts. Just keep the defaults.
+  if (Args.empty())
+    return Error::success();
   SmallVector<const char *> Argv = {"Polly"};
   append_range(Argv, Args);
   std::string Msg;
