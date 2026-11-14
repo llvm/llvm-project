@@ -4,144 +4,47 @@
 ; Minimal loop: software-pipelined only under -enable-pipeliner.
 
 define amdgpu_kernel void @swp_amdgpu_pipeline_minimal(i1 %arg) {
-; CHECK-UNPIPELINED-LABEL: swp_amdgpu_pipeline_minimal:
-; CHECK-UNPIPELINED:       ; %bb.0: ; %bb
-; CHECK-UNPIPELINED-NEXT:    s_load_dword s0, s[4:5], 0x0
-; CHECK-UNPIPELINED-NEXT:    s_mov_b32 s4, 0
-; CHECK-UNPIPELINED-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-UNPIPELINED-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-UNPIPELINED-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-UNPIPELINED-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-UNPIPELINED-NEXT:    s_bitcmp1_b32 s0, 0
-; CHECK-UNPIPELINED-NEXT:    s_cselect_b64 vcc, -1, 0
-; CHECK-UNPIPELINED-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-UNPIPELINED-NEXT:    s_mov_b32 s5, s4
-; CHECK-UNPIPELINED-NEXT:    s_mov_b32 s6, s4
-; CHECK-UNPIPELINED-NEXT:    s_mov_b32 s7, s4
-; CHECK-UNPIPELINED-NEXT:    s_mov_b32 s2, s4
-; CHECK-UNPIPELINED-NEXT:    s_mov_b32 s9, s4
-; CHECK-UNPIPELINED-NEXT:    s_mov_b32 s3, s4
-; CHECK-UNPIPELINED-NEXT:    s_mov_b32 s8, s4
-; CHECK-UNPIPELINED-NEXT:  .LBB0_1: ; %bb1
-; CHECK-UNPIPELINED-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-UNPIPELINED-NEXT:    s_cmp_lt_i32 s9, 1
-; CHECK-UNPIPELINED-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-UNPIPELINED-NEXT:    s_or_b32 s9, s3, 1
-; CHECK-UNPIPELINED-NEXT:    v_mov_b32_e32 v4, s2
-; CHECK-UNPIPELINED-NEXT:    v_mov_b32_e32 v5, s9
-; CHECK-UNPIPELINED-NEXT:    buffer_load_dword v4, v4, s[4:7], 0 offen
-; CHECK-UNPIPELINED-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
-; CHECK-UNPIPELINED-NEXT:    buffer_load_dword v5, v5, s[4:7], 0 offen
-; CHECK-UNPIPELINED-NEXT:    s_add_i32 s3, s3, 1
-; CHECK-UNPIPELINED-NEXT:    s_add_i32 s2, s2, 2
-; CHECK-UNPIPELINED-NEXT:    v_pk_add_f32 v[2:3], v[2:3], 1.0 op_sel_hi:[1,0]
-; CHECK-UNPIPELINED-NEXT:    s_movk_i32 s9, 0x100
-; CHECK-UNPIPELINED-NEXT:    s_cmp_lg_u32 s8, 0
-; CHECK-UNPIPELINED-NEXT:    s_mov_b32 s8, 1
-; CHECK-UNPIPELINED-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-UNPIPELINED-NEXT:    v_cndmask_b32_e64 v4, 0, v4, s[0:1]
-; CHECK-UNPIPELINED-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-UNPIPELINED-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
-; CHECK-UNPIPELINED-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[4:5]
-; CHECK-UNPIPELINED-NEXT:    s_cbranch_scc1 .LBB0_1
-; CHECK-UNPIPELINED-NEXT:  ; %bb.2: ; %bb12
-; CHECK-UNPIPELINED-NEXT:    s_endpgm
-;
-; CHECK-PIPELINED-LABEL: swp_amdgpu_pipeline_minimal:
-; CHECK-PIPELINED:       ; %bb.0: ; %bb
-; CHECK-PIPELINED-NEXT:    s_load_dword s1, s[4:5], 0x0
-; CHECK-PIPELINED-NEXT:    s_mov_b32 s0, 0
-; CHECK-PIPELINED-NEXT:    s_mov_b32 s2, s0
-; CHECK-PIPELINED-NEXT:    s_mov_b32 s3, s0
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v6, s0
-; CHECK-PIPELINED-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-PIPELINED-NEXT:    s_bitcmp1_b32 s1, 0
-; CHECK-PIPELINED-NEXT:    s_cselect_b64 vcc, -1, 0
-; CHECK-PIPELINED-NEXT:    s_cmp_lt_i32 s0, 1
-; CHECK-PIPELINED-NEXT:    s_mov_b32 s1, s0
-; CHECK-PIPELINED-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; CHECK-PIPELINED-NEXT:    s_or_b32 s6, s0, 1
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v7, s6
-; CHECK-PIPELINED-NEXT:    buffer_load_dword v4, v6, s[0:3], 0 offen
-; CHECK-PIPELINED-NEXT:    buffer_load_dword v5, v7, s[0:3], 0 offen
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-PIPELINED-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
-; CHECK-PIPELINED-NEXT:    s_add_i32 s9, s0, 1
-; CHECK-PIPELINED-NEXT:    s_add_i32 s10, s0, 2
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-PIPELINED-NEXT:    s_mov_b32 s8, 1
-; CHECK-PIPELINED-NEXT:    v_pk_add_f32 v[2:3], v[2:3], 1.0 op_sel_hi:[1,0]
-; CHECK-PIPELINED-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-PIPELINED-NEXT:    s_movk_i32 s6, 0x100
-; CHECK-PIPELINED-NEXT:    s_cbranch_scc0 .LBB0_4
-; CHECK-PIPELINED-NEXT:  ; %bb.1: ; %bb1
-; CHECK-PIPELINED-NEXT:    s_cmp_lt_i32 s6, 1
-; CHECK-PIPELINED-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v8, s10
-; CHECK-PIPELINED-NEXT:    s_or_b32 s11, s9, 1
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v9, s11
-; CHECK-PIPELINED-NEXT:    buffer_load_dword v6, v8, s[0:3], 0 offen
-; CHECK-PIPELINED-NEXT:    buffer_load_dword v7, v9, s[0:3], 0 offen
-; CHECK-PIPELINED-NEXT:    s_and_b64 s[6:7], vcc, s[6:7]
-; CHECK-PIPELINED-NEXT:    s_add_i32 s11, s9, 1
-; CHECK-PIPELINED-NEXT:    s_add_i32 s12, s10, 2
-; CHECK-PIPELINED-NEXT:    s_mov_b32 s13, 1
-; CHECK-PIPELINED-NEXT:    v_pk_add_f32 v[2:3], v[2:3], 1.0 op_sel_hi:[1,0]
-; CHECK-PIPELINED-NEXT:    s_cmp_lg_u32 s8, 0
-; CHECK-PIPELINED-NEXT:    s_movk_i32 s8, 0x100
-; CHECK-PIPELINED-NEXT:    s_cbranch_scc0 .LBB0_4
-; CHECK-PIPELINED-NEXT:  ; %bb.2: ; %bb1
-; CHECK-PIPELINED-NEXT:    s_cmp_lt_i32 s8, 1
-; CHECK-PIPELINED-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v10, s12
-; CHECK-PIPELINED-NEXT:    s_or_b32 s10, s11, 1
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v11, s10
-; CHECK-PIPELINED-NEXT:    buffer_load_dword v8, v10, s[0:3], 0 offen
-; CHECK-PIPELINED-NEXT:    buffer_load_dword v9, v11, s[0:3], 0 offen
-; CHECK-PIPELINED-NEXT:    s_and_b64 s[8:9], vcc, s[8:9]
-; CHECK-PIPELINED-NEXT:    s_add_i32 s11, s11, 1
-; CHECK-PIPELINED-NEXT:    s_add_i32 s12, s12, 2
-; CHECK-PIPELINED-NEXT:    s_mov_b32 s10, 1
-; CHECK-PIPELINED-NEXT:    v_pk_add_f32 v[2:3], v[2:3], 1.0 op_sel_hi:[1,0]
-; CHECK-PIPELINED-NEXT:    s_cmp_lg_u32 s13, 0
-; CHECK-PIPELINED-NEXT:    s_movk_i32 s13, 0x100
-; CHECK-PIPELINED-NEXT:    s_cbranch_scc0 .LBB0_4
-; CHECK-PIPELINED-NEXT:  .LBB0_3: ; %bb1
-; CHECK-PIPELINED-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-PIPELINED-NEXT:    s_cmp_lt_i32 s13, 1
-; CHECK-PIPELINED-NEXT:    s_cselect_b64 s[14:15], -1, 0
-; CHECK-PIPELINED-NEXT:    s_or_b32 s13, s11, 1
-; CHECK-PIPELINED-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v11, v5
-; CHECK-PIPELINED-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v5, v7
-; CHECK-PIPELINED-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v7, v9
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v10, v4
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v4, v6
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v6, v8
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v8, s12
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v9, s13
-; CHECK-PIPELINED-NEXT:    buffer_load_dword v8, v8, s[0:3], 0 offen
-; CHECK-PIPELINED-NEXT:    s_mov_b64 s[16:17], s[6:7]
-; CHECK-PIPELINED-NEXT:    buffer_load_dword v9, v9, s[0:3], 0 offen
-; CHECK-PIPELINED-NEXT:    s_mov_b64 s[6:7], s[8:9]
-; CHECK-PIPELINED-NEXT:    s_add_i32 s12, s12, 2
-; CHECK-PIPELINED-NEXT:    s_add_i32 s11, s11, 1
-; CHECK-PIPELINED-NEXT:    v_cndmask_b32_e64 v10, 0, v10, s[4:5]
-; CHECK-PIPELINED-NEXT:    v_cndmask_b32_e32 v11, 0, v11, vcc
-; CHECK-PIPELINED-NEXT:    s_and_b64 s[8:9], vcc, s[14:15]
-; CHECK-PIPELINED-NEXT:    v_pk_add_f32 v[2:3], v[2:3], 1.0 op_sel_hi:[1,0]
-; CHECK-PIPELINED-NEXT:    s_movk_i32 s13, 0x100
-; CHECK-PIPELINED-NEXT:    s_mov_b64 s[4:5], s[16:17]
-; CHECK-PIPELINED-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[10:11]
-; CHECK-PIPELINED-NEXT:    s_cmp_lg_u32 s10, 0
-; CHECK-PIPELINED-NEXT:    s_mov_b32 s10, 1
-; CHECK-PIPELINED-NEXT:    s_cbranch_scc1 .LBB0_3
-; CHECK-PIPELINED-NEXT:  .LBB0_4: ; %bb12
-; CHECK-PIPELINED-NEXT:    s_endpgm
+; CHECK-LABEL: swp_amdgpu_pipeline_minimal:
+; CHECK:       ; %bb.0: ; %bb
+; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x0
+; CHECK-NEXT:    s_mov_b32 s4, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_bitcmp1_b32 s0, 0
+; CHECK-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    s_mov_b32 s5, s4
+; CHECK-NEXT:    s_mov_b32 s6, s4
+; CHECK-NEXT:    s_mov_b32 s7, s4
+; CHECK-NEXT:    s_mov_b32 s2, s4
+; CHECK-NEXT:    s_mov_b32 s9, s4
+; CHECK-NEXT:    s_mov_b32 s3, s4
+; CHECK-NEXT:    s_mov_b32 s8, s4
+; CHECK-NEXT:  .LBB0_1: ; %bb1
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_cmp_lt_i32 s9, 1
+; CHECK-NEXT:    s_cselect_b64 s[0:1], vcc, 0
+; CHECK-NEXT:    s_or_b32 s9, s3, 1
+; CHECK-NEXT:    v_mov_b32_e32 v4, s2
+; CHECK-NEXT:    v_mov_b32_e32 v5, s9
+; CHECK-NEXT:    buffer_load_dword v4, v4, s[4:7], 0 offen
+; CHECK-NEXT:    s_add_i32 s3, s3, 1
+; CHECK-NEXT:    buffer_load_dword v5, v5, s[4:7], 0 offen
+; CHECK-NEXT:    s_add_i32 s2, s2, 2
+; CHECK-NEXT:    v_pk_add_f32 v[2:3], v[2:3], 1.0 op_sel_hi:[1,0]
+; CHECK-NEXT:    s_movk_i32 s9, 0x100
+; CHECK-NEXT:    s_cmp_lg_u32 s8, 0
+; CHECK-NEXT:    s_mov_b32 s8, 1
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    v_cndmask_b32_e64 v4, 0, v4, s[0:1]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[4:5]
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
+; CHECK-NEXT:  ; %bb.2: ; %bb12
+; CHECK-NEXT:    s_endpgm
 bb:
   br label %bb1
 
@@ -174,4 +77,5 @@ bb12:                                             ; preds = %bb1
 }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
+; CHECK-PIPELINED: {{.*}}
+; CHECK-UNPIPELINED: {{.*}}

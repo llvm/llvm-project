@@ -6766,8 +6766,7 @@ define amdgpu_ps i32 @s_copysign_f16_0_f64(double inreg %sign) {
 ; SI-NEXT:    s_cmp_lt_i32 s4, 31
 ; SI-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; SI-NEXT:    s_cmpk_lg_i32 s4, 0x40f
-; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; SI-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
+; SI-NEXT:    s_cselect_b64 s[2:3], s[2:3], 0
 ; SI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; SI-NEXT:    s_cselect_b32 s0, s0, 0x7c00
 ; SI-NEXT:    s_lshr_b32 s1, s1, 16
@@ -6809,8 +6808,7 @@ define amdgpu_ps i32 @s_copysign_f16_0_f64(double inreg %sign) {
 ; VI-NEXT:    s_cmp_lt_i32 s4, 31
 ; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; VI-NEXT:    s_cmpk_lg_i32 s4, 0x40f
-; VI-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; VI-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
+; VI-NEXT:    s_cselect_b64 s[2:3], s[2:3], 0
 ; VI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; VI-NEXT:    s_cselect_b32 s0, s0, 0x7c00
 ; VI-NEXT:    s_lshr_b32 s1, s1, 16
@@ -6852,8 +6850,7 @@ define amdgpu_ps i32 @s_copysign_f16_0_f64(double inreg %sign) {
 ; GFX9-NEXT:    s_cmp_lt_i32 s4, 31
 ; GFX9-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GFX9-NEXT:    s_cmpk_lg_i32 s4, 0x40f
-; GFX9-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GFX9-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
+; GFX9-NEXT:    s_cselect_b64 s[2:3], s[2:3], 0
 ; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s0, 0x7c00
 ; GFX9-NEXT:    s_lshr_b32 s1, s1, 16
@@ -6902,14 +6899,12 @@ define amdgpu_ps i32 @s_copysign_f16_0_f64(double inreg %sign) {
 ; GFX11-NEXT:    s_cmp_lt_i32 s2, 31
 ; GFX11-NEXT:    s_cselect_b32 s3, -1, 0
 ; GFX11-NEXT:    s_cmpk_lg_i32 s2, 0x40f
-; GFX11-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX11-NEXT:    s_and_b32 s2, s2, s3
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_cselect_b32 s2, s3, 0
 ; GFX11-NEXT:    s_and_b32 s2, s2, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s0, s0, 0x7c00
 ; GFX11-NEXT:    s_lshr_b32 s1, s1, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_or_b32 s0, s1, s0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0x8000
 ; GFX11-NEXT:    ; return to shader part epilog
   %sign.trunc = fptrunc double %sign to half
