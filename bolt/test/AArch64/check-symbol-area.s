@@ -38,3 +38,6 @@ $x:
 second_block:
         add     x0, x1, x1
         ret
+
+// Force relocation mode.
+.reloc 0, R_AARCH64_NONE

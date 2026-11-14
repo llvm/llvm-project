@@ -16,7 +16,8 @@
 // RUN: %clang --target=aarch64-unknown-linux-gnu -mbranch-protection=standard \
 // RUN: -no-pie %t/bti-plt.c -o %t.exe -Wl,-q -fuse-ld=lld \
 // RUN: -Wl,-T,%t/link.ld  -Wl,-z,force-bti
-// RUN: llvm-bolt %t.exe -o %t.bolt | FileCheck %s
+// RUN: llvm-bolt %t.exe -o %t.bolt --relax-with-clusters=false | FileCheck %s
+// RUN: llvm-bolt %t.exe -o %t.cluster.bolt --relax-with-clusters | FileCheck %s
 // CHECK: BOLT-INFO: binary is using BTI
 
 // Checking PLT entries before running BOLT
@@ -39,6 +40,16 @@
 // CHECK-BOLT-NEXT: add     x16, x16, #{{0x[0-9a-f]+}}
 // CHECK-BOLT-NEXT: br      x17
 // CHECK-BOLT-NEXT: nop
+
+// TODO: Clustered relaxation must add a BTI landing pad to PLT entries
+// reached through its long thunks.
+// RUN: llvm-objdump -d -j .plt %t.cluster.bolt | FileCheck %s \
+// RUN: --check-prefix=CHECK-CLUSTER
+// CHECK-CLUSTER: <abort@plt>
+// CHECK-CLUSTER-NEXT: adrp    x16, {{0x[0-9a-f]+}}
+// CHECK-CLUSTER-NEXT: ldr     x17, [x16, #{{0x[0-9a-f]+}}]
+// CHECK-CLUSTER-NEXT: add     x16, x16, #{{0x[0-9a-f]+}}
+// CHECK-CLUSTER-NEXT: br      x17
 
 /*
 #--- link.ld

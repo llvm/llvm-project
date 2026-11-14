@@ -7,7 +7,7 @@
 # RUN: %clang %s %cflags -Wl,-q -o %t
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions \
-# RUN:   -debug 2>&1 | FileCheck %s
+# RUN:   -debug --relax-with-clusters=false 2>&1 | FileCheck %s
 
   .text
   .globl  foo

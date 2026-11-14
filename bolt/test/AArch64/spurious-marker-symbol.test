@@ -2,7 +2,7 @@
 // if they fall outside their respective sections.
 
 // RUN: yaml2obj %S/Inputs/spurious-marker-symbol.yaml -o %t.exe
-// RUN: llvm-bolt %t.exe -o %t.bolt 2>&1 | FileCheck %s
+// RUN: llvm-bolt --compact-code-model --relax-with-clusters=false %t.exe -o %t.bolt 2>&1 | FileCheck %s
 // CHECK: 1 out of 1 functions were overwritten
 // RUN: llvm-objdump -j .text -d %t.bolt | FileCheck %s -check-prefix=CHECK-DISASM
 // CHECK-DISASM: func

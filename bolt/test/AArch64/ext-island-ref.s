@@ -6,13 +6,13 @@
 // RUN: llvm-bolt %t.exe -o %t.bolt -lite=false
 // RUN: llvm-objdump -d -j .text %t.bolt | FileCheck %s
 
+// CHECK-LABEL: <func>:
+// CHECK-NEXT: ldr	x0, 0x[[#%x,ADDR:]]
+// CHECK-NEXT: ret
 // CHECK: deadbeef
 // CHECK-NEXT: deadbeef
-// CHECK-NEXT: [[#%x,ADDR:]]: deadbeef
+// CHECK-NEXT: [[#ADDR]]: deadbeef
 // CHECK-NEXT: deadbeef
-// CHECK: <func>:
-// CHECK-NEXT: ldr	x0, 0x[[#ADDR]]
-// CHECK-NEXT: ret
 
 .type	funcWithIsland, %function
 funcWithIsland:
@@ -37,3 +37,6 @@ main:
     mov     w8, #93
     svc     #0
 .size   main, .-main
+
+// Force relocation mode.
+.reloc 0, R_AARCH64_NONE

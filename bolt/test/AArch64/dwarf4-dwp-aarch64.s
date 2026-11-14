@@ -3,7 +3,7 @@
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown --split-dwarf-file=main.exe-main.dwo %t/main.s -o %t/main.o
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown --split-dwarf-file=main.exe-callee.dwo %t/callee.s -o %t/callee.o
-# RUN: %clangxx %cxxflags -gdwarf-4 -gsplit-dwarf=split -Wl,-e,main %t/main.o %t/callee.o -o main.exe
+# RUN: %clangxx %cxxflags -gdwarf-4 -gsplit-dwarf=split -Wl,-e,main %t/main.o %t/callee.o -o main.exe -Wl,-q
 # RUN: llvm-dwp -e %t/main.exe -o %t/main.exe.dwp
 # RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -update-debug-sections  2>&1 | FileCheck %s
 
@@ -22,6 +22,10 @@ main:                                   // @main
 	ret
 .Lfunc_end0:
 	.size	main, .Lfunc_end0-main
+
+# Force relocation mode.
+.reloc 0, R_AARCH64_NONE
+
 	.section	.debug_abbrev,"",@progbits
 	.byte	1                               // Abbreviation Code
 	.byte	17                              // DW_TAG_compile_unit
