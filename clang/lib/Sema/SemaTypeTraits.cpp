@@ -2007,14 +2007,26 @@ ExprResult Sema::BuildExpressionTrait(ExpressionTrait ET, SourceLocation KWLoc,
 }
 
 static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
+  // std::is_trivially_copy_constructible<T> is implemented in terms of
+  // __is_trivially_constructible(T, const T &).
+  if (Name == "is_trivially_copy_constructible")
+    return TT_IsTriviallyConstructible;
   return llvm::StringSwitch<std::optional<TypeTrait>>(Name)
 #define EMIT_STD_NAME_CASES
 #include "clang/Basic/BuiltinTraits.inc"
       .Default(std::nullopt);
 }
 
-using ExtractedTypeTraitInfo =
-    std::optional<std::pair<TypeTrait, llvm::SmallVector<QualType, 1>>>;
+namespace {
+struct TypeTraitInfo {
+  TypeTrait Trait;
+  llvm::SmallVector<QualType, 1> Args;
+  // The std:: name (without "_v") if the trait was spelled as a library trait,
+  // empty if it was spelled as a builtin.
+  StringRef StdName;
+};
+} // namespace
+using ExtractedTypeTraitInfo = std::optional<TypeTraitInfo>;
 
 // Recognize type traits that are builting type traits, or known standard
 // type traits in <type_traits>. Note that at this point we assume the
@@ -2029,7 +2041,7 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
     Trait = TraitExpr->getTrait();
     for (const auto *Arg : TraitExpr->getArgs())
       Args.push_back(Arg->getType());
-    return {{Trait.value(), std::move(Args)}};
+    return {{Trait.value(), std::move(Args), StringRef()}};
   }
   const auto *Ref = dyn_cast<DeclRefExpr>(E);
   if (!Ref)
@@ -2056,7 +2068,7 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
         llvm_unreachable("Unexpected kind");
       }
     }
-    return {{Trait.value(), std::move(Args)}};
+    return {{Trait.value(), std::move(Args), Name}};
   }
 
   // std::is_xxx<>::value
@@ -2071,12 +2083,13 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
     const TemplateDecl *D = Ts->getTemplateName().getAsTemplateDecl();
     if (!D || !D->isInStdNamespace())
       return std::nullopt;
-    Trait = StdNameToTypeTrait(D->getIdentifier()->getName());
+    StringRef Name = D->getIdentifier()->getName();
+    Trait = StdNameToTypeTrait(Name);
     if (!Trait)
       return std::nullopt;
     for (const auto &Arg : Ts->template_arguments())
       Args.push_back(Arg.getAsType());
-    return {{Trait.value(), std::move(Args)}};
+    return {{Trait.value(), std::move(Args), Name}};
   }
   return std::nullopt;
 }
@@ -2309,6 +2322,78 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   if (D->hasDefinition())
     DiagnoseNonTriviallyCopyableReason(SemaRef, Loc, D);
 
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
+static void
+DiagnoseNonTriviallyCopyConstructibleReason(Sema &SemaRef, SourceLocation Loc,
+                                            const CXXRecordDecl *D) {
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    if (B.isVirtual())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+    else if (const CXXRecordDecl *BD = B.getType()->getAsCXXRecordDecl();
+             BD && BD->hasNonTrivialCopyConstructor())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTCCBase << B.getType()
+          << B.getSourceRange();
+  }
+
+  for (const FieldDecl *F : D->fields()) {
+    // Use getBaseElementType to see through array types (e.g. NTBase arr[2]).
+    // Print the declared field type so the note matches the source.
+    QualType ElemTy = SemaRef.Context.getBaseElementType(F->getType());
+    const CXXRecordDecl *FD = ElemTy->getAsCXXRecordDecl();
+    if (FD && FD->hasNonTrivialCopyConstructor())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTCCField << F << F->getType()
+          << F->getSourceRange();
+  }
+
+  if (D->isPolymorphic())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::PolymorphicType;
+
+  for (const CXXConstructorDecl *Ctor : D->ctors()) {
+    if (!Ctor->isCopyConstructor())
+      continue;
+    if (Ctor->isDeleted())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::DeletedCtr << /*copy*/ 0
+          << Ctor->getSourceRange();
+    else if (Ctor->isUserProvided())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::UserProvidedCtr << /*copy*/ 0
+          << Ctor->getSourceRange();
+    else if (Ctor->getAccess() != AS_public)
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::InaccessibleCtr << /*copy*/ 0
+          << Ctor->getSourceRange();
+  }
+}
+
+static void DiagnoseNonTriviallyCopyConstructibleReason(Sema &SemaRef,
+                                                        SourceLocation Loc,
+                                                        QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::TriviallyCopyConstructible;
+
+  if (T->isVoidType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::CVVoidType;
+  else if (T->isFunctionType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionType;
+  else if (T->isIncompleteArrayType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::IncompleteArrayType;
+
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl() || !D->hasDefinition())
+    return;
+
+  DiagnoseNonTriviallyCopyConstructibleReason(SemaRef, Loc, D);
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
@@ -2759,7 +2844,7 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   if (!TraitInfo)
     return;
 
-  const auto &[Trait, Args] = TraitInfo.value();
+  const auto &[Trait, Args, StdName] = TraitInfo.value();
   switch (Trait) {
   case UTT_IsCppTriviallyRelocatable:
     DiagnoseNonTriviallyRelocatableReason(*this, E->getBeginLoc(), Args[0]);
@@ -2793,6 +2878,11 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   }
   case UTT_IsAbstract:
     DiagnoseNonAbstractReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case TT_IsTriviallyConstructible:
+    if (Args.size() == 1 && StdName == "is_trivially_copy_constructible")
+      DiagnoseNonTriviallyCopyConstructibleReason(*this, E->getBeginLoc(),
+                                                  Args[0]);
     break;
   default:
     break;
