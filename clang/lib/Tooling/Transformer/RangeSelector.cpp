@@ -59,40 +59,23 @@ static Expected<DynTypedNode> getNode(const ast_matchers::BoundNodes &Nodes,
   return It->second;
 }
 
-// FIXME: handling of macros should be configurable.
-static SourceLocation findPreviousTokenStart(SourceLocation Start,
-                                             const SourceManager &SM,
-                                             const LangOptions &LangOpts) {
-  if (Start.isInvalid() || Start.isMacroID())
-    return SourceLocation();
-
-  SourceLocation BeforeStart = Start.getLocWithOffset(-1);
-  if (BeforeStart.isInvalid() || BeforeStart.isMacroID())
-    return SourceLocation();
-
-  return Lexer::GetBeginningOfToken(BeforeStart, SM, LangOpts);
-}
-
 // Finds the start location of the previous token of kind \p TK.
 // FIXME: handling of macros should be configurable.
 static SourceLocation findPreviousTokenKind(SourceLocation Start,
                                             const SourceManager &SM,
                                             const LangOptions &LangOpts,
                                             tok::TokenKind TK) {
-  while (true) {
-    SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
-    if (L.isInvalid() || L.isMacroID())
-      return SourceLocation();
+  if (Start.isInvalid() || Start.isMacroID())
+    return SourceLocation();
 
-    Token T;
-    if (Lexer::getRawToken(L, T, SM, LangOpts, /*IgnoreWhiteSpace=*/true))
-      return SourceLocation();
+  while (auto T = Lexer::findPreviousToken(Start, SM, LangOpts,
+                                           /*IncludeComments=*/false)) {
+    if (T->is(TK))
+      return T->getLocation();
 
-    if (T.is(TK))
-      return T.getLocation();
-
-    Start = L;
+    Start = T->getLocation();
   }
+  return SourceLocation();
 }
 
 RangeSelector transformer::before(RangeSelector Selector) {
