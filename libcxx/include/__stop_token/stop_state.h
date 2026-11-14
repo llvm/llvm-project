@@ -171,7 +171,7 @@ public:
     // under below condition, the request_stop call just popped __cb from the list and could execute it now
     bool __potentially_executing_now = __cb->__prev_ == nullptr && !__callback_list_.__is_head(__cb);
 
-    if (__potentially_executing_now) {
+    if (__potentially_executing_now) [[unlikely]] {
       auto __requested_thread = __requesting_thread_;
       __cb_list_lock.__unlock();
 
