@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Module.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -1301,8 +1302,20 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
   }
 
   lldb::user_id_t user_id = LLDB_INVALID_UID;
-  if (std::optional<ClangASTMetadata> metadata = m_main.GetDeclMetadata(from))
+  if (std::optional<ClangASTMetadata> metadata = m_main.GetDeclMetadata(from)) {
     user_id = metadata->GetUserID();
+    lldb::LanguageType lang_type = metadata->GetLanguageType();
+    if (Language::LanguageIsRust(lang_type)) {
+      if (TypeSystemClang *to_ts =
+              TypeSystemClang::GetASTContext(&to->getASTContext())) {
+        ClangASTMetadata to_metadata;
+        if (std::optional<ClangASTMetadata> existing = to_ts->GetMetadata(to))
+          to_metadata = *existing;
+        to_metadata.SetLanguageType(lang_type);
+        to_ts->SetMetadata(to, to_metadata);
+      }
+    }
+  }
 
   if (log) {
     if (NamedDecl *from_named_decl = dyn_cast<clang::NamedDecl>(from)) {

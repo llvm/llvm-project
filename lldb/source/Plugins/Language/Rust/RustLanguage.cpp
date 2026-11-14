@@ -10,16 +10,22 @@
 
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm/Demangle/Demangle.h"
 
 #include <cassert>
 #include <cstdlib>
 
+using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::formatters;
 
 LLDB_PLUGIN_DEFINE(RustLanguage)
 
@@ -38,14 +44,40 @@ void RustLanguage::Terminate() {
 }
 
 // Static Functions
-Language *RustLanguage::CreateInstance(lldb::LanguageType language) {
-  if (language == eLanguageTypeRust)
+Language *RustLanguage::CreateInstance(LanguageType language) {
+  if (Language::LanguageIsRust(language))
     return new RustLanguage();
   return nullptr;
 }
 
-bool RustLanguage::IsSourceFile(llvm::StringRef file_path) const {
+bool RustLanguage::IsSourceFile(StringRef file_path) const {
   return file_path.ends_with_insensitive(".rs");
+}
+
+std::unique_ptr<Language::TypeScavenger> RustLanguage::GetTypeScavenger() {
+  class RustTypeScavenger : public Language::ImageListTypeScavenger {
+  public:
+    CompilerType AdjustForInclusion(CompilerType &candidate) override {
+      LanguageType lang_type(candidate.GetMinimumLanguage());
+      if (!Language::LanguageIsC(lang_type) &&
+          !Language::LanguageIsRust(lang_type))
+        return CompilerType();
+      if (candidate.IsTypedefType())
+        return candidate.GetTypedefedType();
+      return candidate;
+    }
+  };
+
+  return std::unique_ptr<TypeScavenger>(new RustTypeScavenger());
+}
+
+bool RustLanguage::IsNilReference(ValueObject &valobj) {
+  if (!Language::LanguageIsRust(valobj.GetObjectRuntimeLanguage()) ||
+      !valobj.IsPointerType())
+    return false;
+  bool canReadValue = true;
+  bool isZero = valobj.GetValueAsUnsigned(0, &canReadValue) == 0;
+  return canReadValue && isZero;
 }
 
 Language::DemangledName
@@ -71,4 +103,46 @@ RustLanguage::DemangleSymbol(ConstString mangled,
     std::free(demangled_cstr);
   }
   return demangled;
+}
+
+static void LoadRustFormatters(lldb::TypeCategoryImplSP rust_category_sp) {
+  if (!rust_category_sp)
+    return;
+
+  TypeSummaryImpl::Flags summary_flags;
+  summary_flags.SetCascades(true)
+      .SetSkipPointers(false)
+      .SetSkipReferences(false)
+      .SetDontShowChildren(false)
+      .SetDontShowValue(false)
+      .SetShowMembersOneLiner(false)
+      .SetHideItemNames(false);
+
+  AddCXXSummary(rust_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "Rust vector summary provider", "^alloc::vec::Vec<.+>(( )?&)?$",
+                summary_flags, true);
+
+  SyntheticChildren::Flags synth_flags;
+  synth_flags.SetCascades(true)
+      .SetSkipPointers(false)
+      .SetSkipReferences(false)
+      .SetFrontEndWantsDereference();
+
+  AddCXXSynthetic(rust_category_sp,
+                  lldb_private::formatters::RustVectorSyntheticFrontEndCreator,
+                  "Rust vector synthetic children",
+                  "^alloc::vec::Vec<.+>(( )?&)?$", synth_flags, true);
+}
+
+lldb::TypeCategoryImplSP RustLanguage::GetFormatters() {
+  static llvm::once_flag g_initialize;
+  static TypeCategoryImplSP g_category;
+
+  llvm::call_once(g_initialize, [this]() -> void {
+    DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
+    if (g_category)
+      LoadRustFormatters(g_category);
+  });
+  return g_category;
 }

@@ -462,6 +462,10 @@ bool Language::LanguageIsPascal(LanguageType language) {
   }
 }
 
+bool Language::LanguageIsRust(LanguageType language) {
+  return language == eLanguageTypeRust;
+}
+
 LanguageType Language::GetPrimaryLanguage(LanguageType language) {
   switch (language) {
   case eLanguageTypeC_plus_plus:

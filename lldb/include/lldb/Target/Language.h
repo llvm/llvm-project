@@ -498,6 +498,8 @@ public:
 
   static bool LanguageIsPascal(lldb::LanguageType language);
 
+  static bool LanguageIsRust(lldb::LanguageType language);
+
   // return the primary language, so if LanguageIsC(l), return eLanguageTypeC,
   // etc.
   static lldb::LanguageType GetPrimaryLanguage(lldb::LanguageType language);

@@ -1883,6 +1883,10 @@ TypeSP DWARFASTParserClang::ParseStructureLikeDIE(
 
   ClangASTMetadata metadata;
   metadata.SetUserID(die.GetID());
+  // Make sure the LanguageType is properly set for Rust, so that it
+  // can find the Rust data formatters.
+  if (Language::LanguageIsRust(cu_language))
+    metadata.SetLanguageType(Language::GetPrimaryLanguage(cu_language));
   if (!attrs.is_forward_declaration)
     metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
 
