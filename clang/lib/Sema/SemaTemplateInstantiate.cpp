@@ -3341,12 +3341,11 @@ ParmVarDecl *Sema::SubstParmVarDecl(
 
   // A parameter that is not a function's own, such as one of a function
   // pointer's pointee, belongs to no function (see ActOnParamDeclarator); keep
-  // it that way, so it is not taken for a parameter of the enclosing function.
-  // FIXME: OldParm may come from a FunctionProtoType, in which case CurContext
-  // can be anything, is this right ?
-  NewParm->setDeclContext(OldParm->getDeclContext()->isTranslationUnit()
-                              ? Context.getTranslationUnitDecl()
-                              : CurContext);
+  // it in the translation unit, where CheckParameter created it.
+  // FIXME: For other parameters from a FunctionProtoType, CurContext can be
+  // anything; is this right?
+  if (!OldParm->getDeclContext()->isTranslationUnit())
+    NewParm->setDeclContext(CurContext);
 
   NewParm->setScopeInfo(OldParm->getFunctionScopeDepth(),
                         OldParm->getFunctionScopeIndex() + indexAdjustment);

@@ -462,11 +462,11 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
     if (Ctx && Ctx->FunArgs) {
       const Decl *Canonical = Ctx->AttrDecl->getCanonicalDecl();
       bool Match = false;
-      if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
         Match = (FD->getCanonicalDecl() == Canonical);
-      else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
+      } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
         Match = (MD->getCanonicalDecl() == Canonical);
-      else if (D->isTranslationUnit())
+      } else if (D->isTranslationUnit()) {
         // Sema temporarily creates every parameter in the translation unit
         // itself and moves it to its function once there is one. Thus, the
         // parameters of a prototype nested in a declarator's type, such as a
@@ -475,11 +475,12 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
         // redeclaration's. When the declarator is itself a parameter, its
         // attribute may also name a sibling parameter, which is no deeper
         // than it is; only one nested deeper is of its own prototype.
-        Match = !isa<ParmVarDecl>(Ctx->AttrDecl) ||
-                PV->getFunctionScopeDepth() >
-                    cast<ParmVarDecl>(Ctx->AttrDecl)->getFunctionScopeDepth();
-      else
+        const auto *AttrPV = dyn_cast<ParmVarDecl>(Ctx->AttrDecl);
+        Match = !AttrPV ||
+                PV->getFunctionScopeDepth() > AttrPV->getFunctionScopeDepth();
+      } else {
         llvm_unreachable("ParmVarDecl does not belong to current declaration");
+      }
 
       if (Match) {
         // Substitute call arguments for references to function parameters
