@@ -78,6 +78,10 @@ class LiveIntervals {
   /// current extendSegmentsToUses call iff its entry equals LiveOutTag.
   SmallVector<unsigned, 0> LiveOutTags;
 
+  /// Indexed by block number. Holds {tag, index into the pending live-in
+  /// segments}; the index is only valid when the tag equals LiveOutTag.
+  SmallVector<std::pair<unsigned, unsigned>, 0> LiveInSegments;
+
   /// Tag for the current extendSegmentsToUses call, incremented on each call
   /// so stale LiveOutTags entries never need clearing.
   unsigned LiveOutTag = 0;
