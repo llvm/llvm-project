@@ -159,6 +159,7 @@ struct ConstructContext {
   Fortran::lower::StatementContext &stmtCtx; // construct exit code
   std::optional<hlfir::Entity> selector;     // construct selector, if any.
   bool pushedScope = false; // was a scoped pushed for this construct?
+  fir::LexicalScopeAttr lexicalScope; // scope of the current branch, if any
 };
 
 /// Helper to gather the lower bounds of array components with non deferred
@@ -1238,9 +1239,18 @@ public:
     return mlir::FileLineColLoc::get(&ctx, path.str(), pos.line, pos.column);
   }
 
-  /// Generate a `Location` from the `CharBlock`.
+  /// Generate a `Location` from the `CharBlock`, in the lexical scope of the
+  /// branch being lowered, if any.
   mlir::Location
   genLocation(const Fortran::parser::CharBlock &block) override final {
+    mlir::Location loc = genSourceLocation(block);
+    if (fir::LexicalScopeAttr lexicalScope = getLexicalScope())
+      return mlir::FusedLoc::get(&getMLIRContext(), {loc}, lexicalScope);
+    return loc;
+  }
+
+  /// Generate a `Location` from the `CharBlock`.
+  mlir::Location genSourceLocation(const Fortran::parser::CharBlock &block) {
     mlir::Location mainLocation = genUnknownLocation();
     if (const Fortran::parser::AllCookedSources *cooked =
             bridge.getCookedSource()) {
@@ -2062,6 +2072,29 @@ private:
     if (activeConstructStack.back().pushedScope)
       localSymbols.popScope();
     activeConstructStack.pop_back();
+  }
+
+  /// Start the lexical scope of the branch of the innermost construct that
+  /// begins at the current statement. It lasts until the next branch or the
+  /// end of the construct, and lets debug information make the names that
+  /// the branch associates visible only in the branch.
+  void startLexicalScope() {
+    assert(!activeConstructStack.empty() && "must be inside a construct");
+    ConstructContext &construct = activeConstructStack.back();
+    construct.lexicalScope = {};
+    if (getLoweringOptions().getPreserveUseDebugInfo())
+      construct.lexicalScope = fir::LexicalScopeAttr::get(
+          &getMLIRContext(), genSourceLocation(currentPosition),
+          getLexicalScope());
+  }
+
+  /// Return the lexical scope of the innermost branch being lowered, if any.
+  fir::LexicalScopeAttr getLexicalScope() {
+    for (const ConstructContext &construct :
+         llvm::reverse(activeConstructStack))
+      if (construct.lexicalScope)
+        return construct.lexicalScope;
+    return {};
   }
 
   //===--------------------------------------------------------------------===//
@@ -4645,6 +4678,7 @@ private:
         if (eval.lowerAsUnstructured())
           maybeStartBlock(e.block);
         localSymbols.pushScope();
+        startLexicalScope();
         for (const Fortran::parser::Association &assoc :
              std::get<std::list<Fortran::parser::Association>>(stmt->t)) {
           Fortran::semantics::Symbol &sym =
@@ -4876,6 +4910,7 @@ private:
       localSymbols.popScope();
     localSymbols.pushScope();
     activeConstructStack.back().pushedScope = true;
+    startLexicalScope();
     const Fortran::semantics::Symbol &assocEntitySymbol =
         getAssociatingEntitySymbol(
             bridge.getSemanticsContext().FindScope(getEval().position));
@@ -4993,6 +5028,8 @@ private:
     for (Fortran::lower::pft::Evaluation &eval :
          getEval().getNestedEvaluations()) {
       setCurrentPosition(eval.position);
+      if (eval.getIf<Fortran::parser::TypeGuardStmt>())
+        startLexicalScope();
       mlir::Location loc = toLocation();
       if (auto *selectTypeStmt =
               eval.getIf<Fortran::parser::SelectTypeStmt>()) {
