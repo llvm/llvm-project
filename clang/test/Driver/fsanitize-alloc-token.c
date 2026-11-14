@@ -16,8 +16,19 @@
 // RUN: %clang --target=aarch64-none-elf -fsanitize=alloc-token %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-BAREMETAL
 // CHECK-BAREMETAL: "-fsanitize=alloc-token"
 
-// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=alloc-token,address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INCOMPATIBLE-ADDRESS
-// CHECK-INCOMPATIBLE-ADDRESS: error: invalid argument '-fsanitize=alloc-token' not allowed with '-fsanitize=address'
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=alloc-token,address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ADDRESS
+// RUN: %clang --target=aarch64-linux-gnu -fsanitize=address,alloc-token %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ADDRESS
+// CHECK-ADDRESS: "-fsanitize=address,alloc-token"
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address,alloc-token -fsanitize-alloc-token-fast-abi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ADDRESS-FAST
+// CHECK-ADDRESS-FAST: error: invalid argument '-fsanitize-alloc-token-fast-abi' not allowed with '-fsanitize=address'
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address,alloc-token -fsanitize-alloc-token-extended %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ADDRESS-EXTENDED
+// CHECK-ADDRESS-EXTENDED: error: invalid argument '-fsanitize-alloc-token-extended' not allowed with '-fsanitize=address'
+// RUN: not %clang --target=x86_64-apple-darwin -fsanitize=address,alloc-token %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ADDRESS-TARGET
+// RUN: not %clang --target=aarch64-linux-android -fsanitize=address,alloc-token %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ADDRESS-TARGET
+// RUN: not %clang --target=i386-linux-gnu -fsanitize=address,alloc-token %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ADDRESS-TARGET
+// RUN: not %clang --target=x86_64-linux-gnux32 -fsanitize=address,alloc-token %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ADDRESS-TARGET
+// CHECK-ADDRESS-TARGET: error: unsupported option '-fsanitize=address,alloc-token' for target
 
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=alloc-token,memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INCOMPATIBLE-MEMORY
 // CHECK-INCOMPATIBLE-MEMORY: error: invalid argument '-fsanitize=alloc-token' not allowed with '-fsanitize=memory'

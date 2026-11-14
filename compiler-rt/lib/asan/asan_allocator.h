@@ -66,6 +66,7 @@ class AsanChunkView {
   u32 GetAllocStackId() const;
   u32 GetFreeStackId() const;
   AllocType GetAllocType() const;
+  bool GetAllocToken(uptr* token) const;
   bool AddrIsInside(uptr addr, uptr access_size, sptr* offset) const {
     if (addr >= Beg() && (addr + access_size) <= End()) {
       *offset = addr - Beg();
@@ -283,34 +284,48 @@ struct AsanThreadLocalMallocStorage {
   AsanThreadLocalMallocStorage() {}
 };
 
-void* asan_memalign(uptr alignment, uptr size, BufferedStackTrace* stack);
+// A null alloc_token means no token was supplied; zero is a valid token value.
+void* asan_memalign(uptr alignment, uptr size, BufferedStackTrace* stack,
+                    const uptr* alloc_token = nullptr);
 void asan_free(void* ptr, BufferedStackTrace* stack);
 void asan_free_sized(void* ptr, uptr size, BufferedStackTrace* stack);
 void asan_free_aligned_sized(void* ptr, uptr alignment, uptr size,
                              BufferedStackTrace* stack);
 
-void* asan_malloc(uptr size, BufferedStackTrace* stack);
-void* asan_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack);
+void* asan_malloc(uptr size, BufferedStackTrace* stack,
+                  const uptr* alloc_token = nullptr);
+void* asan_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack,
+                  const uptr* alloc_token = nullptr);
 #if SANITIZER_AIX
 void* asan_vec_malloc(uptr size, BufferedStackTrace* stack);
 void* asan_vec_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack);
 #endif
-void* asan_realloc(void* p, uptr size, BufferedStackTrace* stack);
+void* asan_realloc(void* p, uptr size, BufferedStackTrace* stack,
+                   const uptr* alloc_token = nullptr);
 void* asan_reallocarray(void* p, uptr nmemb, uptr size,
-                        BufferedStackTrace* stack);
-void* asan_valloc(uptr size, BufferedStackTrace* stack);
-void* asan_pvalloc(uptr size, BufferedStackTrace* stack);
+                        BufferedStackTrace* stack,
+                        const uptr* alloc_token = nullptr);
+void* asan_valloc(uptr size, BufferedStackTrace* stack,
+                  const uptr* alloc_token = nullptr);
+void* asan_pvalloc(uptr size, BufferedStackTrace* stack,
+                   const uptr* alloc_token = nullptr);
 
-void* asan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace* stack);
+void* asan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace* stack,
+                         const uptr* alloc_token = nullptr);
 int asan_posix_memalign(void** memptr, uptr alignment, uptr size,
-                        BufferedStackTrace* stack);
+                        BufferedStackTrace* stack,
+                        const uptr* alloc_token = nullptr);
 uptr asan_malloc_usable_size(const void* ptr, uptr pc, uptr bp);
 
-void* asan_new(uptr size, BufferedStackTrace* stack);
-void* asan_new_aligned(uptr size, uptr alignment, BufferedStackTrace* stack);
-void* asan_new_array(uptr size, BufferedStackTrace* stack);
+void* asan_new(uptr size, BufferedStackTrace* stack,
+               const uptr* alloc_token = nullptr);
+void* asan_new_aligned(uptr size, uptr alignment, BufferedStackTrace* stack,
+                       const uptr* alloc_token = nullptr);
+void* asan_new_array(uptr size, BufferedStackTrace* stack,
+                     const uptr* alloc_token = nullptr);
 void* asan_new_array_aligned(uptr size, uptr alignment,
-                             BufferedStackTrace* stack);
+                             BufferedStackTrace* stack,
+                             const uptr* alloc_token = nullptr);
 void asan_delete(void* ptr, BufferedStackTrace* stack);
 void asan_delete_aligned(void* ptr, uptr alignment, BufferedStackTrace* stack);
 void asan_delete_sized(void* ptr, uptr size, BufferedStackTrace* stack);

@@ -1585,6 +1585,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### Sanitizers
 
+- AddressSanitizer supports `-fsanitize=address,alloc-token` to report heap
+  allocation tokens on non-Android Linux x86-64 and AArch64 with 64-bit pointers
+  using the default AllocToken ABI.
+
 - Added the `typefunchash` and `typefunchashpointersplit` token assignment
   modes for `-fsanitize=alloc-token`, selected with
   `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both
