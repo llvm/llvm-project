@@ -2536,17 +2536,17 @@ def : Pat<(loongarch_xvinsve0 v8f32:$xd, v8f32:$xj, uimm3:$imm),
 def : Pat<(loongarch_xvinsve0 v4f64:$xd, v4f64:$xj, uimm2:$imm),
           (XVINSVE0_D v4f64:$xd, v4f64:$xj, uimm2:$imm)>;
 def : Pat<(vector_insert v8f32:$xd, FPR32:$fj, uimm3:$imm),
-          (XVINSVE0_W v8f32:$xd, (SUBREG_TO_REG FPR32:$fj, sub_32),
-              uimm3:$imm)>;
+          (XVINSVE0_W v8f32:$xd,
+              (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$fj, sub_32), uimm3:$imm)>;
 def : Pat<(vector_insert v4f64:$xd, FPR64:$fj, uimm2:$imm),
-          (XVINSVE0_D v4f64:$xd, (SUBREG_TO_REG FPR64:$fj, sub_64),
-              uimm2:$imm)>;
+          (XVINSVE0_D v4f64:$xd,
+              (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$fj, sub_64), uimm2:$imm)>;
 
 // scalar_to_vector
 def : Pat<(v8f32 (scalar_to_vector FPR32:$fj)),
-          (SUBREG_TO_REG FPR32:$fj, sub_32)>;
+          (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$fj, sub_32)>;
 def : Pat<(v4f64 (scalar_to_vector FPR64:$fj)),
-          (SUBREG_TO_REG FPR64:$fj, sub_64)>;
+          (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$fj, sub_64)>;
 
 // XVPICKVE2GR_W[U]
 def : Pat<(loongarch_vpick_sext_elt v8i32:$xd, uimm3:$imm, i32),
@@ -2740,9 +2740,9 @@ def : Pat<(loongarch_xvreplve0 v8f32:$xj),
 def : Pat<(loongarch_xvreplve0 v4f64:$xj),
           (XVREPLVE0_D v4f64:$xj)>;
 def : Pat<(lasxsplatf32 FPR32:$fj),
-          (XVREPLVE0_W (SUBREG_TO_REG FPR32:$fj, sub_32))>;
+          (XVREPLVE0_W (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$fj, sub_32))>;
 def : Pat<(lasxsplatf64 FPR64:$fj),
-          (XVREPLVE0_D (SUBREG_TO_REG FPR64:$fj, sub_64))>;
+          (XVREPLVE0_D (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$fj, sub_64))>;
 foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
   def : Pat<(vt (loongarch_xvreplve0q LASX256:$xj)),
             (XVREPLVE0_Q LASX256:$xj)>;
