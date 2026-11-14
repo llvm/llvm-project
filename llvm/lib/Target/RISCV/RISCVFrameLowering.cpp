@@ -52,6 +52,12 @@ static constexpr MCPhysReg SPReg = RISCV::X2;
 // The register used to hold the return address.
 static constexpr MCPhysReg RAReg = RISCV::X1;
 
+// With inline stack probing, the maximum number of bytes above SP that may be
+// left unprobed at an ABI boundary (function entry or a call). It matches the
+// caller guard that GCC assumes for RISC-V (STACK_CLASH_CALLER_GUARD) and that
+// LLVM uses for AArch64 (StackProbeMaxUnprobedStack).
+static constexpr unsigned StackProbeMaxUnprobedStack = 1024;
+
 // LIst of CSRs that are given a fixed location by save/restore libcalls or
 // Zcmp/Xqccmp Push/Pop. The order in this table indicates the order the
 // registers are saved on the stack. Zcmp uses the reverse order of save/restore
@@ -715,7 +721,7 @@ Register RISCVFrameLowering::findScratchNonCalleeSaveRegister(
 void RISCVFrameLowering::allocateAndProbeStackForRVV(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MBBI, const DebugLoc &DL, int64_t Amount,
-    MachineInstr::MIFlag Flag, bool EmitCFI, bool DynAllocation) const {
+    MachineInstr::MIFlag Flag, bool EmitCFI) const {
   assert(Amount != 0 && "Did not need to adjust stack pointer for RVV.");
 
   // Emit a variable-length allocation probing loop.
@@ -750,15 +756,6 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
       .addReg(SPReg)
       .addReg(TargetReg)
       .setMIFlag(Flag);
-
-  // If we have a dynamic allocation later we need to probe any residuals.
-  if (DynAllocation) {
-    BuildMI(MBB, MBBI, DL, TII->get(STI.is64Bit() ? RISCV::SD : RISCV::SW))
-        .addReg(RISCV::X0)
-        .addReg(SPReg)
-        .addImm(0)
-        .setMIFlags(MachineInstr::FrameSetup);
-  }
 }
 
 static void appendScalableVectorExpression(const TargetRegisterInfo &TRI,
@@ -838,21 +835,29 @@ static MCCFIInstruction createDefCFAOffset(const TargetRegisterInfo &TRI,
                                         Comment.str());
 }
 
-// Allocate stack space and probe it if necessary.
+// Allocate stack space and probe it if necessary. When probing, the new SP is
+// probed if the bytes this allocation leaves unprobed, plus FollowupSize (what
+// later code may allocate before it probes), are more than
+// StackProbeMaxUnprobedStack. With SpillsToSP, a register spilled to 0(sp)
+// right after this allocation probes the new SP instead.
 void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI,
                                        MachineFunction &MF, uint64_t Offset,
                                        uint64_t RealStackSize, bool EmitCFI,
                                        bool NeedProbe, uint64_t ProbeSize,
-                                       bool DynAllocation,
+                                       uint64_t FollowupSize, bool SpillsToSP,
                                        MachineInstr::MIFlag Flag) const {
   DebugLoc DL;
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   bool IsRV64 = STI.is64Bit();
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
+  auto NeedsSPProbe = [&](uint64_t Unprobed) {
+    return NeedProbe && !SpillsToSP && Unprobed != 0 &&
+           Unprobed + FollowupSize > StackProbeMaxUnprobedStack;
+  };
 
-  // Simply allocate the stack if it's not big enough to require a probe.
+  // Simply allocate the stack if it's not big enough to require a probe loop.
   if (!NeedProbe || Offset <= ProbeSize) {
     RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(-Offset),
                   Flag, getStackAlign());
@@ -860,7 +865,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
     if (EmitCFI)
       CFIBuilder.buildDefCFAOffset(RealStackSize);
 
-    if (NeedProbe && DynAllocation) {
+    if (NeedsSPProbe(Offset)) {
       // s[d|w] zero, 0(sp)
       BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
           .addReg(RISCV::X0)
@@ -900,7 +905,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
       if (EmitCFI)
         CFIBuilder.buildDefCFAOffset(RealStackSize);
 
-      if (DynAllocation) {
+      if (NeedsSPProbe(Residual)) {
         // s[d|w] zero, 0(sp)
         BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
             .addReg(RISCV::X0)
@@ -937,21 +942,21 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
     CFIBuilder.buildDefCFARegister(SPReg);
   }
 
-  if (Residual) {
+  if (Residual)
     RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(-Residual),
                   Flag, getStackAlign());
-    if (DynAllocation) {
-      // s[d|w] zero, 0(sp)
-      BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
-          .addReg(RISCV::X0)
-          .addReg(SPReg)
-          .addImm(0)
-          .setMIFlags(Flag);
-    }
-  }
 
   if (EmitCFI)
     CFIBuilder.buildDefCFAOffset(RealStackSize);
+
+  if (NeedsSPProbe(Residual)) {
+    // s[d|w] zero, 0(sp)
+    BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
+        .addReg(RISCV::X0)
+        .addReg(SPReg)
+        .addImm(0)
+        .setMIFlags(Flag);
+  }
 }
 
 static bool isPush(unsigned Opcode) {
@@ -1124,12 +1129,58 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   const RISCVTargetLowering *TLI = Subtarget.getTargetLowering();
   bool NeedProbe = TLI->hasInlineStackProbe(MF);
   uint64_t ProbeSize = TLI->getStackProbeSize(MF, getStackAlign());
-  bool DynAllocation =
-      MF.getInfo<RISCVMachineFunctionInfo>()->hasDynamicAllocation();
-  if (StackSize != 0)
+  // With inline stack probing, at most StackProbeMaxUnprobedStack bytes above
+  // SP may be left unprobed at a call, and a probing loop starts from a probed
+  // SP. Each allocation is given what may follow it before the next probe;
+  // FromProbedSP, over the limit, makes it probe the new SP.
+  constexpr uint64_t FromProbedSP = StackProbeMaxUnprobedStack + 1;
+  // Call frames that are not reserved are probed when larger than
+  // StackProbeMaxUnprobedStack, and dynamic allocations always are.
+  uint64_t BodyAllocSize = 0;
+  if (RVFI->hasDynamicAllocation())
+    BodyAllocSize = FromProbedSP;
+  else if (!hasReservedCallFrame(MF))
+    BodyAllocSize = MFI.isMaxCallFrameSizeComputed()
+                        ? alignTo(MFI.getMaxCallFrameSize(), getStackAlign())
+                        : FromProbedSP;
+  // Realigning SP moves it down by up to RealignPadding bytes, with a probing
+  // loop if that may be the probe size or more. The realigned SP is probed
+  // after a loop, or if RealignPadding + BodyAllocSize is over the limit.
+  bool RealignStack = RI->hasStackRealignment(MF);
+  uint64_t RealignPadding =
+      RealignStack && MFI.getMaxAlign() > getStackAlign()
+          ? MFI.getMaxAlign().value() - getStackAlign().value()
+          : 0;
+  bool ProbeRealignLoop = NeedProbe && RealignPadding >= ProbeSize;
+  bool ProbeRealignedSP = NeedProbe && RealignStack &&
+                          (ProbeRealignLoop || RealignPadding + BodyAllocSize >
+                                                   StackProbeMaxUnprobedStack);
+  // What follows the fixed-size allocations: the RVV area and a realignment
+  // loop start from a probed SP; otherwise the realignment, if any, and the
+  // function body, unless the realigned SP is probed.
+  uint64_t FollowupSize =
+      RealignPadding + (ProbeRealignedSP ? 0 : BodyAllocSize);
+  if (RVVStackSize || ProbeRealignLoop)
+    FollowupSize = FromProbedSP;
+  if (StackSize != 0) {
+    // A callee-saved register spilled to 0(sp) probes the new SP, before any
+    // later allocation or call.
+    bool SpillsToSP =
+        NeedProbe &&
+        llvm::any_of(
+            getUnmanagedInterruptCSI(MF, CSI), [&](const CalleeSavedInfo &CS) {
+              Register FrameReg;
+              StackOffset Offset =
+                  getFrameIndexReference(MF, CS.getFrameIdx(), FrameReg);
+              return FrameReg == SPReg && !Offset.getScalable() &&
+                     Offset.getFixed() == 0;
+            });
+    // A second SP adjustment starts from a probed SP.
     allocateStack(MBB, MBBI, MF, StackSize, RealStackSize, NeedsDwarfCFI,
-                  NeedProbe, ProbeSize, DynAllocation,
+                  NeedProbe, ProbeSize,
+                  FirstSPAdjustAmount ? FromProbedSP : FollowupSize, SpillsToSP,
                   MachineInstr::FrameSetup);
+  }
 
   // Save SiFive CLIC CSRs into Stack
   emitSiFiveCLICPreemptibleSaves(MF, MBB, MBBI, DL);
@@ -1192,9 +1243,10 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     assert(SecondSPAdjustAmount > 0 &&
            "SecondSPAdjustAmount should be greater than zero");
 
+    // The first SP adjustment left SP probed.
     allocateStack(MBB, MBBI, MF, SecondSPAdjustAmount,
                   getStackSizeWithRVVPadding(MF), NeedsDwarfCFI && !hasFP(MF),
-                  NeedProbe, ProbeSize, DynAllocation,
+                  NeedProbe, ProbeSize, FollowupSize, /*SpillsToSP=*/false,
                   MachineInstr::FrameSetup);
   }
 
@@ -1202,7 +1254,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     if (NeedProbe) {
       allocateAndProbeStackForRVV(MF, MBB, MBBI, DL, RVVStackSize,
                                   MachineInstr::FrameSetup,
-                                  NeedsDwarfCFI && !hasFP(MF), DynAllocation);
+                                  NeedsDwarfCFI && !hasFP(MF));
     } else {
       // We must keep the stack pointer aligned through any intermediate
       // updates.
@@ -1218,6 +1270,17 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
           StackOffset::get(getStackSizeWithRVVPadding(MF), RVVStackSize / 8)));
     }
 
+    if (NeedProbe) {
+      // The probing loop leaves a residual of up to ProbeSize - 1 bytes, whose
+      // size is not known at compile time: probe it.
+      const RISCVInstrInfo *TII = STI.getInstrInfo();
+      BuildMI(MBB, MBBI, DL, TII->get(STI.is64Bit() ? RISCV::SD : RISCV::SW))
+          .addReg(RISCV::X0)
+          .addReg(SPReg)
+          .addImm(0)
+          .setMIFlags(MachineInstr::FrameSetup);
+    }
+
     std::advance(MBBI, getRVVCalleeSavedInfo(MF, CSI).size());
     if (NeedsDwarfCFI)
       emitCalleeSavedRVVPrologCFI(MBB, MBBI, hasFP(MF));
@@ -1230,7 +1293,31 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
       Align MaxAlignment = MFI.getMaxAlign();
 
       const RISCVInstrInfo *TII = STI.getInstrInfo();
-      if (isInt<12>(-(int64_t)MaxAlignment.value())) {
+      if (ProbeRealignLoop) {
+        // Realigning may move SP down by more than the probe size. Compute
+        // that amount (SP modulo MaxAlignment) and allocate it with the
+        // probing loop used for the RVV area.
+        Register AmountReg = findScratchNonCalleeSaveRegister(&MBB, RISCV::X6);
+        assert(AmountReg.isValid() &&
+               "No available scratch register for stack probing");
+        unsigned ShiftAmount = STI.getXLen() - Log2(MaxAlignment);
+        BuildMI(MBB, MBBI, DL, TII->get(RISCV::SLLI), AmountReg)
+            .addReg(SPReg)
+            .addImm(ShiftAmount)
+            .setMIFlag(MachineInstr::FrameSetup);
+        BuildMI(MBB, MBBI, DL, TII->get(RISCV::SRLI), AmountReg)
+            .addReg(AmountReg)
+            .addImm(ShiftAmount)
+            .setMIFlag(MachineInstr::FrameSetup);
+        // It will be expanded to a probe loop in `inlineStackProbe`.
+        BuildMI(MBB, MBBI, DL, TII->get(RISCV::PROBED_STACKALLOC_RVV))
+            .addReg(AmountReg);
+        // SUB SP, SP, AmountReg
+        BuildMI(MBB, MBBI, DL, TII->get(RISCV::SUB), SPReg)
+            .addReg(SPReg)
+            .addReg(AmountReg)
+            .setMIFlag(MachineInstr::FrameSetup);
+      } else if (isInt<12>(-(int64_t)MaxAlignment.value())) {
         BuildMI(MBB, MBBI, DL, TII->get(RISCV::ANDI), SPReg)
             .addReg(SPReg)
             .addImm(-(int64_t)MaxAlignment.value())
@@ -1248,18 +1335,13 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
             .addImm(ShiftAmount)
             .setMIFlag(MachineInstr::FrameSetup);
       }
-      if (NeedProbe && RVVStackSize == 0) {
-        // Do a probe if the align + size allocated just passed the probe size
-        // and was not yet probed.
-        if (SecondSPAdjustAmount < ProbeSize &&
-            SecondSPAdjustAmount + MaxAlignment.value() >= ProbeSize) {
-          bool IsRV64 = STI.is64Bit();
-          BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
-              .addReg(RISCV::X0)
-              .addReg(SPReg)
-              .addImm(0)
-              .setMIFlags(MachineInstr::FrameSetup);
-        }
+      if (ProbeRealignedSP) {
+        bool IsRV64 = STI.is64Bit();
+        BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
+            .addReg(RISCV::X0)
+            .addReg(SPReg)
+            .addImm(0)
+            .setMIFlags(MachineInstr::FrameSetup);
       }
       // FP will be used to restore the frame in the epilogue, so we need
       // another base register BP to record SP after re-alignment. SP will
@@ -2232,16 +2314,18 @@ MachineBasicBlock::iterator RISCVFrameLowering::eliminateCallFramePseudoInstr(
       const RISCVTargetLowering *TLI =
           MF.getSubtarget<RISCVSubtarget>().getTargetLowering();
       int64_t ProbeSize = TLI->getStackProbeSize(MF, getStackAlign());
-      if (TLI->hasInlineStackProbe(MF) && -Amount >= ProbeSize) {
+      if (TLI->hasInlineStackProbe(MF) &&
+          -Amount > StackProbeMaxUnprobedStack) {
         // When stack probing is enabled, the decrement of SP may need to be
-        // probed. We can handle both the decrement and the probing in
+        // probed. We only need to do this if the call frame is larger than
+        // what may be left unprobed at the call, as SP has been probed at
+        // this point, either by the prologue or by the most recent dynamic
+        // allocation. We can handle both the decrement and the probing in
         // allocateStack.
-        bool DynAllocation =
-            MF.getInfo<RISCVMachineFunctionInfo>()->hasDynamicAllocation();
         allocateStack(MBB, MI, MF, -Amount, -Amount,
                       needsDwarfCFI(MF) && !hasFP(MF),
-                      /*NeedProbe=*/true, ProbeSize, DynAllocation,
-                      MachineInstr::NoFlags);
+                      /*NeedProbe=*/true, ProbeSize, /*FollowupSize=*/0,
+                      /*SpillsToSP=*/false, MachineInstr::NoFlags);
         inlineStackProbe(MF, MBB);
       } else {
         const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
@@ -2879,7 +2963,7 @@ static void emitStackProbeInline(MachineBasicBlock::iterator MBBI, DebugLoc DL,
 
 void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
                                           MachineBasicBlock &MBB) const {
-  // Get the instructions that need to be replaced. We emit at most two of
+  // Get the instructions that need to be replaced. We emit at most three of
   // these. Remember them in order to avoid complications coming from the need
   // to traverse the block while potentially creating more blocks.
   SmallVector<MachineInstr *, 4> ToReplace;
