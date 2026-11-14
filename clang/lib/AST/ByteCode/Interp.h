@@ -121,7 +121,8 @@ bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
 bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
 bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
                   bool TargetIsUCharOrByte);
-bool CheckBCPResult(InterpState &S, const Pointer &Ptr);
+bool CheckBCPResult(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                    bool IsRecord);
 bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD);
 bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
