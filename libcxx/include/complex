@@ -1405,7 +1405,7 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const complex<_Tp>& __x) {
   basic_ostringstream<_CharT, _Traits> __s;
   __s.flags(__os.flags());
-  __s.imbue(__os.getloc());
+  __s.imbue(__os.__getloc());
   __s.precision(__os.precision());
   __s << '(' << __x.real() << ',' << __x.imag() << ')';
   return __os << __s.str();

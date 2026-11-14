@@ -317,6 +317,7 @@ public:
   // 27.5.2.3 locales:
   locale imbue(const locale& __loc);
   [[__nodiscard__]] locale getloc() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const locale& __getloc() const { return __loc_; }
 
   // 27.5.2.5 storage:
   [[__nodiscard__]] static int xalloc();
@@ -686,12 +687,12 @@ inline _LIBCPP_HIDE_FROM_ABI locale basic_ios<_CharT, _Traits>::imbue(const loca
 
 template <class _CharT, class _Traits>
 inline _LIBCPP_HIDE_FROM_ABI char basic_ios<_CharT, _Traits>::narrow(char_type __c, char __dfault) const {
-  return std::use_facet<ctype<char_type> >(getloc()).narrow(__c, __dfault);
+  return std::use_facet<ctype<char_type> >(__getloc()).narrow(__c, __dfault);
 }
 
 template <class _CharT, class _Traits>
 inline _LIBCPP_HIDE_FROM_ABI _CharT basic_ios<_CharT, _Traits>::widen(char __c) const {
-  return std::use_facet<ctype<char_type> >(getloc()).widen(__c);
+  return std::use_facet<ctype<char_type> >(__getloc()).widen(__c);
 }
 
 template <class _CharT, class _Traits>

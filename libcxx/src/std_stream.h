@@ -74,7 +74,7 @@ private:
 template <class _CharT>
 __stdinbuf<_CharT>::__stdinbuf(FILE* __fp, state_type* __st)
     : __file_(__fp), __st_(__st), __last_consumed_(traits_type::eof()), __last_consumed_is_next_(false) {
-  imbue(this->getloc());
+  imbue(this->__getloc());
   // On Windows, in wchar_t mode, ignore the codecvt from the locale by
   // default and assume noconv; this passes wchar_t through unmodified from
   // getwc. If the user sets a custom locale with imbue(), that gets honored,

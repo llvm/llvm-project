@@ -509,8 +509,8 @@ basic_filebuf<_CharT, _Traits>::basic_filebuf()
       __owns_eb_(false),
       __owns_ib_(false),
       __always_noconv_(false) {
-  if (std::has_facet<codecvt<char_type, char, state_type> >(this->getloc())) {
-    __cv_            = std::addressof(std::use_facet<codecvt<char_type, char, state_type> >(this->getloc()));
+  if (std::has_facet<codecvt<char_type, char, state_type> >(this->__getloc())) {
+    __cv_            = std::addressof(std::use_facet<codecvt<char_type, char, state_type> >(this->__getloc()));
     __always_noconv_ = __cv_->always_noconv();
   }
   setbuf(nullptr, 4096);

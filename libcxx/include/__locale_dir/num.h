@@ -213,8 +213,7 @@ struct __num_get : protected __num_get_base {
 private:
   template <typename _Tp>
   _LIBCPP_HIDE_FROM_ABI const _Tp* __do_widen_p(ios_base& __iob, _Tp* __atoms) const {
-    locale __loc = __iob.getloc();
-    use_facet<ctype<_Tp> >(__loc).widen(__src, __src + __int_chr_cnt, __atoms);
+    use_facet<ctype<_Tp> >(__iob.__getloc()).widen(__src, __src + __int_chr_cnt, __atoms);
     return __atoms;
   }
 
@@ -228,7 +227,7 @@ private:
 template <class _CharT>
 string __num_get<_CharT>::__stage2_float_prep(
     ios_base& __iob, _CharT* __atoms, _CharT& __decimal_point, _CharT& __thousands_sep) {
-  locale __loc = __iob.getloc();
+  const locale& __loc = __iob.__getloc();
   std::use_facet<ctype<_CharT> >(__loc).widen(__src, __src + __fp_chr_cnt, __atoms);
   const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__loc);
   __decimal_point              = __np.decimal_point();
@@ -472,7 +471,7 @@ protected:
     // storing the relevant characters first (in an allocated buffer) and parse the characters after we extracted them.
     // This makes the whole process significantly faster, since we avoid potential allocations and copies.
 
-    const auto& __numpunct    = use_facet<numpunct<_CharT> >(__iob.getloc());
+    const auto& __numpunct    = use_facet<numpunct<_CharT> >(__iob.__getloc());
     char_type __thousands_sep = __numpunct.thousands_sep();
     string __grouping         = __numpunct.grouping();
 
@@ -690,8 +689,8 @@ _InputIterator num_get<_CharT, _InputIterator>::do_get(
     }
     return __b;
   }
-  const ctype<_CharT>& __ct    = std::use_facet<ctype<_CharT> >(__iob.getloc());
-  const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__iob.getloc());
+  const ctype<_CharT>& __ct    = std::use_facet<ctype<_CharT> >(__iob.__getloc());
+  const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__iob.__getloc());
   typedef typename numpunct<_CharT>::string_type string_type;
   const string_type __names[2] = {__np.truename(), __np.falsename()};
   const string_type* __i       = std::__scan_keyword(__b, __e, __names, __names + 2, __ct, __err);
@@ -912,7 +911,7 @@ _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, bool __v) const {
   if ((__iob.flags() & ios_base::boolalpha) == 0)
     return do_put(__s, __iob, __fl, (unsigned long)__v);
-  const numpunct<char_type>& __np = std::use_facet<numpunct<char_type> >(__iob.getloc());
+  const numpunct<char_type>& __np = std::use_facet<numpunct<char_type> >(__iob.__getloc());
   typedef typename numpunct<char_type>::string_type string_type;
   string_type __nm = __v ? __np.truename() : __np.falsename();
   return std::copy(__nm.begin(), __nm.end(), __s);
@@ -982,7 +981,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   char_type __o[2 * (__buffer_size - 1) - 1];
   char_type* __op; // pad here
   char_type* __oe; // end of output
-  this->__widen_and_group_int(__char_buffer, __np, __res.__ptr, __o, __op, __oe, __iob.getloc());
+  this->__widen_and_group_int(__char_buffer, __np, __res.__ptr, __o, __op, __oe, __iob.__getloc());
   // [__o, __oe) contains thousands_sep'd wide number
   // Stage 3 & 4
   return std::__pad_and_output(__s, __o, __op, __oe, __iob, __fl);
@@ -1055,7 +1054,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   }
   char_type* __op; // pad here
   char_type* __oe; // end of output
-  this->__widen_and_group_float(__nb, __np, __ne, __ob, __op, __oe, __iob.getloc());
+  this->__widen_and_group_float(__nb, __np, __ne, __ob, __op, __oe, __iob.__getloc());
   // [__o, __oe) contains thousands_sep'd wide number
   // Stage 3 & 4
   __s = std::__pad_and_output(__s, __ob, __op, __oe, __iob, __fl);

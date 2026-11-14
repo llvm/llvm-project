@@ -571,7 +571,7 @@ _LIBCPP_HIDE_FROM_ABI void basic_stringbuf<_CharT, _Traits, _Allocator>::__move_
   __rhs.setg(__p, __p, __p);
   __rhs.setp(__p, __p);
   __rhs.__hm_ = __p;
-  this->pubimbue(__rhs.getloc());
+  this->pubimbue(__rhs.__getloc());
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -613,7 +613,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::operator=(basic_stringbuf&& __rhs)
   __rhs.setg(__p, __p, __p);
   __rhs.setp(__p, __p);
   __rhs.__hm_ = __p;
-  this->pubimbue(__rhs.getloc());
+  this->pubimbue(__rhs.__getloc());
   return *this;
 }
 
@@ -684,9 +684,7 @@ void basic_stringbuf<_CharT, _Traits, _Allocator>::swap(basic_stringbuf& __rhs)
   } else
     __rhs.setp(nullptr, nullptr);
   __rhs.__hm_ = __lhm == -1 ? nullptr : __p + __lhm;
-  locale __tl = __rhs.getloc();
-  __rhs.pubimbue(this->getloc());
-  this->pubimbue(__tl);
+  this->pubimbue(__rhs.pubimbue(this->__getloc()));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
