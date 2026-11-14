@@ -444,7 +444,11 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
 
   // Honor -mllvm options
-  CI->parseLLVMArgs();
+  if (!CI->parseLLVMArgs()) {
+    ErrOut = llvm::createStringError(llvm::errc::invalid_argument,
+                                     "Failed to parse -mllvm arguments");
+    return;
+  }
 
   Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
     return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
@@ -500,7 +504,8 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 
 Interpreter::~Interpreter() {
   IncrParser.reset();
-  Act->FinalizeAction();
+  if (Act)
+    Act->FinalizeAction();
   if (DeviceParser)
     DeviceParser.reset();
   if (DeviceAct)

@@ -1278,6 +1278,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `/permissive` options are also translated consistently for host and device
   compilation.
 
+- Fixed clang terminating the process from inside the LLVM or MLIR option parser, instead of reporting a diagnostic, when an invalid option was passed through `-mllvm` or `-mmlir`.
+
 #### Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.
