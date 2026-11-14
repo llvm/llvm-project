@@ -9,8 +9,8 @@
 // classic CodeGen, and that their definitions carry the "sycl-module-id"
 // attribute that marks them as entry points for device-code splitting.
 
-template <typename KernelName, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+template <typename KernelInfo, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 template <typename KernelName, typename KernelType>
 [[clang::sycl_kernel_entry_point(KernelName)]]

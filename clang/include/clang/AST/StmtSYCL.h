@@ -103,6 +103,7 @@ class UnresolvedSYCLKernelCallStmt : public Stmt {
 
 private:
   Stmt *OriginalStmt = nullptr;
+
   // KernelLaunchIdExpr stores an UnresolvedLookupExpr or UnresolvedMemberExpr
   // corresponding to the SYCL kernel launch function for which a call
   // will be synthesized during template instantiation.

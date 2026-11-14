@@ -13668,9 +13668,26 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
     UnresolvedSYCLKernelCallStmt *S) {
   auto *FD = cast<FunctionDecl>(SemaRef.CurContext);
+
   const auto *SKEPAttr = FD->template getAttr<SYCLKernelEntryPointAttr>();
   if (!SKEPAttr || SKEPAttr->isInvalidAttr())
     return StmtError();
+
+  // The kernel name type held by the transformed SKEPAttr should no longer be
+  // dependent. Ensure that is so and retrieve a non-dependent kernel info
+  // specialization type. The call to GetSYCLKernelInfoClassSpecializationType()
+  // doesn't just retrieve the type; it also builds an explicit specialization
+  // decaration. A declaration of the explicit specialization must be built
+  // before the following expression translations are transformed. Otherwise,
+  // those transformations would trigger an implicit instantiation of the kernel
+  // info type when explicit template arguments are transformed which would
+  // build the wrong kind of specialization; one that can't be defined after
+  // the body is translated.
+  assert(!SKEPAttr->getKernelName()->isDependentType() &&
+         "SYCL kernel name type should not be dependent here");
+  QualType InfoType = SemaRef.SYCL().GetSYCLKernelInfoClassSpecializationType(
+      SKEPAttr->getKernelName());
+  assert(!InfoType.isNull());
 
   ExprResult IdExpr = getDerived().TransformExpr(S->getKernelLaunchIdExpr());
   if (IdExpr.isInvalid())
@@ -13680,9 +13697,9 @@ StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
   if (Body.isInvalid())
     return StmtError();
 
+  SemaSYCL::SYCLKernelCallStmtASTFragments ASTFragments{IdExpr.get()};
   StmtResult SR = SemaRef.SYCL().BuildSYCLKernelCallStmt(
-      cast<FunctionDecl>(SemaRef.CurContext), cast<CompoundStmt>(Body.get()),
-      IdExpr.get());
+      FD, cast<CompoundStmt>(Body.get()), ASTFragments);
   if (SR.isInvalid())
     return StmtError();
 

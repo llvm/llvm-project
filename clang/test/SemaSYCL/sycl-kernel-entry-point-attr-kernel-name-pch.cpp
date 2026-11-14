@@ -16,8 +16,8 @@
 template<int> struct KN;
 
 // A generic kernel launch function.
-template<typename KN, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+template<typename KI, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void pch_test1() {} // << expected previous declaration note here.
