@@ -51,7 +51,7 @@ extern "C" __device__ int printf(const char *, ...);
 // BUFFERED: store i64 -3402830678189845200, ptr addrspace(1) [[P0]], align 8
 // BUFFERED: [[P1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P0]], i32 8
 // BUFFERED: [[A:%.*]] = zext i32 {{%.*}} to i64
-// BUFFERED: store i64 [[A]], ptr addrspace(1) [[P1]], align 8
+// BUFFERED: store i64 [[A]], ptr addrspace(1) [[P1]], align 4
 __device__ void p(int v) { printf("%d\n", v); }
 
 // The result of printf must be forwarded to its users. The expansion's block
@@ -164,7 +164,7 @@ __device__ void s(const char *str) { printf("%s|%s\n", "const", str); }
 // BUFFERED-NEXT: call{{.*}} void @llvm.memcpy.p1.{{p0|p4}}.i64(ptr addrspace(1){{.*}} [[P0]], ptr{{.*}}, i64 [[LEN]], i1 false)
 // BUFFERED-NEXT: [[P1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P0]], i64 [[ALIGNED]]
 // BUFFERED-NEXT: [[A:%.*]] = zext i32 {{%.*}} to i64
-// BUFFERED-NEXT: store i64 [[A]], ptr addrspace(1) [[P1]], align 8
+// BUFFERED-NEXT: store i64 [[A]], ptr addrspace(1) [[P1]], align 4
 __device__ void nf(const char *fmt, int v) { printf(fmt, v); }
 
 // No arguments: the format string is the last thing appended.
@@ -281,7 +281,7 @@ __device__ void off() { printf(&"xx%s|\n"[2], "skip-me" + 5); }
 // BUFFERED-OGCG-NEXT: [[P0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[BUF]], i32 4
 // BUFFERED-OGCG-NEXT: call{{.*}} void @llvm.memcpy.p1.{{p0|p4}}.i64(ptr addrspace(1){{.*}} [[P0]], ptr{{.*}}@_ZL9brace_fmt{{.*}}, i64 [[LEN]], i1 false)
 // BUFFERED-OGCG-NEXT: [[P1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P0]], i64 [[ALIGNED]]
-// BUFFERED-OGCG-NEXT: store ptr{{.*}}@.str.7{{.*}}, ptr addrspace(1) [[P1]], align 8
+// BUFFERED-OGCG-NEXT: store ptr{{.*}}@.str.7{{.*}}, ptr addrspace(1) [[P1]], align 4
 const char brace_fmt[] = {'%', 's', '\n', 0};
 __device__ void bf() { printf(brace_fmt, "x"); }
 

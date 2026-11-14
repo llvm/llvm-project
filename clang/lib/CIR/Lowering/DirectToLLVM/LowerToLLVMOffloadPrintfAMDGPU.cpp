@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/SparseBitVector.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 
@@ -181,7 +182,7 @@ private:
   mlir::Value processNonStringArg(mlir::Value arg);
   void callBufferedPrintfArgPush(mlir::ValueRange args, mlir::Value ptrToStore,
                                  llvm::ArrayRef<StringData> stringContents,
-                                 bool isConstFmtStr);
+                                 bool isConstFmtStr, llvm::Align slotAlign);
   mlir::Value emitAMDGPUPrintfCall(mlir::ValueRange args, bool isBuffered);
 
   cir::OffloadPrintfOp op;
@@ -528,7 +529,8 @@ mlir::Value AMDGPUPrintfLowering::processNonStringArg(mlir::Value arg) {
 
 void AMDGPUPrintfLowering::callBufferedPrintfArgPush(
     mlir::ValueRange args, mlir::Value ptrToStore,
-    llvm::ArrayRef<StringData> stringContents, bool isConstFmtStr) {
+    llvm::ArrayRef<StringData> stringContents, bool isConstFmtStr,
+    llvm::Align slotAlign) {
   const StringData *strIt = stringContents.begin();
   size_t i = isConstFmtStr ? 1 : 0;
   for (; i < args.size(); i++) {
@@ -536,7 +538,8 @@ void AMDGPUPrintfLowering::callBufferedPrintfArgPush(
       // The runtime reads each non-string argument from a slot of at least 8
       // bytes, also when the stored value is smaller.
       mlir::Value toStore = processNonStringArg(args[i]);
-      mlir::LLVM::StoreOp::create(rewriter, op.getLoc(), toStore, ptrToStore);
+      mlir::LLVM::StoreOp::create(rewriter, op.getLoc(), toStore, ptrToStore,
+                                  slotAlign.value());
       uint64_t allocSize =
           dataLayout.getTypeAllocSize(toStore.getType()).getFixedValue();
       ptrToStore = gepInBounds(ptrToStore, llvm::alignTo(allocSize, 8));
@@ -552,11 +555,14 @@ void AMDGPUPrintfLowering::callBufferedPrintfArgPush(
       auto memcpy = mlir::LLVM::MemcpyOp::create(
           rewriter, op.getLoc(), ptrToStore, args[i], strIt->realSize,
           /*isVolatile=*/false);
-      mlir::NamedAttribute align1(mlir::LLVM::LLVMDialect::getAlignAttrName(),
-                                  rewriter.getI64IntegerAttr(1));
+      mlir::NamedAttribute dstAlign(
+          mlir::LLVM::LLVMDialect::getAlignAttrName(),
+          rewriter.getI64IntegerAttr(slotAlign.value()));
+      mlir::NamedAttribute srcAlign(mlir::LLVM::LLVMDialect::getAlignAttrName(),
+                                    rewriter.getI64IntegerAttr(1));
       memcpy.setArgAttrsAttr(
-          rewriter.getArrayAttr({rewriter.getDictionaryAttr(align1),
-                                 rewriter.getDictionaryAttr(align1),
+          rewriter.getArrayAttr({rewriter.getDictionaryAttr(dstAlign),
+                                 rewriter.getDictionaryAttr(srcAlign),
                                  rewriter.getDictionaryAttr({})}));
 
       ptrToStore = gepInBounds(ptrToStore, strIt->alignedSize);
@@ -625,7 +631,15 @@ mlir::Value AMDGPUPrintfLowering::emitAMDGPUPrintfCall(mlir::ValueRange args,
 
     mlir::LLVM::StoreOp::create(rewriter, op.getLoc(), controlDWord, ptr);
 
-    ptr = gepInBounds(ptr, 4);
+    // The device runtime places frames back to back and every frame size is a
+    // multiple of 4 bytes, so a frame is only guaranteed to be 4-byte aligned.
+    // Everything after the control dword is padded to 8 bytes, so all later
+    // slots share the alignment of the first one.
+    uint64_t controlDWordSize =
+        dataLayout.getTypeSize(controlDWord.getType()).getFixedValue();
+    llvm::Align slotAlign =
+        llvm::commonAlignment(llvm::Align(4), controlDWordSize);
+    ptr = gepInBounds(ptr, controlDWordSize);
 
     // Create MD5 hash for constant format string, push low 64 bits of the
     // same onto buffer and metadata.
@@ -646,7 +660,8 @@ mlir::Value AMDGPUPrintfLowering::emitAMDGPUPrintfCall(mlir::ValueRange args,
     }
 
     // Push The printf arguments onto buffer
-    callBufferedPrintfArgPush(args, ptr, stringContents, isConstFmtStr);
+    callBufferedPrintfArgPush(args, ptr, stringContents, isConstFmtStr,
+                              slotAlign);
 
     // End block, returns -1 on failure
     mlir::LLVM::BrOp::create(rewriter, op.getLoc(), end);
