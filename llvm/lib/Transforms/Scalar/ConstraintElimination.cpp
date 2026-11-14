@@ -609,6 +609,19 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
   return true;
 }
 
+static bool isKnownNoWrap(Value *V, ConstraintInfo &Info, bool Signed);
+
+/// Returns D if \p X is D udiv W or D lshr W for a sub D = Z - \p Y, so that
+/// X <=u D, and nullptr otherwise.
+static BinaryOperator *getBoundingSub(Value *X, Value *Y) {
+  BinaryOperator *D;
+  if (match(X, m_CombineOr(m_UDiv(m_BinOp(D), m_Value()),
+                           m_LShr(m_BinOp(D), m_Value()))) &&
+      match(D, m_Sub(m_Value(), m_Specific(Y))))
+    return D;
+  return nullptr;
+}
+
 /// Returns true if \p Opcode applied to \p Op0 and \p Op1 with \p NoWrapFlags
 /// is known to not wrap in signed or unsigned, depending on \p Signed.
 static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
@@ -618,6 +631,14 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
 
   if (NoWrapFlags & (Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap))
     return true;
+
+  // X + Y does not wrap unsigned if X <=u D for D = Z - Y, and D does not wrap
+  // unsigned.
+  if (Opcode == Instruction::Add && !Signed)
+    for (auto [X, Y] : {std::pair(Op0, Op1), std::pair(Op1, Op0)})
+      if (BinaryOperator *D = getBoundingSub(X, Y))
+        if (isKnownNoWrap(D, Info, /*Signed=*/false))
+          return true;
 
   if (Opcode == Instruction::Sub) {
     // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
