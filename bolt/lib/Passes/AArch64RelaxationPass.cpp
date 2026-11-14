@@ -35,6 +35,37 @@ namespace bolt {
 // jobs and checking the exit flag after it.
 static bool PassFailed = false;
 
+bool AArch64RelaxationPass::redirectToIslandCopy(BinaryFunction &BF,
+                                                 MCInst &Inst, unsigned OpNum,
+                                                 const MCSymbol &Symbol) {
+  assert(!opts::CloneConstantIsland && "Reference should already point to the "
+                                       "cloned constant island if constant "
+                                       "island clone is enabled");
+  BinaryContext &BC = BF.getBinaryContext();
+  const BinaryData *BD = BC.getBinaryDataByName(Symbol.getName());
+  if (!BD)
+    return false;
+
+  const uint64_t Address = BD->getAddress();
+  BinaryFunction *Owner = BC.getBinaryFunctionContainingAddress(
+      Address, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
+  if (!Owner || Owner == &BF || !Owner->isInConstantIsland(Address) ||
+      Owner->hasDynamicRelocationAtIsland())
+    return false;
+
+  MCSymbol *Proxy = Owner->getOrCreateProxyIslandAccess(Address, BF);
+  if (!Proxy)
+    return false;
+
+  if (!BF.hasIslandsInfo() || !BF.getIslandInfo().Dependency.contains(Owner)) {
+    ++NumIslandCopies;
+    IslandCopyBytes += Owner->estimateConstantIslandSize(&BF);
+  }
+  BF.createIslandDependency(Proxy, Owner);
+  return BC.MIB->replaceMemOperandDisp(
+      Inst, Proxy, BC.MIB->getTargetAddend(Inst, OpNum), BC.Ctx.get());
+}
+
 void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
   if (PassFailed)
     return;
@@ -76,6 +107,28 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
             continue;
       }
 
+      const bool NopBefore = It != BB.begin() && BC.MIB->isNoop(*std::prev(It));
+      const bool NopAfter =
+          std::next(It) != BB.end() && BC.MIB->isNoop(*std::next(It));
+      if (!NopBefore && !NopAfter && !BF.isSimple()) {
+        // If the function is not simple, it may contain a jump table undetected
+        // by us. This jump table may use an offset from the branch instruction
+        // to land in the desired place. If we add new instructions, we
+        // invalidate this offset, so we have to rely on linker-inserted NOP to
+        // replace it with ADRP, and abort if it is not present. With
+        // --clone-constant-island=0, a reference to another function's
+        // constant island can still use a copy of the island emitted with this
+        // function. With cloning enabled, such references already use copies.
+        auto L = BC.scopeLock();
+        if (!opts::CloneConstantIsland &&
+            redirectToIslandCopy(BF, Inst, IsADR ? 0 : 1, *Symbol))
+          continue;
+        BC.errs() << "BOLT-ERROR: cannot relax " << (IsADR ? "ADR" : "LDR")
+                  << " in non-simple function " << BF << '\n';
+        PassFailed = true;
+        return;
+      }
+
       InstructionListType AdrpMaterialization;
       {
         auto L = BC.scopeLock();
@@ -84,22 +137,10 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
                   : BC.MIB->createAdrpLdr(Inst, BC.Ctx.get());
       }
 
-      if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {
+      if (NopBefore)
         It = BB.eraseInstruction(std::prev(It));
-      } else if (std::next(It) != BB.end() && BC.MIB->isNoop(*std::next(It))) {
+      else if (NopAfter)
         BB.eraseInstruction(std::next(It));
-      } else if (!BF.isSimple()) {
-        // If the function is not simple, it may contain a jump table undetected
-        // by us. This jump table may use an offset from the branch instruction
-        // to land in the desired place. If we add new instructions, we
-        // invalidate this offset, so we have to rely on linker-inserted NOP to
-        // replace it with ADRP, and abort if it is not present.
-        auto L = BC.scopeLock();
-        BC.errs() << "BOLT-ERROR: cannot relax " << (IsADR ? "ADR" : "LDR")
-                  << " in non-simple function " << BF << '\n';
-        PassFailed = true;
-        return;
-      }
       It = BB.replaceInstruction(It, AdrpMaterialization);
     }
   }
@@ -119,6 +160,11 @@ Error AArch64RelaxationPass::runOnFunctions(BinaryContext &BC) {
 
   if (PassFailed)
     return createFatalBOLTError("");
+
+  if (NumIslandCopies)
+    BC.outs() << "BOLT-INFO: copied " << NumIslandCopies
+              << " constant island(s) totaling " << IslandCopyBytes
+              << " bytes into non-simple functions\n";
   return Error::success();
 }
 

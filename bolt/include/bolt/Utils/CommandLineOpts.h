@@ -89,6 +89,7 @@ extern llvm::cl::opt<bool> X86AlignBranchBoundaryHotOnly;
 extern llvm::cl::opt<bool> AggregateOnly;
 extern llvm::cl::opt<bool> ArmSPE;
 extern llvm::cl::opt<unsigned> BucketsPerLine;
+extern llvm::cl::opt<bool> CloneConstantIsland;
 extern llvm::cl::opt<bool> CompactCodeModel;
 extern llvm::cl::opt<bool> DiffOnly;
 extern llvm::cl::opt<bool> EnableBAT;

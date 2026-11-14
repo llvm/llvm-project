@@ -24,6 +24,17 @@ namespace llvm {
 namespace bolt {
 
 class AArch64RelaxationPass : public BinaryFunctionPass {
+  /// Number and total size of constant island copies emitted with non-simple
+  /// functions that reference another function's island.
+  uint64_t NumIslandCopies{0};
+  uint64_t IslandCopyBytes{0};
+
+  /// Point the ADR/LDR Inst in BF at a copy of the constant island it
+  /// references in another function. The copy is emitted with BF, so the
+  /// reference needs no relaxation. Returns false if this attempt failed.
+  bool redirectToIslandCopy(BinaryFunction &BF, MCInst &Inst, unsigned OpNum,
+                            const MCSymbol &Symbol);
+
 public:
   explicit AArch64RelaxationPass(const cl::opt<bool> &PrintPass)
       : BinaryFunctionPass(PrintPass) {}

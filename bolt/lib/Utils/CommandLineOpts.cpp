@@ -104,6 +104,11 @@ cl::opt<unsigned>
                    cl::desc("number of entries per line (default 256)"),
                    cl::init(256), cl::cat(HeatmapCategory));
 
+cl::opt<bool> CloneConstantIsland("clone-constant-island",
+                                  cl::desc("clone constant islands"),
+                                  cl::Hidden, cl::init(true),
+                                  cl::cat(BoltCategory));
+
 cl::opt<bool>
     CompactCodeModel("compact-code-model",
                      cl::desc("generate code for binaries <128MB on AArch64"),
