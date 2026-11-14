@@ -271,7 +271,10 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
           !target->hasAttr(r.type, RelocAttrBits::AUTH)) {
         referentVA -= firstTLVDataSection->addr;
       } else if (needsFixup) {
-        writeChainedFixup(loc, referentSym, r.getAddend(), r.getAuthInfo());
+        const AuthInfo *auth = r.getAuthInfo();
+        if (!auth)
+          auth = getImplicitAuthInfo(this, referentSym);
+        writeChainedFixup(loc, referentSym, r.getAddend(), auth);
         continue;
       }
     } else if (auto *referentIsec =
@@ -328,8 +331,8 @@ StringPiece &CStringInputSection::getStringPiece(uint64_t off) {
   if (off >= data.size())
     fatal(toString(this) + ": offset is outside the section");
 
-  auto it =
-      partition_point(pieces, [=](StringPiece p) { return p.inSecOff <= off; });
+  auto it = partition_point(
+      pieces, [=](const StringPiece &p) { return p.inSecOff <= off; });
   return it[-1];
 }
 
@@ -341,8 +344,8 @@ size_t CStringInputSection::getStringPieceIndex(uint64_t off) const {
   if (off >= data.size())
     fatal(toString(this) + ": offset is outside the section");
 
-  auto it =
-      partition_point(pieces, [=](StringPiece p) { return p.inSecOff <= off; });
+  auto it = partition_point(
+      pieces, [=](const StringPiece &p) { return p.inSecOff <= off; });
   return std::distance(pieces.begin(), it) - 1;
 }
 
@@ -370,7 +373,10 @@ WordLiteralInputSection::WordLiteralInputSection(const Section &section,
     llvm_unreachable("invalid literal section type");
   }
 
-  live.resize(data.size() >> power2LiteralSize, !config->deadStrip);
+  size_t numLiterals = data.size() >> power2LiteralSize;
+  live = std::make_unique<std::atomic<bool>[]>(numLiterals);
+  if (!config->deadStrip)
+    std::fill_n(live.get(), numLiterals, true);
 }
 
 uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {
@@ -419,6 +425,18 @@ bool macho::isEhFrameSection(const InputSection *isec) {
 bool macho::usesAuthGot(const InputSection *isec) {
   // arm64e's unwinder expects signed personality pointers.
   return config->arch() == AK_arm64e && isEhFrameSection(isec);
+}
+
+const AuthInfo *macho::getImplicitAuthInfo(const InputSection *isec,
+                                           const Symbol *sym) {
+  // The only pointer bound from a TLV descriptor is its thunk, which TLV
+  // accesses call with blraaz.
+  static constexpr AuthInfo tlvThunk = {/*diversity=*/0, PtrAuthKeyIA,
+                                        /*addrDiv=*/false};
+  if (config->arch() == AK_arm64e && isThreadLocalVariables(isec->getFlags()) &&
+      needsBinding(sym))
+    return &tlvThunk;
+  return nullptr;
 }
 
 bool macho::isGccExceptTabSection(const InputSection *isec) {

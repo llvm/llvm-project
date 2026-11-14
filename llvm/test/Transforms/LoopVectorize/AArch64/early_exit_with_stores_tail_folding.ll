@@ -2,7 +2,7 @@
 ; RUN: opt -S < %s -p loop-vectorize -force-vector-width=8 -mtriple=aarch64 -mattr=+sve \
 ; RUN:   -enable-early-exit-vectorization-with-side-effects -tail-folding-policy=prefer-fold-tail | FileCheck %s
 
-define void @uniform_load_store(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred, ptr noalias %q) {
+define void @uniform_load_store(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred, ptr noalias %q) vscale_range(1,16) {
 ; CHECK-LABEL: define void @uniform_load_store(
 ; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]], ptr noalias [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:

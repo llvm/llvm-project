@@ -13,12 +13,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2
@@ -26,9 +20,9 @@ body:             |
     ; CHECK-DAG: [[X:%[0-9]+]]:_(f32) = COPY $r0
     ; CHECK-DAG: [[Y:%[0-9]+]]:_(f32) = COPY $r1
     ; CHECK-DAG: [[Z:%[0-9]+]]:_(f32) = COPY $r2
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
     ; HARD: [[R:%[0-9]+]]:_(f32) = G_FMA [[X]], [[Y]], [[Z]]
     ; SOFT-NOT: G_FMA
     ; SOFT: ADJCALLSTACKDOWN
@@ -48,7 +42,7 @@ body:             |
     ; HARD-ABI: [[R:%[0-9]+]]:_(f32) = COPY $s0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_FMA
-    %3(f32) = G_FMA %0, %1, %2
+    %3:_(f32) = G_FMA %0, %1, %2
     ; CHECK: $r0 = COPY [[R]]
     $r0 = COPY %3(f32)
     BX_RET 14, $noreg, implicit $r0
@@ -60,17 +54,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -79,16 +62,16 @@ body:             |
     ; CHECK-DAG: [[X1:%[0-9]+]]:_(f32) = COPY $r1
     ; CHECK-DAG: [[Y0:%[0-9]+]]:_(f32) = COPY $r2
     ; CHECK-DAG: [[Y1:%[0-9]+]]:_(f32) = COPY $r3
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
     ; HARD-DAG: [[X:%[0-9]+]]:_(f64) = G_MERGE_VALUES [[X0]]
     ; HARD-DAG: [[Y:%[0-9]+]]:_(f64) = G_MERGE_VALUES [[Y0]]
     ; HARD-ABI-DAG: [[X:%[0-9]+]]:_(f64) = G_MERGE_VALUES [[X0]]
     ; HARD-ABI-DAG: [[Y:%[0-9]+]]:_(f64) = G_MERGE_VALUES [[Y0]]
-    %4(f64) = G_MERGE_VALUES %0(f32), %1(f32)
-    %5(f64) = G_MERGE_VALUES %2(f32), %3(f32)
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1(f32)
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3(f32)
     ; HARD: [[R:%[0-9]+]]:_(f64) = G_FMA [[X]], [[X]], [[Y]]
     ; SOFT-NOT: G_FMA
     ; SOFT: ADJCALLSTACKDOWN
@@ -125,10 +108,10 @@ body:             |
     ; SOFT-ABI: [[R0:%[0-9]+]]:_(f32) = G_BITCAST [[R0b]]
     ; SOFT-ABI: [[R1:%[0-9]+]]:_(f32) = G_BITCAST [[R1b]]
     ; SOFT-NOT: G_FMA
-    %6(f64) = G_FMA %4, %4, %5
+    %6:_(f64) = G_FMA %4, %4, %5
     ; HARD: [[R0:%[0-9]+]]:_(f32), [[R1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[R]](f64)
     ; HARD-ABI: [[R0:%[0-9]+]]:_(f32), [[R1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[R]](f64)
-    %7(f32),%8(f32) = G_UNMERGE_VALUES %6(f64)
+    %7:_(f32),%8:_(f32) = G_UNMERGE_VALUES %6(f64)
     ; CHECK-DAG: $r0 = COPY [[R0]]
     ; CHECK-DAG: $r1 = COPY [[R1]]
     $r0 = COPY %7(f32)

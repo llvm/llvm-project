@@ -47,6 +47,7 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cmath>
@@ -986,8 +987,13 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 }
 
 static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
+                                const DeclaratorDecl *D,
                                 HLSLAppliedSemanticAttr *Semantic,
                                 bool IsInput) {
+  // Explicitly annotated built-ins skip location assignment
+  if (D->hasAttr<HLSLVkBuiltInAttr>())
+    return true;
+
   if (AstContext.getTargetInfo().getTriple().getOS() != llvm::Triple::Vulkan)
     return false;
 
@@ -1007,6 +1013,8 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return true;
   case SemanticKind::InstanceID:
     return ST == llvm::Triple::Vertex && IsInput;
+  case SemanticKind::IsFrontFace:
+    return ST == llvm::Triple::Pixel && IsInput;
   case SemanticKind::ShadingRate:
     // Lowered to:
     //  - ShadingRateKHR built-in for fragment input.
@@ -1025,6 +1033,57 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return IsInput;
   default:
     return false;
+  }
+}
+
+static void validateVkBuiltinUsage(Sema &S, FunctionDecl *FD,
+                                   const DeclaratorDecl *D,
+                                   const HLSLVkBuiltInAttr *Attr,
+                                   IOType CurrentIOType) {
+  const ASTContext &AstContext = S.getASTContext();
+  if (AstContext.getTargetInfo().getTriple().getOS() != llvm::Triple::Vulkan)
+    return;
+
+  StringRef BuiltIn = Attr->getBuiltIn();
+
+  QualType T =
+      (D == FD ? FD->getReturnType() : D->getType()).getNonReferenceType();
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+  llvm::Triple::EnvironmentType Stage = ShaderAttr->getType();
+  bool IsIn = any(CurrentIOType & IOType::In);
+  bool IsOut = any(CurrentIOType & IOType::Out);
+
+  if (BuiltIn == "PointSize") {
+    // Vulkan requires PointSize to be a 32-bit float
+    // (VUID-PointSize-PointSize-04317). Without native 16-bit types, `half` is
+    // lowered to a 32-bit float, so it is accepted as well.
+    bool Is32BitFloat = T->isSpecificBuiltinType(BuiltinType::Float) ||
+                        (T->isSpecificBuiltinType(BuiltinType::Half) &&
+                         !AstContext.getLangOpts().NativeHalfType);
+    if (!Is32BitFloat)
+      S.Diag(Attr->getLocation(), diag::err_hlsl_vk_builtin_wrong_type)
+          << BuiltIn << S.getASTContext().FloatTy;
+
+    // PointSize is a per-vertex value, so patch-constant (hull/domain)
+    // and per-primitive (mesh) data never carries it.
+    // Note: Sema does not set this bit yet.
+    bool IsPatchConstantOrPrimitive =
+        any(CurrentIOType & IOType::PatchConstantOrPrimitive);
+    bool LegalStage =
+        !IsPatchConstantOrPrimitive &&
+        ((Stage == llvm::Triple::Vertex && IsOut) ||
+         Stage == llvm::Triple::Hull || Stage == llvm::Triple::Domain ||
+         Stage == llvm::Triple::Geometry ||
+         (Stage == llvm::Triple::Mesh && IsOut));
+    if (!LegalStage) {
+      StringRef IOTypeName = (IsIn && IsOut) ? "inputs and outputs"
+                             : IsIn          ? "inputs"
+                                             : "outputs";
+      S.Diag(Attr->getLocation(), diag::err_hlsl_vk_builtin_wrong_stage)
+          << BuiltIn << llvm::Triple::getEnvironmentTypeName(Stage)
+          << IOTypeName;
+    }
   }
 }
 
@@ -1075,8 +1134,14 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
 
   unsigned Location = ActiveSemantic.Index.value_or(0);
 
-  if (!isVkPipelineBuiltin(getASTContext(), FD, A,
-                           any(SC.CurrentIOType & IOType::In))) {
+  bool IsBuiltin = isVkPipelineBuiltin(getASTContext(), FD, D, A,
+                                       any(SC.CurrentIOType & IOType::In));
+  if (IsBuiltin) {
+    if (const auto *BuiltInAttr = D->getAttr<HLSLVkBuiltInAttr>())
+      validateVkBuiltinUsage(SemaRef, FD, D, BuiltInAttr, SC.CurrentIOType);
+  }
+
+  if (!IsBuiltin) {
     bool HasVkLocation = false;
     if (auto *A = D->getAttr<HLSLVkLocationAttr>()) {
       HasVkLocation = true;
@@ -1463,6 +1528,15 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
           << A->getAttrName() << /* scalar */ 0 << 1
           << /* 16 or 32 bit unsigned integer / 32 bit unsigned integer */
           (IsSPIRV ? 4 : 3) << DeclaredTy;
+    return;
+  case SemanticKind::IsFrontFace:
+    // Accept bool or int; SPIR-V FrontFacing BuiltIn is always a bool
+    // and CodeGen converts it to the declared type.
+    if (DeclaredTy != T || !T->isScalarType() ||
+        !(T->isBooleanType() || isIntElementOfWidth(Ctx, T, 32)))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
+          << A->getAttrName() << /* scalar */ 0 << 1
+          << /* bool or 32 bit integer */ 5 << DeclaredTy;
     return;
   default:
     // Other semantics only have the general signature type restrictions.
@@ -2240,8 +2314,51 @@ void SemaHLSL::handleVkLocationAttr(Decl *D, const ParsedAttr &AL) {
   if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Location))
     return;
 
+  // vk::builtin and vk::location mutually exclusive
+  if (const auto *BuiltIn = D->getAttr<HLSLVkBuiltInAttr>()) {
+    Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+        << AL << BuiltIn
+        << (AL.isRegularKeywordAttribute() ||
+            BuiltIn->isRegularKeywordAttribute());
+    Diag(BuiltIn->getLocation(), diag::note_conflicting_attribute);
+  }
+
   D->addAttr(::new (getASTContext())
                  HLSLVkLocationAttr(getASTContext(), AL, Location));
+}
+
+void SemaHLSL::handleVkBuiltInAttr(Decl *D, const ParsedAttr &AL) {
+  StringRef BuiltIn;
+  SourceLocation ArgLoc;
+  if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, BuiltIn, &ArgLoc))
+    return;
+
+  static constexpr StringRef SupportedBuiltIns[] = {
+      "PointSize", // TODO: uncomment build-ins as they're fully implemented
+                   // "HelperInvocation", "BaseVertex", "BaseInstance",
+                   // "DrawIndex", "DeviceIndex", "ViewportMaskNV",
+  };
+  if (!llvm::is_contained(SupportedBuiltIns, BuiltIn)) {
+    std::string Quoted;
+    llvm::raw_string_ostream OS(Quoted);
+    llvm::interleaveComma(SupportedBuiltIns, OS,
+                          [&](StringRef S) { OS << "'" << S << "'"; });
+    Diag(ArgLoc, diag::err_hlsl_vk_builtin_unsupported_value)
+        << BuiltIn << Quoted;
+    return;
+  }
+
+  // vk::builtin and vk::location mutually exclusive.
+  if (const auto *Location = D->getAttr<HLSLVkLocationAttr>()) {
+    Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+        << AL << Location
+        << (AL.isRegularKeywordAttribute() ||
+            Location->isRegularKeywordAttribute());
+    Diag(Location->getLoc(), diag::note_conflicting_attribute);
+  }
+
+  D->addAttr(::new (getASTContext())
+                 HLSLVkBuiltInAttr(getASTContext(), AL, BuiltIn));
 }
 
 void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
@@ -2267,7 +2384,6 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   case SemanticKind::OutputControlPointID:
   case SemanticKind::DomainLocation:
   case SemanticKind::GSInstanceID:
-  case SemanticKind::IsFrontFace:
   case SemanticKind::Coverage:
   case SemanticKind::InnerCoverage:
   case SemanticKind::Depth:
@@ -3642,6 +3758,8 @@ bool SemaHLSL::ActOnResourceMemberAccessExpr(MemberExpr *ME) {
       E = SubME->getBase();
     } else if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
       E = ICE->getSubExpr();
+    } else if (isa<CXXThisExpr>(E)) {
+      return true;
     } else {
       llvm_unreachable("unexpected expr type in resource member access");
     }
@@ -4010,6 +4128,18 @@ static bool CheckWavePrefix(Sema *S, CallExpr *TheCall) {
   if (CheckNotBoolScalarOrVector(S, TheCall, 0))
     return true;
   return false;
+}
+
+static bool CheckWaveMultiPrefixMask(Sema *S, CallExpr *TheCall) {
+  QualType MaskTy = TheCall->getArg(1)->getType();
+  QualType UInt4Ty = S->Context.getExtVectorType(S->Context.UnsignedIntTy, 4);
+  if (S->Context.hasSameUnqualifiedType(MaskTy, UInt4Ty))
+    return false;
+
+  S->Diag(TheCall->getArg(1)->getBeginLoc(),
+          diag::err_typecheck_convert_incompatible)
+      << MaskTy << UInt4Ty << 1 << 0 << 0;
+  return true;
 }
 
 static bool CheckBoolSelect(Sema *S, CallExpr *TheCall) {
@@ -4956,14 +5086,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
-  case Builtin::BI__builtin_hlsl_all:
-  case Builtin::BI__builtin_hlsl_any: {
-    if (SemaRef.checkArgCount(TheCall, 1))
-      return true;
-    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
-      return true;
-    break;
-  }
   case Builtin::BI__builtin_hlsl_asdouble: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
@@ -5302,8 +5424,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits: {
-    if (SemaRef.checkArgCount(TheCall, 1))
+  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_count_bits: {
+    bool IsMultiPrefix =
+        BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_count_bits;
+    if (SemaRef.checkArgCount(TheCall, IsMultiPrefix ? 2 : 1))
       return true;
 
     QualType ArgType = TheCall->getArg(0)->getType();
@@ -5320,6 +5445,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                    diag::err_typecheck_expect_any_scalar_or_vector_or_matrix)
           << ArgType << 0;
       return true;
+    }
+
+    if (IsMultiPrefix) {
+      if (CheckWaveMultiPrefixMask(&SemaRef, TheCall))
+        return true;
+
+      // Alias validation uses calls with an invalid source location.
+      if (TheCall->getBeginLoc().isValid() &&
+          !getASTContext().getTargetInfo().getTriple().isDXIL()) {
+        SemaRef.Diag(TheCall->getBeginLoc(),
+                     diag::err_builtin_target_unsupported)
+            << TheCall->getSourceRange();
+        return true;
+      }
     }
 
     break;
@@ -5404,15 +5543,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     }
 
-    QualType MaskTy = TheCall->getArg(1)->getType();
-    QualType UInt4Ty =
-        getASTContext().getExtVectorType(getASTContext().UnsignedIntTy, 4);
-    if (!getASTContext().hasSameUnqualifiedType(MaskTy, UInt4Ty)) {
-      SemaRef.Diag(TheCall->getArg(1)->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
-          << MaskTy << UInt4Ty << 1 << 0 << 0;
+    if (CheckWaveMultiPrefixMask(&SemaRef, TheCall))
       return true;
-    }
 
     TheCall->setType(ValueTy);
     break;
@@ -6380,9 +6512,8 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     }
 
     // Process resources in user-defined structs, or arrays of such structs.
-    const Type *VDTy = VD->getType().getTypePtr();
-    if (VD->getStorageClass() != SC_Static && VDTy->isHLSLIntangibleType() &&
-        !isResourceRecordTypeOrArrayOf(VD))
+    if (VD->getStorageClass() != SC_Static &&
+        isStructOrArrayOfWithResources(VD->getType()))
       handleGlobalStructOrArrayOfWithResources(VD);
 
     // Mark groupshared variables as extern so they will have

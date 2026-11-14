@@ -82,8 +82,8 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& __mu(reference_wrapper<_Tp> __t, _Uj&)
 }
 
 template <class _Ti, class... _Uj, __enable_if_t<is_bind_expression<_Ti>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 __invoke_result_t<_Ti&, _Uj...> __mu(_Ti& __ti, tuple<_Uj...>& __uj) {
-  return [&]<size_t... _Indices>(__index_sequence<_Indices...>) -> __invoke_result_t<_Ti&, _Uj...> {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 __direct_invoke_result_t<_Ti&, _Uj...> __mu(_Ti& __ti, tuple<_Uj...>& __uj) {
+  return [&]<size_t... _Indices>(__index_sequence<_Indices...>) -> __direct_invoke_result_t<_Ti&, _Uj...> {
     return __ti(std::forward<_Uj>(std::get<_Indices>(__uj))...);
   }(__index_sequence_for<_Uj...>{});
 }
@@ -123,7 +123,7 @@ struct __mu_return_invokable // false
 
 template <class _Ti, class... _Uj>
 struct __mu_return_invokable<true, _Ti, _Uj...> {
-  using type _LIBCPP_NODEBUG = __invoke_result_t<_Ti&, _Uj...>;
+  using type _LIBCPP_NODEBUG = __direct_invoke_result_t<_Ti&, _Uj...>;
 };
 
 template <class _Ti, class... _Uj>
@@ -174,12 +174,13 @@ struct __bind_return;
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>
 struct __bind_return<_Fp, tuple<_BoundArgs...>, _TupleUj, true> {
-  using type _LIBCPP_NODEBUG = __invoke_result_t<_Fp&, typename __mu_return<_BoundArgs, _TupleUj>::type...>;
+  using type _LIBCPP_NODEBUG = __direct_invoke_result_t<_Fp&, typename __mu_return<_BoundArgs, _TupleUj>::type...>;
 };
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>
 struct __bind_return<_Fp, const tuple<_BoundArgs...>, _TupleUj, true> {
-  using type _LIBCPP_NODEBUG = __invoke_result_t<_Fp&, typename __mu_return<const _BoundArgs, _TupleUj>::type...>;
+  using type _LIBCPP_NODEBUG =
+      __direct_invoke_result_t<_Fp&, typename __mu_return<const _BoundArgs, _TupleUj>::type...>;
 };
 
 template <class _Fp, class _BoundArgs, size_t... _Indx, class _Args>

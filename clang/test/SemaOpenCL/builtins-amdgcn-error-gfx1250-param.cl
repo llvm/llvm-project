@@ -55,7 +55,9 @@ void test__builtin_amdgcn_cvt_f16_bf8(int a, int b) {
 void test_cvt_sr_f8_f16(global int* out, uint sr, int old, int sel)
 {
   *out = __builtin_amdgcn_cvt_sr_bf8_f16(1.0, sr, old, sel); // expected-error {{'__builtin_amdgcn_cvt_sr_bf8_f16' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_sr_bf8_f16(1.0, sr, old, 4); // expected-error{{argument value 4 is outside the valid range [0, 3]}}
   *out = __builtin_amdgcn_cvt_sr_fp8_f16(1.0, sr, old, sel); // expected-error {{'__builtin_amdgcn_cvt_sr_fp8_f16' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_sr_fp8_f16(1.0, sr, old, 4); // expected-error{{argument value 4 is outside the valid range [0, 3]}}
 }
 
 void test_cvt_scale_pk(global half8 *outh8, global bfloat8 *outy8, uint2 src2,

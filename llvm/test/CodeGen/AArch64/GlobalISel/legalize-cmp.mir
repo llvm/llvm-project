@@ -2,11 +2,13 @@
 # RUN: llc -O0 -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1 %s -o - | FileCheck %s
 ---
 name:            test_icmp
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: test_icmp
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(sge), [[COPY]](i64), [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[ICMP]](i32)
@@ -39,7 +41,6 @@ body:             |
 ---
 name:            test_s128
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_s128
   ; CHECK: bb.0:
@@ -78,7 +79,6 @@ body:             |
 ...
 ---
 name:            test_s128_eq
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_s128_eq
   ; CHECK: bb.0:
@@ -112,7 +112,6 @@ body:             |
 ...
 ---
 name:            test_s88_eq
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_s88_eq
   ; CHECK: bb.0:
@@ -152,7 +151,6 @@ body:             |
 ...
 ---
 name:            test_s88_ne
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_s88_ne
   ; CHECK: bb.0:
@@ -192,7 +190,6 @@ body:             |
 ...
 ---
 name:            test_s96_eq
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_s96_eq
   ; CHECK: bb.0:
@@ -231,7 +228,6 @@ body:             |
 ...
 ---
 name:            test_s318_eq
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_s318_eq
   ; CHECK: bb.0:
@@ -294,7 +290,6 @@ body:             |
 ...
 ---
 name:            test_s158_eq
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_s158_eq
   ; CHECK: bb.0:
@@ -341,7 +336,6 @@ body:             |
 ...
 ---
 name:            test_3xs32_eq_pr_78181
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -367,7 +361,6 @@ body:             |
 ...
 ---
 name:            test_3xs16_eq_pr_78181
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -402,7 +395,6 @@ body:             |
 ...
 ---
 name:            test_3xs8_eq_pr_78181
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -437,7 +429,6 @@ body:             |
 ...
 ---
 name:            test_3xs64_eq_clamp
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -463,7 +454,6 @@ body:             |
 ...
 ---
 name:            test_5xs32_eq_clamp
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -489,7 +479,6 @@ body:             |
 ...
 ---
 name:            test_7xs16_eq_clamp
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -517,7 +506,6 @@ body:             |
 ...
 ---
 name:            test_9xs8_eq_clamp
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -545,7 +533,6 @@ body:             |
 ...
 ---
 name:            test_4xs64_ne
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins:
@@ -577,7 +564,6 @@ body:             |
 ...
 ---
 name:            test_4xp0_ne
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins:

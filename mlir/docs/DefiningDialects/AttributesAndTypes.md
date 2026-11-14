@@ -1005,7 +1005,7 @@ without tearing down loaded dialects.
 
 In most cases the storage class is auto generated, but if necessary it can be
 manually defined by setting the `genStorageClass` field to 0. The name and
-namespace (defaults to `detail`) can additionally be controlled via the The
+namespace (defaults to `detail`) can additionally be controlled via the
 `storageClass` and `storageNamespace` fields.
 
 #### Defining a storage class

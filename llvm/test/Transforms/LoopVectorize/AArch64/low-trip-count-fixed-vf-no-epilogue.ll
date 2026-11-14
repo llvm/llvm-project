@@ -72,7 +72,7 @@ exit:
   ret void
 }
 
-define void @tc4_optsize_no_rt_check(ptr noalias %a, ptr noalias %b) #1 {
+define void @tc4_optsize_no_rt_check(ptr noalias %a, ptr noalias %b) #1 vscale_range(1,16) {
 ; CHECK-LABEL: define void @tc4_optsize_no_rt_check(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]

@@ -91,7 +91,10 @@ public:
     bool IsDtor = false;
     if (auto *Ctor = dyn_cast<CXXConstructorDecl>(FD)) {
       IsCtor = true;
-      Field = TFA.fieldWithNonTrivialCtor(Ctor->getParent());
+      // A delegating constructor doesn't construct any member variable itself;
+      // the target constructor does, and the call to it is in inits().
+      if (!Ctor->isDelegatingConstructor())
+        Field = TFA.fieldWithNonTrivialCtor(Ctor->getParent());
       if (!Field) {
         for (auto *CtorInit : Ctor->inits()) {
           auto *Init = CtorInit->getInit();

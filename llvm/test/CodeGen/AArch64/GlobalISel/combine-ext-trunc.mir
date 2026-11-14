@@ -3,7 +3,6 @@
 
 ---
 name:            zext_trunc_nuw
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -19,7 +18,6 @@ body:             |
 ...
 ---
 name:            zext_trunc_nsw
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -37,7 +35,6 @@ body:             |
 ...
 ---
 name:            zext_trunc
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -55,12 +52,11 @@ body:             |
 ...
 ---
 name:            zext_trunc_nuw_vector
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: zext_trunc_nuw_vector
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -82,7 +78,6 @@ body:             |
 ...
 ---
 name:            sext_trunc_nsw
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -98,7 +93,6 @@ body:             |
 ...
 ---
 name:            sext_trunc_nuw
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -115,7 +109,6 @@ body:             |
 ...
 ---
 name:            sext_trunc
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -132,7 +125,6 @@ body:             |
 ...
 ---
 name:            sext_trunc_nsw_types_wrong
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -149,7 +141,6 @@ body:             |
 ...
 ---
 name:            sext_trunc_nsw_nuw
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -165,12 +156,11 @@ body:             |
 ...
 ---
 name:            sext_trunc_nsw_nuw_vector
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: sext_trunc_nsw_nuw_vector
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -194,12 +184,11 @@ body:             |
 ...
 ---
 name:            zext_trunc_vector
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: zext_trunc_vector
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -223,12 +212,11 @@ body:             |
 ...
 ---
 name:            zext_trunc_nsw_vector
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: zext_trunc_nsw_vector
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -252,12 +240,11 @@ body:             |
 ...
 ---
 name:            zext_trunc_nuw_vector2
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: zext_trunc_nuw_vector2
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -281,7 +268,6 @@ body:             |
 ...
 ---
 name:            zext_trunc_nuw_vector_wrong_type
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -304,7 +290,6 @@ body:             |
 ...
 ---
 name:            zext_trunc_nuw_scalable_vector
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -323,7 +308,6 @@ body:             |
 ...
 ---
 name:            zext_trunc_nuw_to_zext
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -331,8 +315,8 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
-    ; CHECK-NEXT: %2:_(i64) = nneg G_ZEXT [[COPY]](i32)
-    ; CHECK-NEXT: $x1 = COPY %2(i64)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = nneg G_ZEXT [[COPY]](i32)
+    ; CHECK-NEXT: $x1 = COPY [[ZEXT]](i64)
     %0:_(i32) = COPY $w0
     %2:_(i16) = nuw G_TRUNC %0
     %3:_(i64) = G_ZEXT  %2
@@ -340,7 +324,6 @@ body:             |
 ...
 ---
 name:            zext_trunc_nuw_to_trunc
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -357,7 +340,6 @@ body:             |
 ...
 ---
 name:            sext_trunc_nsw_to_sext
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -374,7 +356,6 @@ body:             |
 ...
 ---
 name:            sext_trunc_nsw_to_trunc
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -391,7 +372,6 @@ body:             |
 ...
 ---
 name: trunc_sext_i32_i16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -409,7 +389,6 @@ body:             |
 ...
 ---
 name: trunc_sext_i32_i1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -428,7 +407,6 @@ body:             |
 ...
 ---
 name: trunc_sext_i32_i2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -447,7 +425,6 @@ body:             |
 ...
 ---
 name: trunc_sext_i32_i8
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -465,7 +442,6 @@ body:             |
 ...
 ---
 name: trunc_sext_i64_i32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -483,7 +459,6 @@ body:             |
 ...
 ---
 name: trunc_sext_v2i32_v2i16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -501,7 +476,6 @@ body:             |
 ...
 ---
 name: trunc_sext_v4i16_v4i8
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -519,7 +493,6 @@ body:             |
 ...
 ---
 name: trunc_sext_mismatching_types
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1

@@ -1193,6 +1193,14 @@ func.func @vector_load_aligned(%arg0 : memref<4xf32, #spirv.storage_class<Storag
   return %0: vector<4xf32>
 }
 
+// CHECK-LABEL: @vector_load_aligned_overflow
+func.func @vector_load_aligned_overflow(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>) -> vector<4xf32> {
+  %idx = arith.constant 0 : index
+  // CHECK: vector.load
+  %0 = vector.load %arg0[%idx] alignment = 4294967296 : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  return %0: vector<4xf32>
+}
+
 // CHECK-LABEL: @vector_load_2d
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<4x4xf32, #spirv.storage_class<StorageBuffer>>) -> vector<4xf32> {
 //       CHECK:   %[[S0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<4x4xf32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<16 x f32, stride=4> [0])>, StorageBuffer>
@@ -1241,6 +1249,14 @@ func.func @vector_store_aligned(%arg0 : memref<4xf32, #spirv.storage_class<Stora
   // CHECK: spirv.Store
   // CHECK-SAME: ["Aligned", 8]
   vector.store %arg1, %arg0[%idx] alignment = 8 : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  return
+}
+
+// CHECK-LABEL: @vector_store_aligned_overflow
+func.func @vector_store_aligned_overflow(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>, %arg1 : vector<4xf32>) {
+  %idx = arith.constant 0 : index
+  // CHECK: vector.store
+  vector.store %arg1, %arg0[%idx] alignment = 4294967296 : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
   return
 }
 

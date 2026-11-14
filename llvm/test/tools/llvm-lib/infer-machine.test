@@ -1,4 +1,4 @@
-REQUIRES: mips-registered-target
+REQUIRES: arm-registered-target, mips-registered-target, x86-registered-target
 
 RUN: rm -rf %t && mkdir -p %t
 
@@ -19,3 +19,9 @@ RUN: llvm-as %S/Inputs/mips.ll -o %t/mips.bc
 RUN: llvm-lib %t/mips.obj %t/mips.bc /out:%t/mips.lib
 RUN: llvm-objdump -h %t/mips.lib | FileCheck %s --check-prefix=MIPS
 MIPS: file format coff-mips
+
+RUN: llc -mtriple=thumbv7-windows-coff -filetype=obj -o %t/thumb.obj %S/Inputs/thumb.ll
+RUN: llvm-as %S/Inputs/thumb.ll -o %t/thumb.bc
+RUN: llvm-lib %t/thumb.obj %t/thumb.bc /out:%t/thumb.lib
+RUN: llvm-objdump -h %t/thumb.lib | FileCheck %s --check-prefix=THUMB
+THUMB: file format coff-arm
