@@ -3503,6 +3503,83 @@ void bad_insert3(std::vector &v1, std::vector &v2) {
 }
 ```
 
+(alpha-cplusplus-placementselfcopy)=
+
+#### alpha.cplusplus.PlacementSelfCopy (C++)
+
+Check for placement new expressions that access the storage they are placed
+into through the old object while the new object is being constructed, e.g.
+`::new (p) T(*p)`. A value read during the construction through a glvalue not
+obtained from `this` is unspecified ([class.cdtor]/2); writes through such a
+glvalue are reported as well. Calls of
+`std::construct_at` are checked as well; a report that would end inside the
+standard library is emitted at the call site.
+
+The checker follows the reference or pointer that received the old storage
+through variables, pointer arithmetic, the functions it is passed to and the
+methods called on it, and reports the first of these operations on it:
+
+- a read or a write of the storage;
+- passing it to a function or calling its method that is not inlined, except
+  for calls that only return their argument, such as `std::move`,
+  `std::forward`, `std::as_const` and `std::addressof`;
+- capturing it in a lambda, unless a pointer to it is captured.
+
+Taking, storing, comparing and shifting its address, accessing members without
+reading them and calling inlined methods that read nothing are allowed, and so
+are all accesses through `this` or its copies. An object that only contains the
+storage, such as a pool with an inline buffer, is not the old object; only its
+accesses that overlap the storage are reported.
+
+```cpp
+struct Buffer {
+  int *Data;
+  int Size;
+  Buffer(const Buffer &O)
+      : Data(new int[O.Size]), // warn: placement new accesses the storage it
+                               //       is placed into during construction of
+                               //       the new object
+        Size(O.Size) {
+    for (int I = 0; I < Size; ++I)
+      Data[I] = O.Data[I];
+  }
+};
+
+void reconstruct(Buffer *B) {
+  ::new (B) Buffer(*B);
+}
+```
+
+An access of the old object in the new-initializer itself is reported as well,
+whatever the order of the elements.
+
+```cpp
+struct Point {
+  int X, Y;
+};
+
+void swap_coordinates(Point *P) {
+  ::new (P) Point{P->Y, P->X}; // warn: placement new accesses the storage it
+                               //       is placed into during construction of
+                               //       the new object
+}
+```
+
+When placement new itself calls a copy or move constructor that is not inlined,
+such as a trivial copy or a constructor without a visible definition, and its
+source is in the storage, it is reported as a self-copy.
+
+```cpp
+struct Trivial {
+  int X;
+};
+
+void trivial_copy(Trivial *T) {
+  ::new (T) Trivial(*T); // warn: object constructed by placement new is
+                         //       initialized from the storage it is placed into
+}
+```
+
 (alpha-cplusplus-smartptr)=
 
 #### alpha.cplusplus.SmartPtr (C++)
