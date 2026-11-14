@@ -47,6 +47,20 @@ struct in_fun_result {
 
 #endif // _LIBCPP_STD_VER >= 20
 
+template <class _InIter1, class _Func1>
+struct __in_fun_result {
+  _LIBCPP_NO_UNIQUE_ADDRESS _InIter1 __in_;
+  _LIBCPP_NO_UNIQUE_ADDRESS _Func1 __fun_;
+
+#if _LIBCPP_STD_VER >= 20
+  template <class _Func2, class _InIter2>
+    requires convertible_to<_InIter1, _InIter2> && convertible_to<_Func1, _Func2>
+  constexpr operator ranges::in_fun_result<_InIter2, _Func2>() && {
+    return {std::move(__in_), std::move(__fun_)};
+  }
+#endif
+};
+
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
