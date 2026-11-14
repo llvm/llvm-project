@@ -2057,6 +2057,39 @@ Instruction *InstCombinerImpl::narrowMaskedBinOp(BinaryOperator &And) {
   return new ZExtInst(Builder.CreateAnd(NewBO, X), Ty);
 }
 
+/// Constant variant of the (A ^ B) op ((B ^ C) ^ A) folds:
+///   (X ^ C1) | (X ^ C2) --> (X ^ C1) | (C1 ^ C2)
+///   (X ^ C1) & (X ^ C2) --> (X ^ C1) & ~(C1 ^ C2)
+static Instruction *foldAndOrOfXorsWithCommonOperand(BinaryOperator &I) {
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Value *X;
+  Constant *C1, *C2;
+  if (!match(Op0, m_Xor(m_Value(X), m_ImmConstant(C1))) ||
+      !match(Op1, m_Xor(m_Specific(X), m_ImmConstant(C2))))
+    return nullptr;
+
+  // The kept xor's constant is used twice in the result, so undef elements are
+  // not safe.
+  if (C1->containsUndefElement() || C2->containsUndefElement())
+    return nullptr;
+
+  // One xor must go away, otherwise nothing is saved.
+  bool OneUse0 = Op0->hasOneUse(), OneUse1 = Op1->hasOneUse();
+  if (!OneUse0 && !OneUse1)
+    return nullptr;
+
+  // If both xors have one use, the existing not folds handle a 'not' better.
+  if (OneUse0 && OneUse1 && (match(C1, m_AllOnes()) || match(C2, m_AllOnes())))
+    return nullptr;
+
+  // Keep the xor with other uses; keep Op0 if both have one use.
+  Value *Keep = OneUse1 ? Op0 : Op1;
+  Constant *NewC = ConstantExpr::getXor(C1, C2);
+  if (I.getOpcode() == Instruction::And)
+    NewC = ConstantExpr::getNot(NewC);
+  return BinaryOperator::Create(I.getOpcode(), Keep, NewC);
+}
+
 /// Try folding relatively complex patterns for both And and Or operations
 /// with all And and Or swapped.
 static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
@@ -2851,6 +2884,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       if (NotC != nullptr)
         return BinaryOperator::CreateAnd(Op1, NotC);
     }
+
+    if (Instruction *R = foldAndOrOfXorsWithCommonOperand(I))
+      return R;
 
     // (A | B) & (~A ^ B) -> A & B
     // (A | B) & (B ^ ~A) -> A & B
@@ -4455,6 +4491,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
               m_c_Xor(m_c_Xor(m_Specific(B), m_Value(C)), m_Specific(A))) ||
         match(Op0, m_c_Xor(m_c_Xor(m_Specific(A), m_Value(C)), m_Specific(B))))
       return BinaryOperator::CreateOr(Op1, C);
+
+  if (Instruction *R = foldAndOrOfXorsWithCommonOperand(I))
+    return R;
 
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, *this))
     return DeMorgan;
