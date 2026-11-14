@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -160,34 +161,62 @@ static bool isOrderedSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
   return true;
 }
 
+static bool isUserConditionTrait(TraitProperty Property) {
+  return Property == TraitProperty::user_condition_true ||
+         Property == TraitProperty::user_condition_false ||
+         Property == TraitProperty::user_condition_unknown;
+}
+
+static bool hasUserConditionTrait(const VariantMatchInfo &VMI) {
+  for (TraitProperty Property :
+       {TraitProperty::user_condition_true, TraitProperty::user_condition_false,
+        TraitProperty::user_condition_unknown})
+    if (VMI.RequiredTraits.test(unsigned(Property)))
+      return true;
+  return false;
+}
+
+// A runtime condition can be left out of the traits but keep its key, so count
+// it as a trait.
+static unsigned countTraits(const VariantMatchInfo &VMI) {
+  return VMI.RequiredTraits.count() +
+         (!VMI.UserCondition.empty() && !hasUserConditionTrait(VMI));
+}
+
 static bool isStrictSubset(const VariantMatchInfo &VMI0,
                            const VariantMatchInfo &VMI1) {
   // VMI0 is a strict subset if its required traits are a subset of VMI1's, its
   // construct traits are an ordered subsequence of VMI1's, and either relation
   // is strict.
-  if (VMI0.RequiredTraits.count() > VMI1.RequiredTraits.count())
+  if (countTraits(VMI0) > countTraits(VMI1))
     return false;
+  // Different runtime conditions share a trait, so compare them as well.
+  bool HasRuntimeCondition = !VMI0.UserCondition.empty();
+  if ((HasRuntimeCondition || hasUserConditionTrait(VMI0)) &&
+      VMI0.UserCondition != VMI1.UserCondition)
+    return false;
+  // The same key also stands for a condition left out of VMI1's traits.
+  bool IsConditionLeftOut = HasRuntimeCondition && !hasUserConditionTrait(VMI1);
   for (unsigned Bit : VMI0.RequiredTraits.set_bits())
-    if (!VMI1.RequiredTraits.test(Bit))
+    if (!VMI1.RequiredTraits.test(Bit) &&
+        !(IsConditionLeftOut && isUserConditionTrait(TraitProperty(Bit))))
       return false;
+  // Different ISA names share a trait, so compare them as well.
+  if (!llvm::all_of(VMI0.ISATraits,
+                    [&](const VariantMatchInfo::ISATrait &Trait) {
+                      return llvm::is_contained(VMI1.ISATraits, Trait);
+                    }))
+    return false;
   if (!isOrderedSubset<TraitProperty>(VMI0.ConstructTraits,
                                       VMI1.ConstructTraits))
     return false;
-  if (VMI0.RequiredTraits.count() < VMI1.RequiredTraits.count())
+  if (countTraits(VMI0) < countTraits(VMI1))
     return true;
   // With the same traits, only a repeated construct makes VMI0 strict.
   if (VMI0.ConstructTraits.size() == VMI1.ConstructTraits.size())
     return false;
-  // Different conditions or ISA names share a trait, so they can't be compared.
-  for (TraitProperty Property :
-       {TraitProperty::user_condition_true, TraitProperty::user_condition_false,
-        TraitProperty::user_condition_unknown})
-    if (VMI0.RequiredTraits.test(unsigned(Property)))
-      return false;
-  return llvm::all_of(VMI0.ISATraits,
-                      [&](const VariantMatchInfo::ISATrait &Trait) {
-                        return llvm::is_contained(VMI1.ISATraits, Trait);
-                      });
+  // Different conditions share a trait, so they can't be compared.
+  return !hasUserConditionTrait(VMI0);
 }
 
 static int
@@ -442,21 +471,32 @@ int llvm::omp::getBestVariantMatchForContext(
   }
 
   // A strict subset of another tied variant is never best; otherwise the first
-  // one wins. Tied variants often share a few supersets, so try the ones found
-  // so far before scanning all of them.
-  SmallVector<const VariantMatchInfo *, 4> Supersets;
+  // one wins. A variant with a runtime condition can only be a subset of one
+  // with the same condition, so only those are scanned. Tied variants often
+  // share a few supersets, so try the ones found so far for the same condition
+  // first.
+  struct TiedGroup {
+    SmallVector<unsigned, 4> Idxs;
+    SmallVector<unsigned, 1> Supersets;
+  };
+  DenseMap<StringRef, TiedGroup> Groups;
+  for (unsigned Idx : BestVMIIdxs)
+    Groups[VMIs[Idx].UserCondition].Idxs.push_back(Idx);
   for (unsigned Idx : BestVMIIdxs) {
     const VariantMatchInfo &VMI = VMIs[Idx];
-    if (llvm::any_of(Supersets, [&](const VariantMatchInfo *Superset) {
-          return isStrictSubset(VMI, *Superset);
-        }))
-      continue;
-    auto *It = llvm::find_if(BestVMIIdxs, [&](unsigned OtherIdx) {
+    auto IsStrictSubsetOf = [&](unsigned OtherIdx) {
       return isStrictSubset(VMI, VMIs[OtherIdx]);
-    });
-    if (It == BestVMIIdxs.end())
+    };
+    TiedGroup &Group = Groups[VMI.UserCondition];
+    if (llvm::any_of(Group.Supersets, IsStrictSubsetOf))
+      continue;
+    // A variant without a runtime condition can be a subset of any of them.
+    ArrayRef<unsigned> Others =
+        VMI.UserCondition.empty() ? BestVMIIdxs : Group.Idxs;
+    auto *It = llvm::find_if(Others, IsStrictSubsetOf);
+    if (It == Others.end())
       return Idx;
-    Supersets.push_back(&VMIs[*It]);
+    Group.Supersets.push_back(*It);
   }
   return -1;
 }
