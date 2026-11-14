@@ -226,8 +226,8 @@ class RVPPairBase<bits<4> f, bit bit15, dag outs, dag ins,
 // Common base for pair binary ops
 class RVPPairBinaryBase_rr<bits<4> f, bits<2> w, bit bit20, bit bit15,
                            string opcodestr, bit DefVXSAT = 0>
-    : RVPPairBase<f, bit15, (outs GPRPairRV32:$rd),
-                  (ins GPRPairRV32:$rs1, GPRPairRV32:$rs2), opcodestr,
+    : RVPPairBase<f, bit15, (outs GPRPair:$rd),
+                  (ins GPRPair:$rs1, GPRPair:$rs2), opcodestr,
                   "$rd, $rs1, $rs2", DefVXSAT> {
   bits<5> rs2;
 
@@ -288,7 +288,7 @@ class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr,
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPWideningShift_ri<bits<3> f, string opcodestr, Operand ImmType>
-    : RVInst<(outs GPRPairRV32:$rd), (ins GPR:$rs1, ImmType:$shamt), opcodestr,
+    : RVInst<(outs GPRPair:$rd), (ins GPR:$rs1, ImmType:$shamt), opcodestr,
              "$rd, $rs1, $shamt", [], InstFormatOther> {
   bits<5> rs1;
   bits<5> rd;
@@ -331,7 +331,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPNarrowingShift_ri<bits<3> f, string opcodestr, Operand ImmType,
                            bit DefVXSAT>
     : RVPNarrowingBase<f, 0b0, 0b1100, (outs GPR:$rd),
-                       (ins GPRPairRV32:$rs1, ImmType:$shamt), opcodestr,
+                       (ins GPRPair:$rs1, ImmType:$shamt), opcodestr,
                        "$rd, $rs1, $shamt", DefVXSAT>;
 
 class RVPNarrowingShiftW_ri<bits<3> f, string opcodestr, bit DefVXSAT = 0>
@@ -362,8 +362,8 @@ class RVPNarrowingShiftB_ri<bits<3> f, string opcodestr, bit DefVXSAT = 0>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairShift_ri<bits<3> f, bit direction, string opcodestr,
                       Operand ImmType, bit DefVXSAT = 0>
-    : RVPPairBase<{f, 0b0}, direction, (outs GPRPairRV32:$rd),
-                  (ins GPRPairRV32:$rs1, ImmType:$shamt), opcodestr,
+    : RVPPairBase<{f, 0b0}, direction, (outs GPRPair:$rd),
+                  (ins GPRPair:$rs1, ImmType:$shamt), opcodestr,
                   "$rd, $rs1, $shamt", DefVXSAT> {
   let Inst{31}    = 0b0;
 }
@@ -398,7 +398,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPNarrowingShift_rr<bits<3> f, bits<2> w, string opcodestr,
                            bit DefVXSAT = 0>
     : RVPNarrowingBase<f, 0b1, 0b1100, (outs GPR:$rd),
-                       (ins GPRPairRV32:$rs1, GPR:$rs2), opcodestr,
+                       (ins GPRPair:$rs1, GPR:$rs2), opcodestr,
                        "$rd, $rs1, $rs2", DefVXSAT> {
   bits<5> rs2;
 
@@ -408,15 +408,15 @@ class RVPNarrowingShift_rr<bits<3> f, bits<2> w, string opcodestr,
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPWideningShift_rr<bits<3> f, bits<2> w, string opcodestr>
-    : RVPWideningBase<{f, 0b1}, w, 0b0, (outs GPRPairRV32:$rd),
+    : RVPWideningBase<{f, 0b1}, w, 0b0, (outs GPRPair:$rd),
                       (ins GPR:$rs1, GPR:$rs2), opcodestr>;
 
 // direction is bit 15 and is usually 0 for left shifts and 1 for right shifts.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairShift_rr<bits<3> f, bits<2> w, bit direction, string opcodestr,
                       bit DefVXSAT = 0>
-    : RVPPairBase<{f, 0b1}, direction, (outs GPRPairRV32:$rd),
-                  (ins GPRPairRV32:$rs1, GPR:$rs2), opcodestr,
+    : RVPPairBase<{f, 0b1}, direction, (outs GPRPair:$rd),
+                  (ins GPRPair:$rs1, GPR:$rs2), opcodestr,
                   "$rd, $rs1, $rs2", DefVXSAT> {
   bits<5> rs2;
 
@@ -438,8 +438,8 @@ class RVPUnary_ri<bits<2> w, bits<5> uf, string opcodestr, bit DefVXSAT = 0>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairUnary_r<bits<2> w, bits<5> uf, string opcodestr, bit DefVXSAT = 0>
-    : RVPPairBase<0b1100, 0b0, (outs GPRPairRV32:$rd),
-                  (ins GPRPairRV32:$rs1), opcodestr, "$rd, $rs1", DefVXSAT> {
+    : RVPPairBase<0b1100, 0b0, (outs GPRPair:$rd),
+                  (ins GPRPair:$rs1), opcodestr, "$rd, $rs1", DefVXSAT> {
   let Inst{31}    = 0b0;
   let Inst{26-25} = w;
   let Inst{24-20} = uf;
@@ -477,7 +477,7 @@ class RVPBinary_rr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPWideningBinary_rr<bits<4> f, bits<2> w, string opcodestr,
                            bit Commutable = 0>
-    : RVPWideningBase<f, w, 0b1, (outs GPRPairRV32:$rd),
+    : RVPWideningBase<f, w, 0b1, (outs GPRPair:$rd),
                       (ins GPR:$rs1, GPR:$rs2), opcodestr> {
   assert !eq(f{0}, 0), "LSB of f should be zero";
   let isCommutable = Commutable;
@@ -486,7 +486,7 @@ class RVPWideningBinary_rr<bits<4> f, bits<2> w, string opcodestr,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPNarrowingBinary_rr<bits<3> f, bits<2> w, string opcodestr>
     : RVPNarrowingBase<f, 0b1, 0b0100, (outs GPR:$rd),
-                       (ins GPRPairRV32:$rs1, GPR:$rs2), opcodestr,
+                       (ins GPRPair:$rs1, GPR:$rs2), opcodestr,
                        "$rd, $rs1, $rs2"> {
   bits<5> rs2;
 
@@ -533,8 +533,8 @@ class RVPTernary_rrr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPWideningTernary_rrr<bits<4> f, bits<2> w, string opcodestr>
-    : RVPWideningBase<f, w, 0b1, (outs GPRPairRV32:$rd_wb),
-                      (ins GPRPairRV32:$rd, GPR:$rs1, GPR:$rs2), opcodestr> {
+    : RVPWideningBase<f, w, 0b1, (outs GPRPair:$rd_wb),
+                      (ins GPRPair:$rd, GPR:$rs1, GPR:$rs2), opcodestr> {
   assert !eq(f{0}, 1), "LSB of f should be one";
   let Constraints = "$rd = $rd_wb";
 }
@@ -542,7 +542,7 @@ class RVPWideningTernary_rrr<bits<4> f, bits<2> w, string opcodestr>
 // Common base for pli.db/h/w and plui.dh/w
 class RVPPairLoadImm_i<bits<7> funct7, dag ins, string opcodestr,
                        string argstr>
-    : RVInst<(outs GPRPairRV32:$rd), ins, opcodestr, argstr, [],
+    : RVInst<(outs GPRPair:$rd), ins, opcodestr, argstr, [],
              InstFormatOther> {
   bits<5> rd;
 
@@ -1660,89 +1660,89 @@ let append Predicates = [IsRV64] in {
 
 let append Predicates = [IsRV32] in {
   def : InstAlias<"pmv.dbs $rd, $rs",
-                  (PADD_DBS GPRPairRV32:$rd, X0_Pair, GPR:$rs)>;
+                  (PADD_DBS GPRPair:$rd, X0_Pair, GPR:$rs)>;
   def : InstAlias<"pmv.dhs $rd, $rs",
-                  (PADD_DHS GPRPairRV32:$rd, X0_Pair, GPR:$rs)>;
+                  (PADD_DHS GPRPair:$rd, X0_Pair, GPR:$rs)>;
   def : InstAlias<"pmv.dws $rd, $rs",
-                  (PADD_DWS GPRPairRV32:$rd, X0_Pair, GPR:$rs)>;
+                  (PADD_DWS GPRPair:$rd, X0_Pair, GPR:$rs)>;
 
   def : InstAlias<"pneg.db $rd, $rs",
-                  (PSUB_DB GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+                  (PSUB_DB GPRPair:$rd, X0_Pair, GPRPair:$rs)>;
   def : InstAlias<"pneg.dh $rd, $rs",
-                  (PSUB_DH GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+                  (PSUB_DH GPRPair:$rd, X0_Pair, GPRPair:$rs)>;
   def : InstAlias<"pneg.dw $rd, $rs",
-                  (PSUB_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+                  (PSUB_DW GPRPair:$rd, X0_Pair, GPRPair:$rs)>;
   def : InstAlias<"negd $rd, $rs",
-                  (SUBD GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+                  (SUBD GPRPair:$rd, X0_Pair, GPRPair:$rs)>;
 
   def : InstAlias<"pabs.db $rd, $rs",
-                  (PABD_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+                  (PABD_DB GPRPair:$rd, GPRPair:$rs, X0_Pair)>;
   def : InstAlias<"pabs.dh $rd, $rs",
-                  (PABD_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+                  (PABD_DH GPRPair:$rd, GPRPair:$rs, X0_Pair)>;
   // No pabd.dw instruction
 
   def : InstAlias<"pzext.dh.b $rd, $rs",
-                  (PPAIRE_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+                  (PPAIRE_DB GPRPair:$rd, GPRPair:$rs, X0_Pair)>;
   def : InstAlias<"pzext.dw.h $rd, $rs",
-                  (PPAIRE_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+                  (PPAIRE_DH GPRPair:$rd, GPRPair:$rs, X0_Pair)>;
 
   def : InstAlias<"pmseqz.db $rd, $rs",
-                  (PMSEQ_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+                  (PMSEQ_DB GPRPair:$rd, GPRPair:$rs, X0_Pair)>;
   def : InstAlias<"pmseqz.dh $rd, $rs",
-                  (PMSEQ_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+                  (PMSEQ_DH GPRPair:$rd, GPRPair:$rs, X0_Pair)>;
   def : InstAlias<"pmseqz.dw $rd, $rs",
-                  (PMSEQ_DW GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+                  (PMSEQ_DW GPRPair:$rd, GPRPair:$rs, X0_Pair)>;
 
   def : InstAlias<"pmsnez.db $rd, $rs",
-                  (PMSLTU_DB GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+                  (PMSLTU_DB GPRPair:$rd, X0_Pair, GPRPair:$rs)>;
   def : InstAlias<"pmsnez.dh $rd, $rs",
-                  (PMSLTU_DH GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+                  (PMSLTU_DH GPRPair:$rd, X0_Pair, GPRPair:$rs)>;
   def : InstAlias<"pmsnez.dw $rd, $rs",
-                  (PMSLTU_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+                  (PMSLTU_DW GPRPair:$rd, X0_Pair, GPRPair:$rs)>;
 
   def : InstAlias<"pmsltz.db $rd, $rs",
-                  (PMSLT_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+                  (PMSLT_DB GPRPair:$rd, GPRPair:$rs, X0_Pair)>;
   def : InstAlias<"pmsltz.dh $rd, $rs",
-                  (PMSLT_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+                  (PMSLT_DH GPRPair:$rd, GPRPair:$rs, X0_Pair)>;
   def : InstAlias<"pmsltz.dw $rd, $rs",
-                  (PMSLT_DW GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+                  (PMSLT_DW GPRPair:$rd, GPRPair:$rs, X0_Pair)>;
 
   def : InstAlias<"pmsgtz.db $rd, $rs",
-                  (PMSLT_DB GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+                  (PMSLT_DB GPRPair:$rd, X0_Pair, GPRPair:$rs)>;
   def : InstAlias<"pmsgtz.dh $rd, $rs",
-                  (PMSLT_DH GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+                  (PMSLT_DH GPRPair:$rd, X0_Pair, GPRPair:$rs)>;
   def : InstAlias<"pmsgtz.dw $rd, $rs",
-                  (PMSLT_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+                  (PMSLT_DW GPRPair:$rd, X0_Pair, GPRPair:$rs)>;
 
   // The canonical pmslt(u) form will always be printed. Therefore,
   // set a zero weight.
   def : InstAlias<"pmsgt.db $rd, $rs, $rt",
-                  (PMSLT_DB GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+                  (PMSLT_DB GPRPair:$rd, GPRPair:$rt, GPRPair:$rs), 0>;
   def : InstAlias<"pmsgt.dh $rd, $rs, $rt",
-                  (PMSLT_DH GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+                  (PMSLT_DH GPRPair:$rd, GPRPair:$rt, GPRPair:$rs), 0>;
   def : InstAlias<"pmsgt.dw $rd, $rs, $rt",
-                  (PMSLT_DW GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+                  (PMSLT_DW GPRPair:$rd, GPRPair:$rt, GPRPair:$rs), 0>;
   def : InstAlias<"pmsgtu.db $rd, $rs, $rt",
-                  (PMSLTU_DB GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+                  (PMSLTU_DB GPRPair:$rd, GPRPair:$rt, GPRPair:$rs), 0>;
   def : InstAlias<"pmsgtu.dh $rd, $rs, $rt",
-                  (PMSLTU_DH GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+                  (PMSLTU_DH GPRPair:$rd, GPRPair:$rt, GPRPair:$rs), 0>;
   def : InstAlias<"pmsgtu.dw $rd, $rs, $rt",
-                  (PMSLTU_DW GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+                  (PMSLTU_DW GPRPair:$rd, GPRPair:$rt, GPRPair:$rs), 0>;
 
-  def : InstAlias<"pwcvt.b $rd, $rs", (PWADD_B GPRPairRV32:$rd, GPR:$rs, X0)>;
-  def : InstAlias<"pwcvt.h $rd, $rs", (PWADD_H GPRPairRV32:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvt.b $rd, $rs", (PWADD_B GPRPair:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvt.h $rd, $rs", (PWADD_H GPRPair:$rd, GPR:$rs, X0)>;
 
-  def : InstAlias<"pwcvtu.b $rd, $rs", (WZIP8P GPRPairRV32:$rd, GPR:$rs, X0)>;
-  def : InstAlias<"pwcvtu.h $rd, $rs", (WZIP16P GPRPairRV32:$rd, GPR:$rs, X0)>;
-  def : InstAlias<"pwcvth.b $rd, $rs", (WZIP8P GPRPairRV32:$rd, X0, GPR:$rs)>;
-  def : InstAlias<"pwcvth.h $rd, $rs", (WZIP16P GPRPairRV32:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pwcvtu.b $rd, $rs", (WZIP8P GPRPair:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvtu.h $rd, $rs", (WZIP16P GPRPair:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvth.b $rd, $rs", (WZIP8P GPRPair:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pwcvth.h $rd, $rs", (WZIP16P GPRPair:$rd, X0, GPR:$rs)>;
 
-  def : InstAlias<"pncvt.b $rd, $rs", (PNSRLI_B GPR:$rd, GPRPairRV32:$rs, 0)>;
-  def : InstAlias<"pncvt.h $rd, $rs", (PNSRLI_H GPR:$rd, GPRPairRV32:$rs, 0)>;
-  def : InstAlias<"pncvth.b $rd, $rs", (PNSRLI_B GPR:$rd, GPRPairRV32:$rs, 8)>;
-  def : InstAlias<"pncvth.h $rd, $rs", (PNSRLI_H GPR:$rd, GPRPairRV32:$rs, 16)>;
+  def : InstAlias<"pncvt.b $rd, $rs", (PNSRLI_B GPR:$rd, GPRPair:$rs, 0)>;
+  def : InstAlias<"pncvt.h $rd, $rs", (PNSRLI_H GPR:$rd, GPRPair:$rs, 0)>;
+  def : InstAlias<"pncvth.b $rd, $rs", (PNSRLI_B GPR:$rd, GPRPair:$rs, 8)>;
+  def : InstAlias<"pncvth.h $rd, $rs", (PNSRLI_H GPR:$rd, GPRPair:$rs, 16)>;
 
-  def : InstAlias<"mvd $rd, $rs", (PADD_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"mvd $rd, $rs", (PADD_DW GPRPair:$rd, X0_Pair, GPRPair:$rs)>;
 } // append Predicates = [IsRV32]
 } // Predicates = [HasStdExtP]
 
