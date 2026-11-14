@@ -1509,8 +1509,8 @@ def LDgotTprelL: PPCEmitTimePseudo<(outs g8rc_nox0:$rD), (ins s16imm64:$disp, g8
                           (PPCldGotTprelL tglobaltlsaddr:$disp, i64:$reg))]>,
                  isPPC64;
 
-let Defs = [CR7], Itinerary = IIC_LdStSync in
-def CFENCE8 : PPCPostRAExpPseudo<(outs), (ins g8rc:$cr)>;
+let Itinerary = IIC_LdStSync in
+def CFENCE8 : PPCPostRAExpPseudo<(outs crrc:$BF), (ins g8rc:$RA)>;
 
 def : Pat<(PPCaddTls i64:$in, tglobaltlsaddr:$g),
           (ADD8TLS $in, tglobaltlsaddr:$g)>;

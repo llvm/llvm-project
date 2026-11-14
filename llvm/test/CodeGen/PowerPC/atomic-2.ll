@@ -106,8 +106,8 @@ entry:
   %tmp = load atomic i64, ptr %mem acquire, align 64
 ; CHECK-NOT: ldarx
 ; CHECK: ld [[VAL:r[0-9]+]]
-; CHECK: cmpd [[CR:cr[0-9]+]], [[VAL]], [[VAL]]
-; CHECK: bne- [[CR]], .+4
+; CHECK: cmpd [[CR:(cr[1-7], )?]][[VAL]], [[VAL]]
+; CHECK: bne- {{(cr0, )?}}[[CR]].+4
 ; CHECK: isync
   ret i64 %tmp
 }

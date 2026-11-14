@@ -1646,7 +1646,9 @@ let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7,
 
     // The same as BCC, except that it's not a terminator. Used for introducing
     // control flow dependency without creating new blocks.
-    let isTerminator = 0 in def CTRL_DEP : BCC_class;
+    // Use hasSideEffects to preserve its ordering with respect to isync and
+    // to prevent it from being a trivially dead instruction.
+    let isTerminator = 0, hasSideEffects = 1 in def CTRL_DEP : BCC_class;
 
     def BCCA : BForm<16, 1, 0, (outs), (ins (pred $BIBO, $CR):$cond, abscondbrtarget:$BD),
                      "b${cond:cc}a${cond:pm} ${cond:reg}, $BD">;
@@ -5571,8 +5573,8 @@ def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
                                  "hashchkp $RB, $addr", IIC_IntGeneral, []>;
 }
 
-let Defs = [CR7], Itinerary = IIC_LdStSync in
-def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr)>;
+let Itinerary = IIC_LdStSync in
+def CFENCE : PPCPostRAExpPseudo<(outs crrc:$BF), (ins gprc:$RA)>;
 
 // Now both high word and low word are reversed, next
 // swap the high word and low word.

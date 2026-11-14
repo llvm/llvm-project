@@ -20,8 +20,8 @@ define i16 @SEXTParam(i16 signext %0) #0 {
 ; CHECK-NEXT:  .LBB0_3: # %top
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    lhz 3, -4(1)
-; CHECK-NEXT:    cmpd 7, 3, 3
-; CHECK-NEXT:    bne- 7, .+4
+; CHECK-NEXT:    cmpd 3, 3
+; CHECK-NEXT:    bne- 0, .+4
 ; CHECK-NEXT:    isync
 ; CHECK-NEXT:    blr
 top:
@@ -53,8 +53,8 @@ define i16 @noSEXTParam(i16 %0) #0 {
 ; CHECK-NEXT:  .LBB1_3: # %top
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    lhz 3, -4(1)
-; CHECK-NEXT:    cmpd 7, 3, 3
-; CHECK-NEXT:    bne- 7, .+4
+; CHECK-NEXT:    cmpd 3, 3
+; CHECK-NEXT:    bne- 0, .+4
 ; CHECK-NEXT:    isync
 ; CHECK-NEXT:    blr
 top:
@@ -86,8 +86,8 @@ define i16 @noSEXTLoad(ptr %p) #0 {
 ; CHECK-NEXT:  .LBB2_3: # %top
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    lhz 3, -4(1)
-; CHECK-NEXT:    cmpd 7, 3, 3
-; CHECK-NEXT:    bne- 7, .+4
+; CHECK-NEXT:    cmpd 3, 3
+; CHECK-NEXT:    bne- 0, .+4
 ; CHECK-NEXT:    isync
 ; CHECK-NEXT:    blr
 top:
