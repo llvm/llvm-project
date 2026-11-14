@@ -336,7 +336,13 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
     return true;
   }
   const MachineFunction *MF = MI.getParent()->getParent();
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  const TargetSubtargetInfo &STI = MF->getSubtarget();
+  if (STI.getFrameLowering()->mayUseStackFrame(MI)) {
+    LLVM_DEBUG(dbgs() << "Target instruction may use stack frame: " << MI
+                      << '\n');
+    return true;
+  }
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   for (const MachineOperand &MO : MI.operands()) {
     bool UseOrDefCSR = false;
     if (MO.isReg()) {

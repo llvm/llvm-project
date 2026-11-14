@@ -39,9 +39,7 @@ public:
     return false;
   }
 
-  bool enableShrinkWrapping(const MachineFunction &MF) const override {
-    return true;
-  }
+  bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF,
