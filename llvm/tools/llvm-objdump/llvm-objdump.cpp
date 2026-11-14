@@ -2020,7 +2020,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           });
       if (Sec != SectionAddresses.begin()) {
         --Sec;
-        // The export RVA of a Thumb function has its low bit set.
+        // The export RVA has a mode indicator on the address.
         if (COFFObj->getMachine() == COFF::IMAGE_FILE_MACHINE_ARMNT &&
             Sec->second.isText())
           VA &= ~1ULL;
