@@ -27,6 +27,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Constants.h"
@@ -10767,6 +10768,9 @@ static llvm::Function *getOmpTargetAlloc(llvm::IRBuilderBase &builder,
       llvm::FunctionType::get(returnType, {i64Ty, i32Ty}, false);
   llvm::Function *func = cast<llvm::Function>(
       llvmModule->getOrInsertFunction("omp_target_alloc", fnType).getCallee());
+  if (auto ak = llvm::TargetLibraryInfo::getExtAttrForI32Param(
+          llvmModule->getTargetTriple()))
+    func->addParamAttr(1, ak);
   return func;
 }
 
@@ -10830,6 +10834,9 @@ convertTargetAllocMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
   // Create call to "omp_target_alloc" with the args as translated llvm values.
   llvm::CallInst *call =
       builder.CreateCall(ompTargetAllocFunc, {allocSize, llvmDeviceNum});
+  if (auto ak = llvm::TargetLibraryInfo::getExtAttrForI32Param(
+          llvmModule->getTargetTriple()))
+    call->addParamAttr(1, ak);
   llvm::Value *resultI64 = builder.CreatePtrToInt(call, builder.getInt64Ty());
 
   // Map the result
@@ -10968,6 +10975,9 @@ static llvm::Function *getOmpTargetFree(llvm::IRBuilderBase &builder,
       llvm::FunctionType::get(voidTy, {ptrTy, i32Ty}, false);
   llvm::Function *func = dyn_cast<llvm::Function>(
       llvmModule->getOrInsertFunction("omp_target_free", fnType).getCallee());
+  if (auto ak = llvm::TargetLibraryInfo::getExtAttrForI32Param(
+          llvmModule->getTargetTriple()))
+    func->addParamAttr(1, ak);
   return func;
 }
 
@@ -10990,7 +11000,11 @@ convertTargetFreeMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
   // Convert heapref int to ptr and call "omp_target_free"
   llvm::Value *intToPtr =
       builder.CreateIntToPtr(llvmHeapref, builder.getPtrTy(0));
-  builder.CreateCall(ompTragetFreeFunc, {intToPtr, llvmDeviceNum});
+  llvm::CallInst *call =
+      builder.CreateCall(ompTragetFreeFunc, {intToPtr, llvmDeviceNum});
+  if (auto ak = llvm::TargetLibraryInfo::getExtAttrForI32Param(
+          llvmModule->getTargetTriple()))
+    call->addParamAttr(1, ak);
   return success();
 }
 
