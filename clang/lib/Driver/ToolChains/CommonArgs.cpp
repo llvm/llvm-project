@@ -3060,6 +3060,22 @@ void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back("+outline-atomics");
   }
+
+  if (Arg *A =
+          Args.getLastArg(options::OPT_moutline_atomics_preserve_most,
+                          options::OPT_mno_outline_atomics_preserve_most)) {
+    if (!Triple.isAArch64() || Triple.isWindowsArm64EC()) {
+      D.Diag(diag::warn_drv_moutline_atomics_unsupported_opt)
+          << Triple.getArchName() << A->getOption().getName();
+    } else if (A->getOption().matches(
+                   options::OPT_moutline_atomics_preserve_most)) {
+      CmdArgs.push_back("-target-feature");
+      CmdArgs.push_back("+outline-atomics-preserve-most");
+    } else {
+      CmdArgs.push_back("-target-feature");
+      CmdArgs.push_back("-outline-atomics-preserve-most");
+    }
+  }
 }
 
 void tools::addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,

@@ -702,6 +702,15 @@ def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2
                                                  (sequence "X%u",19, 28),
                                                  LR, FP)>;
 
+// Out-of-line atomic preserve-most helpers (__aarch64_*_preservemost)
+// preserve all registers except argument/return registers (X0-X4),
+// scratch registers (X15-X17), and NZCV.
+def CSR_AArch64_Outline_Atomics_PreserveMost
+    : CalleeSavedRegs<(add (sequence "Z%u", 0, 31),
+                           (sequence "P%u", 0, 15),
+                           (sub (sequence "X%u", 5, 28), X15, X16, X17),
+                           LR, FP)>;
+
 // The SMSTART/SMSTOP instructions preserve only GPR registers.
 def CSR_AArch64_SMStartStop : CalleeSavedRegs<(add (sequence "X%u", 0, 28),
                                                    LR, FP)>;

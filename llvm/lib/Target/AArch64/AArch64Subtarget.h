@@ -178,6 +178,8 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
+  void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const override;
+  bool useOutlineAtomicsPreserveMost() const;
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
@@ -436,6 +438,7 @@ public:
     case CallingConv::Fast:
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
+    case CallingConv::AArch64_Outline_Atomics_PreserveMost:
       return isTargetWindowsOrUEFI();
     case CallingConv::PreserveNone:
       return IsVarArg && isTargetWindowsOrUEFI();

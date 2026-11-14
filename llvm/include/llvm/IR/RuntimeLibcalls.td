@@ -15,6 +15,9 @@ include "llvm/IR/RuntimeLibcallsImpl.td"
 class DuplicateLibcallImplWithPrefix<RuntimeLibcallImpl Impl, string prefix>
     : RuntimeLibcallImpl<Impl.Provides, prefix#Impl.LibCallFuncName>;
 
+class DuplicateLibcallImplWithSuffix<RuntimeLibcallImpl Impl, string suffix>
+    : RuntimeLibcallImpl<Impl.Provides, Impl.LibCallFuncName#suffix>;
+
 def IsOSDarwin : LibcallPredicate<[{TT.isOSDarwin()}]>;
 def IsOSOpenBSD : LibcallPredicate<[{TT.isOSOpenBSD()}]>;
 def IsOSWindows : LibcallPredicate<[{TT.isOSWindows()}]>;
@@ -2482,7 +2485,7 @@ def objc_sync_exit : RuntimeLibcallImpl<OBJC_SYNC_EXIT>;
 // AArch64 Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
-defset list<RuntimeLibcallImpl> AArch64LibcallImpls = {
+defset list<RuntimeLibcallImpl> AArch64OutlineAtomicImpls = {
   foreach MemSize = [1, 2, 4, 8, 16] in {
     defm __aarch64_cas#MemSize
         : AtomicOrderSizeLibcallImpl<"OUTLINE_ATOMIC_CAS"#MemSize>;
@@ -2500,12 +2503,23 @@ defset list<RuntimeLibcallImpl> AArch64LibcallImpls = {
     defm __aarch64_ldeor#MemSize
         : AtomicOrderSizeLibcallImpl<"OUTLINE_ATOMIC_LDEOR"#MemSize>;
   }
+} // End AArch64OutlineAtomicImpls
 
-  def __arm_sc_memcpy : RuntimeLibcallImpl<SC_MEMCPY>;
-  def __arm_sc_memmove : RuntimeLibcallImpl<SC_MEMMOVE>;
-  def __arm_sc_memset : RuntimeLibcallImpl<SC_MEMSET>;
-  def __arm_sc_memchr : RuntimeLibcallImpl<SC_MEMCHR>;
-} // End AArch64LibcallImpls
+defset list<RuntimeLibcallImpl> AArch64OutlineAtomicPreserveMostImpls = {
+  foreach libcall = AArch64OutlineAtomicImpls in {
+    def libcall#_preservemost
+        : DuplicateLibcallImplWithSuffix<libcall, "_preservemost">;
+  }
+} // End AArch64OutlineAtomicPreserveMostImpls
+
+def __arm_sc_memcpy : RuntimeLibcallImpl<SC_MEMCPY>;
+def __arm_sc_memmove : RuntimeLibcallImpl<SC_MEMMOVE>;
+def __arm_sc_memset : RuntimeLibcallImpl<SC_MEMSET>;
+def __arm_sc_memchr : RuntimeLibcallImpl<SC_MEMCHR>;
+
+defvar AArch64LibcallImpls = !listconcat(AArch64OutlineAtomicImpls, [
+  __arm_sc_memcpy, __arm_sc_memmove, __arm_sc_memset, __arm_sc_memchr
+]);
 
 def __arm_sme_state : RuntimeLibcallImpl<SMEABI_SME_STATE>;
 def __arm_tpidr2_save : RuntimeLibcallImpl<SMEABI_TPIDR2_SAVE>;
@@ -2561,7 +2575,9 @@ def AArch64Libm : LibcallLibrary<"libm",
 
 // AArch64 outline atomics and streaming-mode mem* helpers.
 def AArch64OutlineAtomics : LibcallLibrary<"compiler-rt",
-  (add AArch64LibcallImpls),
+  (add AArch64LibcallImpls,
+       LibcallsWithCC<(add AArch64OutlineAtomicPreserveMostImpls),
+                      AARCH64_OUTLINE_ATOMICS_PRESERVEMOST>),
   isAArch64_ExceptArm64EC>;
 
 def AArch64SystemLibrary : SystemRuntimeLibrary<isAArch64_ExceptArm64EC,

@@ -20,6 +20,7 @@
 #include "GISel/AArch64LegalizerInfo.h"
 #include "GISel/AArch64RegisterBankInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/Analysis/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -544,6 +545,50 @@ bool AArch64Subtarget::useScalarIncVL() const {
   // If SVE2 or SME is present (we are not SVE-1 only) and
   // -sve-use-scalar-inc-vl is not otherwise set, enable it by default.
   return valueOr(CLOpts.sve_use_scalar_inc_vl, hasSVE2() || hasSME());
+}
+
+bool AArch64Subtarget::useOutlineAtomicsPreserveMost() const {
+  if (isWindowsArm64EC())
+    return false;
+  return valueOr(CLOpts.outline_atomics_preserve_most,
+                 OutlineAtomicsPreserveMost);
+}
+
+void AArch64Subtarget::initLibcallLoweringInfo(
+    LibcallLoweringInfo &Info) const {
+  if (!useOutlineAtomicsPreserveMost())
+    return;
+
+  struct LibcallPair {
+    RTLIB::Libcall LC;
+    RTLIB::LibcallImpl Impl;
+  };
+#define LCALL(LC_BASE, IMPL_BASE, ORDER_UPPER, ORDER_LOWER)                    \
+  {RTLIB::OUTLINE_ATOMIC_##LC_BASE##_##ORDER_UPPER,                            \
+   RTLIB::impl___aarch64_##IMPL_BASE##_##ORDER_LOWER##_preservemost}
+#define LCALLS(LC_OP, IMPL_OP, SIZE)                                           \
+  LCALL(LC_OP##SIZE, IMPL_OP##SIZE, RELAX, relax),                             \
+      LCALL(LC_OP##SIZE, IMPL_OP##SIZE, ACQ, acq),                             \
+      LCALL(LC_OP##SIZE, IMPL_OP##SIZE, REL, rel),                             \
+      LCALL(LC_OP##SIZE, IMPL_OP##SIZE, ACQ_REL, acq_rel)
+#define LCALL4(LC_OP, IMPL_OP)                                                 \
+  LCALLS(LC_OP, IMPL_OP, 1), LCALLS(LC_OP, IMPL_OP, 2),                        \
+      LCALLS(LC_OP, IMPL_OP, 4), LCALLS(LC_OP, IMPL_OP, 8)
+  static constexpr LibcallPair OutlineAtomicImpls[] = {
+      LCALL4(CAS, cas),     LCALLS(CAS, cas, 16), LCALL4(SWP, swp),
+      LCALL4(LDADD, ldadd), LCALL4(LDSET, ldset), LCALL4(LDCLR, ldclr),
+      LCALL4(LDEOR, ldeor),
+  };
+#undef LCALL4
+#undef LCALLS
+#undef LCALL
+
+  const RTLIB::RuntimeLibcallsInfo &RTLCI = Info.getRuntimeLibcallsInfo();
+  for (const auto &[LC, Impl] : OutlineAtomicImpls) {
+    if (Info.getLibcallImpl(LC) != RTLIB::Unsupported &&
+        RTLCI.isAvailable(Impl))
+      Info.setLibcallImpl(LC, Impl);
+  }
 }
 
 // If return address signing is enabled, tail calls are emitted as follows:
