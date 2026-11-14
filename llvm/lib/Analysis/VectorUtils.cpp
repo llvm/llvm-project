@@ -37,6 +37,18 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
+SmallVector<VFInfo, 8> VFDatabase::getMappings(const CallInst &CI,
+                                               const TargetTransformInfo *TTI) {
+  SmallVector<VFInfo, 8> Mappings;
+  getVFABIMappings(CI, Mappings);
+  if (TTI)
+    llvm::erase_if(Mappings, [&](const VFInfo &Info) {
+      const Function *VF = CI.getModule()->getFunction(Info.VectorName);
+      return !TTI->isLegalToCallVectorFunction(VF->getFunctionType(), Info);
+    });
+  return Mappings;
+}
+
 /// Return true if all of the intrinsic's arguments and return type are scalars
 /// for the scalar form of the intrinsic, and vectors for the vector form of the
 /// intrinsic (except operands that are marked as always being scalar by
