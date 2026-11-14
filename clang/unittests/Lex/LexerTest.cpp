@@ -419,7 +419,7 @@ TEST_F(LexerTest, HandlesSplitTokens) {
   SourceLocation gtgtLoc = toks[4].getLocation();
   // Split the token to simulate the action of the parser and force creation of
   // an `ExpansionTokenRange`.
-  SourceLocation rangleLoc = PP->SplitToken(gtgtLoc, 1);
+  SourceLocation rangleLoc = PP->SplitToken(gtgtLoc, 1, tok::greater);
 
   // Verify that it only captures the first greater-then and not the second one.
   CharSourceRange range = Lexer::makeFileCharRange(
@@ -442,7 +442,7 @@ TEST_F(LexerTest, HandlesSplitTokens) {
   SourceLocation macroGtgtLoc = toks[9].getLocation();
   // Split the token to simulate the action of the parser and force creation of
   // an `ExpansionTokenRange`.
-  SourceLocation macroRAngleLoc = PP->SplitToken(macroGtgtLoc, 1);
+  SourceLocation macroRAngleLoc = PP->SplitToken(macroGtgtLoc, 1, tok::greater);
 
   // Verify that it fails (because it only captures the first greater-then and
   // not the second one, so it doesn't span the entire macro expansion).
