@@ -81,3 +81,48 @@ entry:
   %r = xor i64 %and, -1
   ret i64 %r
 }
+
+; GCN-LABEL: {{^}}scalar_nand_v2i16_one_use
+; GCN: s_nand_b32
+define amdgpu_kernel void @scalar_nand_v2i16_one_use(
+    ptr addrspace(1) %r0, <2 x i16> %a, <2 x i16> %b) {
+entry:
+  %and = and <2 x i16> %a, %b
+  %r0.val = xor <2 x i16> %and, <i16 -1, i16 -1>
+  store <2 x i16> %r0.val, ptr addrspace(1) %r0
+  ret void
+}
+
+; GCN-LABEL: {{^}}scalar_nand_v4i16_one_use
+; GCN: s_nand_b64
+define amdgpu_kernel void @scalar_nand_v4i16_one_use(
+    ptr addrspace(1) %r0, <4 x i16> %a, <4 x i16> %b) {
+entry:
+  %and = and <4 x i16> %a, %b
+  %r0.val = xor <4 x i16> %and, <i16 -1, i16 -1, i16 -1, i16 -1>
+  store <4 x i16> %r0.val, ptr addrspace(1) %r0
+  ret void
+}
+
+; GCN-LABEL: {{^}}scalar_nand_v2i32_one_use
+; GCN: s_nand_b64
+define amdgpu_kernel void @scalar_nand_v2i32_one_use(
+    ptr addrspace(1) %r0, <2 x i32> %a, <2 x i32> %b) {
+entry:
+  %and = and <2 x i32> %a, %b
+  %r0.val = xor <2 x i32> %and, <i32 -1, i32 -1>
+  store <2 x i32> %r0.val, ptr addrspace(1) %r0
+  ret void
+}
+
+; GCN-LABEL: {{^}}scalar_nand_v4i16_mul_use
+; GCN-NOT: s_nand_b64
+define amdgpu_kernel void @scalar_nand_v4i16_mul_use(
+    ptr addrspace(1) %r0, ptr addrspace(1) %r1, <4 x i16> %a, <4 x i16> %b) {
+entry:
+  %and = and <4 x i16> %a, %b
+  %r0.val = xor <4 x i16> %and, <i16 -1, i16 -1, i16 -1, i16 -1>
+  store <4 x i16> %r0.val, ptr addrspace(1) %r0
+  store <4 x i16> %and, ptr addrspace(1) %r1
+  ret void
+}

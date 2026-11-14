@@ -13,6 +13,32 @@
 include "AMDGPU.td"
 include "AMDGPUCombine.td"
 
+// After legalization, an all-ones v2i16 or v4i16 operand is not always a
+// plain G_BUILD_VECTOR, so vnot does not match it. Without legal v2i16 it is
+// built from a G_BITCAST of i32 -1, and v4i16 is a G_CONCAT_VECTORS of two
+// v2i16 halves.
+def gi_vnot_v2i16_legalized : PatFrag<(ops node:$src),
+  (xor node:$src, (v2i16 (bitconvert (i32 -1))))>;
+
+def gi_vnot_v4i16_legalized : PatFrags<(ops node:$src), [
+  (xor node:$src, (v4i16 (concat_vectors (v2i16 immAllOnesV),
+                                         (v2i16 immAllOnesV)))),
+  (xor node:$src, (v4i16 (concat_vectors (v2i16 (bitconvert (i32 -1))),
+                                         (v2i16 (bitconvert (i32 -1))))))]>;
+
+defm : ScalarNotOfOpPats<v2i16, S_XNOR_B32, S_NAND_B32, S_NOR_B32>;
+defm : ScalarNotOfOpPats<v2i16, S_XNOR_B32, S_NAND_B32, S_NOR_B32,
+                         gi_vnot_v2i16_legalized>;
+defm : ScalarNotOfOpPats<v4i16, S_XNOR_B64, S_NAND_B64, S_NOR_B64>;
+defm : ScalarNotOfOpPats<v4i16, S_XNOR_B64, S_NAND_B64, S_NOR_B64,
+                         gi_vnot_v4i16_legalized>;
+
+// SOPInstructions.td already matches andn2/orn2 when the operand is vnot.
+def : ScalarNot2Pat<S_ANDN2_B32, and, v2i16, gi_vnot_v2i16_legalized>;
+def : ScalarNot2Pat<S_ANDN2_B64, and, v4i16, gi_vnot_v4i16_legalized>;
+def : ScalarNot2Pat<S_ORN2_B32, or, v2i16, gi_vnot_v2i16_legalized>;
+def : ScalarNot2Pat<S_ORN2_B64, or, v4i16, gi_vnot_v4i16_legalized>;
+
 def sd_vsrc0 : ComplexPattern<i32, 1, "">;
 def gi_vsrc0 :
     GIComplexOperandMatcher<s32, "selectVSRC0">,

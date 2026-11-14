@@ -755,6 +755,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::XOR, MVT::v2i16, Promote);
     AddPromotedToType(ISD::XOR, MVT::v2i16, MVT::i32);
 
+    setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, MVT::v4i16, Custom);
+
     setOperationAction(ISD::LOAD, MVT::v4i16, Promote);
     AddPromotedToType(ISD::LOAD, MVT::v4i16, MVT::v2i32);
     setOperationAction(ISD::LOAD, MVT::v4f16, Promote);
@@ -7898,6 +7900,21 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FADD:
   case ISD::FMUL:
     return splitBinaryVectorOp(Op, DAG);
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR: {
+    // Only v4i16 is custom. Do uniform operations as v2i32 so they can use
+    // 64-bit scalar instructions, and split divergent ones into v2i16 halves.
+    assert(Op.getValueType() == MVT::v4i16);
+    if (Op->isDivergent())
+      return splitBinaryVectorOp(Op, DAG);
+    SDLoc SL(Op);
+    SDValue LHS = DAG.getBitcast(MVT::v2i32, Op.getOperand(0));
+    SDValue RHS = DAG.getBitcast(MVT::v2i32, Op.getOperand(1));
+    return DAG.getBitcast(
+        MVT::v4i16,
+        DAG.getNode(Op.getOpcode(), SL, MVT::v2i32, LHS, RHS, Op->getFlags()));
+  }
   case ISD::FCOPYSIGN:
     return lowerFCOPYSIGN(Op, DAG);
   case ISD::MUL:

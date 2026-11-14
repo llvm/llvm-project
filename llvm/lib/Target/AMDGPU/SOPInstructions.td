@@ -2154,6 +2154,56 @@ def : ScalarNot2Pat<S_ORN2_B32, or, v2i16>;
 def : ScalarNot2Pat<S_ORN2_B64, or, v4i16>;
 def : ScalarNot2Pat<S_ORN2_B64, or, v2i32>;
 
+multiclass ScalarNotOfOpPats<ValueType vt, Instruction xnor, Instruction nand,
+                             Instruction nor, SDPatternOperator notnode = vnot> {
+  def : GCNPat<
+    (vt (UniformUnaryFrag<notnode> (xor_oneuse vt:$src0, vt:$src1))),
+    (xnor getSOPSrcForVT<vt>.ret:$src0, getSOPSrcForVT<vt>.ret:$src1)>;
+  def : GCNPat<
+    (vt (UniformUnaryFrag<notnode> (and_oneuse vt:$src0, vt:$src1))),
+    (nand getSOPSrcForVT<vt>.ret:$src0, getSOPSrcForVT<vt>.ret:$src1)>;
+  def : GCNPat<
+    (vt (UniformUnaryFrag<notnode> (or_oneuse vt:$src0, vt:$src1))),
+    (nor getSOPSrcForVT<vt>.ret:$src0, getSOPSrcForVT<vt>.ret:$src1)>;
+}
+
+defm : ScalarNotOfOpPats<v2i32, S_XNOR_B64, S_NAND_B64, S_NOR_B64>;
+
+// SelectionDAG promotes v2i16 and v4i16 bitwise operations to i32 and v2i32,
+// but an all-ones operand can remain a bitcast of a v2i16 BUILD_VECTOR.
+def not_v2i16_as_i32 : PatFrag<(ops node:$src),
+  (xor node:$src, (i32 (bitconvert (v2i16 immAllOnesV))))>;
+
+def vnot_v4i16_as_v2i32 : PatFrag<(ops node:$src),
+  (xor node:$src, (v2i32 (build_vector (i32 (bitconvert (v2i16 immAllOnesV))),
+                                       (i32 (bitconvert (v2i16 immAllOnesV))))))>;
+
+defm : ScalarNotOfOpPats<i32, S_XNOR_B32, S_NAND_B32, S_NOR_B32,
+                         not_v2i16_as_i32>;
+defm : ScalarNotOfOpPats<v2i32, S_XNOR_B64, S_NAND_B64, S_NOR_B64,
+                         vnot_v4i16_as_v2i32>;
+def : ScalarNot2Pat<S_ANDN2_B32, and, i32, not_v2i16_as_i32>;
+def : ScalarNot2Pat<S_ANDN2_B64, and, v2i32, vnot_v4i16_as_v2i32>;
+def : ScalarNot2Pat<S_ORN2_B32, or, i32, not_v2i16_as_i32>;
+def : ScalarNot2Pat<S_ORN2_B64, or, v2i32, vnot_v4i16_as_v2i32>;
+
+// Without 16-bit instructions, a v4i16 bitwise operation is done as v2i32 and
+// its result is inverted as i64.
+def bitconvert_oneuse : HasOneUseUnaryOp<bitconvert>;
+
+def : GCNPat<
+  (i64 (UniformUnaryFrag<not>
+         (bitconvert_oneuse (v2i32 (xor_oneuse v2i32:$src0, v2i32:$src1))))),
+  (S_XNOR_B64 SSrc_b64:$src0, SSrc_b64:$src1)>;
+def : GCNPat<
+  (i64 (UniformUnaryFrag<not>
+         (bitconvert_oneuse (v2i32 (and_oneuse v2i32:$src0, v2i32:$src1))))),
+  (S_NAND_B64 SSrc_b64:$src0, SSrc_b64:$src1)>;
+def : GCNPat<
+  (i64 (UniformUnaryFrag<not>
+         (bitconvert_oneuse (v2i32 (or_oneuse v2i32:$src0, v2i32:$src1))))),
+  (S_NOR_B64 SSrc_b64:$src0, SSrc_b64:$src1)>;
+
 let WaveSizePredicate = isWave32 in {
 def : GCNPat<
   (i1 (not (or_oneuse i1:$src0, i1:$src1))),

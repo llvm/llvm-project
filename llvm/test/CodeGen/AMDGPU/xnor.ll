@@ -192,5 +192,50 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}scalar_xnor_v2i16_one_use
+; GCN: s_xnor_b32
+define amdgpu_kernel void @scalar_xnor_v2i16_one_use(
+    ptr addrspace(1) %r0, <2 x i16> %a, <2 x i16> %b) {
+entry:
+  %xor = xor <2 x i16> %a, %b
+  %r0.val = xor <2 x i16> %xor, <i16 -1, i16 -1>
+  store <2 x i16> %r0.val, ptr addrspace(1) %r0
+  ret void
+}
+
+; GCN-LABEL: {{^}}scalar_xnor_v4i16_one_use
+; GCN: s_xnor_b64
+define amdgpu_kernel void @scalar_xnor_v4i16_one_use(
+    ptr addrspace(1) %r0, <4 x i16> %a, <4 x i16> %b) {
+entry:
+  %xor = xor <4 x i16> %a, %b
+  %r0.val = xor <4 x i16> %xor, <i16 -1, i16 -1, i16 -1, i16 -1>
+  store <4 x i16> %r0.val, ptr addrspace(1) %r0
+  ret void
+}
+
+; GCN-LABEL: {{^}}scalar_xnor_v2i32_one_use
+; GCN: s_xnor_b64
+define amdgpu_kernel void @scalar_xnor_v2i32_one_use(
+    ptr addrspace(1) %r0, <2 x i32> %a, <2 x i32> %b) {
+entry:
+  %xor = xor <2 x i32> %a, %b
+  %r0.val = xor <2 x i32> %xor, <i32 -1, i32 -1>
+  store <2 x i32> %r0.val, ptr addrspace(1) %r0
+  ret void
+}
+
+; GCN-LABEL: {{^}}scalar_xnor_v4i16_mul_use
+; GCN-NOT: s_xnor_b64
+define amdgpu_kernel void @scalar_xnor_v4i16_mul_use(
+    ptr addrspace(1) %r0, ptr addrspace(1) %r1, <4 x i16> %a, <4 x i16> %b) {
+entry:
+  %xor = xor <4 x i16> %a, %b
+  %r0.val = xor <4 x i16> %xor, <i16 -1, i16 -1, i16 -1, i16 -1>
+  store <4 x i16> %r0.val, ptr addrspace(1) %r0
+  store <4 x i16> %xor, ptr addrspace(1) %r1
+  ret void
+}
+
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.x() #0
