@@ -70,7 +70,8 @@ define amdgpu_kernel void @packed_fp32_wide_shufflevector(<4 x float> %vec4, <8 
 
 ; A v_pk_*_f32 operand is an aligned register pair. A lane already in its half
 ; of a source pair is free, a splat of the low half is an op_sel_hi, and every
-; other lane costs one v_mov_b32.
+; other lane costs one v_mov_b32. GFX1250 has wave32 VOPD, so those moves
+; co-issue as v_dual_mov_b32 and every shuffle is free.
 
 define amdgpu_kernel void @packed_fp32_cross_half_shufflevector(<2 x float> %a, <2 x float> %b, <4 x float> %c) {
 ; GFX90A-LABEL: 'packed_fp32_cross_half_shufflevector'
@@ -87,13 +88,13 @@ define amdgpu_kernel void @packed_fp32_cross_half_shufflevector(<2 x float> %a, 
 ;
 ; GFX1250-LABEL: 'packed_fp32_cross_half_shufflevector'
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %splat.lo = shufflevector <2 x float> %a, <2 x float> poison, <2 x i32> zeroinitializer
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %splat.hi = shufflevector <2 x float> %a, <2 x float> poison, <2 x i32> <i32 1, i32 1>
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rev = shufflevector <2 x float> %a, <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %blend = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 0, i32 3>
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lo.lo = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 0, i32 2>
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %hi.lo = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 1, i32 2>
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %rev4 = shufflevector <4 x float> %c, <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ext.mid = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 1, i32 2>
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %splat.hi = shufflevector <2 x float> %a, <2 x float> poison, <2 x i32> <i32 1, i32 1>
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %rev = shufflevector <2 x float> %a, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %blend = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 0, i32 3>
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %lo.lo = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 0, i32 2>
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %hi.lo = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 1, i32 2>
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %rev4 = shufflevector <4 x float> %c, <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ext.mid = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 1, i32 2>
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ext.hi = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;

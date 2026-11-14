@@ -2564,6 +2564,14 @@ private:
   InstructionCost getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                 Type *ScalarTy) const;
 
+  /// \returns HasScalarUser if every non-constant value in \p VL is a computed
+  /// value that has a user, other than an insertelement, that is not
+  /// vectorized in the tree, so it stays scalar and the value must be
+  /// available in a scalar register. Users inside the tree are folded into the
+  /// vector code and do not count, however many there are.
+  TargetTransformInfo::VectorInstrContext
+  getScalarUserContext(ArrayRef<Value *> VL) const;
+
   /// Set the Builder insert point to one after the last instruction in
   /// the bundle
   void setInsertPointAfterBundle(const TreeEntry *E);
@@ -15331,10 +15339,12 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
               std::distance(VL.begin(), It) * getNumElements(ScalarTy),
               cast<FixedVectorType>(ScalarTy));
         }
-        return TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
-                                      CostKind, std::distance(VL.begin(), It),
-                                      PoisonValue::get(VecTy), *It,
-                                      ContextHint);
+        return TTI.getVectorInstrCost(
+            Instruction::InsertElement, VecTy, CostKind,
+            std::distance(VL.begin(), It), PoisonValue::get(VecTy), *It,
+            ContextHint == TTI::VectorInstrContext::None
+                ? R.getScalarUserContext(*It)
+                : ContextHint);
       }
 
       SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
@@ -15343,7 +15353,10 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       });
       InstructionCost InsertCost =
           TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
-                                 PoisonValue::get(VecTy), *It, ContextHint);
+                                 PoisonValue::get(VecTy), *It,
+                                 ContextHint == TTI::VectorInstrContext::None
+                                     ? R.getScalarUserContext(*It)
+                                     : ContextHint);
       return InsertCost + getShuffleCost(TTI, TargetTransformInfo::SK_Broadcast,
                                          VecTy, CostKind, ShuffleMask,
                                          /*Index=*/0, /*SubTp=*/nullptr,
@@ -22161,6 +22174,24 @@ BoUpSLP::isGatherShuffledEntry(
   return Res;
 }
 
+TTI::VectorInstrContext
+BoUpSLP::getScalarUserContext(ArrayRef<Value *> VL) const {
+  bool Found = false;
+  for (Value *V : VL) {
+    if (isa<UndefValue>(V) || isConstant(V))
+      continue;
+    const auto *I = dyn_cast<Instruction>(V);
+    if (!I || isa<LoadInst, InsertElementInst>(I) ||
+        none_of(I->users(), [&](const User *U) {
+          return !isa<InsertElementInst>(U) && !isVectorized(U);
+        }))
+      return TTI::VectorInstrContext::None;
+    Found = true;
+  }
+  return Found ? TTI::VectorInstrContext::HasScalarUser
+               : TTI::VectorInstrContext::None;
+}
+
 InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                        Type *ScalarTy) const {
   const unsigned VF = VL.size();
@@ -22205,7 +22236,8 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                      cast<VectorType>(VecTy), DemandedElements,
                                      /*Insert=*/true,
                                      /*Extract=*/false, CostKind,
-                                     ForPoisonSrc && !IsAnyNonUndefConst, VL);
+                                     ForPoisonSrc && !IsAnyNonUndefConst, VL,
+                                     getScalarUserContext(VL));
   return Cost;
 }
 

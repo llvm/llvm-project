@@ -677,6 +677,18 @@ TargetTransformInfo::getVectorInstrContextHint(const Instruction *I) {
       I->getOperand(1)->hasOneUse())
     return VectorInstrContext::Load;
 
+  // For inserts of a computed value, check if the value also has a scalar user
+  // other than the one the insert feeds. Without knowledge of the vectorized
+  // code, count the users that are not inserts: more than one means a second
+  // user that is not absorbed into the vector operation.
+  if (isa<InsertElementInst>(I))
+    if (const auto *Inserted = dyn_cast<Instruction>(I->getOperand(1)))
+      if (!isa<LoadInst, InsertElementInst>(Inserted) &&
+          count_if(Inserted->users(), [](const User *U) {
+            return !isa<InsertElementInst>(U);
+          }) > 1)
+        return VectorInstrContext::HasScalarUser;
+
   // For extracts, check if it has a single use that is a store.
   if (isa<ExtractElementInst>(I) && I->hasOneUse() &&
       isa<StoreInst>(*I->user_begin()))
