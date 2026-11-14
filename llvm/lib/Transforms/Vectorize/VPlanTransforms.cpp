@@ -3485,14 +3485,8 @@ static bool handleUncountableExitsWithSideEffects(
   // Create a mask to represent all lanes that fully execute in the vector loop,
   // stopping short of any early exit.
   VPBuilder MaskBuilder(InsertIt);
-  VPValue *FirstActive = MaskBuilder.createFirstActiveLane(Cond);
-  Type *IVScalarTy = IV->getScalarType();
-  VPValue *Zero = Plan.getZero(IVScalarTy);
-  FirstActive =
-      MaskBuilder.createScalarZExtOrTrunc(FirstActive, IVScalarTy, DebugLoc());
-  VPValue *Mask = MaskBuilder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                           {Zero, FirstActive}, DebugLoc(),
-                                           "uncountable.exit.mask");
+  VPValue *Mask = MaskBuilder.createWidenIntrinsic(Intrinsic::mask_beforefirst,
+                                                   Cond, Cond->getScalarType());
 
   // Convert all other memory operations to use the mask.
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB))
@@ -3516,6 +3510,10 @@ static bool handleUncountableExitsWithSideEffects(
   assert(match(MiddleVPBB->getTerminator(), m_BranchOnCond()) &&
          "Expected BranchOnCond terminator for MiddleVPBB");
   VPBuilder MiddleBuilder(MiddleVPBB->getTerminator());
+  Type *IVScalarTy = IV->getScalarType();
+  VPValue *Zero = Plan.getZero(IVScalarTy);
+  VPValue *FirstActive = MiddleBuilder.createScalarZExtOrTrunc(
+      MiddleBuilder.createFirstActiveLane(Cond), IVScalarTy, DebugLoc());
   VPValue *ScalarIV = MiddleBuilder.createNaryOp(VPInstruction::ExtractLane,
                                                  {Zero, IV}, DebugLoc());
   VPValue *ExitIV = MiddleBuilder.createAdd(ScalarIV, FirstActive);
@@ -6522,6 +6520,40 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!StoredValue)
         cast<VPWidenLoadRecipe>(&R)->replaceAllUsesWith(StridedR);
       R.eraseFromParent();
+    }
+  }
+}
+
+void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
+                                            VFRange &Range) {
+  if (Range.Start.isScalar())
+    return;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      VPValue *X;
+      if (!match(&R, m_Intrinsic<Intrinsic::mask_beforefirst>(m_VPValue(X))))
+        continue;
+      auto *BeforeFirst = cast<VPWidenIntrinsicRecipe>(&R);
+      auto IsCheap = [&](ElementCount VF) {
+        return BeforeFirst->computeCost(VF, Ctx) <=
+               TargetTransformInfo::TCC_Expensive;
+      };
+      if (LoopVectorizationPlanner::getDecisionAndClampRange(IsCheap, Range))
+        continue;
+
+      VPBuilder Builder(BeforeFirst);
+      Type *Ty = Plan.getVF().getScalarType();
+      DebugLoc DL = BeforeFirst->getDebugLoc();
+      VPValue *FirstActive = Builder.createScalarZExtOrTrunc(
+          Builder.createFirstActiveLane(X, DL), Ty, DL);
+      VPValue *PartStart = Builder.createOverflowingOp(
+          VPInstruction::CanonicalIVIncrementForPart,
+          {Plan.getZero(Ty), &Plan.getVF()});
+      BeforeFirst->replaceAllUsesWith(Builder.createNaryOp(
+          VPInstruction::ActiveLaneMask, {PartStart, FirstActive}, DL));
+      BeforeFirst->eraseFromParent();
     }
   }
 }
