@@ -67,3 +67,59 @@ define void @test_memset_inline_8bytes(ptr %dst, i8 %val) {
   call void @llvm.memset.inline.p0.i64(ptr %dst, i8 %val, i64 8, i1 false)
   ret void
 }
+
+define void @test_memset_inline_8bytes_align2(ptr %dst, i8 %val) {
+; RV32I-LABEL: test_memset_inline_8bytes_align2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sb a1, 0(a0)
+; RV32I-NEXT:    sb a1, 1(a0)
+; RV32I-NEXT:    sb a1, 2(a0)
+; RV32I-NEXT:    sb a1, 3(a0)
+; RV32I-NEXT:    sb a1, 4(a0)
+; RV32I-NEXT:    sb a1, 5(a0)
+; RV32I-NEXT:    sb a1, 6(a0)
+; RV32I-NEXT:    sb a1, 7(a0)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: test_memset_inline_8bytes_align2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sb a1, 0(a0)
+; RV64I-NEXT:    sb a1, 1(a0)
+; RV64I-NEXT:    sb a1, 2(a0)
+; RV64I-NEXT:    sb a1, 3(a0)
+; RV64I-NEXT:    sb a1, 4(a0)
+; RV64I-NEXT:    sb a1, 5(a0)
+; RV64I-NEXT:    sb a1, 6(a0)
+; RV64I-NEXT:    sb a1, 7(a0)
+; RV64I-NEXT:    ret
+  call void @llvm.memset.inline.p0.i64(ptr align 2 %dst, i8 %val, i64 8, i1 false)
+  ret void
+}
+
+define void @test_memset_inline_8bytes_align4(ptr %dst, i8 %val) {
+; RV32I-LABEL: test_memset_inline_8bytes_align4:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sb a1, 0(a0)
+; RV32I-NEXT:    sb a1, 1(a0)
+; RV32I-NEXT:    sb a1, 2(a0)
+; RV32I-NEXT:    sb a1, 3(a0)
+; RV32I-NEXT:    sb a1, 4(a0)
+; RV32I-NEXT:    sb a1, 5(a0)
+; RV32I-NEXT:    sb a1, 6(a0)
+; RV32I-NEXT:    sb a1, 7(a0)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: test_memset_inline_8bytes_align4:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sb a1, 0(a0)
+; RV64I-NEXT:    sb a1, 1(a0)
+; RV64I-NEXT:    sb a1, 2(a0)
+; RV64I-NEXT:    sb a1, 3(a0)
+; RV64I-NEXT:    sb a1, 4(a0)
+; RV64I-NEXT:    sb a1, 5(a0)
+; RV64I-NEXT:    sb a1, 6(a0)
+; RV64I-NEXT:    sb a1, 7(a0)
+; RV64I-NEXT:    ret
+  call void @llvm.memset.inline.p0.i64(ptr align 4 %dst, i8 %val, i64 8, i1 false)
+  ret void
+}
