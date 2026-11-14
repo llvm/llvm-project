@@ -950,6 +950,13 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     if (From->getAlign() > To->getAlign())
       To->setAlignment(From->getAlign());
 
+    // A zero-sized alloca has a one-byte stack object. Extend the alloca to
+    // match, since alias analysis now describes the merged slot by it.
+    if (To->getAllocationSize(MF->getDataLayout()) == TypeSize::getZero()) {
+      To->setAllocatedType(Type::getInt8Ty(To->getContext()));
+      To->setOperand(0, ConstantInt::get(To->getArraySize()->getType(), 1));
+    }
+
     // We keep both slots to maintain AliasAnalysis metadata later.
     MergedAllocas.insert(From);
     MergedAllocas.insert(To);
