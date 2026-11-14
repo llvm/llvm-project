@@ -175,6 +175,13 @@ struct UnrollTransferReadPattern
     SmallVector<int64_t> strides(targetShape->size(), 1);
     Location loc = readOp.getLoc();
     ArrayRef<int64_t> originalSize = sourceVectorType.getShape();
+    // Bail-out if rank(source) != rank(target). The rewrite reuses the original
+    // permutation_map and in_bounds attributes, which must match the sliced
+    // vector rank. If needed, we can relax this later.
+    if (originalSize.size() != targetShape->size())
+      return rewriter.notifyMatchFailure(
+          readOp,
+          "expected source input vector rank to match target shape rank");
 
     // Prepare the result vector;
     Value result =

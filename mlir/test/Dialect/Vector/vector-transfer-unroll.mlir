@@ -73,6 +73,19 @@ func.func @transfer_write_unroll(%mem : memref<4x4xf32>, %vec : vector<4x4xf32>)
 // Note: The vector unrolling target shape in `test-vector-transfer-unrolling-patterns`
 // is currently hard-coded to [2, 2].
 
+// ALL-LABEL: func @negative_transfer_read
+//   ALL-NOT:   vector.insert_strided_slice
+//       ALL:   vector.transfer_read
+//       ALL:   return
+func.func @negative_transfer_read(%t: tensor<2x2x2xi32>) -> vector<2x2x2xi32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0 : i32
+  %x = vector.transfer_read %t[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : tensor<2x2x2xi32>, vector<2x2x2xi32>
+  return %x : vector<2x2x2xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @negative_transfer_write
 //   CHECK-NOT:   vector.extract_strided_slice
 //       CHECK:   vector.transfer_write
