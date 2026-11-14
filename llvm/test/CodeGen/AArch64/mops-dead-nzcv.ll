@@ -64,7 +64,7 @@ define ptr @set_tag(ptr %d, i8 %v, i64 %n) {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY $x2
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
   ; CHECK-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_32
-  ; CHECK-NEXT:   [[MOPSMemorySetTaggingPseudo:%[0-9]+]]:gpr64common, [[MOPSMemorySetTaggingPseudo1:%[0-9]+]]:gpr64 = MOPSMemorySetTaggingPseudo [[COPY]], [[COPY2]], [[INSERT_SUBREG]], implicit-def dead $nzcv :: (store (i8) into %ir.d)
+  ; CHECK-NEXT:   [[MOPSMemorySetTaggingPseudo:%[0-9]+]]:gpr64common, [[MOPSMemorySetTaggingPseudo1:%[0-9]+]]:gpr64 = MOPSMemorySetTaggingPseudo [[COPY]], [[COPY2]], [[INSERT_SUBREG]], implicit-def dead $nzcv :: (store unknown-size into %ir.d, align 1)
   ; CHECK-NEXT:   $x0 = COPY [[MOPSMemorySetTaggingPseudo]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %r = call ptr @llvm.aarch64.mops.memset.tag(ptr %d, i8 %v, i64 %n)

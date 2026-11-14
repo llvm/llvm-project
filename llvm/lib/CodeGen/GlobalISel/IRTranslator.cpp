@@ -3750,6 +3750,10 @@ bool IRTranslatorImpl::translateIntrinsic(
     } else if (Info.fallbackAddressSpace) {
       MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
     }
+
+    if (Info.size == MemoryLocation::UnknownSize)
+      MemTy = LLT();
+
     MIB.addMemOperand(MF->getMachineMemOperand(
         MPI, Info.flags, MemTy, Alignment, CB.getAAMetadata(), Info.ssid,
         Info.order, Info.failureOrder));
