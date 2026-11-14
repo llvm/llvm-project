@@ -66,6 +66,15 @@ bool ValueObjectCast::UpdateValue() {
     CompilerType compiler_type(GetCompilerType());
     m_value.SetCompilerType(compiler_type);
     SetAddressTypeOfChildren(m_parent->GetAddressTypeOfChildren());
+    // A cast that drops __ptrauth strips the signature bits from the value.
+    if (m_parent->GetCompilerType().HasPointerAuthQualifier() &&
+        !compiler_type.HasPointerAuthQualifier()) {
+      if (auto stripped = m_parent->GetStrippedPointerValue(
+              m_parent->GetPointerValue().address)) {
+        m_value.GetScalar() = *stripped;
+        m_value.SetValueType(Value::ValueType::Scalar);
+      }
+    }
     if (!CanProvideValue()) {
       // this value object represents an aggregate type whose children have
       // values, but this object does not. So we say we are changed if our
@@ -87,3 +96,32 @@ bool ValueObjectCast::UpdateValue() {
 }
 
 bool ValueObjectCast::IsInScope() { return m_parent->IsInScope(); }
+
+bool ValueObjectCast::LivesInParentStorage() {
+  // A parent without storage, such as a register variable, keeps the base path.
+  return UpdateValueIfNeeded(false) &&
+         m_value.GetValueType() == Value::ValueType::Scalar &&
+         m_parent->GetAddressOf(/*scalar_is_load_address=*/false).type !=
+             eAddressTypeInvalid;
+}
+
+ValueObject::AddrAndType
+ValueObjectCast::GetAddressOf(bool scalar_is_load_address) {
+  if (LivesInParentStorage())
+    return m_parent->GetAddressOf(scalar_is_load_address);
+  return ValueObject::GetAddressOf(scalar_is_load_address);
+}
+
+const char *ValueObjectCast::GetLocationAsCString() {
+  if (LivesInParentStorage())
+    return m_parent->GetLocationAsCString();
+  return ValueObject::GetLocationAsCString();
+}
+
+llvm::Error ValueObjectCast::CanSetValue() {
+  // UpdateValue rebuilds a stripped pointer from the parent; a write is lost.
+  if (m_parent->GetCompilerType().HasPointerAuthQualifier() &&
+      !GetCompilerType().HasPointerAuthQualifier())
+    return llvm::createStringError("value is not in a writable location");
+  return ValueObject::CanSetValue();
+}
