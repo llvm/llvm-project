@@ -1391,6 +1391,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary
   identifier outside that context.
 
+- With ``-fms-compatibility``, the operand of a ``defined`` operator that is
+  produced while expanding a macro argument in an ``#if`` or ``#elif``
+  condition is no longer macro-expanded, matching MSVC. For example, with
+  ``#define FOO(x) (defined M_##x && M_##x)``, ``#define M_a true`` and
+  ``#define NOT(X) (!(X))``, ``#if NOT(FOO(a))`` is now false, as it is in
+  MSVC.
+
 - Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
   stack pointer as it was on entry to the function, as the frame value the CRT
   stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
