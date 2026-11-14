@@ -22,7 +22,21 @@ define i32 @test_no_flags(i64 %i) {
 ; CHECK-SAME: i64 [[I:%.*]]) {
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr [2 x ptr], ptr @table, i64 0, i64 [[I]]
 ; CHECK-NEXT:    [[F:%.*]] = load ptr, ptr [[P]], align 8
-; CHECK-NEXT:    [[R:%.*]] = call i32 [[F]]()
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[I]], 2305843009213693951
+; CHECK-NEXT:    switch i64 [[TMP1]], label %[[DEFAULT_SWITCH_CASE_UNREACHABLE:.*]] [
+; CHECK-NEXT:      i64 0, label %[[CALL_0:.*]]
+; CHECK-NEXT:      i64 1, label %[[CALL_1:.*]]
+; CHECK-NEXT:    ], !prof [[PROF0:![0-9]+]]
+; CHECK:       [[DEFAULT_SWITCH_CASE_UNREACHABLE]]:
+; CHECK-NEXT:    unreachable
+; CHECK:       [[CALL_0]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @f0()
+; CHECK-NEXT:    br label %[[DOTTAIL:.*]]
+; CHECK:       [[CALL_1]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @f1()
+; CHECK-NEXT:    br label %[[DOTTAIL]]
+; CHECK:       [[DOTTAIL]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP2]], %[[CALL_0]] ], [ [[TMP3]], %[[CALL_1]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %p = getelementptr [2 x ptr], ptr @table, i64 0, i64 %i
@@ -39,7 +53,7 @@ define i32 @test_nusw(i64 %i) {
 ; CHECK-NEXT:    switch i64 [[I]], label %[[DEFAULT_SWITCH_CASE_UNREACHABLE:.*]] [
 ; CHECK-NEXT:      i64 0, label %[[CALL_0:.*]]
 ; CHECK-NEXT:      i64 1, label %[[CALL_1:.*]]
-; CHECK-NEXT:    ], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    ], !prof [[PROF0]]
 ; CHECK:       [[DEFAULT_SWITCH_CASE_UNREACHABLE]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[CALL_0]]:

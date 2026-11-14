@@ -24,15 +24,15 @@ define i32 @func2() {
   ret i32 %d
 }
 
-define i32 @function_gets_converted(i32 %index) {
-  %gep = getelementptr inbounds [2 x ptr], ptr @func_array1, i32 0, i32 %index
+define i32 @function_gets_converted(i64 %index) {
+  %gep = getelementptr inbounds [2 x ptr], ptr @func_array1, i64 0, i64 %index
   %func_ptr = load ptr, ptr %gep
   %result = call i32 %func_ptr()
   ret i32 %result
 }
 
-define i32 @function_not_converted(i32 %index) {
-  %gep = getelementptr inbounds [2 x ptr], ptr @func_array2, i32 0, i32 %index
+define i32 @function_not_converted(i64 %index) {
+  %gep = getelementptr inbounds [2 x ptr], ptr @func_array2, i64 0, i64 %index
   %func_ptr = load ptr, ptr %gep
   %result = call i32 %func_ptr()
   ret i32 %result

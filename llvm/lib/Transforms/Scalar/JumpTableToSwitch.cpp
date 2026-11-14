@@ -13,6 +13,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -49,47 +50,28 @@ static Function *getExpandableCallee(const ScalarOptions &Opts, Value *V,
 }
 
 static std::optional<JumpTable> parseJumpTable(const ScalarOptions &Opts,
-                                               GetElementPtrInst *GEP,
+                                               LoadInst *LI, Value *Ptr,
                                                PointerType *PtrTy,
-                                               FunctionType *CallFTy) {
-  Constant *Ptr = dyn_cast<Constant>(GEP->getPointerOperand());
-  if (!Ptr)
+                                               FunctionType *CallFTy,
+                                               IRBuilderBase &Builder) {
+  std::optional<ConstGlobalIterator> GlobalIter =
+      ConstGlobalIterator::fromLoadInst(LI, Ptr);
+  if (!GlobalIter)
     return std::nullopt;
 
-  GlobalVariable *GV = dyn_cast<GlobalVariable>(Ptr);
-  if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
-    return std::nullopt;
-
-  Function &F = *GEP->getParent()->getParent();
-  const DataLayout &DL = F.getDataLayout();
-  const unsigned BitWidth =
-      DL.getIndexSizeInBits(GEP->getPointerAddressSpace());
-  SmallMapVector<Value *, APInt, 4> VariableOffsets;
-  APInt ConstantOffset(BitWidth, 0);
-  if (!GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset))
-    return std::nullopt;
-  if (VariableOffsets.size() != 1)
-    return std::nullopt;
-  // TODO: consider supporting more general patterns
-  if (!ConstantOffset.isZero())
-    return std::nullopt;
-  APInt StrideBytes = VariableOffsets.front().second;
-  const uint64_t JumpTableSizeBytes = GV->getGlobalSize(DL);
-  if (JumpTableSizeBytes % StrideBytes.getZExtValue() != 0)
-    return std::nullopt;
   ++NumEligibleJumpTables;
-  const uint64_t N = JumpTableSizeBytes / StrideBytes.getZExtValue();
+
+  uint64_t N = GlobalIter->size();
   if (N > Opts.jump_table_to_switch_size_threshold)
     return std::nullopt;
 
-  JumpTable JT;
-  JT.Index = VariableOffsets.front().first;
-  JT.Funcs.reserve(N);
+  Function &F = *LI->getParent()->getParent();
+
+  SmallVector<std::pair<uint64_t, Function *>, 10> Funcs;
+  Funcs.reserve(N);
+
   for (uint64_t Index = 0; Index < N; ++Index) {
-    // ConstantOffset is zero.
-    APInt Offset = Index * StrideBytes;
-    Constant *C =
-        ConstantFoldLoadFromConst(GV->getInitializer(), PtrTy, Offset, DL);
+    Constant *C = GlobalIter->elementAt(Index);
     if (!C)
       return std::nullopt;
     if ((isa<ConstantPointerNull>(C) &&
@@ -99,12 +81,13 @@ static std::optional<JumpTable> parseJumpTable(const ScalarOptions &Opts,
     Function *Func = getExpandableCallee(Opts, C, CallFTy);
     if (!Func)
       return std::nullopt;
-    JT.Funcs.push_back({Index, Func});
+    Funcs.push_back({Index, Func});
   }
   // Empty table, or only values that are UB when called
-  if (JT.Funcs.empty())
+  if (Funcs.empty())
     return std::nullopt;
-  return JT;
+
+  return JumpTable{GlobalIter->getIndex(Builder), std::move(Funcs)};
 }
 
 static BasicBlock *
@@ -258,13 +241,12 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
           // Skip atomic or volatile loads.
           if (!L || !L->isSimple())
             continue;
-          auto *GEP = dyn_cast<GetElementPtrInst>(L->getPointerOperand());
-          if (!GEP ||
-              (!GEP->hasNoUnsignedWrap() && !GEP->hasNoUnsignedSignedWrap()))
-            continue;
+          auto *Ptr = L->getPointerOperand();
           auto *PtrTy = dyn_cast<PointerType>(L->getType());
           assert(PtrTy && "call operand must be a pointer");
-          JT = parseJumpTable(Opts, GEP, PtrTy, Call->getFunctionType());
+          IRBuilder<> Builder(Call);
+          JT = parseJumpTable(Opts, L, Ptr, PtrTy, Call->getFunctionType(),
+                              Builder);
         }
         if (!JT)
           continue;

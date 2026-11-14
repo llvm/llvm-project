@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
@@ -1067,4 +1068,80 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
   }
 
   return Expr;
+}
+
+std::optional<ConstGlobalIterator>
+ConstGlobalIterator::fromLoadInst(LoadInst *LI, Value *Ptr) {
+  const DataLayout &DL = LI->getDataLayout();
+  auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(Ptr));
+  if (LI->isVolatile() || !GV || !GV->isConstant() ||
+      !GV->hasDefinitiveInitializer())
+    return std::nullopt;
+
+  Type *EltTy = LI->getType();
+  TypeSize EltSize = DL.getTypeStoreSize(EltTy);
+  if (EltSize.isScalable())
+    return std::nullopt;
+
+  LinearExpression Expr = decomposeLinearExpression(DL, Ptr);
+  if (!Expr.Index || Expr.BasePtr != GV || Expr.Offset.getBitWidth() > 64)
+    return std::nullopt;
+
+  Constant *Init = GV->getInitializer();
+  TypeSize GlobalSize = DL.getTypeAllocSize(Init->getType());
+
+  const APInt &Stride = Expr.Scale;
+  const APInt &ConstOffset = Expr.Offset;
+
+  // Allow an additional context offset, but only within the stride.
+  if (!ConstOffset.ult(Stride))
+    return std::nullopt;
+
+  // Don't handle overlapping loads for now.
+  if (!Stride.uge(EltSize.getFixedValue()))
+    return std::nullopt;
+
+  // - With nuw: `Idx * Stride` does not wrap and all strides are valid.
+  // - With nusw: `Idx * Stride` does not wrap as signed, and the following
+  //   enumeration over ArrayElementCount is valid so long as the stride is
+  //   positive.
+  // - Without nusw or nuw: `Idx * Stride` is computed modulo 2^N (see
+  //   getIndex), and the masking in getIndex is only exact when the stride is
+  //   a power of two.
+  bool StrideIsValid =
+      Expr.Flags.hasNoUnsignedWrap() ||
+      (Expr.Flags.hasNoUnsignedSignedWrap() ? !Stride.isNegative()
+                                            : Stride.isPowerOf2());
+  if (!StrideIsValid)
+    return std::nullopt;
+
+  uint64_t ArrayElementCount =
+      divideCeil((GlobalSize.getFixedValue() - ConstOffset.getZExtValue()),
+                 Stride.getZExtValue());
+
+  return ConstGlobalIterator(DL, Expr, ArrayElementCount, Init, EltTy);
+}
+
+Constant *ConstGlobalIterator::elementAt(uint64_t Idx) const {
+  APInt Offset = Expr.Offset + (Expr.Scale * Idx);
+  return ConstantFoldLoadFromConst(Init, EltTy, Offset, DL);
+}
+
+Value *ConstGlobalIterator::getIndex(IRBuilderBase &Builder) const {
+  // If none of nusw (implied by inbounds) or nuw is present, Idx * Stride can
+  // overflow.
+  // Let's assume that Stride is 2 and the wanted value is at offset 0.
+  // Then, there are two possible values for Idx to match offset 0:
+  // 0x00..00, 0x80..00.
+  // Emitting 'icmp eq Idx, 0' isn't correct in this case because the
+  // comparison is false if Idx was 0x80..00.
+  // We need to erase the highest countr_zero(Stride) bits of Idx.
+  Value *Idx = Expr.Index;
+  unsigned Shift = Expr.Scale.countr_zero();
+  if (Expr.Flags.hasNoUnsignedWrap() || Expr.Flags.hasNoUnsignedSignedWrap() ||
+      Shift == 0)
+    return Idx;
+  Value *Mask = Constant::getAllOnesValue(Idx->getType());
+  Mask = Builder.CreateLShr(Mask, Shift);
+  return Builder.CreateAnd(Idx, Mask);
 }

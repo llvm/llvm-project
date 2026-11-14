@@ -19,6 +19,7 @@
 #include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace llvm {
 
@@ -26,6 +27,7 @@ class BatchAAResults;
 class AssumptionCache;
 class DataLayout;
 class DominatorTree;
+class IRBuilderBase;
 class Instruction;
 class LoadInst;
 struct LoadStoreInstProperties;
@@ -238,6 +240,31 @@ struct LinearExpression {
 /// multiple GEPs.
 LLVM_ABI LinearExpression decomposeLinearExpression(const DataLayout &DL,
                                                     Value *Ptr);
+
+class ConstGlobalIterator {
+  const DataLayout &DL;
+  LinearExpression Expr;
+  uint64_t ArrayElementCount;
+  Constant *Init;
+  Type *EltTy;
+
+  ConstGlobalIterator(const DataLayout &DL, LinearExpression Expr,
+                      uint64_t ArrayElementCount, Constant *Init, Type *EltTy)
+      : DL(DL), Expr(Expr), ArrayElementCount(ArrayElementCount), Init(Init),
+        EltTy(EltTy) {}
+
+public:
+  LLVM_ABI static std::optional<ConstGlobalIterator> fromLoadInst(LoadInst *LI,
+                                                                  Value *Ptr);
+
+  LLVM_ABI Constant *elementAt(uint64_t Idx) const;
+
+  uint64_t size() const { return ArrayElementCount; }
+
+  const LinearExpression &expr() const { return Expr; }
+
+  LLVM_ABI Value *getIndex(IRBuilderBase &Builder) const;
+};
 }
 
 #endif

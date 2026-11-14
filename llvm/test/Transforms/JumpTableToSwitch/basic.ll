@@ -37,14 +37,14 @@ define i32 @func1() !guid !1 {
   ret i32 2
 }
 
-define i32 @function_with_jump_table(i32 %index) {
+define i32 @function_with_jump_table(i64 %index) {
 ; CHECK-LABEL: define i32 @function_with_jump_table(
-; CHECK-SAME: i32 [[INDEX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 [[INDEX]]
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[FUNC_PTR:%.*]] = load ptr, ptr [[GEP]], align 8
-; CHECK-NEXT:    switch i32 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
-; CHECK-NEXT:      i32 0, label [[CALL_0:%.*]]
-; CHECK-NEXT:      i32 1, label [[CALL_1:%.*]]
+; CHECK-NEXT:    switch i64 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
+; CHECK-NEXT:      i64 0, label [[CALL_0:%.*]]
+; CHECK-NEXT:      i64 1, label [[CALL_1:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF2:![0-9]+]]
 ; CHECK:       default.switch.case.unreachable:
 ; CHECK-NEXT:    unreachable
@@ -59,26 +59,26 @@ define i32 @function_with_jump_table(i32 %index) {
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 ; THRESHOLD-0-LABEL: define i32 @function_with_jump_table(
-; THRESHOLD-0-SAME: i32 [[INDEX:%.*]]) {
-; THRESHOLD-0-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 [[INDEX]]
+; THRESHOLD-0-SAME: i64 [[INDEX:%.*]]) {
+; THRESHOLD-0-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i64 0, i64 [[INDEX]]
 ; THRESHOLD-0-NEXT:    [[FUNC_PTR:%.*]] = load ptr, ptr [[GEP]], align 8
 ; THRESHOLD-0-NEXT:    [[RESULT:%.*]] = call i32 [[FUNC_PTR]](), !prof [[PROF2:![0-9]+]]
 ; THRESHOLD-0-NEXT:    ret i32 [[RESULT]]
 ;
-  %gep = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 %index
+  %gep = getelementptr inbounds [2 x ptr], ptr @func_array, i64 0, i64 %index
   %func_ptr = load ptr, ptr %gep
   %result = call i32 %func_ptr(), !prof !2
   ret i32 %result
 }
 
-define i32 @basic_block_splitted_twice(i32 %index) {
+define i32 @basic_block_splitted_twice(i64 %index) {
 ; CHECK-LABEL: define i32 @basic_block_splitted_twice(
-; CHECK-SAME: i32 [[INDEX:%.*]]) {
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 [[INDEX]]
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[FUNC_PTR1:%.*]] = load ptr, ptr [[GEP1]], align 8
-; CHECK-NEXT:    switch i32 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
-; CHECK-NEXT:      i32 0, label [[CALL_0:%.*]]
-; CHECK-NEXT:      i32 1, label [[CALL_1:%.*]]
+; CHECK-NEXT:    switch i64 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
+; CHECK-NEXT:      i64 0, label [[CALL_0:%.*]]
+; CHECK-NEXT:      i64 1, label [[CALL_1:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF3:![0-9]+]]
 ; CHECK:       default.switch.case.unreachable:
 ; CHECK-NEXT:    unreachable
@@ -90,11 +90,11 @@ define i32 @basic_block_splitted_twice(i32 %index) {
 ; CHECK-NEXT:    br label [[DOTTAIL]]
 ; CHECK:       .tail:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP1]], [[CALL_0]] ], [ [[TMP2]], [[CALL_1]] ]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 [[INDEX]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[FUNC_PTR2:%.*]] = load ptr, ptr [[GEP2]], align 8
-; CHECK-NEXT:    switch i32 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE1:%.*]] [
-; CHECK-NEXT:      i32 0, label [[CALL_02:%.*]]
-; CHECK-NEXT:      i32 1, label [[CALL_13:%.*]]
+; CHECK-NEXT:    switch i64 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE1:%.*]] [
+; CHECK-NEXT:      i64 0, label [[CALL_02:%.*]]
+; CHECK-NEXT:      i64 1, label [[CALL_13:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF3]]
 ; CHECK:       default.switch.case.unreachable1:
 ; CHECK-NEXT:    unreachable
@@ -110,20 +110,20 @@ define i32 @basic_block_splitted_twice(i32 %index) {
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 ; THRESHOLD-0-LABEL: define i32 @basic_block_splitted_twice(
-; THRESHOLD-0-SAME: i32 [[INDEX:%.*]]) {
-; THRESHOLD-0-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 [[INDEX]]
+; THRESHOLD-0-SAME: i64 [[INDEX:%.*]]) {
+; THRESHOLD-0-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i64 0, i64 [[INDEX]]
 ; THRESHOLD-0-NEXT:    [[FUNC_PTR1:%.*]] = load ptr, ptr [[GEP1]], align 8
 ; THRESHOLD-0-NEXT:    [[RESULT1:%.*]] = call i32 [[FUNC_PTR1]]()
-; THRESHOLD-0-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 [[INDEX]]
+; THRESHOLD-0-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i64 0, i64 [[INDEX]]
 ; THRESHOLD-0-NEXT:    [[FUNC_PTR2:%.*]] = load ptr, ptr [[GEP2]], align 8
 ; THRESHOLD-0-NEXT:    [[RESULT2:%.*]] = call i32 [[FUNC_PTR2]]()
 ; THRESHOLD-0-NEXT:    [[RESULT:%.*]] = add i32 [[RESULT1]], [[RESULT2]]
 ; THRESHOLD-0-NEXT:    ret i32 [[RESULT]]
 ;
-  %gep1 = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 %index
+  %gep1 = getelementptr inbounds [2 x ptr], ptr @func_array, i64 0, i64 %index
   %func_ptr1 = load ptr, ptr %gep1
   %result1 = call i32 %func_ptr1()
-  %gep2 = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 %index
+  %gep2 = getelementptr inbounds [2 x ptr], ptr @func_array, i64 0, i64 %index
   %func_ptr2 = load ptr, ptr %gep2
   %result2 = call i32 %func_ptr2()
   %result = add i32 %result1, %result2
@@ -152,14 +152,14 @@ define void @void_func1() {
 
 @void_func_array = constant [2 x ptr] [ptr @void_func0, ptr @void_func1]
 
-define void @void_function_with_jump_table(i32 %index) {
+define void @void_function_with_jump_table(i64 %index) {
 ; CHECK-LABEL: define void @void_function_with_jump_table(
-; CHECK-SAME: i32 [[INDEX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @void_func_array, i32 0, i32 [[INDEX]]
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @void_func_array, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[FUNC_PTR:%.*]] = load ptr, ptr [[GEP]], align 8
-; CHECK-NEXT:    switch i32 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
-; CHECK-NEXT:      i32 0, label [[CALL_0:%.*]]
-; CHECK-NEXT:      i32 1, label [[CALL_1:%.*]]
+; CHECK-NEXT:    switch i64 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
+; CHECK-NEXT:      i64 0, label [[CALL_0:%.*]]
+; CHECK-NEXT:      i64 1, label [[CALL_1:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF3]]
 ; CHECK:       default.switch.case.unreachable:
 ; CHECK-NEXT:    unreachable
@@ -173,26 +173,26 @@ define void @void_function_with_jump_table(i32 %index) {
 ; CHECK-NEXT:    ret void
 ;
 ; THRESHOLD-0-LABEL: define void @void_function_with_jump_table(
-; THRESHOLD-0-SAME: i32 [[INDEX:%.*]]) {
-; THRESHOLD-0-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @void_func_array, i32 0, i32 [[INDEX]]
+; THRESHOLD-0-SAME: i64 [[INDEX:%.*]]) {
+; THRESHOLD-0-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @void_func_array, i64 0, i64 [[INDEX]]
 ; THRESHOLD-0-NEXT:    [[FUNC_PTR:%.*]] = load ptr, ptr [[GEP]], align 8
 ; THRESHOLD-0-NEXT:    call void [[FUNC_PTR]]()
 ; THRESHOLD-0-NEXT:    ret void
 ;
-  %gep = getelementptr inbounds [2 x ptr], ptr @void_func_array, i32 0, i32 %index
+  %gep = getelementptr inbounds [2 x ptr], ptr @void_func_array, i64 0, i64 %index
   %func_ptr = load ptr, ptr %gep
   call void %func_ptr()
   ret void
 }
 
-define void @void_function_with_jump_table_and_call_site_attr(i32 %index) {
+define void @void_function_with_jump_table_and_call_site_attr(i64 %index) {
 ; CHECK-LABEL: define void @void_function_with_jump_table_and_call_site_attr(
-; CHECK-SAME: i32 [[INDEX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @void_func_array, i32 0, i32 [[INDEX]]
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @void_func_array, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[FUNC_PTR:%.*]] = load ptr, ptr [[GEP]], align 8
-; CHECK-NEXT:    switch i32 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
-; CHECK-NEXT:      i32 0, label [[CALL_0:%.*]]
-; CHECK-NEXT:      i32 1, label [[CALL_1:%.*]]
+; CHECK-NEXT:    switch i64 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
+; CHECK-NEXT:      i64 0, label [[CALL_0:%.*]]
+; CHECK-NEXT:      i64 1, label [[CALL_1:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF3]]
 ; CHECK:       default.switch.case.unreachable:
 ; CHECK-NEXT:    unreachable
@@ -206,13 +206,13 @@ define void @void_function_with_jump_table_and_call_site_attr(i32 %index) {
 ; CHECK-NEXT:    ret void
 ;
 ; THRESHOLD-0-LABEL: define void @void_function_with_jump_table_and_call_site_attr(
-; THRESHOLD-0-SAME: i32 [[INDEX:%.*]]) {
-; THRESHOLD-0-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @void_func_array, i32 0, i32 [[INDEX]]
+; THRESHOLD-0-SAME: i64 [[INDEX:%.*]]) {
+; THRESHOLD-0-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @void_func_array, i64 0, i64 [[INDEX]]
 ; THRESHOLD-0-NEXT:    [[FUNC_PTR:%.*]] = load ptr, ptr [[GEP]], align 8
 ; THRESHOLD-0-NEXT:    call void [[FUNC_PTR]]() #[[ATTR0:[0-9]+]]
 ; THRESHOLD-0-NEXT:    ret void
 ;
-  %gep = getelementptr inbounds [2 x ptr], ptr @void_func_array, i32 0, i32 %index
+  %gep = getelementptr inbounds [2 x ptr], ptr @void_func_array, i64 0, i64 %index
   %func_ptr = load ptr, ptr %gep
   call void %func_ptr() nounwind
   ret void
@@ -241,14 +241,14 @@ define i32 @func1_addrspace_42() addrspace(42) {
 
 @func_array_addrspace_42 = addrspace(42) constant [2 x ptr addrspace(42)] [ptr addrspace(42) @func0_addrspace_42, ptr addrspace(42) @func1_addrspace_42]
 
-define i32 @function_with_jump_table_addrspace_42(i32 %index) addrspace(42) {
+define i32 @function_with_jump_table_addrspace_42(i64 %index) addrspace(42) {
 ; CHECK-LABEL: define i32 @function_with_jump_table_addrspace_42(
-; CHECK-SAME: i32 [[INDEX:%.*]]) addrspace(42) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr addrspace(42)], ptr addrspace(42) @func_array_addrspace_42, i32 0, i32 [[INDEX]]
+; CHECK-SAME: i64 [[INDEX:%.*]]) addrspace(42) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr addrspace(42)], ptr addrspace(42) @func_array_addrspace_42, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[FUNC_PTR:%.*]] = load ptr addrspace(42), ptr addrspace(42) [[GEP]], align 8
-; CHECK-NEXT:    switch i32 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
-; CHECK-NEXT:      i32 0, label [[CALL_0:%.*]]
-; CHECK-NEXT:      i32 1, label [[CALL_1:%.*]]
+; CHECK-NEXT:    switch i64 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
+; CHECK-NEXT:      i64 0, label [[CALL_0:%.*]]
+; CHECK-NEXT:      i64 1, label [[CALL_1:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF3]]
 ; CHECK:       default.switch.case.unreachable:
 ; CHECK-NEXT:    unreachable
@@ -263,13 +263,13 @@ define i32 @function_with_jump_table_addrspace_42(i32 %index) addrspace(42) {
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 ; THRESHOLD-0-LABEL: define i32 @function_with_jump_table_addrspace_42(
-; THRESHOLD-0-SAME: i32 [[INDEX:%.*]]) addrspace(42) {
-; THRESHOLD-0-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr addrspace(42)], ptr addrspace(42) @func_array_addrspace_42, i32 0, i32 [[INDEX]]
+; THRESHOLD-0-SAME: i64 [[INDEX:%.*]]) addrspace(42) {
+; THRESHOLD-0-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr addrspace(42)], ptr addrspace(42) @func_array_addrspace_42, i64 0, i64 [[INDEX]]
 ; THRESHOLD-0-NEXT:    [[FUNC_PTR:%.*]] = load ptr addrspace(42), ptr addrspace(42) [[GEP]], align 8
 ; THRESHOLD-0-NEXT:    [[RESULT:%.*]] = call addrspace(42) i32 [[FUNC_PTR]]()
 ; THRESHOLD-0-NEXT:    ret i32 [[RESULT]]
 ;
-  %gep = getelementptr inbounds [2 x ptr addrspace(42)], ptr addrspace(42) @func_array_addrspace_42, i32 0, i32 %index
+  %gep = getelementptr inbounds [2 x ptr addrspace(42)], ptr addrspace(42) @func_array_addrspace_42, i64 0, i64 %index
   %func_ptr = load ptr addrspace(42), ptr addrspace(42) %gep, align 8
   %result = call addrspace(42) i32 %func_ptr()
   ret i32 %result
