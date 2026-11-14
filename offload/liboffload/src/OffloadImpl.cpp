@@ -338,6 +338,11 @@ struct OffloadContext {
   SmallVector<std::unique_ptr<ol_platform_impl_t>, 4> Platforms{};
   size_t RefCount;
 
+  // Cleanup routines to run, in reverse order, before the platforms are
+  // deinitialized.
+  std::mutex ShutdownCallbacksMutex;
+  SmallVector<std::pair<ol_shutdown_cb_t, void *>> ShutdownCallbacks;
+
   static OffloadContext &get() {
     assert(OffloadContextVal);
     return *OffloadContextVal;
@@ -430,6 +435,21 @@ Error olInit_impl(const ol_init_args_t *InitArgs) {
   return InitResult;
 }
 
+// Run the registered cleanup routines. The context is still published here so
+// callbacks can use the API. Callbacks may register further callbacks.
+static void runShutdownCallbacks(OffloadContext &Context) {
+  while (true) {
+    std::pair<ol_shutdown_cb_t, void *> Entry;
+    {
+      std::lock_guard<std::mutex> Lock(Context.ShutdownCallbacksMutex);
+      if (Context.ShutdownCallbacks.empty())
+        return;
+      Entry = Context.ShutdownCallbacks.pop_back_val();
+    }
+    Entry.first(Entry.second);
+  }
+}
+
 static Error destroyContext(OffloadContext *Context) {
   Error Result = Error::success();
   for (auto &Platform : Context->Platforms)
@@ -455,7 +475,16 @@ Error olShutDown_impl() {
   if (--OffloadContext::get().RefCount != 0)
     return Error::success();
 
+  runShutdownCallbacks(OffloadContext::get());
   return destroyContext(OffloadContextVal.exchange(nullptr));
+}
+
+Error olRegisterShutdownCallback_impl(ol_shutdown_cb_t Callback,
+                                      void *UserData) {
+  OffloadContext &Context = OffloadContext::get();
+  std::lock_guard<std::mutex> Lock(Context.ShutdownCallbacksMutex);
+  Context.ShutdownCallbacks.emplace_back(Callback, UserData);
+  return Error::success();
 }
 
 // Vendor libraries have specific teardown orders but can be initialized lazily.
@@ -464,8 +493,11 @@ Error olShutDown_impl() {
 static void shutDownAtExit() {
   std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
   ShutDownAtExit = true;
-  if (OffloadContext *Context = OffloadContextVal.exchange(nullptr))
+  if (OffloadContext *Context = OffloadContextVal.load()) {
+    runShutdownCallbacks(*Context);
+    OffloadContextVal.store(nullptr);
     consumeError(destroyContext(Context));
+  }
 }
 
 Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
