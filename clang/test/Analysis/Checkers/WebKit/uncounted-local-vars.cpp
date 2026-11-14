@@ -253,6 +253,34 @@ void foo10() {
   }
 }
 
+void indirectCallInGuardedScope(void (*callback)()) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    callback();
+    bar->method();
+  }
+}
+
+void guardianPassedByReferenceToIndirectCall(void (*callback)(RefPtr<RefCountable>&)) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    callback(foo);
+    bar->method();
+  }
+}
+
+void guardianPassedByConstReferenceToIndirectCall(void (*callback)(const RefPtr<RefCountable>&)) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    callback(foo);
+    bar->method();
+  }
+}
+
 } // namespace guardian_scopes
 
 namespace auto_keyword {
