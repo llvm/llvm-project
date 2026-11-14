@@ -24,6 +24,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32>, <16 x i32>
 
 declare <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32>, <16 x i32>, <16 x i1>)
 declare <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32>, <16 x i32>, <16 x i1>)
+declare <8 x double> @llvm.x86.avx512.max.pd.512(<8 x double>, <8 x double>, i32 immarg)
 
 define <8 x double> @combine_permvar_8f64_identity(<8 x double> %x0, <8 x double> %x1) {
 ; CHECK-LABEL: combine_permvar_8f64_identity:
@@ -1342,3 +1343,37 @@ define <8 x i64> @PR235659(<8 x i64> %a) {
   %shuffle3 = shufflevector <8 x i64> %div, <8 x i64> zeroinitializer, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x i64> %shuffle3
 }
+
+define double @max_splat1_v8f64(<8 x double> %v) #0 {
+; X86-LABEL: max_splat1_v8f64:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; X86-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovsd %xmm0, (%esp)
+; X86-NEXT:    fldl (%esp)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: max_splat1_v8f64:
+; X64:       # %bb.0:
+; X64-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; X64-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %c = shufflevector <8 x double> %v, <8 x double> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %m = call <8 x double> @llvm.x86.avx512.max.pd.512(<8 x double> %v, <8 x double> %c, i32 4)
+  %r = extractelement <8 x double> %m, i64 0
+  ret double %r
+}
+
+attributes #0 = { "target-cpu"="skylake-avx512" }

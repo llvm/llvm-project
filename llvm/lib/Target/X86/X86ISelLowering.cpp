@@ -45582,6 +45582,15 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           else {
             MVT ShufSVT = MVT::getFloatingPointVT(VT.getScalarSizeInBits());
             MVT ShufVT = HalfVT.changeVectorElementType(ShufSVT);
+            // VPERMILPD selects with bit#1 of the index vector, so scale the
+            // f64 mask elts (VPERMV masks hold plain element indices).
+            if (VT.getScalarSizeInBits() == 64) {
+              SmallVector<int, 8> ShufMask;
+              for (int MaskElt : Mask)
+                ShufMask.push_back(MaskElt < 0 ? MaskElt : MaskElt * 2);
+              M = getConstVector(ShufMask, MVT::getVectorVT(MVT::i64, HalfElts),
+                                 TLO.DAG, DL, /*IsMask=*/true);
+            }
             Ext = TLO.DAG.getNode(X86ISD::VPERMILPV, DL, ShufVT,
                                   TLO.DAG.getBitcast(ShufVT, V), M);
             Ext = TLO.DAG.getBitcast(HalfVT, Ext);
