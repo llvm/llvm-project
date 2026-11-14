@@ -750,3 +750,120 @@ spirv.module Logical GLSL450 {
 // CHECK-SAME: %[[PTR:.+]]: !spirv.ptr<vector<4xf32>, StorageBuffer>, %[[VALUE:.+]]: vector<4xf32>)
 // CHECK-NOT: spirv.AccessChain
 // CHECK: spirv.Store "StorageBuffer" %[[PTR]], %[[VALUE]] : vector<4xf32>
+
+// -----
+
+// WGSL vector-component stores may access the entire vector. When scalar and
+// emulated i64 views share a binding, keep scalar memory locations independent.
+// CHECK-LABEL: module attributes {spirv.target_env = {{.*}}api=WebGPU
+// CHECK: spirv.GlobalVariable @scalar bind(0, 0) : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+// CHECK-NOT: spirv.GlobalVariable @wide
+// CHECK-LABEL: spirv.func @wide_load_scalar_store
+// CHECK: spirv.Load "StorageBuffer" {{.*}} : f32
+// CHECK: spirv.Load "StorageBuffer" {{.*}} : f32
+// CHECK: spirv.CompositeConstruct {{.*}} -> vector<2xi32>
+// CHECK: spirv.Store "StorageBuffer" {{.*}} : f32
+// CHECK-LABEL: spirv.func @wide_store
+// CHECK: spirv.CompositeExtract {{.*}}[0 : i32] : vector<2xf32>
+// CHECK: spirv.Store "StorageBuffer" {{.*}}["Volatile|Aligned", 8] : f32
+// CHECK: spirv.CompositeExtract {{.*}}[1 : i32] : vector<2xf32>
+// CHECK: spirv.Store "StorageBuffer" {{.*}}["Volatile|Aligned", 4] : f32
+
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, api=WebGPU, #spirv.resource_limits<>>} {
+  spirv.module Logical GLSL450 {
+    spirv.GlobalVariable @scalar bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+    spirv.GlobalVariable @wide bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>
+    spirv.func @wide_load_scalar_store(%index: i32) "None" {
+      %c0 = spirv.Constant 0 : i32
+      %v = spirv.mlir.addressof @wide : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>
+      %vp = spirv.AccessChain %v[%c0, %index] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<2xi32>, StorageBuffer>
+      %pair = spirv.Load "StorageBuffer" %vp : vector<2xi32>
+      %bits = spirv.CompositeExtract %pair[0 : i32] : vector<2xi32>
+      %value = spirv.Bitcast %bits : i32 to f32
+      %s = spirv.mlir.addressof @scalar : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+      %sp = spirv.AccessChain %s[%c0, %index] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<f32, StorageBuffer>
+      spirv.Store "StorageBuffer" %sp, %value : f32
+      spirv.Return
+    }
+    spirv.func @wide_store(%index: i32, %value: vector<2xi32>) "None" {
+      %c0 = spirv.Constant 0 : i32
+      %v = spirv.mlir.addressof @wide : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>
+      %vp = spirv.AccessChain %v[%c0, %index] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<2xi32>, StorageBuffer>
+      spirv.Store "StorageBuffer" %vp, %value ["Volatile|Aligned", 8] : vector<2xi32>
+      spirv.Return
+    }
+  }
+}
+
+// -----
+
+// A read-only scalar view cannot make the unified writable vector view read-only.
+// CHECK-LABEL: spirv.GlobalVariable @readonly_scalar bind(0, 0) : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+// CHECK-NOT: spirv.GlobalVariable @writable_vector
+// CHECK-LABEL: spirv.func @store_wide
+// CHECK: spirv.Store "StorageBuffer" {{.*}} : f32
+// CHECK: spirv.Store "StorageBuffer" {{.*}} : f32
+
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, api=WebGPU, #spirv.resource_limits<>>} {
+  spirv.module Logical GLSL450 {
+    spirv.GlobalVariable @readonly_scalar bind(0, 0) {aliased, non_writable} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+    spirv.GlobalVariable @writable_vector bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>
+    spirv.func @load_scalar(%index: i32) -> f32 "None" {
+      %zero = spirv.Constant 0 : i32
+      %address = spirv.mlir.addressof @readonly_scalar : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+      %pointer = spirv.AccessChain %address[%zero, %index] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<f32, StorageBuffer>
+      %value = spirv.Load "StorageBuffer" %pointer : f32
+      spirv.ReturnValue %value : f32
+    }
+    spirv.func @store_wide(%index: i32, %value: vector<2xi32>) "None" {
+      %zero = spirv.Constant 0 : i32
+      %address = spirv.mlir.addressof @writable_vector : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>
+      %pointer = spirv.AccessChain %address[%zero, %index] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<2xi32>, StorageBuffer>
+      spirv.Store "StorageBuffer" %pointer, %value : vector<2xi32>
+      spirv.Return
+    }
+  }
+}
+
+// -----
+
+// A write-only scalar view cannot make the unified vector view write-only.
+// CHECK-LABEL: spirv.GlobalVariable @writeonly_scalar bind(0, 0) : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+// CHECK-NOT: spirv.GlobalVariable @readable_vector
+// CHECK-LABEL: spirv.func @read_vector
+// CHECK: spirv.Load "StorageBuffer" {{.*}} : f32
+// CHECK: spirv.Load "StorageBuffer" {{.*}} : f32
+
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, api=WebGPU, #spirv.resource_limits<>>} {
+  spirv.module Logical GLSL450 {
+    spirv.GlobalVariable @writeonly_scalar bind(0, 0) {aliased, non_readable} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+    spirv.GlobalVariable @readable_vector bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>
+    spirv.func @read_vector(%index: i32) -> vector<2xi32> "None" {
+      %c0 = spirv.Constant 0 : i32
+      %v = spirv.mlir.addressof @readable_vector : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>
+      %vp = spirv.AccessChain %v[%c0, %index] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<2xi32>, StorageBuffer>
+      %value = spirv.Load "StorageBuffer" %vp : vector<2xi32>
+      spirv.ReturnValue %value : vector<2xi32>
+    }
+  }
+}
+
+// -----
+
+// Preserve a read-only restriction shared by every view.
+// CHECK-LABEL: spirv.GlobalVariable @all_readonly_scalar bind(0, 0) {non_writable} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+// CHECK-NOT: spirv.GlobalVariable @all_readonly_vector
+
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, api=WebGPU, #spirv.resource_limits<>>} {
+  spirv.module Logical GLSL450 {
+    spirv.GlobalVariable @all_readonly_scalar bind(0, 0) {aliased, non_writable} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+    spirv.GlobalVariable @all_readonly_vector bind(0, 0) {aliased, non_writable} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>
+    spirv.func @read_vector(%index: i32) -> vector<2xi32> "None" {
+      %c0 = spirv.Constant 0 : i32
+      %v = spirv.mlir.addressof @all_readonly_vector : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>
+      %vp = spirv.AccessChain %v[%c0, %index] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<2xi32>, StorageBuffer>
+      %value = spirv.Load "StorageBuffer" %vp : vector<2xi32>
+      spirv.ReturnValue %value : vector<2xi32>
+    }
+  }
+}
