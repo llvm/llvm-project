@@ -74,20 +74,81 @@ function New-PGOProfile {
     Write-SubStep "PGO profile generated: $ResolvedProfilePath"
 }
 
+function Get-NinjaInputs {
+    <#
+    .SYNOPSIS
+        Lists the inputs of the build edge that produces a Ninja target.
+    #>
+    param([Parameter(Mandatory)][string]$Target)
+    $InInputs = $false
+    foreach ($Line in (Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs -t query $Target)) {
+        # 'ninja -t query' lists the inputs under "  input: <rule>", with
+        # "| " and "|| " before implicit and order-only inputs.
+        if ($Line -match '^  input: ') {
+            $InInputs = $true
+        } elseif ($Line -match '^  \S') {
+            $InInputs = $false
+        } elseif ($InInputs -and $Line -match '^    (?:\|\|? )?(.+)$') {
+            $Matches[1]
+        }
+    }
+}
+
+function Get-TestDependencyTargets {
+    <#
+    .SYNOPSIS
+        Lists the targets that check-* targets build before they run lit.
+    .NOTES
+        CMake's Ninja generator writes check-clang as a phony alias for
+        tools/clang/test/check-clang. That phony target's inputs are the lit
+        command (tools/clang/test/CMakeFiles/check-clang) and the targets the
+        tests depend on.
+    #>
+    param([Parameter(Mandatory)][string[]]$Targets)
+    $Dependencies = [System.Collections.Generic.List[string]]::new()
+    foreach ($Target in $Targets) {
+        $Name = [regex]::Escape($Target)
+        $LitCommand = "(^|[\\/])CMakeFiles[\\/]$Name$"
+        $Inputs = @(Get-NinjaInputs $Target)
+        while ($Inputs.Count -eq 1 -and $Inputs[0] -match "[\\/]$Name$" -and
+               $Inputs[0] -notmatch $LitCommand) {
+            $Inputs = @(Get-NinjaInputs $Inputs[0])
+        }
+        foreach ($Dependency in $Inputs) {
+            if ($Dependency -notmatch $LitCommand -and -not $Dependencies.Contains($Dependency)) {
+                $Dependencies.Add($Dependency)
+            }
+        }
+        # check-runtimes builds the runtimes test dependencies in the same
+        # runtimes build command that runs lit.
+        if ($Target -eq 'check-runtimes' -and -not $Dependencies.Contains('runtimes-test-depends')) {
+            $Dependencies.Add('runtimes-test-depends')
+        }
+    }
+    return $Dependencies
+}
+
 function Invoke-Tests {
     <#
     .SYNOPSIS
-        Runs a list of test targets once each.
+        Builds the dependencies of a list of test targets, then runs each
+        test target once.
         Honors $script:NinjaCommand and $script:NinjaExtraArgs (set via
         LLVM_NINJA_OVERRIDE).
     .NOTES
-        A failing target does not stop the build: the failure is recorded and
-        the remaining targets still run, so packaging can complete. The main
-        script reports the recorded failures once the build finishes.
+        A test dependency that fails to build stops the build. A failing test
+        target does not: the failure is recorded and the remaining targets
+        still run, so packaging can complete. The main script reports the
+        recorded failures once the build finishes.
     #>
     param(
         [string[]]$Targets
     )
+    $Dependencies = @(Get-TestDependencyTargets -Targets $Targets)
+    if ($Dependencies.Count -gt 0) {
+        Write-SubStep "Building test dependencies for: $($Targets -join ', ')"
+        Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs @Dependencies
+    }
     foreach ($Target in $Targets) {
         try {
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs $Target
@@ -403,8 +464,9 @@ function Build-Architecture {
         # Also discards the settings the tarball step left in the CMake cache.
         Remove-StepDirectory (Join-Path $BuildDir $Stage2Name)
 
+        # check-clang-tools also runs the clangd tests.
         $Stage2Tests = @('check-llvm', 'check-clang', 'check-lld', 'check-runtimes',
-                         'check-clang-tools', 'check-clangd')
+                         'check-clang-tools')
 
         Build-Stage -Name $Stage2Name -Description 'stage 2 self-hosted compiler' `
             -CMakeFlags $Stage2Flags `

@@ -22,6 +22,8 @@
 
     Test failures do not stop the build. The failed test targets are listed
     when the build finishes, so they can be reviewed before publishing.
+    The test dependencies are built first, so a test that fails to compile
+    or link still stops the build.
 
 .PARAMETER Version
     LLVM version string (e.g. "19.1.0"). If omitted, auto-detected from
