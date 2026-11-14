@@ -121,6 +121,15 @@ int main(int, char**) {
       {
         auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
 
+        // copy_if(first, last, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::copy_if(policy, std::move(first1), std::move(last1), std::move(dest), pred);
+        });
+      }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
+
         // count(first, last, val)
         assert_non_throwing([=, &policy] { (void)std::count(policy, std::move(first1), std::move(last1), val); });
 

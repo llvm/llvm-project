@@ -698,6 +698,8 @@ set(files
   __pstl/backends/statpart.h
   __pstl/backends/statpart/any_of.h
   __pstl/backends/statpart/basis.h
+  __pstl/backends/statpart/bitset.h
+  __pstl/backends/statpart/copy_if.h
   __pstl/backends/statpart/decoupled_lookback.h
   __pstl/backends/statpart/fill.h
   __pstl/backends/statpart/find_end.h
