@@ -11,7 +11,6 @@
 
 #include "DWARFLinkerGlobalData.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/DWARFLinker/StringPool.h"
 
 namespace llvm {
 namespace dwarf_linker {

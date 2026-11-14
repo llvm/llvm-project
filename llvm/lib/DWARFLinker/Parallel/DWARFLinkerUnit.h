@@ -14,7 +14,6 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DWARFLinker/IndexedValuesMap.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
-#include "llvm/DWARFLinker/StringPool.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/LEB128.h"
 #include <memory>

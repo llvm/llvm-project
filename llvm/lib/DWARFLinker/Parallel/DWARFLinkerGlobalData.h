@@ -11,8 +11,8 @@
 
 #include "ModulePool.h"
 #include "TypePool.h"
+#include "llvm/ADT/StringPool.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
-#include "llvm/DWARFLinker/StringPool.h"
 #include "llvm/Support/PerThreadBumpPtrAllocator.h"
 
 namespace llvm {

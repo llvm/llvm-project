@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
-#include "llvm/DWARFLinker/StringPool.h"
 
 namespace llvm {
 namespace dwarf_linker {
