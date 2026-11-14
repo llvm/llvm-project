@@ -577,6 +577,16 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
       RegInfo->hasStackRealignment(MF))
     return true;
 
+  // Windows unwind codes cannot describe scalable local allocations after a
+  // .seh_save_vg_sm in the prologue. Force a frame pointer so locals aren't
+  // described in the unwind. (We could optimize this by specifically checking
+  // whether there are any scalable local variables or spill slot, but we
+  // currently don't track that.  We could rearrange the prologue so we
+  // emit the .seh_save_vg_sm after we emit the .seh_allocz, but that's a lot
+  // more complicated.)
+  if (MF.needsWinCFI() && requiresSaveVG(MF))
+    return true;
+
   // If we:
   //
   //   1. Have streaming mode changes
