@@ -24,13 +24,37 @@ from sphinx.util.tags import Tags
 
 _SHARED_STATIC_DIR = Path(__file__).parent / "_static"
 
+# LLVM project documentation sites that publish Sphinx inventories.
+_LLVM_DOC_SITES = {
+    "llvm": "https://llvm.org/docs/",
+    "clang": "https://clang.llvm.org/docs/",
+    "clang-tools-extra": "https://clang.llvm.org/extra/",
+    "libc": "https://libc.llvm.org/",
+    "libcxx": "https://libcxx.llvm.org/",
+    "lld": "https://lld.llvm.org/",
+    "lldb": "https://lldb.llvm.org/",
+    "openmp": "https://openmp.llvm.org/",
+    "flang": "https://flang.llvm.org/docs/",
+    "polly": "https://polly.llvm.org/docs/",
+}
+
+
+# Each project is fetched from its site by default. Building with
+# `-D llvm_inventory_dir=<dir>` (see ext/inventory.py) reads the inventories from
+# <dir>/<project>/objects.inv instead.
+LLVM_INTERSPHINX_MAPPING = {name: (url, None) for name, url in _LLVM_DOC_SITES.items()}
+
 
 def common_conf(tags: Tags) -> Dict[str, Any]:
     # If your documentation needs a minimal Sphinx version, state it here.
     # needs_sphinx = '1.0'
     # The encoding of source files.
     # source_encoding = 'utf-8-sig'
-    extensions = ["llvm_sphinx.ext.mlir_pygments", "myst_parser"]
+    extensions = [
+        "llvm_sphinx.ext.inventory",
+        "llvm_sphinx.ext.mlir_pygments",
+        "myst_parser",
+    ]
     source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
     myst_enable_extensions = ["substitution", "colon_fence"]
     myst_heading_anchors = 6

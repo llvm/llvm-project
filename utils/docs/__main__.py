@@ -11,12 +11,13 @@ import sys
 from pathlib import Path
 from typing import List
 
-from llvm_sphinx.ext import absolute_links, ghlinks
+from llvm_sphinx.ext import absolute_links, ghlinks, inventory
 
 
 TEST_COMPONENTS = {
     "absolute-links": absolute_links.run_tests,
     "ghlinks": ghlinks.run_tests,
+    "inventory": inventory.run_tests,
 }
 
 
