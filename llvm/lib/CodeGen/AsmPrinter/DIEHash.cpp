@@ -229,6 +229,12 @@ void DIEHash::hashBlockData(const DIE::const_value_range &Values) {
       assert(!Name.empty() &&
              "Base types referenced from DW_OP_convert should have a name");
       hashNestedType(C, Name);
+    } else if (V.getType() == DIEValue::isEntry) {
+      // DIE references inside location expressions (e.g. the target of
+      // DW_OP_implicit_pointer). Hash the referenced DIE the same way as a
+      // reference attribute.
+      hashDIEEntry(V.getAttribute(), dwarf::DW_TAG_null,
+                   V.getDIEEntry().getEntry());
     } else
       Hash.update(V.getDIEInteger().getValue());
 }
