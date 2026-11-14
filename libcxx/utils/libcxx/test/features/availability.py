@@ -211,4 +211,12 @@ features += [
             cfg.available_features,
         ),
     ),
+    # Tests that require __new_at_least
+    Feature(
+        name="availability-new_at_least-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-24)",
+            cfg.available_features,
+        ),
+    ),
 ]

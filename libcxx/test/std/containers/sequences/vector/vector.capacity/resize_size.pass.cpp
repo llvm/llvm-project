@@ -22,9 +22,10 @@
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
     std::vector<int> v(100);
+    auto cap = v.capacity();
     v.resize(50);
     assert(v.size() == 50);
-    assert(v.capacity() == 100);
+    assert(v.capacity() == cap);
     assert(is_contiguous_container_asan_correct(v));
     v.resize(200);
     assert(v.size() == 200);
@@ -46,9 +47,10 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 #if TEST_STD_VER >= 11
   {
     std::vector<MoveOnly> v(100);
+    auto cap = v.capacity();
     v.resize(50);
     assert(v.size() == 50);
-    assert(v.capacity() == 100);
+    assert(v.capacity() == cap);
     assert(is_contiguous_container_asan_correct(v));
     v.resize(200);
     assert(v.size() == 200);

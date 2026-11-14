@@ -27,13 +27,17 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     std::vector<int> v(100);
-    assert(v.capacity() == 100);
+    assert(v.capacity() >= 100);
+    while (v.size() != v.capacity())
+      v.push_back(0);
+    auto size = v.size();
     v.reserve(50);
-    assert(v.size() == 100);
-    assert(v.capacity() == 100);
-    v.reserve(150);
-    assert(v.size() == 100);
-    assert(v.capacity() == 150);
+    assert(v.size() == size);
+    assert(v.capacity() == size);
+    auto new_cap = v.capacity() + 50;
+    v.reserve(new_cap);
+    assert(v.size() == size);
+    assert(v.capacity() >= new_cap);
     assert(is_contiguous_container_asan_correct(v));
   }
   {
