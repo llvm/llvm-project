@@ -11,14 +11,11 @@ void sink(void *);
 
 // CHECK-LABEL: define{{.*}} void @foo(
 void foo(int n) {
-  // FIXME: Under -mstack-alignment=8, these local arrays should not be
-  // promoted to 16-byte alignment (which forces dynamic stack realignment).
-  // ALIGN8: %buf = alloca [16 x i8], align 16
+  // ALIGN8: %buf = alloca [16 x i8], align 1
   // ALIGN16: %buf = alloca [16 x i8], align 16
   char buf[16];
 
-  // FIXME: Should be align 4 under -mstack-alignment=8.
-  // ALIGN8: %ibuf = alloca [4 x i32], align 16
+  // ALIGN8: %ibuf = alloca [4 x i32], align 4
   // ALIGN16: %ibuf = alloca [4 x i32], align 16
   int ibuf[4];
 
@@ -26,8 +23,7 @@ void foo(int n) {
   // ALIGN16: %abuf = alloca [16 x i8], align 16
   __attribute__((aligned(16))) char abuf[16];
 
-  // FIXME: Should be align 1 under -mstack-alignment=8.
-  // ALIGN8: %vla = alloca i8, i64 %{{.*}}, align 16
+  // ALIGN8: %vla = alloca i8, i64 %{{.*}}, align 1
   // ALIGN16: %vla = alloca i8, i64 %{{.*}}, align 16
   char vla[n];
 

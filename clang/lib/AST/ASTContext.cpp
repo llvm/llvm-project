@@ -1846,6 +1846,26 @@ const llvm::fltSemantics &ASTContext::getFloatTypeSemantics(QualType T) const {
   }
 }
 
+static bool shouldPromoteLargeArrayAlign(const ASTContext &Ctx, const Decl *D,
+                                         const ArrayType *AT, bool ForAlignof) {
+  const TargetInfo &Target = Ctx.getTargetInfo();
+  unsigned MinWidth = Target.getLargeArrayMinWidth();
+  if (ForAlignof || !MinWidth)
+    return false;
+  if (uint32_t StackAlign = Target.getTargetOpts().StackAlignmentOverride) {
+    if (const auto *VarD = dyn_cast<VarDecl>(D);
+        VarD && VarD->hasLocalStorage() &&
+        static_cast<uint64_t>(StackAlign) * Target.getCharWidth() <
+            Target.getLargeArrayAlign())
+      return false;
+  }
+  if (isa<VariableArrayType>(AT))
+    return true;
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
+    return MinWidth <= Ctx.getTypeSize(CAT);
+  return false;
+}
+
 CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
   unsigned Align = Target->getCharWidth();
 
@@ -1883,16 +1903,9 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
     else if (!BaseT->isIncompleteType()) {
       // Adjust alignments of declarations with array type by the
       // large-array alignment on the target.
-      if (const ArrayType *arrayType = getAsArrayType(T)) {
-        unsigned MinWidth = Target->getLargeArrayMinWidth();
-        if (!ForAlignof && MinWidth) {
-          if (isa<VariableArrayType>(arrayType))
-            Align = std::max(Align, Target->getLargeArrayAlign());
-          else if (isa<ConstantArrayType>(arrayType) &&
-                   MinWidth <= getTypeSize(cast<ConstantArrayType>(arrayType)))
-            Align = std::max(Align, Target->getLargeArrayAlign());
-        }
-      }
+      if (const ArrayType *AT = getAsArrayType(T);
+          AT && shouldPromoteLargeArrayAlign(*this, D, AT, ForAlignof))
+        Align = std::max(Align, Target->getLargeArrayAlign());
       Align = std::max(Align, getPreferredTypeAlign(T.getTypePtr()));
       if (BaseT.getQualifiers().hasUnaligned())
         Align = Target->getCharWidth();
