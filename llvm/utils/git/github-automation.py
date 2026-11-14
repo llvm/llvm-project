@@ -73,6 +73,8 @@ def format_author(user) -> str:
 
 
 class IssueSubscriber:
+    COMMENT_TAG = "<!--LLVM MISSED-OPT INSTCOMBINE COMMENT-->"
+
     @property
     def team_name(self) -> str:
         return self._team_name
@@ -94,6 +96,29 @@ class IssueSubscriber:
             )
             self.issue.create_comment(comment)
             return True
+
+        if self.team_name.endswith("missed-optimization") or self.team_name.endswith(
+            "llvm:instcombine"
+        ):
+            labels = [x.name for x in self.issue.get_labels()]
+            if "missed-optimization" in labels and "llvm:instcombine" in labels:
+                for existing_comment in self.issue.get_comments():
+                    if self.COMMENT_TAG in existing_comment.body:
+                        return True
+                comment = textwrap.dedent(
+                    f"""
+                    {self.COMMENT_TAG}
+                    This issue has been tagged as a missed optimization in InstCombine.
+                    
+                    For the issue submitter: Please ensure that the issue explains in which real-world context the optimization is useful. Link to specific code if possible. If there is no real-world motivation, explain how you found this missed optimization (e.g. via fuzzing, looking at optimizations in other compilers, etc.) and why you think the optimization is worth implementing.
+                    
+                    For contributors:
+                    * Check that the issue has a real-world motivation. If it does *not* have one, do *not* create a PR without prior explicit approval from InstCombine maintainers.
+                    * Follow the [InstCombine contributor guide](http://llvm.org/docs/InstCombineContributorGuide.html).
+                """
+                )
+                self.issue.create_comment(comment)
+                return True
 
         team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
