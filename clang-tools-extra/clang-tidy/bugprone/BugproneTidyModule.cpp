@@ -101,6 +101,7 @@
 #include "ThrowKeywordMissingCheck.h"
 #include "ThrowingStaticInitializationCheck.h"
 #include "TooSmallLoopVariableCheck.h"
+#include "UncheckedExpectedAccessCheck.h"
 #include "UncheckedOptionalAccessCheck.h"
 #include "UncheckedStringToNumberConversionCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
@@ -184,6 +185,8 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
+    CheckFactories.registerCheck<UncheckedExpectedAccessCheck>(
+        "bugprone-unchecked-expected-access");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
