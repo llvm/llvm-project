@@ -54,6 +54,7 @@
 #include "GlobalCompilationDatabase.h"
 #include "ParsedAST.h"
 #include "Preamble.h"
+#include "SourceCode.h"
 #include "clang-include-cleaner/Record.h"
 #include "support/Cancellation.h"
 #include "support/Context.h"
@@ -65,6 +66,7 @@
 #include "support/Trace.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/STLExtras.h"
@@ -347,6 +349,80 @@ namespace {
 
 bool isReliable(const tooling::CompileCommand &Cmd) {
   return Cmd.Heuristic.empty();
+}
+
+/// Run the preprocessor over a proxy file to collect resolved paths of
+/// #include directives that precede TargetFile. Uses real VFS for correct
+/// #ifdef evaluation and include path resolution.
+///
+/// This follows the same pattern as scanPreamble() in Preamble.cpp but uses
+/// real VFS instead of an empty one, so that command-line includes (e.g.
+/// -include kconfig.h) are processed and #ifdef guards evaluate correctly.
+std::vector<std::string>
+scanPrecedingIncludes(const ThreadsafeFS &TFS,
+                      const tooling::CompileCommand &ProxyCmd,
+                      PathRef TargetFile) {
+  // Resolve the proxy file's absolute path and read its contents.
+  llvm::SmallString<256> ProxyFile(ProxyCmd.Filename);
+  if (!llvm::sys::path::is_absolute(ProxyFile)) {
+    ProxyFile = ProxyCmd.Directory;
+    llvm::sys::path::append(ProxyFile, ProxyCmd.Filename);
+  }
+  llvm::sys::path::remove_dots(ProxyFile, /*remove_dot_dot=*/true);
+
+  auto FS = TFS.view(std::nullopt);
+
+  // Canonicalize TargetFile to match Inc.Resolved (which uses canonical
+  // paths from getCanonicalPath). This ensures symlinks don't cause
+  // mismatches.
+  llvm::SmallString<256> CanonTarget;
+  if (FS->getRealPath(TargetFile, CanonTarget))
+    CanonTarget = TargetFile; // Fallback if canonicalization fails.
+  llvm::sys::path::remove_dots(CanonTarget, /*remove_dot_dot=*/true);
+
+  auto Buf = FS->getBufferForFile(ProxyFile);
+  if (!Buf)
+    return {};
+
+  // Build a compiler invocation from the proxy's compile command.
+  ParseInputs PI;
+  PI.Contents = (*Buf)->getBuffer().str();
+  PI.TFS = &TFS;
+  PI.CompileCommand = ProxyCmd;
+  IgnoringDiagConsumer IgnoreDiags;
+  auto CI = buildCompilerInvocation(PI, IgnoreDiags);
+  if (!CI)
+    return {};
+  CI->getDiagnosticOpts().IgnoreWarnings = true;
+
+  auto ContentsBuffer = llvm::MemoryBuffer::getMemBuffer(PI.Contents);
+  auto Clang = prepareCompilerInstance(std::move(CI), /*Preamble=*/nullptr,
+                                       std::move(ContentsBuffer),
+                                       TFS.view(std::nullopt), IgnoreDiags);
+  if (!Clang || Clang->getFrontendOpts().Inputs.empty())
+    return {};
+
+  // Run preprocessor and collect main-file includes via IncludeStructure.
+  PreprocessOnlyAction Action;
+  if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
+    return {};
+  IncludeStructure Includes;
+  Includes.collect(*Clang);
+  if (llvm::Error Err = Action.Execute()) {
+    llvm::consumeError(std::move(Err));
+    return {};
+  }
+  Action.EndSourceFile();
+
+  // Return resolved paths of includes that precede TargetFile.
+  std::vector<std::string> Result;
+  for (const auto &Inc : Includes.MainFileIncludes) {
+    if (Inc.Resolved == CanonTarget)
+      return Result;
+    if (!Inc.Resolved.empty())
+      Result.push_back(Inc.Resolved);
+  }
+  return {}; // TargetFile not found among the proxy's includes.
 }
 
 /// Threadsafe manager for updating a TUStatus and emitting it after each
@@ -765,6 +841,12 @@ private:
   std::atomic<unsigned> ASTBuildCount = {0};
   std::atomic<unsigned> PreambleBuildCount = {0};
 
+  /// Cached result of scanPrecedingIncludes for unity build support.
+  /// Only accessed from the worker thread, no locking needed.
+  std::string CachedProxyPath;
+  llvm::sys::TimePoint<> CachedProxyMTime;
+  std::vector<std::string> CachedPrecedingIncludes;
+
   SynchronizedTUStatus Status;
   PreambleThread PreamblePeer;
 };
@@ -882,6 +964,51 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
         } else {
           // We have a reliable command for an including file, use it.
           Cmd = tooling::transferCompileCommand(std::move(*ProxyCmd), FileName);
+        }
+      }
+    }
+    // Unity builds: when a non-header .c file has a command inferred from
+    // another non-header .c file (e.g. ext.c inferred from build_policy.c),
+    // preprocess the proxy to find preceding #include directives and inject
+    // them as -include flags. This works for both warm-cache (proxy from
+    // HeaderIncluderCache, command via transferCompileCommand) and cold-start
+    // (interpolated command from CDB), since both set the Heuristic field.
+    if (Cmd && !isHeaderFile(FileName)) {
+      llvm::StringRef Heuristic = Cmd->Heuristic;
+      if (Heuristic.consume_front("inferred from ") &&
+          !isHeaderFile(Heuristic)) {
+        // Resolve proxy path (Heuristic may be a relative filename).
+        llvm::SmallString<256> ProxyPath(Heuristic);
+        if (!llvm::sys::path::is_absolute(ProxyPath)) {
+          ProxyPath = Cmd->Directory;
+          llvm::sys::path::append(ProxyPath, Heuristic);
+        }
+        llvm::sys::path::remove_dots(ProxyPath, /*remove_dot_dot=*/true);
+        // Use cached result if the proxy hasn't changed, otherwise
+        // fetch the proxy's compile command and preprocess it.
+        auto ProxyStat = Inputs.TFS->view(std::nullopt)->status(ProxyPath);
+        auto ProxyMTime = ProxyStat ? ProxyStat->getLastModificationTime()
+                                    : llvm::sys::TimePoint<>();
+        std::vector<std::string> *Preceding = nullptr;
+        if (CachedProxyPath == ProxyPath && CachedProxyMTime == ProxyMTime) {
+          Preceding = &CachedPrecedingIncludes;
+        } else if (auto ProxyCmd = CDB.getCompileCommand(ProxyPath)) {
+          if (isReliable(*ProxyCmd)) {
+            CachedProxyPath = std::string(ProxyPath);
+            CachedProxyMTime = ProxyMTime;
+            CachedPrecedingIncludes =
+                scanPrecedingIncludes(*Inputs.TFS, *ProxyCmd, FileName);
+            Preceding = &CachedPrecedingIncludes;
+          }
+        }
+        if (Preceding && !Preceding->empty()) {
+          std::vector<std::string> Flags;
+          for (const auto &Inc : *Preceding) {
+            Flags.push_back("-include");
+            Flags.push_back(Inc);
+          }
+          auto It = llvm::find(Cmd->CommandLine, "--");
+          Cmd->CommandLine.insert(It, Flags.begin(), Flags.end());
         }
       }
     }
