@@ -481,8 +481,11 @@ spirv.func @asinh_acosh(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: llvm.intr.log(%[[SUM]]) : (f32) -> f32
   %0 = spirv.GL.Asinh %arg0 : f32
   // CHECK: %[[MONE:.*]] = llvm.mlir.constant(dense<-1.000000e+00> : vector<3xf16>) : vector<3xf16>
-  // CHECK: llvm.fadd %{{.*}}, %[[MONE]] : vector<3xf16>
-  // CHECK: llvm.intr.log(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  // CHECK: %[[VSQ:.*]] = llvm.fmul %[[VX:.*]], %[[VX]] : vector<3xf16>
+  // CHECK: %[[VRAD:.*]] = llvm.fadd %[[VSQ]], %[[MONE]] : vector<3xf16>
+  // CHECK: %[[VROOT:.*]] = llvm.intr.sqrt(%[[VRAD]]) : (vector<3xf16>) -> vector<3xf16>
+  // CHECK: %[[VSUM:.*]] = llvm.fadd %[[VX]], %[[VROOT]] : vector<3xf16>
+  // CHECK: llvm.intr.log(%[[VSUM]]) : (vector<3xf16>) -> vector<3xf16>
   %1 = spirv.GL.Acosh %arg1 : vector<3xf16>
   spirv.Return
 }
