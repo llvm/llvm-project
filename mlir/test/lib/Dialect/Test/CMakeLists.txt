@@ -15,14 +15,23 @@ mlir_tablegen(TestOpInterfaces.h.inc -gen-op-interface-decls)
 mlir_tablegen(TestOpInterfaces.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRTestInterfaceIncGen)
 
+# The attribute and type partitions, each with its own header and source file.
 set(LLVM_TARGET_DEFINITIONS TestOps.td)
-mlir_tablegen(TestAttrDefs.h.inc -gen-attrdef-decls -attrdefs-dialect=test)
-mlir_tablegen(TestAttrDefs.cpp.inc -gen-attrdef-defs -attrdefs-dialect=test)
+foreach(partition Core Syntax)
+  mlir_tablegen(TestAttributes${partition}.h.inc -gen-attrdef-decls
+                -attrdefs-dialect=test -attrdefs-partition=${partition})
+  mlir_tablegen(TestAttributes${partition}.cpp.inc -gen-attrdef-defs
+                -attrdefs-dialect=test -attrdefs-partition=${partition})
+endforeach()
 add_public_tablegen_target(MLIRTestAttrDefIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TestTypeDefs.td)
-mlir_tablegen(TestTypeDefs.h.inc -gen-typedef-decls -typedefs-dialect=test)
-mlir_tablegen(TestTypeDefs.cpp.inc -gen-typedef-defs -typedefs-dialect=test)
+foreach(partition Core Syntax)
+  mlir_tablegen(TestTypes${partition}.h.inc -gen-typedef-decls
+                -typedefs-dialect=test -typedefs-partition=${partition})
+  mlir_tablegen(TestTypes${partition}.cpp.inc -gen-typedef-defs
+                -typedefs-dialect=test -typedefs-partition=${partition})
+endforeach()
 add_public_tablegen_target(MLIRTestTypeDefIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TestEnumDefs.td)
@@ -48,7 +57,8 @@ add_public_tablegen_target(MLIRTestOpsSyntaxIncGen)
 
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestDialect
-  TestAttributes.cpp
+  TestAttributesCore.cpp
+  TestAttributesSyntax.cpp
   TestDialect.cpp
   TestFormatUtils.cpp
   TestInterfaces.cpp
@@ -62,7 +72,8 @@ add_mlir_library(MLIRTestDialect
   TestOpsTraits.cpp
   TestPatterns.cpp
   TestTraits.cpp
-  TestTypes.cpp
+  TestTypesCore.cpp
+  TestTypesSyntax.cpp
   TestOpsSyntax.cpp
   TestDialectInterfaces.cpp
 

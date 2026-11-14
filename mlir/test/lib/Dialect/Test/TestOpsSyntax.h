@@ -9,8 +9,8 @@
 #ifndef MLIR_TEST_DIALECT_TEST_TESTOPSSYNTAX_H
 #define MLIR_TEST_DIALECT_TEST_TESTOPSSYNTAX_H
 
-#include "TestAttributes.h"
-#include "TestTypes.h"
+#include "TestAttributesSyntax.h"
+#include "TestTypesSyntax.h"
 
 namespace test {
 class TestReturnOp;

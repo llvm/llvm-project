@@ -15,6 +15,7 @@
 #include "OpClass.h"
 #include "OpFormatGen.h"
 #include "OpGenHelpers.h"
+#include "PartitionHelpers.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Builder.h"
@@ -4783,20 +4784,18 @@ static SmallVector<Dialect> getOpDialects(ArrayRef<const Record *> defs) {
 static SmallVector<StringRef>
 getAllOpPartitions(const Dialect &dialect, ArrayRef<const Record *> defs,
                    ArrayRef<const Record *> otherPartitionDefs) {
-  llvm::SetVector<StringRef> partitions;
+  SmallVector<const Record *> dialectDefs;
   for (const Record *def :
        concat<const Record *const>(defs, otherPartitionDefs))
     if (def->getValueAsDef("opDialect") == dialect.getDef())
-      partitions.insert(getOpPartitionName(*def));
-
-  SmallVector<StringRef> result = partitions.takeVector();
-  llvm::sort(result);
-  return result;
+      dialectDefs.push_back(def);
+  return getPartitionNames(dialectDefs);
 }
 
 /// Emit the declarations of the op registration hooks of every dialect with
-/// ops in the specified op partition: the hooks of all partitions of the
-/// dialect and the hook that calls them.
+/// ops in the specified op partition: the hook that registers all ops of the
+/// dialect, and the hooks of all partitions, which it calls, in the `detail`
+/// namespace.
 static void emitOpPartitionRegistrationHookDecls(
     ArrayRef<const Record *> defs, ArrayRef<const Record *> otherPartitionDefs,
     raw_ostream &os) {
@@ -4805,6 +4804,7 @@ static void emitOpPartitionRegistrationHookDecls(
     DialectNamespaceEmitter ns(os, dialect);
     os << formatv(opRegistrationHook, getOpRegistrationHookName(dialect),
                   dialect.getCppNamespace(), dialect.getCppClassName());
+    NamespaceEmitter detailNs(os, "detail");
     for (StringRef partition :
          getAllOpPartitions(dialect, defs, otherPartitionDefs))
       os << formatv(opRegistrationHook,
@@ -4916,7 +4916,8 @@ emitOpPartitionRegistrationHookDefs(ArrayRef<const Record *> defs,
                     dialect.getCppClassName());
 
       for (StringRef partition : partitions)
-        os << formatv("  {0}::{1}(dialect);\n", dialect.getCppNamespace(),
+        os << formatv("  {0}::detail::{1}(dialect);\n",
+                      dialect.getCppNamespace(),
                       getOpRegistrationHookName(dialect, partition));
       os << "}\n";
     }
@@ -4924,7 +4925,8 @@ emitOpPartitionRegistrationHookDefs(ArrayRef<const Record *> defs,
     os << formatv(opCommentHeader, dialect.getCppClassName(),
                   (specifiedPartition + " Op Registration Hook").str())
        << formatv(opRegistrationHook, dialect.getCppNamespace(),
-                  getOpRegistrationHookName(dialect, specifiedPartition),
+                  "detail::" +
+                      getOpRegistrationHookName(dialect, specifiedPartition),
                   dialect.getCppClassName());
 
     // The hooks register each op with a separate call instead of

@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "TestTypesCore.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Verifier.h"

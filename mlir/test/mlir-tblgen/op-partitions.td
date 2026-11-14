@@ -49,8 +49,12 @@ def FenceOp : Test_Op<"fence">;
 // DECLS: namespace test {
 // DECLS-EMPTY:
 // DECLS-NEXT: void registerTestDialectOperations(test::TestDialect *dialect);
+// DECLS-NEXT: namespace detail {
+// DECLS-EMPTY:
 // DECLS-NEXT: void registerTestDialectOperationsArith(test::TestDialect *dialect);
 // DECLS-NEXT: void registerTestDialectOperationsMemory(test::TestDialect *dialect);
+// DECLS-EMPTY:
+// DECLS-NEXT: } // namespace detail
 // DECLS-EMPTY:
 // DECLS-NEXT: } // namespace test
 
@@ -63,7 +67,7 @@ def FenceOp : Test_Op<"fence">;
 // DEFS: StoreOpAdaptor
 // DEFS-NOT: AddOp
 // DEFS-NOT: registerTestDialectOperations(
-// DEFS: void test::registerTestDialectOperationsMemory(test::TestDialect *dialect) {
+// DEFS: void test::detail::registerTestDialectOperationsMemory(test::TestDialect *dialect) {
 // DEFS-NEXT:   ::mlir::RegisteredOperationName::insert<test::FenceOp>(*dialect);
 // DEFS-NEXT:   ::mlir::RegisteredOperationName::insert<test::LoadOp>(*dialect);
 // DEFS-NEXT:   ::mlir::RegisteredOperationName::insert<test::StoreOp>(*dialect);
@@ -75,10 +79,10 @@ def FenceOp : Test_Op<"fence">;
 // all partitions.
 // FIRST-LABEL: #ifdef GET_OP_CLASSES
 // FIRST: void test::registerTestDialectOperations(test::TestDialect *dialect) {
-// FIRST-NEXT:   test::registerTestDialectOperationsArith(dialect);
-// FIRST-NEXT:   test::registerTestDialectOperationsMemory(dialect);
+// FIRST-NEXT:   test::detail::registerTestDialectOperationsArith(dialect);
+// FIRST-NEXT:   test::detail::registerTestDialectOperationsMemory(dialect);
 // FIRST-NEXT: }
-// FIRST: void test::registerTestDialectOperationsArith(test::TestDialect *dialect) {
+// FIRST: void test::detail::registerTestDialectOperationsArith(test::TestDialect *dialect) {
 // FIRST-NEXT:   ::mlir::RegisteredOperationName::insert<test::AddOp>(*dialect);
 // FIRST-NEXT:   ::mlir::RegisteredOperationName::insert<test::MulOp>(*dialect);
 // FIRST-NEXT: }

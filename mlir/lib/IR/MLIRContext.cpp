@@ -889,6 +889,19 @@ void Dialect::addAttribute(TypeID typeID, AbstractAttribute &&attrInfo) {
                              newInfo->getName() + " is already registered.");
 }
 
+MLIRContext *AbstractAttribute::insert(Dialect &dialect,
+                                       AbstractAttribute &&attrInfo) {
+  TypeID typeID = attrInfo.getTypeID();
+  dialect.addAttribute(typeID, std::move(attrInfo));
+  return dialect.getContext();
+}
+
+MLIRContext *AbstractType::insert(Dialect &dialect, AbstractType &&typeInfo) {
+  TypeID typeID = typeInfo.getTypeID();
+  dialect.addType(typeID, std::move(typeInfo));
+  return dialect.getContext();
+}
+
 //===----------------------------------------------------------------------===//
 // AbstractAttribute
 //===----------------------------------------------------------------------===//

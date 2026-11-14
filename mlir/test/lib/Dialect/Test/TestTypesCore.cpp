@@ -1,4 +1,4 @@
-//===- TestTypes.cpp - MLIR Test Dialect Types ------------------*- C++ -*-===//
+//===- TestTypesCore.cpp - Test types in `Core` ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains types defined by the TestDialect for testing various
-// features of MLIR.
+// This file contains the types of the test dialect in partition `Core`.
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestTypes.h"
-#include "TestDialect.h"
+#include "TestTypesCore.h"
+#include "TestDialectBase.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -20,7 +19,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/TypeSize.h"
 #include <cstring>
 #include <optional>
@@ -88,61 +86,12 @@ static llvm::hash_code test::hash_value(const FieldInfo &fi) { // NOLINT
 }
 
 //===----------------------------------------------------------------------===//
-// TestCustomType
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseCustomTypeA(AsmParser &parser, int &aResult) {
-  return parser.parseInteger(aResult);
-}
-
-static void printCustomTypeA(AsmPrinter &printer, int a) { printer << a; }
-
-static ParseResult parseCustomTypeB(AsmParser &parser, int a,
-                                    std::optional<int> &bResult) {
-  if (a < 0)
-    return success();
-  for (int i : llvm::seq(0, a))
-    if (failed(parser.parseInteger(i)))
-      return failure();
-  bResult.emplace(0);
-  return parser.parseInteger(*bResult);
-}
-
-static void printCustomTypeB(AsmPrinter &printer, int a, std::optional<int> b) {
-  if (a < 0)
-    return;
-  printer << ' ';
-  for (int i : llvm::seq(0, a))
-    printer << i << ' ';
-  printer << *b;
-}
-
-static ParseResult parseFooString(AsmParser &parser, std::string &foo) {
-  std::string result;
-  if (parser.parseString(&result))
-    return failure();
-  foo = std::move(result);
-  return success();
-}
-
-static void printFooString(AsmPrinter &printer, StringRef foo) {
-  printer << '"' << foo << '"';
-}
-
-static ParseResult parseBarString(AsmParser &parser, StringRef foo) {
-  return parser.parseKeyword(foo);
-}
-
-static void printBarString(AsmPrinter &printer, StringRef foo) {
-  printer << foo;
-}
-//===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 
 #include "TestTypeInterfaces.cpp.inc"
 #define GET_TYPEDEF_CLASSES
-#include "TestTypeDefs.cpp.inc"
+#include "TestTypesCore.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // CompoundAType
@@ -410,92 +359,19 @@ test::detail::TestCustomStorageCtorTypeStorage::construct(
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 struct PtrElementModel
     : public LLVM::PointerElementTypeInterface::ExternalModel<PtrElementModel,
                                                               SimpleAType> {};
 } // namespace
 
 void TestDialect::registerTypes() {
-  addTypes<TestRecursiveType,
-#define GET_TYPEDEF_LIST
-#include "TestTypeDefs.cpp.inc"
-           >();
+  addTypes<TestRecursiveType>();
+  registerTestDialectTypes(this);
   SimpleAType::attachInterface<PtrElementModel>(*getContext());
 
   registerDynamicType(getSingletonDynamicType(this));
   registerDynamicType(getPairDynamicType(this));
   registerDynamicType(getCustomAssemblyFormatDynamicType(this));
-}
-
-Type TestDialect::parseType(DialectAsmParser &parser) const {
-  StringRef typeTag;
-  {
-    Type genType;
-    auto parseResult = generatedTypeParser(parser, &typeTag, genType);
-    if (parseResult.has_value())
-      return genType;
-  }
-
-  {
-    Type dynType;
-    auto parseResult = parseOptionalDynamicType(typeTag, parser, dynType);
-    if (parseResult.has_value()) {
-      if (succeeded(parseResult.value()))
-        return dynType;
-      return Type();
-    }
-  }
-
-  if (typeTag != "test_rec") {
-    parser.emitError(parser.getNameLoc()) << "unknown type!";
-    return Type();
-  }
-
-  StringRef name;
-  if (parser.parseLess() || parser.parseKeyword(&name))
-    return Type();
-  auto rec = TestRecursiveType::get(parser.getContext(), name);
-
-  FailureOr<AsmParser::CyclicParseReset> cyclicParse =
-      parser.tryStartCyclicParse(rec);
-
-  // If this type already has been parsed above in the stack, expect just the
-  // name.
-  if (failed(cyclicParse)) {
-    if (failed(parser.parseGreater()))
-      return Type();
-    return rec;
-  }
-
-  // Otherwise, parse the body and update the type.
-  if (failed(parser.parseComma()))
-    return Type();
-  Type subtype = parseType(parser);
-  if (!subtype || failed(parser.parseGreater()) || failed(rec.setBody(subtype)))
-    return Type();
-
-  return rec;
-}
-
-void TestDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  if (succeeded(generatedTypePrinter(type, printer)))
-    return;
-
-  if (succeeded(printIfDynamicType(type, printer)))
-    return;
-
-  auto rec = llvm::cast<TestRecursiveType>(type);
-
-  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint =
-      printer.tryStartCyclicPrint(rec);
-
-  printer << "test_rec<" << rec.getName();
-  if (succeeded(cyclicPrint)) {
-    printer << ", ";
-    printType(rec.getBody(), printer);
-  }
-  printer << ">";
 }
 
 Type TestRecursiveAliasType::getBody() const { return getImpl()->body; }
@@ -597,28 +473,6 @@ bool TestTensorLikeWrapperType::isTensorLike() const {
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) const {
   return cast<::mlir::bufferization::TensorLikeType>(getInner())
       .verifyCompatibleBufferType(bufferType, emitError);
-}
-
-//===----------------------------------------------------------------------===//
-// TestTypeNewlineAndIndent
-//===----------------------------------------------------------------------===//
-
-Type TestTypeNewlineAndIndentType::parse(::mlir::AsmParser &parser) {
-  if (parser.parseLess() || parser.parseKeyword("indented_content") ||
-      parser.parseGreater()) {
-    return Type();
-  }
-  return get(parser.getContext());
-}
-
-void TestTypeNewlineAndIndentType::print(::mlir::AsmPrinter &printer) const {
-  printer << "<";
-  printer.increaseIndent();
-  printer.printNewline();
-  printer << "indented_content";
-  printer.decreaseIndent();
-  printer.printNewline();
-  printer << ">";
 }
 
 //===----------------------------------------------------------------------===//

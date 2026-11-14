@@ -33,7 +33,7 @@ def CamelCasePartition : Partition<"ControlFlow">;
 def BranchOp : Op<Test_Dialect, "br"> {
   let partition = SnakeCasePartition;
 }
-// ERROR2: error: op partitions 'control_flow' and 'ControlFlow' have the same registration hook 'registerTestDialectOperationsControlFlow'
+// ERROR2: error: op partitions 'control_flow' and 'ControlFlow' have the same name 'ControlFlow' in generated functions
 def CondBranchOp : Op<Test_Dialect, "cond_br"> {
   let partition = CamelCasePartition;
 }

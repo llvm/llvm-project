@@ -54,6 +54,10 @@ public:
                         T::name);
   }
 
+  /// Register the type `T` with `dialect`.
+  template <typename T>
+  static void insert(Dialect &dialect);
+
   /// This method is used by Dialect objects to register types with
   /// custom TypeIDs.
   /// The use of this method is in general discouraged in favor of
@@ -110,6 +114,10 @@ public:
   StringRef getName() const { return name; }
 
 private:
+  /// Registers `typeInfo` with `dialect` and returns the context of `dialect`.
+  /// This is the part of `insert<T>` that requires the definition of `Dialect`.
+  static MLIRContext *insert(Dialect &dialect, AbstractType &&typeInfo);
+
   AbstractType(Dialect &dialect, detail::InterfaceMap &&interfaceMap,
                HasTraitFn &&hasTrait,
                WalkImmediateSubElementsFn walkImmediateSubElementsFn,
@@ -295,6 +303,11 @@ struct TypeUniquer {
 };
 } // namespace detail
 
+template <typename T>
+void AbstractType::insert(Dialect &dialect) {
+  MLIRContext *context = insert(dialect, get<T>(dialect));
+  detail::TypeUniquer::registerType<T>(context);
+}
 } // namespace mlir
 
 #endif
