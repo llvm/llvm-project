@@ -52,45 +52,45 @@ class as_input_view : public view_interface<as_input_view<_View>> {
   class __iterator;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI as_input_view()
+  as_input_view()
     requires default_initializable<_View>
   = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit as_input_view(_View __base) : __base_(std::move(__base)) {}
+  constexpr explicit as_input_view(_View __base) : __base_(std::move(__base)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] constexpr _View base() && { return std::move(__base_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
+  [[nodiscard]] constexpr auto begin()
     requires(!__simple_view<_View>)
   {
     return __iterator<false>{ranges::begin(__base_)};
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] constexpr auto begin() const
     requires range<const _View>
   {
     return __iterator<true>{ranges::begin(__base_)};
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end()
+  [[nodiscard]] constexpr auto end()
     requires(!__simple_view<_View>)
   {
     return ranges::end(__base_);
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] constexpr auto end() const
     requires range<const _View>
   {
     return ranges::end(__base_);
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] constexpr auto size()
     requires sized_range<_View>
   {
     return ranges::size(__base_);
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] constexpr auto size() const
     requires sized_range<const _View>
   {
     return ranges::size(__base_);
@@ -122,7 +122,7 @@ class as_input_view<_View>::__iterator {
 
   iterator_t<_Base> __current_ = iterator_t<_Base>();
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(iterator_t<_Base> __current) : __current_(std::move(__current)) {}
+  constexpr explicit __iterator(iterator_t<_Base> __current) : __current_(std::move(__current)) {}
 
   friend class as_input_view<_View>;
 
@@ -131,51 +131,51 @@ public:
   using value_type       = range_value_t<_Base>;
   using iterator_concept = input_iterator_tag;
 
-  _LIBCPP_HIDE_FROM_ABI __iterator()
+  __iterator()
     requires default_initializable<iterator_t<_Base>>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI __iterator(__iterator&&)            = default;
-  _LIBCPP_HIDE_FROM_ABI __iterator& operator=(__iterator&&) = default;
+  __iterator(__iterator&&)            = default;
+  __iterator& operator=(__iterator&&) = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> __i)
+  constexpr __iterator(__iterator<!_Const> __i)
     requires _Const && convertible_to<iterator_t<_View>, iterator_t<_Base>>
       : __current_(std::move(__i.__current_)) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() && { return std::move(__current_); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept { return __current_; }
+  [[nodiscard]] constexpr iterator_t<_Base> base() && { return std::move(__current_); }
+  [[nodiscard]] constexpr const iterator_t<_Base>& base() const& noexcept { return __current_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const { return *__current_; }
+  [[nodiscard]] constexpr decltype(auto) operator*() const { return *__current_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+  constexpr __iterator& operator++() {
     ++__current_;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
+  constexpr void operator++(int) { ++*this; }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const sentinel_t<_Base>& __y) {
+  friend constexpr bool operator==(const __iterator& __x, const sentinel_t<_Base>& __y) {
     return __x.__current_ == __y;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
+  [[nodiscard]] friend constexpr difference_type
   operator-(const sentinel_t<_Base>& __y, const __iterator& __x)
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
   {
     return __y - __x.__current_;
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
+  [[nodiscard]] friend constexpr difference_type
   operator-(const __iterator& __x, const sentinel_t<_Base>& __y)
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
   {
     return __x.__current_ - __y;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_rvalue_reference_t<_Base> _LIBCPP_HIDE_FROM_ABI
+  [[nodiscard]] friend constexpr range_rvalue_reference_t<_Base> _LIBCPP_HIDE_FROM_ABI
   iter_move(const __iterator& __i) noexcept(noexcept(ranges::iter_move(__i.__current_))) {
     return ranges::iter_move(__i.__current_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr void
+  friend constexpr void
   iter_swap(const __iterator& __x,
             const __iterator& __y) noexcept(noexcept(ranges::iter_swap(__x.__current_, __y.__current_)))
     requires indirectly_swappable<iterator_t<_Base>>
@@ -193,14 +193,14 @@ namespace __as_input_view {
 struct __fn : __range_adaptor_closure<__fn> {
   template <input_range _Range>
     requires(!common_range<_Range> && !forward_range<_Range>)
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  [[nodiscard]] static constexpr auto
   operator()(_Range&& __range) noexcept(noexcept(views::all(std::forward<_Range>(__range))))
       -> decltype(/*--------------------------*/ views::all(std::forward<_Range>(__range))) {
     return /*---------------------------------*/ views::all(std::forward<_Range>(__range));
   }
 
   template <class _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  [[nodiscard]] static constexpr auto
   operator()(_Range&& __range) noexcept(noexcept(as_input_view(std::forward<_Range>(__range))))
       -> decltype(/*--------------------------*/ as_input_view(std::forward<_Range>(__range))) {
     return /*---------------------------------*/ as_input_view(std::forward<_Range>(__range));
