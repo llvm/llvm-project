@@ -16952,6 +16952,9 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
           SDValue ExtLoad =
               DAG.getExtLoad(ISD::EXTLOAD, DL, VT, LN0->getChain(),
                              LN0->getBasePtr(), LoadVT, LN0->getMemOperand());
+          // The load keeps its own debug location. The IR order stays the
+          // extend's, so scheduling doesn't change.
+          ExtLoad->setDebugLoc(LN0->getDebugLoc());
           SDValue Res = Frozen ? DAG.getFreeze(ExtLoad) : ExtLoad;
           ExtendSetCCUses(SetCCs, N0, Res, ISD::ANY_EXTEND);
           // If the load or freeze value is used only by N, replace it via
@@ -16985,6 +16988,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
       SDValue ExtLoad =
           DAG.getExtLoad(ExtType, DL, VT, LN0->getChain(), LN0->getBasePtr(),
                          MemVT, LN0->getMemOperand());
+      ExtLoad->setDebugLoc(LN0->getDebugLoc());
       CombineTo(N, ExtLoad);
       DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
       recursivelyDeleteUnusedNodes(LN0);
