@@ -21055,9 +21055,45 @@ static SDValue performVecReduceAddCntpCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getZExtOrTrunc(Cntp, DL, N->getValueType(0));
 }
 
+// A legal NEON long reduction sums these complete fixed vectors without
+// overflow. Reducing the original elements therefore has the same i64 result
+// as extending each lane first. Keep fixed-vector SVE preference and all
+// non-NEON modes unchanged.
+static SDValue
+performWidenedUnsignedReductionCombine(SDNode *N, SelectionDAG &DAG,
+                                       const AArch64Subtarget *ST) {
+  if (N->getValueType(0) != MVT::i64 || !ST->isNeonAvailable())
+    return SDValue();
+
+  SDValue Ext = N->getOperand(0);
+  if (Ext.getOpcode() != ISD::ZERO_EXTEND ||
+      ST->useSVEForFixedLengthVectors(Ext.getValueType()))
+    return SDValue();
+
+  SDValue Input = Ext.getOperand(0);
+  EVT InputVT = Input.getValueType();
+  if (InputVT != MVT::v8i8 && InputVT != MVT::v16i8 && InputVT != MVT::v4i16 &&
+      InputVT != MVT::v8i16 && InputVT != MVT::v4i32)
+    return SDValue();
+
+  // Use the same legal node/result types as the existing UADDLV intrinsic.
+  // The i8 forms zero the rest of the scalar lane, so extracting i32 is exact.
+  SDLoc DL(N);
+  bool IsWordInput = InputVT.getVectorElementType() == MVT::i32;
+  MVT ScalarVT = IsWordInput ? MVT::i64 : MVT::i32;
+  MVT VectorVT = IsWordInput ? MVT::v2i64 : MVT::v4i32;
+  SDValue Sum = DAG.getNode(AArch64ISD::UADDLV, DL, VectorVT, Input);
+  SDValue Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Sum,
+                               DAG.getConstant(0, DL, MVT::i64));
+  return DAG.getZExtOrTrunc(Scalar, DL, MVT::i64);
+}
+
 static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
                                           const AArch64Subtarget *ST) {
   if (SDValue Result = performVecReduceAddCntpCombine(N, DAG, ST))
+    return Result;
+
+  if (SDValue Result = performWidenedUnsignedReductionCombine(N, DAG, ST))
     return Result;
 
   if (!ST->isNeonAvailable())
