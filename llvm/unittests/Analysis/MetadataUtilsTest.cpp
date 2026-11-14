@@ -91,6 +91,21 @@ TEST_F(MetadataUtilsTest, InvariantGroupRequiresPointerIdentity) {
   EXPECT_FALSE(Different->hasMetadata(LLVMContext::MD_invariant_group));
 }
 
+TEST_F(MetadataUtilsTest, IntegerFragmentPreservesDefinednessButNotRange) {
+  auto *Old = B.CreateLoad(B.getInt64Ty(), P);
+  MDBuilder MDB(C);
+  Old->setMetadata(LLVMContext::MD_noundef, empty());
+  Old->setMetadata(LLVMContext::MD_range,
+                   MDB.createRange(B.getInt64(0), B.getInt64(100)));
+  for (int64_t Offset : {0, 4}) {
+    auto *Ptr = B.CreateInBoundsGEP(B.getInt8Ty(), P, B.getInt64(Offset));
+    auto *New = B.CreateLoad(B.getInt32Ty(), Ptr);
+    copyMetadataForMemoryAccess(*New, *Old, Offset);
+    EXPECT_TRUE(New->hasMetadata(LLVMContext::MD_noundef));
+    EXPECT_FALSE(New->hasMetadata(LLVMContext::MD_range));
+  }
+}
+
 TEST_F(MetadataUtilsTest, WideningDropsFactsAboutOriginalBytes) {
   auto *Old = B.CreateLoad(B.getInt32Ty(), P);
   auto *New = B.CreateLoad(FixedVectorType::get(B.getInt32Ty(), 4), P);
@@ -310,6 +325,57 @@ TEST_F(MetadataUtilsTest, DefinedAggregateDoesNotDefinePadding) {
   Old->setMetadata(LLVMContext::MD_noundef, empty());
   copyMetadataForMemoryAccess(*New, *Old);
   EXPECT_FALSE(New->hasMetadata(LLVMContext::MD_noundef));
+}
+
+TEST_F(MetadataUtilsTest, DefinedIntegerDoesNotDefineSourcePadding) {
+  auto *Old = B.CreateLoad(B.getInt1Ty(), P);
+  auto *New = B.CreateLoad(B.getInt8Ty(), P);
+  Old->setMetadata(LLVMContext::MD_noundef, empty());
+  copyMetadataForMemoryAccess(*New, *Old);
+  EXPECT_FALSE(New->hasMetadata(LLVMContext::MD_noundef));
+}
+
+TEST_F(MetadataUtilsTest, DestinationPaddingDoesNotInvalidateDefinedness) {
+  auto *Old = B.CreateLoad(B.getInt8Ty(), P);
+  auto *New = B.CreateLoad(B.getInt1Ty(), P);
+  Old->setMetadata(LLVMContext::MD_noundef, empty());
+  copyMetadataForMemoryAccess(*New, *Old);
+  EXPECT_TRUE(New->hasMetadata(LLVMContext::MD_noundef));
+}
+
+TEST_F(MetadataUtilsTest, NonnullDoesNotConstrainTruncatedPointerBits) {
+  auto *Old = B.CreateLoad(B.getPtrTy(), P);
+  auto *New = B.CreateLoad(B.getIntNTy(63), P);
+  Old->setMetadata(LLVMContext::MD_nonnull, empty());
+  copyMetadataForMemoryAccess(*New, *Old);
+  EXPECT_FALSE(New->hasMetadata(LLVMContext::MD_range));
+}
+
+TEST_F(MetadataUtilsTest, IntegerRangeBecomesPointerNonnull) {
+  auto *Old = B.CreateLoad(B.getInt64Ty(), P);
+  auto *New = B.CreateLoad(B.getPtrTy(), P);
+  MDBuilder MDB(C);
+  Old->setMetadata(LLVMContext::MD_range,
+                   MDB.createRange(B.getInt64(1), B.getInt64(100)));
+  copyMetadataForMemoryAccess(*New, *Old);
+  EXPECT_TRUE(New->hasMetadata(LLVMContext::MD_nonnull));
+  EXPECT_FALSE(New->hasMetadata(LLVMContext::MD_range));
+}
+
+TEST_F(MetadataUtilsTest, PointerFactsRequireSamePointerType) {
+  auto *Old = B.CreateLoad(B.getPtrTy(), P);
+  auto *New = B.CreateLoad(B.getPtrTy(1), P);
+  Old->setMetadata(LLVMContext::MD_nonnull, empty());
+  Old->setMetadata(LLVMContext::MD_align, MDNode::get(C, {number(16)}));
+  Old->setMetadata(LLVMContext::MD_dereferenceable,
+                   MDNode::get(C, {number(32)}));
+  Old->setMetadata(LLVMContext::MD_dereferenceable_or_null,
+                   MDNode::get(C, {number(32)}));
+  copyMetadataForMemoryAccess(*New, *Old);
+  EXPECT_FALSE(New->hasMetadata(LLVMContext::MD_nonnull));
+  EXPECT_FALSE(New->hasMetadata(LLVMContext::MD_align));
+  EXPECT_FALSE(New->hasMetadata(LLVMContext::MD_dereferenceable));
+  EXPECT_FALSE(New->hasMetadata(LLVMContext::MD_dereferenceable_or_null));
 }
 
 TEST_F(MetadataUtilsTest, PointerFactsRequirePointerResults) {

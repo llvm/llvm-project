@@ -524,7 +524,7 @@ static void scalarizeMaskedGather(const DataLayout &DL,
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
       LoadInst *Load =
           Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
-      copyMetadataForMemoryAccess(*Load, *CI, /*ByteOffset=*/0);
+      copyMetadataForMemoryAccess(*Load, *CI, /*DestByteOffset=*/0);
       VResult =
           Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
     }
@@ -584,7 +584,7 @@ static void scalarizeMaskedGather(const DataLayout &DL,
     Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
     LoadInst *Load =
         Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
-    copyMetadataForMemoryAccess(*Load, *CI, /*ByteOffset=*/0);
+    copyMetadataForMemoryAccess(*Load, *CI, /*DestByteOffset=*/0);
     Value *NewVResult =
         Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
 
@@ -663,7 +663,7 @@ static void scalarizeMaskedScatter(const DataLayout &DL,
           Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
       StoreInst *Store = Builder.CreateAlignedStore(OneElt, Ptr, AlignVal);
-      copyMetadataForMemoryAccess(*Store, *CI, /*ByteOffset=*/0);
+      copyMetadataForMemoryAccess(*Store, *CI, /*DestByteOffset=*/0);
     }
     CI->eraseFromParent();
     return;
@@ -718,7 +718,7 @@ static void scalarizeMaskedScatter(const DataLayout &DL,
     Value *OneElt = Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
     Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
     StoreInst *Store = Builder.CreateAlignedStore(OneElt, Ptr, AlignVal);
-    copyMetadataForMemoryAccess(*Store, *CI, /*ByteOffset=*/0);
+    copyMetadataForMemoryAccess(*Store, *CI, /*DestByteOffset=*/0);
 
     // Create "else" block, fill it in the next iteration
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
@@ -1043,11 +1043,11 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
         continue;
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
       LoadInst *Load = Builder.CreateLoad(EltTy, Ptr, "Load" + Twine(Idx));
-      copyMetadataForMemoryAccess(*Load, *CI, /*ByteOffset=*/0);
+      copyMetadataForMemoryAccess(*Load, *CI, /*DestByteOffset=*/0);
       Value *Update =
           CreateHistogramUpdateValue(cast<IntrinsicInst>(CI), Load, Inc);
       StoreInst *Store = Builder.CreateStore(Update, Ptr);
-      copyMetadataForMemoryAccess(*Store, *CI, /*ByteOffset=*/0);
+      copyMetadataForMemoryAccess(*Store, *CI, /*DestByteOffset=*/0);
     }
     CI->eraseFromParent();
     return;
@@ -1071,11 +1071,11 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
     LoadInst *Load = Builder.CreateLoad(EltTy, Ptr, "Load" + Twine(Idx));
-    copyMetadataForMemoryAccess(*Load, *CI, /*ByteOffset=*/0);
+    copyMetadataForMemoryAccess(*Load, *CI, /*DestByteOffset=*/0);
     Value *UpdateOp =
         CreateHistogramUpdateValue(cast<IntrinsicInst>(CI), Load, Inc);
     StoreInst *Store = Builder.CreateStore(UpdateOp, Ptr);
-    copyMetadataForMemoryAccess(*Store, *CI, /*ByteOffset=*/0);
+    copyMetadataForMemoryAccess(*Store, *CI, /*DestByteOffset=*/0);
 
     // Create "else" block, fill it in the next iteration
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
