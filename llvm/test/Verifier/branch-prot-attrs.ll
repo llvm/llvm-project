@@ -17,26 +17,26 @@ define void @i() #3 {
 }
 
 attributes #0 = {
+; CHECK:   invalid value for 'branch-target-enforcement' attribute: yes-please
+  "branch-target-enforcement"="yes-please"
 ; CHECK:  invalid value for 'sign-return-address' attribute: non-loaf
   "sign-return-address"="non-loaf"
-; CHECK: invalid value for 'sign-return-address-key' attribute: bad-mkey
-  "sign-return-address-key"="bad-mkey"
 ; CHECK: invalid value for 'sign-return-address-harden' attribute: hello
   "sign-return-address-harden"="hello"
-; CHECK:   invalid value for 'branch-target-enforcement' attribute: yes-please
-  "branch-target-enforcement"="yes-please" }
+; CHECK: invalid value for 'sign-return-address-key' attribute: bad-mkey
+  "sign-return-address-key"="bad-mkey" }
 
 attributes #1 = {
+; CHECK:   invalid value for 'branch-protection-pauth-lr' attribute: Yes
+  "branch-protection-pauth-lr"="Yes"
+; CHECK:   invalid value for 'branch-target-enforcement' attribute: True
+  "branch-target-enforcement"="True"
+; CHECK:   invalid value for 'guarded-control-stack' attribute: True
+  "guarded-control-stack"="True"
 ; CHECK:  invalid value for 'sign-return-address' attribute: All
   "sign-return-address"="All"
 ; CHECK: invalid value for 'sign-return-address-key' attribute: B_Key
   "sign-return-address-key"="B_Key"
-; CHECK:   invalid value for 'branch-target-enforcement' attribute: True
-  "branch-target-enforcement"="True"
-; CHECK:   invalid value for 'branch-protection-pauth-lr' attribute: Yes
-  "branch-protection-pauth-lr"="Yes"
-; CHECK:   invalid value for 'guarded-control-stack' attribute: True
-  "guarded-control-stack"="True"
   }
 
 attributes #2 = {
