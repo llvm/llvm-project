@@ -70,8 +70,7 @@ entry:
 define <8 x i16> @bitseli_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; CHECK-LABEL: bitseli_v8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.b $vr2, 127
-; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr2, $vr0
+; CHECK-NEXT:    vbitseli.b $vr0, $vr1, 127
 ; CHECK-NEXT:    ret
 entry:
   %0 = xor <8 x i16> %a, splat (i16 -1)
@@ -84,8 +83,7 @@ entry:
 define <4 x i32> @bitseli_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; CHECK-LABEL: bitseli_v4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.b $vr2, 127
-; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr2, $vr0
+; CHECK-NEXT:    vbitseli.b $vr0, $vr1, 127
 ; CHECK-NEXT:    ret
 entry:
   %0 = xor <4 x i32> %a, splat (i32 -1)
@@ -98,8 +96,7 @@ entry:
 define <2 x i64> @bitseli_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-LABEL: bitseli_v2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.b $vr2, 127
-; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr2, $vr0
+; CHECK-NEXT:    vbitseli.b $vr0, $vr1, 127
 ; CHECK-NEXT:    ret
 entry:
   %0 = xor <2 x i64> %a, splat (i64 -1)
