@@ -411,11 +411,13 @@ def shift_of_shifted_logic_chain : GICombineRule<
          [{ return Helper.matchShiftOfShiftedLogic(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyShiftOfShiftedLogic(*${mi}, ${matchinfo}); }])>;
 
-def mul_to_shl : GICombineRule<
-  (defs root:$d, unsigned_matchinfo:$matchinfo),
-  (match (G_MUL $d, $op1, $op2):$mi,
+foreach mulop = [G_MUL, G_SMULL, G_UMULL] in
+def mulop#_to_shl : GICombineRule<
+  (defs root:$dst, unsigned_matchinfo:$matchinfo),
+  (match (mulop $dst, $src1, $src2):$mi,
          [{ return Helper.matchCombineMulToShl(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineMulToShl(*${mi}, ${matchinfo}); }])>;
+def mul_to_shl : GICombineGroup<[G_MUL_to_shl, G_SMULL_to_shl, G_UMULL_to_shl]>;
 
 // (sub x, C) -> (add x, -C)
 def sub_to_add : GICombineRule<
@@ -738,7 +740,7 @@ class commute_int_overflow_rule<Instruction op> : GICombineRule<
   (apply (op $dst, $carry, $rhs, $lhs, (MIFlags $root)))>;
 
 foreach op = [G_ADD, G_MUL, G_AND, G_OR, G_XOR, G_SMIN, G_SMAX, G_UMIN,
-              G_UMAX, G_UMULH, G_SMULH, G_UADDSAT, G_SADDSAT] in
+              G_UMAX, G_UMULH, G_SMULH, G_UMULL, G_SMULL, G_UADDSAT, G_SADDSAT] in
   def op#"_commute_constant_to_rhs" : commute_int_binop_rule<op>;
 foreach op = [G_SMULFIX, G_UMULFIX, G_SMULFIXSAT, G_UMULFIXSAT] in
   def op#"_commute_constant_to_rhs" : commute_int_mulfix_rule<op>;
@@ -1967,6 +1969,14 @@ def mulh_to_lshr : GICombineRule<
 
 def mulh_combines : GICombineGroup<[mulh_to_lshr]>;
 
+def mull_matchdata : GIDefMatchData<"std::tuple<bool, Register, Register>">;
+def extmultomull : GICombineRule<
+  (defs root:$root, mull_matchdata:$matchinfo),
+  (match (G_MUL $dst, $src1, $src2):$root,
+         [{ return Helper.matchExtMulToMULL(*${root}, MRI, VT, ${matchinfo}); }]),
+  (apply [{ Helper.applyExtMulToMULL(*${root}, MRI, B, Observer, ${matchinfo}); }])
+>;
+
 def trunc_ssats : GICombineRule<
   (defs root:$root, register_matchinfo:$matchinfo),
   (match (G_TRUNC $dst, $src):$root,
@@ -2538,6 +2548,13 @@ def combine_shuffle_of_buildvectors_to_buildvector : GICombineRule<
          (G_BUILD_VECTOR $src2, GIVariadic<>:$unused2),
          (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
   (apply [{ Helper.applyCombineShuffleOfBuildVector(*${root}); }])>;
+
+// Combines trunc of shuffles
+def combine_trunc_of_shuffle : GICombineRule<
+  (defs root:$root),
+  (match (G_SHUFFLE_VECTOR $tmp, $src1, $src2, $mask),
+         (G_TRUNC $dst, $tmp):$root),
+  (apply [{ Helper.applyCombineTruncOfShuffle(*${root}); }])>;
 
 // Combines buildvector operations
 def combine_build_vector_of_bitcast : GICombineRule<
@@ -3262,7 +3279,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     intrem_combines, intdiv_combines, fdiv_repeated_divison,
-    sub_add_reg, select_to_minmax,
+    sub_add_reg, select_to_minmax, combine_trunc_of_shuffle,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     or_and_xor_combines, simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
@@ -3270,7 +3287,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     truncsat_combines, fptoui_ffloor_combines, lshr_of_trunc_of_lshr,
     ctls_combines, count_zero_poison_combines, add_shift, sub_one_from_sub,
     binop_with_neg, sub_minus_one, sub_of_mul_const, max_min_combines,
-    avgfloor_u_match, avgfloor_s_match,
+    extmultomull, avgfloor_u_match, avgfloor_s_match,
     avgceil_u_match, avgceil_s_match, combine_or_of_and]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in

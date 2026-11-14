@@ -273,6 +273,9 @@ public:
   constexpr bool isPointerVector() const {
     return Info == Kind::VECTOR_POINTER;
   }
+  constexpr bool isIntegerOrIntegerVector() const {
+    return isInteger() || isIntegerVector();
+  }
   constexpr bool isPointerOrPointerVector() const {
     return isPointer() || isPointerVector();
   }

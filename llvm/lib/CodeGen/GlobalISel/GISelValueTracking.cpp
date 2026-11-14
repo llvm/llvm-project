@@ -488,6 +488,22 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
     Known = KnownBits::mul(Known, Known2);
     break;
   }
+  case TargetOpcode::G_UMULL: {
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::mul(Known.zext(BitWidth), Known2.zext(BitWidth));
+    break;
+  }
+  case TargetOpcode::G_SMULL: {
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::mul(Known.sext(BitWidth), Known2.sext(BitWidth));
+    break;
+  }
   case TargetOpcode::G_UMULH: {
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
                          Depth + 1);
