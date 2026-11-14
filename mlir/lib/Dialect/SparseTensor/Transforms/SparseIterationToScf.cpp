@@ -228,9 +228,11 @@ public:
   LogicalResult
   matchAndRewrite(IterateOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!op.getCrdUsedLvls().empty())
+    I64BitSet crdUsedLvls = op.getCrdUsedLvls();
+    if (crdUsedLvls.count() > 1 ||
+        (!crdUsedLvls.empty() && !crdUsedLvls[op.getSpaceDim() - 1]))
       return rewriter.notifyMatchFailure(
-          op, "non-empty coordinates list not implemented.");
+          op, "coordinates other than the final level are not implemented");
 
     Location loc = op.getLoc();
 
@@ -254,13 +256,15 @@ public:
 
     Block *block = rewriter.applySignatureConversion(
         op.getBody(), signatureConversion, getTypeConverter());
+    bool usesCrd = !crdUsedLvls.empty();
     ValueRange ret = genLoopWithIterator(
         rewriter, loc, it.get(), ivs,
-        [block](PatternRewriter &rewriter, Location loc, Region &loopBody,
-                SparseIterator *it, ValueRange reduc) -> SmallVector<Value> {
+        [block, usesCrd](PatternRewriter &rewriter, Location loc,
+                         Region &loopBody, SparseIterator *it,
+                         ValueRange reduc) -> SmallVector<Value> {
           SmallVector<Value> blockArgs(reduc);
-          // TODO: Also appends coordinates if used.
-          // blockArgs.push_back(it->deref(rewriter, loc));
+          if (usesCrd)
+            blockArgs.push_back(it->deref(rewriter, loc));
           llvm::append_range(blockArgs, it->getCursor());
 
           Block *dstBlock = &loopBody.getBlocks().front();
