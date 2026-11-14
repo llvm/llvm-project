@@ -1708,7 +1708,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   // The incorrect case for signed would be INT_MAX, but isFromLoadImm can't
   // return that.
   if (isFromLoadImm(MRI, LHS, C0) && C0 != 0 && LHS.getReg().isVirtual() &&
-      MRI.hasOneUse(LHS.getReg()) && (IsSigned || C0 != -1)) {
+      MRI.hasOneNonDBGUse(LHS.getReg()) && (IsSigned || C0 != -1)) {
     assert((isInt<12>(C0) || C0 == 2048) && "Unexpected immediate");
     if (Register RegZ = searchConst(C0 + 1)) {
       BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
@@ -1726,7 +1726,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   // The incorrect case for signed would be INT_MIN, but isFromLoadImm can't
   // return that.
   if (isFromLoadImm(MRI, RHS, C0) && C0 != 0 && RHS.getReg().isVirtual() &&
-      MRI.hasOneUse(RHS.getReg())) {
+      MRI.hasOneNonDBGUse(RHS.getReg())) {
     assert((isInt<12>(C0) || C0 == 2048) && "Unexpected immediate");
     if (Register RegZ = searchConst(C0 - 1)) {
       BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
