@@ -526,6 +526,22 @@ TEST(KnownBitsTest, BinaryExhaustive) {
         return N1.usub_sat(N2);
       });
   testBinaryOpExhaustive(
+      "sshl_sat", KnownBits::sshl_sat,
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.uge(N2.getBitWidth()))
+          return std::nullopt;
+        return N1.sshl_sat(N2);
+      },
+      /*CheckOptimality=*/true, /*RefinePoisonToZero=*/true);
+  testBinaryOpExhaustive(
+      "ushl_sat", KnownBits::ushl_sat,
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.uge(N2.getBitWidth()))
+          return std::nullopt;
+        return N1.ushl_sat(N2);
+      },
+      /*CheckOptimality=*/true, /*RefinePoisonToZero=*/true);
+  testBinaryOpExhaustive(
       "shl",
       [](const KnownBits &Known1, const KnownBits &Known2) {
         return KnownBits::shl(Known1, Known2);
@@ -873,6 +889,8 @@ TEST(KnownBitsTest, WideShifts) {
   LShrResult.One.setBit(0);
   EXPECT_EQ(KnownBits::lshr(AllOnes, Unknown), LShrResult);
   EXPECT_EQ(KnownBits::ashr(AllOnes, Unknown), AllOnes);
+  EXPECT_EQ(KnownBits::sshl_sat(AllOnes, Unknown), ShlResult);
+  EXPECT_EQ(KnownBits::ushl_sat(AllOnes, Unknown), AllOnes);
 }
 
 TEST(KnownBitsTest, ICmpExhaustive) {
