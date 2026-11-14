@@ -1639,6 +1639,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # signal.h entrypoints
     libc.src.signal.kill
     libc.src.signal.killpg
+    libc.src.signal.sig2str
+    libc.src.signal.str2sig
     libc.src.signal.pthread_kill
     libc.src.signal.pthread_sigmask
     libc.src.signal.raise

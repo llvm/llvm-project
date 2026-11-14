@@ -56,6 +56,9 @@
 // SIGRTMAX is the largest allowed value for the runtime signal.
 #define SIGRTMAX (NSIG - 1)
 
+// POSIX.1-2024 maximum signal string length including null terminator.
+#define SIG2STR_MAX 32
+
 // The kernel sigset is stored as an array of long values. Each bit of this
 // array corresponds to a signal, adjusted by 1. That is, bit 0 corresponds
 // to signal number 1, bit 1 corresponds to signal number 2 and so on. The

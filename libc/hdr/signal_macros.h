@@ -17,6 +17,12 @@
 
 #include <signal.h>
 
+// Fallback definition for older host C libraries that do not yet define
+// POSIX.1-2024 SIG2STR_MAX in <signal.h>.
+#ifndef SIG2STR_MAX
+#define SIG2STR_MAX 32
+#endif
+
 #endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_SIGNAL_MACROS_H
