@@ -132,7 +132,10 @@ static const char kStdSuppressions[] =
     // TLS leak in some glibc versions, described in
     // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
     "leak:*tls_get_addr*\n"
-    "leak:*dlerror*\n";
+    "leak:*dlerror*\n"
+    // glibc resolver allocates nameserver address structures in thread-local
+    // _res that may be reported as leaked during thread teardown.
+    "leak:*res_context_send*\n";
 
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
