@@ -1343,7 +1343,6 @@ struct AGPRAllocState : public AbstractState {
 
   AGPRAllocState &getAssumed() { return *this; }
   const AGPRAllocState &getAssumed() const { return *this; }
-
 };
 struct AAAMDGPUAGPRAlloc
     : public StateWrapper<AGPRAllocState, AbstractAttribute> {
@@ -1438,12 +1437,11 @@ struct AAAMDGPUAGPRAlloc
 
       // TODO: Handle callsite attributes
       auto CheckCallee = [&](const Function &Callee) {
-        const AAAMDGPUAGPRAlloc *CalleeInfo =
-            A.getAAFor<AAAMDGPUAGPRAlloc>(
-                *this, IRPosition::function(Callee), DepClassTy::REQUIRED);
+        const AAAMDGPUAGPRAlloc *CalleeInfo = A.getAAFor<AAAMDGPUAGPRAlloc>(
+            *this, IRPosition::function(Callee), DepClassTy::REQUIRED);
         if (!CalleeInfo || !CalleeInfo->isValidState())
           return false;
-          MinAGPRs.takeAssumedMaximum(CalleeInfo->Min.getAssumed());
+        MinAGPRs.takeAssumedMaximum(CalleeInfo->Min.getAssumed());
         return true;
       };
       if (!checkForAllPossibleCallees(A, *this, CB, CheckCallee)) {
