@@ -1007,7 +1007,8 @@ define i1 @smin_of_smax_le(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BD]])
 ; CHECK-NEXT:    [[MX:%.*]] = call i32 @llvm.smax.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    [[MN:%.*]] = call i32 @llvm.smin.i32(i32 [[MX]], i32 [[C]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i32 [[MN]], [[D]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
 entry:
   %ad = icmp sle i32 %a, %d

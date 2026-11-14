@@ -2212,7 +2212,7 @@ static std::optional<bool> TryWithMinMaxDecomposition(CmpInst::Predicate Pred,
   if (D.canonicalize())
     return std::nullopt;
 
-  constexpr unsigned MaxDepth = 2;
+  constexpr unsigned MaxDepth = 1;
   if (isSignedDecompositionKnownTrue(Pred, D, Info, MaxDepth))
     return true;
 
