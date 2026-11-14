@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/IVUsers.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -164,6 +165,12 @@ bool IVUsers::AddUsersIfInteresting(Instruction *I) {
 
   // Get the symbolic expression for this instruction.
   const SCEV *ISE = SE->getSCEV(I);
+
+  // Treat huge expressions as uninteresting. SCEV does not simplify them, and
+  // walking them here and in LSR can take exponential time.
+  if (ISE->getExpressionSize() >=
+      getAnalysisOptions(*L).scalar_evolution_huge_expr_threshold)
+    return false;
 
   // If we've come to an uninteresting expression, stop the traversal and
   // call this a user.
