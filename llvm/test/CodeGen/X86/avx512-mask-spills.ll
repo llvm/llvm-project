@@ -113,3 +113,72 @@ define <64 x i1> @test_64i1(<64 x i8> %a, <64 x i8> %b) {
   %res = or <64 x i1> %cmp_res, %cmp_res2
   ret <64 x i1> %res
 }
+
+; KMOVBkk, KMOVWkk and KMOVDkk zero the mask bits above their width, so the
+; upper lanes must still be zero after the spill and reload.
+
+define i1 @test_zext_v8i1_to_v16i1(<16 x i32> %a, <16 x i32> %b) nounwind {
+; CHECK-LABEL: test_zext_v8i1_to_v16i1:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovb %k0, %k0
+; CHECK-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    callq _f
+; CHECK-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 ## 2-byte Reload
+; CHECK-NEXT:    kortestw %k0, %k0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+  %cmp = icmp ne <16 x i32> %a, %b
+  %zext = shufflevector <16 x i1> %cmp, <16 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  %int = bitcast <16 x i1> %zext to i16
+  call void @f()
+  %res = icmp eq i16 %int, 0
+  ret i1 %res
+}
+
+define i1 @test_zext_v16i1_to_v32i1(<32 x i16> %a, <32 x i16> %b) nounwind {
+; CHECK-LABEL: test_zext_v16i1_to_v32i1:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    vpcmpneqw %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %k0
+; CHECK-NEXT:    kmovd %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    callq _f
+; CHECK-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k0 ## 4-byte Reload
+; CHECK-NEXT:    kortestd %k0, %k0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+  %cmp = icmp ne <32 x i16> %a, %b
+  %zext = shufflevector <32 x i1> %cmp, <32 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
+  %int = bitcast <32 x i1> %zext to i32
+  call void @f()
+  %res = icmp eq i32 %int, 0
+  ret i1 %res
+}
+
+define i1 @test_zext_v32i1_to_v64i1(<64 x i8> %a, <64 x i8> %b) nounwind {
+; CHECK-LABEL: test_zext_v32i1_to_v64i1:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    vpcmpneqb %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovd %k0, %k0
+; CHECK-NEXT:    kmovq %k0, (%rsp) ## 8-byte Spill
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    callq _f
+; CHECK-NEXT:    kmovq (%rsp), %k0 ## 8-byte Reload
+; CHECK-NEXT:    kortestq %k0, %k0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+  %cmp = icmp ne <64 x i8> %a, %b
+  %zext = shufflevector <64 x i1> %cmp, <64 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 72, i32 73, i32 74, i32 75, i32 76, i32 77, i32 78, i32 79, i32 80, i32 81, i32 82, i32 83, i32 84, i32 85, i32 86, i32 87, i32 88, i32 89, i32 90, i32 91, i32 92, i32 93, i32 94, i32 95>
+  %int = bitcast <64 x i1> %zext to i64
+  call void @f()
+  %res = icmp eq i64 %int, 0
+  ret i1 %res
+}
