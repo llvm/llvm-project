@@ -429,6 +429,10 @@ void Flang::addCodegenOptions(const ArgList &Args,
                      options::OPT_fno_optimize_sibling_calls);
 
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
+  // Only ELF x86 and AArch64 use -fno-plt. The default is PLT,
+  // so only an explicit -fno-plt (last flag wins) is forwarded.
+  if (Triple.isOSBinFormatELF() && (Triple.isAArch64() || Triple.isX86()))
+    Args.addOptOutFlag(CmdArgs, options::OPT_fplt, options::OPT_fno_plt);
   addSeparateSectionFlags(Triple, Args, CmdArgs);
 
   if (Args.hasArg(options::OPT_fcoarray))
@@ -821,7 +825,7 @@ void Flang::addTargetOptions(const ArgList &Args, ArgStringList &CmdArgs,
     }
 
     if (Triple.isOSDarwin()) {
-      // flang doesn't currently suport nostdlib, nodefaultlibs. Adding these
+      // flang doesn't currently support nostdlib, nodefaultlibs. Adding these
       // here incase they are added someday
       if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
         if (A->getValue() == StringRef{"Accelerate"}) {
@@ -910,6 +914,16 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
                    options::OPT_fno_openmp_assume_threads_oversubscription,
                    /*Default=*/false))
     CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
+
+  // This forwards the option to switch off/on mapper generation for scenarios
+  // where the compiler considers it neccessary to generate a mapper to cover
+  // implicit allocatable member mapping inside of derived types to adhere to
+  // specification compliance.
+  if (!Args.hasFlag(
+          options::OPT_fimplicit_default_mapper_allocatable_members,
+          options::OPT_fno_implicit_default_mapper_allocatable_members,
+          /*Default=*/true))
+    CmdArgs.push_back("-fno-implicit-default-mapper-allocatable-members");
 
   if (IsOpenMPDevice) {
     // -fopenmp-is-target-device is passed along to tell the frontend that it is

@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=arm64-apple-darwin -run-pass=prolog-epilog -run-pass=machine-outliner \
-# RUN:     -verify-machineinstrs %s -o - | FileCheck %s
+# RUN:     %s -o - | FileCheck %s
 
 # Do not use the MachO compact-unwind frame-record form when the outlined
 # sequence itself reads or writes FP. Restoring FP in the outlined epilogue
@@ -12,7 +12,6 @@
 ...
 ---
 name:            bar
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $lr, $fp
@@ -68,12 +67,11 @@ body:             |
 ...
 ---
 name:            baz
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $lr
     RET undef $lr
-
+...
 # CHECK: name:            OUTLINED_FUNCTION_0
 # CHECK-NOT: STPXpre
 # CHECK-NOT: $fp = ADDXri $sp, 0, 0

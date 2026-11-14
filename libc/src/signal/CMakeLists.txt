@@ -31,6 +31,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sigpending
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigpending
+)
+
+add_entrypoint_object(
   sigaltstack
   ALIAS
   DEPENDS
@@ -49,6 +56,27 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sigsuspend
+)
+
+add_entrypoint_object(
+  sigtimedwait
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigtimedwait
+)
+
+add_entrypoint_object(
+  sigwait
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigwait
+)
+
+add_entrypoint_object(
+  sigwaitinfo
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigwaitinfo
 )
 
 add_entrypoint_object(

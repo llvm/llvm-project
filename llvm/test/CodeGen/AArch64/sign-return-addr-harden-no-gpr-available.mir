@@ -27,7 +27,6 @@
 
 ---
 name:            no_gpr_available
-tracksRegLiveness: true
 body:             |
   ; CHECK-WARNING: warning: harden-pac-ret failed for function no_gpr_available
   ; CHECK-LABEL: name: no_gpr_available
@@ -55,7 +54,6 @@ body:             |
 ...
 
 name:            one_gpr_available
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: one_gpr_available
   ; CHECK:       bb.0.entry:

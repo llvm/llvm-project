@@ -18,16 +18,6 @@
 ---
 name:            insert_32i8_idx
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: zpr, preferred-register: '' }
-  - { id: 1, class: zpr, preferred-register: '' }
-  - { id: 2, class: gpr32, preferred-register: '' }
-  - { id: 3, class: gpr64, preferred-register: '' }
-  - { id: 5, class: ppr_3b, preferred-register: '' }
-  - { id: 6, class: gpr64sp, preferred-register: '' }
-  - { id: 7, class: zpr, preferred-register: '' }
-  - { id: 8, class: zpr, preferred-register: '' }
 liveins:
   - { reg: '$z0', virtual-reg: '%0' }
   - { reg: '$z1', virtual-reg: '%1' }

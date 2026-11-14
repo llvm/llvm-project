@@ -1,4 +1,4 @@
-; RUN: not llvm-as -disable-output < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK: associated value must be pointer typed
 ; CHECK-NEXT: ptr addrspace(1) @associated.int

@@ -84,14 +84,14 @@ public:
     return sizeof(Block) + getMetadataSize(K) + D->getAllocSize();
   }
 
-  static constexpr unsigned getMetadataSize(BlockKind K) {
+  static unsigned getMetadataSize(BlockKind K) {
     switch (K) {
     case None:
       return 0;
     case Global:
       return sizeof(GlobalInlineDescriptor);
     case Local:
-      return sizeof(InlineDescriptor);
+      return sizeof(LocalInlineDescriptor);
     }
     llvm_unreachable("Unhandled Block kind");
   }
@@ -140,15 +140,6 @@ public:
   std::byte *data() { return rawData() + MDSize; }
   const std::byte *data() const { return rawData() + MDSize; }
 
-  /// Returns a pointer to the raw data, including metadata.
-  /// You are allowed to read Desc->getAllocSize() bytes from this address.
-  std::byte *rawData() {
-    return reinterpret_cast<std::byte *>(this) + sizeof(Block);
-  }
-  const std::byte *rawData() const {
-    return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
-  }
-
   template <typename T> const T &deref() const {
     return *reinterpret_cast<const T *>(data());
   }
@@ -159,7 +150,7 @@ public:
 
     if constexpr (std::is_same_v<T, GlobalInlineDescriptor>)
       assert(Kind == Global);
-    else if constexpr (std::is_same_v<T, InlineDescriptor>)
+    else if constexpr (std::is_same_v<T, LocalInlineDescriptor>)
       assert(Kind == Local);
     else
       assert(Kind == None);
@@ -220,6 +211,15 @@ private:
 
   /// For DynamicAllocator.
   void markDead() { Flags = Flags.withDead(); }
+
+  /// Returns a pointer to the raw data, including metadata.
+  /// You are allowed to read Desc->getAllocSize() bytes from this address.
+  std::byte *rawData() {
+    return reinterpret_cast<std::byte *>(this) + sizeof(Block);
+  }
+  const std::byte *rawData() const {
+    return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
+  }
 
   /// Pointer to the stack slot descriptor.
   const Descriptor *const Desc;

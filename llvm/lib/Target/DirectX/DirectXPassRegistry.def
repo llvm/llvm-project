@@ -24,18 +24,25 @@ MODULE_ANALYSIS("dxil-signature-analysis", dxil::SignatureAnalysis())
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+MODULE_PASS("dxil-asm-printer-begin", DXILAsmPrinterBeginPass())
+MODULE_PASS("dxil-asm-printer-end", DXILAsmPrinterEndPass())
 MODULE_PASS("dxil-cbuffer-access", DXILCBufferAccessPass())
+MODULE_PASS("dxil-container-globals", DXILContainerGlobalsPass())
+MODULE_PASS("dxil-container-pdb", DXILContainerPDBPass())
 MODULE_PASS("dxil-finalize-linkage", DXILFinalizeLinkagePass())
 MODULE_PASS("dxil-data-scalarization", DXILDataScalarizationPass())
 MODULE_PASS("dxil-flatten-arrays", DXILFlattenArraysPass())
 MODULE_PASS("dxil-debug-info", DXILDebugInfoPass())
+MODULE_PASS("dxil-embedder", DXILEmbedderPass())
 MODULE_PASS("dxil-intrinsic-expansion", DXILIntrinsicExpansionPass())
 MODULE_PASS("dxil-mem-intrinsics", DXILMemIntrinsicsPass())
 MODULE_PASS("dxil-op-lower", DXILOpLoweringPass())
+MODULE_PASS("dxil-prepare-module", DXILPrepareModulePass())
 MODULE_PASS("dxil-pretty-printer", DXILPrettyPrinterPass(dbgs()))
 MODULE_PASS("dxil-translate-metadata", DXILTranslateMetadataPass())
 MODULE_PASS("dxil-resource-implicit-binding", DXILResourceImplicitBindingPass())
 MODULE_PASS("dxil-post-optimization-validation", DXILPostOptimizationValidationPass())
+MODULE_PASS("dxil-writer", DXILWriterPass())
 // TODO: rename to print<foo> after NPM switch
 MODULE_PASS("print-dx-shader-flags", dxil::ShaderFlagsAnalysisPrinterPass(dbgs()))
 MODULE_PASS("print<dxil-root-signature>", dxil::RootSignatureAnalysisPrinterPass(dbgs()))
@@ -50,3 +57,9 @@ FUNCTION_PASS("dxil-remove-unused-resources", DXILRemoveUnusedResourcesPass())
 FUNCTION_PASS("dxil-resource-access", DXILResourceAccessPass())
 FUNCTION_PASS("dxil-legalize", DXILLegalizePass())
 #undef FUNCTION_PASS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("dxil-asm-printer", DXILAsmPrinterPass())
+#undef MACHINE_FUNCTION_PASS

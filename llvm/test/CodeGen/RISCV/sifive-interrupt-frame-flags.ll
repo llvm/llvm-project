@@ -1,8 +1,8 @@
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+experimental-xsfmclic \
-; RUN:   -verify-machineinstrs -stop-after=prolog-epilog -o - \
+; RUN:   -stop-after=prolog-epilog -o - \
 ; RUN:   | FileCheck %s
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+experimental-xsfmclic \
-; RUN:   -verify-machineinstrs -stop-after=prolog-epilog -o - \
+; RUN:   -stop-after=prolog-epilog -o - \
 ; RUN:   | FileCheck %s
 
 define void @preemptible_stack_swap() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {

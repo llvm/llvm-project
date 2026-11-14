@@ -862,14 +862,14 @@ define void @instructions.memops(i32** %base) {
   ; CHECK: alloca inalloca i32, i8 4, align 4
 
   load i32** %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9
-  ; CHECK: load ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9
+  ; CHECK: load ptr, ptr %base, align 8, !invariant.load !78, !nontemporal !79, !nonnull !78, !dereferenceable !80
   load volatile i32** %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9
-  ; CHECK: load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9
+  ; CHECK: load volatile ptr, ptr %base, align 8, !invariant.load !78, !nontemporal !79, !nonnull !78, !dereferenceable !80
 
   store i32* null, i32** %base, align 4, !nontemporal !8
-  ; CHECK: store ptr null, ptr %base, align 4, !nontemporal !8
+  ; CHECK: store ptr null, ptr %base, align 4, !nontemporal !79
   store volatile i32* null, i32** %base, align 4, !nontemporal !8
-  ; CHECK: store volatile ptr null, ptr %base, align 4, !nontemporal !8
+  ; CHECK: store volatile ptr null, ptr %base, align 4, !nontemporal !79
 
   ret void
 }
@@ -1118,13 +1118,13 @@ define void @intrinsics.codegen() {
   ; CHECK: call ptr @llvm.frameaddress.p0(i32 1)
 
   call i32 @llvm.read_register.i32(metadata !10)
-  ; CHECK: call i32 @llvm.read_register.i32(metadata !10)
+  ; CHECK: call i32 @llvm.read_register.i32(metadata !88)
   call i64 @llvm.read_register.i64(metadata !10)
-  ; CHECK: call i64 @llvm.read_register.i64(metadata !10)
+  ; CHECK: call i64 @llvm.read_register.i64(metadata !88)
   call void @llvm.write_register.i32(metadata !10, i32 0)
-  ; CHECK: call void @llvm.write_register.i32(metadata !10, i32 0)
+  ; CHECK: call void @llvm.write_register.i32(metadata !88, i32 0)
   call void @llvm.write_register.i64(metadata !10, i64 0)
-  ; CHECK: call void @llvm.write_register.i64(metadata !10, i64 0)
+  ; CHECK: call void @llvm.write_register.i64(metadata !88, i64 0)
 
   %stack = call i8* @llvm.stacksave()
   ; CHECK: %stack = call ptr @llvm.stacksave.p0()
@@ -1191,19 +1191,19 @@ define void @intrinsics.codegen() {
 
 ; Metadata -- Module flags
 !llvm.module.flags = !{!0, !1, !2, !4, !5, !6}
-; CHECK: !llvm.module.flags = !{!0, !1, !2, !4, !5, !6}
+; CHECK: !llvm.module.flags = !{!48, !49, !50, !52, !53, !54}
 
 !0 = !{i32 1, !"mod1", i32 0}
-; CHECK: !0 = !{i32 1, !"mod1", i32 0}
+; CHECK: !48 = !{i32 1, !"mod1", i32 0}
 !1 = !{i32 2, !"mod2", i32 0}
-; CHECK: !1 = !{i32 2, !"mod2", i32 0}
+; CHECK: !49 = !{i32 2, !"mod2", i32 0}
 !2 = !{i32 3, !"mod3", !3}
-; CHECK: !2 = !{i32 3, !"mod3", !3}
+; CHECK: !50 = !{i32 3, !"mod3", !51}
 !3 = !{!"mod6", !0}
-; CHECK: !3 = !{!"mod6", !0}
+; CHECK: !51 = !{!"mod6", !48}
 !4 = !{i32 4, !"mod4", i32 0}
-; CHECK: !4 = !{i32 4, !"mod4", i32 0}
+; CHECK: !52 = !{i32 4, !"mod4", i32 0}
 !5 = !{i32 5, !"mod5", !0}
-; CHECK: !5 = !{i32 5, !"mod5", !0}
+; CHECK: !53 = !{i32 5, !"mod5", !48}
 !6 = !{i32 6, !"mod6", !0}
-; CHECK: !6 = !{i32 6, !"mod6", !0}
+; CHECK: !54 = !{i32 6, !"mod6", !48}

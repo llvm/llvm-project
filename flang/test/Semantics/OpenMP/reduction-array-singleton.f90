@@ -36,3 +36,17 @@ subroutine empty(a)
   !$omp parallel reduction(+:a(2:1))
   !$omp end parallel
 end subroutine
+
+subroutine negative_stride_singleton(a)
+  integer :: a(4)
+  !ERROR: 'a' in REDUCTION clause must have a positive stride
+  !$omp parallel reduction(+:a(2:2:-1))
+  !$omp end parallel
+end subroutine
+
+subroutine negative_stride_empty(a)
+  integer :: a(4)
+  !ERROR: 'a' in REDUCTION clause must have a positive stride
+  !$omp parallel reduction(+:a(2:3:-1))
+  !$omp end parallel
+end subroutine

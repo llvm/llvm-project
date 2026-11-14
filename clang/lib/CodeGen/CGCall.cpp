@@ -5821,7 +5821,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // When passing arguments using temporary allocas, we need to add the
   // appropriate lifetime markers. This vector keeps track of all the lifetime
   // markers that need to be ended right after the call.
-  SmallVector<CallLifetimeEnd, 2> CallLifetimeEndAfterCall;
+  SmallVector<llvm::Value *, 2> CallLifetimeEndAfterCall;
 
   // Translate all of the arguments as necessary to match the IR lowering.
   assert(CallInfo.arg_size() == CallArgs.size() &&
@@ -5976,7 +5976,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // Emit lifetime markers for the temporary alloca and add cleanup code to
       // emit the end lifetime marker after the call.
       if (EmitLifetimeStart(AI.getPointer()))
-        CallLifetimeEndAfterCall.emplace_back(AI);
+        CallLifetimeEndAfterCall.push_back(AI.getPointer());
 
       // Generate the copy.
       I->copyInto(*this, AI);
@@ -6858,10 +6858,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     AllocAlignAttrEmitter.EmitAsAnAssumption(Loc, RetTy, Ret);
   }
 
-  // Explicitly call CallLifetimeEnd::Emit just to re-use the code even though
-  // we can't use the full cleanup mechanism.
-  for (CallLifetimeEnd &LifetimeEnd : CallLifetimeEndAfterCall)
-    LifetimeEnd.Emit(*this, /*Flags=*/{});
+  // Emit the end lifetime markers for any temporary allocas created for the
+  // call arguments.
+  for (llvm::Value *LifetimeEndAddr : CallLifetimeEndAfterCall)
+    EmitLifetimeEnd(LifetimeEndAddr);
 
   if (!ReturnValue.isExternallyDestructed() &&
       RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct)

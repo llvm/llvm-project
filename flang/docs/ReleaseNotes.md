@@ -141,6 +141,12 @@ page](https://llvm.org/releases/).
   errors. Use `-fno-out-of-bounds-subscripts` to get an error again, or
   `-Wno-out-of-bounds-subscripts` to silence the warning.
 
+- Flang now provides an opt-in warning, enabled with `-Wstat-kind`, when the
+  `STAT=` variable has a decimal exponent range smaller than four (for
+  example, an 8-bit integer). Fortran 2023 (9.7.4 p1) only recommends this
+  range, so conforming code is flagged and the warning is disabled by
+  default.
+
 ## New Compiler Flags
 - Added `-fno-out-of-bounds-subscripts`, which restores the previous behavior of
   rejecting an out-of-range constant subscript with an error. See the entry above
@@ -171,6 +177,10 @@ page](https://llvm.org/releases/).
   equal the array's declared leading extent, so that the common case has a
   constant trip count.
 
+- Added `-fplt` and `-fno-plt`. `-fno-plt` makes external function
+  calls use GOT indirection instead of the PLT. The driver forwards
+  it for ELF x86 and AArch64. The default remains PLT.
+  
 - Added `-b <arg>` on AIX, which passes `-b <arg>` to the linker.
 
 ## Windows Support

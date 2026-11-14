@@ -39,6 +39,8 @@ public:
 
   bool GetCollectBinaries() const;
   bool SetCollectBinaries(bool collect);
+
+  bool GetSuggestBugReport() const;
 };
 
 /// Diagnostics maintain an always-on, in-memory log of recent diagnostic

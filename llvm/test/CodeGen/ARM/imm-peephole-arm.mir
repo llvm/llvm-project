@@ -24,34 +24,24 @@
 ...
 ---
 name:            foo
-registers:
-  - { id: 0, class: gprnopc }
-  - { id: 1, class: rgpr }
-  - { id: 2, class: rgpr }
-  - { id: 3, class: rgpr }
-  - { id: 4, class: rgpr }
-  - { id: 5, class: rgpr }
-  - { id: 6, class: rgpr }
-  - { id: 7, class: rgpr }
-  - { id: 8, class: rgpr }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
   bb.0 (%ir-block.0):
     liveins: $r0
 
-    %0 = COPY $r0
-    %1 = MOVi32imm -25733
-    %2 = SUBrr %0, %1, 14, $noreg, $noreg
+    %0:gprnopc = COPY $r0
+    %1:rgpr = MOVi32imm -25733
+    %2:rgpr = SUBrr %0, %1, 14, $noreg, $noreg
 
-    %3 = MOVi32imm 25733
-    %4 = SUBrr %0, %3, 14, $noreg, $noreg
+    %3:rgpr = MOVi32imm 25733
+    %4:rgpr = SUBrr %0, %3, 14, $noreg, $noreg
 
-    %5 = MOVi32imm -25733
-    %6 = ADDrr %0, %5, 14, $noreg, $noreg
+    %5:rgpr = MOVi32imm -25733
+    %6:rgpr = ADDrr %0, %5, 14, $noreg, $noreg
 
-    %7 = MOVi32imm 25733
-    %8 = ADDrr %0, %7, 14, $noreg, $noreg
+    %7:rgpr = MOVi32imm 25733
+    %8:rgpr = ADDrr %0, %7, 14, $noreg, $noreg
 
     $r0 = COPY %8
     BX_RET 14, $noreg, implicit $r0

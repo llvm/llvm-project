@@ -183,6 +183,45 @@ void GlobalISelMatchTableExecutorEmitter::emitMatchTable(
   OS << "\n";
 }
 
+void GlobalISelMatchTableExecutorEmitter::emitLLTForHwModeFn(raw_ostream &OS) {
+  OS << "LLT " << getClassName()
+     << "::getLLTForHwMode(unsigned Index) const {\n";
+  if (LLTByHwModeIDs.empty()) {
+    OS << "  llvm_unreachable(\"Unexpected index\");\n}\n\n";
+    return;
+  }
+
+  // Emit the cases in index order.
+  std::vector<const LLTByHwMode *> Types(LLTByHwModeIDs.size());
+  for (const auto &[Ty, ID] : LLTByHwModeIDs)
+    Types[ID] = &Ty;
+
+  OS << "  switch (Index) {\n"
+     << "  default:\n"
+     << "    llvm_unreachable(\"Unexpected index\");\n";
+  for (const auto &[ID, Ty] : enumerate(Types)) {
+    OS << "  case " << ID << ":\n"
+       << "    switch (HwMode) {\n";
+    if (!Ty->hasDefault())
+      OS << "    default:\n      return LLT();\n";
+    for (const auto &[Mode, LTy] : *Ty) {
+      if (Mode == DefaultMode)
+        OS << "    default:\n";
+      else
+        OS << "    case " << Mode << ":\n";
+      OS << "      return ";
+      if (LTy.get().isValid())
+        LTy.emitCxxConstructorCall(OS);
+      else
+        OS << "LLT()";
+      OS << ";\n";
+    }
+    OS << "    }\n";
+  }
+  OS << "  }\n"
+     << "}\n\n";
+}
+
 void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
     raw_ostream &OS, const MatchTable &Table, ArrayRef<LLTCodeGen> TypeObjects,
     ArrayRef<RuleMatcher> Rules,
@@ -203,6 +242,9 @@ void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
   emitRunCustomAction(OS);
 
   emitMatchTable(OS, Table);
+  // Must be emitted after the match table since the indices are assigned while
+  // the match table is emitted.
+  emitLLTForHwModeFn(OS);
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitPredicateBitset(
@@ -240,6 +282,7 @@ void GlobalISelMatchTableExecutorEmitter::emitTemporariesDecl(
      << "  bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat "
         "&Imm) const override;\n"
      << "  const uint8_t *getMatchTable() const override;\n"
+     << "  LLT getLLTForHwMode(unsigned Index) const override;\n"
      << "  bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI"
         ", const MatcherState &State) "
         "const override;\n"

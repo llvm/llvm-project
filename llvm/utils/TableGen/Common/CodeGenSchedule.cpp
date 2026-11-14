@@ -121,8 +121,9 @@ struct InstRegexOp : public SetTheory::Operator {
         }
       }
 
-      // Look for top-level | or ?. We cannot optimize them to binary search.
-      if (removeParens(Original).find_first_of("|?") != std::string::npos)
+      // Look for top-level |. We cannot optimize them to binary search. A ?
+      // only applies to the preceding atom, which is not part of the prefix.
+      if (removeParens(Original).find('|') != std::string::npos)
         FirstMeta = 0;
 
       std::optional<Regex> Regexpr;

@@ -3451,5 +3451,98 @@ entry:
   ret void
 }
 
+define i32 @idot4_repeated_byte(i32 %a, i32 %b) {
+; GFX7-LABEL: idot4_repeated_byte:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_bfe_i32 v2, v0, 8, 8
+; GFX7-NEXT:    v_bfe_i32 v3, v1, 8, 8
+; GFX7-NEXT:    v_mul_i32_i24_e32 v4, v2, v3
+; GFX7-NEXT:    v_bfe_i32 v5, v0, 16, 8
+; GFX7-NEXT:    v_bfe_i32 v6, v1, 16, 8
+; GFX7-NEXT:    v_mad_i32_i24 v2, v2, v3, v4
+; GFX7-NEXT:    v_ashrrev_i32_e32 v0, 24, v0
+; GFX7-NEXT:    v_ashrrev_i32_e32 v1, 24, v1
+; GFX7-NEXT:    v_mad_i32_i24 v2, v5, v6, v2
+; GFX7-NEXT:    v_mad_i32_i24 v0, v0, v1, v2
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: idot4_repeated_byte:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mul_i32_i24_sdwa v2, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_1
+; GFX8-NEXT:    v_mul_i32_i24_sdwa v3, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
+; GFX8-NEXT:    v_mul_i32_i24_sdwa v0, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
+; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v2, v2
+; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v3, v1
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-NODL-LABEL: idot4_repeated_byte:
+; GFX9-NODL:       ; %bb.0: ; %entry
+; GFX9-NODL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NODL-NEXT:    v_mul_i32_i24_sdwa v2, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_1
+; GFX9-NODL-NEXT:    v_mul_i32_i24_sdwa v3, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
+; GFX9-NODL-NEXT:    v_mul_i32_i24_sdwa v0, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
+; GFX9-NODL-NEXT:    v_add_u32_e32 v1, v2, v2
+; GFX9-NODL-NEXT:    v_add3_u32 v0, v3, v1, v0
+; GFX9-NODL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-DL-LABEL: idot4_repeated_byte:
+; GFX9-DL:       ; %bb.0: ; %entry
+; GFX9-DL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-DL-NEXT:    s_mov_b32 s4, 0x3020101
+; GFX9-DL-NEXT:    v_perm_b32 v1, v1, v1, s4
+; GFX9-DL-NEXT:    v_perm_b32 v0, v0, v0, s4
+; GFX9-DL-NEXT:    v_dot4_i32_i8 v0, v0, v1, 0
+; GFX9-DL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-DL-LABEL: idot4_repeated_byte:
+; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-DL-NEXT:    v_perm_b32 v1, v1, v1, 0x3020101
+; GFX10-DL-NEXT:    v_perm_b32 v2, v0, v0, 0x3020101
+; GFX10-DL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-DL-NEXT:    v_dot4c_i32_i8 v0, v2, v1
+; GFX10-DL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-DL-LABEL: idot4_repeated_byte:
+; GFX11-DL:       ; %bb.0: ; %entry
+; GFX11-DL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-DL-NEXT:    v_perm_b32 v1, v1, v1, 0x3020101
+; GFX11-DL-NEXT:    v_perm_b32 v0, v0, v0, 0x3020101
+; GFX11-DL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-DL-NEXT:    v_dot4_i32_iu8 v0, v0, v1, 0 neg_lo:[1,1,0]
+; GFX11-DL-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %as1 = lshr i32 %a, 8
+  %at1 = trunc i32 %as1 to i8
+  %a1 = sext i8 %at1 to i32
+  %bs1 = lshr i32 %b, 8
+  %bt1 = trunc i32 %bs1 to i8
+  %b1 = sext i8 %bt1 to i32
+  %m1 = mul i32 %a1, %b1
+
+  %as2 = lshr i32 %a, 16
+  %at2 = trunc i32 %as2 to i8
+  %a2 = sext i8 %at2 to i32
+  %bs2 = lshr i32 %b, 16
+  %bt2 = trunc i32 %bs2 to i8
+  %b2 = sext i8 %bt2 to i32
+  %m2 = mul i32 %a2, %b2
+
+  %as3 = lshr i32 %a, 24
+  %at3 = trunc i32 %as3 to i8
+  %a3 = sext i8 %at3 to i32
+  %bs3 = lshr i32 %b, 24
+  %bt3 = trunc i32 %bs3 to i8
+  %b3 = sext i8 %bt3 to i32
+  %m3 = mul i32 %a3, %b3
+
+  %s0 = add i32 %m1, %m2
+  %s1 = add i32 %s0, %m1
+  %s2 = add i32 %s1, %m3
+  ret i32 %s2
+}
 
 declare i32 @llvm.amdgcn.workitem.id.x()

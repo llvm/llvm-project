@@ -19,7 +19,6 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
@@ -61,7 +60,6 @@ Error DwarfStreamer::init(Triple TheTriple,
                              "no register info for target %s",
                              TripleName.c_str());
 
-  MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.AsmVerbose = true;
   MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
@@ -368,7 +366,7 @@ void DwarfStreamer::emitDebugNames(DWARF5AccelTable &Table) {
                                           (uint64_t)UniqueIdToCuMap.size() - 1);
   /// llvm-dwarfutil doesn't support type units + .debug_names right now.
   // FIXME: add support for type units + .debug_names. For now the behavior is
-  // unsuported.
+  // unsupported.
   emitDWARF5AccelTable(
       Asm.get(), Table, CompUnits,
       [&](const DWARF5AccelTableData &Entry)

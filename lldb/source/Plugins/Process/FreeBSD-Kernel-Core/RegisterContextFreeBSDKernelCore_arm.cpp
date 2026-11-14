@@ -24,7 +24,7 @@ using namespace lldb_private;
 RegisterContextFreeBSDKernelCore_arm::RegisterContextFreeBSDKernelCore_arm(
     Thread &thread, std::unique_ptr<RegisterInfo_arm> register_info_up,
     lldb::addr_t pcb_addr)
-    : RegisterContextPOSIX_arm(thread, std::move(register_info_up)),
+    : RegisterContextCore_arm(thread, std::move(register_info_up)),
       m_pcb_addr(pcb_addr) {}
 
 bool RegisterContextFreeBSDKernelCore_arm::ReadGPR() { return true; }

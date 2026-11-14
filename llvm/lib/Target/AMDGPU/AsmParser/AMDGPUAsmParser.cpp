@@ -557,12 +557,12 @@ public:
   bool isVSrc_b64() const { return isVCSrc_f64() || isLiteralImm(MVT::i64); }
 
   bool isVSrc_v2b64() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::i64) ||
+    return isRegOrInlineNoModsTarget(AMDGPU::VS_128_AlignTarget, MVT::i64) ||
            isLiteralImm(MVT::i64);
   }
 
   bool isVSrc_v2f64() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::f64) ||
+    return isRegOrInlineNoModsTarget(AMDGPU::VS_128_AlignTarget, MVT::f64) ||
            isLiteralImm(MVT::f64);
   }
 
@@ -1063,8 +1063,9 @@ class KernelScopeInfo {
       if (Ctx) {
         MCSymbol *const Sym =
             Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
-        int totalVGPR = getTotalNumVGPRs(isGFX90A(*MSTI), AgprIndexUnusedMin,
-                                         VgprIndexUnusedMin);
+        int totalVGPR =
+            getTotalNumVGPRs(isGFX90A(*MSTI), std::max(AgprIndexUnusedMin, 0),
+                             VgprIndexUnusedMin);
         Sym->setVariableValue(MCConstantExpr::create(totalVGPR, *Ctx));
       }
     }
@@ -1085,8 +1086,9 @@ class KernelScopeInfo {
         // Also update vgpr_count (dependent on agpr_count for gfx908/gfx90a)
         MCSymbol *const vSym =
             Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
-        int totalVGPR = getTotalNumVGPRs(isGFX90A(*MSTI), AgprIndexUnusedMin,
-                                         VgprIndexUnusedMin);
+        int totalVGPR =
+            getTotalNumVGPRs(isGFX90A(*MSTI), std::max(AgprIndexUnusedMin, 0),
+                             VgprIndexUnusedMin);
         vSym->setVariableValue(MCConstantExpr::create(totalVGPR, *Ctx));
       }
     }
@@ -1365,6 +1367,10 @@ public:
     return getFeatureBits()[AMDGPU::FeatureGloballyAddressableScratch];
   }
 
+  bool hasScaleOffset() const {
+    return getFeatureBits()[AMDGPU::FeatureScaleOffset];
+  }
+
   bool hasCacheFillSize() const {
     return getFeatureBits()[AMDGPU::FeatureCacheFillSize];
   }
@@ -1614,6 +1620,7 @@ private:
   bool validateOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateFlatOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
+  bool validateSMEMSData(const MCInst &Inst, const OperandVector &Operands);
   bool validateBF16InlineConst(const MCInst &Inst,
                                const OperandVector &Operands);
   bool validateSOPLiteral(const MCInst &Inst, const OperandVector &Operands);
@@ -2241,7 +2248,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
       if (Lit == LitModifier::None && AsmParser->hasInv2PiInlineImm() &&
           Literal == 0x3fc45f306725feed) {
         // This is the 1/(2*pi) which is going to be truncated to bf16 with the
-        // loss of precision. The constant represents ideomatic fp32 value of
+        // loss of precision. The constant represents idiomatic fp32 value of
         // 1/(2*pi) = 0.15915494 since bf16 is in fact fp32 with cleared low 16
         // bits. Prevent rounding below.
         Inst.addOperand(MCOperand::createImm(0x3e22));
@@ -4675,6 +4682,22 @@ bool AMDGPUAsmParser::validateSMEMOffset(const MCInst &Inst,
   return false;
 }
 
+// GFX12+ SMEM prefetches and probes encode an immediate sdata in 5 bits.
+bool AMDGPUAsmParser::validateSMEMSData(const MCInst &Inst,
+                                        const OperandVector &Operands) {
+  if (!isGFX12Plus() || !SIInstrFlags::isSMRD(MII, Inst))
+    return true;
+
+  int OpNum =
+      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::sdata);
+  if (OpNum == -1 || !Inst.getOperand(OpNum).isImm() ||
+      isUInt<5>(Inst.getOperand(OpNum).getImm()))
+    return true;
+
+  Error(getOperandLoc(Operands, OpNum), "expected a 5-bit unsigned immediate");
+  return false;
+}
+
 // On subtargets with FeatureBF16InlineConstFromUpperFP32 the hardware generates
 // a bf16 inline constant in the high half of the corresponding fp32 inline
 // constant. A VOP1 bf16 opcode (v_cvt_f32_bf16 and the bf16 transcendentals)
@@ -5330,19 +5353,18 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
     }
   }
 
-  if (!isGFX1250Plus()) {
-    if (CPol & CPol::SCAL) {
-      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
-      StringRef CStr(S.getPointer());
-      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
-      Error(S, "scale_offset is not supported on this GPU");
-    }
-    if (CPol & CPol::NV) {
-      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
-      StringRef CStr(S.getPointer());
-      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
-      Error(S, "nv is not supported on this GPU");
-    }
+  if (!hasScaleOffset() && (CPol & CPol::SCAL)) {
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+    StringRef CStr(S.getPointer());
+    S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
+    Error(S, "scale_offset is not supported on this GPU");
+  }
+
+  if (!isGFX1250Plus() && (CPol & CPol::NV)) {
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+    StringRef CStr(S.getPointer());
+    S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
+    Error(S, "nv is not supported on this GPU");
   }
 
   if ((CPol & CPol::SCAL) && !supportsScaleOffset(MII, Inst.getOpcode())) {
@@ -5544,7 +5566,7 @@ bool AMDGPUAsmParser::validateMonitorSleep(const MCInst &Inst,
   int ImmIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::simm16);
   if (Inst.getOperand(ImmIdx).getImm() & 0x8000) {
     Error(getOperandLoc(Operands, ImmIdx),
-          "sleep forever is unsuported on the target");
+          "sleep forever is unsupported on the target");
     return false;
   }
 
@@ -5696,6 +5718,8 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
   if (!validateOffset(Inst, Operands)) {
     return false;
   }
+  if (!validateSMEMSData(Inst, Operands))
+    return false;
   if (!validateBF16InlineConst(Inst, Operands)) {
     return false;
   }
@@ -6266,11 +6290,6 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (ISA.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
-      if (!getFeatureBits().test(AMDGPU::FeatureSupportsWave32) ||
-          !getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
-        return Error(IDRange.Start,
-                     "directive unsupported on " + getSTI().getCPU(), IDRange);
-      }
       EnableWavefrontSize32 = Val;
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32, ExprVal,

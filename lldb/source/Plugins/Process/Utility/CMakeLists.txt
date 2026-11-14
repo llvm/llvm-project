@@ -14,24 +14,9 @@ add_lldb_library(lldbPluginProcessUtility
   NativeProcessSoftwareSingleStep.cpp
   NetBSDSignals.cpp
   OpenBSDSignals.cpp
-  RegisterContextDarwin_arm.cpp
-  RegisterContextDarwin_arm64.cpp
-  RegisterContextDarwin_riscv32.cpp
-  RegisterContextDarwin_x86_64.cpp
   RegisterContextDummy.cpp
   RegisterContextHistory.cpp
-  RegisterContextMach_arm.cpp
-  RegisterContextMach_x86_64.cpp
   RegisterContextMemory.cpp
-  RegisterContextPOSIX_arm.cpp
-  RegisterContextPOSIX_arm64.cpp
-  RegisterContextPOSIX_loongarch64.cpp
-  RegisterContextPOSIX_riscv32.cpp
-  RegisterContextPOSIX_powerpc.cpp
-  RegisterContextPOSIX_ppc64le.cpp
-  RegisterContextPOSIX_riscv64.cpp
-  RegisterContextPOSIX_s390x.cpp
-  RegisterContextPOSIX_x86.cpp
   RegisterContextThreadMemory.cpp
   StopInfoMachException.cpp
   ThreadMemory.cpp

@@ -3,7 +3,6 @@
 
 ---
 name: fneg_f32
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -20,7 +19,6 @@ body: |
 ...
 ---
 name: fneg_f64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments

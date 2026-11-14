@@ -12,7 +12,6 @@
 ---
 
 name:           outline_default_arm
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_default_arm
   ; CHECK: bb.0:
@@ -66,7 +65,6 @@ body:             |
 ---
 
 name:           outline_default_thumb
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_default_thumb
   ; CHECK: bb.0:
@@ -130,3 +128,4 @@ body:             |
   ; CHECK:   $r4 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r5 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   MOVPCLR 14 /* CC::al */, $noreg
+...

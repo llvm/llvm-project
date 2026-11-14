@@ -18,12 +18,19 @@
 #include "flang/Parser/message.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include <functional>
 
 using namespace std::placeholders; // _1, _2, &c. for std::bind()
 
 namespace Fortran::evaluate {
+
+bool IsSubscriptIntegerKind(const Shape &shape) {
+  return llvm::all_of(shape, [](const MaybeExtentExpr &extent) {
+    return IsSubscriptIntegerKind(extent);
+  });
+}
 
 FoldingContext &GetFoldingContextFrom(const Symbol &symbol) {
   return symbol.owner().context().foldingContext();
@@ -250,7 +257,6 @@ bool ContainsUntaggedRankOneBoundElement(const Expr<T> &expr) {
   return MyVisitor{}(expr);
 }
 template bool ContainsUntaggedRankOneBoundElement(const Expr<SomeType> &);
-template bool ContainsUntaggedRankOneBoundElement(const Expr<SomeInteger> &);
 template bool ContainsUntaggedRankOneBoundElement(
     const Expr<SubscriptInteger> &);
 
@@ -1178,7 +1184,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         // SHAPE(RESHAPE(array,shape)) -> shape
         if (const auto *shapeExpr{
                 call.arguments().at(1).value().UnwrapExpr()}) {
-          auto shapeArg{std::get<Expr<SomeInteger>>(shapeExpr->u)};
+          auto shapeArg{
+              std::get<Expr<Type<TypeCategory::Integer>>>(shapeExpr->u)};
           if (auto result{AsShapeResult(ConvertToType<ExtentType>(
                   ExtentIntKind, std::move(shapeArg)))}) {
             return result;
@@ -1192,8 +1199,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         auto arrayShape{
             (*this)(UnwrapExpr<Expr<SomeType>>(call.arguments().at(0)))};
         const auto *dimArg{UnwrapExpr<Expr<SomeType>>(call.arguments().at(1))};
-        const auto *nCopies{
-            UnwrapExpr<Expr<SomeInteger>>(call.arguments().at(2))};
+        const auto *nCopies{UnwrapExpr<Expr<Type<TypeCategory::Integer>>>(
+            call.arguments().at(2))};
         if (arrayShape && dimArg && nCopies) {
           if (auto dim{ToInt64(*dimArg)}) {
             if (*dim >= 1 &&
@@ -1211,8 +1218,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
     } else if (intrinsic->name == "transfer") {
       if (call.arguments().size() == 3 && call.arguments().at(2)) {
         // SIZE= is present; shape is vector [SIZE=]
-        if (const auto *size{
-                UnwrapExpr<Expr<SomeInteger>>(call.arguments().at(2))}) {
+        if (const auto *size{UnwrapExpr<Expr<Type<TypeCategory::Integer>>>(
+                call.arguments().at(2))}) {
           return Shape{MaybeExtentExpr{
               ConvertToType<ExtentType>(ExtentIntKind, common::Clone(*size))}};
         }
