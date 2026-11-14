@@ -131,6 +131,26 @@ hsa_status_t hsa_amd_memory_async_copy(void *dst, hsa_agent_t dst_agent,
                                        const hsa_signal_t *dep_signals,
                                        hsa_signal_t completion_signal);
 
+typedef struct hsa_pitched_ptr_s {
+  void *base;
+  size_t pitch;
+  size_t slice;
+} hsa_pitched_ptr_t;
+
+typedef enum hsa_amd_copy_direction {
+  hsaHostToHost = 0,
+  hsaHostToDevice = 1,
+  hsaDeviceToHost = 2,
+  hsaDeviceToDevice = 3,
+} hsa_amd_copy_direction_t;
+
+hsa_status_t hsa_amd_memory_async_copy_rect(
+    const hsa_pitched_ptr_t *dst, const hsa_dim3_t *dst_offset,
+    const hsa_pitched_ptr_t *src, const hsa_dim3_t *src_offset,
+    const hsa_dim3_t *range, hsa_agent_t copy_agent,
+    hsa_amd_copy_direction_t dir, uint32_t num_dep_signals,
+    const hsa_signal_t *dep_signals, hsa_signal_t completion_signal);
+
 typedef enum hsa_amd_sdma_engine_id {
   HSA_AMD_SDMA_ENGINE_0 = 0x1,
   HSA_AMD_SDMA_ENGINE_1 = 0x2,

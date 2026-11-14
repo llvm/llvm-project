@@ -17,6 +17,7 @@
 #include <cstring>
 #include <deque>
 #include <functional>
+#include <limits>
 #include <map>
 #include <mutex>
 #include <string>
@@ -349,6 +350,34 @@ static Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst,
       Dst, DstAgent, Src, SrcAgent, Size, NumDepSignals, DepSignals,
       CompletionSignal, *SdmaEngine, /*force_copy_on_sdma=*/true);
   return Plugin::check(S, "error in hsa_amd_memory_async_copy_on_engine: %s");
+}
+
+/// Dispatches an asynchronous 3D memory copy.
+static Error asyncMemCopy3D(const GenericDeviceTy::Copy3DTy &Copy,
+                            hsa_agent_t CopyAgent, uint32_t NumDepSignals,
+                            const hsa_signal_t *DepSignals,
+                            hsa_signal_t CompletionSignal) {
+  hsa_pitched_ptr_t Dst = {Copy.DstPtr, Copy.DstPitch, Copy.DstSlicePitch};
+  hsa_pitched_ptr_t Src = {const_cast<void *>(Copy.SrcPtr), Copy.SrcPitch,
+                           Copy.SrcSlicePitch};
+  hsa_dim3_t DstOffset = {static_cast<uint32_t>(Copy.DstOffset[0]),
+                          static_cast<uint32_t>(Copy.DstOffset[1]),
+                          static_cast<uint32_t>(Copy.DstOffset[2])};
+  hsa_dim3_t SrcOffset = {static_cast<uint32_t>(Copy.SrcOffset[0]),
+                          static_cast<uint32_t>(Copy.SrcOffset[1]),
+                          static_cast<uint32_t>(Copy.SrcOffset[2])};
+  hsa_dim3_t Range = {static_cast<uint32_t>(Copy.Extent[0]),
+                      static_cast<uint32_t>(Copy.Extent[1]),
+                      static_cast<uint32_t>(Copy.Extent[2])};
+
+  hsa_amd_copy_direction_t Dir =
+      Copy.SrcIsHost ? (Copy.DstIsHost ? hsaHostToHost : hsaHostToDevice)
+                     : (Copy.DstIsHost ? hsaDeviceToHost : hsaDeviceToDevice);
+
+  hsa_status_t S = hsa_amd_memory_async_copy_rect(
+      &Dst, &DstOffset, &Src, &SrcOffset, &Range, CopyAgent, Dir, NumDepSignals,
+      DepSignals, CompletionSignal);
+  return Plugin::check(S, "error in hsa_amd_memory_async_copy_rect: %s");
 }
 
 static Error getTargetTripleAndFeatures(hsa_agent_t Agent,
@@ -1899,6 +1928,35 @@ public:
                                    OutputSignal->get());
   }
 
+  Error pushMemoryCopy3DAsync(const GenericDeviceTy::Copy3DTy &Copy,
+                              hsa_agent_t CopyAgent) {
+    AMDGPUSignalTy *OutputSignal;
+    if (auto Err = SignalManager.getResources(/*Num=*/1, &OutputSignal))
+      return Err;
+    OutputSignal->reset();
+    OutputSignal->increaseUseCount();
+
+    std::lock_guard<std::mutex> Lock(Mutex);
+
+    auto [Curr, InputSignal] = consume(OutputSignal);
+
+    hsa_signal_t InputSignalRaw{};
+    bool HasInput = InputSignal && InputSignal->load();
+    if (HasInput)
+      InputSignalRaw = InputSignal->get();
+
+    if (auto Err = hsa_utils::asyncMemCopy3D(
+            Copy, CopyAgent, HasInput ? 1 : 0,
+            HasInput ? &InputSignalRaw : nullptr, OutputSignal->get())) {
+      rollbackConsumedSlot(Curr);
+      if (OutputSignal->decreaseUseCount())
+        if (auto ReturnErr = SignalManager.returnResource(OutputSignal))
+          return joinErrors(std::move(Err), std::move(ReturnErr));
+      return Err;
+    }
+    return Plugin::success();
+  }
+
   Error pushHostCallback(HostFnType Callback, void *UserData) {
     // Retrieve an available signal for the operation's output.
     AMDGPUSignalTy *OutputSignal = nullptr;
@@ -3269,6 +3327,96 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Args.release();
     return Plugin::success();
+  }
+
+  Error dataMemcpy3DImpl(const Copy3DTy &Copy,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    if (!Copy.fitsIn32Bits())
+      return Plugin::error(ErrorCode::INVALID_SIZE,
+                           "3D copy offset, extent or pitch exceeds 32 bits");
+
+    if (Copy.DstIsHost && Copy.SrcIsHost) {
+      if (AsyncInfoWrapper.hasQueue())
+        if (auto Err = synchronize(AsyncInfoWrapper))
+          return Err;
+      Copy.copyHost();
+      return Plugin::success();
+    }
+
+    Copy3DTy Local = Copy;
+    void *Locked[2] = {nullptr, nullptr};
+    const void *Unpinned[2] = {nullptr, nullptr};
+
+    auto Span = [&](size_t Pitch, size_t SlicePitch, const size_t *Off) {
+      return (Off[2] + Copy.Extent[2] - 1) * SlicePitch +
+             (Off[1] + Copy.Extent[1] - 1) * Pitch + Off[0] + Copy.Extent[0];
+    };
+    size_t Spans[2] = {Span(Copy.DstPitch, Copy.DstSlicePitch, Copy.DstOffset),
+                       Span(Copy.SrcPitch, Copy.SrcSlicePitch, Copy.SrcOffset)};
+
+    if (Copy.DstIsHost) {
+      if (void *P =
+              PinnedAllocs.getDeviceAccessiblePtrFromPinnedBuffer(Copy.DstPtr))
+        Local.DstPtr = P;
+      else
+        Unpinned[0] = Copy.DstPtr;
+    }
+    if (Copy.SrcIsHost) {
+      if (void *P =
+              PinnedAllocs.getDeviceAccessiblePtrFromPinnedBuffer(Copy.SrcPtr))
+        Local.SrcPtr = P;
+      else
+        Unpinned[1] = Copy.SrcPtr;
+    }
+
+    if (!Unpinned[0] && !Unpinned[1]) {
+      AMDGPUStreamTy *Stream = nullptr;
+      if (auto Err = getStream(AsyncInfoWrapper, Stream))
+        return Err;
+      return Stream->pushMemoryCopy3DAsync(Local, getAgent());
+    }
+
+    // Pageable host memory has to be locked for the duration of the copy.
+    if (AsyncInfoWrapper.hasQueue())
+      if (auto Err = synchronize(AsyncInfoWrapper))
+        return Err;
+
+    Error Err = Error::success();
+    for (int I = 0; I < 2 && !Err; ++I) {
+      if (!Unpinned[I])
+        continue;
+      hsa_status_t Status = hsa_amd_memory_lock(
+          const_cast<void *>(Unpinned[I]), Spans[I], nullptr, 0, &Locked[I]);
+      Err = Plugin::check(Status, "error in hsa_amd_memory_lock: %s\n");
+    }
+
+    if (!Err) {
+      if (Unpinned[0])
+        Local.DstPtr = Locked[0];
+      if (Unpinned[1])
+        Local.SrcPtr = Locked[1];
+
+      AMDGPUSignalTy Signal;
+      Err = Signal.init();
+      if (!Err) {
+        Err = hsa_utils::asyncMemCopy3D(Local, getAgent(), 0, nullptr,
+                                        Signal.get());
+        if (!Err)
+          Err = Signal.wait(getStreamBusyWaitMicroseconds());
+        Err = joinErrors(std::move(Err), Signal.deinit());
+      }
+    }
+
+    for (int I = 0; I < 2; ++I) {
+      if (!Locked[I])
+        continue;
+      hsa_status_t Status =
+          hsa_amd_memory_unlock(const_cast<void *>(Unpinned[I]));
+      Err = joinErrors(
+          std::move(Err),
+          Plugin::check(Status, "error in hsa_amd_memory_unlock: %s\n"));
+    }
+    return Err;
   }
 
   /// Exchange data between two devices within the plugin.
