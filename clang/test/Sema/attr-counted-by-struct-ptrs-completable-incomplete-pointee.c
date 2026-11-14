@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,immediate %s
 // RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -verify %s
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
@@ -616,9 +616,10 @@ struct IncompleteTy3;
 
 struct CBBufFAMofCountedByPtrs {
   int size;
-  // TODO: This is misleading. The attribute is written in the type position
-  // but clang currently doesn't treat it like that and it gets treated as
-  // an attribute on the array, rather than on the element type.
+  // The attribute is written on the element type, so it's a nested pointer.
+  // With -fexperimental-late-parse-attributes it's still treated as an
+  // attribute on the array until late parsing handles type attributes.
+  // immediate-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
   struct IncompleteTy3* __counted_by(size) arr[];
 };
 

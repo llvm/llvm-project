@@ -6481,6 +6481,7 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
         break;
       }
 
+      case TypeLoc::CountAttributed:
       case TypeLoc::Adjusted:
       case TypeLoc::BTFTagAttributed: {
         CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
@@ -9050,6 +9051,125 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
   }
 }
 
+/// Return true if the type built at \p chunkIndex is part of a function's
+/// return type, i.e. a function chunk wraps it at any level. In both
+/// `int *__counted_by(n) (*fp)(void)` and `int *__counted_by(n) *(*fp)(void)`,
+/// the attributed pointer is in the return type of the function `fp` points to.
+///
+/// Chunk 0 is the one closest to the identifier, which is the outermost part of
+/// the type, so the type built by chunk i is wrapped by chunk i - 1. A
+/// parameter has its own declarator, so it is never part of \p D's chunks.
+static bool isOnFunctionReturnType(const Declarator &D, unsigned chunkIndex) {
+  assert(chunkIndex <= D.getNumTypeObjects());
+  for (unsigned i = chunkIndex; i != 0; --i)
+    if (D.getTypeObject(i - 1).Kind == DeclaratorChunk::Function)
+      return true;
+  return false;
+}
+
+/// Return the number of pointer and array chunks that wrap the type built at
+/// \p chunkIndex, up to the nearest function chunk. The level is relative to
+/// the type the attribute belongs to: the declared type, or the return type of
+/// the nearest enclosing function.
+///
+/// In `int *__counted_by(n) *pp`, the attributed pointer is chunk 1, wrapped by
+/// the pointer at chunk 0, so its level is 1. In
+/// `int *__counted_by(n) *(*fp)(void)`, the attributed pointer is chunk 4,
+/// wrapped by the pointer at chunk 3 and then the function at chunk 2, so its
+/// level is 1, relative to the return type.
+static unsigned getPointerNestLevel(const Declarator &D, unsigned chunkIndex) {
+  assert(chunkIndex <= D.getNumTypeObjects());
+  unsigned Level = 0;
+  for (unsigned i = chunkIndex; i != 0; --i) {
+    switch (D.getTypeObject(i - 1).Kind) {
+    case DeclaratorChunk::Function:
+      return Level;
+    case DeclaratorChunk::Pointer:
+    case DeclaratorChunk::Array:
+      ++Level;
+      break;
+    default:
+      break;
+    }
+  }
+  return Level;
+}
+
+/// A counted_by-family attribute written in the decl-spec applies to the
+/// top-level type of each declarator. Move it to the top-level declarator
+/// chunk, skipping parentheses, so that `__counted_by(n) int *p` is handled
+/// like `int *__counted_by(n) p`. Return false if there is no such chunk, in
+/// which case the decl-spec type is the top-level type.
+///
+/// FIXME: One written after the type specifier, as in
+/// `int __counted_by(n) *p`, should apply to the adjacent type and be
+/// rejected. Moving it to the top-level type is an existing bug, kept for now.
+/// See https://github.com/llvm/llvm-project/issues/241454.
+static bool distributeBoundsAttrFromDeclSpec(TypeProcessingState &State,
+                                             ParsedAttr &Attr) {
+  Declarator &D = State.getDeclarator();
+  for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i) {
+    DeclaratorChunk &Chunk = D.getTypeObject(i);
+    if (Chunk.Kind == DeclaratorChunk::Paren)
+      continue;
+    // The DeclSpec attributes are shared by every declarator, so restore
+    // them once this one is processed.
+    State.saveDeclSpecAttrs();
+    moveAttrFromListToList(Attr, State.getCurrentAttributes(),
+                           Chunk.getAttrs());
+    return true;
+  }
+  return false;
+}
+
+static void HandleCountedByAttrOnType(TypeProcessingState &State,
+                                      QualType &CurType, ParsedAttr &Attr) {
+  Sema &S = State.getSema();
+
+  // This attribute is only supported in C.
+  if (!Attr.diagnoseLangOpts(S)) {
+    Attr.setInvalid();
+    return;
+  }
+
+  auto *CountExpr = Attr.getArgAsExpr(0);
+  if (!CountExpr)
+    return;
+
+  const Declarator &D = State.getDeclarator();
+  unsigned chunkIndex = State.getCurrentChunkIndex();
+
+  Sema::BoundsAttrFlags Flags;
+  if (!S.ValidateBoundsAttrTypeForTypePosition(
+          CurType, Attr.getKind(), Attr.getLoc(), Attr.getRange(),
+          getPointerNestLevel(D, chunkIndex),
+          isOnFunctionReturnType(D, chunkIndex), Flags)) {
+    Attr.setInvalid();
+    return;
+  }
+
+  // For a field, check the record and the count before building the type, so
+  // a rejected attribute never produces a CountAttributedType. The record, or
+  // the Objective-C container of an instance variable, being defined is the
+  // current context.
+  if (D.getContext() == DeclaratorContext::Member) {
+    if (S.CheckCountedByAttrInRecord(S.CurContext, CurType, CountExpr,
+                                     Attr.getLoc(), Attr.getRange(),
+                                     Flags.CountInBytes, Flags.OrNull)) {
+      Attr.setInvalid();
+      return;
+    }
+  }
+
+  QualType NewType = S.BuildCountAttributedArrayOrPointerType(
+      CurType, CountExpr, Flags.CountInBytes, Flags.OrNull);
+  if (NewType.isNull()) {
+    Attr.setInvalid();
+    return;
+  }
+  CurType = NewType;
+}
+
 bool Sema::ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT) {
   // A DeclSpec attribute runs this once per declarator, as in
   // `IP __counted_by(n) a, b;`. Reuse one node, as the eager path does, so no
@@ -9060,10 +9180,11 @@ bool Sema::ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT) {
   }
 
   // Nesting is checked once the enclosing declarator chunks wrap the node.
-  BoundsAttrFlags Flags;
-  if (!ValidateBoundsAttrTypeForTypePosition(QT, LA.Kind, LA.NameLoc,
-                                             SourceRange(LA.NameLoc),
-                                             /*PointerNestLevel=*/0, Flags))
+  BoundsAttrFlags Flags = BoundsAttrFlags::get(LA.Kind);
+  if (!ValidateBoundsAttrTypeShape(QT, LA.NameLoc, SourceRange(LA.NameLoc),
+                                   Flags, /*AttrSpelling=*/{},
+                                   /*AllowRedecl=*/false, /*AttrArg=*/nullptr,
+                                   /*UpdateFlags=*/false))
     return false;
 
   // The argument isn't parsed yet, so build the type without a count.
@@ -9316,6 +9437,37 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 
     case ParsedAttr::AT_SwiftAttr: {
       HandleSwiftAttr(state, TAL, type, attr);
+      break;
+    }
+
+    case ParsedAttr::AT_CountedBy:
+    case ParsedAttr::AT_CountedByOrNull:
+    case ParsedAttr::AT_SizedBy:
+    case ParsedAttr::AT_SizedByOrNull: {
+      // FIXME: Only the GNU spelling is late-parsed, and the late-parsing path
+      // hasn't been switched to the new mechanism to support type-position
+      // attributes yet. Leave a late-parsed one to declaration attribute
+      // processing.
+      if (state.getSema().getLangOpts().ExperimentalLateParseAttributes &&
+          attr.isGNUAttribute())
+        break;
+      // The attribute only applies to fields for now. Leave it to declaration
+      // attribute processing, which diagnoses the GNU spelling. That doesn't
+      // see a [[]] one on a declarator chunk, so diagnose it here as the
+      // default case would.
+      if (state.getDeclarator().getContext() != DeclaratorContext::Member) {
+        if (!attr.isGNUAttribute() && TAL == TAL_DeclChunk) {
+          state.getSema().Diag(attr.getLoc(), diag::err_attribute_not_type_attr)
+              << attr << attr.isRegularKeywordAttribute();
+          attr.setUsedAsTypeAttr();
+        }
+        break;
+      }
+      if (TAL == TAL_DeclSpec && attr.isGNUAttribute() &&
+          distributeBoundsAttrFromDeclSpec(state, attr))
+        break;
+      HandleCountedByAttrOnType(state, type, attr);
+      attr.setUsedAsTypeAttr();
       break;
     }
 
@@ -10090,7 +10242,11 @@ QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
                                                       Expr *CountExpr,
                                                       bool CountInBytes,
                                                       bool OrNull) {
-  assert(WrappedTy->isIncompleteArrayType() || WrappedTy->isPointerType());
+  // Accept any array or pointer type here. The caller has checked the field
+  // and its count (see CheckCountedByAttrInRecord), so the count is a
+  // DeclRefExpr and an array is a flexible array member.
+  assert(WrappedTy->isArrayType() || WrappedTy->isPointerType());
+  assert(isa<DeclRefExpr>(CountExpr) && "count must be checked by the caller");
 
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
   BuildTypeCoupledDecls(CountExpr, Decls);

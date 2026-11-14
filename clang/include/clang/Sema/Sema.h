@@ -2575,21 +2575,38 @@ public:
                                    bool UpdateFlags = true);
 
   /// Check a counted_by-family attribute in type position and initialize
-  /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer, array
-  /// and function declarator chunks enclosing the attribute.
+  /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer and
+  /// array declarator chunks enclosing the attribute, up to the nearest
+  /// function declarator chunk. \p OnReturnType is true if a function chunk
+  /// encloses it, i.e. the attribute is in a function's return type.
   ///
   /// \returns false after diagnosing an attribute that must be dropped (see
   /// ValidateBoundsAttrTypeShape).
   bool ValidateBoundsAttrTypeForTypePosition(
       QualType Ty, AttributeCommonInfo::Kind AttrKind, SourceLocation AttrLoc,
-      SourceRange AttrRange, unsigned PointerNestLevel, BoundsAttrFlags &Flags);
+      SourceRange AttrRange, unsigned PointerNestLevel, bool OnReturnType,
+      BoundsAttrFlags &Flags);
+
+  /// Check where a counted_by-family attribute of kind \p Kind sits in its
+  /// declarator, as described by \p PointerNestLevel and \p OnReturnType (see
+  /// ValidateBoundsAttrTypeForTypePosition).
+  ///
+  /// \returns false after diagnosing an attribute in an unsupported position.
+  bool ValidateBoundsAttrPosition(BoundsAttributedType::BoundsAttrKind Kind,
+                                  SourceLocation AttrLoc, SourceRange AttrRange,
+                                  unsigned PointerNestLevel, bool OnReturnType);
 
   /// Check if applying the specified attribute variant from the "counted by"
-  /// family of attributes to FieldDecl \p FD is semantically valid. If
-  /// semantically invalid diagnostics will be emitted explaining the problems.
+  /// family of attributes to a field of \p DC, with type \p Ty, is
+  /// semantically valid. If semantically invalid, diagnostics will be emitted
+  /// explaining the problems. This doesn't need the FieldDecl, so it can run
+  /// before the field's type is built.
   ///
-  /// \param FD The FieldDecl to apply the attribute to
+  /// \param DC The record the field is declared in, or the Objective-C
+  ///           container of an instance variable
+  /// \param Ty The type the attribute applies to
   /// \param E The count expression on the attribute
+  /// \param Loc, Range Where to report problems with the field itself
   /// \param CountInBytes If true the attribute is from the "sized_by" family of
   ///                     attributes. If the false the attribute is from
   ///                     "counted_by" family of attributes.
@@ -2602,6 +2619,11 @@ public:
   /// `counted_by_or_null` attribute.
   ///
   /// \returns false iff semantically valid.
+  bool CheckCountedByAttrInRecord(const DeclContext *DC, QualType Ty, Expr *E,
+                                  SourceLocation Loc, SourceRange Range,
+                                  bool CountInBytes, bool OrNull);
+
+  /// Like CheckCountedByAttrInRecord, for the field \p FD.
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
