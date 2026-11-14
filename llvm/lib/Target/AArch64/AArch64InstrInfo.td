@@ -3446,6 +3446,19 @@ def : Pat<(not logical_shifted_reg32:$Rm_and_shift),
 def : Pat<(not logical_shifted_reg64:$Rm_and_shift),
           (ORNXrs XZR, logical_shifted_reg64:$Rm_and_shift)>;
 
+// Use the 32-bit logical immediate encoding when the high 32 bits are zero.
+def logical_imm32_only64 : IntImmLeaf<i64, [{
+  uint64_t V = Imm.getZExtValue();
+  return V <= 0xffffffffULL &&
+         AArch64_AM::isLogicalImmediate(V, 32) &&
+         !AArch64_AM::isLogicalImmediate(V, 64);
+}]>;
+
+let AddedComplexity = 6, GISelShouldIgnore = 1 in
+def : Pat<(i64 (and GPR64:$Rn, logical_imm32_only64:$mask)),
+          (SUBREG_TO_REG (ANDWri (EXTRACT_SUBREG GPR64:$Rn, sub_32),
+                                  (logical_imm32_XFORM imm:$mask)), sub_32)>;
+
 // Emit (and 0xFFFFFFFF) as a ORRWrr move which may be eliminated.
 let AddedComplexity = 6 in
 def : Pat<(i64 (and GPR64:$Rn, 0xffffffff)),
