@@ -3083,3 +3083,36 @@ TEST_F(AArch64GISelMITest, SimplifyMultipleUseDemandedBitsChain) {
   EXPECT_FALSE(MRI->use_nodbg_empty(AReg));
   EXPECT_FALSE(MRI->use_nodbg_empty(BReg));
 }
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsNarrowsVectorTruncOfLShr) {
+  StringRef MIRString = R"(
+   %x:_(s32) = G_TRUNC %0
+   %v:_(<4 x s32>) = G_BUILD_VECTOR %x, %x, %x, %x
+   %c8:_(s32) = G_CONSTANT i32 8
+   %amt:_(<4 x s32>) = G_BUILD_VECTOR %c8, %c8, %c8, %c8
+   %sh:_(<4 x s32>) = G_LSHR %v, %amt
+   %t:_(<4 x s16>) = G_TRUNC %sh
+   %out:_(<4 x s16>) = COPY %t
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *Use = MRI->getVRegDef(Copies[Copies.size() - 1]);
+  MachineInstr *VDef = findOpcode(*MF, TargetOpcode::G_BUILD_VECTOR);
+  ASSERT_NE(Use, nullptr);
+  ASSERT_NE(VDef, nullptr);
+  Register VReg = VDef->getOperand(0).getReg();
+
+  // Demanding only the low 8 bits of each lane avoids the bits shifted in from
+  // the high half, so trunc (lshr V, 8) becomes lshr (trunc V), 8 per lane.
+  GISelValueTracking VT(*MF);
+  CombinerHelper Helper(VT, B, /*IsPreLegalize=*/true, &VT);
+  KnownBits Known(16);
+  EXPECT_TRUE(
+      Helper.simplifyDemandedBits(*Use, /*OpNo=*/1, APInt(16, 0xff), Known));
+  using namespace MIPatternMatch;
+  EXPECT_TRUE(
+      mi_match(Use->getOperand(1).getReg(), *MRI,
+               m_GLShr(m_GTrunc(m_SpecificReg(VReg)), m_SpecificICstSplat(8))));
+}

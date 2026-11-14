@@ -4890,8 +4890,14 @@ public:
   /// Return true if it is profitable to combine an XOR of a logical shift
   /// to create a logical shift of NOT. This transformation may not be desirable
   /// if it disrupts a particularly auspicious target-specific tree (e.g.
-  /// BIC on ARM/AArch64). By default, it returns true.
-  virtual bool isDesirableToCommuteXorWithShift(const SDNode *N) const {
+  /// BIC on ARM/AArch64). The query describes (xor (shift X, ShiftAmt),
+  /// XorMask), where IsShl selects SHL over SRL and IsVector describes the XOR
+  /// result type. Callers guarantee that ShiftAmt is less than the bit width
+  /// of XorMask. By default, it returns true.
+  virtual bool isDesirableToCommuteXorWithShift(bool IsShl,
+                                                const APInt &XorMask,
+                                                unsigned ShiftAmt,
+                                                bool IsVector) const {
     return true;
   }
 

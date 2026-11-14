@@ -836,8 +836,9 @@ define <2 x i16> @v_ashr_v2i16_15(<2 x i16> %value) {
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_bfe_i32 v1, v0, 0, 16
 ; GFX6-NEXT:    v_bfe_i32 v0, v0, 16, 16
+; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 15, v1
 ; GFX6-NEXT:    v_bfe_u32 v0, v0, 15, 16
-; GFX6-NEXT:    v_bfe_u32 v1, v1, 15, 16
+; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX6-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]

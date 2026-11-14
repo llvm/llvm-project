@@ -13,7 +13,7 @@ define i32 @func(i32 %x, i32 %y) {
 ; CHECK-GI-LABEL: func:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    smull x8, w0, w1
-; CHECK-GI-NEXT:    asr x0, x8, #2
+; CHECK-GI-NEXT:    lsr x0, x8, #2
 ; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-GI-NEXT:    ret
   %tmp = call i32 @llvm.smul.fix.i32(i32 %x, i32 %y, i32 2)

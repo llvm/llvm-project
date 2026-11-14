@@ -87,11 +87,10 @@ define i16 @convert_to_bitmask16(<16 x i8> %vec) {
 ; CHECK-GI-NEXT:    umov w10, v0.b[14]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #12
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[15]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #13
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #14
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[15]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #14
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #15
 ; CHECK-GI-NEXT:    strh w8, [sp, #14]
 ; CHECK-GI-NEXT:    and w0, w8, #0xffff
@@ -153,11 +152,10 @@ define i16 @convert_to_bitmask8(<8 x i16> %vec) {
 ; CHECK-GI-NEXT:    umov w10, v0.b[6]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[7]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #6
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[7]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #6
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #7
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w0, w8, #0xff
@@ -301,11 +299,10 @@ define i8 @clang_builtins_undef_concat_convert_to_bitmask4(<4 x i32> %vec) {
 ; CHECK-GI-NEXT:    umov w10, v0.b[6]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[7]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #6
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[7]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #6
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #7
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w0, w8, #0xff
@@ -741,11 +738,10 @@ define i16 @convert_to_bitmask_without_knowing_type(<16 x i1> %vec) {
 ; CHECK-GI-NEXT:    umov w10, v0.b[14]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #12
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[15]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #13
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #14
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[15]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #14
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #15
 ; CHECK-GI-NEXT:    strh w8, [sp, #14]
 ; CHECK-GI-NEXT:    and w0, w8, #0xffff
@@ -886,11 +882,10 @@ define i8 @convert_to_bitmask_8xi2(<8 x i2> %vec) {
 ; CHECK-GI-NEXT:    umov w10, v0.b[6]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[7]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #6
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[7]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #6
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #7
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w0, w8, #0xff
@@ -1014,11 +1009,10 @@ define i8 @convert_large_vector(<8 x i32> %vec) {
 ; CHECK-GI-NEXT:    umov w10, v0.b[6]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[7]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #6
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[7]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #6
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #7
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w0, w8, #0xff
@@ -1157,11 +1151,10 @@ define i8 @no_direct_convert_for_bad_concat(<4 x i32> %vec) {
 ; CHECK-GI-NEXT:    umov w10, v0.b[6]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[7]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #6
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[7]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #6
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #7
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w0, w8, #0xff
@@ -1340,195 +1333,187 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-GI-LABEL: vector_to_vector_cast:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #16
-; CHECK-GI-NEXT:    umov w8, v0.b[1]
+; CHECK-GI-NEXT:    umov w9, v0.b[1]
+; CHECK-GI-NEXT:    umov w11, v0.b[1]
+; CHECK-GI-NEXT:    umov w12, v0.b[1]
+; CHECK-GI-NEXT:    umov w10, v0.b[0]
+; CHECK-GI-NEXT:    umov w8, v0.b[0]
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    umov w10, v0.b[1]
-; CHECK-GI-NEXT:    umov w9, v0.b[0]
 ; CHECK-GI-NEXT:    umov w13, v0.b[0]
 ; CHECK-GI-NEXT:    umov w14, v0.b[2]
-; CHECK-GI-NEXT:    umov w15, v0.b[3]
-; CHECK-GI-NEXT:    umov w11, v0.b[2]
-; CHECK-GI-NEXT:    umov w16, v0.b[4]
-; CHECK-GI-NEXT:    umov w17, v0.b[5]
-; CHECK-GI-NEXT:    umov w12, v0.b[3]
-; CHECK-GI-NEXT:    and w8, w8, #0x1
-; CHECK-GI-NEXT:    and w10, w10, #0x1
-; CHECK-GI-NEXT:    umov w18, v1.b[1]
-; CHECK-GI-NEXT:    bfi w9, w8, #1, #31
-; CHECK-GI-NEXT:    bfi w13, w10, #1, #31
-; CHECK-GI-NEXT:    and w14, w14, #0x1
-; CHECK-GI-NEXT:    umov w8, v1.b[0]
-; CHECK-GI-NEXT:    umov w10, v1.b[2]
-; CHECK-GI-NEXT:    and w15, w15, #0x1
-; CHECK-GI-NEXT:    orr w13, w13, w14, lsl #2
-; CHECK-GI-NEXT:    umov w14, v1.b[3]
+; CHECK-GI-NEXT:    umov w15, v0.b[2]
+; CHECK-GI-NEXT:    umov w16, v0.b[3]
+; CHECK-GI-NEXT:    umov w17, v0.b[3]
+; CHECK-GI-NEXT:    and w9, w9, #0x1
 ; CHECK-GI-NEXT:    and w11, w11, #0x1
-; CHECK-GI-NEXT:    and w18, w18, #0x1
-; CHECK-GI-NEXT:    and w16, w16, #0x1
-; CHECK-GI-NEXT:    orr w9, w9, w11, lsl #2
-; CHECK-GI-NEXT:    orr w13, w13, w15, lsl #3
-; CHECK-GI-NEXT:    umov w15, v1.b[4]
-; CHECK-GI-NEXT:    umov w11, v0.b[6]
-; CHECK-GI-NEXT:    bfi w8, w18, #1, #31
-; CHECK-GI-NEXT:    and w10, w10, #0x1
-; CHECK-GI-NEXT:    and w17, w17, #0x1
-; CHECK-GI-NEXT:    orr w13, w13, w16, lsl #4
-; CHECK-GI-NEXT:    and w14, w14, #0x1
-; CHECK-GI-NEXT:    umov w18, v0.b[7]
-; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #2
-; CHECK-GI-NEXT:    umov w10, v1.b[5]
-; CHECK-GI-NEXT:    umov w16, v1.b[6]
-; CHECK-GI-NEXT:    orr w13, w13, w17, lsl #5
-; CHECK-GI-NEXT:    umov w17, v0.b[4]
-; CHECK-GI-NEXT:    and w15, w15, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w14, lsl #3
 ; CHECK-GI-NEXT:    and w12, w12, #0x1
-; CHECK-GI-NEXT:    and w11, w11, #0x1
-; CHECK-GI-NEXT:    umov w14, v1.b[7]
-; CHECK-GI-NEXT:    orr w9, w9, w12, lsl #3
-; CHECK-GI-NEXT:    orr w11, w13, w11, lsl #6
-; CHECK-GI-NEXT:    orr w8, w8, w15, lsl #4
-; CHECK-GI-NEXT:    umov w15, v0.b[5]
-; CHECK-GI-NEXT:    and w10, w10, #0x1
-; CHECK-GI-NEXT:    and w18, w18, #0x1
-; CHECK-GI-NEXT:    and w12, w17, #0x1
-; CHECK-GI-NEXT:    umov w13, v0.b[1]
-; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #5
-; CHECK-GI-NEXT:    and w16, w16, #0x1
-; CHECK-GI-NEXT:    orr w9, w9, w12, lsl #4
-; CHECK-GI-NEXT:    umov w10, v0.b[0]
-; CHECK-GI-NEXT:    orr w11, w11, w18, lsl #7
+; CHECK-GI-NEXT:    bfi w10, w9, #1, #31
+; CHECK-GI-NEXT:    bfi w8, w11, #1, #31
+; CHECK-GI-NEXT:    umov w11, v1.b[1]
+; CHECK-GI-NEXT:    bfi w13, w12, #1, #31
+; CHECK-GI-NEXT:    umov w9, v0.b[4]
+; CHECK-GI-NEXT:    umov w12, v1.b[0]
+; CHECK-GI-NEXT:    and w15, w15, #0x1
 ; CHECK-GI-NEXT:    and w14, w14, #0x1
+; CHECK-GI-NEXT:    and w17, w17, #0x1
+; CHECK-GI-NEXT:    orr w10, w10, w15, lsl #2
+; CHECK-GI-NEXT:    umov w15, v1.b[2]
+; CHECK-GI-NEXT:    orr w13, w13, w14, lsl #2
+; CHECK-GI-NEXT:    umov w14, v0.b[5]
+; CHECK-GI-NEXT:    and w16, w16, #0x1
+; CHECK-GI-NEXT:    and w11, w11, #0x1
+; CHECK-GI-NEXT:    orr w10, w10, w17, lsl #3
+; CHECK-GI-NEXT:    umov w17, v1.b[3]
+; CHECK-GI-NEXT:    orr w13, w13, w16, lsl #3
+; CHECK-GI-NEXT:    bfi w12, w11, #1, #31
+; CHECK-GI-NEXT:    umov w11, v0.b[6]
+; CHECK-GI-NEXT:    and w9, w9, #0x1
+; CHECK-GI-NEXT:    and w15, w15, #0x1
+; CHECK-GI-NEXT:    umov w16, v1.b[4]
+; CHECK-GI-NEXT:    orr w9, w13, w9, lsl #4
+; CHECK-GI-NEXT:    orr w12, w12, w15, lsl #2
+; CHECK-GI-NEXT:    and w14, w14, #0x1
+; CHECK-GI-NEXT:    umov w15, v0.b[7]
+; CHECK-GI-NEXT:    and w17, w17, #0x1
+; CHECK-GI-NEXT:    umov w13, v1.b[5]
+; CHECK-GI-NEXT:    orr w9, w9, w14, lsl #5
+; CHECK-GI-NEXT:    orr w12, w12, w17, lsl #3
+; CHECK-GI-NEXT:    and w11, w11, #0x1
+; CHECK-GI-NEXT:    umov w14, v1.b[6]
+; CHECK-GI-NEXT:    and w16, w16, #0x1
+; CHECK-GI-NEXT:    orr w9, w9, w11, lsl #6
+; CHECK-GI-NEXT:    umov w17, v0.b[4]
+; CHECK-GI-NEXT:    orr w12, w12, w16, lsl #4
+; CHECK-GI-NEXT:    umov w11, v0.b[2]
+; CHECK-GI-NEXT:    umov w16, v0.b[5]
+; CHECK-GI-NEXT:    and w13, w13, #0x1
+; CHECK-GI-NEXT:    orr w9, w9, w15, lsl #7
+; CHECK-GI-NEXT:    umov w15, v0.b[6]
+; CHECK-GI-NEXT:    orr w12, w12, w13, lsl #5
+; CHECK-GI-NEXT:    umov w13, v1.b[7]
+; CHECK-GI-NEXT:    and w14, w14, #0x1
+; CHECK-GI-NEXT:    strb w9, [sp, #8]
+; CHECK-GI-NEXT:    and w17, w17, #0x1
+; CHECK-GI-NEXT:    orr w12, w12, w14, lsl #6
+; CHECK-GI-NEXT:    umov w14, v0.b[3]
+; CHECK-GI-NEXT:    ldr b0, [sp, #8]
+; CHECK-GI-NEXT:    orr w10, w10, w17, lsl #4
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    and w16, w16, #0x1
+; CHECK-GI-NEXT:    orr w11, w12, w13, lsl #7
+; CHECK-GI-NEXT:    umov w12, v0.b[4]
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #2
+; CHECK-GI-NEXT:    orr w10, w10, w16, lsl #5
+; CHECK-GI-NEXT:    umov w13, v0.b[7]
+; CHECK-GI-NEXT:    and w9, w15, #0x1
+; CHECK-GI-NEXT:    and w14, w14, #0x1
+; CHECK-GI-NEXT:    umov w15, v0.b[5]
+; CHECK-GI-NEXT:    strb w11, [sp, #9]
+; CHECK-GI-NEXT:    orr w8, w8, w14, lsl #3
+; CHECK-GI-NEXT:    orr w9, w10, w9, lsl #6
+; CHECK-GI-NEXT:    umov w11, v0.b[6]
+; CHECK-GI-NEXT:    and w10, w12, #0x1
+; CHECK-GI-NEXT:    umov w12, v0.b[1]
+; CHECK-GI-NEXT:    umov w14, v0.b[2]
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #4
+; CHECK-GI-NEXT:    umov w10, v0.b[0]
+; CHECK-GI-NEXT:    orr w9, w9, w13, lsl #7
+; CHECK-GI-NEXT:    and w13, w15, #0x1
+; CHECK-GI-NEXT:    umov w15, v0.b[2]
+; CHECK-GI-NEXT:    umov w17, v0.b[3]
+; CHECK-GI-NEXT:    orr w8, w8, w13, lsl #5
+; CHECK-GI-NEXT:    strb w9, [sp, #10]
+; CHECK-GI-NEXT:    umov w9, v0.b[3]
+; CHECK-GI-NEXT:    and w11, w11, #0x1
+; CHECK-GI-NEXT:    and w12, w12, #0x1
+; CHECK-GI-NEXT:    umov w13, v0.b[1]
+; CHECK-GI-NEXT:    orr w8, w8, w11, lsl #6
+; CHECK-GI-NEXT:    bfi w10, w12, #1, #31
+; CHECK-GI-NEXT:    umov w11, v0.b[0]
+; CHECK-GI-NEXT:    and w12, w14, #0x1
+; CHECK-GI-NEXT:    umov w14, v0.b[4]
+; CHECK-GI-NEXT:    umov w16, v0.b[7]
+; CHECK-GI-NEXT:    orr w10, w10, w12, lsl #2
+; CHECK-GI-NEXT:    and w9, w9, #0x1
+; CHECK-GI-NEXT:    umov w12, v0.b[5]
+; CHECK-GI-NEXT:    and w13, w13, #0x1
+; CHECK-GI-NEXT:    ldr b1, [sp, #9]
+; CHECK-GI-NEXT:    orr w9, w10, w9, lsl #3
+; CHECK-GI-NEXT:    bfi w11, w13, #1, #31
+; CHECK-GI-NEXT:    umov w10, v0.b[6]
+; CHECK-GI-NEXT:    and w13, w14, #0x1
+; CHECK-GI-NEXT:    and w14, w15, #0x1
+; CHECK-GI-NEXT:    umov w15, v0.b[4]
+; CHECK-GI-NEXT:    orr w9, w9, w13, lsl #4
+; CHECK-GI-NEXT:    orr w11, w11, w14, lsl #2
+; CHECK-GI-NEXT:    and w12, w12, #0x1
+; CHECK-GI-NEXT:    and w13, w17, #0x1
+; CHECK-GI-NEXT:    umov w14, v0.b[5]
+; CHECK-GI-NEXT:    orr w8, w8, w16, lsl #7
+; CHECK-GI-NEXT:    orr w9, w9, w12, lsl #5
+; CHECK-GI-NEXT:    orr w11, w11, w13, lsl #3
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    umov w12, v0.b[7]
+; CHECK-GI-NEXT:    and w13, w15, #0x1
+; CHECK-GI-NEXT:    umov w15, v0.b[6]
+; CHECK-GI-NEXT:    orr w9, w9, w10, lsl #6
+; CHECK-GI-NEXT:    orr w10, w11, w13, lsl #4
+; CHECK-GI-NEXT:    umov w11, v0.b[1]
+; CHECK-GI-NEXT:    and w13, w14, #0x1
+; CHECK-GI-NEXT:    umov w14, v0.b[0]
+; CHECK-GI-NEXT:    umov w16, v0.b[1]
+; CHECK-GI-NEXT:    orr w10, w10, w13, lsl #5
+; CHECK-GI-NEXT:    umov w13, v0.b[2]
+; CHECK-GI-NEXT:    umov w17, v0.b[0]
+; CHECK-GI-NEXT:    orr w9, w9, w12, lsl #7
 ; CHECK-GI-NEXT:    and w12, w15, #0x1
 ; CHECK-GI-NEXT:    umov w15, v0.b[2]
-; CHECK-GI-NEXT:    orr w8, w8, w16, lsl #6
-; CHECK-GI-NEXT:    orr w9, w9, w12, lsl #5
-; CHECK-GI-NEXT:    umov w12, v0.b[6]
-; CHECK-GI-NEXT:    strb w11, [sp, #8]
-; CHECK-GI-NEXT:    and w11, w13, #0x1
-; CHECK-GI-NEXT:    umov w13, v0.b[3]
-; CHECK-GI-NEXT:    orr w8, w8, w14, lsl #7
-; CHECK-GI-NEXT:    umov w14, v0.b[7]
-; CHECK-GI-NEXT:    ldr b0, [sp, #8]
-; CHECK-GI-NEXT:    bfi w10, w11, #1, #31
-; CHECK-GI-NEXT:    and w11, w15, #0x1
-; CHECK-GI-NEXT:    strb w8, [sp, #9]
-; CHECK-GI-NEXT:    umov w15, v0.b[4]
-; CHECK-GI-NEXT:    and w8, w12, #0x1
-; CHECK-GI-NEXT:    orr w10, w10, w11, lsl #2
-; CHECK-GI-NEXT:    orr w8, w9, w8, lsl #6
-; CHECK-GI-NEXT:    and w9, w13, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[1]
-; CHECK-GI-NEXT:    orr w9, w10, w9, lsl #3
-; CHECK-GI-NEXT:    umov w10, v0.b[5]
-; CHECK-GI-NEXT:    umov w12, v0.b[0]
-; CHECK-GI-NEXT:    and w13, w14, #0x1
-; CHECK-GI-NEXT:    umov w16, v0.b[2]
-; CHECK-GI-NEXT:    umov w17, v0.b[3]
-; CHECK-GI-NEXT:    and w14, w15, #0x1
-; CHECK-GI-NEXT:    umov w15, v0.b[2]
-; CHECK-GI-NEXT:    orr w8, w8, w13, lsl #7
-; CHECK-GI-NEXT:    orr w9, w9, w14, lsl #4
-; CHECK-GI-NEXT:    umov w13, v0.b[6]
+; CHECK-GI-NEXT:    orr w10, w10, w12, lsl #6
 ; CHECK-GI-NEXT:    and w11, w11, #0x1
-; CHECK-GI-NEXT:    umov w14, v0.b[3]
-; CHECK-GI-NEXT:    strb w8, [sp, #10]
-; CHECK-GI-NEXT:    and w8, w10, #0x1
-; CHECK-GI-NEXT:    bfi w12, w11, #1, #31
-; CHECK-GI-NEXT:    orr w8, w9, w8, lsl #5
-; CHECK-GI-NEXT:    umov w10, v0.b[4]
-; CHECK-GI-NEXT:    and w9, w15, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[7]
-; CHECK-GI-NEXT:    umov w15, v0.b[1]
-; CHECK-GI-NEXT:    orr w9, w12, w9, lsl #2
-; CHECK-GI-NEXT:    umov w12, v0.b[5]
-; CHECK-GI-NEXT:    and w13, w13, #0x1
-; CHECK-GI-NEXT:    and w14, w14, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w13, lsl #6
-; CHECK-GI-NEXT:    umov w13, v0.b[0]
-; CHECK-GI-NEXT:    orr w9, w9, w14, lsl #3
-; CHECK-GI-NEXT:    and w10, w10, #0x1
-; CHECK-GI-NEXT:    umov w14, v0.b[6]
-; CHECK-GI-NEXT:    and w11, w11, #0x1
-; CHECK-GI-NEXT:    and w15, w15, #0x1
-; CHECK-GI-NEXT:    umov w18, v0.b[3]
-; CHECK-GI-NEXT:    orr w9, w9, w10, lsl #4
-; CHECK-GI-NEXT:    and w10, w12, #0x1
-; CHECK-GI-NEXT:    umov w12, v0.b[7]
-; CHECK-GI-NEXT:    orr w8, w8, w11, lsl #7
-; CHECK-GI-NEXT:    bfi w13, w15, #1, #31
+; CHECK-GI-NEXT:    umov w12, v0.b[3]
+; CHECK-GI-NEXT:    bfi w14, w11, #1, #31
 ; CHECK-GI-NEXT:    and w11, w16, #0x1
-; CHECK-GI-NEXT:    orr w9, w9, w10, lsl #5
-; CHECK-GI-NEXT:    and w10, w14, #0x1
-; CHECK-GI-NEXT:    umov w14, v0.b[4]
-; CHECK-GI-NEXT:    strb w8, [sp, #11]
-; CHECK-GI-NEXT:    umov w15, v0.b[1]
 ; CHECK-GI-NEXT:    umov w16, v0.b[3]
-; CHECK-GI-NEXT:    orr w8, w9, w10, lsl #6
-; CHECK-GI-NEXT:    orr w9, w13, w11, lsl #2
-; CHECK-GI-NEXT:    and w10, w12, #0x1
-; CHECK-GI-NEXT:    and w11, w17, #0x1
-; CHECK-GI-NEXT:    umov w12, v0.b[5]
-; CHECK-GI-NEXT:    umov w17, v0.b[0]
-; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #7
-; CHECK-GI-NEXT:    orr w9, w9, w11, lsl #3
-; CHECK-GI-NEXT:    umov w10, v0.b[1]
-; CHECK-GI-NEXT:    and w11, w14, #0x1
-; CHECK-GI-NEXT:    umov w14, v0.b[0]
-; CHECK-GI-NEXT:    and w15, w15, #0x1
-; CHECK-GI-NEXT:    orr w9, w9, w11, lsl #4
-; CHECK-GI-NEXT:    umov w11, v0.b[2]
-; CHECK-GI-NEXT:    umov w13, v0.b[6]
-; CHECK-GI-NEXT:    and w12, w12, #0x1
-; CHECK-GI-NEXT:    bfi w17, w15, #1, #31
-; CHECK-GI-NEXT:    umov w15, v0.b[5]
-; CHECK-GI-NEXT:    orr w9, w9, w12, lsl #5
-; CHECK-GI-NEXT:    and w10, w10, #0x1
-; CHECK-GI-NEXT:    umov w12, v0.b[2]
-; CHECK-GI-NEXT:    bfi w14, w10, #1, #31
-; CHECK-GI-NEXT:    umov w10, v0.b[4]
-; CHECK-GI-NEXT:    ldr b1, [sp, #9]
-; CHECK-GI-NEXT:    and w11, w11, #0x1
 ; CHECK-GI-NEXT:    and w13, w13, #0x1
-; CHECK-GI-NEXT:    strb w8, [sp, #12]
-; CHECK-GI-NEXT:    orr w11, w14, w11, lsl #2
-; CHECK-GI-NEXT:    and w14, w16, #0x1
-; CHECK-GI-NEXT:    umov w16, v0.b[4]
+; CHECK-GI-NEXT:    bfi w17, w11, #1, #31
+; CHECK-GI-NEXT:    umov w11, v0.b[4]
+; CHECK-GI-NEXT:    orr w13, w14, w13, lsl #2
+; CHECK-GI-NEXT:    and w14, w15, #0x1
+; CHECK-GI-NEXT:    umov w15, v0.b[4]
 ; CHECK-GI-NEXT:    and w12, w12, #0x1
-; CHECK-GI-NEXT:    and w15, w15, #0x1
-; CHECK-GI-NEXT:    orr w9, w9, w13, lsl #6
-; CHECK-GI-NEXT:    orr w11, w11, w14, lsl #3
-; CHECK-GI-NEXT:    orr w12, w17, w12, lsl #2
-; CHECK-GI-NEXT:    and w10, w10, #0x1
-; CHECK-GI-NEXT:    and w17, w18, #0x1
-; CHECK-GI-NEXT:    umov w18, v0.b[5]
+; CHECK-GI-NEXT:    orr w14, w17, w14, lsl #2
+; CHECK-GI-NEXT:    umov w17, v0.b[5]
+; CHECK-GI-NEXT:    orr w12, w13, w12, lsl #3
+; CHECK-GI-NEXT:    and w13, w16, #0x1
+; CHECK-GI-NEXT:    umov w16, v0.b[5]
+; CHECK-GI-NEXT:    and w11, w11, #0x1
+; CHECK-GI-NEXT:    orr w13, w14, w13, lsl #3
 ; CHECK-GI-NEXT:    umov w14, v0.b[6]
-; CHECK-GI-NEXT:    orr w10, w11, w10, lsl #4
-; CHECK-GI-NEXT:    orr w12, w12, w17, lsl #3
-; CHECK-GI-NEXT:    umov w11, v0.b[7]
+; CHECK-GI-NEXT:    orr w11, w12, w11, lsl #4
+; CHECK-GI-NEXT:    and w12, w15, #0x1
+; CHECK-GI-NEXT:    umov w15, v0.b[6]
+; CHECK-GI-NEXT:    orr w12, w13, w12, lsl #4
+; CHECK-GI-NEXT:    umov w13, v0.b[7]
+; CHECK-GI-NEXT:    and w17, w17, #0x1
+; CHECK-GI-NEXT:    orr w11, w11, w17, lsl #5
 ; CHECK-GI-NEXT:    and w16, w16, #0x1
-; CHECK-GI-NEXT:    umov w17, v0.b[6]
-; CHECK-GI-NEXT:    orr w10, w10, w15, lsl #5
-; CHECK-GI-NEXT:    umov w15, v0.b[7]
-; CHECK-GI-NEXT:    orr w12, w12, w16, lsl #4
-; CHECK-GI-NEXT:    and w16, w18, #0x1
-; CHECK-GI-NEXT:    umov w18, v0.b[7]
+; CHECK-GI-NEXT:    umov w17, v0.b[7]
 ; CHECK-GI-NEXT:    and w14, w14, #0x1
 ; CHECK-GI-NEXT:    orr w12, w12, w16, lsl #5
-; CHECK-GI-NEXT:    orr w10, w10, w14, lsl #6
-; CHECK-GI-NEXT:    and w11, w11, #0x1
-; CHECK-GI-NEXT:    and w13, w17, #0x1
-; CHECK-GI-NEXT:    orr w9, w9, w11, lsl #7
+; CHECK-GI-NEXT:    umov w16, v0.b[7]
+; CHECK-GI-NEXT:    orr w11, w11, w14, lsl #6
+; CHECK-GI-NEXT:    and w14, w15, #0x1
+; CHECK-GI-NEXT:    strb w8, [sp, #11]
+; CHECK-GI-NEXT:    orr w8, w10, w13, lsl #7
+; CHECK-GI-NEXT:    orr w10, w12, w14, lsl #6
+; CHECK-GI-NEXT:    strb w9, [sp, #12]
+; CHECK-GI-NEXT:    orr w9, w11, w17, lsl #7
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    orr w11, w12, w13, lsl #6
-; CHECK-GI-NEXT:    and w12, w15, #0x1
+; CHECK-GI-NEXT:    strb w8, [sp, #13]
+; CHECK-GI-NEXT:    orr w8, w10, w16, lsl #7
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    orr w8, w10, w12, lsl #7
-; CHECK-GI-NEXT:    and w10, w18, #0x1
-; CHECK-GI-NEXT:    strb w9, [sp, #13]
-; CHECK-GI-NEXT:    orr w9, w11, w10, lsl #7
-; CHECK-GI-NEXT:    strb w8, [sp, #14]
-; CHECK-GI-NEXT:    strb w9, [sp, #15]
+; CHECK-GI-NEXT:    strb w9, [sp, #14]
+; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret
   %bc = bitcast <16 x i1> %arg to <2 x i8>
@@ -1799,11 +1784,10 @@ define i8 @bitmask_v8i32(<8 x i32> %v) {
 ; CHECK-GI-NEXT:    umov w10, v0.b[6]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[7]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #6
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[7]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #6
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #7
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w0, w8, #0xff
@@ -1881,11 +1865,10 @@ define i8 @bitmask_v8i64(<8 x i64> %v) {
 ; CHECK-GI-NEXT:    umov w10, v0.b[6]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[7]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #6
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[7]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #6
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #7
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w0, w8, #0xff
@@ -1995,11 +1978,10 @@ define i16 @bitmask_v16i32(<16 x i32> %v) {
 ; CHECK-GI-NEXT:    umov w10, v0.b[14]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #12
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[15]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #13
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #14
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[15]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #14
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #15
 ; CHECK-GI-NEXT:    strh w8, [sp, #14]
 ; CHECK-GI-NEXT:    and w0, w8, #0xffff
@@ -2142,11 +2124,10 @@ define i16 @bitmask_v16i64(<16 x i64> %v) {
 ; CHECK-GI-NEXT:    umov w10, v0.b[14]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #12
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[15]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #13
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #14
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[15]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #14
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #15
 ; CHECK-GI-NEXT:    strh w8, [sp, #14]
 ; CHECK-GI-NEXT:    and w0, w8, #0xffff
@@ -2216,11 +2197,10 @@ define i8 @bitmask_v8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-GI-NEXT:    umov w10, v0.b[6]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[7]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #6
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[7]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #6
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #7
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w0, w8, #0xff
@@ -2298,11 +2278,10 @@ define i8 @bitmask_v8i32_sve(<8 x i32> %v) vscale_range(2,2) "target-features"="
 ; CHECK-GI-NEXT:    umov w10, v0.b[6]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
 ; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov w11, v0.b[7]
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #6
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    umov w9, v0.b[7]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #6
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #7
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w0, w8, #0xff

@@ -261,7 +261,7 @@ define bfloat @sitofp_i128_to_bf16(i128 %x) {
 ; GISEL-NEXT:    v_lshl_add_u32 v1, v8, 23, 1.0
 ; GISEL-NEXT:    v_and_b32_e32 v2, 0x7fffff, v4
 ; GISEL-NEXT:    v_or3_b32 v0, v2, v0, v1
-; GISEL-NEXT:    v_bfe_u32 v2, v0, 16, 1
+; GISEL-NEXT:    v_bfe_u32 v2, v4, 16, 1
 ; GISEL-NEXT:    v_mov_b32_e32 v3, 0x7fff
 ; GISEL-NEXT:    v_or_b32_e32 v1, 0x400000, v0
 ; GISEL-NEXT:    v_add3_u32 v2, v2, v0, v3
@@ -528,7 +528,7 @@ define bfloat @uitofp_i128_to_bf16(i128 %x) {
 ; GISEL-NEXT:    v_lshl_add_u32 v0, v7, 23, 1.0
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0x7fffff
 ; GISEL-NEXT:    v_and_or_b32 v0, v4, v1, v0
-; GISEL-NEXT:    v_bfe_u32 v2, v0, 16, 1
+; GISEL-NEXT:    v_bfe_u32 v2, v4, 16, 1
 ; GISEL-NEXT:    v_mov_b32_e32 v3, 0x7fff
 ; GISEL-NEXT:    v_or_b32_e32 v1, 0x400000, v0
 ; GISEL-NEXT:    v_add3_u32 v2, v2, v0, v3

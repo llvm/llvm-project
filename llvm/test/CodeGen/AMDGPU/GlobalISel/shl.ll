@@ -1802,22 +1802,17 @@ define amdgpu_ps i65 @s_shl_i65_33(i65 inreg %value) {
 ; GCN-LABEL: s_shl_i65_33:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_lshl_b32 s4, s0, 1
-; GCN-NEXT:    s_mov_b32 s6, 0
-; GCN-NEXT:    s_lshl_b32 s7, s2, 1
-; GCN-NEXT:    s_lshr_b64 s[0:1], s[0:1], 31
-; GCN-NEXT:    s_or_b64 s[2:3], s[6:7], s[0:1]
+; GCN-NEXT:    s_lshr_b64 s[2:3], s[0:1], 31
 ; GCN-NEXT:    s_mov_b32 s0, 0
 ; GCN-NEXT:    s_mov_b32 s1, s4
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_shl_i65_33:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_mov_b32 s4, 0
-; GFX10PLUS-NEXT:    s_lshl_b32 s5, s2, 1
+; GFX10PLUS-NEXT:    s_lshl_b32 s4, s0, 1
 ; GFX10PLUS-NEXT:    s_lshr_b64 s[2:3], s[0:1], 31
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s0, 1
-; GFX10PLUS-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
 ; GFX10PLUS-NEXT:    s_mov_b32 s0, 0
+; GFX10PLUS-NEXT:    s_mov_b32 s1, s4
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %result = shl i65 %value, 33
   ret i65 %result
