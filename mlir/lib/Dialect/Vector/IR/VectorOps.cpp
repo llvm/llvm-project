@@ -716,8 +716,8 @@ struct ElideUnitDimsInMultiDimReduction
     }
 
     Value result =
-        vector::makeArithReduction(rewriter, loc, reductionOp.getKind(), acc,
-                                   cast, reductionOp.getFastmathAttr(), mask);
+        vector::makeArithReduction(rewriter, loc, reductionOp.getKind(), cast,
+                                   acc, reductionOp.getFastmathAttr(), mask);
     rewriter.replaceOp(rootOp, result);
     return success();
   }

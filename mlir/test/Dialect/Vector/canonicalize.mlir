@@ -2466,7 +2466,7 @@ func.func @masked_vector_multi_reduction_no_reduction_dims_nd(%arg0: vector<2x3x
 //  CHECK-SAME: %[[SOURCE:.+]]: vector<5x1x4x1x20xf32>, %[[ACC:.+]]: vector<5x4x20xf32>
 func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32>, %acc: vector<5x4x20xf32>) -> vector<5x4x20xf32> {
 //       CHECK:   %[[CAST:.+]] = vector.shape_cast  %[[SOURCE]] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32>
-//       CHECK:   %[[RESULT:.+]] = arith.mulf  %[[ACC]], %[[CAST]] : vector<5x4x20xf32>
+//       CHECK:   %[[RESULT:.+]] = arith.mulf  %[[CAST]], %[[ACC]] : vector<5x4x20xf32>
     %0 = vector.multi_reduction <mul>, %source, %acc [1, 3] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32>
 
 //       CHECK:     return %[[RESULT]] : vector<5x4x20xf32>
@@ -2479,7 +2479,7 @@ func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32
 //  CHECK-SAME: %[[SOURCE:.+]]: vector<5x1x4xf32>, %[[ACC:.+]]: vector<5x4xf32>
 func.func @vector_multi_reduction_unit_dimensions_fastmath(%source: vector<5x1x4xf32>, %acc: vector<5x4xf32>) -> vector<5x4xf32> {
 //       CHECK:   %[[CAST:.+]] = vector.shape_cast %[[SOURCE]] : vector<5x1x4xf32> to vector<5x4xf32>
-//       CHECK:   %[[RESULT:.+]] = arith.maximumf %[[ACC]], %[[CAST]] fastmath<nnan,nsz> : vector<5x4xf32>
+//       CHECK:   %[[RESULT:.+]] = arith.maximumf %[[CAST]], %[[ACC]] fastmath<nnan,nsz> : vector<5x4xf32>
     %0 = vector.multi_reduction <maximumf>, %source, %acc fastmath<nnan,nsz> [1] : vector<5x1x4xf32> to vector<5x4xf32>
 //       CHECK:   return %[[RESULT]] : vector<5x4xf32>
     return %0 : vector<5x4xf32>
@@ -2496,8 +2496,8 @@ func.func @vector_multi_reduction_scalable(%source: vector<1x[4]x1xf32>,
                                            %mask: vector<1x[4]x1xi1>) -> vector<1x[4]xf32> {
 // CHECK:           %[[VAL_3:.*]] = vector.shape_cast %[[VAL_2]] : vector<1x[4]x1xi1> to vector<1x[4]xi1>
 // CHECK:           %[[VAL_4:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x[4]x1xf32> to vector<1x[4]xf32>
-// CHECK:           %[[VAL_5:.*]] = arith.addf %[[VAL_1]], %[[VAL_4]] : vector<1x[4]xf32>
-// CHECK:           %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_4]] : vector<1x[4]xi1>, vector<1x[4]xf32>
+// CHECK:           %[[VAL_5:.*]] = arith.addf %[[VAL_4]], %[[VAL_1]] : vector<1x[4]xf32>
+// CHECK:           %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_1]] : vector<1x[4]xi1>, vector<1x[4]xf32>
     %0 = vector.mask %mask { vector.multi_reduction <add>, %source, %acc [2] : vector<1x[4]x1xf32> to vector<1x[4]xf32> } :
           vector<1x[4]x1xi1> -> vector<1x[4]xf32>
 
@@ -2514,8 +2514,8 @@ func.func @masked_vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1
                                                          %mask: vector<5x1x4x1x20xi1>) -> vector<5x4x20xf32> {
 //       CHECK:   %[[VAL_3:.*]] = vector.shape_cast %[[VAL_2]] : vector<5x1x4x1x20xi1> to vector<5x4x20xi1>
 //       CHECK:   %[[VAL_4:.*]] = vector.shape_cast %[[VAL_0]] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32>
-//       CHECK:   %[[VAL_5:.*]] = arith.mulf %[[VAL_1]], %[[VAL_4]] : vector<5x4x20xf32>
-//       CHECK:   %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_4]] : vector<5x4x20xi1>, vector<5x4x20xf32>
+//       CHECK:   %[[VAL_5:.*]] = arith.mulf %[[VAL_4]], %[[VAL_1]] : vector<5x4x20xf32>
+//       CHECK:   %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_1]] : vector<5x4x20xi1>, vector<5x4x20xf32>
 %0 = vector.mask %mask { vector.multi_reduction <mul>, %source, %acc [1, 3] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32> } :
            vector<5x1x4x1x20xi1> -> vector<5x4x20xf32>
     return %0 : vector<5x4x20xf32>
@@ -2539,7 +2539,7 @@ func.func @vector_multi_reduction_unit_dimensions_fail(%source: vector<5x1x4x1x2
 //  CHECK-SAME: %[[SOURCE:.+]]: vector<1x1x1xf32>, %[[ACC:.+]]: f32
 func.func @vector_multi_reduction_unit_dimensions_single_elem(%source: vector<1x1x1xf32>, %acc: f32) -> f32 {
 //       CHECK:   %[[CAST:.+]] = vector.extract  %[[SOURCE]][0, 0, 0] : f32 from vector<1x1x1xf32>
-//       CHECK:   %[[RESULT:.+]] = arith.mulf  %[[ACC]], %[[CAST]] : f32
+//       CHECK:   %[[RESULT:.+]] = arith.mulf  %[[CAST]], %[[ACC]] : f32
     %0 = vector.multi_reduction <mul>, %source, %acc [0,1,2] : vector<1x1x1xf32> to f32
 
 //       CHECK:     return %[[RESULT]] : f32
@@ -2554,10 +2554,42 @@ func.func @vector_multi_reduction_unit_dimensions_single_elem(%source: vector<1x
 func.func @masked_vector_multi_reduction_unit_dimensions_single_elem(%source: vector<1x1x1xf32>, %acc: f32, %mask: vector<1x1x1xi1>) -> f32 {
       // CHECK:           %[[VAL_3:.*]] = vector.extract %[[VAL_2]][0, 0, 0] : i1 from vector<1x1x1xi1>
       // CHECK:           %[[VAL_4:.*]] = vector.extract %[[VAL_0]][0, 0, 0] : f32 from vector<1x1x1xf32>
-      // CHECK:           %[[VAL_5:.*]] = arith.mulf %[[VAL_1]], %[[VAL_4]] : f32
-      // CHECK:           %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_4]] : f32
+      // CHECK:           %[[VAL_5:.*]] = arith.mulf %[[VAL_4]], %[[VAL_1]] : f32
+      // CHECK:           %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_1]] : f32
   %0 = vector.mask %mask { vector.multi_reduction <mul>, %source, %acc [0,1,2] : vector<1x1x1xf32> to f32 } : vector<1x1x1xi1> -> f32
     return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions_false_mask(
+//       CHECK:   %[[RESULT:.*]] = arith.constant 42 : i32
+//  CHECK-NEXT:   return %[[RESULT]] : i32
+func.func @masked_vector_multi_reduction_unit_dimensions_false_mask() -> i32 {
+  %mask = arith.constant dense<false> : vector<1xi1>
+  %source = arith.constant dense<7> : vector<1xi32>
+  %acc = arith.constant 42 : i32
+  %result = vector.mask %mask {
+    %reduced = vector.multi_reduction <maxui>, %source, %acc [0] : vector<1xi32> to i32
+    vector.yield %reduced : i32
+  } : vector<1xi1> -> i32
+  return %result : i32
+}
+
+// -----
+
+// CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions_mixed_mask(
+//       CHECK:   %[[RESULT:.*]] = arith.constant dense<[42, 9]> : vector<2xi32>
+//  CHECK-NEXT:   return %[[RESULT]] : vector<2xi32>
+func.func @masked_vector_multi_reduction_unit_dimensions_mixed_mask() -> vector<2xi32> {
+  %mask = arith.constant dense<[[false], [true]]> : vector<2x1xi1>
+  %source = arith.constant dense<[[77], [9]]> : vector<2x1xi32>
+  %acc = arith.constant dense<[42, 3]> : vector<2xi32>
+  %result = vector.mask %mask {
+    %reduced = vector.multi_reduction <maxui>, %source, %acc [1] : vector<2x1xi32> to vector<2xi32>
+    vector.yield %reduced : vector<2xi32>
+  } : vector<2x1xi1> -> vector<2xi32>
+  return %result : vector<2xi32>
 }
 
 // -----
