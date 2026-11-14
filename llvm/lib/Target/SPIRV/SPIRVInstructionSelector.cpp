@@ -2824,7 +2824,6 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
                 STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)))
     BoolType = GR.getOrCreateSPIRVVectorType(BoolType, N, I, TII);
   Register BoolTypeReg = GR.getSPIRVTypeID(BoolType);
-  Register ZeroReg = buildZerosVal(ResType, I);
   // A new virtual register to store the result struct.
   Register StructVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MRI->setRegClass(StructVReg, &SPIRV::IDRegClass);
@@ -2853,12 +2852,30 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
             .addImm(i);
     MIB.constrainAllUses(TII, TRI, RBI);
   }
-  // Build boolean value from the higher part.
+  // Signed multiplication overflows when the high half differs from the sign
+  // extension of the low half. The other operations overflow when the high
+  // part is nonzero.
+  Register ExtReg;
+  if (Opcode == SPIRV::OpSMulExtended) {
+    bool IsVector = isVectorType(ResType);
+    unsigned SignBit = GR.getScalarOrVectorBitWidth(ResType) - 1;
+    Register ShiftReg =
+        IsVector ? GR.getOrCreateConstVector(SignBit, I, ResType, TII)
+                 : GR.getOrCreateConstInt(SignBit, I, ResType, TII);
+    ExtReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
+    if (!selectOpWithSrcs(ExtReg, ResType, I,
+                          {I.getOperand(0).getReg(), ShiftReg},
+                          IsVector ? SPIRV::OpShiftRightArithmeticV
+                                   : SPIRV::OpShiftRightArithmeticS))
+      return false;
+  } else {
+    ExtReg = buildZerosVal(ResType, I);
+  }
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpINotEqual))
       .addDef(I.getOperand(1).getReg())
       .addUse(BoolTypeReg)
       .addUse(HigherVReg)
-      .addUse(ZeroReg)
+      .addUse(ExtReg)
       .constrainAllUses(TII, TRI, RBI);
   return true;
 }
