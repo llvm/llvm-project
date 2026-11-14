@@ -1,0 +1,89 @@
+; The preinliner must not plan inlining of an indirect call target that the
+; sample profile loader will not promote (top target, then >= 25% of the site
+; by default). Such contexts are merged into the callee's base profile instead
+; of being stranded at the call site.
+
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp.prof --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --output=%t1
+; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-ICP
+
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp.prof --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --csspgo-preinliner-honor-icp-limits=0 --output=%t2
+; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-ALL
+
+; A lower ICP threshold lets the 20% targets be promoted, so they stay inlined.
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp.prof --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --sample-profile-icp-relative-hotness=20 --output=%t3
+; RUN: FileCheck %s --input-file %t3 --check-prefix=CHECK-ALL
+
+; Exempting all three targets from the percentage check also keeps them inlined.
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp.prof --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --sample-profile-icp-relative-hotness-skip=3 --output=%t-skip
+; RUN: FileCheck %s --input-file %t-skip --check-prefix=CHECK-ALL
+
+; The nested profile consumed by the compiler keeps the full samples of the
+; rejected targets in their own profiles.
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp.prof --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=1 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --output=%t4
+; RUN: FileCheck %s --input-file %t4 --check-prefix=CHECK-NESTED
+
+; CHECK-ICP:      [disp:2 @ t1]:6000:600
+; CHECK-ICP:      !Attributes: 2
+; CHECK-ICP:      [disp]:2000:1000
+; CHECK-ICP-NEXT:  1: 1000
+; CHECK-ICP-NEXT:  2: 1000 t1:600 t2:200 t3:200
+; CHECK-ICP-NOT:  [disp:2 @ t2]
+; CHECK-ICP-NOT:  [disp:2 @ t3]
+; CHECK-ICP:      [t2]:2000:200
+; CHECK-ICP:      [t3]:2000:200
+
+; CHECK-ALL-DAG:  [disp:2 @ t1]:6000:600
+; CHECK-ALL-DAG:  [disp:2 @ t2]:2000:200
+; CHECK-ALL-DAG:  [disp:2 @ t3]:2000:200
+; CHECK-ALL-NOT:  [t2]:
+; CHECK-ALL-NOT:  [t3]:
+
+; CHECK-NESTED:      disp:7400:1000
+; CHECK-NESTED-NEXT:  1: 1000
+; CHECK-NESTED-NEXT:  2: 400 t2:200 t3:200
+; CHECK-NESTED-NEXT:  2: t1:6000
+; CHECK-NESTED:      t2:2000:200
+; CHECK-NESTED:      t3:2000:200
+
+; The loader's site total uses the nested head estimate of each inlined target
+; and the map count of each outlined one. Here t2's map count is 200 but its
+; head estimate is 260: inlining it would make the total 1060, and 260 is
+; below 25% of that, so t2 must not be pre-inlined either.
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp-map-head.prof --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=1 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --output=%t5
+; RUN: FileCheck %s --input-file %t5 --check-prefix=CHECK-MAPHEAD
+
+; CHECK-MAPHEAD:      disp:7400:1000
+; CHECK-MAPHEAD-NEXT:  1: 1000
+; CHECK-MAPHEAD-NEXT:  2: 400 t2:200 t3:200
+; CHECK-MAPHEAD-NEXT:  2: t1:6000
+; CHECK-MAPHEAD-NOT:   2: t2:
+; CHECK-MAPHEAD:      t2:2000:260
+; CHECK-MAPHEAD:      t3:2000:200
+
+; A zero count in the target map is still an existing target. A single target
+; remains a direct-call candidate even when its context head is not ICP-hot.
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp-zero-map.prof --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=1 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --output=%t6
+; RUN: FileCheck %s --input-file %t6 --check-prefix=CHECK-ZEROMAP
+
+; CHECK-ZEROMAP:      disp:20100:1000
+; CHECK-ZEROMAP-NEXT:  1: 1000
+; CHECK-ZEROMAP-NEXT:  2: t1:19100
+; CHECK-ZEROMAP:      !Attributes: 2
+
+; The profiles above use functions that are not in the binary, so there is no
+; call probe to check and the number of targets decides whether a call is
+; indirect. Here quick_sort is in the binary: its probe 4 is an indirect call
+; and its probe 5 is a direct call. The probe type wins over the number of
+; targets. The single target at the indirect call is not hot enough for ICP, so
+; it is not pre-inlined. The direct call site is not subject to ICP, so all its
+; targets are pre-inlined.
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp-probe-type.prof --binary=%S/Inputs/fs-discriminator-probe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --output=%t7
+; RUN: FileCheck %s --input-file %t7 --check-prefix=CHECK-PROBETYPE
+
+; CHECK-PROBETYPE-DAG: [t1]:19100:100
+; CHECK-PROBETYPE-DAG: [quick_sort:5 @ t2]:6000:600
+; CHECK-PROBETYPE-DAG: [quick_sort:5 @ t3]:2000:200
+; CHECK-PROBETYPE-DAG: [quick_sort:5 @ t4]:2000:200
+; CHECK-PROBETYPE-NOT: [quick_sort:4 @ t1]
+; CHECK-PROBETYPE-NOT: [t3]:
+; CHECK-PROBETYPE-NOT: [t4]:

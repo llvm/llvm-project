@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_PGOINLINEADVISOR_H
 
 #include "ProfiledBinary.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
@@ -32,6 +33,9 @@ struct ProfiledInlineCandidate {
   uint64_t CallsiteCount;
   // Size proxy for function under particular call context.
   uint64_t SizeCost;
+  // Indirect call target that SampleProfileLoader will not promote, so its
+  // context cannot be inlined and must be merged into the callee's base.
+  bool ICPRejected = false;
 };
 
 // Inline candidate comparer using call site weight
@@ -81,7 +85,12 @@ private:
   void processFunction(FunctionId Name);
   bool shouldInline(ProfiledInlineCandidate &Candidate);
   uint32_t getFuncSize(const ContextTrieNode *ContextNode);
+  DenseSet<const ContextTrieNode *>
+  getICPRejectedCallees(ContextTrieNode *CallerNode,
+                        const FunctionSamples *CallerSamples);
   bool UseContextCost;
+  unsigned ProfileICPRelativeHotness;
+  unsigned ProfileICPRelativeHotnessSkip;
   SampleContextTracker &ContextTracker;
   ProfiledBinary &Binary;
   ProfileSummary *Summary;

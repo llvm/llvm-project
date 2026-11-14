@@ -66,6 +66,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
@@ -145,6 +146,16 @@ cl::opt<int> SampleColdCallSiteThreshold(
     "sample-profile-cold-inline-threshold", cl::Hidden, cl::init(45),
     cl::desc("Threshold for inlining cold callsites"));
 } // namespace llvm
+
+unsigned llvm::getSampleProfileICPRelativeHotness(
+    const cl::LibraryOptionsContext &Opts) {
+  return Opts.get<IPOOptions>().sample_profile_icp_relative_hotness;
+}
+
+unsigned llvm::getSampleProfileICPRelativeHotnessSkip(
+    const cl::LibraryOptionsContext &Opts) {
+  return Opts.get<IPOOptions>().sample_profile_icp_relative_hotness_skip;
+}
 
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
@@ -352,7 +363,8 @@ protected:
       const SmallVectorImpl<CallBase *> &Candidates, const Function &F,
       bool Hot);
   void promoteMergeNotInlinedContextSamples(
-      MapVector<CallBase *, const FunctionSamples *> NonInlinedCallSites,
+      ArrayRef<std::pair<CallBase *, const FunctionSamples *>>
+          NonInlinedCallSites,
       const Function &F);
   std::vector<Function *> buildFunctionOrder(Module &M, LazyCallGraph &CG);
   std::unique_ptr<ProfiledCallGraph> buildProfiledCallGraph(Module &M);
@@ -1048,7 +1060,8 @@ bool SampleProfileLoader::inlineHotFunctions(
   // For CS profile, profile for not inlined context will be merged when
   // base profile is being retrieved.
   if (!FunctionSamples::ProfileIsCS)
-    promoteMergeNotInlinedContextSamples(LocalNotInlinedCallSites, F);
+    promoteMergeNotInlinedContextSamples(LocalNotInlinedCallSites.takeVector(),
+                                         F);
   return Changed;
 }
 
@@ -1264,7 +1277,8 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
   if (ExternalInlineAdvisor)
     SizeLimit = std::numeric_limits<unsigned>::max();
 
-  MapVector<CallBase *, const FunctionSamples *> LocalNotInlinedCallSites;
+  SmallVector<std::pair<CallBase *, const FunctionSamples *>, 8>
+      LocalNotInlinedCallSites;
 
   // Perform iterative BFS call site prioritized inlining
   bool Changed = false;
@@ -1295,10 +1309,17 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         // ICP isn't introducing excessive speculative checks even if individual
         // target looks beneficial to promote and inline. That means we should
         // only do ICP when there's a small number dominant targets.
+        if (!PSI->isHotCount(EntryCountDistributed))
+          break;
         if (ICPCount >= Opts.sample_profile_icp_relative_hotness_skip &&
             EntryCountDistributed * 100 <
-                SumOrigin * Opts.sample_profile_icp_relative_hotness)
-          break;
+                SumOrigin * Opts.sample_profile_icp_relative_hotness) {
+          // Keep hot rejected targets' profiles for their outlined definitions.
+          // Recovering samples does not require promoting the indirect call.
+          if (!ContextTracker)
+            LocalNotInlinedCallSites.emplace_back(I, FS);
+          continue;
+        }
         // TODO: Fix CallAnalyzer to handle all indirect calls.
         // For indirect call, we don't run CallAnalyzer to get InlineCost
         // before actual inlining. This is because we could see two different
@@ -1306,8 +1327,6 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         // it's expecting matching parameter type on both caller and callee
         // side. See example from PR18962 for the triggering cases (the bug was
         // fixed, but we generate different types).
-        if (!PSI->isHotCount(EntryCountDistributed))
-          break;
         SmallVector<CallBase *, 8> InlinedCallSites;
         // Attach function profile for promoted indirect callee, and update
         // call site count for the promoted inline candidate too.
@@ -1322,7 +1341,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
           ICPCount++;
           Changed = true;
         } else if (!ContextTracker) {
-          LocalNotInlinedCallSites.insert({I, FS});
+          LocalNotInlinedCallSites.emplace_back(I, FS);
         }
       }
     } else if (CalledFunction && CalledFunction->getSubprogram() &&
@@ -1335,7 +1354,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         }
         Changed = true;
       } else if (!ContextTracker) {
-        LocalNotInlinedCallSites.insert({I, Candidate.CalleeSamples});
+        LocalNotInlinedCallSites.emplace_back(I, Candidate.CalleeSamples);
       }
     } else if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
       findExternalInlineCandidate(I, findCalleeFunctionSamples(*I),
@@ -1361,12 +1380,20 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
 }
 
 void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
-    MapVector<CallBase *, const FunctionSamples *> NonInlinedCallSites,
+    ArrayRef<std::pair<CallBase *, const FunctionSamples *>>
+        NonInlinedCallSites,
     const Function &F) {
   // Accumulate not inlined callsite information into notInlinedSamples
   for (const auto &Pair : NonInlinedCallSites) {
     CallBase *I = Pair.first;
+    const FunctionSamples *FS = Pair.second;
     Function *Callee = I->getCalledFunction();
+    if (!Callee) {
+      Callee = SymbolMap.lookup(FS->getFunction());
+      // Do not merge a recursive context into the profile that owns it.
+      if (Callee == &F)
+        continue;
+    }
     if (!Callee || Callee->isDeclaration())
       continue;
 
@@ -1377,7 +1404,6 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
         << "' into '" << ore::NV("Caller", &F) << "'");
 
     ++NumCSNotInlined;
-    const FunctionSamples *FS = Pair.second;
     if (FS->getTotalSamples() == 0 && FS->getHeadSamplesEstimate() == 0) {
       continue;
     }
