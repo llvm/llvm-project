@@ -61,6 +61,11 @@ static bool isLoongArchBareMetal(const llvm::Triple &Triple) {
          Triple.getEnvironmentName() == "elf";
 }
 
+/// Is the triple csky-*-none-*?
+static bool isCSKYBareMetal(const llvm::Triple &Triple) {
+  return Triple.isCSKY() && Triple.getOS() == llvm::Triple::UnknownOS;
+}
+
 static bool findRISCVMultilibs(const Driver &D,
                                const llvm::Triple &TargetTriple,
                                const ArgList &Args, DetectedMultilibs &Result) {
@@ -222,29 +227,35 @@ static void addMultilibsFilePaths(const Driver &D, const MultilibSet &Multilibs,
 }
 
 // GCC mutltilibs will only work for those targets that have their multlib
-// structure encoded into GCCInstallation. Baremetal toolchain supports ARM,
-// AArch64, RISCV and PPC and of these only RISCV have GCC multilibs hardcoded
-// in GCCInstallation.
+// structure encoded into GCCInstallation. Of the targets supported by the
+// Baremetal toolchain only RISCV and CSKY have GCC multilibs hardcoded in
+// GCCInstallation.
 BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
                      const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
   IsGCCInstallationValid = initGCCInstallation(Triple, Args);
   std::string ComputedSysRoot = computeSysRoot();
   if (IsGCCInstallationValid) {
-    if (!isRISCVBareMetal(Triple))
+    if (!isRISCVBareMetal(Triple) && !isCSKYBareMetal(Triple))
       D.Diag(clang::diag::warn_drv_multilib_not_available_for_target);
 
     Multilibs = GCCInstallation.getMultilibs();
     SelectedMultilibs.assign({GCCInstallation.getMultilib()});
 
     path_list &Paths = getFilePaths();
-    // Add toolchain/multilib specific file paths.
-    addMultilibsFilePaths(D, Multilibs, SelectedMultilibs.back(),
-                          GCCInstallation.getInstallPath(), Paths);
+    // Add toolchain/multilib specific file paths. Multilib layouts that do
+    // not provide their own file paths (e.g. CSKY) use the OS suffix of the
+    // selected multilib instead.
+    std::string MultilibSuffix;
+    if (Multilibs.filePathsCallback())
+      addMultilibsFilePaths(D, Multilibs, SelectedMultilibs.back(),
+                            GCCInstallation.getInstallPath(), Paths);
+    else
+      MultilibSuffix = SelectedMultilibs.back().osSuffix();
     // Adding filepath for locating crt{begin,end}.o files.
-    Paths.push_back(GCCInstallation.getInstallPath().str());
+    Paths.push_back(GCCInstallation.getInstallPath().str() + MultilibSuffix);
     // Adding filepath for locating crt0.o file.
-    Paths.push_back(ComputedSysRoot + "/lib");
+    Paths.push_back(ComputedSysRoot + "/lib" + MultilibSuffix);
 
     ToolChain::path_list &PPaths = getProgramPaths();
     // Multilib cross-compiler GCC installations put ld in a triple-prefixed
@@ -288,7 +299,7 @@ bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
   return arm::isARMEABIBareMetal(Triple) ||
          aarch64::isAArch64BareMetal(Triple) || isRISCVBareMetal(Triple) ||
          isPPCBareMetal(Triple) || isX86BareMetal(Triple) ||
-         isLoongArchBareMetal(Triple);
+         isLoongArchBareMetal(Triple) || isCSKYBareMetal(Triple);
 }
 
 Tool *BareMetal::buildLinker() const {
@@ -300,13 +311,13 @@ Tool *BareMetal::buildStaticLibTool() const {
 }
 
 ToolChain::CXXStdlibType BareMetal::GetDefaultCXXStdlibType() const {
-  if (getTriple().isRISCV() && IsGCCInstallationValid)
+  if ((getTriple().isRISCV() || getTriple().isCSKY()) && IsGCCInstallationValid)
     return ToolChain::CST_Libstdcxx;
   return ToolChain::CST_Libcxx;
 }
 
 ToolChain::RuntimeLibType BareMetal::GetDefaultRuntimeLibType() const {
-  if (getTriple().isRISCV() && IsGCCInstallationValid)
+  if ((getTriple().isRISCV() || getTriple().isCSKY()) && IsGCCInstallationValid)
     return ToolChain::RLT_Libgcc;
   return ToolChain::RLT_CompilerRT;
 }
@@ -315,7 +326,7 @@ ToolChain::RuntimeLibType BareMetal::GetDefaultRuntimeLibType() const {
 //       If valid, use `UNW_Libgcc`; otherwise, use `UNW_None`.
 ToolChain::UnwindLibType
 BareMetal::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
-  if (getTriple().isRISCV())
+  if (getTriple().isRISCV() || getTriple().isCSKY())
     return ToolChain::UNW_None;
 
   return ToolChain::GetUnwindLibType(Args);
@@ -344,11 +355,22 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   const SmallString<128> SysRootDir(computeSysRoot());
   if (!SysRootDir.empty()) {
-    for (const Multilib &M : getOrderedMultilibs()) {
+    if (getTriple().isCSKY()) {
+      // CSKY GCC toolchains share their headers between multilibs and keep
+      // fixed headers in sys-include.
       SmallString<128> Dir(SysRootDir);
-      llvm::sys::path::append(Dir, M.includeSuffix());
       llvm::sys::path::append(Dir, "include");
       addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      SmallString<128> SysDir(SysRootDir);
+      llvm::sys::path::append(SysDir, "sys-include");
+      addSystemInclude(DriverArgs, CC1Args, SysDir.str());
+    } else {
+      for (const Multilib &M : getOrderedMultilibs()) {
+        SmallString<128> Dir(SysRootDir);
+        llvm::sys::path::append(Dir, M.includeSuffix());
+        llvm::sys::path::append(Dir, "include");
+        addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      }
     }
     SmallString<128> Dir(SysRootDir);
     llvm::sys::path::append(Dir, getTripleString());
@@ -583,6 +605,8 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(crt)));
     }
     if (TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D)) {
+      if (Triple.isCSKY())
+        CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crti.o")));
       auto RuntimeLib = TC.GetRuntimeLibType(Args);
       switch (RuntimeLib) {
       case (ToolChain::RLT_Libgcc): {
@@ -632,14 +656,19 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     AddRunTimeLibs(TC, D, CmdArgs, Args);
     if (!Args.hasArg(options::OPT_nolibc))
       CmdArgs.push_back("-lc");
-    if (TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D))
+    if (Triple.isCSKY())
+      CmdArgs.push_back(Args.hasArg(options::OPT_msim) ? "-lsemi" : "-lnosys");
+    else if (TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D))
       CmdArgs.push_back("-lgloss");
     CmdArgs.push_back("--end-group");
   }
 
   if ((TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D)) &&
-      NeedCRTs)
+      NeedCRTs) {
     CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(CRTEnd)));
+    if (Triple.isCSKY())
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crtn.o")));
+  }
 
   // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
   // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and
