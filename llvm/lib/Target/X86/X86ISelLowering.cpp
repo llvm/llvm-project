@@ -12840,7 +12840,7 @@ static SDValue lowerShuffleAsSpecificExtension(const SDLoc &DL, MVT VT,
 
   // The SSE4A EXTRQ instruction can efficiently extend the first 2 lanes
   // to 64-bits.
-  if ((Scale * EltBits) == 64 && EltBits < 32 && Subtarget.hasSSE4A()) {
+  if ((Scale * EltBits) == 64 && EltBits < 32 && Subtarget.useSSE4A()) {
     assert(NumElements == (int)Mask.size() && "Unexpected shuffle mask size!");
     assert(VT.is128BitVector() && "Unexpected vector width!");
 
@@ -14868,7 +14868,7 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return Shift;
 
   // See if we can use SSE4A Extraction / Insertion.
-  if (Subtarget.hasSSE4A())
+  if (Subtarget.useSSE4A())
     if (SDValue V = lowerShuffleWithSSE4A(DL, MVT::v8i16, V1, V2, Mask,
                                           Zeroable, DAG))
       return V;
@@ -15125,7 +15125,7 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return V;
 
   // See if we can use SSE4A Extraction / Insertion.
-  if (Subtarget.hasSSE4A())
+  if (Subtarget.useSSE4A())
     if (SDValue V = lowerShuffleWithSSE4A(DL, MVT::v16i8, V1, V2, Mask,
                                           Zeroable, DAG))
       return V;
@@ -41680,7 +41680,7 @@ static SDValue combineX86ShuffleChain(
   IntMaskVT = MVT::getVectorVT(IntMaskVT, NumMaskElts);
 
   // Annoyingly, SSE4A instructions don't map into the above match helpers.
-  if (Subtarget.hasSSE4A() && AllowIntDomain && RootSizeInBits == 128) {
+  if (Subtarget.useSSE4A() && AllowIntDomain && RootSizeInBits == 128) {
     uint64_t BitLen, BitIdx;
     if (matchShuffleAsEXTRQ(IntMaskVT, V1, V2, Mask, BitLen, BitIdx,
                             Zeroable)) {
