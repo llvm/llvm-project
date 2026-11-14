@@ -73,12 +73,22 @@ protected:
     binary.append(operands.begin(), operands.end());
   }
 
-  uint32_t addDebugInfoExtInstImport() {
+  void addExtension(spirv::Extension ext) {
+    SmallVector<uint32_t, 8> operands;
+    spirv::encodeStringLiteralInto(operands, spirv::stringifyExtension(ext));
+    addInstruction(spirv::Opcode::OpExtension, operands);
+  }
+
+  uint32_t addExtInstImport(StringRef name) {
     SmallVector<uint32_t, 4> importOperands = {nextID++};
     uint32_t extInstSetID = importOperands[0];
-    spirv::encodeStringLiteralInto(importOperands, spirv::extDebugInfo);
+    spirv::encodeStringLiteralInto(importOperands, name);
     addInstruction(spirv::Opcode::OpExtInstImport, importOperands);
     return extInstSetID;
+  }
+
+  uint32_t addDebugInfoExtInstImport() {
+    return addExtInstImport(spirv::extDebugInfo);
   }
 
   uint32_t addVoidType() {
@@ -409,6 +419,134 @@ TEST_F(DeserializationTest, DebugInfoExtInstUnknownOpcode) {
 
   ASSERT_FALSE(deserialize());
   expectDiagnostic("unknown DebugInfo instruction opcode: 99");
+}
+
+TEST_F(DeserializationTest, NonSemanticExtInstIgnored) {
+  addHeader();
+  addExtension(spirv::Extension::SPV_KHR_relaxed_extended_instruction);
+  uint32_t extInstSetID = addExtInstImport("NonSemantic.AuxData");
+
+  uint32_t voidType = addVoidType();
+  addInstruction(spirv::Opcode::OpExtInstWithForwardRefsKHR,
+                 {voidType, nextID++, extInstSetID, 1, 42});
+  addInstruction(spirv::Opcode::OpExtInst,
+                 {voidType, nextID++, extInstSetID, 1});
+
+  OwningOpRef<spirv::ModuleOp> module = deserialize();
+  ASSERT_TRUE(module);
+  EXPECT_TRUE(module->getBody()->empty());
+}
+
+TEST_F(DeserializationTest, ExtInstWithForwardRefsSemanticSet) {
+  addHeader();
+  uint32_t extInstSetID = addExtInstImport("OpenCL.std");
+
+  uint32_t voidType = addVoidType();
+  addInstruction(spirv::Opcode::OpExtInstWithForwardRefsKHR,
+                 {voidType, nextID++, extInstSetID, 1, 42});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpExtInstWithForwardRefsKHR must use a non-semantic "
+                   "extended instruction set");
+}
+
+TEST_F(DeserializationTest, ExtInstWithForwardRefsUndefinedSet) {
+  addHeader();
+  uint32_t voidType = addVoidType();
+  addInstruction(spirv::Opcode::OpExtInstWithForwardRefsKHR,
+                 {voidType, nextID++, /*set=*/42, 1});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("undefined set <id> in OpExtInst");
+}
+
+TEST_F(DeserializationTest, ShaderDebugSourceMissingFile) {
+  addHeader();
+  uint32_t extInstSetID = addExtInstImport(spirv::extShaderDebugInfo100);
+  uint32_t voidType = addVoidType();
+  addInstruction(
+      spirv::Opcode::OpExtInst,
+      {voidType, nextID++, extInstSetID,
+       llvm::to_underlying(spirv::ShaderDebugInfoExtInst::DebugSource)});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("DebugSource must have a File operand");
+}
+
+TEST_F(DeserializationTest, ShaderDebugLineMissingOperands) {
+  addHeader();
+  uint32_t extInstSetID = addExtInstImport(spirv::extShaderDebugInfo100);
+  uint32_t voidType = addVoidType();
+  addInstruction(spirv::Opcode::OpExtInst,
+                 {voidType, nextID++, extInstSetID,
+                  llvm::to_underlying(spirv::ShaderDebugInfoExtInst::DebugLine),
+                  /*source=*/42});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("DebugLine must have 5 operands");
+}
+
+TEST_F(DeserializationTest, ShaderDebugLineNonConstant) {
+  addHeader();
+  uint32_t extInstSetID = addExtInstImport(spirv::extShaderDebugInfo100);
+  uint32_t voidType = addVoidType();
+  addInstruction(spirv::Opcode::OpExtInst,
+                 {voidType, nextID++, extInstSetID,
+                  llvm::to_underlying(spirv::ShaderDebugInfoExtInst::DebugLine),
+                  /*source=*/42, 43, 43, 44, 44});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("DebugLine line and column must be integer constants");
+}
+
+TEST_F(DeserializationTest, ShaderDebugInfoLine) {
+  addHeader();
+  uint32_t extInstSetID = addExtInstImport(spirv::extShaderDebugInfo100);
+  uint32_t fileID = nextID++;
+  SmallVector<uint32_t, 4> stringOperands = {fileID};
+  spirv::encodeStringLiteralInto(stringOperands, "a.cl");
+  addInstruction(spirv::Opcode::OpString, stringOperands);
+
+  uint32_t voidType = addVoidType();
+  uint32_t intType = addIntType(32);
+  uint32_t lineID = nextID++;
+  addInstruction(spirv::Opcode::OpConstant, {intType, lineID, 7});
+  uint32_t columnID = nextID++;
+  addInstruction(spirv::Opcode::OpConstant, {intType, columnID, 3});
+  uint32_t sourceID = nextID++;
+  addInstruction(
+      spirv::Opcode::OpExtInst,
+      {voidType, sourceID, extInstSetID,
+       llvm::to_underlying(spirv::ShaderDebugInfoExtInst::DebugSource),
+       fileID});
+
+  addFunction(voidType, addFunctionType(voidType, {}));
+  addInstruction(spirv::Opcode::OpLabel, {nextID++});
+  addInstruction(spirv::Opcode::OpExtInst,
+                 {voidType, nextID++, extInstSetID,
+                  llvm::to_underlying(spirv::ShaderDebugInfoExtInst::DebugLine),
+                  sourceID, lineID, lineID, columnID, columnID});
+  addInstruction(spirv::Opcode::OpIAdd, {intType, nextID++, lineID, columnID});
+  addInstruction(
+      spirv::Opcode::OpExtInst,
+      {voidType, nextID++, extInstSetID,
+       llvm::to_underlying(spirv::ShaderDebugInfoExtInst::DebugNoLine)});
+  addReturn();
+  addFunctionEnd();
+
+  OwningOpRef<spirv::ModuleOp> module = deserialize();
+  ASSERT_TRUE(module);
+  spirv::IAddOp addOp;
+  spirv::ReturnOp returnOp;
+  module->walk([&](spirv::IAddOp op) { addOp = op; });
+  module->walk([&](spirv::ReturnOp op) { returnOp = op; });
+  ASSERT_TRUE(addOp && returnOp);
+  auto loc = dyn_cast<FileLineColLoc>(addOp.getLoc());
+  ASSERT_TRUE(loc);
+  EXPECT_EQ(loc.getFilename().getValue(), "a.cl");
+  EXPECT_EQ(loc.getLine(), 7u);
+  EXPECT_EQ(loc.getColumn(), 3u);
+  EXPECT_TRUE(isa<UnknownLoc>(returnOp.getLoc()));
 }
 
 //===----------------------------------------------------------------------===//
