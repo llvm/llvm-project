@@ -1923,6 +1923,94 @@ foreach op = ["test_wait", "try_wait"] in {
   } // scope
 } // op
 
+// This class and the InstrMapping below record each phase-qualified mbarrier
+// wait instruction that produces the optional PTX report value together
+// with its variant without the report. The mapping is used by
+// NVPTXTargetLowering::EmitInstrWithCustomInserter to drop an unused
+// report value from the selected instruction.
+class MbarrierReportVariant<string name, bit report> {
+  string MbarrierWaitName = name;
+  bit HasReport = report;
+}
+
+def getMbarrierNoReportOpcode : InstrMapping {
+  let FilterClass = "MbarrierReportVariant";
+  let RowFields = ["MbarrierWaitName"];
+  let ColFields = ["HasReport"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
+}
+
+class MBAR_PHASE_WAIT<string op, string scope, string phase, string sem,
+                      bit time_limit, bit parity, bit report> {
+  defvar intr_name = StrJoin<"_", ["int_nvvm_mbarrier", op,
+                                   !if(parity, "parity", ""),
+                                   !if(time_limit, "tl", ""), phase,
+                                   !if(!eq(sem, "acquire"), "", sem), scope,
+                                   "space_cta"]>.ret;
+  defvar intr = !cast<Intrinsic>(intr_name);
+
+  defvar state_dag = !if(parity, (intr i32:$state), (intr i64:$state));
+  dag intr_dag = !con((intr addr:$addr), state_dag,
+                      !if(time_limit, (intr i32:$tl), (intr)));
+  dag ins_dag  = !con((ins ADDR:$addr),
+                      !if(parity, (ins B32:$state), (ins B64:$state)),
+                      !if(time_limit, (ins B32:$tl), (ins)));
+  dag outs_dag = !if(!eq(phase, "conditional"), (outs B1:$complete),
+                     !con((outs B1:$complete, B1:$reportSeen),
+                          !if(report, (outs B32:$reportValue), (outs))));
+  dag pattern  = !if(!eq(phase, "conditional"), (set i1:$complete, intr_dag),
+                    (set i1:$complete, i1:$reportSeen, i32:$reportValue,
+                     intr_dag));
+
+  defvar asm_inst = StrJoin<".", ["mbarrier", op,
+                                  !if(parity, "parity", ""),
+                                  "phase_type::" # phase, sem,
+                                  MBAR_UTIL<op, scope, "space_cta", sem>._scope_asm,
+                                  MBAR_UTIL<op, scope, "space_cta", sem>._space_asm,
+                                  "b64"]>.ret;
+  defvar asm_results = !if(!eq(phase, "conditional"), "$complete",
+                           "$complete|$reportSeen" # !if(report, ", %rpt_out", ""));
+  string asm_str = !if(report, "\\{\n\t.reg .b8 %rpt_out;\n\t", "") #
+                   asm_inst # " " # asm_results # ", [$addr], $state" #
+                   !if(time_limit, ", $tl", "") # ";" #
+                   !if(report, "\n\tcvt.u32.u8 $reportValue, %rpt_out;\n\t\\}", "");
+}
+
+foreach op = ["test_wait", "try_wait"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach phase = ["primary", "conditional"] in {
+      foreach parity = !if(!eq(phase, "conditional"), [true], [true, false]) in {
+        foreach time_limit = !if(!eq(op, "try_wait"), [true, false], [false]) in {
+          foreach sem = ["acquire", "relaxed"] in {
+            defvar suffix = StrJoin<"_", [op,
+                                !if(parity, "parity", ""),
+                                !if(time_limit, "tl", ""), phase, sem, scope]>.ret;
+            defvar wait = MBAR_PHASE_WAIT<op, scope, phase, sem, time_limit,
+                                          parity, !eq(phase, "primary")>;
+            def mbar_ # suffix :
+                NVPTXInst<wait.outs_dag, wait.ins_dag, wait.asm_str, [wait.pattern]>,
+                Requires<[PTX93, SM90]>,
+                MbarrierReportVariant<suffix, !eq(phase, "primary")> {
+              let usesCustomInserter = !eq(phase, "primary");
+            }
+            if !eq(phase, "primary") then {
+              defvar no_report = MBAR_PHASE_WAIT<op, scope, phase, sem,
+                                                 time_limit, parity, false>;
+              // No pattern: only selected by the custom inserter when the
+              // report value result is unused.
+              def mbar_ # suffix # _NO_REPORT :
+                  NVPTXInst<no_report.outs_dag, no_report.ins_dag, no_report.asm_str>,
+                  Requires<[PTX93, SM90]>,
+                  MbarrierReportVariant<suffix, false>;
+            }
+          } // sem
+        } // time_limit
+      } // parity
+    } // phase
+  } // scope
+} // op
+
 //-----------------------------------
 // Math Functions
 //-----------------------------------

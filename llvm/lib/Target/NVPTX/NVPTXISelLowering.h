@@ -34,6 +34,10 @@ public:
                                const NVPTXSubtarget &STI);
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *MBB) const override;
+
   void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
                           const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
