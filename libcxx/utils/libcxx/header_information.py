@@ -156,15 +156,20 @@ module_c_headers = [h for h in all_headers if h.has_cxx20_module() and h.is_cstd
 # These headers are required by the latest (draft) Standard but have not been
 # implemented yet. They are used in the generated module input. The C++23 standard
 # modules will fail to build if a header is added but this list is not updated.
-headers_not_available = list(map(Header, [
-    "hazard_pointer",
-    "inplace_vector",
-    "linalg",
-    "rcu",
-    "spanstream",
-    "stacktrace",
-    "stdfloat",
-]))
+headers_not_available = list(
+    map(
+        Header,
+        [
+            "hazard_pointer",
+            "inplace_vector",
+            "linalg",
+            "rcu",
+            "spanstream",
+            "stacktrace",
+            "stdfloat",
+        ],
+    )
+)
 
 # Undeprecate headers that are deprecated in C++17 and removed in C++20.
 lit_header_undeprecations = {
