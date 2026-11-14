@@ -280,6 +280,18 @@ private:
   Sema &Actions;
 };
 
+/// PragmaExtendLifetimesHandler - "\#pragma clang extend_lifetimes
+/// enable/disable".
+struct PragmaExtendLifetimesHandler : public PragmaHandler {
+  PragmaExtendLifetimesHandler(Sema &S)
+      : PragmaHandler("extend_lifetimes"), Actions(S) {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+
+private:
+  Sema &Actions;
+};
+
 struct PragmaLoopHintHandler : public PragmaHandler {
   PragmaLoopHintHandler() : PragmaHandler("loop") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
@@ -527,6 +539,10 @@ void Parser::initializePragmaHandlers() {
   OptimizeHandler = std::make_unique<PragmaOptimizeHandler>(Actions);
   PP.AddPragmaHandler("clang", OptimizeHandler.get());
 
+  ExtendLifetimesHandler =
+      std::make_unique<PragmaExtendLifetimesHandler>(Actions);
+  PP.AddPragmaHandler("clang", ExtendLifetimesHandler.get());
+
   LoopHintHandler = std::make_unique<PragmaLoopHintHandler>();
   PP.AddPragmaHandler("clang", LoopHintHandler.get());
 
@@ -669,6 +685,9 @@ void Parser::resetPragmaHandlers() {
 
   PP.RemovePragmaHandler("clang", OptimizeHandler.get());
   OptimizeHandler.reset();
+
+  PP.RemovePragmaHandler("clang", ExtendLifetimesHandler.get());
+  ExtendLifetimesHandler.reset();
 
   PP.RemovePragmaHandler("clang", LoopHintHandler.get());
   LoopHintHandler.reset();
@@ -3373,6 +3392,47 @@ void PragmaOptimizeHandler::HandlePragma(Preprocessor &PP,
   }
 
   Actions.ActOnPragmaOptimize(IsOn, FirstToken.getLocation());
+}
+
+// #pragma clang extend_lifetimes disable
+// #pragma clang extend_lifetimes enable
+void PragmaExtendLifetimesHandler::HandlePragma(Preprocessor &PP,
+                                                PragmaIntroducer Introducer,
+                                                Token &FirstToken) {
+  Token Tok;
+  PP.Lex(Tok);
+  if (Tok.is(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_missing_argument)
+        << "clang extend_lifetimes" << /*Expected=*/true
+        << "'enable' or 'disable'";
+    return;
+  }
+  if (Tok.isNot(tok::identifier)) {
+    PP.Diag(Tok.getLocation(),
+            diag::err_pragma_extend_lifetimes_invalid_argument)
+        << PP.getSpelling(Tok);
+    return;
+  }
+  const IdentifierInfo *II = Tok.getIdentifierInfo();
+  // The only accepted values are 'enable' or 'disable'.
+  bool IsEnabled = false;
+  if (II->isStr("enable")) {
+    IsEnabled = true;
+  } else if (!II->isStr("disable")) {
+    PP.Diag(Tok.getLocation(),
+            diag::err_pragma_extend_lifetimes_invalid_argument)
+        << PP.getSpelling(Tok);
+    return;
+  }
+  PP.Lex(Tok);
+
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_extend_lifetimes_extra_argument)
+        << PP.getSpelling(Tok);
+    return;
+  }
+
+  Actions.ActOnPragmaExtendLifetimes(IsEnabled, FirstToken.getLocation());
 }
 
 namespace {

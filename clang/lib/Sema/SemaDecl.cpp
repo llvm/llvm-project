@@ -11335,6 +11335,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     ModifyFnAttributesMSPragmaOptimize(NewFD);
   }
 
+  // Check if we have to apply the extend_lifetimes disable pragma.
+  if (D.isFunctionDefinition())
+    AddRangeBasedExtendLifetimesDisable(NewFD);
+
   // If this is the first declaration of an extern C variable, update
   // the map of such variables.
   if (NewFD->isFirstDecl() && !NewFD->isInvalidDecl() &&
