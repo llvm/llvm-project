@@ -536,6 +536,9 @@ private:
   void Select_JUMP_TABLE_DEBUG_INFO(SDNode *N);
 
 private:
+  /// The scheduler, reused for all blocks of the current function.
+  std::unique_ptr<ScheduleDAGSDNodes> Scheduler;
+
   void DoInstructionSelection();
   SDNode *MorphNode(SDNode *Node, unsigned TargetOpc, SDVTList VTList,
                     ArrayRef<SDValue> Ops, unsigned EmitNodeInfo);
