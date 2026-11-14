@@ -7,9 +7,9 @@ amomin.b a1, a2, 1 # expected-error:20 {{expected '(' after optional integer off
 amomin.b a1, a2, 1(a3) # expected-error:18 {{optional integer offset must be 0}}
 
 # Only .aq, .rl, and .aqrl suffixes are valid
-amoxor.b.rlqa a2, a3, (a4) # expected-error:1 {{unrecognized instruction mnemonic}}
-amoor.b.aq.rl a4, a5, (a6) # expected-error:1 {{unrecognized instruction mnemonic}}
-amoor.b. a4, a5, (a6) # expected-error:1 {{unrecognized instruction mnemonic}}
+amoxor.b.rlqa a2, a3, (a4) # expected-error:1 {{unrecognized instruction mnemonic, did you mean: amoxor.b.rl?}}
+amoor.b.aq.rl a4, a5, (a6) # expected-error:1 {{unrecognized instruction mnemonic, did you mean: amoor.b.aqrl, amoxor.b.aqrl?}}
+amoor.b. a4, a5, (a6) # expected-error:1 {{unrecognized instruction mnemonic, did you mean: amoor.b, amoor.b.aq, amoor.b.rl, amoxor.b?}}
 
 # Non-zero offsets not supported for the third operand (rs1).
 amocas.b a1, a3, 1(a5) # expected-error:18 {{optional integer offset must be 0}}

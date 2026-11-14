@@ -49,11 +49,9 @@ bool SourceMgrDiagnosticVerifier::ExpectedDiag::emitError(
 }
 
 bool SourceMgrDiagnosticVerifier::ExpectedDiag::match(StringRef str) const {
-  // If this isn't a regex diagnostic, we simply check if the string was
-  // contained.
   if (substringRegex)
     return substringRegex->match(str);
-  return str.contains(substring);
+  return matchFullMessage ? str == substring : str.contains(substring);
 }
 
 bool SourceMgrDiagnosticVerifier::ExpectedDiag::computeRegex(raw_ostream &os,
@@ -85,7 +83,7 @@ bool SourceMgrDiagnosticVerifier::ExpectedDiag::computeRegex(raw_ostream &os,
     regexOS << '(' << regexBlock << ')';
     strToProcess = strToProcess.drop_front(regexEndIt + 2);
   }
-  substringRegex = Regex(regexStr);
+  substringRegex = Regex(matchFullMessage ? "^(" + regexStr + ")$" : regexStr);
   return true;
 }
 
@@ -106,8 +104,9 @@ static Regex buildExpectedRegex(ArrayRef<StringRef> prefixes) {
 }
 
 SourceMgrDiagnosticVerifier::SourceMgrDiagnosticVerifier(
-    ArrayRef<StringRef> prefixes)
-    : expected(buildExpectedRegex(prefixes)) {}
+    ArrayRef<StringRef> prefixes, bool matchFullMessage)
+    : expected(buildExpectedRegex(prefixes)),
+      matchFullMessage(matchFullMessage) {}
 
 MutableArrayRef<SourceMgrDiagnosticVerifier::ExpectedDiag>
 SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
@@ -158,6 +157,7 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
       kind = SourceMgr::DK_Note;
     }
     ExpectedDiag record(kind, lineNo + 1, expectedStart, matches[11]);
+    record.matchFullMessage = matchFullMessage;
 
     // Check to see if this is a regex match, i.e. it includes the `-re`.
     if (!matches[4].empty() && !record.computeRegex(os, mgr)) {
