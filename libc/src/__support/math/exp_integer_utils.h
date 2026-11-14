@@ -34,7 +34,7 @@ namespace static_rounding {
 
 // > display = hexadecimal;
 // > print(2+round(1/log(2), 128, RN));
-// LSB(LOG2_E_F128) = 2^-127
+// LSB(LOG2_E_128) = 2^-127
 LIBC_INLINE_VAR constexpr Frac128 LOG2_E_128 =
     Frac128({0xbe87'fed0'691d'3e89, 0xb8aa'3b29'5c17'f0bb});
 
@@ -42,7 +42,7 @@ LIBC_INLINE_VAR constexpr Frac128 LOG2_E_128 =
 // > for i from 0 to 15 do {
 //   print(1+round(2^(i/16), 128, RN));
 // };
-// LSB(EXP_MID[i]) = 2^-127
+// LSB(EXP_MID_128[i]) = 2^-127
 LIBC_INLINE_VAR constexpr Frac128 EXP_MID_128[] = {
     Frac128({0x0000'0000'0000'0000, 0x8000'0000'0000'0000}),
     Frac128({0xc5c9'5b8c'2154'c1b2, 0x85aa'c367'cc48'7b14}),
@@ -63,7 +63,7 @@ LIBC_INLINE_VAR constexpr Frac128 EXP_MID_128[] = {
 };
 
 // 2^x for x from 0 to (0b1111/2^4) = 15/16
-// Taking the upper 64 bits of EXP_MID[i] above
+// Taking the upper 64 bits of EXP_MID_128[i] above
 LIBC_INLINE_VAR constexpr Frac64 EXP_MID_64[] = {
     Frac64(0x8000'0000'0000'0000), Frac64(0x85aa'c367'cc48'7b14),
     Frac64(0x8b95'c1e3'ea8b'd6e6), Frac64(0x91c3'd373'ab11'c336),
