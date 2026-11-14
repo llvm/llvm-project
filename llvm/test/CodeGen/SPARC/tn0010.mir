@@ -38,7 +38,7 @@ body:             |
     %0 = LDSTUBri $o2, 10
     %0 = LDrr $g0, $o0
     %0 = LDSTUBArr $o2, $o3, 10
-
+...
 ---
 # CHECK:      bb.2:
 # CHECK-NEXT: NOP
@@ -60,7 +60,7 @@ body:             |
 
   bb.2:
     %0 = CASArr $o1, $o2, %0, 10
-
+...
 ---
 # CHECK:      bb.0.entry:
 # CHECK-NEXT: NOP
@@ -72,7 +72,7 @@ registers:
 body:             |
   bb.0.entry:
     %0 = CASArr $o1, $o2, %0, 10
-
+...
 ---
 # CHECK:      bb.1.entry:
 # CHECK:      NOP

@@ -17,6 +17,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -60,7 +62,11 @@ static void compileRunAndCheck42(LLJIT &J) {
 // allocator end to end; on hosts that still default to RuntimeDyld (COFF today)
 // the allocator is constructed but unused, so this confirms the opt-in does no
 // harm there.
+#if defined(_AIX)
+TEST(LLJITTest, DISABLED_ColocatingSlabAllocator) {
+#else
 TEST(LLJITTest, ColocatingSlabAllocator) {
+#endif
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
 
@@ -82,6 +88,11 @@ TEST(LLJITTest, ColocatingSlabAllocator) {
 TEST(LLJITTest, ColocatingSlabAllocatorForcesJITLink) {
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
+
+  // JITLink's COFF backend only supports x86-64.
+  Triple TT(sys::getProcessTriple());
+  if (!TT.isOSBinFormatCOFF() || TT.getArch() != Triple::x86_64)
+    GTEST_SKIP() << "JITLink-forced test only runs on COFF/x86-64 hosts";
 
   auto J =
       LLJITBuilder()

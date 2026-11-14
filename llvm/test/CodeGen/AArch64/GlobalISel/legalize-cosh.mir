@@ -5,9 +5,6 @@
 ---
 name:            test_v4f16.cosh
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $d0
@@ -57,9 +54,6 @@ body:             |
 ---
 name:            test_v8f16.cosh
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $q0
@@ -90,9 +84,6 @@ body:             |
 ---
 name:            test_v2f32.cosh
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $d0
@@ -123,9 +114,6 @@ body:             |
 ---
 name:            test_v4f32.cosh
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $q0
@@ -167,9 +155,6 @@ body:             |
 ---
 name:            test_v2f64.cosh
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $q0
@@ -200,9 +185,6 @@ body:             |
 ---
 name:            test_cosh_half
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $h0
@@ -219,3 +201,4 @@ body:             |
     %1:_(f16) = G_FCOSH %0
     $h0 = COPY %1(f16)
     RET_ReallyLR implicit $h0
+...

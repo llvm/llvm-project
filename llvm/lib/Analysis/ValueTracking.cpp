@@ -8816,6 +8816,10 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::experimental_constrained_lrint:
   case Intrinsic::llrint:
   case Intrinsic::experimental_constrained_llrint:
+  case Intrinsic::lround:
+  case Intrinsic::experimental_constrained_lround:
+  case Intrinsic::llround:
+  case Intrinsic::experimental_constrained_llround:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
   case Intrinsic::frexp:
@@ -10832,6 +10836,19 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
       return ConstantRange::getNonEmpty(APInt::getSignedMinValue(Width),
                                         APInt::getSignedMaxValue(Width) - *C +
                                             1);
+    }
+    break;
+  case Intrinsic::ushl_sat:
+    if (match(II.getOperand(0), m_APInt(C)))
+      return ConstantRange::getNonEmpty(*C, APInt::getZero(Width));
+    break;
+  case Intrinsic::sshl_sat:
+    if (match(II.getOperand(0), m_APInt(C))) {
+      if (C->isNegative())
+        return ConstantRange::getNonEmpty(APInt::getSignedMinValue(Width),
+                                          *C + 1);
+      return ConstantRange::getNonEmpty(*C,
+                                        APInt::getSignedMaxValue(Width) + 1);
     }
     break;
   case Intrinsic::umin:

@@ -18,7 +18,7 @@
   define void @disp_minus128() nounwind {
     ret void
   }
-
+...
 ---
 name:            disp128
 tracksRegLiveness: false

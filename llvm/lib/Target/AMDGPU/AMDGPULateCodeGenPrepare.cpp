@@ -168,7 +168,7 @@ public:
       if (const auto *Intr = dyn_cast<IntrinsicInst>(II))
         return Intr->getIntrinsicID() == Intrinsic::amdgcn_perm;
       return isa<PHINode, ShuffleVectorInst, InsertElementInst,
-                 ExtractElementInst, CastInst>(II);
+                 ExtractElementInst, CastInst, FreezeInst>(II);
     };
 
     while (!UserList.empty()) {
