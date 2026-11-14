@@ -1398,6 +1398,8 @@ let test_builder () =
      * CHECK: %build_in_bounds_gep = getelementptr inbounds i32, ptr %build_array_alloca, i32 %P2
      * CHECK: %build_struct_gep = getelementptr inbounds{{.*}}%build_alloca2, i32 0, i32 1
      * CHECK: %build_atomicrmw = atomicrmw xchg ptr %p, i8 42 seq_cst
+     * CHECK: %build_atomicrmw_fmaximumnum = atomicrmw fmaximumnum ptr %pf, float 1.000000e+00 seq_cst
+     * CHECK: %build_atomicrmw_fminimumnum = atomicrmw fminimumnum ptr %pf, float 1.000000e+00 seq_cst
      *)
     let alloca = build_alloca i32_type "build_alloca" b in
     let array_alloca = build_array_alloca i32_type p2 "build_array_alloca" b in
@@ -1425,6 +1427,15 @@ let test_builder () =
     ignore(build_atomicrmw AtomicRMWBinOp.Xchg p (const_int i8_type 42)
               AtomicOrdering.SequentiallyConsistent false "build_atomicrmw"
               b);
+
+    let pf = build_alloca float_type "pf" b in
+    let one = const_float float_type 1.0 in
+    ignore(build_atomicrmw AtomicRMWBinOp.FMaximumNum pf one
+              AtomicOrdering.SequentiallyConsistent false
+              "build_atomicrmw_fmaximumnum" b);
+    ignore(build_atomicrmw AtomicRMWBinOp.FMinimumNum pf one
+              AtomicOrdering.SequentiallyConsistent false
+              "build_atomicrmw_fminimumnum" b);
 
     ignore(build_unreachable b)
   end;
