@@ -6,7 +6,7 @@
 define i32 @freeze_int() {
 ; X86ASM-LABEL: freeze_int:
 ; X86ASM:       # %bb.0:
-; X86ASM-NEXT:    # implicit-def: $eax
+; X86ASM-NEXT:    # freeze: $eax
 ; X86ASM-NEXT:    imull %eax, %eax
 ; X86ASM-NEXT:    retq
   %y1 = freeze i32 undef
@@ -17,7 +17,7 @@ define i32 @freeze_int() {
 define void @freeze_int_asm() {
 ; X86ASM-LABEL: freeze_int_asm:
 ; X86ASM:       # %bb.0:
-; X86ASM-NEXT:    # implicit-def: $ecx
+; X86ASM-NEXT:    # freeze: $ecx
 ; X86ASM-NEXT:    imull %ecx, %ecx
 ; X86ASM-NEXT:    #APP
 ; X86ASM-NEXT:    # use %ecx
@@ -32,6 +32,7 @@ define void @freeze_int_asm() {
 define i5 @freeze_int2() {
 ; X86ASM-LABEL: freeze_int2:
 ; X86ASM:       # %bb.0:
+; X86ASM-NEXT:    # freeze: $al
 ; X86ASM-NEXT:    mulb %al
 ; X86ASM-NEXT:    retq
   %y1 = freeze i5 undef
@@ -42,7 +43,7 @@ define i5 @freeze_int2() {
 define float @freeze_float() {
 ; X86ASM-LABEL: freeze_float:
 ; X86ASM:       # %bb.0:
-; X86ASM-NEXT:    # implicit-def: $xmm0
+; X86ASM-NEXT:    # freeze: $xmm0
 ; X86ASM-NEXT:    addss %xmm0, %xmm0
 ; X86ASM-NEXT:    retq
   %y1 = freeze float undef
@@ -55,6 +56,7 @@ define half @freeze_half() {
 ; X86ASM:       # %bb.0:
 ; X86ASM-NEXT:    pushq %rax
 ; X86ASM-NEXT:    .cfi_def_cfa_offset 16
+; X86ASM-NEXT:    # freeze: $xmm0
 ; X86ASM-NEXT:    callq __extendhfsf2@PLT
 ; X86ASM-NEXT:    addss %xmm0, %xmm0
 ; X86ASM-NEXT:    callq __truncsfhf2@PLT
@@ -69,6 +71,7 @@ define half @freeze_half() {
 define <2 x i32> @freeze_ivec() {
 ; X86ASM-LABEL: freeze_ivec:
 ; X86ASM:       # %bb.0:
+; X86ASM-NEXT:    # freeze: $xmm0
 ; X86ASM-NEXT:    paddd %xmm0, %xmm0
 ; X86ASM-NEXT:    retq
   %y1 = freeze <2 x i32> undef
@@ -79,6 +82,7 @@ define <2 x i32> @freeze_ivec() {
 define ptr @freeze_ptr() {
 ; X86ASM-LABEL: freeze_ptr:
 ; X86ASM:       # %bb.0:
+; X86ASM-NEXT:    # freeze: $rax
 ; X86ASM-NEXT:    addq $4, %rax
 ; X86ASM-NEXT:    retq
   %y1 = freeze ptr undef
@@ -89,7 +93,9 @@ define ptr @freeze_ptr() {
 define i32 @freeze_struct() {
 ; X86ASM-LABEL: freeze_struct:
 ; X86ASM:       # %bb.0:
-; X86ASM-NEXT:    addl %eax, %eax
+; X86ASM-NEXT:    # freeze: $ecx
+; X86ASM-NEXT:    # freeze: $eax
+; X86ASM-NEXT:    addl %ecx, %eax
 ; X86ASM-NEXT:    retq
   %y1 = freeze %struct.T undef
   %v1 = extractvalue %struct.T %y1, 0
@@ -101,7 +107,9 @@ define i32 @freeze_struct() {
 define i32 @freeze_anonstruct() {
 ; X86ASM-LABEL: freeze_anonstruct:
 ; X86ASM:       # %bb.0:
-; X86ASM-NEXT:    addl %eax, %eax
+; X86ASM-NEXT:    # freeze: $ecx
+; X86ASM-NEXT:    # freeze: $eax
+; X86ASM-NEXT:    addl %ecx, %eax
 ; X86ASM-NEXT:    retq
   %y1 = freeze {i32, i32} undef
   %v1 = extractvalue {i32, i32} %y1, 0
@@ -113,8 +121,10 @@ define i32 @freeze_anonstruct() {
 define i32 @freeze_anonstruct2() {
 ; X86ASM-LABEL: freeze_anonstruct2:
 ; X86ASM:       # %bb.0:
+; X86ASM-NEXT:    # freeze: $ecx
+; X86ASM-NEXT:    # freeze: $ax
 ; X86ASM-NEXT:    movzwl %ax, %eax
-; X86ASM-NEXT:    addl %eax, %eax
+; X86ASM-NEXT:    addl %ecx, %eax
 ; X86ASM-NEXT:    retq
   %y1 = freeze {i32, i16} undef
   %v1 = extractvalue {i32, i16} %y1, 0
@@ -127,7 +137,9 @@ define i32 @freeze_anonstruct2() {
 define i64 @freeze_array() {
 ; X86ASM-LABEL: freeze_array:
 ; X86ASM:       # %bb.0:
-; X86ASM-NEXT:    addq %rax, %rax
+; X86ASM-NEXT:    # freeze: $rcx
+; X86ASM-NEXT:    # freeze: $rax
+; X86ASM-NEXT:    addq %rcx, %rax
 ; X86ASM-NEXT:    retq
   %y1 = freeze [2 x i64] undef
   %v1 = extractvalue [2 x i64] %y1, 0
@@ -202,4 +214,14 @@ entry:
   %sel2 = select i1 %v6, i64 0, i64 1
   %and = and i64 %sel2, %shl
   ret i64 %and
+}
+
+define i128 @freeze_i128() {
+; X86ASM-LABEL: freeze_i128:
+; X86ASM:       # %bb.0:
+; X86ASM-NEXT:    # freeze: $rax
+; X86ASM-NEXT:    # freeze: $rdx
+; X86ASM-NEXT:    retq
+  %y1 = freeze i128 poison
+  ret i128 %y1
 }

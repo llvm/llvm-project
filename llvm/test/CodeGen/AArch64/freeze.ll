@@ -7,30 +7,48 @@
 %struct.T = type { i32, i32 }
 
 define i32 @freeze_int() {
-; CHECK-LABEL: freeze_int:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w0, w8, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_int:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $w0
+; CHECK-SD-NEXT:    mul w0, w0, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_int:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mul w0, w8, w8
+; CHECK-GI-NEXT:    ret
   %y1 = freeze i32 undef
   %t1 = mul i32 %y1, %y1
   ret i32 %t1
 }
 
 define i5 @freeze_int2() {
-; CHECK-LABEL: freeze_int2:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w0, w8, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_int2:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $w0
+; CHECK-SD-NEXT:    mul w0, w0, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_int2:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mul w0, w8, w8
+; CHECK-GI-NEXT:    ret
   %y1 = freeze i5 undef
   %t1 = mul i5 %y1, %y1
   ret i5 %t1
 }
 
 define float @freeze_float() {
-; CHECK-LABEL: freeze_float:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd s0, s0, s0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_float:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $s0
+; CHECK-SD-NEXT:    fadd s0, s0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_float:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fadd s0, s0, s0
+; CHECK-GI-NEXT:    ret
   %y1 = freeze float undef
   %t1 = fadd float %y1, %y1
   ret float %t1
@@ -39,6 +57,7 @@ define float @freeze_float() {
 define <2 x i8> @freeze_v2i8() {
 ; CHECK-LABEL: freeze_v2i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // freeze: $d0
 ; CHECK-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %y1 = freeze <2 x i8> undef
@@ -49,6 +68,7 @@ define <2 x i8> @freeze_v2i8() {
 define <3 x i8> @freeze_v3i8() {
 ; CHECK-SD-LABEL: freeze_v3i8:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $d0
 ; CHECK-SD-NEXT:    add v0.4h, v0.4h, v0.4h
 ; CHECK-SD-NEXT:    umov w0, v0.h[0]
 ; CHECK-SD-NEXT:    umov w1, v0.h[1]
@@ -76,6 +96,7 @@ define <3 x i8> @freeze_v3i8() {
 define <4 x i8> @freeze_v4i8() {
 ; CHECK-SD-LABEL: freeze_v4i8:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $d0
 ; CHECK-SD-NEXT:    add v0.4h, v0.4h, v0.4h
 ; CHECK-SD-NEXT:    ret
 ;
@@ -98,20 +119,32 @@ define <4 x i8> @freeze_v4i8() {
 }
 
 define <8 x i8> @freeze_v8i8() {
-; CHECK-LABEL: freeze_v8i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.8b, v0.8b, v0.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v8i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $d0
+; CHECK-SD-NEXT:    add v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v8i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <8 x i8> undef
   %t1 = add <8 x i8> %y1, %y1
   ret <8 x i8> %t1
 }
 
 define <16 x i8> @freeze_v16i8() {
-; CHECK-LABEL: freeze_v16i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v16i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $q0
+; CHECK-SD-NEXT:    add v0.16b, v0.16b, v0.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v16i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.16b, v0.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <16 x i8> undef
   %t1 = add <16 x i8> %y1, %y1
   ret <16 x i8> %t1
@@ -120,8 +153,10 @@ define <16 x i8> @freeze_v16i8() {
 define <32 x i8> @freeze_v32i8() {
 ; CHECK-SD-LABEL: freeze_v32i8:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $q1
+; CHECK-SD-NEXT:    // freeze: $q0
 ; CHECK-SD-NEXT:    add v0.16b, v0.16b, v0.16b
-; CHECK-SD-NEXT:    add v1.16b, v0.16b, v0.16b
+; CHECK-SD-NEXT:    add v1.16b, v1.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v32i8:
@@ -137,6 +172,7 @@ define <32 x i8> @freeze_v32i8() {
 define <2 x i16> @freeze_v2i16() {
 ; CHECK-SD-LABEL: freeze_v2i16:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $d0
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -153,30 +189,48 @@ define <2 x i16> @freeze_v2i16() {
 }
 
 define <3 x i16> @freeze_v3i16() {
-; CHECK-LABEL: freeze_v3i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.4h, v0.4h, v0.4h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v3i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $d0
+; CHECK-SD-NEXT:    add v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v3i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <3 x i16> undef
   %t1 = add <3 x i16> %y1, %y1
   ret <3 x i16> %t1
 }
 
 define <4 x i16> @freeze_v4i16() {
-; CHECK-LABEL: freeze_v4i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.4h, v0.4h, v0.4h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $d0
+; CHECK-SD-NEXT:    add v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <4 x i16> undef
   %t1 = add <4 x i16> %y1, %y1
   ret <4 x i16> %t1
 }
 
 define <8 x i16> @freeze_v8i16() {
-; CHECK-LABEL: freeze_v8i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.8h, v0.8h, v0.8h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v8i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $q0
+; CHECK-SD-NEXT:    add v0.8h, v0.8h, v0.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v8i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.8h, v0.8h, v0.8h
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <8 x i16> undef
   %t1 = add <8 x i16> %y1, %y1
   ret <8 x i16> %t1
@@ -185,8 +239,10 @@ define <8 x i16> @freeze_v8i16() {
 define <16 x i16> @freeze_v16i16() {
 ; CHECK-SD-LABEL: freeze_v16i16:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $q1
+; CHECK-SD-NEXT:    // freeze: $q0
 ; CHECK-SD-NEXT:    add v0.8h, v0.8h, v0.8h
-; CHECK-SD-NEXT:    add v1.8h, v0.8h, v0.8h
+; CHECK-SD-NEXT:    add v1.8h, v1.8h, v1.8h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v16i16:
@@ -200,30 +256,48 @@ define <16 x i16> @freeze_v16i16() {
 }
 
 define <2 x i32> @freeze_v2i32() {
-; CHECK-LABEL: freeze_v2i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.2s, v0.2s, v0.2s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $d0
+; CHECK-SD-NEXT:    add v0.2s, v0.2s, v0.2s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.2s, v0.2s, v0.2s
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <2 x i32> undef
   %t1 = add <2 x i32> %y1, %y1
   ret <2 x i32> %t1
 }
 
 define <3 x i32> @freeze_v3i32() {
-; CHECK-LABEL: freeze_v3i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v3i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $q0
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v3i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <3 x i32> undef
   %t1 = add <3 x i32> %y1, %y1
   ret <3 x i32> %t1
 }
 
 define <4 x i32> @freeze_v4i32() {
-; CHECK-LABEL: freeze_v4i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v4i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $q0
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v4i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <4 x i32> undef
   %t1 = add <4 x i32> %y1, %y1
   ret <4 x i32> %t1
@@ -232,8 +306,10 @@ define <4 x i32> @freeze_v4i32() {
 define <8 x i32> @freeze_v8i32() {
 ; CHECK-SD-LABEL: freeze_v8i32:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $q1
+; CHECK-SD-NEXT:    // freeze: $q0
 ; CHECK-SD-NEXT:    add v0.4s, v0.4s, v0.4s
-; CHECK-SD-NEXT:    add v1.4s, v0.4s, v0.4s
+; CHECK-SD-NEXT:    add v1.4s, v1.4s, v1.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v8i32:
@@ -247,10 +323,16 @@ define <8 x i32> @freeze_v8i32() {
 }
 
 define <2 x i64> @freeze_v2i64() {
-; CHECK-LABEL: freeze_v2i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.2d, v0.2d, v0.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v2i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $q0
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v0.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v2i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.2d, v0.2d, v0.2d
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <2 x i64> undef
   %t1 = add <2 x i64> %y1, %y1
   ret <2 x i64> %t1
@@ -259,10 +341,12 @@ define <2 x i64> @freeze_v2i64() {
 define <3 x i64> @freeze_v3i64() {
 ; CHECK-SD-LABEL: freeze_v3i64:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $q0
 ; CHECK-SD-NEXT:    add v0.2d, v0.2d, v0.2d
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
-; CHECK-SD-NEXT:    add d2, d0, d0
+; CHECK-SD-NEXT:    // freeze: $q2
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    add d2, d2, d2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v3i64:
@@ -281,8 +365,10 @@ define <3 x i64> @freeze_v3i64() {
 define <4 x i64> @freeze_v4i64() {
 ; CHECK-SD-LABEL: freeze_v4i64:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $q1
+; CHECK-SD-NEXT:    // freeze: $q0
 ; CHECK-SD-NEXT:    add v0.2d, v0.2d, v0.2d
-; CHECK-SD-NEXT:    add v1.2d, v0.2d, v0.2d
+; CHECK-SD-NEXT:    add v1.2d, v1.2d, v1.2d
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v4i64:
@@ -300,7 +386,8 @@ define <2 x ptr> @freeze_v2p0() {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #4 // =0x4
 ; CHECK-SD-NEXT:    dup v0.2d, x8
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v0.2d
+; CHECK-SD-NEXT:    // freeze: $q1
+; CHECK-SD-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v2p0:
@@ -318,10 +405,12 @@ define <3 x ptr> @freeze_v3p0() {
 ; CHECK-SD-LABEL: freeze_v3p0:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #4 // =0x4
+; CHECK-SD-NEXT:    // freeze: $q0
 ; CHECK-SD-NEXT:    dup v2.2d, x8
 ; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
-; CHECK-SD-NEXT:    add d2, d0, d2
+; CHECK-SD-NEXT:    // freeze: $q3
+; CHECK-SD-NEXT:    add d2, d3, d2
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -343,9 +432,11 @@ define <4 x ptr> @freeze_v4p0() {
 ; CHECK-SD-LABEL: freeze_v4p0:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #4 // =0x4
+; CHECK-SD-NEXT:    // freeze: $q2
+; CHECK-SD-NEXT:    // freeze: $q0
 ; CHECK-SD-NEXT:    dup v1.2d, x8
 ; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    add v1.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    add v1.2d, v2.2d, v1.2d
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v4p0:
@@ -361,20 +452,33 @@ define <4 x ptr> @freeze_v4p0() {
 }
 
 define ptr @freeze_ptr() {
-; CHECK-LABEL: freeze_ptr:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x0, x8, #4
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_ptr:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $x0
+; CHECK-SD-NEXT:    add x0, x0, #4
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_ptr:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add x0, x8, #4
+; CHECK-GI-NEXT:    ret
   %y1 = freeze ptr undef
   %t1 = getelementptr i8, ptr %y1, i64 4
   ret ptr %t1
 }
 
 define i32 @freeze_struct() {
-; CHECK-LABEL: freeze_struct:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w0, w8, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_struct:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $w0
+; CHECK-SD-NEXT:    // freeze: $w8
+; CHECK-SD-NEXT:    add w0, w8, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_struct:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add w0, w8, w8
+; CHECK-GI-NEXT:    ret
   %y1 = freeze %struct.T undef
   %v1 = extractvalue %struct.T %y1, 0
   %v2 = extractvalue %struct.T %y1, 1
@@ -383,10 +487,17 @@ define i32 @freeze_struct() {
 }
 
 define i32 @freeze_anonstruct() {
-; CHECK-LABEL: freeze_anonstruct:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w0, w8, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_anonstruct:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $w0
+; CHECK-SD-NEXT:    // freeze: $w8
+; CHECK-SD-NEXT:    add w0, w8, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_anonstruct:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add w0, w8, w8
+; CHECK-GI-NEXT:    ret
   %y1 = freeze {i32, i32} undef
   %v1 = extractvalue {i32, i32} %y1, 0
   %v2 = extractvalue {i32, i32} %y1, 1
@@ -395,10 +506,17 @@ define i32 @freeze_anonstruct() {
 }
 
 define i32 @freeze_anonstruct2() {
-; CHECK-LABEL: freeze_anonstruct2:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w0, w8, w8, uxth
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_anonstruct2:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $w0
+; CHECK-SD-NEXT:    // freeze: $w8
+; CHECK-SD-NEXT:    add w0, w8, w0, uxth
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_anonstruct2:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add w0, w8, w8, uxth
+; CHECK-GI-NEXT:    ret
   %y1 = freeze {i32, i16} undef
   %v1 = extractvalue {i32, i16} %y1, 0
   %v2 = extractvalue {i32, i16} %y1, 1
@@ -408,10 +526,17 @@ define i32 @freeze_anonstruct2() {
 }
 
 define i64 @freeze_array() {
-; CHECK-LABEL: freeze_array:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x0, x8, x8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_array:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $x0
+; CHECK-SD-NEXT:    // freeze: $x8
+; CHECK-SD-NEXT:    add x0, x8, x0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_array:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add x0, x8, x8
+; CHECK-GI-NEXT:    ret
   %y1 = freeze [2 x i64] undef
   %v1 = extractvalue [2 x i64] %y1, 0
   %v2 = extractvalue [2 x i64] %y1, 1
@@ -587,4 +712,20 @@ define i32 @freeze_ucmp(i32 %a0) nounwind {
   %y = freeze i32 %x
   %z = call i32 @llvm.ucmp.i32(i32 %y, i32 1)
   ret i32 %z
+}
+
+define i128 @freeze_i128() {
+; CHECK-SD-LABEL: freeze_i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // freeze: $x0
+; CHECK-SD-NEXT:    // freeze: $x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
+; CHECK-GI-NEXT:    fmov x1, d0
+; CHECK-GI-NEXT:    ret
+  %y1 = freeze i128 poison
+  ret i128 %y1
 }

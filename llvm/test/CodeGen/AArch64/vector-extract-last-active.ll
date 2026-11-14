@@ -11,16 +11,16 @@ define i8 @extract_last_i8(<16 x i8> %data, <16 x i8> %mask, i8 %passthru) {
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI0_0
 ; NEON-FIXED-NEXT:    cmtst v1.16b, v1.16b, v1.16b
 ; NEON-FIXED-NEXT:    ldr q3, [x8, :lo12:.LCPI0_0]
-; NEON-FIXED-NEXT:    mov x9, sp
+; NEON-FIXED-NEXT:    mov x8, sp
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    bic v2.16b, v3.16b, v2.16b
 ; NEON-FIXED-NEXT:    umaxv b1, v1.16b
 ; NEON-FIXED-NEXT:    umaxv b2, v2.16b
-; NEON-FIXED-NEXT:    fmov w8, s2
-; NEON-FIXED-NEXT:    bfxil x9, x8, #0, #4
-; NEON-FIXED-NEXT:    ldrb w8, [x9]
 ; NEON-FIXED-NEXT:    fmov w9, s1
+; NEON-FIXED-NEXT:    fmov w1, s2
 ; NEON-FIXED-NEXT:    tst w9, #0x1
+; NEON-FIXED-NEXT:    bfxil x8, x1, #0, #4
+; NEON-FIXED-NEXT:    ldrb w8, [x8]
 ; NEON-FIXED-NEXT:    csel w0, w8, w0, ne
 ; NEON-FIXED-NEXT:    add sp, sp, #16
 ; NEON-FIXED-NEXT:    ret
@@ -49,18 +49,18 @@ define i16 @extract_last_i16(<8 x i16> %data, <8 x i16> %mask, i16 %passthru) {
 ; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; NEON-FIXED-NEXT:    cmtst v1.8h, v1.8h, v1.8h
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI1_0
-; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI1_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
+; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI1_0]
+; NEON-FIXED-NEXT:    mov x8, sp
 ; NEON-FIXED-NEXT:    xtn v2.8b, v1.8h
 ; NEON-FIXED-NEXT:    umaxv h1, v1.8h
 ; NEON-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
-; NEON-FIXED-NEXT:    umaxv b2, v2.8b
-; NEON-FIXED-NEXT:    fmov w8, s2
-; NEON-FIXED-NEXT:    bfi x9, x8, #1, #3
-; NEON-FIXED-NEXT:    ldrh w8, [x9]
 ; NEON-FIXED-NEXT:    fmov w9, s1
+; NEON-FIXED-NEXT:    umaxv b2, v2.8b
 ; NEON-FIXED-NEXT:    tst w9, #0x1
+; NEON-FIXED-NEXT:    fmov w1, s2
+; NEON-FIXED-NEXT:    bfi x8, x1, #1, #3
+; NEON-FIXED-NEXT:    ldrh w8, [x8]
 ; NEON-FIXED-NEXT:    csel w0, w8, w0, ne
 ; NEON-FIXED-NEXT:    add sp, sp, #16
 ; NEON-FIXED-NEXT:    ret
@@ -89,18 +89,18 @@ define i32 @extract_last_i32(<4 x i32> %data, <4 x i32> %mask, i32 %passthru) {
 ; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; NEON-FIXED-NEXT:    cmtst v1.4s, v1.4s, v1.4s
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI2_0
-; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI2_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
+; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI2_0]
+; NEON-FIXED-NEXT:    mov x8, sp
 ; NEON-FIXED-NEXT:    xtn v2.4h, v1.4s
 ; NEON-FIXED-NEXT:    umaxv s1, v1.4s
 ; NEON-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
-; NEON-FIXED-NEXT:    umaxv h2, v2.4h
-; NEON-FIXED-NEXT:    fmov w8, s2
-; NEON-FIXED-NEXT:    bfi x9, x8, #2, #2
-; NEON-FIXED-NEXT:    ldr w8, [x9]
 ; NEON-FIXED-NEXT:    fmov w9, s1
+; NEON-FIXED-NEXT:    umaxv h2, v2.4h
 ; NEON-FIXED-NEXT:    tst w9, #0x1
+; NEON-FIXED-NEXT:    fmov w1, s2
+; NEON-FIXED-NEXT:    bfi x8, x1, #2, #2
+; NEON-FIXED-NEXT:    ldr w8, [x8]
 ; NEON-FIXED-NEXT:    csel w0, w8, w0, ne
 ; NEON-FIXED-NEXT:    add sp, sp, #16
 ; NEON-FIXED-NEXT:    ret
@@ -171,18 +171,18 @@ define half @extract_last_half(<8 x half> %data, <8 x i16> %mask, half %passthru
 ; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; NEON-FIXED-NEXT:    cmtst v1.8h, v1.8h, v1.8h
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI4_0
-; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d4, [x8, :lo12:.LCPI4_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
+; NEON-FIXED-NEXT:    ldr d4, [x8, :lo12:.LCPI4_0]
+; NEON-FIXED-NEXT:    mov x8, sp
 ; NEON-FIXED-NEXT:    // kill: def $h2 killed $h2 def $s2
 ; NEON-FIXED-NEXT:    xtn v3.8b, v1.8h
 ; NEON-FIXED-NEXT:    umaxv h1, v1.8h
 ; NEON-FIXED-NEXT:    and v3.8b, v3.8b, v4.8b
 ; NEON-FIXED-NEXT:    umaxv b3, v3.8b
-; NEON-FIXED-NEXT:    fmov w8, s3
-; NEON-FIXED-NEXT:    bfi x9, x8, #1, #3
+; NEON-FIXED-NEXT:    fmov w0, s3
+; NEON-FIXED-NEXT:    bfi x8, x0, #1, #3
+; NEON-FIXED-NEXT:    ldr h0, [x8]
 ; NEON-FIXED-NEXT:    fmov w8, s1
-; NEON-FIXED-NEXT:    ldr h0, [x9]
 ; NEON-FIXED-NEXT:    tst w8, #0x1
 ; NEON-FIXED-NEXT:    fcsel s0, s0, s2, ne
 ; NEON-FIXED-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -214,18 +214,18 @@ define bfloat @extract_last_bfloat(<8 x bfloat> %data, <8 x i16> %mask, bfloat %
 ; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; NEON-FIXED-NEXT:    cmtst v1.8h, v1.8h, v1.8h
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI5_0
-; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d4, [x8, :lo12:.LCPI5_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
+; NEON-FIXED-NEXT:    ldr d4, [x8, :lo12:.LCPI5_0]
+; NEON-FIXED-NEXT:    mov x8, sp
 ; NEON-FIXED-NEXT:    // kill: def $h2 killed $h2 def $s2
 ; NEON-FIXED-NEXT:    xtn v3.8b, v1.8h
 ; NEON-FIXED-NEXT:    umaxv h1, v1.8h
 ; NEON-FIXED-NEXT:    and v3.8b, v3.8b, v4.8b
 ; NEON-FIXED-NEXT:    umaxv b3, v3.8b
-; NEON-FIXED-NEXT:    fmov w8, s3
-; NEON-FIXED-NEXT:    bfi x9, x8, #1, #3
+; NEON-FIXED-NEXT:    fmov w0, s3
+; NEON-FIXED-NEXT:    bfi x8, x0, #1, #3
+; NEON-FIXED-NEXT:    ldr h0, [x8]
 ; NEON-FIXED-NEXT:    fmov w8, s1
-; NEON-FIXED-NEXT:    ldr h0, [x9]
 ; NEON-FIXED-NEXT:    tst w8, #0x1
 ; NEON-FIXED-NEXT:    fcsel s0, s0, s2, ne
 ; NEON-FIXED-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -257,17 +257,17 @@ define float @extract_last_float(<4 x float> %data, <4 x i32> %mask, float %pass
 ; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; NEON-FIXED-NEXT:    cmtst v1.4s, v1.4s, v1.4s
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI6_0
-; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d4, [x8, :lo12:.LCPI6_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
+; NEON-FIXED-NEXT:    ldr d4, [x8, :lo12:.LCPI6_0]
+; NEON-FIXED-NEXT:    mov x8, sp
 ; NEON-FIXED-NEXT:    xtn v3.4h, v1.4s
 ; NEON-FIXED-NEXT:    umaxv s1, v1.4s
 ; NEON-FIXED-NEXT:    and v3.8b, v3.8b, v4.8b
 ; NEON-FIXED-NEXT:    umaxv h3, v3.4h
-; NEON-FIXED-NEXT:    fmov w8, s3
-; NEON-FIXED-NEXT:    bfi x9, x8, #2, #2
+; NEON-FIXED-NEXT:    fmov w0, s3
+; NEON-FIXED-NEXT:    bfi x8, x0, #2, #2
+; NEON-FIXED-NEXT:    ldr s0, [x8]
 ; NEON-FIXED-NEXT:    fmov w8, s1
-; NEON-FIXED-NEXT:    ldr s0, [x9]
 ; NEON-FIXED-NEXT:    tst w8, #0x1
 ; NEON-FIXED-NEXT:    fcsel s0, s0, s2, ne
 ; NEON-FIXED-NEXT:    add sp, sp, #16
@@ -441,7 +441,7 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
 ; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; NEON-FIXED-NEXT:    movi v1.2d, #0000000000000000
 ; NEON-FIXED-NEXT:    adrp x8, .LCPI18_0
-; NEON-FIXED-NEXT:    mov x11, sp
+; NEON-FIXED-NEXT:    mov x10, sp
 ; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI18_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    mov v1.h[0], w0
@@ -456,9 +456,9 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
 ; NEON-FIXED-NEXT:    orr w8, w9, w8, lsr #16
 ; NEON-FIXED-NEXT:    tst w8, #0x1
 ; NEON-FIXED-NEXT:    umaxv h2, v2.4h
-; NEON-FIXED-NEXT:    fmov w10, s2
-; NEON-FIXED-NEXT:    bfi x11, x10, #2, #2
-; NEON-FIXED-NEXT:    ldr w9, [x11]
+; NEON-FIXED-NEXT:    fmov w0, s2
+; NEON-FIXED-NEXT:    bfi x10, x0, #2, #2
+; NEON-FIXED-NEXT:    ldr w9, [x10]
 ; NEON-FIXED-NEXT:    csinv w0, w9, wzr, ne
 ; NEON-FIXED-NEXT:    add sp, sp, #16
 ; NEON-FIXED-NEXT:    ret

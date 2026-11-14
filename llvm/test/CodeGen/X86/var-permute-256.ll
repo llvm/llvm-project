@@ -1542,7 +1542,8 @@ define <16 x i16> @var_shuffle_v16i16_from_v8i16(<8 x i16> %v, <16 x i16> %indic
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [514,514,514,514,514,514,514,514,514,514,514,514,514,514,514,514]
 ; AVX2-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256]
-; AVX2-NEXT:    vpshufb %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    # freeze: $xmm2
+; AVX2-NEXT:    vpshufb %ymm1, %ymm2, %ymm2
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
@@ -1554,7 +1555,8 @@ define <16 x i16> @var_shuffle_v16i16_from_v8i16(<8 x i16> %v, <16 x i16> %indic
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [514,514,514,514,514,514,514,514,514,514,514,514,514,514,514,514]
 ; AVX512-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256]
-; AVX512-NEXT:    vpshufb %ymm1, %ymm0, %ymm2
+; AVX512-NEXT:    # freeze: $xmm2
+; AVX512-NEXT:    vpshufb %ymm1, %ymm2, %ymm2
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
@@ -1568,6 +1570,7 @@ define <16 x i16> @var_shuffle_v16i16_from_v8i16(<8 x i16> %v, <16 x i16> %indic
 ; AVX512VLF-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256]
 ; AVX512VLF-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; AVX512VLF-NEXT:    vpshufb %ymm1, %ymm0, %ymm2
+; AVX512VLF-NEXT:    # freeze: $xmm0
 ; AVX512VLF-NEXT:    vpshufb %ymm1, %ymm0, %ymm3
 ; AVX512VLF-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; AVX512VLF-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm2 ^ (ymm0 & (ymm3 ^ ymm2))

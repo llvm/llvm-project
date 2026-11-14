@@ -565,68 +565,68 @@ define <16 x i8> @no_shuffle_with_two_mask_sources(<16 x i8> %src, <16 x i8> %ma
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    umov.b w8, v1[0]
-; CHECK-SD-NEXT:    umov.b w10, v1[8]
-; CHECK-SD-NEXT:    mov x11, sp
-; CHECK-SD-NEXT:    umov.b w9, v2[1]
+; CHECK-SD-NEXT:    umov.b w9, v1[0]
+; CHECK-SD-NEXT:    umov.b w11, v1[8]
+; CHECK-SD-NEXT:    mov x13, sp
+; CHECK-SD-NEXT:    umov.b w10, v2[1]
 ; CHECK-SD-NEXT:    umov.b w12, v2[9]
 ; CHECK-SD-NEXT:    mov x14, sp
-; CHECK-SD-NEXT:    mov x13, sp
+; CHECK-SD-NEXT:    mov x8, sp
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    umov.b w15, v2[11]
-; CHECK-SD-NEXT:    bfxil x11, x8, #0, #4
-; CHECK-SD-NEXT:    bfxil x14, x10, #0, #4
-; CHECK-SD-NEXT:    umov.b w8, v1[2]
 ; CHECK-SD-NEXT:    bfxil x13, x9, #0, #4
-; CHECK-SD-NEXT:    mov x9, sp
-; CHECK-SD-NEXT:    umov.b w10, v1[10]
-; CHECK-SD-NEXT:    bfxil x9, x12, #0, #4
-; CHECK-SD-NEXT:    ldr b0, [x11]
+; CHECK-SD-NEXT:    bfxil x14, x11, #0, #4
+; CHECK-SD-NEXT:    umov.b w9, v1[2]
+; CHECK-SD-NEXT:    bfxil x8, x10, #0, #4
+; CHECK-SD-NEXT:    mov x10, sp
+; CHECK-SD-NEXT:    umov.b w11, v1[10]
+; CHECK-SD-NEXT:    bfxil x10, x12, #0, #4
+; CHECK-SD-NEXT:    ldr b0, [x13]
 ; CHECK-SD-NEXT:    ldr b3, [x14]
-; CHECK-SD-NEXT:    mov x11, sp
-; CHECK-SD-NEXT:    umov.b w12, v2[3]
+; CHECK-SD-NEXT:    mov x12, sp
+; CHECK-SD-NEXT:    umov.b w13, v2[3]
 ; CHECK-SD-NEXT:    mov x14, sp
-; CHECK-SD-NEXT:    ld1.b { v0 }[1], [x13]
-; CHECK-SD-NEXT:    ld1.b { v3 }[1], [x9]
-; CHECK-SD-NEXT:    bfxil x11, x8, #0, #4
-; CHECK-SD-NEXT:    bfxil x14, x10, #0, #4
+; CHECK-SD-NEXT:    ld1.b { v0 }[1], [x8]
+; CHECK-SD-NEXT:    ld1.b { v3 }[1], [x10]
+; CHECK-SD-NEXT:    bfxil x12, x9, #0, #4
+; CHECK-SD-NEXT:    bfxil x14, x11, #0, #4
 ; CHECK-SD-NEXT:    mov x8, sp
 ; CHECK-SD-NEXT:    umov.b w9, v1[4]
 ; CHECK-SD-NEXT:    mov x10, sp
-; CHECK-SD-NEXT:    umov.b w13, v1[12]
-; CHECK-SD-NEXT:    ld1.b { v0 }[2], [x11]
+; CHECK-SD-NEXT:    umov.b w11, v1[12]
+; CHECK-SD-NEXT:    ld1.b { v0 }[2], [x12]
 ; CHECK-SD-NEXT:    ld1.b { v3 }[2], [x14]
-; CHECK-SD-NEXT:    bfxil x8, x12, #0, #4
+; CHECK-SD-NEXT:    bfxil x8, x13, #0, #4
 ; CHECK-SD-NEXT:    bfxil x10, x15, #0, #4
-; CHECK-SD-NEXT:    mov x11, sp
-; CHECK-SD-NEXT:    umov.b w12, v2[5]
+; CHECK-SD-NEXT:    mov x12, sp
+; CHECK-SD-NEXT:    umov.b w13, v2[5]
 ; CHECK-SD-NEXT:    mov x14, sp
 ; CHECK-SD-NEXT:    umov.b w15, v2[13]
-; CHECK-SD-NEXT:    bfxil x11, x9, #0, #4
+; CHECK-SD-NEXT:    bfxil x12, x9, #0, #4
 ; CHECK-SD-NEXT:    ld1.b { v0 }[3], [x8]
 ; CHECK-SD-NEXT:    ld1.b { v3 }[3], [x10]
-; CHECK-SD-NEXT:    bfxil x14, x13, #0, #4
+; CHECK-SD-NEXT:    bfxil x14, x11, #0, #4
 ; CHECK-SD-NEXT:    umov.b w8, v1[6]
 ; CHECK-SD-NEXT:    umov.b w9, v1[14]
 ; CHECK-SD-NEXT:    mov x10, sp
-; CHECK-SD-NEXT:    mov x13, sp
-; CHECK-SD-NEXT:    bfxil x10, x12, #0, #4
-; CHECK-SD-NEXT:    umov.b w12, v2[7]
-; CHECK-SD-NEXT:    ld1.b { v0 }[4], [x11]
-; CHECK-SD-NEXT:    ld1.b { v3 }[4], [x14]
-; CHECK-SD-NEXT:    bfxil x13, x15, #0, #4
 ; CHECK-SD-NEXT:    mov x11, sp
+; CHECK-SD-NEXT:    bfxil x10, x13, #0, #4
+; CHECK-SD-NEXT:    umov.b w13, v2[7]
+; CHECK-SD-NEXT:    ld1.b { v0 }[4], [x12]
+; CHECK-SD-NEXT:    ld1.b { v3 }[4], [x14]
+; CHECK-SD-NEXT:    bfxil x11, x15, #0, #4
+; CHECK-SD-NEXT:    mov x12, sp
 ; CHECK-SD-NEXT:    mov x14, sp
 ; CHECK-SD-NEXT:    umov.b w15, v2[15]
-; CHECK-SD-NEXT:    bfxil x11, x8, #0, #4
+; CHECK-SD-NEXT:    bfxil x12, x8, #0, #4
 ; CHECK-SD-NEXT:    bfxil x14, x9, #0, #4
 ; CHECK-SD-NEXT:    mov x8, sp
 ; CHECK-SD-NEXT:    ld1.b { v0 }[5], [x10]
-; CHECK-SD-NEXT:    ld1.b { v3 }[5], [x13]
+; CHECK-SD-NEXT:    ld1.b { v3 }[5], [x11]
 ; CHECK-SD-NEXT:    mov x9, sp
-; CHECK-SD-NEXT:    bfxil x9, x12, #0, #4
+; CHECK-SD-NEXT:    bfxil x9, x13, #0, #4
 ; CHECK-SD-NEXT:    bfxil x8, x15, #0, #4
-; CHECK-SD-NEXT:    ld1.b { v0 }[6], [x11]
+; CHECK-SD-NEXT:    ld1.b { v0 }[6], [x12]
 ; CHECK-SD-NEXT:    ld1.b { v3 }[6], [x14]
 ; CHECK-SD-NEXT:    ld1.b { v0 }[7], [x9]
 ; CHECK-SD-NEXT:    ld1.b { v3 }[7], [x8]

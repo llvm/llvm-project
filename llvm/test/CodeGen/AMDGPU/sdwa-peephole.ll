@@ -1675,11 +1675,12 @@ bb11:                                             ; preds = %bb10, %bb2
 define void @crash_lshlrevb16_not_reg_op() {
 ; NOSDWA-LABEL: crash_lshlrevb16_not_reg_op:
 ; NOSDWA:       ; %bb.0: ; %bb0
+; NOSDWA-NEXT:    ; freeze: $sgpr4
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; NOSDWA-NEXT:    s_and_b64 vcc, exec, -1
 ; NOSDWA-NEXT:    s_bitset1_b32 s4, 8
 ; NOSDWA-NEXT:    s_and_b32 s6, s4, 0x1ff
 ; NOSDWA-NEXT:    s_mov_b64 s[4:5], 0
-; NOSDWA-NEXT:    s_and_b64 vcc, exec, -1
 ; NOSDWA-NEXT:  .LBB22_1: ; %bb1
 ; NOSDWA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NOSDWA-NEXT:    s_lshl_b32 s7, s4, 3
@@ -1697,11 +1698,12 @@ define void @crash_lshlrevb16_not_reg_op() {
 ;
 ; GFX89-LABEL: crash_lshlrevb16_not_reg_op:
 ; GFX89:       ; %bb.0: ; %bb0
+; GFX89-NEXT:    ; freeze: $sgpr4
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX89-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX89-NEXT:    s_bitset1_b32 s4, 8
 ; GFX89-NEXT:    s_and_b32 s6, s4, 0x1ff
 ; GFX89-NEXT:    s_mov_b64 s[4:5], 0
-; GFX89-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX89-NEXT:  .LBB22_1: ; %bb1
 ; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX89-NEXT:    s_lshl_b32 s7, s4, 3
@@ -1719,11 +1721,12 @@ define void @crash_lshlrevb16_not_reg_op() {
 ;
 ; GFX9-LABEL: crash_lshlrevb16_not_reg_op:
 ; GFX9:       ; %bb.0: ; %bb0
+; GFX9-NEXT:    ; freeze: $sgpr4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX9-NEXT:    s_bitset1_b32 s4, 8
 ; GFX9-NEXT:    s_and_b32 s6, s4, 0x1ff
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
-; GFX9-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX9-NEXT:  .LBB22_1: ; %bb1
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_lshl_b32 s7, s4, 3
@@ -1741,9 +1744,10 @@ define void @crash_lshlrevb16_not_reg_op() {
 ;
 ; GFX10-LABEL: crash_lshlrevb16_not_reg_op:
 ; GFX10:       ; %bb.0: ; %bb0
+; GFX10-NEXT:    ; freeze: $sgpr4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_bitset1_b32 s4, 8
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX10-NEXT:    s_bitset1_b32 s4, 8
 ; GFX10-NEXT:    s_and_b32 s6, s4, 0x1ff
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX10-NEXT:  .LBB22_1: ; %bb1

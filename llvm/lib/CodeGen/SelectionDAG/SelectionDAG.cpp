@@ -1049,19 +1049,30 @@ bool SDNodeKeyInfo::isEqual(const SDNodeKey &Key, const SDNode &N) {
 //                              SelectionDAG Class
 //===----------------------------------------------------------------------===//
 
+/// Return true if \p Opc with operand \p Op is a freeze of undef, before or
+/// after instruction selection.
+static bool isFreezeOfUndef(unsigned Opc, SDValue Op) {
+  if (Opc != ISD::FREEZE && Opc != ~(unsigned)TargetOpcode::FREEZE)
+    return false;
+  return Op.isUndef() || (Op.isMachineOpcode() &&
+                          Op.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF);
+}
+
 /// doNotCSE - Return true if CSE should not be performed for this node.
 static bool doNotCSE(SDNode *N) {
   if (N->getValueType(0) == MVT::Glue)
     return true; // Never CSE anything that produces a glue result.
+
+  // Each freeze of undef is a distinct value.
+  if (N->getNumOperands() == 1 &&
+      isFreezeOfUndef(N->getOpcode(), N->getOperand(0)))
+    return true;
 
   switch (N->getOpcode()) {
   default: break;
   case ISD::HANDLENODE:
   case ISD::EH_LABEL:
     return true;   // Never CSE these nodes.
-  case ISD::FREEZE:
-    // Each freeze of undef is a distinct value.
-    return N->getOperand(0).isUndef();
   }
 
   // Check that remaining values produced are not flags.
@@ -7606,7 +7617,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   SDVTList VTs = getVTList(VT);
   SDValue Ops[] = {N1};
   // Don't CSE glue producing nodes or freezes of undef.
-  if (VT != MVT::Glue && !(Opcode == ISD::FREEZE && N1.isUndef())) {
+  if (VT != MVT::Glue && !isFreezeOfUndef(Opcode, N1)) {
     SDNodeKey ID(Opcode, VTs, Ops);
     FoldingSetInsertToken InsertToken;
     if (SDNode *E = lookupNode(ID, DL, InsertToken)) {
@@ -12729,7 +12740,8 @@ SDNode *SelectionDAG::MorphNodeTo(SDNode *N, unsigned Opc,
                                   SDVTList VTs, ArrayRef<SDValue> Ops) {
   // If an identical node already exists, use it.
   FoldingSetInsertToken InsertToken;
-  if (VTs.VTs[VTs.NumVTs-1] != MVT::Glue) {
+  if (VTs.VTs[VTs.NumVTs - 1] != MVT::Glue &&
+      !(Ops.size() == 1 && isFreezeOfUndef(Opc, Ops[0]))) {
     SDNodeKey ID(Opc, VTs, Ops);
     AddNodeIDCustom(ID.Tail, N, Opc);
     if (SDNode *ON = lookupNode(ID, SDLoc(N), InsertToken))

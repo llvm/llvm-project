@@ -6,6 +6,7 @@
 define void @PR57554() {
 ; CHECK-LABEL: PR57554:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # freeze: $al
 ; CHECK-NEXT:    movb %al, a(%rip)
 ; CHECK-NEXT:    retq
   %.fr13 = freeze i8 undef
