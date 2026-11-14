@@ -152,6 +152,7 @@ void LiveIntervals::clear() {
   RegMaskBits.clear();
   RegMaskBlocks.clear();
   LiveOutTags.clear();
+  LiveInSegments.clear();
 
   for (LiveRange *LR : RegUnitRanges) {
     if (LR)
@@ -179,6 +180,7 @@ void LiveIntervals::analyze(MachineFunction &fn) {
   // Allocate space for all virtual registers.
   VirtRegIntervals.resize(MRI->getNumVirtRegs());
   LiveOutTags.assign(MF->getNumBlockIDs(), 0);
+  LiveInSegments.assign(MF->getNumBlockIDs(), {0, 0});
 
   computeVirtRegs();
   computeRegMasks();
@@ -364,6 +366,7 @@ void LiveIntervals::insertMBBInMapsImpl(
          "Blocks must be added in order.");
   RegMaskBlocks.push_back(std::make_pair(RegMaskSlots.size(), 0));
   LiveOutTags.push_back(0);
+  LiveInSegments.push_back({0, 0});
 }
 
 //===----------------------------------------------------------------------===//
@@ -468,8 +471,13 @@ static void createSegmentsForValues(LiveRange &LR,
     if (VNI->isUnused())
       continue;
     SlotIndex Def = VNI->def;
-    LR.addSegment(LiveRange::Segment(Def, Def.getDeadSlot(), VNI));
+    LR.segments.push_back(LiveRange::Segment(Def, Def.getDeadSlot(), VNI));
   }
+
+  llvm::sort(LR.segments,
+             [](const LiveRange::Segment &A, const LiveRange::Segment &B) {
+               return A.start < B.start;
+             });
 }
 
 void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
@@ -480,6 +488,7 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
   // Blocks that have already been added to WorkList as live-out.
   if (++LiveOutTag == 0) {
     llvm::fill(LiveOutTags, 0);
+    LiveInSegments.assign(LiveInSegments.size(), {0, 0});
     LiveOutTag = 1;
   }
 
@@ -498,6 +507,10 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
 
   const LiveInterval &LI = getInterval(Reg);
   const LiveRange &OldRange = getSubRange(LI, LaneMask);
+
+  // Live-in segments are found in worklist order, so collect them (at most one
+  // per block) and add them all at the end.
+  SmallVector<LiveRange::Segment, 16> LiveIns;
 
   // Extend intervals to reach all uses in WorkList.
   while (!WorkList.empty()) {
@@ -529,9 +542,20 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
       continue;
     }
 
+    auto &[InTag, InIdx] = LiveInSegments[MBB->getNumber()];
+    if (InTag == LiveOutTag) {
+      LiveRange::Segment &S = LiveIns[InIdx];
+      assert(S.valno == VNI && "Unexpected existing value number");
+      S.end = std::max(S.end, Idx);
+      continue;
+    }
+
+    InTag = LiveOutTag;
+    InIdx = LiveIns.size();
+
     // VNI is live-in to MBB.
     LLVM_DEBUG(dbgs() << " live-in at " << BlockStart << '\n');
-    Segments.addSegment(LiveRange::Segment(BlockStart, Idx, VNI));
+    LiveIns.push_back(LiveRange::Segment(BlockStart, Idx, VNI));
 
     // Make sure VNI is live-out from the predecessors.
     for (const MachineBasicBlock *Pred : MBB->predecessors()) {
@@ -558,6 +582,12 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
       }
     }
   }
+
+  llvm::sort(LiveIns,
+             [](const LiveRange::Segment &A, const LiveRange::Segment &B) {
+               return A.start < B.start;
+             });
+  Segments.addSegments(LiveIns);
 }
 
 bool LiveIntervals::shrinkToUses(LiveInterval *li,
