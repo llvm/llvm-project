@@ -181,6 +181,55 @@ TEST(ClangTidyDiagnosticConsumer, LineFilterNormalizesWindowsPaths) {
 }
 #endif
 
+TEST(ClangTidyDiagnosticConsumer, EnableNoLintBlocks) {
+  const auto RunWithBlocks = [](bool EnableBlocks) {
+    ClangTidyOptions Options;
+    Options.Checks = "*";
+    ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
+                                 ClangTidyGlobalOptions(), Options),
+                             false, false, false);
+    ClangTidyDiagnosticConsumer DiagConsumer(Context, nullptr, true, false,
+                                             EnableBlocks);
+    auto DiagOpts = std::make_unique<DiagnosticOptions>();
+    DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                         false);
+    Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
+
+    std::vector<std::string> Args = {"clang-tidy", "-fsyntax-only",
+                                     "-std=c++20", "input.cc"};
+    ast_matchers::MatchFinder Finder;
+    llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS(
+        new llvm::vfs::InMemoryFileSystem);
+    llvm::IntrusiveRefCntPtr<FileManager> Files(
+        new FileManager(FileSystemOptions(), FS));
+
+    SmallVector<std::unique_ptr<ClangTidyCheck>, 1> Checks;
+    tooling::ToolInvocation Invocation(
+        Args,
+        std::make_unique<TestClangTidyAction<TestCheck>>(Checks, Finder,
+                                                         Context),
+        Files.get());
+    FS->addFile("input.cc", 0,
+                llvm::MemoryBuffer::getMemBuffer("// NOLINTBEGIN\nint x;\n"));
+    Invocation.setDiagnosticConsumer(&DiagConsumer);
+    Invocation.run();
+    return DiagConsumer.take();
+  };
+
+  // When EnableNolintBlocks is true, unclosed NOLINTBEGIN produces a
+  // diagnostic.
+  EXPECT_TRUE(llvm::any_of(RunWithBlocks(true), [](const ClangTidyError &Err) {
+    return Err.DiagnosticName == "clang-tidy-nolint";
+  }));
+
+  // When EnableNolintBlocks is false, block directives are disabled and no
+  // unmatched NOLINTBEGIN error is generated.
+  EXPECT_FALSE(
+      llvm::any_of(RunWithBlocks(false), [](const ClangTidyError &Err) {
+        return Err.DiagnosticName == "clang-tidy-nolint";
+      }));
+}
+
 } // namespace test
 } // namespace tidy
 } // namespace clang
