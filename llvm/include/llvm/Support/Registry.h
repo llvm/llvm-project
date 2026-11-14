@@ -283,7 +283,7 @@ public:
 /// EXPORT_ABI must export-or-be-empty, NEVER dllimport, for the same reason
 /// `LLVM_ABI_EXPORT` is used here rather than `LLVM_ABI`: the definition may be
 /// in the same object, a static library, or an import library.
-/// `CLANG_ABI_EXPORT` satisfies this (it is empty under `CLANG_BUILD_STATIC`).
+/// `CLANG_ABI_EXPORT` satisfies this.
 #define LLVM_DECLARE_REGISTRY_EX(EXPORT_ABI, REGISTRY_CLASS)                   \
   namespace llvm::detail {                                                     \
   template <>                                                                  \

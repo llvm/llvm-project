@@ -160,16 +160,7 @@ if(ENABLE_STATIC)
 endif()
 
 if(ENABLE_SHARED)
-  if(WIN32)
-    set_target_properties(libclang
-      PROPERTIES
-      VERSION ${LIBCLANG_LIBRARY_VERSION}
-      DEFINE_SYMBOL _CINDEX_LIB_)
-      # Avoid declaring clang c++ symbols that are statically linked into libclang as dllimport'ed.
-      # If llvm/libclang-cpp dll is also being built for windows clang c++ symbols will still be
-      # implicitly be exported from libclang.
-      target_compile_definitions(libclang PRIVATE CLANG_BUILD_STATIC)
-  elseif(APPLE)
+  if(APPLE)
     if(LLVM_VERSIONED_DYLIB_NAME_ON_DARWIN)
       set_target_properties(libclang PROPERTIES
         VERSION ${LIBCLANG_LIBRARY_VERSION}
