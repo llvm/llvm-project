@@ -17788,18 +17788,12 @@ SITargetLowering::foldAddSub64WithZeroLowBitsTo32(SDNode *N,
   return SDValue();
 }
 
-// Collect the ultimate src of each of the mul node's operands, and confirm
-// each operand is 8 bytes.
+// Collect the ultimate src of the low byte of a mul node operand.
 static std::optional<ByteProvider<SDValue>>
-handleMulOperand(const SDValue &MulOperand) {
+handleMulOperand(SDValue MulOperand) {
   auto Byte0 = calculateByteProvider(MulOperand, 0, 0);
-  if (!Byte0 || Byte0->isConstantZero()) {
+  if (!Byte0 || Byte0->isConstantZero())
     return std::nullopt;
-  }
-  auto Byte1 = calculateByteProvider(MulOperand, 1, 0);
-  if (Byte1 && !Byte1->isConstantZero()) {
-    return std::nullopt;
-  }
   return Byte0;
 }
 
@@ -17982,6 +17976,31 @@ static bool isMul(const SDValue Op) {
           Opcode == AMDGPUISD::MUL_I24);
 }
 
+// Return the known bits of \p Op as read by \p Mul, or std::nullopt if those
+// bits are not a zero, sign, or any extension of the low byte.
+static std::optional<KnownBits>
+getDot4MulOperandKnownBits(SDValue Mul, SDValue Op, const SelectionDAG &DAG) {
+  KnownBits Known = DAG.computeKnownBits(Op);
+  unsigned BitWidth = Known.getBitWidth();
+  // mul24 reads only the low 24 bits of each operand.
+  if (Mul.getOpcode() == AMDGPUISD::MUL_U24)
+    Known = Known.trunc(24).zext(BitWidth);
+  else if (Mul.getOpcode() == AMDGPUISD::MUL_I24)
+    Known = Known.trunc(24).sext(BitWidth);
+
+  if (Known.countMaxActiveBits() <= 8)
+    return Known;
+  if (Op.getOpcode() == ISD::ANY_EXTEND &&
+      Op.getOperand(0).getScalarValueSizeInBits() <= 8)
+    return Known;
+  if (ISD::isEXTLoad(Op.getNode()) &&
+      cast<LoadSDNode>(Op)->getMemoryVT().getSizeInBits() <= 8)
+    return Known;
+  if (!Known.isNonNegative() && DAG.ComputeMaxSignificantBits(Op) <= 8)
+    return Known;
+  return std::nullopt;
+}
+
 static std::optional<bool>
 checkDot4MulSignedness(const SDValue &N, ByteProvider<SDValue> &Src0,
                        ByteProvider<SDValue> &Src1, const SDValue &S0Op,
@@ -17991,12 +18010,16 @@ checkDot4MulSignedness(const SDValue &N, ByteProvider<SDValue> &Src0,
   if (S0Op.getValueSizeInBits() == 8 && S1Op.getValueSizeInBits() == 8)
     return false;
 
-  auto Known0 = DAG.computeKnownBits(S0Op, 0);
-  bool S0IsUnsigned = Known0.countMinLeadingZeros() > 0;
-  bool S0IsSigned = Known0.countMinLeadingOnes() > 0;
-  auto Known1 = DAG.computeKnownBits(S1Op, 0);
-  bool S1IsUnsigned = Known1.countMinLeadingZeros() > 0;
-  bool S1IsSigned = Known1.countMinLeadingOnes() > 0;
+  auto Known0 = getDot4MulOperandKnownBits(N, S0Op, DAG);
+  if (!Known0)
+    return std::nullopt;
+  bool S0IsUnsigned = Known0->countMinLeadingZeros() > 0;
+  bool S0IsSigned = Known0->countMinLeadingOnes() > 0;
+  auto Known1 = getDot4MulOperandKnownBits(N, S1Op, DAG);
+  if (!Known1)
+    return std::nullopt;
+  bool S1IsUnsigned = Known1->countMinLeadingZeros() > 0;
+  bool S1IsSigned = Known1->countMinLeadingOnes() > 0;
 
   assert(!(S0IsUnsigned && S0IsSigned));
   assert(!(S1IsUnsigned && S1IsSigned));
@@ -18017,11 +18040,11 @@ checkDot4MulSignedness(const SDValue &N, ByteProvider<SDValue> &Src0,
     return std::nullopt;
 
   // In the remaining five permutations, we don't know the value of the sign
-  // bit for at least one Op. Since we have a valid ByteProvider, we know that
-  // the upper bits must be extension bits. Thus, the only ways for the sign
-  // bit to be unknown is if it was sign extended from unknown value, or if it
-  // was any extended. In either case, it is correct to use the signed
-  // version of the signedness semantics of dot4
+  // bit for at least one Op. getDot4MulOperandKnownBits verified that the
+  // upper bits are extension bits. Thus, the only ways for the sign bit to be
+  // unknown is if it was sign extended from unknown value, or if it was any
+  // extended. In either case, it is correct to use the signed version of the
+  // signedness semantics of dot4
 
   // In two of such permutations, we known the sign bit is set for
   // one op, and the other is unknown. It is okay to used signed version of
