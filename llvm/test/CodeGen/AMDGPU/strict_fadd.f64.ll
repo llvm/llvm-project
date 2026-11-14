@@ -96,10 +96,6 @@ define amdgpu_ps <2 x float> @s_constained_fadd_f64_fpexcept_strict(double inreg
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-GISEL-NEXT:    v_add_f64 v[0:1], s[2:3], v[0:1]
-; GCN-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-SDAG-LABEL: s_constained_fadd_f64_fpexcept_strict:
@@ -110,10 +106,6 @@ define amdgpu_ps <2 x float> @s_constained_fadd_f64_fpexcept_strict(double inreg
 ; GFX10-GISEL-LABEL: s_constained_fadd_f64_fpexcept_strict:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    v_add_f64 v[0:1], s[2:3], s[4:5]
-; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-LABEL: s_constained_fadd_f64_fpexcept_strict:
@@ -124,9 +116,6 @@ define amdgpu_ps <2 x float> @s_constained_fadd_f64_fpexcept_strict(double inreg
 ; GFX11-GISEL-LABEL: s_constained_fadd_f64_fpexcept_strict:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    v_add_f64 v[0:1], s[0:1], s[2:3]
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
   %val = call double @llvm.experimental.constrained.fadd.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %cast = bitcast double %val to <2 x float>

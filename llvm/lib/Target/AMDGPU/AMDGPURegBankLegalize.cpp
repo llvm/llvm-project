@@ -238,12 +238,20 @@ AMDGPURegBankLegalizeCombiner::getReadAnyLaneSrcs(Register Src) {
     return {};
 
   int Idx = UnMerge->findRegisterDefOperandIdx(Src, nullptr);
-  auto *Merge = getOpcodeDef<GMergeLikeInstr>(UnMerge->getSourceReg(), MRI);
+  Register SourceReg = UnMerge->getSourceReg();
+  // Look through a G_BITCAST between the unmerge and the merge.
+  Register BitcastSrc;
+  if (mi_match(SourceReg, MRI, m_GBitcast(m_Reg(BitcastSrc))))
+    SourceReg = BitcastSrc;
+  auto *Merge = getOpcodeDef<GMergeLikeInstr>(SourceReg, MRI);
   if (!Merge || UnMerge->getNumDefs() != Merge->getNumSources())
     return {};
 
+  // We cannot bitcast pointers.
   Register SrcRegIdx = Merge->getSourceReg(Idx);
-  if (MRI.getType(Src) != MRI.getType(SrcRegIdx))
+  LLT SrcTy = MRI.getType(Src);
+  LLT SrcRegIdxTy = MRI.getType(SrcRegIdx);
+  if (SrcTy != SrcRegIdxTy && (SrcTy.isPointer() || SrcRegIdxTy.isPointer()))
     return {};
 
   auto [RALEl, RALElSrc] = tryMatch(SrcRegIdx, AMDGPU::G_AMDGPU_READANYLANE);
@@ -275,8 +283,9 @@ bool AMDGPURegBankLegalizeCombiner::tryEliminateReadAnyLane(
   if (!Src.isVirtual() || MRI.getRegClassOrNull(Src))
     return false;
 
-  Register RALDst = Src;
-  bool IsBitcast = mi_match(Src, MRI, m_GBitcast(m_Reg(RALDst)));
+  Register RALDst;
+  if (!mi_match(Src, MRI, m_GBitcast(m_Reg(RALDst))))
+    RALDst = Src;
 
   B.setInstrAndDebugLoc(Copy);
   SmallVector<Register> ReadAnyLaneSrcRegs = getReadAnyLaneSrcs(RALDst);
@@ -293,7 +302,7 @@ bool AMDGPURegBankLegalizeCombiner::tryEliminateReadAnyLane(
     ReadAnyLaneSrc = Merge.getReg(0);
   }
 
-  if (!IsBitcast) {
+  if (MRI.getType(ReadAnyLaneSrc) == MRI.getType(Src)) {
     // Src = READANYLANE RALSrc     Src = READANYLANE RALSrc
     // Dst = Copy Src               $Dst = Copy Src
     // ->                           ->
