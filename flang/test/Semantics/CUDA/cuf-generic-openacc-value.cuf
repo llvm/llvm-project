@@ -1,0 +1,128 @@
+! RUN: bbc -fcuda -fopenacc -emit-hlfir %s -o - | FileCheck %s
+
+! A DEVICE actual for an unattributed VALUE dummy has an infinite distance, but
+! device code can load the value. OpenACC compute constructs may run on the
+! device, so these generic references remain accepted.
+
+module acc_value_generic
+  interface choose
+    attributes(device) integer function device_value(a)
+      integer, value :: a
+    end function
+  end interface
+end module
+
+! CHECK-LABEL: func.func @_QPparallel_loop
+! CHECK: fir.call @_QPdevice_value
+subroutine parallel_loop(x, n)
+  use acc_value_generic
+  integer :: n, i
+  integer, device :: x(n)
+  !$acc parallel loop deviceptr(x)
+  do i = 1, n
+    x(i) = choose(x(i))
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPparallel_region
+! CHECK: fir.call @_QPdevice_value
+subroutine parallel_region(x, n)
+  use acc_value_generic
+  integer :: n, i
+  integer, device :: x(n)
+  !$acc parallel deviceptr(x)
+  !$acc loop
+  do i = 1, n
+    x(i) = choose(x(i))
+  end do
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPkernels_region
+! CHECK: fir.call @_QPdevice_value
+subroutine kernels_region(x, n)
+  use acc_value_generic
+  integer :: n, i
+  integer, device :: x(n)
+  !$acc kernels deviceptr(x)
+  do i = 1, n
+    x(i) = choose(x(i))
+  end do
+  !$acc end kernels
+end subroutine
+
+! CHECK-LABEL: func.func @_QPserial_region
+! CHECK: fir.call @_QPdevice_value
+subroutine serial_region(x)
+  use acc_value_generic
+  integer, device :: x(1)
+  !$acc serial deviceptr(x)
+  x(1) = choose(x(1))
+  !$acc end serial
+end subroutine
+
+! CHECK-LABEL: func.func @_QPcombined_bound
+! CHECK: fir.call @_QPdevice_value
+subroutine combined_bound(x, n)
+  use acc_value_generic
+  integer, device :: x(n)
+  integer :: n, i
+  !$acc parallel loop deviceptr(x)
+  do i = 1, choose(x(1))
+    x(i) = i
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QProutine_specific
+! CHECK: fir.call @_QProutine_value
+subroutine routine_specific(x, n)
+  integer :: n, i
+  integer, device :: x(n)
+  interface choose_routine
+    integer function routine_value(a)
+      !$acc routine seq
+      integer, value :: a
+    end function
+  end interface
+  !$acc parallel loop deviceptr(x)
+  do i = 1, n
+    x(i) = choose_routine(x(i))
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPconditional_body
+! CHECK: fir.call @_QPdevice_value
+subroutine conditional_body(x, n, run)
+  use acc_value_generic
+  integer :: n, i
+  logical :: run
+  integer, device :: x(n)
+  !$acc parallel loop deviceptr(x) if(run)
+  do i = 1, n
+    x(i) = choose(x(i))
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPserial_loop
+! CHECK: fir.call @_QPdevice_value
+subroutine serial_loop(x, n)
+  use acc_value_generic
+  integer :: n, i
+  integer, device :: x(n)
+  !$acc serial loop deviceptr(x)
+  do i = 1, n
+    x(i) = choose(x(i))
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPkernels_loop
+! CHECK: fir.call @_QPdevice_value
+subroutine kernels_loop(x, n)
+  use acc_value_generic
+  integer :: n, i
+  integer, device :: x(n)
+  !$acc kernels loop deviceptr(x)
+  do i = 1, n
+    x(i) = choose(x(i))
+  end do
+end subroutine

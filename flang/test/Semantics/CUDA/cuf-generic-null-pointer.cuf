@@ -1,0 +1,43 @@
+! RUN: bbc -fcuda -emit-hlfir %s -o - | FileCheck %s
+
+! A bare NULL() has no storage, so a DEVICE pointer or allocatable dummy may be
+! associated with it through a generic, as through a direct call. A host
+! pointer specific remains the better match.
+
+! CHECK-LABEL: func.func @_QPdevice_pointer
+! CHECK-COUNT-2: fir.call @_QPtake_pointer
+subroutine device_pointer()
+  interface choose
+    subroutine take_pointer(p)
+      real, device, pointer :: p(:)
+    end subroutine
+  end interface
+  call choose(null())
+  call take_pointer(null())
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdevice_allocatable
+! CHECK: fir.call @_QPtake_allocatable
+subroutine device_allocatable()
+  interface choose
+    subroutine take_allocatable(p)
+      real, device, allocatable, intent(in) :: p(:)
+    end subroutine
+  end interface
+  call choose(null())
+end subroutine
+
+! CHECK-LABEL: func.func @_QPhost_preferred
+! CHECK: fir.call @_QPhost_pointer
+! CHECK-NOT: fir.call @_QPdevice_pointer_specific
+subroutine host_preferred()
+  interface choose
+    subroutine host_pointer(p)
+      real, pointer :: p(:)
+    end subroutine
+    subroutine device_pointer_specific(p)
+      real, device, pointer :: p(:)
+    end subroutine
+  end interface
+  call choose(null())
+end subroutine

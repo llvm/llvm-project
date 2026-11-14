@@ -1,0 +1,157 @@
+! RUN: split-file %s %t
+! RUN: bbc -fcuda -emit-hlfir %t/device.cuf -o - | FileCheck %s --check-prefix=DEVICE
+! RUN: bbc -fcuda -gpu=managed -emit-hlfir %t/device.cuf -o - | FileCheck %s --check-prefix=DEVICE
+! RUN: bbc -fcuda -gpu=unified -emit-hlfir %t/device.cuf -o - | FileCheck %s --check-prefix=DEVICE
+! RUN: not bbc -fcuda -emit-hlfir %t/storage.cuf -o - 2>&1 | FileCheck %s --check-prefix=STORAGE
+! RUN: bbc -fcuda -fopenacc -emit-hlfir %t/host-site.cuf -o - | FileCheck %s --check-prefix=HOST-SITE
+
+!--- device.cuf
+! Keep direct calls: their earlier reference-argument normalization is still needed.
+attributes(device) subroutine value_caller(a)
+  integer, value :: a
+  interface choose
+    attributes(device) subroutine device_reference(x)
+      integer, intent(in) :: x
+    end subroutine
+  end interface
+  ! DEVICE-LABEL: func.func @_QPvalue_caller
+  ! DEVICE-COUNT-6: fir.call @_QPdevice_reference
+  call choose(a)
+  call device_reference(a)
+  call choose(3)
+  call device_reference(3)
+  call choose(a + 1)
+  call device_reference(a + 1)
+end subroutine
+
+attributes(device) integer function result_caller() result(r)
+  interface choose
+    attributes(device) subroutine device_result(x)
+      integer, intent(out) :: x
+    end subroutine
+  end interface
+  ! DEVICE-LABEL: func.func @_QPresult_caller
+  ! DEVICE-COUNT-2: fir.call @_QPdevice_result
+  call choose(r)
+  call device_result(r)
+end function
+
+attributes(device) subroutine array_temporary()
+  interface choose
+    attributes(device) subroutine device_array(x)
+      integer, intent(in) :: x(2)
+    end subroutine
+  end interface
+  ! DEVICE-LABEL: func.func @_QParray_temporary
+  ! DEVICE-COUNT-2: fir.call @_QPdevice_array
+  call choose([1, 2])
+  call device_array([1, 2])
+end subroutine
+
+! An explicitly attributed actual retains its existing finite preference.
+attributes(device) subroutine managed_preference(a)
+  integer, managed :: a
+  interface choose
+    attributes(device) subroutine managed_specific(x)
+      integer, managed :: x
+    end subroutine
+    attributes(device) subroutine device_specific(x)
+      integer, device :: x
+    end subroutine
+  end interface
+  ! DEVICE-LABEL: func.func @_QPmanaged_preference
+  ! DEVICE: fir.call @_QPmanaged_specific
+  call choose(a)
+end subroutine
+
+!--- storage.cuf
+attributes(device) subroutine managed_requirement(a)
+  integer, value :: a
+  interface choose
+    attributes(device) subroutine managed_specific(x)
+      integer, managed :: x
+    end subroutine
+  end interface
+  ! STORAGE: No specific subroutine of generic 'choose' matches the actual arguments
+  call choose(a)
+end subroutine
+
+! Argument checking already rejects this; the temporary rule must not admit it.
+attributes(device) subroutine pointer_requirement()
+  interface choose
+    attributes(device) subroutine pointer_specific(x)
+      integer, pointer, device, intent(in) :: x
+    end subroutine
+  end interface
+  ! STORAGE: No specific subroutine of generic 'choose' matches the actual arguments
+  call choose(3)
+end subroutine
+
+!--- host-site.cuf
+! Outside device code, a DEVICE specific keeps its infinite distance for a
+! temporary, so a specific with a finite distance is preferred.
+module host_site
+  interface choose
+    subroutine host_reference(x)
+      integer, intent(in) :: x
+    end subroutine
+    attributes(device) subroutine device_reference(x)
+      integer, intent(in) :: x
+    end subroutine
+  end interface
+  interface choose_function
+    integer function host_function(x)
+      integer, intent(in) :: x
+    end function
+    attributes(device) integer function device_function(x)
+      integer, intent(in) :: x
+    end function
+  end interface
+  interface choose_device
+    procedure :: device_reference
+  end interface
+contains
+  ! HOST-SITE-LABEL: func.func @_QMhost_sitePacc_data
+  ! HOST-SITE-COUNT-2: fir.call @_QPhost_reference
+  subroutine acc_data(n, y)
+    integer :: n, y
+    !$acc data copy(y)
+    call choose(n + 1)
+    call choose(3)
+    !$acc end data
+  end subroutine
+
+  ! HOST-SITE-LABEL: func.func @_QMhost_sitePacc_clause
+  ! HOST-SITE: fir.call @_QPhost_function
+  subroutine acc_clause(n, y)
+    integer :: n, y
+    !$acc parallel num_gangs(choose_function(n + 1))
+    y = 1
+    !$acc end parallel
+  end subroutine
+
+  ! HOST-SITE-LABEL: func.func @_QMhost_sitePcuf_bound
+  ! HOST-SITE: fir.call @_QPhost_function
+  ! HOST-SITE: cuf.kernel
+  subroutine cuf_bound(a, n)
+    integer :: n, i
+    integer, device :: a(n)
+    !$cuf kernel do <<<*, *>>>
+    do i = 1, choose_function(n - 1)
+      a(i) = i
+    end do
+  end subroutine
+
+  ! A lone DEVICE specific remains available in an OpenACC compute region.
+  ! HOST-SITE-LABEL: func.func @_QMhost_sitePacc_compute
+  ! HOST-SITE: fir.call @_QPdevice_reference
+  subroutine acc_compute(n, y)
+    integer :: n, i
+    integer :: y(n)
+    !$acc parallel loop copy(y)
+    do i = 1, n
+      call choose_device(i + 1)
+      y(i) = i
+    end do
+  end subroutine
+end module
