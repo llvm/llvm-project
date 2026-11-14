@@ -1510,6 +1510,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void list<_Tp, _Alloc>::splice(const_iterator __p,
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 void list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __i) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __i != __c.end(), "list::splice(iterator, list, iterator) called with a non-dereferenceable iterator");
   if (__p.__ptr_ != __i.__ptr_ && __p.__ptr_ != __i.__ptr_->__next_) {
     __base_pointer __f = __i.__ptr_;
     __base::__unlink_nodes(__f, __f);
@@ -1523,14 +1525,19 @@ template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 void
 list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, const_iterator __l) {
   if (__f != __l) {
-    __base_pointer __first = __f.__ptr_;
-    --__l;
-    __base_pointer __last = __l.__ptr_;
     if (this != std::addressof(__c)) {
-      size_type __s = std::distance(__f, __l) + 1;
+      size_type __s = 0;
+      for (const_iterator __i = __f; __i != __l; ++__i) {
+        _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+            __i != __c.end(), "list::splice(iterator, list, iterator, iterator) called with an invalid range");
+        ++__s;
+      }
       __c.__size_ -= __s;
       this->__size_ += __s;
     }
+    __base_pointer __first = __f.__ptr_;
+    --__l;
+    __base_pointer __last = __l.__ptr_;
     __base::__unlink_nodes(__first, __last);
     __link_nodes(__p.__ptr_, __first, __last);
   }
