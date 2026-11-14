@@ -416,9 +416,9 @@
 ; SPARC32-NEXT: declare i32 @lroundf(float) [[SQRT_ATTRS]]
 ; SPARC32-NEXT: declare i32 @lroundl(fp128) [[SQRT_ATTRS]]
 ; SPARC32-NEXT: declare noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
-; SPARC32-NEXT: declare ptr @memcpy(ptr, ptr, i32)
-; SPARC32-NEXT: declare ptr @memmove(ptr, ptr, i32)
-; SPARC32-NEXT: declare ptr @memset(ptr, i32, i32)
+; SPARC32-NEXT: declare ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly, i32) [[ARGMEM_ATTRS:#[0-9]+]]
+; SPARC32-NEXT: declare ptr @memmove(ptr returned writeonly, ptr readonly, i32) [[ARGMEM_ATTRS]]
+; SPARC32-NEXT: declare ptr @memset(ptr returned writeonly, i32, i32) [[ARGMEM_WRITE_ATTRS]]
 ; SPARC32-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
 ; SPARC32-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; SPARC32-NEXT: declare fp128 @modfl(fp128, ptr noalias nonnull writeonly align 8 dereferenceable(16)) [[ARGMEM_WRITE_ATTRS]]
@@ -486,6 +486,7 @@
 ; SPARC32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; SPARC32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; SPARC32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; SPARC32-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; SPARC32-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; SPARC32-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
 
@@ -905,9 +906,9 @@
 ; SPARC64-NEXT: declare i64 @lroundf(float) [[SQRT_ATTRS]]
 ; SPARC64-NEXT: declare i64 @lroundl(fp128) [[SQRT_ATTRS]]
 ; SPARC64-NEXT: declare noalias noundef ptr @malloc(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
-; SPARC64-NEXT: declare ptr @memcpy(ptr, ptr, i64)
-; SPARC64-NEXT: declare ptr @memmove(ptr, ptr, i64)
-; SPARC64-NEXT: declare ptr @memset(ptr, i32 signext, i64)
+; SPARC64-NEXT: declare ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly, i64) [[ARGMEM_ATTRS:#[0-9]+]]
+; SPARC64-NEXT: declare ptr @memmove(ptr returned writeonly, ptr readonly, i64) [[ARGMEM_ATTRS]]
+; SPARC64-NEXT: declare ptr @memset(ptr returned writeonly, i32 signext, i64) [[ARGMEM_WRITE_ATTRS]]
 ; SPARC64-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
 ; SPARC64-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; SPARC64-NEXT: declare fp128 @modfl(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_WRITE_ATTRS]]
@@ -975,5 +976,6 @@
 ; SPARC64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; SPARC64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; SPARC64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; SPARC64-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; SPARC64-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; SPARC64-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }

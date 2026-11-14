@@ -430,9 +430,9 @@
 ; SJLJ-NEXT: declare arm_aapcscc i32 @lround(double) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @lroundf(float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc ptr @memcpy(ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc ptr @memmove(ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc ptr @memset(ptr, i32, i32)
+; SJLJ-NEXT: declare arm_aapcscc ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly, i32) [[ARGMEM_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc ptr @memmove(ptr returned writeonly, ptr readonly, i32) [[ARGMEM_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc ptr @memset(ptr returned writeonly, i32, i32) [[ARGMEM_WRITE_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
@@ -480,6 +480,7 @@
 ; SJLJ-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; SJLJ-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; SJLJ-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; SJLJ-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
 
@@ -906,9 +907,9 @@
 ; DWARF-NEXT: declare arm_aapcscc i32 @lround(double) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @lroundf(float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
-; DWARF-NEXT: declare arm_aapcscc ptr @memcpy(ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc ptr @memmove(ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc ptr @memset(ptr, i32, i32)
+; DWARF-NEXT: declare arm_aapcscc ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly, i32) [[ARGMEM_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc ptr @memmove(ptr returned writeonly, ptr readonly, i32) [[ARGMEM_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc ptr @memset(ptr returned writeonly, i32, i32) [[ARGMEM_WRITE_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
@@ -956,5 +957,6 @@
 ; DWARF-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; DWARF-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; DWARF-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; DWARF-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; DWARF-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; DWARF-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
