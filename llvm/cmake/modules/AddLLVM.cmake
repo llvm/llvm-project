@@ -80,6 +80,13 @@ function(llvm_update_compile_flags name)
 endfunction()
 
 function(llvm_update_pch name)
+  get_target_property(mode ${name} LLVM_ABI_MODE)
+  if(NOT mode)
+    message(FATAL_ERROR
+      "llvm_update_pch: ${name} has no LLVM_ABI_MODE, "
+      "call llvm_update_abi_definitions() first")
+  endif()
+
   if(LLVM_REQUIRES_RTTI OR LLVM_REQUIRES_EH)
     # Non-default RTTI/EH results in incompatible flags, precluding PCH reuse.
     set(ARG_DISABLE_PCH_REUSE ON)
@@ -139,39 +146,129 @@ function(llvm_update_pch name)
       set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
     endif()
   elseif(pch_reuse AND NOT ARG_DISABLE_PCH_REUSE)
-    message(DEBUG "Using PCH ${pch_reuse} for ${name} (prio ${pch_priority})")
-    target_precompile_headers(${name} REUSE_FROM ${pch_reuse})
+    get_target_property(provider_mode ${pch_reuse} LLVM_ABI_MODE)
+    if("${mode}" STREQUAL "${provider_mode}")
+      # Same ABI mode: reuse the provider's PCH directly.
+      message(DEBUG "Using PCH ${pch_reuse} for ${name} (prio ${pch_priority})")
+      target_precompile_headers(${name} REUSE_FROM ${pch_reuse})
+    else()
+      # Different ABI mode: reuse the provider's variant for ours, if it exists.
+      set(variant "${pch_reuse}_pch_${mode}")
+      if(TARGET ${variant})
+        message(DEBUG "Using PCH ${variant} for ${name} (prio ${pch_priority})")
+        target_precompile_headers(${name} REUSE_FROM ${variant})
+        # The variant must be linked for MSVC.
+        target_link_libraries(${name} PRIVATE $<BUILD_LOCAL_INTERFACE:${variant}>)
+        # Record the variant so that libraries and executables can link it.
+        set_target_properties(${name} PROPERTIES LLVM_PCH_VARIANT ${variant})
+      else()
+        message(DEBUG "Using NO PCH for ${name} (${pch_reuse} has no ${mode} variant)")
+      endif()
+    endif()
   else()
     message(DEBUG "Using NO PCH for ${name}")
   endif()
 endfunction()
 
+# These are all of the compile definitions used by the ABI modes (see below).
+set(LLVM_ABI_DEFINITIONS_none "")
+set(LLVM_ABI_DEFINITIONS_export LLVM_EXPORTS LLVM_C_EXPORTS)
+set(LLVM_ABI_DEFINITIONS_import "")
+set(LLVM_ABI_DEFINITIONS_static LLVM_BUILD_STATIC)
+
 # llvm_update_abi_definitions(<name> [COMPONENT_LIB] [DISABLE_LLVM_LINK_LLVM_DYLIB])
 #
 # Add to target <name> the compile definitions that select how the export
-# annotations (LLVM_ABI, LLVM_C_ABI, ...) expand in its sources.
+# annotations (LLVM_ABI, LLVM_C_ABI, ...) expand in its sources, and record the
+# resulting ABI mode in its LLVM_ABI_MODE property:
+#   none
+#     The target does not need to select a particular mode. Outside of Windows
+#     with MSVC/clang-cl, this is the only mode.
+#   export
+#     The target is a component library built into the LLVM DLL.
+#   import
+#     The target links the LLVM DLL.
+#   static
+#     The target links the LLVM libraries statically.
 #
 # The arguments (COMPONENT_LIB, DISABLE_LLVM_LINK_LLVM_DYLIB) are the same ones
-# used by add_llvm_library().
+# used by add_llvm_library() and add_llvm_executable().
 function(llvm_update_abi_definitions name)
+  cmake_parse_arguments(ARG "COMPONENT_LIB;DISABLE_LLVM_LINK_LLVM_DYLIB" "" ""
+    ${ARGN})
   if(NOT WIN32 OR MINGW OR NOT LLVM_BUILD_LLVM_DYLIB)
-    # Nothing to do when not building a DLL for Windows with MSVC/clang-cl.
+    # Nothing to select when not building a DLL for Windows with MSVC/clang-cl.
+    set(mode none)
+  elseif(ARG_COMPONENT_LIB)
+    # This is a component library of LLVM, export its symbols.
+    set(mode export)
+  elseif(LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+    # This target imports the annotated symbols from the shared library.
+    set(mode import)
+  else()
+    # This target links the annotated symbols statically.
+    set(mode static)
+  endif()
+  set_property(TARGET ${name} PROPERTY LLVM_ABI_MODE ${mode})
+  target_compile_definitions(${name} PRIVATE ${LLVM_ABI_DEFINITIONS_${mode}})
+endfunction()
+
+# llvm_add_pch_variants(<name> <header> [DEPENDS <targets>...])
+#
+# Give PCH provider <name>, with a certain LLVM_ABI_MODE, variants of its
+# precompiled header for every other ABI mode of this build, named
+# <name>_pch_<other mode>. This is used to provide the appropriate PCH for
+# consumers of <name>, depending on the own ABI mode.
+#
+# The variants are static libraries with a single empty source file, so its
+# only products are the PCH and the object that creates it. On MSVC, the object
+# that creates a PCH must be linked every every image that reuses it, so the
+# variants are linked into each consumer that needs them.
+#
+#   <header>
+#     The header the provider precompiles.
+#   DEPENDS
+#     The provider's dependencies.
+function(llvm_add_pch_variants name header)
+  cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
+  get_target_property(mode ${name} LLVM_ABI_MODE)
+  if(mode STREQUAL "none")
     return()
   endif()
 
-  cmake_parse_arguments(ARG "COMPONENT_LIB;DISABLE_LLVM_LINK_LLVM_DYLIB" "" ""
-    ${ARGN})
-  if(ARG_COMPONENT_LIB)
-    # This is a component library of LLVM, export its symbols.
-    set(definitions LLVM_EXPORTS LLVM_C_EXPORTS)
-  elseif(LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
-    # This target imports the annotated symbols from the shared library.
-    set(definitions "")
-  else()
-    # This target links the annotated symbols statically.
-    set(definitions LLVM_BUILD_STATIC)
-  endif()
-  target_compile_definitions(${name} PRIVATE ${definitions})
+  # Determine the other ABI modes for which to create PCH variants.
+  set(modes export import static)
+  list(REMOVE_ITEM modes ${mode})
+
+  # Create an empty translation unit to be used by all PCH variants.
+  set(empty_tu "${CMAKE_BINARY_DIR}/CMakeFiles/llvm_pch_variant_empty.cpp")
+  file(CONFIGURE OUTPUT "${empty_tu}" CONTENT
+       "// Intentionally empty; carries a shared PCH object.\n")
+  get_subproject_title(subproject_title)
+
+  foreach(variant_mode ${modes})
+    # Create the variant library.
+    set(variant_name "${name}_pch_${variant_mode}")
+    add_library(${variant_name} STATIC EXCLUDE_FROM_ALL "${empty_tu}")
+
+    # Set up the library compile flags and modes.
+    llvm_update_compile_flags(${variant_name})
+    target_compile_definitions(${variant_name} PRIVATE
+      ${LLVM_ABI_DEFINITIONS_${variant_mode}})
+    if(LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_DYLIB_EXPORT_INLINES AND
+       MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
+      target_compile_options(${variant_name} PRIVATE /Zc:dllexportInlines-)
+    endif()
+    target_precompile_headers(${variant_name} PRIVATE
+      $<$<COMPILE_LANGUAGE:CXX>:${header}>)
+    set_target_properties(${variant_name} PROPERTIES
+      FOLDER "${subproject_title}/Precompiled Headers")
+
+    # Set up the target dependencies.
+    if(ARG_DEPENDS)
+      add_dependencies(${variant_name} ${ARG_DEPENDS})
+    endif()
+  endforeach()
 endfunction()
 
 function(add_llvm_symbol_exports target_name export_file)
@@ -680,6 +777,7 @@ function(llvm_add_library name)
       ${ALL_FILES}
       )
     llvm_update_compile_flags(${obj_name})
+    llvm_update_abi_definitions(${obj_name} ${ARGN})
     llvm_update_pch(${obj_name})
     if(CMAKE_GENERATOR STREQUAL "Xcode")
       set(DUMMY_FILE ${CMAKE_CURRENT_BINARY_DIR}/Dummy.c)
@@ -761,11 +859,8 @@ function(llvm_add_library name)
   endif()
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
 
-  # Set the ABI definitions for the library and its object library.
+  # Set the ABI definitions and mode for the library.
   llvm_update_abi_definitions(${name} ${ARGN})
-  if(TARGET obj.${name})
-    llvm_update_abi_definitions(obj.${name} ${ARGN})
-  endif()
 
   ## If were compiling with clang-cl use /Zc:dllexportInlines- to exclude inline
   ## class members from being dllexport'ed to reduce compile time.
@@ -822,7 +917,20 @@ function(llvm_add_library name)
       target_precompile_headers(${name} REUSE_FROM ${obj_name})
       get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
       set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+      get_target_property(pch_variant ${obj_name} LLVM_PCH_VARIANT)
+      if(pch_variant)
+        # Link the PCH variant library. This is needed for MSVC.
+        target_link_libraries(${name} PRIVATE $<BUILD_LOCAL_INTERFACE:${pch_variant}>)
+      endif()
     endif()
+  endif()
+
+  # A provider's PCH can only be reused in its own ABI mode. Give it variants
+  # for every other mode of this build.
+  get_target_property(pch_priority ${name} LLVM_PCH_PRIORITY)
+  if(pch_priority AND ARG_PRECOMPILE_HEADERS)
+    llvm_add_pch_variants(${name} "${ARG_PRECOMPILE_HEADERS}"
+                          DEPENDS ${LLVM_COMMON_DEPENDS})
   endif()
   add_link_opts( ${name} )
   if(ARG_OUTPUT_NAME)
@@ -1118,7 +1226,8 @@ macro(add_llvm_library name)
 endmacro(add_llvm_library name)
 
 macro(generate_llvm_objects name)
-  cmake_parse_arguments(ARG "GENERATE_DRIVER" "" "DEPENDS" ${ARGN})
+  cmake_parse_arguments(ARG "GENERATE_DRIVER;DISABLE_LLVM_LINK_LLVM_DYLIB" ""
+    "DEPENDS" ${ARGN})
 
   llvm_process_sources( ALL_FILES ${ARG_UNPARSED_ARGUMENTS} )
 
@@ -1132,6 +1241,7 @@ macro(generate_llvm_objects name)
       ${ALL_FILES}
       )
     llvm_update_compile_flags(${obj_name})
+    llvm_update_abi_definitions(${obj_name} ${ARGN})
     llvm_update_pch(${obj_name})
     set(ALL_FILES "$<TARGET_OBJECTS:${obj_name}>")
     if(ARG_DEPENDS)
@@ -1185,7 +1295,12 @@ macro(add_llvm_executable name)
     "ENTITLEMENTS;BUNDLE_PATH"
     ""
     ${ARGN})
-  generate_llvm_objects(${name} ${ARG_UNPARSED_ARGUMENTS})
+
+  set(obj_args ${ARG_UNPARSED_ARGUMENTS})
+  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+    list(APPEND obj_args DISABLE_LLVM_LINK_LLVM_DYLIB)
+  endif()
+  generate_llvm_objects(${name} ${obj_args})
   add_windows_version_resource_file(ALL_FILES ${ALL_FILES})
 
   if(XCODE)
@@ -1201,6 +1316,9 @@ macro(add_llvm_executable name)
   endif()
   get_subproject_title(subproject_title)
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Executables")
+
+  # Set the ABI definitions and mode for the executable.
+  llvm_update_abi_definitions(${name} ${ARGN})
 
   setup_dependency_debugging(${name} ${LLVM_COMMON_DEPENDS})
 
@@ -1238,6 +1356,11 @@ macro(add_llvm_executable name)
       target_precompile_headers(${name} REUSE_FROM ${obj_name})
       get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
       set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+      get_target_property(pch_variant ${obj_name} LLVM_PCH_VARIANT)
+      if(pch_variant)
+        # Link the PCH variant library to the executable. This is needed for MSVC.
+        target_link_libraries(${name} PRIVATE $<BUILD_LOCAL_INTERFACE:${pch_variant}>)
+      endif()
     endif()
   endif()
 
@@ -1303,12 +1426,6 @@ macro(add_llvm_executable name)
 
   if (ARG_EXPORT_SYMBOLS)
     export_executable_symbols(${name})
-  endif()
-
-  # Set the ABI definitions for the executable and its object library.
-  llvm_update_abi_definitions(${name} ${ARGN})
-  if(TARGET obj.${name})
-    llvm_update_abi_definitions(obj.${name} ${ARGN})
   endif()
 
   if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND MSVC)

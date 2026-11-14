@@ -1478,9 +1478,23 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
         "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     endif()
   endif()
+
+  if(WIN32 AND NOT MINGW AND LLVM_BUILD_LLVM_DYLIB AND CMAKE_VERSION VERSION_LESS "3.26")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+    message(WARNING "Precompiled headers are disabled by default with CMake "
+      "versions older than 3.26 for the MSVC LLVM Dylib build.")
+  endif()
 endif()
 
 if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  if(WIN32 AND NOT MINGW AND LLVM_BUILD_LLVM_DYLIB AND CMAKE_VERSION VERSION_LESS "3.26")
+    message(FATAL_ERROR "Precompiled header support for the MSVC LLVM Dylib "
+      "build requires support for the BUILD_LOCAL_INTERFACE generator "
+      "expression, introduced in CMake 3.26. Your CMake version is "
+      "${CMAKE_VERSION}. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON to build without them.")
+  endif()
+
   message(STATUS "Precompiled headers enabled.")
   # CMake weirdly marks all PCH as system headers. This undocumented variable
   # can be used to suppress the "#pragma clang system_header".
