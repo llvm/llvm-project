@@ -71,8 +71,9 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    %1:sgpr(s16) = G_TRUNC %0
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %2:sgpr(i32) = G_TRUNC %0
+    %1:sgpr(i16) = G_TRUNC %2
     S_ENDPGM 0, implicit %1
 ...
 ---
@@ -109,8 +110,9 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_96 = COPY $sgpr0_sgpr1_sgpr2
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s96) = COPY $sgpr0_sgpr1_sgpr2
-    %1:sgpr(s16) = G_TRUNC %0
+    %0:sgpr(i96) = COPY $sgpr0_sgpr1_sgpr2
+    %2:sgpr(i32) = G_TRUNC %0
+    %1:sgpr(i16) = G_TRUNC %2
     S_ENDPGM 0, implicit %1
 ...
 ---
@@ -147,8 +149,9 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    %1:sgpr(s16) = G_TRUNC %0
+    %0:sgpr(i128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %2:sgpr(i32) = G_TRUNC %0
+    %1:sgpr(i16) = G_TRUNC %2
     S_ENDPGM 0, implicit %1
 ...
 ---
@@ -278,8 +281,9 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s16) = G_TRUNC %0
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %2:vgpr(i32) = G_TRUNC %0
+    %1:vgpr(i16) = G_TRUNC %2
     S_ENDPGM 0, implicit %1
 ...
 ---
@@ -316,8 +320,9 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_96 = COPY $vgpr0_vgpr1_vgpr2
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:vgpr(s96) = COPY $vgpr0_vgpr1_vgpr2
-    %1:vgpr(s16) = G_TRUNC %0
+    %0:vgpr(i96) = COPY $vgpr0_vgpr1_vgpr2
+    %2:vgpr(i32) = G_TRUNC %0
+    %1:vgpr(i16) = G_TRUNC %2
     S_ENDPGM 0, implicit %1
 ...
 ---
@@ -354,8 +359,9 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:vgpr(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:vgpr(s16) = G_TRUNC %0
+    %0:vgpr(i128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %2:vgpr(i32) = G_TRUNC %0
+    %1:vgpr(i16) = G_TRUNC %2
     S_ENDPGM 0, implicit %1
 ...
 ---
