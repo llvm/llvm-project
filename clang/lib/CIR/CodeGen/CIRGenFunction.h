@@ -2792,10 +2792,6 @@ public:
   ConditionalInfo emitConditionalBlocks(const AbstractConditionalOperator *e,
                                         const FuncTy &branchGenFunc);
 
-  mlir::Value emitTernaryOnBoolExpr(const clang::Expr *cond, mlir::Location loc,
-                                    const clang::Stmt *thenS,
-                                    const clang::Stmt *elseS);
-
   /// Build a "reference" to a va_list; this is either the address or the value
   /// of the expression, depending on how va_list is defined.
   Address emitVAListRef(const Expr *e);

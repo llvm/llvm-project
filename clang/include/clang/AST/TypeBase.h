@@ -5305,7 +5305,6 @@ template <typename Container> class FunctionEffectIterator {
   size_t Idx = 0;
 
 public:
-  FunctionEffectIterator();
   FunctionEffectIterator(const Container &O, size_t I) : Outer(&O), Idx(I) {}
   bool operator==(const FunctionEffectIterator &Other) const {
     return Idx == Other.Idx;
@@ -5432,7 +5431,6 @@ class FunctionEffectKindSet {
     }
 
   public:
-    iterator();
     iterator(const FunctionEffectKindSet &O, size_t I) : Outer(&O), Idx(I) {
       advanceToNextSetBit();
     }
