@@ -1739,6 +1739,27 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Known = KnownFPClass::canonicalize(KnownSrc, DenormMode);
     break;
   }
+  case TargetOpcode::G_VECREDUCE_SEQ_FADD:
+  case TargetOpcode::G_VECREDUCE_FADD: {
+    if (MI.hasRewriteBasedFlags())
+      break;
+
+    const bool HasStart = Opcode == TargetOpcode::G_VECREDUCE_SEQ_FADD;
+    Register Src = MI.getOperand(HasStart ? 2 : 1).getReg();
+    KnownFPClass KnownSrc =
+        computeKnownFPClass(Src, MI.getFlags(), fcAllFlags, Depth + 1);
+    // G_VECREDUCE_FADD has no start value. The vector has at least one
+    // element, so using the vector's own class as the start adds nothing.
+    KnownFPClass KnownStart =
+        HasStart ? computeKnownFPClass(MI.getOperand(1).getReg(), MI.getFlags(),
+                                       fcAllFlags, Depth + 1)
+                 : KnownSrc;
+    DenormalMode Mode =
+        MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+    const bool HasNSZ = MI.getFlag(MachineInstr::MIFlag::FmNsz);
+    Known = KnownFPClass::vec_reduce_fadd(KnownStart, KnownSrc, Mode, HasNSZ);
+    break;
+  }
   case TargetOpcode::G_VECREDUCE_FMAX:
   case TargetOpcode::G_VECREDUCE_FMIN:
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:

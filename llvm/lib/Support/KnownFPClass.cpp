@@ -48,6 +48,20 @@ KnownFPClass KnownFPClass::applyInputDenormalMode(const KnownFPClass &KnownSrc,
   llvm_unreachable("covered switch over denormal mode");
 }
 
+KnownFPClass KnownFPClass::applyInputSemantics(const KnownFPClass &KnownSrc,
+                                               DenormalMode Mode,
+                                               bool MayBeNSZ) {
+  // We flush denormals first since it may add zeroes to the input classes.
+  KnownFPClass Known = applyInputDenormalMode(KnownSrc, Mode);
+
+  // NSZ means that a +0.0 or -0.0 input may be treated as a zero of the
+  // opposite sign.
+  if (MayBeNSZ && !Known.isKnownNever(fcZero))
+    Known |= fcZero;
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::applyOutputDenormalMode(const KnownFPClass &KnownSrc,
                                                    DenormalMode Mode) {
   KnownFPClass Known = KnownSrc;
@@ -954,6 +968,57 @@ KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
     Known.knownNot(fcPosInf);
 
   return Known;
+}
+
+KnownFPClass KnownFPClass::vec_reduce_fadd(const KnownFPClass &Start_,
+                                           const KnownFPClass &Src_,
+                                           DenormalMode Mode, bool MayBeNSZ) {
+  KnownFPClass Start = applyInputSemantics(Start_, Mode, MayBeNSZ);
+  KnownFPClass Src = applyInputSemantics(Src_, Mode, MayBeNSZ);
+  // TODO: This can be refined.
+  Src |= Start;
+
+  KnownFPClass Known;
+
+  Known.propagateNonSNaN(Src);
+
+  // Rule out normal/inf
+  if (Src.isKnownNever(fcPosSubnormal | fcPosNormal)) {
+    Known.knownNot(fcPosNormal);
+    if (Src.isKnownNever(fcPosInf))
+      Known.knownNot(fcPosInf);
+  }
+  if (Src.isKnownNever(fcNegSubnormal | fcNegNormal)) {
+    Known.knownNot(fcNegNormal);
+    if (Src.isKnownNever(fcNegInf))
+      Known.knownNot(fcNegInf);
+  }
+
+  // Rule out subnormal.
+  if (Src.isKnownNever(fcPosSubnormal | fcPosNormal) ||
+      Src.isKnownNever(fcSubnormal | fcNegNormal))
+    Known.knownNot(fcPosSubnormal);
+  if (Src.isKnownNever(fcSubnormal | fcPosNormal) ||
+      Src.isKnownNever(fcNegSubnormal | fcNegNormal))
+    Known.knownNot(fcNegSubnormal);
+
+  // Zero is produced from cancellation of terms, or by adding zero to zero.
+  if (Src.isKnownNever(fcPosSubnormal | fcPosNormal) ||
+      Src.isKnownNever(fcNegSubnormal | fcNegNormal)) {
+    if (Src.isKnownNever(fcNegZero))
+      Known.knownNot(fcNegZero);
+    if (Src.isKnownNever(fcPosZero))
+      Known.knownNot(fcPosZero);
+  }
+
+  // NaN is produced from adding infinities of the opposite sign. So we can
+  // rule out NaN if one sign of infinity is not possible.
+  if (Src.isKnownNever(fcNan) &&
+      (Src.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf) ||
+       Src.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegInf)))
+    Known.knownNot(fcNan);
+
+  return applyOutputDenormalMode(Known, Mode);
 }
 
 KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc_, DenormalMode Mode,

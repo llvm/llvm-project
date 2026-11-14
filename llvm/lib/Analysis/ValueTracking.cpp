@@ -5883,6 +5883,24 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Known = KnownFPClass::canonicalize(KnownSrc, DenormMode);
       break;
     }
+    case Intrinsic::vector_reduce_fadd: {
+      FastMathFlags FMF = II->getFastMathFlags();
+      if (FMF.hasRewriteBasedFlags())
+        break;
+
+      KnownFPClass KnownStart = computeKnownFPClass(II->getArgOperand(0), FMF,
+                                                    fcAllFlags, Q, Depth + 1);
+      KnownFPClass KnownSrc = computeKnownFPClass(II->getArgOperand(1), FMF,
+                                                  fcAllFlags, Q, Depth + 1);
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      const bool HasNSZ = FMF.noSignedZeros();
+      Known = KnownFPClass::vec_reduce_fadd(KnownStart, KnownSrc, Mode, HasNSZ);
+      break;
+    }
     case Intrinsic::vector_reduce_fmax:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
