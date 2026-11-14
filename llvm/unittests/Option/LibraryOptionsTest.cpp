@@ -178,32 +178,26 @@ TEST(LibraryOptionsTest, Parser) {
   EXPECT_EQ(global().count, 3u);
 }
 
-// A static RegisterLibraryOptions connects the struct's Global to cl::.
+// A static RegisterLibraryOptions connects the struct to
+// cl::parseCommandLineOptions.
 TEST(LibraryOptionsTest, Register) {
   cl::ResetCommandLineParser();
   opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
-  const TestLibraryOptions &G = global();
   std::string Path = "-lib-path=q";
   const char *Args[] = {"prog",        "-lib-count", "5",
                         "-lib-enable", Path.c_str(), "-lib-list=1,2"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, "", &nulls()));
-  EXPECT_EQ(G.count, 5u);
-  EXPECT_TRUE(G.enable);
-  EXPECT_THAT(G.list, testing::ElementsAre(1u, 2u));
+  cl::LibraryOptionsContext V;
+  EXPECT_TRUE(cl::parseCommandLineOptions(V, Args, "", &nulls()));
+  const TestLibraryOptions &O = V.get<TestLibraryOptions>();
+  EXPECT_EQ(O.count, 5u);
+  EXPECT_TRUE(O.enable);
+  EXPECT_THAT(O.list, testing::ElementsAre(1u, 2u));
   // A StringRef member does not refer to the caller's argument.
   Path.assign(Path.size(), 'x');
-  EXPECT_EQ(G.Path, "q");
-  cl::ResetAllOptionOccurrences();
-  EXPECT_EQ(G.count, 3u);
-  EXPECT_FALSE(G.enable);
-  EXPECT_EQ(G.Path, "p");
-  EXPECT_THAT(G.list, testing::IsEmpty());
-  // Options parse again after a reset frees their storage.
-  const char *Again[] = {"prog", "-lib-path=r", "-lib-list=3", "-lib-list=4"};
-  EXPECT_TRUE(
-      cl::ParseCommandLineOptions(std::size(Again), Again, "", &nulls()));
-  EXPECT_EQ(G.Path, "r");
-  EXPECT_THAT(G.list, testing::ElementsAre(3u, 4u));
+  EXPECT_EQ(O.Path, "q");
+  // ParseCommandLineOptions, which takes no context, does not recognize them.
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(std::size(Args), Args, "", &nulls()));
   cl::ResetCommandLineParser();
 }
 
