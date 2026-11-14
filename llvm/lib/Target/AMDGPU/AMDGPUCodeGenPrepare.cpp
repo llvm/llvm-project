@@ -1463,8 +1463,13 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
         NewDiv = expandDivRem32(Builder, I, Num, Den);
       else {
         NewDiv = shrinkDivRem64(Builder, I, Num, Den);
-        if (!NewDiv)
-          Div64ToExpand.push_back(&I);
+        if (!NewDiv && ExpandDiv64InIR) {
+          // The expansion erases its input. Expand a copy so that I is erased
+          // through DeadVals.
+          auto *Copy = cast<BinaryOperator>(Builder.Insert(I.clone()));
+          Div64ToExpand.push_back(Copy);
+          NewDiv = Copy;
+        }
       }
     }
 
