@@ -941,16 +941,18 @@ public:
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
-    // Limit conversion to the current invocation only or `StorageBuffer`
-    // required by SPIR-V runner.
+    // Input, Output and Private have one copy per invocation but lower to a
+    // single global.
     // This is okay because multiple invocations are not supported yet.
     auto storageClass = srcType.getStorageClass();
     switch (storageClass) {
+    case spirv::StorageClass::CrossWorkgroup:
     case spirv::StorageClass::Input:
     case spirv::StorageClass::Private:
     case spirv::StorageClass::Output:
     case spirv::StorageClass::StorageBuffer:
     case spirv::StorageClass::UniformConstant:
+    case spirv::StorageClass::Workgroup:
       break;
     default:
       return failure();
@@ -964,9 +966,10 @@ public:
     // SPIR-V spec: "By default, functions and global variables are private to a
     // module and cannot be accessed by other modules. However, a module may be
     // written to export or import functions and global (module scope)
-    // variables.". Therefore, map 'Private' storage class to private linkage,
-    // 'Input' and 'Output' to external linkage.
-    auto linkage = storageClass == spirv::StorageClass::Private
+    // variables.". Therefore, map 'Private' and 'Workgroup' storage classes to
+    // private linkage, the others to external linkage.
+    auto linkage = storageClass == spirv::StorageClass::Private ||
+                           storageClass == spirv::StorageClass::Workgroup
                        ? LLVM::Linkage::Private
                        : LLVM::Linkage::External;
     StringAttr locationAttrName = op.getLocationAttrName();
