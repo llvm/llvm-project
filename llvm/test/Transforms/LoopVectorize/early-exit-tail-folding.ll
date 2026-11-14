@@ -286,16 +286,14 @@ define void @early_exit_with_store_after_exit(ptr align 4 dereferenceable(4096) 
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[PRED]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP1]], <4 x i1> [[TMP0]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 500)
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[DST]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP7]], <4 x i1> [[TMP6]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD1]], splat (i32 1)
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP8]], ptr align 4 [[TMP7]], <4 x i1> [[TMP6]])
-; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i1> [[TMP2]]
-; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP10]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 124
