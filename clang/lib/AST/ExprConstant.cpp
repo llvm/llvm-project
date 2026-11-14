@@ -6675,7 +6675,8 @@ static bool checkDynamicType(EvalInfo &Info, const Expr *E, const LValue &This,
   if (This.Designator.Invalid)
     return false;
 
-  CompleteObject Obj = findCompleteObject(Info, E, AK, This, QualType());
+  CompleteObject Obj =
+      findCompleteObject(Info, E, AK, This, This.Designator.getType(Info.Ctx));
 
   if (!Obj)
     return false;
