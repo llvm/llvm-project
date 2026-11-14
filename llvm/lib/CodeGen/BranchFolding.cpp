@@ -1677,6 +1677,19 @@ ReoptimizeBlock:
   }
 
   if (!CurUnAnalyzable) {
+    // If the branch is conditional and both conditions go to the same
+    // destination, remove the branch, replacing it with an unconditional one or
+    // a fall-through.
+    if (CurTBB && CurTBB == CurFBB) {
+      DebugLoc Dl = MBB->findBranchDebugLoc();
+      TII->removeBranch(*MBB);
+      if (CurTBB->getIterator() != FallThrough)
+        TII->insertBranch(*MBB, CurTBB, nullptr, {}, Dl);
+      MadeChange = true;
+      ++NumBranchOpts;
+      goto ReoptimizeBlock;
+    }
+
     // If this is a two-way branch, and the FBB branches to this block, reverse
     // the condition so the single-basic-block loop is faster.  Instead of:
     //    Loop: xxx; jcc Out; jmp Loop
