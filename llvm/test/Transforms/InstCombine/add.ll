@@ -5404,7 +5404,7 @@ define i8 @neg_add_or(i8 %x) {
 define i8 @add_select_of_ranges_nuw(i1 %c, i8 range(i8 1, 10) %a, i8 range(i8 -10, -2) %b) {
 ; CHECK-LABEL: @add_select_of_ranges_nuw(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[S]], 2
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[S]], 2
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = select i1 %c, i8 %a, i8 %b
@@ -5417,7 +5417,7 @@ define i8 @add_select_of_ranges_nuw(i1 %c, i8 range(i8 1, 10) %a, i8 range(i8 -1
 define i8 @add_select_of_ranges_nsw(i1 %c, i8 range(i8 -100, -90) %a, i8 range(i8 90, 100) %b) {
 ; CHECK-LABEL: @add_select_of_ranges_nsw(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = add nuw i8 [[S]], 27
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[S]], 27
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = select i1 %c, i8 %a, i8 %b
