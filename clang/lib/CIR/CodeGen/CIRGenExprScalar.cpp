@@ -2975,7 +2975,38 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     }
     return builder.createExtractElement(loc, vec, /*idx=*/0);
   }
+  case CK_HLSLMatrixTruncation: {
+    assert((destTy->isMatrixType() || destTy->isBuiltinType()) &&
+           "Destination type must be a matrix or builtin type.");
+    mlir::Value matrix = Visit(subExpr);
+    mlir::Location loc = cgf.getLoc(subExpr->getSourceRange());
+    if (const auto *matTy = destTy->getAs<ConstantMatrixType>()) {
+      llvm::SmallVector<int64_t> mask(matTy->getNumElementsFlattened());
+      unsigned numCols = matTy->getNumColumns();
+      unsigned numRows = matTy->getNumRows();
 
+      auto *srcMatTy = subExpr->getType()->getAs<ConstantMatrixType>();
+      assert(srcMatTy && "Source type must be a matrix type.");
+      assert(numRows <= srcMatTy->getNumRows());
+      assert(numCols <= srcMatTy->getNumColumns());
+
+      for (unsigned row = 0; row < numRows; row++)
+        for (unsigned column = 0; column < numCols; column++)
+          mask[matTy->getColumnMajorFlattenedIndex(row, column)] =
+              srcMatTy->getColumnMajorFlattenedIndex(row, column);
+
+      auto elementTy =
+          mlir::cast<cir::MatrixType>(matrix.getType()).getElementType();
+      auto resultTy = cir::MatrixType::get(builder.getContext(), elementTy,
+                                           numRows, numCols);
+      return builder.createVecShuffle(loc, matrix, resultTy, mask);
+    }
+
+    cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
+                                   "ScalarExprEmitter::VisitCastExpr: HLSL "
+                                   "Matrix truncation with non-matrix dest");
+    return {};
+  }
   default:
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
                                    "CastExpr: ", ce->getCastKindName());

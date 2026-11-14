@@ -6841,12 +6841,12 @@ def CIR_VecShuffleOp : CIR_Op<"vec.shuffle", [
   }];
 
   let arguments = (ins
-    CIR_VectorType:$vec1,
-    CIR_VectorType:$vec2,
+    CIR_AnyVectorOrMatrixType:$vec1,
+    CIR_AnyVectorOrMatrixType:$vec2,
     CIR_IntArrayAttr:$indices
   );
 
-  let results = (outs CIR_VectorType:$result);
+  let results = (outs CIR_AnyVectorOrMatrixType:$result);
   let assemblyFormat = [{
     `(` $vec1 `,` $vec2 `:` qualified(type($vec1)) `)` $indices `:`
      qualified(type($result)) attr-dict
@@ -6962,8 +6962,7 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
   }];
 
   let arguments = (ins CIR_VectorElementType:$value);
-  let results = (outs AnyTypeOf<[CIR_VectorType, CIR_MatrixType],
-                                "vector or matrix type">:$result);
+  let results = (outs CIR_AnyVectorOrMatrixType:$result);
 
   let assemblyFormat = [{
     $value `:` type($value) `,` qualified(type($result)) attr-dict
