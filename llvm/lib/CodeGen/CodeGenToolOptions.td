@@ -79,6 +79,9 @@ defm : ListField<"mattr", "StringRef",
 let MetaVarName = "<cpu-name>" in
 defm : ValueField<"mcpu", "StringRef", "",
   "Target a specific cpu type (-mcpu=help for details)">;
+let MetaVarName = "<tune-cpu-name>" in
+defm : ValueField<"mtune", "StringRef", "",
+  "Tune for a specific CPU microarchitecture (-mtune=help for details)">;
 defm : BoolField<"mxcoff-roptr", "false",
   "When set to true, const objects with relocatable address values are put into the RO data section">;
 defm : BoolField<"nozero-initialized-in-bss", "false",
@@ -89,6 +92,11 @@ defm : OptionalEnumField<"relocation-model", "Reloc::Model",
   "static,pic,dynamic-no-pic,ropi,rwpi,ropi-rwpi",
   ["Reloc::Static", "Reloc::PIC_", "Reloc::DynamicNoPIC", "Reloc::ROPI", "Reloc::RWPI", "Reloc::ROPI_RWPI"],
   "Choose relocation model">;
+defm : FlagOrEnumField<"save-stats", "codegen::SaveStatsMode",
+  "codegen::SaveStatsMode::None", "cwd,obj",
+  ["codegen::SaveStatsMode::Cwd", "codegen::SaveStatsMode::Obj"],
+  "codegen::SaveStatsMode::Cwd",
+  "Save LLVM statistics to a file in the current directory (`-save-stats`/`-save-stats=cwd`) or the directory of the output file (`-save-stats=obj`)">;
 defm : BoolField<"separate-named-sections", "false",
   "Use separate unique sections for named sections">;
 defm : BoolField<"stack-size-section", "false",
