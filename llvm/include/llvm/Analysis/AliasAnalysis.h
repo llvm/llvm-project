@@ -208,6 +208,11 @@ public:
                                       bool OrAt, bool ReturnCaptures) override;
 
   void removeInstruction(Instruction *I);
+
+  /// Notify the analysis that \p I is about to be inserted or moved.
+  /// If \p I may capture a pointer, any cached earliest escape may no longer
+  /// precede all captures, so the whole cache is dropped.
+  void insertPotentialCapture(const Instruction *I);
 };
 
 /// Cache key for BasicAA results. It only includes the pointer and size from

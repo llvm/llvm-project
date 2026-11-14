@@ -56,6 +56,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <cassert>
 #include <cstdint>
@@ -283,6 +284,20 @@ void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
     for (const Value *Obj : Iter->second)
       EarliestEscapes.erase(Obj);
     Inst2Obj.erase(I);
+  }
+}
+
+void EarliestEscapeAnalysis::insertPotentialCapture(const Instruction *I) {
+  for (const Use &U : I->operands()) {
+    if (!U->getType()->isPointerTy())
+      continue;
+
+    if (capturesAnyProvenance(
+            DetermineUseCaptureKind(U, /*Base=*/nullptr).UseCC)) {
+      EarliestEscapes.clear();
+      Inst2Obj.clear();
+      return;
+    }
   }
 }
 
