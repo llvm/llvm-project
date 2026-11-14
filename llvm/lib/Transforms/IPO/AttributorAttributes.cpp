@@ -351,7 +351,13 @@ getMinimalBaseOfPointer(Attributor &A, const AbstractAttribute &QueryingAA,
       stripAndAccumulateOffsets(A, QueryingAA, Ptr, DL, OffsetAPInt,
                                 /* GetMinOffset */ true, AllowNonInbounds);
 
-  BytesOffset = OffsetAPInt.getSExtValue();
+  // Keep Ptr with zero offset if the accumulated offset does not fit in int64_t
+  std::optional<int64_t> Offset = OffsetAPInt.trySExtValue();
+  if (!Offset) {
+    BytesOffset = 0;
+    return Ptr;
+  }
+  BytesOffset = *Offset;
   return Base;
 }
 
@@ -5017,6 +5023,12 @@ struct AADereferenceableFloating : AADereferenceableImpl {
           A, *this, &V, DL, Offset, /* GetMinOffset */ false,
           /* AllowNonInbounds */ true);
 
+      // Cannot derive dereferenceability from the base for an offset
+      // that does not fit in int64_t
+      std::optional<int64_t> SignedOffset = Offset.trySExtValue();
+      if (!SignedOffset)
+        return false;
+
       const auto *AA = A.getAAFor<AADereferenceable>(
           *this, IRPosition::value(*Base), DepClassTy::REQUIRED);
       int64_t DerefBytes = 0;
@@ -5036,9 +5048,7 @@ struct AADereferenceableFloating : AADereferenceableImpl {
       // For now we do not try to "increase" dereferenceability due to negative
       // indices as we first have to come up with code to deal with loops and
       // for overflows of the dereferenceable bytes.
-      int64_t OffsetSExt = Offset.getSExtValue();
-      if (OffsetSExt < 0)
-        OffsetSExt = 0;
+      int64_t OffsetSExt = std::max<int64_t>(*SignedOffset, 0);
 
       T.takeAssumedDerefBytesMinimum(
           std::max(int64_t(0), DerefBytes - OffsetSExt));
