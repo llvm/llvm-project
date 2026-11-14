@@ -297,6 +297,9 @@ DeclContextTree::getResolvedPath(CompileUnit &CU, unsigned FileNum,
     (void)FoundFileName;
     assert(FoundFileName && "Must get file name from line table");
 
+    // Undo prefix mapping, so that the path can be resolved on disk.
+    FileName = CU.getContainingFile().remapPath(FileName);
+
     // Second level of caching, this time based on the file's parent
     // path.
     StringRef ResolvedPath = PathResolver.resolve(FileName, StringPool);
