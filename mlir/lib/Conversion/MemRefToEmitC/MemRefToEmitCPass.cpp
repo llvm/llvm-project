@@ -31,7 +31,6 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-
 struct ConvertMemRefToEmitCPass
     : public impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass> {
   using Base::Base;
