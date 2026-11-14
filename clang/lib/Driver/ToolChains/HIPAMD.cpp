@@ -131,7 +131,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   TC.addProfileRTLibs(Args, LldArgs);
 
   // Link the sanitizer runtimes for the standalone LLD invocation.
-  if (TC.getSanitizerArgs(Args).needsDasanRt())
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
+  if (SanArgs.needsDasanRt() && SanArgs.linkRuntimes())
     LldArgs.push_back(
         TC.getCompilerRTArgString(Args, "dasan", ToolChain::FT_Static));
 

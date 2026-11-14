@@ -24,6 +24,15 @@
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=daddress,undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN
 // CHECK-UBSAN: error: invalid argument '-fsanitize=daddress' not allowed with '-fsanitize=undefined'
 
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=daddress,float-divide-by-zero %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FDBZ
+// CHECK-FDBZ: error: invalid argument '-fsanitize=daddress' not allowed with '-fsanitize=float-divide-by-zero'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=daddress,nullability %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NULLABILITY
+// CHECK-NULLABILITY: error: invalid argument '-fsanitize=daddress' not allowed with '-fsanitize=nullability'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=daddress,integer %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INTEGER
+// CHECK-INTEGER: error: invalid argument '-fsanitize=daddress' not allowed with '-fsanitize=integer'
+
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=daddress,realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN
 // CHECK-RTSAN: error: invalid argument '-fsanitize=daddress' not allowed with '-fsanitize=realtime'
 

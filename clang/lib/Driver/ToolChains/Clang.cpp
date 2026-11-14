@@ -9898,8 +9898,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   };
   auto ToolChainHasSanitizerRT = [&](const ToolChain &TC, const ArgList &TCArgs,
                                      Action::OffloadKind Kind) {
-    if (TC.getSanitizerArgs(TCArgs, /*BA=*/{}, Kind).needsCsanRt())
+    const SanitizerArgs &SanArgs = TC.getSanitizerArgs(TCArgs, /*BA=*/{}, Kind);
+    if (SanArgs.needsCsanRt())
       return ToolChainHasRT(TC, "csan");
+    if (SanArgs.needsDasanRt())
+      return true;
     return ToolChainHasRT(TC, "ubsan_minimal") ||
            ToolChainHasRT(TC, "ubsan_standalone");
   };
@@ -9915,11 +9918,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     // Don't forward sanitizer arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
     if (requiresUBSanRT(ID) && !HasSanitizerRT)
-      return false;
-    // The device sanitizer has a runtime of its own on this side, which the
-    // device link asks for by the same lookup the host one uses.
-    if (requiresUBSanRT(ID) && TC.getSanitizerArgs(Args).needsDasanRt() &&
-        !ToolChainHasRT(TC, "dasan"))
       return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
     return TC.HasNativeLLVMSupport() || ID != OPT_mllvm;
