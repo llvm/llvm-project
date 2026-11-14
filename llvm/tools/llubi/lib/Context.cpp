@@ -972,7 +972,7 @@ AnyValue Context::computePtrAdd(const Pointer &Ptr, const APInt &Offset,
     MO = checkProvenance(
         Ptr, [](const Provenance &) { return true; },
         /*HasSideEffect=*/false);
-    if (!MO || !MO->inBounds(NewAddr))
+    if (!MO || !MO->inBounds(Ptr.address()) || !MO->inBounds(NewAddr))
       return AnyValue::poison();
   }
 
