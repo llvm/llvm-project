@@ -50,18 +50,13 @@ void test_fpclassify_nan(){
 // LLVM-NEXT: br label %[[BB_MERGE2]]
 // LLVM: [[BB_MERGE2]]:
 // LLVM-NEXT: %[[PHI_INF_SEL:.*]] = phi i32 [ %[[NORMAL_OR_SUBNORMAL]], %[[BB_NOT_INF]] ], [ 516, %[[BB_INF]] ]
-// LLVM-NEXT: br label %[[BB_CONT1:.*]]
-// LLVM: [[BB_CONT1]]:
 // LLVM-NEXT: br label %[[BB_MERGE1]]
 // LLVM: [[BB_MERGE1]]:
-// LLVM-NEXT: %[[PHI_NAN_SEL:.*]] = phi i32 [ %[[PHI_INF_SEL]], %[[BB_CONT1]] ], [ 3, %[[BB_NAN]] ]
-// LLVM-NEXT: br label %[[BB_CONT2:.*]]
-// LLVM: [[BB_CONT2]]:
+// LLVM-NEXT: %[[PHI_NAN_SEL:.*]] = phi i32 [ %[[PHI_INF_SEL]], %[[BB_MERGE2]] ], [ 3, %[[BB_NAN]] ]
 // LLVM-NEXT: br label %[[BB_RET]]
 // LLVM: [[BB_RET]]:
-// LLVM-NEXT: %[[PHI_FINAL:.*]] = phi i32 [ %[[PHI_NAN_SEL]], %[[BB_CONT2]] ], [ 96, %[[BB_ZERO]] ]
-// LLVM-NEXT: br label %[[BB_EXIT:.*]]
-// LLVM: [[BB_EXIT]]:
+// LLVM-NEXT: %[[PHI_FINAL:.*]] = phi i32 [ %[[PHI_NAN_SEL]], %[[BB_MERGE1]] ], [ 96, %[[BB_ZERO]] ]
+// LLVM-NEXT: ret void
 
 // OGCG: %[[CMP_ZERO:.+]] = fcmp oeq float %[[VAL:.+]],
 // OGCG-NEXT: br i1 %[[CMP_ZERO]], label %[[BB_RET:.+]], label %[[BB_NOT_ZERO:.+]]
@@ -119,17 +114,13 @@ void test_fpclassify_inf(){
 // LLVM-NEXT: br label %[[BB_MERGE2]]
 // LLVM: [[BB_MERGE2]]:
 // LLVM-NEXT: %[[PHI1:.+]] = phi i32 [ %[[SEL]], %[[BB_NOT_INF]] ], [ 516, %[[BB_INF]] ]
-// LLVM-NEXT: br label %[[BB_CONT1:.+]]
-// LLVM: [[BB_CONT1]]:
 // LLVM-NEXT: br label %[[BB_MERGE1]]
 // LLVM: [[BB_MERGE1]]:
-// LLVM-NEXT: %[[PHI2:.+]] = phi i32 [ %[[PHI1]], %[[BB_CONT1]] ], [ 3, %[[BB_NAN]] ]
-// LLVM-NEXT: br label %[[BB_CONT2:.+]]
-// LLVM: [[BB_CONT2]]:
+// LLVM-NEXT: %[[PHI2:.+]] = phi i32 [ %[[PHI1]], %[[BB_MERGE2]] ], [ 3, %[[BB_NAN]] ]
 // LLVM-NEXT: br label %[[BB_RET]]
 // LLVM: [[BB_RET]]:
-// LLVM-NEXT: %[[PHI3:.+]] = phi i32 [ %[[PHI2]], %[[BB_CONT2]] ], [ 96, %[[BB_ZERO]] ]
-// LLVM-NEXT: br label
+// LLVM-NEXT: %[[PHI3:.+]] = phi i32 [ %[[PHI2]], %[[BB_MERGE1]] ], [ 96, %[[BB_ZERO]] ]
+// LLVM-NEXT: ret void
 
 // OGCG: %[[CMP_ZERO:.+]] = fcmp oeq float %[[VAL:.+]],
 // OGCG-NEXT: br i1 %[[CMP_ZERO]], label %[[BB_RET:.+]], label %[[BB_NOT_ZERO:.+]]
@@ -187,18 +178,13 @@ void test_fpclassify_normal(){
 // LLVM-NEXT: br label %[[BB_MERGE2]]
 // LLVM: [[BB_MERGE2]]:
 // LLVM-NEXT: %[[PHI_INF_SEL:.*]] = phi i32 [ %[[NORMAL_OR_SUBNORMAL]], %[[BB_NOT_INF]] ], [ 516, %[[BB_INF]] ]
-// LLVM-NEXT: br label %[[BB_CONT1:.*]]
-// LLVM: [[BB_CONT1]]:
 // LLVM-NEXT: br label %[[BB_MERGE1]]
 // LLVM: [[BB_MERGE1]]:
-// LLVM-NEXT: %[[PHI_NAN_SEL:.*]] = phi i32 [ %[[PHI_INF_SEL]], %[[BB_CONT1]] ], [ 3, %[[BB_NAN]] ]
-// LLVM-NEXT: br label %[[BB_CONT2:.*]]
-// LLVM: [[BB_CONT2]]:
+// LLVM-NEXT: %[[PHI_NAN_SEL:.*]] = phi i32 [ %[[PHI_INF_SEL]], %[[BB_MERGE2]] ], [ 3, %[[BB_NAN]] ]
 // LLVM-NEXT: br label %[[BB_RET]]
 // LLVM: [[BB_RET]]:
-// LLVM-NEXT: %[[PHI_FINAL:.*]] = phi i32 [ %[[PHI_NAN_SEL]], %[[BB_CONT2]] ], [ 96, %[[BB_ZERO]] ]
-// LLVM-NEXT: br label %[[BB_EXIT:.*]]
-// LLVM: [[BB_EXIT]]:
+// LLVM-NEXT: %[[PHI_FINAL:.*]] = phi i32 [ %[[PHI_NAN_SEL]], %[[BB_MERGE1]] ], [ 96, %[[BB_ZERO]] ]
+// LLVM-NEXT: ret void
 
 // OGCG: %[[CMP_ZERO:.+]] = fcmp oeq float %[[VAL:.+]],
 // OGCG-NEXT: br i1 %[[CMP_ZERO]], label %[[BB_RET:.+]], label %[[BB_NOT_ZERO:.+]]
@@ -256,18 +242,13 @@ void test_fpclassify_subnormal(){
 // LLVM-NEXT: br label %[[BB_MERGE2]]
 // LLVM: [[BB_MERGE2]]:
 // LLVM-NEXT: %[[PHI_INF_SEL:.*]] = phi i32 [ %[[NORMAL_OR_SUBNORMAL]], %[[BB_NOT_INF]] ], [ 516, %[[BB_INF]] ]
-// LLVM-NEXT: br label %[[BB_CONT1:.*]]
-// LLVM: [[BB_CONT1]]:
 // LLVM-NEXT: br label %[[BB_MERGE1]]
 // LLVM: [[BB_MERGE1]]:
-// LLVM-NEXT: %[[PHI_NAN_SEL:.*]] = phi i32 [ %[[PHI_INF_SEL]], %[[BB_CONT1]] ], [ 3, %[[BB_NAN]] ]
-// LLVM-NEXT: br label %[[BB_CONT2:.*]]
-// LLVM: [[BB_CONT2]]:
+// LLVM-NEXT: %[[PHI_NAN_SEL:.*]] = phi i32 [ %[[PHI_INF_SEL]], %[[BB_MERGE2]] ], [ 3, %[[BB_NAN]] ]
 // LLVM-NEXT: br label %[[BB_RET]]
 // LLVM: [[BB_RET]]:
-// LLVM-NEXT: %[[PHI_FINAL:.*]] = phi i32 [ %[[PHI_NAN_SEL]], %[[BB_CONT2]] ], [ 96, %[[BB_ZERO]] ]
-// LLVM-NEXT: br label %[[BB_EXIT:.*]]
-// LLVM: [[BB_EXIT]]:
+// LLVM-NEXT: %[[PHI_FINAL:.*]] = phi i32 [ %[[PHI_NAN_SEL]], %[[BB_MERGE1]] ], [ 96, %[[BB_ZERO]] ]
+// LLVM-NEXT: ret void
 
 // OGCG: %[[CMP_ZERO:.+]] = fcmp oeq float %[[VAL:.+]],
 // OGCG-NEXT: br i1 %[[CMP_ZERO]], label %[[BB_RET:.+]], label %[[BB_NOT_ZERO:.+]]
@@ -325,18 +306,13 @@ void test_fpclassify_zero(){
 // LLVM-NEXT: br label %[[BB_MERGE2]]
 // LLVM: [[BB_MERGE2]]:
 // LLVM-NEXT: %[[PHI_INF_SEL:.*]] = phi i32 [ %[[NORMAL_OR_SUBNORMAL]], %[[BB_NOT_INF]] ], [ 516, %[[BB_INF]] ]
-// LLVM-NEXT: br label %[[BB_CONT1:.*]]
-// LLVM: [[BB_CONT1]]:
 // LLVM-NEXT: br label %[[BB_MERGE1]]
 // LLVM: [[BB_MERGE1]]:
-// LLVM-NEXT: %[[PHI_NAN_SEL:.*]] = phi i32 [ %[[PHI_INF_SEL]], %[[BB_CONT1]] ], [ 3, %[[BB_NAN]] ]
-// LLVM-NEXT: br label %[[BB_CONT2:.*]]
-// LLVM: [[BB_CONT2]]:
+// LLVM-NEXT: %[[PHI_NAN_SEL:.*]] = phi i32 [ %[[PHI_INF_SEL]], %[[BB_MERGE2]] ], [ 3, %[[BB_NAN]] ]
 // LLVM-NEXT: br label %[[BB_RET]]
 // LLVM: [[BB_RET]]:
-// LLVM-NEXT: %[[PHI_FINAL:.*]] = phi i32 [ %[[PHI_NAN_SEL]], %[[BB_CONT2]] ], [ 96, %[[BB_ZERO]] ]
-// LLVM-NEXT: br label %[[BB_EXIT:.*]]
-// LLVM: [[BB_EXIT]]:
+// LLVM-NEXT: %[[PHI_FINAL:.*]] = phi i32 [ %[[PHI_NAN_SEL]], %[[BB_MERGE1]] ], [ 96, %[[BB_ZERO]] ]
+// LLVM-NEXT: ret void
 
 // OGCG: %[[CMP_ZERO:.+]] = fcmp oeq float %[[VAL:.+]],
 // OGCG-NEXT: br i1 %[[CMP_ZERO]], label %[[BB_RET:.+]], label %[[BB_NOT_ZERO:.+]]

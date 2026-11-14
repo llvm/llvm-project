@@ -29,19 +29,20 @@ def CIRCanonicalize : Pass<"cir-canonicalize"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
-def CIRFoldEmptyBranches : Pass<"cir-fold-empty-branches"> {
-  let summary = "Removes blocks that contain only an unconditional branch";
+def CIRMergeBlocks : Pass<"cir-merge-blocks"> {
+  let summary = "Merges blocks joined by a unique unconditional branch";
   let description = [{
-    Removes every non-entry block that has no arguments, contains only a
-    `cir.br`, and is the only predecessor of the `cir.br` destination. Each
-    predecessor of such a block branches directly to the `cir.br`
-    destination, passing the operands the `cir.br` passed.
+    Applies the `cir.br` canonicalization patterns: a block reached only
+    through a `cir.br` from a block with no other successor is merged into
+    that block. A `cir.br` with a `loop_id` is never folded, so loop metadata
+    is preserved.
 
-    A `cir.br` with a `loop_id` is never removed, so loop metadata is
-    preserved. No operations other than `cir.br` are erased.
+    Unlike `cir-canonicalize`, only `cir.br` operations are rewritten, so
+    unused values are kept. Blocks unreachable from the entry block are left
+    untouched.
   }];
 
-  let constructor = "mlir::createCIRFoldEmptyBranchesPass()";
+  let constructor = "mlir::createCIRMergeBlocksPass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 

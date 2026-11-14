@@ -70,6 +70,7 @@ void test_throwing_dtor_cleanup() {
 // LLVM:           to label %[[NORMAL:.*]] unwind label %[[LPAD:.*]]
 // LLVM: [[NORMAL]]:
 // LLVM:   call void @_ZN12ThrowingDtorD1Ev(ptr {{.*}} %[[C]])
+// LLVM:   ret void
 // LLVM: [[LPAD]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:           cleanup
@@ -82,7 +83,6 @@ void test_throwing_dtor_cleanup() {
 // LLVM:           catch ptr null
 // LLVM:   call void @__clang_call_terminate(ptr
 // LLVM:   unreachable
-// LLVM:   ret void
 //
 // LLVM: define linkonce_odr hidden void @__clang_call_terminate(ptr %[[EXN:.*]])
 // LLVM:   call ptr @__cxa_begin_catch(ptr %[[EXN]])

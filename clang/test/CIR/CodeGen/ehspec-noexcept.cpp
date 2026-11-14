@@ -160,15 +160,10 @@ void outer() noexcept {
 // LLVM:         br label %[[TRY_CONT]]
 
 // The pipelines lay the join and the terminate handler out in opposite orders,
-// and the CIR pipeline reaches the terminate handler through a chain of
-// forwarding blocks, so these checks follow the branches.
+// so these checks follow the branches.
 
-// An exception of any other type is on its way to the terminate handler.
+// An exception of any other type goes to the terminate handler.
 // LLVMCIR:    {{^}}[[NOMATCH]]:
-// LLVMCIR:      br label %[[TERM_CHAIN:[^ ,]+]]
-// LLVMCIR:    {{^}}[[TERM_CHAIN]]:
-// LLVMCIR:      br label %[[TERM:[^ ,]+]]
-// LLVMCIR:    {{^}}[[TERM]]:
 // LLVMCIR:      call void @__clang_call_terminate(ptr %{{.*}})
 // LLVMCIR-NEXT: unreachable
 

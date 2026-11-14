@@ -364,26 +364,14 @@ int test_temp_in_condition(G &obj) {
 // LLVM:   %[[REF_TMP1:.*]] = alloca %struct.G
 // LLVM:   %[[TMP_RESULT:.*]] = alloca i8
 // LLVM:   store ptr %[[ARG0]], ptr %[[OBJ]]
-// LLVM:   br label %[[SCOPE_BEGIN:.*]]
-// LLVM: [[SCOPE_BEGIN]]:
 // LLVM:   %[[LOAD_OBJ:.*]] = load ptr, ptr %[[OBJ]]
 // LLVM:   call void @_ZNK1G4copyEv(ptr {{.*}} sret(%struct.G) {{.*}} %[[REF_TMP0]], ptr {{.*}} %[[LOAD_OBJ]])
-// LLVM:   br label %[[CLEAN_SCOPE_ONE:.*]]
-// LLVM: [[CLEAN_SCOPE_ONE]]:
 // LLVM:   call void @_ZN1GC1Ei(ptr {{.*}} %[[REF_TMP1]], i32 {{.*}} 1)
-// LLVM:   br label %[[CLEAN_SCOPE_TWO:.*]]
-// LLVM: [[CLEAN_SCOPE_TWO]]:
 // LLVM:   %[[EQUAL:.*]] = call noundef zeroext i1 @_ZNK1GeqERKS_(ptr {{.*}} %[[REF_TMP0]], ptr {{.*}} %[[REF_TMP1]])
 // LLVM:   %[[ZEXT:.*]] = zext i1 %[[EQUAL]] to i8
 // LLVM:   store i8 %[[ZEXT]], ptr %[[TMP_RESULT]]
-// LLVM:   br label %[[CLEAN_SCOPE_TWO_CLEANUP:.*]]
-// LLVM: [[CLEAN_SCOPE_TWO_CLEANUP]]:
 // LLVM:   call void @_ZN1GD1Ev(ptr {{.*}} %[[REF_TMP1]])
-// LLVM:   br label %[[CLEAN_SCOPE_ONE_CLEANUP:.*]]
-// LLVM: [[CLEAN_SCOPE_ONE_CLEANUP]]:
 // LLVM:   call void @_ZN1GD1Ev(ptr {{.*}} %[[REF_TMP0]])
-// LLVM:   br label %[[SCOPE_CONTINUE:.*]]
-// LLVM: [[SCOPE_CONTINUE]]:
 // LLVM:   %[[LOAD_RESULT:.*]] = load i8, ptr %[[TMP_RESULT]]
 // LLVM:   %[[TRUNC:.*]] = trunc i8 %[[LOAD_RESULT]] to i1
 // LLVM:   br i1 %[[TRUNC]], label %[[TRUE_BLOCK:.*]], label %[[FALSE_BLOCK:.*]]

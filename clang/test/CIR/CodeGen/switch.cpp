@@ -33,8 +33,6 @@ void sw1(int a) {
 // LLVM: define{{.*}} void @_Z3sw1i
 // LLVM:   store i32 1, ptr %[[B_ADDR:.*]], align 4
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
-// LLVM:   br label %[[BB7:.*]]
-// LLVM: [[BB7]]:
 // LLVM:   switch i32 %[[A_VAL]], label %[[EXIT:.*]] [
 // LLVM-DAG:   i32 0, label %[[CASE0:.*]]
 // LLVM-DAG:   i32 1, label %[[CASE1:.*]]
@@ -105,8 +103,6 @@ void sw2(int a) {
 // LLVM: define{{.*}} void @_Z3sw2i
 // LLVM:   store i32 2, ptr %[[YOLO_ADDR:.*]], align 4
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
-// LLVM:   br label %[[SWITCH:.*]]
-// LLVM: [[SWITCH]]:
 // LLVM:   switch i32 %[[A_VAL]], label %[[EXIT:.*]] [
 // LLVM:     i32 3, label %[[CASE3:.*]]
 // LLVM:   ]
@@ -157,8 +153,6 @@ void sw3(int a) {
 
 // LLVM-LABEL: define{{.*}} void @_Z3sw3i
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
-// LLVM:   br label %[[SWITCH:.*]]
-// LLVM: [[SWITCH]]:
 // LLVM:   switch i32 %[[A_VAL]], label %[[DEFAULT:.*]] [
 // LLVM:   ]
 // LLVM: [[DEFAULT]]:
@@ -208,11 +202,7 @@ int sw4(int a) {
 // LLVM: define{{.*}} i32 @_Z3sw4i
 // LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
 // LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
-// LLVM:   br label %[[ENTRY:.*]]
-// LLVM: [[ENTRY]]:
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
-// LLVM:   br label %[[SWITCH:.*]]
-// LLVM: [[SWITCH]]:
 // LLVM:   switch i32 %[[A_VAL]], label %[[DEFAULT:.*]] [
 // LLVM-DAG:     i32 42, label %[[CASE42:.*]]
 // LLVM:   ]
@@ -261,11 +251,7 @@ void sw5(int a) {
 
 // LLVM-LABEL: define{{.*}} void @_Z3sw5i
 // LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
-// LLVM:   br label %[[ENTRY:.*]]
-// LLVM: [[ENTRY]]:
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
-// LLVM:   br label %[[SWITCH:.*]]
-// LLVM: [[SWITCH]]:
 // LLVM:   switch i32 %[[A_VAL]], label %[[EXIT:.*]] [
 // LLVM-DAG:     i32 1, label %[[CASE1:.*]]
 // LLVM:   ]
@@ -322,8 +308,6 @@ void sw6(int a) {
 
 // LLVM: define{{.*}} void @_Z3sw6i
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
-// LLVM:   br label %[[SWITCH:.*]]
-// LLVM: [[SWITCH]]:
 // LLVM:   switch i32 %[[A_VAL]], label %[[EXIT:.*]] [
 // LLVM-DAG:     i32 0, label %[[CASE0:.*]]
 // LLVM-DAG:     i32 1, label %[[CASE1:.*]]
@@ -406,8 +390,6 @@ void sw7(int a) {
 
 // LLVM: define{{.*}} void @_Z3sw7i
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
-// LLVM:   br label %[[SWITCH:.*]]
-// LLVM: [[SWITCH]]:
 // LLVM:   switch i32 %[[A_VAL]], label %[[EXIT:.*]] [
 // LLVM-DAG:     i32 0, label %[[CASE0:.*]]
 // LLVM-DAG:     i32 1, label %[[CASE1:.*]]
@@ -776,8 +758,6 @@ void sw13(int a, int b) {
 // LLVM:   ]
 // LLVM: [[CASE_A_1]]:
 // LLVM:   %[[B_VAL:.*]] = load i32, ptr %[[B_ADDR:.*]], align 4
-// LLVM:   br label %[[INNER_SWITCH:.*]]
-// LLVM: [[INNER_SWITCH]]:
 // LLVM:   switch i32 %[[B_VAL]], label %[[INNER_EXIT:.*]] [
 // LLVM-DAG:     i32 2, label %[[CASE_B_2:.*]]
 // LLVM:   ]
@@ -927,8 +907,6 @@ void sw15(int x) {
 // LLVM:   br label %[[CASE2]]
 // LLVM: [[CASE2]]:
 // LLVM:   store i32 0, ptr %[[Y_ADDR:.*]], align 4
-// LLVM:   br label %[[CASE2_CONT:.*]]
-// LLVM: [[CASE2_CONT]]:
 // LLVM:   br label %[[CASE3]]
 // LLVM: [[CASE3]]:
 // LLVM:   br label %[[EXIT:.*]]
@@ -1004,12 +982,8 @@ int nested_switch(int a) {
 // LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM:   %[[B_ADDR:.*]] = alloca i32, align 4
 // LLVM:   store i32 %[[ARG:.*]], ptr %[[A_ADDR]], align 4
-// LLVM:   br label %[[ENTRY:.*]]
-// LLVM: [[ENTRY]]:
 // LLVM:   store i32 1, ptr %[[B_ADDR]], align 4
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
-// LLVM:   br label %[[SWITCH:.*]]
-// LLVM: [[SWITCH]]:
 // LLVM:   switch i32 %[[A_VAL]], label %[[EXIT:.*]] [
 // LLVM-DAG:     i32 0, label %[[CASE0:.*]]
 // LLVM-DAG:     i32 1, label %[[CASE1:.*]]
@@ -1021,8 +995,6 @@ int nested_switch(int a) {
 // LLVM:   %[[B0:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // LLVM:   %[[B1:.*]] = add nsw i32 %[[B0]], 1
 // LLVM:   store i32 %[[B1]], ptr %[[B_ADDR]], align 4
-// LLVM:   br label %[[CASE0_CONT:.*]]
-// LLVM: [[CASE0_CONT]]:
 // LLVM:   br label %[[CASE1]]
 // LLVM: [[CASE1]]:
 // LLVM:   %[[B1a:.*]] = load i32, ptr %[[B_ADDR]], align 4
@@ -1033,7 +1005,7 @@ int nested_switch(int a) {
 // LLVM:   %[[B2:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // LLVM:   %[[B3:.*]] = add nsw i32 %[[B2]], 1
 // LLVM:   store i32 %[[B3]], ptr %[[B_ADDR]], align 4
-// LLVM:   br label %[[CASE2_CONT:.*]]
+// LLVM:   br i1 %{{.*}}, label %{{.*}}, label %{{.*}}
 // LLVM: [[CASE9]]:
 // LLVM:   %[[A9:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM:   %[[B4:.*]] = load i32, ptr %[[B_ADDR]], align 4

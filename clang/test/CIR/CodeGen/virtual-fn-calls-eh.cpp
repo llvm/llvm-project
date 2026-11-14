@@ -57,30 +57,20 @@ void call_virtual_fn_in_cleanup_scope() {
 // LLVM: define {{.*}} void @_Z32call_virtual_fn_in_cleanup_scopev()
 // LLVM:   %[[B:.*]] = alloca %struct.B
 // LLVM:   call void @_ZN1BC2Ev(ptr {{.*}} %[[B]])
-// LLVM:   br label %[[CLEANUP_SCOPE:.*]]
-// LLVM: [[CLEANUP_SCOPE]]:
 // LLVM:   invoke void @_ZN1B1fEc(ptr {{.*}} %[[B]], i8 noundef signext 99)
-// LLVM:           to label %[[NORMAL_CONTINUE:.*]] unwind label %[[UNWIND:.*]]
-// LLVM: [[NORMAL_CONTINUE]]
-// LLVM:   br label %[[NORMAL_CLEANUP:.*]]
+// LLVM:           to label %[[NORMAL_CLEANUP:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[NORMAL_CLEANUP]]:
 // LLVM:   call void @_ZN1BD1Ev(ptr {{.*}} %[[B]])
-// LLVM:   br label %[[DONE:.*]]
+// LLVM:   ret void
 // LLVM: [[UNWIND]]:
 // LLVM:   %[[EXN:.*]] = landingpad { ptr, i32 }
 // LLVM:                   cleanup
 // LLVM:   %[[EXN_PTR:.*]] = extractvalue { ptr, i32 } %[[EXN]], 0
 // LLVM:   %[[TYPEID:.*]] = extractvalue { ptr, i32 } %[[EXN]], 1
-// LLVM:   br label %[[EH_CLEANUP:.*]]
-// LLVM: [[EH_CLEANUP]]:
-// LLVM:   %[[EXN_PTR_PHI:.*]] = phi ptr [ %[[EXN_PTR]], %[[UNWIND]] ]
-// LLVM:   %[[TYPEID_PHI:.*]] = phi i32 [ %[[TYPEID]], %[[UNWIND]] ]
 // LLVM:   call void @_ZN1BD1Ev(ptr {{.*}} %[[B]])
-// LLVM:   %[[EXN_INSERT:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_PTR_PHI]], 0
-// LLVM:   %[[EXN_INSERT_2:.*]] = insertvalue { ptr, i32 } %[[EXN_INSERT]], i32 %[[TYPEID_PHI]], 1
+// LLVM:   %[[EXN_INSERT:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_PTR]], 0
+// LLVM:   %[[EXN_INSERT_2:.*]] = insertvalue { ptr, i32 } %[[EXN_INSERT]], i32 %[[TYPEID]], 1
 // LLVM:   resume { ptr, i32 } %[[EXN_INSERT_2]]
-// LLVM: [[DONE]]:
-// LLVM:   ret void
 
 // OGCG: define {{.*}} void @_Z32call_virtual_fn_in_cleanup_scopev()
 // OGCG:   %[[B:.*]] = alloca %struct.B, align 8

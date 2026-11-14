@@ -799,14 +799,13 @@ void test_array_new_with_ctor_init() {
 // LLVM:   %[[IDX_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   store ptr %[[BEGIN]], ptr %[[IDX_ADDR]], align 8
 // LLVM:   br label
-// LLVM:   %[[CUR2:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8
-// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR2]], %[[ARRAY_END]]
-// LLVM:   br i1 %[[CMP]], label
 // LLVM:   %[[CUR:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8
 // LLVM:   call void @_ZN1FC1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
 // LLVM:   %[[NEXT:.*]] = getelementptr %class.F, ptr %[[CUR]], i64 1
 // LLVM:   store ptr %[[NEXT]], ptr %[[IDX_ADDR]], align 8
-// LLVM:   br label
+// LLVM:   %[[CUR2:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR2]], %[[ARRAY_END]]
+// LLVM:   br i1 %[[CMP]], label
 // LLVM:   store ptr %[[RAW_PTR]], ptr %[[P_ADDR]], align 8
 // LLVM:   ret void
 
@@ -918,17 +917,15 @@ void test_const_array_new_value_init() {
 // LLVM:   %[[END:.*]] = getelementptr %class.OuterZero, ptr %[[BEGIN]], i64 3
 // LLVM:   store ptr %[[BEGIN]], ptr %[[IDX:.*]], align 8
 // LLVM:   br label %[[BODY:.*]]
-// LLVM: [[COND:.*]]:
-// LLVM:   %[[CUR_C:.*]] = load ptr, ptr %[[IDX]], align 8
-// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR_C]], %[[END]]
-// LLVM:   br i1 %[[CMP]], label %[[BODY]], label %[[EXIT:.*]]
 // LLVM: [[BODY]]:
 // LLVM:   %[[CUR:.*]] = load ptr, ptr %[[IDX]], align 8
 // LLVM:   call void @llvm.memset.p0.i64(ptr align 1 %[[CUR]], i8 0, i64 1, i1 false)
 // LLVM:   call void @_ZN9OuterZeroC1Ev(ptr {{.*}} %[[CUR]])
 // LLVM:   %[[NEXT:.*]] = getelementptr %class.OuterZero, ptr %[[CUR]], i64 1
 // LLVM:   store ptr %[[NEXT]], ptr %[[IDX]], align 8
-// LLVM:   br label %[[COND]]
+// LLVM:   %[[CUR_C:.*]] = load ptr, ptr %[[IDX]], align 8
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR_C]], %[[END]]
+// LLVM:   br i1 %[[CMP]], label %[[BODY]], label %[[EXIT:.*]]
 // LLVM: [[EXIT]]:
 // LLVM:   store ptr %[[RAW]], ptr %{{.*}}, align 8
 // LLVM:   ret void
@@ -1042,16 +1039,14 @@ void test_multidim_array_new_with_ctor() {
 // LLVM:   %[[END:.*]] = getelementptr %class.F, ptr %[[BEGIN]], i64 6
 // LLVM:   store ptr %[[BEGIN]], ptr %[[IDX:.*]], align 8
 // LLVM:   br label %[[BODY:.*]]
-// LLVM: [[COND:.*]]:
-// LLVM:   %[[CUR_C:.*]] = load ptr, ptr %[[IDX]], align 8
-// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR_C]], %[[END]]
-// LLVM:   br i1 %[[CMP]], label %[[BODY]], label %[[EXIT:.*]]
 // LLVM: [[BODY]]:
 // LLVM:   %[[CUR:.*]] = load ptr, ptr %[[IDX]], align 8
 // LLVM:   call void @_ZN1FC1Ev(ptr {{.*}} %[[CUR]])
 // LLVM:   %[[NEXT:.*]] = getelementptr %class.F, ptr %[[CUR]], i64 1
 // LLVM:   store ptr %[[NEXT]], ptr %[[IDX]], align 8
-// LLVM:   br label %[[COND]]
+// LLVM:   %[[CUR_C:.*]] = load ptr, ptr %[[IDX]], align 8
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR_C]], %[[END]]
+// LLVM:   br i1 %[[CMP]], label %[[BODY]], label %[[EXIT:.*]]
 // LLVM: [[EXIT]]:
 // LLVM:   store ptr %[[RAW]], ptr %{{.*}}, align 8
 // LLVM:   ret void
@@ -1205,14 +1200,13 @@ void test_array_new_with_ctor_partial_init_list() {
 // LLVM:   %[[IDX_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   store ptr %[[ARRAY_BEGIN]], ptr %[[IDX_ADDR]], align 8
 // LLVM:   br label
-// LLVM:   %[[CUR2:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8
-// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR2]], %[[ARRAY_END]]
-// LLVM:   br i1 %[[CMP]], label
 // LLVM:   %[[CUR:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8
 // LLVM:   call void @_ZN1GC1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
 // LLVM:   %[[NEXT:.*]] = getelementptr %class.G, ptr %[[CUR]], i64 1
 // LLVM:   store ptr %[[NEXT]], ptr %[[IDX_ADDR]], align 8
-// LLVM:   br label
+// LLVM:   %[[CUR2:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR2]], %[[ARRAY_END]]
+// LLVM:   br i1 %[[CMP]], label
 // LLVM:   store ptr %[[RAW_PTR]], ptr %[[P_ADDR]], align 8
 // LLVM:   ret void
 

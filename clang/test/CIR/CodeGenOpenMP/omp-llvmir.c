@@ -76,18 +76,15 @@
 // LLVM: br label %[[PAR_REGION1:.*]]
 
 // LLVM: [[PAR_REGION1]]:
+// LLVM: store i32 0, ptr %[[I]], align 4
 // LLVM: br label %[[PAR_REGION2:.*]]
 
 // LLVM: [[PAR_REGION2]]:
-// LLVM: store i32 0, ptr %[[I]], align 4
-// LLVM: br label %[[PAR_REGION3:.*]]
-
-// LLVM: [[PAR_REGION3]]:
 // LLVM: %[[I_LOAD:.*]] = load i32, ptr %[[I]], align 4
 // LLVM: %[[CMP:.*]] = icmp slt i32 %[[I_LOAD]], 10000
-// LLVM: br i1 %[[CMP]], label %[[PAR_REGION4:.*]], label %[[PAR_REGION6:.*]]
+// LLVM: br i1 %[[CMP]], label %[[PAR_REGION3:.*]], label %[[PAR_REGION4:.*]]
 
-// LLVM: [[PAR_REGION6]]:
+// LLVM: [[PAR_REGION4]]:
 // LLVM: br label %[[REGION_CONT:.*]]
 
 // LLVM: [[REGION_CONT]]:
@@ -99,15 +96,12 @@
 // LLVM: [[FINI]]:
 // LLVM: br label %[[EXIT_STUB:.*]]
 
-// LLVM: [[PAR_REGION4]]:
+// LLVM: [[PAR_REGION3]]:
 // LLVM: store i32 0, ptr %[[LOAD_J]], align 4
-// LLVM: br label %[[PAR_REGION5:.*]]
-
-// LLVM: [[PAR_REGION5]]:
 // LLVM: %[[I_LOAD2:.*]] = load i32, ptr %[[I]], align 4
 // LLVM: %[[ADD:.*]] = add nsw i32 %[[I_LOAD2]], 1
 // LLVM: store i32 %[[ADD]], ptr %[[I]], align 4
-// LLVM: br label %[[PAR_REGION3]]
+// LLVM: br label %[[PAR_REGION2]]
 
 // LLVM: [[EXIT_STUB]]:
 // LLVM: ret void

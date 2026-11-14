@@ -27,11 +27,7 @@ int f19(void) {
 // LLVM: define dso_local i32 @f19()
 // LLVM:   %[[VAR1:.+]] = alloca i32, 
 // LLVM:   %[[VAR2:.+]] = alloca i32, 
-// LLVM:   br label %[[LBL3:.+]]
-// LLVM: [[LBL3]]:
 // LLVM:     store i32 4, ptr %[[VAR2]]
-// LLVM:     br label %[[LBL4:.+]]
-// LLVM: [[LBL4]]:
 // LLVM:     %[[V1:.+]] = load i32, ptr %[[VAR2]]
 // LLVM:     store i32 %[[V1]], ptr %[[VAR1]]
 // LLVM:     %[[RES:.+]] = load i32, ptr %[[VAR1]]
@@ -110,30 +106,14 @@ int nested(void) {
 // LLVM:   %[[VAR3:.+]] = alloca i32, 
 // LLVM:   %[[VAR4:.+]] = alloca i32, 
 // LLVM:   %[[VAR5:.+]] = alloca i32, 
-// LLVM:   br label %[[LBL8:.+]]
-// LLVM: [[LBL8]]:
 // LLVM:     store i32 123, ptr %[[VAR7]]
-// LLVM:     br label %[[LBL9:.+]]
-// LLVM: [[LBL9]]:
-// LLVM:     br label %[[LBL10:.+]]
-// LLVM: [[LBL10]]:
 // LLVM:     store i32 987, ptr %[[VAR1]]
-// LLVM:     br label %[[LBL12:.+]]
-// LLVM: [[LBL12]]:
 // LLVM:     store i32 123, ptr %[[VAR5]]
 // LLVM:     %[[V1:.+]] = load i32, ptr %[[VAR5]]
 // LLVM:     store i32 %[[V1]], ptr %[[VAR3]]
-// LLVM:     br label %[[LBL14:.+]]
-// LLVM: [[LBL14]]:
-// LLVM:     br label %[[LBL15:.+]]
-// LLVM: [[LBL15]]:
 // LLVM:     store i32 9999, ptr %[[VAR4]]
-// LLVM:     br label %[[LBL16:.+]]
-// LLVM: [[LBL16]]:
 // LLVM:     %[[V2:.+]] = load i32, ptr %[[VAR4]]
 // LLVM:     store i32 %[[V2]], ptr %[[VAR2]]
-// LLVM:     br label %[[LBL18:.+]]
-// LLVM: [[LBL18]]:
 // LLVM:     %[[V3:.+]] = load i32, ptr %[[VAR2]]
 // LLVM:     store i32 %[[V3]], ptr %[[VAR6]]
 // LLVM:     %[[RES:.+]] = load i32, ptr %[[VAR6]]
@@ -204,13 +184,9 @@ void test2() { ({int x = 3; x; }); }
 // LLVM: define dso_local void @test2()
 // LLVM:   %[[TMP:.+]] = alloca i32, 
 // LLVM:   %[[X:.+]] = alloca i32, 
-// LLVM:   br label %[[LBL3:.+]]
-// LLVM: [[LBL3]]:
 // LLVM:     store i32 3, ptr %[[X]]
 // LLVM:     %[[X_VAL:.+]] = load i32, ptr %[[X]]
 // LLVM:     store i32 %[[X_VAL]], ptr %[[TMP]]
-// LLVM:     br label %[[LBL5:.+]]
-// LLVM: [[LBL5]]:
 // LLVM:     ret void
 
 // OGCG: define dso_local void @test2()
@@ -247,12 +223,8 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // LLVM:   %[[VAR3:.+]] = alloca %struct.S, 
 // LLVM:   %[[VAR4:.+]] = alloca %struct.S, 
 // LLVM:   %[[VAR1:.+]] = alloca %struct.S, 
-// LLVM:   br label %[[LBL5:.+]]
-// LLVM: [[LBL5]]:
 // LLVM:     call void @llvm.memcpy{{.*}}(ptr align 4 %[[VAR1]], ptr align 4 @[[TEST3_S]], i64 4, i1 false)
 // LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[VAR3]], ptr align 4 %[[VAR1]], i64 4, i1 false)
-// LLVM:     br label %[[LBL6:.+]]
-// LLVM: [[LBL6]]:
 // LLVM:     %[[GEP_VAR3:.+]] = getelementptr inbounds nuw %struct.S, ptr %[[VAR3]], i32 0, i32 0
 // LLVM:     %[[LOAD_X:.+]] = load i32, ptr %[[GEP_VAR3]]
 // LLVM:     store i32 %[[LOAD_X]], ptr %[[VAR2]]

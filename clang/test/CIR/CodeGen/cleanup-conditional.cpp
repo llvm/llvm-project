@@ -48,8 +48,6 @@ void test_ternary_temporary(bool c, int x) {
 // LLVMCIR:         %[[RESULT_TMP:.*]] = alloca i32
 // LLVMCIR:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
 // LLVMCIR:         %[[COND_BOOL:.*]] = trunc i8 %[[COND_BYTE]] to i1
-// LLVMCIR:         br label %[[INIT:.*]]
-// LLVMCIR:       [[INIT]]:
 // LLVMCIR:         store i8 0, ptr %[[ACTIVE]]
 // LLVMCIR:         br i1 %[[COND_BOOL]], label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
 // LLVMCIR:       [[TRUE_BR]]:
@@ -62,11 +60,7 @@ void test_ternary_temporary(bool c, int x) {
 // LLVMCIR:         br label %[[MERGE]]
 // LLVMCIR:       [[MERGE]]:
 // LLVMCIR:         %[[PHI:.*]] = phi i32 [ %[[XVAL]], %[[FALSE_BR]] ], [ %[[GET_RESULT]], %[[TRUE_BR]] ]
-// LLVMCIR:         br label %[[STORE:.*]]
-// LLVMCIR:       [[STORE]]:
 // LLVMCIR:         store i32 %[[PHI]], ptr %[[RESULT_TMP]]
-// LLVMCIR:         br label %[[CLEANUP:.*]]
-// LLVMCIR:       [[CLEANUP]]:
 // LLVMCIR:         %[[ACTIVE_BYTE:.*]] = load i8, ptr %[[ACTIVE]]
 // LLVMCIR:         %[[ACTIVE_BOOL:.*]] = trunc i8 %[[ACTIVE_BYTE]] to i1
 // LLVMCIR:         br i1 %[[ACTIVE_BOOL]], label %[[DTOR:.*]], label %[[SKIP_DTOR:.*]]
@@ -162,8 +156,6 @@ void test_ternary_both_branches(bool c) {
 // LLVMCIR:         %[[RESULT_TMP:.*]] = alloca i32
 // LLVMCIR:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
 // LLVMCIR:         %[[COND_BOOL:.*]] = trunc i8 %[[COND_BYTE]] to i1
-// LLVMCIR:         br label %[[INIT:.*]]
-// LLVMCIR:       [[INIT]]:
 // LLVMCIR:         store i8 0, ptr %[[ACTA]]
 // LLVMCIR:         store i8 0, ptr %[[ACTB]]
 // LLVMCIR:         br i1 %[[COND_BOOL]], label %[[CONSTRUCT_A:.*]], label %[[CONSTRUCT_B:.*]]
@@ -179,11 +171,7 @@ void test_ternary_both_branches(bool c) {
 // LLVMCIR:         br label %[[MERGE]]
 // LLVMCIR:       [[MERGE]]:
 // LLVMCIR:         %[[PHI:.*]] = phi i32 [ %[[CALLB]], %[[CONSTRUCT_B]] ], [ %[[CALLA]], %[[CONSTRUCT_A]] ]
-// LLVMCIR:         br label %[[STORE:.*]]
-// LLVMCIR:       [[STORE]]:
 // LLVMCIR:         store i32 %[[PHI]], ptr %[[RESULT_TMP]]
-// LLVMCIR:         br label %[[CLEANUP_B:.*]]
-// LLVMCIR:       [[CLEANUP_B]]:
 // LLVMCIR:         %[[ACTIVE_BYTE_B:.*]] = load i8, ptr %[[ACTB]]
 // LLVMCIR:         %[[ACTIVE_BOOL_B:.*]] = trunc i8 %[[ACTIVE_BYTE_B]] to i1
 // LLVMCIR:         br i1 %[[ACTIVE_BOOL_B]], label %[[DTOR_B:.*]], label %[[SKIP_DTOR_B:.*]]
@@ -282,8 +270,6 @@ int test_return_ternary(bool c) {
 // LLVMCIR:         %[[ACTB:.*]] = alloca i8
 // LLVMCIR:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
 // LLVMCIR:         %[[COND_BOOL:.*]] = trunc i8 %[[COND_BYTE]] to i1
-// LLVMCIR:         br label %[[INIT:.*]]
-// LLVMCIR:       [[INIT]]:
 // LLVMCIR:         store i8 0, ptr %[[ACTA]]
 // LLVMCIR:         store i8 0, ptr %[[ACTB]]
 // LLVMCIR:         br i1 %[[COND_BOOL]], label %[[CONSTRUCT_A:.*]], label %[[CONSTRUCT_B:.*]]
@@ -299,11 +285,7 @@ int test_return_ternary(bool c) {
 // LLVMCIR:         br label %[[MERGE]]
 // LLVMCIR:       [[MERGE]]:
 // LLVMCIR:         %[[PHI:.*]] = phi i32 [ %[[CALLB]], %[[CONSTRUCT_B]] ], [ %[[CALLA]], %[[CONSTRUCT_A]] ]
-// LLVMCIR:         br label %[[STORE_RET:.*]]
-// LLVMCIR:       [[STORE_RET]]:
 // LLVMCIR:         store i32 %[[PHI]], ptr %[[RETVAL]]
-// LLVMCIR:         br label %[[CLEANUP_B:.*]]
-// LLVMCIR:       [[CLEANUP_B]]:
 // LLVMCIR:         %[[ACTIVE_BYTE_B:.*]] = load i8, ptr %[[ACTB]]
 // LLVMCIR:         %[[ACTIVE_BOOL_B:.*]] = trunc i8 %[[ACTIVE_BYTE_B]] to i1
 // LLVMCIR:         br i1 %[[ACTIVE_BOOL_B]], label %[[DTOR_B:.*]], label %[[SKIP_DTOR_B:.*]]
@@ -384,17 +366,11 @@ int test_false_positive_conditional(bool c) {
 // LLVMCIR:         %[[RETVAL:.*]] = alloca i32
 // LLVMCIR:         %[[TMP:.*]] = alloca %struct.S
 // LLVMCIR:         call void @_ZN1SC1Ev({{.*}} %[[TMP]])
-// LLVMCIR:         br label %[[BODY:.*]]
-// LLVMCIR:       [[BODY]]:
 // LLVMCIR:         %[[VAL:.*]] = call {{.*}} i32 @_ZN1S3getEv({{.*}} %[[TMP]])
 // LLVMCIR:         %[[CMP:.*]] = icmp ne i32 %[[VAL]], 0
 // LLVMCIR:         %[[SEL:.*]] = select i1 %[[CMP]], i32 1, i32 2
 // LLVMCIR:         store i32 %[[SEL]], ptr %[[RETVAL]]
-// LLVMCIR:         br label %[[DTOR:.*]]
-// LLVMCIR:       [[DTOR]]:
 // LLVMCIR:         call void @_ZN1SD1Ev({{.*}} %[[TMP]])
-// LLVMCIR:         br label %[[EXIT:.*]]
-// LLVMCIR:       [[EXIT]]:
 // LLVMCIR:         %[[RET:.*]] = load i32, ptr %[[RETVAL]]
 // LLVMCIR:         ret i32 %[[RET]]
 

@@ -159,7 +159,6 @@ int ignore_result_assign() {
 // LLVM:         %[[ARR_VAL:.*]] = load i32, ptr %[[GEP]]
 // LLVM:         store i32 %[[ARR_VAL]], ptr %[[J_PTR]]
 // LLVM:         store ptr null, ptr %[[Q_PTR]]
-// LLVM:         br label
 // LLVM:         %[[Q_VAL:.*]] = load ptr, ptr %[[Q_PTR]]
 // LLVM:         store ptr %[[Q_VAL]], ptr %[[P_PTR]]
 // LLVM:         %[[CMP:.*]] = icmp ne ptr %[[Q_VAL]], null

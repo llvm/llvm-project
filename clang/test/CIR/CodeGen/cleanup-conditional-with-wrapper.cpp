@@ -74,8 +74,6 @@ Wrapper makeWrapper() {
 // LLVM: define {{.*}} void @_Z11makeWrapperv(ptr {{.*}} sret(%struct.Wrapper) {{.*}} %[[RETVAL:.*]])
 // LLVM:   %[[CLEANUP_COND:.*]] = alloca i8
 // LLVM:   %[[AGG_TMP0:.*]] = alloca %"struct.std::unique_ptr<Base>"
-// LLVM:   br label %[[INIT:.*]]
-// LLVM: [[INIT]]:
 // LLVM:   br i1 %{{.*}}, label %[[CONSTRUCT_TRUE:.*]], label %[[CONSTRUCT_FALSE:.*]]
 // LLVM: [[CONSTRUCT_TRUE]]:
 // LLVM:   %[[SOURCE:.*]] = call {{.*}} ptr @_Z9getSourcev()

@@ -243,8 +243,6 @@ void f3(unsigned len) {
 // LLVM:   store ptr %[[STACK_PTR]], ptr %[[SAVED_STACK]]
 // LLVM:   %[[S1:.*]] = alloca i8, i64 %[[LEN_SIZE_T]]
 // LLVM:   store i32 0, ptr %[[I]]
-// LLVM:   br label %[[WHILE_START:.*]]
-// LLVM: [[WHILE_START]]:
 // LLVM:   br label %[[WHILE_COND:.*]]
 // LLVM: [[WHILE_COND]]:
 // LLVM:   %[[CUR_I:.*]] = load i32, ptr %[[I]]
@@ -261,8 +259,6 @@ void f3(unsigned len) {
 // LLVM:   %[[S2:.*]] = alloca i8, i64 %[[I_LEN_SIZE_T2]]
 // LLVM:   %[[STACK_RESTORE_PTR2:.*]] = load ptr, ptr %[[SAVED_STACK2]]
 // LLVM:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR2]])
-// LLVM:   br label %[[WHILE_BODY_END:.*]]
-// LLVM: [[WHILE_BODY_END]]:
 // LLVM:   br label %[[WHILE_COND]]
 // LLVM: [[WHILE_END]]:
 // LLVM:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]]
@@ -533,15 +529,9 @@ void complex_vla_cast(int n) {
 // LLVM:   %[[LEN_SIZE_T:.*]] = sext i32 %[[LEN]] to i64
 // LLVM:   %[[STACK_PTR:.*]] = call ptr @llvm.stacksave.p0()
 // LLVM:   store ptr %[[STACK_PTR]], ptr %[[SAVED_STACK]], align 8
-// LLVM:   br label %[[CLEANUP_SCOPE:.*]]
-// LLVM: [[CLEANUP_SCOPE]]:
 // LLVM:   %[[ARR:.*]] = alloca { float, float }, i64 %[[LEN_SIZE_T]], align 16
-// LLVM:   br label %[[CLEANUP_BODY:.*]]
-// LLVM: [[CLEANUP_BODY]]:
 // LLVM:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]], align 8
 // LLVM:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
-// LLVM:   br label %[[DONE:.*]]
-// LLVM: [[DONE]]:
 // LLVM:   ret void
 
 // OGCG: define {{.*}} void @complex_vla_cast

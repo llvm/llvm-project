@@ -54,16 +54,14 @@ void foo() {
 // LLVM: %[[ITER:.*]] = alloca ptr
 // LLVM: store ptr %[[START]], ptr %[[ITER]]
 // LLVM: br label %[[LOOP:.*]]
-// LLVM: [[COND:.*]]:
-// LLVM: %[[CURRENT_CHECK:.*]] = load ptr, ptr %[[ITER]]
-// LLVM: %[[DONE:.*]] = icmp ne ptr %[[CURRENT_CHECK]], %[[END]]
-// LLVM: br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
 // LLVM: [[LOOP]]:
 // LLVM: %[[CURRENT:.*]] = load ptr, ptr %[[ITER]]
 // LLVM: call void @_ZN1SC1Ev(ptr{{.*}} %[[CURRENT]])
 // LLVM: %[[NEXT:.*]] = getelementptr %struct.S, ptr %[[CURRENT]], i64 1
 // LLVM: store ptr %[[NEXT]], ptr %[[ITER]]
-// LLVM: br label %[[COND]]
+// LLVM: %[[CURRENT_CHECK:.*]] = load ptr, ptr %[[ITER]]
+// LLVM: %[[DONE:.*]] = icmp ne ptr %[[CURRENT_CHECK]], %[[END]]
+// LLVM: br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
 // LLVM: [[EXIT]]:
 // LLVM: ret void
 
@@ -147,16 +145,14 @@ void multi_dimensional() {
 // LLVM:       %[[ITER:.*]] = alloca ptr
 // LLVM:       store ptr %[[START]], ptr %[[ITER]]
 // LLVM:       br label %[[LOOP:.*]]
-// LLVM:     [[COND:.*]]:
-// LLVM:       %[[CURRENT_CHECK:.*]] = load ptr, ptr %[[ITER]]
-// LLVM:       %[[DONE:.*]] = icmp ne ptr %[[CURRENT_CHECK]], %[[END]]
-// LLVM:       br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
 // LLVM:     [[LOOP]]:
 // LLVM:       %[[CURRENT:.*]] = load ptr, ptr %[[ITER]]
 // LLVM:       call void @_ZN1SC1Ev(ptr{{.*}} %[[CURRENT]])
 // LLVM:       %[[NEXT:.*]] = getelementptr %struct.S, ptr %[[CURRENT]], i64 1
 // LLVM:       store ptr %[[NEXT]], ptr %[[ITER]]
-// LLVM:       br label %[[COND]]
+// LLVM:       %[[CURRENT_CHECK:.*]] = load ptr, ptr %[[ITER]]
+// LLVM:       %[[DONE:.*]] = icmp ne ptr %[[CURRENT_CHECK]], %[[END]]
+// LLVM:       br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
 // LLVM:     [[EXIT]]:
 // LLVM:       ret void
 
@@ -227,11 +223,7 @@ void TempInArray() {
 // LLVM:       br label %[[DO_BR:.*]]
 // LLVM:       [[DO_BR]]:
 // LLVM:       %[[CURRENT:.*]] = load ptr, ptr %[[ITER]]
-// LLVM:       br label %[[CONSTRUCT_BR:.*]]
-// LLVM:       [[CONSTRUCT_BR]]:
 // LLVM:       call void @_ZN10CausesTempC1E4Temp(ptr {{.*}}%[[CURRENT]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[TMP]])
-// LLVM:       br label %[[CLEANUP_BR:.*]]
-// LLVM:       [[CLEANUP_BR]]:
 // LLVM:       call void @_ZN4TempD1Ev({{.*}}[[TMP]])
 
 // OGCG-LABEL: define {{.*}}void @_Z11TempInArrayv()
@@ -328,11 +320,7 @@ void Temp2InArray() {
 // LLVM:       [[DO_BR]]:
 // LLVM:       %[[CURRENT:.*]] = load ptr, ptr %[[ITER]]
 // LLVM:       call void @_ZN5Temp2C1Ev({{.*}}%[[TMP]])
-// LLVM:       br label %[[CONSTRUCT_BR:.*]]
-// LLVM:       [[CONSTRUCT_BR]]:
 // LLVM:       call void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}}%[[CURRENT]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[TMP]])
-// LLVM:       br label %[[CLEANUP_BR:.*]]
-// LLVM:       [[CLEANUP_BR]]:
 // LLVM:       call void @_ZN5Temp2D1Ev({{.*}}[[TMP]])
 // LLVM:       %[[DTOR_ELT:.*]] = getelementptr %struct.CausesTemp2, ptr %{{.*}}, i64 -1
 // LLVM:       call void @_ZN11CausesTemp2D1Ev(ptr {{.*}}%[[DTOR_ELT]])

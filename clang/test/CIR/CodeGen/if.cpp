@@ -27,19 +27,17 @@ int if0(bool a) {
 
 
 // LLVM: define{{.*}} i32 @_Z3if0b(i1 noundef zeroext %0)
-// LLVM:   br label %[[ENTRY:.*]]
-// LLVM: [[ENTRY]]:
-// LLVM:   %6 = load i8, ptr %3, align 1
-// LLVM:   %7 = trunc i8 %6 to i1
-// LLVM:   br i1 %7, label %[[THEN:.*]], label %[[END:.*]]
+// LLVM:   %5 = load i8, ptr %3, align 1
+// LLVM:   %6 = trunc i8 %5 to i1
+// LLVM:   br i1 %6, label %[[THEN:.*]], label %[[END:.*]]
 // LLVM: [[THEN]]:
 // LLVM:   store i32 2, ptr %2, align 4
-// LLVM:   %9 = load i32, ptr %2, align 4
-// LLVM:   ret i32 %9
+// LLVM:   %8 = load i32, ptr %2, align 4
+// LLVM:   ret i32 %8
 // LLVM: [[END]]:
 // LLVM:   store i32 3, ptr %2, align 4
-// LLVM:   %11 = load i32, ptr %2, align 4
-// LLVM:   ret i32 %11
+// LLVM:   %10 = load i32, ptr %2, align 4
+// LLVM:   ret i32 %10
 
 // OGCG: define{{.*}} i32 @_Z3if0b(i1 noundef zeroext %a)
 // OGCG: entry:
@@ -87,8 +85,6 @@ void if1(int a) {
 // LLVM: %[[X:.*]] = alloca i32, align 4
 // LLVM: store i32 %0, ptr %[[A]], align 4
 // LLVM: store i32 0, ptr %[[X]], align 4
-// LLVM: br label %[[ENTRY:.*]]
-// LLVM: [[ENTRY]]:
 // LLVM:   %[[LOADED:.*]] = load i32, ptr %[[A]], align 4
 // LLVM:   %[[COND:.*]] = icmp ne i32 %[[LOADED]], 0
 // LLVM:   br i1 %[[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
@@ -172,15 +168,11 @@ void if2(int a, bool b, bool c) {
 // LLVM:   %[[C_EXT:.*]] = zext i1 %[[C]] to i8
 // LLVM:   store i8 %[[C_EXT]], ptr %[[VARC]], align 1
 // LLVM:   store i32 0, ptr %[[VARX]], align 4
-// LLVM:   br label %[[ENTRY:.*]]
-// LLVM: [[ENTRY]]:
 // LLVM:   %[[LOAD_A:.*]] = load i32, ptr %[[VARA]], align 4
 // LLVM:   %[[CMP_A:.*]] = icmp ne i32 %[[LOAD_A]], 0
 // LLVM:   br i1 %[[CMP_A]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 // LLVM: [[IF_THEN]]:
 // LLVM:   store i32 3, ptr %[[VARX]], align 4
-// LLVM:   br label %[[LABEL14:.*]]
-// LLVM: [[LABEL14]]:
 // LLVM:   %[[LOAD_B:.*]] = load i8, ptr %[[VARB]], align 1
 // LLVM:   %[[TRUNC_B:.*]] = trunc i8 %[[LOAD_B]] to i1
 // LLVM:   br i1 %[[TRUNC_B]], label %[[IF_THEN2:.*]], label %[[IF_END2:.*]]
