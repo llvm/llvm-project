@@ -1621,3 +1621,183 @@ KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
 
   return Known;
 }
+
+static KnownFPClass unflushInputDenormal(const KnownFPClass &Input,
+                                         DenormalMode Mode) {
+  KnownFPClass Unflushed = Input;
+  switch (Mode.Input) {
+  case DenormalMode::IEEE:
+    return Unflushed;
+  case DenormalMode::PreserveSign:
+    if (!Input.isKnownNever(fcPosZero))
+      Unflushed |= fcPosSubnormal;
+    if (!Input.isKnownNever(fcNegZero))
+      Unflushed |= fcNegSubnormal;
+    return Unflushed;
+  case DenormalMode::PositiveZero:
+    if (!Input.isKnownNever(fcPosZero))
+      Unflushed |= fcSubnormal;
+    return Unflushed;
+  default:
+    if (!Input.isKnownNever(fcPosZero))
+      Unflushed |= fcSubnormal;
+    if (!Input.isKnownNever(fcNegZero))
+      Unflushed |= fcNegSubnormal;
+    return Unflushed;
+  }
+
+  llvm_unreachable("covered switch over denormal mode");
+}
+
+static KnownFPClass inverseApplyInputSemantics(const KnownFPClass &Input,
+                                               DenormalMode Mode,
+                                               bool MayBeNSZ) {
+
+  KnownFPClass Known = Input;
+  if (MayBeNSZ && !Input.isKnownNever(fcZero))
+    Known |= fcZero;
+
+  return unflushInputDenormal(Known, Mode);
+}
+
+/// This assumes that denormals were flushed after rounding
+/// (tiny after rounding).
+static KnownFPClass unflushOutputDenormal(const KnownFPClass &Output,
+                                          DenormalMode Mode) {
+  KnownFPClass Unflushed = Output;
+  switch (Mode.Output) {
+  case DenormalMode::IEEE:
+    return Unflushed;
+  case DenormalMode::PreserveSign:
+    if (!Output.isKnownNever(fcPosZero))
+      Unflushed |= fcPosSubnormal;
+    if (!Output.isKnownNever(fcNegZero))
+      Unflushed |= fcNegSubnormal;
+    return Unflushed;
+  case DenormalMode::PositiveZero:
+    if (!Output.isKnownNever(fcPosZero))
+      Unflushed |= fcSubnormal;
+    return Unflushed;
+  default:
+    if (!Output.isKnownNever(fcPosZero))
+      Unflushed |= fcSubnormal;
+    if (!Output.isKnownNever(fcNegZero))
+      Unflushed |= fcNegSubnormal;
+    return Unflushed;
+  }
+
+  llvm_unreachable("covered switch over denormal mode");
+}
+
+KnownFPClass KnownFPClass::inverse_fmul(const KnownFPClass &Output_,
+                                        DenormalMode Mode) {
+  // unflushOutputDenormal is currently a no-op since we never test that the
+  // output is never subnormal without also testing that the output is never
+  // zero.
+  const KnownFPClass Output = unflushOutputDenormal(Output_, Mode);
+  KnownFPClass Input;
+
+  // qNaN and sNaN are a vacuum. If one operand is NaN, then the other side can
+  // be any value.
+  if (Output.isKnownNever(fcNan))
+    Input.knownNot(fcNan);
+
+  // fmul(x, inf) = inf or NaN
+  if (Output.isKnownNever(fcNan | fcInf))
+    Input.knownNot(fcInf);
+
+  if (Output.isKnownNever(fcNan | fcZero | fcSubnormal | fcNormal | fcInf))
+    Input.knownNot(fcSubnormal | fcNormal);
+
+  // fmul(x, 0.0) = 0.0 or NaN
+  if (Output.isKnownNever(fcNan | fcZero))
+    Input.knownNot(fcZero);
+
+  // unflushInputDenormal is currently a no-op since we never rule out
+  // fcSubnormal without also ruling out fcZero.
+  return unflushInputDenormal(Input, Mode);
+}
+
+KnownFPClass KnownFPClass::inverse_square(const KnownFPClass &Output_,
+                                          RoundingMode RM, DenormalMode Mode,
+                                          bool MayBeNSZ) {
+  const KnownFPClass Output = unflushOutputDenormal(Output_, Mode);
+  KnownFPClass Input;
+
+  if (Output.isKnownNever(fcNan))
+    Input.knownNot(fcSNan);
+
+  if (Output.isKnownNever(fcQNan))
+    Input.knownNot(fcQNan);
+
+  if (Output.isKnownNever(fcPosInf))
+    Input.knownNot(fcInf);
+
+  if (Output.isKnownNever(fcPositive))
+    Input.knownNot(fcNormal);
+
+  // NSZ does not apply to unflushed subnormal inputs.
+  switch (RM) {
+  case RoundingMode::NearestTiesToEven:
+    if (Output.isKnownNever(fcPosZero))
+      Input.knownNot(fcSubnormal);
+    break;
+  default:
+    // subnormal * subnormal may round up to min-subnormal.
+    if (Output.isKnownNever(fcPosZero | fcPosSubnormal))
+      Input.knownNot(fcSubnormal);
+    break;
+  }
+
+  // nsz allows fmul(x, x) to choose different zeroes for x.
+  // Therefore, nsz fmul(x, x) may return -0.0.
+  if (Output.isKnownNever(fcPosZero) &&
+      (!MayBeNSZ || Output.isKnownNever(fcNegZero)))
+    Input.knownNot(fcZero);
+
+  return inverseApplyInputSemantics(Input, Mode, MayBeNSZ);
+}
+
+std::pair<KnownFPClass, KnownFPClass>
+KnownFPClass::inverse_fdiv(const KnownFPClass &Output_, DenormalMode Mode) {
+  // unflushOutputDenormal is currently a no-op since we never test that the
+  // output is never subnormal without also testing that the output is never
+  // zero.
+  const KnownFPClass Output = unflushOutputDenormal(Output_, Mode);
+  KnownFPClass LHS;
+  KnownFPClass RHS;
+
+  // qNaN and sNaN are a vacuum. If one operand is NaN, then the other side can
+  // be any value.
+  if (Output.isKnownNever(fcNan)) {
+    LHS.knownNot(fcNan);
+    RHS.knownNot(fcNan);
+  }
+
+  // fdiv(x, 0.0) and fdiv(inf, y) = inf or NaN
+  if (Output.isKnownNever(fcNan | fcInf)) {
+    LHS.knownNot(fcInf);
+    RHS.knownNot(fcZero);
+  }
+
+  if (Output.isKnownNever(fcNan | fcZero | fcSubnormal | fcNormal | fcInf)) {
+    LHS.knownNot(fcSubnormal | fcNormal);
+    RHS.knownNot(fcNormal);
+  }
+
+  // fdiv(x, subnormal) is never subnormal.
+  if (Output.isKnownNever(fcNan | fcZero | fcNormal | fcInf))
+    RHS.knownNot(fcSubnormal);
+
+  // fdiv(x, 0.0) and fdiv(inf, y) = 0.0 or NaN
+  if (Output.isKnownNever(fcNan | fcZero)) {
+    LHS.knownNot(fcZero);
+    RHS.knownNot(fcInf);
+  }
+
+  // unflushInputDenormal is currently a no-op since we never rule out
+  // fcSubnormal without also ruling out fcZero.
+  LHS = unflushInputDenormal(LHS, Mode);
+  RHS = unflushInputDenormal(RHS, Mode);
+  return {LHS, RHS};
+}

@@ -1913,8 +1913,7 @@ define nofpclass(inf nan norm zero) half @sub_result_demands_sub_rhs(i1 %cond, h
 ; CHECK-LABEL: define nofpclass(nan inf zero norm) half @sub_result_demands_sub_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call half @returns_sub()
-; CHECK-NEXT:    [[SUB_OR_UNKNOWN:%.*]] = select i1 [[COND]], half [[SUB]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[UNKNOWN1]], [[SUB_OR_UNKNOWN]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[UNKNOWN1]], [[UNKNOWN0]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %sub = call half @returns_sub()
@@ -2465,6 +2464,52 @@ entry:
   %scale.0 = select i1 %cmp, float %div, float %y
   %mul = fmul float %scale.0, %x
   ret float %mul
+}
+
+define nofpclass(nan inf nzero sub) float @ret__norm_pzero__fdiv__nzero__unknown(i1 %cond, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub) float @ret__norm_pzero__fdiv__nzero__unknown(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[NZERO:%.*]] = call float @returns_nzero()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NZERO]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan float [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    ret float [[DIV]]
+;
+  %nzero = call float @returns_nzero()
+  %select = select i1 %cond, float %nzero, float %unknown0
+  %div = fdiv float %unknown1, %select
+  ret float %div
+}
+
+define nofpclass(nan inf pzero sub) float @ret__norm_nzero__fdiv__pzero__unknown(i1 %cond, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(nan inf pzero sub) float @ret__norm_nzero__fdiv__pzero__unknown(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[PZERO:%.*]] = call float @returns_pzero()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PZERO]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv nnan float [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %pzero = call float @returns_pzero()
+  %select = select i1 %cond, float %pzero, float %unknown0
+  %div = fdiv float %unknown1, %select
+  ret float %div
+}
+
+define nofpclass(inf zero sub norm) float @ret__nan__fdiv__pos_2_0__unknown(float %x) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret__nan__fdiv__pos_2_0__unknown(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    ret float +qnan
+;
+  %div = fdiv float 2.0, %x
+  ret float %div
+}
+
+define nofpclass(inf zero sub norm) float @ret__nan__fdiv__unknown__norm(float %x, float nofpclass(nan inf zero sub) %y) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret__nan__fdiv__unknown__norm(
+; CHECK-SAME: float [[X:%.*]], float nofpclass(nan inf zero sub) [[Y:%.*]]) {
+; CHECK-NEXT:    ret float +qnan
+;
+  %div = fdiv float %x, %y
+  ret float %div
 }
 
 attributes #0 = { denormal_fpenv(preservesign) }
