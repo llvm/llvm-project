@@ -987,7 +987,8 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
     SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
     Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
     bool *IsMapped, bool *IsFrameworkFound, bool SkipCache,
-    bool BuildSystemModule, bool OpenFile, bool CacheFailures) {
+    bool BuildSystemModule, bool OpenFile, bool CacheFailures,
+    bool DiagnoseShadowing) {
   ConstSearchDirIterator CurDirLocal = nullptr;
   ConstSearchDirIterator &CurDir = CurDirArg ? *CurDirArg : CurDirLocal;
 
@@ -1057,9 +1058,10 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       if (OptionalFileEntryRef FE = getFileAndSuggestModule(
               TmpDir, IncludeLoc, IncluderAndDir.second, IncluderIsSystemHeader,
               RequestingModule, SuggestedModule)) {
-        diagnoseHeaderShadowing(Filename, *FE, IncludeLoc, FromDir, Includers,
-                                isAngled, &IncluderAndDir - Includers.begin(),
-                                nullptr);
+        if (DiagnoseShadowing)
+          diagnoseHeaderShadowing(Filename, *FE, IncludeLoc, FromDir, Includers,
+                                  isAngled, &IncluderAndDir - Includers.begin(),
+                                  nullptr);
         if (!Includer) {
           assert(First && "only first includer can have no file");
           return FE;
@@ -1198,7 +1200,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
     // the includers' directories. That file is the one that ends up being used
     // (see checkMSVCHeaderSearch() below), so reporting this one as the chosen
     // candidate would be wrong.
-    if (!MSFE)
+    if (!MSFE && DiagnoseShadowing)
       diagnoseHeaderShadowing(Filename, *File, IncludeLoc, FromDir, Includers,
                               isAngled, -1, It);
 

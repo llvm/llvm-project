@@ -1138,23 +1138,77 @@ OptionalFileEntryRef Preprocessor::LookupFile(
   if (FromFile) {
     // We're supposed to start looking from after a particular file. Search
     // the include path until we find that file or run out of files.
-    ConstSearchDirIterator TmpCurDir = CurDir;
-    ConstSearchDirIterator TmpFromDir = nullptr;
-    while (OptionalFileEntryRef FE = HeaderInfo.LookupFile(
-               Filename, FilenameLoc, isAngled, TmpFromDir, &TmpCurDir,
-               Includers, SearchPath, RelativePath, RequestingModule,
-               SuggestedModule, /*IsMapped=*/nullptr,
-               /*IsFrameworkFound=*/nullptr, SkipCache)) {
-      // Keep looking as if this file did a #include_next.
-      TmpFromDir = TmpCurDir;
-      ++TmpFromDir;
-      if (&FE->getFileEntry() == FromFile) {
-        // Found it.
-        FromDir = TmpFromDir;
-        CurDir = TmpCurDir;
-        break;
+    // Filename may differ from FromFile's name (e.g. #include_next <wchar.h>
+    // from __mbstate_t.h), so locate FromFile by its own name instead.
+    auto FindFromFile = [&](StringRef LocateName) {
+      bool SameName = LocateName == Filename;
+      ConstSearchDirIterator TmpCurDir = CurDir;
+      ConstSearchDirIterator TmpFromDir = nullptr;
+      while (OptionalFileEntryRef FE = HeaderInfo.LookupFile(
+                 LocateName, FilenameLoc, isAngled, TmpFromDir, &TmpCurDir,
+                 Includers, SameName ? SearchPath : nullptr,
+                 SameName ? RelativePath : nullptr, RequestingModule,
+                 SameName ? SuggestedModule : nullptr, /*IsMapped=*/nullptr,
+                 /*IsFrameworkFound=*/nullptr, SkipCache,
+                 /*BuildSystemModule=*/false, /*OpenFile=*/true,
+                 /*CacheFailures=*/true, /*DiagnoseShadowing=*/false)) {
+        // Keep looking as if this file did a #include_next.
+        TmpFromDir = TmpCurDir;
+        ++TmpFromDir;
+        if (&FE->getFileEntry() == FromFile) {
+          // Found it.
+          FromDir = TmpFromDir;
+          CurDir = TmpCurDir;
+          return true;
+        }
       }
-    }
+      return false;
+    };
+
+    // Candidate names for FromFile: its path relative to each search directory
+    // containing it, innermost first. Directories are matched by identity, as
+    // the file may have been reached via another spelling (e.g. "./x/...").
+    // FIXME: With nested search directories (-Ix -Ix/sub) the original name is
+    // ambiguous; we assume the innermost. Fixing this requires recording the
+    // search directory when a module header is entered.
+    SmallVector<std::string, 4> Names;
+    StringRef BaseName;
+    if (CurPPLexer)
+      if (OptionalFileEntryRef CurFE = CurPPLexer->getFileEntry()) {
+        StringRef Path = CurFE->getName();
+        BaseName = llvm::sys::path::filename(Path);
+        auto IsSearchDir = [&](DirectoryEntryRef Dir) {
+          auto Matches = [&](const DirectoryLookup &DL) {
+            OptionalDirectoryEntryRef DLDir = DL.getDirRef();
+            return DLDir && *DLDir == Dir;
+          };
+          return CurDir ? Matches(*CurDir)
+                        : llvm::any_of(HeaderInfo.search_dir_range(), Matches);
+        };
+        SmallString<128> Rel(BaseName);
+        for (StringRef Parent = llvm::sys::path::parent_path(Path);
+             !Parent.empty(); Parent = llvm::sys::path::parent_path(Parent)) {
+          if (OptionalDirectoryEntryRef Dir =
+                  FileMgr.getOptionalDirectoryRef(Parent))
+            if (IsSearchDir(*Dir))
+              Names.push_back(Rel.str().str());
+          StringRef Name = llvm::sys::path::filename(Parent);
+          if (Name.empty())
+            break;
+          SmallString<128> NewRel(Name);
+          llvm::sys::path::append(NewRel, Rel);
+          Rel = NewRel;
+        }
+      }
+    // A same-name #include_next is most likely how the file was found.
+    if (llvm::is_contained(Names, Filename))
+      Names.insert(Names.begin(), Filename.str());
+    if (!BaseName.empty() && BaseName != Filename)
+      Names.push_back(BaseName.str());
+    Names.push_back(Filename.str());
+    for (const std::string &Name : Names)
+      if (FindFromFile(Name))
+        break;
   }
 
   // Do a standard file entry lookup.

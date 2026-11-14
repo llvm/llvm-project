@@ -574,7 +574,7 @@ public:
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
       bool *IsMapped, bool *IsFrameworkFound, bool SkipCache = false,
       bool BuildSystemModule = false, bool OpenFile = true,
-      bool CacheFailures = true);
+      bool CacheFailures = true, bool DiagnoseShadowing = true);
 
   /// Look up a subframework for the specified \#include file.
   ///
