@@ -525,6 +525,17 @@ void ICF::run() {
       applySafeThunksToRange(begin, end);
     });
 
+  // Replace direct calls to thunks with their function bodies.
+  if (config->icfLevel == ICFLevel::relaxed_thunks)
+    parallelForEach(inputSections, [](ConcatInputSection *isec) {
+      if (!isCodeSection(isec) || isec->shouldOmitFromOutput())
+        return;
+      for (auto &r : isec->relocs)
+        if (auto *defined = getDirectCallTarget(r))
+          if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk)
+            r.referent = getBodyForThunkFoldedSym(defined);
+    });
+
   // Fold sections within equivalence classes
   forEachClass([&](size_t begin, size_t end) {
     if (end - begin < 2)
