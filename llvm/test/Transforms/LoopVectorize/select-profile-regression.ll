@@ -35,7 +35,7 @@ define i64 @smax_idx(ptr nocapture readonly %a, i64 %mm, i64 %ii, ptr nocapture 
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP4]], <4 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP8]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP6]], [[MM]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i64 [[II]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i64 [[II]], i64 [[TMP9]], !prof [[PROF4:![0-9]+]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -54,7 +54,7 @@ define i64 @smax_idx(ptr nocapture readonly %a, i64 %mm, i64 %ii, ptr nocapture 
 ; CHECK-NEXT:    [[SPEC_SELECT7]] = select i1 [[CMP1]], i64 [[IV]], i64 [[MAX_IDX]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[TMP13]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[SPEC_SELECT7_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT7]], %[[LOOP]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
@@ -88,5 +88,6 @@ exit:
 ; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META2]]}
+; CHECK: [[PROF4]] = !{!"unknown", !"vplan"}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META3]], [[META2]]}
 ;.

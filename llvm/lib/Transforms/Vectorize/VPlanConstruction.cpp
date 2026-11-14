@@ -32,6 +32,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
@@ -2308,9 +2309,17 @@ static bool handleFirstArgMinOrMax(
   // the case, set the result of the IV reduction to its start value.
   VPValue *AlwaysFalse = Builder.createICmp(CmpInst::ICMP_EQ, MinOrMaxResult,
                                             MinOrMaxPhiR->getStartValue());
-  VPValue *FinalIV = Builder.createSelect(
+  VPInstruction *FinalIV = Builder.createSelect(
       AlwaysFalse, FindIVSelect->getOperand(2), FinalCanIV);
   FindIVSelect->replaceAllUsesWith(FinalIV);
+
+  // From the original loop, we only have information on the overall percentage
+  // the condition was false, and thus no information on what percentage of loop
+  // executions resulted in the condition always being false. Because of this,
+  // mark the select as having an unknown profile.
+  Function &F = *Builder.getPlan().getIRFunction();
+  if (MDNode *MD = getExplicitlyUnknownBranchWeightsIfProfiled(F, DEBUG_TYPE))
+    FinalIV->setMetadata(LLVMContext::MD_prof, MD);
 
   // Erase the old FindIV result pattern which is now dead.
   FindIVSelect->eraseFromParent();
