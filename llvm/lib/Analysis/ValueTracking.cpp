@@ -5891,14 +5891,23 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::vector_reduce_fminimumnum: {
       // reduce min/max will choose an element from one of the vector elements,
       // so we can infer and class information that is common to all elements.
-      Known = computeKnownFPClass(II->getArgOperand(0), II->getFastMathFlags(),
-                                  InterestedClasses, Q, Depth + 1);
-      // Can only propagate sign if output is never NaN.
-      if (!Known.isKnownNeverNaN())
-        Known.setSignBit(std::nullopt);
+      KnownFPClass KnownSrc =
+          computeKnownFPClass(II->getArgOperand(0), II->getFastMathFlags(),
+                              InterestedClasses, Q, Depth + 1);
+
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+
+      KnownSrc = KnownFPClass::applyInputDenormalMode(KnownSrc, Mode);
+      Known = KnownSrc | fcNan;
+      Known.propagateNonNaN(KnownSrc);
+      Known = KnownFPClass::applyOutputDenormalMode(Known, Mode);
       break;
     }
-      // reverse preserves all characteristics of the input vec's element.
+    // reverse preserves all characteristics of the input vec's element.
     case Intrinsic::vector_reverse:
       Known = computeKnownFPClass(
           II->getArgOperand(0), DemandedElts.reverseBits(),

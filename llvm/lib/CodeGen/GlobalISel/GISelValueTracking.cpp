@@ -1748,12 +1748,16 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Register Val = MI.getOperand(1).getReg();
     // reduce min/max will choose an element from one of the vector elements,
     // so we can infer and class information that is common to all elements.
-
-    Known =
+    KnownFPClass KnownSrc =
         computeKnownFPClass(Val, MI.getFlags(), InterestedClasses, Depth + 1);
-    // Can only propagate sign if output is never NaN.
-    if (!Known.isKnownNeverNaN())
-      Known.setSignBit(std::nullopt);
+
+    DenormalMode Mode =
+        MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+
+    KnownSrc = KnownFPClass::applyInputDenormalMode(KnownSrc, Mode);
+    Known = KnownSrc | fcNan;
+    Known.propagateNonNaN(KnownSrc);
+    Known = KnownFPClass::applyOutputDenormalMode(Known, Mode);
     break;
   }
   case TargetOpcode::G_FFLOOR:

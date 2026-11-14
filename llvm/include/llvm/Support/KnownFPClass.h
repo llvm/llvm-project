@@ -181,30 +181,6 @@ public:
     return std::nullopt;
   }
 
-  void setSignBit(std::optional<bool> Sign) {
-    if (Sign && !*Sign) {
-      KnownFPMask &= FPClassMask::kfcPosSignBit;
-      return;
-    }
-    if (Sign && *Sign) {
-      KnownFPMask &= FPClassMask::kfcNegSignBit;
-      return;
-    }
-    // Set sign to unknown.
-    if ((KnownFPMask & FPClassMask::kfcQNan) != FPClassMask::kfcNone)
-      KnownFPMask |= FPClassMask::kfcQNan;
-    if ((KnownFPMask & FPClassMask::kfcSNan) != FPClassMask::kfcNone)
-      KnownFPMask |= FPClassMask::kfcSNan;
-    if ((KnownFPMask & FPClassMask::kfcInf) != FPClassMask::kfcNone)
-      KnownFPMask |= FPClassMask::kfcInf;
-    if ((KnownFPMask & FPClassMask::kfcNormal) != FPClassMask::kfcNone)
-      KnownFPMask |= FPClassMask::kfcNormal;
-    if ((KnownFPMask & FPClassMask::kfcSubnormal) != FPClassMask::kfcNone)
-      KnownFPMask |= FPClassMask::kfcSubnormal;
-    if ((KnownFPMask & FPClassMask::kfcZero) != FPClassMask::kfcNone)
-      KnownFPMask |= FPClassMask::kfcZero;
-  }
-
   KnownFPClass(FPClassMask Known = FPClassMask::kfcAllFlags)
       : KnownFPMask(Known) {}
   KnownFPClass(FPClassTest Known) : KnownFPMask(toFPClassMask(Known)) {}
