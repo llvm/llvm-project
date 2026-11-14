@@ -1746,7 +1746,7 @@ MachineInstr *X86SpeculativeLoadHardeningImpl::sinkPostLoadHardenedInst(
     // primarily do this because many uses may already end up checked on their
     // own.
     MachineInstr *SingleUseMI = nullptr;
-    for (MachineInstr &UseMI : MRI->use_instructions(DefReg)) {
+    for (MachineInstr &UseMI : MRI->use_nodbg_instructions(DefReg)) {
       // If we're already going to harden this use, it is data invariant, it
       // does not interfere with EFLAGS, and within our block.
       if (HardenedInstrs.count(&UseMI)) {
