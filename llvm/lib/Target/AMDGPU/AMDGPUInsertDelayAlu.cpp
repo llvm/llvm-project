@@ -542,6 +542,19 @@ public:
       // twice?
       State.advance(ProducerType, Cycles);
 
+      if (MI.getOpcode() == AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay) {
+        // The load clears prior delays, but its MC expansion ends in an EXEC
+        // restore. Model that scalar write without an EXEC def in the MIR.
+        DelayInfo RestoreDelay(
+            SALU, SchedModel->computeInstrLatency(AMDGPU::S_MOV_B32));
+        if (!RestoreDelay.advance(SALU, 1)) {
+          for (MCRegUnit Unit : TRI->regunits(AMDGPU::EXEC_LO))
+            State[Unit] = RestoreDelay;
+        }
+        // A single MIR instruction expands to four ISA instructions.
+        LastDelayAlu = nullptr;
+      }
+
       // Track the preceding WMMA's dst for C-reuse; reset on anything else.
       if (SII->isWMMA(MI) || SII->isSWMMAC(MI)) {
         const MachineOperand *VDst =

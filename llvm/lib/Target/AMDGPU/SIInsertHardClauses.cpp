@@ -96,6 +96,9 @@ public:
   const GCNSubtarget *ST = nullptr;
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
+    // The replay expands to scalar EXEC moves surrounding its memory operation.
+    if (MI.getOpcode() == AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay)
+      return HARDCLAUSE_ILLEGAL;
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
       if (ST->hasMixedLoadStoreClauses()) {
         if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||

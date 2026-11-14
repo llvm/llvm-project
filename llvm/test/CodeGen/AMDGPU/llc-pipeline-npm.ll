@@ -1,3 +1,4 @@
+; NOTE: Do not autogenerate. Check the ordered pass pipeline at each optimization level.
 ; RUN: llc -enable-new-pm -mtriple=amdgpu7.00--amdhsa -O0 -print-pipeline-passes=tree < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=GCN-O0 %s
 

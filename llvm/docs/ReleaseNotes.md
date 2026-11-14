@@ -332,6 +332,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the AMDGPU Backend
 
+* Added a compiler workaround for async barrier arrivals on gfx1250 and gfx1251
+  unless XNACK is explicitly disabled.
+
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
   and `amdgpu.sramecc` module flags.
 * `llvm.amdgcn.make.buffer.rsrc` now accepts any integer width for its

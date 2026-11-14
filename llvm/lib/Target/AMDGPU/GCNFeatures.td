@@ -270,6 +270,12 @@ def FeaturePreciseMemory
     : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
                        "true", "Enable precise memory mode">;
 
+defm AsyncBarrierArriveReplayBug : AMDGPUSubtargetFeature<
+  "async-barrier-arrive-replay-bug",
+  "Enable the async barrier arrival workaround",
+  /*GenPredicate=*/0, /*GenAssemblerPredicate=*/0, [], InlineIgnore
+>;
+
 defm SGPRInitBug : AMDGPUSubtargetFeature<"sgpr-init-bug",
   "VI SGPR initialization bug requiring a fixed SGPR allocation size",
   /*GenPredicate=*/1, /*GenAssemblerPredicate=*/1, [], InlineIgnore
@@ -2503,6 +2509,7 @@ def FeatureISAVersion12 : FeatureSet<
 
 def FeatureISAVersion12_50_Common : FeatureSet<
   [FeatureGFX12,
+   FeatureAsyncBarrierArriveReplayBug,
    FeatureGFX1250Insts,
    FeatureBackOffBarrier,
    FeatureRequiresAlignedVGPRs,

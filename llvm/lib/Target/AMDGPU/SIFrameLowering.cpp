@@ -1854,7 +1854,18 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
       // If found any unused scratch SGPR, reserve the register itself for Exec
       // copy and there is no need for any spills in that case.
       MFI->setSGPRForEXECCopy(UnusedScratchReg);
-      MRI.replaceRegWith(ReservedRegForExecCopy, UnusedScratchReg);
+      // Only rewrite EXEC saves and restores. Other uses, such as inline
+      // assembly operands and their callee saves, name fixed registers.
+      const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
+      for (MachineOperand &Op :
+           make_early_inc_range(MRI.reg_operands(ReservedRegForExecCopy))) {
+        MachineInstr &MI = *Op.getParent();
+        if (MI.getOpcode() != LMC.OrSaveExecOpc && MI.getOpcode() != LMC.MovOpc)
+          continue;
+        if (MI.readsRegister(LMC.ExecReg, TRI) ||
+            MI.modifiesRegister(LMC.ExecReg, TRI))
+          Op.setReg(UnusedScratchReg);
+      }
       LiveUnits.addReg(UnusedScratchReg);
     } else {
       // Needs spill.
@@ -1928,19 +1939,23 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
   bool NeedExecCopyReservedReg = false;
+  bool NeedExecCopyForAsyncBarrier = false;
 
   MachineInstr *ReturnMI = nullptr;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       // TODO: Walking through all MBBs here would be a bad heuristic. Better
       // handle them elsewhere.
-      if (TII->isWWMRegSpillOpcode(MI.getOpcode()))
+      if (TII->isWWMRegSpillOpcode(MI.getOpcode())) {
         NeedExecCopyReservedReg = true;
-      else if (MI.getOpcode() == AMDGPU::SI_RETURN ||
-               MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
-               MI.getOpcode() == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
-               (MFI->isChainFunction() &&
-                TII->isChainCallOpcode(MI.getOpcode()))) {
+      } else if (MI.getOpcode() == AMDGPU::DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 &&
+                 ST.needsAsyncBarrierArriveReplayWorkaround()) {
+        NeedExecCopyForAsyncBarrier = true;
+      } else if (MI.getOpcode() == AMDGPU::SI_RETURN ||
+                 MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
+                 MI.getOpcode() == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
+                 (MFI->isChainFunction() &&
+                  TII->isChainCallOpcode(MI.getOpcode()))) {
         // We expect all return to be the same size.
         assert(!ReturnMI ||
                (count_if(MI.operands(), [](auto Op) { return Op.isReg(); }) ==
@@ -2008,7 +2023,10 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (!ST.hasGFX90AInsts())
     SavedVGPRs.clearBitsInMask(TRI->getAllAGPRRegMask());
 
-  determinePrologEpilogSGPRSaves(MF, SavedVGPRs, NeedExecCopyReservedReg);
+  // Whole-wave spills use the original EXEC mask from the first argument, but
+  // the barrier workaround needs separate storage for the current EXEC mask.
+  determinePrologEpilogSGPRSaves(
+      MF, SavedVGPRs, NeedExecCopyReservedReg || NeedExecCopyForAsyncBarrier);
 
   // The Whole-Wave VGPRs need to be specially inserted in the prolog, so don't
   // allow the default insertion to handle them.
