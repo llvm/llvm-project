@@ -142,3 +142,28 @@ define void @storev4f64_byte(i32 %offset, <4 x double> %data) {
 
   ret void
 }
+
+; Leading literals are folded into the constant base of the insertelement
+; chain, so those components come from the base rather than an insert.
+; CHECK-LABEL: define void @storev4f32_constant_base
+define void @storev4f32_constant_base(i32 %index, float %y) {
+  %buffer = call target("dx.RawBuffer", <4 x float>, 1, 0, 0)
+      @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4f32_0_0_0(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+
+  %vec.1 = insertelement <4 x float> <float 1.0, float poison, float poison, float poison>, float %y, i32 1
+  %vec.2 = insertelement <4 x float> %vec.1, float 2.0, i32 2
+  %vec.3 = insertelement <4 x float> %vec.2, float 3.0, i32 3
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: call void @dx.op.rawBufferStore.f32(i32 140, %dx.types.Handle %buffer_annot, i32 %index, i32 0, float 1.000000e+00, float %y, float 2.000000e+00, float 3.000000e+00, i8 15, i32 4)
+  call void @llvm.dx.resource.store.rawbuffer.v4f32(
+      target("dx.RawBuffer", <4 x float>, 1, 0, 0) %buffer,
+      i32 %index, i32 0, <4 x float> %vec.3)
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: ret void
+  ret void
+}

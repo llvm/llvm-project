@@ -251,3 +251,40 @@ define void @samplelevel_texture2d_scalarized(float %u, float %v, float %lod) {
   call void @use_float4(<4 x float> %data)
   ret void
 }
+
+; Leading literals are folded into the constant base of the insertelement
+; chain, so those coordinates and offsets come from the base rather than an
+; insert.
+; CHECK-LABEL: define void @samplelevel_texture2d_constant_base(
+define void @samplelevel_texture2d_constant_base(float %v, float %lod, i32 %oy) {
+  %texture = call target("dx.Texture", <4 x float>, 0, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding.tdx.Texture_v4f32_0_0_0_2t(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+  %sampler = call target("dx.Sampler", 0)
+      @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+
+  %coords = insertelement <2 x float> <float 0.5, float poison>, float %v, i32 1
+  %offsets = insertelement <2 x i32> <i32 1, i32 poison>, i32 %oy, i32 1
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
+  ; CHECK-SAME: @dx.op.sampleLevel.f32(i32 62,
+  ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
+  ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
+  ; CHECK-SAME: float 5.000000e-01, float %v, float undef, float undef,
+  ; CHECK-SAME: i32 1, i32 %oy, i32 undef,
+  ; CHECK-SAME: float %lod)
+  %data = call <4 x float>
+      @llvm.dx.resource.samplelevel.v4f32.tdx.Texture_v4f32_0_0_0_2t.tdx.Sampler_0t.v2f32.v2i32(
+          target("dx.Texture", <4 x float>, 0, 0, 0, 2) %texture,
+          target("dx.Sampler", 0) %sampler,
+          <2 x float> %coords, float %lod, <2 x i32> %offsets)
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: extractvalue %dx.types.ResRet.f32 %[[SAMPLE]], 0
+  call void @use_float4(<4 x float> %data)
+  ret void
+}
