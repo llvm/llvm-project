@@ -210,16 +210,16 @@
 ; MSVC-NEXT: declare i64 @__ltdf2(double, double) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare i64 @__ltsf2(float, float) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare i64 @__lttf2(fp128, fp128) [[NOMEM_ATTRS]]
-; MSVC-NEXT: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
-; MSVC-NEXT: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
-; MSVC-NEXT: declare ptr @__memset_chk(ptr, i32, i64, i64)
+; MSVC-NEXT: declare ptr @__memcpy_chk(ptr noalias writeonly, ptr noalias readonly captures(none), i64, i64) [[CHK_ARGMEM_ATTRS:#[0-9]+]]
+; MSVC-NEXT: declare ptr @__memmove_chk(ptr writeonly, ptr readonly captures(none), i64, i64) [[CHK_ARGMEM_ATTRS]]
+; MSVC-NEXT: declare ptr @__memset_chk(ptr writeonly, i32, i64, i64) [[CHK_ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; MSVC-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare i32 @__modsi3(i32, i32) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare <2 x i64> @__modti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare double @__muldf3(double, double) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
-; MSVC-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; MSVC-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; MSVC-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare float @__mulsf3(float, float) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare i32 @__mulsi3(i32, i32) [[NOMEM_ATTRS]]
@@ -379,7 +379,7 @@
 ; MSVC-NEXT: declare double @fmod(double, double) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare float @fmodf(float, float) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; MSVC-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; MSVC-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; MSVC-NEXT: declare double @ldexp(double, i32) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare i64 @llrint(double) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare i64 @llrintf(float) [[SQRT_ATTRS]]
@@ -399,8 +399,8 @@
 ; MSVC-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; MSVC-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; MSVC-NEXT: declare ptr @memset(ptr, i32, i64)
-; MSVC-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
-; MSVC-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; MSVC-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 captures(none) dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; MSVC-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; MSVC-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; MSVC-NEXT: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
 ; MSVC-NEXT: declare double @nearbyint(double) [[NOMEM_ATTRS]]
@@ -411,8 +411,8 @@
 ; MSVC-NEXT: declare float @powf(float, float) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare double @remainder(double, double) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare float @remainderf(float, float) [[SQRT_ATTRS]]
-; MSVC-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
-; MSVC-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; MSVC-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; MSVC-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
 ; MSVC-NEXT: declare double @rint(double) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare float @rintf(float) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare double @round(double) [[NOMEM_ATTRS]]
@@ -442,9 +442,11 @@
 ; MSVC-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; MSVC-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; MSVC-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
-; MSVC-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; MSVC-NEXT: attributes [[CHK_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: readwrite) }
+; MSVC-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
+; MSVC-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; MSVC-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; MSVC-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; MSVC-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; MSVC-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; MSVC-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
 
@@ -662,16 +664,16 @@
 ; MINGW-NEXT: declare i64 @__ltdf2(double, double) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i64 @__ltsf2(float, float) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i64 @__lttf2(fp128, fp128) [[NOMEM_ATTRS]]
-; MINGW-NEXT: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
-; MINGW-NEXT: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
-; MINGW-NEXT: declare ptr @__memset_chk(ptr, i32, i64, i64)
+; MINGW-NEXT: declare ptr @__memcpy_chk(ptr noalias writeonly, ptr noalias readonly captures(none), i64, i64) [[CHK_ARGMEM_ATTRS:#[0-9]+]]
+; MINGW-NEXT: declare ptr @__memmove_chk(ptr writeonly, ptr readonly captures(none), i64, i64) [[CHK_ARGMEM_ATTRS]]
+; MINGW-NEXT: declare ptr @__memset_chk(ptr writeonly, i32, i64, i64) [[CHK_ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; MINGW-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i32 @__modsi3(i32, i32) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare <2 x i64> @__modti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare double @__muldf3(double, double) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
-; MINGW-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; MINGW-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; MINGW-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare float @__mulsf3(float, float) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i32 @__mulsi3(i32, i32) [[NOMEM_ATTRS]]
@@ -877,10 +879,10 @@
 ; MINGW-NEXT: declare fp128 @fmodf128(fp128, fp128) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare x86_fp80 @fmodl(x86_fp80, x86_fp80) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; MINGW-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
-; MINGW-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
-; MINGW-NEXT: declare fp128 @frexpf128(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
-; MINGW-NEXT: declare x86_fp80 @frexpl(x86_fp80, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; MINGW-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; MINGW-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; MINGW-NEXT: declare fp128 @frexpf128(fp128, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @frexpl(x86_fp80, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; MINGW-NEXT: declare double @ldexp(double, i32) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare float @ldexpf(float, i32) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare fp128 @ldexpf128(fp128, i32) [[SQRT_ATTRS]]
@@ -917,10 +919,10 @@
 ; MINGW-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; MINGW-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; MINGW-NEXT: declare ptr @memset(ptr, i32, i64)
-; MINGW-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
-; MINGW-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
-; MINGW-NEXT: declare fp128 @modff128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_WRITE_ATTRS]]
-; MINGW-NEXT: declare x86_fp80 @modfl(x86_fp80, ptr noalias nonnull writeonly align 16 dereferenceable(10)) [[ARGMEM_WRITE_ATTRS]]
+; MINGW-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 captures(none) dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; MINGW-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; MINGW-NEXT: declare fp128 @modff128(fp128, ptr noalias nonnull writeonly align 16 captures(none) dereferenceable(16)) [[ARGMEM_WRITE_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @modfl(x86_fp80, ptr noalias nonnull writeonly align 16 captures(none) dereferenceable(10)) [[ARGMEM_WRITE_ATTRS]]
 ; MINGW-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; MINGW-NEXT: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
 ; MINGW-NEXT: declare nofpclass(snan inf zero sub norm) x86_fp80 @nanl(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
@@ -938,9 +940,9 @@
 ; MINGW-NEXT: declare double @remainder(double, double) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare float @remainderf(float, float) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare x86_fp80 @remainderl(x86_fp80, x86_fp80) [[SQRT_ATTRS]]
-; MINGW-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
-; MINGW-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
-; MINGW-NEXT: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; MINGW-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; MINGW-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
 ; MINGW-NEXT: declare double @rint(double) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare float @rintf(float) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare fp128 @rintf128(fp128) [[SQRT_ATTRS]]
@@ -960,10 +962,10 @@
 ; MINGW-NEXT: declare float @scalbnf(float, i32) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare x86_fp80 @scalbnl(x86_fp80, i32) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare double @sin(double) [[SQRT_ATTRS]]
-; MINGW-NEXT: declare void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
-; MINGW-NEXT: declare void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
-; MINGW-NEXT: declare void @sincosf128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16), ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
-; MINGW-NEXT: declare void @sincosl(x86_fp80, ptr noalias nonnull writeonly align 16 dereferenceable(10), ptr noalias nonnull writeonly align 16 dereferenceable(10)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; MINGW-NEXT: declare void @sincos(double, ptr noalias nonnull writeonly align 8 captures(none) dereferenceable(8), ptr noalias nonnull writeonly align 8 captures(none) dereferenceable(8)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; MINGW-NEXT: declare void @sincosf(float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4), ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; MINGW-NEXT: declare void @sincosf128(fp128, ptr noalias nonnull writeonly align 16 captures(none) dereferenceable(16), ptr noalias nonnull writeonly align 16 captures(none) dereferenceable(16)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; MINGW-NEXT: declare void @sincosl(x86_fp80, ptr noalias nonnull writeonly align 16 captures(none) dereferenceable(10), ptr noalias nonnull writeonly align 16 captures(none) dereferenceable(10)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
 ; MINGW-NEXT: declare float @sinf(float) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare fp128 @sinf128(fp128) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare double @sinh(double) [[SQRT_ATTRS]]
@@ -995,10 +997,12 @@
 ; MINGW-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; MINGW-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; MINGW-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; MINGW-NEXT: attributes [[CHK_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: readwrite) }
+; MINGW-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; MINGW-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; MINGW-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; MINGW-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; MINGW-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; MINGW-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; MINGW-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; MINGW-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; MINGW-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
 
@@ -1210,16 +1214,16 @@
 ; CYGWIN-NEXT: declare i64 @__ltdf2(double, double) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare i64 @__ltsf2(float, float) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare i64 @__lttf2(fp128, fp128) [[NOMEM_ATTRS]]
-; CYGWIN-NEXT: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
-; CYGWIN-NEXT: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
-; CYGWIN-NEXT: declare ptr @__memset_chk(ptr, i32, i64, i64)
+; CYGWIN-NEXT: declare ptr @__memcpy_chk(ptr noalias writeonly, ptr noalias readonly captures(none), i64, i64) [[CHK_ARGMEM_ATTRS:#[0-9]+]]
+; CYGWIN-NEXT: declare ptr @__memmove_chk(ptr writeonly, ptr readonly captures(none), i64, i64) [[CHK_ARGMEM_ATTRS]]
+; CYGWIN-NEXT: declare ptr @__memset_chk(ptr writeonly, i32, i64, i64) [[CHK_ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; CYGWIN-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare i32 @__modsi3(i32, i32) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare <2 x i64> @__modti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare double @__muldf3(double, double) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
-; CYGWIN-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; CYGWIN-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; CYGWIN-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare float @__mulsf3(float, float) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare i32 @__mulsi3(i32, i32) [[NOMEM_ATTRS]]
@@ -1406,9 +1410,9 @@
 ; CYGWIN-NEXT: declare float @fmodf(float, float) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @fmodl(x86_fp80, x86_fp80) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; CYGWIN-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
-; CYGWIN-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
-; CYGWIN-NEXT: declare x86_fp80 @frexpl(x86_fp80, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; CYGWIN-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; CYGWIN-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @frexpl(x86_fp80, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; CYGWIN-NEXT: declare double @ldexp(double, i32) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare float @ldexpf(float, i32) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @ldexpl(x86_fp80, i32) [[SQRT_ATTRS]]
@@ -1437,9 +1441,9 @@
 ; CYGWIN-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; CYGWIN-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; CYGWIN-NEXT: declare ptr @memset(ptr, i32, i64)
-; CYGWIN-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
-; CYGWIN-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
-; CYGWIN-NEXT: declare x86_fp80 @modfl(x86_fp80, ptr noalias nonnull writeonly align 16 dereferenceable(10)) [[ARGMEM_WRITE_ATTRS]]
+; CYGWIN-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 captures(none) dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; CYGWIN-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @modfl(x86_fp80, ptr noalias nonnull writeonly align 16 captures(none) dereferenceable(10)) [[ARGMEM_WRITE_ATTRS]]
 ; CYGWIN-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; CYGWIN-NEXT: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
 ; CYGWIN-NEXT: declare nofpclass(snan inf zero sub norm) x86_fp80 @nanl(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
@@ -1455,9 +1459,9 @@
 ; CYGWIN-NEXT: declare double @remainder(double, double) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare float @remainderf(float, float) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @remainderl(x86_fp80, x86_fp80) [[SQRT_ATTRS]]
-; CYGWIN-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
-; CYGWIN-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
-; CYGWIN-NEXT: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; CYGWIN-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; CYGWIN-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
 ; CYGWIN-NEXT: declare double @rint(double) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare float @rintf(float) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @rintl(x86_fp80) [[SQRT_ATTRS]]
@@ -1499,10 +1503,12 @@
 ; CYGWIN-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; CYGWIN-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CYGWIN-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; CYGWIN-NEXT: attributes [[CHK_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: readwrite) }
+; CYGWIN-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; CYGWIN-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; CYGWIN-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; CYGWIN-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CYGWIN-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; CYGWIN-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; CYGWIN-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CYGWIN-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; CYGWIN-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
 
@@ -1709,16 +1715,16 @@
 ; UEFI-NEXT: declare i64 @__ltdf2(double, double) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare i64 @__ltsf2(float, float) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare i64 @__lttf2(fp128, fp128) [[NOMEM_ATTRS]]
-; UEFI-NEXT: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
-; UEFI-NEXT: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
-; UEFI-NEXT: declare ptr @__memset_chk(ptr, i32, i64, i64)
+; UEFI-NEXT: declare ptr @__memcpy_chk(ptr noalias writeonly, ptr noalias readonly captures(none), i64, i64) [[CHK_ARGMEM_ATTRS:#[0-9]+]]
+; UEFI-NEXT: declare ptr @__memmove_chk(ptr writeonly, ptr readonly captures(none), i64, i64) [[CHK_ARGMEM_ATTRS]]
+; UEFI-NEXT: declare ptr @__memset_chk(ptr writeonly, i32, i64, i64) [[CHK_ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; UEFI-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare i32 @__modsi3(i32, i32) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare <2 x i64> @__modti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare double @__muldf3(double, double) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
-; UEFI-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; UEFI-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; UEFI-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare float @__mulsf3(float, float) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare i32 @__mulsi3(i32, i32) [[NOMEM_ATTRS]]
@@ -1881,8 +1887,8 @@
 ; UEFI-NEXT: declare double @fmod(double, double) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare float @fmodf(float, float) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; UEFI-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
-; UEFI-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; UEFI-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; UEFI-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; UEFI-NEXT: declare double @ldexp(double, i32) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare float @ldexpf(float, i32) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare i64 @llrint(double) [[SQRT_ATTRS]]
@@ -1903,8 +1909,8 @@
 ; UEFI-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; UEFI-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; UEFI-NEXT: declare ptr @memset(ptr, i32, i64)
-; UEFI-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
-; UEFI-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; UEFI-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 captures(none) dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; UEFI-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; UEFI-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; UEFI-NEXT: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
 ; UEFI-NEXT: declare double @nearbyint(double) [[NOMEM_ATTRS]]
@@ -1915,8 +1921,8 @@
 ; UEFI-NEXT: declare float @powf(float, float) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare double @remainder(double, double) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare float @remainderf(float, float) [[SQRT_ATTRS]]
-; UEFI-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
-; UEFI-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; UEFI-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; UEFI-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
 ; UEFI-NEXT: declare double @rint(double) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare float @rintf(float) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare double @round(double) [[NOMEM_ATTRS]]
@@ -1946,9 +1952,11 @@
 ; UEFI-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; UEFI-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; UEFI-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; UEFI-NEXT: attributes [[CHK_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: readwrite) }
+; UEFI-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; UEFI-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; UEFI-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; UEFI-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; UEFI-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; UEFI-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; UEFI-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; UEFI-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; UEFI-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }

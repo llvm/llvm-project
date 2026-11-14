@@ -18,11 +18,11 @@ define float @sinf(float %x) {
 
 ; CHECK: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr noalias writeonly, ptr noalias readonly, i64) [[ARGMEM_ATTRS:#[0-9]+]]
 
-; CHECK: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
-; CHECK: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
-; CHECK: declare ptr @__memset_chk(ptr, i32, i64, i64)
+; CHECK: declare ptr @__memcpy_chk(ptr noalias writeonly, ptr noalias readonly captures(none), i64, i64) [[CHK_ARGMEM_ATTRS:#[0-9]+]]
+; CHECK: declare ptr @__memmove_chk(ptr writeonly, ptr readonly captures(none), i64, i64) [[CHK_ARGMEM_ATTRS]]
+; CHECK: declare ptr @__memset_chk(ptr writeonly, i32, i64, i64) [[CHK_ARGMEM_WRITE_ATTRS:#[0-9]+]]
 
-; CHECK: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; CHECK: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 
 ; CHECK: declare i128 @__umodti3(i128, i128) [[NOMEM_ATTRS:#[0-9]+]]
 
@@ -51,9 +51,9 @@ define float @sinf(float %x) {
 ; CHECK: declare float @remainderf(float, float) [[ERRNO_ATTRS]]
 ; CHECK: declare x86_fp80 @remainderl(x86_fp80, x86_fp80) [[ERRNO_ATTRS]]
 
-; CHECK: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
-; CHECK: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
-; CHECK: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; CHECK: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; CHECK: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; CHECK: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
 
 ; CHECK: declare double @scalbln(double, i64) [[ERRNO_ATTRS]]
 ; CHECK: declare float @scalblnf(float, i64) [[ERRNO_ATTRS]]
@@ -78,8 +78,10 @@ define float @sinf(float %x) {
 ; CHECK: attributes [[ERRNO_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; CHECK: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
-; CHECK: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; CHECK: attributes [[CHK_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: readwrite) }
+; CHECK: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
+; CHECK: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CHECK: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; CHECK: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; CHECK: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CHECK: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; CHECK: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }

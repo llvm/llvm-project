@@ -184,15 +184,15 @@
 ; CHECK-NEXT: declare i8 @__ltdf2(double, double) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: declare i8 @__ltsf2(float, float) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: declare i8 @__lttf2(fp128, fp128) addrspace(1) [[DIVMOD_ATTRS]]
-; CHECK-NEXT: declare ptr @__memcpy_chk(ptr, ptr, i16, i16) addrspace(1)
-; CHECK-NEXT: declare ptr @__memmove_chk(ptr, ptr, i16, i16) addrspace(1)
-; CHECK-NEXT: declare ptr @__memset_chk(ptr, i16, i16, i16) addrspace(1)
+; CHECK-NEXT: declare ptr @__memcpy_chk(ptr noalias writeonly, ptr noalias readonly captures(none), i16, i16) addrspace(1) [[CHK_ARGMEM_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare ptr @__memmove_chk(ptr writeonly, ptr readonly captures(none), i16, i16) addrspace(1) [[CHK_ARGMEM_ATTRS]]
+; CHECK-NEXT: declare ptr @__memset_chk(ptr writeonly, i16, i16, i16) addrspace(1) [[CHK_ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare i64 @__moddi3(i64, i64) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: declare i128 @__modti3(i128, i128) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: declare double @__muldf3(double, double) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: declare i64 @__muldi3(i64, i64) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: declare i16 @__mulhi3(i16, i16) addrspace(1) [[DIVMOD_ATTRS]]
-; CHECK-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 1 captures(none) dereferenceable(2)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
 ; CHECK-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: declare float @__mulsf3(float, float) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: declare i32 @__mulsi3(i32, i32) addrspace(1) [[DIVMOD_ATTRS]]
@@ -344,8 +344,8 @@
 ; CHECK-NEXT: declare double @fmod(double, double) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare float @fmodf(float, float) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare void @free(ptr allocptr noundef captures(none)) addrspace(1) [[FREE_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
-; CHECK-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 1 captures(none) dereferenceable(2)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 1 captures(none) dereferenceable(2)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
 ; CHECK-NEXT: declare double @ldexp(double, i16) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare float @ldexpf(float, i16) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare i64 @llrint(double) addrspace(1) [[SQRT_ATTRS]]
@@ -366,8 +366,8 @@
 ; CHECK-NEXT: declare ptr @memcpy(ptr, ptr, i16) addrspace(1)
 ; CHECK-NEXT: declare ptr @memmove(ptr, ptr, i16) addrspace(1)
 ; CHECK-NEXT: declare ptr @memset(ptr, i16, i16) addrspace(1)
-; CHECK-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 1 dereferenceable(8)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
-; CHECK-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 1 dereferenceable(4)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 1 captures(none) dereferenceable(8)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 1 captures(none) dereferenceable(4)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
 ; CHECK-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) addrspace(1) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) addrspace(1) [[ARGMEM_READ_ATTRS]]
 ; CHECK-NEXT: declare double @nearbyint(double) addrspace(1) [[DIVMOD_ATTRS]]
@@ -378,8 +378,8 @@
 ; CHECK-NEXT: declare float @powf(float, float) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare double @remainder(double, double) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare float @remainderf(float, float) addrspace(1) [[SQRT_ATTRS]]
-; CHECK-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; CHECK-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 1 captures(none) dereferenceable(2)) addrspace(1) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 1 captures(none) dereferenceable(2)) addrspace(1) [[ARGMEM_ERRNO_WRITE_ATTRS]]
 ; CHECK-NEXT: declare double @rint(double) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare float @rintf(float) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare double @round(double) addrspace(1) [[DIVMOD_ATTRS]]
@@ -408,9 +408,11 @@
 ; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; CHECK-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; CHECK-NEXT: attributes [[CHK_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: readwrite) }
+; CHECK-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; CHECK-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; CHECK-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
