@@ -599,6 +599,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   case VPInstruction::IncomingAliasMask:
   case Instruction::Load:
   case Instruction::Alloca:
+  case Instruction::BitExtract:
     llvm_unreachable("type must be passed explicitly");
   case Instruction::Call:
     return getCalledFunction(Operands)->getReturnType();
@@ -627,11 +628,12 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   return Op0Ty;
 }
 
-Type *VPReplicateRecipe::computeScalarType(const Instruction *I,
-                                           ArrayRef<VPValue *> Operands) {
+Type *llvm::computeScalarTypeForInstruction(const Instruction *I,
+                                            ArrayRef<VPValue *> Operands) {
   unsigned Opcode = I->getOpcode();
   if (Instruction::isCast(Opcode) ||
-      is_contained(ArrayRef<unsigned>({Instruction::Load, Instruction::Alloca}),
+      is_contained(ArrayRef<unsigned>({Instruction::Load, Instruction::Alloca,
+                                       Instruction::BitExtract}),
                    Opcode))
     return I->getType();
   return computeScalarTypeForInstruction(Opcode, Operands);
@@ -689,6 +691,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::FCmp:
   case Instruction::ExtractElement:
   case Instruction::Store:
+  case Instruction::BitExtract:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
@@ -703,6 +706,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
     return 2;
   case Instruction::InsertElement:
   case Instruction::Select:
+  case Instruction::BitInsert:
   case VPInstruction::WideActiveLaneMask:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::WideVectorLoad:
@@ -1304,6 +1308,23 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   case Instruction::ExtractValue:
     return Ctx.TTI.getInsertExtractValueCost(Instruction::ExtractValue,
                                              Ctx.CostKind);
+  case Instruction::BitInsert:
+  case Instruction::BitExtract: {
+    bool IsInsert = Opcode == Instruction::BitInsert;
+    VPValue *Offset = getOperand(IsInsert ? 2 : 1);
+    TargetTransformInfo::OperandValueInfo OffsetInfo =
+        Ctx.getOperandInfo(Offset);
+
+    if (OffsetInfo.Kind == TargetTransformInfo::OK_AnyValue &&
+        Offset->isDefinedOutsideLoopRegions())
+      OffsetInfo.Kind = TargetTransformInfo::OK_UniformValue;
+
+    Type *ScalarOpTy = getOperand(IsInsert ? 1 : 0)->getScalarType();
+    Type *OpTy = VF.isVector() ? toVectorTy(ScalarOpTy, VF) : ScalarOpTy;
+    if (IsInsert)
+      return Ctx.TTI.getBitInsertCost(ResultTy, OpTy, Ctx.CostKind, OffsetInfo);
+    return Ctx.TTI.getBitExtractCost(ResultTy, OpTy, Ctx.CostKind, OffsetInfo);
+  }
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Type *ScalarOpTy = getOperand(0)->getScalarType();
@@ -3084,6 +3105,22 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     State.set(this, Freeze);
     break;
   }
+  case Instruction::BitInsert: {
+    Value *Base = State.get(getOperand(0));
+    Value *Val = State.get(getOperand(1));
+    Value *Offset = State.get(getOperand(2));
+    Value *Insert = Builder.CreateBitInsert(Base, Val, Offset);
+    State.set(this, Insert);
+    break;
+  }
+  case Instruction::BitExtract: {
+    Value *Src = State.get(getOperand(0));
+    Value *Offset = State.get(getOperand(1));
+    Type *DestTy = VectorType::get(getScalarType(), State.VF);
+    Value *Extract = Builder.CreateBitExtract(DestTy, Src, Offset);
+    State.set(this, Extract);
+    break;
+  }
   case Instruction::ICmp:
   case Instruction::FCmp: {
     // Widen compares. Generate vector compares.
@@ -3164,6 +3201,8 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   case Instruction::ICmp:
   case Instruction::FCmp:
   case Instruction::Select:
+  case Instruction::BitInsert:
+  case Instruction::BitExtract:
     return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -4246,6 +4285,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::ICmp:
   case Instruction::FCmp:
   case Instruction::Freeze:
+  case Instruction::BitInsert:
+  case Instruction::BitExtract:
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
