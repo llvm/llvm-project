@@ -5325,6 +5325,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
   MRI->reserveVirtRegs(NumValues);
 
   MF->getFrameInfo().setHasMustTailInVarArgFunc(HasMustTailInVarArgFn);
+  MF->setExposesReturnsTwice(F.callsFunctionThatReturnsTwice());
 
   // Make our arguments/constants entry block fallthrough to the IR entry block.
   EntryBB->addSuccessor(&getMBB(F.front()));
