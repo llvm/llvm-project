@@ -897,15 +897,21 @@ IR_LABEL_RE = re.compile(r"^([\w.$-]+):", re.M)
 
 
 def normalize_local_names(ir):
-    """Make the local value names of every function body canonical.
+    """Give local values the same names, whichever path produced the IR.
 
-    Drops a leading "entry:" label and renames local values (arguments and
-    instructions) to %0, %1, ... in order of first use. IR produced by
-    different pipelines (e.g. classic CodeGen vs. CIR) can then be compared
-    and share CHECK lines. Basic block labels and named types are kept. The
-    attribute group and module metadata definitions are removed as well: they
-    legitimately differ between pipelines and are not what these checks are
-    about.
+    Classic CodeGen and CIR emit the same code with different names, for
+    example %op.addr in one and %0 in the other. This function:
+      - drops the "entry:" label when nothing jumps to it,
+      - renames arguments and instructions to %0, %1, ... in the order they
+        first appear,
+      - keeps other block labels and named types as they are,
+      - removes the "attributes #N = {...}" and "!N = ..." lines at the end
+        of the module, because the two paths emit different ones.
+
+    The output of both paths then looks the same and can share CHECK lines.
+
+    TODO: Currently, this is only used for tests that don't check attributes
+    or metadata. Support checking them.
     """
     ir = IR_METADATA_RE.sub("", IR_ATTR_GROUP_RE.sub("", ir))
     types = set(IR_TYPE_DEF_RE.findall(ir))

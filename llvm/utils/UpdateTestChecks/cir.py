@@ -1,12 +1,21 @@
 """CIR check generation for update_cc_test_checks.py.
 
-Generates checks for -emit-cir RUN lines, and lets LLVM IR and CIR RUN lines
-share function bodies under common -LABEL prefixes (--body-prefixes).
+This file does two things:
+  1. It writes CHECK lines for RUN lines that use -emit-cir.
+  2. With --body-prefixes, it lets the CIR and LLVM RUN lines share one set of
+     CHECK lines for each function (the "body"), so they are not written twice.
 
-Shared bodies are checked less strictly than normal checks: they use plain
-CHECK lines instead of -NEXT, skip global checks, and keep only the function
-arguments, not the return type or attributes. The RUN lines sharing a body can
-differ in exactly those parts, and they are not what these tests are about.
+Example with --body-prefixes LLVM,CIR:
+
+  // C-LABEL: @test_f(                <- only checks the function name (C)
+  // CPP-LABEL: @_Z6test_fv(          <- only checks the function name (C++)
+  // CIR:  ... cir.call_llvm_intrinsic "aarch64.sve.frecpe.x" ...
+  // LLVM: ... call ... @llvm.aarch64.sve.frecpe.x.nxv8f16(...)
+
+Shared bodies are checked less strictly than normal checks:
+  - They use plain CHECK lines, not CHECK-NEXT.
+  - They have no checks for globals.
+  - They keep the function arguments, but not the return type or attributes.
 """
 
 from __future__ import print_function
