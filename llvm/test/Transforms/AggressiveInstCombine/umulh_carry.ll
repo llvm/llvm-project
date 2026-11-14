@@ -29,6 +29,33 @@ entry:
   ret i32 %add11
 }
 
+define i32 @mul_carry_add_carry_to_crosssum(i32 %x, i32 %y) {
+; CHECK-LABEL: define i32 @mul_carry_add_carry_to_crosssum(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ADD11:%.*]] = call i32 @llvm.umulh.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i32 [[ADD11]]
+;
+entry:
+  %shr = lshr i32 %x, 16
+  %and = and i32 %x, 65535
+  %shr1 = lshr i32 %y, 16
+  %and2 = and i32 %y, 65535
+  %mul = mul nuw i32 %and2, %shr
+  %mul3 = mul nuw i32 %shr1, %and
+  %add = add i32 %mul3, %mul
+  %mul4 = mul nuw i32 %and, %and2
+  %shr5 = lshr i32 %mul4, 16
+  %add6 = add i32 %shr5, %add
+  %cmp = icmp ult i32 %add6, %mul
+  %cond = select i1 %cmp, i32 65536, i32 0
+  %mul8 = mul nuw i32 %shr, %shr1
+  %shr10 = lshr i32 %add6, 16
+  %add9 = or disjoint i32 %cond, %shr10
+  %add11 = add i32 %add9, %mul8
+  ret i32 %add11
+}
+
 ; Carry variant of mul-high. https://alive2.llvm.org/ce/z/G2bD6o
 define i128 @mul_carry_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: define i128 @mul_carry_i128(
