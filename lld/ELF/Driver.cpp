@@ -1844,8 +1844,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  cl::ResetAllOptionOccurrences();
-
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
     parseClangOption(ctx, ctx.saver.save("-mcpu=" + StringRef(arg->getValue())),

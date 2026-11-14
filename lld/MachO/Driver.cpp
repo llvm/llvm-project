@@ -2500,8 +2500,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
         reexportHandler(arg, extensions);
     }
 
-    cl::ResetAllOptionOccurrences();
-
     // Parse LTO options.
     if (const Arg *arg = args.getLastArg(OPT_mcpu))
       parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
