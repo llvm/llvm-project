@@ -561,6 +561,8 @@ static bool coerceKeepsScalarValue(mlir::Type origTy,
 /// means the value is passed unchanged in its own type.  Otherwise the
 /// rewriter converts the value to coercedType, and when that is a struct and
 /// canFlatten is set, passes each field of the struct as a separate argument.
+/// When the classifier names no coerce type, a struct or _Complex that can be
+/// flattened is coerced to a struct of its own fields.
 static mlir::FailureOr<ArgClassification>
 convertDirectArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
                      mlir::Type origTy) {
@@ -580,11 +582,23 @@ convertDirectArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
 
   const llvm::abi::Type *coercedAbiTy = info.getCoerceToType();
   if (!coercedAbiTy) {
-    // A struct the classifier allows to be flattened is coerced to its own
-    // type, so that its fields are passed as separate arguments.
+    // A record the classifier allows to be flattened is coerced to its own
+    // type, so that its fields are passed as separate arguments.  A union is
+    // flattened as its LLVM type, the storage member and the tail padding.
     auto recTy = dyn_cast<cir::RecordType>(origTy);
-    if (recTy && recTy.isStruct() && info.getCanBeFlattened())
+    if (recTy && (recTy.isStruct() || recTy.isUnion()) &&
+        info.getCanBeFlattened())
       return passCoerced(recTy, /*offset=*/0);
+    // A _Complex is flattened the same way, as its {real, imag} pair.
+    if (auto complexTy = dyn_cast<cir::ComplexType>(origTy);
+        complexTy && info.getCanBeFlattened()) {
+      SmallVector<mlir::Type, 2> parts(2, complexTy.getElementType());
+      return passCoerced(
+          cir::StructType::get(ctx, parts, /*packed=*/false,
+                               /*is_class=*/false,
+                               cir::RecordType::getAllDataKinds(parts)),
+          /*offset=*/0);
+    }
     return passUnchanged();
   }
 
@@ -768,9 +782,11 @@ CIRABIClassifierCommon::classifySignature(
       return mlir::failure();
     }
     // The classifier passes a transparent union as its first member, and
-    // names no coerce type when it passes that member as its own type.
+    // names no coerce type when it passes that member as its own type.  The
+    // union is then left unchanged or coerced to itself above.
     auto recTy = dyn_cast<cir::RecordType>(origArg);
-    if (ac->kind == ArgKind::Direct && !ac->coercedType && recTy &&
+    if (ac->kind == ArgKind::Direct && recTy &&
+        (!ac->coercedType || ac->coercedType == recTy) &&
         recordIsTransparentUnion(modOp, recTy))
       ac->coercedType = recTy.getMembers().front();
     ac->neededIntRegs = argInfo.getNeededIntRegs();

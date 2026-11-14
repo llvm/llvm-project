@@ -1575,10 +1575,13 @@ void ItaniumVTableBuilder::AddMethods(
             ReturnAdjustment ReturnAdjustment =
               ComputeReturnAdjustment(ReturnAdjustmentOffset);
 
+            const CXXMethodDecl *OrigMD =
+                VTables.findOriginalMethodInMap(OverriddenMD);
+
             // This is a virtual thunk for the most derived class, add it.
             AddThunk(Overrider.Method,
                      ThunkInfo(ThisAdjustment, ReturnAdjustment,
-                               OverriddenMD->getThisType().getTypePtr()));
+                               OrigMD->getThisType().getTypePtr(), OrigMD));
           }
         }
 
@@ -2378,7 +2381,7 @@ ItaniumVTableContext::getVirtualBaseOffsetOffset(const CXXRecordDecl *RD,
 }
 
 GlobalDecl ItaniumVTableContext::findOriginalMethod(GlobalDecl GD) {
-  const auto *MD = cast<CXXMethodDecl>(GD.getDecl());
+  const auto *MD = cast<CXXMethodDecl>(GD.getDecl()->getCanonicalDecl());
   computeVTableRelatedInformation(MD->getParent());
   const CXXMethodDecl *OriginalMD = findOriginalMethodInMap(MD);
 

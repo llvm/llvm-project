@@ -615,7 +615,7 @@ int global_a, global_b;
 // NO-SANITIZE-WITH-ATTR-SAME: i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[BAZ:%.*]] = alloca [[STRUCT_HANG:%.*]], align 4
-// NO-SANITIZE-WITH-ATTR-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BAZ]]) #[[ATTR11:[0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BAZ]])
 // NO-SANITIZE-WITH-ATTR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[BAZ]], ptr noundef nonnull align 4 dereferenceable(24) @hang_bar, i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT8:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[BAZ]], i64 [[IDXPROM]]
@@ -631,7 +631,7 @@ int global_a, global_b;
 // NO-SANITIZE-WITHOUT-ATTR-SAME: i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[BAZ:%.*]] = alloca [[STRUCT_HANG:%.*]], align 4
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BAZ]]) #[[ATTR10:[0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BAZ]])
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[BAZ]], ptr noundef nonnull align 4 dereferenceable(24) @hang_bar, i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT8:![0-9]+]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[BAZ]], i64 [[IDXPROM]]
@@ -694,7 +694,7 @@ struct compound_literal {
 // NO-SANITIZE-WITH-ATTR-SAME: i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTCOMPOUNDLITERAL:%.*]] = alloca [[STRUCT_COMPOUND_LITERAL:%.*]], align 4
-// NO-SANITIZE-WITH-ATTR-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[DOTCOMPOUNDLITERAL]]) #[[ATTR11]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[DOTCOMPOUNDLITERAL]])
 // NO-SANITIZE-WITH-ATTR-NEXT:    store i32 1, ptr [[DOTCOMPOUNDLITERAL]], align 4, !tbaa [[INT_TBAA6]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTCOMPOUNDLITERAL]], i64 4
 // NO-SANITIZE-WITH-ATTR-NEXT:    store i32 2, ptr [[Y]], align 4, !tbaa [[INT_TBAA6]]
@@ -702,14 +702,14 @@ struct compound_literal {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[BLAH]], i64 [[IDXPROM]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[DOTCOMPOUNDLITERAL]]) #[[ATTR11]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[DOTCOMPOUNDLITERAL]])
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret i32 [[TMP0]]
 //
 // NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i32 @test_compound_literal(
 // NO-SANITIZE-WITHOUT-ATTR-SAME: i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[DOTCOMPOUNDLITERAL:%.*]] = alloca [[STRUCT_COMPOUND_LITERAL:%.*]], align 4
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[DOTCOMPOUNDLITERAL]]) #[[ATTR10]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[DOTCOMPOUNDLITERAL]])
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    store i32 1, ptr [[DOTCOMPOUNDLITERAL]], align 4, !tbaa [[INT_TBAA6]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTCOMPOUNDLITERAL]], i64 4
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    store i32 2, ptr [[Y]], align 4, !tbaa [[INT_TBAA6]]
@@ -717,7 +717,7 @@ struct compound_literal {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX]] to i64
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[BLAH]], i64 [[IDXPROM]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[DOTCOMPOUNDLITERAL]]) #[[ATTR10]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[DOTCOMPOUNDLITERAL]])
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret i32 [[TMP0]]
 //
 int test_compound_literal(int idx) {
