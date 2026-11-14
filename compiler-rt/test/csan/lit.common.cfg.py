@@ -41,7 +41,9 @@ if config.target_os not in ["Linux"]:
 
 # The host offloading runtime is optional, see lib/csan/offload.
 if os.path.exists(
-    os.path.join(config.compiler_rt_libdir, "libclang_rt.csan_offload.a")
+    os.path.join(
+        config.compiler_rt_libdir, "libclang_rt.csan_offload%s.a" % config.target_suffix
+    )
 ):
     config.available_features.add("csan-offload")
 
