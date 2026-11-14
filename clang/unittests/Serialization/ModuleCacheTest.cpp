@@ -329,4 +329,18 @@ TEST_F(ModuleCacheTest, ReadRefreshesAccessTime) {
 }
 #endif
 
+// Test that the reported size covers the entire written contents, even if the
+// stream hasn't flushed them to the file on its own.
+TEST_F(ModuleCacheTest, WriteReportsFullSize) {
+  SmallString<256> Path(ModuleCachePath);
+  sys::path::append(Path, "M.pcm");
+
+  StringRef Contents = "contents\n";
+  off_t Size;
+  time_t ModTime;
+  ASSERT_EQ(writeImpl(Path, MemoryBufferRef(Contents, Path), Size, ModTime),
+            std::error_code{});
+  EXPECT_EQ(Size, off_t(Contents.size()));
+}
+
 } // anonymous namespace

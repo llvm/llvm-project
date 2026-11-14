@@ -10,10 +10,10 @@ vint32m1_t Baz();
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca <vscale x 2 x i32>, align 4
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]]) #[[ATTR3:[0-9]+]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[REF_TMP]]) #[[ATTR3]]
-// CHECK:    call void @llvm.lifetime.end.p0(ptr [[REF_TMP]]) #[[ATTR3]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[REF_TMP]])
+// CHECK:    call void @llvm.lifetime.end.p0(ptr [[REF_TMP]])
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 //
 vint32m1_t Test() {
   const vint32m1_t &a = Baz();

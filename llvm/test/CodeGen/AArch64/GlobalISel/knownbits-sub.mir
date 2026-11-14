@@ -3,7 +3,6 @@
 
 ---
 name:            Cst
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Cst
@@ -16,7 +15,6 @@ body:             |
 ...
 ---
 name:            CstZero
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstZero
@@ -29,7 +27,6 @@ body:             |
 ...
 ---
 name:            CstNegOne
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstNegOne
@@ -42,7 +39,6 @@ body:             |
 ...
 ---
 name:            CstNegFour
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstNegFour
@@ -55,7 +51,6 @@ body:             |
 ...
 ---
 name:            CstNeg
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstNeg
@@ -68,9 +63,9 @@ body:             |
 ...
 ---
 name:            ScalarVar
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @ScalarVar
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -81,9 +76,9 @@ body:             |
 ...
 ---
 name:            ScalarRhsEarlyOut
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0
   ; CHECK-LABEL: name: @ScalarRhsEarlyOut
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00000011 SignBits:6 IsKnownNeverZero:1
@@ -94,9 +89,9 @@ body:             |
 ...
 ---
 name:            ScalarNonNegative
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0
   ; CHECK-LABEL: name: @ScalarNonNegative
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00001111 SignBits:4 IsKnownNeverZero:1
@@ -111,9 +106,9 @@ body:             |
 ...
 ---
 name:            ScalarLhsEarlyOut
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0
   ; CHECK-LABEL: name: @ScalarLhsEarlyOut
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00000011 SignBits:6 IsKnownNeverZero:1
@@ -124,9 +119,9 @@ body:             |
 ...
 ---
 name:            ScalarPartKnown
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0
   ; CHECK-LABEL: name: @ScalarPartKnown
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00001111 SignBits:4 IsKnownNeverZero:1
@@ -141,7 +136,6 @@ body:             |
 ...
 ---
 name:            VectorCstZero
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCstZero
@@ -156,7 +150,6 @@ body:             |
 ...
 ---
 name:            VectorCstNegOne
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCstNegOne
@@ -173,9 +166,9 @@ body:             |
 ...
 ---
 name:            VectorVar
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $d0, $d1
   ; CHECK-LABEL: name: @VectorVar
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
@@ -186,9 +179,9 @@ body:             |
 ...
 ---
 name:            VectorRhsEarlyOut
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $d0
   ; CHECK-LABEL: name: @VectorRhsEarlyOut
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000000000011 SignBits:14 IsKnownNeverZero:1
@@ -201,9 +194,9 @@ body:             |
 ...
 ---
 name:            VectorNonNegative
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $d0
   ; CHECK-LABEL: name: @VectorNonNegative
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000011111111 SignBits:8 IsKnownNeverZero:1
@@ -222,9 +215,9 @@ body:             |
 ...
 ---
 name:            VectorLhsEarlyOut
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $d0
   ; CHECK-LABEL: name: @VectorLhsEarlyOut
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000000000011 SignBits:14 IsKnownNeverZero:1
@@ -237,9 +230,9 @@ body:             |
 ...
 ---
 name:            VectorPartKnown
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $d0
   ; CHECK-LABEL: name: @VectorPartKnown
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000011111111 SignBits:8 IsKnownNeverZero:1
@@ -260,7 +253,6 @@ body:             |
 ...
 ---
 name:            VectorCst36
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCst36
@@ -278,9 +270,9 @@ body:             |
 
 ---
 name:            VectorCst3unknown
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $d0
   ; CHECK-LABEL: name: @VectorCst3unknown
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0

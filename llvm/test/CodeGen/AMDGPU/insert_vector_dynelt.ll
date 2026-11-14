@@ -10264,10 +10264,9 @@ define <8 x half> @insert_dyn_half_8(<8 x half> inreg %arg, i32 %idx, half %val)
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0xffff
 ; GCN-NEXT:    v_lshlrev_b64 v[2:3], v0, s[4:5]
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v4
-; GCN-NEXT:    v_mov_b32_e32 v6, 16
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v5, 0, v2, vcc
-; GCN-NEXT:    v_lshlrev_b32_sdwa v6, v6, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GCN-NEXT:    v_lshlrev_b32_e32 v6, 16, v1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
 ; GCN-NEXT:    v_or_b32_sdwa v6, v1, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GCN-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
@@ -10367,9 +10366,8 @@ define <16 x bfloat> @insert_dyn_bfloat_16(<16 x bfloat> inreg %arg, i32 %idx, b
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0xffff
 ; GCN-NEXT:    v_lshlrev_b64 v[6:7], v0, s[4:5]
-; GCN-NEXT:    v_mov_b32_e32 v3, 16
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v8
-; GCN-NEXT:    v_lshlrev_b32_sdwa v3, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GCN-NEXT:    v_lshlrev_b32_e32 v3, 16, v1
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v7, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, 0, v6, vcc
 ; GCN-NEXT:    v_or_b32_sdwa v9, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD

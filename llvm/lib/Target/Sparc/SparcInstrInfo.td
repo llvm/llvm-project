@@ -86,7 +86,6 @@ def HasPWRPSR : Predicate<"Subtarget->hasPWRPSR()">,
 // UMAC and SMAC instructions
 def HasUMAC_SMAC : Predicate<"Subtarget->hasUmacSmac()">;
 
-def HasNoFdivSqrtFix : Predicate<"!Subtarget->fixAllFDIVSQRT()">;
 def HasFMULS : Predicate<"!Subtarget->hasNoFMULS()">;
 def HasFSMULD : Predicate<"!Subtarget->hasNoFSMULD()">;
 
@@ -1494,9 +1493,6 @@ def FABSS : F3_3u<2, 0b110100, 0b000001001,
 
 // Floating-point Square Root Instructions, p.145
 let Uses = [FSR], mayRaiseFPException = 1 in {
-// FSQRTS generates an erratum on LEON processors, so by disabling this instruction
-// this will be promoted to use FSQRTD with doubles instead.
-let Predicates = [HasNoFdivSqrtFix] in
 def FSQRTS : F3_3u<2, 0b110100, 0b000101001,
                   (outs FPRegs:$rd), (ins FPRegs:$rs2),
                   "fsqrts $rs2, $rd",

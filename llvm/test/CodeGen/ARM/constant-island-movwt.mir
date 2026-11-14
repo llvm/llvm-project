@@ -321,7 +321,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r0', virtual-reg: '' }
 frameInfo:

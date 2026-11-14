@@ -2310,8 +2310,8 @@ void Fortran::lower::pft::BlockDataUnit::dump() const {
 const lower::pft::VariableList &
 lower::pft::getScopeVariableList(const semantics::Scope &scope,
                                  ScopeVariableListMap &map) {
-  LLVM_DEBUG(llvm::dbgs() << "\ngetScopeVariableList of [sub]module scope <"
-                          << &scope << "> " << scope.GetName() << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "\ngetScopeVariableList of scope <" << &scope
+                          << "> " << scope.GetName() << "\n");
   auto iter = map.find(&scope);
   if (iter == map.end()) {
     SymbolDependenceAnalysis sda(scope);

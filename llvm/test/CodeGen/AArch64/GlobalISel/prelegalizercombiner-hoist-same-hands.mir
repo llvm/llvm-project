@@ -722,3 +722,4 @@ body:             |
     %logic_op:_(<2 x i64>) = G_AND %x, %y
     $q0 = COPY %logic_op(<2 x i64>)
     RET_ReallyLR implicit $q0
+...

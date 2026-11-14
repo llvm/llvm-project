@@ -1,0 +1,50 @@
+// RUN: cir-opt %s --cir-lowering-prepare -o %t.once.cir
+// RUN: cir-opt %t.once.cir --cir-lowering-prepare -o %t.twice.cir
+// RUN: diff %t.once.cir %t.twice.cir
+// RUN: FileCheck %s --input-file=%t.once.cir
+
+// CallConvLowering runs after LoweringPrepare and materializes ignored and
+// empty-record arguments as stores of a poison aggregate. LoweringPrepare
+// must leave poison and undef aggregate stores alone, so running the pipeline
+// again on its own output does not rewrite them into a copy from a global.
+// Stores of real constant aggregates are still lowered to a copy.
+
+!s32i = !cir.int<s, 32>
+!rec_Empty = !cir.struct<"Empty" {}>
+!rec_P = !cir.struct<"P" {data !s32i, data !s32i}>
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @poison_store() {
+    %0 = cir.alloca "e" align(1) init : !cir.ptr<!rec_Empty>
+    %1 = cir.const #cir.poison : !rec_Empty
+    cir.store align(1) %1, %0 : !rec_Empty, !cir.ptr<!rec_Empty>
+    cir.return
+  }
+  cir.func @undef_store() {
+    %0 = cir.alloca "e" align(1) init : !cir.ptr<!rec_Empty>
+    %1 = cir.const #cir.undef : !rec_Empty
+    cir.store align(1) %1, %0 : !rec_Empty, !cir.ptr<!rec_Empty>
+    cir.return
+  }
+  cir.func @real_store() {
+    %0 = cir.alloca "p" align(4) init : !cir.ptr<!rec_P>
+    %1 = cir.const #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !rec_P
+    cir.store align(4) %1, %0 : !rec_P, !cir.ptr<!rec_P>
+    cir.return
+  }
+}
+
+// CHECK-NOT: cir.global {{.*}} @__const.poison_store.e
+// CHECK-NOT: cir.global {{.*}} @__const.undef_store.e
+// CHECK: cir.global "private" constant cir_private {{.*}}@__const.real_store.p = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !rec_P
+
+// CHECK: cir.func @poison_store()
+// CHECK:   %[[P:.*]] = cir.const #cir.poison : !rec_Empty
+// CHECK:   cir.store align(1) %[[P]], %{{.*}} : !rec_Empty, !cir.ptr<!rec_Empty>
+
+// CHECK: cir.func @undef_store()
+// CHECK:   %[[U:.*]] = cir.const #cir.undef : !rec_Empty
+// CHECK:   cir.store align(1) %[[U]], %{{.*}} : !rec_Empty, !cir.ptr<!rec_Empty>
+
+// CHECK: cir.func @real_store()
+// CHECK:   cir.get_global @__const.real_store.p
+// CHECK:   cir.copy

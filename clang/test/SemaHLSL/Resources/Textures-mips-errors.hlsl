@@ -69,10 +69,10 @@ float4 test_mips() : SV_Target {
   // expected-note@*:* {{implicitly declared protected here}}
   TEXTURE<float4>::mips_slice_type b;
 
-  // expected-warning@+3 {{'auto' type specifier is a HLSL 202y extension}}
   // expected-error-re@+2 {{calling a protected constructor of class 'hlsl::Texture{{.*}}::mips_type'}}
   // expected-note@*:* {{implicitly declared protected here}}
   auto c = t.mips;
+  // expected-warning@-1 {{'auto' type specifier is an HLSL 202x extension}}
 
   // expected-error-re@+2 {{calling a protected constructor of class 'hlsl::Texture{{.*}}::mips_slice_type'}}
   // expected-note@*:* {{implicitly declared protected here}}

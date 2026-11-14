@@ -269,3 +269,4 @@ body:             |
     %trunc:_(i64) = G_TRUNC %ssubsat(i88)
     $x0 = COPY %trunc(i64)
     RET_ReallyLR implicit $x0
+...

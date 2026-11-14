@@ -174,3 +174,4 @@ body:             |
     %add:_(i32) = G_ADD %and, %xor
     $w0 = COPY %add(i32)
     RET_ReallyLR implicit $w0
+...

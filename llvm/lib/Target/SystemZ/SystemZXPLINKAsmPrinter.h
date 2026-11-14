@@ -94,11 +94,16 @@ class LLVM_LIBRARY_VISIBILITY SystemZXPLINKAsmPrinter
   DenseMap<const GlobalObject *, SmallVector<const GlobalAlias *, 1>>
       GOAliasMap;
 
+  /// Entry of the stack restore stub. Created by the first stack restore of
+  /// the module; the stub is then emitted after the last function.
+  MCSymbol *StackRestoreStub = nullptr;
+
   void calculatePPA1();
   void emitPPA2(Module &M);
   void emitADASection();
   void emitIDRLSection(Module &M);
   void emitCELQMAIN(const Function &MainFn);
+  void emitStackRestoreStub();
   void emitCallInformation(CallType CT);
 
   SystemZTargetzOSStreamer *getTargetStreamer() {
@@ -117,6 +122,7 @@ public:
                           bool IsCtor) override;
   void emitEndOfAsmFile(Module &M) override;
   bool doInitialization(Module &M) override;
+  bool doFinalization(Module &M) override;
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyEnd() override;
   void emitStartOfAsmFile(Module &M) override;

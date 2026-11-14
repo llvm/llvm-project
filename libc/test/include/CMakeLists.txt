@@ -49,9 +49,6 @@ add_libc_test(
     libc.include.llvm-libc-macros.sys_queue_macros
     libc.src.__support.char_vector
     libc.src.__support.CPP.string
-  COMPILE_OPTIONS
-    # This is needed because the __containerof macro uses statement expression.
-    -Wno-gnu-statement-expression-from-macro-expansion
 )
 
 if(LIBC_TARGET_OS_IS_LINUX)

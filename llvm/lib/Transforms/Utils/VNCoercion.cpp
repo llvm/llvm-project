@@ -368,7 +368,8 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
     unsigned LoadBits = DL.getTypeSizeInBits(LoadTy).getFixedValue();
     if (LoadBits == SrcBits)
       return Builder.CreateBitCast(SrcVal, LoadTy);
-    // bitextract needs a scalar byte source and can't return a vector.
+    // The lanes of the stored and loaded vectors may not line up, so extract
+    // from the stored value as a scalar byte type.
     SrcVal = Builder.CreateBitCast(SrcVal, Type::getByteNTy(Ctx, SrcBits));
     Type *ExtractTy =
         LoadTy->isVectorTy() ? Type::getByteNTy(Ctx, LoadBits) : LoadTy;

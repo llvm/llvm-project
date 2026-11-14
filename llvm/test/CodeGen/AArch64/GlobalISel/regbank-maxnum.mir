@@ -68,3 +68,4 @@ body:             |
     %maxnum:_(f32) = G_FMAXNUM %lhs, %rhs
     $w0 = COPY %maxnum(f32)
     RET_ReallyLR implicit $w0
+...

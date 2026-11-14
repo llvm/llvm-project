@@ -385,14 +385,29 @@ def MOV16rp : I16rp<0b0100,
                     "mov\t{$rs, $rd}", []>;
 }
 
-// Any instruction that defines a 8-bit result leaves the high half of the
-// register. Truncate can be lowered to EXTRACT_SUBREG, and CopyFromReg may
-// be copying from a truncate, but any other 8-bit operation will zero-extend
-// up to 16 bits.
+// Any byte instruction that writes a register clears the high byte of the
+// register. These are the nodes that are always selected to a single such
+// instruction. Other nodes may be selected to a COPY, or to a pseudo that is
+// expanded into control flow, which does not clear the high byte on every path.
 def def8 : PatLeaf<(i8 GR8:$src), [{
-  return N->getOpcode() != ISD::TRUNCATE &&
-         N->getOpcode() != TargetOpcode::EXTRACT_SUBREG &&
-         N->getOpcode() != ISD::CopyFromReg;
+  switch (N->getOpcode()) {
+  case ISD::LOAD:
+  case ISD::ADD:
+  case ISD::ADDC:
+  case ISD::ADDE:
+  case ISD::SUB:
+  case ISD::SUBC:
+  case ISD::SUBE:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case MSP430ISD::RRA:
+  case MSP430ISD::RLA:
+  case MSP430ISD::RRC:
+    return true;
+  default:
+    return false;
+  }
 }]>;
 
 // In the case of a 8-bit def that is known to implicitly zero-extend,
@@ -909,7 +924,7 @@ def : Pat<(extloadi16i8 addr:$src), (MOVZX16rm8 addr:$src)>;
 
 // anyext
 def : Pat<(i16 (anyext GR8:$src)),
-          (SUBREG_TO_REG GR8:$src, subreg_8bit)>;
+          (INSERT_SUBREG (i16 (IMPLICIT_DEF)), GR8:$src, subreg_8bit)>;
 
 // truncs
 def : Pat<(i8 (trunc GR16:$src)),

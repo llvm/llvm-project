@@ -778,6 +778,9 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
       auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
       for (int i = HMFI.getFirstNamedArgFrameIndex(),
                e = HMFI.getLastNamedArgFrameIndex(); i >= e; --i) {
+        // HLX arguments are on the VTCM stack.
+        if (MFI.getStackID(i) == TargetStackID::NoAlloc)
+          continue;
         uint64_t ObjSize = MFI.getObjectSize(i);
         Align ObjAlign = MFI.getObjectAlign(i);
 
@@ -1843,32 +1846,45 @@ void HexagonFrameLowering::computeVTCMStackOffsets(MachineFunction &MF) const {
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
   MachineFrameInfo &VTCMFrameInfo = HMFI.getVTCMFrameInfo();
   const int64_t HlxLRSize = HRI.getSpillSize(Hexagon::HlxLRRegClass);
+  const int64_t HlxLLRSize = HRI.getSpillSize(Hexagon::HlxLLRRegClass);
+
+  // Incoming HLX stack arguments are just above the VTCM frame. NoAlloc
+  // fixed objects are incoming HLX stack arguments (see LowerFormalArguments).
+  for (int I = MFI.getObjectIndexBegin(); I != 0; ++I) {
+    if (MFI.getStackID(I) != TargetStackID::NoAlloc)
+      continue;
+    HMFI.moveToVTCMStack(I, VTCMFrameInfo.CreateFixedObject(
+                                MFI.getObjectSize(I), MFI.getObjectOffset(I),
+                                /*IsImmutable=*/true));
+  }
 
   int64_t Offset = 0;
   for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
-    bool IsHlxLRSpill =
-        MFI.isSpillSlotObjectIndex(I) && MFI.getObjectSize(I) == HlxLRSize;
+    bool IsHlxSpill =
+        MFI.isSpillSlotObjectIndex(I) && (MFI.getObjectSize(I) == HlxLRSize ||
+                                          MFI.getObjectSize(I) == HlxLLRSize);
     if (MFI.isDeadObjectIndex(I) || MFI.isFixedObjectIndex(I) ||
-        (!IsHlxLRSpill && MFI.isSpillSlotObjectIndex(I)) ||
+        (!IsHlxSpill && MFI.isSpillSlotObjectIndex(I)) ||
         MFI.isVariableSizedObjectIndex(I) || MFI.isObjectPreAllocated(I))
       continue;
     const AllocaInst *AI = MFI.getObjectAllocation(I);
-    if (!IsHlxLRSpill &&
-        (!AI || !containsHLXObject(HST, AI->getAllocatedType())))
+    if (!IsHlxSpill && (!AI || !containsHLXObject(HST, AI->getAllocatedType())))
       continue;
 
     int64_t Size = MFI.getObjectSize(I);
     Align Alignment = MFI.getObjectAlign(I);
     int VTCMIndex =
-        IsHlxLRSpill ? VTCMFrameInfo.CreateSpillStackObject(Size, Alignment)
-                     : VTCMFrameInfo.CreateStackObject(
-                           Size, Alignment, false, MFI.getObjectAllocation(I));
+        IsHlxSpill ? VTCMFrameInfo.CreateSpillStackObject(Size, Alignment)
+                   : VTCMFrameInfo.CreateStackObject(
+                         Size, Alignment, false, MFI.getObjectAllocation(I));
     Offset += Size;
     VTCMFrameInfo.setObjectOffset(VTCMIndex, -Offset);
     HMFI.moveToVTCMStack(I, VTCMIndex);
     MFI.RemoveStackObject(I);
   }
-  VTCMFrameInfo.setStackSize(Offset);
+  // Outgoing HLX stack arguments are stored at VSP+0 and up, below the
+  // objects above.
+  VTCMFrameInfo.setStackSize(Offset + HMFI.getMaxVTCMCallFrameSize());
 }
 
 void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
@@ -1989,9 +2005,12 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   // and also have no sub-registers that are reserved. These will be the can-
   // didates for saving as a whole instead of their individual sub-registers.
   // (Saving R17:16 instead of R16 is fine, but only if R17 was not reserved.)
+  // HLX registers are saved individually: there is no HLX pair spill.
   BitVector TmpSup(Hexagon::NUM_TARGET_REGS);
   for (int x = SRegs.find_first(); x >= 0; x = SRegs.find_next(x)) {
     Register R = x;
+    if (Hexagon::HlxLRRegClass.contains(R))
+      continue;
     for (MCPhysReg SR : TRI->superregs(R))
       TmpSup[SR] = true;
   }
@@ -2052,6 +2071,13 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
     Register R = x;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(R);
     unsigned Size = TRI->getSpillSize(*RC);
+    // HLX registers are saved in spill slots on the VTCM stack.
+    if (Hexagon::HlxLRRegClass.contains(R)) {
+      int FI = MFI.CreateSpillStackObject(Size, TRI->getSpillAlign(*RC));
+      CSI.push_back(CalleeSavedInfo(R, FI));
+      SRegs[R] = false;
+      continue;
+    }
     int64_t Off = MinOffset - Size;
     Align Alignment = std::min(TRI->getSpillAlign(*RC), getStackAlign());
     Off &= -Alignment.value();
@@ -2322,8 +2348,11 @@ bool HexagonFrameLowering::expandLoadVecPred(MachineBasicBlock &B,
 }
 
 bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
-      MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
-      const HexagonInstrInfo &HII, SmallVectorImpl<Register> &NewRegs) const {
+                                           MachineBasicBlock::iterator It,
+                                           MachineRegisterInfo &MRI,
+                                           const HexagonInstrInfo &HII,
+                                           SmallVectorImpl<Register> &NewRegs,
+                                           bool IsHLX) const {
   MachineFunction &MF = *B.getParent();
   auto &MFI = MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
@@ -2349,6 +2378,38 @@ bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
   Register SrcHi = HRI.getSubReg(SrcR, Hexagon::vsub_hi);
   bool IsKill = MI->getOperand(2).isKill();
   int FI = MI->getOperand(0).getIndex();
+
+  if (IsHLX) {
+    const MachineOperand &SrcOp = MI->getOperand(2);
+    unsigned Size = HRI.getSpillSize(Hexagon::HlxLRRegClass);
+    assert(MI->hasOneMemOperand() && "HLX pair spill must have one MMO");
+    const MachineMemOperand *PairMMO = *MI->memoperands_begin();
+    MachineMemOperand *LoMMO = MF.getMachineMemOperand(PairMMO, 0, Size);
+    MachineMemOperand *HiMMO = MF.getMachineMemOperand(PairMMO, Size, Size);
+
+    if (LPR.contains(SrcLo)) {
+      BuildMI(B, It, DL, HII.get(Hexagon::LX_S16b_pseudo))
+          .addFrameIndex(FI)
+          .addReg(SrcLo, getRegState(SrcOp))
+          .addReg(Hexagon::VSP, RegState::Implicit)
+          .addMemOperand(LoMMO);
+    }
+
+    if (LPR.contains(SrcHi)) {
+      Register StackReg = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      BuildMI(B, It, DL, HII.get(Hexagon::A2_addi), StackReg)
+          .addFrameIndex(FI)
+          .addImm(Size);
+      BuildMI(B, It, DL, HII.get(Hexagon::LX_S16b_pseudo))
+          .addReg(StackReg, RegState::Kill)
+          .addReg(SrcHi, getRegState(SrcOp))
+          .addReg(Hexagon::VSP, RegState::Implicit)
+          .addMemOperand(HiMMO);
+    }
+
+    B.erase(It);
+    return true;
+  }
 
   unsigned Size = HRI.getSpillSize(Hexagon::HvxVRRegClass);
   Align NeedAlign = HRI.getSpillAlign(Hexagon::HvxVRRegClass);
@@ -2382,8 +2443,11 @@ bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
 }
 
 bool HexagonFrameLowering::expandLoadVec2(MachineBasicBlock &B,
-      MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
-      const HexagonInstrInfo &HII, SmallVectorImpl<Register> &NewRegs) const {
+                                          MachineBasicBlock::iterator It,
+                                          MachineRegisterInfo &MRI,
+                                          const HexagonInstrInfo &HII,
+                                          SmallVectorImpl<Register> &NewRegs,
+                                          bool IsHLX) const {
   MachineFunction &MF = *B.getParent();
   auto &MFI = MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
@@ -2396,6 +2460,34 @@ bool HexagonFrameLowering::expandLoadVec2(MachineBasicBlock &B,
   Register DstHi = HRI.getSubReg(DstR, Hexagon::vsub_hi);
   Register DstLo = HRI.getSubReg(DstR, Hexagon::vsub_lo);
   int FI = MI->getOperand(1).getIndex();
+
+  if (IsHLX) {
+    const MachineOperand &DstOp = MI->getOperand(0);
+    unsigned Size = HRI.getSpillSize(Hexagon::HlxLRRegClass);
+    assert(MI->hasOneMemOperand() && "HLX pair reload must have one MMO");
+    const MachineMemOperand *PairMMO = *MI->memoperands_begin();
+    MachineMemOperand *LoMMO = MF.getMachineMemOperand(PairMMO, 0, Size);
+    MachineMemOperand *HiMMO = MF.getMachineMemOperand(PairMMO, Size, Size);
+
+    BuildMI(B, It, DL, HII.get(Hexagon::LX_L16b_pseudo))
+        .addReg(DstLo, getRegState(DstOp))
+        .addFrameIndex(FI)
+        .addReg(Hexagon::VSP, RegState::Implicit)
+        .addMemOperand(LoMMO);
+
+    Register StackReg = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    BuildMI(B, It, DL, HII.get(Hexagon::A2_addi), StackReg)
+        .addFrameIndex(FI)
+        .addImm(Size);
+    BuildMI(B, It, DL, HII.get(Hexagon::LX_L16b_pseudo))
+        .addReg(DstHi, getRegState(DstOp))
+        .addReg(StackReg, RegState::Kill)
+        .addReg(Hexagon::VSP, RegState::Implicit)
+        .addMemOperand(HiMMO);
+
+    B.erase(It);
+    return true;
+  }
 
   unsigned Size = HRI.getSpillSize(Hexagon::HvxVRRegClass);
   Align NeedAlign = HRI.getSpillAlign(Hexagon::HvxVRRegClass);
@@ -2522,7 +2614,13 @@ bool HexagonFrameLowering::expandSpillMacros(MachineFunction &MF,
         case Hexagon::PS_vstorerw_ai:
           Changed |= expandStoreVec2(B, I, MRI, HII, NewRegs);
           break;
-      }
+        case Hexagon::PS_loadrll:
+          Changed |= expandLoadVec2(B, I, MRI, HII, NewRegs, /*IsHLX=*/true);
+          break;
+        case Hexagon::PS_storerll:
+          Changed |= expandStoreVec2(B, I, MRI, HII, NewRegs, /*IsHLX=*/true);
+          break;
+        }
     }
   }
 

@@ -27,6 +27,12 @@
 
 namespace __sanitizer {
 
+TEST(SanitizerCommon, InternalUsleep) {
+  const u64 Start = MonotonicNanoTime();
+  internal_usleep(20000);
+  EXPECT_GE(MonotonicNanoTime() - Start, 20000000u);
+}
+
 struct TidReporterArgument {
   TidReporterArgument() {
     pthread_mutex_init(&terminate_thread_mutex, NULL);

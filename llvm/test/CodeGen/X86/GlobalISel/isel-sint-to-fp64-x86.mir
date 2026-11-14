@@ -146,3 +146,4 @@ body:             |
     %7:_(s64) = G_FILD %8(p0) :: (load (s64) from %stack.0)
     G_STORE %7(s64), %1(p0) :: (store (s64))
     RET 0
+...

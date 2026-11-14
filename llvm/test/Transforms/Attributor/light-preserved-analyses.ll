@@ -1,4 +1,4 @@
-; RUN: opt -passes='function(require<domtree>),attributor-light,function(require<domtree>,no-op-function)' -debug-pass-manager -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes='function(require<domtree>),attributor-light,function(require<domtree>,no-op-function)' -verify-analysis-invalidation=false -debug-pass-manager -disable-output %s 2>&1 | FileCheck %s
 
 ; attributor-light does not add or remove functions, so it must not clear the
 ; function analyses.

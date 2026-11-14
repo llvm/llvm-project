@@ -68,3 +68,4 @@ body:             |
     %minnum:_(f32) = G_FMINNUM %lhs, %rhs
     $w0 = COPY %minnum(f32)
     RET_ReallyLR implicit $w0
+...

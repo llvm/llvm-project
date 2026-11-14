@@ -5,11 +5,13 @@
 # artifact combining G_UNMERGE_VALUES instructions.
 ---
 name:            test_none_none
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_none_none
-    ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
     ; CHECK-NEXT: $w0 = COPY [[COPY]](i32)
     ; CHECK-NEXT: $w1 = COPY [[COPY1]](i32)
@@ -22,11 +24,13 @@ body:             |
 ...
 ---
 name:            test_gpr_none
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_gpr_none
-    ; CHECK: [[COPY:%[0-9]+]]:gpr(i32) = COPY $w0
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr(i32) = COPY $w1
     ; CHECK-NEXT: $w0 = COPY [[COPY]](i32)
     ; CHECK-NEXT: $w1 = COPY [[COPY1]](i32)
@@ -39,11 +43,13 @@ body:             |
 ...
 ---
 name:            test_none_gpr
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_none_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(i32) = COPY [[COPY]](i32)
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr(i32) = COPY [[COPY1]](i32)
@@ -58,11 +64,13 @@ body:             |
 ...
 ---
 name:            test_fpr_gpr
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_fpr_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(i32) = COPY $w0
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(i32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(i32) = COPY [[COPY]](i32)
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr(i32) = COPY [[COPY1]](i32)

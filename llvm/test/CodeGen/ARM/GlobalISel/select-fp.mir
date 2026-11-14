@@ -49,10 +49,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
 body:             |
   bb.0:
     liveins: $s0, $s1
@@ -65,11 +61,11 @@ body:             |
     ; CHECK-NEXT: [[VADDS:%[0-9]+]]:spr = nofpexcept VADDS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VADDS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
-    %0(f32) = COPY $s0
+    %0:fprb(f32) = COPY $s0
 
-    %1(f32) = COPY $s1
+    %1:fprb(f32) = COPY $s1
 
-    %2(f32) = G_FADD %0, %1
+    %2:fprb(f32) = G_FADD %0, %1
 
     $s0 = COPY %2(f32)
 
@@ -81,10 +77,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -97,11 +89,11 @@ body:             |
     ; CHECK-NEXT: [[VADDD:%[0-9]+]]:dpr = nofpexcept VADDD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VADDD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(f64) = COPY $d0
+    %0:fprb(f64) = COPY $d0
 
-    %1(f64) = COPY $d1
+    %1:fprb(f64) = COPY $d1
 
-    %2(f64) = G_FADD %0, %1
+    %2:fprb(f64) = G_FADD %0, %1
 
     $d0 = COPY %2(f64)
 
@@ -113,10 +105,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
 body:             |
   bb.0:
     liveins: $s0, $s1
@@ -129,11 +117,11 @@ body:             |
     ; CHECK-NEXT: [[VSUBS:%[0-9]+]]:spr = nofpexcept VSUBS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VSUBS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
-    %0(f32) = COPY $s0
+    %0:fprb(f32) = COPY $s0
 
-    %1(f32) = COPY $s1
+    %1:fprb(f32) = COPY $s1
 
-    %2(f32) = G_FSUB %0, %1
+    %2:fprb(f32) = G_FSUB %0, %1
 
     $s0 = COPY %2(f32)
 
@@ -145,10 +133,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -161,11 +145,11 @@ body:             |
     ; CHECK-NEXT: [[VSUBD:%[0-9]+]]:dpr = nofpexcept VSUBD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VSUBD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(f64) = COPY $d0
+    %0:fprb(f64) = COPY $d0
 
-    %1(f64) = COPY $d1
+    %1:fprb(f64) = COPY $d1
 
-    %2(f64) = G_FSUB %0, %1
+    %2:fprb(f64) = G_FSUB %0, %1
 
     $d0 = COPY %2(f64)
 
@@ -177,10 +161,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
 body:             |
   bb.0:
     liveins: $s0, $s1
@@ -193,11 +173,11 @@ body:             |
     ; CHECK-NEXT: [[VMULS:%[0-9]+]]:spr = nofpexcept VMULS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VMULS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
-    %0(f32) = COPY $s0
+    %0:fprb(f32) = COPY $s0
 
-    %1(f32) = COPY $s1
+    %1:fprb(f32) = COPY $s1
 
-    %2(f32) = G_FMUL %0, %1
+    %2:fprb(f32) = G_FMUL %0, %1
 
     $s0 = COPY %2(f32)
 
@@ -209,10 +189,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -225,11 +201,11 @@ body:             |
     ; CHECK-NEXT: [[VMULD:%[0-9]+]]:dpr = nofpexcept VMULD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VMULD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(f64) = COPY $d0
+    %0:fprb(f64) = COPY $d0
 
-    %1(f64) = COPY $d1
+    %1:fprb(f64) = COPY $d1
 
-    %2(f64) = G_FMUL %0, %1
+    %2:fprb(f64) = G_FMUL %0, %1
 
     $d0 = COPY %2(f64)
 
@@ -241,10 +217,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
 body:             |
   bb.0:
     liveins: $s0, $s1
@@ -257,11 +229,11 @@ body:             |
     ; CHECK-NEXT: [[VDIVS:%[0-9]+]]:spr = nofpexcept VDIVS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VDIVS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
-    %0(f32) = COPY $s0
+    %0:fprb(f32) = COPY $s0
 
-    %1(f32) = COPY $s1
+    %1:fprb(f32) = COPY $s1
 
-    %2(f32) = G_FDIV %0, %1
+    %2:fprb(f32) = G_FDIV %0, %1
 
     $s0 = COPY %2(f32)
 
@@ -273,10 +245,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -289,11 +257,11 @@ body:             |
     ; CHECK-NEXT: [[VDIVD:%[0-9]+]]:dpr = nofpexcept VDIVD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VDIVD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(f64) = COPY $d0
+    %0:fprb(f64) = COPY $d0
 
-    %1(f64) = COPY $d1
+    %1:fprb(f64) = COPY $d1
 
-    %2(f64) = G_FDIV %0, %1
+    %2:fprb(f64) = G_FDIV %0, %1
 
     $d0 = COPY %2(f64)
 
@@ -305,9 +273,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
 body:             |
   bb.0:
     liveins: $s0
@@ -319,9 +284,9 @@ body:             |
     ; CHECK-NEXT: [[VNEGS:%[0-9]+]]:spr = VNEGS [[COPY]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: $s0 = COPY [[VNEGS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
-    %0(f32) = COPY $s0
+    %0:fprb(f32) = COPY $s0
 
-    %1(f32) = G_FNEG %0
+    %1:fprb(f32) = G_FNEG %0
 
     $s0 = COPY %1(f32)
 
@@ -333,10 +298,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
 body:             |
   bb.0:
     liveins: $d0
@@ -348,9 +309,9 @@ body:             |
     ; CHECK-NEXT: [[VNEGD:%[0-9]+]]:dpr = VNEGD [[COPY]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: $d0 = COPY [[VNEGD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(f64) = COPY $d0
+    %0:fprb(f64) = COPY $d0
 
-    %1(f64) = G_FNEG %0
+    %1:fprb(f64) = G_FNEG %0
 
     $d0 = COPY %1(f64)
 
@@ -362,11 +323,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
-  - { id: 3, class: fprb }
 body:             |
   bb.0:
     liveins: $s0, $s1, $s2
@@ -380,13 +336,13 @@ body:             |
     ; CHECK-NEXT: [[VFMAS:%[0-9]+]]:spr = nofpexcept VFMAS [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VFMAS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
-    %0(f32) = COPY $s0
+    %0:fprb(f32) = COPY $s0
 
-    %1(f32) = COPY $s1
+    %1:fprb(f32) = COPY $s1
 
-    %2(f32) = COPY $s2
+    %2:fprb(f32) = COPY $s2
 
-    %3(f32) = G_FMA %0, %1, %2
+    %3:fprb(f32) = G_FMA %0, %1, %2
 
     $s0 = COPY %3(f32)
 
@@ -398,11 +354,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
-  - { id: 3, class: fprb }
 body:             |
   bb.0:
     liveins: $d0, $d1, $d2
@@ -416,13 +367,13 @@ body:             |
     ; CHECK-NEXT: [[VFMAD:%[0-9]+]]:dpr = nofpexcept VFMAD [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VFMAD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(f64) = COPY $d0
+    %0:fprb(f64) = COPY $d0
 
-    %1(f64) = COPY $d1
+    %1:fprb(f64) = COPY $d1
 
-    %2(f64) = COPY $d2
+    %2:fprb(f64) = COPY $d2
 
-    %3(f64) = G_FMA %0, %1, %2
+    %3:fprb(f64) = G_FMA %0, %1, %2
 
     $d0 = COPY %3(f64)
 
@@ -434,9 +385,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
 body:             |
   bb.0:
     liveins: $s0
@@ -448,9 +396,9 @@ body:             |
     ; CHECK-NEXT: [[VCVTDS:%[0-9]+]]:dpr = nofpexcept VCVTDS [[COPY]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VCVTDS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(f32) = COPY $s0
+    %0:fprb(f32) = COPY $s0
 
-    %1(f64) = G_FPEXT %0(f32)
+    %1:fprb(f64) = G_FPEXT %0(f32)
 
     $d0 = COPY %1(f64)
 
@@ -462,9 +410,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
 body:             |
   bb.0:
     liveins: $d0
@@ -476,9 +421,9 @@ body:             |
     ; CHECK-NEXT: [[VCVTSD:%[0-9]+]]:spr = nofpexcept VCVTSD [[COPY]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VCVTSD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
-    %0(f64) = COPY $d0
+    %0:fprb(f64) = COPY $d0
 
-    %1(f32) = G_FPTRUNC %0(f64)
+    %1:fprb(f32) = G_FPTRUNC %0(f64)
 
     $s0 = COPY %1(f32)
 
@@ -490,9 +435,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: gprb }
 body:             |
   bb.0:
     liveins: $s0
@@ -505,9 +447,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOSIZS]]
     ; CHECK-NEXT: $r0 = COPY [[COPY1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $s0
+    %0:fprb(f32) = COPY $s0
 
-    %1(i32) = G_FPTOSI %0(f32)
+    %1:gprb(i32) = G_FPTOSI %0(f32)
 
     $r0 = COPY %1(i32)
 
@@ -519,9 +461,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: gprb }
 body:             |
   bb.0:
     liveins: $d0
@@ -534,9 +473,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOSIZD]]
     ; CHECK-NEXT: $r0 = COPY [[COPY1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f64) = COPY $d0
+    %0:fprb(f64) = COPY $d0
 
-    %1(i32) = G_FPTOSI %0(f64)
+    %1:gprb(i32) = G_FPTOSI %0(f64)
 
     $r0 = COPY %1(i32)
 
@@ -548,9 +487,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: gprb }
 body:             |
   bb.0:
     liveins: $s0
@@ -563,9 +499,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOUIZS]]
     ; CHECK-NEXT: $r0 = COPY [[COPY1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $s0
+    %0:fprb(f32) = COPY $s0
 
-    %1(i32) = G_FPTOUI %0(f32)
+    %1:gprb(i32) = G_FPTOUI %0(f32)
 
     $r0 = COPY %1(i32)
 
@@ -577,9 +513,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: gprb }
 body:             |
   bb.0:
     liveins: $d0
@@ -592,9 +525,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOUIZD]]
     ; CHECK-NEXT: $r0 = COPY [[COPY1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f64) = COPY $d0
+    %0:fprb(f64) = COPY $d0
 
-    %1(i32) = G_FPTOUI %0(f64)
+    %1:gprb(i32) = G_FPTOUI %0(f64)
 
     $r0 = COPY %1(i32)
 
@@ -606,9 +539,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: fprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -621,9 +551,9 @@ body:             |
     ; CHECK-NEXT: [[VSITOS:%[0-9]+]]:spr = nofpexcept VSITOS [[COPY1]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: $s0 = COPY [[VSITOS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(f32) = G_SITOFP %0(i32)
+    %1:fprb(f32) = G_SITOFP %0(i32)
 
     $s0 = COPY %1(f32)
 
@@ -635,9 +565,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: fprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -650,9 +577,9 @@ body:             |
     ; CHECK-NEXT: [[VSITOD:%[0-9]+]]:dpr = nofpexcept VSITOD [[COPY1]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: $d0 = COPY [[VSITOD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(f64) = G_SITOFP %0(i32)
+    %1:fprb(f64) = G_SITOFP %0(i32)
 
     $d0 = COPY %1(f64)
 
@@ -664,9 +591,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: fprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -679,9 +603,9 @@ body:             |
     ; CHECK-NEXT: [[VUITOS:%[0-9]+]]:spr = nofpexcept VUITOS [[COPY1]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: $s0 = COPY [[VUITOS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(f32) = G_UITOFP %0(i32)
+    %1:fprb(f32) = G_UITOFP %0(i32)
 
     $s0 = COPY %1(f32)
 
@@ -693,9 +617,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: fprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -708,9 +629,9 @@ body:             |
     ; CHECK-NEXT: [[VUITOD:%[0-9]+]]:dpr = nofpexcept VUITOD [[COPY1]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: $d0 = COPY [[VUITOD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(f64) = G_UITOFP %0(i32)
+    %1:fprb(f64) = G_UITOFP %0(i32)
 
     $d0 = COPY %1(f64)
 
@@ -722,9 +643,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: fprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -736,9 +654,9 @@ body:             |
     ; CHECK-NEXT: [[VLDRS:%[0-9]+]]:spr = VLDRS [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (f32))
     ; CHECK-NEXT: $s0 = COPY [[VLDRS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
-    %0(p0) = COPY $r0
+    %0:gprb(p0) = COPY $r0
 
-    %1(f32) = G_LOAD %0(p0) :: (load (f32))
+    %1:fprb(f32) = G_LOAD %0(p0) :: (load (f32))
 
     $s0 = COPY %1
 
@@ -750,9 +668,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: fprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -764,9 +679,9 @@ body:             |
     ; CHECK-NEXT: [[VLDRD:%[0-9]+]]:dpr = VLDRD [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (f64))
     ; CHECK-NEXT: $d0 = COPY [[VLDRD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(p0) = COPY $r0
+    %0:gprb(p0) = COPY $r0
 
-    %1(f64) = G_LOAD %0(p0) :: (load (f64))
+    %1:fprb(f64) = G_LOAD %0(p0) :: (load (f64))
 
     $d0 = COPY %1
 
@@ -778,10 +693,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: fprb }
-  - { id: 2, class: fprb }
 body:             |
   bb.0:
     liveins: $r0, $s0, $d0
@@ -795,9 +706,9 @@ body:             |
     ; CHECK-NEXT: VSTRS [[COPY1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (f32))
     ; CHECK-NEXT: VSTRD [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (f64))
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
-    %0(p0) = COPY $r0
-    %1(f32) = COPY $s0
-    %2(f64) = COPY $d2
+    %0:gprb(p0) = COPY $r0
+    %1:fprb(f32) = COPY $s0
+    %2:fprb(f64) = COPY $d2
 
     G_STORE %1(f32), %0(p0) :: (store (f32))
 
@@ -812,23 +723,17 @@ legalized:       true
 regBankSelected: true
 selected:        false
 # CHECK: selected: true
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: fprb }
-  - { id: 3, class: fprb }
-  - { id: 4, class: fprb }
 body:             |
   bb.0:
   ; CHECK: [[BB1:bb.0]]:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $r0, $d0, $d1
 
-    %0(i32) = COPY $r0
-    %1(i1) = G_TRUNC %0(i32)
+    %0:gprb(i32) = COPY $r0
+    %1:gprb(i1) = G_TRUNC %0(i32)
 
-    %2(f64) = COPY $d0
-    %3(f64) = COPY $d1
+    %2:fprb(f64) = COPY $d0
+    %3:fprb(f64) = COPY $d1
     ; CHECK: [[V1:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[V2:%[0-9]+]]:dpr = COPY $d1
 
@@ -844,7 +749,7 @@ body:             |
 
   bb.2:
   ; CHECK: bb.2
-    %4(f64) = G_PHI %2(f64), %bb.0, %3(f64), %bb.1
+    %4:fprb(f64) = G_PHI %2(f64), %bb.0, %3(f64), %bb.1
     ; CHECK: {{%[0-9]+}}:dpr = PHI [[V1]], %[[BB1]], [[V2]], %[[BB2]]
 
     $d0 = COPY %4(f64)
@@ -856,12 +761,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: fprb }
-  - { id: 3, class: gprb }
-  - { id: 4, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -876,13 +775,13 @@ body:             |
     ; CHECK-NEXT: $r0 = COPY [[VMOVRRD]]
     ; CHECK-NEXT: $r1 = COPY [[VMOVRRD1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
-    %0(f32) = COPY $r2
+    %0:gprb(f32) = COPY $r2
 
-    %1(f32) = COPY $r3
+    %1:gprb(f32) = COPY $r3
 
-    %2(f64) = G_MERGE_VALUES %0(f32), %1(f32)
+    %2:fprb(f64) = G_MERGE_VALUES %0(f32), %1(f32)
 
-    %3(f32), %4(f32) = G_UNMERGE_VALUES %2(f64)
+    %3:gprb(f32), %4:gprb(f32) = G_UNMERGE_VALUES %2(f64)
 
     $r0 = COPY %3
 

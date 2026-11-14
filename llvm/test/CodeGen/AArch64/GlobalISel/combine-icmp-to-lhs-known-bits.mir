@@ -230,3 +230,4 @@ body:             |
     %cmp:_(i64) = G_ICMP intpred(ne), %known_zero_or_one(i32), %zero
     $x0 = COPY %cmp(i64)
     RET_ReallyLR implicit $x0
+...

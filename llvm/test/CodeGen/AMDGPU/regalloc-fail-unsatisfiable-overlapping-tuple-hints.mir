@@ -22,7 +22,7 @@
   }
 
   attributes #0 = { "amdgpu-waves-per-eu"="10,10" }
----
+...
 
 ---
 name:            recolor_impossible_hint

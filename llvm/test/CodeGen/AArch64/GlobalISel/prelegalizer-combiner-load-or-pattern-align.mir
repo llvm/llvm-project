@@ -81,3 +81,4 @@ body:             |
     %full_load:_(i32) = G_OR %low_half, %high_half
     $w1 = COPY %full_load(i32)
     RET_ReallyLR implicit $w1
+...

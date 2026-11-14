@@ -31,13 +31,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-registers:
-  - { id: 0, class: fpr128 }
-  - { id: 1, class: fpr128 }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
 liveins:
   - { reg: '$q0' }
 frameInfo:

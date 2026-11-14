@@ -69,7 +69,9 @@ class Bound {
 public:
   static Bound Star() { return Bound(Category::Star); }
   static Bound Colon() { return Bound(Category::Colon); }
-  explicit Bound(MaybeSubscriptIntExpr &&expr) : expr_{std::move(expr)} {}
+  explicit Bound(MaybeSubscriptIntExpr &&expr) : expr_{std::move(expr)} {
+    CHECK(evaluate::IsSubscriptIntegerKind(expr_));
+  }
   explicit Bound(common::ConstantSubscript bound);
   Bound(const Bound &) = default;
   Bound(Bound &&) = default;
@@ -82,6 +84,7 @@ public:
   const MaybeSubscriptIntExpr &GetExplicit() const { return expr_; }
   void SetExplicit(MaybeSubscriptIntExpr &&expr) {
     CHECK(isExplicit());
+    CHECK(evaluate::IsSubscriptIntegerKind(expr));
     expr_ = std::move(expr);
   }
 

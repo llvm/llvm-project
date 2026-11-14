@@ -61,3 +61,4 @@ body:             |
     GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
     GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
     S_ENDPGM 0
+...

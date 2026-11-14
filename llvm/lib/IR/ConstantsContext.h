@@ -35,6 +35,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 #include <utility>
 
 #define DEBUG_TYPE "ir"
@@ -552,6 +553,14 @@ struct ConstantPtrAuthKeyType {
 // removed from all relevant maps.
 void deleteConstant(Constant *C);
 
+/// Record that a uniqued constant uses \p Op, so that
+/// Constant::removeDeadConstantUsers on a global operand knows it has work to
+/// do.
+inline void noteConstantOperand(Value *Op) {
+  if (auto *GV = dyn_cast<GlobalValue>(Op))
+    GV->setMayHaveConstantUsers();
+}
+
 template <class ConstantClass> class ConstantUniqueMap {
 public:
   using ValType = typename ConstantInfo<ConstantClass>::ValType;
@@ -613,6 +622,9 @@ private:
     ConstantClass *Result = V.create(Ty);
 
     assert(Result->getType() == Ty && "Type specified is not correct!");
+    if constexpr (std::is_base_of_v<User, ConstantClass>)
+      for (Value *Op : Result->operand_values())
+        noteConstantOperand(Op);
     Map.insert_as(Result, HashKey);
 
     return Result;
@@ -660,6 +672,7 @@ public:
     // Update to the new value.  Optimize for the case when we have a single
     // operand that we're changing, but handle bulk updates efficiently.
     remove(CP);
+    noteConstantOperand(To);
     if (NumUpdated == 1) {
       assert(OperandNo < CP->getNumOperands() && "Invalid index");
       assert(CP->getOperand(OperandNo) != To && "I didn't contain From!");

@@ -6,7 +6,6 @@
     ret void
   }
 ...
----
 
 ---
 name:            export_cluster_postra

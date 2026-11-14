@@ -2015,6 +2015,14 @@ class Enc_87c142 : OpcodeHexagon {
   bits <4> Rt16;
   let Inst{3-0} = Rt16{3-0};
 }
+class Enc_88ba65 : OpcodeHexagon {
+  bits <2> Pv4;
+  let Inst{10-9} = Pv4{1-0};
+  bits <5> Rs32;
+  let Inst{20-16} = Rs32{4-0};
+  bits <4> Ld16;
+  let Inst{3-0} = Ld16{3-0};
+}
 class Enc_88c16c : OpcodeHexagon {
   bits <5> Rss32;
   let Inst{20-16} = Rss32{4-0};

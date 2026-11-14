@@ -127,9 +127,6 @@ static std::mutex TempFilesMutex;
 /// Temporary files created by the linker wrapper.
 static std::list<SmallString<128>> TempFiles;
 
-/// Codegen flags for LTO backend.
-static codegen::RegisterCodeGenFlags CodeGenFlags;
-
 /// Whether or not to look through symlinks when resolving binaries.
 static bool CanonicalPrefixes = true;
 
@@ -743,7 +740,7 @@ wrapDeviceImagesVerbose(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
       "-o",
       *BitcodeOrErr,
   };
-  if ((Kind == OFK_OpenMP || Kind == OFK_OpenACC) &&
+  if ((Kind == OFK_OpenMP || Kind == OFK_OpenACC || Kind == OFK_SYCL) &&
       Args.hasArg(OPT_relocatable))
     WrapperArgs.push_back("--relocatable");
   for (const auto &Buffer : Buffers)
@@ -829,8 +826,9 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
   case OFK_SYCL: {
     // TODO: fill these options once the Driver supports them.
     offloading::SYCLJITOptions Options;
-    if (Error Err =
-            offloading::wrapSYCLBinaries(M, BuffersToWrap.front(), Options))
+    if (Error Err = offloading::wrapSYCLBinaries(
+            M, BuffersToWrap.front(), Options,
+            /*IsFinalizedImage=*/Args.hasArg(OPT_relocatable)))
       return std::move(Err);
     break;
   }

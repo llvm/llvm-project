@@ -5482,7 +5482,6 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   auto *Regs = Subtarget.getSpecialRegisters();
-  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
 
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     report_fatal_error("Variable-sized stack allocations are not supported "
@@ -5490,14 +5489,33 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
 
   SDValue Chain = Op.getOperand(0);
   SDValue NewSP = Op.getOperand(1);
-  SDValue Backchain;
   SDLoc DL(Op);
 
+  // XPLINK: @@ALCAXP (lowerDYNAMIC_STACKALLOC_XPLINK) moves the frame header
+  // (register save area and reserved words at SP + bias) down with the stack
+  // pointer, and calls made while the stack pointer is lowered place their
+  // arguments over the old header. The current header must be copied back to
+  // the restored stack pointer, otherwise the epilogue and the LE stack walk
+  // use a clobbered header (abend U4083). No signal may be delivered while
+  // the stack pointer is changed and the header is copied, so this is done in
+  // a stub routine (emitted once per module by the AsmPrinter), which gets
+  // the new stack pointer in R1 and is called with BASR 3,3.
+  if (Subtarget.isTargetXPLINK64()) {
+    SDValue Glue;
+    Chain = DAG.getCopyToReg(Chain, DL, SystemZ::R1D, NewSP, Glue);
+    Glue = Chain.getValue(1);
+    return DAG.getNode(SystemZISD::XPLINK_STACKRESTORE, DL, MVT::Other, Chain,
+                       Glue);
+  }
+
+  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
+  SDValue Backchain;
   if (StoreBackchain) {
     SDValue OldSP = DAG.getCopyFromReg(
         Chain, DL, Regs->getStackPointerRegister(), MVT::i64);
-    Backchain = DAG.getLoad(MVT::i64, DL, Chain, getBackchainAddress(OldSP, DAG),
-                            MachinePointerInfo());
+    Backchain =
+        DAG.getLoad(MVT::i64, DL, Chain, getBackchainAddress(OldSP, DAG),
+                    MachinePointerInfo());
   }
 
   Chain = DAG.getCopyToReg(Chain, DL, Regs->getStackPointerRegister(), NewSP);
@@ -6897,8 +6915,13 @@ lowerSIGN_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const {
       break;
     }
     if (StartOffsetCandidate != -1) {
-      StartOffset = StartOffsetCandidate;
-      PackedOp = PackedOp.getOperand(0);
+      // The mask indexes the concatenation of both shuffle operands: an offset
+      // past the first operand's lanes selects lanes of the second.
+      unsigned InNumElts = InVT.getVectorNumElements();
+      unsigned Offset = StartOffsetCandidate;
+      unsigned OpNo = Offset >= InNumElts ? 1 : 0;
+      StartOffset = Offset - OpNo * InNumElts;
+      PackedOp = PackedOp.getOperand(OpNo);
     }
   }
 

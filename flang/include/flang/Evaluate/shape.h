@@ -33,6 +33,8 @@ using Shape = std::vector<MaybeExtentExpr>;
 
 inline constexpr int ExtentIntKind = Fortran::evaluate::SubscriptIntegerKind;
 
+bool IsSubscriptIntegerKind(const Shape &);
+
 inline Constant<ExtentType> MakeExtentConstant(int64_t v) {
   return Constant<ExtentType>{
       ExtentIntKind, Scalar<ExtentType>{ExtentIntKind, v}};

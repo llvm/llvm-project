@@ -2018,13 +2018,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_ROUND, MVT::f32, Custom);
   }
 
-  if (Subtarget->fixAllFDIVSQRT()) {
-    // Promote FDIVS and FSQRTS to FDIVD and FSQRTD instructions instead as
-    // the former instructions generate errata on LEON processors.
-    setOperationAction(ISD::FDIV, MVT::f32, Promote);
-    setOperationAction(ISD::FSQRT, MVT::f32, Promote);
-  }
-
   if (Subtarget->hasNoFMULS()) {
     setOperationAction(ISD::FMUL, MVT::f32, Promote);
   }
@@ -2064,11 +2057,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
                          MVT::f128, Custom);
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f64, Custom);
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Custom);
-    }
-
-    if (Subtarget->fixAllFDIVSQRT()) {
-      setOperationAction(ISD::STRICT_FDIV, MVT::f32, Promote);
-      setOperationAction(ISD::STRICT_FSQRT, MVT::f32, Promote);
     }
 
     if (Subtarget->hasNoFMULS())
@@ -3507,8 +3495,8 @@ static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG)
   if (MemVT == MVT::f128)
     return LowerF128Store(Op, DAG);
 
-  if (MemVT == MVT::i64) {
-    // Custom handling for i64 stores: turn it into a bitcast and a
+  if (MemVT == MVT::i64 && St->getAlign() >= Align(8)) {
+    // Custom handling for aligned i64 stores: turn it into a bitcast and a
     // v2i32 store.
     SDValue Val = DAG.getNode(ISD::BITCAST, dl, MVT::v2i32, St->getValue());
     SDValue Chain = DAG.getStore(
@@ -4224,9 +4212,10 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::LOAD: {
     LoadSDNode *Ld = cast<LoadSDNode>(N);
-    // Custom handling only for i64: turn i64 load into a v2i32 load,
-    // and a bitcast.
-    if (Ld->getValueType(0) != MVT::i64 || Ld->getMemoryVT() != MVT::i64)
+    // Custom handling only for aligned i64 loads: turn i64 load into a v2i32
+    // load, and a bitcast.
+    if (Ld->getValueType(0) != MVT::i64 || Ld->getMemoryVT() != MVT::i64 ||
+        Ld->getAlign() < Align(8))
       return;
 
     SDLoc dl(N);

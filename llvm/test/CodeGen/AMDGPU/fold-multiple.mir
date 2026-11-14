@@ -20,21 +20,14 @@
 
 name:            test
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: sreg_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sreg_32 }
-  - { id: 4, class: vgpr_32 }
-  - { id: 5, class: sgpr_128 }
 body:             |
   bb.0 (%ir-block.0):
-    %0 = IMPLICIT_DEF
-    %1 = S_MOV_B32 2
-    %2 = V_LSHLREV_B32_e64 %1, %0, implicit $exec
-    %3 = S_LSHL_B32 %1, %1, implicit-def dead $scc
-    %4 = V_AND_B32_e64 %2, %3, implicit $exec
-    %5 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = S_MOV_B32 2
+    %2:vgpr_32 = V_LSHLREV_B32_e64 %1, %0, implicit $exec
+    %3:sreg_32 = S_LSHL_B32 %1, %1, implicit-def dead $scc
+    %4:vgpr_32 = V_AND_B32_e64 %2, %3, implicit $exec
+    %5:sgpr_128 = IMPLICIT_DEF
     BUFFER_STORE_DWORD_OFFSET %4, %5, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 

@@ -1,0 +1,502 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+load("//libc:platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_RISCV64", "PLATFORM_CPU_X86_64")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "basic_operations",
+    hdrs = [
+        "BasicOperations.h",
+        "generic/add_sub.h",
+        "generic/div.h",
+        "generic/mul.h",
+    ],
+    deps = [
+        ":cast",
+        ":dyadic_float",
+        ":fenv_impl",
+        ":fp_bits",
+        ":rounding_mode",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
+        "//libc/src/__support:big_int",
+        "//libc/src/__support:common",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/CPP:algorithm",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "comparison_operations",
+    hdrs = ["comparison_operations.h"],
+    deps = [
+        ":fenv_impl",
+        ":fp_bits",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "generic_fmod",
+    hdrs = ["generic/FMod.h"],
+    deps = [
+        ":fenv_impl",
+        ":fp_bits",
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "bfloat16",
+    hdrs = ["bfloat16.h"],
+    deps = [
+        ":basic_operations",
+        ":cast",
+        ":comparison_operations",
+        ":dyadic_float",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "cast",
+    hdrs = ["cast.h"],
+    deps = [
+        ":dyadic_float",
+        ":fp_bits",
+        "//libc/hdr:fenv_macros",
+        "//libc/src/__support/CPP:algorithm",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "division_and_remainder_operations",
+    hdrs = ["DivisionAndRemainderOperations.h"],
+    deps = [
+        ":fp_bits",
+        ":manipulation_functions",
+        ":normal_float",
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "except_value_utils",
+    hdrs = ["except_value_utils.h"],
+    deps = [
+        ":cast",
+        ":fenv_impl",
+        ":fp_bits",
+        ":rounding_mode",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
+        "//libc/src/__support:sign",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "fenv_impl",
+    hdrs = ["FEnvImpl.h"],
+    textual_hdrs = [
+        "x86_64/fenv_mxcsr_utils.h",
+        "x86_64/fenv_x86_common.h",
+        "x86_64/fenv_x87_only.h",
+        "x86_64/fenv_x87_utils.h",
+        "x86_64/FEnvImpl.h",
+        "aarch64/FEnvImpl.h",
+        "aarch64/fenv_darwin_impl.h",
+        "arm/FEnvImpl.h",
+        "riscv/FEnvImpl.h",
+    ],
+    deps = [
+        ":fp_bits",
+        "//libc/hdr:fenv_macros",
+        "//libc/hdr:math_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/hdr/types:fenv_t",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros:sanitizer",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
+        "//libc/src/__support/macros/properties:types",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_support_library(
+    name = "rounding_mode",
+    hdrs = ["rounding_mode.h"],
+    deps = [
+        "//libc/hdr:fenv_macros",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "fp_bits",
+    hdrs = ["FPBits.h"],
+    deps = [
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_assert",
+        "//libc/src/__support:math_extras",
+        "//libc/src/__support:sign",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "fp_bitwise",
+    hdrs = ["fp_bitwise.h"],
+    deps = [
+        ":fp_bits",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "fpbits_str",
+    hdrs = ["fpbits_str.h"],
+    deps = [
+        ":fp_bits",
+        "//libc/src/__support:common",
+        "//libc/src/__support:integer_to_string",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/CPP:string",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "hypot",
+    hdrs = ["Hypot.h"],
+    deps = [
+        ":cast",
+        ":except_value_utils",
+        ":fenv_impl",
+        ":fp_bits",
+        ":rounding_mode",
+        "//libc/hdr:fenv_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "is_integer",
+    hdrs = ["is_integer.h"],
+    deps = [
+        ":fp_bits",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "manipulation_functions",
+    hdrs = ["ManipulationFunctions.h"],
+    textual_hdrs = [
+        "x86_64/NextAfterLongDouble.h",
+        "x86_64/NextUpDownLongDouble.h",
+    ],
+    deps = [
+        ":cast",
+        ":dyadic_float",
+        ":except_value_utils",
+        ":fenv_impl",
+        ":fp_bits",
+        ":nearest_integer_operations",
+        ":normal_float",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
+        "//libc/hdr:math_macros",
+        "//libc/src/__support:sign",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "nearest_integer_operations",
+    hdrs = ["NearestIntegerOperations.h"],
+    deps = [
+        ":fenv_impl",
+        ":fp_bits",
+        ":rounding_mode",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:math_macros",
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "normal_float",
+    hdrs = ["NormalFloat.h"],
+    deps = [
+        ":fp_bits",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "sqrt",
+    hdrs = [
+        "generic/sqrt.h",
+        "generic/sqrt_80_bit_long_double.h",
+        "sqrt.h",
+    ] + selects.with_or({
+        "//conditions:default": [],
+        PLATFORM_CPU_X86_64: ["x86_64/sqrt.h"],
+        PLATFORM_CPU_ARM64: ["aarch64/sqrt.h"],
+        PLATFORM_CPU_RISCV64: ["riscv/sqrt.h"],
+    }),
+    deps = [
+        ":cast",
+        ":dyadic_float",
+        ":fenv_impl",
+        ":fp_bits",
+        ":rounding_mode",
+        "//libc/hdr:fenv_macros",
+        "//libc/src/__support:common",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "fma",
+    hdrs = [
+        "FMA.h",
+        "generic/FMA.h",
+    ],
+    deps = [
+        ":basic_operations",
+        ":cast",
+        ":dyadic_float",
+        ":fenv_impl",
+        ":fp_bits",
+        ":rounding_mode",
+        "//libc/hdr:fenv_macros",
+        "//libc/src/__support:big_int",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "multiply_add",
+    hdrs = ["multiply_add.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "polyeval",
+    hdrs = ["PolyEval.h"],
+    deps = [
+        ":multiply_add",
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nearest_integer",
+    hdrs = [
+        "nearest_integer.h",
+    ],
+    # These are conditionally included and will #error out if the platform
+    # doesn't support rounding instructions, so they can't be compiled on their
+    # own.
+    textual_hdrs = [
+        "x86_64/nearest_integer.h",
+        "aarch64/nearest_integer.h",
+    ],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "double_double",
+    hdrs = ["double_double.h"],
+    deps = [
+        ":multiply_add",
+        "//libc/src/__support:common",
+        "//libc/src/__support:number_pair",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "triple_double",
+    hdrs = ["triple_double.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "dyadic_float",
+    hdrs = ["dyadic_float.h"],
+    deps = [
+        ":fenv_impl",
+        ":fp_bits",
+        ":multiply_add",
+        ":rounding_mode",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
+        "//libc/src/__support:big_int",
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "float128",
+    hdrs = ["float128.h"],
+    deps = [
+        ":basic_operations",
+        ":cast",
+        ":comparison_operations",
+        ":dyadic_float",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "float80",
+    hdrs = ["float80.h"],
+    deps = [
+        ":basic_operations",
+        ":cast",
+        ":comparison_operations",
+        ":dyadic_float",
+        ":float128",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)

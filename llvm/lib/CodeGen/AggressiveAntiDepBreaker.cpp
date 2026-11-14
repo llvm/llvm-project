@@ -17,8 +17,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -145,37 +145,29 @@ void AggressiveAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   assert(!State);
   State = new AggressiveAntiDepState(TRI->getNumRegs(), BB);
 
-  bool IsReturnBlock = BB->isReturnBlock();
   std::vector<unsigned> &KillIndices = State->GetKillIndices();
   std::vector<unsigned> &DefIndices = State->GetDefIndices();
 
-  // Examine the live-in regs of all successors.
-  for (MachineBasicBlock *Succ : BB->successors())
-    for (const auto &LI : Succ->liveins()) {
-      for (MCRegAliasIterator AI(LI.PhysReg, TRI, true); AI.isValid(); ++AI) {
-        MCRegister Reg = *AI;
-        State->UnionGroups(Reg, 0);
-        KillIndices[Reg.id()] = BB->size();
-        DefIndices[Reg.id()] = ~0u;
-      }
-    }
+  // Compute the register units live out of the block: the live-ins of all
+  // successors, the pristine registers and, in a return block, the
+  // callee-saved registers.
+  LiveRegUnits LiveOuts(*TRI);
+  LiveOuts.addLiveOuts(*BB);
+  const BitVector &LiveOutUnits = LiveOuts.getBitVector();
 
-  // Mark live-out callee-saved registers. In a return block this is
-  // all callee-saved registers. In non-return this is any
-  // callee-saved register that is not saved in the prolog.
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  BitVector Pristine = MFI.getPristineRegs(MF);
-  for (const MCPhysReg *I = MF.getRegInfo().getCalleeSavedRegs(); *I;
-       ++I) {
-    unsigned Reg = *I;
-    if (!IsReturnBlock && !Pristine.test(Reg))
+  // Mark the registers fully covered by live-out units as live, and don't
+  // allow renaming them. A super-register that merely overlaps a live-out
+  // register (e.g. a register tuple) is not live, and treating it as such would
+  // wrongly prevent its other sub-registers from being renamed.
+  for (unsigned R = 1, E = TRI->getNumRegs(); R != E; ++R) {
+    MCRegister Reg(R);
+    if (!all_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
+          return LiveOutUnits.test(static_cast<unsigned>(Unit));
+        }))
       continue;
-    for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI) {
-      MCRegister AliasReg = *AI;
-      State->UnionGroups(AliasReg, 0);
-      KillIndices[AliasReg.id()] = BB->size();
-      DefIndices[AliasReg.id()] = ~0u;
-    }
+    State->UnionGroups(Reg, 0);
+    KillIndices[Reg.id()] = BB->size();
+    DefIndices[Reg.id()] = ~0u;
   }
 }
 

@@ -711,7 +711,6 @@ body:             |
 ...
 ---
 name:            noshrink_bb_as_inlineasmbr_target
-registers:       []
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 frameInfo:

@@ -1141,15 +1141,8 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
              MRI->getRegClass(DstReg) == &AMDGPU::SReg_32_XM0RegClass);
       // There is no V_READFIRSTLANE_B16, so legalize the dst/src reg to 32 bits
       MRI->setRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass);
-      Register VReg32 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
       const DebugLoc &DL = MI->getDebugLoc();
-      Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_16RegClass);
-      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), Undef);
-      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), VReg32)
-          .addReg(SrcReg, {}, SubReg)
-          .addImm(AMDGPU::lo16)
-          .addReg(Undef)
-          .addImm(AMDGPU::hi16);
+      Register VReg32 = TII->buildVGPR32FromLo16(*MBB, MI, DL, SrcReg, SubReg);
       BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
           .addReg(VReg32);
     } else if (SrcSize == 32) {

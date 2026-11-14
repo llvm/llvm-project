@@ -1808,11 +1808,18 @@ public:
 
     Location loc = loopOp.getLoc();
 
+    SmallVector<Type> resultTypes;
+    if (failed(getTypeConverter()->convertTypes(loopOp.getResultTypes(),
+                                                resultTypes)))
+      return rewriter.notifyMatchFailure(loopOp, "failed to convert type");
+
     // Split the current block after `spirv.mlir.loop`. The remaining ops will
     // be used in `endBlock`.
     Block *currentBlock = rewriter.getBlock();
     auto position = Block::iterator(loopOp);
     Block *endBlock = rewriter.splitBlock(currentBlock, position);
+    for (Type ty : resultTypes)
+      endBlock->addArgument(ty, loc);
 
     // Remove entry block and create a branch in the current block going to the
     // header block.
@@ -2036,6 +2043,35 @@ public:
     Value lhs = LLVM::FMulOp::create(rewriter, loc, dstType, x, oneMinusA);
     Value rhs = LLVM::FMulOp::create(rewriter, loc, dstType, y, a);
     rewriter.replaceOpWithNewOp<LLVM::FAddOp>(op, dstType, lhs, rhs);
+    return success();
+  }
+};
+
+/// Converts `spirv.GL.Asinh` to `log(x + sqrt(x * x + 1))` and `spirv.GL.Acosh`
+/// to `log(x + sqrt(x * x - 1))`, the formulas Vulkan inherits their precision
+/// from.
+template <typename SPIRVOp>
+class GLAsinhAcoshPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = op.getType();
+    Type dstType = this->getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value x = adaptor.getOperand();
+    double c = std::is_same_v<SPIRVOp, spirv::GLAsinhOp> ? 1.0 : -1.0;
+    Value cst = createFPConstant(loc, srcType, dstType, rewriter, c);
+    Value sq = LLVM::FMulOp::create(rewriter, loc, dstType, x, x);
+    Value rad = LLVM::FAddOp::create(rewriter, loc, dstType, sq, cst);
+    Value root = LLVM::SqrtOp::create(rewriter, loc, dstType, rad);
+    Value sum = LLVM::FAddOp::create(rewriter, loc, dstType, x, root);
+    rewriter.replaceOpWithNewOp<LLVM::LogOp>(op, dstType, sum);
     return success();
   }
 };
@@ -2549,6 +2585,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       InverseSqrtPattern<spirv::GLInverseSqrtOp>, SAbsPattern<spirv::GLSAbsOp>,
       FractPattern, SignPattern<spirv::GLFSignOp, /*isFloat=*/true>,
       SignPattern<spirv::GLSSignOp, /*isFloat=*/false>, GLFMixPattern,
+      GLAsinhAcoshPattern<spirv::GLAsinhOp>,
+      GLAsinhAcoshPattern<spirv::GLAcoshOp>,
 
       // OpenCL extended instruction set ops
       DirectConversionPattern<spirv::CLCeilOp, LLVM::FCeilOp>,

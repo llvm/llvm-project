@@ -1069,3 +1069,72 @@ void [[clang::annotate_type("webkit.nodelete")]] deletingCaptureByValue() {
 }
 
 } // namespace implicit_destructor
+
+namespace nodelete_ctor_base_fields {
+
+struct OpaqueMember {
+  OpaqueMember();
+  ~OpaqueMember();
+};
+
+struct Observer {
+  [[clang::annotate("webkit.nodelete")]] explicit Observer(int*);
+  virtual ~Observer();
+  OpaqueMember member;
+};
+
+// The base class fields are constructed by Observer's constructor, and
+// delegating constructors don't construct any field at all.
+struct ActiveObject : Observer {
+  [[clang::annotate("webkit.nodelete")]] explicit ActiveObject(int* p) : ActiveObject(p, Checked) { }
+  [[clang::annotate("webkit.nodelete")]] explicit ActiveObject(int& p) : ActiveObject(&p, Checked) { }
+
+private:
+  enum CheckedType { Checked };
+  [[clang::annotate("webkit.nodelete")]] ActiveObject(int* p, CheckedType) : Observer(p) { }
+
+  int count { 0 };
+};
+
+struct DelegatesToOpaqueCtor {
+  [[clang::annotate("webkit.nodelete")]] DelegatesToOpaqueCtor() : DelegatesToOpaqueCtor(nullptr) { }
+  // expected-warning@-1{{A constructor 'DelegatesToOpaqueCtor' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  explicit DelegatesToOpaqueCtor(int*);
+  OpaqueMember member;
+};
+
+// The member is constructed by the target constructor, so only it is blamed.
+struct DelegatesWithOpaqueMember {
+  [[clang::annotate("webkit.nodelete")]] DelegatesWithOpaqueMember() : DelegatesWithOpaqueMember(nullptr) { }
+  [[clang::annotate("webkit.nodelete")]] explicit DelegatesWithOpaqueMember(int*) { }
+  // expected-warning@-1{{A constructor 'DelegatesWithOpaqueMember' has [[clang::annotate_type("webkit.nodelete")]] but it constructs a member variable 'member' that could destruct an object}}
+  OpaqueMember member;
+};
+
+struct ObserverWithOpaqueCtor {
+  explicit ObserverWithOpaqueCtor(int*);
+  OpaqueMember member;
+};
+
+struct DerivedFromOpaqueCtor : ObserverWithOpaqueCtor {
+  [[clang::annotate("webkit.nodelete")]] explicit DerivedFromOpaqueCtor(int* p) : ObserverWithOpaqueCtor(p) { }
+  // expected-warning@-1{{A constructor 'DerivedFromOpaqueCtor' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+};
+
+struct ObserverWithOpaqueDefaultCtor {
+  ObserverWithOpaqueDefaultCtor();
+  OpaqueMember member;
+};
+
+struct DerivedFromOpaqueDefaultCtor : ObserverWithOpaqueDefaultCtor {
+  [[clang::annotate("webkit.nodelete")]] DerivedFromOpaqueDefaultCtor() { }
+  // expected-warning@-1{{A constructor 'DerivedFromOpaqueDefaultCtor' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+};
+
+struct DerivedWithOpaqueMember : Observer {
+  [[clang::annotate("webkit.nodelete")]] explicit DerivedWithOpaqueMember(int* p) : Observer(p) { }
+  // expected-warning@-1{{A constructor 'DerivedWithOpaqueMember' has [[clang::annotate_type("webkit.nodelete")]] but it constructs a member variable 'ownMember' that could destruct an object}}
+  OpaqueMember ownMember;
+};
+
+} // namespace nodelete_ctor_base_fields

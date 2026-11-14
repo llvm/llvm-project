@@ -34,7 +34,7 @@
   if.end:                                           ; preds = %if.then, %entry
     ret void
   }
-
+...
 ---
 name:            l5
 alignment:       4

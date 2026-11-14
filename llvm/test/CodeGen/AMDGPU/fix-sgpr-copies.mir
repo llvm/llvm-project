@@ -185,7 +185,7 @@ body:               |
 
   bb.3:
     %2:sreg_32 = PHI %0:vgpr_32, %bb.1, %1:sreg_32, %bb.2
-
+...
 ---
 name:            cmp_f32
 tracksRegLiveness: false

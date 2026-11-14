@@ -689,3 +689,4 @@ body:             |
     %select:gpr(i32) = G_SELECT %reg0, %xor, %sub
     $w0 = COPY %select(i32)
     RET_ReallyLR implicit $w0
+...

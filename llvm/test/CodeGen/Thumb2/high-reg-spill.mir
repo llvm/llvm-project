@@ -29,9 +29,6 @@
 ...
 ---
 name:            constraint_h
-registers:
-  - { id: 0, class: hgpr }
-  - { id: 1, class: tgpr }
 stack:
   - { id: 0, name: i, size: 4, alignment: 4, stack-id: default, local-offset: -4 }
 body:             |

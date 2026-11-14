@@ -10,7 +10,6 @@
 # CHECK:         CCMPXr %5, %4, 0, 10, implicit-def $nzcv, implicit $nzcv
 #
 name: aarch64-ccmp-successor-probs
-tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -23,6 +22,7 @@ registers:
 body : |
   bb.0:
     successors: %bb.1(0x7e000000), %bb.2(0x02000000)
+    liveins: $x0, $x1
 
     %0 = LDRXui killed $x0, 69
     %1 = COPY $xzr

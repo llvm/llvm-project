@@ -18,28 +18,6 @@
 // Zacas (Atomic Compare-and-Swap)
 //===----------------------------------------------------------------------===//
 
-def GPRPairRV32Operand : AsmOperandClass {
-  let Name = "GPRPairRV32";
-  let ParserMethod = "parseGPRPair<false>";
-  let PredicateMethod = "isGPRPair";
-  let RenderMethod = "addRegOperands";
-}
-
-def GPRPairRV64Operand : AsmOperandClass {
-  let Name = "GPRPairRV64";
-  let ParserMethod = "parseGPRPair<true>";
-  let PredicateMethod = "isGPRPair";
-  let RenderMethod = "addRegOperands";
-}
-
-def GPRPairRV32 : RegisterOperand<GPRPair> {
-  let ParserMatchClass = GPRPairRV32Operand;
-}
-
-def GPRPairRV64 : RegisterOperand<GPRPair> {
-  let ParserMatchClass = GPRPairRV64Operand;
-}
-
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1, Constraints = "$rd = $rd_wb" in
 class AMO_cas<bits<5> funct5, bit aq, bit rl, bits<3> funct3, string opcodestr,
               DAGOperand RC>
@@ -60,12 +38,12 @@ defm AMOCAS_W : AMO_cas_aq_rl<0b00101, 0b010, "amocas.w", GPR>;
 } // Predicates = [HasStdExtZacas]
 
 let Predicates = [HasStdExtZacas, IsRV32], DecoderNamespace = "RV32Only"  in {
-defm AMOCAS_D_RV32 : AMO_cas_aq_rl<0b00101, 0b011, "amocas.d", GPRPairRV32>;
+defm AMOCAS_D_RV32 : AMO_cas_aq_rl<0b00101, 0b011, "amocas.d", GPRPair>;
 } // Predicates = [HasStdExtZacas, IsRV32]
 
 let Predicates = [HasStdExtZacas, IsRV64] in {
 defm AMOCAS_D_RV64 : AMO_cas_aq_rl<0b00101, 0b011, "amocas.d", GPR>;
-defm AMOCAS_Q : AMO_cas_aq_rl<0b00101, 0b100, "amocas.q", GPRPairRV64>;
+defm AMOCAS_Q : AMO_cas_aq_rl<0b00101, 0b100, "amocas.q", GPRPair>;
 } // Predicates = [HasStdExtZacas, IsRV64]
 
 multiclass AMOCASPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,

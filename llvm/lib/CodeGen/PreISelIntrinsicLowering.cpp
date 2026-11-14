@@ -43,7 +43,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 
@@ -339,8 +338,9 @@ bool PreISelIntrinsicLowering::tryExpandBoundedMemSet(
 // Return a value appropriate for use with the memset_pattern16 libcall, if
 // possible and if we know how. (Adapted from equivalent helper in
 // LoopIdiomRecognize).
-static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
-                                         const TargetLibraryInfo &TLI) {
+static Constant *
+getMemSetPattern16Value(MemSetPatternInst *Inst,
+                        const RTLIB::RuntimeLibcallsInfo &RTLCI) {
   // TODO: This could check for UndefValue because it can be merged into any
   // other valid pattern.
 
@@ -351,9 +351,8 @@ static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
   Value *V = Inst->getValue();
   Type *VTy = V->getType();
   const DataLayout &DL = Inst->getDataLayout();
-  Module *M = Inst->getModule();
 
-  if (!isLibFuncEmittable(M, &TLI, LibFunc_memset_pattern16))
+  if (!RTLCI.isAvailable(RTLIB::impl_memset_pattern16))
     return nullptr;
 
   // If the value isn't a constant, we can't promote it to being in a constant
@@ -489,8 +488,9 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
     case Intrinsic::experimental_memset_pattern: {
       auto *Memset = cast<MemSetPatternInst>(Inst);
       Function *ParentFunc = Memset->getFunction();
-      const TargetLibraryInfo &TLI = LookupTLI(*ParentFunc);
-      Constant *PatternValue = getMemSetPattern16Value(Memset, TLI);
+      const RTLIB::RuntimeLibcallsInfo &RTLCI =
+          ModuleLibcalls.getRuntimeLibcallsInfo();
+      Constant *PatternValue = getMemSetPattern16Value(Memset, RTLCI);
       if (!PatternValue) {
         // If it isn't possible to emit a memset_pattern16 libcall, expand to
         // a loop instead.
@@ -506,13 +506,9 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
       Module *M = Memset->getModule();
       const DataLayout &DL = Memset->getDataLayout();
 
-      Type *DestPtrTy = Memset->getRawDest()->getType();
-      Type *SizeTTy = TLI.getSizeTType(*M);
-      StringRef FuncName = "memset_pattern16";
-      FunctionCallee MSP = getOrInsertLibFunc(M, TLI, LibFunc_memset_pattern16,
-                                              Builder.getVoidTy(), DestPtrTy,
-                                              Builder.getPtrTy(), SizeTTy);
-      inferNonMandatoryLibFuncAttrs(M, FuncName, TLI);
+      FunctionCallee MSP =
+          RTLCI.getOrInsertLibcallDecl(*M, RTLIB::impl_memset_pattern16);
+      Type *SizeTTy = MSP.getFunctionType()->getParamType(2);
 
       // Otherwise we should form a memset_pattern16.  PatternValue is known
       // to be an constant array of 16-bytes. Put the value into a mergable
@@ -535,11 +531,13 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
       }
       Value *PatternPtr = GV;
       Value *NumBytes = Builder.CreateMul(
-          TLI.getAsSizeT(DL.getTypeAllocSize(Memset->getValue()->getType()),
-                         *M),
+          ConstantInt::get(SizeTTy,
+                           DL.getTypeAllocSize(Memset->getValue()->getType())),
           Builder.CreateZExtOrTrunc(Memset->getLength(), SizeTTy));
       CallInst *MemsetPattern16Call =
           Builder.CreateCall(MSP, {Memset->getRawDest(), PatternPtr, NumBytes});
+      MemsetPattern16Call->setCallingConv(
+          RTLCI.getLibcallImplCallingConv(RTLIB::impl_memset_pattern16));
       MemsetPattern16Call->setAAMetadata(Memset->getAAMetadata());
       // Preserve any call site attributes on the destination pointer
       // argument (e.g. alignment).

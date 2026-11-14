@@ -1,0 +1,63 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "aligned_alloc",
+    hdrs = ["aligned_alloc.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc/hdr/types:size_t",
+            "//libc/src/__support:common",
+        ],
+        "//conditions:default": ["//libc/hdr:stdlib_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "free",
+    hdrs = ["free.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc/src/__support:common",
+        ],
+        "//conditions:default": ["//libc/hdr:stdlib_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "malloc",
+    hdrs = ["malloc.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc/hdr/types:size_t",
+            "//libc/src/__support:common",
+        ],
+        "//conditions:default": ["//libc/hdr:stdlib_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "realloc",
+    hdrs = ["realloc.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc/hdr/types:size_t",
+            "//libc/src/__support:common",
+        ],
+        "//conditions:default": ["//libc/hdr:stdlib_overlay"],
+    }),
+)

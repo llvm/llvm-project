@@ -198,3 +198,4 @@ body:             |
     %addr:gpr(p0) = G_PTR_ADD %copy, %cst(i64)
     %load:gpr(i64) = G_LOAD %addr(p0) :: (volatile load (s64))
     RET_ReallyLR
+...

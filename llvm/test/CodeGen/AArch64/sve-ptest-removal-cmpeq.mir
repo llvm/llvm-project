@@ -5,13 +5,6 @@
 ---
 name:            cmpeq_nxv16i8
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: zpr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -47,15 +40,6 @@ body:             |
 ---
 name:            cmpeq_nxv8i16
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: zpr }
-  - { id: 3, class: ppr_3b }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -92,15 +76,6 @@ body:             |
 ---
 name:            cmpeq_nxv4i32
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: zpr }
-  - { id: 3, class: ppr_3b }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -137,15 +112,6 @@ body:             |
 ---
 name:            cmpeq_nxv2i64
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: zpr }
-  - { id: 3, class: ppr_3b }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -182,13 +148,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv16i8
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -224,14 +183,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv8i16
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -265,14 +216,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv4i32
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -306,14 +249,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv2i64
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -347,13 +282,6 @@ body:             |
 ---
 name:            cmpeq_wide_nxv16i8
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: zpr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -389,15 +317,6 @@ body:             |
 ---
 name:            cmpeq_wide_nxv8i16
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: zpr }
-  - { id: 3, class: ppr_3b }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -434,15 +353,6 @@ body:             |
 ---
 name:            cmpeq_wide_nxv4i32
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: zpr }
-  - { id: 3, class: ppr_3b }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -479,13 +389,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv16i8_ptest_not_all_active
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -521,13 +424,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv16i8_ptest_of_halfs
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -563,13 +459,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv16i8_ptest_with_unique_pg
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$p1', virtual-reg: '%3' }
@@ -606,13 +495,6 @@ body:             |
 ---
 name:            cmpeq_nxv16i8_ptest_with_matching_operands
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: zpr }
-  - { id: 2, class: zpr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%1' }
@@ -649,14 +531,6 @@ body:             |
 ---
 name:            cmpeq_nxv16i8_ptest_with_register_class_mismatch
 alignment:       2
-registers:
-  - { id: 0, class: ppr }
-  - { id: 1, class: zpr }
-  - { id: 2, class: zpr }
-  - { id: 3, class: ppr_3b }
-  - { id: 4, class: ppr }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: gpr32 }
 liveins:
   - { reg: '$z0', virtual-reg: '%1' }
   - { reg: '$z1', virtual-reg: '%2' }

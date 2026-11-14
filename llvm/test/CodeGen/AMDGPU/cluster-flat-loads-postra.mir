@@ -9,7 +9,6 @@
 ---
 name:            cluster_loads_post_ra
 tracksRegLiveness: true
-registers:
 liveins:
   - { reg: '$vgpr0' }
 body:             |

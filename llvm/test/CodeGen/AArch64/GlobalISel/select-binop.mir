@@ -7,10 +7,6 @@ name:            add_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -23,9 +19,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[ADDWrr]]
-    %0(i32) = COPY $w0
-    %1(i32) = COPY $w1
-    %2(i32) = G_ADD %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_ADD %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -35,10 +31,6 @@ name:            add_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -51,9 +43,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x0 = COPY [[ADDXrr]]
-    %0(i64) = COPY $x0
-    %1(i64) = COPY $x1
-    %2(i64) = G_ADD %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_ADD %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -62,10 +54,6 @@ name:            add_imm_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -77,9 +65,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
     ; CHECK-NEXT: [[ADDWri:%[0-9]+]]:gpr32sp = ADDWri [[COPY]], 1, 0
     ; CHECK-NEXT: $w0 = COPY [[ADDWri]]
-    %0(i32) = COPY $w0
-    %1(i32) = G_CONSTANT i32 1
-    %2(i32) = G_ADD %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = G_CONSTANT i32 1
+    %2:gpr(i32) = G_ADD %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -88,10 +76,6 @@ name:            add_imm_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -103,9 +87,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY]], 1, 0
     ; CHECK-NEXT: $x0 = COPY [[ADDXri]]
-    %0(i64) = COPY $x0
-    %1(i64) = G_CONSTANT i64 1
-    %2(i64) = G_ADD %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 1
+    %2:gpr(i64) = G_ADD %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -114,10 +98,6 @@ name:            add_neg_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -129,9 +109,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32sp = COPY $w1
     ; CHECK-NEXT: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 1, 0, implicit-def dead $nzcv
     ; CHECK-NEXT: $w2 = COPY [[SUBSWri]]
-    %0(i32) = COPY $w1
-    %1(i32) = G_CONSTANT i32 -1
-    %2(i32) = G_ADD %0, %1
+    %0:gpr(i32) = COPY $w1
+    %1:gpr(i32) = G_CONSTANT i32 -1
+    %2:gpr(i32) = G_ADD %0, %1
     $w2 = COPY %2(i32)
 ...
 
@@ -140,10 +120,6 @@ name:            add_neg_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -155,9 +131,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[COPY]], 1, 0, implicit-def dead $nzcv
     ; CHECK-NEXT: $x0 = COPY [[SUBSXri]]
-    %0(i64) = COPY $x0
-    %1(i64) = G_CONSTANT i64 -1
-    %2(i64) = G_ADD %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 -1
+    %2:gpr(i64) = G_ADD %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -166,10 +142,6 @@ name:            add_neg_invalid_immed_s32
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -182,9 +154,9 @@ body:             |
     ; CHECK-NEXT: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm -5000
     ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY]], [[MOVi64imm]]
     ; CHECK-NEXT: $x0 = COPY [[ADDXrr]]
-    %0(i64) = COPY $x0
-    %1(i64) = G_CONSTANT i64 -5000
-    %2(i64) = G_ADD %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 -5000
+    %2:gpr(i64) = G_ADD %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -193,10 +165,6 @@ name:            add_neg_invalid_immed_s64
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -209,9 +177,9 @@ body:             |
     ; CHECK-NEXT: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm -5000
     ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY]], [[MOVi64imm]]
     ; CHECK-NEXT: $x0 = COPY [[ADDXrr]]
-    %0(i64) = COPY $x0
-    %1(i64) = G_CONSTANT i64 -5000
-    %2(i64) = G_ADD %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 -5000
+    %2:gpr(i64) = G_ADD %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -220,10 +188,6 @@ name:            add_imm_0_s32
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -236,9 +200,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY]], 0, 0
     ; CHECK-NEXT: $x0 = COPY [[ADDXri]]
-    %0(i64) = COPY $x0
-    %1(i64) = G_CONSTANT i64 0
-    %2(i64) = G_ADD %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 0
+    %2:gpr(i64) = G_ADD %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -247,10 +211,6 @@ name:            add_imm_0_s64
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -263,9 +223,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY]], 0, 0
     ; CHECK-NEXT: $x0 = COPY [[ADDXri]]
-    %0(i64) = COPY $x0
-    %1(i64) = G_CONSTANT i64 0
-    %2(i64) = G_ADD %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 0
+    %2:gpr(i64) = G_ADD %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -274,10 +234,6 @@ name:            add_imm_s32_gpr_bb
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   ; CHECK-LABEL: name: add_imm_s32_gpr_bb
@@ -295,12 +251,12 @@ body:             |
     liveins: $w0, $w1
     successors: %bb.1
 
-    %0(i32) = COPY $w0
-    %1(i32) = G_CONSTANT i32 1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = G_CONSTANT i32 1
     G_BR %bb.1
 
   bb.1:
-    %2(i32) = G_ADD %0, %1
+    %2:gpr(i32) = G_ADD %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -310,10 +266,6 @@ name:            sub_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -326,9 +278,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY]], [[COPY1]], implicit-def dead $nzcv
     ; CHECK-NEXT: $w0 = COPY [[SUBSWrr]]
-    %0(i32) = COPY $w0
-    %1(i32) = COPY $w1
-    %2(i32) = G_SUB %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_SUB %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -338,10 +290,6 @@ name:            sub_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -354,9 +302,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], [[COPY1]], implicit-def dead $nzcv
     ; CHECK-NEXT: $x0 = COPY [[SUBSXrr]]
-    %0(i64) = COPY $x0
-    %1(i64) = COPY $x1
-    %2(i64) = G_SUB %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_SUB %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -366,10 +314,6 @@ name:            or_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -382,9 +326,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[ORRWrr:%[0-9]+]]:gpr32 = ORRWrr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[ORRWrr]]
-    %0(i32) = COPY $w0
-    %1(i32) = COPY $w1
-    %2(i32) = G_OR %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_OR %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -394,10 +338,6 @@ name:            or_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -410,9 +350,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[ORRXrr:%[0-9]+]]:gpr64 = ORRXrr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x0 = COPY [[ORRXrr]]
-    %0(i64) = COPY $x0
-    %1(i64) = COPY $x1
-    %2(i64) = G_OR %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_OR %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -422,10 +362,6 @@ name:            or_v2s32_fpr
 legalized:       true
 regBankSelected: true
 #
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 
 # The actual OR does not matter as long as it is operating
 # on 64-bit width vector.
@@ -440,9 +376,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK-NEXT: [[ORRv8i8_:%[0-9]+]]:fpr64 = ORRv8i8 [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $d0 = COPY [[ORRv8i8_]]
-      %0(<2 x i32>) = COPY $d0
-      %1(<2 x i32>) = COPY $d1
-      %2(<2 x i32>) = G_OR %0, %1
+      %0:fpr(<2 x i32>) = COPY $d0
+      %1:fpr(<2 x i32>) = COPY $d1
+      %2:fpr(<2 x i32>) = G_OR %0, %1
       $d0 = COPY %2(<2 x i32>)
 ...
 
@@ -452,10 +388,6 @@ name:            and_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -468,9 +400,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[ANDWrr:%[0-9]+]]:gpr32 = ANDWrr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[ANDWrr]]
-    %0(i32) = COPY $w0
-    %1(i32) = COPY $w1
-    %2(i32) = G_AND %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_AND %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -480,10 +412,6 @@ name:            and_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -496,9 +424,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[ANDXrr:%[0-9]+]]:gpr64 = ANDXrr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x0 = COPY [[ANDXrr]]
-    %0(i64) = COPY $x0
-    %1(i64) = COPY $x1
-    %2(i64) = G_AND %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_AND %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -508,10 +436,6 @@ name:            shl_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -524,9 +448,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[LSLVWr:%[0-9]+]]:gpr32 = LSLVWr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[LSLVWr]]
-    %0(i32) = COPY $w0
-    %1(i32) = COPY $w1
-    %2(i32) = G_SHL %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_SHL %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -535,10 +459,6 @@ name:            shl_s32_64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -552,9 +472,9 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]].sub_32
     ; CHECK-NEXT: [[LSLVWr:%[0-9]+]]:gpr32 = LSLVWr [[COPY]], [[COPY2]]
     ; CHECK-NEXT: $w0 = COPY [[LSLVWr]]
-    %0(i32) = COPY $w0
-    %1(i64) = COPY $x1
-    %2(i32) = G_SHL %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i32) = G_SHL %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -564,10 +484,6 @@ name:            shl_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -580,9 +496,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[LSLVXr:%[0-9]+]]:gpr64 = LSLVXr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x0 = COPY [[LSLVXr]]
-    %0(i64) = COPY $x0
-    %1(i64) = COPY $x1
-    %2(i64) = G_SHL %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_SHL %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -592,10 +508,6 @@ name:            lshr_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -608,9 +520,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[LSRVWr:%[0-9]+]]:gpr32 = LSRVWr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[LSRVWr]]
-    %0(i32) = COPY $w0
-    %1(i32) = COPY $w1
-    %2(i32) = G_LSHR %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_LSHR %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -620,10 +532,6 @@ name:            lshr_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -636,9 +544,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[LSRVXr:%[0-9]+]]:gpr64 = LSRVXr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x0 = COPY [[LSRVXr]]
-    %0(i64) = COPY $x0
-    %1(i64) = COPY $x1
-    %2(i64) = G_LSHR %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_LSHR %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -648,10 +556,6 @@ name:            ashr_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -664,9 +568,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[ASRVWr:%[0-9]+]]:gpr32 = ASRVWr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[ASRVWr]]
-    %0(i32) = COPY $w0
-    %1(i32) = COPY $w1
-    %2(i32) = G_ASHR %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_ASHR %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -676,10 +580,6 @@ name:            ashr_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -692,9 +592,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[ASRVXr:%[0-9]+]]:gpr64 = ASRVXr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x0 = COPY [[ASRVXr]]
-    %0(i64) = COPY $x0
-    %1(i64) = COPY $x1
-    %2(i64) = G_ASHR %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_ASHR %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -705,10 +605,6 @@ name:            mul_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -721,9 +617,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY1]], $wzr
     ; CHECK-NEXT: $w0 = COPY [[MADDWrrr]]
-    %0(i32) = COPY $w0
-    %1(i32) = COPY $w1
-    %2(i32) = G_MUL %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_MUL %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -733,10 +629,6 @@ name:            mul_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -749,9 +641,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[COPY]], [[COPY1]], $xzr
     ; CHECK-NEXT: $x0 = COPY [[MADDXrrr]]
-    %0(i64) = COPY $x0
-    %1(i64) = COPY $x1
-    %2(i64) = G_MUL %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_MUL %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -789,10 +681,6 @@ name:            sdiv_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -805,9 +693,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[SDIVWr:%[0-9]+]]:gpr32 = SDIVWr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[SDIVWr]]
-    %0(i32) = COPY $w0
-    %1(i32) = COPY $w1
-    %2(i32) = G_SDIV %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_SDIV %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -817,10 +705,6 @@ name:            sdiv_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -833,9 +717,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[SDIVXr:%[0-9]+]]:gpr64 = SDIVXr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x0 = COPY [[SDIVXr]]
-    %0(i64) = COPY $x0
-    %1(i64) = COPY $x1
-    %2(i64) = G_SDIV %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_SDIV %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -845,10 +729,6 @@ name:            udiv_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -861,9 +741,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[UDIVWr:%[0-9]+]]:gpr32 = UDIVWr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[UDIVWr]]
-    %0(i32) = COPY $w0
-    %1(i32) = COPY $w1
-    %2(i32) = G_UDIV %0, %1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_UDIV %0, %1
     $w0 = COPY %2(i32)
 ...
 
@@ -873,10 +753,6 @@ name:            udiv_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 
 body:             |
   bb.0:
@@ -889,9 +765,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[UDIVXr:%[0-9]+]]:gpr64 = UDIVXr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x0 = COPY [[UDIVXr]]
-    %0(i64) = COPY $x0
-    %1(i64) = COPY $x1
-    %2(i64) = G_UDIV %0, %1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_UDIV %0, %1
     $x0 = COPY %2(i64)
 ...
 
@@ -901,10 +777,6 @@ name:            fadd_s32_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 
 body:             |
   bb.0:
@@ -917,9 +789,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
     ; CHECK-NEXT: [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[COPY]], [[COPY1]], implicit $fpcr
     ; CHECK-NEXT: $s0 = COPY [[FADDSrr]]
-    %0(f32) = COPY $s0
-    %1(f32) = COPY $s1
-    %2(f32) = G_FADD %0, %1
+    %0:fpr(f32) = COPY $s0
+    %1:fpr(f32) = COPY $s1
+    %2:fpr(f32) = G_FADD %0, %1
     $s0 = COPY %2(f32)
 ...
 
@@ -928,10 +800,6 @@ name:            fadd_s64_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 
 body:             |
   bb.0:
@@ -944,9 +812,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK-NEXT: [[FADDDrr:%[0-9]+]]:fpr64 = nofpexcept FADDDrr [[COPY]], [[COPY1]], implicit $fpcr
     ; CHECK-NEXT: $d0 = COPY [[FADDDrr]]
-    %0(f64) = COPY $d0
-    %1(f64) = COPY $d1
-    %2(f64) = G_FADD %0, %1
+    %0:fpr(f64) = COPY $d0
+    %1:fpr(f64) = COPY $d1
+    %2:fpr(f64) = G_FADD %0, %1
     $d0 = COPY %2(f64)
 ...
 
@@ -955,10 +823,6 @@ name:            fsub_s32_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 
 body:             |
   bb.0:
@@ -971,9 +835,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
     ; CHECK-NEXT: [[FSUBSrr:%[0-9]+]]:fpr32 = nofpexcept FSUBSrr [[COPY]], [[COPY1]], implicit $fpcr
     ; CHECK-NEXT: $s0 = COPY [[FSUBSrr]]
-    %0(f32) = COPY $s0
-    %1(f32) = COPY $s1
-    %2(f32) = G_FSUB %0, %1
+    %0:fpr(f32) = COPY $s0
+    %1:fpr(f32) = COPY $s1
+    %2:fpr(f32) = G_FSUB %0, %1
     $s0 = COPY %2(f32)
 ...
 
@@ -982,10 +846,6 @@ name:            fsub_s64_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 
 body:             |
   bb.0:
@@ -998,9 +858,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK-NEXT: [[FSUBDrr:%[0-9]+]]:fpr64 = nofpexcept FSUBDrr [[COPY]], [[COPY1]], implicit $fpcr
     ; CHECK-NEXT: $d0 = COPY [[FSUBDrr]]
-    %0(f64) = COPY $d0
-    %1(f64) = COPY $d1
-    %2(f64) = G_FSUB %0, %1
+    %0:fpr(f64) = COPY $d0
+    %1:fpr(f64) = COPY $d1
+    %2:fpr(f64) = G_FSUB %0, %1
     $d0 = COPY %2(f64)
 ...
 
@@ -1009,10 +869,6 @@ name:            fmul_s32_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 
 body:             |
   bb.0:
@@ -1025,9 +881,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
     ; CHECK-NEXT: [[FMULSrr:%[0-9]+]]:fpr32 = nofpexcept FMULSrr [[COPY]], [[COPY1]], implicit $fpcr
     ; CHECK-NEXT: $s0 = COPY [[FMULSrr]]
-    %0(f32) = COPY $s0
-    %1(f32) = COPY $s1
-    %2(f32) = G_FMUL %0, %1
+    %0:fpr(f32) = COPY $s0
+    %1:fpr(f32) = COPY $s1
+    %2:fpr(f32) = G_FMUL %0, %1
     $s0 = COPY %2(f32)
 ...
 
@@ -1036,10 +892,6 @@ name:            fmul_s64_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 
 body:             |
   bb.0:
@@ -1052,9 +904,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK-NEXT: [[FMULDrr:%[0-9]+]]:fpr64 = nofpexcept FMULDrr [[COPY]], [[COPY1]], implicit $fpcr
     ; CHECK-NEXT: $d0 = COPY [[FMULDrr]]
-    %0(f64) = COPY $d0
-    %1(f64) = COPY $d1
-    %2(f64) = G_FMUL %0, %1
+    %0:fpr(f64) = COPY $d0
+    %1:fpr(f64) = COPY $d1
+    %2:fpr(f64) = G_FMUL %0, %1
     $d0 = COPY %2(f64)
 ...
 
@@ -1063,10 +915,6 @@ name:            fdiv_s32_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 
 body:             |
   bb.0:
@@ -1079,9 +927,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
     ; CHECK-NEXT: [[FDIVSrr:%[0-9]+]]:fpr32 = nofpexcept FDIVSrr [[COPY]], [[COPY1]], implicit $fpcr
     ; CHECK-NEXT: $s0 = COPY [[FDIVSrr]]
-    %0(f32) = COPY $s0
-    %1(f32) = COPY $s1
-    %2(f32) = G_FDIV %0, %1
+    %0:fpr(f32) = COPY $s0
+    %1:fpr(f32) = COPY $s1
+    %2:fpr(f32) = G_FDIV %0, %1
     $s0 = COPY %2(f32)
 ...
 
@@ -1090,10 +938,6 @@ name:            fdiv_s64_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 
 body:             |
   bb.0:
@@ -1106,9 +950,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK-NEXT: [[FDIVDrr:%[0-9]+]]:fpr64 = nofpexcept FDIVDrr [[COPY]], [[COPY1]], implicit $fpcr
     ; CHECK-NEXT: $d0 = COPY [[FDIVDrr]]
-    %0(f64) = COPY $d0
-    %1(f64) = COPY $d1
-    %2(f64) = G_FDIV %0, %1
+    %0:fpr(f64) = COPY $d0
+    %1:fpr(f64) = COPY $d1
+    %2:fpr(f64) = G_FDIV %0, %1
     $d0 = COPY %2(f64)
 ...
 ---
@@ -1116,10 +960,6 @@ name:            add_v8i16
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -1145,10 +985,6 @@ name:            add_v16i8
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1:

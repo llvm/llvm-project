@@ -89,7 +89,6 @@ body: |
     PseudoRET implicit $x10
 ...
 ---
----
 name: xor3
 body: |
   bb.0:

@@ -6,16 +6,17 @@
 
 define <32 x i8> @interleaved_load_vf32_i8_stride3(ptr %ptr){
 ; CHECK-LABEL: @interleaved_load_vf32_i8_stride3(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[TMP1:%.*]], align 128
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[TMP1]], align 128
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[PTR]], i64 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[TMP3]], align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[PTR]], i64 32
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <16 x i8>, ptr [[TMP5]], align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1]], i64 48
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[PTR]], i64 48
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <16 x i8>, ptr [[TMP7]], align 16
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP1]], i64 64
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[PTR]], i64 64
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <16 x i8>, ptr [[TMP9]], align 16
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP1]], i64 80
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[PTR]], i64 80
 ; CHECK-NEXT:    [[TMP12:%.*]] = load <16 x i8>, ptr [[TMP11]], align 16
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <16 x i8> [[TMP2]], <16 x i8> [[TMP8]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <16 x i8> [[TMP4]], <16 x i8> [[TMP10]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -46,10 +47,11 @@ define <32 x i8> @interleaved_load_vf32_i8_stride3(ptr %ptr){
 
 define <16 x i8> @interleaved_load_vf16_i8_stride3(ptr %ptr){
 ; CHECK-LABEL: @interleaved_load_vf16_i8_stride3(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[TMP1:%.*]], align 64
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[TMP1]], align 64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[PTR]], i64 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[TMP3]], align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[PTR]], i64 32
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <16 x i8>, ptr [[TMP5]], align 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i8> [[TMP2]], <16 x i8> poison, <16 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 2, i32 5, i32 8, i32 11, i32 14, i32 1, i32 4, i32 7, i32 10, i32 13>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i8> [[TMP4]], <16 x i8> poison, <16 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 2, i32 5, i32 8, i32 11, i32 14, i32 1, i32 4, i32 7, i32 10, i32 13>
@@ -97,7 +99,8 @@ define <8 x i8> @interleaved_load_vf8_i8_stride3(ptr %ptr){
 
 define <64 x i8> @interleaved_load_vf64_i8_stride3(ptr %ptr){
 ; CHECK-LABEL: @interleaved_load_vf64_i8_stride3(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[TMP1:%.*]], align 1
+; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[TMP45]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32

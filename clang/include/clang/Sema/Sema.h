@@ -7654,8 +7654,10 @@ public:
                            bool AllowRecovery = false);
 
   /// BuildBuiltinCallExpr - Create a call to a builtin function specified by Id
-  //  with the specified CallArgs
-  Expr *BuildBuiltinCallExpr(SourceLocation Loc, Builtin::ID Id,
+  /// with the specified CallArgs. Id is unsigned rather than Builtin::ID, so
+  /// that it can also be a target-specific builtin ID, which is not in
+  /// Builtin::ID, e.g., BPF::BI__builtin_preserve_enum_value.
+  Expr *BuildBuiltinCallExpr(SourceLocation Loc, unsigned Id,
                              MultiExprArg CallArgs);
 
   using ADLCallKind = CallExpr::ADLCallKind;

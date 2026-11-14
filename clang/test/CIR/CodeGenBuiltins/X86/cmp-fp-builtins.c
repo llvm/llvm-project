@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror
-// RUN: FileCheck --check-prefix=CHECK --input-file=%t.ll %s
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK
+// RUN: FileCheck --check-prefixes=CHECK,LLVM --input-file=%t.ll %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,OGCG
 
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -ffp-exception-behavior=strict -fexperimental-strict-floating-point -fclangir -emit-cir -o %t.strict.cir -Wall -Werror
 // RUN: FileCheck --check-prefix=CIR-STRICT --input-file=%t.strict.cir %s
@@ -67,11 +67,12 @@ __m128 test_cmp_ps_nlt_us(__m128 a, __m128 b) {
 // FALSE and TRUE
 __m128 test_cmp_ps_false_oq(__m128 a, __m128 b) {
   // CIR-LABEL: cir.func {{.*}}@test_cmp_ps_false_oq
-  // CIR: %[[CMP:.*]] = cir.vec.fcmp(false, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: %[[CMP:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
   // CIR: cir.cast bitcast %[[CMP]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // CHECK-LABEL: @test_cmp_ps_false_oq
-  // CHECK: fcmp false <4 x float> %{{.*}}, %{{.*}}
+  // LLVM: store <4 x float> zeroinitializer
+  // OGCG: fcmp false <4 x float> %{{.*}}, %{{.*}}
 
   // Under strict FP there is no compare to use, so the target intrinsic is
   // called.
@@ -85,11 +86,12 @@ __m128 test_cmp_ps_false_oq(__m128 a, __m128 b) {
 
 __m128 test_cmp_ps_true_uq(__m128 a, __m128 b) {
   // CIR-LABEL: cir.func {{.*}}@test_cmp_ps_true_uq
-  // CIR: %[[CMP:.*]] = cir.vec.fcmp(true, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: %[[CMP:.*]] = cir.const #cir.const_vector<[#cir.int<-1> : !s32i, #cir.int<-1> : !s32i, #cir.int<-1> : !s32i, #cir.int<-1> : !s32i]> : !cir.vector<4 x !s32i>
   // CIR: cir.cast bitcast %[[CMP]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // CHECK-LABEL: @test_cmp_ps_true_uq
-  // CHECK: fcmp true <4 x float> %{{.*}}, %{{.*}}
+  // LLVM: store <4 x float> splat (float {{.*}})
+  // OGCG: fcmp true <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_TRUE_UQ);
 }
 
@@ -353,23 +355,25 @@ __mmask8 test_mm256_cmp_ps_mask(__m256 a, __m256 b) {
 
 __mmask8 test_mm256_mask_cmp_ps_mask_false(__mmask8 m, __m256 a, __m256 b) {
   // CIR-LABEL: cir.func {{.*}}@test_mm256_mask_cmp_ps_mask_false
-  // CIR: %[[CMP:.*]] = cir.vec.fcmp(false, %{{.*}}, %{{.*}}) : !cir.vector<8 x !cir.float>, !cir.vector<8 x !cir.int<s, 1>>
-  // CIR: cir.and %[[CMP]], %{{.*}}
+  // CIR: %[[CMP:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !cir.int<s, 1>, #cir.int<0> : !cir.int<s, 1>, #cir.int<0> : !cir.int<s, 1>, #cir.int<0> : !cir.int<s, 1>, #cir.int<0> : !cir.int<s, 1>, #cir.int<0> : !cir.int<s, 1>, #cir.int<0> : !cir.int<s, 1>, #cir.int<0> : !cir.int<s, 1>]> : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: cir.and %{{.*}}, %[[CMP]]
 
   // CHECK-LABEL: @test_mm256_mask_cmp_ps_mask_false
-  // CHECK: %[[CMP:.*]] = fcmp false <8 x float> %{{.*}}, %{{.*}}
-  // CHECK: and <8 x i1> %[[CMP]], %{{.*}}
+  // LLVM: and <8 x i1> %{{.*}}, zeroinitializer
+  // OGCG: %[[CMP:.*]] = fcmp false <8 x float> %{{.*}}, %{{.*}}
+  // OGCG: and <8 x i1> %[[CMP]], %{{.*}}
   return _mm256_mask_cmp_ps_mask(m, a, b, _CMP_FALSE_OQ);
 }
 
 __mmask8 test_mm256_mask_cmp_ps_mask_true(__mmask8 m, __m256 a, __m256 b) {
   // CIR-LABEL: cir.func {{.*}}@test_mm256_mask_cmp_ps_mask_true
-  // CIR: %[[CMP:.*]] = cir.vec.fcmp(true, %{{.*}}, %{{.*}}) : !cir.vector<8 x !cir.float>, !cir.vector<8 x !cir.int<s, 1>>
-  // CIR: cir.and %[[CMP]], %{{.*}}
+  // CIR: %[[CMP:.*]] = cir.const #cir.const_vector<[#cir.int<-1> : !cir.int<s, 1>, #cir.int<-1> : !cir.int<s, 1>, #cir.int<-1> : !cir.int<s, 1>, #cir.int<-1> : !cir.int<s, 1>, #cir.int<-1> : !cir.int<s, 1>, #cir.int<-1> : !cir.int<s, 1>, #cir.int<-1> : !cir.int<s, 1>, #cir.int<-1> : !cir.int<s, 1>]> : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: cir.and %{{.*}}, %[[CMP]]
 
   // CHECK-LABEL: @test_mm256_mask_cmp_ps_mask_true
-  // CHECK: %[[CMP:.*]] = fcmp true <8 x float> %{{.*}}, %{{.*}}
-  // CHECK: and <8 x i1> %[[CMP]], %{{.*}}
+  // LLVM: and <8 x i1> %{{.*}}, splat (i1 true)
+  // OGCG: %[[CMP:.*]] = fcmp true <8 x float> %{{.*}}, %{{.*}}
+  // OGCG: and <8 x i1> %[[CMP]], %{{.*}}
 
   // Under strict FP the target intrinsic is called.
   // CIR-STRICT-LABEL: cir.func {{.*}}@test_mm256_mask_cmp_ps_mask_true

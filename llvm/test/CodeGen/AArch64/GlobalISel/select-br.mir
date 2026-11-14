@@ -14,7 +14,6 @@
 name:            unconditional_br
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 # CHECK:  body:
 # CHECK:   bb.0:
@@ -32,20 +31,17 @@ body:             |
 name:            conditional_br
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 
 # CHECK:  body:
 # CHECK:   bb.0:
-# CHECK:    TBNZW %1, 0, %bb.1
+# CHECK:    TBNZW %0, 0, %bb.1
 # CHECK:    B %bb.0
 body:             |
   bb.0:
     successors: %bb.0, %bb.1
-    %1(i32) = COPY $w0
+    liveins: $w0
+    %1:gpr(i32) = COPY $w0
     G_BRCOND %1, %bb.1
     G_BR %bb.0
 
@@ -57,10 +53,7 @@ body:             |
 name:            indirect_br
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
-registers:
-  - { id: 0, class: gpr }
 
 # CHECK:  body:
 # CHECK:   bb.0:
@@ -69,7 +62,8 @@ registers:
 body:             |
   bb.0:
     successors: %bb.0, %bb.1
-    %0(p0) = COPY $x0
+    liveins: $x0
+    %0:gpr(p0) = COPY $x0
     G_BRINDIRECT %0(p0)
 
   bb.1:

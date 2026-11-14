@@ -79,7 +79,7 @@ TEST_F(LlvmLibcAtan2fTest, InFloatRange) {
     uint64_t fails = 0;
     uint64_t finite_count = 0;
     uint64_t total_count = 0;
-    float failed_x, failed_y, failed_r = 0.0;
+    float failed_x = 0.0f, failed_y = 0.0f, failed_r = 0.0f;
     double tol = 0.5;
 
     for (uint32_t i = 0, v = X_START; i <= X_COUNT; ++i, v += X_STEP) {

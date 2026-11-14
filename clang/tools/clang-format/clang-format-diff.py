@@ -102,7 +102,8 @@ def main():
     filename = None
     lines_by_file = {}
     for line in sys.stdin:
-        match = re.search(r"^\+\+\+\ (.*?/){%s}(.+)" % args.p, line.rstrip())
+        # Stop at a tab, after which diff and svn may append a timestamp.
+        match = re.search(r"^\+\+\+\ (.*?/){%s}([^\t]+)" % args.p, line.rstrip())
         if match:
             filename = match.group(2)
         if filename is None:

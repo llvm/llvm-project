@@ -24,7 +24,6 @@ namespace cl {
 class LibraryOptions;
 
 // The library options of one compilation context, such as an LLVMContext.
-// Libraries declared with perContext read their options here.
 class LLVM_ABI LibraryOptionsContext {
 public:
   // Replaces the library options with Other's by replaying its arguments.

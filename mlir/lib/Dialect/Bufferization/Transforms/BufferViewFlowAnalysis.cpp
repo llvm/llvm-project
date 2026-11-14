@@ -157,13 +157,16 @@ void BufferViewFlowAnalysis::build(Operation *op) {
 
     if (isa<CallOpInterface>(op)) {
       // This is an intra-function analysis. We have no information about other
-      // functions. Conservatively assume that each operand may alias with each
-      // result. Also mark the results are terminals because the function could
+      // functions. Conservatively assume that each memref operand may alias
+      // with each memref result; a value of any other type is not a view of a
+      // buffer. Also mark the results are terminals because the function could
       // return newly allocated buffers.
       populateTerminalValues(op);
       for (Value operand : op->getOperands())
         for (Value result : op->getResults())
-          registerDependencies({operand}, {result});
+          if (isa<BaseMemRefType>(operand.getType()) &&
+              isa<BaseMemRefType>(result.getType()))
+            registerDependencies({operand}, {result});
       return WalkResult::advance();
     }
 

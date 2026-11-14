@@ -531,6 +531,14 @@ public:
 
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
+  uint64_t GetObjectSize() const { return m_object_size; }
+
+  /// Describe this module, preserving the parsed object's bounds and any
+  /// already-provided bytes.
+  ///
+  /// This may load the module's object file.
+  ModuleSpec GetModuleSpec();
+
   /// Get the object file representation for the current architecture.
   ///
   /// If the object file has not been located or parsed yet, this function
@@ -835,6 +843,14 @@ public:
     ReportError(llvm::formatv(format, std::forward<Args>(args)...));
   }
 
+  /// Report an error that may be a bug in LLDB, see
+  /// Debugger::ReportInternalError.
+  template <typename... Args>
+  void ReportInternalError(const char *format, Args &&...args) {
+    ReportError(llvm::formatv(format, std::forward<Args>(args)...),
+                /*internal_error=*/true);
+  }
+
   // Only report an error once when the module is first detected to be modified
   // so we don't spam the console with many messages.
   template <typename... Args>
@@ -1113,6 +1129,7 @@ protected:
       m_memory_module_addr; ///< For a Module read from memory,
                             ///  the address it was read from.
   uint64_t m_object_offset = 0;
+  uint64_t m_object_size = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
 
   /// DataExtractor containing the module image, if it was provided at
@@ -1199,7 +1216,8 @@ private:
   void LogMessageVerboseBacktrace(Log *log,
                                   const llvm::formatv_object_base &payload);
   void ReportWarning(const llvm::formatv_object_base &payload);
-  void ReportError(const llvm::formatv_object_base &payload);
+  void ReportError(const llvm::formatv_object_base &payload,
+                   bool internal_error = false);
   void ReportErrorIfModifyDetected(const llvm::formatv_object_base &payload);
   /// Returns true the first time \p msg is passed.
   bool ShouldReportDiagnostic(llvm::StringRef msg);

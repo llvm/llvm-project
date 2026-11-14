@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm -o - %s | FileCheck %s '-D$CONST_AS='
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64 -emit-llvm -o - %s | FileCheck %s '-D$CONST_AS=' %}
 // RUN: %clang_cc1 -triple amdgpu -emit-llvm -o - %s | FileCheck %s '-D$CONST_AS= addrspace(4)'
 // END.
 # 1 "t.c"

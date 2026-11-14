@@ -1155,9 +1155,13 @@ def MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 def MEMPCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
 def MEMPCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
 def MEMRCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
-def MEMSET_PATTERN16 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
-def MEMSET_PATTERN4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
-def MEMSET_PATTERN8 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+foreach Size = [4, 8, 16] in {
+  def MEMSET_PATTERN#Size : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+    let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+    let Memory = ArgMemOnly;
+    let ParamAttrs = [[CapturesNone, WriteOnly], [CapturesNone, ReadOnly]];
+  }
+}
 def MKDIR : RuntimeLibcall<Int, [Ptr, IntX]>;
 def MKTIME : RuntimeLibcall<IntPlus, [Ptr]>;
 def MSVC_DELETE_ARRAY_PTR32 : RuntimeLibcall<Void, [Ptr]>;

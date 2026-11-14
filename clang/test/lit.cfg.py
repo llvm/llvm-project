@@ -297,6 +297,19 @@ config.substitutions.append(
 
 config.substitutions.append(
     (
+        "%clang_format_diff",
+        '"%s" %s'
+        % (
+            config.python_executable,
+            os.path.join(
+                config.clang_src_dir, "tools", "clang-format", "clang-format-diff.py"
+            ),
+        ),
+    )
+)
+
+config.substitutions.append(
+    (
         "%deps-to-rsp",
         '"%s" %s'
         % (
@@ -380,6 +393,11 @@ if os.path.exists("/dev/fd/0") and sys.platform not in ["cygwin"]:
 # Set on native MS environment.
 if re.match(r".*-(windows-msvc)$", config.target_triple):
     config.available_features.add("ms-sdk")
+
+# Targets whose object file format (XCOFF on AIX, GOFF on z/OS) does not yet
+# support wrapping a serialized module in the "__clangast" section.
+if not re.match(r".*-(aix|zos)", config.target_triple):
+    config.available_features.add("object-wrapped-module")
 
 # [PR8833] LLP64-incompatible tests
 if not re.match(

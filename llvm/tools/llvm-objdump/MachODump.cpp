@@ -7409,6 +7409,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   Triple TheTriple(TripleName);
 
   MCTargetOptions MCOptions;
+  MCOptions.LibraryOptions = &LibraryOptions;
   // Set up disassembler.
   std::unique_ptr<const MCRegisterInfo> MRI(
       TheTarget->createMCRegInfo(TheTriple));

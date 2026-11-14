@@ -1120,17 +1120,14 @@ define double @v_copysign_f64_0_f32(float %sign) {
 ; SIVI-LABEL: v_copysign_f64_0_f32:
 ; SIVI:       ; %bb.0:
 ; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SIVI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
+; SIVI-NEXT:    v_and_b32_e32 v1, 0x80000000, v0
 ; SIVI-NEXT:    v_mov_b32_e32 v0, 0
-; SIVI-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
 ; SIVI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_copysign_f64_0_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v1, 0x80000000, v1
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v1, 0x80000000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sign.ext = fpext float %sign to double
   %result = call double @llvm.copysign.f64(double 0.0, double %sign.ext)
@@ -1138,23 +1135,16 @@ define double @v_copysign_f64_0_f32(float %sign) {
 }
 
 define amdgpu_ps <2 x i32> @s_copysign_f64_0_f16(half inreg %sign) {
-; SI-LABEL: s_copysign_f64_0_f16:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_lshl_b32 s0, s0, 16
-; SI-NEXT:    s_and_b32 s1, s0, 0x80000000
-; SI-NEXT:    s_mov_b32 s0, 0
-; SI-NEXT:    ; return to shader part epilog
-;
-; VI-LABEL: s_copysign_f64_0_f16:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_sext_i32_i16 s0, s0
-; VI-NEXT:    s_and_b32 s1, s0, 0x80000000
-; VI-NEXT:    s_mov_b32 s0, 0
-; VI-NEXT:    ; return to shader part epilog
+; SIVI-LABEL: s_copysign_f64_0_f16:
+; SIVI:       ; %bb.0:
+; SIVI-NEXT:    s_lshl_b32 s0, s0, 16
+; SIVI-NEXT:    s_and_b32 s1, s0, 0x80000000
+; SIVI-NEXT:    s_mov_b32 s0, 0
+; SIVI-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_copysign_f64_0_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_sext_i32_i16 s0, s0
+; GFX11-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s1, s0, 0x80000000
 ; GFX11-NEXT:    s_mov_b32 s0, 0
@@ -1169,19 +1159,17 @@ define double @v_copysign_f64_0_f16(half %sign) {
 ; SIVI-LABEL: v_copysign_f64_0_f16:
 ; SIVI:       ; %bb.0:
 ; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SIVI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SIVI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
+; SIVI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SIVI-NEXT:    v_and_b32_e32 v1, 0x80000000, v0
 ; SIVI-NEXT:    v_mov_b32_e32 v0, 0
-; SIVI-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
 ; SIVI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_copysign_f64_0_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v1, 0x80000000, v1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v1, 0x80000000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sign.ext = fpext half %sign to double
   %result = call double @llvm.copysign.f64(double 0.0, double %sign.ext)

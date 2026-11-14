@@ -776,3 +776,4 @@ body:             |
     %cmp:_(i32) = G_ICMP intpred(sgt), %cmp_lhs(i64), %cmp_rhs
     $w0 = COPY %cmp(i32)
     RET_ReallyLR implicit $w0
+...

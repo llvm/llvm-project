@@ -265,6 +265,7 @@
     %arrayidx1 = getelementptr inbounds nuw i8, ptr %arr, i32 4
     ret i32 0
   }
+...
 ---
 # Basic case: two consecutive 32-bit loads that can be combined into LD
 name: basic_load_combine

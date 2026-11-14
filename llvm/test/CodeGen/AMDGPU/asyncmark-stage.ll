@@ -20,11 +20,22 @@ define amdgpu_kernel void @wait_tensor_ignores_async(<4 x i32> %sd, <8 x i32> %t
 ; SDAG-NEXT:    v_nop
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    s_clause 0x2
+; SDAG-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
 ; SDAG-NEXT:    s_load_b96 s[16:18], s[4:5], 0x64 nv
 ; SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; SDAG-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
+; SDAG-NEXT:    s_wait_xcnt 0x0
+; SDAG-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; SDAG-NEXT:    s_mov_b32 s5, 0xffff0000
+; SDAG-NEXT:    s_cmp_eq_u32 s4, 15
+; SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; SDAG-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
-; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s18
+; SDAG-NEXT:    s_and_b32 s5, s8, 0xffff
+; SDAG-NEXT:    s_and_b32 s4, s4, s8
+; SDAG-NEXT:    v_mov_b32_e32 v1, s18
+; SDAG-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; SDAG-NEXT:    s_cselect_b32 s8, s4, s8
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
 ; SDAG-NEXT:    ; asyncmark(stages=TENSOR)
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v1, v0, s[16:17] offset:4
@@ -43,20 +54,31 @@ define amdgpu_kernel void @wait_tensor_ignores_async(<4 x i32> %sd, <8 x i32> %t
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_clause 0x2
+; GISEL-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
 ; GISEL-NEXT:    s_load_b96 s[16:18], s[4:5], 0x64 nv
 ; GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GISEL-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
+; GISEL-NEXT:    s_wait_xcnt 0x0
+; GISEL-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; GISEL-NEXT:    s_mov_b32 s5, 0xffff0000
+; GISEL-NEXT:    s_cmp_eq_u32 s4, 15
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s18
+; GISEL-NEXT:    s_and_b32 s5, s8, 0xffff
+; GISEL-NEXT:    s_and_b32 s4, s4, s8
+; GISEL-NEXT:    v_mov_b32_e32 v1, s18
+; GISEL-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; GISEL-NEXT:    s_cselect_b32 s8, s4, s8
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
 ; GISEL-NEXT:    ; asyncmark(stages=TENSOR)
-; GISEL-NEXT:    global_load_async_to_lds_b32 v0, v1, s[16:17] offset:4
+; GISEL-NEXT:    global_load_async_to_lds_b32 v1, v0, s[16:17] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:    ; wait_asyncmark(0, stages=TENSOR)
 ; GISEL-NEXT:    s_wait_tensorcnt 0x0
-; GISEL-NEXT:    ds_load_b32 v2, v0
+; GISEL-NEXT:    ds_load_b32 v2, v1
 ; GISEL-NEXT:    s_wait_dscnt 0x0
-; GISEL-NEXT:    global_store_b32 v1, v2, s[16:17]
+; GISEL-NEXT:    global_store_b32 v0, v2, s[16:17]
 ; GISEL-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %sd, <8 x i32> %td, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
@@ -84,10 +106,20 @@ define amdgpu_kernel void @wait_async_ignores_tensor(<4 x i32> %sd, <8 x i32> %t
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    s_clause 0x2
 ; SDAG-NEXT:    s_load_b96 s[16:18], s[4:5], 0x64 nv
-; SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; SDAG-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
+; SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; SDAG-NEXT:    s_wait_xcnt 0x0
+; SDAG-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; SDAG-NEXT:    s_mov_b32 s5, 0xffff0000
+; SDAG-NEXT:    s_cmp_eq_u32 s4, 15
+; SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; SDAG-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
-; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s18
+; SDAG-NEXT:    v_mov_b32_e32 v1, s18
+; SDAG-NEXT:    s_and_b32 s5, s8, 0xffff
+; SDAG-NEXT:    s_and_b32 s4, s4, s8
+; SDAG-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; SDAG-NEXT:    s_cselect_b32 s8, s4, s8
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v1, v0, s[16:17] offset:4
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; SDAG-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
@@ -107,10 +139,20 @@ define amdgpu_kernel void @wait_async_ignores_tensor(<4 x i32> %sd, <8 x i32> %t
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_clause 0x2
 ; GISEL-NEXT:    s_load_b96 s[16:18], s[4:5], 0x64 nv
-; GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GISEL-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
+; GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GISEL-NEXT:    s_wait_xcnt 0x0
+; GISEL-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; GISEL-NEXT:    s_mov_b32 s5, 0xffff0000
+; GISEL-NEXT:    s_cmp_eq_u32 s4, 15
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s18
+; GISEL-NEXT:    v_mov_b32_e32 v1, s18
+; GISEL-NEXT:    s_and_b32 s5, s8, 0xffff
+; GISEL-NEXT:    s_and_b32 s4, s4, s8
+; GISEL-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; GISEL-NEXT:    s_cselect_b32 s8, s4, s8
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v1, v0, s[16:17] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
@@ -228,11 +270,22 @@ define amdgpu_kernel void @zero_mask_covers_everything(<4 x i32> %sd, <8 x i32> 
 ; SDAG-NEXT:    v_nop
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    s_clause 0x2
+; SDAG-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
 ; SDAG-NEXT:    s_load_b96 s[16:18], s[4:5], 0x64 nv
 ; SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; SDAG-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
+; SDAG-NEXT:    s_wait_xcnt 0x0
+; SDAG-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; SDAG-NEXT:    s_mov_b32 s5, 0xffff0000
+; SDAG-NEXT:    s_cmp_eq_u32 s4, 15
+; SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; SDAG-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
-; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s18
+; SDAG-NEXT:    s_and_b32 s5, s8, 0xffff
+; SDAG-NEXT:    s_and_b32 s4, s4, s8
+; SDAG-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; SDAG-NEXT:    v_mov_b32_e32 v1, s18
+; SDAG-NEXT:    s_cselect_b32 s8, s4, s8
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v1, v0, s[16:17] offset:4
 ; SDAG-NEXT:    ; asyncmark(stages=all)
@@ -251,20 +304,31 @@ define amdgpu_kernel void @zero_mask_covers_everything(<4 x i32> %sd, <8 x i32> 
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_clause 0x2
+; GISEL-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
 ; GISEL-NEXT:    s_load_b96 s[16:18], s[4:5], 0x64 nv
 ; GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GISEL-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
+; GISEL-NEXT:    s_wait_xcnt 0x0
+; GISEL-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; GISEL-NEXT:    s_mov_b32 s5, 0xffff0000
+; GISEL-NEXT:    s_cmp_eq_u32 s4, 15
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s18
+; GISEL-NEXT:    s_and_b32 s5, s8, 0xffff
+; GISEL-NEXT:    s_and_b32 s4, s4, s8
+; GISEL-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; GISEL-NEXT:    v_mov_b32_e32 v1, s18
+; GISEL-NEXT:    s_cselect_b32 s8, s4, s8
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
-; GISEL-NEXT:    global_load_async_to_lds_b32 v0, v1, s[16:17] offset:4
+; GISEL-NEXT:    global_load_async_to_lds_b32 v1, v0, s[16:17] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=all)
 ; GISEL-NEXT:    ; wait_asyncmark(0, stages=all)
 ; GISEL-NEXT:    s_wait_asynccnt 0x0
 ; GISEL-NEXT:    s_wait_tensorcnt 0x0
-; GISEL-NEXT:    ds_load_b32 v2, v0
+; GISEL-NEXT:    ds_load_b32 v2, v1
 ; GISEL-NEXT:    s_wait_dscnt 0x0
-; GISEL-NEXT:    global_store_b32 v1, v2, s[16:17]
+; GISEL-NEXT:    global_store_b32 v0, v2, s[16:17]
 ; GISEL-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %sd, <8 x i32> %td, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
@@ -336,13 +400,21 @@ define amdgpu_kernel void @mcast_is_a_distinct_stage(ptr addrspace(1) %glb, ptr 
 ; SDAG-NEXT:    v_nop
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; SDAG-NEXT:    s_wait_xcnt 0x0
+; SDAG-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; SDAG-NEXT:    s_mov_b32 s5, 0xffff0000
+; SDAG-NEXT:    s_cmp_eq_u32 s4, 15
+; SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; SDAG-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
-; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; SDAG-NEXT:    s_add_co_i32 s2, s2, 4
-; SDAG-NEXT:    s_mov_b32 m0, s3
-; SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; SDAG-NEXT:    s_clause 0x1
+; SDAG-NEXT:    s_add_co_i32 s5, s2, 4
+; SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; SDAG-NEXT:    s_and_b32 s2, s3, 0xffff
+; SDAG-NEXT:    s_and_b32 s4, s4, s3
+; SDAG-NEXT:    v_mov_b32_e32 v2, s5
+; SDAG-NEXT:    s_cmp_eq_u32 s2, 0xffff
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v1, v0, s[0:1] offset:4
+; SDAG-NEXT:    s_cselect_b32 m0, s4, s3
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; SDAG-NEXT:    cluster_load_async_to_lds_b32 v2, v0, s[0:1] offset:4
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS_MCAST)
@@ -360,13 +432,21 @@ define amdgpu_kernel void @mcast_is_a_distinct_stage(ptr addrspace(1) %glb, ptr 
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GISEL-NEXT:    s_wait_xcnt 0x0
+; GISEL-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; GISEL-NEXT:    s_mov_b32 s5, 0xffff0000
+; GISEL-NEXT:    s_cmp_eq_u32 s4, 15
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GISEL-NEXT:    s_add_co_u32 s2, s2, 4
-; GISEL-NEXT:    s_mov_b32 m0, s3
-; GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    s_add_co_u32 s5, s2, 4
+; GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GISEL-NEXT:    s_and_b32 s2, s3, 0xffff
+; GISEL-NEXT:    s_and_b32 s4, s4, s3
+; GISEL-NEXT:    v_mov_b32_e32 v2, s5
+; GISEL-NEXT:    s_cmp_eq_u32 s2, 0xffff
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v1, v0, s[0:1] offset:4
+; GISEL-NEXT:    s_cselect_b32 m0, s4, s3
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:    cluster_load_async_to_lds_b32 v2, v0, s[0:1] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS_MCAST)
@@ -407,11 +487,22 @@ define amdgpu_kernel void @one_mark_joins_two_stages(<4 x i32> %sd, <8 x i32> %t
 ; SDAG-NEXT:    v_nop
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    s_clause 0x2
+; SDAG-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
 ; SDAG-NEXT:    s_load_b96 s[16:18], s[4:5], 0x64 nv
 ; SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; SDAG-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
+; SDAG-NEXT:    s_wait_xcnt 0x0
+; SDAG-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; SDAG-NEXT:    s_mov_b32 s5, 0xffff0000
+; SDAG-NEXT:    s_cmp_eq_u32 s4, 15
+; SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; SDAG-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
-; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s18
+; SDAG-NEXT:    s_and_b32 s5, s8, 0xffff
+; SDAG-NEXT:    s_and_b32 s4, s4, s8
+; SDAG-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; SDAG-NEXT:    v_mov_b32_e32 v1, s18
+; SDAG-NEXT:    s_cselect_b32 s8, s4, s8
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v1, v0, s[16:17] offset:4
 ; SDAG-NEXT:    ; asyncmark(stages=TENSOR|GLOBAL_LOAD_ASYNC_TO_LDS)
@@ -429,19 +520,30 @@ define amdgpu_kernel void @one_mark_joins_two_stages(<4 x i32> %sd, <8 x i32> %t
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_clause 0x2
+; GISEL-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
 ; GISEL-NEXT:    s_load_b96 s[16:18], s[4:5], 0x64 nv
 ; GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GISEL-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
+; GISEL-NEXT:    s_wait_xcnt 0x0
+; GISEL-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; GISEL-NEXT:    s_mov_b32 s5, 0xffff0000
+; GISEL-NEXT:    s_cmp_eq_u32 s4, 15
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s18
+; GISEL-NEXT:    s_and_b32 s5, s8, 0xffff
+; GISEL-NEXT:    s_and_b32 s4, s4, s8
+; GISEL-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; GISEL-NEXT:    v_mov_b32_e32 v1, s18
+; GISEL-NEXT:    s_cselect_b32 s8, s4, s8
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
-; GISEL-NEXT:    global_load_async_to_lds_b32 v0, v1, s[16:17] offset:4
+; GISEL-NEXT:    global_load_async_to_lds_b32 v1, v0, s[16:17] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=TENSOR|GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:    ; wait_asyncmark(0, stages=TENSOR)
 ; GISEL-NEXT:    s_wait_tensorcnt 0x0
-; GISEL-NEXT:    ds_load_b32 v2, v0
+; GISEL-NEXT:    ds_load_b32 v2, v1
 ; GISEL-NEXT:    s_wait_dscnt 0x0
-; GISEL-NEXT:    global_store_b32 v1, v2, s[16:17]
+; GISEL-NEXT:    global_store_b32 v0, v2, s[16:17]
 ; GISEL-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %sd, <8 x i32> %td, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
@@ -471,24 +573,33 @@ define amdgpu_kernel void @multi_stage_wait_unions_counters(<4 x i32> %sd, <8 x 
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    s_clause 0x2
 ; SDAG-NEXT:    s_load_b96 s[16:18], s[4:5], 0x64 nv
-; SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; SDAG-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
+; SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; SDAG-NEXT:    s_wait_xcnt 0x0
+; SDAG-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; SDAG-NEXT:    s_mov_b32 s5, 0xffff0000
+; SDAG-NEXT:    s_cmp_eq_u32 s4, 15
+; SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; SDAG-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
-; SDAG-NEXT:    s_add_co_i32 s4, s18, 4
+; SDAG-NEXT:    s_add_co_i32 s5, s18, 4
+; SDAG-NEXT:    s_and_b32 s6, s8, 0xffff
+; SDAG-NEXT:    s_and_b32 s4, s4, s8
+; SDAG-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v1, s18
+; SDAG-NEXT:    s_cmp_eq_u32 s6, 0xffff
+; SDAG-NEXT:    s_cselect_b32 s8, s4, s8
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
-; SDAG-NEXT:    v_mov_b32_e32 v2, s18
 ; SDAG-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
 ; SDAG-NEXT:    ; asyncmark(stages=TENSOR)
 ; SDAG-NEXT:    s_clause 0x1
-; SDAG-NEXT:    global_store_async_from_lds_b32 v0, v1, s[16:17] offset:4
+; SDAG-NEXT:    global_store_async_from_lds_b32 v0, v2, s[16:17] offset:4
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_STORE_ASYNC_FROM_LDS)
-; SDAG-NEXT:    global_load_async_to_lds_b32 v2, v0, s[16:17] offset:4
+; SDAG-NEXT:    global_load_async_to_lds_b32 v1, v0, s[16:17] offset:4
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; SDAG-NEXT:    ; wait_asyncmark(0, stages=TENSOR|GLOBAL_STORE_ASYNC_FROM_LDS)
 ; SDAG-NEXT:    s_wait_asynccnt 0x1
 ; SDAG-NEXT:    s_wait_tensorcnt 0x0
-; SDAG-NEXT:    ds_load_b32 v3, v2
+; SDAG-NEXT:    ds_load_b32 v3, v1
 ; SDAG-NEXT:    s_wait_dscnt 0x0
 ; SDAG-NEXT:    global_store_b32 v0, v3, s[16:17]
 ; SDAG-NEXT:    s_endpgm
@@ -501,24 +612,33 @@ define amdgpu_kernel void @multi_stage_wait_unions_counters(<4 x i32> %sd, <8 x 
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_clause 0x2
 ; GISEL-NEXT:    s_load_b96 s[16:18], s[4:5], 0x64 nv
-; GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GISEL-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
+; GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GISEL-NEXT:    s_wait_xcnt 0x0
+; GISEL-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; GISEL-NEXT:    s_mov_b32 s5, 0xffff0000
+; GISEL-NEXT:    s_cmp_eq_u32 s4, 15
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    s_add_co_u32 s4, s18, 4
+; GISEL-NEXT:    s_add_co_u32 s5, s18, 4
+; GISEL-NEXT:    s_and_b32 s6, s8, 0xffff
+; GISEL-NEXT:    s_and_b32 s4, s4, s8
+; GISEL-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v1, s18
+; GISEL-NEXT:    s_cmp_eq_u32 s6, 0xffff
+; GISEL-NEXT:    s_cselect_b32 s8, s4, s8
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
-; GISEL-NEXT:    v_mov_b32_e32 v2, s18
 ; GISEL-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
 ; GISEL-NEXT:    ; asyncmark(stages=TENSOR)
 ; GISEL-NEXT:    s_clause 0x1
-; GISEL-NEXT:    global_store_async_from_lds_b32 v0, v1, s[16:17] offset:4
+; GISEL-NEXT:    global_store_async_from_lds_b32 v0, v2, s[16:17] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_STORE_ASYNC_FROM_LDS)
-; GISEL-NEXT:    global_load_async_to_lds_b32 v2, v0, s[16:17] offset:4
+; GISEL-NEXT:    global_load_async_to_lds_b32 v1, v0, s[16:17] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:    ; wait_asyncmark(0, stages=TENSOR|GLOBAL_STORE_ASYNC_FROM_LDS)
 ; GISEL-NEXT:    s_wait_asynccnt 0x1
 ; GISEL-NEXT:    s_wait_tensorcnt 0x0
-; GISEL-NEXT:    ds_load_b32 v3, v2
+; GISEL-NEXT:    ds_load_b32 v3, v1
 ; GISEL-NEXT:    s_wait_dscnt 0x0
 ; GISEL-NEXT:    global_store_b32 v0, v3, s[16:17]
 ; GISEL-NEXT:    s_endpgm
@@ -558,21 +678,31 @@ define amdgpu_kernel void @loop_wait_then_mark_same_stage(<4 x i32> %sd, <8 x i3
 ; SDAG-NEXT:    v_nop
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    s_clause 0x2
-; SDAG-NEXT:    s_load_b128 s[16:19], s[4:5], 0x24 nv
 ; SDAG-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
 ; SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x64 nv
-; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
+; SDAG-NEXT:    s_load_b128 s[16:19], s[4:5], 0x24 nv
+; SDAG-NEXT:    s_wait_xcnt 0x0
+; SDAG-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; SDAG-NEXT:    s_mov_b32 s5, 0xffff0000
+; SDAG-NEXT:    s_cmp_eq_u32 s4, 15
+; SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; SDAG-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
+; SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
-; SDAG-NEXT:    tensor_load_to_lds s[16:19], s[8:15]
+; SDAG-NEXT:    s_and_b32 s5, s8, 0xffff
+; SDAG-NEXT:    s_and_b32 s4, s4, s8
+; SDAG-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; SDAG-NEXT:    v_mov_b32_e32 v2, s2
+; SDAG-NEXT:    s_cselect_b32 s8, s4, s8
 ; SDAG-NEXT:    s_add_co_i32 s4, s2, 4
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s4
+; SDAG-NEXT:    tensor_load_to_lds s[16:19], s[8:15]
+; SDAG-NEXT:    v_mov_b32_e32 v3, s4
 ; SDAG-NEXT:    ; asyncmark(stages=TENSOR)
-; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_clause 0x1
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v2, v0, s[0:1] offset:4
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v3, v0, s[0:1] offset:8
+; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_mov_b32 s5, s2
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; SDAG-NEXT:  .LBB8_1: ; %loop
@@ -609,23 +739,31 @@ define amdgpu_kernel void @loop_wait_then_mark_same_stage(<4 x i32> %sd, <8 x i3
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_clause 0x2
-; GISEL-NEXT:    s_load_b128 s[16:19], s[4:5], 0x24 nv
 ; GISEL-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
 ; GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x64 nv
-; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    s_load_b128 s[16:19], s[4:5], 0x24 nv
 ; GISEL-NEXT:    s_wait_xcnt 0x0
-; GISEL-NEXT:    s_mov_b32 s5, 0
+; GISEL-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; GISEL-NEXT:    s_mov_b32 s5, 0xffff0000
+; GISEL-NEXT:    s_cmp_eq_u32 s4, 15
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    tensor_load_to_lds s[16:19], s[8:15]
+; GISEL-NEXT:    s_and_b32 s5, s8, 0xffff
+; GISEL-NEXT:    s_and_b32 s4, s4, s8
+; GISEL-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GISEL-NEXT:    s_cselect_b32 s8, s4, s8
 ; GISEL-NEXT:    s_add_co_u32 s4, s2, 4
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GISEL-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_mov_b32 v2, s4
+; GISEL-NEXT:    tensor_load_to_lds s[16:19], s[8:15]
+; GISEL-NEXT:    v_mov_b32_e32 v2, s4
 ; GISEL-NEXT:    ; asyncmark(stages=TENSOR)
-; GISEL-NEXT:    s_mov_b32 s6, s2
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v1, v0, s[0:1] offset:4
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v2, v0, s[0:1] offset:8
+; GISEL-NEXT:    s_mov_b32 s5, 0
+; GISEL-NEXT:    s_mov_b32 s6, s2
 ; GISEL-NEXT:    s_mov_b32 s4, 0
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:  .LBB8_1: ; %loop

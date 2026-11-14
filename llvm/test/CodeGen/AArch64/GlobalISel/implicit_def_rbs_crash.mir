@@ -10,11 +10,6 @@ legalized:       true
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
-  - { id: 0, class: gpr64all, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: gpr64all, preferred-register: '' }
-  - { id: 3, class: gpr64all, preferred-register: '' }
 body:             |
   bb.1:
     %0:gpr64all = IMPLICIT_DEF

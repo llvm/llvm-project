@@ -24,6 +24,7 @@
   define void @reduce_spill_agpr_above_addressable_limit() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,2" {
     ret void
   }
+...
 ---
 # User-requested maximum number of SGPRs need to be taken into account by
 # the scheduler's rematerialization stage. Register usage above that number

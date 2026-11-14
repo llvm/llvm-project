@@ -881,7 +881,7 @@ class TrivialFunctionAnalysisVisitor
   template <typename CacheTy, typename IsTrivialTypeFn>
   bool hasNonTrivialField(const CXXRecordDecl *Cls,
                           const FieldDecl **OffendingField, CacheTy &Cache,
-                          IsTrivialTypeFn IsTrivialType) {
+                          bool IncludeBases, IsTrivialTypeFn IsTrivialType) {
     auto CacheIt = Cache.find(Cls);
     if (CacheIt != Cache.end() && !OffendingField)
       return CacheIt->second;
@@ -901,7 +901,7 @@ class TrivialFunctionAnalysisVisitor
       if (HasNonTrivialField(Cls))
         return true;
 
-      if (!Cls->hasDefinition())
+      if (!IncludeBases || !Cls->hasDefinition())
         return false;
 
       CXXBasePaths Paths;
@@ -1034,8 +1034,11 @@ public:
 
   const FieldDecl *FieldWithNonTrivialCtor(const CXXRecordDecl *Cls) {
     const FieldDecl *OffendingField = nullptr;
+    // Base class subobjects are constructed by the base class constructors,
+    // which appear in the constructor's inits() and are checked there, so
+    // only look at the fields declared in Cls itself.
     hasNonTrivialField(
-        Cls, &OffendingField, FieldCtorCache,
+        Cls, &OffendingField, FieldCtorCache, /*IncludeBases=*/false,
         [&](const QualType Ty) { return CanTriviallyConstruct(Ty); });
     return OffendingField;
   }
@@ -1043,7 +1046,7 @@ public:
   const FieldDecl *FieldWithNonTrivialDtor(const CXXRecordDecl *Cls) {
     const FieldDecl *OffendingField = nullptr;
     hasNonTrivialField(
-        Cls, &OffendingField, FieldDtorCache,
+        Cls, &OffendingField, FieldDtorCache, /*IncludeBases=*/true,
         [&](const QualType Ty) { return CanTriviallyDestruct(Ty); });
     return OffendingField;
   }

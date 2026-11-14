@@ -103,15 +103,6 @@
 ---
 name:            phi_i1
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -162,15 +153,6 @@ body:             |
 ---
 name:            phi_i8
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -221,15 +203,6 @@ body:             |
 ---
 name:            phi_i16
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -280,12 +253,6 @@ body:             |
 ---
 name:            phi_i32
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -333,12 +300,6 @@ body:             |
 ---
 name:            phi_ptr
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -386,21 +347,6 @@ body:             |
 ---
 name:            phi_i48
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
-  - { id: 9, class: _ }
-  - { id: 10, class: _ }
-  - { id: 11, class: _ }
-  - { id: 12, class: _ }
-  - { id: 13, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -461,18 +407,6 @@ body:             |
 ---
 name:            phi_i64
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
-  - { id: 9, class: _ }
-  - { id: 10, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -530,24 +464,6 @@ body:             |
 ---
 name:            phi_i72
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
-  - { id: 9, class: _ }
-  - { id: 10, class: _ }
-  - { id: 11, class: _ }
-  - { id: 12, class: _ }
-  - { id: 13, class: _ }
-  - { id: 14, class: _ }
-  - { id: 15, class: _ }
-  - { id: 16, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:

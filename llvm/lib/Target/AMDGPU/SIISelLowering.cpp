@@ -2518,6 +2518,13 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
       (Op == ISD::SINT_TO_FP || Op == ISD::UINT_TO_FP))
     return false;
 
+  // The DAGCombiner replaces a conversion from i1 with a select of the two
+  // exact results. The select avoids an f32 conversion plus rounding for
+  // f16/bf16, a 64-bit conversion for f64 and a missing libcall for f128, and
+  // is the same single v_cndmask for f32.
+  if (VT == MVT::i1 && (Op == ISD::SINT_TO_FP || Op == ISD::UINT_TO_FP))
+    return false;
+
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
 
@@ -3815,7 +3822,10 @@ SDValue SITargetLowering::LowerFormalArguments(
       llvm_unreachable("Unexpected register class in LowerFormalArguments!");
 
     Reg = MF.addLiveIn(Reg, RC);
-    SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
+    bool CopyAsI32 =
+        VT.getSizeInBits() == 16 &&
+        (RC == &AMDGPU::SGPR_32RegClass || !Subtarget->useRealTrue16Insts());
+    SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, CopyAsI32 ? MVT::i32 : VT);
     if (Arg.Flags.isInReg() && RC == &AMDGPU::VGPR_32RegClass) {
       // FIXME: Need to forward the chains created by `CopyFromReg`s, make sure
       // they will read physical regs before any side effect instructions.
@@ -3824,6 +3834,9 @@ SDValue SITargetLowering::LowerFormalArguments(
       Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
                         ReadFirstLane, Val);
     }
+
+    if (CopyAsI32)
+      Val = DAG.getBitcast(VT, DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Val));
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
@@ -20326,15 +20339,27 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'v':
     case 'a':
       return C_RegisterClass;
+    case 'm':
+      return C_Memory;
     }
   } else if (Constraint.size() == 2) {
     if (Constraint == "VA")
       return C_RegisterClass;
+    if (Constraint == "RF")
+      return C_Memory;
   }
   if (isImmConstraint(Constraint)) {
     return C_Other;
   }
   return TargetLowering::getConstraintType(Constraint);
+}
+
+InlineAsm::ConstraintCode
+SITargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
+  if (ConstraintCode == "RF")
+    return InlineAsm::ConstraintCode::RF;
+
+  return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
 }
 
 static uint64_t clearUnusedBits(uint64_t Val, unsigned Size) {

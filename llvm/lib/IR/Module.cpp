@@ -208,21 +208,40 @@ void Module::getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const {
 // it.  This is nice because it allows most passes to get away with not handling
 // the symbol table directly for this common task.
 //
+FunctionCallee
+Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
+                            function_ref<void(Function &)> InitCallback) {
+  assert(InitCallback && "missing init callback");
+  assert(!Name.empty() && !Name.starts_with("llvm.") &&
+         "intrinsics and unnamed functions are not supported");
+
+  Function *New = nullptr;
+  Value *F = ValSymTab->lookupOrInsert(Name, [&] {
+    New = Function::Create(Ty, GlobalVariable::ExternalLinkage,
+                           DL.getProgramAddressSpace(), "", this);
+    return New;
+  });
+  if (New)
+    InitCallback(*New);
+  return {Ty, F};
+}
+
 FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
                                            AttributeList AttributeList) {
-  // See if we have a definition for the specified function already.
-  GlobalValue *F = getNamedValue(Name);
-  if (!F) {
-    // Nope, add it
+  // Intrinsics are set up from their name on construction.
+  if (Name.empty() || Name.starts_with("llvm.")) {
+    if (GlobalValue *F = getNamedValue(Name))
+      return {Ty, F};
+
     Function *New = Function::Create(Ty, GlobalVariable::ExternalLinkage,
                                      DL.getProgramAddressSpace(), Name, this);
-    if (!New->isIntrinsic())       // Intrinsics get attrs set on construction
+    if (!New->isIntrinsic()) // Intrinsics get attrs set on construction
       New->setAttributes(AttributeList);
-    return {Ty, New}; // Return the new prototype.
+    return {Ty, New};
   }
 
-  // Otherwise, we just found the existing function or a prototype.
-  return {Ty, F};
+  return getOrInsertFunction(
+      Name, Ty, [&](Function &New) { New.setAttributes(AttributeList); });
 }
 
 FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty) {

@@ -159,6 +159,15 @@ public:
     return true;
   }
 
+  bool isTypeDesirableForOp(unsigned Opc, EVT VT) const override {
+    // The DAGCombiner replaces a conversion from i1 with a select of the two
+    // exact results. A selp of the exact result replaces selp.b32 plus a
+    // conversion.
+    if (VT == MVT::i1 && (Opc == ISD::SINT_TO_FP || Opc == ISD::UINT_TO_FP))
+      return false;
+    return TargetLowering::isTypeDesirableForOp(Opc, VT);
+  }
+
   bool shouldInsertFencesForAtomic(const Instruction *) const override;
 
   AtomicOrdering

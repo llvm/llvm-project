@@ -13,10 +13,6 @@ machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   frameOffsetReg:  '$sgpr33'
   stackPtrOffsetReg: '$sgpr32'
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vreg_128 }
-  - { id: 2, class: vgpr_32 }
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1

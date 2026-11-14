@@ -360,7 +360,7 @@ void OmpStructureChecker::Leave(const parser::InterfaceBody &) {
   EndMetadirectiveVariantScope();
 }
 
-void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
+void OmpStructureChecker::Enter(const parser::SpecificationPart &specPart) {
   // Clear pending metadirective loop variants at the start of a program unit.
   // An empty partStack_ marks the unit's top-level specification part, so a
   // nested one such as an interface body does not reset them.
@@ -368,6 +368,26 @@ void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
     metadirectiveLoopVariants_.clear();
   }
   partStack_.push_back(PartKind::SpecificationPart);
+
+  using UseStmts =
+      std::list<parser::Statement<common::Indirection<parser::UseStmt>>>;
+  using ImportStmts =
+      std::list<parser::Statement<common::Indirection<parser::ImportStmt>>>;
+  if (!std::get<UseStmts>(specPart.t).empty() ||
+      !std::get<ImportStmts>(specPart.t).empty() ||
+      llvm::any_of(std::get<parser::ImplicitPart>(specPart.t).v,
+          [](const parser::ImplicitPartStmt &stmt) {
+            return parser::Unwrap<parser::ImplicitStmt>(stmt) != nullptr;
+          })) {
+    for (const auto &directive :
+        std::get<std::list<parser::OpenMPDeclarativeConstruct>>(specPart.t)) {
+      if (const auto *assumes{
+              parser::Unwrap<parser::OmpAssumesDirective>(directive)}) {
+        context_.Say(assumes->v.DirName().source,
+            "ASSUMES directive must appear after all USE, IMPORT, and IMPLICIT statements"_err_en_US);
+      }
+    }
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::SpecificationPart &) {
@@ -2132,6 +2152,16 @@ void OmpStructureChecker::Leave(const parser::OmpThreadprivateDirective &x) {
       CheckVarIsNotPartOfAnotherVar(dirSpec.source, *object);
       CheckThreadprivateOrDeclareTargetVar(*object);
     }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpAssumesDirective &directive) {
+  const parser::CharBlock source{directive.v.DirName().source};
+  const Scope &scope{
+      GetProgramUnitOrBlockConstructContaining(context_.FindScope(source))};
+  if (!scope.IsModule() && scope.kind() != Scope::Kind::Subprogram) {
+    context_.Say(source,
+        "ASSUMES directive must appear in the specification part of a module or subprogram"_err_en_US);
   }
 }
 
@@ -6669,6 +6699,19 @@ void OmpStructureChecker::Enter(
 
 void OmpStructureChecker::Enter(const parser::OmpClause::DeviceSafesync &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_device_safesync);
+}
+
+void OmpStructureChecker::Enter(
+    const parser::OmpClause::NoParallelism &clause) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  llvm::omp::Version v60{60};
+  if (clause.v && version < v60) {
+    context_.Say(GetContext().clauseSource,
+        "An argument to %s is an %s feature, %s"_warn_en_US,
+        parser::omp::GetUpperName(
+            llvm::omp::Clause::OMPC_no_parallelism, version),
+        ThisVersion(v60), TryVersion(v60));
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::DynamicAllocators &x) {

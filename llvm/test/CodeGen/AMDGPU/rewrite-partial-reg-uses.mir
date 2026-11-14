@@ -68,13 +68,11 @@ body:             |
 ---
 name: test_subregs_unknown_regclass_from_instructions_sgpr_1024_to_sgpr_64
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sgpr_1024 }
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_subregs_unknown_regclass_from_instructions_sgpr_1024_to_sgpr_64
     ; CHECK: dead [[COPY:%[0-9]+]]:vreg_64 = COPY undef %2:sgpr_64
-    %1:vreg_64 = COPY undef %0.sub4_sub5
+    %1:vreg_64 = COPY undef %0.sub4_sub5:sgpr_1024
 ...
 ---
 name: test_subregs_regclass_defined_by_dst_operand_sreg_64_xexec

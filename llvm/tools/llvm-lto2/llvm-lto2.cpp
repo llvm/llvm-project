@@ -37,8 +37,6 @@
 using namespace llvm;
 using namespace lto;
 
-static codegen::RegisterCodeGenFlags CGF;
-
 static cl::opt<char>
     OptLevel("O",
              cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
@@ -351,12 +349,12 @@ static int run(int argc, char **argv) {
     Conf.TimeTraceEnabled = TimeTrace;
     Conf.TimeTraceGranularity = TimeTraceGranularity;
   }
-  Conf.CPU = codegen::getMCPU();
+  Conf.CPU = codegen::getMCPU(LibraryOptions);
   Conf.Options = codegen::getTargetOptions(LibraryOptions, Triple());
-  Conf.MAttrs = codegen::getMAttrs();
-  if (auto RM = codegen::getExplicitRelocModel())
+  Conf.MAttrs = codegen::getMAttrs(LibraryOptions);
+  if (auto RM = codegen::getExplicitRelocModel(LibraryOptions))
     Conf.RelocModel = *RM;
-  Conf.CodeModel = codegen::getExplicitCodeModel();
+  Conf.CodeModel = codegen::getExplicitCodeModel(LibraryOptions);
 
   Conf.DebugPassManager = DebugPassManager;
 
@@ -402,7 +400,7 @@ static int run(int argc, char **argv) {
     return 1;
   }
 
-  if (auto FT = codegen::getExplicitFileType())
+  if (auto FT = codegen::getExplicitFileType(LibraryOptions))
     Conf.CGFileType = *FT;
 
   Conf.OverrideTriple = OverrideTriple;

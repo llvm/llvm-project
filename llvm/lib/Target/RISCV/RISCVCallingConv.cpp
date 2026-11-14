@@ -765,7 +765,9 @@ static bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   ArrayRef<MCPhysReg> ArgGPRs = getFastCCArgGPRs(ABI);
 
-  if (LocVT.isVector()) {
+  // FIXME: If P extension and V extension are enabled at the same time,
+  // who should go first?
+  if (!Subtarget.isPExtPackedType(LocVT) && LocVT.isVector()) {
     if (MCRegister Reg = allocateRVVReg(ValVT, ValNo, State, TLI)) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
@@ -788,7 +790,27 @@ static bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
-  if (LocVT == XLenVT) {
+  // Pass 2*XLen P extension vectors on RV32 in a pair of GPRs, split between a
+  // GPR and the stack, or entirely on the stack.
+  if (Subtarget.isPExtPackedDoubleType(LocVT)) {
+    MCRegister Reg = State.AllocateReg(ArgGPRs);
+    if (Reg) {
+      LocVT = MVT::i32;
+      State.addLoc(
+          CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      if (MCRegister HiReg = State.AllocateReg(ArgGPRs)) {
+        State.addLoc(
+            CCValAssign::getCustomReg(ValNo, ValVT, HiReg, LocVT, LocInfo));
+      } else {
+        int64_t StackOffset = State.AllocateStack(4, Align(4));
+        State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT, StackOffset, LocVT,
+                                               LocInfo));
+      }
+      return false;
+    }
+  }
+
+  if (LocVT == XLenVT || Subtarget.isPExtPackedType(LocVT)) {
     if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
@@ -798,6 +820,9 @@ static bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (LocVT == XLenVT || LocVT == MVT::f16 || LocVT == MVT::bf16 ||
       LocVT == MVT::f32 || LocVT == MVT::f64 || LocVT.isFixedLengthVector()) {
     Align StackAlign = MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
+    // P extension packed vectors are GPR sized and need XLen alignment.
+    if (Subtarget.isPExtPackedType(LocVT))
+      StackAlign = Align(Subtarget.getXLen() / 8);
     int64_t Offset = State.AllocateStack(LocVT.getStoreSize(), StackAlign);
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
     return false;

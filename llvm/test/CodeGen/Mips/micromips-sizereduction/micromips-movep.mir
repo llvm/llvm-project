@@ -81,6 +81,5 @@ body:             |
     PseudoReturn undef $r31, implicit $r2, implicit $r3
 
 ...
----
 
 

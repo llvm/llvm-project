@@ -13,6 +13,8 @@ declare [4 x i32] @llvm.speculative.load.a4i32.p0(ptr, i1, ...)
 declare <4 x b3> @llvm.speculative.load.v4b3.p0(ptr, i1, ...)
 declare <3 x ptr> @llvm.speculative.load.v3p0.p0(ptr, i1, ...)
 
+; CHECK: oracle function must return i64
+; CHECK-NEXT: ptr @bad_oracle_ret
 define internal i32 @bad_oracle_ret(ptr %p, i64 %n) memory(argmem: read) nounwind nosync willreturn "oracle-function" {
   ret i32 0
 }
@@ -22,19 +24,35 @@ define internal i64 @good_oracle(ptr %p, i64 %n) memory(argmem: read) nounwind n
 define internal i64 @oracle_i32_param(i32 %n) memory(argmem: read) nounwind nosync willreturn "oracle-function" {
   ret i64 0
 }
+; CHECK: oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
+; CHECK-NEXT: ptr @side_effecting_oracle
 define internal i64 @side_effecting_oracle(ptr %p, i64 %n) "oracle-function" {
   ret i64 %n
 }
+; CHECK: oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
+; CHECK-NEXT: ptr @throwing_oracle
 define internal i64 @throwing_oracle(ptr %p, i64 %n) memory(argmem: read) nosync willreturn "oracle-function" {
   ret i64 %n
 }
+; memory(argmem: read) does not imply nosync.
+; CHECK: oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
+; CHECK-NEXT: ptr @syncing_oracle
 define internal i64 @syncing_oracle(ptr %p, i64 %n) memory(argmem: read) nounwind willreturn "oracle-function" {
   ret i64 %n
 }
+; CHECK: oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
+; CHECK-NEXT: ptr @looping_oracle
 define internal i64 @looping_oracle(ptr %p, i64 %n) memory(argmem: read) nounwind nosync "oracle-function" {
   ret i64 %n
 }
+; CHECK: oracle function must have a fixed argument list
+; CHECK-NEXT: ptr @variadic_oracle
 define internal i64 @variadic_oracle(i64 %n, ...) memory(argmem: read) nounwind nosync willreturn "oracle-function" {
+  ret i64 %n
+}
+; CHECK: oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
+; CHECK-NEXT: ptr @unused_invalid_oracle
+define internal i64 @unused_invalid_oracle(i64 %n) "oracle-function" {
   ret i64 %n
 }
 ; CHECK: oracle function must have local linkage
@@ -115,8 +133,6 @@ define b128 @test_direct_form_extra_args(ptr %ptr) {
 }
 
 define b128 @test_oracle_wrong_return_type(ptr %ptr, i64 %n) {
-; CHECK: llvm.speculative.load oracle function must return i64
-; CHECK-NEXT: call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @bad_oracle_ret, ptr %ptr, i64 %n)
   %res = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @bad_oracle_ret, ptr %ptr, i64 %n)
   ret b128 %res
 }
@@ -162,37 +178,26 @@ define b128 @test_oracle_missing_attr(ptr %ptr, i64 %n) {
 }
 
 define b128 @test_oracle_side_effects(ptr %ptr, i64 %n) {
-; CHECK: llvm.speculative.load oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
-; CHECK-NEXT: call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @side_effecting_oracle, ptr %ptr, i64 %n)
   %res = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @side_effecting_oracle, ptr %ptr, i64 %n)
   ret b128 %res
 }
 
 define b128 @test_throwing_oracle(ptr %ptr, i64 %n) {
-; CHECK: llvm.speculative.load oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
-; CHECK-NEXT: call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @throwing_oracle, ptr %ptr, i64 %n)
   %res = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @throwing_oracle, ptr %ptr, i64 %n)
   ret b128 %res
 }
 
 define b128 @test_looping_oracle(ptr %ptr, i64 %n) {
-; CHECK: llvm.speculative.load oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
-; CHECK-NEXT: call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @looping_oracle, ptr %ptr, i64 %n)
   %res = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @looping_oracle, ptr %ptr, i64 %n)
   ret b128 %res
 }
 
-; memory(argmem: read) does not imply nosync.
 define b128 @test_syncing_oracle(ptr %ptr, i64 %n) {
-; CHECK: llvm.speculative.load oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
-; CHECK-NEXT: call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @syncing_oracle, ptr %ptr, i64 %n)
   %res = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @syncing_oracle, ptr %ptr, i64 %n)
   ret b128 %res
 }
 
 define b128 @test_variadic_oracle(ptr %ptr, i64 %n) {
-; CHECK: llvm.speculative.load oracle function must have a fixed argument list
-; CHECK-NEXT: call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @variadic_oracle, i64 %n)
   %res = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @variadic_oracle, i64 %n)
   ret b128 %res
 }

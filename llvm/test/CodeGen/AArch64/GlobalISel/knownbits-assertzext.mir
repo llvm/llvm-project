@@ -3,7 +3,6 @@
 
 ---
 name:            ScalarConst
-tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @ScalarConst
@@ -14,9 +13,9 @@ body:             |
 ...
 ---
 name:            ScalarVar
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w0
   ; CHECK-LABEL: name: @ScalarVar
   ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000000000000???????????????? SignBits:16 IsKnownNeverZero:0
@@ -25,7 +24,6 @@ body:             |
 ...
 ---
 name:            VectorCst
-tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @VectorCst
@@ -38,9 +36,9 @@ body:             |
 ...
 ---
 name:            VectorVar
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0
   ; CHECK-LABEL: name: @VectorVar
   ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000000000000???????????????? SignBits:16 IsKnownNeverZero:0
@@ -49,7 +47,6 @@ body:             |
 ...
 ---
 name:            ScalableCst
-tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @ScalableCst
@@ -62,9 +59,9 @@ body:             |
 ...
 ---
 name:            ScalableVar
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $z0
   ; CHECK-LABEL: name: @ScalableVar
   ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000000000000???????????????? SignBits:16 IsKnownNeverZero:0

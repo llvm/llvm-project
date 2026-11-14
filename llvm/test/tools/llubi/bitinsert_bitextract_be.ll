@@ -54,6 +54,22 @@ entry:
   %bitinsert_b12_padding_concrete_bytes = load b16, ptr %alloca16
   store b12 %bitinsert_b12_poison, ptr %alloca16
   %bitinsert_b12_poison_bytes = load b16, ptr %alloca16
+  %vec_bitextract = bitextract <2 x i8>, <2 x b32> splat (b32 u0x12345678), <2 x i32> <i32 0, i32 8>
+  %vec_bitextract_unaligned = bitextract <2 x i8>, <2 x b32> splat (b32 u0x12345678), <2 x i32> <i32 4, i32 12>
+  %vec_bitextract_oob = bitextract <3 x i8>, <3 x b32> splat (b32 u0x12345678), <3 x i32> <i32 8, i32 32, i32 poison>
+  %vec_bitextract_float = bitextract <2 x float>, <2 x b64> <b64 u0x3F80000000000000, b64 u0x000000003F800000>, <2 x i32> <i32 32, i32 0>
+  %vec_bitinsert = bitinsert <2 x b32> splat (b32 u0x12345678), <2 x i8> <i8 0, i8 -1>, <2 x i32> <i32 0, i32 8>
+  %vec_bitinsert_oob = bitinsert <3 x b32> splat (b32 u0x12345678), <3 x i8> zeroinitializer, <3 x i32> <i32 8, i32 32, i32 poison>
+  %vec_bitinsert_poison = bitinsert <2 x b32> zeroinitializer, <2 x i16> <i16 poison, i16 0>, <2 x i32> splat (i32 4)
+  %vec_bitinsert_roundtrip = bitinsert <2 x b64> zeroinitializer, <2 x i16> <i16 1, i16 2>, <2 x i32> <i32 16, i32 48>
+  %vec_bitextract_roundtrip = bitextract <2 x i16>, <2 x b64> %vec_bitinsert_roundtrip, <2 x i32> <i32 16, i32 48>
+  %vec_bitcast = bitcast <8 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7> to <2 x b32>
+  %vec_bitextract_bitcast = bitextract <2 x i8>, <2 x b32> %vec_bitcast, <2 x i32> <i32 8, i32 24>
+  %vec_ptrs = insertelement <2 x ptr> poison, ptr %ptr, i64 1
+  %vec_bitinsert_ptr = bitinsert <2 x b128> zeroinitializer, <2 x ptr> %vec_ptrs, <2 x i32> splat (i32 32)
+  %vec_bitextract_ptr = bitextract <2 x ptr>, <2 x b128> %vec_bitinsert_ptr, <2 x i32> splat (i32 32)
+  %vec_bitextract_scalable = bitextract <vscale x 2 x i8>, <vscale x 2 x b32> splat (b32 u0x12345678), <vscale x 2 x i32> splat (i32 8)
+  %vec_bitinsert_scalable = bitinsert <vscale x 2 x b32> splat (b32 u0x12345678), <vscale x 2 x i8> splat (i8 -1), <vscale x 2 x i32> splat (i32 8)
   ret void
 }
 ; CHECK: Entering function: main
@@ -99,5 +115,21 @@ entry:
 ; CHECK-NEXT:   %bitinsert_b12_padding_concrete_bytes = load b16, ptr %alloca16, align 2 => b16 0x05 0x!! 
 ; CHECK-NEXT:   store b12 %bitinsert_b12_poison, ptr %alloca16, align 2
 ; CHECK-NEXT:   %bitinsert_b12_poison_bytes = load b16, ptr %alloca16, align 2 => b16 0x!! 0x!! 
+; CHECK-NEXT:   %vec_bitextract = bitextract <2 x i8>, <2 x b32> splat (b32 305419896), <2 x i32> <i32 0, i32 8> => { i8 120, i8 86 }
+; CHECK-NEXT:   %vec_bitextract_unaligned = bitextract <2 x i8>, <2 x b32> splat (b32 305419896), <2 x i32> <i32 4, i32 12> => { i8 103, i8 69 }
+; CHECK-NEXT:   %vec_bitextract_oob = bitextract <3 x i8>, <3 x b32> splat (b32 305419896), <3 x i32> <i32 8, i32 32, i32 poison> => { i8 86, poison, poison }
+; CHECK-NEXT:   %vec_bitextract_float = bitextract <2 x float>, <2 x b64> <b64 4575657221408423936, b64 1065353216>, <2 x i32> <i32 32, i32 0> => { float 1.000000e+00, float 1.000000e+00 }
+; CHECK-NEXT:   %vec_bitinsert = bitinsert <2 x b32> splat (b32 305419896), <2 x i8> <i8 0, i8 -1>, <2 x i32> <i32 0, i32 8> => { b32 0x12 0x34 0x56 0x00 , b32 0x12 0x34 0xFF 0x78  }
+; CHECK-NEXT:   %vec_bitinsert_oob = bitinsert <3 x b32> splat (b32 305419896), <3 x i8> zeroinitializer, <3 x i32> <i32 8, i32 32, i32 poison> => { b32 0x12 0x34 0x00 0x78 , b32 0x!! 0x!! 0x!! 0x!! , b32 0x!! 0x!! 0x!! 0x!!  }
+; CHECK-NEXT:   %vec_bitinsert_poison = bitinsert <2 x b32> zeroinitializer, <2 x i16> <i16 poison, i16 0>, <2 x i32> splat (i32 4) => { b32 0x00 0000!!!! 0x!! !!!!0000 , b32 0x00 0x00 0x00 0x00  }
+; CHECK-NEXT:   %vec_bitinsert_roundtrip = bitinsert <2 x b64> zeroinitializer, <2 x i16> <i16 1, i16 2>, <2 x i32> <i32 16, i32 48> => { b64 0x00 0x00 0x00 0x00 0x00 0x01 0x00 0x00 , b64 0x00 0x02 0x00 0x00 0x00 0x00 0x00 0x00  }
+; CHECK-NEXT:   %vec_bitextract_roundtrip = bitextract <2 x i16>, <2 x b64> %vec_bitinsert_roundtrip, <2 x i32> <i32 16, i32 48> => { i16 1, i16 2 }
+; CHECK-NEXT:   %vec_bitcast = bitcast <8 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7> to <2 x b32> => { b32 0x00 0x01 0x02 0x03 , b32 0x04 0x05 0x06 0x07  }
+; CHECK-NEXT:   %vec_bitextract_bitcast = bitextract <2 x i8>, <2 x b32> %vec_bitcast, <2 x i32> <i32 8, i32 24> => { i8 2, i8 4 }
+; CHECK-NEXT:   %vec_ptrs = insertelement <2 x ptr> poison, ptr %ptr, i64 1 => { poison, ptr 0x8 [ptr] }
+; CHECK-NEXT:   %vec_bitinsert_ptr = bitinsert <2 x b128> zeroinitializer, <2 x ptr> %vec_ptrs, <2 x i32> splat (i32 32) => { b128 0x00 0x00 0x00 0x00 0x!! 0x!! 0x!! 0x!! 0x!! 0x!! 0x!! 0x!! 0x00 0x00 0x00 0x00 , b128 0x00 0x00 0x00 0x00 00000000(00101000) 00000000(11101000) 00000000(00110111) 00000000(11000101) 00000000(11001011) 00000000(01000001) 00000000(11011100) 00001000(00111110) 0x00 0x00 0x00 0x00  }
+; CHECK-NEXT:   %vec_bitextract_ptr = bitextract <2 x ptr>, <2 x b128> %vec_bitinsert_ptr, <2 x i32> splat (i32 32) => { poison, ptr 0x8 [ptr] }
+; CHECK-NEXT:   %vec_bitextract_scalable = bitextract <vscale x 2 x i8>, <vscale x 2 x b32> splat (b32 305419896), <vscale x 2 x i32> splat (i32 8) => { i8 86, i8 86, i8 86, i8 86, i8 86, i8 86, i8 86, i8 86 }
+; CHECK-NEXT:   %vec_bitinsert_scalable = bitinsert <vscale x 2 x b32> splat (b32 305419896), <vscale x 2 x i8> splat (i8 -1), <vscale x 2 x i32> splat (i32 8) => { b32 0x12 0x34 0xFF 0x78 , b32 0x12 0x34 0xFF 0x78 , b32 0x12 0x34 0xFF 0x78 , b32 0x12 0x34 0xFF 0x78 , b32 0x12 0x34 0xFF 0x78 , b32 0x12 0x34 0xFF 0x78 , b32 0x12 0x34 0xFF 0x78 , b32 0x12 0x34 0xFF 0x78  }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

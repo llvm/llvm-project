@@ -184,6 +184,8 @@ def CConvCFGuard_Check : LLVM_EnumAttrCase<"CFGuard_Check",
                                             "CFGuard_Check", 19>;
 def CConvSwiftTail : LLVM_EnumAttrCase<"SwiftTail", "swifttailcc",
                                        "SwiftTail", 20>;
+def CConvPreserveNone : LLVM_EnumAttrCase<"PreserveNone", "preserve_nonecc",
+                                          "PreserveNone", 21>;
 def CConvX86_StdCall : LLVM_EnumAttrCase<"X86_StdCall", "x86_stdcallcc",
                                          "X86_StdCall", 64>;
 def CConvX86_FastCall : LLVM_EnumAttrCase<"X86_FastCall", "x86_fastcallcc",
@@ -265,7 +267,7 @@ def CConvEnum : LLVM_CEnumAttr<
     [CConvC, CConvFast, CConvCold, CConvGHC, CConvHiPE,
      CConvAnyReg, CConvPreserveMost, CConvPreserveAll, CConvSwift,
      CConvCXXFastTLS, CConvTail, CConvCFGuard_Check, CConvSwiftTail,
-     CConvX86_StdCall, CConvX86_FastCall, CConvARM_APCS,
+     CConvPreserveNone, CConvX86_StdCall, CConvX86_FastCall, CConvARM_APCS,
      CConvARM_AAPCS, CConvARM_AAPCS_VFP, CConvMSP430_INTR, CConvX86_ThisCall,
      CConvPTX_Kernel, CConvPTX_Device, CConvSPIR_FUNC, CConvSPIR_KERNEL,
      CConvIntel_OCL_BI, CConvX86_64_SysV, CConvWin64, CConvX86_VectorCall,

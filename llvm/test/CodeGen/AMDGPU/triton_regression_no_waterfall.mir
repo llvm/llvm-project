@@ -23,30 +23,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 1, class: sgpr_64, preferred-register: '', flags: [  ] }
-  - { id: 2, class: sgpr_64, preferred-register: '', flags: [  ] }
-  - { id: 3, class: sgpr_64, preferred-register: '', flags: [  ] }
-  - { id: 4, class: sgpr_64, preferred-register: '', flags: [  ] }
-  - { id: 5, class: sgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 6, class: sgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 7, class: sgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 8, class: sgpr_128, preferred-register: '', flags: [  ] }
-  - { id: 9, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 10, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 11, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 12, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 13, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 14, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 15, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 16, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 17, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 18, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 19, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 20, class: sgpr_128, preferred-register: '', flags: [  ] }
-  - { id: 21, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 22, class: vgpr_32, preferred-register: '', flags: [  ] }
 liveins:
   - { reg: '$sgpr4_sgpr5', virtual-reg: '%3' }
 frameInfo:
@@ -87,10 +63,10 @@ body:             |
     ; GCN: liveins: $sgpr4_sgpr5
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
-    ; GCN-NEXT: early-clobber %8:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 36, 0 :: (dereferenceable invariant load (s128), align 4, addrspace 4)
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY %8.sub2
-    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY %8.sub1
-    ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY %8.sub0
+    ; GCN-NEXT: early-clobber %1:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 36, 0 :: (dereferenceable invariant load (s128), align 4, addrspace 4)
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY %1.sub2
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY %1.sub1
+    ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY %1.sub0
     ; GCN-NEXT: [[V_CVT_U32_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_U32_F32_e64 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
     ; GCN-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[V_CVT_U32_F32_e64_]], implicit $exec

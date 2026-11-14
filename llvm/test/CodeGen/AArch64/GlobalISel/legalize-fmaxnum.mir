@@ -133,3 +133,4 @@ body:             |
     %maxnum:_(f128) = G_FMAXNUM %a, %b
     $q0 = COPY %maxnum(f128)
     RET_ReallyLR implicit $q0
+...

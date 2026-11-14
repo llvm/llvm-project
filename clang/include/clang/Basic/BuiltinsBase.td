@@ -100,6 +100,14 @@ def Consteval : Attribute<"EG">;
 // indicated by the remaining indices.
 class Callback<list<int> ArgIndices> : MultiIndexAttribute<"C", ArgIndices>;
 
+// The _Constant argument at index I must be in the half-open range [Lo, Hi),
+// matching the IR intrinsic range attribute.
+class ArgRange<int I, int Lo, int Hi> : Attribute<"R"> {
+  int Index = I;
+  int Lower = Lo;
+  int Upper = Hi;
+}
+
 // Prefixes
 // ========
 

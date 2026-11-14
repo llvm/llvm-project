@@ -327,3 +327,4 @@ body:             |
     %and:_(i64) = G_AND %copy, %mask_32
     $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0
+...

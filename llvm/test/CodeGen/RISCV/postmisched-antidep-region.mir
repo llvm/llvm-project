@@ -39,6 +39,8 @@ body:             |
 
 ---
 name:            fpr_region_war
+frameInfo:
+  isCalleeSavedInfoValid: true
 body:             |
   bb.0:
     liveins: $x10, $x11, $x12, $f10_d, $f11_d

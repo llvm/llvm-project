@@ -530,7 +530,7 @@ static bool isFusionProfitable(AffineForOp srcForOp,
   // producer scenarios will still go through profitability analysis
   // if only one of the stores is involved in the producer-consumer
   // relationship of the candidate loops.
-  // TODO: Suppport multiple producer stores in profitability
+  // TODO: Support multiple producer stores in profitability
   // analysis.
   if (producerStores.size() > 1) {
     LDBG() << "Limited profitability analysis. Not "

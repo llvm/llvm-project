@@ -1079,6 +1079,16 @@ inline Expr<SubscriptInteger> MakeSubscriptIntExpr(
       Constant<SubscriptInteger>{SubscriptIntegerKind, std::move(v)}};
 }
 
+// Subscripts, bounds, extents, and character lengths must have kind
+// SubscriptIntegerKind; this is not enforced by their type.
+inline bool IsSubscriptIntegerKind(const Expr<SubscriptInteger> &x) {
+  return x.kind() == SubscriptIntegerKind;
+}
+inline bool IsSubscriptIntegerKind(
+    const std::optional<Expr<SubscriptInteger>> &x) {
+  return !x || IsSubscriptIntegerKind(*x);
+}
+
 inline Expr<CInteger> MakeCIntegerExpr(int32_t v) {
   return Expr<CInteger>{MakeCIntegerConstant(v)};
 }

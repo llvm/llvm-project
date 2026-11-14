@@ -18,6 +18,7 @@ add_clang_library(MLIRCIRTransforms
   RecordTypeConverter.cpp
   CIRABIClassifier.cpp
   CIRABIClassifierAMDGPU.cpp
+  CIRABIClassifierSPIRV.cpp
   CIRABIClassifierX86_64.cpp
 
   DEPENDS

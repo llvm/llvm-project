@@ -604,7 +604,8 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
 
 void spirv::ConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ' << getValue();
-  if (isa<spirv::ArrayType, spirv::StructType>(getType()))
+  if (isa<spirv::ArrayType, spirv::StructType>(getType()) &&
+      !isa<spirv::NullAttr>(getValue()))
     printer << " : " << getType();
 }
 
@@ -617,7 +618,11 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
                             "matrix constant, but found ")
              << denseAttr;
   }
-  if (isa<IntegerAttr, FloatAttr>(value)) {
+  if (isa<spirv::NullAttr>(value) &&
+      !isa<spirv::ArrayType, spirv::PointerType, spirv::StructType>(opType))
+    return op.emitOpError("must have spirv.ptr, spirv.array or spirv.struct "
+                          "result type for null value");
+  if (isa<IntegerAttr, FloatAttr, spirv::NullAttr>(value)) {
     auto valueType = cast<TypedAttr>(value).getType();
     if (valueType != opType)
       return op.emitOpError("result type (")

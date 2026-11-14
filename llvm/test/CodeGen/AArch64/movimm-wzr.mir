@@ -16,7 +16,6 @@
 name:            test_mov_0
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: false
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -33,6 +32,7 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
+    liveins: $w0
     $wzr = MOVi32imm 42
     $xzr = MOVi64imm 42
     RET_ReallyLR implicit killed $w0
@@ -40,4 +40,6 @@ body:             |
 ...
 
 # CHECK: bb.0
+# CHECK-NEXT: liveins: $w0
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: RET undef $lr

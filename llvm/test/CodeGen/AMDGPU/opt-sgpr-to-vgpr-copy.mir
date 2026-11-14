@@ -46,38 +46,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_64 }
-  - { id: 1, class: sreg_64 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sgpr_64 }
-  - { id: 4, class: sreg_32_xm0 }
-  - { id: 5, class: sgpr_32 }
-  - { id: 6, class: sreg_64 }
-  - { id: 7, class: sreg_64_xexec }
-  - { id: 8, class: sreg_64_xexec }
-  - { id: 9, class: sreg_32 }
-  - { id: 10, class: sreg_64 }
-  - { id: 11, class: sreg_32_xm0 }
-  - { id: 12, class: sreg_32_xm0 }
-  - { id: 13, class: sreg_32_xm0 }
-  - { id: 14, class: sreg_32_xm0 }
-  - { id: 15, class: sreg_32_xm0 }
-  - { id: 16, class: sreg_32_xm0 }
-  - { id: 17, class: sreg_64 }
-  - { id: 18, class: sreg_32_xm0 }
-  - { id: 19, class: sreg_32_xm0 }
-  - { id: 20, class: sreg_64 }
-  - { id: 21, class: sreg_64 }
-  - { id: 22, class: vreg_64 }
-  - { id: 23, class: sreg_32_xm0 }
-  - { id: 24, class: sreg_64 }
-  - { id: 25, class: sreg_32_xm0 }
-  - { id: 26, class: sreg_32_xm0 }
-  - { id: 27, class: sgpr_64 }
-  - { id: 28, class: sgpr_128 }
-  - { id: 29, class: vgpr_32 }
-  - { id: 30, class: vreg_64 }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%2' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
@@ -123,40 +91,40 @@ body:             |
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    %3 = COPY $sgpr0_sgpr1
-    %2 = COPY $vgpr0
-    %7 = S_LOAD_DWORDX2_IMM %3, 9, 0
-    %8 = S_LOAD_DWORDX2_IMM %3, 11, 0
-    %6 = COPY %7
-    %9 = S_MOV_B32 0
-    %10 = REG_SEQUENCE %2, %subreg.sub0, %9, %subreg.sub1
-    %0 = COPY %10
-    %11 = COPY %10.sub0
-    %12 = COPY %10.sub1
-    %13 = COPY %8.sub0
-    %14 = COPY %8.sub1
-    %15 = S_ADD_U32 %11, %13, implicit-def $scc
-    %16 = S_ADDC_U32 %12, %14, implicit-def dead $scc, implicit $scc
-    %17 = REG_SEQUENCE %15, %subreg.sub0, %16, %subreg.sub1
-    %18 = S_MOV_B32 0
-    %19 = S_MOV_B32 1048576
-    %20 = REG_SEQUENCE %19, %subreg.sub0, %18, %subreg.sub1
-    %22 = COPY %20
-    %21 = V_CMP_LT_U64_e64 %17, %22, implicit $exec
-    %1 = SI_IF %21, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %3:sgpr_64 = COPY $sgpr0_sgpr1
+    %2:vgpr_32 = COPY $vgpr0
+    %7:sreg_64_xexec = S_LOAD_DWORDX2_IMM %3, 9, 0
+    %8:sreg_64_xexec = S_LOAD_DWORDX2_IMM %3, 11, 0
+    %6:sreg_64 = COPY %7
+    %9:sreg_32 = S_MOV_B32 0
+    %10:sreg_64 = REG_SEQUENCE %2, %subreg.sub0, %9, %subreg.sub1
+    %0:sreg_64 = COPY %10
+    %11:sreg_32_xm0 = COPY %10.sub0
+    %12:sreg_32_xm0 = COPY %10.sub1
+    %13:sreg_32_xm0 = COPY %8.sub0
+    %14:sreg_32_xm0 = COPY %8.sub1
+    %15:sreg_32_xm0 = S_ADD_U32 %11, %13, implicit-def $scc
+    %16:sreg_32_xm0 = S_ADDC_U32 %12, %14, implicit-def dead $scc, implicit $scc
+    %17:sreg_64 = REG_SEQUENCE %15, %subreg.sub0, %16, %subreg.sub1
+    %18:sreg_32_xm0 = S_MOV_B32 0
+    %19:sreg_32_xm0 = S_MOV_B32 1048576
+    %20:sreg_64 = REG_SEQUENCE %19, %subreg.sub0, %18, %subreg.sub1
+    %22:vreg_64 = COPY %20
+    %21:sreg_64 = V_CMP_LT_U64_e64 %17, %22, implicit $exec
+    %1:sreg_64 = SI_IF %21, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1.bb1
 
   bb.1.bb1:
     successors: %bb.2.bb2(0x80000000)
 
-    %23 = S_MOV_B32 2
-    %24 = S_LSHL_B64 %0, %23, implicit-def dead $scc
-    %25 = S_MOV_B32 61440
-    %26 = S_MOV_B32 0
-    %27 = REG_SEQUENCE %26, %subreg.sub0, %25, %subreg.sub1
-    %28 = REG_SEQUENCE %6, %subreg.sub0_sub1, %27, %subreg.sub2_sub3
-    %29 = V_MOV_B32_e32 0, implicit $exec
-    %30 = COPY %24
+    %23:sreg_32_xm0 = S_MOV_B32 2
+    %24:sreg_64 = S_LSHL_B64 %0, %23, implicit-def dead $scc
+    %25:sreg_32_xm0 = S_MOV_B32 61440
+    %26:sreg_32_xm0 = S_MOV_B32 0
+    %27:sgpr_64 = REG_SEQUENCE %26, %subreg.sub0, %25, %subreg.sub1
+    %28:sgpr_128 = REG_SEQUENCE %6, %subreg.sub0_sub1, %27, %subreg.sub2_sub3
+    %29:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %30:vreg_64 = COPY %24
     BUFFER_STORE_DWORD_ADDR64 %29, %30, %28, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
@@ -172,47 +140,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_64 }
-  - { id: 1, class: sreg_64 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sgpr_64 }
-  - { id: 4, class: sreg_32_xm0 }
-  - { id: 5, class: sgpr_32 }
-  - { id: 6, class: sreg_64 }
-  - { id: 7, class: sreg_64_xexec }
-  - { id: 8, class: sreg_64_xexec }
-  - { id: 9, class: sreg_64_xexec }
-  - { id: 10, class: sreg_32 }
-  - { id: 11, class: sreg_64 }
-  - { id: 12, class: sreg_32_xm0 }
-  - { id: 13, class: sreg_32_xm0 }
-  - { id: 14, class: sreg_32_xm0 }
-  - { id: 15, class: sreg_32_xm0 }
-  - { id: 16, class: sreg_32_xm0 }
-  - { id: 17, class: sreg_32_xm0 }
-  - { id: 18, class: sreg_64 }
-  - { id: 19, class: sreg_32_xm0 }
-  - { id: 20, class: sreg_32_xm0 }
-  - { id: 21, class: sreg_32_xm0 }
-  - { id: 22, class: sreg_32_xm0 }
-  - { id: 23, class: sreg_64 }
-  - { id: 24, class: sreg_32_xm0 }
-  - { id: 25, class: sreg_32_xm0 }
-  - { id: 26, class: sreg_64 }
-  - { id: 27, class: sreg_64 }
-  - { id: 28, class: vreg_64 }
-  - { id: 29, class: sreg_64 }
-  - { id: 30, class: vreg_64 }
-  - { id: 31, class: sreg_64 }
-  - { id: 32, class: sreg_32_xm0 }
-  - { id: 33, class: sreg_64 }
-  - { id: 34, class: sreg_32_xm0 }
-  - { id: 35, class: sreg_32_xm0 }
-  - { id: 36, class: sgpr_64 }
-  - { id: 37, class: sgpr_128 }
-  - { id: 38, class: vgpr_32 }
-  - { id: 39, class: vreg_64 }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%2' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
@@ -265,48 +192,48 @@ body:             |
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    %3 = COPY $sgpr0_sgpr1
-    %2 = COPY $vgpr0
-    %7 = S_LOAD_DWORDX2_IMM %3, 9, 0
-    %8 = S_LOAD_DWORDX2_IMM %3, 11, 0
-    %9 = S_LOAD_DWORDX2_IMM %3, 13, 0
-    %6 = COPY %7
-    %10 = S_MOV_B32 0
-    %11 = REG_SEQUENCE %2, %subreg.sub0, %10, %subreg.sub1
-    %0 = COPY %11
-    %12 = COPY %11.sub0
-    %13 = COPY %11.sub1
-    %14 = COPY %8.sub0
-    %15 = COPY %8.sub1
-    %16 = S_ADD_U32 %12, %14, implicit-def $scc
-    %17 = S_ADDC_U32 %13, %15, implicit-def dead $scc, implicit $scc
-    %18 = REG_SEQUENCE %16, %subreg.sub0, %17, %subreg.sub1
-    %19 = COPY %9.sub0
-    %20 = COPY %9.sub1
-    %21 = S_ADD_U32 %12, %19, implicit-def $scc
-    %22 = S_ADDC_U32 %13, %20, implicit-def dead $scc, implicit $scc
-    %23 = REG_SEQUENCE %21, %subreg.sub0, %22, %subreg.sub1
-    %24 = S_MOV_B32 0
-    %25 = S_MOV_B32 1048576
-    %26 = REG_SEQUENCE %25, %subreg.sub0, %24, %subreg.sub1
-    %28 = COPY %26
-    %27 = V_CMP_LT_U64_e64 %18, %28, implicit $exec
-    %29 = V_CMP_LT_U64_e64 %23, %28, implicit $exec
-    %31 = S_AND_B64 %27, %29, implicit-def dead $scc
-    %1 = SI_IF %31, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %3:sgpr_64 = COPY $sgpr0_sgpr1
+    %2:vgpr_32 = COPY $vgpr0
+    %7:sreg_64_xexec = S_LOAD_DWORDX2_IMM %3, 9, 0
+    %8:sreg_64_xexec = S_LOAD_DWORDX2_IMM %3, 11, 0
+    %9:sreg_64_xexec = S_LOAD_DWORDX2_IMM %3, 13, 0
+    %6:sreg_64 = COPY %7
+    %10:sreg_32 = S_MOV_B32 0
+    %11:sreg_64 = REG_SEQUENCE %2, %subreg.sub0, %10, %subreg.sub1
+    %0:sreg_64 = COPY %11
+    %12:sreg_32_xm0 = COPY %11.sub0
+    %13:sreg_32_xm0 = COPY %11.sub1
+    %14:sreg_32_xm0 = COPY %8.sub0
+    %15:sreg_32_xm0 = COPY %8.sub1
+    %16:sreg_32_xm0 = S_ADD_U32 %12, %14, implicit-def $scc
+    %17:sreg_32_xm0 = S_ADDC_U32 %13, %15, implicit-def dead $scc, implicit $scc
+    %18:sreg_64 = REG_SEQUENCE %16, %subreg.sub0, %17, %subreg.sub1
+    %19:sreg_32_xm0 = COPY %9.sub0
+    %20:sreg_32_xm0 = COPY %9.sub1
+    %21:sreg_32_xm0 = S_ADD_U32 %12, %19, implicit-def $scc
+    %22:sreg_32_xm0 = S_ADDC_U32 %13, %20, implicit-def dead $scc, implicit $scc
+    %23:sreg_64 = REG_SEQUENCE %21, %subreg.sub0, %22, %subreg.sub1
+    %24:sreg_32_xm0 = S_MOV_B32 0
+    %25:sreg_32_xm0 = S_MOV_B32 1048576
+    %26:sreg_64 = REG_SEQUENCE %25, %subreg.sub0, %24, %subreg.sub1
+    %28:vreg_64 = COPY %26
+    %27:sreg_64 = V_CMP_LT_U64_e64 %18, %28, implicit $exec
+    %29:sreg_64 = V_CMP_LT_U64_e64 %23, %28, implicit $exec
+    %31:sreg_64 = S_AND_B64 %27, %29, implicit-def dead $scc
+    %1:sreg_64 = SI_IF %31, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1.bb1
 
   bb.1.bb1:
     successors: %bb.2.bb2(0x80000000)
 
-    %32 = S_MOV_B32 2
-    %33 = S_LSHL_B64 %0, %32, implicit-def dead $scc
-    %34 = S_MOV_B32 61440
-    %35 = S_MOV_B32 0
-    %36 = REG_SEQUENCE %35, %subreg.sub0, %34, %subreg.sub1
-    %37 = REG_SEQUENCE %6, %subreg.sub0_sub1, %36, %subreg.sub2_sub3
-    %38 = V_MOV_B32_e32 0, implicit $exec
-    %39 = COPY %33
+    %32:sreg_32_xm0 = S_MOV_B32 2
+    %33:sreg_64 = S_LSHL_B64 %0, %32, implicit-def dead $scc
+    %34:sreg_32_xm0 = S_MOV_B32 61440
+    %35:sreg_32_xm0 = S_MOV_B32 0
+    %36:sgpr_64 = REG_SEQUENCE %35, %subreg.sub0, %34, %subreg.sub1
+    %37:sgpr_128 = REG_SEQUENCE %6, %subreg.sub0_sub1, %36, %subreg.sub2_sub3
+    %38:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %39:vreg_64 = COPY %33
     BUFFER_STORE_DWORD_ADDR64 %38, %39, %37, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
@@ -322,38 +249,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_64 }
-  - { id: 1, class: sreg_64 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sgpr_64 }
-  - { id: 4, class: sreg_32_xm0 }
-  - { id: 5, class: sgpr_32 }
-  - { id: 6, class: sreg_64 }
-  - { id: 7, class: sreg_64_xexec }
-  - { id: 8, class: sreg_64_xexec }
-  - { id: 9, class: sreg_32 }
-  - { id: 10, class: sreg_64 }
-  - { id: 11, class: sreg_32_xm0 }
-  - { id: 12, class: sreg_32_xm0 }
-  - { id: 13, class: sreg_32_xm0 }
-  - { id: 14, class: sreg_32_xm0 }
-  - { id: 15, class: sreg_32_xm0 }
-  - { id: 16, class: sreg_32_xm0 }
-  - { id: 17, class: sreg_64 }
-  - { id: 18, class: sreg_32_xm0 }
-  - { id: 19, class: sreg_32_xm0 }
-  - { id: 20, class: sreg_64 }
-  - { id: 21, class: sreg_64 }
-  - { id: 22, class: vgpr_32 }
-  - { id: 23, class: sreg_32_xm0 }
-  - { id: 24, class: sreg_64 }
-  - { id: 25, class: sreg_32_xm0 }
-  - { id: 26, class: sreg_32_xm0 }
-  - { id: 27, class: sgpr_64 }
-  - { id: 28, class: sgpr_128 }
-  - { id: 29, class: vgpr_32 }
-  - { id: 30, class: vreg_64 }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%2' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
@@ -396,40 +291,40 @@ body:             |
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    %3 = COPY $sgpr0_sgpr1
-    %2 = COPY $vgpr0
-    %7 = S_LOAD_DWORDX2_IMM %3, 9, 0
-    %8 = S_LOAD_DWORDX2_IMM %3, 11, 0
-    %6 = COPY %7
-    %9 = S_MOV_B32 0
-    %10 = REG_SEQUENCE %2, %subreg.sub0, %9, %subreg.sub1
-    %0 = COPY %10
-    %11 = COPY %10.sub0
-    %12 = COPY %10.sub1
-    %13 = COPY %8.sub0
-    %14 = COPY %8.sub1
-    %15 = S_ADD_U32 %11, %13, implicit-def $scc
-    %16 = S_ADDC_U32 %12, %14, implicit-def dead $scc, implicit $scc
-    %17 = REG_SEQUENCE %15, %subreg.sub0, %16, %subreg.sub1
-    %18 = S_MOV_B32 12
-    %19 = S_MOV_B32 1048576
-    %20 = REG_SEQUENCE %19, %subreg.sub0, %18, %subreg.sub1
-    %22 = COPY %20.sub1
-    %21 = V_CMP_LT_U32_e64 %17.sub0, %22, implicit $exec
-    %1 = SI_IF %21, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %3:sgpr_64 = COPY $sgpr0_sgpr1
+    %2:vgpr_32 = COPY $vgpr0
+    %7:sreg_64_xexec = S_LOAD_DWORDX2_IMM %3, 9, 0
+    %8:sreg_64_xexec = S_LOAD_DWORDX2_IMM %3, 11, 0
+    %6:sreg_64 = COPY %7
+    %9:sreg_32 = S_MOV_B32 0
+    %10:sreg_64 = REG_SEQUENCE %2, %subreg.sub0, %9, %subreg.sub1
+    %0:sreg_64 = COPY %10
+    %11:sreg_32_xm0 = COPY %10.sub0
+    %12:sreg_32_xm0 = COPY %10.sub1
+    %13:sreg_32_xm0 = COPY %8.sub0
+    %14:sreg_32_xm0 = COPY %8.sub1
+    %15:sreg_32_xm0 = S_ADD_U32 %11, %13, implicit-def $scc
+    %16:sreg_32_xm0 = S_ADDC_U32 %12, %14, implicit-def dead $scc, implicit $scc
+    %17:sreg_64 = REG_SEQUENCE %15, %subreg.sub0, %16, %subreg.sub1
+    %18:sreg_32_xm0 = S_MOV_B32 12
+    %19:sreg_32_xm0 = S_MOV_B32 1048576
+    %20:sreg_64 = REG_SEQUENCE %19, %subreg.sub0, %18, %subreg.sub1
+    %22:vgpr_32 = COPY %20.sub1
+    %21:sreg_64 = V_CMP_LT_U32_e64 %17.sub0, %22, implicit $exec
+    %1:sreg_64 = SI_IF %21, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1.bb1
 
   bb.1.bb1:
     successors: %bb.2.bb2(0x80000000)
 
-    %23 = S_MOV_B32 2
-    %24 = S_LSHL_B64 %0, %23, implicit-def dead $scc
-    %25 = S_MOV_B32 61440
-    %26 = S_MOV_B32 0
-    %27 = REG_SEQUENCE %26, %subreg.sub0, %25, %subreg.sub1
-    %28 = REG_SEQUENCE %6, %subreg.sub0_sub1, %27, %subreg.sub2_sub3
-    %29 = V_MOV_B32_e32 0, implicit $exec
-    %30 = COPY %24
+    %23:sreg_32_xm0 = S_MOV_B32 2
+    %24:sreg_64 = S_LSHL_B64 %0, %23, implicit-def dead $scc
+    %25:sreg_32_xm0 = S_MOV_B32 61440
+    %26:sreg_32_xm0 = S_MOV_B32 0
+    %27:sgpr_64 = REG_SEQUENCE %26, %subreg.sub0, %25, %subreg.sub1
+    %28:sgpr_128 = REG_SEQUENCE %6, %subreg.sub0_sub1, %27, %subreg.sub2_sub3
+    %29:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %30:vreg_64 = COPY %24
     BUFFER_STORE_DWORD_ADDR64 %29, %30, %28, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:

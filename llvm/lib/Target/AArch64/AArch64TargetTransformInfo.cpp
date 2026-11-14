@@ -6106,8 +6106,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     }
     EVT EltVT = VT.getVectorElementType();
     unsigned EltSize = EltVT.getScalarSizeInBits();
-    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
-        Alignment != Align(1))
+    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64)
       return LT.first;
     // FIXME: v3i8 lowering currently is very inefficient, due to automatic
     // widening to v4i8, which produces suboptimal results.
@@ -6124,7 +6123,11 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
       TypeWorklist.push_back({Remainder, 0});
       while (!TypeWorklist.empty()) {
         auto [CurrNumElements, Offset] = TypeWorklist.pop_back_val();
-        if (isPowerOf2_32(CurrNumElements)) {
+        // Loads with sufficient alignment are widened to the next power of two,
+        // so only a single load is needed.
+        if (isPowerOf2_32(CurrNumElements) ||
+            (Opcode == Instruction::Load &&
+             Alignment >= PowerOf2Ceil(CurrNumElements) * EltSize / 8)) {
           // 1 per load/store + possible lane insert.
           Cost += 1 + (Offset == 0 ? 0 : 1);
           continue;
@@ -7035,6 +7038,23 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     if (!Entry)
       break;
     auto *ValVTy = cast<FixedVectorType>(ValTy);
+    // A non-power-of-2 i1 vector is widened with the identity and reduced as
+    // the promoted integer vector, the i1 min/max lowering does not apply. The
+    // zero identity of or/xor is set by a single masking and.
+    if (ValTy->isIntOrIntVectorTy(1) &&
+        !isPowerOf2_32(ValVTy->getNumElements()) && LT.first == 1) {
+      unsigned PaddedElts = MTy.getVectorNumElements();
+      auto *PaddedTy =
+          FixedVectorType::get(ValVTy->getElementType(), PaddedElts);
+      if (ISD != ISD::AND)
+        return Entry->Cost +
+               getArithmeticInstrCost(Instruction::And, PaddedTy, CostKind);
+      return Entry->Cost +
+             getScalarizationOverhead(
+                 PaddedTy,
+                 APInt::getBitsSetFrom(PaddedElts, ValVTy->getNumElements()),
+                 /*Insert=*/true, /*Extract=*/false, CostKind);
+    }
     if (MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
         isPowerOf2_32(ValVTy->getNumElements())) {
       InstructionCost ExtraCost = 0;
@@ -7162,9 +7182,12 @@ AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index,
         getCastInstrCost(Instruction::Trunc, LegalVTy, PromotedVTy,
                          TTI::CastContextHint::None, CostKind);
   }
+
   const auto *Entry =
       CostTableLookup(ShuffleTbl, TTI::SK_Splice, PromotedVT.getSimpleVT());
-  assert(Entry && "Illegal Type for Splice");
+  if (!Entry)
+    return InstructionCost::getInvalid();
+
   LegalizationCost += Entry->Cost;
   return LegalizationCost * LT.first;
 }

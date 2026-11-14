@@ -236,6 +236,9 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
   emission.addr = address;
   setAddrOfLocalVar(&d, address);
 
+  if (d.hasAttr<AnnotateAttr>() && haveInsertPoint())
+    emitVarAnnotations(&d, address.getPointer());
+
   // The lifetime marker must reference the original alloca, so peel any
   // address-space cast back to it.
   if (emission.useLifetimeMarkers)

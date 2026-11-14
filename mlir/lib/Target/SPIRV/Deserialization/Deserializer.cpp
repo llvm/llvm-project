@@ -2188,6 +2188,9 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   } else if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
     if (auto element = opBuilder.getZeroAttr(tensorType.getElementType()))
       attr = DenseElementsAttr::get(tensorType, element);
+  } else if (isa<spirv::ArrayType, spirv::PointerType, spirv::StructType>(
+                 resultType)) {
+    attr = spirv::NullAttr::get(resultType);
   }
 
   if (attr) {

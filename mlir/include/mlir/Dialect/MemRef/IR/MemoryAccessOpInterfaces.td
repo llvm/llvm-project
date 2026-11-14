@@ -183,7 +183,7 @@ def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
 
         Note that, unlike the method on indexed accessors, this method doesn't
         currently allow for the possibility of cloning since DMA ops generally
-        do not return results. If needed, such suppport could be added in
+        do not return results. If needed, such support could be added in
         the future.
 
         The implementation is responsible for issuing rewriter notifications

@@ -4995,10 +4995,12 @@ EMPTY_CLASS(OmpNoOpenMPClause);
 // no_openmp_routines_clause -> NO_OPENMP_ROUTINES
 EMPTY_CLASS(OmpNoOpenMPRoutinesClause);
 
-// Ref: [5.2: 214]
+// Ref: [5.2:214], [6.0:367]
 //
-// no_parallelism_clause -> NO_PARALELISM
-EMPTY_CLASS(OmpNoParallelismClause);
+// no_parallelism_clause -> NO_PARALLELISM [(scalar-logical-const-expr)]
+struct OmpNoParallelismClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpNoParallelismClause, ScalarLogicalConstantExpr);
+};
 
 // Ref: [4.5:87-91], [5.0:140-146], [5.1:166-171], [5.2:270]
 //

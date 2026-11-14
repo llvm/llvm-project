@@ -2,7 +2,6 @@
 ; RUN: opt -passes='assume-builder,verify' --enable-knowledge-retention -S %s | FileCheck %s --check-prefixes=BASIC
 ; RUN: opt -passes='require<assumptions>,assume-builder,verify' --enable-knowledge-retention -S %s | FileCheck %s --check-prefixes=WITH-AC
 ; RUN: opt -passes='require<domtree>,require<assumptions>,assume-builder,verify' --enable-knowledge-retention -S %s | FileCheck %s --check-prefixes=CROSS-BLOCK
-; RUN: opt -passes='assume-builder,require<domtree>,require<assumptions>,assume-simplify,verify' --enable-knowledge-retention -S %s | FileCheck %s --check-prefixes=FULL-SIMPLIFY
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -97,30 +96,6 @@ define void @test(ptr %P, ptr %P1, ptr %P2, ptr %P3) {
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P1]]), "noundef"(ptr [[P]]) ]
 ; CROSS-BLOCK-NEXT:    call void @func(ptr noundef nonnull [[P1]], ptr noundef nonnull [[P]])
 ; CROSS-BLOCK-NEXT:    ret void
-;
-; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test
-; FULL-SIMPLIFY-SAME: (ptr nonnull dereferenceable(16) [[P:%.*]], ptr [[P1:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]]) {
-; FULL-SIMPLIFY-NEXT:  bb:
-; FULL-SIMPLIFY-NEXT:    call void @func(ptr nonnull dereferenceable(16) [[P]], ptr null)
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P1]], i64 12) ]
-; FULL-SIMPLIFY-NEXT:    call void @func(ptr dereferenceable(12) [[P1]], ptr nonnull [[P]])
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "cold"() ]
-; FULL-SIMPLIFY-NEXT:    call void @func_cold(ptr dereferenceable(12) [[P1]]) #[[ATTR6:[0-9]+]]
-; FULL-SIMPLIFY-NEXT:    call void @func_cold(ptr dereferenceable(12) [[P1]])
-; FULL-SIMPLIFY-NEXT:    call void @func(ptr [[P1]], ptr [[P]])
-; FULL-SIMPLIFY-NEXT:    call void @func_strbool(ptr [[P1]])
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 32) ]
-; FULL-SIMPLIFY-NEXT:    call void @func(ptr dereferenceable(32) [[P]], ptr dereferenceable(8) [[P]])
-; FULL-SIMPLIFY-NEXT:    call void @func_many(ptr align 8 [[P1]])
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(ptr [[P1]]), "align"(ptr [[P1]], i64 8) ]
-; FULL-SIMPLIFY-NEXT:    call void @func_many(ptr noundef align 8 [[P1]])
-; FULL-SIMPLIFY-NEXT:    call void @func_argattr(ptr [[P2]], ptr [[P3]])
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(ptr [[P2]]), "align"(ptr [[P2]], i64 8), "noundef"(ptr [[P3]]), "nonnull"(ptr [[P3]]) ]
-; FULL-SIMPLIFY-NEXT:    call void @func_argattr2(ptr [[P2]], ptr [[P3]])
-; FULL-SIMPLIFY-NEXT:    call void @func(ptr nonnull [[P1]], ptr nonnull [[P]])
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P1]]), "noundef"(ptr [[P]]) ]
-; FULL-SIMPLIFY-NEXT:    call void @func(ptr noundef nonnull [[P1]], ptr noundef nonnull [[P]])
-; FULL-SIMPLIFY-NEXT:    ret void
 ;
 bb:
   call void @func(ptr nonnull dereferenceable(16) %P, ptr null)
@@ -235,37 +210,6 @@ define i32 @test2(ptr %arg, ptr %arg1, ptr %arg2) {
 ; CROSS-BLOCK-NEXT:    [[I25:%.*]] = load i32, ptr [[I24]], align 4
 ; CROSS-BLOCK-NEXT:    [[I26:%.*]] = add nsw i32 [[I21]], [[I25]]
 ; CROSS-BLOCK-NEXT:    ret i32 [[I26]]
-;
-; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test2
-; FULL-SIMPLIFY-SAME: (ptr [[ARG:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) {
-; FULL-SIMPLIFY-NEXT:  bb:
-; FULL-SIMPLIFY-NEXT:    [[I:%.*]] = alloca ptr, align 8
-; FULL-SIMPLIFY-NEXT:    [[I3:%.*]] = alloca ptr, align 8
-; FULL-SIMPLIFY-NEXT:    [[I4:%.*]] = alloca ptr, align 8
-; FULL-SIMPLIFY-NEXT:    [[I5:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-; FULL-SIMPLIFY-NEXT:    store ptr [[ARG]], ptr [[I]], align 8
-; FULL-SIMPLIFY-NEXT:    store ptr [[ARG1]], ptr [[I3]], align 8
-; FULL-SIMPLIFY-NEXT:    store ptr [[ARG2]], ptr [[I4]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I6:%.*]] = load ptr, ptr [[I3]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I7:%.*]] = load i32, ptr [[I6]], align 4
-; FULL-SIMPLIFY-NEXT:    [[I8:%.*]] = trunc i32 [[I7]] to i8
-; FULL-SIMPLIFY-NEXT:    [[I9:%.*]] = load ptr, ptr [[I4]], align 8
-; FULL-SIMPLIFY-NEXT:    store i8 [[I8]], ptr [[I9]], align 1
-; FULL-SIMPLIFY-NEXT:    [[I11:%.*]] = load ptr, ptr [[I]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I14:%.*]] = load ptr, ptr [[I]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I16:%.*]] = load i32, ptr [[I14]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I17:%.*]] = load ptr, ptr [[I]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I18:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[I17]], i32 0, i32 1
-; FULL-SIMPLIFY-NEXT:    [[I19:%.*]] = load i8, ptr [[I18]], align 4
-; FULL-SIMPLIFY-NEXT:    [[I20:%.*]] = sext i8 [[I19]] to i32
-; FULL-SIMPLIFY-NEXT:    [[I21:%.*]] = add nsw i32 [[I16]], [[I20]]
-; FULL-SIMPLIFY-NEXT:    [[I22:%.*]] = load ptr, ptr [[I]], align 8
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[I17]], i64 5), "nonnull"(ptr [[I17]]), "align"(ptr [[I17]], i64 4), "dereferenceable"(ptr [[I22]], i64 16), "nonnull"(ptr [[I22]]), "align"(ptr [[I22]], i64 8) ]
-; FULL-SIMPLIFY-NEXT:    [[I23:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[I22]], i32 0, i32 2
-; FULL-SIMPLIFY-NEXT:    [[I24:%.*]] = load ptr, ptr [[I23]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I25:%.*]] = load i32, ptr [[I24]], align 4
-; FULL-SIMPLIFY-NEXT:    [[I26:%.*]] = add nsw i32 [[I21]], [[I25]]
-; FULL-SIMPLIFY-NEXT:    ret i32 [[I26]]
 ;
 bb:
   %i = alloca ptr, align 8
@@ -396,38 +340,6 @@ define i32 @test3(ptr %arg, ptr %arg1, ptr %arg2) #4 {
 ; CROSS-BLOCK-NEXT:    [[I26:%.*]] = add nsw i32 [[I21]], [[I25]]
 ; CROSS-BLOCK-NEXT:    ret i32 [[I26]]
 ;
-; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test3
-; FULL-SIMPLIFY-SAME: (ptr [[ARG:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) #[[ATTR4:[0-9]+]] {
-; FULL-SIMPLIFY-NEXT:  bb:
-; FULL-SIMPLIFY-NEXT:    [[I:%.*]] = alloca ptr, align 8
-; FULL-SIMPLIFY-NEXT:    [[I3:%.*]] = alloca ptr, align 8
-; FULL-SIMPLIFY-NEXT:    [[I4:%.*]] = alloca ptr, align 8
-; FULL-SIMPLIFY-NEXT:    [[I5:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-; FULL-SIMPLIFY-NEXT:    store ptr [[ARG]], ptr [[I]], align 8
-; FULL-SIMPLIFY-NEXT:    store ptr [[ARG1]], ptr [[I3]], align 8
-; FULL-SIMPLIFY-NEXT:    store ptr [[ARG2]], ptr [[I4]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I6:%.*]] = load ptr, ptr [[I3]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I7:%.*]] = load i32, ptr [[I6]], align 4
-; FULL-SIMPLIFY-NEXT:    [[I8:%.*]] = trunc i32 [[I7]] to i8
-; FULL-SIMPLIFY-NEXT:    [[I9:%.*]] = load ptr, ptr [[I4]], align 8
-; FULL-SIMPLIFY-NEXT:    store i8 [[I8]], ptr [[I9]], align 1
-; FULL-SIMPLIFY-NEXT:    [[I11:%.*]] = load ptr, ptr [[I]], align 32
-; FULL-SIMPLIFY-NEXT:    call void @may_throw()
-; FULL-SIMPLIFY-NEXT:    [[I14:%.*]] = load ptr, ptr [[I]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I16:%.*]] = load i32, ptr [[I14]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I17:%.*]] = load ptr, ptr [[I]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I18:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[I17]], i32 0, i32 1
-; FULL-SIMPLIFY-NEXT:    [[I19:%.*]] = load i8, ptr [[I18]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I20:%.*]] = sext i8 [[I19]] to i32
-; FULL-SIMPLIFY-NEXT:    [[I21:%.*]] = add nsw i32 [[I16]], [[I20]]
-; FULL-SIMPLIFY-NEXT:    [[I22:%.*]] = load ptr, ptr [[I]], align 8
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[I17]], i64 5), "align"(ptr [[I17]], i64 4), "dereferenceable"(ptr [[I22]], i64 16), "align"(ptr [[I22]], i64 8) ]
-; FULL-SIMPLIFY-NEXT:    [[I23:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[I22]], i32 0, i32 2
-; FULL-SIMPLIFY-NEXT:    [[I24:%.*]] = load ptr, ptr [[I23]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I25:%.*]] = load i32, ptr [[I24]], align 4
-; FULL-SIMPLIFY-NEXT:    [[I26:%.*]] = add nsw i32 [[I21]], [[I25]]
-; FULL-SIMPLIFY-NEXT:    ret i32 [[I26]]
-;
 bb:
   %i = alloca ptr, align 8
   %i3 = alloca ptr, align 8
@@ -531,28 +443,6 @@ define dso_local i32 @_Z6squarePi(ptr %P, ptr %P1, i1 %cond) {
 ; CROSS-BLOCK-NEXT:    store i32 0, ptr [[P1]], align 4
 ; CROSS-BLOCK-NEXT:    ret i32 0
 ;
-; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@_Z6squarePi
-; FULL-SIMPLIFY-SAME: (ptr nonnull align 4 dereferenceable(4) [[P:%.*]], ptr nonnull align 8 dereferenceable(4) [[P1:%.*]], i1 [[COND:%.*]]) {
-; FULL-SIMPLIFY-NEXT:  bb:
-; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P]], align 4
-; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P1]], align 8
-; FULL-SIMPLIFY-NEXT:    br i1 [[COND]], label [[A:%.*]], label [[B:%.*]]
-; FULL-SIMPLIFY:       A:
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
-; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P]], align 8
-; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P1]], align 4
-; FULL-SIMPLIFY-NEXT:    br i1 [[COND]], label [[C:%.*]], label [[B]]
-; FULL-SIMPLIFY:       B:
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
-; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P]], align 8
-; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P1]], align 8
-; FULL-SIMPLIFY-NEXT:    br label [[C]]
-; FULL-SIMPLIFY:       C:
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 32) ]
-; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P]], align 32
-; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[P1]], align 4
-; FULL-SIMPLIFY-NEXT:    ret i32 0
-;
 bb:
   store i32 0, ptr %P, align 4
   store i32 0, ptr %P1, align 8
@@ -638,26 +528,6 @@ define dso_local i32 @test4A(ptr %arg, ptr %arg1, i32 %arg2, i32 %arg3) {
 ; CROSS-BLOCK:       bb10:
 ; CROSS-BLOCK-NEXT:    ret i32 0
 ;
-; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test4A
-; FULL-SIMPLIFY-SAME: (ptr [[ARG:%.*]], ptr [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 [[ARG3:%.*]]) {
-; FULL-SIMPLIFY-NEXT:  bb:
-; FULL-SIMPLIFY-NEXT:    [[I:%.*]] = icmp ne ptr [[ARG1]], null
-; FULL-SIMPLIFY-NEXT:    br i1 [[I]], label [[BB4:%.*]], label [[BB10:%.*]]
-; FULL-SIMPLIFY:       bb4:
-; FULL-SIMPLIFY-NEXT:    [[I5:%.*]] = add nsw i32 [[ARG3]], [[ARG2]]
-; FULL-SIMPLIFY-NEXT:    call void @may_throw()
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARG]], i64 4), "nonnull"(ptr [[ARG]]), "align"(ptr [[ARG]], i64 4), "dereferenceable"(ptr [[ARG1]], i64 4), "nonnull"(ptr [[ARG1]]), "align"(ptr [[ARG1]], i64 4) ]
-; FULL-SIMPLIFY-NEXT:    [[I6:%.*]] = load i32, ptr [[ARG]], align 4
-; FULL-SIMPLIFY-NEXT:    [[I7:%.*]] = add nsw i32 [[I5]], [[I6]]
-; FULL-SIMPLIFY-NEXT:    store i32 0, ptr [[ARG]], align 4
-; FULL-SIMPLIFY-NEXT:    [[I8:%.*]] = load i32, ptr [[ARG1]], align 4
-; FULL-SIMPLIFY-NEXT:    [[I9:%.*]] = add nsw i32 [[I7]], [[I8]]
-; FULL-SIMPLIFY-NEXT:    call void @may_throw()
-; FULL-SIMPLIFY-NEXT:    store i32 [[I9]], ptr [[ARG1]], align 4
-; FULL-SIMPLIFY-NEXT:    br label [[BB10]]
-; FULL-SIMPLIFY:       bb10:
-; FULL-SIMPLIFY-NEXT:    ret i32 0
-;
 bb:
   %i = icmp ne ptr %arg1, null
   br i1 %i, label %bb4, label %bb10
@@ -719,19 +589,6 @@ define dso_local i32 @terminator(ptr %P) personality ptr @__gxx_personality_v0 {
 ; CROSS-BLOCK:       Exit:
 ; CROSS-BLOCK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB:%.*]] ], [ 0, [[CATCH]] ]
 ; CROSS-BLOCK-NEXT:    ret i32 [[DOT0]]
-;
-; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@terminator
-; FULL-SIMPLIFY-SAME: (ptr [[P:%.*]]) personality ptr @__gxx_personality_v0 {
-; FULL-SIMPLIFY-NEXT:  bb:
-; FULL-SIMPLIFY-NEXT:    invoke void @may_throwv2(ptr nonnull [[P]])
-; FULL-SIMPLIFY-NEXT:            to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
-; FULL-SIMPLIFY:       Catch:
-; FULL-SIMPLIFY-NEXT:    [[V:%.*]] = landingpad { ptr, i32 }
-; FULL-SIMPLIFY-NEXT:            catch ptr null
-; FULL-SIMPLIFY-NEXT:    br label [[EXIT]]
-; FULL-SIMPLIFY:       Exit:
-; FULL-SIMPLIFY-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB:%.*]] ], [ 0, [[CATCH]] ]
-; FULL-SIMPLIFY-NEXT:    ret i32 [[DOT0]]
 ;
 bb:
   invoke void @may_throwv2(ptr nonnull %P)
@@ -797,21 +654,6 @@ define dso_local i32 @test5(ptr %arg, i32 %arg1) {
 ; CROSS-BLOCK-NEXT:    [[B:%.*]] = load i64, ptr [[I7]], align 32
 ; CROSS-BLOCK-NEXT:    [[I9:%.*]] = trunc i64 [[I8]] to i32
 ; CROSS-BLOCK-NEXT:    ret i32 [[I9]]
-;
-; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test5
-; FULL-SIMPLIFY-SAME: (ptr nonnull align 8 [[ARG:%.*]], i32 [[ARG1:%.*]]) {
-; FULL-SIMPLIFY-NEXT:  bb:
-; FULL-SIMPLIFY-NEXT:    [[I3:%.*]] = sext i32 [[ARG1]] to i64
-; FULL-SIMPLIFY-NEXT:    [[I4:%.*]] = getelementptr inbounds i16, ptr [[ARG]], i64 [[I3]]
-; FULL-SIMPLIFY-NEXT:    [[I5:%.*]] = load i16, ptr [[I4]], align 2
-; FULL-SIMPLIFY-NEXT:    [[A:%.*]] = load i16, ptr [[I4]], align 4
-; FULL-SIMPLIFY-NEXT:    [[I6:%.*]] = sext i16 [[I5]] to i64
-; FULL-SIMPLIFY-NEXT:    [[I7:%.*]] = getelementptr inbounds i64, ptr [[ARG]], i64 [[I6]]
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[I4]], i64 2), "dereferenceable"(ptr [[I7]], i64 8) ]
-; FULL-SIMPLIFY-NEXT:    [[I8:%.*]] = load i64, ptr [[I7]], align 16
-; FULL-SIMPLIFY-NEXT:    [[B:%.*]] = load i64, ptr [[I7]], align 32
-; FULL-SIMPLIFY-NEXT:    [[I9:%.*]] = trunc i64 [[I8]] to i32
-; FULL-SIMPLIFY-NEXT:    ret i32 [[I9]]
 ;
 bb:
   %i3 = sext i32 %arg1 to i64
@@ -917,35 +759,6 @@ define i32 @test6(ptr %arg, i32 %arg1, ptr %arg2) {
 ; CROSS-BLOCK-NEXT:    [[I18:%.*]] = load i32, ptr [[I17]], align 4
 ; CROSS-BLOCK-NEXT:    ret i32 [[I18]]
 ;
-; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test6
-; FULL-SIMPLIFY-SAME: (ptr [[ARG:%.*]], i32 [[ARG1:%.*]], ptr [[ARG2:%.*]]) {
-; FULL-SIMPLIFY-NEXT:  bb:
-; FULL-SIMPLIFY-NEXT:    br label [[BB3:%.*]]
-; FULL-SIMPLIFY:       bb3:
-; FULL-SIMPLIFY-NEXT:    [[DOT0:%.*]] = phi i32 [ 0, [[BB:%.*]] ], [ [[I14:%.*]], [[BB4:%.*]] ]
-; FULL-SIMPLIFY-NEXT:    [[I:%.*]] = icmp slt i32 [[DOT0]], [[ARG1]]
-; FULL-SIMPLIFY-NEXT:    br i1 [[I]], label [[BB4]], label [[BB15:%.*]]
-; FULL-SIMPLIFY:       bb4:
-; FULL-SIMPLIFY-NEXT:    [[I5:%.*]] = add nsw i32 [[ARG1]], [[DOT0]]
-; FULL-SIMPLIFY-NEXT:    [[I6:%.*]] = sext i32 [[I5]] to i64
-; FULL-SIMPLIFY-NEXT:    [[I7:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 [[I6]]
-; FULL-SIMPLIFY-NEXT:    [[I8:%.*]] = load i32, ptr [[I7]], align 4
-; FULL-SIMPLIFY-NEXT:    [[I9:%.*]] = mul nsw i32 [[DOT0]], [[I8]]
-; FULL-SIMPLIFY-NEXT:    [[I10:%.*]] = sext i32 [[DOT0]] to i64
-; FULL-SIMPLIFY-NEXT:    [[I11:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 [[I10]]
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[ARG]]), "align"(ptr [[ARG]], i64 4), "dereferenceable"(ptr [[I11]], i64 4) ]
-; FULL-SIMPLIFY-NEXT:    [[I12:%.*]] = load i32, ptr [[I11]], align 4
-; FULL-SIMPLIFY-NEXT:    [[I13:%.*]] = add nsw i32 [[I12]], [[I9]]
-; FULL-SIMPLIFY-NEXT:    store i32 [[I13]], ptr [[I11]], align 4
-; FULL-SIMPLIFY-NEXT:    [[I14]] = add nsw i32 [[DOT0]], 1
-; FULL-SIMPLIFY-NEXT:    br label [[BB3]]
-; FULL-SIMPLIFY:       bb15:
-; FULL-SIMPLIFY-NEXT:    [[I16:%.*]] = sext i32 [[ARG1]] to i64
-; FULL-SIMPLIFY-NEXT:    [[I17:%.*]] = getelementptr inbounds i32, ptr [[ARG2]], i64 [[I16]]
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[ARG2]]), "align"(ptr [[ARG2]], i64 4) ]
-; FULL-SIMPLIFY-NEXT:    [[I18:%.*]] = load i32, ptr [[I17]], align 4
-; FULL-SIMPLIFY-NEXT:    ret i32 [[I18]]
-;
 bb:
   br label %bb3
 
@@ -1032,24 +845,6 @@ define i32 @test7(ptr nonnull %arg, i32 %arg1) {
 ; CROSS-BLOCK-NEXT:    [[I10:%.*]] = load ptr, ptr [[ARG]], align 8
 ; CROSS-BLOCK-NEXT:    [[I11:%.*]] = load i32, ptr [[I10]], align 4
 ; CROSS-BLOCK-NEXT:    ret i32 [[I11]]
-;
-; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test7
-; FULL-SIMPLIFY-SAME: (ptr nonnull align 16 dereferenceable(280) [[ARG:%.*]], i32 [[ARG1:%.*]]) {
-; FULL-SIMPLIFY-NEXT:  bb:
-; FULL-SIMPLIFY-NEXT:    [[I:%.*]] = sext i32 [[ARG1]] to i64
-; FULL-SIMPLIFY-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[ARG]], i64 0, i32 3
-; FULL-SIMPLIFY-NEXT:    [[I3:%.*]] = load i64, ptr [[I2]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I4:%.*]] = getelementptr inbounds [[STRUCT_A]], ptr [[ARG]], i64 0, i32 2, i64 [[I]], i64 [[I3]], i32 0
-; FULL-SIMPLIFY-NEXT:    [[I5:%.*]] = load i64, ptr [[I4]], align 32
-; FULL-SIMPLIFY-NEXT:    [[I6:%.*]] = getelementptr inbounds [[STRUCT_A]], ptr [[ARG]], i64 0, i32 1
-; FULL-SIMPLIFY-NEXT:    [[I7:%.*]] = load ptr, ptr [[I6]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I8:%.*]] = getelementptr inbounds i64, ptr [[I7]], i64 [[I3]]
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[I8]], i64 8), "nonnull"(ptr [[I7]]), "align"(ptr [[I7]], i64 8) ]
-; FULL-SIMPLIFY-NEXT:    store i64 [[I5]], ptr [[I8]], align 8
-; FULL-SIMPLIFY-NEXT:    store i64 [[I5]], ptr [[I8]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I10:%.*]] = load ptr, ptr [[ARG]], align 8
-; FULL-SIMPLIFY-NEXT:    [[I11:%.*]] = load i32, ptr [[I10]], align 4
-; FULL-SIMPLIFY-NEXT:    ret i32 [[I11]]
 ;
 bb:
   %i = sext i32 %arg1 to i64

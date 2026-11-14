@@ -461,6 +461,70 @@ if.end:                                           ; preds = %entry
   ret ptr %add.ptr
 }
 
+; Make sure unswitching triggers after indvars rewrites a check to a
+; loop-invariant form.
+define i64 @unswitch_after_indvars_rewrite_to_invariant(ptr %p, i64 %count, i64 %from) {
+; CHECK-LABEL: define range(i64 -1, 9223372036854775807) i64 @unswitch_after_indvars_rewrite_to_invariant(
+; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], i64 [[COUNT:%.*]], i64 [[FROM:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[COUNT_NONNEG:%.*]] = icmp sgt i64 [[COUNT]], -1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COUNT_NONNEG]])
+; CHECK-NEXT:    [[IN_RANGE1:%.*]] = icmp slt i64 [[FROM]], [[COUNT]]
+; CHECK-NEXT:    br i1 [[IN_RANGE1]], label %[[CHECK_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[CHECK_PREHEADER]]:
+; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i64 [[FROM]], 0
+; CHECK-NEXT:    br i1 [[NEG]], label %[[TRAP:.*]], label %[[BODY:.*]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[I2:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[FROM]], %[[CHECK_PREHEADER]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[P]], i64 [[I2]]
+; CHECK-NEXT:    [[LD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[IS_SPACE:%.*]] = icmp eq i16 [[LD]], 32
+; CHECK-NEXT:    br i1 [[IS_SPACE]], label %[[LOOP_LATCH]], label %[[EXIT]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I2]], 1
+; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp slt i64 [[I_NEXT]], [[COUNT]]
+; CHECK-NEXT:    br i1 [[IN_RANGE]], label %[[BODY]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ -1, %[[ENTRY]] ], [ [[I2]], %[[BODY]] ], [ -1, %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK:       [[TRAP]]:
+; CHECK-NEXT:    tail call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+;
+entry:
+  %count.nonneg = icmp sge i64 %count, 0
+  call void @llvm.assume(i1 %count.nonneg)
+  br label %loop.header
+
+loop.header:
+  %i = phi i64 [ %from, %entry ], [ %i.next, %loop.latch ]
+  %in.range = icmp slt i64 %i, %count
+  br i1 %in.range, label %check, label %exit
+
+check:
+  %neg = icmp slt i64 %i, 0
+  %too.big = icmp sge i64 %i, %count
+  %oob = or i1 %neg, %too.big
+  br i1 %oob, label %trap, label %body
+
+body:
+  %gep = getelementptr inbounds i16, ptr %p, i64 %i
+  %ld = load i16, ptr %gep, align 2
+  %is.space = icmp eq i16 %ld, 32
+  br i1 %is.space, label %loop.latch, label %exit
+
+loop.latch:
+  %i.next = add nsw i64 %i, 1
+  br label %loop.header
+
+exit:
+  %res = phi i64 [ -1, %loop.header ], [ %i, %body ]
+  ret i64 %res
+
+trap:
+  call void @llvm.trap()
+  unreachable
+}
 
 !0 = !{!1, !2, i64 0}
 !1 = !{!"_ZTSNSt12_Vector_baseIdSaIdEE17_Vector_impl_dataE", !2, i64 0, !2, i64 8, !2, i64 16}

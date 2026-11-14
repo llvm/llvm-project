@@ -13,7 +13,7 @@ def main(args):
             return int(self.to_return)
 
     a = Advisor()
-    interactive_host.run_interactive(args[0], a.advice, args[1:])
+    sys.exit(interactive_host.run_interactive(args[0], a.advice, args[1:]))
 
 
 if __name__ == "__main__":

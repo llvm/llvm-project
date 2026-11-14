@@ -16,3 +16,7 @@ llvm::ArrayRef<llvm::StringRef> lldb_private::GetBugReportQuestions() {
   };
   return g_questions;
 }
+
+llvm::StringRef lldb_private::GetBugReportNote() {
+  return "\nnote: if you believe this is a bug, use the 'bugreport' command";
+}

@@ -424,6 +424,18 @@ struct MatchableInfo {
     /// Register record if this token is singleton register.
     const Record *SingletonReg = nullptr;
 
+    /// The instruction or alias operand record (RegisterClassLike,
+    /// RegisterOperand, or Operand) if this token is an operand reference.
+    const Record *Rec = nullptr;
+
+    const Record *getRegClass() const {
+      if (!Rec || Class->isUserClass())
+        return nullptr;
+      return Rec->isSubClassOf("RegisterOperand")
+                 ? Rec->getValueAsDef("RegClass")
+                 : Rec;
+    }
+
     explicit AsmOperand(bool IsIsolatedToken, StringRef T)
         : Token(T), IsIsolatedToken(IsIsolatedToken) {}
   };
@@ -789,6 +801,15 @@ public:
   /// Map of RegisterClass records to their class information.
   std::map<const Record *, ClassInfo *> RegisterClassClasses;
 
+  struct RegConversion {
+    const Record *From;
+    const Record *To;
+  };
+
+  /// For register classes with CoerceFromRegClass: maps each register from
+  /// CoerceFromRegClass to the matching register in this class.
+  DenseMap<const Record *, SmallVector<RegConversion, 0>> RegConversions;
+
 private:
   /// Map of token to class information which has already been constructed.
   std::map<std::string, ClassInfo *> TokenClasses;
@@ -798,8 +819,6 @@ private:
   ClassInfo *getTokenClass(StringRef Token, bool WantDiagnostic = false);
 
   /// getOperandClass - Lookup or create the class for the given operand.
-  ClassInfo *getOperandClass(const CGIOperandList::OperandInfo &OI,
-                             int SubOpIdx);
   ClassInfo *getOperandClass(const Record *Rec, int SubOpIdx);
 
   /// buildRegisterClasses - Build the ClassInfo* instances for register
@@ -1201,15 +1220,6 @@ ClassInfo *AsmMatcherInfo::getTokenClass(StringRef Token, bool WantDiagnostic) {
   return Entry;
 }
 
-ClassInfo *
-AsmMatcherInfo::getOperandClass(const CGIOperandList::OperandInfo &OI,
-                                int SubOpIdx) {
-  const Record *Rec = OI.Rec;
-  if (SubOpIdx != -1)
-    Rec = cast<DefInit>(OI.MIOperandInfo->getArg(SubOpIdx))->getDef();
-  return getOperandClass(Rec, SubOpIdx);
-}
-
 ClassInfo *AsmMatcherInfo::getOperandClass(const Record *Rec, int SubOpIdx) {
   if (Rec->isSubClassOf("RegisterOperand")) {
     // RegisterOperand may have an associated ParserMatchClass. If it does,
@@ -1318,6 +1328,41 @@ void AsmMatcherInfo::buildRegisterClasses(
     return BS;
   };
 
+  // Allow register classes with CoerceFromRegClass to also accept registers
+  // with the same name from that class (e.g. x1 parsed as a GPR for a YGPR
+  // operand). They get converted to the right register in convertToMCInst.
+  for (const CodeGenRegisterClass &RC : RegClassList) {
+    const Record *Def = RC.getDef();
+    if (!Def || Def->isValueUnset("CoerceFromRegClass"))
+      continue;
+    DenseMap<StringRef, const Record *> RegsByAsmName;
+    for (const Record *Reg : RC.getOrder()) {
+      StringRef AsmName = Reg->getValueAsString("AsmName");
+      if (!AsmName.empty() && !RegsByAsmName.try_emplace(AsmName, Reg).second)
+        PrintFatalError(Def->getLoc(), "RegisterClass '" + RC.getName() +
+                                           "' with CoerceFromRegClass contains "
+                                           "multiple registers named '" +
+                                           AsmName + "'");
+    }
+    const CodeGenRegisterClass *FromRC = Target.getRegBank().getRegClass(
+        Def->getValueAsDef("CoerceFromRegClass"));
+    for (const Record *From : FromRC->getOrder()) {
+      const Record *To =
+          RegsByAsmName.lookup(From->getValueAsString("AsmName"));
+      if (To && To != From)
+        RegConversions[Def].push_back({From, To});
+    }
+  }
+
+  // The registers matched by a register class, including the ones that are
+  // coerced into it.
+  auto GetRegisterSet = [&](const CodeGenRegisterClass &RC) {
+    RegisterSet RS = MakeRegisterSet(RC.getOrder());
+    for (const RegConversion &C : RegConversions.lookup(RC.getDef()))
+      RS.set(RegIndexMap.lookup(C.From));
+    return RS;
+  };
+
   using RegisterSetSet = std::set<RegisterSet, LessRegisterSet>;
 
   // The register sets used for matching.
@@ -1325,7 +1370,7 @@ void AsmMatcherInfo::buildRegisterClasses(
 
   // Gather the defined sets.
   for (const CodeGenRegisterClass &RC : RegClassList)
-    RegisterSets.insert(MakeRegisterSet(RC.getOrder()));
+    RegisterSets.insert(GetRegisterSet(RC));
 
   // Add any required singleton sets.
   for (const Record *Rec : SingletonRegisters)
@@ -1395,7 +1440,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     const Record *Def = RC.getDef();
     if (!Def)
       continue;
-    ClassInfo *CI = RegisterSetClasses[MakeRegisterSet(RC.getOrder())];
+    ClassInfo *CI = RegisterSetClasses[GetRegisterSet(RC)];
     if (CI->ValueName.empty()) {
       CI->ClassName = RC.getName();
       CI->Name = "MCK_" + RC.getName();
@@ -1810,7 +1855,11 @@ void AsmMatcherInfo::buildInstructionOperandReference(MatchableInfo *II,
   }
 
   // Set up the operand class.
-  Op->Class = getOperandClass(Operands[*Idx], Op->SubOpIdx);
+  Op->Rec = Operands[*Idx].Rec;
+  if (Op->SubOpIdx != -1)
+    Op->Rec = cast<DefInit>(Operands[*Idx].MIOperandInfo->getArg(Op->SubOpIdx))
+                  ->getDef();
+  Op->Class = getOperandClass(Op->Rec, Op->SubOpIdx);
   Op->OrigSrcOpName = OperandName;
 
   // If the named operand is tied, canonicalize it to the untied operand.
@@ -1853,7 +1902,8 @@ void AsmMatcherInfo::buildAliasOperandReference(MatchableInfo *II,
       // Use the match class from the Alias definition, not the
       // destination instruction, as we may have an immediate that's
       // being munged by the match class.
-      Op.Class = getOperandClass(ResultOp.getRecord(), Op.SubOpIdx);
+      Op.Rec = ResultOp.getRecord();
+      Op.Class = getOperandClass(Op.Rec, Op.SubOpIdx);
       Op.SrcOpName = OperandName;
       Op.OrigSrcOpName = OperandName;
       return;
@@ -2038,11 +2088,9 @@ getConverterOperandID(const std::string &Name,
   return ID;
 }
 
-static unsigned
-emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
-                 std::vector<std::unique_ptr<MatchableInfo>> &Infos,
-                 bool HasMnemonicFirst, bool HasOptionalOperands,
-                 raw_ostream &OS) {
+static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
+                                 AsmMatcherInfo &Info, bool HasMnemonicFirst,
+                                 bool HasOptionalOperands, raw_ostream &OS) {
   SmallSetVector<CachedHashString, 16> OperandConversionKinds;
   SmallSetVector<CachedHashString, 16> InstructionConversionKinds;
   std::vector<std::vector<uint8_t>> ConversionTable;
@@ -2136,7 +2184,10 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   std::map<std::tuple<uint8_t, uint8_t, uint8_t>, std::string>
       TiedOperandsEnumMap;
 
-  for (auto &II : Infos) {
+  // Register classes with CoerceFromRegClass that need a conversion function.
+  SmallSetVector<const Record *, 8> CoercedRegClasses;
+
+  for (auto &II : Info.Matchables) {
     // Check if we have a custom match function.
     StringRef AsmMatchConverter =
         II->getResultInst()->TheDef->getValueAsString("AsmMatchConverter");
@@ -2184,20 +2235,30 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         const MatchableInfo::AsmOperand &Op =
             II->AsmOperands[OpInfo.AsmOperandNum];
 
-        // Registers are always converted the same, don't duplicate the
-        // conversion function based on them.
-        Signature += "__";
+        const Record *RegClass = Op.getRegClass();
+        bool HasRegCoercion =
+            RegClass && Info.RegConversions.contains(RegClass);
+        // Registers are always converted the same unless they need to be
+        // coerced, don't duplicate the conversion function based on them.
         std::string Class;
-        Class = Op.Class->isRegisterClass() ? "Reg" : Op.Class->ClassName;
+        std::string Name = "CVT_";
+        if (HasRegCoercion) {
+          Class = RegClass->getName().str();
+          Name += "convertTo" + Class;
+        } else if (Op.Class->isRegisterClass()) {
+          Class = "Reg";
+          Name += "Reg";
+        } else {
+          Class = Op.Class->ClassName;
+          Name += Op.Class->RenderMethod;
+        }
+        Signature += "__";
         Signature += Class;
         Signature += utostr(OpInfo.MINumOperands);
         Signature += "_" + itostr(OpInfo.AsmOperandNum);
 
         // Add the conversion kind, if necessary, and get the associated ID
         // the index of its entry in the vector).
-        std::string Name =
-            "CVT_" +
-            (Op.Class->isRegisterClass() ? "Reg" : Op.Class->RenderMethod);
         if (Op.Class->IsOptional) {
           // For optional operands we must also care about DefaultMethod
           assert(HasOptionalOperands);
@@ -2218,7 +2279,7 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
 
         // This is a new operand kind. Add a handler for it to the
         // converter driver.
-        CvtOS << "    case " << Name << ":\n";
+        CvtOS << "    case " << Name << (HasRegCoercion ? ": {\n" : ":\n");
         if (Op.Class->IsOptional) {
           // If optional operand is not present in actual instruction then we
           // should call its DefaultMethod before RenderMethod
@@ -2232,12 +2293,24 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
                 << " &>(*Operands[OpIdx])." << Op.Class->RenderMethod
                 << "(Inst, " << OpInfo.MINumOperands << ");\n"
                 << "      }\n";
+        } else if (HasRegCoercion) {
+          assert(OpInfo.MINumOperands == 1 && "Expected a single register");
+          CoercedRegClasses.insert(RegClass);
+          CvtOS
+              << "      MCRegister Reg = Operands[OpIdx]->getReg();\n"
+              << "      if (!get" << Target.getName() << "MCRegisterClass("
+              << Target.getRegBank().getRegClass(RegClass)->getQualifiedIdName()
+              << ").contains(Reg))\n"
+              << "        Reg = convertTo" << Class << "(Reg);\n"
+              << "      Inst.addOperand(MCOperand::createReg(Reg));\n";
         } else {
           CvtOS << "      static_cast<" << TargetOperandClass
                 << " &>(*Operands[OpIdx])." << Op.Class->RenderMethod
                 << "(Inst, " << OpInfo.MINumOperands << ");\n";
         }
         CvtOS << "      break;\n";
+        if (HasRegCoercion)
+          CvtOS << "    }\n";
 
         // Add a handler for the operand number lookup.
         OpOS << "    case " << Name << ":\n"
@@ -2441,6 +2514,20 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   }
 
   OS << "};\n\n";
+
+  // Spit out the functions converting registers matched via CoerceFromRegClass.
+  for (const Record *RC : CoercedRegClasses) {
+    OS << "static MCRegister convertTo" << RC->getName()
+       << "(MCRegister Reg) {\n"
+       << "  switch (Reg.id()) {\n";
+    for (const AsmMatcherInfo::RegConversion &C :
+         Info.RegConversions.lookup(RC))
+      OS << "  case " << getQualifiedName(C.From) << ": return "
+         << getQualifiedName(C.To) << ";\n";
+    OS << "  default: llvm_unreachable(\"unexpected register\");\n"
+       << "  }\n"
+       << "}\n\n";
+  }
 
   // Spit out the conversion driver function.
   OS << ConvertFnBody;
@@ -3725,9 +3812,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // Generate the convertToMCInst function to convert operands into an MCInst.
   // Also, generate the convertToMapAndConstraints function for MS-style inline
   // assembly.  The latter doesn't actually generate a MCInst.
-  unsigned NumConverters =
-      emitConvertFuncs(Target, ClassName, Info.Matchables, HasMnemonicFirst,
-                       HasOptionalOperands, OS);
+  unsigned NumConverters = emitConvertFuncs(
+      Target, ClassName, Info, HasMnemonicFirst, HasOptionalOperands, OS);
 
   // Emit the enumeration for classes which participate in matching.
   emitMatchClassEnumeration(Target, Info.Classes, OS);

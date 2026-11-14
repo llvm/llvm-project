@@ -1886,7 +1886,7 @@ Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
       if (type != DIE_IS_BEING_PARSED)
         return type;
 
-      GetObjectFile()->GetModule()->ReportError(
+      GetObjectFile()->GetModule()->ReportInternalError(
           "Parsing a die that is being parsed die: {0:x16}: {1} ({2}) {3}",
           die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
           die.GetName());

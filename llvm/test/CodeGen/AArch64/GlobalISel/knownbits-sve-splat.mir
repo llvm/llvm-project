@@ -3,7 +3,6 @@
 
 ---
 name:            Scalable
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Scalable
@@ -14,7 +13,6 @@ body:             |
 ...
 ---
 name:            Scalable_trunc
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Scalable_trunc
@@ -25,9 +23,9 @@ body:             |
 ...
 ---
 name:            Scalable_signbits
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $h0
   ; CHECK-LABEL: name: @Scalable_signbits
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????????????????????? SignBits:17 IsKnownNeverZero:0

@@ -55,6 +55,8 @@ def run_interactive(
     and sends back to the compiler an advice (which it gets from `make_response`).
     It's used for testing, and also to showcase how to set up communication in an
     interactive ML ("gym") environment.
+
+    Returns the compiler exit code.
     """
     to_compiler = temp_rootname + ".in"
     from_compiler = temp_rootname + ".out"
@@ -91,7 +93,7 @@ def run_interactive(
                     send(tc, make_response(tensor_values), advice_spec)
         _, err = compiler_proc.communicate()
         print(err.decode("utf-8"))
-        compiler_proc.wait()
+        return compiler_proc.wait()
 
     finally:
         os.unlink(to_compiler)

@@ -2165,7 +2165,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case RISCVISD::MQRWACC:
   case RISCVISD::WMACC:
   case RISCVISD::WMACCU:
-  case RISCVISD::WMACCSU: {
+  case RISCVISD::WMACCSU:
+  case RISCVISD::PM2WADDA:
+  case RISCVISD::PM2WADDA_X:
+  case RISCVISD::PM2WADDAU:
+  case RISCVISD::PM2WSUBA:
+  case RISCVISD::PM2WSUBA_X:
+  case RISCVISD::PM2WADDASU: {
     assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
            "Unexpected opcode");
 
@@ -2190,9 +2196,66 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case RISCVISD::WMACCSU:
       Opc = RISCV::WMACCSU;
       break;
+    case RISCVISD::PM2WADDA:
+      Opc = RISCV::PM2WADDA_H;
+      break;
+    case RISCVISD::PM2WADDA_X:
+      Opc = RISCV::PM2WADDA_HX;
+      break;
+    case RISCVISD::PM2WADDAU:
+      Opc = RISCV::PM2WADDAU_H;
+      break;
+    case RISCVISD::PM2WSUBA:
+      Opc = RISCV::PM2WSUBA_H;
+      break;
+    case RISCVISD::PM2WSUBA_X:
+      Opc = RISCV::PM2WSUBA_HX;
+      break;
+    case RISCVISD::PM2WADDASU:
+      Opc = RISCV::PM2WADDASU_H;
+      break;
     }
     MachineSDNode *New = CurDAG->getMachineNode(
         Opc, DL, MVT::Untyped, Op0, Node->getOperand(2), Node->getOperand(3));
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
+  case RISCVISD::PM2WADD:
+  case RISCVISD::PM2WADDU:
+  case RISCVISD::PM2WADDSU:
+  case RISCVISD::PM2WADD_X:
+  case RISCVISD::PM2WSUB:
+  case RISCVISD::PM2WSUB_X: {
+    assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
+           "Unexpected opcode");
+    unsigned Opc;
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Unexpected opcode");
+    case RISCVISD::PM2WADD:
+      Opc = RISCV::PM2WADD_H;
+      break;
+    case RISCVISD::PM2WADDU:
+      Opc = RISCV::PM2WADDU_H;
+      break;
+    case RISCVISD::PM2WADDSU:
+      Opc = RISCV::PM2WADDSU_H;
+      break;
+    case RISCVISD::PM2WADD_X:
+      Opc = RISCV::PM2WADD_HX;
+      break;
+    case RISCVISD::PM2WSUB:
+      Opc = RISCV::PM2WSUB_H;
+      break;
+    case RISCVISD::PM2WSUB_X:
+      Opc = RISCV::PM2WSUB_HX;
+      break;
+    }
+    MachineSDNode *New = CurDAG->getMachineNode(
+        Opc, DL, MVT::Untyped, Node->getOperand(0), Node->getOperand(1));
     auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
     ReplaceUses(SDValue(Node, 0), Lo);
     ReplaceUses(SDValue(Node, 1), Hi);

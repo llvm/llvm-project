@@ -145,6 +145,11 @@
 
 ; OMP-RELOCATABLE: @.llvm_offloading.device_image = internal unnamed_addr constant [{{[0-9]+}} x i8] c"{{.*}}", section ".llvm.offloading.relocatable", align 8
 
+; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=sycl --relocatable %s -o %t.bc
+; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=SYCL-RELOCATABLE
+
+; SYCL-RELOCATABLE: @.sycl_offloading.binary = internal unnamed_addr constant [{{[0-9]+}} x i8] c"{{.*}}", section ".sycl_fatbin"
+
 ; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=openacc %s -o %t.bc
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=ACC
 

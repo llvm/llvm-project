@@ -106,7 +106,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$x10', virtual-reg: '' }
   - { reg: '$x13', virtual-reg: '' }
@@ -239,7 +238,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$x10', virtual-reg: '' }
   - { reg: '$x13', virtual-reg: '' }

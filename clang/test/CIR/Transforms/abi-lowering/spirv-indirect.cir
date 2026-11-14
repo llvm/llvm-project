@@ -1,0 +1,104 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=spirv | FileCheck %s
+
+// SPIR-V records that cannot be copied, in the shape SYCL CIRGen emits: every
+// local is an address space 0 alloca used through a generic (4) view. As in
+// classic codegen:
+// - one is returned through an sret pointer in the default address space,
+//   which is generic for SYCL;
+// - one is passed to a device function as a pointer to the caller's
+//   copy-constructed temporary, not byval, and the callee works on it in place.
+
+!s32i = !cir.int<s, 32>
+!rec_NT = !cir.struct<"NT" {data !s32i}>
+
+module attributes {
+  cir.triple = "spirv64-unknown-unknown",
+  cir.lowering_options = #cir.lowering_options<
+    exceptions = false, threadsafe_statics = true, cuda = false,
+    cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = true,
+    gpu_rdc = false, openmp = false, openmp_is_target_device = false,
+    clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = true,
+    no_trapping_math = true, ssp_buffer_size = 8>,
+  cir.record_layouts = {NT = #cir.record_layout<
+    arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
+    record_align = 4>},
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @init_nt(!cir.ptr<!rec_NT, target_address_space(4)>) cc(spir_function)
+  cir.func private @copy_nt(!cir.ptr<!rec_NT, target_address_space(4)>, !cir.ptr<!rec_NT, target_address_space(4)>) cc(spir_function)
+  cir.func private @use_nt(!cir.ptr<!rec_NT, target_address_space(4)>) cc(spir_function)
+  cir.func private @make_nt() -> !rec_NT cc(spir_function) requires_call_conv_lowering
+
+  // CHECK: cir.func private @make_nt(!cir.ptr<!rec_NT, target_address_space(4)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_NT, llvm.writable}) cc(spir_function)
+
+  // The callee constructs its result directly in the caller's generic sret
+  // memory.
+  cir.func @ret_nt() -> !rec_NT cc(spir_function) requires_call_conv_lowering {
+    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!rec_NT>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_NT> -> !cir.ptr<!rec_NT, target_address_space(4)>
+    cir.call @init_nt(%1) cc(spir_function) : (!cir.ptr<!rec_NT, target_address_space(4)>) -> ()
+    %2 = cir.load %0 : !cir.ptr<!rec_NT>, !rec_NT
+    cir.return %2 : !rec_NT
+  }
+
+  // CHECK:      cir.func @ret_nt(%[[SRET:.*]]: !cir.ptr<!rec_NT, target_address_space(4)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_NT, llvm.writable}) cc(spir_function) {
+  // CHECK-NEXT:   cir.call @init_nt(%[[SRET]]) cc(spir_function) : (!cir.ptr<!rec_NT, target_address_space(4)>) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // The caller passes the generic view of its local as the sret pointer, so
+  // the callee constructs straight into `x`.
+  cir.func @use_ret() cc(spir_function) requires_call_conv_lowering {
+    %0 = cir.alloca "x" align(4) init : !cir.ptr<!rec_NT>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_NT> -> !cir.ptr<!rec_NT, target_address_space(4)>
+    %2 = cir.call @make_nt() cc(spir_function) : () -> !rec_NT
+    cir.store align(4) %2, %1 : !rec_NT, !cir.ptr<!rec_NT, target_address_space(4)>
+    cir.call @use_nt(%1) cc(spir_function) : (!cir.ptr<!rec_NT, target_address_space(4)>) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func @use_ret() cc(spir_function) {
+  // CHECK-NEXT:   %[[X:.*]] = cir.alloca "x" align(4) init : !cir.ptr<!rec_NT>
+  // CHECK-NEXT:   %[[X_VIEW:.*]] = cir.cast address_space %[[X]] : !cir.ptr<!rec_NT> -> !cir.ptr<!rec_NT, target_address_space(4)>
+  // CHECK-NEXT:   cir.call @make_nt(%[[X_VIEW]]) cc(spir_function) : (!cir.ptr<!rec_NT, target_address_space(4)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_NT, llvm.writable}) -> ()
+  // CHECK-NEXT:   cir.call @use_nt(%[[X_VIEW]]) cc(spir_function) : (!cir.ptr<!rec_NT, target_address_space(4)>) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // The callee works on the caller's object in place: the incoming private
+  // pointer replaces the parameter's alloca, under the same generic view.
+  cir.func @take_nt(%arg0: !rec_NT) cc(spir_function) requires_call_conv_lowering {
+    %0 = cir.alloca "n" align(4) init : !cir.ptr<!rec_NT>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_NT> -> !cir.ptr<!rec_NT, target_address_space(4)>
+    cir.store %arg0, %1 : !rec_NT, !cir.ptr<!rec_NT, target_address_space(4)>
+    cir.call @use_nt(%1) cc(spir_function) : (!cir.ptr<!rec_NT, target_address_space(4)>) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func @take_nt(%[[N:.*]]: !cir.ptr<!rec_NT> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) cc(spir_function) {
+  // CHECK-NEXT:   %[[N_VIEW:.*]] = cir.cast address_space %[[N]] : !cir.ptr<!rec_NT> -> !cir.ptr<!rec_NT, target_address_space(4)>
+  // CHECK-NEXT:   cir.call @use_nt(%[[N_VIEW]]) cc(spir_function) : (!cir.ptr<!rec_NT, target_address_space(4)>) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // The caller passes the copy-constructed temporary itself, not a byte copy.
+  cir.func @call_nt(%arg0: !cir.ptr<!rec_NT, target_address_space(4)>) cc(spir_function) requires_call_conv_lowering {
+    %0 = cir.alloca "agg.tmp0" align(4) : !cir.ptr<!rec_NT>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_NT> -> !cir.ptr<!rec_NT, target_address_space(4)>
+    cir.call @copy_nt(%1, %arg0) cc(spir_function) : (!cir.ptr<!rec_NT, target_address_space(4)>, !cir.ptr<!rec_NT, target_address_space(4)>) -> ()
+    %2 = cir.load %1 : !cir.ptr<!rec_NT, target_address_space(4)>, !rec_NT
+    cir.call @take_nt(%2) cc(spir_function) : (!rec_NT) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func @call_nt(%[[SRC:.*]]: !cir.ptr<!rec_NT, target_address_space(4)>) cc(spir_function) {
+  // CHECK-NEXT:   %[[TMP:.*]] = cir.alloca "agg.tmp0" align(4) : !cir.ptr<!rec_NT>
+  // CHECK-NEXT:   %[[TMP_VIEW:.*]] = cir.cast address_space %[[TMP]] : !cir.ptr<!rec_NT> -> !cir.ptr<!rec_NT, target_address_space(4)>
+  // CHECK-NEXT:   cir.call @copy_nt(%[[TMP_VIEW]], %[[SRC]]) cc(spir_function) : (!cir.ptr<!rec_NT, target_address_space(4)>, !cir.ptr<!rec_NT, target_address_space(4)>) -> ()
+  // CHECK-NEXT:   cir.call @take_nt(%[[TMP]]) cc(spir_function) : (!cir.ptr<!rec_NT> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+}

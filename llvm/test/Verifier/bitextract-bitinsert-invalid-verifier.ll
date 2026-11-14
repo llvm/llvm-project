@@ -27,3 +27,18 @@ define ptr @bitextract_ty_ptr_wider_than_src(b48 %src) {
   %r = bitextract ptr, b48 %src, i32 0
   ret ptr %r
 }
+
+; CHECK: bitinsert val type cannot be wider than base type!
+; CHECK-NEXT: %r = bitinsert <2 x b32> %base, <2 x i64> %val, <2 x i32> zeroinitializer
+define <2 x b32> @bitinsert_vec_val_wider_than_base(<2 x b32> %base,
+                                                    <2 x i64> %val) {
+  %r = bitinsert <2 x b32> %base, <2 x i64> %val, <2 x i32> zeroinitializer
+  ret <2 x b32> %r
+}
+
+; CHECK: bitextract result type cannot be wider than source type!
+; CHECK-NEXT: %r = bitextract <2 x i64>, <2 x b32> %src, <2 x i32> zeroinitializer
+define <2 x i64> @bitextract_vec_ty_wider_than_src(<2 x b32> %src) {
+  %r = bitextract <2 x i64>, <2 x b32> %src, <2 x i32> zeroinitializer
+  ret <2 x i64> %r
+}

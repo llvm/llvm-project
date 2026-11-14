@@ -3,7 +3,6 @@
 ; RUN: opt -p loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -force-target-supports-masked-memory-ops -force-tail-folding-style=data-and-control -tail-folding-policy=prefer-fold-tail -S %s | FileCheck --check-prefix=IC2 %s
 
 ; Test fmaxnum reduction with the active-lane-mask controlling the loop exit.
-; FIXME: Exit condition of loop is currently not set correctly.
 define float @fmaxnum(ptr %src, i64 %n) {
 ; IC1-LABEL: define float @fmaxnum(
 ; IC1-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {

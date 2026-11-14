@@ -169,8 +169,10 @@ void SparcFrameLowering::emitEpilogue(MachineFunction &MF,
           MBBI->getOpcode() == SP::TAIL_CALLri) &&
          "Can only put epilog before 'retl' or 'tail_call' instruction!");
   if (!FuncInfo->isLeafProc()) {
-    BuildMI(MBB, MBBI, dl, TII.get(SP::RESTORErr), SP::G0).addReg(SP::G0)
-      .addReg(SP::G0);
+    BuildMI(MBB, MBBI, dl, TII.get(SP::RESTORErr), SP::G0)
+        .addReg(SP::G0)
+        .addReg(SP::G0)
+        .setMIFlag(MachineInstr::FrameDestroy);
     return;
   }
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -187,7 +189,8 @@ void SparcFrameLowering::emitEpilogue(MachineFunction &MF,
         .addReg(SP::O7);
     BuildMI(MBB, MBBI, dl, TII.get(SP::ORrr), SP::O7)
         .addReg(SP::G0)
-        .addReg(SP::G1);
+        .addReg(SP::G1)
+        .setMIFlag(MachineInstr::FrameDestroy);
   }
 }
 

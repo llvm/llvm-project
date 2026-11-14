@@ -1100,6 +1100,8 @@ bool ConstantRange::isIntrinsicSupported(Intrinsic::ID IntrinsicID) {
   case Intrinsic::usub_sat:
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat:
+  case Intrinsic::ushl_sat:
+  case Intrinsic::sshl_sat:
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:
@@ -1125,6 +1127,10 @@ ConstantRange ConstantRange::intrinsic(Intrinsic::ID IntrinsicID,
     return Ops[0].sadd_sat(Ops[1]);
   case Intrinsic::ssub_sat:
     return Ops[0].ssub_sat(Ops[1]);
+  case Intrinsic::ushl_sat:
+    return Ops[0].ushl_sat(Ops[1]);
+  case Intrinsic::sshl_sat:
+    return Ops[0].sshl_sat(Ops[1]);
   case Intrinsic::umin:
     return Ops[0].umin(Ops[1]);
   case Intrinsic::umax:
@@ -2015,8 +2021,14 @@ ConstantRange ConstantRange::ushl_sat(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
-  APInt NewL = getUnsignedMin().ushl_sat(Other.getUnsignedMin());
-  APInt NewU = getUnsignedMax().ushl_sat(Other.getUnsignedMax()) + 1;
+  unsigned BitWidth = getBitWidth();
+  ConstantRange ShAmt = Other.intersectWith(
+      ConstantRange(APInt::getZero(BitWidth), APInt(BitWidth, BitWidth)));
+  if (ShAmt.isEmptySet())
+    return getEmpty();
+
+  APInt NewL = getUnsignedMin().ushl_sat(ShAmt.getUnsignedMin());
+  APInt NewU = getUnsignedMax().ushl_sat(ShAmt.getUnsignedMax()) + 1;
   return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
@@ -2024,8 +2036,14 @@ ConstantRange ConstantRange::sshl_sat(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
+  unsigned BitWidth = getBitWidth();
+  ConstantRange ShAmt = Other.intersectWith(
+      ConstantRange(APInt::getZero(BitWidth), APInt(BitWidth, BitWidth)));
+  if (ShAmt.isEmptySet())
+    return getEmpty();
+
   APInt Min = getSignedMin(), Max = getSignedMax();
-  APInt ShAmtMin = Other.getUnsignedMin(), ShAmtMax = Other.getUnsignedMax();
+  APInt ShAmtMin = ShAmt.getUnsignedMin(), ShAmtMax = ShAmt.getUnsignedMax();
   APInt NewL = Min.sshl_sat(Min.isNonNegative() ? ShAmtMin : ShAmtMax);
   APInt NewU = Max.sshl_sat(Max.isNegative() ? ShAmtMin : ShAmtMax) + 1;
   return getNonEmpty(std::move(NewL), std::move(NewU));

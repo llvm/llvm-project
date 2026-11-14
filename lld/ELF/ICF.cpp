@@ -347,8 +347,7 @@ void ICF<ELFT>::hashRelocs(const InputSection &sec, uint64_t &h,
 // except relocation targets.
 template <class ELFT>
 bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
-  if (a->flags != b->flags || a->getSize() != b->getSize() ||
-      a->content() != b->content())
+  if (a->flags != b->flags || a->content() != b->content())
     return false;
 
   // If two sections have different output sections, we cannot merge them.
@@ -387,9 +386,7 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
     // We already dealt with absolute and non-InputSection symbols in
     // constantEq, and for InputSections we have already checked everything
     // except the equivalence class.
-    if (!da->section)
-      continue;
-    auto *x = dyn_cast<InputSection>(da->section);
+    auto *x = dyn_cast_or_null<InputSection>(da->section);
     if (!x)
       continue;
     auto *y = cast<InputSection>(db->section);
@@ -400,7 +397,7 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
       return false;
     if (x->eqClass[current] != y->eqClass[current])
       return false;
-  };
+  }
 
   return true;
 }

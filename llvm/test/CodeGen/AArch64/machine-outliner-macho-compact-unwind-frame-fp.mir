@@ -71,7 +71,7 @@ body:             |
   bb.0:
     liveins: $w0, $lr
     RET undef $lr
-
+...
 # CHECK: name:            OUTLINED_FUNCTION_0
 # CHECK-NOT: STPXpre
 # CHECK-NOT: $fp = ADDXri $sp, 0, 0

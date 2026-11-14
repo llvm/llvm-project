@@ -122,10 +122,6 @@ body:             |
 ---
 name:            swap_virt_copy_vgpr_16
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_16 }
-  - { id: 1, class: vgpr_16 }
-  - { id: 2, class: vgpr_16 }
 body:             |
   bb.0:
     ; GCN-LABEL: name: swap_virt_copy_vgpr_16
@@ -134,9 +130,9 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[DEF]]
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = COPY [[DEF1]]
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
+    %0:vgpr_16 = IMPLICIT_DEF
+    %1:vgpr_16 = IMPLICIT_DEF
+    %2:vgpr_16 = COPY %0
     %0 = COPY %1
     %1 = COPY %2
 ...

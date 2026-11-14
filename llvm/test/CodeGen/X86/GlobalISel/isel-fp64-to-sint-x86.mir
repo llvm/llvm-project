@@ -130,3 +130,4 @@ body:             |
     %2:_(s8) = G_TRUNC %3(s16)
     $al = COPY %2(s8)
     RET 0, implicit $al
+...

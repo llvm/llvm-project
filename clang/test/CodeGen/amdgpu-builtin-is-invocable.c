@@ -19,7 +19,7 @@
 // AMDGCN-GFX1010-LABEL: define dso_local void @foo(
 // AMDGCN-GFX1010-SAME: ) #[[ATTR0:[0-9]+]] {
 // AMDGCN-GFX1010-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-GFX1010-NEXT:    call void @llvm.trap() #[[ATTR2:[0-9]+]]
+// AMDGCN-GFX1010-NEXT:    call void @llvm.trap()
 // AMDGCN-GFX1010-NEXT:    unreachable
 // AMDGCN-GFX1010:       [[BB0:.*:]]
 // AMDGCN-GFX1010-NEXT:    ret void
@@ -39,7 +39,7 @@
 // AMDGCNSPIRV-NEXT:    [[TOBOOL3:%.*]] = icmp ne i1 [[TMP2]], false
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL3]], label %[[IF_THEN]], label %[[IF_END:.*]]
 // AMDGCNSPIRV:       [[IF_THEN]]:
-// AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.trap() #[[ATTR3:[0-9]+]]
+// AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.trap()
 // AMDGCNSPIRV-NEXT:    unreachable
 // AMDGCNSPIRV:       [[BB3:.*:]]
 // AMDGCNSPIRV-NEXT:    br label %[[IF_END]]
@@ -57,12 +57,10 @@ void foo() {
 //.
 // AMDGCN-GFX1010: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // AMDGCN-GFX1010: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
-// AMDGCN-GFX1010: attributes #[[ATTR2]] = { noreturn nounwind }
 //.
 // AMDGCNSPIRV: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // AMDGCNSPIRV: attributes #[[ATTR1:[0-9]+]] = { nounwind }
 // AMDGCNSPIRV: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
-// AMDGCNSPIRV: attributes #[[ATTR3]] = { noreturn nounwind }
 //.
 // AMDGCN-GFX900: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // AMDGCN-GFX900: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

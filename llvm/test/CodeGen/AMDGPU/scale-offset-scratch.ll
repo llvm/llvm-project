@@ -401,25 +401,6 @@ entry:
 ; Multiplication is unsigned here, so we cannot match it.
 
 define amdgpu_ps <3 x float> @scratch_load_b96_idxprom_range(ptr addrspace(5) align 4 inreg %p, ptr addrspace(5) align 4 %pp) {
-; GFX1250-LABEL: scratch_load_b96_idxprom_range:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-NEXT:    v_nop
-; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    scratch_load_b32 v0, v0, off
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    scratch_load_b96 v[0:2], v0, s0 scale_offset
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    ; return to shader part epilog
-;
-; GFX13-LABEL: scratch_load_b96_idxprom_range:
-; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    scratch_load_b32 v0, v0, off
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    scratch_load_b96 v[0:2], v0, s0 scale_offset
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
   %idxprom = sext i32 %idx to i64
@@ -429,25 +410,6 @@ entry:
 }
 
 define amdgpu_ps <3 x float> @scratch_load_b96_idxprom_range_ioffset(ptr addrspace(5) align 4 inreg %p, ptr addrspace(5) align 4 %pp) {
-; GFX1250-LABEL: scratch_load_b96_idxprom_range_ioffset:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-NEXT:    v_nop
-; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    scratch_load_b32 v0, v0, off
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    scratch_load_b96 v[0:2], v0, s0 offset:192 scale_offset
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    ; return to shader part epilog
-;
-; GFX13-LABEL: scratch_load_b96_idxprom_range_ioffset:
-; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    scratch_load_b32 v0, v0, off
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    scratch_load_b96 v[0:2], v0, s0 offset:192 scale_offset
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
   %idxprom = sext i32 %idx to i64

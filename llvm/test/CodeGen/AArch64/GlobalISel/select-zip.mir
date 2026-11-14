@@ -140,3 +140,4 @@ body:             |
     %2:fpr(<4 x i32>) = G_ZIP2 %0, %1
     $q0 = COPY %2(<4 x i32>)
     RET_ReallyLR implicit $q0
+...

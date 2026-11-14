@@ -1,0 +1,72 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_function")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+bit_suffix_list = [
+    "uc",
+    "us",
+    "ui",
+    "ul",
+    "ull",
+]
+
+bit_prefix_list = [
+    "stdc_leading_zeros_",
+    "stdc_leading_ones_",
+    "stdc_trailing_zeros_",
+    "stdc_trailing_ones_",
+    "stdc_count_ones_",
+    "stdc_has_single_bit_",
+    "stdc_bit_width_",
+    "stdc_bit_floor_",
+    "stdc_bit_ceil_",
+]
+
+bit_prefix_needs_math_list = [
+    "stdc_first_leading_zero_",
+    "stdc_first_leading_one_",
+    "stdc_first_trailing_zero_",
+    "stdc_first_trailing_one_",
+    "stdc_count_zeros_",
+]
+
+[
+    libc_function(
+        name = bit_prefix + bit_suffix,
+        srcs = [bit_prefix + bit_suffix + ".cpp"],
+        hdrs = [bit_prefix + bit_suffix + ".h"],
+        deps = [
+            "//libc/src/__support:common",
+            "//libc/src/__support/CPP:bit",
+            "//libc/src/__support/macros:config",
+        ],
+    )
+    for bit_prefix in bit_prefix_list
+    for bit_suffix in bit_suffix_list
+]
+
+[
+    libc_function(
+        name = bit_prefix + bit_suffix,
+        srcs = [bit_prefix + bit_suffix + ".cpp"],
+        hdrs = [bit_prefix + bit_suffix + ".h"],
+        deps = [
+            "//libc/src/__support:common",
+            "//libc/src/__support:math_extras",
+            "//libc/src/__support/macros:config",
+        ],
+    )
+    for bit_prefix in bit_prefix_needs_math_list
+    for bit_suffix in bit_suffix_list
+]

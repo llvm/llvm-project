@@ -2504,9 +2504,6 @@ bool TrivialCopy(InterpState &S, CodePtr OpPC, bool Activate,
 template <class T, ArithOp Op>
 std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
                                     const T &Offset, const Pointer &Ptr) {
-  if (S.getLangOpts().CPlusPlus)
-    assert(!Ptr.isZero());
-
   // This is much simpler for integral pointers, so handle them first.
   if (Ptr.isIntegralPointer()) {
     uint64_t V = Ptr.getIntegerRepresentation();
@@ -2549,6 +2546,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
   }
 
   assert(Ptr.isBlockPointer());
+  assert(!Ptr.isZero());
   PtrView P = Ptr.view();
 
   // Arrays of unknown bounds cannot have pointers into them.

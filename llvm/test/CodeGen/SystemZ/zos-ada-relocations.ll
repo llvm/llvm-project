@@ -63,8 +63,8 @@ entry:
 declare void @"Do'Quoted&Func"()
 
 ; CHECK: stdin#C CSECT
-; CHECK: C_WSA64 CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(stdi
-; CHECK:                in#S)
+; CHECK: C_WSA64 CATTR ALIGN(4),FILL(0),DEFLOAD,RENT,NOTEXECUTABLE,RMODE(64),PAR
+; CHECK:                T(stdin#S)
 ; CHECK: stdin#S XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 ; CHECK: * Offset 0 pointer to function descriptor DoFunc
 ; CHECK:  DC VD(DoFunc@indirect)

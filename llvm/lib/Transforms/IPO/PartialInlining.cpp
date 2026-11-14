@@ -1170,7 +1170,7 @@ std::pair<bool, Function *> PartialInlinerImpl::unswitchFunction(Function &F) {
   if (F.hasFnAttribute(Attribute::AlwaysInline))
     return {false, nullptr};
 
-  if (F.hasFnAttribute(Attribute::NoInline))
+  if (F.isNoInline())
     return {false, nullptr};
 
   if (PSI.isFunctionEntryCold(&F))

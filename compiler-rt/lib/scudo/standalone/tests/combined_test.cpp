@@ -13,7 +13,6 @@
 #include "allocator_config.h"
 #include "chunk.h"
 #include "combined.h"
-#include "condition_variable.h"
 #include "mem_map.h"
 #include "size_class_map.h"
 
@@ -763,6 +762,41 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DoubleFreeFromPrimary) {
           Allocator->deallocate(P, Origin);
         },
         "invalid chunk state");
+  }
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DoubleFreeFromSecondary) {
+  auto *Allocator = this->Allocator.get();
+
+  using SecondaryConfig = scudo::SecondaryConfig<TypeParam>;
+  using CacheConfig = typename SecondaryConfig::CacheConfig;
+  using CacheT = typename SecondaryConfig::template CacheT<CacheConfig>;
+  // A secondary double free is only guaranteed to fail with "invalid chunk
+  // state" (like Primary) if the freed block remains mapped in the secondary
+  // cache. Uncached blocks are unmapped on the first deallocate(), so the
+  // second deallocate() faults when loading the chunk header instead.
+  if (!std::is_same_v<CacheT, scudo::MapAllocatorNoCache<CacheConfig>> &&
+      CacheConfig::getDefaultMaxEntriesCount() != 0U &&
+      CacheConfig::getDefaultMaxEntrySize() > 0U) {
+
+    EXPECT_GE(CacheConfig::getDefaultMaxEntrySize(),
+              scudo::getPageSizeCached());
+    scudo::uptr SecondarySize =
+        CacheConfig::getDefaultMaxEntrySize() - scudo::getPageSizeCached();
+    EXPECT_FALSE(
+        isPrimaryAllocation<TestAllocator<TypeParam>>(SecondarySize, 0));
+
+    // Verify that a double free results in a chunk state error (or a SIGSEGV
+    // under MTE, which marks cached secondary entries MAP_NOACCESS).
+    SCUDO_EXPECT_DEATH(
+        {
+          // Allocate from secondary
+          void *Ptr = Allocator->allocate(SecondarySize, Origin);
+          ASSERT_TRUE(Ptr != nullptr);
+          Allocator->deallocate(Ptr, Origin);
+          Allocator->deallocate(Ptr, Origin);
+        },
+        Allocator->useMemoryTaggingTestOnly() ? "" : "invalid chunk state");
   }
 }
 

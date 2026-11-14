@@ -172,6 +172,10 @@ createX86_64ABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp,
 std::unique_ptr<CIRABIClassifier>
 createAMDGPUABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp);
 
+/// The SPIR-V classifier.
+std::unique_ptr<CIRABIClassifier>
+createSPIRVABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp);
+
 /// Map a CIR calling convention to the llvm::CallingConv the ABI classifier
 /// uses.  Conventions the classifier does not distinguish fall back to C.
 llvm::CallingConv::ID convertCallingConv(cir::CallingConv cc);

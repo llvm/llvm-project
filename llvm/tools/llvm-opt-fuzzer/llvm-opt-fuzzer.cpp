@@ -26,8 +26,6 @@
 
 using namespace llvm;
 
-static codegen::RegisterCodeGenFlags CGF;
-
 static cl::opt<std::string>
     TargetTripleStr("mtriple", cl::desc("Override target triple for module"));
 

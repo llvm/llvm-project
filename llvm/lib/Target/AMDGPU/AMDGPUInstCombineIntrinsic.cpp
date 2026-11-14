@@ -552,11 +552,10 @@ static APInt defaultComponentBroadcast(Value *V) {
   return DemandedElts;
 }
 
-static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
-                                                    IntrinsicInst &II,
-                                                    APInt DemandedElts,
-                                                    int DMaskIdx = -1,
-                                                    bool IsLoad = true);
+static Value *
+simplifyAMDGCNMemoryIntrinsicDemanded(const GCNSubtarget &ST, InstCombiner &IC,
+                                      IntrinsicInst &II, APInt DemandedElts,
+                                      int DMaskIdx = -1, bool IsLoad = true);
 
 /// Return true if it's legal to contract llvm.amdgcn.rcp(llvm.sqrt)
 static bool canContractSqrtToRsq(const FPMathOperator *SqrtOp) {
@@ -2224,8 +2223,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     int DMaskIdx = getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()) ? 1 : -1;
-    if (simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, DMaskIdx,
-                                              false)) {
+    if (simplifyAMDGCNMemoryIntrinsicDemanded(*ST, IC, II, DemandedElts,
+                                              DMaskIdx, false)) {
       return IC.eraseInstFromFunction(II);
     }
 
@@ -2357,7 +2356,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 /// image and buffer loads.
 /// Note: This only supports non-TFE/LWE image intrinsic calls; those have
 ///       struct returns.
-static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
+static Value *simplifyAMDGCNMemoryIntrinsicDemanded(const GCNSubtarget &ST,
+                                                    InstCombiner &IC,
                                                     IntrinsicInst &II,
                                                     APInt DemandedElts,
                                                     int DMaskIdx, bool IsLoad) {
@@ -2391,6 +2391,8 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       static const unsigned InvalidOffsetIdx = 0xf;
 
       unsigned OffsetIdx;
+      // Set for tbuffer loads, whose component size comes from the format.
+      unsigned FormatBitsPerComp = 0;
       switch (II.getIntrinsicID()) {
       case Intrinsic::amdgcn_raw_buffer_load:
       case Intrinsic::amdgcn_raw_ptr_buffer_load:
@@ -2410,8 +2412,42 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       case Intrinsic::amdgcn_struct_ptr_buffer_load:
         OffsetIdx = 2;
         break;
+      case Intrinsic::amdgcn_raw_tbuffer_load:
+      case Intrinsic::amdgcn_raw_ptr_tbuffer_load:
+      case Intrinsic::amdgcn_struct_tbuffer_load:
+      case Intrinsic::amdgcn_struct_ptr_tbuffer_load: {
+        // The struct intrinsic variants add a vindex operand before the offset.
+        const bool HasVIndex =
+            II.getIntrinsicID() == Intrinsic::amdgcn_struct_tbuffer_load ||
+            II.getIntrinsicID() == Intrinsic::amdgcn_struct_ptr_tbuffer_load;
+        OffsetIdx = HasVIndex ? 2 : 1;
+        const unsigned FormatIdx = OffsetIdx + 2;
+
+        // The format describes the whole element, so also drop the leading
+        // components from it to keep the element ending at the same byte.
+        // Lanes past the end of the format are filled in by the hardware
+        // rather than loaded; leave such loads alone.
+        const AMDGPU::GcnBufferFormatInfo *OldFormat =
+            AMDGPU::getGcnBufferFormatInfo(
+                cast<ConstantInt>(Args[FormatIdx])->getZExtValue(), ST);
+        const AMDGPU::GcnBufferFormatInfo *NewFormat = nullptr;
+        if (OldFormat && ActiveBits <= OldFormat->NumComponents)
+          NewFormat = AMDGPU::getGcnBufferFormatInfo(
+              OldFormat->BitsPerComp,
+              OldFormat->NumComponents - UnusedComponentsAtFront,
+              OldFormat->NumFormat, ST);
+        if (!NewFormat) {
+          OffsetIdx = InvalidOffsetIdx;
+          break;
+        }
+        Args[FormatIdx] =
+            ConstantInt::get(Args[FormatIdx]->getType(), NewFormat->Format);
+        FormatBitsPerComp = OldFormat->BitsPerComp;
+        break;
+      }
       default:
-        // TODO: handle tbuffer* intrinsics.
+        // buffer_load_format takes its format from the resource, which is
+        // unknown here.
         OffsetIdx = InvalidOffsetIdx;
         break;
       }
@@ -2421,7 +2457,9 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
         DemandedElts &= ~((1 << UnusedComponentsAtFront) - 1);
         auto *Offset = Args[OffsetIdx];
         uint64_t SingleComponentSizeInBits =
-            IC.getDataLayout().getTypeSizeInBits(EltTy).getFixedValue();
+            FormatBitsPerComp
+                ? FormatBitsPerComp
+                : IC.getDataLayout().getTypeSizeInBits(EltTy).getFixedValue();
         OffsetAdd = UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
         auto *OffsetAddVal = ConstantInt::get(Offset->getType(), OffsetAdd);
         Args[OffsetIdx] = IC.Builder.CreateAdd(Offset, OffsetAddVal);
@@ -2621,10 +2659,11 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::amdgcn_struct_ptr_buffer_load_format:
   case Intrinsic::amdgcn_struct_tbuffer_load:
   case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
-    return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
+    return simplifyAMDGCNMemoryIntrinsicDemanded(*ST, IC, II, DemandedElts);
   default: {
     if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID())) {
-      return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, 0);
+      return simplifyAMDGCNMemoryIntrinsicDemanded(*ST, IC, II, DemandedElts,
+                                                   0);
     }
     break;
   }

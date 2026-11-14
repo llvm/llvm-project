@@ -17,14 +17,14 @@ int main() {
 // CHECK:        br label %[[DISP:.*]], !dbg [[LPAD]]
 // CHECK:      [[DISP]]:
 // CHECK-NEXT:   %{{.*}} = load i32, ptr %{{.*}}, align 4, !dbg [[DISPATCH:![0-9]*]]
-// CHECK-NEXT:   [[TIBOOL:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIb) #{{[0-9]+}}, !dbg [[DISPATCH]]
+// CHECK-NEXT:   [[TIBOOL:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIb), !dbg [[DISPATCH]]
 // CHECK-NEXT:   [[ISBOOL:%.*]] = icmp eq i32 %{{.*}}, [[TIBOOL]], !dbg [[DISPATCH]]
 // CHECK-NEXT:   br i1 [[ISBOOL]], label %[[CATCHBOOL:.*]], label %[[FALLTHROUGH:.*]], !dbg [[DISPATCH]]
 // CHECK:      [[CATCHBOOL]]
 // CHECK:        %{{.*}} = call ptr @__cxa_begin_catch(ptr %{{.*}}) #{{[0-9]+}}, !dbg [[BEGINCATCHBOOL:![0-9]*]]
 // CHECK:        call void @__cxa_end_catch() #{{[0-9]+}}, !dbg [[ENDCATCHBOOL:![0-9]*]]
 // CHECK:      [[FALLTHROUGH]]:
-// CHECK-NEXT:   [[TIINT:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) #{{[0-9]+}}, !dbg [[DISPATCH]]
+// CHECK-NEXT:   [[TIINT:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi), !dbg [[DISPATCH]]
 // CHECK-NEXT:   [[ISINT:%.*]] = icmp eq i32 %{{.*}}, [[TIINT]], !dbg [[DISPATCH]]
 // CHECK-NEXT:   br i1 [[ISINT]], label %[[CATCHINT:.*]], label %[[RESUME:.*]], !dbg [[DISPATCH]]
 // CHECK:      [[CATCHINT]]:

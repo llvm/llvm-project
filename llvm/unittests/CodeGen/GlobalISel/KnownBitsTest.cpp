@@ -2096,7 +2096,7 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsSBFXOperandTypes) {
   if (!TM)
     GTEST_SKIP();
 
-  constexpr unsigned SrcBits = 8;
+  static constexpr unsigned SrcBits = 8;
   const LLT SrcTy = LLT::scalar(SrcBits);
   Register Unknown = Copies[0];
   GISelValueTracking Info(*MF);
@@ -2129,7 +2129,7 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsSBFXOperandTypes) {
       for (uint64_t W = 1; O + W <= SrcBits; ++W) {
         if (!isConsistent(WidthKnown, W))
           continue;
-        for (uint64_t S = 0; S != (1u << SrcBits); ++S) {
+        for (uint64_t S = 0; S != (uint64_t(1) << SrcBits); ++S) {
           if (!isConsistent(SrcKnown, S))
             continue;
           uint64_t Expected = ComputeSBFX(S, O, W);
@@ -2162,7 +2162,7 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsSBFXOperandTypes) {
             B.buildConstant(ParamTy, APInt(ParamBits, O)).getReg(0);
         Register Width =
             B.buildConstant(ParamTy, APInt(ParamBits, W)).getReg(0);
-        for (uint64_t S = 0; S != (1u << SrcBits); ++S) {
+        for (uint64_t S = 0; S != (uint64_t(1) << SrcBits); ++S) {
           Register Src = B.buildConstant(SrcTy, APInt(SrcBits, S)).getReg(0);
           Register Dst = B.buildSbfx(SrcTy, Src, Offset, Width).getReg(0);
           KnownBits Res = Info.getKnownBits(Dst);

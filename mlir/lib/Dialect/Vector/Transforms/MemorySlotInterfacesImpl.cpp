@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements memory slot interface models for
-// `vector.transfer_read` and `vector.transfer_write`. These models implement
-// `PromotableMemOpInterface` so Mem2Reg can replace vector transfers with uses
+// `vector.transfer_read`, `vector.transfer_write`, and `vector.mask`. They
+// implement `PromotableMemOpInterface` to replace vector transfers with uses
 // and definitions of a vector SSA value. The models for `memref.subview`
 // live in the MemRef dialect.
 //
@@ -21,9 +21,9 @@
 // of those lanes. `arith.select` implements this behavior and also handles
 // lanes disabled by a transfer's mask operand.
 //
-// Transfers wrapped in `vector.mask` prevent promotion because that op does
-// not implement `PromotableRegionOpInterface`, which Mem2Reg requires to
-// promote accesses inside a region.
+// `vector.mask` owns its wrapped transfer's blocking use and is promoted as a
+// whole. Its region cannot accept extra operations, so `arith.select` is built
+// outside it.
 //
 //===----------------------------------------------------------------------===//
 
@@ -189,6 +189,86 @@ struct TransferWriteOpMemOpModel
     return DeletionKind::Delete;
   }
 };
+
+/// Returns the operation wrapped by the `vector.mask` `op`.
+PromotableMemOpInterface getWrappedMemOp(Operation *op) {
+  Operation *maskableOp = cast<vector::MaskOp>(op).getMaskableOp();
+  if (!maskableOp)
+    return {};
+  if (!isa<vector::TransferReadOp, vector::TransferWriteOp>(maskableOp))
+    return {};
+  return cast<PromotableMemOpInterface>(maskableOp);
+}
+
+/// `PromotableMemOpInterface` model for `vector.mask` wrapping a promotable
+/// memory operation. `vector.mask` owns the wrapped operation's slot use,
+/// delegates promotion to it, and applies its mask to the result.
+struct MaskOpMemOpModel
+    : public PromotableMemOpInterface::ExternalModel<MaskOpMemOpModel,
+                                                     vector::MaskOp> {
+  bool ownsWrappedBlockingUses(Operation *op) const {
+    return static_cast<bool>(getWrappedMemOp(op));
+  }
+
+  bool loadsFrom(Operation *op, const MemorySlot &slot) const {
+    PromotableMemOpInterface memOp = getWrappedMemOp(op);
+    return memOp && memOp.loadsFrom(slot);
+  }
+
+  bool storesTo(Operation *op, const MemorySlot &slot) const {
+    PromotableMemOpInterface memOp = getWrappedMemOp(op);
+    return memOp && memOp.storesTo(slot);
+  }
+
+  Value getStored(Operation *op, const MemorySlot &slot, OpBuilder &builder,
+                  Value reachingDef, const DataLayout &dataLayout) const {
+    Value stored =
+        getWrappedMemOp(op).getStored(slot, builder, reachingDef, dataLayout);
+    return arith::SelectOp::create(builder, op->getLoc(),
+                                   cast<vector::MaskOp>(op).getMask(), stored,
+                                   reachingDef);
+  }
+
+  bool canUsesBeRemoved(Operation *op, const MemorySlot &slot,
+                        const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                        SmallVectorImpl<OpOperand *> &newBlockingUses,
+                        const DataLayout &dataLayout) const {
+    PromotableMemOpInterface memOp = getWrappedMemOp(op);
+    // Transfers with their own mask operand are unsupported.
+    if (!memOp || cast<VectorTransferOpInterface>(*memOp).getMask())
+      return false;
+    return memOp.canUsesBeRemoved(slot, blockingUses, newBlockingUses,
+                                  dataLayout);
+  }
+
+  // Let the wrapped memory op promote itself, then apply the wrapper's mask to
+  // the value it now yields.
+  DeletionKind
+  removeBlockingUses(Operation *op, const MemorySlot &slot,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                     OpBuilder &builder, Value reachingDefinition,
+                     const DataLayout &dataLayout) const {
+    auto maskOp = cast<vector::MaskOp>(op);
+    PromotableMemOpInterface memOp = getWrappedMemOp(op);
+    memOp.removeBlockingUses(slot, blockingUses, builder, reachingDefinition,
+                             dataLayout);
+    auto readOp = dyn_cast<vector::TransferReadOp>(*memOp);
+    if (!readOp)
+      return DeletionKind::Delete;
+
+    Location loc = op->getLoc();
+    Value enabled = maskOp.getMaskBlock()->getTerminator()->getOperand(0);
+    Value disabled =
+        maskOp.hasPassthru()
+            ? maskOp.getPassthru()
+            : vector::BroadcastOp::create(builder, loc, readOp.getVectorType(),
+                                          readOp.getPadding());
+    Value result = arith::SelectOp::create(builder, loc, maskOp.getMask(),
+                                           enabled, disabled);
+    maskOp->getResult(0).replaceAllUsesWith(result);
+    return DeletionKind::Delete;
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -200,5 +280,6 @@ void mlir::vector::registerMemorySlotInterfacesExternalModels(
   registry.addExtension(+[](MLIRContext *ctx, vector::VectorDialect *dialect) {
     TransferReadOp::attachInterface<TransferReadOpMemOpModel>(*ctx);
     TransferWriteOp::attachInterface<TransferWriteOpMemOpModel>(*ctx);
+    MaskOp::attachInterface<MaskOpMemOpModel>(*ctx);
   });
 }

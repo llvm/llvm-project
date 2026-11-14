@@ -1,0 +1,259 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_function")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_function(
+    name = "cimag",
+    srcs = ["generic/cimag.cpp"],
+    hdrs = ["cimag.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_type",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "cimagf",
+    srcs = ["generic/cimagf.cpp"],
+    hdrs = ["cimagf.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_type",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "cimagf128",
+    srcs = ["generic/cimagf128.cpp"],
+    hdrs = ["cimagf128.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_type",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:complex_types",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_function(
+    name = "cimagf16",
+    srcs = ["generic/cimagf16.cpp"],
+    hdrs = ["cimagf16.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_type",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:complex_types",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_function(
+    name = "cimagl",
+    srcs = ["generic/cimagl.cpp"],
+    hdrs = ["cimagl.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_type",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "conj",
+    srcs = ["generic/conj.cpp"],
+    hdrs = ["conj.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_basic_ops",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "conjf",
+    srcs = ["generic/conjf.cpp"],
+    hdrs = ["conjf.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_basic_ops",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "conjf128",
+    srcs = ["generic/conjf128.cpp"],
+    hdrs = ["conjf128.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_basic_ops",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:complex_types",
+    ],
+)
+
+libc_function(
+    name = "conjf16",
+    srcs = ["generic/conjf16.cpp"],
+    hdrs = ["conjf16.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_basic_ops",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:complex_types",
+    ],
+)
+
+libc_function(
+    name = "conjl",
+    srcs = ["generic/conjl.cpp"],
+    hdrs = ["conjl.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_basic_ops",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "cproj",
+    srcs = ["generic/cproj.cpp"],
+    hdrs = ["cproj.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_basic_ops",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "cprojf",
+    srcs = ["generic/cprojf.cpp"],
+    hdrs = ["cprojf.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_basic_ops",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "cprojf128",
+    srcs = ["generic/cprojf128.cpp"],
+    hdrs = ["cprojf128.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_basic_ops",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:complex_types",
+    ],
+)
+
+libc_function(
+    name = "cprojf16",
+    srcs = ["generic/cprojf16.cpp"],
+    hdrs = ["cprojf16.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_basic_ops",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:complex_types",
+    ],
+)
+
+libc_function(
+    name = "cprojl",
+    srcs = ["generic/cprojl.cpp"],
+    hdrs = ["cprojl.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_basic_ops",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "creal",
+    srcs = ["generic/creal.cpp"],
+    hdrs = ["creal.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_type",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "crealf",
+    srcs = ["generic/crealf.cpp"],
+    hdrs = ["crealf.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_type",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "crealf128",
+    srcs = ["generic/crealf128.cpp"],
+    hdrs = ["crealf128.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_type",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:complex_types",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_function(
+    name = "crealf16",
+    srcs = ["generic/crealf16.cpp"],
+    hdrs = ["crealf16.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_type",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:complex_types",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_function(
+    name = "creall",
+    srcs = ["generic/creall.cpp"],
+    hdrs = ["creall.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:complex_type",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:config",
+    ],
+)

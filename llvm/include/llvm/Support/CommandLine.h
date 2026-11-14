@@ -2220,18 +2220,10 @@ public:
   /// Restores the default values.
   virtual void reset() const = 0;
 
-  /// Whether every reader of the options goes through a context's
-  /// LibraryOptionsContext, so that they need not be set in global().
-  bool isPerContext() const { return PerContext; }
-
 protected:
-  constexpr explicit LibraryOptions(bool PerContext = false)
-      : PerContext(PerContext) {}
+  constexpr LibraryOptions() = default;
   // Registrations are static and never destroyed through this class.
   ~LibraryOptions() = default;
-
-private:
-  bool PerContext;
 };
 
 /// Makes ParseCommandLineOptions recognize \p L's options. A name that is also

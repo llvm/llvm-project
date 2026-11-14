@@ -3671,7 +3671,7 @@ bool SPIRVEmitIntrinsicsImpl::processFunctionPointers(Module &M) {
     for (const auto &Arg : F->args())
       Args.push_back(
           getNormalizedPoisonValue(Arg.getType(), CanUseAnyVectorRank));
-    IRB.CreateCall(F, Args);
+    IRB.CreateCall(F, Args)->setTailCall(true);
   }
   IRB.CreateRetVoid();
 

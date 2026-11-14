@@ -7,20 +7,6 @@
 name:            main
 alignment:       1
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_64 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sgpr_256 }
-  - { id: 4, class: sgpr_128 }
-  - { id: 5, class: sgpr_256 }
-  - { id: 6, class: sgpr_128 }
-  - { id: 7, class: sgpr_512 }
-  - { id: 9, class: vreg_512 }
-  - { id: 11, class: vreg_352 }
-  - { id: 18, class: vgpr_32 }
-  - { id: 20, class: vreg_352 }
-  - { id: 27, class: vgpr_32 }
 liveins:
   - { reg: '$sgpr2_sgpr3', virtual-reg: '%0' }
   - { reg: '$vgpr2', virtual-reg: '%1' }
@@ -43,16 +29,16 @@ body:             |
   bb.0:
     liveins: $sgpr2_sgpr3, $vgpr2, $vgpr3
 
-    %0 = COPY $sgpr2_sgpr3
-    %1 = COPY $vgpr2
-    %2 = COPY $vgpr3
-    %3 = S_LOAD_DWORDX8_IMM %0, 0, 0
-    %4 = S_LOAD_DWORDX4_IMM %0, 12, 0
-    %5 = S_LOAD_DWORDX8_IMM %0, 16, 0
-    %6 = S_LOAD_DWORDX4_IMM %0, 28, 0
-    undef %7.sub0 = S_MOV_B32 212739
-    undef %20.sub0 = COPY %7.sub0
-    %11 = COPY %20
+    %0:sreg_64 = COPY $sgpr2_sgpr3
+    %1:vgpr_32 = COPY $vgpr2
+    %2:vgpr_32 = COPY $vgpr3
+    %3:sgpr_256 = S_LOAD_DWORDX8_IMM %0, 0, 0
+    %4:sgpr_128 = S_LOAD_DWORDX4_IMM %0, 12, 0
+    %5:sgpr_256 = S_LOAD_DWORDX8_IMM %0, 16, 0
+    %6:sgpr_128 = S_LOAD_DWORDX4_IMM %0, 28, 0
+    undef %7.sub0:sgpr_512 = S_MOV_B32 212739
+    undef %20.sub0:vreg_352 = COPY %7.sub0
+    %11:vreg_352 = COPY %20
     %11.sub1 = COPY %1
     %11.sub2 = COPY %1
     %11.sub3 = COPY %1
@@ -61,7 +47,7 @@ body:             |
     %11.sub6 = COPY %1
     %11.sub7 = COPY %1
     %11.sub8 = COPY %1
-    dead %18 = IMAGE_SAMPLE_C_D_O_V1_V11 %11, %3, %4, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load (s32))
+    dead %18:vgpr_32 = IMAGE_SAMPLE_C_D_O_V1_V11 %11, %3, %4, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load (s32))
     %20.sub1 = COPY %2
     %20.sub2 = COPY %2
     %20.sub3 = COPY %2
@@ -70,6 +56,6 @@ body:             |
     %20.sub6 = COPY %2
     %20.sub7 = COPY %2
     %20.sub8 = COPY %2
-    dead %27 = IMAGE_SAMPLE_C_D_O_V1_V11 %20, %5, %6, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load (s32))
+    dead %27:vgpr_32 = IMAGE_SAMPLE_C_D_O_V1_V11 %20, %5, %6, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load (s32))
 
 ...

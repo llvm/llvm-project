@@ -48,3 +48,4 @@ body:             |
     %g:gpr(p0) = G_GLOBAL_VALUE @g + 1
     $x0 = COPY %g(p0)
     RET_ReallyLR implicit $x0
+...

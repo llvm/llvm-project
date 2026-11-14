@@ -53,6 +53,16 @@ let Defs = [R3D, CC], Uses = [R3D, R4D], hasNoSchedulingInfo = 1,
     hasSideEffects = 1 in
   def XPLINK_STACKALLOC : Pseudo<(outs), (ins), []>;
 
+// Call of the XPLINK stack restore stub (see SystemZXPLINKAsmPrinter): the new
+// stack pointer is passed in R1, the stub sets R4. Like the stack extension
+// routine, the stub does not follow the XPLINK calling convention and is
+// called with BASR 3,3. Expands to LARL 3, BASR 3,3 and the call information
+// (10 bytes).
+let Predicates = [IsTargetXPLINK64], Defs = [R1D, R3D, R4D],
+    Uses = [R1D, R4D], hasNoSchedulingInfo = 1, hasSideEffects = 1 in
+  def XPLINK_STACKRESTORE : Alias<10, (outs), (ins),
+                                  [(z_xplink_stackrestore)]>;
+
 //===----------------------------------------------------------------------===//
 // Branch instructions
 //===----------------------------------------------------------------------===//

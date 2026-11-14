@@ -149,3 +149,4 @@ body:             |
     %bit:fpr(<16 x i8>) = G_BSP %lhs, %mhs, %rhs
     $q0 = COPY %bit(<16 x i8>)
     RET_ReallyLR implicit $q0
+...

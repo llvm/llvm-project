@@ -59,6 +59,7 @@ struct SharedCacheImageInfo {
   }
   llvm::StringRef GetFilename() const { return m_filename; }
   const UUID &GetUUID() const { return m_uuid; }
+  void *GetImageBaton() const { return m_image_baton; }
 
 private:
   struct LazyExtractor {

@@ -1167,3 +1167,4 @@ body:             |
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     renamable $vgpr16_vgpr17 = nofpexcept V_PK_MUL_F32 8, killed $sgpr30_sgpr31, 11, killed $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     S_ENDPGM 0
+...

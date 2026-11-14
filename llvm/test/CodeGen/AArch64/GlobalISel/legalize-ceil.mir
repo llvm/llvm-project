@@ -14,9 +14,6 @@
 ---
 name:            test_v8f16.ceil
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $q0
@@ -43,9 +40,6 @@ body:             |
 ---
 name:            test_v4f16.ceil
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $d0

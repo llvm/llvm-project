@@ -4297,9 +4297,10 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     const VPValue *PtrOp = getOperand(!IsLoad);
     const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.PSE, Ctx.L);
     if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV)) {
-      // Don't fall back to the legacy cost model for single-scalar accesses.
-      // PtrSCEV won't be used.
-      if (!isSingleScalar())
+      // Fall back to the legacy cost model, unless the access is single-scalar
+      // (PtrSCEV is unused) or predicated (legacy cost includes the region).
+      const VPRegionBlock *ParentRegion = getRegion();
+      if (!isSingleScalar() && (!ParentRegion || !ParentRegion->isReplicator()))
         break;
       PtrSCEV = nullptr;
     }

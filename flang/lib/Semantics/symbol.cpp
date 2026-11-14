@@ -13,6 +13,7 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <string>
@@ -85,6 +86,14 @@ void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
     }
     os << toLower(llvm::omp::getOpenMPClauseName(clause, version_));
     switch (clause) {
+    case llvm::omp::Clause::OMPC_absent:
+      os << '(';
+      llvm::interleaveComma(
+          ompAssumesAbsent(), os, [&](llvm::omp::Directive directive) {
+            os << llvm::omp::getOpenMPDirectiveName(directive, version_);
+          });
+      os << ')';
+      break;
     case llvm::omp::Clause::OMPC_atomic_default_mem_order:
       os << '(' << toLower(EnumToString(*ompAtomicDefaultMemOrder())) << ')';
       break;
@@ -121,6 +130,11 @@ llvm::raw_ostream &operator<<(
   if (const llvm::omp::Clauses &reqs{x.ompRequires()}; reqs.count()) {
     os << " OmpRequirements:(";
     x.printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
+    os << ')';
+  }
+  if (const llvm::omp::Clauses &assumes{x.ompAssumes()}; assumes.count()) {
+    os << " OmpAssumptions:(";
+    x.printClauseSet(os, assumes, llvm::omp::Directive::OMPD_assumes);
     os << ')';
   }
   if (const llvm::omp::Clauses &dtgt{x.ompDeclTarget()}; dtgt.count()) {

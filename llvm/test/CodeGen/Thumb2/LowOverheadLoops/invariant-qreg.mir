@@ -128,7 +128,6 @@
 ---
 name:            invariant_use_store
 alignment:       2
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -242,7 +241,6 @@ body:             |
 ---
 name:            invariant_mul_use_reduce
 alignment:       2
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r2', virtual-reg: '' }
@@ -367,7 +365,6 @@ body:             |
 ---
 name:            invariant_add_use_reduce
 alignment:       2
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r2', virtual-reg: '' }

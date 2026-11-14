@@ -6958,6 +6958,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_relocatable_pch))
     CmdArgs.push_back("-relocatable-pch");
+  Args.AddLastArg(CmdArgs, options::OPT_fpch_base_dir_is_cwd);
 
   if (const Arg *A = Args.getLastArg(options::OPT_fcf_runtime_abi_EQ)) {
     static const char *kCFABIs[] = {

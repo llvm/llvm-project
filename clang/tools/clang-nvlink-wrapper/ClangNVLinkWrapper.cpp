@@ -103,9 +103,6 @@ static std::mutex TempFilesMutex;
 /// Temporary files to be cleaned up.
 static std::list<SmallString<128>> TempFiles;
 
-/// Codegen flags for LTO backend.
-static codegen::RegisterCodeGenFlags CodeGenFlags;
-
 namespace {
 // Must not overlap with llvm::opt::DriverFlag.
 enum WrapperFlags { WrapperOnlyOption = (1 << 4) };
@@ -406,7 +403,7 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
       Args.hasArg(OPT_opt_remarks_with_hotness) || RemarksWithHotness;
   Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
 
-  Conf.MAttrs = llvm::codegen::getMAttrs();
+  Conf.MAttrs = llvm::codegen::getMAttrs(LibraryOptions);
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::parseLevel(Args.getLastArgValue(OPT_O, "2")[0]);
   assert(CGOptLevelOrNone && "Invalid optimization level");

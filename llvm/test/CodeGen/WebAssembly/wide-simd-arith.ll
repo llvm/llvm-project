@@ -5,23 +5,21 @@ define <8 x i32> @add_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: add_v8i8:
 ; CHECK:         .functype add_v8i8 (i32, v128, v128) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push2=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $pop2
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push0=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push1=, $pop0
-; CHECK-NEXT:    i32x4.add $push4=, $pop3, $pop1
-; CHECK-NEXT:    v128.store 0($0), $pop4
-; CHECK-NEXT:    i8x16.shuffle $push11=, $1, $1, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push10=, $1=, $pop11
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push7=, $pop10
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push8=, $pop7
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push5=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push6=, $pop5
-; CHECK-NEXT:    i32x4.add $push9=, $pop8, $pop6
-; CHECK-NEXT:    v128.store 16($0), $pop9
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push9=, $1
+; CHECK-NEXT:    local.tee $push8=, $1=, $pop9
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push1=, $pop8
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push7=, $2
+; CHECK-NEXT:    local.tee $push6=, $2=, $pop7
+; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push0=, $pop6
+; CHECK-NEXT:    i32x4.add $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store 16($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push4=, $1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push3=, $2
+; CHECK-NEXT:    i32x4.add $push5=, $pop4, $pop3
+; CHECK-NEXT:    v128.store 0($0), $pop5
 ; CHECK-NEXT:    return
   %wide.a = sext <8 x i8> %a to <8 x i32>
-  %wide.b = zext <8 x i8> %a to <8 x i32>
+  %wide.b = zext <8 x i8> %b to <8 x i32>
   %res = add <8 x i32> %wide.a, %wide.b
   ret <8 x i32> %res
 }
@@ -33,7 +31,7 @@ define <16 x i32> @add_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:    i16x8.extend_high_i8x16_s $push19=, $1
 ; CHECK-NEXT:    local.tee $push18=, $4=, $pop19
 ; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push1=, $pop18
-; CHECK-NEXT:    i16x8.extend_high_i8x16_u $push17=, $1
+; CHECK-NEXT:    i16x8.extend_high_i8x16_u $push17=, $2
 ; CHECK-NEXT:    local.tee $push16=, $3=, $pop17
 ; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push0=, $pop16
 ; CHECK-NEXT:    i32x4.add $push2=, $pop1, $pop0
@@ -43,20 +41,20 @@ define <16 x i32> @add_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:    i32x4.add $push5=, $pop4, $pop3
 ; CHECK-NEXT:    v128.store 32($0), $pop5
 ; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push15=, $1
-; CHECK-NEXT:    local.tee $push14=, $4=, $pop15
+; CHECK-NEXT:    local.tee $push14=, $1=, $pop15
 ; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push7=, $pop14
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push13=, $1
-; CHECK-NEXT:    local.tee $push12=, $1=, $pop13
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push13=, $2
+; CHECK-NEXT:    local.tee $push12=, $2=, $pop13
 ; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push6=, $pop12
 ; CHECK-NEXT:    i32x4.add $push8=, $pop7, $pop6
 ; CHECK-NEXT:    v128.store 16($0), $pop8
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push10=, $4
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push9=, $1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push10=, $1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push9=, $2
 ; CHECK-NEXT:    i32x4.add $push11=, $pop10, $pop9
 ; CHECK-NEXT:    v128.store 0($0), $pop11
 ; CHECK-NEXT:    return
   %wide.a = sext <16 x i8> %a to <16 x i32>
-  %wide.b = zext <16 x i8> %a to <16 x i32>
+  %wide.b = zext <16 x i8> %b to <16 x i32>
   %res = add <16 x i32> %wide.a, %wide.b
   ret <16 x i32> %res
 }
@@ -65,42 +63,67 @@ define <8 x i32> @add_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: add_v8i16:
 ; CHECK:         .functype add_v8i16 (i32, v128, v128) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push5=, $1
-; CHECK-NEXT:    local.tee $push4=, $3=, $pop5
-; CHECK-NEXT:    i32x4.add $push0=, $pop4, $3
-; CHECK-NEXT:    v128.store 16($0), $pop0
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $1
-; CHECK-NEXT:    local.tee $push2=, $1=, $pop3
-; CHECK-NEXT:    i32x4.add $push1=, $pop2, $1
-; CHECK-NEXT:    v128.store 0($0), $pop1
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push1=, $1
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push0=, $2
+; CHECK-NEXT:    i32x4.add $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store 16($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push4=, $1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $2
+; CHECK-NEXT:    i32x4.add $push5=, $pop4, $pop3
+; CHECK-NEXT:    v128.store 0($0), $pop5
 ; CHECK-NEXT:    return
   %wide.a = sext <8 x i16> %a to <8 x i32>
-  %wide.b = sext <8 x i16> %a to <8 x i32>
+  %wide.b = sext <8 x i16> %b to <8 x i32>
   %res = add <8 x i32> %wide.a, %wide.b
   ret <8 x i32> %res
+}
+
+define <16 x i32> @add_v16i16(<16 x i16> %a, <16 x i16> %b) {
+; CHECK-LABEL: add_v16i16:
+; CHECK:         .functype add_v16i16 (i32, v128, v128, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push1=, $2
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push0=, $4
+; CHECK-NEXT:    i32x4.add $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store 48($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push4=, $2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $4
+; CHECK-NEXT:    i32x4.add $push5=, $pop4, $pop3
+; CHECK-NEXT:    v128.store 32($0), $pop5
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push7=, $1
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push6=, $3
+; CHECK-NEXT:    i32x4.add $push8=, $pop7, $pop6
+; CHECK-NEXT:    v128.store 16($0), $pop8
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push10=, $1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push9=, $3
+; CHECK-NEXT:    i32x4.add $push11=, $pop10, $pop9
+; CHECK-NEXT:    v128.store 0($0), $pop11
+; CHECK-NEXT:    return
+  %wide.a = sext <16 x i16> %a to <16 x i32>
+  %wide.b = sext <16 x i16> %b to <16 x i32>
+  %res = add <16 x i32> %wide.a, %wide.b
+  ret <16 x i32> %res
 }
 
 define <8 x i32> @sub_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: sub_v8i8:
 ; CHECK:         .functype sub_v8i8 (i32, v128, v128) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push2=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $pop2
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push0=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push1=, $pop0
-; CHECK-NEXT:    i32x4.sub $push4=, $pop3, $pop1
-; CHECK-NEXT:    v128.store 0($0), $pop4
-; CHECK-NEXT:    i8x16.shuffle $push11=, $1, $1, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push10=, $1=, $pop11
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push7=, $pop10
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push8=, $pop7
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push5=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push6=, $pop5
-; CHECK-NEXT:    i32x4.sub $push9=, $pop8, $pop6
-; CHECK-NEXT:    v128.store 16($0), $pop9
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push9=, $1
+; CHECK-NEXT:    local.tee $push8=, $1=, $pop9
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push1=, $pop8
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push7=, $2
+; CHECK-NEXT:    local.tee $push6=, $2=, $pop7
+; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push0=, $pop6
+; CHECK-NEXT:    i32x4.sub $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store 16($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push4=, $1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push3=, $2
+; CHECK-NEXT:    i32x4.sub $push5=, $pop4, $pop3
+; CHECK-NEXT:    v128.store 0($0), $pop5
 ; CHECK-NEXT:    return
   %wide.a = sext <8 x i8> %a to <8 x i32>
-  %wide.b = zext <8 x i8> %a to <8 x i32>
+  %wide.b = zext <8 x i8> %b to <8 x i32>
   %res = sub <8 x i32> %wide.a, %wide.b
   ret <8 x i32> %res
 }
@@ -112,7 +135,7 @@ define <16 x i32> @sub_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:    i16x8.extend_high_i8x16_s $push19=, $1
 ; CHECK-NEXT:    local.tee $push18=, $4=, $pop19
 ; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push1=, $pop18
-; CHECK-NEXT:    i16x8.extend_high_i8x16_u $push17=, $1
+; CHECK-NEXT:    i16x8.extend_high_i8x16_u $push17=, $2
 ; CHECK-NEXT:    local.tee $push16=, $3=, $pop17
 ; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push0=, $pop16
 ; CHECK-NEXT:    i32x4.sub $push2=, $pop1, $pop0
@@ -122,20 +145,20 @@ define <16 x i32> @sub_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:    i32x4.sub $push5=, $pop4, $pop3
 ; CHECK-NEXT:    v128.store 32($0), $pop5
 ; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push15=, $1
-; CHECK-NEXT:    local.tee $push14=, $4=, $pop15
+; CHECK-NEXT:    local.tee $push14=, $1=, $pop15
 ; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push7=, $pop14
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push13=, $1
-; CHECK-NEXT:    local.tee $push12=, $1=, $pop13
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push13=, $2
+; CHECK-NEXT:    local.tee $push12=, $2=, $pop13
 ; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push6=, $pop12
 ; CHECK-NEXT:    i32x4.sub $push8=, $pop7, $pop6
 ; CHECK-NEXT:    v128.store 16($0), $pop8
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push10=, $4
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push9=, $1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push10=, $1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push9=, $2
 ; CHECK-NEXT:    i32x4.sub $push11=, $pop10, $pop9
 ; CHECK-NEXT:    v128.store 0($0), $pop11
 ; CHECK-NEXT:    return
   %wide.a = sext <16 x i8> %a to <16 x i32>
-  %wide.b = zext <16 x i8> %a to <16 x i32>
+  %wide.b = zext <16 x i8> %b to <16 x i32>
   %res = sub <16 x i32> %wide.a, %wide.b
   ret <16 x i32> %res
 }
@@ -144,32 +167,62 @@ define <8 x i32> @sub_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: sub_v8i16:
 ; CHECK:         .functype sub_v8i16 (i32, v128, v128) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const $push1=, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push0=, $3=, $pop1
-; CHECK-NEXT:    v128.store 16($0), $pop0
-; CHECK-NEXT:    v128.store 0($0), $3
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push1=, $1
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push0=, $2
+; CHECK-NEXT:    i32x4.sub $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store 16($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push4=, $1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $2
+; CHECK-NEXT:    i32x4.sub $push5=, $pop4, $pop3
+; CHECK-NEXT:    v128.store 0($0), $pop5
 ; CHECK-NEXT:    return
   %wide.a = sext <8 x i16> %a to <8 x i32>
-  %wide.b = sext <8 x i16> %a to <8 x i32>
+  %wide.b = sext <8 x i16> %b to <8 x i32>
   %res = sub <8 x i32> %wide.a, %wide.b
   ret <8 x i32> %res
+}
+
+define <16 x i32> @sub_v16i16(<16 x i16> %a, <16 x i16> %b) {
+; CHECK-LABEL: sub_v16i16:
+; CHECK:         .functype sub_v16i16 (i32, v128, v128, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push1=, $2
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push0=, $4
+; CHECK-NEXT:    i32x4.sub $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store 48($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push4=, $2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $4
+; CHECK-NEXT:    i32x4.sub $push5=, $pop4, $pop3
+; CHECK-NEXT:    v128.store 32($0), $pop5
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push7=, $1
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push6=, $3
+; CHECK-NEXT:    i32x4.sub $push8=, $pop7, $pop6
+; CHECK-NEXT:    v128.store 16($0), $pop8
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push10=, $1
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push9=, $3
+; CHECK-NEXT:    i32x4.sub $push11=, $pop10, $pop9
+; CHECK-NEXT:    v128.store 0($0), $pop11
+; CHECK-NEXT:    return
+  %wide.a = sext <16 x i16> %a to <16 x i32>
+  %wide.b = sext <16 x i16> %b to <16 x i32>
+  %res = sub <16 x i32> %wide.a, %wide.b
+  ret <16 x i32> %res
 }
 
 define <8 x i32> @ashr_v8i8(<8 x i8> %a) {
 ; CHECK-LABEL: ashr_v8i8:
 ; CHECK:         .functype ashr_v8i8 (i32, v128) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push0=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push1=, $pop0
-; CHECK-NEXT:    i32.const $push2=, 4
-; CHECK-NEXT:    i32x4.shr_s $push3=, $pop1, $pop2
-; CHECK-NEXT:    v128.store 0($0), $pop3
-; CHECK-NEXT:    i8x16.shuffle $push4=, $1, $1, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push5=, $pop4
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push6=, $pop5
-; CHECK-NEXT:    i32.const $push8=, 4
-; CHECK-NEXT:    i32x4.shr_s $push7=, $pop6, $pop8
-; CHECK-NEXT:    v128.store 16($0), $pop7
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push7=, $1
+; CHECK-NEXT:    local.tee $push6=, $1=, $pop7
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push0=, $pop6
+; CHECK-NEXT:    i32.const $push1=, 4
+; CHECK-NEXT:    i32x4.shr_s $push2=, $pop0, $pop1
+; CHECK-NEXT:    v128.store 16($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $1
+; CHECK-NEXT:    i32.const $push5=, 4
+; CHECK-NEXT:    i32x4.shr_s $push4=, $pop3, $pop5
+; CHECK-NEXT:    v128.store 0($0), $pop4
 ; CHECK-NEXT:    return
   %wide.a = sext <8 x i8> %a to <8 x i32>
   %res = ashr <8 x i32> %wide.a, splat(i32 4)
@@ -224,21 +277,46 @@ define <8 x i32> @ashr_v8i16(<8 x i16> %a) {
   ret <8 x i32> %res
 }
 
+define <16 x i32> @ashr_v16i16(<16 x i16> %a) {
+; CHECK-LABEL: ashr_v16i16:
+; CHECK:         .functype ashr_v16i16 (i32, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push0=, $2
+; CHECK-NEXT:    i32.const $push1=, 8
+; CHECK-NEXT:    i32x4.shr_s $push2=, $pop0, $pop1
+; CHECK-NEXT:    v128.store 48($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $2
+; CHECK-NEXT:    i32.const $push11=, 8
+; CHECK-NEXT:    i32x4.shr_s $push4=, $pop3, $pop11
+; CHECK-NEXT:    v128.store 32($0), $pop4
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push5=, $1
+; CHECK-NEXT:    i32.const $push10=, 8
+; CHECK-NEXT:    i32x4.shr_s $push6=, $pop5, $pop10
+; CHECK-NEXT:    v128.store 16($0), $pop6
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push7=, $1
+; CHECK-NEXT:    i32.const $push9=, 8
+; CHECK-NEXT:    i32x4.shr_s $push8=, $pop7, $pop9
+; CHECK-NEXT:    v128.store 0($0), $pop8
+; CHECK-NEXT:    return
+  %wide.a = sext <16 x i16> %a to <16 x i32>
+  %res = ashr <16 x i32> %wide.a, splat(i32 8)
+  ret <16 x i32> %res
+}
+
 define <8 x i32> @lshr_v8i8(<8 x i8> %a) {
 ; CHECK-LABEL: lshr_v8i8:
 ; CHECK:         .functype lshr_v8i8 (i32, v128) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push0=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push1=, $pop0
-; CHECK-NEXT:    i32.const $push2=, 4
-; CHECK-NEXT:    i32x4.shr_u $push3=, $pop1, $pop2
-; CHECK-NEXT:    v128.store 0($0), $pop3
-; CHECK-NEXT:    i8x16.shuffle $push4=, $1, $1, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push5=, $pop4
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push6=, $pop5
-; CHECK-NEXT:    i32.const $push8=, 4
-; CHECK-NEXT:    i32x4.shr_u $push7=, $pop6, $pop8
-; CHECK-NEXT:    v128.store 16($0), $pop7
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push7=, $1
+; CHECK-NEXT:    local.tee $push6=, $1=, $pop7
+; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push0=, $pop6
+; CHECK-NEXT:    i32.const $push1=, 4
+; CHECK-NEXT:    i32x4.shr_u $push2=, $pop0, $pop1
+; CHECK-NEXT:    v128.store 16($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push3=, $1
+; CHECK-NEXT:    i32.const $push5=, 4
+; CHECK-NEXT:    i32x4.shr_u $push4=, $pop3, $pop5
+; CHECK-NEXT:    v128.store 0($0), $pop4
 ; CHECK-NEXT:    return
   %wide.a = zext <8 x i8> %a to <8 x i32>
   %res = lshr <8 x i32> %wide.a, splat(i32 4)
@@ -293,21 +371,46 @@ define <8 x i32> @lshr_v8i16(<8 x i16> %a) {
   ret <8 x i32> %res
 }
 
+define <16 x i32> @lshr_v16i16(<16 x i16> %a) {
+; CHECK-LABEL: lshr_v16i16:
+; CHECK:         .functype lshr_v16i16 (i32, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push0=, $2
+; CHECK-NEXT:    i32.const $push1=, 7
+; CHECK-NEXT:    i32x4.shr_u $push2=, $pop0, $pop1
+; CHECK-NEXT:    v128.store 48($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push3=, $2
+; CHECK-NEXT:    i32.const $push11=, 7
+; CHECK-NEXT:    i32x4.shr_u $push4=, $pop3, $pop11
+; CHECK-NEXT:    v128.store 32($0), $pop4
+; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push5=, $1
+; CHECK-NEXT:    i32.const $push10=, 7
+; CHECK-NEXT:    i32x4.shr_u $push6=, $pop5, $pop10
+; CHECK-NEXT:    v128.store 16($0), $pop6
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push7=, $1
+; CHECK-NEXT:    i32.const $push9=, 7
+; CHECK-NEXT:    i32x4.shr_u $push8=, $pop7, $pop9
+; CHECK-NEXT:    v128.store 0($0), $pop8
+; CHECK-NEXT:    return
+  %wide.a = zext <16 x i16> %a to <16 x i32>
+  %res = lshr <16 x i32> %wide.a, splat(i32 7)
+  ret <16 x i32> %res
+}
+
 define <8 x i32> @shl_v8i8(<8 x i8> %a) {
 ; CHECK-LABEL: shl_v8i8:
 ; CHECK:         .functype shl_v8i8 (i32, v128) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push0=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push1=, $pop0
-; CHECK-NEXT:    i32.const $push2=, 3
-; CHECK-NEXT:    i32x4.shl $push3=, $pop1, $pop2
-; CHECK-NEXT:    v128.store 0($0), $pop3
-; CHECK-NEXT:    i8x16.shuffle $push4=, $1, $1, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push5=, $pop4
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push6=, $pop5
-; CHECK-NEXT:    i32.const $push8=, 3
-; CHECK-NEXT:    i32x4.shl $push7=, $pop6, $pop8
-; CHECK-NEXT:    v128.store 16($0), $pop7
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push7=, $1
+; CHECK-NEXT:    local.tee $push6=, $1=, $pop7
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push0=, $pop6
+; CHECK-NEXT:    i32.const $push1=, 3
+; CHECK-NEXT:    i32x4.shl $push2=, $pop0, $pop1
+; CHECK-NEXT:    v128.store 16($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $1
+; CHECK-NEXT:    i32.const $push5=, 3
+; CHECK-NEXT:    i32x4.shl $push4=, $pop3, $pop5
+; CHECK-NEXT:    v128.store 0($0), $pop4
 ; CHECK-NEXT:    return
   %wide.a = sext <8 x i8> %a to <8 x i32>
   %res = shl <8 x i32> %wide.a, splat(i32 3)
@@ -358,6 +461,32 @@ define <8 x i32> @shl_v8i16(<8 x i16> %a) {
   %wide.a = sext <8 x i16> %a to <8 x i32>
   %res = shl <8 x i32> %wide.a, splat(i32 6)
   ret <8 x i32> %res
+}
+
+define <16 x i32> @shl_v16i16(<16 x i16> %a) {
+; CHECK-LABEL: shl_v16i16:
+; CHECK:         .functype shl_v16i16 (i32, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push0=, $2
+; CHECK-NEXT:    i32.const $push1=, 6
+; CHECK-NEXT:    i32x4.shl $push2=, $pop0, $pop1
+; CHECK-NEXT:    v128.store 48($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $2
+; CHECK-NEXT:    i32.const $push11=, 6
+; CHECK-NEXT:    i32x4.shl $push4=, $pop3, $pop11
+; CHECK-NEXT:    v128.store 32($0), $pop4
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push5=, $1
+; CHECK-NEXT:    i32.const $push10=, 6
+; CHECK-NEXT:    i32x4.shl $push6=, $pop5, $pop10
+; CHECK-NEXT:    v128.store 16($0), $pop6
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push7=, $1
+; CHECK-NEXT:    i32.const $push9=, 6
+; CHECK-NEXT:    i32x4.shl $push8=, $pop7, $pop9
+; CHECK-NEXT:    v128.store 0($0), $pop8
+; CHECK-NEXT:    return
+  %wide.a = sext <16 x i16> %a to <16 x i32>
+  %res = shl <16 x i32> %wide.a, splat(i32 6)
+  ret <16 x i32> %res
 }
 
 define void @uhsub(ptr %src1, ptr %src2, ptr %dst) {

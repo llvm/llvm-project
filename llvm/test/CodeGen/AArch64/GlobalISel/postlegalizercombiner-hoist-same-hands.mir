@@ -78,3 +78,4 @@ body:             |
     %logic_op:_(i32) = G_OR %x, %y
     $w0 = COPY %logic_op(i32)
     RET_ReallyLR implicit $w0
+...
