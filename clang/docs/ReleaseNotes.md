@@ -1697,6 +1697,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `default(private)`, which could silently lose writes such as the result of
   a reduction on the nested construct.
 
+- Optimization remarks for a loop associated with an OpenMP loop directive now
+  point at the loop instead of the `#pragma omp` line.
+
 ### SYCL Support
 
 - On a `spirv32-unknown-unknown` or `spirv64-unknown-unknown` offload target,
