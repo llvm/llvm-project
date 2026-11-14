@@ -1193,7 +1193,7 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
       // branch, drop it. When we fold the bonus instructions we want to make
       // sure we reset their debug locations in order to avoid stepping on
       // dead code caused by folding dead branches.
-      NewBonusInst->dropLocation();
+      NewBonusInst->dropSourcePositionKeepIRLayers();
     } else if (const DebugLoc &DL = NewBonusInst->getDebugLoc()) {
       mapAtomInstance(DL, VMap);
     }
@@ -1246,7 +1246,7 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
   if (auto &PredDL = PTI->getDebugLoc()) {
     auto &DL = BB->getTerminator()->getDebugLoc();
     if (!PredDL->getAtomGroup() && DL && DL->getAtomGroup() &&
-        PredDL.isSameSourceLocation(DL)) {
+        PredDL.isSameSourceLocationAndIRLayers(DL)) {
       PTI->setDebugLoc(DL);
       RemapSourceAtom(PTI, VMap);
     }
@@ -3477,7 +3477,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   // hoisting above.
   for (auto &I : make_early_inc_range(*ThenBB)) {
     if (!SpeculatedStoreValue || &I != SpeculatedStore) {
-      I.dropLocation();
+      I.dropSourcePositionKeepIRLayers();
       I.dropUBImplyingAttrsAndMetadata();
     } else {
       assert(PreviousStoreAccess && "Missing previous store access");
