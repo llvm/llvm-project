@@ -2593,6 +2593,25 @@ static bool generateConstructInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+// Stride must be a 32-bit integer, see KhronosGroup/SPIRV-Registry#469.
+static Register buildStride32(Register Stride, MachineIRBuilder &MIRBuilder,
+                              SPIRVGlobalRegistry *GR) {
+  if (GR->getScalarOrVectorBitWidth(GR->getSPIRVTypeForVReg(Stride)) == 32)
+    return Stride;
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  Register ConstReg = Stride;
+  if (getDefInstrMaybeConstant(ConstReg, MRI)->getOpcode() ==
+      TargetOpcode::G_CONSTANT)
+    return buildConstantIntReg32(getIConstVal(Stride, MRI), MIRBuilder, GR);
+  SPIRVTypeInst Int32Ty = GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
+  Register Res = createVirtualRegister(Int32Ty, GR, MIRBuilder);
+  MIRBuilder.buildInstr(SPIRV::OpUConvert)
+      .addDef(Res)
+      .addUse(GR->getSPIRVTypeID(Int32Ty))
+      .addUse(Stride);
+  return Res;
+}
+
 static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
@@ -2604,12 +2623,15 @@ static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
                Opcode != SPIRV::OpCooperativeMatrixPrefetchINTEL;
   unsigned ArgSz = Call->Arguments.size();
   unsigned LiteralIdx = 0;
+  unsigned StrideIdx = 0;
   switch (Opcode) {
   // Memory operand is optional and is literal.
   case SPIRV::OpCooperativeMatrixLoadKHR:
+    StrideIdx = ArgSz > 2 ? 2 : 0;
     LiteralIdx = ArgSz > 3 ? 3 : 0;
     break;
   case SPIRV::OpCooperativeMatrixStoreKHR:
+    StrideIdx = ArgSz > 3 ? 3 : 0;
     LiteralIdx = ArgSz > 4 ? 4 : 0;
     break;
   case SPIRV::OpCooperativeMatrixLoadCheckedINTEL:
@@ -2645,6 +2667,15 @@ static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
   if (LiteralIdx > 0)
     ImmArgs.push_back(getIConstVal(Call->Arguments[LiteralIdx], MRI));
   Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+  if (StrideIdx > 0) {
+    SmallVector<Register> Args(Call->Arguments.begin(), Call->Arguments.end());
+    Args[StrideIdx] = buildStride32(Args[StrideIdx], MIRBuilder, GR);
+    SPIRV::IncomingCall NarrowedCall(Call->BuiltinName, Call->Builtin,
+                                     Call->ReturnRegister, Call->ReturnType,
+                                     Args);
+    return buildOpFromWrapper(MIRBuilder, Opcode, &NarrowedCall,
+                              IsSet ? TypeReg : Register(0), ImmArgs);
+  }
   if (Opcode == SPIRV::OpCooperativeMatrixLengthKHR) {
     SPIRVTypeInst CoopMatrType = GR->getSPIRVTypeForVReg(Call->Arguments[0]);
     if (!CoopMatrType)
