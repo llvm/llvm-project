@@ -17,6 +17,7 @@
 #include "L0Trace.h"
 #include "PluginInterface.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -56,14 +57,25 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
   // Unlock KEnv lock after launching the kernel.
   llvm::scope_exit UnlockGuard([&KEnv]() { KEnv.Lock.unlock(); });
 
+  // The size of a `__local` argument is passed in place of its value.
+  size_t DynSharedMemorySize = KEnv.DynSharedMemorySize;
+
   bool AppendLaunchKernelWithArgsAvailable =
       Device.getL0Driver().LaunchKernelWithArguments.available();
 
   if (AppendLaunchKernelWithArgsAvailable &&
       Device.getL0Driver().AppendLaunchKernelWithArgsSupported.load(
           std::memory_order_acquire)) {
+    void **ArgPtrs = KEnv.ArgPtrs;
+    SmallVector<void *> ArgsWithDynMem;
+    if (KEnv.HasDynSharedMemoryArg) {
+      ArgsWithDynMem.append(KEnv.ArgPtrs, KEnv.ArgPtrs + KEnv.NumArgs);
+      ArgsWithDynMem.push_back(&DynSharedMemorySize);
+      ArgPtrs = ArgsWithDynMem.data();
+    }
+
     auto Err = CmdList->appendLaunchKernelWithArgs(
-        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
+        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, ArgPtrs, SignalEvent,
         NumWaitEvents, WaitEvents, KEnv.IsCooperative);
 
     if (!Err)
@@ -80,9 +92,7 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
     // No Err - it was ErrorCode::UNSUPPORTED, continue into fallback
   }
 
-  auto &KernelProperties = KEnv.KernelPR;
-  if (KernelProperties.NumKernelArgs > 0 &&
-      (KEnv.ArgPtrs == nullptr || KEnv.ArgSizes == nullptr))
+  if (KEnv.NumArgs > 0 && (KEnv.ArgPtrs == nullptr || KEnv.ArgSizes == nullptr))
     return error::createOffloadError(
         ErrorCode::INVALID_ARGUMENT,
         "zeCommandListAppendLaunchKernelWithArguments is not supported on this "
@@ -95,13 +105,12 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
   CALL_ZE_RET_ERROR(zeKernelSetGroupSize, Kernel, GroupSizes.groupSizeX,
                     GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
 
-  for (uint32_t KernelArg = 0; KernelArg < KernelProperties.NumKernelArgs;
-       KernelArg++) {
-    uint32_t ArgSize = KEnv.ArgSizes[KernelArg];
-
-    CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, Kernel, KernelArg, ArgSize,
-                      KEnv.ArgPtrs[KernelArg]);
-  }
+  for (uint32_t KernelArg = 0; KernelArg < KEnv.NumArgs; KernelArg++)
+    CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, Kernel, KernelArg,
+                      KEnv.ArgSizes[KernelArg], KEnv.ArgPtrs[KernelArg]);
+  if (KEnv.HasDynSharedMemoryArg)
+    CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, Kernel, KEnv.NumArgs,
+                      DynSharedMemorySize, nullptr);
 
   return CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent,
                                      NumWaitEvents, WaitEvents,
