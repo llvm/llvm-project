@@ -1544,11 +1544,12 @@ private:
                                    ArrayRef<const DeclRefExpr *> ParamRefs,
                                    bool ReenteredProtoParams);
 
-  /// Helper function to move LateParsedTypeAttribute pointers from one list
-  /// to another. Filters type attributes from \p From and appends them to \p
-  /// To.
-  static void TakeTypeAttrsAppendingFrom(LateParsedAttrList &To,
-                                         LateParsedAttrList &From);
+  /// Moves the late-parsed type attributes out of \p From, appending a pointer
+  /// to each one's LateParsedTypeAttrInfo to \p To. \p To does not own the
+  /// LateParsedTypeAttribute objects: the caller must keep them alive while
+  /// \p To is in use (in a C record, CurRecordLateParsedTypeAttrs does).
+  static void TakeLateParsedTypeAttrInfos(LateParsedTypeAttrInfoList &To,
+                                          LateParsedAttrList &From);
 
   void ParseLexedPragmas(ParsingClass &Class);
   void ParseLexedPragma(LateParsedPragma &LP);
