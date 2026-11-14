@@ -40,6 +40,10 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### MachO Improvements
 
+* Added `--icf=relaxed_thunks` on arm64, which allows direct calls to bypass
+  thunks and branch directly to the function body. This mode may affect debugger
+  and tooling assumptions about function entry addresses.
+
 * `__objc_stubs` entries are now ordered by the priority of the sections that
   call them, so that stubs reached from prioritized code are laid out together.
   This applies whenever section priorities exist, such as with `-order_file`.

@@ -41,7 +41,8 @@ static lto::Config createConfig() {
   c.LibraryOptions = &config->libraryOptions;
   c.Options = getTargetOptions(config->libraryOptions);
   c.Options.EmitAddrsig = config->icfLevel == ICFLevel::safe ||
-                          config->icfLevel == ICFLevel::safe_thunks;
+                          config->icfLevel == ICFLevel::safe_thunks ||
+                          config->icfLevel == ICFLevel::relaxed_thunks;
   for (StringRef C : config->mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
   for (StringRef pluginFn : config->passPlugins)

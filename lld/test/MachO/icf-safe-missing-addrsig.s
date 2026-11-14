@@ -11,6 +11,8 @@
 # RUN: FileCheck %s --check-prefix=NO-ADDRSIG-SAFE < %t/without-addrsig-safe.map
 # RUN: FileCheck %s --check-prefix=ADDRSIG-SAFE-THUNKS < %t/with-addrsig-safe-thunks.map
 # RUN: FileCheck %s --check-prefix=NO-ADDRSIG-SAFE-THUNKS < %t/without-addrsig-safe-thunks.map
+# RUN: %lld -arch arm64 -lSystem --icf=relaxed_thunks -dylib -map - -o %t/with-addrsig-relaxed.dylib %t/with-addrsig.o | FileCheck %s --check-prefix=ADDRSIG-SAFE-THUNKS
+# RUN: %lld -arch arm64 -lSystem --icf=relaxed_thunks -dylib -map - -o %t/without-addrsig-relaxed.dylib %t/without-addrsig.o | FileCheck %s --check-prefix=NO-ADDRSIG-SAFE-THUNKS
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/invalid-addrsig.s -o %t/invalid-addrsig.o
 # RUN: not %lld -arch arm64 -lSystem --icf=safe -dylib -o /dev/null %t/invalid-addrsig.o 2>&1 | FileCheck %s --check-prefix=INVALID-ADDRSIG
