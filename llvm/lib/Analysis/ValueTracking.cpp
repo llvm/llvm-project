@@ -10986,6 +10986,38 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     // TODO: Return ConstantRange.
     setLimitsForBinOp(*BO, Lower, Upper, SQ.IIQ, ForSigned);
     CR = ConstantRange::getNonEmpty(Lower, Upper);
+
+    ConstantRange::PreferredRangeType RangeType =
+        ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
+
+    const APInt *C;
+    switch (BO->getOpcode()) {
+    case Instruction::Add:
+      if (match(BO->getOperand(1), m_APInt(C))) {
+        ConstantRange Base =
+            computeConstantRange(BO->getOperand(0), ForSigned, SQ, Depth + 1);
+
+        unsigned NoWrapKind = 0;
+        if (SQ.IIQ.hasNoUnsignedWrap(BO))
+          NoWrapKind |= OverflowingBinaryOperator::NoUnsignedWrap;
+        if (SQ.IIQ.hasNoSignedWrap(BO))
+          NoWrapKind |= OverflowingBinaryOperator::NoSignedWrap;
+
+        CR = CR.intersectWith(
+            Base.addWithNoWrap(ConstantRange(*C), NoWrapKind, RangeType),
+            RangeType);
+      }
+      break;
+    case Instruction::LShr:
+      if (match(BO->getOperand(1), m_APInt(C)) && C->ult(BitWidth)) {
+        ConstantRange Base = computeConstantRange(
+            BO->getOperand(0), /*ForSigned=*/false, SQ, Depth + 1);
+        CR = CR.intersectWith(Base.lshr(ConstantRange(*C)), RangeType);
+      }
+      break;
+    default:
+      break;
+    }
   } else if (auto *II = dyn_cast<IntrinsicInst>(V))
     CR = getRangeForIntrinsic(*II, SQ.IIQ.UseInstrInfo);
   else if (auto *SI = dyn_cast<SelectInst>(V)) {
