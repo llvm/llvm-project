@@ -1522,6 +1522,26 @@ void GenericInstructionPredicateMatcher::emitPredicateOpcodes(
         << MatchTable::LineBreak;
 }
 
+//===- LegalityPredicateMatcher -------------------------------------------===//
+
+bool LegalityPredicateMatcher::isIdentical(const PredicateMatcher &B) const {
+  if (!InstructionPredicateMatcher::isIdentical(B))
+    return false;
+  const auto &Other = static_cast<const LegalityPredicateMatcher &>(B);
+  return &I == &Other.I && TypeOperands == Other.TypeOperands;
+}
+
+void LegalityPredicateMatcher::emitPredicateOpcodes(MatchTable &Table) const {
+  Table << MatchTable::Opcode("GIM_CheckIsLegal")
+        << MatchTable::NamedValue(2, I.Namespace, I.TheDef->getName())
+        << MatchTable::Comment("NumTypes")
+        << MatchTable::ULEB128Value(TypeOperands.size());
+  for (const auto &[InsnVarID, OpIdx] : TypeOperands)
+    Table << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+          << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx);
+  Table << MatchTable::LineBreak;
+}
+
 //===- MIFlagsInstructionPredicateMatcher ---------------------------------===//
 
 bool MIFlagsInstructionPredicateMatcher::isIdentical(
