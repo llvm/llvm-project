@@ -160,7 +160,6 @@ headers_not_available = list(
     map(
         Header,
         [
-            "generator",
             "hazard_pointer",
             "inplace_vector",
             "linalg",
