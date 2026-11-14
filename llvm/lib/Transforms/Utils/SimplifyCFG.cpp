@@ -288,8 +288,9 @@ class SimplifyCFGOpt {
   bool performValueComparisonIntoPredecessorFolding(Instruction *TI, Value *&CV,
                                                     Instruction *PTI,
                                                     IRBuilder<> &Builder);
-  bool foldValueComparisonIntoPredecessors(Instruction *TI,
-                                           IRBuilder<> &Builder);
+  bool
+  foldValueComparisonIntoPredecessors(Instruction *TI, IRBuilder<> &Builder,
+                                      ArrayRef<Instruction *> EphInsts = {});
 
   bool simplifyResume(ResumeInst *RI, IRBuilder<> &Builder);
   bool simplifySingleResume(ResumeInst *RI);
@@ -1475,12 +1476,41 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
   return true;
 }
 
+/// Clone the instructions \p Insts of \p BB into the successors of \p BB, which
+/// must only be reachable through \p BB.
+static void cloneInstsIntoSuccessors(BasicBlock *BB,
+                                     ArrayRef<Instruction *> Insts,
+                                     AssumptionCache *AC) {
+  SmallPtrSet<BasicBlock *, 8> Visited;
+  for (BasicBlock *Succ : successors(BB)) {
+    if (!Visited.insert(Succ).second)
+      continue;
+    assert(Succ->getUniquePredecessor() == BB &&
+           "Successor is reachable without going through BB");
+    ValueToValueMapTy VMap;
+    BasicBlock::iterator InsertPt = Succ->getFirstInsertionPt();
+    for (Instruction *I : Insts) {
+      Instruction *NewI = I->clone();
+      NewI->insertInto(Succ, InsertPt);
+      NewI->setName(I->getName());
+      if (const DebugLoc &DL = I->getDebugLoc())
+        mapAtomInstance(DL, VMap);
+      RemapInstruction(NewI, VMap,
+                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      VMap[I] = NewI;
+      if (auto *Assume = dyn_cast<AssumeInst>(NewI))
+        if (AC)
+          AC->registerAssumption(Assume);
+    }
+  }
+}
+
 /// The specified terminator is a value equality comparison instruction
 /// (either a switch or a branch on "X == c").
 /// See if any of the predecessors of the terminator block are value comparisons
 /// on the same value.  If so, and if safe to do so, fold them together.
-bool SimplifyCFGOpt::foldValueComparisonIntoPredecessors(Instruction *TI,
-                                                         IRBuilder<> &Builder) {
+bool SimplifyCFGOpt::foldValueComparisonIntoPredecessors(
+    Instruction *TI, IRBuilder<> &Builder, ArrayRef<Instruction *> EphInsts) {
   BasicBlock *BB = TI->getParent();
   Value *CV = isValueEqualityComparison(TI); // CondVal
   assert(CV && "Not a comparison?");
@@ -1489,6 +1519,14 @@ bool SimplifyCFGOpt::foldValueComparisonIntoPredecessors(Instruction *TI,
   // when we duplicate branches in multiple predecessors.
   if (!BB->getSinglePredecessor() &&
       BB->hasNPredecessorsOrMore(128 / TI->getNumSuccessors()))
+    return false;
+
+  // To make sure assumes have the right scope and that we don't speculate other
+  // ephemeral instructions, check that the successors of the comparison block
+  // can only be reached through the current block.
+  if (!EphInsts.empty() && any_of(successors(BB), [BB](BasicBlock *Succ) {
+        return Succ->getUniquePredecessor() != BB;
+      }))
     return false;
 
   bool Changed = false;
@@ -1513,6 +1551,11 @@ bool SimplifyCFGOpt::foldValueComparisonIntoPredecessors(Instruction *TI,
         if (!SplitBlockPredecessors(Succ, TI->getParent(), ".fold.split", DTU))
           return false;
       }
+    }
+
+    if (!EphInsts.empty()) {
+      cloneInstsIntoSuccessors(BB, EphInsts, Options.AC);
+      EphInsts = {};
     }
 
     performValueComparisonIntoPredecessorFolding(TI, CV, PTI, Builder);
@@ -3086,6 +3129,24 @@ public:
   bool contains(const Instruction *I) const { return EphValues.contains(I); }
 };
 } // namespace
+
+/// Return whether all instructions in \p BB other than the terminator,
+/// \p Cond, and pseudo probes are ephemeral. Collects ephemeral instructions
+/// in \b EphInsts.
+static bool
+onlyEphemeralInstsBeforeTerminator(BasicBlock *BB, const Value *Cond,
+                                   SmallVectorImpl<Instruction *> &EphInsts) {
+  EphemeralValueTracker EphTracker;
+  for (Instruction &I : reverse(drop_end(*BB))) {
+    if (isa<PseudoProbeInst>(I) || &I == Cond)
+      continue;
+    if (isa<PHINode>(I) || !EphTracker.track(&I))
+      return false;
+    EphInsts.push_back(&I);
+  }
+  std::reverse(EphInsts.begin(), EphInsts.end());
+  return true;
+}
 
 /// Determine if we can hoist sink a sole store instruction out of a
 /// conditional block.
@@ -8707,11 +8768,12 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
       if (simplifySwitchOnSelect(SI, Select))
         return requestResimplify();
 
-    // If the block only contains the switch, see if we can fold the block
-    // away into any preds.
-    if (SI == &*BB->begin())
-      if (foldValueComparisonIntoPredecessors(SI, Builder))
-        return requestResimplify();
+    // If the block only contains the switch (ignoring pseudo probes and
+    // ephemeral values), see if we can fold the block away into any preds.
+    SmallVector<Instruction *, 4> EphInsts;
+    if (onlyEphemeralInstsBeforeTerminator(BB, /*Cond=*/nullptr, EphInsts) &&
+        foldValueComparisonIntoPredecessors(SI, Builder, EphInsts))
+      return requestResimplify();
   }
 
   // Try to transform the switch into an icmp and a branch.
@@ -9085,17 +9147,14 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
       if (simplifyEqualityComparisonWithOnlyPredecessor(BI, OnlyPred, Builder))
         return requestResimplify();
 
-    // This block must be empty, except for the setcond inst, if it exists.
-    // Ignore pseudo intrinsics.
-    for (auto &I : *BB) {
-      if (isa<PseudoProbeInst>(I) ||
-          &I == cast<Instruction>(BI->getCondition()))
-        continue;
-      if (&I == BI)
-        if (foldValueComparisonIntoPredecessors(BI, Builder))
-          return requestResimplify();
-      break;
-    }
+    // Other than the condition and terminator, the block should only contain
+    // pseudo intrinsics and ephemerals.
+    // Pseudo instrinsics are dropped when folding the block into the
+    // predecessors, and ephemerals are copied to the successors.
+    SmallVector<Instruction *, 4> EphInsts;
+    if (onlyEphemeralInstsBeforeTerminator(BB, BI->getCondition(), EphInsts) &&
+        foldValueComparisonIntoPredecessors(BI, Builder, EphInsts))
+      return requestResimplify();
   }
 
   // Try to turn "br (X == 0 | X == 1), T, F" into a switch instruction.
