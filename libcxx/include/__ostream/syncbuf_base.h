@@ -66,12 +66,9 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& noemit_on_flush(basic_ostr
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& flush_emit(basic_ostream<_CharT, _Traits>& __os) {
-  // [ostream.manip]/12 specifies flush_emit as os.flush(), followed by an
-  // unformatted output function that calls buf->emit() and sets badbit if it
-  // fails. Temporarily enabling emit-on-sync gives the same behaviour: flush()
-  // calls sync(), which then calls emit() and returns -1 on failure. flush() is
-  // itself an unformatted output function, so it constructs the sentry, sets
-  // badbit when sync() fails and handles exceptions.
+  // [ostream.manip]/12: flush(), then emit() under a sentry, setting badbit on
+  // failure. With emit-on-sync temporarily on, flush() does both: its sync()
+  // calls emit() and returns -1 if emit() fails, which flush() turns into badbit.
   if (auto* __buf = dynamic_cast<__syncbuf_base<_CharT, _Traits>*>(__os.rdbuf())) {
     auto __restore =
         std::__make_scope_guard([__buf, __old = __buf->__emit_on_sync_] { __buf->__emit_on_sync_ = __old; });
