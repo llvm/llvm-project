@@ -4,16 +4,10 @@
 define i1 @foo() {
 ; CHECK-LABEL: define i1 @foo() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TOBOOL_NOT_NOT509_I_2329_I_I:%.*]] = icmp ne i32 0, 0
-; CHECK-NEXT:    [[TOBOOL_NOT_NOT509_I_1_1_I_I:%.*]] = icmp ne i32 0, 0
-; CHECK-NEXT:    [[TOBOOL_NOT_NOT509_I_2329_I_I1:%.*]] = icmp ne i32 0, 0
-; CHECK-NEXT:    [[STOREMERGE_2333_I_I:%.*]] = select i1 [[TOBOOL_NOT_NOT509_I_2329_I_I1]], i32 0, i32 0
+; CHECK-NEXT:    [[STOREMERGE_2333_I_I:%.*]] = select i1 false, i32 0, i32 0
 ; CHECK-NEXT:    [[TOBOOL_NOT_NOT509_I_1_2_I_I:%.*]] = icmp ne i32 [[STOREMERGE_2333_I_I]], 0
 ; CHECK-NEXT:    [[OP_RDX4:%.*]] = select i1 false, i1 [[TOBOOL_NOT_NOT509_I_1_2_I_I]], i1 false
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TOBOOL_NOT_NOT509_I_2329_I_I1]], i1 [[TOBOOL_NOT_NOT509_I_1_1_I_I]], i1 false
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX4]], i1 [[OP_RDX1]], i1 false
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[OP_RDX3]], i1 [[TOBOOL_NOT_NOT509_I_2329_I_I]], i1 false
-; CHECK-NEXT:    ret i1 [[OP_RDX]]
+; CHECK-NEXT:    ret i1 [[OP_RDX4]]
 ;
 entry:
   %tobool.not.not509.i.1311.i.i = icmp ne i32 0, 0
