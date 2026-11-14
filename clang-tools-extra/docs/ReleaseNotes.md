@@ -291,6 +291,11 @@ infrastructure are described first, followed by tool-specific sections.
     instantiations, where the suggested `const` would break the move for
     instantiations with real move semantics.
 
+- Improved {doc}`misc-explicit-constructor
+  <clang-tidy/checks/misc/explicit-constructor>` check to respect C++20
+  `explicit(false)` and dependent `explicit` specifiers on conversion
+  operators, matching its handling of constructors.
+
 - Improved {doc}`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by matching
   {option}`IgnoreHeaders` patterns containing `/` against header paths on

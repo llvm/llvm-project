@@ -47,8 +47,22 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
     // gmock to define matchers).
     if (Loc.isMacroID())
       return;
-    diag(Loc, NoExpressionWarningMessage)
-        << Conversion << FixItHint::CreateInsertion(Loc, "explicit ");
+
+    // Don't complain about explicit(false) or dependent expressions.
+    const ExplicitSpecifier ExplicitSpec = Conversion->getExplicitSpecifier();
+    const Expr *ExplicitExpr = ExplicitSpec.getExpr();
+    if (ExplicitExpr) {
+      ExplicitExpr = ExplicitExpr->IgnoreImplicit();
+      if (isa<CXXBoolLiteralExpr>(ExplicitExpr) ||
+          ExplicitExpr->isInstantiationDependent())
+        return;
+    }
+
+    const auto Diag = diag(Loc, ExplicitExpr ? WithExpressionWarningMessage
+                                             : NoExpressionWarningMessage)
+                      << Conversion;
+    if (!ExplicitExpr)
+      Diag << FixItHint::CreateInsertion(Loc, "explicit ");
     return;
   }
 
