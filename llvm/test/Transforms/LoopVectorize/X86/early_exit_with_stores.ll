@@ -12,7 +12,7 @@ define void @interleaved_stores_after_early_exit(ptr noalias %dst, ptr align 2 d
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[MIDDLE_BLOCK:.*]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[GEP_SRC]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 500)
@@ -55,7 +55,7 @@ define void @interleaved_stores_after_early_exit(ptr noalias %dst, ptr align 2 d
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; CHECK:       [[PRED_STORE_CONTINUE4]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], i64 3
-; CHECK-NEXT:    br i1 [[TMP21]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
+; CHECK-NEXT:    br i1 [[TMP21]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[PRED_STORE_IF5]]:
 ; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[IV]], 3
 ; CHECK-NEXT:    [[TMP23:%.*]] = shl i64 [[TMP22]], 1
@@ -69,13 +69,15 @@ define void @interleaved_stores_after_early_exit(ptr noalias %dst, ptr align 2 d
 ; CHECK-NEXT:    [[TMP27:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
-; CHECK-NEXT:    [[TMP29:%.*]] = or i1 [[TMP27]], [[TMP28]]
-; CHECK-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP27]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP30:%.*]] = add i64 [[IV]], [[TMP3]]
-; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[TMP30]], 20
-; CHECK-NEXT:    br i1 [[TMP31]], [[EXIT:label %.*]], label %[[SCALAR_PH1:.*]]
+; CHECK-NEXT:    br i1 [[TMP28]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[SCALAR_PH1]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop.header
@@ -169,7 +171,7 @@ define void @interleaved_stores_before_early_exit(ptr noalias %dst, ptr align 2 
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
 ; CHECK-NEXT:    [[TMP29:%.*]] = or i1 [[TMP27]], [[TMP28]]
-; CHECK-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i64 [[IV]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[TMP30]], 20
