@@ -79,8 +79,8 @@ changes will be overwritten the next time the docs are built.
   Otherwise: `pip install -r llvm/docs/requirements.txt`.
 
 `WARNING: document isn't included in any toctree`
-: A new RST/Markdown file needs a `toctree` entry. Add it to the
-  appropriate `index.rst` or its parent toctree.
+: A new Markdown file needs a `toctree` entry. Add it to the
+  appropriate `index.md` or its parent toctree.
 
 `Extension error: No module named 'sphinx_reredirects'`
 : Same fix: `pip install -r llvm/docs/requirements.txt`.

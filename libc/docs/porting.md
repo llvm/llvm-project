@@ -74,6 +74,35 @@ config and the
 [x86_64](https://github.com/llvm/llvm-project/tree/main/libc/config/linux/x86_64)
 config.
 
+(custom_config_directory)=
+
+### Using a config directory outside the source tree
+
+The configuration for a build does not have to live in `libc/config`. The
+`LIBC_CONFIG_PATH` CMake option names a directory to use instead of the
+in-tree directory for the target:
+
+```sh
+cmake ... -DLIBC_CONFIG_PATH=/path/to/my/config
+```
+
+The directory must contain an `entrypoints.txt`, and a `headers.txt` for a
+full build. An `exclude.txt` and a `config.json` are used if they are
+present. The `config.json` is applied on top of the defaults in
+`libc/config/config.json`, and the in-tree `config.json` files for the target
+are not read.
+
+This is the way to build a libc with a different set of functions, headers,
+and options than the default for a target without editing the in-tree
+configuration. It is not widely used yet.
+
+### Building without `-Werror`
+
+LLVM-libc is compiled with `-Werror`. While bringing up a new target or
+compiler, before the build is free of warnings, pass `-DLIBC_WNO_ERROR=ON` to
+keep the warnings without treating them as errors. This should not be considered
+a long term solution, the warnings should be fixed before landing upstream.
+
 ## Upstreaming
 
 Adding a target to the main LLVM-libc has some requirements to ensure that the
@@ -88,7 +117,7 @@ people are the maintainers, and they are responsible for keeping their target in
 good shape. This means fixing their target when it breaks, reviewing patches
 related to their target, and keeping the target's CI running.
 
-Maintainers are listed in libc/maintainers.md and must follow
+Maintainers are listed in `libc/Maintainers.md` and must follow
 [LLVM's maintainer policy](https://llvm.org/docs/DeveloperPolicy.html#maintainers).
 
 ### CI builders

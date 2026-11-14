@@ -8,6 +8,10 @@ This guide provides a step-by-step walkthrough for adding a new function to LLVM
 
 Adding a new function involves several steps, from updating the public specification to implementing and testing the code. Below is the standard checklist for contributors.
 
+Before starting, read {ref}`code_organization` and {ref}`patterns_to_avoid`.
+The most common mistake in a new function is calling another public function
+from it, which is not allowed.
+
 ## Step-by-Step Checklist
 
 ### 1. Header Entry
@@ -33,7 +37,10 @@ Write the actual code for the function.
 
 - **File**: `libc/src/<header>/<func>.cpp` (or `libc/src/<header>/<os>/<func>.cpp` for platform-specific implementations)
 - Use the `LLVM_LIBC_FUNCTION` macro.
-- Refer to {ref}`code_style` for naming and layout conventions.
+- Refer to {ref}`code_style` for naming and layout conventions and to
+  {ref}`implementation_guidelines` for memory use and input checking.
+- A function that makes a system call does so through a wrapper. See
+  {ref}`syscall_wrapper_refactor`.
 
 ### 4. CMake Rule
 
@@ -50,7 +57,9 @@ Add a CMake target for the new function so it can be compiled.
 Register the new entrypoint for the target platforms to include it in the build.
 
 - **File**: `libc/config/<os>/<arch>/entrypoints.txt`
-- Add the new function to the list of active entrypoints.
+- Add the new function to the list of active entrypoints, on every target
+  where it works. See {ref}`code_organization` for the minimum set and for
+  the difference between the overlay and full build lists.
 
 ### 6. Testing
 
@@ -61,3 +70,5 @@ Create tests to verify the implementation.
   setting `errno`, use `ErrnoCheckingTest` and `ErrnoSetterMatcher`
   (see {ref}`setting_errno`).
 - Update the `CMakeLists.txt` in the test directory (`libc/test/src/<header>/CMakeLists.txt`) to include the new test target.
+- See {ref}`testing_guide` for what the test should cover and how to confirm
+  that it ran.

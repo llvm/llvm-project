@@ -161,6 +161,15 @@ component of the target triple as `none`. For example, to build for a
 `arm-none-eabi`. Other than that, the libc for a bare metal target can be
 built using any of the three recipes described above.
 
+A baremetal toolchain that ships several variants of the library (multilibs)
+may not want a complete copy of the libc in each one. Setting
+`-DLLVM_LIBC_ENABLE_MINOR_VARIANT=ON` builds, instead of the usual archives, a
+single archive that contains only the entrypoints listed in
+`LLVM_LIBC_SUBARCHIVE_ENTRYPOINTS`. The archive is named `libllvm<name>.a`,
+where `<name>` is the value of `LLVM_LIBC_SUBARCHIVE_NAME`. Every listed
+entrypoint must be enabled in the target's `entrypoints.txt`, and the startup
+objects are not installed for such a build.
+
 ## Building for the GPU
 
 To build for a GPU architecture, it should only be necessary to specify the
