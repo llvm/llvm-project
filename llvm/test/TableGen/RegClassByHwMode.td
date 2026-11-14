@@ -81,6 +81,28 @@ include "Common/RegClassByHwModeCommon.td"
 // INSTRINFO: #endif // GET_INSTRINFO_HEADER
 
 
+// ASMMATCHER: void MyTargetAsmParser::
+// ASMMATCHER-NEXT: convertToMCInst(
+// ASMMATCHER: case CVT_95_convertToRegByHwMode_95_XRegs_95_EvenIfRequired:
+// ASMMATCHER-NEXT: switch (STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {
+// ASMMATCHER-NEXT: case 1: // EvenMode
+// ASMMATCHER-NEXT: static_cast<MyTargetOperand &>(*Operands[OpIdx]).addEvenRegOperands(Inst, 1);
+// ASMMATCHER-NEXT: break;
+// ASMMATCHER-NEXT: default:
+// ASMMATCHER-NEXT: static_cast<MyTargetOperand &>(*Operands[OpIdx]).addRegOperands(Inst, 1);
+// ASMMATCHER-NEXT: break;
+// ASMMATCHER-NEXT: }
+// ASMMATCHER-NEXT: break;
+// ASMMATCHER-NEXT: case CVT_95_addRegOperands:
+// ASMMATCHER-NEXT: static_cast<MyTargetOperand &>(*Operands[OpIdx]).addRegOperands(Inst, 1);
+// ASMMATCHER-NEXT: break;
+// ASMMATCHER-NEXT: case CVT_95_Reg:
+// ASMMATCHER-NEXT: static_cast<MyTargetOperand &>(*Operands[OpIdx]).addRegOperands(Inst, 1);
+// ASMMATCHER-NEXT: break;
+// ASMMATCHER-NEXT: case CVT_95_addEvenRegOperands:
+// ASMMATCHER-NEXT: static_cast<MyTargetOperand &>(*Operands[OpIdx]).addEvenRegOperands(Inst, 1);
+// ASMMATCHER-NEXT: break;
+
 // ASMMATCHER: enum MatchClassKind {
 // ASMMATCHER:   MCK_LAST_TOKEN = OptionalMatchClass,
 // ASMMATCHER-NEXT:   MCK_XRegs_Odd, // register class 'XRegs_Odd'
@@ -145,7 +167,7 @@ include "Common/RegClassByHwModeCommon.td"
 // ASMMATCHER: /* also_my_load_1 */, MyTarget::MY_LOAD, Convert__RegByHwMode_XRegs_EvenIfRequired1_0__RegByHwMode_MyPtrRC1_1, AMFBS_None, { MCK_RegByHwMode_XRegs_EvenIfRequired, MCK_RegByHwMode_MyPtrRC }, },
 // ASMMATCHER: /* also_my_load_2 */, MyTarget::MY_LOAD, Convert__RegByHwMode_XRegs_EvenIfRequired1_0__RegByHwMode_MyPtrRC1_1, AMFBS_None, { MCK_RegByHwMode_XRegs_EvenIfRequired, MCK_RegByHwMode_MyPtrRC }, },
 // ASMMATCHER: /* always_all */, MyTarget::ALWAYS_ALL, Convert__Reg1_0, AMFBS_None, { MCK_XRegs }, },
-// ASMMATCHER: /* always_even */, MyTarget::ALWAYS_EVEN, Convert__Reg1_0, AMFBS_None, { MCK_XRegs_Even }, },
+// ASMMATCHER: /* always_even */, MyTarget::ALWAYS_EVEN, Convert__XRegs_Even1_0, AMFBS_None, { MCK_XRegs_Even }, },
 // ASMMATCHER: /* custom_decode */, MyTarget::CUSTOM_DECODE, Convert__RegByHwMode_YRegs_EvenIfRequired1_0, AMFBS_None, { MCK_RegByHwMode_YRegs_EvenIfRequired }, },
 // ASMMATCHER: /* even_if_mode */, MyTarget::EVEN_IF_MODE, Convert__RegByHwMode_XRegs_EvenIfRequired1_0, AMFBS_None, { MCK_RegByHwMode_XRegs_EvenIfRequired }, },
 // ASMMATCHER: /* my_mov */, MyTarget::MY_MOV, Convert__RegByHwMode_YRegs_EvenIfRequired1_0__RegByHwMode_XRegs_EvenIfRequired1_1, AMFBS_None, { MCK_RegByHwMode_YRegs_EvenIfRequired, MCK_RegByHwMode_XRegs_EvenIfRequired }, },
@@ -320,7 +342,9 @@ def P3_64 : MyReg<"p3_64">;
 
 
 def XRegs_Odd : RegisterClass<"MyTarget", [i64], 64, (add X1, X3, X5)>;
-def XRegs_Even : RegisterClass<"MyTarget", [i64], 64, (add X0, X2, X4, X6)>;
+def XRegs_Even : RegisterClass<"MyTarget", [i64], 64, (add X0, X2, X4, X6)> {
+  let RenderMethod = "addEvenRegOperands";
+}
 
 def XRegs_EvenIfRequired : RegClassByHwMode<[DefaultMode, EvenMode, OddMode],
                                             [XRegs, XRegs_Even, XRegs_Odd]>;

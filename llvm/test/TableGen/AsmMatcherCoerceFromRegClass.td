@@ -1,6 +1,9 @@
 // RUN: llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s
 // RUN: not llvm-tblgen -gen-asm-matcher -I %p/../../include %s -DERR_DUPLICATE_NAME 2>&1 | FileCheck %s --check-prefix=ERR-DUPLICATE-NAME
 // RUN: not llvm-tblgen -gen-asm-matcher -I %p/../../include %s -DERR_SHADOWED 2>&1 | FileCheck %s --check-prefix=ERR-SHADOWED
+// RUN: not llvm-tblgen -gen-asm-matcher -I %p/../../include %s -DERR_RENDER_METHOD 2>&1 | FileCheck %s --check-prefix=ERR-RENDER-METHOD
+// RUN: not llvm-tblgen -gen-asm-matcher -I %p/../../include %s -DERR_RENDER_METHOD_CONFLICT 2>&1 | FileCheck %s --check-prefix=ERR-RENDER-METHOD-CONFLICT
+// RUN: not llvm-tblgen -gen-asm-matcher -I %p/../../include %s -DERR_RENDER_METHOD_COERCE_CONFLICT 2>&1 | FileCheck %s --check-prefix=ERR-RENDER-METHOD-COERCE-CONFLICT
 
 include "llvm/Target/Target.td"
 
@@ -167,6 +170,40 @@ def BadRC : RegisterClass<"Arch", [i32], 32, (add R0, R1)> {
   let CoerceFromRegClass = YGPR;
 }
 // ERR-SHADOWED: error: RegisterClass 'BadRC' cannot coerce from 'R0_Y' since MatchRegisterName returns 'R0' for 'r0'
+#endif
+
+#ifdef ERR_RENDER_METHOD
+def BadRC : RegisterClass<"Arch", [i64], 64, (add R0_Y)> {
+  let RenderMethod = "addCustomRegOperands";
+  let CoerceFromRegClass = GPR;
+}
+// ERR-RENDER-METHOD: error: RegisterClass 'BadRC' cannot specify both 'RenderMethod' and 'CoerceFromRegClass'
+#endif
+
+/// Register classes with the same registers share a match class, so they must
+/// use the same RenderMethod.
+#ifdef ERR_RENDER_METHOD_CONFLICT
+def BadRC : RegisterClass<"Arch", [i32], 32, (add R0, R1)> {
+  let RenderMethod = "addCustomRegOperands";
+}
+// ERR-RENDER-METHOD-CONFLICT: error: RegisterClass 'GPR' has the same registers as 'BadRC' but a different RenderMethod
+#endif
+
+/// The same applies to classes that match the same registers as a class with
+/// CoerceFromRegClass, since those always use the default RenderMethod.
+#ifdef ERR_RENDER_METHOD_COERCE_CONFLICT
+let Namespace = "Arch" in {
+  def R2 : Register<"r2">;
+  def R2_Y : Register<"r2">;
+}
+def GPR2 : RegisterClass<"Arch", [i32], 32, (add R2)>;
+def YGPR2 : RegisterClass<"Arch", [i64], 64, (add R2_Y)> {
+  let CoerceFromRegClass = GPR2;
+}
+def BadRC : RegisterClass<"Arch", [i64], 64, (add R2_Y, R2)> {
+  let RenderMethod = "addCustomRegOperands";
+}
+// ERR-RENDER-METHOD-COERCE-CONFLICT: error: RegisterClass 'YGPR2' has the same registers as 'BadRC' but a different RenderMethod
 #endif
 
 // CHECK-LABEL: static MCRegister convertToUPR(MCRegister Reg) {
