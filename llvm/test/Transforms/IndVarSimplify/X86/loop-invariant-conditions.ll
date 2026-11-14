@@ -238,10 +238,10 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test5(i64 %start) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw i64 [[START:%.*]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 25
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BACKEDGE:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @foo()
@@ -271,10 +271,10 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test5.next(i64 %start) {
 ; CHECK-LABEL: @test5.next(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw i64 [[START:%.*]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 25
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BACKEDGE:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @foo()
@@ -305,10 +305,10 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test6(i64 %start) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw i64 [[START:%.*]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 25
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BACKEDGE:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @foo()
@@ -338,10 +338,10 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test6.next(i64 %start) {
 ; CHECK-LABEL: @test6.next(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw i64 [[START:%.*]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 25
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BACKEDGE:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @foo()
@@ -548,10 +548,10 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test4_neg(i64 %start) {
 ; CHECK-LABEL: @test4_neg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nsw i64 [[START:%.*]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 25
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BACKEDGE:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @foo()

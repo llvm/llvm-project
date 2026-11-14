@@ -287,11 +287,11 @@ exit:
 define void @predicated_inside_loop_signed_neg(i32 %arg) nounwind #0 {
 ; CHECK-LABEL: @predicated_inside_loop_signed_neg(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[TMP0]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[OUTER_INC:%.*]] ]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[SUB1]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[GUARDED:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[ARG]], [[I]]
@@ -348,11 +348,12 @@ exit:
 define void @predicated_inside_loop_signed_pos(i32 %arg) nounwind #0 {
 ; CHECK-LABEL: @predicated_inside_loop_signed_pos(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[TMP0]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[OUTER_INC:%.*]] ]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[SUB1]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG]], 1
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[GUARDED:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[ARG]], [[I]]
@@ -408,11 +409,11 @@ exit:
 define void @predicated_inside_loop_unsigned(i32 %arg) nounwind #0 {
 ; CHECK-LABEL: @predicated_inside_loop_unsigned(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[TMP0]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[OUTER_INC:%.*]] ]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[SUB1]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[GUARDED:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[ARG]], [[I]]

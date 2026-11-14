@@ -81,17 +81,14 @@ define void @test_simplifycompare_rhs_not_constant2(i32 %x) {
 ; CHECK-LABEL: define void @test_simplifycompare_rhs_not_constant2(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i32 [[X]], 0
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER_LOOPEXIT:.*]]:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw i64 [[INDVARS_IV:%.*]], 2
 ; CHECK-NEXT:    br label %[[OUTER_HEADER]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[INDVARS_IV]] = phi i64 [ [[INDVARS_IV_NEXT]], %[[OUTER_HEADER_LOOPEXIT]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_1_NEXT:%.*]], %[[OUTER_HEADER_LOOPEXIT]] ]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[EXIT_LOOP_PREHEADER:.*]], label %[[OUTER_LATCH_PREHEADER:.*]]
 ; CHECK:       [[EXIT_LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[INDVARS_IV_LCSSA:%.*]] = phi i64 [ [[INDVARS_IV]], %[[OUTER_HEADER]] ]
 ; CHECK-NEXT:    br label %[[EXIT_LOOP:.*]]
 ; CHECK:       [[OUTER_LATCH_PREHEADER]]:
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add nuw nsw i32 [[IV_1]], 2
@@ -101,7 +98,7 @@ define void @test_simplifycompare_rhs_not_constant2(i32 %x) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i32 [[P]], [[IV_1_NEXT]]
 ; CHECK-NEXT:    br i1 [[C_2]], label %[[OUTER_LATCH]], label %[[OUTER_HEADER_LOOPEXIT]]
 ; CHECK:       [[EXIT_LOOP]]:
-; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_LCSSA]], %[[EXIT_LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT2:%.*]], %[[EXIT_LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ 0, %[[EXIT_LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT2:%.*]], %[[EXIT_LOOP]] ]
 ; CHECK-NEXT:    call void @use.i64(i64 [[INDVARS_IV1]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nuw nsw i64 [[INDVARS_IV1]], 1
 ; CHECK-NEXT:    br label %[[EXIT_LOOP]]
@@ -135,14 +132,12 @@ define void @test_simplifycompare_rhs_addrec(i32 %x) {
 ; CHECK-LABEL: define void @test_simplifycompare_rhs_addrec(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i32 [[X]], 0
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER_LOOPEXIT:.*]]:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV:%.*]], 2
 ; CHECK-NEXT:    br label %[[OUTER_HEADER]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[INDVARS_IV]] = phi i64 [ [[INDVARS_IV_NEXT]], %[[OUTER_HEADER_LOOPEXIT]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[IV_1_NEXT:%.*]], %[[OUTER_HEADER_LOOPEXIT]] ]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[OUTER_EXIT:.*]], label %[[OUTER_LATCH_PREHEADER:.*]]
 ; CHECK:       [[OUTER_LATCH_PREHEADER]]:
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add nuw nsw i32 [[IV_1]], 2
@@ -152,10 +147,9 @@ define void @test_simplifycompare_rhs_addrec(i32 %x) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i32 [[P]], [[IV_1_NEXT]]
 ; CHECK-NEXT:    br i1 [[C_2]], label %[[OUTER_LATCH]], label %[[OUTER_HEADER_LOOPEXIT]]
 ; CHECK:       [[OUTER_EXIT]]:
-; CHECK-NEXT:    [[INDVARS_IV_LCSSA:%.*]] = phi i64 [ [[INDVARS_IV]], %[[OUTER_HEADER]] ]
 ; CHECK-NEXT:    br label %[[EXIT_LOOP:.*]]
 ; CHECK:       [[EXIT_LOOP]]:
-; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT2:%.*]], %[[EXIT_LOOP]] ], [ [[INDVARS_IV_LCSSA]], %[[OUTER_EXIT]] ]
+; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT2:%.*]], %[[EXIT_LOOP]] ], [ 0, %[[OUTER_EXIT]] ]
 ; CHECK-NEXT:    call void @use.i64(i64 [[INDVARS_IV1]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nuw nsw i64 [[INDVARS_IV1]], 1
 ; CHECK-NEXT:    br label %[[EXIT_LOOP]]

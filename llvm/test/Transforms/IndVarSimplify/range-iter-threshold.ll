@@ -13,10 +13,10 @@ define i32 @test(i1 %c.0, i32 %m) {
 ; COMMON-NEXT:    [[IV_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_1_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
 ; COMMON-NEXT:    [[MAX_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[MAX_1:%.*]], [[OUTER_LATCH]] ]
 ; COMMON-NEXT:    [[TMP0:%.*]] = sext i32 [[IV_1]] to i64
+; COMMON-NEXT:    [[TMP1:%.*]] = icmp slt i64 0, [[TMP0]]
 ; COMMON-NEXT:    br label [[INNER_1:%.*]]
 ; COMMON:       inner.1:
-; COMMON-NEXT:    [[C_1:%.*]] = icmp slt i64 0, [[TMP0]]
-; COMMON-NEXT:    br i1 [[C_1]], label [[INNER_1]], label [[INNER_2_HEADER_PREHEADER:%.*]]
+; COMMON-NEXT:    br i1 [[TMP1]], label [[INNER_1]], label [[INNER_2_HEADER_PREHEADER:%.*]]
 ; COMMON:       inner.2.header.preheader:
 ; COMMON-NEXT:    br label [[INNER_2_HEADER:%.*]]
 ; COMMON:       inner.2.header:

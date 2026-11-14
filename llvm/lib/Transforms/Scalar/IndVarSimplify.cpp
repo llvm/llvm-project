@@ -118,6 +118,9 @@ class IndVarSimplify {
   /// Try to form loop invariant tests for loop exits by changing how many
   /// iterations of the loop run when that is unobservable.
   bool predicateLoopExits(Loop *L, SCEVExpander &Rewriter);
+  /// Decide on the outermost loop where we can place the compare of an
+  /// invariant first-iteration exit.
+  bool placeInvariantExitCompare(Loop *L, SCEVExpander &Rewriter);
 
   bool rewriteFirstIterationLoopExitValues(Loop *L);
 
@@ -1813,6 +1816,24 @@ static bool crashingBBWithoutEffect(const BasicBlock &BB) {
   });
 }
 
+/// Returns the outermost loop enclosing L, or L, in whose preheader all of
+/// Exprs are invariant and can be expanded.
+static Loop *getOutermostExpandableLoop(Loop *L, ArrayRef<const SCEV *> Exprs,
+                                        ScalarEvolution &SE,
+                                        SCEVExpander &Rewriter) {
+  Loop *Outer = L;
+  for (Loop *P = L->getParentLoop(); P && P->getLoopPreheader();
+       P = P->getParentLoop()) {
+    Instruction *At = P->getLoopPreheader()->getTerminator();
+    if (any_of(Exprs, [&](const SCEV *S) {
+          return !SE.isLoopInvariant(S, P) || !Rewriter.isSafeToExpandAt(S, At);
+        }))
+      break;
+    Outer = P;
+  }
+  return Outer;
+}
+
 bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
@@ -1973,8 +1994,16 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   //    predicate even if we can't insert a loop invariant expression as
   //    peeling or unrolling will likely reduce the cost of the otherwise loop
   //    varying check.
-  Rewriter.setInsertPoint(L->getLoopPreheader()->getTerminator());
-  IRBuilder<> B(L->getLoopPreheader()->getTerminator());
+  // Compute invariant expressions in the preheader of the outermost loop
+  // possible.
+  SmallVector<const SCEV *> Exprs = {ExactBTC};
+  for (BasicBlock *ExitingBB : ExitingBlocks)
+    if (!BadExit(ExitingBB))
+      Exprs.push_back(SE->getExitCount(L, ExitingBB));
+  Loop *Outer = getOutermostExpandableLoop(L, Exprs, *SE, Rewriter);
+  Instruction *InsertPt = Outer->getLoopPreheader()->getTerminator();
+  Rewriter.setInsertPoint(InsertPt);
+  IRBuilder<> B(InsertPt);
   Value *ExactBTCV = nullptr; // Lazily generated if needed.
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
@@ -2025,6 +2054,52 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
 //===----------------------------------------------------------------------===//
 //  IndVarSimplify driver. Manage several subpasses of IV simplification.
 //===----------------------------------------------------------------------===//
+
+/// Place the compare of an invariant first-iteration exit in the preheader of
+/// the outermost loop possible. Unswitching then hoists the exit, if it accepts
+/// the exit.
+bool IndVarSimplify::placeInvariantExitCompare(Loop *L,
+                                               SCEVExpander &Rewriter) {
+  BasicBlock *BB = L->getHeader();
+  while (true) {
+    if (any_of(*BB, [](const Instruction &I) {
+          return I.mayHaveSideEffects() && !isAssumeLikeIntrinsic(&I);
+        }))
+      return false;
+    BasicBlock *Next = BB->getSingleSuccessor();
+    if (!Next)
+      break;
+    if (!L->contains(Next) || Next == L->getHeader())
+      return false;
+    BB = Next;
+  }
+  auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+  auto *Cmp = BI ? dyn_cast<ICmpInst>(BI->getCondition()) : nullptr;
+  if (!Cmp || !L->isLoopExiting(BB) ||
+      !Cmp->getOperand(0)->getType()->isIntegerTy())
+    return false;
+  RunUnswitching = true;
+  if (L->isLoopInvariant(Cmp))
+    return false;
+  const SCEV *LHS = SE->getSCEV(Cmp->getOperand(0));
+  const SCEV *RHS = SE->getSCEV(Cmp->getOperand(1));
+  if (!SE->isLoopInvariant(LHS, L) || !SE->isLoopInvariant(RHS, L))
+    return false;
+  Loop *Outer = getOutermostExpandableLoop(L, {LHS, RHS}, *SE, Rewriter);
+  Instruction *At = Outer->getLoopPreheader()->getTerminator();
+  if (!Rewriter.isSafeToExpandAt(LHS, At) ||
+      !Rewriter.isSafeToExpandAt(RHS, At) ||
+      Rewriter.isHighCostExpansion({LHS, RHS}, Outer, SCEVCheapExpansionBudget,
+                                   TTI, At))
+    return false;
+  IRBuilder<> B(At);
+  BI->setCondition(B.CreateICmp(
+      Cmp->getCmpPredicate(), Rewriter.expandCodeFor(LHS, LHS->getType(), At),
+      Rewriter.expandCodeFor(RHS, RHS->getType(), At)));
+  if (Cmp->use_empty())
+    DeadInsts.emplace_back(Cmp);
+  return true;
+}
 
 bool IndVarSimplify::run(Loop *L) {
   // We need (and expect!) the incoming loop to be in LCSSA.
@@ -2098,6 +2173,9 @@ bool IndVarSimplify::run(Loop *L) {
     // Given we've changed exit counts, notify SCEV
     SE->forgetLoop(L);
   }
+
+  // Let unswitching hoist an invariant exit on the first iteration.
+  Changed |= placeInvariantExitCompare(L, Rewriter);
 
   // If we have a trip count expression, rewrite the loop's exit condition
   // using it.
@@ -2198,17 +2276,19 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
 
   IndVarSimplify IVS(Opts, &AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI,
                      AR.MSSA, WidenIndVars && Opts.indvars_widen_indvars);
-  if (!IVS.run(&L))
+  bool Changed = IVS.run(&L);
+  if (!Changed && !IVS.runUnswitching())
     return PreservedAnalyses::all();
 
-  auto PA = getLoopPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
+  auto PA = Changed ? getLoopPassPreservedAnalyses() : PreservedAnalyses::all();
+  if (Changed)
+    PA.preserveSet<CFGAnalyses>();
   if (IVS.runUnswitching()) {
     AM.getResult<ShouldRunExtraSimpleLoopUnswitch>(L, AR);
     PA.preserve<ShouldRunExtraSimpleLoopUnswitch>();
   }
 
-  if (AR.MSSA)
+  if (Changed && AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;
 }
