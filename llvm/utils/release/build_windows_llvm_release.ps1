@@ -20,6 +20,9 @@
       5. package      - Create WiX MSI installer
       6. tarball      - Generate full install tarball
 
+    Test failures do not stop the build. The failed test targets are listed
+    when the build finishes, so they can be reviewed before publishing.
+
 .PARAMETER Version
     LLVM version string (e.g. "19.1.0"). If omitted, auto-detected from
     the source tree.
@@ -254,6 +257,10 @@ if ($PSBoundParameters.ContainsKey('StartAt')) {
 
 $script:StartAtStep = if ($StartAt) { $StartAt } else { $null }
 
+# Test targets that failed. They are reported at the end instead of stopping
+# the build, so that a test failure does not prevent packaging.
+$script:FailedTestTargets = [System.Collections.Generic.List[object]]::new()
+
 
 # Ninja override: allow using a custom ninja binary with extra flags.
 # Usage: $env:LLVM_NINJA_OVERRIDE = "myninja.exe --flag1 --flag2"
@@ -482,6 +489,7 @@ try {
 
     Write-Step "Build complete!"
     Write-Host "Packages are in: $BuildDir" -ForegroundColor Green
+    Write-TestFailureSummary
 
 } finally {
     Pop-Location

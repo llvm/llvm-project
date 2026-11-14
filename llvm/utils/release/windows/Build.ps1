@@ -86,12 +86,44 @@ function Invoke-Tests {
         Runs a list of test targets once each.
         Honors $script:NinjaCommand and $script:NinjaExtraArgs (set via
         LLVM_NINJA_OVERRIDE).
+    .NOTES
+        A failing target does not stop the build: the failure is recorded and
+        the remaining targets still run, so packaging can complete. The main
+        script reports the recorded failures once the build finishes.
     #>
     param(
         [string[]]$Targets
     )
     foreach ($Target in $Targets) {
-        Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs $Target
+        try {
+            Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs $Target
+        } catch {
+            Write-Warning "Test target '$Target' failed; continuing. $($_.Exception.Message)"
+            $script:FailedTestTargets.Add([pscustomobject]@{
+                Target         = $Target
+                BuildDirectory = $PWD.Path
+            })
+        }
+    }
+}
+
+function Write-TestFailureSummary {
+    <#
+    .SYNOPSIS
+        Reports the test targets that failed during the build. Under GitHub
+        Actions, also emits a warning annotation for each failed target.
+    #>
+    if ($script:FailedTestTargets.Count -eq 0) {
+        return
+    }
+    Write-Host ''
+    Write-Warning ("$($script:FailedTestTargets.Count) test target(s) failed. " +
+        'The packages were still created; review the lit output above before publishing them.')
+    foreach ($Failure in $script:FailedTestTargets) {
+        Write-Host "  $($Failure.Target) in $($Failure.BuildDirectory)" -ForegroundColor Yellow
+        if ($env:GITHUB_ACTIONS -eq 'true') {
+            Write-Host "::warning title=Windows release tests::$($Failure.Target) failed in $($Failure.BuildDirectory)"
+        }
     }
 }
 
