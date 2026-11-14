@@ -20,12 +20,6 @@
 ---
 name:            foo1
 alignment:       16
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64common }
-  - { id: 3, class: gpr64common }
-  - { id: 4, class: fpr64 }
 frameInfo:
   maxAlignment:    1
   adjustsStack:    true

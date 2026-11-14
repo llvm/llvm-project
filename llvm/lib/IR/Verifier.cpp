@@ -1925,12 +1925,21 @@ void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
 }
 
 void Verifier::visitComdat(const Comdat &C) {
-  // In COFF the Module is invalid if the GlobalValue has private linkage.
-  // Entities with private linkage don't have entries in the symbol table.
-  if (TT.isOSBinFormatCOFF())
-    if (const GlobalValue *GV = M.getNamedValue(C.getName()))
+  // Comdats in COFF modules must have a corresponding global that is not
+  // private. If the global is private, there will be no symbol table entry.
+  // We consider unused or dead comdat entries to be valid, since they won't
+  // make it into the COFF object file.
+  if (TT.isOSBinFormatCOFF()) {
+    const GlobalValue *GV = M.getNamedValue(C.getName());
+    bool IsDefined = GV != nullptr && !GV->isDeclarationForLinker();
+    if (IsDefined)
       Check(!GV->hasPrivateLinkage(), "comdat global value has private linkage",
             GV);
+    else
+      Check(C.getUsers().empty(),
+            "COFF comdats must have a defined global value with the same name",
+            GV);
+  }
 }
 
 void Verifier::visitModuleIdents() {
@@ -2185,7 +2194,8 @@ Verifier::visitModuleFlag(const MDNode *Op,
   if (Name == "wchar_size") {
     ConstantInt *Value
       = mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
-    Check(Value, "wchar_size metadata requires constant integer argument");
+    Check(Value && Value->getValue().isStrictlyPositive(),
+          "wchar_size metadata requires constant positive integer argument");
     return;
   }
 
@@ -4732,8 +4742,8 @@ void Verifier::visitBitInsertInst(BitInsertInst &BII) {
   if (const char *Reason = BitInsertInst::areInvalidOperands(
           BII.getOperand(0), BII.getOperand(1), BII.getOperand(2)))
     Check(false, Reason, &BII);
-  Check(DL.getTypeSizeInBits(BII.getOperand(0)->getType()) >=
-            DL.getTypeSizeInBits(BII.getOperand(1)->getType()),
+  Check(DL.getTypeSizeInBits(BII.getOperand(0)->getType()->getScalarType()) >=
+            DL.getTypeSizeInBits(BII.getOperand(1)->getType()->getScalarType()),
         "bitinsert val type cannot be wider than base type!", &BII);
   visitInstruction(BII);
 }
@@ -4749,8 +4759,8 @@ void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
   if (const char *Reason = BitExtractInst::areInvalidOperands(
           BEI.getType(), BEI.getOperand(0), BEI.getOperand(1)))
     Check(false, Reason, &BEI);
-  Check(DL.getTypeSizeInBits(BEI.getType()) <=
-            DL.getTypeSizeInBits(BEI.getOperand(0)->getType()),
+  Check(DL.getTypeSizeInBits(BEI.getType()->getScalarType()) <=
+            DL.getTypeSizeInBits(BEI.getOperand(0)->getType()->getScalarType()),
         "bitextract result type cannot be wider than source type!", &BEI);
   visitInstruction(BEI);
 }

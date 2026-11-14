@@ -956,12 +956,12 @@ define void @no_merge_freeze_pool(ptr %A, ptr %Out) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x float> [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x float> [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[P2]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <2 x float> [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

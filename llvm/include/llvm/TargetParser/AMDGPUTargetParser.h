@@ -143,6 +143,11 @@ LLVM_ABI GPUKind getGPUKindFromSubArch(Triple::SubArchType SubArch);
 /// Returns \p AK's feature bitset, or an empty bitset if unknown.
 LLVM_ABI const AMDGPUFeatureBitset &getFeatureBitset(GPUKind AK);
 
+/// Convenience overload of getFeatureBitset taking a triple subarch, which is
+/// mapped via getGPUKindFromSubArch.
+LLVM_ABI const AMDGPUFeatureBitset &
+getFeatureBitset(Triple::SubArchType SubArch);
+
 /// Returns R600 GPU \p AK's feature bitset, or an empty bitset if unknown.
 LLVM_ABI const R600FeatureBitset &getFeatureBitsetR600(GPUKind AK);
 

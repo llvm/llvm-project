@@ -2664,6 +2664,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.src.math.fmodf
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -2679,6 +2680,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.src.math.fmod
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -3319,6 +3321,7 @@ add_fp_unittest(
     atan2f16_test.cpp
   DEPENDS
     libc.src.math.atan2f16
+    libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -3747,6 +3750,21 @@ add_fp_unittest(
     libc.src.math.dfmal
     libc.src.stdlib.rand
     libc.src.stdlib.srand
+)
+
+add_fp_unittest(
+  dsubf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-tests
+  SRCS
+    dsubf128_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.dsubf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(

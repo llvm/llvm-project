@@ -33,14 +33,20 @@ using namespace llvm::jitlink;
 
 namespace {
 
+/// Build an empty graph. The graph holds the only reference to its
+/// SymbolStringPool.
+std::unique_ptr<LinkGraph> makeEmptyGraph() {
+  return std::make_unique<LinkGraph>(
+      "foo", std::make_shared<orc::SymbolStringPool>(),
+      Triple("x86_64-apple-darwin"), 8, SubtargetFeatures(),
+      getGenericEdgeKindName);
+}
+
 /// Build a graph containing a single data block that points to an external
 /// symbol "E", so that linking it will issue a lookup. The graph holds the
 /// only reference to its SymbolStringPool.
 std::unique_ptr<LinkGraph> makeGraphWithOneExternal() {
-  auto G = std::make_unique<LinkGraph>(
-      "foo", std::make_shared<orc::SymbolStringPool>(),
-      Triple("x86_64-apple-darwin"), 8, SubtargetFeatures(),
-      getGenericEdgeKindName);
+  auto G = makeEmptyGraph();
 
   auto &Sec =
       G->createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
@@ -54,6 +60,26 @@ std::unique_ptr<LinkGraph> makeGraphWithOneExternal() {
 
   return G;
 }
+
+/// A stage of the link pipeline at which passes can be run.
+struct PassStage {
+  const char *Name;
+  LinkGraphPassList PassConfiguration::*Passes;
+  bool AfterAllocation;
+};
+
+const PassStage PassStages[] = {
+    {"PrePrune", &PassConfiguration::PrePrunePasses, false},
+    {"PostPrune", &PassConfiguration::PostPrunePasses, false},
+    {"PostAllocation", &PassConfiguration::PostAllocationPasses, true},
+    {"PreFixup", &PassConfiguration::PreFixupPasses, true},
+    {"PostFixup", &PassConfiguration::PostFixupPasses, true},
+};
+
+enum class GraphKind { Empty, NonEmpty };
+
+class JITLinkGenericPassErrorTest
+    : public testing::TestWithParam<std::tuple<PassStage, GraphKind>> {};
 
 } // end anonymous namespace
 
@@ -86,3 +112,83 @@ TEST(JITLinkGenericTest, SuccessfulLookupWithGraphOwnedPool) {
 
   EXPECT_THAT_ERROR(std::move(Err), Succeeded());
 }
+
+TEST_P(JITLinkGenericPassErrorTest, FailingPassIsReported) {
+  // Check that an error returned by a pass at any stage of the pipeline is
+  // reported exactly once via notifyFailed, that the link stops, and that any
+  // allocation is abandoned. Empty graphs skip allocation, so they exercise
+  // the failure paths without an allocation to abandon.
+  const PassStage &Stage = std::get<0>(GetParam());
+  GraphKind Kind = std::get<1>(GetParam());
+  std::string ExpectedMsg = std::string(Stage.Name) + " pass failed";
+
+  bool AllocateCalled = false;
+  bool AbandonCalled = false;
+  bool FinalizeCalled = false;
+  bool NotifyFinalizedCalled = false;
+  unsigned FailureCount = 0;
+  Error Err = Error::success();
+
+  auto Ctx = makeMockContext(
+      [&](Error E) {
+        ++FailureCount;
+        Err = joinErrors(std::move(Err), std::move(E));
+      },
+      [&](MockJITLinkMemoryManager &MemMgr) {
+        MemMgr.Allocate = [&](const JITLinkDylib *JD, LinkGraph &G) {
+          AllocateCalled = true;
+          return MemMgr.defaultAllocate(JD, G);
+        };
+        MemMgr.Abandon =
+            [&](std::unique_ptr<MockJITLinkMemoryManager::Alloc> A) {
+              AbandonCalled = true;
+              return MemMgr.defaultAbandon(std::move(A));
+            };
+        MemMgr.Finalize =
+            [&](std::unique_ptr<MockJITLinkMemoryManager::Alloc> A) {
+              FinalizeCalled = true;
+              return MemMgr.defaultFinalize(std::move(A));
+            };
+      },
+      [&](MockJITLinkContext &Ctx) {
+        Ctx.Lookup = lookupResolveEverythingToNull;
+        Ctx.NotifyFinalized = [&](JITLinkMemoryManager::FinalizedAlloc) {
+          NotifyFinalizedCalled = true;
+        };
+        Ctx.ModifyPassConfig = [Passes = Stage.Passes, ExpectedMsg](
+                                   LinkGraph &, PassConfiguration &Config) {
+          (Config.*Passes).push_back([ExpectedMsg](LinkGraph &) {
+            return make_error<StringError>(ExpectedMsg,
+                                           inconvertibleErrorCode());
+          });
+          return Error::success();
+        };
+      });
+
+  link_MachO_x86_64(Kind == GraphKind::Empty ? makeEmptyGraph()
+                                             : makeGraphWithOneExternal(),
+                    std::move(Ctx));
+
+  EXPECT_EQ(FailureCount, 1U) << "Failure should be reported exactly once";
+  EXPECT_THAT_ERROR(std::move(Err), FailedWithMessage(ExpectedMsg));
+  EXPECT_FALSE(FinalizeCalled) << "Allocation should not be finalized";
+  EXPECT_FALSE(NotifyFinalizedCalled) << "Link should not complete";
+
+  // Non-empty graphs allocate before the post-allocation passes run, and must
+  // abandon that allocation on failure.
+  bool ExpectAlloc = Kind == GraphKind::NonEmpty && Stage.AfterAllocation;
+  EXPECT_EQ(AllocateCalled, ExpectAlloc);
+  EXPECT_EQ(AbandonCalled, ExpectAlloc);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    AllStages, JITLinkGenericPassErrorTest,
+    testing::Combine(testing::ValuesIn(PassStages),
+                     testing::Values(GraphKind::Empty, GraphKind::NonEmpty)),
+    [](const testing::TestParamInfo<JITLinkGenericPassErrorTest::ParamType>
+           &Info) {
+      const PassStage &Stage = std::get<0>(Info.param);
+      GraphKind Kind = std::get<1>(Info.param);
+      return std::string(Stage.Name) +
+             (Kind == GraphKind::Empty ? "_EmptyGraph" : "_NonEmptyGraph");
+    });

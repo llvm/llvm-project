@@ -6324,9 +6324,14 @@ static bool combineInstructionsOverFunction(
       reportFatalUsageError(
           "Instruction Combining on " + Twine(F.getName()) +
           " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
-          " iterations. " +
-          "Use 'instcombine<no-verify-fixpoint>' or function attribute "
-          "'instcombine-no-verify-fixpoint' to suppress this error.");
+          " iterations.\n\n"
+          "If you encountered this error while working on InstCombine, "
+          "determine the cause and either fix it, or add the "
+          "\"instcombine-no-verify-fixpoint\" attribute to the test, with "
+          "a comment explaining the reason for the convergence failure.\n\n"
+          "If you encountered this error in any other situation, "
+          "use 'instcombine<no-verify-fixpoint>' and "
+          "do *not* file an issue.");
     }
   }
 
