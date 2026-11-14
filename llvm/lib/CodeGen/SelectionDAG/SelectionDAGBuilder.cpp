@@ -6462,6 +6462,39 @@ getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
   }
 }
 
+/// If the scalar integer \p N is the value of a register, or its low part,
+/// return that register. AssertZext and AssertSext emit no code and are
+/// looked through.
+static Register getArgRegOfValue(SDValue N) {
+  if (!N.getValueType().isScalarInteger())
+    return Register();
+  while (true) {
+    switch (N.getOpcode()) {
+    case ISD::AssertZext:
+    case ISD::AssertSext:
+    case ISD::TRUNCATE:
+      N = N.getOperand(0);
+      continue;
+    case ISD::CopyFromReg:
+      return cast<RegisterSDNode>(N.getOperand(1))->getReg();
+    default:
+      return Register();
+    }
+  }
+}
+
+/// Return true if the first location of \p Var in \p BB, ignoring inlined
+/// copies, is a dbg_value of \p V with \p Expr.
+static bool isFirstDbgValueOf(const BasicBlock &BB, const DILocalVariable *Var,
+                              const Value *V, const DIExpression *Expr) {
+  for (const Instruction &I : BB)
+    for (const DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+      if (DVR.getVariable() == Var && !DVR.getDebugLoc()->getInlinedAt())
+        return DVR.isDbgValue() && !DVR.hasArgList() &&
+               DVR.getVariableLocationOp(0) == V && DVR.getExpression() == Expr;
+  return false;
+}
+
 /// If the DbgValueInst is a dbg_value of a function argument, create the
 /// corresponding DBG_VALUE machine instruction for it now.  At the end of
 /// instruction selection, they will be inserted to the entry BB.
@@ -6471,6 +6504,31 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     const Value *V, DILocalVariable *Variable, DIExpression *Expr,
     DILocation *DL, FuncArgumentDbgValueKind Kind, const SDValue &N) {
   const Argument *Arg = dyn_cast<Argument>(V);
+  bool IsInEntryBlock = FuncInfo.MBB == &FuncInfo.MF->front();
+
+  // Once lowered, a trunc of an argument, or the zext of a zeroext one such as
+  // a bool parameter, is the argument register. Describe the first location of
+  // a parameter by it, as for an argument, if the expression is empty: an
+  // expression would use the whole register, which may be wider than the value.
+  Register ArgPhysReg;
+  if (isa<Instruction>(V) && N.getNode() &&
+      Kind == FuncArgumentDbgValueKind::Value && Expr->getNumElements() == 0 &&
+      Variable->isParameter() && !DL->getInlinedAt() && IsInEntryBlock) {
+    Register VReg = getArgRegOfValue(N);
+    if (VReg.isVirtual())
+      ArgPhysReg = DAG.getMachineFunction().getRegInfo().getLiveInPhysReg(VReg);
+    if (ArgPhysReg) {
+      for (const Argument &A : FuncInfo.Fn->args())
+        if (SDValue ArgN = NodeMap.lookup(&A);
+            ArgN.getNode() && getArgRegOfValue(ArgN) == VReg) {
+          Arg = &A;
+          break;
+        }
+      if (!Arg ||
+          !isFirstDbgValueOf(FuncInfo.Fn->getEntryBlock(), Variable, V, Expr))
+        return false;
+    }
+  }
   if (!Arg)
     return false;
 
@@ -6510,7 +6568,6 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     // ArgDbgValues are hoisted to the beginning of the entry block. So we
     // should only emit as ArgDbgValue if the dbg.value intrinsic is found in
     // the entry block.
-    bool IsInEntryBlock = FuncInfo.MBB == &FuncInfo.MF->front();
     if (!IsInEntryBlock)
       return false;
 
@@ -6572,6 +6629,12 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
         return !NodeMap[V].getNode();
       FuncInfo.DescribedArgs.set(ArgNo);
     }
+  }
+
+  if (ArgPhysReg) {
+    FuncInfo.ArgDbgValues.push_back(
+        MakeVRegDbgValue(ArgPhysReg, Expr, /*Indirect=*/false));
+    return true;
   }
 
   bool IsIndirect = false;
