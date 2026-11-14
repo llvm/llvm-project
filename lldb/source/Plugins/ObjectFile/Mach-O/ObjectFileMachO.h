@@ -164,6 +164,8 @@ public:
 
   bool IsGOTSection(const lldb_private::Section &section) const override;
 
+  bool CanBeTargetModule(lldb_private::Status *status = nullptr) override;
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
