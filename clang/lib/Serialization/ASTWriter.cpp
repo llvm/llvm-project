@@ -7081,7 +7081,7 @@ void ASTRecordWriter::AddTemplateArgumentLoc(const TemplateArgumentLoc &Arg) {
   AddTemplateArgumentLocInfo(Arg);
 }
 
-void ASTRecordWriter::AddTypeSourceInfo(TypeSourceInfo *TInfo) {
+void ASTRecordWriter::AddTypeSourceInfo(const TypeSourceInfo *TInfo) {
   if (!TInfo) {
     AddTypeRef(QualType());
     return;

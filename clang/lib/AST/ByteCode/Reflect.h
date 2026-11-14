@@ -22,21 +22,19 @@ namespace clang {
 namespace interp {
 
 class Reflect final {
-private:
-  ReflectionKind Kind;
-  const void *Operand;
+  ReflectionValue Value;
 
 public:
-  Reflect() : Kind(ReflectionKind::Null), Operand(nullptr) {}
-  Reflect(ReflectionKind Kind, const void *Operand)
-      : Kind(Kind), Operand(Operand) {}
+  Reflect() = default;
+  explicit Reflect(ReflectionKind Kind, const void *Operand)
+      : Value(ReflectionValue::CreateUnsafe(Kind, Operand)) {}
 
-  ReflectionKind getKind() const { return Kind; }
+  ReflectionValue getValue() const { return Value; }
 
   ComparisonCategoryResult compare(const Reflect &RHS) const {
     llvm::FoldingSetNodeID LID, RID;
-    APValue(Kind, Operand).Profile(LID);
-    APValue(RHS.Kind, RHS.Operand).Profile(RID);
+    APValue(Value).Profile(LID);
+    APValue(RHS.Value).Profile(RID);
 
     if (LID == RID)
       return ComparisonCategoryResult::Equal;
@@ -44,11 +42,11 @@ public:
   }
 
   void print(llvm::raw_ostream &OS) const {
-    OS << "Reflect(" << Kind << ", " << Operand << ")";
+    OS << "Reflect(" << Value.getKind() << ", "
+       << Value.getOperand().getOpaqueValue() << ")";
   }
-  APValue toAPValue(const ASTContext &Ctx) const {
-    return APValue(Kind, Operand);
-  }
+
+  APValue toAPValue(const ASTContext &Ctx) const { return APValue(Value); }
 };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Reflect &R) {

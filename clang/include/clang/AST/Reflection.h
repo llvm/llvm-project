@@ -17,9 +17,10 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
+class NamespaceDecl;
 
 // TODO(Reflection): Add support for Template, Namespace and DeclRefExpr.
-enum class ReflectionKind { Null, Type };
+enum class ReflectionKind : std::uint8_t { Null, Type };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      ReflectionKind Kind) {
@@ -34,6 +35,44 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
 
   return OS;
 }
+
+class ReflectionValue {
+public:
+  // Note: 'NamespaceDecl' is currently unused; it's only here because
+  // it's an incomplete type in this header to make sure this pointer
+  // union works with incomplete types.
+  using OperandType =
+      llvm::PointerUnion<const TypeSourceInfo *, const NamespaceDecl *>;
+
+private:
+  ReflectionKind Kind;
+  OperandType Operand;
+
+  ReflectionValue(ReflectionKind Kind, OperandType Operand)
+      : Kind(Kind), Operand(Operand) {}
+
+public:
+  /// Create a null reflection.
+  ReflectionValue() : Kind(ReflectionKind::Null), Operand(nullptr) {}
+
+  /// Create a type or type alias reflection.
+  explicit ReflectionValue(const TypeSourceInfo *TSI);
+
+  /// Do not use this other than to implement serialization as pairing
+  /// an operand with the wrong kind will cause Clang to crash.
+  static ReflectionValue CreateUnsafe(ReflectionKind Kind, const void *Operand);
+
+  /// Get the reflection kind.
+  ReflectionKind getKind() const { return Kind; }
+
+  /// Get the reflection operand.
+  OperandType getOperand() const { return Operand; }
+
+  /// Get the operand as a type.
+  const TypeSourceInfo *castAsType() const;
+
+  void print(raw_ostream &Out, const PrintingPolicy &Policy);
+};
 
 /// [expr.reflect] p5, if a reflect-expression R matches the form
 /// ^^reflection-name it is interpreted as such; the identifier is looked up

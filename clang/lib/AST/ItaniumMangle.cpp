@@ -577,7 +577,7 @@ private:
   void mangleFloatLiteral(QualType T, const llvm::APFloat &V);
   void mangleFixedPointLiteral();
   void mangleNullPointer(QualType T);
-  void mangleReflection(ReflectionKind Kind, const void *OpaqueOperand);
+  void mangleReflection(ReflectionValue Value);
 
   void mangleMemberExprBase(const Expr *base, bool isArrow);
   void mangleMemberExpr(const Expr *base, bool isArrow,
@@ -1283,8 +1283,7 @@ void CXXNameMangler::mangleNullPointer(QualType T) {
   Out << "0E";
 }
 
-void CXXNameMangler::mangleReflection(ReflectionKind Kind,
-                                      const void *OpaqueOperand) {
+void CXXNameMangler::mangleReflection(ReflectionValue Value) {
   // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
   // TODO(Reflection): add support for remaining items in the grammar below
 
@@ -1319,14 +1318,12 @@ void CXXNameMangler::mangleReflection(ReflectionKind Kind,
   //                  description
 
   Out << "LDm";
-  switch (Kind) {
+  switch (Value.getKind()) {
   case ReflectionKind::Null:
     Out << "nu";
     break;
   case ReflectionKind::Type: {
-    const auto *TSI = static_cast<const TypeSourceInfo *>(OpaqueOperand);
-    QualType QT = TSI->getType();
-
+    QualType QT = Value.castAsType()->getType();
     if (isTypeAliasAsReflectionName(QT)) {
       if (const auto *TDT = QT->getAs<TypedefType>()) {
         Out << "ta";
@@ -5108,7 +5105,7 @@ recurse:
 
   case Expr::CXXReflectExprClass: {
     const CXXReflectExpr *RE = cast<CXXReflectExpr>(E);
-    mangleReflection(RE->getKind(), RE->getOpaqueValue());
+    mangleReflection(RE->getValue());
     break;
   }
 
@@ -6676,7 +6673,7 @@ static bool isZeroInitialized(QualType T, const APValue &V) {
     return !V.getMemberPointerDecl();
 
   case APValue::Reflection:
-    return !V.getReflectionOpaqueOperand();
+    return V.getReflectionValue().getOperand().isNull();
   }
 
   llvm_unreachable("Unhandled APValue::ValueKind enum");
@@ -7074,8 +7071,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
   }
 
   case APValue::Reflection: {
-    mangleReflection(V.getReflectionOperandKind(),
-                     V.getReflectionOpaqueOperand());
+    mangleReflection(V.getReflectionValue());
     break;
   }
 

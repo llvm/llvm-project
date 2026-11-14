@@ -1976,14 +1976,14 @@ CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
     : Expr(CXXReflectExprClass, Empty) {}
 
 CXXReflectExpr::CXXReflectExpr(ASTContext &C, SourceLocation CaretCaretLoc,
-                               const TypeSourceInfo *TSI)
+                               ReflectionValue Value)
     : Expr(CXXReflectExprClass, C.MetaInfoTy, VK_PRValue, OK_Ordinary),
-      CaretCaretLoc(CaretCaretLoc), Kind(ReflectionKind::Type), Operand(TSI) {}
+      CaretCaretLoc(CaretCaretLoc), Value(Value) {}
 
 CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
                                        SourceLocation CaretCaretLoc,
-                                       const TypeSourceInfo *TSI) {
-  return new (C) CXXReflectExpr(C, CaretCaretLoc, TSI);
+                                       ReflectionValue Value) {
+  return new (C) CXXReflectExpr(C, CaretCaretLoc, Value);
 }
 
 CXXReflectExpr *CXXReflectExpr::CreateEmpty(ASTContext &C) {
