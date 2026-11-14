@@ -25,6 +25,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/stop.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -1309,8 +1310,14 @@ struct MIFAllocCoarrayOpConversion
     mlir::Value sizeInBytes =
         getSizeInBytes(builder, loc, mod, dl, typeConverter, op.getBox());
     mlir::Value stat = op.getStat();
+    mlir::Type statTy = getPRIFStatType(builder);
     if (!stat)
-      stat = fir::AbsentOp::create(builder, loc, getPRIFStatType(builder));
+      stat = fir::AbsentOp::create(builder, loc, statTy);
+    else {
+      mlir::Value zero =
+          builder.createIntegerConstant(loc, fir::unwrapRefType(statTy), 0);
+      fir::StoreOp::create(builder, loc, zero, stat);
+    }
     auto [errmsgArg, errmsgAllocArg] =
         genErrmsgPRIF(builder, loc, op.getErrmsg());
 
@@ -1318,8 +1325,31 @@ struct MIFAllocCoarrayOpConversion
         builder, loc, ftype, op.getLcobounds(), op.getUcobounds(), sizeInBytes,
         finalFunc, coarrayHandle, allocMem, stat, errmsgArg, errmsgAllocArg);
     fir::CallOp callOp = fir::CallOp::create(builder, loc, funcOp, args);
-    storeCoarrayHandle(builder, loc, coarrayHandle, op.getUniqName().str());
 
+    // If STAT is present, then a check is added after the call to
+    // prif_allocate_coarray. If STAT has a value other than 0, then we must not
+    // set the new address (and initialize the derived type if this is the
+    // case).
+    mlir::Block *contBlock = nullptr;
+    if (op.getStat()) {
+      mlir::Value zero =
+          builder.createIntegerConstant(loc, builder.getI32Type(), 0);
+      mlir::Value statVal = fir::LoadOp::create(builder, loc, stat);
+      mlir::Value allocSuccess = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, statVal, zero);
+
+      mlir::Block *currentBlock = builder.getBlock();
+      mlir::Block *thenBlock =
+          rewriter.splitBlock(currentBlock, builder.getInsertionPoint());
+      contBlock = rewriter.splitBlock(thenBlock, thenBlock->begin());
+
+      builder.setInsertionPointToEnd(currentBlock);
+      mlir::cf::CondBranchOp::create(builder, loc, allocSuccess, thenBlock,
+                                     contBlock);
+      builder.setInsertionPointToStart(thenBlock);
+    }
+
+    storeCoarrayHandle(builder, loc, coarrayHandle, op.getUniqName().str());
     // Set new base_addr for the coarray descriptor
     mlir::Value addrRef =
         fir::factory::genCPtrOrCFunptrAddr(builder, loc, allocMem, ptrTy);
@@ -1344,6 +1374,12 @@ struct MIFAllocCoarrayOpConversion
       //       startup.
       genPrifSyncAllCall(builder, loc, op.getStat(), op.getErrmsg());
     }
+
+    if (op.getStat()) {
+      mlir::cf::BranchOp::create(builder, loc, contBlock);
+      builder.setInsertionPointToStart(contBlock);
+    }
+
     rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
@@ -1722,7 +1758,8 @@ public:
 
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
-    target.addLegalDialect<fir::FIROpsDialect, mlir::cf::ControlFlowDialect>();
+    target.addLegalDialect<fir::FIROpsDialect, mlir::cf::ControlFlowDialect,
+                           mlir::arith::ArithDialect>();
     target.addLegalOp<mlir::ModuleOp>();
 
     // Generate non-allocated missing coarray_handle
