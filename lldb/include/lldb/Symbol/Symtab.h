@@ -42,33 +42,42 @@ public:
   uint32_t AddSymbol(const Symbol &symbol);
   size_t GetNumSymbols() const;
 
-  /// The flags value of an N_OSO symbol that refers to an object file in a
-  /// Mach-O debug map.
+  /// Set whether this symbol table has a debug map.
   ///
-  /// When a Mach-O symbol is encoded, the n_type field is encoded in bits
-  /// 23:16, and the n_desc field is encoded in bits 15:0. N_OSO entries that
-  /// are part of the DWARF + debug map are object file symbols whose flags
-  /// have bits 23:16 == 0x66 (N_OSO) and bits 15:0 == 0x0001 (specifies this
-  /// is a debug map object file).
-  static constexpr uint32_t kDebugMapOSOSymbolFlagsValue = 0x660001u;
+  /// A debug map is a set of symbols that refer to object files containing
+  /// the debug information, such as the N_OSO entries in a Mach-O symbol
+  /// table. Object file plug-ins whose formats have debug maps set this when
+  /// they parse the symbol table, so clients can find out if it is worth
+  /// searching the symbol table for those symbols without needing to iterate
+  /// over all of the symbols themselves. This value is saved in the symbol
+  /// table cache.
+  ///
+  /// AddSymbol() doesn't change this value, so code that adds debug map
+  /// symbols after the symbol table is parsed, such as a SymbolFile's
+  /// AddSymbols(), must call this as well.
+  void SetHasDebugMap(bool has_debug_map);
 
-  /// Check if this symbol table contains a debug map symbol.
-  ///
-  /// This, and HasSourceFiles(), allow clients to find out if it is worth
-  /// searching the symbol table for specific symbols without needing to
-  /// iterate over all of the symbols themselves. Each value is calculated
-  /// the first time it is requested and then cached. The cached values are
-  /// cleared by AddSymbol(), Resize(), Finalize() and Decode(). Modifying
-  /// symbols directly, through the pointer returned by Resize() or
-  /// SymbolAtIndex(), does not update the cached values, so code doing that
-  /// should not call these until it is done.
+  /// Check if this symbol table has a debug map, see SetHasDebugMap().
   ///
   /// \return
-  ///   True if any symbol is an eSymbolTypeObjectFile symbol whose flags are
-  ///   kDebugMapOSOSymbolFlagsValue, false otherwise.
+  ///   True if the object file plug-in found a debug map when it parsed this
+  ///   symbol table, false otherwise.
   bool HasDebugMap() const;
 
+  /// Set whether this symbol table contains any source file symbols.
+  ///
+  /// Object file plug-ins that know this when they parse the symbol table
+  /// can set it, so HasSourceFiles() doesn't need to iterate over all of the
+  /// symbols. This value is saved in the symbol table cache.
+  void SetHasSourceFiles(bool has_source_files);
+
   /// Check if this symbol table contains any source file symbols.
+  ///
+  /// If the object file plug-in didn't set this value with
+  /// SetHasSourceFiles(), it is calculated the first time it is requested and
+  /// then cached. AddSymbol() updates the value, and Resize() clears it so it
+  /// is calculated again. Modifying symbols directly, through the pointer
+  /// returned by Resize() or SymbolAtIndex(), does not update the value.
   ///
   /// \return
   ///   True if any symbol is an eSymbolTypeSourceFile symbol, false otherwise.
@@ -304,11 +313,7 @@ protected:
       FileRangeToIndexMap;
   void InitNameIndexes();
   void InitAddressIndexes();
-  void CalculateHasDebugMap() const;
   void CalculateHasSourceFiles() const;
-  /// Clear the cached HasDebugMap() and HasSourceFiles() values so they are
-  /// recalculated the next time they are requested.
-  void ClearCachedSymbolChecks();
 
   /// Provide thread safety for this symbol table.
   mutable std::recursive_mutex m_mutex;
@@ -323,12 +328,12 @@ protected:
   bool m_file_addr_to_index_computed = false;
   bool m_name_indexes_computed = false;
 
-  /// Cached results for HasDebugMap() and HasSourceFiles(). These are unset
-  /// until they are requested, and are reset by ClearCachedSymbolChecks().
-  /// \{
-  mutable std::optional<bool> m_has_debug_map;
+  /// Set by the object file plug-in, see SetHasDebugMap().
+  bool m_has_debug_map = false;
+
+  /// Set by the object file plug-in, or calculated and cached by
+  /// HasSourceFiles(). Unset when neither has happened yet.
   mutable std::optional<bool> m_has_source_files;
-  /// \}
 
   /// A bitmask of lldb::SymtabState flags.
   uint32_t m_state = lldb::eSymtabStateNone;

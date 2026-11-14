@@ -298,20 +298,26 @@ void SymbolFileDWARFDebugMap::InitOSO() {
   if (!symtab)
     return;
 
-  // Avoid searching all of the symbols for N_OSO entries when the symbol
-  // table has no debug map.
+  // Avoid searching all of the symbols for N_OSO entries when the object file
+  // didn't find a debug map while parsing the symbol table.
   if (!symtab->HasDebugMap())
     return;
 
   Log *log = GetLog(DWARFLog::DebugMap);
 
   std::vector<uint32_t> oso_indexes;
+  // When a mach-o symbol is encoded, the n_type field is encoded in bits
+  // 23:16, and the n_desc field is encoded in bits 15:0.
+  //
   // To find all N_OSO entries that are part of the DWARF + debug map we find
-  // only object file symbols with the debug map N_OSO flags value.
+  // only object file symbols with the flags value as follows: bits 23:16 ==
+  // 0x66 (N_OSO) bits 15: 0 == 0x0001 (specifies this is a debug map object
+  // file)
+  const uint32_t k_oso_symbol_flags_value = 0x660001u;
+
   const uint32_t oso_index_count =
       symtab->AppendSymbolIndexesWithTypeAndFlagsValue(
-          eSymbolTypeObjectFile, Symtab::kDebugMapOSOSymbolFlagsValue,
-          oso_indexes);
+          eSymbolTypeObjectFile, k_oso_symbol_flags_value, oso_indexes);
 
   if (oso_index_count == 0)
     return;
