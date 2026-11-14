@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/RISCVFixupKinds.h"
 #include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVMCSymbolizer.h"
@@ -319,7 +320,7 @@ public:
     // jalr zero, %pcrel_lo(1b)(xi)
     if (Instruction.getOpcode() == RISCV::JALR && Begin != End) {
       MCInst &PrevInst = *std::prev(End);
-      if (isRISCVCall(PrevInst, Instruction) &&
+      if (isRISCVCall(PrevInst, &Instruction) &&
           Instruction.getOperand(0).getReg() == RISCV::X0)
         return IndirectBranchType::POSSIBLE_TAIL_CALL;
     }
@@ -416,7 +417,8 @@ public:
 
   void createLongTailCall(InstructionListType &Seq, const MCSymbol *Target,
                           MCContext *Ctx) override {
-    createShortJmp(Seq, Target, Ctx, /*IsTailCall*/ true);
+    Seq.emplace_back();
+    createTailCall(Seq.back(), Target, Ctx);
   }
 
   void createTailCall(MCInst &Inst, const MCSymbol *Target,
@@ -535,6 +537,7 @@ public:
     default:
       return false;
     case RISCV::C_J:
+    case RISCV::C_JAL:
     case RISCV::PseudoCALL:
     case RISCV::PseudoTAIL:
       OpNum = 0;
@@ -568,6 +571,13 @@ public:
       return getTargetSymbol(RISCVExpr->getSubExpr());
 
     return MCPlusBuilder::getTargetSymbol(Expr);
+  }
+
+  std::pair<const MCSymbol *, uint64_t>
+  getTargetSymbolInfo(const MCExpr *Expr) const override {
+    while (const auto *Specifier = dyn_cast<MCSpecifierExpr>(Expr))
+      Expr = Specifier->getSubExpr();
+    return MCPlusBuilder::getTargetSymbolInfo(Expr);
   }
 
   const MCSymbol *getTargetSymbol(const MCInst &Inst,
@@ -678,13 +688,15 @@ public:
     return false;
   }
 
-  bool isCallAuipc(const MCInst &Inst) const {
-    if (Inst.getOpcode() != RISCV::AUIPC ||
-        MCPlus::getNumPrimeOperands(Inst) != 2 || !Inst.getOperand(0).isReg() ||
-        Inst.getOperand(0).getReg() == RISCV::X0)
+  bool isRISCVCall(const MCInst &First,
+                   const MCInst *Second = nullptr) const override {
+    if (First.getOpcode() != RISCV::AUIPC ||
+        MCPlus::getNumPrimeOperands(First) != 2 ||
+        !First.getOperand(0).isReg() ||
+        First.getOperand(0).getReg() == RISCV::X0)
       return false;
 
-    const auto &ImmOp = Inst.getOperand(1);
+    const auto &ImmOp = First.getOperand(1);
     if (!ImmOp.isExpr())
       return false;
 
@@ -697,15 +709,52 @@ public:
       return false;
     case RISCV::S_CALL_PLT:
     case ELF::R_RISCV_CALL_PLT:
-      return true;
+      return !Second || isValidCallJALR(*Second);
     }
   }
 
-  bool isRISCVCall(const MCInst &First, const MCInst &Second) const override {
-    if (!isCallAuipc(First) || !isValidCallJALR(Second))
-      return false;
+  InstructionListType
+  createReferencePatch(const MCInst &Inst, const MCInst *NextInst,
+                       const MCSymbol *Target, uint32_t TargetRelType,
+                       bool IsPCRelLow, MCContext *Ctx) const override {
+    InstructionListType Patch{Inst};
+    if (NextInst && isRISCVCall(Inst, NextInst) &&
+        Inst.getOperand(0).getReg() == NextInst->getOperand(1).getReg()) {
+      // Keep the original base and link registers and the return address.
+      // HI20/LO12 relocations preserve both instructions during linking.
+      MCSymbol *Label = Ctx->createNamedTempSymbol("pcrel_hi");
+      setOperandToSymbolRef(Patch.front(), 1, Target, 0, Ctx,
+                            ELF::R_RISCV_PCREL_HI20);
+      setInstLabel(Patch.front(), Label);
+      Patch.push_back(*NextInst);
+      setOperandToSymbolRef(Patch.back(), 2, Label, 0, Ctx,
+                            ELF::R_RISCV_PCREL_LO12_I);
+      return Patch;
+    }
 
-    return true;
+    switch (TargetRelType) {
+    default:
+      return {};
+    case ELF::R_RISCV_PCREL_HI20:
+    case ELF::R_RISCV_HI20:
+    case ELF::R_RISCV_LO12_I:
+    case ELF::R_RISCV_LO12_S:
+      break;
+    }
+
+    // PCREL_LO12 must keep the symbolizer's label on its AUIPC instruction.
+    if (IsPCRelLow)
+      return Patch;
+
+    for (unsigned OpNum = 0; OpNum < MCPlus::getNumPrimeOperands(Inst);
+         ++OpNum) {
+      if (!Inst.getOperand(OpNum).isExpr())
+        continue;
+      setOperandToSymbolRef(Patch.front(), OpNum, Target, 0, Ctx,
+                            TargetRelType);
+      return Patch;
+    }
+    return {};
   }
 
   uint16_t getMinFunctionAlignment() const override {
@@ -854,6 +903,33 @@ public:
     setOperandToSymbolRef(Insts[1], /* OpNum */ 2, AuipcLabel, Addend, Ctx,
                           ELF::R_RISCV_PCREL_LO12_I);
     return Insts;
+  }
+
+  std::optional<Relocation>
+  createRelocation(const MCFixup &Fixup,
+                   const MCAsmBackend &MAB) const override {
+    // Keep this in sync with RISCVRelocationHandler::encodeValue(). Paired
+    // instruction relocations are handled by instruction patches instead.
+    uint32_t Type;
+    switch (Fixup.getKind()) {
+    case RISCV::fixup_riscv_jal:
+      Type = ELF::R_RISCV_JAL;
+      break;
+    case RISCV::fixup_riscv_branch:
+      Type = ELF::R_RISCV_BRANCH;
+      break;
+    case RISCV::fixup_riscv_rvc_jump:
+      Type = ELF::R_RISCV_RVC_JUMP;
+      break;
+    case RISCV::fixup_riscv_rvc_branch:
+      Type = ELF::R_RISCV_RVC_BRANCH;
+      break;
+    default:
+      return std::nullopt;
+    }
+
+    auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
+    return Relocation(Fixup.getOffset(), RelSymbol, Type, RelAddend, 0);
   }
 
   InstructionListType createInstrIncMemory(const MCSymbol *Target,
