@@ -131,6 +131,15 @@ module {
   // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.int<4294967294> : !u32i
   // CHECK-NEXT:   cir.return %[[CONST]] : !u32i
 
+  cir.func @unary_minus_poison() -> !s32i {
+    %0 = cir.const #cir.poison : !s32i
+    %1 = cir.minus %0 : !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_poison() -> !s32i
+  // CHECK-NEXT:   %[[P:.*]] = cir.const #cir.poison : !s32i
+  // CHECK-NEXT:   cir.return %[[P]] : !s32i
+
   cir.func @unary_minus_int() -> !s32i {
     %0 = cir.const #cir.int<1> : !s32i
     %1 = cir.minus %0 : !s32i
@@ -148,6 +157,33 @@ module {
   // CHECK:      cir.func{{.*}} @unary_minus_uint() -> !u32i
   // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.int<4294967295> : !u32i
   // CHECK-NEXT:   cir.return %[[CONST]] : !u32i
+
+  cir.func @unary_minus_int_wrap() -> !s8i {
+    %0 = cir.const #cir.int<-128> : !s8i
+    %1 = cir.minus %0 : !s8i
+    cir.return %1 : !s8i
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_int_wrap() -> !s8i
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.int<-128> : !s8i
+  // CHECK-NEXT:   cir.return %[[CONST]] : !s8i
+
+  cir.func @unary_minus_nsw() -> !s8i {
+    %0 = cir.const #cir.int<-127> : !s8i
+    %1 = cir.minus nsw %0 : !s8i
+    cir.return %1 : !s8i
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_nsw() -> !s8i
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.int<127> : !s8i
+  // CHECK-NEXT:   cir.return %[[CONST]] : !s8i
+
+  cir.func @unary_minus_nsw_poison() -> !s8i {
+    %0 = cir.const #cir.int<-128> : !s8i
+    %1 = cir.minus nsw %0 : !s8i
+    cir.return %1 : !s8i
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_nsw_poison() -> !s8i
+  // CHECK-NEXT:   %[[P:.*]] = cir.const #cir.poison : !s8i
+  // CHECK-NEXT:   cir.return %[[P]] : !s8i
 
   cir.func @unary_fneg_float() -> !cir.float {
     %0 = cir.const #cir.fp<1.100000e+00> : !cir.float

@@ -3693,6 +3693,8 @@ OpFoldResult cir::MinusOp::fold(FoldAdaptor adaptor) {
   if (auto intAttr =
           mlir::dyn_cast_if_present<cir::IntAttr>(adaptor.getInput())) {
     APInt val = intAttr.getValue();
+    if (getNoSignedWrap() && val.isMinSignedValue())
+      return cir::PoisonAttr::get(getType());
     val.negate();
     return cir::IntAttr::get(getType(), val);
   }
