@@ -6193,164 +6193,160 @@ void Verifier::visitInstruction(Instruction &I) {
     }
   }
 
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_fpmath)) {
-    Check(FPMathOperator::isSupportedFloatingPointType(I.getType()),
-          "fpmath requires a floating point result!", &I);
-    Check(MD->getNumOperands() == 1, "fpmath takes one operand!", &I);
-    if (ConstantFP *CFP0 =
-            mdconst::dyn_extract_or_null<ConstantFP>(MD->getOperand(0))) {
-      const APFloat &Accuracy = CFP0->getValueAPF();
-      Check(&Accuracy.getSemantics() == &APFloat::IEEEsingle(),
-            "fpmath accuracy must have float type", &I);
-      Check(Accuracy.isFiniteNonZero() && !Accuracy.isNegative(),
-            "fpmath accuracy not a positive number!", &I);
-    } else {
-      Check(false, "invalid fpmath accuracy!", &I);
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  I.getAllMetadataOtherThanDebugLoc(MDs);
+  for (auto [Kind, MD] : MDs) {
+    switch (Kind) {
+    case LLVMContext::MD_fpmath:
+      Check(FPMathOperator::isSupportedFloatingPointType(I.getType()),
+            "fpmath requires a floating point result!", &I);
+      Check(MD->getNumOperands() == 1, "fpmath takes one operand!", &I);
+      if (ConstantFP *CFP0 =
+              mdconst::dyn_extract_or_null<ConstantFP>(MD->getOperand(0))) {
+        const APFloat &Accuracy = CFP0->getValueAPF();
+        Check(&Accuracy.getSemantics() == &APFloat::IEEEsingle(),
+              "fpmath accuracy must have float type", &I);
+        Check(Accuracy.isFiniteNonZero() && !Accuracy.isNegative(),
+              "fpmath accuracy not a positive number!", &I);
+      } else {
+        Check(false, "invalid fpmath accuracy!", &I);
+      }
+      break;
+    case LLVMContext::MD_range:
+      Check((isa<LoadInst, CallInst, InvokeInst, PHINode>(I)),
+            "Ranges are only for loads, calls, invokes and phi nodes!", &I);
+      visitRangeMetadata(I, MD, I.getType());
+      break;
+    case LLVMContext::MD_nofpclass:
+      Check((isa<LoadInst, PHINode>(I)),
+            "nofpclass is only for loads and phi nodes", &I);
+      visitNoFPClassMetadata(I, MD, I.getType());
+      break;
+    case LLVMContext::MD_noalias_addrspace:
+      Check(isa<LoadInst>(I) || isa<StoreInst>(I) || isa<AtomicRMWInst>(I) ||
+                isa<AtomicCmpXchgInst>(I) || isa<CallInst>(I),
+            "noalias.addrspace are only for memory operations!", &I);
+      visitNoaliasAddrspaceMetadata(I, MD, I.getType());
+      break;
+    case LLVMContext::MD_invariant_group:
+      Check(isa<LoadInst>(I) || isa<StoreInst>(I),
+            "invariant.group metadata is only for loads and stores", &I);
+      break;
+    case LLVMContext::MD_invariant_load: {
+      auto *II = dyn_cast<IntrinsicInst>(&I);
+      Check(isa<LoadInst>(I) || (II && II->onlyReadsMemory()),
+            "invariant.load metadata is only for loads and readonly "
+            "intrinsic calls",
+            &I);
+      break;
     }
-  }
-
-  if (MDNode *Range = I.getMetadata(LLVMContext::MD_range)) {
-    Check((isa<LoadInst, CallInst, InvokeInst, PHINode>(I)),
-          "Ranges are only for loads, calls, invokes and phi nodes!", &I);
-    visitRangeMetadata(I, Range, I.getType());
-  }
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofpclass)) {
-    Check((isa<LoadInst, PHINode>(I)),
-          "nofpclass is only for loads and phi nodes", &I);
-    visitNoFPClassMetadata(I, MD, I.getType());
-  }
-
-  if (MDNode *Range = I.getMetadata(LLVMContext::MD_noalias_addrspace)) {
-    Check(isa<LoadInst>(I) || isa<StoreInst>(I) || isa<AtomicRMWInst>(I) ||
-              isa<AtomicCmpXchgInst>(I) || isa<CallInst>(I),
-          "noalias.addrspace are only for memory operations!", &I);
-    visitNoaliasAddrspaceMetadata(I, Range, I.getType());
-  }
-
-  if (I.hasMetadata(LLVMContext::MD_invariant_group)) {
-    Check(isa<LoadInst>(I) || isa<StoreInst>(I),
-          "invariant.group metadata is only for loads and stores", &I);
-  }
-
-  if (I.hasMetadata(LLVMContext::MD_invariant_load)) {
-    auto *II = dyn_cast<IntrinsicInst>(&I);
-    Check(isa<LoadInst>(I) || (II && II->onlyReadsMemory()),
-          "invariant.load metadata is only for loads and readonly "
-          "intrinsic calls",
-          &I);
-  }
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nonnull)) {
-    Check(I.getType()->isPointerTy(), "nonnull applies only to pointer types",
-          &I);
-    Check((isa<LoadInst, PHINode>(I)),
-          "nonnull applies only to load instructions or phi nodes, use "
-          "attributes for calls or invokes",
-          &I);
-    Check(MD->getNumOperands() == 0, "nonnull metadata must be empty", &I);
-  }
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_noundef)) {
-    Check((isa<LoadInst, PHINode>(I)),
-          "noundef applies only to load instructions or phi nodes", &I);
-    Check(MD->getNumOperands() == 0, "noundef metadata must be empty", &I);
-  }
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_dereferenceable))
-    visitDereferenceableMetadata(I, MD);
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_dereferenceable_or_null))
-    visitDereferenceableMetadata(I, MD);
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofreeobj))
-    visitNoFreeObjMetadata(I, MD);
-
-  if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa))
-    TBAAVerifyHelper.visitTBAAMetadata(&I, TBAA);
-
-  if (MDNode *TBAAStruct = I.getMetadata(LLVMContext::MD_tbaa_struct))
-    TBAAVerifyHelper.visitTBAAStructMetadata(&I, TBAAStruct);
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_noalias))
-    visitAliasScopeListMetadata(MD);
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_alias_scope))
-    visitAliasScopeListMetadata(MD);
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_access_group))
-    visitAccessGroupMetadata(MD);
-
-  if (MDNode *AlignMD = I.getMetadata(LLVMContext::MD_align)) {
-    Check(I.getType()->isPointerTy(), "align applies only to pointer types",
-          &I);
-    Check((isa<LoadInst, PHINode>(I)),
-          "align applies only to load instructions or phi nodes, "
-          "use attributes for calls or invokes",
-          &I);
-    Check(AlignMD->getNumOperands() == 1, "align takes one operand!", &I);
-    ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(AlignMD->getOperand(0));
-    Check(CI && CI->getType()->isIntegerTy(64),
-          "align metadata value must be an i64!", &I);
-    uint64_t Align = CI->getZExtValue();
-    Check(isPowerOf2_64(Align), "align metadata value must be a power of 2!",
-          &I);
-    Check(Align <= Value::MaximumAlignment,
-          "alignment is larger that implementation defined limit", &I);
-  }
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_prof))
-    visitProfMetadata(I, MD);
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_memprof))
-    visitMemProfMetadata(I, MD);
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_callsite))
-    visitCallsiteMetadata(I, MD);
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_callee_type))
-    visitCalleeTypeMetadata(I, MD);
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_DIAssignID))
-    visitDIAssignIDMetadata(I, MD);
-
-  if (MDNode *MMRA = I.getMetadata(LLVMContext::MD_mmra))
-    visitMMRAMetadata(I, MMRA);
-
-  if (MDNode *Annotation = I.getMetadata(LLVMContext::MD_annotation))
-    visitAnnotationMetadata(Annotation);
-
-  if (MDNode *Captures = I.getMetadata(LLVMContext::MD_captures))
-    visitCapturesMetadata(I, Captures);
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_alloc_token))
-    visitAllocTokenMetadata(I, MD);
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_inline_history))
-    visitInlineHistoryMetadata(I, MD);
-
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_mem_cache_hint))
-    visitMemCacheHintMetadata(I, MD);
-
-  if (MDNode *MD = I.getMetadata(MDAMDGPUExpectedActiveLanes)) {
-    Check(MD->getNumOperands() == 1,
-          "!amdgpu.expected.active.lanes must have exactly one operand", &I,
-          MD);
-    ConstantInt *CI =
-        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(0));
-    Check(CI && CI->getType()->isIntegerTy(32),
-          "!amdgpu.expected.active.lanes operand must be an i32 constant", &I,
-          MD);
-  }
-
-  if (MDNode *MD = I.getMetadata(MDAMDGPUCFS)) {
-    Check(MD->getNumOperands() == 1,
-          "!amdgpu.cfs must have exactly one operand", &I, MD);
-    ConstantInt *CI =
-        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(0));
-    Check(CI && CI->getType()->isIntegerTy(32),
-          "!amdgpu.cfs operand must be an i32 constant", &I, MD);
-    Check(CI->getZExtValue() <= 3,
-          "!amdgpu.cfs operand must be in the range [0, 3]", &I, MD);
+    case LLVMContext::MD_nonnull:
+      Check(I.getType()->isPointerTy(), "nonnull applies only to pointer types",
+            &I);
+      Check((isa<LoadInst, PHINode>(I)),
+            "nonnull applies only to load instructions or phi nodes, use "
+            "attributes for calls or invokes",
+            &I);
+      Check(MD->getNumOperands() == 0, "nonnull metadata must be empty", &I);
+      break;
+    case LLVMContext::MD_noundef:
+      Check((isa<LoadInst, PHINode>(I)),
+            "noundef applies only to load instructions or phi nodes", &I);
+      Check(MD->getNumOperands() == 0, "noundef metadata must be empty", &I);
+      break;
+    case LLVMContext::MD_dereferenceable:
+    case LLVMContext::MD_dereferenceable_or_null:
+      visitDereferenceableMetadata(I, MD);
+      break;
+    case LLVMContext::MD_nofreeobj:
+      visitNoFreeObjMetadata(I, MD);
+      break;
+    case LLVMContext::MD_tbaa:
+      TBAAVerifyHelper.visitTBAAMetadata(&I, MD);
+      break;
+    case LLVMContext::MD_tbaa_struct:
+      TBAAVerifyHelper.visitTBAAStructMetadata(&I, MD);
+      break;
+    case LLVMContext::MD_noalias:
+    case LLVMContext::MD_alias_scope:
+      visitAliasScopeListMetadata(MD);
+      break;
+    case LLVMContext::MD_access_group:
+      visitAccessGroupMetadata(MD);
+      break;
+    case LLVMContext::MD_align: {
+      Check(I.getType()->isPointerTy(), "align applies only to pointer types",
+            &I);
+      Check((isa<LoadInst, PHINode>(I)),
+            "align applies only to load instructions or phi nodes, "
+            "use attributes for calls or invokes",
+            &I);
+      Check(MD->getNumOperands() == 1, "align takes one operand!", &I);
+      ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
+      Check(CI && CI->getType()->isIntegerTy(64),
+            "align metadata value must be an i64!", &I);
+      uint64_t Align = CI->getZExtValue();
+      Check(isPowerOf2_64(Align), "align metadata value must be a power of 2!",
+            &I);
+      Check(Align <= Value::MaximumAlignment,
+            "alignment is larger that implementation defined limit", &I);
+      break;
+    }
+    case LLVMContext::MD_prof:
+      visitProfMetadata(I, MD);
+      break;
+    case LLVMContext::MD_memprof:
+      visitMemProfMetadata(I, MD);
+      break;
+    case LLVMContext::MD_callsite:
+      visitCallsiteMetadata(I, MD);
+      break;
+    case LLVMContext::MD_callee_type:
+      visitCalleeTypeMetadata(I, MD);
+      break;
+    case LLVMContext::MD_DIAssignID:
+      visitDIAssignIDMetadata(I, MD);
+      break;
+    case LLVMContext::MD_mmra:
+      visitMMRAMetadata(I, MD);
+      break;
+    case LLVMContext::MD_annotation:
+      visitAnnotationMetadata(MD);
+      break;
+    case LLVMContext::MD_captures:
+      visitCapturesMetadata(I, MD);
+      break;
+    case LLVMContext::MD_alloc_token:
+      visitAllocTokenMetadata(I, MD);
+      break;
+    case LLVMContext::MD_inline_history:
+      visitInlineHistoryMetadata(I, MD);
+      break;
+    case LLVMContext::MD_mem_cache_hint:
+      visitMemCacheHintMetadata(I, MD);
+      break;
+    default:
+      if (Kind == MDAMDGPUExpectedActiveLanes) {
+        Check(MD->getNumOperands() == 1,
+              "!amdgpu.expected.active.lanes must have exactly one operand", &I,
+              MD);
+        ConstantInt *CI =
+            mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(0));
+        Check(CI && CI->getType()->isIntegerTy(32),
+              "!amdgpu.expected.active.lanes operand must be an i32 constant",
+              &I, MD);
+      } else if (Kind == MDAMDGPUCFS) {
+        Check(MD->getNumOperands() == 1,
+              "!amdgpu.cfs must have exactly one operand", &I, MD);
+        ConstantInt *CI =
+            mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(0));
+        Check(CI && CI->getType()->isIntegerTy(32),
+              "!amdgpu.cfs operand must be an i32 constant", &I, MD);
+        Check(CI->getZExtValue() <= 3,
+              "!amdgpu.cfs operand must be in the range [0, 3]", &I, MD);
+      }
+      break;
+    }
   }
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
@@ -6368,15 +6364,10 @@ void Verifier::visitInstruction(Instruction &I) {
     }
   }
 
-  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-  I.getAllMetadata(MDs);
-  for (auto Attachment : MDs) {
-    unsigned Kind = Attachment.first;
-    auto AllowLocs =
-        (Kind == LLVMContext::MD_dbg || Kind == LLVMContext::MD_loop)
-            ? AreDebugLocsAllowed::Yes
-            : AreDebugLocsAllowed::No;
-    visitMDNode(*Attachment.second, AllowLocs);
+  for (auto [Kind, MD] : MDs) {
+    auto AllowLocs = Kind == LLVMContext::MD_loop ? AreDebugLocsAllowed::Yes
+                                                  : AreDebugLocsAllowed::No;
+    visitMDNode(*MD, AllowLocs);
   }
 
   InstsInThisBlock.insert(&I);
