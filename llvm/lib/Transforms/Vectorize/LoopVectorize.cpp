@@ -748,6 +748,20 @@ public:
                        : "due to non-interleaving reasons.\n"));
   }
 
+  /// Disable all tail folding styles. Returns false if an epilogue isn't
+  /// allowed. Must be called before the plan is tail folded.
+  bool tryToDisableTailFolding() {
+    assert(foldTailByMasking() && "Expected tail folding to be enabled!");
+    if (EpilogueLoweringStatus != CM_EpilogueNotNeededFoldTail)
+      return false;
+    LLVM_DEBUG(dbgs() << "LV: Disabling tail folding: vectorize with an "
+                         "epilogue instead.\n");
+    ChosenTailFoldingStyle = TailFoldingStyle::None;
+    EpilogueLoweringStatus = CM_EpilogueAllowed;
+    PartialAliasMaskingStatus = AliasMaskingStatus::Disabled;
+    return true;
+  }
+
   /// Returns true if all loop blocks should be masked to fold tail loop.
   bool foldTailByMasking() const {
     return getTailFoldingStyle() != TailFoldingStyle::None;
@@ -6281,6 +6295,16 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
     if (!RUN_VPLAN_PASS(VPlanTransforms::handleUncountableEarlyExits, *VPlan0,
                         ORE, OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
                         EEStyle)) {
+      return nullptr;
+    }
+
+    // Exiting in the scalar loop requires a scalar epilogue for now.
+    if (EEStyle == UncountableExitStyle::MaskedHandleExitInScalarLoop &&
+        PlanCM.foldTailByMasking() && !PlanCM.tryToDisableTailFolding()) {
+      reportVectorizationFailure(
+          "Cannot fold tail by masking when early exits are handled in the "
+          "scalar loop",
+          "EarlyExitInScalarLoopCannotFoldTail", ORE, OrigLoop);
       return nullptr;
     }
   } else {
