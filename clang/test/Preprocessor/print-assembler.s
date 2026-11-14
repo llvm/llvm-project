@@ -11,6 +11,6 @@ _main:
 	ret
 
 // CHECK-LABEL: _main:
-// CHECK-NEXT: {{^}} # asdf
-// CHECK-NEXT: {{^}} # asdf
+// CHECK-NEXT: {{^}}# asdf
+// CHECK-NEXT: {{^}}# asdf
 // CHECK-NEXT: mov bogus_name, 20
