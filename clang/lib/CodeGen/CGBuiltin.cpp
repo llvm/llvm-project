@@ -4095,8 +4095,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     QualType ArgType = Arg->getType();
     // FIXME: The allowance for Obj-C pointers and block pointers is historical
     // and likely a mistake.
-    if (!ArgType->isIntegralOrEnumerationType() && !ArgType->isFloatingType() &&
-        !ArgType->isObjCObjectPointerType() && !ArgType->isBlockPointerType())
+    if (!ArgType->isIntegralOrEnumerationType() &&
+        !ArgType->isRealFloatingType() && !ArgType->isObjCObjectPointerType() &&
+        !ArgType->isBlockPointerType())
       // Per the GCC documentation, only numeric constants are recognized after
       // inlining.
       return RValue::get(ConstantInt::get(ResultType, 0));
