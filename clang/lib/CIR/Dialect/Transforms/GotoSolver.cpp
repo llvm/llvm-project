@@ -128,26 +128,11 @@ void GotoSolverPass::runOnOperation() {
   llvm::StringMap<llvm::SmallSetVector<StringRef, 4>> globalBlockAddrLabels;
   mlir::ModuleOp module = mlir::cast<mlir::ModuleOp>(getOperation());
   module.walk([&](mlir::Operation *op) {
-    if (!mlir::isa<cir::GlobalOp, cir::ConstantOp>(op))
+    if (mlir::isa<cir::BlockAddressOp>(op))
       return;
-    auto collectBlockAddresses = [&](mlir::Attribute attr) {
-      attr.walk(
-          [&](cir::BlockAddrInfoAttr info) {
-            globalBlockAddrLabels[info.getFunc().getValue()].insert(
-                info.getLabel());
-          },
-          [&](cir::BlockAddrDiffAttr diff) {
-            // A block-address difference attribute references two labels in
-            // the same function; keep both alive.
-            llvm::SmallSetVector<StringRef, 4> &labels =
-                globalBlockAddrLabels[diff.getFunc().getValue()];
-            labels.insert(diff.getLhsLabel().getValue());
-            labels.insert(diff.getRhsLabel().getValue());
-          });
-    };
-    op->getName().walkInherentAttrs(
-        op, [&](llvm::StringRef, mlir::Attribute &attr) {
-          collectBlockAddresses(attr);
+    cir::walkBlockAddressLabels(
+        op, [&](mlir::StringAttr func, mlir::StringAttr label) {
+          globalBlockAddrLabels[func.getValue()].insert(label.getValue());
         });
   });
 

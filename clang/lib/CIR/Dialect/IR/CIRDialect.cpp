@@ -1988,6 +1988,29 @@ void cir::buildTerminatedBody(OpBuilder &builder, Location loc) {
   cir::YieldOp::create(builder, loc);
 }
 
+void cir::walkBlockAddressLabels(
+    mlir::Operation *op,
+    llvm::function_ref<void(mlir::StringAttr, mlir::StringAttr)> callback) {
+  if (auto blockAddr = mlir::dyn_cast<BlockAddressOp>(op)) {
+    BlockAddrInfoAttr info = blockAddr.getBlockAddrInfo();
+    callback(info.getFunc().getAttr(), info.getLabel());
+    return;
+  }
+  if (!mlir::isa<GlobalOp, ConstantOp>(op))
+    return;
+  op->getName().walkInherentAttrs(
+      op, [&](llvm::StringRef, mlir::Attribute &attr) {
+        attr.walk(
+            [&](BlockAddrInfoAttr info) {
+              callback(info.getFunc().getAttr(), info.getLabel());
+            },
+            [&](BlockAddrDiffAttr diff) {
+              callback(diff.getFunc().getAttr(), diff.getLhsLabel());
+              callback(diff.getFunc().getAttr(), diff.getRhsLabel());
+            });
+      });
+}
+
 /// Given the region at `index`, or the parent operation if `index` is None,
 /// return the successor regions. These are the regions that may be selected
 /// during the flow of control. `operands` is a set of optional attributes that

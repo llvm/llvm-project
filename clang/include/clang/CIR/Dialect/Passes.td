@@ -88,6 +88,18 @@ def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def FunctionExitAnalysis : Pass<"cir-function-exit-analysis", "mlir::ModuleOp"> {
+  let summary = "Report how control leaves each function";
+  let description = [{
+    The function exit analysis classifies how control can leave a function:
+    through explicit returns, by reaching the end of its body, or not at all.
+    It drives ClangIR's alternative implementation of the -Wreturn-type
+    diagnostic.
+  }];
+  let constructor = "mlir::createFunctionExitAnalysisPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 def GotoSolver : Pass<"cir-goto-solver", "mlir::ModuleOp"> {
   let summary = "Replaces goto operations with branches";
   let description = [{
