@@ -3114,8 +3114,10 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
     CollectEnclosingNamespace(Result.Namespaces, Ctx);
 
     const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
-    for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
-      addAssociatedClassesAndNamespaces(Result, TemplateArgs[I]);
+    Result.S.runWithSufficientStackSpace(Result.InstantiationLoc, [&] {
+      for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
+        addAssociatedClassesAndNamespaces(Result, TemplateArgs[I]);
+    });
   }
 
   // Add the class itself. If we've already transitively visited this class,
