@@ -4742,6 +4742,18 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                                     SQ.getWithInstruction(&SI)))
     return replaceInstUsesWith(SI, V);
 
+  // Canonicalize select arms known to be +/-0 when the zero sign is ignored.
+  if (FMF.noSignedZeros()) {
+    Constant *Zero = Constant::getNullValue(SelType);
+    for (unsigned OpNo : {1u, 2u}) {
+      Value *V = SI.getOperand(OpNo);
+      if (!match(V, m_PosZeroFP()) &&
+          computeKnownFPClass(V, ~fcZero, SQ.getWithInstruction(&SI))
+              .isKnownAlways(fcZero))
+        return replaceOperand(SI, OpNo, Zero);
+    }
+  }
+
   if (Instruction *I = canonicalizeSelectToShuffle(SI))
     return I;
 
