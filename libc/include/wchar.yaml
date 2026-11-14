@@ -453,3 +453,9 @@ functions:
       - type: size_t
       - type: const wchar_t *__restrict
       - type: '...'
+  - name: wcwidth
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: wchar_t
