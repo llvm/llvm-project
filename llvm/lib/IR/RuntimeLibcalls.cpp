@@ -58,7 +58,8 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(
     const Triple &TT, ExceptionHandling ExceptionModel,
     FloatABI::ABIType FloatABI, std::optional<LongDoubleFormat> LDblFormat,
     StringRef ABIName, VectorLibrary VecLib)
-    : LongDoubleFmt(LDblFormat.value_or(TT.getDefaultLongDoubleFormat())) {
+    : LongDoubleFmt(LDblFormat.value_or(TT.getDefaultLongDoubleFormat())),
+      ABIName(ABIName) {
   // Only an unspecified model resolves to the triple default; None is left as
   // an explicit disable.
   if (ExceptionModel == ExceptionHandling::Default)
@@ -409,6 +410,30 @@ static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
   return Attribute::None;
 }
 
+static FuncArgTypeID getCPairElementType(FuncArgTypeID ID) {
+  switch (ID) {
+  case CFltPair:
+    return Flt;
+  case CDblPair:
+    return Dbl;
+  default:
+    return NoFuncArgType;
+  }
+}
+
+std::pair<Type *, Type *>
+RuntimeLibcallsInfo::lowerCPairReturn(const Triple &TT, Type *EltTy) const {
+  Type *PairTy = StructType::get(EltTy, EltTy);
+  // These return small structs in memory.
+  if (TT.isX86_32() ||
+      ((TT.isARM() || TT.isThumb()) && !isAAPCS_ABI(TT, ABIName)))
+    return {Type::getVoidTy(EltTy->getContext()), PairTy};
+  // x86-64 SysV returns a pair of floats packed in one SSE register.
+  if (TT.isX86_64() && !TT.isOSWindows() && EltTy->isFloatTy())
+    return {FixedVectorType::get(EltTy, 2), nullptr};
+  return {PairTy, nullptr};
+}
+
 std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getDefaultFunctionTy(
     LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
@@ -421,18 +446,34 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
     return {};
 
   FuncArgTypeID LastID = ProtoTypes[0];
-  Type *RetTy = convertToIRType(LastID, Ctx, TT, DL, LongDoubleFmt);
+  SmallVector<Type *, 4> ArgTys;
+  SmallVector<AttributeSet, 4> ArgAttrs;
+  Type *RetTy;
   AttributeSet RetAttrs;
-  if (Attribute::AttrKind AK =
-          getIntExtAttr(LastID, RetTy, TT, /*IsReturn=*/true))
-    RetAttrs = AttributeSet::get(Ctx, Attribute::get(Ctx, AK));
-  if (isInRegStruct(LastID))
-    RetAttrs = RetAttrs.addAttribute(Ctx, Attribute::InReg);
+  if (FuncArgTypeID EltID = getCPairElementType(LastID);
+      EltID != NoFuncArgType) {
+    Type *EltTy = convertToIRType(EltID, Ctx, TT, DL, LongDoubleFmt);
+    Type *SRetTy;
+    std::tie(RetTy, SRetTy) = lowerCPairReturn(TT, EltTy);
+    if (SRetTy) {
+      AttrBuilder SRetAttrs(Ctx);
+      SRetAttrs.addStructRetAttr(SRetTy);
+      SRetAttrs.addAlignmentAttr(DL.getABITypeAlign(SRetTy));
+      ArgTys.push_back(DL.getAllocaPtrType(Ctx));
+      ArgAttrs.push_back(AttributeSet::get(Ctx, SRetAttrs));
+    }
+  } else {
+    RetTy = convertToIRType(LastID, Ctx, TT, DL, LongDoubleFmt);
+    if (Attribute::AttrKind AK =
+            getIntExtAttr(LastID, RetTy, TT, /*IsReturn=*/true))
+      RetAttrs = AttributeSet::get(Ctx, Attribute::get(Ctx, AK));
+    if (isInRegStruct(LastID))
+      RetAttrs = RetAttrs.addAttribute(Ctx, Attribute::InReg);
+  }
   RetAttrs = RetAttrs.addAttributes(
       Ctx, getLibcallImplRetAttributes(Ctx, LibcallImpl));
 
-  SmallVector<Type *, 4> ArgTys;
-  SmallVector<AttributeSet, 4> ArgAttrs;
+  unsigned FirstArgNo = ArgTys.size();
   bool IsVarArg = false;
   unsigned Idx = 1;
   for (FuncArgTypeID TyID = ProtoTypes[Idx]; TyID != NoFuncArgType;
@@ -462,7 +503,7 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
 
   for (const LibcallArgAttrs &Static :
        getLibcallImplArgAttributes(LibcallImpl)) {
-    assert(Static.ArgNo < ArgAttrs.size() &&
+    assert(FirstArgNo + Static.ArgNo < ArgAttrs.size() &&
            "attributes for nonexistent argument");
     AttributeSet StaticAttrs = getLibcallArgAttributeSet(Ctx, Static.AttrSetID);
     if (Static.PointeeType != NoFuncArgType) {
@@ -481,7 +522,7 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
       StaticAttrs = StaticAttrs.addSortedAttributes(Ctx, PointeeAttrs);
     }
 
-    AttributeSet &ArgAttrSet = ArgAttrs[Static.ArgNo];
+    AttributeSet &ArgAttrSet = ArgAttrs[FirstArgNo + Static.ArgNo];
     ArgAttrSet = ArgAttrSet.addAttributes(Ctx, StaticAttrs);
   }
 
@@ -548,44 +589,15 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
   // FIXME: Should also include __sincospi[f]_stret
   case RTLIB::impl___sincos_stret:
   case RTLIB::impl___sincosf_stret: {
-    if (!darwinHasSinCosStret(TT)) // Non-darwin currently unexpected
-      return {};
-
-    Type *ScalarTy = LibcallImpl == RTLIB::impl___sincosf_stret
-                         ? Type::getFloatTy(Ctx)
-                         : Type::getDoubleTy(Ctx);
-
+    auto [FuncTy, Attrs] = getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
+    bool UseSRet = FuncTy->getNumParams() != 0 &&
+                   Attrs.hasParamAttr(0, Attribute::StructRet);
     AttrBuilder FuncAttrBuilder(Ctx);
     for (Attribute::AttrKind Attr : CommonFnAttrs)
       FuncAttrBuilder.addAttribute(Attr);
-
-    const bool UseSret =
-        TT.isX86_32() || ((TT.isARM() || TT.isThumb()) &&
-                          ARM::computeTargetABI(TT) == ARM::ARM_ABI_APCS);
-
     FuncAttrBuilder.addMemoryAttr(MemoryEffects::argMemOnly(
-        UseSret ? ModRefInfo::Mod : ModRefInfo::NoModRef));
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    if (UseSret) {
-      AttrBuilder AttrBuilder(Ctx);
-      StructType *StructTy = StructType::get(ScalarTy, ScalarTy);
-      AttrBuilder.addStructRetAttr(StructTy);
-      AttrBuilder.addAlignmentAttr(DL.getABITypeAlign(StructTy));
-      FunctionType *FuncTy = FunctionType::get(
-          Type::getVoidTy(Ctx), {DL.getAllocaPtrType(Ctx), ScalarTy}, false);
-
-      return {FuncTy, Attrs.addParamAttributes(Ctx, 0, AttrBuilder)};
-    }
-
-    Type *RetTy =
-        LibcallImpl == RTLIB::impl___sincosf_stret && TT.isX86_64()
-            ? static_cast<Type *>(FixedVectorType::get(ScalarTy, 2))
-            : static_cast<Type *>(StructType::get(ScalarTy, ScalarTy));
-
-    return {FunctionType::get(RetTy, {ScalarTy}, false), Attrs};
+        UseSRet ? ModRefInfo::Mod : ModRefInfo::NoModRef));
+    return {FuncTy, Attrs.addFnAttributes(Ctx, FuncAttrBuilder)};
   }
   default:
     break;

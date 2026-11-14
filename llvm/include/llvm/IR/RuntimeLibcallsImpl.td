@@ -98,6 +98,9 @@ def FP128 : FuncArgType;
 def PPCFP128 : FuncArgType;
 def Floating : FuncArgType; // Any floating type.
 def Ptr : FuncArgType;      // Any pointer type.
+// C structs, lowered to IR types according to the target's C ABI.
+def CFltPair : FuncArgType; // struct { float, float }
+def CDblPair : FuncArgType; // struct { double, double }
 def AllocaPtr : FuncArgType; // Pointer in the alloca address space.
 def Struct : FuncArgType;   // Any struct type.
 def Ellip : FuncArgType;    // The ellipsis (...).
