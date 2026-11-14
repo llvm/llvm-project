@@ -262,18 +262,18 @@ bb8:                                              ; preds = %bb1
 }
 
 
-; CHECK-DAG:  1 polly-opt-isl    - Number of first level tiling applied
+; CHECK-DAG:  3 polly-opt-isl    - Number of first level tiling applied
 ; CHECK-DAG:  9 polly-opt-isl    - Number of affine loops optimized
 ; CHECK-DAG: 10 polly-opt-isl    - Number of band members (original)
 ; CHECK-DAG: 10 polly-opt-isl    - Number of band members (after scheduler)
-; CHECK-DAG: 12 polly-opt-isl    - Number of band members (after optimizer)
+; CHECK-DAG: 16 polly-opt-isl    - Number of band members (after optimizer)
 ; CHECK-DAG: 10 polly-opt-isl    - Number of bands (original)
 ; CHECK-DAG:  7 polly-opt-isl    - Number of bands (after scheduler)
-; CHECK-DAG:  8 polly-opt-isl    - Number of bands (after optimizer)
+; CHECK-DAG: 10 polly-opt-isl    - Number of bands (after optimizer)
 ; CHECK-DAG:  4 polly-opt-isl    - Number of coincident band members (after scheduler)
-; CHECK-DAG:  5 polly-opt-isl    - Number of coincident band members (after optimizer)
+; CHECK-DAG:  7 polly-opt-isl    - Number of coincident band members (after optimizer)
 ; CHECK-DAG:  7 polly-opt-isl    - Number of permutable bands (after scheduler)
-; CHECK-DAG:  8 polly-opt-isl    - Number of permutable bands (after optimizer)
+; CHECK-DAG: 10 polly-opt-isl    - Number of permutable bands (after optimizer)
 ; CHECK-DAG:  3 polly-opt-isl    - Number of scops optimized
 ; CHECK-DAG:  4 polly-opt-isl    - Number of scops processed
 ; CHECK-DAG:  4 polly-opt-isl    - Number of scops rescheduled

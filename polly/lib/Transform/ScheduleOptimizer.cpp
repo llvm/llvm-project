@@ -400,8 +400,10 @@ private:
 
   /// Apply tiling optimizations on the bands in the schedule tree.
   ///
-  /// @param Node The schedule node to (possibly) optimize.
-  static isl::schedule_node applyTileBandOpt(isl::schedule_node Node);
+  /// @param Node        The schedule node to (possibly) optimize.
+  /// @param IsInnermost Whether @p Node contains no other loops.
+  static isl::schedule_node applyTileBandOpt(isl::schedule_node Node,
+                                             bool IsInnermost);
 
   /// Apply prevectorization on the bands in the schedule tree.
   ///
@@ -542,6 +544,11 @@ isl::schedule_node ScheduleTreeOptimizer::prevectSchedBand(
   return Node.parent();
 }
 
+static cl::opt<bool> TileOuterBands(
+    "polly-tile-outer-bands",
+    cl::desc("Also tile permutable bands that contain other loops"),
+    cl::init(true), cl::cat(PollyCategory));
+
 static bool isSimpleInnermostBand(const isl::schedule_node &Node) {
   assert(isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band);
   assert(isl_schedule_node_n_children(Node.get()) == 1);
@@ -593,7 +600,48 @@ bool ScheduleTreeOptimizer::isTileableBandNode(isl::schedule_node Node) {
   if (unsignedFromIslSize(Space.dim(isl::dim::set)) <= 1u)
     return false;
 
-  return isSimpleInnermostBand(Node);
+  if (isSimpleInnermostBand(Node))
+    return true;
+
+  // A band that contains other loops, for instance a time loop around a
+  // sequence of spatial loop nests. The band that results from tiling it has a
+  // mark as its child, so it is not tiled again.
+  if (!TileOuterBands)
+    return false;
+
+  isl_schedule_node_type ChildType =
+      isl_schedule_node_get_type(Node.child(0).get());
+  if (ChildType != isl_schedule_node_sequence &&
+      ChildType != isl_schedule_node_set && ChildType != isl_schedule_node_band)
+    return false;
+
+  // isl cannot tile a band above an extension node, as inserted by the
+  // optimization of matrix multiplications.
+  if (isl_schedule_node_is_subtree_anchored(Node.get()) != isl_bool_false)
+    return false;
+
+  // If the schedule of the band depends on parameters, the statements in it are
+  // typically shifted against each other by parametric offsets. The tile
+  // boundaries of each statement then depend on the parameters modulo the tile
+  // size, and the AST generator has to distinguish all these cases for every
+  // loop nested in the band, which blows up the generated code.
+  isl::union_map Partial = isl::union_map::from(
+      Node.as<isl::schedule_node_band>().get_partial_schedule());
+  isl::map_list Maps = Partial.get_map_list();
+  if (Maps.is_null())
+    return false;
+  isl::size NumMaps = Maps.size();
+  if (NumMaps.is_error())
+    return false;
+  for (unsigned i = 0; i < unsigned(NumMaps); ++i) {
+    isl::map Map = Maps.at(int(i));
+    isl::size NumParams = Map.dim(isl::dim::param);
+    if (NumParams.is_error() ||
+        !Map.involves_dims(isl::dim::param, 0, unsigned(NumParams)).is_false())
+      return false;
+  }
+
+  return true;
 }
 
 bool ScheduleTreeOptimizer::isPMOptimizableBandNode(isl::schedule_node Node) {
@@ -615,7 +663,8 @@ static SmallVector<int, 4> resolveTileSizes(isl::schedule_node Node,
 }
 
 __isl_give isl::schedule_node
-ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
+ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node,
+                                        bool IsInnermost) {
   if (FirstLevelTiling) {
     // Resolve the tile size of every dimension before tiling splits the band.
     SmallVector<int, 4> Sizes;
@@ -643,7 +692,9 @@ ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
       Node = isolateCompleteTiles(Node, Sizes);
   }
 
-  if (RegisterTiling) {
+  // Register tiling unrolls the point loops, which would duplicate the loops
+  // nested in them.
+  if (RegisterTiling && IsInnermost) {
     SmallVector<int, 4> Sizes;
     if (IsolateCompleteRegisterTiles)
       Sizes =
@@ -696,12 +747,12 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *NodeArg,
   if (!isTileableBandNode(Node))
     return Node.release();
 
+  bool IsInnermost = isSimpleInnermostBand(Node);
   if (OAI->Postopts)
-    Node = applyTileBandOpt(Node);
+    Node = applyTileBandOpt(Node, IsInnermost);
 
-  if (OAI->Prevect) {
+  if (OAI->Prevect && IsInnermost) {
     IslQuotaScope MaxScope = OAI->MaxOpGuard.enter();
-
     // FIXME: Prevectorization requirements are different from those checked by
     // isTileableBandNode.
     Node = applyPrevectBandOpt(Node);
