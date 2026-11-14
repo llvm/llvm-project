@@ -32,13 +32,25 @@ using namespace llvm;
 // Return true if the specified function should have a dedicated frame
 // pointer register.  This is true if frame pointer elimination is
 // disabled, if it needs dynamic stack realignment, if the function has
-// variable sized allocas, or if the frame address is taken.
+// variable sized allocas, if the frame address is taken, or if the reserved
+// call frame is too large to reach the emergency spill slot from SP.
 bool LoongArchFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MF.disableFramePointerElim() || RegInfo->hasStackRealignment(MF) ||
-         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken();
+  if (MF.disableFramePointerElim() || RegInfo->hasStackRealignment(MF) ||
+      MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken())
+    return true;
+
+  // With large call frames around we may need to use FP to access the
+  // scavenging emergency spill slot.
+  //
+  // We calculate the MaxCallFrameSize at the end of ISel so this value should
+  // be stable for the whole post-ISel MIR pipeline.
+  if (MFI.isMaxCallFrameSizeComputed() && MFI.getMaxCallFrameSize() > 2047)
+    return true;
+
+  return false;
 }
 
 bool LoongArchFrameLowering::hasBP(const MachineFunction &MF) const {

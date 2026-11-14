@@ -92,6 +92,8 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  void mirFileLoaded(MachineFunction &MF) const override;
+
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
 #include "LoongArchGenSubtargetInfo.inc"

@@ -12569,3 +12569,10 @@ LoongArchTargetLowering::emitDynamicProbedAlloc(MachineInstr &MI,
   MF.getInfo<LoongArchMachineFunctionInfo>()->setDynamicAllocation();
   return ExitMBB->begin()->getParent();
 }
+
+void LoongArchTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  // hasFPImpl depends on the max call frame size, so compute it before the
+  // reserved registers are frozen.
+  MF.getFrameInfo().computeMaxCallFrameSize(MF);
+  TargetLoweringBase::finalizeLowering(MF);
+}
