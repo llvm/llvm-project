@@ -22,8 +22,8 @@ let Namespace = "CSKY" in {
   }
 
   // Because CSKYFReg64 register have AsmName and AltNames that alias with their
-  // 32-bit sub-register, CSKYAsmParser will need to coerce a register number
-  // from a CSKYFReg32 to the equivalent CSKYFReg64 when appropriate.
+  // 32-bit sub-register, the 64-bit register classes use CoerceFromRegClass to
+  // accept the parsed CSKYFReg32 register.
   def sub32_0 : SubRegIndex<32, 0>;
   def sub32_32 : SubRegIndex<32, 32>;
   def sub64_0 : SubRegIndex<64, 0>;
@@ -179,6 +179,7 @@ def GPRSP : RegisterClass<"CSKY", [i32], 32, (add R14)> {
 
 def GPRPair : RegisterClass<"CSKY", [untyped], 32, (add GPRTuple)> {
   let Size = 64;
+  let CoerceFromRegClass = GPR;
 }
 
 def CARRY : RegisterClass<"CSKY", [i32], 32, (add C)> {
@@ -193,12 +194,14 @@ def FPR32 : RegisterClass<"CSKY", [f32], 32,
 def sFPR32 : RegisterClass<"CSKY", [f32], 32,
                          (add (sequence "F%u_32", 0, 15))>;
 
+let CoerceFromRegClass = FPR32 in {
 def FPR64 : RegisterClass<"CSKY", [f64], 32,
                          (add (sequence "F%u_64", 0, 31))>;
 def sFPR64 : RegisterClass<"CSKY", [f64], 32,
                          (add (sequence "F%u_64", 0, 15))>;
 
 def sFPR64_V : RegisterClass<"CSKY", [v2f32], 32, (add sFPR64)>;
+}
 
 def FPR128 : RegisterClass<"CSKY",
              [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16], 128,
