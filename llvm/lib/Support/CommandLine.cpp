@@ -3018,16 +3018,10 @@ LibraryOptionsContext &cl::getCAPILibraryOptions() {
   return C;
 }
 
-static bool llvmParseCommandLineOptionsImpl(int argc, const char *const *argv,
-                                            const char *Overview,
-                                            raw_ostream *Errs) {
-  return parseCommandLineOptions(getCAPILibraryOptions(), ArrayRef(argv, argc),
-                                 Overview, Errs);
-}
-
 void LLVMParseCommandLineOptions(int argc, const char *const *argv,
                                  const char *Overview) {
-  llvmParseCommandLineOptionsImpl(argc, argv, Overview, &nulls());
+  parseCommandLineOptions(getCAPILibraryOptions(), ArrayRef(argv, argc),
+                          Overview, &nulls());
 }
 
 LLVMBool LLVMParseCommandLineOptionsWithError(int argc, const char *const *argv,
@@ -3036,7 +3030,8 @@ LLVMBool LLVMParseCommandLineOptionsWithError(int argc, const char *const *argv,
   *ErrorMessage = nullptr;
   SmallString<128> Err;
   raw_svector_ostream Stream(Err);
-  if (!llvmParseCommandLineOptionsImpl(argc, argv, Overview, &Stream)) {
+  if (!parseCommandLineOptions(getCAPILibraryOptions(), ArrayRef(argv, argc),
+                               Overview, &Stream)) {
     *ErrorMessage = strdup(Err.c_str());
     return 1;
   }

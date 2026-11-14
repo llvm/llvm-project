@@ -760,16 +760,24 @@ void LLVMOrcDisposeThreadSafeModule(LLVMOrcThreadSafeModuleRef TSM) {
   delete unwrap(TSM);
 }
 
+// Like JITTargetMachineBuilder::detectHost, but the target machines read the
+// options that LLVMParseCommandLineOptions sets.
+static Expected<JITTargetMachineBuilder> detectHostForCAPI() {
+  auto JTMB = JITTargetMachineBuilder::detectHost();
+  if (JTMB)
+    JTMB->getOptions().MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
+  return JTMB;
+}
+
 LLVMErrorRef LLVMOrcJITTargetMachineBuilderDetectHost(
     LLVMOrcJITTargetMachineBuilderRef *Result) {
   assert(Result && "Result can not be null");
 
-  auto JTMB = JITTargetMachineBuilder::detectHost();
+  auto JTMB = detectHostForCAPI();
   if (!JTMB) {
     Result = nullptr;
     return wrap(JTMB.takeError());
   }
-  JTMB->getOptions().MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
 
   *Result = wrap(new JITTargetMachineBuilder(std::move(*JTMB)));
   return LLVMErrorSuccess;
@@ -931,15 +939,15 @@ LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
   if (!Builder)
     Builder = LLVMOrcCreateLLJITBuilder();
 
-  // Without a JITTargetMachineBuilder, LLJITBuilder detects the host itself.
+  // Detect the host here, as LLJITBuilder would without a
+  // JITTargetMachineBuilder.
   if (!unwrap(Builder)->getJITTargetMachineBuilder()) {
-    LLVMOrcJITTargetMachineBuilderRef JTMB;
-    if (LLVMErrorRef Err = LLVMOrcJITTargetMachineBuilderDetectHost(&JTMB)) {
+    auto JTMB = detectHostForCAPI();
+    if (!JTMB) {
       LLVMOrcDisposeLLJITBuilder(Builder);
-      Result = nullptr;
-      return Err;
+      return wrap(JTMB.takeError());
     }
-    LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(Builder, JTMB);
+    unwrap(Builder)->setJITTargetMachineBuilder(std::move(*JTMB));
   }
 
   auto J = unwrap(Builder)->create();

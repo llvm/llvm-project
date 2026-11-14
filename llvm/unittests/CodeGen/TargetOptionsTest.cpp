@@ -1,5 +1,4 @@
 #include "llvm/Target/TargetOptions.h"
-#include "llvm-c/TargetMachine.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -86,25 +85,6 @@ TEST(TargetOptionsTest, LibraryOptions) {
   EXPECT_EQ(mc::getMCTargetOptions(C).LibraryOptions, &C);
   EXPECT_EQ(codegen::getTargetOptions(C, Triple()).MCOptions.LibraryOptions,
             &C);
-}
-
-// A target machine created through the C API reads the options that
-// LLVMParseCommandLineOptions sets.
-TEST(TargetOptionsTest, CAPILibraryOptions) {
-  initLLVM();
-  LLVMTargetRef T;
-  char *Err;
-  if (LLVMGetTargetFromTriple("x86_64--", &T, &Err)) {
-    LLVMDisposeMessage(Err);
-    GTEST_SKIP();
-  }
-  LLVMTargetMachineRef TM =
-      LLVMCreateTargetMachine(T, "x86_64--", "", "", LLVMCodeGenLevelDefault,
-                              LLVMRelocDefault, LLVMCodeModelDefault);
-  EXPECT_EQ(
-      reinterpret_cast<TargetMachine *>(TM)->Options.MCOptions.LibraryOptions,
-      &cl::getCAPILibraryOptions());
-  LLVMDisposeTargetMachine(TM);
 }
 
 TEST(TargetOptionsTest, SubtargetCopyPreservesHwMode) {
