@@ -1303,10 +1303,12 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_alignbit: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    mlir::Value arg0 = emitScalarExpr(expr->getArg(0));
+    mlir::Value arg1 = emitScalarExpr(expr->getArg(1));
+    mlir::Value arg2 = emitScalarExpr(expr->getArg(2));
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Type ty = convertType(expr->getType());
+    return cir::FshrOp::create(builder, loc, ty, arg0, arg1, arg2).getResult();
   }
   case AMDGPU::BI__builtin_amdgcn_fence: {
     // The scope uses AMDGPU spelling on every target, like mapScopeToSPIRV.
