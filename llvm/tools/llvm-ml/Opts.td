@@ -50,6 +50,9 @@ def show_inst : LLVMFlag<"show-inst">,
                          "assembly">;
 def show_inst_operands : LLVMFlag<"show-inst-operands">,
                          HelpText<"Show instructions operands as parsed">;
+def show_includes : LLVMFlag<"showIncludes">,
+                    HelpText<"Print cl.exe-style include information to "
+                             "stderr">;
 def print_imm_hex : LLVMFlag<"print-imm-hex">,
                     HelpText<"Prefer hex format for immediate values in output "
                              "assembly">;

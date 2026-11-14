@@ -582,6 +582,9 @@ Makes programs 10x faster by doing Special New Thing.
   which is mostly useful on Windows where configuring the system to use UTF-8 is
   more involved than setting an environment variable.
 
+* llvm-ml now supports `-showIncludes` to report files read via `INCLUDE` in a
+  format compatible with Ninja's `deps = msvc` mode.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm
