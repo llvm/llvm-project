@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAI: FROZEN-CXX03-HEADERS-FIXME
+
 // <random>
 
 // template<class UIntType, size_t w, size_t s, size_t r>
