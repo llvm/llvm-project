@@ -144,11 +144,16 @@ bool MacroInfo::isIdenticalTo(const MacroInfo &Other, Preprocessor &PP,
   return true;
 }
 
-LLVM_DUMP_METHOD void MacroInfo::dump() const {
+LLVM_DUMP_METHOD void MacroInfo::dump() const { dump(/*SM=*/nullptr); }
+
+LLVM_DUMP_METHOD void MacroInfo::dump(const SourceManager *SM) const {
   llvm::raw_ostream &Out = llvm::errs();
 
-  // FIXME: Dump locations.
   Out << "MacroInfo " << this;
+  if (SM) {
+    Out << " ";
+    SourceRange(Location, EndLocation).print(Out, *SM);
+  }
   if (IsBuiltinMacro) Out << " builtin";
   if (IsDisabled) Out << " disabled";
   if (IsUsed) Out << " used";
@@ -250,7 +255,7 @@ LLVM_DUMP_METHOD void MacroDirective::dump(const SourceManager *SM) const {
   if (auto *DMD = dyn_cast<DefMacroDirective>(this)) {
     if (auto *Info = DMD->getInfo()) {
       Out << "\n  ";
-      Info->dump();
+      Info->dump(SM);
     }
   }
   Out << "\n";

@@ -6,6 +6,7 @@
 #pragma clang __debug macro MACRO
 // CHECK: UndefMacroDirective {{.*}} <macro-directive-dump.c:11:8>
 // CHECK: DefMacroDirective {{.*}} <macro-directive-dump.c:10:9>
+// CHECK-NEXT: MacroInfo {{.*}} <macro-directive-dump.c:10:9, col:15>
 
 #line 20 "macro-directive-dump.c"
 #define MACRO 1
@@ -14,6 +15,7 @@
 #pragma pop_macro("MACRO")
 #pragma clang __debug macro MACRO
 // CHECK: DefMacroDirective {{.*}} <macro-directive-dump.c:23:9>
+// CHECK-NEXT: MacroInfo {{.*}} <macro-directive-dump.c:20:9, col:15>
 // CHECK: #define <macro> 1
 // CHECK: UndefMacroDirective {{.*}} <macro-directive-dump.c:23:9>
 // CHECK: DefMacroDirective {{.*}} <macro-directive-dump.c:20:9>
