@@ -279,3 +279,273 @@ if.else:                                          ; preds = %entry
 if.end:                                           ; preds = %if.else, %if.then
   ret void
 }
+
+define void @sink_byte_to_int(ptr %p, i1 %c, b64 %a, i64 %b) {
+; CHECK-LABEL: define void @sink_byte_to_int
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[C:%.*]], b64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast b64 [[A]] to i64
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi i64 [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store i64 [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  store b64 %a, ptr %p, align 8
+  br label %if.end
+
+if.else:
+  store i64 %b, ptr %p, align 8
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @sink_int_to_byte(ptr %p, i1 %c, i64 %a, b64 %b) {
+; CHECK-LABEL: define void @sink_int_to_byte
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[C:%.*]], i64 [[A:%.*]], b64 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A]] to b64
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi b64 [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store b64 [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  store i64 %a, ptr %p, align 8
+  br label %if.end
+
+if.else:
+  store b64 %b, ptr %p, align 8
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @sink_vec_to_wider_int(ptr %p, i1 %c, <2 x i8> %a, i16 %b) {
+; CHECK-LABEL: define void @sink_vec_to_wider_int
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[C:%.*]], <2 x i8> [[A:%.*]], i16 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i8> [[A]] to i16
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi i16 [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store i16 [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  store <2 x i8> %a, ptr %p, align 8
+  br label %if.end
+
+if.else:
+  store i16 %b, ptr %p, align 8
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @sink_mismatched_lanes(ptr %p, i1 %c, <2 x i24> %a, <3 x i16> %b) {
+; CHECK-LABEL: define void @sink_mismatched_lanes
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[C:%.*]], <2 x i24> [[A:%.*]], <3 x i16> [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i24> [[A]] to <3 x i16>
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi <3 x i16> [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store <3 x i16> [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  store <2 x i24> %a, ptr %p, align 8
+  br label %if.end
+
+if.else:
+  store <3 x i16> %b, ptr %p, align 8
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @sink_scalable_mismatched_lanes(ptr %p, i1 %c, <vscale x 2 x i24> %a, <vscale x 3 x i16> %b) {
+; CHECK-LABEL: define void @sink_scalable_mismatched_lanes
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[C:%.*]], <vscale x 2 x i24> [[A:%.*]], <vscale x 3 x i16> [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i24> [[A]] to <vscale x 3 x i16>
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi <vscale x 3 x i16> [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store <vscale x 3 x i16> [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  store <vscale x 2 x i24> %a, ptr %p, align 8
+  br label %if.end
+
+if.else:
+  store <vscale x 3 x i16> %b, ptr %p, align 8
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @sink_byte_to_fp(ptr %p, i1 %c, b64 %a, double %b) {
+; CHECK-LABEL: define void @sink_byte_to_fp
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[C:%.*]], b64 [[A:%.*]], double [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast b64 [[A]] to double
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi double [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store double [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  store b64 %a, ptr %p, align 8
+  br label %if.end
+
+if.else:
+  store double %b, ptr %p, align 8
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @sink_byte_vec_to_int(ptr %p, i1 %c, <2 x b32> %a, i64 %b) {
+; CHECK-LABEL: define void @sink_byte_vec_to_int
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[C:%.*]], <2 x b32> [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x b32> [[A]] to i64
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi i64 [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store i64 [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  store <2 x b32> %a, ptr %p, align 8
+  br label %if.end
+
+if.else:
+  store i64 %b, ptr %p, align 8
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @sink_odd_size_mismatched_lanes(ptr %p, i1 %c, <2 x i3> %a, <3 x i2> %b) {
+; CHECK-LABEL: define void @sink_odd_size_mismatched_lanes
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[C:%.*]], <2 x i3> [[A:%.*]], <3 x i2> [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i3> [[A]] to <3 x i2>
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi <3 x i2> [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store <3 x i2> [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  store <2 x i3> %a, ptr %p, align 8
+  br label %if.end
+
+if.else:
+  store <3 x i2> %b, ptr %p, align 8
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @sink_scalable_odd_size_mismatched_lanes(ptr %p, i1 %c, <vscale x 2 x i3> %a, <vscale x 3 x i2> %b) {
+; CHECK-LABEL: define void @sink_scalable_odd_size_mismatched_lanes
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[C:%.*]], <vscale x 2 x i3> [[A:%.*]], <vscale x 3 x i2> [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i3> [[A]] to <vscale x 3 x i2>
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi <vscale x 3 x i2> [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store <vscale x 3 x i2> [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  store <vscale x 2 x i3> %a, ptr %p, align 8
+  br label %if.end
+
+if.else:
+  store <vscale x 3 x i2> %b, ptr %p, align 8
+  br label %if.end
+
+if.end:
+  ret void
+}
