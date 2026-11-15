@@ -227,6 +227,7 @@ private:
                                        SDValue &SrcMods) const;
   bool SelectVOP3BMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3NoMods(SDValue In, SDValue &Src) const;
+  bool SelectVOP3NoOpSelMods(SDValue In, SDValue &Src) const;
   bool SelectVOP3Mods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                        SDValue &Clamp, SDValue &Omod) const;
   bool SelectVOP3BMods0(SDValue In, SDValue &Src, SDValue &SrcMods,

@@ -3680,6 +3680,14 @@ bool AMDGPUDAGToDAGISel::SelectVOP3NoMods(SDValue In, SDValue &Src) const {
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectVOP3NoOpSelMods(SDValue In, SDValue &Src) const {
+  SDValue Unused;
+  if (isExtractHiElt(In, Unused))
+    return false;
+
+  return SelectVOP3NoMods(In, Src);
+}
+
 bool AMDGPUDAGToDAGISel::SelectVINTERPModsImpl(SDValue In, SDValue &Src,
                                                SDValue &SrcMods,
                                                bool OpSel) const {
