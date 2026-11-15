@@ -403,6 +403,78 @@ define <2 x i64> @test24(ptr %P) {
   ret <2 x i64> %X
 }
 
+; Check that non-byte loads are not reused for byte loads, but byte loads are
+; reused for non-byte loads.
+
+declare void @use.b64(b64)
+declare void @use.v2.b32(<2 x b32>)
+declare void @use.i64(i64)
+
+define i64 @load_i64_load_b64(ptr %p) {
+; CHECK-LABEL: @load_i64_load_b64(
+; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[Y_CAST:%.*]] = bitcast i64 [[X]] to b64
+; CHECK-NEXT:    call void @use.b64(b64 [[Y_CAST]])
+; CHECK-NEXT:    ret i64 [[X]]
+;
+  %x = load i64, ptr %p
+  %y = load b64, ptr %p
+  call void @use.b64(b64 %y)
+  ret i64 %x
+}
+
+define double @load_double_load_b64(ptr %p) {
+; CHECK-LABEL: @load_double_load_b64(
+; CHECK-NEXT:    [[X:%.*]] = load double, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[Y_CAST:%.*]] = bitcast double [[X]] to b64
+; CHECK-NEXT:    call void @use.b64(b64 [[Y_CAST]])
+; CHECK-NEXT:    ret double [[X]]
+;
+  %x = load double, ptr %p
+  %y = load b64, ptr %p
+  call void @use.b64(b64 %y)
+  ret double %x
+}
+
+define <2 x i32> @load_v2i32_load_v2b32(ptr %p) {
+; CHECK-LABEL: @load_v2i32_load_v2b32(
+; CHECK-NEXT:    [[X:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[Y_CAST:%.*]] = bitcast <2 x i32> [[X]] to <2 x b32>
+; CHECK-NEXT:    call void @use.v2.b32(<2 x b32> [[Y_CAST]])
+; CHECK-NEXT:    ret <2 x i32> [[X]]
+;
+  %x = load <2 x i32>, ptr %p
+  %y = load <2 x b32>, ptr %p
+  call void @use.v2.b32(<2 x b32> %y)
+  ret <2 x i32> %x
+}
+
+define b64 @load_b64_load_i64(ptr %p) {
+; CHECK-LABEL: @load_b64_load_i64(
+; CHECK-NEXT:    [[X:%.*]] = load b64, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[Y_CAST:%.*]] = bitcast b64 [[X]] to i64
+; CHECK-NEXT:    call void @use.i64(i64 [[Y_CAST]])
+; CHECK-NEXT:    ret b64 [[X]]
+;
+  %x = load b64, ptr %p
+  %y = load i64, ptr %p
+  call void @use.i64(i64 %y)
+  ret b64 %x
+}
+
+define b64 @load_b64_load_v2b32(ptr %p) {
+; CHECK-LABEL: @load_b64_load_v2b32(
+; CHECK-NEXT:    [[X:%.*]] = load b64, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[Y_CAST:%.*]] = bitcast b64 [[X]] to <2 x b32>
+; CHECK-NEXT:    call void @use.v2.b32(<2 x b32> [[Y_CAST]])
+; CHECK-NEXT:    ret b64 [[X]]
+;
+  %x = load b64, ptr %p
+  %y = load <2 x b32>, ptr %p
+  call void @use.v2.b32(<2 x b32> %y)
+  ret b64 %x
+}
+
 define i16 @load_from_zero_with_dynamic_offset(i64 %idx) {
 ; CHECK-LABEL: @load_from_zero_with_dynamic_offset(
 ; CHECK-NEXT:    ret i16 0
