@@ -75,6 +75,7 @@ int main(void) {
   omp_destroy_nest_lock(&nested);
   omp_destroy_lock(&lock);
   printf("TICKET_TRY_PUBLICATION team=%d count=%llu nested=%llu errors=%d\n",
-         team, (unsigned long long)count, (unsigned long long)nested_count, errors);
+         team, (unsigned long long)count, (unsigned long long)nested_count,
+         errors);
   return errors != 0;
 }
