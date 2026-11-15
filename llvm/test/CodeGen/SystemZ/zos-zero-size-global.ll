@@ -1,0 +1,49 @@
+; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s --filetype=obj | od -Ax -tx1 -v | \
+; RUN:   FileCheck --check-prefix=GOFF --ignore-case %s
+
+source_filename = "test.ll"
+target triple = "s390x-ibm-zos"
+
+@empty = global {} zeroinitializer, align 8
+@arr = global [0 x i32] zeroinitializer, align 4
+@iempty = internal global {} zeroinitializer
+@full = global i32 7
+
+; CHECK-LABEL: empty CSECT
+; CHECK-NEXT:  C_WSA64 CATTR ALIGN(3),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(empt
+; CHECK-NEXT:  ty)
+; CHECK-NEXT:  empty XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
+; CHECK-NEXT:  DS 0B
+; CHECK-NEXT:  * @arr
+
+; CHECK-LABEL: full CSECT
+; CHECK:       DC XL4'00000007'
+
+; CHECK-LABEL: B_IDRL CATTR
+; CHECK:       empty CSECT
+; CHECK-NEXT:  C_WSA64 CATTR PART(empty)
+; CHECK-NEXT:  DS XL2
+; CHECK-NEXT:  arr CSECT
+; CHECK-NEXT:  C_WSA64 CATTR PART(arr)
+; CHECK-NEXT:  DS XL2
+; CHECK-NEXT:  iempty CSECT
+; CHECK-NEXT:  C_WSA64 CATTR PART(iempty)
+; CHECK-NEXT:  DS XL2
+; CHECK-NEXT:  test#C CSECT
+; CHECK-NEXT:  C_WSA64 CATTR PART(test#S)
+; CHECK-NEXT:  DS XL2
+; CHECK-NEXT:  EXTRN CELQSTRT
+
+; GOFF:      000280 03 00 00 03 00 00 00 07 00 00 00 06 00 00 00 00
+; GOFF-NEXT: 000290 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00
+; GOFF:      0002c0 00 04 23 00 00 00 00 05 85 94 97 a3 a8 00 00 00
+; GOFF:      000370 03 00 00 03 00 00 00 0a 00 00 00 09 00 00 00 00
+; GOFF-NEXT: 000380 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00
+; GOFF:      0003b0 00 04 22 00 00 00 00 03 81 99 99 00 00 00 00 00
+; GOFF:      000460 03 00 00 03 00 00 00 0d 00 00 00 0c 00 00 00 00
+; GOFF-NEXT: 000470 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00
+; GOFF:      0004a0 00 01 23 00 00 00 00 06 89 85 94 97 a3 a8 00 00
+; GOFF:      0005f0 03 00 00 03 00 00 00 12 00 00 00 11 00 00 00 00
+; GOFF-NEXT: 000600 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00
+; GOFF:      000630 00 01 24 00 00 00 00 06 a3 85 a2 a3 7b e2 00 00

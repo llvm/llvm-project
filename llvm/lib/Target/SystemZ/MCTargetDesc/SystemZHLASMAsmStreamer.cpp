@@ -265,6 +265,7 @@ void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
       OS << '\n';
       ED->setEmitted();
       Sec.setEmitted();
+      Parts.push_back(&Sec);
       EmitExternalName();
     } else
       OS << ED->getName() << " CATTR PART(" << Sec.getName() << ")\n";
@@ -275,6 +276,11 @@ void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
   }
   MCStreamer::changeSection(Section, Subsection);
   EmitEOL();
+}
+
+void SystemZHLASMAsmStreamer::notePartData() {
+  if (static_cast<MCSectionGOFF *>(getCurrentSectionOnly())->isPR())
+    PartsWithData.insert(getCurrentSectionOnly());
 }
 
 void SystemZHLASMAsmStreamer::emitAlignmentDS(uint64_t ByteAlignment,
@@ -365,6 +371,8 @@ void SystemZHLASMAsmStreamer::emitCodeAlignment(Align Alignment,
 void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
+  if (!Data.empty())
+    notePartData();
   for (size_t I = 0, E = Data.size(); I < E; I += MaxXLLen) {
     StringRef Chunk = Data.substr(I, MaxXLLen);
     OS << " DC XL" << Chunk.size() << '\'' << toHex(Chunk) << '\'';
@@ -390,6 +398,7 @@ void SystemZHLASMAsmStreamer::emitFill(const MCExpr &NumBytes,
   if (Count == 0)
     return;
 
+  notePartData();
   OS << " DC " << Count << "XL1'"
      << format_hex_no_prefix(FillValue & 0xff, 2, true) << '\'';
   EmitEOL();
@@ -494,6 +503,7 @@ void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
   addEncodingComment(Inst, STI);
   EmitEOL();
 
+  notePartData();
   InstPrinter->printInst(&Inst, 0, "", STI, OS);
   EmitEOL();
 }
@@ -559,6 +569,7 @@ void SystemZHLASMAsmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 
 void SystemZHLASMAsmStreamer::emitRawTextImpl(StringRef String) {
   String.consume_back("\n");
+  notePartData();
   OS << String;
   EmitEOL();
 }
@@ -648,12 +659,21 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   }
 
   MCStreamer::emitValueImpl(Value, Size, Loc);
+  notePartData();
   OS << " DC ";
   emitHLASMValueImpl(Value, Size, true);
   EmitEOL();
 }
 
 void SystemZHLASMAsmStreamer::finishImpl() {
+  for (MCSectionGOFF *Part : Parts) {
+    if (!Part->requiresNonZeroLength() || PartsWithData.contains(Part))
+      continue;
+    switchSection(Part);
+    OS << " DS XL2";
+    EmitEOL();
+  }
+
   for (auto &Symbol : getAssembler().symbols()) {
     if (Symbol.isTemporary() || !Symbol.isRegistered() || Symbol.isDefined())
       continue;

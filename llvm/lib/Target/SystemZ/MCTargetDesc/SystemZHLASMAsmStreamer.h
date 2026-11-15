@@ -13,7 +13,9 @@
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_MCTARGETDESC_SYSTEMZHLASMASMSTREAMER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_MCTARGETDESC_SYSTEMZHLASMASMSTREAMER_H
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -29,6 +31,7 @@
 #include "llvm/Support/FormattedStream.h"
 
 namespace llvm {
+class MCSectionGOFF;
 class MCSymbolGOFF;
 
 class SystemZHLASMAsmStreamer final : public MCAsmBaseStreamer {
@@ -44,6 +47,10 @@ class SystemZHLASMAsmStreamer final : public MCAsmBaseStreamer {
   const MCAsmInfo *MAI;
   std::unique_ptr<MCInstPrinter> InstPrinter;
   bool IsVerboseAsm = false;
+  SmallVector<MCSectionGOFF *, 8> Parts;
+  SmallPtrSet<const MCSection *, 8> PartsWithData;
+
+  void notePartData();
 
 public:
   SystemZHLASMAsmStreamer(MCContext &Context,
