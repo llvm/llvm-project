@@ -51,20 +51,20 @@ struct DerivedSameLayoutFromPublic : Public {};
 // XDSO-NEXT:    ret void
 //
 // XDSOT-LABEL: define hidden void @call_hidden(
-// XDSOT-SAME: ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] !guid [[META8:![0-9]+]] {
+// XDSOT-SAME: ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] !guid [[META6:![0-9]+]] {
 // XDSOT-NEXT:  [[ENTRY:.*:]]
 // XDSOT-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // XDSOT-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // XDSOT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // XDSOT-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// XDSOT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden"), !nosanitize [[META9:![0-9]+]]
-// XDSOT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META9]]
-// XDSOT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF10:![0-9]+]], !nosanitize [[META9]]
+// XDSOT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden"), !nosanitize [[META7:![0-9]+]]
+// XDSOT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META7]]
+// XDSOT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8:![0-9]+]], !nosanitize [[META7]]
 // XDSOT:       [[TRAP]]:
-// XDSOT-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR7:[0-9]+]], !nosanitize [[META9]]
-// XDSOT-NEXT:    unreachable, !nosanitize [[META9]]
+// XDSOT-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR7:[0-9]+]], !nosanitize [[META7]]
+// XDSOT-NEXT:    unreachable, !nosanitize [[META7]]
 // XDSOT:       [[CONT]]:
-// XDSOT-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META9]]
+// XDSOT-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META7]]
 // XDSOT-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // XDSOT-NEXT:    ret void
 //
@@ -223,17 +223,17 @@ extern "C" void call_hidden(Hidden *p) {
 // XDSO-NEXT:    ret void
 //
 // XDSOT-LABEL: define hidden void @call_public(
-// XDSOT-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META11:![0-9]+]] {
+// XDSOT-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META9:![0-9]+]] {
 // XDSOT-NEXT:  [[ENTRY:.*:]]
 // XDSOT-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // XDSOT-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // XDSOT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // XDSOT-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// XDSOT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Public"), !nosanitize [[META9]]
-// XDSOT-NEXT:    br i1 [[TMP1]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF10]], !nosanitize [[META9]]
+// XDSOT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Public"), !nosanitize [[META7]]
+// XDSOT-NEXT:    br i1 [[TMP1]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // XDSOT:       [[CFI_SLOWPATH]]:
-// XDSOT-NEXT:    call void @__cfi_slowpath(i64 7659278028533726273, ptr [[VTABLE]]) #[[ATTR8:[0-9]+]], !nosanitize [[META9]]
-// XDSOT-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META9]]
+// XDSOT-NEXT:    call void @__cfi_slowpath(i64 7659278028533726273, ptr [[VTABLE]]) #[[ATTR8:[0-9]+]], !nosanitize [[META7]]
+// XDSOT-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META7]]
 // XDSOT:       [[CFI_CONT]]:
 // XDSOT-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
 // XDSOT-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
@@ -348,7 +348,7 @@ extern "C" void call_public(Public *p) {
 // XDSO-NEXT:    ret void
 //
 // XDSOT-LABEL: define hidden void @call_no_sanitize(
-// XDSOT-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META12:![0-9]+]] {
+// XDSOT-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META10:![0-9]+]] {
 // XDSOT-NEXT:  [[ENTRY:.*:]]
 // XDSOT-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // XDSOT-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
@@ -483,7 +483,7 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void call_no_sanitize(Hidde
 // XDSO-NEXT:    ret void
 //
 // XDSOT-LABEL: define hidden void @call_derived_same_layout(
-// XDSOT-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META13:![0-9]+]] {
+// XDSOT-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META11:![0-9]+]] {
 // XDSOT-NEXT:  [[ENTRY:.*:]]
 // XDSOT-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // XDSOT-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
@@ -492,14 +492,14 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void call_no_sanitize(Hidde
 // XDSOT-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // XDSOT:       [[DELETE_NOTNULL]]:
 // XDSOT-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// XDSOT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS17DerivedSameLayout"), !nosanitize [[META9]]
-// XDSOT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META9]]
-// XDSOT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF10]], !nosanitize [[META9]]
+// XDSOT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS17DerivedSameLayout"), !nosanitize [[META7]]
+// XDSOT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META7]]
+// XDSOT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // XDSOT:       [[TRAP]]:
-// XDSOT-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR7]], !nosanitize [[META9]]
-// XDSOT-NEXT:    unreachable, !nosanitize [[META9]]
+// XDSOT-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR7]], !nosanitize [[META7]]
+// XDSOT-NEXT:    unreachable, !nosanitize [[META7]]
 // XDSOT:       [[CONT]]:
-// XDSOT-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META9]]
+// XDSOT-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META7]]
 // XDSOT-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR8]]
 // XDSOT-NEXT:    br label %[[DELETE_END]]
 // XDSOT:       [[DELETE_END]]:
@@ -695,20 +695,20 @@ extern "C" void call_derived_same_layout(DerivedSameLayout *p) {
 // XDSO-NEXT:    ret void
 //
 // XDSOT-LABEL: define hidden void @call_derived_public(
-// XDSOT-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META14:![0-9]+]] {
+// XDSOT-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META12:![0-9]+]] {
 // XDSOT-NEXT:  [[ENTRY:.*:]]
 // XDSOT-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // XDSOT-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // XDSOT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // XDSOT-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// XDSOT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 32, metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META9]]
-// XDSOT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META9]]
-// XDSOT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF10]], !nosanitize [[META9]]
+// XDSOT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 32, metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META7]]
+// XDSOT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META7]]
+// XDSOT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // XDSOT:       [[TRAP]]:
-// XDSOT-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR7]], !nosanitize [[META9]]
-// XDSOT-NEXT:    unreachable, !nosanitize [[META9]]
+// XDSOT-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR7]], !nosanitize [[META7]]
+// XDSOT-NEXT:    unreachable, !nosanitize [[META7]]
 // XDSOT:       [[CONT]]:
-// XDSOT-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META9]]
+// XDSOT-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META7]]
 // XDSOT-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(16) [[TMP0]])
 // XDSOT-NEXT:    ret void
 //
@@ -865,7 +865,7 @@ extern "C" void call_derived_public(DerivedFromPublic *p) {
 // XDSO-NEXT:    ret void
 //
 // XDSOT-LABEL: define hidden void @delete_derived_same_layout_from_public(
-// XDSOT-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META15:![0-9]+]] {
+// XDSOT-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META13:![0-9]+]] {
 // XDSOT-NEXT:  [[ENTRY:.*:]]
 // XDSOT-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // XDSOT-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
@@ -874,14 +874,14 @@ extern "C" void call_derived_public(DerivedFromPublic *p) {
 // XDSOT-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // XDSOT:       [[DELETE_NOTNULL]]:
 // XDSOT-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// XDSOT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS27DerivedSameLayoutFromPublic"), !nosanitize [[META9]]
-// XDSOT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META9]]
-// XDSOT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF10]], !nosanitize [[META9]]
+// XDSOT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS27DerivedSameLayoutFromPublic"), !nosanitize [[META7]]
+// XDSOT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META7]]
+// XDSOT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // XDSOT:       [[TRAP]]:
-// XDSOT-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR7]], !nosanitize [[META9]]
-// XDSOT-NEXT:    unreachable, !nosanitize [[META9]]
+// XDSOT-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR7]], !nosanitize [[META7]]
+// XDSOT-NEXT:    unreachable, !nosanitize [[META7]]
 // XDSOT:       [[CONT]]:
-// XDSOT-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META9]]
+// XDSOT-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META7]]
 // XDSOT-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR8]]
 // XDSOT-NEXT:    br label %[[DELETE_END]]
 // XDSOT:       [[DELETE_END]]:
@@ -1040,14 +1040,14 @@ extern "C" void delete_derived_same_layout_from_public(DerivedSameLayoutFromPubl
 // XDSO: [[META21]] = !{i64 -1300877796466697334}
 // XDSO: [[META22]] = !{i64 -3011432234017786520}
 //.
-// XDSOT: [[META8]] = !{i64 -8223949192042198753}
-// XDSOT: [[META9]] = !{}
-// XDSOT: [[PROF10]] = !{!"branch_weights", i32 1048575, i32 1}
-// XDSOT: [[META11]] = !{i64 4735877602249467044}
-// XDSOT: [[META12]] = !{i64 7641651042058123257}
-// XDSOT: [[META13]] = !{i64 -4426688768985367573}
-// XDSOT: [[META14]] = !{i64 -1300877796466697334}
-// XDSOT: [[META15]] = !{i64 -3011432234017786520}
+// XDSOT: [[META6]] = !{i64 -8223949192042198753}
+// XDSOT: [[META7]] = !{}
+// XDSOT: [[PROF8]] = !{!"branch_weights", i32 1048575, i32 1}
+// XDSOT: [[META9]] = !{i64 4735877602249467044}
+// XDSOT: [[META10]] = !{i64 7641651042058123257}
+// XDSOT: [[META11]] = !{i64 -4426688768985367573}
+// XDSOT: [[META12]] = !{i64 -1300877796466697334}
+// XDSOT: [[META13]] = !{i64 -3011432234017786520}
 //.
 // VFEFULL: [[META4]] = !{i64 -8223949192042198753}
 // VFEFULL: [[META5]] = !{}
