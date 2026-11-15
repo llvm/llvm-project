@@ -548,15 +548,15 @@ static void ProcessThread(ThreadID os_id, uptr sp,
         uptr dtls_end = dtls_beg + dtv.size;
         if (dtls_beg < dtls_end) {
           if (IsAccessibleMemoryRange(dtls_beg, dtv.size)) {
-            LOG_THREADS("DTLS %d at %p-%p.\n", id, (void *)dtls_beg,
-                        (void *)dtls_end);
+            LOG_THREADS("DTLS %d at %p-%p.\n", id, (void*)dtls_beg,
+                        (void*)dtls_end);
             ScanForPointers(dtls_beg, dtls_end, frontier, "DTLS", kReachable,
                             accessor);
           } else {
             // A dlclose()-d module's DTLS block might have been lazily freed
             // and unmapped without updating dtv, leaving an inaccessible range.
             LOG_THREADS("DTLS %d at %p-%p is not accessible.\n", id,
-                        (void *)dtls_beg, (void *)dtls_end);
+                        (void*)dtls_beg, (void*)dtls_end);
           }
         }
       });
