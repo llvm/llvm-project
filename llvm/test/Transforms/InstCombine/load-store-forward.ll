@@ -259,6 +259,116 @@ define i1 @load_i1_store_i8(ptr %a) {
   ret i1 %v
 }
 
+define ptr @load_ptr_store_b64(ptr %a, b64 %b) {
+; CHECK-LABEL: @load_ptr_store_b64(
+; CHECK-NEXT:    store b64 [[B:%.*]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[A]], align 8
+; CHECK-NEXT:    ret ptr [[V]]
+;
+  store b64 %b, ptr %a
+  %v = load ptr, ptr %a
+  ret ptr %v
+}
+
+define b64 @load_b64_store_ptr(ptr %a, ptr %p) {
+; CHECK-LABEL: @load_b64_store_ptr(
+; CHECK-NEXT:    store ptr [[P:%.*]], ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[V:%.*]] = load b64, ptr [[A]], align 4
+; CHECK-NEXT:    ret b64 [[V]]
+;
+  store ptr %p, ptr %a
+  %v = load b64, ptr %a
+  ret b64 %v
+}
+
+define <2 x ptr> @load_v2ptr_store_v2b64(ptr %a, <2 x b64> %b) {
+; CHECK-LABEL: @load_v2ptr_store_v2b64(
+; CHECK-NEXT:    store <2 x b64> [[B:%.*]], ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[V:%.*]] = load <2 x ptr>, ptr [[A]], align 16
+; CHECK-NEXT:    ret <2 x ptr> [[V]]
+;
+  store <2 x b64> %b, ptr %a
+  %v = load <2 x ptr>, ptr %a
+  ret <2 x ptr> %v
+}
+
+define ptr @load_ptr_store_v2b32(ptr %a, <2 x b32> %b) {
+; CHECK-LABEL: @load_ptr_store_v2b32(
+; CHECK-NEXT:    store <2 x b32> [[B:%.*]], ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[A]], align 8
+; CHECK-NEXT:    ret ptr [[V]]
+;
+  store <2 x b32> %b, ptr %a
+  %v = load ptr, ptr %a
+  ret ptr %v
+}
+
+define <4 x b32> @load_v4b32_store_v2ptr(ptr %a, <2 x ptr> %p) {
+; CHECK-LABEL: @load_v4b32_store_v2ptr(
+; CHECK-NEXT:    store <2 x ptr> [[P:%.*]], ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[V:%.*]] = load <4 x b32>, ptr [[A]], align 16
+; CHECK-NEXT:    ret <4 x b32> [[V]]
+;
+  store <2 x ptr> %p, ptr %a
+  %v = load <4 x b32>, ptr %a
+  ret <4 x b32> %v
+}
+
+define <vscale x 1 x ptr> @load_nxv1ptr_store_nxv1b64(ptr %a, <vscale x 1 x b64> %b) {
+; CHECK-LABEL: @load_nxv1ptr_store_nxv1b64(
+; CHECK-NEXT:    store <vscale x 1 x b64> [[B:%.*]], ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[V:%.*]] = load <vscale x 1 x ptr>, ptr [[A]], align 8
+; CHECK-NEXT:    ret <vscale x 1 x ptr> [[V]]
+;
+  store <vscale x 1 x b64> %b, ptr %a
+  %v = load <vscale x 1 x ptr>, ptr %a
+  ret <vscale x 1 x ptr> %v
+}
+
+define <vscale x 2 x ptr> @load_nxv2ptr_store_nxv4b32(ptr %a, <vscale x 4 x b32> %b) {
+; CHECK-LABEL: @load_nxv2ptr_store_nxv4b32(
+; CHECK-NEXT:    store <vscale x 4 x b32> [[B:%.*]], ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[V:%.*]] = load <vscale x 2 x ptr>, ptr [[A]], align 16
+; CHECK-NEXT:    ret <vscale x 2 x ptr> [[V]]
+;
+  store <vscale x 4 x b32> %b, ptr %a
+  %v = load <vscale x 2 x ptr>, ptr %a
+  ret <vscale x 2 x ptr> %v
+}
+
+define ptr @load_ptr_store_nxv1b64(ptr %a, <vscale x 1 x b64> %b) {
+; CHECK-LABEL: @load_ptr_store_nxv1b64(
+; CHECK-NEXT:    store <vscale x 1 x b64> [[B:%.*]], ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[A]], align 8
+; CHECK-NEXT:    ret ptr [[V]]
+;
+  store <vscale x 1 x b64> %b, ptr %a
+  %v = load ptr, ptr %a
+  ret ptr %v
+}
+
+define ptr @load_ptr_store_b32(ptr %a, b32 %b) {
+; CHECK-LABEL: @load_ptr_store_b32(
+; CHECK-NEXT:    store b32 [[B:%.*]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[A]], align 8
+; CHECK-NEXT:    ret ptr [[V]]
+;
+  store b32 %b, ptr %a
+  %v = load ptr, ptr %a
+  ret ptr %v
+}
+
+define b32 @load_b32_store_ptr(ptr %a, ptr %p) {
+; CHECK-LABEL: @load_b32_store_ptr(
+; CHECK-NEXT:    store ptr [[P:%.*]], ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[V:%.*]] = load b32, ptr [[A]], align 4
+; CHECK-NEXT:    ret b32 [[V]]
+;
+  store ptr %p, ptr %a
+  %v = load b32, ptr %a
+  ret b32 %v
+}
+
 define i32 @load_after_memset_0(ptr %a) {
 ; CHECK-LABEL: @load_after_memset_0(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)

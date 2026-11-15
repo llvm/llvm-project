@@ -475,6 +475,56 @@ define b64 @load_b64_load_v2b32(ptr %p) {
   ret b64 %x
 }
 
+define ptr @load_ptr_load_b64(ptr %p) {
+; CHECK-LABEL: @load_ptr_load_b64(
+; CHECK-NEXT:    [[X:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[Y:%.*]] = load b64, ptr [[P]], align 8
+; CHECK-NEXT:    call void @use.b64(b64 [[Y]])
+; CHECK-NEXT:    ret ptr [[X]]
+;
+  %x = load ptr, ptr %p
+  %y = load b64, ptr %p
+  call void @use.b64(b64 %y)
+  ret ptr %x
+}
+
+define b64 @load_b64_load_ptr(ptr %p) {
+; CHECK-LABEL: @load_b64_load_ptr(
+; CHECK-NEXT:    [[X:%.*]] = load b64, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[Y:%.*]] = load ptr, ptr [[P]], align 8
+; CHECK-NEXT:    call void @use(ptr [[Y]])
+; CHECK-NEXT:    ret b64 [[X]]
+;
+  %x = load b64, ptr %p
+  %y = load ptr, ptr %p
+  call void @use(ptr %y)
+  ret b64 %x
+}
+
+; Bytes are not forwarded to and from non-integral pointers.
+
+define ptr addrspace(1) @load_ptr1_store_b64(ptr %p, b64 %b) {
+; CHECK-LABEL: @load_ptr1_store_b64(
+; CHECK-NEXT:    store b64 [[B:%.*]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[V:%.*]] = load ptr addrspace(1), ptr [[P]], align 8
+; CHECK-NEXT:    ret ptr addrspace(1) [[V]]
+;
+  store b64 %b, ptr %p
+  %v = load ptr addrspace(1), ptr %p
+  ret ptr addrspace(1) %v
+}
+
+define b64 @load_b64_store_ptr1(ptr %p, ptr addrspace(1) %q) {
+; CHECK-LABEL: @load_b64_store_ptr1(
+; CHECK-NEXT:    store ptr addrspace(1) [[Q:%.*]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[V:%.*]] = load b64, ptr [[P]], align 8
+; CHECK-NEXT:    ret b64 [[V]]
+;
+  store ptr addrspace(1) %q, ptr %p
+  %v = load b64, ptr %p
+  ret b64 %v
+}
+
 define i16 @load_from_zero_with_dynamic_offset(i64 %idx) {
 ; CHECK-LABEL: @load_from_zero_with_dynamic_offset(
 ; CHECK-NEXT:    ret i16 0
