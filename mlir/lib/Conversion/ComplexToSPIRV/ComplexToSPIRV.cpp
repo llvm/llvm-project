@@ -579,6 +579,56 @@ struct LogOpPattern final : OpConversionPattern<ComplexOp> {
     return success();
   }
 };
+
+/// Lowers complex.tan/tanh following the identities
+/// tan(x + iy) = (sin(2x) + i * sinh(2y)) / (cos(2x) + cosh(2y))
+/// tanh(x + iy) = (sinh(2x) + i * sin(2y)) / (cosh(2x) + cos(2y))
+template <bool IsTanh, typename SinOp, typename CosOp, typename SinhOp,
+          typename CoshOp,
+          typename ComplexOp =
+              std::conditional_t<IsTanh, complex::TanhOp, complex::TanOp>>
+struct TanTanhOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    Value two = createFPConstant(rewriter, loc, re.getType(), 2.0);
+    Value twoRe = spirv::FMulOp::create(rewriter, loc, re, two);
+    Value twoIm = spirv::FMulOp::create(rewriter, loc, im, two);
+
+    Value trigArg = IsTanh ? twoIm : twoRe;
+    Value hypArg = IsTanh ? twoRe : twoIm;
+    Value sin = SinOp::create(rewriter, loc, trigArg);
+    Value cos = CosOp::create(rewriter, loc, trigArg);
+    Value sinh = SinhOp::create(rewriter, loc, hypArg);
+    Value cosh = CoshOp::create(rewriter, loc, hypArg);
+
+    Value denom = spirv::FAddOp::create(rewriter, loc, cos, cosh);
+    Value sinQuot = spirv::FDivOp::create(rewriter, loc, sin, denom);
+    Value sinhQuot = spirv::FDivOp::create(rewriter, loc, sinh, denom);
+    Value resultRe = IsTanh ? sinhQuot : sinQuot;
+    Value resultIm = IsTanh ? sinQuot : sinhQuot;
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -642,6 +692,14 @@ void mlir::populateComplexToSPIRVPatterns(
                     spirv::GLSinOp, spirv::GLCosOp, spirv::GLAtan2Op>,
       SqrtOpPattern<SqrtKind::Rsqrt, spirv::CLSqrtOp, spirv::CLRsqrtOp,
                     spirv::CLFAbsOp, spirv::CLFMaxOp, spirv::CLFMinOp,
-                    spirv::CLSinOp, spirv::CLCosOp, spirv::CLAtan2Op>>(
-      typeConverter, context);
+                    spirv::CLSinOp, spirv::CLCosOp, spirv::CLAtan2Op>,
+      TanTanhOpPattern</*IsTanh=*/false, spirv::GLSinOp, spirv::GLCosOp,
+                       spirv::GLSinhOp, spirv::GLCoshOp>,
+      TanTanhOpPattern</*IsTanh=*/false, spirv::CLSinOp, spirv::CLCosOp,
+                       spirv::CLSinhOp, spirv::CLCoshOp>,
+      TanTanhOpPattern</*IsTanh=*/true, spirv::GLSinOp, spirv::GLCosOp,
+                       spirv::GLSinhOp, spirv::GLCoshOp>,
+      TanTanhOpPattern</*IsTanh=*/true, spirv::CLSinOp, spirv::CLCosOp,
+                       spirv::CLSinhOp, spirv::CLCoshOp>>(typeConverter,
+                                                          context);
 }
