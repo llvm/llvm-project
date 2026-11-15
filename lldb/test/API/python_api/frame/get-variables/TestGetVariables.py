@@ -37,7 +37,6 @@ class TestGetVariables(TestBase):
             % (description, copy_names, actual_names),
         )
 
-    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.build()
 

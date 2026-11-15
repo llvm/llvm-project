@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILTranslateMetadata.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DXILSignatureAnalysis.h"
@@ -481,8 +480,7 @@ static void translateInstructionMetadata(Module &M) {
     for (BasicBlock &BB : F) {
       // This needs to be done first so that "hlsl.controlflow.hints" isn't
       // removed in the allow-list below
-      if (auto *I = BB.getTerminator())
-        translateBranchMetadata(M, I);
+      translateBranchMetadata(M, BB.getTerminator());
 
       for (auto &I : make_early_inc_range(BB)) {
         if (isa<UncondBrInst, CondBrInst>(I))
@@ -538,7 +536,6 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
                                     const ModuleMetadataInfo &MMDI,
                                     const ModuleSignatureInfo &SignatureInfo) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(M);
   SmallVector<MDNode *> EntryFnMDNodes;
 
   emitValidatorVersionMD(M, MMDI);
@@ -581,7 +578,8 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
            MMDI.ValidatorVersion == VersionTuple(0, 0) ||
            MMDI.ValidatorVersion >= VersionTuple(1, 1)) &&
           (Sig->InputVectors || Sig->OutputVectors)) {
-        auto State = Sig->getDependencyState();
+        auto State = Sig->getDependencyState(
+            ShaderFlags.getFunctionFlags(EntryProp.Entry).ViewID);
         auto *StateMD = M.getOrInsertNamedMetadata("dx.viewIdState");
         StateMD->clearOperands();
         StateMD->addOperand(MDNode::get(
@@ -612,8 +610,8 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
     NamedMD->eraseFromParent();
 }
 
-PreservedAnalyses DXILTranslateMetadata::run(Module &M,
-                                             ModuleAnalysisManager &MAM) {
+PreservedAnalyses DXILTranslateMetadataPass::run(Module &M,
+                                                 ModuleAnalysisManager &MAM) {
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
   const ModuleShaderFlags &ShaderFlags = MAM.getResult<ShaderFlagsAnalysis>(M);
@@ -625,6 +623,20 @@ PreservedAnalyses DXILTranslateMetadata::run(Module &M,
 
   return PreservedAnalyses::all();
 }
+
+namespace {
+class DXILTranslateMetadataLegacy : public ModulePass {
+public:
+  static char ID; // Pass identification, replacement for typeid
+  explicit DXILTranslateMetadataLegacy() : ModulePass(ID) {}
+
+  StringRef getPassName() const override { return "DXIL Translate Metadata"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  bool runOnModule(Module &M) override;
+};
+} // namespace
 
 void DXILTranslateMetadataLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DXILResourceTypeWrapperPass>();

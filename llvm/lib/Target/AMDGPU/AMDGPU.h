@@ -111,7 +111,7 @@ FunctionPass *createSIInsertWaitcntsPass();
 
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
-FunctionPass *createAMDGPUCodeGenPreparePass();
+FunctionPass *createAMDGPUCodeGenPreparePass(bool ExpandDiv64InIR);
 FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
@@ -154,10 +154,10 @@ void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
 
 void initializeAMDGPUAsmPrinterPass(PassRegistry &);
 
-// DPP/Iterative option enables the atomic optimizer with given strategy
-// whereas None disables the atomic optimizer.
-enum class ScanOptions { DPP, Iterative, None };
-FunctionPass *createAMDGPUAtomicOptimizerPass(ScanOptions ScanStrategy);
+namespace AMDGPU {
+enum class ScanOptions;
+} // namespace AMDGPU
+FunctionPass *createAMDGPUAtomicOptimizerPass(AMDGPU::ScanOptions ScanStrategy);
 void initializeAMDGPUAtomicOptimizerPass(PassRegistry &);
 extern char &AMDGPUAtomicOptimizerID;
 
@@ -337,13 +337,13 @@ private:
 
 struct AMDGPUAtomicOptimizerPass
     : OptionalPassInfoMixin<AMDGPUAtomicOptimizerPass> {
-  AMDGPUAtomicOptimizerPass(TargetMachine &TM, ScanOptions ScanImpl)
+  AMDGPUAtomicOptimizerPass(TargetMachine &TM, AMDGPU::ScanOptions ScanImpl)
       : TM(TM), ScanImpl(ScanImpl) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   TargetMachine &TM;
-  ScanOptions ScanImpl;
+  AMDGPU::ScanOptions ScanImpl;
 };
 
 struct AMDGPUInsertDelayAluPass

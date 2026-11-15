@@ -8,6 +8,7 @@
 
 #define DEBUG_TYPE "runtime-libcall-emitter"
 
+#include "AttributeTableEmitter.h"
 #include "RuntimeLibcalls.h"
 
 #include "SequenceToOffsetTable.h"
@@ -15,11 +16,11 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/xxhash.h"
 #include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -89,6 +90,7 @@ private:
 
   void emitGetInitRuntimeLibcallNames(raw_ostream &OS) const;
   void emitGetInitRuntimeLibcallSignatures(raw_ostream &OS) const;
+  void emitRuntimeLibcallAttributes(raw_ostream &OS) const;
   void emitMaskedVectorLibcallMapping(raw_ostream &OS) const;
 
   // Emit the sorted per-predicate `setAvailable` tables/loops. The
@@ -101,18 +103,26 @@ private:
                       SetVector<PredicateWithCC> &PredicateSorter,
                       unsigned BaseIndent) const;
 
-  // A LibraryRef opt-out: the impls a consumer drops from a shared library,
-  // plus the consumer's triple predicate.
+  // A LibraryExclusion: the impls dropped from a shared library on triples
+  // matching TriplePred.
   struct LibraryExclusion {
     const Record *TriplePred;
     std::vector<const RuntimeLibcallImpl *> Impls;
   };
 
+  // A SystemRuntimeLibrary's default calling convention and default library
+  // names.
+  struct SystemLibraryDispatch {
+    const Record *System;
+    StringRef DefaultCC;
+    SmallVector<StringRef> Libs;
+  };
+
   // A single LibcallLibrary variant, expanded into its per-predicate impl
   // groups. Unconditional impls are tracked separately for cross-variant
   // deduplication. A variant is Deferred when it re-adds an impl its own
-  // consumer excludes; deferred variants are emitted after the LibraryRef
-  // exclusions so the re-add wins over the opt-out.
+  // consumer excludes; deferred variants are emitted after the
+  // LibraryExclusions so the re-add wins over the opt-out.
   struct ExpandedLibrary {
     const Record *Lib;
     DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
@@ -143,7 +153,14 @@ private:
 
   void emitRuntimeLibcallsInfoMemberDecls(raw_ostream &OS) const;
 
-  void emitSystemRuntimeLibrarySetCalls(raw_ostream &OS) const;
+  std::vector<SystemLibraryDispatch> collectSystemLibraryDispatch() const;
+
+  void emitLibraryFunctions(raw_ostream &OS) const;
+
+  // Emit getDefaultLibcallCallingConv, getDefaultRuntimeLibraries, and
+  // setAvailableLibraryLibcalls, which enables a library by name.
+  void emitLibraryByNameSetCalls(raw_ostream &OS,
+                                 ArrayRef<SystemLibraryDispatch> Systems) const;
 
   DenseSet<StringRef> collectLibcallNames() const;
 
@@ -168,7 +185,7 @@ public:
   void run(raw_ostream &OS);
 };
 
-} // End anonymous namespace.
+} // namespace llvm
 
 // Emit the linker name \p Name as a C++ identifier suffix, replacing characters
 // invalid in an identifier (e.g. the '-' in "compiler-rt") with '_'.
@@ -444,15 +461,41 @@ const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
 
     for (const RuntimeLibcallImpl &LibCallImpl :
          Libcalls.getRuntimeLibcallImplDefList()) {
-      const RuntimeLibcall *Provides = LibCallImpl.getProvides();
       OS << "  ";
-      Provides->emitEnumEntry(OS);
+      if (const RuntimeLibcall *Provides = LibCallImpl.getProvides())
+        Provides->emitEnumEntry(OS);
+      else
+        OS << "RTLIB::UNKNOWN_LIBCALL";
       OS << ", // ";
       LibCallImpl.emitEnumEntry(OS);
       OS << '\n';
     }
 
     OS << "};\n\n";
+
+    OS << "RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl("
+          "RTLIB::LibcallImpl Impl) const {\n"
+          "  switch (Impl) {\n";
+    for (const RuntimeLibcallImpl &LibCallImpl :
+         Libcalls.getRuntimeLibcallImplDefList()) {
+      if (!LibCallImpl.isLongDouble())
+        continue;
+
+      OS << "  case ";
+      LibCallImpl.emitEnumEntry(OS);
+      OS << ":\n    return selectLongDoubleLibcall(";
+      LibCallImpl.getProvidesF80()->emitEnumEntry(OS);
+      OS << ", ";
+      LibCallImpl.getProvidesF128()->emitEnumEntry(OS);
+      OS << ", ";
+      LibCallImpl.getProvidesPPCF128()->emitEnumEntry(OS);
+      OS << ");\n";
+    }
+
+    OS << "  default:\n"
+          "    return ImplToLibcall[Impl];\n"
+          "  }\n"
+          "}\n\n";
   }
 
   emitNameMatchHashTable(OS, Table);
@@ -476,8 +519,11 @@ void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallSignatures(
     raw_ostream &OS) const {
   SequenceToOffsetTable<Signature> SignatureTable("NoFuncArgType");
 
-  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList())
-    SignatureTable.add(getSignature(LC.getDef()));
+  const Signature NoSignature;
+  SignatureTable.add(NoSignature);
+  for (const RuntimeLibcallImpl &LibCallImpl :
+       Libcalls.getRuntimeLibcallImplDefList())
+    SignatureTable.add(getSignature(LibCallImpl.getDef()));
   SignatureTable.layout();
 
   IfDefEmitter IfDef(OS, "GET_INIT_RUNTIME_LIBCALL_SIGNATURES");
@@ -491,12 +537,305 @@ const FuncArgTypeID RTLIB::RuntimeLibcallsInfo::SignatureTable[] = {
   OS << R"(
 const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
 )";
-  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList()) {
-    const Record *LibcallDef = LC.getDef();
-    OS << formatv("  {}, // {}\n", SignatureTable.get(getSignature(LibcallDef)),
-                  LibcallDef->getName());
+  OS << formatv("  {}, // RTLIB::Unsupported\n",
+                SignatureTable.get(NoSignature));
+  for (const RuntimeLibcallImpl &LibCallImpl :
+       Libcalls.getRuntimeLibcallImplDefList()) {
+    OS << formatv("  {}, // ",
+                  SignatureTable.get(getSignature(LibCallImpl.getDef())));
+    LibCallImpl.emitEnumEntry(OS);
+    OS << '\n';
   }
+
   OS << "};\n";
+
+  OS << "\nstatic ArrayRef<RTLIB::FuncArgTypeID>\n"
+        "getStructElementTypes(RTLIB::FuncArgTypeID ID) {\n"
+        "  switch (ID) {\n";
+
+  for (const Record *R : Libcalls.getFuncArgTypeList()) {
+    if (!R->isSubClassOf("StructFuncArgType"))
+      continue;
+
+    OS << "  case RTLIB::" << R->getName() << ": {\n"
+       << "    static constexpr RTLIB::FuncArgTypeID Elts[] = {";
+
+    ListSeparator LS;
+    for (const Record *Elt : R->getValueAsListOfDefs("ElementTypes"))
+      OS << LS << "RTLIB::" << Elt->getName();
+
+    OS << "};\n"
+          "    return Elts;\n"
+          "  }\n";
+  }
+
+  OS << "  default:\n"
+        "    return {};\n"
+        "  }\n"
+        "}\n";
+
+  OS << "\nstatic bool isInRegStruct(RTLIB::FuncArgTypeID ID) {\n"
+        "  switch (ID) {\n";
+
+  bool HasInRegStruct = false;
+  for (const Record *R : Libcalls.getFuncArgTypeList()) {
+    if (R->isSubClassOf("StructFuncArgType") && R->getValueAsBit("InReg")) {
+      OS << "  case RTLIB::" << R->getName() << ":\n";
+      HasInRegStruct = true;
+    }
+  }
+
+  if (HasInRegStruct)
+    OS << "    return true;\n";
+
+  OS << "  default:\n"
+        "    return false;\n"
+        "  }\n"
+        "}\n";
+}
+
+using AttrExprs = std::vector<std::string>;
+using ArgAttrEntry = std::tuple<unsigned, unsigned, StringRef, bool>;
+
+static AttrExprs getAttrExprs(const Record *R, const ListInit *L,
+                              StringRef Kind) {
+  const Record *KindDef = R->getRecords().getDef(Kind);
+  AttrExprs Exprs;
+  for (const Init *I : L->getElements()) {
+    const Record *A = cast<DefInit>(I)->getDef();
+    if (!is_contained(A->getValueAsListOfDefs("Properties"), KindDef))
+      PrintFatalError(R, "'" + A->getName() + "' is not a valid " + Kind);
+
+    if (A->isSubClassOf("ValueAttr")) {
+      Exprs.push_back(A->getValueAsString("Expr").str());
+    } else if (A->isSubClassOf("EnumAttr")) {
+      Exprs.push_back(
+          formatv("Attribute::get(C, Attribute::{})", A->getName()).str());
+    } else {
+      PrintFatalError(R, "'" + A->getName() +
+                             "' requires a value; use a ValueAttr");
+    }
+  }
+
+  sort(Exprs);
+  return Exprs;
+}
+
+static ModRefInfo getModRefInfo(const Record *R, StringRef Field) {
+  StringRef Name = R->getValueAsDef(Field)->getName();
+  return StringSwitch<ModRefInfo>(Name)
+      .Case("NoModRef", ModRefInfo::NoModRef)
+      .Case("Ref", ModRefInfo::Ref)
+      .Case("Mod", ModRefInfo::Mod)
+      .Case("ModRef", ModRefInfo::ModRef);
+}
+
+static std::optional<uint32_t> getMemoryEffects(const Record *R) {
+  const Record *Memory = R->getValueAsDef("Memory");
+  static constexpr std::pair<IRMemLocation, StringRef> Locations[] = {
+      {IRMemLocation::ArgMem, "ArgMem"},
+      {IRMemLocation::InaccessibleMem, "InaccessibleMem"},
+      {IRMemLocation::ErrnoMem, "ErrnoMem"},
+      {IRMemLocation::Other, "Other"},
+      {IRMemLocation::TargetMem0, "TargetMem0"},
+      {IRMemLocation::TargetMem1, "TargetMem1"},
+  };
+
+  MemoryEffects ME = MemoryEffects::none();
+  for (auto [Loc, Field] : Locations)
+    ME = ME.getWithModRef(Loc, getModRefInfo(Memory, Field));
+  if (ME == MemoryEffects::unknown())
+    return std::nullopt;
+  return ME.toIntValue();
+}
+
+static StringRef getMinimalUIntType(size_t MaxValue) {
+  if (MaxValue <= std::numeric_limits<uint8_t>::max())
+    return "uint8_t";
+  if (MaxValue <= std::numeric_limits<uint16_t>::max())
+    return "uint16_t";
+  return "uint32_t";
+}
+
+namespace {
+struct FnAttrSet {
+  AttrExprs Attrs;
+  std::optional<uint32_t> Memory;
+
+  bool operator<(const FnAttrSet &RHS) const {
+    return std::tie(Attrs, Memory) < std::tie(RHS.Attrs, RHS.Memory);
+  }
+
+  bool empty() const { return Attrs.empty() && !Memory; }
+};
+} // namespace
+
+static void printAttributes(raw_ostream &OS, const AttrExprs &Exprs) {
+  for (StringRef Expr : Exprs)
+    OS.indent(6) << Expr << ",\n";
+}
+
+static void printFnAttributes(raw_ostream &OS, const FnAttrSet &FnAttrs) {
+  printAttributes(OS, FnAttrs.Attrs);
+  if (FnAttrs.Memory) {
+    OS.indent(6) << formatv("Attribute::getWithMemoryEffects(C, "
+                            "MemoryEffects::createFromIntValue({})),\n",
+                            *FnAttrs.Memory);
+  }
+}
+
+void RuntimeLibcallEmitter::emitRuntimeLibcallAttributes(
+    raw_ostream &OS) const {
+  AttributeSetTable<FnAttrSet> FnAttrSets;
+  AttributeSetTable<AttrExprs> ArgAttrSets;
+  AttributeSequenceTable<ArgAttrEntry> ArgAttrSeqs;
+  std::vector<std::tuple<unsigned, unsigned, unsigned>> ImplAttrIDs;
+
+  FnAttrSets.add({});
+  ArgAttrSets.add({});
+  ArgAttrSeqs.add({});
+
+  for (const RuntimeLibcallImpl &LibCallImpl :
+       Libcalls.getRuntimeLibcallImplDefList()) {
+    const Record *R = LibCallImpl.getDef();
+    std::vector<const Record *> ArgTypes =
+        R->getValueAsListOfDefs("ArgumentTypes");
+    const ListInit *ParamAttrs = R->getValueAsListInit("ParamAttrs");
+    std::vector<const Record *> ParamPointeeTypes =
+        R->getValueAsListOfDefs("ParamPointeeTypes");
+    bool AlignToElement = R->getValueAsBit("AlignPointeesToElementType");
+
+    if (ParamAttrs->size() > ArgTypes.size()) {
+      PrintFatalError(R, "ParamAttrs has " + Twine(ParamAttrs->size()) +
+                             " entries but the function has " +
+                             Twine(ArgTypes.size()) + " arguments");
+    }
+
+    if (ParamPointeeTypes.size() > ArgTypes.size()) {
+      PrintFatalError(R, "ParamPointeeTypes has " +
+                             Twine(ParamPointeeTypes.size()) +
+                             " entries but the function has " +
+                             Twine(ArgTypes.size()) + " arguments");
+    }
+
+    unsigned FnAttrSetID = FnAttrSets.add(
+        {getAttrExprs(R, R->getValueAsListInit("FnAttrs"), "FnAttr"),
+         getMemoryEffects(R)});
+    unsigned RetAttrSetID = ArgAttrSets.add(
+        getAttrExprs(R, R->getValueAsListInit("RetAttrs"), "RetAttr"));
+
+    AttributeSequenceTable<ArgAttrEntry>::Sequence ArgAttrSeq;
+    for (unsigned ArgNo = 0, E = ArgTypes.size(); ArgNo != E; ++ArgNo) {
+      AttrExprs Attrs;
+      if (ArgNo < ParamAttrs->size()) {
+        Attrs = getAttrExprs(R, cast<ListInit>(ParamAttrs->getElement(ArgNo)),
+                             "ParamAttr");
+      }
+
+      StringRef PointeeType;
+      if (ArgNo < ParamPointeeTypes.size() &&
+          ParamPointeeTypes[ArgNo]->getName() != "NoneType") {
+        if (ArgTypes[ArgNo]->getName() != "Ptr") {
+          PrintFatalError(R,
+                          "ParamPointeeTypes entry for non-pointer argument " +
+                              Twine(ArgNo));
+        }
+
+        PointeeType = ParamPointeeTypes[ArgNo]->getName();
+      }
+
+      if (Attrs.empty() && PointeeType.empty())
+        continue;
+
+      ArgAttrSeq.emplace_back(ArgNo, ArgAttrSets.add(std::move(Attrs)),
+                              PointeeType,
+                              !PointeeType.empty() && AlignToElement);
+    }
+
+    ImplAttrIDs.emplace_back(FnAttrSetID, RetAttrSetID,
+                             ArgAttrSeqs.add(std::move(ArgAttrSeq)));
+  }
+
+  ArgAttrSeqs.layout();
+
+  IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALL_ATTRIBUTES");
+
+  OS << "static AttributeSet getLibcallFnAttributeSet(LLVMContext &C, "
+        "unsigned ID) {\n"
+        "  switch (ID) {\n"
+        "  default:\n"
+        "    llvm_unreachable(\"invalid libcall attribute set\");";
+  FnAttrSets.emitCases(OS, printFnAttributes);
+  OS << "\n  }\n"
+        "}\n\n";
+
+  OS << "static AttributeSet getLibcallArgAttributeSet(LLVMContext &C, "
+        "unsigned ID) {\n"
+        "  switch (ID) {\n"
+        "  default:\n"
+        "    llvm_unreachable(\"invalid libcall attribute set\");";
+  ArgAttrSets.emitCases(OS, printAttributes);
+  OS << "\n  }\n"
+        "}\n\n";
+
+  OS << "namespace {\n"
+        "struct LibcallArgAttrs {\n"
+        "  uint8_t ArgNo;\n"
+     << "  " << getMinimalUIntType(ArgAttrSets.size()) << " AttrSetID;\n"
+     << "  RTLIB::FuncArgTypeID PointeeType;\n"
+        "  bool AlignToElement;\n"
+        "};\n"
+        "} // namespace\n\n"
+        "static constexpr LibcallArgAttrs LibcallArgAttrTable[] = {\n";
+  ArgAttrSeqs.emitEntries(OS, [](raw_ostream &OS, ArgAttrEntry Entry) {
+    auto [ArgNo, SetID, PointeeType, AlignToElement] = Entry;
+    OS << formatv("{{{}, {}, RTLIB::{}, {}}", ArgNo, SetID,
+                  PointeeType.empty() ? "NoFuncArgType" : PointeeType,
+                  AlignToElement);
+  });
+  OS << "};\n\n";
+
+  OS << "static constexpr struct {\n"
+     << "  " << getMinimalUIntType(ArgAttrSeqs.size()) << " Start;\n"
+     << "  uint8_t Size;\n"
+        "} LibcallArgAttrSeqs[] = {\n";
+  ArgAttrSeqs.emitInfo(OS);
+  OS << "};\n\n";
+
+  OS << "static constexpr struct {\n"
+     << "  " << getMinimalUIntType(FnAttrSets.size()) << " FnAttrSetID;\n"
+     << "  " << getMinimalUIntType(ArgAttrSets.size()) << " RetAttrSetID;\n"
+     << "  " << getMinimalUIntType(ArgAttrSeqs.numSequences())
+     << " ArgAttrSeqID;\n"
+     << "} LibcallImplAttrIDs[] = {\n"
+        "  {0, 0, 0}, // RTLIB::Unsupported\n";
+  for (auto [LibCallImpl, IDs] :
+       zip_equal(Libcalls.getRuntimeLibcallImplDefList(), ImplAttrIDs)) {
+    auto [FnAttrSetID, RetAttrSetID, ArgAttrSeqID] = IDs;
+    OS << formatv("  {{{}, {}, {}}, // ", FnAttrSetID, RetAttrSetID,
+                  ArgAttrSeqID);
+    LibCallImpl.emitEnumEntry(OS);
+    OS << '\n';
+  }
+
+  OS << "};\n\n";
+
+  OS << "static AttributeSet getLibcallImplFnAttributes(LLVMContext &C,\n"
+        "    RTLIB::LibcallImpl Impl) {\n"
+        "  return getLibcallFnAttributeSet(C, "
+        "LibcallImplAttrIDs[Impl].FnAttrSetID);\n"
+        "}\n\n"
+        "static AttributeSet getLibcallImplRetAttributes(LLVMContext &C,\n"
+        "    RTLIB::LibcallImpl Impl) {\n"
+        "  return getLibcallArgAttributeSet(C, "
+        "LibcallImplAttrIDs[Impl].RetAttrSetID);\n"
+        "}\n\n"
+        "static ArrayRef<LibcallArgAttrs>\n"
+        "getLibcallImplArgAttributes(RTLIB::LibcallImpl Impl) {\n"
+        "  auto [Start, Size] =\n"
+        "      LibcallArgAttrSeqs[LibcallImplAttrIDs[Impl].ArgAttrSeqID];\n"
+        "  return ArrayRef(LibcallArgAttrTable).slice(Start, Size);\n"
+        "}\n";
 }
 
 static void emitMaskedVectorLibcallSwitch(
@@ -591,13 +930,11 @@ void RuntimeLibcallEmitter::emitPredicateGroups(
 
     // Records which impls are available, not which is selected, so a libcall
     // may have more than one. Order is irrelevant (each entry is a setAvailable
-    // call); sort by the provided libcall, breaking ties on the impl enum for a
-    // deterministic total order.
-    llvm::sort(Funcs, [](const RuntimeLibcallImpl *A,
-                         const RuntimeLibcallImpl *B) {
-      return std::make_pair(A->getProvides()->getEnumVal(), A->getEnumVal()) <
-             std::make_pair(B->getProvides()->getEnumVal(), B->getEnumVal());
-    });
+    // call); sort by the impl enum for a deterministic order.
+    llvm::sort(Funcs,
+               [](const RuntimeLibcallImpl *A, const RuntimeLibcallImpl *B) {
+                 return A->getEnumVal() < B->getEnumVal();
+               });
 
     OS << indent(IndentDepth + 2)
        << "static const RTLIB::LibcallImpl LibraryCalls";
@@ -751,9 +1088,9 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
   }
 
   // Mark a variant deferred when it re-adds an impl its own consumer excludes
-  // (same triple, via LibraryRef). Such a variant must be emitted after the
-  // exclusion so the re-add wins while the exclusion still suppresses every
-  // other variant's contribution.
+  // (same predicate, via a LibraryExclusion). Such a variant must be emitted
+  // after the exclusion so the re-add wins while the exclusion still suppresses
+  // every other variant's contribution.
   for (ExpandedLibrary &EL : Expanded) {
     const Record *ELPred = EL.Lib->getValueAsDef("Pred");
     SetVector<const RuntimeLibcallImpl *> Impls;
@@ -778,7 +1115,7 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
       emitLibraryVariant(OS, EL);
   }
 
-  // Emit each consumer's LibraryRef opt-outs.
+  // Emit each LibraryExclusion.
   for (const LibraryExclusion &Excl : Exclusions) {
     OS << '\n' << indent(2);
     AvailabilityPredicate ExcludePred(Excl.TriplePred);
@@ -794,8 +1131,8 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
   }
 
   // Deferred variants: emitted after exclusions so a target's own re-adds
-  // override its own LibraryRef opt-outs (the exclusion still applied above
-  // to every other variant's contributions).
+  // override its own LibraryExclusion opt-outs (the exclusion still applied
+  // above to every other variant's contributions).
   for (ExpandedLibrary &EL : Expanded) {
     if (EL.Deferred)
       emitLibraryVariant(OS, EL);
@@ -838,112 +1175,182 @@ void RuntimeLibcallEmitter::emitRuntimeLibcallsInfoMemberDecls(
           "FloatABI::ABIType FloatABI, StringRef ABIName, "
           "LongDoubleFormat LongDoubleFormat, CallingConv::ID DefaultCC);\n";
   }
+
+  OS << "bool setAvailableLibraryLibcalls(RTLIB::RuntimeLibrary Library, "
+        "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
+        "FloatABI::ABIType FloatABI, StringRef ABIName, "
+        "LongDoubleFormat LongDoubleFormat);\n"
+        "static CallingConv::ID getDefaultLibcallCallingConv("
+        "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
+        "FloatABI::ABIType FloatABI, StringRef ABIName, "
+        "LongDoubleFormat LongDoubleFormat);\n";
 }
 
-void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
-    raw_ostream &OS) const {
-  ArrayRef<const Record *> AllLibs =
-      Records.getAllDerivedDefinitions("SystemRuntimeLibrary");
+std::vector<RuntimeLibcallEmitter::SystemLibraryDispatch>
+RuntimeLibcallEmitter::collectSystemLibraryDispatch() const {
+  std::vector<StringRef> LibraryNames = collectLibraryNames();
 
-  // Collect each shared library's LibraryRef opt-outs, keyed by library name,
-  // so its library function can emit them.
-  MapVector<StringRef, std::vector<LibraryExclusion>> ExclusionsByLibName;
-  for (const Record *R : AllLibs) {
-    const DagInit *MemberDag =
-        R->getValueAsDef("MemberList")->getValueAsDag("MemberList");
-    for (const Init *Arg : MemberDag->getArgs()) {
-      const auto *DI = dyn_cast<DefInit>(Arg);
-      if (!DI || !DI->getDef()->isSubClassOf("LibraryRef"))
+  std::vector<SystemLibraryDispatch> Systems;
+  for (const Record *R :
+       Records.getAllDerivedDefinitions("SystemRuntimeLibrary")) {
+    SystemLibraryDispatch &S = Systems.emplace_back();
+    S.System = R;
+    if (const Record *DefaultCCClass =
+            R->getValueAsDef("DefaultLibcallCallingConv"))
+      S.DefaultCC = DefaultCCClass->getValueAsString("CallingConv").trim();
+
+    for (StringRef Name : R->getValueAsListOfStrings("DefaultLibraries")) {
+      if (!llvm::binary_search(LibraryNames, Name)) {
+        PrintError(R, "SystemRuntimeLibrary default library `" + Name +
+                          "` is not the name of a LibcallLibrary");
         continue;
-      const Record *Def = DI->getDef();
-      LibraryExclusion Excl{R->getValueAsDef("TriplePred"), {}};
-      for (const Record *ExcludeRec : Def->getValueAsListOfDefs("Exclude")) {
-        if (const RuntimeLibcallImpl *Impl =
-                Libcalls.getRuntimeLibcallImpl(ExcludeRec))
-          Excl.Impls.push_back(Impl);
       }
 
-      if (!Excl.Impls.empty()) {
-        StringRef LibName =
-            Def->getValueAsDef("Library")->getValueAsString("LibraryName");
-        ExclusionsByLibName[LibName].push_back(std::move(Excl));
-      }
+      S.Libs.push_back(Name);
     }
+
+    llvm::sort(S.Libs);
+    S.Libs.erase(llvm::unique(S.Libs), S.Libs.end());
+  }
+
+  return Systems;
+}
+
+void RuntimeLibcallEmitter::emitLibraryFunctions(raw_ostream &OS) const {
+  std::vector<StringRef> LibraryNames = collectLibraryNames();
+
+  // Collect each shared library's LibraryExclusions, keyed by library name, so
+  // its library function can emit them.
+  MapVector<StringRef, std::vector<LibraryExclusion>> ExclusionsByLibName;
+  for (const Record *R : Records.getAllDerivedDefinitions("LibraryExclusion")) {
+    StringRef LibName = R->getValueAsString("LibraryName");
+    if (!llvm::binary_search(LibraryNames, LibName)) {
+      PrintError(R, "LibraryExclusion library `" + LibName +
+                        "` is not the name of a LibcallLibrary");
+      continue;
+    }
+
+    LibraryExclusion Excl{R->getValueAsDef("Pred"), {}};
+    for (const Record *ExcludeRec : R->getValueAsListOfDefs("Exclude")) {
+      if (const RuntimeLibcallImpl *Impl =
+              Libcalls.getRuntimeLibcallImpl(ExcludeRec))
+        Excl.Impls.push_back(Impl);
+    }
+
+    if (!Excl.Impls.empty())
+      ExclusionsByLibName[LibName].push_back(std::move(Excl));
   }
 
   for (const auto &[Name, Libs] : collectLibrariesByName())
     emitLibraryFunction(OS, Name, Libs, ExclusionsByLibName.lookup(Name));
+}
 
-  OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
-        "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
-        "FloatABI::ABIType FloatABI, "
-        "StringRef ABIName, LongDoubleFormat LongDoubleFormat) {\n";
+void RuntimeLibcallEmitter::emitLibraryByNameSetCalls(
+    raw_ostream &OS, ArrayRef<SystemLibraryDispatch> Systems) const {
+  constexpr StringLiteral Params =
+      "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
+      "FloatABI::ABIType FloatABI, StringRef ABIName, "
+      "LongDoubleFormat LongDoubleFormat";
 
-  for (const Record *R : AllLibs) {
-    OS << '\n';
+  OS << "CallingConv::ID "
+        "llvm::RTLIB::RuntimeLibcallsInfo::getDefaultLibcallCallingConv("
+     << Params << ") {\n";
+  for (const SystemLibraryDispatch &S : Systems) {
+    if (S.DefaultCC.empty())
+      continue;
 
-    AvailabilityPredicate TopLevelPredicate(R->getValueAsDef("TriplePred"));
-
+    AvailabilityPredicate TriplePred(S.System->getValueAsDef("TriplePred"));
     OS << indent(2);
-    TopLevelPredicate.emitIf(OS);
+    TriplePred.emitIf(OS);
+    OS << indent(4) << "return " << S.DefaultCC << ";\n" << indent(2);
+    TriplePred.emitEndIf(OS);
+  }
+  OS << "  return CallingConv::C;\n"
+        "}\n\n";
 
-    // The default is a property of the target, and is passed to the libraries
-    // as an argument.
-    StringRef DefaultCCArg = "CallingConv::C";
-    if (const Record *DefaultCCClass =
-            R->getValueAsDef("DefaultLibcallCallingConv")) {
-      StringRef DefaultCC =
-          DefaultCCClass->getValueAsString("CallingConv").trim();
+  OS << "ArrayRef<RTLIB::RuntimeLibrary> "
+        "llvm::RTLIB::RuntimeLibcallsInfo::getDefaultRuntimeLibraries("
+        "const llvm::Triple &TT) {\n";
+  for (const SystemLibraryDispatch &S : Systems) {
+    if (S.Libs.empty())
+      continue;
 
-      if (!DefaultCC.empty()) {
-        OS << "    const CallingConv::ID DefaultCC = " << DefaultCC << ";\n"
-           << "    for (CallingConv::ID &Entry : LibcallImplCallingConvs) {\n"
-              "      Entry = DefaultCC;\n"
-              "    }\n\n";
-        DefaultCCArg = "DefaultCC";
-      }
-    }
-
-    // Dispatch each library to setAvailableLibFuncs_<FuncSuffix> under an
-    // isLibraryAvailable(Name) guard. LibraryRef exclusions are applied inside
-    // the library function. A library referenced more than once is dispatched
-    // once.
-    const DagInit *MemberDag =
-        R->getValueAsDef("MemberList")->getValueAsDag("MemberList");
-    SetVector<std::pair<StringRef, StringRef>> DispatchLibs;
-    for (const Init *Arg : MemberDag->getArgs()) {
-      const auto *DI = dyn_cast<DefInit>(Arg);
-      const Record *Lib = DI ? DI->getDef() : nullptr;
-      if (Lib && Lib->isSubClassOf("LibraryRef"))
-        Lib = Lib->getValueAsDef("Library");
-      if (!Lib || !Lib->isSubClassOf("LibcallLibrary")) {
-        PrintError(R, "SystemRuntimeLibrary member `" + Arg->getAsString() +
-                          "` is not a LibcallLibrary or LibraryRef");
-        continue;
-      }
-      DispatchLibs.insert(
-          {Lib->getValueAsString("LibraryName"), libFuncKey(Lib)});
-    }
-
-    for (auto [Name, FuncSuffix] : DispatchLibs) {
-      OS << indent(4) << "if (isLibraryAvailable(";
+    AvailabilityPredicate TriplePred(S.System->getValueAsDef("TriplePred"));
+    OS << indent(2);
+    TriplePred.emitIf(OS);
+    OS << indent(4) << "static constexpr RTLIB::RuntimeLibrary Libs[] = {\n";
+    for (StringRef Name : S.Libs) {
+      OS << indent(6);
       emitRuntimeLibraryEnumerator(OS, Name);
-      OS << "))\n" << indent(6) << "setAvailableLibFuncs_";
-      emitLibFuncSuffix(OS, FuncSuffix);
-      OS << "(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, "
-         << DefaultCCArg << ");\n";
+      OS << ",\n";
     }
-    if (!DispatchLibs.empty())
-      OS << '\n';
+    OS << indent(4) << "};\n" << indent(4) << "return Libs;\n" << indent(2);
+    TriplePred.emitEndIf(OS);
+  }
+  OS << "  return {};\n"
+        "}\n\n";
 
-    OS << indent(4) << "return;\n" << indent(2);
-    TopLevelPredicate.emitEndIf(OS);
+  MapVector<StringRef, std::vector<const Record *>> IsolatedByName;
+  DenseSet<StringRef> MergedNames;
+  for (const Record *Lib : Records.getAllDerivedDefinitions("LibcallLibrary")) {
+    StringRef Name = Lib->getValueAsString("LibraryName");
+    if (!Lib->getValueAsBit("Isolated")) {
+      MergedNames.insert(Name);
+      continue;
+    }
+
+    if (AvailabilityPredicate(Lib->getValueAsDef("Pred")).isAlwaysAvailable())
+      PrintError(Lib, "isolated LibcallLibrary must have a predicate");
+    IsolatedByName[Name].push_back(Lib);
   }
 
-  // FIXME: This should be a fatal error. A few contexts are improperly relying
-  // on RuntimeLibcalls constructed with fully unknown triples.
-  OS << "  LLVM_DEBUG(dbgs() << \"no system runtime library applied to target "
-        "\\'\" << TT.str() << \"\\'\\n\");\n"
+  for (const auto &[Name, Libs] : IsolatedByName) {
+    if (!MergedNames.contains(Name)) {
+      PrintError(Libs.front(), "isolated LibcallLibrary has no non-isolated "
+                               "library named `" +
+                                   Name + "`");
+    }
+  }
+
+  OS << "bool llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibraryLibcalls("
+        "RTLIB::RuntimeLibrary Library, "
+     << Params
+     << ") {\n"
+        "  const CallingConv::ID DefaultCC = getDefaultLibcallCallingConv(TT, "
+        "ExceptionModel, FloatABI, ABIName, LongDoubleFormat);\n"
+        "  switch (Library) {\n";
+
+  auto EmitCall = [&OS](unsigned Ind, StringRef FuncSuffix) {
+    OS << indent(Ind) << "setAvailableLibFuncs_";
+    emitLibFuncSuffix(OS, FuncSuffix);
+    OS << "(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, "
+          "DefaultCC);\n"
+       << indent(Ind) << "return true;\n";
+  };
+
+  for (const auto &[Name, Libs] : collectLibrariesByName()) {
+    if (Libs.front()->getValueAsBit("Isolated"))
+      continue;
+
+    OS << "  case ";
+    emitRuntimeLibraryEnumerator(OS, Name);
+    OS << ":\n";
+
+    for (const Record *Isolated : IsolatedByName.lookup(Name)) {
+      AvailabilityPredicate LibPred(Isolated->getValueAsDef("Pred"));
+      OS << indent(4);
+      LibPred.emitIf(OS);
+      EmitCall(6, Isolated->getName());
+      OS << indent(4);
+      LibPred.emitEndIf(OS);
+    }
+
+    EmitCall(4, Name);
+  }
+
+  OS << "  default:\n"
+        "    return false;\n"
+        "  }\n"
         "}\n\n";
 }
 
@@ -1111,13 +1518,16 @@ void RuntimeLibcallEmitter::run(raw_ostream &OS) {
 
   emitGetInitRuntimeLibcallNames(OS);
   emitGetInitRuntimeLibcallSignatures(OS);
+  emitRuntimeLibcallAttributes(OS);
   emitMaskedVectorLibcallMapping(OS);
 
   emitRuntimeLibcallsInfoMemberDecls(OS);
 
   {
     IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALLS_INFO");
-    emitSystemRuntimeLibrarySetCalls(OS);
+    std::vector<SystemLibraryDispatch> Systems = collectSystemLibraryDispatch();
+    emitLibraryFunctions(OS);
+    emitLibraryByNameSetCalls(OS, Systems);
   }
 
   std::vector<FPLibcallFamily> FPFamilies = collectFPLibcallFamilies(Records);

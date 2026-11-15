@@ -18,33 +18,33 @@ fmmla z0.s, z1.s, z2.d
 
 // Immediate too high (>224)
 ld1rob { z0.b }, p1/z, [x2, #256]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 32 in range [-256, 224].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 32 in range [-256, 224].
 ld1roh { z0.h }, p1/z, [x2, #256]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 32 in range [-256, 224].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 32 in range [-256, 224].
 ld1row { z0.s }, p1/z, [x2, #256]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 32 in range [-256, 224].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 32 in range [-256, 224].
 ld1rod { z0.d }, p1/z, [x2, #256]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 32 in range [-256, 224].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 32 in range [-256, 224].
 
 // Immediate too low (<-256)
 ld1rob { z0.b }, p1/z, [x2, #-288]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 32 in range [-256, 224].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 32 in range [-256, 224].
 ld1roh { z0.h }, p1/z, [x2, #-288]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 32 in range [-256, 224].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 32 in range [-256, 224].
 ld1row { z0.s }, p1/z, [x2, #-288]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 32 in range [-256, 224].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 32 in range [-256, 224].
 ld1rod { z0.d }, p1/z, [x2, #-288]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 32 in range [-256, 224].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 32 in range [-256, 224].
 
 // Immediate not a multiple of 32
 ld1rob { z0.b }, p1/z, [x2, #16]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 32 in range [-256, 224].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 32 in range [-256, 224].
 ld1roh { z0.h }, p1/z, [x2, #16]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 32 in range [-256, 224].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 32 in range [-256, 224].
 ld1row { z0.s }, p1/z, [x2, #16]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 32 in range [-256, 224].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 32 in range [-256, 224].
 ld1rod { z0.d }, p1/z, [x2, #16]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 32 in range [-256, 224].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 32 in range [-256, 224].
 
 // Prediate register too high
 ld1rob { z0.b }, p8/z, [x2]

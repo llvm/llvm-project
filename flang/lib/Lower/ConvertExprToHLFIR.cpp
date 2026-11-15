@@ -88,7 +88,7 @@ public:
   // Character designators variant contains substrings
   using CharacterDesignators =
       decltype(Fortran::evaluate::Designator<Fortran::evaluate::Type<
-                   Fortran::evaluate::TypeCategory::Character, 1>>::u);
+                   Fortran::evaluate::TypeCategory::Character>>::u);
   hlfir::EntityWithAttributes
   gen(const CharacterDesignators &designatorVariant,
       bool vectorSubscriptDesignatorToValue = true) {
@@ -101,7 +101,7 @@ public:
   // Character designators variant contains complex parts
   using RealDesignators =
       decltype(Fortran::evaluate::Designator<Fortran::evaluate::Type<
-                   Fortran::evaluate::TypeCategory::Real, 4>>::u);
+                   Fortran::evaluate::TypeCategory::Real>>::u);
   hlfir::EntityWithAttributes
   gen(const RealDesignators &designatorVariant,
       bool vectorSubscriptDesignatorToValue = true) {
@@ -114,7 +114,7 @@ public:
   // All other designators are similar
   using OtherDesignators =
       decltype(Fortran::evaluate::Designator<Fortran::evaluate::Type<
-                   Fortran::evaluate::TypeCategory::Integer, 4>>::u);
+                   Fortran::evaluate::TypeCategory::Integer>>::u);
   hlfir::EntityWithAttributes
   gen(const OtherDesignators &designatorVariant,
       bool vectorSubscriptDesignatorToValue = true) {
@@ -405,6 +405,11 @@ private:
   gen(const Fortran::evaluate::CoarrayRef &coarrayRef) {
     PartInfo partInfo;
     mlir::Type resultType = visit(coarrayRef, partInfo);
+
+    if (partInfo.componentName.empty() && partInfo.subscripts.empty() &&
+        partInfo.substring.empty())
+      return gen(coarrayRef.GetFirstSymbol());
+
     return genDesignate(resultType, partInfo, coarrayRef);
   }
 
@@ -1091,24 +1096,9 @@ hlfir::EntityWithAttributes HlfirDesignatorBuilder::genDesignatorExpr(
         using T = std::decay_t<decltype(x)>;
         if constexpr (Fortran::common::HasMember<
                           T, Fortran::lower::CategoryExpression>) {
-          if constexpr (T::Result::category ==
-                        Fortran::common::TypeCategory::Derived) {
-            return gen(std::get<Fortran::evaluate::Designator<
-                           Fortran::evaluate::SomeDerived>>(x.u)
-                           .u,
-                       vectorSubscriptDesignatorToValue);
-          } else {
-            return Fortran::common::visit(
-                [&](const auto &preciseKind) {
-                  using TK =
-                      typename std::decay_t<decltype(preciseKind)>::Result;
-                  return gen(
-                      std::get<Fortran::evaluate::Designator<TK>>(preciseKind.u)
-                          .u,
-                      vectorSubscriptDesignatorToValue);
-                },
-                x.u);
-          }
+          using TK = typename T::Result;
+          return gen(std::get<Fortran::evaluate::Designator<TK>>(x.u).u,
+                     vectorSubscriptDesignatorToValue);
         } else {
           fir::emitFatalError(loc, "unexpected typeless Designator");
         }
@@ -1153,11 +1143,11 @@ struct BinaryOp {};
 
 #undef GENBIN
 #define GENBIN(GenBinEvOp, GenBinTyCat, GenBinFirOp)                           \
-  template <int KIND>                                                          \
-  struct BinaryOp<Fortran::evaluate::GenBinEvOp<Fortran::evaluate::Type<       \
-      Fortran::common::TypeCategory::GenBinTyCat, KIND>>> {                    \
-    using Op = Fortran::evaluate::GenBinEvOp<Fortran::evaluate::Type<          \
-        Fortran::common::TypeCategory::GenBinTyCat, KIND>>;                    \
+  template <>                                                                  \
+  struct BinaryOp<Fortran::evaluate::GenBinEvOp<                               \
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::GenBinTyCat>>> {  \
+    using Op = Fortran::evaluate::GenBinEvOp<                                  \
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::GenBinTyCat>>;  \
     static hlfir::EntityWithAttributes gen(mlir::Location loc,                 \
                                            fir::FirOpBuilder &builder,         \
                                            const Op &, hlfir::Entity lhs,      \
@@ -1190,16 +1180,18 @@ GENBIN(Divide, Integer, mlir::arith::DivSIOp)
 GENBIN(Divide, Unsigned, mlir::arith::DivUIOp)
 GENBIN(Divide, Real, mlir::arith::DivFOp)
 
-template <int KIND>
+template <>
 struct BinaryOp<Fortran::evaluate::Divide<
-    Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>> {
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>>> {
   using Op = Fortran::evaluate::Divide<
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>;
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder, const Op &,
-                                         hlfir::Entity lhs, hlfir::Entity rhs) {
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    const int kind = op.kind();
     mlir::Type ty = Fortran::lower::getFIRType(
-        builder.getContext(), Fortran::common::TypeCategory::Complex, KIND,
+        builder.getContext(), Fortran::common::TypeCategory::Complex, kind,
         /*params=*/{});
 
     // TODO: Ideally, complex number division operations should always be
@@ -1215,36 +1207,38 @@ struct BinaryOp<Fortran::evaluate::Divide<
   }
 };
 
-template <Fortran::common::TypeCategory TC, int KIND>
-struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>> {
-  using Op = Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>;
+template <Fortran::common::TypeCategory TC>
+struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC>>> {
+  using Op = Fortran::evaluate::Power<Fortran::evaluate::Type<TC>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder, const Op &,
-                                         hlfir::Entity lhs, hlfir::Entity rhs) {
-    mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    const int kind = op.kind();
+    mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, kind,
                                                /*params=*/{});
     return hlfir::EntityWithAttributes{fir::genPow(builder, loc, ty, lhs, rhs)};
   }
 };
 
-template <Fortran::common::TypeCategory TC, int KIND>
+template <Fortran::common::TypeCategory TC>
 struct BinaryOp<
-    Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>> {
-  using Op =
-      Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>;
+    Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC>>> {
+  using Op = Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder, const Op &,
-                                         hlfir::Entity lhs, hlfir::Entity rhs) {
-    mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    const int kind = op.kind();
+    mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, kind,
                                                /*params=*/{});
     return hlfir::EntityWithAttributes{fir::genPow(builder, loc, ty, lhs, rhs)};
   }
 };
 
-template <Fortran::common::TypeCategory TC, int KIND>
-struct BinaryOp<
-    Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC, KIND>>> {
-  using Op = Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC, KIND>>;
+template <Fortran::common::TypeCategory TC>
+struct BinaryOp<Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC>>> {
+  using Op = Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
@@ -1262,11 +1256,11 @@ struct BinaryOp<
 // MIN and MAX are represented as evaluate::ProcedureRef and are not going
 // through here. So far the frontend does not generate character Extremum so
 // there is no way to test it.
-template <int KIND>
+template <>
 struct BinaryOp<Fortran::evaluate::Extremum<
-    Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, KIND>>> {
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>>> {
   using Op = Fortran::evaluate::Extremum<
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, KIND>>;
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &, const Op &,
                                          hlfir::Entity, hlfir::Entity) {
@@ -1299,11 +1293,11 @@ translateSignedRelational(Fortran::common::RelationalOperator rop) {
   llvm_unreachable("unhandled INTEGER relational operator");
 }
 
-template <int KIND>
+template <>
 struct BinaryOp<Fortran::evaluate::Relational<
-    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>> {
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>> {
   using Op = Fortran::evaluate::Relational<
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>;
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
@@ -1315,17 +1309,18 @@ struct BinaryOp<Fortran::evaluate::Relational<
   }
 };
 
-template <int KIND>
+template <>
 struct BinaryOp<Fortran::evaluate::Relational<
-    Fortran::evaluate::Type<Fortran::common::TypeCategory::Unsigned, KIND>>> {
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Unsigned>>> {
   using Op = Fortran::evaluate::Relational<
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Unsigned, KIND>>;
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Unsigned>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
-    int bits = Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer,
-                                       KIND>::Scalar::bits;
+    const int kind = op.left().kind();
+    int bits = Fortran::evaluate::Type<
+        Fortran::common::TypeCategory::Integer>::Scalar::bits(kind);
     auto signlessType = mlir::IntegerType::get(
         builder.getContext(), bits,
         mlir::IntegerType::SignednessSemantics::Signless);
@@ -1338,11 +1333,11 @@ struct BinaryOp<Fortran::evaluate::Relational<
   }
 };
 
-template <int KIND>
+template <>
 struct BinaryOp<Fortran::evaluate::Relational<
-    Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>>> {
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>>> {
   using Op = Fortran::evaluate::Relational<
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>>;
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
@@ -1354,11 +1349,11 @@ struct BinaryOp<Fortran::evaluate::Relational<
   }
 };
 
-template <int KIND>
+template <>
 struct BinaryOp<Fortran::evaluate::Relational<
-    Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>> {
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>>> {
   using Op = Fortran::evaluate::Relational<
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>;
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
@@ -1370,11 +1365,11 @@ struct BinaryOp<Fortran::evaluate::Relational<
   }
 };
 
-template <int KIND>
+template <>
 struct BinaryOp<Fortran::evaluate::Relational<
-    Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, KIND>>> {
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>>> {
   using Op = Fortran::evaluate::Relational<
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, KIND>>;
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
@@ -1385,9 +1380,9 @@ struct BinaryOp<Fortran::evaluate::Relational<
   }
 };
 
-template <int KIND>
-struct BinaryOp<Fortran::evaluate::LogicalOperation<KIND>> {
-  using Op = Fortran::evaluate::LogicalOperation<KIND>;
+template <>
+struct BinaryOp<Fortran::evaluate::LogicalOperation> {
+  using Op = Fortran::evaluate::LogicalOperation;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
@@ -1442,9 +1437,9 @@ struct BinaryOp<Fortran::evaluate::LogicalOperation<KIND>> {
   }
 };
 
-template <int KIND>
-struct BinaryOp<Fortran::evaluate::ComplexConstructor<KIND>> {
-  using Op = Fortran::evaluate::ComplexConstructor<KIND>;
+template <>
+struct BinaryOp<Fortran::evaluate::ComplexConstructor> {
+  using Op = Fortran::evaluate::ComplexConstructor;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity lhs, hlfir::Entity rhs) {
@@ -1454,9 +1449,9 @@ struct BinaryOp<Fortran::evaluate::ComplexConstructor<KIND>> {
   }
 };
 
-template <int KIND>
-struct BinaryOp<Fortran::evaluate::SetLength<KIND>> {
-  using Op = Fortran::evaluate::SetLength<KIND>;
+template <>
+struct BinaryOp<Fortran::evaluate::SetLength> {
+  using Op = Fortran::evaluate::SetLength;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity string,
@@ -1475,9 +1470,9 @@ struct BinaryOp<Fortran::evaluate::SetLength<KIND>> {
   }
 };
 
-template <int KIND>
-struct BinaryOp<Fortran::evaluate::Concat<KIND>> {
-  using Op = Fortran::evaluate::Concat<KIND>;
+template <>
+struct BinaryOp<Fortran::evaluate::Concat> {
+  using Op = Fortran::evaluate::Concat;
   hlfir::EntityWithAttributes gen(mlir::Location loc,
                                   fir::FirOpBuilder &builder, const Op &,
                                   hlfir::Entity lhs, hlfir::Entity rhs) {
@@ -1512,9 +1507,9 @@ private:
 template <typename T>
 struct UnaryOp {};
 
-template <int KIND>
-struct UnaryOp<Fortran::evaluate::Not<KIND>> {
-  using Op = Fortran::evaluate::Not<KIND>;
+template <>
+struct UnaryOp<Fortran::evaluate::Not> {
+  using Op = Fortran::evaluate::Not;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity lhs) {
@@ -1525,17 +1520,18 @@ struct UnaryOp<Fortran::evaluate::Not<KIND>> {
   }
 };
 
-template <int KIND>
+template <>
 struct UnaryOp<Fortran::evaluate::Negate<
-    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>> {
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>> {
   using Op = Fortran::evaluate::Negate<
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>;
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder, const Op &,
-                                         hlfir::Entity lhs) {
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs) {
+    const int kind = op.kind();
     // Like LLVM, integer negation is the binary op "0 - value"
     mlir::Type type = Fortran::lower::getFIRType(
-        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND,
+        builder.getContext(), Fortran::common::TypeCategory::Integer, kind,
         /*params=*/{});
     mlir::Value zero = builder.createIntegerConstant(loc, type, 0);
     return hlfir::EntityWithAttributes{
@@ -1543,16 +1539,17 @@ struct UnaryOp<Fortran::evaluate::Negate<
   }
 };
 
-template <int KIND>
+template <>
 struct UnaryOp<Fortran::evaluate::Negate<
-    Fortran::evaluate::Type<Fortran::common::TypeCategory::Unsigned, KIND>>> {
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Unsigned>>> {
   using Op = Fortran::evaluate::Negate<
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Unsigned, KIND>>;
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Unsigned>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder, const Op &,
-                                         hlfir::Entity lhs) {
-    int bits = Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer,
-                                       KIND>::Scalar::bits;
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs) {
+    const int kind = op.kind();
+    int bits = Fortran::evaluate::Type<
+        Fortran::common::TypeCategory::Integer>::Scalar::bits(kind);
     mlir::Type signlessType = mlir::IntegerType::get(
         builder.getContext(), bits,
         mlir::IntegerType::SignednessSemantics::Signless);
@@ -1565,11 +1562,11 @@ struct UnaryOp<Fortran::evaluate::Negate<
   }
 };
 
-template <int KIND>
+template <>
 struct UnaryOp<Fortran::evaluate::Negate<
-    Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>>> {
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>>> {
   using Op = Fortran::evaluate::Negate<
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>>;
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity lhs) {
@@ -1578,11 +1575,11 @@ struct UnaryOp<Fortran::evaluate::Negate<
   }
 };
 
-template <int KIND>
+template <>
 struct UnaryOp<Fortran::evaluate::Negate<
-    Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>> {
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>>> {
   using Op = Fortran::evaluate::Negate<
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>;
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity lhs) {
@@ -1590,9 +1587,9 @@ struct UnaryOp<Fortran::evaluate::Negate<
   }
 };
 
-template <int KIND>
-struct UnaryOp<Fortran::evaluate::ComplexComponent<KIND>> {
-  using Op = Fortran::evaluate::ComplexComponent<KIND>;
+template <>
+struct UnaryOp<Fortran::evaluate::ComplexComponent> {
+  using Op = Fortran::evaluate::ComplexComponent;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs) {
@@ -1623,21 +1620,19 @@ struct UnaryOp<Fortran::evaluate::Parentheses<T>> {
   }
 };
 
-template <Fortran::common::TypeCategory TC1, int KIND,
-          Fortran::common::TypeCategory TC2>
-struct UnaryOp<
-    Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>, TC2>> {
-  using Op =
-      Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>, TC2>;
+template <Fortran::common::TypeCategory TC1, Fortran::common::TypeCategory TC2>
+struct UnaryOp<Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1>, TC2>> {
+  using Op = Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1>, TC2>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder, const Op &,
-                                         hlfir::Entity lhs) {
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs) {
+    int kind = op.kind();
     if constexpr (TC1 == Fortran::common::TypeCategory::Character &&
                   TC2 == TC1) {
-      return hlfir::convertCharacterKind(loc, builder, lhs, KIND);
+      return hlfir::convertCharacterKind(loc, builder, lhs, kind);
     }
     mlir::Type type = Fortran::lower::getFIRType(builder.getContext(), TC1,
-                                                 KIND, /*params=*/{});
+                                                 kind, /*params=*/{});
     mlir::Value res = builder.convertWithSemantics(loc, type, lhs);
     return hlfir::EntityWithAttributes{res};
   }
@@ -1690,7 +1685,7 @@ private:
     // least one operand is not constant (otherwise folds). For all other
     // intrinsics, semantics converts BOZ to the expected type before lowering.
     Fortran::evaluate::Constant<Fortran::evaluate::LargestInt> intConstant{
-        expr};
+        Fortran::evaluate::LargestIntKind, expr};
     return gen(intConstant);
   }
 
@@ -1729,7 +1724,9 @@ private:
     mlir::Type resType =
         Fortran::lower::TypeBuilder<T>::genType(getConverter(), expr);
 
-    if constexpr (std::is_same_v<T, Fortran::evaluate::SomeDerived>) {
+    if constexpr (std::is_same_v<T,
+                                 Fortran::evaluate::Type<
+                                     Fortran::common::TypeCategory::Derived>>) {
       if (const auto *intrinsic = expr.proc().GetSpecificIntrinsic();
           intrinsic && intrinsic->name == "huge")
         return genEnumerationHuge(expr, resType);
@@ -1754,7 +1751,8 @@ private:
 
   // Number of enumerators of the enumeration type returned by expr.
   int getEnumerationEnumeratorCount(
-      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+      const Fortran::evaluate::FunctionRef<
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>>
           &expr,
       llvm::StringRef name) {
     auto resultDynType = expr.proc().GetType();
@@ -1776,7 +1774,8 @@ private:
   // Lower HUGE(enumVar) for non-constant enumeration arguments.
   // Should always be folded, but handle as a constant just in case.
   hlfir::EntityWithAttributes genEnumerationHuge(
-      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+      const Fortran::evaluate::FunctionRef<
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>>
           &expr,
       mlir::Type resType) {
     mlir::Location loc = getLoc();
@@ -1794,7 +1793,7 @@ private:
   genEnumerationConstructor(const Fortran::evaluate::StructureConstructor &ctor,
                             fir::RecordType recTy) {
     using Int4 =
-        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 4>;
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>;
     mlir::Location loc = getLoc();
     fir::FirOpBuilder &builder = getBuilder();
     assert(ctor.values().size() == 1 &&
@@ -1811,13 +1810,13 @@ private:
       ordinal = builder.createIntegerConstant(loc, ordTy, *constOrdinal);
     } else {
       const Fortran::evaluate::Convert<Int4> *narrowing = nullptr;
-      if (const auto *intExpr = std::get_if<
-              Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>>(
+      if (const auto *intExpr = std::get_if<Fortran::evaluate::Expr<
+              Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>>(
               &ordExpr.u))
-        if (const auto *int4Expr =
-                std::get_if<Fortran::evaluate::Expr<Int4>>(&intExpr->u))
-          narrowing =
-              std::get_if<Fortran::evaluate::Convert<Int4>>(&int4Expr->u);
+        if (const auto *conv =
+                std::get_if<Fortran::evaluate::Convert<Int4>>(&intExpr->u))
+          if (conv->kind() == 4)
+            narrowing = conv;
       hlfir::Entity original =
           narrowing ? gen(narrowing->left()) : gen(ordExpr);
       mlir::Value value = hlfir::loadTrivialScalar(loc, builder, original);
@@ -1973,6 +1972,7 @@ private:
   template <typename D, typename R, typename O>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Operation<D, R, O> &op) {
+    const int rKind = op.kind();
     auto &builder = getBuilder();
     mlir::Location loc = getLoc();
     const int rank = op.Rank();
@@ -1995,7 +1995,7 @@ private:
             getConverter(), op.derived().GetType().GetDerivedTypeSpec());
     } else {
       elementType =
-          Fortran::lower::getFIRType(builder.getContext(), R::category, R::kind,
+          Fortran::lower::getFIRType(builder.getContext(), R::category, rKind,
                                      /*params=*/{});
     }
     mlir::Value shape = hlfir::genShape(loc, builder, left);
@@ -2018,6 +2018,7 @@ private:
   template <typename D, typename R, typename LO, typename RO>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Operation<D, R, LO, RO> &op) {
+    const int rKind = op.kind();
     auto &builder = getBuilder();
     mlir::Location loc = getLoc();
     const int rank = op.Rank();
@@ -2048,7 +2049,7 @@ private:
 
     // Elemental expression.
     mlir::Type elementType =
-        Fortran::lower::getFIRType(builder.getContext(), R::category, R::kind,
+        Fortran::lower::getFIRType(builder.getContext(), R::category, rKind,
                                    /*params=*/{});
     // TODO: "merge" shape, get cst shape from front-end if possible.
     // Prefer a compile-time constant shape to get a statically shaped result.
@@ -2116,8 +2117,8 @@ private:
                                getStmtCtx())
             .genNamedEntity(desc.base());
     using ResTy = Fortran::evaluate::DescriptorInquiry::Result;
-    mlir::Type resultType =
-        getConverter().genType(ResTy::category, ResTy::kind);
+    const int resKind = Fortran::evaluate::DescriptorInquiry::kind();
+    mlir::Type resultType = getConverter().genType(ResTy::category, resKind);
     auto castResult = [&](mlir::Value v) {
       return hlfir::EntityWithAttributes{
           builder.createConvert(loc, resultType, v)};
@@ -2142,7 +2143,24 @@ private:
 
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::RankOneBoundElement &x) {
-    TODO(getLoc(), "rank-1 bound element lowering");
+    mlir::Location loc = getLoc();
+    auto &builder = getBuilder();
+    using ResTy = Fortran::evaluate::RankOneBoundElement::Result;
+    constexpr int resKind{Fortran::evaluate::RankOneBoundElement::ResultKind};
+    mlir::Type resultType = getConverter().genType(ResTy::category, resKind);
+    // Evaluate the rank-1 base expression.
+    Fortran::lower::SomeExpr someExpr{Fortran::evaluate::AsGenericExpr(
+        Fortran::evaluate::Expr<
+            Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>{
+            Fortran::common::Clone(x.base())})};
+    hlfir::Entity baseArray{Fortran::lower::convertExprToHLFIR(
+        loc, getConverter(), someExpr, getSymMap(), getStmtCtx())};
+    // Extract element at dimension (1-based index).
+    mlir::Value idx = builder.createIntegerConstant(loc, builder.getIndexType(),
+                                                    x.dimension() + 1);
+    mlir::Value elem = hlfir::loadElementAt(loc, builder, baseArray, {idx});
+    return hlfir::EntityWithAttributes{
+        builder.createConvert(loc, resultType, elem)};
   }
 
   /// Generate a conditional expression as an hlfir.conditional op whose
@@ -2620,8 +2638,11 @@ fir::ExtendedValue Fortran::lower::convertExprToBox(
     Fortran::lower::StatementContext &stmtCtx) {
   hlfir::EntityWithAttributes loweredExpr =
       HlfirBuilder(loc, converter, symMap, stmtCtx).gen(expr);
+  unsigned corank = 0;
+  if (auto ref{evaluate::ExtractDataRef(expr)})
+    corank = ref->GetLastSymbol().Corank();
   return convertToBox(loc, converter, loweredExpr, stmtCtx,
-                      converter.genType(expr));
+                      converter.genType(expr), corank);
 }
 
 fir::ExtendedValue Fortran::lower::convertToAddress(

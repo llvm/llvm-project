@@ -4,6 +4,8 @@
 // idempotent; the code below exercises the calling convention, global
 // constructor and TLS wrapper lowering.
 
+// REQUIRES: x86-registered-target
+
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.direct.ll

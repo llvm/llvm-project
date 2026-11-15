@@ -560,16 +560,19 @@ static void convertCallSiteObjects(yaml::MachineFunction &YMF,
                                    const MachineFunction &MF,
                                    ModuleSlotTracker &MST) {
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
+  // Each entry with the number of its block and its offset, for sorting.
+  SmallVector<std::pair<std::pair<int, unsigned>, yaml::CallSiteInfo>> Entries;
   for (auto [MI, CallSiteInfo] : MF.getCallSitesInfo()) {
     yaml::CallSiteInfo YmlCS;
     yaml::MachineInstrLoc CallLocation;
 
     // Prepare instruction position.
     MachineBasicBlock::const_instr_iterator CallI = MI->getIterator();
-    CallLocation.BlockNum = CallI->getParent()->getNumber();
+    const MachineBasicBlock &MBB = *CallI->getParent();
+    raw_string_ostream StrOS(CallLocation.Block.Value);
+    StrOS << printMBBReference(MBB);
     // Get call instruction offset from the beginning of block.
-    CallLocation.Offset =
-        std::distance(CallI->getParent()->instr_begin(), CallI);
+    CallLocation.Offset = std::distance(MBB.instr_begin(), CallI);
     YmlCS.CallLocation = CallLocation;
 
     auto [ArgRegPairs, CalleeTypeIds, _] = CallSiteInfo;
@@ -584,15 +587,14 @@ static void convertCallSiteObjects(yaml::MachineFunction &YMF,
     for (auto *CalleeTypeId : CalleeTypeIds) {
       YmlCS.CalleeTypeIds.push_back(CalleeTypeId->getZExtValue());
     }
-    YMF.CallSitesInfo.push_back(std::move(YmlCS));
+    Entries.push_back(
+        {{MBB.getNumber(), CallLocation.Offset}, std::move(YmlCS)});
   }
 
   // Sort call info by position of call instructions.
-  llvm::sort(YMF.CallSitesInfo.begin(), YMF.CallSitesInfo.end(),
-             [](yaml::CallSiteInfo A, yaml::CallSiteInfo B) {
-               return std::tie(A.CallLocation.BlockNum, A.CallLocation.Offset) <
-                      std::tie(B.CallLocation.BlockNum, B.CallLocation.Offset);
-             });
+  llvm::sort(Entries.begin(), Entries.end(), llvm::less_first());
+  for (auto &Entry : Entries)
+    YMF.CallSitesInfo.push_back(std::move(Entry.second));
 }
 
 static void convertMachineMetadataNodes(yaml::MachineFunction &YMF,
@@ -611,23 +613,24 @@ static void convertMachineMetadataNodes(yaml::MachineFunction &YMF,
 static void convertCalledGlobals(yaml::MachineFunction &YMF,
                                  const MachineFunction &MF,
                                  MachineModuleSlotTracker &MST) {
+  // Each entry with the number of its block and its offset, for sorting.
+  SmallVector<std::pair<std::pair<int, unsigned>, yaml::CalledGlobal>> Entries;
   for (const auto &[CallInst, CG] : MF.getCalledGlobals()) {
+    const MachineBasicBlock &MBB = *CallInst->getParent();
     yaml::MachineInstrLoc CallSite;
-    CallSite.BlockNum = CallInst->getParent()->getNumber();
-    CallSite.Offset = std::distance(CallInst->getParent()->instr_begin(),
-                                    CallInst->getIterator());
+    raw_string_ostream StrOS(CallSite.Block.Value);
+    StrOS << printMBBReference(MBB);
+    CallSite.Offset = std::distance(MBB.instr_begin(), CallInst->getIterator());
 
     yaml::CalledGlobal YamlCG{CallSite, CG.Callee->getName().str(),
                               CG.TargetFlags};
-    YMF.CalledGlobals.push_back(std::move(YamlCG));
+    Entries.push_back({{MBB.getNumber(), CallSite.Offset}, std::move(YamlCG)});
   }
 
   // Sort by position of call instructions.
-  llvm::sort(YMF.CalledGlobals.begin(), YMF.CalledGlobals.end(),
-             [](yaml::CalledGlobal A, yaml::CalledGlobal B) {
-               return std::tie(A.CallSite.BlockNum, A.CallSite.Offset) <
-                      std::tie(B.CallSite.BlockNum, B.CallSite.Offset);
-             });
+  llvm::sort(Entries.begin(), Entries.end(), llvm::less_first());
+  for (auto &Entry : Entries)
+    YMF.CalledGlobals.push_back(std::move(Entry.second));
 }
 
 static void convertPrefetchTargets(yaml::MachineFunction &YMF,

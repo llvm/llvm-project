@@ -97,6 +97,7 @@ void CompileUnit::maybeResetToLoadedStage() {
   Abbreviations.clear();
   OutUnitDIE = nullptr;
   DebugAddrIndexMap.clear();
+  DebugStringIndexMap.clear();
   StmtSeqListAttributes.clear();
 
   llvm::fill(OutDieOffsetArray, 0);
@@ -750,9 +751,8 @@ Error CompileUnit::emitDebugAddrSection() {
   if (getVersion() < 5)
     return Error::success();
 
-  if (DebugAddrIndexMap.empty())
-    return Error::success();
-
+  // Every cloned unit root has DW_AT_addr_base, so emit the table even when it
+  // is empty.
   SectionDescriptor &OutAddrSection =
       getOrCreateSectionDescriptor(DebugSectionKind::DebugAddr);
 

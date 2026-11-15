@@ -53,6 +53,15 @@ using namespace llvm;
 #define OPTIONS_STRUCT_DEFS
 #include "MipsMCOptions.inc"
 
+MCRegister MIPS_MC::getCOP0Register(const MCRegisterInfo &MRI,
+                                    unsigned Encoding) {
+  unsigned Reg = getCOP0RegNum(Encoding);
+  unsigned Sel = getCOP0Sel(Encoding);
+  assert(Reg < 32 && Sel < 8 && "Invalid COP0 register encoding");
+  // COP0's register class is ordered by selector, then register number.
+  return MRI.getRegClass(Mips::COP0RegClassID).getRegister(Sel * 32 + Reg);
+}
+
 MCRegister MIPS_MC::matchRegisterName(StringRef Name, const MCRegisterInfo &MRI,
                                       unsigned RegClassID, unsigned AltIdx) {
   MCRegister Reg = MatchRegisterAltName(Name, AltIdx);
@@ -305,14 +314,19 @@ public:
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override {
     unsigned NumOps = Inst.getNumOperands();
-    if (NumOps == 0)
+    // Register-list transfers have more MC operands than descriptor entries.
+    if (NumOps == 0 || NumOps > Info->get(Inst.getOpcode()).getNumOperands())
       return false;
     switch (Info->get(Inst.getOpcode()).operands()[NumOps - 1].OperandType) {
-    case MCOI::OPERAND_UNKNOWN:
-    case MCOI::OPERAND_IMMEDIATE: {
-      // j, jal, jalx, jals
+    case MipsII::OPERAND_JUMP_TARGET: {
       // Absolute branch within the current 256 MB-aligned region
       uint64_t Region = Addr & ~uint64_t(0xfffffff);
+      Target = Region + Inst.getOperand(NumOps - 1).getImm();
+      return true;
+    }
+    case MipsII::OPERAND_JUMP_TARGET_MM: {
+      // Absolute branch within the current 128 MB-aligned region
+      uint64_t Region = Addr & ~uint64_t(0x7ffffff);
       Target = Region + Inst.getOperand(NumOps - 1).getImm();
       return true;
     }
@@ -325,7 +339,7 @@ public:
     }
   }
 };
-}
+} // anonymous namespace
 
 static MCInstrAnalysis *createMipsMCInstrAnalysis(const MCInstrInfo *Info) {
   return new MipsMCInstrAnalysis(Info);

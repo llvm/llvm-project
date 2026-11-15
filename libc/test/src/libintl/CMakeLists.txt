@@ -1,5 +1,5 @@
 if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
-  add_custom_target(libc-libintl-tests)
+  add_libc_testsuite(libc-libintl-tests)
 
   add_libc_test(
     libintl_test
@@ -8,6 +8,22 @@ if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
     SRCS
       libintl_test.cpp
     DEPENDS
+      libc.hdr.locale_macros
+      libc.hdr.types.locale_t
+      libc.src.libintl.bind_textdomain_codeset
+      libc.src.libintl.bindtextdomain
+      libc.src.libintl.dcgettext
+      libc.src.libintl.dcgettext_l
+      libc.src.libintl.dcngettext
+      libc.src.libintl.dcngettext_l
+      libc.src.libintl.dgettext
+      libc.src.libintl.dgettext_l
+      libc.src.libintl.dngettext
+      libc.src.libintl.dngettext_l
+      libc.src.libintl.gettext
+      libc.src.libintl.gettext_l
+      libc.src.libintl.ngettext
+      libc.src.libintl.ngettext_l
       libc.src.libintl.textdomain
       libc.test.UnitTest.ErrnoCheckingTest
       libc.test.UnitTest.ErrnoSetterMatcher

@@ -1,9 +1,9 @@
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output | FileCheck %s -D#VBITS=128
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=128 | FileCheck %s -D#VBITS=128
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=256 | FileCheck %s -D#VBITS=256
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=512 | FileCheck %s -D#VBITS=512
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=1024 | FileCheck %s -D#VBITS=1024
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=2048 | FileCheck %s -D#VBITS=2048
+; RUN: opt < %s -passes="print<cost-model>" -disable-output 2>&1 | FileCheck %s -D#VBITS=128
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -aarch64-sve-vector-bits-min=128 2>&1 | FileCheck %s -D#VBITS=128
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -aarch64-sve-vector-bits-min=256 2>&1 | FileCheck %s -D#VBITS=256
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -aarch64-sve-vector-bits-min=512 2>&1 | FileCheck %s -D#VBITS=512
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -aarch64-sve-vector-bits-min=1024 2>&1 | FileCheck %s -D#VBITS=1024
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -aarch64-sve-vector-bits-min=2048 2>&1 | FileCheck %s -D#VBITS=2048
 
 ; VBITS represents the useful bit size of a vector register from the code
 ; generator's point of view. It is clamped to power-of-2 values because

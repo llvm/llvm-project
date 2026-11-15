@@ -276,6 +276,9 @@ private:
   /// CFISection type the module needs i.e. either .eh_frame or .debug_frame.
   CFISection ModuleCFISection = CFISection::None;
 
+  /// The exception model for the current module.
+  ExceptionHandling ModuleExceptionModel = ExceptionHandling::None;
+
   /// True if the module contains split-stack functions. This is used to
   /// emit .note.GNU-split-stack section as required by the linker for
   /// special handling split-stack function calling no-split-stack function.
@@ -533,13 +536,18 @@ public:
   /// Get the CFISection type for the module.
   CFISection getModuleCFISectionType() const { return ModuleCFISection; }
 
+  /// Get the exception model resolved for the current module.
+  ExceptionHandling getModuleExceptionModel() const {
+    return ModuleExceptionModel;
+  }
+
   /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }
 
   /// Since emitting CFI unwind information is entangled with supporting the
   /// exceptions, this returns true for platforms which use CFI unwind
-  /// information for other purposes (debugging, sanitizers, ...) when
-  /// `MCAsmInfo::ExceptionsType == ExceptionHandling::None`.
+  /// information for other purposes (debugging, sanitizers, ...) when the
+  /// module's exception model is `ExceptionHandling::None`.
   bool usesCFIWithoutEH() const;
 
   /// Print to the current output stream assembly representations of the

@@ -76,6 +76,7 @@ subroutine test_declare_simd_ref_array_valid(arr)
   integer, intent(in) :: arr(10)
   
   !WARNING: The 'modifier(<list>)' syntax is deprecated in OpenMP v5.2, use '<list> : modifier' instead
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   !$omp declare simd linear(ref(arr))
   ! No error expected - REF modifier allows arrays
 end subroutine

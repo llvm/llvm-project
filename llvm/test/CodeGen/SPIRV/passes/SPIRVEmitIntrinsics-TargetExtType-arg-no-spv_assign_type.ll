@@ -1,6 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -print-after-all -o - 2>&1 | FileCheck %s
-
-; CHECK: *** IR Dump After SPIRV emit intrinsics (spirv-emit-intrinsics) ***
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -stop-after=spirv-emit-intrinsics -o - | FileCheck %s
 
 define spir_kernel void @test(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %srcimg) {
 ; CHECK-NOT: call void @llvm.spv.assign.type.p1(ptr addrspace(1) %srcimg, metadata target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) undef)

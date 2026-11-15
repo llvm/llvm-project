@@ -16,30 +16,30 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
 
-#include "Plugins/Process/Utility/RegisterInfoFreeBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterInfoFreeBSD_powerpc.h"
-#include "Plugins/Process/Utility/RegisterInfoFreeBSD_x86_64.h"
-#include "Plugins/Process/Utility/RegisterInfoLinux_i386.h"
-#include "Plugins/Process/Utility/RegisterInfoLinux_s390x.h"
-#include "Plugins/Process/Utility/RegisterInfoLinux_x86_64.h"
-#include "Plugins/Process/Utility/RegisterInfoNetBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterInfoNetBSD_x86_64.h"
-#include "Plugins/Process/Utility/RegisterInfoOpenBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterInfoOpenBSD_x86_64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
+#include "Register/FreeBSD/RegisterInfoFreeBSD_i386.h"
+#include "Register/FreeBSD/RegisterInfoFreeBSD_powerpc.h"
+#include "Register/FreeBSD/RegisterInfoFreeBSD_x86_64.h"
+#include "Register/Linux/RegisterInfoLinux_i386.h"
+#include "Register/Linux/RegisterInfoLinux_s390x.h"
+#include "Register/Linux/RegisterInfoLinux_x86_64.h"
+#include "Register/NetBSD/RegisterInfoNetBSD_i386.h"
+#include "Register/NetBSD/RegisterInfoNetBSD_x86_64.h"
+#include "Register/OpenBSD/RegisterInfoOpenBSD_i386.h"
+#include "Register/OpenBSD/RegisterInfoOpenBSD_x86_64.h"
+#include "Register/Common/RegisterInfo_arm.h"
+#include "Register/Common/RegisterInfo_arm64.h"
+#include "Register/Common/RegisterInfo_ppc64le.h"
 #include "ProcessElfCore.h"
 #include "RegisterContextLinuxCore_x86.h"
-#include "RegisterContextPOSIXCore_arm.h"
-#include "RegisterContextPOSIXCore_arm64.h"
-#include "RegisterContextPOSIXCore_loongarch64.h"
-#include "RegisterContextPOSIXCore_powerpc.h"
-#include "RegisterContextPOSIXCore_ppc64le.h"
-#include "RegisterContextPOSIXCore_riscv32.h"
-#include "RegisterContextPOSIXCore_riscv64.h"
-#include "RegisterContextPOSIXCore_s390x.h"
-#include "RegisterContextPOSIXCore_x86.h"
+#include "RegisterContextELFCore_arm.h"
+#include "RegisterContextELFCore_arm64.h"
+#include "RegisterContextELFCore_loongarch64.h"
+#include "RegisterContextELFCore_powerpc.h"
+#include "RegisterContextELFCore_ppc64le.h"
+#include "RegisterContextELFCore_riscv32.h"
+#include "RegisterContextELFCore_riscv64.h"
+#include "RegisterContextELFCore_s390x.h"
+#include "RegisterContextELFCore_x86.h"
 #include "ThreadElfCore.h"
 
 #include <memory>
@@ -131,7 +131,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       case llvm::Triple::aarch64:
         break;
       case llvm::Triple::ppc64le:
-        reg_interface = new RegisterInfoPOSIX_ppc64le(arch);
+        reg_interface = new RegisterInfo_ppc64le(arch);
         break;
       case llvm::Triple::systemz:
         reg_interface = new RegisterInfoLinux_s390x(arch);
@@ -180,37 +180,37 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
 
     switch (arch.GetMachine()) {
     case llvm::Triple::aarch64:
-      m_thread_reg_ctx_sp = RegisterContextCorePOSIX_arm64::Create(
+      m_thread_reg_ctx_sp = RegisterContextELFCore_arm64::Create(
           *this, arch, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::arm:
-      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_arm>(
-          *this, std::make_unique<RegisterInfoPOSIX_arm>(arch), m_gpregset_data,
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_arm>(
+          *this, std::make_unique<RegisterInfo_arm>(arch), m_gpregset_data,
           m_notes);
       break;
     case llvm::Triple::loongarch64:
-      m_thread_reg_ctx_sp = RegisterContextCorePOSIX_loongarch64::Create(
+      m_thread_reg_ctx_sp = RegisterContextELFCore_loongarch64::Create(
           *this, arch, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::riscv32:
-      m_thread_reg_ctx_sp = RegisterContextCorePOSIX_riscv32::Create(
+      m_thread_reg_ctx_sp = RegisterContextELFCore_riscv32::Create(
           *this, arch, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::riscv64:
-      m_thread_reg_ctx_sp = RegisterContextCorePOSIX_riscv64::Create(
+      m_thread_reg_ctx_sp = RegisterContextELFCore_riscv64::Create(
           *this, arch, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::ppc:
     case llvm::Triple::ppc64:
-      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_powerpc>(
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_powerpc>(
           *this, reg_interface, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::ppc64le:
-      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_ppc64le>(
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_ppc64le>(
           *this, reg_interface, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::systemz:
-      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_s390x>(
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_s390x>(
           *this, reg_interface, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::x86:
@@ -219,7 +219,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
         m_thread_reg_ctx_sp = std::make_shared<RegisterContextLinuxCore_x86>(
               *this, reg_interface, m_gpregset_data, m_notes);
       } else {
-        m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86>(
+        m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_x86>(
               *this, reg_interface, m_gpregset_data, m_notes);
       }
       break;

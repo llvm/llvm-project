@@ -2,7 +2,6 @@ set(LLVM_LINK_COMPONENTS
   Analysis
   AsmParser
   Core
-  InstCombine
   Support
   Passes
   TargetParser
@@ -38,6 +37,7 @@ add_llvm_unittest(IRTests
   LegacyPassManagerTest.cpp
   LibraryOptionsContextTest.cpp
   MDBuilderTest.cpp
+  MemCacheHintTest.cpp
   MemoryModelRelaxationAnnotationsTest.cpp
   ManglerTest.cpp
   MetadataTest.cpp

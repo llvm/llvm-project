@@ -125,10 +125,14 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
 
+  // The buffer stands in for the variable: honor the alignment the copy-in
+  // was given, if any.
+  std::optional<std::int64_t> alignment = copyIn.getAlignment();
+
   // Decide where the buffer will live before creating it, so that the matching
   // kind of allocation and deallocation is generated.
-  const bool useStack =
-      fir::shouldUseStackForCopyin(loc, sequenceType, policy, sizeContext);
+  const bool useStack = fir::shouldUseStackForCopyin(loc, sequenceType, policy,
+                                                     sizeContext, alignment);
 
   mlir::Value isContiguous =
       fir::IsContiguousBoxOp::create(builder, loc, inputVariable);
@@ -151,10 +155,13 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
             llvm::StringRef tmpName{".tmp.copy_in"};
             llvm::SmallVector<mlir::Value> lenParams;
             mlir::Value alloc =
-                useStack ? builder.createTemporary(loc, sequenceType, tmpName,
-                                                   extents, lenParams)
-                         : builder.createHeapTemporary(
-                               loc, sequenceType, tmpName, extents, lenParams);
+                useStack
+                    ? builder.createTemporary(
+                          loc, sequenceType, tmpName, extents, lenParams,
+                          /*attrs=*/{}, /*cudaAttr=*/std::nullopt, alignment)
+                    : builder.createHeapTemporary(loc, sequenceType, tmpName,
+                                                  extents, lenParams,
+                                                  /*attrs=*/{}, alignment);
 
             auto declareOp = hlfir::DeclareOp::create(builder, loc, alloc,
                                                       tmpName, shape, lenParams,

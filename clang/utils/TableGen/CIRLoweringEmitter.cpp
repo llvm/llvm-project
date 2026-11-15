@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -147,14 +148,12 @@ void GenerateABILoweringPattern(llvm::StringRef OpName,
   CXXABILoweringPatterns.push_back(std::move(CodeBuffer));
 }
 
-void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
-                                 llvm::StringRef PatternName, bool IsRecursive,
-                                 llvm::StringRef ExtraDecl,
-                                 const Record *CustomCtorRec,
-                                 llvm::StringRef LLVMOp,
-                                 llvm::StringRef ConstrainedLLVMIntrinsic,
-                                 bool ConstrainedHasRoundingMode,
-                                 bool HasFastMathFlags, bool HasZeroResult) {
+void GenerateLLVMLoweringPattern(
+    llvm::StringRef OpName, llvm::StringRef PatternName, bool IsRecursive,
+    llvm::StringRef ExtraDecl, const Record *CustomCtorRec,
+    llvm::StringRef LLVMOp, const DagInit *LLVMOpProps,
+    llvm::StringRef ConstrainedLLVMIntrinsic, bool ConstrainedHasRoundingMode,
+    bool HasFastMathFlags, bool HasZeroResult) {
   std::optional<CustomLoweringCtor> CustomCtor =
       parseCustomLoweringCtor(CustomCtorRec);
   std::string CodeBuffer;
@@ -229,19 +228,35 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
         << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
         << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
            "const override {\n";
-    std::string Properties =
-        "cir::getDefaultProperties<mlir::LLVM::" + LLVMOp.str() +
-        ">(op.getContext())";
+    Code << "    auto props = cir::getDefaultProperties<mlir::LLVM::" << LLVMOp
+         << ">(op.getContext());\n";
+    // `$name` forwards the CIR argument to the LLVM property of the same name;
+    // `"llvm_name":$name` names a differently named LLVM property.
+    for (const auto &[Value, Name] : LLVMOpProps->getArgAndNames()) {
+      StringRef CIRName = Name->getValue();
+      StringRef LLVMName = CIRName;
+      if (const auto *Str = dyn_cast<StringInit>(Value))
+        LLVMName = Str->getValue();
+      Code << "    props.set"
+           << llvm::convertToCamelFromSnakeCase(LLVMName,
+                                                /*capitalizeFirst=*/true)
+           << "(convertToLLVMProperty(op.getContext(), op.get"
+           << llvm::convertToCamelFromSnakeCase(CIRName,
+                                                /*capitalizeFirst=*/true)
+           << "()));\n";
+    }
     if (HasZeroResult) {
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
-           << ">(op, mlir::TypeRange{}, adaptor.getOperands(), " << Properties
-           << ");\n";
+           << ">(op, mlir::TypeRange{}, adaptor.getOperands(), props);\n";
     } else {
       Code << "    mlir::Type resTy = "
               "typeConverter->convertType(op.getType());\n";
+      Code << "    if (!resTy)\n";
+      Code << "      return op.emitError() << \"ClangIR lowering NYI: cannot "
+              "convert \" << op.getType();\n";
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
            << ">(op, mlir::TypeRange{resTy}, adaptor.getOperands(), "
-           << Properties << ");\n";
+              "props);\n";
     }
     Code << "    return mlir::success();\n";
     Code << "  }\n";
@@ -280,6 +295,7 @@ void Generate(const Record *OpRecord) {
         OpRecord->getValueAsString("extraLLVMLoweringPatternDecl");
 
     llvm::StringRef LLVMOp = OpRecord->getValueAsString("llvmOp");
+    const DagInit *LLVMOpProps = OpRecord->getValueAsDag("llvmOpProps");
     llvm::StringRef ConstrainedLLVMIntrinsic =
         OpRecord->getValueAsString("constrainedLLVMIntrinsic");
     bool ConstrainedHasRoundingMode =
@@ -302,12 +318,27 @@ void Generate(const Record *OpRecord) {
                           "' has constrainedLLVMIntrinsic set but no llvmOp, "
                           "which is not supported");
 
+    if (!LLVMOpProps->arg_empty() &&
+        (LLVMOp.empty() || !ConstrainedLLVMIntrinsic.empty()))
+      PrintFatalError(OpRecord->getLoc(),
+                      "op '" + OpName +
+                          "' has llvmOpProps, which requires llvmOp and is "
+                          "not supported with constrainedLLVMIntrinsic");
+
+    for (const auto &[Value, Name] : LLVMOpProps->getArgAndNames()) {
+      if (!Name || !isa<UnsetInit, StringInit>(Value))
+        PrintFatalError(OpRecord->getLoc(),
+                        "op '" + OpName +
+                            "' has an llvmOpProps entry that is neither "
+                            "`$name` nor `\"llvm_name\":$name`");
+    }
+
     const DagInit *ResultsDag = OpRecord->getValueAsDag("results");
     bool IsZeroResult = ResultsDag->getNumArgs() == 0;
-    GenerateLLVMLoweringPattern(OpName, PatternName, IsRecursive, ExtraDecl,
-                                CustomCtor, LLVMOp, ConstrainedLLVMIntrinsic,
-                                ConstrainedHasRoundingMode, HasFastMathFlags,
-                                IsZeroResult);
+    GenerateLLVMLoweringPattern(
+        OpName, PatternName, IsRecursive, ExtraDecl, CustomCtor, LLVMOp,
+        LLVMOpProps, ConstrainedLLVMIntrinsic, ConstrainedHasRoundingMode,
+        HasFastMathFlags, IsZeroResult);
     // Only automatically register patterns that use the default constructor.
     // Patterns with a custom constructor must be manually registered by the
     // lowering pass.
@@ -342,7 +373,7 @@ void GenerateAttrToValueVisitFunc() {
        << ">(\n"
        << "            [&](auto attrT) { return visitCirAttr(attrT); })\n"
        << "        .Default([this](mlir::Attribute attr) {\n"
-       << "          mlir::emitError(parentOp->getLoc(), \"unsupported CIR "
+       << "          mlir::emitError(parentLoc, \"unsupported CIR "
           "attribute in LLVM constant lowering\")\n"
        << "              << attr;\n"
        << "          return mlir::Value();\n"

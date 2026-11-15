@@ -1096,7 +1096,7 @@ std::string runToolWithProgress(llvm::ArrayRef<TestCommand> Commands,
   OS << llvm::json::Value(std::move(Entries));
 
   std::unique_ptr<CompilationDatabase> Database(
-      JSONCompilationDatabase::loadFromBuffer(DatabaseContent, ErrorMessage,
+      JSONCompilationDatabase::loadFromBuffer("", DatabaseContent, ErrorMessage,
                                               JSONCommandLineSyntax::Gnu));
   if (!Database) {
     ADD_FAILURE() << "Failed to load compilation database: " << ErrorMessage;

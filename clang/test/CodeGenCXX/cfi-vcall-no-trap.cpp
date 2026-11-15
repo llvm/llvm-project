@@ -7,8 +7,10 @@ struct S1 {
 };
 
 // CHECK: define{{.*}}s1f
-// CHECK: llvm.type.test
+// CFI: llvm.type.test(ptr {{.*}}, metadata !"{{.*}}S1{{.*}}")
+// CFI: llvm.type.test(ptr {{.*}}, metadata !"all-vtables")
 // CFI-NOT: llvm.assume
+// NOCFI: llvm.type.test(ptr {{.*}}, metadata !"{{.*}}S1{{.*}}")
 // NOCFI: llvm.assume
 void s1f(S1 *s1) {
   s1->f();

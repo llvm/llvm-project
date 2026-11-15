@@ -535,6 +535,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "machine-block-address-taken";
       hasAttributes = true;
     }
+    if (hasLabelMustBeEmitted()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "label-must-be-emitted";
+      hasAttributes = true;
+    }
     if (isIRBlockAddressTaken()) {
       os << (hasAttributes ? ", " : " (");
       os << "ir-block-address-taken ";
@@ -661,6 +666,22 @@ bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
   livein_iterator I = find_if(
       LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
   return I != livein_end() && (I->LaneMask & LaneMask).any();
+}
+
+bool MachineBasicBlock::isLiveInOverlappedWith(
+    MCRegister Reg, const TargetRegisterInfo &TRI) const {
+  return any_of(LiveIns, [&](const RegisterMaskPair &LI) {
+    if (!TRI.regsOverlap(Reg, LI.PhysReg))
+      return false;
+    if (LI.LaneMask.all())
+      return true;
+    for (MCRegUnitMaskIterator U(LI.PhysReg, &TRI); U.isValid(); ++U) {
+      auto [Unit, UnitMask] = *U;
+      if ((UnitMask & LI.LaneMask).any() && TRI.hasRegUnit(Reg, Unit))
+        return true;
+    }
+    return false;
+  });
 }
 
 void MachineBasicBlock::sortUniqueLiveIns() {
@@ -1301,30 +1322,18 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
     NMBB->addLiveIn(LI);
 
   if (LIS) {
-    // After splitting the edge and updating SlotIndexes, live intervals may be
-    // in one of two situations, depending on whether this block was the last in
-    // the function. If the original block was the last in the function, all
-    // live intervals will end prior to the beginning of the new split block. If
-    // the original block was not at the end of the function, all live intervals
-    // will extend to the end of the new split block.
-
-    bool isLastMBB =
-      std::next(MachineFunction::iterator(NMBB)) == getParent()->end();
-
+    // NMBB takes over the end index of this block, so all live intervals
+    // that are live out of this block now extend to the end of NMBB.
     SlotIndex StartIndex = Indexes->getMBBEndIdx(this);
     SlotIndex PrevIndex = StartIndex.getPrevSlot();
     SlotIndex EndIndex = Indexes->getMBBEndIdx(NMBB);
 
+#ifndef NDEBUG
     for (Register Reg : PHISrcRegs) {
-      LiveInterval &LI = LIS->getInterval(Reg);
-      VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
-      assert(VNI && "PHI sources should be live out of their predecessors.");
-      LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-      for (auto &SR : LI.subranges()) {
-        if (VNInfo *SRVNI = SR.getVNInfoAt(PrevIndex))
-          SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, SRVNI));
-      }
+      assert(LIS->getInterval(Reg).liveAt(PrevIndex) &&
+             "PHI sources should be live out of their predecessors.");
     }
+#endif
 
     auto UpdateLiveOutReg = [&](Register Reg) {
       if (PHISrcRegs.count(Reg))
@@ -1337,17 +1346,7 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
         return false;
 
       bool isLiveOut = LI.liveAt(LIS->getMBBStartIdx(Succ));
-      if (isLiveOut && isLastMBB) {
-        VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
-        assert(VNI && "LiveInterval should have VNInfo where it is live.");
-        LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-        // Update subranges with live values
-        for (auto &SR : LI.subranges()) {
-          VNInfo *VNI = SR.getVNInfoAt(PrevIndex);
-          if (VNI)
-            SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-        }
-      } else if (!isLiveOut && !isLastMBB) {
+      if (!isLiveOut) {
         LI.removeSegment(StartIndex, EndIndex);
         // The main range is live across NMBB, but an individual lane need not
         // be.
@@ -1824,10 +1823,7 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {
     auto PersonalityFn = MF.getFunction().getPersonalityFn();
-    // Prefer the "exception-model" module flag, else the TargetOptions default.
     ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
-    if (EH == ExceptionHandling::Default)
-      EH = TLI.getTargetMachine().getExceptionModel();
     ExceptionPointer = TLI.getExceptionPointerRegister(EH, PersonalityFn);
     ExceptionSelector = TLI.getExceptionSelectorRegister(EH, PersonalityFn);
   }

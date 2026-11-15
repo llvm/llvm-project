@@ -24,7 +24,6 @@
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
 #include "PluginInterface.h"
-#include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -84,7 +83,8 @@ struct GenELF64KernelTy : public GenericKernelTy {
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
                    KernelLaunchArgsTy &LaunchArgs,
-                   AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
+                   AsyncInfoWrapperTy &AsyncInfoWrapper,
+                   GenericProfilerTy *ProfilerPtr) const override {
     // Cooperative kernel launch is not supported for host
     if (LaunchArgs.Flags.Cooperative)
       return Plugin::error(ErrorCode::UNSUPPORTED,
@@ -220,25 +220,26 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t /* Alignment */) override {
     if (Size == 0)
       return nullptr;
 
     void *MemAlloc = nullptr;
     switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
-    case TARGET_ALLOC_HOST:
-    case TARGET_ALLOC_SHARED:
+    case OL_ALLOC_TYPE_DEVICE:
+    case OL_ALLOC_TYPE_HOST:
+    case OL_ALLOC_TYPE_MANAGED:
       MemAlloc = std::malloc(Size);
       break;
+    default:
+      llvm_unreachable("unexpected allocation type");
     }
     return MemAlloc;
   }
 
   /// Free the memory. Use std::free in all cases.
-  Error free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, ol_alloc_type_t Kind) override {
     std::free(TgtPtr);
     return Plugin::success();
   }
@@ -261,14 +262,16 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+                       AsyncInfoWrapperTy &AsyncInfoWrapper,
+                       GenericProfilerTy *ProfilerPtr) override {
     std::memcpy(TgtPtr, HstPtr, Size);
     return Plugin::success();
   }
 
   /// Retrieve data from the device (device to host transfer).
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
-                         AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+                         AsyncInfoWrapperTy &AsyncInfoWrapper,
+                         GenericProfilerTy *ProfilerPtr) override {
     std::memcpy(HstPtr, TgtPtr, Size);
     return Plugin::success();
   }
@@ -283,15 +286,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   /// supported in this plugin.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,
                          void *DstPtr, int64_t Size,
-                         AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+                         AsyncInfoWrapperTy &AsyncInfoWrapper,
+                         GenericProfilerTy *ProfilerPtr) override {
     std::memcpy(DstPtr, SrcPtr, Size);
-    return Plugin::success();
-  }
-
-  /// Insert a data fence between previous data operations and the following
-  /// operations. This is a no-op for Host devices as operations inserted into
-  /// a queue are in-order.
-  Error dataFence(__tgt_async_info *Async) override {
     return Plugin::success();
   }
 
@@ -348,8 +345,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::success();
   }
+  /// All operations are synchronous, so there is never pending work.
   Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
-    return true;
+    return false;
   }
   Expected<bool> isEventCompleteImpl(void *Event,
                                      AsyncInfoWrapperTy &AsyncInfo) override {
@@ -380,7 +378,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
              DeviceInfo::MAX_CLOCK_FREQUENCY);
     Info.add("Memory Address Size", std::numeric_limits<uintptr_t>::digits,
              "bits", DeviceInfo::ADDRESS_BITS);
-    Info.add("Local memory size (bytes)", 1, "",
+    // The host has no work group shared memory.
+    Info.add("Local memory size (bytes)", 0, "",
              DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
     Info.add("Global memory size (bytes)", 1, "", DeviceInfo::GLOBAL_MEM_SIZE);
     Info.add("Max Memory Allocation Size (bytes)", 1, "",
@@ -484,26 +483,15 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
     return Plugin::success();
   }
 
-  Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
-                            void *HostPtr, TargetAllocTy Kind, size_t Alignment,
-                            GenericProfilerTy *ProfilerPtr) override {
-    auto PtrOrErr = PluginContextTy::allocate(Device, Size, HostPtr, Kind,
-                                              Alignment, ProfilerPtr);
-    if (!PtrOrErr)
-      return PtrOrErr.takeError();
-    void *Ptr = *PtrOrErr;
+  void trackAllocation(GenericDeviceTy &Device, void *Ptr, int64_t Size,
+                       ol_alloc_type_t Kind) override {
     std::lock_guard<std::mutex> Lock(AllocsMutex);
     Allocs[Ptr] = Entry{&Device, Kind, static_cast<size_t>(Size)};
-    return Ptr;
   }
 
-  Error deallocate(GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
-                   GenericProfilerTy *ProfilerPtr) override {
-    {
-      std::lock_guard<std::mutex> Lock(AllocsMutex);
-      Allocs.erase(Ptr);
-    }
-    return PluginContextTy::deallocate(Device, Ptr, Kind, ProfilerPtr);
+  void untrackAllocation(void *Ptr) override {
+    std::lock_guard<std::mutex> Lock(AllocsMutex);
+    Allocs.erase(Ptr);
   }
 
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
@@ -525,7 +513,7 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
 private:
   struct Entry {
     GenericDeviceTy *Device;
-    TargetAllocTy Kind;
+    ol_alloc_type_t Kind;
     size_t Size;
   };
   std::map<void *, Entry> Allocs;

@@ -128,40 +128,11 @@ using WebAssembly::WasmDisableExplicitLocals;
 using WebAssembly::WasmEnableEmSjLj;
 using WebAssembly::WasmEnableSjLj;
 
-static void basicCheckForEHAndSjLj(TargetMachine *TM) {
-
-  bool EnableEmEH = TM->Options.ExceptionModel == ExceptionHandling::Emscripten;
-
+static void basicCheckForEHAndSjLj() {
   // You can't enable two modes of SjLj at the same time
   if (WasmEnableEmSjLj && WasmEnableSjLj)
-    report_fatal_error(
+    reportFatalUsageError(
         "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
-  // You can't mix Emscripten EH with Wasm SjLj.
-  if (EnableEmEH && WasmEnableSjLj)
-    report_fatal_error(
-        "-exception-model=emscripten not allowed with -wasm-enable-sjlj");
-
-  if (TM->Options.ExceptionModel == ExceptionHandling::Default) {
-    // FIXME: This flag should be removed in favor of directly using the
-    // generically configured ExceptionsType.
-    if (WebAssembly::WasmEnableSjLj)
-      TM->Options.ExceptionModel = ExceptionHandling::Wasm;
-  }
-
-  // Basic Correctness checking related to -exception-model
-  if (TM->Options.ExceptionModel != ExceptionHandling::Default &&
-      TM->Options.ExceptionModel != ExceptionHandling::None &&
-      TM->Options.ExceptionModel != ExceptionHandling::Wasm &&
-      TM->Options.ExceptionModel != ExceptionHandling::Emscripten)
-    report_fatal_error(
-        "-exception-model should be either 'none', 'wasm', or 'emscripten'");
-  if (WasmEnableSjLj && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
-    report_fatal_error(
-        "-wasm-enable-sjlj only allowed with -exception-model=wasm");
-
-  // Currently it is allowed to mix Wasm EH with Emscripten SjLj as an interim
-  // measure, but some code will error out at compile time in this combination.
-  // See WebAssemblyLowerEmscriptenEHSjLj pass for details.
 }
 
 /// Create an WebAssembly architecture model.
@@ -190,7 +161,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   this->Options.DataSections = true;
   this->Options.UniqueSectionNames = true;
 
-  basicCheckForEHAndSjLj(this);
+  basicCheckForEHAndSjLj();
   initAsmInfo();
 
   // WebAssembly does not run RegAllocFast; tied operands must be lowered by
@@ -243,7 +214,6 @@ public:
   FunctionPass *createTargetRegisterAllocator(bool) override;
 
   void addIRPasses() override;
-  void addPassesToHandleExceptions() override;
   void addISelPrepare() override;
   bool addInstSelector() override;
   void addOptimizedRegAlloc() override;
@@ -320,13 +290,6 @@ void WebAssemblyPassConfig::addIRPasses() {
       getWebAssemblyTargetMachine()));
 
   TargetPassConfig::addIRPasses();
-}
-
-void WebAssemblyPassConfig::addPassesToHandleExceptions() {
-  // Wasm EH needs WinEHPrepare to remove the catchswitch PHIs SelectionDAG
-  // cannot lower.
-  addPass(createWinEHPass());
-  addPass(createWasmEHPass());
 }
 
 void WebAssemblyPassConfig::addISelPrepare() {

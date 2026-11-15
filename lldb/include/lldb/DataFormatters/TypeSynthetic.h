@@ -52,7 +52,7 @@ public:
   /// default, handled automatically. For data types which need custom
   /// subscripting behavior - for example a sparse array, disable automatic
   /// subscripting with TypeOptions::eTypeOptionCustomSubscripting.
-  virtual llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) {
+  virtual llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
@@ -78,10 +78,10 @@ public:
   // made to this ValueObject
   virtual lldb::ValueObjectSP GetSyntheticValue() { return nullptr; }
 
-  // if this function returns a non-empty ConstString, then clients are
+  // if this function returns a non-empty string, then clients are
   // expected to use the return as the name of the type of this ValueObject for
   // display purposes
-  virtual ConstString GetSyntheticTypeName() { return ConstString(); }
+  virtual std::string GetSyntheticTypeName() { return std::string(); }
 
   virtual void *GetImplementation() { return nullptr; }
 
@@ -120,7 +120,8 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override { return nullptr; }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
@@ -355,7 +356,8 @@ public:
 
     bool MightHaveChildren() override { return filter->GetCount() > 0; }
 
-    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t>
+    GetIndexOfChildWithName(llvm::StringRef name) override;
 
     typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
 
@@ -455,11 +457,12 @@ public:
 
     bool MightHaveChildren() override;
 
-    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t>
+    GetIndexOfChildWithName(llvm::StringRef name) override;
 
     lldb::ValueObjectSP GetSyntheticValue() override;
 
-    ConstString GetSyntheticTypeName() override;
+    std::string GetSyntheticTypeName() override;
 
     void *GetImplementation() override;
 
@@ -514,7 +517,8 @@ private:
     lldb::ChildCacheState Update() override;
     llvm::Expected<uint32_t> CalculateNumChildren() override;
     lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
-    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t>
+    GetIndexOfChildWithName(llvm::StringRef name) override;
 
   private:
     const SyntheticBytecodeImplementation &m_impl;

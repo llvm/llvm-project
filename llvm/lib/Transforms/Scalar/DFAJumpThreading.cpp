@@ -108,10 +108,10 @@ public:
 
 class DFAJumpThreading {
 public:
-  DFAJumpThreading(AssumptionCache *AC, DomTreeUpdater *DTU, LoopInfo *LI,
-                   TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE)
-      : Opts(ScalarOptions::Global), AC(AC), DTU(DTU), LI(LI), TTI(TTI),
-        ORE(ORE) {}
+  DFAJumpThreading(const ScalarOptions &Opts, AssumptionCache *AC,
+                   DomTreeUpdater *DTU, LoopInfo *LI, TargetTransformInfo *TTI,
+                   OptimizationRemarkEmitter *ORE)
+      : Opts(Opts), AC(AC), DTU(DTU), LI(LI), TTI(TTI), ORE(ORE) {}
 
   bool run(Function &F);
   bool LoopInfoBroken;
@@ -1530,7 +1530,8 @@ PreservedAnalyses DFAJumpThreadingPass::run(Function &F,
   OptimizationRemarkEmitter ORE(&F);
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-  DFAJumpThreading ThreadImpl(&AC, &DTU, &LI, &TTI, &ORE);
+  const ScalarOptions &Opts = getScalarOptions(F);
+  DFAJumpThreading ThreadImpl(Opts, &AC, &DTU, &LI, &TTI, &ORE);
   if (!ThreadImpl.run(F))
     return PreservedAnalyses::all();
 

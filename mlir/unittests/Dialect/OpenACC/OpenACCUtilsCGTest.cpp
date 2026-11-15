@@ -14,8 +14,10 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -38,6 +40,9 @@ protected:
     DialectRegistry registry;
     arith::registerValueBoundsOpInterfaceExternalModels(registry);
     context.appendDialectRegistry(registry);
+    DialectRegistry extensions;
+    acc::registerAllExtensions(extensions);
+    context.appendDialectRegistry(extensions);
     context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
                         func::FuncDialect, scf::SCFDialect, gpu::GPUDialect,
                         memref::MemRefDialect, DLTIDialect>();
@@ -431,6 +436,57 @@ TEST_F(OpenACCUtilsCGTest, buildComputeRegionWithInputArgsToMap) {
   ASSERT_TRUE(cr.getBlockArg(deviceBlock->getArgument(0)).has_value());
   EXPECT_EQ(*cr.getBlockArg(deviceBlock->getArgument(0)),
             crBlock.getArgument(0));
+
+  func::ReturnOp::create(rewriter, loc);
+}
+
+// getACCBlockArgForOperand maps each launch and ins operand use to its own
+// body argument, even when the same value is passed twice; the stream operand
+// has none.
+TEST_F(OpenACCUtilsCGTest, getACCBlockArgForOperand) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  IRRewriter rewriter(&context);
+  rewriter.setInsertionPointToEnd(module->getBody());
+
+  auto funcTy = b.getFunctionType(
+      {b.getIndexType(), gpu::AsyncTokenType::get(&context)}, {});
+  auto func = func::FuncOp::create(rewriter, loc, "test", funcTy);
+  Block *entry = func.addEntryBlock();
+  rewriter.setInsertionPointToStart(entry);
+
+  auto c128 = arith::ConstantIndexOp::create(rewriter, loc, 128);
+  auto pw = ParWidthOp::create(rewriter, loc, c128,
+                               GPUParallelDimAttr::threadXDim(&context));
+  Value x = entry->getArgument(0);
+  Value stream = entry->getArgument(1);
+
+  Region sourceRegion;
+  Block *srcBlock = new Block();
+  sourceRegion.push_back(srcBlock);
+  OpBuilder srcBuilder(&context);
+  srcBuilder.setInsertionPointToStart(srcBlock);
+  YieldOp::create(srcBuilder, loc);
+
+  IRMapping mapping;
+  auto cr = buildComputeRegion(
+      loc, {pw}, ValueRange{x, x}, ParallelOp::getOperationName(), sourceRegion,
+      rewriter, mapping, /*output=*/{}, /*kernelFuncName=*/{},
+      /*kernelModuleName=*/{}, stream);
+  ASSERT_TRUE(cr);
+  Block *body = cr.getBody();
+  ASSERT_EQ(cr->getNumOperands(), 4u);
+  ASSERT_EQ(cr.getStream(), stream);
+  ASSERT_EQ(body->getNumArguments(), 3u);
+
+  for (unsigned i = 0; i < 3; ++i) {
+    BlockArgument arg = getACCBlockArgForOperand(cr->getOpOperand(i));
+    EXPECT_EQ(arg, body->getArgument(i));
+    EXPECT_EQ(getACCOperandForBlockArg(arg), cr->getOperand(i));
+  }
+
+  EXPECT_FALSE(getACCBlockArgForOperand(cr->getOpOperand(3)));
+  // An operand of an op other than acc.compute_region has no block argument.
+  EXPECT_FALSE(getACCBlockArgForOperand(pw->getOpOperand(0)));
 
   func::ReturnOp::create(rewriter, loc);
 }

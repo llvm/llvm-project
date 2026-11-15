@@ -104,6 +104,34 @@ When compiled, the PTX kernel functions are callable by host-side code.
   of the number of thread blocks. This attribute is only allowed for kernel
   functions and requires `nvvm.reqntid` and `nvvm.cluster_dim` attributes.
 
+`"nvvm.abi_preserve"="<n>"`
+
+: This attribute specifies the number of general purpose registers that the
+  callers of this function are responsible for preserving. The backend bounds
+  the number of live data variables the callers may keep in callee-save
+  registers accordingly. It is lowered to the PTX
+  [`.abi_preserve`](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#performance-tuning-directives-abi-preserve)
+  directive, which requires PTX ISA 8.3 and `sm_80` or higher. The directives
+  are omitted on targets below that.
+
+`"nvvm.abi_preserve_control"="<n>"`
+
+: This attribute specifies the number of control registers that the callers of
+  this function are responsible for preserving, corresponding to the number of
+  divergent program points in the call tree leading to this call. It is lowered
+  to the PTX
+  [`.abi_preserve_control`](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#performance-tuning-directives-abi-preserve-control)
+  directive, which requires PTX ISA 8.3 and `sm_80` or higher. The directives
+  are omitted on targets below that.
+
+Both `nvvm.abi_preserve*` attributes are valid on function definitions,
+declarations and call sites. PTX permits these directives only on device
+functions, between the `.func` directive and the function body. On a call site
+they are appended to the generated `.callprototype`; this is how an indirect
+call, which has no callee to consult, states the contract. A call site is never
+given the contract of its callee: the attributes are looked up on the call site
+only.
+
 (address-spaces)=
 
 ### Address Spaces
@@ -524,8 +552,8 @@ It is expected that `addr` was previously initialized using
 ```llvm
 declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
 ```
 
 ##### Overview:
@@ -539,6 +567,10 @@ is a 32-bit unsigned integer value.
 The `.space.{cta/cluster}` indicates the address space where the mbarrier
 object resides.
 
+The shared::cluster forms take two additional arguments that select the
+multicast form; see
+[Shared Cluster Multicast Forms](#shared-cluster-multicast-forms).
+
 The `.scope.{cta/cluster}` denotes the set of threads that can directly
 observe the synchronizing effect of the mbarrier operation. When scope is
 "cta", all threads executing in the same CTA (as the current thread) can
@@ -551,6 +583,24 @@ then the behavior of this intrinsic is undefined. This intrinsic has
 `relaxed` semantics and hence does not provide any memory ordering
 or visibility guarantees.
 
+##### Shared Cluster Multicast Forms
+
+The shared::cluster forms of these intrinsics take two additional arguments,
+a 32-bit `%mc` and a compile-time constant `%flag_mc` flag. The
+flag selects the PTX form that is emitted:
+
+- When `%flag_mc` is `false`, `%mc` is ignored and the operation is
+  performed on the single mbarrier object at `%addr`.
+- When `%flag_mc` is `true`, the operation is performed on the mbarrier
+  object at the same CTA-relative offset as `%addr` in the shared memory of
+  every CTA of the cluster whose `%cluster_ctarank` is set in `%mc`.
+  This is the `.multicast::cluster::32b` form, which requires `sm_107f` or
+  later in the same family and PTX ISA 9.4 or later, the version that
+  introduced the qualifier.
+
+For more information, refer
+[PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier).
+
 #### '`llvm.nvvm.mbarrier.complete.tx`'
 
 ##### Syntax:
@@ -558,8 +608,8 @@ or visibility guarantees.
 ```llvm
 declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
 ```
 
 ##### Overview:
@@ -569,6 +619,10 @@ count of the mbarrier object at `%addr` by `%tx_count`. The `%tx_count`
 is a 32-bit unsigned integer value. As a result of this decrement,
 the mbarrier can potentially complete its current phase and transition
 to the next phase.
+
+The shared::cluster forms of these intrinsics take the additional `%mc`
+and `%flag_mc` arguments described in
+[Shared Cluster Multicast Forms](#shared-cluster-multicast-forms).
 
 ##### Semantics:
 
@@ -582,13 +636,13 @@ The semantics of these intrinsics are identical to those of the
 ```llvm
 declare i64  @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
 declare i64  @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.arrive.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
 
 declare i64  @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
 declare i64  @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
 ```
 
 ##### Overview:
@@ -626,6 +680,10 @@ corresponding acquire operations (such as mbarrier.test.wait) synchronize
 with this release. The `relaxed` variants of these intrinsics do not
 provide any memory ordering or visibility guarantees.
 
+The shared::cluster forms of these intrinsics take the additional `%mc`
+and `%flag_mc` arguments described in
+[Shared Cluster Multicast Forms](#shared-cluster-multicast-forms).
+
 #### '`llvm.nvvm.mbarrier.arrive.expect.tx`'
 
 ##### Syntax:
@@ -633,13 +691,13 @@ provide any memory ordering or visibility guarantees.
 ```llvm
 declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
 
 declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
 ```
 
 ##### Overview:
@@ -649,6 +707,10 @@ the `@llvm.nvvm.mbarrier.arrive` intrinsics except that they also
 perform an `expect-tx` operation \_prior\_ to the `arrive` operation.
 The `%tx_count` specifies the transaction count for the `expect-tx`
 operation and the count for the `arrive` operation is assumed to be 1.
+
+The shared::cluster forms of these intrinsics take the additional `%mc`
+and `%flag_mc` arguments described in
+[Shared Cluster Multicast Forms](#shared-cluster-multicast-forms).
 
 ##### Semantics:
 
@@ -662,13 +724,13 @@ The semantics of these intrinsics are identical to those of the
 ```llvm
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
 
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
 ```
 
 ##### Overview:
@@ -677,6 +739,10 @@ The `@llvm.nvvm.mbarrier.arrive.drop.*` intrinsics decrement the
 expected arrival count of the mbarrier object at `%addr` by
 `%count` and then perform an `arrive` operation with `%count`.
 The `%count` is a 32-bit integer.
+
+The shared::cluster forms of these intrinsics take the additional `%mc`
+and `%flag_mc` arguments described in
+[Shared Cluster Multicast Forms](#shared-cluster-multicast-forms).
 
 ##### Semantics:
 
@@ -690,13 +756,13 @@ The semantics of these intrinsics are identical to those of the
 ```llvm
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
 
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
 ```
 
 ##### Overview:
@@ -708,6 +774,10 @@ the below operations on the mbarrier located at `%addr`.
   of the mbarrier by `%tx_count`, a 32-bit unsigned integer value.
 - Decrement the expected arrival count of the mbarrier by 1.
 - Perform an `arrive` operation on the mbarrier with a value of 1.
+
+The shared::cluster forms of these intrinsics take the additional `%mc`
+and `%flag_mc` arguments described in
+[Shared Cluster Multicast Forms](#shared-cluster-multicast-forms).
 
 ##### Semantics:
 
@@ -1610,23 +1680,21 @@ PTX instruction. The supported combinations are:
      - None
 ```
 
-#### '`llvm.nvvm.fma.*`' Half-precision Intrinsics
+#### '`llvm.nvvm.fma.*`' Intrinsics
 
 ##### Syntax:
 
+These are overloaded intrinsics. The '`.ftz`' modifier and one of the '`.sat`'
+or '`.relu`' modifiers are optional.
+
 ```llvm
-declare half @llvm.nvvm.fma.rn{.ftz}.f16(half %a, half %b, half %c)
-declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
-declare bfloat @llvm.nvvm.fma.rn.bf16(bfloat %a, bfloat %b, bfloat %c)
-declare <2 x bfloat> @llvm.nvvm.fma.rn.bf16x2(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
-
-declare half @llvm.nvvm.fma.rn{.ftz}.sat.f16(half %a, half %b, half %c)
-declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.sat.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
-
-declare half @llvm.nvvm.fma.rn{.ftz}.relu.f16(half %a, half %b, half %c)
-declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.relu.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
-declare bfloat @llvm.nvvm.fma.rn.relu.bf16(bfloat %a, bfloat %b, bfloat %c)
-declare <2 x bfloat> @llvm.nvvm.fma.rn.relu.bf16x2(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+declare half         @llvm.nvvm.fma{.ftz}{.sat|.relu}.f16(half %a, half %b, half %c, i32 immarg %rnd)
+declare <2 x half>   @llvm.nvvm.fma{.ftz}{.sat|.relu}.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, i32 immarg %rnd)
+declare bfloat       @llvm.nvvm.fma{.relu}.bf16(bfloat %a, bfloat %b, bfloat %c, i32 immarg %rnd)
+declare <2 x bfloat> @llvm.nvvm.fma{.relu}.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c, i32 immarg %rnd)
+declare float        @llvm.nvvm.fma{.ftz}{.sat}.f32(float %a, float %b, float %c, i32 immarg %rnd)
+declare <2 x float>  @llvm.nvvm.fma{.ftz}.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, i32 immarg %rnd)
+declare double       @llvm.nvvm.fma.f64(double %a, double %b, double %c, i32 immarg %rnd)
 
 declare half @llvm.nvvm.fma.rn.oob{.relu}.f16(half %a, half %b, half %c)
 declare <2 x half> @llvm.nvvm.fma.rn.oob{.relu}.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
@@ -1636,19 +1704,54 @@ declare <2 x bfloat> @llvm.nvvm.fma.rn.oob{.relu}.v2bf16(<2 x bfloat> %a, <2 x b
 
 ##### Overview:
 
-The '`llvm.nvvm.fma.*`' intrinsics perform a fused multiply-add with no loss
-of precision in the intermediate product and addition.
+The '`llvm.nvvm.fma.*`' intrinsics perform a fused multiply-add of `%a`, `%b`
+and `%c` with no loss of precision in the intermediate product and addition,
+using the rounding mode selected by `%rnd` and the modifiers present in the
+intrinsic name. They correspond directly to the `fma` PTX instruction.
 
 ##### Semantics:
 
-The '`.sat`' modifier performs a saturating operation where the result is
-clamped to `[0.0, 1.0]` and `NaN` results are flushed to `+0.0f`.
+`%rnd` selects the rounding mode applied to the result, see
+{ref}`fp-rounding-modes`.
+
 The '`.ftz`' modifier flushes subnormal inputs and results to sign-preserving
 zero.
+The '`.sat`' modifier performs a saturating operation where the result is
+clamped to `[0.0, 1.0]` and `NaN` results are flushed to `+0.0f`.
 The '`.relu`' modifier clamps the result to `0` if negative and `NaN`
 results are flushed to canonical `NaN`.
 The '`.oob`' modifier clamps the result to `0` if either of the operands is
-an `OOB NaN` (defined under [Tensors](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensors)) value.
+an `OOB NaN` (defined under [Tensors](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensors)) value. The
+'`llvm.nvvm.fma.rn.oob{.relu}`' intrinsics only support the `rn` rounding
+mode, and do not take a rounding-mode operand.
+
+Not every combination of operand type, rounding mode and modifier maps to a
+PTX instruction. For the '`llvm.nvvm.fma{.ftz}{.sat|.relu}`' intrinsics, the
+supported combinations are:
+
+```{list-table}
+:widths: 25 25 25
+:header-rows: 1
+
+   * - Operand Type
+     - Rounding Modes
+     - Modifiers
+   * - `half`, `<2 x half>`
+     - `rn`
+     - `.ftz`, `.sat`, `.relu`
+   * - `bfloat`, `<2 x bfloat>`
+     - `rn`
+     - `.relu`
+   * - `float`
+     - `rn`, `rz`, `rp`, `rm`
+     - `.ftz`, `.sat`
+   * - `<2 x float>`
+     - `rn`, `rz`, `rp`, `rm`
+     - `.ftz`
+   * - `double`
+     - `rn`, `rz`, `rp`, `rm`
+     - None
+```
 
 ### Bit Manipulation Intrinsics
 
@@ -3778,9 +3881,9 @@ a shared pointer emits the `.shared::cta` qualifier. The `.cg1` and `.cg2`
 variants generate `cta_group::1` and `cta_group::2` variants of the instruction
 respectively. The last argument to these intrinsics is a boolean flag indicating
 support for exclusive allocation. This flag argument must be a compile-time
-constant. When set, the `.exclusive` variant is emitted, which claims ownership
-of the allocation permit. No other allocation may exist at the same time as an
-exclusive allocation.
+constant and defaults to `0` (`false`) when omitted. When set, the `.exclusive`
+variant is emitted, which claims ownership of the allocation permit. No other
+allocation may exist at the same time as an exclusive allocation.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions).
 
@@ -3803,9 +3906,9 @@ of columns to be de-allocated. The `.cg1` and `.cg2` variants generate
 `cta_group::1` and `cta_group::2` variants of the instruction respectively.
 The last argument to these intrinsics is a boolean flag indicating
 support for exclusive allocation. This flag argument must be a compile-time
-constant. When set, the `.exclusive` variant is emitted. Memory must
-be deallocated with `.exclusive` if and only if it was allocated with
-`.exclusive`.
+constant and defaults to `0` (`false`) when omitted. When set, the `.exclusive`
+variant is emitted. Memory must be deallocated with `.exclusive` if and only if
+it was allocated with `.exclusive`.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions).
 
@@ -3846,10 +3949,10 @@ declare void @llvm.nvvm.tcgen05.commit.mc.{cg1,cg2}.p3.i32(ptr addrspace(3) %mba
 declare void @llvm.nvvm.tcgen05.commit.smem.a.read.{cg1,cg2}.p0(ptr %bar_addr)
 declare void @llvm.nvvm.tcgen05.commit.smem.a.read.{cg1,cg2}.p3(ptr addrspace(3) %bar_addr)
 
-declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p0.i16(ptr %bar_addr, i16 %cta_mask)
-declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p0.i32(ptr %bar_addr, i32 %cta_mask)
-declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p3.i16(ptr addrspace(3) %bar_addr, i16 %cta_mask)
-declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p3.i32(ptr addrspace(3) %bar_addr, i32 %cta_mask)
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p0.i16(ptr %bar_addr, i16 %mc)
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p0.i32(ptr %bar_addr, i32 %mc)
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p3.i16(ptr addrspace(3) %bar_addr, i16 %mc)
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p3.i32(ptr addrspace(3) %bar_addr, i32 %mc)
 ```
 
 ##### Overview:
@@ -4894,7 +4997,7 @@ pass manager:
 
 ```c++
 std::unique_ptr<TargetMachine> TM = ...;
-PassBuilder PB(TM);
+PassBuilder PB(Context, TM.get());
 ModulePassManager MPM;
 PB.parsePassPipeline(MPM, ...);
 ```

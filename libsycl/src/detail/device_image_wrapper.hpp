@@ -84,7 +84,7 @@ private:
 class DeviceImageManager {
 public:
   explicit DeviceImageManager(std::unique_ptr<llvm::object::OffloadBinary> Bin)
-      : MBin(std::move(Bin)) {}
+      : MBin(std::move(Bin)), MTargetArch(MBin->getTriple().split('-').first) {}
   // Explicitly delete copy constructor/operator= to avoid unintentional copies.
   DeviceImageManager(const DeviceImageManager &) = delete;
   DeviceImageManager &operator=(const DeviceImageManager &) = delete;
@@ -97,8 +97,15 @@ public:
   /// \return a reference to the corresponding parsed OffloadBinary object.
   const llvm::object::OffloadBinary &getOffloadBinary() const { return *MBin; }
 
+  /// \return the architecture component of this image's target triple.
+  std::string_view getTargetArch() const { return MTargetArch; }
+
 private:
   std::unique_ptr<llvm::object::OffloadBinary> MBin;
+
+  // Points into the image's triple string, so it stays valid exactly as long as
+  // the fat binary this image was parsed from is registered.
+  std::string_view MTargetArch;
 };
 
 } // namespace detail

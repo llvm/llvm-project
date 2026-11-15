@@ -329,11 +329,24 @@ functions:
       - posix
     return_type: int
     arguments: []
+  - name: pclose
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: FILE *
   - name: perror
     standards:
       - stdc
     return_type: void
     arguments:
+      - type: const char *
+  - name: popen
+    standards:
+      - posix
+    return_type: FILE *
+    arguments:
+      - type: const char *
       - type: const char *
   - name: printf
     standards:
