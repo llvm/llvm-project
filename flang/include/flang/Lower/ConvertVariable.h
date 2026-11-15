@@ -76,6 +76,11 @@ void initializeCloneAtRuntime(Fortran::lower::AbstractConverter &converter,
 /// called.
 void defineModuleVariable(AbstractConverter &, const pft::Variable &var);
 
+/// Declare the fir::GlobalOp of a module variable used from another module
+/// (as instantiateVariable does), outside of any function, and return it.
+fir::GlobalOp declareModuleVariable(AbstractConverter &,
+                                    const semantics::Symbol &);
+
 /// Create fir::GlobalOp for all common blocks, including their initial values
 /// if they have one. This should be called before lowering any scopes so that
 /// common block globals are available when a common appear in a scope.

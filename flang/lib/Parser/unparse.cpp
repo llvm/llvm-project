@@ -1949,9 +1949,32 @@ public:
               Word("!DIR$ ");
               Word(x.source.ToString());
             },
+            [&](const CompilerDirective::Plugin &plugin) {
+              Word("!DIR$ ");
+              Walk(std::get<0>(plugin.t));
+              Put(' ');
+              Walk(std::get<1>(plugin.t));
+              if (const auto &args{std::get<2>(plugin.t)}; !args.empty()) {
+                Walk("(", args, ", ", ")");
+              }
+            },
         },
         x.u);
     Put('\n');
+  }
+  void Unparse(const CompilerDirective::Plugin::Arg &x) {
+    Walk(std::get<0>(x.t), "=");
+    common::visit(common::visitors{
+                      [&](const Name &n) { Walk(n); },
+                      [&](const CompilerDirective::Plugin::CommonBlock &c) {
+                        Put('/');
+                        Walk(c.v);
+                        Put('/');
+                      },
+                      [&](std::uint64_t n) { Put(std::to_string(n)); },
+                      [&](const std::string &str) { PutNormalized(str); },
+                  },
+        std::get<1>(x.t));
   }
   void Unparse(const CompilerDirective::IgnoreTKR &x) {
     if (const auto &maybeList{

@@ -74,6 +74,9 @@ public:
   }
 
   Prescanner &AddCompilerDirectiveSentinel(const std::string &);
+  // "$prefix" for a plugin directive prefix: `!$prefix` lines are spelled
+  // `!dir$ prefix` (see flang/Support/PluginDirectives.h).
+  Prescanner &AddPluginDirectiveSentinel(const std::string &);
 
   void Prescan(ProvenanceRange);
   void Statement();
@@ -212,6 +215,19 @@ private:
             std::strcmp(directiveSentinel_, "$omx") == 0 ||
             std::strcmp(directiveSentinel_, "$ompx") == 0);
   }
+  bool IsPluginDirectiveSentinel(const char *sentinel) const {
+    return sentinel && pluginDirectiveSentinels_.count(sentinel) > 0;
+  }
+  bool InPluginDirective() const {
+    return IsPluginDirectiveSentinel(directiveSentinel_);
+  }
+  // The last column of the sentinel field of a fixed form directive line:
+  // 5, or the end of a longer (plugin) sentinel, which the continuation
+  // column follows.
+  int FixedFormSentinelFieldEnd(const char *sentinel) const {
+    int length{static_cast<int>(std::strlen(sentinel))};
+    return length > 4 ? 1 + length : 5;
+  }
   bool IsPastFixedFormColumnLimit(int column) const {
     return fixedFormColumnLimit_ && column > *fixedFormColumnLimit_;
   }
@@ -345,6 +361,7 @@ private:
   static const int prime1{1019}, prime2{1021};
   std::bitset<prime2> compilerDirectiveBloomFilter_; // 128 bytes
   std::unordered_set<std::string> compilerDirectiveSentinels_;
+  std::unordered_set<std::string> pluginDirectiveSentinels_;
 };
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_PRESCAN_H_
