@@ -2365,11 +2365,23 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
                             /*IsCanonicalizing=*/true);
 }
 
+// computeKnownFPClass can only model what Alive2 models. The afn, arcp,
+// contract and reassoc fast-math flags permit the operation to be replaced
+// with an arbitrarily different computation, so none of the deductions below
+// hold. nsz, ninf and nnan are fine to analyze: they are value assumptions,
+// not license to change the operation.
+static bool hasUnmodeledFastMathFlags(FastMathFlags FMF) {
+  return FMF.approxFunc() || FMF.allowReciprocal() || FMF.allowContract() ||
+         FMF.allowReassoc();
+}
+
 static Value *
 simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
                                   FastMathFlags FMF, FPClassTest DemandedMask,
                                   KnownFPClass &Known, const SimplifyQuery &SQ,
                                   unsigned Depth) {
+  if (hasUnmodeledFastMathFlags(FMF))
+    return nullptr;
 
   const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
   const fltSemantics &SrcTy =
@@ -2491,6 +2503,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
   }
   case Instruction::FAdd:
   case Instruction::FSub: {
+    if (hasUnmodeledFastMathFlags(FMF))
+      break;
+
     KnownFPClass KnownLHS, KnownRHS;
 
     // fadd x, x can be handled more aggressively.
@@ -2590,6 +2605,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     return nullptr;
   }
   case Instruction::FMul: {
+    if (hasUnmodeledFastMathFlags(FMF))
+      break;
+
     KnownFPClass KnownLHS, KnownRHS;
 
     Value *X = I->getOperand(0);
@@ -2764,6 +2782,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     return nullptr;
   }
   case Instruction::FDiv: {
+    if (hasUnmodeledFastMathFlags(FMF))
+      break;
+
     Value *X = I->getOperand(0);
     Value *Y = I->getOperand(1);
     if (X == Y &&
@@ -2908,6 +2929,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     return simplifyDemandedUseFPClassFPTrunc(*this, *I, FMF, DemandedMask,
                                              Known, SQ, Depth);
   case Instruction::FPExt: {
+    if (hasUnmodeledFastMathFlags(FMF))
+      break;
+
     FPClassTest SrcDemandedMask = DemandedMask;
     if (DemandedMask & fcNan)
       SrcDemandedMask |= fcNan;
@@ -3011,6 +3035,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     }
     case Intrinsic::fma:
     case Intrinsic::fmuladd: {
+      if (hasUnmodeledFastMathFlags(FMF))
+        break;
+
       // Keep in mind that fma can rule out NaN in places that fmuladd cannot.
 
       // We can't do any simplification on the source besides stripping out
@@ -3061,6 +3088,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::minimumnum:
     case Intrinsic::maxnum:
     case Intrinsic::minnum: {
+      if (hasUnmodeledFastMathFlags(FMF))
+        break;
+
       const bool PropagateNaN =
           IID == Intrinsic::maximum || IID == Intrinsic::minimum;
 
@@ -3125,6 +3155,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::exp:
     case Intrinsic::exp2:
     case Intrinsic::exp10: {
+      if (hasUnmodeledFastMathFlags(FMF))
+        break;
+
       if ((DemandedMask & fcPositive) == fcNone) {
         // Only returns positive values or nans.
         if ((DemandedMask & fcNan) == fcNone)
@@ -3225,6 +3258,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::log:
     case Intrinsic::log2:
     case Intrinsic::log10: {
+      if (hasUnmodeledFastMathFlags(FMF))
+        break;
+
       Type *EltTy = VTy->getScalarType();
       bool IsMultiUnitFPType = EltTy->isMultiUnitFPType();
 
@@ -3275,6 +3311,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                            KnownSrc);
     }
     case Intrinsic::sqrt: {
+      if (hasUnmodeledFastMathFlags(FMF))
+        break;
+
       Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
@@ -3338,6 +3377,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                            {KnownSrc});
     }
     case Intrinsic::ldexp: {
+      if (hasUnmodeledFastMathFlags(FMF))
+        break;
+
       Type *EltTy = VTy->getScalarType();
       const fltSemantics &FltSem = EltTy->getFltSemantics();
       DenormalMode Mode = F.getDenormalMode(FltSem);
@@ -3389,6 +3431,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::nearbyint:
     case Intrinsic::round:
     case Intrinsic::roundeven: {
+      if (hasUnmodeledFastMathFlags(FMF))
+        break;
+
       Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
@@ -3504,6 +3549,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       return simplifyDemandedUseFPClassFPTrunc(*this, *CI, FMF, DemandedMask,
                                                Known, SQ, Depth);
     case Intrinsic::canonicalize: {
+      if (hasUnmodeledFastMathFlags(FMF))
+        break;
+
       Type *EltTy = VTy->getScalarType();
 
       if (EltTy->isIEEELikeFPTy()) {

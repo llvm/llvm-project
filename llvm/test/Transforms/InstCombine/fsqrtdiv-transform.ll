@@ -80,7 +80,7 @@ define void @bb_constraint_case3(double %a, i32 %d) {
 ; CHECK-NEXT:    [[D_NOT:%.*]] = icmp eq i32 [[D]], 0
 ; CHECK-NEXT:    br i1 [[D_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nnan double [[DIV]], [[DIV]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[DIV]], [[DIV]]
 ; CHECK-NEXT:    store double [[MUL]], ptr @r1, align 8
 ; CHECK-NEXT:    [[DIV1:%.*]] = fdiv reassoc double [[A]], [[SQRT]]
 ; CHECK-NEXT:    store double [[DIV1]], ptr @r2, align 8
@@ -117,7 +117,7 @@ define void @bb_constraint_case4(double %a, i32 %c, i32 %d) {
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i32 [[C]], 0
 ; CHECK-NEXT:    br i1 [[C_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nnan double [[DIV]], [[DIV]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[DIV]], [[DIV]]
 ; CHECK-NEXT:    store double [[MUL]], ptr @r1, align 8
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
@@ -172,7 +172,7 @@ define void @bb_constraint_case5(double %a, i32 %c) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[SQRT:%.*]] = phi double [ [[TMP0]], [[IF_THEN]] ], [ [[TMP1]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc ninf arcp double 1.000000e+00, [[SQRT]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nnan double [[DIV]], [[DIV]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[DIV]], [[DIV]]
 ; CHECK-NEXT:    store double [[MUL]], ptr @r1, align 8
 ; CHECK-NEXT:    [[DIV1:%.*]] = fdiv reassoc double [[A]], [[SQRT]]
 ; CHECK-NEXT:    store double [[DIV1]], ptr @r2, align 8
@@ -267,7 +267,7 @@ define void @bb_constraint_case7(double %a, i32 %c, i32 %d) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double 2.000000e+00, [[A]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.else1:
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nnan double [[DIV]], [[DIV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc double [[DIV]], [[DIV]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[MUL:%.*]] = phi double [ [[TMP1]], [[IF_THEN1]] ], [ [[TMP2]], [[IF_ELSE1]] ], [ [[TMP0]], [[IF_THEN]] ]
@@ -382,7 +382,7 @@ define void @missing_arcp_flag_on_div(double %a) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call reassoc nnan ninf nsz double @llvm.sqrt.f64(double [[A]])
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc ninf double 1.000000e+00, [[SQRT]]
 ; CHECK-NEXT:    store double [[DIV]], ptr @x, align 8
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nnan double [[DIV]], [[DIV]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[DIV]], [[DIV]]
 ; CHECK-NEXT:    store double [[MUL]], ptr @r1, align 8
 ; CHECK-NEXT:    [[DIV1:%.*]] = fdiv reassoc double [[A]], [[SQRT]]
 ; CHECK-NEXT:    store double [[DIV1]], ptr @r2, align 8
@@ -407,7 +407,7 @@ define void @missing_reassoc_flag_on_mul(double %a) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call reassoc nnan ninf nsz double @llvm.sqrt.f64(double [[A]])
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc ninf arcp double 1.000000e+00, [[SQRT]]
 ; CHECK-NEXT:    store double [[DIV]], ptr @x, align 8
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan double [[DIV]], [[DIV]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[DIV]], [[DIV]]
 ; CHECK-NEXT:    store double [[MUL]], ptr @r1, align 8
 ; CHECK-NEXT:    [[DIV1:%.*]] = fdiv reassoc double [[A]], [[SQRT]]
 ; CHECK-NEXT:    store double [[DIV1]], ptr @r2, align 8
@@ -432,7 +432,7 @@ define void @missing_reassoc_flag_on_div1(double %a) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call reassoc nnan ninf nsz double @llvm.sqrt.f64(double [[A]])
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc ninf arcp double 1.000000e+00, [[SQRT]]
 ; CHECK-NEXT:    store double [[DIV]], ptr @x, align 8
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nnan double [[DIV]], [[DIV]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[DIV]], [[DIV]]
 ; CHECK-NEXT:    store double [[MUL]], ptr @r1, align 8
 ; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[A]], [[SQRT]]
 ; CHECK-NEXT:    store double [[DIV1]], ptr @r2, align 8

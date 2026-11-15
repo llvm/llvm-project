@@ -1451,7 +1451,7 @@ define <2 x float> @fmul_ldexp_v2f32(<2 x float> %x, <2 x i32> %exp) {
 
 define float @fmul_ldexp_noreassoc_fmul(float %x, i32 %exp) {
 ; CHECK-LABEL: @fmul_ldexp_noreassoc_fmul(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call reassoc nnan float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[EXP:%.*]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = call reassoc float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[EXP:%.*]])
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], [[LDEXP]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
@@ -1462,7 +1462,7 @@ define float @fmul_ldexp_noreassoc_fmul(float %x, i32 %exp) {
 
 define float @fmul_ldexp_noreassoc_ldexp(float %x, i32 %exp) {
 ; CHECK-LABEL: @fmul_ldexp_noreassoc_ldexp(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call nnan float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[EXP:%.*]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[EXP:%.*]])
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc float [[X:%.*]], [[LDEXP]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
@@ -1498,7 +1498,7 @@ define float @fmul_ldexp_multiuse_x(float %x, i32 %exp) {
 
 define float @fmul_ldexp_not_fpone(float %x, i32 %exp) {
 ; CHECK-LABEL: @fmul_ldexp_not_fpone(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call reassoc nnan float @llvm.ldexp.f32.i32(float 2.000000e+00, i32 [[EXP:%.*]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = call reassoc float @llvm.ldexp.f32.i32(float 2.000000e+00, i32 [[EXP:%.*]])
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc float [[X:%.*]], [[LDEXP]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;

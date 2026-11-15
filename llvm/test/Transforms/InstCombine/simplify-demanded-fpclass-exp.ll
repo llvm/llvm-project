@@ -421,7 +421,8 @@ define nofpclass(nzero) float @source_is_known_nan(float nofpclass(inf norm sub 
 define nofpclass(nzero) float @source_is_known_nan_preserve_flags(float nofpclass(inf norm sub zero) %must.be.nan) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_nan_preserve_flags(
 ; CHECK-SAME: float nofpclass(inf zero sub norm) [[MUST_BE_NAN:%.*]]) {
-; CHECK-NEXT:    ret float [[MUST_BE_NAN]]
+; CHECK-NEXT:    [[EXP:%.*]] = call nsz contract float @llvm.exp2.f32(float [[MUST_BE_NAN]])
+; CHECK-NEXT:    ret float [[EXP]]
 ;
   %exp = call contract nsz float @llvm.exp2.f32(float %must.be.nan)
   ret float %exp
@@ -441,8 +442,7 @@ define nofpclass(nzero) float @source_is_known_inf_or_nan(float nofpclass(norm s
 define nofpclass(nzero) float @source_is_known_inf_or_nan_preserve_flags(float nofpclass(norm sub zero) %must.be.inf.or.nan) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_inf_or_nan_preserve_flags(
 ; CHECK-SAME: float nofpclass(zero sub norm) [[MUST_BE_INF_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nsz contract ueq float [[MUST_BE_INF_OR_NAN]], +inf
-; CHECK-NEXT:    [[TMP2:%.*]] = select nsz contract i1 [[TMP1]], float [[MUST_BE_INF_OR_NAN]], float 0.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = call nsz contract float @llvm.exp2.f32(float [[MUST_BE_INF_OR_NAN]])
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %exp = call contract nsz float @llvm.exp2.f32(float %must.be.inf.or.nan)
