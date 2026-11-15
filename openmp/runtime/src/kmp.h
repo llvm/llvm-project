@@ -16,8 +16,10 @@
 
 #include "kmp_config.h"
 
-// Floating-point CSR access is available only for a declared hardware FP target.
-#if KMP_ARCH_RISCV64 && KMP_OS_LINUX && defined(__riscv_flen) && __riscv_flen >= 32
+// Floating-point CSR access is available only for a declared hardware FP
+// target.
+#if KMP_ARCH_RISCV64 && KMP_OS_LINUX && defined(__riscv_flen) &&               \
+    __riscv_flen >= 32
 #define KMP_RISCV_FP_CONTROL 1
 #else
 #define KMP_RISCV_FP_CONTROL 0

@@ -18,7 +18,7 @@ int main(void) {
     if (fesetround(modes[stage]))
       return 2;
     int bad = 0;
-#pragma omp parallel num_threads(2) reduction(+:bad)
+#pragma omp parallel num_threads(2) reduction(+ : bad)
     {
       if (omp_get_num_threads() != 2 || fegetround() != modes[stage])
         ++bad;
