@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAI: FROZEN-CXX03-HEADERS-FIXME
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // <random>
 
