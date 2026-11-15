@@ -32,7 +32,7 @@
 #if defined(LLVM_BUILD_STATIC) || !defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
 #define ABI_BREAKING_EXPORT_ABI
 #else
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__MINGW32__)
 #if defined(LLVM_EXPORTS)
 #define ABI_BREAKING_EXPORT_ABI __declspec(dllexport)
 #else
