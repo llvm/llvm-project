@@ -1081,7 +1081,7 @@ let AdditionalPredicates = [NotDSP] in {
 def TAILCALL_MM : TailCall<J_MM, jmptarget_mm>,
                   ISA_MICROMIPS32_NOT_MIPS32R6;
 
-def TAILCALLREG_MM  : TailCallReg<JRC16_MM, GPR32Opnd>,
+def TAILCALLREG_MM  : TailCallReg<JR_MM, GPR32Opnd>,
                       ISA_MICROMIPS32_NOT_MIPS32R6;
 
 def PseudoIndirectBranch_MM : PseudoIndirectBranchBase<JR_MM, GPR32Opnd>,

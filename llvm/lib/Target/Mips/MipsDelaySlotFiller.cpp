@@ -777,10 +777,11 @@ static bool searchRange(MachineBasicBlock &MBB, IterTy Begin, IterTy End,
     // to be able to reach the target. b16 only has a range of +/- 1 KB.
     // It's entirely possible that the target function is reachable with b16
     // but we don't have enough information to make that decision.
-     if (InMicroMipsMode && TII->getInstSizeInBytes(*CurrI) == 2 &&
+    if (InMicroMipsMode && TII->getInstSizeInBytes(*CurrI) == 2 &&
         (Opcode == Mips::JR || Opcode == Mips::PseudoIndirectBranch ||
          Opcode == Mips::PseudoIndirectBranch_MM ||
-         Opcode == Mips::PseudoReturn || Opcode == Mips::TAILCALL))
+         Opcode == Mips::PseudoReturn || Opcode == Mips::TAILCALL ||
+         Opcode == Mips::TAILCALL_MM || Opcode == Mips::TAILCALLREG_MM))
       continue;
      // Instructions LWP/SWP and MOVEP should not be in a delay slot as that
      // results in unpredictable behaviour

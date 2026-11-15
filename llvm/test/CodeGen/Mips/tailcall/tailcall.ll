@@ -165,7 +165,7 @@ entry:
 ; ALL-LABEL: caller8_0:
 ; PIC32: jr $25
 ; PIC32R6: jrc $25
-; PIC32MM: jrc
+; PIC32MM: jr $25
 ; PIC32MMR6: jrc
 ; STATIC32: j
 ; STATIC32MMR6: bc
@@ -206,7 +206,7 @@ entry:
 ; ALL-LABEL: caller9_0:
 ; PIC32: jr $25
 ; PIC32R6: jrc $25
-; PIC32MM: jrc
+; PIC32MM: jr $25
 ; PIC32MMR6: jrc
 ; STATIC32: j
 ; STATIC32MMR6: bc
