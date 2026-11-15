@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Linalg/Passes.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -28,6 +29,15 @@ static inline bool isScalarLike(Type t) {
 static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
   if (!OpTrait::hasElementwiseMappableTraits(op))
     return false;
+
+  // A scalar condition selects the whole tensor, including its dynamic
+  // shape. A generic loop over one operand's shape cannot represent that.
+  if (auto select = dyn_cast<arith::SelectOp>(op)) {
+    auto resultType = dyn_cast<RankedTensorType>(select.getType());
+    if (select.getCondition().getType().isInteger(1) && resultType &&
+        !resultType.hasStaticShape())
+      return false;
+  }
 
   auto types = op->getOperandTypes();
 
