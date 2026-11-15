@@ -433,3 +433,44 @@ gpu.module @mbarrier_try_wait_parity_sm80 [#nvvm.target<chip = "sm_80">] {
     return
   }
 }
+
+// -----
+
+gpu.module @cluster_barrier_sm90 [#nvvm.target<chip = "sm_90">] {
+  func.func @cluster_barrier_sm90() {
+    nvvm.cluster.arrive
+    nvvm.cluster.arrive.relaxed
+    nvvm.cluster.wait
+    return
+  }
+}
+
+// -----
+
+gpu.module @cluster_arrive_sm80 [#nvvm.target<chip = "sm_80">] {
+  func.func @cluster_arrive_sm80() {
+    // expected-error @below {{'nvvm.cluster.arrive' op is not supported on sm_80}}
+    nvvm.cluster.arrive
+    return
+  }
+}
+
+// -----
+
+gpu.module @cluster_arrive_relaxed_sm80 [#nvvm.target<chip = "sm_80">] {
+  func.func @cluster_arrive_relaxed_sm80() {
+    // expected-error @below {{'nvvm.cluster.arrive.relaxed' op is not supported on sm_80}}
+    nvvm.cluster.arrive.relaxed
+    return
+  }
+}
+
+// -----
+
+gpu.module @cluster_wait_sm80 [#nvvm.target<chip = "sm_80">] {
+  func.func @cluster_wait_sm80() {
+    // expected-error @below {{'nvvm.cluster.wait' op is not supported on sm_80}}
+    nvvm.cluster.wait
+    return
+  }
+}
