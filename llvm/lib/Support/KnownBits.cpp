@@ -1016,6 +1016,7 @@ static KnownBits computeForSatShl(bool Signed, const KnownBits &LHS,
   unsigned MinShiftAmount = RHS.getMinValue().getLimitedValue(BitWidth);
   if (LHS.isUnknown()) {
     if (MinShiftAmount == BitWidth)
+      // Always poison.
       Known.setAllZero();
     return Known;
   }
@@ -1078,6 +1079,7 @@ static KnownBits computeForSatShl(bool Signed, const KnownBits &LHS,
       break;
   }
 
+  // All shift amounts may result in poison.
   if (Known.hasConflict())
     Known.setAllZero();
   return Known;
