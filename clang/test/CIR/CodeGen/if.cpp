@@ -322,8 +322,7 @@ foo:
   } goto foo;
 }
 // CIR: cir.func{{.*}} @_Z3if3v()
-// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR: %[[ZERO_BOOL:.*]] = cir.cast int_to_bool %[[ZERO]] : !s32i -> !cir.bool
+// CIR: %[[ZERO_BOOL:.*]] = cir.const #false
 // CIR: cir.if %[[ZERO_BOOL]]
 // CIR: cir.call @_Z7if_initv() : () -> (!s32i {llvm.noundef})
 
@@ -349,8 +348,7 @@ void if4(int a) {
 // CIR:  cir.switch(%[[LOAD_ARG]] : !s32i) {
 // CIR:  cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR:    cir.scope {
-// CIR:      %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR:      %[[ZERO_BOOL:.*]] = cir.cast int_to_bool %[[ZERO]] : !s32i -> !cir.bool
+// CIR:      %[[ZERO_BOOL:.*]] = cir.const #false
 // CIR:      cir.if %[[ZERO_BOOL]]
 // CIR:        cir.call @_Z3if0b(
 

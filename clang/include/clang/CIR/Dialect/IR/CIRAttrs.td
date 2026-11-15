@@ -1560,6 +1560,32 @@ def CIR_PtrSpecAttr : CIR_Attr<"PtrSpec", "ptr_spec"> {
 }
 
 //===----------------------------------------------------------------------===//
+// BitIntSpecAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_BitIntSpecAttr : CIR_Attr<"BitIntSpec", "bitint_spec"> {
+  let summary = "!cir.int _BitInt data layout spec";
+  let description = [{
+    Upper bound, in bits, on the ABI alignment of a `_BitInt`. This is
+    `TargetInfo::getBitIntMaxAlign()`. `_BitInt(N)` is aligned to
+    `min(PowerOf2Ceil(N), max_align)` bits, and at least one byte.
+
+    Used as the value of the `!cir.int<u, 1, bitint>`-keyed data-layout
+    entry. The key names the `_BitInt` class. Its width is not a layout
+    input.
+
+    ```mlir
+    #dlti.dl_spec<!cir.int<u, 1, bitint> =
+        #cir.bitint_spec<max_align = 64>>
+    ```
+  }];
+  let parameters = (ins "uint32_t":$max_align);
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 
@@ -2740,6 +2766,9 @@ def CIR_LoweringOptionsAttr
     (see `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine
     within a single toolchain. `no_trapping_math` is true when
     `LangOptions::getDefaultExceptionMode()` is `FPE_Ignore`.
+    `relative_cxx_abi_vtables` mirrors `LangOptions::RelativeCXXABIVTables`
+    (`-fexperimental-relative-c++-abi-vtables`), which selects the layout of the
+    C++ vtables that lowering emits and reads. It is omitted when false.
 
     The following fields come from `CodeGenOptions`.
     `enable_noundef_attrs` mirrors `CodeGenOptions::EnableNoundefAttrs`,
@@ -2780,7 +2809,8 @@ def CIR_LoweringOptionsAttr
     "int32_t":$long_double_size,
     "bool":$enable_noundef_attrs,
     "bool":$no_trapping_math,
-    "uint32_t":$ssp_buffer_size
+    "uint32_t":$ssp_buffer_size,
+    DefaultValuedParameter<"bool", "false">:$relative_cxx_abi_vtables
   );
 
   let assemblyFormat = [{
@@ -2788,7 +2818,7 @@ def CIR_LoweringOptionsAttr
                $hlsl, $sycl_is_device, $gpu_rdc, $openmp,
                $openmp_is_target_device, $clang_abi_compat, $long_double_size,
                $enable_noundef_attrs, $no_trapping_math,
-               $ssp_buffer_size) `>`
+               $ssp_buffer_size, $relative_cxx_abi_vtables) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;
@@ -2799,9 +2829,15 @@ def CIR_LoweringOptionsAttr
 //===----------------------------------------------------------------------===//
 
 def CIR_AnnotationAttr : CIR_Attr<"Annotation", "annotation"> {
-  let summary = "Annotation attribute for global variables and functions";
+  let summary = "A C/C++ `annotate` attribute";
   let description = [{
-    Represents a C/C++ `__attribute__((annotate(...)))` in CIR.
+    Represents a C/C++ `__attribute__((annotate(...)))` in CIR. Global
+    variables and functions carry these in their `annotations` attribute; local
+    variables, parameters, record fields, and `__builtin_annotation` use them
+    through the `cir.var_annotation`, `cir.ptr_annotation`, and
+    `cir.annotation` operations. The source file and line of an annotation are
+    taken from the location of the operation that carries it, and its strings
+    are emitted as globals in the `llvm.metadata` section.
 
     Example C code:
     ```c

@@ -169,7 +169,7 @@ define amdgpu_ps i16 @s_underflow_compare_fold_i16(i16 inreg %a, i16 inreg %b) #
 ; GFX9-LABEL: s_underflow_compare_fold_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_sub_i32 s1, s0, s1
-; GFX9-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX9-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX9-NEXT:    s_min_u32 s0, s1, s0
 ; GFX9-NEXT:    ; return to shader part epilog
@@ -177,7 +177,7 @@ define amdgpu_ps i16 @s_underflow_compare_fold_i16(i16 inreg %a, i16 inreg %b) #
 ; GFX11-LABEL: s_underflow_compare_fold_i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_sub_i32 s1, s0, s1
-; GFX11-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX11-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_min_u32 s0, s1, s0

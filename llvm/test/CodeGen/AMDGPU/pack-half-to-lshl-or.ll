@@ -283,8 +283,8 @@ define i32 @pack_high_half_imm(i16 %hi) {
 ; GFX9-LABEL: pack_high_half_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_movk_i32 s4, 0x3c00
-; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, s4
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3c00
+; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: pack_high_half_imm:
@@ -337,8 +337,8 @@ define void @pack_high_half_imm_to_store(i16 %hi, ptr addrspace(1) %out) {
 ; GFX9-LABEL: pack_high_half_imm_to_store:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_movk_i32 s4, 0x3c00
-; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, s4
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v3
 ; GFX9-NEXT:    global_store_dword v[1:2], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]

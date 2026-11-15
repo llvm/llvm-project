@@ -530,6 +530,15 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
   return nullptr;
 }
 
+/// Return true if \p Ty is or contains a byte type.
+static bool containsByteType(Type *Ty) {
+  if (auto *ATy = dyn_cast<ArrayType>(Ty))
+    return containsByteType(ATy->getElementType());
+  if (auto *STy = dyn_cast<StructType>(Ty))
+    return any_of(STy->elements(), containsByteType);
+  return Ty->isByteOrByteVectorTy();
+}
+
 namespace {
 
 /// Recursive helper to read bits out of global. C is the constant being copied
@@ -569,6 +578,12 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
     }
     return true;
   }
+
+  // Read a `ConstantByte` as an integer with the same bits.
+  auto *CB = dyn_cast<ConstantByte>(C);
+  if (CB && CB->getType()->isByteTy())
+    return ReadDataFromGlobal(ConstantInt::get(C->getContext(), CB->getValue()),
+                              ByteOffset, CurPtr, BytesLeft, DL, IsByteLoad);
 
   auto *CFP = dyn_cast<ConstantFP>(C);
   if (CFP && CFP->getType()->isFloatingPointTy()) {
@@ -629,7 +644,7 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
   if (isa<ConstantArray>(C) || isa<ConstantVector>(C) ||
       isa<ConstantDataSequential>(C) || isa<ConstantInt>(C) ||
-      isa<ConstantFP>(C)) {
+      isa<ConstantFP>(C) || isa<ConstantByte>(C)) {
     uint64_t NumElts, EltSize;
     Type *EltTy;
     if (auto *AT = dyn_cast<ArrayType>(C->getType())) {
@@ -702,6 +717,17 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     if (!LoadTy->isFloatingPointTy() && !LoadTy->isPointerTy() &&
         !LoadTy->isByteTy() && !LoadTy->isVectorTy())
       return nullptr;
+
+    // Reinterpret pointers read from `ConstantByte` as a bitcast, rather than
+    // an inttoptr.
+    if (LoadTy->isPtrOrPtrVectorTy() &&
+        !DL.isNonIntegralPointerType(LoadTy->getScalarType()) &&
+        containsByteType(C->getType())) {
+      Type *ByteTy = DL.getBytePtrType(LoadTy);
+      if (Constant *Res =
+              FoldReinterpretLoadFromConst(C, ByteTy, ByteTy, Offset, DL))
+        return ConstantFoldCastOperand(Instruction::BitCast, Res, LoadTy, DL);
+    }
 
     Type *MapTy = Type::getIntNTy(C->getContext(),
                                   DL.getTypeSizeInBits(LoadTy).getFixedValue());
@@ -1634,11 +1660,10 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
       // If the input is an inttoptr, eliminate the pair.  This requires knowing
       // the width of a pointer, so it can't be done in ConstantExpr::getCast.
       if (CE->getOpcode() == Instruction::IntToPtr) {
-        // zext/trunc the inttoptr to pointer/address size.
-        Type *MidTy = Opcode == Instruction::PtrToInt
-                          ? DL.getAddressType(CE->getType())
-                          : DL.getIntPtrType(CE->getType());
-        FoldedValue = ConstantFoldIntegerCast(CE->getOperand(0), MidTy,
+        // zext/trunc the inttoptr to pointer size. ptrtoaddr is truncated to
+        // the address size below.
+        FoldedValue = ConstantFoldIntegerCast(CE->getOperand(0),
+                                              DL.getIntPtrType(CE->getType()),
                                               /*IsSigned=*/false, DL);
       } else if (auto *GEP = dyn_cast<GEPOperator>(CE)) {
         // If we have GEP, we can perform the following folds:
@@ -1718,6 +1743,10 @@ Constant *llvm::ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
   if (isa<PoisonValue>(Base) && isa<PoisonValue>(Val))
     return Base;
 
+  // TODO: Fold vectors element by element.
+  if (Base->getType()->isVectorTy())
+    return nullptr;
+
   auto *COffset = dyn_cast<ConstantInt>(Offset);
   if (!COffset)
     return nullptr;
@@ -1763,6 +1792,10 @@ Constant *llvm::ConstantFoldBitExtractOperands(Type *Ty, Constant *Src,
   // bitextract C, undef -> poison
   if (isa<PoisonValue>(Src) || isa<UndefValue>(Offset))
     return PoisonValue::get(Ty);
+
+  // TODO: Fold vectors element by element.
+  if (Ty->isVectorTy())
+    return nullptr;
 
   auto *COffset = dyn_cast<ConstantInt>(Offset);
   if (!COffset)

@@ -467,11 +467,6 @@ private:
   Instruction *foldAndOrOfSelectUsingImpliedCond(Value *Op, SelectInst &SI,
                                                  bool IsAnd);
 
-  /// Given that \p CondVal is known to be \p CondIsTrue, try to simplify
-  /// \p SI to one of its arms.
-  Value *simplifyNestedSelectsUsingImpliedCond(SelectInst &SI, Value *CondVal,
-                                               bool CondIsTrue);
-
   Instruction *hoistFNegAboveFMulFDiv(Value *FNegOp, Instruction &FMFSource);
 
   /// Simplify \p V given that it is known to be non-null.
@@ -565,6 +560,11 @@ public:
   // efficiently reorganized.
   Value *SimplifySelectsFeedingBinaryOp(BinaryOperator &I, Value *LHS,
                                         Value *RHS);
+
+  /// Given that \p CondVal is known to be \p CondIsTrue, try to simplify
+  /// \p SI to one of its arms.
+  Value *simplifyNestedSelectsUsingImpliedCond(SelectInst &SI, Value *CondVal,
+                                               bool CondIsTrue);
 
   // If `I` has operand `(ctpop (not x))`, fold `I` with `(sub nuw nsw
   // BitWidth(x), (ctpop x))`.
