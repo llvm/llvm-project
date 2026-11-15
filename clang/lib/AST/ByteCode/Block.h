@@ -84,7 +84,7 @@ public:
     return sizeof(Block) + getMetadataSize(K) + D->getAllocSize();
   }
 
-  static constexpr unsigned getMetadataSize(BlockKind K) {
+  static unsigned getMetadataSize(BlockKind K) {
     switch (K) {
     case None:
       return 0;
