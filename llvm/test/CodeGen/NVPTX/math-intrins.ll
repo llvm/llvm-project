@@ -243,6 +243,114 @@ define i32 @lround_i32_float(float %a) {
   ret i32 %b
 }
 
+define i64 @lround_i64_f16(half %x) {
+; CHECK-LABEL: lround_i64_f16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [lround_i64_f16_param_0];
+; CHECK-NEXT:    cvt.f32.f16 %r1, %rs1;
+; CHECK-NEXT:    and.b32 %r2, %r1, -2147483648;
+; CHECK-NEXT:    or.b32 %r3, %r2, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, %r3;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r5, %r4;
+; CHECK-NEXT:    abs.f32 %r6, %r1;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r6, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r7, %r1, %r5, %p1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r8, %r1;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r6, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r9, %r8, %r7, %p2;
+; CHECK-NEXT:    cvt.rzi.s64.f32 %rd1, %r9;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
+  %r = call i64 @llvm.lround.i64.f16(half %x)
+  ret i64 %r
+}
+
+define i32 @lround_i32_f16(half %x) {
+; CHECK-LABEL: lround_i32_f16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b32 %r<11>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [lround_i32_f16_param_0];
+; CHECK-NEXT:    cvt.f32.f16 %r1, %rs1;
+; CHECK-NEXT:    and.b32 %r2, %r1, -2147483648;
+; CHECK-NEXT:    or.b32 %r3, %r2, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, %r3;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r5, %r4;
+; CHECK-NEXT:    abs.f32 %r6, %r1;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r6, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r7, %r1, %r5, %p1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r8, %r1;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r6, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r9, %r8, %r7, %p2;
+; CHECK-NEXT:    cvt.rzi.s32.f32 %r10, %r9;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r10;
+; CHECK-NEXT:    ret;
+  %r = call i32 @llvm.lround.i32.f16(half %x)
+  ret i32 %r
+}
+
+define i64 @lround_i64_bf16(bfloat %x) {
+; CHECK-LABEL: lround_i64_bf16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b32 %r<11>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %r1, [lround_i64_bf16_param_0];
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-NEXT:    or.b32 %r4, %r3, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r5, %r2, %r4;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
+; CHECK-NEXT:    abs.f32 %r7, %r2;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r7, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r8, %r2, %r6, %p1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r9, %r2;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r7, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r10, %r9, %r8, %p2;
+; CHECK-NEXT:    cvt.rzi.s64.f32 %rd1, %r10;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
+  %r = call i64 @llvm.lround.i64.bf16(bfloat %x)
+  ret i64 %r
+}
+
+define i32 @lround_i32_bf16(bfloat %x) {
+; CHECK-LABEL: lround_i32_bf16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b32 %r<12>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %r1, [lround_i32_bf16_param_0];
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-NEXT:    or.b32 %r4, %r3, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r5, %r2, %r4;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
+; CHECK-NEXT:    abs.f32 %r7, %r2;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r7, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r8, %r2, %r6, %p1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r9, %r2;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r7, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r10, %r9, %r8, %p2;
+; CHECK-NEXT:    cvt.rzi.s32.f32 %r11, %r10;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r11;
+; CHECK-NEXT:    ret;
+  %r = call i32 @llvm.lround.i32.bf16(bfloat %x)
+  ret i32 %r
+}
+
 define i64 @lround_i64_float(float %a) {
 ; CHECK-LABEL: lround_i64_float(
 ; CHECK:       {
@@ -366,6 +474,62 @@ define i64 @cpu_lround_i64_double(double %a) {
   %b = call i64 @llvm.lround.i64.f64(double %a)
   ret i64 %b
 }
+
+define i64 @llround_i64_f16(half %x) {
+; CHECK-LABEL: llround_i64_f16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [llround_i64_f16_param_0];
+; CHECK-NEXT:    cvt.f32.f16 %r1, %rs1;
+; CHECK-NEXT:    and.b32 %r2, %r1, -2147483648;
+; CHECK-NEXT:    or.b32 %r3, %r2, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, %r3;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r5, %r4;
+; CHECK-NEXT:    abs.f32 %r6, %r1;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r6, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r7, %r1, %r5, %p1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r8, %r1;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r6, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r9, %r8, %r7, %p2;
+; CHECK-NEXT:    cvt.rzi.s64.f32 %rd1, %r9;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
+  %r = call i64 @llvm.llround.i64.f16(half %x)
+  ret i64 %r
+}
+
+define i64 @llround_i64_bf16(bfloat %x) {
+; CHECK-LABEL: llround_i64_bf16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b32 %r<11>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %r1, [llround_i64_bf16_param_0];
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-NEXT:    or.b32 %r4, %r3, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r5, %r2, %r4;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
+; CHECK-NEXT:    abs.f32 %r7, %r2;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r7, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r8, %r2, %r6, %p1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r9, %r2;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r7, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r10, %r9, %r8, %p2;
+; CHECK-NEXT:    cvt.rzi.s64.f32 %rd1, %r10;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
+  %r = call i64 @llvm.llround.i64.bf16(bfloat %x)
+  ret i64 %r
+}
+
 
 ; ---- nearbyint ----
 

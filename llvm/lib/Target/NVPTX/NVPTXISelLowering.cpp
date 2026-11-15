@@ -999,6 +999,12 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f32, MVT::f64}, Expand);
 
+  // Promote (not Expand): the f16/bf16 -> f32 extension is exact, so this
+  // avoids the intermediate round back to f16/bf16 that expanding to
+  // FP_TO_SINT(FROUND(x)) would introduce.
+  setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f16, MVT::bf16},
+                     Promote);
+
   // 'Expand' implements FCOPYSIGN without calling an external library.
   setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::v2f16, Expand);
