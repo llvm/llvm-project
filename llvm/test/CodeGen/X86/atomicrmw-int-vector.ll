@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -mattr=+cx16 | FileCheck %s --check-prefixes=CHECK,CX16
 ; RUN: llc < %s -mtriple=i686-linux-gnu | FileCheck %s --check-prefixes=X86
 
-define void @atomicrmw_add_v2i32(ptr %p, <2 x i32> %v) {
+define void @atomicrmw_add_v2i32(ptr %p, <2 x i32> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_add_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
