@@ -5924,8 +5924,8 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
-  if (CM.isMaskRequired(HistInfo->Store))
-    HGramOps.push_back(VPI->getMask());
+  if (VPValue *Mask = VPI->getMask())
+    HGramOps.push_back(Mask);
 
   return new VPHistogramRecipe(HistInfo->UpdateKind, HGramOps,
                                cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());

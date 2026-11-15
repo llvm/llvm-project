@@ -1723,6 +1723,102 @@ define i64 @wslli_i32(i32 %x, i64 %y) {
   ret i64 %b
 }
 
+define i64 @lshr_zext_i32(i32 %x, i64 %y) {
+; RV32-LABEL: lshr_zext_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    nsrl a0, a0, a2
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: lshr_zext_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    srl a0, a0, a1
+; RV64-NEXT:    ret
+  %a = zext i32 %x to i64
+  %b = lshr i64 %a, %y
+  ret i64 %b
+}
+
+define i64 @ashr_zext_i32(i32 %x, i64 %y) {
+; RV32-LABEL: ashr_zext_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    nsrl a0, a0, a2
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: ashr_zext_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    srl a0, a0, a1
+; RV64-NEXT:    ret
+  %a = zext i32 %x to i64
+  %b = ashr i64 %a, %y
+  ret i64 %b
+}
+
+define i64 @lshr_sext_i32(i32 %x, i64 %y) {
+; RV32-LABEL: lshr_sext_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    srai a1, a0, 31
+; RV32-NEXT:    slli a3, a2, 26
+; RV32-NEXT:    srl a4, a1, a2
+; RV32-NEXT:    srai a3, a3, 31
+; RV32-NEXT:    nsrl a0, a0, a2
+; RV32-NEXT:    andn a1, a4, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: lshr_sext_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    srl a0, a0, a1
+; RV64-NEXT:    ret
+  %a = sext i32 %x to i64
+  %b = lshr i64 %a, %y
+  ret i64 %b
+}
+
+define i64 @ashr_sext_i32(i32 %x, i64 %y) {
+; RV32-LABEL: ashr_sext_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    srai a1, a0, 31
+; RV32-NEXT:    nsra a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: ashr_sext_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    sra a0, a0, a1
+; RV64-NEXT:    ret
+  %a = sext i32 %x to i64
+  %b = ashr i64 %a, %y
+  ret i64 %b
+}
+
+define i64 @lshr_sext_i32_2(i32 %x) {
+; RV32-LABEL: lshr_sext_i32_2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a1, a0, 31
+; RV32-NEXT:    nsrli a0, a0, 2
+; RV32-NEXT:    srli a1, a1, 2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: lshr_sext_i32_2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    srli a0, a0, 2
+; RV64-NEXT:    ret
+  %a = sext i32 %x to i64
+  %b = lshr i64 %a, 2
+  ret i64 %b
+}
+
 ; Test that mulh continues to be used with P.
 define i32 @mulh_i32(i32 %x, i32 %y) {
 ; RV32-LABEL: mulh_i32:

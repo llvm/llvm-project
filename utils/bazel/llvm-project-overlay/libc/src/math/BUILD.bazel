@@ -782,6 +782,8 @@ libc_math_function(
     name = "ddivf128",
     additional_deps = [
         "//libc/src/__support/math:ddivf128",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
     ],
 )
 
