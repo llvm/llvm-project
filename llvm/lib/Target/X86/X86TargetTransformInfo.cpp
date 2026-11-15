@@ -8312,10 +8312,28 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
   // Division whose operands fit in 8 bits goes through a reciprocal estimate
   // of the divisor, and a uniform divisor only needs one. Sink the splat so
   // SDAG can see it. This mirrors the operand checks in combineIntDivRem.
-  if (ST->hasSSE2() && (I->getOpcode() == Instruction::UDiv ||
-                        I->getOpcode() == Instruction::SDiv ||
-                        I->getOpcode() == Instruction::URem ||
-                        I->getOpcode() == Instruction::SRem)) {
+  unsigned DivRemOpc = I->getOpcode();
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::masked_udiv:
+      DivRemOpc = Instruction::UDiv;
+      break;
+    case Intrinsic::masked_sdiv:
+      DivRemOpc = Instruction::SDiv;
+      break;
+    case Intrinsic::masked_urem:
+      DivRemOpc = Instruction::URem;
+      break;
+    case Intrinsic::masked_srem:
+      DivRemOpc = Instruction::SRem;
+      break;
+    default:
+      break;
+    }
+  }
+  if (ST->hasSSE2() &&
+      (DivRemOpc == Instruction::UDiv || DivRemOpc == Instruction::SDiv ||
+       DivRemOpc == Instruction::URem || DivRemOpc == Instruction::SRem)) {
     auto *Shuf = dyn_cast<ShuffleVectorInst>(I->getOperand(1));
     if (!Shuf || getSplatIndex(Shuf->getShuffleMask()) < 0 ||
         VTy->getNumElements() == 1 ||
@@ -8326,8 +8344,8 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
     if (EltBits > 32 &&
         (EltBits != 64 || !ST->hasDQI() || !ST->useAVX512Regs()))
       return false;
-    bool IsSigned = I->getOpcode() == Instruction::SDiv ||
-                    I->getOpcode() == Instruction::SRem;
+    bool IsSigned =
+        DivRemOpc == Instruction::SDiv || DivRemOpc == Instruction::SRem;
     const DataLayout &DL = I->getDataLayout();
     auto FitsI8 = [&](const Value *V) {
       if (IsSigned)
