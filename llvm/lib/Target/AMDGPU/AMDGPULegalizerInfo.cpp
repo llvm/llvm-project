@@ -1264,9 +1264,19 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                     .legalFor({{F32, I32}, {F64, I32}})
                     .widenScalarFor({{F16, I32}}, changeElementSizeTo(0, F32))
                     .lowerIf(typeIs(1, I1))
-                    .customFor({{F32, I64}, {F64, I64}});
+                    .customFor({{F32, I64}, {F64, I64}, {BF16, I32},
+                                {BF16, I64}});
   if (ST.has16BitInsts())
     IToFP.legalFor({{F16, I16}});
+  // Sources of up to 24 bits convert to f32 exactly, so the only rounding is
+  // the f32 -> bf16 fptrunc. Wider ones are custom lowered from i32 or i64.
+  IToFP
+      .widenScalarIf(all(typeIs(0, BF16), scalarNarrowerThan(1, 25)),
+                     changeElementTo(0, F32))
+      .widenScalarIf(all(typeIs(0, BF16), scalarNarrowerThan(1, 32)),
+                     changeElementTo(1, I32))
+      .widenScalarIf(all(typeIs(0, BF16), scalarNarrowerThan(1, 64)),
+                     changeElementTo(1, I64));
   IToFP.clampScalar(1, I32, I64)
       .minScalar(0, F32)
       .scalarize(0)
@@ -2901,6 +2911,31 @@ bool AMDGPULegalizerInfo::legalizeIntrinsicTrunc(
   return true;
 }
 
+// Round the i32 \p N to odd at bit 8 when it does not fit in f32's 24 bits,
+// so the conversion to f32 is exact. With at least 17 significant bits left,
+// the f32 -> bf16 fptrunc then rounds \p N correctly.
+static Register roundToOddForBF16(MachineIRBuilder &B, Register N,
+                                  bool Signed) {
+  const LLT I32 = LLT::integer(32);
+  const LLT S1 = LLT::scalar(1);
+
+  // (N | ((N & 0xff) + 0xff)) & ~0xff sets bit 8 if any of bits 0-7 are set,
+  // then clears them.
+  auto Low = B.buildAnd(I32, N, B.buildConstant(I32, 0xff));
+  auto Sticky = B.buildAdd(I32, Low, B.buildConstant(I32, 0xff));
+  auto Odd = B.buildAnd(I32, B.buildOr(I32, N, Sticky),
+                        B.buildConstant(I32, ~0xffu));
+
+  // |N| >= 2^24, or N >= 2^24 if unsigned.
+  Register Mag = N;
+  if (Signed)
+    Mag = B.buildAdd(I32, N, B.buildConstant(I32, 1 << 24)).getReg(0);
+  auto Wide = B.buildICmp(CmpInst::ICMP_UGT, S1, Mag,
+                          B.buildConstant(I32, Signed ? (2 << 24) - 1
+                                                      : (1 << 24) - 1));
+  return B.buildSelect(I32, Wide, Odd, N).getReg(0);
+}
+
 bool AMDGPULegalizerInfo::legalizeITOFP(
   MachineInstr &MI, MachineRegisterInfo &MRI,
   MachineIRBuilder &B, bool Signed) const {
@@ -2910,6 +2945,15 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
 
   const LLT I64 = LLT::integer(64);
   const LLT I32 = LLT::integer(32);
+
+  if (MRI.getType(Src) == I32) {
+    assert(MRI.getType(Dst) == BF16);
+    Register N = roundToOddForBF16(B, Src, Signed);
+    auto FVal = Signed ? B.buildSITOFP(F32, N) : B.buildUITOFP(F32, N);
+    B.buildFPTrunc(Dst, FVal, MachineInstr::FmNoNans);
+    MI.eraseFromParent();
+    return true;
+  }
 
   assert(MRI.getType(Src) == I64);
 
@@ -2929,7 +2973,8 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
     return true;
   }
 
-  assert(MRI.getType(Dst) == F32);
+  const LLT DstTy = MRI.getType(Dst);
+  assert(DstTy == F32 || DstTy == BF16);
 
   auto One = B.buildConstant(I32, 1);
 
@@ -2948,10 +2993,19 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
   auto Norm = B.buildShl(I64, Src, ShAmt);
   auto Unmerge2 = B.buildUnmerge({I32, I32}, Norm);
   auto Adjust = B.buildUMin(I32, One, Unmerge2.getReg(0));
-  auto Norm2 = B.buildOr(I32, Unmerge2.getReg(1), Adjust);
+  Register Norm2 = B.buildOr(I32, Unmerge2.getReg(1), Adjust).getReg(0);
+  // Norm2 is the source if it fits, else its top 31 or 32 bits with the
+  // dropped bits ORed into bit 0. For bf16, round it to odd so that the f32
+  // conversion is exact and only the final fptrunc rounds.
+  if (DstTy == BF16)
+    Norm2 = roundToOddForBF16(B, Norm2, Signed);
   auto FVal = Signed ? B.buildSITOFP(F32, Norm2) : B.buildUITOFP(F32, Norm2);
   auto Scale = B.buildSub(I32, ThirtyTwo, ShAmt);
-  B.buildFLdexp(Dst, FVal, Scale);
+  if (DstTy == BF16)
+    B.buildFPTrunc(Dst, B.buildFLdexp(F32, FVal, Scale),
+                   MachineInstr::FmNoNans);
+  else
+    B.buildFLdexp(Dst, FVal, Scale);
   MI.eraseFromParent();
   return true;
 }
