@@ -2945,22 +2945,28 @@ void CodeGenFunction::EmitVTableCheck(CFITypeCheckKind TCK, CanQualType T,
   auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
   EmitSanitizerStatReport(SSK);
 
+  llvm::ConstantInt *CrossDsoTypeId =
+      UseCrossDsoSlowPath ? CGM.CreateCrossDsoCfiTypeId(MD) : nullptr;
+  if (!CrossDsoTypeId && (CGM.getCodeGenOpts().SanitizeTrap.has(M) ||
+                          CGM.getCodeGenOpts().SanitizeMinimalRuntime)) {
+    EmitCheck(std::make_pair(TypeTest, M), SanitizerHandler::CFICheckFail, {},
+              {});
+    return;
+  }
+
+  if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
+    EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, VTable, {});
+    return;
+  }
+
   llvm::Constant *StaticData[] = {
       llvm::ConstantInt::get(Int8Ty, TCK),
       EmitCheckSourceLocation(Loc),
       EmitCheckTypeDescriptor(T),
   };
 
-  llvm::ConstantInt *CrossDsoTypeId =
-      UseCrossDsoSlowPath ? CGM.CreateCrossDsoCfiTypeId(MD) : nullptr;
   if (CrossDsoTypeId) {
     EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, VTable, StaticData);
-    return;
-  }
-
-  if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
-    bool NoMerge = !CGM.getCodeGenOpts().SanitizeMergeHandlers.has(M);
-    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail, NoMerge);
     return;
   }
 
