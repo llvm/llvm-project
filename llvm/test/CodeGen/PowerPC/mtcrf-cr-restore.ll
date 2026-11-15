@@ -3,10 +3,7 @@
 ;
 ; The epilogue restores the non-volatile CR fields with mtcrf.  The post-RA
 ; scheduler must not move that restore above reads of the CR bits it writes.
-;
-; FIXME: MTCRF does not model the CR fields it writes, so the restore is
-; currently hoisted above some CR2/CR3 reads.  Update this test once MTCRF
-; models its defs.  See https://github.com/llvm/llvm-project/issues/242250.
+; See https://github.com/llvm/llvm-project/issues/242250.
 
 define signext i32 @restore_cr_after_uses(i128 %value, i1 %cond) {
 ; CHECK-LABEL: restore_cr_after_uses:
@@ -37,8 +34,8 @@ define signext i32 @restore_cr_after_uses(i128 %value, i1 %cond) {
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    crandc 20, 8, 30
 ; CHECK-NEXT:    lwz 12, 8(1)
-; CHECK-NEXT:    mtcrf 48, 12
 ; CHECK-NEXT:    crand 22, 30, 12
+; CHECK-NEXT:    mtcrf 48, 12
 ; CHECK-NEXT:    crnor 20, 22, 20
 ; CHECK-NEXT:    isel 4, 0, 3, 20
 ; CHECK-NEXT:    crandc 20, 24, 6
