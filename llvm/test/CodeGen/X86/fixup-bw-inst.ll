@@ -5,6 +5,8 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.8.0"
 
+declare i16 @llvm.bswap.i16(i16)
+
 %struct.A = type { i8, i8, i8, i8, i8, i8, i8, i8 }
 
 ; This has byte loads interspersed with byte stores, in a single
@@ -168,4 +170,47 @@ define void @foo4(ptr%dst, ptr%src) {
   %t0 = load i16, ptr%src, align 2
   store i16 %t0, ptr%dst, align 2
   ret void
+}
+
+; A byte-swapped word load that is zero-extended. Once the load becomes a
+; movzwl, the upper bits are already zero, so the final movzwl is redundant.
+define i32 @foo5(ptr %p) {
+; BWON-LABEL: foo5:
+; BWON:       ## %bb.0:
+; BWON-NEXT:    movzwl (%rdi), %eax
+; BWON-NEXT:    rolw $8, %ax
+; BWON-NEXT:    movzwl %ax, %eax
+; BWON-NEXT:    retq
+;
+; BWOFF-LABEL: foo5:
+; BWOFF:       ## %bb.0:
+; BWOFF-NEXT:    movw (%rdi), %ax
+; BWOFF-NEXT:    rolw $8, %ax
+; BWOFF-NEXT:    movzwl %ax, %eax
+; BWOFF-NEXT:    retq
+  %v = load i16, ptr %p, align 1
+  %s = call i16 @llvm.bswap.i16(i16 %v)
+  %z = zext i16 %s to i32
+  ret i32 %z
+}
+
+; Same as above but with i64
+define i64 @foo6(ptr %p) {
+; BWON-LABEL: foo6:
+; BWON:       ## %bb.0:
+; BWON-NEXT:    movzwl (%rdi), %eax
+; BWON-NEXT:    rolw $8, %ax
+; BWON-NEXT:    movzwl %ax, %eax
+; BWON-NEXT:    retq
+;
+; BWOFF-LABEL: foo6:
+; BWOFF:       ## %bb.0:
+; BWOFF-NEXT:    movw (%rdi), %ax
+; BWOFF-NEXT:    rolw $8, %ax
+; BWOFF-NEXT:    movzwl %ax, %eax
+; BWOFF-NEXT:    retq
+  %v = load i16, ptr %p, align 1
+  %s = call i16 @llvm.bswap.i16(i16 %v)
+  %z = zext i16 %s to i64
+  ret i64 %z
 }
