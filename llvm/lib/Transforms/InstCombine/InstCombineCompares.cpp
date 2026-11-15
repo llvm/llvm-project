@@ -8951,8 +8951,13 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
     ExtNextCValue = ExtCValue + Bias;
   }
 
-  APFloat ExtMidValue =
-      scalbn(ExtCValue + ExtNextCValue, -1, APFloat::rmNearestTiesToEven);
+  APFloat ExtSum = ExtCValue + ExtNextCValue;
+  APFloat ExtMidValue = scalbn(ExtSum, -1, APFloat::rmNearestTiesToEven);
+  // Adjacent finite endpoints can overflow when added, even though their
+  // midpoint is representable. Scale the endpoints before adding in that case.
+  if (ExtSum.isInfinity() && ExtCValue.isFinite() && ExtNextCValue.isFinite())
+    ExtMidValue = scalbn(ExtCValue, -1, APFloat::rmNearestTiesToEven) +
+                  scalbn(ExtNextCValue, -1, APFloat::rmNearestTiesToEven);
 
   const fltSemantics &SrcFltSema =
       C.getType()->getScalarType()->getFltSemantics();
