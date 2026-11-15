@@ -16,7 +16,6 @@
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/CodeGenCWrappers.h"
 #include "llvm/Target/TargetOptions.h"
@@ -106,7 +105,7 @@ LLVMBool LLVMCreateExecutionEngineForModule(LLVMExecutionEngineRef *OutEE,
                                             char **OutError) {
   std::string Error;
   TargetOptions TO;
-  TO.MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
+  TO.MCOptions.LibraryOptions = &unwrap(M)->getContext().getLibraryOptions();
   EngineBuilder builder(std::unique_ptr<Module>(unwrap(M)));
   builder.setEngineKind(EngineKind::Either)
       .setErrorStr(&Error)
@@ -140,7 +139,7 @@ LLVMBool LLVMCreateJITCompilerForModule(LLVMExecutionEngineRef *OutJIT,
                                         char **OutError) {
   std::string Error;
   TargetOptions TO;
-  TO.MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
+  TO.MCOptions.LibraryOptions = &unwrap(M)->getContext().getLibraryOptions();
   EngineBuilder builder(std::unique_ptr<Module>(unwrap(M)));
   builder.setEngineKind(EngineKind::JIT)
       .setErrorStr(&Error)
@@ -187,7 +186,8 @@ LLVMBool LLVMCreateMCJITCompilerForModule(
 
   TargetOptions targetOptions;
   targetOptions.EnableFastISel = options.EnableFastISel;
-  targetOptions.MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
+  targetOptions.MCOptions.LibraryOptions =
+      &unwrap(M)->getContext().getLibraryOptions();
   std::unique_ptr<Module> Mod(unwrap(M));
 
   if (Mod)
