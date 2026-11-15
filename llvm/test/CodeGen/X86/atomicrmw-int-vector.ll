@@ -6,7 +6,7 @@
 define void @atomicrmw_add_v2i32(ptr %p, <2 x i32> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_add_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movq (%rdi), %xmm1 # xmm1 = mem[0],zero
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -22,17 +22,9 @@ define void @atomicrmw_add_v2i32(ptr %p, <2 x i32> %v) nounwind {
 ; X86-LABEL: atomicrmw_add_v2i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
@@ -47,13 +39,9 @@ define void @atomicrmw_add_v2i32(ptr %p, <2 x i32> %v) nounwind {
 ; X86-NEXT:    jne .LBB0_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw add ptr %p, <2 x i32> %v seq_cst
   ret void
@@ -542,7 +530,7 @@ define void @atomicrmw_xor_v4i32(ptr %p, <4 x i32> %v) {
 define <2 x i32> @atomicrmw_add_v2i32_result(ptr %p, <2 x i32> %v) {
 ; CHECK-LABEL: atomicrmw_add_v2i32_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movq (%rdi), %xmm1 # xmm1 = mem[0],zero
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB6_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -636,7 +624,7 @@ define void @atomicrmw_or_zero_v2i32_unused(ptr %p) {
 define <2 x i32> @atomicrmw_or_zero_v2i32_used(ptr %p) {
 ; CHECK-LABEL: atomicrmw_or_zero_v2i32_used:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movq (%rdi), %xmm0 # xmm0 = mem[0],zero
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB8_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -679,7 +667,7 @@ define <2 x i32> @atomicrmw_or_zero_v2i32_used(ptr %p) {
 define <2 x i16> @atomicrmw_or_zero_v2i16_used(ptr %p, <2 x i16> %v) {
 ; CHECK-LABEL: atomicrmw_or_zero_v2i16_used:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movd (%rdi), %xmm0 # xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB9_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -724,7 +712,7 @@ define <2 x i16> @atomicrmw_or_zero_v2i16_used(ptr %p, <2 x i16> %v) {
 define <4 x i8> @atomicrmw_or_zero_v4i8_used(ptr %p, <4 x i8> %v) {
 ; CHECK-LABEL: atomicrmw_or_zero_v4i8_used:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movd (%rdi), %xmm0 # xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB10_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1228,7 +1216,7 @@ define void @atomicrmw_xor_v2i32_const(ptr %p) {
 define <2 x i32> @atomicrmw_and_v2i32_used(ptr %p, <2 x i32> %v) {
 ; CHECK-LABEL: atomicrmw_and_v2i32_used:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movq (%rdi), %xmm1 # xmm1 = mem[0],zero
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB19_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1301,7 +1289,7 @@ define void @atomicrmw_or_v2i32_align4(ptr %p, <2 x i32> %v) {
 ; CHECK-NEXT:    .cfi_offset %r15, -16
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd (%rdi), %xmm0 # xmm0 = mem[0],zero
 ; CHECK-NEXT:    movq %rsp, %r14
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %r15
 ; CHECK-NEXT:    .p2align 4
@@ -1317,7 +1305,7 @@ define void @atomicrmw_or_v2i32_align4(ptr %p, <2 x i32> %v) {
 ; CHECK-NEXT:    movl $5, %r8d
 ; CHECK-NEXT:    movl $5, %r9d
 ; CHECK-NEXT:    callq __atomic_compare_exchange@PLT
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd (%rsp), %xmm0 # xmm0 = mem[0],zero
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB20_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
