@@ -2148,8 +2148,8 @@ static bool canConvertValue(const DataLayout &DL, Type *OldTy, Type *NewTy,
   if (!NewTy->isSingleValueType() || !OldTy->isSingleValueType())
     return false;
 
-  // We can convert pointers to integers and vice-versa. Same for vectors
-  // of pointers and integers.
+  // We can convert pointers to integers or bytes and vice-versa. Same for
+  // vectors of pointers and integers or bytes.
   OldTy = OldTy->getScalarType();
   NewTy = NewTy->getScalarType();
   if (NewTy->isPointerTy() || OldTy->isPointerTy()) {
@@ -2165,15 +2165,15 @@ static bool canConvertValue(const DataLayout &DL, Type *OldTy, Type *NewTy,
               DL.getPointerSize(OldAS) == DL.getPointerSize(NewAS));
     }
 
-    // We can convert integers to integral pointers, but not to non-integral
-    // pointers.
-    if (OldTy->isIntegerTy())
+    // We can convert integers and bytes to integral pointers, but not to
+    // non-integral pointers.
+    if (OldTy->isIntegerTy() || OldTy->isByteTy())
       return !DL.isNonIntegralPointerType(NewTy);
 
-    // We can convert integral pointers to integers, but non-integral pointers
-    // need to remain pointers.
+    // We can convert integral pointers to integers and bytes, but
+    // non-integral pointers need to remain pointers.
     if (!DL.isNonIntegralPointerType(OldTy))
-      return NewTy->isIntegerTy();
+      return NewTy->isIntegerTy() || NewTy->isByteTy();
 
     return false;
   }
@@ -2267,12 +2267,11 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
 ///
 /// This implements the necessary checking for \c isVectorPromotionViable over
 /// all slices of the alloca for the given VectorType.
-static VectorType *
-checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
-                             SmallVectorImpl<VectorType *> &CandidateTys,
-                             bool HaveCommonEltTy, Type *CommonEltTy,
-                             bool HaveVecPtrTy, bool HaveCommonVecPtrTy,
-                             VectorType *CommonVecPtrTy, unsigned VScale) {
+static VectorType *checkVectorTypesForPromotion(
+    Partition &P, const DataLayout &DL,
+    SmallVectorImpl<VectorType *> &CandidateTys, bool HaveCommonEltTy,
+    Type *CommonEltTy, bool HaveVecPtrTy, bool HaveVecByteTy,
+    bool HaveCommonVecPtrTy, VectorType *CommonVecPtrTy, unsigned VScale) {
   // If we didn't find a vector type, nothing to do here.
   if (CandidateTys.empty())
     return nullptr;
@@ -2290,9 +2289,13 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
     CandidateTys.clear();
     CandidateTys.push_back(CommonVecPtrTy);
   } else if (!HaveCommonEltTy && !HaveVecPtrTy) {
-    // Integer-ify vector types.
+    // Integer-ify vector types. If any of them holds bytes, use byte vectors
+    // instead, as integers drop pointer provenance and per-bit poison.
     for (VectorType *&VTy : CandidateTys) {
-      if (!VTy->getElementType()->isIntegerTy())
+      if (HaveVecByteTy)
+        VTy = cast<VectorType>(VTy->getWithNewType(
+            Type::getByteNTy(VTy->getContext(), VTy->getScalarSizeInBits())));
+      else if (!VTy->getElementType()->isIntegerTy())
         VTy = cast<VectorType>(VTy->getWithNewType(IntegerType::getIntNTy(
             VTy->getContext(), VTy->getScalarSizeInBits())));
     }
@@ -2304,10 +2307,12 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
       assert(DL.getTypeSizeInBits(RHSTy).getFixedValue() ==
                  DL.getTypeSizeInBits(LHSTy).getFixedValue() &&
              "Cannot have vector types of different sizes!");
-      assert(RHSTy->getElementType()->isIntegerTy() &&
-             "All non-integer types eliminated!");
-      assert(LHSTy->getElementType()->isIntegerTy() &&
-             "All non-integer types eliminated!");
+      assert((RHSTy->getElementType()->isIntegerTy() ||
+              RHSTy->getElementType()->isByteTy()) &&
+             "All non-integer and non-byte types eliminated!");
+      assert((LHSTy->getElementType()->isIntegerTy() ||
+              LHSTy->getElementType()->isByteTy()) &&
+             "All non-integer and non-byte types eliminated!");
       return cast<FixedVectorType>(RHSTy)->getNumElements() <
              cast<FixedVectorType>(LHSTy)->getNumElements();
     };
@@ -2316,10 +2321,12 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
       assert(DL.getTypeSizeInBits(RHSTy).getFixedValue() ==
                  DL.getTypeSizeInBits(LHSTy).getFixedValue() &&
              "Cannot have vector types of different sizes!");
-      assert(RHSTy->getElementType()->isIntegerTy() &&
-             "All non-integer types eliminated!");
-      assert(LHSTy->getElementType()->isIntegerTy() &&
-             "All non-integer types eliminated!");
+      assert((RHSTy->getElementType()->isIntegerTy() ||
+              RHSTy->getElementType()->isByteTy()) &&
+             "All non-integer and non-byte types eliminated!");
+      assert((LHSTy->getElementType()->isIntegerTy() ||
+              LHSTy->getElementType()->isByteTy()) &&
+             "All non-integer and non-byte types eliminated!");
       return cast<FixedVectorType>(RHSTy)->getNumElements() ==
              cast<FixedVectorType>(LHSTy)->getNumElements();
     };
@@ -2378,7 +2385,8 @@ static VectorType *createAndCheckVectorTypesForPromotion(
     function_ref<void(Type *)> CheckCandidateType, Partition &P,
     const DataLayout &DL, SmallVectorImpl<VectorType *> &CandidateTys,
     bool &HaveCommonEltTy, Type *&CommonEltTy, bool &HaveVecPtrTy,
-    bool &HaveCommonVecPtrTy, VectorType *&CommonVecPtrTy, unsigned VScale) {
+    bool &HaveVecByteTy, bool &HaveCommonVecPtrTy, VectorType *&CommonVecPtrTy,
+    unsigned VScale) {
   [[maybe_unused]] VectorType *OriginalElt =
       CandidateTysCopy.size() ? CandidateTysCopy[0] : nullptr;
   // Consider additional vector types where the element type size is a
@@ -2405,7 +2413,7 @@ static VectorType *createAndCheckVectorTypesForPromotion(
 
   return checkVectorTypesForPromotion(
       P, DL, CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
-      HaveCommonVecPtrTy, CommonVecPtrTy, VScale);
+      HaveVecByteTy, HaveCommonVecPtrTy, CommonVecPtrTy, VScale);
 }
 
 /// Test whether the given alloca partitioning and range of slices can be
@@ -2427,6 +2435,7 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL,
   Type *CommonEltTy = nullptr;
   VectorType *CommonVecPtrTy = nullptr;
   bool HaveVecPtrTy = false;
+  bool HaveVecByteTy = false;
   bool HaveCommonEltTy = true;
   bool HaveCommonVecPtrTy = true;
   auto CheckCandidateType = [&](Type *Ty) {
@@ -2455,6 +2464,9 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL,
         else if (CommonVecPtrTy != VTy)
           HaveCommonVecPtrTy = false;
       }
+
+      if (EltTy->isByteTy())
+        HaveVecByteTy = true;
     }
   };
 
@@ -2485,14 +2497,14 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL,
   if (auto *VTy = createAndCheckVectorTypesForPromotion(
           LoadStoreTys, CandidateTysCopy, CheckCandidateType, P, DL,
           CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
-          HaveCommonVecPtrTy, CommonVecPtrTy, VScale))
+          HaveVecByteTy, HaveCommonVecPtrTy, CommonVecPtrTy, VScale))
     return VTy;
 
   CandidateTys.clear();
   return createAndCheckVectorTypesForPromotion(
       DeferredTys, CandidateTysCopy, CheckCandidateType, P, DL, CandidateTys,
-      HaveCommonEltTy, CommonEltTy, HaveVecPtrTy, HaveCommonVecPtrTy,
-      CommonVecPtrTy, VScale);
+      HaveCommonEltTy, CommonEltTy, HaveVecPtrTy, HaveVecByteTy,
+      HaveCommonVecPtrTy, CommonVecPtrTy, VScale);
 }
 
 /// Test whether a slice of an alloca is valid for integer widening.
@@ -2635,6 +2647,140 @@ static bool isIntegerWideningViable(Partition &P, Type *AllocaTy,
   return WholeAllocaOp;
 }
 
+/// Test whether a partial load or store of the given type can be rewritten
+/// with bitextract or bitinsert.
+static bool canExtractOrInsertBits(const DataLayout &DL, Type *Ty) {
+  // Bitextract and bitinsert only take scalar integer, floating-point, pointer
+  // and byte types.
+  if (!Ty->isIntegerTy() && !Ty->isFloatingPointTy() && !Ty->isPointerTy() &&
+      !Ty->isByteTy())
+    return false;
+  if (DL.getTypeSizeInBits(Ty) != DL.getTypeStoreSizeInBits(Ty))
+    return false;
+  // Non-integral pointers need to remain pointers.
+  return !DL.isNonIntegralPointerType(Ty);
+}
+
+/// Test whether a slice of an alloca is valid for byte widening.
+///
+/// This implements the necessary checking for the \c isByteWideningViable
+/// test below on a single slice of the alloca.
+static bool isByteWideningViableForSlice(const Slice &S,
+                                         uint64_t AllocBeginOffset,
+                                         Type *AllocaTy, const DataLayout &DL,
+                                         bool &WholeAllocaOp, bool &ByteOp) {
+  uint64_t Size = DL.getTypeStoreSize(AllocaTy).getFixedValue();
+
+  uint64_t RelBegin = S.beginOffset() - AllocBeginOffset;
+  uint64_t RelEnd = S.endOffset() - AllocBeginOffset;
+
+  Use *U = S.getUse();
+
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U->getUser())) {
+    if (II->isLifetimeStartOrEnd() || II->isDroppable())
+      return true;
+  }
+
+  // We can't reasonably handle cases where the load or store extends past
+  // the end of the alloca's type and into its padding.
+  if (RelEnd > Size)
+    return false;
+
+  if (LoadInst *LI = dyn_cast<LoadInst>(U->getUser())) {
+    if (LI->isVolatile())
+      return false;
+    // We can't handle loads that extend past the allocated memory.
+    TypeSize LoadSize = DL.getTypeStoreSize(LI->getType());
+    if (!LoadSize.isFixed() ||
+        LoadSize.getFixedValue() != S.endOffset() - S.beginOffset())
+      return false;
+    // So far, AllocaSliceRewriter does not support widening split slice tails
+    // in rewriteByteLoad.
+    if (S.beginOffset() < AllocBeginOffset)
+      return false;
+    // Note that we don't count vector loads or stores as whole-alloca
+    // operations which enable byte widening because we would prefer to use
+    // vector widening instead.
+    if (!isa<VectorType>(LI->getType()) && RelBegin == 0 && RelEnd == Size)
+      WholeAllocaOp = true;
+    if (LI->getType()->isByteOrByteVectorTy())
+      ByteOp = true;
+    if (RelBegin != 0 || RelEnd != Size) {
+      // Partial loads are rewritten with bitextract.
+      if (!canExtractOrInsertBits(DL, LI->getType()))
+        return false;
+    } else if (!canConvertValue(DL, AllocaTy, LI->getType())) {
+      // Whole-alloca loads need to be convertible from the alloca type so that
+      // they are promotable.
+      return false;
+    }
+  } else if (StoreInst *SI = dyn_cast<StoreInst>(U->getUser())) {
+    Type *ValueTy = SI->getValueOperand()->getType();
+    if (SI->isVolatile())
+      return false;
+    // We can't handle stores that extend past the allocated memory.
+    TypeSize StoreSize = DL.getTypeStoreSize(ValueTy);
+    if (!StoreSize.isFixed() ||
+        StoreSize.getFixedValue() != S.endOffset() - S.beginOffset())
+      return false;
+    // So far, AllocaSliceRewriter does not support widening split slice tails
+    // in rewriteByteStore.
+    if (S.beginOffset() < AllocBeginOffset)
+      return false;
+    // Note that we don't count vector loads or stores as whole-alloca
+    // operations which enable byte widening because we would prefer to use
+    // vector widening instead.
+    if (!isa<VectorType>(ValueTy) && RelBegin == 0 && RelEnd == Size)
+      WholeAllocaOp = true;
+    if (ValueTy->isByteOrByteVectorTy())
+      ByteOp = true;
+    if (RelBegin != 0 || RelEnd != Size) {
+      // Partial stores are rewritten with bitinsert.
+      if (!canExtractOrInsertBits(DL, ValueTy))
+        return false;
+    } else if (!canConvertValue(DL, ValueTy, AllocaTy)) {
+      // Whole-alloca stores need to be convertible to the alloca type so that
+      // they are promotable.
+      return false;
+    }
+  } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(U->getUser())) {
+    if (MI->isVolatile() || !isa<Constant>(MI->getLength()))
+      return false;
+    if (!S.isSplittable())
+      return false; // Skip any unsplittable intrinsics.
+  } else {
+    return false;
+  }
+
+  return true;
+}
+
+/// Test whether the given alloca partition's byte operations can be widened
+/// to promotable ones.
+///
+/// This is like \c isIntegerWideningViable, but partial loads and stores are
+/// rewritten with bitextract and bitinsert, which preserve pointer provenance
+/// and poison bits.
+static bool isByteWideningViable(Partition &P, Type *AllocaTy,
+                                 const DataLayout &DL) {
+  // While examining uses, we ensure that the alloca has a covering load or
+  // store, and that at least one of them accesses bytes.
+  bool WholeAllocaOp = false;
+  bool ByteOp = false;
+
+  for (const Slice &S : P)
+    if (!isByteWideningViableForSlice(S, P.beginOffset(), AllocaTy, DL,
+                                      WholeAllocaOp, ByteOp))
+      return false;
+
+  for (const Slice *S : P.splitSliceTails())
+    if (!isByteWideningViableForSlice(*S, P.beginOffset(), AllocaTy, DL,
+                                      WholeAllocaOp, ByteOp))
+      return false;
+
+  return WholeAllocaOp && ByteOp;
+}
+
 static Value *extractInteger(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
                              IntegerType *Ty, uint64_t Offset,
                              const Twine &Name) {
@@ -2690,6 +2836,39 @@ static Value *insertInteger(const DataLayout &DL, IRBuilderTy &IRB, Value *Old,
     V = IRB.CreateOr(Old, V, Name + ".insert");
     LLVM_DEBUG(dbgs() << "    inserted: " << *V << "\n");
   }
+  return V;
+}
+
+static Value *extractBits(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
+                          Type *Ty, uint64_t Offset, const Twine &Name) {
+  LLVM_DEBUG(dbgs() << "       start: " << *V << "\n");
+  ByteType *ByteTy = cast<ByteType>(V->getType());
+  assert(DL.getTypeStoreSize(Ty).getFixedValue() + Offset <=
+             DL.getTypeStoreSize(ByteTy).getFixedValue() &&
+         "Element extends past full value");
+  uint64_t BitOffset = 8 * Offset;
+  if (DL.isBigEndian())
+    BitOffset = 8 * (DL.getTypeStoreSize(ByteTy).getFixedValue() -
+                     DL.getTypeStoreSize(Ty).getFixedValue() - Offset);
+  V = IRB.CreateBitExtract(Ty, V, IRB.getInt32(BitOffset), Name);
+  LLVM_DEBUG(dbgs() << "   extracted: " << *V << "\n");
+  return V;
+}
+
+static Value *insertBits(const DataLayout &DL, IRBuilderTy &IRB, Value *Old,
+                         Value *V, uint64_t Offset, const Twine &Name) {
+  ByteType *ByteTy = cast<ByteType>(Old->getType());
+  Type *Ty = V->getType();
+  LLVM_DEBUG(dbgs() << "       start: " << *V << "\n");
+  assert(DL.getTypeStoreSize(Ty).getFixedValue() + Offset <=
+             DL.getTypeStoreSize(ByteTy).getFixedValue() &&
+         "Element store outside of alloca store");
+  uint64_t BitOffset = 8 * Offset;
+  if (DL.isBigEndian())
+    BitOffset = 8 * (DL.getTypeStoreSize(ByteTy).getFixedValue() -
+                     DL.getTypeStoreSize(Ty).getFixedValue() - Offset);
+  V = IRB.CreateBitInsert(Old, V, IRB.getInt32(BitOffset), Name);
+  LLVM_DEBUG(dbgs() << "    inserted: " << *V << "\n");
   return V;
 }
 
@@ -2873,6 +3052,11 @@ class AllocaSliceRewriter : public InstVisitor<AllocaSliceRewriter, bool> {
   // integer type will be stored here for easy access during rewriting.
   IntegerType *IntTy;
 
+  // Like IntTy, but set when the partition holds byte values and passed
+  // isByteWideningViable above. Partial loads and stores are then rewritten
+  // with bitextract and bitinsert on this byte type.
+  ByteType *ByteTy;
+
   // If we are rewriting an alloca partition which can be written as pure
   // vector operations, we stash extra information here. When VecTy is
   // non-null, we have some strict guarantees about the rewritten alloca:
@@ -2924,7 +3108,7 @@ public:
                       AllocaInst &OldAI, AllocaInst &NewAI, Type *NewAllocaTy,
                       uint64_t NewAllocaBeginOffset,
                       uint64_t NewAllocaEndOffset, bool IsIntegerPromotable,
-                      VectorType *PromotableVecTy,
+                      bool IsBytePromotable, VectorType *PromotableVecTy,
                       SmallSetVector<PHINode *, 8> &PHIUsers,
                       SmallSetVector<SelectInst *, 8> &SelectUsers)
       : DL(DL), AS(AS), Pass(Pass), OldAI(OldAI), NewAI(NewAI),
@@ -2935,6 +3119,7 @@ public:
                         NewAI.getContext(),
                         DL.getTypeSizeInBits(NewAllocaTy).getFixedValue())
                   : nullptr),
+        ByteTy(IsBytePromotable ? cast<ByteType>(NewAllocaTy) : nullptr),
         VecTy(PromotableVecTy),
         ElementTy(VecTy ? VecTy->getElementType() : nullptr),
         ElementSize(VecTy ? DL.getTypeSizeInBits(ElementTy).getFixedValue() / 8
@@ -2947,6 +3132,8 @@ public:
       ++NumVectorized;
     }
     assert((!IntTy && !VecTy) || (IntTy && !VecTy) || (!IntTy && VecTy));
+    assert((!ByteTy || (!IntTy && !VecTy)) &&
+           "Byte widening excludes integer and vector widening");
   }
 
   bool visit(AllocaSlices::const_iterator I) {
@@ -3532,6 +3719,16 @@ private:
     return V;
   }
 
+  Value *rewriteByteLoad(LoadInst &LI) {
+    assert(ByteTy && "We cannot extract bits from the alloca");
+    assert(!LI.isVolatile());
+    Value *V =
+        IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
+    assert(NewBeginOffset >= NewAllocaBeginOffset && "Out of bounds offset");
+    uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
+    return extractBits(DL, IRB, V, LI.getType(), Offset, "extract");
+  }
+
   bool visitLoadInst(LoadInst &LI) {
     LLVM_DEBUG(dbgs() << "    original: " << LI << "\n");
     Value *OldOp = LI.getOperand(0);
@@ -3549,6 +3746,9 @@ private:
       V = rewriteVectorizedLoadInst(LI);
     } else if (IntTy && LI.getType()->isIntegerTy()) {
       V = rewriteIntegerLoad(LI);
+    } else if (ByteTy && (NewBeginOffset != NewAllocaBeginOffset ||
+                          NewEndOffset != NewAllocaEndOffset)) {
+      V = rewriteByteLoad(LI);
     } else if (NewBeginOffset == NewAllocaBeginOffset &&
                NewEndOffset == NewAllocaEndOffset &&
                (canConvertValue(DL, NewAllocaTy, TargetTy) ||
@@ -3712,6 +3912,30 @@ private:
     return true;
   }
 
+  bool rewriteByteStore(Value *V, StoreInst &SI, AAMDNodes AATags) {
+    assert(ByteTy && "We cannot insert bits into the alloca");
+    assert(!SI.isVolatile());
+    Value *Old =
+        IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "oldload");
+    assert(NewBeginOffset >= NewAllocaBeginOffset && "Out of bounds offset");
+    uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
+    V = insertBits(DL, IRB, Old, V, Offset, "insert");
+    StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlign());
+    Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
+                             LLVMContext::MD_access_group});
+    if (AATags)
+      Store->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
+                                                  V->getType(), DL));
+
+    migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &SI,
+                     Store, Store->getPointerOperand(),
+                     Store->getValueOperand(), DL);
+
+    Pass.DeadInsts.push_back(&SI);
+    LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
+    return true;
+  }
+
   bool visitStoreInst(StoreInst &SI) {
     LLVM_DEBUG(dbgs() << "    original: " << SI << "\n");
     Value *OldOp = SI.getOperand(1);
@@ -3742,6 +3966,9 @@ private:
       return rewriteVectorizedStoreInst(V, SI, OldOp, AATags);
     if (IntTy && V->getType()->isIntegerTy())
       return rewriteIntegerStore(V, SI, AATags);
+    if (ByteTy && (NewBeginOffset != NewAllocaBeginOffset ||
+                   NewEndOffset != NewAllocaEndOffset))
+      return rewriteByteStore(V, SI, AATags);
 
     StoreInst *NewSI;
     if (NewBeginOffset == NewAllocaBeginOffset &&
@@ -3843,7 +4070,7 @@ private:
     Type *ScalarTy = NewAllocaTy->getScalarType();
 
     const bool CanContinue = [&]() {
-      if (VecTy || IntTy)
+      if (VecTy || IntTy || ByteTy)
         return true;
       if (BeginOffset > NewAllocaBeginOffset || EndOffset < NewAllocaEndOffset)
         return false;
@@ -3925,6 +4152,18 @@ private:
                "Wrong type for an alloca wide integer!");
       }
       V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
+    } else if (ByteTy && (NewBeginOffset != NewAllocaBeginOffset ||
+                          NewEndOffset != NewAllocaEndOffset)) {
+      // If this is a memset on an alloca where we can widen byte stores,
+      // insert the set integer.
+      assert(!II.isVolatile());
+
+      uint64_t Size = NewEndOffset - NewBeginOffset;
+      V = getIntegerSplat(II.getValue(), Size);
+      Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
+                                         "oldload");
+      uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
+      V = insertBits(DL, IRB, Old, V, Offset, "insert");
     } else {
       // Established these invariants above.
       assert(NewBeginOffset == NewAllocaBeginOffset);
@@ -4004,7 +4243,7 @@ private:
     // If this doesn't map cleanly onto the alloca type, and that type isn't
     // a single value type, just emit a memcpy.
     bool EmitMemCpy =
-        !VecTy && !IntTy &&
+        !VecTy && !IntTy && !ByteTy &&
         (BeginOffset > NewAllocaBeginOffset || EndOffset < NewAllocaEndOffset ||
          SliceSize != DL.getTypeStoreSize(NewAllocaTy).getFixedValue() ||
          !DL.typeSizeEqualsStoreSize(NewAllocaTy) ||
@@ -4097,6 +4336,8 @@ private:
     unsigned NumElements = EndIndex - BeginIndex;
     IntegerType *SubIntTy =
         IntTy ? Type::getIntNTy(IntTy->getContext(), Size * 8) : nullptr;
+    ByteType *SubByteTy =
+        ByteTy ? Type::getByteNTy(ByteTy->getContext(), Size * 8) : nullptr;
 
     // Reset the other pointer type to match the register type we're going to
     // use, but using the address space of the original other pointer.
@@ -4108,6 +4349,8 @@ private:
         OtherTy = FixedVectorType::get(VecTy->getElementType(), NumElements);
     } else if (IntTy && !IsWholeAlloca) {
       OtherTy = SubIntTy;
+    } else if (ByteTy && !IsWholeAlloca) {
+      OtherTy = SubByteTy;
     } else {
       OtherTy = NewAllocaTy;
     }
@@ -4141,6 +4384,11 @@ private:
       Src = IRB.CreateBitPreservingCastChain(DL, Src, IntTy);
       uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
       Src = extractInteger(DL, IRB, Src, SubIntTy, Offset, "extract");
+    } else if (ByteTy && !IsWholeAlloca && !IsDest) {
+      Src =
+          IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
+      uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
+      Src = extractBits(DL, IRB, Src, SubByteTy, Offset, "extract");
     } else {
       LoadInst *Load = IRB.CreateAlignedLoad(OtherTy, SrcPtr, SrcAlign,
                                              II.isVolatile(), "copyload");
@@ -4163,6 +4411,11 @@ private:
       uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
       Src = insertInteger(DL, IRB, Old, Src, Offset, "insert");
       Src = IRB.CreateBitPreservingCastChain(DL, Src, NewAllocaTy);
+    } else if (ByteTy && !IsWholeAlloca && IsDest) {
+      Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
+                                         "oldload");
+      uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
+      Src = insertBits(DL, IRB, Old, Src, Offset, "insert");
     }
 
     StoreInst *Store = cast<StoreInst>(
@@ -5642,18 +5895,28 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
   return VTy;
 }
 
+namespace {
+struct PartitionTypeSelection {
+  Type *PartitionType;
+  bool IsIntegerWideningViable;
+  VectorType *VecTy;
+  bool IsByteWideningViable = false;
+};
+} // namespace
+
 /// Select a partition type for an alloca partition.
 ///
 /// Try to compute a friendly type for this partition of the alloca. This
 /// won't always succeed, in which case we fall back to a legal integer type
 /// or an i8 array of an appropriate size.
 ///
-/// \returns A tuple with the following elements:
+/// \returns A struct with the following elements:
 ///   - PartitionType: The computed type for this partition.
 ///   - IsIntegerWideningViable: True if integer widening promotion is used.
 ///   - VectorType: The vector type if vector promotion is used, otherwise
 ///     nullptr.
-static std::tuple<Type *, bool, VectorType *>
+///   - IsByteWideningViable: True if byte widening promotion is used.
+static PartitionTypeSelection
 selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
                     LLVMContext &C, bool AggregateToVector) {
   auto LogSelection = [&](StringRef Path, Type *SelectedTy,
@@ -5679,7 +5942,7 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // First check if the partition is viable for vector promotion.
   //
   // We prefer vector promotion over integer widening promotion when:
-  // - The vector element type is a floating-point type.
+  // - The vector element type is a floating-point or byte type.
   // - All the loads/stores to the alloca are vector loads/stores to the
   //   entire alloca or load/store a single element of the vector.
   //
@@ -5688,13 +5951,26 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // doing bitwise arithmetic and we generate better code.
   VectorType *VecTy =
       isVectorPromotionViable(P, DL, AI.getFunction()->getVScaleValue());
-  // If the vector element type is a floating-point type, we prefer vector
-  // promotion. If the vector has one element, let the below code select
+  // If the vector element type is a floating-point or byte type, we prefer
+  // vector promotion. If the vector has one element, let the below code select
   // whether we promote with the vector or scalar.
-  if (VecTy && VecTy->getElementType()->isFloatingPointTy() &&
+  if (VecTy &&
+      (VecTy->getElementType()->isFloatingPointTy() ||
+       VecTy->getElementType()->isByteTy()) &&
       VecTy->getElementCount().getFixedValue() > 1) {
     LogSelection("direct-fp-vecty", VecTy, VecTy, false);
     return {VecTy, false, VecTy};
+  }
+
+  // Integers drop pointer provenance, and a single poison bit makes the whole
+  // integer poison. Widen partitions with byte accesses through a byte type
+  // instead, using bitextract and bitinsert for partial accesses.
+  if (P.size() * 8 <= ByteType::MAX_BYTE_BITS) {
+    Type *ByteTy = Type::getByteNTy(C, P.size() * 8);
+    if (isByteWideningViable(P, ByteTy, DL)) {
+      LogSelection("byte-widen", ByteTy, nullptr, false);
+      return {ByteTy, false, nullptr, true};
+    }
   }
 
   // Check if there is a common type that all slices of the partition use that
@@ -5796,7 +6072,7 @@ std::pair<AllocaInst *, uint64_t>
 SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
   // Select the type for the new alloca that spans the partition.
-  auto [PartitionTy, IsIntegerWideningViable, VecTy] =
+  auto [PartitionTy, IsIntegerWideningViable, VecTy, IsByteWideningViable] =
       selectPartitionType(P, DL, AI, *C, AggregateToVector);
 
   // Check for the case where we're going to rewrite to a new alloca of the
@@ -5835,9 +6111,10 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   SmallSetVector<PHINode *, 8> PHIUsers;
   SmallSetVector<SelectInst *, 8> SelectUsers;
 
-  AllocaSliceRewriter Rewriter(
-      DL, AS, *this, AI, *NewAI, PartitionTy, P.beginOffset(), P.endOffset(),
-      IsIntegerWideningViable, VecTy, PHIUsers, SelectUsers);
+  AllocaSliceRewriter Rewriter(DL, AS, *this, AI, *NewAI, PartitionTy,
+                               P.beginOffset(), P.endOffset(),
+                               IsIntegerWideningViable, IsByteWideningViable,
+                               VecTy, PHIUsers, SelectUsers);
   bool Promotable = true;
   // Check whether we can have tree-structured merge.
   if (auto DeletedValues = Rewriter.rewriteTreeStructuredMerge(P)) {
