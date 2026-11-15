@@ -36,8 +36,14 @@ struct Value {
 
 // GCC may pass a pointer to the original non-trivial firstprivate object in
 // the source environment and construct the object inline in the copied one.
-struct Source { Value *original; int *observed; };
-struct alignas(128) Copied { Value value; int *observed; };
+struct Source {
+  Value *original;
+  int *observed;
+};
+struct alignas(128) Copied {
+  Value value;
+  int *observed;
+};
 
 static void copy(void *destination, void *source) {
   auto *from = static_cast<Source *>(source);
