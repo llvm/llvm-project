@@ -87,17 +87,19 @@ define internal void @sink_ptr_to_int(ptr %this.64.val, ptr %val1, i64 %val2, i3
 ; CHECK-NEXT:    [[CMP_NOT_NOT:%.*]] = icmp eq i32 [[VAL3]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT_NOT]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[VAL1]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[VAL2]] to ptr
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ptr [[VAL1]] to b64
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[VAL2]] to b64
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast ptr [[VAL1]] to b64
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64 [[VAL2]] to b64
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[VAL2_SINK:%.*]] = phi i64 [ [[TMP0]], [[IF_THEN]] ], [ [[VAL2]], [[IF_ELSE]] ]
-; CHECK-NEXT:    [[VAL1_SINK:%.*]] = phi ptr [ [[TMP1]], [[IF_THEN]] ], [ [[VAL1]], [[IF_ELSE]] ]
-; CHECK-NEXT:    store i64 [[VAL2_SINK]], ptr [[THIS_64_VAL]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[THIS_64_VAL]], i64 16
-; CHECK-NEXT:    store ptr [[VAL1_SINK]], ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[VAL2_SINK:%.*]] = phi b64 [ [[TMP0]], [[IF_THEN]] ], [ [[TMP3]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[VAL1_SINK:%.*]] = phi b64 [ [[TMP1]], [[IF_THEN]] ], [ [[TMP2]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store b64 [[VAL2_SINK]], ptr [[THIS_64_VAL]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[THIS_64_VAL]], i64 16
+; CHECK-NEXT:    store b64 [[VAL1_SINK]], ptr [[TMP4]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -286,13 +288,13 @@ define void @sink_byte_to_int(ptr %p, i1 %c, b64 %a, i64 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast b64 [[A]] to i64
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[B]] to b64
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[B_SINK:%.*]] = phi i64 [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
-; CHECK-NEXT:    store i64 [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi b64 [ [[A]], [[IF_THEN]] ], [ [[TMP0]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store b64 [[B_SINK]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -346,13 +348,13 @@ define void @sink_vec_to_wider_int(ptr %p, i1 %c, <2 x i8> %a, i16 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i8> [[A]] to i16
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16 [[B]] to <2 x i8>
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[B_SINK:%.*]] = phi i16 [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
-; CHECK-NEXT:    store i16 [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi <2 x i8> [ [[A]], [[IF_THEN]] ], [ [[TMP0]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store <2 x i8> [[B_SINK]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -376,13 +378,14 @@ define void @sink_mismatched_lanes(ptr %p, i1 %c, <2 x i24> %a, <3 x i16> %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i24> [[A]] to <3 x i16>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i24> [[A]] to b48
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i16> [[B]] to b48
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[B_SINK:%.*]] = phi <3 x i16> [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
-; CHECK-NEXT:    store <3 x i16> [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi b48 [ [[TMP0]], [[IF_THEN]] ], [ [[TMP1]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store b48 [[B_SINK]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -406,13 +409,14 @@ define void @sink_scalable_mismatched_lanes(ptr %p, i1 %c, <vscale x 2 x i24> %a
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i24> [[A]] to <vscale x 3 x i16>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i24> [[A]] to <vscale x 6 x b8>
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 3 x i16> [[B]] to <vscale x 6 x b8>
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[B_SINK:%.*]] = phi <vscale x 3 x i16> [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
-; CHECK-NEXT:    store <vscale x 3 x i16> [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi <vscale x 6 x b8> [ [[TMP0]], [[IF_THEN]] ], [ [[TMP1]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store <vscale x 6 x b8> [[B_SINK]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -436,13 +440,13 @@ define void @sink_byte_to_fp(ptr %p, i1 %c, b64 %a, double %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast b64 [[A]] to double
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double [[B]] to b64
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[B_SINK:%.*]] = phi double [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
-; CHECK-NEXT:    store double [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi b64 [ [[A]], [[IF_THEN]] ], [ [[TMP0]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store b64 [[B_SINK]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -466,13 +470,13 @@ define void @sink_byte_vec_to_int(ptr %p, i1 %c, <2 x b32> %a, i64 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x b32> [[A]] to i64
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[B]] to <2 x b32>
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[B_SINK:%.*]] = phi i64 [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
-; CHECK-NEXT:    store i64 [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi <2 x b32> [ [[A]], [[IF_THEN]] ], [ [[TMP0]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store <2 x b32> [[B_SINK]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -496,13 +500,14 @@ define void @sink_odd_size_mismatched_lanes(ptr %p, i1 %c, <2 x i3> %a, <3 x i2>
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i3> [[A]] to <3 x i2>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i3> [[A]] to b6
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i2> [[B]] to b6
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[B_SINK:%.*]] = phi <3 x i2> [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
-; CHECK-NEXT:    store <3 x i2> [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi b6 [ [[TMP0]], [[IF_THEN]] ], [ [[TMP1]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store b6 [[B_SINK]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -526,13 +531,14 @@ define void @sink_scalable_odd_size_mismatched_lanes(ptr %p, i1 %c, <vscale x 2 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i3> [[A]] to <vscale x 3 x i2>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i3> [[A]] to <vscale x 1 x b6>
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 3 x i2> [[B]] to <vscale x 1 x b6>
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[B_SINK:%.*]] = phi <vscale x 3 x i2> [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
-; CHECK-NEXT:    store <vscale x 3 x i2> [[B_SINK]], ptr [[P]], align 8
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi <vscale x 1 x b6> [ [[TMP0]], [[IF_THEN]] ], [ [[TMP1]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store <vscale x 1 x b6> [[B_SINK]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

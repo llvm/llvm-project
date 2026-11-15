@@ -206,8 +206,41 @@ StoreInst *MergedLoadStoreMotion::canSinkFromBlock(BasicBlock *BB1,
   return nullptr;
 }
 
+/// Return true if casting \p From to \p To neither drops provenance nor
+/// spreads poison across lanes.
+static bool isLosslessCast(Type *From, Type *To) {
+  if (From == To || To->isByteOrByteVectorTy())
+    return true;
+  if (From->isByteOrByteVectorTy() || From->isPtrOrPtrVectorTy() ||
+      To->isPtrOrPtrVectorTy())
+    return false;
+  // Casting to wider lanes makes a lane poison if any narrower lane is poison.
+  return From->getScalarSizeInBits() % To->getScalarSizeInBits() == 0;
+}
+
+/// Return the type in which stores of \p A and \p B can be merged without
+/// losing information, preferring \p A.
+static Type *getMergedStoreType(Type *A, Type *B, const DataLayout &DL) {
+  if (isLosslessCast(B, A))
+    return A;
+  if (isLosslessCast(A, B))
+    return B;
+
+  // Otherwise, merge in bytes of the same size. For scalable vectors, prefer
+  // b8 lanes, which targets can lower.
+  LLVMContext &Ctx = A->getContext();
+  TypeSize Bits = DL.getTypeSizeInBits(A);
+  if (!Bits.isScalable())
+    return ByteType::get(Ctx, Bits.getFixedValue());
+  unsigned MinBits = Bits.getKnownMinValue();
+  if (MinBits % 8 == 0)
+    return ScalableVectorType::get(ByteType::get(Ctx, 8), MinBits / 8);
+  return ScalableVectorType::get(ByteType::get(Ctx, MinBits), 1);
+}
+
 ///
-/// Create a PHI node in BB for the operands of S0 and S1
+/// Create a PHI node in BB for the operands of S0 and S1, casting them to a
+/// type they can be merged in without losing information
 ///
 PHINode *MergedLoadStoreMotion::getPHIOperand(BasicBlock *BB, StoreInst *S0,
                                               StoreInst *S1) {
@@ -217,11 +250,20 @@ PHINode *MergedLoadStoreMotion::getPHIOperand(BasicBlock *BB, StoreInst *S0,
   if (Opd1 == Opd2)
     return nullptr;
 
-  auto *NewPN = PHINode::Create(Opd1->getType(), 2, Opd2->getName() + ".sink");
+  // Insert bitcasts for conflicting typed stores (or just use original values
+  // if same type).
+  Type *MergedTy =
+      getMergedStoreType(Opd2->getType(), Opd1->getType(), S0->getDataLayout());
+  IRBuilder<> Builder(S0);
+  Value *Cast1 = Builder.CreateBitCast(Opd1, MergedTy);
+  Builder.SetInsertPoint(S1);
+  Value *Cast2 = Builder.CreateBitCast(Opd2, MergedTy);
+
+  auto *NewPN = PHINode::Create(MergedTy, 2, Opd2->getName() + ".sink");
   NewPN->insertBefore(BB->begin());
   NewPN->applyMergedLocation(S0->getDebugLoc(), S1->getDebugLoc());
-  NewPN->addIncoming(Opd1, S0->getParent());
-  NewPN->addIncoming(Opd2, S1->getParent());
+  NewPN->addIncoming(Cast1, S0->getParent());
+  NewPN->addIncoming(Cast2, S1->getParent());
   return NewPN;
 }
 
@@ -260,13 +302,6 @@ void MergedLoadStoreMotion::sinkStoresAndGEPs(BasicBlock *BB, StoreInst *S0,
   combineMetadataForCSE(S0, S1, true);
   S0->applyMergedLocation(S0->getDebugLoc(), S1->getDebugLoc());
   S0->mergeDIAssignID(S1);
-
-  // Insert bitcast for conflicting typed stores (or just use original value if
-  // same type).
-  IRBuilder<> Builder(S0);
-  auto Cast = Builder.CreateBitOrPointerCast(S0->getValueOperand(),
-                                             S1->getValueOperand()->getType());
-  S0->setOperand(0, Cast);
 
   // Create the new store to be inserted at the join point.
   StoreInst *SNew = cast<StoreInst>(S0->clone());
