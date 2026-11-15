@@ -24,15 +24,15 @@ define void @select_i32(i1 %cond, i32 %a, i32 %b) {
 
 define void @select_i64(i1 %cond, i64 %a, i64 %b) {
 ; ALL-LABEL: 'select_i64'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, i64 %a, i64 %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, i64 %a, i64 %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_i64'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, i64 %a, i64 %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, i64 %a, i64 %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_i64'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, i64 %a, i64 %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, i64 %a, i64 %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, i64 %a, i64 %b
@@ -58,15 +58,15 @@ define void @select_f32(i1 %cond, float %a, float %b) {
 
 define void @select_f64(i1 %cond, double %a, double %b) {
 ; ALL-LABEL: 'select_f64'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, double %a, double %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, double %a, double %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_f64'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, double %a, double %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, double %a, double %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_f64'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, double %a, double %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, double %a, double %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, double %a, double %b
@@ -109,15 +109,15 @@ define void @select_f16(i1 %cond, half %a, half %b) {
 
 define void @select_ptr(i1 %cond, ptr %a, ptr %b) {
 ; ALL-LABEL: 'select_ptr'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, ptr %a, ptr %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, ptr %a, ptr %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_ptr'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, ptr %a, ptr %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, ptr %a, ptr %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_ptr'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, ptr %a, ptr %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, ptr %a, ptr %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, ptr %a, ptr %b
@@ -126,15 +126,15 @@ define void @select_ptr(i1 %cond, ptr %a, ptr %b) {
 
 define void @select_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; ALL-LABEL: 'select_v2i32'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <2 x i32> %a, <2 x i32> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <2 x i32> %a, <2 x i32> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v2i32'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <2 x i32> %a, <2 x i32> %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <2 x i32> %a, <2 x i32> %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_v2i32'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <2 x i32> %a, <2 x i32> %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <2 x i32> %a, <2 x i32> %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, <2 x i32> %a, <2 x i32> %b
@@ -151,7 +151,7 @@ define void @select_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_v4i32'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <4 x i32> %a, <4 x i32> %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <4 x i32> %a, <4 x i32> %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, <4 x i32> %a, <4 x i32> %b
@@ -177,15 +177,15 @@ define void @select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 
 define void @select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; ALL-LABEL: 'select_v4i16'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <4 x i16> %a, <4 x i16> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <4 x i16> %a, <4 x i16> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v4i16'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <4 x i16> %a, <4 x i16> %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <4 x i16> %a, <4 x i16> %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_v4i16'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <4 x i16> %a, <4 x i16> %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <4 x i16> %a, <4 x i16> %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, <4 x i16> %a, <4 x i16> %b
@@ -194,15 +194,15 @@ define void @select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 
 define void @select_v2f32(i1 %cond, <2 x float> %a, <2 x float> %b) {
 ; ALL-LABEL: 'select_v2f32'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <2 x float> %a, <2 x float> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <2 x float> %a, <2 x float> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v2f32'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <2 x float> %a, <2 x float> %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <2 x float> %a, <2 x float> %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_v2f32'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <2 x float> %a, <2 x float> %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <2 x float> %a, <2 x float> %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, <2 x float> %a, <2 x float> %b
@@ -211,15 +211,15 @@ define void @select_v2f32(i1 %cond, <2 x float> %a, <2 x float> %b) {
 
 define void @select_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b) {
 ; ALL-LABEL: 'select_v4f32'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <4 x float> %a, <4 x float> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <4 x float> %a, <4 x float> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v4f32'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <4 x float> %a, <4 x float> %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <4 x float> %a, <4 x float> %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_v4f32'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <4 x float> %a, <4 x float> %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <4 x float> %a, <4 x float> %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, <4 x float> %a, <4 x float> %b
@@ -245,15 +245,15 @@ define void @select_v2f16(i1 %cond, <2 x half> %a, <2 x half> %b) {
 
 define void @select_v4f16(i1 %cond, <4 x half> %a, <4 x half> %b) {
 ; ALL-LABEL: 'select_v4f16'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <4 x half> %a, <4 x half> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <4 x half> %a, <4 x half> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v4f16'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <4 x half> %a, <4 x half> %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <4 x half> %a, <4 x half> %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_v4f16'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <4 x half> %a, <4 x half> %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <4 x half> %a, <4 x half> %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, <4 x half> %a, <4 x half> %b
@@ -270,7 +270,7 @@ define void @select_v3i32(i1 %cond, <3 x i32> %a, <3 x i32> %b) {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_v3i32'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <3 x i32> %a, <3 x i32> %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sel = select i1 %cond, <3 x i32> %a, <3 x i32> %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, <3 x i32> %a, <3 x i32> %b
@@ -279,15 +279,15 @@ define void @select_v3i32(i1 %cond, <3 x i32> %a, <3 x i32> %b) {
 
 define void @select_v3f32(i1 %cond, <3 x float> %a, <3 x float> %b) {
 ; ALL-LABEL: 'select_v3f32'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <3 x float> %a, <3 x float> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sel = select i1 %cond, <3 x float> %a, <3 x float> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v3f32'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <3 x float> %a, <3 x float> %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sel = select i1 %cond, <3 x float> %a, <3 x float> %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_v3f32'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <3 x float> %a, <3 x float> %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sel = select i1 %cond, <3 x float> %a, <3 x float> %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, <3 x float> %a, <3 x float> %b
@@ -296,15 +296,15 @@ define void @select_v3f32(i1 %cond, <3 x float> %a, <3 x float> %b) {
 
 define void @select_v3i16(i1 %cond, <3 x i16> %a, <3 x i16> %b) {
 ; ALL-LABEL: 'select_v3i16'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <3 x i16> %a, <3 x i16> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <3 x i16> %a, <3 x i16> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v3i16'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <3 x i16> %a, <3 x i16> %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <3 x i16> %a, <3 x i16> %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_v3i16'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <3 x i16> %a, <3 x i16> %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <3 x i16> %a, <3 x i16> %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, <3 x i16> %a, <3 x i16> %b
@@ -313,15 +313,15 @@ define void @select_v3i16(i1 %cond, <3 x i16> %a, <3 x i16> %b) {
 
 define void @select_v3f16(i1 %cond, <3 x half> %a, <3 x half> %b) {
 ; ALL-LABEL: 'select_v3f16'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <3 x half> %a, <3 x half> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <3 x half> %a, <3 x half> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v3f16'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <3 x half> %a, <3 x half> %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <3 x half> %a, <3 x half> %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_v3f16'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <3 x half> %a, <3 x half> %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <3 x half> %a, <3 x half> %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, <3 x half> %a, <3 x half> %b
@@ -330,15 +330,15 @@ define void @select_v3f16(i1 %cond, <3 x half> %a, <3 x half> %b) {
 
 define void @select_v2ptr(i1 %cond, <2 x ptr> %a, <2 x ptr> %b) {
 ; ALL-LABEL: 'select_v2ptr'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <2 x ptr> %a, <2 x ptr> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <2 x ptr> %a, <2 x ptr> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v2ptr'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <2 x ptr> %a, <2 x ptr> %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <2 x ptr> %a, <2 x ptr> %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_v2ptr'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <2 x ptr> %a, <2 x ptr> %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <2 x ptr> %a, <2 x ptr> %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, <2 x ptr> %a, <2 x ptr> %b
@@ -347,18 +347,186 @@ define void @select_v2ptr(i1 %cond, <2 x ptr> %a, <2 x ptr> %b) {
 
 define void @select_v4ptr(i1 %cond, <4 x ptr> %a, <4 x ptr> %b) {
 ; ALL-LABEL: 'select_v4ptr'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <4 x ptr> %a, <4 x ptr> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %sel = select i1 %cond, <4 x ptr> %a, <4 x ptr> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v4ptr'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <4 x ptr> %a, <4 x ptr> %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %sel = select i1 %cond, <4 x ptr> %a, <4 x ptr> %b
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; ALL-SIZE-LATENCY-LABEL: 'select_v4ptr'
-; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <4 x ptr> %a, <4 x ptr> %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %sel = select i1 %cond, <4 x ptr> %a, <4 x ptr> %b
 ; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %sel = select i1 %cond, <4 x ptr> %a, <4 x ptr> %b
+  ret void
+}
+
+define void @select() {
+; ALL-LABEL: 'select'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = select i1 poison, i64 poison, i64 poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = select i1 poison, <2 x i64> poison, <2 x i64> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I64 = select i1 poison, <4 x i64> poison, <4 x i64> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V8I64 = select i1 poison, <8 x i64> poison, <8 x i64> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = select i1 poison, double poison, double poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = select i1 poison, <2 x double> poison, <2 x double> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = select i1 poison, <4 x double> poison, <4 x double> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V8F64 = select i1 poison, <8 x double> poison, <8 x double> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = select i1 poison, i32 poison, i32 poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I32 = select i1 poison, <2 x i32> poison, <2 x i32> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = select i1 poison, <4 x i32> poison, <4 x i32> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = select i1 poison, <8 x i32> poison, <8 x i32> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I32 = select i1 poison, <16 x i32> poison, <16 x i32> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = select i1 poison, float poison, float poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F32 = select i1 poison, <2 x float> poison, <2 x float> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = select i1 poison, <4 x float> poison, <4 x float> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = select i1 poison, <8 x float> poison, <8 x float> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16F32 = select i1 poison, <16 x float> poison, <16 x float> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = select i1 poison, i16 poison, i16 poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I16 = select i1 poison, <2 x i16> poison, <2 x i16> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I16 = select i1 poison, <4 x i16> poison, <4 x i16> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = select i1 poison, <8 x i16> poison, <8 x i16> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I16 = select i1 poison, <16 x i16> poison, <16 x i16> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V32I16 = select i1 poison, <32 x i16> poison, <32 x i16> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16 = select i1 poison, half poison, half poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F16 = select i1 poison, <2 x half> poison, <2 x half> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F16 = select i1 poison, <4 x half> poison, <4 x half> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F16 = select i1 poison, <8 x half> poison, <8 x half> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F16 = select i1 poison, <16 x half> poison, <16 x half> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V32F16 = select i1 poison, <32 x half> poison, <32 x half> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = select i1 poison, i8 poison, i8 poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I8 = select i1 poison, <2 x i8> poison, <2 x i8> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I8 = select i1 poison, <4 x i8> poison, <4 x i8> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I8 = select i1 poison, <8 x i8> poison, <8 x i8> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I8 = select i1 poison, <16 x i8> poison, <16 x i8> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I8 = select i1 poison, <32 x i8> poison, <32 x i8> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %V64I8 = select i1 poison, <64 x i8> poison, <64 x i8> poison
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'select'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = select i1 poison, i64 poison, i64 poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = select i1 poison, <2 x i64> poison, <2 x i64> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I64 = select i1 poison, <4 x i64> poison, <4 x i64> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V8I64 = select i1 poison, <8 x i64> poison, <8 x i64> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = select i1 poison, double poison, double poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = select i1 poison, <2 x double> poison, <2 x double> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = select i1 poison, <4 x double> poison, <4 x double> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V8F64 = select i1 poison, <8 x double> poison, <8 x double> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = select i1 poison, i32 poison, i32 poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I32 = select i1 poison, <2 x i32> poison, <2 x i32> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = select i1 poison, <4 x i32> poison, <4 x i32> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = select i1 poison, <8 x i32> poison, <8 x i32> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I32 = select i1 poison, <16 x i32> poison, <16 x i32> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = select i1 poison, float poison, float poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F32 = select i1 poison, <2 x float> poison, <2 x float> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = select i1 poison, <4 x float> poison, <4 x float> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = select i1 poison, <8 x float> poison, <8 x float> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16F32 = select i1 poison, <16 x float> poison, <16 x float> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = select i1 poison, i16 poison, i16 poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I16 = select i1 poison, <2 x i16> poison, <2 x i16> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I16 = select i1 poison, <4 x i16> poison, <4 x i16> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = select i1 poison, <8 x i16> poison, <8 x i16> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I16 = select i1 poison, <16 x i16> poison, <16 x i16> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V32I16 = select i1 poison, <32 x i16> poison, <32 x i16> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16 = select i1 poison, half poison, half poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F16 = select i1 poison, <2 x half> poison, <2 x half> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F16 = select i1 poison, <4 x half> poison, <4 x half> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F16 = select i1 poison, <8 x half> poison, <8 x half> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F16 = select i1 poison, <16 x half> poison, <16 x half> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V32F16 = select i1 poison, <32 x half> poison, <32 x half> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = select i1 poison, i8 poison, i8 poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I8 = select i1 poison, <2 x i8> poison, <2 x i8> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I8 = select i1 poison, <4 x i8> poison, <4 x i8> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I8 = select i1 poison, <8 x i8> poison, <8 x i8> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I8 = select i1 poison, <16 x i8> poison, <16 x i8> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I8 = select i1 poison, <32 x i8> poison, <32 x i8> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %V64I8 = select i1 poison, <64 x i8> poison, <64 x i8> poison
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'select'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = select i1 poison, i64 poison, i64 poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = select i1 poison, <2 x i64> poison, <2 x i64> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I64 = select i1 poison, <4 x i64> poison, <4 x i64> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V8I64 = select i1 poison, <8 x i64> poison, <8 x i64> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = select i1 poison, double poison, double poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = select i1 poison, <2 x double> poison, <2 x double> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = select i1 poison, <4 x double> poison, <4 x double> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V8F64 = select i1 poison, <8 x double> poison, <8 x double> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = select i1 poison, i32 poison, i32 poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I32 = select i1 poison, <2 x i32> poison, <2 x i32> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = select i1 poison, <4 x i32> poison, <4 x i32> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = select i1 poison, <8 x i32> poison, <8 x i32> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I32 = select i1 poison, <16 x i32> poison, <16 x i32> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = select i1 poison, float poison, float poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F32 = select i1 poison, <2 x float> poison, <2 x float> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = select i1 poison, <4 x float> poison, <4 x float> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = select i1 poison, <8 x float> poison, <8 x float> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16F32 = select i1 poison, <16 x float> poison, <16 x float> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = select i1 poison, i16 poison, i16 poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I16 = select i1 poison, <2 x i16> poison, <2 x i16> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I16 = select i1 poison, <4 x i16> poison, <4 x i16> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = select i1 poison, <8 x i16> poison, <8 x i16> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I16 = select i1 poison, <16 x i16> poison, <16 x i16> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V32I16 = select i1 poison, <32 x i16> poison, <32 x i16> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16 = select i1 poison, half poison, half poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F16 = select i1 poison, <2 x half> poison, <2 x half> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F16 = select i1 poison, <4 x half> poison, <4 x half> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F16 = select i1 poison, <8 x half> poison, <8 x half> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F16 = select i1 poison, <16 x half> poison, <16 x half> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V32F16 = select i1 poison, <32 x half> poison, <32 x half> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = select i1 poison, i8 poison, i8 poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I8 = select i1 poison, <2 x i8> poison, <2 x i8> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I8 = select i1 poison, <4 x i8> poison, <4 x i8> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I8 = select i1 poison, <8 x i8> poison, <8 x i8> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I8 = select i1 poison, <16 x i8> poison, <16 x i8> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I8 = select i1 poison, <32 x i8> poison, <32 x i8> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %V64I8 = select i1 poison, <64 x i8> poison, <64 x i8> poison
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %I64 = select i1 poison, i64 poison, i64 poison
+  %V2I64 = select i1 poison, <2 x i64> poison, <2 x i64> poison
+  %V4I64 = select i1 poison, <4 x i64> poison, <4 x i64> poison
+  %V8I64 = select i1 poison, <8 x i64> poison, <8 x i64> poison
+
+  %F64 = select i1 poison, double poison, double poison
+  %V2F64 = select i1 poison, <2 x double> poison, <2 x double> poison
+  %V4F64 = select i1 poison, <4 x double> poison, <4 x double> poison
+  %V8F64 = select i1 poison, <8 x double> poison, <8 x double> poison
+
+  %I32 = select i1 poison, i32 poison, i32 poison
+  %V2I32 = select i1 poison, <2 x i32> poison, <2 x i32> poison
+  %V4I32 = select i1 poison, <4 x i32> poison, <4 x i32> poison
+  %V8I32 = select i1 poison, <8 x i32> poison, <8 x i32> poison
+  %V16I32 = select i1 poison, <16 x i32> poison, <16 x i32> poison
+
+  %F32 = select i1 poison, float poison, float poison
+  %V2F32 = select i1 poison, <2 x float> poison, <2 x float> poison
+  %V4F32 = select i1 poison, <4 x float> poison, <4 x float> poison
+  %V8F32 = select i1 poison, <8 x float> poison, <8 x float> poison
+  %V16F32 = select i1 poison, <16 x float> poison, <16 x float> poison
+
+  %I16 = select i1 poison, i16 poison, i16 poison
+  %V2I16 = select i1 poison, <2 x i16> poison, <2 x i16> poison
+  %V4I16 = select i1 poison, <4 x i16> poison, <4 x i16> poison
+  %V8I16 = select i1 poison, <8 x i16> poison, <8 x i16> poison
+  %V16I16 = select i1 poison, <16 x i16> poison, <16 x i16> poison
+  %V32I16 = select i1 poison, <32 x i16> poison, <32 x i16> poison
+
+  %F16 = select i1 poison, half poison, half poison
+  %V2F16 = select i1 poison, <2 x half> poison, <2 x half> poison
+  %V4F16 = select i1 poison, <4 x half> poison, <4 x half> poison
+  %V8F16 = select i1 poison, <8 x half> poison, <8 x half> poison
+  %V16F16 = select i1 poison, <16 x half> poison, <16 x half> poison
+  %V32F16 = select i1 poison, <32 x half> poison, <32 x half> poison
+
+  %I8 = select i1 poison, i8 poison, i8 poison
+  %V2I8 = select i1 poison, <2 x i8> poison, <2 x i8> poison
+  %V4I8 = select i1 poison, <4 x i8> poison, <4 x i8> poison
+  %V8I8 = select i1 poison, <8 x i8> poison, <8 x i8> poison
+  %V16I8 = select i1 poison, <16 x i8> poison, <16 x i8> poison
+  %V32I8 = select i1 poison, <32 x i8> poison, <32 x i8> poison
+  %V64I8 = select i1 poison, <64 x i8> poison, <64 x i8> poison
+
   ret void
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
