@@ -9,7 +9,6 @@
 #include <__config>
 #include <__pstl/backends/statpart.h>
 #include <atomic>
-#include <utility>
 
 #if defined(__APPLE__)
 #  include <dispatch/dispatch.h>
