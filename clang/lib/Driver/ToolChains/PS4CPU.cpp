@@ -114,6 +114,8 @@ void toolchains::PS5CPU::addSanitizerArgs(const ArgList &Args,
     CmdArgs.push_back(arg("SceUBSanitizer_nosubmission_stub_weak"));
   if (SanArgs.needsAsanRt())
     CmdArgs.push_back(arg("SceAddressSanitizer_nosubmission_stub_weak"));
+  if (SanArgs.needsRtsanRt())
+    CmdArgs.push_back(arg("SceRealtimeSanitizer_nosubmission_stub_weak"));
   if (SanArgs.needsTsanRt())
     CmdArgs.push_back(arg("SceThreadSanitizer_nosubmission_stub_weak"));
   if (SanArgs.needsTysanRt())
@@ -579,6 +581,7 @@ SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers(
 SanitizerMask toolchains::PS5CPU::getSupportedSanitizers(
     BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
   SanitizerMask Res = PS4PS5Base::getSupportedSanitizers(BA, DeviceOffloadKind);
+  Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Thread;
   Res |= SanitizerKind::Type;
   return Res;
