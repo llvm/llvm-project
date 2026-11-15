@@ -24,6 +24,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <string>
 
 #ifdef OMPT_SUPPORT
@@ -320,32 +321,63 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Init) << "Done registering entries!";
 }
 
+void PluginManager::unloadPrograms(const void *Key, TranslationTable &TT) {
+  // To avoid calling destructors with the lock held, make a list first and
+  // then traverse the list to destroy programs.
+  llvm::SmallVector<DeviceTy *> DevicesToVisit;
+  {
+    auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+    for (size_t DeviceId = 0;
+         DeviceId <
+         std::min(TT.TargetsEntries.size(), ExclusiveDevicesAccessor->size());
+         ++DeviceId)
+      DevicesToVisit.push_back((*ExclusiveDevicesAccessor)[DeviceId].get());
+  }
+
+  // Destroy in reverse device order, mirroring the load order.
+  for (size_t DeviceId = DevicesToVisit.size(); DeviceId-- > 0;)
+    DevicesToVisit[DeviceId]->unloadProgram(
+        Key, TT.TargetsEntries[DeviceId],
+        llvm::ArrayRef<llvm::offloading::EntryTy>(TT.HostTable.EntriesBegin,
+                                                  TT.HostTable.EntriesEnd));
+}
+
 void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Deinit) << "Unloading target library!";
 
   Desc = upgradeLegacyEntries(Desc);
 
   // Remove entries from HostPtrToTableMap
-  TblMapMtx.lock();
-  for (llvm::offloading::EntryTy *Cur = Desc->HostEntriesBegin;
-       Cur < Desc->HostEntriesEnd; ++Cur) {
-    if (Cur->Kind == object::OffloadKind::OFK_OpenMP)
-      HostPtrToTableMap.erase(Cur->Address);
+  {
+    std::lock_guard<std::mutex> TblMapLock(TblMapMtx);
+    for (llvm::offloading::EntryTy *Cur = Desc->HostEntriesBegin;
+         Cur < Desc->HostEntriesEnd; ++Cur) {
+      if (Cur->Kind == object::OffloadKind::OFK_OpenMP)
+        HostPtrToTableMap.erase(Cur->Address);
+    }
   }
 
-  // Remove translation table for this descriptor.
-  auto TransTable = HostEntriesBeginToTransTable.find(Desc->HostEntriesBegin);
-  if (TransTable != HostEntriesBeginToTransTable.end()) {
+  // Remove the translation table for this descriptor.
+  std::optional<TranslationTable> TT;
+  {
+    std::lock_guard<std::mutex> TrlTblLock(TrlTblMtx);
+    auto TransTable = HostEntriesBeginToTransTable.find(Desc->HostEntriesBegin);
+    if (TransTable != HostEntriesBeginToTransTable.end()) {
+      TT = std::move(TransTable->second);
+      HostEntriesBeginToTransTable.erase(TransTable);
+      llvm::erase(HostEntriesBeginRegistrationOrder, Desc->HostEntriesBegin);
+    }
+  }
+
+  if (TT) {
     ODBG(ODT_Deinit) << "Removing translation table for descriptor "
                      << Desc->HostEntriesBegin;
-    HostEntriesBeginToTransTable.erase(TransTable);
+    unloadPrograms(Desc->HostEntriesBegin, *TT);
   } else {
     ODBG(ODT_Deinit) << "Translation table for descriptor "
                      << Desc->HostEntriesBegin << " cannot be found, probably "
                      << "it has been already removed.";
   }
-
-  TblMapMtx.unlock();
 
   ODBG(ODT_Deinit) << "Done unregistering library!";
 }
@@ -393,6 +425,10 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
         break;
       }
 
+      // The device keeps the program until the library is unregistered.
+      ProgramTy &Program =
+          Device.addProgram(HostEntriesBegin, std::move(*LoadedOrErr));
+
       // 3) Create the translation table.
       llvm::SmallVector<llvm::offloading::EntryTy> &DeviceEntries =
           TransTable->TargetsEntries[DeviceId];
@@ -400,8 +436,6 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
            llvm::make_range(Img->EntriesBegin, Img->EntriesEnd)) {
         if (Entry.Kind != object::OffloadKind::OFK_OpenMP)
           continue;
-
-        ProgramTy &Program = *LoadedOrErr;
 
         llvm::offloading::EntryTy DeviceEntry = Entry;
         if (Entry.Size) {
@@ -474,7 +508,7 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             const auto &Cfg = KernelEnv.Configuration;
             KernelLaunchInfoTy LaunchInfo;
             LaunchInfo.Name = Entry.SymbolName;
-            LaunchInfo.Program = Program;
+            LaunchInfo.Program = &Program;
             LaunchInfo.Mode =
                 static_cast<llvm::omp::OMPTgtExecModeFlags>(Cfg.ExecMode);
             LaunchInfo.ReductionDataSize = Cfg.ReductionDataSize;

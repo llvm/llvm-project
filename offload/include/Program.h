@@ -51,12 +51,17 @@ public:
   /// input was not IR.
   llvm::MemoryBufferRef getIRImage() const { return IRImage; }
 
+  /// Device buffer holding the indirect call table of this program, or null.
+  void *getIndirectCallTable() const { return IndirectCallTable; }
+  void setIndirectCallTable(void *Table) { IndirectCallTable = Table; }
+
 private:
   ProgramTy(ol_program_handle_t Handle, llvm::MemoryBufferRef IRImage)
       : Handle(Handle), IRImage(IRImage) {}
 
   ol_program_handle_t Handle = nullptr;
   llvm::MemoryBufferRef IRImage;
+  void *IndirectCallTable = nullptr;
 };
 
 #endif
