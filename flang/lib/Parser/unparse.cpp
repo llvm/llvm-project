@@ -1972,6 +1972,7 @@ public:
                         Put('/');
                       },
                       [&](std::uint64_t n) { Put(std::to_string(n)); },
+                      [&](const SignedRealLiteralConstant &r) { Walk(r); },
                       [&](const std::string &str) { PutNormalized(str); },
                   },
         std::get<1>(x.t));
