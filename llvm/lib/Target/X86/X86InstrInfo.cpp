@@ -4193,7 +4193,7 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
 
 /// Test if the given register is a physical h register.
 static bool isHReg(Register Reg) {
-  return X86::GR8_ABCD_HRegClass.contains(Reg);
+  return Reg.isPhysical() && X86::GR8_ABCD_HRegClass.contains(Reg);
 }
 
 // Try and copy between VR128/VR64 and GR64 registers.
