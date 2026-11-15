@@ -180,9 +180,13 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
       bool hoistDynamicAllocs =
           options.hoistDynamicAllocs &&
           !cast<MemRefType>(orig.getType()).hasStaticShape();
-      if ((hoistStaticAllocs || hoistDynamicAllocs) &&
-          isa_and_nonnull<bufferization::AllocationOpInterface>(
-              orig.getDefiningOp())) {
+      // Keep non-hoistable allocations such as memref.realloc and
+      // bufferization.clone. Erasing them would discard the data they preserve
+      // or reproduce in their results.
+      auto allocOp = dyn_cast_if_present<bufferization::AllocationOpInterface>(
+          orig.getDefiningOp());
+      if ((hoistStaticAllocs || hoistDynamicAllocs) && allocOp &&
+          allocOp.getHoistingKind() != HoistingKind::None) {
         if (hoistDynamicAllocs) {
           SmallVector<Value> dynamicSize = getDynamicSize(orig, func);
           dynamicSizes.push_back(dynamicSize);
