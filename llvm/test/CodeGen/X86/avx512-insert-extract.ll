@@ -1445,7 +1445,7 @@ define zeroext i8 @test_extractelement_varible_v2i1(<2 x i64> %a, <2 x i64> %b, 
 ; KNL-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
 ; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $1, %edi
-; KNL-NEXT:    movzbl -24(%rsp,%rdi,8), %eax
+; KNL-NEXT:    movl -24(%rsp,%rdi,8), %eax
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -1457,7 +1457,7 @@ define zeroext i8 @test_extractelement_varible_v2i1(<2 x i64> %a, <2 x i64> %b, 
 ; SKX-NEXT:    vpmovm2q %k0, %xmm0
 ; SKX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SKX-NEXT:    andl $1, %edi
-; SKX-NEXT:    movzbl -24(%rsp,%rdi,8), %eax
+; SKX-NEXT:    movl -24(%rsp,%rdi,8), %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <2 x i64> %a, %b
@@ -1476,7 +1476,7 @@ define zeroext i8 @test_extractelement_varible_v4i1(<4 x i32> %a, <4 x i32> %b, 
 ; KNL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $3, %edi
-; KNL-NEXT:    movzbl -24(%rsp,%rdi,4), %eax
+; KNL-NEXT:    movl -24(%rsp,%rdi,4), %eax
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -1488,7 +1488,7 @@ define zeroext i8 @test_extractelement_varible_v4i1(<4 x i32> %a, <4 x i32> %b, 
 ; SKX-NEXT:    vpmovm2d %k0, %xmm0
 ; SKX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SKX-NEXT:    andl $3, %edi
-; SKX-NEXT:    movzbl -24(%rsp,%rdi,4), %eax
+; SKX-NEXT:    movl -24(%rsp,%rdi,4), %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <4 x i32> %a, %b
@@ -1508,7 +1508,7 @@ define zeroext i8 @test_extractelement_varible_v8i1(<8 x i32> %a, <8 x i32> %b, 
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $7, %edi
-; KNL-NEXT:    movzbl -24(%rsp,%rdi,2), %eax
+; KNL-NEXT:    movzwl -24(%rsp,%rdi,2), %eax
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -1520,7 +1520,7 @@ define zeroext i8 @test_extractelement_varible_v8i1(<8 x i32> %a, <8 x i32> %b, 
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
 ; SKX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SKX-NEXT:    andl $7, %edi
-; SKX-NEXT:    movzbl -24(%rsp,%rdi,2), %eax
+; SKX-NEXT:    movzwl -24(%rsp,%rdi,2), %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
