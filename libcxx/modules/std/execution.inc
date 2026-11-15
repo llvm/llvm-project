@@ -34,3 +34,19 @@ export namespace std::execution {
   using std::execution::unseq;
 } // namespace std::execution
 #endif // _LIBCPP_ENABLE_EXPERIMENTAL
+
+#if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_EXECUTION
+export namespace std::execution {
+  // [exec.set.value], value completion function
+  using std::execution::set_value;
+  using std::execution::set_value_t;
+
+  // [exec.set.error], error completion function
+  using std::execution::set_error;
+  using std::execution::set_error_t;
+
+  // [exec.set.stopped], stopped completion function
+  using std::execution::set_stopped;
+  using std::execution::set_stopped_t;
+} // namespace std::execution
+#endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_EXECUTION
