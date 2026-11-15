@@ -294,13 +294,19 @@ struct BPFUnwindLower : public MachineFunctionPass {
     df_iterator_default_set<MachineBasicBlock *> Reachable;
     for (MachineBasicBlock *MBB : depth_first_ext(&MF, Reachable))
       (void)MBB;
-    for (MachineBasicBlock &MBB : make_early_inc_range(MF)) {
-      if (Reachable.count(&MBB) || MBB.hasAddressTaken())
+
+    // Unlink them all before erasing any: one can be a successor of another.
+    SmallVector<MachineBasicBlock *, 8> Dead;
+    for (MachineBasicBlock &MBB : MF) {
+      if (Reachable.contains(&MBB))
         continue;
       while (!MBB.succ_empty())
         MBB.removeSuccessor(MBB.succ_begin());
-      MBB.eraseFromParent();
+      Dead.push_back(&MBB);
     }
+
+    for (MachineBasicBlock *MBB : Dead)
+      MBB->eraseFromParent();
     for (MachineBasicBlock &MBB : MF)
       if (!MBB.empty() && MBB.back().getOpcode() == BPF::JMP &&
           MBB.isLayoutSuccessor(MBB.back().getOperand(0).getMBB()))
