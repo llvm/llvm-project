@@ -47,25 +47,21 @@ define void @atomicrmw_add_v2i32(ptr %p, <2 x i32> %v) nounwind {
   ret void
 }
 
-define void @atomicrmw_sub_v2i64(ptr %p, <2 x i64> %v) {
+define void @atomicrmw_sub_v2i64(ptr %p, <2 x i64> %v) nounwind {
 ; NOCX16-LABEL: atomicrmw_sub_v2i64:
 ; NOCX16:       # %bb.0:
 ; NOCX16-NEXT:    pushq %rax
-; NOCX16-NEXT:    .cfi_def_cfa_offset 16
 ; NOCX16-NEXT:    movq %xmm0, %rsi
 ; NOCX16-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; NOCX16-NEXT:    movq %xmm0, %rdx
 ; NOCX16-NEXT:    movl $5, %ecx
 ; NOCX16-NEXT:    callq __atomic_fetch_sub_16@PLT
 ; NOCX16-NEXT:    popq %rax
-; NOCX16-NEXT:    .cfi_def_cfa_offset 8
 ; NOCX16-NEXT:    retq
 ;
 ; CX16-LABEL: atomicrmw_sub_v2i64:
 ; CX16:       # %bb.0:
 ; CX16-NEXT:    pushq %rbx
-; CX16-NEXT:    .cfi_def_cfa_offset 16
-; CX16-NEXT:    .cfi_offset %rbx, -16
 ; CX16-NEXT:    movdqa (%rdi), %xmm1
 ; CX16-NEXT:    .p2align 4
 ; CX16-NEXT:  .LBB1_1: # %atomicrmw.start
@@ -84,25 +80,15 @@ define void @atomicrmw_sub_v2i64(ptr %p, <2 x i64> %v) {
 ; CX16-NEXT:    jne .LBB1_1
 ; CX16-NEXT:  # %bb.2: # %atomicrmw.end
 ; CX16-NEXT:    popq %rbx
-; CX16-NEXT:    .cfi_def_cfa_offset 8
 ; CX16-NEXT:    retq
 ;
 ; X86-LABEL: atomicrmw_sub_v2i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    subl $44, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 64
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl 12(%esi), %ecx
 ; X86-NEXT:    movl 8(%esi), %edx
@@ -125,23 +111,15 @@ define void @atomicrmw_sub_v2i64(ptr %p, <2 x i64> %v) {
 ; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    .cfi_adjust_cfa_offset 8
 ; X86-NEXT:    pushl $5
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $5
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $16
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll __atomic_compare_exchange@PLT
 ; X86-NEXT:    addl $32, %esp
-; X86-NEXT:    .cfi_adjust_cfa_offset -32
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl (%esp), %edi
@@ -150,39 +128,30 @@ define void @atomicrmw_sub_v2i64(ptr %p, <2 x i64> %v) {
 ; X86-NEXT:    je .LBB1_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw sub ptr %p, <2 x i64> %v seq_cst
   ret void
 }
 
-define void @atomicrmw_xchg_v4i32(ptr %p, <4 x i32> %v) {
+define void @atomicrmw_xchg_v4i32(ptr %p, <4 x i32> %v) nounwind {
 ; NOCX16-LABEL: atomicrmw_xchg_v4i32:
 ; NOCX16:       # %bb.0:
 ; NOCX16-NEXT:    pushq %rax
-; NOCX16-NEXT:    .cfi_def_cfa_offset 16
 ; NOCX16-NEXT:    movq %xmm0, %rsi
 ; NOCX16-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; NOCX16-NEXT:    movq %xmm0, %rdx
 ; NOCX16-NEXT:    movl $5, %ecx
 ; NOCX16-NEXT:    callq __atomic_exchange_16@PLT
 ; NOCX16-NEXT:    popq %rax
-; NOCX16-NEXT:    .cfi_def_cfa_offset 8
 ; NOCX16-NEXT:    retq
 ;
 ; CX16-LABEL: atomicrmw_xchg_v4i32:
 ; CX16:       # %bb.0:
 ; CX16-NEXT:    pushq %rbx
-; CX16-NEXT:    .cfi_def_cfa_offset 16
-; CX16-NEXT:    .cfi_offset %rbx, -16
 ; CX16-NEXT:    movq %xmm0, %rbx
 ; CX16-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; CX16-NEXT:    movq %xmm0, %rcx
@@ -195,19 +164,13 @@ define void @atomicrmw_xchg_v4i32(ptr %p, <4 x i32> %v) {
 ; CX16-NEXT:    jne .LBB2_1
 ; CX16-NEXT:  # %bb.2: # %atomicrmw.end
 ; CX16-NEXT:    popq %rbx
-; CX16-NEXT:    .cfi_def_cfa_offset 8
 ; CX16-NEXT:    retq
 ;
 ; X86-LABEL: atomicrmw_xchg_v4i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    subl $36, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 48
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -218,32 +181,23 @@ define void @atomicrmw_xchg_v4i32(ptr %p, <4 x i32> %v) {
 ; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ecx, (%esp)
 ; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    .cfi_adjust_cfa_offset 12
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    pushl $5
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %ecx
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %edx
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $16
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll __atomic_exchange@PLT
 ; X86-NEXT:    addl $68, %esp
-; X86-NEXT:    .cfi_adjust_cfa_offset -68
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw xchg ptr %p, <4 x i32> %v seq_cst
   ret void
 }
 
-define void @atomicrmw_and_v2i32(ptr %p, <2 x i32> %v) {
+define void @atomicrmw_and_v2i32(ptr %p, <2 x i32> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_and_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %xmm0, %rax
@@ -253,17 +207,9 @@ define void @atomicrmw_and_v2i32(ptr %p, <2 x i32> %v) {
 ; X86-LABEL: atomicrmw_and_v2i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
@@ -280,37 +226,29 @@ define void @atomicrmw_and_v2i32(ptr %p, <2 x i32> %v) {
 ; X86-NEXT:    jne .LBB3_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw and ptr %p, <2 x i32> %v seq_cst
   ret void
 }
 
-define void @atomicrmw_or_v2i64(ptr %p, <2 x i64> %v) {
+define void @atomicrmw_or_v2i64(ptr %p, <2 x i64> %v) nounwind {
 ; NOCX16-LABEL: atomicrmw_or_v2i64:
 ; NOCX16:       # %bb.0:
 ; NOCX16-NEXT:    pushq %rax
-; NOCX16-NEXT:    .cfi_def_cfa_offset 16
 ; NOCX16-NEXT:    movq %xmm0, %rsi
 ; NOCX16-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; NOCX16-NEXT:    movq %xmm0, %rdx
 ; NOCX16-NEXT:    movl $5, %ecx
 ; NOCX16-NEXT:    callq __atomic_fetch_or_16@PLT
 ; NOCX16-NEXT:    popq %rax
-; NOCX16-NEXT:    .cfi_def_cfa_offset 8
 ; NOCX16-NEXT:    retq
 ;
 ; CX16-LABEL: atomicrmw_or_v2i64:
 ; CX16:       # %bb.0:
 ; CX16-NEXT:    pushq %rbx
-; CX16-NEXT:    .cfi_def_cfa_offset 16
-; CX16-NEXT:    .cfi_offset %rbx, -16
 ; CX16-NEXT:    movdqa (%rdi), %xmm1
 ; CX16-NEXT:    .p2align 4
 ; CX16-NEXT:  .LBB4_1: # %atomicrmw.start
@@ -329,25 +267,15 @@ define void @atomicrmw_or_v2i64(ptr %p, <2 x i64> %v) {
 ; CX16-NEXT:    jne .LBB4_1
 ; CX16-NEXT:  # %bb.2: # %atomicrmw.end
 ; CX16-NEXT:    popq %rbx
-; CX16-NEXT:    .cfi_def_cfa_offset 8
 ; CX16-NEXT:    retq
 ;
 ; X86-LABEL: atomicrmw_or_v2i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    subl $44, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 64
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl 12(%esi), %edi
 ; X86-NEXT:    movl 8(%esi), %edx
@@ -370,23 +298,15 @@ define void @atomicrmw_or_v2i64(ptr %p, <2 x i64> %v) {
 ; X86-NEXT:    orl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    .cfi_adjust_cfa_offset 8
 ; X86-NEXT:    pushl $5
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $5
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $16
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll __atomic_compare_exchange@PLT
 ; X86-NEXT:    addl $32, %esp
-; X86-NEXT:    .cfi_adjust_cfa_offset -32
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl (%esp), %ecx
@@ -395,39 +315,30 @@ define void @atomicrmw_or_v2i64(ptr %p, <2 x i64> %v) {
 ; X86-NEXT:    je .LBB4_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw or ptr %p, <2 x i64> %v seq_cst
   ret void
 }
 
-define void @atomicrmw_xor_v4i32(ptr %p, <4 x i32> %v) {
+define void @atomicrmw_xor_v4i32(ptr %p, <4 x i32> %v) nounwind {
 ; NOCX16-LABEL: atomicrmw_xor_v4i32:
 ; NOCX16:       # %bb.0:
 ; NOCX16-NEXT:    pushq %rax
-; NOCX16-NEXT:    .cfi_def_cfa_offset 16
 ; NOCX16-NEXT:    movq %xmm0, %rsi
 ; NOCX16-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; NOCX16-NEXT:    movq %xmm0, %rdx
 ; NOCX16-NEXT:    movl $5, %ecx
 ; NOCX16-NEXT:    callq __atomic_fetch_xor_16@PLT
 ; NOCX16-NEXT:    popq %rax
-; NOCX16-NEXT:    .cfi_def_cfa_offset 8
 ; NOCX16-NEXT:    retq
 ;
 ; CX16-LABEL: atomicrmw_xor_v4i32:
 ; CX16:       # %bb.0:
 ; CX16-NEXT:    pushq %rbx
-; CX16-NEXT:    .cfi_def_cfa_offset 16
-; CX16-NEXT:    .cfi_offset %rbx, -16
 ; CX16-NEXT:    movdqa (%rdi), %xmm1
 ; CX16-NEXT:    .p2align 4
 ; CX16-NEXT:  .LBB5_1: # %atomicrmw.start
@@ -446,25 +357,15 @@ define void @atomicrmw_xor_v4i32(ptr %p, <4 x i32> %v) {
 ; CX16-NEXT:    jne .LBB5_1
 ; CX16-NEXT:  # %bb.2: # %atomicrmw.end
 ; CX16-NEXT:    popq %rbx
-; CX16-NEXT:    .cfi_def_cfa_offset 8
 ; CX16-NEXT:    retq
 ;
 ; X86-LABEL: atomicrmw_xor_v4i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    subl $44, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 64
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl 12(%esi), %edi
 ; X86-NEXT:    movl 8(%esi), %edx
@@ -487,23 +388,15 @@ define void @atomicrmw_xor_v4i32(ptr %p, <4 x i32> %v) {
 ; X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    .cfi_adjust_cfa_offset 8
 ; X86-NEXT:    pushl $5
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $5
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $16
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll __atomic_compare_exchange@PLT
 ; X86-NEXT:    addl $32, %esp
-; X86-NEXT:    .cfi_adjust_cfa_offset -32
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl (%esp), %ecx
@@ -512,22 +405,17 @@ define void @atomicrmw_xor_v4i32(ptr %p, <4 x i32> %v) {
 ; X86-NEXT:    je .LBB5_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw xor ptr %p, <4 x i32> %v seq_cst
   ret void
 }
 
 ; The result is used, so the value returned by the cmpxchg loop is needed.
-define <2 x i32> @atomicrmw_add_v2i32_result(ptr %p, <2 x i32> %v) {
+define <2 x i32> @atomicrmw_add_v2i32_result(ptr %p, <2 x i32> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_add_v2i32_result:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %xmm1 # xmm1 = mem[0],zero
@@ -547,17 +435,9 @@ define <2 x i32> @atomicrmw_add_v2i32_result(ptr %p, <2 x i32> %v) {
 ; X86-LABEL: atomicrmw_add_v2i32_result:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
@@ -572,13 +452,9 @@ define <2 x i32> @atomicrmw_add_v2i32_result(ptr %p, <2 x i32> %v) {
 ; X86-NEXT:    jne .LBB6_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw add ptr %p, <2 x i32> %v seq_cst
   ret <2 x i32> %r
@@ -586,7 +462,7 @@ define <2 x i32> @atomicrmw_add_v2i32_result(ptr %p, <2 x i32> %v) {
 
 ; An idempotent RMW (or with zero) whose result is unused is a special case
 ; in X86TargetLowering::lowerIdempotentRMWIntoFencedLoad.
-define void @atomicrmw_or_zero_v2i32_unused(ptr %p) {
+define void @atomicrmw_or_zero_v2i32_unused(ptr %p) nounwind {
 ; CHECK-LABEL: atomicrmw_or_zero_v2i32_unused:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
@@ -595,11 +471,7 @@ define void @atomicrmw_or_zero_v2i32_unused(ptr %p) {
 ; X86-LABEL: atomicrmw_or_zero_v2i32_unused:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl (%esi), %eax
 ; X86-NEXT:    movl 4(%esi), %edx
@@ -612,16 +484,14 @@ define void @atomicrmw_or_zero_v2i32_unused(ptr %p) {
 ; X86-NEXT:    jne .LBB7_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw or ptr %p, <2 x i32> zeroinitializer seq_cst
   ret void
 }
 
 ; Same, but the result is used.
-define <2 x i32> @atomicrmw_or_zero_v2i32_used(ptr %p) {
+define <2 x i32> @atomicrmw_or_zero_v2i32_used(ptr %p) nounwind {
 ; CHECK-LABEL: atomicrmw_or_zero_v2i32_used:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %xmm0 # xmm0 = mem[0],zero
@@ -638,11 +508,7 @@ define <2 x i32> @atomicrmw_or_zero_v2i32_used(ptr %p) {
 ; X86-LABEL: atomicrmw_or_zero_v2i32_used:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl (%esi), %eax
 ; X86-NEXT:    movl 4(%esi), %edx
@@ -655,16 +521,14 @@ define <2 x i32> @atomicrmw_or_zero_v2i32_used(ptr %p) {
 ; X86-NEXT:    jne .LBB8_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw or ptr %p, <2 x i32> zeroinitializer seq_cst
   ret <2 x i32> %r
 }
 
 ; Extra test case 1
-define <2 x i16> @atomicrmw_or_zero_v2i16_used(ptr %p, <2 x i16> %v) {
+define <2 x i16> @atomicrmw_or_zero_v2i16_used(ptr %p, <2 x i16> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_or_zero_v2i16_used:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd (%rdi), %xmm0 # xmm0 = mem[0],zero,zero,zero
@@ -681,8 +545,6 @@ define <2 x i16> @atomicrmw_or_zero_v2i16_used(ptr %p, <2 x i16> %v) {
 ; X86-LABEL: atomicrmw_or_zero_v2i16_used:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl (%ecx), %eax
 ; X86-NEXT:    movzwl 2(%ecx), %edx
@@ -702,14 +564,13 @@ define <2 x i16> @atomicrmw_or_zero_v2i16_used(ptr %p, <2 x i16> %v) {
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    # kill: def $dx killed $dx killed $edx
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw or ptr %p, <2 x i16> zeroinitializer seq_cst
   ret <2 x i16> %r
 }
 
 ; Extra test case 2
-define <4 x i8> @atomicrmw_or_zero_v4i8_used(ptr %p, <4 x i8> %v) {
+define <4 x i8> @atomicrmw_or_zero_v4i8_used(ptr %p, <4 x i8> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_or_zero_v4i8_used:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd (%rdi), %xmm0 # xmm0 = mem[0],zero,zero,zero
@@ -726,17 +587,9 @@ define <4 x i8> @atomicrmw_or_zero_v4i8_used(ptr %p, <4 x i8> %v) {
 ; X86-LABEL: atomicrmw_or_zero_v4i8_used:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movzbl 3(%ebp), %ebx
@@ -772,13 +625,9 @@ define <4 x i8> @atomicrmw_or_zero_v4i8_used(ptr %p, <4 x i8> %v) {
 ; X86-NEXT:    movb %bl, 3(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl $4
   %r = atomicrmw or ptr %p, <4 x i8> zeroinitializer seq_cst
   ret <4 x i8> %r
@@ -786,7 +635,7 @@ define <4 x i8> @atomicrmw_or_zero_v4i8_used(ptr %p, <4 x i8> %v) {
 
 ; Unused and/or/xor that fits a GPR is bitcast to an integer and selects to a
 ; single lock and/or/xor (on i686 only when it fits in 32 bits).
-define void @atomicrmw_or_v4i16(ptr %p, <4 x i16> %v) {
+define void @atomicrmw_or_v4i16(ptr %p, <4 x i16> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_or_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %xmm0, %rax
@@ -796,19 +645,10 @@ define void @atomicrmw_or_v4i16(ptr %p, <4 x i16> %v) {
 ; X86-LABEL: atomicrmw_or_v4i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 24
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl 6(%ecx), %esi
 ; X86-NEXT:    movzwl 4(%ecx), %edx
@@ -856,21 +696,16 @@ define void @atomicrmw_or_v4i16(ptr %p, <4 x i16> %v) {
 ; X86-NEXT:    jne .LBB11_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    addl $4, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw or ptr %p, <4 x i16> %v monotonic, align 8
   ret void
 }
 
-define void @atomicrmw_xor_v8i8(ptr %p, <8 x i8> %v) {
+define void @atomicrmw_xor_v8i8(ptr %p, <8 x i8> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_xor_v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %xmm0, %rax
@@ -880,19 +715,10 @@ define void @atomicrmw_xor_v8i8(ptr %p, <8 x i8> %v) {
 ; X86-LABEL: atomicrmw_xor_v8i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    subl $20, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 40
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movb 5(%ecx), %dh
 ; X86-NEXT:    movb 4(%ecx), %dl
@@ -996,21 +822,16 @@ define void @atomicrmw_xor_v8i8(ptr %p, <8 x i8> %v) {
 ; X86-NEXT:    jne .LBB12_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    addl $20, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw xor ptr %p, <8 x i8> %v release, align 8
   ret void
 }
 
-define void @atomicrmw_or_v2i16(ptr %p, <2 x i16> %v) {
+define void @atomicrmw_or_v2i16(ptr %p, <2 x i16> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_or_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %xmm0, %eax
@@ -1030,7 +851,7 @@ define void @atomicrmw_or_v2i16(ptr %p, <2 x i16> %v) {
   ret void
 }
 
-define void @atomicrmw_xor_v4i8(ptr %p, <4 x i8> %v) {
+define void @atomicrmw_xor_v4i8(ptr %p, <4 x i8> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_xor_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %xmm0, %eax
@@ -1057,7 +878,7 @@ define void @atomicrmw_xor_v4i8(ptr %p, <4 x i8> %v) {
   ret void
 }
 
-define void @atomicrmw_and_v2i8(ptr %p, <2 x i8> %v) {
+define void @atomicrmw_and_v2i8(ptr %p, <2 x i8> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_and_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %xmm0, %eax
@@ -1077,7 +898,7 @@ define void @atomicrmw_and_v2i8(ptr %p, <2 x i8> %v) {
   ret void
 }
 
-define void @atomicrmw_or_v2i32_volatile(ptr %p, <2 x i32> %v) {
+define void @atomicrmw_or_v2i32_volatile(ptr %p, <2 x i32> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_or_v2i32_volatile:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %xmm0, %rax
@@ -1087,17 +908,9 @@ define void @atomicrmw_or_v2i32_volatile(ptr %p, <2 x i32> %v) {
 ; X86-LABEL: atomicrmw_or_v2i32_volatile:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
@@ -1114,19 +927,15 @@ define void @atomicrmw_or_v2i32_volatile(ptr %p, <2 x i32> %v) {
 ; X86-NEXT:    jne .LBB16_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw volatile or ptr %p, <2 x i32> %v seq_cst, align 8
   ret void
 }
 
-define void @atomicrmw_and_v2i32_singlethread(ptr %p, <2 x i32> %v) {
+define void @atomicrmw_and_v2i32_singlethread(ptr %p, <2 x i32> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_and_v2i32_singlethread:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %xmm0, %rax
@@ -1136,17 +945,9 @@ define void @atomicrmw_and_v2i32_singlethread(ptr %p, <2 x i32> %v) {
 ; X86-LABEL: atomicrmw_and_v2i32_singlethread:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
@@ -1163,19 +964,15 @@ define void @atomicrmw_and_v2i32_singlethread(ptr %p, <2 x i32> %v) {
 ; X86-NEXT:    jne .LBB17_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw and ptr %p, <2 x i32> %v syncscope("singlethread") seq_cst, align 8
   ret void
 }
 
-define void @atomicrmw_xor_v2i32_const(ptr %p) {
+define void @atomicrmw_xor_v2i32_const(ptr %p) nounwind {
 ; CHECK-LABEL: atomicrmw_xor_v2i32_const:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movabsq $8589934593, %rax # imm = 0x200000001
@@ -1185,11 +982,7 @@ define void @atomicrmw_xor_v2i32_const(ptr %p) {
 ; X86-LABEL: atomicrmw_xor_v2i32_const:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl (%esi), %eax
 ; X86-NEXT:    movl 4(%esi), %edx
@@ -1204,16 +997,14 @@ define void @atomicrmw_xor_v2i32_const(ptr %p) {
 ; X86-NEXT:    jne .LBB18_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw xor ptr %p, <2 x i32> <i32 1, i32 2> seq_cst, align 8
   ret void
 }
 
 ; A used result still needs the old value, so it stays a cmpxchg loop.
-define <2 x i32> @atomicrmw_and_v2i32_used(ptr %p, <2 x i32> %v) {
+define <2 x i32> @atomicrmw_and_v2i32_used(ptr %p, <2 x i32> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_and_v2i32_used:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %xmm1 # xmm1 = mem[0],zero
@@ -1233,17 +1024,9 @@ define <2 x i32> @atomicrmw_and_v2i32_used(ptr %p, <2 x i32> %v) {
 ; X86-LABEL: atomicrmw_and_v2i32_used:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
@@ -1260,33 +1043,22 @@ define <2 x i32> @atomicrmw_and_v2i32_used(ptr %p, <2 x i32> %v) {
 ; X86-NEXT:    jne .LBB19_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw and ptr %p, <2 x i32> %v seq_cst, align 8
   ret <2 x i32> %r
 }
 
 ; Under-aligned: lowered to a libcall before the target hook is asked.
-define void @atomicrmw_or_v2i32_align4(ptr %p, <2 x i32> %v) {
+define void @atomicrmw_or_v2i32_align4(ptr %p, <2 x i32> %v) nounwind {
 ; CHECK-LABEL: atomicrmw_or_v2i32_align4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %r15
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    subq $32, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset %rbx, -32
-; CHECK-NEXT:    .cfi_offset %r14, -24
-; CHECK-NEXT:    .cfi_offset %r15, -16
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movsd (%rdi), %xmm0 # xmm0 = mem[0],zero
@@ -1310,31 +1082,18 @@ define void @atomicrmw_or_v2i32_align4(ptr %p, <2 x i32> %v) {
 ; CHECK-NEXT:    je .LBB20_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
 ; CHECK-NEXT:    addq $32, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %r15
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: atomicrmw_or_v2i32_align4:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    subl $28, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 48
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl (%ebx), %ecx
@@ -1351,37 +1110,24 @@ define void @atomicrmw_or_v2i32_align4(ptr %p, <2 x i32> %v) {
 ; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    .cfi_adjust_cfa_offset 8
 ; X86-NEXT:    pushl $5
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $5
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $8
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll __atomic_compare_exchange@PLT
 ; X86-NEXT:    addl $32, %esp
-; X86-NEXT:    .cfi_adjust_cfa_offset -32
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    je .LBB20_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = atomicrmw or ptr %p, <2 x i32> %v seq_cst, align 4
   ret void
