@@ -4960,7 +4960,7 @@ define i32 @sequence_select_with_same_cond_extra_use(i1 %c1, i1 %c2){
 ; CHECK-SAME: i1 [[C1:%.*]], i1 [[C2:%.*]]) {
 ; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 23, i32 45
 ; CHECK-NEXT:    call void @use32(i32 [[S1]])
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 666, i32 [[S1]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 666, i32 45
 ; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], i32 789, i32 [[S2]]
 ; CHECK-NEXT:    ret i32 [[S3]]
 ;
@@ -5854,13 +5854,13 @@ define [2 x i32] @shared_select_cond_insertvalue_array(i1 %c, [2 x i32] %a, [2 x
   ret [2 x i32] %r
 }
 
-; Negative test: the inner select has another use, so the arm cannot be
-; rewritten.
+; The inner select has another use, but the arm is only used by the outer
+; select, so the inner select can still be resolved in the arm.
 define { i32, i32 } @shared_select_cond_insertvalue_extra_use(i1 %c, { i32, i32 } %a, { i32, i32 } %b, { i32, i32 } %d) {
 ; CHECK-LABEL: define { i32, i32 } @shared_select_cond_insertvalue_extra_use(
 ; CHECK-SAME: i1 [[C:%.*]], { i32, i32 } [[A:%.*]], { i32, i32 } [[B:%.*]], { i32, i32 } [[D:%.*]]) {
 ; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[C]], { i32, i32 } [[A]], { i32, i32 } [[D]]
-; CHECK-NEXT:    [[ARM:%.*]] = insertvalue { i32, i32 } [[INNER]], i32 42, 0
+; CHECK-NEXT:    [[ARM:%.*]] = insertvalue { i32, i32 } [[A]], i32 42, 0
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], { i32, i32 } [[ARM]], { i32, i32 } [[B]]
 ; CHECK-NEXT:    call void @use_struct({ i32, i32 } [[INNER]])
 ; CHECK-NEXT:    ret { i32, i32 } [[R]]

@@ -1766,6 +1766,61 @@ bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
   return Changed;
 }
 
+// select(C, I(..., select(C, X, Y), ...), Z) -> select(C, I(..., X, ...), Z)
+// select(C, Z, I(..., select(C, X, Y), ...)) -> select(C, Z, I(..., Y, ...))
+Instruction *
+InstCombinerImpl::foldInnerSelectOperandsOnSameCond(SelectInst &SI) {
+  for (Value *Arm : {SI.getTrueValue(), SI.getFalseValue()}) {
+    auto *I = dyn_cast<Instruction>(Arm);
+    if (!I || !isSafeToSpeculativelyExecuteWithVariableReplaced(
+                  I, /*IgnoreUBImplyingAttrs=*/false))
+      continue;
+
+    // Every use of I must be an arm of a select, so I only matters when the
+    // condition of that select picks it.
+    if (any_of(I->uses(), [&](Use &U) {
+          auto *UserSI = dyn_cast<SelectInst>(U.getUser());
+          return !UserSI || U.getOperandNo() == 0 ||
+                 (UserSI->getCondition()->getType()->isVectorTy() &&
+                  !isNotCrossLaneOperation(I));
+        }))
+      continue;
+
+    // An inner select folds to one arm if the conditions under which I is
+    // picked all imply the same value for its condition.
+    auto GetInnerSelectValue = [&](Value *Operand) -> Value * {
+      auto *InnerSI = dyn_cast<SelectInst>(Operand);
+      if (!InnerSI)
+        return nullptr;
+      std::optional<bool> InnerCondValue;
+      for (Use &U : I->uses()) {
+        std::optional<bool> Implied = isImpliedCondition(
+            cast<SelectInst>(U.getUser())->getCondition(),
+            InnerSI->getCondition(), DL,
+            /*LHSIsTrue=*/U.getOperandNo() == 1);
+        if (!Implied || (InnerCondValue && *InnerCondValue != *Implied))
+          return nullptr;
+        InnerCondValue = Implied;
+      }
+      return *InnerCondValue ? InnerSI->getTrueValue()
+                             : InnerSI->getFalseValue();
+    };
+
+    bool Changed = false;
+    for (Use &Operand : I->operands()) {
+      if (Value *V = GetInnerSelectValue(Operand)) {
+        replaceUse(Operand, V);
+        Changed = true;
+      }
+    }
+    if (Changed) {
+      Worklist.add(I);
+      return &SI;
+    }
+  }
+  return nullptr;
+}
+
 /// If we have a select with an equality comparison, then we know the value in
 /// one of the arms of the select. See if substituting this value into an arm
 /// and simplifying the result yields the same value as the other arm.
@@ -5054,6 +5109,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     if (Instruction *NewSel = foldSelectValueEquivalence(SI, *CI))
       return NewSel;
 
+  if (Instruction *R = foldInnerSelectOperandsOnSameCond(SI))
+    return R;
+
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(CondVal))
     if (Instruction *Result = foldSelectInstWithICmp(SI, ICI))
       return Result;
@@ -5239,49 +5297,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
           setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
           return &SI;
         }
-      }
-    }
-  }
-
-  // Try to simplify a binop sandwiched between 2 selects with the same
-  // condition. This is not valid for div/rem because the select might be
-  // preventing a division-by-zero.
-  // TODO: A div/rem restriction is conservative; use something like
-  //       isSafeToSpeculativelyExecute().
-  // select(C, binop(select(C, X, Y), W), Z) -> select(C, binop(X, W), Z)
-  BinaryOperator *TrueBO;
-  if (match(TrueVal, m_OneUse(m_BinOp(TrueBO))) && !TrueBO->isIntDivRem()) {
-    if (auto *TrueBOSI = dyn_cast<SelectInst>(TrueBO->getOperand(0))) {
-      if (TrueBOSI->getCondition() == CondVal) {
-        replaceOperand(*TrueBO, 0, TrueBOSI->getTrueValue());
-        Worklist.push(TrueBO);
-        return &SI;
-      }
-    }
-    if (auto *TrueBOSI = dyn_cast<SelectInst>(TrueBO->getOperand(1))) {
-      if (TrueBOSI->getCondition() == CondVal) {
-        replaceOperand(*TrueBO, 1, TrueBOSI->getTrueValue());
-        Worklist.push(TrueBO);
-        return &SI;
-      }
-    }
-  }
-
-  // select(C, Z, binop(select(C, X, Y), W)) -> select(C, Z, binop(Y, W))
-  BinaryOperator *FalseBO;
-  if (match(FalseVal, m_OneUse(m_BinOp(FalseBO))) && !FalseBO->isIntDivRem()) {
-    if (auto *FalseBOSI = dyn_cast<SelectInst>(FalseBO->getOperand(0))) {
-      if (FalseBOSI->getCondition() == CondVal) {
-        replaceOperand(*FalseBO, 0, FalseBOSI->getFalseValue());
-        Worklist.push(FalseBO);
-        return &SI;
-      }
-    }
-    if (auto *FalseBOSI = dyn_cast<SelectInst>(FalseBO->getOperand(1))) {
-      if (FalseBOSI->getCondition() == CondVal) {
-        replaceOperand(*FalseBO, 1, FalseBOSI->getFalseValue());
-        Worklist.push(FalseBO);
-        return &SI;
       }
     }
   }
