@@ -55,12 +55,17 @@ define void @qoo() #5 {
   ret void
 }
 
+define void @roo() #6 {
+  ret void
+}
+
 attributes #0 = { noinline }
 attributes #1 = { alwaysinline }
 attributes #2 = { optsize }
 attributes #3 = { minsize }
 attributes #4 = { optdebug }
 attributes #5 = { noinline optnone }
+attributes #6 = { optnone }
 
 ; CHECK-FOO: attributes #0 = { noinline }
 ; REMOVE-COLD: attributes #0 = { noinline }
@@ -75,17 +80,19 @@ attributes #5 = { noinline optnone }
 ; CHECK-ADD-ALL: define void @bar() #3 {
 ; CHECK-ADD-ALL: define void @baz() #4 {
 ; CHECK-ADD-ALL: define void @qoo() #5 {
+; CHECK-ADD-ALL: define void @roo() #6 {
 ; CHECK-ADD-ALL-DAG: attributes #0 = { optsize }
 ; CHECK-ADD-ALL-DAG: attributes #1 = { noinline optsize }
 ; CHECK-ADD-ALL-DAG: attributes #2 = { alwaysinline optsize }
 ; CHECK-ADD-ALL-DAG: attributes #3 = { minsize optsize }
 ; CHECK-ADD-ALL-DAG: attributes #4 = { optdebug }
 ; CHECK-ADD-ALL-DAG: attributes #5 = { noinline optnone }
+; CHECK-ADD-ALL-DAG: attributes #6 = { optnone }
 
 ; When passing an attribute to be removed without specifying a function,
 ; the attribute should be removed from all functions in the module that
-; have it, unless doing so would create invalid IR (e.g. `optnone` requires
-; `noinline`).
+; have it. optnone implies (but does not require) noinline, so noinline can be
+; removed from optnone functions.
 ; CHECK-REMOVE-ALL: define void @foo() {
 ; CHECK-REMOVE-ALL: define void @goo() {
 ; CHECK-REMOVE-ALL: define void @hoo() #0 {
@@ -93,14 +100,17 @@ attributes #5 = { noinline optnone }
 ; CHECK-REMOVE-ALL: define void @bar() #2 {
 ; CHECK-REMOVE-ALL: define void @baz() #3 {
 ; CHECK-REMOVE-ALL: define void @qoo() #4 {
+; CHECK-REMOVE-ALL: define void @roo() #4 {
 ; CHECK-REMOVE-ALL-DAG: attributes #0 = { alwaysinline }
 ; CHECK-REMOVE-ALL-DAG: attributes #1 = { optsize }
 ; CHECK-REMOVE-ALL-DAG: attributes #2 = { minsize }
 ; CHECK-REMOVE-ALL-DAG: attributes #3 = { optdebug }
-; CHECK-REMOVE-ALL-DAG: attributes #4 = { noinline optnone }
+; CHECK-REMOVE-ALL-DAG: attributes #4 = { optnone }
 
 ; When forcing alwaysinline on all functions, it should not be added to
-; functions that already have noinline or optnone (would produce invalid IR).
+; functions that already have noinline (would produce invalid IR). It may be
+; added to optnone functions (alwaysinline takes precedence over the noinline
+; implied by optnone).
 ; CHECK-ALWAYSINLINE-ALL: define void @foo() #0 {
 ; CHECK-ALWAYSINLINE-ALL: define void @goo() #1 {
 ; CHECK-ALWAYSINLINE-ALL: define void @hoo() #0 {
@@ -108,12 +118,14 @@ attributes #5 = { noinline optnone }
 ; CHECK-ALWAYSINLINE-ALL: define void @bar() #3 {
 ; CHECK-ALWAYSINLINE-ALL: define void @baz() #4 {
 ; CHECK-ALWAYSINLINE-ALL: define void @qoo() #5 {
+; CHECK-ALWAYSINLINE-ALL: define void @roo() #6 {
 ; CHECK-ALWAYSINLINE-ALL-DAG: attributes #0 = { alwaysinline }
 ; CHECK-ALWAYSINLINE-ALL-DAG: attributes #1 = { noinline }
 ; CHECK-ALWAYSINLINE-ALL-DAG: attributes #2 = { alwaysinline optsize }
 ; CHECK-ALWAYSINLINE-ALL-DAG: attributes #3 = { alwaysinline minsize }
 ; CHECK-ALWAYSINLINE-ALL-DAG: attributes #4 = { alwaysinline optdebug }
 ; CHECK-ALWAYSINLINE-ALL-DAG: attributes #5 = { noinline optnone }
+; CHECK-ALWAYSINLINE-ALL-DAG: attributes #6 = { alwaysinline optnone }
 
 ; When forcing noinline on all functions, it should not be added to
 ; functions that already have alwaysinline (would produce invalid IR).
@@ -124,6 +136,7 @@ attributes #5 = { noinline optnone }
 ; CHECK-NOINLINE-ALL: define void @bar() #3 {
 ; CHECK-NOINLINE-ALL: define void @baz() #4 {
 ; CHECK-NOINLINE-ALL: define void @qoo() #5 {
+; CHECK-NOINLINE-ALL: define void @roo() #5 {
 ; CHECK-NOINLINE-ALL-DAG: attributes #0 = { noinline }
 ; CHECK-NOINLINE-ALL-DAG: attributes #1 = { alwaysinline }
 ; CHECK-NOINLINE-ALL-DAG: attributes #2 = { noinline optsize }
@@ -132,19 +145,23 @@ attributes #5 = { noinline optnone }
 ; CHECK-NOINLINE-ALL-DAG: attributes #5 = { noinline optnone }
 
 ; When forcing optnone on all functions, it should not be added to functions
-; that already have alwaysinline, optsize, minsize, or optdebug.
+; that already have optsize, minsize, or optdebug. optnone implies noinline, so
+; noinline is not added alongside it. optnone may be combined with
+; alwaysinline (alwaysinline takes precedence over the implied noinline).
 ; CHECK-OPTNONE-ALL: define void @foo() #0 {
-; CHECK-OPTNONE-ALL: define void @goo() #0 {
-; CHECK-OPTNONE-ALL: define void @hoo() #1 {
-; CHECK-OPTNONE-ALL: define void @zoo() #2 {
-; CHECK-OPTNONE-ALL: define void @bar() #3 {
-; CHECK-OPTNONE-ALL: define void @baz() #4 {
-; CHECK-OPTNONE-ALL: define void @qoo() #0 {
-; CHECK-OPTNONE-ALL-DAG: attributes #0 = { noinline optnone }
-; CHECK-OPTNONE-ALL-DAG: attributes #1 = { alwaysinline }
-; CHECK-OPTNONE-ALL-DAG: attributes #2 = { optsize }
-; CHECK-OPTNONE-ALL-DAG: attributes #3 = { minsize }
-; CHECK-OPTNONE-ALL-DAG: attributes #4 = { optdebug }
+; CHECK-OPTNONE-ALL: define void @goo() #1 {
+; CHECK-OPTNONE-ALL: define void @hoo() #2 {
+; CHECK-OPTNONE-ALL: define void @zoo() #3 {
+; CHECK-OPTNONE-ALL: define void @bar() #4 {
+; CHECK-OPTNONE-ALL: define void @baz() #5 {
+; CHECK-OPTNONE-ALL: define void @qoo() #1 {
+; CHECK-OPTNONE-ALL: define void @roo() #0 {
+; CHECK-OPTNONE-ALL-DAG: attributes #0 = { optnone }
+; CHECK-OPTNONE-ALL-DAG: attributes #1 = { noinline optnone }
+; CHECK-OPTNONE-ALL-DAG: attributes #2 = { alwaysinline optnone }
+; CHECK-OPTNONE-ALL-DAG: attributes #3 = { optsize }
+; CHECK-OPTNONE-ALL-DAG: attributes #4 = { minsize }
+; CHECK-OPTNONE-ALL-DAG: attributes #5 = { optdebug }
 
 ; When forcing minsize on all functions, it should not be added to functions
 ; that already have optnone or optdebug.
@@ -155,12 +172,14 @@ attributes #5 = { noinline optnone }
 ; CHECK-MINSIZE-ALL: define void @bar() #0 {
 ; CHECK-MINSIZE-ALL: define void @baz() #4 {
 ; CHECK-MINSIZE-ALL: define void @qoo() #5 {
+; CHECK-MINSIZE-ALL: define void @roo() #6 {
 ; CHECK-MINSIZE-ALL-DAG: attributes #0 = { minsize }
 ; CHECK-MINSIZE-ALL-DAG: attributes #1 = { minsize noinline }
 ; CHECK-MINSIZE-ALL-DAG: attributes #2 = { alwaysinline minsize }
 ; CHECK-MINSIZE-ALL-DAG: attributes #3 = { minsize optsize }
 ; CHECK-MINSIZE-ALL-DAG: attributes #4 = { optdebug }
 ; CHECK-MINSIZE-ALL-DAG: attributes #5 = { noinline optnone }
+; CHECK-MINSIZE-ALL-DAG: attributes #6 = { optnone }
 
 ; When forcing optdebug on all functions, it should not be added to functions
 ; that already have optnone, minsize, or optsize.
@@ -171,9 +190,11 @@ attributes #5 = { noinline optnone }
 ; CHECK-OPTDEBUG-ALL: define void @bar() #4 {
 ; CHECK-OPTDEBUG-ALL: define void @baz() #0 {
 ; CHECK-OPTDEBUG-ALL: define void @qoo() #5 {
+; CHECK-OPTDEBUG-ALL: define void @roo() #6 {
 ; CHECK-OPTDEBUG-ALL-DAG: attributes #0 = { optdebug }
 ; CHECK-OPTDEBUG-ALL-DAG: attributes #1 = { noinline optdebug }
 ; CHECK-OPTDEBUG-ALL-DAG: attributes #2 = { alwaysinline optdebug }
 ; CHECK-OPTDEBUG-ALL-DAG: attributes #3 = { optsize }
 ; CHECK-OPTDEBUG-ALL-DAG: attributes #4 = { minsize }
 ; CHECK-OPTDEBUG-ALL-DAG: attributes #5 = { noinline optnone }
+; CHECK-OPTDEBUG-ALL-DAG: attributes #6 = { optnone }

@@ -48,6 +48,34 @@ TEST_F(DefineInlineTest, TriggersOnFunctionDecl) {
   // Definition with no body.
   class Bar { Bar() = def^ault; };
   )cpp");
+
+  EXPECT_UNAVAILABLE(R"cpp(
+  // Redeclaration after the definition.
+  void foo() {
+    return;
+  }
+  void f^oo();
+  )cpp");
+
+  EXPECT_UNAVAILABLE(R"cpp(
+  // error-ok
+  // Target is already a definition.
+  void foo() {
+    return;
+  }
+  void f^oo() {
+    return;
+  }
+  )cpp");
+
+  EXPECT_UNAVAILABLE(R"cpp(
+  // error-ok
+  // Target is deleted.
+  void foo() = delete;
+  void f^oo() {
+    return;
+  }
+  )cpp");
 }
 
 TEST_F(DefineInlineTest, NoForwardDecl) {

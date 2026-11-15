@@ -25,10 +25,9 @@ define void @narrow_iv_user_chain(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:      CLONE ir<%and> = and vp<[[VP5]]>, ir<-4>
 ; CHECK-NEXT:      CLONE ir<%gep.ld> = getelementptr inbounds ir<%A>, ir<%and>
 ; CHECK-NEXT:      CLONE ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      WIDEN ir<%calc> = add nsw ir<%ld>, ir<42>
-; CHECK-NEXT:      CLONE ir<%calc>.1 = add nsw ir<%ld>, ir<42>
+; CHECK-NEXT:      CLONE ir<%calc> = add nsw ir<%ld>, ir<42>
 ; CHECK-NEXT:      CLONE ir<%gep.st> = getelementptr inbounds ir<%B>, ir<%and>
-; CHECK-NEXT:      REPLICATE store ir<%calc>.1, ir<%gep.st>
+; CHECK-NEXT:      REPLICATE store ir<%calc>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -81,12 +80,10 @@ define void @narrow_iv_user_chain_multiple_levels(ptr noalias %A, ptr noalias %B
 ; CHECK-NEXT:      CLONE ir<%and> = and vp<[[VP5]]>, ir<-4>
 ; CHECK-NEXT:      CLONE ir<%gep.ld> = getelementptr inbounds ir<%A>, ir<%and>
 ; CHECK-NEXT:      CLONE ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      WIDEN ir<%calc> = add nsw ir<%ld>, ir<42>
-; CHECK-NEXT:      CLONE ir<%calc>.1 = add nsw ir<%ld>, ir<42>
-; CHECK-NEXT:      WIDEN ir<%calc2> = mul nsw ir<%calc>.1, ir<3>
-; CHECK-NEXT:      CLONE ir<%calc2>.1 = mul nsw ir<%calc>.1, ir<3>
+; CHECK-NEXT:      CLONE ir<%calc> = add nsw ir<%ld>, ir<42>
+; CHECK-NEXT:      CLONE ir<%calc2> = mul nsw ir<%calc>, ir<3>
 ; CHECK-NEXT:      CLONE ir<%gep.st> = getelementptr inbounds ir<%B>, ir<%and>
-; CHECK-NEXT:      REPLICATE store ir<%calc2>.1, ir<%gep.st>
+; CHECK-NEXT:      REPLICATE store ir<%calc2>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors

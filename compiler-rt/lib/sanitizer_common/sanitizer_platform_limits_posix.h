@@ -474,6 +474,11 @@ struct __sanitizer_file_handle {
   int handle_type;
   unsigned char f_handle[1];  // variable sized
 };
+
+struct __sanitizer_FTW {
+  int base;
+  int level;
+};
 #  endif
 
 #  if SANITIZER_APPLE || SANITIZER_HAIKU
@@ -1174,8 +1179,6 @@ extern unsigned struct_kbkeycode_sz;
 extern unsigned struct_kbsentry_sz;
 extern unsigned struct_mtconfiginfo_sz;
 extern unsigned struct_nr_parms_struct_sz;
-extern unsigned struct_scc_modem_sz;
-extern unsigned struct_scc_stat_sz;
 extern unsigned struct_serial_multiport_struct_sz;
 extern unsigned struct_serial_struct_sz;
 extern unsigned struct_sockaddr_ax25_sz;

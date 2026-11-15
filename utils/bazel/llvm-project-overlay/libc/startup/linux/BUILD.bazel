@@ -1,0 +1,124 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("//libc:libc_build_rules.bzl", "libc_startup_library", "libc_support_library")
+load("//libc:platforms.bzl", "PLATFORM_CPU_X86_64")
+load(":startup_rules.bzl", "libc_startup_object", "merge_relocatable_object")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+exports_files(["startup_rules.bzl"])
+
+libc_support_library(
+    name = "gnu_property_section",
+    srcs = ["gnu_property_section.cpp"],
+    hdrs = ["gnu_property_section.h"],
+    deps = [
+        "//libc/hdr:elf_proxy",
+        "//libc/hdr:link_macros",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_support_library(
+    name = "irelative_hdr",
+    hdrs = ["irelative.h"],
+    deps = [
+        "//libc/hdr:link_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_startup_library(
+    name = "do_start",
+    srcs = ["do_start.cpp"],
+    hdrs = [
+        "do_start.h",
+    ],
+    deps = [
+        ":gnu_property_section",
+        ":irelative_hdr",
+        "//libc:config_app_h",
+        "//libc:config_linux_app_h",
+        "//libc/hdr:elf_proxy",
+        "//libc/hdr:link_macros",
+        "//libc/hdr:pthread_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/hdr:sys_auxv_macros",
+        "//libc/hdr:sys_mman_macros",
+        "//libc/hdr/types:struct_link_map",
+        "//libc/hdr/types:struct_r_debug",
+        "//libc/src/__support/OSUtil:linux_auxv",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:exit_group",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/threads:linux_futex_utils",
+        "//libc/src/__support/threads:linux_tls",
+        "//libc/src/__support/threads:tcb",
+        "//libc/src/__support/threads:thread",
+        "//libc/src/__support/threads:thread_headers",
+        "//libc/src/errno:program_invocation_name",
+        "//libc/src/errno:program_invocation_short_name",
+        "//libc/src/link:_r_debug",
+        "//libc/src/stdlib:atexit",
+        "//libc/src/stdlib:exit",
+        "//libc/src/unistd:environ",
+    ] + selects.with_or({
+        PLATFORM_CPU_X86_64: [
+            "//libc/startup/linux/x86_64:irelative",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+merge_relocatable_object(
+    name = "crt1_library",
+    deps = [
+        ":do_start",
+        ":gnu_property_section",
+    ] + selects.with_or({
+        PLATFORM_CPU_X86_64: [
+            "//libc/startup/linux/x86_64:irelative",
+            "//libc/startup/linux/x86_64:start",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+libc_startup_object(
+    name = "crt1",
+    dep = ":crt1_library",
+)
+
+libc_startup_library(
+    name = "crti_library",
+    srcs = ["crti.cpp"],
+)
+
+libc_startup_object(
+    name = "crti",
+    dep = ":crti_library",
+)
+
+libc_startup_library(
+    name = "crtn_library",
+    srcs = ["crtn.cpp"],
+)
+
+libc_startup_object(
+    name = "crtn",
+    dep = ":crtn_library",
+)

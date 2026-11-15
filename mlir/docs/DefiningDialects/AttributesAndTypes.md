@@ -887,6 +887,12 @@ assembly format of `` `<` struct(params) `>` `` will result in:
 The order in which the parameters are printed is the order in which they are
 declared in the attribute's or type's `parameter` list.
 
+An `EnumAttrParameter`, `OptionalEnumAttrParameter`, or
+`DefaultValuedEnumAttrParameter` captured by `struct` uses the underlying enum
+syntax. This omits the enum attribute's mnemonic and assembly-format
+delimiters. For example, an enum attribute whose standalone syntax is
+`#my_dialect.enum<case>` is printed as `kind = case` in a `struct`.
+
 Passing `custom<Foo>($variable)` allows providing a custom printer and parser
 for the encapsulated variable. Check the
 [custom and ref directive](#custom-and-ref-directive) section for more
@@ -999,7 +1005,7 @@ without tearing down loaded dialects.
 
 In most cases the storage class is auto generated, but if necessary it can be
 manually defined by setting the `genStorageClass` field to 0. The name and
-namespace (defaults to `detail`) can additionally be controlled via the The
+namespace (defaults to `detail`) can additionally be controlled via the
 `storageClass` and `storageNamespace` fields.
 
 #### Defining a storage class

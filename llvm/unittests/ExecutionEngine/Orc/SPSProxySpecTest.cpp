@@ -15,6 +15,8 @@
 
 #include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -107,6 +109,25 @@ TEST(SPSProxySpecTest, CallMainAsyncViaCallOperator) {
   Expected<int64_t> R = F.get();
   ASSERT_THAT_EXPECTED(R, Succeeded());
   EXPECT_EQ(*R, 2 + 3); // argc == 2, strlen("foo") == 3.
+
+  cantFail(ES.endSession());
+}
+
+// Exercises dispatch for a Proxy other than CallMainProxy: the spec depends
+// only on the wire signature, so any Proxy whose arguments are serializable
+// with it can use the spec.
+TEST(SPSProxySpecTest, CallMainSpecWithOtherProxyType) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  using VectorArgsCallMainProxy =
+      Proxy<int64_t(ExecutorAddr, std::vector<std::string>)>;
+  VectorArgsCallMainProxy CallMain(sps::CallMainProxySpec::dispatch,
+                                   ExecutorAddr::fromPtr(callMainWrapper));
+
+  Expected<int64_t> R =
+      CallMain(ES, ExecutorAddr::fromPtr(testMain), {"hello", "world"});
+  ASSERT_THAT_EXPECTED(R, Succeeded());
+  EXPECT_EQ(*R, 2 + 5); // argc == 2, strlen("hello") == 5.
 
   cantFail(ES.endSession());
 }
@@ -209,6 +230,33 @@ TEST(SPSProxySpecTest, Int32VoidSync) {
   cantFail(ES.endSession());
 }
 
+TEST(SPSProxySpecTest, SelfEPCBootstrapRunAsFunctionProxies) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  CallInt32VoidProxy CallInt32Void;
+  CallInt32Int32Proxy CallInt32Int32;
+  if (auto Err = lookupAndApply(
+          ES.getBootstrapJITDylib(),
+          {recordProxy<sps::CallInt32VoidProxySpec>(&CallInt32Void),
+           recordProxy<sps::CallInt32Int32ProxySpec>(&CallInt32Int32)})) {
+    ADD_FAILURE() << toString(std::move(Err));
+    cantFail(ES.endSession());
+    return;
+  }
+
+  Expected<int32_t> VoidResult =
+      CallInt32Void(ES, ExecutorAddr::fromPtr(int32VoidTarget));
+  ASSERT_THAT_EXPECTED(VoidResult, Succeeded());
+  EXPECT_EQ(*VoidResult, 42);
+
+  Expected<int32_t> IntResult =
+      CallInt32Int32(ES, ExecutorAddr::fromPtr(int32Int32Target), 21);
+  ASSERT_THAT_EXPECTED(IntResult, Succeeded());
+  EXPECT_EQ(*IntResult, 42);
+
+  cantFail(ES.endSession());
+}
+
 // Executor-side wrapper returning Error: fails iff its bool argument is true.
 static CWrapperFunctionBuffer errorFnWrapper(const char *ArgData,
                                              size_t ArgSize) {
@@ -224,11 +272,12 @@ static CWrapperFunctionBuffer errorFnWrapper(const char *ArgData,
 }
 
 struct ErrorFnCI {
-  static constexpr char Name[] = "test_sps_error_fn";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::verbatim("test_sps_error_fn");
   using SPSSig = SPSError(bool);
 };
 using ErrorFnProxy = Proxy<Error(bool)>;
-using ErrorFnProxySpec = sps::ProxySpec<ErrorFnProxy, ErrorFnCI>;
+using ErrorFnProxySpec = sps::ProxySpec<ErrorFnCI>;
 
 // Exercises the Error -> Error mapping across the SPS boundary, including a
 // failure reported by the executor-side function itself.
@@ -260,11 +309,12 @@ static CWrapperFunctionBuffer expectedFnWrapper(const char *ArgData,
 }
 
 struct ExpectedFnCI {
-  static constexpr char Name[] = "test_sps_expected_fn";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::verbatim("test_sps_expected_fn");
   using SPSSig = SPSExpected<int32_t>(int32_t);
 };
 using ExpectedFnProxy = Proxy<Expected<int32_t>(int32_t)>;
-using ExpectedFnProxySpec = sps::ProxySpec<ExpectedFnProxy, ExpectedFnCI>;
+using ExpectedFnProxySpec = sps::ProxySpec<ExpectedFnCI>;
 
 // Exercises the Expected<T> -> Expected<T> (flattening) mapping across the SPS
 // boundary, for both the value and the executor-reported-error cases.

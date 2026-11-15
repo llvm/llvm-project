@@ -7,11 +7,15 @@ define zeroext i16 @test1(i16 zeroext %a, i16 zeroext %b) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.w (6,%sp), %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    move.w (10,%sp), %d1
 ; CHECK-NEXT:    divu %d1, %d0
 ; CHECK-NEXT:    swap %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    rts
 entry:
 	%rem = urem i16 %a, %b
@@ -26,7 +30,9 @@ define zeroext i16 @test2(i16 zeroext %a, i16 zeroext %b) nounwind {
 ; CHECK-NEXT:    move.w (10,%sp), %d1
 ; CHECK-NEXT:    divs %d1, %d0
 ; CHECK-NEXT:    swap %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    rts
 entry:
 	%rem = srem i16 %a, %b
@@ -42,8 +48,8 @@ define zeroext i8 @test3(i8 zeroext %a, i8 zeroext %b) nounwind {
 ; CHECK-NEXT:    and.l #255, %d1
 ; CHECK-NEXT:    divu %d0, %d1
 ; CHECK-NEXT:    swap %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.b %d1, %d0
 ; CHECK-NEXT:    rts
 entry:
 	%rem = urem i8 %a, %b
@@ -60,8 +66,8 @@ define zeroext i8 @test4(i8 zeroext %a, i8 zeroext %b) nounwind {
 ; CHECK-NEXT:    ext.l %d1
 ; CHECK-NEXT:    divs %d0, %d1
 ; CHECK-NEXT:    swap %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.b %d1, %d0
 ; CHECK-NEXT:    rts
 entry:
 	%rem = srem i8 %a, %b

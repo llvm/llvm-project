@@ -8,7 +8,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
     %c10 = arith.constant 10 : index
     %0 = fir.alloca !fir.array<10xf32> {bindc_name = "arr", uniq_name = "_QFsubEarr"}
     %1 = fir.shape_shift %c2, %c10 : (index, index) -> !fir.shapeshift<1>
-    %2 = fir.declare %0(%1) {uniq_name = "_QFsubEarr"} : (!fir.ref<!fir.array<10xf32>>, !fir.shapeshift<1>) -> !fir.ref<!fir.array<10xf32>>
+    %2 = fir.declare %0(%1) uniq_name("_QFsubEarr") : (!fir.ref<!fir.array<10xf32>>, !fir.shapeshift<1>) -> !fir.ref<!fir.array<10xf32>>
     %3 = fir.embox %2(%1) : (!fir.ref<!fir.array<10xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<10xf32>>
     %4 = fir.box_addr %3 : (!fir.box<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>>
     %5 = acc.copyin var(%3 : !fir.box<!fir.array<10xf32>>) structured(false) name("arr") -> !fir.box<!fir.array<10xf32>>
@@ -39,21 +39,21 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
     %c0 = arith.constant 0 : index
     %c10 = arith.constant 10 : index
     %0 = fir.dummy_scope : !fir.dscope
-    %1:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFacc_explicit_shapeEnn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %1:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFacc_explicit_shapeEnn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
     %2 = fir.alloca !fir.array<10xf32> {bindc_name = "arr3", uniq_name = "_QFacc_explicit_shapeEarr3"}
     %3 = fir.shape %c10 : (index) -> !fir.shape<1>
-    %4:2 = hlfir.declare %2(%3) {uniq_name = "_QFacc_explicit_shapeEarr3"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+    %4:2 = hlfir.declare %2(%3) uniq_name("_QFacc_explicit_shapeEarr3") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
     %5 = fir.load %1#0 : !fir.ref<i32>
     %6 = fir.convert %5 : (i32) -> index
     %7 = arith.cmpi sgt, %6, %c0 : index
     %8 = arith.select %7, %6, %c0 : index
     %9 = fir.shape %8 : (index) -> !fir.shape<1>
-    %10:2 = hlfir.declare %arg0(%9) dummy_scope %0 {uniq_name = "_QFacc_explicit_shapeEarr1"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+    %10:2 = hlfir.declare %arg0(%9) dummy_scope %0 uniq_name("_QFacc_explicit_shapeEarr1") : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
     %11 = arith.addi %6, %c-1 : index
     %12 = arith.cmpi sgt, %11, %c0 : index
     %13 = arith.select %12, %11, %c0 : index
     %14 = fir.shape_shift %c2, %13 : (index, index) -> !fir.shapeshift<1>
-    %15:2 = hlfir.declare %arg1(%14) dummy_scope %0 {uniq_name = "_QFacc_explicit_shapeEarr2"} : (!fir.ref<!fir.array<?xf32>>, !fir.shapeshift<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+    %15:2 = hlfir.declare %arg1(%14) dummy_scope %0 uniq_name("_QFacc_explicit_shapeEarr2") : (!fir.ref<!fir.array<?xf32>>, !fir.shapeshift<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
     %16 = acc.copyin var(%10#1 : !fir.ref<!fir.array<?xf32>>) structured(false) name("arr1") -> !fir.ref<!fir.array<?xf32>>
     %17 = acc.copyin var(%15#1 : !fir.ref<!fir.array<?xf32>>) structured(false) name("arr2") -> !fir.ref<!fir.array<?xf32>>
     %18 = acc.copyin varPtr(%4#0 : !fir.ref<!fir.array<10xf32>>) structured(false) name("arr3") -> !fir.ref<!fir.array<10xf32>>
@@ -93,13 +93,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // Test the bounds generation for an opaque box.
   func.func @_QPtest_opaque_box_hlfir(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
     %0 = fir.dummy_scope : !fir.dscope
-    %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_opaque_boxEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+    %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_opaque_boxEx") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
     %2 = acc.copyin var(%1#0 : !fir.box<!fir.array<?x?xf32>>) structured(false) name("x") -> !fir.box<!fir.array<?x?xf32>>
     acc.enter_data dataOperands(%2 : !fir.box<!fir.array<?x?xf32>>)
     return
   }
   // CHECK: Visiting: %{{.*}} = acc.copyin var(%[[VAR:.*]]#0 : !fir.box<!fir.array<?x?xf32>>) structured(false) name("x") -> !fir.box<!fir.array<?x?xf32>>
-  // CHECK: Var: %[[VAR]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {uniq_name = "_QFtest_opaque_boxEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  // CHECK: Var: %[[VAR]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 uniq_name("_QFtest_opaque_boxEx") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
   // CHECK: Mappable: !fir.box<!fir.array<?x?xf32>>
   // CHECK: Type category: array
   // CHECK: Has unknown dimensions: false
@@ -115,13 +115,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
 
   func.func @_QPtest_optional(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.optional}) {
     %0 = fir.dummy_scope : !fir.dscope
-    %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_optionalEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+    %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_optionalEx") fortran_attrs<optional> : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
     %2 = acc.copyin var(%1#0 : !fir.box<!fir.array<?xf32>>) structured(false) name("x") -> !fir.box<!fir.array<?xf32>>
     acc.enter_data dataOperands(%2 : !fir.box<!fir.array<?xf32>>)
     return
   }
   // CHECK: Visiting: %{{.*}} = acc.copyin var(%[[VAR:.*]]#0 : !fir.box<!fir.array<?xf32>>) structured(false) name("x") -> !fir.box<!fir.array<?xf32>>
-  // CHECK: Var: %[[VAR]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_optionalEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  // CHECK: Var: %[[VAR]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 uniq_name("_QFtest_optionalEx") fortran_attrs<optional> : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   // CHECK: Mappable: !fir.box<!fir.array<?xf32>>
   // CHECK: Type category: array
   // CHECK: Has unknown dimensions: false

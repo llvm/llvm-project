@@ -77,9 +77,9 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 
 }
 
-; Check for the explicitly emitted .note.GNU-stack section (ELF only). Marking
-; it executable takes the "executable-stack" module flag.
+; Check for the explicitly emitted .note.GNU-stack section (ELF only) in the
+; presence of trampolines.
 ; UTC_ARGS: --disable
-; RV64-LINUX:         .section        ".note.GNU-stack","",@progbits
-; RV64:               .section        ".note.GNU-stack","",@progbits
+; RV64-LINUX:         .section        ".note.GNU-stack","x",@progbits
+; RV64:               .section        ".note.GNU-stack","x",@progbits
 ; UTC_ARGS: --enable

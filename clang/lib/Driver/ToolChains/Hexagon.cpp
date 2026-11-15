@@ -188,6 +188,16 @@ void hexagon::getHexagonTargetFeatures(const Driver &D,
 
   handleHVXTargetFeatures(D, Args, Features, Cpu, HasHVX);
 
+  // HLX is available on v85 and later.
+  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hlx,
+                               options::OPT_mno_hexagon_hlx)) {
+    unsigned CpuVer = 0;
+    // getAsInteger returns 'true' on error.
+    if (Cpu.substr(1).getAsInteger(10, CpuVer) || CpuVer < 85)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Cpu;
+  }
+
   if (HexagonToolChain::isAutoHVXEnabled(Args) && !HasHVX)
     D.Diag(diag::warn_drv_needs_hvx) << "auto-vectorization";
 }
@@ -218,7 +228,10 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       "-mcpu=hexagon" +
       toolchains::HexagonToolChain::GetTargetCPUVersion(Args)));
 
-  addSanitizerRuntimes(HTC, Args, CmdArgs);
+  if (std::get<0>(ParsePICArgs(HTC, Args)) == llvm::Reloc::PIC_)
+    CmdArgs.push_back("-position-independent");
+
+  addSanitizerRuntimes(HTC, Args, CmdArgs, C);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -233,6 +246,15 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     if (A->getOption().matches(options::OPT_mhexagon_hvx_ieee_fp))
       CmdArgs.push_back("-mhvx-ieee-fp");
   }
+
+  if (Args.hasFlag(options::OPT_mhexagon_hmx, options::OPT_mno_hexagon_hmx,
+                   false)) {
+    CmdArgs.push_back("-mhmx");
+  }
+
+  if (Args.hasFlag(options::OPT_mhexagon_hlx, options::OPT_mno_hexagon_hlx,
+                   false))
+    CmdArgs.push_back("-mhlx");
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
     CmdArgs.push_back(Args.MakeArgString("-gpsize=" + Twine(*G)));
@@ -299,12 +321,14 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
   bool UseLLD = false;
   const char *Exec = Args.MakeArgString(HTC.GetLinkerPath(&UseLLD));
-  UseLLD = UseLLD || llvm::sys::path::filename(Exec).ends_with("ld.lld") ||
+  StringRef LinkerName = llvm::sys::path::filename(Exec);
+  UseLLD = UseLLD || LinkerName.starts_with("ld.lld") ||
+           LinkerName.ends_with("ld.lld") ||
            llvm::sys::path::stem(Exec).ends_with("ld.lld");
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, CmdArgs, C);
   bool NeedsXRayDeps = addXRayRuntime(HTC, Args, CmdArgs);
 
   //----------------------------------------------------------------------------

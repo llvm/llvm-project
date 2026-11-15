@@ -54,6 +54,16 @@ func.func @test_broadcast_fixed() {
   return
 }
 
+// CHECK-LABEL: @test_broadcast_error
+// CHECK: shape.broadcast %{{.*}}, %{{.*}} error = "incompatible shapes"
+func.func @test_broadcast_error() {
+  %0 = shape.const_shape [10, 1, 57, 92] : !shape.shape
+  %1 = shape.const_shape [4, 57, 92] : !shape.shape
+  %2 = shape.broadcast %0, %1 error = "incompatible shapes"
+      : !shape.shape, !shape.shape -> !shape.shape
+  return
+}
+
 func.func @test_broadcast_extents() -> tensor<4xindex> {
   %0 = shape.const_shape [10, 1, 57, 92] : tensor<4xindex>
   %1 = shape.const_shape [4, 57, 92] : tensor<3xindex>
@@ -347,4 +357,3 @@ func.func @meet_index(%arg0 : index, %arg1 : index) -> index {
   %result = shape.meet %arg0, %arg1 : index, index -> index
   return %result : index
 }
-

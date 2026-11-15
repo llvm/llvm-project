@@ -122,17 +122,13 @@ define <4 x float> @modf_store_merging_load_before_store(<4 x float> %x, ptr %ou
 ;
 ; ARMPL-LABEL: modf_store_merging_load_before_store:
 ; ARMPL:       // %bb.0:
-; ARMPL-NEXT:    sub sp, sp, #32
-; ARMPL-NEXT:    str x30, [sp, #16] // 8-byte Spill
-; ARMPL-NEXT:    .cfi_def_cfa_offset 32
+; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; ARMPL-NEXT:    .cfi_def_cfa_offset 16
 ; ARMPL-NEXT:    .cfi_offset w30, -16
-; ARMPL-NEXT:    ldr q1, [x0]
-; ARMPL-NEXT:    str q1, [sp] // 16-byte Spill
+; ARMPL-NEXT:    ldr q16, [x0]
 ; ARMPL-NEXT:    bl armpl_vmodfq_f32
-; ARMPL-NEXT:    ldr q1, [sp] // 16-byte Reload
-; ARMPL-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
-; ARMPL-NEXT:    fadd v0.4s, v1.4s, v0.4s
-; ARMPL-NEXT:    add sp, sp, #32
+; ARMPL-NEXT:    fadd v0.4s, v16.4s, v0.4s
+; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; ARMPL-NEXT:    ret
   %result = call { <4 x float>, <4 x float> } @llvm.modf.v4f32(<4 x float> %x)
   %result.0 = extractvalue { <4 x float>, <4 x float> } %result, 0

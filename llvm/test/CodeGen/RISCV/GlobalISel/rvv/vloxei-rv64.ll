@@ -8,8 +8,7 @@ define <vscale x 1 x i8> @intrinsic_vloxei_v_nxv1i8_nxv1i8_nxv1i64(ptr %0, <vsca
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv1i8_nxv1i8_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vloxei64.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei64.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vloxei.nxv1i8.nxv1i64(
@@ -144,8 +143,7 @@ define <vscale x 1 x i16> @intrinsic_vloxei_v_nxv1i16_nxv1i16_nxv1i64(ptr %0, <v
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv1i16_nxv1i16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vloxei64.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei64.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i16> @llvm.riscv.vloxei.nxv1i16.nxv1i64(
@@ -280,8 +278,7 @@ define <vscale x 1 x i32> @intrinsic_vloxei_v_nxv1i32_nxv1i32_nxv1i64(ptr %0, <v
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv1i32_nxv1i32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vloxei64.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei64.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vloxei.nxv1i32.nxv1i64(
@@ -548,8 +545,7 @@ define <vscale x 1 x half> @intrinsic_vloxei_v_nxv1f16_nxv1f16_nxv1i64(ptr %0, <
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv1f16_nxv1f16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vloxei64.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei64.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x half> @llvm.riscv.vloxei.nxv1f16.nxv1i64(
@@ -684,8 +680,7 @@ define <vscale x 1 x float> @intrinsic_vloxei_v_nxv1f32_nxv1f32_nxv1i64(ptr %0, 
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv1f32_nxv1f32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vloxei64.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei64.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vloxei.nxv1f32.nxv1i64(

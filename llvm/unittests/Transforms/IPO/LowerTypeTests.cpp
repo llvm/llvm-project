@@ -95,11 +95,68 @@ TEST(LowerTypeTests, GlobalLayoutBuilder) {
     for (auto &&F : T.Fragments)
       GLB.addFragment(F);
 
-    std::vector<uint64_t> ComputedLayout;
-    for (auto &&F : GLB.Fragments)
-      llvm::append_range(ComputedLayout, F);
+    EXPECT_EQ(T.WantLayout, GLB.build());
+  }
+}
 
-    EXPECT_EQ(T.WantLayout, ComputedLayout);
+TEST(LowerTypeTests, GlobalLayoutBuilderHotness) {
+  struct {
+    uint64_t NumObjects;
+    std::vector<uint64_t> Ranks;
+    std::vector<std::set<uint64_t>> Fragments;
+    std::vector<uint64_t> WantLayout;
+  } GLBTests[] = {
+      // 0 objects
+      {0, {}, {}, {}},
+      // 1 object
+      {1, {10}, {{0}}, {0}},
+      // Single fragment sorted ascending by rank
+      {4, {40, 10, 30, 20}, {{0, 1, 2, 3}}, {1, 3, 2, 0}},
+      // Multiple root fragments ordered by max element in build()
+      {4, {40, 10, 30, 20}, {{0, 1}, {2, 3}}, {3, 2, 1, 0}},
+      // Three root fragments ordered by max element:
+      // [2, 3] (max 40) < [0, 1] (max 50) < [4, 5] (max 60)
+      {6,
+       {10, 50, 30, 40, 20, 60},
+       {{0, 1}, {2, 3}, {4, 5}},
+       {2, 3, 0, 1, 4, 5}},
+      // Sub-fragments merged into universal set:
+      // Within {0, 1}: 1 (20) < 0 (40) -> [1, 0], max 40
+      // Within {2, 3}: 3 (10) < 2 (30) -> [3, 2], max 30
+      // In {0, 1, 2, 3}: [3, 2] (max 30) < [1, 0] (max 40) -> [3, 2, 1, 0]
+      {4, {40, 20, 30, 10}, {{0, 1}, {2, 3}, {0, 1, 2, 3}}, {3, 2, 1, 0}},
+      // Unassigned element added to existing fragment: unassigned colder
+      {3, {10, 30, 20}, {{0, 1}, {0, 2}}, {2, 0, 1}},
+      // Unassigned element added to existing fragment: unassigned hotter
+      {3, {10, 30, 40}, {{0, 1}, {0, 2}}, {0, 1, 2}},
+      // Merging three disjoint fragments via overlapping set
+      {6,
+       {10, 20, 40, 50, 30, 35},
+       {{0, 1}, {2, 3}, {4, 5}, {1, 3, 5}},
+       {0, 1, 4, 5, 2, 3}},
+      // Chained overlapping fragments
+      {4, {30, 10, 40, 20}, {{0, 1}, {1, 2}, {2, 3}}, {3, 1, 0, 2}},
+      // Multi-level hierarchy (leaves -> branch -> root)
+      {6,
+       {10, 80, 20, 70, 30, 90},
+       {{0, 1}, {2, 3}, {4, 5}, {0, 1, 2, 3}, {0, 1, 2, 3, 4, 5}},
+       {2, 3, 0, 1, 4, 5}},
+      // Preserves order on ties (stable sort)
+      {3, {10, 10, 10}, {{0, 1, 2}}, {0, 1, 2}},
+      // Already ascending and descending ranks
+      {4, {10, 20, 30, 40}, {{0, 1, 2, 3}}, {0, 1, 2, 3}},
+      {4, {40, 30, 20, 10}, {{0, 1, 2, 3}}, {3, 2, 1, 0}},
+  };
+
+  for (auto &&T : GLBTests) {
+    // Pass a temporary lambda directly to verify it does not dangle.
+    GlobalLayoutBuilder GLB(T.NumObjects, [&](uint64_t A, uint64_t B) {
+      return T.Ranks[A] < T.Ranks[B];
+    });
+    for (auto &&F : T.Fragments)
+      GLB.addFragment(F);
+
+    EXPECT_EQ(T.WantLayout, GLB.build());
   }
 }
 

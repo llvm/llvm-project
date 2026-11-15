@@ -103,7 +103,9 @@ public:
   void walkExprs(function_ref<void(AffineExpr)> callback) const;
 
   void print(raw_ostream &os) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   friend ::llvm::hash_code hash_value(IntegerSet arg);
 

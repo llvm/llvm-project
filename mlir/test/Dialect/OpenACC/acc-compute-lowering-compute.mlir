@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -acc-compute-lowering | FileCheck %s
+// RUN: mlir-opt %s -acc-compute-lowering --remarks-filter="(open)?acc.*" 2>&1 | FileCheck %s --check-prefix=REMARK
 
 // CHECK-LABEL: func.func @parallel_gang_loop
 func.func @parallel_gang_loop(%buf: memref<1xi32>) {
@@ -266,6 +267,98 @@ func.func @parallel_num_gangs_1_2_independent(%buf: memref<4xi32>) {
       acc.yield
     } independent
     acc.yield
+  }
+  acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
+  return
+}
+
+// -----
+
+// A sized `vector(n)` clause on a loop inside acc.kernels supplies the vector
+// launch width when the construct itself has no vector_length clause.
+
+// CHECK-LABEL: func.func @kernels_loop_sized_vector
+func.func @kernels_loop_sized_vector(%buf: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c32_i32 = arith.constant 32 : i32
+
+  %dev = acc.copyin varPtr(%buf : memref<4xi32>) -> memref<4xi32>
+  // CHECK: %[[VL:.*]] = arith.constant 32 : index
+  // CHECK: acc.kernel_environment
+  // CHECK: %[[PW:.*]] = acc.par_width %[[VL]] par_dim(#acc.par_dim<thread_x>)
+  // CHECK: acc.compute_region launch(%{{.*}} = %[[PW]])
+  // CHECK: scf.parallel
+  // CHECK: acc.par_dims = #acc<par_dims[thread_x]>
+  acc.kernels dataOperands(%dev : memref<4xi32>) {
+    acc.loop vector(%c32_i32 : i32) control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
+      %vi = arith.index_cast %i : index to i32
+      memref.store %vi, %dev[%i] : memref<4xi32>
+      acc.yield
+    } independent
+    acc.terminator
+  }
+  acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
+  return
+}
+
+// -----
+
+// A sized `worker(n)` clause on a loop inside acc.kernels supplies the worker
+// launch width when the construct itself has no num_workers clause.
+
+// CHECK-LABEL: func.func @kernels_loop_sized_worker
+func.func @kernels_loop_sized_worker(%buf: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c8_i32 = arith.constant 8 : i32
+
+  %dev = acc.copyin varPtr(%buf : memref<4xi32>) -> memref<4xi32>
+  // CHECK: %[[NW:.*]] = arith.constant 8 : index
+  // CHECK: acc.kernel_environment
+  // CHECK: %[[PW:.*]] = acc.par_width %[[NW]] par_dim(#acc.par_dim<thread_y>)
+  // CHECK: acc.compute_region launch(%{{.*}} = %[[PW]])
+  // CHECK: scf.parallel
+  // CHECK: acc.par_dims = #acc<par_dims[thread_y]>
+  acc.kernels dataOperands(%dev : memref<4xi32>) {
+    acc.loop worker(%c8_i32 : i32) control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
+      %vi = arith.index_cast %i : index to i32
+      memref.store %vi, %dev[%i] : memref<4xi32>
+      acc.yield
+    } independent
+    acc.terminator
+  }
+  acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
+  return
+}
+
+// -----
+
+// A non-constant worker(n) on a loop inside acc.kernels is ignored. The loop
+// stays a worker loop, and the launch does not take a worker width from it.
+
+// REMARK: remark:{{.*}}Category:acc-compute-lowering{{.*}}Function=kernels_loop_nonconst_worker{{.*}}Remark="ignoring non-constant worker clause"
+// CHECK-LABEL: func.func @kernels_loop_nonconst_worker
+func.func @kernels_loop_nonconst_worker(%buf: memref<4xi32>, %workers: i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+
+  %dev = acc.copyin varPtr(%buf : memref<4xi32>) -> memref<4xi32>
+  // CHECK: acc.kernel_environment
+  // CHECK-NOT: par_dim(#acc.par_dim<thread_y>)
+  // CHECK: acc.compute_region
+  // CHECK: scf.parallel
+  // CHECK: acc.par_dims = #acc<par_dims[thread_y]>
+  acc.kernels dataOperands(%dev : memref<4xi32>) {
+    acc.loop worker(%workers : i32) control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
+      %vi = arith.index_cast %i : index to i32
+      memref.store %vi, %dev[%i] : memref<4xi32>
+      acc.yield
+    } independent
+    acc.terminator
   }
   acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
   return

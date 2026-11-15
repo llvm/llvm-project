@@ -99,7 +99,9 @@ function(llvm_ExternalProject_Add name source_dir)
   is_msvc_triple(is_msvc_target "${target_triple}")
 
   if(NOT ARG_TOOLCHAIN_TOOLS)
-    set(ARG_TOOLCHAIN_TOOLS clang)
+    # Targets using C++20 or newer may need module dependency scanning. Build
+    # the scanner before CMake looks for it during compiler detection.
+    set(ARG_TOOLCHAIN_TOOLS clang clang-scan-deps)
     if (ARG_ENABLE_FORTRAN)
       list(APPEND ARG_TOOLCHAIN_TOOLS flang-lazy)
     endif ()
@@ -290,8 +292,8 @@ function(llvm_ExternalProject_Add name source_dir)
     if(llvm-mt IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target)
       list(APPEND compiler_args -DCMAKE_MT=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-mt${CMAKE_EXECUTABLE_SUFFIX})
     endif()
-    if(llvm-rc IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target)
-      list(APPEND compiler_args -DCMAKE_RC_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-rc${CMAKE_EXECUTABLE_SUFFIX})
+    if(llvm-rc IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target AND CLANG_IN_TOOLCHAIN)
+        list(APPEND compiler_args -DCMAKE_RC_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-rc${CMAKE_EXECUTABLE_SUFFIX})
     endif()
     list(APPEND ARG_DEPENDS ${TOOLCHAIN_TOOLS})
     # Add LLVMgold.so dependency if it is available, as clang may need it for
@@ -433,6 +435,7 @@ function(llvm_ExternalProject_Add name source_dir)
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
     BUILD_ALWAYS 1
+    CONFIGURE_HANDLED_BY_BUILD 1
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
     USES_TERMINAL_INSTALL 1

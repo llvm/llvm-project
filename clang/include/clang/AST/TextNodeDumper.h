@@ -208,7 +208,7 @@ public:
   void dumpType(QualType T);
   void dumpBareDeclRef(const Decl *D);
   void dumpName(const NamedDecl *ND);
-  void dumpFormalLinkage(const NamedDecl *ND);
+  void dumpLinkageAndVisibility(const NamedDecl *ND);
   void dumpAccessSpecifier(AccessSpecifier AS);
   void dumpCleanupObject(const ExprWithCleanups::CleanupObject &C);
   void dumpTemplateSpecializationKind(TemplateSpecializationKind TSK);
@@ -439,6 +439,7 @@ public:
   void VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D);
   void VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D);
   void VisitOpenACCRoutineDeclAttr(const OpenACCRoutineDeclAttr *A);
+  void VisitOMPCaptureKindAttr(const OMPCaptureKindAttr *A);
   void VisitEmbedExpr(const EmbedExpr *S);
   void VisitAtomicExpr(const AtomicExpr *AE);
   void VisitConvertVectorExpr(const ConvertVectorExpr *S);

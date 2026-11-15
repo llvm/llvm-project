@@ -90,9 +90,18 @@ define dso_local void @Test128Rint(fp128 %d1) nounwind {
   ret void
 }
 
+define fp128 @Test128Ldexp(fp128 %x, i32 %exp) nounwind {
+; ANDROID-LABEL: Test128Ldexp:
+; ANDROID:       # %bb.0:
+; ANDROID-NEXT:    jmp ldexpl@PLT # TAILCALL
+  %r = tail call fp128 @llvm.ldexp.f128.i32(fp128 %x, i32 %exp)
+  ret fp128 %r
+}
+
 declare fp128 @llvm.maxnum.f128(fp128, fp128)
 declare fp128 @llvm.minnum.f128(fp128, fp128)
 declare fp128 @llvm.sqrt.f128(fp128)
 declare fp128 @llvm.sin.f128(fp128)
 declare fp128 @llvm.pow.f128(fp128, fp128)
 declare fp128 @llvm.rint.f128(fp128)
+declare fp128 @llvm.ldexp.f128.i32(fp128, i32)

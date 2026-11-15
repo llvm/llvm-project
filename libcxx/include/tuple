@@ -252,9 +252,9 @@ template <class... Types>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_reference.h>
+#  include <__type_traits/is_relocatable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
-#  include <__type_traits/is_trivially_relocatable.h>
 #  include <__type_traits/maybe_const.h>
 #  include <__type_traits/nat.h>
 #  include <__type_traits/negation.h>
@@ -1192,9 +1192,11 @@ struct __tuple_less {
   template <class _Tp, class _Up>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __x, const _Up& __y) {
     const size_t __idx = tuple_size<_Tp>::value - _Ip;
-    if (std::get<__idx>(__x) < std::get<__idx>(__y))
+    const auto& __a    = std::get<__idx>(__x);
+    const auto& __b    = std::get<__idx>(__y);
+    if (__a < __b)
       return true;
-    if (std::get<__idx>(__y) < std::get<__idx>(__x))
+    if (__b < __a)
       return false;
     return __tuple_less<_Ip - 1>()(__x, __y);
   }
@@ -1396,7 +1398,7 @@ make_from_tuple(_Tuple&& __tuple) noexcept(__can_nothrow_make_from_tuple_v<_Tp, 
                   "Attempted construction of reference element binds to a temporary whose lifetime has ended");
   }
 #      endif // _LIBCPP_STD_VER >= 23
-  return std::apply([]<class... _Args>(_Args&&... __args) { return _Tp(std::forward<_Args>(__args)...); },
+  return std::apply([]<class... _Args>(_Args&&... __args) -> _Tp { return _Tp(std::forward<_Args>(__args)...); },
                     std::forward<_Tuple>(__tuple));
 }
 

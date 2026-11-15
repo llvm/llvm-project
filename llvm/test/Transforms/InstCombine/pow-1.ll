@@ -748,7 +748,7 @@ define float @powf_libcall_half_assume_ninf_noerrno(float %x) {
 ; NOLIB-NEXT:    ret float [[RETVAL]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp one float %fabs, 0x7FF0000000000000
+  %not.inf = fcmp one float %fabs, +inf
   call void @llvm.assume(i1 %not.inf)
   %retval = call float @powf(float %x, float 0.5) #0
   ret float %retval
@@ -887,7 +887,7 @@ define double @pow_libcall_half_fromdomcondition(double %x) {
 ; NOLIB-NEXT:    ret double [[RETVAL]]
 ;
   %a = call double @llvm.fabs.f64(double %x)
-  %c = fcmp oeq double %a, 0x7FF0000000000000
+  %c = fcmp oeq double %a, +inf
   br i1 %c, label %then, label %else
 
 then:
@@ -904,7 +904,7 @@ define double @pow_libcall_half_no_FMF_noerrno(double %x) {
 ; LIB-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X]])
 ; LIB-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; LIB-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], -inf
-; LIB-NEXT:    [[RETVAL:%.*]] = select i1 [[ISINF]], double +inf, double [[ABS]]
+; LIB-NEXT:    [[RETVAL:%.*]] = select i1 [[ISINF]], double +inf, double [[ABS]], !prof [[PROF0:![0-9]+]]
 ; LIB-NEXT:    ret double [[RETVAL]]
 ;
 ; NOLIB-LABEL: define double @pow_libcall_half_no_FMF_noerrno(
@@ -923,7 +923,7 @@ define float @test_simplify9(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float +inf
 ;
-  %retval = call float @llvm.pow.f32(float 0xFFF0000000000000, float 0.5)
+  %retval = call float @llvm.pow.f32(float -inf, float 0.5)
   ret float %retval
 }
 
@@ -932,7 +932,7 @@ define double @test_simplify10(double %x) {
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    ret double +inf
 ;
-  %retval = call double @llvm.pow.f64(double 0xFFF0000000000000, double 0.5)
+  %retval = call double @llvm.pow.f64(double -inf, double 0.5)
   ret double %retval
 }
 
@@ -1340,7 +1340,7 @@ define double @pow_intrinsic_half_no_FMF(double %x) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], -inf
-; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[ISINF]], double +inf, double [[ABS]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[ISINF]], double +inf, double [[ABS]], !prof [[PROF0:![0-9]+]]
 ; CHECK-NEXT:    ret double [[RETVAL]]
 ;
   %retval = call double @llvm.pow.f64(double %x, double 0.5)
@@ -1541,3 +1541,16 @@ define <2 x bfloat> @test_pow_10_v2bf16(<2 x bfloat> %x) {
 }
 
 attributes #0 = { nounwind memory(none) }
+;.
+; CHECK-EXP10: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
+; VC32: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
+; VC51: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
+; VC64: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
+; VC83: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
+; NOLIB: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.

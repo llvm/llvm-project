@@ -60,7 +60,7 @@
 #    error "__cpp_lib_initializer_list should have the value 202511L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_initializer_list
 #    error "__cpp_lib_initializer_list should be defined in c++26"
@@ -69,6 +69,15 @@
 #    error "__cpp_lib_initializer_list should have the value 202511L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should be defined in c++29"
+#  endif
+#  if __cpp_lib_initializer_list != 202511L
+#    error "__cpp_lib_initializer_list should have the value 202511L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

@@ -14,10 +14,11 @@
 #include <__chrono/statically_widen.h>
 #include <__config>
 #include <__format/buffer.h>
-#include <__format/concepts.h>
+#include <__format/fmt_char_type.h>
 #include <__format/format_context.h>
 #include <__format/format_error.h>
 #include <__format/format_parse_context.h>
+#include <__format/formattable.h>
 #include <__format/formatter.h>
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
@@ -37,17 +38,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <__fmt_char_type _CharT, class _Tuple, formattable<_CharT>... _Args>
 struct __formatter_tuple {
-  _LIBCPP_HIDE_FROM_ABI constexpr void set_separator(basic_string_view<_CharT> __separator) noexcept {
-    __separator_ = __separator;
-  }
-  _LIBCPP_HIDE_FROM_ABI constexpr void
+  constexpr void set_separator(basic_string_view<_CharT> __separator) noexcept { __separator_ = __separator; }
+  constexpr void
   set_brackets(basic_string_view<_CharT> __opening_bracket, basic_string_view<_CharT> __closing_bracket) noexcept {
     __opening_bracket_ = __opening_bracket;
     __closing_bracket_ = __closing_bracket;
   }
 
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+  constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     auto __begin = __parser_.__parse(__ctx, __format_spec::__fields_tuple);
 
     auto __end = __ctx.end();
@@ -84,7 +83,7 @@ struct __formatter_tuple {
   }
 
   template <class _FormatContext>
-  typename _FormatContext::iterator _LIBCPP_HIDE_FROM_ABI
+  typename _FormatContext::iterator
   format(conditional_t<(formattable<const _Args, _CharT> && ...), const _Tuple&, _Tuple&> __tuple,
          _FormatContext& __ctx) const {
     __format_spec::__parsed_specifications<_CharT> __specs = __parser_.__get_parsed_std_specifications(__ctx);
@@ -114,7 +113,7 @@ struct __formatter_tuple {
   }
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator __format_tuple(auto&& __tuple, _FormatContext& __ctx) const {
+  typename _FormatContext::iterator __format_tuple(auto&& __tuple, _FormatContext& __ctx) const {
     __ctx.advance_to(std::ranges::copy(__opening_bracket_, __ctx.out()).out);
 
     std::__for_each_index_sequence(make_index_sequence<sizeof...(_Args)>(), [&]<size_t _Index> {

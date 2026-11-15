@@ -47,6 +47,7 @@ struct VRegInfo {
   } D;
   Register VReg;
   Register PreferredReg;
+  SmallVector<Register, 4> AntiHints;
   uint8_t Flags = 0;
 };
 
@@ -173,7 +174,6 @@ struct PerFunctionMIParsingState {
   PerTargetMIParsingState &Target;
 
   std::map<unsigned, TrackingMDNodeRef> MachineMetadataNodes;
-  std::map<unsigned, std::pair<TempMDTuple, SMLoc>> MachineForwardRefMDNodes;
 
   DenseMap<unsigned, MachineBasicBlock *> MBBSlots;
   DenseMap<Register, VRegInfo *> VRegInfos;
@@ -248,10 +248,6 @@ LLVM_ABI bool parsePrefetchTarget(PerFunctionMIParsingState &PFS,
                                   SMDiagnostic &Error);
 LLVM_ABI bool parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node,
                           StringRef Src, SMDiagnostic &Error);
-
-LLVM_ABI bool parseMachineMetadata(PerFunctionMIParsingState &PFS,
-                                   StringRef Src, SMRange SourceRange,
-                                   SMDiagnostic &Error);
 
 } // end namespace llvm
 

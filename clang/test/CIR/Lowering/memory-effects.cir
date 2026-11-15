@@ -1,0 +1,48 @@
+// RUN: cir-translate %s -cir-to-llvmir --target x86_64-unknown-linux-gnu -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func private @reads() -> !s32i attributes {memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>}
+  cir.func private @reads_nounwind() -> !s32i
+      attributes {nounwind, willreturn, memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>}
+  cir.func private @writes_args(!cir.ptr<!s32i>)
+      attributes {memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
+  cir.func private @distinct() -> !s32i attributes {memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = write, errno_mem = read, target_mem0 = readwrite, target_mem1 = none>}
+  cir.func private @only_nounwind() -> !s32i attributes {nounwind}
+  cir.func private @only_willreturn() -> !s32i attributes {willreturn}
+
+  cir.func @caller(%arg0: !cir.ptr<!s32i>) {
+    %0 = cir.call @reads() {memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>} : () -> !s32i
+    %1 = cir.call @reads_nounwind() nounwind willreturn {memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>} : () -> !s32i
+    cir.call @writes_args(%arg0) {memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!s32i>) -> ()
+    %2 = cir.call @only_nounwind() nounwind : () -> !s32i
+    %3 = cir.call @only_willreturn() willreturn : () -> !s32i
+    cir.return
+  }
+}
+
+// LLVM: declare i32 @reads() #[[READS:[0-9]+]]
+// LLVM: declare i32 @reads_nounwind() #[[BOTH:[0-9]+]]
+// LLVM: declare void @writes_args(ptr) #[[ARGMEM:[0-9]+]]
+// Each class is its own slot, so a transposition has to show up here.
+// LLVM: declare i32 @distinct() #[[DISTINCT:[0-9]+]]
+// LLVM: declare i32 @only_nounwind() #[[NUW:[0-9]+]]
+// LLVM: declare i32 @only_willreturn() #[[WR:[0-9]+]]
+// An absent attribute must stay unknown rather than lowering as memory(none),
+// so @caller's define carries no attribute group.
+// LLVM: define void @caller(ptr %{{.+}}) {
+// LLVM: call i32 @reads() #[[READS]]
+// LLVM: call i32 @reads_nounwind() #[[BOTH]]
+// LLVM: call void @writes_args(ptr %{{.+}}) #[[ARGMEM]]
+// Each flag has to survive on its own, without any memory effects.
+// LLVM: call i32 @only_nounwind() #[[NUW]]
+// LLVM: call i32 @only_willreturn() #[[WR]]
+// Memory effects alone must not imply nounwind or willreturn.
+// LLVM-DAG: attributes #[[READS]] = { memory(read) }
+// LLVM-DAG: attributes #[[BOTH]] = { nounwind willreturn memory(read) }
+// LLVM-DAG: attributes #[[ARGMEM]] = { memory(argmem: readwrite) }
+// LLVM-DAG: attributes #[[DISTINCT]] = { memory(inaccessiblemem: write, errnomem: read, target_mem0: readwrite) }
+// LLVM-DAG: attributes #[[NUW]] = { nounwind }
+// LLVM-DAG: attributes #[[WR]] = { willreturn }

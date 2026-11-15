@@ -84,7 +84,7 @@ define i8 @to_e5m3fnu_nan() {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0xff
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f32(float 0x7FF8000000000000, metadata !"Float8E5M3FNU", metadata !"round.tonearest", i1 false)
+  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f32(float +qnan, metadata !"Float8E5M3FNU", metadata !"round.tonearest", i1 false)
   ret i8 %r
 }
 
@@ -95,7 +95,7 @@ define i8 @to_e5m3fnu_inf_saturate() {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0xfe
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f32(float 0x7FF0000000000000, metadata !"Float8E5M3FNU", metadata !"round.tonearest", i1 true)
+  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f32(float +inf, metadata !"Float8E5M3FNU", metadata !"round.tonearest", i1 true)
   ret i8 %r
 }
 
@@ -232,7 +232,6 @@ define float @from_e5m3fnu_dynamic(i8 %x) {
 ; CHECK-LABEL: from_e5m3fnu_dynamic:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; CHECK-NEXT:    v_and_b32_e32 v1, 7, v0
 ; CHECK-NEXT:    v_bfe_u32 v0, v0, 3, 5
 ; CHECK-NEXT:    v_ffbh_u32_e32 v2, v1

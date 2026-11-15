@@ -20,11 +20,19 @@
 
 #if TEST_STD_VER < 14
 
+#  ifdef __cpp_lib_hardened_valarray
+#    error "__cpp_lib_hardened_valarray should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_valarray
 #    error "__cpp_lib_valarray should not be defined before c++14"
 #  endif
 
 #elif TEST_STD_VER == 14
+
+#  ifdef __cpp_lib_hardened_valarray
+#    error "__cpp_lib_hardened_valarray should not be defined before c++26"
+#  endif
 
 #  ifndef __cpp_lib_valarray
 #    error "__cpp_lib_valarray should be defined in c++14"
@@ -35,6 +43,10 @@
 
 #elif TEST_STD_VER == 17
 
+#  ifdef __cpp_lib_hardened_valarray
+#    error "__cpp_lib_hardened_valarray should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_valarray
 #    error "__cpp_lib_valarray should be defined in c++17"
 #  endif
@@ -43,6 +55,10 @@
 #  endif
 
 #elif TEST_STD_VER == 20
+
+#  ifdef __cpp_lib_hardened_valarray
+#    error "__cpp_lib_hardened_valarray should not be defined before c++26"
+#  endif
 
 #  ifndef __cpp_lib_valarray
 #    error "__cpp_lib_valarray should be defined in c++20"
@@ -53,6 +69,10 @@
 
 #elif TEST_STD_VER == 23
 
+#  ifdef __cpp_lib_hardened_valarray
+#    error "__cpp_lib_hardened_valarray should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_valarray
 #    error "__cpp_lib_valarray should be defined in c++23"
 #  endif
@@ -60,7 +80,20 @@
 #    error "__cpp_lib_valarray should have the value 202511L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_valarray
+#      error "__cpp_lib_hardened_valarray should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_valarray != 202502L
+#      error "__cpp_lib_hardened_valarray should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_valarray
+#      error "__cpp_lib_hardened_valarray should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
 
 #  ifndef __cpp_lib_valarray
 #    error "__cpp_lib_valarray should be defined in c++26"
@@ -69,6 +102,28 @@
 #    error "__cpp_lib_valarray should have the value 202511L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_valarray
+#      error "__cpp_lib_hardened_valarray should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_valarray != 202502L
+#      error "__cpp_lib_hardened_valarray should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_valarray
+#      error "__cpp_lib_hardened_valarray should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  ifndef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should be defined in c++29"
+#  endif
+#  if __cpp_lib_valarray != 202511L
+#    error "__cpp_lib_valarray should have the value 202511L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

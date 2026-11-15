@@ -48,23 +48,33 @@ class VecDesc {
   ElementCount VectorizationFactor;
   bool Masked;
   StringRef VABIPrefix;
-  std::optional<CallingConv::ID> CC;
+  /// Encoded calling convention: 0 means absent (std::nullopt), otherwise
+  /// stores CallingConv::ID + 1 so an explicit C (0) remains representable.
+  /// TODO: Since C++20 standard becomes default in LLVM we can return back to
+  /// use std::optional<CallingConv::ID> instead of unsigned and value_or()
+  /// in default constructor.
+  unsigned CC;
 
 public:
   VecDesc() = delete;
-  VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
-          ElementCount VectorizationFactor, bool Masked, StringRef VABIPrefix,
-          std::optional<CallingConv::ID> Conv)
+  constexpr VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
+                    ElementCount VectorizationFactor, bool Masked,
+                    StringRef VABIPrefix, std::optional<CallingConv::ID> Conv)
       : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
         VectorizationFactor(VectorizationFactor), Masked(Masked),
-        VABIPrefix(VABIPrefix), CC(Conv) {}
+        VABIPrefix(VABIPrefix),
+        CC(Conv ? static_cast<unsigned>(*Conv) + 1u : 0u) {}
 
   StringRef getScalarFnName() const { return ScalarFnName; }
   StringRef getVectorFnName() const { return VectorFnName; }
   ElementCount getVectorizationFactor() const { return VectorizationFactor; }
   bool isMasked() const { return Masked; }
   StringRef getVABIPrefix() const { return VABIPrefix; }
-  std::optional<CallingConv::ID> getCallingConv() const { return CC; }
+  std::optional<CallingConv::ID> getCallingConv() const {
+    if (CC == 0)
+      return std::nullopt;
+    return static_cast<CallingConv::ID>(CC - 1);
+  }
 
   /// Returns a vector function ABI variant string on the form:
   ///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
@@ -89,6 +99,7 @@ class TargetLibraryInfoImpl {
 #include "llvm/Analysis/TargetLibraryInfo.inc"
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return;
   unsigned SizeOfInt;
+  bool IsErrnoFunctionCall;
 
   enum AvailabilityState {
     StandardName = 3, // (memset to all ones)
@@ -234,10 +245,6 @@ public:
     ShouldSignExtI32Return = Val;
   }
 
-  /// Returns the size of the wchar_t type in bytes.
-  /// This queries the 'wchar_size' metadata.
-  LLVM_ABI unsigned getWCharSize(const Module &M) const;
-
   /// Returns the size of the size_t type in bits.
   LLVM_ABI unsigned getSizeTSize(const Module &M) const;
 
@@ -260,6 +267,8 @@ public:
   /// conventions.
   LLVM_ABI static bool isCallingConvCCompatible(CallBase *CI);
   LLVM_ABI static bool isCallingConvCCompatible(Function *Callee);
+
+  bool isErrnoFunctionCall() const { return IsErrnoFunctionCall; }
 };
 
 /// Provides information about what library functions are available for
@@ -451,32 +460,15 @@ public:
     return Impl->CustomNames.find(F)->second;
   }
 
-  static void initExtensionsForTriple(bool &ShouldExtI32Param,
-                                      bool &ShouldExtI32Return,
-                                      bool &ShouldSignExtI32Param,
-                                      bool &ShouldSignExtI32Return,
-                                      const Triple &T) {
-    ShouldExtI32Param     = ShouldExtI32Return     = false;
-    ShouldSignExtI32Param = ShouldSignExtI32Return = false;
+  LLVM_ABI static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                   bool &ShouldZExtBoolReturn,
+                                                   const Triple &T);
 
-    // PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
-    // returns corresponding to C-level ints and unsigned ints.
-    if (T.isPPC64() || T.getArch() == Triple::sparcv9 ||
-        T.getArch() == Triple::systemz) {
-      ShouldExtI32Param = true;
-      ShouldExtI32Return = true;
-    }
-    // LoongArch, Mips, and riscv64, on the other hand, need signext on i32
-    // parameters corresponding to both signed and unsigned ints.
-    if (T.isLoongArch() || T.isMIPS() || T.isRISCV64()) {
-      ShouldSignExtI32Param = true;
-    }
-    // LoongArch and riscv64 need signext on i32 returns corresponding to both
-    // signed and unsigned ints.
-    if (T.isLoongArch() || T.isRISCV64()) {
-      ShouldSignExtI32Return = true;
-    }
-  }
+  LLVM_ABI static void initExtensionsForTriple(bool &ShouldExtI32Param,
+                                               bool &ShouldExtI32Return,
+                                               bool &ShouldSignExtI32Param,
+                                               bool &ShouldSignExtI32Return,
+                                               const Triple &T);
 
   /// Returns extension attribute kind to be used for i32 parameters
   /// corresponding to C-level int or unsigned int.  May be zeroext, signext,
@@ -493,6 +485,18 @@ private:
   }
 
 public:
+  static Attribute::AttrKind getExtAttrForBoolParam(const Triple &T) {
+    bool ShouldZExtBoolParam, ShouldZExtBoolReturn;
+    initBoolExtensionsForTriple(ShouldZExtBoolParam, ShouldZExtBoolReturn, T);
+    return ShouldZExtBoolParam ? Attribute::ZExt : Attribute::None;
+  }
+
+  static Attribute::AttrKind getExtAttrForI8Param(bool Signed = true) {
+    // Return the extension attributes here even though nothing special is
+    // done in case any target needs something different in the future.
+    return Signed ? Attribute::SExt : Attribute::ZExt;
+  }
+
   static Attribute::AttrKind getExtAttrForI32Param(const Triple &T,
                                                    bool Signed = true) {
     bool ShouldExtI32Param, ShouldExtI32Return;
@@ -553,11 +557,6 @@ public:
     return AL;
   }
 
-  /// \copydoc TargetLibraryInfoImpl::getWCharSize()
-  unsigned getWCharSize(const Module &M) const {
-    return Impl->getWCharSize(M);
-  }
-
   /// \copydoc TargetLibraryInfoImpl::getSizeTSize()
   unsigned getSizeTSize(const Module &M) const { return Impl->getSizeTSize(M); }
 
@@ -599,6 +598,10 @@ public:
   bool isKnownVectorFunctionInLibrary(StringRef F) const {
     return this->isFunctionVectorizable(F);
   }
+
+  /// Returns whether `errno` is defined as a function call on known
+  /// environments.
+  bool isErrnoFunctionCall() const { return Impl->isErrnoFunctionCall(); }
 };
 
 /// Analysis pass providing the \c TargetLibraryInfo.

@@ -1,6 +1,6 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs -O0
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs -O0
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling
 
 target triple = "wasm32-unknown-unknown"
 
@@ -34,7 +34,7 @@ define void @throw(ptr %p) {
 ; CHECK:       call      foo
 ; CHECK:     catch     $[[EXN:[0-9]+]]=, __cpp_exception
 ; CHECK:       global.set  __stack_pointer
-; CHECK:       i32.store __wasm_lpad_context
+; CHECK:       call       $push[[CONTEXT:.*]]=, _Unwind_GetWasmLPadContext
 ; CHECK:       call       $drop=, __gxx_wasm_personality_v0, $[[EXN]]
 ; CHECK:       block
 ; CHECK:         br_if     0

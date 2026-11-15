@@ -68,6 +68,7 @@ struct Outer {
 // LLVM-DAG: %struct.UnionAllEmptyBits.base = type { [3 x i8] }
 // LLVM-DAG: @oubp = {{(dso_local )?}}global %struct.OuterUnionBitPad zeroinitializer, align 8
 // LLVM-DAG: @oaeb = {{(dso_local )?}}global %struct.OuterAllEmptyBits zeroinitializer, align 8
+// LLVM-DAG: @ndo = {{(dso_local )?}}global %struct.NUADtorOuter { %struct.NUADtor.base <{ i32 42, [3 x i8] zeroinitializer }>, i8 0 }
 // OGCG-DAG: %struct.OuterUnion = type { %union.UnionForNUA, i32 }
 // OGCG-DAG: %union.UnionForNUA = type { i64 }
 // OGCG-DAG: %struct.OuterFinal = type { %struct.FinalForNUA, i8 }
@@ -94,6 +95,7 @@ struct Outer {
 // OGCG-DAG: %union.UnionAllEmptyBits.base = type { [3 x i8] }
 // OGCG-DAG: @oubp = {{(dso_local )?}}global %struct.OuterUnionBitPad zeroinitializer, align 8
 // OGCG-DAG: @oaeb = {{(dso_local )?}}global %struct.OuterAllEmptyBits zeroinitializer, align 8
+// OGCG-DAG: @ndo = {{(dso_local )?}}global { i32, [3 x i8], i8 } { i32 42, [3 x i8] zeroinitializer, i8 0 }, align 4
 
 // LLVM-LABEL: define {{.*}} void @_ZN5OuterC2ERK6Middlec(
 // LLVM:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %{{.+}}, i32 0, i32 0
@@ -127,8 +129,7 @@ struct OuterUnion {
 OuterUnion ou;
 
 struct FinalForNUA final {
-  int a;
-  char b;
+  int a; char b;
 };
 
 struct OuterFinal {
@@ -220,7 +221,8 @@ struct OuterUnionBitPad {
 
 OuterUnionBitPad oubp;
 
-// No variant holds data and one is a unit, so the stand-in is an empty unit.
+// Both variants are unnamed bit-field storage, which holds data for the ABI,
+// so the stand-in holds data even though no variant is named.
 struct alignas(8) EmptyBitsTail {
   EmptyBitsTail();
 
@@ -261,8 +263,8 @@ OuterOnlyBitData oobd;
 // CIR-NUA-DAG: cir.global external @oobd = #cir.zero : !rec_OuterOnlyBitData
 // CIR-NUA-DAG: !rec_UnionBitAndWide2Ebase = !cir.struct<"UnionBitAndWide.base" packed {bitfield !cir.double, pad !u8i}>
 // CIR-NUA-DAG: !rec_OuterUnionBitPad = !cir.struct<"OuterUnionBitPad" {data !rec_UnionBitAndWide2Ebase, data !cir.bool, pad !cir.array<!u8i x 6>}>
-// CIR-NUA-DAG: !rec_UnionAllEmptyBits2Ebase = !cir.struct<"UnionAllEmptyBits.base" {empty !cir.array<!u8i x 3>}>
-// CIR-NUA-DAG: !rec_OuterAllEmptyBits = !cir.struct<"OuterAllEmptyBits" {empty !rec_UnionAllEmptyBits2Ebase, data !cir.bool, pad !cir.array<!u8i x 4>}>
+// CIR-NUA-DAG: !rec_UnionAllEmptyBits2Ebase = !cir.struct<"UnionAllEmptyBits.base" {data !cir.array<!u8i x 3>}>
+// CIR-NUA-DAG: !rec_OuterAllEmptyBits = !cir.struct<"OuterAllEmptyBits" {data !rec_UnionAllEmptyBits2Ebase, data !cir.bool, pad !cir.array<!u8i x 4>}>
 // CIR-NUA-DAG: cir.global external @oubp = #cir.zero : !rec_OuterUnionBitPad
 // CIR-NUA-DAG: cir.global external @oaeb = #cir.zero : !rec_OuterAllEmptyBits
 
@@ -321,3 +323,21 @@ OuterAllEmpty oae;
 // CIR-NUA-DAG: !rec_UnionZeroDataSize = !cir.union<"UnionZeroDataSize" {empty !rec_EmptyForNUA, data !s32i}>
 // CIR-NUA-DAG: !rec_OuterZeroData = !cir.struct<"OuterZeroData" {data !rec_UnionZeroDataSize, data !cir.bool}>
 // CIR-NUA-DAG: cir.global external @ozd = #cir.zero : !rec_OuterZeroData
+
+struct NUADtor {
+  ~NUADtor();
+  int n;
+  char c[3];
+};
+
+struct NUADtorOuter {
+  [[no_unique_address]] NUADtor a;
+  char k;
+};
+
+NUADtorOuter ndo = {42};
+
+// CIR-NUA-DAG: !rec_NUADtor2Ebase = !cir.struct<"NUADtor.base" packed {data !s32i, data !cir.array<!s8i x 3>}>
+// CIR-NUA-DAG: !rec_NUADtorOuter = !cir.struct<"NUADtorOuter" {data !rec_NUADtor2Ebase, data !s8i}>
+// CIR-NUA-DAG: cir.global external {{.*}}@ndo = #cir.const_record<{#cir.const_record<{#cir.int<42> : !s32i, #cir.zero : !cir.array<!s8i x 3>}> : !rec_NUADtor2Ebase, #cir.int<0> : !s8i}> : !rec_NUADtorOuter
+

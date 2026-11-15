@@ -61,7 +61,7 @@ FunctionPass *llvm::createWebAssemblyDebugFixupLegacyPass() {
 
 // At this very end of the compilation pipeline, if any DBG_VALUEs with
 // registers remain, it means they are dangling info which we failed to update
-// when their corresponding def instruction was transformed/moved/splitted etc.
+// when their corresponding def instruction was transformed/moved/split etc.
 // Because Wasm cannot access values in LLVM virtual registers in the debugger,
 // these dangling DBG_VALUEs in effect kill the effect of any previous DBG_VALUE
 // associated with the variable, which will appear as "optimized out".

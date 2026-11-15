@@ -17,6 +17,7 @@
 #define LLVM_CLANG_SCALABLESTATICANALYSIS_CORE_ENTITYLINKER_ENTITYLINKER_H
 
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/Model/EntityLinkage.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
@@ -30,6 +31,14 @@ namespace clang::ssaf {
 class MultiArchStaticLibrary;
 class StaticLibrary;
 class TUSummaryEncoding;
+
+/// Computes the build namespace an entity should carry after linking, given its
+/// linkage.
+NestedBuildNamespace
+resolveNamespace(const NestedBuildNamespace &LUNamespace,
+                 const NestedBuildNamespace &TUNamespace,
+                 const NestedBuildNamespace &EntityNamespace,
+                 EntityLinkageType Linkage);
 
 class EntityLinker {
   LUSummaryEncoding Output;

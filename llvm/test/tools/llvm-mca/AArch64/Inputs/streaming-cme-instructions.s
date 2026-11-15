@@ -6,11 +6,15 @@ fcvtzs w0, s1
 frintz s0, s1
 scvtf s0, w0
 fmov d0, x0
+fmov x0, d0
 fnmadd s0, s1, s2, s3
 ldr s0, [x0]
 ldr q0, [x0, x1, lsl #4]
 str s0, [x0]
 fadd v0.4s, v1.4s, v2.4s
+fcadd v0.4s, v1.4s, v2.4s, #90
+cadd z0.s, z0.s, z2.s, #90
+sqcadd z0.s, z0.s, z2.s, #90
 bfdot v0.4s, v1.8h, v2.8h
 add z0.s, z1.s, z2.s
 andv b0, p7, z31.b
@@ -23,13 +27,19 @@ tbl z0.b, { z0.b, z1.b }, z2.b
 fadd z0.s, p0/m, z0.s, z1.s
 fmul z0.s, p0/m, z0.s, z1.s
 fmin z0.s, p0/m, z0.s, z1.s
+facle p0.s, p0/z, z0.s, z1.s
+faclt p0.s, p0/z, z0.s, z1.s
 fcpy z0.s, p0/m, #1.0
 bfdot z0.s, z1.h, z2.h
 ld1w { z0.s }, p0/z, [x0]
 ld2w { z0.s, z1.s }, p0/z, [x0]
+ld3b { z0.b, z1.b, z2.b }, p0/z, [x0]
+ld4b { z0.b, z1.b, z2.b, z3.b }, p0/z, [x0]
 ld1d { z0.d }, p0/z, [x0, z0.d, uxtw]
 st1w { z0.s }, p0, [x0]
 st2w { z0.s, z1.s }, p0, [x0]
+st3b { z0.b, z1.b, z2.b }, p0, [x0]
+st4b { z0.b, z1.b, z2.b, z3.b }, p0, [x0]
 st1w { z0.s }, p0, [x0, z0.s, uxtw]
 eor3 z0.d, z0.d, z1.d, z2.d
 sabalb z0.s, z1.h, z2.h
@@ -61,3 +71,9 @@ cmplo	p0.b, p0/z, z0.b, #0
 cmpls	p0.b, p0/z, z0.b, #0
 cmplt	p0.b, p0/z, z0.b, #-16
 cmpne	p0.b, p0/z, z0.b, #-16
+cpy     z0.s, p0/m, w0
+sdiv    z0.s, p0/m, z0.s, z1.s
+tbx     v0.8b, {v1.16b}, v1.8b
+trn1    v0.4s, v1.4s, v2.4s
+sunpkhi z0.h, z1.b
+fnmul s0, s1, s2

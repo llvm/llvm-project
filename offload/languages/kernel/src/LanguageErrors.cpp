@@ -58,13 +58,14 @@ const char *GetErrorString(Error_t Error) {
 }
 
 Error_t GetLastError() {
-  Error_t Error = static_cast<Error_t>(ThreadState::getLastError());
-  ThreadState::setLastError(Success);
+  ThreadState &State = ThreadState::get();
+  Error_t Error = static_cast<Error_t>(State.getLastError());
+  State.setLastError(Success);
   return Error;
 }
 
 Error_t PeekAtLastError() {
-  return static_cast<Error_t>(ThreadState::getLastError());
+  return static_cast<Error_t>(ThreadState::get().getLastError());
 }
 
 #include "UndefineLanguageNames.inc"

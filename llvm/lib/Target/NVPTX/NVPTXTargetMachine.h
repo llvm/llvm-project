@@ -23,12 +23,9 @@ namespace llvm {
 /// NVPTXTargetMachine
 ///
 class NVPTXTargetMachine : public CodeGenTargetMachineImpl {
+  const NVPTXOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   NVPTXSubtarget Subtarget;
-
-  // Hold Strings that can be free'd all together with NVPTXTargetMachine
-  mutable BumpPtrAllocator StrAlloc;
-  mutable UniqueStringSaver StrPool;
 
 public:
   NVPTXTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -37,6 +34,7 @@ public:
                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                      bool JIT);
   ~NVPTXTargetMachine() override;
+  const NVPTXOptions &getCLOpts() const { return CLOpts; }
   const NVPTXSubtarget *getSubtargetImpl(const Function &) const override {
     return &Subtarget;
   }
@@ -45,8 +43,6 @@ public:
     return getTargetTriple().getOS() == Triple::NVCL ? NVPTX::NVCL
                                                      : NVPTX::CUDA;
   }
-  UniqueStringSaver &getStrPool() const { return StrPool; }
-
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
   // Emission of machine code through MCJIT is not supported.

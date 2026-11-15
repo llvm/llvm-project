@@ -42,6 +42,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
@@ -75,7 +76,7 @@ struct TempFile {
   FileRemover Remover;
   bool init(const std::string &Ext, bool IsText = false);
   bool writeBitcode(const Module &M) const;
-  bool writeAssembly(const Module &M) const;
+  bool writeAssembly(Module &M) const;
   std::unique_ptr<Module> readBitcode(LLVMContext &Context) const;
   std::unique_ptr<Module> readAssembly(LLVMContext &Context) const;
 };
@@ -137,7 +138,7 @@ bool TempFile::writeBitcode(const Module &M) const {
   return false;
 }
 
-bool TempFile::writeAssembly(const Module &M) const {
+bool TempFile::writeAssembly(Module &M) const {
   LLVM_DEBUG(dbgs() << " - write assembly\n");
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC, sys::fs::OF_TextWithCRLF);
@@ -146,6 +147,7 @@ bool TempFile::writeAssembly(const Module &M) const {
     return true;
   }
 
+  M.renumberMetadataForAssembly();
   M.print(OS, nullptr, /* ShouldPreserveUseListOrder */ true);
   return false;
 }
@@ -376,10 +378,11 @@ static void verifyBitcodeUseListOrder(const Module &M) {
     report_fatal_error("failed to write bitcode");
 
   LLVMContext Context;
+  Context.getLibraryOptions().assign(M.getContext().getLibraryOptions());
   verifyAfterRoundTrip(M, F.readBitcode(Context));
 }
 
-static void verifyAssemblyUseListOrder(const Module &M) {
+static void verifyAssemblyUseListOrder(Module &M) {
   TempFile F;
   if (F.init("ll", /*IsText=*/true))
     report_fatal_error("failed to initialize assembly file");
@@ -388,10 +391,11 @@ static void verifyAssemblyUseListOrder(const Module &M) {
     report_fatal_error("failed to write assembly");
 
   LLVMContext Context;
+  Context.getLibraryOptions().assign(M.getContext().getLibraryOptions());
   verifyAfterRoundTrip(M, F.readAssembly(Context));
 }
 
-static void verifyUseListOrder(const Module &M) {
+static void verifyUseListOrder(Module &M) {
   outs() << "verify bitcode\n";
   verifyBitcodeUseListOrder(M);
   outs() << "verify assembly\n";
@@ -554,10 +558,10 @@ int main(int argc, char **argv) {
   EnableDebugBuffering = true;
 
   cl::HideUnrelatedOptions(Cat);
-  cl::ParseCommandLineOptions(argc, argv,
+  LLVMContext Context;
+  cl::parseCommandLineOptions(Context.getLibraryOptions(), ArrayRef(argv, argc),
                               "llvm tool to verify use-list order\n");
 
-  LLVMContext Context;
   SMDiagnostic Err;
 
   // Load the input module...

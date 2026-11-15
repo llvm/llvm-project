@@ -16,6 +16,7 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -33,6 +34,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -54,6 +56,7 @@ namespace opts {
 
 extern cl::opt<bool> LargeCodeModel;
 extern cl::opt<bool> UpdateDebugSections;
+extern cl::opt<bool> HotFunctionsAtEnd;
 
 static cl::opt<bool>
     NoHugePages("no-huge-pages",
@@ -64,7 +67,6 @@ static cl::opt<bool>
 PrintDebugInfo("print-debug-info",
   cl::desc("print debug info when printing functions"),
   cl::Hidden,
-  cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
 cl::opt<bool> PrintRelocations(
@@ -76,7 +78,6 @@ static cl::opt<bool>
 PrintMemData("print-mem-data",
   cl::desc("print memory data annotations when printing functions"),
   cl::Hidden,
-  cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
 cl::opt<std::string> CompDirOverride(
@@ -89,12 +90,12 @@ cl::opt<std::string> CompDirOverride(
 static cl::opt<bool> CloneConstantIsland("clone-constant-island",
                                          cl::desc("clone constant islands"),
                                          cl::Hidden, cl::init(true),
-                                         cl::ZeroOrMore, cl::cat(BoltCategory));
+                                         cl::cat(BoltCategory));
 
 static cl::opt<bool>
     FailOnInvalidPadding("fail-on-invalid-padding", cl::Hidden, cl::init(false),
                          cl::desc("treat invalid code padding as error"),
-                         cl::ZeroOrMore, cl::cat(BoltCategory));
+                         cl::cat(BoltCategory));
 
 static cl::opt<bool> DropDWOPageCache(
     "drop-dwo-page-cache",
@@ -318,8 +319,8 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
   else if (opts::LargeCodeModel.getNumOccurrences())
     BC->UseLargeCodeModel = opts::LargeCodeModel;
 
-  BC->MAB = std::unique_ptr<MCAsmBackend>(
-      BC->TheTarget->createMCAsmBackend(*BC->STI, *BC->MRI, MCTargetOptions()));
+  BC->MAB = std::unique_ptr<MCAsmBackend>(BC->TheTarget->createMCAsmBackend(
+      *BC->STI, *BC->MRI, BC->Ctx->getTargetOptions()));
 
   BC->setFilename(InputFileName);
 
@@ -351,6 +352,103 @@ bool BinaryContext::forceSymbolRelocations(StringRef SymbolName) const {
     return true;
 
   return false;
+}
+
+namespace {
+
+/// Defines the strict weak ordering for BOLT-produced code sections.
+class CodeSectionOrder {
+public:
+  CodeSectionOrder(StringRef ColdSectionName, StringRef HotTextMoverSectionName,
+                   StringRef MainSectionName, StringRef WarmSectionName,
+                   bool HotText, bool HotFunctionsAtEnd)
+      : ColdSectionName(ColdSectionName),
+        HotTextMoverSectionName(HotTextMoverSectionName),
+        MainSectionName(MainSectionName), WarmSectionName(WarmSectionName),
+        HotText(HotText), HotFunctionsAtEnd(HotFunctionsAtEnd) {}
+
+  bool operator()(StringRef AName, StringRef BName) const {
+    const SectionKind AKind = getKind(AName);
+    const SectionKind BKind = getKind(BName);
+    const unsigned ARank = getRank(AKind);
+    const unsigned BRank = getRank(BKind);
+    if (ARank != BRank)
+      return ARank < BRank;
+
+    if (AKind == SectionKind::Cold) {
+      if (AName.size() != BName.size())
+        return HotFunctionsAtEnd ? AName.size() > BName.size()
+                                 : AName.size() < BName.size();
+      if (AName != BName)
+        return HotFunctionsAtEnd ? AName > BName : AName < BName;
+    }
+
+    return false;
+  }
+
+private:
+  enum class SectionKind { Mover, Main, Warm, Cold, Other };
+
+  SectionKind getKind(StringRef Name) const {
+    if (HotText && Name == HotTextMoverSectionName)
+      return SectionKind::Mover;
+    if (Name == MainSectionName)
+      return SectionKind::Main;
+    if (Name == WarmSectionName)
+      return SectionKind::Warm;
+    if (Name.starts_with(ColdSectionName))
+      return SectionKind::Cold;
+    return SectionKind::Other;
+  }
+
+  unsigned getRank(SectionKind Kind) const {
+    if (Kind == SectionKind::Mover)
+      return 0;
+    if (HotFunctionsAtEnd) {
+      switch (Kind) {
+      case SectionKind::Other:
+        return 1;
+      case SectionKind::Cold:
+        return 2;
+      case SectionKind::Warm:
+        return 3;
+      case SectionKind::Main:
+        return 4;
+      case SectionKind::Mover:
+        llvm_unreachable("handled above");
+      }
+    }
+    switch (Kind) {
+    case SectionKind::Main:
+      return 1;
+    case SectionKind::Warm:
+      return 2;
+    case SectionKind::Cold:
+      return 3;
+    case SectionKind::Other:
+      return 4;
+    case SectionKind::Mover:
+      llvm_unreachable("handled above");
+    }
+    llvm_unreachable("unknown section kind");
+  }
+
+  StringRef ColdSectionName;
+  StringRef HotTextMoverSectionName;
+  StringRef MainSectionName;
+  StringRef WarmSectionName;
+  bool HotText;
+  bool HotFunctionsAtEnd;
+};
+
+} // namespace
+
+bool BinaryContext::compareSectionNames(StringRef A, StringRef B) const {
+  const CodeSectionOrder CompareSections(
+      getColdCodeSectionName(), getHotTextMoverSectionName(),
+      getMainCodeSectionName(), getWarmCodeSectionName(), opts::HotText,
+      opts::HotFunctionsAtEnd);
+  return CompareSections(A, B);
 }
 
 std::unique_ptr<MCObjectWriter>
@@ -557,34 +655,35 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
 MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
                                                     BinaryFunction &Source,
                                                     BinaryFunction &Target) {
+  const auto Reference = std::make_pair(&Source, Address);
+  // Avoid processing a known-invalid reference again when an ignored source
+  // is rescanned.
+  if (InvalidInterproceduralReferences.contains(Reference))
+    return nullptr;
+
   const uint64_t Offset = Address - Target.getAddress();
   assert(Offset < Target.getSize() &&
          "Address should be inside the referenced function");
 
   bool IsValid = true;
-  if (Source.NeedBranchValidation) {
-    if (Target.CurrentState == BinaryFunction::State::Disassembled &&
-        !Target.getInstructionAtOffset(Offset)) {
-      this->errs()
-          << "BOLT-WARNING: corrupted control flow detected in function "
-          << Source
-          << ": an external branch/call targets an invalid instruction "
-          << "in function " << Target << " at address 0x"
-          << Twine::utohexstr(Address) << "; ignoring both functions\n";
-      IsValid = false;
-    }
-    if (Target.isInConstantIsland(Address)) {
-      this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
-                   << Twine::utohexstr(Address)
-                   << " in constant island of function " << Target << '\n';
-      IsValid = false;
-    }
+  if (Target.CurrentState == BinaryFunction::State::Disassembled &&
+      !Target.getInstructionAtOffset(Offset)) {
+    this->errs() << "BOLT-WARNING: corrupted control flow detected in function "
+                 << Source
+                 << ": an external branch/call targets an invalid instruction "
+                 << "in function " << Target << " at address 0x"
+                 << Twine::utohexstr(Address) << "; ignoring both functions\n";
+    IsValid = false;
+  }
+  if (Target.isInConstantIsland(Address)) {
+    this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
+                 << Twine::utohexstr(Address)
+                 << " in constant island of function " << Target << '\n';
+    IsValid = false;
   }
 
   if (!IsValid) {
-    Source.NeedBranchValidation = false;
-    Source.setIgnored();
-    Target.setIgnored();
+    InvalidInterproceduralReferences.insert(Reference);
     return nullptr;
   }
 
@@ -1220,6 +1319,9 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     }
   }
 
+  if (BD->isVTable())
+    VTableMap.try_emplace(Address, BD);
+
   return Symbol;
 }
 
@@ -1241,6 +1343,17 @@ BinaryContext::getBinaryDataContainingAddressImpl(uint64_t Address) const {
     }
   }
   return nullptr;
+}
+
+const BinaryData *
+BinaryContext::getVTableContainingAddress(uint64_t Address) const {
+  // Vtables do not overlap, so only the last one starting at or before
+  // Address can contain it.
+  auto VI = VTableMap.upper_bound(Address);
+  if (VI == VTableMap.begin())
+    return nullptr;
+  const BinaryData *VTable = std::prev(VI)->second;
+  return VTable->containsAddress(Address) ? VTable : nullptr;
 }
 
 BinaryData *BinaryContext::getGOTSymbol() {
@@ -1466,6 +1579,8 @@ bool BinaryContext::handleAArch64Veneer(uint64_t Address, bool MatchOnly) {
 }
 
 void BinaryContext::processInterproceduralReferences() {
+  SmallPtrSet<BinaryFunction *, 4> InvalidFunctions;
+
   for (const std::pair<BinaryFunction *, uint64_t> &It :
        InterproceduralReferences) {
     BinaryFunction &Function = *It.first;
@@ -1490,9 +1605,12 @@ void BinaryContext::processInterproceduralReferences() {
             << TargetFunction->getPrintName() << '\n';
       }
 
-      // Create an extra entry point if needed. Can also render the target
-      // function ignored if the reference is invalid.
-      handleExternalBranchTarget(Address, Function, *TargetFunction);
+      // Create an extra entry point if needed. Defer state changes for invalid
+      // references until all references have been validated.
+      if (!handleExternalBranchTarget(Address, Function, *TargetFunction)) {
+        InvalidFunctions.insert(&Function);
+        InvalidFunctions.insert(TargetFunction);
+      }
 
       continue;
     }
@@ -1536,25 +1654,34 @@ void BinaryContext::processInterproceduralReferences() {
     }
   }
 
+  // Defer applying state changes until the entire validation scan is complete.
+  // Ignoring a function during the scan may lead to missed references or
+  // targets.
+  for (BinaryFunction *Function : InvalidFunctions)
+    if (!Function->isIgnored())
+      Function->setIgnored();
+
   InterproceduralReferences.clear();
 }
 
 void BinaryContext::postProcessSymbolTable() {
-  fixBinaryDataHoles();
-  bool Valid = true;
-  for (auto &Entry : BinaryDataMap) {
-    BinaryData *BD = Entry.second;
-    if ((BD->getName().starts_with("SYMBOLat") ||
-         BD->getName().starts_with("DATAat")) &&
-        !BD->getParent() && !BD->getSize() && !BD->isAbsolute() &&
-        BD->getSection()) {
-      this->errs() << "BOLT-WARNING: zero-sized top level symbol: " << *BD
-                   << "\n";
-      Valid = false;
+  if (!opts::ReorderData.empty()) {
+    fixBinaryDataHoles();
+    bool Valid = true;
+    for (auto &Entry : BinaryDataMap) {
+      BinaryData *BD = Entry.second;
+      if ((BD->getName().starts_with("SYMBOLat") ||
+           BD->getName().starts_with("DATAat")) &&
+          !BD->getParent() && !BD->getSize() && !BD->isAbsolute() &&
+          BD->getSection()) {
+        this->errs() << "BOLT-WARNING: zero-sized top level symbol: " << *BD
+                     << "\n";
+        Valid = false;
+      }
     }
+    assert(Valid);
+    (void)Valid;
   }
-  assert(Valid);
-  (void)Valid;
   generateSymbolHashes();
 }
 
@@ -1826,6 +1953,24 @@ std::optional<DWARFUnit *> BinaryContext::getDWOCU(uint64_t DWOId) {
   if (!DWOCU || !DWOCU->isDWOUnit())
     return std::nullopt;
   return DWOCU;
+}
+
+void BinaryContext::openSharedDWOContext() {
+  if (!UsesDWP)
+    return;
+  DWARFContext *DWOCtx = nullptr;
+  for (auto &KV : DWOIdToSkeletonCU)
+    if (std::optional<DWARFUnit *> DWOCU = getDWOCU(KV.first))
+      DWOCtx = &(*DWOCU)->getContext();
+  if (!DWOCtx)
+    return;
+  // Avoid dwp races on type units needing abbreviations
+  // (buildDWPTypeUnitsForUnit) by making sure all abbreviations are set up.
+  for (const std::unique_ptr<DWARFUnit> &U : DWOCtx->dwo_info_section_units())
+    U->getAbbreviations();
+  // DWARF4-equivalent, which keeps split type units in .debug_types.dwo
+  for (const std::unique_ptr<DWARFUnit> &U : DWOCtx->dwo_types_section_units())
+    U->getAbbreviations();
 }
 
 void BinaryContext::releaseDWOCU(uint64_t DWOId) {
@@ -2663,11 +2808,12 @@ void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
                                          uint32_t Type, uint64_t Addend,
-                                         uint64_t Value, bool IsRELR) {
+                                         uint64_t Value, bool IsRELR,
+                                         uint32_t JmpRelocationIndex) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
   Section->addDynamicRelocation(Address - Section->getAddress(), Symbol, Type,
-                                Addend, Value, IsRELR);
+                                Addend, Value, IsRELR, JmpRelocationIndex);
 }
 
 bool BinaryContext::removeRelocationAt(uint64_t Address) {
@@ -2816,7 +2962,9 @@ BinaryContext::createInstructionPatch(uint64_t Address,
 BinaryFunction *
 BinaryContext::createThunkBinaryFunction(const std::string &Name) {
   static NameResolver NR;
-  return createInjectedBinaryFunction(NR.uniquify(Name));
+  BinaryFunction *BF = createInjectedBinaryFunction(NR.uniquify(Name));
+  BF->setIsThunk(true);
+  return BF;
 }
 
 std::pair<size_t, size_t>
@@ -2833,7 +2981,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   IndependentCodeEmitter MCEInstance = createIndependentMCCodeEmitter();
   MCContext *LocalCtx = MCEInstance.LocalCtx.get();
   MCAsmBackend *MAB =
-      TheTarget->createMCAsmBackend(*STI, *MRI, MCTargetOptions());
+      TheTarget->createMCAsmBackend(*STI, *MRI, Ctx->getTargetOptions());
 
   SmallString<256> Code;
   raw_svector_ostream VecOS(Code);

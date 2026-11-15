@@ -725,6 +725,16 @@ MLIR_CAPI_EXPORTED MlirBlock mlirOperationGetBlock(MlirOperation op);
 MLIR_CAPI_EXPORTED MlirOperation
 mlirOperationGetParentOperation(MlirOperation op);
 
+/// Returns true if `a` is an ancestor of `b`, i.e. `a` contains `b` or
+/// `a == b`.
+MLIR_CAPI_EXPORTED bool mlirOperationIsAncestor(MlirOperation a,
+                                                MlirOperation b);
+
+/// Returns true if `a` is a proper ancestor of `b`, i.e. `a` contains `b` but
+/// `a != b`.
+MLIR_CAPI_EXPORTED bool mlirOperationIsProperAncestor(MlirOperation a,
+                                                      MlirOperation b);
+
 /// Returns the number of regions attached to the given operation.
 MLIR_CAPI_EXPORTED intptr_t mlirOperationGetNumRegions(MlirOperation op);
 
@@ -1322,9 +1332,10 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirIdentifierStr(MlirIdentifier ident);
 /// symbol tables.
 MLIR_CAPI_EXPORTED MlirStringRef mlirSymbolTableGetSymbolAttributeName(void);
 
-/// Returns the name of the attribute used to store symbol visibility.
+/// Returns the name of the attribute used by default to store symbol
+/// visibility.
 MLIR_CAPI_EXPORTED MlirStringRef
-mlirSymbolTableGetVisibilityAttributeName(void);
+mlirSymbolTableGetDefaultVisibilityAttributeName(void);
 
 /// Creates a symbol table for the given operation. If the operation does not
 /// have the SymbolTable trait, returns a null symbol table.

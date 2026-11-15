@@ -39,27 +39,11 @@
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-a57-fp-load-balancing"
-
-// Enforce the algorithm to use the scavenged register even when the original
-// destination register is the correct color. Used for testing.
-static cl::opt<bool>
-TransformAll("aarch64-a57-fp-load-balancing-force-all",
-             cl::desc("Always modify dest registers regardless of color"),
-             cl::init(false), cl::Hidden);
-
-// Never use the balance information obtained from chains - return a specific
-// color always. Used for testing.
-static cl::opt<unsigned>
-OverrideBalance("aarch64-a57-fp-load-balancing-override",
-              cl::desc("Ignore balance information, always return "
-                       "(1: Even, 2: Odd)."),
-              cl::init(0), cl::Hidden);
 
 //===----------------------------------------------------------------------===//
 // Helper functions
@@ -113,6 +97,7 @@ public:
   bool run(MachineFunction &MF);
 
 private:
+  const AArch64Options *CLOpts;
   MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
   RegisterClassInfo *RCI = nullptr;
@@ -125,7 +110,7 @@ private:
   void scanInstruction(MachineInstr *MI, unsigned Idx,
                        std::map<unsigned, Chain *> &Active,
                        std::vector<std::unique_ptr<Chain>> &AllChains);
-  void maybeKillChain(MachineOperand &MO, unsigned Idx,
+  void maybeKillChain(MachineInstr &MI, MachineOperand &MO, unsigned Idx,
                       std::map<unsigned, Chain *> &RegChains);
   Color getColor(unsigned Register);
   Chain *getAndEraseNext(Color PreferredColor, std::vector<Chain *> &L);
@@ -262,9 +247,9 @@ public:
   bool isKillImmutable() const { return KillIsImmutable; }
 
   /// Return the preferred color of this chain.
-  Color getPreferredColor() {
-    if (OverrideBalance != 0)
-      return OverrideBalance == 1 ? Color::Even : Color::Odd;
+  Color getPreferredColor(unsigned Override) {
+    if (Override)
+      return Override == 1 ? Color::Even : Color::Odd;
     return LastColor;
   }
 
@@ -313,8 +298,10 @@ public:
 //===----------------------------------------------------------------------===//
 
 bool AArch64A57FPLoadBalancingImpl::run(MachineFunction &MF) {
-  if (!MF.getSubtarget<AArch64Subtarget>().balanceFPOps())
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  if (!ST.balanceFPOps())
     return false;
+  CLOpts = &ST.getCLOpts();
 
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "***** AArch64A57FPLoadBalancing *****\n");
@@ -448,7 +435,8 @@ Chain *AArch64A57FPLoadBalancingImpl::getAndEraseNext(Color PreferredColor,
       return Ch;
     }
 
-    if ((*I)->getPreferredColor() == PreferredColor) {
+    if ((*I)->getPreferredColor(CLOpts->a57_fp_load_balancing_override) ==
+        PreferredColor) {
       Chain *Ch = *I;
       L.erase(I);
       return Ch;
@@ -487,13 +475,14 @@ bool AArch64A57FPLoadBalancingImpl::colorChainSet(std::vector<Chain *> GV,
     return G1->startsBefore(G2);
   });
 
+  unsigned Override = CLOpts->a57_fp_load_balancing_override;
   Color PreferredColor = Parity < 0 ? Color::Even : Color::Odd;
   while (Chain *G = getAndEraseNext(PreferredColor, GV)) {
     // Start off by assuming we'll color to our own preferred color.
     Color C = PreferredColor;
     if (Parity == 0)
       // But if we really don't care, use the chain's preferred color.
-      C = G->getPreferredColor();
+      C = G->getPreferredColor(Override);
 
     LLVM_DEBUG(dbgs() << " - Parity=" << Parity
                       << ", Color=" << ColorNames[(int)C] << "\n");
@@ -501,8 +490,8 @@ bool AArch64A57FPLoadBalancingImpl::colorChainSet(std::vector<Chain *> GV,
     // If we'll need a fixup FMOV, don't bother. Testing has shown that this
     // happens infrequently and when it does it has at least a 50% chance of
     // slowing code down instead of speeding it up.
-    if (G->requiresFixup() && C != G->getPreferredColor()) {
-      C = G->getPreferredColor();
+    if (G->requiresFixup() && C != G->getPreferredColor(Override)) {
+      C = G->getPreferredColor(Override);
       LLVM_DEBUG(dbgs() << " - " << G->str()
                         << " - not worthwhile changing; "
                            "color remains "
@@ -599,7 +588,8 @@ bool AArch64A57FPLoadBalancingImpl::colorChain(Chain *G, Color C,
     if (&I != G->getKill()) {
       MachineOperand &MO = I.getOperand(0);
 
-      bool Change = TransformAll || getColor(MO.getReg()) != C;
+      bool Change =
+          CLOpts->a57_fp_load_balancing_force_all || getColor(MO.getReg()) != C;
       if (G->requiresFixup() && &I == G->getLast())
         Change = false;
 
@@ -631,9 +621,9 @@ void AArch64A57FPLoadBalancingImpl::scanInstruction(
   if (isMul(MI)) {
 
     for (auto &I : MI->uses())
-      maybeKillChain(I, Idx, ActiveChains);
+      maybeKillChain(*MI, I, Idx, ActiveChains);
     for (auto &I : MI->defs())
-      maybeKillChain(I, Idx, ActiveChains);
+      maybeKillChain(*MI, I, Idx, ActiveChains);
 
     // Create a new chain. Multiplies don't require forwarding so can go on any
     // unit.
@@ -653,10 +643,10 @@ void AArch64A57FPLoadBalancingImpl::scanInstruction(
     Register DestReg = MI->getOperand(0).getReg();
     Register AccumReg = MI->getOperand(3).getReg();
 
-    maybeKillChain(MI->getOperand(1), Idx, ActiveChains);
-    maybeKillChain(MI->getOperand(2), Idx, ActiveChains);
+    maybeKillChain(*MI, MI->getOperand(1), Idx, ActiveChains);
+    maybeKillChain(*MI, MI->getOperand(2), Idx, ActiveChains);
     if (DestReg != AccumReg)
-      maybeKillChain(MI->getOperand(0), Idx, ActiveChains);
+      maybeKillChain(*MI, MI->getOperand(0), Idx, ActiveChains);
 
     if (ActiveChains.find(AccumReg) != ActiveChains.end()) {
       LLVM_DEBUG(dbgs() << "Chain found for accumulator register "
@@ -682,7 +672,7 @@ void AArch64A57FPLoadBalancingImpl::scanInstruction(
       LLVM_DEBUG(
           dbgs() << "Cannot add to chain because accumulator operand wasn't "
                  << "marked <kill>!\n");
-      maybeKillChain(MI->getOperand(3), Idx, ActiveChains);
+      maybeKillChain(*MI, MI->getOperand(3), Idx, ActiveChains);
     }
 
     LLVM_DEBUG(dbgs() << "Creating new chain for dest register "
@@ -696,27 +686,24 @@ void AArch64A57FPLoadBalancingImpl::scanInstruction(
     // Non-MUL or MLA instruction. Invalidate any chain in the uses or defs
     // lists.
     for (auto &I : MI->uses())
-      maybeKillChain(I, Idx, ActiveChains);
+      maybeKillChain(*MI, I, Idx, ActiveChains);
     for (auto &I : MI->defs())
-      maybeKillChain(I, Idx, ActiveChains);
-
+      maybeKillChain(*MI, I, Idx, ActiveChains);
   }
 }
 
 void AArch64A57FPLoadBalancingImpl::maybeKillChain(
-    MachineOperand &MO, unsigned Idx,
+    MachineInstr &MI, MachineOperand &MO, unsigned Idx,
     std::map<unsigned, Chain *> &ActiveChains) {
   // Given an operand and the set of active chains (keyed by register),
   // determine if a chain should be ended and remove from ActiveChains.
-  MachineInstr *MI = MO.getParent();
-
   if (MO.isReg()) {
 
     // If this is a KILL of a current chain, record it.
     if (MO.isKill() && ActiveChains.find(MO.getReg()) != ActiveChains.end()) {
       LLVM_DEBUG(dbgs() << "Kill seen for chain " << printReg(MO.getReg(), TRI)
                         << "\n");
-      ActiveChains[MO.getReg()]->setKill(MI, Idx, /*Immutable=*/MO.isTied());
+      ActiveChains[MO.getReg()]->setKill(&MI, Idx, /*Immutable=*/MO.isTied());
     }
     ActiveChains.erase(MO.getReg());
 
@@ -727,7 +714,7 @@ void AArch64A57FPLoadBalancingImpl::maybeKillChain(
       if (MO.clobbersPhysReg(I->first)) {
         LLVM_DEBUG(dbgs() << "Kill (regmask) seen for chain "
                           << printReg(I->first, TRI) << "\n");
-        I->second->setKill(MI, Idx, /*Immutable=*/true);
+        I->second->setKill(&MI, Idx, /*Immutable=*/true);
         ActiveChains.erase(I++);
       } else
         ++I;

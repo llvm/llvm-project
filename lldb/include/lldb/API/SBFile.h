@@ -35,6 +35,16 @@ public:
   SBFile(int fd, const char *mode, bool transfer_ownership);
   ~SBFile();
 
+#ifndef SWIG
+  /// Open a file descriptor in liblldb from a Windows HANDLE.
+  ///
+  /// This is useful for builds that statically link to the C runtime (`/MT`),
+  /// because the fd -> HANDLE mapping is local to liblldb's CRT instance.
+  ///
+  /// On other platforms, this always returns -1.
+  static int OpenFdFromHandle(intptr_t handle, int flags);
+#endif
+
   SBFile &operator=(const SBFile &rhs);
 
   SBError Read(uint8_t *buf, size_t num_bytes, size_t *OUTPUT);

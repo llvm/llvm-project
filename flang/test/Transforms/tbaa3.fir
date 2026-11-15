@@ -146,52 +146,52 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %c0 = arith.constant 0 : index
     %c10 = arith.constant 10 : index
     %0 = fir.dummy_scope : !fir.dscope
-    %1 = fir.declare %arg4 dummy_scope %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest1Edummya"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-    %2 = fir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtest1Edummyas"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
-    %3 = fir.declare %arg3 dummy_scope %0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtest1Edummyast"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
-    %4 = fir.declare %arg5 dummy_scope %0 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QFtest1Edummyat"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %1 = fir.declare %arg4 dummy_scope %0 uniq_name("_QFtest1Edummya") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %2 = fir.declare %arg2 dummy_scope %0 uniq_name("_QFtest1Edummyas") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+    %3 = fir.declare %arg3 dummy_scope %0 uniq_name("_QFtest1Edummyast") fortran_attrs<target> : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+    %4 = fir.declare %arg5 dummy_scope %0 uniq_name("_QFtest1Edummyat") fortran_attrs<allocatable, target> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %5 = fir.shape %c10 : (index) -> !fir.shape<1>
-    %6 = fir.declare %arg0(%5) dummy_scope %0 {uniq_name = "_QFtest1Edummyf"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf32>>
-    %7 = fir.declare %arg1(%5) dummy_scope %0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtest1Edummyft"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf32>>
-    %8 = fir.declare %arg6 dummy_scope %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest1Edummyp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+    %6 = fir.declare %arg0(%5) dummy_scope %0 uniq_name("_QFtest1Edummyf") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf32>>
+    %7 = fir.declare %arg1(%5) dummy_scope %0 uniq_name("_QFtest1Edummyft") fortran_attrs<target> : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf32>>
+    %8 = fir.declare %arg6 dummy_scope %0 uniq_name("_QFtest1Edummyp") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
     %9 = fir.address_of(@_QMdataEglob) : !fir.ref<!fir.array<10xf32>>
-    %10 = fir.declare %9(%5) {uniq_name = "_QMdataEglob"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+    %10 = fir.declare %9(%5) uniq_name("_QMdataEglob") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
     %11 = fir.address_of(@_QMdataEgloba) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-    %12 = fir.declare %11 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMdataEgloba"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %12 = fir.declare %11 uniq_name("_QMdataEgloba") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %13 = fir.address_of(@_QMdataEglobat) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-    %14 = fir.declare %13 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMdataEglobat"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %14 = fir.declare %13 uniq_name("_QMdataEglobat") fortran_attrs<allocatable, target> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %15 = fir.address_of(@_QMdataEglobp) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-    %16 = fir.declare %15 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMdataEglobp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+    %16 = fir.declare %15 uniq_name("_QMdataEglobp") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
     %17 = fir.address_of(@_QMdataEglobt) : !fir.ref<!fir.array<10xf32>>
-    %18 = fir.declare %17(%5) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMdataEglobt"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+    %18 = fir.declare %17(%5) uniq_name("_QMdataEglobt") fortran_attrs<target> : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
     %19 = fir.alloca !fir.array<10xf32> {bindc_name = "local", uniq_name = "_QFtest1Elocal"}
-    %20 = fir.declare %19(%5) {uniq_name = "_QFtest1Elocal"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+    %20 = fir.declare %19(%5) uniq_name("_QFtest1Elocal") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
     %21 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "locala", uniq_name = "_QFtest1Elocala"}
     %22 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
     %23 = fir.shape %c0 : (index) -> !fir.shape<1>
     %24 = fir.embox %22(%23) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
 // ALL-NOT: fir.store{{.*}}tbaa
     fir.store %24 to %21 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-    %25 = fir.declare %21 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest1Elocala"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %25 = fir.declare %21 uniq_name("_QFtest1Elocala") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %26 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "localat", fir.target, uniq_name = "_QFtest1Elocalat"}
 // ALL-NOT: fir.store{{.*}}tbaa
     fir.store %24 to %26 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-    %27 = fir.declare %26 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QFtest1Elocalat"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %27 = fir.declare %26 uniq_name("_QFtest1Elocalat") fortran_attrs<allocatable, target> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %28 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {bindc_name = "localp", uniq_name = "_QFtest1Elocalp"}
     %29 = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
     %30 = fir.embox %29(%23) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
 // ALL-NOT: fir.store{{.*}}tbaa
     fir.store %30 to %28 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-    %31 = fir.declare %28 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest1Elocalp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+    %31 = fir.declare %28 uniq_name("_QFtest1Elocalp") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
     %32 = fir.alloca !fir.array<10xf32> {bindc_name = "localt", fir.target, uniq_name = "_QFtest1Elocalt"}
-    %33 = fir.declare %32(%5) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtest1Elocalt"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+    %33 = fir.declare %32(%5) uniq_name("_QFtest1Elocalt") fortran_attrs<target> : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
     %34 = fir.array_coor %10(%5) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // module data :: real :: glob(10)
-// ALL: fir.store{{.*}}{tbaa = [#[[GLOBTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[GLOBTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %34 : !fir.ref<f32>
     %35 = fir.array_coor %18(%5) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // module data :: real, target :: globt(10)
-// ALL: fir.store{{.*}}{tbaa = [#[[GLOBTTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[GLOBTTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %35 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %36 = fir.load %12 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -200,7 +200,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %39 = fir.shape_shift %38#0, %38#1 : (index, index) -> !fir.shapeshift<1>
     %40 = fir.array_coor %37(%39) %c1 : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
 // module data :: real, allocatable :: globa(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[GLOBATAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[GLOBATAG]]]}> : !fir.ref<f32>
     fir.store %cst to %40 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %41 = fir.load %14 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -209,7 +209,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %44 = fir.shape_shift %43#0, %43#1 : (index, index) -> !fir.shapeshift<1>
     %45 = fir.array_coor %42(%44) %c1 : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
 // module data :: real, allocatable, target :: globat(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[GLOBATTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[GLOBATTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %45 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %46 = fir.load %16 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
@@ -217,23 +217,23 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %48 = fir.shift %47#0 : (index) -> !fir.shift<1>
     %49 = fir.array_coor %46(%48) %c1 : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.shift<1>, index) -> !fir.ref<f32>
 // module data :: real, pointer :: globp(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[TARGETTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %49 : !fir.ref<f32>
     %50 = fir.array_coor %6(%5) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // real :: dummyf(10)
-// ALL: fir.store{{.*}}{tbaa = [#[[DUMMYFTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[DUMMYFTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %50 : !fir.ref<f32>
     %51 = fir.array_coor %7(%5) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // real, target :: dummyft(10)
-// ALL: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[TARGETTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %51 : !fir.ref<f32>
     %52 = fir.array_coor %2 %c1 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // real :: dummyas(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[DUMMYASTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[DUMMYASTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %52 : !fir.ref<f32>
     %53 = fir.array_coor %3 %c1 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // real, target :: dummyast(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[TARGETTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %53 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %54 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -242,7 +242,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %57 = fir.shape_shift %56#0, %56#1 : (index, index) -> !fir.shapeshift<1>
     %58 = fir.array_coor %55(%57) %c1 : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
 // real, allocatable :: dummya(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[DUMMYATAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[DUMMYATAG]]]}> : !fir.ref<f32>
     fir.store %cst to %58 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %59 = fir.load %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -251,7 +251,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %62 = fir.shape_shift %61#0, %61#1 : (index, index) -> !fir.shapeshift<1>
     %63 = fir.array_coor %60(%62) %c1 : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
 // real, allocatable, target :: dummyat(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[TARGETTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %63 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %64 = fir.load %8 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
@@ -259,15 +259,15 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %66 = fir.shift %65#0 : (index) -> !fir.shift<1>
     %67 = fir.array_coor %64(%66) %c1 : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.shift<1>, index) -> !fir.ref<f32>
 // real, pointer :: dummyp(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[TARGETTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %67 : !fir.ref<f32>
     %68 = fir.array_coor %20(%5) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // real :: local(10)
-// ALL: fir.store{{.*}}{tbaa = [#[[LOCALTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[LOCALTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %68 : !fir.ref<f32>
     %69 = fir.array_coor %33(%5) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // real, target :: localt(10)
-// ALL: fir.store{{.*}}{tbaa = [#[[LOCALTTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[LOCALTTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %69 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %70 = fir.load %25 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -276,7 +276,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %73 = fir.shape_shift %72#0, %72#1 : (index, index) -> !fir.shapeshift<1>
     %74 = fir.array_coor %71(%73) %c1 : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
 // real, allocatable :: locala(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[LOCALATAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[LOCALATAG]]]}> : !fir.ref<f32>
     fir.store %cst to %74 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %75 = fir.load %27 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -285,7 +285,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %78 = fir.shape_shift %77#0, %77#1 : (index, index) -> !fir.shapeshift<1>
     %79 = fir.array_coor %76(%78) %c1 : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
 // real, allocatable, target :: localat(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[LOCALATTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[LOCALATTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %79 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %80 = fir.load %31 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
@@ -293,7 +293,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %82 = fir.shift %81#0 : (index) -> !fir.shift<1>
     %83 = fir.array_coor %80(%82) %c1 : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.shift<1>, index) -> !fir.ref<f32>
 // real, pointer :: localp(:)
-// ALL: fir.store{{.*}}{tbaa = [#[[TARGETTAG]]]} : !fir.ref<f32>
+// ALL: fir.store{{.*}}<{tbaa = [#[[TARGETTAG]]]}> : !fir.ref<f32>
     fir.store %cst to %83 : !fir.ref<f32>
 // ALL-NOT: fir.load{{.*}}tbaa
     %84 = fir.load %27 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>

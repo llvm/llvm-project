@@ -203,23 +203,21 @@ define void @rt_stride_widen_rotate1(ptr %pl, i64 %stride, ptr %ps) {
 ; CHECK-NEXT:    [[OFFSET8:%.*]] = mul nsw i64 [[STRIDE]], 2
 ; CHECK-NEXT:    [[OFFSET10:%.*]] = add nsw i64 [[OFFSET8]], 2
 ; CHECK-NEXT:    [[OFFSET12:%.*]] = mul nsw i64 [[STRIDE]], 3
-; CHECK-NEXT:    [[OFFSET14:%.*]] = add nsw i64 [[OFFSET12]], 2
 ; CHECK-NEXT:    [[OFFSET16:%.*]] = mul nsw i64 [[STRIDE]], 4
 ; CHECK-NEXT:    [[GEP_L1:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET1]]
 ; CHECK-NEXT:    [[GEP_L2:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET2]]
 ; CHECK-NEXT:    [[GEP_L4:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET4]]
 ; CHECK-NEXT:    [[GEP_L6:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET6]]
 ; CHECK-NEXT:    [[GEP_L8:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET8]]
-; CHECK-NEXT:    [[GEP_L10:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET10]]
+; CHECK-NEXT:    [[GEP_L14:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET10]]
 ; CHECK-NEXT:    [[GEP_L12:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET12]]
-; CHECK-NEXT:    [[GEP_L14:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET14]]
 ; CHECK-NEXT:    [[GEP_L16:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET16]]
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[GEP_L1]], align 1
 ; CHECK-NEXT:    [[LOAD16:%.*]] = load i8, ptr [[GEP_L16]], align 1
 ; CHECK-NEXT:    [[GEP_S1:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 1
 ; CHECK-NEXT:    [[GEP_S2:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 2
 ; CHECK-NEXT:    [[GEP_S10:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 10
-; CHECK-NEXT:    [[GEP_S14:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 14
+; CHECK-NEXT:    [[GEP_S12:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 12
 ; CHECK-NEXT:    [[GEP_S16:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[GEP_L2]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[GEP_L4]], align 1
@@ -232,16 +230,12 @@ define void @rt_stride_widen_rotate1(ptr %pl, i64 %stride, ptr %ps) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i8> [[TMP7]], <8 x i8> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i8> [[TMP4]], <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i8> [[TMP9]], <8 x i8> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
-; CHECK-NEXT:    [[TMP12:%.*]] = load <2 x i8>, ptr [[GEP_L10]], align 1
-; CHECK-NEXT:    [[TMP13:%.*]] = load <2 x i8>, ptr [[GEP_L12]], align 1
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i8> [[TMP12]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i8> [[TMP13]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i8> [[TMP12]], <2 x i8> [[TMP13]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i8>, ptr [[GEP_L12]], align 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = load <2 x i8>, ptr [[GEP_L14]], align 1
 ; CHECK-NEXT:    store i8 [[LOAD1]], ptr [[GEP_S1]], align 1
 ; CHECK-NEXT:    store <8 x i8> [[TMP11]], ptr [[GEP_S2]], align 1
-; CHECK-NEXT:    store <4 x i8> [[TMP16]], ptr [[GEP_S10]], align 1
-; CHECK-NEXT:    store <2 x i8> [[TMP17]], ptr [[GEP_S14]], align 1
+; CHECK-NEXT:    store <2 x i8> [[TMP17]], ptr [[GEP_S10]], align 1
+; CHECK-NEXT:    store <4 x i8> [[TMP12]], ptr [[GEP_S12]], align 1
 ; CHECK-NEXT:    store i8 [[LOAD16]], ptr [[GEP_S16]], align 1
 ; CHECK-NEXT:    ret void
 ;

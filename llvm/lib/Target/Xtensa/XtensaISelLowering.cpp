@@ -287,9 +287,10 @@ bool XtensaTargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-bool XtensaTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                        bool ForCodeSize) const {
-  return false;
+TargetLowering::FPImmAction
+XtensaTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                     bool ForCodeSize) const {
+  return FPImmAction::ConstantPool;
 }
 
 //===----------------------------------------------------------------------===//

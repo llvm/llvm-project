@@ -1,0 +1,14 @@
+--- a/BUILD.bazel	2026-10-01 04:10:36.951673433 +0000
++++ b/BUILD.bazel	2026-10-01 04:10:55.701218194 +0000
+@@ -5,4 +5,11 @@
+     srcs = ["generate_compile_commands.py"],
+     visibility = ["//visibility:public"],
+     deps = ["//bazel_protos"],
++    args = [
++        "--extra_aquery_arg=--noprocess_headers_in_dependencies",
++        "--extra_aquery_arg=--features=-parse_headers",
++        "--extra_aquery_arg=--host_features=-parse_headers",
++        "--extra_aquery_arg=--features=-layering_check",
++        "--extra_aquery_arg=--host_features=-layering_check",
++    ],
+ )

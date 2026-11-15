@@ -1,5 +1,8 @@
 add_subdirectory(SandboxVectorizer)
 
+# VPlanVerifierTest.cpp includes the generated VectorizeOptions.inc.
+include_directories(${LLVM_BINARY_DIR}/lib/Transforms/Vectorize)
+
 set(LLVM_LINK_COMPONENTS
   Analysis
   Core

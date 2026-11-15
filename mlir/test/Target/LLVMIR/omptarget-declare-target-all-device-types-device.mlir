@@ -9,14 +9,14 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
 
   // CHECK-DAG: @ial = internal global float 0.000000e+00
   // CHECK-DAG: @ial_decl_tgt_ref_ptr = weak global ptr null, align 8
-  llvm.mlir.global internal @ial() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : f32 {
+  llvm.mlir.global internal @ial() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : f32 {
     %0 = llvm.mlir.zero : f32
     llvm.return %0 : f32
   }
 
   // CHECK-DAG: @eal = internal global float 0.000000e+00
   // CHECK-DAG: @eal_decl_tgt_ref_ptr = weak global ptr null, align 8
-  llvm.mlir.global external @eal() {addr_space = 0 : i32, dso_local, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : f32 {
+  llvm.mlir.global external @eal() {addr_space = 0 : i32, dso_local, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : f32 {
     %0 = llvm.mlir.zero : f32
     llvm.return %0 : f32
   }
@@ -25,14 +25,14 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
 
   // CHECK-DAG: @ihl = internal global float 0.000000e+00
   // CHECK-DAG: @ihl_decl_tgt_ref_ptr = weak global ptr null, align 8
-  llvm.mlir.global internal @ihl() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (link)>} : f32 {
+  llvm.mlir.global internal @ihl() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = link>} : f32 {
     %0 = llvm.mlir.zero : f32
     llvm.return %0 : f32
   }
 
   // CHECK-DAG: @ehl = internal global float 0.000000e+00
   // CHECK-DAG: @ehl_decl_tgt_ref_ptr = weak global ptr null, align 8
-  llvm.mlir.global external @ehl() {addr_space = 0 : i32, dso_local, omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (link)>} : f32 {
+  llvm.mlir.global external @ehl() {addr_space = 0 : i32, dso_local, omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = link>} : f32 {
     %0 = llvm.mlir.zero : f32
     llvm.return %0 : f32
   }
@@ -41,14 +41,14 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
 
   // CHECK-DAG: @inl = internal global float 0.000000e+00
   // CHECK-DAG: @inl_decl_tgt_ref_ptr = weak global ptr null, align 8
-  llvm.mlir.global internal @inl() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (link)>} : f32 {
+  llvm.mlir.global internal @inl() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = link>} : f32 {
     %0 = llvm.mlir.zero : f32
     llvm.return %0 : f32
   }
 
   // CHECK-DAG: @enl = internal global float 0.000000e+00
   // CHECK-DAG: @enl_decl_tgt_ref_ptr = weak global ptr null, align 8
-  llvm.mlir.global external @enl() {addr_space = 0 : i32, dso_local, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (link)>} : f32 {
+  llvm.mlir.global external @enl() {addr_space = 0 : i32, dso_local, omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = link>} : f32 {
     %0 = llvm.mlir.zero : f32
     llvm.return %0 : f32
   }
@@ -56,13 +56,13 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
   // --- enter any ---
 
   // CHECK-DAG: @iae = global float 0.000000e+00
-  llvm.mlir.global internal @iae() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : f32 {
+  llvm.mlir.global internal @iae() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} : f32 {
     %0 = llvm.mlir.zero : f32
     llvm.return %0 : f32
   }
 
   // CHECK-DAG: @eae = dso_local global float 0.000000e+00
-  llvm.mlir.global external @eae() {addr_space = 0 : i32, dso_local, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : f32 {
+  llvm.mlir.global external @eae() {addr_space = 0 : i32, dso_local, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} : f32 {
     %0 = llvm.mlir.zero : f32
     llvm.return %0 : f32
   }
@@ -70,13 +70,13 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
   // --- enter host ---
 
   // CHECK-DAG: @ihe = external dso_local global float
-  llvm.mlir.global internal @ihe() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter)>} : f32 {
+  llvm.mlir.global internal @ihe() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = enter>} : f32 {
     %0 = llvm.mlir.zero : f32
     llvm.return %0 : f32
   }
 
   // CHECK-DAG: @ehe = external dso_local global float
-  llvm.mlir.global external @ehe() {addr_space = 0 : i32, dso_local, omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter)>} : f32 {
+  llvm.mlir.global external @ehe() {addr_space = 0 : i32, dso_local, omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = enter>} : f32 {
     %0 = llvm.mlir.zero : f32
     llvm.return %0 : f32
   }
@@ -84,13 +84,13 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
   // --- enter nohost ---
 
   // CHECK-DAG: @ine = global float 0.000000e+00
-  llvm.mlir.global internal @ine() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>} : f32 {
+  llvm.mlir.global internal @ine() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = enter>} : f32 {
     %0 = llvm.mlir.zero : f32
     llvm.return %0 : f32
   }
 
   // CHECK-DAG: @ene = dso_local global float 0.000000e+00
-  llvm.mlir.global external @ene() {addr_space = 0 : i32, dso_local, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>} : f32 {
+  llvm.mlir.global external @ene() {addr_space = 0 : i32, dso_local, omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = enter>} : f32 {
     %0 = llvm.mlir.zero : f32
     llvm.return %0 : f32
   }

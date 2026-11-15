@@ -17,9 +17,10 @@
 #include <cassert>
 #include <functional>
 
-#include "test_macros.h"
-#include "test_iterators.h"
+#include "../heap_helpers.h"
 #include "MoveOnly.h"
+#include "test_iterators.h"
+#include "test_macros.h"
 
 template<class T, class Iter>
 TEST_CONSTEXPR_CXX20 bool test()
@@ -30,6 +31,7 @@ TEST_CONSTEXPR_CXX20 bool test()
         std::push_heap(Iter(work), Iter(work+i), std::greater<T>());
         assert(std::is_permutation(work, work+i, orig));
         assert(std::is_heap(work, work+i, std::greater<T>()));
+        assert(satisfies_heap_property(work, work + i, std::greater<T>()));
     }
 
     {
@@ -40,6 +42,7 @@ TEST_CONSTEXPR_CXX20 bool test()
         std::push_heap(Iter(input), Iter(input + 4), std::greater<T>()); assert(input[0] == 1);
         std::push_heap(Iter(input), Iter(input + 5), std::greater<T>()); assert(input[0] == 1);
         assert(std::is_heap(input, input + 5, std::greater<T>()));
+        assert(satisfies_heap_property(input, input + 5, std::greater<T>()));
     }
     return true;
 }

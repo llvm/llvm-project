@@ -110,10 +110,12 @@ TEST_F(TestTypeSystemMap, GetScratchTypeSystemsIsOrderedByLanguage) {
   // order in memory is then the reverse of the order of the languages, and an
   // implementation that deduplicates by sorting on pointer identity returns the
   // two the wrong way round.
-  g_fortran90_type_system =
-      std::make_shared<MockTypeSystem>(lldb::eLanguageTypeFortran90);
-  g_fortran77_type_system =
-      std::make_shared<MockTypeSystem>(lldb::eLanguageTypeFortran77);
+  std::shared_ptr<MockTypeSystem[]> mocks(new MockTypeSystem[2]{
+      MockTypeSystem(lldb::eLanguageTypeFortran90),
+      MockTypeSystem(lldb::eLanguageTypeFortran77),
+  });
+  g_fortran90_type_system = std::shared_ptr<MockTypeSystem>(mocks, &mocks[0]);
+  g_fortran77_type_system = std::shared_ptr<MockTypeSystem>(mocks, &mocks[1]);
   ASSERT_LT(g_fortran90_type_system.get(), g_fortran77_type_system.get());
 
   LanguageSet fortran77;

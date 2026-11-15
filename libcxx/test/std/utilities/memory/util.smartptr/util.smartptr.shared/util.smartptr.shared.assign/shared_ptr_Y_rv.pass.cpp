@@ -12,7 +12,7 @@
 
 // shared_ptr
 
-// template<class Y> shared_ptr& operator=(shared_ptr<Y>&& r);
+// template<class Y> shared_ptr& operator=(shared_ptr<Y>&& r) noexcept;
 
 #include <memory>
 #include <type_traits>
@@ -46,6 +46,8 @@ int A::count = 0;
 
 int main(int, char**)
 {
+    static_assert(std::is_nothrow_assignable<std::shared_ptr<B>&, std::shared_ptr<A>&&>::value, "");
+
     {
         std::shared_ptr<A> pA(new A);
         A* ptrA = pA.get();

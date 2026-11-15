@@ -19,7 +19,7 @@
   (export "add" (func $add)))
 */
 
-// CHECK-LABEL:   wasmssa.import_func "twoTimes" from "env" as @func_0 {type = (i32) -> i32}
+// CHECK-LABEL:   wasmssa.import_func "twoTimes" from "env" as @func_0 : (i32) -> i32
 
 // CHECK-LABEL:   wasmssa.func exported @add(
 // CHECK-SAME:      %[[ARG0:.*]]: !wasmssa<local ref to i32>,

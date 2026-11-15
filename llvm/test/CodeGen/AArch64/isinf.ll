@@ -47,7 +47,7 @@ define i32 @replace_isinf_call_f32(float %x) {
 ; CHECK-GI-NEXT:    cset w0, eq
 ; CHECK-GI-NEXT:    ret
   %abs = tail call float @llvm.fabs.f32(float %x)
-  %cmpinf = fcmp oeq float %abs, 0x7FF0000000000000
+  %cmpinf = fcmp oeq float %abs, +inf
   %ret = zext i1 %cmpinf to i32
   ret i32 %ret
 }
@@ -71,7 +71,7 @@ define i32 @replace_isinf_call_f64(double %x) {
 ; CHECK-GI-NEXT:    cset w0, eq
 ; CHECK-GI-NEXT:    ret
   %abs = tail call double @llvm.fabs.f64(double %x)
-  %cmpinf = fcmp oeq double %abs, 0x7FF0000000000000
+  %cmpinf = fcmp oeq double %abs, +inf
   %ret = zext i1 %cmpinf to i32
   ret i32 %ret
 }

@@ -322,10 +322,14 @@ fir::AllocMemOp fir::createAllocMemFromAlloca(mlir::OpBuilder &builder,
       return *opt;
     return {};
   };
-  return fir::AllocMemOp::create(builder, alloca.getLoc(), alloca.getInType(),
-                                 unpackName(alloca.getUniqName()),
-                                 unpackName(alloca.getBindcName()),
-                                 alloca.getTypeparams(), alloca.getShape());
+  auto heap = fir::AllocMemOp::create(
+      builder, alloca.getLoc(), alloca.getInType(),
+      unpackName(alloca.getUniqName()), unpackName(alloca.getBindcName()),
+      alloca.getTypeparams(), alloca.getShape());
+  // Keep a requested alignment across the stack-to-heap conversion.
+  if (std::optional<std::int64_t> alignment = alloca.getAlignment())
+    heap.setAlignment(*alignment);
+  return heap;
 }
 
 /// Device code keeps its stack allocations: the unified/managed entry points
@@ -350,12 +354,17 @@ static bool isDeviceCode(mlir::Operation *func, mlir::ModuleOp mod) {
 }
 
 bool fir::promoteDynamicVariableAllocasToCudaHeap(mlir::RewriterBase &rewriter,
-                                                  mlir::Operation *func) {
+                                                  mlir::Operation *func,
+                                                  bool stackArrays) {
   auto mod = func->getParentOfType<mlir::ModuleOp>();
   if (!mod)
     return false;
   fir::CudaHeapAllocMode mode = fir::getCudaHeapAllocMode(mod);
   if (mode == fir::CudaHeapAllocMode::None || isDeviceCode(func, mod))
+    return false;
+  // The stack is device accessible under unified memory, so -fstack-arrays can
+  // be honored there. Under managed memory only the allocator can be.
+  if (stackArrays && mode == fir::CudaHeapAllocMode::Unified)
     return false;
 
   bool changed = false;

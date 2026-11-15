@@ -29,7 +29,7 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.6, [Shader, Linkage, Cooperat
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat16TypeKHR, Float64, Int64], [SPV_KHR_bfloat16]> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat16TypeKHR, Float16, Float64, Int64], [SPV_KHR_bfloat16]> {
   spirv.func @convert_f_to_s(%arg0 : f32) -> i32 "None" {
     // CHECK: {{%.*}} = spirv.ConvertFToS {{%.*}} : f32 to i32
     %0 = spirv.ConvertFToS %arg0 : f32 to i32
@@ -105,6 +105,11 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat1
     %0 = spirv.FConvert %arg0 : bf16 to f32
     spirv.ReturnValue %0 : f32
   }
+  spirv.func @convert_f16_to_bf16(%arg0 : f16) -> bf16 "None" {
+    // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : f16 to bf16
+    %0 = spirv.FConvert %arg0 : f16 to bf16
+    spirv.ReturnValue %0 : bf16
+  }
   spirv.func @s_convert(%arg0 : i32) -> i64 "None" {
     // CHECK: {{%.*}} = spirv.SConvert {{%.*}} : i32 to i64
     %0 = spirv.SConvert %arg0 : i32 to i64
@@ -114,6 +119,41 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat1
     // CHECK: {{%.*}} = spirv.UConvert {{%.*}} : i32 to i64
     %0 = spirv.UConvert %arg0 : i32 to i64
     spirv.ReturnValue %0 : i64
+  }
+}
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, Int8, Int16, Int64], []> {
+  spirv.func @sat_convert_s_to_u(%arg0 : i32) -> i32 "None" {
+    // CHECK: {{%.*}} = spirv.SatConvertSToU {{%.*}} : i32 to i32
+    %0 = spirv.SatConvertSToU %arg0 : i32 to i32
+    spirv.ReturnValue %0 : i32
+  }
+  spirv.func @sat_convert_s_to_u_narrow(%arg0 : i32) -> i8 "None" {
+    // CHECK: {{%.*}} = spirv.SatConvertSToU {{%.*}} : i32 to i8
+    %0 = spirv.SatConvertSToU %arg0 : i32 to i8
+    spirv.ReturnValue %0 : i8
+  }
+  spirv.func @sat_convert_s_to_u_widen_vector(%arg0 : vector<4xi16>) -> vector<4xi64> "None" {
+    // CHECK: {{%.*}} = spirv.SatConvertSToU {{%.*}} : vector<4xi16> to vector<4xi64>
+    %0 = spirv.SatConvertSToU %arg0 : vector<4xi16> to vector<4xi64>
+    spirv.ReturnValue %0 : vector<4xi64>
+  }
+  spirv.func @sat_convert_u_to_s(%arg0 : i32) -> i32 "None" {
+    // CHECK: {{%.*}} = spirv.SatConvertUToS {{%.*}} : i32 to i32
+    %0 = spirv.SatConvertUToS %arg0 : i32 to i32
+    spirv.ReturnValue %0 : i32
+  }
+  spirv.func @sat_convert_u_to_s_widen(%arg0 : i8) -> i64 "None" {
+    // CHECK: {{%.*}} = spirv.SatConvertUToS {{%.*}} : i8 to i64
+    %0 = spirv.SatConvertUToS %arg0 : i8 to i64
+    spirv.ReturnValue %0 : i64
+  }
+  spirv.func @sat_convert_u_to_s_narrow_vector(%arg0 : vector<3xi64>) -> vector<3xi32> "None" {
+    // CHECK: {{%.*}} = spirv.SatConvertUToS {{%.*}} : vector<3xi64> to vector<3xi32>
+    %0 = spirv.SatConvertUToS %arg0 : vector<3xi64> to vector<3xi32>
+    spirv.ReturnValue %0 : vector<3xi32>
   }
 }
 

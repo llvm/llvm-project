@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -relocation-model=pic --verify-machineinstrs -print-after=postrapseudos < %s 2>&1 | FileCheck -check-prefix=CHECK-POST-RA %s
+; RUN: llc -filetype=obj -relocation-model=pic --verify-machineinstrs -print-after=post-ra-pseudos < %s 2>&1 | FileCheck -check-prefix=CHECK-POST-RA %s
 ; RUN: llc -filetype=obj -relocation-model=pic --verify-machineinstrs -print-after=arm-pseudo < %s 2>&1 | FileCheck -check-prefix=CHECK-POST-AP %s
 
 ; CHECK-POST-RA: $r12 = t2LDRLIT_ga_pcrel target-flags(arm-got) @__stack_chk_guard

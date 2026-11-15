@@ -18,9 +18,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/Interfaces/DestinationStyleOpInterface.h"
-#include "mlir/Interfaces/IndexingMapOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/RawOstreamExtras.h"
@@ -146,25 +143,32 @@ std::optional<SmallVector<int64_t>> isaBroadcastOpInterface(LinalgOp linalgOp);
 std::optional<SmallVector<int64_t>>
 isaTransposeOpInterface(GenericOp genericOp);
 
+/// Checks whether the `genericOp` is semantically equivalent to a
+/// `linalg.reduce`. Returns the reduction dimensions if true.
+std::optional<SmallVector<int64_t>>
+isaReductionOpInterface(GenericOp genericOp);
+
 /// Checks whether a given `genericOp` is semantically equivalent to a single
-/// linalg elementwise unary op, e.g. `linalg.exp` or
-/// `linalg.elementwise kind=#linalg.elementwise_kind<exp>`.
-/// If `allowNonIdentityMaps` is true, operations with custom indexing maps are
-/// included in the check. Note that these operations can only be represented by
-/// the category op.
+/// linalg elementwise unary op, e.g.
+/// `linalg.elementwise <exp>`.
+/// Operations with non-identity indexing maps are included in the check, as
+/// they can be represented by the category op.
 /// A linalg.generic body could be a series of unary elementwise ops e.g.
 /// `exp(neg(x))`, such as formed by linalg op fusion. Here we restrict it to
 /// detecting cases where body is a single computation op.
-bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp,
-                                       bool allowNonIdentityMaps = false);
+bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp);
 
 /// Checks whether `genericOp` is semantically equivalent to a single linalg
 /// elementwise binary op e.g. linalg.sub.
-/// If `allowNonIdentityMaps` is true, operations with custom indexing maps are
-/// included in the check. Note that these operations can only be represented by
-/// the category op.
-bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp,
-                                        bool allowNonIdentityMaps = false);
+/// Operations with non-identity indexing maps are included in the check, as
+/// they can be represented by the category op.
+bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp);
+
+/// Checks whether `genericOp` is semantically equivalent to a single linalg
+/// elementwise ternary op e.g. linalg.fma.
+/// Operations with non-identity indexing maps are included in the check, as
+/// they can be represented by the category op.
+bool isaElemwiseSingleTernaryOpInterface(GenericOp genericOp);
 
 /// Checks whether `genericOp` is semantically equivalent to a `linalg.fill`.
 /// Supports two patterns:

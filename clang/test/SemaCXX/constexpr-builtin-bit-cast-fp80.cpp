@@ -56,11 +56,9 @@ namespace c_cast {
   // FIXME: re-enable the corresponding test cases in CodeGen/const-init.c when
   //  constexpr bitcast with x86_fp80 is supported
 
-  // expected-error@+2 {{constexpr variable 'b' must be initialized by a constant expression}}
-  // expected-note@+1 {{constexpr bit cast involving type 'long double' is not yet supported}}
+  // expected-error@+1 {{C-style cast from vector 'v2f80' (vector of 2 'long double' values) to vector 'v12i16' (vector of 12 'short' values) of different size}}
   constexpr static v12i16 b = (v12i16)(v2f80){1,2};
 
-  // expected-error@+2 {{constexpr variable 'c' must be initialized by a constant expression}}
-  // expected-note@+1 {{constexpr bit cast involving type 'long double' is not yet supported}}
+  // expected-error@+1 {{C-style cast from vector 'v12i16' (vector of 12 'short' values) to vector 'v2f80' (vector of 2 'long double' values) of different size}}
   constexpr static v2f80 c = (v2f80)(v12i16){0,0,0,-32768,16383,0,0,0,0,-32768,16384,0};
 }

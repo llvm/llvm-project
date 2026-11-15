@@ -20,7 +20,7 @@ func.func @threadprivate(%host: memref<i32>) {
     %next = arith.addi %v, %v : i32
     memref.store %next, %local[] : memref<i32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -51,6 +51,6 @@ func.func @dynamic_threadprivate(%n: index) {
         : (!acc.private_type<memref<?xi32>>) -> memref<?xi32>
     memref.store %one, %local[%c0] : memref<?xi32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }

@@ -11,12 +11,17 @@
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 #include <optional>
 
 namespace llvm {
 
-extern LLVM_ABI cl::opt<bool> ForgetSCEVInLoopUnroll;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
+
+/// Return -forget-scev-loop-unroll.
+LLVM_ABI bool
+getForgetSCEVInLoopUnroll(const cl::LibraryOptionsContext &LibraryOptions);
 
 class Function;
 class Loop;

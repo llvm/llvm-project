@@ -212,6 +212,7 @@ public:
   inline const SDValue &getOperand(unsigned i) const;
   inline uint64_t getConstantOperandVal(unsigned i) const;
   inline const APInt &getConstantOperandAPInt(unsigned i) const;
+  inline ISD::CondCode getOperandCondCode(unsigned i) const;
   inline bool isTargetOpcode() const;
   inline bool isMachineOpcode() const;
   inline bool isUndef() const;
@@ -424,13 +425,17 @@ public:
     // Call does not require convergence guarantees.
     NoConvergent = 1 << 16,
 
+    // ISD::ADDRSPACECAST where the source is known not to be the null value of
+    // the source address space, so the result is poison if the source is null.
+    NonNull = 1 << 17,
+
     // NOTE: Please update LargestValue in LLVM_DECLARE_ENUM_AS_BITMASK below
     // the class definition when adding new flags.
 
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
-                            NonNeg | NoNaNs | NoInfs | SameSign | InBounds,
+        NonNeg | NoNaNs | NoInfs | SameSign | InBounds | NonNull,
     FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
-                    AllowContract | ApproximateFuncs | AllowReassociation,
+        AllowContract | ApproximateFuncs | AllowReassociation,
   };
 
   /// Default constructor turns off all optimization flags.
@@ -465,6 +470,7 @@ public:
   void setUnpredictable(bool b) { setFlag<Unpredictable>(b); }
   void setInBounds(bool b) { setFlag<InBounds>(b); }
   void setNoConvergent(bool b) { setFlag<NoConvergent>(b); }
+  void setNonNull(bool b) { setFlag<NonNull>(b); }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return Flags & NoUnsignedWrap; }
@@ -484,6 +490,7 @@ public:
   bool hasUnpredictable() const { return Flags & Unpredictable; }
   bool hasInBounds() const { return Flags & InBounds; }
   bool hasNoConvergent() const { return Flags & NoConvergent; }
+  bool hasNonNull() const { return Flags & NonNull; }
 
   bool operator==(const SDNodeFlags &Other) const {
     return Flags == Other.Flags;
@@ -492,8 +499,7 @@ public:
   void operator|=(const SDNodeFlags &OtherFlags) { Flags |= OtherFlags.Flags; }
 };
 
-LLVM_DECLARE_ENUM_AS_BITMASK(decltype(SDNodeFlags::None),
-                             SDNodeFlags::NoConvergent);
+LLVM_DECLARE_ENUM_AS_BITMASK(decltype(SDNodeFlags::None), SDNodeFlags::NonNull);
 
 inline SDNodeFlags operator|(SDNodeFlags LHS, SDNodeFlags RHS) {
   LHS |= RHS;
@@ -756,6 +762,11 @@ public:
   /// Test if this node has a post-isel opcode, directly
   /// corresponding to a MachineInstr opcode.
   bool isMachineOpcode() const { return NodeType < 0; }
+
+  /// As above, for an opcode not held by a node.
+  static bool isMachineOpcode(unsigned Opc) {
+    return static_cast<int32_t>(Opc) < 0;
+  }
 
   /// This may only be called if isMachineOpcode returns
   /// true. It returns the MachineInstr opcode value that the node's opcode
@@ -1050,6 +1061,9 @@ public:
   /// Helper method returns the APInt value of a ConstantSDNode.
   inline const APInt &getAsAPIntVal() const;
 
+  /// Helper method returns the CondCode of a CondCodeSDNode.
+  inline ISD::CondCode getOperandCondCode(unsigned Num) const;
+
   inline std::optional<APInt> bitcastToAPInt() const;
 
   const SDValue &getOperand(unsigned Num) const {
@@ -1205,9 +1219,6 @@ public:
   LLVM_ABI void dumprWithDepth(const SelectionDAG *G = nullptr,
                                unsigned depth = 100) const;
 
-  /// Gather unique data for the node.
-  LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
-
   /// This method should only be used by the SDUse class.
   void addUse(SDUse &U) { U.addToList(&UseList); }
 
@@ -1295,6 +1306,10 @@ inline uint64_t SDValue::getConstantOperandVal(unsigned i) const {
 
 inline const APInt &SDValue::getConstantOperandAPInt(unsigned i) const {
   return Node->getConstantOperandAPInt(i);
+}
+
+inline ISD::CondCode SDValue::getOperandCondCode(unsigned i) const {
+  return Node->getOperandCondCode(i);
 }
 
 inline bool SDValue::isTargetOpcode() const {
@@ -1486,6 +1501,14 @@ public:
     return getMemOperand()->getMemCacheHint();
   }
 
+  /// Returns metadata that can be copied unchanged to an access covering
+  /// all or part of this access's bytes, even if the value type changes.
+  /// Metadata describing the loaded value (e.g. !range) is excluded, since
+  /// it may not apply to a value loaded with a different type or byte range.
+  MMOMetadata getMMOMetadataForSubAccess() const {
+    return MMOMetadata(getAAInfo(), /*Ranges=*/nullptr, getMemCacheHint());
+  }
+
   /// Returns the synchronization scope ID for this memory operation.
   SyncScope::ID getSyncScopeID() const {
     return getMemOperand()->getSyncScopeID();
@@ -1639,6 +1662,8 @@ public:
     case ISD::ATOMIC_LOAD_FMIN:
     case ISD::ATOMIC_LOAD_FMAXIMUM:
     case ISD::ATOMIC_LOAD_FMINIMUM:
+    case ISD::ATOMIC_LOAD_FMAXIMUMNUM:
+    case ISD::ATOMIC_LOAD_FMINIMUMNUM:
     case ISD::ATOMIC_LOAD_UINC_WRAP:
     case ISD::ATOMIC_LOAD_UDEC_WRAP:
     case ISD::ATOMIC_LOAD_USUB_COND:
@@ -1727,6 +1752,8 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_FMIN ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMAXIMUM ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMINIMUM ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMAXIMUMNUM ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMINIMUMNUM ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UINC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UDEC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_USUB_COND ||
@@ -2057,11 +2084,6 @@ LLVM_ABI bool isOneOrOneSplatFP(SDValue V, bool AllowUndefs = false);
 /// constant -1 integer (with no undefs).
 /// Does not permit build vector implicit truncation.
 LLVM_ABI bool isAllOnesOrAllOnesSplat(SDValue V, bool AllowUndefs = false);
-
-/// Return true if the value is a constant 1 integer or a splatted vector of a
-/// constant 1 integer (with no undefs).
-/// Does not permit build vector implicit truncation.
-LLVM_ABI bool isOnesOrOnesSplat(SDValue N, bool AllowUndefs = false);
 
 /// Return true if the value is a constant 0 integer or a splatted vector of a
 /// constant 0 integer (with no undefs).
@@ -2619,6 +2641,10 @@ public:
     return N->getOpcode() == ISD::CONDCODE;
   }
 };
+
+ISD::CondCode SDNode::getOperandCondCode(unsigned Num) const {
+  return cast<CondCodeSDNode>(getOperand(Num))->get();
+}
 
 /// This class is used to represent EVT's, which are used
 /// to parameterize some operations.
@@ -3481,20 +3507,21 @@ namespace ISD {
     return St && St->getAddressingMode() == ISD::UNINDEXED;
   }
 
-  /// Returns true if the specified node is a non-extending and unindexed
-  /// masked load.
+  /// Returns true if the specified node is a non-extending, non-expanding, and
+  /// unindexed masked load.
   inline bool isNormalMaskedLoad(const SDNode *N) {
     auto *Ld = dyn_cast<MaskedLoadSDNode>(N);
     return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
-           Ld->getAddressingMode() == ISD::UNINDEXED;
+           Ld->getAddressingMode() == ISD::UNINDEXED && !Ld->isExpandingLoad();
   }
 
-  /// Returns true if the specified node is a non-extending and unindexed
-  /// masked store.
+  /// Returns true if the specified node is a non-extending, non-compressing,
+  /// and unindexed masked store.
   inline bool isNormalMaskedStore(const SDNode *N) {
     auto *St = dyn_cast<MaskedStoreSDNode>(N);
     return St && !St->isTruncatingStore() &&
-           St->getAddressingMode() == ISD::UNINDEXED;
+           St->getAddressingMode() == ISD::UNINDEXED &&
+           !St->isCompressingStore();
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or

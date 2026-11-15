@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --one-shot-bufferize="dialect-filter=tensor,bufferization copy-before-write unknown-type-conversion=identity-layout-map" -cse -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --one-shot-bufferize="dialect-filter=tensor,bufferization copy-before-write unknown-type-conversion=identity-layout-map" -cse -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL:   func @dim(
 // CHECK-SAME:              %[[TENSOR:.*]]: tensor<*xf32>,
@@ -423,6 +423,40 @@ func.func @tensor.expand_shape_multiple_dynamic_indices(%t1: tensor<?x256xf32>, 
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[expanded]]
   // CHECK: return %[[r]]
   return %0 : tensor<?x?x?x256xf32>
+}
+// -----
+
+// CHECK-LABEL: func @tensor.expand_shape_of_strided_layout(
+//  CHECK-SAME:     %[[m1:.*]]: memref<4x4xf32, strided<[8, 1]>>
+func.func @tensor.expand_shape_of_strided_layout(
+    %m1: memref<4x4xf32, strided<[8, 1]>>) -> tensor<2x2x4xf32> {
+  %t1 = bufferization.to_tensor %m1 restrict
+      : memref<4x4xf32, strided<[8, 1]>> to tensor<4x4xf32>
+
+  // CHECK-NOT: memref.alloc
+  // CHECK-NOT: memref.copy
+  // CHECK: %[[expanded:.*]] = memref.expand_shape %[[m1]] {{\[\[}}0, 1], [2]] output_shape [2, 2, 4] : memref<4x4xf32, strided<[8, 1]>> into memref<2x2x4xf32, strided<[16, 8, 1]>>
+  %0 = tensor.expand_shape %t1 [[0, 1], [2]] output_shape [2, 2, 4]
+      : tensor<4x4xf32> into tensor<2x2x4xf32>
+
+  // CHECK: %[[r:.*]] = bufferization.to_tensor %[[expanded]]
+  // CHECK: return %[[r]]
+  return %0 : tensor<2x2x4xf32>
+}
+// -----
+
+#nonstrided = affine_map<(d0, d1) -> (d0 * 4 + d1 floordiv 2)>
+
+func.func @tensor.expand_shape_of_non_strided_layout(
+    %m1: memref<4x4xf32, #nonstrided>) -> tensor<2x2x4xf32> {
+  %t1 = bufferization.to_tensor %m1 restrict
+      : memref<4x4xf32, #nonstrided> to tensor<4x4xf32>
+
+  // expected-error @below{{failed to bufferize op}}
+  %0 = tensor.expand_shape %t1 [[0, 1], [2]] output_shape [2, 2, 4]
+      : tensor<4x4xf32> into tensor<2x2x4xf32>
+
+  return %0 : tensor<2x2x4xf32>
 }
 // -----
 

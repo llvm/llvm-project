@@ -17,9 +17,11 @@
 
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang::lifetimes::internal {
@@ -28,8 +30,9 @@ class FactsGenerator : public ConstStmtVisitor<FactsGenerator> {
   using Base = ConstStmtVisitor<FactsGenerator>;
 
 public:
-  FactsGenerator(FactManager &FactMgr, AnalysisDeclContext &AC)
-      : FactMgr(FactMgr), AC(AC),
+  FactsGenerator(FactManager &FactMgr, AnalysisDeclContext &AC,
+                 const LifetimeSafetyOpts &LSOpts)
+      : FactMgr(FactMgr), AC(AC), LSOpts(LSOpts),
         IsCMode(!AC.getASTContext().getLangOpts().CPlusPlus &&
                 !AC.getASTContext().getLangOpts().ObjC) {}
 
@@ -38,6 +41,7 @@ public:
   void VisitDeclStmt(const DeclStmt *DS);
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *DAE);
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
   void VisitMemberExpr(const MemberExpr *ME);
@@ -57,6 +61,9 @@ public:
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
   void VisitCXXNewExpr(const CXXNewExpr *NE);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
+  void VisitCXXThrowExpr(const CXXThrowExpr *TE);
+  void VisitGCCAsmStmt(const GCCAsmStmt *AS);
+  void VisitCXXTypeidExpr(const CXXTypeidExpr *TE);
   void VisitStmtExpr(const StmtExpr *SE);
 
 private:
@@ -113,9 +120,17 @@ private:
   /// reference parameter, creating an IssueFact if it does.
   /// \param IsGslConstruction True if this is a GSL construction where all
   ///   argument origins should flow to the returned origin.
-  void handleFunctionCall(const Expr *Call, const FunctionDecl *FD,
-                          ArrayRef<const Expr *> Args,
-                          bool IsGslConstruction = false);
+  void handleFunctionCall(const Expr *Call, bool IsGslConstruction = false);
+
+  // Handles calls that allocate memory (e.g. functions annotated with
+  // `ownership_returns`): the call result is a fresh allocation, so a new
+  // loan is issued for it.
+  void handleAllocatingCall(const Expr *Call, const FunctionDecl *FD);
+
+  // Handles calls that free memory (e.g. functions annotated with
+  // `ownership_takes`): the freed arguments' origins are invalidated.
+  void handleFreeingCall(const Expr *Call, const FunctionDecl *FD,
+                         ArrayRef<const Expr *> Args);
 
   // Detect methods that invalidate iterators/references/pointees.
   // For instance methods, Args[0] is the implicit 'this' pointer.
@@ -140,29 +155,42 @@ private:
   /// If so, creates a `TestPointFact` and returns true.
   bool handleTestPoint(const CXXFunctionalCastExpr *FCE);
 
-  // Treats an expression as a use of the referenced object. It will be
-  // checked for use-after-free unless it is later marked as being written to
-  // (e.g. on the left-hand side of an assignment in the case of a DeclRefExpr).
-  void handleUse(const Expr *E);
+  /// Whether \p List's outer origin names a declaration's storage outright, so
+  /// it can never hold an expired loan (see Origin::NamesDeclStorage).
+  bool namesDeclStorage(const OriginList *List) const;
 
-  void markUseAsWrite(const DeclRefExpr *DRE);
+  /// Returns the origins of the value \p E evaluates to, recording the read of
+  /// a glvalue. Callers that write to \p E peel the outer origin themselves.
+  ///
+  /// Example: For `View& v`, returns the origin of what v points to, not v's
+  /// storage.
+  OriginList *readValue(const Expr *E);
+
+  /// Records an access (read or write) of the storage \p E designates, or that
+  /// a prvalue pointer \p E points to.
+  void handleAccess(const Expr *E);
+
+  /// Records that \p E's value is handed to opaque code, which may dereference
+  /// it to any depth.
+  void handleUse(const Expr *E);
 
   bool escapesViaReturn(OriginID OID) const;
 
   llvm::SmallVector<Fact *> issuePlaceholderLoans();
+  void issueFieldPlaceholderLoans(const CXXRecordDecl *ClassDef,
+                                  llvm::SmallVectorImpl<Fact *> &Facts);
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
+  const LifetimeSafetyOpts &LSOpts;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
   // Collect origins that escape the function in this block (OriginEscapesFact),
   // appended at the end of CurrentBlockFacts to ensure they appear after
   // ExpireFact entries.
   llvm::SmallVector<Fact *> EscapesInCurrentBlock;
-  // To distinguish between reads and writes for use-after-free checks, this map
-  // stores the `UseFact` for each `DeclRefExpr`. We initially identify all
-  // `DeclRefExpr`s as "read" uses. When an assignment is processed, the use
-  // corresponding to the left-hand side is updated to be a "write", thereby
-  // exempting it from the check.
-  llvm::DenseMap<const Expr *, UseFact *> UseFacts;
+  // Lifetime-extended temporaries, keyed by the variable they expire with.
+  llvm::DenseMap<const ValueDecl *,
+                 llvm::SmallVector<const MaterializeTemporaryExpr *, 1>>
+      ExtendedTemporaries;
   const CFGBlock *CurrentBlock;
   bool IsCMode = false;
 };

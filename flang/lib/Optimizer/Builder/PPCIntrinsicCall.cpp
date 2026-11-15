@@ -1877,8 +1877,10 @@ fir::ExtendedValue PPCIntrinsicLibrary::genVecLdNoCallGrp(
 
   const auto triple{fir::getTargetTriple(builder.getModule())};
   // Need to get align 1.
-  auto result{fir::LoadOp::create(builder, loc, mlirTy, addr,
-                                  getAlignmentAttr(builder, 1))};
+  auto result{fir::LoadOp::create(
+      builder, loc, mlir::TypeRange{mlirTy}, mlir::ValueRange{addr},
+      fir::LoadOp::Properties{},
+      llvm::ArrayRef<mlir::NamedAttribute>{getAlignmentAttr(builder, 1)})};
   if ((vop == VecOp::Xl && isBEVecElemOrderOnLE()) ||
       (vop == VecOp::Xlbe && triple.isLittleEndian()))
     return builder.createConvert(
@@ -2999,9 +3001,10 @@ void PPCIntrinsicLibrary::genVecXStore(
   default:
     assert(false && "Invalid vector operation for generator");
   }
-  fir::StoreOp::create(builder, loc, mlir::TypeRange{},
-                       mlir::ValueRange{src, trg},
-                       getAlignmentAttr(builder, 1));
+  fir::StoreOp::create(
+      builder, loc, mlir::TypeRange{}, mlir::ValueRange{src, trg},
+      fir::StoreOp::Properties{},
+      llvm::ArrayRef<mlir::NamedAttribute>{getAlignmentAttr(builder, 1)});
 }
 
 } // namespace fir

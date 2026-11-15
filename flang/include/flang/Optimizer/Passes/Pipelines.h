@@ -28,6 +28,7 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
+#include <functional>
 
 namespace fir {
 
@@ -99,8 +100,6 @@ void addCfgConversionPass(mlir::PassManager &pm,
 
 void addMemoryAllocationOpt(mlir::PassManager &pm);
 
-void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays);
-
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare);
 
 void addTargetRewritePass(mlir::PassManager &pm);
@@ -132,9 +131,34 @@ void addLLVMDialectToLLVMPass(mlir::PassManager &pm, llvm::raw_ostream &output);
 /// Use inliner extension point callback to register the default inliner pass.
 void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config);
 
+/// A callback run on the MLIRToLLVMPassPipelineConfig before the frontend
+/// builds the pipeline.
+using PassPipelineConfigCallback =
+    std::function<void(MLIRToLLVMPassPipelineConfig &)>;
+
+/// Register a callback that augments the MLIRToLLVMPassPipelineConfig before
+/// the frontend builds the pipeline. Call this from a static initializer in a
+/// plugin to add passes at the pipeline extension points. The callbacks are run
+/// in registration order, and must not themselves register callbacks.
+void registerPassPipelineConfigCallback(PassPipelineConfigCallback callback);
+
+/// Run the callbacks registered via registerPassPipelineConfigCallback on
+/// \p config.
+void invokePassPipelineConfigCallbacks(MLIRToLLVMPassPipelineConfig &config);
+
 /// Register the passes used in Flang's MLIR pass pipeline
 /// e.g. --mlir-print-ir-before=<pass> and similar.
 void registerFlangPipelinePasses();
+
+/// Create a pass pipeline for default FIR optimizations that run before CFG
+/// conversion.
+void createDefaultFIRPreCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc);
+
+/// Create a pass pipeline for default FIR optimizations that run after CFG
+/// conversion.
+void createDefaultFIRPostCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc);
 
 /// Create a pass pipeline for running default optimization passes for
 /// incremental conversion of FIR.
@@ -156,6 +180,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   const MLIRToLLVMPassPipelineConfig &config);
 
 struct OpenMPFIRPassPipelineOpts {
+  /// Whether only OpenMP simd constructs are being honored.
+  bool isSimdOnly;
+
   /// Whether code is being generated for a target device rather than the host
   /// device
   bool isTargetDevice;

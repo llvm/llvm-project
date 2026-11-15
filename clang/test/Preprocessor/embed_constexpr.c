@@ -24,3 +24,7 @@ static constexpr int data4[] = {
 static constexpr float data5[] = {
 #embed "big_char.txt" suffix(, -1)
 };
+
+static constexpr _BitInt(7) data6[] = {
+#embed __FILE__ limit(4) // expected-error {{constexpr initializer evaluates to 82 which is not exactly representable in type 'const _BitInt(7)'}}
+};
