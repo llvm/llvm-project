@@ -27842,13 +27842,18 @@ static SDValue vectorToScalarBitmask(SDValue ComparisonResult,
     VecVT = MVT::getVectorVT(MVT::getIntegerVT(NarrowedEltBits), NumElts);
   }
 
+  bool HasNEON = DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable();
+  // The generic reduction needs to represent each lane's distinct bit.
+  // Without NEON's byte-packing path, use i16 lanes for the 16-bit mask.
+  if (!HasNEON && VecVT == MVT::v16i8)
+    VecVT = MVT::v16i16;
+
   // Ensure that all elements' bits are either 0s or 1s.
   ComparisonResult = DAG.getSExtOrTrunc(ComparisonResult, DL, VecVT);
 
   bool IsLE = DAG.getDataLayout().isLittleEndian();
   SmallVector<SDValue, 16> MaskConstants;
-  if (DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() &&
-      VecVT == MVT::v16i8) {
+  if (HasNEON && VecVT == MVT::v16i8) {
     // v16i8 is a special case: we have 16 entries but only 8 positional bits
     // per i16 of bitmask. ANDing with a mask whose two 8-byte halves both
     // hold the powers-of-two 1,2,...,128 leaves at most one bit set per byte
