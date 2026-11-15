@@ -83,8 +83,8 @@ static void __apply_win32(size_t chunk_count, void* context, void (*func)(void* 
     func(context, chunk);
   __apply_win32_reentrant = false;
 
-  // Wait until all callbacks have completed.
-  WaitForThreadpoolWorkCallbacks(work, FALSE);
+  // Wait until all running callbacks have completed, cancelling any pending ones.
+  WaitForThreadpoolWorkCallbacks(work, true);
 
   // Cleanup.
   CloseThreadpoolWork(work);
