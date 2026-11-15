@@ -30,9 +30,6 @@ __apply_serial(size_t chunk_count, void* context, void (*func)(void* context, si
 }
 
 #if defined(_WIN32)
-// This flag is set on before calling out the user function.
-static constinit thread_local bool __apply_win32_reentrant = false;
-
 // Context for the callbacks executed by the thread pool.
 struct __apply_win32_context {
   std::atomic<size_t> iteration;
@@ -47,17 +44,13 @@ struct __apply_win32_context {
 static void WINAPI __apply_win32_callback(PTP_CALLBACK_INSTANCE, void* callback_context, PTP_WORK) noexcept {
   __apply_win32_context& ctx = *static_cast<__apply_win32_context*>(callback_context);
   size_t iteration           = ctx.iteration.fetch_add(1, std::memory_order_relaxed);
-  if (iteration < ctx.iterations) {
-    __apply_win32_reentrant = true;
+  if (iteration < ctx.iterations)
     ctx.func(ctx.context, iteration);
-    __apply_win32_reentrant = false;
-  }
 }
 
 static void __apply_win32(size_t chunk_count, void* context, void (*func)(void* context, size_t chunk)) noexcept {
-  if (chunk_count < 2 || __apply_win32_reentrant) {
-    // It's possible to deadlock the default thread pool if we allow nested parallelism.
-    // For now explicitly prohibit it and execute such requests serially.
+  if (chunk_count < 2) {
+    // Not enough iterations to call into the thread pool APIs, execute serially.
     __apply_serial(chunk_count, context, func);
     return;
   }
@@ -77,10 +70,8 @@ static void __apply_win32(size_t chunk_count, void* context, void (*func)(void* 
     SubmitThreadpoolWork(work);
 
   // Participate in the work.
-  __apply_win32_reentrant = true;
   for (size_t chunk; (chunk = work_context.iteration.fetch_add(1, std::memory_order_relaxed)) < chunk_count;)
     func(context, chunk);
-  __apply_win32_reentrant = false;
 
   // Wait until all running callbacks have completed, cancelling any pending ones.
   WaitForThreadpoolWorkCallbacks(work, true);
