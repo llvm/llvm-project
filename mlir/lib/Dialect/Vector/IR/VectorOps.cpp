@@ -8745,6 +8745,19 @@ struct SelectBroadcastCondition : OpRewritePattern<arith::SelectOp> {
 
 /// Fold select(mask, maskedload(base, mask, old), new) by using the select's
 /// false value as the load's passthrough.
+///
+/// Before:
+/// ```mlir
+/// %load = vector.maskedload %base[%idx], %mask, %old
+///     : memref<?xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+/// %result = arith.select %mask, %load, %new : vector<4xi1>, vector<4xf32>
+/// ```
+///
+/// After:
+/// ```mlir
+/// %result = vector.maskedload %base[%idx], %mask, %new
+///     : memref<?xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+/// ```
 struct FoldSelectIntoMaskedLoad final : OpRewritePattern<arith::SelectOp> {
   using Base::Base;
 
@@ -8760,14 +8773,19 @@ struct FoldSelectIntoMaskedLoad final : OpRewritePattern<arith::SelectOp> {
       return failure();
 
     // Keep the load in place so it cannot cross a write to the same memory.
-    // Check availability within the load's block to avoid building a dominator
-    // tree during canonicalization.
+    // Check availability at the load or at its enclosing operation in the
+    // passthrough's block, without building a dominator tree.
     Value passthru = select.getFalseValue();
-    if (passthru.getParentBlock() != load->getBlock() ||
-        mayBeGraphRegion(*load->getParentRegion()))
+    Block *passthruBlock = passthru.getParentBlock();
+    if (mayBeGraphRegion(*load->getParentRegion()) ||
+        mayBeGraphRegion(*passthruBlock->getParent()))
+      return failure();
+    Operation *loadInPassthruBlock =
+        passthruBlock->findAncestorOpInBlock(*load.getOperation());
+    if (!loadInPassthruBlock)
       return failure();
     if (Operation *def = passthru.getDefiningOp();
-        def && !def->isBeforeInBlock(load))
+        def && !def->isBeforeInBlock(loadInPassthruBlock))
       return failure();
 
     rewriter.modifyOpInPlace(
@@ -8780,7 +8798,6 @@ struct FoldSelectIntoMaskedLoad final : OpRewritePattern<arith::SelectOp> {
 
 void VectorDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  // Fold a shared vector mask before scalarizing the select's condition.
   results.add<FoldSelectIntoMaskedLoad, SelectBroadcastCondition>(getContext());
 }
 
