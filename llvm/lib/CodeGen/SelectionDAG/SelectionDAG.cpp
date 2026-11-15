@@ -4394,6 +4394,24 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1) - 1);
     break;
   }
+  case ISD::SADDSAT: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::sadd_sat(Known, Known2);
+    break;
+  }
+  case ISD::UADDSAT: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::uadd_sat(Known, Known2);
+    break;
+  }
+  case ISD::SSUBSAT: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::ssub_sat(Known, Known2);
+    break;
+  }
   case ISD::USUBSAT: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);

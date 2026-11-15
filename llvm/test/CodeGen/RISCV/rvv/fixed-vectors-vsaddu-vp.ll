@@ -206,7 +206,7 @@ define <5 x i8> @vsaddu_vi_v5i8(<5 x i8> %va, <5 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsaddu_vi_v5i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vsaddu.vi v8, v8, -1
+; CHECK-NEXT:    vmv.v.i v8, -1
 ; CHECK-NEXT:    ret
   %v = call <5 x i8> @llvm.vp.uadd.sat.v5i8(<5 x i8> %va, <5 x i8> splat (i8 -1), <5 x i1> %m, i32 %evl)
   ret <5 x i8> %v
@@ -216,7 +216,7 @@ define <5 x i8> @vsaddu_vi_v5i8_unmasked(<5 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vsaddu_vi_v5i8_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vsaddu.vi v8, v8, -1
+; CHECK-NEXT:    vmv.v.i v8, -1
 ; CHECK-NEXT:    ret
   %v = call <5 x i8> @llvm.vp.uadd.sat.v5i8(<5 x i8> %va, <5 x i8> splat (i8 -1), <5 x i1> splat (i1 true), i32 %evl)
   ret <5 x i8> %v
@@ -355,8 +355,8 @@ define <256 x i8> @vsaddu_vi_v258i8(<256 x i8> %va, <256 x i1> %m, i32 zeroext %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vsaddu.vi v8, v8, -1
-; CHECK-NEXT:    vsaddu.vi v16, v16, -1
+; CHECK-NEXT:    vmv.v.i v8, -1
+; CHECK-NEXT:    vmv.v.i v16, -1
 ; CHECK-NEXT:    ret
   %v = call <256 x i8> @llvm.vp.uadd.sat.v258i8(<256 x i8> %va, <256 x i8> splat (i8 -1), <256 x i1> %m, i32 %evl)
   ret <256 x i8> %v
@@ -367,8 +367,8 @@ define <256 x i8> @vsaddu_vi_v258i8_unmasked(<256 x i8> %va, i32 zeroext %evl) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vsaddu.vi v8, v8, -1
-; CHECK-NEXT:    vsaddu.vi v16, v16, -1
+; CHECK-NEXT:    vmv.v.i v8, -1
+; CHECK-NEXT:    vmv.v.i v16, -1
 ; CHECK-NEXT:    ret
   %v = call <256 x i8> @llvm.vp.uadd.sat.v258i8(<256 x i8> %va, <256 x i8> splat (i8 -1), <256 x i1> splat (i1 true), i32 %evl)
   ret <256 x i8> %v
@@ -381,8 +381,8 @@ define <256 x i8> @vsaddu_vi_v258i8_evl129(<256 x i8> %va, <256 x i1> %m) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vsaddu.vi v8, v8, -1
-; CHECK-NEXT:    vsaddu.vi v16, v16, -1
+; CHECK-NEXT:    vmv.v.i v8, -1
+; CHECK-NEXT:    vmv.v.i v16, -1
 ; CHECK-NEXT:    ret
   %v = call <256 x i8> @llvm.vp.uadd.sat.v258i8(<256 x i8> %va, <256 x i8> splat (i8 -1), <256 x i1> %m, i32 129)
   ret <256 x i8> %v
@@ -393,8 +393,8 @@ define <256 x i8> @vsaddu_vi_v258i8_evl128(<256 x i8> %va, <256 x i1> %m) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vsaddu.vi v8, v8, -1
-; CHECK-NEXT:    vsaddu.vi v16, v16, -1
+; CHECK-NEXT:    vmv.v.i v8, -1
+; CHECK-NEXT:    vmv.v.i v16, -1
 ; CHECK-NEXT:    ret
   %v = call <256 x i8> @llvm.vp.uadd.sat.v258i8(<256 x i8> %va, <256 x i8> splat (i8 -1), <256 x i1> %m, i32 128)
   ret <256 x i8> %v
@@ -1283,45 +1283,73 @@ define <16 x i64> @vsaddu_vi_v16i64_unmasked(<16 x i64> %va, i32 zeroext %evl) {
 ; Test that split-legalization works as expected.
 
 define <32 x i64> @vsaddu_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vsaddu_vx_v32i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vsaddu.vi v8, v8, -1
-; CHECK-NEXT:    vsaddu.vi v16, v16, -1
-; CHECK-NEXT:    ret
+; RV32-LABEL: vsaddu_vx_v32i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV32-NEXT:    vmv.v.i v8, -1
+; RV32-NEXT:    vmv.v.i v16, -1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vsaddu_vx_v32i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vmv.v.i v8, -1
+; RV64-NEXT:    vmv.v.i v16, -1
+; RV64-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.uadd.sat.v32i64(<32 x i64> %va, <32 x i64> splat (i64 -1), <32 x i1> %m, i32 %evl)
   ret <32 x i64> %v
 }
 
 define <32 x i64> @vsaddu_vi_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vsaddu_vi_v32i64_unmasked:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vsaddu.vi v8, v8, -1
-; CHECK-NEXT:    vsaddu.vi v16, v16, -1
-; CHECK-NEXT:    ret
+; RV32-LABEL: vsaddu_vi_v32i64_unmasked:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV32-NEXT:    vmv.v.i v8, -1
+; RV32-NEXT:    vmv.v.i v16, -1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vsaddu_vi_v32i64_unmasked:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vmv.v.i v8, -1
+; RV64-NEXT:    vmv.v.i v16, -1
+; RV64-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.uadd.sat.v32i64(<32 x i64> %va, <32 x i64> splat (i64 -1), <32 x i1> splat (i1 true), i32 %evl)
   ret <32 x i64> %v
 }
 
 define <32 x i64> @vsaddu_vx_v32i64_evl12(<32 x i64> %va, <32 x i1> %m) {
-; CHECK-LABEL: vsaddu_vx_v32i64_evl12:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vsaddu.vi v8, v8, -1
-; CHECK-NEXT:    vsaddu.vi v16, v16, -1
-; CHECK-NEXT:    ret
+; RV32-LABEL: vsaddu_vx_v32i64_evl12:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV32-NEXT:    vmv.v.i v8, -1
+; RV32-NEXT:    vmv.v.i v16, -1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vsaddu_vx_v32i64_evl12:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vmv.v.i v8, -1
+; RV64-NEXT:    vmv.v.i v16, -1
+; RV64-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.uadd.sat.v32i64(<32 x i64> %va, <32 x i64> splat (i64 -1), <32 x i1> %m, i32 12)
   ret <32 x i64> %v
 }
 
 define <32 x i64> @vsaddu_vx_v32i64_evl27(<32 x i64> %va, <32 x i1> %m) {
-; CHECK-LABEL: vsaddu_vx_v32i64_evl27:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vsaddu.vi v8, v8, -1
-; CHECK-NEXT:    vsaddu.vi v16, v16, -1
-; CHECK-NEXT:    ret
+; RV32-LABEL: vsaddu_vx_v32i64_evl27:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV32-NEXT:    vmv.v.i v8, -1
+; RV32-NEXT:    vmv.v.i v16, -1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vsaddu_vx_v32i64_evl27:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vmv.v.i v8, -1
+; RV64-NEXT:    vmv.v.i v16, -1
+; RV64-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.uadd.sat.v32i64(<32 x i64> %va, <32 x i64> splat (i64 -1), <32 x i1> %m, i32 27)
   ret <32 x i64> %v
 }
