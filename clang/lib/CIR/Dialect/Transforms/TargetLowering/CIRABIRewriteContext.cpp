@@ -657,7 +657,7 @@ mlir::Block *coercionSlotBlock(mlir::Operation *op) {
 /// load at all.
 static cir::LoadOp maybeGetSimpleLoad(mlir::Value val) {
   cir::LoadOp load = val.getDefiningOp<cir::LoadOp>();
-  if (!load || load.getIsVolatile() || load.getMemOrder())
+  if (!load || load.isVolatileOrAtomic())
     return {};
   return load;
 }
