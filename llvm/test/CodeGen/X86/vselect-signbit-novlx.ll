@@ -14,25 +14,12 @@ define <4 x i32> @sel_slt_zero_v4i32(<4 x i32> %m, <4 x i32> %x, <4 x i32> %y) {
 ;
 ; AVX512F-LABEL: sel_slt_zero_v4i32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512F-NEXT:    vpcmpgtd %zmm0, %zmm3, %k1
-; AVX512F-NEXT:    vpblendmd %zmm1, %zmm2, %zmm0 {%k1}
-; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: sel_slt_zero_v4i32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512DQ-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k1
-; AVX512DQ-NEXT:    vpblendmd %zmm1, %zmm2, %zmm0 {%k1}
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VL-LABEL: sel_slt_zero_v4i32:
@@ -44,13 +31,7 @@ define <4 x i32> @sel_slt_zero_v4i32(<4 x i32> %m, <4 x i32> %x, <4 x i32> %y) {
 ;
 ; KNL-LABEL: sel_slt_zero_v4i32:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; KNL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpgtd %zmm0, %zmm3, %k1
-; KNL-NEXT:    vpblendmd %zmm1, %zmm2, %zmm0 {%k1}
-; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; KNL-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; KNL-NEXT:    retq
   %c = icmp slt <4 x i32> %m, zeroinitializer
   %r = select <4 x i1> %c, <4 x i32> %x, <4 x i32> %y
@@ -66,26 +47,12 @@ define <4 x i32> @sel_sgt_allones_v4i32(<4 x i32> %m, <4 x i32> %x, <4 x i32> %y
 ;
 ; AVX512F-LABEL: sel_sgt_allones_v4i32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512F-NEXT:    vpcmpnltd %zmm3, %zmm0, %k1
-; AVX512F-NEXT:    vpblendmd %zmm1, %zmm2, %zmm0 {%k1}
-; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: sel_sgt_allones_v4i32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512DQ-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512DQ-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512DQ-NEXT:    vpcmpnltd %zmm3, %zmm0, %k1
-; AVX512DQ-NEXT:    vpblendmd %zmm1, %zmm2, %zmm0 {%k1}
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VL-LABEL: sel_sgt_allones_v4i32:
@@ -97,13 +64,7 @@ define <4 x i32> @sel_sgt_allones_v4i32(<4 x i32> %m, <4 x i32> %x, <4 x i32> %y
 ;
 ; KNL-LABEL: sel_sgt_allones_v4i32:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; KNL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpnltd %zmm3, %zmm0, %k1
-; KNL-NEXT:    vpblendmd %zmm1, %zmm2, %zmm0 {%k1}
-; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; KNL-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; KNL-NEXT:    retq
   %c = icmp sgt <4 x i32> %m, splat (i32 -1)
   %r = select <4 x i1> %c, <4 x i32> %x, <4 x i32> %y
@@ -119,24 +80,12 @@ define <4 x i64> @sel_sge_zero_v4i64(<4 x i64> %m, <4 x i64> %x, <4 x i64> %y) {
 ;
 ; AVX512F-LABEL: sel_sge_zero_v4i64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
-; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512F-NEXT:    vpcmpnltq %zmm3, %zmm0, %k1
-; AVX512F-NEXT:    vpblendmq %zmm1, %zmm2, %zmm0 {%k1}
-; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-NEXT:    vblendvpd %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: sel_sge_zero_v4i64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
-; AVX512DQ-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512DQ-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512DQ-NEXT:    vpcmpnltq %zmm3, %zmm0, %k1
-; AVX512DQ-NEXT:    vpblendmq %zmm1, %zmm2, %zmm0 {%k1}
-; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512DQ-NEXT:    vblendvpd %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VL-LABEL: sel_sge_zero_v4i64:
@@ -148,13 +97,7 @@ define <4 x i64> @sel_sge_zero_v4i64(<4 x i64> %m, <4 x i64> %x, <4 x i64> %y) {
 ;
 ; KNL-LABEL: sel_sge_zero_v4i64:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
-; KNL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpnltq %zmm3, %zmm0, %k1
-; KNL-NEXT:    vpblendmq %zmm1, %zmm2, %zmm0 {%k1}
-; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; KNL-NEXT:    vblendvpd %ymm0, %ymm2, %ymm1, %ymm0
 ; KNL-NEXT:    retq
   %c = icmp sge <4 x i64> %m, zeroinitializer
   %r = select <4 x i1> %c, <4 x i64> %x, <4 x i64> %y

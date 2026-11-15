@@ -49004,6 +49004,30 @@ static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Match a per-lane sign test on Cond. Returns the tested vector X, and sets
+// Inverted when the condition is true for non-negative lanes.
+//   (setcc X, 0, setlt)  / (setcc 0, X, setgt)   -> X,  Inverted = false
+//   (setcc X, -1, setgt) / (setcc X, 0, setge)   -> X,  Inverted = true
+static SDValue matchSignTest(SDValue Cond, bool &Inverted) {
+  if (Cond.getOpcode() != ISD::SETCC)
+    return SDValue();
+  SDValue A = Cond.getOperand(0), B = Cond.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+
+  Inverted = false;
+  if (CC == ISD::SETLT && ISD::isBuildVectorAllZeros(B.getNode()))
+    return A;
+  if (CC == ISD::SETGT && ISD::isBuildVectorAllZeros(A.getNode()))
+    return B;
+
+  Inverted = true;
+  if (CC == ISD::SETGT && ISD::isBuildVectorAllOnes(B.getNode()))
+    return A;
+  if (CC == ISD::SETGE && ISD::isBuildVectorAllZeros(B.getNode()))
+    return A;
+  return SDValue();
+}
+
 /// If this is a *dynamic* select (non-constant condition) and we can match
 /// this node with one of the variable blend instructions, restructure the
 /// condition so that blends can use the high (sign) bit of each element.
@@ -49049,6 +49073,27 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
   // There are no 512-bit blend instructions that use sign bits.
   if (VT.is512BitVector())
     return SDValue();
+
+  // Without AVX512VL, a vXi1 select on 128/256-bit vectors would be widened to
+  // 512 bits. If the condition is a sign test, use BLENDV directly instead.
+  if (Subtarget.hasAVX512() && !Subtarget.hasVLX() &&
+      Cond.getValueType().getScalarSizeInBits() == 1 &&
+      (VT.is128BitVector() || VT.is256BitVector())) {
+    bool Inverted;
+    if (SDValue X = matchSignTest(Cond, Inverted)) {
+      unsigned EltBits = VT.getScalarSizeInBits();
+      if (X.getValueSizeInBits() == VT.getSizeInBits() &&
+          X.getScalarValueSizeInBits() == EltBits &&
+          (EltBits == 8 || EltBits == 32 || EltBits == 64)) {
+        SDValue TrueV = N->getOperand(1), FalseV = N->getOperand(2);
+        if (Inverted)
+          std::swap(TrueV, FalseV);
+        EVT CondVT = VT.changeVectorElementTypeToInteger(); // v4f32 -> v4i32
+        return DAG.getNode(X86ISD::BLENDV, SDLoc(N), VT,
+                           DAG.getBitcast(CondVT, X), TrueV, FalseV);
+      }
+    }
+  }
 
   // Don't optimize before the condition has been transformed to a legal type
   // and don't ever optimize vector selects that map to AVX512 mask-registers.
