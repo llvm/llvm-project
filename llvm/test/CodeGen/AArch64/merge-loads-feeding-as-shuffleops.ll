@@ -244,3 +244,77 @@ define void @combine_loads_v16i8_v32i8_shuffle_with_poison_mask_indices(ptr %a, 
     store <32 x i8> %result, ptr %a
     ret void
 }
+
+; The first load is invariant but the second isn't, and the loop stores to the
+; second half, so the merged load must not be hoisted out of the loop.
+define void @combine_loads_v16i8_v32i8_invariant_first_load(ptr align 16 dereferenceable(32) %a, ptr %b, i64 %n) {
+; VBITS_GE_128-LABEL: combine_loads_v16i8_v32i8_invariant_first_load:
+; VBITS_GE_128:       // %bb.0: // %entry
+; VBITS_GE_128-NEXT:    ldp q2, q1, [x0]
+; VBITS_GE_128-NEXT:    mov w8, #9 // =0x9
+; VBITS_GE_128-NEXT:    ext v0.16b, v2.16b, v1.16b, #1
+; VBITS_GE_128-NEXT:    ext v1.16b, v2.16b, v1.16b, #2
+; VBITS_GE_128-NEXT:  .LBB6_1: // %loop
+; VBITS_GE_128-NEXT:    // =>This Inner Loop Header: Depth=1
+; VBITS_GE_128-NEXT:    subs x2, x2, #1
+; VBITS_GE_128-NEXT:    stp q0, q1, [x1]
+; VBITS_GE_128-NEXT:    strb w8, [x0, #16]
+; VBITS_GE_128-NEXT:    b.ne .LBB6_1
+; VBITS_GE_128-NEXT:  // %bb.2: // %exit
+; VBITS_GE_128-NEXT:    ret
+;
+; VBITS_GE_256-LABEL: combine_loads_v16i8_v32i8_invariant_first_load:
+; VBITS_GE_256:       // %bb.0: // %entry
+; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI6_0
+; VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI6_0
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x8]
+; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov w8, #9 // =0x9
+; VBITS_GE_256-NEXT:    tbl z0.b, { z1.b }, z0.b
+; VBITS_GE_256-NEXT:  .LBB6_1: // %loop
+; VBITS_GE_256-NEXT:    // =>This Inner Loop Header: Depth=1
+; VBITS_GE_256-NEXT:    subs x2, x2, #1
+; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x1]
+; VBITS_GE_256-NEXT:    strb w8, [x0, #16]
+; VBITS_GE_256-NEXT:    b.ne .LBB6_1
+; VBITS_GE_256-NEXT:  // %bb.2: // %exit
+; VBITS_GE_256-NEXT:    ret
+;
+; BE_VBITS_GE_256-LABEL: combine_loads_v16i8_v32i8_invariant_first_load:
+; BE_VBITS_GE_256:       // %bb.0: // %entry
+; BE_VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; BE_VBITS_GE_256-NEXT:    adrp x8, .LCPI6_0
+; BE_VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI6_0
+; BE_VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x8]
+; BE_VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; BE_VBITS_GE_256-NEXT:    mov w8, #9 // =0x9
+; BE_VBITS_GE_256-NEXT:    tbl z0.b, { z1.b }, z0.b
+; BE_VBITS_GE_256-NEXT:  .LBB6_1: // %loop
+; BE_VBITS_GE_256-NEXT:    // =>This Inner Loop Header: Depth=1
+; BE_VBITS_GE_256-NEXT:    subs x2, x2, #1
+; BE_VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x1]
+; BE_VBITS_GE_256-NEXT:    strb w8, [x0, #16]
+; BE_VBITS_GE_256-NEXT:    b.ne .LBB6_1
+; BE_VBITS_GE_256-NEXT:  // %bb.2: // %exit
+; BE_VBITS_GE_256-NEXT:    ret
+entry:
+    %gep = getelementptr <16 x i8>, ptr %a, i64 1
+    br label %loop
+
+loop:
+    %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+    %l1 = load <16 x i8>, ptr %a, !invariant.load !0
+    %l2 = load <16 x i8>, ptr %gep
+    %result = shufflevector <16 x i8> %l1, <16 x i8> %l2, <32 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17>
+    store <32 x i8> %result, ptr %b
+    store i8 9, ptr %gep
+    %i.next = add i64 %i, 1
+    %done = icmp eq i64 %i.next, %n
+    br i1 %done, label %exit, label %loop
+
+exit:
+    ret void
+}
+
+!0 = !{}
