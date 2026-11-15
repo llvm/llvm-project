@@ -945,6 +945,150 @@ public:
 #endif // STD_EXPECTED_H
 )";
 
+static constexpr char TlExpectedHeader[] = R"(
+#ifndef TL_EXPECTED_H
+#define TL_EXPECTED_H
+
+// Mock of `tl::expected` from https://github.com/TartanLlama/expected.
+//
+// Unlike `std::expected`, it has no `void` specialization.
+
+#include "std_type_traits.h"
+
+namespace tl {
+
+template <class T, class E> class expected;
+
+struct in_place_t {
+  explicit in_place_t() = default;
+};
+static constexpr in_place_t in_place{};
+
+template <class E> class unexpected {
+public:
+  unexpected() = delete;
+  explicit unexpected(const E &e);
+  explicit unexpected(E &&e);
+
+  const E &value() const &;
+  E &value() &;
+  E &&value() &&;
+  const E &&value() const &&;
+};
+
+template <class E> unexpected(E) -> unexpected<E>;
+
+template <class E>
+unexpected<typename std::decay<E>::type> make_unexpected(E &&e);
+
+struct unexpect_t {
+  unexpect_t() = default;
+};
+static constexpr unexpect_t unexpect{};
+
+namespace detail {
+
+template <class> constexpr bool is_unexpected = false;
+template <class E> constexpr bool is_unexpected<unexpected<E>> = true;
+
+} // namespace detail
+
+template <class T, class E> class expected {
+public:
+  typedef T value_type;
+  typedef E error_type;
+  typedef unexpected<E> unexpected_type;
+
+  constexpr expected() = default;
+  constexpr expected(const expected &rhs) = default;
+  constexpr expected(expected &&rhs) = default;
+  expected &operator=(const expected &rhs) = default;
+  expected &operator=(expected &&rhs) = default;
+
+  template <class... Args> expected(in_place_t, Args &&...args);
+
+  template <class G> expected(const unexpected<G> &e);
+  template <class G> expected(unexpected<G> &&e);
+
+  template <class... Args> explicit expected(unexpect_t, Args &&...args);
+
+  template <class U, class G,
+            std::enable_if_t<__is_constructible(T, const U &) &&
+                             __is_constructible(E, const G &)> * = nullptr>
+  expected(const expected<U, G> &rhs);
+  template <class U, class G,
+            std::enable_if_t<__is_constructible(T, U &&) &&
+                             __is_constructible(E, G &&)> * = nullptr>
+  expected(expected<U, G> &&rhs);
+
+  template <
+      class U = T,
+      std::enable_if_t<
+          __is_constructible(T, U &&) &&
+          !std::is_same<typename std::decay<U>::type, in_place_t>::value &&
+          !std::is_same<typename std::decay<U>::type, unexpect_t>::value &&
+          !std::is_same<typename std::decay<U>::type, expected>::value &&
+          !detail::is_unexpected<typename std::decay<U>::type>> * = nullptr>
+  expected(U &&v);
+
+  // `G` delays forming `T &`, which is ill-formed for `void`.
+  template <
+      class U = T, class G = T,
+      std::enable_if_t<
+          __is_constructible(T, U &&) && __is_assignable(G &, U &&) &&
+          !std::is_same<typename std::decay<U>::type, expected>::value &&
+          !detail::is_unexpected<typename std::decay<U>::type>> * = nullptr>
+  expected &operator=(U &&v);
+
+  template <class G> expected &operator=(const unexpected<G> &rhs);
+  template <class G> expected &operator=(unexpected<G> &&rhs);
+
+  template <class... Args> void emplace(Args &&...args);
+
+  void swap(expected &rhs);
+
+  const T *operator->() const;
+  T *operator->();
+
+  template <class U = T,
+            std::enable_if_t<!std::is_void<U>::value> * = nullptr>
+  const U &operator*() const &;
+  template <class U = T,
+            std::enable_if_t<!std::is_void<U>::value> * = nullptr>
+  U &operator*() &;
+  template <class U = T,
+            std::enable_if_t<!std::is_void<U>::value> * = nullptr>
+  U &&operator*() &&;
+
+  bool has_value() const noexcept;
+  explicit operator bool() const noexcept;
+
+  template <class U = T,
+            std::enable_if_t<!std::is_void<U>::value> * = nullptr>
+  const U &value() const &;
+  template <class U = T,
+            std::enable_if_t<!std::is_void<U>::value> * = nullptr>
+  U &value() &;
+  template <class U = T,
+            std::enable_if_t<!std::is_void<U>::value> * = nullptr>
+  U &&value() &&;
+
+  const E &error() const &;
+  E &error() &;
+  E &&error() &&;
+
+  template <class U> T value_or(U &&v) const &;
+  template <class U> T value_or(U &&v) &&;
+};
+
+template <class T, class E>
+void swap(expected<T, E> &lhs, expected<T, E> &rhs);
+
+} // namespace tl
+
+#endif // TL_EXPECTED_H
+)";
+
 static constexpr char AbslOptionalHeader[] = R"(
 #include "absl_type_traits.h"
 #include "std_initializer_list.h"
@@ -2629,6 +2773,7 @@ std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   Headers.emplace_back("std_utility.h", StdUtilityHeader);
   Headers.emplace_back("std_optional.h", StdOptionalHeader);
   Headers.emplace_back("std_expected.h", StdExpectedHeader);
+  Headers.emplace_back("tl_expected.h", TlExpectedHeader);
   Headers.emplace_back("std_coroutine.h", StdCoroutineHeader);
   Headers.emplace_back("absl_type_traits.h", AbslTypeTraitsHeader);
   Headers.emplace_back("absl_optional.h", AbslOptionalHeader);

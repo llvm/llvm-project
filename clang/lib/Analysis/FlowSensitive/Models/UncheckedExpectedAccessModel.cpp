@@ -23,9 +23,25 @@
 namespace clang {
 namespace dataflow {
 
+/// Returns true if `DC` is `std` or the top-level `tl` namespace, which holds
+/// `tl::expected` (https://github.com/TartanLlama/expected).
+static bool isSupportedNamespace(const DeclContext &DC) {
+  if (DC.isStdNamespace())
+    return true;
+  const auto *NS = dyn_cast<NamespaceDecl>(&DC);
+  return NS != nullptr && NS->getDeclName().isIdentifier() &&
+         NS->getName() == "tl" && NS->getParent()->isTranslationUnit();
+}
+
 static bool isExpectedClass(const CXXRecordDecl &RD) {
   return RD.getDeclName().isIdentifier() && RD.getName() == "expected" &&
-         RD.getDeclContext()->isStdNamespace();
+         isSupportedNamespace(*RD.getDeclContext());
+}
+
+/// Returns the name of the expected class `RD` to show in diagnostics.
+static llvm::StringRef getExpectedTypeName(const CXXRecordDecl &RD) {
+  return RD.getDeclContext()->isStdNamespace() ? "std::expected"
+                                               : "tl::expected";
 }
 
 // Classes derived from `std::expected` are deliberately not supported.
@@ -89,12 +105,14 @@ auto buildTransferMatchSwitch() {
       .Build();
 }
 
+/// `ExpectedClass` is the class of the called accessor.
 llvm::SmallVector<UncheckedExpectedAccessDiagnostic>
 diagnoseAccess(SourceLocation AccessLoc, UncheckedExpectedAccessKind Kind,
+               const CXXRecordDecl &ExpectedClass,
                const RecordStorageLocation *ExpectedLoc,
                const Environment &Env) {
   if (ExpectedLoc != nullptr) {
-    // Accesses through classes derived from `std::expected` are not modeled.
+    // Accesses through classes derived from an expected are not modeled.
     if (!isExpectedType(ExpectedLoc->getType()))
       return {};
     if (auto *HasValueVal = Env.get<BoolValue>(locForHasValue(*ExpectedLoc))) {
@@ -108,7 +126,7 @@ diagnoseAccess(SourceLocation AccessLoc, UncheckedExpectedAccessKind Kind,
     }
   }
 
-  return {{AccessLoc, Kind}};
+  return {{AccessLoc, Kind, getExpectedTypeName(ExpectedClass)}};
 }
 
 auto buildDiagnoseMatchSwitch() {
@@ -122,6 +140,7 @@ auto buildDiagnoseMatchSwitch() {
              const Environment &Env) {
             return diagnoseAccess(E->getExprLoc(),
                                   UncheckedExpectedAccessKind::Value,
+                                  *E->getMethodDecl()->getParent(),
                                   getImplicitObjectLocation(*E, Env), Env);
           })
       // expected::operator*, expected::operator->
@@ -133,6 +152,7 @@ auto buildDiagnoseMatchSwitch() {
             // expression, so point at the operator token instead.
             return diagnoseAccess(
                 E->getOperatorLoc(), UncheckedExpectedAccessKind::Value,
+                *cast<CXXMethodDecl>(E->getCalleeDecl())->getParent(),
                 Env.get<RecordStorageLocation>(*E->getArg(0)), Env);
           })
       // expected::error
@@ -142,6 +162,7 @@ auto buildDiagnoseMatchSwitch() {
              const Environment &Env) {
             return diagnoseAccess(E->getExprLoc(),
                                   UncheckedExpectedAccessKind::Error,
+                                  *E->getMethodDecl()->getParent(),
                                   getImplicitObjectLocation(*E, Env), Env);
           })
       .Build();

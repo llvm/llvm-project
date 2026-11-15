@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file defines a dataflow analysis that detects unsafe accesses to the
-//  values of `std::expected` objects.
+//  values of `std::expected` and `tl::expected` objects.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,17 +23,22 @@
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace dataflow {
 
-/// Dataflow analysis that models whether `std::expected` objects hold values.
+/// Dataflow analysis that models whether expected objects hold values.
+///
+/// Supported types are `std::expected` and `tl::expected`
+/// (https://github.com/TartanLlama/expected).
 class UncheckedExpectedAccessModel
     : public DataflowAnalysis<UncheckedExpectedAccessModel, NoopLattice> {
 public:
   UncheckedExpectedAccessModel(ASTContext &Ctx, Environment &Env);
 
-  /// Returns a matcher for calls to member functions of `std::expected`.
+  /// Returns a matcher for calls to member functions of a supported expected
+  /// type.
   static ast_matchers::StatementMatcher callToExpectedClass();
 
   static NoopLattice initialElement() { return {}; }
@@ -44,7 +49,7 @@ private:
   CFGMatchSwitch<TransferState<NoopLattice>> TransferMatchSwitch;
 };
 
-/// The part of a `std::expected` object that is accessed.
+/// The part of an expected object that is accessed.
 ///
 /// The values are used as `%select` indices in diagnostics, so they must not
 /// be reordered.
@@ -55,14 +60,16 @@ enum class UncheckedExpectedAccessKind : int {
   Error = 1,
 };
 
-/// Diagnostic information for an unchecked `std::expected` access.
+/// Diagnostic information for an unchecked expected access.
 struct UncheckedExpectedAccessDiagnostic {
   SourceLocation Loc;
   UncheckedExpectedAccessKind Kind;
+  /// The accessed type, either "std::expected" or "tl::expected".
+  llvm::StringRef TypeName;
 };
 
-/// Reports accesses to the value (or error) of `std::expected` objects that are
-/// not provably preceded by a check that the object holds a value (or error).
+/// Reports accesses to the value (or error) of expected objects that are not
+/// provably preceded by a check that the object holds a value (or error).
 class UncheckedExpectedAccessDiagnoser {
 public:
   UncheckedExpectedAccessDiagnoser();

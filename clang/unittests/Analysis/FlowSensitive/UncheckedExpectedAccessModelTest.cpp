@@ -76,6 +76,7 @@ protected:
     Headers.emplace_back("unchecked_expected_access_test.h", R"(
       #include "std_expected.h"
       #include "std_utility.h"
+      #include "tl_expected.h"
 
       template <typename T>
       T Make();
@@ -101,7 +102,8 @@ protected:
                 {"-fsyntax-only", CxxMode, "-Wno-undefined-inline"})
             .withASTBuildVirtualMappedFiles(
                 tooling::FileContentMappings(Headers.begin(), Headers.end())),
-        /*VerifyResults=*/[&Diagnostics](
+        /*VerifyResults=*/[&Diagnostics,
+                           TypeName = GetParam().NamespaceName + "::expected"](
                               const llvm::DenseMap<unsigned, std::string>
                                   &Annotations,
                               const AnalysisOutputs &AO) {
@@ -127,6 +129,7 @@ protected:
                       ? UncheckedExpectedAccessKind::Error
                       : UncheckedExpectedAccessKind::Value;
               EXPECT_EQ(Diag.Kind, ExpectedKind) << "on line " << Line;
+              EXPECT_EQ(Diag.TypeName, TypeName) << "on line " << Line;
             }
           }
 
@@ -139,10 +142,32 @@ protected:
 
 INSTANTIATE_TEST_SUITE_P(
     UncheckedExpectedUseTestInst, UncheckedExpectedAccessTest,
-    ::testing::Values(ExpectedTypeIdentifier{"std"}),
+    ::testing::Values(ExpectedTypeIdentifier{"std"},
+                      ExpectedTypeIdentifier{"tl"}),
     [](const ::testing::TestParamInfo<ExpectedTypeIdentifier> &Info) {
       return Info.param.NamespaceName;
     });
+
+// Verifies that similarly-named types are ignored.
+TEST_P(UncheckedExpectedAccessTest, NonTrackedExpectedType) {
+  ExpectDiagnosticsFor(
+      R"(
+    namespace other {
+    namespace $ns {
+    template <typename T, typename E>
+    struct expected {
+      T value();
+      E error();
+    };
+    }
+
+    void target($ns::expected<int, int> e) {
+      e.value();
+      e.error();
+    }
+    }
+  )");
+}
 
 TEST_P(UncheckedExpectedAccessTest, EmptyFunctionBody) {
   ExpectDiagnosticsFor(R"(
@@ -226,6 +251,10 @@ TEST_P(UncheckedExpectedAccessTest, UnwrapFunctionCallResultNoCheck) {
 }
 
 TEST_P(UncheckedExpectedAccessTest, UnwrapVoidUsingValueNoCheck) {
+  // `tl::expected<void, E>` has no `value()`.
+  if (GetParam().NamespaceName != "std")
+    GTEST_SKIP();
+
   ExpectDiagnosticsFor(R"(
     #include "unchecked_expected_access_test.h"
 
@@ -507,6 +536,10 @@ TEST_P(UncheckedExpectedAccessTest, ValueAndErrorChecked) {
 }
 
 TEST_P(UncheckedExpectedAccessTest, ErrorOrIsNotAnAccess) {
+  // `tl::expected` has no `error_or()`.
+  if (GetParam().NamespaceName != "std")
+    GTEST_SKIP();
+
   ExpectDiagnosticsFor(R"(
     #include "unchecked_expected_access_test.h"
 
@@ -517,6 +550,19 @@ TEST_P(UncheckedExpectedAccessTest, ErrorOrIsNotAnAccess) {
 }
 
 TEST_P(UncheckedExpectedAccessTest, UnexpectedErrorIsNotAnAccess) {
+  // `tl::unexpected` names its accessor `value()`.
+  if (GetParam().NamespaceName == "tl") {
+    ExpectDiagnosticsFor(R"(
+      #include "unchecked_expected_access_test.h"
+
+      void target() {
+        $ns::unexpected<int> u(1);
+        u.value();
+      }
+    )");
+    return;
+  }
+
   ExpectDiagnosticsFor(R"(
     #include "unchecked_expected_access_test.h"
 
