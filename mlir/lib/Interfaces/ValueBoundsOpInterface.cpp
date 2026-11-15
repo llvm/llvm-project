@@ -95,7 +95,7 @@ static std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   if (auto val = llvm::dyn_cast_if_present<Value>(ofr)) {
     APSInt intVal;
     if (matchPattern(val, m_ConstantInt(&intVal)))
-      return intVal.getSExtValue();
+      return intVal.trySExtValue();
     return std::nullopt;
   }
   // Case 2: Check for IntegerAttr.

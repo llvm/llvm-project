@@ -25,8 +25,12 @@ struct ConstantOpInterface
     auto constantOp = cast<ConstantOp>(op);
     assert(value == constantOp.getResult() && "invalid value");
 
-    if (auto attr = llvm::dyn_cast<IntegerAttr>(constantOp.getValue()))
-      cstr.bound(value) == attr.getInt();
+    auto attr = llvm::dyn_cast<IntegerAttr>(constantOp.getValue());
+    if (!attr)
+      return;
+    // Affine constant expressions can only represent signed 64-bit values.
+    if (auto constant = attr.getValue().trySExtValue())
+      cstr.bound(value) == *constant;
   }
 };
 
