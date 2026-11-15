@@ -808,3 +808,16 @@ define i1 @cmp_load_shifted_index_non_const(i32 %X, i32 %sh) {
   %cmp = icmp eq i16 %load, 68
   ret i1 %cmp
 }
+
+@unknown_idx = external global i8
+
+define i1 @cmp_load_constexpr_gep() {
+; CHECK-LABEL: @cmp_load_constexpr_gep(
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr getelementptr inbounds (i16, ptr @G16, i32 ptrtoint (ptr @unknown_idx to i32)), align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 85
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %load = load i16, ptr getelementptr inbounds (i16, ptr @G16, i32 ptrtoint (ptr @unknown_idx to i32))
+  %cmp = icmp eq i16 %load, 85
+  ret i1 %cmp
+}
