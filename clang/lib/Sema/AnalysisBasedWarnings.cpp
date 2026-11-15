@@ -1261,9 +1261,6 @@ public:
         if (!FollowAlternate)
           continue;
         const CFGBlock *Alt = Succ.getPossiblyUnreachableBlock();
-        assert(B && Alt != B &&
-               "noreturn edge should have a reachable block and a distinct "
-               "alternate");
         if (Alt && ReachableBlocks.insert(Alt).second)
           BlockQueue.push_back(Alt);
       }
