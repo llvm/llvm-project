@@ -3577,10 +3577,15 @@ void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
       // but STGloop is way too unusual for that, and also it only
       // realistically happens in function epilogue. Also, STGloop is expanded
       // before that pass.
-      if (InsertI != MBB->end() &&
-          canMergeRegUpdate(InsertI, FrameReg, FrameRegOffset.getFixed() + Size,
+      auto UpdateI = skipDebugInstructionsForward(InsertI, MBB->end(),
+                                                  /*SkipPseudoOp=*/false);
+      if (UpdateI != MBB->end() &&
+          canMergeRegUpdate(UpdateI, FrameReg, FrameRegOffset.getFixed() + Size,
                             &TotalOffset)) {
-        UpdateInstr = &*InsertI++;
+        // Keep skipped debug instructions before the loop so debug values see
+        // the pre-update SP; only the tag stores move past them.
+        UpdateInstr = &*UpdateI++;
+        InsertI = UpdateI;
         LLVM_DEBUG(dbgs() << "Folding SP update into loop:\n  "
                           << *UpdateInstr);
       }
