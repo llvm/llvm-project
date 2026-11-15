@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements support for context disambiguation of allocation
-// calls for profile guided heap optimization. Specifically, it uses Memprof
-// profiles which indicate context specific allocation behavior (currently
-// distinguishing cold vs hot memory allocations). Cloning is performed to
-// expose the cold allocation call contexts, and the allocation calls are
-// subsequently annotated with an attribute for later transformation.
+// calls for profile-guided memory optimization (MemPGO). Specifically, it uses
+// MemProf profiles which indicate context specific allocation behavior
+// (currently distinguishing cold vs hot memory allocations). Cloning is
+// performed to expose the cold allocation call contexts, and the allocation
+// calls are subsequently annotated with an attribute for later transformation.
 //
 // The transformations can be performed either directly on IR (regular LTO), or
 // on a ThinLTO index (and later applied to the IR during the ThinLTO backend).
@@ -67,11 +67,17 @@ STATISTIC(AllocTypeNotCold, "Number of not cold static allocations (possibly "
                             "cloned) during whole program analysis");
 STATISTIC(AllocTypeCold, "Number of cold static allocations (possibly cloned) "
                          "during whole program analysis");
+STATISTIC(AllocTypeAmbiguous,
+          "Number of ambiguous static allocations (possibly cloned) during "
+          "whole program analysis");
 STATISTIC(AllocTypeNotColdThinBackend,
           "Number of not cold static allocations (possibly cloned) during "
           "ThinLTO backend");
 STATISTIC(AllocTypeColdThinBackend, "Number of cold static allocations "
                                     "(possibly cloned) during ThinLTO backend");
+STATISTIC(AllocTypeAmbiguousThinBackend,
+          "Number of ambiguous static allocations (possibly cloned) during "
+          "ThinLTO backend");
 STATISTIC(OrigAllocsThinBackend,
           "Number of original (not cloned) allocations with memprof profiles "
           "during ThinLTO backend");
@@ -285,6 +291,7 @@ static cl::opt<bool> MemProfImportClonedIndirectTargets(
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 extern cl::opt<unsigned> MinClonedColdBytePercent;
+extern cl::opt<bool> MemProfUseAmbiguousAttributes;
 
 // Appends a per-context diagnostic suffix to each -memprof-report-hinted-sizes
 // line: the allocation function clone, how far the context matched, and the
@@ -683,11 +690,11 @@ public:
                                        DenseSet<const ContextNode *> &Visited);
 
 protected:
-  /// Get a list of nodes corresponding to the stack ids in the given callsite
-  /// context.
+  /// Get the list of context nodes for the stack ids in the given callsite
+  /// context, stopping at the first stack id that does not have a node.
   template <class NodeT, class IteratorT>
-  std::vector<uint64_t>
-  getStackIdsWithContextNodes(CallStack<NodeT, IteratorT> &CallsiteContext);
+  std::vector<ContextNode *>
+  getStackNodesForCallsite(CallStack<NodeT, IteratorT> &CallsiteContext);
 
   /// Adds nodes for the given allocation and any stack ids on its memprof MIB
   /// metadata (or summary).
@@ -766,8 +773,12 @@ private:
   struct CallContextInfo {
     // The callsite we're trying to match.
     CallTy Call;
-    // The callsites stack ids that have a context node in the graph.
-    std::vector<uint64_t> StackIds;
+    // The context nodes for the callsite's stack ids that have one, saved to
+    // avoid repeatedly looking them up. The stack ids are available via the
+    // nodes' OrigStackOrAllocId. Since each stack id has its own node, and the
+    // stack id to node map is not modified while matching calls, two calls
+    // have the same stack ids iff they have the same nodes.
+    std::vector<ContextNode *> StackNodes;
     // The function containing this callsite.
     const FuncTy *Func;
     // Initially empty, if needed this will be updated to contain the context
@@ -851,11 +862,10 @@ private:
     return static_cast<DerivedCCG *>(this)->sameCallee(Call1, Call2);
   }
 
-  /// Get a list of nodes corresponding to the stack ids in the given
-  /// callsite's context.
-  std::vector<uint64_t> getStackIdsWithContextNodesForCall(CallTy Call) {
-    return static_cast<DerivedCCG *>(this)->getStackIdsWithContextNodesForCall(
-        Call);
+  /// Get the list of context nodes for the stack ids in the given callsite's
+  /// context, stopping at the first stack id that does not have a node.
+  std::vector<ContextNode *> getStackNodesForCall(CallTy Call) {
+    return static_cast<DerivedCCG *>(this)->getStackNodesForCall(Call);
   }
 
   /// Get the last stack id in the context for callsite.
@@ -865,7 +875,12 @@ private:
 
   /// Update the allocation call to record type of allocated memory.
   void updateAllocationCall(CallInfo &Call, AllocationType AllocType) {
-    AllocType == AllocationType::Cold ? AllocTypeCold++ : AllocTypeNotCold++;
+    if (AllocType == AllocationType::Cold)
+      AllocTypeCold++;
+    else if (isAmbiguousAllocType((uint8_t)AllocType))
+      AllocTypeAmbiguous++;
+    else
+      AllocTypeNotCold++;
     static_cast<DerivedCCG *>(this)->updateAllocationCall(Call, AllocType);
   }
 
@@ -1072,9 +1087,9 @@ private:
   DenseMap<uint32_t, ImportantContextInfo> ImportantContextIdInfo;
 
   // For each important context id found in Node (if any), records the list of
-  // stack ids that corresponded to the given callsite Node. There can be more
-  // than one in the case of inlining.
-  void recordStackNode(std::vector<uint64_t> &StackIds, ContextNode *Node,
+  // stack ids (those of the given StackNodes) that corresponded to the given
+  // callsite Node. There can be more than one in the case of inlining.
+  void recordStackNode(ArrayRef<ContextNode *> StackNodes, ContextNode *Node,
                        // We pass in the Node's context ids to avoid the
                        // overhead of computing them as the caller already has
                        // them in some cases.
@@ -1088,6 +1103,10 @@ private:
         set_intersection(NodeContextIds, ImportantContextIds);
     if (Ids.empty())
       return;
+    std::vector<uint64_t> StackIds;
+    StackIds.reserve(StackNodes.size());
+    for (const ContextNode *N : StackNodes)
+      StackIds.push_back(N->OrigStackOrAllocId);
     auto Size = StackIds.size();
     for (auto Id : Ids) {
       auto &Entry = ImportantContextIdInfo[Id];
@@ -1203,7 +1222,7 @@ private:
       std::vector<std::pair<Instruction *, Function *>> &FoundCalleeChain,
       bool &FoundMultipleCalleeChains);
   uint64_t getLastStackId(Instruction *Call);
-  std::vector<uint64_t> getStackIdsWithContextNodesForCall(Instruction *Call);
+  std::vector<ContextNode *> getStackNodesForCall(Instruction *Call);
   void updateAllocationCall(CallInfo &Call, AllocationType AllocType);
   AllocationType getAllocationCallType(const CallInfo &Call) const;
   void updateCall(CallInfo &CallerCall, FuncInfo CalleeFunc);
@@ -1295,10 +1314,10 @@ private:
   bool sameCallee(IndexCall &Call1, IndexCall &Call2);
   bool findProfiledCalleeThroughTailCalls(
       ValueInfo ProfiledCallee, ValueInfo CurCallee, unsigned Depth,
-      std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain,
+      std::vector<std::pair<ValueInfo, FunctionSummary *>> &FoundCalleeChain,
       bool &FoundMultipleCalleeChains);
   uint64_t getLastStackId(IndexCall &Call);
-  std::vector<uint64_t> getStackIdsWithContextNodesForCall(IndexCall &Call);
+  std::vector<ContextNode *> getStackNodesForCall(IndexCall &Call);
   void updateAllocationCall(CallInfo &Call, AllocationType AllocType);
   AllocationType getAllocationCallType(const CallInfo &Call) const;
   void updateCall(CallInfo &CallerCall, FuncInfo CalleeFunc);
@@ -1821,11 +1840,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
       NewNode->CallerEdges.push_back(NewEdge);
       NewEdge->Caller->CalleeEdges.push_back(NewEdge);
     }
-    // Remove old edge if context ids empty.
+    // Remove old edge if context ids empty, otherwise update its alloc type to
+    // reflect the removed context ids.
     if (Edge->getContextIds().empty()) {
       removeEdgeFromGraph(Edge.get(), &EI, TowardsCallee);
       continue;
     }
+    Edge->AllocTypes = computeAllocType(Edge->getContextIds());
     ++EI;
   }
 }
@@ -1934,17 +1955,18 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // In this case there is no need to create any new context nodes, simply
   // assign the context node for stack id to this Call.
   if (Calls.size() == 1) {
-    auto &[Call, Ids, Func, SavedContextIds] = Calls[0];
-    if (Ids.size() == 1) {
+    auto &[Call, StackNodes, Func, SavedContextIds] = Calls[0];
+    if (StackNodes.size() == 1) {
       assert(SavedContextIds.empty());
       // It should be this Node
-      assert(Node == getNodeForStackId(Ids[0]));
+      assert(Node == StackNodes[0]);
       if (Node->Recursive)
         return;
       Node->setCall(Call);
       NonAllocationCallToContextNodeMap[Call] = Node;
       NodeToCallingFunc[Node] = Func;
-      recordStackNode(Ids, Node, Node->getContextIds(), ImportantContextIds);
+      recordStackNode(StackNodes, Node, Node->getContextIds(),
+                      ImportantContextIds);
       return;
     }
   }
@@ -1970,7 +1992,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   for (unsigned I = 0; I < Calls.size();
        I++, PrevIterCreatedNode = CreatedNode) {
     CreatedNode = false;
-    auto &[Call, Ids, Func, SavedContextIds] = Calls[I];
+    auto &[Call, StackNodes, Func, SavedContextIds] = Calls[I];
     // Skip any for which we didn't assign any ids, these don't get a node in
     // the graph.
     if (SavedContextIds.empty()) {
@@ -1993,7 +2015,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       continue;
     }
 
-    assert(LastId == Ids.back());
+    assert(LastNode == StackNodes.back());
 
     // Recompute the context ids for this stack id sequence (the
     // intersection of the context ids of the corresponding nodes).
@@ -2004,11 +2026,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     set_intersect(SavedContextIds, LastNodeContextIds);
     ContextNode *PrevNode = LastNode;
     bool Skip = false;
-    // Iterate backwards through the stack Ids, starting after the last Id
+    // Iterate backwards through the stack nodes, starting after the last one
     // in the list, which was handled once outside for all Calls.
-    for (auto IdIter = Ids.rbegin() + 1; IdIter != Ids.rend(); IdIter++) {
-      auto Id = *IdIter;
-      ContextNode *CurNode = getNodeForStackId(Id);
+    for (auto NodeIter = StackNodes.rbegin() + 1; NodeIter != StackNodes.rend();
+         NodeIter++) {
+      ContextNode *CurNode = *NodeIter;
       // We should only have kept stack ids that had nodes and weren't
       // recursive.
       assert(CurNode);
@@ -2040,7 +2062,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     CreatedNode = true;
     NewNode->AllocTypes = computeAllocType(SavedContextIds);
 
-    ContextNode *FirstNode = getNodeForStackId(Ids[0]);
+    ContextNode *FirstNode = StackNodes[0];
     assert(FirstNode);
 
     // Connect to callees of innermost stack frame in inlined call chain.
@@ -2056,8 +2078,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     // Now we need to remove context ids from edges/nodes between First and
     // Last Node.
     PrevNode = nullptr;
-    for (auto Id : Ids) {
-      ContextNode *CurNode = getNodeForStackId(Id);
+    for (ContextNode *CurNode : StackNodes) {
       // We should only have kept stack ids that had nodes.
       assert(CurNode);
 
@@ -2074,6 +2095,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
         set_subtract(PrevEdge->getContextIds(), SavedContextIds);
         if (PrevEdge->getContextIds().empty())
           removeEdgeFromGraph(PrevEdge);
+        else
+          PrevEdge->AllocTypes = computeAllocType(PrevEdge->getContextIds());
       }
       // Since we update the edges from leaf to tail, only look at the callee
       // edges. This isn't an alloc node, so if there are no callee edges, the
@@ -2084,12 +2107,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       PrevNode = CurNode;
     }
 
-    recordStackNode(Ids, NewNode, SavedContextIds, ImportantContextIds);
+    recordStackNode(StackNodes, NewNode, SavedContextIds, ImportantContextIds);
 
     if (VerifyNodes) {
       checkNode<DerivedCCG, FuncTy, CallTy>(NewNode, /*CheckEdges=*/true);
-      for (auto Id : Ids) {
-        ContextNode *CurNode = getNodeForStackId(Id);
+      for (ContextNode *CurNode : StackNodes) {
         // We should only have kept stack ids that had nodes.
         assert(CurNode);
         checkNode<DerivedCCG, FuncTy, CallTy>(CurNode, /*CheckEdges=*/true);
@@ -2219,8 +2241,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
   // Map of stack id to all calls with that as the last (outermost caller)
   // callsite id that has a context node (some might not due to trimming
   // performed during matching of the allocation profile contexts).
-  // The CallContextInfo contains the Call and a list of its stack ids with
-  // ContextNodes, the function containing Call, and the set of context ids
+  // The CallContextInfo contains the Call and a list of the context nodes for
+  // its stack ids, the function containing Call, and the set of context ids
   // the analysis will eventually identify for use in any new node created
   // for that callsite.
   DenseMap<uint64_t, std::vector<CallContextInfo>> StackIdToMatchingCalls;
@@ -2229,16 +2251,16 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // Ignore allocations, already handled.
       if (AllocationCallToContextNodeMap.count(Call))
         continue;
-      auto StackIdsWithContextNodes =
-          getStackIdsWithContextNodesForCall(Call.call());
+      std::vector<ContextNode *> StackNodes = getStackNodesForCall(Call.call());
       // If there were no nodes created for MIBs on allocs (maybe this was in
       // the unambiguous part of the MIB stack that was trimmed), ignore.
-      if (StackIdsWithContextNodes.empty())
+      if (StackNodes.empty())
         continue;
-      // Otherwise, record this Call along with the list of ids for the last
+      // Otherwise, record this Call along with the list of nodes for the last
       // (outermost caller) stack id with a node.
-      StackIdToMatchingCalls[StackIdsWithContextNodes.back()].push_back(
-          {Call.call(), StackIdsWithContextNodes, Func, {}});
+      uint64_t LastId = StackNodes.back()->OrigStackOrAllocId;
+      StackIdToMatchingCalls[LastId].push_back(
+          {Call.call(), std::move(StackNodes), Func, {}});
     }
   }
 
@@ -2257,40 +2279,50 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     auto &Calls = It.getSecond();
     // Skip single calls with a single stack id. These don't need a new node.
     if (Calls.size() == 1) {
-      auto &Ids = Calls[0].StackIds;
-      if (Ids.size() == 1)
+      auto &StackNodes = Calls[0].StackNodes;
+      if (StackNodes.size() == 1)
         continue;
     }
     // In order to do the best and maximal matching of inlined calls to context
-    // node sequences we will sort the vectors of stack ids in descending order
-    // of length, and within each length, lexicographically by stack id. The
-    // latter is so that we can specially handle calls that have identical stack
-    // id sequences (either due to cloning or artificially because of the MIB
-    // context trimming). Those with the same Ids are then sorted by function to
-    // facilitate efficiently mapping them to the same context node.
+    // node sequences we will sort the vectors of stack nodes in descending
+    // order of length, and within each length, lexicographically by stack id.
+    // The latter is so that we can specially handle calls that have identical
+    // stack id sequences (either due to cloning or artificially because of the
+    // MIB context trimming). Those with the same stack ids are then sorted by
+    // function to facilitate efficiently mapping them to the same context node.
     // Because the functions are pointers, to ensure a stable sort first assign
     // each function pointer to its first index in the Calls array, and then use
     // that to sort by.
     DenseMap<const FuncTy *, unsigned> FuncToIndex;
     for (const auto &[Idx, CallCtxInfo] : enumerate(Calls))
       FuncToIndex.insert({CallCtxInfo.Func, Idx});
-    llvm::stable_sort(
-        Calls,
-        [&FuncToIndex](const CallContextInfo &A, const CallContextInfo &B) {
-          return A.StackIds.size() > B.StackIds.size() ||
-                 (A.StackIds.size() == B.StackIds.size() &&
-                  (A.StackIds < B.StackIds ||
-                   (A.StackIds == B.StackIds &&
-                    FuncToIndex[A.Func] < FuncToIndex[B.Func])));
-        });
+    auto StackIdsLess = [](ArrayRef<ContextNode *> A,
+                           ArrayRef<ContextNode *> B) {
+      return std::lexicographical_compare(
+          A.begin(), A.end(), B.begin(), B.end(),
+          [](const ContextNode *X, const ContextNode *Y) {
+            return X->OrigStackOrAllocId < Y->OrigStackOrAllocId;
+          });
+    };
+    auto CallLess = [&FuncToIndex, &StackIdsLess](const CallContextInfo &A,
+                                                  const CallContextInfo &B) {
+      return A.StackNodes.size() > B.StackNodes.size() ||
+             (A.StackNodes.size() == B.StackNodes.size() &&
+              (StackIdsLess(A.StackNodes, B.StackNodes) ||
+               (A.StackNodes == B.StackNodes &&
+                FuncToIndex[A.Func] < FuncToIndex[B.Func])));
+    };
+    llvm::stable_sort(Calls, CallLess);
 
     // Find the node for the last stack id, which should be the same
     // across all calls recorded for this id, and is the id for this
     // entry in the StackIdToMatchingCalls map.
     uint64_t LastId = It.getFirst();
-    ContextNode *LastNode = getNodeForStackId(LastId);
+    // All calls in this entry share the same last node.
+    ContextNode *LastNode = Calls[0].StackNodes.back();
     // We should only have kept stack ids that had nodes.
     assert(LastNode);
+    assert(LastNode == getNodeForStackId(LastId));
 
     if (LastNode->Recursive)
       continue;
@@ -2309,14 +2341,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
 #endif
 
     for (unsigned I = 0; I < Calls.size(); I++) {
-      auto &[Call, Ids, Func, SavedContextIds] = Calls[I];
+      auto &[Call, StackNodes, Func, SavedContextIds] = Calls[I];
       assert(SavedContextIds.empty());
-      assert(LastId == Ids.back());
+      assert(LastNode == StackNodes.back());
 
 #ifndef NDEBUG
       // If this call has a different set of ids than the last one, clear the
       // set used to ensure they are sorted properly.
-      if (I > 0 && Ids != Calls[I - 1].StackIds)
+      if (I > 0 && StackNodes != Calls[I - 1].StackNodes)
         MatchingIdsFuncSet.clear();
 #endif
 
@@ -2330,11 +2362,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       ContextNode *CurNode = LastNode;
       bool Skip = false;
 
-      // Iterate backwards through the stack Ids, starting after the last Id
-      // in the list, which was handled once outside for all Calls.
-      for (auto IdIter = Ids.rbegin() + 1; IdIter != Ids.rend(); IdIter++) {
-        auto Id = *IdIter;
-        CurNode = getNodeForStackId(Id);
+      // Iterate backwards through the stack nodes, starting after the last
+      // one in the list, which was handled once outside for all Calls.
+      for (auto NodeIter = StackNodes.rbegin() + 1;
+           NodeIter != StackNodes.rend(); NodeIter++) {
+        CurNode = *NodeIter;
         // We should only have kept stack ids that had nodes.
         assert(CurNode);
 
@@ -2377,7 +2409,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // beyond these nodes. Otherwise we would be matching part of unrelated /
       // not fully matching stack contexts. To do this, subtract any context ids
       // found in caller nodes of the last node found above.
-      if (Ids.back() != getLastStackId(Call)) {
+      if (LastId != getLastStackId(Call)) {
         for (const auto &PE : LastNode->CallerEdges) {
           set_subtract(StackSequenceContextIds, PE->getContextIds());
           if (StackSequenceContextIds.empty())
@@ -2402,12 +2434,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // Check if the next set of stack ids is the same (since the Calls vector
       // of tuples is sorted by the stack ids we can just look at the next one).
       // If so, save them in the CallToMatchingCall map so that they get
-      // assigned to the same context node, and skip them.
+      // assigned to the same context node, and skip them. Comparing the stack
+      // nodes is equivalent to comparing the stack ids, as each stack id has
+      // its own node and the stack id to node map is not modified here.
       bool DuplicateContextIds = false;
       for (unsigned J = I + 1; J < Calls.size(); J++) {
         auto &CallCtxInfo = Calls[J];
-        auto &NextIds = CallCtxInfo.StackIds;
-        if (NextIds != Ids)
+        if (CallCtxInfo.StackNodes != StackNodes)
           break;
         auto *NextFunc = CallCtxInfo.Func;
         if (NextFunc != Func) {
@@ -2485,18 +2518,12 @@ uint64_t IndexCallsiteContextGraph::getLastStackId(IndexCall &Call) {
   return Index.getStackIdAtIndex(CallsiteContext.back());
 }
 
-static const std::string MemProfCloneSuffix = ".memprof.";
-
 static std::string getMemProfFuncName(Twine Base, unsigned CloneNo) {
   // We use CloneNo == 0 to refer to the original version, which doesn't get
   // renamed with a suffix.
   if (!CloneNo)
     return Base.str();
   return (Base + MemProfCloneSuffix + Twine(CloneNo)).str();
-}
-
-static bool isMemProfClone(const Function &F) {
-  return F.getName().contains(MemProfCloneSuffix);
 }
 
 // Return the clone number of the given function by extracting it from the
@@ -2597,39 +2624,38 @@ void IndexCallsiteContextGraph::populateFunctionsWithCallers() {
   }
 }
 
-std::vector<uint64_t>
-ModuleCallsiteContextGraph::getStackIdsWithContextNodesForCall(
-    Instruction *Call) {
+std::vector<ModuleCallsiteContextGraph::ContextNode *>
+ModuleCallsiteContextGraph::getStackNodesForCall(Instruction *Call) {
   CallStack<MDNode, MDNode::op_iterator> CallsiteContext(
       Call->getMetadata(LLVMContext::MD_callsite));
-  return getStackIdsWithContextNodes<MDNode, MDNode::op_iterator>(
-      CallsiteContext);
+  return getStackNodesForCallsite<MDNode, MDNode::op_iterator>(CallsiteContext);
 }
 
-std::vector<uint64_t>
-IndexCallsiteContextGraph::getStackIdsWithContextNodesForCall(IndexCall &Call) {
+std::vector<IndexCallsiteContextGraph::ContextNode *>
+IndexCallsiteContextGraph::getStackNodesForCall(IndexCall &Call) {
   assert(isa<CallsiteInfo *>(Call));
   CallStack<CallsiteInfo, SmallVector<unsigned>::const_iterator>
       CallsiteContext(dyn_cast_if_present<CallsiteInfo *>(Call));
-  return getStackIdsWithContextNodes<CallsiteInfo,
-                                     SmallVector<unsigned>::const_iterator>(
+  return getStackNodesForCallsite<CallsiteInfo,
+                                  SmallVector<unsigned>::const_iterator>(
       CallsiteContext);
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 template <class NodeT, class IteratorT>
-std::vector<uint64_t>
-CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::getStackIdsWithContextNodes(
+std::vector<
+    typename CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode *>
+CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::getStackNodesForCallsite(
     CallStack<NodeT, IteratorT> &CallsiteContext) {
-  std::vector<uint64_t> StackIds;
+  std::vector<ContextNode *> StackNodes;
   for (auto IdOrIndex : CallsiteContext) {
     auto StackId = getStackId(IdOrIndex);
     ContextNode *Node = getNodeForStackId(StackId);
     if (!Node)
       break;
-    StackIds.push_back(StackId);
+    StackNodes.push_back(Node);
   }
-  return StackIds;
+  return StackNodes;
 }
 
 ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
@@ -3362,25 +3388,19 @@ bool ModuleCallsiteContextGraph::sameCallee(Instruction *Call1,
 
 bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
     ValueInfo ProfiledCallee, ValueInfo CurCallee, unsigned Depth,
-    std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain,
+    std::vector<std::pair<ValueInfo, FunctionSummary *>> &FoundCalleeChain,
     bool &FoundMultipleCalleeChains) {
   // Stop recursive search if we have already explored the maximum specified
   // depth.
   if (Depth > TailCallSearchDepth)
     return false;
 
-  auto CreateAndSaveCallsiteInfo = [&](ValueInfo Callee, FunctionSummary *FS) {
-    // Make a CallsiteInfo for each discovered callee, if one hasn't already
-    // been synthesized.
-    if (!FunctionCalleesToSynthesizedCallsiteInfos.count(FS) ||
-        !FunctionCalleesToSynthesizedCallsiteInfos[FS].count(Callee))
-      // StackIds is empty (we don't have debug info available in the index for
-      // these callsites)
-      FunctionCalleesToSynthesizedCallsiteInfos[FS][Callee] =
-          std::make_unique<CallsiteInfo>(Callee, SmallVector<unsigned>());
-    CallsiteInfo *NewCallsiteInfo =
-        FunctionCalleesToSynthesizedCallsiteInfos[FS][Callee].get();
-    FoundCalleeChain.push_back({NewCallsiteInfo, FS});
+  // Record each discovered tail call (callee and calling function) in the
+  // chain. The CallsiteInfo records are only synthesized by the caller once
+  // the search succeeds, since the chain is discarded if the profiled callee
+  // is found through multiple chains.
+  auto SaveTailCall = [&](ValueInfo Callee, FunctionSummary *FS) {
+    FoundCalleeChain.push_back({Callee, FS});
   };
 
   // Look for tail calls in this function, and check if they either call the
@@ -3419,7 +3439,7 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
           FoundProfiledCalleeMaxDepth = Depth;
         if (CallEdge.second.hasIndirectCall())
           FoundProfiledCalleeIndirectTailCallCount++;
-        CreateAndSaveCallsiteInfo(CallEdge.first, FS);
+        SaveTailCall(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
         FSToVIMap[FS] = FSVI;
@@ -3436,7 +3456,7 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
         FoundSingleCalleeChain = true;
         if (CallEdge.second.hasIndirectCall())
           FoundProfiledCalleeIndirectTailCallCount++;
-        CreateAndSaveCallsiteInfo(CallEdge.first, FS);
+        SaveTailCall(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
         FSToVIMap[FS] = FSVI;
@@ -3485,8 +3505,10 @@ bool IndexCallsiteContextGraph::calleeMatchesFunc(
   // bookkeeping of the created chain of new nodes for each mismatch.
   unsigned Depth = 1;
   bool FoundMultipleCalleeChains = false;
-  if (!findProfiledCalleeThroughTailCalls(
-          FuncVI, Callee, Depth, FoundCalleeChain, FoundMultipleCalleeChains)) {
+  std::vector<std::pair<ValueInfo, FunctionSummary *>> FoundCalleeVIChain;
+  if (!findProfiledCalleeThroughTailCalls(FuncVI, Callee, Depth,
+                                          FoundCalleeVIChain,
+                                          FoundMultipleCalleeChains)) {
     LLVM_DEBUG(dbgs() << "Not found through unique tail call chain: " << FuncVI
                       << " from " << FSToVIMap[CallerFunc]
                       << " that actually called " << Callee
@@ -3497,6 +3519,22 @@ bool IndexCallsiteContextGraph::calleeMatchesFunc(
     if (FoundMultipleCalleeChains)
       FoundProfiledCalleeNonUniquelyCount++;
     return false;
+  }
+
+  // Now that we know the chain is unique, synthesize a CallsiteInfo for each
+  // tail call in it, if one hasn't already been synthesized (e.g. for a chain
+  // to a different profiled callee through the same tail call). These are only
+  // added to the function summaries once the graph is destroyed (see
+  // ~IndexCallsiteContextGraph).
+  for (auto &[CalleeVI, FS] : FoundCalleeVIChain) {
+    auto &CallsiteInfoPtr =
+        FunctionCalleesToSynthesizedCallsiteInfos[FS][CalleeVI];
+    if (!CallsiteInfoPtr)
+      // StackIds is empty (we don't have debug info available in the index for
+      // these callsites)
+      CallsiteInfoPtr =
+          std::make_unique<CallsiteInfo>(CalleeVI, SmallVector<unsigned>());
+    FoundCalleeChain.push_back({CallsiteInfoPtr.get(), FS});
   }
 
   return true;
@@ -3900,7 +3938,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
               " full allocation context " + std::to_string(Info.FullStackId) +
               " with total size " + std::to_string(Info.TotalSize) + " is " +
               getAllocTypeString(Node->AllocTypes) + " after cloning";
-          if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
+          if (allocTypeToUse(Node->AllocTypes) !=
+              allocTypeToUse((uint8_t)AllocTypeFromCall))
             Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
                    " due to cold byte percent";
           // Print the internal context id to aid debugging and visualization.
@@ -3916,7 +3955,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
             "MemProf hinting: " + getAllocTypeString((uint8_t)TypeI->second) +
             " context is " + getAllocTypeString(Node->AllocTypes) +
             " after cloning";
-        if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
+        if (allocTypeToUse(Node->AllocTypes) !=
+            allocTypeToUse((uint8_t)AllocTypeFromCall))
           Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
                  " due to cold byte percent";
         // Print the internal context id to aid debugging and visualization.
@@ -4827,10 +4867,18 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
 void ModuleCallsiteContextGraph::updateAllocationCall(
     CallInfo &Call, AllocationType AllocType) {
   std::string AllocTypeString = getAllocTypeAttributeString(AllocType);
-  removeAnyExistingAmbiguousAttribute(cast<CallBase>(Call.call()));
-  auto A = llvm::Attribute::get(Call.call()->getFunction()->getContext(),
-                                "memprof", AllocTypeString);
-  cast<CallBase>(Call.call())->addFnAttr(A);
+  auto *CB = cast<CallBase>(Call.call());
+  if (isAmbiguousAllocType((uint8_t)AllocType)) {
+    // The contexts reaching this allocation could not be disambiguated, so it
+    // keeps (or gets) the ambiguous attribute added during matching rather than
+    // the default not cold attribute.
+    addAmbiguousAttribute(CB);
+  } else {
+    removeAnyExistingAmbiguousAttribute(CB);
+    auto A = llvm::Attribute::get(CB->getFunction()->getContext(), "memprof",
+                                  AllocTypeString);
+    CB->addFnAttr(A);
+  }
   OREGetter(Call.call()->getFunction())
       .emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", Call.call())
             << ore::NV("AllocationCall", Call.call()) << " in clone "
@@ -4852,9 +4900,14 @@ ModuleCallsiteContextGraph::getAllocationCallType(const CallInfo &Call) const {
   const auto *CB = cast<CallBase>(Call.call());
   if (!CB->getAttributes().hasFnAttr("memprof"))
     return AllocationType::None;
-  return CB->getAttributes().getFnAttr("memprof").getValueAsString() == "cold"
-             ? AllocationType::Cold
-             : AllocationType::NotCold;
+  StringRef AllocTypeString =
+      CB->getAttributes().getFnAttr("memprof").getValueAsString();
+  if (AllocTypeString == "cold")
+    return AllocationType::Cold;
+  if (AllocTypeString == "ambiguous")
+    return (AllocationType)((uint8_t)AllocationType::NotCold |
+                            (uint8_t)AllocationType::Cold);
+  return AllocationType::NotCold;
 }
 
 AllocationType
@@ -4938,6 +4991,10 @@ ModuleCallsiteContextGraph::cloneFunctionForCallsite(
   // Use existing LLVM facilities for cloning and obtaining Call in clone
   ValueToValueMapTy VMap;
   auto *NewFunc = CloneFunction(Func.func(), VMap);
+  // Clones are only called directly and never have their address taken, so
+  // strip !kcfi_type to avoid emitting KCFI type preambles/symbols on them or
+  // making them valid KCFI indirect-call targets.
+  NewFunc->setMetadata(LLVMContext::MD_kcfi_type, nullptr);
   std::string Name = getMemProfFuncName(Func.func()->getName(), CloneNo);
   assert(!Func.func()->getParent()->getFunction(Name));
   NewFunc->setName(Name);
@@ -6375,6 +6432,12 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     if (Node->IsAllocation) {
       auto GetAllocTypeToUse = [&](const ContextNode *Node) {
         auto AT = allocTypeToUse(Node->AllocTypes);
+        // If the allocation type is still ambiguous after cloning, record
+        // that as the allocation type (the attribute stays "ambiguous") rather
+        // than falling back to the default not cold, unless ambiguous
+        // attributes are disabled.
+        if (Node->AllocTypes == BothTypes && MemProfUseAmbiguousAttributes)
+          AT = (AllocationType)BothTypes;
         // If the allocation type is ambiguous, and more aggressive hinting
         // has been enabled via the MinClonedColdBytePercent flag, see if this
         // allocation should be hinted cold anyway because its fraction cold
@@ -6617,6 +6680,8 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
     auto *NewF = CloneFunction(&F, *VMaps.back());
     HashToFunc[Hash] = {NewF, I};
     FunctionClonesThinBackend++;
+    // Strip !kcfi_type (see comment in cloneFunctionForCallsite).
+    NewF->setMetadata(LLVMContext::MD_kcfi_type, nullptr);
     // Strip memprof and callsite metadata from clone as they are no longer
     // needed.
     for (auto &BB : *NewF) {
@@ -6730,13 +6795,16 @@ static ValueInfo findValueInfoForGV(const GlobalValue &GV, const Module &M,
 // CandidateGUID of an indirect tail call, in MapTailCallCalleeVIToCallsite
 // (which maps each synthesized record's callee to the record). Returns null if
 // there is none. OrigNameGUIDToTailCallCallsite caches a map from the original
-// name GUID of each record's callee to the record, and is built on first use.
+// name GUID of each record's callee to the record, and is built on first use
+// (along with AliasVIToGV, which caches alias ValueInfos in M).
 static const CallsiteInfo *findIndirectTailCallCallsite(
     uint64_t CandidateGUID,
     const DenseMap<ValueInfo, CallsiteInfo> &MapTailCallCalleeVIToCallsite,
     std::optional<DenseMap<uint64_t, const CallsiteInfo *>>
         &OrigNameGUIDToTailCallCallsite,
-    const ModuleSummaryIndex *ImportSummary, InstrProfSymtab &Symtab) {
+    std::optional<DenseMap<ValueInfo, const GlobalAlias *>> &AliasVIToGV,
+    const Module &M, const ModuleSummaryIndex *ImportSummary,
+    InstrProfSymtab &Symtab) {
   auto End = MapTailCallCalleeVIToCallsite.end();
   // The callee of the synthesized record is normally the VP metadata GUID, so
   // check that first.
@@ -6758,17 +6826,34 @@ static const CallsiteInfo *findIndirectTailCallCallsite(
   // The index for a distributed ThinLTO backend does not record the original
   // names of local functions, in which case the above lookup via
   // getGUIDFromOriginalID fails. Instead, compute the original name GUID of
-  // each record's callee from its function in this module, located via its
-  // GUID (which is recorded in the function's !guid metadata), using its name
-  // before any promotion.
+  // each record's callee from its function or alias in this module, using its
+  // name before any promotion.
   if (!OrigNameGUIDToTailCallCallsite) {
     // Construct the (initially empty) map so that it is marked as built, even
     // if no entries are added below, to avoid rebuilding it on later calls.
     OrigNameGUIDToTailCallCallsite.emplace();
     for (const auto &[CalleeVI, Callsite] : MapTailCallCalleeVIToCallsite) {
-      Function *Callee = Symtab.getFunction(CalleeVI.getGUID());
-      if (!Callee)
-        continue;
+      const GlobalValue *Callee = Symtab.getFunction(CalleeVI.getGUID());
+      if (!Callee) {
+        // InstrProfSymtab only indexes Functions, not GlobalAliases (imported
+        // alias copies are materialized as Functions with thinlto_alias_guid
+        // metadata and are found via Symtab above). Lazily build a module-wide
+        // map for same-module function GlobalAliases once per module so we can
+        // recover the alias's pre-promotion name.
+        if (!AliasVIToGV) {
+          AliasVIToGV.emplace();
+          for (const GlobalAlias &A : M.aliases()) {
+            if (isMemProfClone(A) ||
+                !isa_and_nonnull<Function>(A.getAliaseeObject()))
+              continue;
+            if (ValueInfo VI = findValueInfoForGV(A, M, ImportSummary))
+              AliasVIToGV->try_emplace(VI, &A);
+          }
+        }
+        Callee = AliasVIToGV->lookup(CalleeVI);
+        if (!Callee)
+          continue;
+      }
       StringRef OrigName =
           ModuleSummaryIndex::getOriginalNameBeforePromote(Callee->getName());
       auto [It, Inserted] = OrigNameGUIDToTailCallCallsite->try_emplace(
@@ -6796,7 +6881,16 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
   // promoted and global function names shouldn't need any special handling
   // (they should not get the ".llvm.*" suffix that the canonicalization
   // handling is attempting to strip).
-  if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false)) {
+  // Key imported copies of aliases by the alias's GUID rather than the
+  // aliasee's GUID retained in their !guid metadata, since we rely on the
+  // looked up function's name (to compute its original name GUID and the names
+  // of its clones), and so that they don't shadow the aliasee's own function
+  // when both are in the module. See AliaseeGUIDToImportedAlias for how
+  // performICP handles profiled targets that are the aliasee of an imported
+  // alias copy when the aliasee itself is not in the module.
+  AliaseeGUIDToImportedAlias.reset();
+  if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false,
+                               /*KeyImportedAliasesByAliasGUID=*/true)) {
     std::string SymtabFailure = toString(std::move(E));
     M.getContext().emitError("Failed to create symtab: " + SymtabFailure);
     return false;
@@ -6871,6 +6965,11 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 
   if (!initializeIndirectCallPromotionInfo(M))
     return false;
+
+  // Lazily populated map from alias ValueInfo to the corresponding same-module
+  // GlobalAlias, used by findIndirectTailCallCallsite when a local alias target
+  // is not in Symtab.
+  std::optional<DenseMap<ValueInfo, const GlobalAlias *>> AliasVIToGV;
 
   for (auto &F : M) {
     if (F.isDeclaration() || isMemProfClone(F))
@@ -7088,28 +7187,18 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             MaxAllocVersionsThinBackend = AllocNode.Versions.size();
 
           // If there is only one version that means we didn't end up
-          // considering this function for cloning, and in that case the alloc
-          // will still be none type or should have gotten the default NotCold.
-          // Skip that after calling clone helper since that does some sanity
-          // checks that confirm we haven't decided yet that we need cloning.
-          // We might have a single version that is cold due to the
-          // MinClonedColdBytePercent heuristic, make sure we don't skip in that
-          // case.
+          // considering this function for cloning. Count that as unclonable
+          // unless the single version is cold due to the
+          // MinClonedColdBytePercent heuristic. The alloc may still be none
+          // type (not reached during whole program analysis), in which case
+          // there is nothing to apply; otherwise it got the type the whole
+          // program analysis resolved it to (not cold, or both types when the
+          // contexts could not be disambiguated), which is applied below like
+          // for cloned functions so that the attribute matches the regular
+          // LTO result.
           if (AllocNode.Versions.size() == 1 &&
-              (AllocationType)AllocNode.Versions[0] != AllocationType::Cold) {
-            assert((AllocationType)AllocNode.Versions[0] ==
-                       AllocationType::NotCold ||
-                   (AllocationType)AllocNode.Versions[0] ==
-                       AllocationType::None);
+              (AllocationType)AllocNode.Versions[0] != AllocationType::Cold)
             UnclonableAllocsThinBackend++;
-            continue;
-          }
-
-          // All versions should have a singular allocation type.
-          assert(llvm::none_of(AllocNode.Versions, [](uint8_t Type) {
-            return Type == ((uint8_t)AllocationType::NotCold |
-                            (uint8_t)AllocationType::Cold);
-          }));
 
           // Update the allocation types per the summary info.
           for (unsigned J = 0; J < AllocNode.Versions.size(); J++) {
@@ -7121,11 +7210,20 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             if (AllocNode.Versions[J] == (uint8_t)AllocationType::None)
               continue;
             AllocationType AllocTy = (AllocationType)AllocNode.Versions[J];
-            AllocTy == AllocationType::Cold ? AllocTypeColdThinBackend++
-                                            : AllocTypeNotColdThinBackend++;
+            // The whole program analysis only records both types when
+            // ambiguous attributes are enabled; if the backend runs without
+            // them, fall back to the not cold default.
+            if (isAmbiguousAllocType((uint8_t)AllocTy) &&
+                !MemProfUseAmbiguousAttributes)
+              AllocTy = AllocationType::NotCold;
+            const bool IsAmbiguous = isAmbiguousAllocType((uint8_t)AllocTy);
+            if (AllocTy == AllocationType::Cold)
+              AllocTypeColdThinBackend++;
+            else if (IsAmbiguous)
+              AllocTypeAmbiguousThinBackend++;
+            else
+              AllocTypeNotColdThinBackend++;
             std::string AllocTypeString = getAllocTypeAttributeString(AllocTy);
-            auto A = llvm::Attribute::get(F.getContext(), "memprof",
-                                          AllocTypeString);
             CallBase *CBClone;
             // Copy 0 is the original function.
             if (!J)
@@ -7135,8 +7233,15 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
               // clone J-1 (J==0 is the original clone and does not have a VMaps
               // entry).
               CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
-            removeAnyExistingAmbiguousAttribute(CBClone);
-            CBClone->addFnAttr(A);
+            if (IsAmbiguous) {
+              // The contexts could not be disambiguated: keep (or add) the
+              // ambiguous attribute from matching instead of a specific type.
+              addAmbiguousAttribute(CBClone);
+            } else {
+              removeAnyExistingAmbiguousAttribute(CBClone);
+              CBClone->addFnAttr(llvm::Attribute::get(F.getContext(), "memprof",
+                                                      AllocTypeString));
+            }
             ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CBClone)
                      << ore::NV("AllocationCall", CBClone) << " in clone "
                      << ore::NV("Caller", CBClone->getFunction())
@@ -7229,7 +7334,8 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
               [&](const InstrProfValueData &Candidate) {
                 return findIndirectTailCallCallsite(
                     Candidate.Value, MapTailCallCalleeVIToCallsite,
-                    OrigNameGUIDToTailCallCallsite, ImportSummary, *Symtab);
+                    OrigNameGUIDToTailCallCallsite, AliasVIToGV, M,
+                    ImportSummary, *Symtab);
               },
               ICallAnalysisInfo);
           if (ICallAnalysisInfo.size() > PrevNumICallAnalysisInfo)
@@ -7349,6 +7455,30 @@ void MemProfContextDisambiguation::performICP(
       if (!TargetFunction && StackNode && StackNode->Callee &&
           StackNode->Callee.getGUID() != Candidate.Value)
         TargetFunction = Symtab->getFunction(StackNode->Callee.getGUID());
+      // The target may be the aliasee of an alias imported as a copy of the
+      // aliasee, without the aliasee itself being imported (e.g. an IRPGO value
+      // profile records the aliasee for calls through the alias, as the alias
+      // has no profile data of its own). The Symtab keys such a copy by the
+      // alias GUID (see initializeIndirectCallPromotionInfo), so look for one
+      // with the target's GUID as its aliasee GUID. Promoting to the copy is
+      // correct as it has the same address, and its clones are aliases of the
+      // aliasee's clones in the defining module.
+      if (!TargetFunction) {
+        if (!AliaseeGUIDToImportedAlias) {
+          AliaseeGUIDToImportedAlias.emplace();
+          for (Function &Fn : M) {
+            if (isMemProfClone(Fn) || !getImportedAliasGUID(Fn))
+              continue;
+            if (auto AliaseeGUID = Fn.getGUIDIfAssigned())
+              AliaseeGUIDToImportedAlias->try_emplace(*AliaseeGUID, &Fn);
+          }
+        }
+        TargetFunction = AliaseeGUIDToImportedAlias->lookup(Candidate.Value);
+        if (!TargetFunction && StackNode && StackNode->Callee &&
+            StackNode->Callee.getGUID() != Candidate.Value)
+          TargetFunction =
+              AliaseeGUIDToImportedAlias->lookup(StackNode->Callee.getGUID());
+      }
       if (TargetFunction == nullptr ||
           // Any ThinLTO global dead symbol removal should have already
           // occurred, so it should be safe to promote when the target is a

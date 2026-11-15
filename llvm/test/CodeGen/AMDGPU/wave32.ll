@@ -747,13 +747,13 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX1032-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX1032-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX1032-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX1032-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
+; GFX1032-NEXT:    v_trunc_f32_e32 v2, v1
 ; GFX1032-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX1032-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX1032-NEXT:    v_madmk_f32 v0, v2, 0xcf800000, v0
 ; GFX1032-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX1032-NEXT:    v_readfirstlane_b32 s5, v0
+; GFX1032-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX1032-NEXT:    s_mul_i32 s10, s8, s4
+; GFX1032-NEXT:    v_readfirstlane_b32 s5, v0
 ; GFX1032-NEXT:    s_mul_hi_u32 s12, s8, s5
 ; GFX1032-NEXT:    s_mul_i32 s11, s9, s5
 ; GFX1032-NEXT:    s_add_i32 s10, s12, s10
@@ -895,13 +895,13 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX1064-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX1064-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX1064-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX1064-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
+; GFX1064-NEXT:    v_trunc_f32_e32 v2, v1
 ; GFX1064-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX1064-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX1064-NEXT:    v_madmk_f32 v0, v2, 0xcf800000, v0
 ; GFX1064-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX1064-NEXT:    v_readfirstlane_b32 s5, v0
+; GFX1064-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX1064-NEXT:    s_mul_i32 s10, s8, s4
+; GFX1064-NEXT:    v_readfirstlane_b32 s5, v0
 ; GFX1064-NEXT:    s_mul_hi_u32 s12, s8, s5
 ; GFX1064-NEXT:    s_mul_i32 s11, s9, s5
 ; GFX1064-NEXT:    s_add_i32 s10, s12, s10

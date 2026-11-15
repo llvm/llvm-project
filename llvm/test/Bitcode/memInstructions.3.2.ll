@@ -39,40 +39,40 @@ entry:
 ; CHECK-NEXT: %res4 = load volatile i8, ptr %ptr1, align 1
   %res4 = load volatile i8, i8* %ptr1, align 1
 
-; CHECK-NEXT: %res5 = load i8, ptr %ptr1, align 1, !nontemporal !0
+; CHECK-NEXT: %res5 = load i8, ptr %ptr1, align 1, !nontemporal !2
   %res5 = load i8, i8* %ptr1, !nontemporal !0
 
-; CHECK-NEXT: %res6 = load volatile i8, ptr %ptr1, align 1, !nontemporal !0
+; CHECK-NEXT: %res6 = load volatile i8, ptr %ptr1, align 1, !nontemporal !2
   %res6 = load volatile i8, i8* %ptr1, !nontemporal !0
 
-; CHECK-NEXT: %res7 = load i8, ptr %ptr1, align 1, !nontemporal !0
+; CHECK-NEXT: %res7 = load i8, ptr %ptr1, align 1, !nontemporal !2
   %res7 = load i8, i8* %ptr1, align 1, !nontemporal !0
 
-; CHECK-NEXT: %res8 = load volatile i8, ptr %ptr1, align 1, !nontemporal !0
+; CHECK-NEXT: %res8 = load volatile i8, ptr %ptr1, align 1, !nontemporal !2
   %res8 = load volatile i8, i8* %ptr1, align 1, !nontemporal !0
 
-; CHECK-NEXT: %res9 = load i8, ptr %ptr1, align 1, !invariant.load !1
+; CHECK-NEXT: %res9 = load i8, ptr %ptr1, align 1, !invariant.load !3
   %res9 = load i8, i8* %ptr1, !invariant.load !1
 
-; CHECK-NEXT: %res10 = load volatile i8, ptr %ptr1, align 1, !invariant.load !1
+; CHECK-NEXT: %res10 = load volatile i8, ptr %ptr1, align 1, !invariant.load !3
   %res10 = load volatile i8, i8* %ptr1, !invariant.load !1
 
-; CHECK-NEXT: %res11 = load i8, ptr %ptr1, align 1, !invariant.load !1
+; CHECK-NEXT: %res11 = load i8, ptr %ptr1, align 1, !invariant.load !3
   %res11 = load i8, i8* %ptr1, align 1, !invariant.load !1
 
-; CHECK-NEXT: %res12 = load volatile i8, ptr %ptr1, align 1, !invariant.load !1
+; CHECK-NEXT: %res12 = load volatile i8, ptr %ptr1, align 1, !invariant.load !3
   %res12 = load volatile i8, i8* %ptr1, align 1, !invariant.load !1
 
-; CHECK-NEXT: %res13 = load i8, ptr %ptr1, {{[(!nontemporal !0, !invariant.load !1) | (!invariant.load !1, !nontemporal !0)]}}
+; CHECK-NEXT: %res13 = load i8, ptr %ptr1, {{[(!nontemporal !2, !invariant.load !3) | (!invariant.load !3, !nontemporal !2)]}}
   %res13 = load i8, i8* %ptr1, !nontemporal !0, !invariant.load !1
 
-; CHECK-NEXT: %res14 = load volatile i8, ptr %ptr1, {{[(!nontemporal !0, !invariant.load !1) | (!invariant.load !1, !nontemporal !0)]}}
+; CHECK-NEXT: %res14 = load volatile i8, ptr %ptr1, {{[(!nontemporal !2, !invariant.load !3) | (!invariant.load !3, !nontemporal !2)]}}
   %res14 = load volatile i8, i8* %ptr1, !nontemporal !0, !invariant.load !1
 
-; CHECK-NEXT: %res15 = load i8, ptr %ptr1, align 1, {{[(!nontemporal !0, !invariant.load !1) | (!invariant.load !1, !nontemporal !0)]}}
+; CHECK-NEXT: %res15 = load i8, ptr %ptr1, align 1, {{[(!nontemporal !2, !invariant.load !3) | (!invariant.load !3, !nontemporal !2)]}}
   %res15 = load i8, i8* %ptr1, align 1, !nontemporal !0, !invariant.load !1
 
-; CHECK-NEXT: %res16 = load volatile i8, ptr %ptr1, align 1, {{[(!nontemporal !0, !invariant.load !1) | (!invariant.load !1, !nontemporal !0)]}}
+; CHECK-NEXT: %res16 = load volatile i8, ptr %ptr1, align 1, {{[(!nontemporal !2, !invariant.load !3) | (!invariant.load !3, !nontemporal !2)]}}
   %res16 = load volatile i8, i8* %ptr1, align 1, !nontemporal !0, !invariant.load !1
 
   ret void
@@ -150,16 +150,16 @@ entry:
 ; CHECK-NEXT: store volatile i8 2, ptr %ptr1, align 1
   store volatile i8 2, i8* %ptr1, align 1
 
-; CHECK-NEXT: store i8 2, ptr %ptr1, align 1, !nontemporal !0
+; CHECK-NEXT: store i8 2, ptr %ptr1, align 1, !nontemporal !2
   store i8 2, i8* %ptr1, !nontemporal !0
 
-; CHECK-NEXT: store volatile i8 2, ptr %ptr1, align 1, !nontemporal !0
+; CHECK-NEXT: store volatile i8 2, ptr %ptr1, align 1, !nontemporal !2
   store volatile i8 2, i8* %ptr1, !nontemporal !0
 
-; CHECK-NEXT: store i8 2, ptr %ptr1, align 1, !nontemporal !0
+; CHECK-NEXT: store i8 2, ptr %ptr1, align 1, !nontemporal !2
   store i8 2, i8* %ptr1, align 1, !nontemporal !0
 
-; CHECK-NEXT: store volatile i8 2, ptr %ptr1, align 1, !nontemporal !0
+; CHECK-NEXT: store volatile i8 2, ptr %ptr1, align 1, !nontemporal !2
   store volatile i8 2, i8* %ptr1, align 1, !nontemporal !0
 
   ret void

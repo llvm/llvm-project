@@ -215,7 +215,14 @@ def DeadOnReturn : IntAttr<"dead_on_return", IntersectMin, [ParamAttr]>;
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 
 /// inline=never.
+/// Note: optnone implies noinline (unless alwaysinline is also present). Use
+/// Function::isNoInline() or CallBase::isNoInline() rather than querying this
+/// attribute directly.
 def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
+
+/// Function is likely only referenced from the current module.
+def LikelyModuleLocal
+    : EnumAttr<"likely_module_local", IntersectAnd, [FnAttr]>;
 
 /// nooutline
 def NoOutline : EnumAttr<"nooutline", IntersectPreserve, [FnAttr]>;

@@ -132,7 +132,6 @@ add_libc_test(
     libc.src.__support.CPP.utility
 )
 
-
 # This test fails with invalid address space operations on sm_60
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(

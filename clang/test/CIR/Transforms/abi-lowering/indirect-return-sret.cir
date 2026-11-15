@@ -45,7 +45,7 @@ module attributes {
 } {
 
   cir.func @returns_big() -> !rec_Big
-      attributes { test_classify = #indirect_return } {
+      requires_call_conv_lowering attributes { test_classify = #indirect_return } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
@@ -72,7 +72,7 @@ module attributes {
   // sret slot directly, so construction flows straight into it and the
   // original store-from-result is dropped (no byte-copy, no load-back).
   cir.func @caller() -> !s32i
-      attributes { test_classify = #caller_cls } {
+      requires_call_conv_lowering attributes { test_classify = #caller_cls } {
     %1 = cir.alloca "s" align(8) : !cir.ptr<!rec_Big>
     %0 = cir.call @returns_big() : () -> !rec_Big
     cir.store %0, %1 : !rec_Big, !cir.ptr<!rec_Big>
@@ -92,7 +92,7 @@ module attributes {
   // A call whose result has more than one use cannot reuse a destination, so a
   // fresh sret slot is allocated and each store of the result copies out of it.
   cir.func @caller_multi() -> !s32i
-      attributes { test_classify = #caller_cls } {
+      requires_call_conv_lowering attributes { test_classify = #caller_cls } {
     %a = cir.alloca "a" align(8) : !cir.ptr<!rec_Big>
     %b = cir.alloca "b" align(8) : !cir.ptr<!rec_Big>
     %0 = cir.call @returns_big() : () -> !rec_Big
@@ -116,7 +116,7 @@ module attributes {
   // s8 argument is still extended to s32 with llvm.signext on both the callee
   // signature and the call site.
   cir.func @returns_big_ext(%arg0: !s8i) -> !rec_Big
-      attributes { test_classify = #indirect_return_ext } {
+      requires_call_conv_lowering attributes { test_classify = #indirect_return_ext } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
@@ -132,7 +132,7 @@ module attributes {
   // CHECK:        cir.return
 
   cir.func @caller_ext(%arg0: !s8i) -> !s32i
-      attributes { test_classify = #caller_cls } {
+      requires_call_conv_lowering attributes { test_classify = #caller_cls } {
     %1 = cir.alloca "s" align(8) : !cir.ptr<!rec_Big>
     %0 = cir.call @returns_big_ext(%arg0) : (!s8i) -> !rec_Big
     cir.store %0, %1 : !rec_Big, !cir.ptr<!rec_Big>
@@ -151,7 +151,7 @@ module attributes {
   // returns into a single epilogue), so every cir.return must be routed
   // through the sret pointer and the shared alloca rewired exactly once.
   cir.func @returns_big_cond(%cond: !cir.bool) -> !rec_Big
-      attributes { test_classify = #indirect_return_bool } {
+      requires_call_conv_lowering attributes { test_classify = #indirect_return_bool } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.if %cond {
@@ -179,10 +179,10 @@ module attributes {
   // both returns collapse to a bare cir.return, and nothing is stored to the
   // sret slot at all.
   cir.func private @make_big(!cir.ptr<!rec_Big>)
-      attributes { test_classify = #direct_ptr_arg }
+      requires_call_conv_lowering attributes { test_classify = #direct_ptr_arg }
 
   cir.func @returns_big_ctor(%cond: !cir.bool) -> !rec_Big
-      attributes { test_classify = #indirect_return_bool } {
+      requires_call_conv_lowering attributes { test_classify = #indirect_return_bool } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
     cir.if %cond {
       cir.call @make_big(%0) : (!cir.ptr<!rec_Big>) -> ()
@@ -206,7 +206,7 @@ module attributes {
   // sret composes with an Ignore argument: the ignored arg is dropped from the
   // signature and the sretOffset shift keeps the remaining block args aligned.
   cir.func @returns_big_ignore(%ignored: !s32i) -> !rec_Big
-      attributes { test_classify = #indirect_return_ignore } {
+      requires_call_conv_lowering attributes { test_classify = #indirect_return_ignore } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
@@ -226,7 +226,7 @@ module attributes {
   // when the function body is present.  Kept last so the CHECK-NOT below
   // scopes to this declaration.
   cir.func private @returns_big_decl() -> !rec_Big
-      attributes { test_classify = #indirect_return }
+      requires_call_conv_lowering attributes { test_classify = #indirect_return }
 
   // CHECK:      cir.func{{.*}} @returns_big_decl(!cir.ptr<!rec_Big> {
   // CHECK-SAME:     llvm.sret = !rec_Big

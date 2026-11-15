@@ -744,6 +744,7 @@ spirv::Deserializer::processFunctionEnd(ArrayRef<uint32_t> operands) {
     return failure();
   }
 
+  blockConstantMap.clear();
   curBlock = nullptr;
   curFunction = std::nullopt;
 
@@ -937,6 +938,7 @@ spirv::Deserializer::processGraphEndARM(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unexpected operands for OpGraphEndARM");
   }
 
+  blockConstantMap.clear();
   curBlock = nullptr;
   curGraph = std::nullopt;
   graphOutputs.clear();
@@ -2186,6 +2188,9 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   } else if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
     if (auto element = opBuilder.getZeroAttr(tensorType.getElementType()))
       attr = DenseElementsAttr::get(tensorType, element);
+  } else if (isa<spirv::ArrayType, spirv::PointerType, spirv::StructType>(
+                 resultType)) {
+    attr = spirv::NullAttr::get(resultType);
   }
 
   if (attr) {

@@ -201,6 +201,22 @@ def vashr_vlshr_imm : GICombineRule<
   (apply [{ applyVAshrLshrImm(*${mi}, MRI, ${matchinfo}); }])
 >;
 
+// Lower a vector shift right by a non-immediate amount to SSHL/USHL of the
+// negated amount, so the negation folds away when the amount is constant.
+def vashr_to_sshl : GICombineRule<
+  (defs root:$dst),
+  (match (G_ASHR $dst, $src, $amt):$mi,
+         [{ return matchVAshrLshrToSShl(*${mi}, MRI); }]),
+  (apply (G_SUB $neg, 0, $amt),
+         (int_aarch64_neon_sshl $dst, $src, $neg))>;
+
+def vlshr_to_ushl : GICombineRule<
+  (defs root:$dst),
+  (match (G_LSHR $dst, $src, $amt):$mi,
+         [{ return matchVAshrLshrToSShl(*${mi}, MRI); }]),
+  (apply (G_SUB $neg, 0, $amt),
+         (int_aarch64_neon_ushl $dst, $src, $neg))>;
+
 def form_duplane_matchdata :
   GIDefMatchData<"std::pair<unsigned, int>">;
 def form_duplane : GICombineRule <
@@ -479,5 +495,5 @@ def AArch64PostLegalizerCombiner
                         extmultomull, subaddmulreassoc, truncsat_combines,
                         lshr_of_trunc_of_lshr,
                         funnel_shift_from_or_shift_constants_are_legal,
-                        simplify_demanded_bits]> {
+                        vashr_to_sshl, vlshr_to_ushl, simplify_demanded_bits]> {
 }

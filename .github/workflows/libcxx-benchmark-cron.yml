@@ -177,7 +177,8 @@ jobs:
           if [ -f "${RUNNER_TEMP}/refinement/refinement.txt" ]; then
             cat "${RUNNER_TEMP}/refinement/refinement.txt" >> commits.txt
           fi
-          libcxx/utils/ci/lnt/plan-benchmarks --commit-list commits.txt --lnt-url "${LNT_URL}" --test-suite libcxx \
+          libcxx/utils/ci/lnt/plan-benchmarks --commit-list commits.txt --lnt-url "${LNT_URL}"             \
+                                              --project libcxx --test-suite microbenchmarks                \
                                               --machine "${MACHINE}" --samples "${SAMPLES}" --output plan.jsonl
 
       - name: Request the missing runs

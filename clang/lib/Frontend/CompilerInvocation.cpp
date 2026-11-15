@@ -4747,7 +4747,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     } else
       Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
 
-    if (Opts.LangStd < LangStandard::lang_hlsl202x) {
+    if (Opts.LangStd < LangStandard::lang_hlsl2021) {
       const LangStandard &Requested =
           LangStandard::getLangStandardForKind(Opts.LangStd);
       const LangStandard &Recommended =

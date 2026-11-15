@@ -116,9 +116,9 @@ define nofpclass(nan pinf zero sub norm) half @ret_only_ninf(half %x, half %y) {
   ret half %add
 }
 
-define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_select_unknown_or_pinf__unknown(i1 %cond, half %x, half %y) {
+define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_select_unknown_or_pinf__unknown(i1 noundef %cond, half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_select_unknown_or_pinf__unknown(
-; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_OR_PINF:%.*]] = select i1 [[COND]], half [[X]], half +inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X_OR_PINF]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
@@ -128,9 +128,9 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_select_unknown_or_pinf__un
   ret half %add
 }
 
-define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_unknown__select_unknown_or_pinf(i1 %cond, half %x, half %y) {
+define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_unknown__select_unknown_or_pinf(i1 noundef %cond, half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_unknown__select_unknown_or_pinf(
-; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[Y_OR_PINF:%.*]] = select i1 [[COND]], half [[Y]], half +inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X]], [[Y_OR_PINF]]
 ; CHECK-NEXT:    ret half [[ADD]]
@@ -140,9 +140,9 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_unknown__select_unknown_or
   ret half %add
 }
 
-define nofpclass(inf) half @ret_nofpclass_inf__fadd_select_unknown_or_inf__unknown(i1 %cond, half %x, half %y) {
+define nofpclass(inf) half @ret_nofpclass_inf__fadd_select_unknown_or_inf__unknown(i1 noundef %cond, half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(inf) half @ret_nofpclass_inf__fadd_select_unknown_or_inf__unknown(
-; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[INF:%.*]] = call half @returns_inf()
 ; CHECK-NEXT:    [[X_OR_INF:%.*]] = select i1 [[COND]], half [[X]], half [[INF]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X_OR_INF]], [[Y]]
@@ -154,9 +154,9 @@ define nofpclass(inf) half @ret_nofpclass_inf__fadd_select_unknown_or_inf__unkno
   ret half %add
 }
 
-define nofpclass(inf) half @ret_nofpclass_inf__fadd_unknown__select_unknown_or_inf(i1 %cond, half %x, half %y) {
+define nofpclass(inf) half @ret_nofpclass_inf__fadd_unknown__select_unknown_or_inf(i1 noundef %cond, half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(inf) half @ret_nofpclass_inf__fadd_unknown__select_unknown_or_inf(
-; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[INF:%.*]] = call half @returns_inf()
 ; CHECK-NEXT:    [[Y_OR_INF:%.*]] = select i1 [[COND]], half [[Y]], half [[INF]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X]], [[Y_OR_INF]]
@@ -168,9 +168,9 @@ define nofpclass(inf) half @ret_nofpclass_inf__fadd_unknown__select_unknown_or_i
   ret half %add
 }
 
-define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_select_unknown_or_pinf(i1 %cond, half %x, half %y) {
+define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_select_unknown_or_pinf(i1 noundef %cond, half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_select_unknown_or_pinf(
-; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd half [[X]], [[Y]]
 ; CHECK-NEXT:    ret half [[TMP1]]
 ;
@@ -180,9 +180,9 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_select_unknown_or_pinf(i1 
   ret half %add
 }
 
-define nofpclass(ninf) half @ret_nofpclass_ninf__fadd_select_unknown_or_ninf(i1 %cond, half %x, half %y) {
+define nofpclass(ninf) half @ret_nofpclass_ninf__fadd_select_unknown_or_ninf(i1 noundef %cond, half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(ninf) half @ret_nofpclass_ninf__fadd_select_unknown_or_ninf(
-; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd half [[X]], [[Y]]
 ; CHECK-NEXT:    ret half [[TMP1]]
 ;
@@ -192,9 +192,9 @@ define nofpclass(ninf) half @ret_nofpclass_ninf__fadd_select_unknown_or_ninf(i1 
   ret half %add
 }
 
-define nofpclass(inf) half @ret_nofpclass_inf__fadd_select_unknown_or_inf(i1 %cond, half %x, half %y) {
+define nofpclass(inf) half @ret_nofpclass_inf__fadd_select_unknown_or_inf(i1 noundef %cond, half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(inf) half @ret_nofpclass_inf__fadd_select_unknown_or_inf(
-; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[INF0:%.*]] = call half @returns_inf()
 ; CHECK-NEXT:    [[INF1:%.*]] = call half @returns_inf()
 ; CHECK-NEXT:    [[X_OR_INF:%.*]] = select i1 [[COND]], half [[X]], half [[INF0]]
@@ -210,9 +210,9 @@ define nofpclass(inf) half @ret_nofpclass_inf__fadd_select_unknown_or_inf(i1 %co
   ret half %add
 }
 
-define nofpclass(nan inf) half @ret_nofpclass_inf_nan__fadd_select_unknown_or_inf(i1 %cond, half %x, half %y) {
+define nofpclass(nan inf) half @ret_nofpclass_inf_nan__fadd_select_unknown_or_inf(i1 noundef %cond, half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(nan inf) half @ret_nofpclass_inf_nan__fadd_select_unknown_or_inf(
-; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[INF0:%.*]] = call half @returns_inf()
 ; CHECK-NEXT:    [[INF1:%.*]] = call half @returns_inf()
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan ninf half [[X]], [[Y]]
@@ -227,9 +227,9 @@ define nofpclass(nan inf) half @ret_nofpclass_inf_nan__fadd_select_unknown_or_in
 }
 
 ; Cannot prune the select, the result could be nan depending on %x
-define nofpclass(inf sub norm) half @nan_result_demands_inf_input_lhs(i1 %cond, half nofpclass(zero) %x, half nofpclass(zero inf nan) %y) {
+define nofpclass(inf sub norm) half @nan_result_demands_inf_input_lhs(i1 noundef %cond, half nofpclass(zero) %x, half nofpclass(zero inf nan) %y) {
 ; CHECK-LABEL: define nofpclass(inf sub norm) half @nan_result_demands_inf_input_lhs(
-; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(nan inf zero) [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(nan inf zero) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[PINF:%.*]] = call half @returns_pinf()
 ; CHECK-NEXT:    [[X_OR_INF:%.*]] = select i1 [[COND]], half [[X]], half +inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X_OR_INF]], [[Y]]
@@ -242,9 +242,9 @@ define nofpclass(inf sub norm) half @nan_result_demands_inf_input_lhs(i1 %cond, 
 }
 
 ; Cannot prune the select, the result could be nan depending on %y
-define nofpclass(inf sub norm) half @nan_result_demands_inf_input_rhs(i1 %cond, half nofpclass(zero) %x, half %y) {
+define nofpclass(inf sub norm) half @nan_result_demands_inf_input_rhs(i1 noundef %cond, half nofpclass(zero) %x, half %y) {
 ; CHECK-LABEL: define nofpclass(inf sub norm) half @nan_result_demands_inf_input_rhs(
-; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[PINF:%.*]] = call half @returns_pinf()
 ; CHECK-NEXT:    [[Y_OR_INF:%.*]] = select i1 [[COND]], half [[Y]], half +inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X]], [[Y_OR_INF]]
@@ -257,9 +257,9 @@ define nofpclass(inf sub norm) half @nan_result_demands_inf_input_rhs(i1 %cond, 
 }
 
 ; Cannot prune the select
-define nofpclass(nan sub norm zero) half @inf_result_demands_inf_input_lhs(i1 %cond, half nofpclass(zero) %x, half nofpclass(zero) %y) {
+define nofpclass(nan sub norm zero) half @inf_result_demands_inf_input_lhs(i1 noundef %cond, half nofpclass(zero) %x, half nofpclass(zero) %y) {
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) half @inf_result_demands_inf_input_lhs(
-; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[INF:%.*]] = call half @returns_inf()
 ; CHECK-NEXT:    [[X_OR_INF:%.*]] = select i1 [[COND]], half [[X]], half [[INF]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X_OR_INF]], [[Y]]
@@ -272,9 +272,9 @@ define nofpclass(nan sub norm zero) half @inf_result_demands_inf_input_lhs(i1 %c
 }
 
 ; Cannot prune the select
-define nofpclass(nan sub norm zero) half @inf_result_demands_inf_input_rhs(i1 %cond, half nofpclass(zero) %x, half nofpclass(zero) %y) {
+define nofpclass(nan sub norm zero) half @inf_result_demands_inf_input_rhs(i1 noundef %cond, half nofpclass(zero) %x, half nofpclass(zero) %y) {
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) half @inf_result_demands_inf_input_rhs(
-; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[INF:%.*]] = call half @returns_inf()
 ; CHECK-NEXT:    [[Y_OR_INF:%.*]] = select i1 [[COND]], half [[Y]], half [[INF]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X]], [[Y_OR_INF]]
@@ -287,9 +287,9 @@ define nofpclass(nan sub norm zero) half @inf_result_demands_inf_input_rhs(i1 %c
 }
 
 ; Cannot prune the select
-define nofpclass(nan sub norm zero) half @inf_result_demands_pinf_input_lhs(i1 %cond, half nofpclass(zero) %x, half nofpclass(zero) %y) {
+define nofpclass(nan sub norm zero) half @inf_result_demands_pinf_input_lhs(i1 noundef %cond, half nofpclass(zero) %x, half nofpclass(zero) %y) {
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) half @inf_result_demands_pinf_input_lhs(
-; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[PINF:%.*]] = call half @returns_pinf()
 ; CHECK-NEXT:    [[X_OR_INF:%.*]] = select i1 [[COND]], half [[X]], half +inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X_OR_INF]], [[Y]]
@@ -302,9 +302,9 @@ define nofpclass(nan sub norm zero) half @inf_result_demands_pinf_input_lhs(i1 %
 }
 
 ; Cannot prune the select
-define nofpclass(nan sub norm zero) half @inf_result_demands_pinf_input_rhs(i1 %cond, half nofpclass(zero) %x, half nofpclass(zero) %y) {
+define nofpclass(nan sub norm zero) half @inf_result_demands_pinf_input_rhs(i1 noundef %cond, half nofpclass(zero) %x, half nofpclass(zero) %y) {
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) half @inf_result_demands_pinf_input_rhs(
-; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[PINF:%.*]] = call half @returns_pinf()
 ; CHECK-NEXT:    [[Y_OR_INF:%.*]] = select i1 [[COND]], half [[Y]], half +inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X]], [[Y_OR_INF]]
@@ -317,9 +317,9 @@ define nofpclass(nan sub norm zero) half @inf_result_demands_pinf_input_rhs(i1 %
 }
 
 ; Cannot prune the select
-define nofpclass(nan sub norm zero) half @inf_result_demands_ninf_input_lhs(i1 %cond, half nofpclass(zero) %x, half nofpclass(zero) %y) {
+define nofpclass(nan sub norm zero) half @inf_result_demands_ninf_input_lhs(i1 noundef %cond, half nofpclass(zero) %x, half nofpclass(zero) %y) {
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) half @inf_result_demands_ninf_input_lhs(
-; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[NINF:%.*]] = call half @returns_ninf()
 ; CHECK-NEXT:    [[X_OR_INF:%.*]] = select i1 [[COND]], half [[X]], half -inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X_OR_INF]], [[Y]]
@@ -332,9 +332,9 @@ define nofpclass(nan sub norm zero) half @inf_result_demands_ninf_input_lhs(i1 %
 }
 
 ; Cannot prune the select
-define nofpclass(nan sub norm zero) half @inf_result_demands_ninf_input_rhs(i1 %cond, half nofpclass(zero) %x, half nofpclass(zero) %y) {
+define nofpclass(nan sub norm zero) half @inf_result_demands_ninf_input_rhs(i1 noundef %cond, half nofpclass(zero) %x, half nofpclass(zero) %y) {
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) half @inf_result_demands_ninf_input_rhs(
-; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[NINF:%.*]] = call half @returns_ninf()
 ; CHECK-NEXT:    [[Y_OR_INF:%.*]] = select i1 [[COND]], half [[Y]], half -inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X]], [[Y_OR_INF]]
@@ -980,9 +980,9 @@ define nofpclass(snan) half @zero_or_nan__fadd_nsz__unknown(half %unknown) {
   ret half %add
 }
 
-define nofpclass(inf) half @nan_result_demands_nan_input_lhs(i1 %cond, half %unknown, half nofpclass(inf nan zero sub) %normal) {
+define nofpclass(inf) half @nan_result_demands_nan_input_lhs(i1 noundef %cond, half %unknown, half nofpclass(inf nan zero sub) %normal) {
 ; CHECK-LABEL: define nofpclass(inf) half @nan_result_demands_nan_input_lhs(
-; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]], half nofpclass(nan inf zero sub) [[NORMAL:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[UNKNOWN:%.*]], half nofpclass(nan inf zero sub) [[NORMAL:%.*]]) {
 ; CHECK-NEXT:    [[NAN:%.*]] = call half @returns_nan()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NAN]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[NORMAL]]
@@ -994,9 +994,9 @@ define nofpclass(inf) half @nan_result_demands_nan_input_lhs(i1 %cond, half %unk
   ret half %add
 }
 
-define nofpclass(inf) half @nan_result_demands_nan_input_rhs(i1 %cond, half %unknown, half nofpclass(inf nan zero sub) %normal) {
+define nofpclass(inf) half @nan_result_demands_nan_input_rhs(i1 noundef %cond, half %unknown, half nofpclass(inf nan zero sub) %normal) {
 ; CHECK-LABEL: define nofpclass(inf) half @nan_result_demands_nan_input_rhs(
-; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]], half nofpclass(nan inf zero sub) [[NORMAL:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[UNKNOWN:%.*]], half nofpclass(nan inf zero sub) [[NORMAL:%.*]]) {
 ; CHECK-NEXT:    [[NAN:%.*]] = call half @returns_nan()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NAN]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[NORMAL]], [[SELECT]]
@@ -1097,9 +1097,9 @@ define nofpclass(snan) half @pzero__fadd__not_nzero_nsub__dynamic(half nofpclass
 }
 
 ; Cannot trim select
-define nofpclass(ninf norm nsub zero) half @fadd_self__pinf_result_demands_pnorm_source(i1 %cond, half noundef %unknown) {
+define nofpclass(ninf norm nsub zero) half @fadd_self__pinf_result_demands_pnorm_source(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(ninf zero nsub norm) half @fadd_self__pinf_result_demands_pnorm_source(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PNORM:%.*]] = call noundef half @returns_pnorm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[PNORM]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1112,9 +1112,9 @@ define nofpclass(ninf norm nsub zero) half @fadd_self__pinf_result_demands_pnorm
 }
 
 ; Cannot trim select
-define nofpclass(pinf norm psub zero) half @fadd_self__ninf_result_demands_nnorm_source(i1 %cond, half noundef %unknown) {
+define nofpclass(pinf norm psub zero) half @fadd_self__ninf_result_demands_nnorm_source(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(pinf zero psub norm) half @fadd_self__ninf_result_demands_nnorm_source(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call noundef half @returns_nnorm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NNORM]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1127,9 +1127,9 @@ define nofpclass(pinf norm psub zero) half @fadd_self__ninf_result_demands_nnorm
 }
 
 ; Cannot trim select
-define nofpclass(norm sub zero) half @fadd_self__inf_result_demands_norm_source(i1 %cond, half noundef %unknown) {
+define nofpclass(norm sub zero) half @fadd_self__inf_result_demands_norm_source(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(zero sub norm) half @fadd_self__inf_result_demands_norm_source(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NORM:%.*]] = call noundef half @returns_norm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NORM]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1142,9 +1142,9 @@ define nofpclass(norm sub zero) half @fadd_self__inf_result_demands_norm_source(
 }
 
 ; Cannot trim select
-define nofpclass(ninf nnorm sub zero) half @fadd_self__pnorm_result_demands_psub_source(i1 %cond, half noundef %unknown) {
+define nofpclass(ninf nnorm sub zero) half @fadd_self__pnorm_result_demands_psub_source(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(ninf zero sub nnorm) half @fadd_self__pnorm_result_demands_psub_source(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[PSUB]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1157,9 +1157,9 @@ define nofpclass(ninf nnorm sub zero) half @fadd_self__pnorm_result_demands_psub
 }
 
 ; Cannot trim select
-define nofpclass(ninf pnorm sub zero) half @fadd_self__nnorm_result_demands_nsub_source(i1 %cond, half noundef %unknown) {
+define nofpclass(ninf pnorm sub zero) half @fadd_self__nnorm_result_demands_nsub_source(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(ninf zero sub pnorm) half @fadd_self__nnorm_result_demands_nsub_source(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NSUB]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1172,9 +1172,9 @@ define nofpclass(ninf pnorm sub zero) half @fadd_self__nnorm_result_demands_nsub
 }
 
 ; Cannot trim select
-define nofpclass(ninf sub zero) half @fadd_self__norm_result_demands_sub_source(i1 %cond, half noundef %unknown) {
+define nofpclass(ninf sub zero) half @fadd_self__norm_result_demands_sub_source(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(ninf zero sub) half @fadd_self__norm_result_demands_sub_source(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef half @returns_sub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SUB]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1198,12 +1198,12 @@ define nofpclass(zero) half @ret_nozero__fadd_self__nozero(half noundef nofpclas
 }
 
 ; No zero output implies no zero inputs for fadd x, x, can trim select
-define nofpclass(zero) half @ret_nozero__fadd_self__select_nozero(i1 %cond, half noundef %unknown) {
+define nofpclass(zero) half @ret_nozero__fadd_self__select_nozero(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(zero) half @ret_nozero__fadd_self__select_nozero(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[ZERO:%.*]] = call noundef half @returns_zero()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[ZERO]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %zero = call noundef half @returns_zero()
@@ -1213,12 +1213,12 @@ define nofpclass(zero) half @ret_nozero__fadd_self__select_nozero(i1 %cond, half
 }
 
 ; No zero output implies no zero inputs for fadd x, x, can trim select
-define nofpclass(pzero) half @ret_nopzero__fadd_self__nopzero(i1 %cond, half noundef %unknown) {
+define nofpclass(pzero) half @ret_nopzero__fadd_self__nopzero(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(pzero) half @ret_nopzero__fadd_self__nopzero(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PZERO:%.*]] = call noundef half @returns_pzero()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[PZERO]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half 0.000000e+00, half [[UNKNOWN]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %pzero = call noundef half @returns_pzero()
@@ -1228,9 +1228,9 @@ define nofpclass(pzero) half @ret_nopzero__fadd_self__nopzero(i1 %cond, half nou
 }
 
 ; No zero output implies no zero inputs for fadd x, x, can trim select
-define nofpclass(pzero) half @ret_nopzero__fadd_self__nonzero(i1 %cond, half noundef %unknown) {
+define nofpclass(pzero) half @ret_nopzero__fadd_self__nonzero(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(pzero) half @ret_nopzero__fadd_self__nonzero(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NZERO:%.*]] = call noundef half @returns_nzero()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NZERO]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1243,12 +1243,12 @@ define nofpclass(pzero) half @ret_nopzero__fadd_self__nonzero(i1 %cond, half nou
 }
 
 ; Cannot trim select
-define nofpclass(inf) half @ret_noinf__fadd_self__noinf(i1 %cond, half noundef %unknown) {
+define nofpclass(inf) half @ret_noinf__fadd_self__noinf(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(inf) half @ret_noinf__fadd_self__noinf(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[INF:%.*]] = call noundef half @returns_inf()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[INF]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %inf = call noundef half @returns_inf()
@@ -1258,9 +1258,9 @@ define nofpclass(inf) half @ret_noinf__fadd_self__noinf(i1 %cond, half noundef %
 }
 
 ; Trim select
-define nofpclass(nan) half @ret_nonan__fadd_self__nonan(i1 %cond, half noundef %unknown) {
+define nofpclass(nan) half @ret_nonan__fadd_self__nonan(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_nonan__fadd_self__nonan(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NAN:%.*]] = call noundef half @returns_nan()
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[UNKNOWN]], [[UNKNOWN]]
 ; CHECK-NEXT:    ret half [[ADD]]
@@ -1271,9 +1271,9 @@ define nofpclass(nan) half @ret_nonan__fadd_self__nonan(i1 %cond, half noundef %
   ret half %add
 }
 
-define nofpclass(nan) half @ret_nonan__fadd_self__nonan_maybe_undef0(i1 %cond, half %unknown) {
+define nofpclass(nan) half @ret_nonan__fadd_self__nonan_maybe_undef0(i1 noundef %cond, half %unknown) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_nonan__fadd_self__nonan_maybe_undef0(
-; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NAN:%.*]] = call noundef half @returns_nan()
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[UNKNOWN]], [[UNKNOWN]]
 ; CHECK-NEXT:    ret half [[ADD]]
@@ -1284,9 +1284,9 @@ define nofpclass(nan) half @ret_nonan__fadd_self__nonan_maybe_undef0(i1 %cond, h
   ret half %add
 }
 
-define nofpclass(nan) half @ret_nonan__fadd_self__nonan_maybe_undef1(i1 %cond, half noundef %unknown) {
+define nofpclass(nan) half @ret_nonan__fadd_self__nonan_maybe_undef1(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_nonan__fadd_self__nonan_maybe_undef1(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NAN:%.*]] = call half @returns_nan()
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[UNKNOWN]], [[UNKNOWN]]
 ; CHECK-NEXT:    ret half [[ADD]]
@@ -1297,9 +1297,9 @@ define nofpclass(nan) half @ret_nonan__fadd_self__nonan_maybe_undef1(i1 %cond, h
   ret half %add
 }
 
-define nofpclass(nan) half @ret_nonan__fadd_self__nonan__other_use(i1 %cond, half noundef %unknown) {
+define nofpclass(nan) half @ret_nonan__fadd_self__nonan__other_use(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_nonan__fadd_self__nonan__other_use(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NAN:%.*]] = call noundef half @returns_nan()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NAN]], half [[UNKNOWN]]
 ; CHECK-NEXT:    call void @use(half [[SELECT]])
@@ -1313,9 +1313,9 @@ define nofpclass(nan) half @ret_nonan__fadd_self__nonan__other_use(i1 %cond, hal
   ret half %add
 }
 
-define nofpclass(sub) half @ret_nosub__fadd_self__nosub(i1 %cond, half noundef %unknown) {
+define nofpclass(sub) half @ret_nosub__fadd_self__nosub(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(sub) half @ret_nosub__fadd_self__nosub(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef half @returns_sub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SUB]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1327,9 +1327,9 @@ define nofpclass(sub) half @ret_nosub__fadd_self__nosub(i1 %cond, half noundef %
   ret half %add
 }
 
-define nofpclass(nsub) half @ret_nonsub__fadd_self__nonsub(i1 %cond, half noundef %unknown) {
+define nofpclass(nsub) half @ret_nonsub__fadd_self__nonsub(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(nsub) half @ret_nonsub__fadd_self__nonsub(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NSUB]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1341,9 +1341,9 @@ define nofpclass(nsub) half @ret_nonsub__fadd_self__nonsub(i1 %cond, half nounde
   ret half %add
 }
 
-define nofpclass(psub) half @ret_nopsub__fadd_self__nopsub(i1 %cond, half noundef %unknown) {
+define nofpclass(psub) half @ret_nopsub__fadd_self__nopsub(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(psub) half @ret_nopsub__fadd_self__nopsub(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[PSUB]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1355,9 +1355,9 @@ define nofpclass(psub) half @ret_nopsub__fadd_self__nopsub(i1 %cond, half nounde
   ret half %add
 }
 
-define nofpclass(norm) half @ret_nonorm__fadd_self__nonorm(i1 %cond, half noundef %unknown) {
+define nofpclass(norm) half @ret_nonorm__fadd_self__nonorm(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(norm) half @ret_nonorm__fadd_self__nonorm(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NORM:%.*]] = call noundef half @returns_norm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NORM]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1369,9 +1369,9 @@ define nofpclass(norm) half @ret_nonorm__fadd_self__nonorm(i1 %cond, half nounde
   ret half %add
 }
 
-define nofpclass(nnorm) half @ret_nonnorm__fadd_self__nonnorm(i1 %cond, half noundef %unknown) {
+define nofpclass(nnorm) half @ret_nonnorm__fadd_self__nonnorm(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(nnorm) half @ret_nonnorm__fadd_self__nonnorm(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call noundef half @returns_nnorm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NNORM]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1383,9 +1383,9 @@ define nofpclass(nnorm) half @ret_nonnorm__fadd_self__nonnorm(i1 %cond, half nou
   ret half %add
 }
 
-define nofpclass(pnorm) half @ret_nopnorm__fadd_self__nopnorm(i1 %cond, half noundef %unknown) {
+define nofpclass(pnorm) half @ret_nopnorm__fadd_self__nopnorm(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(pnorm) half @ret_nopnorm__fadd_self__nopnorm(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PNORM:%.*]] = call noundef half @returns_pnorm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[PNORM]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1397,12 +1397,12 @@ define nofpclass(pnorm) half @ret_nopnorm__fadd_self__nopnorm(i1 %cond, half nou
   ret half %add
 }
 
-define nofpclass(ninf nnorm nsub nzero) half @ret_nonegative__fadd_self__nonegative(i1 %cond, half noundef %unknown) {
+define nofpclass(ninf nnorm nsub nzero) half @ret_nonegative__fadd_self__nonegative(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) half @ret_nonegative__fadd_self__nonegative(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = call noundef half @returns_negative()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NEGATIVE]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %negative = call noundef half @returns_negative()
@@ -1411,12 +1411,12 @@ define nofpclass(ninf nnorm nsub nzero) half @ret_nonegative__fadd_self__nonegat
   ret half %add
 }
 
-define nofpclass(pinf pnorm psub pzero) half @ret_nopositive__fadd_self__nopositive(i1 %cond, half noundef %unknown) {
+define nofpclass(pinf pnorm psub pzero) half @ret_nopositive__fadd_self__nopositive(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) half @ret_nopositive__fadd_self__nopositive(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[POSITIVE:%.*]] = call noundef half @returns_positive()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[POSITIVE]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %positive = call noundef half @returns_positive()
@@ -1425,9 +1425,9 @@ define nofpclass(pinf pnorm psub pzero) half @ret_nopositive__fadd_self__noposit
   ret half %add
 }
 
-define nofpclass(ninf nnorm nsub nzero) half @ret_nonegative__fadd_self__nonegative_or_nan(i1 %cond, half noundef %unknown) {
+define nofpclass(ninf nnorm nsub nzero) half @ret_nonegative__fadd_self__nonegative_or_nan(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) half @ret_nonegative__fadd_self__nonegative_or_nan(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NEGATIVE_OR_NAN:%.*]] = call noundef half @returns_negative_or_nan()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NEGATIVE_OR_NAN]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1439,9 +1439,9 @@ define nofpclass(ninf nnorm nsub nzero) half @ret_nonegative__fadd_self__nonegat
   ret half %add
 }
 
-define nofpclass(pinf pnorm psub pzero) half @ret_nopositive__fadd_self__nopositive_or_nan(i1 %cond, half noundef %unknown) {
+define nofpclass(pinf pnorm psub pzero) half @ret_nopositive__fadd_self__nopositive_or_nan(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) half @ret_nopositive__fadd_self__nopositive_or_nan(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[POSITIVE_OR_NAN:%.*]] = call noundef half @returns_positive_or_nan()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[POSITIVE_OR_NAN]], half [[UNKNOWN]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[SELECT]], [[SELECT]]
@@ -1453,12 +1453,12 @@ define nofpclass(pinf pnorm psub pzero) half @ret_nopositive__fadd_self__noposit
   ret half %add
 }
 
-define nofpclass(nan ninf nnorm nsub nzero) half @ret_nonegative_nonan__fadd_self__nonegative_or_nan(i1 %cond, half noundef %unknown) {
+define nofpclass(nan ninf nnorm nsub nzero) half @ret_nonegative_nonan__fadd_self__nonegative_or_nan(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) half @ret_nonegative_nonan__fadd_self__nonegative_or_nan(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NEGATIVE_OR_NAN:%.*]] = call noundef half @returns_negative_or_nan()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NEGATIVE_OR_NAN]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %negative.or.nan = call noundef half @returns_negative_or_nan()
@@ -1467,12 +1467,12 @@ define nofpclass(nan ninf nnorm nsub nzero) half @ret_nonegative_nonan__fadd_sel
   ret half %add
 }
 
-define nofpclass(nan pinf pnorm psub pzero) half @ret_nopositive_nonan__fadd_self__nopositive_or_nan(i1 %cond, half noundef %unknown) {
+define nofpclass(nan pinf pnorm psub pzero) half @ret_nopositive_nonan__fadd_self__nopositive_or_nan(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(nan pinf pzero psub pnorm) half @ret_nopositive_nonan__fadd_self__nopositive_or_nan(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[POSITIVE_OR_NAN:%.*]] = call noundef half @returns_positive_or_nan()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[POSITIVE_OR_NAN]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %positive.or.nan = call noundef half @returns_positive_or_nan()
@@ -1568,455 +1568,506 @@ define nofpclass(snan) half @ret_no_snan__known_negative__fadd__known_positive()
 }
 
 ;---------------------------------------------------------------------
-; Check not-0 outupt handling with different denormal modes
+; Check not-0 output handling with different denormal modes
 ;---------------------------------------------------------------------
 
 ; Can drop selects with daz
-define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__ieee(i1 %cond, half noundef %unknown) {
+define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__ieee(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(sub norm) half @demand_zero_select_sub_source__fadd_self__ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef half @returns_sub()
-; CHECK-NEXT:    ret half poison
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[SUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %sub = call noundef half @returns_sub()
   %select = select i1 %cond, half %unknown, half %sub
-  %result = fadd half %sub, %sub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__ieee(i1 %cond, half noundef %unknown) {
+define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__ieee(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_nsub_source__fadd_self__ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    ret half poison
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd_self__ieee(i1 %cond, half noundef %unknown) {
+define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd_self__ieee(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_psub_source__fadd_self__ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    ret half poison
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %psub = call noundef half @returns_psub()
   %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__ieee(i1 %cond, half noundef %unknown) {
+define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__ieee(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_psub_source__fadd_self__ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    ret half poison
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %psub = call noundef half @returns_psub()
   %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__ieee(i1 %cond, half noundef %unknown) {
+define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__ieee(i1 noundef %cond, half noundef %unknown) {
 ; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_nsub_source__fadd_self__ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    ret half poison
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
 
 ; Must keep select if ftz or daz
-define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__ftz_daz(i1 %cond, half noundef %unknown) #0 {
+define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__ftz_daz(i1 noundef %cond, half noundef %unknown) #0 {
 ; CHECK-LABEL: define nofpclass(sub norm) half @demand_zero_select_sub_source__fadd_self__ftz_daz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef half @returns_sub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[SUB]], [[SUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[SUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %sub = call noundef half @returns_sub()
   %select = select i1 %cond, half %unknown, half %sub
-  %result = fadd half %sub, %sub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__ftz_daz(i1 %cond, half noundef %unknown) #0 {
+define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__ftz_daz(i1 noundef %cond, half noundef %unknown) #0 {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_nsub_source__fadd_self__ftz_daz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[NSUB]], [[NSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd_self__ftz_daz(i1 %cond, half noundef %unknown) #0 {
+define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd_self__ftz_daz(i1 noundef %cond, half noundef %unknown) #0 {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_psub_source__fadd_self__ftz_daz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    ret half poison
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %psub = call noundef half @returns_psub()
   %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__ftz_daz(i1 %cond, half noundef %unknown) #0 {
+define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__ftz_daz(i1 noundef %cond, half noundef %unknown) #0 {
 ; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_psub_source__fadd_self__ftz_daz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[PSUB]], [[PSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %psub = call noundef half @returns_psub()
   %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__ftz_daz(i1 %cond, half noundef %unknown) #0 {
+define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__ftz_daz(i1 noundef %cond, half noundef %unknown) #0 {
 ; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_nsub_source__fadd_self__ftz_daz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    ret half poison
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
 
-define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__ieee_daz(i1 %cond, half noundef %unknown) #2 {
+define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__ieee_daz(i1 noundef %cond, half noundef %unknown) #2 {
 ; CHECK-LABEL: define nofpclass(sub norm) half @demand_zero_select_sub_source__fadd_self__ieee_daz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef half @returns_sub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[SUB]], [[SUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[SUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %sub = call noundef half @returns_sub()
   %select = select i1 %cond, half %unknown, half %sub
-  %result = fadd half %sub, %sub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__ieee_daz(i1 %cond, half noundef %unknown) #2 {
+define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__ieee_daz(i1 noundef %cond, half noundef %unknown) #2 {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_nsub_source__fadd_self__ieee_daz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[NSUB]], [[NSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd_self__ieee_daz(i1 %cond, half noundef %unknown) #2 {
+define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd_self__ieee_daz(i1 noundef %cond, half noundef %unknown) #2 {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_psub_source__fadd_self__ieee_daz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    ret half poison
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %psub = call noundef half @returns_psub()
   %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__ieee_daz(i1 %cond, half noundef %unknown) #2 {
+define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__ieee_daz(i1 noundef %cond, half noundef %unknown) #2 {
 ; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_psub_source__fadd_self__ieee_daz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[PSUB]], [[PSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %psub = call noundef half @returns_psub()
   %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__ieee_daz(i1 %cond, half noundef %unknown) #2 {
+define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__ieee_daz(i1 noundef %cond, half noundef %unknown) #2 {
 ; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_nsub_source__fadd_self__ieee_daz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    ret half poison
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
 
-define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__ftz_ieee(i1 %cond, half noundef %unknown) #3 {
+define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__ftz_ieee(i1 noundef %cond, half noundef %unknown) #3 {
 ; CHECK-LABEL: define nofpclass(sub norm) half @demand_zero_select_sub_source__fadd_self__ftz_ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef half @returns_sub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[SUB]], [[SUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[SUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %sub = call noundef half @returns_sub()
   %select = select i1 %cond, half %unknown, half %sub
-  %result = fadd half %sub, %sub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__ftz_ieee(i1 %cond, half noundef %unknown) #3 {
+define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__ftz_ieee(i1 noundef %cond, half noundef %unknown) #3 {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_nsub_source__fadd_self__ftz_ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[NSUB]], [[NSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd_self__ftz_ieee(i1 %cond, half noundef %unknown) #3 {
+define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd_self__ftz_ieee(i1 noundef %cond, half noundef %unknown) #3 {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_psub_source__fadd_self__ftz_ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    ret half poison
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %psub = call noundef half @returns_psub()
   %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__ftz_ieee(i1 %cond, half noundef %unknown) #3 {
+define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__ftz_ieee(i1 noundef %cond, half noundef %unknown) #3 {
 ; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_psub_source__fadd_self__ftz_ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[PSUB]], [[PSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %psub = call noundef half @returns_psub()
   %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__ftz_ieee(i1 %cond, half noundef %unknown) #3 {
+define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__ftz_ieee(i1 noundef %cond, half noundef %unknown) #3 {
 ; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_nsub_source__fadd_self__ftz_ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    ret half poison
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
 
-define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__dynamic_dynamic(i1 %cond, half noundef %unknown) #1 {
+define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__dynamic_dynamic(i1 noundef %cond, half noundef %unknown) #1 {
 ; CHECK-LABEL: define nofpclass(sub norm) half @demand_zero_select_sub_source__fadd_self__dynamic_dynamic(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef half @returns_sub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[SUB]], [[SUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[SUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %sub = call noundef half @returns_sub()
   %select = select i1 %cond, half %unknown, half %sub
-  %result = fadd half %sub, %sub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__dynamic_dynamic(i1 %cond, half noundef %unknown) #1 {
+define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__dynamic_dynamic(i1 noundef %cond, half noundef %unknown) #1 {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_nsub_source__fadd_self__dynamic_dynamic(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[NSUB]], [[NSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd__dynamic_dynamic(i1 %cond, half noundef %unknown) #1 {
+define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd__dynamic_dynamic(i1 noundef %cond, half noundef %unknown) #1 {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_psub_source__fadd__dynamic_dynamic(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    ret half poison
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %psub = call noundef half @returns_psub()
   %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__dynamic_dynamic(i1 %cond, half noundef %unknown) #1 {
+define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__dynamic_dynamic(i1 noundef %cond, half noundef %unknown) #1 {
 ; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_psub_source__fadd_self__dynamic_dynamic(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[PSUB]], [[PSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %psub = call noundef half @returns_psub()
   %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__dynamic_dynamic(i1 %cond, half noundef %unknown) #1 {
+define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__dynamic_dynamic(i1 noundef %cond, half noundef %unknown) #1 {
 ; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_nsub_source__fadd_self__dynamic_dynamic(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[NSUB]], [[NSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
 
-define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__ieee_dapz(i1 %cond, half noundef %unknown) #4 {
+define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__ieee_dapz(i1 noundef %cond, half noundef %unknown) #4 {
 ; CHECK-LABEL: define nofpclass(sub norm) half @demand_zero_select_sub_source__fadd_self__ieee_dapz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef half @returns_sub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[SUB]], [[SUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[SUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %sub = call noundef half @returns_sub()
   %select = select i1 %cond, half %unknown, half %sub
-  %result = fadd half %sub, %sub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__ieee_dapz(i1 %cond, half noundef %unknown) #4 {
+define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__ieee_dapz(i1 noundef %cond, half noundef %unknown) #4 {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_nsub_source__fadd_self__ieee_dapz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR4]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    ret half -inf
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd_self__ieee_dapz(i1 %cond, half noundef %unknown) #4 {
+define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd_self__ieee_dapz(i1 noundef %cond, half noundef %unknown) #4 {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_psub_source__fadd_self__ieee_dapz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR4]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    ret half poison
-;
-  %psub = call noundef half @returns_psub()
-  %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
-  ret half %result
-}
-
-define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__ieee_dapz(i1 %cond, half noundef %unknown) #4 {
-; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_psub_source__fadd_self__ieee_dapz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[PSUB]], [[PSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %psub = call noundef half @returns_psub()
   %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
+  %result = fadd half %select, %select
+  ret half %result
+}
+
+define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__ieee_dapz(i1 noundef %cond, half noundef %unknown) #4 {
+; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_psub_source__fadd_self__ieee_dapz(
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %psub = call noundef half @returns_psub()
+  %select = select i1 %cond, half %unknown, half %psub
+  %result = fadd half %select, %select
   ret half %result
 }
 
 ; Special case, positive-zero result may be from negative denormal
-define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__ieee_dapz(i1 %cond, half noundef %unknown) #4 {
+define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__ieee_dapz(i1 noundef %cond, half noundef %unknown) #4 {
 ; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_nsub_source__fadd_self__ieee_dapz(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR4]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[NSUB]], [[NSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
 
-define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__ftpz_ieee(i1 %cond, half noundef %unknown) #5 {
+define nofpclass(norm sub) half @demand_zero_select_sub_source__fadd_self__ftpz_ieee(i1 noundef %cond, half noundef %unknown) #5 {
 ; CHECK-LABEL: define nofpclass(sub norm) half @demand_zero_select_sub_source__fadd_self__ftpz_ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef half @returns_sub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[SUB]], [[SUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[SUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %sub = call noundef half @returns_sub()
   %select = select i1 %cond, half %unknown, half %sub
-  %result = fadd half %sub, %sub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__ftpz_ieee(i1 %cond, half noundef %unknown) #5 {
+define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_self__ftpz_ieee(i1 noundef %cond, half noundef %unknown) #5 {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_nsub_source__fadd_self__ftpz_ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    ret half -inf
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
-define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd_self__ftpz_ieee(i1 %cond, half noundef %unknown) #5 {
+define nofpclass(norm sub pzero) half @demand_nzero_select_psub_source__fadd_self__ftpz_ieee(i1 noundef %cond, half noundef %unknown) #5 {
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_psub_source__fadd_self__ftpz_ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    ret half poison
-;
-  %psub = call noundef half @returns_psub()
-  %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
-  ret half %result
-}
-
-define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__ftpz_ieee(i1 %cond, half noundef %unknown) #5 {
-; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_psub_source__fadd_self__ftpz_ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[PSUB]], [[PSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %psub = call noundef half @returns_psub()
   %select = select i1 %cond, half %unknown, half %psub
-  %result = fadd half %psub, %psub
+  %result = fadd half %select, %select
+  ret half %result
+}
+
+define nofpclass(norm sub nzero) half @demand_pzero_select_psub_source__fadd_self__ftpz_ieee(i1 noundef %cond, half noundef %unknown) #5 {
+; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_psub_source__fadd_self__ftpz_ieee(
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[PSUB:%.*]] = call noundef half @returns_psub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %psub = call noundef half @returns_psub()
+  %select = select i1 %cond, half %unknown, half %psub
+  %result = fadd half %select, %select
   ret half %result
 }
 
 ; Special case, positive-zero result may be from negative denormal
-define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__ftpz_ieee(i1 %cond, half noundef %unknown) #5 {
+define nofpclass(norm sub nzero) half @demand_pzero_select_nsub_source__fadd_self__ftpz_ieee(i1 noundef %cond, half noundef %unknown) #5 {
 ; CHECK-LABEL: define nofpclass(nzero sub norm) half @demand_pzero_select_nsub_source__fadd_self__ftpz_ieee(
-; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[NSUB]], [[NSUB]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
-  %result = fadd half %nsub, %nsub
+  %result = fadd half %select, %select
   ret half %result
 }
 
@@ -2058,9 +2109,9 @@ define nofpclass(snan) half @qnan_result_self_demands_snan(i1 noundef %cond, hal
   ret half %result
 }
 
-define nofpclass(snan) half @qnan_result_demands_snan_lhs(i1 %cond, half %unknown0, half %unknown1) {
+define nofpclass(snan) half @qnan_result_demands_snan_lhs(i1 noundef %cond, half %unknown0, half %unknown1) {
 ; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_lhs(
-; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[UNKNOWN1]]
@@ -2072,9 +2123,9 @@ define nofpclass(snan) half @qnan_result_demands_snan_lhs(i1 %cond, half %unknow
   ret half %result
 }
 
-define nofpclass(snan) half @qnan_result_demands_snan_rhs(i1 %cond, half %unknown0, half %unknown1) {
+define nofpclass(snan) half @qnan_result_demands_snan_rhs(i1 noundef %cond, half %unknown0, half %unknown1) {
 ; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_rhs(
-; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-SAME: i1 noundef [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN1]], [[SELECT]]

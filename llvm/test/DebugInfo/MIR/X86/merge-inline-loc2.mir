@@ -185,7 +185,6 @@
 ---
 name:            multiple_inl_multiple_loc
 alignment:       16
-tracksRegLiveness: true
 tracksDebugUserValues: true
 frameInfo:
   stackSize:       8

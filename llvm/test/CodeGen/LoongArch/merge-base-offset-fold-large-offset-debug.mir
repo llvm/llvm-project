@@ -38,7 +38,7 @@ body:             |
     %0:gpr = ADDI_W %3, target-flags(loongarch-pcadd-lo) <mcsymbol .Lpcadd_hi0>
     %1:gpr = LU12I_W 502733
     DBG_VALUE %1, $noreg, !8, !DIExpression(), debug-location !10
-    %2:gpr = nuw ADD_W killed %0, killed %1
+    %2:gpr = nuw ADD_W %0, %1
     $r4 = COPY %2
     PseudoRET implicit $r4
 ...

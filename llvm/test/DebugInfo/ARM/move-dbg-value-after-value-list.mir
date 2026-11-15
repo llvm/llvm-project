@@ -67,3 +67,4 @@ body:             |
     %32:rgpr = t2ANDrr %16, %0, 14 /* CC::al */, $noreg, def $cpsr
     %33:rgpr = t2ANDrr %16, %0, 14 /* CC::al */, $noreg, def $cpsr
     %34:rgpr = t2ANDrr %16, %0, 14 /* CC::al */, $noreg, def $cpsr
+...

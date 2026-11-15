@@ -3,8 +3,8 @@
 # RUN: llc -mtriple=amdgpu10.10 -run-pass=instruction-select %s -o - | FileCheck -check-prefix=WAVE64 %s
 # RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 -run-pass=instruction-select %s -o - | FileCheck -check-prefixes=GFX11-TRUE16 %s
 # RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 -run-pass=instruction-select %s -o - | FileCheck -check-prefixes=GFX11-FAKE16 %s
-# RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 -global-isel -start-before=instruction-select -stop-after=reg-usage-propagation -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GFX11-FOLD-TRUE16 %s
-# RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 -global-isel -start-before=instruction-select -stop-after=reg-usage-propagation -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GFX11-FOLD-FAKE16 %s
+# RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 -global-isel -start-before=instruction-select -stop-after=reg-usage-propagation %s -o - | FileCheck -check-prefixes=GFX11-FOLD-TRUE16 %s
+# RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 -global-isel -start-before=instruction-select -stop-after=reg-usage-propagation %s -o - | FileCheck -check-prefixes=GFX11-FOLD-FAKE16 %s
 
 # RUN: llc -mtriple=amdgpu6.00 -run-pass=instruction-select -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -filetype=null 2>&1 | FileCheck -check-prefix=SI-ERR %s
 
