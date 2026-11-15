@@ -83,6 +83,44 @@ spirv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.Switch
+//===----------------------------------------------------------------------===//
+
+spirv.module Logical GLSL450 {
+  // CHECK-LABEL: @switch_default_only
+  spirv.func @switch_default_only(%selector: i32) "None" {
+    // CHECK: llvm.switch %{{.*}} : i32, ^bb1 [
+    // CHECK-NEXT: ]
+    spirv.Switch %selector : i32, [
+      default: ^default
+    ]
+  ^default:
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @switch_signed_with_arguments
+  spirv.func @switch_signed_with_arguments(%selector: si32, %arg: i32) "None" {
+    // CHECK: llvm.switch %{{.*}} : i32, ^bb1(%{{.*}} : i32) [
+    // CHECK-NEXT: 0: ^bb2,
+    // CHECK-NEXT: -1: ^bb3(%{{.*}}, %{{.*}} : i32, i32)
+    // CHECK-NEXT: ]
+    spirv.Switch %selector : si32, [
+      default: ^default(%arg : i32),
+      0: ^case0,
+      -1: ^case1(%arg, %arg : i32, i32)
+    ]
+  ^default(%d: i32):
+    spirv.Return
+  ^case0:
+    spirv.Return
+  ^case1(%a: i32, %b: i32):
+    spirv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.mlir.loop
 //===----------------------------------------------------------------------===//
 
