@@ -577,16 +577,6 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
       RegInfo->hasStackRealignment(MF))
     return true;
 
-  // Windows unwind codes cannot describe scalable local allocations after a
-  // .seh_save_vg_sm in the prologue. Force a frame pointer so locals aren't
-  // described in the unwind. (We could optimize this by specifically checking
-  // whether there are any scalable local variables or spill slot, but we
-  // currently don't track that.  We could rearrange the prologue so we
-  // emit the .seh_save_vg_sm after we emit the .seh_allocz, but that's a lot
-  // more complicated.)
-  if (MF.needsWinCFI() && requiresSaveVG(MF))
-    return true;
-
   // If we:
   //
   //   1. Have streaming mode changes
@@ -596,8 +586,8 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // Then the value of VG restored when unwinding to this function may not match
   // the value of VG used to set up the stack.
   //
-  // This is a problem as the CFA can be described with an expression of the
-  // form: CFA = SP + NumBytes + VG * NumScalableBytes.
+  // With DWARF unwind, this is a problem as the CFA can be described with an
+  // expression of the form: CFA = SP + NumBytes + VG * NumScalableBytes.
   //
   // If the value of VG used in that expression does not match the value used to
   // set up the stack, an incorrect address for the CFA will be computed, and
@@ -605,7 +595,14 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   //
   // We work around this issue by ensuring the frame-pointer can describe the
   // CFA in either of these cases.
-  if (AFI.needsDwarfUnwindInfo(MF) &&
+  //
+  // Windows unwind codes have similar issues: because of the order of
+  // processing for unwind codes, any operation after the .seh_save_vg_sm in
+  // the prologue can't depend on the VG. (We could optimize this by ignoring
+  // stack allocations for callee-save registers. We could rearrange the
+  // prologue so we emit the .seh_save_vg_sm after we emit the .seh_allocz, but
+  // that's a lot more complicated.)
+  if ((AFI.needsDwarfUnwindInfo(MF) || MF.needsWinCFI()) &&
       ((requiresSaveVG(MF) || AFI.getSMEFnAttrs().hasStreamingBody()) &&
        (!AFI.hasCalculatedStackSizeSVE() || AFI.hasSVEStackSize())))
     return true;
