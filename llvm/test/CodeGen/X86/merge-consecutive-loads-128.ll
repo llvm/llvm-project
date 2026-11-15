@@ -1730,10 +1730,10 @@ define <4 x i32> @no_reverse_vzload(ptr %p0) nounwind {
 define void @merge_2i64_i64_01_invariant_first_load(ptr align 16 dereferenceable(16) %ptr, ptr %out, i64 %n) nounwind {
 ; SSE-LABEL: merge_2i64_i64_01_invariant_first_load:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movups (%rdi), %xmm0
 ; SSE-NEXT:    .p2align 4
 ; SSE-NEXT:  .LBB33_1: # %loop
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE-NEXT:    movups (%rdi), %xmm0
 ; SSE-NEXT:    movaps %xmm0, (%rsi)
 ; SSE-NEXT:    movq $9, 8(%rdi)
 ; SSE-NEXT:    decq %rdx
@@ -1743,10 +1743,10 @@ define void @merge_2i64_i64_01_invariant_first_load(ptr align 16 dereferenceable
 ;
 ; AVX-LABEL: merge_2i64_i64_01_invariant_first_load:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB33_1: # %loop
 ; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    vmovaps %xmm0, (%rsi)
 ; AVX-NEXT:    movq $9, 8(%rdi)
 ; AVX-NEXT:    decq %rdx
@@ -1802,7 +1802,6 @@ define void @merge_2i64_i64_01_invariant_first_load(ptr align 16 dereferenceable
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE41-NEXT:    movups (%edi), %xmm0
 ; X86-SSE41-NEXT:    xorl %ecx, %ecx
 ; X86-SSE41-NEXT:    .p2align 4
 ; X86-SSE41-NEXT:  .LBB33_1: # %loop
@@ -1814,9 +1813,10 @@ define void @merge_2i64_i64_01_invariant_first_load(ptr align 16 dereferenceable
 ; X86-SSE41-NEXT:    movl %ecx, %ebx
 ; X86-SSE41-NEXT:    xorl {{[0-9]+}}(%esp), %ebx
 ; X86-SSE41-NEXT:    orl %ebp, %ebx
+; X86-SSE41-NEXT:    movups (%edi), %xmm0
 ; X86-SSE41-NEXT:    movaps %xmm0, (%esi)
-; X86-SSE41-NEXT:    movl $9, 8(%edi)
 ; X86-SSE41-NEXT:    movl $0, 12(%edi)
+; X86-SSE41-NEXT:    movl $9, 8(%edi)
 ; X86-SSE41-NEXT:    jne .LBB33_1
 ; X86-SSE41-NEXT:  # %bb.2: # %exit
 ; X86-SSE41-NEXT:    popl %esi

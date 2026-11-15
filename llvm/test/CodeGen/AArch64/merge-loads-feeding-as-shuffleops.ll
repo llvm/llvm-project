@@ -250,14 +250,14 @@ define void @combine_loads_v16i8_v32i8_shuffle_with_poison_mask_indices(ptr %a, 
 define void @combine_loads_v16i8_v32i8_invariant_first_load(ptr align 16 dereferenceable(32) %a, ptr %b, i64 %n) {
 ; VBITS_GE_128-LABEL: combine_loads_v16i8_v32i8_invariant_first_load:
 ; VBITS_GE_128:       // %bb.0: // %entry
-; VBITS_GE_128-NEXT:    ldp q2, q1, [x0]
 ; VBITS_GE_128-NEXT:    mov w8, #9 // =0x9
-; VBITS_GE_128-NEXT:    ext v0.16b, v2.16b, v1.16b, #1
-; VBITS_GE_128-NEXT:    ext v1.16b, v2.16b, v1.16b, #2
 ; VBITS_GE_128-NEXT:  .LBB6_1: // %loop
 ; VBITS_GE_128-NEXT:    // =>This Inner Loop Header: Depth=1
+; VBITS_GE_128-NEXT:    ldp q1, q0, [x0]
 ; VBITS_GE_128-NEXT:    subs x2, x2, #1
-; VBITS_GE_128-NEXT:    stp q0, q1, [x1]
+; VBITS_GE_128-NEXT:    ext v2.16b, v1.16b, v0.16b, #2
+; VBITS_GE_128-NEXT:    ext v0.16b, v1.16b, v0.16b, #1
+; VBITS_GE_128-NEXT:    stp q0, q2, [x1]
 ; VBITS_GE_128-NEXT:    strb w8, [x0, #16]
 ; VBITS_GE_128-NEXT:    b.ne .LBB6_1
 ; VBITS_GE_128-NEXT:  // %bb.2: // %exit
@@ -269,13 +269,13 @@ define void @combine_loads_v16i8_v32i8_invariant_first_load(ptr align 16 derefer
 ; VBITS_GE_256-NEXT:    adrp x8, .LCPI6_0
 ; VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI6_0
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x8]
-; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    mov w8, #9 // =0x9
-; VBITS_GE_256-NEXT:    tbl z0.b, { z1.b }, z0.b
 ; VBITS_GE_256-NEXT:  .LBB6_1: // %loop
 ; VBITS_GE_256-NEXT:    // =>This Inner Loop Header: Depth=1
+; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    subs x2, x2, #1
-; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x1]
+; VBITS_GE_256-NEXT:    tbl z1.b, { z1.b }, z0.b
+; VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x1]
 ; VBITS_GE_256-NEXT:    strb w8, [x0, #16]
 ; VBITS_GE_256-NEXT:    b.ne .LBB6_1
 ; VBITS_GE_256-NEXT:  // %bb.2: // %exit
@@ -287,13 +287,13 @@ define void @combine_loads_v16i8_v32i8_invariant_first_load(ptr align 16 derefer
 ; BE_VBITS_GE_256-NEXT:    adrp x8, .LCPI6_0
 ; BE_VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI6_0
 ; BE_VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x8]
-; BE_VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; BE_VBITS_GE_256-NEXT:    mov w8, #9 // =0x9
-; BE_VBITS_GE_256-NEXT:    tbl z0.b, { z1.b }, z0.b
 ; BE_VBITS_GE_256-NEXT:  .LBB6_1: // %loop
 ; BE_VBITS_GE_256-NEXT:    // =>This Inner Loop Header: Depth=1
+; BE_VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; BE_VBITS_GE_256-NEXT:    subs x2, x2, #1
-; BE_VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x1]
+; BE_VBITS_GE_256-NEXT:    tbl z1.b, { z1.b }, z0.b
+; BE_VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x1]
 ; BE_VBITS_GE_256-NEXT:    strb w8, [x0, #16]
 ; BE_VBITS_GE_256-NEXT:    b.ne .LBB6_1
 ; BE_VBITS_GE_256-NEXT:  // %bb.2: // %exit
