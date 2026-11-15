@@ -2989,7 +2989,7 @@ void DFSanVisitor::addShadowArguments(Function &F, CallBase &CB,
           LabelVAPtr);
     }
 
-    Args.push_back(IRB.CreateStructGEP(LabelVATy, LabelVAAlloca, 0));
+    Args.push_back(LabelVAAlloca);
   }
 
   // Adds the return value shadow.
@@ -3027,7 +3027,7 @@ void DFSanVisitor::addOriginArguments(Function &F, CallBase &CB,
       IRB.CreateStore(DFSF.getOrigin(*I), OriginVAPtr);
     }
 
-    Args.push_back(IRB.CreateStructGEP(OriginVATy, OriginVAAlloca, 0));
+    Args.push_back(OriginVAAlloca);
   }
 
   // Add the return value origin.
