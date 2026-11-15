@@ -96,12 +96,14 @@ class OverlayCDBTest : public ::testing::Test {
 
     std::unique_ptr<ProjectModules>
     getProjectModules(PathRef File) const override {
-      MockFS TFS;
       std::string Error;
       auto JSONCDB = tooling::JSONCompilationDatabase::loadFromBuffer(
           testRoot(), "[]", Error, tooling::JSONCommandLineSyntax::AutoDetect);
       return clang::clangd::getProjectModules(std::move(JSONCDB), TFS);
     }
+
+  private:
+    MockFS TFS;
   };
 
 protected:
