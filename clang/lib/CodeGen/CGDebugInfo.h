@@ -1032,7 +1032,8 @@ public:
   /// Restore everything back to the original state.
   ~ApplyInlineDebugLocation();
   ApplyInlineDebugLocation(const ApplyInlineDebugLocation &) = delete;
-  ApplyInlineDebugLocation &operator=(ApplyInlineDebugLocation &) = delete;
+  ApplyInlineDebugLocation &
+  operator=(const ApplyInlineDebugLocation &) = delete;
 };
 
 class SanitizerDebugLocation {
@@ -1045,7 +1046,7 @@ public:
                          SanitizerHandler Handler);
   ~SanitizerDebugLocation();
   SanitizerDebugLocation(const SanitizerDebugLocation &) = delete;
-  SanitizerDebugLocation &operator=(SanitizerDebugLocation &) = delete;
+  SanitizerDebugLocation &operator=(const SanitizerDebugLocation &) = delete;
 };
 
 } // namespace CodeGen
