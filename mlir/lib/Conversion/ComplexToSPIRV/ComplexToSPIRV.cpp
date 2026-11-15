@@ -56,6 +56,27 @@ Value createIsZero(OpBuilder &builder, Location loc, Value re, Value im) {
   return spirv::LogicalAndOp::create(builder, loc, reIsZero, imIsZero);
 }
 
+/// Computes FinalOp(abs) * (cos(angle * angleScale) + i*sin(angle *
+/// angleScale)) where abs and angle are the modulus and argument of re + i*im.
+/// Zero input is not handled.
+template <typename SqrtOp, typename FAbsOp, typename FMaxOp, typename FMinOp,
+          typename SinOp, typename CosOp, typename Atan2Op, typename FinalOp>
+std::pair<Value, Value> createComplexSqrtOrRsqrt(OpBuilder &builder,
+                                                 Location loc, Value re,
+                                                 Value im, double angleScale) {
+  Value abs =
+      createComplexAbs<SqrtOp, FAbsOp, FMaxOp, FMinOp>(builder, loc, re, im);
+  Value finalAbs = FinalOp::create(builder, loc, abs);
+  Value angle = Atan2Op::create(builder, loc, im, re);
+  Value scale = createFPConstant(builder, loc, re.getType(), angleScale);
+  Value scaledAngle = spirv::FMulOp::create(builder, loc, angle, scale);
+  Value cos = CosOp::create(builder, loc, scaledAngle);
+  Value sin = SinOp::create(builder, loc, scaledAngle);
+  Value resultRe = spirv::FMulOp::create(builder, loc, finalAbs, cos);
+  Value resultIm = spirv::FMulOp::create(builder, loc, finalAbs, sin);
+  return {resultRe, resultIm};
+}
+
 struct ConstantOpPattern final : OpConversionPattern<complex::ConstantOp> {
   using Base::Base;
 
@@ -506,18 +527,11 @@ struct SqrtOpPattern final : OpConversionPattern<ComplexOp> {
     Type elemType = re.getType();
 
     bool isSqrt = Kind == SqrtKind::Sqrt;
-    Value abs =
-        createComplexAbs<SqrtOp, FAbsOp, FMaxOp, FMinOp>(rewriter, loc, re, im);
-    Value finalAbs = isSqrt ? Value(SqrtOp::create(rewriter, loc, abs))
-                            : Value(RsqrtOp::create(rewriter, loc, abs));
-    Value angle = Atan2Op::create(rewriter, loc, im, re);
-    Value scale =
-        createFPConstant(rewriter, loc, elemType, isSqrt ? 0.5 : -0.5);
-    Value scaledAngle = spirv::FMulOp::create(rewriter, loc, angle, scale);
-    Value cos = CosOp::create(rewriter, loc, scaledAngle);
-    Value sin = SinOp::create(rewriter, loc, scaledAngle);
-    Value resultRe = spirv::FMulOp::create(rewriter, loc, finalAbs, cos);
-    Value resultIm = spirv::FMulOp::create(rewriter, loc, finalAbs, sin);
+    using FinalOp = std::conditional_t<Kind == SqrtKind::Sqrt, SqrtOp, RsqrtOp>;
+    auto [resultRe, resultIm] =
+        createComplexSqrtOrRsqrt<SqrtOp, FAbsOp, FMaxOp, FMinOp, SinOp, CosOp,
+                                 Atan2Op, FinalOp>(rewriter, loc, re, im,
+                                                   isSqrt ? 0.5 : -0.5);
 
     Value isZero = createIsZero(rewriter, loc, re, im);
     Value zeroRe = createFPConstant(
@@ -629,6 +643,142 @@ struct TanTanhOpPattern final : OpConversionPattern<ComplexOp> {
     return success();
   }
 };
+
+/// Computes complex.atan2(lhs, rhs) using the complex-logarithm identity
+/// atan2(y, x) = -i * log((x + i*y) / sqrt(x**2 + y**2)), expressed directly
+/// in terms of the real/imaginary components of x and y.
+template <typename SqrtOp, typename FAbsOp, typename FMaxOp, typename FMinOp,
+          typename SinOp, typename CosOp, typename Atan2Op, typename LogOp>
+struct Atan2OpPattern final : OpConversionPattern<complex::Atan2Op> {
+  using OpConversionPattern<complex::Atan2Op>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::Atan2Op op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType = getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value y = adaptor.getLhs();
+    Value x = adaptor.getRhs();
+
+    Value yRe = spirv::CompositeExtractOp::create(rewriter, loc, y, {0});
+    Value yIm = spirv::CompositeExtractOp::create(rewriter, loc, y, {1});
+    Value xRe = spirv::CompositeExtractOp::create(rewriter, loc, x, {0});
+    Value xIm = spirv::CompositeExtractOp::create(rewriter, loc, x, {1});
+
+    // w = x**2 + y**2.
+    Value xReSq = spirv::FMulOp::create(rewriter, loc, xRe, xRe);
+    Value xImSq = spirv::FMulOp::create(rewriter, loc, xIm, xIm);
+    Value xSqRe = spirv::FSubOp::create(rewriter, loc, xReSq, xImSq);
+    Value xReXIm = spirv::FMulOp::create(rewriter, loc, xRe, xIm);
+    Value xSqIm = spirv::FAddOp::create(rewriter, loc, xReXIm, xReXIm);
+
+    Value yReSq = spirv::FMulOp::create(rewriter, loc, yRe, yRe);
+    Value yImSq = spirv::FMulOp::create(rewriter, loc, yIm, yIm);
+    Value ySqRe = spirv::FSubOp::create(rewriter, loc, yReSq, yImSq);
+    Value yReYIm = spirv::FMulOp::create(rewriter, loc, yRe, yIm);
+    Value ySqIm = spirv::FAddOp::create(rewriter, loc, yReYIm, yReYIm);
+
+    Value wRe = spirv::FAddOp::create(rewriter, loc, xSqRe, ySqRe);
+    Value wIm = spirv::FAddOp::create(rewriter, loc, xSqIm, ySqIm);
+
+    // sqrtW = sqrt(w), computed via the trigonometric form.
+    auto [sqrtWRe, sqrtWIm] =
+        createComplexSqrtOrRsqrt<SqrtOp, FAbsOp, FMaxOp, FMinOp, SinOp, CosOp,
+                                 Atan2Op, SqrtOp>(rewriter, loc, wRe, wIm,
+                                                  /*angleScale=*/0.5);
+
+    // num = x + i*y.
+    Value numRe = spirv::FSubOp::create(rewriter, loc, xRe, yIm);
+    Value numIm = spirv::FAddOp::create(rewriter, loc, xIm, yRe);
+
+    // quotient = num / sqrtW.
+    Value denomRe = spirv::FMulOp::create(rewriter, loc, sqrtWRe, sqrtWRe);
+    Value denomIm = spirv::FMulOp::create(rewriter, loc, sqrtWIm, sqrtWIm);
+    Value denom = spirv::FAddOp::create(rewriter, loc, denomRe, denomIm);
+
+    Value numReSqrtWRe = spirv::FMulOp::create(rewriter, loc, numRe, sqrtWRe);
+    Value numImSqrtWIm = spirv::FMulOp::create(rewriter, loc, numIm, sqrtWIm);
+    Value quotNumRe =
+        spirv::FAddOp::create(rewriter, loc, numReSqrtWRe, numImSqrtWIm);
+    Value numImSqrtWRe = spirv::FMulOp::create(rewriter, loc, numIm, sqrtWRe);
+    Value numReSqrtWIm = spirv::FMulOp::create(rewriter, loc, numRe, sqrtWIm);
+    Value quotNumIm =
+        spirv::FSubOp::create(rewriter, loc, numImSqrtWRe, numReSqrtWIm);
+
+    Value quotRe = spirv::FDivOp::create(rewriter, loc, quotNumRe, denom);
+    Value quotIm = spirv::FDivOp::create(rewriter, loc, quotNumIm, denom);
+
+    // log(quotient) = log(abs(quotient)) + i*atan2(quotIm, quotRe).
+    Value quotReSq = spirv::FMulOp::create(rewriter, loc, quotRe, quotRe);
+    Value quotImSq = spirv::FMulOp::create(rewriter, loc, quotIm, quotIm);
+    Value quotAbsSq = spirv::FAddOp::create(rewriter, loc, quotReSq, quotImSq);
+    Value quotAbs = SqrtOp::create(rewriter, loc, quotAbsSq);
+    Value logRe = LogOp::create(rewriter, loc, quotAbs);
+    Value logIm = Atan2Op::create(rewriter, loc, quotIm, quotRe);
+
+    // result = -i * log(quotient) = logIm - i*logRe.
+    Value resultIm = spirv::FNegateOp::create(rewriter, loc, logRe);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{logIm, resultIm});
+    return success();
+  }
+};
+
+/// Lowers complex.pow following the identity
+/// (a + ib)^(c + id) = abs^c * exp(-d * arg) * (cos(q) + i * sin(q))
+/// where abs = |a + ib|, arg = atan2(b, a), q = c * arg + d * log(abs)
+template <typename SqrtOp, typename LogOp, typename ExpOp, typename SinOp,
+          typename CosOp, typename Atan2Op, typename PowOp>
+struct PowOpPattern final : OpConversionPattern<complex::PowOp> {
+  using OpConversionPattern<complex::PowOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::PowOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType = getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value lhs = adaptor.getLhs();
+    Value rhs = adaptor.getRhs();
+
+    Value a = spirv::CompositeExtractOp::create(rewriter, loc, lhs, {0});
+    Value b = spirv::CompositeExtractOp::create(rewriter, loc, lhs, {1});
+    Value c = spirv::CompositeExtractOp::create(rewriter, loc, rhs, {0});
+    Value d = spirv::CompositeExtractOp::create(rewriter, loc, rhs, {1});
+
+    Value aSq = spirv::FMulOp::create(rewriter, loc, a, a);
+    Value bSq = spirv::FMulOp::create(rewriter, loc, b, b);
+    Value absSq = spirv::FAddOp::create(rewriter, loc, aSq, bSq);
+    Value abs = SqrtOp::create(rewriter, loc, absSq);
+    Value absToC = PowOp::create(rewriter, loc, abs, c);
+
+    Value argLhs = Atan2Op::create(rewriter, loc, b, a);
+    Value negD = spirv::FNegateOp::create(rewriter, loc, d);
+    Value negDArgLhs = spirv::FMulOp::create(rewriter, loc, negD, argLhs);
+    Value expNegDArgLhs = ExpOp::create(rewriter, loc, negDArgLhs);
+    Value coeff = spirv::FMulOp::create(rewriter, loc, absToC, expNegDArgLhs);
+
+    Value lnAbs = LogOp::create(rewriter, loc, abs);
+    Value cArgLhs = spirv::FMulOp::create(rewriter, loc, c, argLhs);
+    Value dLnAbs = spirv::FMulOp::create(rewriter, loc, d, lnAbs);
+    Value q = spirv::FAddOp::create(rewriter, loc, cArgLhs, dLnAbs);
+    Value cosQ = CosOp::create(rewriter, loc, q);
+    Value sinQ = SinOp::create(rewriter, loc, q);
+
+    Value resultRe = spirv::FMulOp::create(rewriter, loc, coeff, cosQ);
+    Value resultIm = spirv::FMulOp::create(rewriter, loc, coeff, sinQ);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -700,6 +850,17 @@ void mlir::populateComplexToSPIRVPatterns(
       TanTanhOpPattern</*IsTanh=*/true, spirv::GLSinOp, spirv::GLCosOp,
                        spirv::GLSinhOp, spirv::GLCoshOp>,
       TanTanhOpPattern</*IsTanh=*/true, spirv::CLSinOp, spirv::CLCosOp,
-                       spirv::CLSinhOp, spirv::CLCoshOp>>(typeConverter,
-                                                          context);
+                       spirv::CLSinhOp, spirv::CLCoshOp>,
+      Atan2OpPattern<spirv::GLSqrtOp, spirv::GLFAbsOp, spirv::GLFMaxOp,
+                     spirv::GLFMinOp, spirv::GLSinOp, spirv::GLCosOp,
+                     spirv::GLAtan2Op, spirv::GLLogOp>,
+      Atan2OpPattern<spirv::CLSqrtOp, spirv::CLFAbsOp, spirv::CLFMaxOp,
+                     spirv::CLFMinOp, spirv::CLSinOp, spirv::CLCosOp,
+                     spirv::CLAtan2Op, spirv::CLLogOp>,
+      PowOpPattern<spirv::GLSqrtOp, spirv::GLLogOp, spirv::GLExpOp,
+                   spirv::GLSinOp, spirv::GLCosOp, spirv::GLAtan2Op,
+                   spirv::GLPowOp>,
+      PowOpPattern<spirv::CLSqrtOp, spirv::CLLogOp, spirv::CLExpOp,
+                   spirv::CLSinOp, spirv::CLCosOp, spirv::CLAtan2Op,
+                   spirv::CLPowOp>>(typeConverter, context);
 }

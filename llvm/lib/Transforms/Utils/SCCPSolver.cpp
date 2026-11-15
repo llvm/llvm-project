@@ -767,14 +767,24 @@ private:
       // Anything else has its lattice in the value map.
       if (auto *RetInst = dyn_cast<ReturnInst>(Inst)) {
         Function *F = RetInst->getParent()->getParent();
+        bool Reset = false;
         if (auto It = TrackedRetVals.find(F); It != TrackedRetVals.end()) {
           It->second = ValueLatticeElement();
-          V = F;
+          Reset = true;
         } else if (MRVFunctionsTracked.count(F)) {
           auto *STy = cast<StructType>(F->getReturnType());
           for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I)
             TrackedMultipleRetVals[{F, I}] = ValueLatticeElement();
-          V = F;
+          Reset = true;
+        }
+        if (Reset) {
+          LLVM_DEBUG(dbgs() << "Invalidated lattice for function "
+                            << F->getName() << "\n");
+
+          for (User *U : F->users())
+            if (auto *CB = dyn_cast<CallBase>(U))
+              if (CB->getCalledFunction() == F)
+                ToInvalidate.push_back(CB);
         }
       } else if (auto *STy = dyn_cast<StructType>(Inst->getType())) {
         for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I) {

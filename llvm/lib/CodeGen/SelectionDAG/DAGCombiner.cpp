@@ -18445,6 +18445,34 @@ SDValue DAGCombiner::foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// copysign(x, fp_extend(y)) -> copysign(x, y)
+/// copysign(x, fp_round(y)) -> copysign(x, y)
+/// Operands to the functions are the type of X and Y respectively.
+static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(EVT XTy, EVT YTy) {
+  // Always fold no-op FP casts.
+  if (XTy == YTy)
+    return true;
+
+  // Do not optimize out type conversion of f128 type yet.
+  // For some targets like x86_64, configuration is changed to keep one f128
+  // value in one SSE register, but instruction selection cannot handle
+  // FCOPYSIGN on SSE registers yet.
+  if (YTy == MVT::f128)
+    return false;
+
+  // Avoid mismatched vector operand types, for better instruction selection.
+  return !YTy.isVector();
+}
+
+static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(SDNode *N) {
+  SDValue N1 = N->getOperand(1);
+  if (N1.getOpcode() != ISD::FP_EXTEND && N1.getOpcode() != ISD::FP_ROUND)
+    return false;
+  EVT N1VT = N1->getValueType(0);
+  EVT N1Op0VT = N1->getOperand(0).getValueType();
+  return CanCombineFCOPYSIGN_EXTEND_ROUND(N1VT, N1Op0VT);
+}
+
 SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -18626,16 +18654,25 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   if (N0.getOpcode() == ISD::FCOPYSIGN && N0->hasOneUse() &&
       isa<ConstantFPSDNode>(N0.getOperand(0)) && VT.isInteger() &&
       !VT.isVector()) {
-    unsigned OrigXWidth = N0.getOperand(1).getValueSizeInBits();
+    SDValue Sign = N0.getOperand(1);
+    if (N0.getValueType() != MVT::ppcf128 &&
+        CanCombineFCOPYSIGN_EXTEND_ROUND(N0.getNode()))
+      Sign = Sign.getOperand(0);
+
+    unsigned OrigXWidth = Sign.getValueSizeInBits();
     EVT IntXVT = EVT::getIntegerVT(*DAG.getContext(), OrigXWidth);
     if (isTypeLegal(IntXVT)) {
-      SDValue X = DAG.getBitcast(IntXVT, N0.getOperand(1));
+      SDValue X = DAG.getBitcast(IntXVT, Sign);
       AddToWorklist(X.getNode());
 
-      // If X has a different width than the result/lhs, sext it or truncate it.
+      // If X has a different width than the result, extend or truncate it.
       unsigned VTWidth = VT.getSizeInBits();
       if (OrigXWidth < VTWidth) {
-        X = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), VT, X);
+        SDLoc DL(X);
+        X = DAG.getNode(ISD::ANY_EXTEND, DL, VT, X);
+        X = DAG.getNode(
+            ISD::SHL, DL, VT, X,
+            DAG.getShiftAmountConstant(VTWidth - OrigXWidth, VT, DL));
         AddToWorklist(X.getNode());
       } else if (OrigXWidth > VTWidth) {
         // To get the sign bit in the right place, we have to shift it right
@@ -19902,6 +19939,11 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
 
     int MaxExpChange = Pow2OpKnownBits.countMaxActiveBits();
 
+    // The power of 2 must also be finite in VT. In half, (uitofp (shl 1, 16))
+    // is +inf, and C / +inf is 0, not C * 2^-16.
+    if (MaxExpChange - 1 > APFloat::semanticsMaxExponent(VT.getFltSemantics()))
+      return false;
+
     auto IsFPConstValid = [N, MaxExpChange, &Mantissa](ConstantFPSDNode *CFP) {
       if (CFP == nullptr)
         return false;
@@ -20567,35 +20609,6 @@ SDValue DAGCombiner::visitFSQRT(SDNode *N) {
   return buildSqrtEstimate(N0, Flags);
 }
 
-/// copysign(x, fp_extend(y)) -> copysign(x, y)
-/// copysign(x, fp_round(y)) -> copysign(x, y)
-/// Operands to the functions are the type of X and Y respectively.
-static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(EVT XTy, EVT YTy) {
-  // Always fold no-op FP casts.
-  if (XTy == YTy)
-    return true;
-
-  // Do not optimize out type conversion of f128 type yet.
-  // For some targets like x86_64, configuration is changed to keep one f128
-  // value in one SSE register, but instruction selection cannot handle
-  // FCOPYSIGN on SSE registers yet.
-  if (YTy == MVT::f128)
-    return false;
-
-  // Avoid mismatched vector operand types, for better instruction selection.
-  return !YTy.isVector();
-}
-
-static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(SDNode *N) {
-  SDValue N1 = N->getOperand(1);
-  if (N1.getOpcode() != ISD::FP_EXTEND &&
-      N1.getOpcode() != ISD::FP_ROUND)
-    return false;
-  EVT N1VT = N1->getValueType(0);
-  EVT N1Op0VT = N1->getOperand(0).getValueType();
-  return CanCombineFCOPYSIGN_EXTEND_ROUND(N1VT, N1Op0VT);
-}
-
 SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -20818,10 +20831,9 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
 }
 
 /// Before operation legalization, fold (sint_to_fp x) -> (select x, -1.0, 0.0)
-/// and (uint_to_fp x) -> (select x, 1.0, 0.0) for an i1 or i1 vector x if the
-/// target prefers the select. Both results are exact, so no conversion or
-/// rounding is needed. After type legalization, this also catches the i1
-/// conversions created by splitting vectors.
+/// and (uint_to_fp x) -> (select x, 1.0, 0.0) for an i1 or i1 vector x if i1 is
+/// a legal type that the target does not want as the operand of the
+/// conversion. Both results are exact, so no conversion or rounding is needed.
 static SDValue foldBoolToFPWithSelect(SDNode *N, const SDLoc &DL,
                                       SelectionDAG &DAG,
                                       const TargetLowering &TLI,
@@ -20829,8 +20841,13 @@ static SDValue foldBoolToFPWithSelect(SDNode *N, const SDLoc &DL,
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   unsigned Opcode = N->getOpcode();
-  if (LegalOperations || N0.getValueType().getScalarType() != MVT::i1 ||
-      !TLI.shouldConvertBoolToFPWithSelect(VT))
+  if (LegalOperations || N0.getValueType().getScalarType() != MVT::i1)
+    return SDValue();
+
+  // If i1 is not legal, type legalization promotes the operand and the target
+  // converts from the wider type. isTypeDesirableForOp is also false then, so
+  // check the legality separately.
+  if (!TLI.isTypeLegal(MVT::i1) || TLI.isTypeDesirableForOp(N, MVT::i1))
     return SDValue();
 
   // Leave (int_to_fp (fp_to_int x)) round trips to foldFPToIntToFP, which can
@@ -20987,11 +21004,6 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
 
     // Avoid creating an illegal vector type before type legalization.
     if ((LegalTypes || OpVT.isVector()) && !TLI.isTypeLegal(NarrowVT))
-      continue;
-
-    // Avoid undoing a target combine that widened the source operand.
-    if (N0.getOpcode() == ISD::ZERO_EXTEND &&
-        NarrowVT == N0.getOperand(0).getValueType())
       continue;
 
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, N0);

@@ -54,7 +54,8 @@ class LibraryOptions;
 class LibraryOptionsContext;
 
 //===----------------------------------------------------------------------===//
-// Command line option processing entry point.
+// Command line option processing entry point. It does not recognize library
+// options; parseCommandLineOptions below does.
 //
 // Returns true on success. Otherwise, this will print the error message to
 // stderr and exit if \p Errs is not set (nullptr by default), or print the
@@ -73,8 +74,8 @@ LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
                                       vfs::FileSystem *VFS = nullptr,
                                       const char *EnvVar = nullptr);
 
-// Like ParseCommandLineOptions, but sets per-context libraries' options in
-// Context instead of their global().
+// Like ParseCommandLineOptions, but also recognizes library options, the
+// options declared in TableGen, and sets them in Context.
 LLVM_ABI bool parseCommandLineOptions(LibraryOptionsContext &Context,
                                       ArrayRef<const char *> Args,
                                       StringRef Overview = "",
@@ -2220,18 +2221,10 @@ public:
   /// Restores the default values.
   virtual void reset() const = 0;
 
-  /// Whether every reader of the options goes through a context's
-  /// LibraryOptionsContext, so that they need not be set in global().
-  bool isPerContext() const { return PerContext; }
-
 protected:
-  constexpr explicit LibraryOptions(bool PerContext = false)
-      : PerContext(PerContext) {}
+  constexpr LibraryOptions() = default;
   // Registrations are static and never destroyed through this class.
   ~LibraryOptions() = default;
-
-private:
-  bool PerContext;
 };
 
 /// Makes ParseCommandLineOptions recognize \p L's options. A name that is also

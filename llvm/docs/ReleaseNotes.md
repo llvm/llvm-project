@@ -184,6 +184,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLVM infrastructure
 
+* `cl::ParseCommandLineOptions` no longer recognizes library options declared in TableGen, which include most CodeGen, MC, and target options.
+  A tool that passes them, such as through `-mllvm`, parses them with `cl::parseCommandLineOptions` into a `cl::LibraryOptionsContext`, assigns it to each `LLVMContext` with `getLibraryOptions().assign()`, and sets `MCTargetOptions::LibraryOptions` to it.
+
 * Removed `mc::RegisterMCTargetOptionsFlags` and `codegen::RegisterCodeGenFlags`.
   A tool that created either now passes `mc::getToolOptions()` or `codegen::getToolOptions()` to `cl::parseCommandLineOptions`.
 

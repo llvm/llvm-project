@@ -61,9 +61,6 @@
 #include <optional>
 using namespace llvm;
 
-static codegen::RegisterMTuneFlag MTF;
-static codegen::RegisterSaveStatsFlag SSF;
-
 // General options for llc.  Other pass-specific options are specified
 // within the corresponding llc passes, and target-specific options
 // and back-end code generation options are specified with the target machine.
@@ -539,7 +536,6 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   TargetOptions Options;
   auto InitializeOptions = [&](const Triple &TheTriple) {
     Options = codegen::getTargetOptions(Context.getLibraryOptions(), TheTriple);
-    Options.MCOptions.LibraryOptions = &Context.getLibraryOptions();
 
     if (Options.XCOFFReadOnlyPointers) {
       if (!TheTriple.isOSAIX())
