@@ -1201,6 +1201,11 @@ GenericUniformityInfo<ContextT>::GenericUniformityInfo(
   DA.reset(new ImplT{DT, CI, TTI});
 }
 
+template <typename ContextT> void GenericUniformityInfo<ContextT>::compute() {
+  DA->initialize();
+  DA->compute();
+}
+
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
   // When we print Value, LLVM IR instruction, we want to print extra new line.

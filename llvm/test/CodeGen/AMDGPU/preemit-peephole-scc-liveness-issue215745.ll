@@ -16,11 +16,11 @@ define amdgpu_kernel void @triangular_loop_scc_liveness(i64 %n) {
 ; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
 ; GFX942-NEXT:    s_branch .LBB0_3
 ; GFX942-NEXT:  .LBB0_1: ; in Loop: Header=BB0_3 Depth=1
-; GFX942-NEXT:    s_mov_b64 s[2:3], -1
+; GFX942-NEXT:    s_mov_b64 s[6:7], -1
 ; GFX942-NEXT:  .LBB0_2: ; %loop.exit.guard
 ; GFX942-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; GFX942-NEXT:    s_and_b64 vcc, exec, s[2:3]
 ; GFX942-NEXT:    s_mov_b64 s[2:3], 0
+; GFX942-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX942-NEXT:    s_cbranch_vccnz .LBB0_8
 ; GFX942-NEXT:  .LBB0_3: ; %outer
 ; GFX942-NEXT:    ; =>This Loop Header: Depth=1
@@ -46,7 +46,7 @@ define amdgpu_kernel void @triangular_loop_scc_liveness(i64 %n) {
 ; GFX942-NEXT:    s_mov_b64 vcc, s[2:3]
 ; GFX942-NEXT:    s_cbranch_vccz .LBB0_5
 ; GFX942-NEXT:  ; %bb.7: ; in Loop: Header=BB0_3 Depth=1
-; GFX942-NEXT:    s_mov_b64 s[2:3], 0
+; GFX942-NEXT:    s_mov_b64 s[6:7], 0
 ; GFX942-NEXT:    s_branch .LBB0_2
 ; GFX942-NEXT:  .LBB0_8: ; %DummyReturnBlock
 ; GFX942-NEXT:    s_endpgm
@@ -56,7 +56,6 @@ define amdgpu_kernel void @triangular_loop_scc_liveness(i64 %n) {
 ; GFX1100-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1100-NEXT:    s_mov_b64 s[0:1], 1
 ; GFX1100-NEXT:    s_branch .LBB0_3
-; GFX1100-NEXT:    .p2align 6
 ; GFX1100-NEXT:  .LBB0_1: ; in Loop: Header=BB0_3 Depth=1
 ; GFX1100-NEXT:    s_mov_b32 s0, -1
 ; GFX1100-NEXT:  .LBB0_2: ; %loop.exit.guard
@@ -65,6 +64,7 @@ define amdgpu_kernel void @triangular_loop_scc_liveness(i64 %n) {
 ; GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; GFX1100-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX1100-NEXT:    s_cbranch_vccnz .LBB0_8
+; GFX1100-NEXT:    .p2align 6
 ; GFX1100-NEXT:  .LBB0_3: ; %outer
 ; GFX1100-NEXT:    ; =>This Loop Header: Depth=1
 ; GFX1100-NEXT:    ; Child Loop BB0_5 Depth 2
