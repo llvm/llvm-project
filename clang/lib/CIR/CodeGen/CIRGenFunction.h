@@ -2458,6 +2458,12 @@ public:
   LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
 
+  /// Annotate the address of `field`; accesses must use the result.
+  Address emitFieldAnnotations(const clang::FieldDecl *field, Address addr);
+
+  /// Annotate the storage of `d` at `addr`.
+  void emitVarAnnotations(const clang::VarDecl *d, mlir::Value addr);
+
   LValue emitLValueForLambdaField(const FieldDecl *field);
   LValue emitLValueForLambdaField(const FieldDecl *field,
                                   mlir::Value thisValue);

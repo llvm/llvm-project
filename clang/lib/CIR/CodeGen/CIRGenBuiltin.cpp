@@ -1555,6 +1555,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(nullptr);
   }
 
+  case Builtin::BI__builtin_annotation: {
+    mlir::Value value = emitScalarExpr(e->getArg(0));
+    StringRef str =
+        cast<StringLiteral>(e->getArg(1)->IgnoreParenCasts())->getString();
+    auto annotation = cir::AnnotationAttr::get(
+        &getMLIRContext(), builder.getStringAttr(str), /*args=*/{});
+    return RValue::get(cir::AnnotationOp::create(
+        builder, getLoc(e->getExprLoc()), value, annotation));
+  }
+
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
     if (e->getArg(0)->HasSideEffects(getContext()))
@@ -2823,7 +2833,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__warn_memset_zero_len:
   case Builtin::BI__annotation:
-  case Builtin::BI__builtin_annotation:
     return errorBuiltinNYI(*this, e, builtinID);
 
   case Builtin::BI__builtin_addcb:

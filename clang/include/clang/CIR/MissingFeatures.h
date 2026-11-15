@@ -26,6 +26,7 @@ namespace cir {
 struct MissingFeatures {
   // Address space related
   static bool addressSpace() { return false; }
+  static bool annotationConstantAddrSpace() { return false; }
   static bool spirvDefaultIsGenericAddrSpace() { return false; }
 
   // Unhandled global/linkage information.
@@ -58,7 +59,6 @@ struct MissingFeatures {
   static bool opAllocaTLS() { return false; }
   static bool opAllocaOpenMPThreadPrivate() { return false; }
   static bool opAllocaEscapeByReference() { return false; }
-  static bool opAllocaAnnotations() { return false; }
   static bool opAllocaCaptureByInit() { return false; }
 
   // FuncOp handling
