@@ -12,6 +12,7 @@
 #include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Core/BugReporter.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DebuggerEvents.h"
 #include "lldb/Host/FileSystem.h"
@@ -165,4 +166,63 @@ TEST_F(DiagnosticEventTest, WarningOnce) {
   EXPECT_TRUE(listener_sp->GetEvent(second_event_sp, TIMEOUT));
 
   Debugger::Destroy(debugger_sp);
+}
+
+static std::string GetErrorMessage(const ListenerSP &listener_sp) {
+  EventSP event_sp;
+  if (!listener_sp->GetEvent(event_sp, TIMEOUT))
+    return "<no event>";
+  const DiagnosticEventData *data =
+      DiagnosticEventData::GetEventDataFromEvent(event_sp.get());
+  return data ? data->GetMessage() : "<no data>";
+}
+
+TEST_F(DiagnosticEventTest, InternalError) {
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ListenerSP listener_sp = Listener::MakeListener("test-listener");
+  listener_sp->StartListeningForEvents(&debugger_sp->GetBroadcaster(),
+                                       lldb::eBroadcastBitError);
+  const std::string note = GetBugReportNote().str();
+
+  Debugger::ReportInternalError("foo", debugger_sp->GetID());
+  EXPECT_EQ(GetErrorMessage(listener_sp), "foo" + note);
+  Debugger::ReportInternalError("foo", debugger_sp->GetID());
+  EXPECT_EQ(GetErrorMessage(listener_sp), "foo");
+  Debugger::ReportInternalError("bar", debugger_sp->GetID());
+  EXPECT_EQ(GetErrorMessage(listener_sp), "bar" + note);
+
+  auto set_suggest = [&](llvm::StringRef value) {
+    return debugger_sp->SetPropertyValue(nullptr, eVarSetOperationAssign,
+                                         "diagnostics.suggest-bugreport",
+                                         value);
+  };
+  ASSERT_TRUE(set_suggest("false").Success());
+  Debugger::ReportInternalError("baz", debugger_sp->GetID());
+  EXPECT_EQ(GetErrorMessage(listener_sp), "baz");
+  ASSERT_TRUE(set_suggest("true").Success());
+
+  // A suppressed note is still shown once the setting is back on.
+  Debugger::ReportInternalError("baz", debugger_sp->GetID());
+  EXPECT_EQ(GetErrorMessage(listener_sp), "baz" + note);
+
+  Debugger::Destroy(debugger_sp);
+}
+
+TEST_F(DiagnosticEventTest, InternalErrorMultipleDebuggers) {
+  std::vector<DebuggerSP> debuggers;
+  std::vector<ListenerSP> listeners;
+  for (size_t i = 0; i < DEBUGGERS; ++i) {
+    debuggers.push_back(Debugger::CreateInstance());
+    listeners.push_back(Listener::MakeListener("listener"));
+    listeners.back()->StartListeningForEvents(
+        &debuggers.back()->GetBroadcaster(), lldb::eBroadcastBitError);
+  }
+
+  Debugger::ReportInternalError("qux");
+  const std::string expected = ("qux" + GetBugReportNote()).str();
+  for (const ListenerSP &listener_sp : listeners)
+    EXPECT_EQ(GetErrorMessage(listener_sp), expected);
+
+  for (DebuggerSP &debugger_sp : debuggers)
+    Debugger::Destroy(debugger_sp);
 }
