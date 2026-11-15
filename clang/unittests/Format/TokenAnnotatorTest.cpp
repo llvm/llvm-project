@@ -2737,6 +2737,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;
   EXPECT_TOKEN(Tokens[8], tok::arrow, TT_TrailingReturnArrow);
 
+  Tokens = annotate("auto f() noexcept(A || B) -> int;");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::arrow, TT_TrailingReturnArrow);
+
+  Tokens = annotate("auto f() const & NOEXCEPT -> int;");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::arrow, TT_TrailingReturnArrow);
+
+  Tokens = annotate("auto f() && NOEXCEPT -> int;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::arrow, TT_TrailingReturnArrow);
+
   // Not trailing return arrows
   Tokens = annotate("auto a = b->c;");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
@@ -2791,6 +2803,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_StatementAttributeLikeMacro);
   EXPECT_TOKEN(Tokens[4], tok::arrow, TT_Unknown);
+
+  Tokens = annotate("DO_DEBUG debug() << foo->bar();");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::arrow, TT_Unknown);
 
   // Mixed
   Tokens = annotate("auto f() -> int { auto a = b()->c; }");
