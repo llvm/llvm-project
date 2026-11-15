@@ -196,6 +196,10 @@ class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   /// account for longjmp re-entry paths not visible to the forward CFG.
   std::optional<bool> CallsReturnsTwiceFn;
 
+  /// Cached reachability between block numbers. Invalid if the CFG gains paths
+  /// or blocks are renumbered.
+  DenseMap<std::pair<unsigned, unsigned>, bool> IsReachableCache;
+
   /// Whether the function contains a call that may return twice (e.g., setjmp).
   bool callsReturnsTwiceFn();
 
