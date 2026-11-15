@@ -38,7 +38,6 @@
 ---
 name:            read_x
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: g8rc }
 frameInfo:
@@ -55,7 +54,6 @@ body:             |
 ---
 name:            read_y
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: g8rc }
 frameInfo:

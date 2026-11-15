@@ -32,7 +32,6 @@
 name:            fn1
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: g8rc }
   - { id: 1, class: g8rc }

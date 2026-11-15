@@ -174,7 +174,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: uaccrc, preferred-register: '' }
@@ -288,7 +287,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: uaccrc, preferred-register: '' }
@@ -406,7 +404,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -616,7 +613,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: gprc_and_gprc_nor0, preferred-register: '' }

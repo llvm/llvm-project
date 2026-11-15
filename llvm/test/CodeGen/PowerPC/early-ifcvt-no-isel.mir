@@ -23,7 +23,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: g8rc_and_g8rc_nox0 }
   - { id: 1, class: gprc_and_gprc_nor0 }
