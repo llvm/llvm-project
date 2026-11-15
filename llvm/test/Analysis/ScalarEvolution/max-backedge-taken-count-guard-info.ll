@@ -2072,3 +2072,70 @@ loop:
 exit:
   ret void
 }
+
+define void @guard_truncated_i1_condition(i64 %n) {
+; CHECK-LABEL: 'guard_truncated_i1_condition'
+; CHECK-NEXT:  Classifying expressions for: @guard_truncated_i1_condition
+; CHECK-NEXT:    %cond = trunc i64 %n to i1
+; CHECK-NEXT:    --> (trunc i64 %n to i1) U: full-set S: full-set
+; CHECK-NEXT:    %limit = zext i1 %cond to i64
+; CHECK-NEXT:    --> (zext i1 (trunc i64 %n to i1) to i64) U: [0,2) S: [0,2)
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + (zext i1 (trunc i64 %n to i1) to i64))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (zext i1 (trunc i64 %n to i1) to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_truncated_i1_condition
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (zext i1 (trunc i64 %n to i1) to i64))<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (zext i1 (trunc i64 %n to i1) to i64))<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %cond = trunc i64 %n to i1
+  %limit = zext i1 %cond to i64
+  br i1 %cond, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %limit
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @guard_truncated_i1_condition_false(i64 %n) {
+; CHECK-LABEL: 'guard_truncated_i1_condition_false'
+; CHECK-NEXT:  Classifying expressions for: @guard_truncated_i1_condition_false
+; CHECK-NEXT:    %cond = trunc i64 %n to i1
+; CHECK-NEXT:    --> (trunc i64 %n to i1) U: full-set S: full-set
+; CHECK-NEXT:    %limit = zext i1 %cond to i64
+; CHECK-NEXT:    --> (zext i1 (trunc i64 %n to i1) to i64) U: [0,2) S: [0,2)
+; CHECK-NEXT:    %bound = add nuw i64 %limit, 1
+; CHECK-NEXT:    --> (1 + (zext i1 (trunc i64 %n to i1) to i64))<nuw><nsw> U: [1,3) S: [1,3)
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2) S: [0,2) Exits: (zext i1 (trunc i64 %n to i1) to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,3) S: [1,3) Exits: (1 + (zext i1 (trunc i64 %n to i1) to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_truncated_i1_condition_false
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i1 (trunc i64 %n to i1) to i64)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i1 (trunc i64 %n to i1) to i64)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %cond = trunc i64 %n to i1
+  %limit = zext i1 %cond to i64
+  %bound = add nuw i64 %limit, 1
+  br i1 %cond, label %exit, label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %bound
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
