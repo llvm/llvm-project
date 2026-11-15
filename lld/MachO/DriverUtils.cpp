@@ -353,6 +353,12 @@ StringRef macho::rerootPath(StringRef path) {
   return path;
 }
 
+uint32_t macho::getModTime(const fs::file_status &stat) {
+  if (config->zeroModTime)
+    return 0;
+  return toTimeT(stat.getLastModificationTime());
+}
+
 uint32_t macho::getModTime(StringRef path) {
   if (config->zeroModTime)
     return 0;
@@ -360,7 +366,7 @@ uint32_t macho::getModTime(StringRef path) {
   fs::file_status stat;
   if (!fs::status(path, stat))
     if (fs::exists(stat))
-      return toTimeT(stat.getLastModificationTime());
+      return getModTime(stat);
 
   warn("failed to get modification time of " + path);
   return 0;
