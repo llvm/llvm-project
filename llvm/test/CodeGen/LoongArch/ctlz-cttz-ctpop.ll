@@ -227,13 +227,12 @@ define i64 @test_ctlz_i64(i64 %a) nounwind {
 ;
 ; LA32S-LABEL: test_ctlz_i64:
 ; LA32S:       # %bb.0:
-; LA32S-NEXT:    sltu $a2, $zero, $a1
-; LA32S-NEXT:    clz.w $a1, $a1
-; LA32S-NEXT:    maskeqz $a1, $a1, $a2
+; LA32S-NEXT:    clz.w $a2, $a1
+; LA32S-NEXT:    maskeqz $a2, $a2, $a1
 ; LA32S-NEXT:    clz.w $a0, $a0
 ; LA32S-NEXT:    addi.w $a0, $a0, 32
-; LA32S-NEXT:    masknez $a0, $a0, $a2
-; LA32S-NEXT:    or $a0, $a1, $a0
+; LA32S-NEXT:    masknez $a0, $a0, $a1
+; LA32S-NEXT:    or $a0, $a2, $a0
 ; LA32S-NEXT:    move $a1, $zero
 ; LA32S-NEXT:    ret
 ;
@@ -460,12 +459,11 @@ define i64 @test_not_ctlz_i64(i64 %a) nounwind {
 ; LA32S-LABEL: test_not_ctlz_i64:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    nor $a2, $a1, $zero
-; LA32S-NEXT:    sltu $a2, $zero, $a2
+; LA32S-NEXT:    clo.w $a1, $a1
+; LA32S-NEXT:    maskeqz $a1, $a1, $a2
 ; LA32S-NEXT:    clo.w $a0, $a0
 ; LA32S-NEXT:    addi.w $a0, $a0, 32
 ; LA32S-NEXT:    masknez $a0, $a0, $a2
-; LA32S-NEXT:    clo.w $a1, $a1
-; LA32S-NEXT:    maskeqz $a1, $a1, $a2
 ; LA32S-NEXT:    or $a0, $a1, $a0
 ; LA32S-NEXT:    move $a1, $zero
 ; LA32S-NEXT:    ret
@@ -859,13 +857,12 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ;
 ; LA32S-LABEL: test_cttz_i64:
 ; LA32S:       # %bb.0:
-; LA32S-NEXT:    sltu $a2, $zero, $a0
-; LA32S-NEXT:    ctz.w $a0, $a0
-; LA32S-NEXT:    maskeqz $a0, $a0, $a2
+; LA32S-NEXT:    ctz.w $a2, $a0
+; LA32S-NEXT:    maskeqz $a2, $a2, $a0
 ; LA32S-NEXT:    ctz.w $a1, $a1
 ; LA32S-NEXT:    addi.w $a1, $a1, 32
-; LA32S-NEXT:    masknez $a1, $a1, $a2
-; LA32S-NEXT:    or $a0, $a0, $a1
+; LA32S-NEXT:    masknez $a0, $a1, $a0
+; LA32S-NEXT:    or $a0, $a2, $a0
 ; LA32S-NEXT:    move $a1, $zero
 ; LA32S-NEXT:    ret
 ;
@@ -1025,12 +1022,11 @@ define i64 @test_not_cttz_i64(i64 %a) nounwind {
 ; LA32S-LABEL: test_not_cttz_i64:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    nor $a2, $a0, $zero
-; LA32S-NEXT:    sltu $a2, $zero, $a2
+; LA32S-NEXT:    cto.w $a0, $a0
+; LA32S-NEXT:    maskeqz $a0, $a0, $a2
 ; LA32S-NEXT:    cto.w $a1, $a1
 ; LA32S-NEXT:    addi.w $a1, $a1, 32
 ; LA32S-NEXT:    masknez $a1, $a1, $a2
-; LA32S-NEXT:    cto.w $a0, $a0
-; LA32S-NEXT:    maskeqz $a0, $a0, $a2
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    move $a1, $zero
 ; LA32S-NEXT:    ret

@@ -46,6 +46,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <bitset>
 #include <optional>
 
@@ -8870,31 +8871,36 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
       S.Context.getBuiltinVectorTypeInfo(CurType->castAs<BuiltinType>());
   unsigned MinElts = Info.EC.getKnownMinValue();
 
-  VectorKind VecKind = VectorKind::RVVFixedLengthData;
+  VectorKind VecKind;
   unsigned ExpectedSize = VScale->first * MinElts;
   QualType EltType = CurType->getRVVEltType(S.Context);
   unsigned EltSize = S.Context.getTypeSize(EltType);
   unsigned NumElts;
   if (Info.ElementType == S.Context.BoolTy) {
+    // A mask is stored in bytes. One with fewer than 8 lanes takes a single
+    // byte, and its lane count is recorded in the vector kind.
     NumElts = VecSize / S.Context.getCharWidth();
+    unsigned SubByteLanes = 0;
     if (!NumElts) {
       NumElts = 1;
-      switch (VecSize) {
-      case 1:
-        VecKind = VectorKind::RVVFixedLengthMask_1;
-        break;
-      case 2:
-        VecKind = VectorKind::RVVFixedLengthMask_2;
-        break;
-      case 4:
-        VecKind = VectorKind::RVVFixedLengthMask_4;
-        break;
-      }
-    } else
-      VecKind = VectorKind::RVVFixedLengthMask;
+      if (VecSize == 1 || VecSize == 2 || VecSize == 4)
+        SubByteLanes = VecSize;
+    }
+    // Record the ratio of the vbool<R>_t type in the vector kind, so that
+    // later stages do not have to re-derive it from VLEN and the lane count.
+    // vbool<R>_t has RVVBitsPerBlock / R lanes at vscale=1.
+    VecKind = getRVVFixedLengthMaskVectorKind(
+        llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock / MinElts), SubByteLanes);
   } else {
     ExpectedSize *= EltSize;
     NumElts = VecSize / EltSize;
+
+    // Record the LMUL of the sizeless type in the vector kind, so that later
+    // stages do not have to re-derive it from VLEN and the element count.
+    //   LMUL = MinElts * EltSize / RVVBitsPerBlock
+    VecKind = getRVVFixedLengthDataVectorKind(
+        int(llvm::Log2_32(MinElts * EltSize)) -
+        int(llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock)));
   }
 
   // The attribute vector size must match -mrvv-vector-bits.

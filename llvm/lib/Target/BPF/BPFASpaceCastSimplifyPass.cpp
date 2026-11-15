@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
+#include "llvm/IR/ValueHandle.h"
 #include <optional>
 
 #define DEBUG_TYPE "bpf-aspace-simplify"
@@ -72,20 +73,25 @@ struct CastGEPCast {
 
 PreservedAnalyses BPFASpaceCastSimplifyPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
-  SmallVector<CastGEPCast, 16> WorkList;
+  SmallVector<WeakVH, 16> WorkList;
   bool Changed = false;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB)
-      if (auto It = CastGEPCast::match(&I))
-        WorkList.push_back(It.value());
-    Changed |= !WorkList.empty();
+      if (CastGEPCast::match(&I))
+        WorkList.push_back(&I);
 
     while (!WorkList.empty()) {
-      CastGEPCast InsnChain = WorkList.pop_back_val();
-      GetElementPtrInst *NewGEP = InsnChain.rewrite();
+      Value *V = WorkList.pop_back_val();
+      if (!V)
+        continue;
+      auto InsnChain = CastGEPCast::match(V);
+      if (!InsnChain)
+        continue;
+      GetElementPtrInst *NewGEP = InsnChain->rewrite();
+      Changed = true;
       for (User *U : NewGEP->users())
-        if (auto It = CastGEPCast::match(U))
-          WorkList.push_back(It.value());
+        if (CastGEPCast::match(U))
+          WorkList.push_back(U);
     }
   }
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();

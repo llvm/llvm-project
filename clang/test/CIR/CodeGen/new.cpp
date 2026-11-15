@@ -774,7 +774,7 @@ void test_array_new_with_ctor_init() {
 // CHECK:    %[[THREE_2:.*]] = cir.const #cir.int<3> : !u64i
 // CHECK:    %[[ARRAY_BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARRAY_PTR]] : !cir.ptr<!cir.array<!rec_F x 3>> -> !cir.ptr<!rec_F>
 // CHECK:    %[[ARRAY_END:.*]] = cir.ptr_stride %[[ARRAY_BEGIN]], %[[THREE_2]] : (!cir.ptr<!rec_F>, !u64i) -> !cir.ptr<!rec_F>
-// CHECK:    %[[IDX_ADDR:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_F>>
+// CHECK:    %[[IDX_ADDR:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_F>>
 // CHECK:    cir.store %[[ARRAY_BEGIN]], %[[IDX_ADDR]] : !cir.ptr<!rec_F>, !cir.ptr<!cir.ptr<!rec_F>>
 // CHECK:    cir.do {
 // CHECK:      %[[CUR:.*]] = cir.load %[[IDX_ADDR]] : !cir.ptr<!cir.ptr<!rec_F>>, !cir.ptr<!rec_F>
@@ -796,7 +796,7 @@ void test_array_new_with_ctor_init() {
 // LLVM:   %[[RAW_PTR:.*]] = call noalias noundef nonnull ptr @_Znam(i64 noundef 3)
 // LLVM:   %[[BEGIN:.*]] = getelementptr %class.F, ptr %[[RAW_PTR]], i32 0
 // LLVM:   %[[ARRAY_END:.*]] = getelementptr %class.F, ptr %[[BEGIN]], i64 3
-// LLVM:   %[[IDX_ADDR:.*]] = alloca ptr, align 1
+// LLVM:   %[[IDX_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   store ptr %[[BEGIN]], ptr %[[IDX_ADDR]], align 8
 // LLVM:   br label
 // LLVM:   %[[CUR2:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8
@@ -1176,7 +1176,7 @@ void test_array_new_with_ctor_partial_init_list() {
 // CHECK:    %[[SIX:.*]] = cir.const #cir.int<6> : !u64i
 // CHECK:    %[[ARRAY_BEGIN:.*]] = cir.cast array_to_ptrdecay %[[TAIL_ARRAY]] : !cir.ptr<!cir.array<!rec_G x 6>> -> !cir.ptr<!rec_G>
 // CHECK:    %[[ARRAY_END:.*]] = cir.ptr_stride %[[ARRAY_BEGIN]], %[[SIX]] : (!cir.ptr<!rec_G>, !u64i) -> !cir.ptr<!rec_G>
-// CHECK:    %[[IDX_ADDR:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_G>>
+// CHECK:    %[[IDX_ADDR:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_G>>
 // CHECK:    cir.store %[[ARRAY_BEGIN]], %[[IDX_ADDR]] : !cir.ptr<!rec_G>, !cir.ptr<!cir.ptr<!rec_G>>
 // CHECK:    cir.do {
 // CHECK:      %[[CUR:.*]] = cir.load %[[IDX_ADDR]] : !cir.ptr<!cir.ptr<!rec_G>>, !cir.ptr<!rec_G>
@@ -1202,7 +1202,7 @@ void test_array_new_with_ctor_partial_init_list() {
 // LLVM:   %[[THIRD:.*]] = getelementptr %class.G, ptr %[[SECOND]], i64 1
 // LLVM:   %[[ARRAY_BEGIN:.*]] = getelementptr %class.G, ptr %[[THIRD]], i32 0
 // LLVM:   %[[ARRAY_END:.*]] = getelementptr %class.G, ptr %[[ARRAY_BEGIN]], i64 6
-// LLVM:   %[[IDX_ADDR:.*]] = alloca ptr, align 1
+// LLVM:   %[[IDX_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   store ptr %[[ARRAY_BEGIN]], ptr %[[IDX_ADDR]], align 8
 // LLVM:   br label
 // LLVM:   %[[CUR2:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8

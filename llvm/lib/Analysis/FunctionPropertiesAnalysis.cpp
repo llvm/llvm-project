@@ -22,8 +22,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include <deque>
 
 using namespace llvm;
@@ -39,12 +37,6 @@ using namespace llvm;
   STATISTIC(Num##Name##PreOptimization, Description " (before "                \
                                                     "optimizations)");
 #include "llvm/IR/FunctionProperties.def"
-
-namespace llvm {
-LLVM_ABI cl::opt<bool> EnableDetailedFunctionProperties(
-    "enable-detailed-function-properties", cl::Hidden, cl::init(false),
-    cl::desc("Whether or not to compute detailed function properties."));
-} // namespace llvm
 
 namespace {
 int64_t getNumBlocksFromCond(const BasicBlock &BB) {
@@ -86,8 +78,8 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
   }
   TotalInstructionCount += Direction * BB.size();
 
-  if (EnableDetailedFunctionProperties) {
-    const AnalysisOptions &Opts = getAnalysisOptions(BB.getContext());
+  if (DetailedOpts) {
+    const AnalysisOptions &Opts = *DetailedOpts;
     unsigned SuccessorCount = succ_size(&BB);
     if (SuccessorCount == 1)
       BasicBlocksWithSingleSuccessor += Direction;
@@ -264,6 +256,9 @@ FunctionPropertiesInfo FunctionPropertiesInfo::getFunctionPropertiesInfo(
     const ir2vec::Vocabulary *Vocabulary) {
 
   FunctionPropertiesInfo FPI;
+  const AnalysisOptions &Opts = getAnalysisOptions(F);
+  if (Opts.enable_detailed_function_properties)
+    FPI.DetailedOpts = &Opts;
   if (Vocabulary && Vocabulary->isValid()) {
     FPI.IR2VecVocab = Vocabulary;
     FPI.FunctionEmbedding = ir2vec::Embedding(Vocabulary->getDimension(), 0.0);
@@ -340,7 +335,7 @@ void FunctionPropertiesInfo::print(raw_ostream &OS) const {
 #define FUNCTION_PROPERTY(Name, Description) OS << #Name ": " << Name << "\n";
 
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  if (EnableDetailedFunctionProperties) {                                      \
+  if (DetailedOpts) {                                                          \
     OS << #Name ": " << Name << "\n";                                          \
   }
 

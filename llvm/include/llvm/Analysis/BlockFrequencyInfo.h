@@ -32,6 +32,7 @@ class Module;
 class raw_ostream;
 template <class BlockT> class BlockFrequencyInfoImpl;
 
+enum class GVDAGType { None, Fraction, Integer, Count };
 enum class PGOViewCountsType { None, Graph, Text };
 
 /// Return -view-bfi-func-name.

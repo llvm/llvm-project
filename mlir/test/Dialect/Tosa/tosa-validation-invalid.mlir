@@ -437,3 +437,56 @@ func.func @test_slice_block_scaled_rank0_start(%arg0: tensor<*x!tosa.block_scale
   %0 = tosa.slice %arg0, %start, %size : (tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<0>, !tosa.shape<0>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
   return %0 : tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }
+
+// -----
+
+// Reject the CTS slice that begins at the last input element.
+func.func @test_slice_start_size_outside_bounds(%arg0: tensor<11x11x7xi32>) -> tensor<2x4x3xi32> {
+  %start = tosa.const_shape values(dense<[10, 10, 6]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[2, 4, 3]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op start + size must be less than or equal to input dimension size, got start=10, size=2 vs input dim size=11 at dimension 0}}
+  %0 = tosa.slice %arg0, %start, %size : (tensor<11x11x7xi32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<2x4x3xi32>
+  return %0 : tensor<2x4x3xi32>
+}
+
+// -----
+
+// Check known dimensions even when an earlier input dimension is dynamic.
+func.func @test_slice_static_dim_outside_bounds(%arg0: tensor<?x11x7xi32>) -> tensor<1x2x1xi32> {
+  %start = tosa.const_shape values(dense<[0, 10, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[1, 2, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op start + size must be less than or equal to input dimension size, got start=10, size=2 vs input dim size=11 at dimension 1}}
+  %0 = tosa.slice %arg0, %start, %size : (tensor<?x11x7xi32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x2x1xi32>
+  return %0 : tensor<1x2x1xi32>
+}
+
+// -----
+
+// Reject an oversized start without signed overflow in start + size.
+func.func @test_slice_start_size_overflow(%arg0: tensor<11xi32>) -> tensor<2xi32> {
+  %start = tosa.const_shape values(dense<[9223372036854775807]> : tensor<1xindex>) : () -> !tosa.shape<1>
+  %size = tosa.const_shape values(dense<[2]> : tensor<1xindex>) : () -> !tosa.shape<1>
+  // expected-error@+1 {{'tosa.slice' op start + size must be less than or equal to input dimension size, got start=9223372036854775807, size=2 vs input dim size=11 at dimension 0}}
+  %0 = tosa.slice %arg0, %start, %size : (tensor<11xi32>, !tosa.shape<1>, !tosa.shape<1>) -> tensor<2xi32>
+  return %0 : tensor<2xi32>
+}
+
+// -----
+
+// Accept a slice whose end exactly matches every input dimension.
+func.func @test_slice_exact_boundary(%arg0: tensor<11x11x7xi32>) -> tensor<2x4x3xi32> {
+  %start = tosa.const_shape values(dense<[9, 7, 4]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[2, 4, 3]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %0 = tosa.slice %arg0, %start, %size : (tensor<11x11x7xi32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<2x4x3xi32>
+  return %0 : tensor<2x4x3xi32>
+}
+
+// -----
+
+// Do not reject bounds that depend on unknown input dimensions.
+func.func @test_slice_dynamic_input_dimension(%arg0: tensor<?x11x7xi32>) -> tensor<2x4x3xi32> {
+  %start = tosa.const_shape values(dense<[10, 7, 4]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[2, 4, 3]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %0 = tosa.slice %arg0, %start, %size : (tensor<?x11x7xi32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<2x4x3xi32>
+  return %0 : tensor<2x4x3xi32>
+}

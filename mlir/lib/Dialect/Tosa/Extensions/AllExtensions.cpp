@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tosa/Extensions/AllExtensions.h"
-#include "mlir/Dialect/Tosa/Extensions/ShardingExtensions.h"
+#include "mlir/Dialect/Tosa/Extensions/ShardingInterfaceImpl.h"
 
 using namespace mlir;
 

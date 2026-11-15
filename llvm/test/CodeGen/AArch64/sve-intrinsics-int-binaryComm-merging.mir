@@ -16,9 +16,7 @@
 ---
 name:            fmul_float_zero
 alignment:       4
-tracksRegLiveness: true
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$p0', virtual-reg: '' }
   - { reg: '$z0', virtual-reg: '' }

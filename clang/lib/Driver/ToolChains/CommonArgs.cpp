@@ -680,6 +680,13 @@ void tools::addLinkerCompressDebugSectionsOption(
   }
 }
 
+bool tools::useMachORelocatableDwarf(const llvm::Triple &T,
+                                     unsigned DwarfVersion) {
+  return T.isOSBinFormatMachO() && DwarfVersion >= 5 &&
+         !(T.isMacOSX() || T.isiOS() || T.isWatchOS() || T.isXROS() ||
+           T.isDriverKit());
+}
+
 void tools::renderDebugInfoCompressionArgs(const ArgList &Args,
                                            ArgStringList &CmdArgs,
                                            const Driver &D,
@@ -1203,6 +1210,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                          ParallelismOpt + Parallelism));
 
+  // Forward the loop vectorization preference to the LTO backend by toggling
+  // the existing -vectorize-loops cl::opt, which the pass honors directly.
+  if (Arg *A =
+          Args.getLastArg(options::OPT_fvectorize, options::OPT_fno_vectorize))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine(PluginOptPrefix) + "-vectorize-loops=" +
+        (A->getOption().matches(options::OPT_fvectorize) ? "1" : "0")));
+
   // Forward the SLP vectorization preference to the LTO backend by toggling
   // the existing -vectorize-slp cl::opt, which the pass honors directly. This
   // avoids minting dedicated linker options for what is only pipeline tuning.
@@ -1220,23 +1235,6 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(
         Twine(PluginOptPrefix) + "-global-isel=" +
         (A->getOption().matches(options::OPT_fglobal_isel) ? "1" : "0")));
-  }
-
-  // If an explicit debugger tuning argument appeared, pass it along.
-  if (Arg *A =
-          Args.getLastArg(options::OPT_gTune_Group, options::OPT_ggdbN_Group)) {
-    if (A->getOption().matches(options::OPT_glldb))
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=lldb"));
-    else if (A->getOption().matches(options::OPT_gsce))
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=sce"));
-    else if (A->getOption().matches(options::OPT_gdbx))
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=dbx"));
-    else
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=gdb"));
   }
 
   if (IsOSAIX) {
@@ -1821,8 +1819,11 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
     StaticRuntimes.push_back("dfsan");
   if (SanArgs.needsLsanRt())
     StaticRuntimes.push_back("lsan");
-  if (SanArgs.needsCopyProfRt())
+  if (SanArgs.needsCopyProfRt()) {
     StaticRuntimes.push_back("copyprof");
+    if (SanArgs.linkCXXRuntimes())
+      StaticRuntimes.push_back("copyprof_cxx");
+  }
   if (SanArgs.needsMsanRt()) {
     StaticRuntimes.push_back("msan");
     if (SanArgs.linkCXXRuntimes())

@@ -37,7 +37,7 @@ protected:
   void SetUp() override {
     S = std::make_unique<Session>(mockExecutorProcessInfo(), noDispatch,
                                   noErrors);
-    ASSERT_THAT_ERROR(sps_ci::addSession(CI), Succeeded());
+    ASSERT_THAT_ERROR(sps::ci::addSession(CI), Succeeded());
 
     // Instance symbols are keyed by linker-level name, so register them with
     // SymbolNameSpec::linker to keep the lookup names platform-independent.
