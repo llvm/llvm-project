@@ -11,7 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "DiffConsumer.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/WithColor.h"
@@ -193,10 +198,114 @@ void DiffConsumer::logf(const LogBuilder &Log) {
   out << '\n';
 }
 
+/// The metadata kinds that are compared and displayed: TBAA and alias scopes.
+static constexpr unsigned AliasingMetadataKinds[] = {
+    LLVMContext::MD_tbaa, LLVMContext::MD_tbaa_struct,
+    LLVMContext::MD_alias_scope, LLVMContext::MD_noalias};
+
+/// Returns true if \p L and \p R have the same structure. Distinct nodes, such
+/// as alias scopes, are never equal by pointer, so they are matched pairwise.
+static bool
+isEquivalentMetadata(const Metadata *L, const Metadata *R,
+                     DenseMap<const MDNode *, const MDNode *> &Matched) {
+  if (L == R)
+    return true;
+  const auto *LN = dyn_cast_or_null<MDNode>(L);
+  const auto *RN = dyn_cast_or_null<MDNode>(R);
+  if (!LN || !RN || LN->getNumOperands() != RN->getNumOperands())
+    return false;
+  auto [It, Inserted] = Matched.try_emplace(LN, RN);
+  if (!Inserted)
+    return It->second == RN;
+  for (unsigned I = 0, E = LN->getNumOperands(); I != E; ++I)
+    if (!isEquivalentMetadata(LN->getOperand(I).get(), RN->getOperand(I).get(),
+                              Matched))
+      return false;
+  return true;
+}
+
+static bool hasSameMetadata(const Instruction *L, const Instruction *R,
+                            unsigned Kind) {
+  DenseMap<const MDNode *, const MDNode *> Matched;
+  return isEquivalentMetadata(L->getMetadata(Kind), R->getMetadata(Kind),
+                              Matched);
+}
+
+bool llvm::hasSameAliasingMetadata(const Instruction *L, const Instruction *R) {
+  return all_of(AliasingMetadataKinds,
+                [&](unsigned Kind) { return hasSameMetadata(L, R, Kind); });
+}
+
+/// Prints \p MD with its nested nodes expanded. A node that is already being
+/// printed is shown as "...".
+static void printMetadata(raw_ostream &OS, const Metadata *MD,
+                          SmallPtrSetImpl<const MDNode *> &Active) {
+  if (const auto *Node = dyn_cast<MDNode>(MD)) {
+    if (!Active.insert(Node).second) {
+      OS << "...";
+      return;
+    }
+    OS << "!{";
+    ListSeparator LS;
+    for (const MDOperand &Op : Node->operands()) {
+      OS << LS;
+      if (Op)
+        printMetadata(OS, Op.get(), Active);
+      else
+        OS << "null";
+    }
+    OS << '}';
+    Active.erase(Node);
+  } else if (const auto *Str = dyn_cast<MDString>(MD)) {
+    OS << '"' << Str->getString() << '"';
+  } else if (const auto *Const = dyn_cast<ConstantAsMetadata>(MD)) {
+    Const->getValue()->printAsOperand(OS);
+  }
+}
+
+/// Prints the aliasing metadata of \p I, one line for each kind that
+/// \p ShouldPrint accepts.
+static void printAliasingMetadata(raw_ostream &OS, unsigned Indent,
+                                  const Instruction *I,
+                                  function_ref<bool(unsigned)> ShouldPrint) {
+  SmallVector<StringRef> Names;
+  I->getContext().getMDKindNames(Names);
+  for (unsigned Kind : AliasingMetadataKinds) {
+    const MDNode *MD = I->getMetadata(Kind);
+    if (!MD || !ShouldPrint(Kind))
+      continue;
+    SmallPtrSet<const MDNode *, 8> Active;
+    OS.indent(Indent + 4) << '!' << Names[Kind] << ' ';
+    printMetadata(OS, MD, Active);
+    OS << '\n';
+  }
+}
+
 void DiffConsumer::logd(const DiffLogBuilder &Log) {
   header();
 
-  for (unsigned I = 0, E = Log.getNumLines(); I != E; ++I) {
+  // Expand a kind of aliasing metadata of an instruction only if a differing
+  // instruction with the same opcode on the other side has different metadata
+  // of that kind, and none has the same metadata.
+  unsigned NumLines = Log.getNumLines();
+  auto ShouldExpandMetadata = [&](const Instruction *X, unsigned Kind,
+                                  bool OtherIsLeft) {
+    DiffChange OtherKind = OtherIsLeft ? DC_left : DC_right;
+    bool HasCandidate = false;
+    for (unsigned J = 0; J != NumLines; ++J) {
+      if (Log.getLineKind(J) != OtherKind)
+        continue;
+      const Instruction *Y = OtherIsLeft ? Log.getLeft(J) : Log.getRight(J);
+      if (Y->getOpcode() != X->getOpcode())
+        continue;
+      if (hasSameMetadata(X, Y, Kind))
+        return false;
+      HasCandidate = true;
+    }
+    return HasCandidate;
+  };
+
+  for (unsigned I = 0, E = NumLines; I != E; ++I) {
     indent();
     switch (Log.getLineKind(I)) {
     case DC_match:
@@ -209,6 +318,11 @@ void DiffConsumer::logd(const DiffLogBuilder &Log) {
       LeftColor << "< ";
       Log.getLeft(I)->print(LeftColor);
       LeftColor << '\n';
+      printAliasingMetadata(LeftColor, Indent, Log.getLeft(I),
+                            [&](unsigned Kind) {
+                              return ShouldExpandMetadata(
+                                  Log.getLeft(I), Kind, /*OtherIsLeft=*/false);
+                            });
       break;
     }
     case DC_right: {
@@ -216,6 +330,11 @@ void DiffConsumer::logd(const DiffLogBuilder &Log) {
       RightColor << "> ";
       Log.getRight(I)->print(RightColor);
       RightColor << '\n';
+      printAliasingMetadata(RightColor, Indent, Log.getRight(I),
+                            [&](unsigned Kind) {
+                              return ShouldExpandMetadata(Log.getRight(I), Kind,
+                                                          /*OtherIsLeft=*/true);
+                            });
       break;
     }
     }
