@@ -820,6 +820,125 @@ constexpr bool operator!=(const T &value, const optional<U> &opt);
 } // namespace std
 )";
 
+static constexpr char StdExpectedHeader[] = R"(
+#ifndef STD_EXPECTED_H
+#define STD_EXPECTED_H
+
+namespace std {
+
+template <class E> class unexpected {
+public:
+  unexpected(const unexpected &) = default;
+  unexpected(unexpected &&) = default;
+
+  template <class Err = E> explicit unexpected(Err &&e);
+
+  const E &error() const & noexcept;
+  E &error() & noexcept;
+  const E &&error() const && noexcept;
+  E &&error() && noexcept;
+};
+
+template <class E> unexpected(E) -> unexpected<E>;
+
+struct unexpect_t {
+  explicit unexpect_t() = default;
+};
+
+inline constexpr unexpect_t unexpect{};
+
+template <class T, class E> class expected {
+public:
+  using value_type = T;
+  using error_type = E;
+  using unexpected_type = unexpected<E>;
+
+  expected();
+  expected(const expected &);
+  expected(expected &&) noexcept;
+
+  template <class U = T> expected(U &&v);
+
+  template <class G> expected(const unexpected<G> &e);
+  template <class G> expected(unexpected<G> &&e);
+
+  template <class... Args>
+  explicit expected(unexpect_t, Args &&...args);
+
+  expected &operator=(const expected &);
+  expected &operator=(expected &&) noexcept;
+
+  const T *operator->() const noexcept;
+  T *operator->() noexcept;
+
+  const T &operator*() const & noexcept;
+  T &operator*() & noexcept;
+  const T &&operator*() const && noexcept;
+  T &&operator*() && noexcept;
+
+  explicit operator bool() const noexcept;
+  bool has_value() const noexcept;
+
+  const T &value() const &;
+  T &value() &;
+  const T &&value() const &&;
+  T &&value() &&;
+
+  const E &error() const & noexcept;
+  E &error() & noexcept;
+  const E &&error() const && noexcept;
+  E &&error() && noexcept;
+
+  template <class U> T value_or(U &&v) const &;
+  template <class U> T value_or(U &&v) &&;
+
+  template <class... Args> T &emplace(Args &&...args) noexcept;
+
+  void swap(expected &rhs) noexcept;
+};
+
+template <class E> class expected<void, E> {
+public:
+  using value_type = void;
+  using error_type = E;
+  using unexpected_type = unexpected<E>;
+
+  expected() noexcept;
+  expected(const expected &);
+  expected(expected &&) noexcept;
+
+  template <class G> expected(const unexpected<G> &e);
+  template <class G> expected(unexpected<G> &&e);
+
+  template <class... Args>
+  explicit expected(unexpect_t, Args &&...args);
+
+  expected &operator=(const expected &);
+  expected &operator=(expected &&) noexcept;
+
+  explicit operator bool() const noexcept;
+  bool has_value() const noexcept;
+
+  void operator*() const noexcept;
+
+  void value() const &;
+  void value() &&;
+
+  const E &error() const & noexcept;
+  E &error() & noexcept;
+  const E &&error() const && noexcept;
+  E &&error() && noexcept;
+
+  void emplace() noexcept;
+
+  void swap(expected &rhs) noexcept;
+};
+
+} // namespace std
+
+#endif // STD_EXPECTED_H
+)";
+
 static constexpr char AbslOptionalHeader[] = R"(
 #include "absl_type_traits.h"
 #include "std_initializer_list.h"
@@ -2503,6 +2622,7 @@ std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   Headers.emplace_back("std_type_traits.h", StdTypeTraitsHeader);
   Headers.emplace_back("std_utility.h", StdUtilityHeader);
   Headers.emplace_back("std_optional.h", StdOptionalHeader);
+  Headers.emplace_back("std_expected.h", StdExpectedHeader);
   Headers.emplace_back("std_coroutine.h", StdCoroutineHeader);
   Headers.emplace_back("absl_type_traits.h", AbslTypeTraitsHeader);
   Headers.emplace_back("absl_optional.h", AbslOptionalHeader);
