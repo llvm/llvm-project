@@ -1713,6 +1713,13 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (AAQI.Depth >= 512)
     return AliasResult::MayAlias;
 
+  // aliasCheckRecursive() only looks through GEPs, phis and selects, and
+  // otherwise only refines accesses to the same underlying object. All other
+  // pairs are MayAlias without further queries, so don't cache them.
+  if (O1 != O2 && !isa<GEPOperator, PHINode, SelectInst>(V1) &&
+      !isa<GEPOperator, PHINode, SelectInst>(V2))
+    return AliasResult::MayAlias;
+
   // Check the cache before climbing up use-def chains. This also terminates
   // otherwise infinitely recursive queries. Include MayBeCrossIteration in the
   // cache key, because some cases where MayBeCrossIteration==false returns
