@@ -415,8 +415,9 @@ typename Tr::RegionT *RegionBase<Tr>::removeSubRegion(RegionT *Child) {
         return R.get() == Child;
       });
   assert(I != children.end() && "Region does not exit. Unable to remove.");
+  RegionT *Removed = I->release();
   children.erase(children.begin() + (I - begin()));
-  return Child;
+  return Removed;
 }
 
 template <class Tr>

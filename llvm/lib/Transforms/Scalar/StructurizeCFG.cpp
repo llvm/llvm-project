@@ -1374,6 +1374,52 @@ Pass *llvm::createStructurizeCFGPass(bool SkipUniformRegions) {
   return new StructurizeCFGLegacyPass(SkipUniformRegions);
 }
 
+/// Flatten regions containing only some of a loop's backedges into their
+/// parents, except for the top-level region. Reconverging at a partial
+/// loop region's exit would combine different iterations of the original loop,
+/// invalidating uniformity outside the region.
+///
+/// Return true if the region tree changed.
+static bool flattenPartialLoopRegions(Region &R, DominatorTree &DT) {
+  bool Changed = false;
+  SmallVector<Region *> Children;
+  for (const auto &Child : R)
+    Children.push_back(Child.get());
+
+  for (Region *Child : Children) {
+    Changed |= flattenPartialLoopRegions(*Child, DT);
+
+    // The top-level region is never structurized. Keep its child regions so
+    // their control flow still gets structurized.
+    if (R.isTopLevelRegion())
+      continue;
+
+    BasicBlock *Entry = Child->getEntry();
+    bool HasInternalBackedge = false;
+    bool HasExternalBackedge = false;
+    for (BasicBlock *Pred : predecessors(Entry)) {
+      if (!DT.dominates(Entry, Pred))
+        continue;
+      if (Child->contains(Pred))
+        HasInternalBackedge = true;
+      else
+        HasExternalBackedge = true;
+    }
+    if (!HasInternalBackedge || !HasExternalBackedge)
+      continue;
+
+    RegionInfo *RI = R.getRegionInfo();
+    for (BasicBlock *BB : Child->blocks()) {
+      if (RI->getRegionFor(BB) == Child)
+        RI->setRegionFor(BB, &R);
+    }
+    Child->transferChildrenTo(&R);
+    delete R.removeSubRegion(Child);
+    Changed = true;
+  }
+  return Changed;
+}
+
 static void addRegionIntoQueue(Region &R, std::vector<Region *> &Regions) {
   Regions.push_back(&R);
   for (const auto &E : R)
@@ -1395,7 +1441,7 @@ void StructurizeCFGPass::printPipeline(
 /// regions that contain them. If \p UI is non-null, skip uniform regions.
 static bool runImpl(DominatorTree &DT, RegionInfo &RI,
                     const TargetTransformInfo &TTI, const UniformityInfo *UI) {
-  bool Changed = false;
+  bool Changed = flattenPartialLoopRegions(*RI.getTopLevelRegion(), DT);
   std::vector<Region *> Regions;
   addRegionIntoQueue(*RI.getTopLevelRegion(), Regions);
   while (!Regions.empty()) {
