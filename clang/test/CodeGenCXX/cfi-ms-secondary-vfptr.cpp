@@ -34,15 +34,9 @@ struct DerivedFromHidden : Primary, HiddenSec {
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 // CHECK-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"?AUPublic@@"), !nosanitize [[META9:![0-9]+]]
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { ptr, i1 } [[TMP3]], 1, !nosanitize [[META9]]
-// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF10:![0-9]+]], !nosanitize [[META9]]
-// CHECK:       [[TRAP]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR3:[0-9]+]], !nosanitize [[META9]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META9]]
-// CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { ptr, i1 } [[TMP3]], 0, !nosanitize [[META9]]
-// CHECK-NEXT:    call void [[TMP5]](ptr noundef [[TMP1]])
+// CHECK-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VFN]], align 8
+// CHECK-NEXT:    call void [[TMP3]](ptr noundef [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 extern "C" void call_public_sec(DerivedFromPublic *p) {
@@ -50,7 +44,7 @@ extern "C" void call_public_sec(DerivedFromPublic *p) {
 }
 
 // CHECK-LABEL: define dso_local void @call_hidden_sec(
-// CHECK-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META11:![0-9]+]] {
+// CHECK-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META9:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
@@ -58,14 +52,14 @@ extern "C" void call_public_sec(DerivedFromPublic *p) {
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 // CHECK-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"?AUHiddenSec@@"), !nosanitize [[META9]]
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { ptr, i1 } [[TMP3]], 1, !nosanitize [[META9]]
-// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF10]], !nosanitize [[META9]]
+// CHECK-NEXT:    [[TMP3:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"?AUHiddenSec@@"), !nosanitize [[META10:![0-9]+]]
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { ptr, i1 } [[TMP3]], 1, !nosanitize [[META10]]
+// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF11:![0-9]+]], !nosanitize [[META10]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR3]], !nosanitize [[META9]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META9]]
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR3:[0-9]+]], !nosanitize [[META10]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META10]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { ptr, i1 } [[TMP3]], 0, !nosanitize [[META9]]
+// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { ptr, i1 } [[TMP3]], 0, !nosanitize [[META10]]
 // CHECK-NEXT:    call void [[TMP5]](ptr noundef [[TMP1]])
 // CHECK-NEXT:    ret void
 //
@@ -74,7 +68,7 @@ extern "C" void call_hidden_sec(DerivedFromHidden *p) {
 }
 //.
 // CHECK: [[META8]] = !{i64 -5210807322846835646}
-// CHECK: [[META9]] = !{}
-// CHECK: [[PROF10]] = !{!"branch_weights", i32 1048575, i32 1}
-// CHECK: [[META11]] = !{i64 702925180092474428}
+// CHECK: [[META9]] = !{i64 702925180092474428}
+// CHECK: [[META10]] = !{}
+// CHECK: [[PROF11]] = !{!"branch_weights", i32 1048575, i32 1}
 //.
