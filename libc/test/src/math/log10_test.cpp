@@ -99,7 +99,7 @@ TEST_F(LlvmLibcLog10Test, InDoubleRange) {
     uint64_t fails = 0;
     uint64_t count = 0;
     uint64_t cc = 0;
-    double mx, mr = 0.0;
+    double mx = 0.0, mr = 0.0;
     double tol = 0.5;
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {

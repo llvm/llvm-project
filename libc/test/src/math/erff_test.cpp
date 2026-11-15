@@ -64,7 +64,7 @@ TEST_F(LlvmLibcErffTest, InFloatRange) {
     uint32_t fails = 0;
     uint32_t count = 0;
     uint32_t cc = 0;
-    float mx, mr = 0.0;
+    float mx = 0.0f, mr = 0.0f;
     double tol = 0.5;
 
     for (uint32_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
