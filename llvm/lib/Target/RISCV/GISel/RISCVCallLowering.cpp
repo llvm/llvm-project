@@ -626,6 +626,8 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           .add(Info.Callee);
   if (Info.NoMerge)
     Call.setMIFlag(MachineInstr::MIFlag::NoMerge);
+  if (Info.CFIType)
+    Call->setCFIType(MF, Info.CFIType->getZExtValue());
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv))
       .setOperandDead(2); // $x1 (ra)
