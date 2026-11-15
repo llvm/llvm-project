@@ -27,6 +27,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
@@ -655,6 +656,21 @@ bool CallBase::hasClobberingOperandBundles() const {
               LLVMContext::OB_convergencectrl,
               LLVMContext::OB_deactivation_symbol}) &&
          getIntrinsicID() != Intrinsic::assume;
+}
+
+bool CallBase::isVolatile() const {
+  // There are a very limited number of intrinsics with volatile flags.
+  if (const auto *MI = dyn_cast<MemIntrinsic>(this))
+    return MI->isVolatile();
+
+  switch (getIntrinsicID()) {
+  case Intrinsic::matrix_column_major_load:
+    return cast<ConstantInt>(getArgOperand(2))->isOne();
+  case Intrinsic::matrix_column_major_store:
+    return cast<ConstantInt>(getArgOperand(3))->isOne();
+  default:
+    return false;
+  }
 }
 
 MemoryEffects CallBase::getMemoryEffects() const {
