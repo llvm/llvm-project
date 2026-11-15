@@ -1131,10 +1131,9 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   for (ELFFileBase *file : ctx.objectFiles)
     work.emplace_back(file->getLocalSymbols(), Matches());
 
-  // parallelForEach() processes continguous runs of items, so the symbol
-  // table chunks from the getSymbols() loop above would contain most of
-  // the work but be processed by just one or two threads. Use
-  // parallelForEachFineGrained() to distribute the work across threads better.
+  // The symbol table chunks from the getSymbols() loop above contain most of
+  // the work in the first few items. Use parallelForEachFineGrained() to
+  // split them over more than one or two threads.
   parallelForEachFineGrained(work, [&](auto &pair) {
     auto &[syms, matches] = pair;
     for (Symbol *sym : syms) {
