@@ -238,3 +238,38 @@ bb:
 exit:
   ret i128 0
 }
+
+define i32 @knownbits_sadd_sat(i32 %a0, i32 %a1) nounwind {
+; CHECK-LABEL: knownbits_sadd_sat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    ret{{[l|q]}}
+  %x = and i32 %a0, 2147483647
+  %y = and i32 %a1, 2147483647
+  %s = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %y)
+  %r = lshr i32 %s, 31
+  ret i32 %r
+}
+
+define i32 @knownbits_uadd_sat(i32 %a0, i32 %a1) nounwind {
+; CHECK-LABEL: knownbits_uadd_sat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    ret{{[l|q]}}
+  %x = or i32 %a0, -2147483648
+  %s = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %a1)
+  %r = lshr i32 %s, 31
+  ret i32 %r
+}
+
+define i32 @knownbits_ssub_sat(i32 %a0, i32 %a1) nounwind {
+; CHECK-LABEL: knownbits_ssub_sat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    ret{{[l|q]}}
+  %x = or i32 %a0, -2147483648
+  %y = and i32 %a1, 2147483647
+  %s = call i32 @llvm.ssub.sat.i32(i32 %x, i32 %y)
+  %r = lshr i32 %s, 31
+  ret i32 %r
+}
