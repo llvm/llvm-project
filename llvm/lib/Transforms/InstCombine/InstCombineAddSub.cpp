@@ -2036,13 +2036,14 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // 2. ((A1 | A3) & A2) == (A1 | A3)
   Value *VarX;
   const APInt *A1, *A2, *A3;
-  if(match(&I, m_c_Add(m_c_And(m_c_Add(m_Value(VarX), m_APInt(A1)), m_APInt(A2)), m_APInt(A3)))) {
-    if(*A1 == -(*A3)) {
+  if (match(&I,
+            m_c_Add(m_c_And(m_c_Add(m_Value(VarX), m_APInt(A1)), m_APInt(A2)),
+                    m_APInt(A3)))) {
+    if (*A1 == -(*A3)) {
       APInt A1OrA3 = *A1 | *A3;
       if ((A1OrA3 & *A2) == A1OrA3)
-        return replaceInstUsesWith(I,
-          Builder.CreateAnd(VarX, ConstantInt::get(I.getType(), *A2))
-        );
+        return replaceInstUsesWith(
+            I, Builder.CreateAnd(VarX, ConstantInt::get(I.getType(), *A2)));
     }
   }
 

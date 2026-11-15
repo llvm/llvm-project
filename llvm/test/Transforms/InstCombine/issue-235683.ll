@@ -27,3 +27,80 @@ define i32 @test_add_and_add_generalized(i32 %x) {
   %r = add i32 %m, 16
   ret i32 %r
 }
+
+; Positive: C1 (-24) != C2 (-8), (C1 & C2) == C1 and C1 + C3 == 0 -> folds to (x & -8)
+define i32 @test_add_and_add_aligned_c1(i32 %x) {
+; CHECK-LABEL: @test_add_and_add_aligned_c1(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -8
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %a = add i32 %x, -24
+  %m = and i32 %a, -8
+  %r = add i32 %m, 24
+  ret i32 %r
+}
+
+; Positive: non-power-of-two mask where (16 & -12) == 16 -> folds to (x & -12)
+define i32 @test_add_and_add_non_pow2_mask(i32 %x) {
+; CHECK-LABEL: @test_add_and_add_non_pow2_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -12
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %a = add i32 %x, 16
+  %m = and i32 %a, -12
+  %r = add i32 %m, -16
+  ret i32 %r
+}
+
+; Positive: vector splat
+define <2 x i32> @test_add_and_add_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test_add_and_add_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 -16)
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+;
+  %a = add <2 x i32> %x, <i32 -16, i32 -16>
+  %m = and <2 x i32> %a, <i32 -16, i32 -16>
+  %r = add <2 x i32> %m, <i32 16, i32 16>
+  ret <2 x i32> %r
+}
+
+; Negative: (-20 & -8) != -20 -> must NOT fold
+define i32 @test_add_and_add_unaligned_c1_neg(i32 %x) {
+; CHECK-LABEL: @test_add_and_add_unaligned_c1_neg(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -20
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[A]], -8
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[M]], 20
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, -20
+  %m = and i32 %a, -8
+  %r = add i32 %m, 20
+  ret i32 %r
+}
+
+; Negative: (-2 & -4) != -2 -> must NOT fold
+define i32 @test_add_and_add_unaligned_c1_neg2(i32 %x) {
+; CHECK-LABEL: @test_add_and_add_unaligned_c1_neg2(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -2
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[A]], -4
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, -2
+  %m = and i32 %a, -4
+  %r = add i32 %m, 2
+  ret i32 %r
+}
+
+; Negative: C1 + C3 != 0 -> must NOT fold
+define i32 @test_add_and_add_mismatched_const_neg(i32 %x) {
+; CHECK-LABEL: @test_add_and_add_mismatched_const_neg(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -8
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], 8
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, -8
+  %m = and i32 %a, -8
+  %r = add i32 %m, 16
+  ret i32 %r
+}
