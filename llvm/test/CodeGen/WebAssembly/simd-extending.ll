@@ -216,8 +216,10 @@ define <8 x i8> @extend_i1x8_i8(<8 x i1> %v) {
 ; CHECK:         .functype extend_i1x8_i8 (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 255, 255, 255, 255, 255, 255, 255, 255
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    i32.const 7
 ; CHECK-NEXT:    i8x16.shl
 ; CHECK-NEXT:    i32.const 7
