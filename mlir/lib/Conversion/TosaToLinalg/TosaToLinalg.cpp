@@ -2698,6 +2698,20 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
           linalg::YieldOp::create(nestedBuilder, op.getLoc(), *args.begin());
         });
 
+    if (resultTy.getNumDynamicDims() > 1) {
+      // A TOSA reshape can infer at most one dimension. Each collapsed axis
+      // pairs its repeat count with its input dimension.
+      SmallVector<ReassociationIndices> reassociation;
+      for (int64_t i = 0; i < rank; ++i)
+        reassociation.push_back({2 * i, 2 * i + 1});
+      Value result = tensor::CollapseShapeOp::create(
+          rewriter, loc, genericOp.getResult(0), reassociation);
+      if (result.getType() != resultTy)
+        result = tensor::CastOp::create(rewriter, loc, resultTy, result);
+      rewriter.replaceOp(op, result);
+      return success();
+    }
+
     auto shapeValue = getTosaConstShape(
         rewriter, loc, mlir::tosa::convertFromMlirShape(resultTy.getShape()));
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
