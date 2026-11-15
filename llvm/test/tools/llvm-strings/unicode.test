@@ -1,0 +1,76 @@
+# Show that llvm-strings uses the specified encoding.
+RUN: echo a > %t
+RUN: echo ab >> %t
+RUN: echo abc >> %t
+RUN: echo abcd >> %t
+# UTF-8 encoding of U+00A0 NON-BREAKING SPACE (which we treat as printable)
+RUN: echo -e 'bcde\0302\0240' >> %t
+# UTF-8 encoding of U+10000 LINEAR B SYLLABLE B008 A
+RUN: echo -e 'cdef\0360\0220\0200\0200' >> %t
+
+# Check that long form options work.
+RUN: llvm-strings -e utf8 --unicode=default %t | FileCheck --check-prefixes CHECK,CHECK-UTF8 --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 --unicode=utf8 %t | FileCheck --check-prefixes CHECK,CHECK-UTF8 --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 --unicode=invalid  %t | FileCheck --check-prefixes CHECK,CHECK-ASCII --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 --unicode=locale %t | FileCheck --check-prefixes CHECK,CHECK-LOCALE --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 --unicode=escape %t | FileCheck --check-prefixes CHECK,CHECK-ESCAPE --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 --unicode=hex %t | FileCheck --check-prefixes CHECK,CHECK-HEX --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 --unicode=highlight %t | FileCheck --check-prefixes CHECK,CHECK-ESCAPE --strict-whitespace --match-full-lines %s
+
+# Check that short form options work.
+RUN: llvm-strings -e utf8 -U default %t | FileCheck --check-prefixes CHECK,CHECK-UTF8 --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 -U utf8 %t | FileCheck --check-prefixes CHECK,CHECK-UTF8 --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 -U invalid  %t | FileCheck --check-prefixes CHECK,CHECK-ASCII --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 -U locale %t | FileCheck --check-prefixes CHECK,CHECK-LOCALE --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 -U escape %t | FileCheck --check-prefixes CHECK,CHECK-ESCAPE --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 -U hex %t | FileCheck --check-prefixes CHECK,CHECK-HEX --strict-whitespace --match-full-lines %s
+RUN: llvm-strings -e utf8 -U highlight %t | FileCheck --check-prefixes CHECK,CHECK-ESCAPE --strict-whitespace --match-full-lines %s
+
+# Check that the output of no options, -U default, and --unicode default all
+# match. Check also that this is equivalent to -U utf8 or -U locale depending
+# on the -e option.
+RUN: llvm-strings -e utf8 -U default %t > %t.1
+RUN: llvm-strings -e utf8 --unicode default %t > %t.2
+RUN: llvm-strings -e utf8 --unicode utf8 %t > %t.3
+RUN: llvm-strings -e utf8 %t > %t.4
+RUN: cmp %t.1 %t.2
+RUN: cmp %t.1 %t.3
+RUN: cmp %t.1 %t.4
+RUN: llvm-strings -e S -U default %t > %t.1
+RUN: llvm-strings -e S --unicode default %t > %t.2
+RUN: llvm-strings -e S --unicode locale %t > %t.3
+RUN: llvm-strings -e S %t > %t.4
+RUN: cmp %t.1 %t.2
+RUN: cmp %t.1 %t.3
+RUN: cmp %t.1 %t.4
+
+# The first line containing just abcd should always be matched.
+CHECK:abcd
+
+# In -U invalid, bytes of U+00A0 should not be included.
+CHECK-ASCII:bcde
+
+# In -U locale, U+00A0 and U+10000 should be printed in some way.
+CHECK-LOCALE:bcde{{.+}}
+CHECK-LOCALE:cdef{{.+}}
+
+# In -U default, U+00A0 and U+10000 should be printed as in the input.
+CHECK-UTF8:bcde{{\xc2\xa0}}
+CHECK-UTF8:cdef{{\xf0\x90\x80\x80}}
+
+# In -U escape and -U highlight, U+00A0 should be printed as \u00A0, and U+10000
+# as \U00010000. As the output is not to a tty, -U escape and -U highlight are
+# indistinguishable.
+CHECK-ESCAPE:bcde\u00A0
+CHECK-ESCAPE:cdef\U00010000
+
+# In -U hex, U+00A0 and U+10000 should be printed as their UTF-8 representation
+# in hex.
+CHECK-HEX:bcde<0xc2a0>
+CHECK-HEX:cdef<0xf0908080>
+
+# Check that invalid --unicode values are rejected.
+RUN: not llvm-strings --unicode x 2>&1 %t | FileCheck --check-prefix CHECK-ERROR %s
+RUN: not llvm-strings -U x 2>&1 %t | FileCheck --check-prefix CHECK-ERROR %s
+
+CHECK-ERROR: error: 'x' is not a valid value for '--unicode='

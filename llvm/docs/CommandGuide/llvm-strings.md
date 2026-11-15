@@ -57,6 +57,18 @@ Specifies the encoding of the input file. Valid arguments are:
 The default is `--encoding=S`.
 :::
 
+:::{option} --unicode=<unicode>, -U
+Specifies how non-ASCII characters are presented in the output file. Valid
+arguments are:
+- `default`
+- `utf8` (UTF-8)
+- `locale` (current locale's character set)
+- `escape` (code point printed in `\u00a0` notation)
+- `hex` (UTF-8 byte representation printed in `<0xc2a0>` notation)
+- `highlight` (as `escape`, but highlighted)
+The default, or `--unicode=default`, is `--unicode=locale` if `--encoding=S` is
+used, otherwise `--unicode=utf8`.
+
 :::{option} --help, -h
 Display a summary of command line options.
 :::

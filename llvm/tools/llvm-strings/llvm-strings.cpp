@@ -144,6 +144,9 @@ static Encoding Encoding;
 enum class Radix { None, Octal, Hexadecimal, Decimal };
 static Radix Radix;
 
+enum class Unicode { Invalid, Locale, Utf8, Escape, Hex, Highlight };
+static Unicode Unicode;
+
 [[noreturn]] static void reportCmdLineError(const Twine &Message) {
   WithColor::error(errs(), ToolName) << Message << "\n";
   exit(1);
@@ -289,6 +292,49 @@ struct CharSet {
 
     static void startString() {}
 
+    static void writeChar(raw_ostream &OS, CharT Ch) {
+      static_assert(std::is_same_v<CharT, UTF32>);
+
+      if (Ch <= 0x7F) {
+        OS << (char)Ch;
+        return;
+      }
+
+      switch (Unicode) {
+      case Unicode::Invalid:
+        llvm_unreachable("In --unicode=invalid, we should never print any "
+                         "non-ASCII characters.");
+
+      case Unicode::Locale:
+      case Unicode::Escape:
+      case Unicode::Highlight: {
+        WithColor COS(OS, raw_ostream::RED, false, false,
+                      Unicode == Unicode::Highlight ? ColorMode::Auto
+                                                    : ColorMode::Disable);
+        if (Ch <= 0xFFFF)
+          COS << "\\u" << utohexstr(Ch, false, 4);
+        else
+          COS << "\\U" << utohexstr(Ch, false, 8);
+        return;
+      }
+
+      case Unicode::Utf8:
+      case Unicode::Hex:
+        char UTF8[4];
+        char *UTF8end = UTF8;
+        ConvertCodePointToUTF8(Ch, UTF8end);
+        if (Unicode == Unicode::Utf8) {
+          OS << StringRef(UTF8, UTF8end - UTF8);
+        } else {
+          OS << "<0x";
+          for (unsigned char Byte : StringRef(UTF8, UTF8end - UTF8))
+            OS << utohexstr(Byte, true, 2);
+          OS << '>';
+        }
+        return;
+      }
+    }
+
     static void writeString(raw_ostream &OS, StringRef Str) { OS << Str; }
 
     static void endString(raw_ostream &OS) { OS << '\n'; }
@@ -388,8 +434,11 @@ struct CharSet {
         using llvm::sys::UnicodeCharRange;
 
         for (const UnicodeCharRange &Range : GeneratedCharacterRanges)
-          for (UTF32 Ch = Range.Lower; Ch <= Range.Upper; ++Ch)
+          for (UTF32 Ch = Range.Lower; Ch <= Range.Upper; ++Ch) {
+            if (Ch > U'\x7f' && Unicode == Unicode::Invalid)
+              break;
             StringChars[Ch] = true;
+          }
         for (const UnicodeCharRange &Range : GeneratedControlCharacterRanges)
           for (UTF32 Ch = Range.Lower; Ch <= Range.Upper; ++Ch)
             StringChars[Ch] = false;
@@ -400,6 +449,40 @@ struct CharSet {
 
       return StringChars[Ch];
     }
+
+    static void writeChar(raw_ostream &OS, UTF32 Ch) {
+      if (Ch >= 0x80 && Unicode == Unicode::Locale) {
+        char Buf[MB_LEN_MAX];
+        std::mbstate_t OutMBState{};
+        const size_t BytesWritten = crtomb(Buf, Ch, &OutMBState);
+        if (BytesWritten != (size_t)-1) {
+          OS << StringRef(Buf, BytesWritten);
+          return;
+        }
+      }
+      Base::writeChar(OS, Ch);
+    }
+
+    static void writeString(raw_ostream &OS, StringRef Str) {
+      if (Unicode == Unicode::Invalid || Unicode == Unicode::Locale) {
+        Base::writeString(OS, Str);
+        return;
+      }
+
+      std::mbstate_t StrMBState{};
+      const char *Cur = Str.begin(), *End = Str.end();
+      while (Cur != End) {
+        char_t UCh;
+        const size_t BytesRead = mbrtoc(&UCh, Cur, End - Cur, &StrMBState);
+        assert(BytesRead != 0 && BytesRead != (size_t)-1 &&
+               BytesRead != (size_t)-2 &&
+               "If a string was initially valid, it cannot to become invalid "
+               "when re-reading");
+        if (BytesRead != (size_t)-3)
+          Cur += BytesRead;
+        writeChar(OS, UCh);
+      }
+    }
   };
 
   // Note: The complexity in writing is only required for stateful encodings
@@ -408,6 +491,25 @@ struct CharSet {
     std::mbstate_t StrMBState{}, OutMBState{};
 
     void startString() { StrMBState = InMBState; }
+
+    void writeChar(raw_ostream &OS, UTF32 Ch) {
+      if (Unicode == Unicode::Locale) {
+        char Buf[MB_LEN_MAX];
+        std::mbstate_t MBState = OutMBState;
+        size_t BytesWritten = crtomb(Buf, Ch, &MBState);
+        if (BytesWritten != (size_t)-1) {
+          OutMBState = MBState;
+          OS << StringRef(Buf, BytesWritten);
+          return;
+        }
+        // Restore state for Base::writeChar.
+        BytesWritten = crtomb(Buf, 0, &OutMBState);
+        assert(BytesWritten != (size_t)-1 &&
+               "A null character must always be valid");
+        OS << StringRef(Buf, BytesWritten - 1);
+      }
+      Base::writeChar(OS, Ch);
+    }
 
     void writeString(raw_ostream &OS, StringRef Str) {
       const char *Cur = Str.begin(), *End = Str.end();
@@ -420,13 +522,7 @@ struct CharSet {
                "re-reading");
         if (BytesRead != (size_t)-3)
           Cur += BytesRead;
-
-        char Buf[MB_LEN_MAX];
-        const size_t BytesWritten = crtomb(Buf, UCh, &OutMBState);
-        assert(BytesWritten != (size_t)-1 &&
-               "If we successfully read a character, we must also be able to "
-               "write it");
-        OS << StringRef(Buf, BytesWritten);
+        writeChar(OS, UCh);
       }
     }
 
@@ -440,7 +536,9 @@ struct CharSet {
     }
   };
 
-  struct Utf8 : MultiByteStateless {
+  // UTF-8 is stateless but with -eutf8 -Ulocale, we may convert it to a
+  // stateful encoding.
+  struct Utf8 : MultiByteStateful {
     static bool readChar(const char *&Cur, const char *End, bool AtEOF,
                          CharT &Ch) {
       if (Cur == End)
@@ -471,6 +569,22 @@ struct CharSet {
       }
       Cur = reinterpret_cast<const char *>(UTF8Next);
       return true;
+    }
+
+    void writeString(raw_ostream &OS, StringRef Str) {
+      if (Unicode == Unicode::Utf8) {
+        Base::writeString(OS, Str);
+        return;
+      }
+
+      const UTF8 *Cur = reinterpret_cast<const UTF8 *>(Str.begin()),
+                 *End = reinterpret_cast<const UTF8 *>(Str.end());
+      while (Cur != End) {
+        UTF32 UCh;
+        UTF32 *UTF32Next = &UCh;
+        ConvertUTF8toUTF32(&Cur, End, &UTF32Next, &UCh + 1, strictConversion);
+        writeChar(OS, UCh);
+      }
     }
   };
 
@@ -503,6 +617,10 @@ struct CharSet {
       }();
 
       return StringChars[Ch];
+    }
+
+    static void writeString(raw_ostream &OS, StringRef Str) {
+      MultiByteStateless::writeString(OS, Str);
     }
   };
 
@@ -735,7 +853,12 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  // The defaults are ugly to maintain compatibility with GNU strings in the
+  // common cases. The general idea is that --encoding specifies the input
+  // encoding, --unicode specifies the output encoding, but when one is
+  // specified, the other defaults to the best match.
   Arg *EncodingArg = Args.getLastArg(OPT_encoding_EQ);
+  Arg *UnicodeArg = Args.getLastArg(OPT_unicode_EQ);
   if (!EncodingArg) {
     Encoding = Encoding::Locale;
   } else {
@@ -748,6 +871,24 @@ int main(int argc, char **argv) {
     if (!EncodingVal)
       invalidArgValue(EncodingArg);
     Encoding = *EncodingVal;
+  }
+  Unicode = Encoding == Encoding::Locale ? Unicode::Locale : Unicode::Utf8;
+  if (UnicodeArg) {
+    auto UnicodeVal =
+        llvm::StringSwitch<std::optional<enum Unicode>>(UnicodeArg->getValue())
+            .Case("default", Unicode)
+            .Case("utf8", Unicode::Utf8)
+            .Case("invalid", Unicode::Invalid)
+            .Case("locale", Unicode::Locale)
+            .Case("escape", Unicode::Escape)
+            .Case("hex", Unicode::Hex)
+            .Case("highlight", Unicode::Highlight)
+            .Default(std::nullopt);
+    if (!UnicodeVal)
+      invalidArgValue(UnicodeArg);
+    Unicode = *UnicodeVal;
+    if (!EncodingArg && Unicode != Unicode::Locale)
+      Encoding = Encoding::Utf8;
   }
   parseIntArg(Args, OPT_bytes_EQ, MinLength);
   PrintFileName = Args.hasArg(OPT_print_file_name);
@@ -769,39 +910,57 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
+#ifdef LLVM_ON_UNIX
+  // Using LLVM's built-in decoder is faster than going through libc, but
+  // this doesn't affect correctness (assuming 32-bit wchar_t), so it's fine
+  // if this check has false negatives (e.g. if some OS returns "utf8"
+  // instead).
+  if (StringRef(nl_langinfo(CODESET)) == "UTF-8") {
+    if (Encoding == Encoding::Locale)
+      Encoding = Encoding::Utf8;
+    if (Unicode == Unicode::Locale)
+      Unicode = Unicode::Utf8;
+  }
+#endif
+#ifdef _WIN32
+  // Using LLVM's built-in decoder is necessary for correctness as
+  // Strings<CharSet::MultiByteStateless> on WIndows is implemented on top of
+  // 16-bit wchar_t which cannot represent all code points.
+  if (GetACP() == CP_UTF8) {
+    if (Encoding == Encoding::Locale)
+      Encoding = Encoding::Utf8;
+    if (Unicode == Unicode::Locale)
+      Unicode = Unicode::Utf8;
+  }
+#endif
+
   void (*const StringsImpl)(raw_ostream &OS, StringRef FileName,
                             sys::fs::file_t Handle) = [] {
+    // If the user requested --unicode=invalid and we also know that ASCII
+    // bytes cannot appear anywhere in non-ASCII characters, we can avoid
+    // decoding and act as if the user specified --encoding=s. This applies to
+    // single-byte character sets, does not apply to multibyte character sets in
+    // general whether stateful or stateless, but does apply to UTF-8.
     switch (Encoding) {
     case Encoding::Ascii:
       return strings<CharSet::Ascii>;
 
     case Encoding::Locale:
-      if (MB_CUR_MAX == 1)
-        return strings<CharSet::SingleByte>;
-
-#ifdef LLVM_ON_UNIX
-      // Using LLVM's built-in decoder is faster than going through libc, but
-      // this doesn't affect correctness (assuming 32-bit wchar_t), so it's fine
-      // if this check has false negatives (e.g. if some OS returns "utf8"
-      // instead).
-      if (StringRef(nl_langinfo(CODESET)) == "UTF-8")
-        return strings<CharSet::Utf8>;
-#endif
-#ifdef _WIN32
-      // Using LLVM's built-in decoder is necessary for correctness as
-      // Strings<CharSet::MultiByteStateless> on Windows is implemented on top
-      // of 16-bit wchar_t which cannot represent all code points.
-      if (GetACP() == CP_UTF8)
-        return strings<CharSet::Utf8>;
-#endif
-
-      if (!mblen(NULL, 0))
+      if (MB_CUR_MAX == 1) {
+        if (Unicode == Unicode::Invalid)
+          return strings<CharSet::Ascii>;
+        else
+          return strings<CharSet::SingleByte>;
+      } else if (!mblen(NULL, 0))
         return strings<CharSet::MultiByteStateless>;
       else
         return strings<CharSet::MultiByteStateful>;
 
     case Encoding::Utf8:
-      return strings<CharSet::Utf8>;
+      if (Unicode == Unicode::Invalid)
+        return strings<CharSet::Ascii>;
+      else
+        return strings<CharSet::Utf8>;
     }
 
     llvm_unreachable("unhandled encoding");
