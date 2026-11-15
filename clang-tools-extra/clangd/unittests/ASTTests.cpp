@@ -482,6 +482,39 @@ TEST(ClangdAST, GetQualification) {
   }
 }
 
+TEST(ClangdAST, GetQualificationForEnumInStruct) {
+  const struct {
+    const char *Filename;
+    const char *Expected;
+  } Cases[] = {
+      {"TestTU.c", ""},
+      {"TestTU.cpp", "MaybeSigned::"},
+      {"TestTU.m", ""},               // objective-c
+      {"TestTU.mm", "MaybeSigned::"}, // objective-c++
+  };
+
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Filename);
+
+    auto TU = TestTU::withCode(R"(
+      struct MaybeSigned {
+        enum { S, U } tag;
+      };
+      void insert(void);
+    )");
+    TU.Filename = Case.Filename;
+    auto AST = TU.build();
+
+    const auto &Tag = cast<FieldDecl>(findUnqualifiedDecl(AST, "tag"));
+    const auto *Enum = Tag.getType()->castAs<EnumType>()->getDecl();
+    const auto &Insert = findDecl(AST, "insert");
+
+    EXPECT_EQ(getQualification(AST.getASTContext(), Insert.getDeclContext(),
+                               Insert.getBeginLoc(), Enum),
+              Case.Expected);
+  }
+}
+
 TEST(ClangdAST, PrintType) {
   const struct {
     llvm::StringRef Test;
