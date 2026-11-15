@@ -886,3 +886,11 @@ define b64 @neg_bitcast_constexpr_2b32_ptr_elt_b64() {
   %res = bitcast <2 x b32> <b32 bitcast (ptr @g to b32), b32 0> to b64
   ret b64 %res
 }
+
+define b64 @neg_bitcast_constexpr_2b32_inttoptr_elt_b64() {
+; CHECK-LABEL: @neg_bitcast_constexpr_2b32_inttoptr_elt_b64(
+; CHECK-NEXT:    ret b64 bitcast (<2 x b32> <b32 bitcast (ptr inttoptr (i32 123 to ptr) to b32), b32 0> to b64)
+;
+  %res = bitcast <2 x b32> <b32 bitcast (ptr inttoptr (i32 123 to ptr) to b32), b32 0> to b64
+  ret b64 %res
+}
