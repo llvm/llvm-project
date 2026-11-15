@@ -603,69 +603,382 @@ define void @masked_scatter_v4i64(ptr %a, ptr %b) {
 ; ST1H (float)
 ;
 
-;define void @masked_scatter_v2f16(ptr %a, ptr %b) {
-;  %vals = load <2 x half>, ptr %a
-;  %ptrs = load <2 x ptr>, ptr %b
-;  %mask = fcmp oeq <2 x half> %vals, zeroinitializer
-;  call void @llvm.masked.scatter.v2f16(<2 x half> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> %mask)
-;  ret void
-;}
+define void @masked_scatter_v2f16(ptr %a, ptr %b) {
+; CHECK-LABEL: masked_scatter_v2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fcmeq v1.4h, v0.4h, #0.0
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    zip1 v1.4h, v1.4h, v1.4h
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-NEXT:    shl v1.2d, v1.2d, #63
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
+; CHECK-NEXT:    ret
+  %vals = load <2 x half>, ptr %a
+  %ptrs = load <2 x ptr>, ptr %b
+  %mask = fcmp oeq <2 x half> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v2f16(<2 x half> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> %mask)
+  ret void
+}
 
-;define void @masked_scatter_v4f16(ptr %a, ptr %b) {
-;  %vals = load <4 x half>, ptr %a
-;  %ptrs = load <4 x ptr>, ptr %b
-;  %mask = fcmp oeq <4 x half> %vals, zeroinitializer
-;  call void @llvm.masked.scatter.v4f16(<4 x half> %vals, <4 x ptr> %ptrs, i32 8, <4 x i1> %mask)
-;  ret void
-;}
+define void @masked_scatter_v4f16(ptr %a, ptr %b) {
+; CHECK-LABEL: masked_scatter_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fcmeq v1.4h, v0.4h, #0.0
+; CHECK-NEXT:    zip1 v3.4h, v0.4h, v0.4h
+; CHECK-NEXT:    dup v0.2s, v0.s[1]
+; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    ushll v2.2d, v1.2s, #0
+; CHECK-NEXT:    ushll2 v1.2d, v1.4s, #0
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    shl v2.2d, v2.2d, #48
+; CHECK-NEXT:    shl v1.2d, v1.2d, #48
+; CHECK-NEXT:    sshr v2.2d, v2.2d, #48
+; CHECK-NEXT:    sshr v1.2d, v1.2d, #48
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    ushll v2.2d, v3.2s, #0
+; CHECK-NEXT:    ldp q3, q4, [x1]
+; CHECK-NEXT:    st1h { z2.d }, p1, [z3.d]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    st1h { z0.d }, p1, [z4.d]
+; CHECK-NEXT:    ret
+  %vals = load <4 x half>, ptr %a
+  %ptrs = load <4 x ptr>, ptr %b
+  %mask = fcmp oeq <4 x half> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v4f16(<4 x half> %vals, <4 x ptr> %ptrs, i32 8, <4 x i1> %mask)
+  ret void
+}
 
-;define void @masked_scatter_v8f16(ptr %a, ptr %b) #0 {
-;  %vals = load <8 x half>, ptr %a
-;  %ptrs = load <8 x ptr>, ptr %b
-;  %mask = fcmp oeq <8 x half> %vals, zeroinitializer
-;  call void @llvm.masked.scatter.v8f16(<8 x half> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
-;  ret void
-;}
+define void @masked_scatter_v8f16(ptr %a, ptr %b) #0 {
+; CHECK-LABEL: masked_scatter_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q16, q7, [x1, #32]
+; CHECK-NEXT:    fcmeq v1.8h, v0.8h, #0.0
+; CHECK-NEXT:    zip1 v4.4h, v0.4h, v0.4h
+; CHECK-NEXT:    dup v5.2s, v0.s[1]
+; CHECK-NEXT:    ushll v2.4s, v1.4h, #0
+; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
+; CHECK-NEXT:    zip1 v5.4h, v5.4h, v5.4h
+; CHECK-NEXT:    ushll v3.2d, v2.2s, #0
+; CHECK-NEXT:    ushll2 v2.2d, v2.4s, #0
+; CHECK-NEXT:    shl v3.2d, v3.2d, #48
+; CHECK-NEXT:    shl v2.2d, v2.2d, #48
+; CHECK-NEXT:    sshr v3.2d, v3.2d, #48
+; CHECK-NEXT:    sshr v2.2d, v2.2d, #48
+; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
+; CHECK-NEXT:    ushll v3.2d, v4.2s, #0
+; CHECK-NEXT:    ldp q4, q6, [x1]
+; CHECK-NEXT:    st1h { z3.d }, p1, [z4.d]
+; CHECK-NEXT:    ushll v3.2d, v1.2s, #0
+; CHECK-NEXT:    mov d4, v0.d[1]
+; CHECK-NEXT:    ushll2 v1.2d, v1.4s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    ushll v2.2d, v5.2s, #0
+; CHECK-NEXT:    dup v0.2s, v0.s[3]
+; CHECK-NEXT:    shl v3.2d, v3.2d, #48
+; CHECK-NEXT:    zip1 v4.4h, v4.4h, v4.4h
+; CHECK-NEXT:    shl v1.2d, v1.2d, #48
+; CHECK-NEXT:    sshr v3.2d, v3.2d, #48
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    st1h { z2.d }, p1, [z6.d]
+; CHECK-NEXT:    sshr v1.2d, v1.2d, #48
+; CHECK-NEXT:    ushll v2.2d, v4.2s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    st1h { z2.d }, p1, [z16.d]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    st1h { z0.d }, p1, [z7.d]
+; CHECK-NEXT:    ret
+  %vals = load <8 x half>, ptr %a
+  %ptrs = load <8 x ptr>, ptr %b
+  %mask = fcmp oeq <8 x half> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v8f16(<8 x half> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
+  ret void
+}
 
-;define void @masked_scatter_v16f16(ptr %a, ptr %b) {
-;  %vals = load <16 x half>, ptr %a
-;  %ptrs = load <16 x ptr>, ptr %b
-;  %mask = fcmp oeq <16 x half> %vals, zeroinitializer
-;  call void @llvm.masked.scatter.v16f16(<16 x half> %vals, <16 x ptr> %ptrs, i32 8, <16 x i1> %mask)
-;  ret void
-;}
+define void @masked_scatter_v16f16(ptr %a, ptr %b) {
+; CHECK-LABEL: masked_scatter_v16f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q3, q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q18, q17, [x1]
+; CHECK-NEXT:    ldp q21, q20, [x1, #32]
+; CHECK-NEXT:    fcmeq v4.8h, v3.8h, #0.0
+; CHECK-NEXT:    zip1 v5.4h, v3.4h, v3.4h
+; CHECK-NEXT:    dup v16.2s, v3.s[1]
+; CHECK-NEXT:    ushll v1.4s, v4.4h, #0
+; CHECK-NEXT:    ushll2 v19.4s, v4.8h, #0
+; CHECK-NEXT:    zip1 v16.4h, v16.4h, v16.4h
+; CHECK-NEXT:    ushll v2.2d, v1.2s, #0
+; CHECK-NEXT:    ushll2 v7.2d, v1.4s, #0
+; CHECK-NEXT:    shl v2.2d, v2.2d, #48
+; CHECK-NEXT:    shl v7.2d, v7.2d, #48
+; CHECK-NEXT:    sshr v6.2d, v2.2d, #48
+; CHECK-NEXT:    sshr v7.2d, v7.2d, #48
+; CHECK-NEXT:    ldp q2, q1, [x1, #96]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z6.d, #0
+; CHECK-NEXT:    ushll v6.2d, v5.2s, #0
+; CHECK-NEXT:    ldp q5, q4, [x1, #64]
+; CHECK-NEXT:    st1h { z6.d }, p1, [z18.d]
+; CHECK-NEXT:    ushll v6.2d, v19.2s, #0
+; CHECK-NEXT:    mov d18, v3.d[1]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z7.d, #0
+; CHECK-NEXT:    ushll v7.2d, v16.2s, #0
+; CHECK-NEXT:    dup v3.2s, v3.s[3]
+; CHECK-NEXT:    shl v6.2d, v6.2d, #48
+; CHECK-NEXT:    zip1 v16.4h, v18.4h, v18.4h
+; CHECK-NEXT:    zip1 v3.4h, v3.4h, v3.4h
+; CHECK-NEXT:    sshr v6.2d, v6.2d, #48
+; CHECK-NEXT:    st1h { z7.d }, p1, [z17.d]
+; CHECK-NEXT:    fcmeq v7.8h, v0.8h, #0.0
+; CHECK-NEXT:    ushll2 v17.2d, v19.4s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z6.d, #0
+; CHECK-NEXT:    ushll v6.2d, v16.2s, #0
+; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-NEXT:    shl v16.2d, v17.2d, #48
+; CHECK-NEXT:    ushll v17.4s, v7.4h, #0
+; CHECK-NEXT:    ushll2 v7.4s, v7.8h, #0
+; CHECK-NEXT:    sshr v16.2d, v16.2d, #48
+; CHECK-NEXT:    st1h { z6.d }, p1, [z21.d]
+; CHECK-NEXT:    ushll v6.2d, v17.2s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z16.d, #0
+; CHECK-NEXT:    ushll2 v16.2d, v17.4s, #0
+; CHECK-NEXT:    shl v6.2d, v6.2d, #48
+; CHECK-NEXT:    shl v16.2d, v16.2d, #48
+; CHECK-NEXT:    sshr v6.2d, v6.2d, #48
+; CHECK-NEXT:    st1h { z3.d }, p1, [z20.d]
+; CHECK-NEXT:    zip1 v3.4h, v0.4h, v0.4h
+; CHECK-NEXT:    cmpne p1.d, p0/z, z6.d, #0
+; CHECK-NEXT:    dup v6.2s, v0.s[1]
+; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-NEXT:    st1h { z3.d }, p1, [z5.d]
+; CHECK-NEXT:    zip1 v3.4h, v6.4h, v6.4h
+; CHECK-NEXT:    sshr v5.2d, v16.2d, #48
+; CHECK-NEXT:    ushll v6.2d, v7.2s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z5.d, #0
+; CHECK-NEXT:    mov d5, v0.d[1]
+; CHECK-NEXT:    dup v0.2s, v0.s[3]
+; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-NEXT:    shl v6.2d, v6.2d, #48
+; CHECK-NEXT:    st1h { z3.d }, p1, [z4.d]
+; CHECK-NEXT:    zip1 v3.4h, v5.4h, v5.4h
+; CHECK-NEXT:    sshr v4.2d, v6.2d, #48
+; CHECK-NEXT:    ushll2 v5.2d, v7.4s, #0
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    cmpne p1.d, p0/z, z4.d, #0
+; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-NEXT:    shl v4.2d, v5.2d, #48
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    st1h { z3.d }, p1, [z2.d]
+; CHECK-NEXT:    sshr v2.2d, v4.2d, #48
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
+; CHECK-NEXT:    ret
+  %vals = load <16 x half>, ptr %a
+  %ptrs = load <16 x ptr>, ptr %b
+  %mask = fcmp oeq <16 x half> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v16f16(<16 x half> %vals, <16 x ptr> %ptrs, i32 8, <16 x i1> %mask)
+  ret void
+}
 
-;define void @masked_scatter_v2bf16(ptr %a, ptr %b) {
-;  %vals = load <2 x bfloat>, ptr %a
-;  %ptrs = load <2 x ptr>, ptr %b
-;  %mask = fcmp oeq <2 x bfloat> %vals, zeroinitializer
-;  call void @llvm.masked.scatter.v2bf16(<2 x bfloat> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> %mask)
-;  ret void
-;}
+define void @masked_scatter_v2bf16(ptr %a, ptr %b) {
+; CHECK-LABEL: masked_scatter_v2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    shll v1.4s, v0.4h, #16
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    fcmeq v1.4s, v1.4s, #0.0
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-NEXT:    shl v1.2d, v1.2d, #63
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
+; CHECK-NEXT:    ret
+  %vals = load <2 x bfloat>, ptr %a
+  %ptrs = load <2 x ptr>, ptr %b
+  %mask = fcmp oeq <2 x bfloat> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v2bf16(<2 x bfloat> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> %mask)
+  ret void
+}
 
-;define void @masked_scatter_v4bf16(ptr %a, ptr %b) {
-;  %vals = load <4 x bfloat>, ptr %a
-;  %ptrs = load <4 x ptr>, ptr %b
-;  %mask = fcmp oeq <4 x bfloat> %vals, zeroinitializer
-;  call void @llvm.masked.scatter.v4bf16(<4 x bfloat> %vals, <4 x ptr> %ptrs, i32 8, <4 x i1> %mask)
-;  ret void
-;}
+define void @masked_scatter_v4bf16(ptr %a, ptr %b) {
+; CHECK-LABEL: masked_scatter_v4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    shll v1.4s, v0.4h, #16
+; CHECK-NEXT:    zip1 v3.4h, v0.4h, v0.4h
+; CHECK-NEXT:    dup v0.2s, v0.s[1]
+; CHECK-NEXT:    fcmeq v1.4s, v1.4s, #0.0
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    ushll v2.2d, v1.2s, #0
+; CHECK-NEXT:    ushll2 v1.2d, v1.4s, #0
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    shl v2.2d, v2.2d, #48
+; CHECK-NEXT:    shl v1.2d, v1.2d, #48
+; CHECK-NEXT:    sshr v2.2d, v2.2d, #48
+; CHECK-NEXT:    sshr v1.2d, v1.2d, #48
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    ushll v2.2d, v3.2s, #0
+; CHECK-NEXT:    ldp q3, q4, [x1]
+; CHECK-NEXT:    st1h { z2.d }, p1, [z3.d]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    st1h { z0.d }, p1, [z4.d]
+; CHECK-NEXT:    ret
+  %vals = load <4 x bfloat>, ptr %a
+  %ptrs = load <4 x ptr>, ptr %b
+  %mask = fcmp oeq <4 x bfloat> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v4bf16(<4 x bfloat> %vals, <4 x ptr> %ptrs, i32 8, <4 x i1> %mask)
+  ret void
+}
 
-;define void @masked_scatter_v8bf16(ptr %a, ptr %b) #0 {
-;  %vals = load <8 x bfloat>, ptr %a
-;  %ptrs = load <8 x ptr>, ptr %b
-;  %mask = fcmp oeq <8 x bfloat> %vals, zeroinitializer
-;  call void @llvm.masked.scatter.v8bf16(<8 x bfloat> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
-;  ret void
-;}
+define void @masked_scatter_v8bf16(ptr %a, ptr %b) #0 {
+; CHECK-LABEL: masked_scatter_v8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q16, q7, [x1, #32]
+; CHECK-NEXT:    shll v1.4s, v0.4h, #16
+; CHECK-NEXT:    zip1 v3.4h, v0.4h, v0.4h
+; CHECK-NEXT:    shll2 v4.4s, v0.8h, #16
+; CHECK-NEXT:    dup v5.2s, v0.s[1]
+; CHECK-NEXT:    fcmeq v1.4s, v1.4s, #0.0
+; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-NEXT:    zip1 v5.4h, v5.4h, v5.4h
+; CHECK-NEXT:    ushll v2.2d, v1.2s, #0
+; CHECK-NEXT:    ushll2 v1.2d, v1.4s, #0
+; CHECK-NEXT:    shl v2.2d, v2.2d, #48
+; CHECK-NEXT:    shl v1.2d, v1.2d, #48
+; CHECK-NEXT:    sshr v2.2d, v2.2d, #48
+; CHECK-NEXT:    sshr v1.2d, v1.2d, #48
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    fcmeq v2.4s, v4.4s, #0.0
+; CHECK-NEXT:    ldp q4, q6, [x1]
+; CHECK-NEXT:    st1h { z3.d }, p1, [z4.d]
+; CHECK-NEXT:    ushll v3.2d, v2.2s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    ushll v1.2d, v5.2s, #0
+; CHECK-NEXT:    mov d4, v0.d[1]
+; CHECK-NEXT:    dup v0.2s, v0.s[3]
+; CHECK-NEXT:    shl v3.2d, v3.2d, #48
+; CHECK-NEXT:    zip1 v4.4h, v4.4h, v4.4h
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    sshr v3.2d, v3.2d, #48
+; CHECK-NEXT:    st1h { z1.d }, p1, [z6.d]
+; CHECK-NEXT:    ushll2 v1.2d, v2.4s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
+; CHECK-NEXT:    ushll v2.2d, v4.2s, #0
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    shl v1.2d, v1.2d, #48
+; CHECK-NEXT:    sshr v1.2d, v1.2d, #48
+; CHECK-NEXT:    st1h { z2.d }, p1, [z16.d]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    st1h { z0.d }, p1, [z7.d]
+; CHECK-NEXT:    ret
+  %vals = load <8 x bfloat>, ptr %a
+  %ptrs = load <8 x ptr>, ptr %b
+  %mask = fcmp oeq <8 x bfloat> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v8bf16(<8 x bfloat> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
+  ret void
+}
 
-;define void @masked_scatter_v16bf16(ptr %a, ptr %b) {
-;  %vals = load <16 x bfloat>, ptr %a
-;  %ptrs = load <16 x ptr>, ptr %b
-;  %mask = fcmp oeq <16 x bfloat> %vals, zeroinitializer
-;  call void @llvm.masked.scatter.v16bf16(<16 x bfloat> %vals, <16 x ptr> %ptrs, i32 8, <16 x i1> %mask)
-;  ret void
-;}
+define void @masked_scatter_v16bf16(ptr %a, ptr %b) {
+; CHECK-LABEL: masked_scatter_v16bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q3, q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q19, q18, [x1]
+; CHECK-NEXT:    ldp q21, q20, [x1, #32]
+; CHECK-NEXT:    shll v1.4s, v3.4h, #16
+; CHECK-NEXT:    zip1 v4.4h, v3.4h, v3.4h
+; CHECK-NEXT:    shll2 v6.4s, v3.8h, #16
+; CHECK-NEXT:    dup v16.2s, v3.s[1]
+; CHECK-NEXT:    fcmeq v1.4s, v1.4s, #0.0
+; CHECK-NEXT:    fcmeq v6.4s, v6.4s, #0.0
+; CHECK-NEXT:    ushll v17.2d, v4.2s, #0
+; CHECK-NEXT:    zip1 v16.4h, v16.4h, v16.4h
+; CHECK-NEXT:    ushll v2.2d, v1.2s, #0
+; CHECK-NEXT:    ushll2 v7.2d, v1.4s, #0
+; CHECK-NEXT:    shl v2.2d, v2.2d, #48
+; CHECK-NEXT:    shl v7.2d, v7.2d, #48
+; CHECK-NEXT:    sshr v5.2d, v2.2d, #48
+; CHECK-NEXT:    sshr v7.2d, v7.2d, #48
+; CHECK-NEXT:    ldp q2, q1, [x1, #96]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z5.d, #0
+; CHECK-NEXT:    ldp q5, q4, [x1, #64]
+; CHECK-NEXT:    st1h { z17.d }, p1, [z19.d]
+; CHECK-NEXT:    ushll v17.2d, v6.2s, #0
+; CHECK-NEXT:    mov d19, v3.d[1]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z7.d, #0
+; CHECK-NEXT:    ushll v7.2d, v16.2s, #0
+; CHECK-NEXT:    ushll2 v6.2d, v6.4s, #0
+; CHECK-NEXT:    dup v3.2s, v3.s[3]
+; CHECK-NEXT:    shl v16.2d, v17.2d, #48
+; CHECK-NEXT:    zip1 v17.4h, v19.4h, v19.4h
+; CHECK-NEXT:    shl v6.2d, v6.2d, #48
+; CHECK-NEXT:    sshr v16.2d, v16.2d, #48
+; CHECK-NEXT:    zip1 v3.4h, v3.4h, v3.4h
+; CHECK-NEXT:    st1h { z7.d }, p1, [z18.d]
+; CHECK-NEXT:    shll v7.4s, v0.4h, #16
+; CHECK-NEXT:    sshr v6.2d, v6.2d, #48
+; CHECK-NEXT:    cmpne p1.d, p0/z, z16.d, #0
+; CHECK-NEXT:    ushll v16.2d, v17.2s, #0
+; CHECK-NEXT:    fcmeq v7.4s, v7.4s, #0.0
+; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-NEXT:    st1h { z16.d }, p1, [z21.d]
+; CHECK-NEXT:    ushll v16.2d, v7.2s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z6.d, #0
+; CHECK-NEXT:    ushll2 v7.2d, v7.4s, #0
+; CHECK-NEXT:    shl v6.2d, v16.2d, #48
+; CHECK-NEXT:    shll2 v16.4s, v0.8h, #16
+; CHECK-NEXT:    shl v7.2d, v7.2d, #48
+; CHECK-NEXT:    sshr v6.2d, v6.2d, #48
+; CHECK-NEXT:    fcmeq v16.4s, v16.4s, #0.0
+; CHECK-NEXT:    st1h { z3.d }, p1, [z20.d]
+; CHECK-NEXT:    zip1 v3.4h, v0.4h, v0.4h
+; CHECK-NEXT:    cmpne p1.d, p0/z, z6.d, #0
+; CHECK-NEXT:    dup v6.2s, v0.s[1]
+; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-NEXT:    st1h { z3.d }, p1, [z5.d]
+; CHECK-NEXT:    zip1 v3.4h, v6.4h, v6.4h
+; CHECK-NEXT:    sshr v5.2d, v7.2d, #48
+; CHECK-NEXT:    ushll v6.2d, v16.2s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z5.d, #0
+; CHECK-NEXT:    mov d5, v0.d[1]
+; CHECK-NEXT:    dup v0.2s, v0.s[3]
+; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-NEXT:    shl v6.2d, v6.2d, #48
+; CHECK-NEXT:    st1h { z3.d }, p1, [z4.d]
+; CHECK-NEXT:    zip1 v3.4h, v5.4h, v5.4h
+; CHECK-NEXT:    sshr v4.2d, v6.2d, #48
+; CHECK-NEXT:    ushll2 v5.2d, v16.4s, #0
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    cmpne p1.d, p0/z, z4.d, #0
+; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-NEXT:    shl v4.2d, v5.2d, #48
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    st1h { z3.d }, p1, [z2.d]
+; CHECK-NEXT:    sshr v2.2d, v4.2d, #48
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
+; CHECK-NEXT:    ret
+  %vals = load <16 x bfloat>, ptr %a
+  %ptrs = load <16 x ptr>, ptr %b
+  %mask = fcmp oeq <16 x bfloat> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v16bf16(<16 x bfloat> %vals, <16 x ptr> %ptrs, i32 8, <16 x i1> %mask)
+  ret void
+}
 
 ;
 ; ST1W (float)
@@ -1038,7 +1351,7 @@ define void @masked_scatter_bitcast_infinite_loop(ptr %a, ptr %b, i1 %cond) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0, #16]
 ; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    tbz w2, #0, .LBB29_2
+; CHECK-NEXT:    tbz w2, #0, .LBB37_2
 ; CHECK-NEXT:  // %bb.1: // %bb.1
 ; CHECK-NEXT:    fcmeq v2.2d, v1.2d, #0.0
 ; CHECK-NEXT:    ptrue p0.d, vl2
@@ -1048,7 +1361,7 @@ define void @masked_scatter_bitcast_infinite_loop(ptr %a, ptr %b, i1 %cond) {
 ; CHECK-NEXT:    st1d { z1.d }, p1, [z2.d]
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
 ; CHECK-NEXT:    st1d { z0.d }, p1, [z4.d]
-; CHECK-NEXT:  .LBB29_2: // %bb.2
+; CHECK-NEXT:  .LBB37_2: // %bb.2
 ; CHECK-NEXT:    ret
   %vals = load volatile <4 x double>, ptr %a
   br i1 %cond, label %bb.1, label %bb.2
