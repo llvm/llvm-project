@@ -2,6 +2,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic %s | FileCheck %s -check-prefix GENERIC
 // RUN: mlir-opt -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect -mlir-print-op-generic | FileCheck %s -check-prefix GENERIC
+// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-elementsattrs-with-hex-if-larger=0 %s | mlir-opt -allow-unregistered-dialect | FileCheck %s -check-prefix MXI8-HEX
 
 // CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
 #map = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
@@ -132,6 +133,12 @@ func.func private @memrefs_nomap_opaquespace(memref<5x6x7xf32, #unknown_dialect.
 
 // CHECK: func private @memrefs_map_opaquespace(memref<5x6x7xf32, #map{{[0-9]*}}, #unknown_dialect.unknown_attr>)
 func.func private @memrefs_map_opaquespace(memref<5x6x7xf32, #map3, #unknown_dialect.unknown_attr>)
+
+// CHECK: func private @memrefs_nomap_typespace(memref<5x6x7xf32, i8>)
+func.func private @memrefs_nomap_typespace(memref<5x6x7xf32, i8>)
+
+// CHECK: func private @memrefs_map_typespace(memref<5x6x7xf32, #map{{[0-9]*}}, i8>)
+func.func private @memrefs_map_typespace(memref<5x6x7xf32, #map3, i8>)
 
 // CHECK: func private @complex_types(complex<i1>) -> complex<f32>
 func.func private @complex_types(complex<i1>) -> complex<f32>
@@ -792,6 +799,13 @@ func.func @sparsetensorattr() -> () {
   "fooi32"(){bar = sparse<> : tensor<1x1xi32>} : () -> ()
 // CHECK: "fooi64"() {bar = sparse<0, -1> : tensor<1xi64>} : () -> ()
   "fooi64"(){bar = sparse<[0], [-1]> : tensor<1xi64>} : () -> ()
+// CHECK: "foomxi8"() {bar = sparse<{{\[\[}}0, 0], [1, 1]], {{\[}}-128, 127]> : tensor<2x2xmxi8>} : () -> ()
+// MXI8-HEX: "foomxi8"() {bar = sparse<{{\[\[}}0, 0], [1, 1]], {{\[}}-128, 127]> : tensor<2x2xmxi8>} : () -> ()
+  "foomxi8"(){bar = sparse<[[0, 0], [1, 1]], [-128, 127]> : tensor<2x2xmxi8>} : () -> ()
+// CHECK: "foomxi8_splat"() {bar = sparse<0, -2> : tensor<1x1xmxi8>} : () -> ()
+  "foomxi8_splat"(){bar = sparse<0, -2> : tensor<1x1xmxi8>} : () -> ()
+// CHECK: "foomxi8_empty"() {bar = sparse<> : tensor<2x2xmxi8>} : () -> ()
+  "foomxi8_empty"(){bar = sparse<> : tensor<2x2xmxi8>} : () -> ()
 // CHECK: "foo2"() {bar = sparse<> : tensor<0xi32>} : () -> ()
   "foo2"(){bar = sparse<> : tensor<0xi32>} : () -> ()
 // CHECK: "foo3"() {bar = sparse<> : tensor<i32>} : () -> ()
@@ -829,6 +843,8 @@ func.func @sparsevectorattr() -> () {
   "fooi32"(){bar = sparse<> : vector<1x1xi32>} : () -> ()
 // CHECK: "fooi64"() {bar = sparse<0, -1> : vector<1xi64>} : () -> ()
   "fooi64"(){bar = sparse<[[0]], [-1]> : vector<1xi64>} : () -> ()
+// CHECK: "foomxi8"() {bar = sparse<0, 127> : vector<1xmxi8>} : () -> ()
+  "foomxi8"(){bar = sparse<0, 127> : vector<1xmxi8>} : () -> ()
 
 // CHECK: "foof16"() {bar = sparse<0, -2.000000e+00> : vector<1x1x1xf16>} : () -> ()
   "foof16"(){bar = sparse<0, -2.0> : vector<1x1x1xf16>} : () -> ()

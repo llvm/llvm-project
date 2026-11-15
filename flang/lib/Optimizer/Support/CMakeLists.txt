@@ -12,6 +12,7 @@ add_flang_library(FIRSupport
 
   LINK_LIBS
   FIRDialect
+  FIRDialectSupport
   MIFDialect
 
   LINK_COMPONENTS

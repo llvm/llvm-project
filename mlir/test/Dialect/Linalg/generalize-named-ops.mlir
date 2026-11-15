@@ -1,4 +1,6 @@
 // RUN: mlir-opt %s -split-input-file -linalg-generalize-named-ops | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -linalg-morph-ops=named-to-generic | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -linalg-morph-ops=category-to-generic | FileCheck %s
 
 func.func @generalize_matmul_buffer(%A : memref<16x8xf32>, %B: memref<8x32xf32>, %C: memref<16x32xf32>) {
   linalg.matmul ins(%A, %B: memref<16x8xf32>, memref<8x32xf32>)

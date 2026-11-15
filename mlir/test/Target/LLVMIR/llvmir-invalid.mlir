@@ -1,5 +1,26 @@
 // RUN: mlir-translate -verify-diagnostics -split-input-file -mlir-to-llvmir %s
 
+llvm.func @gep_inrange_nonconstant_base(%ptr: !llvm.ptr) -> !llvm.ptr {
+  // expected-error @below{{'inrange' GEP requires the base and indices to translate to LLVM constants}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.getelementptr}}
+  %0 = llvm.getelementptr inrange <i64, -4, 4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @gep_base() : i8
+
+llvm.func @gep_inrange_nonconstant_index(%idx: i64) -> !llvm.ptr {
+  %addr = llvm.mlir.addressof @gep_base : !llvm.ptr
+  // expected-error @below{{'inrange' GEP requires the base and indices to translate to LLVM constants}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.getelementptr}}
+  %0 = llvm.getelementptr inrange <i64, -4, 4> %addr[%idx] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
 // expected-error @below{{cannot be converted to LLVM IR}}
 func.func @foo() {
   llvm.return
@@ -93,6 +114,30 @@ llvm.func @powi_intr_wrong_type(%arg0 : f32, %arg1 : f32) -> f32 {
   // expected-error @below{{op operand #1 must be signless integer, but got 'f32'}}
   %0 = "llvm.intr.powi"(%arg0, %arg1) : (f32, f32) -> f32
   llvm.return %0 : f32
+}
+
+// -----
+
+llvm.func @powi_intr_vector_exp(%arg0 : vector<4xf32>, %arg1 : vector<4xi32>) -> vector<4xf32> {
+  // expected-error @below{{op operand #1 must be signless integer, but got 'vector<4xi32>'}}
+  %0 = "llvm.intr.powi"(%arg0, %arg1) : (vector<4xf32>, vector<4xi32>) -> vector<4xf32>
+  llvm.return %0 : vector<4xf32>
+}
+
+// -----
+
+llvm.func @ldexp_intr_wrong_type(%arg0 : f32, %arg1 : f32) -> f32 {
+  // expected-error @below{{op operand #1 must be signless integer or LLVM dialect-compatible vector of signless integer, but got 'f32'}}
+  %0 = "llvm.intr.ldexp"(%arg0, %arg1) : (f32, f32) -> f32
+  llvm.return %0 : f32
+}
+
+// -----
+
+llvm.func @ldexp_intr_vector_length_mismatch(%arg0 : vector<4xf32>, %arg1 : vector<8xi32>) -> vector<4xf32> {
+  // expected-error @below{{'llvm.intr.ldexp' op requires the same shape for all operands}}
+  %0 = "llvm.intr.ldexp"(%arg0, %arg1) : (vector<4xf32>, vector<8xi32>) -> vector<4xf32>
+  llvm.return %0 : vector<4xf32>
 }
 
 // -----
@@ -428,4 +473,82 @@ llvm.func @invoke_branch_weights() -> i32 attributes {personality = @__gxx_perso
   llvm.br ^bb2
 ^bb2:  // 2 preds: ^bb0, ^bb1
   llvm.return %0 : i32
+}
+
+// -----
+
+// An in-function constant referring to a missing resource must fail the
+// translation rather than leaving a null value behind for its users.
+
+llvm.func @constant_resource_does_not_exist(%arg0: vector<4xi32>) {
+  // expected-error @below{{resource does not exist}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.mlir.constant}}
+  %0 = llvm.mlir.constant(dense_resource<missing> : vector<4xi32>) : vector<4xi32>
+  %1 = llvm.icmp "sgt" %arg0, %0 : vector<4xi32>
+  llvm.return
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @memprof_not_an_array(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected an array for llvm.memprof}}
+  %0 = llvm.call @alloc(%arg0) {llvm.memprof = 42} : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @memprof_not_a_mib(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected a memprof_mib for llvm.memprof}}
+  %0 = llvm.call @alloc(%arg0) {llvm.memprof = [42]} : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @callsite_not_an_array(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected a dense i64 array for llvm.callsite}}
+  %0 = llvm.call @alloc(%arg0) {llvm.callsite = 42} : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @memprof_without_callsite(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected an llvm.callsite attribute alongside llvm.memprof}}
+  %0 = llvm.call @alloc(%arg0) {
+    llvm.memprof = [#llvm.memprof_mib<call_stack = [7], alloc_type = "hot">]
+  } : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @memprof_empty(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected at least one memprof_mib for llvm.memprof}}
+  %0 = llvm.call @alloc(%arg0) {
+    llvm.callsite = array<i64: 7>,
+    llvm.memprof = []
+  } : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @callsite_empty(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected a non-empty call stack for llvm.callsite}}
+  %0 = llvm.call @alloc(%arg0) {llvm.callsite = array<i64>} : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
 }

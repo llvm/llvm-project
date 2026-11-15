@@ -22,6 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SampleProfile.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -116,224 +117,34 @@ STATISTIC(
 
 namespace llvm {
 
-// Command line option to specify the file to read samples from. This is
-// mainly used for debugging.
-cl::opt<std::string> SampleProfileFile(
-    "sample-profile-file", cl::init(""), cl::value_desc("filename"),
-    cl::desc("Profile file loaded by -sample-profile"), cl::Hidden);
-
-// The named file contains a set of transformations that may have been applied
-// to the symbol names between the program from which the sample data was
-// collected and the current program's symbols.
-static cl::opt<std::string> SampleProfileRemappingFile(
-    "sample-profile-remapping-file", cl::init(""), cl::value_desc("filename"),
-    cl::desc("Profile remapping file loaded by -sample-profile"), cl::Hidden);
-
-cl::opt<bool> SalvageStaleProfile(
-    "salvage-stale-profile", cl::Hidden, cl::init(false),
-    cl::desc("Salvage stale profile by fuzzy matching and use the remapped "
-             "location for sample profile query."));
-cl::opt<bool>
-    SalvageUnusedProfile("salvage-unused-profile", cl::Hidden, cl::init(false),
-                         cl::desc("Salvage unused profile by matching with new "
-                                  "functions on call graph."));
-
-cl::opt<bool> ReportProfileStaleness(
-    "report-profile-staleness", cl::Hidden, cl::init(false),
-    cl::desc("Compute and report stale profile statistical metrics."));
-
-cl::opt<bool> PersistProfileStaleness(
-    "persist-profile-staleness", cl::Hidden, cl::init(false),
-    cl::desc("Compute stale profile statistical metrics and write it into the "
-             "native object file(.llvm_stats section)."));
-
-static cl::opt<bool> ProfileSampleAccurate(
-    "profile-sample-accurate", cl::Hidden, cl::init(false),
-    cl::desc("If the sample profile is accurate, we will mark all un-sampled "
-             "callsite and function as having 0 samples. Otherwise, treat "
-             "un-sampled callsites and functions conservatively as unknown. "));
-
-static cl::opt<bool> ProfileSampleBlockAccurate(
-    "profile-sample-block-accurate", cl::Hidden, cl::init(false),
-    cl::desc("If the sample profile is accurate, we will mark all un-sampled "
-             "branches and calls as having 0 samples. Otherwise, treat "
-             "them conservatively as unknown. "));
-
-static cl::opt<bool> ProfileAccurateForSymsInList(
-    "profile-accurate-for-symsinlist", cl::Hidden, cl::init(true),
-    cl::desc("For symbols in profile symbol list, regard their profiles to "
-             "be accurate. It may be overridden by profile-sample-accurate. "));
-
-static cl::opt<bool> ProfileMergeInlinee(
-    "sample-profile-merge-inlinee", cl::Hidden, cl::init(true),
-    cl::desc("Merge past inlinee's profile to outline version if sample "
-             "profile loader decided not to inline a call site. It will "
-             "only be enabled when top-down order of profile loading is "
-             "enabled. "));
-
-static cl::opt<bool> ProfileTopDownLoad(
-    "sample-profile-top-down-load", cl::Hidden, cl::init(true),
-    cl::desc("Do profile annotation and inlining for functions in top-down "
-             "order of call graph during sample profile loading. It only "
-             "works for new pass manager. "));
-
-static cl::opt<bool>
-    UseProfiledCallGraph("use-profiled-call-graph", cl::init(true), cl::Hidden,
-                         cl::desc("Process functions in a top-down order "
-                                  "defined by the profiled call graph when "
-                                  "-sample-profile-top-down-load is on."));
-
-static cl::opt<bool> ProfileSizeInline(
-    "sample-profile-inline-size", cl::Hidden, cl::init(false),
-    cl::desc("Inline cold call sites in profile loader if it's beneficial "
-             "for code size."));
-
-// Since profiles are consumed by many passes, turning on this option has
-// side effects. For instance, pre-link SCC inliner would see merged profiles
-// and inline the hot functions (that are skipped in this pass).
-static cl::opt<bool> DisableSampleLoaderInlining(
-    "disable-sample-loader-inlining", cl::Hidden, cl::init(false),
-    cl::desc(
-        "If true, artificially skip inline transformation in sample-loader "
-        "pass, and merge (or scale) profiles (as configured by "
-        "--sample-profile-merge-inlinee)."));
-
 cl::opt<bool>
     SortProfiledSCC("sort-profiled-scc-member", cl::init(true), cl::Hidden,
                     cl::desc("Sort profiled recursion by edge weights."));
 
 cl::opt<int> ProfileInlineGrowthLimit(
     "sample-profile-inline-growth-limit", cl::Hidden, cl::init(12),
-    cl::desc("The size growth ratio limit for proirity-based sample profile "
+    cl::desc("The size growth ratio limit for priority-based sample profile "
              "loader inlining."));
 
 cl::opt<int> ProfileInlineLimitMin(
     "sample-profile-inline-limit-min", cl::Hidden, cl::init(100),
     cl::desc("The lower bound of size growth limit for "
-             "proirity-based sample profile loader inlining."));
+             "priority-based sample profile loader inlining."));
 
 cl::opt<int> ProfileInlineLimitMax(
     "sample-profile-inline-limit-max", cl::Hidden, cl::init(10000),
     cl::desc("The upper bound of size growth limit for "
-             "proirity-based sample profile loader inlining."));
+             "priority-based sample profile loader inlining."));
 
 cl::opt<int> SampleHotCallSiteThreshold(
     "sample-profile-hot-inline-threshold", cl::Hidden, cl::init(3000),
-    cl::desc("Hot callsite threshold for proirity-based sample profile loader "
+    cl::desc("Hot callsite threshold for priority-based sample profile loader "
              "inlining."));
 
 cl::opt<int> SampleColdCallSiteThreshold(
     "sample-profile-cold-inline-threshold", cl::Hidden, cl::init(45),
     cl::desc("Threshold for inlining cold callsites"));
 } // namespace llvm
-
-static cl::opt<unsigned> ProfileICPRelativeHotness(
-    "sample-profile-icp-relative-hotness", cl::Hidden, cl::init(25),
-    cl::desc(
-        "Relative hotness percentage threshold for indirect "
-        "call promotion in proirity-based sample profile loader inlining."));
-
-static cl::opt<unsigned> ProfileICPRelativeHotnessSkip(
-    "sample-profile-icp-relative-hotness-skip", cl::Hidden, cl::init(1),
-    cl::desc(
-        "Skip relative hotness check for ICP up to given number of targets."));
-
-static cl::opt<unsigned> HotFuncCutoffForStalenessError(
-    "hot-func-cutoff-for-staleness-error", cl::Hidden, cl::init(800000),
-    cl::desc("A function is considered hot for staleness error check if its "
-             "total sample count is above the specified percentile"));
-
-static cl::opt<unsigned> MinfuncsForStalenessError(
-    "min-functions-for-staleness-error", cl::Hidden, cl::init(50),
-    cl::desc("Skip the check if the number of hot functions is smaller than "
-             "the specified number."));
-
-static cl::opt<unsigned> PrecentMismatchForStalenessError(
-    "precent-mismatch-for-staleness-error", cl::Hidden, cl::init(80),
-    cl::desc("Reject the profile if the mismatch percent is higher than the "
-             "given number."));
-
-static cl::opt<bool> CallsitePrioritizedInline(
-    "sample-profile-prioritized-inline", cl::Hidden,
-    cl::desc("Use call site prioritized inlining for sample profile loader. "
-             "Currently only CSSPGO is supported."));
-
-static cl::opt<bool> UsePreInlinerDecision(
-    "sample-profile-use-preinliner", cl::Hidden,
-    cl::desc("Use the preinliner decisions stored in profile context."));
-
-static cl::opt<bool> AllowRecursiveInline(
-    "sample-profile-recursive-inline", cl::Hidden,
-    cl::desc("Allow sample loader inliner to inline recursive calls."));
-
-static cl::opt<bool> RemoveProbeAfterProfileAnnotation(
-    "sample-profile-remove-probe", cl::Hidden, cl::init(false),
-    cl::desc("Remove pseudo-probe after sample profile annotation."));
-
-static cl::opt<std::string> ProfileInlineReplayFile(
-    "sample-profile-inline-replay", cl::init(""), cl::value_desc("filename"),
-    cl::desc(
-        "Optimization remarks file containing inline remarks to be replayed "
-        "by inlining from sample profile loader."),
-    cl::Hidden);
-
-static cl::opt<ReplayInlinerSettings::Scope> ProfileInlineReplayScope(
-    "sample-profile-inline-replay-scope",
-    cl::init(ReplayInlinerSettings::Scope::Function),
-    cl::values(clEnumValN(ReplayInlinerSettings::Scope::Function, "Function",
-                          "Replay on functions that have remarks associated "
-                          "with them (default)"),
-               clEnumValN(ReplayInlinerSettings::Scope::Module, "Module",
-                          "Replay on the entire module")),
-    cl::desc("Whether inline replay should be applied to the entire "
-             "Module or just the Functions (default) that are present as "
-             "callers in remarks during sample profile inlining."),
-    cl::Hidden);
-
-static cl::opt<ReplayInlinerSettings::Fallback> ProfileInlineReplayFallback(
-    "sample-profile-inline-replay-fallback",
-    cl::init(ReplayInlinerSettings::Fallback::Original),
-    cl::values(
-        clEnumValN(
-            ReplayInlinerSettings::Fallback::Original, "Original",
-            "All decisions not in replay send to original advisor (default)"),
-        clEnumValN(ReplayInlinerSettings::Fallback::AlwaysInline,
-                   "AlwaysInline", "All decisions not in replay are inlined"),
-        clEnumValN(ReplayInlinerSettings::Fallback::NeverInline, "NeverInline",
-                   "All decisions not in replay are not inlined")),
-    cl::desc("How sample profile inline replay treats sites that don't come "
-             "from the replay. Original: defers to original advisor, "
-             "AlwaysInline: inline all sites not in replay, NeverInline: "
-             "inline no sites not in replay"),
-    cl::Hidden);
-
-static cl::opt<CallSiteFormat::Format> ProfileInlineReplayFormat(
-    "sample-profile-inline-replay-format",
-    cl::init(CallSiteFormat::Format::LineColumnDiscriminator),
-    cl::values(
-        clEnumValN(CallSiteFormat::Format::Line, "Line", "<Line Number>"),
-        clEnumValN(CallSiteFormat::Format::LineColumn, "LineColumn",
-                   "<Line Number>:<Column Number>"),
-        clEnumValN(CallSiteFormat::Format::LineDiscriminator,
-                   "LineDiscriminator", "<Line Number>.<Discriminator>"),
-        clEnumValN(CallSiteFormat::Format::LineColumnDiscriminator,
-                   "LineColumnDiscriminator",
-                   "<Line Number>:<Column Number>.<Discriminator> (default)")),
-    cl::desc("How sample profile inline replay file is formatted"), cl::Hidden);
-
-static cl::opt<unsigned>
-    MaxNumPromotions("sample-profile-icp-max-prom", cl::init(3), cl::Hidden,
-                     cl::desc("Max number of promotions for a single indirect "
-                              "call callsite in sample profile loader"));
-
-static cl::opt<bool> OverwriteExistingWeights(
-    "overwrite-existing-weights", cl::Hidden, cl::init(false),
-    cl::desc("Ignore existing branch weights on IR and always overwrite."));
-
-static cl::opt<bool> AnnotateSampleProfileInlinePhase(
-    "annotate-sample-profile-inline-phase", cl::Hidden, cl::init(false),
-    cl::desc("Annotate LTO phase (prelink / postlink), or main (no LTO) for "
-             "sample-profile inline pass name."));
 
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
@@ -344,7 +155,6 @@ namespace {
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
 using EquivalenceClassMap = DenseMap<const BasicBlock *, const BasicBlock *>;
 using Edge = std::pair<const BasicBlock *, const BasicBlock *>;
-using EdgeWeightMap = DenseMap<Edge, uint64_t>;
 using BlockEdgeMap =
     DenseMap<const BasicBlock *, SmallVector<const BasicBlock *, 8>>;
 
@@ -464,8 +274,8 @@ using CandidateQueue =
 class SampleProfileLoader final : public SampleProfileLoaderBaseImpl<Function> {
 public:
   SampleProfileLoader(
-      StringRef Name, StringRef RemapName, ThinOrFullLTOPhase LTOPhase,
-      IntrusiveRefCntPtr<vfs::FileSystem> FS,
+      const IPOOptions &Opts, StringRef Name, StringRef RemapName,
+      ThinOrFullLTOPhase LTOPhase, IntrusiveRefCntPtr<vfs::FileSystem> FS,
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo,
       std::function<const TargetLibraryInfo &(Function &)> GetTLI,
@@ -473,10 +283,20 @@ public:
       bool UseFlattenedProfile)
       : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName),
                                     std::move(FS)),
+        Opts(Opts), ProfileMergeInlinee(Opts.sample_profile_merge_inlinee),
+        ProfileSizeInline(valueOr(Opts.sample_profile_inline_size, false)),
+        CallsitePrioritizedInline(
+            valueOr(Opts.sample_profile_prioritized_inline, false)),
+        AllowRecursiveInline(
+            valueOr(Opts.sample_profile_recursive_inline, false)),
+        UsePreInlinerDecision(
+            valueOr(Opts.sample_profile_use_preinliner, false)),
+        SalvageStaleProfile(valueOr(Opts.salvage_stale_profile, false)),
+        SalvageUnusedProfile(valueOr(Opts.salvage_unused_profile, false)),
         GetAC(std::move(GetAssumptionCache)),
         GetTTI(std::move(GetTargetTransformInfo)), GetTLI(std::move(GetTLI)),
         CG(CG), LTOPhase(LTOPhase),
-        AnnotatedPassName(AnnotateSampleProfileInlinePhase
+        AnnotatedPassName(Opts.annotate_sample_profile_inline_phase
                               ? llvm::AnnotateInlinePassName(InlineContext{
                                     LTOPhase, InlinePass::SampleProfileInliner})
                               : CSINLINE_DEBUG),
@@ -488,6 +308,16 @@ public:
                    ProfileSummaryInfo *_PSI);
 
 protected:
+  const IPOOptions &Opts;
+  // Options the loader adjusts according to the profile.
+  bool ProfileMergeInlinee;
+  bool ProfileSizeInline;
+  bool CallsitePrioritizedInline;
+  bool AllowRecursiveInline;
+  bool UsePreInlinerDecision;
+  bool SalvageStaleProfile;
+  bool SalvageUnusedProfile;
+
   bool runOnFunction(Function &F, ModuleAnalysisManager &AM);
   bool emitAnnotations(Function &F);
   ErrorOr<uint64_t> getInstWeight(const Instruction &I) override;
@@ -793,10 +623,12 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 /// for \p Inst. If we already have at least MaxNumPromotions
 /// NOMORE_ICP_MAGICNUM count values in the value profile of \p Inst, we
 /// cannot promote for \p Inst anymore.
-static bool doesHistoryAllowICP(const Instruction &Inst, StringRef Candidate) {
+static bool doesHistoryAllowICP(const IPOOptions &Opts, const Instruction &Inst,
+                                StringRef Candidate) {
   uint64_t TotalCount = 0;
   auto ValueData = getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget,
-                                            MaxNumPromotions, TotalCount, true);
+                                            Opts.sample_profile_icp_max_prom,
+                                            TotalCount, true);
   // No valid value profile so no promoted targets have been recorded
   // before. Ok to do ICP.
   if (ValueData.empty())
@@ -814,7 +646,7 @@ static bool doesHistoryAllowICP(const Instruction &Inst, StringRef Candidate) {
       return false;
     NumPromoted++;
     // If already have MaxNumPromotions promotion, don't do it anymore.
-    if (NumPromoted == MaxNumPromotions)
+    if (NumPromoted == Opts.sample_profile_icp_max_prom)
       return false;
   }
   return true;
@@ -826,7 +658,7 @@ static bool doesHistoryAllowICP(const Instruction &Inst, StringRef Candidate) {
 /// certain target to be promoted already. If it is not zero,
 /// we expect to use it to update the total count in the value profile.
 static void
-updateIDTMetaData(Instruction &Inst,
+updateIDTMetaData(const IPOOptions &Opts, Instruction &Inst,
                   const SmallVectorImpl<InstrProfValueData> &CallTargets,
                   uint64_t Sum) {
   // Bail out early if MaxNumPromotions is zero.
@@ -834,12 +666,13 @@ updateIDTMetaData(Instruction &Inst,
   //
   // Note `updateIDTMetaData` is called in two places so check
   // `MaxNumPromotions` inside it.
-  if (MaxNumPromotions == 0)
+  if (Opts.sample_profile_icp_max_prom == 0)
     return;
   // OldSum is the existing total count in the value profile data.
   uint64_t OldSum = 0;
-  auto ValueData = getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget,
-                                            MaxNumPromotions, OldSum, true);
+  auto ValueData =
+      getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget,
+                               Opts.sample_profile_icp_max_prom, OldSum, true);
 
   DenseMap<uint64_t, uint64_t> ValueCountMap;
   if (Sum == 0) {
@@ -891,7 +724,8 @@ updateIDTMetaData(Instruction &Inst,
              });
 
   uint32_t MaxMDCount =
-      std::min(NewCallTargets.size(), static_cast<size_t>(MaxNumPromotions));
+      std::min(NewCallTargets.size(),
+               static_cast<size_t>(Opts.sample_profile_icp_max_prom));
   annotateValueSite(*Inst.getParent()->getParent()->getParent(), Inst,
                     NewCallTargets, Sum, IPVK_IndirectCallTarget, MaxMDCount);
 }
@@ -915,7 +749,7 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
 
   // Bail out early if MaxNumPromotions is zero.
   // This prevents allocating an array of zero length in callees below.
-  if (MaxNumPromotions == 0)
+  if (Opts.sample_profile_icp_max_prom == 0)
     return false;
   auto CalleeFunctionName = Candidate.CalleeSamples->getFunction();
   auto R = SymbolMap.find(CalleeFunctionName);
@@ -923,7 +757,7 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     return false;
 
   auto &CI = *Candidate.CallInstr;
-  if (!doesHistoryAllowICP(CI, R->second->getName()))
+  if (!doesHistoryAllowICP(Opts, CI, R->second->getName()))
     return false;
 
   const char *Reason = "Callee function not available";
@@ -941,7 +775,7 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     SmallVector<InstrProfValueData, 1> SortedCallTargets = {InstrProfValueData{
         Function::getGUIDAssumingExternalLinkage(R->second->getName()),
         NOMORE_ICP_MAGICNUM}};
-    updateIDTMetaData(CI, SortedCallTargets, 0);
+    updateIDTMetaData(Opts, CI, SortedCallTargets, 0);
 
     auto *DI = &pgo::promoteIndirectCall(
         CI, R->second, Candidate.CallsiteCount, Sum, false, ORE);
@@ -984,12 +818,12 @@ bool SampleProfileLoader::shouldInlineColdCallee(CallBase &CallInst) {
   if (!ProfileSizeInline)
     return false;
 
-  Function *Callee = CallInst.getCalledFunction();
-  if (Callee == nullptr)
+  if (CallInst.getCalledFunction() == nullptr)
     return false;
 
-  InlineCost Cost = getInlineCost(CallInst, getInlineParams(), GetTTI(*Callee),
-                                  GetAC, GetTLI);
+  InlineCost Cost =
+      getInlineCost(CallInst, getInlineParams(CallInst.getContext()),
+                    GetTTI(*CallInst.getCaller()), GetAC, GetTLI);
 
   if (Cost.isNever())
     return false;
@@ -1126,7 +960,7 @@ bool SampleProfileLoader::inlineHotFunctions(
   // ProfAccForSymsInList is used in callsiteIsHot. The assertion makes sure
   // Profile symbol list is ignored when profile-sample-accurate is on.
   assert((!ProfAccForSymsInList ||
-          (!ProfileSampleAccurate &&
+          (!Opts.profile_sample_accurate &&
            !F.hasFnAttribute("profile-sample-accurate"))) &&
          "ProfAccForSymsInList should be false when profile-sample-accurate "
          "is enabled");
@@ -1344,10 +1178,11 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
       return InlineCost::getNever("cold callsite");
   }
 
+  Function *Caller = Candidate.CallInstr->getCaller();
   Function *Callee = Candidate.CallInstr->getCalledFunction();
   assert(Callee && "Expect a definition for inline candidate of direct call");
 
-  InlineParams Params = getInlineParams();
+  InlineParams Params = getInlineParams(Caller->getContext());
   // We will ignore the threshold from inline cost, so always get full cost.
   Params.ComputeFullInlineCost = true;
   Params.AllowRecursiveCall = AllowRecursiveInline;
@@ -1358,7 +1193,7 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
   // The acutal cost does not matter because we only checks isNever() to
   // see if it is legal to inline the callsite.
   InlineCost Cost = getInlineCost(*Candidate.CallInstr, Callee, Params,
-                                  GetTTI(*Callee), GetAC, GetTLI);
+                                  GetTTI(*Caller), GetAC, GetTLI);
 
   // Honor always inline and never inline from call analyzer
   if (Cost.isNever() || Cost.isAlways())
@@ -1400,7 +1235,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
   // ProfAccForSymsInList is used in callsiteIsHot. The assertion makes sure
   // Profile symbol list is ignored when profile-sample-accurate is on.
   assert((!ProfAccForSymsInList ||
-          (!ProfileSampleAccurate &&
+          (!Opts.profile_sample_accurate &&
            !F.hasFnAttribute("profile-sample-accurate"))) &&
          "ProfAccForSymsInList should be false when profile-sample-accurate "
          "is enabled");
@@ -1410,11 +1245,8 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
   CandidateQueue CQueue;
   InlineCandidate NewCandidate;
   for (auto &BB : F) {
-    for (auto &I : BB) {
-      auto *CB = dyn_cast<CallBase>(&I);
-      if (!CB)
-        continue;
-      if (getInlineCandidate(&NewCandidate, CB))
+    for (CallBase &CB : make_isa_range<CallBase>(BB)) {
+      if (getInlineCandidate(&NewCandidate, &CB))
         CQueue.push(NewCandidate);
     }
   }
@@ -1463,8 +1295,9 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         // ICP isn't introducing excessive speculative checks even if individual
         // target looks beneficial to promote and inline. That means we should
         // only do ICP when there's a small number dominant targets.
-        if (ICPCount >= ProfileICPRelativeHotnessSkip &&
-            EntryCountDistributed * 100 < SumOrigin * ProfileICPRelativeHotness)
+        if (ICPCount >= Opts.sample_profile_icp_relative_hotness_skip &&
+            EntryCountDistributed * 100 <
+                SumOrigin * Opts.sample_profile_icp_relative_hotness)
           break;
         // TODO: Fix CallAnalyzer to handle all indirect calls.
         // For indirect call, we don't run CallAnalyzer to get InlineCost
@@ -1650,8 +1483,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
             }
           }
           if (Sum)
-            updateIDTMetaData(I, SortedCallTargets, Sum);
-          else if (OverwriteExistingWeights)
+            updateIDTMetaData(Opts, I, SortedCallTargets, Sum);
+          else if (Opts.overwrite_existing_weights)
             I.setMetadata(LLVMContext::MD_prof, nullptr);
         } else if (!isa<IntrinsicInst>(&I)) {
           setBranchWeights(
@@ -1659,7 +1492,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
               /*IsExpected=*/false);
         }
       }
-    } else if (OverwriteExistingWeights || ProfileSampleBlockAccurate) {
+    } else if (Opts.overwrite_existing_weights ||
+               Opts.profile_sample_block_accurate) {
       // Set profile metadata (possibly annotated by LTO prelink) to zero or
       // clear it for cold code.
       for (auto &I : *BB) {
@@ -1732,7 +1566,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       if (Weight != 0) {
         if (Weight > MaxWeight) {
           MaxWeight = Weight;
-          MaxDestInst = &*Succ->getFirstNonPHIOrDbgOrLifetime();
+          MaxDestInst = &*Succ->getFirstNonPHIOrLifetime();
         }
       }
     }
@@ -1748,8 +1582,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
     // does not need to set it. With OverwriteExistingWeights, Blocks with zero
     // weight should have their existing metadata (possibly annotated by LTO
     // prelink) cleared.
-    if (MaxWeight > 0 &&
-        (!TI->extractProfTotalWeight(TempWeight) || OverwriteExistingWeights)) {
+    if (MaxWeight > 0 && (!TI->extractProfTotalWeight(TempWeight) ||
+                          Opts.overwrite_existing_weights)) {
       LLVM_DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
       setBranchWeights(*TI, Weights, /*IsExpected=*/false);
       ORE->emit([&]() {
@@ -1758,7 +1592,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
                << ore::NV("CondBranchesLoc", BranchLoc);
       });
     } else {
-      if (OverwriteExistingWeights) {
+      if (Opts.overwrite_existing_weights) {
         TI->setMetadata(LLVMContext::MD_prof, nullptr);
         LLVM_DEBUG(dbgs() << "CLEARED. All branch weights are zero.\n");
       } else {
@@ -1843,11 +1677,11 @@ SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
   std::vector<Function *> FunctionOrderList;
   FunctionOrderList.reserve(M.size());
 
-  if (!ProfileTopDownLoad && UseProfiledCallGraph)
+  if (!Opts.sample_profile_top_down_load && Opts.use_profiled_call_graph)
     errs() << "WARNING: -use-profiled-call-graph ignored, should be used "
               "together with -sample-profile-top-down-load.\n";
 
-  if (!ProfileTopDownLoad) {
+  if (!Opts.sample_profile_top_down_load) {
     if (ProfileMergeInlinee) {
       // Disable ProfileMergeInlinee if profile is not loaded in top down order,
       // because the profile for a function may be used for the profile
@@ -1863,8 +1697,7 @@ SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
     return FunctionOrderList;
   }
 
-  if (UseProfiledCallGraph || (FunctionSamples::ProfileIsCS &&
-                               !UseProfiledCallGraph.getNumOccurrences())) {
+  if (Opts.use_profiled_call_graph) {
     // Use profiled call edges to augment the top-down order. There are cases
     // that the top-down order computed based on the static call graph doesn't
     // reflect real execution order. For example
@@ -1967,27 +1800,28 @@ bool SampleProfileLoader::doInitialization(Module &M,
 
   PSL = Reader->getProfileSymbolList();
 
-  if (DisableSampleLoaderInlining.getNumOccurrences())
-    DisableSampleProfileInlining = DisableSampleLoaderInlining;
+  DisableSampleProfileInlining =
+      !valueOr(Opts.sample_loader_inlining, !DisableSampleProfileInlining);
 
   if (UseFlattenedProfile)
     ProfileConverter::flattenProfile(Reader->getProfiles(),
                                      Reader->profileIsCS());
 
   // While profile-sample-accurate is on, ignore symbol list.
-  ProfAccForSymsInList =
-      ProfileAccurateForSymsInList && PSL && !ProfileSampleAccurate;
+  ProfAccForSymsInList = Opts.profile_accurate_for_symsinlist && PSL &&
+                         !Opts.profile_sample_accurate;
   if (ProfAccForSymsInList)
     CoverageTracker.setProfAccForSymsInList(true);
 
-  if (FAM && !ProfileInlineReplayFile.empty()) {
+  if (FAM && !Opts.sample_profile_inline_replay.empty()) {
     ExternalInlineAdvisor = getReplayInlineAdvisor(
         M, *FAM, Ctx, /*OriginalAdvisor=*/nullptr,
-        ReplayInlinerSettings{ProfileInlineReplayFile,
-                              ProfileInlineReplayScope,
-                              ProfileInlineReplayFallback,
-                              {ProfileInlineReplayFormat}},
-        /*EmitRemarks=*/false, InlineContext{LTOPhase, InlinePass::ReplaySampleProfileInliner});
+        ReplayInlinerSettings{Opts.sample_profile_inline_replay,
+                              Opts.sample_profile_inline_replay_scope,
+                              Opts.sample_profile_inline_replay_fallback,
+                              {Opts.sample_profile_inline_replay_format}},
+        /*EmitRemarks=*/false,
+        InlineContext{LTOPhase, InlinePass::ReplaySampleProfileInliner});
   }
 
   // Apply tweaks if context-sensitive or probe-based profile is available.
@@ -2000,18 +1834,14 @@ bool SampleProfileLoader::doInitialization(Module &M,
     if (!EnableExtTspBlockPlacement.getNumOccurrences())
       EnableExtTspBlockPlacement = true;
     // Enable priority-base inliner and size inline by default for CSSPGO.
-    if (!ProfileSizeInline.getNumOccurrences())
-      ProfileSizeInline = true;
-    if (!CallsitePrioritizedInline.getNumOccurrences())
-      CallsitePrioritizedInline = true;
+    ProfileSizeInline = valueOr(Opts.sample_profile_inline_size, true);
+    CallsitePrioritizedInline =
+        valueOr(Opts.sample_profile_prioritized_inline, true);
     // For CSSPGO, we also allow recursive inline to best use context profile.
-    if (!AllowRecursiveInline.getNumOccurrences())
-      AllowRecursiveInline = true;
+    AllowRecursiveInline = valueOr(Opts.sample_profile_recursive_inline, true);
 
-    if (Reader->profileIsPreInlined()) {
-      if (!UsePreInlinerDecision.getNumOccurrences())
-        UsePreInlinerDecision = true;
-    }
+    if (Reader->profileIsPreInlined())
+      UsePreInlinerDecision = valueOr(Opts.sample_profile_use_preinliner, true);
 
     // Enable stale profile matching by default for probe-based profile.
     // Currently the matching relies on if the checksum mismatch is detected,
@@ -2019,10 +1849,8 @@ bool SampleProfileLoader::doInitialization(Module &M,
     // checksum check could cause regressions for some cases, so further tuning
     // might be needed if we want to enable it for all cases.
     if (Reader->profileIsProbeBased()) {
-      if (!SalvageStaleProfile.getNumOccurrences())
-        SalvageStaleProfile = true;
-      if (!SalvageUnusedProfile.getNumOccurrences())
-        SalvageUnusedProfile = true;
+      SalvageStaleProfile = valueOr(Opts.salvage_stale_profile, true);
+      SalvageUnusedProfile = valueOr(Opts.salvage_unused_profile, true);
     }
 
     if (!Reader->profileIsCS()) {
@@ -2055,11 +1883,11 @@ bool SampleProfileLoader::doInitialization(Module &M,
     }
   }
 
-  if (ReportProfileStaleness || PersistProfileStaleness ||
+  if (Opts.report_profile_staleness || Opts.persist_profile_staleness ||
       SalvageStaleProfile) {
     MatchingManager = std::make_unique<SampleProfileMatcher>(
-        M, *Reader, CG, ProbeManager.get(), LTOPhase, SymbolMap, PSL,
-        FuncNameToProfNameMap);
+        Opts, M, *Reader, CG, ProbeManager.get(), LTOPhase, SymbolMap, PSL,
+        FuncNameToProfNameMap, SalvageStaleProfile, SalvageUnusedProfile);
   }
 
   return true;
@@ -2088,7 +1916,7 @@ bool SampleProfileLoader::rejectHighStalenessProfile(
       continue;
 
     // Use a hotness-based threshold to control the function selection.
-    if (!PSI->isHotCountNthPercentile(HotFuncCutoffForStalenessError,
+    if (!PSI->isHotCountNthPercentile(Opts.hot_func_cutoff_for_staleness_error,
                                       FS.getTotalSamples()))
       continue;
 
@@ -2099,12 +1927,12 @@ bool SampleProfileLoader::rejectHighStalenessProfile(
   }
   // Make sure that the num of selected function is not too small to distinguish
   // from the user's benign changes.
-  if (TotalHotFunc < MinfuncsForStalenessError)
+  if (TotalHotFunc < Opts.min_functions_for_staleness_error)
     return false;
 
   // Finally check the mismatch percentage against the threshold.
   if (NumMismatchedFunc * 100 >=
-      TotalHotFunc * PrecentMismatchForStalenessError) {
+      TotalHotFunc * Opts.percent_mismatch_for_staleness_error) {
     auto &Ctx = M.getContext();
     const char *Msg =
         "The input profile significantly mismatches current source code. "
@@ -2185,7 +2013,7 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
   }
 
   // Stale profile matching.
-  if (ReportProfileStaleness || PersistProfileStaleness ||
+  if (Opts.report_profile_staleness || Opts.persist_profile_staleness ||
       SalvageStaleProfile) {
     MatchingManager->runOnModule();
     MatchingManager->clearMatchingData();
@@ -2208,7 +2036,7 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
     for (const auto &[Fn, Info] : notInlinedCallInfo)
       updateProfileCallee(Fn, Info.entryCount);
 
-  if (RemoveProbeAfterProfileAnnotation &&
+  if (Opts.sample_profile_remove_probe &&
       FunctionSamples::ProfileIsProbeBased) {
     removePseudoProbeInstsDiscriminator(M);
     if (auto *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName))
@@ -2228,8 +2056,9 @@ bool SampleProfileLoader::runOnFunction(Function &F,
   // this will be overwritten in emitAnnotations.
   uint64_t initialEntryCount = -1;
 
-  ProfAccForSymsInList = ProfileAccurateForSymsInList && PSL;
-  if (ProfileSampleAccurate || F.hasFnAttribute("profile-sample-accurate")) {
+  ProfAccForSymsInList = Opts.profile_accurate_for_symsinlist && PSL;
+  if (Opts.profile_sample_accurate ||
+      F.hasFnAttribute("profile-sample-accurate")) {
     // initialize all the function entry counts to 0. It means all the
     // functions without profile will be regarded as cold.
     initialEntryCount = 0;
@@ -2299,6 +2128,10 @@ bool SampleProfileLoader::runOnFunction(Function &F,
     return emitAnnotations(F);
   return false;
 }
+StringRef SampleProfileLoaderPass::getSampleProfileFile(const LLVMContext &C) {
+  return getIPOOptions(C).sample_profile_file;
+}
+
 SampleProfileLoaderPass::SampleProfileLoaderPass(
     std::string File, std::string RemappingFile, ThinOrFullLTOPhase LTOPhase,
     IntrusiveRefCntPtr<vfs::FileSystem> FS, bool DisableSampleProfileInlining,
@@ -2327,10 +2160,13 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
     FS = vfs::getRealFileSystem();
   LazyCallGraph &CG = AM.getResult<LazyCallGraphAnalysis>(M);
 
+  const IPOOptions &Opts = getIPOOptions(M);
   SampleProfileLoader SampleLoader(
-      ProfileFileName.empty() ? SampleProfileFile : ProfileFileName,
-      ProfileRemappingFileName.empty() ? SampleProfileRemappingFile
-                                       : ProfileRemappingFileName,
+      Opts,
+      ProfileFileName.empty() ? Opts.sample_profile_file
+                              : StringRef(ProfileFileName),
+      ProfileRemappingFileName.empty() ? Opts.sample_profile_remapping_file
+                                       : StringRef(ProfileRemappingFileName),
       LTOPhase, FS, GetAssumptionCache, GetTTI, GetTLI, CG,
       DisableSampleProfileInlining, UseFlattenedProfile);
   if (!SampleLoader.doInitialization(M, &FAM))

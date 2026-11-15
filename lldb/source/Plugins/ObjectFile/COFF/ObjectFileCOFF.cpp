@@ -209,8 +209,6 @@ void ObjectFileCOFF::CreateSections(lldb_private::SectionList &sections) {
   if (!module)
     return;
 
-  std::lock_guard<std::recursive_mutex> guard(module->GetMutex());
-
   auto SectionType = [](StringRef Name,
                         const coff_section *Section) -> lldb::SectionType {
     // DWARF Debug Sections
@@ -252,17 +250,12 @@ void ObjectFileCOFF::CreateSections(lldb_private::SectionList &sections) {
     if (!Name)
       consumeError(Name.takeError());
 
-    SectionSP section =
-        std::make_unique<Section>(module, this,
-                                  static_cast<user_id_t>(SecRef.getIndex()),
-                                  ConstString(SectionName),
-                                  SectionType(SectionName, COFFSection),
-                                  COFFSection->VirtualAddress,
-                                  COFFSection->VirtualSize,
-                                  COFFSection->PointerToRawData,
-                                  COFFSection->SizeOfRawData,
-                                  COFFSection->getAlignment(),
-                                  0);
+    SectionSP section = std::make_unique<Section>(
+        module, this, static_cast<user_id_t>(SecRef.getIndex()),
+        SectionName.str(), SectionType(SectionName, COFFSection),
+        COFFSection->VirtualAddress, COFFSection->VirtualSize,
+        COFFSection->PointerToRawData, COFFSection->SizeOfRawData,
+        COFFSection->getAlignment(), 0);
     section->SetPermissions(Permissions(COFFSection));
 
     m_sections_up->AddSection(section);

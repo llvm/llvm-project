@@ -15,7 +15,7 @@
 func.func @test_scalar() {
   %0 = fir.alloca f32 {test.var = "scalar"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -32,7 +32,7 @@ func.func @test_scalar() {
 func.func @test_logical() {
   %0 = fir.alloca !fir.logical<4> {test.var = "logical"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -49,7 +49,7 @@ func.func @test_logical() {
 func.func @test_complex() {
   %0 = fir.alloca complex<f32> {test.var = "complex"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -66,7 +66,7 @@ func.func @test_complex() {
 func.func @test_array_1d() {
   %0 = fir.alloca !fir.array<100xf32> {test.var = "array_1d"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -83,7 +83,7 @@ func.func @test_array_1d() {
 func.func @test_array_3d() {
   %0 = fir.alloca !fir.array<5x10x15xi32> {test.var = "array_3d"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -100,32 +100,40 @@ func.func @test_array_3d() {
 func.func @test_derived() {
   %0 = fir.alloca !fir.type<_QTpoint{x:f32,y:f32,z:f32}> {test.var = "derived"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
 // -----
 
-// Test box type with heap scalar (needs destroy)
+// Test box type with heap scalar (needs destroy). Unallocated allocatables
+// keep a null private allocation.
 // CHECK: acc.private.recipe @private_box_heap_scalar : !fir.ref<!fir.box<!fir.heap<f64>>> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<f64>>>):
-// CHECK:   %[[SCALAR:.*]] = fir.allocmem f64
-// CHECK:   %[[EMBOX:.*]] = fir.embox %[[SCALAR]] : (!fir.heap<f64>) -> !fir.box<!fir.heap<f64>>
+// CHECK:   %[[PRIVATE_ALLOC:.*]] = fir.if {{.*}} -> (!fir.heap<f64>) {
+// CHECK:     %[[SCALAR:.*]] = fir.allocmem f64
+// CHECK:     fir.result %[[SCALAR]] : !fir.heap<f64>
+// CHECK:   } else {
+// CHECK:     %[[NULL_ALLOC:.*]] = fir.zero_bits !fir.heap<f64>
+// CHECK:     fir.result %[[NULL_ALLOC]] : !fir.heap<f64>
+// CHECK:   }
+// CHECK:   %[[EMBOX:.*]] = fir.embox %[[PRIVATE_ALLOC]] : (!fir.heap<f64>) -> !fir.box<!fir.heap<f64>>
 // CHECK:   %[[BOXALLOC:.*]] = fir.alloca !fir.box<!fir.heap<f64>>
 // CHECK:   fir.store %[[EMBOX]] to %[[BOXALLOC]] : !fir.ref<!fir.box<!fir.heap<f64>>>
-// CHECK:   acc.yield %[[BOXALLOC]] : !fir.ref<!fir.box<!fir.heap<f64>>>
+// CHECK:   acc.yield %[[BOXALLOC]], %[[PRIVATE_ALLOC]] : !fir.ref<!fir.box<!fir.heap<f64>>>, !fir.heap<f64>
 // CHECK: } destroy {
-// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<f64>>>, %[[PRIVATE:.*]]: !fir.ref<!fir.box<!fir.heap<f64>>>):
-// CHECK:   %[[BOX:.*]] = fir.load %[[PRIVATE]] : !fir.ref<!fir.box<!fir.heap<f64>>>
-// CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<f64>>) -> !fir.heap<f64>
-// CHECK:   fir.freemem %[[ADDR]] : !fir.heap<f64>
+// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<f64>>>, %{{.*}}: !fir.ref<!fir.box<!fir.heap<f64>>>, %[[PRIVATE_ALLOC:.*]]: !fir.heap<f64>):
+// CHECK-NOT: fir.box_addr
+// CHECK:   fir.if {{.*}} {
+// CHECK:     fir.freemem %[[PRIVATE_ALLOC]] : !fir.heap<f64>
+// CHECK:   }
 // CHECK:   acc.terminator
 // CHECK: }
 
 func.func @test_box_heap_scalar() {
   %0 = fir.alloca !fir.box<!fir.heap<f64>> {test.var = "box_heap_scalar"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -157,48 +165,64 @@ func.func @test_box_heap_scalar() {
 func.func @test_box_ptr_scalar() {
   %0 = fir.alloca !fir.box<!fir.ptr<i32>> {test.var = "box_ptr_scalar"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
 // -----
 
-// Test box type with 1D heap array (needs destroy)
+// Test box type with 1D heap array (needs destroy). Unallocated allocatables
+// keep a null private allocation.
 // CHECK: acc.private.recipe @private_box_heap_array_1d : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>):
+// CHECK:   %[[PRIVATE_ALLOC:.*]] = fir.if {{.*}} -> (!fir.heap<!fir.array<?xf32>>) {
+// CHECK:     fir.allocmem !fir.array<?xf32>
+// CHECK:   } else {
+// CHECK:     fir.zero_bits !fir.heap<!fir.array<?xf32>>
+// CHECK:   }
 // CHECK:   %[[BOXALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
-// CHECK:   acc.yield %[[BOXALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:   acc.yield %[[BOXALLOC]], %[[PRIVATE_ALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.heap<!fir.array<?xf32>>
 // CHECK: } destroy {
-// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %[[PRIVATE:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>):
-// CHECK:   %[[BOX:.*]] = fir.load %[[PRIVATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-// CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
-// CHECK:   fir.freemem %[[ADDR]] : !fir.heap<!fir.array<?xf32>>
+// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %[[PRIVATE_ALLOC:.*]]: !fir.heap<!fir.array<?xf32>>):
+// CHECK-NOT: fir.box_addr
+// CHECK:   fir.if {{.*}} {
+// CHECK:     fir.freemem %[[PRIVATE_ALLOC]] : !fir.heap<!fir.array<?xf32>>
+// CHECK:   }
 // CHECK:   acc.terminator
 // CHECK: }
 
 func.func @test_box_heap_array_1d() {
   %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {test.var = "box_heap_array_1d"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
 // -----
 
-// Test box type with 2D heap array (needs destroy)
+// Test box type with 2D heap array (needs destroy). Unallocated allocatables
+// keep a null private allocation.
 // CHECK: acc.private.recipe @private_box_heap_array_2d : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>):
+// CHECK:   %[[PRIVATE_ALLOC:.*]] = fir.if {{.*}} -> (!fir.heap<!fir.array<?x?xi64>>) {
+// CHECK:     fir.allocmem !fir.array<?x?xi64>
+// CHECK:   } else {
+// CHECK:     fir.zero_bits !fir.heap<!fir.array<?x?xi64>>
+// CHECK:   }
 // CHECK:   %[[BOXALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi64>>>
-// CHECK:   acc.yield %[[BOXALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>
+// CHECK:   acc.yield %[[BOXALLOC]], %[[PRIVATE_ALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>, !fir.heap<!fir.array<?x?xi64>>
 // CHECK: } destroy {
-// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>):
+// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>, %[[PRIVATE_ALLOC:.*]]: !fir.heap<!fir.array<?x?xi64>>):
+// CHECK:   fir.if {{.*}} {
+// CHECK:     fir.freemem %[[PRIVATE_ALLOC]] : !fir.heap<!fir.array<?x?xi64>>
+// CHECK:   }
 // CHECK:   acc.terminator
 // CHECK: }
 
 func.func @test_box_heap_array_2d() {
   %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi64>>> {test.var = "box_heap_array_2d"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -228,7 +252,7 @@ func.func @test_box_heap_array_2d() {
 func.func @test_box_ptr_array() {
   %0 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {test.var = "box_ptr_array"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -248,6 +272,6 @@ func.func @test_from_copyin() {
   %host = fir.alloca i32
   %in = acc.copyin varPtr(%host : !fir.ref<i32>) -> !fir.ref<i32> {test.var = "from_copyin"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }

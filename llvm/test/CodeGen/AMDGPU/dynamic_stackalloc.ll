@@ -895,8 +895,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX9-SDAG-NEXT:  ; %bb.1: ; %bb.1
 ; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff0, v0
-; GFX9-SDAG-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[6:7]
+; GFX9-SDAG-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[4:5]
 ; GFX9-SDAG-NEXT:    s_nop 1
 ; GFX9-SDAG-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX9-SDAG-NEXT:    s_nop 1
@@ -909,25 +909,17 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX9-SDAG-NEXT:    v_max_u32_dpp v1, v1, v1 row_bcast:15 row_mask:0xf bank_mask:0xf
 ; GFX9-SDAG-NEXT:    s_nop 1
 ; GFX9-SDAG-NEXT:    v_max_u32_dpp v1, v1, v1 row_bcast:31 row_mask:0xf bank_mask:0xf
-; GFX9-SDAG-NEXT:    v_readlane_b32 s4, v1, 63
-; GFX9-SDAG-NEXT:    s_mov_b64 exec, s[6:7]
-; GFX9-SDAG-NEXT:    s_mov_b32 s6, s32
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, s4, 6, v0
+; GFX9-SDAG-NEXT:    v_readlane_b32 s6, v1, 63
+; GFX9-SDAG-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX9-SDAG-NEXT:    s_mov_b32 s4, s32
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, s6, 6, v0
 ; GFX9-SDAG-NEXT:    v_readfirstlane_b32 s32, v0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 1
-; GFX9-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], s6
+; GFX9-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], s4
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-SDAG-NEXT:    s_mov_b64 s[6:7], 0
-; GFX9-SDAG-NEXT:    s_branch .LBB7_3
-; GFX9-SDAG-NEXT:  .LBB7_2:
-; GFX9-SDAG-NEXT:    s_mov_b64 s[6:7], -1
-; GFX9-SDAG-NEXT:  .LBB7_3: ; %Flow
-; GFX9-SDAG-NEXT:    s_and_b64 s[6:7], s[6:7], exec
-; GFX9-SDAG-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX9-SDAG-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX9-SDAG-NEXT:    s_cbranch_scc1 .LBB7_5
-; GFX9-SDAG-NEXT:  ; %bb.4: ; %bb.0
+; GFX9-SDAG-NEXT:    s_endpgm
+; GFX9-SDAG-NEXT:  .LBB7_2: ; %bb.0
 ; GFX9-SDAG-NEXT:    s_add_i32 s4, s32, 0xfff
 ; GFX9-SDAG-NEXT:    s_lshl2_add_u32 s5, s5, 15
 ; GFX9-SDAG-NEXT:    s_and_b32 s4, s4, 0xfffff000
@@ -938,7 +930,6 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX9-SDAG-NEXT:    s_add_i32 s32, s4, s5
 ; GFX9-SDAG-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-SDAG-NEXT:  .LBB7_5: ; %bb.2
 ; GFX9-SDAG-NEXT:    s_endpgm
 ;
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_kernel_control_flow:
@@ -950,16 +941,14 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX9-GISEL-NEXT:    s_movk_i32 s32, 0x1000
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX9-GISEL-NEXT:    s_mov_b32 s4, 1
 ; GFX9-GISEL-NEXT:    s_cbranch_scc0 .LBB7_2
 ; GFX9-GISEL-NEXT:  ; %bb.1: ; %bb.1
 ; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
-; GFX9-GISEL-NEXT:    s_mov_b32 s8, s32
+; GFX9-GISEL-NEXT:    s_mov_b32 s6, s32
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
-; GFX9-GISEL-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[6:7]
-; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX9-GISEL-NEXT:    s_nop 0
+; GFX9-GISEL-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[4:5]
+; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf
@@ -971,19 +960,16 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX9-GISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_bcast:15 row_mask:0xf bank_mask:0xf
 ; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_bcast:31 row_mask:0xf bank_mask:0xf
-; GFX9-GISEL-NEXT:    v_readlane_b32 s9, v1, 63
-; GFX9-GISEL-NEXT:    s_mov_b64 exec, s[6:7]
-; GFX9-GISEL-NEXT:    s_lshl_b32 s6, s9, 6
+; GFX9-GISEL-NEXT:    v_readlane_b32 s7, v1, 63
+; GFX9-GISEL-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX9-GISEL-NEXT:    s_lshl_b32 s4, s7, 6
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 1
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, s8
-; GFX9-GISEL-NEXT:    s_add_u32 s32, s8, s6
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GISEL-NEXT:    s_add_u32 s32, s6, s4
 ; GFX9-GISEL-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:  .LBB7_2: ; %Flow
-; GFX9-GISEL-NEXT:    s_xor_b32 s4, s4, 1
-; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX9-GISEL-NEXT:    s_cbranch_scc1 .LBB7_4
-; GFX9-GISEL-NEXT:  ; %bb.3: ; %bb.0
+; GFX9-GISEL-NEXT:    s_endpgm
+; GFX9-GISEL-NEXT:  .LBB7_2: ; %bb.0
 ; GFX9-GISEL-NEXT:    s_lshl2_add_u32 s4, s5, 15
 ; GFX9-GISEL-NEXT:    s_add_u32 s5, s32, 0xfff
 ; GFX9-GISEL-NEXT:    s_and_b32 s4, s4, -16
@@ -994,7 +980,6 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX9-GISEL-NEXT:    s_add_u32 s32, s5, s4
 ; GFX9-GISEL-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:  .LBB7_4: ; %bb.2
 ; GFX9-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_kernel_control_flow:
@@ -1023,25 +1008,16 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_max_u32_e32 v1, v1, v2
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_readlane_b32 s2, v1, 31
+; GFX11-SDAG-NEXT:    v_readlane_b32 s1, v1, 31
 ; GFX11-SDAG-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-SDAG-NEXT:    s_mov_b32 s3, s32
+; GFX11-SDAG-NEXT:    s_mov_b32 s0, s32
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v3, 1
-; GFX11-SDAG-NEXT:    v_add_nc_u32_e64 v0, s3, s2
-; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
-; GFX11-SDAG-NEXT:    scratch_store_b32 off, v3, s3 dlc
+; GFX11-SDAG-NEXT:    v_add_nc_u32_e64 v0, s0, s1
+; GFX11-SDAG-NEXT:    scratch_store_b32 off, v3, s0 dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s32, v0
-; GFX11-SDAG-NEXT:    s_branch .LBB7_3
-; GFX11-SDAG-NEXT:  .LBB7_2:
-; GFX11-SDAG-NEXT:    s_mov_b32 s0, -1
-; GFX11-SDAG-NEXT:  .LBB7_3: ; %Flow
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX11-SDAG-NEXT:    s_and_b32 s0, s0, exec_lo
-; GFX11-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
-; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB7_5
-; GFX11-SDAG-NEXT:  ; %bb.4: ; %bb.0
+; GFX11-SDAG-NEXT:    s_endpgm
+; GFX11-SDAG-NEXT:  .LBB7_2: ; %bb.0
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 2
 ; GFX11-SDAG-NEXT:    s_add_i32 s0, s32, 63
 ; GFX11-SDAG-NEXT:    s_lshl2_add_u32 s1, s1, 15
@@ -1050,7 +1026,6 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v0, s0 dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    s_add_i32 s32, s0, s1
-; GFX11-SDAG-NEXT:  .LBB7_5: ; %bb.2
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_kernel_control_flow:
@@ -1060,17 +1035,16 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX11-GISEL-NEXT:    s_mov_b32 s32, 64
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX11-GISEL-NEXT:    s_mov_b32 s0, 1
 ; GFX11-GISEL-NEXT:    s_cbranch_scc0 .LBB7_2
 ; GFX11-GISEL-NEXT:  ; %bb.1: ; %bb.1
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-GISEL-NEXT:    s_mov_b32 s2, s32
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, s32
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
-; GFX11-GISEL-NEXT:    s_or_saveexec_b32 s0, -1
+; GFX11-GISEL-NEXT:    s_or_saveexec_b32 s1, -1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s0
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX11-GISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf
@@ -1081,19 +1055,14 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_max_u32_e32 v1, v1, v2
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v1, 31
-; GFX11-GISEL-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11-GISEL-NEXT:    v_readlane_b32 s2, v1, 31
+; GFX11-GISEL-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, 1
-; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX11-GISEL-NEXT:    s_add_u32 s32, s2, s3
-; GFX11-GISEL-NEXT:    scratch_store_b32 off, v0, s2 dlc
+; GFX11-GISEL-NEXT:    s_add_u32 s32, s0, s2
+; GFX11-GISEL-NEXT:    scratch_store_b32 off, v0, s0 dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:  .LBB7_2: ; %Flow
-; GFX11-GISEL-NEXT:    s_xor_b32 s0, s0, 1
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB7_4
-; GFX11-GISEL-NEXT:  ; %bb.3: ; %bb.0
+; GFX11-GISEL-NEXT:    s_endpgm
+; GFX11-GISEL-NEXT:  .LBB7_2: ; %bb.0
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, 2
 ; GFX11-GISEL-NEXT:    s_lshl2_add_u32 s0, s1, 15
 ; GFX11-GISEL-NEXT:    s_add_u32 s1, s32, 63
@@ -1103,7 +1072,6 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX11-GISEL-NEXT:    s_add_u32 s32, s1, s0
 ; GFX11-GISEL-NEXT:    scratch_store_b32 off, v0, s1 dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:  .LBB7_4: ; %bb.2
 ; GFX11-GISEL-NEXT:    s_endpgm
 entry:
   %cond = icmp eq i32 %n, 0

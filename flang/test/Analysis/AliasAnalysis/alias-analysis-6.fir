@@ -4,8 +4,8 @@
 func.func @_QPtest(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "y"}) {
   %c1 = arith.constant 1 : index
   %0 = fir.address_of(@_QMdataEx) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %1 = fir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMdataEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %2 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtestEy"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  %1 = fir.declare %0 uniq_name("_QMdataEx") fortran_attrs<allocatable, target> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %2 = fir.declare %arg0 uniq_name("_QFtestEy") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   %3 = fir.load %2 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   %c0 = arith.constant 0 : index
   %4:3 = fir.box_dims %3, %c0 : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)

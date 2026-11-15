@@ -1,5 +1,5 @@
 ; XFAIL: Hexagon
-; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 -disable-cgp-delete-phis < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 -cgp-delete-phis=0 < %s | FileCheck %s
 
 ; Test that we generate the correct Phi name in the last couple of epilog
 ; blocks, when there are 3 epilog blocks. The Phi was scheduled in stage

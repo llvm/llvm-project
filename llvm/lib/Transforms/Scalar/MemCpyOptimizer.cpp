@@ -1109,7 +1109,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     return false;
 
   int64_t MForwardOffset = 0;
-  const DataLayout &DL = M->getModule()->getDataLayout();
+  const DataLayout &DL = M->getDataLayout();
   // We can only transforms memcpy's where the dest of one is the source of the
   // other, or they have an offset in a range.
   if (M->getSource() != MDep->getDest()) {
@@ -1178,8 +1178,8 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     if (MDestOffset == MForwardOffset)
       CopySource = M->getDest();
     else {
-      CopySource = Builder.CreateInBoundsPtrAdd(
-          CopySource, Builder.getInt64(MForwardOffset));
+      CopySource = Builder.CreatePtrAddWithSignedOffset(
+          CopySource, MForwardOffset, "", GEPNoWrapFlags::inBounds());
       NewCopySource = dyn_cast<Instruction>(CopySource);
     }
     // We need to update `MCopyLoc` if an offset exists.
@@ -1345,14 +1345,10 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
          "Preserving debug location based on moving memset within BB.");
   Builder.SetCurrentDebugLocation(MemSet->getDebugLoc());
 
-  // If the sizes have different types, zext the smaller one.
-  if (DestSize->getType() != SrcSize->getType()) {
-    if (DestSize->getType()->getIntegerBitWidth() >
-        SrcSize->getType()->getIntegerBitWidth())
-      SrcSize = Builder.CreateZExt(SrcSize, DestSize->getType());
-    else
-      DestSize = Builder.CreateZExt(DestSize, SrcSize->getType());
-  }
+  // Convert both sizes to the index size.
+  Type *IdxTy = MemCpy->getDataLayout().getIndexType(Dest->getType());
+  SrcSize = Builder.CreateZExtOrTrunc(SrcSize, IdxTy);
+  DestSize = Builder.CreateZExtOrTrunc(DestSize, IdxTy);
 
   Value *Ule = Builder.CreateICmpULE(DestSize, SrcSize);
   Value *SizeDiff = Builder.CreateSub(DestSize, SrcSize);
@@ -1429,7 +1425,7 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   Value *CopySize = MemCpy->getLength();
 
   int64_t MOffset = 0;
-  const DataLayout &DL = MemCpy->getModule()->getDataLayout();
+  const DataLayout &DL = MemCpy->getDataLayout();
   // We can only transforms memcpy's where the dest of one is the source of the
   // other, or they have a known offset.
   if (MemCpy->getSource() != MemSet->getDest()) {
@@ -1483,7 +1479,7 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   Value *DestPtr = MemCpy->getRawDest();
   MaybeAlign Align = MemCpy->getDestAlign();
   if (MOffset < 0) {
-    DestPtr = Builder.CreatePtrAdd(DestPtr, Builder.getInt64(-MOffset));
+    DestPtr = Builder.CreatePtrAddWithSignedOffset(DestPtr, -MOffset);
     if (Align)
       Align = commonAlignment(*Align, -MOffset);
   }
@@ -1748,8 +1744,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   Value *NewDestPtr = SrcAlloca;
   if (*SrcOffset != *DestOffset) {
     IRBuilder<> Builder(DestAlloca);
-    NewDestPtr = Builder.CreateInBoundsPtrAdd(
-        SrcAlloca, Builder.getInt64(*SrcOffset - *DestOffset));
+    NewDestPtr = Builder.CreatePtrAddWithSignedOffset(
+        SrcAlloca, *SrcOffset - *DestOffset, "", GEPNoWrapFlags::inBounds());
   }
   DestAlloca->replaceAllUsesWith(NewDestPtr);
   eraseInstruction(DestAlloca);

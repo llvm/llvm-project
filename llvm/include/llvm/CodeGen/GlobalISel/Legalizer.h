@@ -44,7 +44,7 @@ struct LegalizerMFResult {
   const MachineInstr *FailedOn;
 };
 
-LegalizerMFResult legalizeMachineFunction(
+LLVM_ABI LegalizerMFResult legalizeMachineFunction(
     MachineFunction &MF, const LegalizerInfo &LI,
     ArrayRef<GISelChangeObserver *> AuxObservers,
     LostDebugLocObserver &LocObserver, MachineIRBuilder &MIRBuilder,
@@ -79,8 +79,8 @@ public:
 
 class LegalizerPass : public RequiredPassInfoMixin<LegalizerPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setIsSSA();

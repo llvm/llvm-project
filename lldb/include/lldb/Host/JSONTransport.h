@@ -239,10 +239,15 @@ public:
 
 protected:
   llvm::Error Write(const llvm::json::Value &message) {
-    this->Logv("<-- {0}", message);
     std::string output = Encode(message);
     size_t bytes_written = output.size();
-    return m_out->Write(output.data(), bytes_written).takeError();
+    llvm::Error err = m_out->Write(output.data(), bytes_written).takeError();
+    if (err)
+      this->Logv("write failed [{0}]: <-- {1}",
+                 llvm::toStringWithoutConsuming(err), message);
+    else
+      this->Logv("<-- {0}", message);
+    return err;
   }
 
   virtual llvm::Expected<std::vector<std::string>> Parse() = 0;

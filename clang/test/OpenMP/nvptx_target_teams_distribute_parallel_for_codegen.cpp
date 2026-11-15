@@ -1033,7 +1033,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[ADD10:%.*]] = add nsw i32 [[ADD9]], [[TMP14]]
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i32, ptr [[I]], align 4
 // CHECK1-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP15]] to i64
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[J]], align 4
 // CHECK1-NEXT:    [[IDXPROM11:%.*]] = sext i32 [[TMP16]] to i64
 // CHECK1-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i64 0, i64 [[IDXPROM11]]
@@ -1341,7 +1341,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[ADD33:%.*]] = add nsw i32 [[TMP21]], [[TMP22]]
 // CHECK1-NEXT:    [[TMP23:%.*]] = load i32, ptr [[I9]], align 4
 // CHECK1-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP23]] to i64
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
 // CHECK1-NEXT:    [[TMP24:%.*]] = load i32, ptr [[J10]], align 4
 // CHECK1-NEXT:    [[IDXPROM34:%.*]] = sext i32 [[TMP24]] to i64
 // CHECK1-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i64 0, i64 [[IDXPROM34]]
@@ -2593,7 +2593,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[ADD10:%.*]] = add nsw i32 [[ADD9]], [[TMP14]]
 // CHECK2-NEXT:    [[TMP15:%.*]] = load i32, ptr [[I]], align 4
 // CHECK2-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP15]] to i64
-// CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
+// CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i32, ptr [[J]], align 4
 // CHECK2-NEXT:    [[IDXPROM11:%.*]] = sext i32 [[TMP16]] to i64
 // CHECK2-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i64 0, i64 [[IDXPROM11]]
@@ -2896,7 +2896,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[ADD29:%.*]] = add nsw i32 [[TMP21]], [[TMP22]]
 // CHECK2-NEXT:    [[TMP23:%.*]] = load i32, ptr [[I9]], align 4
 // CHECK2-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP23]] to i64
-// CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
+// CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
 // CHECK2-NEXT:    [[TMP24:%.*]] = load i32, ptr [[J10]], align 4
 // CHECK2-NEXT:    [[IDXPROM30:%.*]] = sext i32 [[TMP24]] to i64
 // CHECK2-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i64 0, i64 [[IDXPROM30]]
@@ -4123,7 +4123,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[K]], align 4
 // CHECK3-NEXT:    [[ADD8:%.*]] = add nsw i32 [[ADD7]], [[TMP14]]
 // CHECK3-NEXT:    [[TMP15:%.*]] = load i32, ptr [[I]], align 4
-// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP15]]
+// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP15]]
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, ptr [[J]], align 4
 // CHECK3-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i32 0, i32 [[TMP16]]
 // CHECK3-NEXT:    store i32 [[ADD8]], ptr [[ARRAYIDX9]], align 4
@@ -4434,7 +4434,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP22:%.*]] = load i32, ptr [[J12]], align 4
 // CHECK3-NEXT:    [[ADD36:%.*]] = add nsw i32 [[TMP21]], [[TMP22]]
 // CHECK3-NEXT:    [[TMP23:%.*]] = load i32, ptr [[I11]], align 4
-// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP23]]
+// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP23]]
 // CHECK3-NEXT:    [[TMP24:%.*]] = load i32, ptr [[J12]], align 4
 // CHECK3-NEXT:    [[ARRAYIDX37:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i32 0, i32 [[TMP24]]
 // CHECK3-NEXT:    store i32 [[ADD36]], ptr [[ARRAYIDX37]], align 4

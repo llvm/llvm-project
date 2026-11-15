@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/DenseMap.h"
 #include <optional>
 
 using namespace mlir;
@@ -20,7 +21,7 @@ constexpr char kFooAttrName[] = "foo";
 constexpr char kFooStateAttrName[] = "foo_state";
 constexpr char kBarStateAttrName[] = "bar_state";
 
-/// This analysis state represents an integer that is XOR'd with other states.
+/// This analysis state represents an integer that is OR'd with other states.
 class FooState : public AnalysisState {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FooState)
@@ -39,7 +40,7 @@ public:
   }
 
   /// Join the state with another. If either is uninitialized, take the
-  /// initialized value. Otherwise, XOR the integer values.
+  /// initialized value. Otherwise, OR the integer values.
   ChangeResult join(const FooState &rhs) {
     if (rhs.isUninitialized())
       return ChangeResult::NoChange;
@@ -51,7 +52,7 @@ public:
       return ChangeResult::Change;
     }
     uint64_t before = *state;
-    state = before ^ value;
+    state = before | value;
     return before == *state ? ChangeResult::NoChange : ChangeResult::Change;
   }
 
@@ -72,7 +73,7 @@ private:
 };
 
 /// This analysis computes `FooState` across operations and control-flow edges.
-/// If an op specifies a `foo` integer attribute, the contained value is XOR'd
+/// If an op specifies a `foo` integer attribute, the contained value is OR'd
 /// with the value before the operation.
 class FooAnalysis : public DataFlowAnalysis {
 public:
@@ -87,15 +88,19 @@ public:
   LogicalResult initialize(Operation *top) override;
   LogicalResult visit(ProgramPoint *point) override;
 
+  unsigned lookupVisits(const Block *block) const;
+
 private:
   void visitBlock(Block *block);
   void visitOperation(Operation *op);
+
+  DenseMap<const Block *, unsigned> blockVisits; // including initial visit
 };
 
 /// This analysis state stores whether all previously observed `FooState`
 /// values at tagged program points along the CFG leading to the current point
-/// have been non-multiples of 4. Once the state becomes false at some point,
-/// all later points reachable from it also remain false.
+/// have not been positive multiples of 5. Once the state becomes false at some
+/// point, all later points reachable from it also remain false.
 class BarState : public AnalysisState {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(BarState)
@@ -138,10 +143,10 @@ private:
 
 /// This analysis is intended to be loaded after `FooAnalysis` has converged.
 /// It records whether every observed `FooState` on or before a given tagged
-/// program point has been non-divisible by 4. Because the state only ever
-/// transitions from true to false, observing a transient divisible-by-4
-/// `FooState` before `FooAnalysis` converges can permanently poison the
-/// result.
+/// program point has not been a positive multiple of 5. Because the state only
+/// ever transitions from true to false, observing a transient positive
+/// divisible-by-5 `FooState` before `FooAnalysis` converges can permanently
+/// poison the result.
 class BarAnalysis : public DataFlowAnalysis {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(BarAnalysis)
@@ -210,7 +215,12 @@ LogicalResult FooAnalysis::visit(ProgramPoint *point) {
   return success();
 }
 
+unsigned FooAnalysis::lookupVisits(const Block *const block) const {
+  return blockVisits.lookup(block);
+}
+
 void FooAnalysis::visitBlock(Block *block) {
+  ++blockVisits[block];
   if (block->isEntryBlock()) {
     // This is the initial state. Let the framework default-initialize it.
     return;
@@ -305,7 +315,8 @@ void BarAnalysis::visitOperation(Operation *op) {
     const FooState *fooState = getOrCreateFor<FooState>(point, point);
     if (fooState->isUninitialized())
       return;
-    result |= state->join((fooState->getValue() & 0x3) != 0);
+    const auto value = fooState->getValue();
+    result |= state->join(value > 0 && value % 5 != 0);
   }
   propagateIfChanged(state, result);
 }
@@ -313,7 +324,7 @@ void BarAnalysis::visitOperation(Operation *op) {
 void TestFooAnalysisPass::runOnOperation() {
   func::FuncOp func = getOperation();
   DataFlowSolver solver;
-  solver.load<FooAnalysis>();
+  auto &analysis = *solver.load<FooAnalysis>();
   if (failed(solver.initializeAndRun(func)))
     return signalPassFailure();
 
@@ -324,6 +335,9 @@ void TestFooAnalysisPass::runOnOperation() {
     auto tag = op->getDiscardableAttrOfType<StringAttr>(kTagAttrName);
     if (!tag)
       return;
+    if (auto *const block = op->getBlock(); &block->front() == op)
+      os << tag.getValue() << " block visits -> "
+         << analysis.lookupVisits(block) << "\n";
     const FooState *state =
         solver.lookupState<FooState>(solver.getProgramPointAfter(op));
     assert(state && !state->isUninitialized());

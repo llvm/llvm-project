@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++1y | FileCheck --check-prefix CHECK_ABI_LATEST %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++1y | FileCheck --check-prefix CHECK_ABI_LATEST %s %}
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++1y -fclang-abi-compat=6.0 | FileCheck --check-prefix CHECK_ABIV6 %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++1y -fclang-abi-compat=6.0 | FileCheck --check-prefix CHECK_ABIV6 %s %}
 
 // CHECK-LABEL: define void @_ZN19non_inline_function3fooEv
 // CHECK-LABEL: define internal void @"_ZZN19non_inline_function3fooEvENK3$_0clEi"(%class.anon

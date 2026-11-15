@@ -46,12 +46,18 @@ enum {
   // the intrinsic's .td.
   ArgAsWidenedRetType = (1 << 9),
 
+  // The immediate operand is `LLVMMatchType<0>` in the intrinsic
+  // definition, so it is vectorized like a data operand (e.g. the `_n_`
+  // scalar saturating shifts: vqshlb_n_s8, vqshlub_n_s8, ...).
+  // ClangIR-only; classic code-gen derives this from the intrinsic's .td.
+  VectorizeImmArg = (1 << 10),
+
   Vectorize1ArgType = Add1ArgType | VectorizeArgTypes,
   VectorRet = AddRetType | VectorizeRetType,
-  VectorRetGetArgs01 =
-      AddRetType | Add2ArgTypes | VectorizeRetType | VectorizeArgTypes,
-  FpCmpzModifiers =
-      AddRetType | VectorizeRetType | Add1ArgType | InventFloatType
+  VectorRetGetArgs01 = AddRetType | Add2ArgTypes | VectorizeRetType |
+      VectorizeArgTypes,
+  FpCmpzModifiers = AddRetType | VectorizeRetType | Add1ArgType |
+      InventFloatType
 };
 
 /// Describes an ARM or AArch64 NEON intrinsic, or an AArch64 SISD intrinsic.
@@ -592,22 +598,22 @@ const inline ARMNeonVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
   NEONMAP1(vqrshrund_n_s64, aarch64_neon_sqrshrun, AddRetType),
   NEONMAP1(vqrshrunh_n_s16, aarch64_neon_sqrshrun, VectorRet | Use64BitVectors | ArgAsWidenedRetType),
   NEONMAP1(vqrshruns_n_s32, aarch64_neon_sqrshrun, VectorRet | Use64BitVectors | ArgAsWidenedRetType),
-  NEONMAP1(vqshlb_n_s8, aarch64_neon_sqshl, Vectorize1ArgType | Use64BitVectors),
-  NEONMAP1(vqshlb_n_u8, aarch64_neon_uqshl, Vectorize1ArgType | Use64BitVectors),
+  NEONMAP1(vqshlb_n_s8, aarch64_neon_sqshl, Vectorize1ArgType | Use64BitVectors | VectorizeImmArg),
+  NEONMAP1(vqshlb_n_u8, aarch64_neon_uqshl, Vectorize1ArgType | Use64BitVectors | VectorizeImmArg),
   NEONMAP1(vqshlb_s8, aarch64_neon_sqshl, Vectorize1ArgType | Use64BitVectors),
   NEONMAP1(vqshlb_u8, aarch64_neon_uqshl, Vectorize1ArgType | Use64BitVectors),
   NEONMAP1(vqshld_s64, aarch64_neon_sqshl, Add1ArgType),
   NEONMAP1(vqshld_u64, aarch64_neon_uqshl, Add1ArgType),
-  NEONMAP1(vqshlh_n_s16, aarch64_neon_sqshl, Vectorize1ArgType | Use64BitVectors),
-  NEONMAP1(vqshlh_n_u16, aarch64_neon_uqshl, Vectorize1ArgType | Use64BitVectors),
+  NEONMAP1(vqshlh_n_s16, aarch64_neon_sqshl, Vectorize1ArgType | Use64BitVectors | VectorizeImmArg),
+  NEONMAP1(vqshlh_n_u16, aarch64_neon_uqshl, Vectorize1ArgType | Use64BitVectors | VectorizeImmArg),
   NEONMAP1(vqshlh_s16, aarch64_neon_sqshl, Vectorize1ArgType | Use64BitVectors),
   NEONMAP1(vqshlh_u16, aarch64_neon_uqshl, Vectorize1ArgType | Use64BitVectors),
   NEONMAP1(vqshls_n_s32, aarch64_neon_sqshl, Add1ArgType),
   NEONMAP1(vqshls_n_u32, aarch64_neon_uqshl, Add1ArgType),
   NEONMAP1(vqshls_s32, aarch64_neon_sqshl, Add1ArgType),
   NEONMAP1(vqshls_u32, aarch64_neon_uqshl, Add1ArgType),
-  NEONMAP1(vqshlub_n_s8, aarch64_neon_sqshlu, Vectorize1ArgType | Use64BitVectors),
-  NEONMAP1(vqshluh_n_s16, aarch64_neon_sqshlu, Vectorize1ArgType | Use64BitVectors),
+  NEONMAP1(vqshlub_n_s8, aarch64_neon_sqshlu, Vectorize1ArgType | Use64BitVectors | VectorizeImmArg),
+  NEONMAP1(vqshluh_n_s16, aarch64_neon_sqshlu, Vectorize1ArgType | Use64BitVectors | VectorizeImmArg),
   NEONMAP1(vqshlus_n_s32, aarch64_neon_sqshlu, Add1ArgType),
   NEONMAP1(vqshrnd_n_s64, aarch64_neon_sqshrn, AddRetType),
   NEONMAP1(vqshrnd_n_u64, aarch64_neon_uqshrn, AddRetType),

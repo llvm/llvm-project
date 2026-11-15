@@ -42,7 +42,7 @@ static constexpr bool StrictCppStandardComplianceDefault = true;
 
 static unsigned getNumberOfDesignated(const InitListExpr *SyntacticInitList) {
   return llvm::count_if(*SyntacticInitList, [](auto *InitExpr) {
-    return isa<DesignatedInitExpr>(InitExpr);
+    return llvm::isa_and_nonnull<DesignatedInitExpr>(InitExpr);
   });
 }
 

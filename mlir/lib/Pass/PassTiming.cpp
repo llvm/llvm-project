@@ -8,9 +8,11 @@
 
 #include "PassDetail.h"
 #include "mlir/Pass/PassManager.h"
-#include "llvm/ADT/SmallVector.h"
+#include "mlir/Support/ThreadLocalCache.h"
+#include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 
+#include <deque>
 #include <optional>
 
 using namespace mlir;
@@ -28,11 +30,13 @@ struct PassTiming : public PassInstrumentation {
         ownedTimingScope(ownedTimingManager->getRootScope()),
         rootScope(ownedTimingScope) {}
 
-  /// If a pass can spawn additional work on other threads, it records the
-  /// index to its currently active timer here. Passes that run on a
-  /// newly-forked thread will check this list to find the active timer of the
-  /// parent thread into which the new thread should be nested.
-  DenseMap<PipelineParentInfo, unsigned> parentTimerIndices;
+  bool isThreadSafe() const override { return rootScope.isThreadSafe(); }
+
+  /// Published adaptor scopes remain alive until their nested pipelines have
+  /// joined. The deque below keeps their addresses stable when a worker helps
+  /// execute another task while waiting for nested parallel work.
+  DenseMap<PipelineParentInfo, TimingScope *> parentScopes;
+  llvm::sys::SmartRWMutex<true> parentScopesMutex;
 
   /// The timing manager owned by this instrumentation (in case timing was
   /// enabled by the user on the pass manager without providing an external
@@ -43,7 +47,7 @@ struct PassTiming : public PassInstrumentation {
   TimingScope ownedTimingScope;
 
   /// A stack of the currently active timing scopes per thread.
-  DenseMap<uint64_t, SmallVector<TimingScope, 4>> activeThreadTimers;
+  ThreadLocalCache<std::deque<TimingScope>> activeThreadTimers;
 
   /// The root timing scope into which timing is reported.
   TimingScope &rootScope;
@@ -54,17 +58,17 @@ struct PassTiming : public PassInstrumentation {
 
   void runBeforePipeline(std::optional<OperationName> name,
                          const PipelineParentInfo &parentInfo) override {
-    auto tid = llvm::get_threadid();
-    auto &activeTimers = activeThreadTimers[tid];
+    auto &activeTimers = *activeThreadTimers;
 
     // Find the parent scope, either using the parent info or the root scope
     // (e.g. in the case of the top-level pipeline).
-    TimingScope *parentScope;
-    auto it = parentTimerIndices.find(parentInfo);
-    if (it != parentTimerIndices.end())
-      parentScope = &activeThreadTimers[parentInfo.parentThreadID][it->second];
-    else
-      parentScope = &rootScope;
+    TimingScope *parentScope = &rootScope;
+    {
+      llvm::sys::SmartScopedReader<true> lock(parentScopesMutex);
+      auto it = parentScopes.find(parentInfo);
+      if (it != parentScopes.end())
+        parentScope = it->second;
+    }
 
     // Use nullptr to anchor op-agnostic pipelines, otherwise use the name of
     // the operation.
@@ -76,7 +80,7 @@ struct PassTiming : public PassInstrumentation {
 
   void runAfterPipeline(std::optional<OperationName>,
                         const PipelineParentInfo &) override {
-    auto &activeTimers = activeThreadTimers[llvm::get_threadid()];
+    auto &activeTimers = *activeThreadTimers;
     assert(!activeTimers.empty() && "expected active timer");
     activeTimers.pop_back();
   }
@@ -86,18 +90,18 @@ struct PassTiming : public PassInstrumentation {
   //===--------------------------------------------------------------------===//
 
   void runBeforePass(Pass *pass, Operation *) override {
-    auto tid = llvm::get_threadid();
-    auto &activeTimers = activeThreadTimers[tid];
+    auto &activeTimers = *activeThreadTimers;
     auto &parentScope = activeTimers.empty() ? rootScope : activeTimers.back();
 
     if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass)) {
-      parentTimerIndices[{tid, pass}] = activeTimers.size();
       auto scope =
           parentScope.nest(pass->getThreadingSiblingOrThis(),
                            [adaptor]() { return adaptor->getAdaptorName(); });
       if (adaptor->getPassManagers().size() <= 1)
         scope.hide();
       activeTimers.push_back(std::move(scope));
+      llvm::sys::SmartScopedWriter<true> lock(parentScopesMutex);
+      parentScopes[{llvm::get_threadid(), pass}] = &activeTimers.back();
     } else {
       activeTimers.push_back(
           parentScope.nest(pass->getThreadingSiblingOrThis(),
@@ -106,10 +110,11 @@ struct PassTiming : public PassInstrumentation {
   }
 
   void runAfterPass(Pass *pass, Operation *) override {
-    auto tid = llvm::get_threadid();
-    if (isa<OpToOpPassAdaptor>(pass))
-      parentTimerIndices.erase({tid, pass});
-    auto &activeTimers = activeThreadTimers[tid];
+    if (isa<OpToOpPassAdaptor>(pass)) {
+      llvm::sys::SmartScopedWriter<true> lock(parentScopesMutex);
+      parentScopes.erase({llvm::get_threadid(), pass});
+    }
+    auto &activeTimers = *activeThreadTimers;
     assert(!activeTimers.empty() && "expected active timer");
     activeTimers.pop_back();
   }
@@ -123,15 +128,14 @@ struct PassTiming : public PassInstrumentation {
   //===--------------------------------------------------------------------===//
 
   void runBeforeAnalysis(StringRef name, TypeID id, Operation *) override {
-    auto tid = llvm::get_threadid();
-    auto &activeTimers = activeThreadTimers[tid];
+    auto &activeTimers = *activeThreadTimers;
     auto &parentScope = activeTimers.empty() ? rootScope : activeTimers.back();
     activeTimers.push_back(parentScope.nest(
         id.getAsOpaquePointer(), [name] { return "(A) " + name.str(); }));
   }
 
   void runAfterAnalysis(StringRef, TypeID, Operation *) override {
-    auto &activeTimers = activeThreadTimers[llvm::get_threadid()];
+    auto &activeTimers = *activeThreadTimers;
     assert(!activeTimers.empty() && "expected active timer");
     activeTimers.pop_back();
   }

@@ -42,6 +42,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <system_error>
@@ -551,43 +552,57 @@ bool SampleProfileReaderText::hasFormat(const MemoryBuffer &Buffer) {
   return result;
 }
 
-template <typename T> ErrorOr<T> SampleProfileReaderBinary::readNumber() {
-  unsigned NumBytesRead = 0;
-  uint64_t Val = decodeULEB128(Data, &NumBytesRead);
+/// Emit a reader diagnostic for \p ProfError and return its error code.
+static std::error_code diagnoseReaderError(const SampleProfileReader &Reader,
+                                           sampleprof_error ProfError) {
+  std::error_code EC = ProfError;
+  Reader.reportError(0, EC.message());
+  return EC;
+}
 
-  if (Val > std::numeric_limits<T>::max()) {
-    std::error_code EC = sampleprof_error::malformed;
-    reportError(0, EC.message());
-    return EC;
-  } else if (Data + NumBytesRead > End) {
-    std::error_code EC = sampleprof_error::truncated;
-    reportError(0, EC.message());
-    return EC;
+template <typename T> ErrorOr<T> SampleProfileReaderBinary::readNumber() {
+  if (Data >= End)
+    return diagnoseReaderError(*this, sampleprof_error::truncated);
+
+  unsigned NumBytesRead = 0;
+  ULEB128DecodeError DecodeError = ULEB128DecodeError::None;
+  uint64_t Val = decodeULEB128(Data, &NumBytesRead, End, nullptr, &DecodeError);
+
+  // Preserve the distinction between incomplete input and an invalid value.
+  switch (DecodeError) {
+  case ULEB128DecodeError::None:
+    break;
+  case ULEB128DecodeError::UnexpectedEnd:
+    return diagnoseReaderError(*this, sampleprof_error::truncated);
+  case ULEB128DecodeError::TooBig:
+    return diagnoseReaderError(*this, sampleprof_error::malformed);
   }
+
+  if (Val > std::numeric_limits<T>::max())
+    return diagnoseReaderError(*this, sampleprof_error::malformed);
 
   Data += NumBytesRead;
   return static_cast<T>(Val);
 }
 
 ErrorOr<StringRef> SampleProfileReaderBinary::readString() {
-  StringRef Str(reinterpret_cast<const char *>(Data));
-  if (Data + Str.size() + 1 > End) {
-    std::error_code EC = sampleprof_error::truncated;
-    reportError(0, EC.message());
-    return EC;
-  }
+  if (Data >= End)
+    return diagnoseReaderError(*this, sampleprof_error::truncated);
 
-  Data += Str.size() + 1;
+  const auto *Terminator = static_cast<const uint8_t *>(
+      std::memchr(Data, 0, static_cast<size_t>(End - Data)));
+  if (!Terminator)
+    return diagnoseReaderError(*this, sampleprof_error::truncated);
+
+  StringRef Str(reinterpret_cast<const char *>(Data), Terminator - Data);
+  Data = Terminator + 1;
   return Str;
 }
 
 template <typename T>
 ErrorOr<T> SampleProfileReaderBinary::readUnencodedNumber() {
-  if (Data + sizeof(T) > End) {
-    std::error_code EC = sampleprof_error::truncated;
-    reportError(0, EC.message());
-    return EC;
-  }
+  if (Data > End || static_cast<size_t>(End - Data) < sizeof(T))
+    return diagnoseReaderError(*this, sampleprof_error::truncated);
 
   using namespace support;
   T Val = endian::readNext<T, llvm::endianness::little>(Data);
@@ -662,7 +677,10 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
   auto NumVTableTypes = readNumber<uint32_t>();
   if (std::error_code EC = NumVTableTypes.getError())
     return EC;
-  M.reserve(*NumVTableTypes);
+  // With FS discriminators, M may already hold the types of another raw
+  // location that maps to the same masked location (see below), so reserve
+  // for both the existing and the incoming vtables.
+  M.reserve(M.size() + *NumVTableTypes);
 
   for (uint32_t I = 0; I < *NumVTableTypes; ++I) {
     auto VTableType(readStringFromTable());
@@ -672,10 +690,15 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
     auto VTableSamples = readNumber<uint64_t>();
     if (std::error_code EC = VTableSamples.getError())
       return EC;
-    // The source profile should not have duplicate vtable records at the same
-    // location. In case duplicate vtables are found, reader can emit a warning
-    // but continue processing the profile.
-    if (!M.insert(std::make_pair(*VTableType, *VTableSamples)).second) {
+
+    auto [It, Inserted] = M.try_emplace(*VTableType, *VTableSamples);
+    if (Inserted)
+      continue;
+
+    // Without FS discriminators, the source profile should not have duplicate
+    // vtable records at the same location. Emit a warning about duplicate
+    // vtables and continue processing the profile.
+    if (!ProfileIsFS) {
       Ctx.diagnose(DiagnosticInfoSampleProfile(
           Buffer->getBufferIdentifier(), 0,
           "Duplicate vtable type " + VTableType->str() +
@@ -683,6 +706,12 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
           DS_Warning));
       continue;
     }
+
+    // With flow-sensitive discriminators enabled in the profiled binary,
+    // several raw locations of the profiled instruction may map to the same
+    // masked location. Accumulate vtable counts for the same masked location,
+    // like body and callsite samples are accumulated.
+    It->second = SaturatingAdd(It->second, *VTableSamples);
   }
   return sampleprof_error::success;
 }
@@ -1251,6 +1280,14 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
       auto FuncName = FContext.getFunction();
       StringRef FuncNameStr = FuncName.stringRef();
       if (!FuncsToUse.count(FuncNameStr) && !Remapper->exist(FuncNameStr))
+        continue;
+      // This function may be called more than once on the same reader: once
+      // for the module's functions and then incrementally (e.g. by
+      // SampleProfileMatcher) for additional candidates. The remapper is
+      // cumulative, so names inserted by an earlier call still match here.
+      // Skip profiles that are already loaded; otherwise they would be read
+      // again and merged into themselves.
+      if (Profiles.find(FContext) != Profiles.end())
         continue;
       const uint8_t *FuncProfileAddr = Start + NameOffset.second;
       if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
@@ -1969,18 +2006,23 @@ std::error_code SampleProfileReaderBinary::readSummary() {
   return sampleprof_error::success;
 }
 
-bool SampleProfileReaderRawBinary::hasFormat(const MemoryBuffer &Buffer) {
+/// Return whether Buffer starts with ExpectedMagic without reading beyond it.
+static bool hasBinaryFormat(const MemoryBuffer &Buffer,
+                            uint64_t ExpectedMagic) {
   const uint8_t *Data =
       reinterpret_cast<const uint8_t *>(Buffer.getBufferStart());
-  uint64_t Magic = decodeULEB128(Data);
-  return Magic == SPMagic();
+  const uint8_t *End = reinterpret_cast<const uint8_t *>(Buffer.getBufferEnd());
+  ULEB128DecodeError DecodeError = ULEB128DecodeError::None;
+  uint64_t Magic = decodeULEB128(Data, nullptr, End, nullptr, &DecodeError);
+  return DecodeError == ULEB128DecodeError::None && Magic == ExpectedMagic;
+}
+
+bool SampleProfileReaderRawBinary::hasFormat(const MemoryBuffer &Buffer) {
+  return hasBinaryFormat(Buffer, SPMagic());
 }
 
 bool SampleProfileReaderExtBinary::hasFormat(const MemoryBuffer &Buffer) {
-  const uint8_t *Data =
-      reinterpret_cast<const uint8_t *>(Buffer.getBufferStart());
-  uint64_t Magic = decodeULEB128(Data);
-  return Magic == SPMagic(SPF_Ext_Binary);
+  return hasBinaryFormat(Buffer, SPMagic(SPF_Ext_Binary));
 }
 
 std::error_code SampleProfileReaderGCC::skipNextWord() {
@@ -2224,8 +2266,10 @@ std::error_code SampleProfileReaderGCC::readImpl() {
 }
 
 bool SampleProfileReaderGCC::hasFormat(const MemoryBuffer &Buffer) {
-  StringRef Magic(Buffer.getBufferStart());
-  return Magic == "adcg*704";
+  StringRef Contents = Buffer.getBuffer();
+  // Preserve exact magic matching, including a magic-only eight-byte buffer.
+  return Contents.starts_with("adcg*704") &&
+         (Contents.size() == 8 || Contents[8] == '\0');
 }
 
 void SampleProfileReaderItaniumRemapper::applyRemapping(LLVMContext &Ctx) {

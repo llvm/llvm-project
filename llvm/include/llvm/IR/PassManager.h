@@ -39,16 +39,17 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/IRUnitRef.h"
 #include "llvm/IR/PassManagerInternal.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
-#include <list>
 #include <memory>
 #include <tuple>
 #include <type_traits>
@@ -85,10 +86,10 @@ struct PassInfoMixin : detail::InfoMixin<DerivedT> {
     auto PassName = MapClassName2PassName(ClassName);
     OS << PassName;
   }
-
-  // TODO: remove once out of tree users are updated.
-  static bool isRequired() { return false; }
 };
+
+LLVM_ABI bool shouldSkipOptimizationForOptBisect(IRUnitRef IR,
+                                                 StringRef PassName);
 } // namespace detail
 
 class Function;
@@ -101,6 +102,11 @@ template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 template <typename DerivedT>
 struct RequiredPassInfoMixin : detail::PassInfoMixin<DerivedT> {
   static bool isRequired() { return true; }
+
+public:
+  bool shouldSkipOptimizationForOptBisect(IRUnitRef IR) {
+    return detail::shouldSkipOptimizationForOptBisect(IR, DerivedT::name());
+  }
 };
 
 /// A CRTP mix-in for passes that can be skipped.
@@ -282,22 +288,22 @@ private:
 
   /// List of analysis pass IDs and associated concept pointers.
   ///
-  /// Requires iterators to be valid across appending new entries and arbitrary
-  /// erases. Provides the analysis ID to enable finding iterators to a given
-  /// entry in maps below, and provides the storage for the actual result
-  /// concept.
+  /// Requires result pointers to stay valid across appending new entries and
+  /// arbitrary erases (results are heap allocated behind unique_ptrs).
+  /// Provides the analysis ID to enable finding results for a given entry in
+  /// the map below, and provides the storage for the actual result concept.
   using AnalysisResultListT =
-      std::list<std::pair<AnalysisKey *, typename ResultConceptT::unique_ptr>>;
+      SmallVector<std::pair<AnalysisKey *, typename ResultConceptT::unique_ptr>,
+                  8>;
 
   /// Map type from IRUnitT pointer to our custom list type.
   using AnalysisResultListMapT = DenseMap<IRUnitT *, AnalysisResultListT>;
 
-  /// Map type from a pair of analysis ID and IRUnitT pointer to an
-  /// iterator into a particular result list (which is where the actual analysis
-  /// result is stored).
+  /// Map type from a pair of analysis ID and IRUnitT pointer to the result in
+  /// a particular result list (which is where the actual analysis result is
+  /// stored).
   using AnalysisResultMapT =
-      DenseMap<std::pair<AnalysisKey *, IRUnitT *>,
-               typename AnalysisResultListT::iterator>;
+      DenseMap<std::pair<AnalysisKey *, IRUnitT *>, ResultConceptT *>;
 
 public:
   /// API to communicate dependencies between analyses during invalidation.
@@ -348,43 +354,47 @@ public:
   private:
     friend class AnalysisManager;
 
+    /// Invalidation state of each entry in the results list of the IR unit.
+    enum class ResultState : uint8_t { Unknown, InProgress, Valid, Invalid };
+
     template <typename ResultT = ResultConceptT>
     bool invalidateImpl(AnalysisKey *ID, IRUnitT &IR,
                         const PreservedAnalyses &PA) {
-      // If we've already visited this pass, return true if it was invalidated
-      // and false otherwise.
-      auto IMapI = IsResultInvalidated.find(ID);
-      if (IMapI != IsResultInvalidated.end())
-        return IMapI->second;
-
-      // Otherwise look up the result object.
-      auto RI = Results.find({ID, &IR});
-      assert(RI != Results.end() &&
+      assert(&IR == &IRUnit && "Invalidating a result of another IR unit");
+      auto RI = llvm::find_if(ResultsList, [ID](const auto &IDAndResult) {
+        return IDAndResult.first == ID;
+      });
+      assert(RI != ResultsList.end() &&
              "Trying to invalidate a dependent result that isn't in the "
              "manager's cache is always an error, likely due to a stale result "
              "handle!");
-
-      auto &Result = static_cast<ResultT &>(*RI->second->second);
-
-      // Insert into the map whether the result should be invalidated and return
-      // that. Note that we cannot reuse IMapI and must do a fresh insert here,
-      // as calling invalidate could (recursively) insert things into the map,
-      // making any iterator or reference invalid.
-      bool Inserted;
-      std::tie(IMapI, Inserted) =
-          IsResultInvalidated.insert({ID, Result.invalidate(IR, PA, *this)});
-      (void)Inserted;
-      assert(Inserted && "Should not have already inserted this ID, likely "
-                         "indicates a dependency cycle!");
-      return IMapI->second;
+      return invalidateResult<ResultT>(RI - ResultsList.begin(), PA);
     }
 
-    Invalidator(SmallDenseMap<AnalysisKey *, bool, 8> &IsResultInvalidated,
-                const AnalysisResultMapT &Results)
-        : IsResultInvalidated(IsResultInvalidated), Results(Results) {}
+    /// Invalidate the result at index \p Idx of the results list if that
+    /// hasn't been done yet, and return whether it was invalidated.
+    template <typename ResultT = ResultConceptT>
+    bool invalidateResult(size_t Idx, const PreservedAnalyses &PA) {
+      if (States[Idx] != ResultState::Unknown) {
+        assert(States[Idx] != ResultState::InProgress &&
+               "Dependency cycle between analysis results");
+        return States[Idx] == ResultState::Invalid;
+      }
 
-    SmallDenseMap<AnalysisKey *, bool, 8> &IsResultInvalidated;
-    const AnalysisResultMapT &Results;
+      States[Idx] = ResultState::InProgress;
+      auto &Result = static_cast<ResultT &>(*ResultsList[Idx].second);
+      bool Invalidated = Result.invalidate(IRUnit, PA, *this);
+      States[Idx] = Invalidated ? ResultState::Invalid : ResultState::Valid;
+      return Invalidated;
+    }
+
+    Invalidator(IRUnitT &IR, const AnalysisResultListT &ResultsList,
+                SmallVectorImpl<ResultState> &States)
+        : IRUnit(IR), ResultsList(ResultsList), States(States) {}
+
+    IRUnitT &IRUnit;
+    const AnalysisResultListT &ResultsList;
+    SmallVectorImpl<ResultState> &States;
   };
 
   /// Construct an empty analysis manager.
@@ -465,8 +475,13 @@ public:
   template <typename PassT>
   void verifyNotInvalidated(IRUnitT &IR, typename PassT::Result *Result) const {
     PreservedAnalyses PA = PreservedAnalyses::none();
-    SmallDenseMap<AnalysisKey *, bool, 8> IsResultInvalidated;
-    Invalidator Inv(IsResultInvalidated, AnalysisResults);
+    auto ResultsListI = AnalysisResultLists.find(&IR);
+    assert(ResultsListI != AnalysisResultLists.end() &&
+           "Result is not cached for this IR unit");
+    const AnalysisResultListT &ResultsList = ResultsListI->second;
+    SmallVector<typename Invalidator::ResultState, 32> States(
+        ResultsList.size(), Invalidator::ResultState::Unknown);
+    Invalidator Inv(IR, ResultsList, States);
     assert(!Result->invalidate(IR, PA, Inv) &&
            "Cached result cannot be invalidated");
   }
@@ -515,7 +530,10 @@ public:
   /// sure you want to *only* clear this analysis without asking if it is
   /// invalid.
   template <typename AnalysisT> void clearAnalysis(IRUnitT &IR) {
-    AnalysisResultListT &ResultsList = AnalysisResultLists[&IR];
+    auto ResultsListI = AnalysisResultLists.find(&IR);
+    assert(ResultsListI != AnalysisResultLists.end() &&
+           "Analysis must be available");
+    AnalysisResultListT &ResultsList = ResultsListI->second;
     AnalysisKey *ID = AnalysisT::ID();
 
     auto I =
@@ -550,7 +568,7 @@ private:
   ResultConceptT *getCachedResultImpl(AnalysisKey *ID, IRUnitT &IR) const {
     typename AnalysisResultMapT::const_iterator RI =
         AnalysisResults.find({ID, &IR});
-    return RI == AnalysisResults.end() ? nullptr : &*RI->second->second;
+    return RI == AnalysisResults.end() ? nullptr : RI->second;
   }
 
   /// Map type from analysis pass ID to pass concept pointer.

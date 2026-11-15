@@ -96,15 +96,6 @@ bool isSourceElement(Type type) {
 }
 
 template <TosaNarrowKind Kind>
-Type convertElement(Type type) {
-  if (auto intTy = dyn_cast<IntegerType>(type))
-    return convertInteger<Kind>(intTy);
-  if (auto floatTy = dyn_cast<FloatType>(type))
-    return convertFloat<Kind>(floatTy);
-  return type;
-}
-
-template <TosaNarrowKind Kind>
 bool typeNeedsConversion(Type type) {
   if (auto shaped = dyn_cast<ShapedType>(type))
     return isSourceElement<Kind>(shaped.getElementType());
@@ -581,13 +572,14 @@ class ConvertCastOpWithBoundsChecking
   }
 };
 
-// ArgMax indices must fit the axis dimension, so we guard the integer rewrite.
-class ConvertArgMaxOpWithBoundsChecking
-    : public OpConversionPattern<tosa::ArgMaxOp> {
-  using OpConversionPattern::OpConversionPattern;
+// ArgMax/Min indices must fit the axis dimension, so we guard the integer
+// rewrite.
+template <typename OpTy>
+class ConvertArgMaxMinOpWithBoundsChecking : public OpConversionPattern<OpTy> {
+  using OpConversionPattern<OpTy>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(tosa::ArgMaxOp op, typename tosa::ArgMaxOp::Adaptor adaptor,
+  matchAndRewrite(OpTy op, typename OpTy::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     const int32_t axis = op.getAxis();
     const auto inputType = dyn_cast<ShapedType>(adaptor.getInput().getType());
@@ -602,8 +594,8 @@ class ConvertArgMaxOpWithBoundsChecking
     const Type resultType = op.getOutput().getType();
     const Type newResultType =
         this->getTypeConverter()->convertType(resultType);
-    rewriter.replaceOpWithNewOp<tosa::ArgMaxOp>(op, newResultType,
-                                                adaptor.getInput(), axis);
+    rewriter.replaceOpWithNewOp<OpTy>(op, newResultType, adaptor.getInput(),
+                                      axis);
     return success();
   }
 };
@@ -760,18 +752,21 @@ LogicalResult runTosaNarrowing(Operation *op, bool aggressiveRewrite,
         });
   }
 
+  auto hasLegalTypes = [&typeConverter](Operation *op) {
+    return typeConverter.isLegal(op->getOperandTypes()) &&
+           typeConverter.isLegal(op->getResultTypes());
+  };
+
   ConversionTarget target(*context);
-  target.addDynamicallyLegalDialect<tosa::TosaDialect>(
-      [&typeConverter, convertAccumulatorType](Operation *op) {
-        if (!typeConverter.isLegal(op->getResultTypes()) ||
-            !typeConverter.isLegal(op->getOperandTypes()))
-          return false;
-        if (!convertAccumulatorType)
-          return true;
-        const auto accumulatorType = op->getAttrOfType<TypeAttr>("acc_type");
-        return !accumulatorType ||
-               !typeNeedsConversion<Kind>(accumulatorType.getValue());
-      });
+  target.addDynamicallyLegalDialect<tosa::TosaDialect>([&](Operation *op) {
+    if (!hasLegalTypes(op))
+      return false;
+    if (!convertAccumulatorType)
+      return true;
+    const auto accumulatorType = op->getAttrOfType<TypeAttr>("acc_type");
+    return !accumulatorType ||
+           !typeNeedsConversion<Kind>(accumulatorType.getValue());
+  });
   if (convertFunctionBoundaries) {
     target.addDynamicallyLegalOp<func::FuncOp>(
         [&typeConverter](func::FuncOp op) {
@@ -789,6 +784,7 @@ LogicalResult runTosaNarrowing(Operation *op, bool aggressiveRewrite,
     target.addDynamicallyLegalOp<func::ReturnOp>(
         [](func::ReturnOp) { return true; });
   }
+  target.markUnknownOpDynamicallyLegal(hasLegalTypes);
 
   RewritePatternSet patterns(context);
   if (convertFunctionBoundaries) {
@@ -803,7 +799,10 @@ LogicalResult runTosaNarrowing(Operation *op, bool aggressiveRewrite,
         typeConverter, context, allowLossyConversion, convertAccumulatorType);
   } else {
     if constexpr (Kind == TosaNarrowKind::Int64ToInt32) {
-      patterns.add<ConvertArgMaxOpWithBoundsChecking>(typeConverter, context);
+      patterns.add<ConvertArgMaxMinOpWithBoundsChecking<tosa::ArgMaxOp>>(
+          typeConverter, context);
+      patterns.add<ConvertArgMaxMinOpWithBoundsChecking<tosa::ArgMinOp>>(
+          typeConverter, context);
       patterns.add<ConvertClampOpWithBoundsChecking<Kind>>(typeConverter,
                                                            context);
     }

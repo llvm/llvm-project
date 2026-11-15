@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/limits_macros.h"
 #include "hdr/unistd_macros.h"
 #include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -35,9 +36,33 @@ TEST_F(LlvmLibcSysconfTest, NprocessorsOnlnTest) {
   ASSERT_GT(sysconf_count, 0L);
 }
 
-TEST_F(LlvmLibcSysconfTest, ThreadsTest) {
-  long threads = LIBC_NAMESPACE::sysconf(_SC_THREADS);
-  ASSERT_EQ(threads, _POSIX_THREADS);
+TEST_F(LlvmLibcSysconfTest, PosixVersionTest) {
+  EXPECT_EQ(LIBC_NAMESPACE::sysconf(_SC_VERSION), 202405L);
+}
+
+TEST_F(LlvmLibcSysconfTest, PosixThreadsConstantsTest) {
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREADS), Succeeds(202405L));
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREAD_ATTR_STACKADDR),
+              Succeeds(202405L));
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREAD_ATTR_STACKSIZE),
+              Succeeds(202405L));
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREAD_CPUTIME), Succeeds(-1L));
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREAD_PRIO_INHERIT), Succeeds(-1L));
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREAD_PRIO_PROTECT), Succeeds(-1L));
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREAD_PRIORITY_SCHEDULING),
+              Succeeds(202405L));
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREAD_PROCESS_SHARED),
+              Succeeds(202405L));
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREAD_ROBUST_PRIO_INHERIT),
+              Succeeds(-1L));
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREAD_ROBUST_PRIO_PROTECT),
+              Succeeds(-1L));
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREAD_SAFE_FUNCTIONS),
+              Succeeds(202405L));
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREAD_SPORADIC_SERVER),
+              Succeeds(-1L));
+  EXPECT_THAT(LIBC_NAMESPACE::sysconf(_SC_THREAD_DESTRUCTOR_ITERATIONS),
+              Succeeds<long>(PTHREAD_DESTRUCTOR_ITERATIONS));
 }
 
 TEST_F(LlvmLibcSysconfTest, ArgMaxTest) {

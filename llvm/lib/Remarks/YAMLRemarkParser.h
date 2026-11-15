@@ -15,6 +15,7 @@
 
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkParser.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -58,6 +59,9 @@ struct YAMLRemarkParser : public RemarkParser {
   /// If we parse remark metadata in separate mode, we need to open a new file
   /// and parse that.
   std::unique_ptr<MemoryBuffer> SeparateBuf;
+  /// Storage for values that do not point into the input buffer: unescaped
+  /// scalars and block scalars. Remarks point into it.
+  BumpPtrAllocator Alloc;
 
   YAMLRemarkParser(StringRef Buf);
 
@@ -78,6 +82,8 @@ protected:
   Expected<std::unique_ptr<Remark>> parseRemark(yaml::Document &Remark);
   /// Parse the type of a remark to an enum type.
   Expected<Type> parseType(yaml::MappingNode &Node);
+  /// Decode a scalar, unescaping quoted forms.
+  Expected<StringRef> parseScalar(yaml::ScalarNode &Node);
   /// Parse one key to a string.
   Expected<StringRef> parseKey(yaml::KeyValueNode &Node);
   /// Parse one value to a string.

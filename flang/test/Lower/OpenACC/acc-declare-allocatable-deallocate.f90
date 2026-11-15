@@ -24,7 +24,7 @@ end module
 ! CHECK-NOT: _acc_declare_post_dealloc
 
 ! The release happens here, before the host deallocation.
-! CHECK-LABEL: func.func @_QMacc_declare_dealloc_modEdata_acc_declare_pre_dealloc() attributes {acc.declare_action} {
+! CHECK-LABEL: func.func @_QMacc_declare_dealloc_modEdata_acc_declare_pre_dealloc() attributes {acc.declare_action = #acc.declare_action<preDealloc = @_QMacc_declare_dealloc_modEdata_acc_declare_pre_dealloc>} {
 ! CHECK:         %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_dealloc_modEdata)
 ! CHECK:         %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ADDR]]
 ! CHECK:         acc.declare_exit dataOperands(%[[DEVPTR]]

@@ -273,6 +273,27 @@ func.func @shuffle_2D(%a: vector<1x4xf32>, %b: vector<2x4xf32>) -> vector<3x4xf3
 
 // -----
 
+func.func @shuffle_2D_poison(%a: vector<1x4xf32>, %b: vector<2x4xf32>) -> vector<4x4xf32> {
+  %1 = vector.shuffle %a, %b[1, -1, 0, 2] : vector<1x4xf32>, vector<2x4xf32>
+  return %1 : vector<4x4xf32>
+}
+// CHECK-LABEL: @shuffle_2D_poison(
+// CHECK-SAME: %[[A:.*]]: vector<1x4xf32>,
+// CHECK-SAME: %[[B:.*]]: vector<2x4xf32>)
+//       CHECK-DAG:   %[[VAL_0:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<1x4xf32> to !llvm.array<1 x vector<4xf32>>
+//       CHECK-DAG:   %[[VAL_1:.*]] = builtin.unrealized_conversion_cast %[[B]] : vector<2x4xf32> to !llvm.array<2 x vector<4xf32>>
+//       CHECK:   %[[U0:.*]] = llvm.mlir.poison : !llvm.array<4 x vector<4xf32>>
+//       CHECK:   %[[E1:.*]] = llvm.extractvalue %[[VAL_1]][0] : !llvm.array<2 x vector<4xf32>>
+//       CHECK:   %[[I1:.*]] = llvm.insertvalue %[[E1]], %[[U0]][0] : !llvm.array<4 x vector<4xf32>>
+//       CHECK:   %[[E2:.*]] = llvm.extractvalue %[[VAL_0]][0] : !llvm.array<1 x vector<4xf32>>
+//       CHECK:   %[[I2:.*]] = llvm.insertvalue %[[E2]], %[[I1]][2] : !llvm.array<4 x vector<4xf32>>
+//       CHECK:   %[[E3:.*]] = llvm.extractvalue %[[VAL_1]][1] : !llvm.array<2 x vector<4xf32>>
+//       CHECK:   %[[I3:.*]] = llvm.insertvalue %[[E3]], %[[I2]][3] : !llvm.array<4 x vector<4xf32>>
+//       CHECK:   %[[VAL_3:.*]] = builtin.unrealized_conversion_cast %[[I3]] : !llvm.array<4 x vector<4xf32>> to vector<4x4xf32>
+//       CHECK:   return %[[VAL_3]] : vector<4x4xf32>
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.extract
 //===----------------------------------------------------------------------===//
@@ -2050,6 +2071,54 @@ func.func @scalable_insert(%sub: vector<4xf32>, %dsv: vector<[4]xf32>) -> vector
   %1 = vector.scalable.insert %sub, %0[4] : vector<4xf32> into vector<[4]xf32>
   return %1 : vector<[4]xf32>
 }
+
+// -----
+
+func.func @reduce_fminimumnum_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
+  %0 = vector.reduction <minimumnumf>, %arg0, %arg1 : vector<16xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_fminimumnum_f32(
+// CHECK-SAME: %[[A:.*]]: vector<16xf32>, %[[B:.*]]: f32)
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fminimumnum(%[[A]]) : (vector<16xf32>) -> f32
+//      CHECK: %[[R:.*]] = llvm.intr.minimumnum(%[[V]], %[[B]]) : (f32, f32) -> f32
+//      CHECK: return %[[R]] : f32
+
+// -----
+
+func.func @reduce_fminimumnum_f32_scalable(%arg0: vector<[16]xf32>, %arg1: f32) -> f32 {
+  %0 = vector.reduction <minimumnumf>, %arg0, %arg1 : vector<[16]xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_fminimumnum_f32_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xf32>, %[[B:.*]]: f32)
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fminimumnum(%[[A]]) : (vector<[16]xf32>) -> f32
+//      CHECK: %[[R:.*]] = llvm.intr.minimumnum(%[[V]], %[[B]]) : (f32, f32) -> f32
+//      CHECK: return %[[R]] : f32
+
+// -----
+
+func.func @reduce_fmaximumnum_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
+  %0 = vector.reduction <maximumnumf>, %arg0, %arg1 : vector<16xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_fmaximumnum_f32(
+// CHECK-SAME: %[[A:.*]]: vector<16xf32>, %[[B:.*]]: f32)
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fmaximumnum(%[[A]]) : (vector<16xf32>) -> f32
+//      CHECK: %[[R:.*]] = llvm.intr.maximumnum(%[[V]], %[[B]]) : (f32, f32) -> f32
+//      CHECK: return %[[R]] : f32
+
+// -----
+
+func.func @reduce_fmaximumnum_f32_scalable(%arg0: vector<[16]xf32>, %arg1: f32) -> f32 {
+  %0 = vector.reduction <maximumnumf>, %arg0, %arg1 : vector<[16]xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_fmaximumnum_f32_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xf32>, %[[B:.*]]: f32)
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fmaximumnum(%[[A]]) : (vector<[16]xf32>) -> f32
+//      CHECK: %[[R:.*]] = llvm.intr.maximumnum(%[[V]], %[[B]]) : (f32, f32) -> f32
+//      CHECK: return %[[R]] : f32
 
 // -----
 

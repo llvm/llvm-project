@@ -2335,6 +2335,9 @@ struct WarpOpReduction : public WarpDistributionPattern {
     if (vectorType.getRank() != 1)
       return rewriter.notifyMatchFailure(
           warpOp, "Only rank 1 reductions can be distributed.");
+    if (vectorType.isScalable())
+      return rewriter.notifyMatchFailure(
+          warpOp, "Scalable reductions cannot be distributed.");
     // Only warp_size-sized vectors supported.
     if (vectorType.getShape()[0] % warpOp.getWarpSize() != 0)
       return rewriter.notifyMatchFailure(

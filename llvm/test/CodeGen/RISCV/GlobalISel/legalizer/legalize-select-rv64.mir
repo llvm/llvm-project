@@ -5,8 +5,11 @@
 name:            select_i8
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12
     ; CHECK-LABEL: name: select_i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
@@ -33,8 +36,11 @@ body:             |
 name:            select_i15
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12
     ; CHECK-LABEL: name: select_i15
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
@@ -61,8 +67,11 @@ body:             |
 name:            select_i16
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12
     ; CHECK-LABEL: name: select_i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
@@ -89,8 +98,11 @@ body:             |
 name:            select_i32
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12
     ; CHECK-LABEL: name: select_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
@@ -117,8 +129,11 @@ body:             |
 name:            select_i64
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12
     ; CHECK-LABEL: name: select_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
@@ -139,8 +154,11 @@ body:             |
 name:            select_i72
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13, $x14
     ; CHECK-LABEL: name: select_i72
-    ; CHECK: %xhi:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %xhi:_(s64) = COPY $x10
     ; CHECK-NEXT: %xlo:_(s64) = COPY $x11
     ; CHECK-NEXT: %yhi:_(s64) = COPY $x12
     ; CHECK-NEXT: %ylo:_(s64) = COPY $x13
@@ -174,8 +192,11 @@ body:             |
 name:            select_i128
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13, $x14
     ; CHECK-LABEL: name: select_i128
-    ; CHECK: %xhi:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %xhi:_(s64) = COPY $x10
     ; CHECK-NEXT: %xlo:_(s64) = COPY $x11
     ; CHECK-NEXT: %yhi:_(s64) = COPY $x12
     ; CHECK-NEXT: %ylo:_(s64) = COPY $x13
@@ -206,8 +227,11 @@ body:             |
 name:            select_i192
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16
     ; CHECK-LABEL: name: select_i192
-    ; CHECK: %yhi:_(s64) = COPY $x13
+    ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %yhi:_(s64) = COPY $x13
     ; CHECK-NEXT: %ymid:_(s64) = COPY $x14
     ; CHECK-NEXT: %ylo:_(s64) = COPY $x15
     ; CHECK-NEXT: $x10 = COPY %yhi(s64)
@@ -236,8 +260,11 @@ body:             |
 name:            select_ptr
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12
     ; CHECK-LABEL: name: select_ptr
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1

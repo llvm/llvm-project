@@ -27,9 +27,6 @@
 namespace llvm {
 
 class ARMBaseTargetMachine : public CodeGenTargetMachineImpl {
-public:
-  ARM::ARMABI TargetABI;
-
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   bool isLittle;
@@ -73,21 +70,6 @@ public:
     return TLOF.get();
   }
 
-  bool isAPCS_ABI() const {
-    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
-    return TargetABI == ARM::ARM_ABI_APCS;
-  }
-
-  bool isAAPCS_ABI() const {
-    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
-    return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
-  }
-
-  bool isAAPCS16_ABI() const {
-    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
-    return TargetABI == ARM::ARM_ABI_AAPCS16;
-  }
-
   bool targetSchedulesPostRAScheduling() const override { return true; };
 
   MachineFunctionInfo *
@@ -95,7 +77,8 @@ public:
                             const TargetSubtargetInfo *STI) const override;
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+  bool isNoopAddrSpaceCast(const DataLayout &, unsigned SrcAS,
+                           unsigned DestAS) const override {
     // Addrspacecasts are always noops.
     return true;
   }

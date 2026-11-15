@@ -394,10 +394,12 @@ function(runtime_register_target name)
     endif()
   endforeach()
 
+  set(${name}_runtime_targets)
   foreach(runtime_name ${runtime_names})
     set(${runtime_name}-${name} ${runtime_name})
     set(install-${runtime_name}-${name} install-${runtime_name})
     set(install-${runtime_name}-${name}-stripped install-${runtime_name}-stripped)
+    list(APPEND ${name}_runtime_targets ${runtime_name}-${name})
     list(APPEND ${name}_extra_targets ${runtime_name}-${name} install-${runtime_name}-${name} install-${runtime_name}-${name}-stripped)
     if(LLVM_INCLUDE_TESTS)
       set(check-${runtime_name}-${name} check-${runtime_name} )
@@ -530,6 +532,7 @@ function(runtime_register_target name)
   endforeach()
 
   add_flang_mod_deps(runtimes-${name}-build ${${name}_extra_targets})
+  set(${name}_runtime_targets ${${name}_runtime_targets} PARENT_SCOPE)
 endfunction()
 
 # Check if we have any runtimes to build.
@@ -626,13 +629,18 @@ if(build_runtimes)
       list(APPEND extra_cmake_args "-DLLVM_NATIVE_TOOL_DIR=${LLVM_RUNTIME_OUTPUT_INTDIR}")
     endif()
   endif()
-  # Tools needed by build_symbolizer.sh.
-  if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
-    foreach(dep clang llvm-tblgen opt llvm-ar llvm-link)
-      if(TARGET ${dep})
-        list(APPEND extra_deps ${dep})
-      endif()
-    endforeach()
+  if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    # Tools needed by build_symbolizer.sh.
+    if (COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+      foreach(dep clang llvm-tblgen opt llvm-ar llvm-link)
+        if(TARGET ${dep})
+          list(APPEND extra_deps ${dep})
+        endif()
+      endforeach()
+    endif()
+    if(LLVM_INCLUDE_TESTS AND TARGET llvm-dis)
+      list(APPEND extra_deps llvm-dis)
+    endif()
   endif()
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
     foreach(dep opt llvm-link llvm-extract clang llvm-offload-binary clang-nvlink-wrapper)
@@ -763,7 +771,7 @@ if(build_runtimes)
     foreach(multilib ${LLVM_RUNTIME_MULTILIBS})
       foreach(name ${LLVM_RUNTIME_MULTILIB_${multilib}_TARGETS})
         runtime_register_target(${name}+${multilib}
-          DEPENDS runtimes-${name}
+          DEPENDS ${${name}_runtime_targets}
           CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
                      -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
                      ${extra_cmake_args}

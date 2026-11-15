@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -fcoverage-mcdc | FileCheck %s -check-prefix=MCDC
-// RUN: %clang_cc1 -triple %itanium_abi_triple %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping | FileCheck %s -check-prefix=NOMCDC
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -fcoverage-mcdc | FileCheck %s -check-prefix=MCDC
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping | FileCheck %s -check-prefix=NOMCDC
 
 int test(int a, int b, int c, int d, int e, int f) {
   return ((!a && b) || ((!c && d) || (e && !f)));
@@ -78,7 +78,8 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
 // MCDC:  %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 0
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
-// MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB1]]
+// MCDC:  %[[ZEXT:[0-9]+]] = zext i32 %[[LAB1]] to i64
+// MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i64 %[[ZEXT]]
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
@@ -173,7 +174,8 @@ int internot(int a, int b, int c, int d, int e, int f) {
 // MCDC-DAG:  %[[T0:.+]] = load i32, ptr %mcdc.addr, align 4
 // MCDC-DAG:  %[[T:.+]] = add i32 %[[T0]], 0
 // MCDC-DAG:  %[[TA:.+]] = lshr i32 %[[T]], 3
-// MCDC-DAG:  %[[BA:.+]] = getelementptr inbounds i8, ptr @__profbm_internot, i32 %[[TA]]
+// MCDC-DAG:  %[[ZEXT:.+]] = zext i32 %[[TA]] to i64
+// MCDC-DAG:  %[[BA:.+]] = getelementptr inbounds i8, ptr @__profbm_internot, i64 %[[ZEXT]]
 // MCDC-DAG:  %[[BI:.+]] = and i32 %[[T]], 7
 // MCDC-DAG:  %[[BI1:.+]] = trunc i32 %[[BI]] to i8
 // MCDC-DAG:  %[[BM:.+]] = shl i8 1, %[[BI1]]

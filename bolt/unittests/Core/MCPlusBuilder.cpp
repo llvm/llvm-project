@@ -82,7 +82,6 @@ protected:
 
   void initializeBolt() {
     const Triple TheTriple = GetParam();
-    Relocation::Arch = TheTriple.getArch();
     // Minimal test ELFs have no RISC-V attributes. RISC-V needs an empty
     // feature set for +relax, while other targets reject a non-null one.
     SubtargetFeatures Features;
@@ -1121,7 +1120,3 @@ TEST_P(MCPlusBuilderTester, Annotation) {
   ASSERT_DEATH(BC->MIB->addEHInfo(Inst, MCPlus::MCLandingPad(LPSymbol, Value)),
                "annotation value out of range");
 }
-
-#if !defined(X86_AVAILABLE) && !defined(AARCH64_AVAILABLE)
-GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MCPlusBuilderTester);
-#endif // !defined(X86_AVAILABLE) && !defined(AARCH64_AVAILABLE)

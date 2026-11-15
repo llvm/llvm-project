@@ -104,13 +104,13 @@ private:
     if (isec)
       kind = uint64_t(isec->kind());
 
-    if (auto *sym = reloc.referent.dyn_cast<Symbol *>()) {
+    if (auto *sym = dyn_cast<Symbol *>(reloc.referent)) {
       kind = (kind << 8) | uint8_t(sym->kind());
       if (auto *d = llvm::dyn_cast<Defined>(sym))
         value = d->value;
     }
     return llvm::stable_hash_combine(kind, sectionIdx.value_or(0), value,
-                                     reloc.addend);
+                                     reloc.getAddend());
   }
 };
 } // namespace

@@ -33,11 +33,15 @@ public:
     return llvm::SmallVector<AbstractMethodRequirement>({{"handle_stop", 2}});
   }
 
+  llvm::SmallVector<llvm::StringLiteral> GetOptionalMethods() const override {
+    return {"handle_module_loaded", "handle_module_unloaded"};
+  }
+
   /// Check which of the three hook methods the Python class implements.
   SupportedHookMethods GetSupportedMethods() override;
 
-  void HandleModuleLoaded(lldb::StreamSP &output_sp) override;
-  void HandleModuleUnloaded(lldb::StreamSP &output_sp) override;
+  llvm::Error HandleModuleLoaded(lldb::StreamSP &output_sp) override;
+  llvm::Error HandleModuleUnloaded(lldb::StreamSP &output_sp) override;
   llvm::Expected<bool> HandleStop(ExecutionContext &exe_ctx,
                                   lldb::StreamSP &output_sp) override;
 

@@ -161,8 +161,12 @@ def LLVM_UDivOp : LLVM_IntArithmeticOpWithExactFlag<"udiv", "UDiv",
     [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
 def LLVM_SDivOp : LLVM_IntArithmeticOpWithExactFlag<"sdiv", "SDiv",
     [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
-def LLVM_URemOp : LLVM_IntArithmeticOp<"urem", "URem", [Pure]>;
-def LLVM_SRemOp : LLVM_IntArithmeticOp<"srem", "SRem", [Pure]>;
+def LLVM_URemOp : LLVM_IntArithmeticOp<
+    "urem", "URem",
+    [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
+def LLVM_SRemOp : LLVM_IntArithmeticOp<
+    "srem", "SRem",
+    [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
 def LLVM_AndOp : LLVM_IntArithmeticOp<"and", "And", [Pure]>;
 def LLVM_OrOp : LLVM_IntArithmeticOpWithDisjointFlag<"or", "Or", [Pure]> {
   let hasFolder = 1;
@@ -301,7 +305,8 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
                    Variadic<LLVM_ScalarOrVectorOf<AnySignlessInteger>>:$dynamicIndices,
                    DenseI32ArrayAttr:$rawConstantIndices,
                    TypeAttr:$elem_type,
-                   GEPNoWrapFlagsProp:$noWrapFlags);
+                   GEPNoWrapFlagsProp:$noWrapFlags,
+                   OptionalAttr<LLVM_ConstantRangeAttr>:$inrange);
   let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
   let skipDefaultBuilders = 1;
 
@@ -320,6 +325,14 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     Note that 'inbounds' implies 'nusw' which is ensured by the enum
     definition. The flags can be set individually or in combination.
 
+    An optional `inrange` attribute corresponds to the LLVM IR `inrange(Start,
+    End)` qualifier on constant GEP expressions. Loading from or storing to any
+    pointer derived from the GEP has undefined behavior if the access would fall
+    outside the half-open range `[Start, End)` from the GEP result. The bounds
+    use the pointer index type: their bitwidth must match the index bitwidth of
+    the base pointer in the data layout. LLVM IR permits `inrange` only on
+    constant GEP expressions.
+
     Examples:
 
     ```mlir
@@ -332,6 +345,10 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     // GEP with constant offsets into a structure
     %0 = llvm.getelementptr %1[0, 1]
        : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, f32)>
+
+    // Constant GEP with an inrange qualifier
+    %0 = llvm.getelementptr inbounds inrange <i64, -16, 8> %1[0, 0, 2]
+       : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
     ```
   }];
 
@@ -339,33 +356,19 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$basePtr,
                "ValueRange":$indices,
                CArg<"GEPNoWrapFlags", "GEPNoWrapFlags::none">:$noWrapFlags,
+               CArg<"ConstantRangeAttr", "{}">:$inrange,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$basePtr,
                "ArrayRef<GEPArg>":$indices,
                CArg<"GEPNoWrapFlags", "GEPNoWrapFlags::none">:$noWrapFlags,
+               CArg<"ConstantRangeAttr", "{}">:$inrange,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
   ];
   let llvmBuilder = [{
-    SmallVector<llvm::Value *> indices;
-    indices.reserve($rawConstantIndices.size());
-    GEPIndicesAdaptor<decltype($dynamicIndices)>
-        gepIndices(op.getRawConstantIndicesAttr(), $dynamicIndices);
-    for (PointerUnion<IntegerAttr, llvm::Value*> valueOrAttr : gepIndices) {
-      if (llvm::Value* value = ::llvm::dyn_cast<llvm::Value*>(valueOrAttr))
-        indices.push_back(value);
-      else
-        indices.push_back(
-            builder.getInt32(cast<IntegerAttr>(valueOrAttr).getInt()));
-    }
-    Type baseElementType = op.getElemType();
-    llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
-    $res = builder.CreateGEP(elementType, $base, indices, "",
-                             llvm::GEPNoWrapFlags::fromRaw(
-                                 static_cast<unsigned>(
-                                     op.getNoWrapFlags())));
+    return convertGEPOp(op, builder, moduleTranslation);
   }];
   let assemblyFormat = [{
-    ($noWrapFlags^)?
+    ($noWrapFlags^)? (`inrange` $inrange^)?
     $base `[` custom<GEPIndices>($dynamicIndices, $rawConstantIndices) `]` attr-dict
     `:` functional-type(operands, results) `,` $elem_type
   }];
@@ -384,7 +387,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
-     DeclareOpInterfaceMethods<DereferenceableOpInterface>]> {
+     DeclareOpInterfaceMethods<DereferenceableOpInterface>,
+     DeclareOpInterfaceMethods<RangeOpInterface>]> {
   dag args = (ins LLVM_AnyPointer:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
@@ -394,7 +398,9 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
               DefaultValuedAttr<
                 AtomicOrdering, "AtomicOrdering::not_atomic">:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
-              OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable);
+              OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable,
+              UnitAttr:$noundef,
+              OptionalAttr<LLVM_ConstantRangeAttr>:$range);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs LLVM_LoadableType:$res);
@@ -415,6 +421,12 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     // A nontemporal load of a float variable.
     %0 = llvm.load %ptr <nontemporal> : !llvm.ptr -> f32
 
+    // A load of a value that is neither undef nor poison.
+    %0 = llvm.load %ptr noundef : !llvm.ptr -> i32
+
+    // A load of an integer known to lie in [0, 10).
+    %0 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> i32
+
     // An atomic load of an integer variable.
     %0 = llvm.load %ptr atomic monotonic <alignment = 8>
         : !llvm.ptr -> i64
@@ -426,9 +438,13 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
-    (`invariant` $invariant^)?
-    (`invariant_group` $invariantGroup^)?
-    (`dereferenceable` `` $dereferenceable^)?
+    oilist(
+      `invariant` $invariant |
+      `invariant_group` $invariantGroup |
+      `dereferenceable` `` $dereferenceable |
+      `noundef` $noundef |
+      `range` `` $range
+    )
     prop-dict
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
@@ -441,11 +457,16 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     }
     if ($dereferenceable)
       moduleTranslation.setDereferenceableMetadata(op, inst);
+    if ($noundef) {
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
+      inst->setMetadata(llvm::LLVMContext::MD_noundef, metadata);
+    }
   }] # setOrderingCode
      # setSyncScopeCode
      # setAlignmentCode
      # setNonTemporalMetadataCode
      # setInvariantGroupCode
+     # setRangeCode
      # setAccessGroupsMetadataCode
      # setAliasAnalysisMetadataCode;
   string mlirBuilder = [{
@@ -456,6 +477,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
         loadInst->hasMetadata(llvm::LLVMContext::MD_nontemporal),
         loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_load),
         loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_group),
+        loadInst->hasMetadata(llvm::LLVMContext::MD_noundef),
         convertAtomicOrderingFromLLVM(loadInst->getOrdering()),
         getLLVMSyncScope(loadInst));
   }];
@@ -463,7 +485,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     OpBuilder<(ins "Type":$type, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal, CArg<"bool", "false">:$isInvariant,
-      CArg<"bool", "false">:$isInvariantGroup,
+      CArg<"bool", "false">:$isInvariantGroup, CArg<"bool", "false">:$isNoundef,
       CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope)>
   ];
@@ -514,7 +536,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $value `,` $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
-    (`invariant_group` $invariantGroup^)?
+    oilist(`invariant_group` $invariantGroup)
     prop-dict
     attr-dict `:` type($value) `,` qualified(type($addr))
   }];
@@ -629,8 +651,8 @@ class LLVM_DereferenceableCastOp<string mnemonic, string instName, Type type,
     auto *val = builder.Create}] # instName # [{($arg, $_resultType);
     $res = val;
     if ($dereferenceable) {
-      llvm::Instruction *inst = dyn_cast<llvm::Instruction>(val);
-      moduleTranslation.setDereferenceableMetadata(op, inst);
+      if (auto *inst = dyn_cast<llvm::Instruction>(val))
+        moduleTranslation.setDereferenceableMetadata(op, inst);
     }
   }];
   string mlirBuilder = [{
@@ -740,6 +762,7 @@ def LLVM_InvokeOp
     : LLVM_Op<"invoke", [AttrSizedOperandSegments,
                          DeclareOpInterfaceMethods<BranchOpInterface>,
                          DeclareOpInterfaceMethods<CallOpInterface>,
+                         DeclareOpInterfaceMethods<SymbolUserOpInterface>,
                          DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
                          Terminator]> {
   let arguments = (ins
@@ -1417,7 +1440,8 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, SymbolName,
-     SymbolVisibility, Symbol]> {
+     SymbolVisibility, Symbol,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins
     TypeAttr:$global_type,
     UnitAttr:$constant,
@@ -2068,7 +2092,8 @@ def LLVM_ComdatOp
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     AffineScope, AutomaticAllocationScope, IsolatedFromAbove, SymbolName,
-    SymbolVisibility, FunctionOpInterface
+    SymbolVisibility, FunctionOpInterface,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
   ]> {
   let summary = "LLVM dialect function.";
 
@@ -2100,9 +2125,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     ```
 
     The `function_entry_count` attribute models function-level `!prof`
-    entry-count metadata. It stores the entry count, whether the count is real
-    or synthetic, and any trailing import GUID operands in a single
-    `#llvm.function_entry_count` attribute.
+    entry-count metadata. It stores the entry count and any trailing import
+    GUID operands in a single `#llvm.function_entry_count` attribute.
   }];
 
   let arguments = (ins
@@ -2159,7 +2183,9 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<I32Attr>:$intel_reqd_sub_group_size,
     OptionalAttr<LLVM_FunctionMetadataArrayAttr>:$function_metadata,
     OptionalAttr<UWTableKindAttr>:$uwtable_kind,
-    OptionalAttr<BoolAttr>:$use_sample_profile
+    OptionalAttr<BoolAttr>:$use_sample_profile,
+    OptionalAttr<BoolAttr>:$disable_tail_calls,
+    OptionalAttr<StrAttr>:$sample_profile_suffix_elision_policy
   );
 
   let regions = (region AnyRegion:$body);
@@ -2318,8 +2344,16 @@ def LLVM_ZeroOp
 
 def LLVM_ConstantOp
     : LLVM_Op<"mlir.constant", [Pure, ConstantLike]>,
-      LLVM_Builder<[{$res = getLLVMConstant($_resultType, $value, $_location,
-                                            moduleTranslation);}]>
+      LLVM_Builder<[{
+        llvm::Constant *cst = getLLVMConstant($_resultType, $value,
+                                              $_location, moduleTranslation);
+        // `getLLVMConstant` emits a diagnostic and returns null if the
+        // attribute cannot be converted, e.g. when it refers to a resource
+        // that is not present in the module.
+        if (!cst)
+          return failure();
+        $res = cst;
+      }]>
 {
   let summary = "Defines a constant of LLVM type.";
   let description = [{
@@ -2422,12 +2456,14 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
               LLVM_AtomicRMWType:$val, AtomicOrdering:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
               OptionalAttr<I64Attr>:$alignment,
-              UnitAttr:$volatile_);
+              UnitAttr:$volatile_,
+              UnitAttr:$ignore_denormal_mode);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs LLVM_AtomicRMWType:$res);
   let assemblyFormat = [{
-    (`volatile` $volatile_^)? $bin_op $ptr `,` $val
+    (`volatile` $volatile_^)? (`ignore_denormal_mode` $ignore_denormal_mode^)?
+    $bin_op $ptr `,` $val
     (`syncscope` `(` $syncscope^ `)`)? $ordering
     prop-dict
     attr-dict `:`
@@ -2440,6 +2476,7 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
         convertAtomicOrderingToLLVM($ordering));
     $res = inst;
   }] # setVolatileCode
+     # setIgnoreDenormalModeCode
      # setSyncScopeCode
      # setAlignmentCode
      # setAccessGroupsMetadataCode
@@ -2450,16 +2487,30 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
     $res = LLVM::AtomicRMWOp::create($_builder, $_location,
         convertAtomicBinOpFromLLVM(atomicInst->getOperation()), $ptr, $val,
         convertAtomicOrderingFromLLVM(atomicInst->getOrdering()),
-        getLLVMSyncScope(atomicInst), alignment, atomicInst->isVolatile());
+        getLLVMSyncScope(atomicInst), alignment, atomicInst->isVolatile(),
+        atomicInst->hasMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode));
   }];
-  list<int> llvmArgIndices = [-1, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1];
+  list<int> llvmArgIndices = [-1, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1];
   let builders = [
     OpBuilder<(ins "LLVM::AtomicBinOp":$binOp, "Value":$ptr, "Value":$val,
       "LLVM::AtomicOrdering":$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope,
-      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile
+      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
+      CArg<"bool", "false">:$ignoreDenormalMode
     )>
   ];
+  let extraClassDeclaration = [{
+    bool isFloatingPointOperation() {
+      return getBinOp() == AtomicBinOp::fadd ||
+             getBinOp() == AtomicBinOp::fsub ||
+             getBinOp() == AtomicBinOp::fmin ||
+             getBinOp() == AtomicBinOp::fmax ||
+             getBinOp() == AtomicBinOp::fminimum ||
+             getBinOp() == AtomicBinOp::fmaximum ||
+             getBinOp() == AtomicBinOp::fminimumnum ||
+             getBinOp() == AtomicBinOp::fmaximumnum;
+    }
+  }];
   let hasVerifier = 1;
 }
 

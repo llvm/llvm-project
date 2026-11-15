@@ -28,10 +28,13 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -658,7 +661,8 @@ static void emitInitWithReductionInitializer(CodeGenFunction &CGF,
 /// \param DestAddr Address of the array.
 /// \param Type Type of array.
 /// \param Init Initial expression of array.
-/// \param SrcAddr Address of the original array.
+/// \param SrcAddr Address of the original array, required only if the declare
+/// reduction has an initializer.
 static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
                                  QualType Type, bool EmitDeclareReductionInit,
                                  const Expr *Init,
@@ -667,14 +671,19 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
   // Perform element-by-element initialization.
   QualType ElementTy;
 
+  // Only the initializer of a declare reduction reads the original item.
+  bool UseSrc = DRD && DRD->getInitializer();
+  assert((!UseSrc || SrcAddr.isValid()) &&
+         "Declare reduction initializer requires the original item address.");
+
   // Drill down to the base element type on both arrays.
   const ArrayType *ArrayTy = Type->getAsArrayTypeUnsafe();
   llvm::Value *NumElements = CGF.emitArrayLength(ArrayTy, ElementTy, DestAddr);
-  if (DRD)
+  if (UseSrc)
     SrcAddr = SrcAddr.withElementType(DestAddr.getElementType());
 
   llvm::Value *SrcBegin = nullptr;
-  if (DRD)
+  if (UseSrc)
     SrcBegin = SrcAddr.emitRawPointer(CGF);
   llvm::Value *DestBegin = DestAddr.emitRawPointer(CGF);
   // Cast from pointer to array type to pointer to single element.
@@ -695,7 +704,7 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
 
   llvm::PHINode *SrcElementPHI = nullptr;
   Address SrcElementCurrent = Address::invalid();
-  if (DRD) {
+  if (UseSrc) {
     SrcElementPHI = CGF.Builder.CreatePHI(SrcBegin->getType(), 2,
                                           "omp.arraycpy.srcElementPast");
     SrcElementPHI->addIncoming(SrcBegin, EntryBB);
@@ -721,7 +730,7 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
                            /*IsInitializer=*/false);
   }
 
-  if (DRD) {
+  if (UseSrc) {
     // Shift the address forward by one element.
     llvm::Value *SrcElementNext = CGF.Builder.CreateConstGEP1_32(
         SrcAddr.getElementType(), SrcElementPHI, /*Idx0=*/1,
@@ -1198,7 +1207,7 @@ struct PushAndPopStackRAII {
     // The FiniCB will still be needed but at the point where the
     // OpenMPIRBuilder is asked to construct a parallel (or similar) construct.
     auto FiniCB = [&CGF](llvm::OpenMPIRBuilder::InsertPointTy IP) {
-      assert(IP.getBlock()->end() == IP.getPoint() &&
+      assert(IP == IP.getNodeParent()->end() &&
              "Clang CG should cause non-terminated block!");
       CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
       CGF.Builder.restoreIP(IP);
@@ -1331,7 +1340,11 @@ llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
     HasCancel = TD->hasCancel();
   else if (const auto *TD = dyn_cast<OMPMasterTaskLoopDirective>(&D))
     HasCancel = TD->hasCancel();
+  else if (const auto *TD = dyn_cast<OMPMaskedTaskLoopDirective>(&D))
+    HasCancel = TD->hasCancel();
   else if (const auto *TD = dyn_cast<OMPParallelMasterTaskLoopDirective>(&D))
+    HasCancel = TD->hasCancel();
+  else if (const auto *TD = dyn_cast<OMPParallelMaskedTaskLoopDirective>(&D))
     HasCancel = TD->hasCancel();
 
   CodeGenFunction CGF(CGM, true);
@@ -1854,7 +1867,7 @@ void CGOpenMPRuntime::emitAndRegisterVTable(CodeGenModule &CGM,
                                             const VarDecl *VD) {
   // Register C++ VTable to OpenMP Offload Entry if it's a new
   // CXXRecordDecl.
-  if (CXXRecord && CXXRecord->isDynamicClass() &&
+  if (CXXRecord && CXXRecord->hasDefinition() && CXXRecord->isDynamicClass() &&
       !CGM.getOpenMPRuntime().VTableDeclMap.contains(CXXRecord)) {
     auto Res = CGM.getOpenMPRuntime().VTableDeclMap.try_emplace(CXXRecord, VD);
     if (Res.second) {
@@ -1895,7 +1908,11 @@ void CGOpenMPRuntime::registerVTable(const OMPExecutableDirective &D) {
 
     const VarDecl *VD = nullptr;
     if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-      VD = cast<VarDecl>(DRE->getDecl());
+      // Handle BindingDecls by redirecting to their DecompositionDecl.
+      if (auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
+        VD = cast<VarDecl>(BD->getDecomposedDecl());
+      else
+        VD = cast<VarDecl>(DRE->getDecl());
     } else if (auto *MRE = dyn_cast<MemberExpr>(E)) {
       if (auto *BaseDRE = dyn_cast<DeclRefExpr>(MRE->getBase())) {
         if (auto *BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl()))
@@ -1994,6 +2011,25 @@ void CGOpenMPRuntime::emitParallelCall(
     OpenMPSeverityClauseKind Severity, const Expr *Message) {
   if (!CGF.HaveInsertPoint())
     return;
+
+  // The caller waits for the parallel region to finish, so its captured stack
+  // variables remain alive until the region completes. Global variables also
+  // remain alive. Record this lifetime guarantee on the outlined function's
+  // parameters, even if other code has access to the same storage.
+  // The storage may still be modified or accessed through other pointers.
+  // For a captured pointer variable, this guarantees the lifetime of the
+  // variable itself, not the object it points to.
+  if (!CGM.getLangOpts().OpenMPIsTargetDevice) {
+    assert(OutlinedFn->arg_size() == CapturedVars.size() + 2 &&
+           "Expected tid and bound tid before the captured arguments");
+    for (auto [I, Captured] : llvm::enumerate(CapturedVars)) {
+      if (Captured->getType()->isPointerTy() &&
+          llvm::isa<llvm::AllocaInst, llvm::GlobalVariable>(
+              llvm::getUnderlyingObject(Captured)))
+        OutlinedFn->addParamAttr(I + 2, llvm::Attribute::NoFreeObj);
+    }
+  }
+
   llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
   auto &M = CGM.getModule();
   auto &&ThenGen = [&M, OutlinedFn, CapturedVars, RTLoc,
@@ -3034,6 +3070,14 @@ struct PrivateHelpersTy {
 typedef std::pair<CharUnits /*Align*/, PrivateHelpersTy> PrivateDataTy;
 } // anonymous namespace
 
+/// For BindingDecls, returns the DecomposedDecl as the original VarDecl.
+/// For regular VarDecls, returns the VarDecl itself.
+static const VarDecl *getOriginalVarDecl(const ValueDecl *Decl) {
+  if (const auto *BD = dyn_cast<BindingDecl>(Decl))
+    return cast<VarDecl>(BD->getDecomposedDecl());
+  return cast<VarDecl>(Decl);
+}
+
 static bool isAllocatableDecl(const VarDecl *VD) {
   const VarDecl *CVD = VD->getCanonicalDecl();
   if (!CVD->hasAttr<OMPAllocateDeclAttr>())
@@ -3055,7 +3099,18 @@ createPrivatesRecordDecl(CodeGenModule &CGM, ArrayRef<PrivateDataTy> Privates) {
     RD->startDefinition();
     for (const auto &Pair : Privates) {
       const VarDecl *VD = Pair.second.Original;
-      QualType Type = VD->getType().getNonReferenceType();
+      const VarDecl *PrivateCopy = Pair.second.PrivateCopy;
+      // For BindingDecls, use PrivateCopy type (binding's actual type).
+      // For regular variables, use Original type to preserve qualifiers.
+      // Check OriginalRef to detect BindingDecls since Original may be the
+      // DecompositionDecl.
+      bool IsBinding =
+          Pair.second.OriginalRef &&
+          isa<BindingDecl>(
+              cast<DeclRefExpr>(Pair.second.OriginalRef)->getDecl());
+      QualType Type = IsBinding ? PrivateCopy->getType().getNonReferenceType()
+                                : VD->getType().getNonReferenceType();
+
       // If the private variable is a local variable with lvalue ref type,
       // allocate the pointer instead of the pointee type.
       if (Pair.second.isLocalPrivate()) {
@@ -3327,7 +3382,9 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       C.getPointerType(PrivatesQTy).withConst().withRestrict(),
       ImplicitParamKind::Other);
   Args.push_back(TaskPrivatesArg);
-  llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, unsigned> PrivateVarsPos;
+  llvm::SmallDenseMap<CanonicalDeclPtr<const VarDecl>, unsigned> PrivateVarsPos;
+  // Track BindingDecl positions separately since BindingDecl is not a VarDecl.
+  llvm::SmallDenseMap<const BindingDecl *, unsigned> BindingDeclPos;
   unsigned Counter = 1;
   for (const Expr *E : Data.PrivateVars) {
     Args.push_back(ImplicitParamDecl::Create(
@@ -3336,8 +3393,11 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
-    PrivateVarsPos[VD] = Counter;
+    const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
+    if (const auto *BD = dyn_cast<BindingDecl>(VD))
+      BindingDeclPos[cast<BindingDecl>(BD->getCanonicalDecl())] = Counter;
+    else
+      PrivateVarsPos[cast<VarDecl>(VD)] = Counter;
     ++Counter;
   }
   for (const Expr *E : Data.FirstprivateVars) {
@@ -3347,8 +3407,11 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
-    PrivateVarsPos[VD] = Counter;
+    const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
+    if (const auto *BD = dyn_cast<BindingDecl>(VD))
+      BindingDeclPos[cast<BindingDecl>(BD->getCanonicalDecl())] = Counter;
+    else
+      PrivateVarsPos[cast<VarDecl>(VD)] = Counter;
     ++Counter;
   }
   for (const Expr *E : Data.LastprivateVars) {
@@ -3358,8 +3421,11 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
-    PrivateVarsPos[VD] = Counter;
+    const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
+    if (const auto *BD = dyn_cast<BindingDecl>(VD))
+      BindingDeclPos[cast<BindingDecl>(BD->getCanonicalDecl())] = Counter;
+    else
+      PrivateVarsPos[cast<VarDecl>(VD)] = Counter;
     ++Counter;
   }
   for (const VarDecl *VD : Data.PrivateLocals) {
@@ -3406,7 +3472,28 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
   Counter = 0;
   for (const FieldDecl *Field : PrivatesQTyRD->fields()) {
     LValue FieldLVal = CGF.EmitLValueForField(Base, Field);
-    const VarDecl *VD = Args[PrivateVarsPos[Privates[Counter].second.Original]];
+    // Lookup by the original declaration (BindingDecl or VarDecl).
+    const ValueDecl *LookupVD;
+    if (Privates[Counter].second.OriginalRef) {
+      LookupVD =
+          cast<DeclRefExpr>(Privates[Counter].second.OriginalRef)->getDecl();
+    } else {
+      LookupVD = Privates[Counter].second.Original;
+    }
+
+    // For BindingDecls, the privates record now stores each binding's type
+    // directly (not the full DecompositionDecl), so FieldLVal is already
+    // correct.
+
+    unsigned Position;
+    if (const auto *BD = dyn_cast<BindingDecl>(LookupVD)) {
+      Position =
+          BindingDeclPos.lookup(cast<BindingDecl>(BD->getCanonicalDecl()));
+      assert(Position && "binding not in privates mapping");
+    } else {
+      Position = PrivateVarsPos[cast<VarDecl>(LookupVD)];
+    }
+    const VarDecl *VD = Args[Position];
     LValue RefLVal =
         CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(VD), VD->getType());
     LValue RefLoadLVal = CGF.EmitLoadOfPointerLValue(
@@ -3481,9 +3568,41 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
               CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(OriginalVD), Type);
         } else if (ForDup) {
           SharedRefLValue = CGF.EmitLValueForField(SrcBase, SharedField);
+          // For BindingDecls, access the specific binding field within the
+          // captured DecompositionDecl.
+          if (Pair.second.OriginalRef) {
+            if (const auto *DRE =
+                    dyn_cast<DeclRefExpr>(Pair.second.OriginalRef)) {
+              if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
+                // Emit the binding subobject (member or array element) with
+                // the decomposed decl temporarily mapped to the capture.
+                const VarDecl *DD = cast<VarDecl>(BD->getDecomposedDecl());
+                auto It = CGF.findLocalDecl(DD);
+                bool WasMapped = It != CGF.localDeclMapEnd();
+                Address Saved = WasMapped ? It->second : Address::invalid();
+                if (WasMapped)
+                  It->second = SharedRefLValue.getAddress();
+                else
+                  CGF.insertLocalDecl(DD, SharedRefLValue.getAddress());
+                SharedRefLValue = CGF.EmitLValue(BD->getBinding());
+                if (WasMapped) {
+                  auto RestoreIt = CGF.findLocalDecl(DD);
+                  RestoreIt->second = Saved;
+                } else {
+                  CGF.eraseLocalDecl(DD);
+                }
+              }
+            }
+          }
+          bool IsBinding =
+              Pair.second.OriginalRef &&
+              isa<BindingDecl>(
+                  cast<DeclRefExpr>(Pair.second.OriginalRef)->getDecl());
           SharedRefLValue = CGF.MakeAddrLValue(
               SharedRefLValue.getAddress().withAlignment(
-                  C.getDeclAlign(OriginalVD)),
+                  IsBinding ? C.toCharUnitsFromBits(
+                                  C.getTypeAlign(SharedRefLValue.getType()))
+                            : C.getDeclAlign(OriginalVD)),
               SharedRefLValue.getType(), LValueBaseInfo(AlignmentSource::Decl),
               SharedRefLValue.getTBAAInfo());
         } else if (CGF.LambdaCaptureFields.count(
@@ -3531,6 +3650,72 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
         }
       } else {
         CGF.EmitExprAsInit(Init, VD, PrivateLValue, /*capturedByInit=*/false);
+      }
+    } else if (const VarDecl *OriginalVD = Pair.second.Original) {
+      // Handle array bindings without initializers (firstprivate only).
+      // For private clause (PrivateElemInit is nullptr), skip initialization.
+      // Check if OriginalRef is a BindingDecl with array type.
+      const BindingDecl *BD = nullptr;
+      if (Pair.second.OriginalRef) {
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(Pair.second.OriginalRef)) {
+          BD = dyn_cast<BindingDecl>(DRE->getDecl());
+        }
+      }
+      if (BD && BD->getType()->isArrayType() && Pair.second.PrivateElemInit) {
+        LValue PrivateLValue = CGF.EmitLValueForField(PrivatesBase, *FI);
+        QualType Type = PrivateLValue.getType();
+        const FieldDecl *SharedField = CapturesInfo.lookup(OriginalVD);
+
+        // Lambda to temporarily map DecompositionDecl and emit the binding
+        // expression.
+        auto EmitBindingWithTempMap = [&CGF](const BindingDecl *BD,
+                                             Address DDAddr) -> LValue {
+          const VarDecl *DD = cast<VarDecl>(BD->getDecomposedDecl());
+          auto It = CGF.findLocalDecl(DD);
+          bool WasMapped = It != CGF.localDeclMapEnd();
+          Address Saved = WasMapped ? It->second : Address::invalid();
+          if (WasMapped)
+            It->second = DDAddr;
+          else
+            CGF.insertLocalDecl(DD, DDAddr);
+
+          LValue Result = CGF.EmitLValue(BD->getBinding());
+
+          // Restore the mapping
+          if (WasMapped) {
+            auto RestoreIt = CGF.findLocalDecl(DD);
+            RestoreIt->second = Saved;
+          } else {
+            CGF.eraseLocalDecl(DD);
+          }
+
+          return Result;
+        };
+
+        LValue SharedRefLValue;
+        if (ForDup) {
+          SharedRefLValue = CGF.EmitLValueForField(SrcBase, SharedField);
+          SharedRefLValue =
+              EmitBindingWithTempMap(BD, SharedRefLValue.getAddress());
+          SharedRefLValue = CGF.MakeAddrLValue(
+              SharedRefLValue.getAddress().withAlignment(
+                  C.getDeclAlign(OriginalVD)),
+              SharedRefLValue.getType(), LValueBaseInfo(AlignmentSource::Decl),
+              SharedRefLValue.getTBAAInfo());
+        } else {
+          // For !ForDup (first task), emit binding from parent scope using
+          // InlinedOpenMPRegionRAII to access the correct scope
+          InlinedOpenMPRegionRAII Region(
+              CGF, [](CodeGenFunction &, PrePostActionTy &) {}, OMPD_unknown,
+              /*HasCancel=*/false, /*NoInheritance=*/true);
+
+          // Get the decomposed decl address from parent scope
+          const VarDecl *DD = cast<VarDecl>(BD->getDecomposedDecl());
+          Address DDAddr = CGF.GetAddrOfLocalVar(DD);
+          SharedRefLValue = EmitBindingWithTempMap(BD, DDAddr);
+        }
+        // Perform simple memcpy for array binding
+        CGF.EmitAggregateAssign(PrivateLValue, SharedRefLValue, Type);
       }
     }
     ++FI;
@@ -3784,32 +3969,35 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Aggregate privates and sort them by the alignment.
   const auto *I = Data.PrivateCopies.begin();
   for (const Expr *E : Data.PrivateVars) {
-    const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
-    Privates.emplace_back(
-        C.getDeclAlign(VD),
-        PrivateHelpersTy(E, VD, cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl()),
-                         /*PrivateElemInit=*/nullptr));
+    const auto *Decl = cast<DeclRefExpr>(E)->getDecl();
+    const auto *VD = getOriginalVarDecl(Decl);
+    const auto *CopyVD = cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl());
+    Privates.emplace_back(C.getDeclAlign(VD),
+                          PrivateHelpersTy(E, VD, CopyVD,
+                                           /*PrivateElemInit=*/nullptr));
     ++I;
   }
   I = Data.FirstprivateCopies.begin();
   const auto *IElemInitRef = Data.FirstprivateInits.begin();
   for (const Expr *E : Data.FirstprivateVars) {
-    const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
-    Privates.emplace_back(
-        C.getDeclAlign(VD),
-        PrivateHelpersTy(
-            E, VD, cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl()),
-            cast<VarDecl>(cast<DeclRefExpr>(*IElemInitRef)->getDecl())));
+    const auto *Decl = cast<DeclRefExpr>(E)->getDecl();
+    const auto *VD = getOriginalVarDecl(Decl);
+    const auto *CopyVD = cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl());
+    const auto *InitVD =
+        cast<VarDecl>(cast<DeclRefExpr>(*IElemInitRef)->getDecl());
+    Privates.emplace_back(C.getDeclAlign(VD),
+                          PrivateHelpersTy(E, VD, CopyVD, InitVD));
     ++I;
     ++IElemInitRef;
   }
   I = Data.LastprivateCopies.begin();
   for (const Expr *E : Data.LastprivateVars) {
-    const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
-    Privates.emplace_back(
-        C.getDeclAlign(VD),
-        PrivateHelpersTy(E, VD, cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl()),
-                         /*PrivateElemInit=*/nullptr));
+    const auto *Decl = cast<DeclRefExpr>(E)->getDecl();
+    const auto *VD = getOriginalVarDecl(Decl);
+    const auto *CopyVD = cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl());
+    Privates.emplace_back(C.getDeclAlign(VD),
+                          PrivateHelpersTy(E, VD, CopyVD,
+                                           /*PrivateElemInit=*/nullptr));
     ++I;
   }
   for (const VarDecl *VD : Data.PrivateLocals) {
@@ -5685,8 +5873,15 @@ static std::string generateUniqueName(CodeGenModule &CGM, StringRef Prefix,
   llvm::raw_svector_ostream Out(Buffer);
   const clang::DeclRefExpr *DE;
   const VarDecl *D = ::getBaseDecl(Ref, DE);
-  if (!D)
-    D = cast<VarDecl>(cast<DeclRefExpr>(Ref)->getDecl());
+  if (!D) {
+    auto *DRE = cast<DeclRefExpr>(Ref);
+    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
+      // For BindingDecls, use the decomposed declaration as the base.
+      D = cast<VarDecl>(BD->getDecomposedDecl());
+    } else {
+      D = cast<VarDecl>(DRE->getDecl());
+    }
+  }
   D = D->getCanonicalDecl();
   std::string Name = CGM.getOpenMPRuntime().getName(
       {D->isLocalVarDeclOrParm() ? D->getName() : CGM.getMangledName(D)});
@@ -6256,11 +6451,14 @@ namespace {
 /// Cleanup action for uses_allocators support.
 class OMPUsesAllocatorsActionTy final : public PrePostActionTy {
   ArrayRef<std::pair<const Expr *, const Expr *>> Allocators;
+  const OMPExecutableDirective &D;
+  bool IsOffloadEntry;
 
 public:
   OMPUsesAllocatorsActionTy(
-      ArrayRef<std::pair<const Expr *, const Expr *>> Allocators)
-      : Allocators(Allocators) {}
+      ArrayRef<std::pair<const Expr *, const Expr *>> Allocators,
+      const OMPExecutableDirective &D, bool IsOffloadEntry)
+      : Allocators(Allocators), D(D), IsOffloadEntry(IsOffloadEntry) {}
   void Enter(CodeGenFunction &CGF) override {
     if (!CGF.HaveInsertPoint())
       return;
@@ -6268,6 +6466,12 @@ public:
       CGF.CGM.getOpenMPRuntime().emitUsesAllocatorsInit(
           CGF, AllocatorData.first, AllocatorData.second);
     }
+    // This kernel does not go through the device-side runtime
+    // init/deinit sequence (that is GPU-only), but the runtime still
+    // needs a '<kernel>_kernel_environment' global to know how the
+    // kernel was configured, so emit it directly here.
+    if (IsOffloadEntry)
+      CGF.CGM.getOpenMPRuntime().emitHostKernelEnvironment(D, CGF);
   }
   void Exit(CodeGenFunction &CGF) override {
     if (!CGF.HaveInsertPoint())
@@ -6279,6 +6483,28 @@ public:
   }
 };
 } // namespace
+
+void CGOpenMPRuntime::emitHostKernelEnvironment(const OMPExecutableDirective &D,
+                                                CodeGenFunction &CGF) {
+  llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
+  Attrs.ExecFlags = llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+  computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
+  OMPBuilder.emitKernelEnvironment(CGF.Builder, Attrs);
+}
+
+StringRef
+CGOpenMPRuntime::getTargetRegionParentName(const FunctionDecl *FD) const {
+  // Regions in a closure are named after its enclosing non-closure function
+  // (CodeGenFunction::CurFuncDecl), if there is one.
+  if (const auto *Parent =
+          dyn_cast_or_null<FunctionDecl>(FD->getNonClosureContext()))
+    FD = Parent;
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD))
+    return CGM.getMangledName(GlobalDecl(Ctor, Ctor_Complete));
+  if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(FD))
+    return CGM.getMangledName(GlobalDecl(Dtor, Dtor_Complete));
+  return CGM.getMangledName(GlobalDecl(FD));
+}
 
 void CGOpenMPRuntime::emitTargetOutlinedFunction(
     const OMPExecutableDirective &D, StringRef ParentName,
@@ -6295,7 +6521,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunction(
       Allocators.emplace_back(D.Allocator, D.AllocatorTraits);
     }
   }
-  OMPUsesAllocatorsActionTy UsesAllocatorAction(Allocators);
+  OMPUsesAllocatorsActionTy UsesAllocatorAction(Allocators, D, IsOffloadEntry);
   CodeGen.setAction(UsesAllocatorAction);
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
@@ -6546,6 +6772,7 @@ const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
   case OMPD_target_parallel_for_simd:
   case OMPD_target_parallel_loop:
   case OMPD_target_simd:
+  case OMPD_target_loop:
     MinTeamsVal = MaxTeamsVal = 1;
     return nullptr;
   case OMPD_parallel:
@@ -6932,6 +7159,7 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
   }
   case OMPD_target_teams_distribute_simd:
   case OMPD_target_simd:
+  case OMPD_target_loop:
     return ReturnSequential();
   default:
     break;
@@ -8757,7 +8985,7 @@ private:
       QualType BaseTy = I.getType();
       const auto *Base = BaseTy->getAsCXXRecordDecl();
       // Ignore empty bases.
-      if (isEmptyRecordForLayout(CGF.getContext(), BaseTy) ||
+      if (CodeGenUtils::isEmptyRecordForLayout(CGF.getContext(), BaseTy) ||
           CGF.getContext()
               .getASTRecordLayout(Base)
               .getNonVirtualSize()
@@ -8771,7 +8999,7 @@ private:
     for (const auto &I : RD->vbases()) {
       QualType BaseTy = I.getType();
       // Ignore empty bases.
-      if (isEmptyRecordForLayout(CGF.getContext(), BaseTy))
+      if (CodeGenUtils::isEmptyRecordForLayout(CGF.getContext(), BaseTy))
         continue;
 
       const auto *Base = BaseTy->getAsCXXRecordDecl();
@@ -8786,7 +9014,7 @@ private:
       // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
       // will fill in later.)
       if (!Field->isBitField() &&
-          !isEmptyFieldForLayout(CGF.getContext(), Field)) {
+          !CodeGenUtils::isEmptyFieldForLayout(CGF.getContext(), Field)) {
         unsigned FieldIndex = RL.getLLVMFieldNo(Field);
         RecordLayout[FieldIndex] = Field;
       }
@@ -9374,9 +9602,12 @@ public:
       : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {
     // Extract firstprivate clause information.
     for (const auto *C : Dir.getClausesOfKind<OMPFirstprivateClause>())
-      for (const auto *D : C->varlist())
-        FirstPrivateDecls.try_emplace(
-            cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl()), C->isImplicit());
+      for (const auto *D : C->varlist()) {
+        const ValueDecl *VD = cast<DeclRefExpr>(D)->getDecl();
+        if (const auto *BD = dyn_cast<BindingDecl>(VD))
+          VD = cast<VarDecl>(BD->getDecomposedDecl());
+        FirstPrivateDecls.try_emplace(cast<VarDecl>(VD), C->isImplicit());
+      }
     // Extract implicit firstprivates from uses_allocators clauses.
     for (const auto *C : Dir.getClausesOfKind<OMPUsesAllocatorsClause>()) {
       for (unsigned I = 0, E = C->getNumberOfAllocators(); I < E; ++I) {
@@ -10465,10 +10696,8 @@ static void emitOffloadingArraysAndArgs(
   CodeGenModule &CGM = CGF.CGM;
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  InsertPointTy AllocaIP(CGF.AllocaInsertPt->getParent(),
-                         CGF.AllocaInsertPt->getIterator());
-  InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
-                          CGF.Builder.GetInsertPoint());
+  InsertPointTy AllocaIP(CGF.AllocaInsertPt->getIterator());
+  InsertPointTy CodeGenIP(CGF.Builder.GetInsertPoint());
 
   auto DeviceAddrCB = [&](unsigned int I, llvm::Value *NewDecl) {
     if (const ValueDecl *DevVD = CombinedInfo.DevicePtrDecls[I]) {
@@ -10528,6 +10757,7 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
       return nullptr;
     case OMPD_target_parallel:
     case OMPD_target_simd:
+    case OMPD_target_loop:
     case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
       return nullptr;
@@ -10720,10 +10950,14 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   // HasAttachPtr) only for OpenMP >= 6.0; before 6.0 the present modifier does
   // not apply to the pointee (see the OpenMP 6.0 erratum on the present motion
   // vs. map-type modifier divergence).
-  bool PropagatePresentToPointee = CGM.getLangOpts().OpenMP >= 60;
+  bool PropagatePresentToPointeeStorage = CGM.getLangOpts().OpenMP >= 60;
+  // Keep non-pointee storage present propagation disabled until Clang stops
+  // emitting PTR_AND_OBJ maps and uses attach-style maps throughout.
+  bool PropagatePresentToNonPointeeStorage = false;
   llvm::Function *NewFn = cantFail(OMPBuilder.emitUserDefinedMapper(
       PrivatizeAndGenMapInfoCB, ElemTy, Name, CustomMapperCB,
-      /*PreserveMemberOfFlags=*/false, PropagatePresentToPointee));
+      /*PreserveMemberOfFlags=*/false, PropagatePresentToPointeeStorage,
+      PropagatePresentToNonPointeeStorage));
   UDMMap.try_emplace(D, NewFn);
   if (CGF)
     FunctionUDMMap[CGF->CurFn].push_back(D);
@@ -11100,7 +11334,7 @@ static void emitTargetCallKernelLaunch(
         OMPRuntime->emitTargetNumIterationsCall(CGF, D, SizeEmitter);
     auto [DynCGroupMem, DynCGroupMemFallback] = emitDynCGroupMem(D, CGF);
     llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
-        CGF.AllocaInsertPt->getParent(), CGF.AllocaInsertPt->getIterator());
+        CGF.AllocaInsertPt->getIterator());
 
     llvm::OpenMPIRBuilder::TargetDataRTArgs RTArgs(
         BasePointersArray, PointersArray, SizesArray, MapTypesArray,
@@ -11279,8 +11513,9 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
           CGM, ParentName, cast<OMPTargetParallelForSimdDirective>(E));
       break;
     case OMPD_target_simd:
+    case OMPD_target_loop:
       CodeGenFunction::EmitOMPTargetSimdDeviceFunction(
-          CGM, ParentName, cast<OMPTargetSimdDirective>(E));
+          CGM, ParentName, cast<OMPLoopDirective>(E));
       break;
     case OMPD_target_teams_distribute_parallel_for:
       CodeGenFunction::EmitOMPTargetTeamsDistributeParallelForDeviceFunction(
@@ -11367,6 +11602,13 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     return;
   }
 
+  // A metadirective has no associated statement; look into its variants.
+  if (const auto *MD = dyn_cast<OMPMetaDirective>(S)) {
+    for (const Stmt *V : MD->variants())
+      scanForTargetRegionsFunctions(V, ParentName);
+    return;
+  }
+
   if (const auto *E = dyn_cast<OMPExecutableDirective>(S)) {
     if (!E->hasAssociatedStmt() || !E->getAssociatedStmt())
       return;
@@ -11375,13 +11617,49 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     return;
   }
 
+  // Default arguments and member initializers are not children of their uses.
+  if (const auto *E = dyn_cast<CXXDefaultArgExpr>(S)) {
+    scanForTargetRegionsFunctions(E->getExpr(), ParentName);
+    return;
+  }
+  if (const auto *E = dyn_cast<CXXDefaultInitExpr>(S)) {
+    scanForTargetRegionsFunctions(E->getExpr(), ParentName);
+    return;
+  }
+
+  // Implicit and inheriting constructors are only reachable from their uses.
+  const CXXConstructorDecl *Ctor = nullptr;
+  if (const auto *E = dyn_cast<CXXConstructExpr>(S))
+    Ctor = E->getConstructor();
+  else if (const auto *E = dyn_cast<CXXInheritedCtorInitExpr>(S))
+    Ctor = E->getConstructor();
+  if (Ctor && (!Ctor->isUserProvided() || Ctor->isInheritingConstructor()) &&
+      Ctor->hasBody() && ScannedImplicitCtors.insert(Ctor).second)
+    scanConstructorForTargetRegions(Ctor, ParentName);
+
   // If this is a lambda function, look into its body.
-  if (const auto *L = dyn_cast<LambdaExpr>(S))
+  if (const auto *L = dyn_cast<LambdaExpr>(S)) {
+    const CXXMethodDecl *CallOp = L->getCallOperator();
+    // Specializations of a generic lambda are scanned as top-level decls.
+    if (CallOp->isTemplated())
+      return;
+    ParentName = getTargetRegionParentName(CallOp);
     S = L->getBody();
+  }
 
   // Keep looking for target regions recursively.
   for (const Stmt *II : S->children())
     scanForTargetRegionsFunctions(II, ParentName);
+}
+
+void CGOpenMPRuntime::scanConstructorForTargetRegions(
+    const CXXConstructorDecl *Ctor, StringRef ParentName) {
+  const auto *Def = dyn_cast_or_null<CXXConstructorDecl>(Ctor->getDefinition());
+  if (!Def)
+    return;
+  for (const CXXCtorInitializer *Init : Def->inits())
+    scanForTargetRegionsFunctions(Init->getInit(), ParentName);
+  scanForTargetRegionsFunctions(Def->getBody(), ParentName);
 }
 
 static bool isAssumedToBeNotEmitted(const ValueDecl *VD, bool IsDevice) {
@@ -11412,8 +11690,11 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   const ValueDecl *VD = cast<ValueDecl>(GD.getDecl());
   // Try to detect target regions in the function.
   if (const auto *FD = dyn_cast<FunctionDecl>(VD)) {
-    StringRef Name = CGM.getMangledName(GD);
-    scanForTargetRegionsFunctions(FD->getBody(), Name);
+    StringRef Name = getTargetRegionParentName(FD);
+    if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD))
+      scanConstructorForTargetRegions(Ctor, Name);
+    else
+      scanForTargetRegionsFunctions(FD->getBody(), Name);
     if (isAssumedToBeNotEmitted(cast<ValueDecl>(FD),
                                 CGM.getLangOpts().OpenMPIsTargetDevice))
       return true;
@@ -11425,39 +11706,38 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
 }
 
 bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
-  if (isAssumedToBeNotEmitted(cast<ValueDecl>(GD.getDecl()),
-                              CGM.getLangOpts().OpenMPIsTargetDevice))
-    return true;
-
   if (!CGM.getLangOpts().OpenMPIsTargetDevice)
-    return false;
+    return isAssumedToBeNotEmitted(cast<ValueDecl>(GD.getDecl()),
+                                   /*IsDevice=*/false);
 
   // Check if there are Ctors/Dtors in this declaration and look for target
   // regions in it. We use the complete variant to produce the kernel name
   // mangling.
-  QualType RDTy = cast<VarDecl>(GD.getDecl())->getType();
+  const auto *VD = cast<VarDecl>(GD.getDecl());
+  QualType RDTy = VD->getType();
   if (const auto *RD = RDTy->getBaseElementTypeUnsafe()->getAsCXXRecordDecl()) {
-    for (const CXXConstructorDecl *Ctor : RD->ctors()) {
-      StringRef ParentName =
-          CGM.getMangledName(GlobalDecl(Ctor, Ctor_Complete));
-      scanForTargetRegionsFunctions(Ctor->getBody(), ParentName);
-    }
-    if (const CXXDestructorDecl *Dtor = RD->getDestructor()) {
-      StringRef ParentName =
-          CGM.getMangledName(GlobalDecl(Dtor, Dtor_Complete));
-      scanForTargetRegionsFunctions(Dtor->getBody(), ParentName);
-    }
+    for (const CXXConstructorDecl *Ctor : RD->ctors())
+      scanConstructorForTargetRegions(Ctor, getTargetRegionParentName(Ctor));
+    if (const CXXDestructorDecl *Dtor = RD->getDestructor())
+      scanForTargetRegionsFunctions(Dtor->getBody(),
+                                    getTargetRegionParentName(Dtor));
   }
+
+  // Lambdas in the initializer are reached from nowhere else.
+  if (const Expr *Init = VD->getInit())
+    scanForTargetRegionsFunctions(Init, CGM.getMangledName(GD));
+
+  if (isAssumedToBeNotEmitted(VD, /*IsDevice=*/true))
+    return true;
 
   // Do not emit variable if it is not marked as declare target.
   std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
-          cast<VarDecl>(GD.getDecl()));
+      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link ||
       ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
         *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
        HasRequiresUnifiedSharedMemory)) {
-    DeferredGlobalVariables.insert(cast<VarDecl>(GD.getDecl()));
+    DeferredGlobalVariables.insert(VD);
     return true;
   }
   return false;
@@ -11784,8 +12064,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
       }
       break;
     }
-    return InsertPointTy(CGF.Builder.GetInsertBlock(),
-                         CGF.Builder.GetInsertPoint());
+    return InsertPointTy(CGF.Builder.GetInsertPoint());
   };
 
   auto DeviceAddrCB = [&](unsigned int I, llvm::Value *NewDecl) {
@@ -11807,10 +12086,8 @@ void CGOpenMPRuntime::emitTargetDataCalls(
   // Source location for the ident struct
   llvm::Value *RTLoc = emitUpdateLocation(CGF, D.getBeginLoc());
 
-  InsertPointTy AllocaIP(CGF.AllocaInsertPt->getParent(),
-                         CGF.AllocaInsertPt->getIterator());
-  InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
-                          CGF.Builder.GetInsertPoint());
+  InsertPointTy AllocaIP(CGF.AllocaInsertPt->getIterator());
+  InsertPointTy CodeGenIP(CGF.Builder.GetInsertPoint());
   llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CGF.Builder);
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createTargetData(

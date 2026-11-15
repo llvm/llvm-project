@@ -256,7 +256,7 @@ int csr_check(csr_config_t mask);
 RNBRemote::RNBRemote()
     : m_ctx(), m_comm(), m_arch(), m_continue_thread(-1), m_thread(-1),
       m_mutex(), m_dispatch_queue_offsets(),
-      m_dispatch_queue_offsets_addr(INVALID_NUB_ADDRESS),
+      m_dispatch_queue_offsets_addr(INVALID_NUB_ADDRESS), m_recent_reads(),
       m_qSymbol_index(UINT32_MAX), m_packets_recvd(0), m_packets(),
       m_rx_packets(), m_rx_partial_data(), m_rx_pthread(0),
       m_max_payload_size(DEFAULT_GDB_REMOTE_PROTOCOL_BUFSIZE - 4),
@@ -2779,6 +2779,9 @@ static const nub_size_t k_expedite_stack_arg_size = 160;
 static_assert(k_expedite_stack_arg_size <= k_expedite_stack_window,
               "above-fp arg window must fit within the total stack budget");
 
+static const size_t k_recent_reads_count = 16;
+static const nub_size_t k_recent_read_max_size = 512;
+
 // Heuristic to decide whether frame 0's $fp looks like a valid frame pointer.
 static bool FrameZeroFPLooksValid(nub_process_t pid, nub_thread_t tid,
                                   uint64_t sp, uint64_t fp,
@@ -2837,6 +2840,20 @@ static std::vector<ExpeditedMemory> ReadFrameZeroStackMemory(nub_process_t pid,
   return chunks;
 }
 
+void RNBRemote::RecordRecentRead(nub_addr_t addr, nub_size_t size) {
+  if (size == 0 || size > k_recent_read_max_size)
+    return;
+
+  auto entry = std::make_pair(addr, size);
+  auto pos = std::find(m_recent_reads.begin(), m_recent_reads.end(), entry);
+  if (pos != m_recent_reads.end())
+    m_recent_reads.erase(pos);
+  m_recent_reads.push_back(entry);
+
+  while (m_recent_reads.size() > k_recent_reads_count)
+    m_recent_reads.pop_front();
+}
+
 rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
   const nub_process_t pid = m_ctx.ProcessID();
   if (pid == INVALID_NUB_PROCESS)
@@ -2855,6 +2872,7 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
       // Reset any symbols that need resetting when we exec
       m_dispatch_queue_offsets_addr = INVALID_NUB_ADDRESS;
       m_dispatch_queue_offsets.Clear();
+      m_recent_reads.clear();
     }
 
     std::ostringstream ostrm;
@@ -3319,6 +3337,7 @@ rnb_err_t RNBRemote::HandlePacket_m(const char *p) {
   // "The reply may contain fewer bytes than requested if the server was able
   //  to read only part of the region of memory."
   length = bytes_read;
+  RecordRecentRead(addr, length);
 
   std::ostringstream ostrm;
   for (unsigned long i = 0; i < length; i++)
@@ -3390,6 +3409,7 @@ rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
     nub_size_t bytes_read = DNBProcessMemoryRead(m_ctx.ProcessID(), base_addr,
                                                  length, buffers.back().data());
     buffers.back().resize(bytes_read);
+    RecordRecentRead(base_addr, bytes_read);
   }
 
   std::ostringstream reply_stream;
@@ -3530,6 +3550,7 @@ rnb_err_t RNBRemote::HandlePacket_x(const char *p) {
   }
 
   buf.resize(bytes_read);
+  RecordRecentRead(addr, buf.size());
   std::ostringstream ostrm;
   binary_encode_data_vector(ostrm, buf);
 
@@ -3830,6 +3851,7 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   reply << "jMultiBreakpoint+;";
   // The stopped thread's frame 0 stack memory is expedited in jThreadsInfo.
   reply << "ExpediteStack+;";
+  reply << "ExpediteRecentReads+;";
   return SendPacket(reply.str().c_str());
 }
 
@@ -5973,6 +5995,11 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
           std::vector<ExpeditedMemory> frame_zero_chunks =
               ReadFrameZeroStackMemory(pid, tid);
           AppendExpeditedMemoryToJSON(frame_zero_chunks, memory_array_sp);
+
+          std::vector<ExpeditedMemory> recent_chunks;
+          for (const auto &[addr, size] : m_recent_reads)
+            AppendExpeditedMemory(pid, addr, size, recent_chunks);
+          AppendExpeditedMemoryToJSON(recent_chunks, memory_array_sp);
         }
 
         if (!memory_array_sp->empty())

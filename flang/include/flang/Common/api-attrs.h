@@ -1,4 +1,4 @@
-/*===-- include/flang/Common/api-attrs.h ---------------------------*- C -*-=//
+/*===-- include/flang/Common/api-attrs.h ----------------------------*- C -*-=//
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -146,6 +146,18 @@
 #endif
 
 /*
+ * RT_THIN_IO leaves out the I/O paths that need descriptor-io.cpp and the
+ * external unit machinery. It is on for the native GPU builds, which don't
+ * compile those files. RT_GPU_TARGET alone would also match the device pass
+ * of a clang CUDA build, and the regular CUDA runtime library does compile
+ * them, hence the RT_DEVICE_COMPILATION check. The CUDA PTX library leaves
+ * them out and sets RT_THIN_IO itself from CMake.
+ */
+#if RT_GPU_TARGET && !defined(RT_DEVICE_COMPILATION)
+#define RT_THIN_IO 1
+#endif
+
+/*
  * Recurrence in the call graph prevents computing minimal stack size
  * required for a kernel execution. This macro can be used to disable
  * some F18 runtime functionality that is implemented using recurrent
@@ -182,6 +194,25 @@
 #else
 #define RT_NOINLINE_ATTR
 #endif
+/*
+ * RT_FORCE_INLINE_ATTR marks a function that must be inlined into its
+ * caller even where the compiler's own cost heuristics would decline,
+ * because the caller's surrounding code depends on being able to see
+ * through the call. It is placed at the definition, and it implies
+ * "inline".
+ */
+#if defined(_MSC_VER) && !defined(__clang__)
+#define RT_FORCE_INLINE_ATTR __forceinline
+#elif defined(__has_attribute)
+#if __has_attribute(always_inline)
+#define RT_FORCE_INLINE_ATTR inline __attribute__((always_inline))
+#else
+#define RT_FORCE_INLINE_ATTR inline
+#endif
+#else
+#define RT_FORCE_INLINE_ATTR inline
+#endif
+
 #if (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
 #define RT_DEVICE_NOINLINE RT_NOINLINE_ATTR
 #define RT_DEVICE_NOINLINE_HOST_INLINE

@@ -47,6 +47,12 @@ public:
 
   static SummaryName summaryName() { return SummaryName{Name.str()}; }
 };
+
+PointerFlowEntitySummary buildPointerFlowEntitySummary(EdgeSet Edges);
+
+llvm::iterator_range<EdgeSet::const_iterator>
+getEdges(const PointerFlowEntitySummary &);
+
 } // namespace clang::ssaf
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSIS_ANALYSES_POINTERFLOW_POINTERFLOW_H

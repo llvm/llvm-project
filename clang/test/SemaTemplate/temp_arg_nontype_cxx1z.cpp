@@ -648,3 +648,16 @@ namespace GH58682 {
   template <decltype(auto) v> struct B<A<v>> { static constexpr int k = 1; };
   static_assert(B<A<(g)>>::k == 1, "");
 } // namespace GH58682
+
+// C++26 [temp.deduct.type]p13, Example 8.
+namespace temp_deduct_type_p13 {
+  template<long n> struct A { };
+
+  template<typename T> struct C;
+  template<typename T, T n> struct C<A<n>> {
+    using Q = T;
+  };
+
+  using R = long;
+  using R = C<A<2>>::Q;
+} // namespace temp_deduct_type_p13

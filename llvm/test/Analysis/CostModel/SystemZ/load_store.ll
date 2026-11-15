@@ -1,6 +1,6 @@
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=zEC12 | FileCheck %s --check-prefixes=CHECK,ZEC12
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s --check-prefixes=CHECK,Z13
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z14 | FileCheck %s --check-prefixes=CHECK,Z14
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -mtriple=systemz-unknown -mcpu=zEC12 2>&1 | FileCheck %s --check-prefixes=CHECK,ZEC12
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -mtriple=systemz-unknown -mcpu=z13 2>&1 | FileCheck %s --check-prefixes=CHECK,Z13
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -mtriple=systemz-unknown -mcpu=z14 2>&1 | FileCheck %s --check-prefixes=CHECK,Z14
 
 define void @store() {
   store i8 undef, ptr undef

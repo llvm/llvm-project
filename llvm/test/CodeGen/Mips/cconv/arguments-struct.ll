@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=mips-unknown-linux-gnu -relocation-model=static < %s | FileCheck --check-prefixes=ALL,SYM32,O32-BE %s
 ; RUN: llc -mtriple=mipsel-unknown-linux-gnu -relocation-model=static < %s | FileCheck --check-prefixes=ALL,SYM32,O32-LE %s
 
-; RUN-TODO: llc -mtriple=mips64-unknown-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,SYM32,O32-BE %s
-; RUN-TODO: llc -mtriple=mips64el-unknown-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,SYM32,O32-LE %s
+; RUN: llc -verify-machineinstrs -mtriple=mips64-unknown-linux-gnu -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,SYM32,O32-BE %s
+; RUN: llc -verify-machineinstrs -mtriple=mips64el-unknown-linux-gnu -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,SYM32,O32-LE %s
 
 ; RUN: llc -mtriple=mips64-unknown-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,SYM32,NEW-BE %s
 ; RUN: llc -mtriple=mips64el-unknown-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,SYM32,NEW-LE %s
