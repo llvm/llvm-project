@@ -476,6 +476,7 @@ def AArch64PostLegalizerCombiner
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
+                        mul_by_zero_one_vector,
                         mul_const, redundant_sext_inreg,
                         redundant_zext_sext_inreg, redundant_aext_sext_inreg,
                         redundant_aext_unmerge_sext_inreg, redundant_zext_unmerge_sext_inreg,

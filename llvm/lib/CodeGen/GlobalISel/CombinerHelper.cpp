@@ -8420,6 +8420,15 @@ static void commuteMask(MutableArrayRef<int> Mask, const unsigned NumElems) {
   }
 }
 
+bool CombinerHelper::isZeroOrOneVector(Register Reg) const {
+  if (!MRI.getType(Reg).isFixedVector())
+    return false;
+  return matchUnaryPredicate(MRI, Reg, [](const Constant *C) {
+    auto *CI = dyn_cast_or_null<ConstantInt>(C);
+    return CI && (CI->isZero() || CI->isOne());
+  });
+}
+
 bool CombinerHelper::matchShuffleDisjointMask(MachineInstr &MI,
                                               BuildFnTy &MatchInfo) const {
 
