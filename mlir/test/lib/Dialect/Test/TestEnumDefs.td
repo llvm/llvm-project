@@ -130,6 +130,11 @@ def TestGreedyCfgRewriteMode
         I32EnumCase<"Merge", 13, "merge">,
         I32EnumCase<"MergeDisconnect", 14, "merge_disconnect">,
         I32EnumCase<"RedirectRetarget", 15, "redirect_retarget">,
+        I32EnumCase<"EraseNextLabel", 16, "erase_next_label">,
+        I32EnumCase<"EraseNext", 17, "erase_next">,
+        I32EnumCase<"MoveLabel", 18, "move_label">,
+        I32EnumCase<"ReplaceNextLabel", 19, "replace_next_label">,
+        I32EnumCase<"MoveHolder", 20, "move_holder">,
       ]> {
   let cppNamespace = "::test";
 }

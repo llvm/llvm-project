@@ -645,4 +645,8 @@ def ReturnLike : TraitList<[
     DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
     NativeOpTrait</*name=*/"ReturnLike">]>;
 
+// Op is "label-like": control can enter its block without a CFG edge. See
+// `OpTrait::LabelLike`.
+def LabelLike : NativeOpTrait</*name=*/"LabelLike">;
+
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES

@@ -133,11 +133,17 @@ LogicalResult simplifyRegions(RewriterBase &rewriter,
 /// Erase the unreachable blocks within the provided regions. If \p recurse is
 /// true, also visit regions nested under live operations. Returns success if
 /// any blocks were erased, failure otherwise.
+///
+/// A block that control enters through a label (see `findLabelEntry`) is not
+/// erased, nor is any block it reaches or whose values such a block uses.
 LogicalResult eraseUnreachableBlocks(RewriterBase &rewriter,
                                      MutableArrayRef<Region> regions,
                                      bool recurse = true);
 
-/// This function returns success if any operations or arguments were deleted,
+/// Delete the operations and block arguments of the given regions that are
+/// dead. Every block counts as live, including blocks that the entry block
+/// does not reach, so run `eraseUnreachableBlocks` first to drop those. This
+/// function returns success if any operations or arguments were deleted,
 /// failure otherwise.
 LogicalResult runRegionDCE(RewriterBase &rewriter,
                            MutableArrayRef<Region> regions);

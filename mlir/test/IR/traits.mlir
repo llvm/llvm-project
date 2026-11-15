@@ -819,3 +819,33 @@ func.func @failed_attr_traits() {
   "test.attr_with_trait"() {attr = 42 : i32} : () -> ()
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @label_like
+func.func @label_like() {
+  return
+^bb1:
+  // CHECK: test.label "L"
+  test.label "L"
+  return
+}
+
+// -----
+
+func.func @label_like_not_first() {
+  return
+^bb1:
+  test.label "L"
+  // expected-error @+1 {{'test.label' op must be the first operation in the parent block}}
+  test.label "M"
+  return
+}
+
+// -----
+
+func.func @label_like_in_entry_block() {
+  // expected-error @+1 {{'test.label' op must not be in an entry block}}
+  test.label "L"
+  return
+}

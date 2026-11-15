@@ -934,3 +934,18 @@ func.func @keep_switch_case_with_ops_before_unreachable(%flag: i32) {
   "test.noreturn"() : () -> ()
   ub.unreachable
 }
+
+// -----
+
+// A block that starts with a label-like op is not merged into its only CFG
+// predecessor: the jumps to the label enter it too.
+// CHECK-LABEL: func @br_to_label_block
+// CHECK:         cf.br ^[[LABEL:bb[0-9]+]]
+// CHECK-NEXT:  ^[[LABEL]]:
+// CHECK-NEXT:    test.label "L"
+func.func @br_to_label_block() {
+  cf.br ^label
+^label:
+  test.label "L"
+  return
+}

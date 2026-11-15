@@ -603,6 +603,47 @@ public:
                                [&] { lostBranch.setDest(newBlock); });
       break;
     }
+    case GreedyCfgRewriteMode::EraseNextLabel:
+      rewriter.eraseOp(&std::next(op->getBlock()->getIterator())->front());
+      break;
+    case GreedyCfgRewriteMode::ReplaceNextLabel: {
+      // The new op is inserted in front of the label before it is erased.
+      Operation *label = &std::next(op->getBlock()->getIterator())->front();
+      rewriter.setInsertionPoint(label);
+      rewriter.replaceOpWithNewOp<TestGreedyCfgRewriteOp>(
+          label, GreedyCfgRewriteMode::Observe, /*cond=*/Value());
+      break;
+    }
+    case GreedyCfgRewriteMode::EraseNext:
+      rewriter.eraseBlock(&*std::next(op->getBlock()->getIterator()));
+      break;
+    case GreedyCfgRewriteMode::MoveLabel: {
+      Operation *source = nullptr, *target = nullptr;
+      op->getParentOp()->walk([&](Operation *nested) {
+        if (nested->hasAttr("label_source"))
+          source = nested;
+        if (nested->hasAttr("label_target"))
+          target = nested;
+      });
+      Region &from = source->getRegion(0);
+      Region &to = target->getRegion(0);
+      auto labeled = llvm::find_if(from, [](Block &block) {
+        return !block.empty() && isa<TestLabelOp>(block.front());
+      });
+      rewriter.moveBlockBefore(&*labeled, &to, to.end());
+      break;
+    }
+    case GreedyCfgRewriteMode::MoveHolder: {
+      Operation *source = nullptr, *target = nullptr;
+      op->getParentOp()->walk([&](Operation *nested) {
+        if (nested->hasAttr("label_source"))
+          source = nested;
+        if (nested->hasAttr("label_target"))
+          target = nested;
+      });
+      rewriter.moveOpBefore(source, target);
+      break;
+    }
     case GreedyCfgRewriteMode::Merge:
     case GreedyCfgRewriteMode::MergeDisconnect: {
       Block *dest = op->getBlock();
@@ -653,7 +694,8 @@ struct TestGreedyPatternDriver
     config.setUseTopDownTraversal(useTopDownTraversal)
         .setMaxIterations(this->maxIterations)
         .enableFolding(this->fold)
-        .enableConstantCSE(this->cseConstants);
+        .enableConstantCSE(this->cseConstants)
+        .enableRewritingAfterLabels(this->rewriteAfterLabels);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
 
@@ -674,6 +716,10 @@ struct TestGreedyPatternDriver
   Option<bool> cseConstants{
       *this, "cse-constants", llvm::cl::desc("Whether to CSE constants"),
       llvm::cl::init(GreedyRewriteConfig().isConstantCSEEnabled())};
+  Option<bool> rewriteAfterLabels{
+      *this, "rewrite-after-labels",
+      llvm::cl::desc("Whether to rewrite the code reached through labels"),
+      llvm::cl::init(GreedyRewriteConfig().isRewritingAfterLabelsEnabled())};
 };
 
 struct TestStrictPatternDriver
@@ -685,6 +731,7 @@ public:
   TestStrictPatternDriver(const TestStrictPatternDriver &other)
       : PassWrapper(other) {
     strictMode = other.strictMode;
+    rewriteAfterLabels = other.rewriteAfterLabels;
   }
 
   StringRef getArgument() const final { return "test-strict-pattern-driver"; }
@@ -727,6 +774,7 @@ public:
     DumpNotifications dumpNotifications;
     GreedyRewriteConfig config;
     config.setListener(&dumpNotifications);
+    config.enableRewritingAfterLabels(rewriteAfterLabels);
     if (strictMode == "AnyOp") {
       config.setStrictness(GreedyRewriteStrictness::AnyOp);
     } else if (strictMode == "ExistingAndNewOps") {
@@ -756,6 +804,10 @@ public:
       *this, "strictness",
       llvm::cl::desc("Can be {AnyOp, ExistingAndNewOps, ExistingOps}"),
       llvm::cl::init("AnyOp")};
+  Option<bool> rewriteAfterLabels{
+      *this, "rewrite-after-labels",
+      llvm::cl::desc("Whether to rewrite the code reached through labels"),
+      llvm::cl::init(false)};
 
 private:
   // New inserted operation is valid for further transformation.

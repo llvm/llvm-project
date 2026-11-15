@@ -161,6 +161,28 @@ public:
     return *this;
   }
 
+  /// If set to "true", the driver also rewrites the operations that control
+  /// reaches through a label (see `OpTrait::LabelLike` and `findLabelEntry`):
+  /// those of a block that a label enters, from the label's entry operation
+  /// onward unless a reachable block branches to the block, and those of the
+  /// blocks reachable from it. By default, the driver skips them like the
+  /// operations of any block that is unreachable from its region's entry
+  /// block.
+  ///
+  /// The verifier does not check dominance in blocks that are unreachable in
+  /// the CFG, and unreachable code can contain SSA cycles that make folds or
+  /// patterns crash or loop. Only enable this when the code reached through
+  /// labels is known to satisfy dominance, for example because a later pass
+  /// turns the jumps into CFG edges and the IR must verify then.
+  /// `DominanceInfo` treats these blocks as unreachable, so any value dominates
+  /// their operations: patterns that rely on dominance checks can create uses
+  /// there that are invalid once the jumps become CFG edges.
+  bool isRewritingAfterLabelsEnabled() const { return rewriteAfterLabels; }
+  GreedyRewriteConfig &enableRewritingAfterLabels(bool enable = true) {
+    rewriteAfterLabels = enable;
+    return *this;
+  }
+
 private:
   Region *scope = nullptr;
   bool useTopDownTraversal = false;
@@ -173,6 +195,7 @@ private:
   bool fold = true;
   bool cseConstants = true;
   bool cseBetweenIterations = false;
+  bool rewriteAfterLabels = false;
 };
 
 //===----------------------------------------------------------------------===//
@@ -261,7 +284,8 @@ applyPatternsGreedily(Operation *op, const FrozenRewritePatternSet &patterns,
 /// when this function returns success. This protects folds and patterns from
 /// the SSA cycles that are legal in unreachable code. Reachability is checked
 /// between rewrites, so a block connected before a rewrite returns is eligible
-/// for processing.
+/// for processing. With `GreedyRewriteConfig::enableRewritingAfterLabels`, the
+/// operations that control reaches through a label are processed too.
 ///
 /// Unlike `applyPatternsGreedily`, this function does not erase unreachable
 /// blocks. They are left in place, along with their operations.

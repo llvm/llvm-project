@@ -160,10 +160,12 @@ static LogicalResult collapseBranch(Block *&successor,
 /// merges the two blocks.
 static LogicalResult
 simplifyBrToBlockWithSinglePred(BranchOp op, PatternRewriter &rewriter) {
-  // Check that the successor block has a single predecessor.
+  // Check that the successor block has a single predecessor. A block that
+  // starts with a label-like op has more: the jumps to the label.
   Block *succ = op.getDest();
   Block *opParent = op->getBlock();
-  if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
+  if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()) ||
+      succ->front().hasTrait<OpTrait::LabelLike>())
     return failure();
 
   // If any branch operand is itself a block argument of the successor, merging

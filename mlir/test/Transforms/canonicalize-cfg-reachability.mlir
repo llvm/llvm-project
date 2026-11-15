@@ -55,3 +55,61 @@ func.func @lose_edge_into_loop(%init: i32, %c: i1) {
 ^exit:
   return
 }
+
+// -----
+
+// A block that starts with a label-like op is kept although it has no
+// predecessors, but canonicalization does not rewrite its operations.
+// CHECK-LABEL: func @label_block
+// CHECK:       ^bb1:
+// CHECK-NEXT:    test.label "L"
+// CHECK-NEXT:    %[[SUM:.*]] = arith.addi %{{.*}}, %{{.*}} : i32
+// CHECK-NEXT:    return %[[SUM]] : i32
+func.func @label_block(%x: i32) -> i32 {
+  %zero = arith.constant 0 : i32
+  return %x : i32
+^bb1:
+  test.label "L"
+  %sum = arith.addi %x, %zero : i32
+  return %sum : i32
+}
+
+// -----
+
+// Region DCE keeps the values and block arguments used in blocks that only a
+// label reaches.
+// CHECK-LABEL: func @label_block_arguments
+// CHECK:       test.label "L"
+// CHECK-NEXT:    cf.br ^[[NEXT:bb[0-9]+]](%{{.*}} : i32)
+// CHECK-NEXT:  ^[[NEXT]](%[[A:.*]]: i32):
+// CHECK-NEXT:    return %[[A]] : i32
+func.func @label_block_arguments(%x: i32) -> i32 {
+  return %x : i32
+^label:
+  test.label "L"
+  cf.br ^next(%x : i32)
+^next(%a: i32):
+  return %a : i32
+}
+
+// -----
+
+// The verifier does not check dominance in a block that only a label reaches,
+// so it may use a value of a block that nothing reaches. That block is kept
+// too, so that erasing it leaves no use behind.
+// CHECK-LABEL: func @label_block_uses_dead_value
+// CHECK:       ^bb1:
+// CHECK-NEXT:    %[[V:.*]] = arith.addi %{{.*}}, %{{.*}} : i32
+// CHECK-NEXT:    return %[[V]] : i32
+// CHECK-NEXT:  ^bb2:
+// CHECK-NEXT:    test.label "L"
+// CHECK-NEXT:    return %[[V]] : i32
+func.func @label_block_uses_dead_value(%x: i32) -> i32 {
+  return %x : i32
+^dead:
+  %v = arith.addi %x, %x : i32
+  return %v : i32
+^label:
+  test.label "L"
+  return %v : i32
+}

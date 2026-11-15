@@ -19,6 +19,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Transforms/CSE.h"
@@ -336,18 +337,31 @@ private:
 /// date. `Block::isReachable` is not used because it traverses the region on
 /// every call, while the driver queries once per processed operation. All
 /// notifications are forwarded to the wrapped listener.
+///
+/// When rewriting after labels is enabled, control can also enter a block
+/// through a label (see `findLabelEntry`). Such blocks are roots besides the
+/// entry block. A query looks for them in the blocks that the entry block does
+/// not reach, once per traversal. Notifications that may move a label scan the
+/// inserted block or operation for one.
 class ReachabilityListener : public RewriterBase::ForwardingListener {
 public:
-  ReachabilityListener(RewriterBase::Listener *listener, Region *scope)
-      : RewriterBase::ForwardingListener(listener), scope(scope) {}
+  ReachabilityListener(RewriterBase::Listener *listener, Region *scope,
+                       bool followLabels)
+      : RewriterBase::ForwardingListener(listener), scope(scope),
+        followLabels(followLabels) {}
 
   /// Return whether `op` is reachable: its block is reachable from the entry
-  /// block of its region, and so is every containing block up to `scope`.
-  /// Must be called between rewrites, when the IR is in a consistent state.
+  /// block of its region or through a label, and so is every containing block
+  /// up to `scope`. In a block that control enters only through a label, the
+  /// operations before the entry operation are unreachable. Must be called
+  /// between rewrites, when the IR is in a consistent state.
   bool isReachable(Operation *op);
 
   /// Drop all cached reachability information.
-  void clear() { regionStates.clear(); }
+  void clear() {
+    regionStates.clear();
+    labelEntries.clear();
+  }
 
   void notifyBlockInserted(Block *block, Region *previous,
                            Region::iterator previousIt) override;
@@ -381,17 +395,33 @@ private:
     /// Blocks erased from or moved out of the region since the last query.
     /// Their pointers are only compared, never dereferenced.
     llvm::SmallDenseSet<Block *, 4> removedBlocks;
+    /// Whether the blocks that the entry block does not reach were searched for
+    /// labels since the last traversal.
+    bool labelsScanned = false;
+    /// Blocks that the search added because control enters them through a
+    /// label. A query decides from their predecessors whether control also
+    /// enters them at their start.
+    llvm::SmallDenseSet<Block *, 4> labelRoots;
 
     /// Rebuild the cache from the entry block of `region`.
     void traverse(Region *region);
+    /// Add the blocks that the entry block does not reach and that control
+    /// enters through a label, as `getEntry` tells, and every block reachable
+    /// from them.
+    void scanLabels(Region *region,
+                    function_ref<Operation *(Block *)> getEntry);
+    /// Return whether a block of `reachable` that is not uncertain branches to
+    /// `block`, so that control enters it at its start.
+    bool isEnteredAtStart(Block *block) const;
     /// Add `roots` and every block reachable from them to `reachable`. The
     /// added blocks are uncertain if `isUncertain` is set.
     void addReachable(SmallVector<Block *> roots, bool isUncertain);
     /// Mark `block` and every block behind it in the snapshots uncertain.
     void markUncertain(Block *block);
-    /// Apply the pending changes, if any. On failure, the state is
-    /// inconsistent and the region must be traversed again.
-    LogicalResult applyChanges();
+    /// Apply the pending changes, if any. `isLabelRoot`, if set, tells
+    /// whether control enters a block through a label. On failure, the state
+    /// is inconsistent and the region must be traversed again.
+    LogicalResult applyChanges(function_ref<bool(Block *)> isLabelRoot);
   };
 
   /// Record that the terminator of `block` changed. Only tracked regions
@@ -409,13 +439,29 @@ private:
     if (it != regionStates.end())
       it->second.removedBlocks.insert(block);
   }
-  bool isBlockReachable(Block *block);
+  /// Return whether `block` is reachable. If control enters it only through a
+  /// label, after some of its operations, set `from` to the operation where
+  /// it enters.
+  bool isBlockReachable(Block *block, Operation *&from);
+
+  /// Return `findLabelEntry(block)`. The answers are cached until a label is
+  /// inserted, moved or erased.
+  Operation *getLabelEntry(Block *block);
+  /// Drop everything that depends on where the labels are.
+  void dropLabelState() {
+    regionStates.clear();
+    labelEntries.clear();
+  }
 
   /// The tracked regions. A region without an entry is traversed by the next
   /// query that needs it.
   DenseMap<Region *, RegionState> regionStates;
+  /// The cached answers of `getLabelEntry`.
+  DenseMap<Block *, Operation *> labelEntries;
 
   Region *const scope;
+  /// Whether control can enter blocks through labels.
+  const bool followLabels;
 };
 
 /// Provides cached deadness queries that stay valid across rewriter
@@ -604,8 +650,27 @@ void ReachabilityListener::RegionState::traverse(Region *region) {
   uncertain.clear();
   changedBlocks.clear();
   removedBlocks.clear();
+  labelRoots.clear();
+  labelsScanned = false;
   entry = &region->front();
   addReachable({entry}, /*isUncertain=*/false);
+}
+
+void ReachabilityListener::RegionState::scanLabels(
+    Region *region, function_ref<Operation *(Block *)> getEntry) {
+  labelsScanned = true;
+  for (Block &block : llvm::drop_begin(*region)) {
+    if (reachable.contains(&block) || !getEntry(&block))
+      continue;
+    labelRoots.insert(&block);
+    addReachable({&block}, /*isUncertain=*/false);
+  }
+}
+
+bool ReachabilityListener::RegionState::isEnteredAtStart(Block *block) const {
+  return llvm::any_of(block->getPredecessors(), [&](Block *pred) {
+    return reachable.contains(pred) && !uncertain.contains(pred);
+  });
 }
 
 void ReachabilityListener::RegionState::addReachable(SmallVector<Block *> roots,
@@ -633,7 +698,8 @@ void ReachabilityListener::RegionState::markUncertain(Block *block) {
   }
 }
 
-LogicalResult ReachabilityListener::RegionState::applyChanges() {
+LogicalResult ReachabilityListener::RegionState::applyChanges(
+    function_ref<bool(Block *)> isLabelRoot) {
   if (changedBlocks.empty() && removedBlocks.empty())
     return success();
   // Blocks are dropped after the loop, so that the snapshot of a lost block
@@ -650,7 +716,8 @@ LogicalResult ReachabilityListener::RegionState::applyChanges() {
     // Keep even a disconnected block's snapshot up to date: a later rewrite
     // may reconnect it without querying the block itself. Its added successors
     // must remain uncertain until a traversal establishes their reachability.
-    if (changed != entry && changed->hasNoPredecessors())
+    if (changed != entry && changed->hasNoPredecessors() &&
+        !(isLabelRoot && isLabelRoot(changed)))
       markUncertain(changed);
     // Keep the snapshot available while marking lost successors uncertain.
     // A lost self-edge can make that traversal visit `changed` itself.
@@ -672,7 +739,9 @@ LogicalResult ReachabilityListener::RegionState::applyChanges() {
       // branch and by merging a block into its predecessor. Any other lost
       // edge leaves the blocks behind `lost` uncertain until a query for one
       // of them traverses the region.
-      bool isGone = removedBlocks.contains(lost) || lost->hasNoPredecessors();
+      bool isGone =
+          removedBlocks.contains(lost) ||
+          (lost->hasNoPredecessors() && !(isLabelRoot && isLabelRoot(lost)));
       if (isGone && llvm::all_of(lostIt->second, [&](Block *successor) {
             return current.contains(successor);
           })) {
@@ -697,29 +766,96 @@ LogicalResult ReachabilityListener::RegionState::applyChanges() {
   for (Block *block : unreachable) {
     reachable.erase(block);
     uncertain.erase(block);
+    labelRoots.erase(block);
   }
   changedBlocks.clear();
   removedBlocks.clear();
   return success();
 }
 
-bool ReachabilityListener::isBlockReachable(Block *block) {
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+/// Return the blocks of `region` that a traversal reaches from the entry block
+/// and, if `followLabels` is set, from every block that control enters through
+/// a label.
+static SmallPtrSet<Block *, 16> getReachableByTraversal(Region *region,
+                                                        bool followLabels) {
+  SmallVector<Block *> worklist{&region->front()};
+  if (followLabels)
+    for (Block &root : llvm::drop_begin(*region))
+      if (findLabelEntry(&root))
+        worklist.push_back(&root);
+  SmallPtrSet<Block *, 16> visited;
+  while (!worklist.empty()) {
+    Block *current = worklist.pop_back_val();
+    if (visited.insert(current).second)
+      llvm::append_range(worklist, current->getSuccessors());
+  }
+  return visited;
+}
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+
+Operation *ReachabilityListener::getLabelEntry(Block *block) {
+  auto [it, inserted] = labelEntries.try_emplace(block);
+  if (inserted)
+    it->second = findLabelEntry(block);
+  return it->second;
+}
+
+/// Return `entry` if `block` has operations before it, and null otherwise.
+static Operation *getEntryAfterStart(Block *block, Operation *entry) {
+  return entry == &block->front() ? nullptr : entry;
+}
+
+bool ReachabilityListener::isBlockReachable(Block *block, Operation *&from) {
+  from = nullptr;
   Region *region = block->getParent();
   // A detached block is treated as reachable, as is the entry block.
   if (!region || block == &region->front())
     return true;
-  if (block->hasNoPredecessors())
-    return false;
+  if (block->hasNoPredecessors()) {
+    Operation *entry = followLabels ? getLabelEntry(block) : nullptr;
+    if (!entry)
+      return false;
+    from = getEntryAfterStart(block, entry);
+    return true;
+  }
   auto [it, inserted] = regionStates.try_emplace(region);
   RegionState &state = it->second;
   bool isStale = inserted || state.entry != &region->front();
-  if (isStale || failed(state.applyChanges()) ||
+  auto isLabelRoot = [&](Block *b) { return getLabelEntry(b) != nullptr; };
+  function_ref<bool(Block *)> labelRootFn;
+  if (followLabels)
+    labelRootFn = isLabelRoot;
+  if (isStale || failed(state.applyChanges(labelRootFn)) ||
       state.uncertain.contains(block))
     state.traverse(region);
   bool result = state.reachable.contains(block);
+  if (!result && followLabels && !state.labelsScanned) {
+    state.scanLabels(region, [&](Block *b) { return getLabelEntry(b); });
+    result = state.reachable.contains(block);
+  }
+  // A block that the search added because a label enters it is entered there,
+  // unless a reachable block also branches to its start.
+  if (result && state.labelRoots.contains(block) &&
+      !state.isEnteredAtStart(block)) {
+    Operation *entry = getLabelEntry(block);
+    // Label notifications drop the cache, so the entry is still there.
+    assert(entry && "block added for a label holds none");
+    from = entry ? getEntryAfterStart(block, entry) : nullptr;
+    result = entry != nullptr;
+  }
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  assert(result == region->front().isReachable(block) &&
+  SmallPtrSet<Block *, 16> expected =
+      getReachableByTraversal(region, followLabels);
+  assert(result == expected.contains(block) &&
          "reachability cache disagrees with a traversal");
+  // Taking a block that a label enters after some of its operations as
+  // entered at its start would rewrite those unreachable operations.
+  Operation *entry = followLabels ? findLabelEntry(block) : nullptr;
+  assert((!result || from || !entry || entry == &block->front() ||
+          llvm::any_of(block->getPredecessors(),
+                       [&](Block *pred) { return expected.contains(pred); })) &&
+         "operations before a label's entry are not reachable");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   return result;
 }
@@ -728,7 +864,11 @@ bool ReachabilityListener::isReachable(Operation *op) {
   // A nested region can be locally reachable while its owning operation is in
   // an unreachable block, so check every containing block up to the scope.
   while (Block *block = op->getBlock()) {
-    if (!isBlockReachable(block))
+    Operation *from;
+    if (!isBlockReachable(block, from))
+      return false;
+    // Control enters the block at `from`, after the operations before it.
+    if (from && op != from && op->isBeforeInBlock(from))
       return false;
     Region *region = block->getParent();
     if (!region || region == scope)
@@ -741,6 +881,10 @@ bool ReachabilityListener::isReachable(Operation *op) {
 void ReachabilityListener::notifyBlockInserted(Block *block, Region *previous,
                                                Region::iterator previousIt) {
   Region *region = block->getParent();
+  // A block that control enters through a label is a root wherever it goes,
+  // and moving it changes which blocks hold a label.
+  if (followLabels && findLabelEntry(block))
+    dropLabelState();
   // A block moved within its region keeps its reachability, unless it becomes
   // the entry block, which the next query detects. A block that is new to the
   // region is unreachable until a recorded terminator change adds an edge to
@@ -758,12 +902,46 @@ void ReachabilityListener::notifyBlockInserted(Block *block, Region *previous,
 }
 
 void ReachabilityListener::notifyBlockErased(Block *block) {
+  // No cached answer may match a block allocated later at the same address.
+  labelEntries.erase(block);
   markRemoved(block->getParent(), block);
   RewriterBase::ForwardingListener::notifyBlockErased(block);
 }
 
+/// Return whether `op` is the first operation of its block, and it or the
+/// operation behind it is label-like. A label-like operation is only valid at
+/// the front of its block, so inserting or erasing an operation can only add or
+/// remove one there: the operation itself, or a label that it displaces from
+/// or exposes at the front.
+static bool affectsBlockLabel(Operation *op) {
+  Block *block = op->getBlock();
+  if (!block || &block->front() != op)
+    return false;
+  Operation *next = op->getNextNode();
+  return op->hasTrait<OpTrait::LabelLike>() ||
+         (next && next->hasTrait<OpTrait::LabelLike>());
+}
+
+/// Return whether the regions of `op` contain a label-like operation, at any
+/// depth. Moving such an operation, or wrapping it in one, may change where
+/// control enters through labels.
+static bool containsLabel(Operation *op) {
+  if (op->getNumRegions() == 0)
+    return false;
+  return op
+      ->walk([](Operation *nested) {
+        return nested->hasTrait<OpTrait::LabelLike>() ? WalkResult::interrupt()
+                                                      : WalkResult::advance();
+      })
+      .wasInterrupted();
+}
+
 void ReachabilityListener::notifyOperationInserted(
     Operation *op, OpBuilder::InsertPoint previous) {
+  // A label that appears or moves changes the roots, and so does an
+  // operation with a label nested in its regions.
+  if (followLabels && (affectsBlockLabel(op) || containsLabel(op)))
+    dropLabelState();
   if (mayDefineSuccessors(op)) {
     markChanged(op->getBlock());
     if (previous.isSet())
@@ -779,6 +957,9 @@ void ReachabilityListener::notifyOperationModified(Operation *op) {
 }
 
 void ReachabilityListener::notifyOperationErased(Operation *op) {
+  // Erasing an operation erases the labels nested in it first, one by one.
+  if (followLabels && affectsBlockLabel(op))
+    dropLabelState();
   if (mayDefineSuccessors(op))
     markChanged(op->getBlock());
   // Do not retain keys for regions that are about to be destroyed.
@@ -791,8 +972,9 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
     MLIRContext *ctx, const FrozenRewritePatternSet &patterns,
     const GreedyRewriteConfig &config)
     : rewriter(ctx), config(config),
-      reachabilityListener(this, config.getScope()), matcher(patterns),
-      deadnessListener(&reachabilityListener)
+      reachabilityListener(this, config.getScope(),
+                           config.isRewritingAfterLabelsEnabled()),
+      matcher(patterns), deadnessListener(&reachabilityListener)
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       // clang-format off
       , expensiveChecks(

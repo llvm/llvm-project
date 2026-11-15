@@ -154,6 +154,50 @@ LogicalResult detail::verifyRegionBranchWeights(Operation *op) {
 }
 
 //===----------------------------------------------------------------------===//
+// LabelLike
+//===----------------------------------------------------------------------===//
+
+LogicalResult detail::verifyLabelLikeOp(Operation *op) {
+  Block *block = op->getBlock();
+  if (!block)
+    return success();
+  if (&block->front() != op)
+    return op->emitOpError("must be the first operation in the parent block");
+  if (block->getParent() && block->isEntryBlock())
+    return op->emitOpError("must not be in an entry block");
+  return success();
+}
+
+/// Return whether the regions of `op` contain a label-like operation that is
+/// not nested in an operation isolated from above, `op` included.
+static bool holdsLabel(Operation *op) {
+  if (op->getNumRegions() == 0 || op->hasTrait<OpTrait::IsIsolatedFromAbove>())
+    return false;
+  return op
+      ->walk<WalkOrder::PreOrder>([&](Operation *nested) {
+        if (nested == op)
+          return WalkResult::advance();
+        if (nested->hasTrait<OpTrait::LabelLike>())
+          return WalkResult::interrupt();
+        if (nested->hasTrait<OpTrait::IsIsolatedFromAbove>())
+          return WalkResult::skip();
+        return WalkResult::advance();
+      })
+      .wasInterrupted();
+}
+
+Operation *mlir::findLabelEntry(Block *block) {
+  if (block->empty())
+    return nullptr;
+  if (block->front().hasTrait<OpTrait::LabelLike>())
+    return &block->front();
+  for (Operation &op : *block)
+    if (holdsLabel(&op))
+      return &op;
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 

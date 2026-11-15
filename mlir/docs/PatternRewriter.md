@@ -394,6 +394,20 @@ processing in each iteration. The op-based driver leaves unreachable blocks and
 their operations in place, even if those operations were explicitly provided to
 the driver.
 
+Control can also enter a block through a label, an operation with the
+`LabelLike` trait, without a CFG edge: for example through a jump that a later
+pass turns into a branch. `findLabelEntry` returns where control enters such a
+block: the label that starts it, or an operation whose regions contain a
+label, unless that operation or one between it and the label is isolated from
+above. The region-based driver does not erase these blocks, the blocks they
+reach, or the blocks whose values they use. Both drivers still skip their
+operations, apart from constant CSE moving constants out of them, unless
+`GreedyRewriteConfig::enableRewritingAfterLabels` is set. The verifier does not
+check dominance in blocks that are unreachable in the CFG, and `DominanceInfo`
+treats them as dominated by every value, so only set it when the code reached
+through labels is known to satisfy dominance and the patterns do not rely on
+dominance checks there.
+
 Note: This driver listens for IR changes via the callbacks provided by
 `RewriterBase`. It is important that patterns announce all IR changes to the
 rewriter and do not bypass the rewriter API by modifying ops directly.

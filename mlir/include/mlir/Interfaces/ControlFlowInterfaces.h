@@ -398,6 +398,40 @@ struct ReturnLike : public TraitBase<ConcreteType, ReturnLike> {
 };
 } // namespace OpTrait
 
+namespace detail {
+/// Verify that an operation with the `LabelLike` trait is the first operation
+/// of a block that is not an entry block.
+LogicalResult verifyLabelLikeOp(Operation *op);
+} // namespace detail
+
+namespace OpTrait {
+/// This trait indicates that an operation is "label-like": it marks its block
+/// as the target of transfers of control that the CFG does not represent, such
+/// as a symbolic jump that a later pass turns into a branch. The operation must
+/// be the first operation of a block that is not an entry block. See
+/// `findLabelEntry` for the blocks that control enters this way.
+///
+/// `eraseUnreachableBlocks` keeps these blocks and the blocks they reach. The
+/// greedy pattern rewrite driver rewrites their operations only if
+/// `GreedyRewriteConfig::enableRewritingAfterLabels` is set, because the
+/// verifier does not check dominance in blocks that are unreachable in the
+/// CFG. Rewrites must not merge such a block into a predecessor.
+template <typename ConcreteType>
+struct LabelLike : public TraitBase<ConcreteType, LabelLike> {
+  static LogicalResult verifyTrait(Operation *op) {
+    return ::mlir::detail::verifyLabelLikeOp(op);
+  }
+};
+} // namespace OpTrait
+
+/// Return the operation at which control can enter `block` through a label
+/// (see `OpTrait::LabelLike`), or null if there is none. That is the label
+/// that starts `block`, or else the first operation whose regions contain a
+/// label, unless that operation or one between it and the label is isolated
+/// from above: control that enters such a label continues in `block` after
+/// that operation. Operations before the returned one are not reached this
+/// way.
+Operation *findLabelEntry(Block *block);
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//

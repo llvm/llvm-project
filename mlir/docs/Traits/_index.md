@@ -320,6 +320,25 @@ foo.region_op {
 This trait is an important structural property of the IR, and enables operations
 to have [passes](../PassManagement) scheduled under them.
 
+### LabelLike
+
+*   `OpTrait::LabelLike` -- `LabelLike`
+
+This trait marks an operation that labels its block as the target of transfers
+of control that the CFG does not represent, such as a symbolic jump that a later
+pass turns into a branch. The operation must be the first operation of a block
+that is not an entry block, and rewrites must not merge that block into a
+predecessor.
+
+Control can enter such a block without predecessors. It can also enter a block
+holding an operation whose regions contain a label, after that operation,
+unless that operation or one between it and the label is isolated from above;
+`findLabelEntry` returns where control enters. Unreachable-block elimination
+keeps these blocks and the blocks they reach. The greedy pattern rewrite driver
+rewrites their operations only if
+`GreedyRewriteConfig::enableRewritingAfterLabels` is set, because the verifier
+does not check dominance in blocks that are unreachable in the CFG.
+
 ### MemRefsNormalizable
 
 *   `OpTrait::MemRefsNormalizable` -- `MemRefsNormalizable`

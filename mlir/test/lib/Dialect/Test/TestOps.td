@@ -1210,6 +1210,16 @@ def TestGreedyCfgRewriteOp : TEST_Op<"greedy_cfg_rewrite"> {
       redirect_retarget: retarget the block's branch to its destination's
                          destination, and the destination's branch to an
                          appended block holding an observer
+      erase_next_label:  erase the `test.label` that starts the next block
+      erase_next:        erase the next block
+      replace_next_label: replace the `test.label` that starts the next block
+                         with an observer
+      move_holder:       move the op with the `label_source` attribute before
+                         the op with the `label_target` attribute
+      move_label:        move the block that starts with a `test.label` out of
+                         the first region of the op with the `label_source`
+                         attribute to the end of the first region of the op
+                         with the `label_target` attribute
 
     Modes that operate on the block's branch expect an unconditional branch
     without operands as the terminator, except that `double_redirect` also
@@ -1218,6 +1228,14 @@ def TestGreedyCfgRewriteOp : TEST_Op<"greedy_cfg_rewrite"> {
   let arguments = (ins EnumProp<TestGreedyCfgRewriteMode>:$mode,
                        Optional<I1>:$cond);
   let assemblyFormat = "$mode ($cond^)? attr-dict";
+}
+
+def TestLabelOp : TEST_Op<"label", [LabelLike]> {
+  let description = [{
+    Labels its block as the target of a jump that the CFG does not represent.
+  }];
+  let arguments = (ins StrAttr:$name);
+  let assemblyFormat = "$name attr-dict";
 }
 
 def TestBranchOp : TEST_Op<"br",

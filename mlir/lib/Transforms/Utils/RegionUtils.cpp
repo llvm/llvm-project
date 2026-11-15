@@ -182,6 +182,58 @@ SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
 // Unreachable Block Elimination
 //===----------------------------------------------------------------------===//
 
+using BlockSet = llvm::df_iterator_default_set<Block *, 16>;
+
+/// Return whether a block of `region` in `kept` uses a value that `block`
+/// defines.
+static bool isUsedByKeptBlock(Block &block, Region &region,
+                              const BlockSet &kept) {
+  auto isKeptUse = [&](OpOperand &use) {
+    Block *user = region.findAncestorBlockInRegion(*use.getOwner()->getBlock());
+    return user && kept.count(user);
+  };
+  if (llvm::any_of(block.getArguments(), [&](BlockArgument arg) {
+        return llvm::any_of(arg.getUses(), isKeptUse);
+      }))
+    return true;
+  return llvm::any_of(block, [&](Operation &op) {
+    return llvm::any_of(op.getResults(), [&](Value result) {
+      return llvm::any_of(result.getUses(), isKeptUse);
+    });
+  });
+}
+
+/// Add to `reachable` the blocks of `region` from `begin` on that control
+/// enters through a label (see `OpTrait::LabelLike`), and the blocks reachable
+/// from them. The verifier does not check dominance in these blocks, so they
+/// may use values of blocks that nothing reaches: keep those as well, so that
+/// erasing the others leaves no use behind.
+static void addLabelReachedBlocks(Region &region, Region::iterator begin,
+                                  BlockSet &reachable) {
+  auto addFrom = [&](Block &root) {
+    for (Block *block : depth_first_ext(&root, reachable))
+      (void)block;
+  };
+  bool foundLabel = false;
+  for (Block &block : llvm::make_range(begin, region.end())) {
+    if (reachable.count(&block) || !findLabelEntry(&block))
+      continue;
+    foundLabel = true;
+    addFrom(block);
+  }
+  bool keptMore = foundLabel;
+  while (keptMore) {
+    keptMore = false;
+    for (Block &block : llvm::make_range(begin, region.end())) {
+      if (reachable.count(&block) ||
+          !isUsedByKeptBlock(block, region, reachable))
+        continue;
+      keptMore = true;
+      addFrom(block);
+    }
+  }
+}
+
 /// Erase the unreachable blocks within the provided regions. Returns success
 /// if any blocks were erased, failure otherwise.
 // TODO: We could likely merge this with the DCE algorithm below.
@@ -192,7 +244,7 @@ LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
          << " regions";
 
   // Set of blocks found to be reachable within a given region.
-  llvm::df_iterator_default_set<Block *, 16> reachable;
+  BlockSet reachable;
   // If any blocks were found to be dead.
   int erasedDeadBlocks = 0;
 
@@ -236,7 +288,15 @@ LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
 
     // Collect all of the dead blocks and push the live regions onto the
     // worklist.
+    bool scannedLabels = false;
     for (Block &block : llvm::make_early_inc_range(*region)) {
+      // Control can also enter a block through a label, without a CFG edge.
+      // Such a block comes at or after the first block that the entry block
+      // does not reach, so look for them there, before erasing anything.
+      if (!scannedLabels && !reachable.count(&block)) {
+        scannedLabels = true;
+        addLabelReachedBlocks(*region, block.getIterator(), reachable);
+      }
       if (!reachable.count(&block)) {
         LDBG() << "Erasing unreachable block: " << &block;
         block.dropAllDefinedValueUses();
@@ -390,11 +450,30 @@ static void propagateLiveness(Operation *op, LiveMap &liveMap) {
     processValue(value, liveMap);
 }
 
+/// Return the blocks of `region` in post-order. `eraseUnreachableBlocks` keeps
+/// the blocks that control enters through a label, which the CFG does not
+/// show, so the blocks that the entry block does not reach count as live too.
+/// They come first: they may use values of the blocks that the entry block
+/// reaches, but not the other way around.
+static SmallVector<Block *> getBlocksInPostOrder(Region &region) {
+  SmallPtrSet<Block *, 16> visited;
+  auto fromEntry =
+      llvm::to_vector(llvm::post_order_ext(&region.front(), visited));
+  if (fromEntry.size() == region.getBlocks().size())
+    return fromEntry;
+  SmallVector<Block *> blocks;
+  for (Block &block : region)
+    if (!visited.contains(&block))
+      llvm::append_range(blocks, llvm::post_order_ext(&block, visited));
+  llvm::append_range(blocks, fromEntry);
+  return blocks;
+}
+
 static void propagateLiveness(Region &region, LiveMap &liveMap) {
   if (region.empty())
     return;
 
-  for (Block *block : llvm::post_order(&region.front())) {
+  for (Block *block : getBlocksInPostOrder(region)) {
     // We process block arguments after the ops in the block, to promote
     // faster convergence to a fixed point (we try to visit uses before defs).
     for (Operation &op : llvm::reverse(block->getOperations()))
@@ -453,8 +532,9 @@ static LogicalResult deleteDeadness(RewriterBase &rewriter,
     // in the use-def graph, so we must explicitly dropAllUses() from each
     // operation as we erase it. Visiting the operations in post-order
     // guarantees that in SSA CFG regions value uses are removed before defs,
-    // which makes dropAllUses() a no-op.
-    for (Block *block : llvm::post_order(&region.front())) {
+    // which makes dropAllUses() a no-op, except in blocks that only a label
+    // reaches, where dominance is not checked.
+    for (Block *block : getBlocksInPostOrder(region)) {
       if (!hasSingleBlock)
         eraseTerminatorSuccessorOperands(block->getTerminator(), liveMap);
       for (Operation &childOp :
