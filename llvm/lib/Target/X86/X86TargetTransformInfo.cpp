@@ -8361,6 +8361,7 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
 
 bool X86TTIImpl::useFastCCForInternalCall(Function &F) const {
   bool HasEGPR = ST->hasEGPR();
+  bool UseAPXFastCC = ST->useAPXFastCC();
   const TargetMachine &TM = getTLI()->getTargetMachine();
 
   for (User *U : F.users()) {
@@ -8368,7 +8369,9 @@ bool X86TTIImpl::useFastCCForInternalCall(Function &F) const {
     if (!CB || CB->getCalledOperand() != &F)
       continue;
     Function *CallerFunc = CB->getFunction();
-    if (TM.getSubtarget<X86Subtarget>(*CallerFunc).hasEGPR() != HasEGPR)
+    const X86Subtarget &CallerST = TM.getSubtarget<X86Subtarget>(*CallerFunc);
+    if (CallerST.hasEGPR() != HasEGPR ||
+        CallerST.useAPXFastCC() != UseAPXFastCC)
       return false;
   }
 
