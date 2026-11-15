@@ -1319,6 +1319,9 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     }
   }
 
+  if (BD->isVTable())
+    VTableMap.try_emplace(Address, BD);
+
   return Symbol;
 }
 
@@ -1340,6 +1343,17 @@ BinaryContext::getBinaryDataContainingAddressImpl(uint64_t Address) const {
     }
   }
   return nullptr;
+}
+
+const BinaryData *
+BinaryContext::getVTableContainingAddress(uint64_t Address) const {
+  // Vtables do not overlap, so only the last one starting at or before
+  // Address can contain it.
+  auto VI = VTableMap.upper_bound(Address);
+  if (VI == VTableMap.begin())
+    return nullptr;
+  const BinaryData *VTable = std::prev(VI)->second;
+  return VTable->containsAddress(Address) ? VTable : nullptr;
 }
 
 BinaryData *BinaryContext::getGOTSymbol() {

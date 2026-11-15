@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -2368,13 +2369,11 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
   assert(!LPadList.empty() &&
          "No landing pad destinations for the dispatch jump table!");
 
-  // The %fn_context is allocated like below (from --print-after=sjljehprepare):
-  //   %fn_context = alloca { i8*, i64, [4 x i64], i8*, i8*, [5 x i8*] }
-  //
-  // This `[5 x i8*]` is jmpbuf, so jmpbuf[1] is FI+72.
-  // First `i64` is callsite, so callsite is FI+8.
-  static const int OffsetIC = 72;
-  static const int OffsetCS = 8;
+  const DataLayout &Layout = MF->getDataLayout();
+  const StructLayout *SL = Layout.getStructLayout(
+      getSjLjFunctionContextType(*MF->getFunction().getParent()));
+  const int OffsetIC = SL->getElementOffset(5) + Layout.getPointerSize();
+  const int OffsetCS = SL->getElementOffset(1);
 
   // Create the MBBs for the dispatch code like following:
   //

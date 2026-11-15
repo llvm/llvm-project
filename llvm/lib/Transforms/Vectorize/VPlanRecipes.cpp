@@ -114,6 +114,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
   case VPExpandSCEVSC:
+  case VPConditionalInductionPHISC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -176,6 +177,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
   case VPExpandSCEVSC:
+  case VPConditionalInductionPHISC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -214,6 +216,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPPredInstPHISC:
   case VPVectorEndPointerSC:
   case VPExpandSCEVSC:
+  case VPConditionalInductionPHISC:
     return false;
   case VPInstructionSC: {
     auto *VPI = cast<VPInstruction>(this);
@@ -353,8 +356,14 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
   else if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(this))
     UI = &WidenMem->getIngredient();
 
+  // Replicating per lane is invalid for scalable VFs. Don't skip such recipes
+  // even if the legacy cost model ignores UI, e.g. as an address of an
+  // interleave group member, assuming the group is widened.
+  auto *RepR = dyn_cast<VPReplicateRecipe>(this);
+  bool ReplicatesScalable =
+      RepR && VF.isScalable() && RepR->doesGeneratePerAllLanes();
   InstructionCost RecipeCost;
-  if (UI && Ctx.skipCostComputation(UI, VF.isVector())) {
+  if (UI && Ctx.skipCostComputation(UI, VF.isVector()) && !ReplicatesScalable) {
     RecipeCost = 0;
   } else {
     RecipeCost = computeCost(VF, Ctx);
@@ -1064,6 +1073,9 @@ Value *VPInstruction::generate(VPTransformState &State,
     assert(GenerateSingleScalar && "Can only generate first lane for PtrAdd");
     Value *Ptr = State.get(getOperand(0), VPLane(0));
     Value *Addend = State.get(getOperand(1), VPLane(0));
+    // TODO: Require that offset matches index type in VPlan.
+    Addend = Builder.CreateSExtOrTrunc(
+        Addend, Builder.getDataLayout().getIndexType(Ptr->getType()));
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::WidePtrAdd: {
@@ -1208,7 +1220,13 @@ Value *VPInstruction::generate(VPTransformState &State,
 
     Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
     Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
-    LoadInst *WideLI = Builder.CreateAlignedLoad(WideDataTy, Addr, Alignment);
+    Instruction *WideLI;
+    if (isMasked()) {
+      Value *Mask = State.get(getMask());
+      WideLI = Builder.CreateMaskedLoad(WideDataTy, Addr, Alignment, Mask);
+    } else {
+      WideLI = Builder.CreateAlignedLoad(WideDataTy, Addr, Alignment);
+    }
     applyMetadata(*WideLI);
     return WideLI;
   }
@@ -1222,10 +1240,18 @@ Value *VPInstruction::generate(VPTransformState &State,
 
     Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
     Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
-    StoreInst *WideSI = Builder.CreateAlignedStore(WideData, Addr, Alignment);
+    Instruction *WideSI;
+    if (isMasked()) {
+      Value *Mask = State.get(getMask());
+      WideSI = Builder.CreateMaskedStore(WideData, Addr, Alignment, Mask);
+    } else {
+      WideSI = Builder.CreateAlignedStore(WideData, Addr, Alignment);
+    }
     applyMetadata(*WideSI);
     return WideSI;
   }
+  case VPInstruction::MaskedCond:
+    llvm_unreachable("Should have been lowered in VPlanPredicator");
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -1596,6 +1622,13 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, ValTy,
                                           Ctx.CostKind);
   }
+  case VPInstruction::NumActiveLanes: {
+    Type *ElementTy = getOperand(0)->getScalarType();
+    auto *MaskTy = cast<VectorType>(toVectorTy(ElementTy, VF));
+    return Ctx.TTI.getExtendedReductionCost(
+        Instruction::Add, /*IsUnsigned=*/true, getScalarType(), MaskTy,
+        /*FMF=*/{}, Ctx.CostKind);
+  }
   case VPInstruction::BranchOnCount: {
     // If TC <= VF then this is just a branch.
     // FIXME: Removing the branch happens in simplifyBranchConditionForVFAndUF
@@ -1718,7 +1751,7 @@ void VPInstruction::addOperand(VPValue *Op) {
 }
 
 void VPInstruction::execute(VPTransformState &State) {
-  assert(!isMasked() && "cannot execute masked VPInstruction");
+  assert(!isAbstract() && "cannot execute this VPInstruction");
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
@@ -1791,6 +1824,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ReductionStartVector:
   case VPInstruction::Reverse:
   case VPInstruction::Unpack:
+  case VPInstruction::NumActiveLanes:
     return false;
   case VPInstruction::Intrinsic:
   case Instruction::Call:
@@ -1827,9 +1861,9 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::Intrinsic:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
-  case VPInstruction::WideVectorLoad:
   case VPInstruction::BuildVector:
     return true;
+  case VPInstruction::WideVectorLoad:
   case VPInstruction::WideVectorStore:
     return Op == getOperand(0) || Op == getOperand(1) || Op == getOperand(2);
   case VPInstruction::PtrAdd:
@@ -4200,6 +4234,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     return computeCallCost(CalledFn, ResultTy, drop_end(operands()),
                            isSingleScalar(), VF, Ctx);
   }
+  case Instruction::FNeg:
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::FAdd:
@@ -4216,6 +4251,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Xor:
   case Instruction::ICmp:
   case Instruction::FCmp:
+  case Instruction::Freeze:
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
@@ -4266,8 +4302,14 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     bool IsLoad = UI->getOpcode() == Instruction::Load;
     const VPValue *PtrOp = getOperand(!IsLoad);
     const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.PSE, Ctx.L);
-    if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV))
-      break;
+    if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV)) {
+      // Fall back to the legacy cost model, unless the access is single-scalar
+      // (PtrSCEV is unused) or predicated (legacy cost includes the region).
+      const VPRegionBlock *ParentRegion = getRegion();
+      if (!isSingleScalar() && (!ParentRegion || !ParentRegion->isReplicator()))
+        break;
+      PtrSCEV = nullptr;
+    }
 
     Type *ValTy = (IsLoad ? this : getOperand(0))->getScalarType();
     Type *ScalarPtrTy = PtrOp->getScalarType();
@@ -4327,6 +4369,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     }
     return Cost;
   }
+  case Instruction::BitCast:
   case Instruction::SExt:
   case Instruction::ZExt:
   case Instruction::FPToUI:
@@ -5317,6 +5360,23 @@ bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
          "Blend should propagate first lane use");
   return vputils::onlyFirstLaneUsed(this);
 }
+
+InstructionCost
+VPConditionalInductionPHIRecipe::computeCost(ElementCount VF,
+                                             VPCostContext &Ctx) const {
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPConditionalInductionPHIRecipe::printRecipe(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent << "CONDITIONAL-INDUCTION-PHI ";
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+#endif
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   executePhiRecipe(this, *this, State, /*IsScalar=*/false, Name);

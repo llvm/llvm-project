@@ -18,7 +18,6 @@
 # CHECK: SU(5):   $r0 = COPY %3:rgpr
 ---
 name:            test
-tracksRegLiveness: true
 constants:
   - id:              0
     value:           double 0x7FF0000000000000

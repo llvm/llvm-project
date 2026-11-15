@@ -938,8 +938,11 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(3).getReg(), WidthKnown, DemandedElts,
                          Depth + 1);
-    OffsetKnown = OffsetKnown.sext(BitWidth);
-    WidthKnown = WidthKnown.sext(BitWidth);
+    // The offset and width are unsigned and can have a different type than the
+    // source. extractBits reads both as unsigned values of any width. The
+    // width is also used below in a subtraction of BitWidth type. A valid width
+    // is at most BitWidth, so it fits in BitWidth bits.
+    WidthKnown = WidthKnown.zextOrTrunc(BitWidth);
     Known = extractBits(BitWidth, SrcOpKnown, OffsetKnown, WidthKnown);
     // Sign extend the extracted value using shift left and arithmetic shift
     // right.
@@ -2059,7 +2062,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     break;
   }
-  case TargetOpcode::G_FREM: {
+  case TargetOpcode::G_FREM:
+  case TargetOpcode::G_STRICT_FREM: {
     FPClassTest InterestedLHS = fcNone;
     FPClassTest InterestedRHS = fcNone;
 
@@ -2471,7 +2475,9 @@ bool GISelValueTracking::isKnownNeverNaN(Register Val, bool SNaN) {
     case TargetOpcode::G_FMUL:
     case TargetOpcode::G_STRICT_FMUL:
     case TargetOpcode::G_FDIV:
+    case TargetOpcode::G_STRICT_FDIV:
     case TargetOpcode::G_FREM:
+    case TargetOpcode::G_STRICT_FREM:
     case TargetOpcode::G_FMA:
     case TargetOpcode::G_STRICT_FMA:
     case TargetOpcode::G_FMAD:

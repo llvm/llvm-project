@@ -3507,20 +3507,21 @@ namespace ISD {
     return St && St->getAddressingMode() == ISD::UNINDEXED;
   }
 
-  /// Returns true if the specified node is a non-extending and unindexed
-  /// masked load.
+  /// Returns true if the specified node is a non-extending, non-expanding, and
+  /// unindexed masked load.
   inline bool isNormalMaskedLoad(const SDNode *N) {
     auto *Ld = dyn_cast<MaskedLoadSDNode>(N);
     return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
-           Ld->getAddressingMode() == ISD::UNINDEXED;
+           Ld->getAddressingMode() == ISD::UNINDEXED && !Ld->isExpandingLoad();
   }
 
-  /// Returns true if the specified node is a non-extending and unindexed
-  /// masked store.
+  /// Returns true if the specified node is a non-extending, non-compressing,
+  /// and unindexed masked store.
   inline bool isNormalMaskedStore(const SDNode *N) {
     auto *St = dyn_cast<MaskedStoreSDNode>(N);
     return St && !St->isTruncatingStore() &&
-           St->getAddressingMode() == ISD::UNINDEXED;
+           St->getAddressingMode() == ISD::UNINDEXED &&
+           !St->isCompressingStore();
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or

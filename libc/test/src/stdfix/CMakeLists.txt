@@ -15,7 +15,7 @@ foreach(suffix IN ITEMS hr r lr hk k lk)
       abs${suffix}_test.cpp
     DEPENDS
       libc.src.stdfix.abs${suffix}
-      libc.src.__support.fixed_point.fx_bits
+      libc.src.__support.fixed_point.fx_rep
   )
 endforeach()
 
@@ -32,13 +32,18 @@ foreach(suffix IN ITEMS uhr ur ulr uhk uk)
       libc.src.stdfix.sqrt${suffix}
       libc.src.__support.CPP.bit
       libc.src.__support.fixed_point.fx_rep
-      libc.src.__support.fixed_point.sqrt
       libc.src.__support.FPUtil.basic_operations
       libc.src.__support.FPUtil.sqrt
   )
 endforeach()
 
 foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
+  if(suffix MATCHES "^u")
+    set(int_type uint_${suffix}_t)
+  else()
+    set(int_type int_${suffix}_t)
+  endif()
+
   add_libc_test(
     round${suffix}_test
     SUITE
@@ -49,7 +54,7 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       round${suffix}_test.cpp
     DEPENDS
       libc.src.stdfix.round${suffix}
-      libc.src.__support.fixed_point.fx_bits
+      libc.src.__support.fixed_point.fx_rep
   )
 
   add_libc_test(
@@ -62,8 +67,8 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       ${suffix}bits_test.cpp
     DEPENDS
       libc.src.stdfix.${suffix}bits
-      libc.src.__support.CPP.bit
-      libc.src.__support.fixed_point.fx_bits
+      libc.src.__support.fixed_point.fx_rep
+      libc.src.__support.math_extras
   )
 
   add_libc_test(
@@ -75,21 +80,9 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
     SRCS
       bits${suffix}_test.cpp
     DEPENDS
-      libc.include.llvm-libc-types.int_k_t
-      libc.include.llvm-libc-types.int_hr_t
-      libc.include.llvm-libc-types.int_lk_t
-      libc.include.llvm-libc-types.int_lr_t
-      libc.include.llvm-libc-types.int_r_t
-      libc.include.llvm-libc-types.uint_uhk_t
-      libc.include.llvm-libc-types.uint_uhr_t
-      libc.include.llvm-libc-types.uint_uk_t
-      libc.include.llvm-libc-types.uint_ulk_t
-      libc.include.llvm-libc-types.uint_ulr_t
-      libc.include.llvm-libc-types.uint_ur_t
-      libc.include.llvm-libc-types.int_hk_t
+      libc.include.llvm-libc-types.${int_type}
       libc.src.stdfix.bits${suffix}
       libc.src.__support.fixed_point.fx_rep
-      libc.src.__support.fixed_point.fx_bits
   )
 
   add_libc_test(
@@ -103,7 +96,6 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
     DEPENDS
       libc.src.stdfix.countls${suffix}
       libc.src.__support.fixed_point.fx_rep
-      libc.src.__support.fixed_point.fx_bits
   )
 endforeach()
 
@@ -117,9 +109,10 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
     SRCS
       idiv${suffix}_test.cpp
     DEPENDS
-      libc.src.stdfix.idiv${suffix}
-      libc.src.__support.fixed_point.fx_bits
       libc.hdr.signal_macros
+      libc.include.llvm-libc-macros.stdfix_macros
+      libc.src.stdfix.idiv${suffix}
+      libc.src.__support.fixed_point.fx_rep
   )
 endforeach()
 
@@ -133,9 +126,12 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
     SRCS
       ${suffix}divi_test.cpp
     DEPENDS
-      libc.src.stdfix.${suffix}divi
-      libc.src.__support.fixed_point.fx_bits
       libc.hdr.signal_macros
+      libc.include.llvm-libc-macros.stdfix_macros
+      libc.src.stdfix.${suffix}divi
+      libc.src.__support.CPP.limits
+      libc.src.__support.CPP.type_traits
+      libc.src.__support.fixed_point.fx_rep
   )
 endforeach()
 
@@ -149,10 +145,28 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
     SRCS
       divi${suffix}_test.cpp
     DEPENDS
-      libc.src.stdfix.divi${suffix}
-      libc.src.__support.fixed_point.fx_rep
-      libc.src.__support.fixed_point.fx_bits
       libc.hdr.signal_macros
+      libc.include.llvm-libc-macros.stdfix_macros
+      libc.src.stdfix.divi${suffix}
+      libc.src.__support.CPP.limits
+      libc.src.__support.fixed_point.fx_rep
+  )
+endforeach()
+
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
+  add_libc_test(
+    muli${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      MuliFxTest.h
+    SRCS
+      muli${suffix}_test.cpp
+    DEPENDS
+      libc.include.llvm-libc-macros.stdfix_macros
+      libc.src.stdfix.muli${suffix}
+      libc.src.__support.CPP.limits
+      libc.src.__support.fixed_point.fx_rep
   )
 endforeach()
 
@@ -166,7 +180,6 @@ add_libc_test(
     uhksqrtus_test.cpp
   DEPENDS
     libc.src.stdfix.uhksqrtus
-    libc.src.__support.CPP.bit
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.fixed_point.sqrt
     libc.src.__support.FPUtil.basic_operations
@@ -183,44 +196,28 @@ add_libc_test(
     uksqrtui_test.cpp
   DEPENDS
     libc.src.stdfix.uksqrtui
-    libc.src.__support.CPP.bit
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.fixed_point.sqrt
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.sqrt
 )
 
-add_libc_test(
-  exphk_test
-  SUITE
-    libc-stdfix-tests
-  HDRS
-    ExpTest.h
-  SRCS
-    exphk_test.cpp
-  DEPENDS
-    libc.src.stdfix.exphk
-    libc.src.math.exp
-    libc.src.__support.CPP.bit
-    libc.src.__support.fixed_point.fx_rep
-    libc.src.__support.FPUtil.basic_operations
-)
-
-add_libc_test(
-  expk_test
-  SUITE
-    libc-stdfix-tests
-  HDRS
-    ExpTest.h
-  SRCS
-    expk_test.cpp
-  DEPENDS
-    libc.src.stdfix.expk
-    libc.src.math.exp
-    libc.src.__support.CPP.bit
-    libc.src.__support.fixed_point.fx_rep
-    libc.src.__support.FPUtil.basic_operations
-)
+foreach(suffix IN ITEMS hk k uhk uk)
+  add_libc_test(
+    exp${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      ExpTest.h
+    SRCS
+      exp${suffix}_test.cpp
+    DEPENDS
+      libc.src.stdfix.exp${suffix}
+      libc.src.math.exp
+      libc.src.__support.fixed_point.fx_rep
+      libc.src.__support.FPUtil.basic_operations
+  )
+endforeach()
 
 set(macros_depends)
 
@@ -239,6 +236,6 @@ add_libc_test(
   SUITE libc-stdfix-tests
   SRCS macros_test.cpp
   DEPENDS
-    libc.include.stdfix
+    libc.include.llvm-libc-macros.stdfix_macros
     ${macros_depends}
 )

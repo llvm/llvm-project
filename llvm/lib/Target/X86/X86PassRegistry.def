@@ -74,10 +74,3 @@ MACHINE_FUNCTION_PASS("x86-suppress-apx-for-relocation", X86SuppressAPXForReloca
 MACHINE_FUNCTION_PASS("x86-tile-config", X86TileConfigPass())
 MACHINE_FUNCTION_PASS("x86-wineh-unwindv2", X86WinEHUnwindV2Pass())
 #undef MACHINE_FUNCTION_PASS
-
-#ifndef DUMMY_MACHINE_FUNCTION_PASS
-#define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)
-#endif
-DUMMY_MACHINE_FUNCTION_PASS("x86-indirect-thunks", X86IndirectThunks())
-DUMMY_MACHINE_FUNCTION_PASS("x86-pad-short-functions", X86PadShortFunctionsPass())
-#undef DUMMY_MACHINE_FUNCTION_PASS

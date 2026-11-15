@@ -19,10 +19,6 @@
 
 #include <string>
 
-namespace llvm::omp::target::plugin {
-struct GenericPluginTy;
-}
-
 /// A liboffload platform together with its cached properties.
 struct PlatformTy {
   /// Query the properties of \p Handle and create the platform. Properties

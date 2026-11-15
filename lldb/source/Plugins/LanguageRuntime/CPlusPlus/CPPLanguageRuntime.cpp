@@ -130,7 +130,7 @@ CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     m_abi_runtimes.emplace_back(new MicrosoftABIRuntime(process));
 }
 
-bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
+bool CPPLanguageRuntime::IsAllowedRuntimeValue(llvm::StringRef name) {
   return name == g_this || name == g_promise || name == g_coro_frame;
 }
 

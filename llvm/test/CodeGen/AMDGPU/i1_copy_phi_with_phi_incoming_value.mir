@@ -17,14 +17,14 @@ body:             |
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]](s32)
   ; GCN-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 [[COPY1]](s32), [[S_LOAD_DWORD_IMM]], implicit $exec
   ; GCN-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-  ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_LT_I32_e64_]], %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF [[V_CMP_LT_I32_e64_]], %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.6(0x80000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-  ; GCN-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY3]], killed [[S_MOV_B32_]], 0, implicit $exec
+  ; GCN-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY3]], [[S_MOV_B32_]], 0, implicit $exec
   ; GCN-NEXT:   [[V_CMP_GE_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_GE_I32_e64 [[V_ADD_U32_e64_]], [[COPY2]], implicit $exec
   ; GCN-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_64 = COPY [[V_CMP_GE_I32_e64_]]
@@ -85,7 +85,7 @@ body:             |
     %9:sreg_64 = V_CMP_LT_I32_e64 %2:vgpr_32(s32), %3:sreg_32_xm0_xexec, implicit $exec
     %4:sreg_64 = S_MOV_B64 0
     %17:vreg_1 = COPY %4:sreg_64, implicit $exec
-    %16:sreg_64 = SI_IF killed %9:sreg_64, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %16:sreg_64 = SI_IF %9:sreg_64, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -93,7 +93,7 @@ body:             |
     successors: %bb.6
 
     %10:sreg_32 = S_MOV_B32 16
-    %18:vgpr_32 = V_ADD_U32_e64 %14:vgpr_32, killed %10:sreg_32, 0, implicit $exec
+    %18:vgpr_32 = V_ADD_U32_e64 %14:vgpr_32, %10:sreg_32, 0, implicit $exec
     %11:sreg_64 = V_CMP_GE_I32_e64 %18:vgpr_32, %8:sreg_32, implicit $exec
     %12:sreg_64 = S_MOV_B64 0
     %19:vreg_1 = COPY %11:sreg_64

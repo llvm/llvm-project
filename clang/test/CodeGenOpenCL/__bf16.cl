@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -cl-std=cl3.0 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -cl-std=cl3.0 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s %}
 // RUN: %clang_cc1 %s -cl-std=cl3.0 -emit-llvm -o - -triple spirv64-unknown-unknown | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -cl-std=cl3.0 -emit-llvm -o - -triple spirv64-unknown-unknown | FileCheck %s %}
 
 kernel void test(global __bf16 *a, global __bf16 *b){
 // CHECK-LABEL: spir_kernel void @test(

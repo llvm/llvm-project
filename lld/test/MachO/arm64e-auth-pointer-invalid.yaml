@@ -17,6 +17,7 @@
 # RESERVED: error: AUTHENTICATED_POINTER relocation requires bits 51..62 to be zero at offset 0 of __DATA,__data in
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

@@ -14,7 +14,6 @@
 
 #include "L0Context.h"
 #include "L0Device.h"
-#include "L0Interop.h"
 #include "L0Kernel.h"
 #include "L0Plugin.h"
 #include "L0Trace.h"
@@ -166,10 +165,6 @@ GenericGlobalHandlerTy *LevelZeroPluginTy::createGlobalHandler() {
   return new L0GlobalHandlerTy();
 }
 
-Error LevelZeroPluginTy::flushQueueImpl(omp_interop_val_t *Interop) {
-  return Plugin::success();
-}
-
 Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
   switch (identify_magic(Image)) {
   case file_magic::spirv_object:
@@ -204,48 +199,6 @@ Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
     // Unknown format
     return false;
   }
-}
-
-Error LevelZeroPluginTy::syncBarrierImpl(omp_interop_val_t *Interop) {
-  if (!Interop) {
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "Invalid/inconsistent OpenMP interop " DPxMOD "\n",
-                         DPxPTR(Interop));
-  }
-  if (!Interop->async_info || !Interop->async_info->Queue)
-    return Plugin::success();
-
-  const auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
-
-  ODBG(OLDT_Sync) << "LevelZeroPluginTy::sync_barrier: Synchronizing "
-                  << Interop << " with ImmCmdList barrier";
-  auto ImmCmdList = L0->ImmCmdList;
-
-  CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, ImmCmdList, L0DefaultTimeout);
-
-  return Plugin::success();
-}
-
-Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
-  if (!Interop) {
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "Invalid/inconsistent OpenMP interop " DPxMOD "\n",
-                         DPxPTR(Interop));
-  }
-  if (!Interop->async_info || !Interop->async_info->Queue)
-    return Plugin::success();
-
-  const auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
-  if (Interop->attrs.inorder)
-    return Plugin::success();
-
-  ODBG(OLDT_Sync) << "LevelZeroPluginTy::async_barrier: Appending ImmCmdList "
-                  << "barrier to " << Interop;
-  auto ImmCmdList = L0->ImmCmdList;
-  CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, ImmCmdList, nullptr, 0,
-                    nullptr);
-
-  return Plugin::success();
 }
 
 Expected<std::unique_ptr<PluginContextTy>>
