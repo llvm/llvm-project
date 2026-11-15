@@ -520,3 +520,21 @@ define <vscale x 2 x ptr> @neg_bitextract_scalable_vec_ptr() {
   %r = bitextract <vscale x 2 x ptr>, <vscale x 2 x b64> splat (b64 1), <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x ptr> %r
 }
+
+define i8 @bitextract_vec_bitcast_src() {
+; CHECK-LABEL: define i8 @bitextract_vec_bitcast_src() {
+; CHECK-NEXT:    ret i8 2
+;
+  %b = bitcast <2 x i32> <i32 1, i32 2> to b64
+  %r = bitextract i8, b64 %b, i32 32
+  ret i8 %r
+}
+
+define b64 @bitinsert_vec_bitcast_base() {
+; CHECK-LABEL: define b64 @bitinsert_vec_bitcast_base() {
+; CHECK-NEXT:    ret b64 8589934599
+;
+  %b = bitcast <2 x i32> <i32 1, i32 2> to b64
+  %r = bitinsert b64 %b, i8 7, i32 0
+  ret b64 %r
+}
