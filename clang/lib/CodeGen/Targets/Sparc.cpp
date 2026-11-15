@@ -193,6 +193,16 @@ public:
 // the inreg arguments. All other arguments are allocated a multiple of 8
 // bytes.
 //
+// Zero-sized structs have a special treatment:
+// - The first six occupies a full i64 argument slot.
+// - The next ten occupies a f64 register (but *not* reserve a shadow space in
+//   the stack).
+// - Further arguments won't occupy any space.
+// This is represented as i64 with the LLVM IR inreg attribute:
+//
+//   declare void f(i64 inreg %a)
+//
+// The backend then takes care of allocating the space for it.
 namespace {
 class SparcV9ABIInfo : public ABIInfo {
 public:
