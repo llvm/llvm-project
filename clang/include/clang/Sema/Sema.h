@@ -5331,6 +5331,12 @@ public:
   bool ProcessAccessDeclAttributeList(AccessSpecDecl *ASDecl,
                                       const ParsedAttributesView &AttrList);
 
+  /// Check that \p Record is a capability if a thread safety attribute without
+  /// capability arguments on one of its fields refers to it. Called once the
+  /// record's own attributes are applied; the attributes checked are those
+  /// already on its fields, which were applied before the record's.
+  void CheckFieldCapabilityAttrs(const RecordDecl *Record);
+
   /// checkUnusedDeclAttributes - Given a declarator which is not being
   /// used to build a declaration, complain about any decl attributes
   /// which might be lying around on it.

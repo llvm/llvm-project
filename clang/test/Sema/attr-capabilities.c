@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wthread-safety -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wthread-safety -verify -fexperimental-late-parse-attributes %s
 
 typedef int __attribute__((capability("role"))) ThreadRole;
 struct __attribute__((shared_capability("mutex"))) Mutex {};
@@ -73,13 +74,17 @@ int AlsoNotACapability;
 void Func31(void) __attribute__((requires_capability(GUI && AlsoNotACapability))); // expected-warning {{'requires_capability' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
 
 // Without arguments, an attribute on a function pointer field refers to the
-// object the field is called through, which must be a capability.
-struct __attribute__((capability("mutex"))) FPCap {
+// object the field is called through, which must be a capability. The record's
+// own attributes may follow its closing brace, after the field's.
+struct FPCap {
   void (*lock)(void) __attribute__((acquire_capability()));
   void (*unlock)(void) __attribute__((release_capability()));
-};
+} __attribute__((capability("mutex")));
 struct FPNotCap {
   void (*lock)(void) __attribute__((acquire_capability())); // expected-warning {{'acquire_capability' attribute without capability arguments refers to the object it is called through, but 'FPNotCap' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
+  struct FPInnerCap {
+    void (*lock)(void) __attribute__((acquire_capability()));
+  } __attribute__((capability("mutex"))) inner;
 };
 
 // A field of an anonymous struct or union is called through the anonymous

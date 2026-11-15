@@ -1801,14 +1801,23 @@ Mutex &mu1_impl(void);
 Mutex &(&fn_ref_returned)(void) LOCK_RETURNED(mu1) = mu1_impl;
 
 // Without arguments, an attribute on a field refers to the object the field is
-// called through, as it refers to 'this' on a method.
-struct LOCKABLE FPSelf {
+// called through, as it refers to 'this' on a method. The class's own
+// attributes may follow its closing brace: a field's GNU attributes are parsed
+// after them, but C++11 ones are applied before.
+struct FPSelf {
   void (*lock)(void) EXCLUSIVE_LOCK_FUNCTION();
   void (*unlock)(void) UNLOCK_FUNCTION();
-};
+#if __cplusplus >= 201103
+  [[clang::acquire_capability]] void (*lock11)(void);
+#endif
+} LOCKABLE;
 struct FPNotLockable {
   void (*lock)(void) EXCLUSIVE_LOCK_FUNCTION(); // \
     // expected-warning {{'exclusive_lock_function' attribute without capability arguments refers to the object it is called through, but 'FPNotLockable' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
+#if __cplusplus >= 201103
+  [[clang::acquire_capability]] void (*lock11)(void); // \
+    // expected-warning {{'clang::acquire_capability' attribute without capability arguments refers to the object it is called through, but 'FPNotLockable' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
+#endif
 };
 // The record may be a capability through a base, as the class of a method may.
 struct FPDerived : FPSelf {

@@ -361,6 +361,10 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
         RD = MD->getParent();
     } else if (const auto *FD = dyn_cast<FieldDecl>(D)) {
       RD = FD->getParent();
+      // Attributes after the record's closing brace aren't applied yet.
+      // ActOnFields checks the field then (CheckFieldCapabilityAttrs).
+      if (RD && !RD->isCompleteDefinition())
+        return;
     }
     if (RD) {
       // FIXME -- need to check this again on template instantiation
@@ -521,6 +525,32 @@ bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
     return true;
 
   return checkThreadSafetyValueDeclIsFunPtr(*this, VD, *A);
+}
+
+template <typename... AttrTypes> static bool isAttrWithoutArgs(const Attr *A) {
+  return (... || [A] {
+    const auto *TA = dyn_cast<AttrTypes>(A);
+    return TA && TA->args_size() == 0;
+  }());
+}
+
+void Sema::CheckFieldCapabilityAttrs(const RecordDecl *Record) {
+  std::optional<bool> IsCapability;
+  for (const FieldDecl *FD : Record->fields()) {
+    for (const Attr *A : FD->attrs()) {
+      // The attributes that may have no capability arguments.
+      if (!isAttrWithoutArgs<AcquireCapabilityAttr, ReleaseCapabilityAttr,
+                             TryAcquireCapabilityAttr, AssertCapabilityAttr>(A))
+        continue;
+      if (!IsCapability)
+        IsCapability = checkRecordDeclForAttr<CapabilityAttr>(Record) ||
+                       checkRecordDeclForAttr<ScopedLockableAttr>(Record);
+      if (!*IsCapability)
+        Diag(A->getLocation(),
+             diag::warn_thread_attribute_not_on_capability_member)
+            << A << Record << /*IsField=*/true;
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
