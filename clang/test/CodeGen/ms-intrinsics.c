@@ -1463,6 +1463,234 @@ __int64 test_InterlockedDecrement64_nf(__int64 volatile *Addend) {
 // CHECK-ARM-ARM64: }
 #endif
 
+#if defined(__arm__) || defined(__aarch64__)
+long test_InterlockedAdd(long volatile *Addend, long Value) {
+  return _InterlockedAdd(Addend, Value);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_InterlockedAdd(ptr{{.*}}%Addend, i32{{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64: [[TMP:%[0-9]+]] = atomicrmw add ptr %Addend, i32 %Value seq_cst, align 4
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = add i32 [[TMP]], %Value
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+long test_InterlockedAdd_acq(long volatile *Addend, long Value) {
+  return _InterlockedAdd_acq(Addend, Value);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_InterlockedAdd_acq(ptr{{.*}}%Addend, i32{{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64: [[TMP:%[0-9]+]] = atomicrmw add ptr %Addend, i32 %Value acquire, align 4
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = add i32 [[TMP]], %Value
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+long test_InterlockedAdd_rel(long volatile *Addend, long Value) {
+  return _InterlockedAdd_rel(Addend, Value);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_InterlockedAdd_rel(ptr{{.*}}%Addend, i32{{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64: [[TMP:%[0-9]+]] = atomicrmw add ptr %Addend, i32 %Value release, align 4
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = add i32 [[TMP]], %Value
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+long test_InterlockedAdd_nf(long volatile *Addend, long Value) {
+  return _InterlockedAdd_nf(Addend, Value);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_InterlockedAdd_nf(ptr{{.*}}%Addend, i32{{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64: [[TMP:%[0-9]+]] = atomicrmw add ptr %Addend, i32 %Value monotonic, align 4
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = add i32 [[TMP]], %Value
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+__int64 test_InterlockedAdd64(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64(Addend, Value);
+}
+// CHECK-ARM-ARM64: define{{.*}}i64 @test_InterlockedAdd64(ptr{{.*}}%Addend, i64{{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64: [[TMP:%[0-9]+]] = atomicrmw add ptr %Addend, i64 %Value seq_cst, align 8
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = add i64 [[TMP]], %Value
+// CHECK-ARM-ARM64: ret i64 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+__int64 test_InterlockedAdd64_acq(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64_acq(Addend, Value);
+}
+// CHECK-ARM-ARM64: define{{.*}}i64 @test_InterlockedAdd64_acq(ptr{{.*}}%Addend, i64{{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64: [[TMP:%[0-9]+]] = atomicrmw add ptr %Addend, i64 %Value acquire, align 8
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = add i64 [[TMP]], %Value
+// CHECK-ARM-ARM64: ret i64 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+__int64 test_InterlockedAdd64_rel(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64_rel(Addend, Value);
+}
+// CHECK-ARM-ARM64: define{{.*}}i64 @test_InterlockedAdd64_rel(ptr{{.*}}%Addend, i64{{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64: [[TMP:%[0-9]+]] = atomicrmw add ptr %Addend, i64 %Value release, align 8
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = add i64 [[TMP]], %Value
+// CHECK-ARM-ARM64: ret i64 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+__int64 test_InterlockedAdd64_nf(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64_nf(Addend, Value);
+}
+// CHECK-ARM-ARM64: define{{.*}}i64 @test_InterlockedAdd64_nf(ptr{{.*}}%Addend, i64{{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64: [[TMP:%[0-9]+]] = atomicrmw add ptr %Addend, i64 %Value monotonic, align 8
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = add i64 [[TMP]], %Value
+// CHECK-ARM-ARM64: ret i64 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+double test_CopyDoubleFromInt64(__int64 x) {
+  return _CopyDoubleFromInt64(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}double @test_CopyDoubleFromInt64(i64{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = bitcast i64 %x to double
+// CHECK-ARM-ARM64: ret double [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+float test_CopyFloatFromInt32(__int32 x) {
+  return _CopyFloatFromInt32(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}float @test_CopyFloatFromInt32(i32{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = bitcast i32 %x to float
+// CHECK-ARM-ARM64: ret float [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+__int32 test_CopyInt32FromFloat(float x) {
+  return _CopyInt32FromFloat(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_CopyInt32FromFloat(float{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = bitcast float %x to i32
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+__int64 test_CopyInt64FromDouble(double x) {
+  return _CopyInt64FromDouble(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}i64 @test_CopyInt64FromDouble(double{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = bitcast double %x to i64
+// CHECK-ARM-ARM64: ret i64 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+unsigned int test_CountLeadingOnes(unsigned long x) {
+  return _CountLeadingOnes(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_CountLeadingOnes(i32{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM-ARM64: [[NOT:%[0-9]+]] = xor i32 %x, -1
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[NOT]], i1 false)
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+unsigned int test_CountLeadingOnes64(unsigned __int64 x) {
+  return _CountLeadingOnes64(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_CountLeadingOnes64(i64{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM-ARM64: [[NOT:%[0-9]+]] = xor i64 %x, -1
+// CHECK-ARM-ARM64: [[COUNT:%[0-9]+]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[NOT]], i1 false)
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = trunc nuw nsw i64 [[COUNT]] to i32
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+unsigned int test_CountLeadingZeros(unsigned long x) {
+  return _CountLeadingZeros(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_CountLeadingZeros(i32{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %x, i1 false)
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+unsigned int test_CountLeadingZeros64(unsigned __int64 x) {
+  return _CountLeadingZeros64(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_CountLeadingZeros64(i64{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM-ARM64: [[COUNT:%[0-9]+]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 %x, i1 false)
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = trunc nuw nsw i64 [[COUNT]] to i32
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+unsigned int test_CountOneBits(unsigned long x) {
+  return _CountOneBits(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_CountOneBits(i32{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 %x)
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+unsigned int test_CountOneBits64(unsigned __int64 x) {
+  return _CountOneBits64(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_CountOneBits64(i64{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM-ARM64: [[COUNT:%[0-9]+]] = tail call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 %x)
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = trunc nuw nsw i64 [[COUNT]] to i32
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+unsigned int test_CountTrailingZeros(unsigned long x) {
+  return _CountTrailingZeros(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_CountTrailingZeros(i32{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 %x, i1 false)
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+unsigned int test_CountTrailingZeros64(unsigned __int64 x) {
+  return _CountTrailingZeros64(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_CountTrailingZeros64(i64{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM-ARM64: [[COUNT:%[0-9]+]] = tail call range(i64 0, 65) i64 @llvm.cttz.i64(i64 %x, i1 false)
+// CHECK-ARM-ARM64: [[RESULT:%[0-9]+]] = trunc nuw nsw i64 [[COUNT]] to i32
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+unsigned int test_CountLeadingSigns(long x) {
+  return _CountLeadingSigns(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_CountLeadingSigns(i32{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM: [[RESULT:%.*]] = tail call i32 @llvm.arm.cls(i32 %x)
+// CHECK-ARM64: [[RESULT:%.*]] = tail call i32 @llvm.aarch64.cls(i32 %x)
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+unsigned int test_CountLeadingSigns64(__int64 x) {
+  return _CountLeadingSigns64(x);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_CountLeadingSigns64(i64{{[a-z_ ]*}}%x){{.*}}{
+// CHECK-ARM: [[RESULT:%.*]] = tail call i32 @llvm.arm.cls64(i64 %x)
+// CHECK-ARM64: [[RESULT:%.*]] = tail call i32 @llvm.aarch64.cls64(i64 %x)
+// CHECK-ARM-ARM64: ret i32 [[RESULT]]
+// CHECK-ARM-ARM64: }
+
+void test__prefetch(const void *p) {
+  __prefetch(p);
+}
+// CHECK-ARM-ARM64: define{{.*}}void @test__prefetch(ptr{{.*}}%p){{.*}}{
+// CHECK-ARM-ARM64: tail call void @llvm.prefetch.p0(ptr %p, i32 0, i32 3, i32 1)
+// CHECK-ARM-ARM64: ret void
+// CHECK-ARM-ARM64: }
+#endif
+
+#if defined(__arm__)
+long test_MulHigh(long a, long b) {
+  return _MulHigh(a, b);
+}
+// CHECK-ARM: define{{.*}}i32 @test_MulHigh(i32{{[a-z_ ]*}}%a, i32{{[a-z_ ]*}}%b){{.*}}{
+// CHECK-ARM: [[RESULT:%[0-9]+]] = tail call i32 @llvm.smulh.i32(i32 %a, i32 %b)
+// CHECK-ARM: ret i32 [[RESULT]]
+// CHECK-ARM: }
+
+unsigned long test_MulUnsignedHigh(unsigned long a, unsigned long b) {
+  return _MulUnsignedHigh(a, b);
+}
+// CHECK-ARM: define{{.*}}i32 @test_MulUnsignedHigh(i32{{[a-z_ ]*}}%a, i32{{[a-z_ ]*}}%b){{.*}}{
+// CHECK-ARM: [[RESULT:%[0-9]+]] = tail call i32 @llvm.umulh.i32(i32 %a, i32 %b)
+// CHECK-ARM: ret i32 [[RESULT]]
+// CHECK-ARM: }
+
+int test_ReadStatusReg(void) {
+  return _ReadStatusReg(0) + _ReadStatusReg(1);
+}
+// CHECK-ARM: define{{.*}}i32 @test_ReadStatusReg(){{.*}}{
+// CHECK-ARM-DAG: call i32 @llvm.read_register.i32(metadata [[APSR:![0-9]+]])
+// CHECK-ARM-DAG: call i32 @llvm.read_register.i32(metadata [[SPSR:![0-9]+]])
+// CHECK-ARM: }
+#endif
+
 void test__fastfail(void) {
   __fastfail(42);
 }
@@ -1474,3 +1702,6 @@ void test__fastfail(void) {
 // Attributes come last.
 
 // CHECK: attributes #[[NORETURN]] = { noreturn{{.*}} }
+
+// CHECK-ARM-DAG: [[APSR]] = !{!"apsr"}
+// CHECK-ARM-DAG: [[SPSR]] = !{!"spsr"}

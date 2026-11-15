@@ -1280,6 +1280,19 @@ mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
     return builder.createCast(loc, cir::CastKind::bool_to_int, notZero,
                               resultType);
   }
+  case MSVCIntrin::_CopyDoubleFromInt64:
+  case MSVCIntrin::_CopyFloatFromInt32:
+  case MSVCIntrin::_CopyInt32FromFloat:
+  case MSVCIntrin::_CopyInt64FromDouble:
+  case MSVCIntrin::_CountLeadingOnes:
+  case MSVCIntrin::_CountLeadingZeros:
+  case MSVCIntrin::_CountOneBits:
+  case MSVCIntrin::_CountTrailingZeros:
+  case MSVCIntrin::_InterlockedAdd:
+  case MSVCIntrin::_InterlockedAdd_acq:
+  case MSVCIntrin::_InterlockedAdd_rel:
+  case MSVCIntrin::_InterlockedAdd_nf:
+  case MSVCIntrin::__prefetch:
   case MSVCIntrin::_InterlockedAnd:
   case MSVCIntrin::_InterlockedExchange:
   case MSVCIntrin::_InterlockedExchangeAdd:

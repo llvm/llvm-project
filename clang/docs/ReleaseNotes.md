@@ -1395,6 +1395,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary
   identifier outside that context.
 
+- More MSVC intrinsics are now available on 32-bit Arm, such as
+  `_CountLeadingZeros`, `_InterlockedAdd` and `_MulHigh`.
+
 - Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
   stack pointer as it was on entry to the function, as the frame value the CRT
   stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it

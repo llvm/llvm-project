@@ -373,6 +373,43 @@ static __inline__ void __DEFAULT_FN_ATTRS __nop(void) {
 #endif
 
 /*----------------------------------------------------------------------------*\
+|* MS ARM and AArch64 specific
+\*----------------------------------------------------------------------------*/
+#if defined(__arm__) || defined(__aarch64__) || defined(__arm64ec__)
+long _InterlockedAdd(long volatile *, long);
+long _InterlockedAdd_acq(long volatile *, long);
+long _InterlockedAdd_nf(long volatile *, long);
+long _InterlockedAdd_rel(long volatile *, long);
+__int64 _InterlockedAdd64(__int64 volatile *, __int64);
+__int64 _InterlockedAdd64_acq(__int64 volatile *, __int64);
+__int64 _InterlockedAdd64_nf(__int64 volatile *, __int64);
+__int64 _InterlockedAdd64_rel(__int64 volatile *, __int64);
+
+double _CopyDoubleFromInt64(__int64);
+float _CopyFloatFromInt32(__int32);
+__int32 _CopyInt32FromFloat(float);
+__int64 _CopyInt64FromDouble(double);
+
+unsigned int _CountLeadingOnes(unsigned long);
+unsigned int _CountLeadingOnes64(unsigned __int64);
+unsigned int _CountLeadingSigns(long);
+unsigned int _CountLeadingSigns64(__int64);
+unsigned int _CountOneBits(unsigned long);
+unsigned int _CountOneBits64(unsigned __int64);
+
+void __cdecl __prefetch(const void *);
+#endif
+
+/*----------------------------------------------------------------------------*\
+|* MS ARM specific
+\*----------------------------------------------------------------------------*/
+#if defined(__arm__)
+long _MulHigh(long, long);
+unsigned long _MulUnsignedHigh(unsigned long, unsigned long);
+int _ReadStatusReg(int);
+#endif
+
+/*----------------------------------------------------------------------------*\
 |* MS AArch64 specific
 \*----------------------------------------------------------------------------*/
 #if defined(__aarch64__) || defined(__arm64ec__)
@@ -392,14 +429,6 @@ unsigned char _interlockedbittestandset_rel(long volatile *, long);
 unsigned char _interlockedbittestandset64_acq(__int64 volatile *, __int64);
 unsigned char _interlockedbittestandset64_nf(__int64 volatile *, __int64);
 unsigned char _interlockedbittestandset64_rel(__int64 volatile *, __int64);
-long _InterlockedAdd(long volatile *, long);
-long _InterlockedAdd_acq(long volatile *, long);
-long _InterlockedAdd_nf(long volatile *, long);
-long _InterlockedAdd_rel(long volatile *, long);
-__int64 _InterlockedAdd64(__int64 volatile *, __int64);
-__int64 _InterlockedAdd64_acq(__int64 volatile *, __int64);
-__int64 _InterlockedAdd64_nf(__int64 volatile *, __int64);
-__int64 _InterlockedAdd64_rel(__int64 volatile *, __int64);
 __int64 _ReadStatusReg(int);
 void _WriteStatusReg(int, __int64);
 unsigned int __sys(int, __int64);
@@ -433,25 +462,10 @@ void __incx18word(unsigned long offset);
 void __incx18dword(unsigned long offset);
 void __incx18qword(unsigned long offset);
 
-double _CopyDoubleFromInt64(__int64);
-float _CopyFloatFromInt32(__int32);
-__int32 _CopyInt32FromFloat(float);
-__int64 _CopyInt64FromDouble(double);
-
-unsigned int _CountLeadingOnes(unsigned long);
-unsigned int _CountLeadingOnes64(unsigned __int64);
-unsigned int _CountLeadingSigns(long);
-unsigned int _CountLeadingSigns64(__int64);
-unsigned int _CountOneBits(unsigned long);
-unsigned int _CountOneBits64(unsigned __int64);
-unsigned int _CountTrailingZeros(unsigned long);
-unsigned int _CountTrailingZeros64(unsigned __int64);
-
 unsigned int __hlt(unsigned int, ...);
 unsigned int __hvc(unsigned int, ...);
 unsigned int __svc(unsigned int, ...);
 
-void __cdecl __prefetch(const void *);
 void __cdecl __prefetch2(const void *, unsigned char);
 
 #endif

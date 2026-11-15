@@ -356,3 +356,36 @@ let Attributes = [NoThrow, RequireDeclaration], Header = "intrin.h", Languages =
 	def _WriteBarrier 						: ARMNoPrefixTargetLibBuiltin<"void ()">;
 }
 
+let Attributes = [NoThrow, RequireDeclaration], Header = "intrin.h", Languages = "ALL_MS_LANGUAGES" in {
+	def _MulHigh             : ARMNoPrefixTargetLibBuiltin<"msint32_t (msint32_t, msint32_t)">;
+	def _MulUnsignedHigh     : ARMNoPrefixTargetLibBuiltin<"msuint32_t (msuint32_t, msuint32_t)">;
+
+	def _CountLeadingOnes    : ARMNoPrefixTargetLibBuiltin<"unsigned int (msuint32_t)">;
+	def _CountLeadingOnes64  : ARMNoPrefixTargetLibBuiltin<"unsigned int (unsigned long long int)">;
+	def _CountLeadingSigns   : ARMNoPrefixTargetLibBuiltin<"unsigned int (signed msint32_t)">;
+	def _CountLeadingSigns64 : ARMNoPrefixTargetLibBuiltin<"unsigned int (signed long long int)">;
+	def _CountLeadingZeros   : ARMNoPrefixTargetLibBuiltin<"unsigned int (msuint32_t)">;
+	def _CountLeadingZeros64 : ARMNoPrefixTargetLibBuiltin<"unsigned int (unsigned long long int)">;
+	def _CountOneBits        : ARMNoPrefixTargetLibBuiltin<"unsigned int (msuint32_t)">;
+	def _CountOneBits64      : ARMNoPrefixTargetLibBuiltin<"unsigned int (unsigned long long int)">;
+	def _CountTrailingZeros  : ARMNoPrefixTargetLibBuiltin<"unsigned int (msuint32_t)">;
+	def _CountTrailingZeros64: ARMNoPrefixTargetLibBuiltin<"unsigned int (unsigned long long int)">;
+
+	def _CopyDoubleFromInt64 : ARMNoPrefixTargetLibBuiltin<"double (signed long long int)">;
+	def _CopyFloatFromInt32  : ARMNoPrefixTargetLibBuiltin<"float (signed int)">;
+	def _CopyInt32FromFloat  : ARMNoPrefixTargetLibBuiltin<"signed int (float)">;
+	def _CopyInt64FromDouble : ARMNoPrefixTargetLibBuiltin<"signed long long int (double)">;
+
+	def _InterlockedAdd      : ARMNoPrefixTargetLibBuiltin<"msint32_t (msint32_t volatile *, msint32_t)">;
+	def _InterlockedAdd_acq  : ARMNoPrefixTargetLibBuiltin<"msint32_t (msint32_t volatile *, msint32_t)">;
+	def _InterlockedAdd_nf   : ARMNoPrefixTargetLibBuiltin<"msint32_t (msint32_t volatile *, msint32_t)">;
+	def _InterlockedAdd_rel  : ARMNoPrefixTargetLibBuiltin<"msint32_t (msint32_t volatile *, msint32_t)">;
+	def _InterlockedAdd64    : ARMNoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
+	def _InterlockedAdd64_acq: ARMNoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
+	def _InterlockedAdd64_nf : ARMNoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
+	def _InterlockedAdd64_rel: ARMNoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int)">;
+
+	def _ReadStatusReg       : ARMNoPrefixTargetLibBuiltin<"int (int)">;
+	def __prefetch           : ARMNoPrefixTargetLibBuiltin<"void (void const *)">;
+}
+
