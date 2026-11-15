@@ -485,13 +485,13 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                        vpabsw	%ymm0, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vpabsw	(%rax), %ymm2
 # CHECK-NEXT:  1      2     0.50                        vpackssdw	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpackssdw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      9     0.50    *                   vpackssdw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     0.50                        vpacksswb	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpacksswb	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      9     0.50    *                   vpacksswb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     0.50                        vpackusdw	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpackusdw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      9     0.50    *                   vpackusdw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     0.50                        vpackuswb	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpackuswb	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      9     0.50    *                   vpackuswb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.25                        vpaddb	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vpaddb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.25                        vpaddd	%ymm0, %ymm1, %ymm2

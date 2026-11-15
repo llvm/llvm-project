@@ -457,6 +457,10 @@ defm : BWWriteResPair<WriteVarShuffle, [BWPort5], 1, [1], 1, 5>; // Vector varia
 defm : BWWriteResPair<WriteVarShuffleX,[BWPort5], 1, [1], 1, 5>; // Vector variable shuffles.
 defm : BWWriteResPair<WriteVarShuffleY,[BWPort5], 1, [1], 1, 6>; // Vector variable shuffles (YMM/ZMM).
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
+defm : BWWriteResPair<WritePack,   [BWPort5], 3, [2], 2, 4>;
+defm : BWWriteResPair<WritePackX,  [BWPort5], 1, [1], 1, 5>;
+defm : BWWriteResPair<WritePackY,  [BWPort5], 1, [1], 1, 6>;
+defm : X86WriteResPairUnsupported<WritePackZ>;
 defm : BWWriteResPair<WriteBlend,  [BWPort5], 1, [1], 1, 5>; // Vector blends.
 defm : BWWriteResPair<WriteBlendY, [BWPort5], 1, [1], 1, 6>; // Vector blends (YMM/ZMM).
 defm : X86WriteResPairUnsupported<WriteBlendZ>;
@@ -782,15 +786,6 @@ def BWWriteResGroup28 : SchedWriteRes<[BWPort5]> {
 def: InstRW<[BWWriteResGroup28], (instrs VPBROADCASTBrr,
                                          VPBROADCASTWrr)>;
 
-def BWWriteResGroup33 : SchedWriteRes<[BWPort5]> {
-  let Latency = 3;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [2];
-}
-def: InstRW<[BWWriteResGroup33], (instrs MMX_PACKSSDWrr,
-                                         MMX_PACKSSWBrr,
-                                         MMX_PACKUSWBrr)>;
-
 def BWWriteResGroup34 : SchedWriteRes<[BWPort6,BWPort0156]> {
   let Latency = 3;
   let NumMicroOps = 3;
@@ -1040,15 +1035,6 @@ def BWWriteResGroup77 : SchedWriteRes<[BWPort23,BWPort015]> {
   let ReleaseAtCycles = [1,1];
 }
 def: InstRW<[BWWriteResGroup77], (instrs VPBLENDDYrmi)>;
-
-def BWWriteResGroup79 : SchedWriteRes<[BWPort5,BWPort23]> {
-  let Latency = 7;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [2,1];
-}
-def: InstRW<[BWWriteResGroup79], (instrs MMX_PACKSSDWrm,
-                                         MMX_PACKSSWBrm,
-                                         MMX_PACKUSWBrm)>;
 
 def BWWriteResGroup80 : SchedWriteRes<[BWPort23,BWPort0156]> {
   let Latency = 7;

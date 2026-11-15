@@ -397,6 +397,10 @@ defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort0,SKXPort5], 1, [1,1], 2, 5>; /
 defm : SKXWriteResPair<WriteVarShuffleX, [SKXPort5], 1, [1], 1, 6>;
 defm : SKXWriteResPair<WriteVarShuffleY, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVarShuffleZ, [SKXPort5], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WritePack,  [SKXPort5], 2, [2], 2, 5>; // Vector packs.
+defm : SKXWriteResPair<WritePackX, [SKXPort5], 1, [1], 1, 6>;
+defm : SKXWriteResPair<WritePackY, [SKXPort5], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WritePackZ, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteBlend, [SKXPort5], 1, [1], 1, 6>; // Vector blends.
 defm : SKXWriteResPair<WriteBlendY,[SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteBlendZ,[SKXPort5], 1, [1], 1, 7>;
@@ -877,15 +881,6 @@ def SKXWriteResGroup38 : SchedWriteRes<[SKXPort5,SKXPort01]> {
 }
 def: InstRW<[SKXWriteResGroup38], (instregex "(V?)PH(ADD|SUB)SW(Y?)rr")>;
 
-def SKXWriteResGroup41 : SchedWriteRes<[SKXPort5]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [2];
-}
-def: InstRW<[SKXWriteResGroup41], (instrs MMX_PACKSSDWrr,
-                                          MMX_PACKSSWBrr,
-                                          MMX_PACKUSWBrr)>;
-
 def SKXWriteResGroup42 : SchedWriteRes<[SKXPort6,SKXPort0156]> {
   let Latency = 3;
   let NumMicroOps = 3;
@@ -1357,15 +1352,6 @@ def: InstRW<[SKXWriteResGroup95, ReadAfterVecXLd],
                                              "(V?)PSUB(B|D|Q|W)rm",
                                              "VPTERNLOGDZ128rm(b?)i",
                                              "VPTERNLOGQZ128rm(b?)i")>;
-
-def SKXWriteResGroup96 : SchedWriteRes<[SKXPort5,SKXPort23]> {
-  let Latency = 7;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [2,1];
-}
-def: InstRW<[SKXWriteResGroup96], (instrs MMX_PACKSSDWrm,
-                                          MMX_PACKSSWBrm,
-                                          MMX_PACKUSWBrm)>;
 
 def SKXWriteResGroup97 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let Latency = 7;

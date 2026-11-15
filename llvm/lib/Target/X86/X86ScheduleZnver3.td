@@ -1120,6 +1120,10 @@ defm : Zn3WriteResXMMPair<WriteVarShuffle, [Zn3FPVShuf01], 1, [1], 1>;  // Vecto
 defm : Zn3WriteResXMMPair<WriteVarShuffleX, [Zn3FPVShuf01], 1, [1], 1>; // Vector variable shuffles (XMM).
 defm : Zn3WriteResYMMPair<WriteVarShuffleY, [Zn3FPVShuf01], 1, [1], 1>; // Vector variable shuffles (YMM).
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>; // Vector variable shuffles (ZMM).
+defm : Zn3WriteResXMMPair<WritePack, [Zn3FPVShuf01], 1, [1], 1>;
+defm : Zn3WriteResXMMPair<WritePackX, [Zn3FPVShuf01], 1, [1], 1>;
+defm : Zn3WriteResYMMPair<WritePackY, [Zn3FPVShuf01], 1, [1], 1>;
+defm : X86WriteResPairUnsupported<WritePackZ>;
 defm : Zn3WriteResXMMPair<WriteBlend, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends.
 defm : Zn3WriteResYMMPair<WriteBlendY, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
 defm : X86WriteResPairUnsupported<WriteBlendZ>; // Vector blends (ZMM).

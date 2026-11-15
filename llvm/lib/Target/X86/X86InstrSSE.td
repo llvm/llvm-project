@@ -3882,47 +3882,46 @@ multiclass sse4_pack<bits<8> opc, string OpcodeStr, ValueType OutVT,
 
 let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
   defm VPACKSSWB : sse2_pack<0x63, "vpacksswb", v16i8, v8i16, X86Packss, VR128,
-                             i128mem, SchedWriteShuffle.XMM, load, 0>,
+                             i128mem, SchedWritePack.XMM, load, 0>,
                              VEX, VVVV, WIG;
   defm VPACKSSDW : sse2_pack<0x6B, "vpackssdw", v8i16, v4i32, X86Packss, VR128,
-                             i128mem, SchedWriteShuffle.XMM, load, 0>,
+                             i128mem, SchedWritePack.XMM, load, 0>,
                              VEX, VVVV, WIG;
 
   defm VPACKUSWB : sse2_pack<0x67, "vpackuswb", v16i8, v8i16, X86Packus, VR128,
-                             i128mem, SchedWriteShuffle.XMM, load, 0>,
+                             i128mem, SchedWritePack.XMM, load, 0>,
                              VEX, VVVV, WIG;
   defm VPACKUSDW : sse4_pack<0x2B, "vpackusdw", v8i16, v4i32, X86Packus, VR128,
-                             i128mem, SchedWriteShuffle.XMM, load, 0>,
+                             i128mem, SchedWritePack.XMM, load, 0>,
                              VEX, VVVV, WIG;
 }
 
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
   defm VPACKSSWBY : sse2_pack<0x63, "vpacksswb", v32i8, v16i16, X86Packss, VR256,
-                              i256mem, SchedWriteShuffle.YMM, load, 0>,
+                              i256mem, SchedWritePack.YMM, load, 0>,
                               VEX, VVVV, VEX_L, WIG;
   defm VPACKSSDWY : sse2_pack<0x6B, "vpackssdw", v16i16, v8i32, X86Packss, VR256,
-                              i256mem, SchedWriteShuffle.YMM, load, 0>,
+                              i256mem, SchedWritePack.YMM, load, 0>,
                               VEX, VVVV, VEX_L, WIG;
 
   defm VPACKUSWBY : sse2_pack<0x67, "vpackuswb", v32i8, v16i16, X86Packus, VR256,
-                              i256mem, SchedWriteShuffle.YMM, load, 0>,
+                              i256mem, SchedWritePack.YMM, load, 0>,
                               VEX, VVVV, VEX_L, WIG;
   defm VPACKUSDWY : sse4_pack<0x2B, "vpackusdw", v16i16, v8i32, X86Packus, VR256,
-                              i256mem, SchedWriteShuffle.YMM, load, 0>,
+                              i256mem, SchedWritePack.YMM, load, 0>,
                               VEX, VVVV, VEX_L, WIG;
 }
 
 let Constraints = "$src1 = $dst" in {
   defm PACKSSWB : sse2_pack<0x63, "packsswb", v16i8, v8i16, X86Packss, VR128,
-                            i128mem, SchedWriteShuffle.XMM, memop>;
+                            i128mem, SchedWritePack.XMM, memop>;
   defm PACKSSDW : sse2_pack<0x6B, "packssdw", v8i16, v4i32, X86Packss, VR128,
-                            i128mem, SchedWriteShuffle.XMM, memop>;
+                            i128mem, SchedWritePack.XMM, memop>;
 
   defm PACKUSWB : sse2_pack<0x67, "packuswb", v16i8, v8i16, X86Packus, VR128,
-                            i128mem, SchedWriteShuffle.XMM, memop>;
-
+                            i128mem, SchedWritePack.XMM, memop>;
   defm PACKUSDW : sse4_pack<0x2B, "packusdw", v8i16, v4i32, X86Packus, VR128,
-                            i128mem, SchedWriteShuffle.XMM, memop>;
+                            i128mem, SchedWritePack.XMM, memop>;
 }
 } // ExeDomain = SSEPackedInt
 

@@ -175,7 +175,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  4      4     2.00                        mpsadbw	$1, %xmm0, %xmm2
 # CHECK-NEXT:  6      11    2.00    *                   mpsadbw	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      2     0.50                        packusdw	%xmm0, %xmm2
-# CHECK-NEXT:  1      8     0.50    *                   packusdw	(%rax), %xmm2
+# CHECK-NEXT:  1      9     0.50    *                   packusdw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        pblendvb	%xmm0, %xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   pblendvb	%xmm0, (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.25                        pblendw	$11, %xmm0, %xmm2
