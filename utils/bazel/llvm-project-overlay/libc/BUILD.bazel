@@ -722,6 +722,12 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_types_stack_t",
+    hdrs = ["include/llvm-libc-types/stack_t.h"],
+    deps = [":llvm_libc_types_size_t"],
+)
+
+libc_support_library(
     name = "llvm_libc_types_struct_sigaction",
     hdrs = ["include/llvm-libc-types/struct_sigaction.h"],
     deps = [
@@ -1351,6 +1357,15 @@ libc_support_library(
     hdrs = ["hdr/types/siginfo_t.h"],
     deps = select({
         ":full_build": [":llvm_libc_types_siginfo_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "types_stack_t",
+    hdrs = ["hdr/types/stack_t.h"],
+    deps = select({
+        ":full_build": [":llvm_libc_types_stack_t"],
         "//conditions:default": [],
     }),
 )
@@ -3357,6 +3372,22 @@ libc_support_library(
         ":types_socklen_t",
         ":types_ssize_t",
         ":types_struct_sockaddr",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_sigaltstack",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sigaltstack.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_stack_t",
     ],
 )
 
@@ -19138,6 +19169,26 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":types_struct_sigaction",
+    ],
+)
+
+libc_function(
+    name = "sigaltstack",
+    srcs = ["src/signal/linux/sigaltstack.cpp"],
+    hdrs = ["src/signal/sigaltstack.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sigaltstack",
+        ":errno",
+        ":hdr_errno_macros",
+        ":hdr_signal_macros",
+        ":types_stack_t",
     ],
 )
 
