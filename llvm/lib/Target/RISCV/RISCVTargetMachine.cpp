@@ -49,9 +49,9 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   static opt::RegisterLibraryOptions<RISCVOptions> O;
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
-  initializeRISCVO0PreLegalizerCombinerPass(*PR);
-  initializeRISCVPreLegalizerCombinerPass(*PR);
-  initializeRISCVPostLegalizerCombinerPass(*PR);
+  initializeRISCVO0PreLegalizerCombinerLegacyPass(*PR);
+  initializeRISCVPreLegalizerCombinerLegacyPass(*PR);
+  initializeRISCVPostLegalizerCombinerLegacyPass(*PR);
   initializeMachineKCFILegacyPass(*PR);
   initializeRISCVDeadRegisterDefinitionsLegacyPass(*PR);
   initializeRISCVLateBranchOptLegacyPass(*PR);
@@ -127,16 +127,19 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
 
 const RISCVSubtarget *
 RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
+  // Avoid rebuilding the subtarget key for repeated queries with the same
+  // function attributes.
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  if (LastSubtarget.first && LastSubtarget.second == FnAttrs)
+    return LastSubtarget.first;
+
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute TuneAttr = F.getFnAttribute("tune-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
-  std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
-  std::string TuneCPU =
-      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
-  std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+  StringRef CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString() : TargetCPU;
+  StringRef TuneCPU = TuneAttr.isValid() ? TuneAttr.getValueAsString() : CPU;
+  StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
 
   unsigned RVVBitsMin = CLOpts.v_vector_bits_min.value_or(-1);
   unsigned RVVBitsMax = CLOpts.v_vector_bits_max.value_or(0);
@@ -186,7 +189,8 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
     I = std::make_unique<RISCVSubtarget>(
         TargetTriple, CPU, TuneCPU, FS, ABIName, RVVBitsMin, RVVBitsMax, *this);
   }
-  return I.get();
+  LastSubtarget = {I.get(), FnAttrs};
+  return LastSubtarget.first;
 }
 
 MachineFunctionInfo *RISCVTargetMachine::createMachineFunctionInfo(
@@ -459,9 +463,9 @@ bool RISCVPassConfig::addIRTranslator() {
 
 void RISCVPassConfig::addPreLegalizeMachineIR() {
   if (getOptLevel() == CodeGenOptLevel::None) {
-    addPass(createRISCVO0PreLegalizerCombiner());
+    addPass(createRISCVO0PreLegalizerCombinerLegacyPass());
   } else {
-    addPass(createRISCVPreLegalizerCombiner());
+    addPass(createRISCVPreLegalizerCombinerLegacyPass());
   }
 }
 
@@ -472,7 +476,7 @@ bool RISCVPassConfig::addLegalizeMachineIR() {
 
 void RISCVPassConfig::addPreRegBankSelect() {
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createRISCVPostLegalizerCombiner());
+    addPass(createRISCVPostLegalizerCombinerLegacyPass());
 }
 
 bool RISCVPassConfig::addRegBankSelect() {

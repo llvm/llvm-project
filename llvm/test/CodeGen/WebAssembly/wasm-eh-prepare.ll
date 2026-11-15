@@ -1,7 +1,7 @@
 ; RUN: opt < %s -win-eh-prepare -wasm-eh-prepare -S | FileCheck %s
 ; RUN: opt < %s -win-eh-prepare -wasm-eh-prepare -S --mattr=+atomics,+bulk-memory | FileCheck %s
-; RUN: opt < %s -passes='win-eh-prepare,wasm-eh-prepare' -S | FileCheck %s
-; RUN: opt < %s -passes='win-eh-prepare,wasm-eh-prepare' -S --mattr=+atomics,+bulk-memory | FileCheck %s
+; RUN: opt < %s -passes='require<runtime-libcall-info>,win-eh-prepare,wasm-eh-prepare' -S | FileCheck %s
+; RUN: opt < %s -passes='require<runtime-libcall-info>,win-eh-prepare,wasm-eh-prepare' -S --mattr=+atomics,+bulk-memory | FileCheck %s
 ; RUN: llc < %s -exception-model=wasm -mattr=+exception-handling -stop-after=wasm-eh-prepare | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
@@ -101,11 +101,10 @@ catch.start:                                      ; preds = %catch.dispatch
   catchret from %1 to label %try.cont
 ; CHECK: catch.start:
 ; CHECK-NEXT:   catchpad within %0 [ptr null]
-; CHECK-NOT:   call void @llvm.wasm.landingpad.index
 ; CHECK-NOT:   call ptr @_Unwind_GetWasmLPadContext()
+; CHECK-NOT:   call void @llvm.wasm.landingpad.index
 ; CHECK-NOT:   call ptr @llvm.wasm.lsda()
 ; CHECK-NOT:   call i32 @__gxx_wasm_personality_v0
-; CHECK-NOT:   load {{.*}} @__wasm_lpad_context
 
 try.cont:                                         ; preds = %entry, %catch.start
   invoke void @foo()

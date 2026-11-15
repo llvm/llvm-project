@@ -85,9 +85,27 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.strings.strcasecmp
     libc.src.strings.strncasecmp
 
+    # stdlib.h entrypoints
+    libc.src.stdlib.abs
+    libc.src.stdlib.div
+    libc.src.stdlib.labs
+    libc.src.stdlib.ldiv
+    libc.src.stdlib.llabs
+    libc.src.stdlib.lldiv
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
+  # math.h entrypoints
+  libc.src.math.logbf
+  # complex.h entrypoints
+  libc.src.complex.cabs
+  libc.src.complex.cabsf
+  libc.src.complex.creal
+  libc.src.complex.crealf
+  libc.src.complex.cimag
+  libc.src.complex.cimagf
+  libc.src.complex.conj
+  libc.src.complex.conjf
 )
 
 if(LIBC_TYPES_HAS_FLOAT16)

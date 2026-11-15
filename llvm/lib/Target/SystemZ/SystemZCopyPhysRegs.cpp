@@ -13,51 +13,50 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SystemZ.h"
 #include "SystemZTargetMachine.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
 
 namespace {
 
-class SystemZCopyPhysRegs : public MachineFunctionPass {
+class SystemZCopyPhysRegsLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  SystemZCopyPhysRegs() : MachineFunctionPass(ID), TII(nullptr), MRI(nullptr) {}
+  SystemZCopyPhysRegsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-private:
-
-  bool visitMBB(MachineBasicBlock &MBB);
-
-  const SystemZInstrInfo *TII;
-  MachineRegisterInfo *MRI;
 };
 
-char SystemZCopyPhysRegs::ID = 0;
+char SystemZCopyPhysRegsLegacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(SystemZCopyPhysRegs, "systemz-copy-physregs",
+INITIALIZE_PASS(SystemZCopyPhysRegsLegacy, "systemz-copy-physregs",
                 "SystemZ Copy Physregs", false, false)
 
-FunctionPass *llvm::createSystemZCopyPhysRegsPass(SystemZTargetMachine &TM) {
-  return new SystemZCopyPhysRegs();
+FunctionPass *
+llvm::createSystemZCopyPhysRegsLegacyPass(SystemZTargetMachine &TM) {
+  return new SystemZCopyPhysRegsLegacy();
 }
 
-void SystemZCopyPhysRegs::getAnalysisUsage(AnalysisUsage &AU) const {
+void SystemZCopyPhysRegsLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool SystemZCopyPhysRegs::visitMBB(MachineBasicBlock &MBB) {
+static bool visitMBB(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
+                     const TargetInstrInfo *TII) {
   bool Modified = false;
 
   // Certain special registers can only be copied from a subset of the
@@ -98,14 +97,26 @@ bool SystemZCopyPhysRegs::visitMBB(MachineBasicBlock &MBB) {
   return Modified;
 }
 
-bool SystemZCopyPhysRegs::runOnMachineFunction(MachineFunction &F) {
-  TII = F.getSubtarget<SystemZSubtarget>().getInstrInfo();
-  MRI = &F.getRegInfo();
+static bool runCopyPhysRegsOnMF(MachineFunction &F) {
+  const TargetInstrInfo *TII =
+      F.getSubtarget<SystemZSubtarget>().getInstrInfo();
+  MachineRegisterInfo *MRI = &F.getRegInfo();
 
   bool Modified = false;
   for (auto &MBB : F)
-    Modified |= visitMBB(MBB);
+    Modified |= visitMBB(MBB, MRI, TII);
 
   return Modified;
 }
 
+bool SystemZCopyPhysRegsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runCopyPhysRegsOnMF(MF);
+}
+
+PreservedAnalyses
+SystemZCopyPhysRegsPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  return runCopyPhysRegsOnMF(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                       .preserveSet<CFGAnalyses>()
+                                 : PreservedAnalyses::all();
+}

@@ -135,7 +135,7 @@ void NilArgChecker::warnIfNilExpr(const Expr *E,
 
   // If it's known to be null.
   if (!NonNull && Null) {
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       generateBugReport(N, Msg, E->getSourceRange(), E, C);
       return;
     }
@@ -167,7 +167,7 @@ void NilArgChecker::warnIfNilArg(CheckerContext &C,
   // an unwanted state split if two or more non-fatal errors are thrown
   // within the same checker callback. For now we don't want to, but
   // it'll need to be fixed if we ever want to.
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     SmallString<128> sbuf;
     llvm::raw_svector_ostream os(sbuf);
 
@@ -559,7 +559,7 @@ void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
   std::tie(stateNonNull, stateNull) = state->assume(*DefArgVal);
 
   if (!stateNonNull) {
-    ExplodedNode *N = C.generateErrorNode(stateNull);
+    ExplodedNode *N = C.addSink(stateNull);
     if (!N)
       return;
 

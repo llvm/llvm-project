@@ -654,13 +654,13 @@ HandleSignalMode GetHandleSignalMode(int signum) {
 // Offset example:
 // XNU 17 -- macOS 10.13 -- iOS 11 -- tvOS 11 -- watchOS 4
 constexpr u16 GetOSMajorKernelOffset() {
-  if (TARGET_OS_OSX)
+  if (SANITIZER_OSX)
     return 4;
-  if (TARGET_OS_IOS || TARGET_OS_TV)
+  if (SANITIZER_IPHONEOS || SANITIZER_TVOS)
     return 6;
-  if (TARGET_OS_WATCH)
+  if (SANITIZER_WATCHOS)
     return 13;
-  if (TARGET_OS_VISION)
+  if (SANITIZER_VISIONOS)
     return 22;
 }
 
@@ -679,7 +679,7 @@ static uptr ApproximateOSVersionViaKernelVersion(VersStr vers) {
   } else if (kernel_major >= 25) {
     // with kernel_major 25 <=> OSes 26.0, OS versions are aligned
     os_major = kernel_major + 1;
-  } else if (TARGET_OS_OSX) {
+  } else if (SANITIZER_OSX) {
     if (os_major >= 16) {  // macOS 11+
       os_major -= 5;
     } else {  // macOS 10.15 and below
@@ -733,7 +733,7 @@ void ParseVersion(const char *vers, u16 *major, u16 *minor) {
 // Aligned versions example:
 // macOS 10.15 -- iOS 13 -- tvOS 13 -- watchOS 6
 static void MapToMacos(u16 *major, u16 *minor) {
-  if (TARGET_OS_OSX)
+  if (SANITIZER_OSX)
     return;
 
   // All supported platforms (including DriverKit) have
@@ -741,7 +741,7 @@ static void MapToMacos(u16 *major, u16 *minor) {
   if (*major >= 27)
     return;
 
-#  if TARGET_OS_DRIVERKIT
+#  if SANITIZER_DRIVERKIT
   // Driverkit 25.0+ aligns with macOS 26+
   if (*major >= 25) {
     *major += 1;
@@ -754,11 +754,11 @@ static void MapToMacos(u16 *major, u16 *minor) {
 #  endif
 
   // Below are mappings for pre-macOS-25-aligned releases
-  if (TARGET_OS_IOS || TARGET_OS_TV)
+  if (SANITIZER_IPHONEOS || SANITIZER_TVOS)
     *major += 2;
-  else if (TARGET_OS_WATCH)
+  else if (SANITIZER_WATCHOS)
     *major += 9;
-  else if (TARGET_OS_VISION)
+  else if (SANITIZER_VISIONOS)
     *major += 18;
   else
     UNREACHABLE("unsupported platform");

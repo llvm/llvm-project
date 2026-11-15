@@ -108,24 +108,26 @@ define <4 x i32> @load_v4i8_v4i32(ptr %p) {
 define <4 x i32> @load_v4i12_v4i32(ptr %p) {
 ; CHECK-LABEL: load_v4i12_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr w9, [x0, #8]
-; CHECK-NEXT:    lsr x10, x8, #60
-; CHECK-NEXT:    ubfx x11, x8, #48, #12
-; CHECK-NEXT:    ubfx w12, w9, #8, #12
-; CHECK-NEXT:    orr w10, w10, w9, lsl #4
-; CHECK-NEXT:    fmov s0, w11
-; CHECK-NEXT:    and w11, w8, #0xfff
-; CHECK-NEXT:    fmov s1, w11
-; CHECK-NEXT:    lsr x9, x9, #20
-; CHECK-NEXT:    and w10, w10, #0xfff
-; CHECK-NEXT:    mov v0.h[1], w10
+; CHECK-NEXT:    ldur w8, [x0, #6]
+; CHECK-NEXT:    ldr w12, [x0]
+; CHECK-NEXT:    ldrh w11, [x0, #10]
+; CHECK-NEXT:    ldrh w13, [x0, #4]
+; CHECK-NEXT:    and w9, w8, #0xfff
 ; CHECK-NEXT:    ubfx w10, w8, #12, #12
+; CHECK-NEXT:    orr x8, x8, x11, lsl #32
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    and w9, w12, #0xfff
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    ubfx x8, x8, #24, #12
+; CHECK-NEXT:    orr x9, x12, x13, lsl #32
+; CHECK-NEXT:    mov v0.h[1], w10
+; CHECK-NEXT:    ubfx w10, w12, #12, #12
 ; CHECK-NEXT:    mov v1.h[1], w10
-; CHECK-NEXT:    ubfx x10, x8, #24, #12
-; CHECK-NEXT:    ubfx x8, x8, #36, #12
-; CHECK-NEXT:    mov v0.h[2], w12
-; CHECK-NEXT:    mov v1.h[2], w10
+; CHECK-NEXT:    mov v0.h[2], w8
+; CHECK-NEXT:    ubfx x8, x9, #24, #12
+; CHECK-NEXT:    ubfx w9, w11, #4, #12
+; CHECK-NEXT:    mov v1.h[2], w8
+; CHECK-NEXT:    ubfx w8, w13, #4, #12
 ; CHECK-NEXT:    mov v0.h[3], w9
 ; CHECK-NEXT:    mov v1.h[3], w8
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #3

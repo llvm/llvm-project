@@ -13,3 +13,24 @@ cir.func @bad_type_arg() attributes {a = #cir.annotation<"x", [!s32i]>} {
 
 // expected-error @below {{annotation args must be StringAttr or IntegerAttr}}
 cir.global external @g = #cir.int<0> : !s32i [#cir.annotation<"x", [#cir.int<1> : !s32i]>]
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @annotation_with_args(%arg0: !s32i) -> !s32i {
+  // expected-error @below {{annotation must not have arguments}}
+  %0 = cir.annotation %arg0 [#cir.annotation<"x", ["s"]>] : !s32i
+  cir.return %0 : !s32i
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+cir.func @ptr_annotation_type_mismatch(%arg0: !cir.ptr<!s32i>) {
+  // expected-error @below {{all of {addr, result} have same type}}
+  %0 = "cir.ptr_annotation"(%arg0) {annotation = #cir.annotation<"x">} : (!cir.ptr<!s32i>) -> !cir.ptr<!s64i>
+  cir.return
+}

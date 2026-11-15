@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 
@@ -59,6 +60,80 @@ TEST(MLIRParser, ParseAtEnd) {
   // Check the we parse at the end.
   EXPECT_EQ(block.front().getName().getStringRef(), "test.first");
   EXPECT_EQ(block.back().getName().getStringRef(), "test.second");
+}
+
+TEST(MLIRParser, ParseUnterminatedString) {
+  // The source text ends inside a token and is followed in memory by bytes
+  // that are not part of it; a lexer that reads past the end of the StringRef
+  // lexes `i32garbage` instead of `i32`.
+  StringRef text = R"mlir("test.first"() : () -> i32)mlir";
+  std::string storage = (text + "garbage").str();
+  StringRef source(storage.data(), text.size());
+
+  MLIRContext context;
+  context.allowUnregisteredDialects();
+  Block block;
+
+  LogicalResult parse = parseSourceString(source, &block, &context);
+  EXPECT_TRUE(succeeded(parse));
+  ASSERT_EQ(block.getOperations().size(), 1u);
+  EXPECT_EQ(block.front().getName().getStringRef(), "test.first");
+  ASSERT_EQ(block.front().getNumResults(), 1u);
+  EXPECT_TRUE(block.front().getResult(0).getType().isInteger(32));
+}
+
+/// The outcome of parsing a source string: whether the parse succeeded, the
+/// diagnostics it emitted, and the operations it produced.
+static std::string parseOutcome(StringRef source) {
+  MLIRContext context;
+  context.allowUnregisteredDialects();
+  std::string outcome;
+  llvm::raw_string_ostream os(outcome);
+  ScopedDiagnosticHandler handler(&context, [&](Diagnostic &diag) {
+    os << diag.getLocation() << ": " << diag << "\n";
+  });
+  Block block;
+  os << (succeeded(parseSourceString(source, &block, &context)) ? "success"
+                                                                : "failure")
+     << "\n";
+  for (Operation &op : block)
+    os << op << "\n";
+  return outcome;
+}
+
+TEST(MLIRParser, ParseTokenAtUnterminatedEnd) {
+  // Each source ends inside a token and is followed in memory by bytes that
+  // could continue that token. Parsing it must not look past the end of the
+  // StringRef: the outcome must equal the outcome for the same text alone.
+  StringRef locAlias = "\"test.op\"() : () -> () loc(#l)\n#l = ";
+  std::string sources[][2] = {
+      // A bare identifier.
+      {"foo", "bar }"},
+      // A keyword.
+      {"\"test.op\"() : () -> index", "x }"},
+      // A symbol reference.
+      {(locAlias + "@s").str(), "ym }"},
+      // A value name.
+      {"%x", "y }"},
+      // A type alias.
+      {"\"test.op\"() : () -> !t", "y }"},
+      // An integer.
+      {(locAlias + "4").str(), "2 }"},
+      // A float with an exponent.
+      {(locAlias + "1.5e3").str(), "7 }"},
+      // A hexadecimal integer.
+      {(locAlias + "0x1F").str(), "F }"},
+      // A string literal ending in an escape.
+      {(locAlias + "\"ab\\").str(), "\"\" }"},
+      // A line comment.
+      {"\"test.op\"() : () -> ()\n// comment", "\n}"},
+  };
+  for (auto &[text, following] : sources) {
+    std::string storage = text + following;
+    StringRef unterminated(storage.data(), text.size());
+    EXPECT_EQ(parseOutcome(unterminated), parseOutcome(text))
+        << "source: " << text;
+  }
 }
 
 TEST(MLIRParser, ParseAttr) {

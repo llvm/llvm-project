@@ -52,7 +52,6 @@ add_entrypoint_object(
     libc.src.__support.math.atan2f
 )
 
-
 add_entrypoint_object(
   cproj
   SRCS

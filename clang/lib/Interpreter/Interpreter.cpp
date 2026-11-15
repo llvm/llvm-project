@@ -680,7 +680,12 @@ Interpreter::Parse(llvm::StringRef Code) {
     if (auto E = DeviceTU.takeError())
       return std::move(E);
 
-    DeviceParser->RegisterPTU(*DeviceTU);
+    PartialTranslationUnit &DevicePTU = DeviceParser->RegisterPTU(*DeviceTU);
+
+    // Under -emit-llvm, print the device module IR before it is lowered.
+    if (DevicePTU.TheModule &&
+        DeviceCI->getFrontendOpts().ProgramAction == frontend::EmitLLVM)
+      DevicePTU.TheModule->print(llvm::outs(), /*AAW=*/nullptr);
 
     llvm::Error Err = DeviceParser->GenerateOffloadBinary();
     if (Err)

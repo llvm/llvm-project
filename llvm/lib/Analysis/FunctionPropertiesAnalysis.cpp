@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -21,8 +22,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include <deque>
 
 using namespace llvm;
@@ -38,27 +37,6 @@ using namespace llvm;
   STATISTIC(Num##Name##PreOptimization, Description " (before "                \
                                                     "optimizations)");
 #include "llvm/IR/FunctionProperties.def"
-
-namespace llvm {
-LLVM_ABI cl::opt<bool> EnableDetailedFunctionProperties(
-    "enable-detailed-function-properties", cl::Hidden, cl::init(false),
-    cl::desc("Whether or not to compute detailed function properties."));
-
-static cl::opt<unsigned> BigBasicBlockInstructionThreshold(
-    "big-basic-block-instruction-threshold", cl::Hidden, cl::init(500),
-    cl::desc("The minimum number of instructions a basic block should contain "
-             "before being considered big."));
-
-static cl::opt<unsigned> MediumBasicBlockInstructionThreshold(
-    "medium-basic-block-instruction-threshold", cl::Hidden, cl::init(15),
-    cl::desc("The minimum number of instructions a basic block should contain "
-             "before being considered medium-sized."));
-} // namespace llvm
-
-static cl::opt<unsigned> CallWithManyArgumentsThreshold(
-    "call-with-many-arguments-threshold", cl::Hidden, cl::init(4),
-    cl::desc("The minimum number of arguments a function call must have before "
-             "it is considered having many arguments."));
 
 namespace {
 int64_t getNumBlocksFromCond(const BasicBlock &BB) {
@@ -100,7 +78,8 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
   }
   TotalInstructionCount += Direction * BB.size();
 
-  if (EnableDetailedFunctionProperties) {
+  if (DetailedOpts) {
+    const AnalysisOptions &Opts = *DetailedOpts;
     unsigned SuccessorCount = succ_size(&BB);
     if (SuccessorCount == 1)
       BasicBlocksWithSingleSuccessor += Direction;
@@ -116,9 +95,10 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     else if (BB.hasNPredecessorsOrMore(3))
       BasicBlocksWithMoreThanTwoPredecessors += Direction;
 
-    if (TotalInstructionCount > BigBasicBlockInstructionThreshold)
+    if (TotalInstructionCount > Opts.big_basic_block_instruction_threshold)
       BigBasicBlocks += Direction;
-    else if (TotalInstructionCount > MediumBasicBlockInstructionThreshold)
+    else if (TotalInstructionCount >
+             Opts.medium_basic_block_instruction_threshold)
       MediumBasicBlocks += Direction;
     else
       SmallBasicBlocks += Direction;
@@ -185,7 +165,7 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
             CallReturnsVectorPointerCount += Direction;
         }
 
-        if (Call->arg_size() > CallWithManyArgumentsThreshold)
+        if (Call->arg_size() > Opts.call_with_many_arguments_threshold)
           CallWithManyArgumentsCount += Direction;
 
         for (const auto &Arg : Call->args()) {
@@ -276,6 +256,9 @@ FunctionPropertiesInfo FunctionPropertiesInfo::getFunctionPropertiesInfo(
     const ir2vec::Vocabulary *Vocabulary) {
 
   FunctionPropertiesInfo FPI;
+  const AnalysisOptions &Opts = getAnalysisOptions(F);
+  if (Opts.enable_detailed_function_properties)
+    FPI.DetailedOpts = &Opts;
   if (Vocabulary && Vocabulary->isValid()) {
     FPI.IR2VecVocab = Vocabulary;
     FPI.FunctionEmbedding = ir2vec::Embedding(Vocabulary->getDimension(), 0.0);
@@ -352,7 +335,7 @@ void FunctionPropertiesInfo::print(raw_ostream &OS) const {
 #define FUNCTION_PROPERTY(Name, Description) OS << #Name ": " << Name << "\n";
 
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  if (EnableDetailedFunctionProperties) {                                      \
+  if (DetailedOpts) {                                                          \
     OS << #Name ": " << Name << "\n";                                          \
   }
 

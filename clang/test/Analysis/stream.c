@@ -233,7 +233,7 @@ void f_leak(int c) {
   if (!p)
     return;
   if(c)
-    return; // expected-warning {{Opened stream never closed. Potential resource leak}}
+    return; // expected-warning {{Opened stream never closed; potential resource leak}}
   fclose(p);
 }
 
@@ -345,7 +345,7 @@ void check_leak_noreturn_1(void) {
     handle_error(); // no warning
   }
   rewind(F1);
-} // expected-warning {{Opened stream never closed. Potential resource leak}}
+} // expected-warning {{Opened stream never closed; potential resource leak}}
 
 // Check that "location uniqueing" works.
 // This results in reporting only one occurence of resource leak for a stream.
@@ -357,7 +357,7 @@ void check_leak_noreturn_2(void) {
     return; // no warning
   }
   rewind(F1);
-} // expected-warning {{Opened stream never closed. Potential resource leak}}
+} // expected-warning {{Opened stream never closed; potential resource leak}}
 // FIXME: This warning should be placed at the `return` above.
 // See https://reviews.llvm.org/D83120 about details.
 
@@ -552,3 +552,22 @@ void test_invalidate_at_non_system_call() {
   do_something();
   clang_analyzer_eval(old_stdin == stdin); // expected-warning{{UNKNOWN}}
 }
+
+void myfclose(FILE *F);
+void SymbolEscapedThroughFunctionCall(void) {
+  FILE *F = fopen("myfile.txt", "w");
+  myfclose(F); // no-warning
+}
+
+void passConstPointer(const FILE * F);
+void testPassConstPointer(void) {
+  FILE *F = fopen("myfile.txt", "w");
+  passConstPointer(F);
+  return; // expected-warning {{Opened stream never closed; potential resource leak}}
+}
+
+void testPassToSystemHeaderFunctionIndirectly(void) {
+  FileStruct fs;
+  fs.p = fopen("myfile.txt", "w");
+  fakeSystemHeaderCallFS(&fs); // invalidates fs, making fs.p unreachable
+}  // no-warning

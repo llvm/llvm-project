@@ -97,4 +97,16 @@ LIBC_ALWAYS_INLINE constexpr bool expects_bool_condition<bool>(bool value) {
 #define LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 #endif
 
+// Helper macros to compare math implementation namespace tokens in #if
+// directives (e.g. when LIBC_MATH_<FUNC>_IMPL is overridden via -D).
+#define LIBC_MATH_IMPL_ID_double_eval 1
+#define LIBC_MATH_IMPL_ID_float_eval 2
+#define LIBC_MATH_IMPL_ID_float_eval_cr_rn 3
+#define LIBC_MATH_IMPL_ID_integer_eval 4
+#define LIBC_MATH_IMPL_CONCAT_INNER(a, b) a##b
+#define LIBC_MATH_IMPL_CONCAT(a, b) LIBC_MATH_IMPL_CONCAT_INNER(a, b)
+#define LIBC_MATH_IMPL_IS(impl, target)                                        \
+  (LIBC_MATH_IMPL_CONCAT(LIBC_MATH_IMPL_ID_, impl) ==                          \
+   LIBC_MATH_IMPL_CONCAT(LIBC_MATH_IMPL_ID_, target))
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H

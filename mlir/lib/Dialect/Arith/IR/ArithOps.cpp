@@ -1087,6 +1087,17 @@ OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
   return overflowOrDiv ? Attribute() : result;
 }
 
+Speculation::Speculatability FloorDivSIOp::getSpeculatability() {
+  // Division by zero is UB.
+  // Signed division overflow (INT_MIN / -1) is also UB.
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
 //===----------------------------------------------------------------------===//
 // RemUIOp
 //===----------------------------------------------------------------------===//
@@ -2769,6 +2780,7 @@ OpFoldResult arith::CmpFOp::fold(FoldAdaptor adaptor) {
   return BoolAttr::get(getContext(), val);
 }
 
+namespace {
 class CmpFIntToFPConst final : public OpRewritePattern<CmpFOp> {
 public:
   using Base::Base;
@@ -3084,6 +3096,7 @@ public:
     return success();
   }
 };
+} // namespace
 
 void arith::CmpFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
@@ -3094,6 +3107,7 @@ void arith::CmpFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 // SelectOp
 //===----------------------------------------------------------------------===//
 
+namespace {
 //  select %arg, %c1, %c0 => extui %arg
 struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
   using Base::Base;
@@ -3127,6 +3141,7 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
     return failure();
   }
 };
+} // namespace
 
 void arith::SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {

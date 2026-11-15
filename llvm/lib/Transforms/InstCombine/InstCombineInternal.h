@@ -561,6 +561,11 @@ public:
   Value *SimplifySelectsFeedingBinaryOp(BinaryOperator &I, Value *LHS,
                                         Value *RHS);
 
+  /// Given that \p CondVal is known to be \p CondIsTrue, try to simplify
+  /// \p SI to one of its arms.
+  Value *simplifyNestedSelectsUsingImpliedCond(SelectInst &SI, Value *CondVal,
+                                               bool CondIsTrue);
+
   // If `I` has operand `(ctpop (not x))`, fold `I` with `(sub nuw nsw
   // BitWidth(x), (ctpop x))`.
   Instruction *tryFoldInstWithCtpopWithNot(Instruction *I);

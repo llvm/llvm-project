@@ -50,10 +50,12 @@ class Error;
 /// It is intentionally a short name to make qualified usage concise.
 namespace cl {
 
+class LibraryOptions;
 class LibraryOptionsContext;
 
 //===----------------------------------------------------------------------===//
-// Command line option processing entry point.
+// Command line option processing entry point. It does not recognize library
+// options; parseCommandLineOptions below does.
 //
 // Returns true on success. Otherwise, this will print the error message to
 // stderr and exit if \p Errs is not set (nullptr by default), or print the
@@ -72,14 +74,28 @@ LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
                                       vfs::FileSystem *VFS = nullptr,
                                       const char *EnvVar = nullptr);
 
-// Like ParseCommandLineOptions, but sets per-context libraries' options in
-// Context instead of their global().
+// Like ParseCommandLineOptions, but also recognizes library options, the
+// options declared in TableGen, and sets them in Context.
 LLVM_ABI bool parseCommandLineOptions(LibraryOptionsContext &Context,
                                       ArrayRef<const char *> Args,
                                       StringRef Overview = "",
                                       raw_ostream *Errs = nullptr,
                                       vfs::FileSystem *VFS = nullptr,
                                       const char *EnvVar = nullptr);
+
+// Like the above, but also accepts the options of ToolOptions, libraries that a
+// tool opts in to rather than registering with addLibraryOptions. Context (for
+// assign) and the parser (until its next parse or ResetCommandLineParser) keep
+// pointers to them.
+LLVM_ABI bool parseCommandLineOptions(
+    LibraryOptionsContext &Context,
+    ArrayRef<const LibraryOptions *> ToolOptions, ArrayRef<const char *> Args,
+    StringRef Overview = "", raw_ostream *Errs = nullptr,
+    vfs::FileSystem *VFS = nullptr, const char *EnvVar = nullptr);
+
+// The library options that LLVMParseCommandLineOptions sets, which contexts
+// created through the C API start with.
+LLVM_ABI LibraryOptionsContext &getCAPILibraryOptions();
 
 // Function pointer type for printing version information.
 using VersionPrinterTy = std::function<void(raw_ostream &)>;
@@ -2191,10 +2207,10 @@ public:
   /// \p Consumed to the number of arguments it spans. The strings in \p Args
   /// and the memory from \p Alloc remain valid as long as \p Opts is used.
   virtual Error parse(void *Opts, ArrayRef<const char *> Args,
-                      unsigned &Consumed, BumpPtrAllocator &Alloc) = 0;
+                      unsigned &Consumed, BumpPtrAllocator &Alloc) const = 0;
 
   /// Returns the values that ParseCommandLineOptions sets.
-  virtual void *global() = 0;
+  virtual void *global() const = 0;
 
   /// Returns the default values.
   virtual const void *getDefault() const = 0;
@@ -2203,24 +2219,17 @@ public:
   virtual void *copyDefault(BumpPtrAllocator &Alloc) const = 0;
 
   /// Restores the default values.
-  virtual void reset() = 0;
-
-  /// Whether every reader of the options goes through a context's
-  /// LibraryOptionsContext, so that they need not be set in global().
-  bool isPerContext() const { return PerContext; }
+  virtual void reset() const = 0;
 
 protected:
-  explicit LibraryOptions(bool PerContext = false) : PerContext(PerContext) {}
+  constexpr LibraryOptions() = default;
   // Registrations are static and never destroyed through this class.
   ~LibraryOptions() = default;
-
-private:
-  bool PerContext;
 };
 
 /// Makes ParseCommandLineOptions recognize \p L's options. A name that is also
 /// a cl::opt or belongs to another library is a fatal error.
-LLVM_ABI void addLibraryOptions(LibraryOptions &L);
+LLVM_ABI void addLibraryOptions(const LibraryOptions &L);
 
 } // end namespace cl
 

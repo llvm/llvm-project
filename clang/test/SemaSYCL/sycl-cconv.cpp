@@ -6,7 +6,7 @@
 
 __inline __cdecl int printf(char const* const _Format, ...) { return 0; }
 
-// FIXME: that should be diagnosed.
+// expected-warning@+1 {{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
 [[clang::sycl_external]] int foo(int, ...) { return 0; }
 
 __inline __cdecl int moo() { return 0; }

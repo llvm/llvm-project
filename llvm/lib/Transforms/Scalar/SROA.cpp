@@ -288,7 +288,8 @@ private:
   bool propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS);
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runOnAlloca(AllocaInst &AI);
   void clobberUse(Use &U);
-  bool deleteDeadInstructions(SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
+  bool deleteDeadInstructions(AllocaInst *AI,
+                              SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
   bool promoteAllocas();
 };
 
@@ -642,7 +643,6 @@ public:
   iterator end() { return Slices.end(); }
 
   using const_iterator = SmallVectorImpl<Slice>::const_iterator;
-  using const_range = iterator_range<const_iterator>;
 
   const_iterator begin() const { return Slices.begin(); }
   const_iterator end() const { return Slices.end(); }
@@ -1879,7 +1879,15 @@ std::optional<RewriteableMemOps>
 SROA::isSafeSelectToSpeculateOrPredicate(SelectInst &SI, bool PreserveCFG) {
   RewriteableMemOps Ops;
 
+  SmallVector<User *> Users;
   for (User *U : SI.users()) {
+    if (isa<AddrSpaceCastInst>(U))
+      append_range(Users, U->users());
+    else
+      Users.push_back(U);
+  }
+
+  for (User *U : Users) {
     if (auto *Store = dyn_cast<StoreInst>(U)) {
       // We don't care about atomicity of stores as they're always predicated.
       if (Store->isVolatile() || PreserveCFG)
@@ -1932,6 +1940,12 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
 
   IRB.SetInsertPoint(&LI);
 
+  // Casts may separate the load from the select.
+  TV = IRB.CreateAddrSpaceCast(TV, LI.getPointerOperandType(),
+                               LI.getName() + ".sroa.speculate.cast.true");
+  FV = IRB.CreateAddrSpaceCast(FV, LI.getPointerOperandType(),
+                               LI.getName() + ".sroa.speculate.cast.false");
+
   LoadInst *TL =
       IRB.CreateAlignedLoad(LI.getType(), TV, LI.getAlign(),
                             LI.getName() + ".sroa.speculate.load.true");
@@ -1959,7 +1973,7 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
 
 template <typename T>
 static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
-                                 SelectHandSpeculativity Spec,
+                                 SelectHandSpeculativity Spec, IRBuilderTy &IRB,
                                  DomTreeUpdater &DTU) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) && "Only for load and store!");
   LLVM_DEBUG(dbgs() << "    original mem op: " << I << "\n");
@@ -2000,6 +2014,12 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
     }
     CondMemOp.insertBefore(NewMemOpBB->getTerminator()->getIterator());
     Value *Ptr = SI.getOperand(1 + SuccIdx);
+    // Casts may separate the memory operation from the select. Keep the
+    // original access pointer type, e.g. its address space.
+    IRB.SetInsertPoint(&CondMemOp);
+    Ptr = IRB.CreateAddrSpaceCast(Ptr, I.getPointerOperandType(),
+                                  I.getName() + (IsThen ? ".then" : ".else") +
+                                      ".cast");
     CondMemOp.setOperand(I.getPointerOperandIndex(), Ptr);
     if (isa<LoadInst>(I)) {
       CondMemOp.setName(I.getName() + (IsThen ? ".then" : ".else") + ".val");
@@ -2015,12 +2035,12 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
 }
 
 static void rewriteMemOpOfSelect(SelectInst &SelInst, Instruction &I,
-                                 SelectHandSpeculativity Spec,
+                                 SelectHandSpeculativity Spec, IRBuilderTy &IRB,
                                  DomTreeUpdater &DTU) {
   if (auto *LI = dyn_cast<LoadInst>(&I))
-    rewriteMemOpOfSelect(SelInst, *LI, Spec, DTU);
+    rewriteMemOpOfSelect(SelInst, *LI, Spec, IRB, DTU);
   else if (auto *SI = dyn_cast<StoreInst>(&I))
-    rewriteMemOpOfSelect(SelInst, *SI, Spec, DTU);
+    rewriteMemOpOfSelect(SelInst, *SI, Spec, IRB, DTU);
   else
     llvm_unreachable_internal("Only for load and store.");
 }
@@ -2045,14 +2065,14 @@ static bool rewriteSelectInstMemOps(SelectInst &SI,
       speculateSelectInstLoads(SI, cast<LoadInst>(*I), IRB);
     } else {
       assert(DTU && "Should not get here when not allowed to modify the CFG!");
-      rewriteMemOpOfSelect(SI, *I, Spec, *DTU);
+      rewriteMemOpOfSelect(SI, *I, Spec, IRB, *DTU);
       CFGChanged = true;
     }
     I->eraseFromParent();
   }
 
   for (User *U : make_early_inc_range(SI.users()))
-    cast<BitCastInst>(U)->eraseFromParent();
+    cast<AddrSpaceCastInst>(U)->eraseFromParent();
   SI.eraseFromParent();
   return CFGChanged;
 }
@@ -3444,9 +3464,10 @@ private:
     // Strip any SROA suffixes as well.
     OldName = OldName.substr(0, OldName.find(".sroa_"));
 
-    return getAdjustedPtr(IRB, DL, &NewAI,
-                          APInt(DL.getIndexTypeSizeInBits(PointerTy), Offset),
-                          PointerTy, Twine(OldName) + ".");
+    return getAdjustedPtr(
+        IRB, DL, &NewAI,
+        APInt(DL.getIndexTypeSizeInBits(NewAI.getType()), Offset), PointerTy,
+        Twine(OldName) + ".");
   }
 
   /// Compute suitable alignment to access this slice of the *new*
@@ -5337,6 +5358,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // From here on, we can't fail and will be building new accesses, so rig up
   // an IR builder.
   IRBuilderTy IRB(&AI);
+  IRB.disableGEPCanonicalization();
 
   // Collect the new slices which we will merge into the alloca slices.
   SmallVector<Slice, 4> NewSlices;
@@ -5505,10 +5527,10 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         assert(OtherAI != &AI && "We can't re-split our own alloca!");
         ResplitPromotableAllocas.insert(OtherAI);
         Worklist.insert(OtherAI);
-      } else if (AllocaInst *OtherAI = dyn_cast<AllocaInst>(
+      } else if (AllocaInst *StrippedAI = dyn_cast<AllocaInst>(
                      LoadBasePtr->stripInBoundsOffsets())) {
-        assert(OtherAI != &AI && "We can't re-split our own alloca!");
-        Worklist.insert(OtherAI);
+        assert(StrippedAI != &AI && "We can't re-split our own alloca!");
+        Worklist.insert(StrippedAI);
       }
     }
 
@@ -6395,7 +6417,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
 
   // Special case dead allocas, as they're trivial.
   if (AI.use_empty()) {
-    AI.eraseFromParent();
+    DeadInsts.push_back(&AI);
     Changed = true;
     return {Changed, CFGChanged};
   }
@@ -6409,6 +6431,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
   // First, split any FCA loads and stores touching this alloca to promote
   // better splitting and promotion opportunities.
   IRBuilderTy IRB(&AI);
+  IRB.disableGEPCanonicalization();
   AggLoadStoreRewriter AggRewriter(DL, IRB);
   Changed |= AggRewriter.rewrite(AI);
 
@@ -6480,7 +6503,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
 /// We also record the alloca instructions deleted here so that they aren't
 /// subsequently handed to mem2reg to promote.
 bool SROA::deleteDeadInstructions(
-    SmallPtrSetImpl<AllocaInst *> &DeletedAllocas) {
+    AllocaInst *AI, SmallPtrSetImpl<AllocaInst *> &DeletedAllocas) {
   bool Changed = false;
   while (!DeadInsts.empty()) {
     Instruction *I = dyn_cast_or_null<Instruction>(DeadInsts.pop_back_val());
@@ -6512,6 +6535,17 @@ bool SROA::deleteDeadInstructions(
     I->eraseFromParent();
     Changed = true;
   }
+
+  if (!DeletedAllocas.contains(AI) && AI->hasNUndroppableUses(0)) {
+    DeletedAllocas.insert(AI);
+    AI->dropDroppableUses();
+    for (DbgVariableRecord *OldDII : findDVRDeclares(AI))
+      OldDII->eraseFromParent();
+    ++NumDeleted;
+    AI->eraseFromParent();
+    Changed = true;
+  }
+
   return Changed;
 }
 /// Promote the allocas, using the best available technique.
@@ -6559,12 +6593,12 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
 
   do {
     while (!Worklist.empty()) {
-      auto [IterationChanged, IterationCFGChanged] =
-          runOnAlloca(*Worklist.pop_back_val());
+      AllocaInst *AI = Worklist.pop_back_val();
+      auto [IterationChanged, IterationCFGChanged] = runOnAlloca(*AI);
       Changed |= IterationChanged;
       CFGChanged |= IterationCFGChanged;
 
-      Changed |= deleteDeadInstructions(DeletedAllocas);
+      Changed |= deleteDeadInstructions(AI, DeletedAllocas);
 
       // Remove the deleted allocas from various lists so that we don't try to
       // continue processing them.

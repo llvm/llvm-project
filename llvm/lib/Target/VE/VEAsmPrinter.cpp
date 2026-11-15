@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "VEAsmPrinter.h"
 #include "MCTargetDesc/VEInstPrinter.h"
 #include "MCTargetDesc/VEMCAsmInfo.h"
 #include "MCTargetDesc/VETargetStreamer.h"
@@ -18,6 +19,7 @@
 #include "VE.h"
 #include "VEInstrInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
@@ -422,4 +424,33 @@ INITIALIZE_PASS(VEAsmPrinter, "ve-asm-printer", "VE Assembly Printer", false,
 // Force static initialization.
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEAsmPrinter() {
   RegisterAsmPrinter<VEAsmPrinter> X(getTheVETarget());
+}
+
+PreservedAnalyses VEAsmPrinterBeginPass::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
+  VEAsmPrinter &AsmPrinter = static_cast<VEAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses VEAsmPrinterPass::run(MachineFunction &MF,
+                                        MachineFunctionAnalysisManager &MFAM) {
+  VEAsmPrinter &AsmPrinter = static_cast<VEAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses VEAsmPrinterEndPass::run(Module &M,
+                                           ModuleAnalysisManager &MAM) {
+  VEAsmPrinter &AsmPrinter = static_cast<VEAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

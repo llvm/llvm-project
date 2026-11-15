@@ -140,7 +140,7 @@ template <typename Config> static void testBasic() {
   EXPECT_NE(P, nullptr);
   memset(P, 'A', Size);
   EXPECT_GE(Info.Allocator->getBlockSize(P), Size);
-  Info.Allocator->deallocate(Info.Options, P);
+  Info.Allocator->deallocate(Info.Options, P, false);
 
   // If the Secondary can't cache that pointer, it will be unmapped.
   if (!Info.Allocator->canCache(Size)) {
@@ -150,7 +150,7 @@ template <typename Config> static void testBasic() {
           // code.
           for (int i = 0; i < 10; ++i) {
             P = Info.Allocator->allocate(Info.Options, Size);
-            Info.Allocator->deallocate(Info.Options, P);
+            Info.Allocator->deallocate(Info.Options, P, false);
             memset(P, 'A', Size);
           }
         },
@@ -163,14 +163,14 @@ template <typename Config> static void testBasic() {
   void *AlignedP = reinterpret_cast<void *>(
       scudo::roundUp(reinterpret_cast<scudo::uptr>(P), Align));
   memset(AlignedP, 'A', Size);
-  Info.Allocator->deallocate(Info.Options, P);
+  Info.Allocator->deallocate(Info.Options, P, false);
 
   std::vector<void *> V;
   for (scudo::uptr I = 0; I < 32U; I++)
     V.push_back(Info.Allocator->allocate(Info.Options, Size));
   std::shuffle(V.begin(), V.end(), std::mt19937(std::random_device()()));
   while (!V.empty()) {
-    Info.Allocator->deallocate(Info.Options, V.back());
+    Info.Allocator->deallocate(Info.Options, V.back(), false);
     V.pop_back();
   }
 }
@@ -207,7 +207,7 @@ template <typename Config> static void testMteCacheRemapping() {
       scudo::LargeBlock::getHeader<ConfigWrapper>(P1)->CommitBase;
 
   // Free P1 to cache it
-  Info.Allocator->deallocate(Info.Options, P1);
+  Info.Allocator->deallocate(Info.Options, P1, false);
 
   // 2. Reuse cached block for smaller allocation (52KB) -> Shift Forwards
   void *P2 = Info.Allocator->allocate(Info.Options, SmallSize, PageSize);
@@ -234,7 +234,7 @@ template <typename Config> static void testMteCacheRemapping() {
   }
 
   // Free P2 to cache it again (now cached with P2's smaller layout)
-  Info.Allocator->deallocate(Info.Options, P2);
+  Info.Allocator->deallocate(Info.Options, P2, false);
 
   // 3. Reuse cached block for larger allocation (64KB) -> Shift Backwards
   void *P3 = Info.Allocator->allocate(Info.Options, LargeSize, PageSize);
@@ -260,7 +260,7 @@ template <typename Config> static void testMteCacheRemapping() {
     EXPECT_EQ(*reinterpret_cast<volatile char *>(OldHeaderPageB), 'Y');
   }
 
-  Info.Allocator->deallocate(Info.Options, P3);
+  Info.Allocator->deallocate(Info.Options, P3, false);
 }
 
 TEST(ScudoSecondaryTest, MteCacheRemapping) {
@@ -291,7 +291,7 @@ template <typename Config> void testAllocatorCombinations() {
         void *AlignedP = reinterpret_cast<void *>(
             scudo::roundUp(reinterpret_cast<scudo::uptr>(P), Align));
         memset(AlignedP, 0xff, UserSize);
-        Info.Allocator->deallocate(Info.Options, P);
+        Info.Allocator->deallocate(Info.Options, P, false);
       }
     }
   }
@@ -318,7 +318,7 @@ template <typename Config> void testAllocatorIterate() {
   Info.Allocator->iterateOverBlocks(Lambda);
   Info.Allocator->enable();
   while (!V.empty()) {
-    Info.Allocator->deallocate(Info.Options, V.back());
+    Info.Allocator->deallocate(Info.Options, V.back(), false);
     V.pop_back();
   }
 }
@@ -344,14 +344,14 @@ template <typename Config> static void testHeaderCorruption() {
   // The fields that decide what gets cached or unmapped, and where the block
   // ends, are verified before they are used.
   H->CommitBase -= PageSize;
-  SCUDO_EXPECT_DEATH(Info.Allocator->deallocate(Info.Options, P),
+  SCUDO_EXPECT_DEATH(Info.Allocator->deallocate(Info.Options, P, false),
                      "corrupted secondary header");
   SCUDO_EXPECT_DEATH(Info.Allocator->getBlockSize(P),
                      "corrupted secondary header");
   H->CommitBase += PageSize;
 
   H->CommitSize += PageSize;
-  SCUDO_EXPECT_DEATH(Info.Allocator->deallocate(Info.Options, P),
+  SCUDO_EXPECT_DEATH(Info.Allocator->deallocate(Info.Options, P, false),
                      "corrupted secondary header");
   SCUDO_EXPECT_DEATH(Info.Allocator->getBlockSize(P),
                      "corrupted secondary header");
@@ -359,20 +359,20 @@ template <typename Config> static void testHeaderCorruption() {
 
   scudo::LargeBlock::Header Saved = *H;
   H->MemMap = HQ->MemMap;
-  SCUDO_EXPECT_DEATH(Info.Allocator->deallocate(Info.Options, P),
+  SCUDO_EXPECT_DEATH(Info.Allocator->deallocate(Info.Options, P, false),
                      "corrupted secondary header");
   *H = Saved;
 
   // A valid header is only valid at its own address.
   Saved = *HQ;
   *HQ = *H;
-  SCUDO_EXPECT_DEATH(Info.Allocator->deallocate(Info.Options, Q),
+  SCUDO_EXPECT_DEATH(Info.Allocator->deallocate(Info.Options, Q, false),
                      "corrupted secondary header");
   *HQ = Saved;
 
   EXPECT_GE(Info.Allocator->getBlockSize(P), Size);
-  Info.Allocator->deallocate(Info.Options, Q);
-  Info.Allocator->deallocate(Info.Options, P);
+  Info.Allocator->deallocate(Info.Options, Q, false);
+  Info.Allocator->deallocate(Info.Options, P, false);
 }
 
 TEST(ScudoSecondaryDeathTest, HeaderCorruption) {
@@ -391,7 +391,7 @@ template <typename Config> static void testHeaderCacheReuse() {
   ASSERT_NE(P, nullptr);
   const scudo::uptr CommitBase =
       scudo::LargeBlock::getHeader<ConfigWrapper>(P)->CommitBase;
-  Info.Allocator->deallocate(Info.Options, P);
+  Info.Allocator->deallocate(Info.Options, P, false);
 
   // Q reuses the block, with its header further into it.
   void *Q = Info.Allocator->allocate(Info.Options, SmallSize);
@@ -401,7 +401,7 @@ template <typename Config> static void testHeaderCacheReuse() {
   EXPECT_EQ(HQ->CommitBase, CommitBase);
   EXPECT_GT(reinterpret_cast<scudo::uptr>(Q), reinterpret_cast<scudo::uptr>(P));
   EXPECT_GE(Info.Allocator->getBlockSize(Q), SmallSize);
-  Info.Allocator->deallocate(Info.Options, Q);
+  Info.Allocator->deallocate(Info.Options, Q, false);
 
   // R reuses it again with its header back where the one of P was, which puts
   // the header of Q in the user data of R: its checksum was cleared.
@@ -409,7 +409,7 @@ template <typename Config> static void testHeaderCacheReuse() {
   ASSERT_EQ(R, P);
   EXPECT_GE(Info.Allocator->getBlockSize(R), Size);
   EXPECT_EQ(HQ->Checksum, 0U);
-  Info.Allocator->deallocate(Info.Options, R);
+  Info.Allocator->deallocate(Info.Options, R, false);
 }
 
 TEST(ScudoSecondaryTest, HeaderCacheReuse) {
@@ -440,12 +440,12 @@ template <typename Config> void testAllocatorWithReleaseThreadsRace() {
             Info.Options,
             (static_cast<scudo::uptr>(std::rand()) % 16U) * PageSize);
         if (Deallocate)
-          Info.Allocator->deallocate(Info.Options, P);
+          Info.Allocator->deallocate(Info.Options, P, false);
         else
           V.push_back(P);
       }
       while (!V.empty()) {
-        Info.Allocator->deallocate(Info.Options, V.back());
+        Info.Allocator->deallocate(Info.Options, V.back(), false);
         V.pop_back();
       }
     });
@@ -484,7 +484,7 @@ void testGetMappedSize(scudo::uptr Size, scudo::uptr *mapped,
   EXPECT_GE(Stats[scudo::StatMapped], *mapped);
   *mapped = Stats[scudo::StatMapped] - *mapped;
 
-  Info.Allocator->deallocate(Info.Options, Ptr);
+  Info.Allocator->deallocate(Info.Options, Ptr, false);
 
   // Cache is disabled therefore every deallocation is guaranteed to bypass the
   // cache and increment UncacheableUnmaps.
@@ -576,13 +576,13 @@ template <class Config> struct CacheInfoType {
       MemMaps.emplace_back(allocate(Size));
       auto &MemMap = MemMaps[I];
       Cache->store(Options, MemMap.getBase(), MemMap.getCapacity(),
-                   MemMap.getBase(), MemMap);
+                   MemMap.getBase(), MemMap, false);
     }
   }
 
   void storeMemMap(scudo::MemMapT &MemMap) {
     Cache->store(Options, MemMap.getBase(), MemMap.getCapacity(),
-                 MemMap.getBase(), MemMap);
+                 MemMap.getBase(), MemMap, false);
   }
 };
 
@@ -614,7 +614,7 @@ TEST(ScudoSecondaryTest, AllocatorCachePartialChunkHeuristicRetrievalTest) {
   scudo::CachedBlock Entry;
   scudo::MemMapT MemMap = Info.allocate(PageSize + FragmentedPages * PageSize);
   Info.Cache->store(Info.Options, MemMap.getBase(), MemMap.getCapacity(),
-                    MemMap.getBase(), MemMap);
+                    MemMap.getBase(), MemMap, false);
 
   // FragmentedPages > MaxAllowedFragmentedPages so PageSize
   // cannot be retrieved from the cache
@@ -992,4 +992,53 @@ TEST(ScudoSecondaryTest, ReleaseIntervalGreaterThanCurrentTime) {
   Str.clear();
   Info.Cache->getStats(&Str);
   EXPECT_NE(strstr(Str.data(), "ReleaseToOsSkips: 2,"), nullptr);
+}
+
+TEST(ScudoSecondaryTest, AllocatorCacheZeroed) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  scudo::uptr EntryHeaderPos;
+  scudo::CachedBlock Entry;
+
+  scudo::MemMapT MemMap = Info.allocate(PageSize);
+  Info.MemMaps.push_back(MemMap);
+
+  // Store with Zeroed = true
+  Info.Cache->store(Info.Options, MemMap.getBase(), MemMap.getCapacity(),
+                    MemMap.getBase(), MemMap, true);
+
+  Entry = Info.Cache->retrieve(0, PageSize, PageSize, 0, EntryHeaderPos);
+  EXPECT_TRUE(Entry.isValid());
+  EXPECT_TRUE(Entry.Zero);
+
+  scudo::MemMapT MemMap2 = Info.allocate(PageSize);
+  Info.MemMaps.push_back(MemMap2);
+
+  // Store with Zeroed = false
+  Info.Cache->store(Info.Options, MemMap2.getBase(), MemMap2.getCapacity(),
+                    MemMap2.getBase(), MemMap2, false);
+
+  Entry = Info.Cache->retrieve(0, PageSize, PageSize, 0, EntryHeaderPos);
+  EXPECT_TRUE(Entry.isValid());
+  EXPECT_FALSE(Entry.Zero);
+}
+
+TEST(ScudoSecondaryTest, AllocatorCacheReleaseOlderThanClearsZero) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+
+  scudo::MemMapT MemMap = Info.allocate(PageSize);
+  Info.MemMaps.push_back(MemMap);
+
+  Info.Cache->store(Info.Options, MemMap.getBase(), MemMap.getCapacity(),
+                    MemMap.getBase(), MemMap, true);
+
+  Info.Cache->releaseOlderThanTestOnly(UINT64_MAX);
+
+  scudo::uptr EntryHeaderPos;
+  scudo::CachedBlock Entry =
+      Info.Cache->retrieve(0, PageSize, PageSize, 0, EntryHeaderPos);
+  EXPECT_TRUE(Entry.isValid());
+  EXPECT_FALSE(Entry.Zero);
 }

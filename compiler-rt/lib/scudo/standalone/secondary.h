@@ -129,6 +129,7 @@ struct CachedBlock {
   u64 Time = 0;
   u16 Next = 0;
   u16 Prev = 0;
+  bool Zero = false;
 
   enum CacheFlags : u16 {
     None = 0,
@@ -152,7 +153,7 @@ public:
   }
   void store(UNUSED Options Options, UNUSED uptr CommitBase,
              UNUSED uptr CommitSize, UNUSED uptr BlockBegin,
-             UNUSED MemMapT MemMap) {
+             UNUSED MemMapT MemMap, UNUSED bool Zero) {
     // This should never be called since canCache always returns false.
     UNREACHABLE(
         "It is not valid to call store on MapAllocatorNoCache objects.");
@@ -325,7 +326,7 @@ public:
   }
 
   void store(const Options &Options, uptr CommitBase, uptr CommitSize,
-             uptr BlockBegin, MemMapT MemMap) EXCLUDES(Mutex) {
+             uptr BlockBegin, MemMapT MemMap, bool Zero) EXCLUDES(Mutex) {
     DCHECK(canCache(CommitSize));
 
     const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
@@ -337,12 +338,14 @@ public:
     Entry.BlockBegin = BlockBegin;
     Entry.MemMap = MemMap;
     Entry.Time = UINT64_MAX;
+    Entry.Zero = Zero;
     Entry.Flags = CachedBlock::None;
 
     bool MemoryTaggingEnabled = useMemoryTagging<Config>(Options);
     if (MemoryTaggingEnabled) {
-      if (Interval == 0 && !SCUDO_FUCHSIA) {
+      if ((Interval == 0 || Zero) && !SCUDO_FUCHSIA) {
         Entry.Time = 0;
+        Entry.Zero = true;
         Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase,
                                              Entry.CommitSize);
       }
@@ -403,6 +406,8 @@ public:
         remove(Entry);
       }
 
+      if (Zero && !useMemoryTagging<Config>(Options))
+        memset(reinterpret_cast<void *>(Entry.CommitBase), 0, Entry.CommitSize);
       insert(Entry);
       trimResidentBytes(atomic_load_relaxed(&MaxCacheResidentBytes));
     } while (0);
@@ -612,7 +617,9 @@ public:
         Quarantine[I].invalidate();
       }
     }
-    QuarantinePos = -1U;
+    // Reset to 0 (matching initial state) rather than UINT32_MAX so that
+    // (QuarantinePos + 1) in store() does not overflow u32.
+    QuarantinePos = 0;
   }
 
   void disable() NO_THREAD_SAFETY_ANALYSIS { Mutex.lock(); }
@@ -710,6 +717,7 @@ private:
         Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase,
                                              Entry.CommitSize);
         Entry.Time = 0;
+        Entry.Zero = false;
       }
     }
 
@@ -728,6 +736,7 @@ private:
                                             Entry->CommitSize);
       CurrentResidentBytes -= Entry->CommitSize;
       Entry->Time = 0;
+      Entry->Zero = false;
     }
     OldestPresentEntry = nullptr;
   }
@@ -776,7 +785,7 @@ public:
                  uptr *BlockEnd = nullptr,
                  FillContentsMode FillContents = NoFill);
 
-  void deallocate(const Options &Options, void *Ptr);
+  void deallocate(const Options &Options, void *Ptr, bool Zero);
 
   void *tryAllocateFromCache(const Options &Options, uptr Size, uptr Alignment,
                              uptr *BlockEndPtr, FillContentsMode FillContents);
@@ -883,7 +892,6 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
 
   LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(
       LargeBlock::addHeaderTag<Config>(EntryHeaderPos));
-  bool Zeroed = Entry.Time == 0;
 
   if (UNLIKELY(Entry.Flags & CachedBlock::NoAccess)) {
     // NOTE: Flags set to 0 actually restores read-write.
@@ -952,7 +960,7 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
     HInt = untagPointer(HInt);
   const uptr PtrInt = HInt + LargeBlock::getHeaderSize();
   void *Ptr = reinterpret_cast<void *>(PtrInt);
-  if (FillContents && !Zeroed)
+  if (FillContents && !Entry.Zero)
     memset(Ptr, FillContents == ZeroFill ? 0 : PatternFillByte,
            BlockEnd - PtrInt);
   {
@@ -1083,8 +1091,8 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
 }
 
 template <typename Config>
-void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr)
-    EXCLUDES(Mutex) {
+void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr,
+                                      bool Zero) EXCLUDES(Mutex) {
   // Only the verified copy of the header is used from here on: the header
   // itself is in memory the user can write to.
   LargeBlock::Header Header;
@@ -1105,7 +1113,7 @@ void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr)
     // leaves this one in the user data of the new block: clear its checksum.
     H->Checksum = 0;
     Cache.store(Options, Header.CommitBase, CommitSize,
-                reinterpret_cast<uptr>(H + 1), Header.MemMap);
+                reinterpret_cast<uptr>(H + 1), Header.MemMap, Zero);
   } else {
     // Note that the `Header.MemMap` is a copy of the one stored on the pages
     // managed by itself, so that any operation along with unmap() won't touch

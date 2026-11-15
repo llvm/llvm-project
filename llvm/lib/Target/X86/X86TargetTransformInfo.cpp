@@ -69,38 +69,6 @@ using namespace llvm;
 //
 //===----------------------------------------------------------------------===//
 
-// Helper struct to store/access costs for each cost kind.
-// TODO: Move this to allow other targets to use it?
-namespace {
-struct CostKindCosts {
-  unsigned RecipThroughputCost = ~0U;
-  unsigned LatencyCost = ~0U;
-  unsigned CodeSizeCost = ~0U;
-  unsigned SizeAndLatencyCost = ~0U;
-
-  std::optional<unsigned>
-  operator[](TargetTransformInfo::TargetCostKind Kind) const {
-    unsigned Cost = ~0U;
-    switch (Kind) {
-    case TargetTransformInfo::TCK_RecipThroughput:
-      Cost = RecipThroughputCost;
-      break;
-    case TargetTransformInfo::TCK_Latency:
-      Cost = LatencyCost;
-      break;
-    case TargetTransformInfo::TCK_CodeSize:
-      Cost = CodeSizeCost;
-      break;
-    case TargetTransformInfo::TCK_SizeAndLatency:
-      Cost = SizeAndLatencyCost;
-      break;
-    }
-    if (Cost == ~0U)
-      return std::nullopt;
-    return Cost;
-  }
-};
-} // namespace
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
 using TypeConversionCostKindTblEntry = TypeConversionCostTblEntryT<CostKindCosts>;
 
@@ -2316,6 +2284,16 @@ InstructionCost X86TTIImpl::getShuffleCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
+  static const CostKindTblEntry AVX512BWInLaneShuffleTbl[] = {
+      {TTI::SK_PermuteTwoSrc, MVT::v64i8, {2, 2, 2, 2}}, // 2*vpshufb + vpor
+  };
+
+  if (IsInLaneShuffle && ST->hasBWI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512BWInLaneShuffleTbl, Kind, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   static const CostKindTblEntry AVX512BWShuffleTbl[] = {
     { TTI::SK_Broadcast, MVT::v32i16, { 1, 3, 1, 1 } }, // vpbroadcastw
     { TTI::SK_Broadcast, MVT::v32f16, { 1, 3, 1, 1 } }, // vpbroadcastw
@@ -4323,6 +4301,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v16i8,   {  2,  6, 11, 11 } },
     { ISD::CTTZ,       MVT::v32i8,   {  2,  6, 11, 11 } },
     { ISD::CTTZ,       MVT::v64i8,   {  3,  7, 11, 13 } },
+    { ISD::MASK_BEFOREFIRST, MVT::v32i1, {  4,  8,  4,  8 } }, // kmov seq
+    { ISD::MASK_BEFOREFIRST, MVT::v64i1, {  4,  8,  4,  8 } }, // kmov seq
     { ISD::MULHS,      MVT::v32i16,  {  1,  5,  1,  1 } },
     { ISD::MULHU,      MVT::v32i16,  {  1,  5,  1,  1 } },
     { ISD::ROTL,       MVT::v32i16,  {  2,  8,  6,  8 } },
@@ -4393,6 +4373,10 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v16i32,  {  2,  8,  6,  7 } },
     { ISD::CTTZ,       MVT::v32i16,  {  7, 17, 27, 27 } },
     { ISD::CTTZ,       MVT::v64i8,   {  6, 13, 21, 21 } },
+    { ISD::MASK_BEFOREFIRST, MVT::v2i1,  {  4,  8,  4,  8 } }, // kmov seq
+    { ISD::MASK_BEFOREFIRST, MVT::v4i1,  {  4,  8,  4,  8 } }, // kmov seq
+    { ISD::MASK_BEFOREFIRST, MVT::v8i1,  {  4,  8,  4,  8 } }, // kmov seq
+    { ISD::MASK_BEFOREFIRST, MVT::v16i1, {  4,  8,  4,  8 } }, // kmov seq
     { ISD::MULHS,      MVT::v16i32,  {  3, 10,  6,  7 } },
     { ISD::MULHS,      MVT::v8i32,   {  3,  9,  6,  6 } },
     { ISD::MULHS,      MVT::v32i16,  {  3,  7,  5,  5 } },
@@ -4585,6 +4569,11 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v16i16,  {  6,  9, 14, 24 } },
     { ISD::CTTZ,       MVT::v16i8,   {  3,  7, 11, 11 } },
     { ISD::CTTZ,       MVT::v32i8,   {  5,  7, 11, 18 } },
+    { ISD::MASK_BEFOREFIRST, MVT::v2i64, {  7, 13,  8, 13 } }, // movmsk seq
+    { ISD::MASK_BEFOREFIRST, MVT::v4i32, {  7, 13,  8, 13 } }, // movmsk seq
+    { ISD::MASK_BEFOREFIRST, MVT::v8i16, {  8, 14,  9, 14 } }, // movmsk seq
+    { ISD::MASK_BEFOREFIRST, MVT::v16i8, {  7, 11,  8, 11 } }, // movmsk seq
+    { ISD::MASK_BEFOREFIRST, MVT::v32i8, {  8, 14,  9, 14 } }, // movmsk seq
     { ISD::MULHS,      MVT::v8i32,   {  4,  9,  6, 12 } },
     { ISD::MULHS,      MVT::v16i16,  {  2,  5,  1,  2 } },
     { ISD::MULHU,      MVT::v8i32,   {  4,  9,  6, 12 } },
@@ -4703,6 +4692,11 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v8i16,   {  9, 21, 14, 18 } },
     { ISD::CTTZ,       MVT::v32i8,   { 15, 18, 21, 30 } }, // 2 x 128-bit Op + extract/insert
     { ISD::CTTZ,       MVT::v16i8,   {  8, 16, 11, 15 } },
+    { ISD::MASK_BEFOREFIRST, MVT::v2i64, {  8, 11,  9, 11 } }, // movmsk seq
+    { ISD::MASK_BEFOREFIRST, MVT::v4i32, {  8, 11,  9, 11 } }, // movmsk seq
+    { ISD::MASK_BEFOREFIRST, MVT::v8i16, { 10, 13, 11, 13 } }, // movmsk seq
+    { ISD::MASK_BEFOREFIRST, MVT::v16i8, {  8, 11,  9, 11 } }, // movmsk seq
+    { ISD::MASK_BEFOREFIRST, MVT::v32i8, { 18, 24, 19, 24 } }, // movmsk seq
     { ISD::MULHS,      MVT::v8i32,   {  9, 11, 14, 18 } },
     { ISD::MULHS,      MVT::v16i16,  {  3,  7,  5,  6 } },
     { ISD::MULHU,      MVT::v8i32,   {  9, 11, 14, 18 } },
@@ -4823,6 +4817,7 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   };
   static const CostKindTblEntry SSE41CostTbl[] = {
     { ISD::ABS,        MVT::v2i64,   {  3,  4,  3,  5 } }, // BLENDVPD(X,PSUBQ(0,X),X)
+    { ISD::MASK_BEFOREFIRST, MVT::v2i64, {  8, 11,  9, 11 } }, // movmsk seq
     { ISD::MULHS,      MVT::v4i32,   {  3,  9,  6,  7 } },
     { ISD::MULHU,      MVT::v4i32,   {  3,  9,  6,  7 } },
     { ISD::SADDSAT,    MVT::v2i64,   { 10, 14, 17, 21 } },
@@ -4876,7 +4871,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v2i64,   { 13, 25, 15, 22 } },
     { ISD::CTTZ,       MVT::v4i32,   { 18, 26, 19, 25 } },
     { ISD::CTTZ,       MVT::v8i16,   { 13, 20, 17, 23 } },
-    { ISD::CTTZ,       MVT::v16i8,   { 11, 16, 13, 19 } }
+    { ISD::CTTZ,       MVT::v16i8,   { 11, 16, 13, 19 } },
+    { ISD::MASK_BEFOREFIRST, MVT::v16i8, {  8, 11,  9, 11 } }, // movmsk seq
   };
   static const CostKindTblEntry SSE2CostTbl[] = {
     { ISD::ABS,        MVT::v2i64,   {  3,  6,  5,  5 } },
@@ -4902,6 +4898,10 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v4i32,   { 18, 31, 24, 26 } },
     { ISD::CTTZ,       MVT::v8i16,   { 16, 27, 21, 23 } },
     { ISD::CTTZ,       MVT::v16i8,   { 13, 23, 17, 19 } },
+    { ISD::MASK_BEFOREFIRST, MVT::v2i64, { 10, 13, 11, 13 } }, // movmsk seq
+    { ISD::MASK_BEFOREFIRST, MVT::v4i32, {  8, 11,  9, 11 } }, // movmsk seq
+    { ISD::MASK_BEFOREFIRST, MVT::v8i16, { 10, 13, 11, 13 } }, // movmsk seq
+    { ISD::MASK_BEFOREFIRST, MVT::v16i8, { 10, 13, 11, 13 } }, // movmsk seq
     { ISD::MULHS,      MVT::v4i32,   {  5, 11, 15, 15 } },
     { ISD::MULHS,      MVT::v8i16,   {  1,  5,  1,  1 } },
     { ISD::MULHU,      MVT::v4i32,   {  3,  9,  7,  7 } },
@@ -5159,6 +5159,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getCastInstrCost(Instruction::FPToSI, RetTy, ArgTys[0],
                             TTI::CastContextHint::None, CostKind);
   }
+  case Intrinsic::mask_beforefirst:
+    ISD = ISD::MASK_BEFOREFIRST;
+    break;
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
     // FMINNUM has same costs so don't duplicate.
@@ -6098,6 +6101,14 @@ X86TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
     { Intrinsic::masked_expandload,    MVT::v16i16, { 2, 8, 1, 3 } },
     { Intrinsic::masked_expandload,    MVT::v32i16, { 2, 9, 1, 3 } },
 
+    { Intrinsic::masked_expandload,    MVT::v8f16,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v16f16, { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v32f16, { 2, 9, 1, 3 } },
+
+    { Intrinsic::masked_expandload,    MVT::v8bf16, { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v16bf16,{ 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v32bf16,{ 2, 9, 1, 3 } },
+
     { Intrinsic::masked_compressstore, MVT::v16i8,  { 3,10, 1, 7 } },
     { Intrinsic::masked_compressstore, MVT::v32i8,  { 3,11, 1, 7 } },
     { Intrinsic::masked_compressstore, MVT::v64i8,  { 3,12, 1, 8 } },
@@ -6105,6 +6116,14 @@ X86TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
     { Intrinsic::masked_compressstore, MVT::v8i16,  { 3,10, 1, 7 } },
     { Intrinsic::masked_compressstore, MVT::v16i16, { 3,11, 1, 7 } },
     { Intrinsic::masked_compressstore, MVT::v32i16, { 3,12, 1, 8 } },
+
+    { Intrinsic::masked_compressstore, MVT::v8f16,  { 3,10, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v16f16, { 3,11, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v32f16, { 3,12, 1, 8 } },
+
+    { Intrinsic::masked_compressstore, MVT::v8bf16, { 3,10, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v16bf16,{ 3,11, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v32bf16,{ 3,12, 1, 8 } },
   };
 
   static const CostKindTblEntry AVX512CostTable[] = {
@@ -7446,6 +7465,9 @@ bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) const {
 
   if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
     return true;
+
+  if (ScalarTy->isHalfTy() || ScalarTy->isBFloatTy())
+    return ST->hasVBMI2();
 
   if (!ScalarTy->isIntegerTy())
     return false;

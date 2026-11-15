@@ -5693,9 +5693,8 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
                           MachineBasicBlock::reverse_iterator E) {
   // At the end of the function LR dead.
   bool Live = false;
-  for (; I != E; ++I) {
-    const MachineInstr &MI = *I;
-
+  for (const MachineInstr &MI :
+       instructionsWithoutDebug(I, E, /*SkipPseudoOp=*/false)) {
     // Check defs of LR.
     if (MI.modifiesRegister(ARM::LR, &TRI))
       Live = false;

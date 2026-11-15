@@ -35,6 +35,17 @@
 
 namespace fir {
 
+/// Return true if a fir.allocmem of \p type may be moved to the stack: arrays,
+/// and the constant-length scalar characters that inlined character intrinsics
+/// allocate for their results.
+inline bool isStackArraysCandidateType(mlir::Type type) {
+  if (mlir::isa<fir::SequenceType>(type))
+    return true;
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(type))
+    return charTy.hasConstantLen();
+  return false;
+}
+
 /// Stores where an alloca should be inserted. If the PointerUnion is an
 /// Operation the alloca should be inserted /after/ the operation. If it is a
 /// block, the alloca can be placed anywhere in that block.
