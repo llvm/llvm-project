@@ -2060,6 +2060,8 @@ public:
     LLVM::LLVMFuncOp func =
         lookupOrCreateSPIRVFn(symbolTable, "printf", {formatType}, dstType,
                               /*convergent=*/false, /*isVarArg=*/true);
+    // The module may already declare printf with another signature. Calling
+    // it would produce an invalid llvm.call.
     if (func.getFunctionType() !=
         LLVM::LLVMFunctionType::get(dstType, formatType, /*isVarArg=*/true))
       return rewriter.notifyMatchFailure(op, "printf signature mismatch");
