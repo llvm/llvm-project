@@ -19,6 +19,9 @@
 
 namespace llvm {
 class TargetMachine;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 } // namespace llvm
 
 namespace mlir {
@@ -35,7 +38,8 @@ public:
       function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
       function_ref<void(llvm::Module &)> linkedLlvmIRCallback = {},
       function_ref<void(llvm::Module &)> optimizedLlvmIRCallback = {},
-      function_ref<void(StringRef)> isaCallback = {});
+      function_ref<void(StringRef)> isaCallback = {},
+      const llvm::cl::LibraryOptionsContext *libraryOptions = nullptr);
   virtual ~ModuleToObject();
 
   /// Returns the operation being serialized.
@@ -140,6 +144,11 @@ protected:
   /// Callback invoked with the target ISA for the device,
   /// for example PTX assembly.
   function_ref<void(StringRef)> isaCallback;
+
+  /// LLVM library options for the LLVMContext and TargetMachine that
+  /// serialization creates, or nullptr for their defaults. They must outlive
+  /// this object.
+  const llvm::cl::LibraryOptionsContext *libraryOptions;
 
 private:
   /// The TargetMachine created for the given Triple, if available.

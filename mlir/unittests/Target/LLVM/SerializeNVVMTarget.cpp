@@ -15,6 +15,7 @@
 #include "mlir/InitAllDialects.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"
+#include "mlir/Target/LLVM/NVVM/Utils.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
@@ -23,6 +24,8 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Config/Targets.h" // for LLVM_HAS_NVPTX_TARGET
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/SourceMgr.h"
@@ -138,6 +141,47 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMToPTX)) {
         StringRef(object->getObject().data(), object->getObject().size())
             .count('\0') == 0);
   }
+}
+
+// The LLVMContext and TargetMachine that serialization creates read the library
+// options in TargetOptions.
+TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(LibraryOptions)) {
+  MLIRContext context(registry);
+  context.loadDialect<NVVM::NVVMDialect>();
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(R"mlir(
+      gpu.module @nvvm_test {
+        llvm.func @fma(%a: f32, %b: f32, %c: f32) -> f32 {
+          %0 = llvm.fmul %a, %b : f32
+          %1 = llvm.fadd %0, %c : f32
+          llvm.return %1 : f32
+        }
+      })mlir",
+                                                             &context);
+  ASSERT_TRUE(!!module);
+
+  // Register the NVPTX options before parsing them.
+  NVVM::SerializeGPUModuleBase::init();
+  llvm::cl::LibraryOptionsContext libraryOptions;
+  const char *args[] = {"test", "-nvptx-fma-level=1"};
+  ASSERT_TRUE(llvm::cl::parseCommandLineOptions(libraryOptions, args, "",
+                                                &llvm::nulls()));
+
+  auto serializer =
+      dyn_cast<gpu::TargetAttrInterface>(NVVM::NVVMTargetAttr::get(&context));
+  ASSERT_TRUE(!!serializer);
+  size_t numArgs = 0;
+  auto initialCallback = [&](llvm::Module &m) {
+    numArgs = m.getContext().getLibraryOptions().args().size();
+  };
+  gpu::TargetOptions options({}, {}, {}, {}, gpu::CompilationTarget::Assembly,
+                             {}, initialCallback);
+  options.setLibraryOptions(&libraryOptions);
+  std::optional<gpu::SerializedObject> object = serializer.serializeToObject(
+      *(*module).getBody()->getOps<gpu::GPUModuleOp>().begin(), options);
+  ASSERT_TRUE(object != std::nullopt);
+  EXPECT_THAT(StringRef(object->getObject().data(), object->getObject().size()),
+              testing::HasSubstr("fma.rn.f32"));
+  EXPECT_EQ(numArgs, 1u);
 }
 
 // Test NVVM serialization to Binary.
