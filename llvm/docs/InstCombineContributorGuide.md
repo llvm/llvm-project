@@ -438,19 +438,20 @@ Generally, we prefer unsigned operations over signed operations in the middle-en
 if signed operations are more efficient on some targets. The following is an incomplete
 list of canonicalizations that are implemented in InstCombine:
 
-| Original Pattern             | Canonical Form             | Condition                     |
-|------------------------------|----------------------------|-------------------------------|
-| `icmp spred X, Y`            | `icmp samesign upred X, Y` | `sign(X) == sign(Y)`          |
-| `icmp eq/ne X, 0`            | `(not) trunc nuw X to i1`  | `X in [0, 1]`                 |
-| `smin/smax X, Y`             | `umin/umax X, Y`           | `sign(X) == sign(Y)`          |
-| `sext X`                     | `zext nneg X`              | `X >=s 0`                     |
-| `sitofp X`                   | `uitofp nneg X`            | `X >=s 0`                     |
-| `ashr X, Y`                  | `lshr X, Y`                | `X >=s 0`                     |
-| `sdiv/srem X, Y`             | `udiv/urem X, Y`           | `X >=s 0 && Y >=s 0`          |
-| `add X, Y`                   | `or disjoint X, Y`         | `(X & Y) != 0`                |
-| `mul X, C`                   | `shl X, Log2(C)`           | `isPowerOf2(C)`               |
-| `select Cond1, Cond2, false` | `and Cond1, Cond2`         | `impliesPoison(Cond2, Cond1)` |
-| `select Cond1, true, Cond2`  | `or Cond1, Cond2`          | `impliesPoison(Cond2, Cond1)` |
+| Original Pattern             | Canonical Form                    | Condition                     |
+|------------------------------|-----------------------------------|-------------------------------|
+| `icmp spred X, Y`            | `icmp samesign upred X, Y`        | `sign(X) == sign(Y)`          |
+| `icmp eq X, 0`               | `xor (trunc nuw X to i1), true`   | `X in [0, 1]`                 |
+| `icmp ne X, 0`               | `trunc nuw X to i1`               | `X in [0, 1]`                 |
+| `smin/smax X, Y`             | `umin/umax X, Y`                  | `sign(X) == sign(Y)`          |
+| `sext X`                     | `zext nneg X`                     | `X >=s 0`                     |
+| `sitofp X`                   | `uitofp nneg X`                   | `X >=s 0`                     |
+| `ashr X, Y`                  | `lshr X, Y`                       | `X >=s 0`                     |
+| `sdiv/srem X, Y`             | `udiv/urem X, Y`                  | `X >=s 0 && Y >=s 0`          |
+| `add X, Y`                   | `or disjoint X, Y`                | `(X & Y) != 0`                |
+| `mul X, C`                   | `shl X, Log2(C)`                  | `isPowerOf2(C)`               |
+| `select Cond1, Cond2, false` | `and Cond1, Cond2`                | `impliesPoison(Cond2, Cond1)` |
+| `select Cond1, true, Cond2`  | `or Cond1, Cond2`                 | `impliesPoison(Cond2, Cond1)` |
 
 ### VectorCombine
 
