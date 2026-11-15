@@ -5648,7 +5648,7 @@ static bool isPoisonBitRange(Value *Offset, Type *Ty, Type *SrcTy,
 
   // Try harder for fixed-length vectors:
   // If every lane's offset is out of range or poison, the result is poison.
-  if (isa<ConstantVector>(C) || isa<ConstantDataVector>(C)) {
+  if (isa<ConstantVector, ConstantDataVector>(C)) {
     for (unsigned I = 0,
                   E = cast<FixedVectorType>(C->getType())->getNumElements();
          I != E; ++I)
