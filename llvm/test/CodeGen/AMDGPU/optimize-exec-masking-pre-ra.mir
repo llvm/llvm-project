@@ -159,7 +159,6 @@ body:             |
 
 ---
 name: fold_exec_copy_removed_use
-tracksRegLiveness: true
 body: |
   ; GCN-LABEL: name: fold_exec_copy_removed_use
   ; GCN: bb.0:
