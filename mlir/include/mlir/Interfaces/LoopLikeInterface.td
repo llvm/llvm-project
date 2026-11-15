@@ -153,6 +153,15 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
+        Return whether loop bounds and steps are interpreted as unsigned.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasUnsignedLoopBounds",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return false;"
+    >,
+    InterfaceMethod<[{
         Return the mutable "init" operands that are used as initialization
         values for the region "iter_args" of this loop.
       }],

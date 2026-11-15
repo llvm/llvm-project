@@ -147,20 +147,25 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
   /// Given a lower bound, upper bound, or step from a LoopLikeInterface return
   /// the lower/upper bound for that result if possible.
   auto getLoopBoundFromFold = [&](OpFoldResult loopBound, Type boundType,
-                                  bool getUpper) {
+                                  bool getUpper, bool isUnsigned) {
     unsigned int width = ConstantIntRanges::getStorageBitwidth(boundType);
     if (auto attr = dyn_cast<Attribute>(loopBound)) {
       if (auto bound = dyn_cast<IntegerAttr>(attr))
         return bound.getValue();
     } else if (auto value = llvm::dyn_cast<Value>(loopBound)) {
       const IntegerValueRangeLattice *lattice = getLattice(value);
-      if (lattice != nullptr && !lattice->getValue().isUninitialized())
-        return getUpper ? lattice->getValue().getValue().smax()
-                        : lattice->getValue().getValue().smin();
+      if (lattice != nullptr && !lattice->getValue().isUninitialized()) {
+        const ConstantIntRanges &range = lattice->getValue().getValue();
+        if (isUnsigned)
+          return getUpper ? range.umax() : range.umin();
+        return getUpper ? range.smax() : range.smin();
+      }
     }
     // Given the results of getConstant{Lower,Upper}Bound()
     // or getConstantStep() on a LoopLikeInterface return the lower/upper
     // bound
+    if (isUnsigned)
+      return getUpper ? APInt::getMaxValue(width) : APInt::getZero(width);
     return getUpper ? APInt::getSignedMaxValue(width)
                     : APInt::getSignedMinValue(width);
   };
@@ -190,30 +195,36 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     SmallVector<OpFoldResult> lowerBounds = *maybeLowerBounds;
     SmallVector<OpFoldResult> upperBounds = *maybeUpperBounds;
     SmallVector<OpFoldResult> steps = *maybeSteps;
+    bool isUnsigned = loop.hasUnsignedLoopBounds();
     for (auto [iv, lowerBound, upperBound, step] :
          llvm::zip_equal(*maybeIvs, lowerBounds, upperBounds, steps)) {
       APInt min = getLoopBoundFromFold(lowerBound, iv.getType(),
-                                       /*getUpper=*/false);
+                                       /*getUpper=*/false, isUnsigned);
       APInt max = getLoopBoundFromFold(upperBound, iv.getType(),
-                                       /*getUpper=*/true);
-      // Assume positivity for uniscoverable steps by way of getUpper = true.
-      APInt stepVal =
-          getLoopBoundFromFold(step, iv.getType(), /*getUpper=*/true);
-
-      if (stepVal.isNegative()) {
-        std::swap(min, max);
-      } else {
-        // Correct the upper bound by subtracting 1 so that it becomes a <=
-        // bound, because loops do not generally include their upper bound.
+                                       /*getUpper=*/true, isUnsigned);
+      if (isUnsigned) {
+        // Check the exclusive upper bound before subtracting: zero must not
+        // wrap to the greatest unsigned value.
+        if (!min.ult(max))
+          continue;
         max -= 1;
+      } else {
+        // Assume positivity for unknown steps by using the upper bound.
+        APInt stepVal = getLoopBoundFromFold(step, iv.getType(),
+                                             /*getUpper=*/true, isUnsigned);
+        if (stepVal.isNegative())
+          std::swap(min, max);
+        else
+          max -= 1;
       }
 
       // If we infer the lower bound to be larger than the upper bound, the
       // resulting range is meaningless and should not be used in further
       // inferences.
-      if (max.sge(min)) {
+      if (isUnsigned || max.sge(min)) {
         IntegerValueRangeLattice *ivEntry = getLatticeElement(iv);
-        auto ivRange = ConstantIntRanges::fromSigned(min, max);
+        auto ivRange = isUnsigned ? ConstantIntRanges::fromUnsigned(min, max)
+                                  : ConstantIntRanges::fromSigned(min, max);
         propagateIfChanged(ivEntry, ivEntry->join(IntegerValueRange{ivRange}));
       }
     }

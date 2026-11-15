@@ -407,6 +407,8 @@ LogicalResult ForOp::verifyRegions() {
   return success();
 }
 
+bool ForOp::hasUnsignedLoopBounds() { return getUnsignedCmp(); }
+
 std::optional<SmallVector<Value>> ForOp::getLoopInductionVars() {
   return SmallVector<Value>{getInductionVar()};
 }
@@ -3045,6 +3047,8 @@ void ParallelOp::print(OpAsmPrinter &p) {
 }
 
 SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
+
+bool ParallelOp::hasUnsignedLoopBounds() { return getUnsignedCmp(); }
 
 std::optional<SmallVector<Value>> ParallelOp::getLoopInductionVars() {
   return SmallVector<Value>{getBody()->getArguments()};

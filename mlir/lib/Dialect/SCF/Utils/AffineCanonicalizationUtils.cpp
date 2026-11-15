@@ -31,12 +31,17 @@ using namespace presburger;
 LogicalResult scf::matchForLikeLoop(Value iv, OpFoldResult &lb,
                                     OpFoldResult &ub, OpFoldResult &step) {
   if (scf::ForOp forOp = scf::getForInductionVarOwner(iv)) {
+    // The affine constraints below are signed.
+    if (forOp.getUnsignedCmp())
+      return failure();
     lb = forOp.getLowerBound();
     ub = forOp.getUpperBound();
     step = forOp.getStep();
     return success();
   }
   if (scf::ParallelOp parOp = scf::getParallelForInductionVarOwner(iv)) {
+    if (parOp.getUnsignedCmp())
+      return failure();
     for (unsigned idx = 0; idx < parOp.getNumLoops(); ++idx) {
       if (parOp.getInductionVars()[idx] == iv) {
         lb = parOp.getLowerBound()[idx];
