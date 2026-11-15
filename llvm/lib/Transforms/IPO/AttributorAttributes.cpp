@@ -1292,17 +1292,13 @@ struct AAPointerInfoImpl
             QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
         if (FnReachabilityAA) {
           // Without going backwards in the call tree, can we reach the access
-          // from the least dominating write. Do not allow to pass the
-          // instruction itself either.
-          bool Inserted = ExclusionSet.insert(&I).second;
-
+          // from the least dominating write. The instruction itself must not be
+          // excluded: if it is in a cycle, the access can happen after it and
+          // still be observed by a later execution of it.
           if (!FnReachabilityAA->instructionCanReach(
                   A, *LeastDominatingWriteInst,
                   *Acc.getRemoteInst()->getFunction(), &ExclusionSet))
             WriteChecked = true;
-
-          if (Inserted)
-            ExclusionSet.erase(&I);
         }
       }
 
