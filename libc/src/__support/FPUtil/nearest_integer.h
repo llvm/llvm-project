@@ -77,16 +77,13 @@ LIBC_INLINE constexpr double nearest_integer(double x) {
 // The target specific headers below define fputil::nearest_integer using the
 // rounding instructions of the target, and dispatch to generic::nearest_integer
 // during constant evaluation.
-#if (defined(LIBC_TARGET_ARCH_IS_X86_64) &&                                    \
-     defined(LIBC_TARGET_CPU_HAS_SSE4_2)) &&                                   \
-    !defined(LIBC_USE_CONSTEXPR)
+#if (defined(LIBC_TARGET_ARCH_IS_X86_64) && defined(LIBC_TARGET_CPU_HAS_SSE4_2))
 #include "x86_64/nearest_integer.h"
 #elif (defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                 \
        defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT) &&                               \
-       defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE)) &&                             \
-    !defined(LIBC_USE_CONSTEXPR)
+       defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE))
 #include "aarch64/nearest_integer.h"
-#elif defined(LIBC_TARGET_ARCH_IS_GPU) && !defined(LIBC_USE_CONSTEXPR)
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
