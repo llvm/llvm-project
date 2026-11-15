@@ -413,8 +413,8 @@ declare void @use.i64(i64)
 define i64 @load_i64_load_b64(ptr %p) {
 ; CHECK-LABEL: @load_i64_load_b64(
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[Y_CAST:%.*]] = bitcast i64 [[X]] to b64
-; CHECK-NEXT:    call void @use.b64(b64 [[Y_CAST]])
+; CHECK-NEXT:    [[Y:%.*]] = load b64, ptr [[P]], align 8
+; CHECK-NEXT:    call void @use.b64(b64 [[Y]])
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
   %x = load i64, ptr %p
@@ -426,8 +426,8 @@ define i64 @load_i64_load_b64(ptr %p) {
 define double @load_double_load_b64(ptr %p) {
 ; CHECK-LABEL: @load_double_load_b64(
 ; CHECK-NEXT:    [[X:%.*]] = load double, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[Y_CAST:%.*]] = bitcast double [[X]] to b64
-; CHECK-NEXT:    call void @use.b64(b64 [[Y_CAST]])
+; CHECK-NEXT:    [[Y:%.*]] = load b64, ptr [[P]], align 8
+; CHECK-NEXT:    call void @use.b64(b64 [[Y]])
 ; CHECK-NEXT:    ret double [[X]]
 ;
   %x = load double, ptr %p
@@ -439,8 +439,8 @@ define double @load_double_load_b64(ptr %p) {
 define <2 x i32> @load_v2i32_load_v2b32(ptr %p) {
 ; CHECK-LABEL: @load_v2i32_load_v2b32(
 ; CHECK-NEXT:    [[X:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[Y_CAST:%.*]] = bitcast <2 x i32> [[X]] to <2 x b32>
-; CHECK-NEXT:    call void @use.v2.b32(<2 x b32> [[Y_CAST]])
+; CHECK-NEXT:    [[Y:%.*]] = load <2 x b32>, ptr [[P]], align 8
+; CHECK-NEXT:    call void @use.v2.b32(<2 x b32> [[Y]])
 ; CHECK-NEXT:    ret <2 x i32> [[X]]
 ;
   %x = load <2 x i32>, ptr %p

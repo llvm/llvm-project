@@ -628,6 +628,12 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
     if (!AreEquivalentAddressValues(LoadPtr, Ptr))
       return nullptr;
 
+    // A non-byte load may drop provenance and makes a value (or lane) poison if
+    // any of its bits is poison, so its result can't replace a byte load.
+    if (AccessTy->isByteOrByteVectorTy() &&
+        !LI->getType()->isByteOrByteVectorTy())
+      return nullptr;
+
     if (hasCompatibleAtomicAccessSize(AccessTy, AccessProps, LI->getType(),
                                       LI->getProperties(), DL) &&
         CastInst::isBitOrNoopPointerCastable(LI->getType(), AccessTy, DL)) {
