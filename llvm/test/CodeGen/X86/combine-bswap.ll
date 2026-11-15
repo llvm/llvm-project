@@ -202,7 +202,6 @@ define i64 @test_bswap64_shift48_zext(i16 %a0) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rolw $8, %ax
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;

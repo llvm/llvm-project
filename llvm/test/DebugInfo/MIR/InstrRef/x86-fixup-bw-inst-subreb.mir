@@ -66,3 +66,45 @@ body:             |
     RET64 $ax
 
 ...
+---
+# CHECK-LABEL: name: test6
+name:            test6
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef: true
+liveins:
+  - { reg: '$rdi' }
+# CHECK:      debugValueSubstitutions:
+# CHECK-NEXT: - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
+body:             |
+  bb.0:
+    liveins: $rdi
+
+    $ax = MOV16rm killed $rdi, 1, $noreg, 0, $noreg
+    $ax = ROL16ri killed $ax, 8, implicit-def dead $eflags
+    ; CHECK: ROL16ri {{.*}} debug-instr-number 2
+    $eax = MOVZX32rr16 killed $ax, debug-instr-number 1
+    ; CHECK-NOT: MOVZX32rr16
+    RET64 $eax
+
+...
+---
+# CHECK-LABEL: name: test7
+name:            test7
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef: true
+liveins:
+  - { reg: '$rdi' }
+# CHECK:      debugValueSubstitutions: []
+body:             |
+  bb.0:
+    liveins: $rdi
+
+    $ax = MOV16rm killed $rdi, 1, $noreg, 0, $noreg
+    $al = MOV8ri 5
+    $eax = MOVZX32rr16 killed $ax, debug-instr-number 1
+    ; CHECK-NOT: MOVZX32rr16
+    RET64 $eax
+
+...

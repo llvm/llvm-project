@@ -53,8 +53,6 @@ define i32 @length2(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:    movzwl (%rsi), %ecx
 ; X64-NEXT:    rolw $8, %ax
 ; X64-NEXT:    rolw $8, %cx
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    movzwl %cx, %ecx
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 2) nounwind
@@ -66,7 +64,6 @@ define i32 @length2_const(ptr %X, ptr %Y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    rolw $8, %ax
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    addl $-12594, %eax # imm = 0xCECE
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr getelementptr inbounds ([513 x i8], ptr @.str, i32 0, i32 1), i64 2) nounwind
@@ -78,7 +75,6 @@ define i1 @length2_gt_const(ptr %X, ptr %Y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    rolw $8, %ax
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    addl $-12594, %eax # imm = 0xCECE
 ; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    setg %al
@@ -107,8 +103,6 @@ define i1 @length2_lt(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:    movzwl (%rsi), %ecx
 ; X64-NEXT:    rolw $8, %ax
 ; X64-NEXT:    rolw $8, %cx
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    movzwl %cx, %ecx
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    shrl $31, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
@@ -125,8 +119,6 @@ define i1 @length2_gt(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:    movzwl (%rsi), %ecx
 ; X64-NEXT:    rolw $8, %ax
 ; X64-NEXT:    rolw $8, %cx
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    movzwl %cx, %ecx
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    setg %al
@@ -504,7 +496,6 @@ define i1 @length10_eq(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:    xorq (%rsi), %rax
 ; X64-NEXT:    movzwl 8(%rdi), %ecx
 ; X64-NEXT:    xorw 8(%rsi), %cx
-; X64-NEXT:    movzwl %cx, %ecx
 ; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq

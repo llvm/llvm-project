@@ -38,6 +38,8 @@
   define void @test6() { ret void }
   define void @test7() { ret void }
   define void @test8() { ret void }
+  define void @test9() { ret void }
+  define void @test10() { ret void }
 
 ...
 ---
@@ -164,7 +166,7 @@ body:             |
     ; CHECK: $eax = MOVZX32rm16
     $ax = ROL16ri killed $ax, 8, implicit-def dead $eflags
     $eax = MOVZX32rr16 killed $ax
-    ; CHECK: $eax = MOVZX32rr16
+    ; CHECK-NOT: MOVZX32rr16
     RET64 $eax
 
 ...
@@ -202,6 +204,46 @@ body:             |
     $eax = MOV32rm killed $rdi, 1, $noreg, 4, $noreg
     $eax = MOVZX32rr16 killed $ax
     ; CHECK: $eax = MOVZX32rr16
+    RET64 $eax
+
+...
+---
+# CHECK-LABEL: name: test9
+name:            test9
+alignment:       16
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$ecx' }
+body:             |
+  bb.0:
+    liveins: $rdi, $ecx
+
+    $ax = MOV16rm $rdi, 1, $noreg, 0, $noreg
+    ; CHECK: $eax = MOVZX32rm16
+    MOV16mr killed $rdi, 1, $noreg, 2, $noreg, killed $ax
+    $ax = MOV16rr killed $cx
+    $eax = MOVZX32rr16 killed $ax
+    ; CHECK: $eax = MOVZX32rr16
+    RET64 $eax
+
+...
+---
+# CHECK-LABEL: name: test10
+name:            test10
+alignment:       16
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0:
+    liveins: $rdi, $rsi
+
+    $ax = MOV16rm killed $rdi, 1, $noreg, 0, $noreg
+    ; CHECK: $eax = MOVZX32rm16
+    $ax = MOV16rm killed $rsi, 1, $noreg, 0, $noreg
+    ; CHECK: $eax = MOVZX32rm16
+    $eax = MOVZX32rr16 killed $ax
+    ; CHECK-NOT: MOVZX32rr16
     RET64 $eax
 
 ...

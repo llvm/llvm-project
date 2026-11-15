@@ -179,7 +179,6 @@ define i32 @foo5(ptr %p) {
 ; BWON:       ## %bb.0:
 ; BWON-NEXT:    movzwl (%rdi), %eax
 ; BWON-NEXT:    rolw $8, %ax
-; BWON-NEXT:    movzwl %ax, %eax
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: foo5:
@@ -200,7 +199,6 @@ define i64 @foo6(ptr %p) {
 ; BWON:       ## %bb.0:
 ; BWON-NEXT:    movzwl (%rdi), %eax
 ; BWON-NEXT:    rolw $8, %ax
-; BWON-NEXT:    movzwl %ax, %eax
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: foo6:

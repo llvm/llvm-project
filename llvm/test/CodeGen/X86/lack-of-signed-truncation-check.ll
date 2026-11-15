@@ -464,7 +464,6 @@ define i1 @add_ugecmp_bad_i16_i8_add(i16 %x, i16 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addw {{[0-9]+}}(%esp), %ax
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    cmpl $256, %eax # imm = 0x100
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
