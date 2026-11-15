@@ -132,6 +132,7 @@ private:
   bool isSOffsetLegalWithImmOffset(SDValue *SOffset, bool Imm32Only,
                                    bool IsBuffer, int64_t ImmOffset = 0) const;
 
+  bool groupDSLargeOffsets();
   bool SelectDS1Addr1Offset(SDValue Ptr, SDValue &Base, SDValue &Offset) const;
   bool SelectDS64Bit4ByteAligned(SDValue Ptr, SDValue &Base, SDValue &Offset0,
                                  SDValue &Offset1) const;

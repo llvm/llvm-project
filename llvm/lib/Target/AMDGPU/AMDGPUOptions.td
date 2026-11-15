@@ -66,6 +66,10 @@ defm : ValueField<"amdgpu-igrouplp-exact-solver-cutoff", "unsigned", "0",
 defm : ValueField<"amdgpu-igrouplp-exact-solver-max-branches", "uint64_t", "0",
   "The amount of branches that we are willing to explore with the exact algorithm before giving up">;
 
+// AMDGPUISelDAGToDAG.cpp
+defm : BoolField<"amdgpu-ds-group-large-offsets", "true",
+  "Share one base per 64 KiB window among statically known LDS addresses (a common variable part plus a compile-time constant offset, as with statically allocated LDS) whose constants exceed the 16-bit DS offset">;
+
 // AMDGPUISelLowering.cpp
 defm : BoolField<"amdgpu-bypass-slow-div", "true",
   "Skip 64-bit divide for dynamic 32-bit values">;

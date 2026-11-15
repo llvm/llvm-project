@@ -19,6 +19,8 @@
 #include "R600RegisterInfo.h"
 #include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -408,11 +410,126 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
     }
   }
 
+  MadeChange |= groupDSLargeOffsets();
+
   if (MadeChange) {
     CurDAG->RemoveDeadNodes();
     LLVM_DEBUG(dbgs() << "After PreProcess:\n";
                CurDAG->dump(););
   }
+}
+
+/// Decompose \p Addr as a non-constant Root plus 0 <= C <= INT32_MAX.
+static bool decomposeDSAddr(const SelectionDAG &DAG, SDValue Addr,
+                            SDValue &Root, int64_t &C) {
+  C = 0;
+  Root = Addr;
+  while (DAG.isBaseWithConstantOffset(Root)) {
+    C += cast<ConstantSDNode>(Root.getOperand(1))->getSExtValue();
+    Root = Root.getOperand(0);
+  }
+  return !isa<ConstantSDNode>(Root) && C >= 0 && C <= INT32_MAX;
+}
+
+static SDValue getLDSPointerOperand(SDNode *N) {
+  auto *M = dyn_cast<MemSDNode>(N);
+  // Nodes with several memory operands (e.g. global <-> LDS DMA) are not DS
+  // instructions.
+  if (!M || !M->hasUniqueMemOperand() ||
+      M->getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
+    return SDValue();
+  if (isa<LSBaseSDNode>(M) || isa<AtomicSDNode>(M))
+    return M->getBasePtr();
+  if ((N->getOpcode() == ISD::INTRINSIC_W_CHAIN ||
+       N->getOpcode() == ISD::INTRINSIC_VOID) &&
+      N->getNumOperands() > 2)
+    return N->getOperand(2);
+  return SDValue();
+}
+
+/// Return true if all of \p Members are one node plus a legal DS offset.
+static bool shareDSBase(const SelectionDAG &DAG,
+                        ArrayRef<std::pair<SDValue, int64_t>> Members) {
+  auto Bases = [&](SDValue Addr) {
+    SmallVector<SDValue, 2> Result = {Addr};
+    if (DAG.isBaseWithConstantOffset(Addr) &&
+        isUInt<16>(cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue()))
+      Result.push_back(Addr.getOperand(0));
+    return Result;
+  };
+  return any_of(Bases(Members.front().first), [&](SDValue Base) {
+    return all_of(Members, [&](const auto &M) {
+      return is_contained(Bases(M.first), Base);
+    });
+  });
+}
+
+/// Give statically known LDS addresses whose constants exceed the DS offset
+/// range a shared base: cover each root's sorted constants greedily with 64 KiB
+/// windows starting at the smallest uncovered constant rounded down to
+/// 16 bytes, and rewrite each address to (Root + WindowBase) + Imm. Windows
+/// based at the root, lone addresses and addresses that already share a base
+/// are left alone.
+bool AMDGPUDAGToDAGISel::groupDSLargeOffsets() {
+  if (!Subtarget->getCLOpts().ds_group_large_offsets ||
+      (!Subtarget->hasUsableDSOffset() &&
+       !Subtarget->unsafeDSOffsetFoldingEnabled()))
+    return false;
+
+  MapVector<SDValue, SmallVector<std::pair<SDValue, int64_t>, 8>> Groups;
+  SmallPtrSet<const SDNode *, 32> Seen;
+  for (SDNode &N : CurDAG->allnodes()) {
+    SDValue Ptr = getLDSPointerOperand(&N);
+    if (!Ptr || Ptr.getValueType() != MVT::i32 || Ptr.getResNo() != 0 ||
+        !Seen.insert(Ptr.getNode()).second)
+      continue;
+    SDValue Root;
+    int64_t C;
+    if (decomposeDSAddr(*CurDAG, Ptr, Root, C))
+      Groups[Root].push_back({Ptr, C});
+  }
+
+  constexpr uint64_t BaseAlign = 16;
+  SmallVector<SDValue, 16> From, To;
+  for (auto &[Root, Members] : Groups) {
+    if (none_of(Members, [](const auto &M) { return M.second > UINT16_MAX; }))
+      continue;
+    llvm::stable_sort(Members, [](const auto &A, const auto &B) {
+      return A.second < B.second;
+    });
+    for (auto *I = Members.begin(), *E = Members.end(); I != E;) {
+      int64_t WindowBase =
+          I->second <= UINT16_MAX ? 0 : alignDown(I->second, BaseAlign);
+      auto *WindowEnd = std::find_if(I, E, [&](const auto &M) {
+        return M.second - WindowBase > UINT16_MAX;
+      });
+      if (WindowBase != 0 && std::distance(I, WindowEnd) > 1 &&
+          !shareDSBase(*CurDAG, ArrayRef(I, WindowEnd))) {
+        SDLoc DL(Root);
+        SDValue Base =
+            CurDAG->getNode(ISD::ADD, DL, MVT::i32, Root,
+                            CurDAG->getConstant(WindowBase, DL, MVT::i32));
+        for (const auto &[Addr, C] : make_range(I, WindowEnd)) {
+          SDValue NewAddr =
+              C == WindowBase
+                  ? Base
+                  : CurDAG->getNode(
+                        ISD::ADD, DL, MVT::i32, Base,
+                        CurDAG->getConstant(C - WindowBase, DL, MVT::i32));
+          if (NewAddr != Addr) {
+            From.push_back(Addr);
+            To.push_back(NewAddr);
+          }
+        }
+      }
+      I = WindowEnd;
+    }
+  }
+
+  if (From.empty())
+    return false;
+  CurDAG->ReplaceAllUsesOfValuesWith(From.data(), To.data(), From.size());
+  return true;
 }
 
 bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
