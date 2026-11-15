@@ -114,6 +114,39 @@ struct SizedSentinelNotConstView : std::ranges::view_base {
 bool operator==(const ForwardIter &lhs, int* rhs);
 bool operator==(int* lhs, const ForwardIter &rhs);
 
+#if TEST_STD_VER >= 26
+struct ApproximatelySizedView : std::ranges::view_base {
+  int start_;
+  unsigned int reserve_hint_;
+
+  constexpr explicit ApproximatelySizedView(unsigned int hint, int start = 0) : start_(start), reserve_hint_(hint) {}
+  constexpr auto begin() const { return forward_iterator<int*>(globalBuff + start_); }
+  constexpr auto end() const { return forward_iterator<int*>(globalBuff + 8); }
+  constexpr unsigned int reserve_hint() const { return reserve_hint_; }
+};
+
+static_assert(std::ranges::view<ApproximatelySizedView>);
+static_assert(!std::ranges::sized_range<ApproximatelySizedView>);
+static_assert(std::ranges::approximately_sized_range<ApproximatelySizedView>);
+static_assert(std::ranges::approximately_sized_range<const ApproximatelySizedView>);
+
+struct ApproximatelySizedNotConstView : std::ranges::view_base {
+  int start_;
+  unsigned int reserve_hint_;
+
+  constexpr explicit ApproximatelySizedNotConstView(unsigned int hint, int start = 0)
+      : start_(start), reserve_hint_(hint) {}
+  constexpr auto begin() const { return forward_iterator<int*>(globalBuff + start_); }
+  constexpr auto end() const { return forward_iterator<int*>(globalBuff + 8); }
+  constexpr unsigned int reserve_hint() { return reserve_hint_; }
+};
+
+static_assert(std::ranges::view<ApproximatelySizedNotConstView>);
+static_assert(!std::ranges::sized_range<ApproximatelySizedNotConstView>);
+static_assert(std::ranges::approximately_sized_range<ApproximatelySizedNotConstView>);
+static_assert(!std::ranges::approximately_sized_range<const ApproximatelySizedNotConstView>);
+#endif
+
 struct Range {
   int *begin() const;
   int *end() const;

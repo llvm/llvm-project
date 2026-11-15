@@ -117,4 +117,9 @@ concept weakly_equality_comparable_with =
       { u != t } -> std::same_as<bool>;
     };
 
+#if TEST_STD_VER >= 26
+template <class T>
+concept HasReserveHint = requires(T t) { t.reserve_hint(); };
+#endif
+
 #endif // LIBCXX_TEST_SUPPORT_TEST_RANGE_H

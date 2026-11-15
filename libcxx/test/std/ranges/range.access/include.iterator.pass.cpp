@@ -56,7 +56,7 @@ constexpr bool test() {
   test(std::ranges::ssize, a);
 
 #if TEST_STD_VER >= 26
-  // test(std::views::reserve_hint, a);
+  test(std::ranges::reserve_hint, a);
 #endif
 
   return true;

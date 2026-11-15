@@ -109,6 +109,20 @@ concept DataIsInvocable = requires (std::ranges::ref_view<R> view) { view.data()
 static_assert(std::same_as<decltype(std::ranges::ref_view(std::declval<Range&>())),
               std::ranges::ref_view<Range>>);
 
+#if TEST_STD_VER >= 26
+template <class R>
+concept ReserveHintIsInvocable = requires(std::ranges::ref_view<R> view) { view.reserve_hint(); };
+
+struct ApproximatelySizedRange {
+  int start_;
+  unsigned int reserve_hint_;
+
+  constexpr auto begin() const { return forward_iterator<int*>(globalBuff + start_); }
+  constexpr auto end() const { return forward_iterator<int*>(globalBuff + 8); }
+  constexpr unsigned int reserve_hint() const { return reserve_hint_; }
+};
+#endif
+
 constexpr bool test() {
   {
     // ref_view::base
@@ -183,6 +197,21 @@ constexpr bool test() {
 
     static_assert(!SizeIsInvocable<ForwardRange>);
   }
+
+#if TEST_STD_VER >= 26
+  // ref_view::reserve_hint
+  {
+    ApproximatelySizedRange range1{2, 5};
+    std::ranges::ref_view<ApproximatelySizedRange> view1 = range1;
+    assert(view1.reserve_hint() == 5);
+
+    ApproximatelySizedRange range2{7, 0};
+    std::ranges::ref_view<ApproximatelySizedRange> view2 = range2;
+    assert(view2.reserve_hint() == 0);
+
+    static_assert(!ReserveHintIsInvocable<ForwardRange>);
+  }
+#endif
 
   {
     // ref_view::data
