@@ -2126,9 +2126,6 @@ HeaderSearch::getModuleMapHomeDir(FileEntryRef File,
       if (DirName.ends_with(".framework"))
         if (auto MaybeDir = FileMgr.getOptionalDirectoryRef(DirName))
           Dir = *MaybeDir;
-      // FIXME: This assert can fail if there's a race between the above check
-      // and the removal of the directory.
-      assert(Dir && "parent must exist");
     }
   }
   return Dir;
