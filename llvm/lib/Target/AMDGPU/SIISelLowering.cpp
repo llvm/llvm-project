@@ -2724,12 +2724,8 @@ SDValue SITargetLowering::convertABITypeToValueType(SelectionDAG &DAG,
                       DAG.getValueType(ValVT));
     return DAG.getNode(ISD::TRUNCATE, SL, ValVT, Val);
   case CCValAssign::AExt:
-    if (ValVT.isFloatingPoint()) {
-      Val = DAG.getNode(ISD::TRUNCATE, SL, ValVT.changeTypeToInteger(), Val);
-      return DAG.getNode(ISD::BITCAST, SL, ValVT, Val);
-    }
-
-    return DAG.getNode(ISD::TRUNCATE, SL, ValVT, Val);
+    Val = DAG.getNode(ISD::TRUNCATE, SL, ValVT.changeTypeToInteger(), Val);
+    return DAG.getBitcast(ValVT, Val);
   default:
     llvm_unreachable("Unknown loc info!");
   }
@@ -4553,11 +4549,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       Arg = DAG.getNode(ISD::SIGN_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     case CCValAssign::AExt:
-      if (VA.getValVT().isFloatingPoint()) {
-        Arg = DAG.getNode(ISD::BITCAST, DL, VA.getValVT().changeTypeToInteger(),
-                          Arg);
-      }
-
+      Arg = DAG.getBitcast(VA.getValVT().changeTypeToInteger(), Arg);
       Arg = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     case CCValAssign::FPExt:
