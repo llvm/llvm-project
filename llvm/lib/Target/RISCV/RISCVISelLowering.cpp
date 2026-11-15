@@ -17601,11 +17601,13 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue ShAmt = N->getOperand(1);
 
       unsigned WideOpc = 0;
-      APInt HighMask = APInt::getHighBitsSet(64, 32);
-      if (DAG.MaskedValueIsZero(LHS, HighMask))
-        WideOpc = RISCVISD::WSLL;
-      else if (DAG.ComputeMaxSignificantBits(LHS) <= 32)
-        WideOpc = RISCVISD::WSLA;
+      if (N->getOpcode() == ISD::SHL) {
+        APInt HighMask = APInt::getHighBitsSet(64, 32);
+        if (DAG.MaskedValueIsZero(LHS, HighMask))
+          WideOpc = RISCVISD::WSLL;
+        else if (DAG.ComputeMaxSignificantBits(LHS) <= 32)
+          WideOpc = RISCVISD::WSLA;
+      }
 
       if (WideOpc) {
         SDValue Res =
@@ -20070,7 +20072,7 @@ static SDValue combinePExtWideningAddAcc(SDNode *N, SelectionDAG &DAG,
   if (N->getOpcode() != ISD::ADD)
     return SDValue();
 
-  MVT VT = N->getSimpleValueType(0);
+  EVT VT = N->getValueType(0);
   if (VT != MVT::v4i16 && VT != MVT::v2i32)
     return SDValue();
 
@@ -20149,7 +20151,7 @@ static SDValue combinePExtWideningSubAcc(SDNode *N, SelectionDAG &DAG,
   if (N->getOpcode() != ISD::SUB)
     return SDValue();
 
-  MVT VT = N->getSimpleValueType(0);
+  EVT VT = N->getValueType(0);
   if (VT != MVT::v4i16 && VT != MVT::v2i32)
     return SDValue();
 
