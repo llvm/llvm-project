@@ -248,12 +248,10 @@ static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
   char *POut = Cvt;
   size_t NOut = MB_LEN_MAX;
   const size_t NumErrors = iconv(CD.value(), &PIn, &NIn, &POut, &NOut);
-  if (NumErrors == (size_t)-1 || NIn)
-    llvm_unreachable("internal error: iconv failed on valid character");
-  if (NumErrors)
+  if (NumErrors || NIn)
     return (size_t)-1;
   wchar_t WCh;
-  if (mbrtowc(&WCh, Cvt, POut - Cvt, &CvtMBState) != size_t(POut - Cvt))
+  if (mbrtowc(&WCh, Cvt, POut - Cvt, &CvtMBState) >= size_t(-2))
     llvm_unreachable("internal error: mbrtowc failed on valid character");
   return wcrtomb(S, WCh, MBState);
 }
