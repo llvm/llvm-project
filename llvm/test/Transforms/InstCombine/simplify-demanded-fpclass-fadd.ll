@@ -2143,8 +2143,7 @@ define nofpclass(nan pinf) half @ret__no_nan_pinf__fadd__lhs_no_demand_pinf(i1 %
 ; CHECK-LABEL: define nofpclass(nan pinf) half @ret__no_nan_pinf__fadd__lhs_no_demand_pinf(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NAN_PINF:%.*]] = call half @returns_pinf_or_nan()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half +inf, half [[UNKNOWN0]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[UNKNOWN0]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nan.pinf = call half @returns_pinf_or_nan()
@@ -2157,8 +2156,7 @@ define nofpclass(nan ninf) half @ret__no_nan_ninf__fadd__lhs_no_demand_ninf(i1 %
 ; CHECK-LABEL: define nofpclass(nan ninf) half @ret__no_nan_ninf__fadd__lhs_no_demand_ninf(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NAN_NINF:%.*]] = call half @returns_ninf_or_nan()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half -inf, half [[UNKNOWN0]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[UNKNOWN0]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nan.ninf = call half @returns_ninf_or_nan()
@@ -2171,8 +2169,7 @@ define nofpclass(nan pinf) half @ret__no_nan_pinf__fadd__rhs_no_demand_pinf(i1 %
 ; CHECK-LABEL: define nofpclass(nan pinf) half @ret__no_nan_pinf__fadd__rhs_no_demand_pinf(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NAN_PINF:%.*]] = call half @returns_pinf_or_nan()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half +inf, half [[UNKNOWN0]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[UNKNOWN1]], [[UNKNOWN0]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nan.pinf = call half @returns_pinf_or_nan()
@@ -2185,8 +2182,7 @@ define nofpclass(nan ninf) half @ret__no_nan_ninf__fadd__rhs_no_demand_ninf(i1 %
 ; CHECK-LABEL: define nofpclass(nan ninf) half @ret__no_nan_ninf__fadd__rhs_no_demand_ninf(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NAN_NINF:%.*]] = call half @returns_ninf_or_nan()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half -inf, half [[UNKNOWN0]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd nnan half [[UNKNOWN1]], [[UNKNOWN0]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nan.ninf = call half @returns_ninf_or_nan()
