@@ -6224,7 +6224,9 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fsub -0.0, (fsub -0.0, X) ==> X
   // fsub -0.0, (fneg X) ==> X
   Value *X;
-  if (canIgnoreSNaN(ExBehavior, FMF))
+  if (canIgnoreSNaN(ExBehavior, FMF) &&
+      (!canRoundingModeBe(Rounding, RoundingMode::TowardNegative) ||
+       FMF.noSignedZeros()))
     // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(Op0, m_NegZeroFP()) &&
         match(Op1, m_FNegOrFSubNegZero(m_Value(X))))
