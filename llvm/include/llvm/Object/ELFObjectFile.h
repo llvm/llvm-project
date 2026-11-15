@@ -1323,6 +1323,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "elf32-loongarch";
     case ELF::EM_XTENSA:
       return "elf32-xtensa";
+    case ELF::EM_NANOMIPS:
+      return "elf32-nanomips";
     default:
       return "elf32-unknown";
     }
@@ -1455,6 +1457,9 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
 
   case ELF::EM_XTENSA:
     return Triple::xtensa;
+
+  case ELF::EM_NANOMIPS:
+    return Triple::nanomips;
 
   default:
     return Triple::UnknownArch;

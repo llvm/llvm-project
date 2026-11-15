@@ -134,6 +134,13 @@ TEST(ELFObjectFileTest, MachineTestForMIPS) {
     checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
 
+TEST(ELFObjectFileTest, MachineTestForNanomips) {
+  std::array<StringRef, 4> Formats = {"elf32-nanomips", "elf32-nanomips",
+                                      "elf64-unknown", "elf64-unknown"};
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_NANOMIPS)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::nanomips);
+}
+
 TEST(ELFObjectFileTest, MachineTestForAMDGPU) {
   std::array<StringRef, 4> Formats = {"elf32-amdgpu", "elf32-amdgpu",
                                       "elf64-amdgpu", "elf64-amdgpu"};

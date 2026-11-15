@@ -309,6 +309,8 @@ TEST(ELFTest, getRISCVVendorRelocationTypeName) {
 TEST(ELFTest, getELFRelativeRelocationType) {
   EXPECT_EQ(ELF::R_VE_RELATIVE, getELFRelativeRelocationType(EM_VE));
   EXPECT_EQ(ELF::R_LARCH_RELATIVE, getELFRelativeRelocationType(EM_LOONGARCH));
+  EXPECT_EQ(ELF::R_NANOMIPS_RELATIVE,
+            getELFRelativeRelocationType(EM_NANOMIPS));
 }
 
 // This is a test for the DataRegion helper struct, defined in ELF.h header.
