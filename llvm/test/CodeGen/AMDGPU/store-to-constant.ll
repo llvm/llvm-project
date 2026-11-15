@@ -350,21 +350,21 @@ define amdgpu_kernel void @store_as6_v4i64(<4 x i64> %value) {
 ; CHECK-LABEL: store_as6_v4i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0x1010
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    s_mov_b32 s9, 0
+; CHECK-NEXT:    s_movk_i32 s8, 0x1010
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v5, s7
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0x1000
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9]
+; CHECK-NEXT:    s_movk_i32 s8, 0x1000
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v5, s3
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9]
 ; CHECK-NEXT:    s_endpgm
   store <4 x i64> %value, ptr addrspace(6) inttoptr (i32 4096 to ptr addrspace(6)), align 32
   ret void
