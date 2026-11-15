@@ -234,7 +234,7 @@ TEST(ConstraintSolverTest, TestInPlaceSolveGivesSameAnswerAsCopy) {
   addVariableRow(CS, {-5, -1, 0});
   addVariableRow(CS, {-6, 0, -1});
   for (ArrayRef<int64_t> Query :
-       {ArrayRef<int64_t>{3, 1, 1}, {10, 1, 0}, {4, 1, 0}, {0, 0, 0}}) {
+       {std::array<int64_t, 3>{3, 1, 1}, {10, 1, 0}, {4, 1, 0}, {0, 0, 0}}) {
     bool Expected = CS.isConditionImplied(toRow(Query));
     ConstraintSystem Copy = CS;
     EXPECT_EQ(Expected, std::move(Copy).isConditionImplied(toRow(Query)));
