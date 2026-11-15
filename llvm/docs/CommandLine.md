@@ -1599,6 +1599,7 @@ Only `-help-hidden` lists the options, like `cl::Hidden`.
 A default is the member's C++ initializer, so `"\"-\""` initializes `foo_path` to `"-"`.
 An `OptionalValueField` or `OptionalEnumField` takes no default; its `std::optional` member stays `std::nullopt` unless the option is given, replacing `getNumOccurrences()`.
 The header declares the struct after including what the member defaults need, and one source file defines it and registers it with `cl::`.
+Options that only some tools accept, such as those that `mc::getMCTargetOptions` reads, are not registered: a function returns a function-local `opt::LibraryOptionsParser`, and each such tool passes it to the `cl::parseCommandLineOptions` overload that takes tool options.
 
 The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under `LINK_COMPONENTS`.
 A library that otherwise needs only `llvm-min-tblgen` sets `LLVM_TABLEGEN_PROJECT` to `LLVM_HEADERS` before its `llvm_tablegen()` call, so that its sources need not wait for `llvm-tblgen`.

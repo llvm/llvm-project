@@ -1,4 +1,4 @@
-; REQUIRES: asserts
+; REQUIRES: asserts, default_triple
 
 ; Ensure the test runs in a temp directory. See https://github.com/llvm/llvm-project/pull/167403#event-20848739526
 ; RUN: rm -rf %t.dir && mkdir -p %t.dir && cd %t.dir

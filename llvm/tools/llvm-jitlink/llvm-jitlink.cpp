@@ -3051,8 +3051,7 @@ static Expected<int> runWithRuntime(Session &S, ExecutorAddr EntryPointAddr) {
   using RunProgramProxy =
       Proxy<int64_t(StringRef, StringRef, ArrayRef<std::string>)>;
   RunProgramProxy RunProgram(
-      sps::ProxySpec<RunProgramProxy, run_program_sps_ci::RunProgram>::dispatch,
-      EntryPointAddr);
+      sps::ProxySpec<run_program_sps_ci::RunProgram>::dispatch, EntryPointAddr);
   auto Result =
       RunProgram(S.ES, S.MainJD->getName(), DemangledEntryPoint,
                  ArrayRef<std::string>(

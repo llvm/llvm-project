@@ -4299,7 +4299,7 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc dl = getCurSDLoc();
 
-  assert(BaseVT.getSizeInBits() >= ValVT.getSizeInBits() &&
+  assert(BaseVT.getScalarSizeInBits() >= ValVT.getScalarSizeInBits() &&
          "bitinsert val wider than base should be rejected by verifier");
 
   // If Val is a float, cast it to an integer of the same bitwidth
@@ -4337,7 +4337,7 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   SDLoc dl = getCurSDLoc();
 
-  assert(ResultVT.getSizeInBits() <= SrcVT.getSizeInBits() &&
+  assert(ResultVT.getScalarSizeInBits() <= SrcVT.getScalarSizeInBits() &&
          "bitextract result wider than source should be rejected by verifier");
 
   // Legalize shift amount to the target's shift amount type.
@@ -9964,19 +9964,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitMemCmpBCmpCall(I))
           return;
         break;
-      case LibFunc_copysign:
-      case LibFunc_copysignf:
-      case LibFunc_copysignl:
-        // We already checked this call's prototype; verify it doesn't modify
-        // errno.
-        if (I.onlyReadsMemory()) {
-          SDValue LHS = getValue(I.getArgOperand(0));
-          SDValue RHS = getValue(I.getArgOperand(1));
-          setValue(&I, DAG.getNode(ISD::FCOPYSIGN, getCurSDLoc(),
-                                   LHS.getValueType(), LHS, RHS));
-          return;
-        }
-        break;
       case LibFunc_sin:
       case LibFunc_sinf:
       case LibFunc_sinl:
@@ -10062,12 +10049,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_exp10f:
       case LibFunc_exp10l:
         if (visitUnaryFloatCall(I, ISD::FEXP10))
-          return;
-        break;
-      case LibFunc_ldexp:
-      case LibFunc_ldexpf:
-      case LibFunc_ldexpl:
-        if (visitBinaryFloatCall(I, ISD::FLDEXP))
           return;
         break;
       case LibFunc_strstr:
@@ -10798,8 +10779,14 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         assert((OpInfo.isIndirect ||
                 OpInfo.ConstraintType != TargetLowering::C_Memory) &&
                "Operand must be indirect to be a mem!");
+
         assert(InOperandVal.getValueType() ==
-                   TLI.getPointerTy(DAG.getDataLayout()) &&
+                   TLI.getPointerTy(
+                       DAG.getDataLayout(),
+                       OpInfo.CallOperandVal
+                           ? cast<PointerType>(OpInfo.CallOperandVal->getType())
+                                 ->getAddressSpace()
+                           : 0) &&
                "Memory operands expect pointer values");
 
         const InlineAsm::ConstraintCode ConstraintID =

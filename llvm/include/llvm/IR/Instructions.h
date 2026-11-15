@@ -257,6 +257,9 @@ public:
     setSubclassData<OrderingField>(Ordering);
   }
 
+  /// Return true if this load has an atomic ordering.
+  bool isAtomic() const { return getOrdering() != AtomicOrdering::NotAtomic; }
+
   /// Returns the synchronization scope ID of this load instruction.
   SyncScope::ID getSyncScopeID() const {
     return SSID;
@@ -405,6 +408,9 @@ public:
   void setOrdering(AtomicOrdering Ordering) {
     setSubclassData<OrderingField>(Ordering);
   }
+
+  /// Return true if this store has an atomic ordering.
+  bool isAtomic() const { return getOrdering() != AtomicOrdering::NotAtomic; }
 
   /// Returns the synchronization scope ID of this store instruction.
   SyncScope::ID getSyncScopeID() const {

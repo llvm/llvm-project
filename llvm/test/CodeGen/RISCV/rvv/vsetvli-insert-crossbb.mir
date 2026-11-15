@@ -1094,3 +1094,4 @@ body: |
     %avl:gprnox0 = ADDI %avl:gprnox0, -1
     $v8 = PseudoVMV_S_X undef renamable $v8, $x0, 1, 3
     $v8 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, %vl:gprnox0, 3, 3
+...

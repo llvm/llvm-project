@@ -464,7 +464,8 @@ optMain(int argc, char **argv,
 
   LLVMContext Context;
   if (!cl::parseCommandLineOptions(
-          Context.getLibraryOptions(), ArrayRef(argv, argc),
+          Context.getLibraryOptions(), codegen::getToolOptions(),
+          ArrayRef(argv, argc),
           "llvm .bc -> .bc modular optimizer and analysis printer\n",
           &errs())) {
     // Unpinned pass names are not options; point `opt -passname` users to
@@ -514,9 +515,9 @@ optMain(int argc, char **argv,
   }
 
   // If user just wants to list available options, skip module loading.
-  auto MAttrs = codegen::getMAttrs();
-  std::string CPUStr = codegen::getCPUStr();
-  std::string TuneCPUStr = codegen::getTuneCPUStr();
+  auto MAttrs = codegen::getMAttrs(Context.getLibraryOptions());
+  std::string CPUStr = codegen::getCPUStr(Context.getLibraryOptions());
+  std::string TuneCPUStr = codegen::getTuneCPUStr(Context.getLibraryOptions());
   bool SkipModule =
       CPUStr == "help" || TuneCPUStr == "help" || is_contained(MAttrs, "help");
   if (SkipModule) {
@@ -527,8 +528,8 @@ optMain(int argc, char **argv,
       TheTriple = Triple(sys::getDefaultTargetTriple());
 
     std::string Error;
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(
+        codegen::getMArch(Context.getLibraryOptions()), TheTriple, Error);
     if (!TheTarget) {
       errs() << argv[0] << ": " << Error << "\n";
       return 1;
@@ -541,8 +542,10 @@ optMain(int argc, char **argv,
     // Create the target machine just to print the help info. Use unique_ptr
     // to avoid a memory leak.
     std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-        TheTriple, SkipModuleCPU, codegen::getFeaturesStr(), Options,
-        codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
+        TheTriple, SkipModuleCPU,
+        codegen::getFeaturesStr(Context.getLibraryOptions()), Options,
+        codegen::getExplicitRelocModel(Context.getLibraryOptions()),
+        codegen::getExplicitCodeModel(Context.getLibraryOptions()),
         GetCodeGenOptLevel()));
     if (!TM) {
       errs() << argv[0] << ": could not allocate target machine\n";
@@ -573,7 +576,7 @@ optMain(int argc, char **argv,
   }
   LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
-  codegen::MaybeEnableStatistics();
+  codegen::maybeEnableStatistics(Context.getLibraryOptions());
 
   StringRef ABIName =
       mc::getABIName(Context.getLibraryOptions()); // FIXME: Handle module flag.
@@ -708,9 +711,9 @@ optMain(int argc, char **argv,
   std::string FeaturesStr;
   std::unique_ptr<TargetMachine> TM;
   if (ModuleTriple.getArch()) {
-    CPUStr = codegen::getCPUStr();
-    TuneCPUStr = codegen::getTuneCPUStr();
-    FeaturesStr = codegen::getFeaturesStr();
+    CPUStr = codegen::getCPUStr(Context.getLibraryOptions());
+    TuneCPUStr = codegen::getTuneCPUStr(Context.getLibraryOptions());
+    FeaturesStr = codegen::getFeaturesStr(Context.getLibraryOptions());
     Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
         codegen::createTargetMachineForTriple(
             Context.getLibraryOptions(), ModuleTriple, GetCodeGenOptLevel());
@@ -834,7 +837,8 @@ optMain(int argc, char **argv,
             EmitModuleHash, EnableDebugify, VerifyDebugInfoPreserve,
             EnableProfileVerification, UnifiedLTO))
       return 1;
-    return codegen::MaybeSaveStatistics(OutputFilename, "opt");
+    return codegen::maybeSaveStatistics(Context.getLibraryOptions(),
+                                        OutputFilename, "opt");
   }
 
   if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
@@ -1020,5 +1024,6 @@ optMain(int argc, char **argv,
   if (ThinLinkOut)
     ThinLinkOut->keep();
 
-  return codegen::MaybeSaveStatistics(OutputFilename, "opt");
+  return codegen::maybeSaveStatistics(Context.getLibraryOptions(),
+                                      OutputFilename, "opt");
 }

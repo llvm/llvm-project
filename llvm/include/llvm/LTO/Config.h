@@ -274,6 +274,12 @@ struct Config {
       const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols)>;
   CombinedIndexHookFn CombinedIndexHook;
 
+  /// This hook is called after regular LTO modules with summaries (e.g., split
+  /// LTO units) have been linked into the combined module, before optimizing
+  /// the combined module or running ThinLTO.
+  using PostRegularLTOLinkHookFn = std::function<void()>;
+  PostRegularLTOLinkHookFn PostRegularLTOLinkHook;
+
   /// This is a convenience function that configures this Config object to write
   /// temporary files named after the given OutputFileName for each of the LTO
   /// phases to disk. A client can use this function to implement -save-temps.

@@ -39,8 +39,7 @@ body:             |
     %6:fpr32 = FADDSrr %5, %3, implicit $fpcr
     $s0 = COPY %6
     RET_ReallyLR implicit $s0
-
-
+...
 # FIXME: We should be able to reassociate without unsafe fp math, but currently
 # the reassoc flag is ignored.
 # CHECK-LABEL: name: fadd_reassoc
@@ -81,8 +80,7 @@ body:             |
     %6:fpr32 = reassoc FADDSrr %5, %3, implicit $fpcr
     $s0 = COPY %6
     RET_ReallyLR implicit $s0
-
-
+...
 # Check that flags on the instructions are preserved after reassociation.
 # CHECK-LABEL: name: fadd_flags
 # CHECK:             [[ADD1:%[0-9]+]]:fpr32 = nnan ninf nsz FADDSrr %0, %1, implicit $fpcr
@@ -121,3 +119,4 @@ body:             |
     %6:fpr32 = nsz ninf FADDSrr %5, %3, implicit $fpcr
     $s0 = COPY %6
     RET_ReallyLR implicit $s0
+...

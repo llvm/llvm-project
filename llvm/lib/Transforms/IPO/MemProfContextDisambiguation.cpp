@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements support for context disambiguation of allocation
-// calls for profile guided heap optimization. Specifically, it uses Memprof
-// profiles which indicate context specific allocation behavior (currently
-// distinguishing cold vs hot memory allocations). Cloning is performed to
-// expose the cold allocation call contexts, and the allocation calls are
-// subsequently annotated with an attribute for later transformation.
+// calls for profile-guided memory optimization (MemPGO). Specifically, it uses
+// MemProf profiles which indicate context specific allocation behavior
+// (currently distinguishing cold vs hot memory allocations). Cloning is
+// performed to expose the cold allocation call contexts, and the allocation
+// calls are subsequently annotated with an attribute for later transformation.
 //
 // The transformations can be performed either directly on IR (regular LTO), or
 // on a ThinLTO index (and later applied to the IR during the ThinLTO backend).
@@ -2518,18 +2518,12 @@ uint64_t IndexCallsiteContextGraph::getLastStackId(IndexCall &Call) {
   return Index.getStackIdAtIndex(CallsiteContext.back());
 }
 
-static const std::string MemProfCloneSuffix = ".memprof.";
-
 static std::string getMemProfFuncName(Twine Base, unsigned CloneNo) {
   // We use CloneNo == 0 to refer to the original version, which doesn't get
   // renamed with a suffix.
   if (!CloneNo)
     return Base.str();
   return (Base + MemProfCloneSuffix + Twine(CloneNo)).str();
-}
-
-static bool isMemProfClone(const GlobalValue &GV) {
-  return GV.getName().contains(MemProfCloneSuffix);
 }
 
 // Return the clone number of the given function by extracting it from the

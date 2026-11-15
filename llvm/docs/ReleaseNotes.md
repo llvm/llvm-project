@@ -52,6 +52,13 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* The `optnone` function attribute now implies `noinline`, and no longer
+  requires `noinline` to be present on the same function. `optnone` may now
+  be combined with `alwaysinline`, in which case `alwaysinline` takes
+  precedence and the function is inlined. Use `Function::isNoInline()` or
+  `CallBase::isNoInline()` to query whether a function or call should not be
+  inlined.
+
 * LLVM now assigns persistent print IDs to metadata nodes. Reusing these IDs
   avoids repeated module-wide scans to rebuild metadata numbering, which can
   significantly speed up debug and pass printing on large modules. Keeping
@@ -172,7 +179,13 @@ Makes programs 10x faster by doing Special New Thing.
 * Added the `bitinsert` and `bitextract` instructions for bit-range
   manipulation on byte type values.
 
+* The verifier now rejects a `"wchar_size"` module flag whose value is not
+  positive.
+
 ### Changes to LLVM infrastructure
+
+* Removed `mc::RegisterMCTargetOptionsFlags`.
+  A tool that created it now passes `mc::getToolOptions()`, or `codegen::getToolOptions()` with `codegen::RegisterCodeGenFlags`, to `cl::parseCommandLineOptions`.
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.

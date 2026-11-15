@@ -1718,6 +1718,10 @@ Constant *llvm::ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
   if (isa<PoisonValue>(Base) && isa<PoisonValue>(Val))
     return Base;
 
+  // TODO: Fold vectors element by element.
+  if (Base->getType()->isVectorTy())
+    return nullptr;
+
   auto *COffset = dyn_cast<ConstantInt>(Offset);
   if (!COffset)
     return nullptr;
@@ -1763,6 +1767,10 @@ Constant *llvm::ConstantFoldBitExtractOperands(Type *Ty, Constant *Src,
   // bitextract C, undef -> poison
   if (isa<PoisonValue>(Src) || isa<UndefValue>(Offset))
     return PoisonValue::get(Ty);
+
+  // TODO: Fold vectors element by element.
+  if (Ty->isVectorTy())
+    return nullptr;
 
   auto *COffset = dyn_cast<ConstantInt>(Offset);
   if (!COffset)

@@ -361,6 +361,7 @@ endif()
 if(LLVM_LIBC_INCLUDE_SCUDO)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # malloc.h external entrypoints
+    libc.src.stdlib.mallinfo2
     libc.src.stdlib.mallopt
   )
 endif()
@@ -435,6 +436,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cosf
     libc.src.math.cosh
     libc.src.math.coshf
+    libc.src.math.daddf128
     libc.src.math.dfmal
     libc.src.math.dsqrtl
     libc.src.math.erff

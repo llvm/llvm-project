@@ -278,6 +278,9 @@ private:
   const MCSymbol *PersonalityFunction{nullptr};
   uint8_t PersonalityEncoding{dwarf::DW_EH_PE_sdata4 | dwarf::DW_EH_PE_pcrel};
 
+  /// The function's CIE has the 'S' augmentation (.cfi_signal_frame).
+  bool IsSignalFrame{false};
+
   BinaryContext &BC;
 
   std::unique_ptr<BinaryLoopInfo> BLI;
@@ -1556,6 +1559,8 @@ public:
 
   uint8_t getPersonalityEncoding() const { return PersonalityEncoding; }
 
+  bool isSignalFrame() const { return IsSignalFrame; }
+
   CallSitesRange getCallSites(const FragmentNum F) const {
     return make_range(std::equal_range(CallSites.begin(), CallSites.end(),
                                        std::make_pair(F, CallSite()),
@@ -1991,6 +1996,11 @@ public:
 
   BinaryFunction &setPersonalityEncoding(uint8_t Encoding) {
     PersonalityEncoding = Encoding;
+    return *this;
+  }
+
+  BinaryFunction &setIsSignalFrame(bool V) {
+    IsSignalFrame = V;
     return *this;
   }
 

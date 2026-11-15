@@ -144,7 +144,8 @@ int main(int Argc, char **Argv) {
   LLVMContext Context;
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
   cl::parseCommandLineOptions(
-      Context.getLibraryOptions(), ArrayRef(Argv, Argc),
+      Context.getLibraryOptions(), codegen::getToolOptions(),
+      ArrayRef(Argv, Argc),
       "LLVM automatic testcase reducer.\n"
       "See https://llvm.org/docs/CommandGuide/llvm-reduce.html for more "
       "information.\n");

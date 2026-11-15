@@ -219,3 +219,4 @@ body:             |
     %1:_(f16) = G_FCOSH %0
     $h0 = COPY %1(f16)
     RET_ReallyLR implicit $h0
+...

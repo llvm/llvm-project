@@ -50,6 +50,7 @@
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
@@ -9351,6 +9352,14 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     Context.getFunctionFeatureMap(CallerFeatureMap, FD);
     RISCV().checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext),
                                 CallerFeatureMap);
+  }
+
+  // Global, static or variable sized objects of HLX types are not allowed.
+  if (Hexagon().isHLXVectorType(T) &&
+      (NewVD->hasGlobalStorage() || T->isVariableArrayType())) {
+    Diag(NewVD->getLocation(), diag::err_hlx_invalid_object);
+    NewVD->setInvalidDecl();
+    return;
   }
 
   if (Context.getTargetInfo().hasAMDGPUTypes()) {
@@ -19788,6 +19797,12 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
         InvalidDecl = true;
       }
     }
+  }
+
+  // Aggregates with members of HLX types are not allowed.
+  if (Hexagon().isHLXVectorType(T)) {
+    Diag(Loc, diag::err_hlx_invalid_field);
+    InvalidDecl = true;
   }
 
   // C++11 [class.union]p8 (DR1460):

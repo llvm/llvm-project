@@ -1017,8 +1017,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
                 isa<ShlOperator, LShrOperator, AShrOperator>(U.getUser()) &&
                 U.getOperandNo() == 1)
               return CI->uge(MinBW);
-            uint64_t BW = bit_width(DB.getDemandedBits(&U).getZExtValue());
-            return bit_ceil(BW) > MinBW;
+            return bit_ceil(DB.getDemandedBits(&U).getActiveBits()) > MinBW;
           }))
         continue;
 

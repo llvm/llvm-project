@@ -187,6 +187,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  ifaddrs
+  ../libc/include/ifaddrs.yaml
+  ifaddrs.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_ifaddrs
+)
+
+add_header_macro(
   libgen
   ../libc/include/libgen.yaml
   libgen.h
@@ -218,6 +227,8 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.malloc_macros
+    .llvm-libc-types.size_t
+    .llvm-libc-types.struct_mallinfo2
 )
 
 add_header_macro(

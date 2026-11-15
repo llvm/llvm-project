@@ -3407,16 +3407,6 @@ bool Sema::CheckIfOverriddenFunctionIsMarkedFinal(const CXXMethodDecl *New,
   return true;
 }
 
-static bool InitializationHasSideEffects(const FieldDecl &FD) {
-  const Type *T = FD.getType()->getBaseElementTypeUnsafe();
-  // FIXME: Destruction of ObjC lifetime types has side-effects.
-  if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
-    return !RD->isCompleteDefinition() ||
-           !RD->hasTrivialDefaultConstructor() ||
-           !RD->hasTrivialDestructor();
-  return false;
-}
-
 void Sema::CheckShadowInheritedFields(const SourceLocation &Loc,
                                       DeclarationName FieldName,
                                       const CXXRecordDecl *RD,
@@ -3465,29 +3455,6 @@ void Sema::CheckShadowInheritedFields(const SourceLocation &Loc,
       Bases.erase(It);
     }
   }
-}
-
-template <typename AttrType>
-inline static bool HasAttribute(const QualType &T) {
-  if (const TagDecl *TD = T->getAsTagDecl())
-    return TD->hasAttr<AttrType>();
-  if (const TypedefType *TDT = T->getAs<TypedefType>())
-    return TDT->getDecl()->hasAttr<AttrType>();
-  return false;
-}
-
-static bool IsUnusedPrivateField(const FieldDecl *FD) {
-  if (FD->getAccess() == AS_private && FD->getDeclName()) {
-    QualType FieldType = FD->getType();
-    if (HasAttribute<WarnUnusedAttr>(FieldType))
-      return true;
-
-    return !FD->isImplicit() && !FD->hasAttr<UnusedAttr>() &&
-           !FD->getParent()->isDependentContext() &&
-           !HasAttribute<UnusedAttr>(FieldType) &&
-           !InitializationHasSideEffects(*FD);
-  }
-  return false;
 }
 
 NamedDecl *
@@ -3783,7 +3750,7 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     FieldCollector->Add(FD);
 
     if (!Diags.isIgnored(diag::warn_unused_private_field, FD->getLocation()) &&
-        IsUnusedPrivateField(FD)) {
+        FD->isUnusedPrivateField()) {
       // Remember all explicit private FieldDecls that have a name, no side
       // effects and are not part of a dependent type declaration.
       UnusedPrivateFields.insert(FD);
