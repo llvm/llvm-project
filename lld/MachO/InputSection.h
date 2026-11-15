@@ -16,10 +16,13 @@
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/SwapByteOrder.h"
+
+#include <atomic>
+#include <memory>
 
 namespace lld {
 namespace macho {
@@ -57,7 +60,8 @@ public:
   std::string getSourceLocation(uint64_t off) const;
   // Return the relocation at \p off, if it exists. This does a linear search.
   const Relocation *getRelocAt(uint32_t off) const;
-  // Whether the data at \p off in this InputSection is live.
+  // Whether the data at \p off in this InputSection is live. isLive() and
+  // markLive() are safe to call from several threads at once.
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
   virtual InputSection *canonical() { return this; }
@@ -120,8 +124,12 @@ public:
   uint64_t getOffset(uint64_t off) const override { return outSecOff + off; }
   uint64_t getVA() const { return InputSection::getVA(0); }
   // ConcatInputSections are entirely live or dead, so the offset is irrelevant.
-  bool isLive(uint64_t off) const override { return live; }
-  void markLive(uint64_t off) override { live = true; }
+  bool isLive(uint64_t off) const override {
+    return utils::atomicRef(live).load(std::memory_order_relaxed);
+  }
+  void markLive(uint64_t off) override {
+    utils::atomicRef(live).store(true, std::memory_order_relaxed);
+  }
   bool isCoalescedWeak() const { return wasCoalesced && symbols.empty(); }
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
   void writeTo(uint8_t *buf);
@@ -190,6 +198,27 @@ struct StringPiece {
 
   StringPiece(uint64_t off, uint32_t hash)
       : inSecOff(off), live(!config->deadStrip), hash(hash) {}
+
+  // Thread-safe iff `hash` is not modified concurrently.
+  bool isLive() const {
+    // &inSecOff + 1 points to the `live` bitfield.
+    auto &word = utils::atomicRef(*(&inSecOff + 1));
+    return word.load(std::memory_order_relaxed) & liveBit;
+  }
+
+  void markLive() {
+    auto &word = utils::atomicRef(*(&inSecOff + 1));
+    uint32_t w = word.load(std::memory_order_relaxed);
+    // No atomic OR is needed: while markLive runs, `hash` does not change and
+    // `live` only goes from false to true, so threads racing here all store the
+    // same value.
+    if (!(w & liveBit))
+      word.store(w | liveBit, std::memory_order_relaxed);
+  }
+
+  // The bit of the word after inSecOff that holds `live`.
+  static constexpr uint32_t liveBit =
+      llvm::sys::IsBigEndianHost ? (1U << 31) : 1U;
 };
 
 static_assert(sizeof(StringPiece) == 16, "StringPiece is too big!");
@@ -212,8 +241,10 @@ public:
         deduplicateLiterals(dedupLiterals) {}
 
   uint64_t getOffset(uint64_t off) const override;
-  bool isLive(uint64_t off) const override { return getStringPiece(off).live; }
-  void markLive(uint64_t off) override { getStringPiece(off).live = true; }
+  bool isLive(uint64_t off) const override {
+    return getStringPiece(off).isLive();
+  }
+  void markLive(uint64_t off) override { getStringPiece(off).markLive(); }
   // Find the StringPiece that contains this offset.
   StringPiece &getStringPiece(uint64_t off);
   const StringPiece &getStringPiece(uint64_t off) const;
@@ -259,10 +290,10 @@ public:
                           uint32_t align);
   uint64_t getOffset(uint64_t off) const override;
   bool isLive(uint64_t off) const override {
-    return live[off >> power2LiteralSize];
+    return live[off >> power2LiteralSize].load(std::memory_order_relaxed);
   }
   void markLive(uint64_t off) override {
-    live[off >> power2LiteralSize] = true;
+    live[off >> power2LiteralSize].store(true, std::memory_order_relaxed);
   }
 
   static bool classof(const InputSection *isec) {
@@ -272,7 +303,7 @@ public:
 private:
   unsigned power2LiteralSize;
   // The liveness of data[off] is tracked by live[off >> power2LiteralSize].
-  llvm::BitVector live;
+  std::unique_ptr<std::atomic<bool>[]> live;
 };
 
 inline uint8_t sectionType(uint32_t flags) {
