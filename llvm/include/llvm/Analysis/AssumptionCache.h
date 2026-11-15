@@ -180,13 +180,14 @@ public:
   }
 
   /// Access the list of assume bundles which affect V.
-  bool assumeBundlesFor(
+  LLVM_ABI bool assumeBundlesFor(
       const Value *V,
       function_ref<bool(BundleAttr, OperandBundleUse, AssumeInst *)>);
 
   /// Access all assume bundles of type Bundle which affect V.
-  bool assumeBundlesOfKind(BundleAttr Bundle, const Value *V,
-                           function_ref<bool(OperandBundleUse, AssumeInst *)>);
+  LLVM_ABI bool
+  assumeBundlesOfKind(BundleAttr Bundle, const Value *V,
+                      function_ref<bool(OperandBundleUse, AssumeInst *)>);
 
   /// Determine which values are affected by this assume operand bundle.
   LLVM_ABI static void
