@@ -8,5 +8,6 @@
 // WRONG: clang (MLIR option parsing): Did you mean '--mlir-disable-threading'?
 // WRONG: clang (MLIR option parsing): Unknown command line argument '-mlir-print-op-genericd'.  Try: 'clang (MLIR option parsing) --help'
 // WRONG: clang (MLIR option parsing): Did you mean '--mlir-print-op-generic'?
+// WRONG: error: invalid argument in '-mmlir'
 
 // CC1: "-mmlir" "-mlir-disable-threading"
