@@ -448,7 +448,6 @@ try {
         "LLVM_ENABLE_ZSTD=FORCE_ON"
         "CMAKE_C_FLAGS=`"$CommonCompilerFlags`""
         "CMAKE_CXX_FLAGS=`"$CommonCompilerFlags`""
-        "CMAKE_CXX_FLAGS_RELEASE=`"$ReleaseCompilerFlags`""
         # libxml2 2.15 needs bcrypt on executable and shared links.
         "CMAKE_EXE_LINKER_FLAGS=bcrypt.lib"
         "CMAKE_SHARED_LINKER_FLAGS=bcrypt.lib"
@@ -456,7 +455,6 @@ try {
         'LLVM_ENABLE_PROJECTS="clang;lld"'
         'LLVM_ENABLE_RUNTIMES="compiler-rt"'
         "COMPILER_RT_BUILD_ORC=OFF"
-        "LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF"
         # Configure WiX explicitly so llvm/CMakeLists.txt sets its MSI
         # compression, install scope, and permanent UpgradeCode.
         "CPACK_GENERATOR=WIX"
