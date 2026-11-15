@@ -186,10 +186,10 @@ declare i32 @use_b(i32)
 ; CODESIZE-LABEL: define i32 @caller(
 ; CODESIZE-SAME: i32 [[X:%.*]]) {
 ; CODESIZE-NEXT:  [[ENTRY:.*:]]
-; CODESIZE-NEXT:    [[ZERO:%.*]] = call i32 @zero_savings.specialized.1(i32 1, i32 [[X]])
-; CODESIZE-NEXT:    [[FRACTIONAL:%.*]] = call i32 @fractional_savings.specialized.2(i32 1, i32 [[X]])
-; CODESIZE-NEXT:    [[EXACT:%.*]] = call i32 @exact_savings.specialized.3(i32 1, i32 [[X]])
-; CODESIZE-NEXT:    [[BRANCH:%.*]] = call i32 @branch_savings.specialized.4(i1 true, i32 [[X]])
+; CODESIZE-NEXT:    [[ZERO:%.*]] = call i32 @zero_savings(i32 1, i32 [[X]])
+; CODESIZE-NEXT:    [[FRACTIONAL:%.*]] = call i32 @fractional_savings(i32 1, i32 [[X]])
+; CODESIZE-NEXT:    [[EXACT:%.*]] = call i32 @exact_savings.specialized.1(i32 1, i32 [[X]])
+; CODESIZE-NEXT:    [[BRANCH:%.*]] = call i32 @branch_savings.specialized.2(i1 true, i32 [[X]])
 ; CODESIZE-NEXT:    [[SUM0:%.*]] = add i32 [[ZERO]], [[FRACTIONAL]]
 ; CODESIZE-NEXT:    [[SUM1:%.*]] = add i32 [[EXACT]], [[BRANCH]]
 ; CODESIZE-NEXT:    [[SUM:%.*]] = add i32 [[SUM0]], [[SUM1]]
@@ -240,26 +240,7 @@ declare i32 @use_b(i32)
 ; CODESIZE-NEXT:    ret i32 [[RESULT]]
 ;
 ;
-; CODESIZE-LABEL: define internal i32 @zero_savings.specialized.1(
-; CODESIZE-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CODESIZE-NEXT:  [[ENTRY:.*:]]
-; CODESIZE-NEXT:    [[ADD:%.*]] = add i32 1, [[Y]]
-; CODESIZE-NEXT:    ret i32 [[ADD]]
-;
-;
-; CODESIZE-LABEL: define internal i32 @fractional_savings.specialized.2(
-; CODESIZE-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CODESIZE-NEXT:  [[ENTRY:.*:]]
-; CODESIZE-NEXT:    [[A:%.*]] = add i32 2, [[Y]]
-; CODESIZE-NEXT:    [[B:%.*]] = xor i32 [[A]], 2
-; CODESIZE-NEXT:    [[C:%.*]] = add i32 [[B]], [[Y]]
-; CODESIZE-NEXT:    [[D:%.*]] = xor i32 [[C]], 3
-; CODESIZE-NEXT:    [[E:%.*]] = add i32 [[D]], [[Y]]
-; CODESIZE-NEXT:    [[F:%.*]] = xor i32 [[E]], 4
-; CODESIZE-NEXT:    ret i32 [[F]]
-;
-;
-; CODESIZE-LABEL: define internal i32 @exact_savings.specialized.3(
+; CODESIZE-LABEL: define internal i32 @exact_savings.specialized.1(
 ; CODESIZE-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CODESIZE-NEXT:  [[ENTRY:.*:]]
 ; CODESIZE-NEXT:    [[A:%.*]] = add i32 2, [[Y]]
@@ -267,7 +248,7 @@ declare i32 @use_b(i32)
 ; CODESIZE-NEXT:    ret i32 [[B]]
 ;
 ;
-; CODESIZE-LABEL: define internal i32 @branch_savings.specialized.4(
+; CODESIZE-LABEL: define internal i32 @branch_savings.specialized.2(
 ; CODESIZE-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) {
 ; CODESIZE-NEXT:  [[ENTRY:.*:]]
 ; CODESIZE-NEXT:    br label %[[THEN:.*]]
@@ -281,10 +262,10 @@ declare i32 @use_b(i32)
 ; LATENCY-LABEL: define i32 @caller(
 ; LATENCY-SAME: i32 [[X:%.*]]) {
 ; LATENCY-NEXT:  [[ENTRY:.*:]]
-; LATENCY-NEXT:    [[ZERO:%.*]] = call i32 @zero_savings.specialized.1(i32 1, i32 [[X]])
-; LATENCY-NEXT:    [[FRACTIONAL:%.*]] = call i32 @fractional_savings.specialized.2(i32 1, i32 [[X]])
-; LATENCY-NEXT:    [[EXACT:%.*]] = call i32 @exact_savings.specialized.3(i32 1, i32 [[X]])
-; LATENCY-NEXT:    [[BRANCH:%.*]] = call i32 @branch_savings.specialized.4(i1 true, i32 [[X]])
+; LATENCY-NEXT:    [[ZERO:%.*]] = call i32 @zero_savings(i32 1, i32 [[X]])
+; LATENCY-NEXT:    [[FRACTIONAL:%.*]] = call i32 @fractional_savings(i32 1, i32 [[X]])
+; LATENCY-NEXT:    [[EXACT:%.*]] = call i32 @exact_savings.specialized.1(i32 1, i32 [[X]])
+; LATENCY-NEXT:    [[BRANCH:%.*]] = call i32 @branch_savings(i1 true, i32 [[X]])
 ; LATENCY-NEXT:    [[SUM0:%.*]] = add i32 [[ZERO]], [[FRACTIONAL]]
 ; LATENCY-NEXT:    [[SUM1:%.*]] = add i32 [[EXACT]], [[BRANCH]]
 ; LATENCY-NEXT:    [[SUM:%.*]] = add i32 [[SUM0]], [[SUM1]]
@@ -335,26 +316,7 @@ declare i32 @use_b(i32)
 ; LATENCY-NEXT:    ret i32 [[RESULT]]
 ;
 ;
-; LATENCY-LABEL: define internal i32 @zero_savings.specialized.1(
-; LATENCY-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; LATENCY-NEXT:  [[ENTRY:.*:]]
-; LATENCY-NEXT:    [[ADD:%.*]] = add i32 1, [[Y]]
-; LATENCY-NEXT:    ret i32 [[ADD]]
-;
-;
-; LATENCY-LABEL: define internal i32 @fractional_savings.specialized.2(
-; LATENCY-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; LATENCY-NEXT:  [[ENTRY:.*:]]
-; LATENCY-NEXT:    [[A:%.*]] = add i32 2, [[Y]]
-; LATENCY-NEXT:    [[B:%.*]] = xor i32 [[A]], 2
-; LATENCY-NEXT:    [[C:%.*]] = add i32 [[B]], [[Y]]
-; LATENCY-NEXT:    [[D:%.*]] = xor i32 [[C]], 3
-; LATENCY-NEXT:    [[E:%.*]] = add i32 [[D]], [[Y]]
-; LATENCY-NEXT:    [[F:%.*]] = xor i32 [[E]], 4
-; LATENCY-NEXT:    ret i32 [[F]]
-;
-;
-; LATENCY-LABEL: define internal i32 @exact_savings.specialized.3(
+; LATENCY-LABEL: define internal i32 @exact_savings.specialized.1(
 ; LATENCY-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; LATENCY-NEXT:  [[ENTRY:.*:]]
 ; LATENCY-NEXT:    [[A:%.*]] = add i32 2, [[Y]]
@@ -362,23 +324,12 @@ declare i32 @use_b(i32)
 ; LATENCY-NEXT:    ret i32 [[B]]
 ;
 ;
-; LATENCY-LABEL: define internal i32 @branch_savings.specialized.4(
-; LATENCY-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) {
-; LATENCY-NEXT:  [[ENTRY:.*:]]
-; LATENCY-NEXT:    br label %[[THEN:.*]]
-; LATENCY:       [[THEN]]:
-; LATENCY-NEXT:    [[A:%.*]] = call i32 @use_a(i32 [[X]])
-; LATENCY-NEXT:    br label %[[EXIT:.*]]
-; LATENCY:       [[EXIT]]:
-; LATENCY-NEXT:    ret i32 [[A]]
-;
-;
 ; EXACT-MIN-LABEL: define i32 @caller(
 ; EXACT-MIN-SAME: i32 [[X:%.*]]) {
 ; EXACT-MIN-NEXT:  [[ENTRY:.*:]]
-; EXACT-MIN-NEXT:    [[ZERO:%.*]] = call i32 @zero_savings.specialized.1(i32 1, i32 [[X]])
+; EXACT-MIN-NEXT:    [[ZERO:%.*]] = call i32 @zero_savings(i32 1, i32 [[X]])
 ; EXACT-MIN-NEXT:    [[FRACTIONAL:%.*]] = call i32 @fractional_savings(i32 1, i32 [[X]])
-; EXACT-MIN-NEXT:    [[EXACT:%.*]] = call i32 @exact_savings.specialized.2(i32 1, i32 [[X]])
+; EXACT-MIN-NEXT:    [[EXACT:%.*]] = call i32 @exact_savings.specialized.1(i32 1, i32 [[X]])
 ; EXACT-MIN-NEXT:    [[BRANCH:%.*]] = call i32 @branch_savings(i1 true, i32 [[X]])
 ; EXACT-MIN-NEXT:    [[SUM0:%.*]] = add i32 [[ZERO]], [[FRACTIONAL]]
 ; EXACT-MIN-NEXT:    [[SUM1:%.*]] = add i32 [[EXACT]], [[BRANCH]]
@@ -430,14 +381,7 @@ declare i32 @use_b(i32)
 ; EXACT-MIN-NEXT:    ret i32 [[RESULT]]
 ;
 ;
-; EXACT-MIN-LABEL: define internal i32 @zero_savings.specialized.1(
-; EXACT-MIN-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; EXACT-MIN-NEXT:  [[ENTRY:.*:]]
-; EXACT-MIN-NEXT:    [[ADD:%.*]] = add i32 1, [[Y]]
-; EXACT-MIN-NEXT:    ret i32 [[ADD]]
-;
-;
-; EXACT-MIN-LABEL: define internal i32 @exact_savings.specialized.2(
+; EXACT-MIN-LABEL: define internal i32 @exact_savings.specialized.1(
 ; EXACT-MIN-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; EXACT-MIN-NEXT:  [[ENTRY:.*:]]
 ; EXACT-MIN-NEXT:    [[A:%.*]] = add i32 2, [[Y]]
