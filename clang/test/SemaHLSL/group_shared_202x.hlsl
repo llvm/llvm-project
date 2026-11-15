@@ -1,13 +1,6 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -std=hlsl202x  -o - -fsyntax-only %s -verify
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -std=hlsl202y  -o - -fsyntax-only %s -verify
 
-#if __HLSL_VERSION < 2029
-// expected-warning@#func{{'auto' type specifier is a HLSL 202y extension}}
-// expected-warning@#func_gs{{'auto' type specifier is a HLSL 202y extension}}
-// expected-warning@#l{{'auto' type specifier is a HLSL 202y extension}}
-// expected-warning@#l2{{'auto' type specifier is a HLSL 202y extension}}
-#endif
-
 // expected-error@#func {{return type cannot be qualified with address space}}
 auto func() -> groupshared void; // #func
 

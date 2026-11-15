@@ -1436,7 +1436,7 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
       TypeSpecType == TST_auto)
     S.Diag(TSTLoc, diag::ext_auto_type_specifier) << /*C++*/ 0;
   if (S.getLangOpts().HLSL &&
-      S.getLangOpts().getHLSLVersion() < LangOptions::HLSL_202y &&
+      S.getLangOpts().getHLSLVersion() < LangOptions::HLSL_202x &&
       TypeSpecType == TST_auto)
     S.Diag(TSTLoc, diag::ext_hlsl_auto_type_specifier) << /*HLSL*/ 1;
   if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11 &&
