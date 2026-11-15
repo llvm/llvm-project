@@ -17,11 +17,6 @@ name:            test_icmp_eq_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -35,10 +30,10 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[t2MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
-    %1(i32) = COPY $r1
-    %2(i1) = G_ICMP intpred(eq),  %0(i32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:gprb(i32) = COPY $r0
+    %1:gprb(i32) = COPY $r1
+    %2:gprb(i1) = G_ICMP intpred(eq),  %0(i32), %1
+    %3:gprb(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -47,11 +42,6 @@ name:            test_icmp_ne_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -65,10 +55,10 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[t2MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
-    %1(i32) = COPY $r1
-    %2(i1) = G_ICMP intpred(ne),  %0(i32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:gprb(i32) = COPY $r0
+    %1:gprb(i32) = COPY $r1
+    %2:gprb(i1) = G_ICMP intpred(ne),  %0(i32), %1
+    %3:gprb(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -77,11 +67,6 @@ name:            test_icmp_ugt_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -95,10 +80,10 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[t2MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
-    %1(i32) = COPY $r1
-    %2(i1) = G_ICMP intpred(ugt),  %0(i32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:gprb(i32) = COPY $r0
+    %1:gprb(i32) = COPY $r1
+    %2:gprb(i1) = G_ICMP intpred(ugt),  %0(i32), %1
+    %3:gprb(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -107,11 +92,6 @@ name:            test_icmp_uge_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -125,10 +105,10 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[t2MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
-    %1(i32) = COPY $r1
-    %2(i1) = G_ICMP intpred(uge),  %0(i32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:gprb(i32) = COPY $r0
+    %1:gprb(i32) = COPY $r1
+    %2:gprb(i1) = G_ICMP intpred(uge),  %0(i32), %1
+    %3:gprb(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -137,11 +117,6 @@ name:            test_icmp_ult_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -155,10 +130,10 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[t2MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
-    %1(i32) = COPY $r1
-    %2(i1) = G_ICMP intpred(ult),  %0(i32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:gprb(i32) = COPY $r0
+    %1:gprb(i32) = COPY $r1
+    %2:gprb(i1) = G_ICMP intpred(ult),  %0(i32), %1
+    %3:gprb(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -167,11 +142,6 @@ name:            test_icmp_ule_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -185,10 +155,10 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[t2MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
-    %1(i32) = COPY $r1
-    %2(i1) = G_ICMP intpred(ule),  %0(i32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:gprb(i32) = COPY $r0
+    %1:gprb(i32) = COPY $r1
+    %2:gprb(i1) = G_ICMP intpred(ule),  %0(i32), %1
+    %3:gprb(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -197,11 +167,6 @@ name:            test_icmp_sgt_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -215,10 +180,10 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[t2MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
-    %1(i32) = COPY $r1
-    %2(i1) = G_ICMP intpred(sgt),  %0(i32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:gprb(i32) = COPY $r0
+    %1:gprb(i32) = COPY $r1
+    %2:gprb(i1) = G_ICMP intpred(sgt),  %0(i32), %1
+    %3:gprb(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -227,11 +192,6 @@ name:            test_icmp_sge_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -245,10 +205,10 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[t2MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
-    %1(i32) = COPY $r1
-    %2(i1) = G_ICMP intpred(sge),  %0(i32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:gprb(i32) = COPY $r0
+    %1:gprb(i32) = COPY $r1
+    %2:gprb(i1) = G_ICMP intpred(sge),  %0(i32), %1
+    %3:gprb(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -257,11 +217,6 @@ name:            test_icmp_slt_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -275,10 +230,10 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[t2MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
-    %1(i32) = COPY $r1
-    %2(i1) = G_ICMP intpred(slt),  %0(i32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:gprb(i32) = COPY $r0
+    %1:gprb(i32) = COPY $r1
+    %2:gprb(i1) = G_ICMP intpred(slt),  %0(i32), %1
+    %3:gprb(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -287,11 +242,6 @@ name:            test_icmp_sle_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -305,10 +255,10 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[t2MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
-    %1(i32) = COPY $r1
-    %2(i1) = G_ICMP intpred(sle),  %0(i32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:gprb(i32) = COPY $r0
+    %1:gprb(i32) = COPY $r1
+    %2:gprb(i1) = G_ICMP intpred(sle),  %0(i32), %1
+    %3:gprb(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...

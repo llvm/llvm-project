@@ -24,9 +24,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 # CHECK: selected: true
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
 # RW-DEFAULT-NOMOVT: constants:
 # RW-DEFAULT-NOMOVT: id: 0
 # RW-DEFAULT-NOMOVT: value: 'ptr @internal_global'
@@ -35,14 +32,14 @@ registers:
 # RWPI-NOMOVT: value: 'internal_global(SBREL)'
 body:             |
   bb.0:
-    %0(p0) = G_GLOBAL_VALUE @internal_global
+    %0:gprb(p0) = G_GLOBAL_VALUE @internal_global
     ; RW-DEFAULT-MOVT: [[G:%[0-9]+]]:rgpr = t2MOVi32imm @internal_global
     ; RW-DEFAULT-NOMOVT: [[G:%[0-9]+]]:gpr = t2LDRpci %const.0, 14 /* CC::al */, $noreg :: (load (p0) from constant-pool)
     ; RWPI-MOVT: [[OFF:%[0-9]+]]:rgpr = t2MOVi32imm target-flags(arm-sbrel) @internal_global
     ; RWPI-NOMOVT: [[OFF:%[0-9]+]]:rgpr = t2LDRpci %const.0, 14 /* CC::al */, $noreg :: (load (p0) from constant-pool)
     ; RWPI: [[G:%[0-9]+]]:gprnopc = t2ADDrr $r9, [[OFF]], 14 /* CC::al */, $noreg, $noreg
 
-    %1(i32) = G_LOAD %0(p0) :: (load (i32) from @internal_global)
+    %1:gprb(i32) = G_LOAD %0(p0) :: (load (i32) from @internal_global)
     ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (i32) from @internal_global)
 
     $r0 = COPY %1(i32)
@@ -58,9 +55,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 # CHECK: selected: true
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
 # RW-DEFAULT-NOMOVT: constants:
 # RW-DEFAULT-NOMOVT: id: 0
 # RW-DEFAULT-NOMOVT: value: 'ptr @external_global'
@@ -69,14 +63,14 @@ registers:
 # RWPI-NOMOVT: value: 'external_global(SBREL)'
 body:             |
   bb.0:
-    %0(p0) = G_GLOBAL_VALUE @external_global
+    %0:gprb(p0) = G_GLOBAL_VALUE @external_global
     ; RW-DEFAULT-MOVT: [[G:%[0-9]+]]:rgpr = t2MOVi32imm @external_global
     ; RW-DEFAULT-NOMOVT: [[G:%[0-9]+]]:gpr = t2LDRpci %const.0, 14 /* CC::al */, $noreg :: (load (p0) from constant-pool)
     ; RWPI-MOVT: [[OFF:%[0-9]+]]:rgpr = t2MOVi32imm target-flags(arm-sbrel) @external_global
     ; RWPI-NOMOVT: [[OFF:%[0-9]+]]:rgpr = t2LDRpci %const.0, 14 /* CC::al */, $noreg :: (load (p0) from constant-pool)
     ; RWPI: [[G:%[0-9]+]]:gprnopc = t2ADDrr $r9, [[OFF]], 14 /* CC::al */, $noreg, $noreg
 
-    %1(i32) = G_LOAD %0(p0) :: (load (i32) from @external_global)
+    %1:gprb(i32) = G_LOAD %0(p0) :: (load (i32) from @external_global)
     ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (i32) from @external_global)
 
     $r0 = COPY %1(i32)
@@ -92,21 +86,18 @@ legalized:       true
 regBankSelected: true
 selected:        false
 # CHECK: selected: true
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
 # RO-DEFAULT-NOMOVT: constants:
 # RO-DEFAULT-NOMOVT: id: 0
 # RO-DEFAULT-NOMOVT: value: 'ptr @internal_constant'
 body:             |
   bb.0:
-    %0(p0) = G_GLOBAL_VALUE @internal_constant
+    %0:gprb(p0) = G_GLOBAL_VALUE @internal_constant
     ; ROPI-MOVT: [[G:%[0-9]+]]:rgpr = t2MOV_ga_pcrel @internal_constant
     ; ROPI-NOMOVT: [[G:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel @internal_constant
     ; RO-DEFAULT-MOVT: [[G:%[0-9]+]]:rgpr = t2MOVi32imm @internal_constant
     ; RO-DEFAULT-NOMOVT: [[G:%[0-9]+]]:gpr = t2LDRpci %const.0, 14 /* CC::al */, $noreg :: (load (p0) from constant-pool)
 
-    %1(i32) = G_LOAD %0(p0) :: (load (i32) from @internal_constant)
+    %1:gprb(i32) = G_LOAD %0(p0) :: (load (i32) from @internal_constant)
     ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (i32) from @internal_constant)
 
     $r0 = COPY %1(i32)
@@ -122,21 +113,18 @@ legalized:       true
 regBankSelected: true
 selected:        false
 # CHECK: selected: true
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
 # RO-DEFAULT-NOMOVT: constants:
 # RO-DEFAULT-NOMOVT: id: 0
 # RO-DEFAULT-NOMOVT: value: 'ptr @external_constant'
 body:             |
   bb.0:
-    %0(p0) = G_GLOBAL_VALUE @external_constant
+    %0:gprb(p0) = G_GLOBAL_VALUE @external_constant
     ; ROPI-MOVT: [[G:%[0-9]+]]:rgpr = t2MOV_ga_pcrel @external_constant
     ; ROPI-NOMOVT: [[G:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel @external_constant
     ; RO-DEFAULT-MOVT: [[G:%[0-9]+]]:rgpr = t2MOVi32imm @external_constant
     ; RO-DEFAULT-NOMOVT: [[G:%[0-9]+]]:gpr = t2LDRpci %const.0, 14 /* CC::al */, $noreg :: (load (p0) from constant-pool)
 
-    %1(i32) = G_LOAD %0(p0) :: (load (i32) from @external_constant)
+    %1:gprb(i32) = G_LOAD %0(p0) :: (load (i32) from @external_constant)
     ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (i32) from @external_constant)
 
     $r0 = COPY %1(i32)

@@ -9,10 +9,6 @@
 ---
 name:            constraint_h
 alignment:       2
-registers:
-  - { id: 0, class: tgpr }
-  - { id: 1, class: hgpr }
-  - { id: 2, class: tgpr }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 frameInfo:
@@ -28,19 +24,22 @@ body:             |
 
     ; CHECK-LABEL: name: constraint_h
     ; CHECK: liveins: $r0
-    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: tSTRspi [[COPY]], %stack.0, 0, 14 /* CC::al */, $noreg
-    ; CHECK: [[tLDRspi:%[0-9]+]]:tgpr = tLDRspi %stack.0, 0, 14 /* CC::al */, $noreg
-    ; CHECK: [[COPY1:%[0-9]+]]:hgpr = COPY [[tLDRspi]]
-    ; CHECK: INLINEASM &"mov r12, $0", sideeffect attdialect, reguse:hGPR, %1, clobber, implicit-def early-clobber $r12
-    ; CHECK: tBX_RET 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK-NEXT: tSTRspi [[COPY]], %stack.0, 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: [[tLDRspi:%[0-9]+]]:tgpr = tLDRspi %stack.0, 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:hgpr = COPY [[tLDRspi]]
+    ; CHECK-NEXT: INLINEASM &"mov r12, $0", sideeffect attdialect, reguse:hGPR, [[COPY1]], clobber, implicit-def early-clobber $r12
+    ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg
+    ;
     ; FAST-LABEL: name: constraint_h
     ; FAST: liveins: $r0
-    ; FAST: tSTRspi killed renamable $r0, %stack.0, 0, 14 /* CC::al */, $noreg
-    ; FAST: renamable $r0 = tLDRspi %stack.0, 0, 14 /* CC::al */, $noreg
-    ; FAST: renamable $r8 = COPY killed renamable $r0
-    ; FAST: INLINEASM &"mov r12, $0", sideeffect attdialect, reguse:hGPR, killed renamable $r8, clobber, implicit-def dead early-clobber $r12
-    ; FAST: tBX_RET 14 /* CC::al */, $noreg
+    ; FAST-NEXT: {{  $}}
+    ; FAST-NEXT: tSTRspi killed renamable $r0, %stack.0, 0, 14 /* CC::al */, $noreg
+    ; FAST-NEXT: renamable $r0 = tLDRspi %stack.0, 0, 14 /* CC::al */, $noreg
+    ; FAST-NEXT: renamable $r8 = COPY killed renamable $r0
+    ; FAST-NEXT: INLINEASM &"mov r12, $0", sideeffect attdialect, reguse:hGPR, killed renamable $r8, clobber, implicit-def dead early-clobber $r12
+    ; FAST-NEXT: tBX_RET 14 /* CC::al */, $noreg
     %0:tgpr = COPY $r0
     tSTRspi %0, %stack.0, 0, 14 /* CC::al */, $noreg
     %2:tgpr = tLDRspi %stack.0, 0, 14 /* CC::al */, $noreg

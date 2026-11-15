@@ -31,10 +31,6 @@
 ...
 ---
 name:            t2LDRi12
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -58,10 +54,6 @@ body:             |
 ...
 ---
 name:            t2LDRHi12
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -84,10 +76,6 @@ body:             |
 ...
 ---
 name:            t2LDRSHi12
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -110,10 +98,6 @@ body:             |
 ...
 ---
 name:            t2LDRBi12
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -136,10 +120,6 @@ body:             |
 ...
 ---
 name:            t2LDRSBi12
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -162,10 +142,6 @@ body:             |
 ...
 ---
 name:            t2STRi12
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -192,10 +168,6 @@ body:             |
 ...
 ---
 name:            t2STRHi12
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -221,10 +193,6 @@ body:             |
 ...
 ---
 name:            t2STRBi12
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -250,9 +218,6 @@ body:             |
 ...
 ---
 name:            storedadd
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -276,11 +241,6 @@ body:             |
 ...
 ---
 name:            minsize2
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -305,12 +265,6 @@ body:             |
 ...
 ---
 name:            minsize3
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: rgpr, preferred-register: '' }
-  - { id: 4, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -338,12 +292,6 @@ body:             |
 ...
 ---
 name:            t2LDRi12_posoff
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: rgpr, preferred-register: '' }
-  - { id: 4, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -370,13 +318,6 @@ body:             |
 ...
 ---
 name:            t2LDRHi12_posoff
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: rgpr, preferred-register: '' }
-  - { id: 4, class: rgpr, preferred-register: '' }
-  - { id: 5, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -405,13 +346,6 @@ body:             |
 ...
 ---
 name:            t2LDRBi12_posoff
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: rgpr, preferred-register: '' }
-  - { id: 4, class: rgpr, preferred-register: '' }
-  - { id: 5, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -440,10 +374,6 @@ body:             |
 ...
 ---
 name:            t2STRi12_posoff
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -474,10 +404,6 @@ body:             |
 ...
 ---
 name:            t2STRHi12_posoff
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -507,10 +433,6 @@ body:             |
 ...
 ---
 name:            t2STRBi12_posoff
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -540,12 +462,6 @@ body:             |
 ...
 ---
 name:            t2LDRi12_negoff
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: rgpr, preferred-register: '' }
-  - { id: 4, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -572,13 +488,6 @@ body:             |
 ...
 ---
 name:            t2LDRHi12_negoff
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: rgpr, preferred-register: '' }
-  - { id: 4, class: rgpr, preferred-register: '' }
-  - { id: 5, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -608,13 +517,6 @@ body:             |
 ...
 ---
 name:            t2LDRBi12_negoff
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: rgpr, preferred-register: '' }
-  - { id: 4, class: rgpr, preferred-register: '' }
-  - { id: 5, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
@@ -644,10 +546,6 @@ body:             |
 ...
 ---
 name:            t2STRi12_negoff
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -678,10 +576,6 @@ body:             |
 ...
 ---
 name:            t2STRHi12_negoff
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -712,10 +606,6 @@ body:             |
 ...
 ---
 name:            t2STRBi12_negoff
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }

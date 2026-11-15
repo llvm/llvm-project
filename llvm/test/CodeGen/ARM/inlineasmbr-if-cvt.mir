@@ -45,7 +45,6 @@ hasEHFunclets:   false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
 frameInfo:
