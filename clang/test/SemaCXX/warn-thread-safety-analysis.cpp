@@ -8518,6 +8518,45 @@ struct GuardedOpsSelf {
   }
 };
 
+// Without arguments, an attribute on a function pointer field refers to the
+// object the field is called through, the object 'this' names in it.
+struct LOCKABLE SelfOps {
+  void (*lock)() EXCLUSIVE_LOCK_FUNCTION();
+  void (*unlock)() UNLOCK_FUNCTION();
+  int data GUARDED_BY(this);
+  void self() { lock(); data = 1; unlock(); }
+  struct LOCKABLE {
+    void (*anonLock)() EXCLUSIVE_LOCK_FUNCTION();
+    void (*anonUnlock)() UNLOCK_FUNCTION();
+    int anonData GUARDED_BY(this); // the anonymous object, as for anonLock
+  };
+};
+
+void requiresSelfOps(SelfOps *s) EXCLUSIVE_LOCKS_REQUIRED(s);
+
+void testSelfOps(SelfOps *s, SelfOps *o) {
+  s->lock();
+  s->data = 1;
+  requiresSelfOps(s);
+  o->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'o' exclusively}}
+  s->unlock();
+  s->anonLock();
+  s->anonData = 1;
+  s->anonUnlock();
+}
+
+template <class F> struct LOCKABLE SelfOpsTemplate {
+  F lock EXCLUSIVE_LOCK_FUNCTION();
+  F unlock UNLOCK_FUNCTION();
+  int data GUARDED_BY(this);
+};
+
+void testSelfOpsTemplate(SelfOpsTemplate<void (*)()> *t) {
+  t->lock();
+  t->data = 1;
+  t->unlock();
+}
+
 } // namespace FunctionPointers
 
 namespace AnonymousMembers {
