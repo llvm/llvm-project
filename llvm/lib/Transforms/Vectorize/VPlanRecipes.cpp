@@ -356,8 +356,14 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
   else if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(this))
     UI = &WidenMem->getIngredient();
 
+  // Replicating per lane is invalid for scalable VFs. Don't skip such recipes
+  // even if the legacy cost model ignores UI, e.g. as an address of an
+  // interleave group member, assuming the group is widened.
+  auto *RepR = dyn_cast<VPReplicateRecipe>(this);
+  bool ReplicatesScalable =
+      RepR && VF.isScalable() && RepR->doesGeneratePerAllLanes();
   InstructionCost RecipeCost;
-  if (UI && Ctx.skipCostComputation(UI, VF.isVector())) {
+  if (UI && Ctx.skipCostComputation(UI, VF.isVector()) && !ReplicatesScalable) {
     RecipeCost = 0;
   } else {
     RecipeCost = computeCost(VF, Ctx);
@@ -4297,9 +4303,10 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     const VPValue *PtrOp = getOperand(!IsLoad);
     const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.PSE, Ctx.L);
     if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV)) {
-      // Don't fall back to the legacy cost model for single-scalar accesses.
-      // PtrSCEV won't be used.
-      if (!isSingleScalar())
+      // Fall back to the legacy cost model, unless the access is single-scalar
+      // (PtrSCEV is unused) or predicated (legacy cost includes the region).
+      const VPRegionBlock *ParentRegion = getRegion();
+      if (!isSingleScalar() && (!ParentRegion || !ParentRegion->isReplicator()))
         break;
       PtrSCEV = nullptr;
     }

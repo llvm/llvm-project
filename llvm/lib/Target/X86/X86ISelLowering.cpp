@@ -41862,7 +41862,8 @@ static SDValue combineX86ShuffleChain(
   }
 
   // See if we can combine a single input shuffle with zeros to a bit-mask,
-  // which is much simpler than any shuffle.
+  // which is much simpler than any shuffle. Ensure we freeze the input to
+  // prevent AND(poison,M) -> poison folds.
   if (UnaryShuffle && MaskContainsZeros && AllowVariablePerLaneMask &&
       isSequentialOrUndefOrZeroInRange(Mask, 0, NumMaskElts, 0) &&
       TLI.isTypeLegal(MaskVT)) {
@@ -41881,7 +41882,7 @@ static SDValue combineX86ShuffleChain(
       EltBits[i] = AllOnes;
     }
     SDValue BitMask = getConstVector(EltBits, UndefElts, MaskVT, DAG, DL);
-    Res = CanonicalizeShuffleInput(MaskVT, V1);
+    Res = DAG.getFreeze(CanonicalizeShuffleInput(MaskVT, V1));
     unsigned AndOpcode =
         MaskVT.isFloatingPoint() ? unsigned(X86ISD::FAND) : unsigned(ISD::AND);
     Res = DAG.getNode(AndOpcode, DL, MaskVT, Res, BitMask);

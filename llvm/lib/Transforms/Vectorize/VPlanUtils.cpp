@@ -372,24 +372,24 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
             return SE.getAddRecExpr(Start, Step, L, SCEV::FlagNone);
           })
           .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) -> const SCEV * {
-            const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
-            const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
-            const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), PSE, L);
-            if (any_of(ArrayRef({Start, IV, Scale}),
+            const SCEV *Start =
+                getSCEVExprForVPValue(R->getStartValue(), PSE, L);
+            const SCEV *Index = getSCEVExprForVPValue(R->getIndex(), PSE, L);
+            const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), PSE, L);
+            if (any_of(ArrayRef({Start, Index, Step}),
                        IsaPred<SCEVCouldNotCompute>))
               return SE.getCouldNotCompute();
 
-            return SE.getAddExpr(
-                SE.getTruncateOrSignExtend(Start, IV->getType()),
-                SE.getMulExpr(
-                    IV, SE.getTruncateOrSignExtend(Scale, IV->getType())));
+            // Convert Index to the step type, matching expandVPDerivedIV.
+            Index = SE.getTruncateOrZeroExtend(Index, Step->getType());
+            return SE.getAddExpr(Start, SE.getMulExpr(Index, Step));
           })
           .Case([&SE, &PSE, L](const VPScalarIVStepsRecipe *R) {
             const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
             const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
             if (isa<SCEVCouldNotCompute>(IV) || !isa<SCEVConstant>(Step))
               return SE.getCouldNotCompute();
-            return SE.getTruncateOrSignExtend(IV, Step->getType());
+            return IV;
           })
           .Default(
               [&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
