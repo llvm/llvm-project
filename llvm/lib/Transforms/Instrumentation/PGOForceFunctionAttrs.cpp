@@ -52,7 +52,9 @@ PreservedAnalyses PGOForceFunctionAttrsPass::run(Module &M,
       F.addFnAttr(Attribute::MinSize);
       break;
     case PGOOptions::ColdFuncOpt::OptNone:
-      // alwaysinline is incompatible with optnone.
+      // alwaysinline functions will be inlined regardless (alwaysinline takes
+      // precedence over optnone), and noinline is incompatible with
+      // alwaysinline.
       if (F.hasFnAttribute(Attribute::AlwaysInline))
         continue;
       F.addFnAttr(Attribute::OptimizeNone);
