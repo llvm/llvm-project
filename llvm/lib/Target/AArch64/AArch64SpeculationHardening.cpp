@@ -625,7 +625,7 @@ bool AArch64SpeculationHardening::lowerSpeculationSafeValuePseudos(
     bool NeedToEmitBarrier = false;
     if (RegsNeedingCSDBBeforeUse.any() && (MI.isCall() || MI.isTerminator()))
       NeedToEmitBarrier = true;
-    if (!NeedToEmitBarrier)
+    if (!NeedToEmitBarrier && !MI.isDebugInstr())
       for (MachineOperand Op : MI.uses())
         if (Op.isReg() && RegsNeedingCSDBBeforeUse[Op.getReg()]) {
           NeedToEmitBarrier = true;
