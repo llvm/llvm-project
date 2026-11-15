@@ -32,6 +32,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/Stack.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
@@ -189,6 +190,13 @@ void TypePrinter::print(const Type *T, Qualifiers Quals, raw_ostream &OS,
                         StringRef PlaceHolder) {
   if (!T) {
     OS << "NULL TYPE";
+    return;
+  }
+
+  if (isStackNearlyExhausted()) {
+    OS << "...";
+    if (!PlaceHolder.empty())
+      OS << ' ' << PlaceHolder;
     return;
   }
 
@@ -2572,14 +2580,16 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     SmallString<128> Buf;
     llvm::raw_svector_ostream ArgOS(Buf);
     const TemplateArgument &Argument = getArgument(Arg);
-    if (Argument.getKind() == TemplateArgument::Pack) {
-      if (Argument.pack_size() && !FirstArg)
-        OS << Comma;
+    bool IsArgumentPack = Argument.getKind() == TemplateArgument::Pack;
+    bool HasArgument = !IsArgumentPack || Argument.pack_size() != 0;
+    if (HasArgument && !FirstArg)
+      OS << Comma;
+    if (HasArgument && isStackNearlyExhausted()) {
+      ArgOS << "...";
+    } else if (IsArgumentPack && HasArgument) {
       printTo(ArgOS, Argument.getPackAsArray(), Policy, TPL,
               /*IsPack*/ true, ParmIndex);
-    } else {
-      if (!FirstArg)
-        OS << Comma;
+    } else if (!IsArgumentPack) {
       // Tries to print the argument with location info if exists.
       printArgument(Arg, Policy, ArgOS,
                     TemplateParameterList::shouldIncludeTypeForArgument(

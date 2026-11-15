@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -verify %s -DTEST=1 -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -verify %s -DTEST=2 -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -verify %s -DTEST=3 -fexperimental-new-constant-interpreter
+// RUN: not %clang_cc1 -fsyntax-only -ftemplate-backtrace-limit=1 %s -DTEST=4 2>&1 | FileCheck %s
 
 // REQUIRES: thread_support
 
@@ -63,6 +64,18 @@ namespace template_parameter_type_recursion {
 
   void printFunctionalType(ostream &os, mlir::Value &v) { os << v; }
 }
+
+#elif TEST == 4
+
+// Check that Clang can print the nested binding after reaching the depth limit.
+// The innermost type may be abbreviated depending on stack usage.
+// CHECK: fatal error: recursive template instantiation exceeded maximum depth
+// CHECK: note: while substituting deduced template arguments into function template 'g' [with T = {{(A<)+(\.\.\.|(std::)?nullptr_t)>+( \*>)* \*}}]
+
+typedef decltype(nullptr) nullptr_t;
+template <class T> struct A {};
+template <typename T> auto g(T t) -> decltype(g(new A<T>)) { return nullptr; }
+template <> nullptr_t g(A<nullptr_t>) { return nullptr; }
 
 #else
 #error unknown test
