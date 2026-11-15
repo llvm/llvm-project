@@ -2018,13 +2018,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_ROUND, MVT::f32, Custom);
   }
 
-  if (Subtarget->fixAllFDIVSQRT()) {
-    // Promote FDIVS and FSQRTS to FDIVD and FSQRTD instructions instead as
-    // the former instructions generate errata on LEON processors.
-    setOperationAction(ISD::FDIV, MVT::f32, Promote);
-    setOperationAction(ISD::FSQRT, MVT::f32, Promote);
-  }
-
   if (Subtarget->hasNoFMULS()) {
     setOperationAction(ISD::FMUL, MVT::f32, Promote);
   }
@@ -2064,11 +2057,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
                          MVT::f128, Custom);
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f64, Custom);
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Custom);
-    }
-
-    if (Subtarget->fixAllFDIVSQRT()) {
-      setOperationAction(ISD::STRICT_FDIV, MVT::f32, Promote);
-      setOperationAction(ISD::STRICT_FSQRT, MVT::f32, Promote);
     }
 
     if (Subtarget->hasNoFMULS())
