@@ -59,6 +59,15 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
   initializeAtSpecifiers(atSpecifiers);
 }
 
+const MCExpr *SystemZMCAsmInfoGOFF::getDwarfSectionOffsetExpr(
+    const MCSymbol *Sym, uint64_t Offset, MCContext &Ctx) const {
+  const MCExpr *Expr = MCSpecifierExpr::create(Sym, SystemZ::S_QCon, Ctx);
+  if (Offset)
+    Expr =
+        MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
+  return Expr;
+}
+
 void SystemZMCAsmInfoGOFF::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
   switch (Expr.getSpecifier()) {
