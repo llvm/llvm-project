@@ -1655,6 +1655,14 @@ public:
   void legalizeOperandsVALUt16(MachineInstr &Inst, unsigned OpIdx,
                                MachineRegisterInfo &MRI) const;
 
+  /// Build a 32-bit VGPR whose low half is the 16-bit value \p Src.SrcSubReg
+  /// and whose high half is undefined. The instructions are inserted before
+  /// \p I. \returns the new register.
+  Register buildVGPR32FromLo16(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator I,
+                               const DebugLoc &DL, Register Src,
+                               unsigned SrcSubReg) const;
+
   /// Replace the instructions opcode with the equivalent VALU
   /// opcode.  This function will also move the users of MachineInstruntions
   /// in the \p WorkList to the VALU if necessary. If present, \p MDT is
