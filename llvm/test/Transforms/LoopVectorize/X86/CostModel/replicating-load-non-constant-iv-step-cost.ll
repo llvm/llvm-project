@@ -5,13 +5,13 @@
 define void @hoisted_loads_non_constant_iv_step(ptr noalias %dst, ptr noalias %src, ptr noalias %cond, i64 %s, i64 %n) #0 {
 ; CHECK-LABEL: 'hoisted_loads_non_constant_iv_step'
 ; CHECK:  LV: Scalar loop costs: 7.
-; CHECK:  Cost of 3000000 for VF 2: REPLICATE ir<%l.else> = load ir<%gep.src>
-; CHECK:  Cost for VF 2: 3000011 (Estimated cost per lane: 1.5E+6)
-; CHECK:  Cost of 3000000 for VF 4: REPLICATE ir<%l.else> = load ir<%gep.src>
-; CHECK:  Cost for VF 4: 3000011 (Estimated cost per lane: 7.5E+5)
-; CHECK:  Cost of 3000000 for VF 8: REPLICATE ir<%l.else> = load ir<%gep.src>
-; CHECK:  Cost for VF 8: 3000011 (Estimated cost per lane: 3.75E+5)
-; CHECK:  LV: Selecting VF: 1.
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%l.else> = load ir<%gep.src>
+; CHECK:  Cost for VF 2: 17 (Estimated cost per lane: 8.5)
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%l.else> = load ir<%gep.src>
+; CHECK:  Cost for VF 4: 23 (Estimated cost per lane: 5.75)
+; CHECK:  Cost of 25 for VF 8: REPLICATE ir<%l.else> = load ir<%gep.src>
+; CHECK:  Cost for VF 8: 36 (Estimated cost per lane: 4.5)
+; CHECK:  LV: Selecting VF: 8.
 ;
 entry:
   %step = mul i64 %s, %s
