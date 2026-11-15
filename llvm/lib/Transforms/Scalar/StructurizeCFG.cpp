@@ -11,11 +11,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -377,10 +380,12 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<RegionInfoPass>();
 
     AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
   }
 };
 
@@ -392,6 +397,7 @@ INITIALIZE_PASS_BEGIN(StructurizeCFGLegacyPass, "structurizecfg",
                       "Structurize the CFG", false, false)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
 INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
@@ -1393,9 +1399,29 @@ void StructurizeCFGPass::printPipeline(
 
 /// Structurize every region in \p RI, processing inner regions before the
 /// regions that contain them. If \p UI is non-null, skip uniform regions.
-static bool runImpl(DominatorTree &DT, RegionInfo &RI,
-                    const TargetTransformInfo &TTI, const UniformityInfo *UI) {
+/// Recompute \p LI after a rewrite and carry a loop ID over to the loop that
+/// holds the old header, unless several old loops end up in that loop. Nothing
+/// is carried over for irreducible control flow, where a cycle that is not a
+/// natural loop may take over a loop header.
+static bool runImpl(Function &F, DominatorTree &DT, LoopInfo &LI,
+                    RegionInfo &RI, const TargetTransformInfo &TTI,
+                    const UniformityInfo *UI) {
+  SmallVector<std::pair<BasicBlock *, MDNode *>> OldLoops;
+  bool HasLoopID = false;
+  for (Loop *L : LI.getLoopsInPreorder()) {
+    MDNode *LoopID = L->getLoopID();
+    HasLoopID |= LoopID != nullptr;
+    OldLoops.push_back({L->getHeader(), LoopID});
+  }
+  if (HasLoopID) {
+    ReversePostOrderTraversal<const Function *> RPOT(&F);
+    HasLoopID = !containsIrreducibleCFG<const BasicBlock *>(RPOT, LI);
+  }
+  if (!HasLoopID)
+    OldLoops.clear();
+
   bool Changed = false;
+  bool Structurized = false;
   std::vector<Region *> Regions;
   addRegionIntoQueue(*RI.getTopLevelRegion(), Regions);
   while (!Regions.empty()) {
@@ -1410,9 +1436,22 @@ static bool runImpl(DominatorTree &DT, RegionInfo &RI,
       continue;
     }
 
-    Changed |= SCFG.run(R, &DT, &TTI);
+    Structurized |= SCFG.run(R, &DT, &TTI);
   }
-  return Changed;
+  if (!Structurized)
+    return Changed;
+
+  LI.releaseMemory();
+  LI.analyze(DT);
+  SmallDenseMap<Loop *, unsigned> NumOldLoops;
+  for (auto [Header, LoopID] : OldLoops)
+    if (Loop *L = LI.getLoopFor(Header))
+      ++NumOldLoops[L];
+  for (auto [Header, LoopID] : OldLoops)
+    if (Loop *L = LI.getLoopFor(Header);
+        L && LoopID && NumOldLoops.lookup(L) == 1)
+      L->setLoopID(LoopID);
+  return true;
 }
 
 bool StructurizeCFGLegacyPass::runOnFunction(Function &F) {
@@ -1421,15 +1460,17 @@ bool StructurizeCFGLegacyPass::runOnFunction(Function &F) {
   if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions))
     UI = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   RegionInfo &RI = getAnalysis<RegionInfoPass>().getRegionInfo();
   const TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  return runImpl(DT, RI, TTI, UI);
+  return runImpl(F, DT, LI, RI, TTI, UI);
 }
 
 PreservedAnalyses StructurizeCFGPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   auto &RI = AM.getResult<RegionInfoAnalysis>(F);
   TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
   const ScalarOptions &Opts = getScalarOptions(F);
@@ -1437,9 +1478,10 @@ PreservedAnalyses StructurizeCFGPass::run(Function &F,
   if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions))
     UI = &AM.getResult<UniformityInfoAnalysis>(F);
 
-  if (!runImpl(DT, RI, TTI, UI))
+  if (!runImpl(F, DT, LI, RI, TTI, UI))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
   return PA;
 }
