@@ -1549,6 +1549,38 @@ public:
   }
 };
 
+class MemoryBarrierPattern
+    : public SPIRVToLLVMConversion<spirv::MemoryBarrierOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::MemoryBarrierOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::MemoryBarrierOp memoryBarrierOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Operation *symbolTable =
+        memoryBarrierOp->getParentWithTrait<OpTrait::SymbolTable>();
+
+    Type i32 = rewriter.getI32Type();
+
+    Type voidTy = rewriter.getType<LLVM::LLVMVoidType>();
+    LLVM::LLVMFuncOp func =
+        lookupOrCreateSPIRVFn(symbolTable, "_Z21__spirv_MemoryBarrierii",
+                              {i32, i32}, voidTy, /*convergent=*/false);
+
+    Location loc = memoryBarrierOp->getLoc();
+    Value memory = LLVM::ConstantOp::create(
+        rewriter, loc, i32, static_cast<int32_t>(adaptor.getMemoryScope()));
+    Value semantics = LLVM::ConstantOp::create(
+        rewriter, loc, i32, static_cast<int32_t>(adaptor.getMemorySemantics()));
+
+    auto call =
+        createSPIRVBuiltinCall(loc, rewriter, func, {memory, semantics});
+
+    rewriter.replaceOp(memoryBarrierOp, call);
+    return success();
+  }
+};
+
 namespace {
 
 StringRef getTypeMangling(Type type, bool isSigned) {
@@ -2671,6 +2703,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ControlBarrierPattern<spirv::ControlBarrierOp>,
       ControlBarrierPattern<spirv::INTELControlBarrierArriveOp>,
       ControlBarrierPattern<spirv::INTELControlBarrierWaitOp>,
+      MemoryBarrierPattern,
 
       // Group reduction operations
       GroupReducePattern<spirv::GroupIAddOp>,
