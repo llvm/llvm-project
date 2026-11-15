@@ -27,6 +27,11 @@ Re-run with /DEBUG:GHASH
 RUN: lld-link a.obj b.obj -entry:main -debug:ghash -out:t.exe -pdb:t.pdb -nodefaultlib -summary -verbose
 RUN: llvm-pdbutil dump -symbols -types -ids -globals %t/t.pdb | FileCheck %s
 
+Re-run with --time-trace: the type server PDB's path must be valid in the trace.
+RUN: lld-link a.obj b.obj -entry:main -debug:ghash -out:t.exe -pdb:t.pdb -nodefaultlib --time-trace=t.json --time-trace-granularity=0
+RUN: FileCheck %s -check-prefix TIME-TRACE --input-file=t.json
+TIME-TRACE: "name":"File: ","args":{"detail":"{{[^"]*}}ts.pdb"}
+
 Re-run with pdb from outputpath
 RUN: mkdir -p libs
 RUN: cp a.obj libs/a.obj && cp b.obj libs/b.obj
