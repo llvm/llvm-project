@@ -663,10 +663,10 @@ TEST_F(DeserializationTest, SwitchInt64LiteralWordOrder) {
   addReturn();
   addFunctionEnd();
 
-  auto module = deserialize();
-  ASSERT_TRUE(module);
+  auto moduleOp = deserialize();
+  ASSERT_TRUE(moduleOp);
   SmallVector<int64_t> literals;
-  module->walk([&](spirv::SwitchOp switchOp) {
+  moduleOp->walk([&](spirv::SwitchOp switchOp) {
     for (APInt literal : switchOp.getLiterals()->getValues<APInt>())
       literals.push_back(literal.getSExtValue());
   });
