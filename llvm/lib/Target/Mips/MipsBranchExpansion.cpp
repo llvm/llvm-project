@@ -776,6 +776,23 @@ bool MipsBranchExpansionImpl::handleMFLOSlot(Pred Predicate, Safe SafeInSlot) {
   return Changed;
 }
 
+// Returns true if MI is a NOP, either the NOP pseudo or the SLL $zero, $zero, 0
+// that insertNop() creates.
+static bool isNop(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case Mips::NOP:
+    return true;
+  case Mips::SLL:
+  case Mips::SLL_MM:
+  case Mips::SLL_MMR6:
+    return MI.getOperand(0).getReg() == Mips::R0 &&
+           MI.getOperand(1).getReg() == Mips::R0 &&
+           MI.getOperand(2).getImm() == 0;
+  default:
+    return false;
+  }
+}
+
 template <typename Pred, typename Safe>
 bool MipsBranchExpansionImpl::handleSlot(Pred Predicate, Safe SafeInSlot) {
   bool Changed = false;
@@ -798,8 +815,7 @@ bool MipsBranchExpansionImpl::handleSlot(Pred Predicate, Safe SafeInSlot) {
 
       if (LastInstInFunction || !SafeInSlot(*IInSlot, *I)) {
         MachineBasicBlock::instr_iterator Iit = I->getIterator();
-        if (std::next(Iit) == FI->end() ||
-            std::next(Iit)->getOpcode() != Mips::NOP) {
+        if (std::next(Iit) == FI->end() || !isNop(*std::next(Iit))) {
           Changed = true;
           TII->insertNop(*(I->getParent()), std::next(I), I->getDebugLoc())
               ->bundleWithPred();
@@ -928,27 +944,21 @@ bool MipsBranchExpansionImpl::runOnMachineFunction(MachineFunction &MF) {
   MFp = &MF;
 
   ForceLongBranchFirstPass = STI->getCLOpts().force_mips_long_branch;
-  // Run these at least once.
-  bool longBranchChanged = handlePossibleLongBranch();
-  bool forbiddenSlotChanged = handleForbiddenSlot();
-  bool fpuDelaySlotChanged = handleFPUDelaySlot();
-  bool loadDelaySlotChanged = handleLoadDelaySlot();
-  bool MfloChanged = handleMFLO();
+  // Long branch expansion does not create MFLO/MFHI hazards, and handleMFLO()
+  // is not idempotent, so only run it once.
+  bool Changed = handleMFLO();
 
-  bool Changed = longBranchChanged || forbiddenSlotChanged ||
-                 fpuDelaySlotChanged || loadDelaySlotChanged || MfloChanged;
-
-  // Then run them alternatively while there are changes.
-  while (forbiddenSlotChanged) {
-    longBranchChanged = handlePossibleLongBranch();
-    fpuDelaySlotChanged = handleFPUDelaySlot();
-    loadDelaySlotChanged = handleLoadDelaySlot();
-    MfloChanged = handleMFLO();
-    if (!longBranchChanged && !fpuDelaySlotChanged && !loadDelaySlotChanged &&
-        !MfloChanged)
-      break;
-    forbiddenSlotChanged = handleForbiddenSlot();
-  }
+  // Only long branch expansion depends on instruction sizes, so run it last
+  // and repeat until it makes no more changes. Long branch expansion can
+  // create new hazards, so handle those again after each change.
+  bool LongBranchChanged;
+  do {
+    Changed |= handleForbiddenSlot();
+    Changed |= handleFPUDelaySlot();
+    Changed |= handleLoadDelaySlot();
+    LongBranchChanged = handlePossibleLongBranch();
+    Changed |= LongBranchChanged;
+  } while (LongBranchChanged);
 
   return Changed;
 }
