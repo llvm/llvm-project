@@ -998,6 +998,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   AddPromotedToType(ISD::FROUND, MVT::bf16, MVT::f32);
 
   setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f32, MVT::f64}, Expand);
+
+  // Promote (not Expand): the f16/bf16 -> f32 extension is exact, so this
+  // avoids the intermediate round back to f16/bf16 that expanding to
+  // FP_TO_SINT(FROUND(x)) would introduce.
   setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f16, MVT::bf16},
                      Promote);
 
