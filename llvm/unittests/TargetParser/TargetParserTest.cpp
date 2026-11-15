@@ -2934,6 +2934,14 @@ TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
   // An unknown kind yields an empty bitset.
   EXPECT_EQ(AMDGPU::getFeatureBitset(AMDGPU::GK_NONE).count(), 0u);
 
+  // The subarch overload returns the bitset of the subarch's GPU.
+  EXPECT_EQ(AMDGPU::getFeatureBitset(Triple::AMDGPUSubArch900), GFX900);
+  EXPECT_TRUE(AMDGPU::getFeatureBitset(Triple::AMDGPUSubArch1250)
+                  .test(AMDGPU::FEAT_MCAST_FULL_MASK_BUG));
+  EXPECT_FALSE(AMDGPU::getFeatureBitset(Triple::AMDGPUSubArch1251)
+                   .test(AMDGPU::FEAT_MCAST_FULL_MASK_BUG));
+  EXPECT_EQ(AMDGPU::getFeatureBitset(Triple::NoSubArch).count(), 0u);
+
   // getFeatureNames maps the set bits back to their SubtargetFeature names, one
   // per set bit.
   SmallVector<StringRef, 0> Names;
