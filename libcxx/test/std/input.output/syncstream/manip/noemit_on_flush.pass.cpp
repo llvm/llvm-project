@@ -6,9 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: libcpp-has-no-experimental-syncstream
+
+// Detecting a basic_syncbuf requires RTTI. Without it, libc++ treats every
+// stream as a non-sync stream.
+// XFAIL: no-rtti
 
 // template<class charT, class traits>
 // basic_ostream<charT, traits>& noemit_on_flush(basic_ostream<charT, traits>& os);

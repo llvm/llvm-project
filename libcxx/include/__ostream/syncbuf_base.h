@@ -49,8 +49,18 @@ private:
 };
 
 template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI __syncbuf_base<_CharT, _Traits>*
+__as_syncbuf_base([[maybe_unused]] basic_streambuf<_CharT, _Traits>* __buf) {
+#  if _LIBCPP_HAS_RTTI
+  return dynamic_cast<__syncbuf_base<_CharT, _Traits>*>(__buf);
+#  else
+  return nullptr;
+#  endif
+}
+
+template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& emit_on_flush(basic_ostream<_CharT, _Traits>& __os) {
-  if (auto* __buf = dynamic_cast<__syncbuf_base<_CharT, _Traits>*>(__os.rdbuf())) {
+  if (auto* __buf = std::__as_syncbuf_base(__os.rdbuf())) {
     __buf->__emit_on_sync_ = true;
   }
   return __os;
@@ -58,7 +68,7 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& emit_on_flush(basic_ostrea
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& noemit_on_flush(basic_ostream<_CharT, _Traits>& __os) {
-  if (auto* __buf = dynamic_cast<__syncbuf_base<_CharT, _Traits>*>(__os.rdbuf())) {
+  if (auto* __buf = std::__as_syncbuf_base(__os.rdbuf())) {
     __buf->__emit_on_sync_ = false;
   }
   return __os;
@@ -69,7 +79,7 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& flush_emit(basic_ostream<_
   // [ostream.manip]/12: flush(), then emit() under a sentry, setting badbit on
   // failure. With emit-on-sync temporarily on, flush() does both: its sync()
   // calls emit() and returns -1 if emit() fails, which flush() turns into badbit.
-  if (auto* __buf = dynamic_cast<__syncbuf_base<_CharT, _Traits>*>(__os.rdbuf())) {
+  if (auto* __buf = std::__as_syncbuf_base(__os.rdbuf())) {
     auto __restore =
         std::__make_scope_guard([__buf, __old = __buf->__emit_on_sync_] { __buf->__emit_on_sync_ = __old; });
     __buf->__emit_on_sync_ = true;
