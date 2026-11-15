@@ -558,7 +558,8 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
         continue;
       Tag = ShrinkTag;
       SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
-      if (VNInfo *OldVNI = OldRange.getVNInfoBefore(Stop)) {
+      if (VNInfo *OldVNI =
+              LaneMask.none() ? VNI : OldRange.getVNInfoBefore(Stop)) {
         assert(OldVNI == VNI && "Wrong value out of predecessor");
         (void)OldVNI;
         WorkList.push_back(std::make_pair(Stop, VNI));
@@ -566,8 +567,6 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
 #ifndef NDEBUG
         // There was no old VNI. Verify that Stop is jointly dominated
         // by <undef>s for this live range.
-        assert(LaneMask.any() &&
-               "Missing value out of predecessor for main range");
         SmallVector<SlotIndex,8> Undefs;
         LI.computeSubRangeUndefs(Undefs, LaneMask, *MRI, *Indexes);
         assert(LiveRangeCalc::isJointlyDominated(Pred, Undefs, *Indexes) &&
