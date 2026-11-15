@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve -run-pass arm-mve-vpt-opts %s -o - | FileCheck %s
 
 # Debug uses of the predicate copy and of the constant must not stop
-# ReplaceConstByVPNOTs from erasing them, and their debug uses become undef.
+# ReplaceConstByVPNOTs from erasing them.
 
 --- |
   define void @reuse_debug_use() !dbg !3 { ret void }
@@ -38,8 +38,8 @@ body:             |
     ; CHECK-NEXT: [[t2MOVi:%[0-9]+]]:rgpr = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vccr = COPY [[t2MOVi]]
     ; CHECK-NEXT: [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR [[COPY]], [[COPY]], 1, [[COPY1]], $noreg, [[COPY]]
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !7, !DIExpression(), debug-location !DILocation(line: 0, scope: !3)
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !8, !DIExpression(), debug-location !DILocation(line: 0, scope: !3)
+    ; CHECK-NEXT: DBG_VALUE %4:rgpr, $noreg, !7, !DIExpression(), debug-location !DILocation(line: 0, scope: !3)
+    ; CHECK-NEXT: DBG_VALUE %5:vccr, $noreg, !8, !DIExpression(), debug-location !DILocation(line: 0, scope: !3)
     ; CHECK-NEXT: [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR]], [[MVE_VORR]], 1, [[COPY1]], $noreg, [[MVE_VORR]]
     ; CHECK-NEXT: $q0 = COPY [[MVE_VORR1]]
     ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit $q0
@@ -69,8 +69,8 @@ body:             |
     ; CHECK-NEXT: [[t2MOVi:%[0-9]+]]:rgpr = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vccr = COPY [[t2MOVi]]
     ; CHECK-NEXT: [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR [[COPY]], [[COPY]], 1, [[COPY1]], $noreg, [[COPY]]
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !7, !DIExpression(), debug-location !DILocation(line: 0, scope: !6)
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !8, !DIExpression(), debug-location !DILocation(line: 0, scope: !6)
+    ; CHECK-NEXT: DBG_VALUE %4:rgpr, $noreg, !7, !DIExpression(), debug-location !DILocation(line: 0, scope: !6)
+    ; CHECK-NEXT: DBG_VALUE %5:vccr, $noreg, !8, !DIExpression(), debug-location !DILocation(line: 0, scope: !6)
     ; CHECK-NEXT: [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT [[COPY1]], 0, $noreg, $noreg
     ; CHECK-NEXT: [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR]], [[MVE_VORR]], 1, [[MVE_VPNOT]], $noreg, [[MVE_VORR]]
     ; CHECK-NEXT: $q0 = COPY [[MVE_VORR1]]

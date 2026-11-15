@@ -964,10 +964,8 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
     LastVPTReg = VPR;
   }
 
-  for (MachineInstr *DI : DeadInstructions) {
-    MRI->markUsesInDebugValueAsUndef(DI->getOperand(0).getReg());
+  for (MachineInstr *DI : DeadInstructions)
     DI->eraseFromParent();
-  }
 
   return !DeadInstructions.empty();
 }
