@@ -133,10 +133,14 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   TlsGetAddrParam *arg = reinterpret_cast<TlsGetAddrParam *>(arg_void);
   uptr dso_id = arg->dso_id;
   DTLS::DTV *dtv = DTLS_Find(dso_id);
-  if (!dtv || dtv->beg)
-    return nullptr;
   CHECK_LE(static_tls_begin, static_tls_end);
   uptr tls_beg = reinterpret_cast<uptr>(res) - arg->offset - kDtvOffset;
+
+  // Return early if the start address is the same. Note that we could have a
+  // previous, different start address set in dtv if a module was previously
+  // loaded and unloaded for the same dso_id.
+  if (!dtv || dtv->beg == tls_beg)
+    return nullptr;
   VReport(2,
           "__tls_get_addr: %p {0x%zx,0x%zx} => %p; tls_beg: %p; sp: %p "
           "num_live_dtls %zd\n",
