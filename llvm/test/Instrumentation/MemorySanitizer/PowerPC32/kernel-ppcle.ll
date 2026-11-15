@@ -9,18 +9,19 @@ define void @Store1(ptr %p, i8 %x) sanitize_memory {
 ; CHECK-SAME: ptr [[P:%.*]], i8 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 800
 ; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1600
 ; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2400
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3200
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3208
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4008
-; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
-; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
+; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[_MSARG1]], align 8
 ; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[_MSARG_O2]], align 4
@@ -56,18 +57,19 @@ define void @Store2(ptr %p, i16 %x) sanitize_memory {
 ; CHECK-SAME: ptr [[P:%.*]], i16 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 800
 ; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1600
 ; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2400
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3200
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3208
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4008
-; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
-; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
+; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[_MSARG1]], align 8
 ; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[_MSARG_O2]], align 4
@@ -103,18 +105,19 @@ define void @Store4(ptr %p, i32 %x) sanitize_memory {
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 800
 ; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1600
 ; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2400
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3200
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3208
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4008
-; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
-; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
+; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[_MSARG1]], align 8
 ; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[_MSARG_O2]], align 4
@@ -150,18 +153,19 @@ define void @Store8(ptr %p, i64 %x) sanitize_memory {
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 800
 ; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1600
 ; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2400
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3200
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3208
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4008
-; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
-; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
+; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[_MSARG1]], align 8
 ; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[_MSARG_O2]], align 4
@@ -199,18 +203,19 @@ define void @Store16(ptr %p, i128 %x) sanitize_memory {
 ; CHECK-SAME: ptr [[P:%.*]], i128 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 800
 ; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1600
 ; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2400
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3200
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3208
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4008
-; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
-; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
+; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i128, ptr [[_MSARG1]], align 8
 ; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[_MSARG_O2]], align 4
@@ -252,13 +257,14 @@ define i8 @Load1(ptr %p) sanitize_memory {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 800
 ; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1600
 ; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2400
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3200
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3208
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4008
-; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
@@ -291,13 +297,14 @@ define i16 @Load2(ptr %p) sanitize_memory {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 800
 ; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1600
 ; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2400
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3200
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3208
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4008
-; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
@@ -330,13 +337,14 @@ define i32 @Load4(ptr %p) sanitize_memory {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 800
 ; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1600
 ; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2400
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3200
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3208
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4008
-; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
@@ -369,13 +377,14 @@ define i64 @Load8(ptr %p) sanitize_memory {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 800
 ; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1600
 ; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2400
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3200
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3208
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4008
-; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
@@ -408,13 +417,14 @@ define i128 @Load16(ptr %p) sanitize_memory {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 800
 ; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1600
 ; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2400
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3200
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3208
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4008
-; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
