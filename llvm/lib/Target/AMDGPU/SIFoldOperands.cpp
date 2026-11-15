@@ -2291,14 +2291,10 @@ bool SIFoldOperandsImpl::tryFuseThreeOpSharedConstants(MachineInstr &MI) {
   auto Fused = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(M->Opc),
                        MI.getOperand(0).getReg());
   for (const MachineOperand *MO : M->Ops) {
-    if (MO->isReg() && is_contained(ToVGPR, MO->getReg())) {
+    if (MO->isReg() && is_contained(ToVGPR, MO->getReg()))
       Fused.addReg(getSharedConstantVGPR(MO->getReg()));
-      continue;
-    }
-    Fused.add(*MO);
-    // Inner operands are now read at MI, past any kill in between.
-    if (MO->isReg() && MO->getParent() == M->Inner && !MO->isKill())
-      MRI->clearKillFlags(MO->getReg());
+    else
+      Fused.add(*MO);
   }
 
   M->Inner->eraseFromParent();

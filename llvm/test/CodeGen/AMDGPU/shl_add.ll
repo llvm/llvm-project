@@ -384,13 +384,13 @@ define amdgpu_ps <3 x float> @shl_add_shared_literals(<3 x i32> %a) {
 ; GFX9-NEXT:    v_lshl_add_u32 v2, s0, v2, v3
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX10-LABEL: shl_add_shared_literals:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s0, 0xf000f
-; GFX10-NEXT:    v_lshl_add_u32 v0, s0, v0, 0x64006400
-; GFX10-NEXT:    v_lshl_add_u32 v1, s0, v1, 0x64006400
-; GFX10-NEXT:    v_lshl_add_u32 v2, s0, v2, 0x64006400
-; GFX10-NEXT:    ; return to shader part epilog
+; GFX10P-LABEL: shl_add_shared_literals:
+; GFX10P:       ; %bb.0:
+; GFX10P-NEXT:    s_mov_b32 s0, 0xf000f
+; GFX10P-NEXT:    v_lshl_add_u32 v0, s0, v0, 0x64006400
+; GFX10P-NEXT:    v_lshl_add_u32 v1, s0, v1, 0x64006400
+; GFX10P-NEXT:    v_lshl_add_u32 v2, s0, v2, 0x64006400
+; GFX10P-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-O0-LABEL: shl_add_shared_literals:
 ; GFX9-O0:       ; %bb.0:
@@ -403,7 +403,6 @@ define amdgpu_ps <3 x float> @shl_add_shared_literals(<3 x i32> %a) {
 ; GFX9-O0-NEXT:    buffer_store_dword v2, off, s[4:7], 0 ; 4-byte Folded Spill
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX9-O0-NEXT:    buffer_load_dword v0, off, s[4:7], 0 ; 4-byte Folded Reload
-; GFX9-O0-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX9-O0-NEXT:    s_mov_b32 s0, 0xf000f
 ; GFX9-O0-NEXT:    v_lshlrev_b32_e64 v2, v2, s0
 ; GFX9-O0-NEXT:    v_lshlrev_b32_e64 v1, v1, s0

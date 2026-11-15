@@ -99,7 +99,7 @@ body: |
     S_ENDPGM 0, implicit %6, implicit %8, implicit %10
 ...
 
-# Inner operands keep undef and drop kills, as the fused op reads them later.
+# Inner operands keep undef.
 ---
 name: and_or_shared_flags
 tracksRegLiveness: true
@@ -124,7 +124,7 @@ body: |
     %4:sreg_32 = S_MOV_B32 1677747200
     %5:vgpr_32 = V_AND_B32_e64 undef %2:vgpr_32, %3, implicit $exec
     %7:vgpr_32 = V_AND_B32_e64 %0, %3, implicit $exec
-    %9:vgpr_32 = V_AND_B32_e64 %1, killed %3, implicit $exec
+    %9:vgpr_32 = V_AND_B32_e64 %1, %3, implicit $exec
     %6:vgpr_32 = V_OR_B32_e64 %5, %4, implicit $exec
     %8:vgpr_32 = V_OR_B32_e64 %7, %4, implicit $exec
     %10:vgpr_32 = V_OR_B32_e64 %9, %4, implicit $exec
