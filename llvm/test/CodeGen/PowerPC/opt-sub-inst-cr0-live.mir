@@ -33,35 +33,6 @@ name:            fn1
 alignment:       4
 exposesReturnsTwice: false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc }
-  - { id: 1, class: g8rc }
-  - { id: 2, class: g8rc }
-  - { id: 3, class: g8rc }
-  - { id: 4, class: g8rc }
-  - { id: 5, class: g8rc }
-  - { id: 6, class: g8rc }
-  - { id: 7, class: g8rc }
-  - { id: 8, class: g8rc }
-  - { id: 9, class: g8rc }
-  - { id: 10, class: g8rc }
-  - { id: 11, class: g8rc }
-  - { id: 12, class: g8rc }
-  - { id: 13, class: g8rc }
-  - { id: 14, class: g8rc }
-  - { id: 15, class: g8rc_and_g8rc_nox0 }
-  - { id: 16, class: g8rc_and_g8rc_nox0 }
-  - { id: 17, class: g8rc }
-  - { id: 18, class: g8rc }
-  - { id: 19, class: g8rc }
-  - { id: 20, class: g8rc }
-  - { id: 21, class: g8rc }
-  - { id: 22, class: g8rc }
-  - { id: 23, class: g8rc }
-  - { id: 24, class: g8rc }
-  - { id: 25, class: crrc }
-  - { id: 26, class: g8rc_and_g8rc_nox0 }
-  - { id: 27, class: g8rc_and_g8rc_nox0 }
 liveins:
   - { reg: '$x3', virtual-reg: '%6' }
   - { reg: '$x4', virtual-reg: '%7' }
@@ -86,54 +57,54 @@ body:             |
     successors: %bb.1.loop
     liveins: $x3, $x4, $x5, $x6
 
-    %9 = COPY $x6
-    %8 = COPY $x5
-    %7 = COPY $x4
-    %6 = COPY $x3
-    %14 = COPY %9
-    %13 = COPY %8
-    %12 = COPY %7
-    %11 = COPY %6
-    %21 = LI8 128
-    %23 = LI8 64
+    %9:g8rc = COPY $x6
+    %8:g8rc = COPY $x5
+    %7:g8rc = COPY $x4
+    %6:g8rc = COPY $x3
+    %14:g8rc = COPY %9
+    %13:g8rc = COPY %8
+    %12:g8rc = COPY %7
+    %11:g8rc = COPY %6
+    %21:g8rc = LI8 128
+    %23:g8rc = LI8 64
 
   bb.1.loop:
     successors: %bb.2.loop, %bb.4
 
-    %0 = PHI %11, %bb.0.top, %4, %bb.3.loop
-    %1 = PHI %12, %bb.0.top, %5, %bb.3.loop
-    %2 = PHI %13, %bb.0.top, %4, %bb.3.loop
-    %3 = PHI %14, %bb.0.top, %5, %bb.3.loop
-    %15 = SUBFC8 %3, %1, implicit-def $carry
-    %16 = SUBFE8 %2, %0, implicit-def dead $carry, implicit $carry
-    %17 = ADDI8 %16, -1
-    %18 = ADDI8 %15, -1
-    %19 = ANDC8 %17, %16
-    %20 = ANDC8 %18, %15
-    %22 = CNTLZD %19
-    %24 = CNTLZD %20
-    %25 = CMPLDI %15, 0
+    %0:g8rc = PHI %11, %bb.0.top, %4, %bb.3.loop
+    %1:g8rc = PHI %12, %bb.0.top, %5, %bb.3.loop
+    %2:g8rc = PHI %13, %bb.0.top, %4, %bb.3.loop
+    %3:g8rc = PHI %14, %bb.0.top, %5, %bb.3.loop
+    %15:g8rc_and_g8rc_nox0 = SUBFC8 %3, %1, implicit-def $carry
+    %16:g8rc_and_g8rc_nox0 = SUBFE8 %2, %0, implicit-def dead $carry, implicit $carry
+    %17:g8rc = ADDI8 %16, -1
+    %18:g8rc = ADDI8 %15, -1
+    %19:g8rc = ANDC8 %17, %16
+    %20:g8rc = ANDC8 %18, %15
+    %22:g8rc = CNTLZD %19
+    %24:g8rc = CNTLZD %20
+    %25:crrc = CMPLDI %15, 0
     BCC 76, %25, %bb.2.loop
-    ; CHECK: SUBFC8_rec %3, %1, implicit-def $carry, implicit-def $cr0
+    ; CHECK: SUBFC8_rec %15, %12, implicit-def $carry, implicit-def $cr0
     ; CHECK: COPY killed $cr0
     ; CHECK: BCC
 
   bb.4:
     successors: %bb.3.loop
 
-    %27 = SUBF8 %24, %23
+    %27:g8rc_and_g8rc_nox0 = SUBF8 %24, %23
     B %bb.3.loop
 
   bb.2.loop:
     successors: %bb.3.loop
 
-    %26 = SUBF8 %22, %21
+    %26:g8rc_and_g8rc_nox0 = SUBF8 %22, %21
 
   bb.3.loop:
     successors: %bb.1.loop
 
-    %5 = PHI %26, %bb.2.loop, %27, %bb.4
-    %4 = LI8 0
+    %5:g8rc = PHI %26, %bb.2.loop, %27, %bb.4
+    %4:g8rc = LI8 0
     B %bb.1.loop
 
 ...
