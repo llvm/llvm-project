@@ -628,8 +628,7 @@ define i1 @test_xor1_nofold_multi_use(i8 %x, i8 %y, i8 %z) {
 
 define i1 @xor_uge(i8 %x, i8 %y) {
 ; CHECK-LABEL: @xor_uge(
-; CHECK-NEXT:    [[YNZ:%.*]] = icmp ne i8 [[Y:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[XOR]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -668,8 +667,7 @@ define <2 x i1> @xor_ule_2(<2 x i8> %x, <2 x i8> %yy) {
 define i1 @xor_sle_2(i8 %xx, i8 %y, i8 %z) {
 ; CHECK-LABEL: @xor_sle_2(
 ; CHECK-NEXT:    [[X:%.*]] = add i8 [[XX:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[YNZ:%.*]] = icmp ne i8 [[Y:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[XOR]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]

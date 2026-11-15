@@ -1279,8 +1279,7 @@ define i1 @smin_and_bitwise(i32 %x) {
 ; Y < Z fail
 define i1 @eq_smin_nofold(i32 %x) {
 ; CHECK-LABEL: @eq_smin_nofold(
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X:%.*]], 5
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[X:%.*]], i32 6, i32 5) ]
 ; CHECK-NEXT:    [[MINV:%.*]] = tail call i32 @llvm.smin.i32(i32 [[X]], i32 5)
 ; CHECK-NEXT:    [[RET:%.*]] = icmp eq i32 [[MINV]], 5
 ; CHECK-NEXT:    ret i1 [[RET]]

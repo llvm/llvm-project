@@ -102,8 +102,7 @@ define void @maybenullAfterInt2Ptr(i128 %llu) {
 ; CHECK-LABEL: define void @maybenullAfterInt2Ptr
 ; CHECK-SAME: (i128 [[LLU:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i128 [[LLU]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i128 [[LLU]], i128 1, i128 0) ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[LLU]] to i64
 ; CHECK-NEXT:    [[I2P:%.*]] = inttoptr i64 [[TMP0]] to ptr
 ; CHECK-NEXT:    call void @foo(ptr [[I2P]])

@@ -45,8 +45,7 @@ define <2 x i1> @or_slt_pos(<2 x i8> %xx, <2 x i8> %yy, <2 x i8> %z) {
 
 define i1 @or_sle_pos(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_sle_pos(
-; CHECK-NEXT:    [[NS:%.*]] = icmp sgt i8 [[Y:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NS]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 0, i8 -128) ]
 ; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[XN1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]

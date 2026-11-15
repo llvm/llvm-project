@@ -4,8 +4,7 @@
 define <vscale x 2 x i64> @bounded(i32 %base) vscale_range(2, 1024) {
 ; CHECK-LABEL: define <vscale x 2 x i64> @bounded(
 ; CHECK-SAME: i32 [[BASE:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ult i32 [[BASE]], 3841
-; CHECK-NEXT:    call void @llvm.assume(i1 [[IN_RANGE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[BASE]], i32 0, i32 3841) ]
 ; CHECK-NEXT:    [[BASE64:%.*]] = zext nneg i32 [[BASE]] to i64
 ; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[BASE64]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[INSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer

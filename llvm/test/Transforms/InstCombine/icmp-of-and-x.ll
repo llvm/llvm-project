@@ -55,8 +55,7 @@ define i1 @icmp_uge_x_y_2(i8 %xx, i8 %y) {
 
 define i1 @icmp_sge_x_negy(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_sge_x_negy(
-; CHECK-NEXT:    [[CY:%.*]] = icmp slt i8 [[Y:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CY]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[Z:%.*]] = icmp eq i8 [[AND]], [[X]]
 ; CHECK-NEXT:    ret i1 [[Z]]
@@ -173,8 +172,7 @@ define <2 x i1> @icmp_sle_x_posy_fail_partial(<2 x i8> %x, <2 x i8> %yy) {
 
 define i1 @icmp_sgt_x_posy(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_sgt_x_posy(
-; CHECK-NEXT:    [[CY:%.*]] = icmp sgt i8 [[Y:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CY]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 0, i8 -128) ]
 ; CHECK-NEXT:    [[Z:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
@@ -198,8 +196,7 @@ define <2 x i1> @icmp_sgt_negx_y(<2 x i8> %xx, <2 x i8> %y) {
 
 define i1 @icmp_sle_negx_y(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_sle_negx_y(
-; CHECK-NEXT:    [[CX:%.*]] = icmp slt i8 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CX]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[Z:%.*]] = icmp slt i8 [[Y:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
@@ -212,8 +209,7 @@ define i1 @icmp_sle_negx_y(i8 %x, i8 %y) {
 
 define i1 @icmp_sle_negx_y_fail_maybe_zero(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_sle_negx_y_fail_maybe_zero(
-; CHECK-NEXT:    [[CX:%.*]] = icmp slt i8 [[X:%.*]], 1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CX]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 -128, i8 1) ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[Z:%.*]] = icmp sle i8 [[AND]], [[X]]
 ; CHECK-NEXT:    ret i1 [[Z]]

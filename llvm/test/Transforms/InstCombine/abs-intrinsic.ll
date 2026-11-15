@@ -357,8 +357,7 @@ define <3 x i82> @select_abs(<3 x i1> %cond) {
 
 define i32 @assume_abs(i32 %x) {
 ; CHECK-LABEL: @assume_abs(
-; CHECK-NEXT:    [[ASSUME:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[X:%.*]], i32 0, i32 -2147483648) ]
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %assume = icmp sge i32 %x, 0
@@ -371,8 +370,7 @@ define i32 @assume_abs(i32 %x) {
 
 define i32 @abs_assume_neg(i32 %x) {
 ; CHECK-LABEL: @abs_assume_neg(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[X:%.*]], i32 -2147483648, i32 0) ]
 ; CHECK-NEXT:    [[ABS:%.*]] = sub i32 0, [[X]]
 ; CHECK-NEXT:    ret i32 [[ABS]]
 ;

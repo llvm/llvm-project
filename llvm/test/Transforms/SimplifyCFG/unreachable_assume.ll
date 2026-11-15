@@ -4,8 +4,7 @@
 define i32 @assume1(i32 %p) {
 ; CHECK-LABEL: @assume1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[P:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[P:%.*]], i32 1, i32 -2147483648) ]
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
@@ -24,8 +23,7 @@ if.end:
 define i32 @assume2(i32 %p) {
 ; CHECK-LABEL: @assume2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[P:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[P:%.*]], i32 1, i32 -2147483648) ]
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:

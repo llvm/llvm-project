@@ -467,8 +467,7 @@ define i64 @unswitch_after_indvars_rewrite_to_invariant(ptr %p, i64 %count, i64 
 ; CHECK-LABEL: define range(i64 -1, 9223372036854775807) i64 @unswitch_after_indvars_rewrite_to_invariant(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], i64 [[COUNT:%.*]], i64 [[FROM:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[COUNT_NONNEG:%.*]] = icmp sgt i64 [[COUNT]], -1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COUNT_NONNEG]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[COUNT]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[IN_RANGE1:%.*]] = icmp slt i64 [[FROM]], [[COUNT]]
 ; CHECK-NEXT:    br i1 [[IN_RANGE1]], label %[[CHECK_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[CHECK_PREHEADER]]:

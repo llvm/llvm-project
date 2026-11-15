@@ -1240,8 +1240,7 @@ exit:
 
 define i1 @trunc_nuw_i1_non_zero(i8 %1) {
 ; CHECK-LABEL: @trunc_nuw_i1_non_zero(
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[TMP0:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    ret i1 true
 ;
   %3 = icmp ne i8 %1, 0
@@ -1261,8 +1260,7 @@ define i1 @neg_trunc_nuw_i1_maybe_zero(i8 %1) {
 
 define i2 @neg_trunc_nuw_i2_non_zero(i8 %1) {
 ; CHECK-LABEL: @neg_trunc_nuw_i2_non_zero(
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[TMP0:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    [[RET:%.*]] = trunc nuw i8 [[TMP0]] to i2
 ; CHECK-NEXT:    ret i2 [[RET]]
 ;
@@ -1274,8 +1272,7 @@ define i2 @neg_trunc_nuw_i2_non_zero(i8 %1) {
 
 define i1 @neg_trunc_i1_non_zero(i8 %1) {
 ; CHECK-LABEL: @neg_trunc_i1_non_zero(
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[TMP0:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    [[RET:%.*]] = trunc i8 [[TMP0]] to i1
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
@@ -1287,8 +1284,7 @@ define i1 @neg_trunc_i1_non_zero(i8 %1) {
 
 define i1 @trunc_nsw_i1_non_zero(i8 %1) {
 ; CHECK-LABEL: @trunc_nsw_i1_non_zero(
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[TMP0:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    ret i1 true
 ;
   %3 = icmp ne i8 %1, 0
@@ -1308,8 +1304,7 @@ define i1 @neg_trunc_nsw_i1_maybe_zero(i8 %1) {
 
 define i2 @neg_trunc_nsw_i2_non_zero(i8 %1) {
 ; CHECK-LABEL: @neg_trunc_nsw_i2_non_zero(
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[TMP0:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    [[RET:%.*]] = trunc nsw i8 [[TMP0]] to i2
 ; CHECK-NEXT:    ret i2 [[RET]]
 ;
@@ -1565,10 +1560,10 @@ define i1 @neg_trunc_nuw_lshr(i8 %x, i8 %c) {
 
 define i32 @separate_truncs_i32(i64 %x) {
 ; CHECK-LABEL: @separate_truncs_i32(
-; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
-; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
-; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 130816
-; CHECK-NEXT:    ret i32 %[[MASK]]
+; CHECK-NEXT:    [[WIDE_SHIFT:%.*]] = lshr i64 [[X:%.*]], 16
+; CHECK-NEXT:    [[WIDE:%.*]] = trunc i64 [[WIDE_SHIFT]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = and i32 [[WIDE]], 130816
+; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %wide.shift = lshr i64 %x, 16
   %wide = trunc i64 %wide.shift to i32
@@ -1584,16 +1579,16 @@ define i32 @separate_truncs_i32(i64 %x) {
 
 define i32 @separate_truncs_i32_reverse(i64 %x) {
 ; CHECK-LABEL: @separate_truncs_i32_reverse(
-; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
-; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
-; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 130816
-; CHECK-NEXT:    ret i32 %[[MASK]]
+; CHECK-NEXT:    [[WIDE_SHIFT:%.*]] = lshr i64 [[X:%.*]], 16
+; CHECK-NEXT:    [[WIDE:%.*]] = trunc i64 [[WIDE_SHIFT]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = and i32 [[WIDE]], 130816
+; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %x.narrow = trunc i64 %x to i32
   %narrow.shift = lshr i32 %x.narrow, 16
   %field.lo = and i32 %narrow.shift, 65280
 
-  %wide.shift = lshr i64 %x, 16 
+  %wide.shift = lshr i64 %x, 16
   %wide = trunc i64 %wide.shift to i32
   %field.hi = and i32 %wide, 65536
 
@@ -1603,12 +1598,12 @@ define i32 @separate_truncs_i32_reverse(i64 %x) {
 
 define i32 @separate_truncs_i32_multiuse(i64 %x) {
 ; CHECK-LABEL: @separate_truncs_i32_multiuse(
-; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
-; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
-; CHECK-NEXT:    call void @use(i32 %[[TRUNC]])
-; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 130816
-; CHECK-NEXT:    ret i32 %[[MASK]]
-; 
+; CHECK-NEXT:    [[WIDE_SHIFT:%.*]] = lshr i64 [[X:%.*]], 16
+; CHECK-NEXT:    [[WIDE:%.*]] = trunc i64 [[WIDE_SHIFT]] to i32
+; CHECK-NEXT:    call void @use(i32 [[WIDE]])
+; CHECK-NEXT:    [[RESULT:%.*]] = and i32 [[WIDE]], 130816
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
   %wide.shift = lshr i64 %x, 16
   %wide = trunc i64 %wide.shift to i32
   call void @use(i32 %wide)
@@ -1624,19 +1619,19 @@ define i32 @separate_truncs_i32_multiuse(i64 %x) {
 
 define i32 @separate_truncs_i32_reverse_multiuse(i64 %x) {
 ; CHECK-LABEL: @separate_truncs_i32_reverse_multiuse(
-; CHECK-NEXT:    %[[NARROW:.*]] = trunc i64 %x to i32
-; CHECK-NEXT:    call void @use(i32 %[[NARROW]])
-; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
-; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
-; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 130816
-; CHECK-NEXT:    ret i32 %[[MASK]]
+; CHECK-NEXT:    [[X_NARROW:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[X_NARROW]])
+; CHECK-NEXT:    [[WIDE_SHIFT:%.*]] = lshr i64 [[X]], 16
+; CHECK-NEXT:    [[WIDE:%.*]] = trunc i64 [[WIDE_SHIFT]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = and i32 [[WIDE]], 130816
+; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %x.narrow = trunc i64 %x to i32
   call void @use(i32 %x.narrow)
   %narrow.shift = lshr i32 %x.narrow, 16
   %field.lo = and i32 %narrow.shift, 65280
 
-  %wide.shift = lshr i64 %x, 16 
+  %wide.shift = lshr i64 %x, 16
   %wide = trunc i64 %wide.shift to i32
   %field.hi = and i32 %wide, 65536
 
@@ -1646,11 +1641,11 @@ define i32 @separate_truncs_i32_reverse_multiuse(i64 %x) {
 
 define <2 x i32> @separate_truncs_i32_reverse_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @separate_truncs_i32_reverse_vec(
-; CHECK-NEXT:    %[[SHIFT:.*]] = lshr <2 x i64> %x, splat (i64 16)
-; CHECK-NEXT:    %[[TRUNC:.*]] = trunc <2 x i64> %[[SHIFT]] to <2 x i32>
-; CHECK-NEXT:    %[[MASK:.*]] = and <2 x i32> %[[TRUNC]], splat (i32 130816)
-; CHECK-NEXT:    ret <2 x i32> %[[MASK]]
-; 
+; CHECK-NEXT:    [[WIDE_SHIFT:%.*]] = lshr <2 x i64> [[X:%.*]], splat (i64 16)
+; CHECK-NEXT:    [[WIDE:%.*]] = trunc <2 x i64> [[WIDE_SHIFT]] to <2 x i32>
+; CHECK-NEXT:    [[RESULT:%.*]] = and <2 x i32> [[WIDE]], splat (i32 130816)
+; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+;
   %x.narrow = trunc <2 x i64> %x to <2 x i32>
   %narrow.shift = lshr <2 x i32> %x.narrow, <i32 16, i32 16>
   %field.lo = and <2 x i32> %narrow.shift, <i32 65280, i32 65280>
@@ -1682,10 +1677,10 @@ define i32 @neg_separate_truncs_i32_shift_geq_32(i64 %x) {
 ; negative test: narrow mask 131072
 define i32 @neg_separate_truncs_i32_upper_bits(i64 %x) {
 ; CHECK-LABEL: @neg_separate_truncs_i32_upper_bits(
-; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
-; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
-; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 65536
-; CHECK-NEXT:    ret i32 %[[MASK]]
+; CHECK-NEXT:    [[WIDE_SHIFT:%.*]] = lshr i64 [[X:%.*]], 16
+; CHECK-NEXT:    [[WIDE:%.*]] = trunc i64 [[WIDE_SHIFT]] to i32
+; CHECK-NEXT:    [[FIELD_HI:%.*]] = and i32 [[WIDE]], 65536
+; CHECK-NEXT:    ret i32 [[FIELD_HI]]
 ;
   %wide.shift = lshr i64 %x, 16
   %wide = trunc i64 %wide.shift to i32

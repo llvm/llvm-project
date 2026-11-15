@@ -7,8 +7,7 @@ define i32 @main(ptr %a, i8 %a0, i32 %conv, i8 %a1) {
 ; CHECK-NEXT:    [[A3:%.*]] = trunc i32 [[CONV]] to i8
 ; CHECK-NEXT:    [[OR11:%.*]] = or i8 [[A0]], [[A3]]
 ; CHECK-NEXT:    store i8 [[OR11]], ptr [[A]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A1]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[A1]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
   %conv1 = sext i8 %a1 to i32

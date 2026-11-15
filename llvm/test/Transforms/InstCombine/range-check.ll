@@ -34,8 +34,7 @@ define i1 @test_and1_logical(i32 %x, i32 %n) {
 
 define i1 @test_and1_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_and1_sext(
-; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[NN:%.*]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -79,8 +78,7 @@ define i1 @test_and2_logical(i32 %x, i32 %n) {
 
 define i1 @test_and2_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_and2_sext(
-; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[NN:%.*]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -122,8 +120,7 @@ define i1 @test_and3_logical(i32 %x, i32 %n) {
 
 define i1 @test_and3_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_and3_sext(
-; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[NN:%.*]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -165,8 +162,7 @@ define i1 @test_and4_logical(i32 %x, i32 %n) {
 
 define i1 @test_and4_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_and4_sext(
-; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[NN:%.*]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -210,8 +206,7 @@ define i1 @test_or1_logical(i32 %x, i32 %n) {
 
 define i1 @test_or1_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_or1_sext(
-; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[NN:%.*]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -255,8 +250,7 @@ define i1 @test_or2_logical(i32 %x, i32 %n) {
 
 define i1 @test_or2_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_or2_sext(
-; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[NN:%.*]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -298,8 +292,7 @@ define i1 @test_or3_logical(i32 %x, i32 %n) {
 
 define i1 @test_or3_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_or3_sext(
-; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[NN:%.*]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -341,8 +334,7 @@ define i1 @test_or4_logical(i32 %x, i32 %n) {
 
 define i1 @test_or4_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_or4_sext(
-; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[NN:%.*]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]

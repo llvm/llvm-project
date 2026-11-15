@@ -1649,8 +1649,7 @@ define i32 @test_umin_sub1_nuw(i32 %x, i32 range(i32 1, 0) %w) {
 
 define i32 @test_umin_sub1_assume_nonzero(i32 %x, i32 %w) {
 ; CHECK-LABEL: @test_umin_sub1_assume_nonzero(
-; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i32 [[W:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NONZERO]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[W:%.*]], i32 1, i32 0) ]
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[W]], -1
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[SUB]])
 ; CHECK-NEXT:    ret i32 [[R]]

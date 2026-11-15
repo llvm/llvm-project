@@ -1242,8 +1242,7 @@ define i1 @mul_nsuw_xy_z_maybe_zero_eq(i8 %x, i8 %y, i8 %z) {
 
 define i1 @mul_xy_z_assumenozero_ne(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @mul_xy_z_assumenozero_ne(
-; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i8 [[Z:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NZ]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Z:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    [[MULX:%.*]] = mul i8 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    [[MULY:%.*]] = mul i8 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[MULY]], [[MULX]]
@@ -1306,8 +1305,7 @@ define i1 @mul_mixed_nuw_nsw_xy_z_setodd_ult(i8 %x, i8 %y, i8 %zi) {
 
 define i1 @mul_nuw_xy_z_assumenonzero_uge(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @mul_nuw_xy_z_assumenonzero_uge(
-; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i8 [[Z:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NZ]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Z:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    [[MULX:%.*]] = mul nuw i8 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    call void @use(i8 [[MULX]])
@@ -1564,8 +1562,7 @@ entry:
 define i1 @icmp_mul_nsw_slt_neg_var(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_mul_nsw_slt_neg_var(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp slt i8 [[Z:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Z:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -1613,8 +1610,7 @@ entry:
 define i1 @icmp_mul_nsw_slt_may_be_zero(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_mul_nsw_slt_may_be_zero(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i8 [[Z:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Z:%.*]], i8 0, i8 -128) ]
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i8 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i8 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[MUL1]], [[MUL2]]

@@ -190,8 +190,7 @@ define <2 x i32> @blsmsk_and_eval3_vec(<2 x i32> %x) {
 define i1 @blsmsk_eq_is_false_assume(i32 %x) {
 ; CHECK-LABEL: @blsmsk_eq_is_false_assume(
 ; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LB]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[LB]], i32 1, i32 5) ]
 ; CHECK-NEXT:    ret i1 false
 ;
   %lb = and i32 %x, 4
@@ -206,9 +205,11 @@ define i1 @blsmsk_eq_is_false_assume(i32 %x) {
 define i1 @blsmsk_gt_is_false_assume(i32 %x) {
 ; CHECK-LABEL: @blsmsk_gt_is_false_assume(
 ; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LB]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[LB]], i32 1, i32 3) ]
+; CHECK-NEXT:    [[X2:%.*]] = add i32 [[X]], -1
+; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[X2]], [[X]]
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i32 [[X3]], 8
+; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %lb = and i32 %x, 2
   %cmp = icmp ne i32 %lb, 0
@@ -291,8 +292,7 @@ define i32 @blsmsk_or_eval_assume(i32 %x) {
 define i32 @blsmsk_and_eval_assume(i32 %x) {
 ; CHECK-LABEL: @blsmsk_and_eval_assume(
 ; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LB]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[LB]], i32 1, i32 5) ]
 ; CHECK-NEXT:    [[X2:%.*]] = add i32 [[X]], 63
 ; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[X2]], [[X]]
 ; CHECK-NEXT:    [[Z:%.*]] = and i32 [[X3]], 32
@@ -496,9 +496,11 @@ define <2 x i1> @blsi_eq_is_false_assume_vec(<2 x i32> %x) {
 define i1 @blsi_ne_is_true_assume(i32 %x) {
 ; CHECK-LABEL: @blsi_ne_is_true_assume(
 ; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LB]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[LB]], i32 1, i32 5) ]
+; CHECK-NEXT:    [[X2:%.*]] = sub i32 0, [[X]]
+; CHECK-NEXT:    [[X3:%.*]] = and i32 [[X]], [[X2]]
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i32 [[X3]], 8
+; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %lb = and i32 %x, 4
   %cmp = icmp ne i32 %lb, 0
@@ -512,9 +514,11 @@ define i1 @blsi_ne_is_true_assume(i32 %x) {
 define i1 @blsi_ge_is_false_assume(i32 %x) {
 ; CHECK-LABEL: @blsi_ge_is_false_assume(
 ; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LB]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[LB]], i32 1, i32 5) ]
+; CHECK-NEXT:    [[X2:%.*]] = sub i32 0, [[X]]
+; CHECK-NEXT:    [[X3:%.*]] = and i32 [[X]], [[X2]]
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i32 [[X3]], 7
+; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %lb = and i32 %x, 4
   %cmp = icmp ne i32 %lb, 0
@@ -558,9 +562,11 @@ define i32 @blsi_xor_eval_assume(i32 %x) {
 define i32 @blsi_and_eval_assume(i32 %x) {
 ; CHECK-LABEL: @blsi_and_eval_assume(
 ; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LB]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[LB]], i32 1, i32 9) ]
+; CHECK-NEXT:    [[X2:%.*]] = sub i32 0, [[X]]
+; CHECK-NEXT:    [[X3:%.*]] = and i32 [[X]], [[X2]]
+; CHECK-NEXT:    [[Z:%.*]] = and i32 [[X3]], 32
+; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %lb = and i32 %x, 8
   %cmp = icmp ne i32 %lb, 0
@@ -661,8 +667,7 @@ define <2 x i32> @blsmsk_xor_no_eval_vec(<2 x i32> %x) {
 define i32 @blsmsk_xor_no_eval_assume(i32 %x) {
 ; CHECK-LABEL: @blsmsk_xor_no_eval_assume(
 ; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LB]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[LB]], i32 0, i32 1) ]
 ; CHECK-NEXT:    [[X2:%.*]] = add i32 [[X]], -1
 ; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[X]], [[X2]]
 ; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[X3]], 32
@@ -680,9 +685,8 @@ define i32 @blsmsk_xor_no_eval_assume(i32 %x) {
 define i32 @blsmsk_xor_no_eval_assume2(i32 %x) {
 ; CHECK-LABEL: @blsmsk_xor_no_eval_assume2(
 ; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 128
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LB]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[X2:%.*]] = add nsw i32 [[X]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[LB]], i32 1, i32 129) ]
+; CHECK-NEXT:    [[X2:%.*]] = add i32 [[X]], -1
 ; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[X]], [[X2]]
 ; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[X3]], 32
 ; CHECK-NEXT:    ret i32 [[Z]]
@@ -746,11 +750,13 @@ define <2 x i32> @blsi_or_no_partial_eval_vec(<2 x i32> %x) {
 ;; Test that if we have different knowledge about lowbit of X/-X that we select the minimum.
 define i1 @blsi_differing_lowbits(i8 %x) {
 ; CHECK-LABEL: @blsi_differing_lowbits(
-; CHECK-NEXT:    [[Z:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], 8
+; CHECK-NEXT:    [[Z:%.*]] = sub nsw i8 0, [[Y]]
 ; CHECK-NEXT:    [[LB:%.*]] = and i8 [[Z]], 2
-; CHECK-NEXT:    [[NE:%.*]] = icmp ne i8 [[LB]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[LB]], i8 1, i8 3) ]
+; CHECK-NEXT:    [[O:%.*]] = and i8 [[Y]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[O]], 4
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y = or i8 %x, 8
   %z = sub i8 0, %y
@@ -766,12 +772,12 @@ define i1 @blsi_differing_lowbits2(i8 %x) {
 ; CHECK-LABEL: @blsi_differing_lowbits2(
 ; CHECK-NEXT:    [[Z:%.*]] = sub nsw i8 0, [[X:%.*]]
 ; CHECK-NEXT:    [[LB:%.*]] = and i8 [[Z]], 8
-; CHECK-NEXT:    [[NE:%.*]] = icmp ne i8 [[LB]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[LB]], i8 1, i8 9) ]
 ; CHECK-NEXT:    [[LB2:%.*]] = and i8 [[X]], 2
-; CHECK-NEXT:    [[NE2:%.*]] = icmp ne i8 [[LB2]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NE2]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[LB2]], i8 1, i8 3) ]
+; CHECK-NEXT:    [[O:%.*]] = and i8 [[X]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[O]], 4
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = sub i8 0, %x
   %lb = and i8 %z, 8

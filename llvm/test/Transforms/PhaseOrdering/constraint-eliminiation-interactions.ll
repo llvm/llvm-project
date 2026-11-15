@@ -9,14 +9,17 @@ define void @sum_of_induction_and_guard(i8 %n, i8 %j) mustprogress {
 ; CHECK-LABEL: define void @sum_of_induction_and_guard(
 ; CHECK-SAME: i8 [[N:%.*]], i8 [[J:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[PRE_0:%.*]] = icmp sgt i8 [[N]], 10
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[PRE_0]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[N]], i8 11, i8 -128), "range"(i8 [[J]], i8 20, i8 -128) ]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub nsw i8 29, [[J]]
 ; CHECK-NEXT:    [[C_NOT1:%.*]] = icmp eq i8 [[N]], 11
 ; CHECK-NEXT:    br i1 [[C_NOT1]], label %[[EXIT:.*]], label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[IV_NEXT2:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[BODY]] ], [ 11, %[[ENTRY]] ]
-; CHECK-NEXT:    tail call void @use(i32 1)
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV_NEXT2]], 1
+; CHECK-NEXT:    [[IV_NEXT3:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[BODY]] ], [ 11, %[[ENTRY]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i8 [ [[IV_NEXT3]], %[[BODY]] ], [ 10, %[[ENTRY]] ]
+; CHECK-NEXT:    [[T:%.*]] = icmp sgt i8 [[IV2]], [[INVARIANT_OP]]
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[T]], i32 1, i32 2
+; CHECK-NEXT:    tail call void @use(i32 [[DOT]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV_NEXT3]], 1
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i8 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[C_NOT]], label %[[EXIT]], label %[[BODY]]
 ; CHECK:       [[EXIT]]:
@@ -220,8 +223,7 @@ define i64 @even_index_sum(ptr %p, i64 %count) {
 ; CHECK-LABEL: define i64 @even_index_sum(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], i64 [[COUNT:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[NN:%.*]] = icmp sgt i64 [[COUNT]], -1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NN]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[COUNT]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[EZ:%.*]] = icmp eq i64 [[COUNT]], 0
 ; CHECK-NEXT:    br i1 [[EZ]], label %[[EXIT:.*]], label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
@@ -280,24 +282,23 @@ define i64 @even_index_sum_uadd_with_overflow(ptr %p, i64 %count) {
 ; CHECK-LABEL: define i64 @even_index_sum_uadd_with_overflow(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], i64 [[COUNT:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[NN:%.*]] = icmp sgt i64 [[COUNT]], -1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NN]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[COUNT]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[EZ:%.*]] = icmp eq i64 [[COUNT]], 0
 ; CHECK-NEXT:    br i1 [[EZ]], label %[[EXIT:.*]], label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER1:.*]]:
-; CHECK-NEXT:    [[OOB:%.*]] = icmp ult i64 [[IV:%.*]], [[COUNT]]
-; CHECK-NEXT:    br i1 [[OOB]], label %[[LOOP_HEADER]], label %[[TRAP:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ [[IV]], %[[LOOP_HEADER1]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ [[ACC_NEXT:%.*]], %[[LOOP_HEADER1]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[P]], i64 [[IV2]]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ [[ACC_NEXT:%.*]], %[[BODY:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[BODY]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[OOB:%.*]] = icmp ult i64 [[IV]], [[COUNT]]
+; CHECK-NEXT:    br i1 [[OOB]], label %[[BODY]], label %[[TRAP:.*]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    [[ACC_NEXT]] = add i64 [[V]], [[ACC]]
-; CHECK-NEXT:    [[IV]] = add nuw i64 [[IV2]], 2
-; CHECK-NEXT:    [[EC_NOT:%.*]] = icmp slt i64 [[IV]], [[COUNT]]
-; CHECK-NEXT:    br i1 [[EC_NOT]], label %[[LOOP_HEADER1]], label %[[EXIT]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 2
+; CHECK-NEXT:    [[EC_NOT:%.*]] = icmp slt i64 [[IV_NEXT]], [[COUNT]]
+; CHECK-NEXT:    br i1 [[EC_NOT]], label %[[LOOP_HEADER]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT]], %[[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT]], %[[BODY]] ]
 ; CHECK-NEXT:    ret i64 [[R]]
 ; CHECK:       [[TRAP]]:
 ; CHECK-NEXT:    tail call void @llvm.trap()

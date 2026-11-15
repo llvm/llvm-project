@@ -14,13 +14,12 @@ define void @test(ptr nocapture readonly %arg) local_unnamed_addr {
 ; CHECK-NEXT:    [[I:%.*]] = load i64, ptr @d, align 8
 ; CHECK-NEXT:    [[I1:%.*]] = icmp eq i64 [[I]], 0
 ; CHECK-NEXT:    [[I2:%.*]] = load i64, ptr @a, align 8
-; CHECK-NEXT:    [[I3:%.*]] = icmp ne i64 [[I2]], 0
 ; CHECK-NEXT:    br i1 [[I1]], label [[BB13:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[I5:%.*]] = load i16, ptr [[ARG:%.*]], align 2
 ; CHECK-NEXT:    [[I6:%.*]] = trunc i16 [[I5]] to i8
 ; CHECK-NEXT:    store i8 [[I6]], ptr @c, align 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[I3]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I2]], i64 1, i64 0) ]
 ; CHECK-NEXT:    br label [[BB22:%.*]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    [[I14:%.*]] = load i16, ptr [[ARG]], align 2

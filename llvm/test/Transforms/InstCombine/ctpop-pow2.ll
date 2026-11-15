@@ -55,8 +55,7 @@ define i32 @ctpop_2_shl_nz(i32 %x) {
 
 define i8 @ctpop_imin_plus1_lshr_nz(i8 %x) {
 ; CHECK-LABEL: @ctpop_imin_plus1_lshr_nz(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    [[V:%.*]] = lshr i8 -127, [[X]]
 ; CHECK-NEXT:    [[CNT:%.*]] = call range(i8 1, 9) i8 @llvm.ctpop.i8(i8 [[V]])
 ; CHECK-NEXT:    ret i8 [[CNT]]
@@ -71,8 +70,7 @@ define i8 @ctpop_imin_plus1_lshr_nz(i8 %x) {
 
 define i64 @ctpop_x_and_negx_nz(i64 %x) {
 ; CHECK-LABEL: @ctpop_x_and_negx_nz(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[X:%.*]], i64 1, i64 0) ]
 ; CHECK-NEXT:    ret i64 1
 ;
   %v0 = sub i64 0, %x

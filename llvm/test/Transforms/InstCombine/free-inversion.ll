@@ -516,8 +516,7 @@ define i8 @smax_both_freely_invertable_always(i8 %x, i8 %y) {
 
 define i8 @lshr_nneg(i8 %x, i8 %y) {
 ; CHECK-LABEL: @lshr_nneg(
-; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i8 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NEG]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[SHR_NOT:%.*]] = ashr i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[SHR_NOT]]
 ;

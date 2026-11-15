@@ -158,10 +158,7 @@ define i1 @mul_unkV_evenC_ne(i64 %v) {
 
 define i1 @mul_assumenzV_asumenzV_eq(i64 %v, i64 %v2) {
 ; CHECK-LABEL: @mul_assumenzV_asumenzV_eq(
-; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i64 [[V:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NZ]])
-; CHECK-NEXT:    [[NZ2:%.*]] = icmp ne i64 [[V2:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NZ2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[V:%.*]], i64 1, i64 0), "range"(i64 [[V2:%.*]], i64 1, i64 0) ]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[V]], [[V2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[MUL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -177,8 +174,7 @@ define i1 @mul_assumenzV_asumenzV_eq(i64 %v, i64 %v2) {
 
 define i1 @mul_assumenzV_unkV_nsw_ne(i32 %v, i32 %v2) {
 ; CHECK-LABEL: @mul_assumenzV_unkV_nsw_ne(
-; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i32 [[V:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NZ]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[V:%.*]], i32 1, i32 0) ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[V2:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -302,8 +298,7 @@ define i1 @test_icmp_ult_and_negpow2_one(i32 %add) {
 
 define i1 @test_imply_dom_condition(i32 %add) {
 ; CHECK-LABEL: @test_imply_dom_condition(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD:%.*]], 7
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[ADD:%.*]], i32 8, i32 -2147483648) ]
 ; CHECK-NEXT:    ret i1 false
 ;
   %and = and i32 %add, -8

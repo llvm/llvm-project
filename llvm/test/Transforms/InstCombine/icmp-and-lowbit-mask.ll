@@ -673,8 +673,7 @@ define i1 @src_x_and_mask_slt(i8 %x, i8 %y, i1 %cond) {
 ; CHECK-LABEL: @src_x_and_mask_slt(
 ; CHECK-NEXT:    [[MASK0:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = select i1 [[COND:%.*]], i8 [[MASK0]], i8 0
-; CHECK-NEXT:    [[MASK_POS:%.*]] = icmp sgt i8 [[MASK]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[MASK_POS]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[MASK]], i8 0, i8 -128) ]
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[X:%.*]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -691,8 +690,7 @@ define i1 @src_x_and_mask_sge(i8 %x, i8 %y, i1 %cond) {
 ; CHECK-LABEL: @src_x_and_mask_sge(
 ; CHECK-NEXT:    [[MASK0:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = select i1 [[COND:%.*]], i8 [[MASK0]], i8 0
-; CHECK-NEXT:    [[MASK_POS:%.*]] = icmp sgt i8 [[MASK]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[MASK_POS]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[MASK]], i8 0, i8 -128) ]
 ; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[X:%.*]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

@@ -7,8 +7,7 @@ declare void @use8(i8)
 
 define i1 @t0(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[OFFSET:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[OFFSET:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[RES:%.*]] = icmp ule i8 [[OFFSET]], [[BASE]]
@@ -24,8 +23,7 @@ define i1 @t0(i8 %base, i8 %offset) {
 }
 define i1 @t1(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[OFFSET:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[OFFSET:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i8 [[OFFSET]], [[BASE]]
@@ -41,8 +39,7 @@ define i1 @t1(i8 %base, i8 %offset) {
 }
 define i1 @t2(i8 %offset) {
 ; CHECK-LABEL: @t2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[OFFSET:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[OFFSET:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[BASE:%.*]] = call i8 @gen8()
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
@@ -60,8 +57,7 @@ define i1 @t2(i8 %offset) {
 }
 define i1 @t3(i8 %offset) {
 ; CHECK-LABEL: @t3(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[OFFSET:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[OFFSET:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[BASE:%.*]] = call i8 @gen8()
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
@@ -94,8 +90,7 @@ define i1 @n4_maybezero(i8 %base, i8 %offset) {
 ; We need to know that about %offset, %base won't do. Can't fold.
 define i1 @n5_wrongnonzero(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @n5_wrongnonzero(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 1, i8 -128) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[RES:%.*]] = icmp ult i8 [[ADJUSTED]], [[BASE]]

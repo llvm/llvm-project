@@ -160,10 +160,7 @@ define ptr @gep_add_nuw(ptr %ptr, i64 %a, i64 %b) {
 define ptr @gep_inbounds_add_nsw_nonneg(ptr %ptr, i64 %a, i64 %b) {
 ; CHECK-LABEL: define ptr @gep_inbounds_add_nsw_nonneg(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i64 [[A]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
-; CHECK-NEXT:    [[B_NNEG:%.*]] = icmp sgt i64 [[B]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NNEG]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[A]], i64 0, i64 -9223372036854775808), "range"(i64 [[B]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[PTR]], i64 [[A]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP1]], i64 [[B]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
@@ -180,8 +177,7 @@ define ptr @gep_inbounds_add_nsw_nonneg(ptr %ptr, i64 %a, i64 %b) {
 define ptr @gep_inbounds_add_nsw_not_nonneg1(ptr %ptr, i64 %a, i64 %b) {
 ; CHECK-LABEL: define ptr @gep_inbounds_add_nsw_not_nonneg1(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i64 [[A]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[A]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [4 x i8], ptr [[PTR]], i64 [[A]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr [[TMP1]], i64 [[B]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
@@ -196,8 +192,7 @@ define ptr @gep_inbounds_add_nsw_not_nonneg1(ptr %ptr, i64 %a, i64 %b) {
 define ptr @gep_inbounds_add_nsw_not_nonneg2(ptr %ptr, i64 %a, i64 %b) {
 ; CHECK-LABEL: define ptr @gep_inbounds_add_nsw_not_nonneg2(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[B_NNEG:%.*]] = icmp sgt i64 [[B]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NNEG]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[B]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [4 x i8], ptr [[PTR]], i64 [[A]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr [[TMP1]], i64 [[B]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
@@ -212,10 +207,7 @@ define ptr @gep_inbounds_add_nsw_not_nonneg2(ptr %ptr, i64 %a, i64 %b) {
 define ptr @gep_not_inbounds_add_nsw_nonneg(ptr %ptr, i64 %a, i64 %b) {
 ; CHECK-LABEL: define ptr @gep_not_inbounds_add_nsw_nonneg(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i64 [[A]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
-; CHECK-NEXT:    [[B_NNEG:%.*]] = icmp sgt i64 [[B]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NNEG]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[A]], i64 0, i64 -9223372036854775808), "range"(i64 [[B]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [4 x i8], ptr [[PTR]], i64 [[A]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr [[TMP1]], i64 [[B]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
@@ -232,10 +224,7 @@ define ptr @gep_not_inbounds_add_nsw_nonneg(ptr %ptr, i64 %a, i64 %b) {
 define ptr @gep_inbounds_add_not_nsw_nonneg(ptr %ptr, i64 %a, i64 %b) {
 ; CHECK-LABEL: define ptr @gep_inbounds_add_not_nsw_nonneg(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i64 [[A]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
-; CHECK-NEXT:    [[B_NNEG:%.*]] = icmp sgt i64 [[B]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NNEG]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[A]], i64 0, i64 -9223372036854775808), "range"(i64 [[B]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [4 x i8], ptr [[PTR]], i64 [[A]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr [[TMP1]], i64 [[B]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
@@ -252,8 +241,7 @@ define ptr @gep_inbounds_add_not_nsw_nonneg(ptr %ptr, i64 %a, i64 %b) {
 define ptr @gep_inbounds_sext_add_nonneg(ptr %ptr, i32 %a) {
 ; CHECK-LABEL: define ptr @gep_inbounds_sext_add_nonneg(
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i32 [[A]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A]], i32 0, i32 -2147483648) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[A]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[PTR]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 40
@@ -270,8 +258,7 @@ define ptr @gep_inbounds_sext_add_nonneg(ptr %ptr, i32 %a) {
 define ptr @gep_inbounds_sext_addlike_nonneg(ptr %ptr, i32 %a) {
 ; CHECK-LABEL: define ptr @gep_inbounds_sext_addlike_nonneg(
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i32 [[A]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A]], i32 0, i32 -2147483648) ]
 ; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i32 [[A]] to i64
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[PTR]], i64 [[IDX]]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP]], i64 40
@@ -288,8 +275,7 @@ define ptr @gep_inbounds_sext_addlike_nonneg(ptr %ptr, i32 %a) {
 define ptr @gep_inbounds_sext_add_not_nonneg_1(ptr %ptr, i32 %a) {
 ; CHECK-LABEL: define ptr @gep_inbounds_sext_add_not_nonneg_1(
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i32 [[A]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A]], i32 0, i32 -2147483648) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[A]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [4 x i8], ptr [[PTR]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -40
@@ -320,8 +306,7 @@ define ptr @gep_inbounds_sext_add_not_nonneg_2(ptr %ptr, i32 %a) {
 define ptr @gep_not_inbounds_sext_add_nonneg(ptr %ptr, i32 %a) {
 ; CHECK-LABEL: define ptr @gep_not_inbounds_sext_add_nonneg(
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i32 [[A]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A]], i32 0, i32 -2147483648) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[A]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [4 x i8], ptr [[PTR]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 40

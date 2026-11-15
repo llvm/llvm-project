@@ -5,8 +5,7 @@ define <2 x i1> @vector_bailout(<2 x i8> noundef %x, <2 x i8> noundef %y) {
 ; CHECK-LABEL: @vector_bailout(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i8> [[Y:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i1> [[TMP1]] to i2
-; CHECK-NEXT:    [[ALL_POSITIVE:%.*]] = icmp eq i2 [[TMP2]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ALL_POSITIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i2 [[TMP2]], i2 0, i2 1) ]
 ; CHECK-NEXT:    [[REM:%.*]] = srem <2 x i8> [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt <2 x i8> [[REM]], zeroinitializer
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = select <2 x i1> [[NEGATIVE]], <2 x i8> [[Y]], <2 x i8> zeroinitializer
@@ -27,8 +26,7 @@ define <2 x i1> @vector_bailout(<2 x i8> noundef %x, <2 x i8> noundef %y) {
 
 define i1 @positive_divisor(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @positive_divisor(
-; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[Y:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 1, i8 -128) ]
 ; CHECK-NEXT:    ret i1 true
 ;
   %positive = icmp sgt i8 %y, 0
@@ -43,8 +41,7 @@ define i1 @positive_divisor(i8 noundef %x, i8 noundef %y) {
 
 define i1 @nonnegative_divisor(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @nonnegative_divisor(
-; CHECK-NEXT:    [[NONNEGATIVE:%.*]] = icmp sgt i8 [[Y:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEGATIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 0, i8 -128) ]
 ; CHECK-NEXT:    ret i1 true
 ;
   %nonnegative = icmp sge i8 %y, 0
@@ -59,8 +56,7 @@ define i1 @nonnegative_divisor(i8 noundef %x, i8 noundef %y) {
 
 define i1 @positive_divisor_commuted(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @positive_divisor_commuted(
-; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[Y:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 1, i8 -128) ]
 ; CHECK-NEXT:    ret i1 true
 ;
   %positive = icmp sgt i8 %y, 0
@@ -75,8 +71,7 @@ define i1 @positive_divisor_commuted(i8 noundef %x, i8 noundef %y) {
 
 define i1 @x_not_noundef(i8 %x, i8 noundef %y) {
 ; CHECK-LABEL: @x_not_noundef(
-; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[Y:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 1, i8 -128) ]
 ; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i8 [[REM]], 0
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = select i1 [[NEGATIVE]], i8 [[Y]], i8 0
@@ -96,8 +91,7 @@ define i1 @x_not_noundef(i8 %x, i8 noundef %y) {
 
 define i1 @false_arm_one(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @false_arm_one(
-; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[Y:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 1, i8 -128) ]
 ; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i8 [[REM]], 0
 ; CHECK-NEXT:    [[ADJUSTMENT:%.*]] = select i1 [[NEGATIVE]], i8 [[Y]], i8 1
@@ -117,8 +111,7 @@ define i1 @false_arm_one(i8 noundef %x, i8 noundef %y) {
 
 define i1 @false_arm_minus_one(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @false_arm_minus_one(
-; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[Y:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 1, i8 -128) ]
 ; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[NEGATIVE_INV:%.*]] = icmp sgt i8 [[REM]], -1
 ; CHECK-NEXT:    [[ADJUSTMENT:%.*]] = select i1 [[NEGATIVE_INV]], i8 -1, i8 [[Y]]
@@ -138,8 +131,7 @@ define i1 @false_arm_minus_one(i8 noundef %x, i8 noundef %y) {
 
 define i1 @false_arm_signed_max(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @false_arm_signed_max(
-; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[Y:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 1, i8 -128) ]
 ; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i8 [[REM]], 0
 ; CHECK-NEXT:    [[ADJUSTMENT:%.*]] = select i1 [[NEGATIVE]], i8 [[Y]], i8 127
@@ -176,8 +168,7 @@ define i1 @divisor_not_known_positive(i8 noundef %x, i8 noundef %y) {
 
 define i1 @wrong_sign_condition(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @wrong_sign_condition(
-; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[Y:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 1, i8 -128) ]
 ; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[NEGATIVE1:%.*]] = icmp slt i8 [[REM]], 0
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = select i1 [[NEGATIVE1]], i8 0, i8 [[Y]]
@@ -197,8 +188,7 @@ define i1 @wrong_sign_condition(i8 noundef %x, i8 noundef %y) {
 
 define i1 @absolute_divisor(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @absolute_divisor(
-; CHECK-NEXT:    [[NOT_MINUS_ONE:%.*]] = icmp ne i8 [[Y:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT_MINUS_ONE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 0, i8 -1) ]
 ; CHECK-NEXT:    ret i1 true
 ;
   %not_minus_one = icmp ne i8 %y, -1
@@ -257,12 +247,7 @@ define i1 @absolute_divisor_wrapping(i8 noundef %x, i8 noundef %y) {
 
 define i1 @absolute_of_different_divisor(i8 noundef %x, i8 noundef %y, i8 noundef %z) {
 ; CHECK-LABEL: @absolute_of_different_divisor(
-; CHECK-NEXT:    [[NOT_MIN:%.*]] = icmp ne i8 [[Y:%.*]], -128
-; CHECK-NEXT:    [[NOT_MINUS_ONE:%.*]] = icmp ne i8 [[Y]], -1
-; CHECK-NEXT:    [[Z_NOT_MIN:%.*]] = icmp ne i8 [[Z:%.*]], -128
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT_MIN]])
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT_MINUS_ONE]])
-; CHECK-NEXT:    call void @llvm.assume(i1 [[Z_NOT_MIN]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[Y:%.*]], i8 -127, i8 -128), "range"(i8 [[Y]], i8 0, i8 -1), "range"(i8 [[Z:%.*]], i8 -127, i8 -128) ]
 ; CHECK-NEXT:    [[ABS_Z:%.*]] = call i8 @llvm.abs.i8(i8 [[Z]], i1 true)
 ; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i8 [[REM]], 0
