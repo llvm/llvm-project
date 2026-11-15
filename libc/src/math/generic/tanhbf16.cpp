@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation for tanhbf16(x) function.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/math/tanhbf16.h"
 #include "src/__support/common.h"

@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the shared tanhbf16(x) function.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SHARED_MATH_TANHBF16_H
 #define LLVM_LIBC_SHARED_MATH_TANHBF16_H

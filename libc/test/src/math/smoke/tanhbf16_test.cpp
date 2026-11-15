@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains unit tests for bfloat16 tanh.
+///
+//===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"

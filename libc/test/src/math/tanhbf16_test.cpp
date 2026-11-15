@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains exhaustive tests for bfloat16 tanh.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/tanhbf16.h"
