@@ -491,7 +491,7 @@ define ptr @load_ptr_load_b64(ptr %p) {
 define b64 @load_b64_load_ptr(ptr %p) {
 ; CHECK-LABEL: @load_b64_load_ptr(
 ; CHECK-NEXT:    [[X:%.*]] = load b64, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[Y:%.*]] = load ptr, ptr [[P]], align 8
+; CHECK-NEXT:    [[Y:%.*]] = bitcast b64 [[X]] to ptr
 ; CHECK-NEXT:    call void @use(ptr [[Y]])
 ; CHECK-NEXT:    ret b64 [[X]]
 ;

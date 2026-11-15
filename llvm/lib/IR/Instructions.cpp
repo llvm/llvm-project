@@ -3395,6 +3395,14 @@ bool CastInst::isBitOrNoopPointerCastable(Type *SrcTy, Type *DestTy,
       return (IntTy->getBitWidth() == DL.getPointerTypeSizeInBits(PtrTy) &&
               !DL.isNonIntegralPointerType(PtrTy));
 
+  // Bytes can hold pointers, so a byte (vector) can be bitcast to and from a
+  // pointer (vector) of the same size.
+  if ((SrcTy->isPtrOrPtrVectorTy() && DestTy->isByteOrByteVectorTy()) ||
+      (SrcTy->isByteOrByteVectorTy() && DestTy->isPtrOrPtrVectorTy()))
+    return !DL.isNonIntegralPointerType(SrcTy) &&
+           !DL.isNonIntegralPointerType(DestTy) &&
+           DL.getTypeSizeInBits(SrcTy) == DL.getTypeSizeInBits(DestTy);
+
   return isBitCastable(SrcTy, DestTy);
 }
 

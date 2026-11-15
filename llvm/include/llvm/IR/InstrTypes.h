@@ -610,10 +610,15 @@ public:
   );
 
   /// Check whether a bitcast, inttoptr, or ptrtoint cast between these
-  /// types is valid and a no-op.
+  /// types is valid and a no-op on the bits.
   ///
   /// This ensures that any pointer<->integer cast has enough bits in the
-  /// integer and any other cast is a bitcast.
+  /// integer and any other cast is a bitcast. Bytes can be bitcast to and from
+  /// pointers of the same size.
+  ///
+  /// The cast may still lose information. Both ptrtoint and casting a byte to
+  /// a non-byte type can drop provenance. Casting a byte to a non-byte type or
+  /// to wider vector lanes can also make more bits poison.
   LLVM_ABI static bool isBitOrNoopPointerCastable(
       Type *SrcTy,  ///< The Type from which the value should be cast.
       Type *DestTy, ///< The Type to which the value should be cast.

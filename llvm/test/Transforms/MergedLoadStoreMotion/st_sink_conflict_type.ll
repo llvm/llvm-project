@@ -562,12 +562,13 @@ define void @sink_byte_to_ptr(ptr %p, i1 %c, b64 %a, ptr %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store b64 [[A]], ptr [[P]], align 8
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    store ptr [[B]], ptr [[P]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ptr [[B]] to b64
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi b64 [ [[A]], [[IF_THEN]] ], [ [[TMP0]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store b64 [[B_SINK]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -591,12 +592,13 @@ define void @sink_ptr_to_byte(ptr %p, i1 %c, ptr %a, b64 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store ptr [[A]], ptr [[P]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ptr [[A]] to b64
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    store b64 [[B]], ptr [[P]], align 8
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
+; CHECK-NEXT:    [[B_SINK:%.*]] = phi b64 [ [[TMP0]], [[IF_THEN]] ], [ [[B]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store b64 [[B_SINK]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

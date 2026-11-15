@@ -262,7 +262,7 @@ define i1 @load_i1_store_i8(ptr %a) {
 define ptr @load_ptr_store_b64(ptr %a, b64 %b) {
 ; CHECK-LABEL: @load_ptr_store_b64(
 ; CHECK-NEXT:    store b64 [[B:%.*]], ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[A]], align 8
+; CHECK-NEXT:    [[V:%.*]] = bitcast b64 [[B]] to ptr
 ; CHECK-NEXT:    ret ptr [[V]]
 ;
   store b64 %b, ptr %a
@@ -273,7 +273,7 @@ define ptr @load_ptr_store_b64(ptr %a, b64 %b) {
 define b64 @load_b64_store_ptr(ptr %a, ptr %p) {
 ; CHECK-LABEL: @load_b64_store_ptr(
 ; CHECK-NEXT:    store ptr [[P:%.*]], ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[V:%.*]] = load b64, ptr [[A]], align 4
+; CHECK-NEXT:    [[V:%.*]] = bitcast ptr [[P]] to b64
 ; CHECK-NEXT:    ret b64 [[V]]
 ;
   store ptr %p, ptr %a
@@ -284,7 +284,7 @@ define b64 @load_b64_store_ptr(ptr %a, ptr %p) {
 define <2 x ptr> @load_v2ptr_store_v2b64(ptr %a, <2 x b64> %b) {
 ; CHECK-LABEL: @load_v2ptr_store_v2b64(
 ; CHECK-NEXT:    store <2 x b64> [[B:%.*]], ptr [[A:%.*]], align 16
-; CHECK-NEXT:    [[V:%.*]] = load <2 x ptr>, ptr [[A]], align 16
+; CHECK-NEXT:    [[V:%.*]] = bitcast <2 x b64> [[B]] to <2 x ptr>
 ; CHECK-NEXT:    ret <2 x ptr> [[V]]
 ;
   store <2 x b64> %b, ptr %a
@@ -295,7 +295,7 @@ define <2 x ptr> @load_v2ptr_store_v2b64(ptr %a, <2 x b64> %b) {
 define ptr @load_ptr_store_v2b32(ptr %a, <2 x b32> %b) {
 ; CHECK-LABEL: @load_ptr_store_v2b32(
 ; CHECK-NEXT:    store <2 x b32> [[B:%.*]], ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[A]], align 8
+; CHECK-NEXT:    [[V:%.*]] = bitcast <2 x b32> [[B]] to ptr
 ; CHECK-NEXT:    ret ptr [[V]]
 ;
   store <2 x b32> %b, ptr %a
@@ -306,7 +306,7 @@ define ptr @load_ptr_store_v2b32(ptr %a, <2 x b32> %b) {
 define <4 x b32> @load_v4b32_store_v2ptr(ptr %a, <2 x ptr> %p) {
 ; CHECK-LABEL: @load_v4b32_store_v2ptr(
 ; CHECK-NEXT:    store <2 x ptr> [[P:%.*]], ptr [[A:%.*]], align 16
-; CHECK-NEXT:    [[V:%.*]] = load <4 x b32>, ptr [[A]], align 16
+; CHECK-NEXT:    [[V:%.*]] = bitcast <2 x ptr> [[P]] to <4 x b32>
 ; CHECK-NEXT:    ret <4 x b32> [[V]]
 ;
   store <2 x ptr> %p, ptr %a
@@ -317,7 +317,7 @@ define <4 x b32> @load_v4b32_store_v2ptr(ptr %a, <2 x ptr> %p) {
 define <vscale x 1 x ptr> @load_nxv1ptr_store_nxv1b64(ptr %a, <vscale x 1 x b64> %b) {
 ; CHECK-LABEL: @load_nxv1ptr_store_nxv1b64(
 ; CHECK-NEXT:    store <vscale x 1 x b64> [[B:%.*]], ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[V:%.*]] = load <vscale x 1 x ptr>, ptr [[A]], align 8
+; CHECK-NEXT:    [[V:%.*]] = bitcast <vscale x 1 x b64> [[B]] to <vscale x 1 x ptr>
 ; CHECK-NEXT:    ret <vscale x 1 x ptr> [[V]]
 ;
   store <vscale x 1 x b64> %b, ptr %a
@@ -328,7 +328,7 @@ define <vscale x 1 x ptr> @load_nxv1ptr_store_nxv1b64(ptr %a, <vscale x 1 x b64>
 define <vscale x 2 x ptr> @load_nxv2ptr_store_nxv4b32(ptr %a, <vscale x 4 x b32> %b) {
 ; CHECK-LABEL: @load_nxv2ptr_store_nxv4b32(
 ; CHECK-NEXT:    store <vscale x 4 x b32> [[B:%.*]], ptr [[A:%.*]], align 16
-; CHECK-NEXT:    [[V:%.*]] = load <vscale x 2 x ptr>, ptr [[A]], align 16
+; CHECK-NEXT:    [[V:%.*]] = bitcast <vscale x 4 x b32> [[B]] to <vscale x 2 x ptr>
 ; CHECK-NEXT:    ret <vscale x 2 x ptr> [[V]]
 ;
   store <vscale x 4 x b32> %b, ptr %a
