@@ -106,10 +106,13 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 }
 
 /// Try to fold
-///   cmp pred (load (gep GV, ...)), cmpcst
-/// where GV is a global variable with a constant initializer. Try to simplify
-/// this into some simple computation that does not need the load. For example
-/// we can optimize "icmp eq (load (gep "foo", 0, i)), 0" into "icmp eq i, 3".
+///   cmp pred (load ...), cmpcst
+/// where the load instruction loads from a global variable with a constant
+/// initializer.
+///
+/// Try to simplify this into some simple computation that does not need the
+/// load. For example we can optimize
+/// "icmp eq (load (gep "foo", 0, i)), 0" into "icmp eq i, 3".
 ///
 /// If AndCst is non-null, then the loaded value is masked with that constant
 /// before doing the comparison. This handles cases like "A[i]&4 == 0".
@@ -121,11 +124,8 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LoadInst *LI, CmpPredicate Pred, Constant *RHSC, Instruction &CtxI,
     ConstantInt *AndCst) {
-  auto *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
-  if (!GEP)
-    return nullptr;
-
-  auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(GEP));
+  Value *Ptr = LI->getPointerOperand();
+  auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(Ptr));
   if (LI->isVolatile() || !GV || !GV->isConstant() ||
       !GV->hasDefinitiveInitializer())
     return nullptr;
@@ -135,7 +135,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   if (EltSize.isScalable())
     return nullptr;
 
-  LinearExpression Expr = decomposeLinearExpression(DL, GEP);
+  LinearExpression Expr = decomposeLinearExpression(DL, Ptr);
   if (!Expr.Index || Expr.BasePtr != GV || Expr.Offset.getBitWidth() > 64)
     return nullptr;
 
