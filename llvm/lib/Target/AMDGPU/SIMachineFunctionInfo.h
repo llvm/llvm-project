@@ -523,6 +523,11 @@ private:
   /// relevant for gfx90a-gfx950. For gfx908, this should be infinite.
   unsigned MinNumAGPRs = ~0u;
 
+  /// Maximum number of AGPRs that the function can allocate, including the
+  /// -amdgpu-stress-agpr limit. Only relevant for gfx90a-gfx950. For gfx908,
+  /// this should be infinite.
+  unsigned MaxNumAGPRs = ~0u;
+
   // The hard-wired high half of the address of the global information table
   // for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
   // current hardware only allows a 16 bit value.
@@ -1234,10 +1239,20 @@ public:
 
   unsigned getMinNumAGPRs() const { return MinNumAGPRs; }
 
+  unsigned getMaxNumAGPRs() const { return MaxNumAGPRs; }
+
   /// Return true if an MFMA that requires at least \p NumRegs should select to
   /// the AGPR form, instead of the VGPR form.
   bool selectAGPRFormMFMA(unsigned NumRegs) const {
-    return !MFMAVGPRForm && getMinNumAGPRs() >= NumRegs;
+    // An accumulator wider than this number of registers must not partially
+    // overlap the result (see NoDstOverlap in VOPProfileMAI). If src2 is live
+    // after such an MFMA, the two-address pass selects the early-clobber form,
+    // which needs src2 and vdst in disjoint AGPRs.
+    constexpr unsigned MaxDstOverlapRegs = 4;
+    unsigned NumRequiredAGPRs =
+        NumRegs > MaxDstOverlapRegs ? 2 * NumRegs : NumRegs;
+    return !MFMAVGPRForm && getMinNumAGPRs() >= NumRegs &&
+           getMaxNumAGPRs() >= NumRequiredAGPRs;
   }
 
   /// \returns Default/requested number of work groups for this function.

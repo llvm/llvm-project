@@ -193,7 +193,7 @@ bb:
   ret void
 }
 
-define <16 x float> @mfma_scale_respect_flag(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %scale0, i32 %scale1) #2 {
+define <16 x float> @mfma_scale_respect_flag(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %scale0, i32 %scale1) #3 {
 ; HEURRC-LABEL: mfma_scale_respect_flag:
 ; HEURRC:       ; %bb.0:
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -275,3 +275,4 @@ define <16 x float> @mfma_scale_respect_flag(<8 x i32> %arg0, <8 x i32> %arg1, <
 attributes #0 = { "amdgpu-agpr-alloc"="32,256" }
 attributes #1 = { "amdgpu-agpr-alloc"="0,0" }
 attributes #2 = { nounwind "amdgpu-agpr-alloc"="20" }
+attributes #3 = { nounwind "amdgpu-agpr-alloc"="32" }

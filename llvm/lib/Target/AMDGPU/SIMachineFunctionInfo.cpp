@@ -84,6 +84,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
         AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", {~0u, ~0u},
                                         /*OnlyFirstRequired=*/true);
     MinNumAGPRs = MinNumAGPRAttr;
+    MaxNumAGPRs = ST.getMaxNumVectorRegs(F).second;
+    // Apply the same stress limit as SIRegisterInfo::getReservedRegs.
+    if (auto Limit = ST.getCLOpts().stress_agpr; Limit && *Limit < MaxNumAGPRs)
+      MaxNumAGPRs = *Limit;
   }
 
   if (!isEntryFunction()) {

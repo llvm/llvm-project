@@ -270,78 +270,50 @@ define amdgpu_kernel void @max_32regs_mfma32(ptr addrspace(1) %arg) #3 {
 ;
 ; GFX90A-LABEL: max_32regs_mfma32:
 ; GFX90A:       ; %bb.0: ; %bb
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x40400000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a2, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x40a00000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a4, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x40c00000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a5, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x40e00000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a6, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41000000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a7, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41100000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a8, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41200000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a9, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41300000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a10, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41400000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a11, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41500000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a12, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41600000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a13, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41700000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a14, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41800000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a15, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41880000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a16, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41900000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a17, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41980000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a18, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41a00000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a19, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41a80000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a20, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41b00000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a21, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41b80000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a22, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41c00000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a23, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41c80000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a24, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41d00000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a25, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41d80000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a26, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41e00000
-; GFX90A-NEXT:    v_mov_b32_e32 v2, 1.0
-; GFX90A-NEXT:    v_accvgpr_write_b32 a27, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41e80000
-; GFX90A-NEXT:    v_accvgpr_write_b32 a28, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41f00000
-; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_accvgpr_write_b32 a1, 2.0
-; GFX90A-NEXT:    v_accvgpr_write_b32 a29, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x41f80000
-; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_accvgpr_write_b32 a0, 1.0
-; GFX90A-NEXT:    v_accvgpr_write_b32 a3, 4.0
-; GFX90A-NEXT:    v_accvgpr_write_b32 a30, v1
-; GFX90A-NEXT:    v_accvgpr_mov_b32 a31, a1
+; GFX90A-NEXT:    v_mov_b32_e32 v0, 1.0
+; GFX90A-NEXT:    v_mov_b32_e32 v1, 2.0
+; GFX90A-NEXT:    v_mov_b32_e32 v2, 0x40400000
+; GFX90A-NEXT:    v_mov_b32_e32 v3, 4.0
+; GFX90A-NEXT:    v_mov_b32_e32 v4, 0x40a00000
+; GFX90A-NEXT:    v_mov_b32_e32 v5, 0x40c00000
+; GFX90A-NEXT:    v_mov_b32_e32 v6, 0x40e00000
+; GFX90A-NEXT:    v_mov_b32_e32 v7, 0x41000000
+; GFX90A-NEXT:    v_mov_b32_e32 v8, 0x41100000
+; GFX90A-NEXT:    v_mov_b32_e32 v9, 0x41200000
+; GFX90A-NEXT:    v_mov_b32_e32 v10, 0x41300000
+; GFX90A-NEXT:    v_mov_b32_e32 v11, 0x41400000
+; GFX90A-NEXT:    v_mov_b32_e32 v12, 0x41500000
+; GFX90A-NEXT:    v_mov_b32_e32 v13, 0x41600000
+; GFX90A-NEXT:    v_mov_b32_e32 v14, 0x41700000
+; GFX90A-NEXT:    v_mov_b32_e32 v15, 0x41800000
+; GFX90A-NEXT:    v_mov_b32_e32 v16, 0x41880000
+; GFX90A-NEXT:    v_mov_b32_e32 v17, 0x41900000
+; GFX90A-NEXT:    v_mov_b32_e32 v18, 0x41980000
+; GFX90A-NEXT:    v_mov_b32_e32 v19, 0x41a00000
+; GFX90A-NEXT:    v_mov_b32_e32 v20, 0x41a80000
+; GFX90A-NEXT:    v_mov_b32_e32 v21, 0x41b00000
+; GFX90A-NEXT:    v_mov_b32_e32 v22, 0x41b80000
+; GFX90A-NEXT:    v_mov_b32_e32 v23, 0x41c00000
+; GFX90A-NEXT:    v_mov_b32_e32 v24, 0x41c80000
+; GFX90A-NEXT:    v_mov_b32_e32 v25, 0x41d00000
+; GFX90A-NEXT:    v_mov_b32_e32 v26, 0x41d80000
+; GFX90A-NEXT:    v_mov_b32_e32 v27, 0x41e00000
+; GFX90A-NEXT:    v_mov_b32_e32 v28, 0x41e80000
+; GFX90A-NEXT:    v_mov_b32_e32 v29, 0x41f00000
+; GFX90A-NEXT:    v_mov_b32_e32 v30, 0x41f80000
+; GFX90A-NEXT:    v_mov_b32_e32 v31, v1
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
-; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90A-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v2, a[0:31]
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    ;;#ASMSTART
+; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ;;#ASMSTART
+; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_nop 0
+; GFX90A-NEXT:    v_mfma_f32_32x32x1f32 v[0:31], v0, v0, v[0:31]
 ; GFX90A-NEXT:    s_nop 15
-; GFX90A-NEXT:    s_nop 1
-; GFX90A-NEXT:    global_store_dword v0, a0, s[2:3]
+; GFX90A-NEXT:    s_nop 2
+; GFX90A-NEXT:    v_mov_b32_e32 v1, 0
+; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GFX90A-NEXT:    s_endpgm
 bb:
   %v = call i32 asm sideeffect "", "=a"()
