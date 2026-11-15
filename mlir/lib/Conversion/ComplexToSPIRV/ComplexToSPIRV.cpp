@@ -534,6 +534,51 @@ struct SqrtOpPattern final : OpConversionPattern<ComplexOp> {
     return success();
   }
 };
+
+/// Lowers complex.log/log1p following the identities
+/// log(x + iy) = log(abs(x + iy)) + i * atan2(y, x)
+/// log1p(x + iy) = log(abs(1 + x + iy)) + i * atan2(y, 1 + x)
+template <bool IsLog1p, typename SqrtOp, typename LogOp, typename Atan2Op,
+          typename ComplexOp =
+              std::conditional_t<IsLog1p, complex::Log1pOp, complex::LogOp>>
+struct LogOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    if (IsLog1p) {
+      Value one = createFPConstant(rewriter, loc, re.getType(), 1.0);
+      re = spirv::FAddOp::create(rewriter, loc, one, re);
+    }
+
+    Value reSq = spirv::FMulOp::create(rewriter, loc, re, re);
+    Value imSq = spirv::FMulOp::create(rewriter, loc, im, im);
+    Value sum = spirv::FAddOp::create(rewriter, loc, reSq, imSq);
+    Value abs = SqrtOp::create(rewriter, loc, sum);
+
+    Value resultRe = LogOp::create(rewriter, loc, abs);
+    Value resultIm = Atan2Op::create(rewriter, loc, im, re);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -576,7 +621,15 @@ void mlir::populateComplexToSPIRVPatterns(
            ExpOpPattern</*IsExpm1=*/true, spirv::GLExpOp, spirv::GLSinOp,
                         spirv::GLCosOp>,
            ExpOpPattern</*IsExpm1=*/true, spirv::CLExpOp, spirv::CLSinOp,
-                        spirv::CLCosOp>>(typeConverter, context);
+                        spirv::CLCosOp>,
+           LogOpPattern</*IsLog1p=*/false, spirv::GLSqrtOp, spirv::GLLogOp,
+                        spirv::GLAtan2Op>,
+           LogOpPattern</*IsLog1p=*/false, spirv::CLSqrtOp, spirv::CLLogOp,
+                        spirv::CLAtan2Op>,
+           LogOpPattern</*IsLog1p=*/true, spirv::GLSqrtOp, spirv::GLLogOp,
+                        spirv::GLAtan2Op>,
+           LogOpPattern</*IsLog1p=*/true, spirv::CLSqrtOp, spirv::CLLogOp,
+                        spirv::CLAtan2Op>>(typeConverter, context);
   patterns.add<
       SqrtOpPattern<SqrtKind::Sqrt, spirv::GLSqrtOp, spirv::GLInverseSqrtOp,
                     spirv::GLFAbsOp, spirv::GLFMaxOp, spirv::GLFMinOp,
