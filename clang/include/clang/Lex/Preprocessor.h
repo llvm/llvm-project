@@ -2382,6 +2382,9 @@ public:
   IdentifierInfo *LookUpIdentifierInfo(Token &Identifier) const;
 
 private:
+  /// Diagnose keyword compatibility and extension uses.
+  void diagnoseKeywordUsage(const Token &Identifier, IdentifierInfo &II);
+
   llvm::DenseMap<IdentifierInfo*,unsigned> PoisonReasons;
 
 public:

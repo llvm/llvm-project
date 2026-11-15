@@ -511,6 +511,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Improvements to Clang's diagnostics
 
+- Fixed missing keyword compatibility and extension warnings in single-token
+  macro expansions, and duplicate or spurious warnings from macro argument
+  expansion.
+
 - Fixed `-Wheader-guard` warnings pointing at `if` instead of the macro name
   in `#if !defined(...)` header guards.
 
