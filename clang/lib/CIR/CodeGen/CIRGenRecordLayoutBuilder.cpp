@@ -195,6 +195,14 @@ struct CIRRecordLowering final {
                           /*isNamedBitField=*/false);
   }
 
+  bool isEmptyFieldForCIRLayout(const FieldDecl *fd) const {
+    if (fd->isZeroLengthBitField())
+      return true;
+    return fd->isPotentiallyOverlapping() &&
+           CodeGenUtils::isEmptyFieldForLayout(astContext, fd) &&
+           isEmptyFieldForABI(astContext, fd);
+  }
+
   /// The mark for a base subobject.  A base contributes no ABI data when it is
   /// empty for the ABI, which is not the same as CXXRecordDecl::isEmpty(): a
   /// base holding only unnamed bit-fields is laid out but carries no data.
@@ -636,7 +644,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
           // non-reusable tail padding.
           CharUnits limitOffset;
           for (auto probe = field; probe != fieldEnd; ++probe)
-            if (!CodeGenUtils::isEmptyFieldForLayout(astContext, *probe)) {
+            if (!isEmptyFieldForCIRLayout(*probe)) {
               // A member with storage sets the limit.
               assert((getFieldBitOffset(*probe) % charBits) == 0 &&
                      "Next storage is not byte-aligned");
@@ -734,8 +742,7 @@ void CIRRecordLowering::accumulateFields(bool nonVirtualBaseType) {
       field = accumulateBitFields(field, fieldEnd);
       assert((field == fieldEnd || !field->isBitField()) &&
              "Failed to accumulate all the bitfields");
-    } else if (CodeGenUtils::isEmptyFieldForLayout(astContext, *field) &&
-               field->isPotentiallyOverlapping()) {
+    } else if (isEmptyFieldForCIRLayout(*field)) {
       // We lay out normal empty fields, as they are required for GEPs/getting
       // function pointers. However 'no-unique-address' lends some additional
       // complexity. These fields take up no real space, but would also have to
@@ -747,15 +754,6 @@ void CIRRecordLowering::accumulateFields(bool nonVirtualBaseType) {
       // problem with taking the address of one of these, so it is in practice
       // not a horrifyingly problematic issue.
       assert(!cir::MissingFeatures::noUniqueAddressLayout());
-      // Dropping the field leaves no member to mark, so its bytes read as
-      // padding.  That is only sound when the field carries no ABI data, so
-      // make sure we add a member for it. if it does.
-      if (!isEmptyFieldForABI(astContext, *field))
-        members.push_back(
-            MemberInfo(bitsToCharUnits(getFieldBitOffset(*field)),
-                       MemberInfo::InfoKind::Field,
-                       getStorageType(field->getType()->getAsCXXRecordDecl()),
-                       getFieldMemberKind(*field), *field));
       ++field;
     } else {
       // Use base subobject layout for potentially-overlapping fields,
