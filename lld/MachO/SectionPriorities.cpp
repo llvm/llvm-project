@@ -416,10 +416,9 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
     if (auto *obj = dyn_cast<ObjFile>(file))
       work.emplace_back(obj->symbols, Matches());
 
-  // parallelForEach() processes continguous runs of items, so the symbol
-  // table chunks from the getSymbols() loop above would contain most of
-  // the work but be processed by just one or two threads. Use
-  // parallelForEachFineGrained() to distribute the work across threads better.
+  // The symbol table chunks from the getSymbols() loop above contain most of
+  // the work in the first few items. Use parallelForEachFineGrained() to
+  // split them over more than one or two threads.
   parallelForFineGrained(work.size(), [&](size_t i) {
     auto &[syms, matches] = work[i];
     bool external = i < numSymtabChunks;
