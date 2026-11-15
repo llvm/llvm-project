@@ -237,7 +237,6 @@ LLVM_DUMP_METHOD void MacroDirective::dump() const {
   // FIXME: Dump SourceLocation.
   if (auto *Prev = getPrevious())
     Out << " prev " << Prev;
-  if (IsFromPCH) Out << " from_pch";
 
   if (isa<VisibilityMacroDirective>(this))
     Out << (IsPublic ? " public" : " private");
