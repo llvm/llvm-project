@@ -1462,7 +1462,9 @@ public:
     Location loc = expandOp->getLoc();
     SmallVector<OpFoldResult> newExpandedSizes = expandOp.getMixedOutputShape();
     SmallVector<int64_t> newExpandedShape(expandedType.getShape());
-    rewriter.setInsertionPointAfterValue(padOp.getSource());
+    // Dynamic output sizes are operands of expandOp and may be defined after
+    // the pad's source.
+    rewriter.setInsertionPoint(expandOp);
     SmallVector<OpFoldResult> padSrcSizes =
         tensor::getMixedSizes(rewriter, loc, padOp.getSource());
     for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
