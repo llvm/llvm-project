@@ -3,7 +3,6 @@
 
 ---
 name: Cst_UAddSat
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst_UAddSat
@@ -16,7 +15,6 @@ body: |
 ...
 ---
 name: CstSat_UAddSat
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @CstSat_UAddSat
@@ -29,7 +27,6 @@ body: |
 ...
 ---
 name: Cst_SAddSat
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst_SAddSat
@@ -42,7 +39,6 @@ body: |
 ...
 ---
 name: CstSat_SAddSat
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @CstSat_SAddSat
@@ -55,7 +51,6 @@ body: |
 ...
 ---
 name: Cst_USubSat
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst_USubSat
@@ -68,7 +63,6 @@ body: |
 ...
 ---
 name: CstSat_USubSat
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @CstSat_USubSat
@@ -81,7 +75,6 @@ body: |
 ...
 ---
 name: Cst_SSubSat
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst_SSubSat
@@ -94,7 +87,6 @@ body: |
 ...
 ---
 name: CstSat_SSubSat
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @CstSat_SSubSat
@@ -107,7 +99,6 @@ body: |
 ...
 ---
 name: PartialKnown_UAddSat
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @PartialKnown_UAddSat
@@ -124,7 +115,6 @@ body: |
 ...
 ---
 name: PartialKnown_USubSat
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @PartialKnown_USubSat
@@ -141,7 +131,6 @@ body: |
 ...
 ---
 name: Vector_UAddSat
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Vector_UAddSat
@@ -158,9 +147,9 @@ body: |
 ...
 ---
 name: Unknown_SAddSat
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @Unknown_SAddSat
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0

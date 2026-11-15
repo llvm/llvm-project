@@ -5,7 +5,6 @@
 # RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=thunderx3t110 -machine-combiner-verify-pattern-order=true %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
 #
 name:            f1_2s
-tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr64 }
   - { id: 1, class: fpr64 }
@@ -14,6 +13,7 @@ registers:
   - { id: 4, class: fpr64 }
 body:             |
   bb.0.entry:
+    liveins: $d0, $d1, $d2
     %2:fpr64 = COPY $d2
     %1:fpr64 = COPY $d1
     %0:fpr64 = COPY $d0
@@ -32,7 +32,6 @@ body:             |
 # PROFITABLE-NEXT: FMLAv2f32 [[R1]], %0, %1, implicit $fpcr
 ---
 name:            f1_4s
-tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -41,6 +40,7 @@ registers:
   - { id: 4, class: fpr128 }
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1, $q2
     %2:fpr128 = COPY $q2
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
@@ -59,7 +59,6 @@ body:             |
 # PROFITABLE-NEXT: FMLAv4f32 [[R1]], %0, %1, implicit $fpcr
 ---
 name:            f1_2d
-tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -68,6 +67,7 @@ registers:
   - { id: 4, class: fpr128 }
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1, $q2
     %2:fpr128 = COPY $q2
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
@@ -86,7 +86,6 @@ body:             |
 # PROFITABLE-NEXT: FMLAv2f64 [[R1]], %0, %1, implicit $fpcr
 ---
 name:            f1_both_fmul_2s
-tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr64 }
   - { id: 1, class: fpr64 }
@@ -97,6 +96,7 @@ registers:
   - { id: 6, class: fpr64 }
 body:             |
   bb.0.entry:
+    liveins: $d0, $d1, $d2, $d3
     %3:fpr64 = COPY $d3
     %2:fpr64 = COPY $d2
     %1:fpr64 = COPY $d1
@@ -113,7 +113,6 @@ body:             |
 # ALL-NEXT: FMLSv2f32 %4, %2, %3, implicit $fpcr
 ---
 name:            f1_both_fmul_4s
-tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -124,6 +123,7 @@ registers:
   - { id: 6, class: fpr128 }
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1, $q2, $q3
     %3:fpr128 = COPY $q3
     %2:fpr128 = COPY $q2
     %1:fpr128 = COPY $q1
@@ -140,7 +140,6 @@ body:             |
 # ALL-NEXT: FMLSv4f32 %4, %2, %3, implicit $fpcr
 ---
 name:            f1_both_fmul_2d
-tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -151,6 +150,7 @@ registers:
   - { id: 6, class: fpr128 }
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1, $q2, $q3
     %3:fpr128 = COPY $q3
     %2:fpr128 = COPY $q2
     %1:fpr128 = COPY $q1
