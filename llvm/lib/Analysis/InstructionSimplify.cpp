@@ -5637,8 +5637,8 @@ static bool isPoisonBitRange(Value *Offset, Type *Ty, Type *SrcTy,
   // Accessing bits past the end of the value is poison.
   uint64_t Off;
   return match(Offset, m_ConstantInt(Off)) &&
-         Off + Q.DL.getTypeSizeInBits(Ty).getFixedValue() >
-             Q.DL.getTypeSizeInBits(SrcTy).getFixedValue();
+         Off + Q.DL.getTypeSizeInBits(Ty->getScalarType()).getFixedValue() >
+             Q.DL.getTypeSizeInBits(SrcTy->getScalarType()).getFixedValue();
 }
 
 /// Given operands for a BitInsertInst, see if we can fold the result.
@@ -7319,7 +7319,16 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return Op0;
     // 0 << Y -> 0
     if (match(Op0, m_Zero()))
-      return Constant::getNullValue(ReturnType);
+      return Op0;
+    if (IID == Intrinsic::ushl_sat) {
+      // -1 u<< Y -> -1
+      if (match(Op0, m_AllOnes()))
+        return Op0;
+    } else {
+      // SINT_MAX s<< Y -> SINT_MAX, SINT_MIN s<< Y -> SINT_MIN
+      if (match(Op0, m_MaxSignedValue()) || match(Op0, m_SignMask()))
+        return Op0;
+    }
     break;
   case Intrinsic::load_relative:
     if (auto *C0 = dyn_cast<Constant>(Op0))

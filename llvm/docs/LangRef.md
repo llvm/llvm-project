@@ -2765,8 +2765,9 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `"oracle-function"`
 :   This attribute indicates that the function is an oracle function of
     '`llvm.speculative.load`'. A function with this attribute must have local
-    linkage, and it may only be used as the oracle argument of
-    '`llvm.speculative.load`' calls.
+    linkage, be non-variadic, return `i64`, be `nounwind`, `nosync`,
+    `willreturn`, and have at most `memory(argmem: read)`. It may only be used
+    as the oracle argument of '`llvm.speculative.load`' calls.
 
 `speculative_load_hardening`
 :   This attribute indicates that
@@ -9643,40 +9644,38 @@ Some important flag interactions:
 -  A module with `Objective-C Garbage Collection` set to 0 cannot be
    merged with a module with `Objective-C GC Only` set to 6.
 
-### C type width Module Flags Metadata
+### wchar_t Type Size Module Flags Metadata
 
-The ARM backend emits a section into each generated object file describing the
-options that it was compiled with (in a compiler-independent way) to prevent
-linking incompatible objects, and to allow automatic library selection. Some
-of these options are not visible at the IR level, namely wchar_t width and enum
-width.
+The `wchar_size` module flag records the size of `wchar_t` in bytes. Its value
+is a positive integer. The size of `wchar_t` is a property of the target's C
+ABI and is not implied by the widths available in the IR, so it is recorded
+explicitly.
 
-To pass this information to the backend, these options are encoded in module
-flags metadata, using the following key-value pairs:
+When the flag is absent, the target's default `wchar_t` size is used.
 
-```{list-table}
-:header-rows: 1
-:widths: 30 70
-* - Key
-  - Value
+For example, the following metadata section specifies a 4-byte `wchar_t`:
 
-* - short_wchar
-  - * 0 --- sizeof(wchar_t) == 4
-    * 1 --- sizeof(wchar_t) == 2
-
-* - short_enum
-  - * 0 --- Enums are at least as large as an `int`.
-    * 1 --- Enums are stored in the smallest integer type which can
-      represent all of its values.
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"wchar_size", i32 4}
 ```
 
-For example, the following metadata section specifies that the module was
-compiled with a `wchar_t` width of 4 bytes, and the underlying type of an
-enum is the smallest type which can represent all of its values:
-```
-!llvm.module.flags = !{!0, !1}
-!0 = !{i32 1, !"short_wchar", i32 1}
-!1 = !{i32 1, !"short_enum", i32 0}
+### Minimum Enum Size Module Flags Metadata
+
+The `min_enum_size` module flag records the minimum size of an enumeration type
+in bytes. Its value is an integer: a value of 1 indicates that enums are stored
+in the smallest integer type which can represent all of their values, and a
+value of 4 indicates that enums are at least as wide as `int`.
+
+The ARM backend reads this flag to emit the `Tag_ABI_enum_size` build attribute,
+which records the enum size the module was compiled with and prevents linking
+incompatible objects. The attribute is not emitted when the flag is absent.
+
+For example, the following metadata section specifies short enums:
+
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"min_enum_size", i32 1}
 ```
 
 ### Float ABI Module Flags Metadata
@@ -11970,7 +11969,7 @@ Instructions for bit-range manipulation on {ref}`byte type <t_byte>` values.
 ##### Syntax:
 
 ```
-<result> = bitextract <ty>, <bty> <source>, i32 <offset>
+<result> = bitextract <ty>, <bty> <source>, <ity> <offset>
 ```
 
 ##### Overview:
@@ -11981,14 +11980,12 @@ The '`bitextract`' instruction reads a contiguous range of bits from a
 ##### Arguments:
 
 `<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
-<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
-and specifies the result type. The first operand, `source`, must be a value
-of {ref}`byte type <t_byte>`. The `offset` operand is an `i32` giving the bit
-position at which the extraction begins within `source`.
-
-```{note}
-Vector types are not currently supported as the result type.
-```
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type, or a
+{ref}`vector <t_vector>` of those types, and specifies the result type. The
+first operand, `source`, must be a value of {ref}`byte type <t_byte>`, or a
+vector of byte type with the same number of elements as `ty`. The `offset`
+operand is an `i32`, or a vector of `i32` with the same number of elements as
+`ty`, giving the bit position at which the extraction begins within `source`.
 
 ##### Semantics:
 
@@ -11998,6 +11995,11 @@ Bit `0` is the least significant bit of `source`.
 
 If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 {ref}`poison value <poisonvalues>` is returned.
+
+If the arguments are vectors, each element of the result is extracted from
+the corresponding element of `source`, at the corresponding bit position in
+`offset`. In this case, `bitwidth(ty)` and `bitwidth(source)` refer to the
+element types, and an out-of-range offset only makes its own element poison.
 
 ##### Example:
 
@@ -12009,6 +12011,8 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 %result = bitextract i16, b64 %src, i32 16 ; Extract bits [16..31] of %src and return a 16-bit integer
 
 %result = bitextract float, b32 %src, i32 0 ; Extract bits [0..31] of %src and reinterpret them as a 32-bit float
+
+%result = bitextract <2 x i8>, <2 x b32> %src, <2 x i32> <i32 0, i32 24> ; Extract bits [0..7] of the first element and bits [24..31] of the second element of %src
 ```
 
 (i_bitinsert)=
@@ -12017,7 +12021,7 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 
 ##### Syntax:
 ```
-<result> = bitinsert <bty> <base>, <ty> <val>, i32 <offset>
+<result> = bitinsert <bty> <base>, <ty> <val>, <ity> <offset>
 ```
 ##### Overview:
 
@@ -12028,16 +12032,13 @@ the result as a value of the same byte type.
 ##### Arguments:
 
 `<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
-<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
-and specifies the type of the value to insert. The first operand, `base`,
-must be a value of {ref}`byte type <t_byte>`. The second operand, `val`, must
-be a value of type `ty`. The `offset` operand is an `i32` giving the bit
-position at which the insertion begins within `base`.
-
-```{note}
-Vector types are not currently supported as the type of the value
-to insert.
-```
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type, or a
+{ref}`vector <t_vector>` of those types, and specifies the type of the value
+to insert. The first operand, `base`, must be a value of {ref}`byte type
+<t_byte>`, or a vector of byte type with the same number of elements as `ty`.
+The second operand, `val`, must be a value of type `ty`. The `offset` operand
+is an `i32`, or a vector of `i32` with the same number of elements as `ty`,
+giving the bit position at which the insertion begins within `base`.
 
 ##### Semantics:
 
@@ -12047,6 +12048,11 @@ Bit `0` is the least significant bit of `base`.
 
 If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
 {ref}`poison value <poisonvalues>` is returned.
+
+If the arguments are vectors, each element of `val` is inserted into the
+corresponding element of `base`, at the corresponding bit position in
+`offset`. In this case, `bitwidth(ty)` and `bitwidth(base)` refer to the
+element types, and an out-of-range offset only makes its own element poison.
 
 ##### Example:
 
@@ -12058,6 +12064,8 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
 %result = bitinsert b64 %x, i16 %y, i32 32 ; Inserts a 16-bit value into bits [32..47] of %x
 
 %result = bitinsert b32 %x, float %f, i32 0 ; Inserts the bit pattern of %f into bits [0..31] of %x, overwriting it entirely
+
+%result = bitinsert <2 x b32> %x, <2 x i8> %y, <2 x i32> <i32 0, i32 24> ; Inserts the first element of %y into bits [0..7] of the first element of %x, and the second element of %y into bits [24..31] of the second element of %x
 ```
 
 ### Vector Operations

@@ -125,8 +125,7 @@ class LLVM_ABI LibraryOptionsParser final : public cl::LibraryOptions {
 public:
   template <typename T>
   constexpr explicit LibraryOptionsParser(std::in_place_type_t<T>)
-      : LibraryOptions(T::PerContext), Table(T::optTable), Global(&T::Global),
-        Default(&T::Default),
+      : Table(T::optTable), Global(&T::Global), Default(&T::Default),
         Apply([](void *Opts, const Arg &A, BumpPtrAllocator &Alloc) {
           return static_cast<T *>(Opts)->apply(A, Alloc);
         }),
