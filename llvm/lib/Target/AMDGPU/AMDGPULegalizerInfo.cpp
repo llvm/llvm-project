@@ -1185,6 +1185,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   } else {
     FPTruncActions.legalFor({{F32, F64}, {F16, F32}});
   }
+  if (ST.hasBF16ConversionInsts()) {
+    FPTruncActions.legalFor({{BF16, F32}, {V2BF16, V2F32}})
+        .clampMaxNumElements(0, BF16, 2);
+  }
   FPTruncActions.lowerFor({{BF16, F32}, {BF16, F64}, {F16, F64}}).scalarize(0);
 
   getActionDefinitionsBuilder(G_FPEXT)
