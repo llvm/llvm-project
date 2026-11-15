@@ -4,11 +4,9 @@
 ---
 # CHECK-LABEL: MachineUniformityInfo for function: @exit_into_next_loop
 # CHECK: CYCLES WITH DIVERGENT EXIT:
-# FIXME: The cycle with the divergent exit is the outer loop.
-# CHECK-NEXT: depth=2: entries(bb.2) bb.3
+# CHECK-NEXT: depth=1: entries(bb.1) bb.2 bb.3
 # CHECK: DIVERGENT: G_BRCOND %div_cond:_(s1), %bb.4
-# FIXME: %outer_use is divergent.
-# CHECK-NOT: DIVERGENT: %outer_use: %outer_use:_(s32) = G_ADD %o:_, %zero:_
+# CHECK: DIVERGENT: %outer_use: %outer_use:_(s32) = G_ADD %o:_, %zero:_
 name:            exit_into_next_loop
 body:             |
   bb.0:
