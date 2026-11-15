@@ -47,7 +47,43 @@ entry:
 ; CHECK-NOT: call i32 @simpleFunction(i32 6)
 ; CHECK: ret
 
+; optnone implies noinline, even without an explicit noinline attribute.
+define i32 @OptnoneOnlyFunction(i32 %a) #3 {
+entry:
+  %add = add i32 %a, %a
+  ret i32 %add
+}
+
+define i32 @baz(i32 %a) #1 {
+entry:
+  %0 = tail call i32 @OptnoneOnlyFunction(i32 5)
+  ret i32 %0
+}
+
+; CHECK-LABEL: @baz
+; CHECK: call i32 @OptnoneOnlyFunction(i32 5)
+; CHECK: ret
+
+; alwaysinline takes precedence over the noinline implied by optnone.
+define i32 @AlwaysInlineOptnoneFunction(i32 %a) #4 {
+entry:
+  %sub = sub i32 %a, 1
+  ret i32 %sub
+}
+
+define i32 @qux(i32 %a) #1 {
+entry:
+  %0 = tail call i32 @AlwaysInlineOptnoneFunction(i32 7)
+  ret i32 %0
+}
+
+; CHECK-LABEL: @qux
+; CHECK-NOT: call i32 @AlwaysInlineOptnoneFunction
+; CHECK: ret
+
 
 attributes #0 = { alwaysinline nounwind readnone uwtable }
 attributes #1 = { nounwind readnone uwtable }
 attributes #2 = { nounwind noinline optnone readnone uwtable }
+attributes #3 = { nounwind optnone readnone uwtable }
+attributes #4 = { alwaysinline nounwind optnone readnone uwtable }
