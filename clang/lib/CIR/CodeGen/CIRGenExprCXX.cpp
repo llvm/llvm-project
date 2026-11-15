@@ -775,7 +775,7 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
       // FIXME: inaccessiblemem could cause issues if LTO makes the
       // previously inaccessible memory accessible after linking.
       callOrTryCall.setMemoryEffectsAttr(
-          cir::MemoryEffectsAttr::inaccessibleOrErrnoMemOnly(
+          cir::MemoryEffectsAttr::controlOrErrnoMemOnly(
               callOrTryCall->getContext(), cir::ModRefInfo::ModRef,
               cir::ModRefInfo::Mod));
     }

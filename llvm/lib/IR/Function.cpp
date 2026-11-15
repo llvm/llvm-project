@@ -899,25 +899,6 @@ void Function::setOnlyAccessesArgMemory() {
   setMemoryEffects(getMemoryEffects() & MemoryEffects::argMemOnly());
 }
 
-/// Determine if the function may only access memory that is
-///  inaccessible from the IR.
-bool Function::onlyAccessesInaccessibleMemory() const {
-  return getMemoryEffects().onlyAccessesInaccessibleMem();
-}
-void Function::setOnlyAccessesInaccessibleMemory() {
-  setMemoryEffects(getMemoryEffects() & MemoryEffects::inaccessibleMemOnly());
-}
-
-/// Determine if the function may only access memory that is
-///  either inaccessible from the IR or pointed to by its arguments.
-bool Function::onlyAccessesInaccessibleMemOrArgMem() const {
-  return getMemoryEffects().onlyAccessesInaccessibleOrArgMem();
-}
-void Function::setOnlyAccessesInaccessibleMemOrArgMem() {
-  setMemoryEffects(getMemoryEffects() &
-                   MemoryEffects::inaccessibleOrArgMemOnly());
-}
-
 bool Function::isTargetIntrinsic() const {
   return Intrinsic::isTargetIntrinsic(IntID);
 }

@@ -1682,7 +1682,7 @@ define i8** @constexpr() {
 ; CHECK: attributes #40 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #41 = { memory(write) }
 ; CHECK: attributes #42 = { speculatable }
-; CHECK: attributes #43 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #43 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, controlmem: readwrite) }
 ; CHECK: attributes #44 = { builtin }
 
 ;; Metadata

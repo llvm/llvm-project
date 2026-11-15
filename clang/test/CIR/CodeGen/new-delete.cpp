@@ -16,7 +16,7 @@ A *a() {
 // CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[ALLOC_SIZE:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:   %[[PTR:.*]] = cir.call @_Znwm(%[[ALLOC_SIZE]]) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
+// CIR:   %[[PTR:.*]] = cir.call @_Znwm(%[[ALLOC_SIZE]]) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, control_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[PTR_A:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_A>
 // CIR:     cir.store{{.*}} %[[PTR_A]], %[[NEW_RESULT]] : !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>
@@ -91,7 +91,7 @@ A *b() {
 // CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[ALLOC_SIZE:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:   %[[PTR:.*]] = cir.call @_Znwm(%[[ALLOC_SIZE]]) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
+// CIR:   %[[PTR:.*]] = cir.call @_Znwm(%[[ALLOC_SIZE]]) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, control_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[PTR_A:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_A>
 // CIR:     cir.store{{.*}} %[[PTR_A]], %[[NEW_RESULT]] : !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>
@@ -573,7 +573,7 @@ D *test_new_delete_conditional_array(bool cond, int n) {
 // OGCG:   %[[OGA_LOAD_SIZE:.*]] = load i64, ptr %[[OGA_SAVE_SIZE]], align 8
 // OGCG:   invoke void @_ZN1DdaEPvm(ptr %[[OGA_LOAD_PTR]], i64 %[[OGA_LOAD_SIZE]])
 
-// LLVM-DAG: attributes #[[ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}memory(inaccessiblemem: readwrite, errnomem: write){{.*}}}
+// LLVM-DAG: attributes #[[ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}memory(errnomem: write, controlmem: readwrite){{.*}}}
 // LLVM-DAG: attributes #[[ATTR_BUILTIN_DEL]] = {{{.*}}builtin{{.*}}}
 // OGCG-DAG: attributes #[[OGCG_ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}}
 // OGCG-DAG: attributes #[[OGCG_ATTR_BUILTIN_DEL]] = {{{.*}}builtin{{.*}}}

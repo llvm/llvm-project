@@ -300,7 +300,7 @@ MemoryEffectsAttr MemoryEffectsAttr::get(MLIRContext *context,
 bool MemoryEffectsAttr::isReadWrite() {
   if (this->getArgMem() != ModRefInfo::ModRef)
     return false;
-  if (this->getInaccessibleMem() != ModRefInfo::ModRef)
+  if (this->getControlMem() != ModRefInfo::ModRef)
     return false;
   if (this->getOther() != ModRefInfo::ModRef)
     return false;

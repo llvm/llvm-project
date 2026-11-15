@@ -468,7 +468,7 @@ MemoryEffectsAttr MemoryEffectsAttr::writeOnly(MLIRContext *ctx) {
 MemoryEffectsAttr MemoryEffectsAttr::argMemOnly(MLIRContext *ctx,
                                                 ModRefInfo mr) {
   return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
-             /*inaccessible_mem=*/ModRefInfo::NoModRef,
+             /*control_mem=*/ModRefInfo::NoModRef,
              /*errno_mem=*/ModRefInfo::NoModRef,
              /*target_mem0=*/ModRefInfo::NoModRef,
              /*target_mem1=*/ModRefInfo::NoModRef);
@@ -477,7 +477,16 @@ MemoryEffectsAttr MemoryEffectsAttr::argMemOnly(MLIRContext *ctx,
 MemoryEffectsAttr MemoryEffectsAttr::inaccessibleMemOnly(MLIRContext *ctx,
                                                          ModRefInfo mr) {
   return get(ctx, /*other=*/ModRefInfo::NoModRef,
-             /*arg_mem=*/ModRefInfo::NoModRef, /*inaccessible_mem=*/mr,
+             /*arg_mem=*/ModRefInfo::NoModRef, /*control_mem=*/mr,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/mr,
+             /*target_mem1=*/mr);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::controlMemOnly(MLIRContext *ctx,
+                                                    ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef, /*control_mem=*/mr,
              /*errno_mem=*/ModRefInfo::NoModRef,
              /*target_mem0=*/ModRefInfo::NoModRef,
              /*target_mem1=*/ModRefInfo::NoModRef);
@@ -487,7 +496,7 @@ MemoryEffectsAttr MemoryEffectsAttr::errnoMemOnly(MLIRContext *ctx,
                                                   ModRefInfo mr) {
   return get(ctx, /*other=*/ModRefInfo::NoModRef,
              /*arg_mem=*/ModRefInfo::NoModRef,
-             /*inaccessible_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/mr,
+             /*control_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/mr,
              /*target_mem0=*/ModRefInfo::NoModRef,
              /*target_mem1=*/ModRefInfo::NoModRef);
 }
@@ -495,7 +504,7 @@ MemoryEffectsAttr MemoryEffectsAttr::errnoMemOnly(MLIRContext *ctx,
 MemoryEffectsAttr MemoryEffectsAttr::otherMemOnly(MLIRContext *ctx,
                                                   ModRefInfo mr) {
   return get(ctx, /*other=*/mr, /*arg_mem=*/ModRefInfo::NoModRef,
-             /*inaccessible_mem=*/ModRefInfo::NoModRef,
+             /*control_mem=*/ModRefInfo::NoModRef,
              /*errno_mem=*/ModRefInfo::NoModRef,
              /*target_mem0=*/ModRefInfo::NoModRef,
              /*target_mem1=*/ModRefInfo::NoModRef);
@@ -504,7 +513,15 @@ MemoryEffectsAttr MemoryEffectsAttr::otherMemOnly(MLIRContext *ctx,
 MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrArgMemOnly(MLIRContext *ctx,
                                                               ModRefInfo mr) {
   return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
-             /*inaccessible_mem=*/mr, /*errno_mem=*/ModRefInfo::NoModRef,
+             /*control_mem=*/mr, /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/mr,
+             /*target_mem1=*/mr);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::controlOrArgMemOnly(MLIRContext *ctx,
+                                                         ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
+             /*control_mem=*/mr, /*errno_mem=*/ModRefInfo::NoModRef,
              /*target_mem0=*/ModRefInfo::NoModRef,
              /*target_mem1=*/ModRefInfo::NoModRef);
 }
@@ -513,7 +530,17 @@ MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrErrnoMemOnly(
     MLIRContext *ctx, ModRefInfo inaccessibleMr, ModRefInfo errnoMr) {
   return get(ctx, /*other=*/ModRefInfo::NoModRef,
              /*arg_mem=*/ModRefInfo::NoModRef,
-             /*inaccessible_mem=*/inaccessibleMr, /*errno_mem=*/errnoMr,
+             /*control_mem=*/inaccessibleMr, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/inaccessibleMr,
+             /*target_mem1=*/inaccessibleMr);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::controlOrErrnoMemOnly(MLIRContext *ctx,
+                                                           ModRefInfo controlMr,
+                                                           ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef,
+             /*control_mem=*/controlMr, /*errno_mem=*/errnoMr,
              /*target_mem0=*/ModRefInfo::NoModRef,
              /*target_mem1=*/ModRefInfo::NoModRef);
 }
@@ -522,7 +549,16 @@ MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrArgOrErrnoMemOnly(
     MLIRContext *ctx, ModRefInfo inaccessibleOrArgMr, ModRefInfo errnoMr) {
   return get(ctx, /*other=*/ModRefInfo::NoModRef,
              /*arg_mem=*/inaccessibleOrArgMr,
-             /*inaccessible_mem=*/inaccessibleOrArgMr, /*errno_mem=*/errnoMr,
+             /*control_mem=*/inaccessibleOrArgMr, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/inaccessibleOrArgMr,
+             /*target_mem1=*/inaccessibleOrArgMr);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::controlOrArgOrErrnoMemOnly(
+    MLIRContext *ctx, ModRefInfo inaccessibleOrArgMr, ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/inaccessibleOrArgMr,
+             /*control_mem=*/inaccessibleOrArgMr, /*errno_mem=*/errnoMr,
              /*target_mem0=*/ModRefInfo::NoModRef,
              /*target_mem1=*/ModRefInfo::NoModRef);
 }
@@ -531,7 +567,7 @@ MemoryEffectsAttr
 MemoryEffectsAttr::argumentOrErrnoMemOnly(MLIRContext *ctx, ModRefInfo argMr,
                                           ModRefInfo errnoMr) {
   return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/argMr,
-             /*inaccessible_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/errnoMr,
+             /*control_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/errnoMr,
              /*target_mem0=*/ModRefInfo::NoModRef,
              /*target_mem1=*/ModRefInfo::NoModRef);
 }

@@ -7,15 +7,15 @@
 !rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
 
 #none = #cir.memory_effects<other = none, arg_mem = none,
-                            inaccessible_mem = none, errno_mem = none,
+                            control_mem = none, errno_mem = none,
                             target_mem0 = none, target_mem1 = none>
 
 #read = #cir.memory_effects<other = read, arg_mem = read,
-                            inaccessible_mem = read, errno_mem = read,
+                            control_mem = read, errno_mem = read,
                             target_mem0 = read, target_mem1 = read>
 
 #argmem = #cir.memory_effects<other = none, arg_mem = readwrite,
-                              inaccessible_mem = none, errno_mem = none,
+                              control_mem = none, errno_mem = none,
                               target_mem0 = none, target_mem1 = none>
 
 // The leading direct argument puts the byval slot at index 1.
@@ -63,36 +63,36 @@ module attributes {
   cir.func private @const_sret() -> !rec_Big
       requires_call_conv_lowering attributes { memory_effects = #none, test_classify = #sret_ret }
 
-  // CHECK: cir.func{{.*}} @const_sret(!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+  // CHECK: cir.func{{.*}} @const_sret(!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, control_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
 
   cir.func private @pure_sret() -> !rec_Big
       requires_call_conv_lowering attributes { memory_effects = #read, test_classify = #sret_ret }
 
-  // CHECK: cir.func{{.*}} @pure_sret(!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>
+  // CHECK: cir.func{{.*}} @pure_sret(!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, control_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>
 
   cir.func private @const_byval(!s32i, !rec_Big)
       requires_call_conv_lowering attributes { memory_effects = #none, test_classify = #byval_arg }
 
-  // CHECK: cir.func{{.*}} @const_byval(!s32i, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+  // CHECK: cir.func{{.*}} @const_byval(!s32i, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, control_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
 
   // An indirect argument without byval widens the same as byval.
   cir.func private @const_non_byval(!rec_Big)
       requires_call_conv_lowering attributes { memory_effects = #none, test_classify = #non_byval_arg }
 
-  // CHECK: cir.func{{.*}} @const_non_byval(!cir.ptr<!rec_Big> {{{.*}}llvm.nofreeobj{{.*}}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+  // CHECK: cir.func{{.*}} @const_non_byval(!cir.ptr<!rec_Big> {{{.*}}llvm.nofreeobj{{.*}}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, control_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
 
   // Variadic with no indirect slot in the signature.
   cir.func private @const_variadic(!s8i, ...) -> !s32i
       requires_call_conv_lowering attributes { memory_effects = #none, test_classify = #extend_arg }
 
-  // CHECK: cir.func{{.*}} @const_variadic(!s8i {llvm.noundef, llvm.signext}, ...) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+  // CHECK: cir.func{{.*}} @const_variadic(!s8i {llvm.noundef, llvm.signext}, ...) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, control_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
 
   // An Extend argument is rewritten but hands the callee no memory, so the
   // effects stay as written.
   cir.func private @const_extend(!s8i) -> !s32i
       requires_call_conv_lowering attributes { memory_effects = #none, test_classify = #extend_arg }
 
-  // CHECK: cir.func{{.*}} @const_extend(!s8i {llvm.noundef, llvm.signext}) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+  // CHECK: cir.func{{.*}} @const_extend(!s8i {llvm.noundef, llvm.signext}) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, control_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
 
   // Expand replaces the record with its fields, handing the callee no
   // memory.  Only the hook reaches this, since no x86_64 classification
@@ -100,13 +100,13 @@ module attributes {
   cir.func private @const_expand(!rec_Big) -> !s32i
       requires_call_conv_lowering attributes { memory_effects = #none, test_classify = #expand_arg }
 
-  // CHECK: cir.func{{.*}} @const_expand(!s64i, !s64i, !s64i) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+  // CHECK: cir.func{{.*}} @const_expand(!s64i, !s64i, !s64i) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, control_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
 
   // Already widened on the way in, so widening it again changes nothing.
   cir.func private @prewidened_sret() -> !rec_Big
       requires_call_conv_lowering attributes { memory_effects = #argmem, test_classify = #sret_ret }
 
-  // CHECK: cir.func{{.*}} @prewidened_sret(!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+  // CHECK: cir.func{{.*}} @prewidened_sret(!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, control_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
 
   // A callee with no recorded effects must still come out with none, so that
   // forwarding the original is distinguishable from hard-coding a value.
@@ -139,5 +139,5 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @call_const_sret()
-  // CHECK:   cir.call @const_sret(%{{[^,)]+}}) {memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) -> ()
+  // CHECK:   cir.call @const_sret(%{{[^,)]+}}) {memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, control_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) -> ()
 }

@@ -552,16 +552,6 @@ public:
   bool onlyAccessesArgMemory() const;
   void setOnlyAccessesArgMemory();
 
-  /// Determine if the function may only access memory that is
-  ///  inaccessible from the IR.
-  bool onlyAccessesInaccessibleMemory() const;
-  void setOnlyAccessesInaccessibleMemory();
-
-  /// Determine if the function may only access memory that is
-  ///  either inaccessible from the IR or pointed to by its arguments.
-  bool onlyAccessesInaccessibleMemOrArgMem() const;
-  void setOnlyAccessesInaccessibleMemOrArgMem();
-
   /// Determine if the function cannot return.
   bool doesNotReturn() const {
     return hasFnAttribute(Attribute::NoReturn);

@@ -26,7 +26,7 @@ A *deact_simple() { return new A(makeB()); }
 // CIR:   %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
-// CIR:   %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
+// CIR:   %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, control_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[TRUE:.*]] = cir.const #true
 // CIR:     cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -106,7 +106,7 @@ A *deact_if(bool cond) {
 // CIR-LABEL: cir.func {{.*}} @_Z8deact_ifb
 // CIR:   cir.if {{.*}} {
 // CIR:     %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
-// CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
+// CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, control_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:     cir.cleanup.scope {
 // CIR:       %[[TRUE:.*]] = cir.const #true
 // CIR:       cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -162,7 +162,7 @@ A *deact_ternary(bool cond) { return (new A(makeB()), cond) ? nullptr : nullptr;
 
 // CIR-LABEL: cir.func {{.*}} @_Z13deact_ternaryb
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
-// CIR:   %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
+// CIR:   %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, control_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[TRUE:.*]] = cir.const #true
 // CIR:     cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -219,7 +219,7 @@ A *deact_while_cond(int n) {
 // CIR-LABEL: cir.func {{.*}} @_Z16deact_while_condi
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   cir.while {
-// CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
+// CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, control_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:     cir.cleanup.scope {
 // CIR:       %[[TRUE:.*]] = cir.const #true
 // CIR:       cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -299,7 +299,7 @@ A *deact_switch(int kind) {
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   cir.switch({{.*}}) {
 // CIR:     cir.case(equal, [#cir.int<1> : !s32i]) {
-// CIR:       %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
+// CIR:       %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, control_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:       cir.cleanup.scope {
 // CIR:         %[[TRUE:.*]] = cir.const #true
 // CIR:         cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -358,7 +358,7 @@ A *deact_switch(int kind) {
 // OGCG: [[DO_DELETE]]:
 // OGCG:   call void @_ZdlPv(ptr allocptr %[[PTR]])
 
-// LLVM-DAG: attributes #[[ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}memory(inaccessiblemem: readwrite, errnomem: write){{.*}}}
+// LLVM-DAG: attributes #[[ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}memory(errnomem: write, controlmem: readwrite){{.*}}}
 // LLVM-DAG: attributes #[[ATTR_BUILTIN_DEL]] = {{{.*}}builtin{{.*}}}
 // LLVM-DAG: attributes #[[ATTR_NOUNWIND]] = {{{.*}}nounwind{{.*}}}
 // OGCG-DAG: attributes #[[OGCG_ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}}

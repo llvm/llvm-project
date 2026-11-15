@@ -572,7 +572,7 @@ convertMemoryEffects(mlir::MLIRContext *ctx, cir::MemoryEffectsAttr effects) {
   return mlir::LLVM::MemoryEffectsAttr::get(
       ctx, convertModRefInfo(effects.getOther()),
       convertModRefInfo(effects.getArgMem()),
-      convertModRefInfo(effects.getInaccessibleMem()),
+      convertModRefInfo(effects.getControlMem()),
       convertModRefInfo(effects.getErrnoMem()),
       convertModRefInfo(effects.getTargetMem0()),
       convertModRefInfo(effects.getTargetMem1()));

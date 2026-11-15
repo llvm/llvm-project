@@ -2434,7 +2434,7 @@ def CIR_MemoryEffectsAttr : CIR_Attr<"MemoryEffects", "memory_effects"> {
       parameters, including locations with no class of their own such as
       globals and captured pointers.
     - `arg_mem`: accesses based on the function's pointer arguments.
-    - `inaccessible_mem`: accesses to memory the current module cannot reach,
+    - `control_mem`: accesses to memory the current module cannot reach,
       often used to model the control dependencies of intrinsics.
     - `errno_mem`: accesses to the `errno` variable.
     - `target_mem0`, `target_mem1`: target-specific state.
@@ -2449,7 +2449,7 @@ def CIR_MemoryEffectsAttr : CIR_Attr<"MemoryEffects", "memory_effects"> {
     Example:
     ```
     #cir.memory_effects<other = read, arg_mem = readwrite,
-                        inaccessible_mem = none, errno_mem = none,
+                        control_mem = none, errno_mem = none,
                         target_mem0 = none, target_mem1 = none>
     ```
 
@@ -2463,7 +2463,7 @@ def CIR_MemoryEffectsAttr : CIR_Attr<"MemoryEffects", "memory_effects"> {
   }];
 
   let parameters = (ins "ModRefInfo":$other, "ModRefInfo":$arg_mem,
-                        "ModRefInfo":$inaccessible_mem,
+                        "ModRefInfo":$control_mem,
                         "ModRefInfo":$errno_mem, "ModRefInfo":$target_mem0,
                         "ModRefInfo":$target_mem1);
 
@@ -2489,6 +2489,10 @@ def CIR_MemoryEffectsAttr : CIR_Attr<"MemoryEffects", "memory_effects"> {
     static MemoryEffectsAttr argMemOnly(::mlir::MLIRContext *ctx,
                                         ModRefInfo mr = ModRefInfo::ModRef);
 
+    /// Create MemoryEffectsAttr that can only access control memory.
+    static MemoryEffectsAttr controlMemOnly(::mlir::MLIRContext *ctx,
+                                            ModRefInfo mr = ModRefInfo::ModRef);
+
     /// Create MemoryEffectsAttr that can only access inaccessible memory.
     static MemoryEffectsAttr
     inaccessibleMemOnly(::mlir::MLIRContext *ctx,
@@ -2508,6 +2512,12 @@ def CIR_MemoryEffectsAttr : CIR_Attr<"MemoryEffects", "memory_effects"> {
     inaccessibleOrArgMemOnly(::mlir::MLIRContext *ctx,
                              ModRefInfo mr = ModRefInfo::ModRef);
 
+    /// Create MemoryEffectsAttr that can only access control or argument
+    /// memory.
+    static MemoryEffectsAttr
+    controlOrArgMemOnly(::mlir::MLIRContext *ctx,
+                        ModRefInfo mr = ModRefInfo::ModRef);
+
     /// Create MemoryEffectsAttr that can only access inaccessible or errno
     /// memory.
     static MemoryEffectsAttr inaccessibleOrErrnoMemOnly(
@@ -2515,11 +2525,25 @@ def CIR_MemoryEffectsAttr : CIR_Attr<"MemoryEffects", "memory_effects"> {
         ModRefInfo inaccessibleMr = ModRefInfo::ModRef,
         ModRefInfo errnoMr = ModRefInfo::ModRef);
 
+    /// Create MemoryEffectsAttr that can only access control or errno
+    /// memory.
+    static MemoryEffectsAttr controlOrErrnoMemOnly(
+        ::mlir::MLIRContext *ctx,
+        ModRefInfo controlMr = ModRefInfo::ModRef,
+        ModRefInfo errnoMr = ModRefInfo::ModRef);
+
     /// Create MemoryEffectsAttr that can only access inaccessible, argument or
     /// errno memory.
     static MemoryEffectsAttr inaccessibleOrArgOrErrnoMemOnly(
         ::mlir::MLIRContext *ctx,
         ModRefInfo inaccessibleOrArgMr = ModRefInfo::ModRef,
+        ModRefInfo errnoMr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access control, argument or
+    /// errno memory.
+    static MemoryEffectsAttr controlOrArgOrErrnoMemOnly(
+        ::mlir::MLIRContext *ctx,
+        ModRefInfo controlOrArgMr = ModRefInfo::ModRef,
         ModRefInfo errnoMr = ModRefInfo::ModRef);
 
     /// Create MemoryEffectsAttr that can only access argument or errno memory.

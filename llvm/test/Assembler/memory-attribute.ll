@@ -109,7 +109,7 @@ declare void @fn_read_target_mem0_write_mem_target1()
 declare void @fn_inaccessiblemem_write_new()
     memory(inaccessiblemem: write)
 
-; CHECK: Function Attrs: memory(inaccessiblemem: read, target_mem: read)
+; CHECK: Function Attrs: memory(inaccessiblemem: read)
 ; CHECK: @fn_inaccessiblemem_target_mem0_1read()
 declare void @fn_inaccessiblemem_target_mem0_1read()
     memory(inaccessiblemem: read, target_mem0: read, target_mem1: read)
@@ -119,7 +119,7 @@ declare void @fn_inaccessiblemem_target_mem0_1read()
 declare void @fn_inaccessiblemem_none_target_mem0_read()
     memory(inaccessiblemem: none, target_mem0: read)
 
-; CHECK: Function Attrs: memory(write, inaccessiblemem: read)
+; CHECK: Function Attrs: memory(write, controlmem: read, target_mem1: read)
 ; CHECK: @fn_write_inaccessiblemem_read_target_mem0_write
 declare void @fn_write_inaccessiblemem_read_target_mem0_write()
     memory(write, inaccessiblemem: read, target_mem0: write)

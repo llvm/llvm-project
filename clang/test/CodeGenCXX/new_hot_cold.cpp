@@ -126,11 +126,11 @@ void hot_cold_new_align_nothrow_array() {
 // CHECK-DAG: attributes [[ATTR_NOBUILTIN_NOTHROW]] = { nobuiltin nounwind allocsize(0) {{.*}} }
 // CHECK-DAG: attributes [[ATTR_NO_BUILTIN_CALL]] = { allocsize(0) }
 // CHECK-DAG: attributes [[ATTR_NO_BUILTIN_NOTHROW_CALL]] = { nounwind allocsize(0) }
-// CHECK-DAG: attributes [[ATTR_BUILTIN_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znwm" }
-// CHECK-DAG: attributes [[ATTR_BUILTIN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znam" }
-// CHECK-DAG: attributes [[ATTR_BUILTIN_NOTHROW_NEW]] = { builtin nounwind allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znwm" }
-// CHECK-DAG: attributes [[ATTR_BUILTIN_NOTHROW_ARRAY_NEW]] = { builtin nounwind allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znam" }
-// CHECK-DAG: attributes [[ATTR_BUILTIN_ALIGN_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_ZnwmSt11align_val_t" }
-// CHECK-DAG: attributes [[ATTR_BUILTIN_ALIGN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_ZnamSt11align_val_t" }
-// CHECK-DAG: attributes [[ATTR_BUILTIN_ALIGN_NOTHROW_NEW]] = { builtin nounwind allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_ZnwmSt11align_val_t" }
-// CHECK-DAG: attributes [[ATTR_BUILTIN_ALIGN_NOTHROW_ARRAY_NEW]] = { builtin nounwind allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_ZnamSt11align_val_t" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="_Znwm" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="_Znam" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_NOTHROW_NEW]] = { builtin nounwind allockind("alloc,uninitialized") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="_Znwm" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_NOTHROW_ARRAY_NEW]] = { builtin nounwind allockind("alloc,uninitialized") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="_Znam" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_ALIGN_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="_ZnwmSt11align_val_t" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_ALIGN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="_ZnamSt11align_val_t" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_ALIGN_NOTHROW_NEW]] = { builtin nounwind allockind("alloc,uninitialized,aligned") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="_ZnwmSt11align_val_t" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_ALIGN_NOTHROW_ARRAY_NEW]] = { builtin nounwind allockind("alloc,uninitialized,aligned") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="_ZnamSt11align_val_t" }

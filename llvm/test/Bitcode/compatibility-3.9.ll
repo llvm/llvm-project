@@ -1631,7 +1631,7 @@ declare void @f.writeonly() writeonly
 ; CHECK: attributes #39 = { nocallback nounwind }
 ; CHECK: attributes #40 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #41 = { memory(write) }
-; CHECK: attributes #42 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #42 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, controlmem: readwrite) }
 ; CHECK: attributes #43 = { builtin }
 
 ;; Metadata

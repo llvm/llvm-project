@@ -22,7 +22,7 @@ entry:
   ret void
 }
 
-; CHECK: attributes #[[ATTRS_FOO]] = { nobuiltin memory(readwrite, argmem: write, inaccessiblemem: none
-; CHECK: attributes #[[ATTRS_FOO2]] = { nobuiltin memory(readwrite, inaccessiblemem: write
+; CHECK: attributes #[[ATTRS_FOO]] = { nobuiltin memory(readwrite, argmem: write, errnomem: none, inaccessiblemem: none
+; CHECK: attributes #[[ATTRS_FOO2]] = { nobuiltin memory(readwrite, errnomem: none, inaccessiblemem: write
 ; CHECK: attributes #[[ATTRS_FOO3]] = { memory(inaccessiblemem: write) }
 ; CHECK: attributes #[[ATTRS_BAR]] = { sanitize_address }

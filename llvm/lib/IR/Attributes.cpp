@@ -636,26 +636,52 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       OS << getModRefStr(OtherMR);
     }
 
-    bool TargetPrintedForAll = false;
+    bool SkipLocGroup = false;
+    IRMemLocation LastToSkip;
+    const auto isInaccessibleMemLocSameForAll = [](MemoryEffects ME) -> bool {
+      ModRefInfo Expected = ME.getModRef(IRMemLocation::FirstInaccessible);
+      for (auto L : MemoryEffects::inaccessibleMemLocations()) {
+        if (Expected != ME.getModRef(L))
+          return false;
+      }
+      return true;
+    };
+
     for (auto Loc : MemoryEffects::locations()) {
       ModRefInfo MR = ME.getModRef(Loc);
       if (MR == OtherMR)
         continue;
 
-      if (!First && !TargetPrintedForAll)
+      if (SkipLocGroup) {
+        if (Loc == LastToSkip)
+          SkipLocGroup = false;
+        continue;
+      }
+
+      if (!First && !SkipLocGroup)
         OS << ", ";
       First = false;
+
+      // If all inaccessible memory locations have the same value, ptint that
+      // value under "inaccessiblemem" key.
+      if (Loc == IRMemLocation::FirstInaccessible) {
+        if (isInaccessibleMemLocSameForAll(ME)) {
+          OS << "inaccessiblemem: ";
+          OS << getModRefStr(MR);
+          SkipLocGroup = true;
+          LastToSkip = IRMemLocation::LastInaccessible;
+          continue;
+        }
+      }
 
       // isTargetMemLocSameForAll is fine for target location < 3
       // If more targets are added it should do something like:
       // memory(target_mem:read, target_mem3:none, target_mem5:write).
       if (ME.isTargetMemLoc(Loc) && ME.isTargetMemLocSameForAll()) {
-        if (!TargetPrintedForAll) {
-          OS << "target_mem: ";
-          OS << getModRefStr(MR);
-          TargetPrintedForAll = true;
-        }
-        // Only works when target memories are last to be listed in Location.
+        OS << "target_mem: ";
+        OS << getModRefStr(MR);
+        SkipLocGroup = true;
+        LastToSkip = IRMemLocation::TargetMem1;
         continue;
       }
 
@@ -663,8 +689,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       case IRMemLocation::ArgMem:
         OS << "argmem: ";
         break;
-      case IRMemLocation::InaccessibleMem:
-        OS << "inaccessiblemem: ";
+      case IRMemLocation::ControlMem:
+        OS << "controlmem: ";
         break;
       case IRMemLocation::ErrnoMem:
         OS << "errnomem: ";

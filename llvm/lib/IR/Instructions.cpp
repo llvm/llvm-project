@@ -686,7 +686,7 @@ MemoryEffects CallBase::getMemoryEffects() const {
     }
     if (isVolatile()) {
       // Volatile operations also access inaccessible memory.
-      FnME |= MemoryEffects::inaccessibleMemOnly();
+      FnME |= MemoryEffects::controlMemOnly();
     }
     ME &= FnME;
   }
@@ -734,18 +734,11 @@ void CallBase::setOnlyAccessesArgMemory() {
 bool CallBase::onlyAccessesInaccessibleMemory() const {
   return getMemoryEffects().onlyAccessesInaccessibleMem();
 }
-void CallBase::setOnlyAccessesInaccessibleMemory() {
-  setMemoryEffects(getMemoryEffects() & MemoryEffects::inaccessibleMemOnly());
-}
 
 /// Determine if the function may only access memory that is
 ///  either inaccessible from the IR or pointed to by its arguments.
 bool CallBase::onlyAccessesInaccessibleMemOrArgMem() const {
   return getMemoryEffects().onlyAccessesInaccessibleOrArgMem();
-}
-void CallBase::setOnlyAccessesInaccessibleMemOrArgMem() {
-  setMemoryEffects(getMemoryEffects() &
-                   MemoryEffects::inaccessibleOrArgMemOnly());
 }
 
 CaptureInfo CallBase::getCaptureInfo(unsigned OpNo) const {

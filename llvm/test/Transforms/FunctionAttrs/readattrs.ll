@@ -33,7 +33,7 @@ define void @test1_2(ptr %x1_2, ptr %y1_2, ptr %z1_2) {
 
 ; TODO: Missing with attributor-light: argmem: none, inaccessiblemem: none
 define ptr @test2(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none, target_mem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none)
 ; FNATTRS-LABEL: define {{[^@]+}}@test2
 ; FNATTRS-SAME: (ptr nofree readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FNATTRS-NEXT:    store i32 0, ptr @x, align 4
@@ -346,7 +346,7 @@ define <4 x i32> @test12_2(<4 x ptr> %ptrs) {
 }
 
 define i32 @volatile_load(ptr %p) {
-; FNATTRS: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
+; FNATTRS: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite, controlmem: readwrite)
 ; FNATTRS-LABEL: define {{[^@]+}}@volatile_load
 ; FNATTRS-SAME: (ptr nofree captures(address) [[P:%.*]]) #[[ATTR11:[0-9]+]] {
 ; FNATTRS-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4

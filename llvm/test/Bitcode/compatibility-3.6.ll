@@ -1184,7 +1184,7 @@ define void @intrinsics.codegen() {
 ; CHECK: attributes #32 = { nocallback nofree nosync nounwind willreturn memory(read) }
 ; CHECK: attributes #33 = { nocallback nounwind }
 ; CHECK: attributes #34 = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #35 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #35 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, controlmem: readwrite) }
 ; CHECK: attributes #36 = { builtin }
 
 ;; Metadata

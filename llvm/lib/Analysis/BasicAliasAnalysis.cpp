@@ -935,7 +935,7 @@ MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
       FuncME |= MemoryEffects::writeOnly();
     if (Call->isVolatile()) {
       // Volatile operations also access inaccessible memory.
-      FuncME |= MemoryEffects::inaccessibleMemOnly();
+      FuncME |= MemoryEffects::controlMemOnly();
     }
     Min &= FuncME;
   }
@@ -1027,9 +1027,8 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
 
   // We can completely ignore inaccessible memory here, because MemoryLocations
   // can only reference accessible memory.
-  auto ME = AAQI.AAR.getMemoryEffects(Call, AAQI)
-                .getWithoutLoc(IRMemLocation::InaccessibleMem);
-  if (ME.doesNotAccessMemory())
+  auto ME = AAQI.AAR.getMemoryEffects(Call, AAQI);
+  if (ME.onlyAccessesInaccessibleMem())
     return ModRefInfo::NoModRef;
 
   ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);

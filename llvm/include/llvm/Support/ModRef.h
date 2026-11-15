@@ -60,12 +60,18 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 enum class IRMemLocation {
   /// Access to memory via argument pointers.
   ArgMem = 0,
-  /// Memory that is inaccessible via LLVM IR.
-  InaccessibleMem = 1,
   /// Errno memory.
-  ErrnoMem = 2,
+  ErrnoMem = 1,
   /// Any other memory.
-  Other = 3,
+  Other = 2,
+
+  // Note: The locations below only resemble memory accesses. They are not
+  // actual memory and cannot be associated with any pointer. These locations
+  // must form a continuous sequence.
+
+  /// Used to represent control flow restrictions.
+  ControlMem = 3,
+
   /// Represents target specific state.
   TargetMem0 = 4,
   TargetMem1 = 5,
@@ -73,6 +79,8 @@ enum class IRMemLocation {
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
   Last = TargetMem1,
+  FirstInaccessible = ControlMem,
+  LastInaccessible = TargetMem1
 };
 
 template <typename LocationEnum> class MemoryEffectsBase {
@@ -100,6 +108,12 @@ public:
   /// Returns iterator over all supported location kinds.
   static auto locations() {
     return enum_seq_inclusive(Location::First, Location::Last,
+                              force_iteration_on_noniterable_enum);
+  }
+  /// Returns iterator over all inaccessible memory location kinds.
+  static auto inaccessibleMemLocations() {
+    return enum_seq_inclusive(Location::FirstInaccessible,
+                              Location::LastInaccessible,
                               force_iteration_on_noniterable_enum);
   }
   /// Returns iterator over all target location kinds
@@ -144,10 +158,18 @@ public:
     return MemoryEffectsBase(Location::ArgMem, MR);
   }
 
+  /// Create MemoryEffectsBase that can only access control memory.
+  static MemoryEffectsBase controlMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::ControlMem, MR);
+  }
+
   /// Create MemoryEffectsBase that can only access inaccessible memory.
   static MemoryEffectsBase
   inaccessibleMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
-    return MemoryEffectsBase(Location::InaccessibleMem, MR);
+    MemoryEffectsBase MEB = none();
+    for (auto L : inaccessibleMemLocations())
+      MEB.setModRef(L, MR);
+    return MEB;
   }
 
   /// Create MemoryEffectsBase that can only access errno memory.
@@ -166,7 +188,18 @@ public:
   inaccessibleOrArgMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
     MemoryEffectsBase FRMB = none();
     FRMB.setModRef(Location::ArgMem, MR);
-    FRMB.setModRef(Location::InaccessibleMem, MR);
+    for (auto L : inaccessibleMemLocations())
+      FRMB.setModRef(L, MR);
+    return FRMB;
+  }
+
+  /// Create MemoryEffectsBase that can only access control or argument
+  /// memory.
+  static MemoryEffectsBase
+  controlOrArgMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::ControlMem, MR);
+    FRMB.setModRef(Location::ArgMem, MR);
     return FRMB;
   }
 
@@ -176,7 +209,8 @@ public:
   inaccessibleOrErrnoMemOnly(ModRefInfo InaccessibleMR = ModRefInfo::ModRef,
                              ModRefInfo ErrnoMR = ModRefInfo::ModRef) {
     MemoryEffectsBase FRMB = none();
-    FRMB.setModRef(Location::InaccessibleMem, InaccessibleMR);
+    for (auto L : inaccessibleMemLocations())
+      FRMB.setModRef(L, InaccessibleMR);
     FRMB.setModRef(Location::ErrnoMem, ErrnoMR);
     return FRMB;
   }
@@ -187,7 +221,8 @@ public:
       ModRefInfo InaccessibleOrArgMR = ModRefInfo::ModRef,
       ModRefInfo ErrnoMR = ModRefInfo::ModRef) {
     MemoryEffectsBase FRMB = none();
-    FRMB.setModRef(Location::InaccessibleMem, InaccessibleOrArgMR);
+    for (auto L : inaccessibleMemLocations())
+      FRMB.setModRef(L, InaccessibleOrArgMR);
     FRMB.setModRef(Location::ArgMem, InaccessibleOrArgMR);
     FRMB.setModRef(Location::ErrnoMem, ErrnoMR);
     return FRMB;
@@ -234,6 +269,14 @@ public:
     return ME;
   }
 
+  /// Getnew MemoryEffectsBase with NoModRef on the inaccessible memory.
+  MemoryEffectsBase getWithoutInaccessibleLocs() const {
+    MemoryEffectsBase ME = *this;
+    for (auto Loc : inaccessibleMemLocations())
+      ME.setModRef(Loc, ModRefInfo::NoModRef);
+    return ME;
+  }
+
   /// Get ModRefInfo for any location.
   ModRefInfo getModRef() const {
     ModRefInfo MR = ModRefInfo::NoModRef;
@@ -261,18 +304,22 @@ public:
     return isModOrRefSet(getModRef(Location::ArgMem));
   }
 
-  /// Whether this function only (at most) accesses inaccessible memory.
-  bool onlyAccessesInaccessibleMem() const {
-    return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
+  /// Whether this function only (at most) accesses control memory.
+  bool onlyAccessesControlMem() const {
+    return getWithoutLoc(Location::ControlMem).doesNotAccessMemory();
   }
 
-  /// Whether this function only (at most) accesses inaccessible or target
-  /// memory.
-  bool onlyAccessesInaccessibleOrTargetMem() const {
-    MemoryEffectsBase ME = *this;
-    for (auto Loc : MemoryEffectsBase::targetMemLocations())
-      ME &= ME.getWithoutLoc(Loc);
-    return ME.getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
+  /// Whether this function only (at most) accesses inaccessible memory.
+  bool onlyAccessesInaccessibleMem() const {
+    return getWithoutInaccessibleLocs().doesNotAccessMemory();
+  }
+
+  /// Whether location is an inaccessible memory location.
+  bool isInaccessibleMemLoc(IRMemLocation Loc) {
+    for (auto L : inaccessibleMemLocations())
+      if (Loc == L)
+        return true;
+    return false;
   }
 
   /// Whether location is target memory location.
@@ -303,7 +350,7 @@ public:
   /// Whether this function only (at most) accesses argument and inaccessible
   /// memory.
   bool onlyAccessesInaccessibleOrArgMem() const {
-    return getWithoutLoc(Location::InaccessibleMem)
+    return getWithoutInaccessibleLocs()
         .getWithoutLoc(Location::ArgMem)
         .doesNotAccessMemory();
   }
