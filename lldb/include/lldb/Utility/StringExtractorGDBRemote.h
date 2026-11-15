@@ -205,6 +205,18 @@ public:
 
   bool IsErrorResponse() const;
 
+  enum StopReplyMask : uint32_t {
+    Signal = (1u << 0),
+    Exited = (1u << 1),
+    Terminated = (1u << 2),
+    Output = (1u << 3),
+    NoResumed = (1u << 4),
+    Syscall = (1u << 5),
+    Any = ((Syscall << 1) - 1u),
+  };
+
+  bool IsStopReply(uint32_t mask = StopReplyMask::Any) const;
+
   // Returns zero if the packet isn't a EXX packet where XX are two hex digits.
   // Otherwise the error encoded in XX is returned.
   uint8_t GetError();

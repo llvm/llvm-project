@@ -182,3 +182,35 @@ TEST(StringExtractorGDBRemoteTest, GetPidTidMultipleValues) {
   ASSERT_THAT(*ex.GetPidTid(100),
               ::testing::Pair(0x1234ULL, StringExtractorGDBRemote::AllThreads));
 }
+
+TEST(StringExtractorGDBRemoteTest, IsStopReply) {
+  EXPECT_TRUE(StringExtractorGDBRemote("T05").IsStopReply());
+  EXPECT_TRUE(StringExtractorGDBRemote("S05").IsStopReply());
+  EXPECT_TRUE(StringExtractorGDBRemote("W00").IsStopReply());
+  EXPECT_TRUE(StringExtractorGDBRemote("w00").IsStopReply());
+  EXPECT_TRUE(StringExtractorGDBRemote("X09").IsStopReply());
+  EXPECT_TRUE(StringExtractorGDBRemote("O6869").IsStopReply());
+  EXPECT_TRUE(StringExtractorGDBRemote("N").IsStopReply());
+  EXPECT_TRUE(StringExtractorGDBRemote("F0").IsStopReply());
+
+  EXPECT_TRUE(StringExtractorGDBRemote("T05").IsStopReply(
+      StringExtractorGDBRemote::Signal));
+  EXPECT_TRUE(StringExtractorGDBRemote("W00").IsStopReply(
+      StringExtractorGDBRemote::Exited));
+  EXPECT_TRUE(StringExtractorGDBRemote("X09").IsStopReply(
+      StringExtractorGDBRemote::Terminated));
+  EXPECT_TRUE(StringExtractorGDBRemote("O6869").IsStopReply(
+      StringExtractorGDBRemote::Output));
+  EXPECT_TRUE(StringExtractorGDBRemote("N").IsStopReply(
+      StringExtractorGDBRemote::NoResumed));
+  EXPECT_TRUE(StringExtractorGDBRemote("F0").IsStopReply(
+      StringExtractorGDBRemote::Syscall));
+  EXPECT_FALSE(StringExtractorGDBRemote("T05").IsStopReply(
+      StringExtractorGDBRemote::Exited));
+  EXPECT_FALSE(StringExtractorGDBRemote("W00").IsStopReply(
+      StringExtractorGDBRemote::Signal));
+  EXPECT_FALSE(StringExtractorGDBRemote("OK").IsStopReply());
+  EXPECT_FALSE(StringExtractorGDBRemote("E01").IsStopReply());
+  EXPECT_FALSE(StringExtractorGDBRemote("Qfoo").IsStopReply());
+  EXPECT_FALSE(StringExtractorGDBRemote("").IsStopReply());
+}

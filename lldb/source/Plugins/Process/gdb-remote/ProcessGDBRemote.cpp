@@ -893,6 +893,7 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
     // Send the environment and the program + arguments after we connect
     m_gdb_comm.SendEnvironment(launch_info.GetEnvironment());
 
+    StringExtractorGDBRemote response;
     {
       // Scope for the scoped timeout object
       GDBRemoteCommunication::ScopedTimeout timeout(m_gdb_comm,
@@ -914,11 +915,14 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
                                       exe_file.GetPath(/*denormalize=*/true));
         }
       }
-      if (llvm::Error err = m_gdb_comm.LaunchProcess(args)) {
+      llvm::Expected<StringExtractorGDBRemote> launch_response =
+          m_gdb_comm.LaunchProcess(args);
+      if (!launch_response) {
         error = Status::FromErrorStringWithFormatv(
             "Cannot launch '{0}': {1}", args.GetArgumentAtIndex(0),
-            llvm::fmt_consume(std::move(err)));
+            llvm::fmt_consume(launch_response.takeError()));
       } else {
+        response = std::move(*launch_response);
         SetID(m_gdb_comm.GetCurrentProcessID());
       }
     }
@@ -930,8 +934,8 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       return error;
     }
 
-    StringExtractorGDBRemote response;
-    if (m_gdb_comm.GetStopReply(response)) {
+    if (response.IsStopReply(StringExtractorGDBRemote::Signal) ||
+        m_gdb_comm.GetStopReply(response)) {
       SetLastStopPacket(response);
 
       const ArchSpec &process_arch = m_gdb_comm.GetProcessArchitecture();
