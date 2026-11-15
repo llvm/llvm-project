@@ -136,6 +136,110 @@ uint64_t test_slx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
 uint64_t test_srx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
   return __riscv_srx_64(rd, rs1, shamt);
 }
+
+// RV64-LABEL: define dso_local i64 @test_zip8p_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <8 x i8>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> [[TMP1]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_zip8p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip8p_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_zip16p_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <4 x i16>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_zip16p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip16p_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_zip8hp_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <8 x i8>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> [[TMP1]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_zip8hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip8hp_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_zip16hp_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <4 x i16>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_zip16hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip16hp_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_unzip8p_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <8 x i8>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> [[TMP1]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_unzip8p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip8p_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_unzip16p_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <4 x i16>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_unzip16p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip16p_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_unzip8hp_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <8 x i8>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> [[TMP1]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_unzip8hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip8hp_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_unzip16hp_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <4 x i16>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_unzip16hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip16hp_64(rs1, rs2);
+}
 #endif
 
 /* Scalar Averaging Addition and Subtraction */
@@ -437,6 +541,88 @@ uint64_t test_usati_u64(int64_t a) {
   return __riscv_usati_u64(a, 16);
 }
 #endif
+
+/* Scalar Narrowing Clip */
+
+// RV32-LABEL: define dso_local i32 @test_nclipu_u32(
+// RV32-SAME: i64 noundef [[A:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.nclipu.u32(i64 [[A]], i32 [[SHAMT]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_nclipu_u32(
+// RV64-SAME: i64 noundef [[A:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.nclipu.u32(i64 [[A]], i32 [[SHAMT]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t test_nclipu_u32(uint64_t a, unsigned shamt) {
+  return __riscv_nclipu_u32(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i32 @test_nclipru_u32(
+// RV32-SAME: i64 noundef [[A:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.nclipru.u32(i64 [[A]], i32 [[SHAMT]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_nclipru_u32(
+// RV64-SAME: i64 noundef [[A:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.nclipru.u32(i64 [[A]], i32 [[SHAMT]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t test_nclipru_u32(uint64_t a, unsigned shamt) {
+  return __riscv_nclipru_u32(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i32 @test_nsrar_i32(
+// RV32-SAME: i64 noundef [[A:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.nsrar.i32(i64 [[A]], i32 [[SHAMT]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_nsrar_i32(
+// RV64-SAME: i64 noundef [[A:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.nsrar.i32(i64 [[A]], i32 [[SHAMT]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_nsrar_i32(int64_t a, unsigned shamt) {
+  return __riscv_nsrar_i32(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i32 @test_nclip_i32(
+// RV32-SAME: i64 noundef [[A:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.nclip.i32(i64 [[A]], i32 [[SHAMT]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_nclip_i32(
+// RV64-SAME: i64 noundef [[A:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.nclip.i32(i64 [[A]], i32 [[SHAMT]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_nclip_i32(int64_t a, unsigned shamt) {
+  return __riscv_nclip_i32(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i32 @test_nclipr_i32(
+// RV32-SAME: i64 noundef [[A:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.nclipr.i32(i64 [[A]], i32 [[SHAMT]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_nclipr_i32(
+// RV64-SAME: i64 noundef [[A:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.nclipr.i32(i64 [[A]], i32 [[SHAMT]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_nclipr_i32(int64_t a, unsigned shamt) {
+  return __riscv_nclipr_i32(a, shamt);
+}
 
 // RV32-LABEL: define dso_local i32 @test_mulh_i32(
 // RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
@@ -10913,7 +11099,7 @@ uint32x2_t test_pslidedownx_u32x2(uint32x2_t rd, uint32x2_t rs1,
 
 /* Packed Byte Multiplication with Horizontal Addition and Accumulate */
 
-// CHECK-LABEL: define dso_local i64 @test_pm4adda_i8x8(
+// CHECK-LABEL: define dso_local i64 @test_pm4adda_i32x2(
 // CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
@@ -10923,11 +11109,11 @@ uint32x2_t test_pslidedownx_u32x2(uint32x2_t rd, uint32x2_t rs1,
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
-int32x2_t test_pm4adda_i8x8(int32x2_t rd, int8x8_t a, int8x8_t b) {
-  return __riscv_pm4adda_i8x8(rd, a, b);
+int32x2_t test_pm4adda_i32x2(int32x2_t rd, int8x8_t a, int8x8_t b) {
+  return __riscv_pm4adda_i32x2(rd, a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm4addau_u8x8(
+// CHECK-LABEL: define dso_local i64 @test_pm4addau_u32x2(
 // CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
@@ -10937,11 +11123,11 @@ int32x2_t test_pm4adda_i8x8(int32x2_t rd, int8x8_t a, int8x8_t b) {
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
-uint32x2_t test_pm4addau_u8x8(uint32x2_t rd, uint8x8_t a, uint8x8_t b) {
-  return __riscv_pm4addau_u8x8(rd, a, b);
+uint32x2_t test_pm4addau_u32x2(uint32x2_t rd, uint8x8_t a, uint8x8_t b) {
+  return __riscv_pm4addau_u32x2(rd, a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm4addasu_i8x8(
+// CHECK-LABEL: define dso_local i64 @test_pm4addasu_i32x2(
 // CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
@@ -10951,8 +11137,8 @@ uint32x2_t test_pm4addau_u8x8(uint32x2_t rd, uint8x8_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
-int32x2_t test_pm4addasu_i8x8(int32x2_t rd, int8x8_t a, uint8x8_t b) {
-  return __riscv_pm4addasu_i8x8(rd, a, b);
+int32x2_t test_pm4addasu_i32x2(int32x2_t rd, int8x8_t a, uint8x8_t b) {
+  return __riscv_pm4addasu_i32x2(rd, a, b);
 }
 
 // CHECK-LABEL: define dso_local i32 @test_pmul_b00_i16x2(
@@ -12177,7 +12363,7 @@ int32x2_t test_pmhaccsu_h1_i32x2(int32x2_t rd, int32x2_t a, uint16x4_t b) {
   return __riscv_pmhaccsu_h1_i32x2(rd, a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm4add_i8x4(
+// RV32-LABEL: define dso_local i32 @test_pm4add_i32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
@@ -12185,7 +12371,7 @@ int32x2_t test_pmhaccsu_h1_i32x2(int32x2_t rd, int32x2_t a, uint16x4_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm4add.i32.v4i8(<4 x i8> [[TMP0]], <4 x i8> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm4add_i8x4(
+// RV64-LABEL: define dso_local signext i32 @test_pm4add_i32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
@@ -12193,11 +12379,11 @@ int32x2_t test_pmhaccsu_h1_i32x2(int32x2_t rd, int32x2_t a, uint16x4_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm4add.i32.v4i8(<4 x i8> [[TMP0]], <4 x i8> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm4add_i8x4(int8x4_t a, int8x4_t b) {
-  return __riscv_pm4add_i8x4(a, b);
+int32_t test_pm4add_i32(int8x4_t a, int8x4_t b) {
+  return __riscv_pm4add_i32(a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2add_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2add_i32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12205,7 +12391,7 @@ int32_t test_pm4add_i8x4(int8x4_t a, int8x4_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2add.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2add_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2add_i32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12213,11 +12399,11 @@ int32_t test_pm4add_i8x4(int8x4_t a, int8x4_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2add.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm2add_i16x2(int16x2_t a, int16x2_t b) {
-  return __riscv_pm2add_i16x2(a, b);
+int32_t test_pm2add_i32(int16x2_t a, int16x2_t b) {
+  return __riscv_pm2add_i32(a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2add_x_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2add_x_i32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12225,7 +12411,7 @@ int32_t test_pm2add_i16x2(int16x2_t a, int16x2_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2add.x.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2add_x_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2add_x_i32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12233,11 +12419,11 @@ int32_t test_pm2add_i16x2(int16x2_t a, int16x2_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2add.x.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm2add_x_i16x2(int16x2_t a, int16x2_t b) {
-  return __riscv_pm2add_x_i16x2(a, b);
+int32_t test_pm2add_x_i32(int16x2_t a, int16x2_t b) {
+  return __riscv_pm2add_x_i32(a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm4addu_u8x4(
+// RV32-LABEL: define dso_local i32 @test_pm4addu_u32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
@@ -12245,7 +12431,7 @@ int32_t test_pm2add_x_i16x2(int16x2_t a, int16x2_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm4addu.i32.v4i8(<4 x i8> [[TMP0]], <4 x i8> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm4addu_u8x4(
+// RV64-LABEL: define dso_local signext i32 @test_pm4addu_u32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
@@ -12253,11 +12439,11 @@ int32_t test_pm2add_x_i16x2(int16x2_t a, int16x2_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm4addu.i32.v4i8(<4 x i8> [[TMP0]], <4 x i8> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-uint32_t test_pm4addu_u8x4(uint8x4_t a, uint8x4_t b) {
-  return __riscv_pm4addu_u8x4(a, b);
+uint32_t test_pm4addu_u32(uint8x4_t a, uint8x4_t b) {
+  return __riscv_pm4addu_u32(a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2addu_u16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2addu_u32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12265,7 +12451,7 @@ uint32_t test_pm4addu_u8x4(uint8x4_t a, uint8x4_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2addu.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2addu_u16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2addu_u32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12273,11 +12459,11 @@ uint32_t test_pm4addu_u8x4(uint8x4_t a, uint8x4_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2addu.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-uint32_t test_pm2addu_u16x2(uint16x2_t a, uint16x2_t b) {
-  return __riscv_pm2addu_u16x2(a, b);
+uint32_t test_pm2addu_u32(uint16x2_t a, uint16x2_t b) {
+  return __riscv_pm2addu_u32(a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pmq2add_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pmq2add_i32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12285,7 +12471,7 @@ uint32_t test_pm2addu_u16x2(uint16x2_t a, uint16x2_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pmq2add.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pmq2add_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pmq2add_i32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12293,11 +12479,11 @@ uint32_t test_pm2addu_u16x2(uint16x2_t a, uint16x2_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pmq2add.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pmq2add_i16x2(int16x2_t a, int16x2_t b) {
-  return __riscv_pmq2add_i16x2(a, b);
+int32_t test_pmq2add_i32(int16x2_t a, int16x2_t b) {
+  return __riscv_pmq2add_i32(a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pmqr2add_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pmqr2add_i32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12305,7 +12491,7 @@ int32_t test_pmq2add_i16x2(int16x2_t a, int16x2_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pmqr2add.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pmqr2add_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pmqr2add_i32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12313,11 +12499,11 @@ int32_t test_pmq2add_i16x2(int16x2_t a, int16x2_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pmqr2add.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pmqr2add_i16x2(int16x2_t a, int16x2_t b) {
-  return __riscv_pmqr2add_i16x2(a, b);
+int32_t test_pmqr2add_i32(int16x2_t a, int16x2_t b) {
+  return __riscv_pmqr2add_i32(a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2sadd_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2sadd_i32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12325,7 +12511,7 @@ int32_t test_pmqr2add_i16x2(int16x2_t a, int16x2_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2sadd.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2sadd_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2sadd_i32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12333,11 +12519,11 @@ int32_t test_pmqr2add_i16x2(int16x2_t a, int16x2_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2sadd.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm2sadd_i16x2(int16x2_t a, int16x2_t b) {
-  return __riscv_pm2sadd_i16x2(a, b);
+int32_t test_pm2sadd_i32(int16x2_t a, int16x2_t b) {
+  return __riscv_pm2sadd_i32(a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2sadd_x_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2sadd_x_i32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12345,7 +12531,7 @@ int32_t test_pm2sadd_i16x2(int16x2_t a, int16x2_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2sadd.x.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2sadd_x_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2sadd_x_i32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12353,11 +12539,11 @@ int32_t test_pm2sadd_i16x2(int16x2_t a, int16x2_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2sadd.x.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm2sadd_x_i16x2(int16x2_t a, int16x2_t b) {
-  return __riscv_pm2sadd_x_i16x2(a, b);
+int32_t test_pm2sadd_x_i32(int16x2_t a, int16x2_t b) {
+  return __riscv_pm2sadd_x_i32(a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2sub_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2sub_i32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12365,7 +12551,7 @@ int32_t test_pm2sadd_x_i16x2(int16x2_t a, int16x2_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2sub.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2sub_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2sub_i32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12373,11 +12559,11 @@ int32_t test_pm2sadd_x_i16x2(int16x2_t a, int16x2_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2sub.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm2sub_i16x2(int16x2_t a, int16x2_t b) {
-  return __riscv_pm2sub_i16x2(a, b);
+int32_t test_pm2sub_i32(int16x2_t a, int16x2_t b) {
+  return __riscv_pm2sub_i32(a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2sub_x_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2sub_x_i32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12385,7 +12571,7 @@ int32_t test_pm2sub_i16x2(int16x2_t a, int16x2_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2sub.x.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2sub_x_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2sub_x_i32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12393,11 +12579,11 @@ int32_t test_pm2sub_i16x2(int16x2_t a, int16x2_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2sub.x.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm2sub_x_i16x2(int16x2_t a, int16x2_t b) {
-  return __riscv_pm2sub_x_i16x2(a, b);
+int32_t test_pm2sub_x_i32(int16x2_t a, int16x2_t b) {
+  return __riscv_pm2sub_x_i32(a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm4addsu_i8x4(
+// RV32-LABEL: define dso_local i32 @test_pm4addsu_i32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
@@ -12405,7 +12591,7 @@ int32_t test_pm2sub_x_i16x2(int16x2_t a, int16x2_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm4addsu.i32.v4i8(<4 x i8> [[TMP0]], <4 x i8> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm4addsu_i8x4(
+// RV64-LABEL: define dso_local signext i32 @test_pm4addsu_i32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
@@ -12413,11 +12599,11 @@ int32_t test_pm2sub_x_i16x2(int16x2_t a, int16x2_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm4addsu.i32.v4i8(<4 x i8> [[TMP0]], <4 x i8> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm4addsu_i8x4(int8x4_t a, uint8x4_t b) {
-  return __riscv_pm4addsu_i8x4(a, b);
+int32_t test_pm4addsu_i32(int8x4_t a, uint8x4_t b) {
+  return __riscv_pm4addsu_i32(a, b);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2addsu_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2addsu_i32(
 // RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12425,7 +12611,7 @@ int32_t test_pm4addsu_i8x4(int8x4_t a, uint8x4_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2addsu.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2addsu_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2addsu_i32(
 // RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
@@ -12433,11 +12619,11 @@ int32_t test_pm4addsu_i8x4(int8x4_t a, uint8x4_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2addsu.i32.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm2addsu_i16x2(int16x2_t a, uint16x2_t b) {
-  return __riscv_pm2addsu_i16x2(a, b);
+int32_t test_pm2addsu_i32(int16x2_t a, uint16x2_t b) {
+  return __riscv_pm2addsu_i32(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm4add_i8x8(
+// CHECK-LABEL: define dso_local i64 @test_pm4add_i32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
@@ -12446,11 +12632,11 @@ int32_t test_pm2addsu_i16x2(int16x2_t a, uint16x2_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-int32x2_t test_pm4add_i8x8(int8x8_t a, int8x8_t b) {
-  return __riscv_pm4add_i8x8(a, b);
+int32x2_t test_pm4add_i32x2(int8x8_t a, int8x8_t b) {
+  return __riscv_pm4add_i32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2add_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2add_i32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12459,11 +12645,11 @@ int32x2_t test_pm4add_i8x8(int8x8_t a, int8x8_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-int32x2_t test_pm2add_i16x4(int16x4_t a, int16x4_t b) {
-  return __riscv_pm2add_i16x4(a, b);
+int32x2_t test_pm2add_i32x2(int16x4_t a, int16x4_t b) {
+  return __riscv_pm2add_i32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2add_x_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2add_x_i32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12472,11 +12658,11 @@ int32x2_t test_pm2add_i16x4(int16x4_t a, int16x4_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-int32x2_t test_pm2add_x_i16x4(int16x4_t a, int16x4_t b) {
-  return __riscv_pm2add_x_i16x4(a, b);
+int32x2_t test_pm2add_x_i32x2(int16x4_t a, int16x4_t b) {
+  return __riscv_pm2add_x_i32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm4addu_u8x8(
+// CHECK-LABEL: define dso_local i64 @test_pm4addu_u32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
@@ -12485,11 +12671,11 @@ int32x2_t test_pm2add_x_i16x4(int16x4_t a, int16x4_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-uint32x2_t test_pm4addu_u8x8(uint8x8_t a, uint8x8_t b) {
-  return __riscv_pm4addu_u8x8(a, b);
+uint32x2_t test_pm4addu_u32x2(uint8x8_t a, uint8x8_t b) {
+  return __riscv_pm4addu_u32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2addu_u16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2addu_u32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12498,11 +12684,11 @@ uint32x2_t test_pm4addu_u8x8(uint8x8_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-uint32x2_t test_pm2addu_u16x4(uint16x4_t a, uint16x4_t b) {
-  return __riscv_pm2addu_u16x4(a, b);
+uint32x2_t test_pm2addu_u32x2(uint16x4_t a, uint16x4_t b) {
+  return __riscv_pm2addu_u32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pmq2add_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pmq2add_i32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12511,11 +12697,11 @@ uint32x2_t test_pm2addu_u16x4(uint16x4_t a, uint16x4_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-int32x2_t test_pmq2add_i16x4(int16x4_t a, int16x4_t b) {
-  return __riscv_pmq2add_i16x4(a, b);
+int32x2_t test_pmq2add_i32x2(int16x4_t a, int16x4_t b) {
+  return __riscv_pmq2add_i32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pmqr2add_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pmqr2add_i32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12524,11 +12710,11 @@ int32x2_t test_pmq2add_i16x4(int16x4_t a, int16x4_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-int32x2_t test_pmqr2add_i16x4(int16x4_t a, int16x4_t b) {
-  return __riscv_pmqr2add_i16x4(a, b);
+int32x2_t test_pmqr2add_i32x2(int16x4_t a, int16x4_t b) {
+  return __riscv_pmqr2add_i32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2sadd_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2sadd_i32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12537,11 +12723,11 @@ int32x2_t test_pmqr2add_i16x4(int16x4_t a, int16x4_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-int32x2_t test_pm2sadd_i16x4(int16x4_t a, int16x4_t b) {
-  return __riscv_pm2sadd_i16x4(a, b);
+int32x2_t test_pm2sadd_i32x2(int16x4_t a, int16x4_t b) {
+  return __riscv_pm2sadd_i32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2sadd_x_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2sadd_x_i32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12550,11 +12736,11 @@ int32x2_t test_pm2sadd_i16x4(int16x4_t a, int16x4_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-int32x2_t test_pm2sadd_x_i16x4(int16x4_t a, int16x4_t b) {
-  return __riscv_pm2sadd_x_i16x4(a, b);
+int32x2_t test_pm2sadd_x_i32x2(int16x4_t a, int16x4_t b) {
+  return __riscv_pm2sadd_x_i32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2sub_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2sub_i32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12563,11 +12749,11 @@ int32x2_t test_pm2sadd_x_i16x4(int16x4_t a, int16x4_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-int32x2_t test_pm2sub_i16x4(int16x4_t a, int16x4_t b) {
-  return __riscv_pm2sub_i16x4(a, b);
+int32x2_t test_pm2sub_i32x2(int16x4_t a, int16x4_t b) {
+  return __riscv_pm2sub_i32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2sub_x_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2sub_x_i32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12576,11 +12762,11 @@ int32x2_t test_pm2sub_i16x4(int16x4_t a, int16x4_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-int32x2_t test_pm2sub_x_i16x4(int16x4_t a, int16x4_t b) {
-  return __riscv_pm2sub_x_i16x4(a, b);
+int32x2_t test_pm2sub_x_i32x2(int16x4_t a, int16x4_t b) {
+  return __riscv_pm2sub_x_i32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm4addsu_i8x8(
+// CHECK-LABEL: define dso_local i64 @test_pm4addsu_i32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
@@ -12589,11 +12775,11 @@ int32x2_t test_pm2sub_x_i16x4(int16x4_t a, int16x4_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-int32x2_t test_pm4addsu_i8x8(int8x8_t a, uint8x8_t b) {
-  return __riscv_pm4addsu_i8x8(a, b);
+int32x2_t test_pm4addsu_i32x2(int8x8_t a, uint8x8_t b) {
+  return __riscv_pm4addsu_i32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2addsu_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2addsu_i32x2(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12602,11 +12788,11 @@ int32x2_t test_pm4addsu_i8x8(int8x8_t a, uint8x8_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
-int32x2_t test_pm2addsu_i16x4(int16x4_t a, uint16x4_t b) {
-  return __riscv_pm2addsu_i16x4(a, b);
+int32x2_t test_pm2addsu_i32x2(int16x4_t a, uint16x4_t b) {
+  return __riscv_pm2addsu_i32x2(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2add_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pm2add_i64(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
@@ -12614,11 +12800,11 @@ int32x2_t test_pm2addsu_i16x4(int16x4_t a, uint16x4_t b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm2add.i64.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm2add_i32x2(int32x2_t a, int32x2_t b) {
-  return __riscv_pm2add_i32x2(a, b);
+int64_t test_pm2add_i64(int32x2_t a, int32x2_t b) {
+  return __riscv_pm2add_i64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2add_x_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pm2add_x_i64(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
@@ -12626,11 +12812,11 @@ int64_t test_pm2add_i32x2(int32x2_t a, int32x2_t b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm2add.x.i64.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm2add_x_i32x2(int32x2_t a, int32x2_t b) {
-  return __riscv_pm2add_x_i32x2(a, b);
+int64_t test_pm2add_x_i64(int32x2_t a, int32x2_t b) {
+  return __riscv_pm2add_x_i64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2addu_u32x2(
+// CHECK-LABEL: define dso_local i64 @test_pm2addu_u64(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
@@ -12638,11 +12824,11 @@ int64_t test_pm2add_x_i32x2(int32x2_t a, int32x2_t b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm2addu.i64.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-uint64_t test_pm2addu_u32x2(uint32x2_t a, uint32x2_t b) {
-  return __riscv_pm2addu_u32x2(a, b);
+uint64_t test_pm2addu_u64(uint32x2_t a, uint32x2_t b) {
+  return __riscv_pm2addu_u64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pmq2add_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pmq2add_i64(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
@@ -12650,11 +12836,11 @@ uint64_t test_pm2addu_u32x2(uint32x2_t a, uint32x2_t b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pmq2add.i64.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pmq2add_i32x2(int32x2_t a, int32x2_t b) {
-  return __riscv_pmq2add_i32x2(a, b);
+int64_t test_pmq2add_i64(int32x2_t a, int32x2_t b) {
+  return __riscv_pmq2add_i64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2sub_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pm2sub_i64(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
@@ -12662,11 +12848,11 @@ int64_t test_pmq2add_i32x2(int32x2_t a, int32x2_t b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm2sub.i64.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm2sub_i32x2(int32x2_t a, int32x2_t b) {
-  return __riscv_pm2sub_i32x2(a, b);
+int64_t test_pm2sub_i64(int32x2_t a, int32x2_t b) {
+  return __riscv_pm2sub_i64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2sub_x_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pm2sub_x_i64(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
@@ -12674,11 +12860,11 @@ int64_t test_pm2sub_i32x2(int32x2_t a, int32x2_t b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm2sub.x.i64.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm2sub_x_i32x2(int32x2_t a, int32x2_t b) {
-  return __riscv_pm2sub_x_i32x2(a, b);
+int64_t test_pm2sub_x_i64(int32x2_t a, int32x2_t b) {
+  return __riscv_pm2sub_x_i64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2addsu_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pm2addsu_i64(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
@@ -12686,11 +12872,11 @@ int64_t test_pm2sub_x_i32x2(int32x2_t a, int32x2_t b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm2addsu.i64.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm2addsu_i32x2(int32x2_t a, uint32x2_t b) {
-  return __riscv_pm2addsu_i32x2(a, b);
+int64_t test_pm2addsu_i64(int32x2_t a, uint32x2_t b) {
+  return __riscv_pm2addsu_i64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pmqr2add_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pmqr2add_i64(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
@@ -12698,11 +12884,11 @@ int64_t test_pm2addsu_i32x2(int32x2_t a, uint32x2_t b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pmqr2add.i64.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pmqr2add_i32x2(int32x2_t a, int32x2_t b) {
-  return __riscv_pmqr2add_i32x2(a, b);
+int64_t test_pmqr2add_i64(int32x2_t a, int32x2_t b) {
+  return __riscv_pmqr2add_i64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm4add_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm4add_i64(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12710,11 +12896,11 @@ int64_t test_pmqr2add_i32x2(int32x2_t a, int32x2_t b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm4add.i64.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm4add_i16x4(int16x4_t a, int16x4_t b) {
-  return __riscv_pm4add_i16x4(a, b);
+int64_t test_pm4add_i64(int16x4_t a, int16x4_t b) {
+  return __riscv_pm4add_i64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm4addu_u16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm4addu_u64(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12722,11 +12908,11 @@ int64_t test_pm4add_i16x4(int16x4_t a, int16x4_t b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm4addu.i64.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-uint64_t test_pm4addu_u16x4(uint16x4_t a, uint16x4_t b) {
-  return __riscv_pm4addu_u16x4(a, b);
+uint64_t test_pm4addu_u64(uint16x4_t a, uint16x4_t b) {
+  return __riscv_pm4addu_u64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm4addsu_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm4addsu_i64(
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]], i64 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
@@ -12734,8 +12920,8 @@ uint64_t test_pm4addu_u16x4(uint16x4_t a, uint16x4_t b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm4addsu.i64.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm4addsu_i16x4(int16x4_t a, uint16x4_t b) {
-  return __riscv_pm4addsu_i16x4(a, b);
+int64_t test_pm4addsu_i64(int16x4_t a, uint16x4_t b) {
+  return __riscv_pm4addsu_i64(a, b);
 }
 
 // RV32-LABEL: define dso_local i32 @test_macc_h00_i32(
@@ -13108,7 +13294,7 @@ int64_t test_maccsu_w11_i64(int64_t rd, int32x2_t a, uint32x2_t b) {
 
 /* Packed Multiplication with Horizontal Addition and Accumulate */
 
-// RV32-LABEL: define dso_local i32 @test_pm4adda_i8x4(
+// RV32-LABEL: define dso_local i32 @test_pm4adda_i32(
 // RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
@@ -13116,7 +13302,7 @@ int64_t test_maccsu_w11_i64(int64_t rd, int32x2_t a, uint32x2_t b) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm4adda.i32.v4i8(i32 [[RD]], <4 x i8> [[TMP0]], <4 x i8> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm4adda_i8x4(
+// RV64-LABEL: define dso_local signext i32 @test_pm4adda_i32(
 // RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
@@ -13124,11 +13310,11 @@ int64_t test_maccsu_w11_i64(int64_t rd, int32x2_t a, uint32x2_t b) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm4adda.i32.v4i8(i32 [[RD]], <4 x i8> [[TMP0]], <4 x i8> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm4adda_i8x4(int32_t rd, int8x4_t rs1, int8x4_t rs2) {
-  return __riscv_pm4adda_i8x4(rd, rs1, rs2);
+int32_t test_pm4adda_i32(int32_t rd, int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_pm4adda_i32(rd, rs1, rs2);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm4addau_u8x4(
+// RV32-LABEL: define dso_local i32 @test_pm4addau_u32(
 // RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
@@ -13136,7 +13322,7 @@ int32_t test_pm4adda_i8x4(int32_t rd, int8x4_t rs1, int8x4_t rs2) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm4addau.i32.v4i8(i32 [[RD]], <4 x i8> [[TMP0]], <4 x i8> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm4addau_u8x4(
+// RV64-LABEL: define dso_local signext i32 @test_pm4addau_u32(
 // RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
@@ -13144,11 +13330,11 @@ int32_t test_pm4adda_i8x4(int32_t rd, int8x4_t rs1, int8x4_t rs2) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm4addau.i32.v4i8(i32 [[RD]], <4 x i8> [[TMP0]], <4 x i8> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-uint32_t test_pm4addau_u8x4(uint32_t rd, uint8x4_t rs1, uint8x4_t rs2) {
-  return __riscv_pm4addau_u8x4(rd, rs1, rs2);
+uint32_t test_pm4addau_u32(uint32_t rd, uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_pm4addau_u32(rd, rs1, rs2);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm4addasu_i8x4(
+// RV32-LABEL: define dso_local i32 @test_pm4addasu_i32(
 // RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
@@ -13156,7 +13342,7 @@ uint32_t test_pm4addau_u8x4(uint32_t rd, uint8x4_t rs1, uint8x4_t rs2) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm4addasu.i32.v4i8(i32 [[RD]], <4 x i8> [[TMP0]], <4 x i8> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm4addasu_i8x4(
+// RV64-LABEL: define dso_local signext i32 @test_pm4addasu_i32(
 // RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
@@ -13164,11 +13350,11 @@ uint32_t test_pm4addau_u8x4(uint32_t rd, uint8x4_t rs1, uint8x4_t rs2) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm4addasu.i32.v4i8(i32 [[RD]], <4 x i8> [[TMP0]], <4 x i8> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm4addasu_i8x4(int32_t rd, int8x4_t rs1, uint8x4_t rs2) {
-  return __riscv_pm4addasu_i8x4(rd, rs1, rs2);
+int32_t test_pm4addasu_i32(int32_t rd, int8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_pm4addasu_i32(rd, rs1, rs2);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2adda_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2adda_i32(
 // RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13176,7 +13362,7 @@ int32_t test_pm4addasu_i8x4(int32_t rd, int8x4_t rs1, uint8x4_t rs2) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2adda.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2adda_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2adda_i32(
 // RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13184,11 +13370,11 @@ int32_t test_pm4addasu_i8x4(int32_t rd, int8x4_t rs1, uint8x4_t rs2) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2adda.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm2adda_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pm2adda_i16x2(rd, rs1, rs2);
+int32_t test_pm2adda_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2adda_i32(rd, rs1, rs2);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2adda_x_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2adda_x_i32(
 // RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13196,7 +13382,7 @@ int32_t test_pm2adda_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2adda.x.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2adda_x_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2adda_x_i32(
 // RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13204,11 +13390,11 @@ int32_t test_pm2adda_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2adda.x.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm2adda_x_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pm2adda_x_i16x2(rd, rs1, rs2);
+int32_t test_pm2adda_x_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2adda_x_i32(rd, rs1, rs2);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2addau_u16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2addau_u32(
 // RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13216,7 +13402,7 @@ int32_t test_pm2adda_x_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2addau.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2addau_u16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2addau_u32(
 // RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13224,11 +13410,11 @@ int32_t test_pm2adda_x_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2addau.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-uint32_t test_pm2addau_u16x2(uint32_t rd, uint16x2_t rs1, uint16x2_t rs2) {
-  return __riscv_pm2addau_u16x2(rd, rs1, rs2);
+uint32_t test_pm2addau_u32(uint32_t rd, uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pm2addau_u32(rd, rs1, rs2);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pmq2adda_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pmq2adda_i32(
 // RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13236,7 +13422,7 @@ uint32_t test_pm2addau_u16x2(uint32_t rd, uint16x2_t rs1, uint16x2_t rs2) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pmq2adda.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pmq2adda_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pmq2adda_i32(
 // RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13244,11 +13430,11 @@ uint32_t test_pm2addau_u16x2(uint32_t rd, uint16x2_t rs1, uint16x2_t rs2) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pmq2adda.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pmq2adda_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pmq2adda_i16x2(rd, rs1, rs2);
+int32_t test_pmq2adda_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmq2adda_i32(rd, rs1, rs2);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pmqr2adda_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pmqr2adda_i32(
 // RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13256,7 +13442,7 @@ int32_t test_pmq2adda_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pmqr2adda.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pmqr2adda_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pmqr2adda_i32(
 // RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13264,11 +13450,11 @@ int32_t test_pmq2adda_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pmqr2adda.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pmqr2adda_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pmqr2adda_i16x2(rd, rs1, rs2);
+int32_t test_pmqr2adda_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmqr2adda_i32(rd, rs1, rs2);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2suba_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2suba_i32(
 // RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13276,7 +13462,7 @@ int32_t test_pmqr2adda_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2suba.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2suba_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2suba_i32(
 // RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13284,11 +13470,11 @@ int32_t test_pmqr2adda_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2suba.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm2suba_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pm2suba_i16x2(rd, rs1, rs2);
+int32_t test_pm2suba_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2suba_i32(rd, rs1, rs2);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2suba_x_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2suba_x_i32(
 // RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13296,7 +13482,7 @@ int32_t test_pm2suba_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2suba.x.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2suba_x_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2suba_x_i32(
 // RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13304,11 +13490,11 @@ int32_t test_pm2suba_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2suba.x.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm2suba_x_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pm2suba_x_i16x2(rd, rs1, rs2);
+int32_t test_pm2suba_x_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2suba_x_i32(rd, rs1, rs2);
 }
 
-// RV32-LABEL: define dso_local i32 @test_pm2addasu_i16x2(
+// RV32-LABEL: define dso_local i32 @test_pm2addasu_i32(
 // RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13316,7 +13502,7 @@ int32_t test_pm2suba_x_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2addasu.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
-// RV64-LABEL: define dso_local signext i32 @test_pm2addasu_i16x2(
+// RV64-LABEL: define dso_local signext i32 @test_pm2addasu_i32(
 // RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
@@ -13324,11 +13510,11 @@ int32_t test_pm2suba_x_i16x2(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.pm2addasu.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
-int32_t test_pm2addasu_i16x2(int32_t rd, int16x2_t rs1, uint16x2_t rs2) {
-  return __riscv_pm2addasu_i16x2(rd, rs1, rs2);
+int32_t test_pm2addasu_i32(int32_t rd, int16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pm2addasu_i32(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2adda_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2adda_i32x2(
 // CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
@@ -13338,11 +13524,11 @@ int32_t test_pm2addasu_i16x2(int32_t rd, int16x2_t rs1, uint16x2_t rs2) {
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
-int32x2_t test_pm2adda_i16x4(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pm2adda_i16x4(rd, rs1, rs2);
+int32x2_t test_pm2adda_i32x2(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pm2adda_i32x2(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2adda_x_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2adda_x_i32x2(
 // CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
@@ -13352,11 +13538,11 @@ int32x2_t test_pm2adda_i16x4(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
-int32x2_t test_pm2adda_x_i16x4(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pm2adda_x_i16x4(rd, rs1, rs2);
+int32x2_t test_pm2adda_x_i32x2(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pm2adda_x_i32x2(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2addau_u16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2addau_u32x2(
 // CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
@@ -13366,11 +13552,11 @@ int32x2_t test_pm2adda_x_i16x4(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
-uint32x2_t test_pm2addau_u16x4(uint32x2_t rd, uint16x4_t rs1, uint16x4_t rs2) {
-  return __riscv_pm2addau_u16x4(rd, rs1, rs2);
+uint32x2_t test_pm2addau_u32x2(uint32x2_t rd, uint16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_pm2addau_u32x2(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pmq2adda_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pmq2adda_i32x2(
 // CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
@@ -13380,11 +13566,11 @@ uint32x2_t test_pm2addau_u16x4(uint32x2_t rd, uint16x4_t rs1, uint16x4_t rs2) {
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
-int32x2_t test_pmq2adda_i16x4(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pmq2adda_i16x4(rd, rs1, rs2);
+int32x2_t test_pmq2adda_i32x2(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pmq2adda_i32x2(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pmqr2adda_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pmqr2adda_i32x2(
 // CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
@@ -13394,11 +13580,11 @@ int32x2_t test_pmq2adda_i16x4(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
-int32x2_t test_pmqr2adda_i16x4(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pmqr2adda_i16x4(rd, rs1, rs2);
+int32x2_t test_pmqr2adda_i32x2(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pmqr2adda_i32x2(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2suba_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2suba_i32x2(
 // CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
@@ -13408,11 +13594,11 @@ int32x2_t test_pmqr2adda_i16x4(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
-int32x2_t test_pm2suba_i16x4(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pm2suba_i16x4(rd, rs1, rs2);
+int32x2_t test_pm2suba_i32x2(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pm2suba_i32x2(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2suba_x_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2suba_x_i32x2(
 // CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
@@ -13422,11 +13608,11 @@ int32x2_t test_pm2suba_i16x4(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
-int32x2_t test_pm2suba_x_i16x4(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pm2suba_x_i16x4(rd, rs1, rs2);
+int32x2_t test_pm2suba_x_i32x2(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pm2suba_x_i32x2(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2addasu_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm2addasu_i32x2(
 // CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
@@ -13436,11 +13622,11 @@ int32x2_t test_pm2suba_x_i16x4(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
-int32x2_t test_pm2addasu_i16x4(int32x2_t rd, int16x4_t rs1, uint16x4_t rs2) {
-  return __riscv_pm2addasu_i16x4(rd, rs1, rs2);
+int32x2_t test_pm2addasu_i32x2(int32x2_t rd, int16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_pm2addasu_i32x2(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2adda_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pm2adda_i64(
 // CHECK-SAME: i64 noundef [[RD:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
@@ -13448,11 +13634,11 @@ int32x2_t test_pm2addasu_i16x4(int32x2_t rd, int16x4_t rs1, uint16x4_t rs2) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm2adda.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm2adda_i32x2(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
-  return __riscv_pm2adda_i32x2(rd, rs1, rs2);
+int64_t test_pm2adda_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pm2adda_i64(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2adda_x_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pm2adda_x_i64(
 // CHECK-SAME: i64 noundef [[RD:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
@@ -13460,11 +13646,11 @@ int64_t test_pm2adda_i32x2(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm2adda.x.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm2adda_x_i32x2(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
-  return __riscv_pm2adda_x_i32x2(rd, rs1, rs2);
+int64_t test_pm2adda_x_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pm2adda_x_i64(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2addau_u32x2(
+// CHECK-LABEL: define dso_local i64 @test_pm2addau_u64(
 // CHECK-SAME: i64 noundef [[RD:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
@@ -13472,11 +13658,11 @@ int64_t test_pm2adda_x_i32x2(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm2addau.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-uint64_t test_pm2addau_u32x2(uint64_t rd, uint32x2_t rs1, uint32x2_t rs2) {
-  return __riscv_pm2addau_u32x2(rd, rs1, rs2);
+uint64_t test_pm2addau_u64(uint64_t rd, uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_pm2addau_u64(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pmq2adda_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pmq2adda_i64(
 // CHECK-SAME: i64 noundef [[RD:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
@@ -13484,11 +13670,11 @@ uint64_t test_pm2addau_u32x2(uint64_t rd, uint32x2_t rs1, uint32x2_t rs2) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pmq2adda.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pmq2adda_i32x2(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
-  return __riscv_pmq2adda_i32x2(rd, rs1, rs2);
+int64_t test_pmq2adda_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pmq2adda_i64(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pmqr2adda_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pmqr2adda_i64(
 // CHECK-SAME: i64 noundef [[RD:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
@@ -13496,11 +13682,11 @@ int64_t test_pmq2adda_i32x2(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pmqr2adda.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pmqr2adda_i32x2(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
-  return __riscv_pmqr2adda_i32x2(rd, rs1, rs2);
+int64_t test_pmqr2adda_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pmqr2adda_i64(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2suba_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pm2suba_i64(
 // CHECK-SAME: i64 noundef [[RD:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
@@ -13508,11 +13694,11 @@ int64_t test_pmqr2adda_i32x2(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm2suba.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm2suba_i32x2(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
-  return __riscv_pm2suba_i32x2(rd, rs1, rs2);
+int64_t test_pm2suba_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pm2suba_i64(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2suba_x_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pm2suba_x_i64(
 // CHECK-SAME: i64 noundef [[RD:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
@@ -13520,11 +13706,11 @@ int64_t test_pm2suba_i32x2(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm2suba.x.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm2suba_x_i32x2(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
-  return __riscv_pm2suba_x_i32x2(rd, rs1, rs2);
+int64_t test_pm2suba_x_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pm2suba_x_i64(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm2addasu_i32x2(
+// CHECK-LABEL: define dso_local i64 @test_pm2addasu_i64(
 // CHECK-SAME: i64 noundef [[RD:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
@@ -13532,11 +13718,11 @@ int64_t test_pm2suba_x_i32x2(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm2addasu.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm2addasu_i32x2(int64_t rd, int32x2_t rs1, uint32x2_t rs2) {
-  return __riscv_pm2addasu_i32x2(rd, rs1, rs2);
+int64_t test_pm2addasu_i64(int64_t rd, int32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_pm2addasu_i64(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm4adda_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm4adda_i64(
 // CHECK-SAME: i64 noundef [[RD:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
@@ -13544,11 +13730,11 @@ int64_t test_pm2addasu_i32x2(int64_t rd, int32x2_t rs1, uint32x2_t rs2) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm4adda.i64.v4i16(i64 [[RD]], <4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm4adda_i16x4(int64_t rd, int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pm4adda_i16x4(rd, rs1, rs2);
+int64_t test_pm4adda_i64(int64_t rd, int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pm4adda_i64(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm4addau_u16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm4addau_u64(
 // CHECK-SAME: i64 noundef [[RD:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
@@ -13556,11 +13742,11 @@ int64_t test_pm4adda_i16x4(int64_t rd, int16x4_t rs1, int16x4_t rs2) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm4addau.i64.v4i16(i64 [[RD]], <4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-uint64_t test_pm4addau_u16x4(uint64_t rd, uint16x4_t rs1, uint16x4_t rs2) {
-  return __riscv_pm4addau_u16x4(rd, rs1, rs2);
+uint64_t test_pm4addau_u64(uint64_t rd, uint16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_pm4addau_u64(rd, rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_pm4addasu_i16x4(
+// CHECK-LABEL: define dso_local i64 @test_pm4addasu_i64(
 // CHECK-SAME: i64 noundef [[RD:%.*]], i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
@@ -13568,6 +13754,6 @@ uint64_t test_pm4addau_u16x4(uint64_t rd, uint16x4_t rs1, uint16x4_t rs2) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.pm4addasu.i64.v4i16(i64 [[RD]], <4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
-int64_t test_pm4addasu_i16x4(int64_t rd, int16x4_t rs1, uint16x4_t rs2) {
-  return __riscv_pm4addasu_i16x4(rd, rs1, rs2);
+int64_t test_pm4addasu_i64(int64_t rd, int16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_pm4addasu_i64(rd, rs1, rs2);
 }

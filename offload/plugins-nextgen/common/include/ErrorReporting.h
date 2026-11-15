@@ -163,15 +163,9 @@ class ErrorReporter {
       reportStackTrace(ATI->DeallocationTrace);
     }
 
-    if (ATI->HostPtr)
-      print(BoldLightPurple,
-            "Last allocation of size %lu for host pointer %p -> device pointer "
-            "%p:\n",
-            ATI->Size, ATI->HostPtr, ATI->DevicePtr);
-    else
-      print(BoldLightPurple,
-            "Last allocation of size %lu -> device pointer %p:\n", ATI->Size,
-            ATI->DevicePtr);
+    print(BoldLightPurple,
+          "Last allocation of size %lu -> device pointer %p:\n", ATI->Size,
+          ATI->DevicePtr);
     reportStackTrace(ATI->AllocationTrace);
     if (!ATI->LastAllocationInfo)
       return;
@@ -184,14 +178,8 @@ class ErrorReporter {
       print(BoldLightPurple, " #%u Prior deallocation of size %lu:\n", I,
             ATI->Size);
       reportStackTrace(ATI->DeallocationTrace);
-      if (ATI->HostPtr)
-        print(
-            BoldLightPurple,
-            " #%u Prior allocation for host pointer %p -> device pointer %p:\n",
-            I, ATI->HostPtr, ATI->DevicePtr);
-      else
-        print(BoldLightPurple, " #%u Prior allocation -> device pointer %p:\n",
-              I, ATI->DevicePtr);
+      print(BoldLightPurple, " #%u Prior allocation -> device pointer %p:\n", I,
+            ATI->DevicePtr);
       reportStackTrace(ATI->AllocationTrace);
       ++I;
     }

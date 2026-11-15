@@ -755,17 +755,16 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   //     feeding the assume is trivially true, thus causing the removal of
   //     the assume).
 
+  // If the checked instruction and the assume are the same, it's valid exactly
+  // if ephemeral values are allowed.
+  if (Inv == CtxI)
+    return AllowEphemerals;
+
   if (Inv->getParent() == CtxI->getParent()) {
     // If Inv and CtxI are in the same block, check if the assume (Inv) is first
     // in the BB.
     if (Inv->comesBefore(CtxI))
       return true;
-
-    // Don't let an assume affect itself - this would cause the problems
-    // `isEphemeralValueOf` is trying to prevent, and it would also make
-    // the loop below go out of bounds.
-    if (!AllowEphemerals && Inv == CtxI)
-      return false;
 
     // The context comes first, but they're both in the same block.
     // Make sure there is nothing in between that might interrupt
@@ -8816,6 +8815,10 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::experimental_constrained_lrint:
   case Intrinsic::llrint:
   case Intrinsic::experimental_constrained_llrint:
+  case Intrinsic::lround:
+  case Intrinsic::experimental_constrained_lround:
+  case Intrinsic::llround:
+  case Intrinsic::experimental_constrained_llround:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
   case Intrinsic::frexp:
@@ -10832,6 +10835,19 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
       return ConstantRange::getNonEmpty(APInt::getSignedMinValue(Width),
                                         APInt::getSignedMaxValue(Width) - *C +
                                             1);
+    }
+    break;
+  case Intrinsic::ushl_sat:
+    if (match(II.getOperand(0), m_APInt(C)))
+      return ConstantRange::getNonEmpty(*C, APInt::getZero(Width));
+    break;
+  case Intrinsic::sshl_sat:
+    if (match(II.getOperand(0), m_APInt(C))) {
+      if (C->isNegative())
+        return ConstantRange::getNonEmpty(APInt::getSignedMinValue(Width),
+                                          *C + 1);
+      return ConstantRange::getNonEmpty(*C,
+                                        APInt::getSignedMaxValue(Width) + 1);
     }
     break;
   case Intrinsic::umin:

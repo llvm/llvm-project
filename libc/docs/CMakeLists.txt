@@ -40,11 +40,11 @@ if(LLVM_ENABLE_SPHINX)
         monetary
         mqueue
         ndbm
-        netdb
-        nl_types
         net/if
+        netdb
         netinet/in
         netinet/tcp
+        nl_types
         poll
         pthread
         pwd

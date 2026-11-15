@@ -2498,7 +2498,7 @@ static bool replaceOverflowUses(WithOverflowInst *II,
       U->replaceAllUsesWith(Res);
       Changed = true;
     } else if (match(U, m_ExtractValue<1>(m_Value()))) {
-      U->replaceAllUsesWith(Builder.getFalse());
+      U->replaceAllUsesWith(ConstantInt::getFalse(U->getType()));
       Changed = true;
     } else
       continue;
