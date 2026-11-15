@@ -60,7 +60,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Argument.h"
@@ -2504,6 +2503,94 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   }
 }
 
+namespace {
+/// The string function attributes verifyFunctionAttrs checks, grouped
+/// by what checks need to be performed.
+enum class StringFnAttr {
+  Unknown,
+  SMEnabled,
+  ZAState,
+  ZT0State,
+  ZAStateAgnostic,
+  AllocVariantZeroed,
+  FramePointer,
+  UnsignedInt,
+  PatchableFunctionEntrySection,
+  SignReturnAddress,
+  SignReturnAddressKey,
+  SignReturnAddressHarden,
+  BoolOrEmpty,
+  VectorFunctionABIVariant,
+  ModularFormat,
+  TargetFeatures,
+  MCount,
+  OracleFunction,
+};
+} // namespace
+
+static bool lessByLengthThenName(StringRef LHS, StringRef RHS) {
+  if (LHS.size() != RHS.size())
+    return LHS.size() < RHS.size();
+  return LHS < RHS;
+}
+
+/// Sorted by lessByLengthThenName
+static constexpr std::pair<StringLiteral, StringFnAttr> StringFnAttrKinds[] = {
+    {"mnop-mcount", StringFnAttr::MCount},
+    {"aarch64_in_za", StringFnAttr::ZAState},
+    {"frame-pointer", StringFnAttr::FramePointer},
+    {"aarch64_in_zt0", StringFnAttr::ZT0State},
+    {"aarch64_new_za", StringFnAttr::ZAState},
+    {"aarch64_out_za", StringFnAttr::ZAState},
+    {"modular-format", StringFnAttr::ModularFormat},
+    {"mrecord-mcount", StringFnAttr::MCount},
+    {"tail-pad-value", StringFnAttr::UnsignedInt},
+    {"aarch64_new_zt0", StringFnAttr::ZT0State},
+    {"aarch64_out_zt0", StringFnAttr::ZT0State},
+    {"oracle-function", StringFnAttr::OracleFunction},
+    {"target-features", StringFnAttr::TargetFeatures},
+    {"warn-stack-size", StringFnAttr::UnsignedInt},
+    {"aarch64_inout_za", StringFnAttr::ZAState},
+    {"tail-pad-to-size", StringFnAttr::UnsignedInt},
+    {"aarch64_inout_zt0", StringFnAttr::ZT0State},
+    {"unsafe-stack-size", StringFnAttr::UnsignedInt},
+    {"sign-return-address", StringFnAttr::SignReturnAddress},
+    {"aarch64_preserves_za", StringFnAttr::ZAState},
+    {"alloc-variant-zeroed", StringFnAttr::AllocVariantZeroed},
+    {"aarch64_preserves_zt0", StringFnAttr::ZT0State},
+    {"guarded-control-stack", StringFnAttr::BoolOrEmpty},
+    {"sign-return-address-key", StringFnAttr::SignReturnAddressKey},
+    {"patchable-function-entry", StringFnAttr::UnsignedInt},
+    {"aarch64_pstate_sm_enabled", StringFnAttr::SMEnabled},
+    {"aarch64_za_state_agnostic", StringFnAttr::ZAStateAgnostic},
+    {"branch-target-enforcement", StringFnAttr::BoolOrEmpty},
+    {"patchable-function-prefix", StringFnAttr::UnsignedInt},
+    {"branch-protection-pauth-lr", StringFnAttr::BoolOrEmpty},
+    {"sign-return-address-harden", StringFnAttr::SignReturnAddressHarden},
+    {"vector-function-abi-variant", StringFnAttr::VectorFunctionABIVariant},
+    {"patchable-function-entry-section",
+     StringFnAttr::PatchableFunctionEntrySection},
+};
+
+static StringFnAttr classifyStringFnAttr(StringRef Kind) {
+#ifndef NDEBUG
+  static const bool IsSorted =
+      is_sorted(StringFnAttrKinds, [](const auto &LHS, const auto &RHS) {
+        return lessByLengthThenName(LHS.first, RHS.first);
+      });
+  assert(IsSorted && "StringFnAttrKinds must be sorted");
+#endif
+  const auto *I = lower_bound(StringFnAttrKinds, Kind,
+                              [](const auto &Entry, StringRef Kind) {
+                                return lessByLengthThenName(Entry.first, Kind);
+                              });
+  if (I != std::end(StringFnAttrKinds) && I->first == Kind)
+    return I->second;
+  if (is_contained(NVVMAttr::AbiPreserveAttrs, Kind))
+    return StringFnAttr::UnsignedInt;
+  return StringFnAttr::Unknown;
+}
+
 // Check parameter attributes against a function type.
 // The value V is printed in error messages.
 void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
@@ -2729,27 +2816,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   Check(!(Attrs.hasFnAttr(Attribute::Hot) && Attrs.hasFnAttr(Attribute::Cold)),
         "Attributes 'hot' and 'cold' are incompatible");
 
-  enum class StringAttr {
-    Unknown,
-    SMEnabled,
-    ZAState,
-    ZT0State,
-    ZAStateAgnostic,
-    AllocVariantZeroed,
-    FramePointer,
-    UnsignedInt,
-    PatchableFunctionEntrySection,
-    SignReturnAddress,
-    SignReturnAddressKey,
-    SignReturnAddressHarden,
-    BoolOrEmpty,
-    VectorFunctionABIVariant,
-    ModularFormat,
-    TargetFeatures,
-    MCount,
-    OracleFunction,
-  };
-
   unsigned NumZAStates = 0;
   unsigned NumZT0States = 0;
 
@@ -2761,60 +2827,26 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   for (Attribute A : make_range(FirstStringAttr, FnAttrs.end())) {
     StringRef Kind = A.getKindAsString();
     StringRef S = A.getValueAsString();
-    StringAttr KindID =
-        StringSwitch<StringAttr>(Kind)
-            .Case("aarch64_pstate_sm_enabled", StringAttr::SMEnabled)
-            .Cases({"aarch64_new_za", "aarch64_in_za", "aarch64_inout_za",
-                    "aarch64_out_za", "aarch64_preserves_za"},
-                   StringAttr::ZAState)
-            .Cases({"aarch64_new_zt0", "aarch64_in_zt0", "aarch64_inout_zt0",
-                    "aarch64_out_zt0", "aarch64_preserves_zt0"},
-                   StringAttr::ZT0State)
-            .Case("aarch64_za_state_agnostic", StringAttr::ZAStateAgnostic)
-            .Case("alloc-variant-zeroed", StringAttr::AllocVariantZeroed)
-            .Case("frame-pointer", StringAttr::FramePointer)
-            .Cases({"tail-pad-to-size", "tail-pad-value",
-                    "patchable-function-prefix", "patchable-function-entry",
-                    "warn-stack-size", "unsafe-stack-size"},
-                   StringAttr::UnsignedInt)
-            .Case("patchable-function-entry-section",
-                  StringAttr::PatchableFunctionEntrySection)
-            .Case("sign-return-address", StringAttr::SignReturnAddress)
-            .Case("sign-return-address-key", StringAttr::SignReturnAddressKey)
-            .Case("sign-return-address-harden",
-                  StringAttr::SignReturnAddressHarden)
-            .Cases({"branch-target-enforcement", "branch-protection-pauth-lr",
-                    "guarded-control-stack"},
-                   StringAttr::BoolOrEmpty)
-            .Case("vector-function-abi-variant",
-                  StringAttr::VectorFunctionABIVariant)
-            .Case("modular-format", StringAttr::ModularFormat)
-            .Case("target-features", StringAttr::TargetFeatures)
-            .Cases({"mnop-mcount", "mrecord-mcount"}, StringAttr::MCount)
-            .Case("oracle-function", StringAttr::OracleFunction)
-            .Default(is_contained(NVVMAttr::AbiPreserveAttrs, Kind)
-                         ? StringAttr::UnsignedInt
-                         : StringAttr::Unknown);
-    switch (KindID) {
-    case StringAttr::Unknown:
+    switch (classifyStringFnAttr(Kind)) {
+    case StringFnAttr::Unknown:
       break;
-    case StringAttr::SMEnabled:
+    case StringFnAttr::SMEnabled:
       Check(!Attrs.hasFnAttr("aarch64_pstate_sm_compatible"),
             "Attributes 'aarch64_pstate_sm_enabled and "
             "aarch64_pstate_sm_compatible' are incompatible!",
             V);
       break;
-    case StringAttr::ZAState:
+    case StringFnAttr::ZAState:
       ++NumZAStates;
       break;
-    case StringAttr::ZT0State:
+    case StringFnAttr::ZT0State:
       ++NumZT0States;
       break;
-    case StringAttr::ZAStateAgnostic:
+    case StringFnAttr::ZAStateAgnostic:
       ++NumZAStates;
       ++NumZT0States;
       break;
-    case StringAttr::AllocVariantZeroed: {
+    case StringFnAttr::AllocVariantZeroed: {
       Check(!S.empty(), "'alloc-variant-zeroed' must not be empty");
       Function *Variant = M.getFunction(S);
       if (Variant) {
@@ -2845,27 +2877,27 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
       break;
     }
-    case StringAttr::FramePointer:
+    case StringFnAttr::FramePointer:
       if (S != "all" && S != "non-leaf" && S != "none" && S != "reserved" &&
           S != "non-leaf-no-reserve")
         CheckFailed("invalid value for 'frame-pointer' attribute: " + S, V);
       break;
-    case StringAttr::UnsignedInt: {
+    case StringFnAttr::UnsignedInt: {
       unsigned N;
       if (S.getAsInteger(10, N))
         CheckFailed("\"" + Kind + "\" takes an unsigned integer: " + S, V);
       break;
     }
-    case StringAttr::PatchableFunctionEntrySection:
+    case StringFnAttr::PatchableFunctionEntrySection:
       Check(!S.empty(),
             "\"patchable-function-entry-section\" must not be empty");
       break;
-    case StringAttr::SignReturnAddress:
+    case StringFnAttr::SignReturnAddress:
       if (S != "none" && S != "all" && S != "non-leaf")
         CheckFailed("invalid value for 'sign-return-address' attribute: " + S,
                     V);
       break;
-    case StringAttr::SignReturnAddressKey:
+    case StringFnAttr::SignReturnAddressKey:
       if (S != "a_key" && S != "b_key")
         CheckFailed(
             "invalid value for 'sign-return-address-key' attribute: " + S, V);
@@ -2873,7 +2905,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
         CheckFailed(
             "'sign-return-address-key' present without `sign-return-address`");
       break;
-    case StringAttr::SignReturnAddressHarden:
+    case StringFnAttr::SignReturnAddressHarden:
       if (S != "load-return-address" && S != "none")
         CheckFailed(
             "invalid value for 'sign-return-address-harden' attribute: " + S,
@@ -2883,15 +2915,15 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
         CheckFailed("'sign-return-address-harden' present without "
                     "'sign-return-address' or 'ptrauth-returns'");
       break;
-    case StringAttr::BoolOrEmpty:
+    case StringFnAttr::BoolOrEmpty:
       if (S != "" && S != "true" && S != "false")
         CheckFailed("invalid value for '" + Kind + "' attribute: " + S, V);
       break;
-    case StringAttr::VectorFunctionABIVariant:
+    case StringFnAttr::VectorFunctionABIVariant:
       if (!VFABI::tryDemangleForVFABI(S, FT))
         CheckFailed("invalid name for a VFABI variant: " + S, V);
       break;
-    case StringAttr::ModularFormat: {
+    case StringFnAttr::ModularFormat: {
       SmallVector<StringRef> Args;
       S.split(Args, ',');
       Check(Args.size() >= 5,
@@ -2921,7 +2953,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
       break;
     }
-    case StringAttr::TargetFeatures:
+    case StringFnAttr::TargetFeatures:
       if (!S.empty()) {
         for (auto FeatureFlag : split(S, ',')) {
           if (FeatureFlag.empty())
@@ -2936,13 +2968,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       }
 
       break;
-    case StringAttr::MCount: {
+    case StringFnAttr::MCount: {
       Attribute FEntry = Attrs.getFnAttr("fentry-call");
       Check(FEntry.isValid() && FEntry.getValueAsString() == "true",
             Kind + " only supported with fentry-call");
       break;
     }
-    case StringAttr::OracleFunction: {
+    case StringFnAttr::OracleFunction: {
       const auto *F = dyn_cast<Function>(V);
       Check(F, "\"oracle-function\" attribute only applies to functions", V);
       Check(F->hasLocalLinkage(), "oracle function must have local linkage", V);
