@@ -94,15 +94,21 @@ std::string normalizePathForCache(PathRef Path) {
   return maybeCaseFoldPath(Normalized);
 }
 
-/// Returns the project source root owning \p ModuleUnitFileName, falling back
-/// to the consuming translation unit's (\p RequiredSource) project root when
-/// the module unit resides outside the workspace tree (e.g. system `std.cppm`).
+/// Returns the project source root used for the module cache of
+/// \p ModuleUnitFileName. The module unit's own project root is used only when
+/// the global CDB has an exact entry for it. If it has none, or only an
+/// interpolated (heuristic) command, as with an unrelated ancestor
+/// compile_commands.json or a system `std.cppm`, fall back to the consuming
+/// translation unit's (\p RequiredSource) project root.
 std::optional<std::string>
 getModuleProjectRoot(PathRef RequiredSource, PathRef ModuleUnitFileName,
                      const GlobalCompilationDatabase &CDB) {
-  if (auto PI = CDB.getProjectInfo(ModuleUnitFileName);
-      PI && !PI->SourceRoot.empty())
-    return PI->SourceRoot;
+  auto Cmd = CDB.getCompileCommand(ModuleUnitFileName);
+  if (Cmd && Cmd->Heuristic.empty()) {
+    if (auto PI = CDB.getProjectInfo(ModuleUnitFileName);
+        PI && !PI->SourceRoot.empty())
+      return PI->SourceRoot;
+  }
   if (auto PI = CDB.getProjectInfo(RequiredSource);
       PI && !PI->SourceRoot.empty())
     return PI->SourceRoot;

@@ -1768,7 +1768,12 @@ TEST_F(PrerequisiteModulesTests,
 
   HeaderSearchOptions HS(P.Project);
   Info->adjustHeaderSearchOptions(HS);
-  EXPECT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+  ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+
+  llvm::SmallString<256> ExpectedRoot(P.Project);
+  llvm::sys::path::append(ExpectedRoot, ".cache", "clangd", "modules");
+  EXPECT_TRUE(StringRef(HS.PrebuiltModuleFiles["M"]).starts_with(ExpectedRoot))
+      << "Actual: " << HS.PrebuiltModuleFiles["M"];
 }
 
 TEST_F(PrerequisiteModulesTests, ModuleImportThroughInclude) {
