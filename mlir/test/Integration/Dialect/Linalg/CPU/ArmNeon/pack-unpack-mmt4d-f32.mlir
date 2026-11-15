@@ -183,7 +183,7 @@ func.func private @unpack_acc(%C_packed: tensor<2x4x4x4xf32>) -> tensor<5x15xf32
 // Implements matrix-multiplication via linalg.mmt4d.
 //===----------------------------------------------------------------------===//
 // CHECK-IR-LABEL: llvm.func @matmul_via_mmt4d
-// CHECK-IR-COUNT-4: llvm.intr.fmuladd
+// CHECK-IR-COUNT-4: llvm.intr.fma
 func.func private @matmul_via_mmt4d(%A: tensor<5x3xf32>, %B: tensor<3x15xf32>, %C: tensor<5x15xf32>) -> tensor<5x15xf32> {
   // Pack input matrices
   %A_pack = func.call @pack_lhs(%A): (tensor<5x3xf32>) -> tensor<2x3x4x1xf32>
