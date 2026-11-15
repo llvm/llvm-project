@@ -172,6 +172,7 @@ bool GetHeapAddressInformation(uptr addr, uptr access_size,
   CHECK_NE(chunk.AllocTid(), kInvalidTid);
   descr->alloc_tid = chunk.AllocTid();
   descr->alloc_stack_id = chunk.GetAllocStackId();
+  descr->has_alloc_token = chunk.GetAllocToken(&descr->alloc_token);
   descr->free_tid = chunk.FreeTid();
   if (descr->free_tid != kInvalidTid)
     descr->free_stack_id = chunk.GetFreeStackId();
@@ -419,6 +420,8 @@ void StackAddressDescription::Print() const {
 
 void HeapAddressDescription::Print() const {
   PrintHeapChunkAccess(addr, chunk_access);
+  if (has_alloc_token)
+    Printf("Allocation token: 0x%zx\n", alloc_token);
 
   asanThreadRegistry().CheckLocked();
   AsanThreadContext *alloc_thread = GetThreadContextByTidLocked(alloc_tid);

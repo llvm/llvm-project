@@ -1,4 +1,5 @@
 __asan_*
+__alloc_token_*
 __lsan_*
 __ubsan_*
 __sancov_*
