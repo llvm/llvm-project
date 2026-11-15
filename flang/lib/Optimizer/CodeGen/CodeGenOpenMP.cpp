@@ -57,16 +57,16 @@ struct MapInfoOpConversion
 
   mlir::omp::MapBoundsOp
   createBoundsForCharString(mlir::ConversionPatternRewriter &rewriter,
-                            unsigned int len, mlir::Location loc) const {
+                            int64_t len, mlir::Location loc) const {
     mlir::Type i64Ty = rewriter.getIntegerType(64);
     auto lBound = mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, 0);
-    auto uBoundAndExt =
-        mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, len - 1);
+    auto uBound = mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, len - 1);
+    auto extent = mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, len);
     auto stride = mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, 1);
     auto baseLb = mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, 1);
     auto mapBoundType = rewriter.getType<mlir::omp::MapBoundsType>();
     return mlir::omp::MapBoundsOp::create(rewriter, loc, mapBoundType, lBound,
-                                          uBoundAndExt, uBoundAndExt, stride,
+                                          uBound, extent, stride,
                                           /*strideInBytes*/ false, baseLb);
   }
 
@@ -164,8 +164,42 @@ struct MapInfoOpConversion
         curOp, resTypes, adaptor.getOperands(), newProperties,
         curOp->getDiscardableAttrDictionary().getValue());
     if (mapBoundsOp) {
+      rewriter.setInsertionPoint(newOp);
+      // Bounds are ordered from fastest to slowest varying dimension. Each
+      // string contributes an innermost dimension of character code units.
+      // Element strides still count whole strings here, whereas descriptor
+      // byte strides already include the character length and kind.
+      llvm::SmallVector<mlir::Value> bounds{mapBoundsOp};
+      for (mlir::Value bound : newOp.getBounds()) {
+        auto original = bound.getDefiningOp<mlir::omp::MapBoundsOp>();
+        if (original.getStrideInBytes()) {
+          bounds.push_back(bound);
+          continue;
+        }
+        mlir::Value stride = original.getStride();
+        if (stride) {
+          // Bounds operands have independent integer types (including lowered
+          // index types). Preserve signed strides and match the i64 LEN bound
+          // at the point where whole-string strides become code-unit strides.
+          unsigned strideWidth =
+              mlir::cast<mlir::IntegerType>(stride.getType()).getWidth();
+          if (strideWidth < 64)
+            stride = mlir::LLVM::SExtOp::create(rewriter, newOp.getLoc(),
+                                                rewriter.getI64Type(), stride);
+          else if (strideWidth > 64)
+            stride = mlir::LLVM::TruncOp::create(rewriter, newOp.getLoc(),
+                                                 rewriter.getI64Type(), stride);
+          stride = mlir::LLVM::MulOp::create(rewriter, newOp.getLoc(), stride,
+                                             mapBoundsOp.getExtent());
+        }
+        bounds.push_back(mlir::omp::MapBoundsOp::create(
+            rewriter, newOp.getLoc(), original.getType(),
+            original.getLowerBound(), original.getUpperBound(),
+            original.getExtent(), stride, /*strideInBytes=*/false,
+            original.getStartIdx()));
+      }
       rewriter.startOpModification(newOp);
-      newOp.getBoundsMutable().append(mlir::ValueRange{mapBoundsOp});
+      newOp.getBoundsMutable().assign(bounds);
       rewriter.finalizeOpModification(newOp);
     }
 

@@ -17,3 +17,37 @@ end subroutine TestCharLenBounds
 !CHECK: %[[UB:.*]] = arith.subi %[[EXTENT]]#1, %[[STRIDE]] : index
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%[[LB_START_IDX]] : index) upper_bound(%[[UB]] : index) extent(%[[EXTENT]]#1 : index) stride(%[[STRIDE]] : index) start_idx(%[[LB_START_IDX]] : index) stride_in_bytes(true)
 !CHECK: %{{.*}} = omp.map.info {{.*}} bounds(%[[BOUNDS]]) {{.*}}
+
+! A dynamic length is a count of code units. Wide-character byte strides
+! must include the kind's storage size, in both motion directions.
+! CHECK-LABEL: func.func @_QPupdate_wide_char(
+! CHECK: %[[ZERO:.*]] = arith.constant 0 : index
+! CHECK: %[[ONE:.*]] = arith.constant 1 : index
+! CHECK: %[[WIDTH:.*]] = arith.constant 4 : index
+! CHECK: %[[UNBOX:.*]]:2 = fir.unboxchar {{.*}} : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
+! CHECK: %[[UB:.*]] = arith.subi %[[UNBOX]]#1, %[[ONE]] : index
+! CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%[[ZERO]] : index) upper_bound(%[[UB]] : index) extent(%[[UNBOX]]#1 : index) stride(%[[WIDTH]] : index) start_idx(%[[ZERO]] : index) stride_in_bytes(true)
+! CHECK: omp.map.info {{.*}} map_clauses(to) {{.*}} bounds(%[[BOUNDS]])
+! CHECK: omp.target_update
+! CHECK: %[[WIDTH_FROM:.*]] = arith.constant 4 : index
+! CHECK: omp.map.bounds {{.*}} stride(%[[WIDTH_FROM]] : index) {{.*}} stride_in_bytes(true)
+! CHECK: omp.map.info {{.*}} map_clauses(from)
+! CHECK: omp.target_update
+subroutine update_wide_char(clen)
+  character(kind=4,len=*) :: clen
+  !$omp target update to(clen)
+  !$omp target update from(clen)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPupdate_optional_wide_char(
+! CHECK: %[[WIDTH:.*]] = arith.constant 2 : index
+! CHECK: %[[PRESENT_BOUNDS:.*]]:2 = fir.if {{.*}} -> (index, index) {
+! CHECK: fir.result {{.*}}, %[[WIDTH]] : index, index
+! CHECK: } else {
+! CHECK: fir.result %{{.*}}, %{{.*}} : index, index
+! CHECK: omp.map.bounds {{.*}} stride(%[[PRESENT_BOUNDS]]#1 : index) {{.*}} stride_in_bytes(true)
+! CHECK: omp.target_update
+subroutine update_optional_wide_char(clen)
+  character(kind=2,len=*), optional :: clen
+  !$omp target update to(clen)
+end subroutine
