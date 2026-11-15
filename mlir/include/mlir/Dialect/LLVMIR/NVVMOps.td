@@ -2096,12 +2096,13 @@ def NVVM_ConvertF32x2ToF4x2Op : NVVM_Op<"convert.f32x2.to.f4x2"> {
     The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction. The `pzo` attribute, when set, lowers to the
     '.pzo' variant of the cvt instruction.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
 
   let results = (outs I8:$dst);
-  let arguments = (ins F32:$a, F32:$b,
+  let arguments = (ins F32:$a, F32:$b, Optional<I8>:$scale_factor,
                        DefaultValuedAttr<BoolAttr, "false">:$relu,
                        TypeAttr:$dstTy,
                        DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
@@ -2110,8 +2111,9 @@ def NVVM_ConvertF32x2ToF4x2Op : NVVM_Op<"convert.f32x2.to.f4x2"> {
                          "FPRoundingMode::RN">:$rnd,
                        DefaultValuedAttr<BoolAttr, "false">:$pzo);
   let assemblyFormat = [{
-    $a `,` $b oilist(`rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo)
-    attr-dict `:` type($dst) `(` $dstTy `)`
+    $a `,` $b (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($dst) `(` $dstTy `)`
   }];
   let hasVerifier = 1;
 
@@ -2142,10 +2144,12 @@ class NVVM_ConvertFPx2ToF4x2Op<string srcType>
     The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction. The `pzo` attribute, when set, lowers to the
     '.pzo' variant of the cvt instruction.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
     }];
   let results = (outs I8:$dst);
   let arguments = (ins
       VectorOfLengthAndType<[2], [!cast<Type>(srcType)]>:$src,
+      Optional<I8>:$scale_factor,
       DefaultValuedAttr<BoolAttr, "false">:$relu,
       TypeAttrOf<F4E2M1FN>:$dstTy,
       DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
@@ -2155,8 +2159,9 @@ class NVVM_ConvertFPx2ToF4x2Op<string srcType>
       DefaultValuedAttr<BoolAttr, "false">:$pzo);
 
   let assemblyFormat = [{
-    $src oilist(`rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo) attr-dict
-    `:` type($src) `->` type($dst) `(` $dstTy `)`
+    $src (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`
   }];
 
   let extraClassDeclaration = [{
@@ -2191,6 +2196,7 @@ def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
     The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction. The `pzo` attribute, when set, lowers to the
     '.pzo' variant of the cvt instruction.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
@@ -2199,6 +2205,7 @@ def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
   let arguments = (ins 
     F32:$a,
     F32:$b,
+    Optional<I8>:$scale_factor,
     DefaultValuedAttr<BoolAttr, "false">:$relu,
     TypeAttr:$dstTy,
     DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
@@ -2207,21 +2214,23 @@ def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
       "FPRoundingMode::RN">:$rnd,
     DefaultValuedAttr<BoolAttr, "false">:$pzo);
   let assemblyFormat = [{
-    $a `,` $b oilist(`rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo)
-    attr-dict `:` type($dst) `(` $dstTy `)`
+    $a `,` $b (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($dst) `(` $dstTy `)`
   }];
   let hasVerifier = 1;
-  
+
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy,
-                                              NVVM::FPRoundingMode rnd,
-                                              bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF6x2Op &op,
+                          LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertF32x2ToF6x2Op::getIntrinsicID($dstTy, $rnd, $relu);
-    llvm::Value *packedI16 =
-        createIntrinsicCall(builder, intId, {$a, $b, builder.getInt1($pzo)});
+    auto [intId, args] =
+        NVVM::ConvertF32x2ToF6x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2248,11 +2257,13 @@ class NVVM_ConvertFPx2ToF6x2Op<string srcType>
     The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction. The `pzo` attribute, when set, lowers to the
     '.pzo' variant of the cvt instruction.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
   }];
 
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
       VectorOfLengthAndType<[2], [!cast<Type>(srcType)]>:$src,
+      Optional<I8>:$scale_factor,
       DefaultValuedAttr<BoolAttr, "false">:$relu,
       TypeAttrOf<AnyTypeOf<[F6E2M3FN, F6E3M2FN]>>:$dstTy,
       DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
@@ -2261,19 +2272,21 @@ class NVVM_ConvertFPx2ToF6x2Op<string srcType>
         "FPRoundingMode::RN">:$rnd,
       DefaultValuedAttr<BoolAttr, "false">:$pzo);
   let assemblyFormat = [{
-    $src oilist(`rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo) attr-dict
-    `:` type($src) `->` type($dst) `(` $dstTy `)`
+    $src (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`
   }];
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy,
-                                              NVVM::FPRoundingMode rnd,
-                                              bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::Convert}]#srcType#[{x2ToF6x2Op &op,
+                          LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::Convert}]#srcType#[{x2ToF6x2Op::getIntrinsicID($dstTy, $rnd, $relu);
-    llvm::Value *packedI16 =
-        createIntrinsicCall(builder, intId, {$src, builder.getInt1($pzo)});
+    auto [intId, args] = NVVM::Convert}]#srcType#[{x2ToF6x2Op::getIntrinsicIDAndArgs(
+        op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2301,7 +2314,9 @@ def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
     The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction. The `pzo` attribute, when set, lowers to the
     '.pzo' variant of the cvt instruction. `pzo` is not supported for
-    conversions to `f8E8M0FNU`.
+    conversions to `f8E8M0FNU` or `f8E5M3FNU`.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
+    Scaled conversions to `f8E5M3FNU` support `rn` and `rz` only.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
@@ -2311,29 +2326,26 @@ def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
   let arguments = (ins
     F32:$a,
     F32:$b,
+    Optional<I8>:$scale_factor,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
     DefaultValuedAttr<BoolAttr, "false">:$relu,
     TypeAttr:$dstTy,
     DefaultValuedAttr<BoolAttr, "false">:$pzo);
   let assemblyFormat = [{
-    $a `,` $b oilist(
+    $a `,` $b (`,` $scale_factor^)? oilist(
       `rnd` `=` $rnd | `sat` `=` $sat | `relu` `=` $relu | `pzo` `=` $pzo
     ) attr-dict `:` type($dst) `(` $dstTy `)`
   }];
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy,
-                                              NVVM::FPRoundingMode rnd,
-                                              NVVM::SaturationMode sat,
-                                              bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF8x2Op &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
   
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertF32x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $sat, $relu);
-    llvm::SmallVector<llvm::Value *> args = {$a, $b};
-    if (!mlir::isa<mlir::Float8E8M0FNUType>($dstTy))
-      args.push_back(builder.getInt1($pzo));
+    auto [intId, args] = NVVM::ConvertF32x2ToF8x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
     llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
@@ -2356,10 +2368,14 @@ def NVVM_ConvertF16x2ToF8x2Op : NVVM_Op<"convert.f16x2.to.f8x2"> {
     second element of `a` is stored in the lower 8 bits of `dst`.
     If `dst` is returned as a vector type, each converted value is stored as an 
     i8 element in the vector.
-    The `rnd` attribute specifies the rounding mode (`rn` or `rz`).
+    The `rnd` attribute specifies the rounding mode. Conversions to
+    `f8E4M3FN` and `f8E5M2` support `rn` and `rz`. Conversions to
+    `f8E5M3FNU` also support `rp`, except when a scale factor is present.
     The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction. The `pzo` attribute, when set, lowers to the
-    '.pzo' variant of the cvt instruction.
+    '.pzo' variant of the cvt instruction. `relu` and `pzo` are not
+    supported for conversions to `f8E5M3FNU`.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
@@ -2368,28 +2384,28 @@ def NVVM_ConvertF16x2ToF8x2Op : NVVM_Op<"convert.f16x2.to.f8x2"> {
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
     VectorOfLengthAndType<[2], [F16]>:$a,
+    Optional<I8>:$scale_factor,
+    DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
     DefaultValuedAttr<BoolAttr, "false">:$relu,
     TypeAttr:$dstTy,
-    DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
-      [EnumAttrIsOneOf<FPRoundingModeAttr,
-        [FPRoundingModeRN, FPRoundingModeRZ]>]>,
-      "FPRoundingMode::RN">:$rnd,
+    DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::RN">:$rnd,
     DefaultValuedAttr<BoolAttr, "false">:$pzo);
   let assemblyFormat = [{
-    $a oilist(`rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo) attr-dict
-    `:` type($a) `->` type($dst) `(` $dstTy `)`
+    $a (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `sat` `=` $sat | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($a) `->` type($dst) `(` $dstTy `)`
   }];
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy,
-                                              NVVM::FPRoundingMode rnd,
-                                              bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertF16x2ToF8x2Op &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertF16x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $relu);
-    llvm::Value *packedI16 =
-        createIntrinsicCall(builder, intId, {$a, builder.getInt1($pzo)});
+    auto [intId, args] =
+        NVVM::ConvertF16x2ToF8x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2415,7 +2431,9 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
     rounding. The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction. The `pzo` attribute, when set, lowers to the '.pzo'
     variant of the cvt instruction. `pzo` is not supported for conversions to
-    `f8E8M0FNU`.
+    `f8E8M0FNU` or `f8E5M3FNU`.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
+    Scaled conversions to `f8E5M3FNU` support `rn` and `rz` only.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
@@ -2424,29 +2442,29 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
     VectorOfLengthAndType<[2], [BF16]>:$src,
+    Optional<I8>:$scale_factor,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
     DefaultValuedAttr<BoolAttr, "false">:$relu,
-    TypeAttrOf<AnyTypeOf<[F8E8M0FNU, F8E4M3FN, F8E5M2]>>:$dstTy,
+    TypeAttrOf<AnyTypeOf<[F8E8M0FNU, F8E5M3FNU, F8E4M3FN, F8E5M2]>>:$dstTy,
     DefaultValuedAttr<BoolAttr, "false">:$pzo);
   let assemblyFormat = [{
-    $src oilist(
+    $src (`,` $scale_factor^)? oilist(
       `rnd` `=` $rnd | `sat` `=` $sat | `relu` `=` $relu | `pzo` `=` $pzo
     ) attr-dict
     `:` type($src) `->` type($dst) `(` $dstTy `)`
   }];
-  
+
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy,
-                                  NVVM::FPRoundingMode rnd,
-                                  NVVM::SaturationMode sat, bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertBF16x2ToF8x2Op &op,
+                          LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $sat, $relu);
-    llvm::SmallVector<llvm::Value *> args = {$src};
-    if (!mlir::isa<mlir::Float8E8M0FNUType>($dstTy))
-      args.push_back(builder.getInt1($pzo));
+    auto [intId, args] =
+        NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
     llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
@@ -2502,11 +2520,11 @@ class NVVM_ConvertToFP16x2Op_Base <string srcTypeStr, Type srcStorageType, strin
 }
 
 def NVVM_ConvertF8x2ToF16x2Op :
-  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "F16", 
-    [F8E4M3FN, F8E5M2]>;
+  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "F16",
+    [F8E4M3FN, F8E5M2, F8E5M3FNU], 1>;
 def NVVM_ConvertF8x2ToBF16x2Op :
   NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "BF16",
-    [F8E8M0FNU, F8E4M3FN, F8E5M2], 1> {
+    [F8E8M0FNU, F8E4M3FN, F8E5M2, F8E5M3FNU], 1> {
   let append description = [{
 
     Example:
