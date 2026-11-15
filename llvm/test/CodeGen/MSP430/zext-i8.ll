@@ -13,8 +13,8 @@ define i16 @zext_add(i8 %a, i8 %b) nounwind {
   ret i16 %z
 }
 
-; FIXME: The select is expanded into a branch and a PHI, so no byte instruction
-; clears the high byte when %c is true, and the result is all of %x.
+; The select is expanded into a branch and a PHI, so no byte instruction clears
+; the high byte when %c is true. The zext needs a mov.b.
 define i16 @zext_select(i1 %c, i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: zext_select:
 ; CHECK:       ; %bb.0:
@@ -23,7 +23,7 @@ define i16 @zext_select(i1 %c, i16 %x, i16 %y) nounwind {
 ; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    mov.b r14, r13
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    mov r13, r12
+; CHECK-NEXT:    mov.b r13, r12
 ; CHECK-NEXT:    ret
   %a = trunc i16 %x to i8
   %b = trunc i16 %y to i8
@@ -32,8 +32,8 @@ define i16 @zext_select(i1 %c, i16 %x, i16 %y) nounwind {
   ret i16 %z
 }
 
-; FIXME: The variable shift is expanded into a loop, so no byte instruction
-; clears the high byte when %n is 0, and the result is all of %x.
+; The variable shift is expanded into a loop, so no byte instruction clears the
+; high byte when %n is 0. The zext needs a mov.b.
 define i16 @zext_shl_var(i16 %x, i8 %n) nounwind {
 ; CHECK-LABEL: zext_shl_var:
 ; CHECK:       ; %bb.0:
@@ -44,6 +44,7 @@ define i16 @zext_shl_var(i16 %x, i8 %n) nounwind {
 ; CHECK-NEXT:    sub.b #1, r13
 ; CHECK-NEXT:    jne .LBB2_1
 ; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:    mov.b r12, r12
 ; CHECK-NEXT:    ret
   %a = trunc i16 %x to i8
   %s = shl i8 %a, %n
