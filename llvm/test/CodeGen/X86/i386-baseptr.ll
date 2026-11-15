@@ -87,9 +87,10 @@ entry:
   ret void
 }
 
-define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 %param3, i32 %param4, i32 %param5, i32 %param6) #0 {
+define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 %param3, i32 %param4, i32 %param5, i32 %param6) #0 !dbg !4 {
 ; CHECK-LABEL: clobber_baseptr_argptr:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    #DEBUG_VALUE: clobber_baseptr_argptr:param5 <- $esi
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %ebp, -8
@@ -132,6 +133,7 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    .cfi_def_cfa %esp, 4
 ; CHECK-NEXT:    retl
 entry:
+  #dbg_value(i32 %param5, !9, !DIExpression(), !10)
   %k = call i32 @helper()
   %a = alloca i32, align 128
   %b = alloca i32, i32 %k, align 4
@@ -145,5 +147,15 @@ entry:
 }
 
 attributes #0 = {"frame-pointer"="all"}
-!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0, !2}
 !0 = !{i32 2, !"override-stack-alignment", i32 32}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !3, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !DIFile(filename: "i386-baseptr.ll", directory: "/")
+!4 = distinct !DISubprogram(name: "clobber_baseptr_argptr", scope: null, file: !3, spFlags: DISPFlagDefinition, unit: !1, type: !5)
+!5 = !DISubroutineType(types: !6)
+!6 = !{null}
+!8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!9 = !DILocalVariable(name: "param5", arg: 5, scope: !4, file: !3, line: 1, type: !8)
+!10 = !DILocation(line: 0, scope: !4)
