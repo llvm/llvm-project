@@ -95,9 +95,7 @@ void if_parallel() {
 
   #pragma omp parallel if (1)
   {}
-  // CHECK: %[[ONE_CONST:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[ONE_BOOL:.*]] = cir.cast int_to_bool %[[ONE_CONST]]
-  // CHECK-NEXT: %[[ONE_U1:.*]] = cir.cast bool_to_int %[[ONE_BOOL]]
+  // CHECK: %[[ONE_U1:.*]] = cir.const #cir.int<1> : !cir.int<u, 1>
   // CHECK-NEXT: %[[ONE_I1:.*]] = cir.builtin_int_cast %[[ONE_U1]]
   // CHECK-NEXT: omp.parallel if(%[[ONE_I1]]) {
   // CHECK-NEXT: omp.terminator
