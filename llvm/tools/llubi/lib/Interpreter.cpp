@@ -3213,32 +3213,36 @@ public:
   }
 
   void visitBitInsertInst(BitInsertInst &BII) {
-    ByteValue Res = getValue(BII.getOperand(0)).asByte();
-    auto &Val = getValue(BII.getOperand(1));
-    auto &Offset = getValue(BII.getOperand(2));
-    Type *ValTy = BII.getOperand(1)->getType();
+    Type *BaseTy = BII.getType()->getScalarType();
+    Type *ValTy = BII.getOperand(1)->getType()->getScalarType();
     uint64_t NumBits = DL.getTypeSizeInBits(ValTy).getFixedValue();
-    uint64_t OffsetInBits =
-        Offset.isPoison() ? 0 : Offset.asInteger().getZExtValue();
-    if (Offset.isPoison() || OffsetInBits + NumBits > Res.getBitWidth()) {
-      setResult(BII, AnyValue::getPoisonValue(Ctx, BII.getType()));
-      return;
-    }
-    Ctx.insertBits(Res, OffsetInBits, Val, ValTy);
-    setResult(BII, std::move(Res));
+    visitTriOp(BII,
+               [&](const AnyValue &Base, const AnyValue &Val,
+                   const AnyValue &Offset) -> AnyValue {
+                 if (Offset.isPoison())
+                   return AnyValue::getPoisonValue(Ctx, BaseTy);
+                 ByteValue Res = Base.asByte();
+                 uint64_t OffsetInBits = Offset.asInteger().getZExtValue();
+                 if (OffsetInBits + NumBits > Res.getBitWidth())
+                   return AnyValue::getPoisonValue(Ctx, BaseTy);
+                 Ctx.insertBits(Res, OffsetInBits, Val, ValTy);
+                 return Res;
+               });
   }
 
   void visitBitExtractInst(BitExtractInst &BEI) {
-    auto &Src = getValue(BEI.getOperand(0)).asByte();
-    auto &Offset = getValue(BEI.getOperand(1));
-    uint64_t NumBits = DL.getTypeSizeInBits(BEI.getType()).getFixedValue();
-    uint64_t OffsetInBits =
-        Offset.isPoison() ? 0 : Offset.asInteger().getZExtValue();
-    if (Offset.isPoison() || OffsetInBits + NumBits > Src.getBitWidth()) {
-      setResult(BEI, AnyValue::getPoisonValue(Ctx, BEI.getType()));
-      return;
-    }
-    setResult(BEI, Ctx.extractBits(Src, OffsetInBits, BEI.getType()));
+    Type *Ty = BEI.getType()->getScalarType();
+    uint64_t NumBits = DL.getTypeSizeInBits(Ty).getFixedValue();
+    visitBinOp(BEI,
+               [&](const AnyValue &Src, const AnyValue &Offset) -> AnyValue {
+                 if (Offset.isPoison())
+                   return AnyValue::getPoisonValue(Ctx, Ty);
+                 const ByteValue &Bytes = Src.asByte();
+                 uint64_t OffsetInBits = Offset.asInteger().getZExtValue();
+                 if (OffsetInBits + NumBits > Bytes.getBitWidth())
+                   return AnyValue::getPoisonValue(Ctx, Ty);
+                 return Ctx.extractBits(Bytes, OffsetInBits, Ty);
+               });
   }
 
   void visitFreezeInst(FreezeInst &FI) {
