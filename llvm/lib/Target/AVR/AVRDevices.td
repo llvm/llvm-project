@@ -206,8 +206,8 @@ def FamilyAVR6 : Family<"avr6", [FamilyAVR51, FeatureEIJMPCALL]>;
 
 def FamilyTiny
     : Family<"avrtiny",
-             [FamilyAVR0, FeatureBREAK, FeatureSRAM, FeatureTinyEncoding,
-              FeatureSmallStack]>;
+             [FamilyAVR0, FeatureIJMPCALL, FeatureBREAK, FeatureSRAM,
+              FeatureTinyEncoding, FeatureSmallStack]>;
 
 def FamilyXMEGA2 : Family<"xmega2",
                           [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
