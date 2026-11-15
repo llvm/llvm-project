@@ -48,10 +48,7 @@ public:
   GenericUniformityInfo(GenericUniformityInfo &&) = default;
   GenericUniformityInfo &operator=(GenericUniformityInfo &&) = default;
 
-  void compute() {
-    DA->initialize();
-    DA->compute();
-  }
+  void compute();
 
   /// The GPU kernel this analysis result is for
   const FunctionT &getFunction() const;

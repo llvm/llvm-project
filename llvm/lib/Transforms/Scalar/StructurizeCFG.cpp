@@ -13,9 +13,13 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -23,6 +27,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -1391,11 +1396,95 @@ void StructurizeCFGPass::printPipeline(
     OS << "<skip-uniform-regions>";
 }
 
+/// If the entry of \p R is the header of a cycle with latches both inside and
+/// outside \p R, give the cycle a new header for the edges from outside \p R.
+///
+/// Structurizing \p R turns the latches inside it into a loop of its own, and
+/// the enclosing region turns the latches outside it into an outer loop. If
+/// both loops keep the same header, CycleInfo sees them as a single cycle, so
+/// UniformityInfo misses the temporal divergence at the exit of the inner loop,
+/// but the AMDGPU backend lowers them as nested loops. For example, a value
+/// computed in the cycle can be reported uniform in the outer latch even though
+/// lanes leave the inner loop on different iterations, so they see different
+/// values. Splitting the header makes the nesting explicit, as LoopSimplify
+/// does when it separates nested loops.
+static bool separateSharedLoopHeader(Region &R, DominatorTree &DT) {
+  BasicBlock *Header = R.getEntry();
+  if (Header->isEHPad())
+    return false;
+
+  bool HasInnerLatch = false;
+  bool HasOuterLatch = false;
+  SmallSetVector<BasicBlock *, 4> OuterPreds;
+  for (BasicBlock *Pred : predecessors(Header)) {
+    // Every block in R is dominated by its entry, so this is a latch.
+    if (R.contains(Pred)) {
+      HasInnerLatch = true;
+      continue;
+    }
+    if (isa<CallBrInst, IndirectBrInst>(Pred->getTerminator()))
+      return false;
+    OuterPreds.insert(Pred);
+    if (DT.dominates(Header, Pred))
+      HasOuterLatch = true;
+  }
+  if (!HasInnerLatch || !HasOuterLatch)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Separating shared loop header " << Header->getName()
+                    << " of region " << R.getNameStr() << '\n');
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  SplitBlockPredecessors(Header, OuterPreds.getArrayRef(), ".outer", &DTU);
+  return true;
+}
+
+/// Apply separateSharedLoopHeader to every region, innermost first, and keep
+/// \p RI up to date, using \p PDT and \p DF to recalculate it. Return true if
+/// the CFG changed.
+static bool separateSharedLoopHeaders(Function &F, DominatorTree &DT,
+                                      RegionInfo &RI, PostDominatorTree &PDT,
+                                      DominanceFrontier &DF) {
+  bool Changed = false;
+  while (true) {
+    std::vector<Region *> Regions;
+    addRegionIntoQueue(*RI.getTopLevelRegion(), Regions);
+    // Inner regions come after their parents in the queue. Split at most one
+    // header before recalculating RegionInfo for the new CFG.
+    if (none_of(reverse(Regions), [&](Region *R) {
+          return !R->isTopLevelRegion() && separateSharedLoopHeader(*R, DT);
+        }))
+      return Changed;
+    Changed = true;
+
+    PDT.recalculate(F);
+    DF.releaseMemory();
+    DF.analyze(DT);
+    RI.releaseMemory();
+    RI.recalculate(F, &DT, &PDT, &DF);
+  }
+}
+
 /// Structurize every region in \p RI, processing inner regions before the
 /// regions that contain them. If \p UI is non-null, skip uniform regions.
-static bool runImpl(DominatorTree &DT, RegionInfo &RI,
+static bool runImpl(Function &F, DominatorTree &DT, RegionInfo &RI,
                     const TargetTransformInfo &TTI, const UniformityInfo *UI) {
-  bool Changed = false;
+  // If RI is recalculated it keeps pointers to these, so they must live until
+  // we have finished using RI.
+  PostDominatorTree PDT;
+  DominanceFrontier DF;
+  bool Changed = separateSharedLoopHeaders(F, DT, RI, PDT, DF);
+
+  // Splitting loop headers changes the cycle structure, so the uniformity
+  // information must be recomputed before it is used to skip regions.
+  CycleInfo CI;
+  UniformityInfo NewUI;
+  if (Changed && UI && TTI.hasBranchDivergence(&F)) {
+    CI.compute(F);
+    NewUI = UniformityInfo(DT, CI, &TTI);
+    NewUI.compute();
+    UI = &NewUI;
+  }
+
   std::vector<Region *> Regions;
   addRegionIntoQueue(*RI.getTopLevelRegion(), Regions);
   while (!Regions.empty()) {
@@ -1424,7 +1513,7 @@ bool StructurizeCFGLegacyPass::runOnFunction(Function &F) {
   RegionInfo &RI = getAnalysis<RegionInfoPass>().getRegionInfo();
   const TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  return runImpl(DT, RI, TTI, UI);
+  return runImpl(F, DT, RI, TTI, UI);
 }
 
 PreservedAnalyses StructurizeCFGPass::run(Function &F,
@@ -1437,7 +1526,7 @@ PreservedAnalyses StructurizeCFGPass::run(Function &F,
   if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions))
     UI = &AM.getResult<UniformityInfoAnalysis>(F);
 
-  if (!runImpl(DT, RI, TTI, UI))
+  if (!runImpl(F, DT, RI, TTI, UI))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
