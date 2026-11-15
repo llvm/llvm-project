@@ -288,22 +288,22 @@ public:
         .Attach(doConcurrentSourcePosition_, GetEnclosingDoMsg());
   }
 
-  // C1145, C1146: cannot call ieee_[gs]et_flag, ieee_[gs]et_halting_mode,
-  // ieee_[gs]et_status, ieee_set_rounding_mode, or ieee_set_underflow_mode
+  // F2023 C1145, C1146: prohibit specified IEEE_EXCEPTIONS and
+  // IEEE_ARITHMETIC procedure references in DO CONCURRENT
   void Post(const parser::ProcedureDesignator &procedureDesignator) {
     if (auto *name{std::get_if<parser::Name>(&procedureDesignator.u)}) {
       if (name->symbol) {
         const Symbol &ultimate{name->symbol->GetUltimate()};
         const Scope &scope{ultimate.owner()};
-        if (const Symbol * module{scope.IsModule() ? scope.symbol() : nullptr};
-            module &&
-            (module->name() == "__fortran_ieee_arithmetic" ||
+        if (const Symbol *module{scope.IsModule() ? scope.symbol() : nullptr};
+            module && scope.parent().IsIntrinsicModules() &&
+            (module->name() == "ieee_arithmetic" ||
                 module->name() == "__fortran_ieee_exceptions")) {
           std::string s{ultimate.name().ToString()};
           static constexpr const char *badName[]{"ieee_get_flag",
-              "ieee_set_flag", "ieee_get_halting_mode", "ieee_set_halting_mode",
-              "ieee_get_status", "ieee_set_status", "ieee_set_rounding_mode",
-              "ieee_set_underflow_mode", nullptr};
+              "ieee_get_halting_mode", "ieee_set_halting_mode",
+              "ieee_get_status", "ieee_set_modes", "ieee_set_status",
+              "ieee_set_rounding_mode", "ieee_set_underflow_mode", nullptr};
           for (std::size_t j{0}; badName[j]; ++j) {
             if (s.find(badName[j]) != s.npos) {
               context_
