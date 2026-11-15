@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 @requireThreadSupport
 @skipIfTargetDoesNotSupportSharedLibraries()
 class TlsGlobalTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def setUp(self):

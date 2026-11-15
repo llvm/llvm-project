@@ -141,7 +141,7 @@ struct CIRRecordLowering final {
   void calculateZeroInit();
 
   CharUnits getSize(mlir::Type Ty) {
-    return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
+    return CharUnits::fromQuantity(dataLayout.getTypeAllocSize(Ty));
   }
   CharUnits getSizeInBits(mlir::Type ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSizeInBits(ty));
@@ -964,10 +964,15 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       hasTrivialDestructor = cxxRD->hasTrivialDestructor();
     const auto &astLayout = astContext.getASTRecordLayout(rd);
     uint64_t recordAlignInBytes = astLayout.getAlignment().getQuantity();
+    uint64_t unadjustedAlignInBytes =
+        astLayout.getUnadjustedAlignment().getQuantity();
+    bool isTransparentUnion = rd->hasAttr<TransparentUnionAttr>();
 
-    cgm.addRecordLayout(ty->getName(), cir::RecordLayoutAttr::get(
-                                           mlirCtx, apk, hasTrivialDestructor,
-                                           recordAlignInBytes));
+    cgm.addRecordLayout(ty->getName(),
+                        cir::RecordLayoutAttr::get(
+                            mlirCtx, apk, hasTrivialDestructor,
+                            recordAlignInBytes, unadjustedAlignInBytes,
+                            isTransparentUnion, rd->hasFlexibleArrayMember()));
   }
 
   auto rl = std::make_unique<CIRGenRecordLayout>(

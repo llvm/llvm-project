@@ -68,7 +68,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -163,6 +162,11 @@ struct MachineVerifier {
   RegVector regsDefined, regsDead, regsKilled;
   RegMaskVector regMasks;
 
+  // Live physical register defs of the current instruction, and the operand
+  // indices of its dead physical register defs.
+  SmallVector<MCRegister, 4> LivePhysDefs;
+  SmallVector<unsigned, 4> DeadPhysDefOps;
+
   SlotIndex lastIndex;
 
   // Add Reg and any sub-registers to RV
@@ -181,16 +185,12 @@ struct MachineVerifier {
     // that only are used by PHI nodes.
     RegMap vregsLiveIn;
 
-    // Regs killed in MBB. They may be defined again, and will then be in both
-    // regsKilled and regsLiveOut.
-    RegSet regsKilled;
-
     // Regs defined in MBB and live out. Note that vregs passing through may
     // be live out without being mentioned here.
     RegSet regsLiveOut;
 
     // Vregs that pass through MBB untouched. This set is disjoint from
-    // regsKilled and regsLiveOut.
+    // regsLiveOut.
     RegSet vregsPassed;
 
     // Vregs that must pass through MBB because they are needed by a successor
@@ -311,6 +311,7 @@ struct MachineVerifier {
 
   void visitMachineInstrBefore(const MachineInstr *MI);
   void visitMachineOperand(const MachineOperand *MO, unsigned MONum);
+  void visitMachineInstrAfter(const MachineInstr *MI);
   void visitMachineBundleAfter(const MachineInstr *MI);
   void visitMachineBasicBlockAfter(const MachineBasicBlock *MBB);
   void visitMachineFunctionAfter();
@@ -553,6 +554,7 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
 
         visitMachineOperand(&Op, I);
       }
+      visitMachineInstrAfter(&MI);
 
       // Was this the last bundled instruction?
       InBundle = MI.isBundledWithSucc();
@@ -777,12 +779,10 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     }
   }
 
-  const MCAsmInfo &AsmInfo = TM->getMCAsmInfo();
   const BasicBlock *BB = MBB->getBasicBlock();
   const Function &F = MF->getFunction();
   if (LandingPadSuccs.size() > 1 &&
-      !(AsmInfo.getExceptionHandlingType() == ExceptionHandling::SjLj && BB &&
-        isa<SwitchInst>(BB->getTerminator())) &&
+      !(BB && isa<SwitchInst>(BB->getTerminator())) &&
       !isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     report("MBB has more than one landing pad successor", MBB);
 
@@ -1990,8 +1990,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
 
-    if (!DstTy.isScalableVector()) {
-      report("Destination type must be a scalable vector", MI);
+    if (!DstTy.isVector()) {
+      report("Destination type must be a vector", MI);
       break;
     }
 
@@ -2324,6 +2324,25 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   default:
     break;
   }
+}
+
+void MachineVerifier::visitMachineInstrAfter(const MachineInstr *MI) {
+  // A dead def is contradictory if the same instruction has a live def of the
+  // same register. Overlapping dead and live defs of different registers
+  // describe a partially used def.
+  if (!LivePhysDefs.empty()) {
+    for (unsigned MONum : DeadPhysDefOps) {
+      const MachineOperand &MO = MI->getOperand(MONum);
+      if (is_contained(LivePhysDefs, MO.getReg().asMCReg())) {
+        report("Dead def has a live def of the same register on the same "
+               "instruction",
+               &MO, MONum);
+      }
+    }
+  }
+
+  LivePhysDefs.clear();
+  DeadPhysDefOps.clear();
 }
 
 void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
@@ -2694,6 +2713,9 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         MO->getReg().isVirtual()) // TODO: Apply to physregs too
       report("Undef virtual register def operands require a subregister", MO, MONum);
 
+    if (MO->isKill() && Reg.isVirtual())
+      report("Kill flag on virtual register", MO, MONum);
+
     // Verify the consistency of tied operands.
     if (MO->isTied()) {
       unsigned OtherIdx = MI->findTiedOperandIdx(MONum);
@@ -3056,7 +3078,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
 
   // Both use and def operands can read a register.
   if (MO->readsReg()) {
-    if (MO->isKill())
+    if (MO->isKill() && Reg.isPhysical())
       addRegWithSubRegs(regsKilled, Reg);
 
     // Check LiveInts liveness and kill.
@@ -3153,14 +3175,11 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       } else if (MRI->def_empty(Reg)) {
         report("Reading virtual register without a def", MO, MONum);
       } else {
-        BBInfo &MInfo = MBBInfoMap[MI->getParent()];
-        // We don't know which virtual registers are live in, so only complain
-        // if vreg was killed in this MBB. Otherwise keep track of vregs that
-        // must be live in. PHI instructions are handled separately.
-        if (MInfo.regsKilled.count(Reg))
-          report("Using a killed virtual register", MO, MONum);
-        else if (!MI->isPHI())
-          MInfo.vregsLiveIn.insert(std::make_pair(Reg, MI));
+        // We don't know which virtual registers are live in, so keep track of
+        // vregs that must be live in. PHI instructions are handled separately.
+        if (!MI->isPHI())
+          MBBInfoMap[MI->getParent()].vregsLiveIn.insert(
+              std::make_pair(Reg, MI));
       }
     }
   }
@@ -3172,6 +3191,13 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       addRegWithSubRegs(regsDead, Reg);
     else
       addRegWithSubRegs(regsDefined, Reg);
+
+    if (Reg.isPhysical()) {
+      if (MO->isDead())
+        DeadPhysDefOps.push_back(MONum);
+      else
+        LivePhysDefs.push_back(Reg.asMCReg());
+    }
 
     // Verify SSA form.
     if (MRI->isSSA() && Reg.isVirtual()) {
@@ -3210,8 +3236,6 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
 // Normal stand-alone instructions are also considered 'bundles', and this
 // function is called for all of them.
 void MachineVerifier::visitMachineBundleAfter(const MachineInstr *MI) {
-  BBInfo &MInfo = MBBInfoMap[MI->getParent()];
-  set_union(MInfo.regsKilled, regsKilled);
   set_subtract(regsLive, regsKilled); regsKilled.clear();
   // Kill any masked registers.
   while (!regMasks.empty()) {
@@ -3358,7 +3382,6 @@ void MachineVerifier::calcRegsPassed() {
     BBInfo &Info = MBBInfoMap[MB];
     assert(Info.reachable);
 
-    VRegs.addToFilter(Info.regsKilled);
     VRegs.addToFilter(Info.regsLiveOut);
     for (const MachineBasicBlock *Pred : MB->predecessors()) {
       const BBInfo &PredInfo = MBBInfoMap[Pred];
@@ -3520,17 +3543,6 @@ void MachineVerifier::visitMachineFunctionAfter() {
 
   // Now check liveness info if available
   calcRegsRequired();
-
-  // Check for killed virtual registers that should be live out.
-  for (const auto &MBB : *MF) {
-    BBInfo &MInfo = MBBInfoMap[&MBB];
-    for (Register VReg : MInfo.vregsRequired)
-      if (MInfo.regsKilled.count(VReg)) {
-        report("Virtual register killed in block, but needed live out.", &MBB);
-        OS << "Virtual register " << printReg(VReg)
-           << " is used after the block.\n";
-      }
-  }
 
   if (!MF->empty()) {
     BBInfo &MInfo = MBBInfoMap[&MF->front()];
@@ -3800,8 +3812,8 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     // The following checks only apply to virtual registers. Physreg liveness
     // is too weird to check.
     if (VRegOrUnit.isVirtualReg()) {
-      // A live segment can end with either a redefinition, a kill flag on a
-      // use, or a dead flag on a def.
+      // A live segment can end with either a redefinition, a use, or a dead
+      // flag on a def.
       bool hasRead = false;
       bool hasSubRegDef = false;
       bool hasDeadDef = false;

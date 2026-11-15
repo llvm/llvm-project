@@ -10,10 +10,11 @@
 subroutine simple_linear
     implicit none
     integer :: x, y, i
-    !DEFAULT: omp.wsloop linear(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32) {{.*}}
-    !OPENMP52: omp.wsloop linear(val(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32)) {{.*}}
+    !DEFAULT: omp.wsloop linear(@{{[^ ]+}} %[[X]]#0 -> %[[X_ARG:[^ ]+]] : !fir.ref<i32> = %[[const]] : i32) {{.*}}
+    !OPENMP52: omp.wsloop linear(val(@{{[^ ]+}} %[[X]]#0 -> %[[X_ARG:[^ ]+]] : !fir.ref<i32> = %[[const]] : i32)) {{.*}}
     !$omp do linear(x)
-    !CHECK: %[[LOAD:.*]] = fir.load %[[X]]#0 : !fir.ref<i32>
+    !CHECK: %[[X_PRIV:.*]]:2 = hlfir.declare %[[X_ARG]]
+    !CHECK: %[[LOAD:.*]] = fir.load %[[X_PRIV]]#0 : !fir.ref<i32>
     !CHECK: %[[const:.*]] = arith.constant 2 : i32
     !CHECK: %[[RESULT:.*]] = arith.addi %[[LOAD]], %[[const]] : i32
     do i = 1, 10
@@ -30,10 +31,11 @@ subroutine linear_step
     implicit none
     integer :: x, y, i
     !CHECK: %[[const:.*]] = arith.constant 4 : i32
-    !DEFAULT: omp.wsloop linear(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32) {{.*}}
-    !OPENMP52: omp.wsloop linear(val(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32)) {{.*}}
+    !DEFAULT: omp.wsloop linear(@{{[^ ]+}} %[[X]]#0 -> %[[X_ARG:[^ ]+]] : !fir.ref<i32> = %[[const]] : i32) {{.*}}
+    !OPENMP52: omp.wsloop linear(val(@{{[^ ]+}} %[[X]]#0 -> %[[X_ARG:[^ ]+]] : !fir.ref<i32> = %[[const]] : i32)) {{.*}}
     !$omp do linear(x:4)
-    !CHECK: %[[LOAD:.*]] = fir.load %[[X]]#0 : !fir.ref<i32>
+    !CHECK: %[[X_PRIV:.*]]:2 = hlfir.declare %[[X_ARG]]
+    !CHECK: %[[LOAD:.*]] = fir.load %[[X_PRIV]]#0 : !fir.ref<i32>
     !CHECK: %[[const:.*]] = arith.constant 2 : i32
     !CHECK: %[[RESULT:.*]] = arith.addi %[[LOAD]], %[[const]] : i32   
     do i = 1, 10
@@ -53,8 +55,8 @@ subroutine linear_expr
     !CHECK: %[[LOAD_A:.*]] = fir.load %[[A]]#0 : !fir.ref<i32>
     !CHECK: %[[const:.*]] = arith.constant 4 : i32
     !CHECK: %[[LINEAR_EXPR:.*]] = arith.addi %[[LOAD_A]], %[[const]] : i32
-    !DEFAULT: omp.wsloop linear(%[[X]]#0 : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32) {{.*}}
-    !OPENMP52: omp.wsloop linear(val(%[[X]]#0 : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32)) {{.*}}
+    !DEFAULT: omp.wsloop linear(@{{[^ ]+}} %[[X]]#0 -> %[[X_ARG:[^ ]+]] : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32) {{.*}}
+    !OPENMP52: omp.wsloop linear(val(@{{[^ ]+}} %[[X]]#0 -> %[[X_ARG:[^ ]+]] : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32)) {{.*}}
     !$omp do linear(x:a+4)
     do i = 1, 10
         y = x + 2

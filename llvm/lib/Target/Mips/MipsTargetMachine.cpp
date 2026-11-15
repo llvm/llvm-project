@@ -14,9 +14,7 @@
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "Mips.h"
-#include "Mips16ISelDAGToDAG.h"
 #include "MipsMachineFunction.h"
-#include "MipsSEISelDAGToDAG.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetObjectFile.h"
 #include "MipsTargetTransformInfo.h"
@@ -60,12 +58,12 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeMipsAsmPrinterPass(*PR);
-  initializeMipsDelaySlotFillerPass(*PR);
-  initializeMipsBranchExpansionPass(*PR);
-  initializeMicroMipsSizeReducePass(*PR);
-  initializeMipsPreLegalizerCombinerPass(*PR);
-  initializeMipsPostLegalizerCombinerPass(*PR);
-  initializeMipsMulMulBugFixPass(*PR);
+  initializeMipsDelaySlotFillerLegacyPass(*PR);
+  initializeMipsBranchExpansionLegacyPass(*PR);
+  initializeMicroMipsSizeReduceLegacyPass(*PR);
+  initializeMipsPreLegalizerCombinerLegacyPass(*PR);
+  initializeMipsPostLegalizerCombinerLegacyPass(*PR);
+  initializeMipsMulMulBugFixLegacyPass(*PR);
   initializeMipsDAGToDAGISelLegacyPass(*PR);
 }
 
@@ -95,10 +93,11 @@ MipsTargetMachine::MipsTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      CLOpts(MipsOptions::Global), MCCLOpts(MipsMCOptions::Global),
-      isLittle(isLittle), IsJIT(JIT),
-      DefaultSubtarget(TT, CPU, FS, Options.MCOptions.getABIName(), isLittle,
-                       *this, std::nullopt),
+      CLOpts(cl::LibraryOptionsContext::get<MipsOptions>(
+          Options.MCOptions.LibraryOptions)),
+      MCCLOpts(MIPS_MC::getCLOpts(Options.MCOptions)), isLittle(isLittle),
+      IsJIT(JIT), DefaultSubtarget(TT, CPU, FS, Options.MCOptions.getABIName(),
+                                   isLittle, *this, std::nullopt),
       TLOF(createTLOF(TT, DefaultSubtarget.useSmallSection())) {
   initAsmInfo();
 
@@ -216,19 +215,19 @@ void MipsPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
   addPass(createAtomicExpandLegacyPass());
   if (getMipsTargetMachine().getCLOpts().os16)
-    addPass(createMipsOs16Pass());
-  addPass(createMips16HardFloatPass());
+    addPass(createMipsOs16LegacyPass());
+  addPass(createMips16HardFloatLegacyPass());
 }
 // Install an instruction selector pass using
 // the ISelDag to gen Mips code.
 bool MipsPassConfig::addInstSelector() {
-  addPass(createMips16ISelDag(getMipsTargetMachine(), getOptLevel()));
-  addPass(createMipsSEISelDag(getMipsTargetMachine(), getOptLevel()));
+  addPass(createMips16ISelDAGLegacyPass(getMipsTargetMachine(), getOptLevel()));
+  addPass(createMipsSEISelDAGLegacyPass(getMipsTargetMachine(), getOptLevel()));
   return false;
 }
 
 void MipsPassConfig::addPreRegAlloc() {
-  addPass(createMipsOptimizePICCallPass());
+  addPass(createMipsOptimizePICCallLegacyPass());
 }
 
 TargetTransformInfo
@@ -247,20 +246,20 @@ MachineFunctionInfo *MipsTargetMachine::createMachineFunctionInfo(
 // machine code is emitted.
 void MipsPassConfig::addPreEmitPass() {
   // Expand pseudo instructions that are sensitive to register allocation.
-  addPass(createMipsExpandPseudoPass());
+  addPass(createMipsExpandPseudoLegacyPass());
 
   // The microMIPS size reduction pass performs instruction reselection for
   // instructions which can be remapped to a 16 bit instruction.
-  addPass(createMicroMipsSizeReducePass());
+  addPass(createMicroMipsSizeReduceLegacyPass());
 
   // This pass inserts a nop instruction between two back-to-back multiplication
   // instructions when the "mfix4300" flag is passed.
   if (getMipsTargetMachine().getCLOpts().mfix4300)
-    addPass(createMipsMulMulBugPass());
+    addPass(createMipsMulMulBugFixLegacyPass());
 
   // The delay slot filler pass can potientially create forbidden slot hazards
   // for MIPSR6 and therefore it should go before MipsBranchExpansion pass.
-  addPass(createMipsDelaySlotFillerPass());
+  addPass(createMipsDelaySlotFillerLegacyPass());
 
   // This pass expands branches and takes care about the forbidden slot hazards.
   // Expanding branches may potentially create forbidden slot hazards for
@@ -270,9 +269,9 @@ void MipsPassConfig::addPreEmitPass() {
   // then we can be sure that all branches are expanded properly and no hazards
   // exists.
   // Any new pass should go before this pass.
-  addPass(createMipsBranchExpansion());
+  addPass(createMipsBranchExpansionLegacyPass());
 
-  addPass(createMipsConstantIslandPass());
+  addPass(createMipsConstantIslandLegacyPass());
 }
 
 bool MipsPassConfig::addIRTranslator() {
@@ -281,7 +280,7 @@ bool MipsPassConfig::addIRTranslator() {
 }
 
 void MipsPassConfig::addPreLegalizeMachineIR() {
-  addPass(createMipsPreLegalizeCombiner());
+  addPass(createMipsPreLegalizeCombinerLegacyPass());
 }
 
 bool MipsPassConfig::addLegalizeMachineIR() {
@@ -291,7 +290,7 @@ bool MipsPassConfig::addLegalizeMachineIR() {
 
 void MipsPassConfig::addPreRegBankSelect() {
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  addPass(createMipsPostLegalizeCombiner(IsOptNone));
+  addPass(createMipsPostLegalizeCombinerLegacyPass(IsOptNone));
 }
 
 bool MipsPassConfig::addRegBankSelect() {

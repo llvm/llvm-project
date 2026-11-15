@@ -310,7 +310,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   // Make sure the result is of the correct type.
   LangAS ExpectedAS = Ty.getAddressSpace();
   llvm::Constant *Addr = GV;
-  if (AS != ExpectedAS) {
+  if (AS != ExpectedAS && D.getTLSKind() == VarDecl::TLS_None) {
     Addr = performAddrSpaceCast(
         GV,
         llvm::PointerType::get(getLLVMContext(),
@@ -1372,8 +1372,7 @@ bool CodeGenFunction::EmitLifetimeStart(llvm::Value *Addr) {
   assert(Addr->getType()->getPointerAddressSpace() ==
              CGM.getDataLayout().getAllocaAddrSpace() &&
          "Pointer should be in alloca address space");
-  llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMLifetimeStartFn(), {Addr});
-  C->setDoesNotThrow();
+  Builder.CreateCall(CGM.getLLVMLifetimeStartFn(), {Addr});
   return true;
 }
 
@@ -1384,15 +1383,13 @@ void CodeGenFunction::EmitLifetimeEnd(llvm::Value *Addr) {
   assert(Addr->getType()->getPointerAddressSpace() ==
              CGM.getDataLayout().getAllocaAddrSpace() &&
          "Pointer should be in alloca address space");
-  llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMLifetimeEndFn(), {Addr});
-  C->setDoesNotThrow();
+  Builder.CreateCall(CGM.getLLVMLifetimeEndFn(), {Addr});
 }
 
 void CodeGenFunction::EmitFakeUse(Address Addr) {
   auto NL = ApplyDebugLocation::CreateEmpty(*this);
   llvm::Value *V = Builder.CreateLoad(Addr, "fake.use");
   llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMFakeUseFn(), {V});
-  C->setDoesNotThrow();
   C->setTailCallKind(llvm::CallInst::TCK_NoTail);
 }
 
@@ -1664,11 +1661,9 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
           const auto *Vars = Bypasses.getBypassedVarsForSource(FG.Source);
           if (!Vars || !Vars->contains(&D))
             continue;
-          if (llvm::Instruction *Term = FG.Block->getTerminator()) {
-            llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
-            Builder.SetInsertPoint(Term);
-            emitZeroOrPatternForAutoVarInit(Ty, D, address);
-          }
+          llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+          Builder.SetInsertPoint(FG.Block->getTerminator());
+          emitZeroOrPatternForAutoVarInit(Ty, D, address);
         }
       } else {
         // A computed goto can jump anywhere, so we can't identify the jumps

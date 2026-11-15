@@ -1828,7 +1828,7 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
     SDValue RHS = N->getOperand(1);
     SDValue True = N->getOperand(2);
     SDValue False = N->getOperand(3);
-    ISD::CondCode NCC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+    ISD::CondCode NCC = N->getOperandCondCode(4);
 
     if (LHS.getOperand(2).getNode() != True.getNode() ||
         LHS.getOperand(3).getNode() != False.getNode() ||
@@ -1840,7 +1840,7 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
     default: return SDValue();
     case ISD::SETNE: return LHS;
     case ISD::SETEQ: {
-      ISD::CondCode LHSCC = cast<CondCodeSDNode>(LHS.getOperand(4))->get();
+      ISD::CondCode LHSCC = LHS.getOperandCondCode(4);
       LHSCC = ISD::getSetCCInverse(LHSCC, LHS.getOperand(0).getValueType());
       if (DCI.isBeforeLegalizeOps() ||
           isCondCodeLegal(LHSCC, LHS.getOperand(0).getSimpleValueType()))

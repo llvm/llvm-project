@@ -38,11 +38,11 @@ define i32 @caller(i32 %idx) {
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[CALL0]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @jt_target_0()
-; CHECK-NEXT:    br [[DOTTAIL:label %.*]]
+; CHECK-NEXT:    br label %[[DOTTAIL:.*]]
 ; CHECK:       [[CALL1]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @jt_target_1()
-; CHECK-NEXT:    br [[DOTTAIL]]
-; CHECK:       [[_TAIL:.*:]]
+; CHECK-NEXT:    br label %[[DOTTAIL]]
+; CHECK:       [[DOTTAIL]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP1]], %[[CALL0]] ], [ [[TMP2]], %[[CALL1]] ]
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -65,11 +65,11 @@ define i32 @caller_only_zero_guids(i32 %idx) {
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[CALL_0]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @jt_target_0()
-; CHECK-NEXT:    br [[DOTTAIL:label %.*]]
+; CHECK-NEXT:    br label %[[DOTTAIL:.*]]
 ; CHECK:       [[CALL_1]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @jt_target_1()
-; CHECK-NEXT:    br [[DOTTAIL]]
-; CHECK:       [[_TAIL:.*:]]
+; CHECK-NEXT:    br label %[[DOTTAIL]]
+; CHECK:       [[DOTTAIL]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP1]], %[[CALL_0]] ], [ [[TMP2]], %[[CALL_1]] ]
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;

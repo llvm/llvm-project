@@ -407,6 +407,19 @@ struct CUFAddConstructor
     auto entryBlock = func.addEntryBlock(builder);
     builder.setInsertionPointToStart(entryBlock);
     mlir::LLVM::LLVMFuncOp initCtor;
+    // Returns the block at the end of the initialization constructor, which
+    // is terminated once all of its code is emitted.
+    auto getInitCtorBlock = [&]() -> mlir::Block * {
+      if (!initCtor) {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToEnd(mod.getBody());
+        initCtor = mlir::LLVM::LLVMFuncOp::create(
+            builder, loc, cudaFortranInitCtorName, funcTy);
+        initCtor.setLinkage(mlir::LLVM::Linkage::Internal);
+        initCtor.addEntryBlock(builder);
+      }
+      return &initCtor.getBody().back();
+    };
 
     if (needAllocatorRegistration) {
       llvm::StringRef allocatorRegistrationFunctionName =
@@ -422,44 +435,6 @@ struct CUFAddConstructor
           mod.getContext(), allocatorRegistrationFunctionName);
       builder.setInsertionPointToStart(entryBlock);
       mlir::LLVM::CallOp::create(builder, loc, funcTy, cufRegisterAllocatorRef);
-    }
-
-    // Device code reads the runtime type information defined here through its
-    // host address, so its pages must be registered with the CUDA runtime.
-    // The section bounds are local to the executable or shared library being
-    // linked, and every unit defining type information registers the same
-    // range.
-    if (cudaManagedTypeInfo && definesSharedTypeInfo(mod)) {
-      auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(ctx);
-      auto getSectionBound = [&](llvm::StringRef prefix) -> mlir::Value {
-        std::string name = (prefix + cudaSharedTypeInfoSection).str();
-        auto bound = mod.lookupSymbol<mlir::LLVM::GlobalOp>(name);
-        if (!bound) {
-          mlir::OpBuilder::InsertionGuard guard(builder);
-          builder.setInsertionPointToEnd(mod.getBody());
-          bound = mlir::LLVM::GlobalOp::create(
-              builder, loc, mlir::IntegerType::get(ctx, 8),
-              /*isConstant=*/false, mlir::LLVM::Linkage::ExternWeak, name,
-              mlir::Attribute{});
-          bound.setVisibility_(mlir::LLVM::Visibility::Hidden);
-        }
-        return mlir::LLVM::AddressOfOp::create(builder, loc, bound);
-      };
-      mlir::Value begin = getSectionBound("__start_");
-      mlir::Value end = getSectionBound("__stop_");
-      auto rangeFuncTy = mlir::LLVM::LLVMFunctionType::get(
-          voidTy, {llvmPtrTy, llvmPtrTy}, /*isVarArg=*/false);
-      llvm::StringRef rangeFuncName = RTNAME_STRING(CUFRegisterHostMemoryRange);
-      if (!mod.lookupSymbol(rangeFuncName)) {
-        mlir::OpBuilder::InsertionGuard guard(builder);
-        builder.setInsertionPointToEnd(mod.getBody());
-        auto rangeFunc = mlir::LLVM::LLVMFuncOp::create(
-            builder, loc, rangeFuncName, rangeFuncTy);
-        rangeFunc.setVisibility(mlir::SymbolTable::Visibility::Private);
-      }
-      mlir::LLVM::CallOp::create(builder, loc, rangeFuncTy,
-                                 mlir::SymbolRefAttr::get(ctx, rangeFuncName),
-                                 mlir::ValueRange{begin, end});
     }
 
     auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName);
@@ -600,11 +575,7 @@ struct CUFAddConstructor
               mlir::LLVM::ZeroOp::create(builder, loc, llvmPtrTy);
           mlir::LLVM::ReturnOp::create(builder, loc, nullHandle);
 
-          builder.setInsertionPointToEnd(mod.getBody());
-          initCtor = mlir::LLVM::LLVMFuncOp::create(
-              builder, loc, cudaFortranInitCtorName, funcTy);
-          initCtor.setLinkage(mlir::LLVM::Linkage::Internal);
-          mlir::Block *initBlock = initCtor.addEntryBlock(builder);
+          mlir::Block *initBlock = getInitCtorBlock();
 
           builder.setInsertionPointToEnd(entryBlock);
           mlir::LLVM::StoreOp::create(
@@ -662,9 +633,55 @@ struct CUFAddConstructor
             mlir::LLVM::BrOp::create(builder, loc, nextBlock);
             builder.setInsertionPointToStart(nextBlock);
           }
-          mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
         }
       }
+    }
+
+    // Device code reads the runtime type information defined here through its
+    // host address, so its pages must be registered with the CUDA runtime.
+    // The section bounds are local to the executable or shared library being
+    // linked, and every unit defining type information registers the same
+    // range. The registration calls the CUDA runtime, which initializes the
+    // module and ignores the managed variables registered afterwards, so it
+    // runs in the initialization constructor.
+    if (cudaManagedTypeInfo && definesSharedTypeInfo(mod)) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToEnd(getInitCtorBlock());
+      auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(ctx);
+      auto getSectionBound = [&](llvm::StringRef prefix) -> mlir::Value {
+        std::string name = (prefix + cudaSharedTypeInfoSection).str();
+        auto bound = mod.lookupSymbol<mlir::LLVM::GlobalOp>(name);
+        if (!bound) {
+          mlir::OpBuilder::InsertionGuard guard(builder);
+          builder.setInsertionPointToEnd(mod.getBody());
+          bound = mlir::LLVM::GlobalOp::create(
+              builder, loc, mlir::IntegerType::get(ctx, 8),
+              /*isConstant=*/false, mlir::LLVM::Linkage::ExternWeak, name,
+              mlir::Attribute{});
+          bound.setVisibility_(mlir::LLVM::Visibility::Hidden);
+        }
+        return mlir::LLVM::AddressOfOp::create(builder, loc, bound);
+      };
+      mlir::Value begin = getSectionBound("__start_");
+      mlir::Value end = getSectionBound("__stop_");
+      auto rangeFuncTy = mlir::LLVM::LLVMFunctionType::get(
+          voidTy, {llvmPtrTy, llvmPtrTy}, /*isVarArg=*/false);
+      llvm::StringRef rangeFuncName = RTNAME_STRING(CUFRegisterHostMemoryRange);
+      if (!mod.lookupSymbol(rangeFuncName)) {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToEnd(mod.getBody());
+        auto rangeFunc = mlir::LLVM::LLVMFuncOp::create(
+            builder, loc, rangeFuncName, rangeFuncTy);
+        rangeFunc.setVisibility(mlir::SymbolTable::Visibility::Private);
+      }
+      mlir::LLVM::CallOp::create(builder, loc, rangeFuncTy,
+                                 mlir::SymbolRefAttr::get(ctx, rangeFuncName),
+                                 mlir::ValueRange{begin, end});
+    }
+    if (initCtor) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToEnd(getInitCtorBlock());
+      mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
     }
     if (emitCudaCompiledMarker) {
       // Keep the sentinel reference alive: an unused non-volatile load would

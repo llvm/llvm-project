@@ -173,6 +173,9 @@ class SPIRVLegalizePointerCastImpl {
     auto *DVT = dyn_cast<FixedVectorType>(ToTy);
     if (SVT && DVT)
       return true;
+    if (SVT && (ToTy->isIntegerTy() || ToTy->isFloatingPointTy()) &&
+        ToTy->getPrimitiveSizeInBits() == SVT->getPrimitiveSizeInBits())
+      return true;
     auto *SAT = dyn_cast<ArrayType>(FromTy);
     if (SAT && DVT) {
       if (SAT->getElementType() == DVT->getElementType())
@@ -448,6 +451,15 @@ class SPIRVLegalizePointerCastImpl {
       buildAssignType(B, ElementType, LI);
       return LI;
     }
+    if (SVT && !DVT) {
+      LoadInst *LI = B.CreateLoad(CurrentTy, GEP);
+      LI->setAlignment(IllegalLoad->getAlign());
+      buildAssignType(B, CurrentTy, LI);
+      Value *Result = B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                                        {ElementType, CurrentTy}, {LI});
+      buildAssignType(B, ElementType, Result);
+      return Result;
+    }
     if (SVT && DVT)
       return loadVectorFromVector(B, SVT, DVT, GEP, IllegalLoad->getAlign());
     if (SAT && DVT && SAT->getElementType() == DVT->getElementType())
@@ -700,7 +712,6 @@ class SPIRVLegalizePointerCastImpl {
       Src =
           B.CreateIntrinsic(Intrinsic::spv_bitcast, {DstType, SrcType}, {Src});
       buildAssignType(B, DstType, Src);
-      SrcType = DstType;
 
       StoreInst *SI = B.CreateStore(Src, Dst);
       SI->setAlignment(Alignment);
@@ -747,6 +758,14 @@ class SPIRVLegalizePointerCastImpl {
 
     if (Src->getType() == CurrentTy) {
       StoreInst *SI = B.CreateStore(Src, GEP);
+      SI->setAlignment(Alignment);
+      return;
+    }
+    if (DVT && !SVT) {
+      Value *Result = B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                                        {CurrentTy, Src->getType()}, {Src});
+      buildAssignType(B, CurrentTy, Result);
+      StoreInst *SI = B.CreateStore(Result, GEP);
       SI->setAlignment(Alignment);
       return;
     }

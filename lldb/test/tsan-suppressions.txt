@@ -1,0 +1,27 @@
+# ThreadSanitizer suppressions for the LLDB test suite. Added suppressions
+# should have a description whether they are a real bug or a false-positive.
+
+# Likely a real race. See issue #232224
+race:lldb_private::Process::PrivateStateThread::IsRunning
+# Same race, but in optimized builds.
+race:lldb_private::Process::ControlPrivateStateThread
+
+# Likely a real race: Socket::IsValid() reads the socket while another thread
+# closes it via Socket::Close().
+# See issue https://github.com/llvm/llvm-project/issues/234147
+race:lldb_private::Socket::Close
+
+# Likely a real race: SBTarget::GetProcess() reads Target::m_process_sp while
+# Target::CreateProcess() replaces it on another thread.
+# See issue: https://github.com/llvm/llvm-project/issues/234148
+race:lldb_private::Target::CreateProcess
+
+# Likely a real race: the IO handler thread reads Debugger::m_io_handler_thread
+# while StartIOHandlerThread() is still assigning it.
+# See issue https://github.com/llvm/llvm-project/issues/234149
+race:lldb_private::Debugger::StartIOHandlerThread
+
+# Likely a real race: Diagnostics::Enabled() is called from a process
+# destructor while Diagnostics::Terminate() resets the instance.
+# See issue https://github.com/llvm/llvm-project/issues/234151
+race:lldb_private::Diagnostics::Terminate

@@ -21,9 +21,16 @@ void AccessPath::dump(llvm::raw_ostream &OS) const {
       OS << "$" << PVD->getNameAsString();
     else if (PB->getImplicitThisParent())
       OS << "$this";
-  } else if (const auto *E = getAsNewAllocation())
-    OS << "NewAllocation at " << E;
-  else
+    else if (const auto *FD = PB->getFieldDecl())
+      OS << "$this." << FD->getNameAsString();
+  } else if (const auto *E = getAsAllocation()) {
+    if (isa<CXXNewExpr>(E))
+      OS << "NewAllocation at " << E;
+    else if (isa<CallExpr>(E))
+      OS << "HeapAllocation at " << E;
+    else
+      llvm_unreachable("unexpected allocation expression");
+  } else
     llvm_unreachable("access path base invalid");
   for (const auto &E : Elements)
     E.dump(OS);
@@ -59,6 +66,20 @@ LoanManager::getOrCreatePlaceholderBase(const CXXMethodDecl *MD) {
 
   void *Mem = LoanAllocator.Allocate<PlaceholderBase>();
   PlaceholderBase *NewPB = new (Mem) PlaceholderBase(MD);
+  PlaceholderBases.insert(NewPB, InsertToken);
+  return NewPB;
+}
+
+const PlaceholderBase *
+LoanManager::getOrCreatePlaceholderBase(const FieldDecl *FD) {
+  llvm::FoldingSetNodeID ID;
+  PlaceholderBase::Profile(ID, FD);
+  llvm::FoldingSetInsertToken InsertToken;
+  if (PlaceholderBase *Existing = PlaceholderBases.lookup(ID, InsertToken))
+    return Existing;
+
+  void *Mem = LoanAllocator.Allocate<PlaceholderBase>();
+  PlaceholderBase *NewPB = new (Mem) PlaceholderBase(FD);
   PlaceholderBases.insert(NewPB, InsertToken);
   return NewPB;
 }

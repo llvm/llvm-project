@@ -220,11 +220,9 @@ define amdgpu_ps double @raw_ptr_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_OFFEN_RTN]].sub0_sub1
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub0
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub1
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY11]]
+  ; CHECK-NEXT:   $vgpr1 = COPY [[COPY12]]
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %ret = call i64 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i64(i64 %val, i64 %cmp, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %cast = bitcast i64 %ret to double
   ret double %cast
@@ -318,11 +316,9 @@ define amdgpu_ps double @raw_ptr_buffer_atomic_cmpswap_i64__sgpr_val__sgpr_cmp__
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY17]].sub0
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[COPY17]].sub1
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY18]], implicit $exec
-  ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_5]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY19]], implicit $exec
-  ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_6]]
-  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY18]]
+  ; CHECK-NEXT:   $vgpr1 = COPY [[COPY19]]
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %ret = call i64 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i64(i64 %val, i64 %cmp, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %cast = bitcast i64 %ret to double
   ret double %cast
@@ -415,11 +411,9 @@ define amdgpu_ps double @raw_ptr_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_OFFEN_RTN]].sub0_sub1
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub0
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub1
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY11]]
+  ; CHECK-NEXT:   $vgpr1 = COPY [[COPY12]]
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %voffset = add i32 %voffset.base, 4095
   %ret = call i64 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i64(i64 %val, i64 %cmp, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %cast = bitcast i64 %ret to double

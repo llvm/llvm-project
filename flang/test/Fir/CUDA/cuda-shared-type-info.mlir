@@ -63,25 +63,34 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
 // CHECK-DAG: fir.global linkonce_odr @_QMmE.dt.t constant : !fir.llvm_ptr<i8> {
 // CHECK-DAG: fir.global @_QMmEXdtXtXhostaddr[[TAG]] <{data_attr = #cuf.cuda<managed>}> : !fir.llvm_ptr<i8> {
 
+// The unit ends its type information with a page-aligned global, so no other
+// data shares the pages registered by the constructor. llvm.used keeps the
+// global, which nothing references.
+// CHECK: llvm.mlir.global internal @__nv_type_info_end_[[TAG]](0 : i8)
+// CHECK-SAME: alignment = 4096
+// CHECK-SAME: section = "__nv_type_info"
+// CHECK: llvm.mlir.global appending @llvm.used()
+// CHECK-SAME: section = "llvm.metadata"
+// CHECK-SAME: !llvm.array<1 x ptr>
+// CHECK: llvm.mlir.addressof @__nv_type_info_end_[[TAG]] : !llvm.ptr
+
 // NODECLARE-NOT: acc.declare
 
-// The constructor registers the pages of the section and the managed pointer,
-// and saves the module handle. A second constructor, which runs after the
-// registration constructors of all the units, initializes the module and then
-// stores the host address of the type descriptor in the managed pointer,
-// unless the runtime left the pointer null.
+// The constructor registers the managed pointer and saves the module handle,
+// without calling the CUDA runtime. A second constructor, which runs after the
+// registration constructors of all the units, initializes the module, stores
+// the host address of the type descriptor in the managed pointer unless the
+// runtime left the pointer null, and registers the pages of the section.
 // CTOR-LABEL: llvm.func internal @__cudaFortranConstructor()
-// CTOR: %[[START:.*]] = llvm.mlir.addressof @__start___nv_type_info : !llvm.ptr
-// CTOR: %[[STOP:.*]] = llvm.mlir.addressof @__stop___nv_type_info : !llvm.ptr
-// CTOR: llvm.call @_FortranACUFRegisterHostMemoryRange(%[[START]], %[[STOP]]) : (!llvm.ptr, !llvm.ptr) -> ()
+// CTOR-NOT: CUFRegisterHostMemoryRange
 // CTOR: %[[MOD:.*]] = cuf.register_module @cuda_device_mod -> !llvm.ptr
 // CTOR: fir.call @_FortranACUFRegisterManagedVariable
 // CTOR-NOT: fir.call @_FortranACUFInitModule
+// CTOR-NOT: CUFRegisterHostMemoryRange
 // CTOR: %[[HANDLEADDR:.*]] = llvm.mlir.addressof @__cudaFortranModuleHandle : !llvm.ptr
 // CTOR: llvm.store %[[MOD]], %[[HANDLEADDR]] : !llvm.ptr, !llvm.ptr
+// CTOR-NOT: CUFRegisterHostMemoryRange
 // CTOR: llvm.return
-// CTOR-DAG: llvm.mlir.global extern_weak hidden @__start___nv_type_info() {{.*}}: i8
-// CTOR-DAG: llvm.mlir.global extern_weak hidden @__stop___nv_type_info() {{.*}}: i8
 // CTOR-DAG: llvm.mlir.global internal @__cudaFortranModuleHandle() {{.*}}: !llvm.ptr
 
 // CTOR-LABEL: llvm.func internal @__cudaFortranInitConstructor()
@@ -100,6 +109,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
 // CTOR: fir.store %[[VAL]] to %[[DEST]] : !fir.ref<!fir.llvm_ptr<i8>>
 // CTOR: llvm.br ^[[NEXT]]
 // CTOR: ^[[NEXT]]:
+// CTOR: %[[START:.*]] = llvm.mlir.addressof @__start___nv_type_info : !llvm.ptr
+// CTOR: %[[STOP:.*]] = llvm.mlir.addressof @__stop___nv_type_info : !llvm.ptr
+// CTOR: llvm.call @_FortranACUFRegisterHostMemoryRange(%[[START]], %[[STOP]]) : (!llvm.ptr, !llvm.ptr) -> ()
 // CTOR: llvm.return
+// CTOR-DAG: llvm.mlir.global extern_weak hidden @__start___nv_type_info() {{.*}}: i8
+// CTOR-DAG: llvm.mlir.global extern_weak hidden @__stop___nv_type_info() {{.*}}: i8
 
 // CTOR: llvm.mlir.global_ctors ctors = [@__cudaFortranConstructor, @__cudaFortranInitConstructor], priorities = [0 : i32, 1 : i32]

@@ -18,9 +18,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Regex.h"
 
 namespace llvm {
 
@@ -33,29 +31,33 @@ class OptimizationRemarkEmitter;
 class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
+class RuntimePointerChecking;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class VPRecipeBuilder;
 struct VFRange;
 
-LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
+struct VPlanTransforms {
+  /// Abort if -vplan-verify-each is set and \p Plan is invalid.
+  LLVM_ABI_FOR_TEST static void verifyIfRequested(VPlan &Plan);
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintBeforeAll;
-LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintAfterAll;
-LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintBeforePasses;
-LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintAfterPasses;
-LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintVectorRegionScope;
+#ifndef NDEBUG
+  LLVM_ABI_FOR_TEST static bool isPrintingRequested(const VPlan &Plan);
+
+  /// Print \p Plan of \p Fn before or after the pass \p NumberedPassName if
+  /// requested.
+  LLVM_ABI_FOR_TEST static void printIfRequested(VPlan &Plan, Function *Fn,
+                                                 StringRef NumberedPassName,
+                                                 bool After);
 #endif
 
-struct VPlanTransforms {
   /// Helper to run a VPlan pass \p Pass on \p VPlan, forwarding extra arguments
   /// to the pass. Performs verification/printing after each VPlan pass if
   /// requested via command line options.
   template <bool EnableVerify = true, typename PassTy, typename... ArgsTy>
   static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
                                 ArgsTy &&...Args) {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifndef NDEBUG
     static DenseMap<std::pair<Function *, StringRef /* Pass */>, unsigned>
         PassCounter;
     Function *Fn = Plan.getScalarHeader()->getIRBasicBlock()->getParent();
@@ -64,8 +66,7 @@ struct VPlanTransforms {
     unsigned Instance;
     std::string NumberedPassName;
 
-    if (VPlanPrintBeforeAll || VPlanPrintAfterAll ||
-        !VPlanPrintBeforePasses.empty() || !VPlanPrintAfterPasses.empty()) {
+    if (isPrintingRequested(Plan)) {
       Instance = ++PassCounter[{Fn, PassName}];
 
       NumberedPassName = Instance == 1
@@ -73,37 +74,17 @@ struct VPlanTransforms {
                              : (PassName + "@" + Twine(Instance)).str();
     }
 
-    auto PrintPlan = [&](StringRef BeforeOrAfterStr) {
-      dbgs() << "VPlan for loop in '" << Fn->getName() << "' "
-             << BeforeOrAfterStr << " " << NumberedPassName << '\n';
-      if (VPlanPrintVectorRegionScope && Plan.getVectorLoopRegion())
-        Plan.getVectorLoopRegion()->print(dbgs());
-      else
-        dbgs() << Plan << '\n';
-    };
-
-    auto MatchesPassListOption = [&](const cl::list<std::string> &ListOpt) {
-      return (ListOpt.getNumOccurrences() > 0 &&
-              any_of(ListOpt, [&](StringRef Entry) {
-                return Regex(Entry).match(NumberedPassName);
-              }));
-    };
-
-    if (VPlanPrintBeforeAll || MatchesPassListOption(VPlanPrintBeforePasses))
-      PrintPlan("before");
+    printIfRequested(Plan, Fn, NumberedPassName, /*After=*/false);
 #endif
 
     scope_exit PostTransformActions{[&]() {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifndef NDEBUG
       // Make sure to print before verification, so that output is more useful
       // in case of failures:
-      if (VPlanPrintAfterAll || MatchesPassListOption(VPlanPrintAfterPasses))
-        PrintPlan("after");
+      printIfRequested(Plan, Fn, NumberedPassName, /*After=*/true);
 #endif
-      if (VerifyEachVPlan && EnableVerify) {
-        if (!verifyVPlanIsValid(Plan))
-          report_fatal_error("Broken VPlan found, compilation aborted!");
-      }
+      if (EnableVerify)
+        verifyIfRequested(Plan);
     }};
 
     return std::forward<PassTy>(Pass)(Plan, std::forward<ArgsTy>(Args)...);
@@ -175,6 +156,8 @@ struct VPlanTransforms {
       OptimizationRemarkEmitter *ORE, const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
+      const MapVector<PHINode *, ConditionalInductionDescriptor>
+          &ConditionalInductions,
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
       const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
 
@@ -233,19 +216,25 @@ struct VPlanTransforms {
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
-  /// Generate \p Checks as recipes and attach the check block to \p Plan.
+  /// Generate the memory runtime checks of \p RtPtrChecking for \p TheLoop as
+  /// recipes and attach the check block to \p Plan. \p VF and \p UF are used
+  /// to compute the thresholds of difference checks.
   static void attachMemoryChecks(VPlan &Plan,
-                                 ArrayRef<RuntimePointerCheck> Checks,
-                                 ScalarEvolution &SE, DebugLoc DL,
+                                 const RuntimePointerChecking &RtPtrChecking,
+                                 const Loop *TheLoop, ScalarEvolution &SE,
+                                 ElementCount VF, unsigned UF,
                                  bool AddBranchWeights);
 
   /// Model the blocks the executed \p MainPlan generated for the main vector
   /// loop in \p EpiPlan during epilogue vectorization, wrapping each in a
-  /// VPIRBasicBlock, with \p EnteredFrom the block \p EpiPlan is entered from.
-  /// Edges from blocks bypassing both vector loops are redirected to \p
-  /// EpiPlan's scalar preheader, all others are mirrored.
-  static void modelGeneratedMainLoopBlocks(VPlan &EpiPlan, VPlan &MainPlan,
-                                           VPIRBasicBlock *EnteredFrom);
+  /// VPIRBasicBlock. Bypass edges are redirected to \p EpiPlan's scalar
+  /// preheader, or its vector preheader for \p MainCheck, which only bypasses
+  /// the main vector loop. The main vector loop's back-edge is not modeled.
+  /// Returns the block wrapping \p MainPlan's scalar
+  /// preheader, which becomes the epilogue iteration check.
+  static VPIRBasicBlock *modelGeneratedMainLoopBlocks(VPlan &EpiPlan,
+                                                      VPlan &MainPlan,
+                                                      VPBasicBlock *MainCheck);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
@@ -276,6 +265,17 @@ struct VPlanTransforms {
   /// was unsuccessful.
   static bool handleFindLastReductions(VPlan &Plan);
 
+  /// Widens compressing memory loads/stores. Loads/stores where the pointer is
+  /// derived from a conditional induction PHI are replaced with expandloads or
+  /// compressstores respectively. The backedge value of the conditional
+  /// induction PHI is updated to increment by the number of active lanes of
+  /// the block mask.
+  /// Returns false if any memory operation could not be updated (e.g., due to
+  /// having a mask that does not match the PHI).
+  static bool widenCompressingPatterns(VPlan &Plan,
+                                       VPRecipeBuilder &RecipeBuilder,
+                                       ScalarEvolution &SE);
+
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
 
@@ -284,7 +284,7 @@ struct VPlanTransforms {
 
   /// Replace replicating VPReplicateRecipe, VPScalarIVStepsRecipe and
   /// VPInstruction in \p Plan with \p VF single-scalar recipes, packed into
-  /// Build(Struct)Vectors for vector users. Replicate regions are dissolved by
+  /// BuildVectors for vector users. Replicate regions are dissolved by
   /// replicating their blocks and their recipes \p VF times.
   /// TODO: Also dissolve replicate regions with live outs.
   static void replicateByVF(VPlan &Plan, ElementCount VF);
@@ -457,7 +457,7 @@ struct VPlanTransforms {
   static bool removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
 
   /// Perform common-subexpression-elimination on \p Plan.
-  static void cse(VPlan &Plan);
+  static void cse(VPlan &Plan, const VPDominatorTree &VPDT);
 
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
@@ -503,11 +503,6 @@ struct VPlanTransforms {
       bool RequiresScalarEpilogue, VPValue *Step,
       std::optional<uint64_t> MaxRuntimeStep = std::nullopt);
 
-  /// Materialize the backedge-taken count to be computed explicitly using
-  /// VPInstructions.
-  static void materializeBackedgeTakenCount(VPlan &Plan,
-                                            VPBasicBlock *VectorPH);
-
   /// Add explicit Unpack recipes to extract scalars from vectors as needed.
   static void materializeUnpacks(VPlan &Plan);
 
@@ -519,17 +514,22 @@ struct VPlanTransforms {
   /// Attaches the alias-mask to the existing header-mask.
   static void attachAliasMaskToHeaderMask(VPlan &Plan);
 
-  /// Materializes within the \p AliasCheckVPBB block. Updates the header mask
-  /// of the loop to use the alias mask. Returns the clamped VF.
+  /// Materializes the alias mask within \p AliasCheckVPBB, which must be
+  /// dominated by the SCEV checks, as the pointer bounds of \p DiffChecks are
+  /// only valid if the SCEV predicates hold. Updates the header mask of the
+  /// loop to use the alias mask. Returns the clamped VF.
   static VPValue *materializeAliasMask(VPlan &Plan,
                                        VPBasicBlock *AliasCheckVPBB,
-                                       ArrayRef<PointerDiffInfo> DiffChecks);
+                                       ArrayRef<PointerDiffInfo> DiffChecks,
+                                       ScalarEvolution &SE);
 
   /// Materializes the alias mask within a check block before the loop. The
   /// vector loop will only be entered if the clamped VF from the alias mask
   /// is not scalar.
-  static void materializeAliasMaskCheckBlock(
-      VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights);
+  static void
+  materializeAliasMaskCheckBlock(VPlan &Plan,
+                                 ArrayRef<PointerDiffInfo> DiffChecks,
+                                 ScalarEvolution &SE, bool HasBranchWeights);
 
   /// Expand VPExpandSCEVRecipes in \p Plan's entry block to VPInstructions.
   /// Recipes wrapping a SCEVAddRecExpr are kept for later IR-level expansion.

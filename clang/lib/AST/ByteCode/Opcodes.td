@@ -267,9 +267,6 @@ def Destroy : Opcode {
   let Args = [ArgUint32];
   let HasCustomEval = 1;
 }
-def InitScope : SuccessOpcode {
-  let Args = [ArgUint32];
-}
 
 def GetLocalEnabled : SuccessOpcode {
   let Args = [ArgUint32];
@@ -968,6 +965,10 @@ def InvalidDeclRef : Opcode {
 def SizelessVectorElementSize : Opcode;
 def InvalidShuffleVectorIndex : Opcode {
   let Args = [ArgUint32];
+}
+
+def InvalidTargetLabel : Opcode {
+  let Args = [ArgBool];
 }
 
 def Assume : Opcode;

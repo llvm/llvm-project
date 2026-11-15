@@ -537,6 +537,56 @@ bool isGetterOfUniquePtr(const CXXMethodDecl *M) {
   return false;
 }
 
+// The object lives until the program exits but a pointer stored in it doesn't
+// keep its pointee alive. A smart pointer keeps its pointee alive only if it
+// can't be reassigned or swapped.
+static bool isImmortalStorageType(QualType T) {
+  if (T.isNull() || T->isPointerType() || T->isReferenceType() ||
+      T->isObjCObjectPointerType())
+    return false;
+  auto Name = safeGetName(T->getAsCXXRecordDecl());
+  if (isSmartPtrClass(Name) || isOwnerPtr(Name))
+    return T.isConstQualified();
+  return true;
+}
+
+/// \returns true if \p R is NeverDestroyed or LazyNeverDestroyed which stores
+/// a non-pointer type.
+static bool isNeverDestroyedOfObject(const CXXRecordDecl *R) {
+  auto *Spec = dyn_cast_or_null<ClassTemplateSpecializationDecl>(R);
+  if (!Spec)
+    return false;
+  auto Name = safeGetName(Spec);
+  if (Name != "NeverDestroyed" && Name != "LazyNeverDestroyed")
+    return false;
+  const auto &Args = Spec->getTemplateArgs();
+  return Args.size() && Args[0].getKind() == TemplateArgument::Type &&
+         isImmortalStorageType(Args[0].getAsType());
+}
+
+bool isAccessorOfNeverDestroyed(const CXXMethodDecl *M) {
+  assert(M);
+  if (!isNeverDestroyedOfObject(M->getParent()))
+    return false;
+  if (safeGetName(M) == "get" || M->getOverloadedOperator() == OO_Arrow)
+    return true;
+  if (auto *Conversion = dyn_cast<CXXConversionDecl>(M)) {
+    const Type *T = Conversion->getConversionType().getTypePtrOrNull();
+    return T && (T->isPointerType() || T->isReferenceType());
+  }
+  return false;
+}
+
+bool isImmortalVar(const VarDecl *V) {
+  assert(V);
+  if (!V->hasGlobalStorage())
+    return false;
+  QualType T = V->getType();
+  if (V->hasAttr<NoDestroyAttr>() && isImmortalStorageType(T))
+    return true;
+  return isNeverDestroyedOfObject(T->getAsCXXRecordDecl());
+}
+
 bool isRefCounted(const CXXRecordDecl *R) {
   assert(R);
   if (auto *TmplR = R->getTemplateInstantiationPattern()) {
@@ -780,6 +830,34 @@ class TrivialFunctionAnalysisVisitor
     return false; // Otherwise it's likely not trivial.
   }
 
+  // The body of an implicit or =default destructor says nothing about what it
+  // does: the calls to the base and member destructors are materialised at
+  // codegen, so the AST holds either no body at all (when the destructor is
+  // never odr-used) or an empty one. Reading the body therefore flips between
+  // blaming every such destructor and clearing every such destructor; ask the
+  // subobjects instead. Closure types depend on this -- their destructor is
+  // always implicit.
+  bool CanTriviallyRunImplicitDtor(const CXXDestructorDecl *Dtor) {
+    const CXXRecordDecl *Cls = Dtor->getParent();
+    if (!Cls->hasDefinition())
+      return false;
+    if (Cls->hasTrivialDestructor())
+      return true;
+    for (const FieldDecl *F : Cls->fields()) {
+      if (!CanTriviallyDestruct(F->getType()))
+        return false;
+    }
+    for (const CXXBaseSpecifier &B : Cls->bases()) {
+      if (!CanTriviallyDestruct(B.getType()))
+        return false;
+    }
+    for (const CXXBaseSpecifier &B : Cls->vbases()) {
+      if (!CanTriviallyDestruct(B.getType()))
+        return false;
+    }
+    return true;
+  }
+
   bool CanTriviallyConstruct(QualType Ty) {
     if (Ty.isNull())
       return false;
@@ -803,7 +881,7 @@ class TrivialFunctionAnalysisVisitor
   template <typename CacheTy, typename IsTrivialTypeFn>
   bool hasNonTrivialField(const CXXRecordDecl *Cls,
                           const FieldDecl **OffendingField, CacheTy &Cache,
-                          IsTrivialTypeFn IsTrivialType) {
+                          bool IncludeBases, IsTrivialTypeFn IsTrivialType) {
     auto CacheIt = Cache.find(Cls);
     if (CacheIt != Cache.end() && !OffendingField)
       return CacheIt->second;
@@ -823,7 +901,7 @@ class TrivialFunctionAnalysisVisitor
       if (HasNonTrivialField(Cls))
         return true;
 
-      if (!Cls->hasDefinition())
+      if (!IncludeBases || !Cls->hasDefinition())
         return false;
 
       CXXBasePaths Paths;
@@ -923,11 +1001,11 @@ public:
             return false;
         }
       }
-      // An implicit or =default special member runs no user code when it is
-      // trivial in the C++ standard sense, so it cannot delete. Such a
-      // member's synthesized body is typically absent from the AST until
-      // codegen materialises it, which the generic null-body check below
-      // would otherwise conservatively classify as non-trivial.
+      // An implicit or =default special member has no body of its own to read.
+      // A constructor is covered by the inits() walk above; a destructor has
+      // to be decided from its subobjects. The synthesized body is in any case
+      // absent from the AST until codegen materialises it, which the generic
+      // null-body check below would otherwise call non-trivial.
       if (MethodDecl && !MethodDecl->isUserProvided()) {
         if (CtorDecl) {
           const CXXRecordDecl *RD = CtorDecl->getParent();
@@ -939,8 +1017,8 @@ public:
                RD->hasTrivialMoveConstructor()))
             return true;
         }
-        if (DtorDecl && DtorDecl->getParent()->hasTrivialDestructor())
-          return true;
+        if (DtorDecl)
+          return CanTriviallyRunImplicitDtor(DtorDecl);
       }
       const Stmt *Body = D->getBody();
       if (!Body)
@@ -956,8 +1034,11 @@ public:
 
   const FieldDecl *FieldWithNonTrivialCtor(const CXXRecordDecl *Cls) {
     const FieldDecl *OffendingField = nullptr;
+    // Base class subobjects are constructed by the base class constructors,
+    // which appear in the constructor's inits() and are checked there, so
+    // only look at the fields declared in Cls itself.
     hasNonTrivialField(
-        Cls, &OffendingField, FieldCtorCache,
+        Cls, &OffendingField, FieldCtorCache, /*IncludeBases=*/false,
         [&](const QualType Ty) { return CanTriviallyConstruct(Ty); });
     return OffendingField;
   }
@@ -965,7 +1046,7 @@ public:
   const FieldDecl *FieldWithNonTrivialDtor(const CXXRecordDecl *Cls) {
     const FieldDecl *OffendingField = nullptr;
     hasNonTrivialField(
-        Cls, &OffendingField, FieldDtorCache,
+        Cls, &OffendingField, FieldDtorCache, /*IncludeBases=*/true,
         [&](const QualType Ty) { return CanTriviallyDestruct(Ty); });
     return OffendingField;
   }
@@ -1272,6 +1353,13 @@ public:
   }
 
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *VMT) {
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(VMT->getSubExpr());
+        ICE && ICE->getCastKind() == CK_NoOp &&
+        ICE->getType().isConstQualified()) {
+      if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(ICE->getSubExpr());
+          BTE && isNullSmartPtr(BTE->getSubExpr()))
+        return Visit(BTE->getSubExpr());
+    }
     return Visit(VMT->getSubExpr());
   }
 
@@ -1330,11 +1418,48 @@ public:
 
   bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE) {
     if (auto *Temp = BTE->getTemporary()) {
-      if (!isNullSmartPtr(BTE->getSubExpr()) &&
-          !IsFunctionTrivial(Temp->getDestructor()))
+      if (!IsFunctionTrivial(Temp->getDestructor()))
         return false;
     }
     return Visit(BTE->getSubExpr());
+  }
+
+  bool VisitLambdaExpr(const LambdaExpr *LE) {
+    // Creating the closure object runs each capture's initializer here.
+    for (const Expr *Init : LE->capture_inits()) {
+      if (Init && !Visit(Init))
+        return false;
+    }
+
+    // The body does not run at this point, but a closure that could destruct
+    // an object is not safe to hand out from a nodelete function either, so
+    // check it here rather than relying on finding the call.
+    if (LE->isGenericLambda()) {
+      // A generic lambda's own body is a dependent pattern whose calls are
+      // unresolved. Only its instantiations describe code that runs; one that
+      // is never instantiated cannot destruct anything.
+      auto *CallOpTemplate =
+          LE->getLambdaClass()->getDependentLambdaCallOperator();
+      if (!CallOpTemplate)
+        return true;
+      for (const FunctionDecl *Spec : CallOpTemplate->specializations()) {
+        if (const Stmt *Body = Spec->getBody()) {
+          if (!Visit(Body))
+            return false;
+        }
+      }
+      return true;
+    }
+
+    const auto *CallOp = LE->getCallOperator();
+    if (!CallOp)
+      return true;
+    // The body is written inside the function being analyzed, so visit it
+    // directly: that keeps the blame on the offending statement itself instead
+    // of on the whole lambda. The parameters are destructed by whoever calls
+    // the closure, and that call site is checked separately.
+    const Stmt *Body = CallOp->getBody();
+    return !Body || Visit(Body);
   }
 
   bool VisitArrayInitLoopExpr(const ArrayInitLoopExpr *AILE) {

@@ -20,7 +20,7 @@
 #include "CIRGenFunction.h"
 
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -31,13 +31,38 @@ namespace {
 class ConditionalEvaluationFinder
     : public RecursiveASTVisitor<ConditionalEvaluationFinder> {
   bool foundConditional = false;
+  bool inResumeExpr = false;
+
+  bool traverseSuspendExpr(CoroutineSuspendExpr *e) {
+    return TraverseStmt(e->getCommonExpr()) && traverseResumeExpr(e);
+  }
+
+  /// Traverse the resume expression of \p e, except for the binding of its
+  /// result, which emitSuspendExpression destroys after the cir.await.
+  bool traverseResumeExpr(CoroutineSuspendExpr *e) {
+    Expr *resume = e->getResumeExpr();
+    if (auto *bind = dyn_cast_if_present<CXXBindTemporaryExpr>(resume))
+      resume = bind->getSubExpr();
+    llvm::SaveAndRestore inResume(inResumeExpr, true);
+    return TraverseStmt(resume);
+  }
 
 public:
+  static bool needsCleanupScope(const Stmt *s) {
+    ConditionalEvaluationFinder finder;
+    finder.TraverseStmt(const_cast<Stmt *>(s));
+    return finder.foundConditional;
+  }
+
+  static bool resumeExprDefersCleanups(const CoroutineSuspendExpr &s) {
+    ConditionalEvaluationFinder finder;
+    finder.traverseResumeExpr(const_cast<CoroutineSuspendExpr *>(&s));
+    return finder.foundConditional;
+  }
+
   // Default arguments and default member initializers can contain conditional
   // temporaries whose cleanups belong to the enclosing full-expression.
   bool shouldVisitImplicitCode() const { return true; }
-
-  bool found() const { return foundConditional; }
 
   bool VisitAbstractConditionalOperator(AbstractConditionalOperator *) {
     foundConditional = true;
@@ -74,19 +99,31 @@ public:
   bool TraverseBlockExpr(BlockExpr *) { return true; }
   bool TraverseStmtExpr(StmtExpr *) { return true; }
 
-  // Skip over the implicit call to await_resume(). This requires cleanup
-  // scopes for await full-expressions which don't exist yet.
-  bool TraverseCoawaitExpr(CoawaitExpr *e) {
-    assert(!cir::MissingFeatures::coroAwaitFullExprCleanups());
-    return TraverseStmt(e->getOperand());
+  bool TraverseGCCAsmStmt(GCCAsmStmt *s) {
+    for (Stmt *operand : s->children())
+      if (!TraverseStmt(operand))
+        return false;
+    return true;
   }
-  bool TraverseDependentCoawaitExpr(DependentCoawaitExpr *e) {
-    assert(!cir::MissingFeatures::coroAwaitFullExprCleanups());
-    return TraverseStmt(e->getOperand());
+
+  // Traverse the common and resume expressions, whose temporaries belong to
+  // the enclosing full-expression. Ready and suspend have their own cleanup
+  // boundaries. The resume result's cleanup is handled separately.
+  bool TraverseCoawaitExpr(CoawaitExpr *e) { return traverseSuspendExpr(e); }
+  bool TraverseCoyieldExpr(CoyieldExpr *e) { return traverseSuspendExpr(e); }
+
+  bool VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *) {
+    if (!inResumeExpr)
+      return true;
+    foundConditional = true;
+    return false;
   }
-  bool TraverseCoyieldExpr(CoyieldExpr *e) {
-    assert(!cir::MissingFeatures::coroAwaitFullExprCleanups());
-    return TraverseStmt(e->getOperand());
+
+  bool VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *e) {
+    if (!inResumeExpr || !e->getType().isDestructedType())
+      return true;
+    foundConditional = true;
+    return false;
   }
 };
 } // namespace
@@ -94,6 +131,10 @@ public:
 //===----------------------------------------------------------------------===//
 // CIRGenFunction cleanup related
 //===----------------------------------------------------------------------===//
+
+bool CIRGenFunction::resumeExprDefersCleanups(const CoroutineSuspendExpr &s) {
+  return ConditionalEvaluationFinder::resumeExprDefersCleanups(s);
+}
 
 /// Emits all the code to cause the given temporary to be cleaned up.
 void CIRGenFunction::emitCXXTemporary(const CXXTemporary *temporary,
@@ -143,16 +184,16 @@ void CIRGenFunction::initFullExprCleanupWithFlag(Address activeFlag) {
 }
 
 CIRGenFunction::FullExprCleanupScope::FullExprCleanupScope(CIRGenFunction &cgf,
-                                                           const Expr *subExpr)
+                                                           const Stmt *s)
     : cgf(cgf), cleanups(cgf), scope(nullptr),
       oldFullExprCleanupScope(cgf.currentFullExprCleanupScope),
+      oldOutermostConditional(cgf.outermostConditional),
+      oldHiddenOutermostConditional(cgf.hiddenOutermostConditional),
       deferredCleanupStackSize(cgf.deferredConditionalCleanupStack.size()),
       conditionalScopeDepth(cgf.conditionalCleanupScopes.size()) {
 
-  assert(subExpr && "ExprWithCleanups always has a sub-expression");
-  ConditionalEvaluationFinder finder;
-  finder.TraverseStmt(const_cast<Expr *>(subExpr));
-  if (finder.found()) {
+  assert(s && "expected an AST root for a cleanup boundary");
+  if (ConditionalEvaluationFinder::needsCleanupScope(s)) {
     mlir::Location loc = cgf.builder.getUnknownLoc();
     cir::CleanupKind cleanupKind = cgf.getLangOpts().Exceptions
                                        ? cir::CleanupKind::All
@@ -169,6 +210,13 @@ CIRGenFunction::FullExprCleanupScope::FullExprCleanupScope(CIRGenFunction &cgf,
   // Conditional cleanup scopes are only opened while a full-expression scope
   // is active to close them.
   cgf.currentFullExprCleanupScope = scope;
+
+  // This full-expression owns its cleanups, even inside a conditional branch.
+  // Hide the outer conditional to keep those cleanups here, but remember it
+  // for lifetime-extended temporaries whose cleanups belong to an outer scope.
+  if (cgf.outermostConditional)
+    cgf.hiddenOutermostConditional = cgf.outermostConditional;
+  cgf.outermostConditional = nullptr;
 }
 
 /// If the alloca that backs \p addr is currently nested inside the body
@@ -303,6 +351,8 @@ void CIRGenFunction::FullExprCleanupScope::exit(
   exited = true;
 
   cgf.currentFullExprCleanupScope = oldFullExprCleanupScope;
+  cgf.outermostConditional = oldOutermostConditional;
+  cgf.hiddenOutermostConditional = oldHiddenOutermostConditional;
 
   size_t oldSize = deferredCleanupStackSize;
 
@@ -557,8 +607,12 @@ static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
                                           mlir::Operation *dominatingIP) {
   EHCleanupScope &scope = cast<EHCleanupScope>(*cgf.ehStack.find(c));
 
-  assert((scope.isNormalCleanup() || scope.isEHCleanup()) &&
-         "cleanup block is neither normal nor EH?");
+  // An EH-only cleanup has both flags clear when pushCleanup dropped
+  // the EH flag. That happens when exceptions are disabled, and when
+  // the innermost EH scope is a terminate scope. The cleanup never
+  // runs, so there is no active flag to clear.
+  if (!scope.isNormalCleanup() && !scope.isEHCleanup())
+    return;
 
   scope.setTestFlagInNormalCleanup(scope.isNormalCleanup());
   scope.setTestFlagInEHCleanup(scope.isEHCleanup());
@@ -595,7 +649,16 @@ static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
   builder.createFlagStore(loc, false, var.getPointer());
 }
 
-/// Deactive a cleanup that was created in an active state.
+static bool enclosesOpenConditionalCleanupScope(CIRGenFunction &cgf,
+                                                EHCleanupScope &scope) {
+  cir::CleanupScopeOp op = scope.getCleanupScopeOp();
+  return op &&
+         llvm::any_of(cgf.conditionalCleanupScopes, [&](const auto &condScope) {
+           return op->isProperAncestor(condScope.scope);
+         });
+}
+
+/// Deactivate a cleanup that was created in an active state.
 void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
                                             mlir::Operation *dominatingIP) {
   assert(c != ehStack.stable_end() && "deactivating bottom of stack?");
@@ -603,9 +666,11 @@ void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
   assert(scope.isActive() && "double deactivation");
 
   // If it's the top of the stack, just pop it, but do so only if it belongs
-  // to the current RunCleanupsScope.
+  // to the current RunCleanupsScope. If a conditional opened a cleanup scope
+  // keep it open till the end of the full-expression.
   if (c == ehStack.stable_begin() &&
-      currentCleanupStackDepth.strictlyEncloses(c)) {
+      currentCleanupStackDepth.strictlyEncloses(c) &&
+      !enclosesOpenConditionalCleanupScope(*this, scope)) {
     popCleanupBlock(/*forDeactivation=*/true);
     return;
   }
@@ -833,10 +898,11 @@ void CIRGenFunction::emitCapturedCleanups(EHScopeStack::stable_iterator depth,
     if (scope.isEHCleanup())
       cleanupFlags.setIsEHCleanupKind();
 
-    // A captured cleanup may be guarded by an active flag. A loop condition
-    // variable's destructor cleanup has one that is false while its
+    // A captured cleanup may be guarded by an active flag. The destructor
+    // cleanups of a loop condition variable and of the temporaries that its
+    // initializer lifetime-extends have one that is false while its
     // initializer runs, so a throwing initializer does not destroy the
-    // not-yet-constructed variable. The lifetime-end cleanup has no flag
+    // not-yet-constructed variables. The lifetime-end cleanup has no flag
     // because its lifetime starts before initialization. For a loop, each
     // emission serves both the normal per-iteration exit and the EH unwind
     // path.

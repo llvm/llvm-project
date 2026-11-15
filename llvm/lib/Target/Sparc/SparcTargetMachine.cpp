@@ -34,7 +34,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeSparcAsmPrinterPass(PR);
   initializeSparcDAGToDAGISelLegacyPass(PR);
-  initializeErrataWorkaroundPass(PR);
+  initializeSparcErrataWorkaroundLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -81,7 +81,8 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
           getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM),
                                      TT.isSPARC64(), JIT),
           OL),
-      CLOpts(SparcOptions::Global),
+      CLOpts(cl::LibraryOptionsContext::get<SparcOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<SparcELFTargetObjectFile>()) {
   initAsmInfo();
 }
@@ -109,7 +110,7 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
   if (softFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 
-  auto &I = SubtargetMap[CPU + FS];
+  auto &I = SubtargetMap[CPU + TuneCPU + FS];
   if (!I)
     I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, FS, *this);
   return I.get();
@@ -155,7 +156,8 @@ void SparcPassConfig::addIRPasses() {
 }
 
 bool SparcPassConfig::addInstSelector() {
-  addPass(createSparcISelDag(getSparcTargetMachine()));
+  addPass(createSparcDAGToDAGISelLegacyPass(getSparcTargetMachine(),
+                                            getOptLevel()));
   return false;
 }
 
@@ -163,11 +165,8 @@ void SparcPassConfig::addPreEmitPass(){
   if (getSparcTargetMachine().getCLOpts().enable_branch_relax)
     addPass(&BranchRelaxationPassID);
 
-  addPass(createSparcDelaySlotFillerPass());
-  addPass(new InsertNOPLoad());
-  addPass(new DetectRoundChange());
-  addPass(new FixAllFDIVSQRT());
-  addPass(new ErrataWorkaround());
+  addPass(createSparcDelaySlotFillerLegacyPass());
+  addPass(new SparcErrataWorkaroundLegacy());
 }
 
 void SparcV8TargetMachine::anchor() { }

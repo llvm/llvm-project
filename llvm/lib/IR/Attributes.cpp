@@ -325,14 +325,6 @@ StringRef Attribute::getNameFromAttrKind(Attribute::AttrKind AttrKind) {
   }
 }
 
-bool Attribute::isExistingAttribute(StringRef Name) {
-  return StringSwitch<bool>(Name)
-#define GET_ATTR_NAMES
-#define ATTRIBUTE_ALL(ENUM_NAME, DISPLAY_NAME) .Case(#DISPLAY_NAME, true)
-#include "llvm/IR/Attributes.inc"
-      .Default(false);
-}
-
 //===----------------------------------------------------------------------===//
 // Attribute Accessor Methods
 //===----------------------------------------------------------------------===//
@@ -968,6 +960,12 @@ bool AttributeImpl::operator<(const AttributeImpl &AI) const {
 // AttributeSet Definition
 //===----------------------------------------------------------------------===//
 
+AttributeSet::AttributeSet(AttributeSetNode *ASN) : SetNode(ASN) {}
+
+AttributeSetNode *AttributeSet::getNode() const {
+  return static_cast<AttributeSetNode *>(SetNode);
+}
+
 AttributeSet AttributeSet::get(LLVMContext &C, const AttrBuilder &B) {
   return AttributeSet(AttributeSetNode::get(C, B));
 }
@@ -1175,120 +1173,119 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
 }
 
 unsigned AttributeSet::getNumAttributes() const {
-  return SetNode ? SetNode->getNumAttributes() : 0;
+  return SetNode ? getNode()->getNumAttributes() : 0;
 }
 
-bool AttributeSet::hasAttribute(Attribute::AttrKind Kind) const {
-  return SetNode ? SetNode->hasAttribute(Kind) : false;
-}
 
 bool AttributeSet::hasAttribute(StringRef Kind) const {
-  return SetNode ? SetNode->hasAttribute(Kind) : false;
+  return SetNode ? getNode()->hasAttribute(Kind) : false;
 }
 
 Attribute AttributeSet::getAttribute(Attribute::AttrKind Kind) const {
-  return SetNode ? SetNode->getAttribute(Kind) : Attribute();
+  return SetNode ? getNode()->getAttribute(Kind) : Attribute();
 }
 
 Attribute AttributeSet::getAttribute(StringRef Kind) const {
-  return SetNode ? SetNode->getAttribute(Kind) : Attribute();
+  return SetNode ? getNode()->getAttribute(Kind) : Attribute();
 }
 
 MaybeAlign AttributeSet::getAlignment() const {
-  return SetNode ? SetNode->getAlignment() : std::nullopt;
+  return SetNode ? getNode()->getAlignment() : std::nullopt;
 }
 
 MaybeAlign AttributeSet::getStackAlignment() const {
-  return SetNode ? SetNode->getStackAlignment() : std::nullopt;
+  return SetNode ? getNode()->getStackAlignment() : std::nullopt;
 }
 
 uint64_t AttributeSet::getDereferenceableBytes() const {
-  return SetNode ? SetNode->getDereferenceableBytes() : 0;
+  return SetNode ? getNode()->getDereferenceableBytes() : 0;
 }
 
 DeadOnReturnInfo AttributeSet::getDeadOnReturnInfo() const {
-  return SetNode ? SetNode->getDeadOnReturnInfo() : DeadOnReturnInfo(0);
+  return SetNode ? getNode()->getDeadOnReturnInfo() : DeadOnReturnInfo(0);
 }
 
 uint64_t AttributeSet::getDereferenceableOrNullBytes() const {
-  return SetNode ? SetNode->getDereferenceableOrNullBytes() : 0;
+  return SetNode ? getNode()->getDereferenceableOrNullBytes() : 0;
 }
 
 Type *AttributeSet::getByRefType() const {
-  return SetNode ? SetNode->getAttributeType(Attribute::ByRef) : nullptr;
+  return SetNode ? getNode()->getAttributeType(Attribute::ByRef) : nullptr;
 }
 
 Type *AttributeSet::getByValType() const {
-  return SetNode ? SetNode->getAttributeType(Attribute::ByVal) : nullptr;
+  return SetNode ? getNode()->getAttributeType(Attribute::ByVal) : nullptr;
 }
 
 Type *AttributeSet::getStructRetType() const {
-  return SetNode ? SetNode->getAttributeType(Attribute::StructRet) : nullptr;
+  return SetNode ? getNode()->getAttributeType(Attribute::StructRet) : nullptr;
 }
 
 Type *AttributeSet::getPreallocatedType() const {
-  return SetNode ? SetNode->getAttributeType(Attribute::Preallocated) : nullptr;
+  return SetNode ? getNode()->getAttributeType(Attribute::Preallocated)
+                 : nullptr;
 }
 
 Type *AttributeSet::getInAllocaType() const {
-  return SetNode ? SetNode->getAttributeType(Attribute::InAlloca) : nullptr;
+  return SetNode ? getNode()->getAttributeType(Attribute::InAlloca) : nullptr;
 }
 
 Type *AttributeSet::getElementType() const {
-  return SetNode ? SetNode->getAttributeType(Attribute::ElementType) : nullptr;
+  return SetNode ? getNode()->getAttributeType(Attribute::ElementType)
+                 : nullptr;
 }
 
 std::optional<std::pair<unsigned, std::optional<unsigned>>>
 AttributeSet::getAllocSizeArgs() const {
   if (SetNode)
-    return SetNode->getAllocSizeArgs();
+    return getNode()->getAllocSizeArgs();
   return std::nullopt;
 }
 
 unsigned AttributeSet::getVScaleRangeMin() const {
-  return SetNode ? SetNode->getVScaleRangeMin() : 1;
+  return SetNode ? getNode()->getVScaleRangeMin() : 1;
 }
 
 std::optional<unsigned> AttributeSet::getVScaleRangeMax() const {
-  return SetNode ? SetNode->getVScaleRangeMax() : std::nullopt;
+  return SetNode ? getNode()->getVScaleRangeMax() : std::nullopt;
 }
 
 UWTableKind AttributeSet::getUWTableKind() const {
-  return SetNode ? SetNode->getUWTableKind() : UWTableKind::None;
+  return SetNode ? getNode()->getUWTableKind() : UWTableKind::None;
 }
 
 AllocFnKind AttributeSet::getAllocKind() const {
-  return SetNode ? SetNode->getAllocKind() : AllocFnKind::Unknown;
+  return SetNode ? getNode()->getAllocKind() : AllocFnKind::Unknown;
 }
 
 MemoryEffects AttributeSet::getMemoryEffects() const {
-  return SetNode ? SetNode->getMemoryEffects() : MemoryEffects::unknown();
+  return SetNode ? getNode()->getMemoryEffects() : MemoryEffects::unknown();
 }
 
 CaptureInfo AttributeSet::getCaptureInfo() const {
-  return SetNode ? SetNode->getCaptureInfo() : CaptureInfo::all();
+  return SetNode ? getNode()->getCaptureInfo() : CaptureInfo::all();
 }
 
 FPClassTest AttributeSet::getNoFPClass() const {
-  return SetNode ? SetNode->getNoFPClass() : fcNone;
+  return SetNode ? getNode()->getNoFPClass() : fcNone;
 }
 
 std::string AttributeSet::getAsString(bool InAttrGrp) const {
-  return SetNode ? SetNode->getAsString(InAttrGrp) : "";
+  return SetNode ? getNode()->getAsString(InAttrGrp) : "";
 }
 
 bool AttributeSet::hasParentContext(LLVMContext &C) const {
   assert(hasAttributes() && "empty AttributeSet doesn't refer to any context");
   FoldingSetInsertToken Token;
-  return C.pImpl->AttrsSetNodes.lookup(SetNode->getKey(), Token) == SetNode;
+  return C.pImpl->AttrsSetNodes.lookup(getNode()->getKey(), Token) == SetNode;
 }
 
 AttributeSet::iterator AttributeSet::begin() const {
-  return SetNode ? SetNode->begin() : nullptr;
+  return SetNode ? getNode()->begin() : nullptr;
 }
 
 AttributeSet::iterator AttributeSet::end() const {
-  return SetNode ? SetNode->end() : nullptr;
+  return SetNode ? getNode()->end() : nullptr;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1323,11 +1320,50 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
   return getSorted(C, SortedAttrs);
 }
 
+/// Attribute comparator that only compares attribute keys. Enum attributes are
+/// sorted before string attributes.
+struct AttributeComparator {
+  bool operator()(Attribute A0, Attribute A1) const {
+    bool A0IsString = A0.isStringAttribute();
+    bool A1IsString = A1.isStringAttribute();
+    if (A0IsString) {
+      if (A1IsString)
+        return A0.getKindAsString() < A1.getKindAsString();
+      else
+        return false;
+    }
+    if (A1IsString)
+      return true;
+    return A0.getKindAsEnum() < A1.getKindAsEnum();
+  }
+  bool operator()(Attribute A0, Attribute::AttrKind Kind) const {
+    if (A0.isStringAttribute())
+      return false;
+    return A0.getKindAsEnum() < Kind;
+  }
+  bool operator()(Attribute A0, StringRef Kind) const {
+    if (A0.isStringAttribute())
+      return A0.getKindAsString() < Kind;
+    return true;
+  }
+};
+
+#ifndef NDEBUG
+/// Return true if \p Attrs is known sorted with no duplicate entries.
+static bool isSortedAndUnique(ArrayRef<Attribute> Attrs) {
+  return adjacent_find(Attrs, [](Attribute A0, Attribute A1) {
+           return !AttributeComparator()(A0, A1);
+         }) == Attrs.end();
+}
+#endif
+
 AttributeSetNode *AttributeSetNode::getSorted(LLVMContext &C,
                                               ArrayRef<Attribute> SortedAttrs) {
-  assert(llvm::is_sorted(SortedAttrs) && "Expected sorted attributes!");
   if (SortedAttrs.empty())
     return nullptr;
+
+  assert(isSortedAndUnique(SortedAttrs) &&
+         "expected sorted and unique attributes!");
 
   FoldingSetInsertToken Token;
   AttributeSetNode *PA = C.pImpl->AttrsSetNodes.lookup(SortedAttrs, Token);
@@ -1531,6 +1567,12 @@ LLVM_DUMP_METHOD void AttributeListImpl::dump() const {
 //===----------------------------------------------------------------------===//
 // AttributeList Construction and Mutation Methods
 //===----------------------------------------------------------------------===//
+
+AttributeList::AttributeList(AttributeListImpl *LI) : pImpl(LI) {}
+
+AttributeListImpl *AttributeList::getListImpl() const {
+  return static_cast<AttributeListImpl *>(pImpl);
+}
 
 AttributeList AttributeList::getImpl(LLVMContext &C,
                                      ArrayRef<AttributeSet> AttrSets) {
@@ -1783,6 +1825,15 @@ AttributeList AttributeList::addAttributesAtIndex(LLVMContext &C,
   return setAttributesAtIndex(C, Index, AttributeSet::get(C, Merged));
 }
 
+AttributeList
+AttributeList::addSortedAttributesAtIndex(LLVMContext &C, unsigned Index,
+                                          ArrayRef<Attribute> Attrs) const {
+  if (Attrs.empty())
+    return *this;
+  return setAttributesAtIndex(
+      C, Index, getAttributes(Index).addSortedAttributes(C, Attrs));
+}
+
 AttributeList AttributeList::addParamAttribute(LLVMContext &C,
                                                ArrayRef<unsigned> ArgNos,
                                                Attribute A) const {
@@ -1934,9 +1985,6 @@ bool AttributeList::hasAttributesAtIndex(unsigned Index) const {
   return getAttributes(Index).hasAttributes();
 }
 
-bool AttributeList::hasFnAttr(Attribute::AttrKind Kind) const {
-  return pImpl && pImpl->hasFnAttribute(Kind);
-}
 
 bool AttributeList::hasFnAttr(StringRef Kind) const {
   return hasAttributeAtIndex(AttributeList::FunctionIndex, Kind);
@@ -1944,7 +1992,7 @@ bool AttributeList::hasFnAttr(StringRef Kind) const {
 
 bool AttributeList::hasAttrSomewhere(Attribute::AttrKind Attr,
                                      unsigned *Index) const {
-  return pImpl && pImpl->hasAttrSomewhere(Attr, Index);
+  return pImpl && getListImpl()->hasAttrSomewhere(Attr, Index);
 }
 
 Attribute AttributeList::getAttributeAtIndex(unsigned Index,
@@ -2058,21 +2106,21 @@ AttributeSet AttributeList::getAttributes(unsigned Index) const {
   Index = attrIdxToArrayIdx(Index);
   if (!pImpl || Index >= getNumAttrSets())
     return {};
-  return pImpl->begin()[Index];
+  return getListImpl()->begin()[Index];
 }
 
 bool AttributeList::hasParentContext(LLVMContext &C) const {
   assert(!isEmpty() && "an empty attribute list has no parent context");
   FoldingSetInsertToken Token;
-  return C.pImpl->AttrsLists.lookup(pImpl->getKey(), Token) == pImpl;
+  return C.pImpl->AttrsLists.lookup(getListImpl()->getKey(), Token) == pImpl;
 }
 
 AttributeList::iterator AttributeList::begin() const {
-  return pImpl ? pImpl->begin() : nullptr;
+  return pImpl ? getListImpl()->begin() : nullptr;
 }
 
 AttributeList::iterator AttributeList::end() const {
-  return pImpl ? pImpl->end() : nullptr;
+  return pImpl ? getListImpl()->end() : nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2080,7 +2128,7 @@ AttributeList::iterator AttributeList::end() const {
 //===----------------------------------------------------------------------===//
 
 unsigned AttributeList::getNumAttrSets() const {
-  return pImpl ? pImpl->NumAttrSets : 0;
+  return pImpl ? getListImpl()->NumAttrSets : 0;
 }
 
 void AttributeList::print(raw_ostream &O) const {
@@ -2120,34 +2168,6 @@ AttrBuilder::AttrBuilder(LLVMContext &Ctx, AttributeSet AS) : Ctx(Ctx) {
 }
 
 void AttrBuilder::clear() { Attrs.clear(); }
-
-/// Attribute comparator that only compares attribute keys. Enum attributes are
-/// sorted before string attributes.
-struct AttributeComparator {
-  bool operator()(Attribute A0, Attribute A1) const {
-    bool A0IsString = A0.isStringAttribute();
-    bool A1IsString = A1.isStringAttribute();
-    if (A0IsString) {
-      if (A1IsString)
-        return A0.getKindAsString() < A1.getKindAsString();
-      else
-        return false;
-    }
-    if (A1IsString)
-      return true;
-    return A0.getKindAsEnum() < A1.getKindAsEnum();
-  }
-  bool operator()(Attribute A0, Attribute::AttrKind Kind) const {
-    if (A0.isStringAttribute())
-      return false;
-    return A0.getKindAsEnum() < Kind;
-  }
-  bool operator()(Attribute A0, StringRef Kind) const {
-    if (A0.isStringAttribute())
-      return A0.getKindAsString() < Kind;
-    return true;
-  }
-};
 
 template <typename K>
 static void addAttributeImpl(SmallVectorImpl<Attribute> &Attrs, K Kind,
@@ -2394,12 +2414,55 @@ AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {
   return *this;
 }
 
-AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
-  // TODO: Could make this O(n) as we're merging two sorted lists.
-  for (const auto &I : B.attrs())
-    addAttribute(I);
+/// Merge \p B into \p A, both sorted by kind, into \p Merged. An attribute
+/// in \p B replaces the attribute of the same kind in \p A.
+static void mergeSortedAttrs(ArrayRef<Attribute> A, ArrayRef<Attribute> B,
+                             SmallVectorImpl<Attribute> &Merged) {
+  Merged.reserve(A.size() + B.size());
+  AttributeComparator Less;
+  auto *I = A.begin(), *E = A.end();
 
+  for (Attribute BAttr : B) {
+    while (I != E && Less(*I, BAttr))
+      Merged.push_back(*I++);
+
+    if (I != E && !Less(BAttr, *I))
+      ++I;
+
+    Merged.push_back(BAttr);
+  }
+
+  Merged.append(I, E);
+}
+
+AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
+  if (B.Attrs.empty())
+    return *this;
+
+  if (Attrs.empty()) {
+    Attrs = B.Attrs;
+    return *this;
+  }
+
+  // Both lists are already sorted by kind.
+  SmallVector<Attribute, 8> Merged;
+  mergeSortedAttrs(Attrs, B.Attrs, Merged);
+  Attrs = std::move(Merged);
   return *this;
+}
+
+AttributeSet
+AttributeSet::addSortedAttributes(LLVMContext &C,
+                                  ArrayRef<Attribute> Attrs) const {
+  if (Attrs.empty())
+    return *this;
+
+  assert(isSortedAndUnique(Attrs) &&
+         "Expected sorted attributes with distinct kinds!");
+
+  SmallVector<Attribute, 32> Merged;
+  mergeSortedAttrs(ArrayRef(begin(), end()), Attrs, Merged);
+  return AttributeSet(AttributeSetNode::getSorted(C, Merged));
 }
 
 AttrBuilder &AttrBuilder::remove(const AttributeMask &AM) {
@@ -2536,6 +2599,15 @@ AttributeMask AttributeFuncs::getUBImplyingAttributes() {
   AM.addAttribute(Attribute::NoUndef);
   AM.addAttribute(Attribute::Dereferenceable);
   AM.addAttribute(Attribute::DereferenceableOrNull);
+  return AM;
+}
+
+AttributeMask AttributeFuncs::getPoisonGeneratingAttributes() {
+  AttributeMask AM;
+  AM.addAttribute(Attribute::Range);
+  AM.addAttribute(Attribute::Alignment);
+  AM.addAttribute(Attribute::NonNull);
+  AM.addAttribute(Attribute::NoFPClass);
   return AM;
 }
 

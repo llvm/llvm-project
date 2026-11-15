@@ -25,6 +25,7 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -173,6 +174,10 @@ public:
   MCSubtargetInfo &operator=(const MCSubtargetInfo &) = delete;
   MCSubtargetInfo &operator=(MCSubtargetInfo &&) = delete;
   virtual ~MCSubtargetInfo() = default;
+
+  virtual std::unique_ptr<MCSubtargetInfo> clone() const {
+    return std::make_unique<MCSubtargetInfo>(*this);
+  }
 
   const Triple &getTargetTriple() const { return TargetTriple; }
   StringRef getCPU() const { return CPU; }

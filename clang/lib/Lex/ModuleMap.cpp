@@ -508,7 +508,7 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
     // Suppose we have a pair of files foo.cpp / foo.h.
     // Our build system may want to verify that foo.cpp only uses things
     // declared in the implementation_deps of foo, while foo.h only uses things
-    // declared in interface_deps. This requires them to be two seperate
+    // declared in interface_deps. This requires them to be two separate
     // modules, foo_Private and foo. This check is required to ensure that foo.h
     // is still checked. Otherwise, foo.h would never be checked, since it will
     // never be the top-level module.
@@ -1126,8 +1126,8 @@ static void inferFrameworkLink(Module *Mod) {
 
   StringRef FrameworkName(Mod->Name);
   FrameworkName.consume_back("_Private");
-  Mod->LinkLibraries.push_back(Module::LinkLibrary(FrameworkName.str(),
-                                                   /*IsFramework=*/true));
+  Mod->LinkLibraries.emplace_back(FrameworkName.str(),
+                                  /*IsFramework=*/true);
 }
 
 Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
@@ -1325,7 +1325,6 @@ Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
   Result->ShadowingModule = ShadowingModule;
   Result->markUnavailable(/*Unimportable*/true);
   ModuleScopeIDs[Result] = CurrentModuleScopeID;
-  ShadowModules.push_back(Result);
 
   return Result;
 }
@@ -2301,8 +2300,8 @@ void ModuleMapLoader::handleUseDecl(const modulemap::UseDecl &UD) {
 }
 
 void ModuleMapLoader::handleLinkDecl(const modulemap::LinkDecl &LD) {
-  ActiveModule->LinkLibraries.push_back(
-      Module::LinkLibrary(std::string{LD.Library}, LD.Framework));
+  ActiveModule->LinkLibraries.emplace_back(std::string{LD.Library},
+                                           LD.Framework);
 }
 
 void ModuleMapLoader::handleConfigMacros(
@@ -2444,6 +2443,18 @@ bool ModuleMapLoader::parseAndLoadModuleMapFile(
         Decl);
   }
   return HadError;
+}
+
+OptionalFileEntryRef ModuleMap::getModuleMapFileForName(StringRef Name) const {
+  // Check loaded modules first, inferred modules are only found here.
+  if (Module *M = Modules.lookup(Name))
+    return getModuleMapFileForUniquing(M);
+
+  // Then check only parsed modules.
+  auto ParsedMod = ParsedModules.find(Name);
+  if (ParsedMod == ParsedModules.end())
+    return std::nullopt;
+  return SourceMgr.getFileEntryRefForID(ParsedMod->second.front().first->ID);
 }
 
 Module *ModuleMap::findOrLoadModule(StringRef Name) {

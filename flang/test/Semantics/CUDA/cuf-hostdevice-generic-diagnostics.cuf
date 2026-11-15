@@ -57,26 +57,26 @@ contains
   attributes(host,device) subroutine unguarded(n, x)
     integer :: n
     real :: x
-    !ERROR: 'host_generic' (specific procedure 'host_integer') may not be called in device code
+    !ERROR: 'host_generic' (specific procedure 'host_integer'), a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     n = host_generic(n)
-    !ERROR: 'host_generic' (specific procedure 'host_real') may not be called in device code
+    !ERROR: 'host_generic' (specific procedure 'host_real'), a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     x = host_generic(x)
-    !ERROR: 'device_generic' (specific procedure 'device_integer') may not be called in host code
+    !ERROR: 'device_generic' (specific procedure 'device_integer'), a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     n = device_generic(n)
-    !ERROR: 'host_sub_generic' (specific procedure 'host_sub') may not be called in device code
+    !ERROR: 'host_sub_generic' (specific procedure 'host_sub'), a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     call host_sub_generic(n)
-    !ERROR: 'device_sub_generic' (specific procedure 'device_sub') may not be called in host code
+    !ERROR: 'device_sub_generic' (specific procedure 'device_sub'), a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     call device_sub_generic(n)
     ! Ordinary calls keep their single-name diagnostics.
-    !ERROR: 'host_integer' may not be called in device code
+    !ERROR: 'host_integer', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     n = host_integer(n)
-    !ERROR: 'device_integer' may not be called in host code
+    !ERROR: 'device_integer', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     n = device_integer(n)
     n = both_generic(n)
   end subroutine
   attributes(device) subroutine device_caller(n)
     integer :: n
-    !ERROR: 'host_generic' (specific procedure 'host_integer') may not be called in device code
+    !ERROR: 'host_generic' (specific procedure 'host_integer'), a procedure with the HOST attribute, may not be called from device code
     n = host_generic(n)
     n = device_generic(n)
   end subroutine
@@ -99,18 +99,18 @@ module generic_alias_callers
 contains
   attributes(host,device) subroutine aliases(n)
     integer :: n
-    !ERROR: 'renamed_host' (specific procedure 'host_integer') may not be called in device code
+    !ERROR: 'renamed_host' (specific procedure 'host_integer'), a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     n = renamed_host(n)
-    !ERROR: 'another_host' (specific procedure 'host_integer') may not be called in device code
+    !ERROR: 'another_host' (specific procedure 'host_integer'), a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     n = another_host(n)
-    !ERROR: 'renamed_device' (specific procedure 'device_integer') may not be called in host code
+    !ERROR: 'renamed_device' (specific procedure 'device_integer'), a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     n = renamed_device(n)
-    !ERROR: 'renamed_sub' (specific procedure 'host_sub') may not be called in device code
+    !ERROR: 'renamed_sub' (specific procedure 'host_sub'), a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     call renamed_sub(n)
-    !ERROR: 'renamed_host' (specific procedure 'host_integer') may not be called in device code
+    !ERROR: 'renamed_host' (specific procedure 'host_integer'), a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     n = both_generic(renamed_host(n))
     ! A USE alias of an ordinary specific is not a generic reference.
-    !ERROR: 'specific_alias' may not be called in device code
+    !ERROR: 'specific_alias', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     n = specific_alias(n)
   end subroutine
 end module
@@ -122,13 +122,13 @@ contains
     type(bound_targets) :: t
     class(bound_targets) :: poly
     integer :: n
-    !ERROR: 'host_bound' (specific procedure 'host_integer') may not be called in device code
+    !ERROR: 'host_bound' (specific procedure 'host_integer'), a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     n = t%host_bound(n)
-    !ERROR: 'device_bound' (specific procedure 'device_integer') may not be called in host code
+    !ERROR: 'device_bound' (specific procedure 'device_integer'), a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     n = t%device_bound(n)
-    !ERROR: 'host_bound' (specific procedure 'host_integer') may not be called in device code
+    !ERROR: 'host_bound' (specific procedure 'host_integer'), a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     n = poly%host_bound(n)
-    !ERROR: 'device_bound' (specific procedure 'device_integer') may not be called in host code
+    !ERROR: 'device_bound' (specific procedure 'device_integer'), a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     n = poly%device_bound(n)
   end subroutine
 end module
@@ -139,7 +139,7 @@ contains
   attributes(host,device) subroutine atomic_call(a, n, old)
     integer, device :: a(*)
     integer :: n, old
-    !ERROR: 'atomicadd' (specific procedure 'atomicaddi') may not be called in host code
+    !ERROR: 'atomicadd' (specific procedure 'atomicaddi'), a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     old = atomicadd(a(1), n)
   end subroutine
 end module
@@ -156,7 +156,7 @@ contains
   attributes(host,device) subroutine caller(n)
     integer :: n
     ! Do not repeat the name when generic and specific have the same spelling.
-    !ERROR: 'same_name' may not be called in device code
+    !ERROR: 'same_name', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     n = same_name(n)
   end subroutine
 end module
