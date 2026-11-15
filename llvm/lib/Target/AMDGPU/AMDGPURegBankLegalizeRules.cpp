@@ -1717,6 +1717,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivV2S64}, {{VgprV2S64}, {VgprV2S64, VgprV2S64}}});
 
   addRulesForGOpcs({G_FPTRUNC})
+      .Any({{UniBF16, S32}, {{UniInVgprS16}, {Vgpr32}}})
       .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})
       .Any({{UniS32, S64}, {{UniInVgprS32}, {Vgpr64}}})
       .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}}})

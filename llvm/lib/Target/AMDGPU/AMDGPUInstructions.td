@@ -225,7 +225,8 @@ class is_canonicalized_2<SDPatternOperator op> : PatFrag<
     const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
       MF.getSubtarget().getTargetLowering());
 
-    return TLI->isCanonicalized(MI.getOperand(1).getReg(), MF) &&
+    return MRI.getType(MI.getOperand(0).getReg()).getScalarType().isFloat16() &&
+      TLI->isCanonicalized(MI.getOperand(1).getReg(), MF) &&
       TLI->isCanonicalized(MI.getOperand(2).getReg(), MF);
   }];
 }

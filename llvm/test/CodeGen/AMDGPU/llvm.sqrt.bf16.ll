@@ -72,10 +72,12 @@ define <2 x bfloat> @sqrt_v2bf16(<2 x bfloat> %a) {
 ; GFX12-FAKE16-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-FAKE16-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-GISEL-NEXT:    v_sqrt_bf16_e32 v1, v0
+; GFX12-FAKE16-GISEL-NEXT:    v_nop
+; GFX12-FAKE16-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
+; GFX12-FAKE16-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX12-FAKE16-GISEL-NEXT:    v_sqrt_bf16_e64 v0, v0 op_sel:[1,0]
 ; GFX12-FAKE16-GISEL-NEXT:    v_nop
-; GFX12-FAKE16-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-FAKE16-GISEL-NEXT:    v_pack_b32_f16 v0, v1, v0
+; GFX12-FAKE16-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX12-FAKE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %r.val = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> %a)
   ret <2 x bfloat> %r.val
