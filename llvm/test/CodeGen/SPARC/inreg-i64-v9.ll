@@ -36,7 +36,7 @@ entry:
 }
 
 
-define nopoison float @floatret(i64 inreg %.coerce, i64 inreg %.coerce1, i64 inreg %.coerce2, i64 inreg %.coerce3, i64 inreg %.coerce4, i64 inreg %.coerce5, i64 inreg %.coerce6, float nopoison returned %v) nounwind {
+define float @floatret(i64 inreg %.coerce, i64 inreg %.coerce1, i64 inreg %.coerce2, i64 inreg %.coerce3, i64 inreg %.coerce4, i64 inreg %.coerce5, i64 inreg %.coerce6, float %v) nounwind {
 ; SPARC64-LABEL: floatret:
 ; SPARC64:       ! %bb.0: ! %entry
 ; SPARC64-NEXT:    fmovs %f15, %f0
