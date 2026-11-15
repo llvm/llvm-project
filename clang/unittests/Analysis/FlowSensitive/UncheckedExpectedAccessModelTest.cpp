@@ -58,8 +58,10 @@ protected:
   // Check that after running the analysis on SourceCode, it produces the
   // expected diagnostics according to [[unsafe]] annotations.
   // - No annotations => no diagnostics.
-  // - Given "// [[unsafe]]" annotations on a line, we expect a diagnostic on
-  //   that line.
+  // - Given "// [[unsafe]]" annotations on a line, we expect a diagnostic for
+  //   an unchecked value access on that line.
+  // - Given "// [[unsafe:error]]" annotations on a line, we expect a diagnostic
+  //   for an unchecked error access on that line.
   void ExpectDiagnosticsFor(std::string SourceCode) {
     // Run in C++17 and C++20 mode to cover differences in the AST between modes
     // (e.g. C++20 can contain `CXXRewrittenBinaryOperator`).
@@ -78,7 +80,7 @@ protected:
       template <typename T>
       T Make();
     )");
-    std::vector<SourceLocation> Diagnostics;
+    std::vector<UncheckedExpectedAccessDiagnostic> Diagnostics;
     llvm::Error Error = checkDataflow<UncheckedExpectedAccessModel>(
         AnalysisInputs<UncheckedExpectedAccessModel>(
             SourceCode, ast_matchers::hasName("target"),
@@ -108,16 +110,23 @@ protected:
             AnnotationLines.insert(Line);
           auto &SrcMgr = AO.ASTCtx.getSourceManager();
           llvm::DenseSet<unsigned> DiagnosticLines;
-          for (SourceLocation Loc : Diagnostics) {
-            unsigned Line = SrcMgr.getPresumedLineNumber(Loc);
+          for (const UncheckedExpectedAccessDiagnostic &Diag : Diagnostics) {
+            unsigned Line = SrcMgr.getPresumedLineNumber(Diag.Loc);
             DiagnosticLines.insert(Line);
-            if (!AnnotationLines.contains(Line)) {
+            auto It = Annotations.find(Line);
+            if (It == Annotations.end()) {
               DiagnosticOptions DiagOpts;
               TextDiagnostic TD(llvm::errs(), AO.ASTCtx.getLangOpts(),
                                 DiagOpts);
-              TD.emitDiagnostic(FullSourceLoc(Loc, SrcMgr),
+              TD.emitDiagnostic(FullSourceLoc(Diag.Loc, SrcMgr),
                                 DiagnosticsEngine::Error,
                                 "unexpected diagnostic", {}, {});
+            } else {
+              UncheckedExpectedAccessKind ExpectedKind =
+                  It->second == "unsafe:error"
+                      ? UncheckedExpectedAccessKind::Error
+                      : UncheckedExpectedAccessKind::Value;
+              EXPECT_EQ(Diag.Kind, ExpectedKind) << "on line " << Line;
             }
           }
 
@@ -336,6 +345,184 @@ TEST_P(UncheckedExpectedAccessTest, ValueOrIsNotAnAccess) {
 
     void target($ns::expected<int, int> e) {
       e.value_or(0);
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, UnwrapErrorNoCheck) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> e) {
+      e.error(); // [[unsafe:error]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target(const $ns::expected<int, int> &e) {
+      e.error(); // [[unsafe:error]]
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, UnwrapErrorOfFunctionCallResultNoCheck) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target() {
+      auto e = Make<$ns::expected<int, int>>();
+      e.error(); // [[unsafe:error]]
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, UnwrapVoidErrorNoCheck) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<void, int> e) {
+      e.error(); // [[unsafe:error]]
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, UnwrapErrorWhenHoldingValue) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> e) {
+      if (e) {
+        e.error(); // [[unsafe:error]]
+      }
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> e) {
+      if (e.has_value()) {
+        e.error(); // [[unsafe:error]]
+      }
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> e) {
+      if (!e)
+        return;
+      e.error(); // [[unsafe:error]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      return e ? e.error() : 0; // [[unsafe:error]]
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, ErrorCheck) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> e) {
+      if (!e) {
+        e.error();
+      }
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> e) {
+      if (!e.has_value()) {
+        e.error();
+      }
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> e) {
+      if (e) {
+      } else {
+        e.error();
+      }
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<void, int> e) {
+      if (!e)
+        e.error();
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, ErrorCheckedAfterEarlyReturn) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (e)
+        return 0;
+      return e.error();
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, ErrorCheckedInTernary) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      return e ? 0 : e.error();
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, ValueAndErrorChecked) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> e) {
+      if (e) {
+        *e;
+      } else {
+        e.error();
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, ErrorOrIsNotAnAccess) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> e) {
+      e.error_or(0);
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, UnexpectedErrorIsNotAnAccess) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target() {
+      $ns::unexpected<int> u(1);
+      u.error();
     }
   )");
 }

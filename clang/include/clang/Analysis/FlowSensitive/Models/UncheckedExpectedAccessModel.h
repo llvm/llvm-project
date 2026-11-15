@@ -44,20 +44,38 @@ private:
   CFGMatchSwitch<TransferState<NoopLattice>> TransferMatchSwitch;
 };
 
-/// Reports the locations of accesses to `std::expected` values that are not
-/// provably preceded by a check that the object holds a value.
+/// The part of a `std::expected` object that is accessed.
+///
+/// The values are used as `%select` indices in diagnostics, so they must not
+/// be reordered.
+enum class UncheckedExpectedAccessKind : int {
+  /// `value()`, `operator*` or `operator->`, which require a value.
+  Value = 0,
+  /// `error()`, which requires an error.
+  Error = 1,
+};
+
+/// Diagnostic information for an unchecked `std::expected` access.
+struct UncheckedExpectedAccessDiagnostic {
+  SourceLocation Loc;
+  UncheckedExpectedAccessKind Kind;
+};
+
+/// Reports accesses to the value (or error) of `std::expected` objects that are
+/// not provably preceded by a check that the object holds a value (or error).
 class UncheckedExpectedAccessDiagnoser {
 public:
   UncheckedExpectedAccessDiagnoser();
 
-  llvm::SmallVector<SourceLocation>
+  llvm::SmallVector<UncheckedExpectedAccessDiagnostic>
   operator()(const CFGElement &Elt, ASTContext &Ctx,
              const TransferStateForDiagnostics<NoopLattice> &State) {
     return DiagnoseMatchSwitch(Elt, Ctx, State.Env);
   }
 
 private:
-  CFGMatchSwitch<const Environment, llvm::SmallVector<SourceLocation>>
+  CFGMatchSwitch<const Environment,
+                 llvm::SmallVector<UncheckedExpectedAccessDiagnostic>>
       DiagnoseMatchSwitch;
 };
 

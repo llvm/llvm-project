@@ -892,6 +892,9 @@ public:
   template <class U> T value_or(U &&v) const &;
   template <class U> T value_or(U &&v) &&;
 
+  template <class G> E error_or(G &&e) const &;
+  template <class G> E error_or(G &&e) &&;
+
   template <class... Args> T &emplace(Args &&...args) noexcept;
 
   void swap(expected &rhs) noexcept;
@@ -928,6 +931,9 @@ public:
   E &error() & noexcept;
   const E &&error() const && noexcept;
   E &&error() && noexcept;
+
+  template <class G> E error_or(G &&e) const &;
+  template <class G> E error_or(G &&e) &&;
 
   void emplace() noexcept;
 

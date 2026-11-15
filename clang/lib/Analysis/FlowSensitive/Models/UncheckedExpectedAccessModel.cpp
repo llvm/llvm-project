@@ -15,6 +15,8 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
+#include "clang/Analysis/FlowSensitive/Arena.h"
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 
@@ -87,31 +89,39 @@ auto buildTransferMatchSwitch() {
       .Build();
 }
 
-llvm::SmallVector<SourceLocation>
-diagnoseAccess(SourceLocation AccessLoc,
+llvm::SmallVector<UncheckedExpectedAccessDiagnostic>
+diagnoseAccess(SourceLocation AccessLoc, UncheckedExpectedAccessKind Kind,
                const RecordStorageLocation *ExpectedLoc,
                const Environment &Env) {
   if (ExpectedLoc != nullptr) {
     // Accesses through classes derived from `std::expected` are not modeled.
     if (!isExpectedType(ExpectedLoc->getType()))
       return {};
-    if (auto *HasValueVal = Env.get<BoolValue>(locForHasValue(*ExpectedLoc)))
-      if (Env.proves(HasValueVal->formula()))
+    if (auto *HasValueVal = Env.get<BoolValue>(locForHasValue(*ExpectedLoc))) {
+      // The value may only be accessed if the expected holds a value, and the
+      // error only if it does not.
+      const Formula &Safe = Kind == UncheckedExpectedAccessKind::Value
+                                ? HasValueVal->formula()
+                                : Env.arena().makeNot(HasValueVal->formula());
+      if (Env.proves(Safe))
         return {};
+    }
   }
 
-  return {AccessLoc};
+  return {{AccessLoc, Kind}};
 }
 
 auto buildDiagnoseMatchSwitch() {
-  return CFGMatchSwitchBuilder<const Environment,
-                               llvm::SmallVector<SourceLocation>>()
+  return CFGMatchSwitchBuilder<
+             const Environment,
+             llvm::SmallVector<UncheckedExpectedAccessDiagnostic>>()
       // expected::value
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           expectedMemberCall(hasName("value")),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              const Environment &Env) {
             return diagnoseAccess(E->getExprLoc(),
+                                  UncheckedExpectedAccessKind::Value,
                                   getImplicitObjectLocation(*E, Env), Env);
           })
       // expected::operator*, expected::operator->
@@ -121,9 +131,18 @@ auto buildDiagnoseMatchSwitch() {
              const Environment &Env) {
             // `getExprLoc` of `operator->` is the start of the object
             // expression, so point at the operator token instead.
-            return diagnoseAccess(E->getOperatorLoc(),
-                                  Env.get<RecordStorageLocation>(*E->getArg(0)),
-                                  Env);
+            return diagnoseAccess(
+                E->getOperatorLoc(), UncheckedExpectedAccessKind::Value,
+                Env.get<RecordStorageLocation>(*E->getArg(0)), Env);
+          })
+      // expected::error
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          expectedMemberCall(hasName("error")),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+             const Environment &Env) {
+            return diagnoseAccess(E->getExprLoc(),
+                                  UncheckedExpectedAccessKind::Error,
+                                  getImplicitObjectLocation(*E, Env), Env);
           })
       .Build();
 }
