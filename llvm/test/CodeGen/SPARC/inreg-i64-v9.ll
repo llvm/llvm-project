@@ -3,7 +3,7 @@
 
 ;; `i64 inreg`s get a special treatment when lowered
 
-declare void @callee1(i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i8 noundef zeroext)
+declare void @callee1(i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i8 zeroext)
 
 define void @caller1() nounwind {
 ; SPARC64-LABEL: caller1:
@@ -15,11 +15,11 @@ define void @caller1() nounwind {
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
 entry:
-  tail call void @callee1(i64 inreg undef, i64 inreg undef, i64 inreg undef, i64 inreg undef, i64 inreg undef, i64 inreg undef, i64 inreg undef, i8 noundef zeroext 90)
+  tail call void @callee1(i64 inreg poison, i64 inreg poison, i64 inreg poison, i64 inreg poison, i64 inreg poison, i64 inreg poison, i64 inreg poison, i8 zeroext 90)
   ret void
 }
 
-declare void @callee2(i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i8 noundef zeroext)
+declare void @callee2(i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i8 zeroext)
 
 define void @caller2() nounwind {
 ; SPARC64-LABEL: caller2:
@@ -31,12 +31,12 @@ define void @caller2() nounwind {
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
 entry:
-  tail call void @callee2(i64 inreg undef, i64 inreg undef, i64 inreg undef, i64 inreg undef, i64 inreg undef, i64 inreg undef, i64 inreg undef, i64 inreg undef, i8 noundef zeroext 90)
+  tail call void @callee2(i64 inreg poison, i64 inreg poison, i64 inreg poison, i64 inreg poison, i64 inreg poison, i64 inreg poison, i64 inreg poison, i64 inreg poison, i8 zeroext 90)
   ret void
 }
 
 
-define noundef float @floatret(i64 inreg %.coerce, i64 inreg %.coerce1, i64 inreg %.coerce2, i64 inreg %.coerce3, i64 inreg %.coerce4, i64 inreg %.coerce5, i64 inreg %.coerce6, float noundef returned %v) nounwind {
+define nopoison float @floatret(i64 inreg %.coerce, i64 inreg %.coerce1, i64 inreg %.coerce2, i64 inreg %.coerce3, i64 inreg %.coerce4, i64 inreg %.coerce5, i64 inreg %.coerce6, float nopoison returned %v) nounwind {
 ; SPARC64-LABEL: floatret:
 ; SPARC64:       ! %bb.0: ! %entry
 ; SPARC64-NEXT:    fmovs %f15, %f0
