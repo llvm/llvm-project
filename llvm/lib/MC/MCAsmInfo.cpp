@@ -70,6 +70,16 @@ const MCExpr *MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
   return MCBinaryExpr::createSub(Res, PC, Context);
 }
 
+const MCExpr *MCAsmInfo::getDwarfSectionOffsetExpr(const MCSymbol *Sym,
+                                                   uint64_t Offset,
+                                                   MCContext &Ctx) const {
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+  if (Offset)
+    Expr =
+        MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
+  return Expr;
+}
+
 bool MCAsmInfo::isAcceptableChar(char C) const {
   // For AIX assembler, symbols may consist of numeric digits, underscores,
   // periods, uppercase or lowercase letters, orany combination of these.
