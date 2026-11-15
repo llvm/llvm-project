@@ -5232,6 +5232,7 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.asinpif16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
@@ -5315,6 +5316,7 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.asinf16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
@@ -5363,6 +5365,7 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.acosf16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
@@ -5386,6 +5389,7 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.acospif16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
@@ -5452,6 +5456,7 @@ add_fp_unittest(
     atan2f16_test.cpp
   DEPENDS
     libc.src.math.atan2f16
+    libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -6658,6 +6663,7 @@ add_fp_unittest(
     cbrtf16_test.cpp
   DEPENDS
     libc.src.math.cbrtf16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(

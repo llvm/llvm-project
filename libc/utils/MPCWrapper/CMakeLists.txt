@@ -17,6 +17,7 @@ if(LIBC_TESTS_CAN_USE_MPC)
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.complex_type
+    libc.src.__support.macros.config
     libc.test.UnitTest.FPTestHelpers
     libc.test.UnitTest.LibcTest
   )
