@@ -8816,6 +8816,10 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::experimental_constrained_lrint:
   case Intrinsic::llrint:
   case Intrinsic::experimental_constrained_llrint:
+  case Intrinsic::lround:
+  case Intrinsic::experimental_constrained_lround:
+  case Intrinsic::llround:
+  case Intrinsic::experimental_constrained_llround:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
   case Intrinsic::frexp:

@@ -75,6 +75,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
@@ -31826,6 +31827,64 @@ static SDValue performPTestFirstCombine(SDNode *N,
   return SDValue();
 }
 
+/// Given a and/or/xor from a scalar_to_vector, calculate if it is profitable to
+/// execute as a vector operation using type VT. This can avoid the expensive
+/// fmov cross register bank copies.
+static SDValue performAsVectorOperation(SDValue N, EVT VT, SelectionDAG &DAG) {
+  if (N.getOpcode() != ISD::AND && N.getOpcode() != ISD::OR &&
+      N.getOpcode() != ISD::XOR)
+    return SDValue();
+
+  std::function<int(SDValue)> Check = [&Check](SDValue V) -> int {
+    if (V.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        isNullConstant(V.getOperand(1)) &&
+        (V.getOperand(0).getValueType().is64BitVector() ||
+         V.getOperand(0).getValueType().is128BitVector()))
+      return -1;
+    // Special case detect mvn looking through to the operand
+    if (isBitwiseNot(V))
+      return Check(V.getOperand(0));
+    return 1; // Extra scalar_to_vector
+  };
+
+  int Cost = N.hasOneUse() ? -1 : 0;
+  Cost += Check(N.getOperand(0));
+  Cost += Check(N.getOperand(1));
+
+  if (Cost > 0)
+    return SDValue();
+
+  std::function<SDValue(SDValue)> Process = [&Process, VT, &DAG](SDValue V) {
+    SDLoc DL(V);
+    if (V.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        isNullConstant(V.getOperand(1)) &&
+        (V.getOperand(0).getValueType().is64BitVector() ||
+         V.getOperand(0).getValueType().is128BitVector())) {
+      EVT VecVT = V.getOperand(0).getValueType();
+      if (VT.getSizeInBits() < VecVT.getSizeInBits()) {
+        EVT HalfVT = VecVT.getHalfNumVectorElementsVT(*DAG.getContext());
+        assert(HalfVT.getSizeInBits() == VT.getSizeInBits());
+        SDValue Half = DAG.getExtractSubvector(DL, HalfVT, V.getOperand(0), 0);
+        return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Half);
+      } else {
+        assert(VT.getSizeInBits() == VecVT.getSizeInBits());
+        return DAG.getNode(AArch64ISD::NVCAST, DL, VT, V.getOperand(0));
+      }
+    }
+
+    if (isBitwiseNot(V)) {
+      SDValue Op1 = Process(V.getOperand(0));
+      return DAG.getNOT(DL, Op1, VT);
+    }
+
+    return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, V);
+  };
+
+  SDValue Op1 = Process(N.getOperand(0));
+  SDValue Op2 = Process(N.getOperand(1));
+  return DAG.getNode(N.getOpcode(), N, VT, Op1, Op2);
+}
+
 static SDValue
 performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              SelectionDAG &DAG) {
@@ -31847,6 +31906,10 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     Ops[0] = N0;
     return DAG.getBuildVector(VT, DL, Ops);
   }
+
+  if (DCI.isAfterLegalizeDAG() && VT.isFixedLengthVector())
+    if (SDValue R = performAsVectorOperation(N->getOperand(0), VT, DAG))
+      return R;
 
   // Let's do below transform.
   //
@@ -34746,11 +34809,11 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   // The !mem.cache_hint metadata is not supported by GISel and will be dropped.
   // TODO: Remove this and handle atomic hints in GISel once supported.
   if (auto *Store = dyn_cast<StoreInst>(&Inst)) {
-    if (Store->isAtomic() && getMemCacheHintMetadata(*Store, 1))
+    if (Store->isAtomic() && getMemCacheHint(*Store, 1))
       return true;
   }
   if (auto *RMW = dyn_cast<AtomicRMWInst>(&Inst))
-    if (getMemCacheHintMetadata(*RMW))
+    if (getMemCacheHint(*RMW))
       return true;
 
   return false;

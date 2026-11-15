@@ -7381,8 +7381,9 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
 
       // Non-volatile memset / memcpy do not count as side-effect for forward
       // progress.
-      if (isa<MemIntrinsic>(I) && !I->isVolatile())
-        return false;
+      if (auto *MI = dyn_cast<MemIntrinsic>(I))
+        if (!MI->isVolatile())
+          return false;
 
       // Droppable intrinsics only model a memory write; they are not progress.
       if (I->isDroppable())

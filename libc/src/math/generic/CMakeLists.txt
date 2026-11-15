@@ -285,6 +285,7 @@ add_entrypoint_object(
   HDRS
     ../dsubf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.dsubf128
 )
 
@@ -3942,6 +3943,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  coshbf16
+  SRCS
+    coshbf16.cpp
+  HDRS
+    ../coshbf16.h
+  DEPENDS
+    libc.src.__support.math.coshbf16
+)
+
+add_entrypoint_object(
   coshf16
   SRCS
     coshf16.cpp
@@ -5100,6 +5111,7 @@ add_entrypoint_object(
   HDRS
     ../dmulf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.dmulf128
 )
 
