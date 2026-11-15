@@ -177,6 +177,17 @@ ABIArgInfo NVPTXABIInfo::classifyReturnType(QualType RetTy) const {
       isUnsupportedType(RetTy))
     return coerceToIntArrayWithLimit(RetTy, 64);
 
+  // Return a record as an integer array of the same size. Returning its LLVM
+  // struct type would copy it field by field and drop bytes that are padding
+  // in that type, which can hold data of an active union member. Elements are
+  // no wider than the struct type's ABI alignment, so the PTX return parameter
+  // keeps its alignment.
+  if (RetTy->isRecordType() && !isEmptyRecord(getContext(), RetTy, true)) {
+    unsigned Align =
+        getDataLayout().getABITypeAlign(CGT.ConvertType(RetTy)).value() * 8;
+    return coerceToIntArrayWithLimit(RetTy, Align);
+  }
+
   // note: this is different from default ABI
   if (!RetTy->isScalarType())
     return ABIArgInfo::getDirect();
