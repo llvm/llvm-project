@@ -95,3 +95,15 @@ func.func @mfma_to_rocdl(%arg0 : f32, %arg1 : vector<32xf32>,
 
   func.return
 }
+
+// CHECK-LABEL: func @mfma_prefer_agpr_to_rocdl
+func.func @mfma_prefer_agpr_to_rocdl(%arg0 : vector<4xf16>, %arg1 : vector<4xf32>,
+                                     %arg2 : f64) {
+  // CHECK: rocdl.mfma.f32.16x16x16f16 %{{.*}}, %{{.*}}, %{{.*}}, 0, 0, none preferAgpr : (vector<4xf16>, vector<4xf16>, vector<4xf32>) -> vector<4xf32>
+  amdgpu.mfma 16x16x16 %arg0 * %arg0 + %arg1 preferAgpr : vector<4xf16>, vector<4xf16>, vector<4xf32>
+  // CHECK: rocdl.mfma.f32.16x16x16f16 %{{.*}}, %{{.*}}, %{{.*}}, 0, 0, none : (vector<4xf16>, vector<4xf16>, vector<4xf32>) -> vector<4xf32>
+  amdgpu.mfma 16x16x16 %arg0 * %arg0 + %arg1 : vector<4xf16>, vector<4xf16>, vector<4xf32>
+  // CHECK: rocdl.mfma.f64.4x4x4f64 %{{.*}}, %{{.*}}, %{{.*}}, 0, 0, neg_a preferAgpr : (f64, f64, f64) -> f64
+  amdgpu.mfma blocks(4) 4x4x4 %arg2 * %arg2 + %arg2 negateA preferAgpr : f64, f64, f64
+  func.return
+}

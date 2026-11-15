@@ -96,3 +96,17 @@ func.func @scaled_mfma_to_rocdl(%arg0 : vector<16xf32>,
 
   func.return
 }
+
+// CHECK-LABEL: func @mfma_prefer_agpr_to_rocdl
+func.func @mfma_prefer_agpr_to_rocdl(%arg0 : vector<16xf32>,
+                                     %arg1 : vector<32xf8E4M3FN>,
+                                     %arg2 : vector<4xf8E8M0FNU>,
+                                     %arg3 : f8E8M0FNU) {
+  // CHECK: rocdl.mfma.scale.f32.32x32x64.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp8_e4m3, fp8_e4m3, 0, %{{.*}}, 0, %{{.*}} preferAgpr : (vector<8xi32>, vector<8xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
+  amdgpu.mfma 32x32x64 %arg1 * %arg1 + %arg0 preferAgpr : vector<32xf8E4M3FN>, vector<32xf8E4M3FN>, vector<16xf32>
+  // CHECK: rocdl.mfma.scale.f32.32x32x64.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp8_e4m3, fp8_e4m3, 0, %{{.*}}, 1, %{{.*}} preferAgpr : (vector<8xi32>, vector<8xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
+  amdgpu.scaled_mfma 32x32x64 (%arg2[0] * %arg1) * (%arg3[1] * %arg1) + %arg0 preferAgpr : vector<4xf8E8M0FNU>, vector<32xf8E4M3FN>, f8E8M0FNU, vector<32xf8E4M3FN>, vector<16xf32>
+  // CHECK: rocdl.mfma.scale.f32.32x32x64.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp8_e4m3, fp8_e4m3, 0, %{{.*}}, 1, %{{.*}} : (vector<8xi32>, vector<8xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
+  amdgpu.scaled_mfma 32x32x64 (%arg2[0] * %arg1) * (%arg3[1] * %arg1) + %arg0 : vector<4xf8E8M0FNU>, vector<32xf8E4M3FN>, f8E8M0FNU, vector<32xf8E4M3FN>, vector<16xf32>
+  func.return
+}

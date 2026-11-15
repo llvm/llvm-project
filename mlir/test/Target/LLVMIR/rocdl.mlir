@@ -1992,6 +1992,32 @@ llvm.func @rocdl_last_use(%ptr: !llvm.ptr<1>) -> i32 {
   llvm.return %ret : i32
 }
 
+llvm.func @rocdl_mfma_prefer_agpr(%a : vector<4xf16>, %c : vector<4xf32>,
+                                  %d : f64, %scale : i32,
+                                  %sa : vector<8xi32>,
+                                  %sc : vector<16xf32>) {
+  // CHECK-LABEL: @rocdl_mfma_prefer_agpr
+  // CHECK: call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> %{{.*}}, <4 x half> %{{.*}}, <4 x float> %{{.*}}, i32 0, i32 0, i32 0), !amdgpu.mfma ![[$MFMA_AGPR:[0-9]+]]{{$}}
+  %r0 = rocdl.mfma.f32.16x16x16f16 %a, %a, %c, 0, 0, none preferAgpr :
+                            (vector<4xf16>, vector<4xf16>, vector<4xf32>) -> vector<4xf32>
+  // CHECK: call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> %{{.*}}, <4 x half> %{{.*}}, <4 x float> %{{.*}}, i32 0, i32 0, i32 0){{$}}
+  %r1 = rocdl.mfma.f32.16x16x16f16 %a, %a, %c, 0, 0, none :
+                            (vector<4xf16>, vector<4xf16>, vector<4xf32>) -> vector<4xf32>
+  // CHECK: call double @llvm.amdgcn.mfma.f64.4x4x4f64(double %{{.*}}, double %{{.*}}, double %{{.*}}, i32 0, i32 0, i32 1), !amdgpu.mfma ![[$MFMA_AGPR]]{{$}}
+  %r2 = rocdl.mfma.f64.4x4x4f64 %d, %d, %d, 0, 0, neg_a preferAgpr :
+                            (f64, f64, f64) -> f64
+  // CHECK: call double @llvm.amdgcn.mfma.f64.4x4x4f64(double %{{.*}}, double %{{.*}}, double %{{.*}}, i32 0, i32 0, i32 1){{$}}
+  %r3 = rocdl.mfma.f64.4x4x4f64 %d, %d, %d, 0, 0, neg_a :
+                            (f64, f64, f64) -> f64
+  // CHECK: call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <16 x float> %{{.*}}, i32 0, i32 0, i32 0, i32 %{{.*}}, i32 0, i32 %{{.*}}), !amdgpu.mfma ![[$MFMA_AGPR]]{{$}}
+  %r4 = rocdl.mfma.scale.f32.32x32x64.f8f6f4 %sa, %sa, %sc, fp8_e4m3, fp8_e4m3, 0, %scale, 0, %scale preferAgpr :
+                            (vector<8xi32>, vector<8xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
+  // CHECK: call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <16 x float> %{{.*}}, i32 0, i32 0, i32 0, i32 %{{.*}}, i32 0, i32 %{{.*}}){{$}}
+  %r5 = rocdl.mfma.scale.f32.32x32x64.f8f6f4 %sa, %sa, %sc, fp8_e4m3, fp8_e4m3, 0, %scale, 0, %scale :
+                            (vector<8xi32>, vector<8xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
+  llvm.return
+}
+
 llvm.func @test_fmed3_f16(%arg0: f16, %arg1: f16, %arg2: f16) -> f16 {
   // CHECK-LABEL: define half @test_fmed3_f16(half %0, half %1, half %2)
   %0 = rocdl.fmed3 %arg0, %arg1, %arg2 : f16
@@ -2262,6 +2288,7 @@ llvm.func @rocdl_dot_fp8_family(%i32: i32, %f32: f32) -> f32 {
 // CHECK-DAG: attributes #[[$KERNEL_NO_UNIFORM_WORK_GROUPS_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" }
 // CHECK-DAG: ![[$REQD_WORK_GROUP_SIZE]] = !{i32 16, i32 4, i32 2}
 // CHECK-DAG: ![[$REQD_BLOCK_SIZE]] = !{i32 8, i32 4, i32 2}
+// CHECK-DAG: ![[$MFMA_AGPR]] = !{!"agpr"}
 // CHECK-DAG: attributes #[[$KERNEL_WAVES_PER_EU_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "uniform-work-group-size" }
 // CHECK-DAG: attributes #[[$KERNEL_WAVES_PER_EU_RANGE_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="1,1" "uniform-work-group-size" }
 // CHECK-DAG: attributes #[[$KERNEL_UNSAFE_FP_ATOMICS_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-unsafe-fp-atomics"="true" "uniform-work-group-size" }
