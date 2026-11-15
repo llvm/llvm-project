@@ -317,6 +317,10 @@ struct __unwrap_iter_impl<reverse_iterator<reverse_iterator<_Iter> >, __b> {
   }
 };
 
+template <class _Iter>
+struct __unwrap_iter_may_strip_checks<reverse_iterator<reverse_iterator<_Iter> > >
+    : __unwrap_iter_may_strip_checks<_Iter> {};
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___ITERATOR_REVERSE_ITERATOR_H
