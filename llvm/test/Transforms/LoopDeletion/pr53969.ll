@@ -10,19 +10,17 @@ define void @test() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ undef, [[BB:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ 11, [[BB]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ 11, [[BB:%.*]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 112, -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP3]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw i32 [[TMP2]], -6
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nsw i32 [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i32 [[TMP7]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = and i32 undef, 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[BB33_LOOPEXIT1:%.*]], label [[BB34_PREHEADER:%.*]]
 ; CHECK:       bb34.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[TMP]], 2
 ; CHECK-NEXT:    br label [[BB34:%.*]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    [[TMP2_LCSSA12:%.*]] = phi i32 [ 11, [[BB34]] ]
@@ -30,16 +28,13 @@ define void @test() {
 ; CHECK:       bb12:
 ; CHECK-NEXT:    [[TMP41_LCSSA:%.*]] = phi i64 [ [[TMP41:%.*]], [[BB34]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq ptr addrspace(1) undef, null
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP]] to i1
-; CHECK-NEXT:    [[TMP11:%.*]] = add i1 [[TMP1]], true
 ; CHECK-NEXT:    br label [[BB14:%.*]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 4, [[BB12:%.*]] ]
-; CHECK-NEXT:    [[TMP15:%.*]] = phi i32 [ [[TMP0]], [[BB12]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi i64 [ [[TMP41_LCSSA]], [[BB12]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP16]], undef
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV]] to i1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i1 [[LFTR_WIDEIV]], [[TMP11]]
+; CHECK-NEXT:    [[LFTR_WIDEIV16:%.*]] = trunc i32 [[TMP2]] to i1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i1 [[LFTR_WIDEIV16]], undef
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB32:%.*]], label [[BB22:%.*]]
 ; CHECK:       bb22:
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
@@ -48,10 +43,8 @@ define void @test() {
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[BB42:%.*]], label [[BB25:%.*]]
 ; CHECK:       bb25:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[TMP15]], 3
 ; CHECK-NEXT:    br label [[BB31:%.*]]
 ; CHECK:       bb31:
-; CHECK-NEXT:    [[TMP29_LCSSA:%.*]] = phi i32 [ [[TMP29]], [[BB25]] ]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb32:
 ; CHECK-NEXT:    ret void
