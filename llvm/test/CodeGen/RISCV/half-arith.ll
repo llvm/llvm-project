@@ -1171,10 +1171,17 @@ define half @fmadd_h(half %a, half %b, half %c) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: fmadd_h:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa2
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa2, fa0
+; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa2, fa3, fa4, rdn
+; CHECKIZFHMIN-NEXT:    fmv.x.w a0, fa5
+; CHECKIZFHMIN-NEXT:    fmadd.s fa4, fa2, fa3, fa4, rup
+; CHECKIZFHMIN-NEXT:    andi a0, a0, 1
+; CHECKIZFHMIN-NEXT:    bnez a0, .LBB11_2
+; CHECKIZFHMIN-NEXT:  # %bb.1:
+; CHECKIZFHMIN-NEXT:    fmv.s fa5, fa4
+; CHECKIZFHMIN-NEXT:  .LBB11_2:
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
@@ -1313,9 +1320,16 @@ define half @fmsub_h(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    xor a0, a0, a1
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa2, fa0
+; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa2, fa4, fa3, rdn
+; CHECKIZFHMIN-NEXT:    fmv.x.w a0, fa5
+; CHECKIZFHMIN-NEXT:    fmadd.s fa4, fa2, fa4, fa3, rup
+; CHECKIZFHMIN-NEXT:    andi a0, a0, 1
+; CHECKIZFHMIN-NEXT:    bnez a0, .LBB12_2
+; CHECKIZFHMIN-NEXT:  # %bb.1:
+; CHECKIZFHMIN-NEXT:    fmv.s fa5, fa4
+; CHECKIZFHMIN-NEXT:  .LBB12_2:
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
@@ -1481,10 +1495,17 @@ define half @fnmadd_h(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    xor a1, a1, a2
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa4, a1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa4, fa3, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa2, fa1
+; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa4, fa2, fa3, rdn
+; CHECKIZFHMIN-NEXT:    fmv.x.w a0, fa5
+; CHECKIZFHMIN-NEXT:    fmadd.s fa4, fa4, fa2, fa3, rup
+; CHECKIZFHMIN-NEXT:    andi a0, a0, 1
+; CHECKIZFHMIN-NEXT:    bnez a0, .LBB13_2
+; CHECKIZFHMIN-NEXT:  # %bb.1:
+; CHECKIZFHMIN-NEXT:    fmv.s fa5, fa4
+; CHECKIZFHMIN-NEXT:  .LBB13_2:
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
@@ -1659,10 +1680,17 @@ define half @fnmadd_h_2(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    xor a1, a1, a2
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa4, a1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa2, fa0
+; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa2, fa4, fa3, rdn
+; CHECKIZFHMIN-NEXT:    fmv.x.w a0, fa5
+; CHECKIZFHMIN-NEXT:    fmadd.s fa4, fa2, fa4, fa3, rup
+; CHECKIZFHMIN-NEXT:    andi a0, a0, 1
+; CHECKIZFHMIN-NEXT:    bnez a0, .LBB14_2
+; CHECKIZFHMIN-NEXT:  # %bb.1:
+; CHECKIZFHMIN-NEXT:    fmv.s fa5, fa4
+; CHECKIZFHMIN-NEXT:  .LBB14_2:
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
@@ -1806,10 +1834,17 @@ define half @fnmadd_h_3(half %a, half %b, half %c) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: fnmadd_h_3:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa2
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa2, fa0
+; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa2, fa3, fa4, rdn
+; CHECKIZFHMIN-NEXT:    fmv.x.w a0, fa5
+; CHECKIZFHMIN-NEXT:    fmadd.s fa4, fa2, fa3, fa4, rup
+; CHECKIZFHMIN-NEXT:    andi a0, a0, 1
+; CHECKIZFHMIN-NEXT:    bnez a0, .LBB15_2
+; CHECKIZFHMIN-NEXT:  # %bb.1:
+; CHECKIZFHMIN-NEXT:    fmv.s fa5, fa4
+; CHECKIZFHMIN-NEXT:  .LBB15_2:
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa5
 ; CHECKIZFHMIN-NEXT:    lui a1, 1048568
@@ -1944,10 +1979,17 @@ define half @fnmadd_nsz(half %a, half %b, half %c) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: fnmadd_nsz:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa2
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa2, fa0
+; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa2, fa3, fa4, rdn
+; CHECKIZFHMIN-NEXT:    fmv.x.w a0, fa5
+; CHECKIZFHMIN-NEXT:    fmadd.s fa4, fa2, fa3, fa4, rup
+; CHECKIZFHMIN-NEXT:    andi a0, a0, 1
+; CHECKIZFHMIN-NEXT:    bnez a0, .LBB16_2
+; CHECKIZFHMIN-NEXT:  # %bb.1:
+; CHECKIZFHMIN-NEXT:    fmv.s fa5, fa4
+; CHECKIZFHMIN-NEXT:  .LBB16_2:
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa5
 ; CHECKIZFHMIN-NEXT:    lui a1, 1048568
@@ -2091,9 +2133,16 @@ define half @fnmsub_h(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    xor a0, a0, a1
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa5, fa3, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa2, fa1
+; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa2, fa4, rdn
+; CHECKIZFHMIN-NEXT:    fmv.x.w a0, fa5
+; CHECKIZFHMIN-NEXT:    fmadd.s fa4, fa3, fa2, fa4, rup
+; CHECKIZFHMIN-NEXT:    andi a0, a0, 1
+; CHECKIZFHMIN-NEXT:    bnez a0, .LBB17_2
+; CHECKIZFHMIN-NEXT:  # %bb.1:
+; CHECKIZFHMIN-NEXT:    fmv.s fa5, fa4
+; CHECKIZFHMIN-NEXT:  .LBB17_2:
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
@@ -2239,9 +2288,16 @@ define half @fnmsub_h_2(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    xor a0, a0, a1
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa5, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa2, fa0
+; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa2, fa3, fa4, rdn
+; CHECKIZFHMIN-NEXT:    fmv.x.w a0, fa5
+; CHECKIZFHMIN-NEXT:    fmadd.s fa4, fa2, fa3, fa4, rup
+; CHECKIZFHMIN-NEXT:    andi a0, a0, 1
+; CHECKIZFHMIN-NEXT:    bnez a0, .LBB18_2
+; CHECKIZFHMIN-NEXT:  # %bb.1:
+; CHECKIZFHMIN-NEXT:    fmv.s fa5, fa4
+; CHECKIZFHMIN-NEXT:  .LBB18_2:
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;

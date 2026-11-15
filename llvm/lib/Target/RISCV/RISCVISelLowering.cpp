@@ -703,11 +703,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
 
     if (!Subtarget.hasStdExtD()) {
-      // FIXME: handle f16 fma when f64 is not legal. Using an f32 fma
-      // instruction runs into double rounding issues, so this is wrong.
-      // Normally we'd use an f64 fma, but without the D extension the f64 type
-      // is not legal. This should probably be a libcall.
-      AddPromotedToType(ISD::FMA, MVT::f16, MVT::f32);
+      // Zfhmin has the conversions needed to round an f32 result to odd
+      // before narrowing. Keep the native half operation when Zfh is present.
+      if (Subtarget.hasStdExtZfhmin() && !Subtarget.hasStdExtZfh())
+        setOperationAction(ISD::FMA, MVT::f16, Custom);
+      else
+        AddPromotedToType(ISD::FMA, MVT::f16, MVT::f32);
+      // FIXME: Strict FMA also needs a single rounding and must preserve the
+      // rounding mode, signed zero and accrued exception flags.
       AddPromotedToType(ISD::STRICT_FMA, MVT::f16, MVT::f32);
     }
 
@@ -8423,6 +8426,39 @@ static SDValue lowerCttzElts(SDValue Op, SelectionDAG &DAG,
 static SDValue lowerCONVERT_FROM_ARBITRARY_FP(SDValue Op, SelectionDAG &DAG,
                                               const RISCVSubtarget &Subtarget);
 
+static SDValue lowerZfhminFMA(SDValue Op, SelectionDAG &DAG,
+                             const RISCVSubtarget &Subtarget) {
+  SDLoc DL(Op);
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue LHS = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op.getOperand(0));
+  SDValue RHS = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op.getOperand(1));
+  SDValue Addend = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op.getOperand(2));
+
+  auto roundFMA = [&](RISCVFPRndMode::RoundingMode RM) {
+    SDValue Mode = DAG.getTargetConstant(RM, DL, XLenVT);
+    return SDValue(DAG.getMachineNode(RISCV::FMADD_S, DL, MVT::f32,
+                                      {LHS, RHS, Addend, Mode}),
+                   0);
+  };
+  SDValue Down = roundFMA(RISCVFPRndMode::RDN);
+  SDValue Up = roundFMA(RISCVFPRndMode::RUP);
+
+  // If the exact result is not representable, Down and Up bracket it. Select
+  // the odd significand so rounding to f16 cannot introduce a false tie.
+  // Exact results agree except for the sign of zero on exact cancellation.
+  // In that case the low bit is zero and Up supplies the round-to-nearest sign.
+  SDValue Bits = Subtarget.is64Bit()
+                     ? DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenVT, Down)
+                     : DAG.getBitcast(XLenVT, Down);
+  SDValue LowBit =
+      DAG.getNode(ISD::AND, DL, XLenVT, Bits, DAG.getConstant(1, DL, XLenVT));
+  SDValue IsOdd = DAG.getSetCC(DL, XLenVT, LowBit,
+                               DAG.getConstant(0, DL, XLenVT), ISD::SETNE);
+  SDValue Rounded = DAG.getSelect(DL, MVT::f32, IsOdd, Down, Up);
+  return DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, Rounded,
+                     DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+}
+
 SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                             SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -9736,6 +9772,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FMAXNUM:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
+    if (Op.getOpcode() == ISD::FMA && Op.getValueType() == MVT::f16)
+      return lowerZfhminFMA(Op, DAG, Subtarget);
     if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     [[fallthrough]];
