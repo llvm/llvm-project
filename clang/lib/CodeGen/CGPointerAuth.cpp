@@ -198,6 +198,7 @@ CGPointerAuthInfo CodeGenModule::getPointerAuthInfoForPointeeType(QualType T) {
 /// pointer type.
 static CGPointerAuthInfo getPointerAuthInfoForType(CodeGenModule &CGM,
                                                    QualType PointerType) {
+  PointerType = PointerType.getAtomicUnqualifiedType();
   assert(PointerType->isSignableType(CGM.getContext()));
 
   // Block pointers are currently not signed.
@@ -232,7 +233,7 @@ emitLoadOfOrigPointerRValue(CodeGenFunction &CGF, const LValue &LV,
 /// needlessly resigning the pointer.
 std::pair<llvm::Value *, CGPointerAuthInfo>
 CodeGenFunction::EmitOrigPointerRValue(const Expr *E) {
-  assert(E->getType()->isSignableType(getContext()));
+  assert(E->getType().getAtomicUnqualifiedType()->isSignableType(getContext()));
 
   E = E->IgnoreParens();
   if (const auto *Load = dyn_cast<ImplicitCastExpr>(E)) {
