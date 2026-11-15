@@ -42,7 +42,10 @@ libc_test(
     deps = [
         "//libc/hdr:sys_mman_macros",
         "//libc/hdr:sys_resource_macros",
+        "//libc/hdr/types:struct_rlimit",
+        "//libc/src/__support/CPP:scope",
         "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:sanitizer",
         "//libc/src/sys/mman:madvise",
         "//libc/src/sys/mman:mincore",
         "//libc/src/sys/mman:mlock",
@@ -53,6 +56,7 @@ libc_test(
         "//libc/src/sys/mman:munlockall",
         "//libc/src/sys/mman:munmap",
         "//libc/src/sys/resource:getrlimit",
+        "//libc/src/sys/resource:setrlimit",
         "//libc/src/unistd:getpagesize",
     ],
 )
