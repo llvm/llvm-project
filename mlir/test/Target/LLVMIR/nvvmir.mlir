@@ -600,6 +600,13 @@ llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
   // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n16.x4.b8x16.b4x16_p64.p3(ptr addrspace(3) %{{.*}})
   %m8n16_b4_l4 = nvvm.ldmatrix %arg0 , num = 4, layout = <row>, shape = <m = 8, n = 16>, element_type = <b8x16.b4x16_p64> : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
 
+  // CHECK: call i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n16.x1.s8.s4.p3(ptr addrspace(3) %{{.*}})
+  %m8n16_s4_l1 = nvvm.ldmatrix %arg0 , num = 1, layout = <row>, shape = <m = 8, n = 16>, element_type = <s8.s4> : (!llvm.ptr<3>) -> i32
+  // CHECK: call { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n16.x2.s8.s4.p3(ptr addrspace(3) %{{.*}})
+  %m8n16_s4_l2 = nvvm.ldmatrix %arg0 , num = 2, layout = <row>, shape = <m = 8, n = 16>, element_type = <s8.s4> : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
+  // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n16.x4.s8.s4.p3(ptr addrspace(3) %{{.*}})
+  %m8n16_s4_l4 = nvvm.ldmatrix %arg0 , num = 4, layout = <row>, shape = <m = 8, n = 16>, element_type = <s8.s4> : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+
   // CHECK: call { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m16n16.x1.trans.b8.p3(ptr addrspace(3) %{{.*}})
   %m16n16_l1t = nvvm.ldmatrix %arg0 , num = 1, layout = <col>, shape = <m = 16, n = 16>, element_type = <b8> : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
   // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m16n16.x2.trans.b8.p3(ptr addrspace(3) %{{.*}})

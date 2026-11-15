@@ -106,24 +106,6 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
   return false;
 }
 
-// Return true if Use is not after Def in the same block or EXEC is modified
-// between them.
-static bool execModifiedBeforeUse(const SIRegisterInfo &TRI, MCRegister ExecReg,
-                                  const MachineInstr &Def,
-                                  const MachineInstr &Use) {
-  if (Use.getParent() != Def.getParent())
-    return true;
-
-  auto I = std::next(Def.getIterator());
-  auto E = Def.getParent()->end();
-  for (; I != E && &*I != &Use; ++I) {
-    if (I->modifiesRegister(ExecReg, &TRI))
-      return true;
-  }
-
-  return I == E;
-}
-
 // Optimize sequence
 //    %sel = V_CNDMASK_B32_e64 0, 1, %cc
 //    %cmp = V_CMP_NE_U32 1, %sel
@@ -485,7 +467,7 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
         int Idx = SingleExecUser->findRegisterUseOperandIdx(SavedExec,
                                                             /*TRI=*/nullptr);
         assert(Idx != -1);
-        if (!execModifiedBeforeUse(*TRI, ExecReg, *I, *SingleExecUser) &&
+        if (SingleExecUser->getParent() == I->getParent() &&
             !SingleExecUser->getOperand(Idx).isImplicit() &&
             static_cast<unsigned>(Idx) <
                 SingleExecUser->getDesc().getNumOperands() &&

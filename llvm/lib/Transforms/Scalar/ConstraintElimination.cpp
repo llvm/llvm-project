@@ -419,10 +419,12 @@ public:
   /// system implies it or because ValueTracking can prove it.
   bool isKnownPositive(Value *V);
 
-  /// Returns true if \p V is known to be negative, false if \p V is known to be
-  /// nonnegative, or std::nullopt if neither the signed system nor
-  /// ValueTracking can prove it.
-  std::optional<bool> getKnownSign(Value *V);
+  /// Returns the sign of \p V, if known. The result is false if \p V is known
+  /// to be non-negative. Otherwise it is true if \p V is known to be negative
+  /// (if \p StrictlyNegative), or non-positive (if not \p StrictlyNegative).
+  /// Returns std::nullopt if neither ValueTracking, nor the signed system can
+  /// prove either fact.
+  std::optional<bool> getKnownSign(Value *V, bool StrictlyNegative);
 
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
@@ -625,6 +627,16 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
     // Op0 - Op1 does not wrap signed if 0 <=s Op1 <=s Op0.
     if (Info.isKnownNonNegative(Op1) &&
         Info.doesHold(CmpInst::ICMP_SGE, Op0, Op1))
+      return true;
+  }
+
+  // A signed sum of operands with opposite signs cannot wrap.
+  if (Signed && Opcode == Instruction::Add) {
+    std::optional<bool> Op0Sign =
+        Info.getKnownSign(Op0, /*StrictlyNegative=*/false);
+    std::optional<bool> Op1Sign =
+        Info.getKnownSign(Op1, /*StrictlyNegative=*/false);
+    if (Op0Sign && Op1Sign && *Op0Sign != *Op1Sign)
       return true;
   }
 
@@ -1165,16 +1177,18 @@ bool ConstraintInfo::isKnownPositive(Value *V) {
          doesHold(CmpInst::ICMP_SGT, V, ConstantInt::get(V->getType(), 0));
 }
 
-std::optional<bool> ConstraintInfo::getKnownSign(Value *V) {
+std::optional<bool> ConstraintInfo::getKnownSign(Value *V,
+                                                 bool StrictlyNegative) {
   KnownBits Known = computeKnownBits(V, DL);
   if (Known.isNonNegative())
     return false;
-  if (Known.isNegative())
+  if (StrictlyNegative ? Known.isNegative() : Known.isNonPositive())
     return true;
   Constant *Zero = ConstantInt::get(V->getType(), 0);
   if (doesHold(CmpInst::ICMP_SGE, V, Zero))
     return false;
-  if (doesHold(CmpInst::ICMP_SLT, V, Zero))
+  auto NegativePred = StrictlyNegative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SLE;
+  if (doesHold(NegativePred, V, Zero))
     return true;
   return std::nullopt;
 }
@@ -2484,7 +2498,7 @@ static bool replaceOverflowUses(WithOverflowInst *II,
       U->replaceAllUsesWith(Res);
       Changed = true;
     } else if (match(U, m_ExtractValue<1>(m_Value()))) {
-      U->replaceAllUsesWith(Builder.getFalse());
+      U->replaceAllUsesWith(ConstantInt::getFalse(U->getType()));
       Changed = true;
     } else
       continue;
@@ -2660,8 +2674,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           // The operands also have the same sign: if one of them is known to
           // be non-negative (or negative), so is the other.
           if (A->getType()->isIntegerTy()) {
-            std::optional<bool> ASign = Info.getKnownSign(A);
-            std::optional<bool> BSign = Info.getKnownSign(B);
+            std::optional<bool> ASign =
+                Info.getKnownSign(A, /*StrictlyNegative=*/true);
+            std::optional<bool> BSign =
+                Info.getKnownSign(B, /*StrictlyNegative=*/true);
             if (ASign.has_value() != BSign.has_value()) {
               bool IsNegative = ASign ? *ASign : *BSign;
               Value *OtherOp = ASign ? B : A;

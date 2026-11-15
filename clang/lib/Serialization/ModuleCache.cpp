@@ -187,6 +187,8 @@ std::error_code clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer,
   {
     llvm::raw_fd_ostream OS(FD, /*shouldClose=*/true);
     OS << Buffer.getBuffer();
+    // Make sure all contents reach the file before querying its status.
+    OS.flush();
     // Using the status from an open file descriptor ensures this is not racy.
     if ((EC = llvm::sys::fs::status(FD, Status)))
       return EC;
