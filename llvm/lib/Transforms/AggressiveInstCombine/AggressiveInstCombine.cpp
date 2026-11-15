@@ -854,6 +854,11 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
   // of errno), then:
   // (1) errno won't be set.
   // (2) it is safe to convert this to an intrinsic call.
+  // A plain sqrt intrinsic would lose the strict call's floating-point
+  // environment.
+  if (Call->isStrictFP())
+    return false;
+
   Type *Ty = Call->getType();
   Value *Arg = Call->getArgOperand(0);
   if (TTI.haveFastSqrt(Ty) &&
