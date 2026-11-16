@@ -442,15 +442,17 @@ public:
 
   /// Report known values for fadd
   LLVM_ABI static KnownFPClass fadd(const KnownFPClass &LHS,
-                                    const KnownFPClass &RHS, DenormalMode Mode);
+                                    const KnownFPClass &RHS, RoundingMode RM,
+                                    DenormalMode Mode);
 
   /// Report known values for fadd x, x
   LLVM_ABI static KnownFPClass fadd_self(const KnownFPClass &Src,
-                                         DenormalMode Mode);
+                                         RoundingMode RM, DenormalMode Mode);
 
   /// Report known values for fsub
   LLVM_ABI static KnownFPClass fsub(const KnownFPClass &LHS,
-                                    const KnownFPClass &RHS, DenormalMode Mode);
+                                    const KnownFPClass &RHS, RoundingMode RM,
+                                    DenormalMode Mode);
 
   /// Report known values for fmul
   LLVM_ABI static KnownFPClass fmul(const KnownFPClass &LHS,
@@ -477,11 +479,12 @@ public:
   LLVM_ABI static KnownFPClass fdiv_self(const KnownFPClass &Src,
                                          DenormalMode Mode);
 
-  /// Report known values for frem
+  /// Report known values for frem. Valid for all rounding modes, since frem is
+  /// always exact.
   LLVM_ABI static KnownFPClass frem(const KnownFPClass &LHS,
                                     const KnownFPClass &RHS, DenormalMode Mode);
 
-  /// Report known values for frem x, x
+  /// Report known values for frem x, x. Valid for all rounding modes.
   LLVM_ABI static KnownFPClass frem_self(const KnownFPClass &Src,
                                          DenormalMode Mode);
 

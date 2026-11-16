@@ -2450,26 +2450,16 @@ static void CheckReduce(
   // no IDENTITY=, it's an error.
   if (const auto &mask{arguments[3]}; mask && !arguments[/*identity*/ 4]) {
     if (const auto *expr{mask->UnwrapExpr()}) {
-      if (const auto *logical{
-              std::get_if<evaluate::Expr<evaluate::SomeLogical>>(&expr->u)}) {
-        if (common::visit(
-                [](const auto &kindExpr) {
-                  using KindExprType = std::decay_t<decltype(kindExpr)>;
-                  using KindLogical = typename KindExprType::Result;
-                  if (const auto *c{evaluate::UnwrapConstantValue<KindLogical>(
-                          kindExpr)}) {
-                    for (const auto &element : c->values()) {
-                      if (element.IsTrue()) {
-                        return false;
-                      }
-                    }
-                    return true;
-                  }
-                  return false;
-                },
-                logical->u)) {
-          messages.Say(
-              "MASK= has no .TRUE. element, so IDENTITY= must be present"_err_en_US);
+      if (const auto *logical{std::get_if<
+              evaluate::Expr<evaluate::Type<common::TypeCategory::Logical>>>(
+              &expr->u)}) {
+        if (const auto *c{evaluate::UnwrapConstantValue<
+                evaluate::Type<common::TypeCategory::Logical>>(*logical)}) {
+          if (llvm::none_of(c->values(),
+                  [](const auto &element) { return element.IsTrue(); })) {
+            messages.Say(
+                "MASK= has no .TRUE. element, so IDENTITY= must be present"_err_en_US);
+          }
         }
       }
     }

@@ -3,11 +3,13 @@
 
 ---
 name:            test_fcmp_canon
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_fcmp_canon
-    ; CHECK: %lhs:_(f64) = G_FCONSTANT double 1.000000e+00
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(f64) = G_FCONSTANT double 1.000000e+00
     ; CHECK-NEXT: %rhs:_(f64) = COPY $x0
     ; CHECK-NEXT: %res:_(i32) = afn G_FCMP floatpred(ole), %rhs(f64), %lhs
     ; CHECK-NEXT: $w0 = COPY %res(i32)
@@ -18,11 +20,13 @@ body:             |
 ...
 ---
 name:            test_fcmp_no_canon
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_fcmp_no_canon
-    ; CHECK: %lhs:_(f64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(f64) = COPY $x0
     ; CHECK-NEXT: %rhs:_(f64) = G_FCONSTANT double 1.000000e+00
     ; CHECK-NEXT: %res:_(i32) = afn G_FCMP floatpred(oge), %lhs(f64), %rhs
     ; CHECK-NEXT: $w0 = COPY %res(i32)
@@ -33,11 +37,13 @@ body:             |
 ...
 ---
 name:            test_fcmp_no_canon_bv
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_fcmp_no_canon_bv
-    ; CHECK: %opaque1:_(f64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %opaque1:_(f64) = COPY $x0
     ; CHECK-NEXT: %opaque2:_(f64) = COPY $x0
     ; CHECK-NEXT: %const1:_(f64) = G_FCONSTANT double 1.000000e+00
     ; CHECK-NEXT: %const2:_(f64) = G_FCONSTANT double 2.000000e+00
@@ -56,11 +62,13 @@ body:             |
 ...
 ---
 name:            test_fcmp_canon_bv
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_fcmp_canon_bv
-    ; CHECK: %opaque1:_(f64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %opaque1:_(f64) = COPY $x0
     ; CHECK-NEXT: %opaque2:_(f64) = COPY $x0
     ; CHECK-NEXT: %const1:_(f64) = G_FCONSTANT double 1.000000e+00
     ; CHECK-NEXT: %const2:_(f64) = G_FCONSTANT double 2.000000e+00
@@ -79,11 +87,13 @@ body:             |
 ...
 ---
 name:            test_fcmp_canon_splat
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x1
     ; CHECK-LABEL: name: test_fcmp_canon_splat
-    ; CHECK: %const:_(f64) = G_FCONSTANT double 1.000000e+00
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %const:_(f64) = G_FCONSTANT double 1.000000e+00
     ; CHECK-NEXT: %lhs:_(<vscale x 2 x f64>) = G_SPLAT_VECTOR %const(f64)
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $x1
     ; CHECK-NEXT: %rhs:_(<vscale x 2 x f64>) = G_SPLAT_VECTOR [[COPY]](f64)
@@ -100,7 +110,6 @@ body:             |
 ...
 ---
 name:            test_fcmp_const
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fcmp_const
@@ -113,7 +122,6 @@ body:             |
 ...
 ---
 name:            test_fcmp_const_other
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fcmp_const_other
@@ -126,7 +134,6 @@ body:             |
 ...
 ---
 name:            test_fcmp_no_same_semantics
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fcmp_no_same_semantics

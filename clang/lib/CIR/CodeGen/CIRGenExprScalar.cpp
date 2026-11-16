@@ -518,15 +518,18 @@ public:
   mlir::Value emitScalarCast(mlir::Value src, QualType srcType,
                              QualType dstType, mlir::Type srcTy,
                              mlir::Type dstTy, ScalarConversionOpts opts) {
-    assert(!srcType->isMatrixType() && !dstType->isMatrixType() &&
-           "Internal error: matrix types not handled by this function.");
     assert(!(mlir::isa<mlir::IntegerType>(srcTy) ||
              mlir::isa<mlir::IntegerType>(dstTy)) &&
            "Obsolete code. Don't use mlir::IntegerType with CIR.");
 
     mlir::Type fullDstTy = dstTy;
-    if (mlir::isa<cir::VectorType>(srcTy) &&
-        mlir::isa<cir::VectorType>(dstTy)) {
+    if (mlir::isa<cir::MatrixType>(srcTy) &&
+        mlir::isa<cir::MatrixType>(dstTy)) {
+      // Use the element types of the matrices to figure out the CastKind.
+      srcTy = mlir::dyn_cast<cir::MatrixType>(srcTy).getElementType();
+      dstTy = mlir::dyn_cast<cir::MatrixType>(dstTy).getElementType();
+    } else if (mlir::isa<cir::VectorType>(srcTy) &&
+               mlir::isa<cir::VectorType>(dstTy)) {
       // Use the element types of the vectors to figure out the CastKind.
       srcTy = mlir::dyn_cast<cir::VectorType>(srcTy).getElementType();
       dstTy = mlir::dyn_cast<cir::VectorType>(dstTy).getElementType();
@@ -887,6 +890,14 @@ public:
     if (cir::isFPOrVectorOfFPType(operand.getType()))
       return builder.createOrFold<cir::FNegOp>(loc, operand);
 
+    // Saturated negation must saturate (-min for signed, any nonzero value for
+    // unsigned), as in classic codegen.
+    if (e->getType()->isSaturatedFixedPointType()) {
+      CIRGenFixedPointBuilder fpBuilder(builder, loc);
+      return fpBuilder.createNeg(
+          operand, cgf.getContext().getFixedPointSemantics(e->getType()));
+    }
+
     // TODO(cir): We might have to change this to support overflow trapping.
     //            Classic codegen routes unary minus through emitSub to ensure
     //            that the overflow behavior is handled correctly.
@@ -1146,9 +1157,8 @@ public:
     }
 
     if (srcType->isMatrixType() && dstType->isMatrixType()) {
-      cgf.getCIRGenModule().errorNYI(loc,
-                                     "matrix type to matrix type conversion");
-      return {};
+      return emitScalarCast(src, srcType, dstType, mlirSrcType, mlirDstType,
+                            opts);
     }
     assert(!srcType->isMatrixType() && !dstType->isMatrixType() &&
            "Internal error: conversion between matrix type and scalar type");
@@ -2965,7 +2975,38 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     }
     return builder.createExtractElement(loc, vec, /*idx=*/0);
   }
+  case CK_HLSLMatrixTruncation: {
+    assert((destTy->isMatrixType() || destTy->isBuiltinType()) &&
+           "Destination type must be a matrix or builtin type.");
+    mlir::Value matrix = Visit(subExpr);
+    mlir::Location loc = cgf.getLoc(subExpr->getSourceRange());
+    if (const auto *matTy = destTy->getAs<ConstantMatrixType>()) {
+      llvm::SmallVector<int64_t> mask(matTy->getNumElementsFlattened());
+      unsigned numCols = matTy->getNumColumns();
+      unsigned numRows = matTy->getNumRows();
 
+      auto *srcMatTy = subExpr->getType()->getAs<ConstantMatrixType>();
+      assert(srcMatTy && "Source type must be a matrix type.");
+      assert(numRows <= srcMatTy->getNumRows());
+      assert(numCols <= srcMatTy->getNumColumns());
+
+      for (unsigned row = 0; row < numRows; row++)
+        for (unsigned column = 0; column < numCols; column++)
+          mask[matTy->getColumnMajorFlattenedIndex(row, column)] =
+              srcMatTy->getColumnMajorFlattenedIndex(row, column);
+
+      auto elementTy =
+          mlir::cast<cir::MatrixType>(matrix.getType()).getElementType();
+      auto resultTy = cir::MatrixType::get(builder.getContext(), elementTy,
+                                           numRows, numCols);
+      return builder.createVecShuffle(loc, matrix, resultTy, mask);
+    }
+
+    cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
+                                   "ScalarExprEmitter::VisitCastExpr: HLSL "
+                                   "Matrix truncation with non-matrix dest");
+    return {};
+  }
   default:
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
                                    "CastExpr: ", ce->getCastKindName());
