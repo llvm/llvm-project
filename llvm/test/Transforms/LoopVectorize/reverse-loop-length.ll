@@ -4,34 +4,52 @@
 ; The loops below walk a dereferenceable region backwards, so every load is
 ; safe.
 
-; TODO: The counting-down IV is in the range [0, %length), which is exactly the region
-; the assume marks dereferenceable, so the early-exit loop should be vectorized.
+; The counting-down IV is in the range [0, %length), which is exactly the region
+; the assume marks dereferenceable, so the early-exit loop is vectorized.
 define ptr @reverse_reaches_base_dynamic_length(i64 %length, ptr %ptr) {
 ; CHECK-LABEL: define ptr @reverse_reaches_base_dynamic_length(
 ; CHECK-SAME: i64 [[LENGTH:%.*]], ptr [[PTR:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[NULL_CHECK:%.*]] = icmp eq i64 [[LENGTH]], 0
-; CHECK-NEXT:    br i1 [[NULL_CHECK]], label %[[EXIT:.*]], label %[[PREHEADER:.*]]
+; CHECK-NEXT:    br i1 [[NULL_CHECK]], [[EXIT:label %.*]], label %[[PREHEADER:.*]]
 ; CHECK:       [[PREHEADER]]:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PTR]], i64 [[LENGTH]]) ]
 ; CHECK-NEXT:    [[START:%.*]] = sub i64 [[LENGTH]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[LENGTH]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[LENGTH]], 3
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[LENGTH]], [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[START]], [[N_VEC]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[START]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[PREHEADER]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[ELEMENT_GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[IV]]
-; CHECK-NEXT:    [[ELEMENT:%.*]] = load i8, ptr [[ELEMENT_GEP]], align 1
-; CHECK-NEXT:    [[FOUND_CHECK:%.*]] = icmp eq i8 [[ELEMENT]], 0
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[TMP2]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i8, ptr [[PTR]], <4 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x ptr> [[WIDE_GEP]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -3
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i8> [[REVERSE]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP5]]
+; CHECK-NEXT:    [[FOUND_CHECK:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 -4)
 ; CHECK-NEXT:    br i1 [[FOUND_CHECK]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
-; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ne i64 [[IV]], 0
-; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label %[[LOOP_HEADER]], label %[[EXIT_LOOPEXIT]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[LENGTH]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT_LOOPEXIT1:label %.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[RES_PH:%.*]] = phi ptr [ null, %[[LOOP_LATCH]] ], [ [[ELEMENT_GEP]], %[[LOOP_HEADER]] ]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[RES_PH]], %[[EXIT_LOOPEXIT]] ]
-; CHECK-NEXT:    ret ptr [[RES]]
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP6]], i1 false)
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x ptr> [[WIDE_GEP]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    br [[EXIT_LOOPEXIT1]]
+; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
   %null_check = icmp eq i64 %length, 0
@@ -85,7 +103,7 @@ define ptr @reverse_reaches_base_static_length(ptr dereferenceable(16) %ptr) {
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 -4)
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
