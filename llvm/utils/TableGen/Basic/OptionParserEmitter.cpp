@@ -300,7 +300,7 @@ static void emitStructOptionIDs(ArrayRef<const Record *> Groups,
 }
 
 // Emits the struct an OptionsStruct def declares: its declaration under
-// OPTIONS_STRUCT_DECL, and under OPTIONS_STRUCT_DEFS the global instance, the
+// OPTIONS_STRUCT_DECL, and under OPTIONS_STRUCT_DEFS the default values, the
 // option table, and apply(), which sets the member an argument names.
 static void emitOptionsStruct(const Record &Struct,
                               ArrayRef<const Record *> Groups,
@@ -372,14 +372,12 @@ static void emitOptionsStruct(const Record &Struct,
         "&Alloc);\n";
   OS << "\nprivate:\n  friend class llvm::cl::LibraryOptionsContext;\n"
         "  friend class llvm::opt::LibraryOptionsParser;\n";
-  OS << "\n  static " << Name << " Global;\n";
-  OS << "  static const " << Name << " Default;\n";
+  OS << "\n  static const " << Name << " Default;\n";
   OS << "};\n} // namespace " << Namespace << "\n";
   OS << "#endif // OPTIONS_STRUCT_DECL\n";
 
   std::string Qualified = (Namespace + "::" + Name).str();
   OS << "\n#ifdef OPTIONS_STRUCT_DEFS\n#undef OPTIONS_STRUCT_DEFS\n";
-  OS << Qualified << " " << Qualified << "::Global;\n";
   OS << "LLVM_REQUIRE_CONSTANT_INITIALIZATION const " << Qualified << " "
      << Qualified << "::Default;\n\n";
   OS << "const llvm::opt::OptTable &" << Qualified << "::optTable() {\n";
