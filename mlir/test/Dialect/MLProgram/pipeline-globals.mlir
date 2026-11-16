@@ -233,7 +233,7 @@ func.func @call_with_unresolvable_callee(%arg0: memref<f32>) {
   // CHECK: ml_program.global_load @global_variable
   %0 = ml_program.global_load @global_variable : tensor<4xi32>
   // @callee is not defined anywhere in this module.
-  test.call_and_store @callee(%arg0), %arg0 {store_before_call = false} : (memref<f32>, memref<f32>) -> ()
+  test.call_and_store @callee(%arg0), %arg0 <store_before_call = false> : (memref<f32>, memref<f32>) -> ()
   // CHECK: ml_program.global_load @global_variable
   %1 = ml_program.global_load @global_variable : tensor<4xi32>
   func.return

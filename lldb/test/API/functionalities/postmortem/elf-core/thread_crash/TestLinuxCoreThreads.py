@@ -19,19 +19,16 @@ class LinuxCoreThreadsTestCase(TestBase):
     _i386_tid = 5195
     _x86_64_tid = 5250
 
-    @skipIf(oslist=["windows"])
     @skipIf(triple="^mips")
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
         self.do_test("linux-i386", self._i386_pid, self._i386_tid)
 
-    @skipIf(oslist=["windows"])
     @skipIf(triple="^mips")
     def test_x86_64(self):
         """Test that lldb can read the process information from an x86_64 linux core file."""
         self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_tid)
 
-    @skipIf(oslist=["windows"])
     @skipIf(triple="^mips")
     def test_fs_gs_base(self):
         """Tests fs_base/gs_base registers can be read from linux coredump."""

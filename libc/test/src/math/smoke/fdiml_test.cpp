@@ -10,4 +10,4 @@
 
 #include "src/math/fdiml.h"
 
-LIST_FDIM_TESTS(long double, LIBC_NAMESPACE::fdiml);
+LIST_FDIM_TESTS(Fdiml, long double, LIBC_NAMESPACE::fdiml);

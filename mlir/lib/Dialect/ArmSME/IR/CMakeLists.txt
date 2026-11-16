@@ -8,6 +8,9 @@ add_mlir_dialect_library(MLIRArmSMEDialect
   DEPENDS
   MLIRArmSMEOpsIncGen
   MLIRArmSMEIntrinsicOpsIncGen
+  MLIRArmSMEIncGen
+  MLIRArmSMEConversionsIncGen
+  MLIRArmSMEOpInterfaces
 
   LINK_LIBS PUBLIC
   MLIRIR

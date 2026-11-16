@@ -8,8 +8,8 @@
 
 #include "src/pthread/pthread_rwlock_unlock.h"
 
+#include "hdr/errno_macros.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/unix_rwlock.h"
 

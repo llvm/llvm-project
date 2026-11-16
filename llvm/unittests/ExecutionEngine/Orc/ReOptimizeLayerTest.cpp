@@ -65,7 +65,7 @@ protected:
       GTEST_SKIP();
 
     // ARM is not supported yet.
-    if (Triple.isARM())
+    if (Triple.isARM() || Triple.isArm64e())
       GTEST_SKIP();
 
     auto EPC = SelfExecutorProcessControl::Create();
@@ -129,7 +129,7 @@ static Function *createRetFunction(Module *M, StringRef Name,
       GlobalValue::ExternalLinkage, Name, M);
 
   BasicBlock *BB = BasicBlock::Create(M->getContext(), Name, Result);
-  IRBuilder<> Builder(M->getContext());
+  IRBuilder<> Builder(*M);
   Builder.SetInsertPoint(BB);
 
   Value *RetValue = ConstantInt::get(M->getContext(), APInt(32, ReturnCode));

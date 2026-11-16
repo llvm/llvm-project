@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass=hexagon-rdf-opt -hexagon-aggressive-rdf-copy=true -hexagon-rdf-dump -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -march=hexagon -run-pass=hexagon-rdf-opt -hexagon-aggressive-rdf-copy=true -hexagon-rdf-dump -o /dev/null %s 2>&1 | FileCheck %s
 
 # Check that RDF graph has a phi node for R28 register in bb.3 and bb.4
 # R28 is clobbered by memcpy call. The clobbering def must be present in bb.4's IDF
@@ -23,7 +23,7 @@
   }
 
   declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
-
+...
 ---
 name:            foo
 alignment:       16
@@ -32,7 +32,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false

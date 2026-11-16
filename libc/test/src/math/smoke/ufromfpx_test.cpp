@@ -10,4 +10,4 @@
 
 #include "src/math/ufromfpx.h"
 
-LIST_UFROMFPX_TESTS(double, LIBC_NAMESPACE::ufromfpx)
+LIST_UFROMFPX_TESTS(Ufromfpx, double, LIBC_NAMESPACE::ufromfpx)

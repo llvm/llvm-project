@@ -143,7 +143,7 @@ struct GridShapeFolder
 // only materializes the M/N-element local slice, reducing peak memory by
 // a factor of N.
 struct AllReduceAllSliceSimplification : OpRewritePattern<AllSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(AllSliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {

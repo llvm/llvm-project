@@ -16,8 +16,9 @@ module {
 !s32i = !cir.int<s, 32>
 
 module {
-  // expected-error@+1{{op cannot have both static local and tls references}}
-cir.global "private" internal tls_model = tls_dyn tls_refs = <"asdf", "asdf", "asdf"> static_local_guard<"asdf"> @_ZZ1fvE1y : !s32i
+  // expected-error@+1{{op cannot have a dynamic-init guard combined with ordered tls references}}
+cir.global "private" internal tls_model = tls_dyn tls_refs = <"asdf", "asdf"> dynamic_init_guard<"asdf"> @_ZZ1fvE1y : !s32i
+  dynamic_init_info<local = true, tls = dynamic, is_inline = false, tsk = undeclared>
 }
 
 // -----

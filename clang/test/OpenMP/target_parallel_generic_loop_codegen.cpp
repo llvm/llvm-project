@@ -183,7 +183,7 @@ int main() {
 // IR-NEXT:    store i32 0, ptr [[X]], align 4
 // IR-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[DEVICE_RESULT]], i8 0, i64 256, i1 false)
 // IR-NEXT:    [[TMP0:%.*]] = load ptr, ptr @omp_pteam_mem_alloc, align 8
-// IR-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37(ptr [[DEVICE_RESULT]], ptr [[TMP0]], ptr null) #[[ATTR3:[0-9]+]]
+// IR-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37(ptr [[DEVICE_RESULT]], ptr [[TMP0]], ptr null) #[[ATTR4:[0-9]+]]
 // IR-NEXT:    ret i32 0
 //
 //
@@ -205,7 +205,7 @@ int main() {
 //
 //
 // IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37.omp_outlined
-// IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR2]] {
+// IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR3:[0-9]+]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -292,7 +292,7 @@ int main() {
 // IR-PCH-NEXT:    store i32 0, ptr [[X]], align 4
 // IR-PCH-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[DEVICE_RESULT]], i8 0, i64 256, i1 false)
 // IR-PCH-NEXT:    [[TMP0:%.*]] = load ptr, ptr @omp_pteam_mem_alloc, align 8
-// IR-PCH-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37(ptr [[DEVICE_RESULT]], ptr [[TMP0]], ptr null) #[[ATTR3:[0-9]+]]
+// IR-PCH-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37(ptr [[DEVICE_RESULT]], ptr [[TMP0]], ptr null) #[[ATTR4:[0-9]+]]
 // IR-PCH-NEXT:    ret i32 0
 //
 //
@@ -314,7 +314,7 @@ int main() {
 //
 //
 // IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37.omp_outlined
-// IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR2]] {
+// IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR3:[0-9]+]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8

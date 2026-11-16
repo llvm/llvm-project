@@ -21,7 +21,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
 
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
 #include "lldb/Host/common/DomainSocket.h"
 #endif
 
@@ -34,7 +34,7 @@ void CreateConnectedSockets(
 bool CreateTCPConnectedSockets(std::string listen_remote_ip,
                                std::unique_ptr<TCPSocket> *a_up,
                                std::unique_ptr<TCPSocket> *b_up);
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
 void CreateDomainConnectedSockets(llvm::StringRef path,
                                   std::unique_ptr<DomainSocket> *a_up,
                                   std::unique_ptr<DomainSocket> *b_up);
@@ -42,7 +42,7 @@ void CreateDomainConnectedSockets(llvm::StringRef path,
 
 bool HostSupportsIPv6();
 bool HostSupportsIPv4();
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
 bool HostSupportsDomainSockets();
 #endif
 

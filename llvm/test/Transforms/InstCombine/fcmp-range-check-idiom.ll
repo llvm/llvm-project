@@ -200,8 +200,8 @@ define i1 @test_and_olt_nan(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    ret i1 false
 ;
-  %cmp1 = fcmp olt float %x, 0x7FF8000000000000
-  %cmp2 = fcmp ogt float %x, 0xFFF8000000000000
+  %cmp1 = fcmp olt float %x, +qnan
+  %cmp2 = fcmp ogt float %x, -qnan
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }

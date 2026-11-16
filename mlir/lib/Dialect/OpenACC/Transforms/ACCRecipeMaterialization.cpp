@@ -31,6 +31,12 @@
 // 3. Reduction: Creates acc.reduction_init (init region inlined) and
 //    acc.reduction_combine_region (combiner region inlined). Uses within
 //    the region are updated to the reduction init result.
+//    In addition, creates appropriate acc.copyin/copyout around
+//    the compute region; the reduction's initial value is taken
+//    from the copied in variable, and the final reduction value
+//    is copied out to the variable. If there are existing
+//    data operations for the reduction variable, no new data
+//    operations are added.
 //
 // Requirements:
 // -------------
@@ -42,6 +48,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
@@ -73,7 +80,6 @@ namespace acc {
 #define DEBUG_TYPE "acc-recipe-materialization"
 
 namespace {
-
 using namespace mlir;
 
 static void setLocation(Region &region, Location loc) {
@@ -83,6 +89,20 @@ static void setLocation(Region &region, Location loc) {
   // of the location of the recipe operations to the location of the op that is
   // being materialized.
   region.walk([&](Operation *op) { op->setLoc(loc); });
+}
+
+// Complex multiplication mixes the real and imaginary parts, so a reduction
+// of that operator cannot be lowered as two independent component reductions.
+// Keep unwrapping pointer-like types so a reference to a reference still
+// reports the element type.
+static bool isComplexReductionType(Type type) {
+  while (auto ptrTy = dyn_cast<acc::PointerLikeType>(type)) {
+    Type elementType = ptrTy.getElementType();
+    if (!elementType || elementType == type)
+      return false;
+    type = elementType;
+  }
+  return isa<ComplexType>(type);
 }
 
 static void saveVarName(StringRef name, Value dst) {
@@ -167,6 +187,12 @@ class ACCRecipeMaterialization
 public:
   using acc::impl::ACCRecipeMaterializationBase<
       ACCRecipeMaterialization>::ACCRecipeMaterializationBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCRecipeMaterializationBase<
+        ACCRecipeMaterialization>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
   void runOnOperation() override;
 
 private:
@@ -192,7 +218,8 @@ private:
   template <typename OpTy, typename RecipeOpTy, typename AccOpTy>
   LogicalResult materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
                             acc::OpenACCSupport &accSupport,
-                            acc::ACCToGPUMappingPolicy &policy) const;
+                            acc::ACCToGPUMappingPolicy &policy,
+                            Value materializationVar = {}) const;
   template <typename OpTy>
   LogicalResult materializeForACCOp(OpTy accOp, acc::OpenACCSupport &accSupport,
                                     acc::ACCToGPUMappingPolicy &policy) const;
@@ -248,9 +275,9 @@ void ACCRecipeMaterialization::removeRecipe(
 template <typename OpTy, typename RecipeOpTy, typename AccOpTy>
 LogicalResult ACCRecipeMaterialization::materialize(
     OpTy op, RecipeOpTy recipe, AccOpTy accOp, acc::OpenACCSupport &accSupport,
-    acc::ACCToGPUMappingPolicy &policy) const {
+    acc::ACCToGPUMappingPolicy &policy, Value materializationVar) const {
   Region &region = accOp.getRegion();
-  Value origPtr = op.getVar();
+  Value origPtr = materializationVar ? materializationVar : op.getVar();
   Value accPtr = op.getAccVar();
   assert(accPtr && "invalid op: null acc var");
 
@@ -349,6 +376,12 @@ LogicalResult ACCRecipeMaterialization::materialize(
       cloneDestroy(loc, recipe, block, std::prev(block->end()), destroyArgs);
     }
   } else if constexpr (std::is_same_v<OpTy, acc::ReductionOp>) {
+    if (recipe.getReductionOperator() == acc::ReductionOperator::AccMul &&
+        isComplexReductionType(recipe.getType())) {
+      (void)accSupport.emitNYI(loc, "reduction: complex multiply reduction");
+      return failure();
+    }
+
     auto cloneRegionIntoAccRegion = [&](Region *src, Region *dest,
                                         bool hasResult) {
       src->cloneInto(dest, mapping);
@@ -459,6 +492,78 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
     acc::ACCToGPUMappingPolicy &policy) const {
   assert(isa<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(accOp));
 
+  // Reduction recipes use the original variable both to initialize the
+  // private reduction value and to combine the result. Preserve copy semantics
+  // when materializing reductions on compute constructs, before the
+  // acc.reduction operation carrying that intent is erased. Loop reductions
+  // are excluded: their original variable can be an outer private reduction
+  // value rather than a host variable. Keep acc.reduction referring to its
+  // original host variable and pass the mapped value to materialization
+  // separately.
+  struct ReductionMapping {
+    Value originalVar;
+    Value mappedVar;
+  };
+  SmallVector<ReductionMapping> mappedReductionVars;
+  if constexpr (!std::is_same_v<OpTy, acc::LoopOp>) {
+    for (Value dataOperand : accOp.getDataClauseOperands()) {
+      Operation *dataOp = dataOperand.getDefiningOp();
+      if (dataOp && isa<ACC_DATA_ENTRY_OPS>(dataOp))
+        mappedReductionVars.push_back({acc::getVar(dataOp), dataOperand});
+    }
+  }
+
+  auto getMappedReductionVar = [&](acc::ReductionOp reductionOp) -> Value {
+    if constexpr (std::is_same_v<OpTy, acc::LoopOp>) {
+      return reductionOp.getVar();
+    } else {
+      Value originalVar = reductionOp.getVar();
+      if (isa_and_nonnull<ACC_DATA_ENTRY_OPS>(originalVar.getDefiningOp()))
+        return originalVar;
+
+      // Note that we do not require matching bounds here.
+      // Bounds may be represented by different SSA values while evaluating to
+      // the same values at runtime. Data clauses for the same variable are
+      // expected to specify matching bounds.
+      auto existing = llvm::find_if(mappedReductionVars,
+                                    [&](const ReductionMapping &mapping) {
+                                      return mapping.originalVar == originalVar;
+                                    });
+      if (existing != mappedReductionVars.end())
+        return existing->mappedVar;
+
+      OpBuilder builder(reductionOp);
+      acc::CopyinOp copyinOp;
+      if (std::optional<StringRef> name = reductionOp.getName())
+        copyinOp =
+            acc::CopyinOp::create(builder, reductionOp.getLoc(), originalVar,
+                                  /*structured=*/true, /*implicit=*/true, *name,
+                                  reductionOp.getBounds());
+      else
+        copyinOp = acc::CopyinOp::create(
+            builder, reductionOp.getLoc(), originalVar,
+            /*structured=*/true, /*implicit=*/true, reductionOp.getBounds());
+      copyinOp.setDataClause(acc::DataClause::acc_reduction);
+      accOp.getDataClauseOperandsMutable().append(copyinOp.getAccVar());
+
+      builder.setInsertionPointAfter(accOp);
+      acc::CopyoutOp copyoutOp;
+      if (std::optional<StringRef> name = reductionOp.getName())
+        copyoutOp = acc::CopyoutOp::create(
+            builder, reductionOp.getLoc(), copyinOp.getAccVar(), originalVar,
+            /*structured=*/true, /*implicit=*/true, *name,
+            reductionOp.getBounds());
+      else
+        copyoutOp = acc::CopyoutOp::create(
+            builder, reductionOp.getLoc(), copyinOp.getAccVar(), originalVar,
+            /*structured=*/true, /*implicit=*/true, reductionOp.getBounds());
+      copyoutOp.setDataClause(acc::DataClause::acc_reduction);
+
+      mappedReductionVars.push_back({originalVar, copyinOp.getAccVar()});
+      return copyinOp.getAccVar();
+    }
+  };
+
   if (!accOp.getFirstprivateOperands().empty()) {
     // Clear the firstprivate operands list so there will be no uses after
     // the recipe is materialized.
@@ -510,7 +615,9 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
       auto recipeOp = cast<acc::ReductionRecipeOp>(decl);
       LLVM_DEBUG(llvm::dbgs() << "materializing: " << reductionOp << "\n"
                               << symbolRef << "\n");
-      if (failed(materialize(reductionOp, recipeOp, accOp, accSupport, policy)))
+      Value mappedVar = getMappedReductionVar(reductionOp);
+      if (failed(materialize(reductionOp, recipeOp, accOp, accSupport, policy,
+                             mappedVar)))
         return failure();
     }
   }
@@ -562,5 +669,4 @@ void ACCRecipeMaterialization::runOnOperation() {
       removeRecipe(recipe, moduleOp, usedSymbols);
   });
 }
-
 } // namespace

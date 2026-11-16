@@ -5,7 +5,7 @@
 
 ; Re-evaluate the slot numbers of scopes as that numbering could be changed run-by-run.
 
-; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"bax"}
+; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"bax"}
 ; MIR-DAG: ![[SCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"bax: %p"}
 ; MIR-DAG: ![[SCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"bax: %q"}
 ; MIR-DAG: ![[SET0:[0-9]+]] = !{![[SCOPE0]]}
@@ -20,8 +20,8 @@ define i32 @test_memcpy(ptr nocapture %p, ptr nocapture readonly %q) {
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; MIR-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store (s64) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, [[MOV64rm]] :: (store (s64) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   $eax = COPY [[ADD32rm]]
@@ -46,8 +46,8 @@ define i32 @test_memcpy_inline(ptr nocapture %p, ptr nocapture readonly %q) {
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; MIR-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store (s64) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, [[MOV64rm]] :: (store (s64) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   $eax = COPY [[ADD32rm]]
@@ -72,8 +72,8 @@ define i32 @test_memmove(ptr nocapture %p, ptr nocapture readonly %q) {
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; MIR-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store (s64) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, [[MOV64rm]] :: (store (s64) into %ir.p0, align 4, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   $eax = COPY [[ADD32rm]]
@@ -121,8 +121,8 @@ define i32 @test_mempcpy(ptr nocapture %p, ptr nocapture readonly %q) {
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; MIR-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 1, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 1, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 1, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store (s64) into %ir.p0, align 1, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 1, !alias.scope !0, !noalias !3)
+  ; MIR-NEXT:   MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, [[MOV64rm]] :: (store (s64) into %ir.p0, align 1, !alias.scope !0, !noalias !3)
   ; MIR-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   $eax = COPY [[ADD32rm]]
@@ -145,7 +145,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 declare ptr @mempcpy(ptr, ptr, i64)
 
-!0 = distinct !{!0, !"bax"}
+!0 = distinct !{!0, i1 false, !"bax"}
 !1 = distinct !{!1, !0, !"bax: %p"}
 !2 = !{!1}
 !3 = distinct !{!3, !0, !"bax: %q"}

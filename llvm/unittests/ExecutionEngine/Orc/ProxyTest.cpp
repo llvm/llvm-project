@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/Orc/Proxy.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -92,7 +93,7 @@ static_assert(
 // A minimal ProxySpec-shaped type (static dispatch + Name) for exercising the
 // recordProxy client path without depending on a protocol.
 struct AddOneSpec {
-  static constexpr const char *Name = "add_one";
+  static constexpr SymbolNameSpec Name = SymbolNameSpec::verbatim("add_one");
   static void dispatch(unique_function<void(Expected<int32_t>)> OnComplete,
                        ExecutionSession &ES, ExecutorAddr Callee,
                        const int32_t &Arg) {
@@ -161,7 +162,7 @@ TEST(ProxyTest, RecordProxyWeaklyReferencedPresent) {
   auto &JD = ES.getBootstrapJITDylib();
   ExecutorAddr CalleeAddr = ExecutorAddr::fromPtr(addOne);
   cantFail(
-      JD.define(absoluteSymbols({{ES.intern(AddOneSpec::Name),
+      JD.define(absoluteSymbols({{MangleAndInterner(ES)(AddOneSpec::Name),
                                   {CalleeAddr, JITSymbolFlags::Exported}}})));
 
   AddOneProxy Call;
@@ -181,7 +182,7 @@ TEST(ProxyTest, RecordProxy) {
 
   auto &JD = ES.getBootstrapJITDylib();
   cantFail(JD.define(absoluteSymbols(
-      {{ES.intern(AddOneSpec::Name),
+      {{MangleAndInterner(ES)(AddOneSpec::Name),
         {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
 
   AddOneProxy Call;
@@ -202,7 +203,7 @@ TEST(ProxyTest, RecordProxyExplicitDispatch) {
 
   auto &JD = ES.getBootstrapJITDylib();
   cantFail(JD.define(absoluteSymbols(
-      {{ES.intern(AddOneSpec::Name),
+      {{MangleAndInterner(ES)(AddOneSpec::Name),
         {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
 
   AddOneProxy Call;
@@ -230,8 +231,9 @@ TEST(ProxyTest, RecordProxySpecNameOverride) {
         {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
 
   AddOneProxy Call;
-  cantFail(
-      lookupAndApply(JD, {recordProxy<AddOneSpec>(&Call, "add_one_alias")}));
+  cantFail(lookupAndApply(
+      JD, {recordProxy<AddOneSpec>(
+              &Call, SymbolNameSpec::verbatim("add_one_alias"))}));
   ASSERT_TRUE(static_cast<bool>(Call));
 
   Expected<int32_t> R = Call(ES, 41);
@@ -264,12 +266,13 @@ TEST(ProxyTest, RecordProxySymbolStringPtrExplicitDispatch) {
 
   auto &JD = ES.getBootstrapJITDylib();
   cantFail(JD.define(absoluteSymbols(
-      {{ES.intern(AddOneSpec::Name),
+      {{MangleAndInterner(ES)(AddOneSpec::Name),
         {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
 
   AddOneProxy Call;
   cantFail(lookupAndApply(
-      JD, {recordProxy(&Call, AddOneDispatch, ES.intern(AddOneSpec::Name))}));
+      JD, {recordProxy(&Call, AddOneDispatch,
+                       MangleAndInterner(ES)(AddOneSpec::Name))}));
   ASSERT_TRUE(static_cast<bool>(Call));
 
   Expected<int32_t> R = Call(ES, 41);
@@ -310,7 +313,7 @@ TEST(ProxyTest, RecordProxySymbolStringPtrWeaklyReferencedAbsent) {
   AddOneProxy Call;
   cantFail(lookupAndApply(
       ES.getBootstrapJITDylib(),
-      {recordProxy<AddOneSpec>(&Call, ES.intern(AddOneSpec::Name),
+      {recordProxy<AddOneSpec>(&Call, MangleAndInterner(ES)(AddOneSpec::Name),
                                SymbolLookupFlags::WeaklyReferencedSymbol)}));
   EXPECT_FALSE(static_cast<bool>(Call));
 

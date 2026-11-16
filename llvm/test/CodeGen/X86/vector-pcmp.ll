@@ -1836,15 +1836,12 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm4[0],xmm7[1],xmm4[1],xmm7[2],xmm4[2],xmm7[3],xmm4[3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm5[0],xmm7[1],xmm5[1]
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm7 = xmm7[0],xmm6[0]
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
-; SSE2-NEXT:    pcmpgtb %xmm3, %xmm0
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pcmpgtb %xmm3, %xmm1
-; SSE2-NEXT:    pand %xmm7, %xmm1
-; SSE2-NEXT:    psllw $7, %xmm1
+; SSE2-NEXT:    psllw $7, %xmm7
+; SSE2-NEXT:    pandn %xmm7, %xmm1
 ; SSE2-NEXT:    pmovmskb %xmm1, %ecx
 ; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    psllw $7, %xmm0
+; SSE2-NEXT:    psllw $7, %xmm2
+; SSE2-NEXT:    pandn %xmm2, %xmm0
 ; SSE2-NEXT:    pmovmskb %xmm0, %edx
 ; SSE2-NEXT:    orl %ecx, %edx
 ; SSE2-NEXT:    movl %edx, (%rdi)
@@ -1885,16 +1882,13 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE42-NEXT:    pinsrb $13, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pinsrb $14, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pinsrb $15, {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    pcmpeqd %xmm4, %xmm4
-; SSE42-NEXT:    pcmpgtb %xmm4, %xmm1
-; SSE42-NEXT:    pand %xmm3, %xmm1
-; SSE42-NEXT:    pcmpgtb %xmm4, %xmm0
-; SSE42-NEXT:    pand %xmm2, %xmm0
-; SSE42-NEXT:    psllw $7, %xmm0
-; SSE42-NEXT:    pmovmskb %xmm0, %ecx
-; SSE42-NEXT:    psllw $7, %xmm1
-; SSE42-NEXT:    pmovmskb %xmm1, %edx
-; SSE42-NEXT:    shll $16, %edx
+; SSE42-NEXT:    psllw $7, %xmm3
+; SSE42-NEXT:    pandn %xmm3, %xmm1
+; SSE42-NEXT:    pmovmskb %xmm1, %ecx
+; SSE42-NEXT:    shll $16, %ecx
+; SSE42-NEXT:    psllw $7, %xmm2
+; SSE42-NEXT:    pandn %xmm2, %xmm0
+; SSE42-NEXT:    pmovmskb %xmm0, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
 ; SSE42-NEXT:    movl %edx, (%rdi)
 ; SSE42-NEXT:    retq
@@ -1949,12 +1943,10 @@ define <4 x i64> @PR52504(<4 x i16> %t3) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,0,1,1]
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSE2-NEXT:    pcmpgtd %xmm4, %xmm0
-; SSE2-NEXT:    pand %xmm0, %xmm1
 ; SSE2-NEXT:    pxor %xmm4, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,2,3,3]
 ; SSE2-NEXT:    pcmpgtd %xmm4, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm3
 ; SSE2-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    retq

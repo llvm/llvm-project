@@ -659,7 +659,6 @@ define i32 @invariant_start_end(ptr addrspace(7) %p) {
 }
 
 declare ptr addrspace(7) @llvm.launder.invariant.group.p7(ptr addrspace(7) nocapture)
-declare ptr addrspace(7) @llvm.strip.invariant.group.p7(ptr addrspace(7) nocapture)
 
 define ptr addrspace(7) @invariant_group(ptr addrspace(7) %p) {
 ; CHECK-LABEL: define { ptr addrspace(8), i32 } @invariant_group
@@ -667,12 +666,10 @@ define ptr addrspace(7) @invariant_group(ptr addrspace(7) %p) {
 ; CHECK-NEXT:    [[P_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 0
 ; CHECK-NEXT:    [[P_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 1
 ; CHECK-NEXT:    [[LAUNDERED:%.*]] = call ptr addrspace(8) @llvm.launder.invariant.group.p8(ptr addrspace(8) [[P_RSRC]])
-; CHECK-NEXT:    [[STRIPPED:%.*]] = call ptr addrspace(8) @llvm.strip.invariant.group.p8(ptr addrspace(8) [[LAUNDERED]])
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[STRIPPED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[LAUNDERED]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[P_OFF]], 1
 ; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
 ;
   %laundered = call ptr addrspace(7) @llvm.launder.invariant.group.p7(ptr addrspace(7) %p)
-  %stripped = call ptr addrspace(7) @llvm.strip.invariant.group.p7(ptr addrspace(7) %laundered)
-  ret ptr addrspace(7) %stripped
+  ret ptr addrspace(7) %laundered
 }

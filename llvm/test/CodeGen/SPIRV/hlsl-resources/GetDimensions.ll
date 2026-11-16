@@ -14,7 +14,12 @@
 ; CHECK-DAG: %[[image3d_s2:[0-9]+]] = OpTypeImage %[[float]] 3D 2 0 0 2 Unknown
 ; CHECK-DAG: %[[imagems:[0-9]+]] = OpTypeImage %[[float]] 2D 2 0 1 1 Unknown
 ; CHECK-DAG: %[[imagemsarray:[0-9]+]] = OpTypeImage %[[float]] 2D 2 1 1 1 Unknown
+; CHECK-DAG: %[[imagecube:[0-9]+]] = OpTypeImage %[[float]] Cube 2 0 0 1 Unknown
+; CHECK-DAG: %[[image2darray:[0-9]+]] = OpTypeImage %[[float]] 2D 2 1 0 1 Unknown
+; CHECK-DAG: %[[imagebuffer_s1:[0-9]+]] = OpTypeImage %[[float]] Buffer 2 0 0 1 Unknown
+; CHECK-DAG: %[[imagebuffer_s2:[0-9]+]] = OpTypeImage %[[float]] Buffer 2 0 0 2 Unknown
 ; CHECK-DAG: %[[int_0:[0-9]+]] = OpConstant %[[int]] 0
+; CHECK-DAG: %[[int_2:[0-9]+]] = OpConstant %[[int]] 2
 
 @.str1 = private unnamed_addr constant [6 x i8] c"img1d\00", align 1
 @.str2 = private unnamed_addr constant [6 x i8] c"img2d\00", align 1
@@ -24,6 +29,10 @@
 @.str6 = private unnamed_addr constant [9 x i8] c"img3dlod\00", align 1
 @.str7 = private unnamed_addr constant [6 x i8] c"imgms\00", align 1
 @.str8 = private unnamed_addr constant [11 x i8] c"imgmsarray\00", align 1
+@.str9 = private unnamed_addr constant [8 x i8] c"imgcube\00", align 1
+@.str10 = private unnamed_addr constant [11 x i8] c"img2darray\00", align 1
+@.str11 = private unnamed_addr constant [10 x i8] c"imgbuffer\00", align 1
+@.str12 = private unnamed_addr constant [12 x i8] c"imgrwbuffer\00", align 1
 
 define void @main() #0 {
 entry:
@@ -38,6 +47,11 @@ entry:
   %imgms = tail call target("spirv.Image", float, 1, 2, 0, 1, 1, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_1_2_0_1_1_0t(i32 0, i32 6, i32 1, i32 0, ptr @.str7)
   %imgmsarray = tail call target("spirv.Image", float, 1, 2, 1, 1, 1, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_1_2_1_1_1_0t(i32 0, i32 7, i32 1, i32 0, ptr @.str8)
 
+  %imgcube = tail call target("spirv.Image", float, 3, 2, 0, 0, 1, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_3_2_0_0_1_0t(i32 0, i32 8, i32 1, i32 0, ptr @.str9)
+  %img2darray = tail call target("spirv.Image", float, 1, 2, 1, 0, 1, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_1_2_1_0_1_0t(i32 0, i32 9, i32 1, i32 0, ptr @.str10)
+  %imgbuffer = tail call target("spirv.Image", float, 5, 2, 0, 0, 1, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_1_0t(i32 0, i32 10, i32 1, i32 0, ptr @.str11)
+  %imgrwbuffer = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 0, i32 11, i32 1, i32 0, ptr @.str12)
+
 ; CHECK: %[[img1d_val:[0-9]+]] = OpLoad %[[image1d_s2]]
 ; CHECK: OpImageQuerySize %[[int]] %[[img1d_val]]
   %res0 = call i32 @llvm.spv.resource.getdimensions.x.tspirv.Image_f32_0_2_0_0_2_0t(target("spirv.Image", float, 0, 2, 0, 0, 2, 0) %img1d)
@@ -51,10 +65,10 @@ entry:
   %res2 = call <3 x i32> @llvm.spv.resource.getdimensions.xyz.tspirv.Image_f32_2_2_0_0_2_0t(target("spirv.Image", float, 2, 2, 0, 0, 2, 0) %img3d)
 
 ; CHECK: %[[img1dlod_val:[0-9]+]] = OpLoad %[[image1d_s1]]
-; CHECK: %[[size3:[0-9]+]] = OpImageQuerySizeLod %[[int]] %[[img1dlod_val]] %[[int_0]]
+; CHECK: %[[size3:[0-9]+]] = OpImageQuerySizeLod %[[int]] %[[img1dlod_val]] %[[int_2]]
 ; CHECK: %[[levels3:[0-9]+]] = OpImageQueryLevels %[[int]] %[[img1dlod_val]]
 ; CHECK: OpCompositeConstruct %[[v2int]] %[[size3]] %[[levels3]]
-  %res3 = call <2 x i32> @llvm.spv.resource.getdimensions.levels.x.tspirv.Image_f32_0_2_0_0_1_0t(target("spirv.Image", float, 0, 2, 0, 0, 1, 0) %img1dlod, i32 0)
+  %res3 = call <2 x i32> @llvm.spv.resource.getdimensions.levels.x.tspirv.Image_f32_0_2_0_0_1_0t(target("spirv.Image", float, 0, 2, 0, 0, 1, 0) %img1dlod, i32 2)
 
 ; CHECK: %[[img2dlod_val:[0-9]+]] = OpLoad %[[image2d_s1]]
 ; CHECK: %[[size4:[0-9]+]] = OpImageQuerySizeLod %[[v2int]] %[[img2dlod_val]] %[[int_0]]
@@ -80,6 +94,37 @@ entry:
 ; CHECK: OpCompositeConstruct %[[v4int]] %[[size7]] %[[samp7]]
   %res7 = call <4 x i32> @llvm.spv.resource.getdimensions.ms.xyz.tspirv.Image_f32_1_2_1_1_1_0t(target("spirv.Image", float, 1, 2, 1, 1, 1, 0) %imgmsarray)
 
+; Non-multisampled textures compatible with sampling operations (Sampled = 1)
+; query mip level zero when no LOD is supplied.
+; CHECK: %[[img1d_nolod:[0-9]+]] = OpLoad %[[image1d_s1]]
+; CHECK: OpImageQuerySizeLod %[[int]] %[[img1d_nolod]] %[[int_0]]
+  %res8 = call i32 @llvm.spv.resource.getdimensions.x.tspirv.Image_f32_0_2_0_0_1_0t(target("spirv.Image", float, 0, 2, 0, 0, 1, 0) %img1dlod)
+
+; CHECK: %[[img2d_nolod:[0-9]+]] = OpLoad %[[image2d_s1]]
+; CHECK: OpImageQuerySizeLod %[[v2int]] %[[img2d_nolod]] %[[int_0]]
+  %res9 = call <2 x i32> @llvm.spv.resource.getdimensions.xy.tspirv.Image_f32_1_2_0_0_1_0t(target("spirv.Image", float, 1, 2, 0, 0, 1, 0) %img2dlod)
+
+; CHECK: %[[img3d_nolod:[0-9]+]] = OpLoad %[[image3d_s1]]
+; CHECK: OpImageQuerySizeLod %[[v3int]] %[[img3d_nolod]] %[[int_0]]
+  %res10 = call <3 x i32> @llvm.spv.resource.getdimensions.xyz.tspirv.Image_f32_2_2_0_0_1_0t(target("spirv.Image", float, 2, 2, 0, 0, 1, 0) %img3dlod)
+
+; CHECK: %[[imgcube_val:[0-9]+]] = OpLoad %[[imagecube]]
+; CHECK: OpImageQuerySizeLod %[[v2int]] %[[imgcube_val]] %[[int_0]]
+  %res11 = call <2 x i32> @llvm.spv.resource.getdimensions.xy.tspirv.Image_f32_3_2_0_0_1_0t(target("spirv.Image", float, 3, 2, 0, 0, 1, 0) %imgcube)
+
+; CHECK: %[[img2darray_val:[0-9]+]] = OpLoad %[[image2darray]]
+; CHECK: OpImageQuerySizeLod %[[v3int]] %[[img2darray_val]] %[[int_0]]
+  %res12 = call <3 x i32> @llvm.spv.resource.getdimensions.xyz.tspirv.Image_f32_1_2_1_0_1_0t(target("spirv.Image", float, 1, 2, 1, 0, 1, 0) %img2darray)
+
+; Buffers have no mip levels, including those with Sampled = 1.
+; CHECK: %[[imgbuffer_val:[0-9]+]] = OpLoad %[[imagebuffer_s1]]
+; CHECK: OpImageQuerySize %[[int]] %[[imgbuffer_val]]
+  %res13 = call i32 @llvm.spv.resource.getdimensions.x.tspirv.Image_f32_5_2_0_0_1_0t(target("spirv.Image", float, 5, 2, 0, 0, 1, 0) %imgbuffer)
+
+; CHECK: %[[imgrwbuffer_val:[0-9]+]] = OpLoad %[[imagebuffer_s2]]
+; CHECK: OpImageQuerySize %[[int]] %[[imgrwbuffer_val]]
+  %res14 = call i32 @llvm.spv.resource.getdimensions.x.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 0) %imgrwbuffer)
+
   ret void
 }
 
@@ -104,3 +149,16 @@ declare <4 x i32> @llvm.spv.resource.getdimensions.levels.xyz.tspirv.Image_f32_2
 
 declare <3 x i32> @llvm.spv.resource.getdimensions.ms.xy.tspirv.Image_f32_1_2_0_1_1_0t(target("spirv.Image", float, 1, 2, 0, 1, 1, 0))
 declare <4 x i32> @llvm.spv.resource.getdimensions.ms.xyz.tspirv.Image_f32_1_2_1_1_1_0t(target("spirv.Image", float, 1, 2, 1, 1, 1, 0))
+
+declare target("spirv.Image", float, 3, 2, 0, 0, 1, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_3_2_0_0_1_0t(i32, i32, i32, i32, ptr)
+declare target("spirv.Image", float, 1, 2, 1, 0, 1, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_1_2_1_0_1_0t(i32, i32, i32, i32, ptr)
+declare target("spirv.Image", float, 5, 2, 0, 0, 1, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_1_0t(i32, i32, i32, i32, ptr)
+declare target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32, i32, i32, i32, ptr)
+
+declare i32 @llvm.spv.resource.getdimensions.x.tspirv.Image_f32_0_2_0_0_1_0t(target("spirv.Image", float, 0, 2, 0, 0, 1, 0))
+declare <2 x i32> @llvm.spv.resource.getdimensions.xy.tspirv.Image_f32_1_2_0_0_1_0t(target("spirv.Image", float, 1, 2, 0, 0, 1, 0))
+declare <3 x i32> @llvm.spv.resource.getdimensions.xyz.tspirv.Image_f32_2_2_0_0_1_0t(target("spirv.Image", float, 2, 2, 0, 0, 1, 0))
+declare <2 x i32> @llvm.spv.resource.getdimensions.xy.tspirv.Image_f32_3_2_0_0_1_0t(target("spirv.Image", float, 3, 2, 0, 0, 1, 0))
+declare <3 x i32> @llvm.spv.resource.getdimensions.xyz.tspirv.Image_f32_1_2_1_0_1_0t(target("spirv.Image", float, 1, 2, 1, 0, 1, 0))
+declare i32 @llvm.spv.resource.getdimensions.x.tspirv.Image_f32_5_2_0_0_1_0t(target("spirv.Image", float, 5, 2, 0, 0, 1, 0))
+declare i32 @llvm.spv.resource.getdimensions.x.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 0))

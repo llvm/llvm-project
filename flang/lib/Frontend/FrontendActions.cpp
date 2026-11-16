@@ -17,6 +17,7 @@
 #include "flang/Frontend/ParserActions.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Support/Verifier.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
@@ -26,6 +27,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/Flags.h"
 #include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
 
@@ -179,6 +181,7 @@ bool CodeGenAction::beginSourceFileAction() {
     llvmModule.reset(nullptr);
   llvmCtx = std::make_unique<llvm::LLVMContext>();
   CompilerInstance &ci = this->getInstance();
+  llvmCtx->getLibraryOptions().assign(ci.getLibraryOptions());
   mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
   mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
@@ -234,7 +237,8 @@ bool CodeGenAction::beginSourceFileAction() {
     }
 
     mlirModule = std::move(module);
-    const llvm::DataLayout &dl = targetMachine.createDataLayout();
+    const llvm::DataLayout dl(targetMachine.getTargetTriple().computeDataLayout(
+        ci.getInvocation().getTargetOpts().abi));
     fir::support::setMLIRDataLayout(*mlirModule, dl);
     return true;
   }
@@ -251,6 +255,11 @@ bool CodeGenAction::beginSourceFileAction() {
              runSemanticChecks() && generateRtTypeTables();
   if (!res)
     return res;
+
+  enableImplicitDefaultMapperAllocatableMembers.setValue(
+      ci.getInvocation()
+          .getCodeGenOpts()
+          .ImplicitDefaultMapperAllocatableMembers);
 
   timingScopeParse.stop();
   mlir::TimingScope timingScopeMLIRGen = timingScopeRoot.nest(
@@ -278,8 +287,7 @@ bool CodeGenAction::beginSourceFileAction() {
         makeOffloadModuleOpts(ci.getInvocation().getLangOpts()));
     llvm::omp::Version version =
         ci.getInvocation().getLangOpts().getOpenMPVersion();
-    mlir::omp::setOpenMPVersionAttribute(lb.getModule(),
-                                         static_cast<unsigned>(version));
+    mlir::omp::setOpenMPVersionAttribute(lb.getModule(), version.value());
     if (!ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
       mlir::omp::setOpenMPIntegerWrapAround(lb.getModule(), false);
   }
@@ -289,6 +297,14 @@ bool CodeGenAction::beginSourceFileAction() {
     mod.getOperation()->setAttr(
         mlir::StringAttr::get(mod.getContext(),
                               llvm::Twine{"fir.fast_real_mod"}),
+        mlir::BoolAttr::get(mod.getContext(), true));
+  }
+
+  if (ci.getInvocation().getLangOpts().CheckIntegerModZeroDivisor) {
+    mlir::ModuleOp mod = lb.getModule();
+    mod.getOperation()->setAttr(
+        mlir::StringAttr::get(mod.getContext(),
+                              fir::getCheckIntegerModZeroDivisorAttrName()),
         mlir::BoolAttr::get(mod.getContext(), true));
   }
 
@@ -323,7 +339,7 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getInvocation().getCodeGenOpts().getDoConcurrentMapping();
 
   if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None &&
-      !isOpenMPEnabled) {
+      (!isOpenMPEnabled || opts.isSimdOnly)) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
         "OpenMP is required for lowering `do concurrent` loops to OpenMP."
@@ -343,7 +359,7 @@ bool CodeGenAction::beginSourceFileAction() {
   // WARNING: This pipeline must be run immediately after the lowering to
   // ensure that the FIR is correct with respect to OpenMP operations/
   // attributes.
-  if (isOpenMPEnabled || opts.isSimdOnly)
+  if (isOpenMPEnabled)
     fir::createOpenMPFIRPassPipeline(pm, opts);
 
   pm.enableVerifier(/*verifyPasses=*/true);
@@ -636,8 +652,8 @@ void CodeGenAction::lowerHLFIRToFIR() {
   MLIRToLLVMPassPipelineConfig config(level);
   config.fpMaxminBehavior =
       ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
-  if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
-    config.EnableOpenMPIsTargetDevice = true;
+  // Give plugins a chance to register passes at the extension points.
+  fir::invokePassPipelineConfigCallbacks(config);
   // Create the pass pipeline
   fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -772,9 +788,6 @@ void CodeGenAction::generateLLVMIR() {
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
 
-  if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
-    config.EnableOpenMPIsTargetDevice = true;
-
   if (ci.getInvocation().getLangOpts().OpenMPSimd)
     config.EnableOpenMPSimd = true;
 
@@ -782,6 +795,10 @@ void CodeGenAction::generateLLVMIR() {
     config.NSWOnLoopVarInc = false;
 
   config.ComplexRange = opts.getComplexRange();
+
+  // Give plugins a chance to register passes at the extension points, once the
+  // config is fully set up.
+  fir::invokePassPipelineConfigCallbacks(config);
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
@@ -830,6 +847,9 @@ void CodeGenAction::generateLLVMIR() {
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
   }
 
+  if (opts.getFramePointer() != llvm::FramePointerKind::None)
+    llvmModule->setFramePointer(opts.getFramePointer());
+
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
   const llvm::Triple triple(targetOpts.triple);
 
@@ -843,7 +863,7 @@ void CodeGenAction::generateLLVMIR() {
     }
   }
 
-  if (triple.isRISCV() && !targetOpts.abi.empty())
+  if (!targetOpts.abi.empty())
     llvmModule->addModuleFlag(
         llvm::Module::Error, "target-abi",
         llvm::MDString::get(llvmModule->getContext(), targetOpts.abi));
@@ -857,6 +877,15 @@ void CodeGenAction::generateLLVMIR() {
                                 "amdhsa_code_object_version",
                                 opts.CodeObjectVersion);
     }
+  }
+
+  // Add NonLazyBind attribute to function declarations when -fno-plt is used.
+  // Also set the RtLibUseGOT module flag so compiler-rt calls use the GOT.
+  if (opts.NoPLT) {
+    llvmModule->setRtLibUseGOT();
+    for (llvm::Function &func : *llvmModule)
+      if (func.isDeclaration() && !func.isIntrinsic())
+        func.addFnAttr(llvm::Attribute::NonLazyBind);
   }
 }
 
@@ -922,8 +951,8 @@ static void generateMachineCodeOrAssemblyImpl(
       return;
     }
   }
-  llvm::Error codeGenError =
-      runCodeGenPipeline(tm, llvmModule, os, dwoOS, cgft);
+  llvm::Error codeGenError = runCodeGenPipeline(
+      tm, llvmModule, os, dwoOS ? &dwoOS->os() : nullptr, cgft);
   if (codeGenError) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
@@ -950,6 +979,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   // Create the pass manager builder.
   llvm::PassInstrumentationCallbacks pic;
+  const llvm::cl::LibraryOptionsContext &libraryOptions =
+      llvmModule->getContext().getLibraryOptions();
   llvm::PipelineTuningOptions pto;
   std::optional<llvm::PGOOptions> pgoOpt;
 
@@ -957,7 +988,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     // -fprofile-generate.
     pgoOpt = llvm::PGOOptions(
         opts.InstrProfileOutput.empty()
-            ? llvm::driver::getDefaultProfileGenName()
+            ? llvm::driver::getDefaultProfileGenName(libraryOptions)
             : opts.InstrProfileOutput,
         "", "", opts.MemoryProfileUsePath, llvm::PGOOptions::IRInstr,
         llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
@@ -1005,7 +1036,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   pto.LoopVectorization = opts.VectorizeLoop;
   pto.SLPVectorization = opts.VectorizeSLP;
 
-  llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
+  llvm::PassBuilder pb(llvmModule->getContext(), targetMachine, pto, pgoOpt,
+                       &pic);
 
   // Register plugin callbacks with PB.
   for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins())
@@ -1023,8 +1055,6 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
   mam.registerPass([&] {
     return llvm::RuntimeLibraryAnalysis(
-        targetMachine->Options.ExceptionModel,
-        targetMachine->Options.EABIVersion,
         targetMachine->Options.MCOptions.ABIName,
         targetMachine->Options.VecLib);
   });
@@ -1086,7 +1116,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested. In this case, don't run the passes. This mimics the behavior of
   // clang.
-  if (llvm::PrintPipelinePasses) {
+  if (pb.getPrintPipelinePasses()) {
     mpm.printPipeline(llvm::outs(), [&pic](llvm::StringRef className) {
       auto passName = pic.getPassNameForClassName(className);
       return passName.empty() ? className : passName;
@@ -1420,7 +1450,7 @@ void CodeGenAction::executeAction() {
   // Note that this overwrites any datalayout stored in the LLVM-IR. This avoids
   // an assert for incompatible data layout when the code-generation happens.
   llvmModule->setTargetTriple(theTriple);
-  llvmModule->setDataLayout(targetMachine.createDataLayout());
+  llvmModule->setDataLayout(theTriple.computeDataLayout(targetOpts.abi));
 
   // Link in builtin bitcode libraries
   if (!codeGenOpts.BuiltinBCLibs.empty())

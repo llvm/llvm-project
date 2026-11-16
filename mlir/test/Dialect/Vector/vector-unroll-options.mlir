@@ -423,6 +423,25 @@ func.func @vector_broadcast_with_tailing_unit_dim(%v: vector<4x1xf32>) -> vector
 
 // -----
 
+// Verify unrolling when the broadcast result rank is greater than the
+// native shape rank.
+// CHECK-LABEL: func.func @vector_broadcast_rank_mismatch(
+//  CHECK-SAME: [[arg0:%.+]]: vector<2x4xi16>
+//       CHECK: [[c:%.+]] = arith.constant dense<0> : vector<1x2x4xi16>
+//       CHECK: [[s0:%.+]] = vector.extract_strided_slice [[arg0]] offsets = [0, 0], sizes = [2, 2], strides = [1, 1] : vector<2x4xi16> to vector<2x2xi16>
+//       CHECK: [[b0:%.+]] = vector.broadcast [[s0]] : vector<2x2xi16> to vector<1x2x2xi16>
+//       CHECK: [[r0:%.+]] = vector.insert_strided_slice [[b0]], [[c]] offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x2x4xi16>
+//       CHECK: [[s1:%.+]] = vector.extract_strided_slice [[arg0]] offsets = [0, 2], sizes = [2, 2], strides = [1, 1] : vector<2x4xi16> to vector<2x2xi16>
+//       CHECK: [[b1:%.+]] = vector.broadcast [[s1]] : vector<2x2xi16> to vector<1x2x2xi16>
+//       CHECK: [[r1:%.+]] = vector.insert_strided_slice [[b1]], [[r0]] offsets = [0, 0, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x2x4xi16>
+//       CHECK: return [[r1]] : vector<1x2x4xi16>
+func.func @vector_broadcast_rank_mismatch(%arg: vector<2x4xi16>) -> vector<1x2x4xi16> {
+  %0 = vector.broadcast %arg : vector<2x4xi16> to vector<1x2x4xi16>
+  return %0 : vector<1x2x4xi16>
+}
+
+// -----
+
 func.func @vector_load_2D(%mem: memref<4x4xf16>) -> vector<4x4xf16> {
   %c0 = arith.constant 0 : index
   %0 = vector.load %mem[%c0, %c0] : memref<4x4xf16>, vector<4x4xf16>
@@ -489,7 +508,7 @@ func.func @vector_step() -> vector<32xindex> {
 // -----
 
 func.func @elementwise_3D_to_2D(%v1: vector<2x2x2xf32>, %v2: vector<2x2x2xf32>) -> vector<2x2x2xf32> {
-  %0 = arith.addf %v1, %v2 : vector<2x2x2xf32>
+  %0 = arith.addf %v1, %v2 fastmath<nnan> {test.marker} : vector<2x2x2xf32>
   return %0 : vector<2x2x2xf32>
 }
 // CHECK-LABEL: func @elementwise_3D_to_2D
@@ -499,13 +518,13 @@ func.func @elementwise_3D_to_2D(%v1: vector<2x2x2xf32>, %v2: vector<2x2x2xf32>) 
 //       CHECK:   %[[S_LHS_0:.*]] = vector.shape_cast %[[E_LHS_0]] : vector<1x2x2xf32> to vector<2x2xf32>
 //       CHECK:   %[[E_RHS_0:.*]] = vector.extract_strided_slice %[[ARG1]] offsets = [0, 0, 0], sizes = [1, 2, 2], strides = [1, 1, 1] : vector<2x2x2xf32> to vector<1x2x2xf32>
 //       CHECK:   %[[S_RHS_0:.*]] = vector.shape_cast %[[E_RHS_0]] : vector<1x2x2xf32> to vector<2x2xf32>
-//       CHECK:   %[[ADD0:.*]] = arith.addf %[[S_LHS_0]], %[[S_RHS_0]] : vector<2x2xf32>
+//       CHECK:   %[[ADD0:.*]] = arith.addf %[[S_LHS_0]], %[[S_RHS_0]] fastmath<nnan> {test.marker} : vector<2x2xf32>
 //       CHECK:   %[[I0:.*]] = vector.insert_strided_slice %[[ADD0]], %[[CST]] offsets = [0, 0, 0], strides = [1, 1] : vector<2x2xf32> into vector<2x2x2xf32>
 //       CHECK:   %[[E_LHS_1:.*]] = vector.extract_strided_slice %[[ARG0]] offsets = [1, 0, 0], sizes = [1, 2, 2], strides = [1, 1, 1] : vector<2x2x2xf32> to vector<1x2x2xf32>
 //       CHECK:   %[[S_LHS_1:.*]] = vector.shape_cast %[[E_LHS_1]] : vector<1x2x2xf32> to vector<2x2xf32>
 //       CHECK:   %[[E_RHS_1:.*]] = vector.extract_strided_slice %[[ARG1]] offsets = [1, 0, 0], sizes = [1, 2, 2], strides = [1, 1, 1] : vector<2x2x2xf32> to vector<1x2x2xf32>
 //       CHECK:   %[[S_RHS_1:.*]] = vector.shape_cast %[[E_RHS_1]] : vector<1x2x2xf32> to vector<2x2xf32>
-//       CHECK:   %[[ADD1:.*]] = arith.addf %[[S_LHS_1]], %[[S_RHS_1]] : vector<2x2xf32>
+//       CHECK:   %[[ADD1:.*]] = arith.addf %[[S_LHS_1]], %[[S_RHS_1]] fastmath<nnan> {test.marker} : vector<2x2xf32>
 //       CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[ADD1]], %[[I0]] offsets = [1, 0, 0], strides = [1, 1] : vector<2x2xf32> into vector<2x2x2xf32>
 //       CHECK:   return %[[I1]] : vector<2x2x2xf32>
 
@@ -582,6 +601,37 @@ func.func @vector_create_mask_constant_dim_sizes() -> vector<16x16xi1> {
 
 // -----
 
+// TargetShape is [8x8]
+
+// The default unrolling target shape is rank-2, but the source vector is
+// rank-3. The unrolling logic adds leading unit dims to handle cases like
+// this.
+
+func.func @vector_create_mask_rank_mismatch(%size: index) -> vector<2x8x8xi1> {
+  %c8 = arith.constant 8 : index
+  %0 = vector.create_mask %size, %c8, %c8 : vector<2x8x8xi1>
+  return %0 : vector<2x8x8xi1>
+}
+
+// CHECK-LABEL: func @vector_create_mask_rank_mismatch
+// CHECK-SAME: (%[[SIZE:.*]]: index) -> vector<2x8x8xi1>
+//       CHECK:   %[[C8:.*]] = arith.constant 8 : index
+//       CHECK:   %[[ACC:.*]] = arith.constant dense<false> : vector<2x8x8xi1>
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[C1:.*]] = arith.constant 1 : index
+//       CHECK:   %[[MAX0:.*]] = arith.maxsi %[[SIZE]], %[[C0]] : index
+//       CHECK:   %[[MIN0:.*]] = arith.minsi %[[MAX0]], %[[C1]] : index
+//       CHECK:   %[[MASK0:.*]] = vector.create_mask %[[MIN0]], %[[C8]], %[[C8]] : vector<1x8x8xi1>
+//       CHECK:   %[[INS0:.*]] = vector.insert_strided_slice %[[MASK0]], %[[ACC]] offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+//       CHECK:   %[[SUB1:.*]] = arith.subi %[[SIZE]], %[[C1]] : index
+//       CHECK:   %[[MAX1:.*]] = arith.maxsi %[[SUB1]], %[[C0]] : index
+//       CHECK:   %[[MIN1:.*]] = arith.minsi %[[MAX1]], %[[C1]] : index
+//       CHECK:   %[[MASK1:.*]] = vector.create_mask %[[MIN1]], %[[C8]], %[[C8]] : vector<1x8x8xi1>
+//       CHECK:   %[[INS1:.*]] = vector.insert_strided_slice %[[MASK1]], %[[INS0]] offsets = [1, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+//       CHECK:   return %[[INS1]] : vector<2x8x8xi1>
+
+// -----
+
 func.func @vector_constant_mask() -> vector<16x16xi1> {
   %0 = vector.constant_mask [12, 10] : vector<16x16xi1>
   return %0 : vector<16x16xi1>
@@ -599,6 +649,54 @@ func.func @vector_constant_mask() -> vector<16x16xi1> {
 //       CHECK:   %[[MASK11:.*]] = vector.constant_mask [4, 2] : vector<8x8xi1>
 //       CHECK:   %[[INS11:.*]] = vector.insert_strided_slice %[[MASK11]], %[[INS10]] offsets = [8, 8], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
 //       CHECK:   return %[[INS11]] : vector<16x16xi1>
+
+// -----
+
+// TargetShape is [8x8]
+
+// Mask tiles "outside" the original "true" regions are ALL FALSE
+func.func @vector_constant_mask_no_rank_mismatch() -> vector<16x16xi1> {
+  %0 = vector.constant_mask [8, 8] : vector<16x16xi1>
+  return %0 : vector<16x16xi1>
+}
+
+// CHECK-LABEL: func @vector_constant_mask_no_rank_mismatch
+// CHECK-SAME: () -> vector<16x16xi1>
+//       CHECK:   %[[EMPTY:.*]] = arith.constant dense<false> : vector<8x8xi1>
+//       CHECK:   %[[ACC:.*]] = arith.constant dense<false> : vector<16x16xi1>
+//       CHECK:   %[[FULL:.*]] = arith.constant dense<true> : vector<8x8xi1>
+//       CHECK:   %[[INS00:.*]] = vector.insert_strided_slice %[[FULL]], %[[ACC]] offsets = [0, 0], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[INS01:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS00]] offsets = [0, 8], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[INS10:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS01]] offsets = [8, 0], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[INS11:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS10]] offsets = [8, 8], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   return %[[INS11]] : vector<16x16xi1>
+
+// -----
+
+// TargetShape is [8x8]
+
+// Same as above, but the source vector has an additional leading dimension.
+// Since the default unrolling target shape is rank-2, the unrolling logic
+// adds a leading unit dimension to the target shape.
+func.func @vector_constant_mask_rank_mismatch() -> vector<2x16x16xi1> {
+  %0 = vector.constant_mask [1, 8, 8] : vector<2x16x16xi1>
+  return %0 : vector<2x16x16xi1>
+}
+
+// CHECK-LABEL: func @vector_constant_mask_rank_mismatch
+// CHECK-SAME: () -> vector<2x16x16xi1>
+//       CHECK:   %[[EMPTY:.*]] = arith.constant dense<false> : vector<1x8x8xi1>
+//       CHECK:   %[[ACC:.*]] = arith.constant dense<false> : vector<2x16x16xi1>
+//       CHECK:   %[[FULL:.*]] = arith.constant dense<true> : vector<1x8x8xi1>
+//       CHECK:   %[[INS000:.*]] = vector.insert_strided_slice %[[FULL]], %[[ACC]] offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x16x16xi1>
+//       CHECK:   %[[INS001:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS000]] offsets = [0, 0, 8], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x16x16xi1>
+//       CHECK:   %[[INS010:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS001]] offsets = [0, 8, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x16x16xi1>
+//       CHECK:   %[[INS011:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS010]] offsets = [0, 8, 8], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x16x16xi1>
+//       CHECK:   %[[INS100:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS011]] offsets = [1, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x16x16xi1>
+//       CHECK:   %[[INS101:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS100]] offsets = [1, 0, 8], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x16x16xi1>
+//       CHECK:   %[[INS110:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS101]] offsets = [1, 8, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x16x16xi1>
+//       CHECK:   %[[INS111:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS110]] offsets = [1, 8, 8], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x16x16xi1>
+//       CHECK:   return %[[INS111]] : vector<2x16x16xi1>
 
 // -----
 
@@ -888,3 +986,31 @@ func.func @vector_multi_reduction_rank_mismatch(%v : vector<2x2x4xf32>, %acc: ve
 //       CHECK:   %[[V1:.*]] = vector.insert_strided_slice %[[R1]], %[[V0]] offsets = [0, 0], strides = [1, 1] : vector<1x2xf32> into vector<2x2xf32>
 //       CHECK:   %[[V2:.*]] = vector.insert_strided_slice %[[R3]], %[[V1]] offsets = [1, 0], strides = [1, 1] : vector<1x2xf32> into vector<2x2xf32>
 //       CHECK:   return %[[V2]] : vector<2x2xf32>
+
+// -----
+
+// Region-masked ops are not unrolled: the enclosing mask would not be sliced.
+
+func.func @masked_vector_contract(%lhs : vector<8x4xf32>, %rhs : vector<8x4xf32>,
+                                  %init : vector<8x8xf32>, %mask : vector<8x8x4xi1>) -> vector<8x8xf32> {
+  %0 = vector.mask %mask { vector.contract
+         {indexing_maps = [affine_map<(i, j, k) -> (i, k)>,
+                           affine_map<(i, j, k) -> (j, k)>,
+                           affine_map<(i, j, k) -> (i, j)>],
+          iterator_types = ["parallel", "parallel", "reduction"]}
+       %lhs, %rhs, %init : vector<8x4xf32>, vector<8x4xf32> into vector<8x8xf32> } : vector<8x8x4xi1> -> vector<8x8xf32>
+  return %0 : vector<8x8xf32>
+}
+// CHECK-LABEL: func @masked_vector_contract
+//  CHECK-NEXT:   %[[R:.*]] = vector.mask %{{.*}} { vector.contract {{.*}} : vector<8x4xf32>, vector<8x4xf32> into vector<8x8xf32> }
+//  CHECK-NEXT:   return %[[R]]
+
+// -----
+
+func.func @masked_vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf32>, %mask : vector<4x6xi1>) -> vector<4xf32> {
+  %0 = vector.mask %mask { vector.multi_reduction #vector.kind<add>, %v, %acc [1] : vector<4x6xf32> to vector<4xf32> } : vector<4x6xi1> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+// CHECK-LABEL: func @masked_vector_multi_reduction
+//  CHECK-NEXT:   %[[R:.*]] = vector.mask %{{.*}} { vector.multi_reduction <add>, {{.*}} : vector<4x6xf32> to vector<4xf32> }
+//  CHECK-NEXT:   return %[[R]]

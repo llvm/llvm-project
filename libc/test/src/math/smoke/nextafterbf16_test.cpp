@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/nextafterbf16.h"
 
-LIST_NEXTAFTER_TESTS(bfloat16, LIBC_NAMESPACE::nextafterbf16)
+LIST_NEXTAFTER_TESTS(Nextafterbf16, bfloat16, LIBC_NAMESPACE::nextafterbf16)

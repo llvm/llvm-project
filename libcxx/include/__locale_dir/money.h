@@ -17,7 +17,6 @@
 #include <__locale_dir/check_grouping.h>
 #include <__locale_dir/ctype.h>
 #include <__locale_dir/ctype_base.h>
-#include <__locale_dir/get_c_locale.h>
 #include <__locale_dir/locale.h>
 #include <__locale_dir/pad_and_output.h>
 #include <__memory/unique_ptr.h>
@@ -767,7 +766,7 @@ _OutputIterator money_put<_CharT, _OutputIterator>::do_put(
   unique_ptr<char_type, void (*)(void*)> __hd(0, free);
   // secure memory for digit storage
   if (static_cast<size_t>(__n) > __bs - 1) {
-    __n = __locale::__asprintf(&__bb, _LIBCPP_GET_C_LOCALE, "%.0Lf", __units);
+    __n = __locale::__asprintf(&__bb, __locale::__get_c_locale(), "%.0Lf", __units);
     if (__n == -1)
       std::__throw_bad_alloc();
     __hn.reset(__bb);

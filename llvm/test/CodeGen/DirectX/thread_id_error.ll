@@ -7,8 +7,8 @@
 target triple = "dxil-pc-shadermodel6.7-library"
 
 ; Function Attrs: noinline nounwind optnone
-define i32 @test_thread_id(i32 %a) #0 {
+define i32 @test_thread_id() #0 {
 entry:
-  %0 = call i32 @llvm.dx.thread.id(i32 %a)
+  %0 = call i32 @llvm.dx.thread.id(i32 1)
   ret i32 %0
 }

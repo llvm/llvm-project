@@ -37,10 +37,6 @@ using namespace llvm::object;
 
 namespace {
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
 enum {
   OPT_INVALID = 0,
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
@@ -48,22 +44,13 @@ enum {
 #undef OPTION
 };
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTION
-};
 
-class LibOptTable : public opt::GenericOptTable {
+class LibOptTable : public opt::OptTable {
 public:
-  LibOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                             true) {}
+  LibOptTable() : opt::OptTable(optionTables(), true) {}
 };
 } // namespace
 
@@ -192,6 +179,7 @@ static Expected<COFF::MachineTypes> getBitcodeFileMachine(MemoryBufferRef MB) {
   case Triple::x86_64:
     return COFF::IMAGE_FILE_MACHINE_AMD64;
   case Triple::arm:
+  case Triple::thumb:
     return COFF::IMAGE_FILE_MACHINE_ARMNT;
   case Triple::aarch64:
     return T.isWindowsArm64EC() ? COFF::IMAGE_FILE_MACHINE_ARM64EC

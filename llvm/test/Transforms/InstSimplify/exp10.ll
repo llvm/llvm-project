@@ -200,7 +200,7 @@ define float @exp10_qnan() {
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.exp10.f32(float +qnan)
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %ret = call float @llvm.exp10.f32(float 0x7FF8000000000000)
+  %ret = call float @llvm.exp10.f32(float +qnan)
   ret float %ret
 }
 
@@ -269,7 +269,7 @@ define <2 x float> @exp10_splat_qnan() {
 ; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.exp10.v2f32(<2 x float> splat (float +qnan))
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
-  %ret = call <2 x float> @llvm.exp10.v2f32(<2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>)
+  %ret = call <2 x float> @llvm.exp10.v2f32(<2 x float> <float +qnan, float +qnan>)
   ret <2 x float> %ret
 }
 

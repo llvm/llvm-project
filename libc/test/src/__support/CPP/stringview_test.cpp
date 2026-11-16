@@ -9,34 +9,17 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/string/memory_utils/inline_memcpy.h"
+#include "test/UnitTest/CharLiteralUtils.h"
 #include "test/UnitTest/Test.h"
 
-using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char, wchar_t>;
+using TestCharTypes = LIBC_NAMESPACE::testing::Types<char, wchar_t>;
 
-template <typename CharT>
-const CharT *chooseLiteral(const char *CharStr, const wchar_t *WCharStr) {
-  if constexpr (LIBC_NAMESPACE::cpp::is_same_v<CharT, char>)
-    return CharStr;
-  else {
-    static_assert(LIBC_NAMESPACE::cpp::is_same_v<CharT, wchar_t>);
-    return WCharStr;
-  }
-}
+template <typename T>
+class LlvmLibcTypedStringViewTest : public LIBC_NAMESPACE::testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcTypedStringViewTest, TestCharTypes);
 
-template <typename CharT>
-CharT chooseLiteral(char CharValue, wchar_t WCharValue) {
-  if constexpr (LIBC_NAMESPACE::cpp::is_same_v<CharT, char>)
-    return CharValue;
-  else {
-    static_assert(LIBC_NAMESPACE::cpp::is_same_v<CharT, wchar_t>);
-    return WCharValue;
-  }
-}
-
-#define ENCODED(CharT, S) chooseLiteral<CharT>(S, L##S)
-
-TYPED_TEST(LlvmLibcStringViewTest, InitializeCheck, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedStringViewTest, InitializeCheck) {
+  using CharT = TypeParam;
   using StringView = LIBC_NAMESPACE::cpp::basic_string_view<CharT>;
 
   StringView S;
@@ -58,8 +41,8 @@ TYPED_TEST(LlvmLibcStringViewTest, InitializeCheck, TestCharTypes) {
   ASSERT_EQ(S.size(), size_t(5));
 }
 
-TYPED_TEST(LlvmLibcStringViewTest, Equals, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedStringViewTest, Equals) {
+  using CharT = TypeParam;
   using StringView = LIBC_NAMESPACE::cpp::basic_string_view<CharT>;
 
   StringView S(ENCODED(CharT, "abc"));
@@ -72,8 +55,8 @@ TYPED_TEST(LlvmLibcStringViewTest, Equals, TestCharTypes) {
   ASSERT_NE(S, StringView(ENCODED(CharT, "abcde")));
 }
 
-TYPED_TEST(LlvmLibcStringViewTest, startsWith, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedStringViewTest, startsWith) {
+  using CharT = TypeParam;
   using StringView = LIBC_NAMESPACE::cpp::basic_string_view<CharT>;
 
   StringView S(ENCODED(CharT, "abc"));
@@ -90,8 +73,8 @@ TYPED_TEST(LlvmLibcStringViewTest, startsWith, TestCharTypes) {
   ASSERT_FALSE(S.starts_with(StringView(ENCODED(CharT, "abcde"))));
 }
 
-TYPED_TEST(LlvmLibcStringViewTest, endsWith, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedStringViewTest, endsWith) {
+  using CharT = TypeParam;
   using StringView = LIBC_NAMESPACE::cpp::basic_string_view<CharT>;
 
   StringView S(ENCODED(CharT, "abc"));
@@ -108,8 +91,8 @@ TYPED_TEST(LlvmLibcStringViewTest, endsWith, TestCharTypes) {
   ASSERT_FALSE(S.ends_with(StringView(ENCODED(CharT, "abcde"))));
 }
 
-TYPED_TEST(LlvmLibcStringViewTest, RemovePrefix, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedStringViewTest, RemovePrefix) {
+  using CharT = TypeParam;
   using StringView = LIBC_NAMESPACE::cpp::basic_string_view<CharT>;
 
   StringView A(ENCODED(CharT, "123456789"));
@@ -127,8 +110,8 @@ TYPED_TEST(LlvmLibcStringViewTest, RemovePrefix, TestCharTypes) {
   ASSERT_EQ(C.size(), size_t(0));
 }
 
-TYPED_TEST(LlvmLibcStringViewTest, RemoveSuffix, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedStringViewTest, RemoveSuffix) {
+  using CharT = TypeParam;
   using StringView = LIBC_NAMESPACE::cpp::basic_string_view<CharT>;
 
   StringView A(ENCODED(CharT, "123456789"));
@@ -146,8 +129,8 @@ TYPED_TEST(LlvmLibcStringViewTest, RemoveSuffix, TestCharTypes) {
   ASSERT_EQ(C.size(), size_t(0));
 }
 
-TYPED_TEST(LlvmLibcStringViewTest, Observer, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedStringViewTest, Observer) {
+  using CharT = TypeParam;
   using StringView = LIBC_NAMESPACE::cpp::basic_string_view<CharT>;
 
   StringView ABC(ENCODED(CharT, "abc"));
@@ -157,8 +140,8 @@ TYPED_TEST(LlvmLibcStringViewTest, Observer, TestCharTypes) {
   ASSERT_EQ(ABC.back(), ENCODED(CharT, 'c'));
 }
 
-TYPED_TEST(LlvmLibcStringViewTest, FindFirstOf, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedStringViewTest, FindFirstOf) {
+  using CharT = TypeParam;
   using StringView = LIBC_NAMESPACE::cpp::basic_string_view<CharT>;
 
   StringView Tmp(ENCODED(CharT, "abca"));
@@ -174,8 +157,8 @@ TYPED_TEST(LlvmLibcStringViewTest, FindFirstOf, TestCharTypes) {
   ASSERT_FALSE(Tmp.find_first_of(ENCODED(CharT, 'c'), 1) == 1);
 }
 
-TYPED_TEST(LlvmLibcStringViewTest, FindLastOf, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedStringViewTest, FindLastOf) {
+  using CharT = TypeParam;
   using StringView = LIBC_NAMESPACE::cpp::basic_string_view<CharT>;
 
   StringView Tmp(ENCODED(CharT, "abada"));
@@ -227,8 +210,8 @@ TYPED_TEST(LlvmLibcStringViewTest, FindLastOf, TestCharTypes) {
   ASSERT_EQ(Empty1.find_last_of(ENCODED(CharT, 'a'), 123), StringView::npos);
 }
 
-TYPED_TEST(LlvmLibcStringViewTest, FindFirstNotOf, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedStringViewTest, FindFirstNotOf) {
+  using CharT = TypeParam;
   using StringView = LIBC_NAMESPACE::cpp::basic_string_view<CharT>;
 
   StringView Tmp(ENCODED(CharT, "abada"));
@@ -291,8 +274,8 @@ TYPED_TEST(LlvmLibcStringViewTest, FindFirstNotOf, TestCharTypes) {
   EXPECT_EQ(Full.find_first_not_of(ENCODED(CharT, 'b'), 123), StringView::npos);
 }
 
-TYPED_TEST(LlvmLibcStringViewTest, Contains, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedStringViewTest, Contains) {
+  using CharT = TypeParam;
   using StringView = LIBC_NAMESPACE::cpp::basic_string_view<CharT>;
 
   StringView Empty;
@@ -308,8 +291,8 @@ TYPED_TEST(LlvmLibcStringViewTest, Contains, TestCharTypes) {
   EXPECT_FALSE(S.contains(ENCODED(CharT, 'e')));
 }
 
-TYPED_TEST(LlvmLibcStringViewTest, Substr, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedStringViewTest, Substr) {
+  using CharT = TypeParam;
   using StringView = LIBC_NAMESPACE::cpp::basic_string_view<CharT>;
 
   StringView S = ENCODED(CharT, "abada");

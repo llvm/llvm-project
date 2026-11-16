@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
@@ -35,7 +36,6 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 static bool
 computeRegionInSpecializedAccRoutine(acc::ComputeRegionOp computeRegion) {
   if (auto func = computeRegion->getParentOfType<FunctionOpInterface>())
@@ -144,10 +144,24 @@ static void emitLoopMappingRemark(acc::ComputeRegionOp computeRegion,
       DEBUG_TYPE);
 }
 
+static void
+emitUnstructuredIndependentLoopRemark(Operation *op,
+                                      acc::OpenACCSupport &accSupport) {
+  accSupport.emitRemark(op,
+                        "Loop is not parallelized: complex control "
+                        "flow prevents parallelization",
+                        DEBUG_TYPE);
+}
+
 class ACCEmitRemarksLoop
     : public acc::impl::ACCEmitRemarksLoopBase<ACCEmitRemarksLoop> {
 public:
   using ACCEmitRemarksLoopBase<ACCEmitRemarksLoop>::ACCEmitRemarksLoopBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCEmitRemarksLoopBase<ACCEmitRemarksLoop>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
 
   void runOnOperation() override {
     func::FuncOp func = getOperation();
@@ -160,12 +174,14 @@ public:
       if (!shouldEmitLoopRemarks(computeRegion))
         return;
 
-      computeRegion.getRegion().walk([&](LoopLikeOpInterface loopOp) {
-        emitLoopMappingRemark(computeRegion, loopOp, accSupport, policy,
-                              gpuDimSeparator);
+      computeRegion.getRegion().walk([&](Operation *op) {
+        if (auto loopOp = dyn_cast<LoopLikeOpInterface>(op))
+          emitLoopMappingRemark(computeRegion, loopOp, accSupport, policy,
+                                gpuDimSeparator);
+        else if (op->hasAttr(acc::getUnstructuredIndependentLoopAttrName()))
+          emitUnstructuredIndependentLoopRemark(op, accSupport);
       });
     });
   }
 };
-
 } // namespace

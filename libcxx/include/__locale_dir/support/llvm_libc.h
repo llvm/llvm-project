@@ -54,9 +54,12 @@ inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t) { ret
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
+#include <__locale_dir/support/default/get_c_locale.h>
 #include <__locale_dir/support/no_locale/characters.h>
 #include <__locale_dir/support/no_locale/conversions.h>
 #include <__locale_dir/support/no_locale/formatting.h>
 #include <__locale_dir/support/no_locale/strtonum.h>
+
+#define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 1
 
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_LLVM_LIBC_H

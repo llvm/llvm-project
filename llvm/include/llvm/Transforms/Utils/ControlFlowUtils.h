@@ -32,8 +32,9 @@ class DomTreeUpdater;
 /// argument vector.
 ///
 /// This also updates any PHINodes in the successor. For each such PHINode, the
-/// operands corresponding to incoming blocks are moved to a new PHINode in the
-/// hub, and the hub is made an operand of the original PHINode.
+/// operands for the edges that are rerouted through the hub are moved to a new
+/// PHINode in the hub, and the hub is made an operand of the original PHINode.
+/// Operands for edges that are not rerouted are kept.
 ///
 /// Note that for some block BB with a conditional branch, it is not necessary
 /// that both successors are rerouted. The client specifies this by setting

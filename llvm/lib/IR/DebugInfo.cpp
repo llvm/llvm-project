@@ -219,6 +219,7 @@ void DebugInfoFinder::processGlobalVariableExpression(
   auto *GV = GVE->getVariable();
   processScope(GV->getScope());
   processType(GV->getType());
+  processType(GV->getStaticDataMemberDeclaration());
 }
 
 void DebugInfoFinder::processInstruction(const Module &M,
@@ -415,6 +416,10 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
       [this](DIImportedEntity *IE) { processImportedEntity(IE); },
       [this](DIType *T) { processType(T); },
       [this](auto *GVE) { return processGlobalVariableExpression(GVE); });
+
+  // Not reached through the scope, type, or retained nodes.
+  if (DISubprogram *Decl = SP->getDeclaration())
+    processSubprogram(Decl);
 }
 
 void DebugInfoFinder::processVariable(const DILocalVariable *DV) {
@@ -701,6 +706,8 @@ bool llvm::stripDebugInfo(Function &F) {
         I.setMetadata("heapallocsite", nullptr);
         // DIAssignID are debug info metadata primitives.
         I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+        // Call targets point to DISubprograms.
+        I.setMetadata(LLVMContext::MD_call_target, nullptr);
       }
       I.dropDbgRecords();
     }
@@ -1009,9 +1016,13 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
           return MD;
         });
 
-        // Strip heapallocsite attachments, they point into the DIType system.
-        if (I.hasMetadataOtherThanDebugLoc())
+        // Strip attachments that refer to non-line-table debug info:
+        // heapallocsite points into the DIType system, call_target to a
+        // DISubprogram.
+        if (I.hasMetadataOtherThanDebugLoc()) {
           I.setMetadata("heapallocsite", nullptr);
+          I.setMetadata(LLVMContext::MD_call_target, nullptr);
+        }
 
         // Strip any DbgRecords attached.
         I.dropDbgRecords();
@@ -2021,18 +2032,6 @@ LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata) {
   }
 }
 
-AssignmentInstRange at::getAssignmentInsts(DIAssignID *ID) {
-  assert(ID && "Expected non-null ID");
-  LLVMContext &Ctx = ID->getContext();
-  auto &Map = Ctx.pImpl->AssignmentIDToInstrs;
-
-  auto MapIt = Map.find(ID);
-  if (MapIt == Map.end())
-    return make_range(nullptr, nullptr);
-
-  return make_range(MapIt->second.begin(), MapIt->second.end());
-}
-
 void at::deleteAssignmentMarkers(const Instruction *Inst) {
   for (auto *DVR : getDVRAssignmentMarkers(Inst))
     DVR->eraseFromParent();
@@ -2048,7 +2047,9 @@ void at::RAUW(DIAssignID *Old, DIAssignID *New) {
   for (auto *I : InstVec)
     I->setMetadata(LLVMContext::MD_DIAssignID, New);
 
-  Old->replaceAllUsesWith(New);
+  for (DbgVariableRecord *DVR :
+       SmallVector<DbgVariableRecord *>(Old->getRecords()))
+    DVR->setAssignId(New);
 }
 
 void at::deleteAll(Function *F) {

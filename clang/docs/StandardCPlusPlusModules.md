@@ -1,8 +1,5 @@
 # Standard C++ Modules
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -2084,39 +2081,7 @@ However, the behavior is inconsistent with other compilers. This is tracked by
 
 ODR violations are a common issue when using modules. Clang sometimes produces
 false-positive diagnostics or fails to produce true-positive diagnostics of the
-One Definition Rule. One often-reported example is:
-
-```c++
-// part.cc
-module;
-typedef long T;
-namespace ns {
-inline void fun() {
-    (void)(T)0;
-}
-}
-export module repro:part;
-
-// repro.cc
-module;
-typedef long T;
-namespace ns {
-    using ::T;
-}
-namespace ns {
-inline void fun() {
-    (void)(T)0;
-}
-}
-export module repro;
-export import :part;
-```
-
-Currently the compiler incorrectly diagnoses the inconsistent definition of
-`fun()` in two module units. Because both definitions of `fun()` have the
-same spelling and `T` refers to the same type entity, there is no ODR
-violation. This is tracked by
-[#78850](https://github.com/llvm/llvm-project/issues/78850).
+One Definition Rule.
 
 #### Using TU-local entity in other units
 
@@ -2532,6 +2497,37 @@ Individual command line options can be specified after `--`.
 `clang-scan-deps` will extract the necessary information from the specified
 options. Note that the path to the compiler executable needs to be specified
 explicitly instead of using `clang++` directly.
+
+Module maps can also introduce module dependencies by translating includes to
+imports. For example:
+
+```c++
+// a.modulemap
+module a {
+  header "a.h"
+}
+
+// use.cpp
+#include "a.h"
+```
+
+```console
+$ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ \
+    -std=c++20 use.cpp -c -o use.o -fmodule-map-file=a.modulemap
+```
+
+The rule for `use.o` contains a requirement for `a`:
+
+```text
+{
+  "primary-output": "use.o",
+  "requires": [
+    {
+      "logical-name": "a"
+    }
+  ]
+}
+```
 
 Users may want the scanner to get the transitive dependency information for
 headers. Otherwise, the project has to be scanned twice, once for headers and

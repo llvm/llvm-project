@@ -2,9 +2,6 @@
 
 A tutorial on how to write a source-to-source translation tool using Clang Transformer.
 
-```{contents}
-:local:
-```
 
 ## What is Clang Transformer?
 
@@ -370,7 +367,7 @@ introductions on clang's site:
 
 - {doc}`Introduction to the Clang AST <IntroductionToTheClangAST>`
 - {doc}`Matching the Clang AST <LibASTMatchers>`
-- [AST Matcher Reference](https://clang.llvm.org/docs/LibASTMatchersReference.html)
+- [AST Matcher Reference](LibASTMatchersReference.html){.external}
 
 :::{rubric} Footnotes
 :::

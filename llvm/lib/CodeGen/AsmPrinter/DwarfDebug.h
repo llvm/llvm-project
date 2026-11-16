@@ -376,6 +376,10 @@ class DwarfDebug : public DebugHandlerBase {
   /// create DIEs.
   SmallSetVector<const DISubprogram *, 16> ProcessedSPNodes;
 
+  /// Whether all functions of the module have been processed, so that it is
+  /// known which subprograms have abstract DIEs.
+  bool AllFunctionsProcessed = false;
+
   /// Map function-local imported entities to their parent local scope
   /// (either DILexicalBlock or DISubprogram) for a processed function
   /// (including inlined subprograms).
@@ -505,9 +509,6 @@ private:
   /// True iff there are multiple CUs in this module.
   bool SingleCU;
   bool IsDarwin;
-
-  /// Map for tracking Fortran deferred CHARACTER lengths.
-  DenseMap<const DIStringType *, unsigned> StringTypeLocMap;
 
   AddressPool AddrPool;
 
@@ -961,14 +962,13 @@ public:
   DwarfCompileUnit &getOrCreateAbstractSubprogramCU(const DISubprogram *SP,
                                                     DwarfCompileUnit &SrcCU);
 
-  unsigned getStringTypeLoc(const DIStringType *ST) const {
-    return StringTypeLocMap.lookup(ST);
-  }
+  /// Returns whether all functions of the module have been processed, so that
+  /// abstract subprogram DIEs are not created for inlined subprograms anymore.
+  bool allFunctionsProcessed() const { return AllFunctionsProcessed; }
 
-  void addStringTypeLoc(const DIStringType *ST, unsigned Loc) {
-    assert(ST);
-    if (Loc)
-      StringTypeLocMap[ST] = Loc;
+  /// Returns whether a DIE for the function of \p SP has been constructed.
+  bool isProcessedSubprogram(const DISubprogram *SP) const {
+    return ProcessedSPNodes.contains(SP);
   }
 
   /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.

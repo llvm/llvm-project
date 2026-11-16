@@ -26,10 +26,10 @@ subroutine managed_component()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_component()
-! CHECK: cuf.allocate %{{.*}} : {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: cuf.allocate %{{.*}} : {{.*}} data_attr(managed) -> i32
 ! CHECK: hlfir.designate %{{.*}}{"arr"} {{.*}} : {{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>
-! CHECK: fir.embox %{{.*}} {allocator_idx = 3 : i32}
-! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: fir.embox %{{.*}} allocator_idx(3)
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> data_attr(managed) -> i32
 
 ! Device attribute on variable with allocatable component.
 subroutine device_component()
@@ -41,10 +41,10 @@ subroutine device_component()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPdevice_component()
-! CHECK: cuf.allocate %{{.*}} : {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: cuf.allocate %{{.*}} : {{.*}} data_attr(device) -> i32
 ! CHECK: hlfir.designate %{{.*}}{"arr"} {{.*}} : {{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>
-! CHECK: fir.embox %{{.*}} {allocator_idx = 2 : i32}
-! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: fir.embox %{{.*}} allocator_idx(2)
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> data_attr(device) -> i32
 
 ! Managed component with source allocation.
 subroutine managed_component_source()
@@ -58,10 +58,10 @@ subroutine managed_component_source()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_component_source()
-! CHECK: cuf.allocate %{{.*}} : {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: cuf.allocate %{{.*}} : {{.*}} data_attr(managed) -> i32
 ! CHECK: hlfir.designate %{{.*}}{"arr"} {{.*}} : {{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>
-! CHECK: fir.embox %{{.*}} {allocator_idx = 3 : i32}
-! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> source({{.*}}) {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: fir.embox %{{.*}} allocator_idx(3)
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> source({{.*}}) data_attr(managed) -> i32
 
 ! Intermediate component has device attribute, outermost variable does not.
 subroutine intermediate_device_component()
@@ -75,8 +75,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPintermediate_device_component()
 ! CHECK: hlfir.designate %{{.*}}{"arr"} {{.*}} : {{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>
-! CHECK: fir.embox %{{.*}} {allocator_idx = 2 : i32}
-! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: fir.embox %{{.*}} allocator_idx(2)
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> data_attr(device) -> i32
 
 ! Deallocating a component uses the parent's memory space.
 subroutine managed_component_dealloc()
@@ -89,10 +89,10 @@ subroutine managed_component_dealloc()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_component_dealloc()
-! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> data_attr(managed) -> i32
 ! CHECK: hlfir.designate %{{.*}}{"arr"} {{.*}} : {{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>
 ! CHECK-NOT: fir.freemem
-! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> data_attr(managed) -> i32
 
 ! Same for a device component reached through an intermediate parent.
 subroutine device_component_dealloc()
@@ -106,9 +106,9 @@ subroutine device_component_dealloc()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPdevice_component_dealloc()
-! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> data_attr(device) -> i32
 ! CHECK-NOT: fir.freemem
-! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> data_attr(device) -> i32
 
 ! A component's own attribute wins over the parent's, on both sides.
 subroutine component_attr_wins_over_parent()
@@ -121,7 +121,7 @@ subroutine component_attr_wins_over_parent()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPcomponent_attr_wins_over_parent()
-! CHECK: fir.embox %{{.*}} {allocator_idx = 2 : i32}
-! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: fir.embox %{{.*}} allocator_idx(2)
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> data_attr(device) -> i32
 ! CHECK-NOT: fir.freemem
-! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> data_attr(device) -> i32

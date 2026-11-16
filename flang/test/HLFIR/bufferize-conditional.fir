@@ -16,12 +16,12 @@ func.func @test_scalar_derived(%cond: i1, %a: !fir.ref<!fir.type<_Tt{x:i32}>>, %
 // CHECK-LABEL: func.func @test_scalar_derived(
 // CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: !fir.ref<!fir.type<_Tt{x:i32}>>, %[[B:.*]]: !fir.ref<!fir.type<_Tt{x:i32}>>)
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.ref<!fir.type<_Tt{x:i32}>>, i1) {
-// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[A]] to %[[T1]]#0 temporary_lhs
 // CHECK:         %[[FALSE1:.*]] = arith.constant false
 // CHECK:         fir.result %[[T1]]#0, %[[FALSE1]] : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       } else {
-// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[B]] to %[[T2]]#0 temporary_lhs
 // CHECK:         %[[FALSE2:.*]] = arith.constant false
 // CHECK:         fir.result %[[T2]]#0, %[[FALSE2]] : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
@@ -45,14 +45,14 @@ func.func @test_scalar_polymorphic(%cond: i1, %a: !fir.class<!fir.type<_Tt{x:i32
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.class<!fir.type<_Tt{x:i32}>>, i1) {
 // CHECK:         fir.embox %{{.*}} source_box %[[A]]
 // CHECK:         fir.call @_FortranAAllocatableAllocate
-// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[A]] to %[[T1]]#0 temporary_lhs
 // CHECK:         %[[TRUE1:.*]] = arith.constant true
 // CHECK:         fir.result %[[T1]]#0, %[[TRUE1]] : !fir.class<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       } else {
 // CHECK:         fir.embox %{{.*}} source_box %[[B]]
 // CHECK:         fir.call @_FortranAAllocatableAllocate
-// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[B]] to %[[T2]]#0 temporary_lhs
 // CHECK:         %[[TRUE2:.*]] = arith.constant true
 // CHECK:         fir.result %[[T2]]#0, %[[TRUE2]] : !fir.class<!fir.type<_Tt{x:i32}>>, i1
@@ -69,7 +69,7 @@ func.func @test_poly_func_result_cleanup(%cond: i1) {
     %1 = fir.call @_QPmake_poly() fastmath<contract> : () -> !fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>
     fir.save_result %1 to %alloca : !fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
     %2 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
-    %3:2 = hlfir.declare %2 {uniq_name = ".tmp.func_result"} : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> (!fir.class<!fir.type<_Tt{x:i32}>>, !fir.class<!fir.type<_Tt{x:i32}>>)
+    %3:2 = hlfir.declare %2 uniq_name(".tmp.func_result") : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> (!fir.class<!fir.type<_Tt{x:i32}>>, !fir.class<!fir.type<_Tt{x:i32}>>)
     hlfir.yield %3#0 : !fir.class<!fir.type<_Tt{x:i32}>> cleanup {
       %4 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
       %5 = fir.convert %4 : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> !fir.box<none>
@@ -87,7 +87,7 @@ func.func @test_poly_func_result_cleanup(%cond: i1) {
     %1 = fir.call @_QPmake_poly() fastmath<contract> : () -> !fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>
     fir.save_result %1 to %alloca : !fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
     %2 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
-    %3:2 = hlfir.declare %2 {uniq_name = ".tmp.func_result"} : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> (!fir.class<!fir.type<_Tt{x:i32}>>, !fir.class<!fir.type<_Tt{x:i32}>>)
+    %3:2 = hlfir.declare %2 uniq_name(".tmp.func_result") : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> (!fir.class<!fir.type<_Tt{x:i32}>>, !fir.class<!fir.type<_Tt{x:i32}>>)
     hlfir.yield %3#0 : !fir.class<!fir.type<_Tt{x:i32}>> cleanup {
       %4 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
       %5 = fir.convert %4 : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> !fir.box<none>
@@ -110,8 +110,8 @@ func.func @test_poly_func_result_cleanup(%cond: i1) {
 // (because cleanup would free the original buffer), then replay cleanup ops,
 // then return the copy with mustFree=true.
 // CHECK:       fir.if %{{.*}} -> (!fir.class<!fir.type<_Tt{x:i32}>>, i1) {
-// CHECK:         %[[DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp.func_result"}
-// CHECK:         %[[COPY:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp.func_result")
+// CHECK:         %[[COPY:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[DECL]]#0 to %[[COPY]]#0 temporary_lhs
 // CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         fir.call @_FortranADestroy
@@ -171,12 +171,12 @@ func.func @test_scalar_char(%cond: i1, %a: !fir.ref<!fir.char<1,20>>, %b: !fir.r
 // CHECK-LABEL: func.func @test_scalar_char(
 // CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: !fir.ref<!fir.char<1,20>>, %[[B:.*]]: !fir.ref<!fir.char<1,20>>)
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.ref<!fir.char<1,20>>, i1) {
-// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[A]] to %[[T1]]#0 temporary_lhs
 // CHECK:         %[[FALSE1:.*]] = arith.constant false
 // CHECK:         fir.result %[[T1]]#0, %[[FALSE1]] : !fir.ref<!fir.char<1,20>>, i1
 // CHECK:       } else {
-// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[B]] to %[[T2]]#0 temporary_lhs
 // CHECK:         %[[FALSE2:.*]] = arith.constant false
 // CHECK:         fir.result %[[T2]]#0, %[[FALSE2]] : !fir.ref<!fir.char<1,20>>, i1
@@ -190,13 +190,13 @@ func.func @test_forwarding(%cond: i1) {
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
   %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<?xi32> {
     %mem1 = fir.allocmem !fir.array<?xi32>, %c10 {uniq_name = ".tmp"}
-    %decl1:2 = hlfir.declare %mem1(%shape) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+    %decl1:2 = hlfir.declare %mem1(%shape) uniq_name(".tmp") : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
     %true = arith.constant true
     %expr1 = hlfir.as_expr %decl1#0 move %true : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
     hlfir.yield %expr1 : !hlfir.expr<?xi32>
   } else {
     %mem2 = fir.allocmem !fir.array<?xi32>, %c10 {uniq_name = ".tmp"}
-    %decl2:2 = hlfir.declare %mem2(%shape) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+    %decl2:2 = hlfir.declare %mem2(%shape) uniq_name(".tmp") : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
     %true = arith.constant true
     %expr2 = hlfir.as_expr %decl2#0 move %true : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
     hlfir.yield %expr2 : !hlfir.expr<?xi32>
@@ -269,12 +269,12 @@ func.func @test_scalar_char_dynamic(%cond: i1, %a: !fir.boxchar<1>, %b: !fir.box
 // CHECK-LABEL: func.func @test_scalar_char_dynamic(
 // CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: !fir.boxchar<1>, %[[B:.*]]: !fir.boxchar<1>)
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.boxchar<1>, i1) {
-// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[A]] to %[[T1]]#0 temporary_lhs
 // CHECK:         %[[FALSE1:.*]] = arith.constant false
 // CHECK:         fir.result %[[T1]]#0, %[[FALSE1]] : !fir.boxchar<1>, i1
 // CHECK:       } else {
-// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[B]] to %[[T2]]#0 temporary_lhs
 // CHECK:         %[[FALSE2:.*]] = arith.constant false
 // CHECK:         fir.result %[[T2]]#0, %[[FALSE2]] : !fir.boxchar<1>, i1
@@ -298,7 +298,7 @@ func.func @test_asymmetric_poly(%cond: i1, %a: !fir.ref<!fir.type<_Tt{x:i32}>>, 
 // CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: !fir.ref<!fir.type<_Tt{x:i32}>>, %[[B:.*]]: !fir.class<!fir.type<_Tt{x:i32}>>)
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.class<!fir.type<_Tt{x:i32}>>, i1) {
 // Non-poly branch: copy into a stack temp, then embox ref → class:
-// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[A]] to %[[T1]]#0 temporary_lhs
 // CHECK:         %[[FALSE:.*]] = arith.constant false
 // CHECK:         %[[BOX:.*]] = fir.embox %[[T1]]#0 : (!fir.ref<!fir.type<_Tt{x:i32}>>) -> !fir.class<!fir.type<_Tt{x:i32}>>
@@ -306,7 +306,7 @@ func.func @test_asymmetric_poly(%cond: i1, %a: !fir.ref<!fir.type<_Tt{x:i32}>>, 
 // CHECK:       } else {
 // Poly branch: runtime-allocate a polymorphic temp and copy into it:
 // CHECK:         fir.call @_FortranAAllocatableAllocate
-// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[B]] to %[[T2]]#0 temporary_lhs
 // CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         fir.result %[[T2]]#0, %[[TRUE]] : !fir.class<!fir.type<_Tt{x:i32}>>, i1
@@ -364,7 +364,7 @@ func.func private @_QPfunc_alloc_char(!fir.boxchar<1>) -> !fir.box<!fir.heap<!fi
 // CHECK:         fir.result %[[BOXCHAR]], %[[TRUE]] : !fir.boxchar<1>, i1
 // CHECK:       } else {
 // Non-forwarding: variable copied into a stack temp (mustFree=false):
-// CHECK:         %[[T:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[T:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[ARG]] to %[[T]]#0 temporary_lhs
 // CHECK:         %[[FALSE:.*]] = arith.constant false
 // CHECK:         fir.result %[[T]]#0, %[[FALSE]] : !fir.boxchar<1>, i1
@@ -435,18 +435,18 @@ func.func @test_nested(%cond1: i1, %cond2: i1, %a: !fir.ref<!fir.type<_Tt{x:i32}
 // CHECK:       %[[OUTER:.*]]:2 = fir.if %[[COND1]] -> (!fir.ref<!fir.type<_Tt{x:i32}>>, i1) {
 // Inner fir.if (nested — proves bounded rewrite recursion works):
 // CHECK:         %[[INNER:.*]]:2 = fir.if %[[COND2]] -> (!fir.ref<!fir.type<_Tt{x:i32}>>, i1) {
-// CHECK:           %[[IT:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:           %[[IT:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp")
 // CHECK:           hlfir.assign %[[A]] to %[[IT]]#0 temporary_lhs
 // CHECK:           fir.result %[[IT]]#0, %{{.*}} : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:         } else {
-// CHECK:           %[[IE:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:           %[[IE:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp")
 // CHECK:           hlfir.assign %[[B]] to %[[IE]]#0 temporary_lhs
 // CHECK:           fir.result %[[IE]]#0, %{{.*}} : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:         }
 // Inner results forwarded to outer fir.result:
 // CHECK:         fir.result %[[INNER]]#0, %[[INNER]]#1 : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       } else {
-// CHECK:         %[[OE:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         %[[OE:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[C]] to %[[OE]]#0 temporary_lhs
 // CHECK:         fir.result %[[OE]]#0, %{{.*}} : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       }

@@ -14,7 +14,7 @@ contains
     real :: pi
     common /COM/ pi
 !$acc declare present(/COM/)
-! CHECK: fir.global common @com_(dense<0> : vector<4xi8>) {alignment = 4 : i64} : !fir.array<4xi8>
+! CHECK: fir.global common @com_(dense<0> : vector<4xi8>) <{alignment = 4 : i64}> : !fir.array<4xi8>
 ! CHECK-LABEL: func.func private @_QFPs()
 ! CHECK-DAG: hlfir.declare
 ! CHECK-DAG: %[[ADDR:.*]] = fir.address_of(@com_){{.*}} : !fir.ref<!fir.array<4xi8>>

@@ -95,7 +95,7 @@ complicated behavior in a single node (rotate).
 3.  `lib/CodeGen/SelectionDAG/LegalizeDAG.cpp`:
 
     Add code to [legalize, promote, and
-    expand](project:CodeGenerator.md#selectiondag-legalize-phase) the node as
+    expand](CodeGenerator.md#selectiondag-legalize-phase) the node as
     necessary. At a minimum, you will need to add a case statement for your node
     in `LegalizeOp` which calls LegalizeOp on the node's operands, and returns a
     new node if any of the operands changed as a result of being legalized. It

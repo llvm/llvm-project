@@ -30,7 +30,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
     %11 = llvm.load %10 : !llvm.ptr -> !llvm.ptr
     %12 = llvm.load %9 : !llvm.ptr -> f32
     %13 = llvm.load %11 : !llvm.ptr -> f32
-    %14 = llvm.fadd %12, %13 {fastmathFlags = #llvm.fastmath<contract>} : f32
+    %14 = llvm.fadd %12, %13 fastmath<contract> : f32
     llvm.store %14, %9 : f32, !llvm.ptr
     omp.yield(%arg0 : !llvm.ptr)
   } data_ptr_ptr {
