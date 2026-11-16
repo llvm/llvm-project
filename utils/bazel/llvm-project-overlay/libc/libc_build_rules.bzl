@@ -406,8 +406,8 @@ def libc_math_function(
     ]
     libc_function(
         name = name,
-        srcs = ["//libc/src/math:generic/" + name + ".cpp"],
-        hdrs = ["//libc/src/math:" + name + ".h"],
+        srcs = ["//libc/src/math:generic/{}.cpp".format(name)],
+        hdrs = ["//libc/src/math:{}.h".format(name)],
         deps = [
             "//libc/src/__support:common",
             "//libc/src/__support/macros:config",
