@@ -2380,6 +2380,11 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
   setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
                             {3}, VT, Custom);
+  // With two lane vectors, pairwise shuffles are more efficient.
+  if (VT == MVT::v2f64 || VT == MVT::v2i64 || VT == MVT::v2i32 ||
+      VT == MVT::v2f32)
+    setVectorInterleaveAction(
+        {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {6, 8}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
@@ -2686,6 +2691,11 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::VECREDUCE_UMIN, VT, Default);
   setOperationAction(ISD::VECREDUCE_XOR, VT, Default);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Default);
+  // With two lane vectors, pairwise shuffles are more efficient.
+  if (VT == MVT::v2f64 || VT == MVT::v2i64 || VT == MVT::v2i32 ||
+      VT == MVT::v2f32)
+    setVectorInterleaveAction(
+        {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {6, 8}, VT, Custom);
   setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Default);
   setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Default);
   setOperationAction(ISD::VSELECT, VT, Default);
@@ -35720,6 +35730,19 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
 
+  unsigned Factor = Op->getNumOperands();
+  if ((OpVT == MVT::v2f64 || OpVT == MVT::v2i64 || OpVT == MVT::v2i32 ||
+       OpVT == MVT::v2f32) &&
+      (Factor == 6 || Factor == 8)) {
+    SmallVector<SDValue, 8> Results;
+    for (unsigned I = 0; I != Factor / 2; ++I)
+      for (int Lane = 0; Lane != 2; ++Lane)
+        Results.push_back(DAG.getVectorShuffle(OpVT, DL, Op.getOperand(I),
+                                               Op.getOperand(I + Factor / 2),
+                                               {Lane, Lane + 2}));
+    return DAG.getMergeValues(Results, DL);
+  }
+
   if (OpVT.isFixedLengthVector() && Op->getNumOperands() == 3) {
     Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
     SDValue StackPtr =
@@ -35832,6 +35855,19 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
                                                       SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
+
+  unsigned Factor = Op->getNumOperands();
+  if ((OpVT == MVT::v2f64 || OpVT == MVT::v2i64 || OpVT == MVT::v2i32 ||
+       OpVT == MVT::v2f32) &&
+      (Factor == 6 || Factor == 8)) {
+    SmallVector<SDValue, 8> Results;
+    for (int Lane = 0; Lane != 2; ++Lane)
+      for (unsigned I = 0; I != Factor; I += 2)
+        Results.push_back(DAG.getVectorShuffle(OpVT, DL, Op.getOperand(I),
+                                               Op.getOperand(I + 1),
+                                               {Lane, Lane + 2}));
+    return DAG.getMergeValues(Results, DL);
+  }
 
   if (OpVT.isFixedLengthVector() && Op->getNumOperands() == 3) {
     Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
