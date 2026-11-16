@@ -118,9 +118,10 @@ public:
 };
 } // anonymous namespace
 
-static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
+static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name,
+                      bool show_hidden) {
   std::string usage_str = tool_name.str() + " options";
-  table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB DAP", false);
+  table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB DAP", show_hidden);
 
   llvm::outs() << R"___(
 EXAMPLES:
@@ -132,17 +133,22 @@ EXAMPLES:
 
     lldb-dap --connection listen://localhost:<port>
 
-  Passing --wait-for-debugger will pause the process at startup and wait for a
-  debugger to attach to the process.
-
-    lldb-dap -g
-
   You can also use lldb-dap to launch a supported client, for example the
   LLDB-DAP Visual Studio Code extension.
 
     lldb-dap --client vscode -- /path/to/binary <args>
 
 )___";
+
+  if (show_hidden) {
+    llvm::outs()
+        << R"___(  Passing --wait-for-debugger will pause the process at startup and wait for a
+  debugger to attach to the process.
+
+    lldb-dap -g
+
+)___";
+  }
 }
 
 static void PrintVersion() {
@@ -757,8 +763,9 @@ int main(int argc, char *argv[]) {
   llvm::ArrayRef<const char *> ArgsArr = llvm::ArrayRef(argv + 1, argc);
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
 
-  if (input_args.hasArg(OPT_help)) {
-    PrintHelp(T, llvm::sys::path::filename(argv[0]));
+  if (input_args.hasArg(OPT_help, OPT_help_hidden)) {
+    const llvm::StringRef tool_name = llvm::sys::path::filename(argv[0]);
+    PrintHelp(T, tool_name, input_args.hasArg(OPT_help_hidden));
     return EXIT_SUCCESS;
   }
 
