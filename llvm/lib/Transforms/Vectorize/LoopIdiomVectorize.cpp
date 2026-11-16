@@ -92,7 +92,6 @@ class LoopIdiomVectorize {
   DominatorTree *DT;
   LoopInfo *LI;
   const TargetTransformInfo *TTI;
-  const DataLayout *DL;
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter &ORE;
@@ -107,10 +106,10 @@ class LoopIdiomVectorize {
 public:
   LoopIdiomVectorize(const VectorizeOptions &Opts, LoopIdiomVectorizeStyle S,
                      unsigned VF, DominatorTree *DT, LoopInfo *LI,
-                     const TargetTransformInfo *TTI, const DataLayout *DL,
+                     const TargetTransformInfo *TTI,
                      OptimizationRemarkEmitter &ORE)
       : Opts(Opts), VectorizeStyle(S), ByteCompareVF(VF), DT(DT), LI(LI),
-        TTI(TTI), DL(DL), ORE(ORE) {}
+        TTI(TTI), ORE(ORE) {}
 
   bool run(Loop *L);
 
@@ -164,8 +163,6 @@ PreservedAnalyses LoopIdiomVectorizePass::run(Loop &L, LoopAnalysisManager &AM,
   if (Opts.disable_loop_idiom_vectorize_all)
     return PreservedAnalyses::all();
 
-  const auto *DL = &L.getHeader()->getDataLayout();
-
   LoopIdiomVectorizeStyle VecStyle =
       Opts.loop_idiom_vectorize_style.value_or(VectorizeStyle);
   unsigned BCVF = Opts.loop_idiom_vectorize_bytecmp_vf.value_or(ByteCompareVF);
@@ -180,8 +177,7 @@ PreservedAnalyses LoopIdiomVectorizePass::run(Loop &L, LoopAnalysisManager &AM,
     ORE = &*ORELocal;
   }
 
-  LoopIdiomVectorize LIV(Opts, VecStyle, BCVF, &AR.DT, &AR.LI, &AR.TTI, DL,
-                         *ORE);
+  LoopIdiomVectorize LIV(Opts, VecStyle, BCVF, &AR.DT, &AR.LI, &AR.TTI, *ORE);
   if (!LIV.run(&L))
     return PreservedAnalyses::all();
 

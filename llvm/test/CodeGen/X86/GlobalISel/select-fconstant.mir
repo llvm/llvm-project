@@ -15,6 +15,7 @@
   entry:
     ret double 5.500000e+00
   }
+...
 ---
 name:            test_float
 #

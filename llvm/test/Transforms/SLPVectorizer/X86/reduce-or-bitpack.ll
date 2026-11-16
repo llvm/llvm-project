@@ -267,3 +267,29 @@ define dso_local { i64, i64 } @and_shl_add_pack(i64 %0, i64 %1, i64 %2, i64 %3) 
   %140 = insertvalue { i64, i64 } %117, i64 %139, 1
   ret { i64, i64 } %140
 }
+
+; The add of zero in the first lane is interchangeable with a shl by zero.
+
+define i32 @add_zero_lane_pack(i8 %a, i8 %b, i8 %c, i8 %d) {
+; CHECK-LABEL: define i32 @add_zero_lane_pack(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> poison, i8 [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[B]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[C]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP3]], i8 [[D]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i8> [[TMP4]] to i32
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %za = zext i8 %a to i32
+  %zb = zext i8 %b to i32
+  %zc = zext i8 %c to i32
+  %zd = zext i8 %d to i32
+  %sa = add i32 %za, 0
+  %sb = shl i32 %zb, 8
+  %sc = shl i32 %zc, 16
+  %sd = shl i32 %zd, 24
+  %o1 = or i32 %sa, %sb
+  %o2 = or i32 %o1, %sc
+  %o3 = or i32 %o2, %sd
+  ret i32 %o3
+}

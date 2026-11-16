@@ -51,6 +51,7 @@ void initializeHexagonLiveVariablesPass(PassRegistry &);
 void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
 void initializeHexagonLoopAlignPass(PassRegistry &);
 void initializeHexagonLoopReschedulingPass(PassRegistry &);
+void initializeHexagonLowerHLXPairAllocasPass(PassRegistry &);
 void initializeHexagonMaskPass(PassRegistry &);
 void initializeHexagonNewValueJumpPass(PassRegistry &);
 void initializeHexagonOptAddrModePass(PassRegistry &);
@@ -105,6 +106,7 @@ FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
                                    CodeGenOptLevel OptLevel);
 FunctionPass *createHexagonLoopAlign();
 FunctionPass *createHexagonLoopRescheduling();
+FunctionPass *createHexagonLowerHLXPairAllocas();
 FunctionPass *createHexagonMask();
 FunctionPass *createHexagonNewValueJump();
 FunctionPass *createHexagonOptAddrMode();

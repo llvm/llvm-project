@@ -386,7 +386,6 @@ private:
 
 /// Pass to analyze and populate MIR2Vec vocabulary from a module
 class LLVM_ABI MIR2VecVocabLegacyAnalysis : public ImmutablePass {
-  using VocabVector = std::vector<mir2vec::Embedding>;
   using VocabMap = std::map<std::string, mir2vec::Embedding>;
 
   StringRef getPassName() const override;

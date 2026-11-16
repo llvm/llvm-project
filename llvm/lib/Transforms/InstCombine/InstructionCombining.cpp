@@ -1379,6 +1379,56 @@ bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
   return true;
 }
 
+/// Distribute a binop over a select:
+///   (Cond ? TVal : FVal) op Other --> Cond ? (TVal op Other) : (FVal op Other)
+/// (or with the operands swapped if \p SelIsLHS is false).
+/// If \p Other is a select whose condition is implied by Cond (or its
+/// negation), it is resolved to the corresponding arm on that side first.
+/// \p True and \p False are set to the simplified arms, or null if an arm did
+/// not simplify.
+static void distributeBinOpOverSelect(InstCombinerImpl &IC,
+                                      Instruction::BinaryOps Opcode,
+                                      SelectInst *Sel, Value *Other,
+                                      bool SelIsLHS, FastMathFlags FMF,
+                                      const SimplifyQuery &SQ, Value *&True,
+                                      Value *&False) {
+  // If V is a select whose condition is implied by Cond, try to resolve it to
+  // the appropriate arm for this value of Cond.
+  auto SimplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
+                                           bool CondIsTrue) -> Value * {
+    auto *InnerSI = dyn_cast<SelectInst>(V);
+    if (!InnerSI || Cond->getType() != InnerSI->getCondition()->getType())
+      return V;
+
+    if (Value *Arm = IC.simplifyNestedSelectsUsingImpliedCond(*InnerSI, Cond,
+                                                              CondIsTrue))
+      return Arm;
+    return V;
+  };
+
+  Value *Cond = Sel->getCondition();
+  Value *TVal = Sel->getTrueValue(), *FVal = Sel->getFalseValue();
+  Value *OtherT = SimplifySelectWithImpliedCond(Other, Cond, true);
+  Value *OtherF = SimplifySelectWithImpliedCond(Other, Cond, false);
+  Value *LHSTrueArm = TVal, *RHSTrueArm = OtherT;
+  Value *LHSFalseArm = FVal, *RHSFalseArm = OtherF;
+  if (!SelIsLHS) {
+    std::swap(LHSTrueArm, RHSTrueArm);
+    std::swap(LHSFalseArm, RHSFalseArm);
+  }
+
+  True = simplifyBinOp(Opcode, LHSTrueArm, RHSTrueArm, FMF, SQ);
+  False = simplifyBinOp(Opcode, LHSFalseArm, RHSFalseArm, FMF, SQ);
+
+  if (!Other->hasOneUse())
+    return;
+
+  if (True && !False && OtherT != Other)
+    False = IC.Builder.CreateBinOp(Opcode, LHSFalseArm, RHSFalseArm);
+  else if (False && !True && OtherF != Other)
+    True = IC.Builder.CreateBinOp(Opcode, LHSTrueArm, RHSTrueArm);
+}
+
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
                                                         Value *LHS,
                                                         Value *RHS) {
@@ -1401,20 +1451,6 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   SimplifyQuery Q = SQ.getWithInstruction(&I);
 
   Value *Cond, *True = nullptr, *False = nullptr;
-
-  // If V is a select whose condition is implied by Cond, try to resolve it to
-  // the appropriate arm for this value of Cond.
-  auto SimplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
-                                           bool CondIsTrue) -> Value * {
-    auto *InnerSI = dyn_cast<SelectInst>(V);
-    if (!InnerSI || Cond->getType() != InnerSI->getCondition()->getType())
-      return V;
-
-    if (Value *Arm =
-            simplifyNestedSelectsUsingImpliedCond(*InnerSI, Cond, CondIsTrue))
-      return Arm;
-    return V;
-  };
 
   // Special-case for add/negate combination. Replace the zero in the negation
   // with the trailing add operand:
@@ -1448,24 +1484,26 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
       else if (True && !False)
         False = Builder.CreateBinOp(Opcode, C, F);
     }
-  } else if (LHSIsSelect && LHS->hasOneUse()) {
-    // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
-    Cond = A;
-    Value *TrueRHS = SimplifySelectWithImpliedCond(RHS, Cond, true);
-    Value *FalseRHS = SimplifySelectWithImpliedCond(RHS, Cond, false);
-    True = simplifyBinOp(Opcode, B, TrueRHS, FMF, Q);
-    False = simplifyBinOp(Opcode, C, FalseRHS, FMF, Q);
-    if (Value *NewSel = foldAddNegate(B, C, RHS))
-      return NewSel;
-  } else if (RHSIsSelect && RHS->hasOneUse()) {
-    // X op (D ? E : F) -> D ? (X op E) : (X op F)
-    Cond = D;
-    Value *TrueLHS = SimplifySelectWithImpliedCond(LHS, Cond, true);
-    Value *FalseLHS = SimplifySelectWithImpliedCond(LHS, Cond, false);
-    True = simplifyBinOp(Opcode, TrueLHS, E, FMF, Q);
-    False = simplifyBinOp(Opcode, FalseLHS, F, FMF, Q);
-    if (Value *NewSel = foldAddNegate(E, F, LHS))
-      return NewSel;
+  } else {
+    // Prefer distributing over the LHS select.
+    if (LHSIsSelect && LHS->hasOneUse()) {
+      Cond = A;
+      distributeBinOpOverSelect(*this, Opcode, SI, RHS, /*SelIsLHS=*/true, FMF,
+                                Q, True, False);
+      if (Value *NewSel = foldAddNegate(B, C, RHS))
+        return NewSel;
+    }
+
+    bool Folded = True && False;
+    if (!Folded && RHSIsSelect && RHS->hasOneUse()) {
+      // The LHS select did not fold, or there was none. Try the RHS one.
+      SI = cast<SelectInst>(RHS);
+      Cond = D;
+      distributeBinOpOverSelect(*this, Opcode, SI, LHS, /*SelIsLHS=*/false, FMF,
+                                Q, True, False);
+      if (Value *NewSel = foldAddNegate(E, F, LHS))
+        return NewSel;
+    }
   }
 
   if (!True || !False)
@@ -6286,9 +6324,14 @@ static bool combineInstructionsOverFunction(
       reportFatalUsageError(
           "Instruction Combining on " + Twine(F.getName()) +
           " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
-          " iterations. " +
-          "Use 'instcombine<no-verify-fixpoint>' or function attribute "
-          "'instcombine-no-verify-fixpoint' to suppress this error.");
+          " iterations.\n\n"
+          "If you encountered this error while working on InstCombine, "
+          "determine the cause and either fix it, or add the "
+          "\"instcombine-no-verify-fixpoint\" attribute to the test, with "
+          "a comment explaining the reason for the convergence failure.\n\n"
+          "If you encountered this error in any other situation, "
+          "use 'instcombine<no-verify-fixpoint>' and "
+          "do *not* file an issue.");
     }
   }
 

@@ -2126,9 +2126,10 @@ size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
     return DoReadMemory(process_addr, buf, size, error);
   }
 
-  lldb::addr_t addr = process_addr.GetValue();
-  if (ABISP abi_sp = GetABI())
-    addr = abi_sp->FixAnyAddress(addr);
+  const lldb::addr_t addr = FixAnyAddress(process_addr.GetValue());
+
+  if (!ShouldUseMemoryCache(addr))
+    return DoReadMemory(addr, buf, size, error);
 
   if (GetDisableMemoryCache())
     return ReadMemoryFromInferior(addr, buf, size, error);
