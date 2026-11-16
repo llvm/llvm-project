@@ -194,11 +194,11 @@ public:
 // bytes.
 //
 // Zero-sized structs have a special treatment:
-// - The first six occupies a full i64 argument slot.
-// - The next ten occupies a f64 register (but *not* reserve a shadow space in
-//   the stack).
+// - Initially it will be allocated as if it's a normal i64.
+// - If we run out of available integer registers, it'll occupy an f64 register
+//   (but *not* reserve a shadow space in the stack).
 // - Further arguments won't occupy any space.
-// This is represented as i64 with the LLVM IR inreg attribute:
+// A zero-sized struct is represented as i64 with the LLVM IR inreg attribute:
 //
 //   declare void f(i64 inreg %a)
 //
@@ -317,7 +317,7 @@ private:
         }
       }
 
-      // Zero-sized structs gets the inreg flag; they are treated specially.
+      // Zero-sized structs get the inreg flag; they are treated specially.
       unsigned Size = DL.getTypeSizeInBits(StrTy).getKnownMinValue();
       if (!Size)
         InReg = true;
@@ -436,10 +436,11 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
   CoerceBuilder CB(VMContext, getDataLayout(), IsVarArg);
   CB.addStruct(0, StrTy);
 
-  // All structs, even empty ones, should take up a register argument slot,
-  // so pin the minimum struct size to one bit.
+  // All structs, even zero-sized ones, should take up a register argument
+  // slot, so pin the minimum struct size to one bit.
   uint64_t ActualSize = CB.DL.getTypeSizeInBits(StrTy).getKnownMinValue();
   CB.pad(llvm::alignTo(std::max(ActualSize, uint64_t(1)), 64));
+  RegOffset += PaddingSlots + CB.Size / 64;
 
   // Try to use the original type for coercion.
   llvm::Type *CoerceTy = CB.isUsableType(StrTy) ? StrTy : CB.getType();

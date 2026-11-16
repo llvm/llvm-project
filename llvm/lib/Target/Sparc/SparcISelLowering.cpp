@@ -141,7 +141,7 @@ static bool Analyze_CC_Sparc64_Full(bool IsReturn, unsigned &ValNo, MVT &ValVT,
   // https://github.com/llvm/llvm-project/issues/213561#issuecomment-5377850094
   if (!IsReturn && LocVT == MVT::i64 && ArgFlags.isInReg() &&
       State.isAllocated(SP::I5)) {
-    Register Reg = State.AllocateReg(ArgDs);
+    MCRegister Reg = State.AllocateReg(ArgDs);
     if (Reg)
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     return true;
@@ -153,7 +153,7 @@ static bool Analyze_CC_Sparc64_Full(bool IsReturn, unsigned &ValNo, MVT &ValVT,
   Align alignment =
       (LocVT == MVT::f128 || ArgFlags.isSplit()) ? Align(16) : Align(8);
   unsigned Offset = State.AllocateStack(size, alignment);
-  Register Reg = 0;
+  MCRegister Reg = 0;
 
   if (LocVT == MVT::i64) {
     // Promote integers to %i0-%i5.
