@@ -8,8 +8,8 @@
 ; rewritten, so the other accumulator still goes through v_accvgpr_write and
 ; v_accvgpr_read.
 
-define amdgpu_kernel void @pin_d_nounroll(ptr addrspace(1) %A, ptr addrspace(1) %B, ptr addrspace(1) %C, i32 %K) #0 {
-; CHECK-LABEL: pin_d_nounroll:
+define amdgpu_kernel void @pin_d(ptr addrspace(1) %A, ptr addrspace(1) %B, ptr addrspace(1) %C, i32 %K) {
+; CHECK-LABEL: pin_d:
 ; CHECK:       .Lfunc_begin0:
 ; CHECK-NEXT:    .cfi_sections .debug_frame
 ; CHECK-NEXT:    .cfi_startproc
@@ -76,7 +76,7 @@ loop:
   %dp = call <4 x float> asm "", "=a,0"(<4 x float> %d)
   %k.next = add i32 %k, 1
   %cont = icmp slt i32 %k.next, %K
-  br i1 %cont, label %loop, label %exit, !llvm.loop !0
+  br i1 %cont, label %loop, label %exit
 exit:
   %r = phi <4 x float> [zeroinitializer, %entry], [%dp, %loop]
   %pcs0 = getelementptr <4 x float>, ptr addrspace(1) %C, i64 %tid64
@@ -84,7 +84,7 @@ exit:
   ret void
 }
 
-define amdgpu_kernel void @big32_pin_c(ptr addrspace(1) %A, ptr addrspace(1) %B, ptr addrspace(1) %C, i32 %K) #0 {
+define amdgpu_kernel void @big32_pin_c(ptr addrspace(1) %A, ptr addrspace(1) %B, ptr addrspace(1) %C, i32 %K) {
 ; CHECK-LABEL: big32_pin_c:
 ; CHECK:       .Lfunc_begin1:
 ; CHECK-NEXT:    .cfi_startproc
@@ -178,7 +178,7 @@ loop:
   %d = call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.f16(<8 x half> %a, <8 x half> %b, <16 x float> %accp, i32 0, i32 0, i32 0)
   %k.next = add i32 %k, 1
   %cont = icmp slt i32 %k.next, %K
-  br i1 %cont, label %loop, label %exit, !llvm.loop !0
+  br i1 %cont, label %loop, label %exit
 exit:
   %r = phi <16 x float> [zeroinitializer, %entry], [%d, %loop]
   %pcs0 = getelementptr <16 x float>, ptr addrspace(1) %C, i64 %tid64
@@ -186,7 +186,7 @@ exit:
   ret void
 }
 
-define amdgpu_kernel void @multi4_pin_d(ptr addrspace(1) %A, ptr addrspace(1) %B, ptr addrspace(1) %C, i32 %K) #0 {
+define amdgpu_kernel void @multi4_pin_d(ptr addrspace(1) %A, ptr addrspace(1) %B, ptr addrspace(1) %C, i32 %K) {
 ; CHECK-LABEL: multi4_pin_d:
 ; CHECK:       .Lfunc_begin2:
 ; CHECK-NEXT:    .cfi_startproc
@@ -319,7 +319,7 @@ exit:
   ret void
 }
 
-define amdgpu_kernel void @swap_pin_d(ptr addrspace(1) %A, ptr addrspace(1) %B, ptr addrspace(1) %C, i32 %K) #0 {
+define amdgpu_kernel void @swap_pin_d(ptr addrspace(1) %A, ptr addrspace(1) %B, ptr addrspace(1) %C, i32 %K) {
 ; CHECK-LABEL: swap_pin_d:
 ; CHECK:       .Lfunc_begin3:
 ; CHECK-NEXT:    .cfi_startproc
@@ -412,7 +412,7 @@ loop:
   %p1 = call <4 x float> asm "", "=a,0"(<4 x float> %n1)
   %k.next = add i32 %k, 1
   %cont = icmp slt i32 %k.next, %K
-  br i1 %cont, label %loop, label %exit, !llvm.loop !0
+  br i1 %cont, label %loop, label %exit
 exit:
   %r0 = phi <4 x float> [zeroinitializer, %entry], [%p0, %loop]
   %r1 = phi <4 x float> [<float 1.0, float 2.0, float 3.0, float 4.0>, %entry], [%p1, %loop]
@@ -493,19 +493,13 @@ loop:
   %dp = call <4 x float> asm "", "=a,0"(<4 x float> %d), !dbg !13
   %k.next = add i32 %k, 1
   %cont = icmp slt i32 %k.next, %K
-  br i1 %cont, label %loop, label %exit, !llvm.loop !0
+  br i1 %cont, label %loop, label %exit
 exit:
   %pc = getelementptr <4 x float>, ptr addrspace(1) %C, i64 %tid64
   store <4 x float> %dp, ptr addrspace(1) %pc, align 16
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half>, <8 x half>, <4 x float>, i32, i32, i32)
-declare <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.f16(<8 x half>, <8 x half>, <16 x float>, i32, i32, i32)
-attributes #0 = { "amdgpu-flat-work-group-size"="64,64" }
-!0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.unroll.disable"}
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!4, !5}
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "t", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
