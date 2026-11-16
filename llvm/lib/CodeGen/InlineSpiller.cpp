@@ -1258,17 +1258,18 @@ void InlineSpiller::insertReload(Register NewVReg,
   ++NumReloads;
 }
 
-/// Check if \p Def fully defines a VReg with an undefined value.
-/// If that's the case, that means the value of VReg is actually
+/// Check if \p Def defines \p Reg with an undefined value.
+/// If that's the case, that means the value of Reg is actually
 /// not relevant.
-static bool isRealSpill(const MachineInstr &Def) {
+static bool isRealSpill(const MachineInstr &Def, Register Reg) {
   if (!Def.isImplicitDef())
     return true;
 
-  // We can say that the VReg defined by Def is undef, only if it is
-  // fully defined by Def. Otherwise, some of the lanes may not be
-  // undef and the value of the VReg matters.
-  return Def.getOperand(0).getSubReg();
+  // Reg is undef only if every def of it in Def is full or read-undef.
+  // Otherwise, other lanes may hold live values.
+  return any_of(Def.all_defs(), [&](const MachineOperand &MO) {
+    return MO.getReg() == Reg && MO.readsReg();
+  });
 }
 
 /// insertSpill - Insert a spill of NewVReg after MI.
@@ -1281,7 +1282,7 @@ void InlineSpiller::insertSpill(Register NewVReg,
 
   MachineInstrSpan MIS(MI, &MBB);
   MachineBasicBlock::iterator SpillBefore = std::next(MI);
-  bool IsRealSpill = isRealSpill(*MI);
+  bool IsRealSpill = isRealSpill(*MI, NewVReg);
 
   if (IsRealSpill)
     TII.storeRegToStackSlot(MBB, SpillBefore, NewVReg, false, StackSlot,

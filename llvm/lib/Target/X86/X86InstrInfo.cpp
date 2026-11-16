@@ -1260,17 +1260,17 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   }
   CASE_NF(INC8r)
   CASE_NF(INC16r)
-    addRegOffset(MIB, InRegLEA, false, 1);
+    addRegOffset(MIB, InRegLEA, 1);
     break;
   CASE_NF(DEC8r)
   CASE_NF(DEC16r)
-    addRegOffset(MIB, InRegLEA, false, -1);
+    addRegOffset(MIB, InRegLEA, -1);
     break;
   CASE_NF(ADD8ri)
   CASE_NF(ADD16ri)
   case X86::ADD8ri_DB:
   case X86::ADD16ri_DB:
-    addRegOffset(MIB, InRegLEA, false, MI.getOperand(2).getImm());
+    addRegOffset(MIB, InRegLEA, MI.getOperand(2).getImm());
     break;
   CASE_NF(ADD8rr)
   CASE_NF(ADD16rr)
@@ -4192,7 +4192,7 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
 }
 
 /// Test if the given register is a physical h register.
-static bool isHReg(Register Reg) {
+static bool isHReg(MCRegister Reg) {
   return X86::GR8_ABCD_HRegClass.contains(Reg);
 }
 
@@ -4406,7 +4406,8 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
     if (STI.is64Bit())
       // Copying to or from a physical H register on x86-64 requires a NOREX
       // move.  Otherwise use a normal move.
-      if (isHReg(Reg) || X86::GR8_ABCD_HRegClass.hasSubClassEq(RC))
+      if ((Reg.isPhysical() && isHReg(Reg)) ||
+          X86::GR8_ABCD_HRegClass.hasSubClassEq(RC))
         return Load ? X86::MOV8rm_NOREX : X86::MOV8mr_NOREX;
     return Load ? X86::MOV8rm : X86::MOV8mr;
   case 2:
@@ -6474,11 +6475,13 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
                             get(X86::VEXTRACTF64X4Zmri), X86::sub_ymm);
   case X86::MOV32ri64: {
-    Register Reg = MIB.getReg(0);
-    Register Reg32 = RI.getSubReg(Reg, X86::sub_32bit);
+    MachineOperand &DefMO = MIB->getOperand(0);
+    Register Reg32 = RI.getSubReg(DefMO.getReg(), X86::sub_32bit);
     MI.setDesc(get(X86::MOV32ri));
-    MIB->getOperand(0).setReg(Reg32);
-    MIB.addReg(Reg, RegState::ImplicitDefine);
+    DefMO.setReg(Reg32);
+    DefMO.setIsDead(none_of(MI.all_defs(), [=](const MachineOperand &MO) {
+      return MO.getReg() == Reg32 && !MO.isDead();
+    }));
     return true;
   }
 
@@ -8831,9 +8834,8 @@ bool X86InstrInfo::unfoldMemoryOperand(
   // TODO: Check if 32-byte or greater accesses are slow too?
   if (!MI.hasOneMemOperand() && RC == &X86::VR128RegClass &&
       Subtarget.isUnalignedMem16Slow())
-    // Without memoperands, loadRegFromAddr and storeRegToStackSlot will
-    // conservatively assume the address is unaligned. That's bad for
-    // performance.
+    // Without memoperands, storeRegToStackSlot will conservatively
+    // assume the address is unaligned. That's bad for performance.
     return false;
   SmallVector<MachineOperand, X86::AddrNumOperands> AddrOps;
   SmallVector<MachineOperand, 2> BeforeOps;

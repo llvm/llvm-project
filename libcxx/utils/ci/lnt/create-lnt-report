@@ -175,6 +175,11 @@ def main(argv: List[str]) -> int:
     ordinal.add_argument('--no-ordinal', action='store_true',
         help='Never give the commit an ordinal. This is useful for results that are not meant to be part of a '
              'time series, and required when the repository does not have the full history (e.g. a shallow clone).')
+    parser.add_argument('--untracked-machine', action='store_true',
+        help='Mark the machine as not tracked, which keeps it out of the dashboards and the automatic machine '
+             'selection of LNT. This is useful for machines holding throwaway results, like A/B comparisons.')
+    parser.add_argument('--delete-after-inactive-days', type=common.at_least(1), default=None, metavar='DAYS',
+        help='Ask LNT to delete the machine and the commit after they have been inactive for that many days.')
     parser.add_argument('--measured-at', type=utc_timestamp, default=None, metavar='YYYY-MM-DDTHH:MM:SSZ',
         help='The UTC time at which the benchmarks were run. Defaults to the current time.')
     parser.add_argument('--run-parameter', type=common.key_value, action='append', default=[], metavar='KEY=VALUE',
@@ -219,10 +224,17 @@ def main(argv: List[str]) -> int:
     if args.lit_build_dir is not None:
         machine_fields.update(gather_lit_features(args.lit_build_dir, lit_options))
 
+    machine_settings = {}
+    if args.untracked_machine:
+        machine_settings['tracked'] = False
+    if args.delete_after_inactive_days is not None:
+        machine_settings['delete_after_inactive_days'] = args.delete_after_inactive_days
+        commit['delete_after_inactive_days'] = args.delete_after_inactive_days
+
     measured_at = args.measured_at or datetime.datetime.now(datetime.timezone.utc)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     common.write_lnt_report(args.output, args.machine, machine_fields, commit, tests, measured_at,
-                            run_parameters=dict(args.run_parameter))
+                            run_parameters=dict(args.run_parameter), machine_settings=machine_settings)
     logging.info(f'Report written to {args.output}')
     return 0
 

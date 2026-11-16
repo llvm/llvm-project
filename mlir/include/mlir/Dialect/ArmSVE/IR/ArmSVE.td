@@ -233,6 +233,49 @@ def UdotOp : ArmSVE_Op<"udot", [Pure,
 }
 
 //===----------------------------------------------------------------------===//
+// FmlaOp
+//===----------------------------------------------------------------------===//
+
+def FmlaOp : ArmSVE_Op<"fmla", [Pure,
+                                AllTypesMatch<["src1", "src2"]>,
+                                AllTypesMatch<["acc", "dst"]>]> {
+  let summary = "Floating-point fused multiply-add by indexed element";
+  let description = [{
+    FMLA: Floating-point fused multiply-add by indexed element
+
+    Below is a summary from the official documentation for the corresponding
+    [SVE instruction](https://support.arm.com/documentation/111108/2026-09/SVE-Instructions/FMLA--indexed---Floating-point-fused-multiply-add-by-indexed-element-)
+
+    ```
+    This instruction multiplies all floating-point elements within each 128-bit
+    segment of the first source vector by the specified element in the
+    corresponding second source vector segment. The products are then
+    destructively added without intermediate rounding to the corresponding
+    elements of the addend and destination vector.
+
+    The elements within the second source vector are specified using an immediate
+    index that selects the same element position within each 128-bit vector
+    segment. The index range is from 0 to one less than the number of elements per
+    128-bit segment. This instruction is unpredicated.
+    ```
+
+    TODO: When adding support for the "vector" variant of FMLA, rename this Op to
+    better differentiate the two.
+  }];
+
+  // Supports (vector<[4]xi32>, vector<[4]xi32>, i32) -> (vector<[4]xi32>)
+  let arguments = (ins
+          ScalableVectorOfLengthAndType<[4], [F32]>:$acc,
+          ScalableVectorOfLengthAndType<[4], [F32]>:$src1,
+          ScalableVectorOfLengthAndType<[4], [F32]>:$src2,
+          I32:$lane
+  );
+  let results = (outs ScalableVectorOfLengthAndType<[4], [F32]>:$dst);
+  let assemblyFormat =
+    "$acc `,` $src1 `,` $src2 `,` $lane attr-dict `:` type($src1) `to` type($dst)";
+}
+
+//===----------------------------------------------------------------------===//
 // SmmlaOp
 //===----------------------------------------------------------------------===//
 
@@ -677,61 +720,65 @@ def ScalableMaskedDivFOp : ScalableMaskedFOp<"masked.divf", "division">;
 //  Intrinsic ops
 //===----------------------------------------------------------------------===//
 
+def FmlaIntrOp :
+  ArmSVE_IntrBinaryOverloadedOp<"fmla.lane">,
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnySignlessInteger)>;
+
 def UmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"ummla">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def SmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"smmla">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def UsmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"usmmla">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def SdotIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"sdot">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def UdotIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"udot">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def ScalableMaskedAddIIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"add">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def ScalableMaskedAddFIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"fadd">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def ScalableMaskedMulIIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"mul">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def ScalableMaskedMulFIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"fmul">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def ScalableMaskedSubIIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"sub">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def ScalableMaskedSubFIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"fsub">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def ScalableMaskedSDivIIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"sdiv">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def ScalableMaskedUDivIIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"udiv">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def ScalableMaskedDivFIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"fdiv">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1)>;
 
 def ConvertFromSvboolIntrOp :
   ArmSVE_IntrOp<"convert.from.svbool",
@@ -753,8 +800,8 @@ def ZipX2IntrOp : ArmSVE_IntrOp<"zip.x2",
     /*overloadedOperands=*/[0],
     /*overloadedResults=*/[],
     /*numResults=*/2>,
-    Arguments<(ins Arg<AnyScalableVectorOfAnyRank, "v1">:$v1,
-                   Arg<AnyScalableVectorOfAnyRank, "v2">:$v2)>;
+    Arguments<(ins Arg<AnyScalableVectorOfRank1, "v1">:$v1,
+                   Arg<AnyScalableVectorOfRank1, "v2">:$v2)>;
 
 // Note: This multi-vector intrinsic requires SME2.
 def ZipX4IntrOp : ArmSVE_IntrOp<"zip.x4",
@@ -762,10 +809,10 @@ def ZipX4IntrOp : ArmSVE_IntrOp<"zip.x4",
     /*overloadedOperands=*/[0],
     /*overloadedResults=*/[],
     /*numResults=*/4>,
-    Arguments<(ins Arg<AnyScalableVectorOfAnyRank, "v1">:$v1,
-                   Arg<AnyScalableVectorOfAnyRank, "v2">:$v2,
-                   Arg<AnyScalableVectorOfAnyRank, "v3">:$v3,
-                   Arg<AnyScalableVectorOfAnyRank, "v3">:$v4)>;
+    Arguments<(ins Arg<AnyScalableVectorOfRank1, "v1">:$v1,
+                   Arg<AnyScalableVectorOfRank1, "v2">:$v2,
+                   Arg<AnyScalableVectorOfRank1, "v3">:$v3,
+                   Arg<AnyScalableVectorOfRank1, "v3">:$v4)>;
 
 // Note: This intrinsic requires SME or SVE2.1.
 def PselIntrOp : ArmSVE_IntrOp<"psel",

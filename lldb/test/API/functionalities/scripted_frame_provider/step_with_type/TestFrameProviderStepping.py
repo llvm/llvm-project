@@ -9,9 +9,6 @@ from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
 
-# One of these tests is infinitely recursing sometimes in Github CI.
-# https://github.com/llvm/llvm-project/issues/234888
-@skipIfWindows
 class TestFrameProviderStepping(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

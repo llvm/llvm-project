@@ -14,7 +14,7 @@ define void @test(ptr nocapture readonly %arg, ptr nocapture readonly %arg1, ptr
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x ptr> poison, ptr [[ARG:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x ptr> [[TMP0]], <8 x ptr> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, <8 x ptr> [[TMP1]], <8 x i64> <i64 1, i64 3, i64 5, i64 7, i64 9, i64 11, i64 13, i64 15>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [8 x i8], <8 x ptr> [[TMP1]], <8 x i64> <i64 1, i64 3, i64 5, i64 7, i64 9, i64 11, i64 13, i64 15>
 ; CHECK-NEXT:    [[GEP2_0:%.*]] = getelementptr inbounds double, ptr [[ARG1:%.*]], i64 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 [[TMP5]], <8 x i1> splat (i1 true), <8 x double> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x double>, ptr [[GEP2_0]], align 8

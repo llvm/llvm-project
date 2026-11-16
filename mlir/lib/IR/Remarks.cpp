@@ -12,8 +12,15 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Value.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/StringSaver.h"
+
+#include <mutex>
+#include <vector>
 
 using namespace mlir::remark::detail;
 using namespace mlir::remark;
@@ -39,13 +46,22 @@ Remark::Arg::Arg(llvm::StringRef k, Attribute a) : key(k), attr(a) {
 void Remark::insert(llvm::StringRef s) { args.emplace_back(s); }
 void Remark::insert(Arg a) { args.push_back(std::move(a)); }
 
+void Remark::setRelatedRemarkIds(ArrayRef<RemarkId> ids) {
+  SmallVector<RemarkId> copy(ids);
+  llvm::erase_if(args, [](const Arg &arg) { return arg.isLink; });
+  relatedRemarks.clear();
+  for (RemarkId id : copy)
+    addRelatedRemark(id);
+}
+
 // Simple helper to print key=val list (sorted).
 static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
   if (args.empty())
     return;
 
+  // Preserve the relative order of repeated keys, including related IDs.
   llvm::SmallVector<Remark::Arg, 8> sorted(args.begin(), args.end());
-  llvm::sort(sorted, [](const Remark::Arg &a, const Remark::Arg &b) {
+  llvm::stable_sort(sorted, [](const Remark::Arg &a, const Remark::Arg &b) {
     return a.key < b.key;
   });
 
@@ -151,7 +167,7 @@ llvm::remarks::Remark Remark::generateRemark() const {
   r.PassName = getCombinedCategoryName();
   r.FunctionName = getFunction();
   r.Loc = locLambda();
-  // Add all args (includes RemarkId and RelatedTo if they were added).
+  // Keep serialized strings owned by the source remark.
   for (const Remark::Arg &arg : getArgs()) {
     r.Args.emplace_back();
     r.Args.back().Key = arg.key;
@@ -164,6 +180,20 @@ llvm::remarks::Remark Remark::generateRemark() const {
 // InFlightRemark
 //===----------------------------------------------------------------------===//
 
+InFlightRemark &InFlightRemark::operator<<(const RelatedRemarkQuery &related) {
+  if (!remark || !owner)
+    return *this;
+  // Link each target once, even if an explicit link or an earlier query
+  // already added it.
+  llvm::SmallDenseSet<uint64_t> linked;
+  for (RemarkId id : remark->getRelatedRemarkIds())
+    linked.insert(id.getValue());
+  for (RemarkId id : owner->findRemarks(related.query))
+    if (linked.insert(id.getValue()).second)
+      remark->addRelatedRemark(id);
+  return *this;
+}
+
 InFlightRemark::~InFlightRemark() {
   if (remark && owner)
     owner->report(std::move(*remark));
@@ -173,6 +203,118 @@ InFlightRemark::~InFlightRemark() {
 //===----------------------------------------------------------------------===//
 // Remark Engine
 //===----------------------------------------------------------------------===//
+
+struct RemarkEngine::RemarkHistory {
+  struct Entry {
+    RemarkId id;
+    RemarkKind kind;
+    Location location;
+    StringRef name, category, subCategory, function;
+
+    static Entry from(const Remark &remark) {
+      return {remark.getId(),           remark.getRemarkKind(),
+              remark.getLocation(),     remark.getRawRemarkName(),
+              remark.getCategoryName(), remark.getSubCategoryName(),
+              remark.getRawFunction()};
+    }
+
+    static Entry from(const Remark &remark, llvm::UniqueStringSaver &strings) {
+      Entry entry = from(remark);
+      entry.name = strings.save(entry.name);
+      entry.category = strings.save(entry.category);
+      entry.subCategory = strings.save(entry.subCategory);
+      entry.function = strings.save(entry.function);
+      return entry;
+    }
+  };
+
+  struct Storage {
+    llvm::BumpPtrAllocator allocator;
+    llvm::UniqueStringSaver strings{allocator};
+    std::vector<Entry> entries;
+    // IDs already recorded.
+    llvm::DenseSet<uint64_t> recordedIds;
+  };
+
+  // Keep the mutex alive for the engine's lifetime so disabling history cannot
+  // destroy it while another thread is about to lock it. Storage is opt-in.
+  std::mutex mutex;
+  std::unique_ptr<Storage> storage;
+};
+
+void RemarkEngine::enableHistory(bool enable) {
+  std::scoped_lock<std::mutex> lock(history->mutex);
+  if (enable) {
+    if (!history->storage)
+      history->storage = std::make_unique<RemarkHistory::Storage>();
+  } else {
+    history->storage.reset();
+  }
+  historyEnabled.store(enable, std::memory_order_release);
+}
+
+void RemarkEngine::clearHistory() {
+  if (!historyEnabled.load(std::memory_order_acquire))
+    return;
+  std::scoped_lock<std::mutex> lock(history->mutex);
+  if (history->storage)
+    history->storage = std::make_unique<RemarkHistory::Storage>();
+}
+
+SmallVector<RemarkId>
+RemarkEngine::findRemarks(const RemarkQuery &query) const {
+  SmallVector<RemarkId> result;
+  if (!historyEnabled.load(std::memory_order_acquire))
+    return result;
+
+  auto matches = [](const auto &filter, const auto &value) {
+    return !filter || *filter == value;
+  };
+  auto matchesQuery = [&](const RemarkHistory::Entry &entry) {
+    return matches(query.location, entry.location) &&
+           matches(query.remarkKind, entry.kind) &&
+           matches(query.remarkName, entry.name) &&
+           matches(query.categoryName, entry.category) &&
+           matches(query.subCategoryName, entry.subCategory) &&
+           matches(query.functionName, entry.function);
+  };
+  // Call policies without holding the history lock.
+  if (remarkEmittingPolicy)
+    remarkEmittingPolicy->forEachPendingRemark([&](const Remark &remark) {
+      if (remark.getId() && matchesQuery(RemarkHistory::Entry::from(remark)))
+        result.push_back(remark.getId());
+    });
+
+  {
+    std::scoped_lock<std::mutex> lock(history->mutex);
+    if (!history->storage)
+      return {};
+    for (const RemarkHistory::Entry &entry : history->storage->entries)
+      if (matchesQuery(entry))
+        result.push_back(entry.id);
+  }
+  llvm::sort(result, [](RemarkId lhs, RemarkId rhs) {
+    return lhs.getValue() < rhs.getValue();
+  });
+  result.erase(llvm::unique(result), result.end());
+  return result;
+}
+
+SmallVector<RemarkId>
+RemarkEngine::findRemarks(const RemarkOpts &opts,
+                          std::optional<RemarkKind> kind) const {
+  RemarkQuery query;
+  if (!opts.remarkName.empty())
+    query.remarkName = opts.remarkName.str();
+  if (!opts.categoryName.empty())
+    query.categoryName = opts.categoryName.str();
+  if (!opts.subCategoryName.empty())
+    query.subCategoryName = opts.subCategoryName.str();
+  if (!opts.functionName.empty())
+    query.functionName = opts.functionName.str();
+  query.remarkKind = kind;
+  return findRemarks(query);
+}
 
 template <typename RemarkT>
 InFlightRemark RemarkEngine::makeRemark(Location loc, RemarkOpts opts) {
@@ -253,6 +395,16 @@ InFlightRemark RemarkEngine::emitOptimizationRemarkAnalysis(Location loc,
 //===----------------------------------------------------------------------===//
 
 void RemarkEngine::reportImpl(const Remark &remark) {
+  if (historyEnabled.load(std::memory_order_acquire)) {
+    std::scoped_lock<std::mutex> lock(history->mutex);
+    if (history->storage && remark.getId()) {
+      auto &storage = *history->storage;
+      // A policy may deliver the same event repeatedly.
+      if (storage.recordedIds.insert(remark.getId().getValue()).second)
+        storage.entries.push_back(
+            RemarkHistory::Entry::from(remark, storage.strings));
+    }
+  }
   // Stream the remark
   if (remarkStreamer) {
     remarkStreamer->streamOptimizationRemark(remark);
@@ -330,7 +482,8 @@ buildFilter(const mlir::remark::RemarkCategories &cats,
 
 RemarkEngine::RemarkEngine(bool printAsEmitRemarks,
                            const RemarkCategories &cats)
-    : printAsEmitRemarks(printAsEmitRemarks) {
+    : history(std::make_unique<RemarkHistory>()),
+      printAsEmitRemarks(printAsEmitRemarks) {
   if (cats.passed)
     passedFilter = buildFilter(cats, cats.passed);
   if (cats.missed)
@@ -365,19 +518,63 @@ llvm::LogicalResult mlir::remark::enableOptimizationRemarks(
 
 namespace mlir::remark {
 RemarkEmittingPolicyAll::RemarkEmittingPolicyAll() = default;
+
 RemarkEmittingPolicyFinal::RemarkEmittingPolicyFinal() = default;
+
+static void dropDiscardedLinks(detail::Remark &remark,
+                               const llvm::DenseSet<uint64_t> &discardedIds) {
+  if (discardedIds.empty())
+    return;
+  auto ids = llvm::to_vector(remark.getRelatedRemarkIds());
+  llvm::erase_if(
+      ids, [&](RemarkId id) { return discardedIds.contains(id.getValue()); });
+  if (ids.size() != remark.getRelatedRemarkIds().size())
+    remark.setRelatedRemarkIds(ids);
+}
+
+void RemarkEmittingPolicyFinal::reportRemark(const detail::Remark &remark) {
+  detail::Remark copy = remark;
+  std::scoped_lock<std::mutex> lock(mutex);
+  auto previous = pendingRemarks.find(copy);
+  if (previous != pendingRemarks.end()) {
+    if (previous->getId() && previous->getId() != copy.getId())
+      discardedIds.insert(previous->getId().getValue());
+    pendingRemarks.erase(previous);
+  }
+  pendingRemarks.insert(std::move(copy));
+}
+
+void RemarkEmittingPolicyFinal::forEachPendingRemark(
+    llvm::function_ref<void(const detail::Remark &)> callback) const {
+  std::scoped_lock<std::mutex> lock(mutex);
+  for (const auto &remark : pendingRemarks)
+    callback(remark);
+}
 
 void RemarkEmittingPolicyFinal::finalize() {
   assert(reportImpl && "reportImpl is not set");
 
-  // Take the pending remarks so that a second finalize(), e.g. from the engine
-  // destructor after an explicit call, does not emit them again. IDs are
-  // assigned in creation order; sorting by them keeps the output independent
-  // of the set's hash layout.
-  std::vector<detail::Remark> remarks(postponedRemarks.begin(),
-                                      postponedRemarks.end());
-  postponedRemarks.clear();
+  SmallVector<detail::Remark, 0> remarks;
+  llvm::DenseSet<uint64_t> discarded;
+  {
+    std::scoped_lock<std::mutex> lock(mutex);
+    remarks = llvm::to_vector<0>(pendingRemarks);
+    pendingRemarks.clear();
+    discarded.swap(discardedIds);
+  }
+
+  // A re-reported ID that survives is still a valid target.
+  for (const auto &remark : remarks)
+    if (remark.getId())
+      discarded.erase(remark.getId().getValue());
+  for (auto &remark : remarks)
+    dropDiscardedLinks(remark, discarded);
+
   llvm::sort(remarks, [](const auto &lhs, const auto &rhs) {
+    if (!lhs.getId())
+      return false;
+    if (!rhs.getId())
+      return true;
     return lhs.getId().getValue() < rhs.getId().getValue();
   });
 
@@ -392,22 +589,31 @@ void RemarkEmittingPolicyFinal::finalize() {
       childIds.insert(relId.getValue());
   }
 
-  // Emit remarks with related remarks grouped after their parents.
-  // Parent remarks are emitted first, followed by their related (child)
-  // remarks. Child-only remarks are skipped at the top level to avoid
-  // duplication.
+  // Visit by address so ID-less remarks remain distinct.
+  llvm::DenseSet<const detail::Remark *> emitted;
+  SmallVector<const detail::Remark *> worklist;
+  auto emit = [&](const detail::Remark &root) {
+    worklist.push_back(&root);
+    while (!worklist.empty()) {
+      const auto *remark = worklist.pop_back_val();
+      if (!emitted.insert(remark).second)
+        continue;
+      reportImpl(*remark);
+      for (RemarkId id : llvm::reverse(remark->getRelatedRemarkIds()))
+        if (const auto *related = idMap.lookup(id.getValue()))
+          worklist.push_back(related);
+    }
+  };
+
   for (const auto &remark : remarks) {
     if (remark.getId() && childIds.contains(remark.getId().getValue()))
-      continue; // will be printed grouped under its parent
-
-    reportImpl(remark);
-
-    // Emit related remarks immediately after the parent.
-    for (auto relId : remark.getRelatedRemarkIds()) {
-      if (const auto *related = idMap.lookup(relId.getValue()))
-        reportImpl(*related);
-    }
+      continue;
+    emit(remark);
   }
+  // Cycles have no root.
+  for (const auto &remark : remarks)
+    if (!emitted.contains(&remark))
+      emit(remark);
 }
 
 } // namespace mlir::remark

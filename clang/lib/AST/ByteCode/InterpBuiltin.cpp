@@ -50,6 +50,23 @@ namespace interp {
   return false;
 }
 
+static bool isFixedSizeIntegralType(PrimType T) {
+  switch (T) {
+  case PT_Sint8:
+  case PT_Uint8:
+  case PT_Sint16:
+  case PT_Uint16:
+  case PT_Sint32:
+  case PT_Uint32:
+  case PT_Sint64:
+  case PT_Uint64:
+  case PT_Bool:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static void discard(InterpStack &Stk, PrimType T) {
   TYPE_SWITCH(T, { Stk.discard<T>(); });
 }
@@ -435,6 +452,9 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
   PrimType ElemT = StrPtr.getFieldDesc()->getPrimType();
+  if (!isFixedSizeIntegralType(ElemT))
+    return false;
+
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemDataSize();
   if (ElemSize != 1 && ElemSize != 2 && ElemSize != 4)
     return Invalid(S, OpPC);
@@ -442,7 +462,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
     const ASTContext &AC = S.getASTContext();
     unsigned WCharSize = AC.getTypeSizeInChars(AC.getWCharType()).getQuantity();
-    if (StrPtr.getFieldDesc()->getElemDataSize() != WCharSize)
+    if (ElemSize != WCharSize)
       return false;
   }
 
@@ -1007,8 +1027,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
 
   // Write Result to ResultPtr and put Overflow on the stack.
   assignIntegral(S, ResultPtr, ResultT, Result);
-  if (ResultPtr.canBeInitialized())
-    ResultPtr.initialize();
+  ResultPtr.initialize();
 
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
@@ -1071,8 +1090,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
   assignIntegral(S, CarryOutPtr, CarryOutT, CarryOut);
-  if (CarryOutPtr.canBeInitialized())
-    CarryOutPtr.initialize();
+  CarryOutPtr.initialize();
 
   assert(S.getASTContext().hasSimilarType(Call->getType(),
                                           Call->getArg(0)->getType()));
@@ -2237,6 +2255,9 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   if (!isReadable(Ptr) && !Ptr.isOnePastEnd())
     return false;
 
+  if (!Ptr.isReadablePointerType())
+    return false;
+
   if (IsAligned) {
     CharUnits RequiredAlign =
         S.getASTContext().getTypeAlignInChars(Call->getType());
@@ -2325,6 +2346,10 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     pushInteger(S, 0, Call->getType());
     return true;
   }
+
+  if (PtrA.isFunctionPointer() || PtrB.isFunctionPointer())
+    return false;
+
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
 
@@ -4780,22 +4805,8 @@ static bool interp__builtin_meta_is_type(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool InterpretReflectionBuiltin(InterpState &S, CodePtr OpPC,
-                                       const CallExpr *Call,
-                                       uint32_t BuiltinID) {
-  switch (BuiltinID) {
-  case Builtin::BI__builtin_meta_is_type:
-    return interp__builtin_meta_is_type(S, OpPC, Call);
-  default:
-    llvm_unreachable("unknown metafunction builtin");
-  }
-}
-
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
-  if (S.getASTContext().BuiltinInfo.isReflectionMetafunctionBuiltin(BuiltinID))
-    return InterpretReflectionBuiltin(S, OpPC, Call, BuiltinID);
-
   const InterpFrame *Frame = S.Current;
   switch (BuiltinID) {
   case Builtin::BI__builtin_is_constant_evaluated:
@@ -6951,6 +6962,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cvttpd2dq256:
   case X86::BI__builtin_ia32_cvttps2dq256:
     return interp_builtin_ia32_cvt_vector_to_int(S, OpPC, Call);
+
+  case Builtin::BI__builtin_meta_is_type:
+    return interp__builtin_meta_is_type(S, OpPC, Call);
+
   default:
     return Invalid(S, OpPC);
   }
@@ -7120,8 +7135,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, PtrView Src, PtrView Dest,
       }
 
       TYPE_SWITCH(*FT, DestField.deref<T>() = SrcField.deref<T>(););
-      if (DestField.canBeInitialized())
-        DestField.initialize();
+      DestField.initialize();
       if (Activate)
         DestField.activate();
       return true;

@@ -148,6 +148,11 @@ defm FlatGVSMode : AMDGPUSubtargetFeature<"flat-gvs-mode",
   [FeatureFlatAddressSpace]
 >;
 
+defm ScaleOffset : AMDGPUSubtargetFeature<"scale-offset",
+  "Scalar and global loads support scale_offset bit.",
+  /*GenPredicate=*/0
+>;
+
 defm AddNoCarryInsts : AMDGPUSubtargetFeature<"add-no-carry-insts",
   "Have VALU add/sub instructions without carry out"
 >;
@@ -570,6 +575,10 @@ defm CvtSrPkBF16F32Inst : AMDGPUSubtargetFeature<"cvt-sr-pk-bf16-f32-inst",
 
 defm McastLoadInsts : AMDGPUSubtargetFeature<"mcast-load-insts",
   "Has multicast load instructions"
+>;
+
+defm LoadMonitorInsts : AMDGPUSubtargetFeature<"load-monitor-insts",
+  "Has flat_load_monitor_b* and global_load_monitor_b* instructions"
 >;
 
 defm AsyncLoadToLDSInsts : AMDGPUSubtargetFeature<"async-load-to-lds-insts",
@@ -1691,8 +1700,18 @@ defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
   /*GenPredicate=*/1
 >;
 
+defm McastFullMaskBug : AMDGPUGenericAnySubtargetFeature<"mcast-full-mask-bug",
+  "Multicast loads with all 16 workgroup mask bits set may never complete",
+  /*GenPredicate=*/0
+>;
+
 defm WaveMatchInsts : AMDGPUSubtargetFeature<"wave-match-insts",
   "Has v_wave_match_b32 instruction"
+>;
+
+defm NoMTypeNC : AMDGPUSubtargetFeature<"no-mtype-nc",
+  "Does not use MTYPE NC",
+  /*GenPredicate=*/0
 >;
 
 //===----------------------------------------------------------------------===//
@@ -2499,6 +2518,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
+   FeatureScaleOffset,
    FeatureFlatGVSMode,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
@@ -2525,6 +2545,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureTensorCvtLutInsts,
    FeatureTDMInsts,
    FeatureVPermPk16Hazard,
+   FeatureLoadMonitorInsts,
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
@@ -2605,6 +2626,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
+   FeatureMcastFullMaskBug,
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
@@ -2643,6 +2665,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureNoSleepForever,
+   FeatureNoMTypeNC,
+   FeatureMcastFullMaskBug,
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
@@ -2684,6 +2708,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureNoMTypeNC,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    ])>;
@@ -2711,6 +2736,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureUnusableSAddPCI64,
+   FeatureMcastFullMaskBug,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -2732,6 +2758,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureShaderCyclesRegister,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
+   FeatureScaleOffset,
    FeatureFlatGVSMode,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
@@ -2827,7 +2854,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureGFX13Insts, FeatureGFX8Insts, FeatureGFX90AInsts,
   FeatureGFX940Insts, FeatureGFX950Insts, FeatureGFX9Insts,
   FeatureGWS, FeatureImageInsts, FeatureLdsBarrierArriveAtomic,
-  FeatureLerpInst, FeatureMAIInsts, FeatureMcastLoadInsts,
+  FeatureLerpInst, FeatureLoadMonitorInsts, FeatureMAIInsts, FeatureMcastLoadInsts,
   FeatureMqsadInsts, FeatureMqsadPkInsts, FeatureMsadInsts,
   FeatureOCPFP8ConversionInsts, FeaturePermlane16Insts, FeaturePermlane16Swap,
   FeaturePermlane32Swap, FeaturePkAddMinMaxInsts, FeaturePrngInst,
@@ -2842,7 +2869,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSRAMECCOnOffModes,
-  FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
+  FeatureSGPRInitBug, FeatureMcastFullMaskBug, FeatureApertureRegs,
+  FeatureGetDoorbellID,
   FeatureAGPRAlloc, Feature1536VGPRs, FeatureVGPRMSBs,
   FeatureHalfAddressablePhysicalLocalMemory, FeatureBackOffBarrier,
   FeatureLDSAllocGranularity256,

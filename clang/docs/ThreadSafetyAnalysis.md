@@ -172,6 +172,10 @@ void test() {
 }
 ```
 
+A member of a nested struct or union, named or anonymous, may also name a
+member of the enclosing struct, which is resolved on the enclosing object through
+which the guarded member is reached.
+
 When multiple capabilities are listed:
 
 - **Write** access requires all listed capabilities to be held exclusively.

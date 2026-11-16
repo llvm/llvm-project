@@ -423,6 +423,16 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
     auto initialSuspendBuilder = [&]() -> mlir::LogicalResult {
       if (emitStmt(s.getPromiseDeclStmt(), /*useCurrentScope=*/true).failed())
         return mlir::failure();
+      // Update coro.id to refer to the promise. We could not do it earlier
+      // because the promise local variable was not emitted yet.
+      Address promiseAddr = getAddrOfLocalVar(s.getPromiseDecl());
+      {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPoint(coroId);
+        mlir::Value promisePtr = builder.createBitcast(
+            promiseAddr.emitRawPointer(), builder.getVoidPtrTy());
+        coroId.getPromiseMutable().assign(promisePtr);
+      }
       // returnValue should be valid as long as the coroutine's return type
       // is not void. The assertion could help us to reduce the check later.
       assert(returnValue.isValid() == (bool)s.getReturnStmt());
