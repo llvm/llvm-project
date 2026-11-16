@@ -11,6 +11,18 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/foo.s -o %t/foo.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/bar.s -o %t/bar.o
 # RUN: %lld -arch arm64 -lSystem -o %t.out %t/foo.o %t/bar.o
+# RUN: llvm-objdump --syms %t.out | FileCheck %s
+
+## Every thunk is a local symbol, whether its target is local or external.
+# CHECK-LABEL: SYMBOL TABLE:
+# CHECK: l F __TEXT,__text .hidden _some_late_external.thunk.0
+# CHECK: l F __TEXT,__text .hidden _late_landing_local_fn.thunk.0
+# CHECK: l F __TEXT,__text .hidden _some_early_external.thunk.0
+# CHECK: l F __TEXT,__text .hidden _early_landing_local_fn.thunk.0
+# CHECK: l F __TEXT,__text .hidden _some_other_late_external.thunk.0
+# CHECK: l F __TEXT,__text .hidden _late_landing_local_fn.thunk.0
+# CHECK: l F __TEXT,__text .hidden _some_other_early_external.thunk.0
+# CHECK: l F __TEXT,__text .hidden _early_landing_local_fn.thunk.0
 
 #--- foo.s
 
