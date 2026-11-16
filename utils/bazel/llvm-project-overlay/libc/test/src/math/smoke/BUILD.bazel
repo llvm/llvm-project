@@ -1902,7 +1902,7 @@ math_test(
 math_test(
     name = "nanf128",
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support/FPUtil:float128",
     ],
 )
@@ -2743,7 +2743,7 @@ math_test(name = "lgammaf16")
 math_test(
     name = "nan",
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support/macros:sanitizer",
     ],
 )
@@ -2751,7 +2751,7 @@ math_test(
 math_test(
     name = "nanbf16",
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support/FPUtil:bfloat16",
         "//libc/src/__support/macros:sanitizer",
     ],
@@ -2760,7 +2760,7 @@ math_test(
 math_test(
     name = "nanf",
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support/macros:sanitizer",
     ],
 )
@@ -2768,7 +2768,7 @@ math_test(
 math_test(
     name = "nanf16",
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support/macros:sanitizer",
     ],
 )

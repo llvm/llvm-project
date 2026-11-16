@@ -27,9 +27,9 @@ libc_test(
     name = "except_value_utils_test",
     srcs = ["except_value_utils_test.cpp"],
     deps = [
-        "//libc:hdr_errno_macros",
-        "//libc:hdr_fenv_macros",
-        "//libc:hdr_math_macros",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
+        "//libc/hdr:math_macros",
         "//libc/src/__support:sign",
         "//libc/src/__support/FPUtil:bfloat16",
         "//libc/src/__support/FPUtil:except_value_utils",
@@ -85,7 +85,7 @@ libc_test(
     srcs = ["rounding_mode_test.cpp"],
     overlay_build_only = True,  # Depends on mpfr
     deps = [
-        "//libc:hdr_fenv_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support:uint128",
         "//libc/src/__support/FPUtil:rounding_mode",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",

@@ -24,7 +24,7 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:types_struct_utsname",
+        "//libc/hdr/types:struct_utsname",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:uname",

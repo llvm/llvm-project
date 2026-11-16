@@ -20,7 +20,7 @@ libc_function(
     srcs = ["linux/getrlimit.cpp"],
     hdrs = ["getrlimit.h"],
     deps = [
-        "//libc:types_struct_rlimit",
+        "//libc/hdr/types:struct_rlimit",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
@@ -35,7 +35,7 @@ libc_function(
     srcs = ["linux/setrlimit.cpp"],
     hdrs = ["setrlimit.h"],
     deps = [
-        "//libc:types_struct_rlimit",
+        "//libc/hdr/types:struct_rlimit",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
