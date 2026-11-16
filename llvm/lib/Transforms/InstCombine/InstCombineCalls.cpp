@@ -5388,7 +5388,10 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
       }
     });
 
-    return CallBase::removeOperandBundle(&Call, LLVMContext::OB_kcfi);
+    CallBase *NewCall =
+        CallBase::removeOperandBundle(&Call, LLVMContext::OB_kcfi);
+    NewCall->copyMetadata(Call);
+    return NewCall;
   }
 
   if (isRemovableAlloc(&Call, &TLI))
