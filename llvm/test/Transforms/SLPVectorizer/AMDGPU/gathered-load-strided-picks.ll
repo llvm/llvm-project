@@ -10,7 +10,7 @@
 ; YAML-NEXT: Function:        two_accumulators_f32
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '-16'
+; YAML-NEXT:   - Cost:            '-8'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '17'
 

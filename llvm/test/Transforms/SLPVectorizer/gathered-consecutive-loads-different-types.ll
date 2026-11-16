@@ -12,7 +12,7 @@ define i32 @test(i8 %0) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(21) null, align 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = load volatile i8, ptr null, align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i8>, ptr addrspace(21) getelementptr inbounds (i8, ptr addrspace(21) null, i64 7), align 1
-; CHECK-NEXT:    [[TMP32:%.*]] = shufflevector <2 x i8> <i8 0, i8 poison>, <2 x i8> [[TMP5]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP32:%.*]] = shufflevector <2 x i8> [[TMP5]], <2 x i8> <i8 0, i8 poison>, <2 x i32> <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i8> zeroinitializer, [[TMP32]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i8> [[TMP5]], <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <8 x i8> <i8 0, i8 0, i8 poison, i8 0, i8 0, i8 poison, i8 0, i8 0>, <8 x i8> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 9, i32 3, i32 4, i32 poison, i32 6, i32 7>
@@ -22,9 +22,9 @@ define i32 @test(i8 %0) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i48> [[TMP9]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i8> zeroinitializer, [[TMP10]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load <2 x i8>, ptr addrspace(21) getelementptr inbounds (i8, ptr addrspace(21) null, i64 8), align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i8> <i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 0, i8 0, i8 0>, i8 [[TMP12]], i64 1
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i8> [[TMP14]], <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <8 x i8> [[TMP15]], <8 x i8> [[TMP16]], <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 9, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i8> [[TMP14]], <2 x i8> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <8 x i8> [[TMP16]], <8 x i8> <i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 0, i8 0, i8 0>, <8 x i32> <i32 8, i32 poison, i32 10, i32 3, i32 4, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <8 x i8> [[TMP18]], i8 [[TMP12]], i64 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <8 x i8> <i8 0, i8 poison, i8 0, i8 poison, i8 0, i8 0, i8 0, i8 0>, i8 [[TMP0]], i64 3
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <8 x i8> [[TMP34]], i8 [[TMP13]], i64 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq <8 x i8> [[TMP17]], [[TMP19]]

@@ -27,8 +27,7 @@ define i32 @swap_bytes(ptr %params, ptr %out) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <8 x i32> [[TMP3]], <i32 -1, i32 1, i32 253, i32 3, i32 251, i32 5, i32 249, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> <i32 -1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>, <8 x i32> [[TMP3]], <8 x i32> <i32 0, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 1, i32 2, i32 1, i32 2, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> <i32 -1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>, <8 x i32> <i32 8, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP8:%.*]] = and <8 x i32> <i32 0, i32 254, i32 2, i32 252, i32 4, i32 250, i32 6, i32 248>, [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or disjoint <8 x i32> [[TMP4]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc <8 x i32> [[TMP9]] to <8 x i8>

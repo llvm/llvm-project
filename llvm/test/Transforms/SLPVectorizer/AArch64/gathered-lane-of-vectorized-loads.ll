@@ -6,11 +6,14 @@
 define void @load_lane_and_arg(ptr %a, double %x, ptr %out) {
 ; CHECK-LABEL: define void @load_lane_and_arg(
 ; CHECK-SAME: ptr [[A:%.*]], double [[X:%.*]], ptr [[OUT:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[X]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 3, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[M0:%.*]] = fadd double [[A0]], [[A1]]
+; CHECK-NEXT:    [[M1:%.*]] = fadd double [[A1]], [[X]]
+; CHECK-NEXT:    [[O1:%.*]] = getelementptr double, ptr [[OUT]], i64 1
+; CHECK-NEXT:    store double [[M0]], ptr [[OUT]], align 8
+; CHECK-NEXT:    store double [[M1]], ptr [[O1]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr double, ptr %a, i64 1
