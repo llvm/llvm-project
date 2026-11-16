@@ -15,6 +15,8 @@
 #include "src/__support/regex/regex_expr_pool.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::regex::ANCHOR_BOL;
+using LIBC_NAMESPACE::regex::ANCHOR_EOL;
 using LIBC_NAMESPACE::regex::ByteSet;
 using LIBC_NAMESPACE::regex::EMPTY_SET_ID;
 using LIBC_NAMESPACE::regex::Expr;
@@ -33,10 +35,25 @@ TEST(LlvmLibcRegexExprTest, Interning) {
   ASSERT_TRUE(lit_a_2.has_value());
   // Hash-consing: same literal should return the same ExprId.
   EXPECT_EQ(*lit_a, *lit_a_2);
+  EXPECT_FALSE(pool.has_anchors(*lit_a));
 
   auto lit_b = pool.make_lit('b');
   ASSERT_TRUE(lit_b.has_value());
   EXPECT_NE(*lit_a, *lit_b);
+
+  auto bol_1 = pool.make_anchor(ANCHOR_BOL);
+  auto bol_2 = pool.make_anchor(ANCHOR_BOL);
+  auto eol = pool.make_anchor(ANCHOR_EOL);
+  ASSERT_TRUE(bol_1.has_value());
+  ASSERT_TRUE(bol_2.has_value());
+  ASSERT_TRUE(eol.has_value());
+  EXPECT_EQ(*bol_1, *bol_2);
+  EXPECT_NE(*bol_1, *eol);
+  EXPECT_FALSE(pool.is_nullable(*bol_1));
+  EXPECT_TRUE(pool.has_anchors(*bol_1));
+  EXPECT_TRUE(pool.has_anchors(*pool.make_concat(*bol_1, *lit_a)));
+  EXPECT_TRUE(pool.has_anchors(*pool.make_alt(*lit_a, *eol)));
+  EXPECT_FALSE(pool.has_anchors(*pool.make_concat(*lit_a, *lit_b)));
 
   auto empty_set_1 = pool.empty_set();
   auto empty_set_2 = pool.empty_set();
@@ -126,6 +143,12 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesConcat) {
   EXPECT_EQ(*pool.make_concat(empty_str, lit_a), lit_a);
   EXPECT_EQ(*pool.make_concat(lit_a, empty_str), lit_a);
 
+  // Right-associativity: (a · b) · c == a · (b · c).
+  const ExprId lit_c = *pool.make_lit('c');
+  const ExprId ab = *pool.make_concat(lit_a, lit_b);
+  const ExprId bc = *pool.make_concat(lit_b, lit_c);
+  EXPECT_EQ(*pool.make_concat(ab, lit_c), *pool.make_concat(lit_a, bc));
+
   // Nullability of (L · R) requires both L and R to be nullable.
   const ExprId opt_a = *pool.make_alt(lit_a, empty_str);
   const ExprId opt_b = *pool.make_alt(lit_b, empty_str);
@@ -143,10 +166,11 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesConcat) {
                Expr::make_concat(lit_b, lit_b));
 }
 
-TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAlt) {
+TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAltAndStar) {
   ExprPool pool;
   const ExprId lit_a = *pool.make_lit('a');
   const ExprId lit_b = *pool.make_lit('b');
+  const ExprId lit_c = *pool.make_lit('c');
   const ExprId empty_set = *pool.empty_set();
   const ExprId empty_str = *pool.empty_str();
 
@@ -166,13 +190,39 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAlt) {
   EXPECT_EQ(*pool.make_alt(lit_a, lit_a), lit_a);
 
   // (A | B) == (B | A) (Commutativity)
-  EXPECT_EQ(*pool.make_alt(lit_a, lit_b), *pool.make_alt(lit_b, lit_a));
+  const ExprId ab = *pool.make_alt(lit_a, lit_b);
+  EXPECT_EQ(ab, *pool.make_alt(lit_b, lit_a));
+
+  // Canonical right-associated sorted deduplication across 3-way alternations.
+  const ExprId bc = *pool.make_alt(lit_b, lit_c);
+  const ExprId ac = *pool.make_alt(lit_a, lit_c);
+  const ExprId abc = *pool.make_alt(lit_a, bc);
+  EXPECT_EQ(*pool.make_alt(ab, lit_c), abc);
+  EXPECT_EQ(*pool.make_alt(lit_c, ab), abc);
+  EXPECT_EQ(*pool.make_alt(ac, lit_b), abc);
+  EXPECT_EQ(*pool.make_alt(ab, bc), abc);
+  EXPECT_EQ(*pool.make_alt(abc, lit_b), abc);
 
   // Nullability of (L | R) when L is non-nullable and R (with higher ExprId) is
   // nullable.
   const ExprId opt_b = *pool.make_alt(lit_b, empty_str);
   const ExprId opt_bb = *pool.make_concat(opt_b, opt_b);
   EXPECT_TRUE(pool.is_nullable(*pool.make_alt(lit_a, opt_bb)));
+
+  // Star identities: INVALID_EXPR_ID, Ø* => ε, ε* => ε, and (R*)* => R*.
+  auto bad_star = pool.make_star(INVALID_EXPR_ID);
+  ASSERT_FALSE(bad_star.has_value());
+  EXPECT_EQ(bad_star.error(), REG_BADPAT);
+  EXPECT_EQ(*pool.make_star(empty_set), empty_str);
+  EXPECT_EQ(*pool.make_star(empty_str), empty_str);
+
+  const ExprId star_a = *pool.make_star(lit_a);
+  EXPECT_EQ(*pool.make_star(star_a), star_a);
+  EXPECT_TRUE(pool.is_nullable(star_a));
+  EXPECT_FALSE(pool.has_anchors(star_a));
+  EXPECT_TRUE(pool.has_anchors(*pool.make_star(*pool.make_anchor(ANCHOR_BOL))));
+  EXPECT_TRUE(Expr::make_star(lit_a) == Expr::make_star(lit_a));
+  EXPECT_FALSE(Expr::make_star(lit_a) == Expr::make_star(lit_b));
 }
 
 TEST(LlvmLibcRegexExprTest, HermeticHundredPools) {

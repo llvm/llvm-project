@@ -54,14 +54,12 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16(i32 %node_ptr, float %
 ; GFX10-LABEL: image_bvh_intersect_ray_a16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v9, 16
-; GFX10-NEXT:    v_and_b32_e32 v10, 0xffff, v7
+; GFX10-NEXT:    v_lshlrev_b32_e32 v10, 16, v7
 ; GFX10-NEXT:    v_bfe_u32 v7, v7, 16, 16
-; GFX10-NEXT:    v_and_b32_e32 v8, 0xffff, v8
 ; GFX10-NEXT:    v_lshlrev_b32_sdwa v9, v9, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; GFX10-NEXT:    v_and_or_b32 v6, v6, 0xffff, v10
 ; GFX10-NEXT:    v_lshl_or_b32 v7, v8, 16, v7
 ; GFX10-NEXT:    v_and_or_b32 v5, v5, 0xffff, v9
-; GFX10-NEXT:    v_and_or_b32 v6, v6, 0xffff, v10
 ; GFX10-NEXT:    image_bvh_intersect_ray v[0:3], v[0:7], s[0:3] a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
@@ -129,14 +127,12 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16(i64 %node_ptr, float
 ; GFX10-LABEL: image_bvh64_intersect_ray_a16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v10, 16
-; GFX10-NEXT:    v_and_b32_e32 v11, 0xffff, v8
+; GFX10-NEXT:    v_lshlrev_b32_e32 v11, 16, v8
 ; GFX10-NEXT:    v_bfe_u32 v8, v8, 16, 16
-; GFX10-NEXT:    v_and_b32_e32 v9, 0xffff, v9
 ; GFX10-NEXT:    v_lshlrev_b32_sdwa v10, v10, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
+; GFX10-NEXT:    v_and_or_b32 v7, v7, 0xffff, v11
 ; GFX10-NEXT:    v_lshl_or_b32 v8, v9, 16, v8
 ; GFX10-NEXT:    v_and_or_b32 v6, v6, 0xffff, v10
-; GFX10-NEXT:    v_and_or_b32 v7, v7, 0xffff, v11
 ; GFX10-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:8], s[0:3] a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
@@ -281,20 +277,18 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16_vgpr_descr(i32 %node_p
 ; GFX1030-LABEL: image_bvh_intersect_ray_a16_vgpr_descr:
 ; GFX1030:       ; %bb.0:
 ; GFX1030-NEXT:    v_mov_b32_e32 v13, v0
-; GFX1030-NEXT:    v_mov_b32_e32 v14, v1
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 16
-; GFX1030-NEXT:    v_and_b32_e32 v1, 0xffff, v7
+; GFX1030-NEXT:    v_mov_b32_e32 v14, v1
 ; GFX1030-NEXT:    v_mov_b32_e32 v15, v2
-; GFX1030-NEXT:    v_mov_b32_e32 v16, v3
+; GFX1030-NEXT:    v_lshlrev_b32_e32 v1, 16, v7
 ; GFX1030-NEXT:    v_bfe_u32 v2, v7, 16, 16
 ; GFX1030-NEXT:    v_lshlrev_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX1030-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX1030-NEXT:    v_and_b32_e32 v3, 0xffff, v8
+; GFX1030-NEXT:    v_mov_b32_e32 v16, v3
 ; GFX1030-NEXT:    v_mov_b32_e32 v17, v4
-; GFX1030-NEXT:    s_mov_b32 s1, exec_lo
-; GFX1030-NEXT:    v_and_or_b32 v18, v5, 0xffff, v0
 ; GFX1030-NEXT:    v_and_or_b32 v19, v6, 0xffff, v1
-; GFX1030-NEXT:    v_lshl_or_b32 v20, v3, 16, v2
+; GFX1030-NEXT:    v_lshl_or_b32 v20, v8, 16, v2
+; GFX1030-NEXT:    v_and_or_b32 v18, v5, 0xffff, v0
+; GFX1030-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1030-NEXT:  .LBB7_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1030-NEXT:    v_readfirstlane_b32 s4, v9
 ; GFX1030-NEXT:    v_readfirstlane_b32 s5, v10
@@ -325,15 +319,13 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16_vgpr_descr(i32 %node_p
 ; GFX1013-LABEL: image_bvh_intersect_ray_a16_vgpr_descr:
 ; GFX1013:       ; %bb.0:
 ; GFX1013-NEXT:    v_mov_b32_e32 v13, 16
-; GFX1013-NEXT:    v_and_b32_e32 v14, 0xffff, v7
+; GFX1013-NEXT:    v_lshlrev_b32_e32 v14, 16, v7
 ; GFX1013-NEXT:    v_bfe_u32 v7, v7, 16, 16
-; GFX1013-NEXT:    v_and_b32_e32 v8, 0xffff, v8
 ; GFX1013-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1013-NEXT:    v_lshlrev_b32_sdwa v13, v13, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX1013-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
+; GFX1013-NEXT:    v_and_or_b32 v6, v6, 0xffff, v14
 ; GFX1013-NEXT:    v_lshl_or_b32 v7, v8, 16, v7
 ; GFX1013-NEXT:    v_and_or_b32 v5, v5, 0xffff, v13
-; GFX1013-NEXT:    v_and_or_b32 v6, v6, 0xffff, v14
 ; GFX1013-NEXT:  .LBB7_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1013-NEXT:    v_readfirstlane_b32 s4, v9
 ; GFX1013-NEXT:    v_readfirstlane_b32 s5, v10
@@ -550,20 +542,18 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16_vgpr_descr(i64 %node
 ; GFX1030-LABEL: image_bvh64_intersect_ray_a16_vgpr_descr:
 ; GFX1030:       ; %bb.0:
 ; GFX1030-NEXT:    v_mov_b32_e32 v14, v0
-; GFX1030-NEXT:    v_mov_b32_e32 v15, v1
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 16
-; GFX1030-NEXT:    v_and_b32_e32 v1, 0xffff, v8
+; GFX1030-NEXT:    v_mov_b32_e32 v15, v1
 ; GFX1030-NEXT:    v_mov_b32_e32 v16, v2
-; GFX1030-NEXT:    v_mov_b32_e32 v17, v3
+; GFX1030-NEXT:    v_lshlrev_b32_e32 v1, 16, v8
 ; GFX1030-NEXT:    v_bfe_u32 v2, v8, 16, 16
 ; GFX1030-NEXT:    v_lshlrev_b32_sdwa v0, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX1030-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX1030-NEXT:    v_and_b32_e32 v3, 0xffff, v9
+; GFX1030-NEXT:    v_mov_b32_e32 v17, v3
 ; GFX1030-NEXT:    v_mov_b32_e32 v18, v4
 ; GFX1030-NEXT:    v_mov_b32_e32 v19, v5
-; GFX1030-NEXT:    v_and_or_b32 v20, v6, 0xffff, v0
 ; GFX1030-NEXT:    v_and_or_b32 v21, v7, 0xffff, v1
-; GFX1030-NEXT:    v_lshl_or_b32 v22, v3, 16, v2
+; GFX1030-NEXT:    v_and_or_b32 v20, v6, 0xffff, v0
+; GFX1030-NEXT:    v_lshl_or_b32 v22, v9, 16, v2
 ; GFX1030-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1030-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1030-NEXT:    v_readfirstlane_b32 s4, v10
@@ -596,15 +586,13 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16_vgpr_descr(i64 %node
 ; GFX1013-LABEL: image_bvh64_intersect_ray_a16_vgpr_descr:
 ; GFX1013:       ; %bb.0:
 ; GFX1013-NEXT:    v_mov_b32_e32 v14, 16
-; GFX1013-NEXT:    v_and_b32_e32 v15, 0xffff, v8
+; GFX1013-NEXT:    v_lshlrev_b32_e32 v15, 16, v8
 ; GFX1013-NEXT:    v_bfe_u32 v8, v8, 16, 16
-; GFX1013-NEXT:    v_and_b32_e32 v9, 0xffff, v9
 ; GFX1013-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1013-NEXT:    v_lshlrev_b32_sdwa v14, v14, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX1013-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
+; GFX1013-NEXT:    v_and_or_b32 v7, v7, 0xffff, v15
 ; GFX1013-NEXT:    v_lshl_or_b32 v8, v9, 16, v8
 ; GFX1013-NEXT:    v_and_or_b32 v6, v6, 0xffff, v14
-; GFX1013-NEXT:    v_and_or_b32 v7, v7, 0xffff, v15
 ; GFX1013-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1013-NEXT:    v_readfirstlane_b32 s4, v10
 ; GFX1013-NEXT:    v_readfirstlane_b32 s5, v11
@@ -788,11 +776,10 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_mov_b32 s1, 1.0
 ; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX11-NEXT:    flat_load_b32 v9, v[0:1]
 ; GFX11-NEXT:    flat_load_b32 v10, v[2:3]
@@ -896,7 +883,6 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s10, s3, 0x4500
 ; GFX11-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
@@ -927,11 +913,10 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s1, 1.0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, 0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX11-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-FAKE16-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX11-FAKE16-NEXT:    flat_load_b32 v6, v[0:1]
 ; GFX11-FAKE16-NEXT:    flat_load_b32 v7, v[2:3]
@@ -1045,7 +1030,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
 ; GFX11-NEXT:    v_dual_mov_b32 v1, s7 :: v_dual_lshlrev_b32 v2, 2, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX11-NEXT:    s_mov_b32 s6, 2.0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s6
@@ -1147,7 +1132,6 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
 ; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s10, s7, 0x4500
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, s8
 ; GFX11-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v6, 0xb36211c6 :: v_dual_mov_b32 v5, s10
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, s6
@@ -1179,7 +1163,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v1, s7 :: v_dual_lshlrev_b32 v2, 2, v0
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s6, 2.0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX11-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, s6

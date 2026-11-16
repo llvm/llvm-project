@@ -57,10 +57,6 @@ defm : BoolField<"elide-all-zero-branch-weights", "ElideAllZeroBranchWeightsDefa
 // usage) and continue execution as if nothing happened.
 defm : BoolField<"safepoint-ir-verifier-print-only", "false", "">;
 
-// Value.cpp
-defm : BoolField<"use-dereferenceable-at-point-semantics", "true",
-  "Deref attributes and metadata infer facts at definition only">;
-
 // Verifier.cpp
 defm : BoolField<"verify-noalias-scope-decl-dom", "false",
   "Ensure that llvm.experimental.noalias.scope.decl for identical scopes are not dominating">;

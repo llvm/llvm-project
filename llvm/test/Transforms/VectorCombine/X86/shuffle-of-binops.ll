@@ -249,6 +249,26 @@ define <4 x i32> @shuf_sdiv_v4i32_multiuse_both(<4 x i32> %x, <4 x i32> %y, <4 x
   ret <4 x i32> %r
 }
 
+define <4 x i32> @shuf_add_v4i32_inner_shuffles_multiuse_rhs(<4 x i32> %a, <4 x i32> %b, <4 x i32> %y) {
+; CHECK-LABEL: define <4 x i32> @shuf_add_v4i32_inner_shuffles_multiuse_rhs(
+; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A0:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[B0:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[L:%.*]] = add <4 x i32> [[A0]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = add <4 x i32> [[B0]], [[Y]]
+; CHECK-NEXT:    call void @use(<4 x i32> [[R]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[L]], <4 x i32> [[R]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %a0 = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %b0 = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %l = add <4 x i32> %a0, %y
+  %r = add <4 x i32> %b0, %y
+  call void @use(<4 x i32> %r)
+  %s = shufflevector <4 x i32> %l, <4 x i32> %r, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x i32> %s
+}
+
 ; non-matching operands (not commutable)
 
 define <4 x float> @shuf_fdiv_v4f32_no_common_op(<4 x float> %x, <4 x float> %y, <4 x float> %z, <4 x float> %w) {

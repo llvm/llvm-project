@@ -204,5 +204,7 @@ WebAssemblyPreLegalizerCombinerPass::run(MachineFunction &MF,
       [&]() { return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF); });
   return Changed ? getMachineFunctionPassPreservedAnalyses()
                        .preserveSet<CFGAnalyses>()
+                       .preserve<GISelCSEAnalysis>()
+                       .preserve<GISelValueTrackingAnalysis>()
                  : PreservedAnalyses::all();
 }

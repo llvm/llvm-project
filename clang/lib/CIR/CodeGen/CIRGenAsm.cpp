@@ -261,6 +261,8 @@ static void emitAsmStores(CIRGenFunction &cgf, const AsmStmt &s,
 }
 
 mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
+  FullExprCleanupScope cleanups(*this, &s);
+
   // Assemble the final asm string.
   std::string asmString = s.generateAsmString(getContext());
   SourceLocation srcLoc = s.getAsmLoc();
@@ -542,11 +544,15 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
         cir::RecordType::getAllDataKinds(resultRegTypes));
 
   bool hasSideEffect = s.isVolatile() || s.getNumOutputs() == 0;
+  // Asm may contain an intrinsically convergent op such as a barrier.
+  assert(!cir::MissingFeatures::asmNoConvergent());
+  bool isConvergent = getLangOpts().assumeFunctionsAreConvergent();
 
   std::vector<mlir::Value> regResults;
   cir::InlineAsmOp ia = cir::InlineAsmOp::create(
       builder, getLoc(s.getAsmLoc()), resultType, operands, asmString,
-      constraints, hasSideEffect, inferFlavor(cgm, s), mlir::ArrayAttr());
+      constraints, hasSideEffect, isConvergent, inferFlavor(cgm, s),
+      mlir::ArrayAttr());
 
   if (isGCCAsmGoto) {
     assert(!cir::MissingFeatures::asmGoto());

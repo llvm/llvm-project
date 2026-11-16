@@ -258,7 +258,7 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
   if (F.hasFnAttribute(Attribute::AlwaysInline))
     return false;
 
-  if (F.hasFnAttribute(Attribute::NoInline))
+  if (F.isNoInline())
     return false;
 
   // A function marked `noreturn` may contain unreachable terminators: these
@@ -269,6 +269,7 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
   if (F.hasFnAttribute(Attribute::SanitizeAddress) ||
       F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
       F.hasFnAttribute(Attribute::SanitizeThread) ||
+      F.hasFnAttribute(Attribute::SanitizeConcurrency) ||
       F.hasFnAttribute(Attribute::SanitizeMemory))
     return false;
 

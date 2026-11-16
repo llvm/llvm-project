@@ -189,6 +189,7 @@ static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
   DAG->addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::CallMutation>());
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII));
+  DAG->addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
   return DAG;
 }
 
@@ -216,10 +217,12 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonGenMemAbsolutePass(PR);
   initializeHexagonGenMuxPass(PR);
   initializeHexagonGlobalSchedulerPass(PR);
+  initializeHLXExpandPseudosPass(PR);
   initializeHexagonLiveVariablesPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
   initializeHexagonHVXSaveRemarkPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
+  initializeHexagonLowerHLXPairAllocasPass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
@@ -369,9 +372,14 @@ public:
   }
 
   void addIRPasses() override;
+  bool addPreISel() override;
   bool addInstSelector() override;
   bool addILPOpts() override;
+  void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
+  bool isMachinePipelinerEnabled() const override {
+    return getOptLevel() >= CodeGenOptLevel::Default;
+  }
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -418,6 +426,13 @@ void HexagonPassConfig::addIRPasses() {
     if (EnableGenExtract)
       addPass(createHexagonGenExtract());
   }
+}
+
+bool HexagonPassConfig::addPreISel() {
+  // Functions can enable HLX through target-features, so the pass filters
+  // individual functions instead of being gated by the default subtarget.
+  addPass(createHexagonLowerHLXPairAllocas());
+  return false;
 }
 
 bool HexagonPassConfig::addInstSelector() {
@@ -475,27 +490,30 @@ bool HexagonPassConfig::addILPOpts() {
   return true;
 }
 
+void HexagonPassConfig::addMachineSSAOptimization() {
+  TargetPassConfig::addMachineSSAOptimization();
+
+  if (EnableCExtOpt)
+    addPass(createHexagonConstExtenders());
+  if (!DisableStoreWidening)
+    addPass(createHexagonStoreWidening());
+  if (!DisableLoadWidening)
+    addPass(createHexagonLoadWidening());
+  if (EnableGenMemAbs)
+    addPass(createHexagonGenMemAbsolute());
+  if (!DisableHardwareLoops)
+    addPass(createHexagonHardwareLoops());
+}
+
 void HexagonPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    if (EnableCExtOpt)
-      addPass(createHexagonConstExtenders());
     if (EnableExpandCondsets)
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
     if (EnableCopyHoist)
       insertPass(&RegisterCoalescerID, &HexagonCopyHoistingID);
     if (EnableTfrCleanup)
       insertPass(&VirtRegRewriterID, &HexagonTfrCleanupID);
-    if (!DisableStoreWidening)
-      addPass(createHexagonStoreWidening());
-    if (!DisableLoadWidening)
-      addPass(createHexagonLoadWidening());
-    if (EnableGenMemAbs)
-      addPass(createHexagonGenMemAbsolute());
-    if (!DisableHardwareLoops)
-      addPass(createHexagonHardwareLoops());
   }
-  if (TM->getOptLevel() >= CodeGenOptLevel::Default)
-    addPass(&MachinePipelinerID);
   addPass(createHexagonHVXSaveRemark());
 }
 
@@ -554,6 +572,10 @@ void HexagonPassConfig::addPreEmitPass() {
 
   // Packetization is mandatory: it handles gather/scatter at all opt levels.
   addPass(createHexagonPacketizer(NoOpt));
+
+  // Expand HLX load/store pseudos into their final bundled form. This must run
+  // after packetization so the resulting bundles are not seen by the scheduler.
+  addPass(createHLXExpandPseudos());
 
   if (!NoOpt) {
     // Global pull-up scheduler

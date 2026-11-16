@@ -26,20 +26,11 @@ define void @interleave4_consecutive_splats(<4 x i16> %src, ptr %dst0, ptr %dst1
 define void @interleave3_consecutive_splats_nonzero(<8 x i16> %src, ptr %dst0, ptr %dst1) {
 ; CHECK-LABEL: interleave3_consecutive_splats_nonzero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    dup v1.8h, v0.h[2]
-; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    dup v2.8h, v0.h[3]
 ; CHECK-NEXT:    dup v3.8h, v0.h[4]
-; CHECK-NEXT:    st3 { v1.8h, v2.8h, v3.8h }, [x8]
-; CHECK-NEXT:    ldp q0, q1, [sp]
-; CHECK-NEXT:    ldr q2, [sp, #32]
-; CHECK-NEXT:    stp q0, q1, [x0]
-; CHECK-NEXT:    str q2, [x0, #32]
-; CHECK-NEXT:    stp q0, q1, [x1]
-; CHECK-NEXT:    str q2, [x1, #32]
-; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    st3 { v1.8h, v2.8h, v3.8h }, [x0]
+; CHECK-NEXT:    st3 { v1.8h, v2.8h, v3.8h }, [x1]
 ; CHECK-NEXT:    ret
   %splat2 = shufflevector <8 x i16> %src, <8 x i16> poison, <8 x i32> splat (i32 2)
   %splat3 = shufflevector <8 x i16> %src, <8 x i16> poison, <8 x i32> splat (i32 3)
@@ -73,21 +64,11 @@ define void @interleave4_nonshuffle_operand(<8 x i16> %src, ptr %dst0, ptr %dst1
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.8h, #1
 ; CHECK-NEXT:    dup v2.8h, v0.h[0]
-; CHECK-NEXT:    dup v3.8h, v0.h[2]
-; CHECK-NEXT:    dup v4.8h, v0.h[3]
-; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    zip2 v1.8h, v2.8h, v3.8h
-; CHECK-NEXT:    zip1 v2.8h, v2.8h, v3.8h
-; CHECK-NEXT:    zip2 v5.8h, v0.8h, v4.8h
-; CHECK-NEXT:    zip1 v0.8h, v0.8h, v4.8h
-; CHECK-NEXT:    zip1 v3.8h, v1.8h, v5.8h
-; CHECK-NEXT:    zip2 v1.8h, v1.8h, v5.8h
-; CHECK-NEXT:    zip1 v4.8h, v2.8h, v0.8h
-; CHECK-NEXT:    zip2 v0.8h, v2.8h, v0.8h
-; CHECK-NEXT:    stp q3, q1, [x0, #32]
-; CHECK-NEXT:    stp q4, q0, [x0]
-; CHECK-NEXT:    stp q4, q0, [x1]
-; CHECK-NEXT:    stp q3, q1, [x1, #32]
+; CHECK-NEXT:    add v3.8h, v0.8h, v1.8h
+; CHECK-NEXT:    dup v4.8h, v0.h[2]
+; CHECK-NEXT:    dup v5.8h, v0.h[3]
+; CHECK-NEXT:    st4 { v2.8h, v3.8h, v4.8h, v5.8h }, [x0]
+; CHECK-NEXT:    st4 { v2.8h, v3.8h, v4.8h, v5.8h }, [x1]
 ; CHECK-NEXT:    ret
   %splat0 = shufflevector <8 x i16> %src, <8 x i16> poison, <8 x i32> zeroinitializer
   %added = add <8 x i16> %src, splat (i16 1)

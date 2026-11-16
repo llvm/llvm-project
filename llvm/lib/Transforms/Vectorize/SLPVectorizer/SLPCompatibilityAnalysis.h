@@ -21,7 +21,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 
@@ -193,6 +192,9 @@ public:
                                        CmpInst::Predicate Pred);
 };
 
+/// Checks if \p I is a call to llvm.fma or llvm.fmuladd.
+bool isFMAOrFMulAdd(const Instruction *I);
+
 /// Main data required for vectorization of instructions.
 class InstructionsState {
   /// MainOp and AltOp are primarily determined by getSameOpcode. Currently,
@@ -222,7 +224,7 @@ class InstructionsState {
   /// Whether the instruction state represents copyable instructions.
   bool HasCopyables = false;
   /// Index of the operand modeling the copyable values: the addend for
-  /// fmuladd (retried with a multiplicand), the first operand otherwise.
+  /// fma/fmuladd (retried with a multiplicand), the first operand otherwise.
   unsigned CopyableOpIdx = 0;
   /// Whether copyable single-use fmuls/fadds are modeled as
   /// fmuladd(a, b, -0.0)/fmuladd(1.0, a, b), absorbing the binop instead of
@@ -298,9 +300,7 @@ public:
   InstructionsState(Instruction *MainOp, Instruction *AltOp,
                     bool HasCopyables = false)
       : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables),
-        CopyableOpIdx(MainOp && RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)
-                          ? 2
-                          : 0) {}
+        CopyableOpIdx(MainOp && isFMAOrFMulAdd(MainOp) ? 2 : 0) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
 
   /// Checks if the value is a copyable element.
@@ -387,6 +387,39 @@ SmallVector<SmallVector<Value *>> scanAltAssociativeOperands(
     const InstructionsState &S, const TargetLibraryInfo &TLI,
     ArrayRef<Value *> VL, ArrayRef<Value *> Op0, ArrayRef<Value *> Op1,
     SmallVectorImpl<Value *> &ReassocScalars, SmallBitVector &SubLanes);
+
+/// Returns main/alternate instructions for the given \p VL. Unlike
+/// getSameOpcode supports non-compatible instructions for better SplitVectorize
+/// node support.
+/// \returns first main/alt instructions, if only poisons and instruction with
+/// only 2 opcodes exists. Returns pair of nullptr otherwise.
+std::pair<Instruction *, Instruction *>
+getMainAltOpsNoStateVL(ArrayRef<Value *> VL);
+
+/// Detects an extractvalue bundle that can be widened by vectorizing the
+/// underlying struct-returning calls.
+///
+/// \p VL is a bundle whose state \p S is Instruction::ExtractValue. The
+/// bundle is acceptable for widening into one struct-of-vectors call only
+/// when:
+///   - every element of \p VL is an ExtractValueInst,
+///   - every ExtractValueInst extracts the same struct field (its
+///     getIndices() matches the main op's indices),
+///   - the aggregate operands form a uniform set of CallInsts (per
+///     getSameOpcode) that is not an alt-shuffle and whose return type is
+///     a literal struct, and
+///   - every user of every such call is itself an ExtractValueInst, so the
+///     external-use extraction code can rebuild scalars via extractvalue +
+///     extractelement without needing an insertvalue chain.
+///
+/// On success returns true and fills \p Indices with the common field
+/// index path and \p Calls with the per-lane aggregate calls (in VL order),
+/// for the caller to feed as the operand of the new tree entry. Otherwise
+/// returns false and leaves the output parameters untouched.
+bool checkEVsForVecCalls(ArrayRef<Value *> VL, const InstructionsState &S,
+                         const TargetLibraryInfo &TLI,
+                         SmallVectorImpl<unsigned> &Indices,
+                         SmallVectorImpl<Value *> &Calls);
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOMPATIBILITYANALYSIS_H

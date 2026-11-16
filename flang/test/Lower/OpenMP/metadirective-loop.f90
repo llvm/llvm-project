@@ -577,6 +577,78 @@ subroutine test_unreachable_idempotent_condition(flag, n, a)
   end do
 end subroutine
 
+! `a` and `b` are the first dummy arguments of different procedures, but they
+! are different variables. The DO variant is still reachable when `a` is false.
+! CHECK-LABEL: func.func private @_QFtest_host_dummy_conditionPinner(
+! CHECK:         %[[A:.*]]:2 = hlfir.declare {{.*}}_QFtest_host_dummy_conditionEa
+! CHECK:         %[[B:.*]]:2 = hlfir.declare {{.*}}_QFtest_host_dummy_conditionFinnerEb
+! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]]#0
+! CHECK:         %[[A_COND:.*]] = fir.convert %[[A_VAL]]
+! CHECK:         fir.if %[[A_COND]] {
+! CHECK:           omp.simd
+! CHECK:         } else {
+! CHECK:           %[[B_VAL:.*]] = fir.load %[[B]]#0
+! CHECK:           %[[B_COND:.*]] = fir.convert %[[B_VAL]]
+! CHECK:           fir.if %[[B_COND]] {
+! CHECK:             omp.wsloop
+! CHECK:           } else {
+! CHECK:             fir.do_loop
+! CHECK:         return
+subroutine test_host_dummy_condition(a, n)
+  logical, intent(in) :: a
+  integer, intent(in) :: n
+  call inner(a, n)
+contains
+  subroutine inner(b, m)
+    logical, intent(in) :: b
+    integer, intent(in) :: m
+    integer :: i
+    !$omp metadirective &
+    !$omp & when(user={condition(a)}: simd) &
+    !$omp & when(user={condition(b)}: do) &
+    !$omp & otherwise(nothing)
+    do i = 1, m
+    end do
+  end subroutine
+end subroutine
+
+! `a .and. b` is not the same condition as `a`, so the DO variant is still
+! reachable when `a .and. b` is false.
+! CHECK-LABEL: func.func private @_QFtest_host_dummy_and_conditionPinner(
+! CHECK:         %[[A:.*]]:2 = hlfir.declare {{.*}}_QFtest_host_dummy_and_conditionEa
+! CHECK:         %[[B:.*]]:2 = hlfir.declare {{.*}}_QFtest_host_dummy_and_conditionFinnerEb
+! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]]#0
+! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]]#0
+! CHECK:         %[[AND:.*]] = fir.logical_and %[[A_VAL]], %[[B_VAL]]
+! CHECK:         %[[AND_COND:.*]] = fir.convert %[[AND]]
+! CHECK:         fir.if %[[AND_COND]] {
+! CHECK:           omp.simd
+! CHECK:         } else {
+! CHECK:           %[[A_VAL2:.*]] = fir.load %[[A]]#0
+! CHECK:           %[[A_COND:.*]] = fir.convert %[[A_VAL2]]
+! CHECK:           fir.if %[[A_COND]] {
+! CHECK:             omp.wsloop
+! CHECK:           } else {
+! CHECK:             fir.do_loop
+! CHECK:         return
+subroutine test_host_dummy_and_condition(a, n)
+  logical, intent(in) :: a
+  integer, intent(in) :: n
+  call inner(a, n)
+contains
+  subroutine inner(b, m)
+    logical, intent(in) :: b
+    integer, intent(in) :: m
+    integer :: i
+    !$omp metadirective &
+    !$omp & when(user={condition(a .and. b)}: simd) &
+    !$omp & when(user={condition(a)}: do) &
+    !$omp & otherwise(nothing)
+    do i = 1, m
+    end do
+  end subroutine
+end subroutine
+
 ! Calls to an opaque procedure are independent runtime conditions even when
 ! their source expressions are identical. Preserve both candidates without
 ! relying on clause-expression side effects.

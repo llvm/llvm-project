@@ -1,4 +1,5 @@
 // RUN: fir-opt --stack-arrays %s | FileCheck %s
+// RUN: fir-opt --allocation-placement="legacy=true stack-arrays=true" %s | FileCheck %s
 
 // Simplest transformation
 func.func @simple() {
@@ -13,6 +14,21 @@ func.func @simple() {
 }
 // CHECK: func.func @simple()
 // CHECK: fir.alloca !fir.array<42xi32>
+// CHECK: return
+
+// A requested alignment survives the move to the stack
+func.func @aligned() {
+  %0 = fir.allocmem !fir.array<42xi32> {alignment = 64 : i64}
+  %c0_a = arith.constant 0 : index
+  %c0_i32_a = arith.constant 0 : i32
+  %ref_a = fir.convert %0 : (!fir.heap<!fir.array<42xi32>>) -> !fir.ref<!fir.array<42xi32>>
+  %elt_a = fir.coordinate_of %ref_a, %c0_a : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
+  fir.store %c0_i32_a to %elt_a : !fir.ref<i32>
+  fir.freemem %0 : !fir.heap<!fir.array<42xi32>>
+  return
+}
+// CHECK-LABEL: func.func @aligned()
+// CHECK: fir.alloca !fir.array<42xi32> <{alignment = 64 : i64}>
 // CHECK: return
 
 // Check fir.must_be_heap allocations are not moved
@@ -527,3 +543,53 @@ func.func @freemem_through_convert_in_loop(%arg0: i1, %n: index) {
 // CHECK:         llvm.intr.stackrestore %[[SP]] : !llvm.ptr
 // CHECK-NOT:     fir.freemem
 // CHECK:         cf.br ^bb1
+
+// A constant-length scalar character temporary (as created by the inlining of
+// TRIM) is moved to the stack like a constant-shape array, and hoisted to the
+// entry block.
+func.func private @_QPuse_char(!fir.boxchar<1>)
+func.func @constant_length_char(%arg0: i1) {
+  cf.br ^bb1
+^bb1:  // 2 preds: ^bb0, ^bb2
+  cf.cond_br %arg0, ^bb2, ^bb3
+^bb2:  // pred: ^bb1
+  %c5 = arith.constant 5 : index
+  %mem = fir.allocmem !fir.char<1,8> {bindc_name = ".tmp.trim", uniq_name = ""}
+  %dyn = fir.convert %mem : (!fir.heap<!fir.char<1,8>>) -> !fir.heap<!fir.char<1,?>>
+  %decl = fir.declare %dyn typeparams %c5 uniq_name(".tmp.trim") : (!fir.heap<!fir.char<1,?>>, index) -> !fir.heap<!fir.char<1,?>>
+  %box = fir.emboxchar %decl, %c5 : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  fir.call @_QPuse_char(%box) : (!fir.boxchar<1>) -> ()
+  fir.freemem %decl : !fir.heap<!fir.char<1,?>>
+  cf.br ^bb1
+^bb3:  // pred: ^bb1
+  return
+}
+// CHECK-LABEL: func.func @constant_length_char(
+// CHECK-NEXT:    fir.alloca !fir.char<1,8> {{.*}}.tmp.trim
+// CHECK:         cf.br ^bb1
+// CHECK-NOT:     fir.allocmem
+// CHECK-NOT:     fir.freemem
+
+// A dynamic-length scalar character temporary stays on the heap.
+func.func @dynamic_length_char(%len: index) {
+  %mem = fir.allocmem !fir.char<1,?>(%len : index) {bindc_name = ".tmp.trim", uniq_name = ""}
+  %box = fir.emboxchar %mem, %len : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  fir.call @_QPuse_char(%box) : (!fir.boxchar<1>) -> ()
+  fir.freemem %mem : !fir.heap<!fir.char<1,?>>
+  return
+}
+// CHECK-LABEL: func.func @dynamic_length_char(
+// CHECK-NOT:     fir.alloca
+// CHECK:         fir.allocmem !fir.char<1,?>(%{{.*}} : index)
+// CHECK:         fir.freemem
+
+// Other scalars are not candidates.
+func.func @scalar_int() {
+  %mem = fir.allocmem i32
+  fir.freemem %mem : !fir.heap<i32>
+  return
+}
+// CHECK-LABEL: func.func @scalar_int(
+// CHECK-NOT:     fir.alloca
+// CHECK:         fir.allocmem i32
+// CHECK:         fir.freemem

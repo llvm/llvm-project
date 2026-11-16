@@ -620,7 +620,8 @@ bool ManualDWARFIndex::LoadFromCache() {
   ObjectFile *objfile = m_dwarf->GetObjectFile();
   if (!objfile)
     return false;
-  DataFileCache *cache = Module::GetIndexCache(objfile->IsInMemory());
+  Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeDwarfIndex;
+  DataFileCache *cache = Module::GetIndexCache(type);
   if (!cache)
     return false;
   std::unique_ptr<llvm::MemoryBuffer> mem_buffer_up =
@@ -643,7 +644,8 @@ void ManualDWARFIndex::SaveToCache() {
   ObjectFile *objfile = m_dwarf->GetObjectFile();
   if (!objfile)
     return;
-  DataFileCache *cache = Module::GetIndexCache(objfile->IsInMemory());
+  Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeDwarfIndex;
+  DataFileCache *cache = Module::GetIndexCache(type);
   if (!cache)
     return; // Caching is not enabled.
   DataEncoder file(endian::InlHostByteOrder(), objfile->GetAddressByteSize());

@@ -24,6 +24,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MakeSupport.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
@@ -691,6 +692,12 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     if (EmitCovNotes) {
       CmdArgs.push_back(
           Args.MakeArgString("-coverage-notes-file=" + CoverageFilename));
+
+      bool UseAbsolutePathsInNotes =
+          Args.hasFlag(options::OPT_fprofile_abs_path,
+                       options::OPT_fno_profile_abs_path, false);
+      if (UseAbsolutePathsInNotes)
+        CmdArgs.push_back(Args.MakeArgString("-coverage-notes-abs-paths"));
     }
 
     if (EmitCovData) {
@@ -1215,7 +1222,7 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
-    if (Triple.isOSDarwin() || Triple.isOSWindows())
+    if (Triple.isOSDarwin() || Triple.isOSWindowsOrUEFI())
       return true;
     return false;
 
@@ -1458,9 +1465,9 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     if (Scope != "none" && Scope != "non-leaf" && Scope != "all")
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Scope;
-    // This spelling cannot express a key, and AArch64 Windows only supports
-    // B-key, so default to it there as parseBranchProtection() does.
-    Key = isAArch64 && Triple.isOSWindows() ? "b_key" : "a_key";
+    // This spelling cannot express a key, and AArch64 Windows and UEFI only
+    // support B-key, so default to it there as parseBranchProtection() does.
+    Key = isAArch64 && Triple.isOSWindowsOrUEFI() ? "b_key" : "a_key";
     IndirectBranches =
         (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64;
     BranchProtectionPAuthLR = false;
@@ -2798,11 +2805,13 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                 .Case("-Av8plus", {"+v8plus", "+v9"})
                 .Case("-Av8plusa", {"+v8plus", "+v9", "+vis"})
                 .Case("-Av8plusb", {"+v8plus", "+v9", "+vis", "+vis2"})
-                .Case("-Av8plusd", {"+v8plus", "+v9", "+vis", "+vis2", "+vis3"})
+                .Case("-Av8plusd", {"+v8plus", "+v9", "+vis", "+vis2", "+vis3",
+                                    "+ua2005", "+ua2007"})
                 .Case("-Av9", {"+v9"})
                 .Case("-Av9a", {"+v9", "+vis"})
                 .Case("-Av9b", {"+v9", "+vis", "+vis2"})
-                .Case("-Av9d", {"+v9", "+vis", "+vis2", "+vis3"})
+                .Case("-Av9d",
+                      {"+v9", "+vis", "+vis2", "+vis3", "+ua2005", "+ua2007"})
                 .Default({});
         if (!SparcTargetFeatures.empty())
           continue;
@@ -4021,7 +4030,8 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
       options::OPT_fhlsl_spv_use_unknown_image_format,
       options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order,
       options::OPT_fhlsl_spv_enable_maximal_reconvergence,
-      options::OPT_fhlsl_spv_preserve_interface};
+      options::OPT_fhlsl_spv_preserve_interface,
+      options::OPT_fhlsl_spv_support_nonzero_base_instance};
   if (!types::isHLSL(InputType))
     return;
   for (const auto &Arg : ForwardedArguments)
@@ -4052,6 +4062,7 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("--dx-pdb-in-private");
   }
+  CmdArgs.push_back("-load-bool-from-mem=nonzero");
 }
 
 static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
@@ -4162,8 +4173,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
                    options::OPT_fno_modules_strict_decluse, false))
     CmdArgs.push_back("-fmodules-strict-decluse");
 
-  Args.addOptOutFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
-                     options::OPT_fno_modulemap_allow_subdirectory_search);
+  Args.addOptInFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
+                    options::OPT_fno_modulemap_allow_subdirectory_search);
 
   // -fno-implicit-modules turns off implicitly compiling modules on demand.
   bool ImplicitModules = false;
@@ -5115,6 +5126,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     CmdArgs.push_back("-dwarf-explicit-import");
 
   renderDwarfFormat(D, T, Args, CmdArgs, EffectiveDWARFVersion);
+  if (useMachORelocatableDwarf(T, EffectiveDWARFVersion))
+    CmdArgs.push_back("-grelocatable-dwarf");
   renderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
 
   // This controls whether or not we perform JustMyCode instrumentation.
@@ -6945,6 +6958,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_relocatable_pch))
     CmdArgs.push_back("-relocatable-pch");
+  Args.AddLastArg(CmdArgs, options::OPT_fpch_base_dir_is_cwd);
 
   if (const Arg *A = Args.getLastArg(options::OPT_fcf_runtime_abi_EQ)) {
     static const char *kCFABIs[] = {
@@ -7326,14 +7340,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << A->getAsString(Args) << TripleStr;
     }
     if (Arg *A = Args.getLastArg(options::OPT_mnop_mcount)) {
-      if (Arch == llvm::Triple::systemz)
+      if (Arch == llvm::Triple::systemz ||
+          (TC.getTriple().isX86() && TC.getTriple().isOSBinFormatELF()))
         A->render(Args, CmdArgs);
       else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << A->getAsString(Args) << TripleStr;
     }
     if (Arg *A = Args.getLastArg(options::OPT_mrecord_mcount)) {
-      if (Arch == llvm::Triple::systemz)
+      if (Arch == llvm::Triple::systemz ||
+          (TC.getTriple().isX86() && TC.getTriple().isOSBinFormatELF()))
         A->render(Args, CmdArgs);
       else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -8599,6 +8615,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_keep_persistent_storage_variables);
   Args.addOptInFlag(CmdArgs, options::OPT_fkeep_inline_functions,
                     options::OPT_fno_keep_inline_functions);
+  Args.addOptInFlag(CmdArgs, options::OPT_fmodule_local_hints,
+                    options::OPT_fno_module_local_hints);
   Args.addOptInFlag(CmdArgs, options::OPT_fcomplete_member_pointers,
                     options::OPT_fno_complete_member_pointers);
   if (Arg *A = Args.getLastArg(options::OPT_cxx_static_destructors_EQ))
@@ -9220,6 +9238,9 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     // This option does not allow the user redefinitions for these macros.
     if (!HasNoDateTime)
       CmdArgs.push_back("-init-datetime-macros=literalone");
+    // Omit tool, current workdir and command line in COFF CV debug section.
+    CmdArgs.push_back("-gno-codeview-command-line");
+    CmdArgs.push_back("-gno-codeview-cwd");
   }
 }
 
@@ -9439,6 +9460,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DwarfVersion,
                           llvm::DebuggerKind::Default);
   renderDwarfFormat(D, Triple, Args, CmdArgs, DwarfVersion);
+  if (useMachORelocatableDwarf(Triple, DwarfVersion))
+    CmdArgs.push_back("-grelocatable-dwarf");
   renderDebugInfoCompressionArgs(Args, CmdArgs, D, getToolChain());
 
   // Handle -fPIC et al -- the relocation-model affects the assembler
@@ -9693,6 +9716,8 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(TCArgs.MakeArgString(UB));
   }
   addOffloadCompressArgs(TCArgs, CmdArgs);
+  if (TCArgs.hasArg(options::OPT_v))
+    CmdArgs.push_back("--verbose");
   // All the inputs are encoded as commands.
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::None(),
@@ -9749,6 +9774,11 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
 
     CmdArgs.push_back(Args.MakeArgString("--image=" + llvm::join(Parts, ",")));
   }
+
+  // FIXME: --offload-compress is HIP only until the OpenMP runtime accepts it.
+  if (JA.isDeviceOffloading(Action::OFK_HIP) &&
+      Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false))
+    addOffloadCompressArgs(Args, CmdArgs, /*EmitCompressionFormat=*/true);
 
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileUTF8(),
@@ -9850,6 +9880,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fno_sanitize_minimal_runtime,
       OPT_fsanitize_trap_EQ,
       OPT_fno_sanitize_trap_EQ,
+      OPT_fvectorize,
+      OPT_fno_vectorize,
       OPT_fslp_vectorize,
       OPT_fno_slp_vectorize,
       OPT_hipstdpar,
@@ -9864,7 +9896,15 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     return TC.getVFS().exists(
         TC.getCompilerRT(Args, Name, ToolChain::FT_Static));
   };
-  auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC) {
+  auto ToolChainHasSanitizerRT = [&](const ToolChain &TC, const ArgList &TCArgs,
+                                     Action::OffloadKind Kind) {
+    if (TC.getSanitizerArgs(TCArgs, /*BA=*/{}, Kind).needsCsanRt())
+      return ToolChainHasRT(TC, "csan");
+    return ToolChainHasRT(TC, "ubsan_minimal") ||
+           ToolChainHasRT(TC, "ubsan_standalone");
+  };
+  auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC,
+                                       bool HasSanitizerRT) {
     unsigned ID = A->getOption().getID();
     // Don't forward profiling arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
@@ -9874,20 +9914,19 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       return false;
     // Don't forward sanitizer arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
-    if (requiresUBSanRT(ID) && !ToolChainHasRT(TC, "ubsan_minimal") &&
-        !ToolChainHasRT(TC, "ubsan_standalone"))
+    if (requiresUBSanRT(ID) && !HasSanitizerRT)
       return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
     return TC.HasNativeLLVMSupport() || ID != OPT_mllvm;
   };
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A,
-                           const ToolChain &TC) {
+                           const ToolChain &TC, bool HasSanitizerRT) {
     if (A->getOption().matches(OPT_v) && SuppressHIPNoRDCVerbose)
       return false;
     return (Set.contains(A->getOption().getID()) ||
             (A->getOption().getGroup().isValid() &&
              Set.contains(A->getOption().getGroup().getID()))) &&
-           ShouldForwardForToolChain(A, TC);
+           ShouldForwardForToolChain(A, TC, HasSanitizerRT);
   };
 
   ArgStringList CmdArgs;
@@ -9903,22 +9942,29 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       ArgStringList LinkerArgs;
       const DerivedArgList &ToolChainArgs =
           C.getArgsForToolChain(TC, /*BA=*/{}, Kind);
+      const bool HasSanitizerRT =
+          ToolChainHasSanitizerRT(*TC, ToolChainArgs, Kind);
       for (Arg *A : ToolChainArgs) {
         if (A->getOption().matches(OPT_Zlinker_input))
           LinkerArgs.emplace_back(A->getValue());
-        else if (ShouldForward(CompilerOptions, A, *TC)) {
+        else if (ShouldForward(CompilerOptions, A, *TC, HasSanitizerRT)) {
           A->claim();
           A->render(Args, CompilerArgs);
-        } else if (ShouldForward(LinkerOptions, A, *TC)) {
+        } else if (ShouldForward(LinkerOptions, A, *TC, HasSanitizerRT)) {
           A->claim();
           A->render(Args, LinkerArgs);
         }
       }
 
       // If the user explicitly requested it via `--offload-arch` we should
-      // extract it from any static libraries if present.
-      for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ))
-        CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Arg));
+      // extract it from any static libraries if present. Device images are
+      // labeled with the canonical target ID, so request that.
+      for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ)) {
+        std::optional<std::string> TargetID =
+            getCanonicalTargetID(TC->getTriple(), Arg);
+        CmdArgs.emplace_back(Args.MakeArgString(
+            "--should-extract=" + (TargetID ? StringRef(*TargetID) : Arg)));
+      }
 
       // If this is OpenMP the device linker will need `-lompdevice`.
       if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&

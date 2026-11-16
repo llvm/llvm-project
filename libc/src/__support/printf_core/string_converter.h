@@ -40,11 +40,14 @@ LIBC_INLINE int write_char_string_as_chars(Writer<mode, char> *writer,
   }
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
-  string_len = internal::string_length(str_ptr);
-
-  if (to_conv.precision >= 0 &&
-      static_cast<size_t>(to_conv.precision) < string_len)
-    string_len = to_conv.precision;
+  // If a precision is specified, it doesn't have to be null-terminated.
+  if (to_conv.precision >= 0) {
+    while (string_len < static_cast<size_t>(to_conv.precision) &&
+           str_ptr[string_len] != '\0')
+      string_len++;
+  } else {
+    string_len = internal::string_length(str_ptr);
+  }
 
   size_t padding_spaces = to_conv.min_width > static_cast<int>(string_len)
                               ? to_conv.min_width - string_len

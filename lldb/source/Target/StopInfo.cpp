@@ -1454,6 +1454,26 @@ public:
   }
 };
 
+class StopInfoDyld : public StopInfo {
+public:
+  StopInfoDyld(Thread &thread, const char *description) : StopInfo(thread, 0) {
+    SetDescription(description && description[0] ? description
+                                                 : "dynamic loader");
+  }
+
+  ~StopInfoDyld() override = default;
+
+  StopReason GetStopReason() const override { return eStopReasonDynamicLoader; }
+
+  bool ShouldStopSynchronous(Event *event_ptr) override {
+    if (ThreadSP thread_sp = GetThread()) {
+      if (ProcessSP process_sp = thread_sp->GetProcess())
+        return process_sp->GetStopOnSharedLibraryEvents();
+    }
+    return false;
+  }
+};
+
 // StopInfoThreadPlan
 
 class StopInfoThreadPlan : public StopInfo {
@@ -1747,6 +1767,11 @@ StopInfoSP StopInfo::CreateStopReasonProcessorTrace(Thread &thread,
 StopInfoSP StopInfo::CreateStopReasonHistoryBoundary(Thread &thread,
                                                      const char *description) {
   return std::make_shared<StopInfoHistoryBoundary>(thread, description);
+}
+
+StopInfoSP StopInfo::CreateStopReasonDyld(Thread &thread,
+                                          const char *description) {
+  return std::make_shared<StopInfoDyld>(thread, description);
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithExec(Thread &thread) {

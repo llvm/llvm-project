@@ -831,17 +831,30 @@ void OmpStructureChecker::CheckDoacross(
     }
   }
   for (const parser::OmpIteration &iter : vec) {
-    auto &name{std::get<parser::Name>(iter.t)};
+    auto &[name, offset] = iter.t;
     if (!inductionVars.count(name.symbol)) {
       context_.Say(name.source,
           "The iteration vector element '%s' is not an induction variable within the ORDERED loop nest"_err_en_US,
           name.ToString());
+    }
+    if (offset) {
+      // The operation in the offset should be + or -.
+      using IntrinsicOperator = parser::DefinedOperator::IntrinsicOperator;
+      auto &defOp = std::get<parser::DefinedOperator>(offset->t);
+      auto *intOp = std::get_if<IntrinsicOperator>(&defOp.u);
+      if (!intOp ||
+          (*intOp != IntrinsicOperator::Add &&
+              *intOp != IntrinsicOperator::Subtract)) {
+        context_.Say(iter.source,
+            "The operation in the iteration offset must be + or -"_err_en_US);
+      }
     }
   }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  auto leafs{llvm::omp::getLeafConstructsOrSelf(dirStack_.back()->DirId())};
   parser::CharBlock source{GetContext().clauseSource};
   std::string clauseName{
       parser::omp::GetUpperName(llvm::omp::Clause::OMPC_ordered, version)};
@@ -871,6 +884,17 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
             .Attach(source, "%s clause specified here"_en_US, clauseName);
       }
     }
+  }
+
+  // ORDERED is not allowed on DISTRIBUTE, so if it is the only leaf,
+  // a diagnostic has already been emitted.
+  if (leafs.size() > 1 &&
+      llvm::is_contained(leafs, llvm::omp::OMPD_distribute)) {
+    context_.Say(GetContext().clauseSource,
+        "%s clause is not allowed on a compound directive with %s as a constituent"_err_en_US,
+        clauseName,
+        parser::omp::GetUpperName(
+            llvm::omp::Directive::OMPD_distribute, version));
   }
 }
 

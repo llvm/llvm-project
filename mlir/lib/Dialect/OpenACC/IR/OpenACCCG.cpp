@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUBase.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -33,7 +33,6 @@ using namespace mlir;
 using namespace acc;
 
 namespace {
-
 /// Generic helper for single-region OpenACC ops that execute their body once
 /// and then continue after the operation with their results (if any).
 static void
@@ -371,7 +370,6 @@ static void printGPUParallelDimList(AsmPrinter &printer,
   });
   printer << "]";
 }
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -669,9 +667,12 @@ ComputeRegionOp::getKnownLaunchArg(GPUParallelDimAttr parDim) {
 std::optional<uint64_t>
 ComputeRegionOp::getKnownConstantLaunchArg(GPUParallelDimAttr parDim) {
   auto knownParWidth = getKnownLaunchArg(parDim);
-  if (knownParWidth.has_value())
-    return getConstantIntValue(knownParWidth.value());
-  return {};
+  if (!knownParWidth.has_value())
+    return {};
+  std::optional<int64_t> width = getConstantIntValue(knownParWidth.value());
+  if (!width || *width < 0)
+    return {};
+  return static_cast<uint64_t>(*width);
 }
 
 BlockArgument ComputeRegionOp::appendInputArg(Value value) {
@@ -713,6 +714,15 @@ bool ComputeRegionOp::isEffectivelySerial() {
          checkDim(GPUParallelDimAttr::blockXDim(ctx)) &&
          checkDim(GPUParallelDimAttr::blockYDim(ctx)) &&
          checkDim(GPUParallelDimAttr::blockZDim(ctx));
+}
+
+bool ComputeRegionOp::launchesMultipleBlocks() {
+  return llvm::any_of(getLaunchParDims(), [&](GPUParallelDimAttr dim) {
+    if (!dim.isAnyBlock())
+      return false;
+    std::optional<uint64_t> width = getKnownConstantLaunchArg(dim);
+    return !width || *width != 1;
+  });
 }
 
 BlockArgument ComputeRegionOp::parDimToWidth(GPUParallelDimAttr parDim) {
@@ -976,8 +986,7 @@ LogicalResult GPUSharedMemoryOp::verify() {
   auto resultTy = cast<MemRefType>(getResult().getType());
   auto addrSpace =
       dyn_cast_if_present<gpu::AddressSpaceAttr>(resultTy.getMemorySpace());
-  if (!addrSpace ||
-      addrSpace.getValue() != gpu::GPUDialect::getWorkgroupAddressSpace())
+  if (!addrSpace || addrSpace.getValue() != gpu::AddressSpace::Workgroup)
     return emitOpError("result memref must use #gpu.address_space<workgroup>");
 
   return success();

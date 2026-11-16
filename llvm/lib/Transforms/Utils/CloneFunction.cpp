@@ -32,6 +32,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -513,7 +514,11 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
   SmallVector<Type *> ArgTys = llvm::map_to_vector(Args, &Value::getType);
   Function *IFn = Intrinsic::getOrInsertDeclaration(NewFunc->getParent(), CIID,
                                                     OldInst.getType(), ArgTys);
-  return CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
+  CallInst *NewCall =
+      CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
+  if (isa<FPMathOperator>(NewCall))
+    NewCall->copyFastMathFlags(&OldInst);
+  return NewCall;
 }
 
 /// The specified block is found to be reachable, clone it and

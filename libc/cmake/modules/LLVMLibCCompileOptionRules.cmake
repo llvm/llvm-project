@@ -87,7 +87,7 @@ function(_get_compile_options_from_flags output_var)
         list(APPEND compile_options "-D__LIBC_USE_BUILTIN_FMAXF16_FMINF16")
       endif()
       if("FullFP16" IN_LIST LIBC_CPU_FEATURES AND
-        CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+          CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         list(APPEND compile_options
           "SHELL:-Xclang -target-feature -Xclang +fullfp16")
       endif()
@@ -154,7 +154,7 @@ function(_get_compile_options_from_config output_var)
     endif()
   endif()
 
-  if(LIBC_CONF_ERRNO_MODE)
+  if(LIBC_CONF_ERRNO_MODE AND NOT "${LIBC_CONF_ERRNO_MODE}" STREQUAL "LIBC_ERRNO_MODE_DEFAULT")
     libc_add_definition(config_options "LIBC_ERRNO_MODE=${LIBC_CONF_ERRNO_MODE}")
   endif()
 
@@ -210,6 +210,10 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_COPT_SCANF_PROVIDE_ISOC99_ALIASES")
   endif()
 
+  if(LIBC_COPT_PROVIDE_GNU_ALIASES)
+    libc_add_definition(config_options "LIBC_COPT_PROVIDE_GNU_ALIASES")
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction()
 _get_compile_options_from_config(LIBC_COMPILE_OPTIONS_FROM_CONFIG)
@@ -242,6 +246,13 @@ function(_get_common_compile_options_impl output_var)
       # Only add -ffreestanding flag in non-GPU full build mode.
       if(NOT LIBC_TARGET_OS_IS_GPU)
         list(APPEND compile_options "-ffreestanding")
+        # GCC's <xmmintrin.h> unconditionally includes <mm_malloc.h> even with
+        # -ffreestanding, which in turn includes <stdlib.h>. Suppress it by
+        # defining its header guard.
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
+            (LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_X86))
+          list(APPEND compile_options "-D_MM_MALLOC_H_INCLUDED")
+        endif()
       endif()
       list(APPEND compile_options "-DLIBC_FULL_BUILD")
       # Manually disable standard include paths to prevent system headers from
@@ -255,7 +266,7 @@ function(_get_common_compile_options_impl output_var)
       endif()
       # TODO: We should set this unconditionally on Linux.
       if(LIBC_TARGET_OS_IS_LINUX AND
-        (LIBC_CC_SUPPORTS_NOSTDLIBINC OR COMPILER_RESOURCE_DIR))
+          (LIBC_CC_SUPPORTS_NOSTDLIBINC OR COMPILER_RESOURCE_DIR))
         # We use -idirafter to avoid preempting libc's own headers in case the
         # directory (e.g. /usr/include) contains other headers.
         foreach(path IN LISTS LIBC_KERNEL_HEADERS)
@@ -310,6 +321,12 @@ function(_get_common_compile_options_impl output_var)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       # Silence this warning because _Complex is a part of C99.
       list(APPEND compile_options "-fext-numeric-literals")
+      if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "11.0.0")
+        # AllocChecker's operator new overloads inline malloc/aligned_alloc
+        # while C++ forbids marking replaceable operator delete inline, causing
+        # GCC to report false-positive -Wmismatched-new-delete diagnostics.
+        list(APPEND compile_options "-Wno-mismatched-new-delete")
+      endif()
     else()
       list(APPEND compile_options "-Wno-c99-extensions")
       list(APPEND compile_options "-Wno-gnu-imaginary-constant")

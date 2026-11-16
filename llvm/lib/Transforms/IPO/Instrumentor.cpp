@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/Instrumentor.h"
+#include "IPOOptions.h"
 #include "llvm/Transforms/IPO/InstrumentorConfigFile.h"
 #include "llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"
 #include "llvm/Transforms/IPO/InstrumentorStubPrinter.h"
@@ -69,27 +70,12 @@ using namespace llvm::instrumentor;
 
 namespace {
 
-/// The user option to specify an output JSON file to write the configuration.
-static cl::opt<std::string> OutputConfigFile(
-    "instrumentor-write-config-file",
-    cl::desc(
-        "Write the instrumentor configuration into the specified JSON file"),
-    cl::init(""));
-
 /// The user option to specify input JSON files to read the configuration from.
 static cl::list<std::string>
     ConfigFiles("instrumentor-read-config-files",
                 cl::desc("Read the instrumentor configuration from the "
                          "specified JSON files (comma separated)"),
                 cl::CommaSeparated);
-
-/// The user option to specify an input file to read the configuration file
-/// paths from.
-static cl::opt<std::string> ConfigPathsFile(
-    "instrumentor-read-config-paths-file",
-    cl::desc("Read the instrumentor configuration file "
-             "paths from the specified file (newline separated)"),
-    cl::init(""));
 
 /// Set the debug location, if not set, after changing the insertion point of
 /// the IR builder \p IRB.
@@ -331,6 +317,8 @@ bool InstrumentorImpl::shouldInstrumentTarget() {
 bool InstrumentorImpl::shouldInstrumentFunction(Function &Fn) {
   if (Fn.isDeclaration())
     return false;
+  if (Fn.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return false;
   bool RegexMatches = true;
   if (ParsedFunctionRegex.isValid())
     RegexMatches = ParsedFunctionRegex.match(Fn.getName());
@@ -557,6 +545,7 @@ InstrumentorPass::InstrumentorPass(IntrusiveRefCntPtr<vfs::FileSystem> FS,
 PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
                                         InstrumentorIRBuilderTy &IIRB,
                                         bool ReadConfig) {
+  const IPOOptions &Opts = getIPOOptions(M);
   bool Changed = false;
   InstrumentorImpl Impl(IConf, IIRB, M);
 
@@ -564,7 +553,8 @@ PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
   // provided by the user, if not, use the config as is and run the instrumentor
   // once.
   if (ReadConfig)
-    readConfigPathsFile(ConfigPathsFile, ConfigFiles, IIRB.Ctx, *FS);
+    readConfigPathsFile(Opts.instrumentor_read_config_paths_file, ConfigFiles,
+                        IIRB.Ctx, *FS);
 
   bool MultipleConfigs = ConfigFiles.size() > 1;
   unsigned Idx = 0;
@@ -579,11 +569,13 @@ PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
     if (!readConfigFromJSON(IConf, ConfigFile, IIRB.Ctx, *FS))
       continue;
 
-    writeConfigToJSON(IConf,
-                      MultipleConfigs
-                          ? OutputConfigFile + "." + std::to_string(Idx)
-                          : OutputConfigFile,
-                      IIRB.Ctx);
+    writeConfigToJSON(
+        IConf,
+        MultipleConfigs
+            ? (Opts.instrumentor_write_config_file + "." + std::to_string(Idx))
+                  .str()
+            : Opts.instrumentor_write_config_file.str(),
+        IIRB.Ctx);
 
     printRuntimeStub(IConf, IConf.RuntimeStubsFile->getString(), IIRB.Ctx);
 
@@ -986,7 +978,6 @@ static void readValuePack(const Range &R, Value &Pack,
                           function_ref<void(int, Value *)> SetterCB) {
   auto *Fn = IIRB.IRB.GetInsertBlock()->getParent();
   auto &DL = Fn->getDataLayout();
-  SmallVector<Value *> ParameterValues;
   unsigned Offset = 0;
   for (const auto &[Idx, RE] : enumerate(R)) {
     Value *V = getValue(RE);
@@ -1636,7 +1627,6 @@ Value *GlobalVarIO::setAddress(Value &V, Value &NewV,
 
   SmallVector<Use *> Worklist(make_pointer_range(GV.uses()));
   SmallPtrSet<Use *, 32> Done;
-  DenseMap<std::pair<Value *, Function *>, Instruction *> VMap;
   DenseMap<Value *, Instruction *> ConstToInstMap;
   DenseMap<Function *, Instruction *> ReloadMap;
 
@@ -1683,7 +1673,6 @@ Value *GlobalVarIO::setAddress(Value &V, Value &NewV,
     }
   };
 
-  SmallPtrSet<Use *, 8> Visited;
   while (!Worklist.empty()) {
     Use *U = Worklist.pop_back_val();
     if (!Done.insert(U).second)

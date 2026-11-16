@@ -131,6 +131,67 @@ TEST(Numeric, Modulo) {
   EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{-5.0}, Real<4>(-1.0)), -0.0);
 }
 
+// MOD/MODULO with a REAL operand of magnitude exactly 2**63, which is one
+// past the end of the std::int64_t range used by the integer fast path.
+TEST(Numeric, ModRealAtInt64Limit) {
+  // MOD(-2**63, -1.0) used to convert -2**63 to INT64_MIN and evaluate
+  // INT64_MIN / -1, which overflows and raises SIGFPE on x86-64.
+  EXPECT_EQ(RTNAME(ModReal4)(-Real<4>{0x1p63}, Real<4>{-1.0}), 0.0);
+  EXPECT_TRUE(std::signbit(RTNAME(ModReal4)(-Real<4>{0x1p63}, Real<4>{-1.0})));
+  EXPECT_EQ(RTNAME(ModReal8)(-Real<8>{0x1p63}, Real<8>{-1.0}), 0.0);
+  EXPECT_TRUE(std::signbit(RTNAME(ModReal8)(-Real<8>{0x1p63}, Real<8>{-1.0})));
+  // MOD(2**63, 3.0) used to convert 2**63 to a saturated INT64_MAX on
+  // AArch64 and return MOD(INT64_MAX, 3) == 1.0 instead of 2.0.
+  EXPECT_EQ(RTNAME(ModReal4)(Real<4>{0x1p63}, Real<4>{3.0}), 2.0);
+  EXPECT_EQ(RTNAME(ModReal8)(Real<8>{0x1p63}, Real<8>{3.0}), 2.0);
+  // Controls that were already correct and must stay so: the negative
+  // dividend at the same magnitude, and the largest magnitude that still
+  // belongs on the integer fast path.
+  EXPECT_EQ(RTNAME(ModReal4)(-Real<4>{0x1p63}, Real<4>{3.0}), -2.0);
+  EXPECT_EQ(RTNAME(ModReal8)(-Real<8>{0x1p63}, Real<8>{3.0}), -2.0);
+  EXPECT_EQ(RTNAME(ModReal4)(Real<4>{0x1p62}, Real<4>{3.0}), 1.0);
+  EXPECT_EQ(RTNAME(ModReal8)(Real<8>{0x1p62}, Real<8>{3.0}), 1.0);
+  EXPECT_EQ(RTNAME(ModReal8)(-Real<8>{0x1p62}, Real<8>{-1.0}), 0.0);
+  EXPECT_TRUE(std::signbit(RTNAME(ModReal8)(-Real<8>{0x1p62}, Real<8>{-1.0})));
+  // Both operands at magnitude 2**63.  On AArch64, +2**63 used to convert
+  // to a saturated INT64_MAX that round-trips back to 2**63, so these were
+  // computed with 2**63 - 1 in its place and returned 2**63 and -1.
+  EXPECT_EQ(RTNAME(ModReal4)(Real<4>{0x1p63}, -Real<4>{0x1p63}), 0.0);
+  EXPECT_EQ(RTNAME(ModReal8)(Real<8>{0x1p63}, -Real<8>{0x1p63}), 0.0);
+  EXPECT_EQ(RTNAME(ModReal4)(-Real<4>{0x1p63}, Real<4>{0x1p63}), 0.0);
+  EXPECT_TRUE(
+      std::signbit(RTNAME(ModReal4)(-Real<4>{0x1p63}, Real<4>{0x1p63})));
+  EXPECT_EQ(RTNAME(ModReal8)(-Real<8>{0x1p63}, Real<8>{0x1p63}), 0.0);
+  EXPECT_TRUE(
+      std::signbit(RTNAME(ModReal8)(-Real<8>{0x1p63}, Real<8>{0x1p63})));
+}
+
+TEST(Numeric, ModuloRealAtInt64Limit) {
+  EXPECT_EQ(RTNAME(ModuloReal4)(-Real<4>{0x1p63}, Real<4>{-1.0}), 0.0);
+  EXPECT_TRUE(
+      std::signbit(RTNAME(ModuloReal4)(-Real<4>{0x1p63}, Real<4>{-1.0})));
+  EXPECT_EQ(RTNAME(ModuloReal8)(-Real<8>{0x1p63}, Real<8>{-1.0}), 0.0);
+  EXPECT_TRUE(
+      std::signbit(RTNAME(ModuloReal8)(-Real<8>{0x1p63}, Real<8>{-1.0})));
+  EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{0x1p63}, Real<4>{3.0}), 2.0);
+  EXPECT_EQ(RTNAME(ModuloReal8)(Real<8>{0x1p63}, Real<8>{3.0}), 2.0);
+  // MODULO differs from MOD here: the result takes the sign of P, so
+  // MODULO(-2**63, 3.0) is MOD(-2**63, 3.0) + 3.0 == 1.0.
+  EXPECT_EQ(RTNAME(ModuloReal4)(-Real<4>{0x1p63}, Real<4>{3.0}), 1.0);
+  EXPECT_EQ(RTNAME(ModuloReal8)(-Real<8>{0x1p63}, Real<8>{3.0}), 1.0);
+  EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{0x1p62}, Real<4>{3.0}), 1.0);
+  EXPECT_EQ(RTNAME(ModuloReal8)(Real<8>{0x1p62}, Real<8>{3.0}), 1.0);
+  EXPECT_EQ(RTNAME(ModuloReal8)(-Real<8>{0x1p62}, Real<8>{3.0}), 2.0);
+  // P == 2**63 with a negative dividend.  On AArch64 these used to be
+  // computed with P == 2**63 - 1: MODULO(-2**63, 2**63) returned 2**63 and
+  // MODULO(-(2**63 - 1024), 2**63), exactly 1024, returned 1023.
+  EXPECT_EQ(RTNAME(ModuloReal4)(-Real<4>{0x1p63}, Real<4>{0x1p63}), 0.0);
+  EXPECT_EQ(RTNAME(ModuloReal8)(-Real<8>{0x1p63}, Real<8>{0x1p63}), 0.0);
+  EXPECT_EQ(
+      RTNAME(ModuloReal8)(-Real<8>{0x1.fffffffffffffp62}, Real<8>{0x1p63}),
+      1024.0);
+}
+
 TEST(Numeric, Nearest) {
   EXPECT_EQ(RTNAME(Nearest4)(Real<4>{0}, true),
       numeric_limits<Real<4>>::denorm_min());
@@ -271,6 +332,15 @@ TEST(Numeric, FPowI) {
   EXPECT_EQ(RTNAME(FPow4i)(Real<4>{0.5}, Int<4>{-1}), Real<4>{2});
   EXPECT_EQ(RTNAME(FPow4i)(Real<4>{-3}, Int<4>{3}), Real<4>{-27});
   EXPECT_EQ(RTNAME(FPow4i)(Real<4>{-2}, Int<4>{-3}), Real<4>{-0.125});
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{3}, Int<4>{-2}), Real<4>{1} / Real<4>{9});
+  EXPECT_EQ(
+      RTNAME(FPow4i)(Real<4>{7}, Int<4>{-5}), Real<4>{1} / Real<4>{16807});
+  EXPECT_EQ(
+      RTNAME(FPow4i)(Real<4>{2}, Int<4>{-133}), std::ldexp(Real<4>{1}, -133));
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{3}, Int<4>{-88}),
+      static_cast<Real<4>>(std::pow(3.0f, -88.0f)));
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{2}, std::numeric_limits<Int<4>>::min()),
+      Real<4>{0});
 
   EXPECT_EQ(RTNAME(FPow4k)(Real<4>{0}, Int<8>{0}), Real<4>{1});
   EXPECT_EQ(RTNAME(FPow4k)(Real<4>{0.3}, Int<8>{0}), Real<4>{1});
@@ -278,6 +348,8 @@ TEST(Numeric, FPowI) {
   EXPECT_EQ(RTNAME(FPow4k)(Real<4>{0.5}, Int<8>{-1}), Real<4>{2});
   EXPECT_EQ(RTNAME(FPow4k)(Real<4>{-3}, Int<8>{3}), Real<4>{-27});
   EXPECT_EQ(RTNAME(FPow4k)(Real<4>{-2}, Int<8>{-3}), Real<4>{-0.125});
+  EXPECT_EQ(
+      RTNAME(FPow4k)(Real<4>{2}, Int<8>{-133}), std::ldexp(Real<4>{1}, -133));
 
   EXPECT_EQ(RTNAME(FPow8i)(Real<8>{0}, Int<4>{0}), Real<8>{1});
   EXPECT_EQ(RTNAME(FPow8i)(Real<8>{0.3}, Int<4>{0}), Real<8>{1});
@@ -285,6 +357,10 @@ TEST(Numeric, FPowI) {
   EXPECT_EQ(RTNAME(FPow8i)(Real<8>{0.5}, Int<4>{-1}), Real<8>{2});
   EXPECT_EQ(RTNAME(FPow8i)(Real<8>{-3}, Int<4>{3}), Real<8>{-27});
   EXPECT_EQ(RTNAME(FPow8i)(Real<8>{-2}, Int<4>{-3}), Real<8>{-0.125});
+  EXPECT_EQ(
+      RTNAME(FPow8i)(Real<8>{2}, Int<4>{-1070}), std::ldexp(Real<8>{1}, -1070));
+  EXPECT_EQ(RTNAME(FPow8i)(Real<8>{2}, std::numeric_limits<Int<4>>::min()),
+      Real<8>{0});
 
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{0}, Int<8>{0}), Real<8>{1});
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{0.3}, Int<8>{0}), Real<8>{1});
@@ -292,6 +368,8 @@ TEST(Numeric, FPowI) {
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{0.5}, Int<8>{-1}), Real<8>{2});
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{-3}, Int<8>{3}), Real<8>{-27});
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{-2}, Int<8>{-3}), Real<8>{-0.125});
+  EXPECT_EQ(RTNAME(FPow8k)(Real<8>{2}, std::numeric_limits<Int<8>>::min()),
+      Real<8>{0});
 
 #if HAS_FLOAT80
   EXPECT_EQ(RTNAME(FPow10i)(Real<10>{0}, Int<4>{0}), Real<10>{1});

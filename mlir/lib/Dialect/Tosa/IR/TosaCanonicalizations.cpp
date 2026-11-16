@@ -1921,12 +1921,14 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   // synthesize a zero shift for other data type.
   int32_t shift = 0;
   if (resultETy.isInteger(32)) {
-    ElementsAttr shift_elem;
+    ElementsAttr shiftElem;
     if (getShift().getImpl()) {
-      if (!matchPattern(getShift(), m_Constant(&shift_elem)))
+      if (!matchPattern(getShift(), m_Constant(&shiftElem)))
         // cannot be folded when the shift value is unknown.
         return {};
-      shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+      shift = shiftElem.getValues<IntegerAttr>()[0].getInt();
+      if (shift < 0 || shift > 63)
+        return {};
     }
   }
 
@@ -2301,7 +2303,7 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
     }
 
     if (sizeMatchesInput)
-      return getInput1();
+      return foldToInputIfTypeMatches(getType(), getInput1());
   }
 
   // The following checks require the input to be a constant

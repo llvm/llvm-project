@@ -50,21 +50,21 @@ private:
   streambuf_type* __sbuf_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator(ostream_type& __s) _NOEXCEPT : __sbuf_(__s.rdbuf()) {}
-  _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator(streambuf_type* __s) _NOEXCEPT : __sbuf_(__s) {}
-  _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator=(_CharT __c) {
+  ostreambuf_iterator(ostream_type& __s) _NOEXCEPT : __sbuf_(__s.rdbuf()) {}
+  ostreambuf_iterator(streambuf_type* __s) _NOEXCEPT : __sbuf_(__s) {}
+  ostreambuf_iterator& operator=(_CharT __c) {
     if (__sbuf_ && traits_type::eq_int_type(__sbuf_->sputc(__c), traits_type::eof()))
       __sbuf_ = nullptr;
     return *this;
   }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator*() { return *this; }
-  _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator++() { return *this; }
-  _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator++(int) { return *this; }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool failed() const _NOEXCEPT { return __sbuf_ == nullptr; }
+  [[__nodiscard__]] ostreambuf_iterator& operator*() { return *this; }
+  ostreambuf_iterator& operator++() { return *this; }
+  ostreambuf_iterator& operator++(int) { return *this; }
+  [[__nodiscard__]] bool failed() const _NOEXCEPT { return __sbuf_ == nullptr; }
 
 #if _LIBCPP_HAS_LOCALIZATION
   template <class _Ch, class _Tr>
-  friend _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator<_Ch, _Tr> __pad_and_output(
+  friend ostreambuf_iterator<_Ch, _Tr> __pad_and_output(
       ostreambuf_iterator<_Ch, _Tr> __s, const _Ch* __ob, const _Ch* __op, const _Ch* __oe, ios_base& __iob, _Ch __fl);
 #endif // _LIBCPP_HAS_LOCALIZATION
 
@@ -78,7 +78,7 @@ struct __specialized_algorithm<_Algorithm::__copy,
                                __single_iterator<ostreambuf_iterator<_CharT, _Traits> > > {
   static const bool __has_algorithm = is_same<const _CharT, const _InCharT>::value;
 
-  _LIBCPP_HIDE_FROM_ABI static __in_out_result<_InCharT*, ostreambuf_iterator<_CharT, _Traits> >
+  static __in_out_result<_InCharT*, ostreambuf_iterator<_CharT, _Traits> >
   operator()(_InCharT* __first, _InCharT* __last, ostreambuf_iterator<_CharT, _Traits> __result) {
     auto __size = __last - __first;
     if (__result.__sbuf_ && __size > 0) {

@@ -1099,7 +1099,7 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
     const GlobalValue *GV = Info.Callee.getGlobal();
     const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
-        (!TT.isOSWindows() || TT.isOSBinFormatELF() ||
+        (!TT.isOSWindowsOrUEFI() || TT.isOSBinFormatELF() ||
          TT.isOSBinFormatMachO())) {
       LLVM_DEBUG(dbgs() << "... Cannot tail call externally-defined function "
                            "with weak linkage for this OS.\n");
@@ -1554,6 +1554,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                              MF.getTarget().Options.GuaranteedTailCallOpt)
           ? alignTo(Assigner.StackSize, 16)
           : 0;
+
+  // See AArch64FunctionInfo::HasWinCallToCalleePopFunction.
+  if (Subtarget.isTargetWindows() && CalleePopBytes != 0)
+    MF.getInfo<AArch64FunctionInfo>()->setHasWinCallToCalleePopFunction(true);
 
   CallSeqStart.addImm(Assigner.StackSize).addImm(0);
   MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)

@@ -216,3 +216,16 @@ S12 f12() {
   S12 x((int*)0);
   return func12(x);
 }
+
+// GH237188
+// Ignore deleted template constructor
+// CHECK: define dso_local i32 @"?f13@@YA?AUS13@@PEAU1@@Z"(ptr noundef {{.*}})
+// CHECK: call i32 @"?func13@@YA?AUS13@@U1@@Z"(i32 {{.*}})
+struct S13 {
+  template<typename T> S13(T*) = delete;
+  int x;
+};
+S13 func13(S13 x);
+S13 f13(S13 *p) {
+  return func13(*p);
+}

@@ -109,13 +109,13 @@ Value *BundleVec::createVectorInstr(BndlRef<Value *> Bndl,
           BinOp0->getOpcode(), LHS, RHS, BinOp0, WhereIt, Ctx, "Vec");
     }
     case Instruction::Opcode::Load: {
+      auto Align = VecUtils::getVecAlignment(Bndl);
       auto *Ld0 = cast<LoadInst>(Bndl[0]);
       Value *Ptr = Ld0->getPointerOperand();
-      return LoadInst::create(VecTy, Ptr, Ld0->getAlign(), WhereIt, Ctx,
-                              "VecL");
+      return LoadInst::create(VecTy, Ptr, Align, WhereIt, Ctx, "VecL");
     }
     case Instruction::Opcode::Store: {
-      auto Align = cast<StoreInst>(Bndl[0])->getAlign();
+      auto Align = VecUtils::getVecAlignment(Bndl);
       Value *Val = Operands[0];
       Value *Ptr = Operands[1];
       return StoreInst::create(Val, Ptr, Align, WhereIt, Ctx);
@@ -511,7 +511,7 @@ bool BundleVec::tryVectorize(BndlRef<Value *> Bndl,
 }
 
 bool BundleVec::runOnRegion(Region &Rgn, const Analyses &A) {
-  Opts = &Rgn.getContext().getLibraryOptions().get<VectorizeOptions>();
+  Opts = &getVectorizeOptions(Rgn.getContext());
   const auto &SeedSlice = Rgn.getAux();
   if (SeedSlice.size() < 2)
     return false;
