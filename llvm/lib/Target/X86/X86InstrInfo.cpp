@@ -4192,8 +4192,8 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
 }
 
 /// Test if the given register is a physical h register.
-static bool isHReg(Register Reg) {
-  return Reg.isPhysical() && X86::GR8_ABCD_HRegClass.contains(Reg);
+static bool isHReg(MCRegister Reg) {
+  return X86::GR8_ABCD_HRegClass.contains(Reg);
 }
 
 // Try and copy between VR128/VR64 and GR64 registers.
@@ -4406,7 +4406,8 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
     if (STI.is64Bit())
       // Copying to or from a physical H register on x86-64 requires a NOREX
       // move.  Otherwise use a normal move.
-      if (isHReg(Reg) || X86::GR8_ABCD_HRegClass.hasSubClassEq(RC))
+      if ((Reg.isPhysical() && isHReg(Reg)) ||
+          X86::GR8_ABCD_HRegClass.hasSubClassEq(RC))
         return Load ? X86::MOV8rm_NOREX : X86::MOV8mr_NOREX;
     return Load ? X86::MOV8rm : X86::MOV8mr;
   case 2:
