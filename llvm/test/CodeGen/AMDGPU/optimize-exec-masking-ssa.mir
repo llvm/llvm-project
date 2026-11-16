@@ -3,34 +3,8 @@
 # RUN:   -amdgpu-exec-mask-opt-ssa-mode -amdgpu-opt-exec-mask-pre-ra=false \
 # RUN:   -run-pass si-optimize-exec-masking-pre-ra %s -o - | FileCheck -check-prefix=GCN %s
 
-# copied from optimize-exec-masking-pre-ra.mir
----
-name: cndmask_cmp_cbranch_fold
-tracksRegLiveness: true
-isSSA:           true
-body:             |
-  ; GCN-LABEL: name: cndmask_cmp_cbranch_fold
-  ; GCN: bb.0:
-  ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $vcc = S_ANDN2_B64 $exec, undef %1:sreg_64_xexec, implicit-def dead $scc
-  ; GCN-NEXT:   S_CBRANCH_VCCZ %bb.1, implicit $vcc
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1:
-  bb.0:
-
-    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, undef %0:sreg_64_xexec, implicit $exec
-    V_CMP_NE_U32_e32 1, %1, implicit-def $vcc, implicit $exec
-    $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
-    S_CBRANCH_VCCZ %bb.1, implicit $vcc
-
-  bb.1:
-
-...
-
 ---
 name:            cndmask_cmp_cbranch_fold_phi
-tracksRegLiveness: true
 isSSA:           true
 body:             |
   ; GCN-LABEL: name: cndmask_cmp_cbranch_fold_phi
@@ -90,7 +64,6 @@ body:             |
 
 ---
 name:            optimize_else_branch_with_phi
-tracksRegLiveness: true
 isSSA:           true
 body: |
   ; GCN-LABEL: name: optimize_else_branch_with_phi
