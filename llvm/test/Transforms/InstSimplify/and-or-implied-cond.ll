@@ -608,4 +608,47 @@ define i1 @neg_or_slt_ult_sext_both(i8 %a, i16 %b) {
   ret i1 %or
 }
 
+define i1 @neg_or_slt_ult_ptrmask_lhs(ptr %p, ptr %y) {
+; CHECK-LABEL: @neg_or_slt_ult_ptrmask_lhs(
+; CHECK-NEXT:    [[X:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P:%.*]], i64 9223372036854775807)
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt ptr [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ult ptr [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[SLT]], [[ULT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %x = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 9223372036854775807)
+  %slt = icmp slt ptr %x, %y
+  %ult = icmp ult ptr %x, %y
+  %or = or i1 %slt, %ult
+  ret i1 %or
+}
+
+define <2 x i1> @neg_or_slt_ult_ptrmask_lhs_vec(<2 x ptr> %p, <2 x ptr> %y) {
+; CHECK-LABEL: @neg_or_slt_ult_ptrmask_lhs_vec(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P:%.*]], <2 x i64> splat (i64 9223372036854775807))
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt <2 x ptr> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ult <2 x ptr> [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[SLT]], [[ULT]]
+; CHECK-NEXT:    ret <2 x i1> [[OR]]
+;
+  %x = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %p, <2 x i64> splat (i64 9223372036854775807))
+  %slt = icmp slt <2 x ptr> %x, %y
+  %ult = icmp ult <2 x ptr> %x, %y
+  %or = or <2 x i1> %slt, %ult
+  ret <2 x i1> %or
+}
+
+define i1 @neg_or_ult_slt_ptr_const_rhs(ptr %x) {
+; CHECK-LABEL: @neg_or_ult_slt_ptr_const_rhs(
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ult ptr [[X:%.*]], inttoptr (i64 2147483648 to ptr)
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt ptr [[X]], inttoptr (i64 2147483648 to ptr)
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ULT]], [[SLT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %ult = icmp ult ptr %x, inttoptr (i64 2147483648 to ptr)
+  %slt = icmp slt ptr %x, inttoptr (i64 2147483648 to ptr)
+  %or = or i1 %ult, %slt
+  ret i1 %or
+}
+
 declare i1 @llvm.is.constant.i1(i1)

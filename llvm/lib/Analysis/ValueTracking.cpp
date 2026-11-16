@@ -10135,7 +10135,8 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
             ICmpInst::isImpliedByMatchingCmp(LPred, RPred))
       return Res;
     if (!ICmpInst::isRelational(LPred) || !ICmpInst::isRelational(RPred) ||
-        ICmpInst::isSigned(LPred) == ICmpInst::isSigned(RPred))
+        ICmpInst::isSigned(LPred) == ICmpInst::isSigned(RPred) ||
+        !L0->getType()->isIntOrIntVectorTy())
       return std::nullopt;
     // If L0 is non-negative, L0 s< L1 implies L0 u< L1 and L0 u> L1 implies
     // L0 s> L1 (also for the non-strict forms). If L1 is non-negative, the
