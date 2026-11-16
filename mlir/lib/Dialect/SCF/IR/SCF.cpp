@@ -1772,9 +1772,9 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
 
 /// Replace a read of the init value of a shared_outs in the body with a read of
 /// the tied block argument, when the read is a tensor.extract_slice of a tile
-/// that the iteration also writes with a tensor.parallel_insert_slice. This lets
-/// bufferization read and write the tile in place, without copying the whole
-/// tensor.
+/// that the iteration also writes with a tensor.parallel_insert_slice. This
+/// lets bufferization read and write the tile in place, without copying the
+/// whole tensor.
 ///
 /// Reads of other tiles are left alone, because other iterations may update
 /// them in the block argument but not in the init value.
