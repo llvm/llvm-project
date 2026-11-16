@@ -445,6 +445,15 @@ normal input. Also produce a carry output in addition to the normal result.
 %4:_(s32), %5:_(s1) = G_UADDE %0, %1, %3:_(s1)
 ```
 
+### G_UMULL, G_SMULL
+
+Multiply two numbers at twice the incoming bit width (unsigned or signed).
+
+```none
+  %2:_(s64) = G_SMULL %0:_(s32), %1
+  %2:_(s64) = G_UMULL %0:_(s32), %1
+```
+
 ### G_UMULH, G_SMULH
 
 Multiply two numbers at twice the incoming bit width (unsigned or signed) and

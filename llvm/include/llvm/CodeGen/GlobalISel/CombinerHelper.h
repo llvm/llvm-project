@@ -305,6 +305,8 @@ public:
   /// Replace shuffle of build_vector with a build_vector.
   LLVM_ABI void applyCombineShuffleOfBuildVector(MachineInstr &MI) const;
 
+  LLVM_ABI void applyCombineTruncOfShuffle(MachineInstr &MI) const;
+
   /// Combine G_BUILD_VECTOR(G_UNMERGE(G_BITCAST), Undef) to
   /// G_BITCAST(G_BUILD_VECTOR(..))
   LLVM_ABI bool
@@ -798,6 +800,16 @@ public:
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   LLVM_ABI bool matchUMulHToLShr(MachineInstr &MI) const;
   LLVM_ABI void applyUMulHToLShr(MachineInstr &MI) const;
+
+  // G_SMULL/G_UMULL
+  LLVM_ABI bool
+  matchExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    GISelValueTracking *KB,
+                    std::tuple<bool, Register, Register> &MatchInfo) const;
+  LLVM_ABI void
+  applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &B, GISelChangeObserver &Observer,
+                    std::tuple<bool, Register, Register> &MatchInfo) const;
 
   // Combine trunc(smin(smax(x, C1), C2)) -> truncssat_s(x)
   // or      trunc(smax(smin(x, C2), C1)) -> truncssat_s(x).
