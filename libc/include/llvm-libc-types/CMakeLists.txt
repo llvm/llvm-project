@@ -208,6 +208,16 @@ add_header(
     .struct_ipc_perm
     .time_t
 )
+add_header(
+  struct_shmid_ds
+  HDR struct_shmid_ds.h
+  DEPENDS
+    .pid_t
+    .shmatt_t
+    .size_t
+    .struct_ipc_perm
+    .time_t
+)
 add_header(struct_timeval HDR struct_timeval.h DEPENDS .suseconds_t .time_t)
 add_header(struct_itimerval HDR struct_itimerval.h DEPENDS .struct_timeval)
 add_header(struct_rusage HDR struct_rusage.h DEPENDS .struct_timeval)
@@ -307,6 +317,7 @@ add_type_header(
     struct_ifreq.h
 )
 add_header(struct_if_nameindex HDR struct_if_nameindex.h)
+add_header(struct_ifaddrs HDR struct_ifaddrs.h DEPENDS .struct_sockaddr)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
 add_header(struct_linger HDR struct_linger.h)
 add_header(struct_ucred HDR struct_ucred.h DEPENDS .pid_t .uid_t .gid_t)
@@ -369,6 +380,7 @@ add_header(
 )
 add_header(locale_t HDR locale_t.h)
 add_header(struct_lconv HDR struct_lconv.h)
+add_header(struct_mallinfo2 HDR struct_mallinfo2.h DEPENDS .size_t)
 add_header(int_hk_t HDR int_hk_t.h)
 add_header(int_hr_t HDR int_hr_t.h)
 add_header(int_k_t HDR int_k_t.h)

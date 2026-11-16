@@ -15,7 +15,7 @@ define void @memset_pattern_i128_len1_dynvalue(ptr align 16 %a, i128 %value) {
 ; CHECK-NEXT:    br label [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY:%.*]]
 ; CHECK:       memset.pattern-expansion-residual-body:
 ; CHECK-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i128, ptr [[A:%.*]], i64 [[RESIDUAL_LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [16 x i8], ptr [[A:%.*]], i64 [[RESIDUAL_LOOP_INDEX]]
 ; CHECK-NEXT:    store i128 [[VALUE:%.*]], ptr [[TMP1]], align 16
 ; CHECK-NEXT:    [[TMP2]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 1
@@ -32,7 +32,7 @@ define void @memset_pattern_i128_len1(ptr align 16 %a) {
 ; CHECK-NEXT:    br label [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY:%.*]]
 ; CHECK:       memset.pattern-expansion-residual-body:
 ; CHECK-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i128, ptr [[A:%.*]], i64 [[RESIDUAL_LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [16 x i8], ptr [[A:%.*]], i64 [[RESIDUAL_LOOP_INDEX]]
 ; CHECK-NEXT:    store i128 -113427455635030943652277463699152839203, ptr [[TMP1]], align 16
 ; CHECK-NEXT:    [[TMP2]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 1
@@ -49,7 +49,7 @@ define void @memset_pattern_i128_constlen_mainloop_and_residual_taken(ptr align 
 ; DEFAULT-NEXT:    br label [[MEMSET_PATTERN_EXPANSION_MAIN_BODY:%.*]]
 ; DEFAULT:       memset.pattern-expansion-main-body:
 ; DEFAULT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr [[A:%.*]], i64 [[LOOP_INDEX]]
+; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [256 x i8], ptr [[A:%.*]], i64 [[LOOP_INDEX]]
 ; DEFAULT-NEXT:    store <64 x i32> bitcast (<16 x i128> splat (i128 -113427455635030943652277463699152839203) to <64 x i32>), ptr [[TMP1]], align 16
 ; DEFAULT-NEXT:    [[TMP2]] = add i64 [[LOOP_INDEX]], 16
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 16
@@ -57,7 +57,7 @@ define void @memset_pattern_i128_constlen_mainloop_and_residual_taken(ptr align 
 ; DEFAULT:       memset.pattern-expansion-residual-body:
 ; DEFAULT-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ], [ [[TMP6:%.*]], [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = add i64 16, [[RESIDUAL_LOOP_INDEX]]
-; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i128, ptr [[A]], i64 [[TMP4]]
+; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [16 x i8], ptr [[A]], i64 [[TMP4]]
 ; DEFAULT-NEXT:    store i128 -113427455635030943652277463699152839203, ptr [[TMP5]], align 16
 ; DEFAULT-NEXT:    [[TMP6]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[TMP6]], 3
@@ -69,7 +69,7 @@ define void @memset_pattern_i128_constlen_mainloop_and_residual_taken(ptr align 
 ; UNROLL2-NEXT:    br label [[MEMSET_PATTERN_EXPANSION_MAIN_BODY:%.*]]
 ; UNROLL2:       memset.pattern-expansion-main-body:
 ; UNROLL2-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; UNROLL2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i32>, ptr [[A:%.*]], i64 [[LOOP_INDEX]]
+; UNROLL2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [32 x i8], ptr [[A:%.*]], i64 [[LOOP_INDEX]]
 ; UNROLL2-NEXT:    store <8 x i32> bitcast (<2 x i128> splat (i128 -113427455635030943652277463699152839203) to <8 x i32>), ptr [[TMP1]], align 16
 ; UNROLL2-NEXT:    [[TMP2]] = add i64 [[LOOP_INDEX]], 2
 ; UNROLL2-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 18
@@ -77,7 +77,7 @@ define void @memset_pattern_i128_constlen_mainloop_and_residual_taken(ptr align 
 ; UNROLL2:       memset.pattern-expansion-residual-body:
 ; UNROLL2-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ], [ [[TMP6:%.*]], [[MEMSET_PATTERN_POST_EXPANSION]] ]
 ; UNROLL2-NEXT:    [[TMP4:%.*]] = add i64 18, [[RESIDUAL_LOOP_INDEX]]
-; UNROLL2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i128, ptr [[A]], i64 [[TMP4]]
+; UNROLL2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [16 x i8], ptr [[A]], i64 [[TMP4]]
 ; UNROLL2-NEXT:    store i128 -113427455635030943652277463699152839203, ptr [[TMP5]], align 16
 ; UNROLL2-NEXT:    [[TMP6]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
 ; UNROLL2-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[TMP6]], 1
@@ -94,7 +94,8 @@ define void @memset_pattern_i128_len1_nz_as(ptr addrspace(3) align 16 %a) {
 ; CHECK-NEXT:    br label [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY:%.*]]
 ; CHECK:       memset.pattern-expansion-residual-body:
 ; CHECK-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i128, ptr addrspace(3) [[A:%.*]], i64 [[RESIDUAL_LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[RESIDUAL_LOOP_INDEX]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(3) [[A:%.*]], i32 [[TMP4]]
 ; CHECK-NEXT:    store i128 -113427455635030943652277463699152839203, ptr addrspace(3) [[TMP1]], align 16
 ; CHECK-NEXT:    [[TMP2]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 1
@@ -111,7 +112,7 @@ define void @memset_pattern_i128_len1_no_align(ptr %a) {
 ; CHECK-NEXT:    br label [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY:%.*]]
 ; CHECK:       memset.pattern-expansion-residual-body:
 ; CHECK-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i128, ptr [[A:%.*]], i64 [[RESIDUAL_LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [16 x i8], ptr [[A:%.*]], i64 [[RESIDUAL_LOOP_INDEX]]
 ; CHECK-NEXT:    store i128 -113427455635030943652277463699152839203, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP2]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 1
@@ -128,7 +129,7 @@ define void @memset_pattern_i128_len16(ptr align 16 %a) {
 ; DEFAULT-NEXT:    br label [[MEMSET_PATTERN_EXPANSION_MAIN_BODY:%.*]]
 ; DEFAULT:       memset.pattern-expansion-main-body:
 ; DEFAULT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <64 x i32>, ptr [[A:%.*]], i64 [[LOOP_INDEX]]
+; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [256 x i8], ptr [[A:%.*]], i64 [[LOOP_INDEX]]
 ; DEFAULT-NEXT:    store <64 x i32> bitcast (<16 x i128> splat (i128 -113427455635030943652277463699152839203) to <64 x i32>), ptr [[TMP1]], align 16
 ; DEFAULT-NEXT:    [[TMP2]] = add i64 [[LOOP_INDEX]], 16
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 16
@@ -140,7 +141,7 @@ define void @memset_pattern_i128_len16(ptr align 16 %a) {
 ; UNROLL2-NEXT:    br label [[MEMSET_PATTERN_EXPANSION_MAIN_BODY:%.*]]
 ; UNROLL2:       memset.pattern-expansion-main-body:
 ; UNROLL2-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; UNROLL2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i32>, ptr [[A:%.*]], i64 [[LOOP_INDEX]]
+; UNROLL2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [32 x i8], ptr [[A:%.*]], i64 [[LOOP_INDEX]]
 ; UNROLL2-NEXT:    store <8 x i32> bitcast (<2 x i128> splat (i128 -113427455635030943652277463699152839203) to <8 x i32>), ptr [[TMP1]], align 16
 ; UNROLL2-NEXT:    [[TMP2]] = add i64 [[LOOP_INDEX]], 2
 ; UNROLL2-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 16
@@ -158,7 +159,7 @@ define void @memset_pattern_i128_dynlen(ptr align 16 %a, i64 %len) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[MEMSET_PATTERN_EXPANSION_MAIN_BODY:%.*]], label [[MEMSET_PATTERN_POST_EXPANSION:%.*]]
 ; CHECK:       memset.pattern-expansion-main-body:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i128, ptr [[A:%.*]], i64 [[LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [16 x i8], ptr [[A:%.*]], i64 [[LOOP_INDEX]]
 ; CHECK-NEXT:    store i128 -113427455635030943652277463699152839203, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[LEN]]
@@ -176,7 +177,8 @@ define void @memset_pattern_i128_dynlen_nz_as(ptr addrspace(3) align 16 %a, i64 
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[MEMSET_PATTERN_EXPANSION_MAIN_BODY:%.*]], label [[MEMSET_PATTERN_POST_EXPANSION:%.*]]
 ; CHECK:       memset.pattern-expansion-main-body:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i128, ptr addrspace(3) [[A:%.*]], i64 [[LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[LOOP_INDEX]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(3) [[A:%.*]], i32 [[TMP5]]
 ; CHECK-NEXT:    store i128 -113427455635030943652277463699152839203, ptr addrspace(3) [[TMP2]], align 16
 ; CHECK-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[LEN]]
@@ -196,7 +198,7 @@ define void @memset_pattern_i32_dynlen(ptr align 16 %a, i64 %len) {
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MEMSET_PATTERN_EXPANSION_MAIN_BODY:%.*]], label [[MEMSET_PATTERN_EXPANSION_RESIDUAL_COND:%.*]]
 ; CHECK:       memset.pattern-expansion-main-body:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, ptr [[A:%.*]], i64 [[LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [16 x i8], ptr [[A:%.*]], i64 [[LOOP_INDEX]]
 ; CHECK-NEXT:    store <4 x i32> splat (i32 -1430532899), ptr [[TMP4]], align 16
 ; CHECK-NEXT:    [[TMP5]] = add i64 [[LOOP_INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[TMP2]]
@@ -207,7 +209,7 @@ define void @memset_pattern_i32_dynlen(ptr align 16 %a, i64 %len) {
 ; CHECK:       memset.pattern-expansion-residual-body:
 ; CHECK-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[MEMSET_PATTERN_EXPANSION_RESIDUAL_COND]] ], [ [[TMP10:%.*]], [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP2]], [[RESIDUAL_LOOP_INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[TMP8]]
 ; CHECK-NEXT:    store i32 -1430532899, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP10]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i64 [[TMP10]], [[TMP1]]
@@ -229,7 +231,7 @@ define void @memset_pattern_i32_dynval_dynlen(ptr align 16 %a, i32 %val, i64 %le
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MEMSET_PATTERN_EXPANSION_MAIN_BODY:%.*]], label [[MEMSET_PATTERN_EXPANSION_RESIDUAL_COND:%.*]]
 ; CHECK:       memset.pattern-expansion-main-body:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, ptr [[A:%.*]], i64 [[LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [16 x i8], ptr [[A:%.*]], i64 [[LOOP_INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[SETVALUE_SPLAT_SPLAT]], ptr [[TMP4]], align 16
 ; CHECK-NEXT:    [[TMP5]] = add i64 [[LOOP_INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[TMP2]]
@@ -240,7 +242,7 @@ define void @memset_pattern_i32_dynval_dynlen(ptr align 16 %a, i32 %val, i64 %le
 ; CHECK:       memset.pattern-expansion-residual-body:
 ; CHECK-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[MEMSET_PATTERN_EXPANSION_RESIDUAL_COND]] ], [ [[TMP10:%.*]], [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP2]], [[RESIDUAL_LOOP_INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[TMP8]]
 ; CHECK-NEXT:    store i32 [[VAL]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP10]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i64 [[TMP10]], [[TMP1]]
@@ -260,7 +262,7 @@ define void @memset_pattern_i96_dynval_dynlen(ptr align 16 %a, i96 %val, i64 %le
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[MEMSET_PATTERN_EXPANSION_MAIN_BODY:%.*]], label [[MEMSET_PATTERN_POST_EXPANSION:%.*]]
 ; CHECK:       memset.pattern-expansion-main-body:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i96, ptr [[A:%.*]], i64 [[LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [16 x i8], ptr [[A:%.*]], i64 [[LOOP_INDEX]]
 ; CHECK-NEXT:    store i96 [[VAL:%.*]], ptr [[TMP2]], align 16
 ; CHECK-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[LEN]]

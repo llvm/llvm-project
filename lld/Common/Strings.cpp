@@ -34,7 +34,13 @@ SingleStringMatcher::SingleStringMatcher(StringRef Pattern)
       error(toString(Glob.takeError()) + ": " + Pattern);
       return;
     }
-    GlobPatternMatcher = *Glob;
+    // A pattern without metacharacters is all prefix.
+    if (Glob->prefix().size() == Pattern.size()) {
+      ExactMatch = true;
+      ExactPattern = Pattern;
+    } else {
+      GlobPatternMatcher = std::move(*Glob);
+    }
   }
 }
 

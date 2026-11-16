@@ -1329,17 +1329,21 @@ define i32 @PR143456(ptr %p0, ptr %p1) {
   ret i32 %res
 }
 
-; FIXME: combineBasicSADPattern didn't account for halving in vector sizes every iteration.
+; combineBasicSADPattern didn't account for halving in vector sizes every iteration.
 define i32 @PR239204(<16 x i8> %a, <16 x i8> %b) {
 ; SSE2-LABEL: PR239204:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psadbw %xmm1, %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSE2-NEXT:    paddq %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: PR239204:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
   %max = call <16 x i8> @llvm.umax.v16i8(<16 x i8> %a, <16 x i8> %b)

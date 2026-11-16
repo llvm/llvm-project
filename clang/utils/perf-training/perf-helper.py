@@ -73,11 +73,9 @@ def merge_fdata(args):
             + "\tMerges all fdata files from path into output."
         )
         return 1
-    inputs = findFilesWithExtension(args[2], "fdata")
-    subprocess.check_call([args[0], inputs, "-o", args[1]])
-    # Remove input fdata files to save space.
-    for filename in inputs:
-        os.remove(filename)
+    cmd = [args[0], "-o", args[1]]
+    cmd.extend(findFilesWithExtension(args[2], "fdata"))
+    subprocess.check_call(cmd)
     return 0
 
 

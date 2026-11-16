@@ -13,7 +13,6 @@
 name:            check_constrain
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 jumpTable:
   kind:            block-address
   entries:

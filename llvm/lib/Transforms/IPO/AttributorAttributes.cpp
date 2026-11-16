@@ -7822,10 +7822,11 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
     IRPosition::Kind Kind = IRP.getPositionKind();
     if (Kind == IRPosition::IRP_CALL_SITE ||
         Kind == IRPosition::IRP_CALL_SITE_ARGUMENT) {
-      if (auto *I = dyn_cast<Instruction>(&IRP.getAnchorValue())) {
-        if (!I->mayReadFromMemory())
+      if (auto *CB = dyn_cast<CallBase>(&IRP.getAnchorValue())) {
+        ModRefInfo MR = CB->getMemoryEffects().getModRef();
+        if (!isRefSet(MR))
           State.addKnownBits(NO_READS);
-        if (!I->mayWriteToMemory())
+        if (!isModSet(MR))
           State.addKnownBits(NO_WRITES);
       }
     }
@@ -8832,6 +8833,20 @@ struct AAMemoryLocationFunction final : public AAMemoryLocationImpl {
 struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
   AAMemoryLocationCallSite(const IRPosition &IRP, Attributor &A)
       : AAMemoryLocationImpl(IRP, A) {}
+
+  void initialize(Attributor &A) override {
+    AAMemoryLocationImpl::initialize(A);
+
+    // Volatile calls may also access inaccessible memory, which the callee's
+    // attributes do not say.
+    auto &CB = cast<CallBase>(getAnchorValue());
+    if (CB.isVolatile()) {
+      bool Changed = false;
+      removeKnownBits(NO_INACCESSIBLE_MEM);
+      updateStateAndAccessesMap(getState(), NO_INACCESSIBLE_MEM, &CB, nullptr,
+                                Changed, getAccessKindFromInst(&CB));
+    }
+  }
 
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide

@@ -13,7 +13,7 @@
 ; UNSUPPORTED: target={{.*-(cygwin|windows-gnu|windows-msvc)}}
 
 ; RUN: llc -mtriple=x86_64 < %s -o - | FileCheck %s -check-prefix=ASM
-; RUN: llc -mtriple=x86_64 -debugger-tune=lldb < %s -filetype=obj -o %t.o
+; RUN: llc -mtriple=x86_64 < %s -filetype=obj -o %t.o
 ; RUN: llvm-dwarfdump %t.o -o - | FileCheck %s -check-prefix=OBJ -implicit-check-not=DW_TAG_call -implicit-check-not=DW_AT_call
 ; RUN: llvm-dwarfdump -verify %t.o 2>&1 | FileCheck %s -check-prefix=VERIFY
 ; RUN: llvm-dwarfdump -statistics %t.o | FileCheck %s -check-prefix=STATS

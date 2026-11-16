@@ -1,4 +1,5 @@
 // RUN: fir-opt --stack-arrays %s | FileCheck %s
+// RUN: fir-opt --allocation-placement="legacy=true stack-arrays=true" %s | FileCheck %s
 
 // Simplest transformation
 func.func @simple() {

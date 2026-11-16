@@ -24,7 +24,7 @@
 ! RUN: | FileCheck %s --check-prefixes=ALL,PLACE
 ! RUN: %flang -S -O2 -fopenmp -fstack-arrays \
 ! RUN:   -mmlir --mlir-disable-threading \
-! RUN:   -mmlir --mlir-print-ir-after=stack-arrays \
+! RUN:   -mmlir --mlir-print-ir-after=allocation-placement \
 ! RUN:   %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=ALL,STACK
 ! RUN: %flang -S -O2 -fopenmp -mllvm -enable-allocation-placement \
 ! RUN:   -mmlir --mlir-disable-threading \

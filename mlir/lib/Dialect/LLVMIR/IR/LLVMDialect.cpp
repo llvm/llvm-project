@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 #include "IR/LLVMOps.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Attributes.h"
@@ -4706,7 +4707,20 @@ Speculation::Speculatability SRemOp::getSpeculatability() {
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+struct LLVMSCFToControlFlowInterface : SCFToControlFlowDialectInterface {
+  using SCFToControlFlowDialectInterface::SCFToControlFlowDialectInterface;
+
+  bool shouldPropagateLoopAttribute(NamedAttribute attr) const override {
+    // Preserve the existing policy of forwarding LLVM-valued attributes,
+    // including loop annotations, during SCF-to-CF conversion.
+    return true;
+  }
+};
+} // namespace
+
 void LLVMDialect::initialize() {
+  addInterfaces<LLVMSCFToControlFlowInterface>();
   registerAttributes();
 
   // clang-format off
@@ -4834,7 +4848,8 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
 
   // Check a unit attribute that is attached to an integer value.
   if (name == LLVMDialect::getSExtAttrName() ||
-      name == LLVMDialect::getZExtAttrName()) {
+      name == LLVMDialect::getZExtAttrName() ||
+      name == LLVMDialect::getNoExtAttrName()) {
     if (failed(checkUnitAttrType()))
       return failure();
     if (verifyValueType && failed(checkIntegerType()))
