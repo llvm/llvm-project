@@ -158,8 +158,8 @@ Scope::Local EvalEmitter::createLocal(const Descriptor *D,
   B->invokeCtor();
 
   // Initialize local variable inline descriptor.
-  auto &Desc = B->getBlockDesc<InlineDescriptor>();
-  new (&Desc) InlineDescriptor(D);
+  auto &Desc = B->getBlockDesc<LocalInlineDescriptor>();
+  new (&Desc) LocalInlineDescriptor();
 
   // Register the local.
   unsigned Off = Locals.size();
@@ -384,9 +384,9 @@ bool EvalEmitter::emitSetLocal(uint32_t I, SourceInfo Info) {
 
   Block *B = getLocal(I);
   B->deref<T>() = S.Stk.pop<T>();
-  auto &Desc = B->getBlockDesc<InlineDescriptor>();
+  auto &Desc = B->getBlockDesc<LocalInlineDescriptor>();
   Desc.IsInitialized = true;
-  Desc.LifeState = Lifetime::Started;
+  Desc.setLifetime(Lifetime::Started);
 
   return true;
 }
@@ -408,9 +408,9 @@ bool EvalEmitter::emitGetLocalEnabled(uint32_t I, SourceInfo Info) {
     return true;
 
   Block *B = getLocal(I);
-  const auto &Desc = B->getBlockDesc<InlineDescriptor>();
+  const auto &Desc = B->getBlockDesc<LocalInlineDescriptor>();
 
-  S.Stk.push<bool>(Desc.IsActive);
+  S.Stk.push<bool>(Desc.IsEnabled);
   return true;
 }
 
@@ -418,14 +418,9 @@ bool EvalEmitter::emitEnableLocal(uint32_t I, SourceInfo Info) {
   if (!isActive())
     return true;
 
-  // FIXME: This is a little dirty, but to avoid adding a flag to
-  // InlineDescriptor that's only ever useful on the toplevel of local
-  // variables, we reuse the IsActive flag for the enabled state. We should
-  // probably use a different struct than InlineDescriptor for the block-level
-  // inline descriptor of local varaibles.
   Block *B = getLocal(I);
-  auto &Desc = B->getBlockDesc<InlineDescriptor>();
-  Desc.IsActive = true;
+  auto &Desc = B->getBlockDesc<LocalInlineDescriptor>();
+  Desc.IsEnabled = true;
   return true;
 }
 

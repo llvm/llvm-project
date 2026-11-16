@@ -324,12 +324,20 @@ defvar WaveBitOpKind_And = 0;
 defvar WaveBitOpKind_Or = 1;
 defvar WaveBitOpKind_Xor = 2;
 
+defvar WaveMultiPrefixOpKind_Sum = 0;
+defvar WaveMultiPrefixOpKind_And = 1;
+defvar WaveMultiPrefixOpKind_Or = 2;
+defvar WaveMultiPrefixOpKind_Xor = 3;
+defvar WaveMultiPrefixOpKind_Product = 4;
+
 defvar SignedOpKind_Signed = 0;
 defvar SignedOpKind_Unsigned = 1;
 
 defvar QuadOpKind_ReadAcrossX = 0;
 defvar QuadOpKind_ReadAcrossY = 1;
 defvar QuadOpKind_ReadAcrossDiagonal = 2;
+
+defvar QuadVoteOpKind_All = 1;
 
 // Intrinsic arg selection
 class IntrinArgSelectType;
@@ -1559,6 +1567,79 @@ def Dot4AddU8Packed : DXILOp<164, dot4AddPacked> {
   let attributes = [Attributes<DXIL1_4, [DXILReadNone]>];
 }
 
+def WaveMultiPrefixOp : DXILOp<166, waveMultiPrefixOp> {
+  let Doc = "returns the prefix result for lanes selected by a mask";
+  let intrinsics = [
+    IntrinSelect<int_dx_wave_multi_prefix_bit_and,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_And>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_bit_or,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Or>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_bit_xor,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Xor>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_product,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Product>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_uproduct,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Product>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_sum,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Sum>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_usum,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Sum>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
+                 ]>
+  ];
+  let arguments = [
+    OverloadTy, Int32Ty, Int32Ty, Int32Ty, Int32Ty, Int8Ty, Int8Ty
+  ];
+  let result = OverloadTy;
+  let overloads = [
+    Overloads<DXIL1_5, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
+  ];
+  let stages = [Stages<DXIL1_5, [all_stages]>];
+  let attributes = [Attributes<DXIL1_5, []>];
+}
+
+def WaveMultiPrefixBitCount : DXILOp<167, waveMultiPrefixBitCount> {
+  let Doc = "returns the prefix count for lanes selected by a mask";
+  let intrinsics = [IntrinSelect<int_dx_wave_multi_prefix_bit_count>];
+  let arguments = [Int1Ty, Int32Ty, Int32Ty, Int32Ty, Int32Ty];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_5, [all_stages]>];
+  let attributes = [Attributes<DXIL1_5, []>];
+}
+
 def AnnotateHandle : DXILOp<216, annotateHandle> {
   let Doc = "annotate handle with resource properties";
   let arguments = [HandleTy, ResPropsTy];
@@ -1581,6 +1662,20 @@ def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [DXILReadNone]>];
+}
+
+def QuadVote : DXILOp<222, quadVote> {
+  let Doc = "compares a boolean condition across a quad";
+  let intrinsics = [
+    IntrinSelect<int_dx_quad_all,
+                 [IntrinArgIndex<0>, IntrinArgI8<QuadVoteOpKind_All>]>
+  ];
+  let arguments = [Int1Ty, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_7, [Int1Ty]>];
+  let stages = [
+    Stages<DXIL1_7, [library, compute, amplification, mesh, pixel, node]>
+  ];
 }
 
 def BarrierByMemoryType : DXILOp<244, barrierByMemoryType> {

@@ -31,7 +31,7 @@ auto [t1, t2, t3] = t;
 const auto & [t11, t12, t13] = getT<Type>();
 
 // CIR: cir.global external @_ZDC3t113t123t13E = #cir.ptr<null> : !cir.ptr<!rec_Type>
-// CIR: cir.func internal private @__cxx_global_var_init{{.*}}() {
+// CIR: cir.func internal private @__cxx_global_var_init{{.*}}(){{.*}} {
 // CIR:   %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_anon_struct>
 // CIR:   %[[SB:.*]] = cir.get_global @_ZDC3t113t123t13E : !cir.ptr<!cir.ptr<!rec_Type>>
 // CIR:   %[[SB_REF:.*]] = cir.get_global @_ZGRDC3t113t123t13E_ : !cir.ptr<!rec_Type>
@@ -53,7 +53,7 @@ DtorType dt;
 auto [dt1, dt2, dt3] = dt;
 
 // CIR: cir.global external @_ZDC3dt13dt23dt3E = #cir.zero : !rec_DtorType
-// CIR: cir.func internal private @__cxx_global_var_init{{.*}}() {
+// CIR: cir.func internal private @__cxx_global_var_init{{.*}}(){{.*}} {
 // CIR:   %[[SB:.*]] = cir.get_global @_ZDC3dt13dt23dt3E : !cir.ptr<!rec_DtorType>
 // CIR:   %[[DT:.*]] = cir.get_global @dt : !cir.ptr<!rec_DtorType>
 // CIR:   cir.copy %[[DT]] align(4) to %[[SB]] align(4) : !cir.ptr<!rec_DtorType>

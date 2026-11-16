@@ -15,7 +15,6 @@
 
 ---
 name:            expandb_rrz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -37,7 +36,6 @@ body:             |
 ...
 ---
 name:            expandb_rrz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -59,7 +57,6 @@ body:             |
 ...
 ---
 name:            expandb_rrz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -81,7 +78,6 @@ body:             |
 ...
 ---
 name:            expandw_rrz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -103,7 +99,6 @@ body:             |
 ...
 ---
 name:            expandw_rrz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -125,7 +120,6 @@ body:             |
 ...
 ---
 name:            expandw_rrz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -147,7 +141,6 @@ body:             |
 ...
 ---
 name:            expandd_rrz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -169,7 +162,6 @@ body:             |
 ...
 ---
 name:            expandd_rrz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -191,7 +183,6 @@ body:             |
 ...
 ---
 name:            expandd_rrz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -213,7 +204,6 @@ body:             |
 ...
 ---
 name:            expandq_rrz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -235,7 +225,6 @@ body:             |
 ...
 ---
 name:            expandq_rrz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -257,7 +246,6 @@ body:             |
 ...
 ---
 name:            expandq_rrz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -279,7 +267,6 @@ body:             |
 ...
 ---
 name:            expandps_rrz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -301,7 +288,6 @@ body:             |
 ...
 ---
 name:            expandps_rrz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -323,7 +309,6 @@ body:             |
 ...
 ---
 name:            expandps_rrz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -345,7 +330,6 @@ body:             |
 ...
 ---
 name:            expandpd_rrz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -367,7 +351,6 @@ body:             |
 ...
 ---
 name:            expandpd_rrz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -389,7 +372,6 @@ body:             |
 ...
 ---
 name:            expandpd_rrz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -412,7 +394,6 @@ body:             |
 
 ---
 name:            expandb_rmz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -434,7 +415,6 @@ body:             |
 ...
 ---
 name:            expandb_rmz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -456,7 +436,6 @@ body:             |
 ...
 ---
 name:            expandb_rmz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -478,7 +457,6 @@ body:             |
 ...
 ---
 name:            expandw_rmz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -500,7 +478,6 @@ body:             |
 ...
 ---
 name:            expandw_rmz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -522,7 +499,6 @@ body:             |
 ...
 ---
 name:            expandw_rmz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -544,7 +520,6 @@ body:             |
 ...
 ---
 name:            expandd_rmz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -566,7 +541,6 @@ body:             |
 ...
 ---
 name:            expandd_rmz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -588,7 +562,6 @@ body:             |
 ...
 ---
 name:            expandd_rmz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -610,7 +583,6 @@ body:             |
 ...
 ---
 name:            expandq_rmz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -632,7 +604,6 @@ body:             |
 ...
 ---
 name:            expandq_rmz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -654,7 +625,6 @@ body:             |
 ...
 ---
 name:            expandq_rmz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -676,7 +646,6 @@ body:             |
 ...
 ---
 name:            expandps_rmz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -698,7 +667,6 @@ body:             |
 ...
 ---
 name:            expandps_rmz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -720,7 +688,6 @@ body:             |
 ...
 ---
 name:            expandps_rmz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -742,7 +709,6 @@ body:             |
 ...
 ---
 name:            expandpd_rmz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -764,7 +730,6 @@ body:             |
 ...
 ---
 name:            expandpd_rmz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -786,7 +751,6 @@ body:             |
 ...
 ---
 name:            expandpd_rmz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -809,7 +773,6 @@ body:             |
 
 ---
 name:            no_break_expandb_rrz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -826,7 +789,6 @@ body:             |
 ...
 ---
 name:            no_break_expandb_rrz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -843,7 +805,6 @@ body:             |
 ...
 ---
 name:            no_break_expandb_rrz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -860,7 +821,6 @@ body:             |
 ...
 ---
 name:            no_break_expandw_rrz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -877,7 +837,6 @@ body:             |
 ...
 ---
 name:            no_break_expandw_rrz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -894,7 +853,6 @@ body:             |
 ...
 ---
 name:            no_break_expandw_rrz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -911,7 +869,6 @@ body:             |
 ...
 ---
 name:            no_break_expandd_rrz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -928,7 +885,6 @@ body:             |
 ...
 ---
 name:            no_break_expandd_rrz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -945,7 +901,6 @@ body:             |
 ...
 ---
 name:            no_break_expandd_rrz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -962,7 +917,6 @@ body:             |
 ...
 ---
 name:            no_break_expandq_rrz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -979,7 +933,6 @@ body:             |
 ...
 ---
 name:            no_break_expandq_rrz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -996,7 +949,6 @@ body:             |
 ...
 ---
 name:            no_break_expandq_rrz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1013,7 +965,6 @@ body:             |
 ...
 ---
 name:            no_break_expandps_rrz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1030,7 +981,6 @@ body:             |
 ...
 ---
 name:            no_break_expandps_rrz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1047,7 +997,6 @@ body:             |
 ...
 ---
 name:            no_break_expandps_rrz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1064,7 +1013,6 @@ body:             |
 ...
 ---
 name:            no_break_expandpd_rrz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1081,7 +1029,6 @@ body:             |
 ...
 ---
 name:            no_break_expandpd_rrz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1098,7 +1045,6 @@ body:             |
 ...
 ---
 name:            no_break_expandpd_rrz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1116,7 +1062,6 @@ body:             |
 
 ---
 name:            no_break_expandb_rmz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1131,7 +1076,6 @@ body:             |
 ...
 ---
 name:            no_break_expandb_rmz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1146,7 +1090,6 @@ body:             |
 ...
 ---
 name:            no_break_expandb_rmz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1161,7 +1104,6 @@ body:             |
 ...
 ---
 name:            no_break_expandw_rmz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1176,7 +1118,6 @@ body:             |
 ...
 ---
 name:            no_break_expandw_rmz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1191,7 +1132,6 @@ body:             |
 ...
 ---
 name:            no_break_expandw_rmz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1206,7 +1146,6 @@ body:             |
 ...
 ---
 name:            no_break_expandd_rmz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1221,7 +1160,6 @@ body:             |
 ...
 ---
 name:            no_break_expandd_rmz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1236,7 +1174,6 @@ body:             |
 ...
 ---
 name:            no_break_expandd_rmz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1251,7 +1188,6 @@ body:             |
 ...
 ---
 name:            no_break_expandq_rmz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1266,7 +1202,6 @@ body:             |
 ...
 ---
 name:            no_break_expandq_rmz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1281,7 +1216,6 @@ body:             |
 ...
 ---
 name:            no_break_expandq_rmz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1296,7 +1230,6 @@ body:             |
 ...
 ---
 name:            no_break_expandps_rmz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1311,7 +1244,6 @@ body:             |
 ...
 ---
 name:            no_break_expandps_rmz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1326,7 +1258,6 @@ body:             |
 ...
 ---
 name:            no_break_expandps_rmz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1341,7 +1272,6 @@ body:             |
 ...
 ---
 name:            no_break_expandpd_rmz_128
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1356,7 +1286,6 @@ body:             |
 ...
 ---
 name:            no_break_expandpd_rmz_256
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
@@ -1371,7 +1300,6 @@ body:             |
 ...
 ---
 name:            no_break_expandpd_rmz_512
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:

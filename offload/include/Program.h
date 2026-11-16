@@ -18,6 +18,7 @@
 #include "OffloadAPI.h"
 #include "Shared/APITypes.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBufferRef.h"
 
 class ProgramTy {
 public:
@@ -43,10 +44,24 @@ public:
 
   ol_program_handle_t getHandle() const { return Handle; }
 
+  /// The image loaded for this program.
+  llvm::Expected<llvm::MemoryBufferRef> getImage() const;
+
+  /// The IR image this program was created from, or an empty buffer if the
+  /// input was not IR.
+  llvm::MemoryBufferRef getIRImage() const { return IRImage; }
+
+  /// Device buffer holding the indirect call table of this program, or null.
+  void *getIndirectCallTable() const { return IndirectCallTable; }
+  void setIndirectCallTable(void *Table) { IndirectCallTable = Table; }
+
 private:
-  explicit ProgramTy(ol_program_handle_t Handle) : Handle(Handle) {}
+  ProgramTy(ol_program_handle_t Handle, llvm::MemoryBufferRef IRImage)
+      : Handle(Handle), IRImage(IRImage) {}
 
   ol_program_handle_t Handle = nullptr;
+  llvm::MemoryBufferRef IRImage;
+  void *IndirectCallTable = nullptr;
 };
 
 #endif

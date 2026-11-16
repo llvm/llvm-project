@@ -191,6 +191,7 @@ private:
   selectVOP3BMods(MachineOperand &Root) const;
 
   ComplexRendererFns selectVOP3NoMods(MachineOperand &Root) const;
+  ComplexRendererFns selectVOP3NoOpSelMods(MachineOperand &Root) const;
 
   std::pair<Register, unsigned>
   selectVOP3PModsImpl(Register RootReg, const MachineRegisterInfo &MRI,
@@ -364,6 +365,8 @@ private:
 
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+  void renderPrefetchLen(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
   void renderZextBoolTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                           int OpIdx) const;
 

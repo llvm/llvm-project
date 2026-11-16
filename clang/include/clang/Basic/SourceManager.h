@@ -2012,10 +2012,10 @@ class BeforeThanCompare;
 /// Compare two source locations.
 template<>
 class BeforeThanCompare<SourceLocation> {
-  SourceManager &SM;
+  const SourceManager &SM;
 
 public:
-  explicit BeforeThanCompare(SourceManager &SM) : SM(SM) {}
+  explicit BeforeThanCompare(const SourceManager &SM) : SM(SM) {}
 
   bool operator()(SourceLocation LHS, SourceLocation RHS) const {
     return SM.isBeforeInTranslationUnit(LHS, RHS);
@@ -2025,10 +2025,10 @@ public:
 /// Compare two non-overlapping source ranges.
 template<>
 class BeforeThanCompare<SourceRange> {
-  SourceManager &SM;
+  const SourceManager &SM;
 
 public:
-  explicit BeforeThanCompare(SourceManager &SM) : SM(SM) {}
+  explicit BeforeThanCompare(const SourceManager &SM) : SM(SM) {}
 
   bool operator()(SourceRange LHS, SourceRange RHS) const {
     return SM.isBeforeInTranslationUnit(LHS.getBegin(), RHS.getBegin());

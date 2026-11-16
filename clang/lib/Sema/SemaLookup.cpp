@@ -2910,6 +2910,20 @@ namespace {
       return ClassesTransitive.insert(RD);
     }
 
+    // Save that `RD` is being processed, so that we don't attempt to re-visit
+    // this multiple times. Returns 'false' if we've already visited this, and
+    // shouldn't do so again.
+    bool addClassVisited(CXXRecordDecl *RD) {
+      return ClassesVisited.insert(RD).second;
+    }
+
+    // Save that `FnType` is being processed, so that we don't attempt to
+    // re-visit this multiple times. Returns 'false' if we've already visited
+    // this, and shouldn't do so again.
+    bool addFunctionTypeVisited(const Type *FnType) {
+      return FunctionTypesVisited.insert(FnType).second;
+    }
+
     Sema &S;
     Sema::AssociatedNamespaceSet &Namespaces;
     Sema::AssociatedClassSet &Classes;
@@ -2917,6 +2931,8 @@ namespace {
 
   private:
     Sema::AssociatedClassSet ClassesTransitive;
+    llvm::SmallPtrSet<CXXRecordDecl *, 16> ClassesVisited;
+    llvm::SmallPtrSet<const Type *, 16> FunctionTypesVisited;
   };
 } // end anonymous namespace
 
@@ -3058,6 +3074,10 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
 
   // Just silently ignore anything whose name is __va_list_tag.
   if (Class->getDeclName() == Result.S.VAListTagName)
+    return;
+
+  // Don't revisit a type if we've already seen it.
+  if (!Result.addClassVisited(Class))
     return;
 
   // C++ [basic.lookup.argdep]p2:
@@ -3226,6 +3246,9 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        classes are those associated with the function parameter
     //        types and those associated with the return type.
     case Type::FunctionProto: {
+      // Don't revisit a type if we've already seen it.
+      if (!Result.addFunctionTypeVisited(T))
+        break;
       const FunctionProtoType *Proto = cast<FunctionProtoType>(T);
       for (const auto &Arg : Proto->param_types())
         Queue.push_back(Arg.getTypePtr());

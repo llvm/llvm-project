@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -x c %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s %}
 // RUN: %clang_cc1 -x c %s -triple x86_64-linux-gnu -emit-llvm -fno-builtin -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c %s -triple x86_64-linux-gnu -emit-llvm -fno-builtin -o - | FileCheck %s %}
 // RUN: %clang_cc1 -x c++ %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s %}
 
 #ifdef __cplusplus
 extern "C" {

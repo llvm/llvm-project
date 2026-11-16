@@ -17,8 +17,8 @@ libc_startup_library(
     name = "start",
     srcs = ["start.cpp"],
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:config_app_h",
+        "//libc/src/__support/macros:attributes",
         "//libc/startup/linux:do_start",
     ],
 )
@@ -27,11 +27,11 @@ libc_startup_library(
     name = "irelative",
     srcs = ["irelative.cpp"],
     deps = [
-        "//libc:__support_macros_config",
-        "//libc:hdr_elf_macros",
-        "//libc:hdr_elf_proxy",
-        "//libc:hdr_link_macros",
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:elf_macros",
+        "//libc/hdr:elf_proxy",
+        "//libc/hdr:link_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/macros:config",
         "//libc/startup/linux:irelative_hdr",
     ],
 )

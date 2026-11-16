@@ -1,6 +1,6 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=51
 
-! The capture statement in ATOMIC COMPARE CAPTURE must read x.
+! Invalid capture statements in ATOMIC COMPARE CAPTURE.
 
 subroutine f00(x, v, e, d)
   integer :: x, v, e, d
@@ -29,5 +29,14 @@ subroutine f02(x, v, e, d)
     !ERROR: In ATOMIC UPDATE COMPARE CAPTURE the right-hand side of the capture assignment should read x
     v = d
   end if
+  !$omp end atomic
+end
+
+subroutine f03(x, e, d)
+  integer :: x, e, d, v(2)
+  !$omp atomic compare capture
+  !ERROR: Capture variable v should be a scalar
+  v = x
+  if (x == e) x = d
   !$omp end atomic
 end

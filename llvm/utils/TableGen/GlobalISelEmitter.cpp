@@ -285,10 +285,22 @@ static bool shouldUseGenericTypeForInstruction(const CodeGenInstruction *GI) {
   return Unset ? false : ShouldMatchGeneric;
 }
 
+/// Return true if \p Pred is true for any type in any HwMode of \p VTy.
+static bool anyTypeByHwMode(const TypeSetByHwMode &VTy,
+                            function_ref<bool(MVT)> Pred) {
+  return any_of(VTy, [&](const auto &P) { return any_of(P.second, Pred); });
+}
+
+/// Return true if \p Pred is true for every type in every HwMode of \p VTy.
+static bool allTypesByHwMode(const TypeSetByHwMode &VTy,
+                             function_ref<bool(MVT)> Pred) {
+  return all_of(VTy, [&](const auto &P) { return all_of(P.second, Pred); });
+}
+
 //===- GlobalISelEmitter class --------------------------------------------===//
 
-static Expected<LLTCodeGen> getInstResultType(const TreePatternNode &Dst,
-                                              const CodeGenTarget &Target) {
+static Expected<LLTOrLLTByHwMode>
+getInstResultType(const TreePatternNode &Dst, const CodeGenTarget &Target) {
   // While we allow more than one output (both implicit and explicit defs)
   // below, we only expect one explicit def here.
   assert(Dst.getOperator()->isSubClassOf("Instruction"));
@@ -302,9 +314,12 @@ static Expected<LLTCodeGen> getInstResultType(const TreePatternNode &Dst,
 
   // If there are multiple results, just take the first one (this is how
   // SelectionDAG does it).
-  std::optional<LLTCodeGen> MaybeOpTy;
+  std::optional<LLTOrLLTByHwMode> MaybeOpTy;
   if (ChildTypes.front().isMachineValueType()) {
-    MaybeOpTy = MVTToLLT(ChildTypes.front().getMachineValueType().SimpleTy);
+    if (auto OpTy = MVTToLLT(ChildTypes.front().getMachineValueType().SimpleTy))
+      MaybeOpTy = *OpTy;
+  } else {
+    MaybeOpTy = getLLTOrLLTByHwMode(ChildTypes.front());
   }
 
   if (!MaybeOpTy)
@@ -547,9 +562,16 @@ GlobalISelEmitter::getEquivNode(const Record &Equiv,
                                 const TreePatternNode &N) const {
   if (N.getNumChildren() >= 1) {
     // setcc operation maps to two different G_* instructions based on the type.
-    if (!Equiv.isValueUnset("IfFloatingPoint") &&
-        MVT(N.getChild(0).getSimpleType(0)).isFloatingPoint())
-      return &Target.getInstruction(Equiv.getValueAsDef("IfFloatingPoint"));
+    if (!Equiv.isValueUnset("IfFloatingPoint")) {
+      auto IsFP = [](MVT VT) { return VT.isFloatingPoint(); };
+      const TypeSetByHwMode &VTy = N.getChild(0).getExtType(0);
+      if (anyTypeByHwMode(VTy, IsFP)) {
+        // The opcode can't depend on the HwMode.
+        if (!allTypesByHwMode(VTy, IsFP))
+          return nullptr;
+        return &Target.getInstruction(Equiv.getValueAsDef("IfFloatingPoint"));
+      }
+    }
   }
 
   if (!Equiv.isValueUnset("IfConvergent") &&
@@ -779,8 +801,18 @@ Error GlobalISelEmitter::addTypeCheckPredicateForOpcode(
     return OM.addTypeCheckPredicate(VTy, OperandIsAPointer);
 
   if (LLT::getUseExtended() && shouldUseGenericTypeForInstruction(GI)) {
-    if (!VTy.isMachineValueType())
-      return failedImport("unsupported typeset");
+    if (!VTy.isMachineValueType()) {
+      std::optional<LLTOrLLTByHwMode> GenericTy =
+          getLLTOrLLTByHwMode(VTy, /*Generic=*/true);
+      if (!GenericTy)
+        return failedImport("unsupported typeset");
+      if (const auto *LLT = std::get_if<LLTCodeGen>(&*GenericTy))
+        OM.addPredicate<LLTOperandShapeMatcher>(*LLT);
+      else
+        OM.addPredicate<LLTOperandShapeMatcher>(
+            std::get<LLTByHwMode>(*GenericTy));
+      return Error::success();
+    }
 
     auto GenericLLT = MVTToGenericLLT(VTy.getMachineValueType().SimpleTy);
     if (GenericLLT) {
@@ -816,6 +848,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       return failedImport("Pattern operator lacks an equivalent Instruction" +
                           explainOperator(Src.getOperator()));
     SrcGIOrNull = getEquivNode(*SrcGIEquivOrNull, Src);
+    if (!SrcGIOrNull)
+      return failedImport("Pattern operator equivalent depends on HwMode");
 
     // The operators look good: match the opcode
     InsnMatcher.addPredicate<InstructionOpcodeMatcher>(SrcGIOrNull);
@@ -967,8 +1001,9 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       if (!DI || !DI->getDef()->isSubClassOf("ValueType"))
         return failedImport("Expected ValueType saturation-width operand");
       MVT SatVT = llvm::getValueType(DI->getDef());
-      if (SatVT.getScalarSizeInBits() !=
-          Src.getSimpleType(0).getScalarSizeInBits())
+      if (!allTypesByHwMode(Src.getExtType(0), [&](MVT VT) {
+            return VT.getScalarSizeInBits() == SatVT.getScalarSizeInBits();
+          }))
         return failedImport("Saturation width must match the result width");
       --NumChildren;
     }
@@ -1226,9 +1261,21 @@ Error GlobalISelEmitter::importChildMatcher(
 
     if (ChildRec->isSubClassOf("Register")) {
       // This just be emitted as a copy to the specific register.
-      ValueTypeByHwMode VT = ChildTypes.front().getValueTypeByHwMode();
-      const CodeGenRegisterClass *RC =
-          CGRegs.getMinimalPhysRegClass(ChildRec, &VT);
+      if (!ChildTypes.front().isValueTypeByHwMode(/*AllowEmpty=*/true))
+        return failedImport("Physical register source has multiple types");
+      // Find the register class for each HwMode. They must all be the same.
+      const CodeGenRegisterClass *RC = nullptr;
+      for (const auto &[Mode, VTs] : ChildTypes.front()) {
+        if (VTs.empty())
+          continue;
+        ValueTypeByHwMode VT(*VTs.begin());
+        const CodeGenRegisterClass *ModeRC =
+            CGRegs.getMinimalPhysRegClass(ChildRec, &VT);
+        if (RC && ModeRC != RC)
+          return failedImport(
+              "Physical register class of pattern source depends on HwMode");
+        RC = ModeRC;
+      }
       if (!RC) {
         return failedImport(
             "Could not determine physical register class of pattern source");
@@ -1264,8 +1311,6 @@ Error GlobalISelEmitter::importChildMatcher(
           InsnMatcher.getRuleMatcher(), SrcChild.getName(), false);
       InstructionOperandMatcher &InsnOperand = **MaybeInsnOperand;
 
-      ValueTypeByHwMode VTy = ChildTypes.front().getValueTypeByHwMode();
-
       const CodeGenInstruction &BuildVector =
           Target.getInstruction(RK.getDef("G_BUILD_VECTOR"));
       const CodeGenInstruction &BuildVectorTrunc =
@@ -1281,7 +1326,7 @@ Error GlobalISelEmitter::importChildMatcher(
       // has to succeed.
       OperandMatcher &OM =
           InsnOperand.getInsnMatcher().addOperand(0, "", TempOpIdx);
-      if (auto Error = OM.addTypeCheckPredicate(TypeSetByHwMode(VTy),
+      if (auto Error = OM.addTypeCheckPredicate(ChildTypes.front(),
                                                 /*OperandIsAPointer=*/false))
         return failedImport(toString(std::move(Error)) +
                             " for result of Src pattern operator");
@@ -1402,12 +1447,14 @@ Error GlobalISelEmitter::importLeafNodeRenderer(
     }
 
     if (R->getName() == "undef_tied_input") {
-      std::optional<LLTCodeGen> OpTyOrNone = MVTToLLT(N.getSimpleType(0));
+      std::optional<LLTOrLLTByHwMode> OpTyOrNone =
+          getLLTOrLLTByHwMode(N.getExtType(0));
       if (!OpTyOrNone)
         return failedImport("unsupported type");
 
       unsigned TempRegID = M.allocateTempRegID();
-      M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTyOrNone, TempRegID);
+      M.insertAction<MakeTempRegisterAction>(
+          InsertPt, LLTCodeGenOrTempType(*OpTyOrNone), TempRegID);
 
       auto I = M.insertAction<BuildMIAction>(
           InsertPt, M.allocateOutputInsnID(), M,
@@ -1471,7 +1518,7 @@ Error GlobalISelEmitter::importXFormNodeRenderer(
 Error GlobalISelEmitter::importInstructionNodeRenderer(
     RuleMatcher &M, BuildMIAction &MIBuilder, const TreePatternNode &N,
     action_iterator &InsertPt) const {
-  Expected<LLTCodeGen> OpTy = getInstResultType(N, Target);
+  Expected<LLTOrLLTByHwMode> OpTy = getInstResultType(N, Target);
   if (!OpTy)
     return OpTy.takeError();
 
@@ -1479,7 +1526,8 @@ Error GlobalISelEmitter::importInstructionNodeRenderer(
   //   requiring a temporary register, which prevents us from using this
   //   function on the root of the destination DAG.
   unsigned TempRegID = M.allocateTempRegID();
-  InsertPt = M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
+  InsertPt = M.insertAction<MakeTempRegisterAction>(
+      InsertPt, LLTCodeGenOrTempType(*OpTy), TempRegID);
   MIBuilder.addRenderer<TempRegRenderer>(TempRegID);
 
   auto InsertPtOrError =
@@ -1651,16 +1699,21 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
 
     // The def is discarded, create a dead virtual register for it.
     const TypeSetByHwMode &ExtTy = Dst.getExtType(I);
-    if (!ExtTy.isMachineValueType())
-      return failedImport("unsupported typeset");
-
-    auto OpTy = MVTToLLT(ExtTy.getMachineValueType().SimpleTy);
-    if (!OpTy)
-      return failedImport("unsupported type");
+    std::optional<LLTOrLLTByHwMode> OpTy;
+    if (ExtTy.isMachineValueType()) {
+      auto SimpleTy = MVTToLLT(ExtTy.getMachineValueType().SimpleTy);
+      if (!SimpleTy)
+        return failedImport("unsupported type");
+      OpTy = *SimpleTy;
+    } else {
+      OpTy = getLLTOrLLTByHwMode(ExtTy);
+      if (!OpTy)
+        return failedImport("unsupported typeset");
+    }
 
     unsigned TempRegID = M.allocateTempRegID();
-    InsertPt =
-        M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
+    InsertPt = M.insertAction<MakeTempRegisterAction>(
+        InsertPt, LLTCodeGenOrTempType(*OpTy), TempRegID);
     DstMIBuilder.addRenderer<TempRegRenderer>(
         TempRegID, /*IsDef=*/true, /*SubReg=*/nullptr, /*IsDead=*/true);
   }
@@ -1705,8 +1758,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
         return ExtractSrcTy.takeError();
 
       unsigned TempRegID = M.allocateTempRegID();
-      InsertPt = M.insertAction<MakeTempRegisterAction>(InsertPt, *ExtractSrcTy,
-                                                        TempRegID);
+      InsertPt = M.insertAction<MakeTempRegisterAction>(
+          InsertPt, LLTCodeGenOrTempType(*ExtractSrcTy), TempRegID);
 
       auto InsertPtOrError = createAndImportSubInstructionRenderer(
           ++InsertPt, M, ValChild, TempRegID);
@@ -2157,6 +2210,82 @@ const CodeGenSubRegIndex *GlobalISelEmitter::inferSubRegIndexForNode(
   return CGRegs.findSubRegIdx(SubRegInit->getDef());
 }
 
+static void collectModes(std::set<unsigned> &Modes, const TreePatternNode &N) {
+  for (const TypeSetByHwMode &VTS : N.getExtTypes())
+    for (const auto &I : VTS)
+      Modes.insert(I.first);
+
+  for (const TreePatternNode &Child : N.children())
+    collectModes(Modes, Child);
+}
+
+/// Return true if every type in \p N has a type for \p Mode.
+static bool hasTypesForMode(const TreePatternNode &N, unsigned Mode) {
+  for (const TypeSetByHwMode &VTS : N.getExtTypes()) {
+    if (!VTS.hasMode(Mode) && !VTS.hasDefault())
+      return false;
+    if (VTS.get(Mode).empty())
+      return false;
+  }
+  return all_of(N.children(), [&](const TreePatternNode &C) {
+    return hasTypesForMode(C, Mode);
+  });
+}
+
+/// Since HwMode based types aren't expanded into separate patterns, a pattern
+/// may only be valid for some of the HwModes. Return a predicate that checks
+/// for those HwModes, or an empty string if the pattern is valid for all of
+/// them. This matches the predicates that were used when the patterns were
+/// expanded.
+static std::string getHwModeCheck(const PatternToMatch &P,
+                                  const CodeGenHwModes &CGH) {
+  const TreePatternNode &Src = P.getSrcPattern();
+  const TreePatternNode &Dst = P.getDstPattern();
+  if (!Src.hasProperTypeByHwMode() && !Dst.hasProperTypeByHwMode())
+    return "";
+
+  std::set<unsigned> Modes;
+  collectModes(Modes, Src);
+  collectModes(Modes, Dst);
+
+  SmallVector<unsigned> ValidModes;
+  for (unsigned M : Modes)
+    if (hasTypesForMode(Src, M) && hasTypesForMode(Dst, M))
+      ValidModes.push_back(M);
+
+  // If the pattern is valid for every mode it mentions and there's a default
+  // mode, there's nothing to check.
+  if (ValidModes.size() == Modes.size() && Modes.count(DefaultMode))
+    return "";
+
+  std::string DefaultCheck;
+  std::string Check;
+  for (unsigned M : Modes) {
+    if (M == DefaultMode)
+      continue;
+    std::string PredicateCheck;
+    raw_string_ostream PS(PredicateCheck);
+    SubtargetFeatureInfo::emitPredicateCheck(PS, CGH.getMode(M).Predicates);
+    if (!DefaultCheck.empty())
+      DefaultCheck += " && ";
+    DefaultCheck += "!(" + PredicateCheck + ")";
+    if (is_contained(ValidModes, M)) {
+      if (!Check.empty())
+        Check += " || ";
+      Check += "(" + PredicateCheck + ")";
+    }
+  }
+  if (is_contained(ValidModes, DefaultMode)) {
+    if (!Check.empty())
+      Check += " || ";
+    Check += "(" + DefaultCheck + ")";
+  }
+  // There is no valid mode. Use a check that can never pass.
+  if (Check.empty())
+    return "false";
+  return Check;
+}
+
 Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   // Keep track of the matchers and actions to emit.
   int Score = P.getPatternComplexity(CGP);
@@ -2171,8 +2300,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   if (auto Error = importRulePredicates(M, Predicates))
     return std::move(Error);
 
-  if (!P.getHwModeFeatures().empty())
-    M.addHwModeIdx(declareHwModeCheck(P.getHwModeFeatures()));
+  std::string HwModeCheck = getHwModeCheck(P, Target.getHwModes());
+  if (!HwModeCheck.empty())
+    M.addHwModeIdx(declareHwModeCheck(HwModeCheck));
 
   // Next, analyze the pattern operators.
   TreePatternNode &Src = P.getSrcPattern();
@@ -2468,8 +2598,8 @@ void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
 
 bool hasBFloatType(const TreePatternNode &Node) {
   for (unsigned I = 0, E = Node.getNumTypes(); I < E; I++) {
-    MVT VT = Node.getSimpleType(I);
-    if (VT.getScalarType() == MVT::bf16)
+    if (anyTypeByHwMode(Node.getExtType(I),
+                        [](MVT VT) { return VT.getScalarType() == MVT::bf16; }))
       return true;
   }
   for (const TreePatternNode &C : Node.children())

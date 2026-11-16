@@ -35,6 +35,9 @@ public:
   static char ID;
   SPIRVPostLegalizerLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
+  MachineFunctionProperties getSetProperties() const override {
+    return MachineFunctionProperties().setRegBankSelected();
+  }
 };
 } // namespace
 
@@ -157,6 +160,7 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
     LLVM_DEBUG(dbgs() << "Looking at use " << Use);
     switch (Use.getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
+    case TargetOpcode::G_CONCAT_VECTORS:
     case TargetOpcode::G_SHUFFLE_VECTOR:
     case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     case TargetOpcode::G_UNMERGE_VALUES:
@@ -617,6 +621,7 @@ bool SPIRVPostLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 SPIRVPostLegalizerPass::run(MachineFunction &MF,
                             MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
   return runPostLegalizer(MF) ? getMachineFunctionPassPreservedAnalyses()
                               : PreservedAnalyses::all();
 }

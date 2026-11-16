@@ -364,12 +364,6 @@ static bool delayHasHazard(MachineBasicBlock::iterator candidate, bool &sawLoad,
       Opcode >=  SP::LDDArr && Opcode <= SP::LDrr)
     return true;
 
-  // Same as above for FDIV and FSQRT on some LEON processors.
-  if (Subtarget->fixAllFDIVSQRT()
-      &&
-      Opcode >=  SP::FDIVD && Opcode <= SP::FSQRTD)
-    return true;
-
   if (Subtarget->fixTN0009() && candidate->mayStore())
     return true;
 
@@ -477,7 +471,8 @@ static bool runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     // to cover all floating point operations.
     if (!Subtarget->isV9() &&
         (MI->getOpcode() == SP::FCMPS || MI->getOpcode() == SP::FCMPD ||
-         MI->getOpcode() == SP::FCMPQ)) {
+         MI->getOpcode() == SP::FCMPQ || MI->getOpcode() == SP::FCMPES ||
+         MI->getOpcode() == SP::FCMPED || MI->getOpcode() == SP::FCMPEQ)) {
       BuildMI(MBB, I, MI->getDebugLoc(), TII->get(SP::NOP));
       Changed = true;
       continue;

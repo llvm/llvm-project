@@ -9,11 +9,7 @@
 #ifndef MLIR_DIALECT_SMT_IR_SMTOPS_H
 #define MLIR_DIALECT_SMT_IR_SMTOPS_H
 
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/SymbolTable.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/Dialect/SMT/IR/SMTAttributes.h"
 #include "mlir/Dialect/SMT/IR/SMTDialect.h"

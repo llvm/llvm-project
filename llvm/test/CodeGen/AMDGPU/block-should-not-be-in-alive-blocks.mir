@@ -84,7 +84,7 @@ body:             |
     %0:sgpr_64 = COPY $sgpr4_sgpr5
     %1:vgpr_32 = COPY $vgpr0
     %2:sreg_32 = V_CMP_NE_U32_e64 0, %1, implicit $exec
-    %3:sreg_32 = SI_IF killed %2, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %3:sreg_32 = SI_IF %2, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.1:
@@ -92,11 +92,11 @@ body:             |
 
     %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
     %5:vgpr_32, %6:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %4.sub0, %1, 0, implicit $exec
-    %7:vgpr_32, dead %8:sreg_32_xm0_xexec = V_ADDC_U32_e64 0, %4.sub1, killed %6, 0, implicit $exec
+    %7:vgpr_32, dead %8:sreg_32_xm0_xexec = V_ADDC_U32_e64 0, %4.sub1, %6, 0, implicit $exec
     %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %7, %subreg.sub1
-    %10:vgpr_32 = GLOBAL_LOAD_UBYTE killed %9, 0, 0, implicit $exec :: (load (s8), addrspace 1)
+    %10:vgpr_32 = GLOBAL_LOAD_UBYTE %9, 0, 0, implicit $exec :: (load (s8), addrspace 1)
     %11:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
-    GLOBAL_STORE_BYTE killed %11, killed %10, 0, 0, implicit $exec :: (store (s8), addrspace 1)
+    GLOBAL_STORE_BYTE %11, %10, 0, 0, implicit $exec :: (store (s8), addrspace 1)
     S_BRANCH %bb.7
 
   bb.2:
@@ -113,7 +113,7 @@ body:             |
     successors: %bb.6(0x80000000)
 
     %12:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
-    %13:vgpr_32 = GLOBAL_LOAD_UBYTE killed %12, 0, 0, implicit $exec :: (load (s8), addrspace 1)
+    %13:vgpr_32 = GLOBAL_LOAD_UBYTE %12, 0, 0, implicit $exec :: (load (s8), addrspace 1)
     S_BRANCH %bb.6
 
   bb.5:

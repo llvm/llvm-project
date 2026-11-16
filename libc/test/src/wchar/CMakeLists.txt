@@ -62,7 +62,6 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-
 add_libc_test(
   mbsrtowcs_test
   SUITE
