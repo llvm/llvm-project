@@ -3307,9 +3307,10 @@ support a 32-byte fetch size so it treats CFS_32B the same as CFS_64B.
 
 ### '`amdgpu.noclobber`' Metadata
 
-If a `load` instruction marked as `!amdgpu.noclobber` may see any write
-other than the initialization of that location at kernel launch according to the
-{ref}`concurrent memory model<amdgpu-location-order>`, it returns `undef`.
+Consider the writes that a `load` instruction L marked as `!amdgpu.noclobber`
+may see according to the {ref}`AMDGPU memory model<amdgpu-location-order>`.
+L returns `undef` if any of these writes does not happen-before the operation
+that dispatches the kernel executing L.
 
 This metadata can allow the AMDGPU compiler backend to emit scalar instead of
 vector load instructions.
