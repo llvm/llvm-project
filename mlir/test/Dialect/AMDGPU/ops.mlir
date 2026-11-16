@@ -574,6 +574,15 @@ func.func @mfma_with_blocks(%arg0 : f32, %arg1 : vector<32xf32>) -> vector<32xf3
   func.return %0 : vector<32xf32>
 }
 
+// CHECK-LABEL: func @mfma_prefer_agpr
+func.func @mfma_prefer_agpr(%arg0 : vector<4xf16>, %arg1 : vector<4xf32>) -> vector<4xf32> {
+  // CHECK: amdgpu.mfma 16x16x16 %{{.*}} * %{{.*}} + %{{.*}} preferAgpr : vector<4xf16>, vector<4xf16>, vector<4xf32>
+  %0 = amdgpu.mfma 16x16x16 %arg0 * %arg0 + %arg1 preferAgpr : vector<4xf16>, vector<4xf16>, vector<4xf32>
+  // CHECK: amdgpu.mfma 16x16x16 %{{.*}} * %{{.*}} + %{{.*}} : vector<4xf16>, vector<4xf16>, vector<4xf32>
+  %1 = amdgpu.mfma 16x16x16 %arg0 * %arg0 + %0 : vector<4xf16>, vector<4xf16>, vector<4xf32>
+  func.return %1 : vector<4xf32>
+}
+
 // CHECK-LABEL: func @wmma_f16_16x16x16_f16
 func.func @wmma_f16_16x16x16_f16(%arg0 : vector<16xf16>, %arg1 : vector<8xf16>) -> vector<8xf16> {
   // CHECK: amdgpu.wmma 16x16x16
@@ -649,6 +658,15 @@ func.func @scaled_mfma(%arg0 : f8E8M0FNU, %arg1 : vector<32xf6E2M3FN>, %arg2 : v
   // CHECK: amdgpu.scaled_mfma 32x32x64
   %0 = amdgpu.scaled_mfma 32x32x64 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 : f8E8M0FNU, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
   func.return %0 : vector<16xf32>
+}
+
+// CHECK-LABEL: func @scaled_mfma_prefer_agpr
+func.func @scaled_mfma_prefer_agpr(%arg0 : f8E8M0FNU, %arg1 : vector<32xf6E2M3FN>, %arg2 : vector<16xf32>) -> vector<16xf32> {
+  // CHECK: amdgpu.scaled_mfma 32x32x64 (%{{.*}}[0] * %{{.*}}) * (%{{.*}}[1] * %{{.*}}) + %{{.*}} preferAgpr : f8E8M0FNU, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
+  %0 = amdgpu.scaled_mfma 32x32x64 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 preferAgpr : f8E8M0FNU, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
+  // CHECK: amdgpu.scaled_mfma 32x32x64 (%{{.*}}[0] * %{{.*}}) * (%{{.*}}[1] * %{{.*}}) + %{{.*}} : f8E8M0FNU, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
+  %1 = amdgpu.scaled_mfma 32x32x64 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %0 : f8E8M0FNU, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
+  func.return %1 : vector<16xf32>
 }
 
 // CHECK-LABEL: func @sparse_mfma

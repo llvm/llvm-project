@@ -27,6 +27,15 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using mlir::LLVM::detail::createIntrinsicCall;
 
+/// Attaches the hint that asks the AMDGPU backend to allocate the accumulator
+/// input (C) and the result (D) of the MFMA intrinsic call `inst` to AGPRs.
+/// This is the only place that knows the LLVM IR spelling of the hint.
+static void setMfmaAgprHint(llvm::Instruction *inst) {
+  llvm::LLVMContext &ctx = inst->getContext();
+  inst->setMetadata("amdgpu.mfma",
+                    llvm::MDNode::get(ctx, llvm::MDString::get(ctx, "agpr")));
+}
+
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
 /// to the ROCDL dialect to LLVM IR.

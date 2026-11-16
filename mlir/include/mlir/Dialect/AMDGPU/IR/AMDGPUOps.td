@@ -1057,7 +1057,8 @@ def AMDGPU_MFMAOp :
                    UnitAttr:$reducePrecision,
                    UnitAttr:$negateA,
                    UnitAttr:$negateB,
-                   UnitAttr:$negateC)>,
+                   UnitAttr:$negateC,
+                   UnitAttr:$preferAgpr)>,
     Results<(outs MFMAOutTypes: $destD)> {
   let summary = "MLIR wrapper for CDNA mfma instructions";
   let description = [{
@@ -1087,6 +1088,12 @@ def AMDGPU_MFMAOp :
     The negateA, negateB, and negateC flags are only supported for double-precision
     operations on gfx94x.
 
+    The `preferAgpr` flag is a hint that asks the backend to allocate `destC`
+    and `destD` to AGPRs. The lowering to ROCDL copies the flag to the
+    intrinsic operation, and the translation to LLVM IR attaches the
+    `!amdgpu.mfma !{!"agpr"}` metadata to the intrinsic call. The backend can
+    ignore the hint, and the hint does not change the result.
+
     Example:
     ```mlir
       %0 = amdgpu.mfma 16x16x16 %matA * %matB + %matC
@@ -1095,6 +1102,9 @@ def AMDGPU_MFMAOp :
       %1 = amdgpu.mfma blocks(2) 32x32x1 %matD * %matE + %matF
         abid(1) blgp(bcast_second_32) cbsz(1)
         : f32, f32, vector<32xf32>
+
+      %2 = amdgpu.mfma 16x16x16 %matA * %matB + %matC preferAgpr
+        : vector<4xf16>, vector<4xf16>, vector<4xf32>
     ```
   }];
   let assemblyFormat = [{
@@ -1106,7 +1116,8 @@ def AMDGPU_MFMAOp :
           | `reducePrecision` $reducePrecision
           | `negateA` $negateA
           | `negateB` $negateB
-          | `negateC` $negateC)
+          | `negateC` $negateC
+          | `preferAgpr` $preferAgpr)
     attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
@@ -1628,7 +1639,8 @@ def AMDGPU_ScaledMFMAOp :
                    AnyTypeOf<[F8E8M0FNU, FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>]>:$scalesA,
                    AnyTypeOf<[F8E8M0FNU, FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>]>:$scalesB,
                    ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$scalesIdxA,
-                   ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$scalesIdxB
+                   ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$scalesIdxB,
+                   UnitAttr:$preferAgpr
                    )>,
     Results<(outs ScaledMFMAOutTypes: $destD)> {
   let summary = "MLIR wrapper for CDNA scaled mfma instructions";
@@ -1657,9 +1669,16 @@ def AMDGPU_ScaledMFMAOp :
     - The `negateA`, `negateB`, and `negateC` flags in `amdgpu.mfma` are only supported
       for double-precision operations on gfx94x and so are not included here.
 
+    The `preferAgpr` flag has the same meaning as in `amdgpu.mfma`: it is a
+    hint that asks the backend to allocate `destC` and `destD` to AGPRs. The
+    backend can ignore the hint, and the hint does not change the result.
+
     Example:
     ```mlir
       %0 = amdgpu.scaled_mfma 32x32x64 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2
+        : vector<4xf8E8M0FNU>, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
+
+      %1 = amdgpu.scaled_mfma 32x32x64 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 preferAgpr
         : vector<4xf8E8M0FNU>, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
     ```
   }];
@@ -1667,7 +1686,7 @@ def AMDGPU_ScaledMFMAOp :
     custom<MNKDimensionList>($m, $n, $k) ` `
     `(` $scalesA `[` $scalesIdxA `]` `*` $sourceA `)` `*`
     `(` $scalesB `[` $scalesIdxB `]` `*` $sourceB `)` `+` $destC
-    attr-dict
+    (`preferAgpr` $preferAgpr^)? attr-dict
     `:` type($scalesA) `,` type($sourceA) `,` type($scalesB) `,` type($sourceB) `,` type($destC)
   }];
   let hasCanonicalizer = 1;

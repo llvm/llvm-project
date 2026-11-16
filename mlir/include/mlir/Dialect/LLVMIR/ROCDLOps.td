@@ -830,20 +830,44 @@ def ROCDL_IglpOpt : ROCDL_ConcreteNonMemIntrOp<"iglp.opt", [], 0, [0], ["variant
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics
 
+// Shared parts of the MFMA operations that have the `preferAgpr` attribute.
+class ROCDL_MfmaAgprHint {
+  // Translation code that attaches the AGPR hint to the intrinsic call when
+  // the `preferAgpr` attribute is present. `setMfmaAgprHint` is defined in
+  // ROCDLToLLVMIRTranslation.cpp.
+  string mfmaAgprHintLlvmBuilder = [{
+    if ($preferAgpr)
+      setMfmaAgprHint(inst);
+  }];
+
+  // Description text for the `preferAgpr` attribute.
+  string mfmaAgprHintDescription = [{
+    If the `preferAgpr` unit attribute is present, the call to the intrinsic
+    gets the `!amdgpu.mfma !{!"agpr"}` metadata. This metadata is a hint that
+    asks the backend to allocate the accumulator input (C) and the result (D) to
+    AGPRs. The backend can ignore the hint, and the hint does not change the
+    result.
+  }];
+}
+
 class ROCDL_Mfma_IntrOpBase<string mnemonic, ROCDL_NamedType ABType,
                             ROCDL_NamedType CDType, Attr blgpAttr> :
   ROCDL_IntrOp<mnemonic, [], [], [], 1, 0, 0, 0, [3, 4, 5], ["cbsz", "abid", "blgp"]>,
+  ROCDL_MfmaAgprHint,
   Arguments<(ins
              ABType:$a,
              ABType:$b,
              CDType:$c,
              I32Attr:$cbsz,
              I32Attr:$abid,
-             blgpAttr:$blgp)> {
+             blgpAttr:$blgp,
+             UnitAttr:$preferAgpr)> {
   let results = (outs CDType:$res);
+  let llvmBuilder = baseLlvmBuilder # mfmaAgprHintLlvmBuilder
+    # baseLlvmBuilderCoda;
   let assemblyFormat = [{
     $a `,` $b `,` $c `,` $cbsz `,` $abid `,` enum($blgp)
-    attr-dict `:` functional-type(operands, $res)
+    (`preferAgpr` $preferAgpr^)? attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -854,12 +878,17 @@ class ROCDL_Mfma_IntrOp<string mnemonic, ROCDL_NamedType ABType,
     Matrix fused multiply-add (MFMA) intrinsic. Computes `D = A * B + C`
     with matrix operands. The `cbsz`, `abid`, and `blgp` attributes control
     broadcast and block layout modes.
-
+  }] # mfmaAgprHintDescription # [{
     Example:
     ```mlir
     %r0 = }] # mnemonic # [{ %a0, %b0, %c0, 0, 0, none : (}] # ABType.typeName
     # [{, }] # ABType.typeName # [{, }] # CDType.typeName # [{) -> }]
     # CDType.typeName # [{
+
+    // With the AGPR hint.
+    %r1 = }] # mnemonic # [{ %a0, %b0, %c0, 0, 0, none preferAgpr : (}]
+    # ABType.typeName # [{, }] # ABType.typeName # [{, }] # CDType.typeName
+    # [{) -> }] # CDType.typeName # [{
     ```}];
 }
 
@@ -869,10 +898,15 @@ class ROCDL_Mfma_F64_IntrOp<string mnemonic, ROCDL_NamedType ABType,
   let description = [{
     Double-precision matrix fused multiply-add (MFMA) intrinsic. On gfx94x,
     the `blgp` immarg is a NEG bitfield rather than a B-lane permutation.
-
+  }] # mfmaAgprHintDescription # [{
     Example:
     ```mlir
     %r0 = }] # mnemonic # [{ %a0, %b0, %c0, 0, 0, neg_a|neg_b : (}]
+    # ABType.typeName # [{, }] # ABType.typeName # [{, }] # CDType.typeName
+    # [{) -> }] # CDType.typeName # [{
+
+    // With the AGPR hint.
+    %r1 = }] # mnemonic # [{ %a0, %b0, %c0, 0, 0, none preferAgpr : (}]
     # ABType.typeName # [{, }] # ABType.typeName # [{, }] # CDType.typeName
     # [{) -> }] # CDType.typeName # [{
     ```
@@ -881,6 +915,7 @@ class ROCDL_Mfma_F64_IntrOp<string mnemonic, ROCDL_NamedType ABType,
 
 class ROCDL_Mfma_Scale_IntrOp<string mnemonic, Type AB, Type CD> :
   ROCDL_IntrOp<mnemonic, [], [0, 1], [], 1, 0, 0, 0, [3, 4, 5, 7], ["cbsz", "blgp", "opselA", "opselB"]>,
+  ROCDL_MfmaAgprHint,
   Arguments<(ins
              LLVM_VectorOf<AB>:$a,
              LLVM_VectorOf<AB>:$b,
@@ -890,18 +925,21 @@ class ROCDL_Mfma_Scale_IntrOp<string mnemonic, Type AB, Type CD> :
              I32Attr:$opselA,
              I32:$scaleA,
              I32Attr:$opselB,
-             I32:$scaleB)> {
+             I32:$scaleB,
+             UnitAttr:$preferAgpr)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
+  let llvmBuilder = baseLlvmBuilder # mfmaAgprHintLlvmBuilder
+    # baseLlvmBuilderCoda;
   let assemblyFormat = [{
     $a `,` $b `,` $c `,` enum($cbsz) `,` enum($blgp) `,` $opselA `,`
-    $scaleA `,` $opselB `,` $scaleB attr-dict `:`
+    $scaleA `,` $opselB `,` $scaleB (`preferAgpr` $preferAgpr^)? attr-dict `:`
     functional-type(operands, $res)
   }];
   let description = [{
     Scaled matrix fused multiply-add (MFMA) intrinsic with per-operand scaling.
     The `opselA`/`opselB` and `scaleA`/`scaleB` arguments control the scaling
     of input operands.
-
+  }] # mfmaAgprHintDescription # [{
     Example:
     ```mlir
     // Scaled MFMA with fp8 * fp8 inputs.
@@ -915,6 +953,10 @@ class ROCDL_Mfma_Scale_IntrOp<string mnemonic, Type AB, Type CD> :
     // Scaled MFMA with fp8 * fp6 inputs (6xi32 operand B).
     %r2 = rocdl.mfma.scale.f32.32x32x64.f8f6f4 %a, %b6, %c, fp8_e4m3, fp6_e2m3, 0, %scaleA, 0, %scaleB :
       (vector<8xi32>, vector<6xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
+
+    // Scaled MFMA with fp8 * fp8 inputs and the AGPR hint.
+    %r3 = rocdl.mfma.scale.f32.32x32x64.f8f6f4 %a, %a, %c, fp8_e4m3, fp8_e4m3, 0, %scaleA, 0, %scaleB preferAgpr :
+      (vector<8xi32>, vector<8xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
     ```
   }];
 }

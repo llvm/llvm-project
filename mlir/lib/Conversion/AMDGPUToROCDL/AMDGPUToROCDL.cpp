@@ -1617,6 +1617,8 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
            {"abid", rewriter.getI32IntegerAttr(op.getAbid())},
            {"blgp", blgpAttr}});
     };
+    if (op.getPreferAgpr())
+      loweredOp.addAttribute("preferAgpr", rewriter.getUnitAttr());
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     if (outType != intrinsicOutType)
       lowered = LLVM::BitcastOp::create(rewriter, loc, outType, lowered);
@@ -1665,6 +1667,8 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
           ROCDL::MatrixFormatAttr::get(rewriter.getContext(), bTypeCode)},
          {"opselA", rewriter.getI32IntegerAttr(adaptor.getScalesIdxA())},
          {"opselB", rewriter.getI32IntegerAttr(adaptor.getScalesIdxB())}});
+    if (op.getPreferAgpr())
+      loweredOp.addAttribute("preferAgpr", rewriter.getUnitAttr());
 
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     rewriter.replaceOp(op, lowered);

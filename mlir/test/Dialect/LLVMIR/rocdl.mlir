@@ -602,6 +602,38 @@ llvm.func @rocdl.mfma.scale.f32.32x32x64.f8f6f4(%arg0 : i32,
   llvm.return
 }
 
+llvm.func @rocdl.mfma.prefer_agpr(%a : vector<4xf16>, %c : vector<4xf32>,
+                                  %d : f64, %scale : i32,
+                                  %sa : vector<8xi32>,
+                                  %sc : vector<16xf32>) {
+  // CHECK-LABEL: rocdl.mfma.prefer_agpr
+  // CHECK: rocdl.mfma.f32.16x16x16f16 %{{.*}}, %{{.*}}, %{{.*}}, 0, 0, none preferAgpr : (vector<4xf16>, vector<4xf16>, vector<4xf32>) -> vector<4xf32>
+  %r0 = rocdl.mfma.f32.16x16x16f16 %a, %a, %c, 0, 0, none preferAgpr :
+                            (vector<4xf16>, vector<4xf16>, vector<4xf32>) -> vector<4xf32>
+
+  // CHECK: rocdl.mfma.f32.16x16x16f16 %{{.*}}, %{{.*}}, %{{.*}}, 0, 0, none : (vector<4xf16>, vector<4xf16>, vector<4xf32>) -> vector<4xf32>
+  %r1 = rocdl.mfma.f32.16x16x16f16 %a, %a, %c, 0, 0, none :
+                            (vector<4xf16>, vector<4xf16>, vector<4xf32>) -> vector<4xf32>
+
+  // CHECK: rocdl.mfma.f64.4x4x4f64 %{{.*}}, %{{.*}}, %{{.*}}, 0, 0, neg_a preferAgpr : (f64, f64, f64) -> f64
+  %r2 = rocdl.mfma.f64.4x4x4f64 %d, %d, %d, 0, 0, neg_a preferAgpr :
+                            (f64, f64, f64) -> f64
+
+  // CHECK: rocdl.mfma.f64.4x4x4f64 %{{.*}}, %{{.*}}, %{{.*}}, 0, 0, neg_a : (f64, f64, f64) -> f64
+  %r3 = rocdl.mfma.f64.4x4x4f64 %d, %d, %d, 0, 0, neg_a :
+                            (f64, f64, f64) -> f64
+
+  // CHECK: rocdl.mfma.scale.f32.32x32x64.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp8_e4m3, fp8_e4m3, 0, %{{.*}}, 0, %{{.*}} preferAgpr : (vector<8xi32>, vector<8xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
+  %r4 = rocdl.mfma.scale.f32.32x32x64.f8f6f4 %sa, %sa, %sc, fp8_e4m3, fp8_e4m3, 0, %scale, 0, %scale preferAgpr :
+                            (vector<8xi32>, vector<8xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
+
+  // CHECK: rocdl.mfma.scale.f32.32x32x64.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp8_e4m3, fp8_e4m3, 0, %{{.*}}, 0, %{{.*}} : (vector<8xi32>, vector<8xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
+  %r5 = rocdl.mfma.scale.f32.32x32x64.f8f6f4 %sa, %sa, %sc, fp8_e4m3, fp8_e4m3, 0, %scale, 0, %scale :
+                            (vector<8xi32>, vector<8xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
+
+  llvm.return
+}
+
 llvm.func @rocdl.mfma.scale.f32.16x16x128.f8f6f4(%arg0 : i32,
                    %arg1 : vector<4 x f32>, %arg2 : vector<8xi32>,
                    %arg3 : vector<6xi32>, %arg4 : vector<4xi32>) {
