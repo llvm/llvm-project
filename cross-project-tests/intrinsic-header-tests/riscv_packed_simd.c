@@ -5977,8 +5977,9 @@ int32x2_t test_pset_i32_i32x2(int32x2_t v, int32_t e) {
 
 // CHECK-LABEL: test_pset_u32_u32x2:
 // RV32:         mv{{[[:space:]]}}
-// RV64:         srli{{[[:space:]]}}
-// RV64-NEXT:    pack{{[[:space:]]}}
+// RV64:         li{{[[:space:]]}}
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    mvmn{{[[:space:]]}}
 uint32x2_t test_pset_u32_u32x2(uint32x2_t v, uint32_t e) {
   return __riscv_pset_u32_u32x2(v, e, 0);
 }
