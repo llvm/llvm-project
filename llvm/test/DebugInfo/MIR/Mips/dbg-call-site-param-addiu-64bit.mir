@@ -90,6 +90,7 @@
 ---
 name:            fn2
 alignment:       8
+tracksRegLiveness: false
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 stack:

@@ -1718,9 +1718,7 @@ public:
       Result = Builder.CreateAddReduce(Mul);
     else {
       Result = Builder.CreateFAddReduce(
-          ConstantFP::get(
-              cast<FixedVectorType>(LHS->getType())->getElementType(), 0.0),
-          Mul);
+          ConstantFP::getNegativeZero(ElementType), Mul);
       cast<Instruction>(Result)->setFastMathFlags(FMF);
     }
 
@@ -1855,15 +1853,19 @@ public:
     if (AA->isNoAlias(LoadLoc, StoreLoc))
       return {Load->getPointerOperand(), nullptr};
 
+    // Use an array type for the alloca, to avoid potentially huge alignment
+    // requirements for large vector types.
+    auto *VT = cast<FixedVectorType>(Load->getType());
+    auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
+    IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
+    AllocaInst *Alloca =
+        AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+    // The fused loads use the original load's alignment.
+    Alloca->setAlignment(std::max(Alloca->getAlign(), Load->getAlign()));
+
     // If the pointers are in different address spaces, we cannot compare them
     // at runtime. Conservatively copy the load operand to a new buffer.
-    IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
     if (Load->getPointerAddressSpace() != Store->getPointerAddressSpace()) {
-      auto *VT = cast<FixedVectorType>(Load->getType());
-      auto *ArrayTy =
-          ArrayType::get(VT->getElementType(), VT->getNumElements());
-      AllocaInst *Alloca =
-          AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
       IRBuilder<> Builder(MatMul);
       Builder.CreateLifetimeStart(Alloca);
       Builder.CreateMemCpy(Alloca, Alloca->getAlign(),
@@ -1916,13 +1918,6 @@ public:
     // overlap.
     Check1->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check1->begin());
-
-    auto *VT = cast<FixedVectorType>(Load->getType());
-    // Use an array type for the alloca, to avoid potentially huge alignment
-    // requirements for large vector types.
-    auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
-    AllocaInst *Alloca =
-        AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
     Builder.CreateLifetimeStart(Alloca);
 
     Value *LoadEnd = Builder.CreatePtrAdd(
@@ -2016,12 +2011,14 @@ public:
     MatrixTy TileResult(isColumnMajor());
     // Insert in the inner loop header.
     Builder.SetInsertPoint(TI.KLoop.Header->getTerminator());
+    Constant *Init = EltType->isFloatingPointTy()
+                         ? ConstantFP::getNegativeZero(TileVecTy)
+                         : Constant::getNullValue(TileVecTy);
     // Create PHI nodes for the result columns to accumulate across iterations.
     SmallVector<PHINode *, 4> ColumnPhis;
     for (unsigned I = 0; I < Opts.fuse_matrix_tile_size; I++) {
       auto *Phi = Builder.CreatePHI(TileVecTy, 2, "result.vec." + Twine(I));
-      Phi->addIncoming(ConstantAggregateZero::get(TileVecTy),
-                       TI.RowLoop.Header->getSingleSuccessor());
+      Phi->addIncoming(Init, TI.RowLoop.Header->getSingleSuccessor());
       TileResult.addVector(Phi);
       ColumnPhis.push_back(Phi);
     }

@@ -2223,18 +2223,22 @@ Expected<bool> FunctionImporter::importFunctions(
                      << " " << GO->getName() << " from "
                      << SrcModule->getSourceFileName() << "\n");
           if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
-            // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
-            // statistics and debugging.
+            // Add 'thinlto_src_module', 'thinlto_src_file', and
+            // 'thinlto_alias_guid' metadata for statistics, debugging, and
+            // summary lookup (since Fn retains the aliasee's !guid metadata).
+            LLVMContext &Ctx = DestModule.getContext();
             Fn->setMetadata(
                 "thinlto_src_module",
-                MDNode::get(DestModule.getContext(),
-                            {MDString::get(DestModule.getContext(),
-                                           SrcModule->getModuleIdentifier())}));
+                MDNode::get(Ctx, {MDString::get(
+                                     Ctx, SrcModule->getModuleIdentifier())}));
             Fn->setMetadata(
                 "thinlto_src_file",
-                MDNode::get(DestModule.getContext(),
-                            {MDString::get(DestModule.getContext(),
-                                           SrcModule->getSourceFileName())}));
+                MDNode::get(
+                    Ctx, {MDString::get(Ctx, SrcModule->getSourceFileName())}));
+            Fn->setMetadata(
+                "thinlto_alias_guid",
+                MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                                     Type::getInt64Ty(Ctx), GUID))}));
           }
           GlobalsToImport.insert(Fn);
         } else if (MaybeImportType) {

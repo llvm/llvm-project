@@ -18,6 +18,7 @@
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFFORLOOPRANGEFOLDING
@@ -28,6 +29,78 @@ using namespace mlir;
 using namespace mlir::scf;
 
 namespace {
+struct ForLoopRangeFoldingPattern : public OpRewritePattern<ForOp> {
+  using Base::Base;
+
+  void initialize() { setHasBoundedRewriteRecursion(); }
+
+  LogicalResult matchAndRewrite(ForOp op,
+                                PatternRewriter &rewriter) const override {
+    Value indVar = op.getInductionVar();
+
+    auto canBeFolded = [&](Value value) {
+      return op.isDefinedOutsideOfLoop(value) || value == indVar;
+    };
+
+    // If the induction variable is used by more than one operation, we can't
+    // fold its arith ops into the loop range. Note that a single operation
+    // may use the induction variable several times (e.g. `arith.addi %i,
+    // %i`), so check for a single user rather than a single use.
+    if (indVar.use_empty())
+      return failure();
+
+    Operation *user = *indVar.getUsers().begin();
+    if (!llvm::all_of(indVar.getUsers(),
+                      [&](Operation *u) { return u == user; }))
+      return failure();
+
+    if (!isa<arith::AddIOp, arith::MulIOp>(user))
+      return failure();
+
+    if (!llvm::all_of(user->getOperands(), canBeFolded))
+      return failure();
+
+    if (auto mulOp = dyn_cast<arith::MulIOp>(user)) {
+      // Only fold if the multiplier is a known strictly positive constant.
+      // Multiplying by zero or a negative value would produce an invalid
+      // step (scf.for requires a strictly positive step).
+      Value multiplier =
+          (mulOp.getLhs() == indVar) ? mulOp.getRhs() : mulOp.getLhs();
+      std::optional<int64_t> multiplierVal = getConstantIntValue(multiplier);
+      if (!multiplierVal || *multiplierVal <= 0)
+        return failure();
+    }
+
+    rewriter.setInsertionPoint(op);
+    IRMapping lbMap;
+    lbMap.map(indVar, op.getLowerBound());
+    IRMapping ubMap;
+    ubMap.map(indVar, op.getUpperBound());
+    IRMapping stepMap;
+    stepMap.map(indVar, op.getStep());
+
+    Operation *lbFold = rewriter.clone(*user, lbMap);
+    Operation *ubFold = rewriter.clone(*user, ubMap);
+    Operation *stepFold = nullptr;
+    if (auto addOp = dyn_cast<arith::AddIOp>(user)) {
+      // `arith.addi %i, %i` is `2 * %i`, so the step has to be doubled too.
+      if (addOp.getLhs() == indVar && addOp.getRhs() == indVar)
+        stepFold = rewriter.clone(*user, stepMap);
+    } else {
+      stepFold = rewriter.clone(*user, stepMap);
+    }
+
+    rewriter.modifyOpInPlace(op, [&]() {
+      op.setLowerBound(lbFold->getResult(0));
+      op.setUpperBound(ubFold->getResult(0));
+      if (stepFold)
+        op.setStep(stepFold->getResult(0));
+    });
+    rewriter.replaceOp(user, indVar);
+    return success();
+  }
+};
+
 struct ForLoopRangeFolding
     : public impl::SCFForLoopRangeFoldingBase<ForLoopRangeFolding> {
   void runOnOperation() override;
@@ -35,79 +108,16 @@ struct ForLoopRangeFolding
 } // namespace
 
 void ForLoopRangeFolding::runOnOperation() {
-  getOperation()->walk([&](ForOp op) {
-    Value indVar = op.getInductionVar();
-
-    auto canBeFolded = [&](Value value) {
-      return op.isDefinedOutsideOfLoop(value) || value == indVar;
-    };
-
-    // Fold until a fixed point is reached
-    while (true) {
-
-      // If the induction variable is used by more than one operation, we can't
-      // fold its arith ops into the loop range. Note that a single operation
-      // may use the induction variable several times (e.g. `arith.addi %i,
-      // %i`), so check for a single user rather than a single use.
-      if (indVar.use_empty())
-        break;
-
-      Operation *user = *indVar.getUsers().begin();
-      if (!llvm::all_of(indVar.getUsers(),
-                        [&](Operation *u) { return u == user; }))
-        break;
-
-      if (!isa<arith::AddIOp, arith::MulIOp>(user))
-        break;
-
-      if (!llvm::all_of(user->getOperands(), canBeFolded))
-        break;
-
-      OpBuilder b(op);
-      IRMapping lbMap;
-      lbMap.map(indVar, op.getLowerBound());
-      IRMapping ubMap;
-      ubMap.map(indVar, op.getUpperBound());
-      IRMapping stepMap;
-      stepMap.map(indVar, op.getStep());
-
-      if (auto addOp = dyn_cast<arith::AddIOp>(user)) {
-        Operation *lbFold = b.clone(*user, lbMap);
-        Operation *ubFold = b.clone(*user, ubMap);
-
-        op.setLowerBound(lbFold->getResult(0));
-        op.setUpperBound(ubFold->getResult(0));
-
-        // `arith.addi %i, %i` is `2 * %i`, so the step has to be doubled too.
-        if (addOp.getLhs() == indVar && addOp.getRhs() == indVar) {
-          Operation *stepFold = b.clone(*user, stepMap);
-          op.setStep(stepFold->getResult(0));
-        }
-
-      } else if (auto mulOp = dyn_cast<arith::MulIOp>(user)) {
-        // Only fold if the multiplier is a known strictly positive constant.
-        // Multiplying by zero or a negative value would produce an invalid
-        // step (scf.for requires a strictly positive step).
-        Value multiplier =
-            (mulOp.getLhs() == indVar) ? mulOp.getRhs() : mulOp.getLhs();
-        std::optional<int64_t> multiplierVal = getConstantIntValue(multiplier);
-        if (!multiplierVal || *multiplierVal <= 0)
-          break;
-
-        Operation *lbFold = b.clone(*user, lbMap);
-        Operation *ubFold = b.clone(*user, ubMap);
-        Operation *stepFold = b.clone(*user, stepMap);
-
-        op.setLowerBound(lbFold->getResult(0));
-        op.setUpperBound(ubFold->getResult(0));
-        op.setStep(stepFold->getResult(0));
-      }
-
-      ValueRange wrapIndvar(indVar);
-      user->replaceAllUsesWith(wrapIndvar);
-      user->erase();
-    }
-  });
+  RewritePatternSet patterns(&getContext());
+  patterns.add<ForLoopRangeFoldingPattern>(&getContext());
+  GreedyRewriteConfig config;
+  config.setStrictness(GreedyRewriteStrictness::ExistingOps)
+      .enableFolding(false)
+      .enableConstantCSE(false)
+      .setRegionSimplificationLevel(GreedySimplifyRegionLevel::Disabled);
+  if (failed(
+          applyPatternsGreedily(getOperation(), std::move(patterns), config)))
+    signalPassFailure();
 }
 
 std::unique_ptr<Pass> mlir::createForLoopRangeFoldingPass() {

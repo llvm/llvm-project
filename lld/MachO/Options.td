@@ -230,7 +230,7 @@ defm warn_missing_subsections_via_symbols : BB<"warn-missing-subsections-via-sym
 
 // Flags<[HelpHidden]> marks options that are not yet ported to lld,
 // and serve as a scoreboard for annotating our progress toward
-// implementing ld64 options in lld. As you add implementions to
+// implementing ld64 options in lld. As you add implementations to
 // Driver.cpp, please remove the hidden flag here.
 
 def grp_kind : OptionGroup<"kind">, HelpText<"OUTPUT KIND">;

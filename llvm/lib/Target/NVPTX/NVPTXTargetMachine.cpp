@@ -74,6 +74,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXAsmPrinterPass(PR);
   initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PR);
   initializeNVPTXAtomicLowerLegacyPassPass(PR);
+  initializeNVPTXCanonicalizeDynamicSharedLegacyPassPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
   initializeNVPTXPromoteParamAlignLegacyPassPass(PR);
   initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PR);
@@ -257,6 +258,11 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&ShrinkWrapID);
   disablePass(&RemoveLoadsIntoFakeUsesID);
 
+  // Leave block placement to ptxas. Its CFG transformations can invalidate
+  // layout decisions made at the PTX level, and block placement here can
+  // interfere with ptxas analyses.
+  disablePass(&MachineBlockPlacementID);
+
   addPass(createNVPTXAAWrapperPass());
   addPass(createNVPTXExternalAAWrapperPass());
 
@@ -266,6 +272,7 @@ void NVPTXPassConfig::addIRPasses() {
   // call addEarlyAsPossiblePasses.
   const NVPTXSubtarget &ST = *getTM<NVPTXTargetMachine>().getSubtargetImpl();
   addPass(createNVVMReflectPass(ST.getSmVersion()));
+  addPass(createNVPTXCanonicalizeDynamicSharedLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createNVPTXImageOptimizerLegacyPass());

@@ -4720,27 +4720,27 @@ define amdgpu_kernel void @divergent_cfg_i64(ptr addrspace(1) %out, i64 %in, i64
 ; GFX9DAGISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9DAGISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX9DAGISEL-NEXT:    v_cmp_lt_u32_e32 vcc, 15, v0
-; GFX9DAGISEL-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GFX9DAGISEL-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GFX9DAGISEL-NEXT:    s_xor_b64 s[8:9], exec, s[8:9]
+; GFX9DAGISEL-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; GFX9DAGISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GFX9DAGISEL-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9DAGISEL-NEXT:    s_cbranch_execz .LBB11_2
 ; GFX9DAGISEL-NEXT:  ; %bb.1: ; %else
-; GFX9DAGISEL-NEXT:    s_mov_b64 s[4:5], exec
-; GFX9DAGISEL-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
-; GFX9DAGISEL-NEXT:    s_sub_i32 s5, 0, s4
-; GFX9DAGISEL-NEXT:    s_ashr_i32 s4, s5, 31
+; GFX9DAGISEL-NEXT:    s_mov_b64 s[8:9], exec
+; GFX9DAGISEL-NEXT:    s_bcnt1_i32_b64 s8, s[8:9]
+; GFX9DAGISEL-NEXT:    s_sub_i32 s9, 0, s8
+; GFX9DAGISEL-NEXT:    s_ashr_i32 s8, s9, 31
 ; GFX9DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9DAGISEL-NEXT:    s_mul_i32 s10, s2, s4
-; GFX9DAGISEL-NEXT:    s_mul_i32 s4, s2, s5
-; GFX9DAGISEL-NEXT:    s_mul_hi_u32 s2, s2, s5
-; GFX9DAGISEL-NEXT:    s_mul_i32 s3, s3, s5
+; GFX9DAGISEL-NEXT:    s_mul_i32 s10, s2, s8
+; GFX9DAGISEL-NEXT:    s_mul_i32 s8, s2, s9
+; GFX9DAGISEL-NEXT:    s_mul_hi_u32 s2, s2, s9
+; GFX9DAGISEL-NEXT:    s_mul_i32 s3, s3, s9
 ; GFX9DAGISEL-NEXT:    s_add_u32 s2, s2, s3
-; GFX9DAGISEL-NEXT:    s_add_u32 s5, s2, s10
+; GFX9DAGISEL-NEXT:    s_add_u32 s9, s2, s10
 ; GFX9DAGISEL-NEXT:  .LBB11_2: ; %Flow
 ; GFX9DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9DAGISEL-NEXT:    s_or_saveexec_b64 s[2:3], s[8:9]
-; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v0, s4
-; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9DAGISEL-NEXT:    s_or_saveexec_b64 s[2:3], s[4:5]
+; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v0, s8
+; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX9DAGISEL-NEXT:    s_xor_b64 exec, exec, s[2:3]
 ; GFX9DAGISEL-NEXT:    s_cbranch_execz .LBB11_4
 ; GFX9DAGISEL-NEXT:  ; %bb.3: ; %if
@@ -4766,27 +4766,27 @@ define amdgpu_kernel void @divergent_cfg_i64(ptr addrspace(1) %out, i64 %in, i64
 ; GFX9GISEL:       ; %bb.0: ; %entry
 ; GFX9GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9GISEL-NEXT:    v_cmp_le_u32_e32 vcc, 16, v0
-; GFX9GISEL-NEXT:    ; implicit-def: $sgpr6_sgpr7
-; GFX9GISEL-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GFX9GISEL-NEXT:    s_xor_b64 s[8:9], exec, s[8:9]
+; GFX9GISEL-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; GFX9GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; GFX9GISEL-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
 ; GFX9GISEL-NEXT:    s_cbranch_execz .LBB11_2
 ; GFX9GISEL-NEXT:  ; %bb.1: ; %else
-; GFX9GISEL-NEXT:    s_mov_b64 s[6:7], exec
-; GFX9GISEL-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
-; GFX9GISEL-NEXT:    s_sub_i32 s7, 0, s6
-; GFX9GISEL-NEXT:    s_ashr_i32 s6, s7, 31
+; GFX9GISEL-NEXT:    s_mov_b64 s[8:9], exec
+; GFX9GISEL-NEXT:    s_bcnt1_i32_b64 s8, s[8:9]
+; GFX9GISEL-NEXT:    s_sub_i32 s9, 0, s8
+; GFX9GISEL-NEXT:    s_ashr_i32 s8, s9, 31
 ; GFX9GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9GISEL-NEXT:    s_mul_i32 s10, s2, s6
-; GFX9GISEL-NEXT:    s_mul_i32 s6, s2, s7
-; GFX9GISEL-NEXT:    s_mul_hi_u32 s2, s2, s7
-; GFX9GISEL-NEXT:    s_mul_i32 s3, s3, s7
+; GFX9GISEL-NEXT:    s_mul_i32 s10, s2, s8
+; GFX9GISEL-NEXT:    s_mul_i32 s8, s2, s9
+; GFX9GISEL-NEXT:    s_mul_hi_u32 s2, s2, s9
+; GFX9GISEL-NEXT:    s_mul_i32 s3, s3, s9
 ; GFX9GISEL-NEXT:    s_add_u32 s2, s2, s3
-; GFX9GISEL-NEXT:    s_add_u32 s7, s2, s10
+; GFX9GISEL-NEXT:    s_add_u32 s9, s2, s10
 ; GFX9GISEL-NEXT:  .LBB11_2: ; %Flow
 ; GFX9GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9GISEL-NEXT:    s_or_saveexec_b64 s[2:3], s[8:9]
-; GFX9GISEL-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9GISEL-NEXT:    v_mov_b32_e32 v1, s7
+; GFX9GISEL-NEXT:    s_or_saveexec_b64 s[2:3], s[6:7]
+; GFX9GISEL-NEXT:    v_mov_b32_e32 v0, s8
+; GFX9GISEL-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX9GISEL-NEXT:    s_xor_b64 exec, exec, s[2:3]
 ; GFX9GISEL-NEXT:    s_cbranch_execz .LBB11_4
 ; GFX9GISEL-NEXT:  ; %bb.3: ; %if

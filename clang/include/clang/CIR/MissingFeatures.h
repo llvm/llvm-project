@@ -273,6 +273,7 @@ struct MissingFeatures {
   static bool openMP() { return false; }
   static bool openMPLastprivateConditional() { return false; }
   static bool openMPNontemporalDecl() { return false; }
+  static bool openMPRequiresUnifiedSharedMemory() { return false; }
   static bool sycl() { return false; }
   static bool opTBAA() { return false; }
   static bool peepholeProtection() { return false; }

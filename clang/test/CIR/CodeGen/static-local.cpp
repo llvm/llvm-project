@@ -33,6 +33,14 @@
 // CIR-DAG: cir.global "private" internal dso_local @_ZGVZ23array_static_local_dtorvE2sm = #cir.int<0> : !s64i
 // LLVM-DAG: @_ZGVZ23array_static_local_dtorvE2sm = internal global i64 0
 
+// Static locals with an asm label are named by the label:
+// CIR-BOTH-DAG: cir.global "private" internal dso_local @foo = #cir.int<1> : !s32i
+// LLVM-DAG: @foo = internal global i32 1, align 4
+// CIR-BOTH-DAG: cir.global "private" internal dso_local @bar = #cir.int<0> : !s32i
+// LLVM-DAG: @bar = internal global i32 0, align 4
+// CIR-BOTH-DAG: cir.global linkonce_odr comdat @baz = #cir.int<3> : !s32i
+// LLVM-DAG: @baz = linkonce_odr global i32 3, comdat, align 4
+
 // CIR-BOTH-DAG: cir.global linkonce_odr comdat dynamic_init_guard<"_ZGVZ10getInlineAvE1a"> @_ZZ10getInlineAvE1a = #cir.zero : !rec_A
 // LLVM-DAG: @_ZZ10getInlineAvE1a = linkonce_odr global %class.A zeroinitializer, comdat
 // CIR-BOTH-DAG: cir.global "private" internal dso_local @_ZZ23referenced_inside_constvE12static_local = #cir.int<42> : !s32i
@@ -833,3 +841,45 @@ void array_static_local_dtor() {
 // CIR: }
 // CIR-BOTH:    cir.return
 }
+
+// A static local with an asm label is named by the label, rather than by its
+// usual function-scoped static name.
+int asm_label_initialized() {
+  static int x __asm__("foo") = 1;
+  return x++;
+// CIR-BOTH-LABEL: cir.func {{.*}}@_Z21asm_label_initializedv()
+// CIR-BOTH:   %[[FOO:.*]] = cir.get_global @foo : !cir.ptr<!s32i>
+// CIR-BOTH:   cir.load {{.*}}%[[FOO]]
+
+// LLVM-LABEL: define dso_local noundef i32 @_Z21asm_label_initializedv()
+// LLVM:   load i32, ptr @foo
+// LLVM:   store i32 %{{.*}}, ptr @foo
+}
+
+int asm_label_zero_initialized() {
+  static int y __asm__("bar");
+  return y++;
+// CIR-BOTH-LABEL: cir.func {{.*}}@_Z26asm_label_zero_initializedv()
+// CIR-BOTH:   %[[BAR:.*]] = cir.get_global @bar : !cir.ptr<!s32i>
+// CIR-BOTH:   cir.load {{.*}}%[[BAR]]
+
+// LLVM-LABEL: define dso_local noundef i32 @_Z26asm_label_zero_initializedv()
+// LLVM:   load i32, ptr @bar
+// LLVM:   store i32 %{{.*}}, ptr @bar
+}
+
+// The label is used as-is, even for a variable with linkonce_odr linkage.
+inline int asm_label_inline() {
+  static int z __asm__("baz") = 3;
+  return z;
+}
+
+int use_asm_label_inline() { return asm_label_inline(); }
+
+// The inline function is emitted after its user.
+// CIR-BOTH-LABEL: cir.func {{.*}}@_Z16asm_label_inlinev()
+// CIR-BOTH:   %[[BAZ:.*]] = cir.get_global @baz : !cir.ptr<!s32i>
+// CIR-BOTH:   cir.load {{.*}}%[[BAZ]]
+
+// LLVM-LABEL: define linkonce_odr noundef i32 @_Z16asm_label_inlinev()
+// LLVM:   load i32, ptr @baz

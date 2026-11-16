@@ -28,8 +28,8 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
       common::visitors{
           [](IndirectSubscriptIntegerExpr &expr)
               -> std::optional<Constant<SubscriptInteger>> {
-            if (const auto *constant{
-                    UnwrapConstantValue<SubscriptInteger>(expr.value())}) {
+            if (const auto *constant{UnwrapConstantValue<SubscriptInteger>(
+                    SubscriptIntegerKind, expr.value())}) {
               return *constant;
             } else {
               return std::nullopt;
@@ -52,10 +52,11 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
               std::vector<SubscriptInteger::Scalar> values;
               while ((*stride > 0 && *lbi <= *ubi) ||
                   (*stride < 0 && *lbi >= *ubi)) {
-                values.emplace_back(*lbi);
+                values.emplace_back(SubscriptIntegerKind, *lbi);
                 *lbi += *stride;
               }
-              return Constant<SubscriptInteger>{std::move(values),
+              return Constant<SubscriptInteger>{SubscriptIntegerKind,
+                  std::move(values),
                   ConstantSubscripts{
                       static_cast<ConstantSubscript>(values.size())}};
             } else {
@@ -218,7 +219,8 @@ std::optional<std::int64_t> GetInt64ArgOr(
 Expr<ImpliedDoIndex::Result> FoldOperation(
     FoldingContext &context, ImpliedDoIndex &&iDo) {
   if (std::optional<ConstantSubscript> value{context.GetImpliedDo(iDo.name)}) {
-    return Expr<ImpliedDoIndex::Result>{*value};
+    return MakeConstantExpr<ImpliedDoIndex::Result>(
+        SubscriptIntegerKind, *value);
   } else {
     return Expr<ImpliedDoIndex::Result>{std::move(iDo)};
   }
@@ -339,8 +341,8 @@ static std::optional<ResolvedConsequent> FoldConditionalArgImpl(
   condArg.condition() = Fold(context, std::move(condArg.condition()));
 
   // Condition is constant - select appropriate branch and recursively fold it.
-  if (auto constCond{
-          GetScalarConstantValue<LogicalResult>(condArg.condition())}) {
+  if (auto constCond{GetScalarConstantValue<LogicalResult>(
+          LogicalResultKind, condArg.condition())}) {
     if (constCond->IsTrue()) {
       // .TRUE. — select this consequent.
       FoldConsequent(context, condArg.consequent());

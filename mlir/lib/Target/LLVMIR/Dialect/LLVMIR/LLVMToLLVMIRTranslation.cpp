@@ -669,7 +669,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     if (inlineAsmOp.getConvergent())
       inst->addFnAttr(llvm::Attribute::Convergent);
     if (auto maybeOperandAttrs = inlineAsmOp.getOperandAttrs()) {
-      llvm::AttributeList attrList;
+      llvm::AttributeList attrList = inst->getAttributes();
       for (const auto &it : llvm::enumerate(*maybeOperandAttrs)) {
         Attribute attr = it.value();
         if (!attr)

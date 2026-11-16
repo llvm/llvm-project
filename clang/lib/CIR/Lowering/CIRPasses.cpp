@@ -131,14 +131,14 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
     CallConvTarget target = getCallConvTarget(triple);
     if (target != CallConvTarget::None) {
       // Source the ABI-compatibility version from the module's serialized
-      // #cir.lowering_lang_options so a reloaded .cir classifies the same way
+      // #cir.lowering_options so a reloaded .cir classifies the same way
       // it was compiled, without a live clang::LangOptions. CIRGen sets this
       // attribute at module construction; if it is absent fall back to the
       // LangOptions default, matching how LowerModule reads the same attribute.
       auto compat = clang::LangOptions::ClangABI::Latest;
       if (auto loweringLangOpts =
-              theModule->getAttrOfType<cir::LoweringLangOptionsAttr>(
-                  cir::CIRDialect::getLoweringLangOptionsAttrName()))
+              theModule->getAttrOfType<cir::LoweringOptionsAttr>(
+                  cir::CIRDialect::getLoweringOptionsAttrName()))
         compat = static_cast<clang::LangOptions::ClangABI>(
             loweringLangOpts.getClangAbiCompat());
       pm.addPass(mlir::createCallConvLoweringPass(

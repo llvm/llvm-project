@@ -118,10 +118,6 @@ static cl::opt<bool> PreserveBitcodeUseListOrder(
     "preserve-bc-uselistorder", cl::Hidden, cl::init(true),
     cl::desc("Preserve use-list order when writing LLVM bitcode."));
 
-namespace llvm {
-extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
-}
-
 namespace {
 
 /// These are manifest constants used by the bitcode writer. They do not need to
@@ -975,6 +971,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_SANITIZE_HWADDRESS;
   case Attribute::SanitizeThread:
     return bitc::ATTR_KIND_SANITIZE_THREAD;
+  case Attribute::SanitizeConcurrency:
+    return bitc::ATTR_KIND_SANITIZE_CONCURRENCY;
   case Attribute::SanitizeType:
     return bitc::ATTR_KIND_SANITIZE_TYPE;
   case Attribute::SanitizeMemory:
@@ -1043,6 +1041,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NOOUTLINE;
   case Attribute::NoIPA:
     return bitc::ATTR_KIND_NOIPA;
+  case Attribute::LikelyModuleLocal:
+    return bitc::ATTR_KIND_LIKELY_MODULE_LOCAL;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:

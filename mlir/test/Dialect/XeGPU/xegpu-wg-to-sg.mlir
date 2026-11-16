@@ -933,6 +933,94 @@ gpu.module @test_distribution {
     gpu.return
   }
 
+  // f8E4M3FN has no infinity: maximumf/minimumf use the lowest/highest finite value.
+  // maxnumf still uses a quiet NaN.
+  // CHECK-LABEL: gpu.func @vector_reduce_no_inf_neutral
+  // CHECK: %[[N0:.*]] = arith.constant dense<-4.480000e+02> : vector<16xf8E4M3FN>
+  // CHECK: vector.multi_reduction <maximumf>, %{{.*}}, %[[N0]] [1] : vector<16x64xf8E4M3FN> to vector<16xf8E4M3FN>
+  // CHECK: %[[N1:.*]] = arith.constant dense<4.480000e+02> : vector<16xf8E4M3FN>
+  // CHECK: vector.multi_reduction <minimumf>, %{{.*}}, %[[N1]] [1] : vector<16x64xf8E4M3FN> to vector<16xf8E4M3FN>
+  // CHECK: %[[N2:.*]] = arith.constant dense<0x7F> : vector<16xf8E4M3FN>
+  // CHECK: vector.multi_reduction <maxnumf>, %{{.*}}, %[[N2]] [1] : vector<16x64xf8E4M3FN> to vector<16xf8E4M3FN>
+  gpu.func @vector_reduce_no_inf_neutral(%src: memref<256x64xf8E4M3FN>) {
+    %cst = arith.constant dense<1.0> : vector<256xf8E4M3FN>
+    %tdesc = xegpu.create_nd_tdesc %src : memref<256x64xf8E4M3FN>
+      -> !xegpu.tensor_desc<256x64xf8E4M3FN>
+    %load = xegpu.load_nd %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>}>
+      : !xegpu.tensor_desc<256x64xf8E4M3FN>
+      -> vector<256x64xf8E4M3FN>
+    %r0 = vector.multi_reduction <maximumf>, %load, %cst [1]
+      : vector<256x64xf8E4M3FN> to vector<256xf8E4M3FN>
+    %a0 = xegpu.convert_layout %r0
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>}>
+      : vector<256xf8E4M3FN>
+    %r1 = vector.multi_reduction <minimumf>, %load, %cst [1]
+      : vector<256x64xf8E4M3FN> to vector<256xf8E4M3FN>
+    %a1 = xegpu.convert_layout %r1
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>}>
+      : vector<256xf8E4M3FN>
+    %r2 = vector.multi_reduction <maxnumf>, %load, %cst [1]
+      : vector<256x64xf8E4M3FN> to vector<256xf8E4M3FN>
+    %a2 = xegpu.convert_layout %r2
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>}>
+      : vector<256xf8E4M3FN>
+    gpu.return
+  }
+
+  // f4E2M1FN has neither NaN nor infinity: all min/max kinds use the lowest/highest
+  // finite value.
+  // CHECK-LABEL: gpu.func @vector_reduce_no_nan_no_inf_neutral
+  // CHECK: %[[N0:.*]] = arith.constant dense<-6.000000e+00> : vector<16xf4E2M1FN>
+  // CHECK: vector.multi_reduction <maxnumf>, %{{.*}}, %[[N0]] [1] : vector<16x64xf4E2M1FN> to vector<16xf4E2M1FN>
+  // CHECK: %[[N1:.*]] = arith.constant dense<6.000000e+00> : vector<16xf4E2M1FN>
+  // CHECK: vector.multi_reduction <minimumf>, %{{.*}}, %[[N1]] [1] : vector<16x64xf4E2M1FN> to vector<16xf4E2M1FN>
+  gpu.func @vector_reduce_no_nan_no_inf_neutral(%src: memref<256x64xf4E2M1FN>) {
+    %cst = arith.constant dense<1.0> : vector<256xf4E2M1FN>
+    %tdesc = xegpu.create_nd_tdesc %src : memref<256x64xf4E2M1FN>
+      -> !xegpu.tensor_desc<256x64xf4E2M1FN>
+    %load = xegpu.load_nd %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>}>
+      : !xegpu.tensor_desc<256x64xf4E2M1FN>
+      -> vector<256x64xf4E2M1FN>
+    %r0 = vector.multi_reduction <maxnumf>, %load, %cst [1]
+      : vector<256x64xf4E2M1FN> to vector<256xf4E2M1FN>
+    %a0 = xegpu.convert_layout %r0
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>}>
+      : vector<256xf4E2M1FN>
+    %r1 = vector.multi_reduction <minimumf>, %load, %cst [1]
+      : vector<256x64xf4E2M1FN> to vector<256xf4E2M1FN>
+    %a1 = xegpu.convert_layout %r1
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>}>
+      : vector<256xf4E2M1FN>
+    gpu.return
+  }
+
+  // f8E8M0FNU is unsigned, with no zero and no infinity: maximumf uses the smallest
+  // value, minimumf the largest finite value.
+  // CHECK-LABEL: gpu.func @vector_reduce_unsigned_neutral
+  // CHECK: %[[N0:.*]] = arith.constant dense<5.877470e-39> : vector<16xf8E8M0FNU>
+  // CHECK: vector.multi_reduction <maximumf>, %{{.*}}, %[[N0]] [1] : vector<16x64xf8E8M0FNU> to vector<16xf8E8M0FNU>
+  // CHECK: %[[N1:.*]] = arith.constant dense<1.701410e+38> : vector<16xf8E8M0FNU>
+  // CHECK: vector.multi_reduction <minimumf>, %{{.*}}, %[[N1]] [1] : vector<16x64xf8E8M0FNU> to vector<16xf8E8M0FNU>
+  gpu.func @vector_reduce_unsigned_neutral(%src: memref<256x64xf8E8M0FNU>) {
+    %cst = arith.constant dense<1.0> : vector<256xf8E8M0FNU>
+    %tdesc = xegpu.create_nd_tdesc %src : memref<256x64xf8E8M0FNU>
+      -> !xegpu.tensor_desc<256x64xf8E8M0FNU>
+    %load = xegpu.load_nd %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>}>
+      : !xegpu.tensor_desc<256x64xf8E8M0FNU>
+      -> vector<256x64xf8E8M0FNU>
+    %r0 = vector.multi_reduction <maximumf>, %load, %cst [1]
+      : vector<256x64xf8E8M0FNU> to vector<256xf8E8M0FNU>
+    %a0 = xegpu.convert_layout %r0
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>}>
+      : vector<256xf8E8M0FNU>
+    %r1 = vector.multi_reduction <minimumf>, %load, %cst [1]
+      : vector<256x64xf8E8M0FNU> to vector<256xf8E8M0FNU>
+    %a1 = xegpu.convert_layout %r1
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>}>
+      : vector<256xf8E8M0FNU>
+    gpu.return
+  }
+
   // NaN-propagating kinds have +/-inf as neutral element.
   // CHECK-LABEL: gpu.func @vector_reduce_nan_propagating_neutral
   gpu.func @vector_reduce_nan_propagating_neutral(%src: memref<256x64xf32>) {

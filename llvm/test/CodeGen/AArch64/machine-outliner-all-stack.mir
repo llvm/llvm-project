@@ -1,5 +1,4 @@
-# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner \
-# RUN: -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner %s -o - | FileCheck %s
 
 # Show that, when instructions that use the stack are present, it's possible
 # for us to outline everything as the default outlining type.

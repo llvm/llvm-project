@@ -2,7 +2,7 @@
 # 
 # RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
 # RUN: -window-sched=force -filetype=null -window-search-num=100 \
-# RUN: -window-search-ratio=100 -window-diff-limit=0 -verify-machineinstrs \
+# RUN: -window-search-ratio=100 -window-diff-limit=0 \
 # RUN: 2>&1 | FileCheck %s
 
 # The bug was reported at https://github.com/llvm/llvm-project/pull/99454. 

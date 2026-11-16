@@ -56,7 +56,7 @@ define amdgpu_ps void @global_load_monitor_b64_vaddr_acquire_agent(ptr addrspace
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    global_load_monitor_b64 v[0:1], v[0:1], off offset:32 scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX1250-NEXT:    s_endpgm
@@ -77,7 +77,7 @@ define amdgpu_ps void @global_load_monitor_b64_saddr_acquire_agent(ptr addrspace
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    global_load_monitor_b64 v[2:3], v2, s[0:1] offset:32 scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1250-NEXT:    s_endpgm
@@ -134,7 +134,7 @@ define amdgpu_ps void @flat_load_monitor_b32_seq_cst_sys(ptr %addr, ptr addrspac
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    flat_load_monitor_b32 v0, v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX1250-NEXT:    s_endpgm
@@ -154,7 +154,7 @@ define amdgpu_ps void @flat_load_monitor_b64_seq_cst_agent(ptr %addr, ptr addrsp
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    flat_load_monitor_b64 v[0:1], v[0:1] offset:32 scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX1250-NEXT:    s_endpgm
@@ -174,7 +174,7 @@ define amdgpu_ps void @flat_load_monitor_b128_acquire_sys(ptr %addr, ptr addrspa
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    flat_load_monitor_b128 v[4:7], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b128 v[2:3], v[4:7], off
 ; GFX1250-NEXT:    s_endpgm
@@ -194,7 +194,7 @@ define amdgpu_ps void @global_load_monitor_b32_saddr_scale_offset_acquire_agent(
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    global_load_monitor_b32 v2, v2, s[0:1] scale_offset scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
@@ -237,7 +237,7 @@ define amdgpu_ps void @global_load_monitor_b64_saddr_no_scale_offset_seq_cst_sys
 ; GFX1250-NEXT:    v_lshl_add_u64 v[2:3], v[2:3], 2, s[0:1]
 ; GFX1250-NEXT:    global_load_monitor_b64 v[2:3], v[2:3], off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1250-NEXT:    s_endpgm

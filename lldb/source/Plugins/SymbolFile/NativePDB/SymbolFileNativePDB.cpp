@@ -3030,6 +3030,20 @@ SymbolFileNativePDB::FindNamespace(ConstString name,
   if (!ast_builder)
     return {};
 
+  if (CompilerDeclContext ns =
+          ast_builder->FindNamespaceDecl(parent_decl_ctx, name.GetStringRef()))
+    return ns;
+
+  // The AST builder only knows the namespaces of the decls it created so far.
+  BuildParentMap();
+  std::string qualified_name;
+  if (parent_decl_ctx.IsValid())
+    qualified_name = parent_decl_ctx.GetScopeQualifiedName().GetString() + "::";
+  qualified_name += name.GetStringRef();
+  auto it = m_typedef_scopes.find(qualified_name);
+  if (it == m_typedef_scopes.end())
+    return {};
+  GetOrCreateTypedef(PdbGlobalSymId{it->second, false});
   return ast_builder->FindNamespaceDecl(parent_decl_ctx, name.GetStringRef());
 }
 
@@ -3155,9 +3169,11 @@ void SymbolFileNativePDB::BuildParentMap() {
     }
     if (!IsTypedefUdt(*udt_or_err))
       continue;
-    llvm::StringRef base_name =
-        MSVCUndecoratedNameParser::DropScope(udt_or_err->Name);
-    m_typedef_base_names.Append(ConstString(base_name), gid);
+    MSVCUndecoratedNameParser parser(udt_or_err->Name);
+    llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specs = parser.GetSpecifiers();
+    m_typedef_base_names.Append(ConstString(specs.back().GetBaseName()), gid);
+    for (const MSVCUndecoratedNameSpecifier &scope : specs.drop_back())
+      m_typedef_scopes.try_emplace(scope.GetFullName(), gid);
   }
   m_typedef_base_names.Sort(std::less<uint32_t>());
 

@@ -1,7 +1,7 @@
-# RUN: llc -O0 -mtriple arm-- -mattr=+vfp3,-neonfp -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,VFP3
-# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2,+vfp3,-neonfp -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,VFP3
-# RUN: llc -O0 -mtriple arm-- -mattr=+vfp2,-neonfp -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,VFP2
-# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2,+vfp2,-neonfp -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,VFP2
+# RUN: llc -O0 -mtriple arm-- -mattr=+vfp3,-neonfp -run-pass=instruction-select %s -o - | FileCheck %s --check-prefixes=CHECK,VFP3
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2,+vfp3,-neonfp -run-pass=instruction-select %s -o - | FileCheck %s --check-prefixes=CHECK,VFP3
+# RUN: llc -O0 -mtriple arm-- -mattr=+vfp2,-neonfp -run-pass=instruction-select %s -o - | FileCheck %s --check-prefixes=CHECK,VFP2
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2,+vfp2,-neonfp -run-pass=instruction-select %s -o - | FileCheck %s --check-prefixes=CHECK,VFP2
 --- |
   define void @test_fpconst_zero_s32() { ret void }
   define void @test_fpconst_zero_s64() { ret void }

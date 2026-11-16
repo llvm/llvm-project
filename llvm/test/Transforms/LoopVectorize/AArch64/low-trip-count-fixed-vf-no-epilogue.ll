@@ -72,6 +72,43 @@ exit:
   ret void
 }
 
+define void @tc4_optsize_no_rt_check(ptr noalias %a, ptr noalias %b) #1 {
+; CHECK-LABEL: define void @tc4_optsize_no_rt_check(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = add <4 x i32> [[WIDE_LOAD]], splat (i32 1)
+; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[A]], align 4
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gb = getelementptr inbounds i32, ptr %b, i64 %iv
+  %v = load i32, ptr %gb, align 4
+  %add = add i32 %v, 1
+  %ga = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 %add, ptr %ga, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 4
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+attributes #1 = { optsize }
+
 ; Trip count 3 is not a multiple of any fixed-width VF.
 define void @tc3_no_vscale_range(ptr %a) {
 ; CHECK-LABEL: define void @tc3_no_vscale_range(

@@ -30,15 +30,15 @@ add_mlir_library(MLIRTestIR
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  MLIRAnalysisBase
   MLIRTestDialect
   )
 
 mlir_target_link_libraries(MLIRTestIR PUBLIC
-  MLIRPass
+  MLIRAnalysisBase
   MLIRBytecodeReader
   MLIRBytecodeWriter
   MLIRFunctionInterfaces
+  MLIRPass
   )
 
 target_include_directories(MLIRTestIR

@@ -899,7 +899,7 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
     Increment = 2;
   }
   unsigned CurrScore = UB + Increment;
-  if (CurrScore == 0)
+  if (CurrScore <= UB)
     report_fatal_error("InsertWaitcnt score wraparound");
   // PendingEvents and ScoreUB need to be update regardless if this event
   // changes the score of a register or not.

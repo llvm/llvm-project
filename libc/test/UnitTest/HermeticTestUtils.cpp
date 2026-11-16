@@ -141,9 +141,6 @@ void *calloc(size_t num, size_t size) {
   LIBC_NAMESPACE::memset(mem, 0, total);
   return mem;
 }
-#if defined(__linux__)
-int *__errno_location() noexcept { return LIBC_NAMESPACE::__llvm_libc_errno(); }
-#endif
 
 } // extern "C"
 

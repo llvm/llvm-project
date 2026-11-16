@@ -3,6 +3,7 @@
 
 ---
 name: Cst
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst
@@ -15,6 +16,7 @@ body: |
 ...
 ---
 name: PartialKnown
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @PartialKnown
@@ -32,6 +34,7 @@ body: |
 
 ---
 name: SignBits
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @SignBits
@@ -48,6 +51,7 @@ body: |
 ...
 ---
 name: SignBitsAsymmetric
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @SignBitsAsymmetric
@@ -64,6 +68,7 @@ body: |
 ...
 ---
 name: Unknown
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Unknown

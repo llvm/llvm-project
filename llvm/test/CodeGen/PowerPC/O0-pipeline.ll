@@ -40,14 +40,10 @@
 ; CHECK-NEXT:       PowerPC VSX Copy Legalization
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       Local Stack Slot Allocation
-; CHECK-NEXT:       Remove unreachable machine basic blocks
-; CHECK-NEXT:       Live Variable Analysis
-; CHECK-NEXT:       MachineDominator Tree Construction
-; CHECK-NEXT:       Slot index numbering
-; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       PowerPC TLS Dynamic Call Fixup
 ; CHECK-NEXT:       PowerPC TOC Register Dependencies
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
+; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       Remove Redundant DEBUG_VALUE analysis
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved

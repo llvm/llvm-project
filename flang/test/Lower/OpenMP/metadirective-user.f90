@@ -90,6 +90,95 @@ subroutine test_begin_condition_false()
   !$omp end metadirective
 end subroutine
 
+! Only constant conditions of default LOGICAL kind are resolved statically.
+! Other kinds are lowered as a runtime fir.if on a constant.
+
+! CHECK-LABEL: func.func @_QPtest_condition_true_kind8()
+! CHECK:         %[[TRUE:.*]] = arith.constant true
+! CHECK-NEXT:    fir.if %[[TRUE]] {
+! CHECK-NEXT:      omp.taskyield
+! CHECK-NEXT:    } else {
+! CHECK-NEXT:    }
+! CHECK-NEXT:    return
+subroutine test_condition_true_kind8()
+  !$omp metadirective &
+  !$omp & when(user={condition(.true._8)}: taskyield) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_condition_false_kind8()
+! CHECK:         %[[FALSE:.*]] = arith.constant false
+! CHECK-NEXT:    fir.if %[[FALSE]] {
+! CHECK-NEXT:      omp.taskwait
+! CHECK-NEXT:    } else {
+! CHECK-NEXT:    }
+! CHECK-NEXT:    return
+subroutine test_condition_false_kind8()
+  !$omp metadirective &
+  !$omp & when(user={condition(.false._8)}: taskwait) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_condition_true_kind1()
+! CHECK:         %[[TRUE:.*]] = arith.constant true
+! CHECK-NEXT:    fir.if %[[TRUE]] {
+! CHECK-NEXT:      omp.taskyield
+! CHECK-NEXT:    } else {
+! CHECK-NEXT:    }
+! CHECK-NEXT:    return
+subroutine test_condition_true_kind1()
+  !$omp metadirective &
+  !$omp & when(user={condition(.true._1)}: taskyield) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_condition_true_kind2()
+! CHECK:         %[[TRUE:.*]] = arith.constant true
+! CHECK-NEXT:    fir.if %[[TRUE]] {
+! CHECK-NEXT:      omp.taskyield
+! CHECK-NEXT:    } else {
+! CHECK-NEXT:    }
+! CHECK-NEXT:    return
+subroutine test_condition_true_kind2()
+  !$omp metadirective &
+  !$omp & when(user={condition(.true._2)}: taskyield) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_condition_score_kind8()
+! CHECK:         %[[TRUE:.*]] = arith.constant true
+! CHECK-NEXT:    fir.if %[[TRUE]] {
+! CHECK-NEXT:      omp.taskwait
+! CHECK-NEXT:    } else {
+! CHECK-NEXT:    }
+! CHECK-NEXT:    return
+subroutine test_condition_score_kind8()
+  !$omp metadirective &
+  !$omp & when(user={condition(.true._8)}: taskyield) &
+  !$omp & when(user={condition(score(2): .true._8)}: taskwait) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+end subroutine
+
 !===----------------------------------------------------------------------===!
 ! Dynamic (runtime) user conditions
 !===----------------------------------------------------------------------===!

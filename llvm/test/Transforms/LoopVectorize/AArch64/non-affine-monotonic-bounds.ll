@@ -44,10 +44,29 @@ exit:
 define void @bitset_tc8(ptr %words, ptr %out) {
 ; CHECK-LABEL: define void @bitset_tc8(
 ; CHECK-SAME: ptr [[WORDS:%.*]], ptr [[OUT:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OUT]], i64 8
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[WORDS]], i64 1
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[OUT]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[WORDS]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[WORDS]], align 1, !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    store <8 x i8> [[BROADCAST_SPLAT]], ptr [[OUT]], align 1, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-NEXT:    [[DIV:%.*]] = lshr i64 [[IV]], 6
 ; CHECK-NEXT:    [[GEP_WORDS:%.*]] = getelementptr inbounds i8, ptr [[WORDS]], i64 [[DIV]]
 ; CHECK-NEXT:    [[W:%.*]] = load i8, ptr [[GEP_WORDS]], align 1
@@ -55,7 +74,7 @@ define void @bitset_tc8(ptr %words, ptr %out) {
 ; CHECK-NEXT:    store i8 [[W]], ptr [[GEP_OUT]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 8
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

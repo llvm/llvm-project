@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=GFX94 %s
-# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=GFX94 %s
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=GFX94 %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=GFX94 %s
 
 ---
 name:            buffer_inv_advances_vmcnt

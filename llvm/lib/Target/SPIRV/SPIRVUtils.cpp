@@ -368,37 +368,37 @@ MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB) {
 SPIRV::StorageClass::StorageClass
 addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
-  case 0:
+  case SPIRVAS::Function:
     return SPIRV::StorageClass::Function;
-  case 1:
+  case SPIRVAS::CrossWorkgroup:
     return SPIRV::StorageClass::CrossWorkgroup;
-  case 2:
+  case SPIRVAS::UniformConstant:
     return SPIRV::StorageClass::UniformConstant;
-  case 3:
+  case SPIRVAS::Workgroup:
     return SPIRV::StorageClass::Workgroup;
-  case 4:
+  case SPIRVAS::Generic:
     return SPIRV::StorageClass::Generic;
-  case 5:
+  case SPIRVAS::DeviceOnlyINTEL:
     return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
                ? SPIRV::StorageClass::DeviceOnlyINTEL
                : SPIRV::StorageClass::CrossWorkgroup;
-  case 6:
+  case SPIRVAS::HostOnlyINTEL:
     return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
                ? SPIRV::StorageClass::HostOnlyINTEL
                : SPIRV::StorageClass::CrossWorkgroup;
-  case 7:
+  case SPIRVAS::Input:
     return SPIRV::StorageClass::Input;
-  case 8:
+  case SPIRVAS::Output:
     return SPIRV::StorageClass::Output;
-  case 9:
+  case SPIRVAS::CodeSectionINTEL:
     return SPIRV::StorageClass::CodeSectionINTEL;
-  case 10:
+  case SPIRVAS::Private:
     return SPIRV::StorageClass::Private;
-  case 11:
+  case SPIRVAS::StorageBuffer:
     return SPIRV::StorageClass::StorageBuffer;
-  case 12:
+  case SPIRVAS::Uniform:
     return SPIRV::StorageClass::Uniform;
-  case 13:
+  case SPIRVAS::PushConstant:
     return SPIRV::StorageClass::PushConstant;
   default:
     report_fatal_error("Unknown address space");

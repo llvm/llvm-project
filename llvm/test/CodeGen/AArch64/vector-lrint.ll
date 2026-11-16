@@ -3,11 +3,9 @@
 ; RUN:   FileCheck %s --check-prefixes=CHECK-i32,CHECK-i32-SD
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=aarch64 -mattr=+neon |\
 ; RUN:   FileCheck %s --check-prefixes=CHECK-i64,CHECK-i64-SD
-; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=aarch64 -mattr=+neon \
-; RUN:   -global-isel -global-isel-abort=2 2>&1 |\
+; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=aarch64 -mattr=+neon -global-isel |\
 ; RUN:   FileCheck %s --check-prefixes=CHECK-i32,CHECK-i32-GI
-; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=aarch64 -mattr=+neon \
-; RUN:   -global-isel -global-isel-abort=2 2>&1 |\
+; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=aarch64 -mattr=+neon -global-isel |\
 ; RUN:   FileCheck %s --check-prefixes=CHECK-i64,CHECK-i64-GI
 
 define <1 x iXLen> @lrint_v1f16(<1 x half> %x) nounwind {

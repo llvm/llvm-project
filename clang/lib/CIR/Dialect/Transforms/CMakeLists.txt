@@ -21,8 +21,7 @@ add_clang_library(MLIRCIRTransforms
 
   DEPENDS
   MLIRCIRPassIncGen
-  MLIRBuiltinLocationAttributesIncGen
-  MLIRBytecodeOpInterfaceIncGen
+  mlir-headers
 
   LINK_COMPONENTS
   ABI

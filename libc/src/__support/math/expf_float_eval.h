@@ -123,10 +123,14 @@ LIBC_INLINE float expf(float x) {
   return exp2f_eval(u, k);
 }
 
+} // namespace float_eval
+
+namespace float_eval_cr_rn {
+
 // Designed for GPU performance. Correctly rounded only in round-to-nearest,
 // ties-to-even mode. Requires single-precision FMA. Does not support errno
 // or floating-point exception reporting.
-LIBC_INLINE float cr_expf_rn(float x) {
+LIBC_INLINE float expf(float x) {
   using FPBits = fputil::FPBits<float>;
   using FPBounds = math::check::exp_internal::Bounds<float>;
 
@@ -179,10 +183,10 @@ LIBC_INLINE float cr_expf_rn(float x) {
   u.lo += u_lo.lo;
 
   // Polynomial approximation: e^u
-  fputil::FloatFloat exp_u = cr_expf_rn_internal::exp_eval(u);
+  fputil::FloatFloat exp_u = expf_internal::exp_eval(u);
 
   // Reconstruction: 2^k * e^u
-  float res = cr_expf_rn_internal::scale_result(exp_u, k, produces_subnormal);
+  float res = expf_internal::scale_result(exp_u, k, produces_subnormal);
 
   // Special cases
   constexpr float INF = FPBits::inf().get_val();
@@ -194,7 +198,7 @@ LIBC_INLINE float cr_expf_rn(float x) {
   return res;
 }
 
-} // namespace float_eval
+} // namespace float_eval_cr_rn
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 

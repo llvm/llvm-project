@@ -123,9 +123,9 @@ public:
                                                bool has_extra_args,
                                                bool is_callback) override;
 
-  bool GenerateWatchpointCommandCallbackData(StringList &input,
-                                             std::string &output,
-                                             bool is_callback) override;
+  llvm::Error GenerateWatchpointCommandCallbackData(StringList &input,
+                                                    std::string &output,
+                                                    bool is_callback) override;
 
   bool GetScriptedSummary(const char *function_name, lldb::ValueObjectSP valobj,
                           StructuredData::ObjectSP &callee_wrapper_sp,

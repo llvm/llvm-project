@@ -1188,33 +1188,77 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
 #undef PZO_CVT
 
   case NVPTX::BI__nvvm_fma_rn_f16:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_f16, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_f16x2, BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_bf16:
+  case NVPTX::BI__nvvm_fma_rn_bf16x2:
+  case NVPTX::BI__nvvm_fma_rn_f:
+  case NVPTX::BI__nvvm_fma_rn_d:
+    return MakeFPArith(Intrinsic::nvvm_fma, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rz_f:
+  case NVPTX::BI__nvvm_fma_rz_d:
+    return MakeFPArith(Intrinsic::nvvm_fma, APFloat::rmTowardZero, BuiltinID, E,
+                       *this);
+  case NVPTX::BI__nvvm_fma_rm_f:
+  case NVPTX::BI__nvvm_fma_rm_d:
+    return MakeFPArith(Intrinsic::nvvm_fma, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rp_f:
+  case NVPTX::BI__nvvm_fma_rp_d:
+    return MakeFPArith(Intrinsic::nvvm_fma, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_ftz_f16:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_ftz_f16, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_ftz_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_ftz_f16x2, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_ftz_relu_f16, BuiltinID, E,
-                        *this);
-  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_ftz_relu_f16x2, BuiltinID, E,
-                        *this);
-  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_ftz_sat_f16, BuiltinID, E,
-                        *this);
-  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_ftz_sat_f16x2, BuiltinID, E,
-                        *this);
-  case NVPTX::BI__nvvm_fma_rn_relu_f16:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_relu_f16, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fma_rn_relu_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_relu_f16x2, BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rz_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz, APFloat::rmTowardZero,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rm_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rp_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_sat_f16:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_sat_f16, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_sat_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_sat_f16x2, BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_sat, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_sat, APFloat::rmTowardZero,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rm_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_sat, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rp_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_sat, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16:
+  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16x2:
+  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz_sat,
+                       APFloat::rmNearestTiesToEven, BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rz_ftz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz_sat, APFloat::rmTowardZero,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rm_ftz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz_sat, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rp_ftz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz_sat, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_relu_f16:
+  case NVPTX::BI__nvvm_fma_rn_relu_f16x2:
+  case NVPTX::BI__nvvm_fma_rn_relu_bf16:
+  case NVPTX::BI__nvvm_fma_rn_relu_bf16x2:
+    return MakeFPArith(Intrinsic::nvvm_fma_relu, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16:
+  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16x2:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz_relu,
+                       APFloat::rmNearestTiesToEven, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_oob_f16:
     return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob, Builder.getHalfTy(), E,
                       *this);

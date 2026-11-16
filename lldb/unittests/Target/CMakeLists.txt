@@ -20,6 +20,7 @@ add_lldb_unittest(TargetTests
   SummaryStatisticsTest.cpp
   TargetAPIMutexTest.cpp
   TargetGroupTest.cpp
+  ThreadPlanStackTest.cpp
   FindFileTest.cpp
 
   LINK_COMPONENTS

@@ -524,11 +524,9 @@ void Instruction::dropPoisonGeneratingMetadata() {
 
 bool Instruction::hasPoisonGeneratingAttributes() const {
   if (const auto *CB = dyn_cast<CallBase>(this)) {
-    auto HasPoisonGeneratingAttributes = [](AttributeSet Attrs) {
-      return Attrs.hasAttribute(Attribute::Range) ||
-             Attrs.hasAttribute(Attribute::Alignment) ||
-             Attrs.hasAttribute(Attribute::NonNull) ||
-             Attrs.hasAttribute(Attribute::NoFPClass);
+    AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
+    auto HasPoisonGeneratingAttributes = [&](AttributeSet Attrs) {
+      return any_of(Attrs, [&](Attribute A) { return AM.contains(A); });
     };
     if (HasPoisonGeneratingAttributes(CB->getRetAttributes()))
       return true;
@@ -541,11 +539,7 @@ bool Instruction::hasPoisonGeneratingAttributes() const {
 
 void Instruction::dropPoisonGeneratingAttributes() {
   if (auto *CB = dyn_cast<CallBase>(this)) {
-    AttributeMask AM;
-    AM.addAttribute(Attribute::Range);
-    AM.addAttribute(Attribute::Alignment);
-    AM.addAttribute(Attribute::NonNull);
-    AM.addAttribute(Attribute::NoFPClass);
+    AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
     CB->removeRetAttrs(AM);
     for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
       CB->removeParamAttrs(ArgNo, AM);

@@ -11,18 +11,22 @@
 
 // Computes an integer power of a real or complex value.
 
+#include "flang/Evaluate/real-value.h"
 #include "flang/Evaluate/real.h"
 #include "flang/Evaluate/target.h"
 
 namespace Fortran::evaluate {
 
-template <typename REAL, typename INT>
+template <typename REAL>
 ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
-    const INT &power, bool forceMultiply = false,
+    const value::IntegerValue &power, bool forceMultiply = false,
     Rounding rounding = TargetCharacteristics::defaultRounding) {
+  using INT = value::IntegerValue;
+  const int realKind{base.kind()};
+  CHECK(factor.kind() == base.kind());
   ValueWithRealFlags<REAL> result{factor};
   if (base.IsNotANumber()) {
-    result.value = REAL::NotANumber();
+    result.value = REAL::NotANumber(realKind);
     result.flags.set(RealFlag::InvalidArgument);
   } else if (power.IsZero()) {
     if (base.IsZero() || base.IsInfinite()) {
@@ -32,7 +36,7 @@ ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
     bool negativePower{!forceMultiply && power.IsNegative()};
     INT absPower{power.ABS().value};
     REAL squares{base};
-    int nbits{INT::bits - absPower.LEADZ()};
+    int nbits{absPower.bits() - absPower.LEADZ()};
     for (int j{0}; j < nbits; ++j) {
       if (j > 0) { // avoid spurious overflow on last iteration
         squares =
@@ -52,12 +56,14 @@ ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
   return result;
 }
 
-template <typename W, int P, typename INT>
-ValueWithRealFlags<value::Real<W, P>> IntPower(const value::Real<W, P> &base,
-    const INT &power,
+inline ValueWithRealFlags<value::RealValue> IntPower(
+    const value::RealValue &base, const value::IntegerValue &power,
     Rounding rounding = TargetCharacteristics::defaultRounding) {
-  using REAL = value::Real<W, P>;
-  REAL one{REAL::FromInteger(INT{1}).value};
+  using REAL = value::RealValue;
+  using INT = value::IntegerValue;
+  const int realKind{base.kind()};
+  const int intKind{power.kind()};
+  REAL one{REAL::FromInteger(realKind, INT{intKind, 1}).value};
   ValueWithRealFlags<REAL> result{
       TimesIntPowerOf(one, base, power, /*forceMultiply=*/false, rounding)};
   if (result.flags.test(RealFlag::Overflow) && power.IsNegative() &&
@@ -72,11 +78,16 @@ ValueWithRealFlags<value::Real<W, P>> IntPower(const value::Real<W, P> &base,
   return result;
 }
 
-template <typename REAL, typename INT>
-ValueWithRealFlags<REAL> IntPower(const REAL &base, const INT &power,
+inline ValueWithRealFlags<value::ComplexValue> IntPower(
+    const value::ComplexValue &base, const value::IntegerValue &power,
     Rounding rounding = TargetCharacteristics::defaultRounding) {
-  REAL one{REAL::FromInteger(INT{1}).value};
+  using CMPLX = value::ComplexValue;
+  using INT = value::IntegerValue;
+  const int cmplxKind{base.kind()};
+  const int intKind{power.kind()};
+  CMPLX one{CMPLX::FromInteger(cmplxKind, INT{intKind, 1}).value};
   return TimesIntPowerOf(one, base, power, /*forceMultiply=*/false, rounding);
 }
+
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_INT_POWER_H_
