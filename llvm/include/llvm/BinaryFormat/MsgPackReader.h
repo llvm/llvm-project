@@ -129,7 +129,6 @@ public:
   LLVM_ABI Expected<bool> read(Object &Obj);
 
 private:
-  MemoryBufferRef InputBuffer;
   StringRef::iterator Current;
   StringRef::iterator End;
 
