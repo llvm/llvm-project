@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-none-linux-gnu -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s --check-prefixes=CHECK
-// RUN: %clang_cc1 -triple x86_64-none-linux-gnu -emit-llvm -debug-info-kind=unused-types %s -o - | FileCheck %s --check-prefixes=UNUSED_TYPES
+// RUN: %clang_cc1 -triple x86_64-none-linux-gnu -emit-llvm -debug-info-kind=limited -debugger-tuning=gdb %s -o - | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -triple x86_64-none-linux-gnu -emit-llvm -debug-info-kind=unused-types -debugger-tuning=gdb %s -o - | FileCheck %s --check-prefixes=UNUSED_TYPES
 
 // Test that debug info nodes for function-local types are emitted in their
 // lexical block scopes, including cases when types have forward declarations.

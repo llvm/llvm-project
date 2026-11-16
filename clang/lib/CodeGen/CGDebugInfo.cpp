@@ -432,9 +432,11 @@ void CGDebugInfo::recordDeclarationLexicalScope(const Decl &D) {
 }
 
 llvm::DIScope *CGDebugInfo::getDeclarationLexicalScope(const Decl *D) {
-  D = D->getCanonicalDecl();
-  if (llvm::DIScope *S = LexicalBlockMap.lookup(D))
-    return S;
+  if (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::GDB) {
+    D = D->getCanonicalDecl();
+    if (llvm::DIScope *S = LexicalBlockMap.lookup(D))
+      return S;
+  }
   return getDeclContextDescriptor(cast<Decl>(D));
 }
 
@@ -1787,18 +1789,17 @@ static llvm::DINode::DIFlags getAccessFlag(AccessSpecifier Access,
 
 llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
                                       llvm::DIFile *Unit) {
-  llvm::DIType *Underlying =
-      getOrCreateType(Ty->getDecl()->getUnderlyingType(), Unit);
+  TypedefNameDecl *TND = Ty->getDecl();
+  llvm::DIType *Underlying = getOrCreateType(TND->getUnderlyingType(), Unit);
 
-  if (Ty->getDecl()->hasAttr<NoDebugAttr>())
+  if (TND->hasAttr<NoDebugAttr>())
     return Underlying;
 
   // We don't set size information, but do specify where the typedef was
   // declared.
-  SourceLocation Loc = Ty->getDecl()->getLocation();
+  SourceLocation Loc = TND->getLocation();
 
-  llvm::DIScope *TDContext = getDeclarationLexicalScope(Ty->getDecl());
-  uint32_t Align = getDeclAlignIfRequired(Ty->getDecl(), CGM.getContext());
+  uint32_t Align = getDeclAlignIfRequired(TND, CGM.getContext());
 
   // Typedefs are derived from some other type. Collect both btf_decl_tag
   // annotations on the typedef declaration and btf_type_tag annotations on
@@ -1806,19 +1807,19 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
   //   typedef struct foo __attribute__((btf_type_tag("tag"))) foo_t;
   SmallVector<llvm::Metadata *, 4> Annots;
   llvm::DINodeArray Annotations;
-  CollectBTFTypeTagAnnotations(Ty->getDecl()->getUnderlyingType(), Annots);
-  CollectBTFDeclTagAnnotations(Ty->getDecl(), Annots);
+  CollectBTFTypeTagAnnotations(TND->getUnderlyingType(), Annots);
+  CollectBTFDeclTagAnnotations(TND, Annots);
   if (!Annots.empty())
     Annotations = DBuilder.getOrCreateArray(Annots);
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
-  const DeclContext *DC = Ty->getDecl()->getDeclContext();
+  const DeclContext *DC = TND->getDeclContext();
   if (isa<RecordDecl>(DC))
-    Flags = getAccessFlag(Ty->getDecl()->getAccess(), cast<RecordDecl>(DC));
+    Flags = getAccessFlag(TND->getAccess(), cast<RecordDecl>(DC));
 
-  return DBuilder.createTypedef(Underlying, Ty->getDecl()->getName(),
-                                getOrCreateFile(Loc), getLineNumber(Loc),
-                                TDContext, Align, Flags, Annotations);
+  return DBuilder.createTypedef(
+      Underlying, TND->getName(), getOrCreateFile(Loc), getLineNumber(Loc),
+      getDeclarationLexicalScope(TND), Align, Flags, Annotations);
 }
 
 static unsigned getDwarfCC(CallingConv CC, const llvm::Triple &T) {

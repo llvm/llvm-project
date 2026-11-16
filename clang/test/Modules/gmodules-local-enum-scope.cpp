@@ -2,7 +2,7 @@
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -x c++ -std=c++11 -emit-pch -o %t/header.pch %t/header.h
 // RUN: %clang_cc1 -std=c++11 -debug-info-kind=limited -dwarf-ext-refs \
-// RUN:     -include-pch %t/header.pch %t/main.cpp -emit-llvm -o - \
+// RUN:     -debugger-tuning=gdb -include-pch %t/header.pch %t/main.cpp -emit-llvm -o - \
 // RUN:   | FileCheck %s
 
 // Test that type nodes for function-local enums are emitted in their lexical blocks
