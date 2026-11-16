@@ -9027,104 +9027,239 @@ struct VarArgPowerPC64Helper : public VarArgStackModelHelperBase {
 
 /// PowerPC32-specific implementation of VarArgHelper.
 struct VarArgPowerPC32Helper : public VarArgHelperBase {
+  static const unsigned kPowerPC32GrArgSize = 32;
+  static const unsigned kPowerPC32FrArgSize = 64;
+  static const unsigned kPowerPC32GrArgBase = 0;
+  static const unsigned kPowerPC32FrArgBase =
+      kPowerPC32GrArgBase + kPowerPC32GrArgSize;
+  // Parameter save area is 8 bytes from frame pointer in PPC32
+  // So we add the 8-byte offset to the 16-byte aligned value
+  // FIXME: we need to support more than 16-byte alignment
+  static const unsigned kPowerPC32OverflowArgBase =
+      kPowerPC32FrArgBase + kPowerPC32FrArgSize;
+
+  enum class ArgKind {
+    GpReg,
+    ByVal,
+    FpReg,
+    Other,
+  };
+
+  struct ArgAttr {
+    ArgKind Kind;
+    Align ArgAlign;
+    uint64_t ArgSize;
+  };
+
+  bool IsSoftFloatABI = false;
+  bool HasSPE = false;
   AllocaInst *VAArgTLSCopy = nullptr;
-  Value *VAArgSize = nullptr;
+  Value *VAArgDesc = nullptr;
 
   VarArgPowerPC32Helper(Function &F, MemorySanitizer &MS,
                         MemorySanitizerVisitor &MSV)
-      : VarArgHelperBase(F, MS, MSV, /*VAListTagSize=*/12) {}
+      : VarArgHelperBase(F, MS, MSV, /*VAListTagSize=*/12),
+        IsSoftFloatABI(F.getFnAttribute("use-soft-float").getValueAsBool()) {
+    Attribute TFAttr = F.getFnAttribute("target-features");
+    if (TFAttr.isValid()) {
+      SmallVector<StringRef, 6> Features;
+      TFAttr.getValueAsString().split(Features, ',');
+      HasSPE = is_contained(Features, "+spe");
+    }
+  }
 
-  void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
-    unsigned VAArgBase;
-    // Parameter save area is 8 bytes from frame pointer in PPC32
-    VAArgBase = 8;
-    unsigned VAArgOffset = VAArgBase;
+  ArgAttr classifyArgument(CallBase &CB, unsigned ArgNo, Use &A) {
     const DataLayout &DL = F.getDataLayout();
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
+    unsigned DoubleSize = DL.getTypeStoreSize(Type::getDoubleTy(*MS.C));
+
+    Type *ArgType = A->getType();
+    uint64_t ArgSize = DL.getTypeAllocSize(ArgType);
+    Align ArgAlign = CB.getParamAlign(ArgNo).value_or(Align(IntptrSize));
+
+    bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+    bool IsSRet = CB.paramHasAttr(ArgNo, Attribute::StructRet);
+    if (IsByVal || IsSRet) {
+      assert(ArgType->isPointerTy());
+      assert(!IsSRet || ArgNo == 0U);
+      Type *RealTy = IsByVal ? CB.getParamByValType(ArgNo)
+                             : CB.getParamStructRetType(ArgNo);
+      ArgSize = DL.getTypeAllocSize(RealTy);
+      ArgAlign = DL.getABITypeAlign(RealTy);
+      if (ArgAlign < IntptrSize)
+        ArgAlign = Align(IntptrSize);
+
+      return ArgAttr{ArgKind::ByVal, ArgAlign, ArgSize};
+    }
+
+    if (ArgType->isIntOrPtrTy()) {
+      if (ArgAlign < IntptrSize)
+        ArgAlign = Align(IntptrSize);
+      if (ArgType->isIntegerTy(64))
+        ArgAlign = Align(ArgSize);
+
+      return ArgAttr{ArgKind::GpReg, ArgAlign, ArgSize};
+    }
+
+    if (ArgType->isFloatingPointTy()) {
+      if (IsSoftFloatABI) {
+        ArgAlign = Align(IntptrSize);
+        if (ArgType->isDoubleTy())
+          ArgAlign = Align(DoubleSize);
+
+        return ArgAttr{ArgKind::GpReg, ArgAlign, ArgSize};
+      }
+      if (HasSPE) {
+        ArgAlign = Align(DoubleSize);
+        return ArgAttr{ArgKind::GpReg, ArgAlign, ArgSize};
+      }
+      if (ArgAlign < DoubleSize)
+        ArgAlign = Align(DoubleSize);
+      if (ArgType->isFP128Ty() || ArgType->isPPC_FP128Ty())
+        ArgAlign = Align(ArgSize);
+
+      return ArgAttr{ArgKind::FpReg, ArgAlign, ArgSize};
+    }
+
+    return ArgAttr{ArgKind::Other, ArgAlign, ArgSize};
+  }
+
+  void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
+    // GP integers fit in r3...r10 while qwords occupy (r3,r4)...(r9,r10)
+    unsigned GrArgBase = 0, GrArgOffset = GrArgBase;
+    // FP floats and doubles fit in f1...f8 while quads occupy (f2,f3)...(f6,f7)
+    unsigned FrArgBase = 8, FrArgOffset = FrArgBase;
+    // Parameter save area is 8 bytes from frame pointer in PPC32
+    unsigned OverflowArgBase = 8, OverflowArgOffset = OverflowArgBase;
+
+    unsigned GrFixedCount = 0, GrTotalCount = 0;
+    unsigned FrFixedCount = 0, FrTotalCount = 0;
+
+    const DataLayout &DL = F.getDataLayout();
+    unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
+    unsigned DoubleSize = DL.getTypeStoreSize(Type::getDoubleTy(*MS.C));
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.isByValArgument(ArgNo);
-      if (IsByVal) {
-        assert(A->getType()->isPointerTy());
-        Type *RealTy = CB.getParamByValType(ArgNo);
-        uint64_t ArgSize = DL.getTypeAllocSize(RealTy);
-        Align ArgAlign = CB.getParamAlign(ArgNo).value_or(Align(IntptrSize));
-        if (ArgAlign < IntptrSize)
-          ArgAlign = Align(IntptrSize);
-        VAArgOffset = alignTo(VAArgOffset, ArgAlign);
-        if (!IsFixed) {
-          Value *Base =
-              getShadowPtrForVAArgument(IRB, VAArgOffset - VAArgBase, ArgSize);
-          if (Base) {
-            Value *AShadowPtr, *AOriginPtr;
-            std::tie(AShadowPtr, AOriginPtr) =
-                MSV.getShadowOriginPtr(A, IRB, IRB.getInt8Ty(),
-                                       kShadowTLSAlignment, /*isStore*/ false);
+      auto ArgAttr = classifyArgument(CB, ArgNo, A);
+      Value *Base = nullptr;
 
-            IRB.CreateMemCpy(Base, kShadowTLSAlignment, AShadowPtr,
-                             kShadowTLSAlignment, ArgSize);
-          }
-        }
-        VAArgOffset += alignTo(ArgSize, Align(IntptrSize));
-      } else {
-        Value *Base;
-        Type *ArgTy = A->getType();
+      if (ArgAttr.Kind == ArgKind::ByVal) {
+        if (GrArgOffset < GrArgBase + kPowerPC32GrArgSize)
+          GrArgOffset += IntptrSize;
+        else
+          OverflowArgOffset += IntptrSize;
+        continue;
+      }
 
-        // On PPC 32 floating point variable arguments are stored in separate
-        // area: fp_save_area = reg_save_area + 4*8. We do not copy shaodow for
-        // them as they will be found when checking call arguments.
-        if (!ArgTy->isFloatingPointTy()) {
-          uint64_t ArgSize = DL.getTypeAllocSize(ArgTy);
-          Align ArgAlign = Align(IntptrSize);
-          if (ArgTy->isArrayTy()) {
-            // Arrays are aligned to element size, except for long double
-            // arrays, which are aligned to 8 bytes.
-            Type *ElementTy = ArgTy->getArrayElementType();
-            if (!ElementTy->isPPC_FP128Ty())
-              ArgAlign = Align(DL.getTypeAllocSize(ElementTy));
-          } else if (ArgTy->isVectorTy()) {
-            // Vectors are naturally aligned.
-            ArgAlign = Align(ArgSize);
-          }
-          if (ArgAlign < IntptrSize)
-            ArgAlign = Align(IntptrSize);
-          VAArgOffset = alignTo(VAArgOffset, ArgAlign);
-          if (DL.isBigEndian()) {
-            // Adjusting the shadow for argument with size < IntptrSize to match
-            // the placement of bits in big endian system
-            if (ArgSize < IntptrSize)
-              VAArgOffset += (IntptrSize - ArgSize);
-          }
+      if (ArgAttr.Kind == ArgKind::GpReg) {
+        if (alignTo(GrArgOffset, ArgAttr.ArgAlign) + ArgAttr.ArgSize <=
+            GrArgBase + kPowerPC32GrArgSize) {
+          if (DL.isBigEndian() && ArgAttr.ArgSize < IntptrSize)
+            GrArgOffset += (IntptrSize - ArgAttr.ArgSize);
+          else
+            GrArgOffset = alignTo(GrArgOffset, ArgAttr.ArgAlign);
           if (!IsFixed) {
-            Base = getShadowPtrForVAArgument(IRB, VAArgOffset - VAArgBase,
-                                             ArgSize);
-            if (Base)
-              IRB.CreateAlignedStore(MSV.getShadow(A), Base,
-                                     kShadowTLSAlignment);
+            Base = getShadowPtrForVAArgument(
+                IRB, kPowerPC32GrArgBase + GrArgOffset - GrArgBase,
+                ArgAttr.ArgSize);
           }
-          VAArgOffset += ArgSize;
-          VAArgOffset = alignTo(VAArgOffset, Align(IntptrSize));
+        } else {
+          ArgAttr.Kind = ArgKind::Other;
         }
+      } else if (ArgAttr.Kind == ArgKind::FpReg) {
+        if (alignTo(FrArgOffset, ArgAttr.ArgAlign) + ArgAttr.ArgSize <=
+            FrArgBase + kPowerPC32FrArgSize) {
+          FrArgOffset = alignTo(FrArgOffset, ArgAttr.ArgAlign);
+          if (!IsFixed) {
+            Base = getShadowPtrForVAArgument(
+                IRB, kPowerPC32FrArgBase + FrArgOffset - FrArgBase,
+                ArgAttr.ArgSize);
+          }
+        } else {
+          ArgAttr.Kind = ArgKind::Other;
+        }
+      }
+
+      if (ArgAttr.Kind == ArgKind::Other) {
+        if (DL.isBigEndian() && ArgAttr.ArgSize < IntptrSize)
+          OverflowArgOffset += (IntptrSize - ArgAttr.ArgSize);
+        else
+          OverflowArgOffset = alignTo(OverflowArgOffset, ArgAttr.ArgAlign);
+        if (!IsFixed) {
+          Base = getShadowPtrForVAArgument(
+              IRB,
+              kPowerPC32OverflowArgBase + OverflowArgOffset - OverflowArgBase,
+              ArgAttr.ArgSize);
+        }
+      }
+
+      if (Base) {
+        IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
+      }
+
+      switch (ArgAttr.Kind) {
+      case ArgKind::GpReg:
+        GrArgOffset += ArgAttr.ArgSize;
+        GrArgOffset = alignTo(GrArgOffset, Align(IntptrSize));
+        [[fallthrough]];
+        // Shadow propagates since we effectively use by-ref semantic
+      case ArgKind::ByVal:
+        GrTotalCount = GrArgOffset / IntptrSize;
+        if (IsFixed)
+          GrFixedCount = GrTotalCount;
+        break;
+      case ArgKind::FpReg:
+        FrArgOffset += ArgAttr.ArgSize;
+        FrArgOffset = alignTo(FrArgOffset, Align(DoubleSize));
+        FrTotalCount = FrArgOffset / DoubleSize;
+        if (IsFixed)
+          FrFixedCount = FrTotalCount;
+        break;
+      case ArgKind::Other:
+        OverflowArgOffset += ArgAttr.ArgSize;
+        OverflowArgOffset = alignTo(OverflowArgOffset, Align(IntptrSize));
+        break;
       }
     }
 
-    Constant *TotalVAArgSize =
-        ConstantInt::get(MS.IntptrTy, VAArgOffset - VAArgBase);
-    // Here using VAArgOverflowSizeTLS as VAArgSizeTLS to avoid creation of
-    // a new class member i.e. it is the total size of all VarArgs.
-    IRB.CreateStore(TotalVAArgSize, MS.VAArgOverflowSizeTLS);
+    assert(GrTotalCount < 16);
+    assert(FrTotalCount < 16);
+    unsigned VAArgGrDescValue =
+        GrFixedCount | ((GrTotalCount - GrFixedCount) << 4);
+    unsigned VAArgFrDescValue =
+        FrFixedCount | ((FrTotalCount - FrFixedCount) << 4);
+    unsigned VAArgOverflowValue = OverflowArgOffset - OverflowArgBase;
+    unsigned VAArgDescValue =
+        VAArgGrDescValue | (VAArgFrDescValue << 8) | (VAArgOverflowValue << 16);
+    Constant *VAArgDesc = ConstantInt::get(MS.IntptrTy, VAArgDescValue);
+    // Here using VAArgOverflowSizeTLS as VAArgDescTLS to avoid creation of
+    // a new class member i.e. it is the descriptor of all VarArgs.
+    IRB.CreateStore(VAArgDesc, MS.VAArgOverflowSizeTLS);
   }
 
   void finalizeInstrumentation() override {
-    assert(!VAArgSize && !VAArgTLSCopy &&
+    assert(!VAArgDesc && !VAArgTLSCopy &&
            "finalizeInstrumentation called twice");
     IRBuilder<> IRB(MSV.FnPrologueEnd);
-    VAArgSize = IRB.CreateLoad(MS.IntptrTy, MS.VAArgOverflowSizeTLS);
-    Value *CopySize = VAArgSize;
+    VAArgDesc = IRB.CreateLoad(MS.IntptrTy, MS.VAArgOverflowSizeTLS);
+    Constant *Mask = ConstantInt::get(MS.IntptrTy, 0xF);
+    Value *GrFixedCount = IRB.CreateAnd(VAArgDesc, Mask);
+    Value *GrVAArgCount = IRB.CreateAnd(IRB.CreateLShr(VAArgDesc, 4), Mask);
+    Value *FrFixedCount = IRB.CreateAnd(IRB.CreateLShr(VAArgDesc, 8), Mask);
+    Value *FrVAArgCount = IRB.CreateAnd(IRB.CreateLShr(VAArgDesc, 12), Mask);
+    Value *OverflowSize = IRB.CreateLShr(VAArgDesc, 16);
+
+    OverflowSize = IRB.CreateBinaryIntrinsic(
+        Intrinsic::umin, OverflowSize,
+        ConstantInt::get(MS.IntptrTy,
+                         kParamTLSSize - kPowerPC32OverflowArgBase));
 
     if (!VAStartInstrumentationList.empty()) {
       // If there is a va_start in this function, make a backup copy of
       // va_arg_tls somewhere in the function entry block.
+      Value *CopySize = IRB.CreateAdd(
+          OverflowSize,
+          ConstantInt::get(MS.IntptrTy, kPowerPC32OverflowArgBase));
 
       VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
       VAArgTLSCopy->setAlignment(kShadowTLSAlignment);
@@ -9144,46 +9279,60 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
       Value *RegSaveAreaPtrPtr = IRB.CreatePtrToInt(VAListTag, MS.IntptrTy);
-      Value *RegSaveAreaSize = CopySize;
 
       // In PPC32 va_list_tag is a struct
       RegSaveAreaPtrPtr =
           IRB.CreateAdd(RegSaveAreaPtrPtr, ConstantInt::get(MS.IntptrTy, 8));
 
-      // On PPC 32 reg_save_area can only hold 32 bytes of data
-      RegSaveAreaSize = IRB.CreateBinaryIntrinsic(
-          Intrinsic::umin, CopySize, ConstantInt::get(MS.IntptrTy, 32));
-
       RegSaveAreaPtrPtr = IRB.CreateIntToPtr(RegSaveAreaPtrPtr, MS.PtrTy);
-      Value *RegSaveAreaPtr = IRB.CreateLoad(MS.PtrTy, RegSaveAreaPtrPtr);
+      Value *GpSaveAreaPtr = IRB.CreateLoad(MS.PtrTy, RegSaveAreaPtrPtr);
+      Value *FpSaveAreaPtr =
+          IRB.CreateGEP(IRB.getInt8Ty(), GpSaveAreaPtr,
+                        {ConstantInt::get(MS.IntptrTy, kPowerPC32FrArgBase)});
+
+      Constant *NullPtr = ConstantPointerNull::get(PointerType::get(*MS.C, 0));
+
+      Value *GpVAPtr =
+          IRB.CreateGEP(MS.IntptrTy, GpSaveAreaPtr, {GrFixedCount});
+      Value *GpVASize = IRB.CreateGEP(MS.IntptrTy, NullPtr, {GrVAArgCount});
+      GpVASize = IRB.CreatePtrToInt(GpVASize, MS.IntptrTy);
+
+      Type *DoubleTy = Type::getDoubleTy(*MS.C);
+      Value *FpVAPtr = IRB.CreateGEP(DoubleTy, FpSaveAreaPtr, {FrFixedCount});
+      Value *FpVASize = IRB.CreateGEP(DoubleTy, NullPtr, {FrVAArgCount});
+      FpVASize = IRB.CreatePtrToInt(FpVASize, MS.IntptrTy);
 
       const DataLayout &DL = F.getDataLayout();
       unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
       const Align Alignment = Align(IntptrSize);
 
       { // Copy reg save area
-        Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
-        std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
-            MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(),
-                                   Alignment, /*isStore*/ true);
-        IRB.CreateMemCpy(RegSaveAreaShadowPtr, Alignment, VAArgTLSCopy,
-                         Alignment, RegSaveAreaSize);
+        Value *GpSaveAreaShadowPtr, *GpSaveAreaOriginPtr;
+        std::tie(GpSaveAreaShadowPtr, GpSaveAreaOriginPtr) =
+            MSV.getShadowOriginPtr(GpVAPtr, IRB, IRB.getInt8Ty(), Alignment,
+                                   /*isStore*/ true);
+        Value *GpVAArgTLSCopyPtr =
+            IRB.CreateGEP(MS.IntptrTy, VAArgTLSCopy, {GrFixedCount});
+        IRB.CreateMemCpy(GpSaveAreaShadowPtr, Alignment, GpVAArgTLSCopyPtr,
+                         Alignment, GpVASize);
 
-        RegSaveAreaShadowPtr =
-            IRB.CreatePtrToInt(RegSaveAreaShadowPtr, MS.IntptrTy);
-        Value *FPSaveArea = IRB.CreateAdd(RegSaveAreaShadowPtr,
-                                          ConstantInt::get(MS.IntptrTy, 32));
-        FPSaveArea = IRB.CreateIntToPtr(FPSaveArea, MS.PtrTy);
-        // We fill fp shadow with zeroes as uninitialized fp args should have
-        // been found during call base check
-        IRB.CreateMemSet(FPSaveArea, ConstantInt::getNullValue(IRB.getInt8Ty()),
-                         ConstantInt::get(MS.IntptrTy, 32), Alignment);
+        Value *FpSaveAreaShadowPtr, *FpSaveAreaOriginPtr;
+        std::tie(FpSaveAreaShadowPtr, FpSaveAreaOriginPtr) =
+            MSV.getShadowOriginPtr(FpVAPtr, IRB, IRB.getInt8Ty(), Alignment,
+                                   /*isStore*/ true);
+        Value *FpVAArgTLSCopyPtr =
+            IRB.CreatePtrToInt(VAArgTLSCopy, MS.IntptrTy);
+        FpVAArgTLSCopyPtr =
+            IRB.CreateAdd(FpVAArgTLSCopyPtr,
+                          ConstantInt::get(MS.IntptrTy, kPowerPC32FrArgBase));
+        FpVAArgTLSCopyPtr = IRB.CreateIntToPtr(FpVAArgTLSCopyPtr, MS.PtrTy);
+        FpVAArgTLSCopyPtr =
+            IRB.CreateGEP(DoubleTy, FpVAArgTLSCopyPtr, {FrFixedCount});
+        IRB.CreateMemCpy(FpSaveAreaShadowPtr, Alignment, FpVAArgTLSCopyPtr,
+                         Alignment, FpVASize);
       }
 
       { // Copy overflow area
-        // RegSaveAreaSize is min(CopySize, 32) -> no overflow can occur
-        Value *OverflowAreaSize = IRB.CreateSub(CopySize, RegSaveAreaSize);
-
         Value *OverflowAreaPtrPtr = IRB.CreatePtrToInt(VAListTag, MS.IntptrTy);
         OverflowAreaPtrPtr =
             IRB.CreateAdd(OverflowAreaPtrPtr, ConstantInt::get(MS.IntptrTy, 4));
@@ -9198,13 +9347,13 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
 
         Value *OverflowVAArgTLSCopyPtr =
             IRB.CreatePtrToInt(VAArgTLSCopy, MS.IntptrTy);
-        OverflowVAArgTLSCopyPtr =
-            IRB.CreateAdd(OverflowVAArgTLSCopyPtr, RegSaveAreaSize);
-
+        OverflowVAArgTLSCopyPtr = IRB.CreateAdd(
+            OverflowVAArgTLSCopyPtr,
+            ConstantInt::get(MS.IntptrTy, kPowerPC32OverflowArgBase));
         OverflowVAArgTLSCopyPtr =
             IRB.CreateIntToPtr(OverflowVAArgTLSCopyPtr, MS.PtrTy);
         IRB.CreateMemCpy(OverflowAreaShadowPtr, Alignment,
-                         OverflowVAArgTLSCopyPtr, Alignment, OverflowAreaSize);
+                         OverflowVAArgTLSCopyPtr, Alignment, OverflowSize);
       }
     }
   }
