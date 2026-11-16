@@ -533,8 +533,8 @@ struct TypeBuilderImpl {
     // Do not use dynamic type length here. We would miss constant
     // lengths opportunities because dynamic type only has the length
     // if it comes from a declaration.
-    if (const auto *charExpr = std::get_if<
-            Fortran::evaluate::Expr<Fortran::evaluate::SomeCharacter>>(
+    if (const auto *charExpr = std::get_if<Fortran::evaluate::Expr<
+            Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>>>(
             &expr.u)) {
       if (auto constantLen = toInt64(charExpr->LEN()))
         return *constantLen;
@@ -544,7 +544,8 @@ struct TypeBuilderImpl {
       // CLASS(*), regardless of their actual type.
       // GetType() will recover the actual symbol type as the dynamic type, so
       // getCharacterLength may be reached even if expr is packaged as an
-      // Expr<SomeDerived> instead of an Expr<SomeChar>.
+      // Expr<Type<TypeCategory::Derived>> instead of an
+      // Expr<Type<TypeCategory::Character>>.
       // Just use the dynamic type here again to retrieve the length.
       if (auto constantLen = toInt64(dynamicType->GetCharLength()))
         return *constantLen;

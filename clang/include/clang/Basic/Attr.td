@@ -2577,7 +2577,7 @@ def AMDGPUAvailableVisible : StmtAttr, TargetSpecificAttr<TargetAMDGPU> {
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];
-  let Subjects = SubjectList<[Record], ErrorDiag>;
+  let Subjects = SubjectList<[Record, Enum], ErrorDiag>;
   let Documentation = [BPFPreserveAccessIndexDocs];
   let LangOpts = [COnly];
 }
@@ -5464,6 +5464,14 @@ def HLSLVkLocation : HLSLAnnotationAttr {
   let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLVkLocationDocs];
+}
+
+def HLSLVkBuiltIn : HLSLAnnotationAttr, TargetSpecificAttr<TargetSPIRV> {
+  let Spellings = [CXX11<"vk", "builtin">];
+  let Args = [StringArgument<"BuiltIn">];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkBuiltInDocs];
 }
 
 // `row_major` / `column_major` are HLSL keywords that select the in-memory

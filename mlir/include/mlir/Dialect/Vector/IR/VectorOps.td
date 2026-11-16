@@ -219,6 +219,8 @@ def Vector_ContractionOp :
       return llvm::to_vector<4>(getIndexingMaps().getAsValueRange<::mlir::AffineMapAttr>());
     }
 
+    bool isAddKind() { return getKind() == vector::CombiningKind::ADD;}
+
     // Returns the bounds of each dimension in the iteration space spanned
     // by the iterator types of this operation.
     void getIterationBounds(SmallVectorImpl<int64_t> &iterationBounds);

@@ -255,3 +255,36 @@ void R8261992_test(R8261992 *tc) {
   *p = 0xDEADBEEF; // expected-warning{{null}}
 }
 
+// #133381 removed the early return for BaseRegions of the ElementRegion types
+// and returned MemRegionVal instead. Before that the store to
+// 'moreStrings[x][y]' was dropped, so the retained string looked unreachable
+// and the RetainCount checker reported a potential leak.
+extern CFStringRef CFStringCreateCopy(CFAllocatorRef, CFStringRef) __attribute__((cf_returns_retained));
+extern CFStringRef exampleString;
+CFStringRef GH19340_Strings[2][2];
+
+@interface GH19340_StringCache : NSObject {
+  CFStringRef strings[2];
+  CFStringRef moreStrings[2][2];
+}
+@end
+
+@implementation GH19340_StringCache
+- (CFStringRef)stringAtZ:(int)z {
+  if (!strings[z])
+    strings[z] = CFStringCreateCopy(kCFAllocatorDefault, exampleString);
+  return strings[z]; // no-warning
+}
+
+- (CFStringRef)stringAtX:(int)x y:(int)y {
+  if (!moreStrings[x][y])
+    moreStrings[x][y] = CFStringCreateCopy(kCFAllocatorDefault, exampleString);
+  return moreStrings[x][y]; // no-warning
+}
+
+- (CFStringRef)staticStringAtX:(int)x y:(int)y {
+  if (!GH19340_Strings[x][y])
+    GH19340_Strings[x][y] = CFStringCreateCopy(kCFAllocatorDefault, exampleString);
+  return GH19340_Strings[x][y]; // no-warning
+}
+@end

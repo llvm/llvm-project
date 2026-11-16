@@ -216,7 +216,7 @@ namespace test3 {
 
   A *b(bool cond) {
 
-    // CHECK:    define{{( dso_local)?}} ptr @_ZN5test31bEb(i1 zeroext
+    // CHECK:    define{{( dso_local)?}} ptr @_ZN5test31bEb(i1
     // CHECK:      [[SAVED0:%.*]] = alloca ptr
     // CHECK-NEXT: [[SAVED1:%.*]] = alloca ptr
     // CHECK-NEXT: [[CLEANUPACTIVE:%.*]] = alloca i1
