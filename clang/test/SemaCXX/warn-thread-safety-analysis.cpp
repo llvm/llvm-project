@@ -2256,9 +2256,24 @@ struct TestTryLock {
   // unlocked.
   void tryheld_unlock_unchecked_then_again() {
     mu.TryLock();
-    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}} \
-                 // expected-note {{mutex released here}}
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
     mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
+  }
+
+  // A conditional fact covers its own call's failure, with nothing else
+  // held on the failing path.
+  void tryheld_cond_covers_failure(bool c, bool d) {
+    bool ok = mu.TryLock();
+    if (c) {
+      if (ok) {
+        mu.Unlock();
+        return;
+      }
+    }
+    if (d)
+      cond = true;
+    if (ok)
+      mu.Unlock();
   }
 
   // A spin-acquire resolves the state on both loop edges.
@@ -7839,6 +7854,44 @@ void testReentrantTryLockSequentialBothHeld() {
   }
 } // expected-warning {{mutex 'rmu' is not held on every path through here}}
 
+// Either result failed: the first call's hold on the path where only the
+// second failed, the second call's unresolved try fact on the path where the
+// first did. That try fact is a level of its own, not the hold's, so the
+// hold joins back into the first call's conditional level beside it, and
+// each branch resolves its own call -- first by the rebranch on b1.
+void testReentrantTryLockEitherFailed() {
+  bool b1 = rmu.TryLock();
+  bool b2 = rmu.TryLock();
+  if (b1 && b2) {
+    rmu.Unlock();
+    rmu.Unlock();
+  } else {
+    if (b1)
+      rmu.Unlock();
+    if (b2)
+      rmu.Unlock();
+  }
+}
+
+// A conditional level beside its own call's failure at the same depth: the
+// definite levels agree, and the conditional one is the try facts' to join.
+void testReentrantTryLockCondBesideFailure(bool c, bool d) {
+  rmu.Lock();
+  bool b = rmu.TryLock();
+  if (c) {
+    if (b) {
+      rmu.Unlock();
+      rmu.Unlock();
+      return;
+    }
+  }
+  if (d)
+    guardby_var = 1;
+  if (b)
+    rmu.Unlock();
+  rmu.Unlock();
+}
+
 // Analysis can only track one kind at a time. A second attempt to try-acquire
 // a different kind conflicts with the ability to track it, requiring a warning.
 void testReentrantTryLockKindMismatch() {
@@ -7855,22 +7908,20 @@ void testReentrantTryLockUpgradeKindMismatch() {
   rmu.Unlock();
 }
 
-// A join of facts with unequal reentrancy depths warns once, then keeps the
-// fact that guarantees more, to minimize follow-on warnings: the guarded
-// write under !b is covered by the definite level the failure edge leaves,
-// while the depth imbalance is re-diagnosed at the later joins. The notes
-// point at the definite acquisition that is unbalanced, not at the
-// try-acquire.
+// A definite level on one side only, beside the same call's conditional
+// level on both: no call accounts for it, so the join reports it lost, and
+// the guarded write under !b warns -- on the path through neither the
+// Lock() nor a successful try-acquire, nothing is held. The note points at
+// the definite acquisition that is unbalanced, not at the try-acquire.
 void testReentrantTryLockConditionalDeepen(bool c) {
   bool b = rmu.TryLock();
   if (c)
-    rmu.Lock(); // expected-note 4 {{mutex acquired here}}
-  if (!b) // expected-warning {{mutex 'rmu' is not held on every path through here with equal reentrancy depth}}
-    guardby_var = 1;
-  if (b) // expected-warning {{mutex 'rmu' is not held on every path through here with equal reentrancy depth}}
+    rmu.Lock(); // expected-note {{mutex acquired here}}
+  if (!b) // expected-warning {{mutex 'rmu' is not held on every path through here}}
+    guardby_var = 1; // expected-warning {{writing variable 'guardby_var' requires holding mutex 'rmu' exclusively}}
+  if (b)
     rmu.Unlock();
-} // expected-warning {{mutex 'rmu' is not held on every path through here with equal reentrancy depth}} \
-  // expected-warning {{mutex 'rmu' is still held at the end of function}}
+}
 
 // As above; the kept deeper fact absorbs both releases that the deepening
 // path had balanced, and the imbalance against the shallow path surfaces

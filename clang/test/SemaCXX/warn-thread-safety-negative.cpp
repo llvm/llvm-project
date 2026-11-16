@@ -148,13 +148,22 @@ public:
     }
   }
 
-  // Releasing an unchecked try-acquire is diagnosed at the release, and the
-  // thread provably does not hold the capability afterwards: the release
-  // establishes the negative fact, so re-acquiring does not also warn.
+  // Releasing an unchecked try-acquire is diagnosed at the release, and it
+  // does not show the thread free of the capability (the caller may hold a
+  // reentrant one): without a declared '!mu', re-acquiring needs it again.
   void tryLockUncheckedReleaseThenLock() {
     mu.TryLock(); // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
     mu.Unlock();  // expected-warning{{releasing mutex 'mu' that may not be held}}
-    mu.Lock();    // no '!mu' warning: the release above proves it
+    mu.Lock();    // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
+    a = 0;
+    mu.Unlock();
+  }
+
+  // With '!mu' declared, the release restores it.
+  void tryLockUncheckedReleaseKeepsDeclared() EXCLUSIVE_LOCKS_REQUIRED(!mu) {
+    mu.TryLock();
+    mu.Unlock(); // expected-warning{{releasing mutex 'mu' that may not be held}}
+    mu.Lock();
     a = 0;
     mu.Unlock();
   }
