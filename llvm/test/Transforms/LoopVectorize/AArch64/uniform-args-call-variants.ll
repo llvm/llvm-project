@@ -53,13 +53,13 @@ define void @test_uniform(ptr noalias %dst, ptr readonly %src, i64 %uniform , i6
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[EXTRACT_ENTRY_ALM_PART]], [[VECTOR_PH]] ], [ [[EXTRACT_NEXT_ALM_PART:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi <vscale x 2 x i1> [ [[EXTRACT_ENTRY_ALM_PART1]], [[VECTOR_PH]] ], [ [[EXTRACT_NEXT_ALM_PART4:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[TMP3]], i64 [[TMP1]]
+; INTERLEAVE-NEXT:    [[TMP4:%.*]] = getelementptr [8 x i8], ptr [[TMP3]], i64 [[TMP1]]
 ; INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP3]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> poison)
 ; INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP4]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x double> poison)
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x double> @foo_uniform(<vscale x 2 x double> [[WIDE_MASKED_LOAD]], i64 [[UNIFORM]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x double> @foo_uniform(<vscale x 2 x double> [[WIDE_MASKED_LOAD3]], i64 [[UNIFORM]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i64 [[TMP1]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP7]], i64 [[TMP1]]
 ; INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP5]], ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP6]], ptr align 8 [[TMP8]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
@@ -139,13 +139,13 @@ define void @test_uniform_smaller_scalar(ptr noalias %dst, ptr readonly %src, i3
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[EXTRACT_ENTRY_ALM_PART]], [[VECTOR_PH]] ], [ [[EXTRACT_NEXT_ALM_PART:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi <vscale x 2 x i1> [ [[EXTRACT_ENTRY_ALM_PART1]], [[VECTOR_PH]] ], [ [[EXTRACT_NEXT_ALM_PART4:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[TMP3]], i64 [[TMP1]]
+; INTERLEAVE-NEXT:    [[TMP4:%.*]] = getelementptr [8 x i8], ptr [[TMP3]], i64 [[TMP1]]
 ; INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP3]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> poison)
 ; INTERLEAVE-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP4]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x double> poison)
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x double> @bar_uniform(<vscale x 2 x double> [[WIDE_MASKED_LOAD]], i32 [[UNIFORM]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x double> @bar_uniform(<vscale x 2 x double> [[WIDE_MASKED_LOAD3]], i32 [[UNIFORM]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i64 [[TMP1]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP7]], i64 [[TMP1]]
 ; INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP5]], ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP6]], ptr align 8 [[TMP8]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])

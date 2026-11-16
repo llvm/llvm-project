@@ -305,6 +305,8 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
   // Decompose the end of the comment.
   const unsigned CommentEndOffset =
       Comments.getCommentEndOffset(CommentBeforeDecl);
+  if (CommentEndOffset > LocDecomp.second)
+    return nullptr;
 
   // Get the corresponding buffer.
   bool Invalid = false;
@@ -541,8 +543,18 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
       if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
         continue;
 
+      const FileID DeclFile = SourceMgr.getDecomposedLoc(DeclLoc).first;
+      if (!DeclFile.isValid())
+        continue;
+
+      const auto *CommentsInDeclFile =
+          DeclFile == File ? CommentsInThisFile
+                           : Comments.getCommentsInFile(DeclFile);
+      if (!CommentsInDeclFile || CommentsInDeclFile->empty())
+        continue;
+
       if (RawComment *const DocComment =
-              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInThisFile)) {
+              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInDeclFile)) {
         cacheRawComment(D, *DocComment);
         comments::FullComment *FC = DocComment->parse(*this, PP, D);
         ParsedComments[D->getCanonicalDecl()] = FC;
@@ -5216,14 +5228,12 @@ QualType ASTContext::getFunctionTypeInternal(
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
       FunctionType::FunctionTypeExtraAttributeInfo,
-      FunctionType::FunctionTypeArmAttributes,
-      FunctionType::FunctionTypeRISCVAttributes, FunctionType::ExceptionType,
+      FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
       Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, Qualifiers,
       FunctionEffect, EffectConditionExpr>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
       EPI.requiresFunctionProtoTypeExtraAttributeInfo(),
-      EPI.requiresFunctionProtoTypeArmAttributes(),
-      EPI.requiresFunctionProtoTypeRISCVAttributes(), ESH.NumExceptionType,
+      EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
       ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
       EPI.ExtParameterInfos ? NumArgs : 0,
       EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0, EPI.FunctionEffects.size(),

@@ -590,12 +590,6 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
-
-  if (Info.Callee.isGlobal())
-    checkRISCVStateCall(MF.getFunction(), Info.Callee.getGlobal());
-  else if (Info.Callee.isSymbol())
-    checkRISCVStateCall(MF.getFunction(), Info.Callee.getSymbolName());
-
   for (auto &AInfo : Info.OrigArgs) {
     if (!isSupportedArgumentType(AInfo.Ty, Subtarget))
       return false;
@@ -632,6 +626,8 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           .add(Info.Callee);
   if (Info.NoMerge)
     Call.setMIFlag(MachineInstr::MIFlag::NoMerge);
+  if (Info.CFIType)
+    Call->setCFIType(MF, Info.CFIType->getZExtValue());
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv))
       .setOperandDead(2); // $x1 (ra)

@@ -16,6 +16,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
@@ -210,6 +211,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*cuda_is_device=*/langOpts.CUDAIsDevice,
           /*hip=*/langOpts.HIP,
           /*hlsl=*/langOpts.HLSL,
+          /*sycl_is_device=*/langOpts.SYCLIsDevice,
           /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
           /*openmp=*/langOpts.OpenMP != 0,
           /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
@@ -219,7 +221,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*enable_noundef_attrs=*/cgo.EnableNoundefAttrs,
           /*no_trapping_math=*/langOpts.getDefaultExceptionMode() ==
               LangOptions::FPE_Ignore,
-          /*ssp_buffer_size=*/cgo.SSPBufferSize));
+          /*ssp_buffer_size=*/cgo.SSPBufferSize,
+          /*relative_cxx_abi_vtables=*/langOpts.RelativeCXXABIVTables));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     getModule()->setAttr(cir::CIRDialect::getOptInfoAttrName(),
@@ -1315,7 +1318,9 @@ cir::GlobalOp CIRGenModule::getOrCreateCIRGlobal(
       entry.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
 
     assert(!cir::MissingFeatures::setDLLStorageClass());
-    assert(!cir::MissingFeatures::openMP());
+
+    if (langOpts.OpenMP && !langOpts.OpenMPSimd && d)
+      getOpenMPRuntime().registerTargetGlobalVariable(d);
 
     if (entry.getSymType() == ty &&
         cir::normalizeDefaultAddressSpace(entryCIRAS) ==
@@ -1388,8 +1393,7 @@ cir::GlobalOp CIRGenModule::getOrCreateCIRGlobal(
   // Handle things which are present even on external declarations.
   if (d) {
     if (langOpts.OpenMP && !langOpts.OpenMPSimd)
-      errorNYI(d->getSourceRange(),
-               "getOrCreateCIRGlobal: OpenMP target global variable");
+      getOpenMPRuntime().registerTargetGlobalVariable(d);
 
     gv.setAlignmentAttr(getSize(astContext.getDeclAlign(d)));
 
@@ -1854,7 +1858,18 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
   if (const Module *m = fd->getOwningModule();
       m && m->getTopLevelModule()->isNamedModule() &&
       getASTContext().getCurrentNamedModule() != m->getTopLevelModule()) {
-    errorNYI(fd->getSourceRange(), "should emit function in a named module");
+    // There are practices to mark template member function as always-inline
+    // and mark the template as extern explicit instantiation but not give
+    // the definition for member function. So we have to emit the function
+    // from explicitly instantiation with always-inline.
+    //
+    // See https://github.com/llvm/llvm-project/issues/86893 for details.
+    //
+    // TODO: Maybe it is better to give it a warning if we call a non-inline
+    // function from other module units which is marked as always-inline.
+    if (!fd->isTemplateInstantiation() || !fd->hasAttr<AlwaysInlineAttr>()) {
+      return false;
+    }
   }
 
   if (fd->hasAttr<NoInlineAttr>())
@@ -1979,9 +1994,9 @@ void CIRGenModule::addReplacement(StringRef name, mlir::Operation *op) {
 }
 
 #ifndef NDEBUG
-static bool verifyPointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF,
-                                  mlir::SymbolUserMap &userMap) {
-  for (mlir::Operation *user : userMap.getUsers(oldF)) {
+static bool verifyPointerTypeArgs(llvm::ArrayRef<mlir::Operation *> users,
+                                  cir::FuncOp newF) {
+  for (mlir::Operation *user : users) {
     auto call = mlir::dyn_cast<cir::CallOp>(user);
     if (!call)
       continue;
@@ -2001,11 +2016,38 @@ void CIRGenModule::applyReplacements() {
   if (replacements.empty())
     return;
 
-  // Build a symbol user map once — this walks the module O(M) one time.
-  // Previously, each replaceAllSymbolUses call walked the entire module,
-  // giving O(R × M) quadratic behavior for R replacements.
-  mlir::SymbolTableCollection symbolTableCollection;
-  mlir::SymbolUserMap userMap(symbolTableCollection, getModule());
+  // Collect the users of the functions being replaced in one walk. Skip CIR
+  // types. None can hold a symbol reference (see CIRTypes.td), and walking
+  // them descends into every nested struct of every signature.
+  llvm::DenseMap<mlir::StringAttr, llvm::SetVector<mlir::Operation *>> users;
+  for (auto &i : replacements)
+    users.try_emplace(mlir::StringAttr::get(&getMLIRContext(), i.first));
+
+  mlir::ModuleOp module = getModule();
+  module->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+    auto collect = [&](mlir::Attribute attr) {
+      attr.walk<mlir::WalkOrder::PreOrder>(
+          [&](mlir::SymbolRefAttr ref) {
+            auto it = users.find(ref.getRootReference());
+            if (it != users.end())
+              it->second.insert(op);
+            return mlir::WalkResult::skip();
+          },
+          [&](mlir::Type type) {
+            return mlir::isa<cir::CIRDialect>(type.getDialect())
+                       ? mlir::WalkResult::skip()
+                       : mlir::WalkResult::advance();
+          });
+    };
+    collect(op->getRawDictionaryAttrs());
+    op->getName().walkInherentAttrs(
+        op, [&](llvm::StringRef, mlir::Attribute &attr) { collect(attr); });
+    // Like mlir::SymbolUserMap, don't look into nested symbol tables.
+    if (op != module.getOperation() &&
+        op->hasTrait<mlir::OpTrait::SymbolTable>())
+      return mlir::WalkResult::skip();
+    return mlir::WalkResult::advance();
+  });
 
   for (auto &i : replacements) {
     StringRef mangledName = i.first;
@@ -2022,12 +2064,21 @@ void CIRGenModule::applyReplacements() {
       continue;
     }
 
-    assert(verifyPointerTypeArgs(oldF, newF, userMap) &&
+    auto oldIt = users.find(oldF.getSymNameAttr());
+    assert(oldIt != users.end() && "replaced function was not collected");
+    llvm::ArrayRef<mlir::Operation *> oldUsers = oldIt->second.getArrayRef();
+    assert(verifyPointerTypeArgs(oldUsers, newF) &&
            "call argument types do not match replacement function");
 
-    // Replace old with new, but keep the old order.  Uses
-    // SymbolUserMap to touch only actual users, not the whole module.
-    userMap.replaceAllUsesWith(oldF, newF.getSymNameAttr());
+    // Replace old with new, but keep the old order.
+    for (mlir::Operation *user : oldUsers)
+      (void)mlir::SymbolTable::replaceAllSymbolUses(oldF, newF.getSymNameAttr(),
+                                                    user);
+    // These users now name newF. Keep them in case newF is replaced later.
+    auto newIt = users.find(newF.getSymNameAttr());
+    if (newIt != users.end())
+      newIt->second.set_union(oldIt->second);
+
     newF->moveBefore(oldF);
     eraseGlobalSymbol(oldF);
     oldF->erase();
@@ -3193,7 +3244,8 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
     // -fsemantic-interposition nor -fhalf-no-semantic-interposition. Set
     // dso_local on the function if using a local alias is preferable (can avoid
     // PLT indirection).
-    if (!(isa<cir::FuncOp>(gv) && gv.canBenefitFromLocalAlias()))
+    auto func = dyn_cast<cir::FuncOp>(gv.getOperation());
+    if (!func || func.getAliasee() || !gv.canBenefitFromLocalAlias())
       return false;
     return !(lOpts.SemanticInterposition || lOpts.HalfNoSemanticInterposition);
   }
@@ -3429,6 +3481,14 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
     setCIRFunctionAttributes(globalDecl,
                              getTypes().arrangeGlobalDeclaration(globalDecl),
                              func, isThunk);
+
+  // Add the Returned attribute for "this", except for iOS 5 and earlier
+  // where substantial code, including the libstdc++ dylib, was compiled with
+  // GCC and does not actually return "this".
+  if (!isThunk && getCXXABI().hasThisReturn(globalDecl) &&
+      !(getTriple().isiOS() && getTriple().isOSVersionLT(6)))
+    func.setArgAttr(0, mlir::LLVM::LLVMDialect::getReturnedAttrName(),
+                    mlir::UnitAttr::get(&getMLIRContext()));
 
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);

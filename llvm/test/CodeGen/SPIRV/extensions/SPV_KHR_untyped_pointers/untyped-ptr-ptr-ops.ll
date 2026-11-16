@@ -39,3 +39,12 @@ define spir_func ptr addrspace(1) @sel(i1 %c, ptr addrspace(1) %a) {
   %s = select i1 %c, ptr addrspace(1) %a, ptr addrspace(1) @G
   ret ptr addrspace(1) %s
 }
+
+; Constants should not yield different results.
+; CHECK: OpSelect %[[#PTR]] %[[#]] %[[#]] %[[#]]
+define spir_func void @k(ptr addrspace(1) %p) {
+entry:
+  %s = select i1 false, ptr addrspace(1) null, ptr addrspace(1) %p
+  store i32 0, ptr addrspace(1) %s, align 4
+  ret void
+}

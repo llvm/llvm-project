@@ -146,6 +146,16 @@ void IteratorInvalidationInAWhileLoop(std::vector<int> v) {
   }
 }
 
+void PointerInvalidationBeforeInfiniteLoop() {
+  std::vector<int> v = {1, 2, 3};
+  int* p = &v[0]; // expected-warning {{local variable 'v' is later invalidated}} \
+                  // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'v'}}
+  v.push_back(4); // expected-note {{local variable 'v' is invalidated here}}
+  *p = 10;        // expected-note {{later used here}}
+  for (;;) {
+  }
+}
+
 void NoIteratorInvalidationInAWhileLoopErase(std::unordered_map<int, int> mp) {
   auto it = mp.begin();
   while (it != std::end(mp)) {
@@ -578,7 +588,7 @@ struct SinkOwnerBorrow {
 struct SinkInteriorBorrow {
   const char *dest_; // expected-note {{this field dangles}}
 
-  SinkInteriorBorrow(std::string *dest, int n) : dest_(dest->data()) { // expected-warning {{parameter 'dest' escapes to the field 'dest_' and is later invalidated}}
+  SinkInteriorBorrow(std::string *dest, int n) : dest_(dest->data()) { // expected-warning {{parameter 'dest' escapes to the field 'dest_' and is later invalidated}} expected-note {{result of call to 'data' aliases the storage of parameter 'dest' because the implicit object parameter is inferred as lifetimebound}}
     if (n > 0)
       dest->clear(); // expected-note {{parameter 'dest' is invalidated here}}
   }
@@ -627,7 +637,7 @@ struct S {
 
   void InvalidatedFieldDelete() {
     int *p = new int; // expected-warning {{allocated object escapes to the field 'FieldFromNew' and is later invalidated}}
-    FieldFromNew = p;
+    FieldFromNew = p; // expected-note {{local variable 'p' aliases the storage of allocated object}}
     delete p;         // expected-note {{allocated object is freed here}}
   }
 
@@ -678,7 +688,7 @@ void InvalidatedGlobalRefParamString(std::string &s) { // expected-warning {{par
 
 void InvalidatedGlobalDelete() {
   int *p = new int;  // expected-warning {{allocated object escapes to the global variable 'GlobalFromNew' and is later invalidated}}
-  GlobalFromNew = p;
+  GlobalFromNew = p; // expected-note {{local variable 'p' aliases the storage of allocated object}}
   delete p;          // expected-note {{allocated object is freed here}}
 }
 
@@ -717,7 +727,7 @@ int *g_owned_ptr; // expected-note {{this global dangles}}
 
 void ownership_returns_escape_global() {
   int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' escapes to the global variable 'g_owned_ptr' and is later invalidated}}
-  g_owned_ptr = p;
+  g_owned_ptr = p;    // expected-note {{local variable 'p' aliases the storage of object allocated by 'myalloc'}}
   myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
 }
 
@@ -725,7 +735,7 @@ struct OwnershipFieldHolder {
   int *f; // expected-note {{this field dangles}}
   void go() {
     int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' escapes to the field 'f' and is later invalidated}}
-    this->f = p;
+    this->f = p;        // expected-note {{local variable 'p' aliases the storage of object allocated by 'myalloc'}}
     myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
   }
 };
@@ -1051,7 +1061,7 @@ void cleanup_ref(Ref *r);
 void via_destructor() {
   Ref r;
   int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
-  r = h;
+  r = h;               // expected-note {{local variable 'h' aliases the storage of allocated object}}
   delete h;            // expected-note {{allocated object is freed here}}
 }                      // expected-note {{later used by the destructor of 'r' at scope exit}}
 
@@ -1060,7 +1070,7 @@ void ownership_free(int *p) __attribute__((ownership_takes(malloc, 1)));
 void via_destructor_ownership_takes() {
   Ref r;
   int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
-  r = h;
+  r = h;               // expected-note {{local variable 'h' aliases the storage of allocated object}}
   ownership_free(h);   // expected-note {{allocated object is freed here}}
 }                      // expected-note {{later used by the destructor of 'r' at scope exit}}
 
@@ -1073,7 +1083,7 @@ void via_destructor_ownership_takes_param(int *p) { // expected-warning {{parame
 void via_cleanup() {
   Ref g __attribute__((cleanup(cleanup_ref)));
   int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
-  g = h;
+  g = h;               // expected-note {{local variable 'h' aliases the storage of allocated object}}
   delete h;            // expected-note {{allocated object is freed here}}
 }                      // expected-note {{later used by the cleanup function of 'g' at scope exit}}
 

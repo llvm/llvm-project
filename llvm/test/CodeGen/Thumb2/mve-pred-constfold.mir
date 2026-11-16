@@ -33,20 +33,6 @@
 ---
 name:            reg
 alignment:       2
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: mqpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: rgpr, preferred-register: '' }
-  - { id: 5, class: vccr, preferred-register: '' }
-  - { id: 6, class: tgpreven, preferred-register: '' }
-  - { id: 7, class: rgpr, preferred-register: '' }
-  - { id: 8, class: vccr, preferred-register: '' }
-  - { id: 9, class: tgpreven, preferred-register: '' }
-  - { id: 10, class: tgpreven, preferred-register: '' }
-  - { id: 11, class: tgpreven, preferred-register: '' }
 liveins:
   - { reg: '$q0', virtual-reg: '%0' }
   - { reg: '$q1', virtual-reg: '%1' }

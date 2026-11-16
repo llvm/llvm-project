@@ -424,13 +424,22 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
 }
 
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
-  assert(K != TargetTransformInfo::RGK_Scalar);
+    TargetTransformInfo::VectorKind K, Type *ElementTy) const {
+  // Don't maximize bandwidth for i1s. The legal width of predicates is derived
+  // from the data vectors they are used with. Maximizing the predicate width
+  // will just result in excessive VFs with a lot of unpacking.
+  if (ElementTy && ElementTy->isIntegerTy(1))
+    return false;
 
-  if (K == TargetTransformInfo::RGK_FixedWidthVector && ST->isNeonAvailable())
+  // If we don't know the specific class of vector just return true. Later VF
+  // selection will ask us about fixed or scalable vectors.
+  if (K == TargetTransformInfo::VectorKind::FixedOrScalable)
     return true;
 
-  return K == TargetTransformInfo::RGK_ScalableVector &&
+  if (K == TargetTransformInfo::VectorKind::FixedWidth && ST->isNeonAvailable())
+    return true;
+
+  return K == TargetTransformInfo::VectorKind::Scalable &&
          ST->isSVEorStreamingSVEAvailable() &&
          !ST->disableMaximizeScalableBandwidth();
 }
@@ -4069,6 +4078,19 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       return InstructionCost::getInvalid();
   }
 
+  // A non-power-of-2 i1 vector that fits in a single register has no bitmask
+  // lowering, so its lanes are extracted and combined one by one.
+  if (auto *SrcVTy = dyn_cast<FixedVectorType>(Src);
+      ISD == ISD::BITCAST && SrcVTy && Dst->isIntegerTy() &&
+      Src->isIntOrIntVectorTy(1) && !isPowerOf2_32(SrcVTy->getNumElements()) &&
+      getTypeLegalizationCost(SrcVTy).first == 1) {
+    unsigned NumElts = SrcVTy->getNumElements();
+    return getScalarizationOverhead(SrcVTy, APInt::getAllOnes(NumElts),
+                                    /*Insert=*/false, /*Extract=*/true,
+                                    CostKind) +
+           NumElts - 1;
+  }
+
   // If the cast is observable, and it is used by a widening instruction (e.g.,
   // uaddl, saddw, etc.), it may be free.
   if (I && !I->users().empty()) {
@@ -6084,8 +6106,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     }
     EVT EltVT = VT.getVectorElementType();
     unsigned EltSize = EltVT.getScalarSizeInBits();
-    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
-        Alignment != Align(1))
+    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64)
       return LT.first;
     // FIXME: v3i8 lowering currently is very inefficient, due to automatic
     // widening to v4i8, which produces suboptimal results.
@@ -6102,7 +6123,11 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
       TypeWorklist.push_back({Remainder, 0});
       while (!TypeWorklist.empty()) {
         auto [CurrNumElements, Offset] = TypeWorklist.pop_back_val();
-        if (isPowerOf2_32(CurrNumElements)) {
+        // Loads with sufficient alignment are widened to the next power of two,
+        // so only a single load is needed.
+        if (isPowerOf2_32(CurrNumElements) ||
+            (Opcode == Instruction::Load &&
+             Alignment >= PowerOf2Ceil(CurrNumElements) * EltSize / 8)) {
           // 1 per load/store + possible lane insert.
           Cost += 1 + (Offset == 0 ? 0 : 1);
           continue;
@@ -7013,6 +7038,23 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     if (!Entry)
       break;
     auto *ValVTy = cast<FixedVectorType>(ValTy);
+    // A non-power-of-2 i1 vector is widened with the identity and reduced as
+    // the promoted integer vector, the i1 min/max lowering does not apply. The
+    // zero identity of or/xor is set by a single masking and.
+    if (ValTy->isIntOrIntVectorTy(1) &&
+        !isPowerOf2_32(ValVTy->getNumElements()) && LT.first == 1) {
+      unsigned PaddedElts = MTy.getVectorNumElements();
+      auto *PaddedTy =
+          FixedVectorType::get(ValVTy->getElementType(), PaddedElts);
+      if (ISD != ISD::AND)
+        return Entry->Cost +
+               getArithmeticInstrCost(Instruction::And, PaddedTy, CostKind);
+      return Entry->Cost +
+             getScalarizationOverhead(
+                 PaddedTy,
+                 APInt::getBitsSetFrom(PaddedElts, ValVTy->getNumElements()),
+                 /*Insert=*/true, /*Extract=*/false, CostKind);
+    }
     if (MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
         isPowerOf2_32(ValVTy->getNumElements())) {
       InstructionCost ExtraCost = 0;
@@ -7039,8 +7081,15 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
   EVT VecVT = TLI->getValueType(DL, VecTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
+  if (IsUnsigned && Opcode == Instruction::Add &&
+      VecVT.isScalableVectorOf(MVT::i1) && ResVT.isSimple() &&
+      getTLI()->isTypeLegal(VecVT)) {
+    // This is vecreduce.add(ZExt(mask)) which can lower as cntp(mask).
+    return 1;
+  }
+
   if (Opcode == Instruction::Add && VecVT.isSimple() && ResVT.isSimple() &&
-      VecVT.getSizeInBits() >= 64) {
+      !VecVT.isScalableVT() && VecVT.getFixedSizeInBits() >= 64) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
 
     // The legal cases are:
@@ -7133,9 +7182,12 @@ AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index,
         getCastInstrCost(Instruction::Trunc, LegalVTy, PromotedVTy,
                          TTI::CastContextHint::None, CostKind);
   }
+
   const auto *Entry =
       CostTableLookup(ShuffleTbl, TTI::SK_Splice, PromotedVT.getSimpleVT());
-  assert(Entry && "Illegal Type for Splice");
+  if (!Entry)
+    return InstructionCost::getInvalid();
+
   LegalizationCost += Entry->Cost;
   return LegalizationCost * LT.first;
 }

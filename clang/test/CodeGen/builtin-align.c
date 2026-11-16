@@ -98,7 +98,7 @@ TYPE get_type(void) {
 // CHECK-LONG-NEXT:    ret i1 [[IS_ALIGNED]]
 //
 // CHECK-USHORT-LABEL: define {{[^@]+}}@is_aligned
-// CHECK-USHORT-SAME: (i16 noundef zeroext [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-USHORT-SAME: (i16 noundef [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
 // CHECK-USHORT-NEXT:  entry:
 // CHECK-USHORT-NEXT:    [[ALIGNMENT:%.*]] = trunc i32 [[ALIGN:%.*]] to i16
 // CHECK-USHORT-NEXT:    [[MASK:%.*]] = sub i16 [[ALIGNMENT]], 1
@@ -142,7 +142,7 @@ _Bool is_aligned(TYPE ptr, unsigned align) {
 // CHECK-LONG-NEXT:    ret i64 [[ALIGNED_RESULT]]
 //
 // CHECK-USHORT-LABEL: define {{[^@]+}}@align_up
-// CHECK-USHORT-SAME: (i16 noundef zeroext [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-USHORT-SAME: (i16 noundef [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
 // CHECK-USHORT-NEXT:  entry:
 // CHECK-USHORT-NEXT:    [[ALIGNMENT:%.*]] = trunc i32 [[ALIGN:%.*]] to i16
 // CHECK-USHORT-NEXT:    [[MASK:%.*]] = sub i16 [[ALIGNMENT]], 1
@@ -184,7 +184,7 @@ TYPE align_up(TYPE ptr, unsigned align) {
 // CHECK-LONG-NEXT:    ret i64 [[ALIGNED_RESULT]]
 //
 // CHECK-USHORT-LABEL: define {{[^@]+}}@align_down
-// CHECK-USHORT-SAME: (i16 noundef zeroext [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-USHORT-SAME: (i16 noundef [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
 // CHECK-USHORT-NEXT:  entry:
 // CHECK-USHORT-NEXT:    [[ALIGNMENT:%.*]] = trunc i32 [[ALIGN:%.*]] to i16
 // CHECK-USHORT-NEXT:    [[MASK:%.*]] = sub i16 [[ALIGNMENT]], 1
