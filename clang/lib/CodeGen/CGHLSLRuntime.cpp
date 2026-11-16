@@ -1006,9 +1006,7 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
   LayoutTypes[StructType] = LayoutTy;
 }
 
-static std::optional<SPIRVExecutionMode>
-getSPIRVDerivativeGroupMode(CodeGenModule &CGM, const Function &F) {
-  StringRef NumThreads = F.getFnAttribute("hlsl.numthreads").getValueAsString();
+static std::array<uint32_t, 3> parseNumThreads(StringRef NumThreads) {
   SmallVector<StringRef, 3> Dimensions;
   NumThreads.split(Dimensions, ',');
   assert(Dimensions.size() == 3 && "expected three numthreads dimensions");
@@ -1017,15 +1015,7 @@ getSPIRVDerivativeGroupMode(CodeGenModule &CGM, const Function &F) {
     [[maybe_unused]] bool Invalid = Dimension.getAsInteger(10, Thread);
     assert(!Invalid && "expected an integer numthreads dimension");
   }
-  bool IsLinear = Threads[1] == 1 && Threads[2] == 1;
-  if (IsLinear ? (uint64_t(Threads[0]) * Threads[1] * Threads[2]) % 4 != 0
-               : Threads[0] % 2 != 0 || Threads[1] % 2 != 0) {
-    CGM.getDiags().Report(diag::err_hlsl_spirv_derivative_group_numthreads)
-        << F.getName() << IsLinear;
-    return std::nullopt;
-  }
-  return IsLinear ? SPIRVExecutionMode::DerivativeGroupLinearKHR
-                  : SPIRVExecutionMode::DerivativeGroupQuadsKHR;
+  return Threads;
 }
 
 static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
@@ -1043,10 +1033,27 @@ static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
     if (!Visited.insert(F).second)
       continue;
 
-    if (F->hasFnAttribute("hlsl.numthreads")) {
-      std::optional<SPIRVExecutionMode> Mode =
-          getSPIRVDerivativeGroupMode(CGM, *F);
-      if (!Mode) {
+    Attribute NumThreadsAttr = F->getFnAttribute("hlsl.numthreads");
+    if (NumThreadsAttr.isValid()) {
+      std::array<uint32_t, 3> Threads =
+          parseNumThreads(NumThreadsAttr.getValueAsString());
+      bool IsLinear = Threads[1] == 1 && Threads[2] == 1;
+      // QuadAll needs derivative groups for SPIR-V compute entry points.
+      // Linear groups need complete sets of four threads. Quad groups need
+      // complete 2-by-2 quads in the X and Y dimensions.
+      bool InvalidThreads;
+      SPIRVExecutionMode Mode;
+      if (IsLinear) {
+        InvalidThreads =
+            (uint64_t(Threads[0]) * Threads[1] * Threads[2]) % 4 != 0;
+        Mode = SPIRVExecutionMode::DerivativeGroupLinearKHR;
+      } else {
+        InvalidThreads = Threads[0] % 2 != 0 || Threads[1] % 2 != 0;
+        Mode = SPIRVExecutionMode::DerivativeGroupQuadsKHR;
+      }
+      if (InvalidThreads) {
+        CGM.getDiags().Report(diag::err_hlsl_spirv_derivative_group_numthreads)
+            << F->getName() << IsLinear;
         CGM.getDiags().Report(
             diag::note_hlsl_spirv_derivative_group_requirement)
             << "QuadAll" << F->getName();
@@ -1055,7 +1062,7 @@ static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
       MDNode *MD = MDNode::get(
           M.getContext(),
           {ValueAsMetadata::get(F),
-           ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(*Mode)))});
+           ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(Mode)))});
       M.getOrInsertNamedMetadata("spirv.ExecutionMode")->addOperand(MD);
     }
 
