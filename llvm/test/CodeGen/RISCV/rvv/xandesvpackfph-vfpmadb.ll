@@ -7,10 +7,8 @@
 define <vscale x 1 x half> @intrinsic_vfpmadb_vf_nxv1f16_nxv1f16_f32(<vscale x 1 x half> %0, float %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfpmadb_vf_nxv1f16_nxv1f16_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    nds.vfpmadb.vf v8, fa0, v8
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = tail call <vscale x 1 x half> @llvm.riscv.nds.vfpmadb.nxv1f16.f32(
@@ -24,10 +22,8 @@ entry:
 define <vscale x 1 x half> @intrinsic_vfpmadb_mask_vf_nxv1f16_nxv1f16_f32(<vscale x 1 x half> %0, <vscale x 1 x half> %1, float %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfpmadb_mask_vf_nxv1f16_nxv1f16_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
 ; CHECK-NEXT:    nds.vfpmadb.vf v8, fa0, v9, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = tail call <vscale x 1 x half> @llvm.riscv.nds.vfpmadb.mask.nxv1f16.f32(
@@ -43,10 +39,8 @@ entry:
 define <vscale x 2 x half> @intrinsic_vfpmadb_vf_nxv2f16_nxv2f16_f32(<vscale x 2 x half> %0, float %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfpmadb_vf_nxv2f16_nxv2f16_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    nds.vfpmadb.vf v8, fa0, v8
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = tail call <vscale x 2 x half> @llvm.riscv.nds.vfpmadb.nxv2f16.f32(
@@ -60,10 +54,8 @@ entry:
 define <vscale x 2 x half> @intrinsic_vfpmadb_mask_vf_nxv2f16_nxv2f16_f32(<vscale x 2 x half> %0, <vscale x 2 x half> %1, float %2, <vscale x 2 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfpmadb_mask_vf_nxv2f16_nxv2f16_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
 ; CHECK-NEXT:    nds.vfpmadb.vf v8, fa0, v9, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = tail call <vscale x 2 x half> @llvm.riscv.nds.vfpmadb.mask.nxv2f16.f32(
@@ -79,10 +71,8 @@ entry:
 define <vscale x 4 x half> @intrinsic_vfpmadb_vf_nxv4f16_nxv4f16_f32(<vscale x 4 x half> %0, float %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfpmadb_vf_nxv4f16_nxv4f16_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    nds.vfpmadb.vf v8, fa0, v8
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = tail call <vscale x 4 x half> @llvm.riscv.nds.vfpmadb.nxv4f16.f32(
@@ -96,10 +86,8 @@ entry:
 define <vscale x 4 x half> @intrinsic_vfpmadb_mask_vf_nxv4f16_nxv4f16_f32(<vscale x 4 x half> %0, <vscale x 4 x half> %1, float %2, <vscale x 4 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfpmadb_mask_vf_nxv4f16_nxv4f16_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
 ; CHECK-NEXT:    nds.vfpmadb.vf v8, fa0, v9, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = tail call <vscale x 4 x half> @llvm.riscv.nds.vfpmadb.mask.nxv4f16.f32(
@@ -115,10 +103,8 @@ entry:
 define <vscale x 8 x half> @intrinsic_vfpmadb_vf_nxv8f16_nxv8f16_f32(<vscale x 8 x half> %0, float %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfpmadb_vf_nxv8f16_nxv8f16_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    nds.vfpmadb.vf v8, fa0, v8
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = tail call <vscale x 8 x half> @llvm.riscv.nds.vfpmadb.nxv8f16.f32(
@@ -132,10 +118,8 @@ entry:
 define <vscale x 8 x half> @intrinsic_vfpmadb_mask_vf_nxv8f16_nxv8f16_f32(<vscale x 8 x half> %0, <vscale x 8 x half> %1, float %2, <vscale x 8 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfpmadb_mask_vf_nxv8f16_nxv8f16_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
 ; CHECK-NEXT:    nds.vfpmadb.vf v8, fa0, v10, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = tail call <vscale x 8 x half> @llvm.riscv.nds.vfpmadb.mask.nxv8f16.f32(
@@ -151,10 +135,8 @@ entry:
 define <vscale x 16 x half> @intrinsic_vfpmadb_vf_nxv16f16_nxv16f16_f32(<vscale x 16 x half> %0, float %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfpmadb_vf_nxv16f16_nxv16f16_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    nds.vfpmadb.vf v8, fa0, v8
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = tail call <vscale x 16 x half> @llvm.riscv.nds.vfpmadb.nxv16f16.f32(
@@ -168,10 +150,8 @@ entry:
 define <vscale x 16 x half> @intrinsic_vfpmadb_mask_vf_nxv16f16_nxv16f16_f32(<vscale x 16 x half> %0, <vscale x 16 x half> %1, float %2, <vscale x 16 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfpmadb_mask_vf_nxv16f16_nxv16f16_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
 ; CHECK-NEXT:    nds.vfpmadb.vf v8, fa0, v12, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = tail call <vscale x 16 x half> @llvm.riscv.nds.vfpmadb.mask.nxv16f16.f32(
@@ -187,10 +167,8 @@ entry:
 define <vscale x 32 x half> @intrinsic_vfpmadb_vf_nxv32f16_nxv32f16_f32(<vscale x 32 x half> %0, float %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfpmadb_vf_nxv32f16_nxv32f16_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    nds.vfpmadb.vf v8, fa0, v8
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = tail call <vscale x 32 x half> @llvm.riscv.nds.vfpmadb.nxv32f16.f32(
@@ -204,10 +182,8 @@ entry:
 define <vscale x 32 x half> @intrinsic_vfpmadb_mask_vf_nxv32f16_nxv32f16_f32(<vscale x 32 x half> %0, <vscale x 32 x half> %1, float %2, <vscale x 32 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfpmadb_mask_vf_nxv32f16_nxv32f16_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, mu
 ; CHECK-NEXT:    nds.vfpmadb.vf v8, fa0, v16, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = tail call <vscale x 32 x half> @llvm.riscv.nds.vfpmadb.mask.nxv32f16.f32(
