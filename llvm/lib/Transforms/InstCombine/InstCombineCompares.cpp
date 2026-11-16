@@ -105,7 +105,7 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
   return false;
 }
 
-/// This is called when we see this pattern:
+/// Try to fold
 ///   cmp pred (load (gep GV, ...)), cmpcst
 /// where GV is a global variable with a constant initializer. Try to simplify
 /// this into some simple computation that does not need the load. For example
@@ -119,8 +119,12 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 /// Even if there are multiple uses, they can often be sunk into the block
 /// guarded by the icmp.
 Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
-    LoadInst *LI, GetElementPtrInst *GEP, CmpPredicate Pred, Constant *RHSC,
-    Instruction &CtxI, ConstantInt *AndCst) {
+    LoadInst *LI, CmpPredicate Pred, Constant *RHSC, Instruction &CtxI,
+    ConstantInt *AndCst) {
+  auto *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
+  if (!GEP)
+    return nullptr;
+
   auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(GEP));
   if (LI->isVolatile() || !GV || !GV->isConstant() ||
       !GV->hasDefinitiveInitializer())
@@ -1999,11 +2003,10 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   Value *Y = And->getOperand(1);
   if (auto *C2 = dyn_cast<ConstantInt>(Y))
     if (auto *LI = dyn_cast<LoadInst>(X))
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0)))
-        if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
-                LI, GEP, Cmp.getPredicate(), cast<Constant>(Cmp.getOperand(1)),
-                Cmp, C2))
-          return Res;
+      if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+              LI, Cmp.getPredicate(), cast<Constant>(Cmp.getOperand(1)), Cmp,
+              C2))
+        return Res;
 
   if (!Cmp.isEquality())
     return nullptr;
@@ -4552,11 +4555,9 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
 
   case Instruction::Load:
     // Try to optimize things like "A[i] > 4" to index computations.
-    if (GetElementPtrInst *GEP =
-            dyn_cast<GetElementPtrInst>(LHSI->getOperand(0)))
-      if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
-              cast<LoadInst>(LHSI), GEP, I.getPredicate(), RHSC, I))
-        return Res;
+    if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+            cast<LoadInst>(LHSI), I.getPredicate(), RHSC, I))
+      return Res;
     break;
   }
 
@@ -9616,10 +9617,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
         return NV;
       break;
     case Instruction::Load:
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(LHSI->getOperand(0)))
-        if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
-                cast<LoadInst>(LHSI), GEP, I.getPredicate(), RHSC, I))
-          return Res;
+      if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+              cast<LoadInst>(LHSI), I.getPredicate(), RHSC, I))
+        return Res;
       break;
     case Instruction::FPTrunc:
       if (Instruction *NV = foldFCmpFpTrunc(I, *LHSI, *RHSC))
