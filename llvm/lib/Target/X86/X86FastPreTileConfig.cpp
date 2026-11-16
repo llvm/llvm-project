@@ -227,19 +227,20 @@ void X86FastPreTileConfigImpl::spill(MachineBasicBlock::iterator Before,
 
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
 
-  // ACE configures palette 2, which has no TILESTORED - use TILEMOVROW
-  // row-by-row through a scratch ZMM.
-  // FIXME: This defines the tile and the scratch register once per row, which
-  // is not valid SSA. X86VolatileTileData also still emits the AMX load/store
-  // intrinsics at -O0, so the ACE -O0 path needs both fixed together.
-  if (ST->hasACEV1()) {
-    const DebugLoc &DL = Before->getDebugLoc();
-    Register ScratchZMM = MRI->createVirtualRegister(&X86::VR512RegClass);
+  // Palette 2 has no TILESTORED - use TILEMOVROW row-by-row through a scratch
+  // ZMM. Only palette 2 tiles, since palette 1 has its own shape.
+  if (X86FI->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA) {
+    // Before is MBB.end() when the tile def ends the block, so it can't be
+    // dereferenced for a debug location.
+    DebugLoc DL;
 
     const unsigned NumRows = 16;
     const unsigned RowSize = 64;
 
     for (unsigned Row = 0; Row < NumRows; ++Row) {
+      // The read form writes the whole ZMM, so each row needs its own.
+      Register ScratchZMM = MRI->createVirtualRegister(&X86::VR512RegClass);
+
       // tilemovrow $row, %tmm, %zmm
       BuildMI(*MBB, Before, DL, TII->get(X86::TILEMOVROWrti), ScratchZMM)
           .addReg(VirtReg)
@@ -284,15 +285,24 @@ void X86FastPreTileConfigImpl::reload(MachineBasicBlock::iterator UseMI,
 
   // ACE configures palette 2, which has no TILELOADD - use TILEMOVROW
   // row-by-row through a scratch ZMM.
-  // FIXME: See the corresponding comment in spill().
-  if (ST->hasACEV1()) {
+  if (X86FI->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA) {
     const DebugLoc &DL = UseMI->getDebugLoc();
-    Register ScratchZMM = MRI->createVirtualRegister(&X86::VR512RegClass);
 
     const unsigned NumRows = 16;
     const unsigned RowSize = 64;
 
+    // Each row write returns the tile with one more row in place, so thread a
+    // register through the rows and end at TileReg. Row 0 has nothing to
+    // merge with.
+    Register PartialTile = MRI->createVirtualRegister(&RC);
+    BuildMI(*UseMI->getParent(), UseMI, DL, TII->get(X86::IMPLICIT_DEF),
+            PartialTile);
+
     for (unsigned Row = 0; Row < NumRows; ++Row) {
+      Register ScratchZMM = MRI->createVirtualRegister(&X86::VR512RegClass);
+      Register Filled =
+          Row + 1 == NumRows ? TileReg : MRI->createVirtualRegister(&RC);
+
       // vmovups row*64(%sp), %zmm
       MachineInstrBuilder MIB = BuildMI(*UseMI->getParent(), UseMI, DL,
                                         TII->get(X86::VMOVUPSZrm), ScratchZMM);
@@ -300,9 +310,11 @@ void X86FastPreTileConfigImpl::reload(MachineBasicBlock::iterator UseMI,
 
       // tilemovrow $row, %zmm, %tmm
       BuildMI(*UseMI->getParent(), UseMI, DL, TII->get(X86::TILEMOVROWtri),
-              TileReg)
+              Filled)
+          .addReg(PartialTile)
           .addReg(ScratchZMM)
           .addImm(Row);
+      PartialTile = Filled;
     }
   } else {
     // AMX: Use PTILELOADDV
