@@ -734,8 +734,7 @@ struct DevirtIndex {
         ExternallyVisibleSymbolNamesPtr(ExternallyVisibleSymbolNamesPtr) {
     FunctionsToSkip.init(SkipFunctionNames);
     if (Ctx)
-      DevirtSpeculatively =
-          Ctx->getLibraryOptions().get<IPOOptions>().devirtualize_speculatively;
+      DevirtSpeculatively = getIPOOptions(*Ctx).devirtualize_speculatively;
   }
 
   bool tryFindVirtualCallTargets(std::vector<ValueInfo> &TargetsForSlot,
@@ -755,10 +754,11 @@ struct DevirtIndex {
 
 PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
-  DevirtSpeculatively |= getIPOOptions(M).devirtualize_speculatively;
+  const bool DevirtualizeSpeculatively =
+      DevirtSpeculatively || getIPOOptions(M).devirtualize_speculatively;
 
   if (UseCommandLine) {
-    if (!DevirtModule::runForTesting(M, MAM, DevirtSpeculatively))
+    if (!DevirtModule::runForTesting(M, MAM, DevirtualizeSpeculatively))
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
@@ -768,13 +768,14 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   // needs, such as the module, the analyses and the summaries.
   std::optional<ModuleSummaryIndex> Index;
   ModuleSummaryIndex *Export = ExportSummary;
-  if (!ExportSummary && !ImportSummary && DevirtSpeculatively) {
+  if (!ExportSummary && !ImportSummary && DevirtualizeSpeculatively) {
     // Build the ExportSummary from the module.
     ProfileSummaryInfo PSI(M);
     Index.emplace(buildModuleSummaryIndex(M, nullptr, &PSI));
     Export = &*Index;
   }
-  if (!DevirtModule(M, MAM, Export, ImportSummary, DevirtSpeculatively).run())
+  if (!DevirtModule(M, MAM, Export, ImportSummary, DevirtualizeSpeculatively)
+           .run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
@@ -872,7 +873,11 @@ void llvm::updatePublicTypeTestCalls(Module &M,
       CI->replaceAllUsesWith(NewCI);
       CI->eraseFromParent();
     }
-  } else if (!getIPOOptions(M).devirtualize_speculatively) {
+  }
+  // TODO: With distributed ThinLTO, the type tests are still dropped here
+  // even when devirtualize-speculatively is used, because the distributed
+  // backends don't see this option.
+  else if (!getIPOOptions(M).devirtualize_speculatively) {
     auto *True = ConstantInt::getTrue(M.getContext());
     for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
       auto *CI = cast<CallInst>(U.getUser());
@@ -1125,14 +1130,18 @@ bool DevirtModule::tryFindVirtualCallTargets(
   // In most cases empty functions will be overridden by the
   // implementation of the derived class, so we can skip them
   // for speculative devirtualization.
-  if (HasPublicTarget)
+  if (HasPublicTarget) {
     erase_if(TargetsForSlot, [](const VirtualCallTarget &Target) {
       const auto *Fn = dyn_cast<Function>(Target.Fn);
       if (!Fn)
         Fn = cast<Function>(cast<GlobalAlias>(Target.Fn)->getAliasee());
+      // TODO: This heuristic is currently not applied during hybrid LTO because
+      // we skip all declarations. If there is a function summary, we should get
+      // the instruction from there instead.
       return !Fn->isDeclaration() && Fn->getReturnType()->isVoidTy() &&
              Fn->getInstructionCount() <= 1;
     });
+  }
 
   // Give up if we couldn't find any targets.
   return !TargetsForSlot.empty();

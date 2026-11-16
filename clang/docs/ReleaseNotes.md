@@ -467,6 +467,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   extensions that DXC implements, as `-fspv-extension=DXC` does, instead of all
   extensions. `-fspv-extension=all` restores the previous behavior.
 
+- `-fdevirtualize-speculatively` can now also be used to enable speculative
+  devirtualization when using LTO, with the exception of Distributed ThinLTO.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
