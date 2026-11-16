@@ -6,6 +6,16 @@
 // RUN:                        -analyzer-config 'unitybuild-file-extensions=; ;' \
 // RUN:                        %t/main.cpp 2>&1 | FileCheck %s --check-prefix=EMPTY
 // EMPTY: invalid input for analyzer-config option 'unitybuild-file-extensions', that expects a non-empty file extension
+// A comma is parsed as a separator between analyzer options, not extensions.
+// RUN: not %clang_analyze_cc1 -analyzer-checker=core \
+// RUN:                        -analyzer-config 'unitybuild-file-extensions=.c,.cc,.cpp,.cxx' \
+// RUN:                        %t/main.cpp 2>&1 | FileCheck %s --check-prefix=COMMA
+// COMMA: error: analyzer-config option '.cc' has a key but no value
+// The same error occurs if another analyzer option follows the extension list.
+// RUN: not %clang_analyze_cc1 -analyzer-checker=core \
+// RUN:                        -analyzer-config 'unitybuild-file-extensions=.c,.cc,eagerly-assume=true' \
+// RUN:                        %t/main.cpp 2>&1 | FileCheck %s --check-prefix=COMMA
+
 // RUN: %clang_analyze_cc1 -analyzer-checker=core \
 // RUN:                    -analyzer-config 'unitybuild-file-extensions=.cpp;.impl;.c' \
 // RUN:                    -verify=expected,all-extensions %t/main.cpp
