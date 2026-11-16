@@ -24,17 +24,13 @@ define void @one(ptr %p) optsize {
 define void @small(ptr %p) optsize {
 ; CHECK-LABEL: small:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    adr r1, .LCPI2_0
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vstrw.32 q0, [r0]
+; CHECK-NEXT:    mov.w r12, #4
+; CHECK-NEXT:    movs r2, #3
+; CHECK-NEXT:    movs r3, #2
+; CHECK-NEXT:    movs r1, #1
+; CHECK-NEXT:    strd r1, r3, [r0]
+; CHECK-NEXT:    strd r2, r12, [r0, #8]
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI2_0:
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 2 @ 0x2
-; CHECK-NEXT:    .long 3 @ 0x3
-; CHECK-NEXT:    .long 4 @ 0x4
   store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %p, align 4
   ret void
 }
@@ -42,17 +38,12 @@ define void @small(ptr %p) optsize {
 define void @repeated(ptr %p) optsize {
 ; CHECK-LABEL: repeated:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    adr r1, .LCPI3_0
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vstrw.32 q0, [r0]
+; CHECK-NEXT:    movw r1, #17767
+; CHECK-NEXT:    movs r2, #1
+; CHECK-NEXT:    movt r1, #291
+; CHECK-NEXT:    strd r2, r1, [r0]
+; CHECK-NEXT:    strd r2, r1, [r0, #8]
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 19088743 @ 0x1234567
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 19088743 @ 0x1234567
   store <4 x i32> <i32 1, i32 u0x1234567, i32 1, i32 u0x1234567>, ptr %p, align 4
   ret void
 }
