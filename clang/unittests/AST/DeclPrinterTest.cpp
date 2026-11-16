@@ -454,6 +454,13 @@ TEST(DeclPrinter, TestMemberFunctionOutside_FullyQualifiedName) {
       [](PrintingPolicy &Policy){ Policy.FullyQualifiedName = true; }));
 }
 
+TEST(DeclPrinter, TestDestructor_FullyQualifiedName) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "namespace ns { struct X { ~X(); }; }",
+      cxxDestructorDecl().bind("id"), "ns::X::~X()",
+      [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
+}
+
 TEST(DeclPrinter, TestMemberFunction_SuppressFunctionNameScope) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
       "namespace ns { struct Foo{}; struct X { void A(Foo); }; }", "A",
@@ -476,6 +483,25 @@ TEST(DeclPrinter, TestMemberFunctionOutside_SuppressFunctionNameScope) {
       "void X::A() {}",
       functionDecl(hasName("A"), isDefinition()).bind("id"), "void A()",
       [](PrintingPolicy &Policy) { Policy.SuppressFunctionNameScope = true; }));
+}
+
+TEST(DeclPrinter, TestConstructor_SuppressFunctionNameScope) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "namespace ns { struct Foo{}; struct X { X(Foo); }; }",
+      cxxConstructorDecl(hasName("X")).bind("id"), "X(ns::Foo)",
+      [](PrintingPolicy &Policy) {
+        Policy.FullyQualifiedName = true;
+        Policy.SuppressFunctionNameScope = true;
+      }));
+}
+
+TEST(DeclPrinter, TestDestructor_SuppressFunctionNameScope) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches("namespace ns { struct X { ~X(); }; }",
+                                      cxxDestructorDecl().bind("id"), "~X()",
+                                      [](PrintingPolicy &Policy) {
+                                        Policy.FullyQualifiedName = true;
+                                        Policy.SuppressFunctionNameScope = true;
+                                      }));
 }
 
 TEST(DeclPrinter, TestFunctionDecl2) {
