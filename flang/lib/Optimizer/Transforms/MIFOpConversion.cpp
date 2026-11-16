@@ -1313,7 +1313,7 @@ struct MIFAllocCoarrayOpConversion
     mlir::Type statTy = getPRIFStatType(builder);
     if (!stat) {
       stat = fir::AbsentOp::create(builder, loc, statTy);
-    else {
+    } else {
       // Workaround for https://github.com/BerkeleyLab/caffeine/issues/380
       // Ensures deterministic behavior even for Caffeine versions
       // prior to 0.8.4 that don't correctly set stat=0 on success.
