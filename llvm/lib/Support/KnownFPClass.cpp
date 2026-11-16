@@ -48,6 +48,20 @@ KnownFPClass KnownFPClass::applyInputDenormalMode(const KnownFPClass &KnownSrc,
   llvm_unreachable("covered switch over denormal mode");
 }
 
+KnownFPClass KnownFPClass::applyInputSemantics(const KnownFPClass &KnownSrc,
+                                               DenormalMode Mode,
+                                               bool MayBeNSZ) {
+  // We flush denormals first since it may add zeroes to the input classes.
+  KnownFPClass Known = applyInputDenormalMode(KnownSrc, Mode);
+
+  // NSZ means that a +0.0 or -0.0 input may be treated as a zero of the
+  // opposite sign.
+  if (MayBeNSZ && !Known.isKnownNever(fcZero))
+    Known |= fcZero;
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::applyOutputDenormalMode(const KnownFPClass &KnownSrc,
                                                    DenormalMode Mode) {
   KnownFPClass Known = KnownSrc;
