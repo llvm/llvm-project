@@ -43,9 +43,9 @@ public:
                               : *static_cast<const T *>(It->second);
   }
 
-  // C's values of T, or T::Global if C is null.
+  // C's values of T, or T::Default if C is null.
   template <typename T> static const T &get(const LibraryOptionsContext *C) {
-    return C ? C->get<T>() : T::Global;
+    return C ? C->get<T>() : T::Default;
   }
 
 private:

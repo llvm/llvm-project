@@ -187,10 +187,6 @@ public:
   // a parse recognizes library options, and only then does -help-hidden list
   // them.
   bool RecognizeLibraryOptions = false;
-  // Storage that library options refer to: copies of the arguments passed to
-  // LibraryOptions::parse and what it allocates. Response file expansions do
-  // not outlive parsing.
-  BumpPtrAllocator LibraryArgAlloc;
 
   CommandLineParser() { registerSubCommand(&SubCommand::getTopLevel()); }
 
@@ -471,27 +467,6 @@ private:
 static CommandLineParser &globalParser() {
   static ManagedStatic<CommandLineParser> GlobalParser;
   return *GlobalParser;
-}
-
-// Parses the library option spelled by Args[0], which takes at most one
-// separate value, into Opts. Opts may refer to the arguments, so they are
-// copied into Alloc, and appended to Record if given.
-static Error
-parseLibraryOption(const LibraryOptions &L, void *Opts,
-                   ArrayRef<const char *> Args, unsigned &Consumed,
-                   BumpPtrAllocator &Alloc,
-                   SmallVectorImpl<const char *> *Record = nullptr) {
-  StringSaver Saver(Alloc);
-  const char *Saved[2];
-  unsigned NumArgs = std::min<size_t>(Args.size(), 2);
-  for (unsigned J = 0; J != NumArgs; ++J)
-    Saved[J] = Saver.save(Args[J]).data();
-  Consumed = 1;
-  if (Error E = L.parse(Opts, ArrayRef(Saved, NumArgs), Consumed, Alloc))
-    return E;
-  if (Record)
-    Record->append(Saved, Saved + Consumed);
-  return Error::success();
 }
 
 template <typename T, T TrueVal, T FalseVal>
@@ -1547,10 +1522,6 @@ void CommandLineParser::ResetAllOptionOccurrences() {
     if (SC->ConsumeAfterOpt)
       SC->ConsumeAfterOpt->reset();
   }
-  for (const LibraryOptions *L :
-       concat<const LibraryOptions *const>(Libraries, ToolOptions))
-    L->reset();
-  LibraryArgAlloc.Reset();
 }
 
 bool CommandLineParser::ParseCommandLineOptions(
@@ -3006,10 +2977,19 @@ Error LibraryOptionsContext::parse(const LibraryOptions &L,
   auto [It, Inserted] = Values.try_emplace(L.getDefault());
   if (Inserted)
     It->second = L.copyDefault(Alloc);
-  Error E =
-      parseLibraryOption(L, It->second, Args, Consumed, Alloc, &SavedArgs);
+  // The option takes at most one separate value. The values may refer to the
+  // arguments, so save them.
+  StringSaver Saver(Alloc);
+  const char *Saved[2];
+  unsigned NumArgs = std::min<size_t>(Args.size(), 2);
+  for (unsigned J = 0; J != NumArgs; ++J)
+    Saved[J] = Saver.save(Args[J]).data();
+  Consumed = 1;
+  if (Error E = L.parse(It->second, ArrayRef(Saved, NumArgs), Consumed, Alloc))
+    return E;
+  SavedArgs.append(Saved, Saved + Consumed);
   SavedLibraries.resize(SavedArgs.size(), &L);
-  return E;
+  return Error::success();
 }
 
 void cl::ResetAllOptionOccurrences() {
