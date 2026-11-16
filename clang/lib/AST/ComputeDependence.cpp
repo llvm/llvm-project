@@ -955,7 +955,7 @@ ExprDependence clang::computeDependence(ConceptSpecializationExpr *E,
   ExprDependence D =
       ValueDependent ? ExprDependence::Value : ExprDependence::None;
   auto Res = D | toExprDependence(TA);
-  if(!ValueDependent && E->getSatisfaction().ContainsErrors)
+  if (!ValueDependent && E->getSatisfaction().containsErrors())
     Res |= ExprDependence::Error;
   return Res;
 }

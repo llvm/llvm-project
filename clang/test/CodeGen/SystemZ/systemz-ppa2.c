@@ -14,7 +14,7 @@
 // CHECK-C-NEXT:   DC  XL1'00'
 // CHECK-C-NEXT:   DC  XL1'22'
 // CHECK-C-NEXT:   DC  XL1'04'
-// CHECK-C-NEXT:   DC AD(CELQSTRT-[[PPA2]])
+// CHECK-C-NEXT:   DC A(CELQSTRT-[[PPA2]])
 
 // RUN: %clang_cc1 -triple s390x-ibm-zos -xc++ -S -o - %s | FileCheck %s --check-prefix CHECK-CXX
 // CHECK-CXX:        [[PPA2:(.L)|(L#)PPA2]] DS 0H
@@ -22,4 +22,4 @@
 // CHECK-CXX-NEXT:   DC  XL1'01'
 // CHECK-CXX-NEXT:   DC  XL1'22'
 // CHECK-CXX-NEXT:   DC  XL1'04'
-// CHECK-CXX-NEXT:   DC AD(CELQSTRT-[[PPA2]])
+// CHECK-CXX-NEXT:   DC A(CELQSTRT-[[PPA2]])

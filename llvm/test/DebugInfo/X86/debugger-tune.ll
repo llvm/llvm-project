@@ -10,10 +10,17 @@
 ; RUN: llc -mtriple=x86_64-pc-freebsd -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
 
-; We can override defaults.
-; RUN: llc -mtriple=x86_64-scei-ps4 -filetype=obj -debugger-tune=gdb < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=LLDB %s
-; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=sce < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
+; We can override defaults via the "debugger-tuning" module flag.
+; RUN: sed 's/TUNE_PLACEHOLDER/gdb/' %s \
+; RUN:   | llc -mtriple=x86_64-scei-ps4 -filetype=obj | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
+; RUN: sed 's/TUNE_PLACEHOLDER/lldb/' %s \
+; RUN:   | llc -mtriple=x86_64-pc-linux -filetype=obj | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=LLDB %s
+; RUN: sed 's/TUNE_PLACEHOLDER/sce/' %s \
+; RUN:   | llc -mtriple=x86_64-apple-darwin12 -filetype=obj | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
+
+; An unrecognized tuning name (the unsubstituted placeholder) falls back to
+; the triple default rather than erroring.
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
 
 ; GDB: DW_AT_APPLE_optimized
 ; GDB-NOT: DW_OP_form_tls_address
@@ -40,7 +47,7 @@ attributes #0 = { norecurse nounwind readnone uwtable }
 attributes #1 = { norecurse uwtable }
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!7, !8, !9}
+!llvm.module.flags = !{!7, !8, !9, !100}
 !llvm.ident = !{!10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -53,6 +60,7 @@ attributes #1 = { norecurse uwtable }
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"wchar_size", i32 4}
+!100 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}
 !10 = !{!"clang version 7.0.0 (trunk 322268) (llvm/trunk 322267)"}
 !11 = distinct !DISubprogram(name: "fun", linkageName: "_Z3funv", scope: !3, file: !3, line: 2, type: !12, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !4)
 !12 = !DISubroutineType(types: !13)

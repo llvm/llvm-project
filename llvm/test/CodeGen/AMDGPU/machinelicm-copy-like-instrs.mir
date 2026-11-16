@@ -7,6 +7,7 @@
 
 ---
 name: licm_reg_sequence
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: licm_reg_sequence
   ; CHECK: bb.0:
@@ -22,7 +23,7 @@ body: |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $vgpr0 = COPY [[REG_SEQUENCE]]
+  ; CHECK-NEXT:   $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -40,7 +41,7 @@ body: |
     S_BRANCH %bb.2
 
   bb.2:
-    $vgpr0 = COPY %3
+    $vgpr0_vgpr1 = COPY %3
     S_ENDPGM 0
 
 ...
@@ -49,6 +50,7 @@ body: |
 # reason for these to be legal)?
 ---
 name: licm_reg_sequence_physreg_use
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: licm_reg_sequence_physreg_use
   ; CHECK: bb.0:
@@ -66,7 +68,7 @@ body: |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $vgpr0 = COPY [[REG_SEQUENCE]]
+  ; CHECK-NEXT:   $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -85,13 +87,14 @@ body: |
     S_BRANCH %bb.2
 
   bb.2:
-    $vgpr0 = COPY %3
+    $vgpr0_vgpr1 = COPY %3
     S_ENDPGM 0
 
 ...
 
 ---
 name: licm_insert_subreg
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: licm_insert_subreg
   ; CHECK: bb.0:

@@ -7,6 +7,7 @@
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
+!rec_S = !cir.struct<"S" {data !s32i}>
 
 module {
 
@@ -88,5 +89,39 @@ cir.func @f_no_ann() {
   cir.return
 }
 // CHECK: cir.func{{.*}} @f_no_ann() {
+
+// -----------------------------------------------------------------------------
+// Local variables, parameters, record fields, and __builtin_annotation
+// -----------------------------------------------------------------------------
+
+
+cir.func @var_annotation() {
+  %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
+  cir.var_annotation %0 [#cir.annotation<"on_local">] : !cir.ptr<!s32i>
+  cir.var_annotation %0 [#cir.annotation<"with_args", ["s", 7 : i32]>] : !cir.ptr<!s32i>
+  cir.return
+}
+// CHECK: cir.func{{.*}} @var_annotation()
+// CHECK:   %[[X:.*]] = cir.alloca "x" align(4) : !cir.ptr<!s32i>
+// CHECK:   cir.var_annotation %[[X]] [#cir.annotation<"on_local">] : !cir.ptr<!s32i>
+// CHECK:   cir.var_annotation %[[X]] [#cir.annotation<"with_args", ["s", 7 : i32]>] : !cir.ptr<!s32i>
+
+cir.func @ptr_annotation(%arg0: !cir.ptr<!rec_S>) -> !s32i {
+  %0 = cir.get_member %arg0[0] {name = "v"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
+  %1 = cir.ptr_annotation %0 [#cir.annotation<"on_field">] : !cir.ptr<!s32i>
+  %2 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+  cir.return %2 : !s32i
+}
+// CHECK: cir.func{{.*}} @ptr_annotation
+// CHECK:   %[[V:.*]] = cir.get_member
+// CHECK:   %[[A:.*]] = cir.ptr_annotation %[[V]] [#cir.annotation<"on_field">] : !cir.ptr<!s32i>
+// CHECK:   cir.load %[[A]]
+
+cir.func @annotation(%arg0: !s32i) -> !s32i {
+  %0 = cir.annotation %arg0 [#cir.annotation<"on_builtin">] : !s32i
+  cir.return %0 : !s32i
+}
+// CHECK: cir.func{{.*}} @annotation
+// CHECK:   %{{.*}} = cir.annotation %{{.*}} [#cir.annotation<"on_builtin">] : !s32i
 
 }

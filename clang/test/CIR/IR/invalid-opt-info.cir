@@ -11,3 +11,35 @@ module attributes {
   // expected-error @below {{size optimization level must be between 0 and 2 inclusive}}
   cir.opt_info = #cir.opt_info<level = 0, size = 3>
 } {}
+
+// -----
+
+// cir.opt_info that is not an OptInfoAttr.
+
+// expected-error @below {{'builtin.module' op malformed cir.opt_info attribute}}
+module attributes {cir.opt_info = 1 : i32} {}
+
+// -----
+
+// String cir.opt_info.
+
+// expected-error @below {{'builtin.module' op malformed cir.opt_info attribute}}
+module attributes {cir.opt_info = "O2"} {}
+
+// -----
+
+// Dictionary cir.opt_info that mimics OptInfoAttr's fields.
+
+// expected-error @below {{'builtin.module' op malformed cir.opt_info attribute}}
+module attributes {cir.opt_info = {level = 2 : i32, size = 1 : i32}} {}
+
+// -----
+
+// cir.opt_info attached to something other than a module.
+
+module {
+  // expected-error @below {{'cir.func' op expects 'cir.opt_info' attribute to be attached to 'builtin.module'}}
+  cir.func @not_module_attr() attributes {cir.opt_info = #cir.opt_info<level = 2, size = 0>} {
+    cir.return
+  }
+}
