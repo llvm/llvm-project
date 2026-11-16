@@ -1649,6 +1649,10 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     return true;
 
   switch (MI.getOpcode()) {
+  case AArch64::PAUTH_EPILOGUE:
+    // Keep authentication after the other epilogue instructions and close to
+    // the return, allowing them to combine into an authenticated return.
+    return true;
   case AArch64::HINT:
     // CSDB hints are scheduling barriers.
     if (MI.getOperand(0).getImm() == 0x14)
@@ -2788,8 +2792,8 @@ bool AArch64InstrInfo::isGPRCopy(const MachineInstr &MI) {
   case TargetOpcode::COPY: {
     // GPR32 copies will by lowered to ORRXrs
     Register DstReg = MI.getOperand(0).getReg();
-    return (AArch64::GPR32RegClass.contains(DstReg) ||
-            AArch64::GPR64RegClass.contains(DstReg));
+    return DstReg.isPhysical() && (AArch64::GPR32RegClass.contains(DstReg) ||
+                                   AArch64::GPR64RegClass.contains(DstReg));
   }
   case AArch64::ORRXrs: // orr Xd, Xzr, Xm (LSL #0)
     if (MI.getOperand(1).getReg() == AArch64::XZR) {
@@ -2817,7 +2821,7 @@ bool AArch64InstrInfo::isFPRCopy(const MachineInstr &MI) {
     break;
   case TargetOpcode::COPY: {
     Register DstReg = MI.getOperand(0).getReg();
-    return AArch64::FPR128RegClass.contains(DstReg);
+    return DstReg.isPhysical() && AArch64::FPR128RegClass.contains(DstReg);
   }
   case AArch64::ORRv16i8:
     if (MI.getOperand(1).getReg() == MI.getOperand(2).getReg()) {

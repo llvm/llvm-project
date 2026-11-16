@@ -4,7 +4,6 @@
 ...
 ---
 name:           unsafe_range_at_end
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |
@@ -52,3 +51,4 @@ body:             |
     $x9 = ADDXri $x9, 16, 0
     $x16 = ADDXri killed $x16, 16, 0
     RET undef $x9
+...

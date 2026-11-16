@@ -866,16 +866,12 @@ static void eraseTerminatorAndDCECond(Instruction *TI,
     RecursivelyDeleteTriviallyDeadInstructions(Cond, nullptr, MSSAU);
 }
 
-/// Return true if the specified terminator checks
-/// to see if a value is equal to constant integer value.
+/// If the terminator is an integer value check, return the value being checked.
 Value *SimplifyCFGOpt::isValueEqualityComparison(Instruction *TI) {
   Value *CV = nullptr;
-  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
-    // Do not permit merging of large switch instructions into their
-    // predecessors unless there is only one predecessor.
-    if (!SI->getParent()->hasNPredecessorsOrMore(128 / SI->getNumSuccessors()))
-      CV = SI->getCondition();
-  } else if (CondBrInst *BI = dyn_cast<CondBrInst>(TI))
+  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI))
+    CV = SI->getCondition();
+  else if (CondBrInst *BI = dyn_cast<CondBrInst>(TI))
     if (BI->getCondition()->hasOneUse()) {
       if (ICmpInst *ICI = dyn_cast<ICmpInst>(BI->getCondition())) {
         if (ICI->isEquality() && getConstantInt(ICI->getOperand(1), DL))
@@ -1488,6 +1484,12 @@ bool SimplifyCFGOpt::foldValueComparisonIntoPredecessors(Instruction *TI,
   BasicBlock *BB = TI->getParent();
   Value *CV = isValueEqualityComparison(TI); // CondVal
   assert(CV && "Not a comparison?");
+
+  // Limit `incoming_edges * outgoing_edges < 128` to avoid code size explosion
+  // when we duplicate branches in multiple predecessors.
+  if (!BB->getSinglePredecessor() &&
+      BB->hasNPredecessorsOrMore(128 / TI->getNumSuccessors()))
+    return false;
 
   bool Changed = false;
 
@@ -2807,6 +2809,22 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
     if (!incomingValuesAreCompatible(
             NormalBB, {Invokes[0]->getParent(), Invokes[1]->getParent()},
             &EquivalenceSet))
+      return false;
+
+    // Merging replaces all uses of each `invoke`'s result with the result of
+    // the merged `invoke`. This is only correct if each result is used solely
+    // by PHI nodes in the normal destination, on the edge from that same
+    // `invoke`. For example, if the second `invoke` is inside a loop that is
+    // entered through the first `invoke`'s normal destination, a use of the
+    // first result inside that loop would see the second result after merging.
+    auto HasOnlyIncomingPHIUses = [NormalBB](InvokeInst *II) {
+      return all_of(II->uses(), [NormalBB, II](const Use &U) {
+        auto *PN = dyn_cast<PHINode>(U.getUser());
+        return PN && PN->getParent() == NormalBB &&
+               PN->getIncomingBlock(U) == II->getParent();
+      });
+    };
+    if (!all_of(Invokes, HasOnlyIncomingPHIUses))
       return false;
   }
 
