@@ -6520,13 +6520,15 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
     constexpr unsigned MaxUC = 8;
 
     unsigned BestUC = 1;
-    unsigned BestInstsInLastLine = Size % MaxInstsPerLine;
-    for (unsigned UC = 2, SizeWithUC = 2 * Size;
-         UC <= MaxUC && SizeWithUC <= MaxSizeWithUC; ++UC, SizeWithUC += Size) {
-      unsigned InstsInLastLine = SizeWithUC % MaxInstsPerLine;
-      if (InstsInLastLine == 0 || BestInstsInLastLine < InstsInLastLine) {
+    unsigned BestLineRemainder = Size % MaxInstsPerLine;
+    for (unsigned UC = 2; UC <= MaxUC; ++UC) {
+      unsigned SizeWithUC = UC * Size;
+      if (SizeWithUC > MaxSizeWithUC)
+        break;
+      unsigned LineRemainder = SizeWithUC % MaxInstsPerLine;
+      if (LineRemainder == 0 || BestLineRemainder < LineRemainder) {
         BestUC = UC;
-        BestInstsInLastLine = InstsInLastLine;
+        BestLineRemainder = LineRemainder;
       }
     }
 
