@@ -38,10 +38,10 @@
 
 #define SIZE_T __sanitizer::usize
 #define SSIZE_T __sanitizer::ssize
-typedef __sanitizer::sptr    PTRDIFF_T;
-typedef __sanitizer::s64     INTMAX_T;
-typedef __sanitizer::u64     UINTMAX_T;
-typedef __sanitizer::OFF_T   OFF_T;
+typedef __sanitizer::sptr PTRDIFF_T;
+typedef __sanitizer::s64 INTMAX_T;
+typedef __sanitizer::u64 UINTMAX_T;
+typedef __sanitizer::OFF_T OFF_T;
 typedef __sanitizer::OFF64_T OFF64_T;
 
 // How to add an interceptor:
@@ -127,7 +127,7 @@ typedef __sanitizer::OFF64_T OFF64_T;
 // INTERCEPT_FUNCTION() is effectively a no-op on this system.
 
 #if SANITIZER_APPLE
-#include <sys/cdefs.h>  // For __DARWIN_ALIAS_C().
+#  include <sys/cdefs.h>  // For __DARWIN_ALIAS_C().
 
 // Just a pair of pointers.
 struct interpose_substitution {
@@ -138,35 +138,35 @@ struct interpose_substitution {
 // For a function foo() create a global pair of pointers { wrap_foo, foo } in
 // the __DATA,__interpose section.
 // As a result all the calls to foo() will be routed to wrap_foo() at runtime.
-#define INTERPOSER(func_name) __attribute__((used))     \
-const interpose_substitution substitution_##func_name[] \
-    __attribute__((section("__DATA, __interpose"))) = { \
-    { reinterpret_cast<const uptr>(WRAP(func_name)),    \
-      reinterpret_cast<const uptr>(func_name) }         \
-}
+#  define INTERPOSER(func_name)                             \
+    __attribute__((used))                                   \
+    const interpose_substitution substitution_##func_name[] \
+        __attribute__((section("__DATA, __interpose"))) = { \
+            {reinterpret_cast<const uptr>(WRAP(func_name)), \
+             reinterpret_cast<const uptr>(func_name)}}
 
 // For a function foo() and a wrapper function bar() create a global pair
 // of pointers { bar, foo } in the __DATA,__interpose section.
 // As a result all the calls to foo() will be routed to bar() at runtime.
-#define INTERPOSER_2(func_name, wrapper_name) __attribute__((used)) \
-const interpose_substitution substitution_##func_name[]             \
-    __attribute__((section("__DATA, __interpose"))) = {             \
-    { reinterpret_cast<const uptr>(wrapper_name),                   \
-      reinterpret_cast<const uptr>(func_name) }                     \
-}
+#  define INTERPOSER_2(func_name, wrapper_name)             \
+    __attribute__((used))                                   \
+    const interpose_substitution substitution_##func_name[] \
+        __attribute__((section("__DATA, __interpose"))) = { \
+            {reinterpret_cast<const uptr>(wrapper_name),    \
+             reinterpret_cast<const uptr>(func_name)}}
 
-# define WRAP(x) wrap_##x
-# define TRAMPOLINE(x) WRAP(x)
-# define INTERCEPTOR_ATTRIBUTE
-# define DECLARE_WRAPPER(ret_type, func, ...)
+#  define WRAP(x) wrap_##x
+#  define TRAMPOLINE(x) WRAP(x)
+#  define INTERCEPTOR_ATTRIBUTE
+#  define DECLARE_WRAPPER(ret_type, func, ...)
 
 #elif SANITIZER_WINDOWS
-# define WRAP(x) __asan_wrap_##x
-# define TRAMPOLINE(x) WRAP(x)
-# define INTERCEPTOR_ATTRIBUTE __declspec(dllexport)
-# define DECLARE_WRAPPER(ret_type, func, ...)         \
+#  define WRAP(x) __asan_wrap_##x
+#  define TRAMPOLINE(x) WRAP(x)
+#  define INTERCEPTOR_ATTRIBUTE __declspec(dllexport)
+#  define DECLARE_WRAPPER(ret_type, func, ...) \
     extern "C" ret_type func(__VA_ARGS__);
-# define DECLARE_WRAPPER_WINAPI(ret_type, func, ...)  \
+#  define DECLARE_WRAPPER_WINAPI(ret_type, func, ...) \
     extern "C" __declspec(dllimport) ret_type __stdcall func(__VA_ARGS__);
 #elif SANITIZER_AIX
 #  define WRAP(x) __interceptor_##x
@@ -179,8 +179,8 @@ const interpose_substitution substitution_##func_name[]             \
     extern "C" ret_type func(__VA_ARGS__)      \
         __attribute__((alias("__interceptor_" #func), visibility("default")));
 #elif !SANITIZER_FUCHSIA  // LINUX, FREEBSD, NETBSD, SOLARIS
-# define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
-# if ASM_INTERCEPTOR_TRAMPOLINE_SUPPORT
+#  define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
+#  if ASM_INTERCEPTOR_TRAMPOLINE_SUPPORT
 // Weak aliases of weak aliases do not work, therefore we need to set up a
 // trampoline function. The function "func" is a weak alias to the trampoline
 // (so that we may check if "func" was overridden), which calls the weak
@@ -196,28 +196,28 @@ const interpose_substitution substitution_##func_name[]             \
 //
 // We use inline assembly to define most of this, because not all compilers
 // support functions with the "naked" attribute with every architecture.
-#  define WRAP(x) ___interceptor_ ## x
-#  define TRAMPOLINE(x) __interceptor_trampoline_ ## x
-#  if SANITIZER_FREEBSD || SANITIZER_NETBSD
+#    define WRAP(x) ___interceptor_##x
+#    define TRAMPOLINE(x) __interceptor_trampoline_##x
+#    if SANITIZER_FREEBSD || SANITIZER_NETBSD
 // FreeBSD's dynamic linker (incompliantly) gives non-weak symbols higher
 // priority than weak ones so weak aliases won't work for indirect calls
 // in position-independent (-fPIC / -fPIE) mode.
-#   define __ASM_WEAK_WRAPPER(func) ".globl " #func "\n"
-#  else
-#   define __ASM_WEAK_WRAPPER(func) ".weak " #func "\n"
-#  endif  // SANITIZER_FREEBSD || SANITIZER_NETBSD
-#  if defined(__arm__) || defined(__aarch64__)
-#   define ASM_TYPE_FUNCTION_STR "%function"
-#  else
-#   define ASM_TYPE_FUNCTION_STR "@function"
-#  endif
+#      define __ASM_WEAK_WRAPPER(func) ".globl " #func "\n"
+#    else
+#      define __ASM_WEAK_WRAPPER(func) ".weak " #func "\n"
+#    endif  // SANITIZER_FREEBSD || SANITIZER_NETBSD
+#    if defined(__arm__) || defined(__aarch64__)
+#      define ASM_TYPE_FUNCTION_STR "%function"
+#    else
+#      define ASM_TYPE_FUNCTION_STR "@function"
+#    endif
 // Keep trampoline implementation in sync with sanitizer_common/sanitizer_asm.h
-#  define DECLARE_WRAPPER(ret_type, func, ...)                                 \
-     extern "C" ret_type func(__VA_ARGS__);                                    \
-     extern "C" ret_type TRAMPOLINE(func)(__VA_ARGS__);                        \
-     extern "C" ret_type __interceptor_##func(__VA_ARGS__)                     \
-       INTERCEPTOR_ATTRIBUTE __attribute__((weak)) ALIAS(WRAP(func));          \
-     asm(                                                                      \
+#    define DECLARE_WRAPPER(ret_type, func, ...)                         \
+      extern "C" ret_type func(__VA_ARGS__);                             \
+      extern "C" ret_type TRAMPOLINE(func)(__VA_ARGS__);                 \
+      extern "C" ret_type __interceptor_##func(__VA_ARGS__)              \
+          INTERCEPTOR_ATTRIBUTE __attribute__((weak)) ALIAS(WRAP(func)); \
+      asm(                                                                      \
        ".text\n"                                                               \
        __ASM_WEAK_WRAPPER(func)                                                \
        ".set " #func ", " SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"           \
@@ -233,66 +233,66 @@ const interpose_substitution substitution_##func_name[]             \
        ".size  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", "                    \
             ".-" SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"                    \
      );
-# else  // ASM_INTERCEPTOR_TRAMPOLINE_SUPPORT
+#  else  // ASM_INTERCEPTOR_TRAMPOLINE_SUPPORT
 // Some architectures cannot implement efficient interceptor trampolines with
 // just a plain jump due to complexities of resolving a preemptible symbol. In
 // those cases, revert to just this scheme:
 //
 //    [wrapper "func": weak] --(alias)--> [WRAP(func)]
 //
-#  define WRAP(x) __interceptor_ ## x
-#  define TRAMPOLINE(x) WRAP(x)
-#  if SANITIZER_FREEBSD || SANITIZER_NETBSD
-#   define __ATTRIBUTE_WEAK_WRAPPER
-#  else
-#   define __ATTRIBUTE_WEAK_WRAPPER __attribute__((weak))
-#  endif  // SANITIZER_FREEBSD || SANITIZER_NETBSD
-#  define DECLARE_WRAPPER(ret_type, func, ...)                                 \
-     extern "C" ret_type func(__VA_ARGS__)                                     \
-       INTERCEPTOR_ATTRIBUTE __ATTRIBUTE_WEAK_WRAPPER ALIAS(WRAP(func));
-# endif  // ASM_INTERCEPTOR_TRAMPOLINE_SUPPORT
+#    define WRAP(x) __interceptor_##x
+#    define TRAMPOLINE(x) WRAP(x)
+#    if SANITIZER_FREEBSD || SANITIZER_NETBSD
+#      define __ATTRIBUTE_WEAK_WRAPPER
+#    else
+#      define __ATTRIBUTE_WEAK_WRAPPER __attribute__((weak))
+#    endif  // SANITIZER_FREEBSD || SANITIZER_NETBSD
+#    define DECLARE_WRAPPER(ret_type, func, ...) \
+      extern "C" ret_type func(__VA_ARGS__)      \
+      INTERCEPTOR_ATTRIBUTE __ATTRIBUTE_WEAK_WRAPPER ALIAS(WRAP(func));
+#  endif  // ASM_INTERCEPTOR_TRAMPOLINE_SUPPORT
 #endif
 
 #if SANITIZER_FUCHSIA
 // There is no general interception at all on Fuchsia.
 // Sanitizer runtimes just define functions directly to preempt them,
 // and have bespoke ways to access the underlying libc functions.
-# include <zircon/sanitizer.h>
-# define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
-# define REAL(x) __unsanitized_##x
-# define DECLARE_REAL(ret_type, func, ...)
+#  include <zircon/sanitizer.h>
+#  define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
+#  define REAL(x) __unsanitized_##x
+#  define DECLARE_REAL(ret_type, func, ...)
 #elif !SANITIZER_APPLE
-# define PTR_TO_REAL(x) real_##x
-# define REAL(x) __interception::PTR_TO_REAL(x)
-# define FUNC_TYPE(x) x##_type
+#  define PTR_TO_REAL(x) real_##x
+#  define REAL(x) __interception::PTR_TO_REAL(x)
+#  define FUNC_TYPE(x) x##_type
 
-# define DECLARE_REAL(ret_type, func, ...)            \
+#  define DECLARE_REAL(ret_type, func, ...)           \
     typedef ret_type (*FUNC_TYPE(func))(__VA_ARGS__); \
     namespace __interception {                        \
     extern FUNC_TYPE(func) PTR_TO_REAL(func);         \
     }
-# define ASSIGN_REAL(dst, src) REAL(dst) = REAL(src)
+#  define ASSIGN_REAL(dst, src) REAL(dst) = REAL(src)
 #else  // SANITIZER_APPLE
-# define REAL(x) x
-# define DECLARE_REAL(ret_type, func, ...) \
+#  define REAL(x) x
+#  define DECLARE_REAL(ret_type, func, ...) \
     extern "C" ret_type func(__VA_ARGS__);
-# define ASSIGN_REAL(x, y)
+#  define ASSIGN_REAL(x, y)
 #endif  // SANITIZER_APPLE
 
 #if !SANITIZER_FUCHSIA
-# define DECLARE_REAL_AND_INTERCEPTOR(ret_type, func, ...)  \
+#  define DECLARE_REAL_AND_INTERCEPTOR(ret_type, func, ...) \
     DECLARE_REAL(ret_type, func, __VA_ARGS__)               \
     extern "C" ret_type TRAMPOLINE(func)(__VA_ARGS__);      \
     extern "C" ret_type WRAP(func)(__VA_ARGS__);
 // Declare an interceptor and its wrapper defined in a different translation
 // unit (ex. asm).
-# define DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(ret_type, func, ...)  \
+#  define DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(ret_type, func, ...) \
     extern "C" ret_type TRAMPOLINE(func)(__VA_ARGS__);                \
     extern "C" ret_type WRAP(func)(__VA_ARGS__);                      \
     extern "C" ret_type func(__VA_ARGS__);
 #else
-# define DECLARE_REAL_AND_INTERCEPTOR(ret_type, func, ...)
-# define DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(ret_type, func, ...)
+#  define DECLARE_REAL_AND_INTERCEPTOR(ret_type, func, ...)
+#  define DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(ret_type, func, ...)
 #endif
 
 // Generally, you don't need to use DEFINE_REAL by itself, as INTERCEPTOR
@@ -306,7 +306,7 @@ const interpose_substitution substitution_##func_name[]             \
     FUNC_TYPE(func) PTR_TO_REAL(func);                \
     }
 #else
-# define DEFINE_REAL(ret_type, func, ...)
+#  define DEFINE_REAL(ret_type, func, ...)
 #endif
 
 #if SANITIZER_FUCHSIA
@@ -314,47 +314,48 @@ const interpose_substitution substitution_##func_name[]             \
 // We need to define the __interceptor_func name just to get
 // sanitizer_common/scripts/gen_dynamic_list.py to export func.
 // But we don't need to export __interceptor_func to get that.
-#define INTERCEPTOR(ret_type, func, ...)                                \
-  extern "C"[[ gnu::alias(#func), gnu::visibility("hidden") ]] ret_type \
-      __interceptor_##func(__VA_ARGS__);                                \
-  extern "C" INTERCEPTOR_ATTRIBUTE ret_type func(__VA_ARGS__)
+#  define INTERCEPTOR(ret_type, func, ...)                                   \
+    extern "C" [[gnu::alias(#func),                                          \
+                 gnu::visibility(                                            \
+                     "hidden")]] ret_type __interceptor_##func(__VA_ARGS__); \
+    extern "C" INTERCEPTOR_ATTRIBUTE ret_type func(__VA_ARGS__)
 
 #elif !SANITIZER_APPLE
 
-#define INTERCEPTOR(ret_type, func, ...)        \
-  DEFINE_REAL(ret_type, func, __VA_ARGS__)      \
-  DECLARE_WRAPPER(ret_type, func, __VA_ARGS__)  \
-  extern "C" INTERCEPTOR_ATTRIBUTE ret_type WRAP(func)(__VA_ARGS__)
+#  define INTERCEPTOR(ret_type, func, ...)       \
+    DEFINE_REAL(ret_type, func, __VA_ARGS__)     \
+    DECLARE_WRAPPER(ret_type, func, __VA_ARGS__) \
+    extern "C" INTERCEPTOR_ATTRIBUTE ret_type WRAP(func)(__VA_ARGS__)
 
 // We don't need INTERCEPTOR_WITH_SUFFIX on non-Darwin for now.
-#define INTERCEPTOR_WITH_SUFFIX(ret_type, func, ...) \
-  INTERCEPTOR(ret_type, func, __VA_ARGS__)
+#  define INTERCEPTOR_WITH_SUFFIX(ret_type, func, ...) \
+    INTERCEPTOR(ret_type, func, __VA_ARGS__)
 
 #else  // SANITIZER_APPLE
 
-#define INTERCEPTOR_ZZZ(suffix, ret_type, func, ...)  \
-  extern "C" ret_type func(__VA_ARGS__) suffix;       \
-  extern "C" ret_type WRAP(func)(__VA_ARGS__);        \
-  INTERPOSER(func);                                   \
-  extern "C" INTERCEPTOR_ATTRIBUTE ret_type WRAP(func)(__VA_ARGS__)
+#  define INTERCEPTOR_ZZZ(suffix, ret_type, func, ...) \
+    extern "C" ret_type func(__VA_ARGS__) suffix;      \
+    extern "C" ret_type WRAP(func)(__VA_ARGS__);       \
+    INTERPOSER(func);                                  \
+    extern "C" INTERCEPTOR_ATTRIBUTE ret_type WRAP(func)(__VA_ARGS__)
 
-#define INTERCEPTOR(ret_type, func, ...) \
-  INTERCEPTOR_ZZZ(/*no symbol variants*/, ret_type, func, __VA_ARGS__)
+#  define INTERCEPTOR(ret_type, func, ...) \
+    INTERCEPTOR_ZZZ(/*no symbol variants*/, ret_type, func, __VA_ARGS__)
 
-#define INTERCEPTOR_WITH_SUFFIX(ret_type, func, ...) \
-  INTERCEPTOR_ZZZ(__DARWIN_ALIAS_C(func), ret_type, func, __VA_ARGS__)
+#  define INTERCEPTOR_WITH_SUFFIX(ret_type, func, ...) \
+    INTERCEPTOR_ZZZ(__DARWIN_ALIAS_C(func), ret_type, func, __VA_ARGS__)
 
 // Override |overridee| with |overrider|.
-#define OVERRIDE_FUNCTION(overridee, overrider) \
-  INTERPOSER_2(overridee, WRAP(overrider))
+#  define OVERRIDE_FUNCTION(overridee, overrider) \
+    INTERPOSER_2(overridee, WRAP(overrider))
 #endif
 
 #if SANITIZER_WINDOWS
-# define INTERCEPTOR_WINAPI(ret_type, func, ...)                \
-    typedef ret_type (__stdcall *FUNC_TYPE(func))(__VA_ARGS__); \
-    namespace __interception {                                  \
-      FUNC_TYPE(func) PTR_TO_REAL(func);                        \
-    }                                                           \
+#  define INTERCEPTOR_WINAPI(ret_type, func, ...)              \
+    typedef ret_type(__stdcall* FUNC_TYPE(func))(__VA_ARGS__); \
+    namespace __interception {                                 \
+    FUNC_TYPE(func) PTR_TO_REAL(func);                         \
+    }                                                          \
     extern "C" INTERCEPTOR_ATTRIBUTE ret_type __stdcall WRAP(func)(__VA_ARGS__)
 #endif
 
@@ -400,14 +401,14 @@ inline void DoesNotSupportStaticLinking() {}
 #  define INTERCEPT_FUNCTION_VER(func, symver) \
     INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver)
 #elif SANITIZER_APPLE
-# include "interception_mac.h"
-# define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_MAC(func)
-# define INTERCEPT_FUNCTION_VER(func, symver) \
+#  include "interception_mac.h"
+#  define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_MAC(func)
+#  define INTERCEPT_FUNCTION_VER(func, symver) \
     INTERCEPT_FUNCTION_VER_MAC(func, symver)
 #elif SANITIZER_WINDOWS
-# include "interception_win.h"
-# define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_WIN(func)
-# define INTERCEPT_FUNCTION_VER(func, symver) \
+#  include "interception_win.h"
+#  define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_WIN(func)
+#  define INTERCEPT_FUNCTION_VER(func, symver) \
     INTERCEPT_FUNCTION_VER_WIN(func, symver)
 #endif
 
