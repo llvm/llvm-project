@@ -2111,6 +2111,26 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     // extract.last.active intrinsic.
     auto *RdxResult =
         findSingleUser<VPInstruction::ComputeReductionResult>(BackedgeSelect);
+    // Skip FindLast reductions already handled by handleMultiUseReductions.
+    if (!RdxResult) {
+      auto *ExtractR =
+          findSingleUser<VPInstruction::ExtractLane>(BackedgeSelect);
+      VPValue *MaskCmpLHS, *MaskCmpRHS;
+      if (ExtractR &&
+          match(ExtractR,
+                m_ExtractLane(m_FirstActiveLane(m_SpecificICmp(
+                                  ICmpInst::ICMP_EQ, m_VPValue(MaskCmpLHS),
+                                  m_VPValue(MaskCmpRHS))),
+                              m_Specific(BackedgeSelect)))) {
+        auto *FindIVSelect = dyn_cast<VPInstruction>(MaskCmpRHS);
+        if (FindIVSelect &&
+            matchFindIVResult(
+                FindIVSelect,
+                m_Select(m_VPValue(), m_Specific(MaskCmpLHS), m_VPValue()),
+                m_ZeroInt()))
+          continue;
+      }
+    }
     assert(RdxResult && "Could not find reduction result");
 
     // Add mask phi.
