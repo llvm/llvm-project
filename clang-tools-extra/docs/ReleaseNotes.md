@@ -248,7 +248,7 @@ infrastructure are described first, followed by tool-specific sections.
 
     - Added support for logical not operator for inner if condition.
 
-    - Fixed incorrect fix on sideeffect on `RHS` side of Conjuction(`||`) operator.
+    - Fixed incorrect fix on side effect on right-hand side of conjunction (`||`) operator.
 
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
