@@ -95,7 +95,7 @@ A *deact_simple() { return new A(makeB()); }
 // OGCG:   %[[IS_ACTIVE:.*]] = load i1, ptr %[[ACTIVE]]
 // OGCG:   br i1 %[[IS_ACTIVE]], label %[[DO_DELETE:.*]], label %[[SKIP_DELETE:.*]]
 // OGCG: [[DO_DELETE]]:
-// OGCG:   call void @_ZdlPv(ptr %[[PTR]]) #[[OGCG_ATTR_BUILTIN_DEL:.*]]
+// OGCG:   call void @_ZdlPv(ptr allocptr %[[PTR]]) #[[OGCG_ATTR_BUILTIN_DEL:.*]]
 
 A *deact_if(bool cond) {
   if (cond)
@@ -156,7 +156,7 @@ A *deact_if(bool cond) {
 // OGCG:   %[[IS_ACTIVE:.*]] = load i1, ptr %[[ACTIVE]]
 // OGCG:   br i1 %[[IS_ACTIVE]], label %[[DO_DELETE:.*]], label %[[SKIP_DELETE:.*]]
 // OGCG: [[DO_DELETE]]:
-// OGCG:   call void @_ZdlPv(ptr %[[PTR]])
+// OGCG:   call void @_ZdlPv(ptr allocptr %[[PTR]])
 
 A *deact_ternary(bool cond) { return (new A(makeB()), cond) ? nullptr : nullptr; }
 
@@ -208,7 +208,7 @@ A *deact_ternary(bool cond) { return (new A(makeB()), cond) ? nullptr : nullptr;
 // OGCG:   %[[IS_ACTIVE:.*]] = load i1, ptr %[[ACTIVE]]
 // OGCG:   br i1 %[[IS_ACTIVE]], label %[[DO_DELETE:.*]], label %[[SKIP_DELETE:.*]]
 // OGCG: [[DO_DELETE]]:
-// OGCG:   call void @_ZdlPv(ptr %[[PTR]])
+// OGCG:   call void @_ZdlPv(ptr allocptr %[[PTR]])
 
 A *deact_while_cond(int n) {
   while ((new A(makeB()), n > 0))
@@ -284,7 +284,7 @@ A *deact_while_cond(int n) {
 // OGCG:   %[[IS_ACTIVE:.*]] = load i1, ptr %[[ACTIVE]]
 // OGCG:   br i1 %[[IS_ACTIVE]], label %[[DO_DELETE:.*]], label %[[SKIP_DELETE:.*]]
 // OGCG: [[DO_DELETE]]:
-// OGCG:   call void @_ZdlPv(ptr %[[PTR]])
+// OGCG:   call void @_ZdlPv(ptr allocptr %[[PTR]])
 
 A *deact_switch(int kind) {
   switch (kind) {
@@ -356,7 +356,7 @@ A *deact_switch(int kind) {
 // OGCG:   %[[IS_ACTIVE:.*]] = load i1, ptr %[[ACTIVE]]
 // OGCG:   br i1 %[[IS_ACTIVE]], label %[[DO_DELETE:.*]], label %[[SKIP_DELETE:.*]]
 // OGCG: [[DO_DELETE]]:
-// OGCG:   call void @_ZdlPv(ptr %[[PTR]])
+// OGCG:   call void @_ZdlPv(ptr allocptr %[[PTR]])
 
 // LLVM-DAG: attributes #[[ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}memory(inaccessiblemem: readwrite, errnomem: write){{.*}}}
 // LLVM-DAG: attributes #[[ATTR_BUILTIN_DEL]] = {{{.*}}builtin{{.*}}}

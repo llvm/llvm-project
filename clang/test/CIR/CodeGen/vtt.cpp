@@ -85,7 +85,8 @@ void D::y() {}
 // CIR-COMMON-SAME:    ]> : !cir.array<!cir.ptr<!u8i> x 4>
 // CIR-COMMON-SAME: }> : ![[REC_D_VTABLE]] align(8)
 
-// LLVM-COMMON:       @_ZTV1D = constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
+// LLVM-NO-RTTI:     @_ZTV1D = unnamed_addr constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
+// LLVM-RTTI:         @_ZTV1D = constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
 // LLVM-NO-RTTI-SAME:   [5 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr null, ptr @_ZN1B1wEv, ptr @_ZN1D1yEv],
 // LLVM-RTTI-SAME:      [5 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr @_ZTI1D, ptr @_ZN1B1wEv, ptr @_ZN1D1yEv],
 // LLVM-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr inttoptr (i64 -16 to ptr), ptr null, ptr @_ZN1C1xEv],
@@ -155,7 +156,8 @@ void D::y() {}
 // CIR-COMMON-SAME:    ]> : !cir.array<!cir.ptr<!u8i> x 4>
 // CIR-COMMON-SAME:    }> : ![[REC_B_OR_C_IN_D_VTABLE]]
 
-// LLVM-COMMON:       @_ZTC1D0_1B = constant { [4 x ptr], [4 x ptr] } {
+// LLVM-NO-RTTI:     @_ZTC1D0_1B = unnamed_addr constant { [4 x ptr], [4 x ptr] } {
+// LLVM-RTTI:         @_ZTC1D0_1B = constant { [4 x ptr], [4 x ptr] } {
 // LLVM-NO-RTTI-SAME: [4 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr null, ptr @_ZN1B1wEv],
 // LLVM-RTTI-SAME:    [4 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr @_ZTI1B, ptr @_ZN1B1wEv],
 // LLVM-NO-RTTI-SAME: [4 x ptr] [ptr null, ptr inttoptr (i64 -40 to ptr), ptr null, ptr @_ZN1A1vEv]
@@ -194,7 +196,8 @@ void D::y() {}
 // CIR-COMMON-SAME:  ]> : !cir.array<!cir.ptr<!u8i> x 4>}>
 // CIR-COMMON-SAME:  : ![[REC_B_OR_C_IN_D_VTABLE]]
 
-// LLVM-COMMON:       @_ZTC1D16_1C = constant { [4 x ptr], [4 x ptr] } {
+// LLVM-NO-RTTI:     @_ZTC1D16_1C = unnamed_addr constant { [4 x ptr], [4 x ptr] } {
+// LLVM-RTTI:         @_ZTC1D16_1C = constant { [4 x ptr], [4 x ptr] } {
 // LLVM-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr null, ptr null, ptr @_ZN1C1xEv],
 // LLVM-RTTI-SAME:      [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr null, ptr @_ZTI1C, ptr @_ZN1C1xEv],
 // LLVM-NO-RTTI-SAME:   [4 x ptr] [ptr null, ptr inttoptr (i64 -24 to ptr), ptr null, ptr @_ZN1A1vEv]
