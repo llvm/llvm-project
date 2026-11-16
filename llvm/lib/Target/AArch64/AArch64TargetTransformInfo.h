@@ -370,7 +370,6 @@ public:
     if (!ST->isSVEAvailable())
       return false;
 
-    // For fixed vectors, scalarize if not using SVE for them.
     auto *DataTypeFVTy = dyn_cast<FixedVectorType>(DataType);
     if (DataTypeFVTy && DataTypeFVTy->getNumElements() < 2)
       return false;
