@@ -644,6 +644,12 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
     LLVM_DEBUG(dbgs() << "Falling back to SDAG because we don't support no-NEON\n");
     return true;
   }
+  // GlobalISel assumes 64-bit pointers in a number of places.
+  if (ST.isTargetILP32()) {
+    LLVM_DEBUG(
+        dbgs() << "Falling back to SDAG because we don't support ILP32\n");
+    return true;
+  }
 
   SMEAttrs Attrs = MF.getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
   if (Attrs.hasZAState() || Attrs.hasZT0State() ||
