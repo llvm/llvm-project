@@ -7,6 +7,7 @@
 
 ---
 name:            trans_writes_valu_reads_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX125X-LABEL: name: trans_writes_valu_reads_hazard
@@ -27,6 +28,7 @@ body:            |
 
 ---
 name:            trans_writes_valu_valu_reads_hazard_covered
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_writes_valu_valu_reads_hazard_covered
@@ -40,6 +42,7 @@ body:            |
 
 ---
 name:            trans_writes_salu_valu_reads_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX125X-LABEL: name: trans_writes_salu_valu_reads_hazard
@@ -64,6 +67,7 @@ body:            |
 
 ---
 name:            trans_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_no_hazard
@@ -75,6 +79,7 @@ body:            |
 
 ---
 name:            trans_reads_valu_writes_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX125X-LABEL: name: trans_reads_valu_writes_hazard
@@ -95,6 +100,7 @@ body:            |
 
 ---
 name:            trans_reads_valu_valu_writes_hazard_covered
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_reads_valu_valu_writes_hazard_covered
@@ -108,6 +114,7 @@ body:            |
 
 ---
 name:            trans_reads__salu_valu_writes_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX125X-LABEL: name: trans_reads__salu_valu_writes_hazard
@@ -132,6 +139,7 @@ body:            |
 
 ---
 name:            trans_writes_trans_reads_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_writes_trans_reads_no_hazard
@@ -143,6 +151,7 @@ body:            |
 
 ---
 name:            trans_reads_trans_writes_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_reads_trans_writes_no_hazard
@@ -154,6 +163,7 @@ body:            |
 
 ---
 name:            trans_reads_vopd_writes_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX125X-LABEL: name: trans_reads_vopd_writes_hazard

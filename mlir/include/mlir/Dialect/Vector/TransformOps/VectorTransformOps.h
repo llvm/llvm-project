@@ -16,7 +16,6 @@
 
 namespace mlir {
 namespace vector {
-class VectorOp;
 struct LowerVectorsOptions;
 } // namespace vector
 } // namespace mlir
@@ -42,7 +41,7 @@ struct LowerVectorsOptions : public VectorTransformsOptions {
     setVectorMultiReductionLowering(
         VectorMultiReductionLowering::InnerParallel);
     setVectorTransposeLowering(VectorTransposeLowering::EltWise);
-    setVectorTransferSplit(VectorTransferSplit::LinalgCopy);
+    setVectorTransferSplit(VectorTransferSplit::MemRefCopy);
   }
 
   /// Duplicate the base API of VectorTransformsOptions but return the

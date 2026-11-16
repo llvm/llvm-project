@@ -16,6 +16,7 @@
 #include <__algorithm/upper_bound.h>
 #include <__assert>
 #include <__atomic/atomic.h>
+#include <__atomic/memory_order.h>
 #include <__config>
 #include <__execution/is_execution_policy.h>
 #include <__functional/identity.h>
@@ -29,8 +30,10 @@
 #include <__memory/destroy.h>
 #include <__memory/unique_ptr.h>
 #include <__numeric/reduce.h>
+#include <__optional/comparison.h>
 #include <__optional/nullopt_t.h>
 #include <__optional/optional.h>
+#include <__pstl/backends/statpart/decoupled_lookback.h>
 #include <__thread/hardware_concurrency.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
@@ -94,6 +97,8 @@ struct _LIBCPP_HIDE_FROM_ABI __iterator_range {
 template <class _Iterator>
 struct _LIBCPP_HIDE_FROM_ABI __iterator_partitions {
   _LIBCPP_HIDE_FROM_ABI size_t __partitions_count() const { return __partitions_count_; }
+
+  _LIBCPP_HIDE_FROM_ABI size_t __max_partition_size() const { return __partition_size_ + (__remainder_ > 0 ? 1 : 0); }
 
   _LIBCPP_HIDE_FROM_ABI __iterator_range<_Iterator> __partition(size_t __n) const {
     _Iterator __first = __base_ + __n * __partition_size_ + (__n < __remainder_ ? __n : __remainder_);
@@ -188,8 +193,8 @@ _LIBCPP_HIDE_FROM_ABI void __for_each_partition(const __iterator_partitions<_Ite
   struct __ctx_t {
     const __iterator_partitions<_Iterator>& __partitions_;
     _Functor& __func_;
-  } __ctx{__partitions, __func};
-  __statpart::__apply(__partitions.__partitions_count(), &__ctx, [](void* __context, size_t __partition) {
+  } __apply_ctx{__partitions, __func};
+  __statpart::__apply(__partitions.__partitions_count(), &__apply_ctx, [](void* __context, size_t __partition) {
     __ctx_t& __ctx = *static_cast<__ctx_t*>(__context);
     auto __range   = __ctx.__partitions_.__partition(__partition);
     __ctx.__func_(__range.__first, __range.__last);
@@ -502,6 +507,139 @@ __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp
   if (__objects_are_in_buffer) {
     std::move(__values.get(), __values.get() + __size, __first);
   }
+
+  return __empty{};
+}
+
+// __lookback_scan() provides a basic building block for the family of scanning algorithms.
+// It's based on the paper "Single-pass Parallel Prefix Scan with Decoupled Look-back", and follows these steps:
+// - The input range is partitioned with at least 2 elements per partition.
+// - A lookback storage is allocated for each of the partitions except the last one.
+// - A higher-level algorithm can at this point allocate any scratch context it might need.
+// - for_each_index(max_workers_count, ...) runs this lambda in parallel:
+//   - While this worker can atomically pick the next partition to process in a strictly monotonically increasing order:
+//     - Pick the partition by its index.
+//     - Process the partition with __scan_head/__scan_middle/__scan_tail, depending on the partition position in the
+//       input range.
+//       The callbacks are given the scratch context, the worker index, the range of iterators to process, and an
+//       optional pointer to the lookback partition.
+//       Callbacks follow roughly these steps (may vary between head/middle/tail):
+//       - Calculate and publish the result of their local reduction.
+//       - Obtain the inclusive prefix of the previous lookback partition.
+//       - Calculate and publish the inclusive prefix of their own lookback partition.
+//       - Perform the scanning operation.
+//
+// Description of the callbacks:
+// - __setup: std::optional<OpaqueCtx>(size_t number_of_workers, size_t max_partition_size)
+//   Provides an injection point for a higher-level algorithm to allocate resources upfront.
+//   The context this callback creates is opaque to __lookback_scan and will be passed as-is to each invocation of
+//   the head/middle/tail callbacks.
+//   In case __setup() returns std::nullopt, __lookback_scan will abort the operation and return std::nullopt.
+// - __scan_head: void(OpaqueCtx& ctx,
+//                     size_t worker_idx,
+//                     It chunk_first,
+//                     It chunk_last,
+//                     __decoupled_lookback_partition<Value> *optional_lookback_partition)
+// - __scan_middle: void(OpaqueCtx& ctx,
+//                       size_t worker_idx,
+//                       It chunk_first,
+//                       It chunk_last,
+//                       __decoupled_lookback_partition<Value> *lookback_partition)
+// - __scan_tail: void(OpaqueCtx& ctx,
+//                     size_t worker_idx,
+//                     It chunk_first,
+//                     It chunk_last,
+//                     __decoupled_lookback_partition<Value> *nonexistent_lookback_partition)
+//  All scanning callbacks have the same signature, but differ in how the last parameter is interpreted:
+//  The head callback will get a valid pointer in regular cases, but in the edge case of having a single partition this
+//  pointer will be nullptr. The middle callback always has a lookback partition. The tail callback never gets a
+//  lookback partition and can only use the provided pointer to access the previous one.
+template <class _Value, class _RandomAccessIterator, class _Setup, class _ScanHead, class _ScanMiddle, class _ScanTail>
+_LIBCPP_HIDE_FROM_ABI optional<__empty> __lookback_scan(
+    _RandomAccessIterator __first,
+    _RandomAccessIterator __last,
+    _Setup __setup,
+    _ScanHead __scan_head,
+    _ScanMiddle __scan_middle,
+    _ScanTail __scan_tail) {
+  if (__first == __last)
+    return __empty{}; // nothing to do
+
+  // Determine how many workers we could potentially have on the hardware level.
+  // Do it only once and pass the same value to __partition below, to avoid a redundant syscall.
+  size_t __max_workers_count = __statpart::__thread_hardware_concurrency();
+
+  // Partition the input.
+  auto __partitioning_result = __statpart::__partition(
+      __first,
+      __last,
+      /*__min_partition_size=*/2,
+      /*__prefix_to_skip=*/0,
+      /*__suffix_to_skip=*/0,
+      /*__workers_count=*/__max_workers_count);
+  if (!__partitioning_result.__value_) {
+    if (__partitioning_result.__status_ == __partitioning_status::__bad_alloc)
+      return nullopt;
+    // Not enough elements or partitions to run in parallel, scan everything serially using the head scanning.
+    auto __ctx = __setup(/*worker_count=*/1, /*max_partition_size=*/static_cast<size_t>(__last - __first));
+    if (__ctx == nullopt)
+      return nullopt; // Failed to allocate memory for the operation context
+    __scan_head(*__ctx, 0, __first, __last, nullptr);
+    return __empty{};
+  }
+  auto& __partitions = *__partitioning_result.__value_;
+  _LIBCPP_ASSERT_INTERNAL(__partitions.__partitions_count() >= 2, "the number of partitions must be at least 2");
+
+  // Allocate the lookback storage.
+  // The last partition doesn't need a storage in the lookback, hence its size is 1 less than the number of partitions.
+  optional<__decoupled_lookback<_Value>> __lookback =
+      __statpart::__make_decoupled_lookback<_Value>(__partitions.__partitions_count() - 1);
+  if (__lookback == nullopt) {
+    return nullopt; // Failed to allocate the lookback storage, report an error
+  }
+
+  // Limit the max workers count by the number of partitions we actually have, to avoid allocating unnecessary resources
+  // later.
+  size_t __effective_max_workers_count = std::min(__max_workers_count, __partitions.__partitions_count());
+
+  // Allow the scanning operation to allocate upfront any context it needs
+  auto __ctx = __setup(__effective_max_workers_count, __partitions.__max_partition_size());
+  if (__ctx == nullopt) {
+    return nullopt; // Failed to allocate the scratch context for the operation, report an error
+  }
+
+  // Run the single-pass scan with decoupled lookback.
+  // Ask the threading backend to run up to __effective_max_workers_count workers in parallel, each of them picks the
+  // next partition to work on in a monotonically increasing order.
+  std::atomic<size_t> __next_partition_idx{0};
+  __statpart::__for_each_index(__effective_max_workers_count, [&](size_t __worker_id) {
+    // Pick the next chunk to work on, stop once the partitions are exhausted.
+    size_t __partition_idx;
+    while ((__partition_idx = __next_partition_idx.fetch_add(1, std::memory_order_relaxed)) <
+           __partitions.__partitions_count()) {
+      // Determine the input range of this chunk.
+      auto __partition = __partitions.__partition(__partition_idx);
+      // Depending on the position of the partition in the input, call either a head, a middle or a tail scan callback.
+      if (__partition_idx == 0)
+        __scan_head(*__ctx,              //
+                    __worker_id,         //
+                    __partition.__first, //
+                    __partition.__last,  //
+                    &__lookback->__partition(0));
+      else if (__partition_idx < __lookback->__size())
+        __scan_middle(*__ctx,              //
+                      __worker_id,         //
+                      __partition.__first, //
+                      __partition.__last,  //
+                      &__lookback->__partition(__partition_idx));
+      else
+        __scan_tail(*__ctx,              //
+                    __worker_id,         //
+                    __partition.__first, //
+                    __partition.__last,  //
+                    __lookback->__partitions() + __partition_idx);
+    }
+  });
 
   return __empty{};
 }

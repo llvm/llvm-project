@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+class LLVMContext;
 class Module;
 
 LLVM_ABI extern cl::opt<int> SampleHotCallSiteThreshold;
@@ -45,6 +46,9 @@ public:
       bool UseFlattenedProfile = false);
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  /// Return -sample-profile-file.
+  LLVM_ABI static StringRef getSampleProfileFile(const LLVMContext &C);
 
 private:
   std::string ProfileFileName;

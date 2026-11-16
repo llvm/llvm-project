@@ -207,7 +207,6 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT:  DC XL2'000A'
 ; CHECK-NEXT: * Name of Function
 ; CHECK-NEXT:  DC XL10'A689A388819393968381'
-; CHECK-NEXT:  DC 4XL1'00'
 ; CHECK-NEXT:  DC A(L#EPM_withalloca_0-L#PPA1_withalloca_0)
 
 ; Attribute "zos-ppa1-name"="" removes the function name from PPA1.

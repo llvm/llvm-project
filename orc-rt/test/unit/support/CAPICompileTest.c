@@ -15,6 +15,7 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
+#include "orc-rt-c/bedrock/ControllerHandlerTag.h"
 #include "orc-rt-c/bedrock/Session.h"
 #include "orc-rt-c/support/Compiler.h"
 #include "orc-rt-c/support/CoreTypes.h"

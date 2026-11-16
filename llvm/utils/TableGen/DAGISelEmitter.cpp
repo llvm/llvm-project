@@ -30,7 +30,7 @@ class DAGISelEmitter {
   const CodeGenDAGPatterns CGP;
 
 public:
-  explicit DAGISelEmitter(const RecordKeeper &R) : Records(R), CGP(R, false) {}
+  explicit DAGISelEmitter(const RecordKeeper &R) : Records(R), CGP(R) {}
   void run(raw_ostream &OS);
 };
 } // End anonymous namespace

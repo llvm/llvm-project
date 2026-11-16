@@ -16,6 +16,7 @@
 #include "orc-rt/bedrock/BootstrapInfo.h"
 #include "orc-rt/bedrock/Service.h"
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
+#include "orc-rt/support/SymbolLookupResult.h"
 #include "orc-rt/support/SymbolLookupSet.h"
 
 namespace orc_rt {
@@ -35,7 +36,7 @@ public:
   Create(Session &S, SimpleSymbolTable &ST,
          const char *InstanceName = "orc_rt_ci_NativeDylibManager_Instance",
          SimpleSymbolTable::MutatorFn AddInterface =
-             sps_ci::addNativeDylibManager);
+             sps::ci::addNativeDylibManager);
 
   /// Convenience constructor that adds default symbols to the given
   /// BootstrapInfo's symbols map.

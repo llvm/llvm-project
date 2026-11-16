@@ -81,7 +81,9 @@ define void @F() #0 {
 
 ; IR-LABEL: define dso_local void @G()
 define void @G() #0 {
-  ; IR: call ptr @_Znwm(i64 0) #[[NOTCOLD]]
+  ;; G is reached by both cold and not cold contexts that could not be
+  ;; disambiguated, so its allocation keeps the ambiguous attribute.
+  ; IR: call ptr @_Znwm(i64 0) #[[AMBIGUOUS:[0-9]+]]
   %2 = call ptr @_Znwm(i64 0), !memprof !10, !callsite !15
   ret void
 }
@@ -121,6 +123,7 @@ declare ptr @_Znwm(i64)
 
 attributes #0 = { noinline optnone }
 ; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
+; IR: attributes #[[AMBIGUOUS]] = { "memprof"="ambiguous" }
 ; IR: attributes #[[COLD]] = { "memprof"="cold" }
 
 !0 = !{i64 123}

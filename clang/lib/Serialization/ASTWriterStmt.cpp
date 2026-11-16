@@ -2614,8 +2614,11 @@ void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
 
 void ASTStmtWriter::VisitOMPMetaDirective(OMPMetaDirective *D) {
   VisitStmt(D);
-  Record.push_back(D->getNumClauses());
+  Record.push_back(D->getNumVariants());
   VisitOMPExecutableDirective(D);
+  Record.writeBool(D->hasImplicitOtherwise());
+  for (const OMPTraitInfo *TI : D->traitInfos())
+    Record.writeOMPTraitInfo(TI);
   Code = serialization::STMT_OMP_META_DIRECTIVE;
 }
 
@@ -3124,6 +3127,12 @@ void ASTStmtWriter::VisitOMPTargetParallelGenericLoopDirective(
     OMPTargetParallelGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_TARGET_PARALLEL_GENERIC_LOOP_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPTargetGenericLoopDirective(
+    OMPTargetGenericLoopDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_TARGET_GENERIC_LOOP_DIRECTIVE;
 }
 
 //===----------------------------------------------------------------------===//

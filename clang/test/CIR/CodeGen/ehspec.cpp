@@ -165,13 +165,11 @@ void outer() throw() {
 // specification's own dispatch block before reaching the unexpected handler.
 // LLVMCIR:    {{^}}[[NOMATCH]]:
 // LLVMCIR:      br label %[[FILTER_DISPATCH:[0-9]+]]
-// LLVMCIR:    {{^}}[[TRY_CONT]]:
 // LLVMCIR:    {{^}}[[FILTER_DISPATCH]]:
 // LLVMCIR:      br label %[[UNEXPECTED:[0-9]+]]
 // LLVMCIR:    {{^}}[[UNEXPECTED]]:
 // LLVMCIR:      call void @__cxa_call_unexpected(ptr %{{.*}})
 // LLVMCIR-NEXT: unreachable
-// LLVMCIR:      ret void
 
-// OGCG:       {{^}}[[TRY_CONT]]:
-// OGCG-NEXT:    ret void
+// LLVM:       {{^}}[[TRY_CONT]]:
+// LLVM-NEXT:    ret void

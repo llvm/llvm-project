@@ -18,6 +18,7 @@
 #define ORC_RT_INTERNAL_BEDROCK_SYS_DYNAMICLIBRARY_H
 
 #include "orc-rt/support/Error.h"
+#include "orc-rt/support/SymbolLookupResult.h"
 #include "orc-rt/support/SymbolLookupSet.h"
 
 #include <string>

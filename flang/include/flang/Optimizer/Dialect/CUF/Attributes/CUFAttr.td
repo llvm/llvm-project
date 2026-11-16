@@ -16,7 +16,9 @@
 include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "mlir/IR/EnumAttr.td"
 
-class cuf_Attr<string name> : AttrDef<CUFDialect, name>;
+class cuf_Attr<string name> : AttrDef<CUFDialect, name> {
+  let cppIncludes = ["flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"];
+}
 
 def cuf_DataAttribute : I32EnumAttr<
     "DataAttribute",
