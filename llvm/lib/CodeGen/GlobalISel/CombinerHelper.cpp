@@ -2388,8 +2388,7 @@ bool CombinerHelper::matchCombineUnmergeConstant(
   unsigned SrcIdx = MI.getNumOperands() - 1;
   Register SrcReg = MI.getOperand(SrcIdx).getReg();
   // Break down the big constant in smaller ones.
-  auto MaybeConstant =
-      getAnyConstantVRegValWithLookThrough(SrcReg, MRI);
+  auto MaybeConstant = getAnyConstantVRegValWithLookThrough(SrcReg, MRI);
 
   if (!MaybeConstant)
     return false;
