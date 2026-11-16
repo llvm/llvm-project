@@ -733,6 +733,7 @@ bool CVPImpl::processSaturatingInst(SaturatingInst *SI) {
   BinOp->setDebugLoc(SI->getDebugLoc());
   setDeducedOverflowingFlags(BinOp, Opcode, NSW, NUW);
 
+  salvageDebugInfo(*SI);
   SI->replaceAllUsesWith(BinOp);
   SI->eraseFromParent();
   ++NumSaturating;
