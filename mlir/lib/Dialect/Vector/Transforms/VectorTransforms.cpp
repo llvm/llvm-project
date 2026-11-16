@@ -81,15 +81,33 @@ namespace {
 ///  ```
 struct MultiReduceToContract
     : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using Base::Base;
+  MultiReduceToContract(MLIRContext *context, bool allowFastMathFlagLoss,
+                        PatternBenefit benefit = 1)
+      : OpRewritePattern(context, benefit),
+        allowFastMathFlagLoss(allowFastMathFlagLoss) {}
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reduceOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: Support the other combining kinds that vector.contract supports.
     if (reduceOp.getKind() != vector::CombiningKind::ADD)
       return failure();
     Operation *mulOp = reduceOp.getSource().getDefiningOp();
     if (!mulOp || !isa<arith::MulIOp, arith::MulFOp>(mulOp))
       return failure();
+    // The fast-math flags of a vector.contract apply to both its elementwise
+    // multiply and its combining op. So the contract can only take the flags
+    // that both the multiply and the reduction carry; then neither of the two
+    // gains a flag it did not have. In particular, `contract` is kept only if
+    // both carry it. An `arith.muli` has no flags, so an integer contraction
+    // gets none. If any flag would be lost, convert only when allowed.
+    arith::FastMathFlags mulFlags = arith::FastMathFlags::none;
+    if (auto mulFOp = dyn_cast<arith::MulFOp>(mulOp))
+      mulFlags = mulFOp.getFastmath();
+    arith::FastMathFlags reduceFlags = reduceOp.getFastmath();
+    if (!allowFastMathFlagLoss && mulFlags != reduceFlags)
+      return rewriter.notifyMatchFailure(
+          reduceOp, "converting would drop fast-math flags");
+    arith::FastMathFlags fastMathFlags = mulFlags & reduceFlags;
     SmallVector<bool> reductionMask = reduceOp.getReductionMask();
     auto srcMap = rewriter.getMultiDimIdentityMap(reductionMask.size());
     SmallVector<AffineExpr> exprs;
@@ -109,11 +127,16 @@ struct MultiReduceToContract
         reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
         rewriter.getArrayAttr(llvm::map_to_vector(
-            iteratorTypes, [&](IteratorType t) -> mlir::Attribute {
+            iteratorTypes,
+            [&](IteratorType t) -> mlir::Attribute {
               return IteratorTypeAttr::get(rewriter.getContext(), t);
-            })));
+            })),
+        CombiningKind::ADD, fastMathFlags);
     return success();
   }
+
+private:
+  bool allowFastMathFlagLoss;
 };
 
 /// Merge LHS/RHS (A/B) TransposeOp into ContractionOp user.
@@ -166,7 +189,8 @@ struct CombineContractABTranspose final
       return failure();
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contractOp, lhs, rhs, contractOp.getAcc(),
-        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes());
+        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes(),
+        contractOp.getKind(), contractOp.getFastmath());
     return success();
   }
 };
@@ -241,7 +265,8 @@ struct CombineContractResultTranspose final
 
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         resTOp, contractOp.getLhs(), contractOp.getRhs(), accTOp.getVector(),
-        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes());
+        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes(),
+        contractOp.getKind(), contractOp.getFastmath());
     return success();
   }
 };
@@ -374,19 +399,16 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
     }
   }
 
-  // Check that compressing unused dims isn't removing all reduction dimension
-  // pairs. For example, if the vector.contract had only one reduction
-  // iterator and that was a unit-dimension created by a broadcast,
-  // then we should bail here, otherwise we would create a contract without
-  // a reduction dimension pair.
+  // Bail if no reduction iterator survives on both LHS and RHS: folding a
+  // one-sided unit-dim broadcast would leave an unpaired reduction iterator
+  // and produce an invalid contract.
   bool hasReductionIteratorApplyingOnBothSides = false;
   for (unsigned i = 0; i < iterators.size(); ++i) {
     if (!isReductionIterator(iterators[i]))
       continue;
-    if (getResultIndex(maps[0], i) && getResultIndex(maps[1], i)) {
-      hasReductionIteratorApplyingOnBothSides = true;
-      break;
-    }
+    if (!getResultIndex(maps[0], i) || !getResultIndex(maps[1], i))
+      return failure();
+    hasReductionIteratorApplyingOnBothSides = true;
   }
   if (!hasReductionIteratorApplyingOnBothSides)
     return failure();
@@ -398,7 +420,8 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
 
   Operation *newOp = vector::ContractionOp::create(
       rewriter, contractOp.getLoc(), lhs, rhs, contractOp.getAcc(),
-      rewriter.getAffineMapArrayAttr(maps), rewriter.getArrayAttr(iterators));
+      rewriter.getAffineMapArrayAttr(maps), rewriter.getArrayAttr(iterators),
+      contractOp.getKind(), contractOp.getFastmath());
 
   // Handle the mask.
   if (maskingOp) {
@@ -501,7 +524,7 @@ struct ReorderCastOpsOnBroadcast
 /// ```
 struct ReorderElementwiseOpsOnTranspose final
     : public OpTraitRewritePattern<OpTrait::Elementwise> {
-  using OpTraitRewritePattern::OpTraitRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() != 1 || op->getNumRegions() != 0)
@@ -1030,7 +1053,7 @@ static Value getBroadcastLikeSource(Value value) {
 /// ```
 struct ReorderElementwiseOpsOnBroadcast final
     : public OpTraitRewritePattern<OpTrait::Elementwise> {
-  using OpTraitRewritePattern::OpTraitRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() != 1)
@@ -1813,6 +1836,10 @@ struct CanonicalizeContractMatmulToMMT final
                                 PatternRewriter &rewriter) const override {
     if (failed(filter(op)))
       return failure();
+    // The mask is not updated: the rewrite may create ops inside the
+    // vector.mask region or swap the m and n iteration dimensions.
+    if (op.isMasked())
+      return rewriter.notifyMatchFailure(op, "masked contraction");
 
     Location loc = op.getLoc();
     Value lhs = op.getLhs();
@@ -1888,7 +1915,7 @@ struct CanonicalizeContractMatmulToMMT final
     }
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         op, lhs, rhs, res, rewriter.getAffineMapArrayAttr(canonicalForm),
-        op.getIteratorTypes());
+        op.getIteratorTypes(), op.getKind(), op.getFastmath());
     return success();
   };
 
@@ -1932,7 +1959,8 @@ struct FoldArithExtIntoContractionOp
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contractOp, lhsDefOp->getOperand(0), rhsDefOp->getOperand(0),
         contractOp.getAcc(), contractOp.getIndexingMapsAttr(),
-        contractOp.getIteratorTypesAttr());
+        contractOp.getIteratorTypesAttr(), contractOp.getKind(),
+        contractOp.getFastmath());
 
     return success();
   }
@@ -2037,7 +2065,7 @@ static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
 /// `%cast`.
 struct DropUnitDimFromElementwiseOps final
     : public OpTraitRewritePattern<OpTrait::Elementwise> {
-  using OpTraitRewritePattern::OpTraitRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() != 1 || op->getNumRegions() != 0)
@@ -2438,10 +2466,12 @@ void mlir::vector::populateVectorContractCanonicalizeMatmulToMMT(
 }
 
 void mlir::vector::populateVectorReductionToContractPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<MultiReduceToContract, CombineContractBroadcastMask,
-               CombineContractABTranspose, CombineContractResultTranspose>(
-      patterns.getContext(), benefit);
+    RewritePatternSet &patterns, PatternBenefit benefit,
+    bool allowFastMathFlagLoss) {
+  patterns.add<MultiReduceToContract>(patterns.getContext(),
+                                      allowFastMathFlagLoss, benefit);
+  patterns.add<CombineContractBroadcastMask, CombineContractABTranspose,
+               CombineContractResultTranspose>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateDropInnerMostUnitDimsXferOpPatterns(

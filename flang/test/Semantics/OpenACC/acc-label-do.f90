@@ -86,3 +86,52 @@ subroutine shared_end_do(a, n, m)
       a(i, j) = 1.0
 100 end do
 end subroutine
+
+subroutine goto_end_do(c, np)
+  integer :: np, n
+  real :: c(np)
+  !$acc parallel loop
+  do 100 n = 1, np
+    if (c(n) > 0) goto 100
+    c(n) = 0
+100 end do
+end subroutine
+
+subroutine end_directives(c, np)
+  integer :: np, n
+  real :: c(np)
+  !$acc parallel loop
+  do 100 n = 1, np
+    c(n) = 0
+100 end do
+  !$acc end parallel loop
+  !$acc parallel
+  !$acc loop
+  do 200 n = 1, np
+    c(n) = 1
+200 end do
+  !$acc end loop
+  !$acc end parallel
+end subroutine
+
+subroutine kernels_serial(c, np)
+  integer :: np, n
+  real :: c(np)
+  !$acc kernels loop
+  do 100 n = 1, np
+    c(n) = 0
+100 end do
+  !$acc serial loop
+  do 200 n = 1, np
+    c(n) = 1
+200 end do
+end subroutine
+
+subroutine named_label_do(c, np)
+  integer :: np, n
+  real :: c(np)
+  !$acc parallel loop
+  foo: do 100 n = 1, np
+    c(n) = 0
+100 end do foo
+end subroutine

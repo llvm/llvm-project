@@ -14,12 +14,12 @@ define i64 @if_break_mask_shares_constant_with_divergent_phi(i1 %cond) {
   ; GFX900-NEXT: {{  $}}
   ; GFX900-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX900-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1, [[COPY]], implicit $exec
-  ; GFX900-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_AND_B32_e64_]], 1, implicit $exec
+  ; GFX900-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_AND_B32_e64_]], 1, implicit $exec
   ; GFX900-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX900-NEXT:   [[COPY1:%[0-9]+]]:sreg_64 = COPY [[S_MOV_B64_]]
   ; GFX900-NEXT:   [[COPY2:%[0-9]+]]:sreg_64 = COPY [[V_CMP_EQ_U32_e64_]]
   ; GFX900-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-  ; GFX900-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, killed [[S_MOV_B64_1]], implicit-def dead $scc
+  ; GFX900-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[S_MOV_B64_1]], implicit-def dead $scc
   ; GFX900-NEXT:   $vcc = COPY [[S_AND_B64_]]
   ; GFX900-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[COPY1]], implicit $exec
   ; GFX900-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit $vcc
@@ -49,7 +49,7 @@ define i64 @if_break_mask_shares_constant_with_divergent_phi(i1 %cond) {
   ; GFX900-NEXT: bb.3.UnifiedReturnBlock:
   ; GFX900-NEXT:   [[PHI4:%[0-9]+]]:vreg_64 = PHI [[COPY3]], %bb.0, [[COPY6]], %bb.2
   ; GFX900-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32
-  ; GFX900-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64 = V_LSHRREV_B64_e64 killed [[S_MOV_B32_]], [[PHI4]], implicit $exec
+  ; GFX900-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64 = V_LSHRREV_B64_e64 [[S_MOV_B32_]], [[PHI4]], implicit $exec
   ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[V_LSHRREV_B64_e64_]].sub0
   ; GFX900-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[PHI4]].sub0
   ; GFX900-NEXT:   $vgpr0 = COPY [[COPY8]]
@@ -63,12 +63,12 @@ define i64 @if_break_mask_shares_constant_with_divergent_phi(i1 %cond) {
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX90A-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1, [[COPY]], implicit $exec
-  ; GFX90A-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_AND_B32_e64_]], 1, implicit $exec
+  ; GFX90A-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_AND_B32_e64_]], 1, implicit $exec
   ; GFX90A-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:sreg_64 = COPY [[S_MOV_B64_]]
   ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:sreg_64 = COPY [[V_CMP_EQ_U32_e64_]]
   ; GFX90A-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-  ; GFX90A-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, killed [[S_MOV_B64_1]], implicit-def dead $scc
+  ; GFX90A-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[S_MOV_B64_1]], implicit-def dead $scc
   ; GFX90A-NEXT:   $vcc = COPY [[S_AND_B64_]]
   ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:vreg_64_align2 = COPY [[COPY1]], implicit $exec
   ; GFX90A-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit $vcc
@@ -99,7 +99,7 @@ define i64 @if_break_mask_shares_constant_with_divergent_phi(i1 %cond) {
   ; GFX90A-NEXT: bb.3.UnifiedReturnBlock:
   ; GFX90A-NEXT:   [[PHI4:%[0-9]+]]:vreg_64_align2 = PHI [[COPY3]], %bb.0, [[COPY7]], %bb.2
   ; GFX90A-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32
-  ; GFX90A-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_LSHRREV_B64_e64 killed [[S_MOV_B32_]], [[PHI4]], implicit $exec
+  ; GFX90A-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_LSHRREV_B64_e64 [[S_MOV_B32_]], [[PHI4]], implicit $exec
   ; GFX90A-NEXT:   [[COPY8:%[0-9]+]]:av_32 = COPY [[V_LSHRREV_B64_e64_]].sub0
   ; GFX90A-NEXT:   [[COPY9:%[0-9]+]]:av_32 = COPY [[PHI4]].sub0
   ; GFX90A-NEXT:   $vgpr0 = COPY [[COPY9]]
@@ -131,12 +131,12 @@ define i64 @divergent_loop_with_bypass(i1 %cond, i64 %val) {
   ; GFX900-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX900-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
   ; GFX900-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1, [[COPY2]], implicit $exec
-  ; GFX900-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_AND_B32_e64_]], 1, implicit $exec
+  ; GFX900-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_AND_B32_e64_]], 1, implicit $exec
   ; GFX900-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX900-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
   ; GFX900-NEXT:   [[COPY4:%[0-9]+]]:sreg_64 = COPY [[V_CMP_EQ_U32_e64_]]
   ; GFX900-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-  ; GFX900-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, killed [[S_MOV_B64_1]], implicit-def dead $scc
+  ; GFX900-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[S_MOV_B64_1]], implicit-def dead $scc
   ; GFX900-NEXT:   $vcc = COPY [[S_AND_B64_]]
   ; GFX900-NEXT:   [[V_MOV_B:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
   ; GFX900-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit $vcc
@@ -161,7 +161,7 @@ define i64 @divergent_loop_with_bypass(i1 %cond, i64 %val) {
   ; GFX900-NEXT: bb.3.join:
   ; GFX900-NEXT:   [[PHI2:%[0-9]+]]:vreg_64 = PHI [[V_MOV_B]], %bb.0, [[COPY3]], %bb.2
   ; GFX900-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32
-  ; GFX900-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64 = V_LSHRREV_B64_e64 killed [[S_MOV_B32_]], [[PHI2]], implicit $exec
+  ; GFX900-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64 = V_LSHRREV_B64_e64 [[S_MOV_B32_]], [[PHI2]], implicit $exec
   ; GFX900-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[V_LSHRREV_B64_e64_]].sub0
   ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[PHI2]].sub0
   ; GFX900-NEXT:   $vgpr0 = COPY [[COPY7]]
@@ -178,12 +178,12 @@ define i64 @divergent_loop_with_bypass(i1 %cond, i64 %val) {
   ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX90A-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
   ; GFX90A-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1, [[COPY2]], implicit $exec
-  ; GFX90A-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_AND_B32_e64_]], 1, implicit $exec
+  ; GFX90A-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_AND_B32_e64_]], 1, implicit $exec
   ; GFX90A-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:av_64_align2 = COPY [[REG_SEQUENCE]]
   ; GFX90A-NEXT:   [[COPY4:%[0-9]+]]:sreg_64 = COPY [[V_CMP_EQ_U32_e64_]]
   ; GFX90A-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-  ; GFX90A-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, killed [[S_MOV_B64_1]], implicit-def dead $scc
+  ; GFX90A-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[S_MOV_B64_1]], implicit-def dead $scc
   ; GFX90A-NEXT:   $vcc = COPY [[S_AND_B64_]]
   ; GFX90A-NEXT:   [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
   ; GFX90A-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit $vcc
@@ -209,7 +209,7 @@ define i64 @divergent_loop_with_bypass(i1 %cond, i64 %val) {
   ; GFX90A-NEXT: bb.3.join:
   ; GFX90A-NEXT:   [[PHI2:%[0-9]+]]:vreg_64_align2 = PHI [[V_MOV_B]], %bb.0, [[COPY6]], %bb.2
   ; GFX90A-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32
-  ; GFX90A-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_LSHRREV_B64_e64 killed [[S_MOV_B32_]], [[PHI2]], implicit $exec
+  ; GFX90A-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_LSHRREV_B64_e64 [[S_MOV_B32_]], [[PHI2]], implicit $exec
   ; GFX90A-NEXT:   [[COPY7:%[0-9]+]]:av_32 = COPY [[V_LSHRREV_B64_e64_]].sub0
   ; GFX90A-NEXT:   [[COPY8:%[0-9]+]]:av_32 = COPY [[PHI2]].sub0
   ; GFX90A-NEXT:   $vgpr0 = COPY [[COPY8]]

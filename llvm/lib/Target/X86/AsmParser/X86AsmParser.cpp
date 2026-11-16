@@ -1401,7 +1401,8 @@ public:
 
   X86AsmParser(const MCSubtargetInfo &sti, MCAsmParser &Parser,
                const MCInstrInfo &mii)
-      : MCTargetAsmParser(sti, mii), CLOpts(X86MCOptions::Global),
+      : MCTargetAsmParser(sti, mii),
+        CLOpts(X86_MC::getCLOpts(Parser.getContext().getTargetOptions())),
         InstInfo(nullptr), Code16GCC(false) {
 
     Parser.addAliasForDirective(".word", ".2byte");
@@ -3958,7 +3959,7 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
     HadVerifyError = VerifyAndAdjustOperands(Operands, TmpOperands);
   }
 
-  // Check if we encountered an error for one the string insturctions
+  // Check if we encountered an error for one the string instructions.
   if (HadVerifyError) {
     return HadVerifyError;
   }

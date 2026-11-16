@@ -169,3 +169,6 @@ f208f6311b6ea3468b35deab208e307f8a59781b
 
 # [llvm][llvm-readobj][NFC] clang-format COFFDumper.cpp
 34c0dc0bbf96ed16f47115b1c9033a450ad2bcf4
+
+# [clang][NFC] Format DeclSpec.h
+3587edd5fc145b2536e59e5b83ecd31c50337fd6

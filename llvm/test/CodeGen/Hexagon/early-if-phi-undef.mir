@@ -6,7 +6,6 @@
 
 ---
 name: undef_phi_operand
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: undef_phi_operand
   ; CHECK: bb.0:

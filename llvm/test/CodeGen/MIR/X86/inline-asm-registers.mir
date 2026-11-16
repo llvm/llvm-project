@@ -19,7 +19,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -35,7 +34,6 @@ body: |
 ...
 ---
 name:            test2
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }

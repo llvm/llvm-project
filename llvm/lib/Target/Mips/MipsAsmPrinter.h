@@ -148,8 +148,6 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
                              const char *ExtraCode, raw_ostream &O) override;
   void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
-  void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
-  void printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printRegisterList(const MachineInstr *MI, int opNum, raw_ostream &O);
   void emitStartOfAsmFile(Module &M) override;
@@ -159,6 +157,24 @@ public:
   void emitDirectiveRelocJalr(const MachineInstr &MI, MCContext &OutContext,
                               TargetMachine &TM, MCStreamer &OutStreamer,
                               const MipsSubtarget &Subtarget);
+};
+
+class MipsAsmPrinterBeginPass
+    : public RequiredPassInfoMixin<MipsAsmPrinterBeginPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
+};
+
+class MipsAsmPrinterPass : public RequiredPassInfoMixin<MipsAsmPrinterPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class MipsAsmPrinterEndPass
+    : public RequiredPassInfoMixin<MipsAsmPrinterEndPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
 };
 
 } // end namespace llvm

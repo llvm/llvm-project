@@ -227,9 +227,11 @@ void Parser::ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
     while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
            Tok.isNot(tok::eof)) {
       ParsedAttributes DeclAttrs(AttrFactory);
-      MaybeParseCXX11Attributes(DeclAttrs);
-      ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
-      ParseExternalDeclaration(DeclAttrs, EmptyDeclSpecAttrs);
+      ParsedAttributes DeclSpecAttrs(AttrFactory);
+      while (MaybeParseCXX11Attributes(DeclAttrs) ||
+             MaybeParseGNUAttributes(DeclSpecAttrs))
+        ;
+      ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
     }
 
     // The caller is what called check -- we are simply calling
@@ -1157,8 +1159,11 @@ SourceLocation Parser::ParsePackIndexingType(DeclSpec &DS) {
     return Tok.getEndLoc();
   }
 
-  ParsedType Ty = Actions.getTypeName(*Tok.getIdentifierInfo(),
-                                      Tok.getLocation(), getCurScope());
+  ParsedType Ty = Actions.getTypeName(
+      *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(),
+      /*SS=*/nullptr, /*isClassName=*/false, /*HasTrailingDot=*/false,
+      /*ObjectType=*/nullptr, /*IsCtorOrDtorName=*/false,
+      /*WantNontrivialTypeSourceInfo=*/true);
   if (!Ty) {
     DS.SetTypeSpecError();
     return Tok.getEndLoc();
@@ -3378,7 +3383,11 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
             << 0 /* default */;
       else
         Diag(ConsumeToken(), diag::err_default_special_members)
-            << getLangOpts().CPlusPlus20;
+            << (getLangOpts().CPlusPlus29
+                    ? diag::DefaultableFunctionKinds::Cxx29
+                : getLangOpts().CPlusPlus20
+                    ? diag::DefaultableFunctionKinds::Cxx20
+                    : diag::DefaultableFunctionKinds::Default);
       return ExprError();
     }
   }

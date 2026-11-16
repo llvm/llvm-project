@@ -50,6 +50,13 @@ static cl::opt<unsigned> MaxThunkChainLength(
     "max-thunk-chain-length",
     cl::desc("maximum number of B-only thunks to use for call relaxation"),
     cl::init(1), cl::Hidden, cl::cat(BoltOptCategory));
+
+static cl::opt<bool> DeprecatedRelaxPLT(
+    "relax-plt", cl::desc("deprecated, has no effect"), cl::init(true),
+    cl::callback([](const bool &) {
+      errs() << "BOLT-WARNING: '-relax-plt' is deprecated and has no effect\n";
+    }),
+    cl::Hidden, cl::cat(BoltOptCategory));
 }
 
 namespace llvm {
@@ -742,11 +749,12 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
     // \p Offset reflects the size delta of BB caused by splitting unconditional
     // branches, or replacing a branch with a longer instruction sequence. It is
     // used to update the output addresses of basic blocks following the
-    // trampoline.
+    // trampoline. If IsTailCall is true, the outgoing branch is a tail call.
     auto addTrampolineAfter = [&](BinaryBasicBlock *BB,
                                   const MCSymbol *TargetSym,
                                   BinaryBasicBlock *TargetBB, uint64_t Count,
-                                  uint64_t Offset = 0) {
+                                  uint64_t Offset = 0,
+                                  bool IsTailCall = false) {
       FunctionTrampolines.emplace_back(BB ? BB : FF.back(),
                                        BF.createBasicBlock());
       BinaryBasicBlock *TrampolineBB = FunctionTrampolines.back().second.get();
@@ -758,7 +766,10 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       MCInst Inst;
       {
         auto L = BC.scopeLock();
-        MIB->createUncondBranch(Inst, TargetSym, BC.Ctx.get());
+        if (IsTailCall)
+          MIB->createTailCall(Inst, TargetSym, BC.Ctx.get());
+        else
+          MIB->createUncondBranch(Inst, TargetSym, BC.Ctx.get());
       }
       TrampolineBB->addInstruction(Inst);
       if (TargetBB)
@@ -991,9 +1002,11 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
               return false;
             }
 
-            TrampolineBB = addTrampolineAfter(/*BB=*/nullptr, TargetSymbol,
-                                              /*TargetBB=*/nullptr,
-                                              /*Count=*/0);
+            // Propagate the tail-call annotation so cluster relaxation can
+            // relax the trampoline's outgoing branch with a long thunk.
+            TrampolineBB = addTrampolineAfter(
+                /*BB=*/nullptr, TargetSymbol, /*TargetBB=*/nullptr,
+                /*Count=*/0, /*Offset=*/0, MIB->isTailCall(Inst));
             SymbolTrampolines[TargetSymbol] = TrampolineBB;
             auto L = BC.scopeLock();
             MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(),
@@ -1505,19 +1518,20 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
     return IsForward ? FC.getEndOffset() : FC.StartOffset;
   };
 
-  auto isWithinClusterRange = [&](Position Source, Position Target) {
-    const uint64_t Distance = Source.Offset <= Target.Offset
-                                  ? Target.Offset - Source.Offset
-                                  : Source.Offset - Target.Offset;
+  auto isWithinClusterRange = [&](uint64_t SourceOffset,
+                                  uint64_t TargetOffset) {
+    const uint64_t Distance = SourceOffset <= TargetOffset
+                                  ? TargetOffset - SourceOffset
+                                  : SourceOffset - TargetOffset;
     // A hop across a full adjacent cluster can be exactly this far. The
     // remaining branch range covers emitted thunks and output alignment.
     return Distance <= opts::MaxClusterSize;
   };
 
   SmallVector<unsigned> ThunkClusters;
-  Position Current{0, Ref.SourceOffset};
+  uint64_t CurrentOffset = Ref.SourceOffset;
   unsigned NextHop = 0;
-  while (!isWithinClusterRange(Current, {NumHops, Ref.TargetOffset})) {
+  while (!isWithinClusterRange(CurrentOffset, Ref.TargetOffset)) {
     // Stop if the chain would exceed the configured thunk budget.
     if (ThunkClusters.size() == MaxThunks)
       return nullptr;
@@ -1525,7 +1539,7 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
     unsigned BestHop = -1u;
     for (unsigned Hop = NextHop; Hop < NumHops; ++Hop) {
       const unsigned Cluster = getClusterAtHop(Hop);
-      if (!isWithinClusterRange(Current, {Hop, getThunkOffset(Cluster)}))
+      if (!isWithinClusterRange(CurrentOffset, getThunkOffset(Cluster)))
         break;
       BestHop = Hop;
     }
@@ -1535,8 +1549,8 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
 
     const unsigned BestCluster = getClusterAtHop(BestHop);
     ThunkClusters.push_back(BestCluster);
+    CurrentOffset = getThunkOffset(BestCluster);
     NextHop = BestHop + 1;
-    Current = {BestHop, getThunkOffset(BestCluster)};
   }
 
   BinaryFunction *FirstThunk = nullptr;

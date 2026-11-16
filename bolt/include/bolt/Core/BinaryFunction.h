@@ -278,6 +278,9 @@ private:
   const MCSymbol *PersonalityFunction{nullptr};
   uint8_t PersonalityEncoding{dwarf::DW_EH_PE_sdata4 | dwarf::DW_EH_PE_pcrel};
 
+  /// The function's CIE has the 'S' augmentation (.cfi_signal_frame).
+  bool IsSignalFrame{false};
+
   BinaryContext &BC;
 
   std::unique_ptr<BinaryLoopInfo> BLI;
@@ -309,11 +312,20 @@ private:
   /// function is done.
   SparseBitVector<> DebugScopeBoundaryOffsets;
 
+  struct SecondaryEntryPoint {
+    /// Global symbol corresponding to the external entry point.
+    MCSymbol *Symbol{nullptr};
+    /// Number of addEntryPoint() and addEntryPointAtOffset() requests for the
+    /// entry point. Lets releaseEntryPoint() tell whether anything else still
+    /// needs it.
+    unsigned RefCount{0};
+  };
+
   /// A set of local and global symbols corresponding to secondary entry points.
   /// Each additional function entry point has a corresponding entry in the map.
   /// The key is a local symbol corresponding to a basic block and the value
-  /// is a global symbol corresponding to an external entry point.
-  DenseMap<const MCSymbol *, MCSymbol *> SecondaryEntryPoints;
+  /// holds a global symbol corresponding to an external entry point.
+  DenseMap<const MCSymbol *, SecondaryEntryPoint> SecondaryEntryPoints;
 
   /// False if the function is too complex to reconstruct its control
   /// flow graph.
@@ -1284,7 +1296,7 @@ public:
   /// secondary entry point into the function, then return a global symbol
   /// that represents the secondary entry point. Otherwise return nullptr.
   MCSymbol *getSecondaryEntryPointSymbol(const MCSymbol *BBLabel) const {
-    return SecondaryEntryPoints.lookup(BBLabel);
+    return SecondaryEntryPoints.lookup(BBLabel).Symbol;
   }
 
   /// If the basic block serves as a secondary entry point to the function,
@@ -1547,6 +1559,8 @@ public:
 
   uint8_t getPersonalityEncoding() const { return PersonalityEncoding; }
 
+  bool isSignalFrame() const { return IsSignalFrame; }
+
   CallSitesRange getCallSites(const FragmentNum F) const {
     return make_range(std::equal_range(CallSites.begin(), CallSites.end(),
                                        std::make_pair(F, CallSite()),
@@ -1635,6 +1649,11 @@ public:
   /// Register secondary entry point at a given \p Offset into the function.
   /// Return global symbol for use by extern function references.
   MCSymbol *addEntryPointAtOffset(uint64_t Offset);
+
+  /// Withdraw one request for the secondary entry point at \p BB, made when
+  /// whatever needed it goes away. The entry point is removed once no requests
+  /// are left.
+  void releaseEntryPoint(const BinaryBasicBlock &BB);
 
   /// Mark all blocks that are unreachable from a root (entry point
   /// or landing pad) as invalid.
@@ -1977,6 +1996,11 @@ public:
 
   BinaryFunction &setPersonalityEncoding(uint8_t Encoding) {
     PersonalityEncoding = Encoding;
+    return *this;
+  }
+
+  BinaryFunction &setIsSignalFrame(bool V) {
+    IsSignalFrame = V;
     return *this;
   }
 

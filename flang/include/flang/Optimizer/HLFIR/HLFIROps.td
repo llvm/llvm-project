@@ -838,27 +838,6 @@ def hlfir_EOShiftOp
   let hasVerifier = 1;
 }
 
-def hlfir_PackOp
-    : hlfir_Op<
-          "pack", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let summary = "PACK transformational intrinsic";
-  let description = [{
-    Selects elements from an array according to a mask.
-  }];
-
-  let arguments = (ins AnyFortranArrayObject:$array,
-      AnyFortranLogicalOrI1ArrayObject:$mask,
-      Optional<AnyFortranArrayObject>:$vector);
-
-  let results = (outs hlfir_ExprType);
-
-  let assemblyFormat = [{
-    $array $mask (`vector` $vector^)? attr-dict `:` functional-type(operands, results)
-  }];
-
-  let hasVerifier = 1;
-}
-
 def hlfir_ReshapeOp
     : hlfir_Op<
           "reshape", [AttrSizedOperandSegments,
@@ -1304,18 +1283,30 @@ def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {
     To deal with the optional case, an extra boolean value can be pass to the
     operation. In such cases, the copy-in will only be done if "var_is_present"
     is true and, when it is false, the original value will be returned instead.
+
+    The optional alignment attribute requests a minimum byte alignment for the
+    temporary, so that a copy standing in for a variable with an alignment
+    requirement satisfies the same requirement. It must be a positive power of
+    two. Code generation applies it to the inline buffer allocation; copies
+    made by the runtime do not honor it yet, and on targets where an aligned
+    fir.allocmem lowers to an ordinary malloc (Windows, GPU device code) a
+    heap-allocated buffer only gets the allocator's alignment.
   }];
 
   let arguments = (ins Arg<fir_BaseBoxType, "", [MemRead]>:$var,
                     Arg<AnyReferenceLike, "", [MemWrite]>:$tempBox,
-                    Optional<I1>:$var_is_present);
+                    Optional<I1>:$var_is_present,
+                    OptionalAttr<I64Attr>:$alignment);
 
   let results = (outs fir_BaseBoxType, I1, I1);
 
   let assemblyFormat = [{
     $var `to` $tempBox (`handle_optional` $var_is_present^)?
+    (`alignment` `(` $alignment^ `)`)?
     attr-dict `:` functional-type(operands, results)
   }];
+
+  let hasVerifier = 1;
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$var, "mlir::Value":$temp_box,

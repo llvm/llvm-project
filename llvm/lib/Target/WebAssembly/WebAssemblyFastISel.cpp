@@ -715,7 +715,8 @@ bool WebAssemblyFastISel::fastLowerArguments() {
   if (F->isVarArg())
     return false;
 
-  if (FuncInfo.Fn->getCallingConv() == CallingConv::Swift)
+  if (FuncInfo.Fn->getCallingConv() == CallingConv::Swift ||
+      FuncInfo.Fn->getCallingConv() == CallingConv::SwiftTail)
     return false;
 
   unsigned I = 0;
@@ -724,6 +725,7 @@ bool WebAssemblyFastISel::fastLowerArguments() {
     if (Attrs.hasParamAttr(I, Attribute::ByVal) ||
         Attrs.hasParamAttr(I, Attribute::SwiftSelf) ||
         Attrs.hasParamAttr(I, Attribute::SwiftError) ||
+        Attrs.hasParamAttr(I, Attribute::SwiftAsync) ||
         Attrs.hasParamAttr(I, Attribute::InAlloca) ||
         Attrs.hasParamAttr(I, Attribute::Nest))
       return false;
@@ -840,7 +842,8 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   if (Func && Func->isIntrinsic())
     return false;
 
-  if (Call->getCallingConv() == CallingConv::Swift)
+  if (Call->getCallingConv() == CallingConv::Swift ||
+      Call->getCallingConv() == CallingConv::SwiftTail)
     return false;
 
   bool IsDirect = Func != nullptr;
@@ -911,10 +914,12 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     if (ArgTy == MVT::INVALID_SIMPLE_VALUE_TYPE)
       return false;
 
+    // The attribute of the callee counts too, see computeSignatureVTs.
     const AttributeList &Attrs = Call->getAttributes();
     if (Attrs.hasParamAttr(I, Attribute::ByVal) ||
         Attrs.hasParamAttr(I, Attribute::SwiftSelf) ||
         Attrs.hasParamAttr(I, Attribute::SwiftError) ||
+        Call->paramHasAttr(I, Attribute::SwiftAsync) ||
         Attrs.hasParamAttr(I, Attribute::InAlloca) ||
         Attrs.hasParamAttr(I, Attribute::Nest))
       return false;
@@ -1173,6 +1178,13 @@ bool WebAssemblyFastISel::selectSExt(const Instruction *I) {
 bool WebAssemblyFastISel::selectICmp(const Instruction *I) {
   const auto *ICmp = cast<ICmpInst>(I);
 
+  // The I32 test below classifies every non-i64 type as i32, so a vector
+  // compare would emit a scalar compare over v128 registers and produce
+  // an invalid module. The SelectionDAG lowers vector compares to SIMD
+  // compares.
+  if (ICmp->getOperand(0)->getType()->isVectorTy())
+    return false;
+
   bool I32 = getSimpleType(ICmp->getOperand(0)->getType()) != MVT::i64;
   unsigned Opc;
   bool IsSigned = false;
@@ -1233,6 +1245,13 @@ bool WebAssemblyFastISel::selectICmp(const Instruction *I) {
 
 bool WebAssemblyFastISel::selectFCmp(const Instruction *I) {
   const auto *FCmp = cast<FCmpInst>(I);
+
+  // The F32 test below classifies every non-f64 type as f32, so a vector
+  // compare would emit a scalar compare over v128 registers and produce
+  // an invalid module. The SelectionDAG lowers vector compares to SIMD
+  // compares.
+  if (FCmp->getOperand(0)->getType()->isVectorTy())
+    return false;
 
   Register LHS = getRegForValue(FCmp->getOperand(0));
   if (LHS == 0)

@@ -22,23 +22,67 @@
 using namespace clang;
 using namespace dependencies;
 
+void ModuleCacheEntries::addInvalidatedPath(StringRef Path) {
+#ifndef NDEBUG
+  SmallString<256> Canonical(Path);
+  assert(llvm::sys::path::is_absolute(Path) &&
+         !llvm::sys::path::remove_dots(Canonical, /*remove_dot_dot=*/true) &&
+         "invalidated paths must be spelled like ModuleDeps::DirectoryDeps");
+#endif
+  {
+    std::lock_guard<std::mutex> Lock(InvalidatedPathsMutex);
+    InvalidatedPaths.insert(Path);
+  }
+  AnyInvalidatedPaths.store(true, std::memory_order_release);
+}
+
+std::optional<bool>
+ModuleCacheEntries::isDirectoryInvalidated(StringRef Directory) const {
+  if (!ValidateAgainstInvalidatedPaths)
+    return std::nullopt;
+  if (!AnyInvalidatedPaths.load(std::memory_order_acquire))
+    return false;
+  std::lock_guard<std::mutex> Lock(InvalidatedPathsMutex);
+  return InvalidatedPaths.contains(Directory);
+}
+
 void ModuleCacheEntries::flush() {
   auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
   for (auto &[Path, Entry] : Map) {
     if (Entry->State == ModuleCacheEntry::S_Written) {
-      assert(Entry->WrittenBuffer && "Wrote PCM with no contents");
+      assert(Entry->Buffer && "Wrote PCM with no contents");
       // Note: We could propagate Entry->ModTime to the on-disk file, but
       // implicitly-built modules (unlike explicitly-built modules) don't use
       // that metadata to refer to imports, rendering this unnecessary.
       off_t Size;
       time_t ModTime;
       // Best-effort: ignore errors (e.g. read-only cache directory).
-      (void)writeImpl(Path, *Entry->WrittenBuffer, Size, ModTime);
+      (void)writeImpl(Path, *Entry->Buffer, Size, ModTime);
     }
   }
 }
 
 namespace {
+/// A buffer that keeps the contents of a \c ModuleCacheEntry alive.
+class SharedMemoryBuffer : public llvm::MemoryBuffer {
+  std::shared_ptr<const llvm::MemoryBuffer> Underlying;
+
+public:
+  SharedMemoryBuffer(std::shared_ptr<const llvm::MemoryBuffer> Underlying)
+      : Underlying(std::move(Underlying)) {
+    init(this->Underlying->getBufferStart(), this->Underlying->getBufferEnd(),
+         /*RequiresNullTerminator=*/false);
+  }
+
+  StringRef getBufferIdentifier() const override {
+    return Underlying->getBufferIdentifier();
+  }
+
+  BufferKind getBufferKind() const override {
+    return Underlying->getBufferKind();
+  }
+};
+
 class ReaderWriterLock : public llvm::AdvisoryLock {
   ModuleCacheEntry &Entry;
   std::optional<unsigned> OwnedGeneration;
@@ -134,6 +178,10 @@ public:
     Timestamp.store(llvm::sys::toTimeT(std::chrono::system_clock::now()));
   }
 
+  std::optional<bool> isDirectoryInvalidated(StringRef Directory) override {
+    return Entries.isDirectoryInvalidated(Directory);
+  }
+
   void maybePrune(StringRef Path, time_t PruneInterval,
                   time_t PruneAfter) override {
     // FIXME: This only needs to be ran once per build, not in every
@@ -152,18 +200,19 @@ public:
     std::lock_guard<std::mutex> Lock(Entry.Mutex);
     Logger.log() << "pcm_write: " << Path;
     if (Entry.State == ModuleCacheEntry::S_Written) {
-      assert(Entry.WrittenBuffer && "Wrote PCM with no contents");
-      assert(Entry.WrittenBuffer->getBuffer() == Buffer.getBuffer() &&
+      assert(Entry.Buffer && "Wrote PCM with no contents");
+      assert(Entry.Buffer->getBuffer() == Buffer.getBuffer() &&
              "Wrote the same PCM with different contents");
-      Size = Entry.WrittenBuffer->getBufferSize();
+      Size = Entry.Buffer->getBufferSize();
       ModTime = Entry.ModTime;
       return {};
     }
-    Entry.WrittenBuffer =
+    // Readers of the previous buffer (if any) keep it alive on their own.
+    Entry.Buffer =
         llvm::MemoryBuffer::getMemBufferCopy(Buffer.getBuffer(), Path);
     Entry.ModTime = llvm::sys::toTimeT(std::chrono::system_clock::now());
     Entry.State = ModuleCacheEntry::S_Written;
-    Size = Entry.WrittenBuffer->getBufferSize();
+    Size = Entry.Buffer->getBufferSize();
     ModTime = Entry.ModTime;
     return {};
   }
@@ -181,18 +230,13 @@ public:
       auto ReadBuffer = readImpl(FileName, ReadSize, ReadModTime);
       if (!ReadBuffer)
         return ReadBuffer.takeError();
-      Entry.ReadBuffer = std::move(*ReadBuffer);
+      Entry.Buffer = std::move(*ReadBuffer);
       Entry.ModTime = ReadModTime;
       Entry.State = ModuleCacheEntry::S_Read;
     }
-    // The written buffer takes precedence over any read buffer.
-    llvm::MemoryBuffer *Buffer = Entry.WrittenBuffer ? Entry.WrittenBuffer.get()
-                                                     : Entry.ReadBuffer.get();
-    Size = Buffer->getBufferSize();
+    Size = Entry.Buffer->getBufferSize();
     ModTime = Entry.ModTime;
-    // Note: Creates a reference to ReadBuffer or WrittenBuffer.
-    return llvm::MemoryBuffer::getMemBuffer(*Buffer,
-                                            /*RequiresNullTerminator=*/false);
+    return std::make_unique<SharedMemoryBuffer>(Entry.Buffer);
   }
 };
 } // namespace

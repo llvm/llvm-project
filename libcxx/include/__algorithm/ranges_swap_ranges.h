@@ -42,8 +42,7 @@ using swap_ranges_result = in_in_result<_I1, _I2>;
 struct __swap_ranges {
   template <input_iterator _I1, sentinel_for<_I1> _S1, input_iterator _I2, sentinel_for<_I2> _S2>
     requires indirectly_swappable<_I1, _I2>
-  _LIBCPP_HIDE_FROM_ABI constexpr swap_ranges_result<_I1, _I2>
-  operator()(_I1 __first1, _S1 __last1, _I2 __first2, _S2 __last2) const {
+  constexpr swap_ranges_result<_I1, _I2> operator()(_I1 __first1, _S1 __last1, _I2 __first2, _S2 __last2) const {
     if constexpr (sized_sentinel_for<_I1, _S1> && sized_sentinel_for<_I2, _S2> &&
                   (random_access_iterator<_I1> || random_access_iterator<_I2> ||
                    (is_same_v<_I1, _S1> && is_same_v<_I2, _S2>))) {
@@ -75,7 +74,7 @@ struct __swap_ranges {
 
   template <input_range _R1, input_range _R2>
     requires indirectly_swappable<iterator_t<_R1>, iterator_t<_R2>>
-  _LIBCPP_HIDE_FROM_ABI constexpr swap_ranges_result<borrowed_iterator_t<_R1>, borrowed_iterator_t<_R2>>
+  constexpr swap_ranges_result<borrowed_iterator_t<_R1>, borrowed_iterator_t<_R2>>
   operator()(_R1&& __r1, _R2&& __r2) const {
     return operator()(ranges::begin(__r1), ranges::end(__r1), ranges::begin(__r2), ranges::end(__r2));
   }

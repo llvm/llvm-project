@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace mlir::gpu {
 
@@ -43,4 +44,27 @@ vector::CombiningKind convertReductionKind(gpu::AllReduceOperation mode) {
   llvm_unreachable("Vector and GPU reduction kinds should match 1:1");
 }
 
+FailureOr<SubgroupReduceClusterInfo>
+getSubgroupReduceClusterInfo(SubgroupReduceOp op, unsigned subgroupSize) {
+  assert(llvm::isPowerOf2_32(subgroupSize));
+
+  std::optional<uint32_t> clusterSize = op.getClusterSize();
+  assert(!clusterSize ||
+         llvm::isPowerOf2_32(*clusterSize)); // Verifier should've caught this.
+  if (clusterSize && *clusterSize > subgroupSize)
+    return op.emitOpError()
+           << "cluster size " << *clusterSize
+           << " is greater than subgroup size " << subgroupSize;
+  unsigned effectiveClusterSize = clusterSize.value_or(subgroupSize);
+
+  auto clusterStride = op.getClusterStride();
+  assert(llvm::isPowerOf2_32(clusterStride)); // Verifier should've caught this.
+  if (clusterStride >= subgroupSize)
+    return op.emitOpError()
+           << "cluster stride " << clusterStride
+           << " is not less than subgroup size " << subgroupSize;
+
+  return SubgroupReduceClusterInfo{clusterStride, effectiveClusterSize,
+                                   subgroupSize};
+}
 } // namespace mlir::gpu

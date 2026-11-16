@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +raoint \
 // RUN: -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +raoint -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression | FileCheck %s --check-prefixes=CHECK,X64 %}
 // RUN: %clang_cc1 %s -ffreestanding -triple=i686-unknown-unknown -target-feature +raoint \
 // RUN: -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression | FileCheck %s --check-prefixes=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple=i686-unknown-unknown -target-feature +raoint -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression | FileCheck %s --check-prefixes=CHECK %}
 
 #include <stddef.h>
 #include <x86gprintrin.h>

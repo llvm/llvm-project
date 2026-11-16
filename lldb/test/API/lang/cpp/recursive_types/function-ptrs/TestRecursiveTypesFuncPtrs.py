@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.build_and_run()
 

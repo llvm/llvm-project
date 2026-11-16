@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -192,6 +193,29 @@ bool LiveRegMatrix::checkRegUnitInterference(const LiveInterval &VirtReg,
   return Result;
 }
 
+bool LiveRegMatrix::checkRegMaskInterference(SlotIndex Start, SlotIndex End,
+                                             MCRegister PhysReg) {
+  ArrayRef<SlotIndex> Slots = LIS->getRegMaskSlots();
+  ArrayRef<const uint32_t *> Bits = LIS->getRegMaskBits();
+
+  // Find the first regmask slot that is not before Start.
+  auto SlotI = llvm::lower_bound(Slots, Start);
+  for (; SlotI != Slots.end() && *SlotI < End; ++SlotI) {
+    if (MachineOperand::clobbersPhysReg(Bits[SlotI - Slots.begin()], PhysReg))
+      return true;
+  }
+  return false;
+}
+
+bool LiveRegMatrix::checkRegUnitInterference(SlotIndex Start, SlotIndex End,
+                                             MCRegister PhysReg) {
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    if (LIS->getRegUnit(Unit).overlaps(Start, End))
+      return true;
+  }
+  return false;
+}
+
 LiveIntervalUnion::Query &LiveRegMatrix::query(const LiveRange &LR,
                                                MCRegUnit RegUnit) {
   LiveIntervalUnion::Query &Q = Queries[static_cast<unsigned>(RegUnit)];
@@ -226,13 +250,21 @@ LiveRegMatrix::checkInterference(const LiveInterval &VirtReg,
 
 bool LiveRegMatrix::checkInterference(SlotIndex Start, SlotIndex End,
                                       MCRegister PhysReg) {
+  // Regmask interference is the fastest check.
+  if (checkRegMaskInterference(Start, End, PhysReg))
+    return true;
+
+  // Check for fixed interference.
+  if (checkRegUnitInterference(Start, End, PhysReg))
+    return true;
+
   // Construct artificial live range containing only one segment [Start, End).
   VNInfo valno(0, Start);
   LiveRange::Segment Seg(Start, End, &valno);
   LiveRange LR;
   LR.addSegment(Seg);
 
-  // Check for interference with that segment
+  // Check the matrix for virtual register interference with that segment.
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
     // LR is stack-allocated. LiveRegMatrix caches queries by a key that
     // includes the address of the live range. If (for the same reg unit) this
