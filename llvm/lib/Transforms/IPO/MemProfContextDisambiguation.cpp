@@ -2133,11 +2133,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     if (Skip)
       SavedContextIds.clear();
     // Add the duplicates created for this call (see updateStackNodes) that are
-    // still on its first node. Calls given them as well normally come later in
-    // the post order, but one may have been processed first and claimed them
-    // when edges between the nodes are missing, or when a recursive context
-    // traverses the initial nodes more than once with different continuations
-    // (in which case the same happens to the original ids).
+    // still on its first node. Other calls given them end below that node and
+    // leave them on it, but a recursive context may traverse this call's
+    // initial nodes more than once with different continuations, in which
+    // case a call assigned one of the other traversals may have been processed
+    // first and claimed them (as happens to the original ids too).
     if (!TrimmedInlinedDupIds.empty()) {
       StackNodes[0]->removeContextIdsNotPresent(TrimmedInlinedDupIds);
       SavedContextIds.insert_range(TrimmedInlinedDupIds);
@@ -2387,6 +2387,12 @@ DenseSet<uint32_t> CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // it, so start with all those trimmed there, and start PrefixContextIds with
   // the ids on the edge out of the first node (rather than the possibly very
   // large set of ids on the first node itself).
+  //
+  // If an edge is missing between two of the nodes, the contexts trimmed at
+  // the nodes before it (in particular all those trimmed at the first node)
+  // are deliberately kept, even though updateStackNodes does not assign such
+  // a call any contexts otherwise: a trimmed context is unambiguous for every
+  // continuation, including an inlined sequence never observed in the profile.
   Result = Cache.TrimmedAtNodeIds[TrimmedAtNodeIdsIndices[0]];
   DenseSet<uint32_t> PrefixContextIds;
   for (unsigned I = 1; I < TrimmedAtNodeIdsIndices.size(); I++) {
@@ -2451,6 +2457,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
           return X->OrigStackOrAllocId < Y->OrigStackOrAllocId;
         });
   };
+  // Save a map from each call to any that are found to match it. I.e. located
+  // in the same function and have the same (possibly trimmed) stack ids. We use
+  // this to avoid creating extra graph nodes as they can be treated the same.
+  DenseMap<CallInfo, CallInfo> CallToMatchingCall;
   for (auto &Entry : StackIdToMatchingCalls) {
     auto &Calls = Entry.second;
     if (Calls.size() == 1)
@@ -2467,6 +2477,19 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
                 FuncToIndex[A.Func] < FuncToIndex[B.Func])));
     };
     llvm::stable_sort(Calls, CallLess);
+    // Matching calls are now adjacent. Record each run's calls after the first
+    // as matching it. Comparing the stack nodes is equivalent to comparing the
+    // stack ids, as each stack id has its own node and the stack id to node
+    // map is not modified here.
+    unsigned FirstInRun = 0;
+    for (unsigned I = 1; I < Calls.size(); I++) {
+      if (Calls[I].Func != Calls[FirstInRun].Func ||
+          Calls[I].StackNodes != Calls[FirstInRun].StackNodes) {
+        FirstInRun = I;
+        continue;
+      }
+      CallToMatchingCall[Calls[I].Call] = Calls[FirstInRun].Call;
+    }
   }
 
   // First make a pass through all stack ids that correspond to a call,
@@ -2511,11 +2534,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
         // inlined frames either.
         if (StackNodes.size() < 2)
           break;
-        // Calls in the same function with the same stack ids are adjacent
-        // after sorting, and will share a context node (see
-        // CallToMatchingCall below), so only give duplicates to the first.
-        if (I > 0 && Calls[I - 1].Func == CallCtxInfo.Func &&
-            Calls[I - 1].StackNodes == StackNodes)
+        // Calls matching an earlier call in the same function will share its
+        // context node, so only give duplicates to the first.
+        if (CallToMatchingCall.contains(CallCtxInfo.Call))
           continue;
         auto Trimmed = computeTrimmedInlinedContextIds(StackNodes, Cache);
         if (Trimmed.empty())
@@ -2554,15 +2575,15 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       for (auto [DupId, CreatorIdx] : Dups) {
         ArrayRef<ContextNode *> CreatorNodes =
             TrimmedInlinedDupCreatorNodes[CreatorIdx];
-        // Skip the duplicate if this call ends at a node of the creating
-        // call's sequence other than its first. Such a call overlaps the
-        // stretch of the context the creating call needs the duplicate on,
-        // and would compete with it for the duplicate; being assigned the
-        // original there is enough for it. Calls ending at the creating call's
-        // first node or below only cover the callee side of the context, and
-        // are processed after the creating call in the post order traversal,
-        // so they take only what flows on below it.
-        if (is_contained(CreatorNodes.drop_front(), LastNode))
+        // Skip the duplicate if this call ends at any node of the creating
+        // call's sequence. Such a call overlaps the stretch of the context
+        // the creating call needs the duplicate on, and could claim the
+        // duplicate first (the post order processes the creating call first
+        // only when all edges along its sequence exist); being assigned the
+        // original there is enough for it. Calls ending below the creating
+        // call's first node only cover the callee side of the context, and
+        // leave the duplicate on that first node for the creating call.
+        if (is_contained(CreatorNodes, LastNode))
           continue;
         DupIdsToAdd.push_back(DupId);
       }
@@ -2581,10 +2602,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     }
     SavedContextIds.insert_range(DupIdsToAdd);
   };
-  // Save a map from each call to any that are found to match it. I.e. located
-  // in the same function and have the same (possibly trimmed) stack ids. We use
-  // this to avoid creating extra graph nodes as they can be treated the same.
-  DenseMap<CallInfo, CallInfo> CallToMatchingCall;
   for (auto &It : StackIdToMatchingCalls) {
     auto &Calls = It.getSecond();
     // Skip single calls with a single stack id. These don't need a new node.
@@ -2633,15 +2650,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
         MatchingIdsFuncSet.clear();
 #endif
 
-      // Check if the next set of stack ids is the same (since the Calls vector
-      // of tuples is sorted by the stack ids we can just look at the next one).
-      // If so, save them in the CallToMatchingCall map so that they get
-      // assigned to the same context node, and skip them. Comparing the stack
-      // nodes is equivalent to comparing the stack ids, as each stack id has
-      // its own node and the stack id to node map is not modified here. This
-      // is done before computing this call's context ids so that, when it
-      // gets a node only from its TrimmedInlinedDupIds, these calls are
-      // assigned to that node too.
+      // Skip the calls matching this one (recorded in CallToMatchingCall when
+      // sorting above), which are adjacent to it, so that they get assigned to
+      // the same context node. Also note whether a call in a different
+      // function has the same stack ids.
       bool DuplicateContextIds = false;
       for (unsigned J = I + 1; J < Calls.size(); J++) {
         auto &CallCtxInfo = Calls[J];
@@ -2654,8 +2666,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
           DuplicateContextIds = true;
           break;
         }
-        auto &NextCall = CallCtxInfo.Call;
-        CallToMatchingCall[NextCall] = Call;
+        assert(CallToMatchingCall.lookup(CallCtxInfo.Call).call() == Call);
         // Update I so that it gets incremented correctly to skip this call.
         I = J;
       }
