@@ -127,12 +127,8 @@ public:
     return AnaCtxMgr.getContext(D);
   }
 
-  ArrayRef<StringRef> getUnityBuildFileExtensions() const {
-    return UnityBuildFileExtensions;
-  }
-
-  static bool isInCodeFile(SourceLocation SL, const SourceManager &SM,
-                           ArrayRef<StringRef> UnityBuildFileExtensions) {
+  bool isInCodeFile(SourceLocation SL) const {
+    const SourceManager &SM = Ctx.getSourceManager();
     if (SM.isInMainFile(SL))
       return true;
 
@@ -162,11 +158,6 @@ public:
     }
 
     return false;
-  }
-
-  bool isInCodeFile(SourceLocation SL) {
-    const SourceManager &SM = getASTContext().getSourceManager();
-    return isInCodeFile(SL, SM, UnityBuildFileExtensions);
   }
 };
 
