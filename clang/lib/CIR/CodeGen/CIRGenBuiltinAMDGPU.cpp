@@ -655,7 +655,9 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.frexp.mant")
         .getValue();
   }
+  case AMDGPU::BI__builtin_amdgcn_frexp_exp:
   case AMDGPU::BI__builtin_amdgcn_frexp_expf:
+  case AMDGPU::BI__builtin_amdgcn_frexp_exph:
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.frexp.exp",
                                                convertType(expr->getType()))
         .getValue();
