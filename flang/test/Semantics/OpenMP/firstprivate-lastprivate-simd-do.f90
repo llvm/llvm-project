@@ -24,6 +24,14 @@ subroutine overlaps
   !$omp end do simd
 
   !CHECK-NOT: Variable {{'.*'}} appears in both FIRSTPRIVATE and LASTPRIVATE clauses on a DO SIMD construct; {{'.*'}} may be uninitialised in the associated structured block [-Wportability]
+  !$omp do firstprivate(a) lastprivate(a)
+  do i = 1, 10
+    a = i
+    b = i
+  end do
+  !$omp end do
+
+  !CHECK-NOT: Variable {{'.*'}} appears in both FIRSTPRIVATE and LASTPRIVATE clauses on a DO SIMD construct; {{'.*'}} may be uninitialised in the associated structured block [-Wportability]
   !$omp do simd firstprivate(a)
   do i = 1, 10
     a = i
