@@ -68,7 +68,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install ninja cmake python@3.14 gcc@${LIBSTDCXX_VERSION}
+          brew install ninja cmake python@3.14 gcc@${LIBSTDCXX_VERSION} tbb
           echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
 
       - name: Diagnose tools in use
@@ -93,6 +93,7 @@ jobs:
 
           libcxx/utils/ci/lnt/run-libstdcxx-benchmarks                  \
             --gcc "g++-${LIBSTDCXX_VERSION}"                            \
+            --tbb-path "$(brew --prefix tbb)"                           \
             --compiler "${COMPILER}"                                    \
             --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
             --machine "${LNT_MACHINE}"                                  \

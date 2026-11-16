@@ -6,6 +6,9 @@
 # and the library are located by querying that GCC. Note that this is not the compiler used to
 # build the tests, which is selected with '--param compiler' as usual.
 #
+# The optional '--param tbb_path=<TBB>' Lit parameter points to an installation of TBB. When it is
+# provided, libstdc++ uses TBB as the backend for its parallel algorithms instead of the serial one.
+#
 # For example:
 #
 #  $ ./libcxx/utils/libcxx-lit <BUILD> -sv libcxx/test/std --param libstdcxx_compiler=g++-14 \
@@ -81,6 +84,17 @@ LIBSTDCXX_PARAMETERS = [
         The GCC whose libstdc++ we are testing against, e.g. 'g++-14'. The libstdc++ headers and
         library are located by querying that GCC. This is not the compiler used to build the tests.
         """),
+    libcxx.test.dsl.Parameter(name='tbb_path', type=str, default='',
+        actions=lambda tbb: [
+            libcxx.test.dsl.AddSubstitution('%{tbb-include-flags}',
+                '-I {}'.format(shlex.quote(os.path.join(tbb, 'include'))) if tbb else ''),
+            libcxx.test.dsl.AddSubstitution('%{tbb-link-flags}',
+                '-L {} -ltbb'.format(shlex.quote(os.path.join(tbb, 'lib'))) if tbb else ''),
+        ],
+        help="""
+        Optional path to a TBB installation. When provided, libstdc++ uses TBB as the backend for
+        its parallel algorithms instead of running them serially.
+        """),
 ]
 
 # Since this configuration knows which Standard Library it is testing, provide the corresponding
@@ -95,10 +109,10 @@ config.substitutions.append(('%{flags}',
     '-pthread' + (' -isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else '')
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ %{libstdcxx-include-flags} -I %{libcxx-dir}/test/support'
+    '-nostdinc++ %{libstdcxx-include-flags} %{tbb-include-flags} -I %{libcxx-dir}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ %{libstdcxx-link-flags}'
+    '-nostdlib++ %{libstdcxx-link-flags} %{tbb-link-flags}'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %{temp} -- '
@@ -113,3 +127,7 @@ libcxx.test.config.configure(
     config,
     lit_config
 )
+
+# Passing "enable_experimental=False" disables the tests that rely on PSTL, yet we want to run them,
+# so manually discard the cancellation.
+config.available_features.discard('libcpp-has-no-incomplete-pstl')
