@@ -1656,7 +1656,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
   {
     llvm::TimeTraceScope timeScope2("Parse cl::opt");
-    cl::ResetAllOptionOccurrences();
     cl::parseCommandLineOptions(config->libraryOptions, getToolOptions(), v);
   }
 
