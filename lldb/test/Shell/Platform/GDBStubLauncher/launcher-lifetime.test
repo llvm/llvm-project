@@ -1,0 +1,109 @@
+# REQUIRES: system-darwin, python
+
+# The launched program's process group lives as long as the debugged process:
+# killing the process or launching again terminates it, and a detach leaves it
+# running. debugserver stands in for the program's gdb stub, and a background
+# sleep in the program's process group shows whether the group is still up.
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: %clang_host -g %t/main.c -o %t/a.out
+
+# process kill terminates the program. The port reaches it in an environment
+# variable.
+# RUN: %lldb -b -s %t/setup.lldb \
+# RUN:   -o 'settings set platform.plugin.gdb-stub-launcher.port-env-var STUB_PORT' \
+# RUN:   -o 'settings set -- platform.plugin.gdb-stub-launcher.launch-command sh %t/stub.sh %debugserver %t/a.out %t/kill.pids' \
+# RUN:   -o 'target create %t/a.out' -o 'process launch -s' -o 'process kill' \
+# RUN:   2>&1 | FileCheck %s --check-prefix=KILL
+# KILL: Process {{[0-9]+}} launched
+# KILL: Process {{[0-9]+}} exited
+# RUN: %python %t/group.py dead %t/kill.pids | FileCheck %s --check-prefix=DEAD
+# DEAD: dead
+
+# process detach leaves it running, including after quitting. The port reaches
+# it on its command line.
+# RUN: %lldb -b -s %t/setup.lldb \
+# RUN:   -o 'settings set -- platform.plugin.gdb-stub-launcher.launch-command sh %t/stub.sh %debugserver {executable} %t/detach.pids {port}' \
+# RUN:   -o 'target create %t/a.out' -o 'process launch -s' -o 'process detach' \
+# RUN:   -o 'platform shell sleep 1' 2>&1 | FileCheck %s --check-prefix=DETACH
+# DETACH: Process {{[0-9]+}} detached
+# RUN: %python %t/group.py alive %t/detach.pids | FileCheck %s --check-prefix=ALIVE
+# ALIVE: alive
+
+# Launching again terminates the previous program before starting the next.
+# RUN: %lldb -b -s %t/setup.lldb \
+# RUN:   -o 'settings set -- platform.plugin.gdb-stub-launcher.launch-command sh %t/stub.sh %debugserver {executable} %t/relaunch.pids {port}' \
+# RUN:   -o 'target create %t/a.out' -o 'process launch -s' -o 'process launch -s' \
+# RUN:   -o 'platform shell %python %t/group.py first-dead %t/relaunch.pids' \
+# RUN:   2>&1 | FileCheck %s --check-prefix=RELAUNCH
+# RELAUNCH: first launcher dead
+# RUN: %python %t/group.py dead %t/relaunch.pids | FileCheck %s --check-prefix=DEAD
+
+# Launching from a second target fails while the first target's process is
+# live, and leaves the first program running until quit.
+# RUN: not %lldb -b -s %t/setup.lldb \
+# RUN:   -o 'settings set -- platform.plugin.gdb-stub-launcher.launch-command sh %t/stub.sh %debugserver {executable} %t/second.pids {port}' \
+# RUN:   -o 'target create %t/a.out' -o 'process launch -s' \
+# RUN:   -o 'target create %t/a.out' -o 'process launch -s' \
+# RUN:   2>&1 | FileCheck %s --check-prefix=SECOND
+# SECOND: Process {{[0-9]+}} launched
+# SECOND: gdb-stub-launcher is already serving another target
+# RUN: %python %t/group.py dead %t/second.pids | FileCheck %s --check-prefix=DEAD
+
+#--- main.c
+int main() { return 0; }
+
+#--- setup.lldb
+settings set target.disable-stdio true
+settings set auto-confirm true
+platform select gdb-stub-launcher
+settings set platform.plugin.gdb-stub-launcher.timeout 30
+
+#--- stub.sh
+# Usage: stub.sh <debugserver> <program> <pid file> [port]
+# Record a process in this program's process group, then serve the gdb stub on
+# the port the platform picked, from the command line or STUB_PORT.
+sleep 120 &
+echo $! >> "$3"
+"$1" "localhost:${4:-$STUB_PORT}" "$2"
+wait
+
+#--- group.py
+"""Check the sentinel processes recorded by stub.sh.
+
+dead <file>: wait for every recorded process to exit.
+alive <file>: check every recorded process is still running, then kill them.
+first-dead <file>: check the first recorded process has exited.
+"""
+
+import os
+import signal
+import sys
+import time
+
+
+def running(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
+mode, path = sys.argv[1], sys.argv[2]
+with open(path) as f:
+    pids = [int(line) for line in f if line.strip()]
+
+if mode == "dead":
+    deadline = time.time() + 10
+    while any(map(running, pids)) and time.time() < deadline:
+        time.sleep(0.1)
+    print("alive" if any(map(running, pids)) else "dead")
+elif mode == "alive":
+    time.sleep(1)
+    print("alive" if all(map(running, pids)) else "dead")
+    for pid in pids:
+        if running(pid):
+            os.killpg(os.getpgid(pid), signal.SIGTERM)
+elif mode == "first-dead":
+    print("first launcher " + ("alive" if running(pids[0]) else "dead"))

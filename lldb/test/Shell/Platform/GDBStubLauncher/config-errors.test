@@ -1,0 +1,34 @@
+# UNSUPPORTED: system-windows
+
+# A launch with missing settings fails before anything is started, naming what
+# is missing.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g %t/main.c -o %t/a.out
+
+# RUN: not %lldb -b -o 'platform select gdb-stub-launcher' \
+# RUN:   -o 'target create %t/a.out' -o 'process launch' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=COMMAND
+# COMMAND: gdb-stub-launcher is missing settings: launch-command (platform.plugin.gdb-stub-launcher.*)
+
+# RUN: not %lldb -b -o 'platform select gdb-stub-launcher' \
+# RUN:   -o 'settings set platform.plugin.gdb-stub-launcher.launch-command true' \
+# RUN:   -o 'settings set platform.plugin.gdb-stub-launcher.connect remote-platform' \
+# RUN:   -o 'target create %t/a.out' -o 'process launch' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=REMOTE
+# REMOTE: gdb-stub-launcher is missing settings: connect-url, attach (
+
+# RUN: not %lldb -b -o 'platform select gdb-stub-launcher' \
+# RUN:   -o 'settings set platform.plugin.gdb-stub-launcher.launch-command true' \
+# RUN:   -o 'settings set platform.plugin.gdb-stub-launcher.ready-log %t/boot.log' \
+# RUN:   -o 'target create %t/a.out' -o 'process launch' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=READY
+# READY: gdb-stub-launcher is missing settings: ready-pattern (
+
+# RUN: not %lldb -b -o 'platform select gdb-stub-launcher' \
+# RUN:   -o 'settings set platform.plugin.gdb-stub-launcher.connect nope' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CONNECT
+# CONNECT: invalid enumeration value 'nope', valid values are: gdb-stub, remote-platform
+
+#--- main.c
+int main() { return 0; }

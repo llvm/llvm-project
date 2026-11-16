@@ -27,6 +27,10 @@ public:
       std::pair<std::unique_ptr<TCPSocket>, std::unique_ptr<TCPSocket>>;
   static llvm::Expected<Pair> CreatePair();
 
+  /// Returns a localhost TCP port that the system reported as free. The port
+  /// is not reserved, so another process can bind it before the caller does.
+  static llvm::Expected<uint16_t> FindFreePort();
+
   // returns port number or 0 if error
   uint16_t GetLocalPortNumber() const;
 

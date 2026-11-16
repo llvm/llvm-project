@@ -66,9 +66,6 @@ public:
   }
 
 protected:
-  /// Find a free TCP port by binding to port 0.
-  static llvm::Expected<uint16_t> FindFreeTCPPort();
-
   static auto GetArgRange(const Args &args) {
     return llvm::make_range(args.GetArgumentArrayRef().begin(),
                             args.GetArgumentArrayRef().end());
