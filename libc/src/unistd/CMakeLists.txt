@@ -85,6 +85,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  copy_file_range
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.copy_file_range
+)
+
+add_entrypoint_object(
   dup
   ALIAS
   DEPENDS
@@ -404,6 +411,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.pipe2
+)
+
+add_entrypoint_object(
+  posix_close
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.posix_close
 )
 
 add_entrypoint_object(

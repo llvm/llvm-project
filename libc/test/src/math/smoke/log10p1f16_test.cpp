@@ -39,7 +39,7 @@ TEST_F(LlvmLibcLog10p1f16Test, SpecialNumbers) {
       neg_inf,
       LIBC_NAMESPACE::log10p1f16(LIBC_NAMESPACE::fputil::cast<float16>(-1.0)),
       FE_DIVBYZERO);
-  EXPECT_MATH_ERRNO(0);
+  EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_ALL_ROUNDING(
       aNaN,

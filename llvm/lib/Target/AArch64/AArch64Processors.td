@@ -475,6 +475,9 @@ def TuneAppleM5 : SubtargetFeature<"apple-m5", "ARMProcFamily", "AppleM5",
                                     !listconcat(TuneAppleM4.Implies,
                                     [FeatureFuseFMinFMax])>;
 
+def TuneAppleM6 : SubtargetFeature<"apple-m6", "ARMProcFamily", "AppleM6",
+                                    "Apple M6", TuneAppleM5.Implies>;
+
 def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
                                     [FeatureExynosCheapAsMoveHandling,
@@ -1150,6 +1153,26 @@ def ProcessorFeatures {
                                     FeatureSME2p1, FeatureSMEB16B16, FeatureSMEF16F16,
                                     FeatureSPECRES2];
 
+  list<SubtargetFeature> AppleM6 = [HasV8_7aOps, FeatureSHA2, FeatureFPARMv8,
+                                    FeatureNEON, FeaturePerfMon, FeatureSHA3,
+                                    FeatureFullFP16, FeatureFP16FML,
+                                    FeatureAES, FeatureBF16,
+                                    FeatureWFxT,
+                                    FeatureSME, FeatureSME2,
+                                    FeatureSMEF64F64, FeatureSMEI16I64,
+                                    FeatureComplxNum, FeatureCRC, FeatureJS,
+                                    FeatureLSE, FeaturePAuth, FeatureFPAC,
+                                    FeatureRAS, FeatureRCPC, FeatureRDM,
+                                    FeatureDotProd, FeatureMatMulInt8,
+                                    FeatureMTE, FeatureCSSC, FeatureHBC,
+                                    FeatureSME2p1, FeatureSMEB16B16, FeatureSMEF16F16,
+                                    FeatureSPECRES2,
+                                    // M6 additions, up to v9.5a features
+                                    FeatureCPA, FeaturePAuthLR, FeatureRASv2,
+                                    FeatureFP8, FeatureFAMINMAX, FeatureLUT,
+                                    FeatureSMEF8F16, FeatureSMEF8F32,
+                                    FeatureSME_LUTv2];
+
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureSHA2, FeatureAES,
                                      FeaturePerfMon, FeatureNEON, FeatureFPARMv8];
   list<SubtargetFeature> ExynosM4 = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureDotProd,
@@ -1513,8 +1536,14 @@ def : ProcessorModel<"apple-m5", CycloneModel, ProcessorFeatures.AppleM5,
                      [TuneAppleM5]>;
 def : ProcessorAlias<"apple-a19", "apple-m5">;
 
+def : ProcessorModel<"apple-m6", CycloneModel, ProcessorFeatures.AppleM6,
+                     [TuneAppleM6]>;
+
+def : ProcessorAlias<"apple-a20", "apple-m6">;
+def : ProcessorAlias<"apple-s11", "apple-m6">;
+
 // Alias for the latest Apple processor model supported by LLVM.
-def : ProcessorAlias<"apple-latest", "apple-m5">;
+def : ProcessorAlias<"apple-latest", "apple-m6">;
 
 
 // Fujitsu A64FX

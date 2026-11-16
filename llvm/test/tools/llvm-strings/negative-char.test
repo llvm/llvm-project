@@ -2,7 +2,7 @@
 ## Such characters should form string delimiters like other unprintable ones,
 ## unless using an encoding where they form valid characters.
 
-# RUN: echo -n -e "z\0\200\0\302\241\0a\0" > %t
+# RUN: echo -n -e "z\0\0200\0\0302\0241\0a\0" > %t
 # RUN: llvm-strings --encoding=s --bytes 1 %t | FileCheck %s
 # RUN: llvm-strings --encoding=utf8 --bytes 1 %t | FileCheck %s --check-prefixes=CHECK,CHECK-UTF8
 # CHECK: z{{$}}
