@@ -1594,7 +1594,9 @@ public:
 
   InstructionCost
   getBitInsertCost(Type *Base, Type *Val, TTI::TargetCostKind CostKind,
-                   TTI::OperandValueInfo OffsetInfo) const override {
+                   TTI::OperandValueInfo OffsetInfo,
+                   ArrayRef<const Value *> Args,
+                   const Instruction *CtxI = nullptr) const override {
     const DataLayout &DL = this->getDataLayout();
     Type *IntTy = Type::getIntFromByteType(Base);
     Type *IntValTy = IntTy->getWithNewBitWidth(
@@ -1623,7 +1625,9 @@ public:
 
   InstructionCost
   getBitExtractCost(Type *Dst, Type *Src, TTI::TargetCostKind CostKind,
-                    TTI::OperandValueInfo OffsetInfo) const override {
+                    TTI::OperandValueInfo OffsetInfo,
+                    ArrayRef<const Value *> Args,
+                    const Instruction *CtxI = nullptr) const override {
     const DataLayout &DL = this->getDataLayout();
     Type *IntTy = Type::getIntFromByteType(Src);
     Type *IntDstTy = IntTy->getWithNewBitWidth(

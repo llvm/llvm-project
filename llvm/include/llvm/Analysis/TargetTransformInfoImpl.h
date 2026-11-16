@@ -927,13 +927,17 @@ public:
 
   virtual InstructionCost
   getBitInsertCost(Type *Base, Type *Val, TTI::TargetCostKind CostKind,
-                   TTI::OperandValueInfo OffsetInfo) const {
+                   TTI::OperandValueInfo OffsetInfo,
+                   ArrayRef<const Value *> Args,
+                   const Instruction *CtxI = nullptr) const {
     return 1;
   }
 
   virtual InstructionCost
   getBitExtractCost(Type *Dst, Type *Src, TTI::TargetCostKind CostKind,
-                    TTI::OperandValueInfo OffsetInfo) const {
+                    TTI::OperandValueInfo OffsetInfo,
+                    ArrayRef<const Value *> Args,
+                    const Instruction *CtxI = nullptr) const {
     return 1;
   }
 
@@ -1594,10 +1598,12 @@ public:
     }
     case Instruction::BitInsert:
       return TargetTTI->getBitInsertCost(Ty, Operands[1]->getType(), CostKind,
-                                         TTI::getOperandInfo(Operands[2]));
+                                         TTI::getOperandInfo(Operands[2]),
+                                         Operands, I);
     case Instruction::BitExtract:
       return TargetTTI->getBitExtractCost(Ty, Operands[0]->getType(), CostKind,
-                                          TTI::getOperandInfo(Operands[1]));
+                                          TTI::getOperandInfo(Operands[1]),
+                                          Operands, I);
     case Instruction::Store: {
       auto *SI = cast<StoreInst>(U);
       Type *ValTy = Operands[0]->getType();

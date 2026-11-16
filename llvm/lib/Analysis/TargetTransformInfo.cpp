@@ -1324,22 +1324,26 @@ InstructionCost TargetTransformInfo::getInsertExtractValueCost(
   return Cost;
 }
 
-InstructionCost
-TargetTransformInfo::getBitInsertCost(Type *Base, Type *Val,
-                                      TTI::TargetCostKind CostKind,
-                                      OperandValueInfo OffsetInfo) const {
+InstructionCost TargetTransformInfo::getBitInsertCost(
+    Type *Base, Type *Val, TTI::TargetCostKind CostKind,
+    OperandValueInfo OffsetInfo, ArrayRef<const Value *> Args,
+    const Instruction *CtxI) const {
+  assert((CtxI == nullptr || CtxI->getOpcode() == Instruction::BitInsert) &&
+         "Opcode should reflect passed instruction.");
   InstructionCost Cost =
-      TTIImpl->getBitInsertCost(Base, Val, CostKind, OffsetInfo);
+      TTIImpl->getBitInsertCost(Base, Val, CostKind, OffsetInfo, Args, CtxI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
 
-InstructionCost
-TargetTransformInfo::getBitExtractCost(Type *Dst, Type *Src,
-                                       TTI::TargetCostKind CostKind,
-                                       OperandValueInfo OffsetInfo) const {
+InstructionCost TargetTransformInfo::getBitExtractCost(
+    Type *Dst, Type *Src, TTI::TargetCostKind CostKind,
+    OperandValueInfo OffsetInfo, ArrayRef<const Value *> Args,
+    const Instruction *CtxI) const {
+  assert((CtxI == nullptr || CtxI->getOpcode() == Instruction::BitExtract) &&
+         "Opcode should reflect passed instruction.");
   InstructionCost Cost =
-      TTIImpl->getBitExtractCost(Dst, Src, CostKind, OffsetInfo);
+      TTIImpl->getBitExtractCost(Dst, Src, CostKind, OffsetInfo, Args, CtxI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
