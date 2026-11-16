@@ -618,17 +618,22 @@ public:
     /// a particular static global value should be promoted or not.
     unsigned NoRenameOnPromotion : 1;
 
+    /// This function or alias is on an ifunc's resolver path. Keep its
+    /// definition even when it is not prevailing.
+    unsigned IFuncResolver : 1;
+
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
                      GlobalValue::VisibilityTypes Visibility,
                      bool NotEligibleToImport, bool Live, bool IsLocal,
                      bool CanAutoHide, ImportKind ImportType,
-                     bool NoRenameOnPromotion)
+                     bool NoRenameOnPromotion, bool IFuncResolver = false)
         : Linkage(Linkage), Visibility(Visibility),
           NotEligibleToImport(NotEligibleToImport), Live(Live),
           DSOLocal(IsLocal), CanAutoHide(CanAutoHide),
           ImportType(static_cast<unsigned>(ImportType)), Promoted(false),
-          NoRenameOnPromotion(NoRenameOnPromotion) {}
+          NoRenameOnPromotion(NoRenameOnPromotion),
+          IFuncResolver(IFuncResolver) {}
   };
 
 private:
@@ -723,6 +728,10 @@ public:
   bool isLive() const { return Flags.Live; }
 
   void setLive(bool Live) { Flags.Live = Live; }
+
+  bool isIFuncResolver() const { return Flags.IFuncResolver; }
+
+  void setIFuncResolver() { Flags.IFuncResolver = true; }
 
   void setDSOLocal(bool Local) { Flags.DSOLocal = Local; }
 

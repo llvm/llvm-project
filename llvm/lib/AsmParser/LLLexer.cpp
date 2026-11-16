@@ -829,6 +829,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(definition);
   KEYWORD(declaration);
   KEYWORD(noRenameOnPromotion);
+  KEYWORD(ifuncResolver);
   KEYWORD(function);
   KEYWORD(insts);
   KEYWORD(funcFlags);

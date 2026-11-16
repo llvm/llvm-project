@@ -9,7 +9,7 @@
 ; Check a function that makes several calls with various profile hotness and
 ; flags, and a reference (also tests forward references to function and
 ; variables in calls and refs).
-^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold, indirect: 1), (callee: ^16, hotness: none, tail: 1, indirect: 1)), refs: (writeonly ^14, readonly ^13, ^11))))
+^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, ifuncResolver: 1), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold, indirect: 1), (callee: ^16, hotness: none, tail: 1, indirect: 1)), refs: (writeonly ^14, readonly ^13, ^11))))
 
 ;; relbf is deprecated, but we support reading old files.
 ; Function with a call that has relative block frequency instead of profile
@@ -44,7 +44,7 @@
 ^17 = gv: (guid: 16, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1, funcFlags: (readOnly: 1, returnDoesNotAlias: 1, mustBeUnreachable: 1), calls: ((callee: ^15)))))
 
 ; Alias summary with backwards reference to aliasee.
-^18 = gv: (guid: 17, summaries: (alias: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1), aliasee: ^14)))
+^18 = gv: (guid: 17, summaries: (alias: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, ifuncResolver: 1), aliasee: ^2)))
 
 ; Test all types of TypeIdInfo on function summaries.
 ^19 = gv: (guid: 18, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 4, typeIdInfo: (typeTests: (^27, ^29)))))
@@ -80,7 +80,7 @@
 ; Make sure we get back from llvm-dis essentially what we put in via llvm-as.
 ; CHECK: ^0 = module: (path: "thinlto-summary1.o", hash: (1369602428, 2747878711, 259090915, 2507395659, 1141468049))
 ; CHECK: ^1 = module: (path: "thinlto-summary2.o", hash: (2998369023, 4283347029, 1195487472, 2757298015, 1852134156))
-; CHECK: ^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold, indirect: 1), (callee: ^16, hotness: none, tail: 1, indirect: 1)), refs: (^11, readonly ^13, writeonly ^14))))
+; CHECK: ^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0, ifuncResolver: 1), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold, indirect: 1), (callee: ^16, hotness: none, tail: 1, indirect: 1)), refs: (^11, readonly ^13, writeonly ^14))))
 ;; relbf is not emitted since this is a combined summary, and that is only
 ;; emitted for per-module summaries. Additionally, it is now deprecated.
 ; CHECK: ^3 = gv: (guid: 2, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), insts: 10, calls: ((callee: ^15, tail: 1)))))
@@ -98,7 +98,7 @@
 ; CHECK: ^15 = gv: (guid: 14, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 1, live: 1, dsoLocal: 0, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), insts: 1, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0, noInline: 1, alwaysInline: 0, noUnwind: 0, mayThrow: 0, hasUnknownCall: 0, mustBeUnreachable: 0))))
 ; CHECK: ^16 = gv: (guid: 15, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), insts: 1, funcFlags: (readNone: 1, readOnly: 0, noRecurse: 1, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 1, noUnwind: 1, mayThrow: 1, hasUnknownCall: 1, mustBeUnreachable: 0))))
 ; CHECK: ^17 = gv: (guid: 16, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), insts: 1, funcFlags: (readNone: 0, readOnly: 1, noRecurse: 0, returnDoesNotAlias: 1, noInline: 0, alwaysInline: 0, noUnwind: 0, mayThrow: 0, hasUnknownCall: 0, mustBeUnreachable: 1), calls: ((callee: ^15)))))
-; CHECK: ^18 = gv: (guid: 17, summaries: (alias: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), aliasee: ^14)))
+; CHECK: ^18 = gv: (guid: 17, summaries: (alias: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0, ifuncResolver: 1), aliasee: ^2)))
 ; CHECK: ^19 = gv: (guid: 18, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), insts: 4, typeIdInfo: (typeTests: (^27, ^29)))))
 ; CHECK: ^20 = gv: (guid: 19, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), insts: 8, typeIdInfo: (typeTestAssumeVCalls: (vFuncId: (^30, offset: 16))))))
 ; CHECK: ^21 = gv: (guid: 20, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), insts: 5, typeIdInfo: (typeCheckedLoadVCalls: (vFuncId: (^28, offset: 16))))))

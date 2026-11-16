@@ -3889,6 +3889,8 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
   Out << ", importType: "
       << getImportTypeName(GlobalValueSummary::ImportKind(GVFlags.ImportType));
   Out << ", noRenameOnPromotion: " << GVFlags.NoRenameOnPromotion;
+  if (GVFlags.IFuncResolver)
+    Out << ", ifuncResolver: 1";
   Out << ")";
 
   if (Summary.getSummaryKind() == GlobalValueSummary::AliasKind)

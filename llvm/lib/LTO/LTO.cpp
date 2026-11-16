@@ -450,15 +450,15 @@ static void thinLTOResolvePrevailingGUID(
       if (C.VisibilityScheme == Config::FromPrevailing)
         Visibility = S->getVisibility();
     }
-    // Alias and aliasee can't be turned into available_externally.
+    // Aliases, aliasees and ifunc resolvers need definitions for the linker.
     // When force-import-all is used, it indicates that object linking is not
     // supported by the target. In this case, we can't change the linkage as
     // well in case the global is converted to declaration.
     // Also, if the symbol was promoted, it wouldn't have a prevailing variant,
     // but also its linkage is set correctly (to External) already.
     else if (!isa<AliasSummary>(S.get()) &&
-             !GlobalInvolvedWithAlias.count(S.get()) && !ForceImportAll &&
-             !S->wasPromoted())
+             !GlobalInvolvedWithAlias.count(S.get()) && !S->isIFuncResolver() &&
+             !ForceImportAll && !S->wasPromoted())
       S->setLinkage(GlobalValue::AvailableExternallyLinkage);
 
     // For ELF, set visibility to the computed visibility from summaries. We
