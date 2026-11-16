@@ -15,7 +15,7 @@
 // DEFAULT: <INPUT_FILE{{.*}}> blob data = '{{(/|[A-Za-z]:).*[/\\]}}original{{[/\\]}}forced.h'
 
 // Paths under the cwd are relative; paths outside it remain absolute.
-// RUN: cd %t/original && %clang_cc1 -emit-module -x c modules/module.modulemap -fmodule-name=ExplicitTypes -o pch/ExplicitTypes.pcm -fmodules -fno-implicit-modules -fmodule-file-home-is-cwd
+// RUN: cd %t/original && %clang_cc1 -emit-module -x c modules/module.modulemap -fmodule-name=ExplicitTypes -o pch/ExplicitTypes.pcm -fmodules -fno-implicit-modules -fmodule-file-home-is-cwd -fmodule-related-to-pch
 // RUN: cd %t/original && %clang_cc1 -emit-pch -x c-header headers/bridge.h -o pch/bridge.pch -fpch-base-dir-is-cwd -isysroot %t/original -fmodules -fno-implicit-modules -fmodule-map-file=modules/module.modulemap -fmodule-file=ExplicitTypes=pch/ExplicitTypes.pcm -I modules -I %t/shared -include ./forced.h -imacros ./macros.h
 // RUN: llvm-bcanalyzer -dump -disable-histogram -show-binary-blobs %t/original/pch/bridge.pch > %t/bridge.dump
 // RUN: FileCheck %s --check-prefix=PATHS --input-file=%t/bridge.dump
