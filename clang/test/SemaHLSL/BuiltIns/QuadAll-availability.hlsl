@@ -10,6 +10,9 @@
 
 // expected-no-diagnostics
 
+// TODO: Test vulkan targets after 
+// https://github.com/llvm/llvm-project/issues/243266 is resolved.
+
 bool test_availability(bool cond) {
   return QuadAll(cond);
 }
