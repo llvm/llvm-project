@@ -2,6 +2,8 @@ include "llvm/Option/OptParser.td"
 
 def WrapperOnlyOption : OptionFlag;
 def DeviceOnlyOption : OptionFlag;
+// Options that only exist for GNU-style host linkers (ld, ld.lld).
+def GNULinkerOnlyOption : OptionFlag;
 
 def help : Flag<["--"], "help">,
   HelpText<"Display available options (--help-hidden for more)">;
@@ -110,19 +112,24 @@ def output_EQ : Joined<["--"], "output=">, Alias<o>, Flags<[HelpHidden]>,
 def output : Separate<["--"], "output">, Alias<o>, Flags<[HelpHidden]>,
   HelpText<"Alias for -o">;
 
+// GNU-style library and library path options. link.exe-style linkers have no
+// such options (the driver renders them as 'foo.lib' and '-libpath:'), so they
+// are not parsed for a Windows MSVC host; see GNULinkerOnlyOption.
 def library_path : JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
+  Flags<[GNULinkerOnlyOption]>,
   HelpText<"Add <dir> to the library search path">;
-def library_path_S : Separate<["--", "-"], "library-path">, Flags<[HelpHidden]>,
-  Alias<library_path>;
-def library_path_EQ : Joined<["--", "-"], "library-path=">, Flags<[HelpHidden]>,
-  Alias<library_path>;
+def library_path_S : Separate<["--", "-"], "library-path">,
+  Flags<[GNULinkerOnlyOption, HelpHidden]>, Alias<library_path>;
+def library_path_EQ : Joined<["--", "-"], "library-path=">,
+  Flags<[GNULinkerOnlyOption, HelpHidden]>, Alias<library_path>;
 
 def library : JoinedOrSeparate<["-"], "l">, MetaVarName<"<libname>">,
+  Flags<[GNULinkerOnlyOption]>,
   HelpText<"Search for library <libname>">;
-def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
-  Alias<library>;
-def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
-  Alias<library>;
+def library_S : Separate<["--", "-"], "library">,
+  Flags<[GNULinkerOnlyOption, HelpHidden]>, Alias<library>;
+def library_EQ : Joined<["--", "-"], "library=">,
+  Flags<[GNULinkerOnlyOption, HelpHidden]>, Alias<library>;
 
 def rpath : Separate<["--", "-"], "rpath">;
 def rpath_EQ : Joined<["--", "-"], "rpath=">, Flags<[HelpHidden]>, Alias<rpath>;
