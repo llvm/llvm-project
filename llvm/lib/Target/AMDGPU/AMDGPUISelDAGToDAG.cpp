@@ -1753,6 +1753,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
   if (Subtarget->useFlatForGlobal())
     return false;
 
+  Addr = Expand32BitAddress(Addr);
   SDLoc DL(Addr);
 
   Idxen = CurDAG->getTargetConstant(0, DL, MVT::i1);
@@ -2050,6 +2051,8 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(
   int64_t OffsetVal = 0;
 
   unsigned AS = findMemSDNode(N)->getAddressSpace();
+  if (AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
+    Addr = Expand32BitAddress(Addr);
 
   bool CanHaveFlatSegmentOffsetBug =
       Subtarget->hasFlatSegmentOffsetBug() &&
@@ -2197,6 +2200,8 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
   using AMDGPU::FlatAddrSpace;
   int64_t ImmOffset = 0;
   ScaleOffset = false;
+
+  Addr = Expand32BitAddress(Addr);
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
@@ -3791,6 +3796,14 @@ bool AMDGPUDAGToDAGISel::SelectVOP3NoMods(SDValue In, SDValue &Src) const {
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectVOP3NoOpSelMods(SDValue In, SDValue &Src) const {
+  SDValue Unused;
+  if (isExtractHiElt(In, Unused))
+    return false;
+
+  return SelectVOP3NoMods(In, Src);
+}
+
 bool AMDGPUDAGToDAGISel::SelectVINTERPModsImpl(SDValue In, SDValue &Src,
                                                SDValue &SrcMods,
                                                bool OpSel) const {
@@ -5048,6 +5061,33 @@ void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
     }
     CurDAG->RemoveDeadNodes();
   } while (IsModified);
+}
+
+bool AMDGPUDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
+  switch (ConstraintID) {
+  case InlineAsm::ConstraintCode::m:
+    OutOps.push_back(Op);
+    return false;
+  case InlineAsm::ConstraintCode::RF: {
+    // flat_load/flat_store require the address in a VGPR. Always force a copy
+    // to the appropriate VGPR class.
+    const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+    MVT VT = Op.getSimpleValueType();
+    const TargetRegisterClass *VRC =
+        TRI->getVGPRClassForBitWidth(VT.getSizeInBits());
+    assert(VRC && "Expected valid VGPR class for RF constraint operand");
+    SDLoc DL(Op);
+    SDValue RCVal = CurDAG->getTargetConstant(VRC->getID(), DL, MVT::i32);
+    SDNode *Copy =
+        CurDAG->getMachineNode(AMDGPU::COPY_TO_REGCLASS, DL, VT, {Op, RCVal});
+    OutOps.push_back(SDValue(Copy, 0));
+    return false;
+  }
+  default:
+    return true;
+  }
 }
 
 AMDGPUDAGToDAGISelLegacy::AMDGPUDAGToDAGISelLegacy(TargetMachine &TM,

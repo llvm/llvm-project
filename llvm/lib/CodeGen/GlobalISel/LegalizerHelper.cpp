@@ -918,61 +918,56 @@ LegalizerHelper::createMemLibcall(MachineRegisterInfo &MRI, MachineInstr &MI,
   return LegalizerHelper::Legalized;
 }
 
-static RTLIB::Libcall getOutlineAtomicLibcall(MachineInstr &MI) {
-  unsigned Opc = MI.getOpcode();
-  auto &AtomicMI = cast<GMemOperation>(MI);
-  auto &MMO = AtomicMI.getMMO();
-  auto Ordering = MMO.getMergedOrdering();
-  LLT MemType = MMO.getMemoryType();
-  uint64_t MemSize = MemType.getSizeInBytes();
-  if (MemType.isVector())
-    return RTLIB::UNKNOWN_LIBCALL;
-
-#define LCALLS(A, B) {A##B##_RELAX, A##B##_ACQ, A##B##_REL, A##B##_ACQ_REL}
-#define LCALL5(A)                                                              \
-  LCALLS(A, 1), LCALLS(A, 2), LCALLS(A, 4), LCALLS(A, 8), LCALLS(A, 16)
+static unsigned getAtomicLibcallISDOpcode(unsigned Opc) {
   switch (Opc) {
   case TargetOpcode::G_ATOMIC_CMPXCHG:
-  case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
-    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_CAS)};
-    return getOutlineAtomicHelper(LC, Ordering, MemSize);
-  }
-  case TargetOpcode::G_ATOMICRMW_XCHG: {
-    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_SWP)};
-    return getOutlineAtomicHelper(LC, Ordering, MemSize);
-  }
+  case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS:
+    return ISD::ATOMIC_CMP_SWAP;
+  case TargetOpcode::G_ATOMICRMW_XCHG:
+    return ISD::ATOMIC_SWAP;
   case TargetOpcode::G_ATOMICRMW_ADD:
-  case TargetOpcode::G_ATOMICRMW_SUB: {
-    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDADD)};
-    return getOutlineAtomicHelper(LC, Ordering, MemSize);
-  }
-  case TargetOpcode::G_ATOMICRMW_AND: {
-    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDCLR)};
-    return getOutlineAtomicHelper(LC, Ordering, MemSize);
-  }
-  case TargetOpcode::G_ATOMICRMW_OR: {
-    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDSET)};
-    return getOutlineAtomicHelper(LC, Ordering, MemSize);
-  }
-  case TargetOpcode::G_ATOMICRMW_XOR: {
-    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDEOR)};
-    return getOutlineAtomicHelper(LC, Ordering, MemSize);
-  }
+  case TargetOpcode::G_ATOMICRMW_SUB:
+    return ISD::ATOMIC_LOAD_ADD;
+  case TargetOpcode::G_ATOMICRMW_AND:
+    return ISD::ATOMIC_LOAD_CLR;
+  case TargetOpcode::G_ATOMICRMW_OR:
+    return ISD::ATOMIC_LOAD_OR;
+  case TargetOpcode::G_ATOMICRMW_XOR:
+    return ISD::ATOMIC_LOAD_XOR;
   default:
-    return RTLIB::UNKNOWN_LIBCALL;
+    llvm_unreachable("unsupported opcode");
   }
-#undef LCALLS
-#undef LCALL5
 }
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::createAtomicLibcall(MachineInstr &MI) const {
   auto &Ctx = MIRBuilder.getContext();
+  unsigned Opc = MI.getOpcode();
+
+  if (!Libcalls) // FIXME: Should be mandatory
+    return LegalizerHelper::UnableToLegalize;
+
+  const MachineMemOperand &MMO = cast<GMemOperation>(MI).getMMO();
+  LLT MemType = MMO.getMemoryType();
+  MVT VT =
+      MemType.isVector() ? MVT() : MVT::getIntegerVT(MemType.getSizeInBits());
+  RTLIB::AtomicLibcall LC = RTLIB::selectAtomicLibcall(
+      *Libcalls, getAtomicLibcallISDOpcode(Opc), MMO.getMergedOrdering(), VT);
+
+  // Unsupported libcall on the target.
+  if (LC.Impl == RTLIB::Unsupported) {
+    LLVM_DEBUG(dbgs() << ".. .. Could not find libcall name for "
+                      << MIRBuilder.getTII().getName(Opc) << "\n");
+    return LegalizerHelper::UnableToLegalize;
+  }
+
+  // TODO: Support __sync_* calls, which take the pointer first.
+  if (!LC.IsOutline)
+    return LegalizerHelper::UnableToLegalize;
 
   Type *RetTy;
   SmallVector<Register> RetRegs;
   SmallVector<CallLowering::ArgInfo, 3> Args;
-  unsigned Opc = MI.getOpcode();
   switch (Opc) {
   case TargetOpcode::G_ATOMIC_CMPXCHG:
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
@@ -1019,25 +1014,12 @@ LegalizerHelper::createAtomicLibcall(MachineInstr &MI) const {
     llvm_unreachable("unsupported opcode");
   }
 
-  if (!Libcalls) // FIXME: Should be mandatory
-    return LegalizerHelper::UnableToLegalize;
-
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
-  RTLIB::Libcall RTLibcall = getOutlineAtomicLibcall(MI);
-  RTLIB::LibcallImpl RTLibcallImpl = Libcalls->getLibcallImpl(RTLibcall);
-
-  // Unsupported libcall on the target.
-  if (RTLibcallImpl == RTLIB::Unsupported) {
-    LLVM_DEBUG(dbgs() << ".. .. Could not find libcall name for "
-                      << MIRBuilder.getTII().getName(Opc) << "\n");
-    return LegalizerHelper::UnableToLegalize;
-  }
-
   CallLowering::CallLoweringInfo Info;
-  Info.CallConv = Libcalls->getLibcallImplCallingConv(RTLibcallImpl);
+  Info.CallConv = Libcalls->getLibcallImplCallingConv(LC.Impl);
 
   StringRef LibcallName =
-      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(RTLibcallImpl);
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LC.Impl);
   Info.Callee = MachineOperand::CreateES(LibcallName.data());
   Info.OrigRet = CallLowering::ArgInfo(RetRegs, RetTy, 0);
 

@@ -509,9 +509,6 @@ private:
                      int OpIdx = -1) const;
   void renderFPImm64(MachineInstrBuilder &MIB, const MachineInstr &MI,
                      int OpIdx = -1) const;
-  void renderFPImm32SIMDModImmType4(MachineInstrBuilder &MIB,
-                                    const MachineInstr &MI,
-                                    int OpIdx = -1) const;
 
   // Materialize a GlobalValue or BlockAddress using a movz+movk sequence.
   void materializeLargeCMVal(MachineInstr &I, const Value *V, unsigned OpFlags);
@@ -7126,7 +7123,7 @@ AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
   // to generate a NEG instead of a SUB from a constant.
   Register SubSrcReg;
   int64_t SubImm;
-  if (MRI.hasOneUse(ShAmtReg) &&
+  if (MRI.hasOneNonDBGUse(ShAmtReg) &&
       mi_match(ShAmtReg, MRI, m_GSub(m_ICst(SubImm), m_Reg(SubSrcReg))) &&
       SubImm != 0 && (SubImm % ShiftWidth == 0)) {
     return {{[=](MachineInstrBuilder &MIB) {
@@ -7150,7 +7147,7 @@ AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
   // to generate a NOT (MVN) instead of a SUB from a constant.
   Register NotSrcReg;
   int64_t NotImm;
-  if (MRI.hasOneUse(ShAmtReg) &&
+  if (MRI.hasOneNonDBGUse(ShAmtReg) &&
       mi_match(ShAmtReg, MRI, m_GSub(m_ICst(NotImm), m_Reg(NotSrcReg))) &&
       (NotImm % ShiftWidth == ShiftWidth - 1)) {
     return {{[=](MachineInstrBuilder &MIB) {
@@ -8205,17 +8202,6 @@ void AArch64InstructionSelector::renderFPImm64(MachineInstrBuilder &MIB,
          "Expected G_FCONSTANT");
   MIB.addImm(
       AArch64_AM::getFP64Imm(MI.getOperand(1).getFPImm()->getValueAPF()));
-}
-
-void AArch64InstructionSelector::renderFPImm32SIMDModImmType4(
-    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
-  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT && OpIdx == -1 &&
-         "Expected G_FCONSTANT");
-  MIB.addImm(AArch64_AM::encodeAdvSIMDModImmType4(MI.getOperand(1)
-                                                      .getFPImm()
-                                                      ->getValueAPF()
-                                                      .bitcastToAPInt()
-                                                      .getZExtValue()));
 }
 
 bool AArch64InstructionSelector::isLoadStoreOfNumBytes(

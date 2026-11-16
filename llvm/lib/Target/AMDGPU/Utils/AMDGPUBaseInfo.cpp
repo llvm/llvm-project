@@ -2578,8 +2578,8 @@ unsigned hasKernargPreload(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureKernargPreload);
 }
 
-int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
-                         int32_t ArgNumVGPR) {
+uint32_t getTotalNumVGPRs(bool has90AInsts, uint32_t ArgNumAGPR,
+                          uint32_t ArgNumVGPR) {
   if (has90AInsts && ArgNumAGPR)
     return alignTo(ArgNumVGPR, 4) + ArgNumAGPR;
   return std::max(ArgNumVGPR, ArgNumAGPR);
