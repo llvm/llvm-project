@@ -4666,31 +4666,36 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
   }
 
   return cir::ConstVectorAttr::get(
-      getType(), mlir::ArrayAttr::get(getContext(), elements));
+      mlir::cast<cir::VectorType>(getType()),
+      mlir::ArrayAttr::get(getContext(), elements));
 }
 
 LogicalResult cir::VecShuffleOp::verify() {
-  if (getVec1().getType().isScalable() || getVec2().getType().isScalable() ||
-      getResult().getType().isScalable())
+  if (!mlir::isa<cir::VectorType>(getType()))
+    return success();
+
+  auto vec1Ty = mlir::cast<cir::VectorType>(getVec1().getType());
+  auto vec2Ty = mlir::cast<cir::VectorType>(getVec2().getType());
+  auto resultTy = mlir::cast<cir::VectorType>(getResult().getType());
+  if (vec1Ty.isScalable() || vec2Ty.isScalable() || resultTy.isScalable())
     return emitOpError() << "scalable vectors are not supported";
 
   // The number of elements in the indices array must match the number of
   // elements in the result type.
-  if (getIndices().size() != getResult().getType().getFixedSize()) {
+  if (getIndices().size() != resultTy.getFixedSize()) {
     return emitOpError() << ": the number of elements in " << getIndices()
-                         << " and " << getResult().getType() << " don't match";
+                         << " and " << resultTy << " don't match";
   }
 
   // The element types of the two input vectors and of the result type must
   // match.
-  if (getVec1().getType().getElementType() !=
-      getResult().getType().getElementType()) {
+  if (vec1Ty.getElementType() != resultTy.getElementType()) {
     return emitOpError() << ": element types of " << getVec1().getType()
-                         << " and " << getResult().getType() << " don't match";
+                         << " and " << resultTy << " don't match";
   }
 
-  const uint64_t maxValidIndex = getVec1().getType().getFixedSize() +
-                                 getVec2().getType().getFixedSize() - 1;
+  const uint64_t maxValidIndex =
+      vec1Ty.getFixedSize() + vec2Ty.getFixedSize() - 1;
   if (llvm::any_of(
           getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
             return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;
