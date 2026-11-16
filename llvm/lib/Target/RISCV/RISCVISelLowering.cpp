@@ -9665,11 +9665,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (Op.getSimpleValueType().isFixedLengthVector()) {
       if (Subtarget.hasStdExtP()) {
         SDValue ShAmtVec = Op.getOperand(1);
-        SDValue SplatVal;
-        if (ShAmtVec.getOpcode() == ISD::SPLAT_VECTOR)
-          SplatVal = ShAmtVec.getOperand(0);
-        else if (ShAmtVec.getOpcode() == ISD::BUILD_VECTOR)
-          SplatVal = cast<BuildVectorSDNode>(ShAmtVec)->getSplatValue();
+        SDValue SplatVal = DAG.getSplatValue(ShAmtVec, /*LegalTypes=*/true);
 
         if (!SplatVal)
           return SDValue();
