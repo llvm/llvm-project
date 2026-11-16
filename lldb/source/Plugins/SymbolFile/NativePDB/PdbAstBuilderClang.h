@@ -51,6 +51,8 @@ struct DeclStatus {
   bool resolved = false;
 };
 
+struct CVTagRecord;
+
 class PdbAstBuilderClang : public PdbAstBuilder {
 public:
   PdbAstBuilderClang(TypeSystemClang &clang);
@@ -74,6 +76,8 @@ public:
 
   CompilerDeclContext FindNamespaceDecl(CompilerDeclContext parent_ctx,
                                         llvm::StringRef name) override;
+
+  std::string GetQualifiedName(llvm::StringRef name) override;
 
   void Dump(Stream &stream, llvm::StringRef filter, bool show_color) override;
 
@@ -124,8 +128,7 @@ private:
   clang::QualType
   CreateModifierType(const llvm::codeview::ModifierRecord &modifier);
   clang::QualType CreateArrayType(const llvm::codeview::ArrayRecord &array);
-  clang::QualType CreateRecordType(PdbTypeSymId id,
-                                   const llvm::codeview::TagRecord &record);
+  clang::QualType CreateRecordType(PdbTypeSymId id, const CVTagRecord &record);
   clang::QualType CreateEnumType(PdbTypeSymId id,
                                  const llvm::codeview::EnumRecord &record);
   clang::QualType
@@ -165,6 +168,8 @@ private:
   GetOrCreateDeclContextForCompilandSymbol(PdbCompilandSymId uid);
 
   clang::QualType CreateSimpleType(TypeIndex ti);
+
+  bool IsDynamicTagRecord(const CVTagRecord &tag);
 
   TypeSystemClang &m_clang;
 

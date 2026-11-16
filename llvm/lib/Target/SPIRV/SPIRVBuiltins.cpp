@@ -806,7 +806,7 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   StringRef Name = Call->Builtin->name();
-  // The registry prefixes atomic_fetch_min/max with "s_" or "u_".
+  // The registry prefixes atomic_fetch_min/max with "s_", "u_" or "f".
   bool IsOCL20 =
       Name.contains("atomic_fetch_") || Name.starts_with("atomic_exchange");
   SPIRV::Scope::Scope DefaultScope =
@@ -1888,6 +1888,8 @@ static bool generateAtomicInst(const SPIRV::IncomingCall *Call,
   case SPIRV::OpAtomicSMin:
   case SPIRV::OpAtomicUMax:
   case SPIRV::OpAtomicUMin:
+  case SPIRV::OpAtomicFMinEXT:
+  case SPIRV::OpAtomicFMaxEXT:
     return buildAtomicRMWInst(Call, Opcode, MIRBuilder, GR);
   case SPIRV::OpMemoryBarrier:
     return buildBarrierInst(Call, SPIRV::OpMemoryBarrier, MIRBuilder, GR);
@@ -3176,16 +3178,20 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
     uint64_t NumElem = ConstOp.getCImm()->getValue().getZExtValue();
 
     Register LocalSizeArrayReg = Call->Arguments[LocalSizeElemPtrIdx];
+    SPIRVTypeInst PointeeTy =
+        GR->getPointeeType(GR->getSPIRVTypeForVReg(LocalSizeArrayReg));
+    bool IsArrayPtr = PointeeTy && PointeeTy->getOpcode() == SPIRV::OpTypeArray;
 
     for (unsigned i = 0; i < NumElem; ++i) {
       Register Reg = MRI->createVirtualRegister(&SPIRV::pIDRegClass);
       auto GEPInst = MIRBuilder.buildIntrinsic(
           Intrinsic::spv_gep, ArrayRef<Register>{Reg}, true, false);
       GEPInst
-          .addImm(0)                                        // In bound.
-          .addUse(LocalSizeArrayReg)                        // Base pointer.
-          .addUse(buildConstantIntReg32(0, MIRBuilder, GR)) // Indices.
-          .addUse(buildConstantIntReg32(i, MIRBuilder, GR));
+          .addImm(0)                  // In bound.
+          .addUse(LocalSizeArrayReg); // Base pointer.
+      if (IsArrayPtr)
+        GEPInst.addUse(buildConstantIntReg32(0, MIRBuilder, GR));
+      GEPInst.addUse(buildConstantIntReg32(i, MIRBuilder, GR));
       LocalSizes.push_back(Reg);
     }
   }

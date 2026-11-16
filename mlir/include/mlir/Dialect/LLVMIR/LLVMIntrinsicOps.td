@@ -125,24 +125,21 @@ def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32Attr:$bit);
 }
 
-class LLVM_PowFI<string func> :
-    LLVM_OneResultIntrOp<func, [], [0,1],
-        [Pure], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
+def LLVM_CopySignOp : LLVM_BinarySameArgsIntrOpF<"copysign">;
+def LLVM_ExpOp : LLVM_UnaryIntrOpF<"exp">;
+def LLVM_Exp2Op : LLVM_UnaryIntrOpF<"exp2">;
+def LLVM_Exp10Op : LLVM_UnaryIntrOpF<"exp10">;
+def LLVM_LoadExpOp : LLVM_OneResultIntrOp<"ldexp", [], [0,1],
+    [Pure, SameOperandsShape], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
         /*requiresFastmath=*/1> {
     let arguments =
         (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
-            AnySignlessInteger:$power,
+            LLVM_ScalarOrVectorOf<AnySignlessInteger>:$exp,
             DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
     let assemblyFormat = "`(` operands `)` (`fastmath` `` $fastmathFlags^)? "
             "attr-dict `:` "
             "functional-type(operands, results)";
 }
-
-def LLVM_CopySignOp : LLVM_BinarySameArgsIntrOpF<"copysign">;
-def LLVM_ExpOp : LLVM_UnaryIntrOpF<"exp">;
-def LLVM_Exp2Op : LLVM_UnaryIntrOpF<"exp2">;
-def LLVM_Exp10Op : LLVM_UnaryIntrOpF<"exp10">;
-def LLVM_LoadExpOp : LLVM_PowFI<"ldexp">;
 def LLVM_FractionExpOp : LLVM_TwoResultIntrOp<"frexp", [0, 1], [],
     [Pure], /*requiresFastmath=*/1> {
     let arguments =
@@ -172,7 +169,17 @@ def LLVM_RoundOp : LLVM_UnaryIntrOpF<"round">;
 def LLVM_FTruncOp : LLVM_UnaryIntrOpF<"trunc">;
 def LLVM_SqrtOp : LLVM_UnaryIntrOpF<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrOpF<"pow">;
-def LLVM_PowIOp : LLVM_PowFI<"powi">;
+def LLVM_PowIOp : LLVM_OneResultIntrOp<"powi", [], [0,1],
+    [Pure], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
+            /*requiresFastmath=*/1> {
+    let arguments =
+      (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+           AnySignlessInteger:$power,
+           DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+    let assemblyFormat = "`(` operands `)` (`fastmath` `` $fastmathFlags^)? "
+        "attr-dict `:` "
+        "functional-type(operands, results)";
+}
 def LLVM_RintOp : LLVM_UnaryIntrOpF<"rint">;
 def LLVM_NearbyintOp : LLVM_UnaryIntrOpF<"nearbyint">;
 class LLVM_IntRoundIntrOpBase<string func, Type element = LLVM_AnyFloat> :
@@ -259,13 +266,15 @@ class LLVM_MemcpyIntrOpBase<string name> :
     LLVM_ZeroResultIntrOp<name, [0, 1, 2],
     [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
-     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
+     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
+     DeclareOpInterfaceMethods<TBAAStructOpInterface>],
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
     /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
     /*immArgPositions=*/[3], /*immArgAttrNames=*/["isVolatile"]> {
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
-                  AnySignlessInteger:$len, I1Attr:$isVolatile);
+                  AnySignlessInteger:$len, I1Attr:$isVolatile,
+                  OptionalAttr<LLVM_TBAAStructFieldArrayAttr>:$tbaa_struct);
   // Append the arguments defined by LLVM_IntrOpBase.
   let arguments = !con(args, baseArgs);
   let builders = [
@@ -277,11 +286,19 @@ class LLVM_MemcpyIntrOpBase<string name> :
     OpBuilder<(ins "Value":$dst, "Value":$src, "Value":$len,
                    "IntegerAttr":$isVolatile), [{
       build($_builder, $_state, dst, src, len, isVolatile,
+            /*tbaa_struct=*/nullptr,
             /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
             /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
             /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
     }]>
   ];
+
+  // The generated builder writes the alias metadata; tbaa.struct is specific to
+  // the aggregate-copy intrinsics, so it is appended here rather than in the
+  // shared alias code, which also covers loads and stores.
+  let llvmBuilder = baseLlvmBuilder # setAccessGroupsMetadataCode
+      # setAliasAnalysisMetadataCode # setTBAAStructMetadataCode
+      # baseLlvmBuilderArgAndResultAttrs # baseLlvmBuilderCoda;
 }
 
 def LLVM_MemcpyOp : LLVM_MemcpyIntrOpBase<"memcpy">;
@@ -291,13 +308,15 @@ def LLVM_MemcpyInlineOp :
     LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2],
     [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
-     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
+     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
+     DeclareOpInterfaceMethods<TBAAStructOpInterface>],
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
     /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
     /*immArgPositions=*/[2, 3], /*immArgAttrNames=*/["len", "isVolatile"]> {
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
-                  APIntAttr:$len, I1Attr:$isVolatile);
+                  APIntAttr:$len, I1Attr:$isVolatile,
+                  OptionalAttr<LLVM_TBAAStructFieldArrayAttr>:$tbaa_struct);
   // Append the arguments defined by LLVM_IntrOpBase.
   let arguments = !con(args, baseArgs);
   let builders = [
@@ -309,11 +328,17 @@ def LLVM_MemcpyInlineOp :
     OpBuilder<(ins "Value":$dst, "Value":$src, "IntegerAttr":$len,
                    "IntegerAttr":$isVolatile), [{
       build($_builder, $_state, dst, src, len, isVolatile,
+            /*tbaa_struct=*/nullptr,
             /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
             /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
             /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
     }]>
   ];
+
+  // Same as the memcpy base: tbaa.struct is specific to the aggregate copies.
+  let llvmBuilder = baseLlvmBuilder # setAccessGroupsMetadataCode
+      # setAliasAnalysisMetadataCode # setTBAAStructMetadataCode
+      # baseLlvmBuilderArgAndResultAttrs # baseLlvmBuilderCoda;
 }
 
 def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2],
@@ -1717,6 +1742,10 @@ def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
   let assemblyFormat = "`failureKind` `=` $failureKind attr-dict";
 }
 
+//
+// Vector intrinsics.
+//
+
 /// Create a call to vscale intrinsic.
 def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
 
@@ -1811,6 +1840,7 @@ def LLVM_vector_extract
   }];
 }
 
+/// Interleave2
 def LLVM_vector_interleave2
     : LLVM_OneResultIntrOp<"vector.interleave2",
         /*overloadedResults=*/[0], /*overloadedOperands=*/[],
@@ -1825,11 +1855,22 @@ def LLVM_vector_interleave2
         ]>,
         Arguments<(ins LLVM_AnyVector:$vec1, LLVM_AnyVector:$vec2)>;
 
+/// Deinterleave2
 def LLVM_vector_deinterleave2
     : LLVM_OneResultIntrOp<"vector.deinterleave2",
         /*overloadedResults=*/[], /*overloadedOperands=*/[0],
         /*traits=*/[Pure]>,
         Arguments<(ins LLVM_AnyVector:$vec)>;
+
+/// Repeat
+def LLVM_vector_repeat
+    : LLVM_OneResultIntrOp<"vector.repeat",
+        /*overloadedResults=*/[0], /*overloadedOperands=*/[0],
+        /*traits=*/[Pure]>,
+        Arguments<(ins LLVM_AnyVector:$vec)> {
+  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+                       "functional-type(operands, results)";
+}
 
 //
 // LLVM Vector Predication operations.

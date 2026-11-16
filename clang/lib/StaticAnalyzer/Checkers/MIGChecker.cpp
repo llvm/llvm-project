@@ -272,14 +272,14 @@ void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
   if (mayBeSuccess(V, C))
     return;
 
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return;
 
   auto R = std::make_unique<PathSensitiveBugReport>(
       BT,
-      "MIG callback fails with error after deallocating argument value. "
-      "This is a use-after-free vulnerability because the caller will try to "
+      "MIG callback fails with error after deallocating argument value; "
+      "this is a use-after-free vulnerability because the caller will try to "
       "deallocate it again",
       N);
 

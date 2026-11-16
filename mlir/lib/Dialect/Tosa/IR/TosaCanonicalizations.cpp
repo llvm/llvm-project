@@ -250,7 +250,7 @@ void DepthwiseConv2DOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 struct AvgPool2dAdaptiveToAvgPool2d
     : public OpRewritePattern<tosa::AvgPool2dAdaptiveOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::AvgPool2dAdaptiveOp op,
                                 PatternRewriter &rewriter) const override {
@@ -274,7 +274,7 @@ struct AvgPool2dAdaptiveToAvgPool2d
 };
 
 struct AvgPool2dIsNoOp : public OpRewritePattern<tosa::AvgPool2dOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::AvgPool2dOp op,
                                 PatternRewriter &rewriter) const override {
@@ -321,7 +321,7 @@ void AvgPool2dAdaptiveOp::getCanonicalizationPatterns(
 }
 
 struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
                                 PatternRewriter &rewriter) const override {
@@ -369,7 +369,7 @@ void MaxPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 struct MaxPool2dAdaptiveToMaxPool2d
     : public OpRewritePattern<tosa::MaxPool2dAdaptiveOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::MaxPool2dAdaptiveOp op,
                                 PatternRewriter &rewriter) const override {
@@ -491,7 +491,7 @@ LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
 
 struct ConsolidateTransposeOptimization
     : public OpRewritePattern<tosa::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
@@ -529,7 +529,7 @@ struct ConsolidateTransposeOptimization
 
 // Determines the case when tosa.transpose is a tosa.reshape operation.
 struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
@@ -590,7 +590,7 @@ void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::ClampOp op,
                                 PatternRewriter &rewriter) const override {
@@ -599,6 +599,9 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
     auto inputElementType = inputType.getElementType();
 
     if (isa<FloatType>(inputElementType)) {
+      if (op.getNanMode() == tosa::NanPropagationMode::IGNORE)
+        return failure();
+
       // Unlike integer types, floating point types can represent infinity.
       const auto minClamp =
           llvm::cast<mlir::FloatAttr>(op.getMinValAttr()).getValue();
@@ -1918,12 +1921,14 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   // synthesize a zero shift for other data type.
   int32_t shift = 0;
   if (resultETy.isInteger(32)) {
-    ElementsAttr shift_elem;
+    ElementsAttr shiftElem;
     if (getShift().getImpl()) {
-      if (!matchPattern(getShift(), m_Constant(&shift_elem)))
+      if (!matchPattern(getShift(), m_Constant(&shiftElem)))
         // cannot be folded when the shift value is unknown.
         return {};
-      shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+      shift = shiftElem.getValues<IntegerAttr>()[0].getInt();
+      if (shift < 0 || shift > 63)
+        return {};
     }
   }
 
@@ -2060,10 +2065,12 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
     }
 
     if (llvm::isa<FloatType>(inETy) && llvm::isa<IntegerType>(outETy)) {
+      auto floatVal = operand.getSplatValue<APFloat>();
+      if (outETy.isInteger(1))
+        return SplatElementsAttr::get(outTy, !floatVal.isZero());
       auto unsign = llvm::cast<IntegerType>(outETy).isUnsignedInteger();
       auto intVal = APSInt(
           llvm::cast<IntegerType>(outETy).getIntOrFloatBitWidth(), unsign);
-      auto floatVal = operand.getSplatValue<APFloat>();
       bool exact;
       floatVal.convertToInteger(intVal, llvm::RoundingMode::NearestTiesToEven,
                                 &exact);
@@ -2296,7 +2303,7 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
     }
 
     if (sizeMatchesInput)
-      return getInput1();
+      return foldToInputIfTypeMatches(getType(), getInput1());
   }
 
   // The following checks require the input to be a constant

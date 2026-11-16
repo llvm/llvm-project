@@ -52,11 +52,13 @@ define void @test_stream_sd(ptr %p, <2 x double> %a) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movntsd %xmm0, (%eax)
+; X86-NEXT:    sfence
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_stream_sd:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movntsd %xmm0, (%rdi)
+; X64-NEXT:    sfence
 ; X64-NEXT:    retq
   %1 = extractelement <2 x double> %a, i64 0
   store double %1, ptr %p, align 1, !nontemporal !1
@@ -68,11 +70,13 @@ define void @test_mm_stream_ss(ptr %p, <4 x float> %a) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movntss %xmm0, (%eax)
+; X86-NEXT:    sfence
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_stream_ss:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movntss %xmm0, (%rdi)
+; X64-NEXT:    sfence
 ; X64-NEXT:    retq
   %1 = extractelement <4 x float> %a, i64 0
   store float %1, ptr %p, align 1, !nontemporal !1

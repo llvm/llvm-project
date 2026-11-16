@@ -112,7 +112,7 @@ public:
     DynamicAllocLValue V;
     uintptr_t Combined =
         reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
-    V.AllocKind = Combined & (1 << NumAllocKindBits) - 1;
+    V.AllocKind = Combined & ((1 << NumAllocKindBits) - 1);
     V.Index = Combined >> NumAllocKindBits;
     return V;
   }

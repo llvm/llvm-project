@@ -57,7 +57,9 @@ class TargetAPITestCase(TestBase):
         self.build()
         self.get_description()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureAll(
+        oslist=["windows"], debug_info=no_match(["pdb"]), bugnumber="llvm.org/pr21765"
+    )
     def test_resolve_symbol_context_with_address(self):
         """Exercise SBTarget.ResolveSymbolContextForAddress() API."""
         self.build()
@@ -183,7 +185,6 @@ class TargetAPITestCase(TestBase):
         process = target.LaunchSimple(
             ["foo", "bar"], ["baz"], self.get_process_working_directory()
         )
-        process.Continue()
         self.assertState(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertIn("arg: foo", output)
@@ -193,7 +194,6 @@ class TargetAPITestCase(TestBase):
         self.runCmd("setting set target.run-args foo")
         self.runCmd("setting set target.env-vars bar=baz")
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        process.Continue()
         self.assertState(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertIn("arg: foo", output)
@@ -202,14 +202,12 @@ class TargetAPITestCase(TestBase):
         # Clear all the run args set above.
         self.runCmd("setting clear target.run-args")
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertNotIn("arg: foo", output)
 
         self.runCmd("settings set target.disable-stdio true")
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        process.Continue()
         self.assertState(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertEqual(output, "")
@@ -380,6 +378,7 @@ class TargetAPITestCase(TestBase):
             False,
             error,
         )
+        self.assertSuccess(error)
         process.Continue()
         # self.runCmd("process status")
         if lldb.remote_platform:

@@ -2822,7 +2822,6 @@ std::optional<SmallVector<OpFoldResult>> AffineForOp::getLoopUpperBounds() {
 }
 
 std::optional<APInt> AffineForOp::getStaticTripCount() {
-  MLIRContext *context = getContext();
   int64_t step = getStepAsInt();
   if (step <= 0)
     return std::nullopt;
@@ -2845,15 +2844,11 @@ std::optional<APInt> AffineForOp::getStaticTripCount() {
   // expression (divided by the step) provides the expressions for the trip
   // count map.
   AffineValueMap ubValueMap(ubMap, getUpperBoundOperands());
-
-  SmallVector<AffineExpr, 4> lbSplatExpr(ubValueMap.getNumResults(),
-                                         lbMap.getResult(0));
-  auto lbMapSplat = AffineMap::get(lbMap.getNumDims(), lbMap.getNumSymbols(),
-                                   lbSplatExpr, context);
-  AffineValueMap lbSplatValueMap(lbMapSplat, getLowerBoundOperands());
+  AffineValueMap lbValueMap(lbMap, getLowerBoundOperands());
 
   AffineValueMap tripCountValueMap;
-  AffineValueMap::difference(ubValueMap, lbSplatValueMap, &tripCountValueMap);
+  AffineValueMap::cartesianProductDifference(ubValueMap, lbValueMap,
+                                             &tripCountValueMap);
 
   // Take the min if all trip counts are constant.
   std::optional<uint64_t> tripCount;
@@ -5090,11 +5085,10 @@ SmallVector<OpFoldResult> AffineDelinearizeIndexOp::getPaddedBasis() {
 }
 
 namespace {
-
 // Drops delinearization indices that correspond to unit-extent basis
 struct DropUnitExtentBasis
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
                                 PatternRewriter &rewriter) const override {
@@ -5156,7 +5150,7 @@ struct DropUnitExtentBasis
 /// in-bounds the way the outputs of the delinearization would be.
 struct CancelDelinearizeOfLinearizeDisjointExactTail
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
                                 PatternRewriter &rewriter) const override {
@@ -5227,7 +5221,7 @@ struct CancelDelinearizeOfLinearizeDisjointExactTail
 /// where the original %1:4 is replaced by %1:2 ++ %2:2
 struct SplitDelinearizeSpanningLastLinearizeArg final
     : OpRewritePattern<affine::AffineDelinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
                                 PatternRewriter &rewriter) const override {
@@ -5460,7 +5454,7 @@ namespace {
 /// the operation isn't asserted to be `disjoint`.
 struct DropLinearizeUnitComponentsIfDisjointOrZero final
     : OpRewritePattern<affine::AffineLinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp op,
                                 PatternRewriter &rewriter) const override {
@@ -5557,7 +5551,7 @@ OpFoldResult computeProduct(Location loc, OpBuilder &builder,
 /// becoming `%t = affine.linearize_index [%x, %c0] by (64, 16)`
 struct CancelLinearizeOfDelinearizePortion final
     : OpRewritePattern<affine::AffineLinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
 private:
   // Struct representing a case where the cancellation pattern
@@ -5737,7 +5731,7 @@ public:
 /// to `affine.linearize_index [...a] by (...b)` in all cases.
 struct DropLinearizeLeadingZero final
     : OpRewritePattern<affine::AffineLinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp op,
                                 PatternRewriter &rewriter) const override {

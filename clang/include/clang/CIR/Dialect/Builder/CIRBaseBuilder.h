@@ -16,7 +16,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -29,38 +29,17 @@
 
 namespace cir {
 
-enum class OverflowBehavior {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
+/// No-wrap flags of a pointer offset computation: the subset of
+/// llvm::GEPNoWrapFlags that `cir.get_element` carries as its `in_bounds` and
+/// `no_unsigned_wrap` properties.
+enum class PtrOffsetFlags {
   None = 0,
-  NoSignedWrap = 1 << 0,
+  InBounds = 1 << 0,
   NoUnsignedWrap = 1 << 1,
-  Saturated = 1 << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/NoUnsignedWrap)
 };
-
-constexpr OverflowBehavior operator|(OverflowBehavior a, OverflowBehavior b) {
-  return static_cast<OverflowBehavior>(llvm::to_underlying(a) |
-                                       llvm::to_underlying(b));
-}
-
-constexpr OverflowBehavior operator&(OverflowBehavior a, OverflowBehavior b) {
-  return static_cast<OverflowBehavior>(llvm::to_underlying(a) &
-                                       llvm::to_underlying(b));
-}
-
-constexpr OverflowBehavior &operator|=(OverflowBehavior &a,
-                                       OverflowBehavior b) {
-  a = a | b;
-  return a;
-}
-
-constexpr OverflowBehavior &operator&=(OverflowBehavior &a,
-                                       OverflowBehavior b) {
-  a = a & b;
-  return a;
-}
-
-constexpr bool testFlag(OverflowBehavior ob, OverflowBehavior flag) {
-  return (ob & flag) != OverflowBehavior::None;
-}
 
 class CIRBaseBuilderTy : public mlir::OpBuilder {
 
@@ -69,11 +48,22 @@ public:
       : mlir::OpBuilder(&mlirContext) {}
   CIRBaseBuilderTy(mlir::OpBuilder &builder) : mlir::OpBuilder(builder) {}
 
+  // mlir::Builder's float getters return builtin types, which CIR types don't
+  // accept as elements. Use CIR float types, such as cir::SingleType.
+  mlir::FloatType getBF16Type() = delete;
+  mlir::FloatType getF16Type() = delete;
+  mlir::FloatType getTF32Type() = delete;
+  mlir::FloatType getF32Type() = delete;
+  mlir::FloatType getF64Type() = delete;
+  mlir::FloatType getF80Type() = delete;
+  mlir::FloatType getF128Type() = delete;
+
   bool isFPConstrained = false;
   clang::LangOptions::FPExceptionModeKind defaultConstrainedExcept =
       clang::LangOptions::FPE_Ignore;
   llvm::RoundingMode defaultConstrainedRounding =
       llvm::RoundingMode::NearestTiesToEven;
+  cir::FastMathFlags fastMathFlags = cir::FastMathFlags::none;
 
   mlir::Value getConstAPInt(mlir::Location loc, mlir::Type typ,
                             const llvm::APInt &val) {
@@ -251,6 +241,19 @@ public:
     return defaultConstrainedRounding;
   }
 
+  /// Set the fast-math flags attached to floating-point operations.
+  void setFastMathFlags(cir::FastMathFlags flags) { fastMathFlags = flags; }
+
+  /// Get the fast-math flags attached to floating-point operations.
+  cir::FastMathFlags getFastMathFlags() const { return fastMathFlags; }
+
+  /// Returns a null attribute when no fast-math flags are set.
+  cir::FastMathFlagsAttr getFastMathFlagsAttr() {
+    if (fastMathFlags == cir::FastMathFlags::none)
+      return {};
+    return cir::FastMathFlagsAttr::get(getContext(), fastMathFlags);
+  }
+
   /// Build the `#cir.fenv` attribute describing the constrained floating-point
   /// environment currently in effect. This is attached to floating-point
   /// operations that support it to capture the rounding and exception
@@ -331,16 +334,20 @@ public:
   mlir::Value createComplexAdd(mlir::Location loc, mlir::Value lhs,
                                mlir::Value rhs) {
     auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
-    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
-      return cir::ComplexFAddOp::create(*this, loc, lhs, rhs);
+    if (cir::isAnyFloatingPointType(complexTy.getElementType())) {
+      cir::FenvAttr fenv = getConstrainedFPAttr();
+      return cir::ComplexFAddOp::create(*this, loc, lhs, rhs, fenv);
+    }
     return cir::ComplexAddOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createComplexSub(mlir::Location loc, mlir::Value lhs,
                                mlir::Value rhs) {
     auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
-    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
-      return cir::ComplexFSubOp::create(*this, loc, lhs, rhs);
+    if (cir::isAnyFloatingPointType(complexTy.getElementType())) {
+      cir::FenvAttr fenv = getConstrainedFPAttr();
+      return cir::ComplexFSubOp::create(*this, loc, lhs, rhs, fenv);
+    }
     return cir::ComplexSubOp::create(*this, loc, lhs, rhs);
   }
 
@@ -826,57 +833,56 @@ public:
   }
 
   mlir::Value createMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                        OverflowBehavior ob = OverflowBehavior::None) {
-    auto op = cir::MulOp::create(*this, loc, lhs, rhs);
-    op.setNoUnsignedWrap(testFlag(ob, OverflowBehavior::NoUnsignedWrap));
-    op.setNoSignedWrap(testFlag(ob, OverflowBehavior::NoSignedWrap));
-    return op;
+                        OverflowFlags flags = OverflowFlags::None) {
+    return cir::MulOp::create(*this, loc, lhs, rhs, flags);
   }
   mlir::Value createNSWMul(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createMul(loc, lhs, rhs, OverflowBehavior::NoSignedWrap);
+    return createMul(loc, lhs, rhs, OverflowFlags::NoSignedWrap);
   }
   mlir::Value createNUWAMul(mlir::Location loc, mlir::Value lhs,
                             mlir::Value rhs) {
-    return createMul(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
+    return createMul(loc, lhs, rhs, OverflowFlags::NoUnsignedWrap);
+  }
+
+  mlir::Value createAddSat(mlir::Location loc, mlir::Value lhs,
+                           mlir::Value rhs) {
+    return cir::AddSatOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createSubSat(mlir::Location loc, mlir::Value lhs,
+                           mlir::Value rhs) {
+    return cir::SubSatOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                        OverflowBehavior ob = OverflowBehavior::None) {
-    auto op = cir::SubOp::create(*this, loc, lhs, rhs);
-    op.setNoUnsignedWrap(testFlag(ob, OverflowBehavior::NoUnsignedWrap));
-    op.setNoSignedWrap(testFlag(ob, OverflowBehavior::NoSignedWrap));
-    op.setSaturated(testFlag(ob, OverflowBehavior::Saturated));
-    return op;
+                        OverflowFlags flags = OverflowFlags::None) {
+    return cir::SubOp::create(*this, loc, lhs, rhs, flags);
   }
 
   mlir::Value createNSWSub(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createSub(loc, lhs, rhs, OverflowBehavior::NoSignedWrap);
+    return createSub(loc, lhs, rhs, OverflowFlags::NoSignedWrap);
   }
 
   mlir::Value createNUWSub(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createSub(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
+    return createSub(loc, lhs, rhs, OverflowFlags::NoUnsignedWrap);
   }
 
   mlir::Value createAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                        OverflowBehavior ob = OverflowBehavior::None) {
-    auto op = cir::AddOp::create(*this, loc, lhs, rhs);
-    op.setNoUnsignedWrap(testFlag(ob, OverflowBehavior::NoUnsignedWrap));
-    op.setNoSignedWrap(testFlag(ob, OverflowBehavior::NoSignedWrap));
-    op.setSaturated(testFlag(ob, OverflowBehavior::Saturated));
-    return op;
+                        OverflowFlags flags = OverflowFlags::None) {
+    return cir::AddOp::create(*this, loc, lhs, rhs, flags);
   }
 
   mlir::Value createNSWAdd(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createAdd(loc, lhs, rhs, OverflowBehavior::NoSignedWrap);
+    return createAdd(loc, lhs, rhs, OverflowFlags::NoSignedWrap);
   }
 
   mlir::Value createNUWAdd(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createAdd(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
+    return createAdd(loc, lhs, rhs, OverflowFlags::NoUnsignedWrap);
   }
 
   mlir::Value createDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
@@ -887,34 +893,32 @@ public:
     return cir::RemOp::create(*this, loc, lhs, rhs);
   }
 
-  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+  template <typename OpTy>
+  mlir::Value createFPBinOp(mlir::Location loc, mlir::Value lhs,
+                            mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FAddOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
+    return OpTy::create(*this, loc, lhs, rhs, getConstrainedFPAttr(),
+                        getFastMathFlagsAttr());
+  }
+
+  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    return createFPBinOp<cir::FAddOp>(loc, lhs, rhs);
   }
 
   mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FSubOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
+    return createFPBinOp<cir::FSubOp>(loc, lhs, rhs);
   }
 
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FMulOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
+    return createFPBinOp<cir::FMulOp>(loc, lhs, rhs);
   }
 
   mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FDivOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
+    return createFPBinOp<cir::FDivOp>(loc, lhs, rhs);
   }
 
   mlir::Value createFRem(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FRemOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
+    return createFPBinOp<cir::FRemOp>(loc, lhs, rhs);
   }
 
   mlir::Value createFNeg(mlir::Location loc, mlir::Value operand) {
@@ -981,6 +985,41 @@ public:
     if (cir::isFPOrVectorOfFPType(lhs.getType()))
       fenv = getConstrainedFPAttr();
     return cir::VecCmpOp::create(*this, loc, resultTy, kind, lhs, rhs, fenv);
+  }
+
+  /// Compares \p lhs and \p rhs element-wise.  Each result element is a
+  /// signed integer of the operand element's bit width.  That is not the
+  /// result an FP80 element needs, so an FP80 compare names its result type
+  /// with the overload below.
+  cir::VecFCmpOp createVecFCompare(mlir::Location loc, cir::FCmpOpKind kind,
+                                   mlir::Value lhs, mlir::Value rhs,
+                                   bool signaling = false) {
+    VectorType vecCast = mlir::cast<VectorType>(lhs.getType());
+    mlir::Type elemTy = vecCast.getElementType();
+    assert(!(mlir::isa<cir::FPTypeInterface>(elemTy) &&
+             &mlir::cast<cir::FPTypeInterface>(elemTy).getFloatSemantics() ==
+                 &llvm::APFloat::x87DoubleExtended()) &&
+           "an FP80 vector compare must name its result type");
+    IntType integralTy = getSIntNTy(getCIRIntOrFloatBitWidth(elemTy));
+    auto resTy = cir::VectorType::get(integralTy, vecCast.getSize());
+    return cir::VecFCmpOp::create(*this, loc, resTy, kind, lhs, rhs, signaling,
+                                  getConstrainedFPAttr());
+  }
+
+  /// Compares \p lhs and \p rhs element-wise, producing \p resultTy, which
+  /// must be a vector of integers or bools with as many elements as \p lhs.
+  /// The result element width can then differ from the operand element's
+  /// bit width, as for FP80, whose result elements are 128 bits.
+  cir::VecFCmpOp createVecFCompare(mlir::Location loc, VectorType resultTy,
+                                   cir::FCmpOpKind kind, mlir::Value lhs,
+                                   mlir::Value rhs, bool signaling = false) {
+    assert(mlir::cast<VectorType>(lhs.getType()).getSize() ==
+               resultTy.getSize() &&
+           cir::isIntOrBoolType(resultTy.getElementType()) &&
+           "vector compare result must be an int or bool vector of the "
+           "operand length");
+    return cir::VecFCmpOp::create(*this, loc, resultTy, kind, lhs, rhs,
+                                  signaling, getConstrainedFPAttr());
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {

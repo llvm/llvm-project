@@ -246,12 +246,17 @@ ProgramStateRef advancePosition(ProgramStateRef State, SVal Iter,
     IntDist = nonloc::ConcreteInt(BVF.getValue(-IntDist.getValue()));
     BinOp = (BinOp == BO_Add) ? BO_Sub : BO_Add;
   }
-  const auto NewPos =
-    Pos->setTo(SVB.evalBinOp(State, BinOp,
-                             nonloc::SymbolVal(Pos->getOffset()),
-                             IntDist, SymMgr.getType(Pos->getOffset()))
-               .getAsSymbol());
-  return setIteratorPosition(State, Iter, NewPos);
+  const auto NewOffset =
+      SVB.evalBinOp(State, BinOp, nonloc::SymbolVal(Pos->getOffset()), IntDist,
+                    SymMgr.getType(Pos->getOffset()))
+          .getAsSymbol();
+  // Even a symbolic offset can simplify to a concrete value.
+  // FIXME: Represent iterator offsets as NonLoc so that concrete results can be
+  // preserved. Rejecting them here makes callers lose position information or
+  // skip range checks.
+  if (!NewOffset)
+    return nullptr;
+  return setIteratorPosition(State, Iter, Pos->setTo(NewOffset));
 }
 
 // This function tells the analyzer's engine that symbols produced by our

@@ -4,15 +4,15 @@
 define i32 @mul(i32 %a, i32 %b) {
   ; CHECK-LABEL: name: mul
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   liveins: $a0, $a1
+  ; CHECK-NEXT:   liveins: $r4, $r5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $r5
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $r4
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:gpr32 = MUL [[COPY2]], [[COPY3]], implicit-def dead $hi0, implicit-def dead $lo0
-  ; CHECK-NEXT:   $v0 = COPY [[MUL]]
-  ; CHECK-NEXT:   RetRA implicit $v0
+  ; CHECK-NEXT:   $r2 = COPY [[MUL]]
+  ; CHECK-NEXT:   RetRA implicit $r2
 entry:
   %0 = mul i32 %a, %b
   ret i32 %0

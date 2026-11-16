@@ -156,6 +156,10 @@ public:
   void addAssignPtrTypeInstr(Value *Val, CallInst *AssignPtrTyCI) {
     AssignPtrTypeInstr[Val] = AssignPtrTyCI;
   }
+  // - Remove a record.
+  void removeAssignPtrTypeInstr(Value *OldVal) {
+    AssignPtrTypeInstr.erase(OldVal);
+  }
   // - Find a record.
   CallInst *findAssignPtrTypeInstr(const Value *Val) {
     auto It = AssignPtrTypeInstr.find(Val);

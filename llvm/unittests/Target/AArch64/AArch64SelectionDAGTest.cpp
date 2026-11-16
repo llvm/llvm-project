@@ -8,6 +8,7 @@
 #include "AArch64SelectionDAGInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -1472,6 +1473,34 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_extload_knownnegative) {
   EXPECT_EQ(Known.One, APInt(32, 0xfffffff0));
 }
 
+// The result of an EXTRACT_VECTOR_ELT may be wider than the vector element
+// type. Scalarizing an extract of a loaded vector after legalization must then
+// create an extending load of the result type.
+TEST_F(AArch64SelectionDAGTest, Combine_EXTRACT_VECTOR_ELT_ExtLoad) {
+  // DAGCombiner asks the current block whether to optimize for size.
+  FunctionLoweringInfo FLI;
+  FLI.MBB = MF->CreateMachineBasicBlock(&F->getEntryBlock());
+  MF->push_back(FLI.MBB);
+  DAG->setFunctionLoweringInfo(&FLI);
+
+  SDLoc Loc;
+  SDValue Ptr = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                    Register::index2VirtReg(0), MVT::i64);
+  SDValue Load = DAG->getLoad(MVT::v4i32, Loc, DAG->getEntryNode(), Ptr,
+                              MachinePointerInfo(), Align(16));
+  HandleSDNode Extract(DAG->getNode(ISD::EXTRACT_VECTOR_ELT, Loc, MVT::i64,
+                                    Load, DAG->getVectorIdxConstant(1, Loc)));
+
+  DAG->Combine(AfterLegalizeDAG, /*BatchAA=*/nullptr, CodeGenOptLevel::Default);
+
+  auto *Scalar = dyn_cast<LoadSDNode>(Extract.getValue());
+  ASSERT_NE(Scalar, nullptr);
+  EXPECT_EQ(Scalar->getValueType(0), MVT::i64);
+  EXPECT_NE(Scalar->getExtensionType(), ISD::NON_EXTLOAD);
+  EXPECT_EQ(Scalar->getMemoryVT(), MVT::i32);
+  EXPECT_EQ(Scalar->getPointerInfo().Offset, 4);
+}
+
 TEST_F(AArch64SelectionDAGTest,
        computeKnownBits_AVGFLOORU_AVGFLOORS_AVGCEILU_AVGCEILS) {
   SDLoc Loc;
@@ -1518,6 +1547,39 @@ TEST_F(AArch64SelectionDAGTest,
   KnownBits KnownAVGCEILS = DAG->computeKnownBits(AVGCEILS);
   EXPECT_EQ(KnownAVGCEILS.Zero, Zeroes);
   EXPECT_EQ(KnownAVGCEILS.One, Ones);
+}
+
+TEST_F(AArch64SelectionDAGTest, computeKnownBits_AVGSUBFLOORU_AVGSUBFLOORS) {
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto Int16VT = EVT::getIntegerVT(Context, 16);
+  auto Int8Vec8VT = EVT::getVectorVT(Context, Int8VT, 8);
+  auto Int16Vec8VT = EVT::getVectorVT(Context, Int16VT, 8);
+
+  SDValue UnknownOp0 = DAG->getRegister(0, Int8Vec8VT);
+  SDValue ZextOp0 =
+      DAG->getNode(ISD::ZERO_EXTEND, Loc, Int16Vec8VT, UnknownOp0);
+  SDValue Zero = DAG->getConstant(0, Loc, Int16Vec8VT);
+  // ZextOp0 = 00000000????????
+  // Zero    = 0000000000000000
+  // => (for both AVGSUBFLOOR* instructions) the difference is ZextOp0, and
+  // halving it leaves the top 9 bits zero.
+  // Known.Zero = 1111111110000000 (0xFF80)
+  // Known.One  = 0000000000000000 (0x0000)
+  auto Zeroes = APInt(16, 0xFF80);
+  auto Ones = APInt(16, 0x0000);
+
+  SDValue AVGSUBFLOORU =
+      DAG->getNode(ISD::AVGSUBFLOORU, Loc, Int16Vec8VT, ZextOp0, Zero);
+  KnownBits KnownAVGSUBFLOORU = DAG->computeKnownBits(AVGSUBFLOORU);
+  EXPECT_EQ(KnownAVGSUBFLOORU.Zero, Zeroes);
+  EXPECT_EQ(KnownAVGSUBFLOORU.One, Ones);
+
+  SDValue AVGSUBFLOORS =
+      DAG->getNode(ISD::AVGSUBFLOORS, Loc, Int16Vec8VT, ZextOp0, Zero);
+  KnownBits KnownAVGSUBFLOORS = DAG->computeKnownBits(AVGSUBFLOORS);
+  EXPECT_EQ(KnownAVGSUBFLOORS.Zero, Zeroes);
+  EXPECT_EQ(KnownAVGSUBFLOORS.One, Ones);
 }
 
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.

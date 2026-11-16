@@ -142,6 +142,12 @@ public:
     All,
   };
 
+  enum class HLSLSemanticSignaturePackingMode {
+    Default,
+    PrefixStable,
+    Optimized,
+  };
+
   enum InlineAsmDialectKind {
     IAD_ATT,
     IAD_Intel,
@@ -291,6 +297,9 @@ public:
 
   /// The filename with path we use for coverage notes files.
   std::string CoverageNotesFile;
+
+  /// Whether to force absolute paths in coverage notes files.
+  bool UseAbsolutePathsInNotesFile;
 
   /// Regexes separated by a semi-colon to filter the files to instrument.
   std::string ProfileFilterFiles;

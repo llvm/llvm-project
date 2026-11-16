@@ -306,6 +306,9 @@ public:
   /// passes that lazily update the DT while performing AA queries.
   bool UseDominatorTree = true;
 
+  /// Whether ephemeral values should be allowed when checking assumes.
+  bool AllowEphemerals = true;
+
   AAQueryInfo(AAResults &AAR, CaptureAnalysis *CA) : AAR(AAR), CA(CA) {}
 };
 
@@ -589,9 +592,9 @@ private:
 
   const TargetLibraryInfo &TLI;
 
-  std::vector<std::unique_ptr<Concept>> AAs;
+  SmallVector<std::unique_ptr<Concept>, 4> AAs;
 
-  std::vector<AnalysisKey *> AADeps;
+  SmallVector<AnalysisKey *, 4> AADeps;
 
   friend class BatchAAResults;
 };

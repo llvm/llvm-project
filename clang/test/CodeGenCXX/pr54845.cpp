@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i686-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i686-linux-gnu -emit-llvm %s -o - | FileCheck %s %}
 // https://github.com/llvm/llvm-project/issues/54845
 
 void *operator new(unsigned int, void *);

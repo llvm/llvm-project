@@ -2,9 +2,9 @@
 // RUN: cp %S/Inputs/single_byte.txt %S/Inputs/jk.txt %S/Inputs/numbers.txt %t/
 // RUN: cp %S/Inputs/media/empty %t/media/
 // RUN: printf "\0" > %t/null_byte.bin
-// RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%t -verify=expected,cxx -Wno-c23-extensions
+// RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%t -verify=expected,cxx -Wno-c++26-extensions
 // RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only --embed-dir=%t -verify=expected,c
-// RUN: %clang_cc1 %s -fsyntax-only -fexperimental-new-constant-interpreter --embed-dir=%t -verify=expected,cxx -Wno-c23-extensions
+// RUN: %clang_cc1 %s -fsyntax-only -fexperimental-new-constant-interpreter --embed-dir=%t -verify=expected,cxx -Wno-c++26-extensions
 // RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only -fexperimental-new-constant-interpreter --embed-dir=%t -verify=expected,c
 #embed <media/empty>
 ;

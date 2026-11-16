@@ -2633,6 +2633,9 @@ public:
   /// The alignment of the record ignoring any over-alignment imposed via
   /// __declspec(align()) / alignas on the record or its bases.
   CharUnits NonRequiredAlignment;
+  /// Natural alignment of pragma-pack-resistant fields (vectors, x87 fp80),
+  /// or zero if none.
+  CharUnits PragmaPackResistantAlignment;
   /// The size of the allocation of the currently active bitfield.
   /// This value isn't meaningful unless LastFieldIsNonZeroWidthBitfield
   /// is true.
@@ -2724,8 +2727,17 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
   // The portion of the field's required alignment that comes from its type
   // rather than from over-alignment applied directly to the field.
   CharUnits FieldTypeRequiredAlignment = CharUnits::Zero();
-  // Respect align attributes on the type.
-  if (Context.isAlignmentRequired(FD->getType()))
+  // Types that resist #pragma pack (vectors, x87 fp80) contribute their
+  // natural alignment for the purpose of resisting pragma pack, but do not
+  // affect the record's required alignment.
+  CharUnits FieldTypePragmaPackResistantAlignment = CharUnits::Zero();
+  AlignRequirementKind FieldAlignReq =
+      Context.getTypeInfo(FD->getType()).AlignRequirement;
+  if (FieldAlignReq == AlignRequirementKind::ResistPragmaPack)
+    FieldTypePragmaPackResistantAlignment =
+        Context.getTypeAlignInChars(FD->getType());
+  else if (FieldAlignReq != AlignRequirementKind::None)
+    // Respect align attributes on the type.
     FieldTypeRequiredAlignment = Context.getTypeAlignInChars(FD->getType());
   // Respect attributes applied to subobjects of the field.
   if (FD->isBitField())
@@ -2742,17 +2754,30 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
       EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
       FieldTypeRequiredAlignment =
           std::max(FieldTypeRequiredAlignment, Layout.getRequiredAlignment());
+      // Propagate pragma-pack-resistant alignment from nested records.
+      FieldTypePragmaPackResistantAlignment =
+          std::max(FieldTypePragmaPackResistantAlignment,
+                   Layout.getPragmaPackResistantAlignment());
     }
     // Capture required alignment as a side-effect.
     RequiredAlignment =
         std::max(RequiredAlignment,
                  std::max(DirectFieldAlignment, FieldTypeRequiredAlignment));
   }
+  // Capture pragma-pack-resistant alignment as a side-effect.
+  PragmaPackResistantAlignment = std::max(
+      PragmaPackResistantAlignment, FieldTypePragmaPackResistantAlignment);
   // Respect pragma pack, attribute pack and declspec align
   if (!MaxFieldAlignment.isZero())
     Info.Alignment = std::min(Info.Alignment, MaxFieldAlignment);
   if (FD->hasAttr<PackedAttr>())
     Info.Alignment = CharUnits::One();
+  // Types that resist #pragma pack restore their natural alignment after
+  // pragma pack clamping, but only when neither the field nor the enclosing
+  // record is explicitly packed via __attribute__((packed)).
+  if (!FD->hasAttr<PackedAttr>() && !FD->getParent()->hasAttr<PackedAttr>())
+    Info.Alignment =
+        std::max(Info.Alignment, FieldTypePragmaPackResistantAlignment);
   // The alignment used to update the record's alignment excludes over-alignment
   // applied directly to the field; the alignment used for placement includes
   // it.  On targets that don't reuse over-aligned tail padding the two are the
@@ -3454,7 +3479,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
       Builder.cxxLayout(RD);
       NewEntry = new (*this) ASTRecordLayout(
           *this, Builder.Size, Builder.Alignment, Builder.Alignment,
-          Builder.Alignment, Builder.RequiredAlignment, Builder.HasOwnVFPtr,
+          Builder.Alignment, Builder.RequiredAlignment,
+          Builder.PragmaPackResistantAlignment, Builder.HasOwnVFPtr,
           Builder.HasOwnVFPtr || Builder.PrimaryBase, Builder.VBPtrOffset,
           Builder.DataSize, Builder.FieldOffsets, Builder.NonVirtualSize,
           Builder.Alignment, Builder.Alignment, Builder.NonRequiredAlignment,
@@ -3466,7 +3492,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
       Builder.layout(D);
       NewEntry = new (*this) ASTRecordLayout(
           *this, Builder.Size, Builder.Alignment, Builder.Alignment,
-          Builder.Alignment, Builder.RequiredAlignment, Builder.Size,
+          Builder.Alignment, Builder.RequiredAlignment,
+          Builder.PragmaPackResistantAlignment, Builder.Size,
           Builder.FieldOffsets);
     }
   } else {
@@ -3490,7 +3517,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           *this, Builder.getSize(), Builder.Alignment,
           Builder.PreferredAlignment, Builder.UnadjustedAlignment,
           /*RequiredAlignment : used by MS-ABI)*/
-          Builder.Alignment, Builder.HasOwnVFPtr, RD->isDynamicClass(),
+          Builder.Alignment, /*PragmaPackResistantAlignment=*/CharUnits::Zero(),
+          Builder.HasOwnVFPtr, RD->isDynamicClass(),
           CharUnits::fromQuantity(-1), DataSize, Builder.FieldOffsets,
           NonVirtualSize, Builder.NonVirtualAlignment,
           Builder.PreferredNVAlignment, Builder.NonVirtualAlignment,
@@ -3505,7 +3533,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           *this, Builder.getSize(), Builder.Alignment,
           Builder.PreferredAlignment, Builder.UnadjustedAlignment,
           /*RequiredAlignment : used by MS-ABI)*/
-          Builder.Alignment, Builder.getSize(), Builder.FieldOffsets);
+          Builder.Alignment, /*PragmaPackResistantAlignment=*/CharUnits::Zero(),
+          Builder.getSize(), Builder.FieldOffsets);
     }
   }
 
@@ -3644,7 +3673,8 @@ ASTContext::getObjCLayout(const ObjCInterfaceDecl *D) const {
       *this, Builder.getSize(), Builder.Alignment, Builder.PreferredAlignment,
       Builder.UnadjustedAlignment,
       /*RequiredAlignment : used by MS-ABI)*/
-      Builder.Alignment, Builder.getDataSize(), Builder.FieldOffsets);
+      Builder.Alignment, /*PragmaPackResistantAlignment=*/CharUnits::Zero(),
+      Builder.getDataSize(), Builder.FieldOffsets);
 
   ObjCLayouts[D] = NewEntry;
 

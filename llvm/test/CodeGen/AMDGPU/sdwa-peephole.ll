@@ -1300,7 +1300,7 @@ define amdgpu_kernel void @immediate_mul_v2i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dword v0, v0, s[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_pk_mul_lo_u16 v0, 0x141007b, v0
+; GFX10-NEXT:    v_pk_mul_lo_u16 v0, v0, 0x141007b
 ; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 entry:

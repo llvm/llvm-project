@@ -14,17 +14,14 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
+#include "mlir/Conversion/VectorToGPUCommon/VectorToGPUUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
-#include "mlir/Dialect/NVGPU/Utils/MMAUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
-#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Region.h"
 #include "mlir/Pass/Pass.h"
@@ -36,41 +33,14 @@
 #define DEBUG_TYPE "vector-to-gpu"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTVECTORTOGPU
+#define GEN_PASS_DEF_CONVERTVECTORTOGPUPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
 using namespace mlir;
 
-/// For a vector TransferOpType `xferOp`, an empty `indices` vector, and an
-/// AffineMap representing offsets to apply to indices, the function fills
-/// `indices` with the original indices plus the offsets. The offsets are
-/// applied by taking into account the permutation map of the transfer op. If
-/// the `offsetMap` has dimension placeholders, those should be provided in
-/// `dimValues`.
-template <typename TransferOpType>
-static void getXferIndices(RewriterBase &rewriter, TransferOpType xferOp,
-                           AffineMap offsetMap, ArrayRef<Value> dimValues,
-                           SmallVector<Value, 4> &indices) {
-  indices.append(xferOp.getIndices().begin(), xferOp.getIndices().end());
-  Location loc = xferOp.getLoc();
-  unsigned offsetsIdx = 0;
-  for (auto expr : xferOp.getPermutationMap().getResults()) {
-    if (auto dim = dyn_cast<AffineDimExpr>(expr)) {
-      Value prevIdx = indices[dim.getPosition()];
-      SmallVector<OpFoldResult, 3> dims(dimValues);
-      dims.push_back(prevIdx);
-      AffineExpr d0 = rewriter.getAffineDimExpr(offsetMap.getNumDims());
-      indices[dim.getPosition()] = affine::makeComposedAffineApply(
-          rewriter, loc, d0 + offsetMap.getResult(offsetsIdx++), dims);
-      continue;
-    }
-  }
-}
-
 // Return true if the contract op can be convert to MMA matmul.
-static bool contractSupportsMMAMatrixType(vector::ContractionOp contract,
-                                          bool useNvGpu) {
+static bool contractSupportsMMAMatrixType(vector::ContractionOp contract) {
   using MapList = ArrayRef<ArrayRef<AffineExpr>>;
   auto infer = [&](MapList m) {
     return AffineMap::inferFromExprList(m, contract.getContext());
@@ -85,11 +55,7 @@ static bool contractSupportsMMAMatrixType(vector::ContractionOp contract,
 
   // The contract needs to represent a matmul to be able to convert to
   // MMAMatrix matmul.
-  if (!useNvGpu &&
-      contract.getIndexingMapsArray() != infer({{m, k}, {k, n}, {m, n}}))
-    return false;
-  if (useNvGpu &&
-      contract.getIndexingMapsArray() != infer({{m, k}, {n, k}, {m, n}}))
+  if (contract.getIndexingMapsArray() != infer({{m, k}, {k, n}, {m, n}}))
     return false;
 
   return true;
@@ -213,102 +179,21 @@ transferWriteSupportsMMAMatrixType(vector::TransferWriteOp writeOp) {
   return llvm::is_contained(permutationMap.getResults(), innerDim);
 }
 
-/// Return true if the constant is a splat to a 2D vector so that it can be
-/// converted to a MMA constant matrix op.
-static bool constantSupportsMMAMatrixType(arith::ConstantOp constantOp) {
-  auto vecType = dyn_cast<VectorType>(constantOp.getType());
-  if (!vecType || vecType.getRank() != 2)
-    return false;
-  return isa<SplatElementsAttr>(constantOp.getValue());
-}
-
-/// Return true if this is a broadcast from scalar to a 2D vector.
-static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
-  return broadcastOp.getResultVectorType().getRank() == 2;
-}
-
-/// Return true if this integer extend op can be folded into a contract op.
-template <typename ExtOpTy>
-static bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
-  auto transferReadOp =
-      extOp.getOperand().template getDefiningOp<vector::TransferReadOp>();
-  if (!transferReadOp)
-    return false;
-  return llvm::all_of(extOp->getUsers(), llvm::IsaPred<vector::ContractionOp>);
-}
-
-static bool fpExtendSupportsMMAMatrixType(arith::ExtFOp extOp) { return true; }
-static bool fpTruncSupportsMMAMatrixType(arith::TruncFOp extOp) { return true; }
-
-/// Return the MMA elementwise enum associated with `op` if it is supported.
-/// Return `std::nullopt` otherwise.
-static std::optional<gpu::MMAElementwiseOp>
-convertElementwiseOpToMMA(Operation *op) {
-  using MMAEwO = gpu::MMAElementwiseOp;
-  return TypeSwitch<Operation *, std::optional<MMAEwO>>(op)
-      .Case([](arith::AddFOp) { return MMAEwO::ADDF; })
-      .Case([](arith::AddIOp) { return MMAEwO::ADDI; })
-      .Case([](arith::DivFOp) { return MMAEwO::DIVF; })
-      .Case([](arith::DivSIOp) { return MMAEwO::DIVS; })
-      .Case([](arith::DivUIOp) { return MMAEwO::DIVU; })
-      .Case([](arith::ExtFOp) { return MMAEwO::EXTF; })
-      .Case([](arith::MaximumFOp) { return MMAEwO::MAXF; })
-      .Case([](arith::MinimumFOp) { return MMAEwO::MINF; })
-      .Case([](arith::MulFOp) { return MMAEwO::MULF; })
-      .Case([](arith::MulIOp) { return MMAEwO::MULI; })
-      .Case([](arith::NegFOp) { return MMAEwO::NEGATEF; })
-      .Case([](arith::SubFOp) { return MMAEwO::SUBF; })
-      .Case([](arith::SubIOp) { return MMAEwO::SUBI; })
-      .Case([](arith::TruncFOp) { return MMAEwO::TRUNCF; })
-      .Default(std::nullopt);
-}
-
-/// Return true if the op is supported as elementwise op on MMAMatrix type.
-static bool elementwiseSupportsMMAMatrixType(Operation *op) {
-  return convertElementwiseOpToMMA(op).has_value();
-}
-
-/// Returns true if the extract strided slice op is supported with `mma.sync`
-/// path.
-static bool
-extractStridedSliceSupportsMMAMatrixType(vector::ExtractStridedSliceOp op) {
-
-  FailureOr<nvgpu::WarpMatrixInfo> warpMatrixInfo =
-      nvgpu::getWarpMatrixInfo(op);
-  if (failed(warpMatrixInfo))
-    return false;
-
-  FailureOr<vector::ContractionOp> contractOp = nvgpu::getUserContract(op);
-  if (failed(contractOp))
-    return false;
-
-  // Handle vector.extract_strided_slice on registers containing
-  // matrixB and matrixC operands. vector.extract_strided_slice op
-  // is not supported on registers containing matrixA operands.
-  if (warpMatrixInfo->operandRole == nvgpu::MatMulOperandRole::B)
-    return (cast<VectorType>(op->getResult(0).getType()) ==
-            cast<VectorType>((*contractOp).getRhs().getType()));
-  if (warpMatrixInfo->operandRole == nvgpu::MatMulOperandRole::C)
-    return (cast<VectorType>(op->getResult(0).getType()) ==
-            cast<VectorType>((*contractOp).getAcc().getType()));
-
-  return false;
-}
-
-static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
+static bool supportsMMaMatrixType(Operation *op) {
   if (isa<scf::ForOp, scf::YieldOp>(op))
     return true;
+  // MMA ops cannot honor a mask. An op masked by an enclosing vector.mask has
+  // no mask operand, so the checks below would miss it; rewriting it in place
+  // would leave non-maskable ops inside the vector.mask region.
+  auto maskableOp = dyn_cast<vector::MaskableOpInterface>(op);
+  if (maskableOp && maskableOp.isMasked())
+    return false;
   if (auto transferRead = dyn_cast<vector::TransferReadOp>(op))
-    return useNvGpu ? nvgpu::canLowerToWarpMatrixOperation(transferRead)
-                    : transferReadSupportsMMAMatrixType(transferRead);
+    return transferReadSupportsMMAMatrixType(transferRead);
   if (auto transferWrite = dyn_cast<vector::TransferWriteOp>(op))
-    return useNvGpu ? nvgpu::canLowerToWarpMatrixOperation(transferWrite)
-                    : transferWriteSupportsMMAMatrixType(transferWrite);
-  if (auto extractStridedSlice = dyn_cast<vector::ExtractStridedSliceOp>(op))
-    return useNvGpu &&
-           extractStridedSliceSupportsMMAMatrixType(extractStridedSlice);
+    return transferWriteSupportsMMAMatrixType(transferWrite);
   if (auto contract = dyn_cast<vector::ContractionOp>(op))
-    return contractSupportsMMAMatrixType(contract, useNvGpu);
+    return contractSupportsMMAMatrixType(contract);
   if (auto constant = dyn_cast<arith::ConstantOp>(op))
     return constantSupportsMMAMatrixType(constant);
   if (auto broadcast = dyn_cast<vector::BroadcastOp>(op))
@@ -317,17 +202,12 @@ static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
     return integerExtendSupportsMMAMatrixType<arith::ExtSIOp>(signedExtend);
   if (auto unsignedExtend = dyn_cast<arith::ExtUIOp>(op))
     return integerExtendSupportsMMAMatrixType<arith::ExtUIOp>(unsignedExtend);
-  if (auto fpExtend = dyn_cast<arith::ExtFOp>(op))
-    return fpExtendSupportsMMAMatrixType(fpExtend);
-  if (auto fpTrunc = dyn_cast<arith::TruncFOp>(op))
-    return fpTruncSupportsMMAMatrixType(fpTrunc);
   return elementwiseSupportsMMAMatrixType(op);
 }
 
 // Analyze slice of operations based on convert op to figure out if the whole
 // slice can be converted to MMA operations.
-static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
-                                             bool useNvGpu) {
+static SetVector<Operation *> getOpToConvert(mlir::Operation *op) {
   auto hasVectorDest = [](Operation *op) {
     return llvm::any_of(op->getResultTypes(), llvm::IsaPred<VectorType>);
   };
@@ -386,7 +266,7 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
     auto [it, inserted] =
         supportsMMAMatrixTypeCache.try_emplace(currentOp, false);
     if (inserted)
-      it->second = supportsMMaMatrixType(currentOp, useNvGpu);
+      it->second = supportsMMaMatrixType(currentOp);
     return it->second;
   };
 
@@ -433,6 +313,11 @@ struct PrepareContractToGPUMMA
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
+    // The mask is not updated: the rewrite may create ops inside the
+    // vector.mask region or swap the m and n iteration dimensions.
+    if (op.isMasked())
+      return rewriter.notifyMatchFailure(op, "masked contraction");
+
     Location loc = op.getLoc();
     Value lhs = op.getLhs(), rhs = op.getRhs(), res = op.getAcc();
 
@@ -482,78 +367,10 @@ struct PrepareContractToGPUMMA
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         op, lhs, rhs, res,
         rewriter.getAffineMapArrayAttr(infer({{m, k}, {k, n}, {m, n}})),
-        op.getIteratorTypes());
+        op.getIteratorTypes(), op.getKind(), op.getFastmath());
     return success();
   }
 };
-
-// Fold transpose op into the transfer read op. NVGPU mma.sync op only supports
-// row-, column-, and row-major layout for matrixA, matrixB, and matrixC,
-// respectively. We can fold the transpose operation when loading the data from
-// Shared Memory to registers.
-struct CombineTransferReadOpTranspose final
-    : public OpRewritePattern<vector::TransposeOp> {
-  using Base::Base;
-
-  LogicalResult matchAndRewrite(vector::TransposeOp op,
-                                PatternRewriter &rewriter) const override {
-    // Look through integer extend ops.
-    Value source = op.getVector();
-    Type resultType = op.getType();
-    Operation *extOp;
-    if ((extOp = source.getDefiningOp<arith::ExtSIOp>()) ||
-        (extOp = source.getDefiningOp<arith::ExtUIOp>()) ||
-        (extOp = source.getDefiningOp<arith::ExtFOp>())) {
-      source = extOp->getOperand(0);
-      resultType =
-          VectorType::get(cast<VectorType>(resultType).getShape(),
-                          cast<VectorType>(source.getType()).getElementType());
-    }
-
-    auto transferReadOp = source.getDefiningOp<vector::TransferReadOp>();
-    if (!transferReadOp)
-      return rewriter.notifyMatchFailure(op, "no transfer read");
-
-    // TODO: support 0-d corner case.
-    if (transferReadOp.getTransferRank() == 0)
-      return rewriter.notifyMatchFailure(op, "0-D transfer read");
-
-    if (transferReadOp.getMask() || transferReadOp.hasOutOfBoundsDim())
-      return rewriter.notifyMatchFailure(op, "not inbounds transfer read");
-
-    AffineMap permutationMap =
-        AffineMap::getPermutationMap(op.getPermutation(), op.getContext());
-    AffineMap newMap =
-        permutationMap.compose(transferReadOp.getPermutationMap());
-
-    auto loc = op.getLoc();
-    Value result = vector::TransferReadOp::create(
-                       rewriter, loc, resultType, transferReadOp.getBase(),
-                       transferReadOp.getIndices(), AffineMapAttr::get(newMap),
-                       transferReadOp.getPadding(), transferReadOp.getMask(),
-                       transferReadOp.getInBoundsAttr())
-                       .getResult();
-
-    // Fuse through the integer extend op.
-    if (extOp) {
-      if (isa<arith::ExtSIOp>(extOp))
-        result = arith::ExtSIOp::create(rewriter, loc, op.getType(), result)
-                     .getResult();
-      else if (isa<arith::ExtUIOp>(extOp))
-        result = arith::ExtUIOp::create(rewriter, loc, op.getType(), result)
-                     .getResult();
-      else
-        result = arith::ExtFOp::create(rewriter, loc, TypeRange{op.getType()},
-                                       ValueRange{result},
-                                       arith::ExtFOp::Properties{})
-                     .getResult();
-    }
-
-    rewriter.replaceOp(op, result);
-    return success();
-  }
-};
-
 } // namespace
 
 // MMA types have different layout based on how they are used in matmul ops.
@@ -670,405 +487,6 @@ convertTransferWriteOp(RewriterBase &rewriter, vector::TransferWriteOp op,
   return success();
 }
 
-/// Returns the vector type which represents a matrix fragment.
-static VectorType
-getMmaSyncVectorOperandType(const nvgpu::FragmentElementInfo &regInfo) {
-  SmallVector<int64_t> shape{regInfo.numRegistersPerFragment,
-                             regInfo.elementsPerRegister};
-  Type elType = regInfo.registerLLVMType;
-  if (auto vecType = dyn_cast<VectorType>(elType))
-    elType = vecType.getElementType();
-  return VectorType::get(shape, elType);
-}
-
-/// Convert a 2D splat ConstantOp to a SubgroupMmaConstantMatrix op.
-static LogicalResult
-convertConstantOpMmaSync(RewriterBase &rewriter, arith::ConstantOp op,
-                         llvm::DenseMap<Value, Value> &valueMapping) {
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(op);
-
-  FailureOr<nvgpu::WarpMatrixInfo> warpMatrixInfo =
-      nvgpu::getWarpMatrixInfo(op);
-  if (failed(warpMatrixInfo)) {
-    LDBG() << "no warpMatrixInfo";
-    return rewriter.notifyMatchFailure(op, "no warpMatrixInfo");
-  }
-
-  FailureOr<nvgpu::FragmentElementInfo> regInfo =
-      nvgpu::getMmaSyncRegisterType(*warpMatrixInfo);
-  if (failed(regInfo)) {
-    LDBG() << "not mma sync reg info";
-    return rewriter.notifyMatchFailure(op, "not mma sync reg info");
-  }
-
-  VectorType vectorType = getMmaSyncVectorOperandType(*regInfo);
-  auto dense = dyn_cast<SplatElementsAttr>(op.getValue());
-  if (!dense) {
-    LDBG() << "not a splat";
-    return rewriter.notifyMatchFailure(op, "not a splat");
-  }
-
-  Value result = arith::ConstantOp::create(
-      rewriter, op.getLoc(), vectorType,
-      DenseElementsAttr::get(vectorType, dense.getSplatValue<Attribute>()));
-  valueMapping[op.getResult()] = result;
-  return success();
-}
-
-/// Check if the loaded matrix operand requires transposed.
-/// Transposed Map Example:
-/// Example 1   : (..., d0, d1) -> (d1 * 1, d0 * 2)
-/// Example 2   : (d0, d1, d2, d3) -> (d3, d2)
-/// The code below checks if the output 2D is transposed using a generalized
-/// version     : (d0, d1, dn, ..., dm, ...) -> (dm, dn)
-/// Returns     : true; if m > n, false o.w.
-static FailureOr<bool> isTransposed(vector::TransferReadOp op) {
-  mlir::AffineMap map = op.getPermutationMap();
-
-  if (map.getNumResults() != 2) {
-    LDBG() << "Failed because the result of `vector.transfer_read` "
-              "is not a 2d operand";
-    return failure();
-  }
-
-  // Output 2D matrix dimensions in the order of d0, d1.
-  mlir::AffineExpr dM = map.getResult(0);
-  mlir::AffineExpr dN = map.getResult(1);
-
-  //  Find the position of these expressions in the input.
-  auto exprM = dyn_cast<AffineDimExpr>(dM);
-  auto exprN = dyn_cast<AffineDimExpr>(dN);
-
-  if (!exprM || !exprN) {
-    LDBG() << "Failed because expressions are not affine dim "
-              "expressions, then transpose cannot be determined.";
-    return failure();
-  }
-
-  return exprM.getPosition() > exprN.getPosition();
-}
-
-static LogicalResult
-creatLdMatrixCompatibleLoads(RewriterBase &rewriter, vector::TransferReadOp op,
-                             llvm::DenseMap<Value, Value> &valueMapping) {
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(op);
-  Location loc = op->getLoc();
-
-  FailureOr<nvgpu::WarpMatrixInfo> warpMatrixInfo =
-      nvgpu::getWarpMatrixInfo(op);
-  if (failed(warpMatrixInfo)) {
-    LDBG() << "no warpMatrixInfo";
-    return rewriter.notifyMatchFailure(op, "no warpMatrixInfo");
-  }
-
-  FailureOr<nvgpu::FragmentElementInfo> regInfo =
-      nvgpu::getMmaSyncRegisterType(*warpMatrixInfo);
-  if (failed(regInfo)) {
-    LDBG() << "not mma sync reg info";
-    return rewriter.notifyMatchFailure(op, "not mma sync reg info");
-  }
-
-  FailureOr<bool> transpose = isTransposed(op);
-  if (failed(transpose)) {
-    LDBG() << "failed to determine the transpose";
-    return rewriter.notifyMatchFailure(
-        op, "Op should likely not be converted to a nvgpu.ldmatrix call.");
-  }
-
-  FailureOr<nvgpu::LdMatrixParams> params =
-      nvgpu::getLdMatrixParams(*warpMatrixInfo, *transpose);
-
-  if (failed(params)) {
-    LDBG() << "failed to convert vector.transfer_read to ldmatrix. "
-           << "Op should likely not be converted to a nvgpu.ldmatrix call.";
-    return rewriter.notifyMatchFailure(
-        op, "failed to convert vector.transfer_read to ldmatrix; this op "
-            "likely should not be converted to a nvgpu.ldmatrix call.");
-  }
-
-  // Adjust the load offset.
-  auto laneId = gpu::LaneIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-  FailureOr<AffineMap> offsets =
-      nvgpu::getLaneIdToLdMatrixMatrixCoord(rewriter, loc, *params);
-  if (failed(offsets)) {
-    LDBG() << "no offsets";
-    return rewriter.notifyMatchFailure(op, "no offsets");
-  }
-
-  VectorType vectorType = getMmaSyncVectorOperandType(*regInfo);
-
-  SmallVector<Value, 4> indices;
-  getXferIndices<vector::TransferReadOp>(rewriter, op, *offsets, {laneId},
-                                         indices);
-
-  nvgpu::LdMatrixOp newOp =
-      nvgpu::LdMatrixOp::create(rewriter, loc, vectorType, op.getBase(),
-                                indices, *transpose, params->numTiles);
-  valueMapping[op] = newOp->getResult(0);
-  return success();
-}
-
-static LogicalResult
-createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
-                       llvm::DenseMap<Value, Value> &valueMapping) {
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(op);
-
-  Location loc = op.getLoc();
-  FailureOr<nvgpu::WarpMatrixInfo> warpMatrixInfo =
-      nvgpu::getWarpMatrixInfo(op);
-  if (failed(warpMatrixInfo))
-    return rewriter.notifyMatchFailure(op, "no warpMatrixInfo");
-  FailureOr<nvgpu::FragmentElementInfo> regInfo =
-      nvgpu::getMmaSyncRegisterType(*warpMatrixInfo);
-  if (failed(regInfo)) {
-    return rewriter.notifyMatchFailure(
-        op, "Failed to deduce register fragment type during "
-            "conversion to distributed non-ldmatrix compatible load");
-  }
-
-  Value laneId = gpu::LaneIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-
-  // This is the individual element type.
-  Type loadedElType = regInfo->registerLLVMType;
-  VectorType vectorType = getMmaSyncVectorOperandType(*regInfo);
-
-  Value fill = arith::ConstantOp::create(
-      rewriter, op.getLoc(), vectorType.getElementType(),
-      rewriter.getZeroAttr(vectorType.getElementType()));
-  Value result =
-      vector::BroadcastOp::create(rewriter, op.getLoc(), vectorType, fill);
-
-  bool isTransposeLoad = !op.getPermutationMap().isMinorIdentity();
-
-  // If we are not transposing, then we can use vectorized loads. Otherwise, we
-  // must load each element individually.
-  if (!isTransposeLoad) {
-    if (!isa<VectorType>(loadedElType)) {
-      loadedElType = VectorType::get({1}, loadedElType);
-    }
-
-    for (int i = 0; i < vectorType.getShape()[0]; i++) {
-      FailureOr<AffineMap> coords = nvgpu::getLaneIdAndValueIdToOperandCoord(
-          rewriter, op.getLoc(), *warpMatrixInfo);
-      if (failed(coords))
-        return rewriter.notifyMatchFailure(op, "no coords");
-
-      Value logicalValueId = arith::ConstantOp::create(
-          rewriter, loc, rewriter.getIndexType(),
-          rewriter.getIndexAttr(i * regInfo->elementsPerRegister));
-      SmallVector<Value, 4> newIndices;
-      getXferIndices<vector::TransferReadOp>(
-          rewriter, op, *coords, {laneId, logicalValueId}, newIndices);
-
-      Value el = vector::LoadOp::create(rewriter, loc, loadedElType,
-                                        op.getBase(), newIndices);
-      result = vector::InsertOp::create(rewriter, loc, el, result, i);
-    }
-  } else {
-    if (auto vecType = dyn_cast<VectorType>(loadedElType)) {
-      loadedElType = vecType.getElementType();
-    }
-    for (int i = 0; i < vectorType.getShape()[0]; i++) {
-      for (unsigned innerIdx = 0; innerIdx < vectorType.getShape()[1];
-           innerIdx++) {
-
-        Value logicalValueId = arith::ConstantOp::create(
-            rewriter, loc, rewriter.getIndexType(),
-            rewriter.getIndexAttr(i * regInfo->elementsPerRegister + innerIdx));
-        FailureOr<AffineMap> coords = nvgpu::getLaneIdAndValueIdToOperandCoord(
-            rewriter, op.getLoc(), *warpMatrixInfo);
-        if (failed(coords))
-          return rewriter.notifyMatchFailure(op, "no coords");
-
-        SmallVector<Value, 4> newIndices;
-        getXferIndices<vector::TransferReadOp>(
-            rewriter, op, *coords, {laneId, logicalValueId}, newIndices);
-        Value el = memref::LoadOp::create(rewriter, op.getLoc(), loadedElType,
-                                          op.getBase(), newIndices);
-        result = vector::InsertOp::create(rewriter, op.getLoc(), el, result,
-                                          ArrayRef<int64_t>{i, innerIdx});
-      }
-    }
-  }
-
-  valueMapping[op.getResult()] = result;
-  return success();
-}
-
-/// Return true if this is a shared memory memref type.
-static bool isSharedMemory(MemRefType type) {
-  auto addressSpace =
-      dyn_cast_or_null<gpu::AddressSpaceAttr>(type.getMemorySpace());
-  return addressSpace &&
-         addressSpace.getValue() == gpu::GPUDialect::getWorkgroupAddressSpace();
-}
-
-/// Converts a `vector.transfer_read` operation directly to either a
-/// `vector.load` or a `nvgpu.ldmatrix` operation. This function should only be
-/// used when converting to `nvgpu.mma.sync` operations.
-static LogicalResult
-convertTransferReadToLoads(RewriterBase &rewriter, vector::TransferReadOp op,
-                           llvm::DenseMap<Value, Value> &valueMapping) {
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(op);
-
-  FailureOr<nvgpu::WarpMatrixInfo> warpMatrixInfo =
-      nvgpu::getWarpMatrixInfo(op);
-  if (failed(warpMatrixInfo))
-    return rewriter.notifyMatchFailure(op, "no warpMatrixInfo");
-
-  bool isLdMatrixCompatible =
-      isSharedMemory(cast<MemRefType>(op.getBase().getType())) &&
-      nvgpu::inferTileWidthInBits(*warpMatrixInfo) == 128;
-
-  VectorType vecTy = op.getVectorType();
-  int64_t bitWidth = vecTy.getElementType().getIntOrFloatBitWidth();
-
-  // When we are transposing the B operand, ldmatrix will only work if we have
-  // at least 8 rows to read and the width to read for the transpose is 128
-  // bits.
-  if (!op.getPermutationMap().isMinorIdentity() &&
-      (bitWidth != 16 || vecTy.getDimSize(1) < 8 ||
-       vecTy.getDimSize(0) * bitWidth < 128))
-    isLdMatrixCompatible = false;
-
-  if (!isLdMatrixCompatible)
-    return createNonLdMatrixLoads(rewriter, op, valueMapping);
-
-  return creatLdMatrixCompatibleLoads(rewriter, op, valueMapping);
-}
-
-static LogicalResult
-convertTransferWriteToStores(RewriterBase &rewriter, vector::TransferWriteOp op,
-                             llvm::DenseMap<Value, Value> &valueMapping) {
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(op);
-
-  Location loc = op->getLoc();
-  auto it = valueMapping.find(op.getVector());
-  if (it == valueMapping.end())
-    return rewriter.notifyMatchFailure(op, "no mapping");
-  Value matrix = it->second;
-
-  FailureOr<nvgpu::WarpMatrixInfo> warpMatrixInfo =
-      nvgpu::getWarpMatrixInfo(op);
-  if (failed(warpMatrixInfo))
-    return rewriter.notifyMatchFailure(op, "no warpMatrixInfo");
-  FailureOr<nvgpu::FragmentElementInfo> regInfo =
-      nvgpu::getMmaSyncRegisterType(*warpMatrixInfo);
-  if (failed(regInfo))
-    return rewriter.notifyMatchFailure(op, "not mma sync reg info");
-
-  VectorType vectorType = getMmaSyncVectorOperandType(*regInfo);
-  Value laneId = gpu::LaneIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-
-  for (unsigned i = 0; i < vectorType.getShape()[0]; i++) {
-    Value logicalValueId = arith::ConstantOp::create(
-        rewriter, loc, rewriter.getIndexType(),
-        rewriter.getIndexAttr(i * regInfo->elementsPerRegister));
-    FailureOr<AffineMap> coords = nvgpu::getLaneIdAndValueIdToOperandCoord(
-        rewriter, op.getLoc(), *warpMatrixInfo);
-    if (failed(coords))
-      return rewriter.notifyMatchFailure(op, "no coords");
-
-    Value el =
-        vector::ExtractOp::create(rewriter, loc, matrix, ArrayRef<int64_t>{i});
-    SmallVector<Value, 4> newIndices;
-    getXferIndices<vector::TransferWriteOp>(
-        rewriter, op, *coords, {laneId, logicalValueId}, newIndices);
-    vector::StoreOp::create(rewriter, loc, el, op.getBase(), newIndices);
-  }
-
-  LDBG() << "erase: " << op;
-  rewriter.eraseOp(op);
-  return success();
-}
-
-static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
-                                       SmallVectorImpl<int64_t> &results) {
-  for (auto attr : arrayAttr)
-    results.push_back(cast<IntegerAttr>(attr).getInt());
-}
-
-static LogicalResult
-convertExtractStridedSlice(RewriterBase &rewriter,
-                           vector::ExtractStridedSliceOp op,
-                           llvm::DenseMap<Value, Value> &valueMapping) {
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(op);
-
-  Location loc = op->getLoc();
-
-  FailureOr<nvgpu::WarpMatrixInfo> warpMatrixInfo =
-      nvgpu::getWarpMatrixInfo(op);
-  if (failed(warpMatrixInfo))
-    return rewriter.notifyMatchFailure(op, "no warpMatrixInfo");
-
-  FailureOr<nvgpu::FragmentElementInfo> mmaSyncFragmentInfo =
-      nvgpu::getMmaSyncRegisterType(*warpMatrixInfo);
-  if (failed(mmaSyncFragmentInfo))
-    return rewriter.notifyMatchFailure(op, "no mmaSyncFragmentInfo");
-
-  // Find the vector.transer_read whose result vector is being sliced.
-  auto transferReadOp = op.getSource().getDefiningOp<vector::TransferReadOp>();
-  if (!transferReadOp)
-    return rewriter.notifyMatchFailure(op, "no transfer read");
-
-  warpMatrixInfo = nvgpu::getWarpMatrixInfo(transferReadOp);
-  if (failed(warpMatrixInfo))
-    return rewriter.notifyMatchFailure(op, "no warpMatrixInfo");
-
-  FailureOr<nvgpu::FragmentElementInfo> ldFragmentInfo =
-      nvgpu::getMmaSyncRegisterType(*warpMatrixInfo);
-  if (failed(ldFragmentInfo))
-    return rewriter.notifyMatchFailure(op, "no ldFragmentInfo");
-
-  assert(
-      (mmaSyncFragmentInfo->elementsPerRegister ==
-       ldFragmentInfo->elementsPerRegister) &&
-      "Number of elements per register should be same for load and mma.sync");
-
-  // Create vector.extract_strided_slice op for thread-owned fragments.
-  std::array<int64_t, 2> strides = {1,
-                                    1}; // stride for extract slice is always 1.
-  std::array<int64_t, 2> sliceShape = {
-      mmaSyncFragmentInfo->numRegistersPerFragment,
-      mmaSyncFragmentInfo->elementsPerRegister};
-  auto it = valueMapping.find(transferReadOp);
-  if (it == valueMapping.end())
-    return rewriter.notifyMatchFailure(op, "no mapping");
-  auto sourceVector = it->second;
-
-  // offset and sizes at warp-level of onwership.
-  SmallVector<int64_t> offsets;
-  populateFromInt64AttrArray(op.getOffsets(), offsets);
-
-  SmallVector<int64_t> sizes;
-  populateFromInt64AttrArray(op.getSizes(), sizes);
-  ArrayRef<int64_t> warpVectorShape = op.getSourceVectorType().getShape();
-
-  // Compute offset in vector registers. Note that the mma.sync vector registers
-  // are shaped as numberOfFragments x numberOfRegistersPerfFragment. The vector
-  // registers can only be sliced along numberOfFragments, i.e., sliceOffset[0].
-  std::array<int64_t, 2> sliceOffset = {0, 0};
-
-  if (offsets[0] && offsets[1])
-    return op->emitError() << "Slicing fragments in 2D is not supported. ";
-  if (offsets[0])
-    sliceOffset[0] = (warpVectorShape[0] / offsets[0]);
-  else if (offsets[1])
-    sliceOffset[0] = (warpVectorShape[1] / offsets[1]);
-
-  Value newOp = vector::ExtractStridedSliceOp::create(
-      rewriter, loc, sourceVector, sliceOffset, sliceShape, strides);
-
-  valueMapping[op] = newOp;
-  return success();
-}
-
 static LogicalResult
 convertContractOp(RewriterBase &rewriter, vector::ContractionOp op,
                   llvm::DenseMap<Value, Value> &valueMapping) {
@@ -1086,28 +504,6 @@ convertContractOp(RewriterBase &rewriter, vector::ContractionOp op,
                                                    opC.getType(), opA, opB, opC,
                                                    /*a_transpose=*/UnitAttr(),
                                                    /*b_transpose=*/UnitAttr());
-  valueMapping[op.getResult()] = matmul;
-  return success();
-}
-
-static LogicalResult
-convertContractOpToMmaSync(RewriterBase &rewriter, vector::ContractionOp op,
-                           llvm::DenseMap<Value, Value> &valueMapping) {
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(op);
-
-  auto itA = valueMapping.find(op.getLhs());
-  auto itB = valueMapping.find(op.getRhs());
-  auto itC = valueMapping.find(op.getAcc());
-  if (itA == valueMapping.end() || itB == valueMapping.end() ||
-      itC == valueMapping.end())
-    return rewriter.notifyMatchFailure(op, "no mapping");
-  Value opA = itA->second, opB = itB->second, opC = itC->second;
-  int64_t m = cast<VectorType>(op.getLhs().getType()).getShape()[0];
-  int64_t n = cast<VectorType>(op.getRhs().getType()).getShape()[0];
-  int64_t k = cast<VectorType>(op.getLhs().getType()).getShape()[1];
-  Value matmul = nvgpu::MmaSyncOp::create(rewriter, op.getLoc(), opA, opB, opC,
-                                          rewriter.getI64ArrayAttr({m, n, k}));
   valueMapping[op.getResult()] = matmul;
   return success();
 }
@@ -1154,96 +550,6 @@ convertBroadcastOp(RewriterBase &rewriter, vector::BroadcastOp op,
   return success();
 }
 
-// Replace ForOp with a new ForOp with extra operands. The YieldOp is not
-// updated and needs to be updated separately for the loop to be correct.
-static scf::ForOp replaceForOpWithNewSignature(RewriterBase &rewriter,
-                                               scf::ForOp loop,
-                                               ValueRange newInitArgs) {
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(loop);
-
-  // Create a new loop before the existing one, with the extra operands.
-  rewriter.setInsertionPoint(loop);
-  auto operands = llvm::to_vector<4>(loop.getInitArgs());
-  llvm::append_range(operands, newInitArgs);
-  scf::ForOp newLoop =
-      scf::ForOp::create(rewriter, loop.getLoc(), loop.getLowerBound(),
-                         loop.getUpperBound(), loop.getStep(), operands);
-  rewriter.eraseBlock(newLoop.getBody());
-
-  newLoop.getRegion().getBlocks().splice(
-      newLoop.getRegion().getBlocks().begin(), loop.getRegion().getBlocks());
-  for (Value operand : newInitArgs)
-    newLoop.getBody()->addArgument(operand.getType(), operand.getLoc());
-
-  for (auto it : llvm::zip(loop.getResults(), newLoop.getResults().take_front(
-                                                  loop.getNumResults())))
-    rewriter.replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
-
-  LDBG() << "newLoop now: " << newLoop;
-  LDBG() << "stripped scf.for: " << loop;
-  LDBG() << "erase: " << loop;
-
-  rewriter.eraseOp(loop);
-  return newLoop;
-}
-
-static LogicalResult convertForOp(RewriterBase &rewriter, scf::ForOp op,
-                                  llvm::DenseMap<Value, Value> &valueMapping) {
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(op);
-
-  SmallVector<Value> newOperands;
-  SmallVector<std::pair<size_t, size_t>> argMapping;
-  for (const auto &operand : llvm::enumerate(op.getInitArgs())) {
-    auto it = valueMapping.find(operand.value());
-    if (it == valueMapping.end()) {
-      LDBG() << "no value mapping for: " << operand.value();
-      continue;
-    }
-    argMapping.push_back(std::make_pair(
-        operand.index(), op.getInitArgs().size() + newOperands.size()));
-    newOperands.push_back(it->second);
-  }
-
-  scf::ForOp newForOp = replaceForOpWithNewSignature(rewriter, op, newOperands);
-  Block &loopBody = *newForOp.getBody();
-  for (auto mapping : argMapping) {
-    valueMapping[newForOp.getResult(mapping.first)] =
-        newForOp.getResult(mapping.second);
-    valueMapping[loopBody.getArgument(mapping.first +
-                                      newForOp.getNumInductionVars())] =
-        loopBody.getArgument(mapping.second + newForOp.getNumInductionVars());
-  }
-
-  LDBG() << "scf.for to: " << newForOp;
-  return success();
-}
-
-static LogicalResult
-convertYieldOp(RewriterBase &rewriter, scf::YieldOp op,
-               llvm::DenseMap<Value, Value> &valueMapping) {
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(op);
-
-  auto loop = cast<scf::ForOp>(op->getParentOp());
-  auto yieldOperands = llvm::to_vector<4>(op.getOperands());
-  for (const auto &operand : llvm::enumerate(op.getOperands())) {
-    auto it = valueMapping.find(operand.value());
-    if (it == valueMapping.end())
-      continue;
-    // Replace the yield of old value with the for op argument to make it easier
-    // to remove the dead code.
-    yieldOperands[operand.index()] = loop.getInitArgs()[operand.index()];
-    yieldOperands.push_back(it->second);
-  }
-  scf::YieldOp::create(rewriter, op.getLoc(), yieldOperands);
-
-  LDBG() << "erase: " << op;
-  rewriter.eraseOp(op);
-  return success();
-}
-
 /// Convert an elementwise op to the equivalent elementwise op on MMA matrix.
 static LogicalResult
 convertElementwiseOp(RewriterBase &rewriter, Operation *op,
@@ -1275,20 +581,14 @@ convertElementwiseOp(RewriterBase &rewriter, Operation *op,
   return success();
 }
 
-void mlir::populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns,
-                                              bool useNvGpu) {
-  if (!useNvGpu) {
-    patterns.add<PrepareContractToGPUMMA, CombineTransferReadOpTranspose>(
-        patterns.getContext());
-    return;
-  }
-  vector::populateVectorContractCanonicalizeMatmulToMMT(patterns);
-  patterns.add<CombineTransferReadOpTranspose>(patterns.getContext());
+void mlir::populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns) {
+  patterns.add<PrepareContractToGPUMMA>(patterns.getContext());
+  populateVectorTransferReadTransposePatterns(patterns);
 }
 
 LogicalResult mlir::convertVectorToMMAOps(RewriterBase &rewriter,
                                           Operation *rootOp) {
-  SetVector<Operation *> ops = getOpToConvert(rootOp, /*useNvGpu=*/false);
+  SetVector<Operation *> ops = getOpToConvert(rootOp);
   llvm::DenseMap<Value, Value> valueMapping;
 
   auto globalRes = LogicalResult::success();
@@ -1307,9 +607,9 @@ LogicalResult mlir::convertVectorToMMAOps(RewriterBase &rewriter,
     } else if (auto broadcastOp = dyn_cast<vector::BroadcastOp>(op)) {
       res = convertBroadcastOp(rewriter, broadcastOp, valueMapping);
     } else if (auto forOp = dyn_cast<scf::ForOp>(op)) {
-      res = convertForOp(rewriter, forOp, valueMapping);
+      res = convertForOpForMMA(rewriter, forOp, valueMapping);
     } else if (auto yieldOp = dyn_cast<scf::YieldOp>(op)) {
-      res = convertYieldOp(rewriter, yieldOp, valueMapping);
+      res = convertYieldOpForMMA(rewriter, yieldOp, valueMapping);
     } else if (auto elementwiseType = convertElementwiseOpToMMA(op)) {
       res = convertElementwiseOp(rewriter, op, *elementwiseType, valueMapping);
     }
@@ -1319,76 +619,18 @@ LogicalResult mlir::convertVectorToMMAOps(RewriterBase &rewriter,
   return globalRes;
 }
 
-LogicalResult mlir::convertVectorToNVVMCompatibleMMASync(RewriterBase &rewriter,
-                                                         Operation *rootOp) {
-  SetVector<Operation *> ops = getOpToConvert(rootOp, /*useNvGpu=*/true);
-  llvm::DenseMap<Value, Value> valueMapping;
-  for (Operation *op : ops) {
-    if (llvm::TypeSwitch<Operation *, LogicalResult>(op)
-            .Case([&](vector::TransferReadOp transferReadOp) {
-              return convertTransferReadToLoads(rewriter, transferReadOp,
-                                                valueMapping);
-            })
-            .Case([&](vector::TransferWriteOp transferWriteOp) {
-              return convertTransferWriteToStores(rewriter, transferWriteOp,
-                                                  valueMapping);
-            })
-            .Case([&](vector::ExtractStridedSliceOp extractStridedSliceOp) {
-              return convertExtractStridedSlice(rewriter, extractStridedSliceOp,
-                                                valueMapping);
-            })
-            .Case([&](vector::ContractionOp contractionOp) {
-              return convertContractOpToMmaSync(rewriter, contractionOp,
-                                                valueMapping);
-            })
-            .Case([&](scf::ForOp forOp) {
-              return convertForOp(rewriter, forOp, valueMapping);
-            })
-            .Case([&](scf::YieldOp yieldOp) {
-              return convertYieldOp(rewriter, yieldOp, valueMapping);
-            })
-            .Case([&](arith::ConstantOp constOp) {
-              return convertConstantOpMmaSync(rewriter, constOp, valueMapping);
-            })
-            .Default([&](Operation *op) {
-              return op->emitError() << "unhandled vector to mma type: " << *op;
-            })
-            .failed()) {
-      return op->emitOpError()
-             << "failed to convert op during vector-to-nvgpu conversion";
-    }
-  }
-  return success();
-}
-
 namespace {
-
 struct ConvertVectorToGPUPass
-    : public impl::ConvertVectorToGPUBase<ConvertVectorToGPUPass> {
-
-  explicit ConvertVectorToGPUPass(bool useNvGpu_) {
-    useNvGpu.setValue(useNvGpu_);
-  }
+    : public impl::ConvertVectorToGPUPassBase<ConvertVectorToGPUPass> {
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populatePrepareVectorToMMAPatterns(patterns, useNvGpu.getValue());
+    populatePrepareVectorToMMAPatterns(patterns);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
 
     IRRewriter rewriter(&getContext());
-    if (useNvGpu) {
-      if (failed(
-              convertVectorToNVVMCompatibleMMASync(rewriter, getOperation())))
-        return signalPassFailure();
-      return;
-    }
     (void)convertVectorToMMAOps(rewriter, getOperation());
   }
 };
-
 } // namespace
-
-std::unique_ptr<Pass> mlir::createConvertVectorToGPUPass(bool useNvGpu) {
-  return std::make_unique<ConvertVectorToGPUPass>(useNvGpu);
-}

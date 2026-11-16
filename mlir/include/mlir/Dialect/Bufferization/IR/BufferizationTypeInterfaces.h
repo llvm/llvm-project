@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Types.h"
 
 namespace mlir::bufferization {
 struct BufferizationOptions;
