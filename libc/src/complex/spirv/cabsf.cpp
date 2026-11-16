@@ -13,10 +13,10 @@
 
 #include "src/complex/cabsf.h"
 #include "src/__support/CPP/bit.h"
+#include "src/__support/FPUtil/Hypot.h"
 #include "src/__support/common.h"
 #include "src/__support/complex_type.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/FPUtil/Hypot.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
