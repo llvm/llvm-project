@@ -57,7 +57,13 @@ struct ESDRecord {
   std::optional<uint32_t> ParentESDID;
   std::optional<uint32_t> Offset;
   std::optional<uint32_t> Length;
+  std::optional<uint32_t> ExtendedAttributeESDID;
+  std::optional<uint32_t> ExtendedAttributeDataOffset;
   std::optional<GOFF_ESDNAMESPACEID> NameSpace;
+  std::optional<bool> Mangled;
+  std::optional<bool> Renameable;
+  std::optional<bool> RemovableClass;
+  std::optional<bool> Reserve16Bytes;
   std::optional<GOFF_ESDAMODE> Amode;
   std::optional<GOFF_ESDRMODE> Rmode;
   std::optional<GOFF_ESDTEXTSTYLE> TextStyle;

@@ -201,7 +201,14 @@ void MappingTraits<GOFFYAML::ESDRecord>::mapping(IO &IO,
   IO.mapOptional("ParentESDID", Record.ParentESDID);
   IO.mapOptional("Offset", Record.Offset);
   IO.mapOptional("Length", Record.Length);
+  IO.mapOptional("ExtendedAttributeESDID", Record.ExtendedAttributeESDID);
+  IO.mapOptional("ExtendedAttributeDataOffset",
+                 Record.ExtendedAttributeDataOffset);
   IO.mapOptional("NameSpace", Record.NameSpace);
+  IO.mapOptional("Mangled", Record.Mangled);
+  IO.mapOptional("Renameable", Record.Renameable);
+  IO.mapOptional("RemovableClass", Record.RemovableClass);
+  IO.mapOptional("Reserve16Bytes", Record.Reserve16Bytes);
   IO.mapOptional("Amode", Record.Amode);
   IO.mapOptional("Rmode", Record.Rmode);
   IO.mapOptional("TextStyle", Record.TextStyle);

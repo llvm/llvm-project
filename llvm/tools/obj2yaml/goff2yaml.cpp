@@ -111,14 +111,38 @@ Error GOFFDumper::dumpExternalSymbol(ArrayRef<uint8_t> Data) {
   if (Length)
     Sym.Length = Length;
 
-  // Skip to byte 40.
-  C.seek(40);
+  // Bytes 28-31: Extended Attribute ESDID.
+  uint32_t ExtendedAttributeESDID = DE.getU32(C);
+  if (ExtendedAttributeESDID)
+    Sym.ExtendedAttributeESDID = ExtendedAttributeESDID;
+
+  // Bytes 32-35: Extended Attribute Data Offset.
+  uint32_t ExtendedAttributeDataOffset = DE.getU32(C);
+  if (ExtendedAttributeDataOffset)
+    Sym.ExtendedAttributeDataOffset = ExtendedAttributeDataOffset;
+
+  // Skip bytes 36-39 (Reserved).
+  DE.skip(C, 4);
+
+  // Byte 40: Name Space ID.
   uint8_t NameSpace = DE.getU8(C);
   if (NameSpace)
     Sym.NameSpace = NameSpace;
 
   // Byte 41: Flags.
   uint8_t Flags = DE.getU8(C);
+  bool Mangled = (Flags & 0x40) != 0;
+  if (Mangled)
+    Sym.Mangled = Mangled;
+  bool Renameable = (Flags & 0x20) != 0;
+  if (Renameable)
+    Sym.Renameable = Renameable;
+  bool RemovableClass = (Flags & 0x10) != 0;
+  if (RemovableClass)
+    Sym.RemovableClass = RemovableClass;
+  bool Reserve16Bytes = (Flags & 0x01) != 0;
+  if (Reserve16Bytes)
+    Sym.Reserve16Bytes = Reserve16Bytes;
   bool FillBytePresent = (Flags & 0x80) != 0;
   if (FillBytePresent) {
     uint8_t FillByteValue = DE.getU8(C);
