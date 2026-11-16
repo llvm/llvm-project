@@ -70,3 +70,17 @@ void testZeroInitialized(void) {
   // ldbl64-warning@-3{{0 IEEEdouble}}
   // ibm128-warning@-4{{Unknown}}
 }
+
+// Covers the case where the increment operand is known but the constant 1
+// cannot be modeled (IBM double-double). It is Unknown on every target because
+// float arithmetic on symbolic values aren't modeled, but the IBM
+// double-double reaches it via a different path.
+void testIncrementSymbolic(int n) {
+  long double x = n;
+  x++;
+  clang_analyzer_dump(x);
+  // x87-warning@-1{{Unknown}}
+  // quad-warning@-2{{Unknown}}
+  // ldbl64-warning@-3{{Unknown}}
+  // ibm128-warning@-4{{Unknown}}
+}
