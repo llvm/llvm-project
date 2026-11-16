@@ -99,8 +99,7 @@ bool SeedContainer::erase(Instruction *I) {
 }
 
 SeedContainer::SeedContainer(ScalarEvolution &SE) : SE(SE) {
-  const VectorizeOptions &Opts =
-      SE.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(SE.getContext());
   BundleSizeLimit = Opts.sbvec_seed_bundle_size_limit;
 }
 
@@ -111,10 +110,14 @@ void SeedContainer::insert(LoadOrStoreT *LSI, bool AllowDiffTypes) {
   // Fill this vector of bundles front to back so that only the last bundle in
   // the vector may have available space. This avoids iteration to find one with
   // space.
-  if (BundleVec.empty() || BundleVec.back()->size() == BundleSizeLimit)
+  if (BundleVec.empty() || BundleVec.back()->size() == BundleSizeLimit) {
     BundleVec.emplace_back(std::make_unique<MemSeedBundle<LoadOrStoreT>>(LSI));
-  else
-    BundleVec.back()->tryInsert(LSI, SE);
+  } else {
+    bool Inserted = BundleVec.back()->tryInsert(LSI, SE);
+    if (!Inserted)
+      BundleVec.emplace_back(
+          std::make_unique<MemSeedBundle<LoadOrStoreT>>(LSI));
+  }
 
   SeedLookupMap[LSI] = BundleVec.back().get();
 }
@@ -179,8 +182,7 @@ SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
   });
 
   // Actually collect the seeds.
-  const VectorizeOptions &Opts =
-      Ctx.getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Ctx);
   for (auto &I : *BB) {
     if (StoreInst *SI = dyn_cast<StoreInst>(&I))
       if (CollectStores && isValidMemSeed(SI))

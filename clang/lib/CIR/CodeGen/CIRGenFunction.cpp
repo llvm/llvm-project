@@ -14,6 +14,7 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
 #include "clang/AST/Attr.h"
@@ -51,9 +52,29 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
   ehStack.setCGF(this);
   shouldEmitLifetimeMarkers = CodeGenUtils::shouldEmitLifetimeMarkers(
       cgm.getCodeGenOpts(), getContext().getLangOpts());
+  setFastMathFlags(curFPFeatures);
 }
 
 CIRGenFunction::~CIRGenFunction() {}
+
+void CIRGenFunction::setFastMathFlags(FPOptions fpFeatures) {
+  cir::FastMathFlags flags = cir::FastMathFlags::none;
+  if (fpFeatures.getAllowFPReassociate())
+    flags = flags | cir::FastMathFlags::reassoc;
+  if (fpFeatures.getNoHonorNaNs())
+    flags = flags | cir::FastMathFlags::nnan;
+  if (fpFeatures.getNoHonorInfs())
+    flags = flags | cir::FastMathFlags::ninf;
+  if (fpFeatures.getNoSignedZero())
+    flags = flags | cir::FastMathFlags::nsz;
+  if (fpFeatures.getAllowReciprocal())
+    flags = flags | cir::FastMathFlags::arcp;
+  if (fpFeatures.getAllowApproxFunc())
+    flags = flags | cir::FastMathFlags::afn;
+  if (fpFeatures.allowFPContractAcrossStatement())
+    flags = flags | cir::FastMathFlags::contract;
+  builder.setFastMathFlags(flags);
+}
 
 // This is copied from clang/lib/CodeGen/CodeGenFunction.cpp
 cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
@@ -266,6 +287,23 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
   symbolTable.insert(var, addrVal);
 }
 
+void CIRGenFunction::emitVarAnnotations(const VarDecl *d, mlir::Value addr) {
+  assert(d->hasAttr<AnnotateAttr>() && "no annotate attribute");
+  for (const auto *attr : d->specific_attrs<AnnotateAttr>())
+    cir::VarAnnotationOp::create(builder, getLoc(d->getLocation()), addr,
+                                 cgm.emitAnnotateAttr(attr));
+}
+
+Address CIRGenFunction::emitFieldAnnotations(const FieldDecl *field,
+                                             Address addr) {
+  assert(field->hasAttr<AnnotateAttr>() && "no annotate attribute");
+  mlir::Value ptr = addr.getPointer();
+  for (const auto *attr : field->specific_attrs<AnnotateAttr>())
+    ptr = cir::PtrAnnotationOp::create(builder, getLoc(field->getLocation()),
+                                       ptr, cgm.emitAnnotateAttr(attr));
+  return addr.withPointer(ptr);
+}
+
 void CIRGenFunction::LexicalScope::cleanup() {
   CIRGenBuilderTy &builder = cgf.builder;
   LexicalScope *localScope = cgf.curLexScope;
@@ -412,15 +450,16 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
     if (shouldEmitUnreachable) {
       assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
-        cir::TrapOp::create(builder, localScope->endLoc);
+        cir::TrapOp::create(builder, localScope->endLoc, /*implicit=*/true);
       else
-        cir::UnreachableOp::create(builder, localScope->endLoc);
+        cir::UnreachableOp::create(builder, localScope->endLoc,
+                                   /*implicit=*/true);
       builder.clearInsertionPoint();
       return;
     }
   }
 
-  (void)emitReturn(localScope->endLoc);
+  emitReturn(localScope->endLoc).setImplicit(true);
 }
 
 cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
@@ -506,6 +545,9 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
     mlir::Location fnBodyBegin = getLoc(bodyBeginLoc);
     builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal,
                                           addr.getPointer());
+
+    if (paramVar->hasAttr<AnnotateAttr>())
+      emitVarAnnotations(paramVar, addr.getPointer());
   }
   assert(builder.getInsertionBlock() && "Should be valid");
 }
@@ -627,8 +669,13 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
         }
       }
       for (auto *fd : md->getParent()->fields()) {
-        if (fd->hasCapturedVLAType())
-          cgm.errorNYI(loc, "lambda captured VLA type");
+        if (fd->hasCapturedVLAType()) {
+          mlir::Value exprArg =
+              emitLoadOfLValue(emitLValueForLambdaField(fd), SourceLocation())
+                  .getValue();
+          const VariableArrayType *vat = fd->getCapturedVLAType();
+          vlaSizeMap[vat->getSizeExpr()] = exprArg;
+        }
       }
     } else if (md->isImplicitObjectMemberFunction()) {
       // Not in a lambda; just use 'this' from the method.
@@ -1228,9 +1275,16 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return LValue();
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
-  case Expr::ConstantExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: ConstantExpr");
-    return LValue();
+  case Expr::ConstantExprClass: {
+    const ConstantExpr *ce = cast<ConstantExpr>(e);
+    if (mlir::Attribute result =
+            ConstantEmitter(*this).tryEmitConstantExpr(ce)) {
+      mlir::Value val = builder.getConstant(
+          getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
+      return makeNaturalAlignPointeeAddrLValue(val, ce->getType());
+    }
+    return emitLValue(ce->getSubExpr());
+  }
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::GenericSelectionExprClass:
@@ -1316,9 +1370,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::ExtVectorElementExprClass:
     return emitExtVectorElementExpr(cast<ExtVectorElementExpr>(e));
   case Expr::MatrixElementExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: MatrixElementExpr");
-    return LValue();
+    return emitMatrixElementExpr(cast<MatrixElementExpr>(e));
   case Expr::CXXThisExprClass:
     return makeAddrLValue(loadCXXThisAddress(), e->getType());
   case Expr::MemberExprClass:
@@ -1353,11 +1405,9 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
   case Expr::CoawaitExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoawaitExpr");
-    return LValue();
+    return emitCoawaitLValue(cast<CoawaitExpr>(e));
   case Expr::CoyieldExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoyieldExpr");
-    return LValue();
+    return emitCoyieldLValue(cast<CoyieldExpr>(e));
   case Expr::PackIndexingExprClass:
     return emitLValue(cast<PackIndexingExpr>(e)->getSelectedExpr());
   case Expr::HLSLOutArgExprClass:
@@ -1456,8 +1506,7 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   if (oldFPFeatures == fpFeatures)
     return;
 
-  // TODO(cir): create guard to restore fast math configurations.
-  assert(!cir::MissingFeatures::fastMathGuard());
+  oldFastMathFlags = cgf.builder.getFastMathFlags();
 
   llvm::RoundingMode newRoundingMode = fpFeatures.getRoundingMode();
   LangOptions::FPExceptionModeKind newExceptionBehavior =
@@ -1466,8 +1515,7 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   cgf.builder.setDefaultConstrainedRounding(newRoundingMode);
   cgf.builder.setDefaultConstrainedExcept(newExceptionBehavior);
 
-  // TODO(cir): override FP flags once FM configs are guarded.
-  assert(!cir::MissingFeatures::fastMathFlags());
+  cgf.setFastMathFlags(fpFeatures);
 
   assert((cgf.curFuncDecl == nullptr || cgf.builder.getIsFPConstrained() ||
           isa<CXXConstructorDecl>(cgf.curFuncDecl) ||
@@ -1484,6 +1532,8 @@ CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
   cgf.curFPFeatures = oldFPFeatures;
   cgf.builder.setDefaultConstrainedExcept(oldExcept);
   cgf.builder.setDefaultConstrainedRounding(oldRounding);
+  if (oldFastMathFlags)
+    cgf.builder.setFastMathFlags(*oldFastMathFlags);
 }
 
 cir::FastMathFlags CIRGenFunction::getCurrentFastMathFlags() const {
@@ -1603,7 +1653,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   if (numVLAElements)
     numElements =
         builder.createMul(numVLAElements.getLoc(), numVLAElements, numElements,
-                          cir::OverflowBehavior::NoUnsignedWrap);
+                          cir::OverflowFlags::NoUnsignedWrap);
 
   return numElements;
 }
@@ -1659,7 +1709,7 @@ CIRGenFunction::getVLASize(const VariableArrayType *type) {
 
       numElements =
           builder.createMul(numElements.getLoc(), numElements, vlaSize,
-                            cir::OverflowBehavior::NoUnsignedWrap);
+                            cir::OverflowFlags::NoUnsignedWrap);
     }
   } while ((type = getContext().getAsVariableArrayType(elementType)));
 

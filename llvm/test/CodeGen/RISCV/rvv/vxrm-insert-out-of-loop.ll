@@ -148,7 +148,6 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ;
 ; RV64X60-LABEL: test1:
 ; RV64X60:       # %bb.0: # %entry
-; RV64X60-NEXT:    csrwi vxrm, 0
 ; RV64X60-NEXT:    blez a7, .LBB0_12
 ; RV64X60-NEXT:  # %bb.1: # %for.cond1.preheader.lr.ph
 ; RV64X60-NEXT:    blez a6, .LBB0_12
@@ -199,6 +198,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    or t4, t5, t4
 ; RV64X60-NEXT:    andi t4, t4, 1
 ; RV64X60-NEXT:    add t5, a0, a6
+; RV64X60-NEXT:    csrwi vxrm, 0
 ; RV64X60-NEXT:    j .LBB0_4
 ; RV64X60-NEXT:  .LBB0_3: # %for.cond1.for.cond.cleanup3_crit_edge.us
 ; RV64X60-NEXT:    # in Loop: Header=BB0_4 Depth=1

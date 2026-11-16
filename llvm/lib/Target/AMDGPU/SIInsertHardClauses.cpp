@@ -41,23 +41,19 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-hard-clauses"
 
-static cl::opt<unsigned>
-    HardClauseLengthLimit("amdgpu-hard-clause-length-limit",
-                          cl::desc("Maximum number of memory instructions to "
-                                   "place in the same hard clause"),
-                          cl::Hidden);
-
 namespace {
 
 enum HardClauseType {
-  // For GFX10 and GFX1250:
+  // For targets where loads, stores and atomics share one clause type per
+  // memory class (see hasMixedLoadStoreClauses):
 
   // Texture, buffer, global or scratch memory instructions.
   HARDCLAUSE_VMEM,
   // Flat (not global or scratch) memory instructions.
   HARDCLAUSE_FLAT,
 
-  // For GFX11:
+  // For targets where each memory class is typed separately for loads,
+  // stores and atomics:
 
   // Texture memory instructions.
   HARDCLAUSE_MIMG_LOAD,
@@ -101,8 +97,7 @@ public:
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
-      if (ST->getGeneration() == AMDGPUSubtarget::GFX10 ||
-          ST->hasGFX1250Insts()) {
+      if (ST->hasMixedLoadStoreClauses()) {
         if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
             SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
@@ -211,10 +206,10 @@ public:
     if (!ST->hasHardClauses())
       return false;
 
-    unsigned MaxClauseLength = MF.getFunction().getFnAttributeAsParsedInteger(
-        "amdgpu-hard-clause-length-limit", 255);
-    if (HardClauseLengthLimit.getNumOccurrences())
-      MaxClauseLength = HardClauseLengthLimit;
+    unsigned MaxClauseLength =
+        ST->getCLOpts().hard_clause_length_limit.value_or(
+            MF.getFunction().getFnAttributeAsParsedInteger(
+                "amdgpu-hard-clause-length-limit", 255));
     MaxClauseLength = std::min(MaxClauseLength, ST->maxHardClauseLength());
     if (MaxClauseLength <= 1)
       return false;

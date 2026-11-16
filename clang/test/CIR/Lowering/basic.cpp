@@ -22,8 +22,7 @@ int f2() {
 // CHECK:    %[[RV:.*]] = alloca i32, align 4
 // CHECK:    %[[I_PTR:.*]] = alloca i32, align 4
 // CHECK:    store i32 2, ptr %[[I_PTR]], align 4
-// CHECK:    %[[I:.*]] = load i32, ptr %[[I_PTR]], align 4
-// CHECK:    store i32 %[[I]], ptr %[[RV]], align 4
+// CHECK:    store i32 2, ptr %[[RV]], align 4
 // CHECK:    %[[R:.*]] = load i32, ptr %[[RV]], align 4
 // CHECK:    ret i32 %[[R]]
 

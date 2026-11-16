@@ -249,40 +249,22 @@ public:
   }
 };
 
-class AttributeBitSet {
-  /// Bitset with a bit for each available attribute Attribute::AttrKind.
-  uint8_t AvailableAttrs[16] = {};
-  static_assert(Attribute::EndAttrKinds <= sizeof(AvailableAttrs) * CHAR_BIT,
-                "Too many attributes");
-
-public:
-  bool hasAttribute(Attribute::AttrKind Kind) const {
-    return AvailableAttrs[Kind / 8] & (1 << (Kind % 8));
-  }
-
-  void addAttribute(Attribute::AttrKind Kind) {
-    AvailableAttrs[Kind / 8] |= 1 << (Kind % 8);
-  }
-};
-
 //===----------------------------------------------------------------------===//
 /// \class
 /// This class represents a group of attributes that apply to one
 /// element: function, return type, or parameter.
 class AttributeSetNode final
     : public FoldingSetNode,
+      public AttributeSetNodeBase,
       private TrailingObjects<AttributeSetNode, Attribute> {
   friend TrailingObjects;
 
   unsigned NumAttrs; ///< Number of attributes in this node.
-  AttributeBitSet AvailableAttrs; ///< Available enum attributes.
 
   DenseMap<StringRef, Attribute> StringAttrs;
 
   AttributeSetNode(ArrayRef<Attribute> Attrs);
 
-  static AttributeSetNode *getSorted(LLVMContext &C,
-                                     ArrayRef<Attribute> SortedAttrs);
   std::optional<Attribute> findEnumAttribute(Attribute::AttrKind Kind) const;
 
 public:
@@ -296,12 +278,13 @@ public:
 
   static AttributeSetNode *get(LLVMContext &C, ArrayRef<Attribute> Attrs);
 
+  static AttributeSetNode *getSorted(LLVMContext &C,
+                                     ArrayRef<Attribute> SortedAttrs);
+
   /// Return the number of attributes this AttributeList contains.
   unsigned getNumAttributes() const { return NumAttrs; }
 
-  bool hasAttribute(Attribute::AttrKind Kind) const {
-    return AvailableAttrs.hasAttribute(Kind);
-  }
+  using AttributeSetNodeBase::hasAttribute;
   bool hasAttribute(StringRef Kind) const;
   bool hasAttributes() const { return NumAttrs != 0; }
 
@@ -339,14 +322,13 @@ public:
 /// return type, and parameters.
 class AttributeListImpl final
     : public FoldingSetNode,
+      public AttributeListImplBase,
       private TrailingObjects<AttributeListImpl, AttributeSet> {
   friend class AttributeList;
   friend TrailingObjects;
 
 private:
   unsigned NumAttrSets; ///< Number of entries in this set.
-  /// Available enum function attributes.
-  AttributeBitSet AvailableFunctionAttrs;
   /// Union of enum attributes available at any index.
   AttributeBitSet AvailableSomewhereAttrs;
 
@@ -356,12 +338,6 @@ public:
   // AttributesSetImpt is uniqued, these should not be available.
   AttributeListImpl(const AttributeListImpl &) = delete;
   AttributeListImpl &operator=(const AttributeListImpl &) = delete;
-
-  /// Return true if the AttributeSet or the FunctionIndex has an
-  /// enum attribute of the given kind.
-  bool hasFnAttribute(Attribute::AttrKind Kind) const {
-    return AvailableFunctionAttrs.hasAttribute(Kind);
-  }
 
   /// Return true if the specified attribute is set for at least one
   /// parameter or for the return value. If Index is not nullptr, the index

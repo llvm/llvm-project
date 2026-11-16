@@ -341,6 +341,30 @@ GDBRemoteCommunicationClient::AcceleratorBreakpointHit(
       response.GetStringRef(), llvm::toString(hit_response.takeError()));
 }
 
+std::optional<AcceleratorDynamicLoaderResponse>
+GDBRemoteCommunicationClient::GetAcceleratorDynamicLoaderLibraryInfos(
+    const AcceleratorDynamicLoaderArgs &args) {
+  StreamGDBRemote packet;
+  packet.PutCString("jAcceleratorPluginGetDynamicLoaderLibraryInfo:");
+  packet.PutAsJSON(args, /*hex_ascii=*/false);
+
+  StringExtractorGDBRemote response;
+  response.SetResponseValidatorToJSON();
+  if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+          PacketResult::Success ||
+      response.IsErrorResponse())
+    return std::nullopt;
+
+  llvm::Expected<AcceleratorDynamicLoaderResponse> parsed =
+      llvm::json::parse<AcceleratorDynamicLoaderResponse>(
+          response.Peek(), "AcceleratorDynamicLoaderResponse");
+  if (!parsed) {
+    llvm::consumeError(parsed.takeError());
+    return std::nullopt;
+  }
+  return *parsed;
+}
+
 bool GDBRemoteCommunicationClient::QueryNoAckModeSupported() {
   if (m_supports_not_sending_acks == eLazyBoolCalculate) {
     m_send_acks = true;
@@ -4252,6 +4276,19 @@ GDBRemoteCommunicationClient::ReadExtFeature(llvm::StringRef object,
   }
 
   return output;
+}
+
+llvm::Expected<std::string>
+GDBRemoteCommunicationClient::ReadSiginfo(lldb::tid_t tid) {
+  // qXfer:siginfo:read returns the siginfo of the thread selected by the Hg
+  // packet. Hold the lock to make sure nobody selects a different thread
+  // before we're done.
+  Lock lock(*this);
+  if (!lock)
+    return llvm::createStringError("failed to get the sequence mutex");
+  if (!SetCurrentThread(tid))
+    return llvm::createStringError("failed to select thread");
+  return ReadExtFeature("siginfo", "");
 }
 
 // Notify the target that gdb is prepared to serve symbol lookup requests.

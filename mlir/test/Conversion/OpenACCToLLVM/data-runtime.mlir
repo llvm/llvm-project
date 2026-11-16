@@ -2,7 +2,7 @@
 
 // Data runtime argument emission preserves every dialect map flag.
 // CHECK-LABEL: llvm.func @all_map_flags
-// CHECK: %[[FLAGS:.*]] = llvm.mlir.constant(8384411 : i64) : i64
+// CHECK: %[[FLAGS:.*]] = llvm.mlir.constant(8384475 : i64) : i64
 // CHECK: llvm.store %[[FLAGS]], %{{.*}} : i64, !llvm.ptr
 // CHECK: llvm.call @__tgt_acc_data_enter
 func.func @all_map_flags(%arg0: !llvm.ptr) {
@@ -10,7 +10,8 @@ func.func @all_map_flags(%arg0: !llvm.ptr) {
   %map = acc.map_info varPtr(%arg0 : !llvm.ptr) varType(i32)
       size(%size : i64) elementSize(4)
       descKind(none)
-      mapFlags(to, from, delete, ptr_and_obj, private, literal, implicit,
+      mapFlags(to, from, delete, ptr_and_obj, return_param, private, literal,
+               implicit,
                devptr, managed_devptr, no_create, gang_private,
                worker_private, vector_private, init_zero, device_resident,
                if_present, present, descriptor, reduction) -> !llvm.ptr

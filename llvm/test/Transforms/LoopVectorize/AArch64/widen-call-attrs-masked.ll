@@ -24,7 +24,7 @@ define void @masked_range_arg_and_ret_propagated(ptr noalias %a, ptr readnone %b
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP2]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call range(i64 0, 100) <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> range(i64 0, 50) [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP3]], ptr align 8 [[TMP4]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
@@ -70,7 +70,7 @@ define void @masked_noundef_dereferenceable_stripped(ptr noalias %a, ptr readnon
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP2]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call range(i64 0, 100) <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> range(i64 0, 50) [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP3]], ptr align 8 [[TMP4]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
@@ -101,5 +101,75 @@ exit:
   ret void
 }
 
+declare i64 @baz(i64, i64, ptr) memory(none)
+declare <vscale x 2 x i64> @baz_vector(i64, <vscale x 2 x i64>, ptr, <vscale x 2 x i1>) memory(none)
+
+; The call is conditionally executed, so the masked variant gets called with
+; inactive lanes. range on the widened argument is kept, as the inactive lanes
+; are masked off. The attributes on the linear and uniform arguments are
+; dropped: their scalar values are shared by all lanes, e.g. the linear
+; argument passes the value of the first lane, which may be inactive.
+define void @masked_linear_and_uniform_arg_attrs_dropped(ptr noalias %a, ptr readnone %b, ptr %p) #1 {
+; CHECK-LABEL: define void @masked_linear_and_uniform_arg_attrs_dropped(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[LATCH:.*]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[INDEX_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[LOOP]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP2]], %[[LOOP]] ], [ [[VEC_IND_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP3]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <vscale x 2 x i64> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = call range(i64 0, 100) <vscale x 2 x i64> @baz_vector(i64 [[IV]], <vscale x 2 x i64> range(i64 0, 50) [[WIDE_MASKED_LOAD]], ptr [[P]], <vscale x 2 x i1> [[TMP5]])
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64> zeroinitializer
+; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr align 8 [[A_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = xor i1 [[TMP8]], true
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[EXIT:.*]], label %[[LATCH]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %latch]
+  %gep = getelementptr i64, ptr %b, i64 %iv
+  %x = load i64, ptr %gep
+  %c = icmp ne i64 %iv, 0
+  br i1 %c, label %then, label %latch
+
+then:
+  %r = call range(i64 0, 100) i64 @baz(i64 range(i64 1, 1025) %iv, i64 range(i64 0, 50) %x, ptr nonnull %p) #2
+  br label %latch
+
+latch:
+  %res = phi i64 [ %r, %then ], [ 0, %loop ]
+  %a.gep = getelementptr i64, ptr %a, i64 %iv
+  store i64 %res, ptr %a.gep
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 1025
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 attributes #0 = { nounwind "vector-function-abi-variant"="_ZGVsMxv_foo(foo_vector)" }
 attributes #1 = { "target-features"="+sve" vscale_range(2,16) }
+attributes #2 = { nounwind "vector-function-abi-variant"="_ZGVsMxlvu_baz(baz_vector)" }

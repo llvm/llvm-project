@@ -216,5 +216,41 @@ exit:
   ret i64 %res
 }
 
+; Test null pointer handling. SCEV-based alignment check returns 64 low zero
+; bits for the load base here, which used to cause a compiler crash when we
+; converted it to an `Align` value. (`Align` allows at most 63)
+define i64 @wcslen_at_zero() null_pointer_is_valid {
+; CHECK-LABEL: define i64 @wcslen_at_zero(
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[WCSLEN:%.*]] = call i64 @wcslen(ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[WCSLEN]], 2
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr null, i64 [[TMP0]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[P_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 1
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq i32 [[V]], 0
+; CHECK-NEXT:    br i1 true, label %[[DONE:.*]], label %[[LOOP]]
+; CHECK:       [[DONE]]:
+; CHECK-NEXT:    [[D:%.*]] = ptrtoint ptr [[SCEVGEP]] to i64
+; CHECK-NEXT:    ret i64 [[D]]
+;
+entry:
+  br label %loop
+
+loop:
+  %p = phi ptr [ null, %entry ], [ %p.next, %loop ]
+  %v = load i32, ptr %p, align 1
+  %p.next = getelementptr inbounds i8, ptr %p, i64 4
+  %z = icmp eq i32 %v, 0
+  br i1 %z, label %done, label %loop
+
+done:
+  %d = ptrtoint ptr %p to i64
+  ret i64 %d
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"wchar_size", i32 4}

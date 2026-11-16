@@ -26,6 +26,7 @@ extern const size_t LINUX_IFMAP_SIZE;
 extern const size_t LINUX_IFMAP_ALIGN;
 extern const size_t LINUX_IFREQ_SIZE;
 extern const size_t LINUX_IFREQ_ALIGN;
+extern const int LINUX_IFNAMSIZ;
 
 TEST(LlvmLibcNetIfAndLinuxIfTest, LinuxIfAfterNetIf) {
   // Verify that our struct definitions match the size and alignment of the
@@ -34,4 +35,7 @@ TEST(LlvmLibcNetIfAndLinuxIfTest, LinuxIfAfterNetIf) {
   EXPECT_EQ(alignof(struct ifmap), LINUX_IFMAP_ALIGN);
   EXPECT_EQ(sizeof(struct ifreq), LINUX_IFREQ_SIZE);
   EXPECT_EQ(alignof(struct ifreq), LINUX_IFREQ_ALIGN);
+
+  EXPECT_EQ(IFNAMSIZ, LINUX_IFNAMSIZ);
+  EXPECT_EQ(IFNAMSIZ, IF_NAMESIZE);
 }

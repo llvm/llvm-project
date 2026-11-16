@@ -13,7 +13,7 @@ from lldbsuite.test.tools.lldb_dap.types import AttachArgs, LaunchArgs
 class TestDAP_save_core(DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @requireMinidumpSave
     @requireLinux
     def test_save_and_reload_core(self):
         """Save minidump cores in every supported `--style` from a single

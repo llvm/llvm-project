@@ -142,7 +142,7 @@ public:
   LiveRegMatrix *getInterferenceMatrix() const { return Matrix; }
   LiveIntervals *getLiveIntervals() const { return LIS; }
   VirtRegMap *getVirtRegMap() const { return VRM; }
-  const RegisterClassInfo &getRegClassInfo() const { return RegClassInfo; }
+  const RegisterClassInfo &getRegClassInfo() const { return *RegClassInfo; }
   const ExtraRegInfo &getExtraInfo() const { return *ExtraInfo; }
   size_t getQueueSize() const { return Queue.size(); }
   // end (interface to eviction advisers)
@@ -313,7 +313,8 @@ private:
 
   bool hasVirtRegAlloc();
   BlockFrequency calcBlockSplitCost();
-  bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &);
+  bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &,
+                           BlockFrequency MaxCost);
   bool addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);
   bool growRegion(GlobalSplitCandidate &Cand);
   BlockFrequency calcGlobalSplitCost(GlobalSplitCandidate &,
@@ -380,7 +381,7 @@ private:
                                      unsigned);
   bool tryRecoloringCandidates(PQueue &, SmallVectorImpl<Register> &,
                                SmallVirtRegSet &, RecoloringStack &, unsigned);
-  void tryHintRecoloring(const LiveInterval &);
+  void tryHintRecoloring(const LiveInterval &, DenseSet<Register> &);
   void tryHintsRecoloring();
 
   /// Model the information carried by one end of a copy.

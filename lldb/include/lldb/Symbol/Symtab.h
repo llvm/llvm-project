@@ -225,19 +225,24 @@ public:
   /// index is saved to the cache, debug sessions can be slower. These accessors
   /// can be accessed by the statistics and emitted to help track these costs.
   /// \{
-  bool GetWasLoadedFromCache() const {
-    return m_loaded_from_cache;
-  }
   void SetWasLoadedFromCache() {
-    m_loaded_from_cache = true;
+    SetStateFlags(lldb::eSymtabStateLoadedFromCache);
   }
-  bool GetWasSavedToCache() const {
-    return m_saved_to_cache;
-  }
-  void SetWasSavedToCache() {
-    m_saved_to_cache = true;
-  }
+  void SetWasSavedToCache() { SetStateFlags(lldb::eSymtabStateSavedToCache); }
   /// \}
+
+  /// Returns a bitmask of lldb::SymtabState flags describing the state of this
+  /// symbol table.
+  uint32_t GetState() const {
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    return m_state;
+  }
+  void SetWasParsedFromObjectFile() {
+    SetStateFlags(lldb::eSymtabStateParsedFromObjectFile);
+  }
+  void SetSymbolFileAddedSymbols() {
+    SetStateFlags(lldb::eSymtabStateSymbolFileAddedSymbols);
+  }
 
 protected:
   typedef std::vector<Symbol> collection;
@@ -282,10 +287,14 @@ protected:
       m_name_to_symbol_indices;
   bool m_file_addr_to_index_computed = false;
   bool m_name_indexes_computed = false;
-  bool m_loaded_from_cache = false;
-  bool m_saved_to_cache = false;
+  /// A bitmask of lldb::SymtabState flags.
+  uint32_t m_state = lldb::eSymtabStateNone;
 
 private:
+  void SetStateFlags(lldb::SymtabState state) {
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    m_state |= state;
+  }
   UniqueCStringMap<uint32_t> &
   GetNameToSymbolIndexMap(lldb::FunctionNameType type) {
     auto map = m_name_to_symbol_indices.find(type);
@@ -346,9 +355,9 @@ private:
                                         SymbolContextList &sc_list);
 
   void RegisterMangledNameEntry(
-      uint32_t value, std::set<const char *> &class_contexts,
-      std::vector<std::pair<NameToIndexMap::Entry, const char *>> &backlog,
-      RichManglingContext &rmc);
+      uint32_t value, const Mangled::FunctionNameParts &parts,
+      std::set<const char *> &class_contexts,
+      std::vector<std::pair<NameToIndexMap::Entry, const char *>> &backlog);
 
   void RegisterBacklogEntry(const NameToIndexMap::Entry &entry,
                             const char *decl_context,

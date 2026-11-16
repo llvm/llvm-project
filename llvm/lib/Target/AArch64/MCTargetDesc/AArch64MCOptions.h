@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCOPTIONS_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCOPTIONS_H
 
+#include "llvm/MC/MCTargetOptions.h"
 #include <optional>
 
 namespace llvm::AArch64 {
@@ -17,5 +18,12 @@ enum AsmWriterVariantTy { Generic = 0, Apple = 1 };
 
 #define OPTIONS_STRUCT_DECL
 #include "AArch64MCOptions.inc"
+
+namespace llvm::AArch64_MC {
+inline const AArch64MCOptions &getCLOpts(const MCTargetOptions &Options) {
+  return cl::LibraryOptionsContext::get<AArch64MCOptions>(
+      Options.LibraryOptions);
+}
+} // namespace llvm::AArch64_MC
 
 #endif // LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCOPTIONS_H

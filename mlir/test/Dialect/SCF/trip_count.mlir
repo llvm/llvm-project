@@ -663,7 +663,7 @@ func.func @trip_count_arith_add_negative_nuw_loop_unsigned(%lb : i32) -> i32 {
   %c0_i32 = arith.constant 0 : i32
   %c4_i32 = arith.constant 4 : i32
   %c-16_i32 = arith.constant -16 : i32
-  // CHECK: "test.trip-count" = 0
+  // CHECK: "test.trip-count" = 1073741820
   %ub = arith.addi %lb, %c-16_i32 overflow<nuw> : i32
   %1 = scf.for unsigned %arg0 = %lb to %ub step %c4_i32 iter_args(%arg1 = %c0_i32) -> (i32)  : i32 {
     scf.yield %arg0 : i32
@@ -677,7 +677,7 @@ func.func @trip_count_arith_add_negative_nuw_loop_unsigned(%lb : i32) -> i32 {
 func.func @trip_count_arith_add_negative_nuw_loop_unsigned_step_dyn(%lb : i32, %step : i32) -> i32 {
   %c0_i32 = arith.constant 0 : i32
   %c-16_i32 = arith.constant -16 : i32
-  // CHECK: "test.trip-count" = 0
+  // CHECK: "test.trip-count" = "none"
   %ub = arith.addi %lb, %c-16_i32 overflow<nuw> : i32
   %1 = scf.for unsigned %arg0 = %lb to %ub step %step iter_args(%arg1 = %c0_i32) -> (i32)  : i32 {
     scf.yield %arg0 : i32

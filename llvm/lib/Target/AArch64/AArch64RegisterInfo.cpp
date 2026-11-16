@@ -75,7 +75,8 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const auto &F = MF->getFunction();
   const auto *TLI = MF->getSubtarget<AArch64Subtarget>().getTargetLowering();
   const bool Darwin = MF->getSubtarget<AArch64Subtarget>().isTargetDarwin();
-  const bool Windows = MF->getSubtarget<AArch64Subtarget>().isTargetWindows();
+  const bool Windows =
+      MF->getSubtarget<AArch64Subtarget>().isTargetWindowsOrUEFI();
 
   if (TLI->supportSwiftError() &&
       F.getAttributes().hasAttrSomewhere(Attribute::SwiftError)) {
@@ -437,17 +438,6 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
       markSuperRegs(Reserved, i);
   }
 
-  if (MF.getSubtarget<AArch64Subtarget>().isLFI()) {
-    markSuperRegs(Reserved, AArch64::W28);
-    markSuperRegs(Reserved, AArch64::W27);
-    markSuperRegs(Reserved, AArch64::W26);
-    markSuperRegs(Reserved, AArch64::W25);
-    if (!MF.getProperties().hasNoVRegs()) {
-      markSuperRegs(Reserved, AArch64::LR);
-      markSuperRegs(Reserved, AArch64::W30);
-    }
-  }
-
   for (size_t i = 0; i < AArch64::GPR32commonRegClass.getNumRegs(); ++i) {
     if (MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(i))
       markSuperRegs(Reserved, AArch64::GPR32commonRegClass.getRegister(i));
@@ -691,7 +681,7 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
-    if (STI.isTargetWindows()) {
+    if (STI.isTargetWindowsOrUEFI()) {
       if (IsVarArg)
         return HasReg(CC_AArch64_Win64_VarArg_ArgRegs, Reg);
       switch (CC) {
@@ -737,7 +727,7 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
-    if (STI.isTargetWindows())
+    if (STI.isTargetWindowsOrUEFI())
       return HasReg(CC_AArch64_Win64PCS_ArgRegs, Reg);
     return HasReg(CC_AArch64_AAPCS_ArgRegs, Reg);
   }
@@ -756,7 +746,7 @@ bool AArch64RegisterInfo::requiresRegisterScavenging(
 
 bool AArch64RegisterInfo::requiresVirtualBaseRegisters(
     const MachineFunction &MF) const {
-  return true;
+  return MF.getTarget().getOptLevel() != CodeGenOptLevel::None;
 }
 
 bool

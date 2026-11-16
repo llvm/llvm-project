@@ -97,9 +97,9 @@ stack:
       stack-id: default, callee-saved-register: '$fp', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 callSites:
-  - { bb: 0, offset: 8, fwdArgRegs:
+  - { bb: '%bb.0', offset: 8, fwdArgRegs:
       - { arg: 0, reg: '$w0' } }
-  - { bb: 0, offset: 10, fwdArgRegs:
+  - { bb: '%bb.0', offset: 10, fwdArgRegs:
       - { arg: 0, reg: '$w0' } }
 body:             |
   bb.0.entry:

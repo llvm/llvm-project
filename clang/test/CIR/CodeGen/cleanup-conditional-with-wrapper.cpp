@@ -1,9 +1,15 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -fcxx-exceptions -fexceptions -emit-cir %s -o %t.eh.cir
+// RUN: FileCheck --input-file=%t.eh.cir %s --check-prefix=DEACT
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -fcxx-exceptions -fexceptions -emit-llvm %s -o %t.eh.ll
+// RUN: FileCheck --input-file=%t.eh.ll %s --check-prefix=DEACT-IR
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm %s -o %t.ogcg.eh.ll
+// RUN: FileCheck --input-file=%t.ogcg.eh.ll %s --check-prefix=DEACT-IR
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR,DEACT
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,DEACT-IR
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG,DEACT-IR
 
 struct Base { ~Base(); };
 
@@ -349,3 +355,46 @@ void makeEntry() {
 // OGCG: [[CLEANUP_DONE]]:
 // OGCG:   call void @_ZN4IterD1Ev(ptr {{.*}} %[[REF_TMP]])
 // OGCG:   ret void
+
+// A non-conditional array initializer leaves its temporary alive until the
+// enclosing full-expression ends.
+
+struct Obj {
+  char c;
+  Obj(char);
+  ~Obj();
+};
+
+extern "C" int h(const Obj &);
+extern "C" int g();
+
+struct Agg {
+  Obj o;
+  int i;
+};
+
+extern "C" void use_array(Agg *, int);
+
+// DEACT-LABEL: cir.func {{.*}} @array_new_temporary(
+// DEACT: %[[TMP:.*]] = cir.alloca "ref.tmp0"
+// DEACT: cir.call @_ZN3ObjC1Ec(
+// DEACT-NEXT: %[[TRUE:.*]] = cir.const #true
+// DEACT-NEXT: cir.store %[[TRUE]], %[[ACTIVE:.*]]
+// DEACT: cir.call @h(%[[TMP]])
+// DEACT: %[[FALSE:.*]] = cir.const #false
+// DEACT-NEXT: cir.store %[[FALSE]], %[[ACTIVE]]
+// DEACT-NOT: cir.call @_ZN3ObjD1Ev(%[[TMP]])
+// DEACT: cir.call @g()
+// DEACT-NEXT: cir.call @use_array(
+// DEACT: cir.call @_ZN3ObjD1Ev(%[[TMP]])
+
+// DEACT-IR-LABEL: define {{.*}} void @array_new_temporary(
+// DEACT-IR: {{(call|invoke)}} void @_ZN3ObjC1Ec(ptr {{.*}} %[[TMP:.*]], i8 {{.*}} 116)
+// DEACT-IR-NOT: call void @_ZN3ObjD1Ev(ptr {{.*}} %[[TMP]])
+// DEACT-IR: {{(call|invoke)}} i32 @g()
+// DEACT-IR: {{(call|invoke)}} void @use_array(
+// DEACT-IR: call void @_ZN3ObjD1Ev(ptr {{.*}} %[[TMP]])
+
+extern "C" void array_new_temporary() {
+  use_array(new Agg[2]{{Obj{'a'}, h(Obj{'t'})}, {Obj{'c'}, 2}}, g());
+}
