@@ -24,6 +24,7 @@
 #include "SILowerI1Copies.h"
 #include "AMDGPU.h"
 #include "llvm/CodeGen/MachineIDFSSAUpdater.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "si-i1-copies"
@@ -853,6 +854,33 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
 
 void Vreg1LoweringHelper::constrainAsLaneMask(AMDGPU::Incoming &In) {}
 
+/// AMDGPUUnifyDivergentExitNodes branches from blocks that call a noreturn
+/// function to the rest of the function, so that every divergent branch
+/// reconverges. Lane mask lowering relies on this through post-dominance. Once
+/// it is done, remove the edges so that nothing is live across the call.
+static bool removeEdgesAfterNoReturnCalls(MachineFunction &MF) {
+  const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
+  bool Changed = false;
+  for (MachineBasicBlock &MBB : MF) {
+    const BasicBlock *BB = MBB.getBasicBlock();
+    auto *Br = BB ? dyn_cast<UncondBrInst>(BB->getTerminator()) : nullptr;
+    auto *Call = Br ? dyn_cast_or_null<CallInst>(Br->getPrevNode()) : nullptr;
+    if (!Call || isa<IntrinsicInst>(Call) || !Call->doesNotReturn() ||
+        MBB.succ_size() != 1)
+      continue;
+
+    MachineBasicBlock *Succ = *MBB.succ_begin();
+    if (Succ->getBasicBlock() == BB || Succ->pred_size() == 1)
+      continue;
+
+    TII->removeBranch(MBB);
+    Succ->removePHIsIncomingValuesForPredecessor(MBB);
+    MBB.removeSuccessor(Succ);
+    Changed = true;
+  }
+  return Changed;
+}
+
 /// Lower all instructions that def or use vreg_1 registers.
 ///
 /// In a first pass, we lower COPYs from vreg_1 to vector registers, as can
@@ -863,7 +891,7 @@ void Vreg1LoweringHelper::constrainAsLaneMask(AMDGPU::Incoming &In) {}
 /// all others, because phi lowering looks through copies and can therefore
 /// often make copy lowering unnecessary.
 static bool runFixI1Copies(MachineFunction &MF, MachineDominatorTree &MDT,
-                           MachinePostDominatorTree &MPDT) {
+                           MachinePostDominatorTree &MPDT, bool &CFGChanged) {
   // Only need to run this in SelectionDAG path.
   if (MF.getProperties().hasSelected())
     return false;
@@ -873,7 +901,9 @@ static bool runFixI1Copies(MachineFunction &MF, MachineDominatorTree &MDT,
   Changed |= Helper.lowerCopiesFromI1();
   Changed |= Helper.lowerPhis();
   Changed |= Helper.lowerCopiesToI1();
-  return Helper.cleanConstrainRegs(Changed);
+  Changed = Helper.cleanConstrainRegs(Changed);
+  CFGChanged = removeEdgesAfterNoReturnCalls(MF);
+  return Changed || CFGChanged;
 }
 
 PreservedAnalyses
@@ -882,12 +912,16 @@ SILowerI1CopiesPass::run(MachineFunction &MF,
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachinePostDominatorTree &MPDT =
       MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
-  bool Changed = runFixI1Copies(MF, MDT, MPDT);
+  bool CFGChanged = false;
+  bool Changed = runFixI1Copies(MF, MDT, MPDT, CFGChanged);
   if (!Changed)
     return PreservedAnalyses::all();
 
   // TODO: Probably preserves most.
-  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  if (!CFGChanged)
+    PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 class SILowerI1CopiesLegacy : public MachineFunctionPass {
@@ -901,7 +935,6 @@ public:
   StringRef getPassName() const override { return "SI Lower i1 Copies"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -913,7 +946,8 @@ bool SILowerI1CopiesLegacy::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MachinePostDominatorTree &MPDT =
       getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-  return runFixI1Copies(MF, MDT, MPDT);
+  bool CFGChanged = false;
+  return runFixI1Copies(MF, MDT, MPDT, CFGChanged);
 }
 
 INITIALIZE_PASS_BEGIN(SILowerI1CopiesLegacy, DEBUG_TYPE, "SI Lower i1 Copies",
