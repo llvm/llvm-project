@@ -368,7 +368,7 @@ void CodeGenPassBuilder::addISelPasses(PassManagerWrapper &PMW) {
     addFunctionPass(ObjCARCContractPass(), PMW);
     flushFPMsToMPM(PMW);
   }
-  addModulePass(PreISelIntrinsicLoweringPass(&TM), PMW);
+  addModulePass(PreISelIntrinsicLoweringPass(TM), PMW);
   addFunctionPass(ExpandIRInstsPass(TM, getOptLevel()), PMW);
 
   addIRPasses(PMW);

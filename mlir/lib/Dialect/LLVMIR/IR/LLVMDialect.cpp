@@ -4834,7 +4834,8 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
 
   // Check a unit attribute that is attached to an integer value.
   if (name == LLVMDialect::getSExtAttrName() ||
-      name == LLVMDialect::getZExtAttrName()) {
+      name == LLVMDialect::getZExtAttrName() ||
+      name == LLVMDialect::getNoExtAttrName()) {
     if (failed(checkUnitAttrType()))
       return failure();
     if (verifyValueType && failed(checkIntegerType()))
