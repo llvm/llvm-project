@@ -1281,8 +1281,8 @@ public:
     /// Path Operation (APO).
     struct OperandData {
       OperandData() = default;
-      OperandData(Value *V, bool APO, bool IsUsed)
-          : V(V), APO(APO), IsUsed(IsUsed) {}
+      OperandData(Value *V, bool APO, bool IsUsed, unsigned RootUsersKey = 0)
+          : V(V), APO(APO), IsUsed(IsUsed), RootUsersKey(RootUsersKey) {}
       /// The operand value.
       Value *V = nullptr;
       /// TreeEntries only allow a single opcode, or an alternate sequence of
@@ -1293,7 +1293,24 @@ public:
       bool APO = false;
       /// Helper data for the reordering function.
       bool IsUsed = false;
+      /// Key of the binary users of the lane root, which also use this
+      /// operand, like the subtraction in s = a + b; e = s - b. 0 if none.
+      unsigned RootUsersKey = 0;
     };
+
+    /// \returns the key of the binary users of \p Root, which also use its
+    /// operand \p Op.
+    static unsigned getRootUsersKey(Instruction *Root, Value *Op) {
+      if (Root->hasNUsesOrMore(UsesLimit))
+        return 0;
+      unsigned Key = 0;
+      for (User *U : Root->users()) {
+        auto *BO = dyn_cast<BinaryOperator>(U);
+        if (BO && is_contained(BO->operands(), Op))
+          Key += (BO->getOpcode() << 1) | (BO->getOperand(0) == Root);
+      }
+      return Key;
+    }
 
     /// During operand reordering, we are trying to select the operand at lane
     /// that matches best with the operand at the neighboring lane. Our
@@ -1507,6 +1524,22 @@ public:
       bool IsUsed = RMode == ReorderingMode::Splat ||
                     RMode == ReorderingMode::Constant ||
                     RMode == ReorderingMode::Load;
+      // An operand, used with the lane root by the same binary users as the
+      // operand of another column in the previous lane, belongs to that
+      // column, unless no candidates remain.
+      unsigned LastKey = getData(OpIdx, LastLane).RootUsersKey;
+      auto IsOtherColumnKey = [&](unsigned Key) {
+        return Key != LastKey &&
+               any_of(seq<unsigned>(NumOperands), [&](unsigned Idx) {
+                 return getData(Idx, LastLane).RootUsersKey == Key;
+               });
+      };
+      bool SkipOtherColumnKeys =
+          any_of(seq<unsigned>(NumOperands), [&](unsigned Idx) {
+            const OperandData &Data = getData(Idx, Lane);
+            return !Data.IsUsed && Data.APO == OpIdxAPO &&
+                   !IsOtherColumnKey(Data.RootUsersKey);
+          });
       // Iterate through all unused operands and look for the best.
       for (unsigned Idx = 0; Idx != NumOperands; ++Idx) {
         // Get the operand at Idx and Lane.
@@ -1528,6 +1561,8 @@ public:
         switch (RMode) {
         case ReorderingMode::Load:
         case ReorderingMode::Opcode: {
+          if (SkipOtherColumnKeys && IsOtherColumnKey(OpData.RootUsersKey))
+            continue;
           bool LeftToRight = Lane > LastLane;
           Value *OpLeft = (LeftToRight) ? OpLastLane : Op;
           Value *OpRight = (LeftToRight) ? Op : OpLastLane;
@@ -1740,7 +1775,8 @@ public:
           continue;
         }
         bool IsInverseOperation = false;
-        if (S.isCopyableElement(VL[Lane])) {
+        bool IsCopyable = S.isCopyableElement(VL[Lane]);
+        if (IsCopyable) {
           // The value is a copyable element.
           IsInverseOperation =
               !isCommutative(MainOp, VL[Lane], /*IsCopyable=*/true);
@@ -1754,7 +1790,9 @@ public:
         }
         for (unsigned OpIdx : seq<unsigned>(ArgSize)) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
-          OpsVec[OpIdx][Lane] = {Operands[OpIdx][Lane], APO, false};
+          Value *Op = Operands[OpIdx][Lane];
+          OpsVec[OpIdx][Lane] = {Op, APO, false,
+                                 IsCopyable ? 0 : getRootUsersKey(I, Op)};
         }
       }
     }
