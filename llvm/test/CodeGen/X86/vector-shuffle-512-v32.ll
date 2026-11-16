@@ -519,31 +519,25 @@ define <32 x i16> @shuffle_v32i16_07_zz_05_zz_03_zz_01_zz_15_zz_13_zz_11_zz_09_z
 define i16 @extract_subvector_from_multiuse_narrow_shuffle(<32 x i16> %v, ptr %out0, ptr %out1) {
 ; KNL-LABEL: extract_subvector_from_multiuse_narrow_shuffle:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovdw %zmm0, %ymm1
-; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; KNL-NEXT:    vpcmpeqw %ymm2, %ymm1, %ymm2
-; KNL-NEXT:    vpternlogq {{.*#+}} zmm2 = ~zmm2
-; KNL-NEXT:    vpmovsxwd %ymm2, %zmm2
-; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-NEXT:    vmovdqu %xmm1, (%rdi)
-; KNL-NEXT:    vmovdqu %xmm0, (%rsi)
+; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; KNL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm1
+; KNL-NEXT:    vpternlogq {{.*#+}} zmm1 = ~zmm1
+; KNL-NEXT:    vpmovsxwd %ymm1, %zmm1
+; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    vmovdqu %xmm0, (%rdi)
+; KNL-NEXT:    vextracti128 $1, %ymm0, (%rsi)
 ; KNL-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: extract_subvector_from_multiuse_narrow_shuffle:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3,4,26,28,30]
-; SKX-NEXT:    vpmovdw %ymm0, %xmm2
-; SKX-NEXT:    vpermt2w %ymm0, %ymm1, %ymm2
-; SKX-NEXT:    vpmovdw %zmm0, %ymm1
-; SKX-NEXT:    vptestmw %ymm1, %ymm1, %k0
+; SKX-NEXT:    vpmovdw %zmm0, %ymm0
+; SKX-NEXT:    vptestmw %ymm0, %ymm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; SKX-NEXT:    vmovdqu %xmm2, (%rdi)
-; SKX-NEXT:    vpmovdw %ymm0, (%rsi)
+; SKX-NEXT:    vmovdqu %xmm0, (%rdi)
+; SKX-NEXT:    vextracti128 $1, %ymm0, (%rsi)
 ; SKX-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
