@@ -96,8 +96,6 @@ static cl::opt<int>
                                "of delta passes (default=5)"),
                       cl::init(5), cl::cat(LLVMReduceOptions));
 
-static codegen::RegisterCodeGenFlags CGF;
-
 /// Turn off crash debugging features
 ///
 /// Crash is expected, so disable crash reports and symbolization to reduce
