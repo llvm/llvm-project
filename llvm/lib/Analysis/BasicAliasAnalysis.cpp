@@ -56,6 +56,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <cassert>
 #include <cstdint>
@@ -286,6 +287,20 @@ void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
   }
 }
 
+void EarliestEscapeAnalysis::insertPotentialCapture(const Instruction *I) {
+  for (const Use &U : I->operands()) {
+    if (!U->getType()->isPointerTy())
+      continue;
+
+    if (capturesAnyProvenance(
+            DetermineUseCaptureKind(U, /*Base=*/nullptr).UseCC)) {
+      EarliestEscapes.clear();
+      Inst2Obj.clear();
+      return;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // GetElementPtr Instruction Decomposition and Analysis
 //===----------------------------------------------------------------------===//
@@ -495,17 +510,20 @@ static LinearExpression GetLinearExpression(
       case Instruction::Add: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
-        E.Offset += RHS;
+        // Folding the constants can overflow even if each add is nsw.
+        bool Overflow;
+        E.Offset = E.Offset.sadd_ov(RHS, Overflow);
         E.IsNUW &= NUW;
-        E.IsNSW &= NSW;
+        E.IsNSW &= NSW && !Overflow;
         break;
       }
       case Instruction::Sub: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
-        E.Offset -= RHS;
+        bool Overflow;
+        E.Offset = E.Offset.ssub_ov(RHS, Overflow);
         E.IsNUW = false; // sub nuw x, y is not add nuw x, -y.
-        E.IsNSW &= NSW;
+        E.IsNSW &= NSW && !Overflow;
         break;
       }
       case Instruction::Mul:
@@ -1664,6 +1682,11 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
                                                AAQI.AllowEphemerals)) ||
               (AAQI.AllowEphemerals && (ValidAssumeForPtrContext(V1) ||
                                         ValidAssumeForPtrContext(V2)))) {
+            // The assumption relates values from the same iteration. Across
+            // iterations, both underlying objects must be invariant.
+            if (!isValueEqualInPotentialCycles(O1, O1, AAQI) ||
+                !isValueEqualInPotentialCycles(O2, O2, AAQI))
+              break;
             return AliasResult::NoAlias;
           }
         }

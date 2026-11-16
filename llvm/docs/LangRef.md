@@ -2765,8 +2765,9 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `"oracle-function"`
 :   This attribute indicates that the function is an oracle function of
     '`llvm.speculative.load`'. A function with this attribute must have local
-    linkage, and it may only be used as the oracle argument of
-    '`llvm.speculative.load`' calls.
+    linkage, be non-variadic, return `i64`, be `nounwind`, `nosync`,
+    `willreturn`, and have at most `memory(argmem: read)`. It may only be used
+    as the oracle argument of '`llvm.speculative.load`' calls.
 
 `speculative_load_hardening`
 :   This attribute indicates that
@@ -9408,6 +9409,23 @@ function that has had all calls to it inlined.
 call void @foo(), !inline_history !0
 
 !0 = !{ptr @bar, null, ptr @baz}
+```
+
+### '`call_target`' Matadata
+The `call_target` metadata may be attached to a call instruction. It
+identifies expected type information of indirect calls by providing
+a sample function. For virtual calls in object oriented languages, this
+is expected to be the member function in the base class.
+
+This is intended to be used by debuggers to detect when the current
+call matches the frame function.
+
+```llvm
+%0 = load ptr, ptr %virtualfunction, align 8, !dbg !47
+call void %0(ptr noundef nonnull align 8 dereferenceable(8) %obj), !call_target !0
+
+!0 = !DISubprogram(name: "foo", linkageName: "_ZN5CBase2f00Ev", virtualIndex: 0, 
+flags: DIFlagPrototyped, spFlags: DISPFlagVirtual, ...)
 ```
 
 #### '`elf_section_properties`' Metadata
