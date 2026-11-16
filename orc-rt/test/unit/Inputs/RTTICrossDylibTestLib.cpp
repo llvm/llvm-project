@@ -6,14 +6,8 @@
 #include "RTTICrossDylibTestLib.h"
 #include "RTTICrossDylibTestError.h"
 
-#if defined(_WIN32)
-#define TEST_EXPORT __declspec(dllexport)
-#else
-#define TEST_EXPORT __attribute__((visibility("default")))
-#endif
-
 using namespace orc_rt;
-using orc_rt_test::CrossDylibTestError;
+using orc_rt::test::CrossDylibTestError;
 
 extern "C" TEST_EXPORT ErrorInfoBase *rttiCrossDylibTest_makeError(int Code) {
   return new CrossDylibTestError(Code);

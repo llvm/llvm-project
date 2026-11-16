@@ -15,7 +15,6 @@ from lldbsuite.test.tools.lldb_dap.types import (
 class TestDAP_setDataBreakpoints(DAPTestCaseBase):
     ACCESS_TYPES = ["read", "write", "readWrite"]
 
-    @skipIfWindows
     def test_duplicate_start_addresses(self):
         """Test setDataBreakpoints with multiple watchpoints starting at the same addresses."""
         program = self.getBuildArtifact("a.out")
@@ -67,7 +66,6 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.set_data_breakpoints([])
         session.continue_to_exit()
 
-    @skipIfWindows
     def test_expression(self):
         """Tests setting data breakpoints on expression."""
         source = "main.cpp"
@@ -112,7 +110,6 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.set_data_breakpoints([])
         session.continue_to_exit()
 
-    @skipIfWindows
     def test_functionality(self):
         """Tests setting data breakpoints on variable."""
         source = "main.cpp"
@@ -188,7 +185,6 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
     # Test works but test program faults after continuing.
     # https://github.com/llvm/llvm-project/issues/217961
     @skipIf(oslist=["linux"], archs=["arm$"])
-    @skipIfWindows
     def test_console_watchpoint_preserved(self):
         """Test setDataBreakpoints must not delete watchpoints created via the console."""
         source = "main.cpp"
@@ -235,7 +231,6 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.evaluate("`watchpoint delete 1", context="repl")
         session.continue_to_exit()
 
-    @skipIfWindows
     def test_hit_count_preserved(self):
         """Test setDataBreakpoints preserves hit counts of existing watchpoints."""
         source = "main.cpp"
@@ -299,6 +294,47 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.continue_to_exit()
 
     @skipIfWindows
+    def test_remove_hit_condition(self):
+        """Tests removing hitCondition restores a stopping data breakpoint."""
+        source = "main.cpp"
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+        second_loop_break_line = line_number(source, "// second loop breakpoint")
+        with session.configure(LaunchArgs(program)) as ctx:
+            session.resolve_source_breakpoints(source, [second_loop_break_line])
+        stop_event = session.verify_stopped_on_breakpoint(after=ctx.process_event)
+
+        top_frame_ctx = session.top_frame_from(stop_event)
+        frame_id = top_frame_ctx.frame.id
+        locals_ref = top_frame_ctx.locals.variablesReference
+        response_x = session.data_breakpoint_info("x", locals_ref, frame_id)
+        x_data_id = self.expect_not_none(response_x.body.dataId)
+        session.set_source_breakpoints(source, [])
+
+        # Set a hitCondition, then omit it before any hits consume the ignore count.
+        set_response = session.set_data_breakpoints(
+            [DataBreakpoint(dataId=x_data_id, accessType="write", hitCondition="3")]
+        )
+        [bp_hit] = set_response.body.breakpoints
+        self.assertTrue(bp_hit.verified)
+        x_bp_id = self.expect_not_none(bp_hit.id)
+
+        set_response = session.set_data_breakpoints(
+            [DataBreakpoint(dataId=x_data_id, accessType="write")]
+        )
+        [bp_clear] = set_response.body.breakpoints
+        self.assertTrue(bp_clear.verified)
+        self.assertEqual(bp_clear.id, x_bp_id)
+
+        # Check that the updated data breakpoint stops at the next write.
+        stop_event = session.continue_to_breakpoint(x_bp_id)
+        top_frame = session.top_frame_from(stop_event)
+        self.assertEqual(top_frame.locals["x"].value, "2")
+
+        session.set_data_breakpoints([])
+        session.continue_to_exit()
+
+    @skipIfWindows
     def test_type_change_recreates(self):
         """Test setDataBreakpoints recreates watchpoint in case of changing type."""
         source = "main.cpp"
@@ -341,7 +377,6 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.set_data_breakpoints([])
         session.continue_to_exit()
 
-    @skipIfWindows
     def test_bytes(self):
         """Tests setting data breakpoints on memory range."""
         source = self.getSourcePath("main.cpp")

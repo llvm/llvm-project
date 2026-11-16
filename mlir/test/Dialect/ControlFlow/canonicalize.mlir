@@ -784,3 +784,153 @@ func.func @skip_unused_block_arg(%flag: i32, %a: i32, %b: i32) -> i32 {
   // CHECK-NEXT: return %[[A:.*]]
   return %arg1 : i32
 }
+
+// -----
+
+// These distinct i128 cases exceed 64 bits. Select each after parsing.
+// CHECK-LABEL: func @switch_i128_large_cases
+// CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : i32
+// CHECK-DAG: %[[TWO:.*]] = arith.constant 2 : i32
+// CHECK: return %[[ONE]], %[[TWO]] : i32, i32
+func.func @switch_i128_large_cases() -> (i32, i32) {
+  %first = arith.constant 18446744073709551616 : i128
+  %second = arith.constant 18446744073709551617 : i128
+  %zero = arith.constant 0 : i32
+  %one = arith.constant 1 : i32
+  %two = arith.constant 2 : i32
+  cf.switch %first : i128, [
+    default: ^bb1(%zero : i32),
+    18446744073709551616: ^bb1(%one : i32),
+    18446744073709551617: ^bb1(%two : i32)
+  ]
+^bb1(%first_result: i32):
+  cf.switch %second : i128, [
+    default: ^bb2(%zero : i32),
+    18446744073709551616: ^bb2(%one : i32),
+    18446744073709551617: ^bb2(%two : i32)
+  ]
+^bb2(%second_result: i32):
+  return %first_result, %second_result : i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: @drop_unreachable_switch_case
+//  CHECK-NEXT:   cf.switch %{{.*}} : i32, [
+//  CHECK-NEXT:     default: ^[[DEFAULT:.*]],
+//  CHECK-NEXT:     1: ^[[CASE1:.*]]
+//  CHECK-NEXT:   ]
+//  CHECK-NEXT: ^[[DEFAULT]]:
+//  CHECK-NEXT:   "test.default"()
+//  CHECK-NEXT:   return
+//  CHECK-NEXT: ^[[CASE1]]:
+//  CHECK-NEXT:   "test.case1"()
+//  CHECK-NEXT:   return
+//   CHECK-NOT: ub.unreachable
+func.func @drop_unreachable_switch_case(%flag: i32) {
+  cf.switch %flag : i32, [
+    default: ^bb1,
+    1: ^bb2,
+    2: ^bb3
+  ]
+^bb1:
+  "test.default"() : () -> ()
+  return
+^bb2:
+  "test.case1"() : () -> ()
+  return
+^bb3:
+  ub.unreachable
+}
+
+// -----
+
+// CHECK-LABEL: @drop_unreachable_switch_default
+//  CHECK-NEXT:   cf.switch %{{.*}} : i32, [
+//  CHECK-NEXT:     default: ^[[CASE2:.*]],
+//  CHECK-NEXT:     1: ^[[CASE1:.*]]
+//  CHECK-NEXT:   ]
+//  CHECK-NEXT: ^[[CASE1]]:
+//  CHECK-NEXT:   "test.case1"()
+//  CHECK-NEXT:   return
+//  CHECK-NEXT: ^[[CASE2]]:
+//  CHECK-NEXT:   "test.case2"()
+//  CHECK-NEXT:   return
+//   CHECK-NOT: ub.unreachable
+func.func @drop_unreachable_switch_default(%flag: i32) {
+  cf.switch %flag : i32, [
+    default: ^bb1,
+    1: ^bb2,
+    2: ^bb3
+  ]
+^bb1:
+  ub.unreachable
+^bb2:
+  "test.case1"() : () -> ()
+  return
+^bb3:
+  "test.case2"() : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @drop_unreachable_switch_single_reachable_case
+//  CHECK-NEXT:   "test.only"()
+//  CHECK-NEXT:   return
+func.func @drop_unreachable_switch_single_reachable_case(%flag: i32) {
+  cf.switch %flag : i32, [
+    default: ^bb1,
+    1: ^bb1,
+    2: ^bb2
+  ]
+^bb1:
+  ub.unreachable
+^bb2:
+  "test.only"() : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @drop_unreachable_switch_all_unreachable
+//  CHECK-NEXT:   ub.unreachable
+func.func @drop_unreachable_switch_all_unreachable(%flag: i32) {
+  cf.switch %flag : i32, [
+    default: ^bb1,
+    1: ^bb2
+  ]
+^bb1:
+  ub.unreachable
+^bb2:
+  ub.unreachable
+}
+
+// -----
+
+// A block that executes operations before ub.unreachable (e.g. a call to a
+// noreturn function) is still reachable and must be kept.
+
+// CHECK-LABEL: @keep_switch_case_with_ops_before_unreachable
+//  CHECK-NEXT:   cf.switch %{{.*}} : i32, [
+//  CHECK-NEXT:     default: ^[[DEFAULT:.*]],
+//  CHECK-NEXT:     1: ^[[CASE1:.*]]
+//  CHECK-NEXT:   ]
+//  CHECK-NEXT: ^[[DEFAULT]]:
+//  CHECK-NEXT:   "test.default"()
+//  CHECK-NEXT:   return
+//  CHECK-NEXT: ^[[CASE1]]:
+//  CHECK-NEXT:   "test.noreturn"()
+//  CHECK-NEXT:   ub.unreachable
+func.func @keep_switch_case_with_ops_before_unreachable(%flag: i32) {
+  cf.switch %flag : i32, [
+    default: ^bb1,
+    1: ^bb2
+  ]
+^bb1:
+  "test.default"() : () -> ()
+  return
+^bb2:
+  "test.noreturn"() : () -> ()
+  ub.unreachable
+}

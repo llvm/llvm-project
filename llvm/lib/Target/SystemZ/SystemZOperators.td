@@ -50,7 +50,7 @@ def SDT_ZProbedAlloca       : SDTypeProfile<1, 2,
                                              SDTCisSameAs<0, 2>,
                                              SDTCisPtrTy<0>]>;
 def SDT_ZGR128Binary        : SDTypeProfile<1, 2,
-                                            [SDTCisVT<0, untyped>,
+                                            [SDTCisVT<0, v2i64>,
                                              SDTCisInt<1>,
                                              SDTCisInt<2>]>;
 def SDT_ZBinaryWithFlags    : SDTypeProfile<2, 2,
@@ -96,17 +96,17 @@ def SDT_ZAtomicCmpSwap      : SDTypeProfile<2, 3,
                                              SDTCisSameAs<0, 3>,
                                              SDTCisSameAs<0, 4>]>;
 def SDT_ZAtomicLoad128      : SDTypeProfile<1, 1,
-                                            [SDTCisVT<0, untyped>,
+                                            [SDTCisVT<0, v2i64>,
                                              SDTCisPtrTy<1>]>;
 def SDT_ZAtomicStore128     : SDTypeProfile<0, 2,
-                                            [SDTCisVT<0, untyped>,
+                                            [SDTCisVT<0, v2i64>,
                                              SDTCisPtrTy<1>]>;
 def SDT_ZAtomicCmpSwap128   : SDTypeProfile<2, 3,
-                                            [SDTCisVT<0, untyped>,
+                                            [SDTCisVT<0, v2i64>,
                                              SDTCisVT<1, i32>,
                                              SDTCisPtrTy<2>,
-                                             SDTCisVT<3, untyped>,
-                                             SDTCisVT<4, untyped>]>;
+                                             SDTCisVT<3, v2i64>,
+                                             SDTCisVT<4, v2i64>]>;
 def SDT_ZMemMemLength       : SDTypeProfile<0, 3,
                                             [SDTCisPtrTy<0>,
                                              SDTCisPtrTy<1>,
@@ -292,6 +292,13 @@ def z_tls_ldcall        : SDNode<"SystemZISD::TLS_LDCALL", SDT_ZCall,
                                  [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
                                   SDNPVariadic]>;
 
+// XPLINK: restore the stack pointer to the value in R1 (glued in). Calls the
+// stack restore stub of the module, which copies the frame header and sets
+// R4 with signals delayed. Operand 0 is the chain operand.
+def z_xplink_stackrestore : SDNode<"SystemZISD::XPLINK_STACKRESTORE", SDTNone,
+                                   [SDNPHasChain, SDNPInGlue,
+                                    SDNPSideEffect]>;
+
 // Wraps a TargetGlobalAddress that should be loaded using PC-relative
 // accesses (LARL).  Operand 0 is the address.
 def z_pcrel_wrapper     : SDNode<"SystemZISD::PCREL_WRAPPER", SDT_ZWrapPtr, []>;
@@ -371,6 +378,9 @@ def z_smul_lohi         : SDNode<"SystemZISD::SMUL_LOHI", SDT_ZGR128Binary>;
 def z_umul_lohi         : SDNode<"SystemZISD::UMUL_LOHI", SDT_ZGR128Binary>;
 def z_sdivrem           : SDNode<"SystemZISD::SDIVREM", SDT_ZGR128Binary>;
 def z_udivrem           : SDNode<"SystemZISD::UDIVREM", SDT_ZGR128Binary>;
+
+// Create a GR128 from two i64 GPRs. The first operand is the high part.
+def z_pair128           : SDNode<"SystemZISD::PAIR128", SDT_ZJoinDwords>;
 
 // Add/subtract with overflow/carry.  These have the same operands as
 // the corresponding standard operations, except with the carry flag
@@ -1319,7 +1329,7 @@ def z_vnot : PatFrag<(ops node:$x), (xor node:$x, immAllOnesV)>;
 // In-register element-wise zero extension from i1 on vectors.
 def vsplat_imm_eq_1 : PatFrag<(ops), (build_vector), [{
   APInt Imm;
-  return ISD::isConstantSplatVector(N, Imm) && Imm == 1;
+  return ISD::isConstantSplatVector(SDValue(N, 0), Imm) && Imm == 1;
 }]>;
 def z_vzext1 : PatFrag<(ops node:$x), (and node:$x, vsplat_imm_eq_1)>;
 
@@ -1330,14 +1340,16 @@ def ssat_trunc_min_vec: PatFrag<(ops), (build_vector), [{
   EVT EltTy = N->getValueType(0).getVectorElementType();
   unsigned SizeInBits = EltTy.getSizeInBits();
   APInt min = APInt::getSignedMinValue(SizeInBits / 2).sext(SizeInBits);
-  return ISD::isConstantSplatVector(N, Imm) && APInt::isSameValue(Imm, min);
+  return ISD::isConstantSplatVector(SDValue(N, 0), Imm) &&
+         APInt::isSameValue(Imm, min);
 }]>;
 def ssat_trunc_max_vec: PatFrag<(ops), (build_vector), [{
   APInt Imm;
   EVT EltTy = N->getValueType(0).getVectorElementType();
   unsigned SizeInBits = EltTy.getSizeInBits();
   APInt max = APInt::getSignedMaxValue(SizeInBits / 2).sext(SizeInBits);
-  return ISD::isConstantSplatVector(N, Imm) && APInt::isSameValue(Imm, max);
+  return ISD::isConstantSplatVector(SDValue(N, 0), Imm) &&
+         APInt::isSameValue(Imm, max);
 }]>;
 
 def usat_trunc_max_vec: PatFrag<(ops), (build_vector), [{
@@ -1345,7 +1357,8 @@ def usat_trunc_max_vec: PatFrag<(ops), (build_vector), [{
   EVT EltTy = N->getValueType(0).getVectorElementType();
   unsigned SizeInBits = EltTy.getSizeInBits();
   APInt max = APInt::getMaxValue(SizeInBits / 2).zext(SizeInBits);
-  return ISD::isConstantSplatVector(N, Imm) && APInt::isSameValue(Imm, max);
+  return ISD::isConstantSplatVector(SDValue(N, 0), Imm) &&
+         APInt::isSameValue(Imm, max);
 }]>;
 
 // Signed "integer greater than zero" on vectors.

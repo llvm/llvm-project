@@ -3,6 +3,9 @@
 ; RUN: llc < %s -mtriple=x86_64 -mattr=+branch-hint -enable-branch-hint -branch-hint-probability-threshold=50 | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64 -mattr=+branch-hint -enable-branch-hint -branch-hint-probability-threshold=60 -tail-dup-placement=false | FileCheck --check-prefix=TH60 %s
 
+; RUN: llc < %s -mtriple=x86_64 -mattr=+branch-hint -enable-branch-hint -enable-new-pm | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64 -mattr=+branch-hint -enable-branch-hint -branch-hint-probability-threshold=50 -enable-new-pm | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64 -mattr=+branch-hint -enable-branch-hint -branch-hint-probability-threshold=60 -tail-dup-placement=false -enable-new-pm | FileCheck --check-prefix=TH60 %s
 
 ; Design: Add DS segment override prefix for condition branch who has high
 ; probability to take (which is greater than the probability threshold of

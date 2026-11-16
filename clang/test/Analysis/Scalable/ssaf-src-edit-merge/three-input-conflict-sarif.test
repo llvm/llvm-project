@@ -5,11 +5,9 @@
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp
 
-# RUN: cp %S/Inputs/single-replacement.tpl.yaml %t.dir/a.yaml
-# RUN: cp %S/Inputs/conflict-text-y.tpl.yaml %t.dir/b.yaml
-# RUN: cp %S/Inputs/conflict-text-z.tpl.yaml %t.dir/c.yaml
-# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" \
-# RUN:           %t.dir/a.yaml %t.dir/b.yaml %t.dir/c.yaml
+# RUN: sed "s|@FOO@|%/t.dir/foo.cpp|g" %S/Inputs/single-replacement.tpl.yaml > %t.dir/a.yaml
+# RUN: sed "s|@FOO@|%/t.dir/foo.cpp|g" %S/Inputs/conflict-text-y.tpl.yaml > %t.dir/b.yaml
+# RUN: sed "s|@FOO@|%/t.dir/foo.cpp|g" %S/Inputs/conflict-text-z.tpl.yaml > %t.dir/c.yaml
 
 # RUN: clang-ssaf-src-edit-merge \
 # RUN:     -o %t.dir/merged.yaml \

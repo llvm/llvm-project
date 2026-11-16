@@ -15,10 +15,10 @@
 #include "PerfReader.h"
 #include "ProfileGenerator.h"
 #include "ProfiledBinary.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -194,12 +194,15 @@ int main(int argc, const char *argv[]) {
   InitializeAllDisassemblers();
 
   cl::HideUnrelatedOptions({&ProfGenCategory, &getColorCategory()});
-  cl::ParseCommandLineOptions(argc, argv, "llvm SPGO profile generator\n");
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+                              "llvm SPGO profile generator\n");
   validateCommandLine();
 
   // Load symbols and disassemble the code of a given binary.
-  std::unique_ptr<ProfiledBinary> Binary = std::make_unique<ProfiledBinary>(
-      BinaryPath, DebugBinPath, InferLBRLeafRange || CheckLBRRanges);
+  std::unique_ptr<ProfiledBinary> Binary =
+      std::make_unique<ProfiledBinary>(LibraryOptions, BinaryPath, DebugBinPath,
+                                       InferLBRLeafRange || CheckLBRRanges);
   Binary->load(TargetTriple);
 
   if (ShowDisassemblyOnly)

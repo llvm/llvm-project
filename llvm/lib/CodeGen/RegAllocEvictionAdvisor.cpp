@@ -122,17 +122,15 @@ void RegAllocEvictionAdvisorAnalysis::initializeProvider(
         new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/false, Ctx));
     return;
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
-#if defined(LLVM_HAVE_TFLITE)
     Provider.reset(createDevelopmentModeAdvisorProvider(Ctx));
-#else
-    Provider.reset(
-        new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/true, Ctx));
-#endif
-    return;
+    break;
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
     Provider.reset(createReleaseModeAdvisorProvider(Ctx));
-    return;
+    break;
   }
+  if (!Provider)
+    Provider.reset(
+        new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/true, Ctx));
 }
 
 RegAllocEvictionAdvisorAnalysis::Result
@@ -359,7 +357,7 @@ MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
        ++I) {
     MCRegister PhysReg = *I;
     assert(PhysReg);
-    if (!canAllocatePhysReg(CostPerUseLimit, PhysReg) ||
+    if (!canAllocatePhysReg(VirtReg, CostPerUseLimit, PhysReg) ||
         !canEvictInterferenceBasedOnCost(VirtReg, PhysReg, false, BestCost,
                                          FixedRegisters))
       continue;

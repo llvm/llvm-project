@@ -46,6 +46,10 @@
 #include <vector>
 
 namespace llvm {
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
+
 namespace sampleprof {
 
 class ProfiledBinary;
@@ -203,6 +207,8 @@ struct MMapEvent {
 };
 
 class ProfiledBinary {
+  const cl::LibraryOptionsContext &LibraryOptions;
+
 public:
   // Why static inference stops. Earlier values take priority at shared
   // addresses. Function and code boundaries outrank conditional transfers and
@@ -522,7 +528,8 @@ private:
 
 public:
   // CollectRangeEnds enables static range-end analysis with a lazy index.
-  ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath,
+  ProfiledBinary(const cl::LibraryOptionsContext &LibraryOptions,
+                 const StringRef ExeBinPath, const StringRef DebugBinPath,
                  bool CollectRangeEnds);
   ~ProfiledBinary();
 

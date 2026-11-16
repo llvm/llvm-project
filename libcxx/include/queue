@@ -306,7 +306,8 @@ public:
   typedef typename container_type::reference reference;
   typedef typename container_type::const_reference const_reference;
   typedef typename container_type::size_type size_type;
-  static_assert(is_same<_Tp, value_type>::value, "");
+  static_assert(is_same<_Tp, value_type>::value,
+                "The stored elements type must match the underlying container's value_type.");
 
 protected:
   container_type c;
@@ -524,7 +525,8 @@ public:
   typedef typename container_type::reference reference;
   typedef typename container_type::const_reference const_reference;
   typedef typename container_type::size_type size_type;
-  static_assert(is_same<_Tp, value_type>::value, "");
+  static_assert(is_same<_Tp, value_type>::value,
+                "The stored elements type must match the underlying container's value_type.");
 
 protected:
   container_type c;

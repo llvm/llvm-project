@@ -23,6 +23,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "llvm/Support/FileSystem.h"
 
@@ -103,7 +104,7 @@ const char *SBPlatformConnectOptions::GetURL() {
 
   if (m_opaque_ptr->m_url.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_url).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_ptr->m_url);
 }
 
 void SBPlatformConnectOptions::SetURL(const char *url) {
@@ -206,7 +207,7 @@ const char *SBPlatformShellCommand::GetShell() {
 
   if (m_opaque_ptr->m_shell.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_shell).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_ptr->m_shell);
 }
 
 void SBPlatformShellCommand::SetShell(const char *shell_interpreter) {
@@ -223,7 +224,7 @@ const char *SBPlatformShellCommand::GetCommand() {
 
   if (m_opaque_ptr->m_command.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_command).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_ptr->m_command);
 }
 
 void SBPlatformShellCommand::SetCommand(const char *shell_command) {
@@ -240,7 +241,7 @@ const char *SBPlatformShellCommand::GetWorkingDirectory() {
 
   if (m_opaque_ptr->m_working_dir.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_working_dir).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_ptr->m_working_dir);
 }
 
 void SBPlatformShellCommand::SetWorkingDirectory(const char *path) {
@@ -286,7 +287,7 @@ const char *SBPlatformShellCommand::GetOutput() {
 
   if (m_opaque_ptr->m_output.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_output).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_ptr->m_output);
 }
 
 // SBPlatform
@@ -347,7 +348,7 @@ const char *SBPlatform::GetName() {
 
   PlatformSP platform_sp(GetSP());
   if (platform_sp)
-    return ConstString(platform_sp->GetName()).AsCString(nullptr);
+    return StringPool::GetSystemPool().InternNonEmpty(platform_sp->GetName());
   return nullptr;
 }
 
@@ -362,8 +363,8 @@ const char *SBPlatform::GetWorkingDirectory() {
 
   PlatformSP platform_sp(GetSP());
   if (platform_sp)
-    return ConstString(platform_sp->GetWorkingDirectory().GetPath())
-        .AsCString(nullptr);
+    return StringPool::GetSystemPool().InternNonEmpty(
+        platform_sp->GetWorkingDirectory().GetPath());
   return nullptr;
 }
 
@@ -420,9 +421,7 @@ const char *SBPlatform::GetTriple() {
   if (platform_sp) {
     ArchSpec arch(platform_sp->GetSystemArchitecture());
     if (arch.IsValid()) {
-      // Const-ify the string so we don't need to worry about the lifetime of
-      // the string
-      return ConstString(arch.GetTriple().getTriple()).GetCString();
+      return StringPool::GetSystemPool().Intern(arch.GetTriple().getTriple());
     }
   }
   return nullptr;
@@ -435,9 +434,7 @@ const char *SBPlatform::GetOSBuild() {
   if (platform_sp) {
     std::string s = platform_sp->GetOSBuildString().value_or("");
     if (!s.empty()) {
-      // Const-ify the string so we don't need to worry about the lifetime of
-      // the string
-      return ConstString(s).GetCString();
+      return StringPool::GetSystemPool().Intern(s);
     }
   }
   return nullptr;
@@ -450,9 +447,7 @@ const char *SBPlatform::GetOSDescription() {
   if (platform_sp) {
     std::string s = platform_sp->GetOSKernelDescription().value_or("");
     if (!s.empty()) {
-      // Const-ify the string so we don't need to worry about the lifetime of
-      // the string
-      return ConstString(s).GetCString();
+      return StringPool::GetSystemPool().Intern(s);
     }
   }
   return nullptr;
@@ -463,7 +458,7 @@ const char *SBPlatform::GetHostname() {
 
   PlatformSP platform_sp(GetSP());
   if (platform_sp)
-    return ConstString(platform_sp->GetHostname()).GetCString();
+    return StringPool::GetSystemPool().Intern(platform_sp->GetHostname());
   return nullptr;
 }
 
@@ -548,26 +543,25 @@ SBError SBPlatform::Install(SBFileSpec &src, SBFileSpec &dst) {
 
 SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
   LLDB_INSTRUMENT_VA(this, shell_command);
-  return ExecuteConnected(
-      [&](const lldb::PlatformSP &platform_sp) {
-        const char *command = shell_command.GetCommand();
-        if (!command)
-          return Status::FromErrorString("invalid shell command (empty)");
+  return ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
+    const char *command = shell_command.GetCommand();
+    if (!command)
+      return Status::FromErrorString("invalid shell command (empty)");
 
-        if (shell_command.GetWorkingDirectory() == nullptr) {
-          std::string platform_working_dir =
-              platform_sp->GetWorkingDirectory().GetPath();
-          if (!platform_working_dir.empty())
-            shell_command.SetWorkingDirectory(platform_working_dir.c_str());
-        }
-        return platform_sp->RunShellCommand(
-            shell_command.m_opaque_ptr->m_shell, command,
-            FileSpec(shell_command.GetWorkingDirectory()),
-            &shell_command.m_opaque_ptr->m_status,
-            &shell_command.m_opaque_ptr->m_signo,
-            &shell_command.m_opaque_ptr->m_output, nullptr,
-            shell_command.m_opaque_ptr->m_timeout);
-      });
+    if (shell_command.GetWorkingDirectory() == nullptr) {
+      std::string platform_working_dir =
+          platform_sp->GetWorkingDirectory().GetPath();
+      if (!platform_working_dir.empty())
+        shell_command.SetWorkingDirectory(platform_working_dir.c_str());
+    }
+    return platform_sp->RunShellCommand(
+        shell_command.m_opaque_ptr->m_shell, command,
+        FileSpec(shell_command.GetWorkingDirectory()),
+        &shell_command.m_opaque_ptr->m_status,
+        &shell_command.m_opaque_ptr->m_signo,
+        &shell_command.m_opaque_ptr->m_output, nullptr,
+        shell_command.m_opaque_ptr->m_timeout);
+  });
 }
 
 SBError SBPlatform::Launch(SBLaunchInfo &launch_info) {

@@ -47,6 +47,7 @@ struct PipelineOptions {
   unsigned StoreQueueSize;
   bool AssumeNoAlias;
   bool EnableBottleneckAnalysis;
+  float ReservationStationScaleFactor = 1.0f;
 };
 
 class Context {

@@ -623,7 +623,7 @@ mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
-    return cir::ComplexAddOp::create(builder, op.loc, op.lhs, op.rhs);
+    return builder.createComplexAdd(op.loc, op.lhs, op.rhs);
 
   auto createAdd = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
     return cir::isFPOrVectorOfFPType(a.getType())
@@ -651,7 +651,7 @@ mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
-    return cir::ComplexSubOp::create(builder, op.loc, op.lhs, op.rhs);
+    return builder.createComplexSub(op.loc, op.lhs, op.rhs);
 
   auto createSub = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
     return cir::isFPOrVectorOfFPType(a.getType())
@@ -694,6 +694,7 @@ getComplexRangeAttr(LangOptions::ComplexRangeKind range) {
     // The default value for ComplexRangeKind is Full if no option is selected
     return cir::ComplexRangeKind::Full;
   }
+  llvm_unreachable("fully covered switch");
 }
 
 mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
@@ -704,8 +705,7 @@ mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
     cir::ComplexRangeKind rangeKind =
         getComplexRangeAttr(op.fpFeatures.getComplexRange());
-    return cir::ComplexMulOp::create(builder, op.loc, op.lhs, op.rhs,
-                                     rangeKind);
+    return builder.createComplexMul(op.loc, op.lhs, op.rhs, rangeKind);
   }
 
   auto createMul = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
@@ -742,8 +742,7 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
     cir::ComplexRangeKind rangeKind =
         getComplexRangeAttr(op.fpFeatures.getComplexRange());
-    return cir::ComplexDivOp::create(builder, op.loc, op.lhs, op.rhs,
-                                     rangeKind);
+    return builder.createComplexDiv(op.loc, op.lhs, op.rhs, rangeKind);
   }
 
   // The C99 standard (G.5.1) defines division of a complex value by a real
@@ -763,7 +762,7 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
   mlir::Value lhs = builder.createComplexCreate(op.loc, op.lhs, nullValue);
   cir::ComplexRangeKind rangeKind =
       getComplexRangeAttr(op.fpFeatures.getComplexRange());
-  return cir::ComplexDivOp::create(builder, op.loc, lhs, op.rhs, rangeKind);
+  return builder.createComplexDiv(op.loc, lhs, op.rhs, rangeKind);
 }
 
 mlir::Value CIRGenFunction::emitUnPromotedValue(mlir::Value result,
@@ -1003,10 +1002,10 @@ mlir::Value ComplexExprEmitter::VisitAbstractConditionalOperator(
   // Bind the common expression if necessary.
   CIRGenFunction::OpaqueValueMapping binding(cgf, e);
 
-  CIRGenFunction::ConditionalEvaluation eval(cgf);
-
   Expr *cond = e->getCond()->IgnoreParens();
   mlir::Value condValue = cgf.evaluateExprAsBool(cond);
+
+  CIRGenFunction::ConditionalEvaluation eval(cgf, loc);
 
   return cir::TernaryOp::create(
              builder, loc, condValue,
@@ -1088,8 +1087,7 @@ LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {
 
   mlir::Value value; // ignored
   LValue lvalue = ComplexExprEmitter(*this).emitBinAssignLValue(e, value);
-  if (getLangOpts().OpenMP)
-    cgm.errorNYI("emitComplexAssignmentLValue OpenMP");
+  assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
   return lvalue;
 }
@@ -1145,8 +1143,7 @@ mlir::Value CIRGenFunction::emitComplexPrePostIncDec(const UnaryOperator *e,
   // Store the updated result through the lvalue.
   emitStoreOfComplex(loc, incVal, lv, /*isInit=*/false);
 
-  if (getLangOpts().OpenMP)
-    cgm.errorNYI(loc, "emitComplexPrePostIncDec OpenMP");
+  assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
   // If this is a postinc, return the value read from memory, otherwise use the
   // updated value.

@@ -116,12 +116,6 @@ public:
     consumeError(Mapping.Mapping.visitTypeBegin(FieldList));
   }
 
-  ~FieldListDeserializer() override {
-    RecordPrefix Pre(static_cast<uint16_t>(TypeLeafKind::LF_FIELDLIST));
-    CVType FieldList(&Pre, sizeof(Pre));
-    consumeError(Mapping.Mapping.visitTypeEnd(FieldList));
-  }
-
   Error visitMemberBegin(CVMemberRecord &Record) override {
     Mapping.StartOffset = Mapping.Reader.getOffset();
     return Mapping.Mapping.visitMemberBegin(Record);

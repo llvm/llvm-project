@@ -70,32 +70,42 @@ private:
   const FieldDecl *FD;
 };
 
-/// Represents the base of a placeholder access path, which is either a
-/// function parameter or the implicit 'this' object of an instance method.
-/// Placeholder paths never expire within the function scope, as they represent
-/// storage from the caller's scope.
+/// Represents the base of a placeholder access path, which is a function
+/// parameter, the implicit 'this' object of an instance method, or a field of
+/// the enclosing class. Placeholder paths never expire within the function
+/// scope, as they represent storage from the caller's or object's scope.
 class PlaceholderBase : public llvm::FoldingSetNode {
-  llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *> ParamOrMethod;
+  llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *,
+                     const FieldDecl *>
+      ParamMethodOrField;
 
 public:
-  PlaceholderBase(const ParmVarDecl *PVD) : ParamOrMethod(PVD) {}
-  PlaceholderBase(const CXXMethodDecl *MD) : ParamOrMethod(MD) {}
+  PlaceholderBase(const ParmVarDecl *PVD) : ParamMethodOrField(PVD) {}
+  PlaceholderBase(const CXXMethodDecl *MD) : ParamMethodOrField(MD) {}
+  PlaceholderBase(const FieldDecl *FD) : ParamMethodOrField(FD) {}
 
   const ParmVarDecl *getParmVarDecl() const {
-    return ParamOrMethod.dyn_cast<const ParmVarDecl *>();
+    return dyn_cast<const ParmVarDecl *>(ParamMethodOrField);
   }
 
   const CXXMethodDecl *getImplicitThisParent() const {
-    return ParamOrMethod.dyn_cast<const CXXMethodDecl *>();
+    return dyn_cast<const CXXMethodDecl *>(ParamMethodOrField);
   }
 
-  using KeyTy = llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
-
-  static void Profile(llvm::FoldingSetNodeID &ID, KeyTy ParamOrMethod) {
-    ID.AddPointer(ParamOrMethod.getOpaqueValue());
+  const FieldDecl *getFieldDecl() const {
+    return dyn_cast<const FieldDecl *>(ParamMethodOrField);
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const { Profile(ID, ParamOrMethod); }
+  using KeyTy = llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *,
+                                   const FieldDecl *>;
+
+  static void Profile(llvm::FoldingSetNodeID &ID, KeyTy ParamMethodOrField) {
+    ID.AddPointer(ParamMethodOrField.getOpaqueValue());
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    Profile(ID, ParamMethodOrField);
+  }
 };
 
 /// Represents the storage location being borrowed, e.g., a specific stack
@@ -115,10 +125,14 @@ public:
 ///
 /// TODO: Model access paths of other types, e.g. heap and globals.
 class AccessPath {
-  /// The base of the access path: a variable, temporary, or placeholder.
-  const llvm::PointerUnion<const clang::ValueDecl *,
-                           const clang::MaterializeTemporaryExpr *,
-                           const PlaceholderBase *, const clang::CXXNewExpr *>
+  /// The base of the access path: a variable, temporary, placeholder, or an
+  /// allocation expression (a `CXXNewExpr` or an allocating `CallExpr`).
+  ///
+  /// NOTE: Keep the number of alternatives low; PointerUnion packs the
+  /// discriminator in the low bits of the pointer, so more alternatives
+  /// require more alignment than 32-bit builds can always provide.
+  const llvm::PointerUnion<const clang::ValueDecl *, const PlaceholderBase *,
+                           const clang::Expr *>
       Base;
   /// The path elements representing field accesses and access to unnamed
   /// interior regions.
@@ -129,6 +143,7 @@ public:
   AccessPath(const clang::MaterializeTemporaryExpr *MTE) : Base(MTE) {}
   AccessPath(const PlaceholderBase *PB) : Base(PB) {}
   AccessPath(const clang::CXXNewExpr *New) : Base(New) {}
+  AccessPath(const clang::CallExpr *CE) : Base(CE) {}
 
   /// Creates an extended access path by appending a path element.
   /// Example: AccessPath(x_path, field) creates path to `x.field`.
@@ -138,19 +153,23 @@ public:
   }
 
   const clang::ValueDecl *getAsValueDecl() const {
-    return Base.dyn_cast<const clang::ValueDecl *>();
+    return dyn_cast<const clang::ValueDecl *>(Base);
   }
 
   const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
-    return Base.dyn_cast<const clang::MaterializeTemporaryExpr *>();
+    return dyn_cast_or_null<clang::MaterializeTemporaryExpr>(
+        dyn_cast<const clang::Expr *>(Base));
   }
 
   const PlaceholderBase *getAsPlaceholderBase() const {
-    return Base.dyn_cast<const PlaceholderBase *>();
+    return dyn_cast<const PlaceholderBase *>(Base);
   }
 
-  const clang::CXXNewExpr *getAsNewAllocation() const {
-    return Base.dyn_cast<const clang::CXXNewExpr *>();
+  /// Returns the allocation expression that created this loan: a
+  /// `CXXNewExpr` or an allocating `CallExpr`.
+  const clang::Expr *getAsAllocation() const {
+    const auto *E = dyn_cast<const clang::Expr *>(Base);
+    return isa_and_nonnull<clang::CXXNewExpr, clang::CallExpr>(E) ? E : nullptr;
   }
 
   bool operator==(const AccessPath &RHS) const {
@@ -229,6 +248,9 @@ public:
   Loan *createPlaceholderLoan(const CXXMethodDecl *MD) {
     return createLoan(AccessPath(getOrCreatePlaceholderBase(MD)));
   }
+  Loan *createPlaceholderLoan(const FieldDecl *FD) {
+    return createLoan(AccessPath(getOrCreatePlaceholderBase(FD)));
+  }
 
   const Loan *getLoan(LoanID ID) const {
     assert(ID.Value < AllLoans.size());
@@ -240,9 +262,11 @@ public:
 private:
   LoanID getNextLoanID() { return NextLoanID++; }
 
-  /// Gets or creates a placeholder base for a given parameter or method.
+  /// Gets or creates a placeholder base for a given parameter, method, or
+  /// field.
   const PlaceholderBase *getOrCreatePlaceholderBase(const ParmVarDecl *PVD);
   const PlaceholderBase *getOrCreatePlaceholderBase(const CXXMethodDecl *MD);
+  const PlaceholderBase *getOrCreatePlaceholderBase(const FieldDecl *FD);
 
   LoanID NextLoanID{0};
 

@@ -32,7 +32,7 @@
 ; Function Attrs: nounwind readnone
 define float @fsin_float_var(float %0) {
 ; CHECK-LABEL: fsin_float_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s1, sinf@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, sinf@hi(, %s1)
@@ -48,7 +48,7 @@ declare float @llvm.sin.f32(float)
 ; Function Attrs: nounwind readnone
 define double @fsin_double_var(double %0) {
 ; CHECK-LABEL: fsin_double_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s1, sin@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, sin@hi(, %s1)
@@ -64,7 +64,7 @@ declare double @llvm.sin.f64(double)
 ; Function Attrs: nounwind readnone
 define fp128 @fsin_quad_var(fp128 %0) {
 ; CHECK-LABEL: fsin_quad_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, sinl@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, sinl@hi(, %s2)
@@ -98,7 +98,7 @@ define double @fsin_double_zero() {
 ; Function Attrs: nounwind readnone
 define fp128 @fsin_quad_zero() {
 ; CHECK-LABEL: fsin_quad_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, .LCPI{{[0-9]+}}_0@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s2, .LCPI{{[0-9]+}}_0@hi(, %s0)
@@ -136,7 +136,7 @@ define double @fsin_double_const() {
 ; Function Attrs: nounwind readnone
 define fp128 @fsin_quad_const() {
 ; CHECK-LABEL: fsin_quad_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, .LCPI{{[0-9]+}}_0@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s2, .LCPI{{[0-9]+}}_0@hi(, %s0)

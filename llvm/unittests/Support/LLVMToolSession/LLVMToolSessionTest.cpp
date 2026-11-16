@@ -58,7 +58,9 @@ int resetOptionsMain(int, char **, const ToolContext &) {
 int directMain(int Argc, char **Argv, const ToolContext &Context) {
   EXPECT_EQ(Argc, 1);
   EXPECT_STREQ(Argv[0], ExecutablePath.c_str());
-  EXPECT_STREQ(Context.Path, ExecutablePath.c_str());
+  SmallString<32> ExecutablePathBuf(ExecutablePath);
+  sys::path::make_preferred(ExecutablePathBuf);
+  EXPECT_STREQ(Context.Path, ExecutablePathBuf.c_str());
   EXPECT_FALSE(Context.NeedsPrependArg);
   return 0;
 }

@@ -143,6 +143,11 @@ LLVM_ABI GPUKind getGPUKindFromSubArch(Triple::SubArchType SubArch);
 /// Returns \p AK's feature bitset, or an empty bitset if unknown.
 LLVM_ABI const AMDGPUFeatureBitset &getFeatureBitset(GPUKind AK);
 
+/// Convenience overload of getFeatureBitset taking a triple subarch, which is
+/// mapped via getGPUKindFromSubArch.
+LLVM_ABI const AMDGPUFeatureBitset &
+getFeatureBitset(Triple::SubArchType SubArch);
+
 /// Returns R600 GPU \p AK's feature bitset, or an empty bitset if unknown.
 LLVM_ABI const R600FeatureBitset &getFeatureBitsetR600(GPUKind AK);
 
@@ -240,6 +245,16 @@ LLVM_ABI unsigned getAddressableLocalMemorySize(Triple::SubArchType SubArch,
 /// \returns Number of LDS banks per compute unit.
 LLVM_ABI unsigned getLDSBankCount(GPUKind AK);
 LLVM_ABI unsigned getLDSBankCount(Triple::SubArchType SubArch);
+
+/// \returns Hardware LDS allocation granularity in bytes, used for occupancy.
+LLVM_ABI unsigned getLDSAllocGranule(GPUKind AK);
+LLVM_ABI unsigned getLDSAllocGranule(Triple::SubArchType SubArch);
+
+/// \returns LDS size encoding granularity in bytes, used for program resource
+/// registers and metadata. This can differ from the allocation granularity.
+/// Returns zero if the target has no LDS encoding granularity feature.
+LLVM_ABI unsigned getLDSEncodingGranule(GPUKind AK);
+LLVM_ABI unsigned getLDSEncodingGranule(Triple::SubArchType SubArch);
 
 /// \returns Number of SIMDs a work-group's waves run on. All four SIMDs of the
 /// functional block in full-SIMD mode, half of them otherwise.

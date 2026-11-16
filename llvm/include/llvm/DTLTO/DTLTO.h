@@ -113,7 +113,7 @@ private:
   /// but before optimization begins. Existing files are overwritten because
   /// they are likely leftovers from a previously terminated linker process and
   /// can be safely replaced.
-  LLVM_ABI Error extractLTOInputs();
+  Error extractLTOInputs();
 
   // Remove temporary files created to enable distribution.
   void cleanup() override;

@@ -12,6 +12,14 @@ int4 SomeNonsense(int V) {
   return V.poop; // expected-error{{illegal vector component name 'p'}}
 }
 
+float NumericAccessor(float4 V) {
+  return V.s0; // expected-error{{illegal vector component name 's0'}}
+}
+
+float2 HalvingAccessor(float4 V) {
+  return V.hi; // expected-error{{illegal vector component name 'hi'}}
+}
+
 float2 WhatIsHappening(float V) {
   return V.; // expected-error{{expected unqualified-id}}
 }

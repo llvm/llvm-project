@@ -1,4 +1,4 @@
-# RUN: not --crash llc -o - -mtriple=x86_64-linux-gnu -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -o - -mtriple=x86_64-linux-gnu -global-isel -run-pass=none %s 2>&1 | FileCheck %s
 # REQUIRES: x86-registered-target
 
 ---

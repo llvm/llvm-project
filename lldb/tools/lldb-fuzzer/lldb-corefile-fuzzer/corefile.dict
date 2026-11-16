@@ -1,0 +1,51 @@
+# LC_NOTE data_owner names.
+"all image infos"
+"load binary"
+"main bin spec"
+"process metadata"
+"addrable bits"
+"kern ver str"
+
+# mach_header_64.magic / arm64 and x86_64 cputype.
+magic_64="\xcf\xfa\xed\xfe"
+cputype_arm64="\x0c\x00\x00\x01"
+cputype_x86_64="\x07\x00\x00\x01"
+
+# Load commands the corefile paths care about.
+lc_segment_64="\x19\x00\x00\x00"
+lc_note="\x31\x00\x00\x00"
+lc_uuid="\x1b\x00\x00\x00"
+
+# The note_command.cmdsize LC_NOTE uses.
+cmdsize_40="\x28\x00\x00\x00"
+
+# ELF magic, with EI_CLASS and EI_DATA.
+elf64_le="\x7fELF\x02\x01\x01"
+elf32_le="\x7fELF\x01\x01\x01"
+elf64_be="\x7fELF\x02\x02\x01"
+elf32_be="\x7fELF\x01\x02\x01"
+
+# e_type: ET_CORE.
+elf_et_core="\x04\x00"
+
+# NT_FPREGSET / NT_PRPSINFO / NT_AUXV / NT_FILE note types.
+nt_fpregset="\x02\x00\x00\x00"
+nt_prpsinfo="\x03\x00\x00\x00"
+nt_auxv="\x06\x00\x00\x00"
+nt_file="\x45\x4c\x49\x46"
+
+# One entry each for the u32 values several fields share: u32_4 covers MH_CORE,
+# LC_THREAD, and PT_NOTE; u32_1 covers PT_LOAD, NT_PRSTATUS, and the 'all image
+# infos' header version.
+u32_4="\x04\x00\x00\x00"
+u32_1="\x01\x00\x00\x00"
+
+# Note "owner" strings.
+"CORE"
+"LINUX"
+"FreeBSD"
+"GNU"
+"NetBSD"
+"NetBSD-CORE"
+"OpenBSD"
+"Android"

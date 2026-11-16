@@ -1,6 +1,9 @@
 ; RUN: llc -mtriple=x86_64-pc-win32 %s -o - | FileCheck %s --check-prefix=X64
 ; RUN: llc -mtriple=x86_64-pc-win32 -filetype=obj %s -o - | llvm-readobj -r - | FileCheck %s --check-prefix=RELOC
 ; RUN: llc -mtriple=x86_64-pc-win32 -filetype=obj %s -o - | llvm-readobj -S --section-data - | FileCheck %s --check-prefix=DATA
+; RUN: llc -mtriple=x86_64-w64-mingw32 %s -o - | FileCheck %s --check-prefix=X64
+; RUN: llc -mtriple=x86_64-w64-mingw32 -filetype=obj %s -o - | llvm-readobj -r - | FileCheck %s --check-prefix=RELOC
+; RUN: llc -mtriple=x86_64-w64-mingw32 -filetype=obj %s -o - | llvm-readobj -S --section-data - | FileCheck %s --check-prefix=DATA
 
 @__ImageBase = external global i8
 
@@ -8,7 +11,7 @@
 ; RELOC: IMAGE_REL_AMD64_ADDR32NB ?x@@3HA
 @"\01?x@@3HA" = global i32 trunc (i64 sub nsw (i64 ptrtoint (ptr @"\01?x@@3HA" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), align 4
 
-declare void @f()
+declare dllimport void @f()
 
 ; X64: .long   f@IMGREL
 ; RELOC: IMAGE_REL_AMD64_ADDR32NB f

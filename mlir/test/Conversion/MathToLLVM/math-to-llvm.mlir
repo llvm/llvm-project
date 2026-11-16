@@ -583,6 +583,54 @@ func.func @fpowi(%arg0 : f64, %arg1 : i32) {
   func.return
 }
 
+// -----
+
+// CHECK-LABEL: func @fpowi_splat_vector(
+// CHECK-SAME: vector<4xf32>
+func.func @fpowi_splat_vector(%arg0 : vector<4xf32>) {
+  // CHECK: %[[EXP:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK: llvm.intr.powi(%arg0, %[[EXP]]) : (vector<4xf32>, i32) -> vector<4xf32>
+  %cst = arith.constant dense<2> : vector<4xi32>
+  %0 = math.fpowi %arg0, %cst : vector<4xf32>, vector<4xi32>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @fpowi_splat_scalable_vector(
+// CHECK-SAME: vector<[4]xf32>
+func.func @fpowi_splat_scalable_vector(%arg0 : vector<[4]xf32>) {
+  // CHECK: %[[EXP:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK: llvm.intr.powi(%arg0, %[[EXP]]) : (vector<[4]xf32>, i32) -> vector<[4]xf32>
+  %cst = arith.constant dense<2> : vector<[4]xi32>
+  %0 = math.fpowi %arg0, %cst : vector<[4]xf32>, vector<[4]xi32>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @fpowi_multidim_vector(
+// CHECK-SAME: vector<4x4xf32>
+func.func @fpowi_multidim_vector(%arg0 : vector<4x4xf32>) {
+  // CHECK: %[[EXP:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.array<4 x vector<4xf32>>
+  // CHECK: %[[POWI:.*]] = llvm.intr.powi(%[[EXTRACT]], %[[EXP]]) : (vector<4xf32>, i32) -> vector<4xf32>
+  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[POWI]], %{{.*}}[0] : !llvm.array<4 x vector<4xf32>>
+  %cst = arith.constant dense<2> : vector<4x4xi32>
+  %0 = math.fpowi %arg0, %cst : vector<4x4xf32>, vector<4x4xi32>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @fpowi_non_splat_vector(
+// CHECK-SAME: vector<4xf32>
+func.func @fpowi_non_splat_vector(%arg0 : vector<4xf32>, %arg1 : vector<4xi32>) {
+  // CHECK: math.fpowi
+  // CHECK-NOT: llvm.intr.powi
+  %0 = math.fpowi %arg0, %arg1 : vector<4xf32>, vector<4xi32>
+  func.return
+}
 
 // -----
 

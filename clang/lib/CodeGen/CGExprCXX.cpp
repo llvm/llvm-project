@@ -253,12 +253,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     }
   }
 
-  bool TrivialForCodegen =
-      MD->isTrivial() || (MD->isDefaulted() && MD->getParent()->isUnion());
-  bool TrivialAssignment =
-      TrivialForCodegen &&
-      (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()) &&
-      !MD->getParent()->mayInsertExtraPadding();
+  bool TrivialAssignment = MD->isMemcpyEquivalentSpecialMember(getContext());
 
   // C++17 demands that we evaluate the RHS of a (possibly-compound) assignment
   // operator before the LHS.
@@ -278,8 +273,18 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     }
   }
 
-  auto getLValueForThis = [this, IsArrow,
-                           Base](bool EmitCheckedForStore = false) {
+  std::optional<LValue> HLSLThisLValue;
+  if (auto *HLSLOutArg = dyn_cast<HLSLOutArgExpr>(Base)) {
+    if (!RtlArgs)
+      RtlArgs = &RtlArgStorage;
+    HLSLThisLValue = EmitHLSLOutArgExpr(
+        HLSLOutArg, *RtlArgs, HLSLOutArg->getType(), /*IsImplicitObject=*/true);
+    EmitCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
+                 drop_begin(CE->arguments(), 0), CE->getDirectCallee());
+  }
+
+  auto getLValueForThis = [this, IsArrow, Base,
+                           HLSLThisLValue](bool EmitCheckedForStore = false) {
     // FIXME: Respect EmitCheckedForStore for the IsArrow case.
     if (IsArrow) {
       LValueBaseInfo BaseInfo;
@@ -288,6 +293,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       return MakeAddrLValue(ThisValue, Base->getType()->getPointeeType(),
                             BaseInfo, TBAAInfo);
     }
+    if (HLSLThisLValue)
+      return *HLSLThisLValue;
     if (EmitCheckedForStore)
       return EmitCheckedLValue(Base, TCK_Store);
     return EmitLValue(Base);
@@ -312,29 +319,24 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     return RValue::get(nullptr);
   }
 
-  if (TrivialForCodegen) {
-    if (isa<CXXDestructorDecl>(MD)) {
-      (void)getLValueForThis(); // Emit LHS for side effects.
-      return RValue::get(nullptr);
-    }
+  if (isa<CXXDestructorDecl>(MD) && MD->isTrivial()) {
+    (void)getLValueForThis(); // Emit LHS for side effects.
+    return RValue::get(nullptr);
+  }
 
-    if (TrivialAssignment) {
-      // We don't like to generate the trivial copy/move assignment operator
-      // when it isn't necessary; just produce the proper effect here.
-      LValue This = getLValueForThis(/*EmitCheckedForStore=*/true);
+  if (TrivialAssignment) {
+    // We don't like to generate the trivial copy/move assignment operator
+    // when it isn't necessary; just produce the proper effect here.
+    LValue This = getLValueForThis(/*EmitCheckedForStore=*/true);
 
-      // It's important that we use the result of EmitCheckedLValue here rather
-      // than emitting call arguments, in order to preserve TBAA information
-      // from the RHS.
-      LValue RHS = isa<CXXOperatorCallExpr>(CE)
-                       ? TrivialAssignmentRHS
-                       : EmitCheckedLValue(*CE->arg_begin(), TCK_Load);
-      EmitAggregateAssign(This, RHS, CE->getType());
-      return RValue::get(This.getPointer(*this));
-    }
-
-    assert(MD->getParent()->mayInsertExtraPadding() &&
-           "unknown trivial member function");
+    // It's important that we use the result of EmitCheckedLValue here rather
+    // than emitting call arguments, in order to preserve TBAA information
+    // from the RHS.
+    LValue RHS = isa<CXXOperatorCallExpr>(CE)
+                     ? TrivialAssignmentRHS
+                     : EmitCheckedLValue(*CE->arg_begin(), TCK_Load);
+    EmitAggregateAssign(This, RHS, CE->getType());
+    return RValue::get(This.getPointer(*this));
   }
 
   // Compute the function type we're calling.
@@ -1391,9 +1393,19 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
   ///
   /// We model such elidable calls with the 'builtin' attribute.
   llvm::Function *Fn = dyn_cast<llvm::Function>(CalleePtr);
-  if (CalleeDecl->isReplaceableGlobalAllocationFunction() && Fn &&
-      Fn->hasFnAttribute(llvm::Attribute::NoBuiltin)) {
-    CallOrInvoke->addFnAttr(llvm::Attribute::Builtin);
+  if (CalleeDecl->isReplaceableGlobalAllocationFunction() && Fn) {
+    if (Fn->hasFnAttribute(llvm::Attribute::NoBuiltin))
+      CallOrInvoke->addFnAttr(llvm::Attribute::Builtin);
+
+    // A sane operator new does not read or write accessible memory.
+    if (CGF.CGM.getCodeGenOpts().AssumeSaneOperatorNew &&
+        CalleeDecl->getDeclName().isAnyOperatorNew()) {
+      // FIXME: inaccessiblemem could cause issues if LTO makes the
+      // previously inaccessible memory accessible after linking.
+      CallOrInvoke->setMemoryEffects(
+          llvm::MemoryEffects::inaccessibleOrErrnoMemOnly(
+              llvm::ModRefInfo::ModRef, llvm::ModRefInfo::Mod));
+    }
   }
 
   return RV;
@@ -1776,11 +1788,16 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     EnterNewDeleteCleanup(*this, E, TypeIdentityArg, allocation, allocSize,
                           allocAlign, allocatorArgs);
     operatorDeleteCleanup = EHStack.stable_begin();
-    cleanupDominator = Builder.CreateUnreachable();
+    cleanupDominator =
+        Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
   }
 
-  assert((allocSize == allocSizeWithoutCookie) ==
-         CalculateCookiePadding(*this, E).isZero());
+  // Without a cookie the two sizes must match. With a cookie they usually
+  // differ, but on overflow the allocation size is all-ones, which can
+  // coincide with the size without the cookie.
+  assert(allocSize == llvm::Constant::getAllOnesValue(SizeTy) ||
+         ((allocSize == allocSizeWithoutCookie) ==
+          CalculateCookiePadding(*this, E).isZero()));
   if (allocSize != allocSizeWithoutCookie) {
     assert(E->isArray());
     allocation = CGM.getCXXABI().InitializeArrayCookie(

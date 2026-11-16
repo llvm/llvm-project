@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 
 namespace llvm {
 
@@ -30,9 +31,9 @@ class TargetExtType;
 
 namespace AMDGPU {
 
-static constexpr unsigned NamedBarrierTypeSizeInBytes = 16;
+static constexpr unsigned NamedBarrierTypeSizeInBytes = 1;
 
-using FunctionVariableMap = DenseMap<Function *, DenseSet<GlobalVariable *>>;
+using FunctionVariableMap = MapVector<Function *, DenseSet<GlobalVariable *>>;
 using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
 
 Align getAlign(const DataLayout &DL, const GlobalVariable *GV);

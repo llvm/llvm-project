@@ -1,4 +1,4 @@
-# RUN: llc --run-pass=livedebugvalues -o - %s | FileCheck %s --implicit-check-not=DBG_VALUE 
+# RUN: llc --run-pass=live-debug-values -o - %s | FileCheck %s --implicit-check-not=DBG_VALUE
 # REQUIRES: x86-registered-target
 
 # This test covers the scenario where a DBG_VALUE created prior to LiveDebugValues has an entry-value expression.
@@ -85,6 +85,7 @@ body:             |
     liveins: $eax
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !29
     RET64 implicit $eax, debug-location !29
+...
 # CHECK-LABEL: bb.0:
 # CHECK: DBG_VALUE $r14, {{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
 # CHECK-LABEL: bb.1.if.then:

@@ -42,7 +42,7 @@ ASM_FUNCTION_ARM_RE = re.compile(
 )
 
 ASM_FUNCTION_AARCH64_RE = re.compile(
-    r'^(?P<func>_?[a-zA-Z][^:]*):[ \t]*(\/\/[ \t]*@"?(?P=func)"?)?( (Function|Tail Call))?\n'
+    r'^(?P<func>_*[a-zA-Z][^:]*):[ \t]*(\/\/[ \t]*@"?(?P=func)"?)?( (Function|Tail Call))?\n'
     r"(?:[ \t]+.cfi_startproc\n)?"  # drop optional cfi noise
     r"(?P<body>.*?)"
     # This list is incomplete
@@ -211,7 +211,7 @@ ASM_FUNCTION_ARM_IOS_RE = re.compile(
 )
 
 ASM_FUNCTION_WASM_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n'
+    r'^(?P<func>_?[^:\n]+):(?:[ \t]*#+[ \t]*@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)\n"
     r"^\s*(\.Lfunc_end[0-9]+:\n|end_function)",
     flags=(re.M | re.S),

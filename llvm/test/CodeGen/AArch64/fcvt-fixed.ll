@@ -1304,21 +1304,12 @@ define float @neon_fcvtzu_f32_i32_32_bitcast(float %a) {
 
 
 define float @scvtf_f32_i32_3_input_in_fpr(i32 %int) {
-; CHECK-SD-LABEL: scvtf_f32_i32_3_input_in_fpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    usqadd s0, s0
-; CHECK-SD-NEXT:    scvtf s0, s0, #3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: scvtf_f32_i32_3_input_in_fpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    fmov s1, #8.00000000
-; CHECK-GI-NEXT:    usqadd s0, s0
-; CHECK-GI-NEXT:    scvtf s0, s0
-; CHECK-GI-NEXT:    fdiv s0, s0, s1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: scvtf_f32_i32_3_input_in_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    usqadd s0, s0
+; CHECK-NEXT:    scvtf s0, s0, #3
+; CHECK-NEXT:    ret
   %sum = call i32 @llvm.aarch64.neon.usqadd.i32(i32 %int, i32 %int)
   %cvt = sitofp i32 %sum to float
   %fix = fdiv float %cvt, 8.0
@@ -1326,21 +1317,12 @@ define float @scvtf_f32_i32_3_input_in_fpr(i32 %int) {
 }
 
 define float @scvtf_f32_i32_5_fmul_input_in_fpr(i32 %int) {
-; CHECK-SD-LABEL: scvtf_f32_i32_5_fmul_input_in_fpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    usqadd s0, s0
-; CHECK-SD-NEXT:    scvtf s0, s0, #5
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: scvtf_f32_i32_5_fmul_input_in_fpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    movi v0.2s, #61, lsl #24
-; CHECK-GI-NEXT:    usqadd s1, s1
-; CHECK-GI-NEXT:    scvtf s1, s1
-; CHECK-GI-NEXT:    fmul s0, s1, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: scvtf_f32_i32_5_fmul_input_in_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    usqadd s0, s0
+; CHECK-NEXT:    scvtf s0, s0, #5
+; CHECK-NEXT:    ret
   %sum = call i32 @llvm.aarch64.neon.usqadd.i32(i32 %int, i32 %int)
   %cvt = sitofp i32 %sum to float
   %fix = fmul float %cvt, 0x1.0p-5
@@ -1348,22 +1330,13 @@ define float @scvtf_f32_i32_5_fmul_input_in_fpr(i32 %int) {
 }
 
 define double @scvtf_f64_i64_6_input_in_fpr(i64 %long) {
-; CHECK-SD-LABEL: scvtf_f64_i64_6_input_in_fpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov d0, x0
-; CHECK-SD-NEXT:    usqadd d0, d0
-; CHECK-SD-NEXT:    scvtf d0, d0, #6
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: scvtf_f64_i64_6_input_in_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    usqadd d0, d0
+; CHECK-NEXT:    scvtf d0, d0, #6
+; CHECK-NEXT:    ret
 
-; CHECK-GI-LABEL: scvtf_f64_i64_6_input_in_fpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov d0, x0
-; CHECK-GI-NEXT:    mov x8, #4634204016564240384 // =0x4050000000000000
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    usqadd d0, d0
-; CHECK-GI-NEXT:    scvtf d0, d0
-; CHECK-GI-NEXT:    fdiv d0, d0, d1
-; CHECK-GI-NEXT:    ret
   %sum = call i64 @llvm.aarch64.neon.usqadd.i64(i64 %long, i64 %long)
   %cvt = sitofp i64 %sum to double
   %fix = fdiv double %cvt, 64.0
@@ -1371,22 +1344,12 @@ define double @scvtf_f64_i64_6_input_in_fpr(i64 %long) {
 }
 
 define double @scvtf_f64_i64_9_fmul_input_in_fpr(i64 %long) {
-; CHECK-SD-LABEL: scvtf_f64_i64_9_fmul_input_in_fpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov d0, x0
-; CHECK-SD-NEXT:    usqadd d0, d0
-; CHECK-SD-NEXT:    scvtf d0, d0, #9
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: scvtf_f64_i64_9_fmul_input_in_fpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov d0, x0
-; CHECK-GI-NEXT:    mov x8, #4566650022153682944 // =0x3f60000000000000
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    usqadd d0, d0
-; CHECK-GI-NEXT:    scvtf d0, d0
-; CHECK-GI-NEXT:    fmul d0, d0, d1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: scvtf_f64_i64_9_fmul_input_in_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    usqadd d0, d0
+; CHECK-NEXT:    scvtf d0, d0, #9
+; CHECK-NEXT:    ret
   %sum = call i64 @llvm.aarch64.neon.usqadd.i64(i64 %long, i64 %long)
   %cvt = sitofp i64 %sum to double
   %fix = fmul double %cvt, 0x1.0p-9
@@ -1394,22 +1357,12 @@ define double @scvtf_f64_i64_9_fmul_input_in_fpr(i64 %long) {
 }
 
 define float @ucvtf_f32_i32_3_input_in_fpr(i32 %int) {
-; CHECK-SD-LABEL: ucvtf_f32_i32_3_input_in_fpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    usqadd s0, s0
-; CHECK-SD-NEXT:    ucvtf s0, s0, #3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ucvtf_f32_i32_3_input_in_fpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    fmov s1, #8.00000000
-; CHECK-GI-NEXT:    usqadd s0, s0
-; CHECK-GI-NEXT:    ucvtf s0, s0
-; CHECK-GI-NEXT:    fdiv s0, s0, s1
-; CHECK-GI-NEXT:    ret
-;
+; CHECK-LABEL: ucvtf_f32_i32_3_input_in_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    usqadd s0, s0
+; CHECK-NEXT:    ucvtf s0, s0, #3
+; CHECK-NEXT:    ret
   %sum = call i32 @llvm.aarch64.neon.usqadd.i32(i32 %int, i32 %int)
   %cvt = uitofp i32 %sum to float
   %fix = fdiv float %cvt, 8.0
@@ -1417,22 +1370,12 @@ define float @ucvtf_f32_i32_3_input_in_fpr(i32 %int) {
 }
 
 define float @ucvtf_f32_i32_5_fmul_input_in_fpr(i32 %int) {
-; CHECK-SD-LABEL: ucvtf_f32_i32_5_fmul_input_in_fpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    usqadd s0, s0
-; CHECK-SD-NEXT:    ucvtf s0, s0, #5
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ucvtf_f32_i32_5_fmul_input_in_fpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    movi v0.2s, #61, lsl #24
-; CHECK-GI-NEXT:    usqadd s1, s1
-; CHECK-GI-NEXT:    ucvtf s1, s1
-; CHECK-GI-NEXT:    fmul s0, s1, s0
-; CHECK-GI-NEXT:    ret
-;
+; CHECK-LABEL: ucvtf_f32_i32_5_fmul_input_in_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    usqadd s0, s0
+; CHECK-NEXT:    ucvtf s0, s0, #5
+; CHECK-NEXT:    ret
   %sum = call i32 @llvm.aarch64.neon.usqadd.i32(i32 %int, i32 %int)
   %cvt = uitofp i32 %sum to float
   %fix = fmul float %cvt, 0x1.0p-5
@@ -1440,23 +1383,12 @@ define float @ucvtf_f32_i32_5_fmul_input_in_fpr(i32 %int) {
 }
 
 define double @ucvtf_f64_i64_6_input_in_fpr(i64 %long) {
-; CHECK-SD-LABEL: ucvtf_f64_i64_6_input_in_fpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov d0, x0
-; CHECK-SD-NEXT:    usqadd d0, d0
-; CHECK-SD-NEXT:    ucvtf d0, d0, #6
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ucvtf_f64_i64_6_input_in_fpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov d0, x0
-; CHECK-GI-NEXT:    mov x8, #4634204016564240384 // =0x4050000000000000
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    usqadd d0, d0
-; CHECK-GI-NEXT:    ucvtf d0, d0
-; CHECK-GI-NEXT:    fdiv d0, d0, d1
-; CHECK-GI-NEXT:    ret
-;
+; CHECK-LABEL: ucvtf_f64_i64_6_input_in_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    usqadd d0, d0
+; CHECK-NEXT:    ucvtf d0, d0, #6
+; CHECK-NEXT:    ret
   %sum = call i64 @llvm.aarch64.neon.usqadd.i64(i64 %long, i64 %long)
   %cvt = uitofp i64 %sum to double
   %fix = fdiv double %cvt, 64.0
@@ -1464,23 +1396,12 @@ define double @ucvtf_f64_i64_6_input_in_fpr(i64 %long) {
 }
 
 define double @ucvtf_f64_i64_9_fmul_input_in_fpr(i64 %long) {
-; CHECK-SD-LABEL: ucvtf_f64_i64_9_fmul_input_in_fpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov d0, x0
-; CHECK-SD-NEXT:    usqadd d0, d0
-; CHECK-SD-NEXT:    ucvtf d0, d0, #9
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ucvtf_f64_i64_9_fmul_input_in_fpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov d0, x0
-; CHECK-GI-NEXT:    mov x8, #4566650022153682944 // =0x3f60000000000000
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    usqadd d0, d0
-; CHECK-GI-NEXT:    ucvtf d0, d0
-; CHECK-GI-NEXT:    fmul d0, d0, d1
-; CHECK-GI-NEXT:    ret
-;
+; CHECK-LABEL: ucvtf_f64_i64_9_fmul_input_in_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    usqadd d0, d0
+; CHECK-NEXT:    ucvtf d0, d0, #9
+; CHECK-NEXT:    ret
   %sum = call i64 @llvm.aarch64.neon.usqadd.i64(i64 %long, i64 %long)
   %cvt = uitofp i64 %sum to double
   %fix = fmul double %cvt, 0x1.0p-9
@@ -1500,20 +1421,11 @@ define float @scvtf_f32_i32_3_input_in_gpr(i32 %int) {
 }
 
 define float @scvtf_f32_i32_5_fmul_input_in_gpr(i32 %int) {
-; CHECK-SD-LABEL: scvtf_f32_i32_5_fmul_input_in_gpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    add w8, w0, w0
-; CHECK-SD-NEXT:    scvtf s0, w8, #5
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: scvtf_f32_i32_5_fmul_input_in_gpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    add w8, w0, w0
-; CHECK-GI-NEXT:    movi v0.2s, #61, lsl #24
-; CHECK-GI-NEXT:    scvtf s1, w8
-; CHECK-GI-NEXT:    fmul s0, s1, s0
-; CHECK-GI-NEXT:    ret
-;
+; CHECK-LABEL: scvtf_f32_i32_5_fmul_input_in_gpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, w0
+; CHECK-NEXT:    scvtf s0, w8, #5
+; CHECK-NEXT:    ret
   %sum = add i32 %int, %int
   %cvt = sitofp i32 %sum to float
   %fix = fmul float %cvt, 0x1.0p-5
@@ -1533,21 +1445,11 @@ define double @scvtf_f64_i64_6_input_in_gpr(i64 %long) {
 }
 
 define double @scvtf_f64_i64_9_fmul_input_in_gpr(i64 %long) {
-; CHECK-SD-LABEL: scvtf_f64_i64_9_fmul_input_in_gpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    add x8, x0, x0
-; CHECK-SD-NEXT:    scvtf d0, x8, #9
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: scvtf_f64_i64_9_fmul_input_in_gpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    add x8, x0, x0
-; CHECK-GI-NEXT:    scvtf d0, x8
-; CHECK-GI-NEXT:    mov x8, #4566650022153682944 // =0x3f60000000000000
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fmul d0, d0, d1
-; CHECK-GI-NEXT:    ret
-;
+; CHECK-LABEL: scvtf_f64_i64_9_fmul_input_in_gpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add x8, x0, x0
+; CHECK-NEXT:    scvtf d0, x8, #9
+; CHECK-NEXT:    ret
   %sum = add i64 %long, %long
   %cvt = sitofp i64 %sum to double
   %fix = fmul double %cvt, 0x1.0p-9
@@ -1567,20 +1469,11 @@ define float @ucvtf_f32_i32_3_input_in_gpr(i32 %int) {
 }
 
 define float @ucvtf_f32_i32_5_fmul_input_in_gpr(i32 %int) {
-; CHECK-SD-LABEL: ucvtf_f32_i32_5_fmul_input_in_gpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    add w8, w0, w0
-; CHECK-SD-NEXT:    ucvtf s0, w8, #5
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ucvtf_f32_i32_5_fmul_input_in_gpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    add w8, w0, w0
-; CHECK-GI-NEXT:    movi v0.2s, #61, lsl #24
-; CHECK-GI-NEXT:    ucvtf s1, w8
-; CHECK-GI-NEXT:    fmul s0, s1, s0
-; CHECK-GI-NEXT:    ret
-;
+; CHECK-LABEL: ucvtf_f32_i32_5_fmul_input_in_gpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, w0
+; CHECK-NEXT:    ucvtf s0, w8, #5
+; CHECK-NEXT:    ret
   %sum = add i32 %int, %int
   %cvt = uitofp i32 %sum to float
   %fix = fmul float %cvt, 0x1.0p-5
@@ -1600,26 +1493,100 @@ define double @ucvtf_f64_i64_6_input_in_gpr(i64 %long) {
 }
 
 define double @ucvtf_f64_i64_9_fmul_input_in_gpr(i64 %long) {
-; CHECK-SD-LABEL: ucvtf_f64_i64_9_fmul_input_in_gpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    add x8, x0, x0
-; CHECK-SD-NEXT:    ucvtf d0, x8, #9
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ucvtf_f64_i64_9_fmul_input_in_gpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    add x8, x0, x0
-; CHECK-GI-NEXT:    ucvtf d0, x8
-; CHECK-GI-NEXT:    mov x8, #4566650022153682944 // =0x3f60000000000000
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fmul d0, d0, d1
-; CHECK-GI-NEXT:    ret
-;
+; CHECK-LABEL: ucvtf_f64_i64_9_fmul_input_in_gpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add x8, x0, x0
+; CHECK-NEXT:    ucvtf d0, x8, #9
+; CHECK-NEXT:    ret
   %sum = add i64 %long, %long
   %cvt = uitofp i64 %sum to double
   %fix = fmul double %cvt, 0x1.0p-9
   ret double %fix
 }
+define float @neon_vcvtfxu2fp_i32_f32_gpr(i32 %a) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_gpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ucvtf s0, w0, #16
+; CHECK-NEXT:    ret
+  %cvt = tail call float @llvm.aarch64.neon.vcvtfxu2fp.i32.f32(i32 %a, i32 16)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_fpr(i32 %a) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    usqadd s0, s0
+; CHECK-NEXT:    ucvtf s0, s0, #16
+; CHECK-NEXT:    ret
+  %sum = call i32 @llvm.aarch64.neon.usqadd.i32(i32 %a, i32 %a)
+  %cvt = tail call float @llvm.aarch64.neon.vcvtfxu2fp.i32.f32(i32 %sum, i32 16)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxs2fp_i32_f32_gpr(i32 %a) {
+; CHECK-LABEL: neon_vcvtfxs2fp_i32_f32_gpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf s0, w0, #16
+; CHECK-NEXT:    ret
+  %cvt = call float @llvm.aarch64.neon.vcvtfxs2fp.i32.f32(i32 %a, i32 16)
+  ret float %cvt
+}
+
+define double @neon_vcvtfxs2fp_i64_f64_gpr(i64 %a) {
+; CHECK-LABEL: neon_vcvtfxs2fp_i64_f64_gpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf d0, x0, #32
+; CHECK-NEXT:    ret
+  %cvt = call double @llvm.aarch64.neon.vcvtfxs2fp.i64.f64(i64 %a, i32 32)
+  ret double %cvt
+}
+
+define double @neon_vcvtfxu2fp_i64_f64_gpr(i64 %a) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i64_f64_gpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ucvtf d0, x0, #32
+; CHECK-NEXT:    ret
+  %cvt = call double @llvm.aarch64.neon.vcvtfxu2fp.i64.f64(i64 %a, i32 32)
+  ret double %cvt
+}
+
+define float @neon_vcvtfxs2fp_i32_f32_fpr(i32 %a) {
+; CHECK-LABEL: neon_vcvtfxs2fp_i32_f32_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    usqadd s0, s0
+; CHECK-NEXT:    scvtf s0, s0, #16
+; CHECK-NEXT:    ret
+  %sum = call i32 @llvm.aarch64.neon.usqadd.i32(i32 %a, i32 %a)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxs2fp.i32.f32(i32 %sum, i32 16)
+  ret float %cvt
+}
+
+define double @neon_vcvtfxs2fp_i64_f64_fpr(i64 %a) {
+; CHECK-LABEL: neon_vcvtfxs2fp_i64_f64_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    usqadd d0, d0
+; CHECK-NEXT:    scvtf d0, d0, #32
+; CHECK-NEXT:    ret
+  %sum = call i64 @llvm.aarch64.neon.usqadd.i64(i64 %a, i64 %a)
+  %cvt = call double @llvm.aarch64.neon.vcvtfxs2fp.i64.f64(i64 %sum, i32 32)
+  ret double %cvt
+}
+
+define double @neon_vcvtfxu2fp_i64_f64_fpr(i64 %a) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i64_f64_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    usqadd d0, d0
+; CHECK-NEXT:    ucvtf d0, d0, #32
+; CHECK-NEXT:    ret
+  %sum = call i64 @llvm.aarch64.neon.usqadd.i64(i64 %a, i64 %a)
+  %cvt = call double @llvm.aarch64.neon.vcvtfxu2fp.i64.f64(i64 %sum, i32 32)
+  ret double %cvt
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK-GI: {{.*}}
 ; CHECK-SD: {{.*}}

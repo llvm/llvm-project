@@ -114,12 +114,13 @@ private:
   bool IsInsideComputeConstruct() const;
   bool IsInsideKernelsConstruct() const;
   void CheckNotInComputeConstruct();
-  std::optional<std::int64_t> getGangDimensionSize(
-      DirectiveContext &dirContext);
   void CheckNotInSameOrSubLevelLoopConstruct();
   void CheckLoopLevelClauseValue(llvm::StringRef clauseName);
   void CheckLoopLevelClauseKernelsConflicts();
   void CheckRoutineCallInLoop(const Symbol &);
+  // OpenACC 3.4 2.15.1: a loop parallelism level above the enclosing
+  // routine is ignored.
+  void WarnIfLoopClausesExceedRoutine(const parser::AccClauseList &);
   void CheckMultipleOccurrenceInDeclare(
       const parser::AccObjectList &, llvm::acc::Clause);
   void CheckMultipleOccurrenceInDeclare(

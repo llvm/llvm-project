@@ -8,14 +8,18 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass legalizes the @llvm.spv.resource.handlefromimplicitbinding
-// intrinsic by replacing it with a call to
-// @llvm.spv.resource.handlefrombinding.
+// and @llvm.spv.resource.handlefromheap intrinsics by replacing them with a
+// call to @llvm.spv.resource.handlefrombinding.
+// It also replaces any @llvm.spv.resource.counterhandlefromimplicitbinding and
+// @llvm.spv.resource.counterhandlefromheap intrinsics with calls to
+// @llvm.spv.resource.counterhandlefrombinding.
 //
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -23,6 +27,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/raw_ostream.h"
 #include <vector>
 
 using namespace llvm;
@@ -36,13 +41,16 @@ private:
   void collectBindingInfo(Module &M);
   uint32_t getAndReserveFirstUnusedBinding(uint32_t DescSet);
   bool replaceImplicitBindingCalls(Module &M);
+  bool replaceHeapBindingCalls(Module &M);
 
   // A map from descriptor set to a bit vector of used binding numbers.
   std::vector<BitVector> UsedBindings;
 
-  // Set to true by collectBindingInfo() if there are any implicit binding
-  // declarations in the module.
+  // Set to true by collectBindingInfo() if there are possibly any implicit
+  // binding or heap binding calls in the module (if the module contains a
+  // declaration of implicit binding or heap intrinsic).
   bool MayHaveImplicitBindings = false;
+  bool MayHaveHeapBindings = false;
 };
 
 class SPIRVLegalizeResourceBindingLegacy : public ModulePass {
@@ -116,6 +124,10 @@ void SPIRVLegalizeResourceBindingImpl::collectBindingInfo(Module &M) {
     case Intrinsic::spv_resource_counterhandlefromimplicitbinding:
       MayHaveImplicitBindings = true;
       break;
+    case Intrinsic::spv_resource_handlefromheap:
+    case Intrinsic::spv_resource_counterhandlefromheap:
+      MayHaveHeapBindings = true;
+      break;
     default:
       break;
     }
@@ -142,18 +154,19 @@ uint32_t SPIRVLegalizeResourceBindingImpl::getAndReserveFirstUnusedBinding(
 // Replace the implicit binding call with a new call using explicit binding.
 static void replaceWithHandleFromBinding(Module &M, CallInst *CI,
                                          uint32_t DescSet, uint32_t Binding,
-                                         Value *IndexOp, Value *RangeOp,
+                                         Value *RangeOp, Value *IndexOp,
                                          Value *Name) {
-  assert(CI->getIntrinsicID() ==
-             Intrinsic::spv_resource_handlefromimplicitbinding &&
-         "unexpected implicit binding intrinsic");
+  assert((CI->getIntrinsicID() ==
+              Intrinsic::spv_resource_handlefromimplicitbinding ||
+          CI->getIntrinsicID() == Intrinsic::spv_resource_handlefromheap) &&
+         "unexpected binding intrinsic");
   IRBuilder<> Builder(CI);
   Value *DescSetOp = Builder.getInt32(DescSet);
   Value *BindingOp = Builder.getInt32(Binding);
   Function *NewFunc = Intrinsic::getOrInsertDeclaration(
       &M, Intrinsic::spv_resource_handlefrombinding, {CI->getType()});
   CallInst *NewCI = Builder.CreateCall(
-      NewFunc, {DescSetOp, BindingOp, IndexOp, RangeOp, Name});
+      NewFunc, {DescSetOp, BindingOp, RangeOp, IndexOp, Name});
   NewCI->setCallingConv(CI->getCallingConv());
   CI->replaceAllUsesWith(NewCI);
   CI->eraseFromParent();
@@ -164,9 +177,11 @@ static void replaceWithHandleFromBinding(Module &M, CallInst *CI,
 static void replaceWithCounterHandleFromBinding(Module &M, CallInst *CI,
                                                 uint32_t DescSet,
                                                 uint32_t Binding) {
-  assert(CI->getIntrinsicID() ==
-             Intrinsic::spv_resource_counterhandlefromimplicitbinding &&
-         "unexpected implicit binding intrinsic");
+  assert(
+      (CI->getIntrinsicID() ==
+           Intrinsic::spv_resource_counterhandlefromimplicitbinding ||
+       CI->getIntrinsicID() == Intrinsic::spv_resource_counterhandlefromheap) &&
+      "unexpected binding intrinsic");
   IRBuilder<> Builder(CI);
   Value *DescSetOp = Builder.getInt32(DescSet);
   Value *BindingOp = Builder.getInt32(Binding);
@@ -247,12 +262,186 @@ bool SPIRVLegalizeResourceBindingImpl::replaceImplicitBindingCalls(Module &M) {
   return Changed;
 }
 
+bool moduleContainsConstantString(Module &M, StringRef Str) {
+  for (GlobalVariable &GV : M.globals()) {
+    if (!GV.hasInitializer())
+      continue;
+    if (ConstantDataArray *CDA =
+            dyn_cast<ConstantDataArray>(GV.getInitializer())) {
+      if (CDA->isString() && CDA->getAsCString() == Str)
+        return true;
+    }
+  }
+  return false;
+}
+
+// Creates unique global variable for the heap name string, making
+// sure that each heap name string is unique within the module.
+GlobalVariable *createHeapNameString(Module &M, StringRef Name) {
+  SmallString<32> GlobalStringName(Name);
+  uint32_t HeapNameLen = Name.size();
+  StringRef HeapName;
+  for (unsigned Suffix = 1;; ++Suffix) {
+    GlobalStringName.append(".str");
+    if (!M.getNamedValue(GlobalStringName)) {
+      // Make sure the module does not already have a constant
+      // string with this value.
+      HeapName = GlobalStringName.substr(0, HeapNameLen);
+      if (!moduleContainsConstantString(M, HeapName))
+        break;
+    }
+    GlobalStringName.resize(Name.size());
+    raw_svector_ostream(GlobalStringName) << '.' << Suffix;
+    HeapNameLen = GlobalStringName.size();
+  }
+  Constant *Init = ConstantDataArray::getString(M.getContext(), HeapName);
+  GlobalVariable *HeapNameGV = new GlobalVariable(
+      M, Init->getType(), /*isConstant=*/true, GlobalValue::PrivateLinkage,
+      Init, GlobalStringName, /*InsertBefore=*/nullptr,
+      GlobalVariable::NotThreadLocal, /*AddressSpace=*/0);
+  HeapNameGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  HeapNameGV->setAlignment(Align(1));
+  return HeapNameGV;
+}
+
+// The SPIR-V backend represents dynamic resources as unbounded resource arrays.
+// This function scans the module for calls to
+// `llvm.spv.resource.handlefromheap` and groups them according to whether they
+// create CBV/SRV/UAV resources or samplers. It also collects calls to
+// `llvm.spv.resource.counterhandlefromheap` intrinsics that form a third group.
+//
+// The function assigns the first available binding to each non-empty heap group
+// in this order: CBV/SRV/UAV resources, samplers, and counters. For each group,
+// it will replace the heap intrinsic calls with their explicit
+// `handlefrombinding` equivalents using the assigned binding.
+//
+// The function does not actually create the unbounded resource-array globals
+// itself. It only assigns a unique name that is shared by all resources
+// belonging to the same heap type; the existing `SPIRVInstructionSelector` will
+// create the globals.
+//
+// Because the CBV/SRV/UAV group can contain resources of different types, these
+// resources must be represented by separate arrays, one for each unique
+// resource type. All of these arrays will use the same binding and therefore
+// overlap.
+bool SPIRVLegalizeResourceBindingImpl::replaceHeapBindingCalls(Module &M) {
+  // First we collect all used heap binding declarations and group them based on
+  // their kind.
+  SmallVector<Function *, 8> CbvSrvUavs;
+  SmallVector<Function *, 8> Samplers;
+  SmallVector<Function *, 8> Counters;
+  bool Changed = false;
+
+  for (Function &F : M) {
+    if (!F.isDeclaration() || F.user_empty())
+      continue;
+
+    if (F.getIntrinsicID() == Intrinsic::spv_resource_handlefromheap) {
+      TargetExtType *ResType = cast<TargetExtType>(F.getReturnType());
+      if (ResType->getName() == "spirv.Sampler")
+        Samplers.emplace_back(&F);
+      else
+        CbvSrvUavs.emplace_back(&F);
+    } else if (F.getIntrinsicID() ==
+               Intrinsic::spv_resource_counterhandlefromheap) {
+      Counters.emplace_back(&F);
+    } else
+      continue;
+  }
+
+  if (CbvSrvUavs.empty() && Samplers.empty() && Counters.empty())
+    return false;
+
+  // Heap resources are always mapped to descriptor set 0 as an unbounded
+  // runtime array.
+  constexpr uint32_t DescSet = 0;
+  Value *Zero =
+      llvm::ConstantInt::get(llvm::Type::getInt32Ty(M.getContext()), 0);
+
+  if (!CbvSrvUavs.empty()) {
+    // For CBV/UAV/SRV resources we need to create a different
+    // ResourceDescriptorHeap name for each unique resource type. They will all
+    // share the same binding and will overlap.
+    uint32_t Binding = getAndReserveFirstUnusedBinding(DescSet);
+    SmallDenseMap<TargetExtType *, GlobalVariable *> ResourceDescriptorHeaps;
+    for (Function *F : CbvSrvUavs) {
+      TargetExtType *ResType = cast<TargetExtType>(F->getReturnType());
+      GlobalVariable *HeapNameGV = nullptr;
+      auto It = ResourceDescriptorHeaps.find(ResType);
+      if (It == ResourceDescriptorHeaps.end()) {
+        HeapNameGV = createHeapNameString(M, "ResourceDescriptorHeap");
+        [[maybe_unused]] auto [InsertedIt, Inserted] =
+            ResourceDescriptorHeaps.try_emplace(ResType, HeapNameGV);
+        assert(Inserted && "resource heap name already exists");
+      } else {
+        HeapNameGV = It->second;
+      }
+
+      for (User *U : make_early_inc_range(F->users())) {
+        if (CallInst *CI = dyn_cast<CallInst>(U)) {
+          Value *HeapIdx = CI->getArgOperand(0);
+          replaceWithHandleFromBinding(M, CI, DescSet, Binding, Zero, HeapIdx,
+                                       HeapNameGV);
+          Changed = true;
+        }
+      }
+      F->eraseFromParent();
+    }
+  }
+
+  if (!Samplers.empty()) {
+    uint32_t Binding = getAndReserveFirstUnusedBinding(DescSet);
+    // The Sampler handle type should be the same for all samplers
+    // (target("spirv.Sampler")).
+    [[maybe_unused]] TargetExtType *SamplerHandleType =
+        cast<TargetExtType>(Samplers.front()->getReturnType());
+
+    GlobalVariable *HeapNameGV =
+        createHeapNameString(M, "SamplerDescriptorHeap");
+    for (Function *F : Samplers) {
+      assert(F->getReturnType() == SamplerHandleType &&
+             "sampler handle type mismatch");
+      for (User *U : make_early_inc_range(F->users())) {
+        if (CallInst *CI = dyn_cast<CallInst>(U)) {
+          Value *HeapIdx = CI->getArgOperand(0);
+          replaceWithHandleFromBinding(M, CI, DescSet, Binding, Zero, HeapIdx,
+                                       HeapNameGV);
+          Changed = true;
+        }
+      }
+      F->eraseFromParent();
+    }
+  }
+
+  if (!Counters.empty()) {
+    uint32_t Binding = getAndReserveFirstUnusedBinding(DescSet);
+    [[maybe_unused]] Type *CounterHandleTy = Counters.front()->getReturnType();
+    for (Function *F : Counters) {
+      // The counter handle type should be the same for all resource types
+      // that have a counter (target("spirv.VulkanBuffer", i32, 12, 1)).
+      assert(F->getReturnType() == CounterHandleTy &&
+             "counter handle type mismatch");
+      for (User *U : make_early_inc_range(F->users())) {
+        if (CallInst *CI = dyn_cast<CallInst>(U)) {
+          replaceWithCounterHandleFromBinding(M, CI, DescSet, Binding);
+          Changed = true;
+        }
+      }
+      F->eraseFromParent();
+    }
+  }
+
+  return Changed;
+}
+
 bool SPIRVLegalizeResourceBindingImpl::runOnModule(Module &M) {
   collectBindingInfo(M);
 
   bool Changed = false;
   if (MayHaveImplicitBindings)
     Changed |= replaceImplicitBindingCalls(M);
+  if (MayHaveHeapBindings)
+    Changed |= replaceHeapBindingCalls(M);
 
   return Changed;
 }

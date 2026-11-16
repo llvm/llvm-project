@@ -22,6 +22,8 @@ struct VectorScaleOpInterface
                                                    VectorScaleOp> {
   void populateBoundsForIndexValue(Operation *op, Value value,
                                    ValueBoundsConstraintSet &cstr) const {
+    // vscale is a positive integer by definition.
+    cstr.bound(value) >= 1;
     auto *scalableCstr = dyn_cast<ScalableValueBoundsConstraintSet>(&cstr);
     if (!scalableCstr)
       return;

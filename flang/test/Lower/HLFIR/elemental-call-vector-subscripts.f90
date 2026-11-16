@@ -14,9 +14,9 @@ subroutine test()
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest() {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> {bindc_name = "x", uniq_name = "_QFtestEx"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> <{bindc_name = "x", uniq_name = "_QFtestEx"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFtestEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) uniq_name("_QFtestEx") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! CHECK:           %[[VAL_4:.*]] = fir.address_of(@_QQro.3xi8.0) : !fir.ref<!fir.array<3xi64>>
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
@@ -46,9 +46,9 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPtest_value() {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> {bindc_name = "x", uniq_name = "_QFtest_valueEx"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> <{bindc_name = "x", uniq_name = "_QFtest_valueEx"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFtest_valueEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) uniq_name("_QFtest_valueEx") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! CHECK:           %[[VAL_4:.*]] = fir.address_of(@_QQro.3xi8.0) : !fir.ref<!fir.array<3xi64>>
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
@@ -91,3 +91,88 @@ end subroutine
 ! CHECK:             fir.call @_QPfoo2(%[[VAL_23]]#0){{.*}}: (!fir.ref<i64>) -> ()
 ! CHECK:             hlfir.end_associate %[[VAL_23]]#1, %[[VAL_23]]#2 : !fir.ref<i64>, i1
 ! CHECK:           }
+
+subroutine vector_index(x, a, b)
+  real :: x(:)
+  integer :: a(:), b(:)
+  interface
+    elemental subroutine consume(x)
+      real, intent(in) :: x
+    end subroutine
+  end interface
+  call consume(x(a+b))
+end subroutine
+subroutine scalar_index(x, a, b, v)
+  real :: x(:,:)
+  integer :: a(:), b(:), v(:)
+  interface
+    elemental subroutine consume(x)
+      real, intent(in) :: x
+    end subroutine
+  end interface
+  call consume(x(v,sum(a+b)))
+end subroutine
+subroutine character_index(x, a, b)
+  real :: x(:)
+  character(*) :: a(:), b(:)
+  interface
+    elemental subroutine consume(x)
+      real, intent(in) :: x
+    end subroutine
+  end interface
+  call consume(x(len_trim(a//b)))
+end subroutine
+
+! The index expression arrays belong to the enclosing statement, not the
+! per-element address computation. No cleanup may precede the call loop.
+! CHECK-LABEL: func.func @_QPvector_index
+! CHECK: %[[ADD:.*]] = hlfir.elemental
+! CHECK: arith.addi
+! CHECK: %[[CAST:.*]] = hlfir.elemental
+! CHECK: hlfir.apply %[[ADD]]
+! CHECK-NOT: hlfir.destroy
+! CHECK: fir.do_loop
+! CHECK: hlfir.apply %[[CAST]]
+! CHECK: fir.call @_QPconsume
+! CHECK: }
+! CHECK-NEXT: hlfir.destroy %[[CAST]]
+! CHECK-NEXT: hlfir.destroy %[[ADD]]
+! CHECK-NEXT: return
+
+! CHECK-LABEL: func.func @_QPscalar_index
+! CHECK: %[[VECTOR:.*]] = hlfir.elemental
+! CHECK: %[[ADD:.*]] = hlfir.elemental
+! CHECK: %[[SUM:.*]] = hlfir.sum %[[ADD]]
+! CHECK: %[[INDEX:.*]] = fir.convert %[[SUM]]
+! CHECK-NOT: hlfir.destroy
+! CHECK: fir.do_loop
+! CHECK: %[[V:.*]] = hlfir.apply %[[VECTOR]]
+! CHECK: hlfir.designate %{{.*}} (%[[V]], %[[INDEX]])
+! CHECK: fir.call @_QPconsume
+! CHECK: }
+! CHECK-NEXT: hlfir.destroy %[[ADD]]
+! CHECK-NEXT: hlfir.destroy %[[VECTOR]]
+! CHECK-NEXT: return
+
+! Character subexpressions retain their per-element cleanup regions, while
+! their containing arrays are cleaned up after the elemental subroutine call.
+! CHECK-LABEL: func.func @_QPcharacter_index
+! CHECK: %[[CHARS:.*]] = hlfir.elemental
+! CHECK: %[[CONCAT:.*]] = hlfir.concat
+! CHECK-NEXT: hlfir.yield_element %[[CONCAT]] : {{.*}} cleanup {
+! CHECK-NEXT: hlfir.destroy %[[CONCAT]]
+! CHECK: %[[LENGTHS:.*]] = hlfir.elemental
+! CHECK: hlfir.apply %[[CHARS]]
+! CHECK: hlfir.yield_element {{.*}} cleanup {
+! CHECK: hlfir.end_associate
+! CHECK: %[[INDICES:.*]] = hlfir.elemental
+! CHECK: hlfir.apply %[[LENGTHS]]
+! CHECK-NOT: hlfir.destroy
+! CHECK: fir.do_loop
+! CHECK: hlfir.apply %[[INDICES]]
+! CHECK: fir.call @_QPconsume
+! CHECK: }
+! CHECK-NEXT: hlfir.destroy %[[INDICES]]
+! CHECK-NEXT: hlfir.destroy %[[LENGTHS]]
+! CHECK-NEXT: hlfir.destroy %[[CHARS]]
+! CHECK-NEXT: return

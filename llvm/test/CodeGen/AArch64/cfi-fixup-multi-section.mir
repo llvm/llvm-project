@@ -34,10 +34,8 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 failsVerification: false
-registers:       []
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 frameInfo:
@@ -217,10 +215,8 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 failsVerification: false
-registers:       []
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 frameInfo:

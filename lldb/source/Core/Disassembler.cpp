@@ -1495,10 +1495,10 @@ void PseudoInstruction::SetDescription(llvm::StringRef description) {
   m_description = std::string(description);
 }
 
-Instruction::Operand Instruction::Operand::BuildRegister(ConstString &r) {
+Instruction::Operand Instruction::Operand::BuildRegister(llvm::StringRef r) {
   Operand ret;
   ret.m_type = Type::Register;
-  ret.m_register = r;
+  ret.m_register = r.str();
   return ret;
 }
 
@@ -1573,13 +1573,13 @@ std::function<bool(const Instruction::Operand &)>
 lldb_private::OperandMatchers::MatchRegOp(const RegisterInfo &info) {
   return [&info](const Instruction::Operand &op) {
     return (op.m_type == Instruction::Operand::Type::Register &&
-            (op.m_register == ConstString(info.name) ||
-             op.m_register == ConstString(info.alt_name)));
+            (llvm::StringRef(op.m_register) == info.name ||
+             llvm::StringRef(op.m_register) == info.alt_name));
   };
 }
 
 std::function<bool(const Instruction::Operand &)>
-lldb_private::OperandMatchers::FetchRegOp(ConstString &reg) {
+lldb_private::OperandMatchers::FetchRegOp(std::string &reg) {
   return [&reg](const Instruction::Operand &op) {
     if (op.m_type != Instruction::Operand::Type::Register) {
       return false;

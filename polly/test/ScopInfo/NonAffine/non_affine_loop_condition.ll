@@ -1,6 +1,6 @@
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops -polly-process-unprofitable=false '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops -polly-detect-reductions=false '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=NO-REDUCTION
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-nonaffine-branches -plugin-arg=Polly,-polly-allow-nonaffine-loops '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-detect -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-nonaffine-branches -plugin-arg=Polly,-polly-allow-nonaffine-loops -plugin-arg=Polly,-polly-process-unprofitable=false '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-detect -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-nonaffine-branches -plugin-arg=Polly,-polly-allow-nonaffine-loops -plugin-arg=Polly,-polly-detect-reductions=false '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-detect -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=NO-REDUCTION
 ;
 ;    void f(int *A, int *C) {
 ;      for (int i = 0; i < 1024; i++) {

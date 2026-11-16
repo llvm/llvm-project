@@ -155,11 +155,11 @@
 // WASM_EXCEPTIONS_FEMSCRIPTEN_EH: invalid argument '-fwasm-exceptions' not allowed with '-femscripten-exceptions'
 
 // '-fwasm-exceptions' sets +exception-handling, -multivalue, -reference-types,
-// "-exception-model=wasm", and '-mllvm -wasm-enable-eh'
+// and "-exception-model=wasm"
 // RUN: %clang -### --target=wasm32-unknown-unknown \
 // RUN:    --sysroot=/foo %s -fwasm-exceptions 2>&1 \
 // RUN:  | FileCheck -check-prefix=WASM_EXCEPTIONS %s
-// WASM_EXCEPTIONS: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm" "-mllvm" "-wasm-enable-eh"
+// WASM_EXCEPTIONS: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm"
 
 // '-fwasm-exceptions' not allowed with '-mllvm -enable-emscripten-sjlj'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \

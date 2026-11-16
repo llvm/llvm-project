@@ -91,9 +91,9 @@ void ConstantInitBuilderBase::setGlobalInitializer(llvm::GlobalVariable *GV,
 
 void ConstantInitBuilderBase::resolveSelfReferences(llvm::GlobalVariable *GV) {
   for (auto &entry : SelfReferences) {
-    llvm::Constant *resolvedReference =
-      llvm::ConstantExpr::getInBoundsGetElementPtr(
-        GV->getValueType(), GV, entry.Indices);
+    llvm::Constant *resolvedReference = llvm::ConstantExpr::getGetElementPtr(
+        CGM.getDataLayout(), GV->getValueType(), GV, entry.Indices,
+        llvm::GEPNoWrapFlags::inBounds());
     auto dummy = entry.Dummy;
     dummy->replaceAllUsesWith(resolvedReference);
     dummy->eraseFromParent();

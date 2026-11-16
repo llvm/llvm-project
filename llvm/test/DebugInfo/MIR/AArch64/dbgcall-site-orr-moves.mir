@@ -121,7 +121,6 @@
 ---
 name:            same_reg
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 frameInfo:
@@ -134,7 +133,7 @@ stack:
   - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$lr' }
   - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '$fp' }
 callSites:
-  - { bb: 0, offset: 8, fwdArgRegs:
+  - { bb: '%bb.0', offset: 8, fwdArgRegs:
       - { arg: 0, reg: '$w0' } }
 machineFunctionInfo: {}
 body:             |
@@ -167,7 +166,6 @@ body:             |
 ---
 name:            super_reg
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 frameInfo:
@@ -180,7 +178,7 @@ stack:
   - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$lr' }
   - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '$fp' }
 callSites:
-  - { bb: 0, offset: 9, fwdArgRegs:
+  - { bb: '%bb.0', offset: 9, fwdArgRegs:
       - { arg: 0, reg: '$x0' } }
 machineFunctionInfo: {}
 body:             |
@@ -213,7 +211,6 @@ body:             |
 ---
 name:            sub_reg
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -228,7 +225,7 @@ stack:
   - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$lr' }
   - { id: 2, type: spill-slot, offset: -32, size: 8, alignment: 8, callee-saved-register: '$fp' }
 callSites:
-  - { bb: 0, offset: 17, fwdArgRegs:
+  - { bb: '%bb.0', offset: 17, fwdArgRegs:
       - { arg: 0, reg: '$w0' }
       - { arg: 1, reg: '$w1' } }
 machineFunctionInfo: {}

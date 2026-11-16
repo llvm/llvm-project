@@ -266,7 +266,7 @@ void RISCVMachObjectWriter::recordRelocation(
 
   // Only .word and %pcrel_lo instructions inline the pc-relative
   // offset in the instruction, but only if such offset fits the
-  // 12-bit immediate of an addi or an lw instrucion.
+  // 12-bit immediate of an addi or an lw instruction.
   if ((Type != MachO::RISCV_RELOC_UNSIGNED && Type != MachO::RISCV_RELOC_LO12 &&
        Type != MachO::RISCV_RELOC_GOT_LO12) ||
       RequireExtraAddend)
@@ -323,14 +323,10 @@ void RISCVMachObjectWriter::recordRelocation(
         (!B_Base || !B_Base->getFragment() ? 0
                                            : Writer->getSymbolAddress(*B_Base));
 
-    // If there's any addend left to handle, inline it in the instruction's
-    // immediate.
+    // If there's any addend left to handle, inline it in the data being
+    // relocated. Unlike the 12-bit immediate of an addi or an lw, the data
+    // is wide enough to store the whole addend.
     FixedValue = Value;
-    if (!isValidInt<12>(
-            FixedValue,
-            "AUIPC out of range of corresponding %pcrel_lo instruction", Asm,
-            Fixup.getLoc()))
-      return;
 
     emitRelocation(Writer, Fragment, FixupOffset, /*RelSymbol*/ A_Base, Index,
                    IsPCRel, Log2Size, /*Type*/ MachO::RISCV_RELOC_UNSIGNED);

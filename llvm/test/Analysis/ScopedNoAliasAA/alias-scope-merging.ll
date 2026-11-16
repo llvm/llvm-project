@@ -30,11 +30,11 @@ declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 !0 = !{!1, !7}
 !1 = distinct !{!1, !3, !"callee0: %a"}
 !2 = distinct !{!2, !3, !"callee0: %b"}
-!3 = distinct !{!3, !"callee0"}
+!3 = distinct !{!3, i1 false, !"callee0"}
 
 !4 = !{!2, !5}
 !5 = distinct !{!5, !6, !"callee1: %a"}
-!6 = distinct !{!6, !"callee1"}
+!6 = distinct !{!6, i1 false, !"callee1"}
 
 !7 = distinct !{!7, !8, !"callee2: %a"}
-!8 = distinct !{!8, !"callee2"}
+!8 = distinct !{!8, i1 false, !"callee2"}

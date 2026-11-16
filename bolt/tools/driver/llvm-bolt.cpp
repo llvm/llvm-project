@@ -54,7 +54,6 @@ static cl::opt<std::string> InputFilename(cl::Positional,
 static cl::opt<std::string>
 InputDataFilename("data",
   cl::desc("<data file>"),
-  cl::Optional,
   cl::cat(BoltCategory));
 
 static cl::alias
@@ -71,7 +70,6 @@ static cl::opt<std::string>
 static cl::opt<std::string>
 InputDataFilename2("data2",
   cl::desc("<data file>"),
-  cl::Optional,
   cl::cat(BoltCategory));
 
 static cl::opt<std::string>

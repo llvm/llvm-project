@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fveclib=Darwin_libsystem_m -triple arm64-apple-darwin %s -target-cpu apple-a7 -vectorize-loops -emit-llvm -O3 -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fveclib=Darwin_libsystem_m -triple arm64-apple-darwin %s -target-cpu apple-a7 -vectorize-loops -emit-llvm -O3 -o - | FileCheck %s %}
 
 // REQUIRES: aarch64-registered-target
 
@@ -13,4 +14,17 @@ extern float sinf(float);
 void apply_sin(float *A, float *B, float *C, unsigned N) {
   for (unsigned i = 0; i < N; i++)
     C[i] = sinf(A[i]) + sinf(B[i]);
+}
+
+// __exp10f is a Darwin-only spelling with no plain-named counterpart in
+// math.h, so check that the mapping keyed on it is reachable from C.
+
+extern float __exp10f(float);
+
+// CHECK-LABEL: define{{.*}}@apply_exp10
+// CHECK: call <4 x float> @_simd_exp10_f4(
+//
+void apply_exp10(float *A, float *B, float *C, unsigned N) {
+  for (unsigned i = 0; i < N; i++)
+    C[i] = __exp10f(A[i]) + __exp10f(B[i]);
 }
