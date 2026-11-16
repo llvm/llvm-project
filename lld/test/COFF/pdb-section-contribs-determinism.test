@@ -1,0 +1,28 @@
+# Pin the determinism of the parallelized createSectionContrib loop in
+# PDBLinker::addSections (lld/COFF/PDB.cpp): the section contributions written
+# to the PDB -- their order and per-chunk JamCRC -- must not depend on the
+# number of link threads. Link the same inputs serially and in parallel, then
+# require the dumped contributions to be byte-identical.
+#
+# Both links reuse the same /out and /pdb paths (the serial PDB is dumped before
+# the parallel link overwrites it) and pin /pdbaltpath, so /threads: is the only
+# difference. Otherwise the embedded PDB-path string would change the size of a
+# synthesized .rdata chunk and make the contributions differ for reasons
+# unrelated to the parallel loop.
+
+# RUN: yaml2obj %p/Inputs/pdb1.yaml -o %t1.obj
+# RUN: yaml2obj %p/Inputs/pdb2.yaml -o %t2.obj
+
+# RUN: lld-link /debug /pdb:%t.pdb /pdbaltpath:test.pdb /dll /out:%t.dll \
+# RUN:   /entry:main /nodefaultlib /threads:1 %t1.obj %t2.obj
+# RUN: llvm-pdbutil dump -section-contribs %t.pdb > %t.serial.txt
+
+# RUN: lld-link /debug /pdb:%t.pdb /pdbaltpath:test.pdb /dll /out:%t.dll \
+# RUN:   /entry:main /nodefaultlib /threads:4 %t1.obj %t2.obj
+# RUN: llvm-pdbutil dump -section-contribs %t.pdb > %t.parallel.txt
+
+# Guard against both dumps being empty (which would make the diff vacuous).
+# RUN: FileCheck --check-prefix=NONEMPTY --input-file=%t.serial.txt %s
+# NONEMPTY: SC[
+
+# RUN: diff -u %t.serial.txt %t.parallel.txt
