@@ -14,7 +14,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "test_macros.h"
 
 int main(int, char**) {
   static_assert(std::is_same_v<decltype(std::observable_checkpoint()), void>);
