@@ -1358,16 +1358,20 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
       continue;
     }
 
-    // (tbz (ubfx x, lsb, width), b) -> (tbz x, lsb + b) when b < width.
+    // (tbz (ubfx x, lsb, width), b) -> (tbz x, lsb + b) when b < width and
+    // lsb + b is a bit of x.
     if (Opc == TargetOpcode::G_UBFX) {
+      Register Src = MI->getOperand(1).getReg();
+      uint64_t SrcSize = MRI.getType(Src).getSizeInBits();
       auto Lsb =
           getIConstantVRegValWithLookThrough(MI->getOperand(2).getReg(), MRI);
       auto Width =
           getIConstantVRegValWithLookThrough(MI->getOperand(3).getReg(), MRI);
-      if (!Lsb || !Width || Bit >= Width->Value.getZExtValue())
+      if (!Lsb || !Width || Width->Value.ule(Bit) || Lsb->Value.uge(SrcSize) ||
+          Lsb->Value.getZExtValue() + Bit >= SrcSize)
         break;
       Bit += Lsb->Value.getZExtValue();
-      Reg = MI->getOperand(1).getReg();
+      Reg = Src;
       continue;
     }
 

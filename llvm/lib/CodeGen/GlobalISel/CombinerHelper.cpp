@@ -8731,15 +8731,8 @@ Register CombinerHelper::simplifyMultipleUseDemandedBits(
 
   APInt DemandedElts =
       Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
-  // Value tracking gives up at the depth limit even for constants, whereas
-  // SelectionDAG checks for constants first; match the latter.
-  auto GetKnownBits = [&](Register Reg) {
-    if (auto C = getConstantOrConstantSplatVector(Reg))
-      return KnownBits::makeConstant(*C);
-    return VT->getKnownBits(Reg, DemandedElts, Depth + 1);
-  };
-  KnownBits LHSKnown = GetKnownBits(LHS);
-  KnownBits RHSKnown = GetKnownBits(RHS);
+  KnownBits LHSKnown = VT->getKnownBits(LHS, DemandedElts, Depth + 1);
+  KnownBits RHSKnown = VT->getKnownBits(RHS, DemandedElts, Depth + 1);
   // Return an operand that agrees with R on every demanded bit.
   switch (Opcode) {
   case TargetOpcode::G_AND:
@@ -8914,7 +8907,12 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
               Shift->getOperand(2).getReg(), DemandedElts, Depth + 2))
         if (const APInt *C = AmtRange->getSingleElement())
           Amt = getValidConstShiftAmt(*C, BW);
-      LLT AmtTy = MRI.getType(Shift->getOperand(2).getReg());
+      // Prefer the target's amount type for OpTy, as SelectionDAG and the
+      // trunc_shift combine do, unless only the original one is legal (e.g.
+      // legalized AArch64 i32 shifts take i64 amounts).
+      LLT AmtTy = TLI.getPreferredShiftAmountTy(OpTy);
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR, {OpTy, AmtTy}}))
+        AmtTy = MRI.getType(Shift->getOperand(2).getReg());
       if (Amt &&
           !(APInt::getHighBitsSet(SrcBW, SrcBW - BW).lshr(*Amt).trunc(BW) &
             Demanded) &&

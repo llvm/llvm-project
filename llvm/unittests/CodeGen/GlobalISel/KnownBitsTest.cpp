@@ -2946,7 +2946,12 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsNarrowsVectorTruncOfLShr) {
   EXPECT_TRUE(
       Helper.simplifyDemandedBits(*Use, /*OpNo=*/1, APInt(16, 0xff), Known));
   using namespace MIPatternMatch;
+  Register NewShift = Use->getOperand(1).getReg();
   EXPECT_TRUE(
-      mi_match(Use->getOperand(1).getReg(), *MRI,
+      mi_match(NewShift, *MRI,
                m_GLShr(m_GTrunc(m_SpecificReg(VReg)), m_SpecificICstSplat(8))));
+  // The narrow shift takes the preferred amount type for <4 x s16>, not the
+  // wide shift's <4 x s32>.
+  EXPECT_EQ(MRI->getType(MRI->getVRegDef(NewShift)->getOperand(2).getReg()),
+            MRI->getType(NewShift));
 }
