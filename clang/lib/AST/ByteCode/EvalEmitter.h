@@ -71,9 +71,8 @@ public:
   }
 
 protected:
-  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
-              FrameAllocator &FrameAlloc,
-              ConstantExprKind ConstexprKind = ConstantExprKind::Normal);
+  EvalEmitter(Context &Ctx, Program &P, const EvalSettings &Settings,
+              InterpStack &Stk, FrameAllocator &FrameAlloc);
 
   EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
               InterpStack &Stk, FrameAllocator &FrameAlloc);
@@ -113,7 +112,7 @@ protected:
   }
 
   /// Callback for registering a local.
-  Local createLocal(const Descriptor *D);
+  Local createLocal(const Descriptor *D, bool IsConstexprUnknown = false);
 
   /// Parameter indices.
   llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;

@@ -115,7 +115,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_data_operandPacc_operand_array_section_allocatable() {
 ! CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> <{bindc_name = "a", uniq_name = "_QMacc_data_operandFacc_operand_array_section_allocatableEa"}>
-! CHECK: %[[DECLA:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<allocatable>
+! CHECK: %[[DECLA:.*]]:2 = hlfir.declare %[[A]] {{.*}}fortran_attrs<allocatable>
 ! CHECK: %[[LOAD_BOX_A_1:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_0:.*]]:3 = fir.box_dims %[[LOAD_BOX_A_1]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
@@ -166,7 +166,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_data_operandPacc_operand_array_section_pointer() {
 ! CHECK: %[[P:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> <{bindc_name = "p", uniq_name = "_QMacc_data_operandFacc_operand_array_section_pointerEp"}>
-! CHECK: %[[DECLP:.*]]:2 = hlfir.declare %[[P]] {fortran_attrs = #fir.var_attrs<pointer>
+! CHECK: %[[DECLP:.*]]:2 = hlfir.declare %[[P]] {{.*}}fortran_attrs<pointer>
 ! CHECK: %[[LOAD_BOX_P_1:.*]] = fir.load %[[DECLP]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_0:.*]]:3 = fir.box_dims %[[LOAD_BOX_P_1]], %[[C0:.*]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)

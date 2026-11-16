@@ -1345,3 +1345,31 @@ define <11 x i32> @wide_insert_chain_out_of_range(i32 %a0, i32 %bad, i32 %a1, i3
   %v10 = insertelement <11 x i32> %v9, i32 %a10, i64 10
   ret <11 x i32> %v10
 }
+
+; abs is elementwise, so dropping result lane 3 drops the same lane of the
+; vector operand and removes the insert. Its i1 flag is a scalar operand and
+; must be left alone.
+define <4 x i32> @abs_undemanded_elt(<4 x i32> %a, i32 %x) {
+; CHECK-LABEL: @abs_undemanded_elt(
+; CHECK-NEXT:    [[ABS:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[A:%.*]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[ABS]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %a3 = insertelement <4 x i32> %a, i32 %x, i64 3
+  %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a3, i1 false)
+  %r = shufflevector <4 x i32> %abs, <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+  ret <4 x i32> %r
+}
+
+; Same for is.fpclass, whose i32 test mask is a scalar operand.
+define <4 x i1> @is_fpclass_undemanded_elt(<4 x float> %a, float %x) {
+; CHECK-LABEL: @is_fpclass_undemanded_elt(
+; CHECK-NEXT:    [[CLS:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[A:%.*]], /* (norm) */ i32 264)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i1> [[CLS]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %a3 = insertelement <4 x float> %a, float %x, i64 3
+  %cls = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %a3, i32 264)
+  %r = shufflevector <4 x i1> %cls, <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+  ret <4 x i1> %r
+}

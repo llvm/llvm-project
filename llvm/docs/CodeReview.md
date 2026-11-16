@@ -109,10 +109,8 @@ generally expected that suggested changes will be incorporated into a future
 revision of the patch unless the author and/or other reviewers can articulate a
 good reason to do otherwise (and then the reviewers must agree). If a new patch
 does not address all outstanding feedback, the author should explicitly state
-that when providing the updated patch. When using the web-based code-review
-tool, such notes can be provided in the "Diff" description (which is different
-from the description of the "Differential Revision" as a whole used for the
-commit message).
+that when updating the pull request. Such notes can be provided in a comment on
+the pull request so reviewers can see which feedback remains outstanding.
 
 If you suggest changes in a code review, but don't wish the suggestion to be
 interpreted this strongly, please state so explicitly.

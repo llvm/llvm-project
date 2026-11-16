@@ -22,7 +22,7 @@ include "mlir/IR/BuiltinAttributes.td"
 
 def fircg_Dialect : Dialect {
   let name = "fircg";
-  let useStrictPropertiesInAssemblyFormat = 0;
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::fir::cg";
 }
 
@@ -68,7 +68,9 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
   let assemblyFormat = [{
     $memref (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)?
       (`path` $subcomponent^)? (`substr` $substr^)? (`typeparams` $lenParams^)?
-      (`source_box` $sourceBox^)? attr-dict `:` functional-type(operands, results)
+      (`source_box` $sourceBox^)?
+      (`allocator_idx` `(` $allocator_idx^ `)`)?
+      attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
@@ -246,6 +248,8 @@ def fircg_XDeclareOp : fircg_Op<"ext_declare", [AttrSizedOperandSegments]> {
     $memref (`(` $shape^ `)`)? (`origin` $shift^)? (`typeparams` $typeparams^)?
     (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
     (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
+    `uniq_name` `(` $uniq_name `)`
+    (`data_attr` `(` qualified($data_attr)^ `)`)?
     attr-dict `:` functional-type(operands, results)
   }];
 

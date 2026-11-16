@@ -198,3 +198,12 @@ func.func @test_dense_ressource_f64() -> tensor<1x2xf64> {
     }
   }
 #-}
+
+// -----
+
+// CHECK-LABEL: test_preserve_unknown_dialect_op
+func.func @test_preserve_unknown_dialect_op() -> i32 {
+  //COMMON: arith.constant 1 : i32
+  %0 = arith.constant 1 : i32
+  return %0 : i32
+}

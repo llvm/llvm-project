@@ -21,10 +21,10 @@
   END FORALL
 
 ! CHECK: %[[V_11:[0-9]+]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>>> <{bindc_name = "t", uniq_name = "_QFforallpolymorphicEt"}>
-! CHECK: %[[V_15:[0-9]+]] = fir.declare %[[V_11]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFforallpolymorphicEt"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>>>>) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>>>>
+! CHECK: %[[V_15:[0-9]+]] = fir.declare %[[V_11]] uniq_name("_QFforallpolymorphicEt") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>>>>) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>>>>
 ! CHECK: %[[V_16:[0-9]+]] = fir.alloca !fir.array<10x!fir.type<_QFforallpolymorphicTdt1{dt:!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>}>> <{bindc_name = "tar1", uniq_name = "_QFforallpolymorphicEtar1"}> {fir.target}
 ! CHECK: %[[V_17:[0-9]+]] = fir.shape %c10 : (index) -> !fir.shape<1>
-! CHECK: %[[V_18:[0-9]+]] = fir.declare %[[V_16]](%[[V_17]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFforallpolymorphicEtar1"} : (!fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphicTdt1{dt:!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphicTdt1{dt:!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>}>>>
+! CHECK: %[[V_18:[0-9]+]] = fir.declare %[[V_16]](%[[V_17]]) uniq_name("_QFforallpolymorphicEtar1") fortran_attrs<target> : (!fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphicTdt1{dt:!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphicTdt1{dt:!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>}>>>
 ! CHECK: %[[V_19:[0-9]+]] = fir.embox %[[V_18]](%[[V_17]]) : (!fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphicTdt1{dt:!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.type<_QFforallpolymorphicTdt1{dt:!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>}>>>
 ! CHECK: %[[V_34:[0-9]+]] = fir.convert %c1_i32 : (i32) -> index
 ! CHECK: %[[V_35:[0-9]+]] = fir.convert %c10_i32 : (i32) -> index
@@ -69,8 +69,8 @@
 
 ! CHECK: %[[V_11:[0-9]+]] = fir.alloca !fir.array<10x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>> <{bindc_name = "t", uniq_name = "_QFforallpolymorphic2Et"}>
 ! CHECK: %[[V_12:[0-9]+]] = fir.shape %c10 : (index) -> !fir.shape<1>
-! CHECK: %[[V_13:[0-9]+]] = fir.declare %[[V_11]](%[[V_12]]) {uniq_name = "_QFforallpolymorphic2Et"} : (!fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>
-! CHECK: %[[V_18:[0-9]+]] = fir.declare %arg0 dummy_scope %0 {{.*}} {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QFforallpolymorphic2Etar1"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>>>, !fir.dscope) -> !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>>>
+! CHECK: %[[V_13:[0-9]+]] = fir.declare %[[V_11]](%[[V_12]]) uniq_name("_QFforallpolymorphic2Et") : (!fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>
+! CHECK: %[[V_18:[0-9]+]] = fir.declare %arg0 dummy_scope %0 {{.*}} uniq_name("_QFforallpolymorphic2Etar1") fortran_attrs<allocatable, target> : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>>>, !fir.dscope) -> !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>>>
 ! CHECK: %[[V_30:[0-9]+]] = fir.convert %c1_i32 : (i32) -> index
 ! CHECK: %[[V_31:[0-9]+]] = fir.convert %c10_i32 : (i32) -> index
 ! CHECK: fir.do_loop %arg1 = %[[V_30]] to %[[V_31]] step %c1
@@ -108,9 +108,9 @@ subroutine forallPolymorphic3()
 
 ! CHECK: %[[V_7:[0-9]+]] = fir.alloca !fir.array<10x!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>> <{bindc_name = "d1", uniq_name = "_QFforallpolymorphic3Ed1"}>
 ! CHECK: %[[V_8:[0-9]+]] = fir.shape %c10 : (index) -> !fir.shape<1>
-! CHECK: %[[V_9:[0-9]+]] = fir.declare %[[V_7]](%[[V_8]]) {uniq_name = "_QFforallpolymorphic3Ed1"} : (!fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>>>
+! CHECK: %[[V_9:[0-9]+]] = fir.declare %[[V_7]](%[[V_8]]) uniq_name("_QFforallpolymorphic3Ed1") : (!fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>>>
 ! CHECK: %[[V_16:[0-9]+]] = fir.alloca !fir.array<10x!fir.char<1>> <{bindc_name = "tar1", uniq_name = "_QFforallpolymorphic3Etar1"}> {fir.target}
-! CHECK: %[[V_17:[0-9]+]] = fir.declare %[[V_16]](%[[V_8]]) typeparams %c1 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFforallpolymorphic3Etar1"} : (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> !fir.ref<!fir.array<10x!fir.char<1>>>
+! CHECK: %[[V_17:[0-9]+]] = fir.declare %[[V_16]](%[[V_8]]) typeparams %c1 uniq_name("_QFforallpolymorphic3Etar1") fortran_attrs<target> : (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> !fir.ref<!fir.array<10x!fir.char<1>>>
 ! CHECK: %[[V_24:[0-9]+]] = fir.convert %c1_i32 : (i32) -> index
 ! CHECK: %[[V_25:[0-9]+]] = fir.convert %c10_i32 : (i32) -> index
 ! CHECK: fir.do_loop %arg0 = %[[V_24]] to %[[V_25]] step %c1
@@ -165,7 +165,7 @@ end subroutine forallPolymorphic3
 ! CHECK: fir.store %[[V_32]] to %[[V_3]] : !fir.ref<i32>
 ! CHECK: %[[V_33:[0-9]+]] = fir.call @_QPmakedata(%[[V_3]]) proc_attrs<pure> fastmath<contract> : (!fir.ref<i32>) -> !fir.box<!fir.ptr<f32>>
 ! CHECK: fir.save_result %[[V_33]] to %[[V_4]] : !fir.box<!fir.ptr<f32>>, !fir.ref<!fir.box<!fir.ptr<f32>>>
-! CHECK: %[[V_34:[0-9]+]] = fir.declare %[[V_4]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+! CHECK: %[[V_34:[0-9]+]] = fir.declare %[[V_4]] uniq_name(".tmp.func_result") : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK: %[[V_35:[0-9]+]] = fir.load %[[V_34]] : !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK: %[[V_36:[0-9]+]] = fir.convert %[[V_35]] : (!fir.box<!fir.ptr<f32>>) -> !fir.box<none>
 ! CHECK: fir.call @_FortranAPushDescriptor(%[[V_29]], %[[V_36]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()

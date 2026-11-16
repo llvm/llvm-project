@@ -39,7 +39,7 @@ module {
   acc.routine @acc_routine_0 func(@_QMmPfv_0) vector nohost
   func.func @_QMmPfv_0(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_0, <vector>, "_QMmPfv_0">} {
     %0 = fir.dummy_scope : !fir.dscope
-    %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QMmFfvEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+    %1 = fir.declare %arg0 dummy_scope %0 uniq_name("_QMmFfvEn") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
     return
   }
 }

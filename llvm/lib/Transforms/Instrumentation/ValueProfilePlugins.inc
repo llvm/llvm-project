@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InstrumentationOptions.h"
 #include "ValueProfileCollector.h"
 #include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -21,12 +22,9 @@
 using namespace llvm;
 using CandidateInfo = ValueProfileCollector::CandidateInfo;
 
-namespace llvm {
-extern cl::opt<bool> MemOPOptMemcmpBcmp;
-} // end namespace llvm
-
 ///--------------------------- MemIntrinsicPlugin ------------------------------
 class MemIntrinsicPlugin : public InstVisitor<MemIntrinsicPlugin> {
+  const InstrumentationOptions &Opts;
   Function &F;
   TargetLibraryInfo &TLI;
   std::vector<CandidateInfo> *Candidates;
@@ -35,7 +33,8 @@ public:
   static constexpr InstrProfValueKind Kind = IPVK_MemOPSize;
 
   MemIntrinsicPlugin(Function &Fn, TargetLibraryInfo &TLI)
-      : F(Fn), TLI(TLI), Candidates(nullptr) {}
+      : Opts(Fn.getContext().getLibraryOptions().get<InstrumentationOptions>()),
+        F(Fn), TLI(TLI), Candidates(nullptr) {}
 
   void run(std::vector<CandidateInfo> &Cs) {
     Candidates = &Cs;
@@ -53,7 +52,7 @@ public:
     Candidates->emplace_back(CandidateInfo{Length, InsertPt, AnnotatedInst});
   }
   void visitCallInst(CallInst &CI) {
-    if (!MemOPOptMemcmpBcmp)
+    if (!Opts.pgo_memop_optimize_memcmp_bcmp)
       return;
     auto *F = CI.getCalledFunction();
     if (!F)

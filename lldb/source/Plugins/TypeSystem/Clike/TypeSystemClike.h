@@ -46,7 +46,9 @@ public:
   bool DeclContextIsContainedInLookup(void *opaque_decl_ctx,
                                       void *other_opaque_decl_ctx) override;
   lldb::LanguageType DeclContextGetLanguage(void *opaque_decl_ctx) override;
+#ifndef NDEBUG
   bool Verify(lldb::opaque_compiler_type_t type) override;
+#endif
   bool IsArrayType(lldb::opaque_compiler_type_t type,
                    CompilerType *element_type, uint64_t *size,
                    bool *is_incomplete) override;

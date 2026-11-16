@@ -225,10 +225,10 @@ which can further inspect them and report diagnostics.
   }
 
 (If you want to see an example of a useful check, look at
-`clang-tidy/google/ExplicitConstructorCheck.h
-<https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/clang-tidy/google/ExplicitConstructorCheck.h>`_
-and `clang-tidy/google/ExplicitConstructorCheck.cpp
-<https://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/google/ExplicitConstructorCheck.cpp>`_).
+`clang-tidy/misc/ExplicitConstructorCheck.h
+<https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/clang-tidy/misc/ExplicitConstructorCheck.h>`_
+and `clang-tidy/misc/ExplicitConstructorCheck.cpp
+<https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/clang-tidy/misc/ExplicitConstructorCheck.cpp>`_).
 
 If you need to interact with macros or preprocessor directives, you will want
 to override the method ``registerPPCallbacks``. The ``add_new_check.py``
@@ -442,7 +442,7 @@ Documenting your check
 ^^^^^^^^^^^^^^^^^^^^^^
 
 The ``add_new_check.py`` script creates entries in the
-`release notes <https://clang.llvm.org/extra/ReleaseNotes.html>`_, the list of
+:doc:`release notes </ReleaseNotes>`, the list of
 
 checks and a new file for the check documentation itself. It is recommended
 that you have a concise summary of what your check does in a single sentence

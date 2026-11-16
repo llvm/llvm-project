@@ -24,12 +24,6 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> IndirectCallSpecializationThreshold(
-    "amdgpu-indirect-call-specialization-threshold",
-    cl::desc(
-        "A threshold controls whether an indirect call will be specialized"),
-    cl::init(3));
-
 #define AMDGPU_ATTRIBUTE(Name, Str) Name##_POS,
 
 enum ImplicitArgumentPositions {
@@ -141,6 +135,7 @@ static bool isDSAddress(const Constant *C) {
 static bool hasSanitizerAttributes(const Function &F) {
   return F.hasFnAttribute(Attribute::SanitizeAddress) ||
          F.hasFnAttribute(Attribute::SanitizeThread) ||
+         F.hasFnAttribute(Attribute::SanitizeConcurrency) ||
          F.hasFnAttribute(Attribute::SanitizeMemory) ||
          F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
          F.hasFnAttribute(Attribute::SanitizeMemTag);
@@ -156,9 +151,48 @@ public:
         SubArch(M.getTargetTriple().getSubArch()),
         Features(
             AMDGPU::getFeatureBitset(AMDGPU::getGPUKindFromSubArch(SubArch))),
-        CodeObjectVersion(AMDGPU::getAMDHSACodeObjectVersion(M)) {}
+        CodeObjectVersion(AMDGPU::getAMDHSACodeObjectVersion(M)) {
+    LLVMContext &Ctx = M.getContext();
+    for (auto [Mask, Name] : ImplicitAttrs)
+      ImplicitAttrList.push_back({Mask, Attribute::get(Ctx, Name)});
+    // Sorted by name, the order of attributes in an attribute set.
+    llvm::sort(ImplicitAttrList, [](const auto &A, const auto &B) {
+      return A.second.getKindAsString() < B.second.getKindAsString();
+    });
+
+    unsigned COV = CodeObjectVersion;
+    ImplicitArgRanges = {
+        {MULTIGRID_SYNC_ARG,
+         {AMDGPU::getMultigridSyncArgImplicitArgPosition(COV), 8}},
+        {HOSTCALL_PTR, {AMDGPU::getHostcallImplicitArgPosition(COV), 8}},
+        {DEFAULT_QUEUE, {AMDGPU::getDefaultQueueImplicitArgPosition(COV), 8}},
+        {COMPLETION_ACTION,
+         {AMDGPU::getCompletionActionImplicitArgPosition(COV), 8}}};
+    if (COV >= 5) {
+      ImplicitArgRanges.push_back(
+          {HEAP_PTR, {AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8}});
+      ImplicitArgRanges.push_back(
+          {QUEUE_PTR, {AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8}});
+    }
+
+    int64_t Begin = INT64_MAX, End = 0;
+    for (auto [Mask, Range] : ImplicitArgRanges) {
+      ImplicitArgsMask |= Mask;
+      Begin = std::min(Begin, Range.Offset);
+      End = std::max(End, Range.Offset + Range.Size);
+    }
+
+    ImplicitArgsRange = AA::RangeTy(Begin, End - Begin);
+  }
 
   TargetMachine &TM;
+
+  /// The attributes for the implicit arguments that are not needed, sorted by
+  /// name.
+  ArrayRef<std::pair<ImplicitArgumentMask, Attribute>>
+  getImplicitAttrList() const {
+    return ImplicitAttrList;
+  }
 
   enum ConstantStatus : uint8_t {
     NONE = 0,
@@ -191,6 +225,19 @@ public:
 
   /// Get code object version.
   unsigned getCodeObjectVersion() const { return CodeObjectVersion; }
+
+  /// The implicit kernel arguments at a fixed offset from implicitarg_ptr,
+  /// with their ranges.
+  ArrayRef<std::pair<ImplicitArgumentMask, AA::RangeTy>>
+  getImplicitArgRanges() const {
+    return ImplicitArgRanges;
+  }
+
+  /// The mask of the implicit arguments in getImplicitArgRanges().
+  uint32_t getImplicitArgsMask() const { return ImplicitArgsMask; }
+
+  /// The range covering all the implicit arguments in getImplicitArgRanges().
+  AA::RangeTy getImplicitArgsRange() const { return ImplicitArgsRange; }
 
   /// Get the features of the module target.
   const AMDGPU::AMDGPUFeatureBitset &getFeatures() const { return Features; }
@@ -233,6 +280,9 @@ private:
 
   /// Get the constant access bitmap for \p C.
   uint8_t getConstantAccess(const Constant *C) {
+    if (isa<ConstantData>(C))
+      return NONE;
+
     const auto &It = ConstantStatus.find(C);
     if (It != ConstantStatus.end())
       return It->second.value();
@@ -301,9 +351,15 @@ public:
 private:
   /// Used to determine if the Constant needs the queue pointer.
   DenseMap<const Constant *, std::optional<uint8_t>> ConstantStatus;
+  SmallVector<std::pair<ImplicitArgumentMask, Attribute>, LAST_ARG_POS>
+      ImplicitAttrList;
   const Triple::SubArchType SubArch;
   const AMDGPU::AMDGPUFeatureBitset Features;
   const unsigned CodeObjectVersion;
+  SmallVector<std::pair<ImplicitArgumentMask, AA::RangeTy>, 6>
+      ImplicitArgRanges;
+  uint32_t ImplicitArgsMask = 0;
+  AA::RangeTy ImplicitArgsRange;
 };
 
 struct AAAMDAttributes
@@ -318,10 +374,8 @@ struct AAAMDAttributes
   static AAAMDAttributes &createForPosition(const IRPosition &IRP,
                                             Attributor &A);
 
-  /// See AbstractAttribute::getName().
   StringRef getName() const override { return "AAAMDAttributes"; }
 
-  /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -344,10 +398,8 @@ struct AAUniformWorkGroupSize
   static AAUniformWorkGroupSize &createForPosition(const IRPosition &IRP,
                                                    Attributor &A);
 
-  /// See AbstractAttribute::getName().
   StringRef getName() const override { return "AAUniformWorkGroupSize"; }
 
-  /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -425,7 +477,6 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
     return "AMDWorkGroupSize[" + std::to_string(getAssumed()) + "]";
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 };
 
@@ -549,35 +600,37 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
         removeAssumedBits(QUEUE_PTR);
     }
 
-    if (funcRetrievesMultigridSyncArg(A, COV)) {
+    uint32_t Retrieved = getRetrievedImplicitArgs(A);
+
+    if (Retrieved & MULTIGRID_SYNC_ARG) {
       assert(!isAssumed(IMPLICIT_ARG_PTR) &&
              "multigrid_sync_arg needs implicitarg_ptr");
       removeAssumedBits(MULTIGRID_SYNC_ARG);
     }
 
-    if (funcRetrievesHostcallPtr(A, COV)) {
+    if (Retrieved & HOSTCALL_PTR) {
       assert(!isAssumed(IMPLICIT_ARG_PTR) && "hostcall needs implicitarg_ptr");
       removeAssumedBits(HOSTCALL_PTR);
     }
 
-    if (funcRetrievesHeapPtr(A, COV)) {
+    if (Retrieved & HEAP_PTR) {
       assert(!isAssumed(IMPLICIT_ARG_PTR) && "heap_ptr needs implicitarg_ptr");
       removeAssumedBits(HEAP_PTR);
     }
 
-    if (isAssumed(QUEUE_PTR) && funcRetrievesQueuePtr(A, COV)) {
+    if (isAssumed(QUEUE_PTR) && (Retrieved & QUEUE_PTR)) {
       assert(!isAssumed(IMPLICIT_ARG_PTR) && "queue_ptr needs implicitarg_ptr");
       removeAssumedBits(QUEUE_PTR);
     }
 
-    if (isAssumed(LDS_KERNEL_ID) && funcRetrievesLDSKernelId(A)) {
+    if (isAssumed(LDS_KERNEL_ID) && (Retrieved & LDS_KERNEL_ID)) {
       removeAssumedBits(LDS_KERNEL_ID);
     }
 
-    if (isAssumed(DEFAULT_QUEUE) && funcRetrievesDefaultQueue(A, COV))
+    if (isAssumed(DEFAULT_QUEUE) && (Retrieved & DEFAULT_QUEUE))
       removeAssumedBits(DEFAULT_QUEUE);
 
-    if (isAssumed(COMPLETION_ACTION) && funcRetrievesCompletionAction(A, COV))
+    if (isAssumed(COMPLETION_ACTION) && (Retrieved & COMPLETION_ACTION))
       removeAssumedBits(COMPLETION_ACTION);
 
     if (isAssumed(FLAT_SCRATCH_INIT) && needFlatScratchInit(A))
@@ -588,12 +641,11 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
   }
 
   ChangeStatus manifest(Attributor &A) override {
-    SmallVector<Attribute, 8> AttrList;
-    LLVMContext &Ctx = getAssociatedFunction()->getContext();
-
-    for (auto Attr : ImplicitAttrs) {
-      if (isKnown(Attr.first))
-        AttrList.push_back(Attribute::get(Ctx, Attr.second));
+    SmallVector<Attribute, LAST_ARG_POS> AttrList;
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+    for (auto [Mask, Attr] : InfoCache.getImplicitAttrList()) {
+      if (isKnown(Mask))
+        AttrList.push_back(Attr);
     }
 
     return A.manifestAttrs(getIRPosition(), AttrList,
@@ -611,7 +663,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     return OS.str();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
 private:
@@ -667,80 +718,68 @@ private:
     return false;
   }
 
-  bool funcRetrievesMultigridSyncArg(Attributor &A, unsigned COV) {
-    auto Pos = llvm::AMDGPU::getMultigridSyncArgImplicitArgPosition(COV);
-    AA::RangeTy Range(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
+  /// Returns the implicit kernel arguments that may be read through the
+  /// pointer returned by the implicitarg_ptr call \p Call.
+  uint32_t getImplicitArgsReadThrough(Attributor &A, const CallBase &Call) {
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+    uint32_t ArgsMask = InfoCache.getImplicitArgsMask();
+    const auto *PointerInfoAA = A.getAAFor<AAPointerInfo>(
+        *this, IRPosition::callsite_returned(Call), DepClassTy::REQUIRED);
+    if (!PointerInfoAA || !PointerInfoAA->getState().isValidState())
+      return ArgsMask;
 
-  bool funcRetrievesHostcallPtr(Attributor &A, unsigned COV) {
-    auto Pos = llvm::AMDGPU::getHostcallImplicitArgPosition(COV);
-    AA::RangeTy Range(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
-
-  bool funcRetrievesDefaultQueue(Attributor &A, unsigned COV) {
-    auto Pos = llvm::AMDGPU::getDefaultQueueImplicitArgPosition(COV);
-    AA::RangeTy Range(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
-
-  bool funcRetrievesCompletionAction(Attributor &A, unsigned COV) {
-    auto Pos = llvm::AMDGPU::getCompletionActionImplicitArgPosition(COV);
-    AA::RangeTy Range(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
-
-  bool funcRetrievesHeapPtr(Attributor &A, unsigned COV) {
-    if (COV < 5)
-      return false;
-    AA::RangeTy Range(AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
-
-  bool funcRetrievesQueuePtr(Attributor &A, unsigned COV) {
-    if (COV < 5)
-      return false;
-    AA::RangeTy Range(AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
-
-  bool funcRetrievesImplicitKernelArg(Attributor &A, AA::RangeTy Range) {
-    // Check if this is a call to the implicitarg_ptr builtin and it
-    // is used to retrieve the hostcall pointer. The implicit arg for
-    // hostcall is not used only if every use of the implicitarg_ptr
-    // is a load that clearly does not retrieve any byte of the
-    // hostcall pointer. We check this by tracing all the uses of the
-    // initial call to the implicitarg_ptr intrinsic.
-    auto DoesNotLeadToKernelArgLoc = [&](Instruction &I) {
-      auto &Call = cast<CallBase>(I);
-      if (Call.getIntrinsicID() != Intrinsic::amdgcn_implicitarg_ptr)
+    // An implicit argument is not read if every access that may read any byte
+    // of it is droppable. Check the accesses once for all the implicit
+    // arguments, and stop once all of them may be read.
+    uint32_t Read = 0;
+    auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool) {
+      if (Acc.getRemoteInst()->isDroppable())
         return true;
+      for (const AA::RangeTy &AccRange : Acc.getRanges()) {
+        for (auto [Mask, Range] : InfoCache.getImplicitArgRanges()) {
+          if (AccRange.mayOverlap(Range))
+            Read |= Mask;
+        }
+      }
 
-      const auto *PointerInfoAA = A.getAAFor<AAPointerInfo>(
-          *this, IRPosition::callsite_returned(Call), DepClassTy::REQUIRED);
-      if (!PointerInfoAA || !PointerInfoAA->getState().isValidState())
-        return false;
-
-      return PointerInfoAA->forallInterferingAccesses(
-          Range, [](const AAPointerInfo::Access &Acc, bool IsExact) {
-            return Acc.getRemoteInst()->isDroppable();
-          });
+      return Read != ArgsMask;
     };
 
-    bool UsedAssumedInformation = false;
-    return !A.checkForAllCallLikeInstructions(DoesNotLeadToKernelArgLoc, *this,
-                                              UsedAssumedInformation);
+    if (!PointerInfoAA->forallInterferingAccesses(
+            InfoCache.getImplicitArgsRange(), CheckAccess))
+      return ArgsMask;
+    return Read;
   }
 
-  bool funcRetrievesLDSKernelId(Attributor &A) {
-    auto DoesNotRetrieve = [&](Instruction &I) {
+  /// Returns the implicit kernel arguments that may be retrieved by the
+  /// function.
+  uint32_t getRetrievedImplicitArgs(Attributor &A) {
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+    uint32_t All = InfoCache.getImplicitArgsMask() | LDS_KERNEL_ID;
+    uint32_t Retrieved = 0;
+    auto CheckCall = [&](Instruction &I) {
       auto &Call = cast<CallBase>(I);
-      return Call.getIntrinsicID() != Intrinsic::amdgcn_lds_kernel_id;
+      switch (Call.getIntrinsicID()) {
+      case Intrinsic::amdgcn_implicitarg_ptr:
+        Retrieved |= getImplicitArgsReadThrough(A, Call);
+        break;
+      case Intrinsic::amdgcn_lds_kernel_id:
+        Retrieved |= LDS_KERNEL_ID;
+        break;
+      default:
+        // Other calls do not retrieve anything.
+        return true;
+      }
+
+      // Stop once everything may be retrieved.
+      return Retrieved != All;
     };
+
     bool UsedAssumedInformation = false;
-    return !A.checkForAllCallLikeInstructions(DoesNotRetrieve, *this,
-                                              UsedAssumedInformation);
+    if (!A.checkForAllCallLikeInstructions(CheckCall, *this,
+                                           UsedAssumedInformation))
+      return All;
+    return Retrieved;
   }
 
   // Returns true if FlatScratchInit is needed, i.e., no-flat-scratch-init is
@@ -796,7 +835,6 @@ struct AAAMDSizeRangeAttribute
                           StringRef AttrName)
       : Base(IRP, 32), AttrName(AttrName) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
   template <class AttributeImpl> ChangeStatus updateImplImpl(Attributor &A) {
@@ -917,10 +955,8 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
         A, InfoCache.getMaximumFlatWorkGroupRange());
   }
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAAMDFlatWorkGroupSize"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -1155,10 +1191,8 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
         A, {1U, InfoCache.getMaxWavesPerEU()});
   }
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAAMDWavesPerEU"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -1188,7 +1222,7 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
   unsigned AGPRDefCount = 0;
   unsigned AGPRUseCount = 0;
   unsigned MaxPhysReg = 0;
-  const DataLayout &DL = Call.getFunction()->getParent()->getDataLayout();
+  const DataLayout &DL = Call.getFunction()->getDataLayout();
 
   // TODO: Overestimates due to not accounting for tied operands
   for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
@@ -1255,6 +1289,26 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
   // allocate any virtual registers after them so we don't have to solve optimal
   // packing.
   return std::min(MaxVirtReg + MaxPhysReg, 256u);
+}
+
+/// Call \p Pred on each function that \p CB may call. Return false if a callee
+/// is unknown, or if \p Pred returns false for a callee.
+static bool
+checkForAllPossibleCallees(Attributor &A, const AbstractAttribute &QueryingAA,
+                           const CallBase &CB,
+                           function_ref<bool(const Function &)> Pred) {
+  // A direct call without callbacks only calls its callee, so it does not need
+  // a call site AACallEdges.
+  auto *Callee = dyn_cast<Function>(CB.getCalledOperand());
+  if (Callee && !Callee->hasMetadata(LLVMContext::MD_callback))
+    return Pred(*Callee);
+
+  const AACallEdges *CBEdges = A.getAAFor<AACallEdges>(
+      QueryingAA, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
+  if (!CBEdges || CBEdges->hasUnknownCallee())
+    return false;
+  return all_of(CBEdges->getOptimisticEdges(),
+                [&](const Function *Fn) { return Pred(*Fn); });
 }
 
 struct AAAMDGPUMinAGPRAlloc
@@ -1348,22 +1402,18 @@ struct AAAMDGPUMinAGPRAlloc
       }
 
       // TODO: Handle callsite attributes
-      auto *CBEdges = A.getAAFor<AACallEdges>(
-          *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
-      if (!CBEdges || CBEdges->hasUnknownCallee()) {
+      auto CheckCallee = [&](const Function &Callee) {
+        const AAAMDGPUMinAGPRAlloc *CalleeInfo =
+            A.getAAFor<AAAMDGPUMinAGPRAlloc>(
+                *this, IRPosition::function(Callee), DepClassTy::REQUIRED);
+        if (!CalleeInfo || !CalleeInfo->isValidState())
+          return false;
+        Maximum.takeAssumedMaximum(CalleeInfo->getAssumed());
+        return true;
+      };
+      if (!checkForAllPossibleCallees(A, *this, CB, CheckCallee)) {
         Maximum.indicatePessimisticFixpoint();
         return false;
-      }
-
-      for (const Function *PossibleCallee : CBEdges->getOptimisticEdges()) {
-        const auto *CalleeInfo = A.getAAFor<AAAMDGPUMinAGPRAlloc>(
-            *this, IRPosition::function(*PossibleCallee), DepClassTy::REQUIRED);
-        if (!CalleeInfo || !CalleeInfo->isValidState()) {
-          Maximum.indicatePessimisticFixpoint();
-          return false;
-        }
-
-        Maximum.takeAssumedMaximum(CalleeInfo->getAssumed());
       }
 
       return true;
@@ -1401,6 +1451,94 @@ struct AAAMDGPUMinAGPRAlloc
 
 const char AAAMDGPUMinAGPRAlloc::ID = 0;
 
+/// Deduce the function attribute "amdgpu-no-lds-dma"
+struct AAAMDGPUNoLDSDMA : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAAMDGPUNoLDSDMA(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAAMDGPUNoLDSDMA &createForPosition(const IRPosition &IRP,
+                                             Attributor &A) {
+    assert(IRP.getPositionKind() == IRPosition::IRP_FUNCTION &&
+           "AAAMDGPUNoLDSDMA is only valid for function position");
+    return *new (A.Allocator) AAAMDGPUNoLDSDMA(IRP, A);
+  }
+
+  void initialize(Attributor &A) override {
+    const Function *F = getAssociatedFunction();
+    if (F->hasFnAttribute("amdgpu-no-lds-dma")) {
+      indicateOptimisticFixpoint();
+      return;
+    }
+
+    if (F->isDeclaration())
+      indicatePessimisticFixpoint();
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    auto CheckNoLDSDMA = [&](Instruction &I) {
+      const auto &CB = cast<CallBase>(I);
+
+      // Inline assembly may hold any instruction, including an LDSDMA
+      // operation.
+      if (isa<InlineAsm>(CB.getCalledOperand()))
+        return false;
+
+      Intrinsic::ID IID = CB.getIntrinsicID();
+      if (IID != Intrinsic::not_intrinsic) {
+        // Assume !nocallback intrinsics may call a function which issues an
+        // LDSDMA operation.
+        return !AMDGPU::isLDSDMAIntrinsic(IID) &&
+               CB.hasFnAttr(Attribute::NoCallback);
+      }
+
+      return checkForAllPossibleCallees(
+          A, *this, CB, [&](const Function &Callee) {
+            const AAAMDGPUNoLDSDMA *CalleeInfo = A.getAAFor<AAAMDGPUNoLDSDMA>(
+                *this, IRPosition::function(Callee), DepClassTy::REQUIRED);
+            return CalleeInfo && CalleeInfo->getAssumed();
+          });
+    };
+
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallLikeInstructions(CheckNoLDSDMA, *this,
+                                           UsedAssumedInformation))
+      return indicatePessimisticFixpoint();
+
+    return ChangeStatus::UNCHANGED;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (!getAssumed())
+      return ChangeStatus::UNCHANGED;
+
+    LLVMContext &Ctx = getAssociatedFunction()->getContext();
+    return A.manifestAttrs(getIRPosition(),
+                           {Attribute::get(Ctx, "amdgpu-no-lds-dma")});
+  }
+
+  bool isValidState() const override { return true; }
+
+  const std::string getAsStr(Attributor *A) const override {
+    return "AMDGPUNoLDSDMA[" + std::to_string(getAssumed()) + "]";
+  }
+
+  void trackStatistics() const override {}
+
+  StringRef getName() const override { return "AAAMDGPUNoLDSDMA"; }
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAMDGPUNoLDSDMA
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  static const char ID;
+};
+
+const char AAAMDGPUNoLDSDMA::ID = 0;
+
 /// An abstract attribute to propagate the function attribute
 /// "amdgpu-cluster-dims" from kernel entry functions to device functions.
 struct AAAMDGPUClusterDims
@@ -1412,10 +1550,8 @@ struct AAAMDGPUClusterDims
   static AAAMDGPUClusterDims &createForPosition(const IRPosition &IRP,
                                                 Attributor &A);
 
-  /// See AbstractAttribute::getName().
   StringRef getName() const override { return "AAAMDGPUClusterDims"; }
 
-  /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -1560,24 +1696,31 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   AMDGPUInformationCache InfoCache(M, AG, Allocator, nullptr, TM);
-  DenseSet<const char *> Allowed(
-      {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
-       &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
-       &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID,
-       &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
-       &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
-       &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAAMDGPUClusterDims::ID, &AAAlign::ID});
+  static constexpr AAKindSet Allowed = AAKindSet::get<
+      &AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID, &AAPotentialValues::ID,
+      &AAAMDFlatWorkGroupSize::ID, &AAAMDMaxNumWorkgroups::ID,
+      &AAAMDWavesPerEU::ID, &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID,
+      &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
+      &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
+      &AAIndirectCallInfo::ID, &AAAMDGPUClusterDims::ID, &AAAMDGPUNoLDSDMA::ID,
+      &AAAlign::ID>();
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
-  AC.Allowed = &Allowed;
+  AC.Allowed = Allowed;
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = DeleteFns;
   AC.DefaultInitializeLiveInternals = false;
+  // AAIsDead is not allowed, so nothing is ever assumed dead.
+  AC.UseLiveness = false;
+  unsigned IndirectCallSpecializationThreshold =
+      static_cast<const AMDGPUTargetMachine &>(TM)
+          .getCLOpts()
+          .indirect_call_specialization_threshold;
   AC.IndirectCalleeSpecializationCallback =
-      [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
-         Function &Callee, unsigned NumAssumedCallees) {
+      [IndirectCallSpecializationThreshold](
+          Attributor &A, const AbstractAttribute &AA, CallBase &CB,
+          Function &Callee, unsigned NumAssumedCallees) {
         return !AMDGPU::isEntryFunctionCC(Callee.getCallingConv()) &&
                (NumAssumedCallees <= IndirectCallSpecializationThreshold);
       };
@@ -1599,6 +1742,7 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAAMDMaxNumWorkgroups>(IRPosition::function(*F));
+    A.getOrCreateAAFor<AAAMDGPUNoLDSDMA>(IRPosition::function(*F));
     CallingConv::ID CC = F->getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CC)) {
       A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(*F));
@@ -1624,8 +1768,12 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
         Ptr = CmpX->getPointerOperand();
 
       if (Ptr) {
-        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
-        A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+        // Only flat pointers can be refined to a specific address space.
+        if (Ptr->getType()->getPointerAddressSpace() ==
+            AMDGPUAS::FLAT_ADDRESS) {
+          A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
+          A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+        }
         if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Ptr)) {
           if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
             A.getOrCreateAAFor<AAAlign>(IRPosition::value(*Ptr));

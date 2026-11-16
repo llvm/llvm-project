@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "unit-map.h"
+#include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/io-error.h"
 #include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/tools.h"
@@ -112,9 +113,25 @@ bool ExternalFileUnit::OpenUnit(common::optional<OpenStatus> status,
     common::optional<Action> action, Position position,
     OwningPtr<char> &&newPath, std::size_t newPathLength, Convert convert,
     IoErrorHandler &handler) {
+  Convert explicitRtConvert{Convert::Unknown};
+
+  // Increasing order of conversion specifiers (endianness)
+  // 1. CONVERT=<mode> specifier on OPEN statement.
+  // 2. Environment variable FORT_CONVERT iff CONVERT specifier is not present.
+  // 3. Even if CONVERT specifier is present, check to environment variable
+  //    FORT_CONVERT_UNIT to see if unit number has an explicit setting.
+
   if (convert == Convert::Unknown) {
     convert = executionEnvironment.conversion;
   }
+
+  explicitRtConvert = executionEnvironment.UnitRtConvert(unitNumber());
+  if (Convert::Unknown != explicitRtConvert) {
+    // Runtime has overridden previous defaults using environment variable
+    // FORT_CONVERT_UNIT.
+    convert = explicitRtConvert;
+  }
+
   swapEndianness_ = convert == Convert::Swap ||
       (convert == Convert::LittleEndian && !isHostLittleEndian) ||
       (convert == Convert::BigEndian && isHostLittleEndian);
@@ -186,7 +203,7 @@ bool ExternalFileUnit::OpenUnit(common::optional<OpenStatus> status,
     if (access != Access::Stream) {
       if (!endfileRecordNumber) {
         // Fake it so that we can backspace relative from the end
-        endfileRecordNumber = std::numeric_limits<std::int64_t>::max() - 2;
+        endfileRecordNumber = common::numeric_limits<std::int64_t>::max() - 2;
       }
       currentRecordNumber = *endfileRecordNumber;
     }
@@ -303,6 +320,10 @@ void ExternalFileUnit::CloseAll(IoErrorHandler &handler) {
   if (unitMap) {
     unitMap->CloseAll(handler);
     FreeMemoryAndNullify(unitMap);
+  }
+  if (executionEnvironment.convertUnits) {
+    std::free(executionEnvironment.convertUnits);
+    executionEnvironment.convertUnits = nullptr;
   }
   defaultOutput = nullptr;
   defaultInput = nullptr;

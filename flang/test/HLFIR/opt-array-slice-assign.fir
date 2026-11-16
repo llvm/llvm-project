@@ -16,11 +16,11 @@ func.func @_QPtest1(%arg0: !fir.ref<!fir.array<8000x120x3xf32>> {fir.bindc_name 
   %c120 = arith.constant 120 : index
   %c8000 = arith.constant 8000 : index
   %0 = fir.alloca i32 {bindc_name = "new", uniq_name = "_QFtest1Enew"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFtest1Enew"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %0 uniq_name("_QFtest1Enew") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2 = fir.alloca i32 {bindc_name = "old", uniq_name = "_QFtest1Eold"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFtest1Eold"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtest1Eold") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %4 = fir.shape %c8000, %c120, %c3 : (index, index, index) -> !fir.shape<3>
-  %5:2 = hlfir.declare %arg0(%4) {uniq_name = "_QFtest1Ex"} : (!fir.ref<!fir.array<8000x120x3xf32>>, !fir.shape<3>) -> (!fir.ref<!fir.array<8000x120x3xf32>>, !fir.ref<!fir.array<8000x120x3xf32>>)
+  %5:2 = hlfir.declare %arg0(%4) uniq_name("_QFtest1Ex") : (!fir.ref<!fir.array<8000x120x3xf32>>, !fir.shape<3>) -> (!fir.ref<!fir.array<8000x120x3xf32>>, !fir.ref<!fir.array<8000x120x3xf32>>)
   %6 = fir.load %3#0 : !fir.ref<i32>
   %7 = fir.convert %6 : (i32) -> i64
   %8 = fir.shape %c7998, %c120 : (index, index) -> !fir.shape<2>
@@ -56,7 +56,7 @@ func.func @_QPtest2(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>> 
   %c1 = arith.constant 1 : index
   %c7999 = arith.constant 7999 : index
   %c2 = arith.constant 2 : index
-  %0:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest2Ex"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFtest2Ex") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>)
   %1 = fir.load %0#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
   %2 = fir.shape %c7998, %c120 : (index, index) -> !fir.shape<2>
   %3 = hlfir.designate %1 (%c2:%c7999:%c1, %c1:%c120:%c1, %c2)  shape %2 : (!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>, index, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<7998x120xf32>>
@@ -93,11 +93,11 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.array<10x!fir.type<_QMtypesTt{x:!fir.ar
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
   %0 = fir.alloca i32 {bindc_name = "new", uniq_name = "_QFtest3Enew"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFtest3Enew"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %0 uniq_name("_QFtest3Enew") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2 = fir.alloca i32 {bindc_name = "old", uniq_name = "_QFtest3Eold"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFtest3Eold"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtest3Eold") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %4 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %arg0(%4) {uniq_name = "_QFtest3Ex"} : (!fir.ref<!fir.array<10x!fir.type<_QMtypesTt{x:!fir.array<8000x120x3xf32>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.type<_QMtypesTt{x:!fir.array<8000x120x3xf32>}>>>, !fir.ref<!fir.array<10x!fir.type<_QMtypesTt{x:!fir.array<8000x120x3xf32>}>>>)
+  %5:2 = hlfir.declare %arg0(%4) uniq_name("_QFtest3Ex") : (!fir.ref<!fir.array<10x!fir.type<_QMtypesTt{x:!fir.array<8000x120x3xf32>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.type<_QMtypesTt{x:!fir.array<8000x120x3xf32>}>>>, !fir.ref<!fir.array<10x!fir.type<_QMtypesTt{x:!fir.array<8000x120x3xf32>}>>>)
   %6 = hlfir.designate %5#0 (%c1)  : (!fir.ref<!fir.array<10x!fir.type<_QMtypesTt{x:!fir.array<8000x120x3xf32>}>>>, index) -> !fir.ref<!fir.type<_QMtypesTt{x:!fir.array<8000x120x3xf32>}>>
   %7 = fir.shape %c8000, %c120, %c3 : (index, index, index) -> !fir.shape<3>
   %8 = fir.load %3#0 : !fir.ref<i32>
@@ -141,18 +141,18 @@ func.func @_QPtest4(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}, %
   %c1_i32 = arith.constant 1 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.alloca f32 {bindc_name = "f", uniq_name = "_QFtest4Ef"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFtest4Ef"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %0 uniq_name("_QFtest4Ef") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %2 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest4Ei"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFtest4Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %4:2 = hlfir.declare %arg1 {uniq_name = "_QFtest4Ei1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %5:2 = hlfir.declare %arg2 {uniq_name = "_QFtest4Ei2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %6:2 = hlfir.declare %arg3 {uniq_name = "_QFtest4Enx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtest4Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4:2 = hlfir.declare %arg1 uniq_name("_QFtest4Ei1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5:2 = hlfir.declare %arg2 uniq_name("_QFtest4Ei2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %6:2 = hlfir.declare %arg3 uniq_name("_QFtest4Enx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %7 = fir.load %5#0 : !fir.ref<i32>
   %8 = fir.convert %7 : (i32) -> index
   %9 = arith.cmpi sgt, %8, %c0 : index
   %10 = arith.select %9, %8, %c0 : index
   %11 = fir.shape %10 : (index) -> !fir.shape<1>
-  %12:2 = hlfir.declare %arg0(%11) {uniq_name = "_QFtest4Ex"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+  %12:2 = hlfir.declare %arg0(%11) uniq_name("_QFtest4Ex") : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
   %13 = fir.load %4#0 : !fir.ref<i32>
   %14 = fir.convert %13 : (i32) -> index
   %15 = fir.load %5#0 : !fir.ref<i32>
@@ -217,18 +217,18 @@ func.func @_QPtest5(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}, %
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %0 = fir.alloca f32 {bindc_name = "f", uniq_name = "_QFtest5Ef"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFtest5Ef"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %0 uniq_name("_QFtest5Ef") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %2 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest5Ei"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFtest5Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %4:2 = hlfir.declare %arg1 {uniq_name = "_QFtest5Ei1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %5:2 = hlfir.declare %arg2 {uniq_name = "_QFtest5Ei2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %6:2 = hlfir.declare %arg3 {uniq_name = "_QFtest5Enx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtest5Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4:2 = hlfir.declare %arg1 uniq_name("_QFtest5Ei1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5:2 = hlfir.declare %arg2 uniq_name("_QFtest5Ei2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %6:2 = hlfir.declare %arg3 uniq_name("_QFtest5Enx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %7 = fir.load %5#0 : !fir.ref<i32>
   %8 = fir.convert %7 : (i32) -> index
   %9 = arith.cmpi sgt, %8, %c0 : index
   %10 = arith.select %9, %8, %c0 : index
   %11 = fir.shape %10 : (index) -> !fir.shape<1>
-  %12:2 = hlfir.declare %arg0(%11) {uniq_name = "_QFtest5Ex"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+  %12:2 = hlfir.declare %arg0(%11) uniq_name("_QFtest5Ex") : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
   %13 = fir.load %4#0 : !fir.ref<i32>
   %14 = fir.convert %13 : (i32) -> index
   %15 = fir.load %5#0 : !fir.ref<i32>
@@ -295,26 +295,26 @@ func.func @_QPtest6(%arg0: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "x"},
   %c1_i32 = arith.constant 1 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.alloca f32 {bindc_name = "f", uniq_name = "_QFtest6Ef"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFtest6Ef"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %0 uniq_name("_QFtest6Ef") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %2 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest6Ei"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFtest6Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %4:2 = hlfir.declare %arg1 {uniq_name = "_QFtest6Ei1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %5:2 = hlfir.declare %arg2 {uniq_name = "_QFtest6Ei2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtest6Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4:2 = hlfir.declare %arg1 uniq_name("_QFtest6Ei1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5:2 = hlfir.declare %arg2 uniq_name("_QFtest6Ei2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %6 = fir.alloca i32 {bindc_name = "n1", uniq_name = "_QFtest6En1"}
-  %7:2 = hlfir.declare %6 {uniq_name = "_QFtest6En1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %7:2 = hlfir.declare %6 uniq_name("_QFtest6En1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %8 = fir.alloca i32 {bindc_name = "n2", uniq_name = "_QFtest6En2"}
-  %9:2 = hlfir.declare %8 {uniq_name = "_QFtest6En2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %9:2 = hlfir.declare %8 uniq_name("_QFtest6En2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %10 = fir.alloca i32 {bindc_name = "n3", uniq_name = "_QFtest6En3"}
-  %11:2 = hlfir.declare %10 {uniq_name = "_QFtest6En3"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %11:2 = hlfir.declare %10 uniq_name("_QFtest6En3") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %12 = fir.alloca i32 {bindc_name = "n4", uniq_name = "_QFtest6En4"}
-  %13:2 = hlfir.declare %12 {uniq_name = "_QFtest6En4"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %14:2 = hlfir.declare %arg3 {uniq_name = "_QFtest6Enx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %13:2 = hlfir.declare %12 uniq_name("_QFtest6En4") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %14:2 = hlfir.declare %arg3 uniq_name("_QFtest6Enx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %15 = fir.load %5#0 : !fir.ref<i32>
   %16 = fir.convert %15 : (i32) -> index
   %17 = arith.cmpi sgt, %16, %c0 : index
   %18 = arith.select %17, %16, %c0 : index
   %19 = fir.shape %18, %18 : (index, index) -> !fir.shape<2>
-  %20:2 = hlfir.declare %arg0(%19) {uniq_name = "_QFtest6Ex"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+  %20:2 = hlfir.declare %arg0(%19) uniq_name("_QFtest6Ex") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
   %21 = fir.load %4#0 : !fir.ref<i32>
   %22 = fir.convert %21 : (i32) -> index
   %23 = fir.load %5#0 : !fir.ref<i32>
@@ -392,7 +392,7 @@ func.func @test_disjoint_triple_index(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.
   %c8 = arith.constant 8 : index
   %c1 = arith.constant 1 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEx") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
   %2:3 = fir.box_dims %1#1, %c1 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
   %3 = arith.cmpi sgt, %2#1, %c0 : index
   %4 = arith.select %3, %2#1, %c0 : index
@@ -429,7 +429,7 @@ func.func @test_overlapping_triple_index(%arg0: !fir.box<!fir.array<?x?xf32>> {f
   %c8 = arith.constant 8 : index
   %c1 = arith.constant 1 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEx") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
   %2:3 = fir.box_dims %1#1, %c1 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
   %3 = arith.cmpi sgt, %2#1, %c0 : index
   %4 = arith.select %3, %2#1, %c0 : index
@@ -469,9 +469,9 @@ func.func @test_disjoint_unknown_bounds(%arg0: !fir.box<!fir.array<?xf32>> {fir.
   %c1 = arith.constant 1 : index
   %c6 = arith.constant 6 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestElb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEub"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFtestElb") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFtestEub") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %4 = fir.load %1#0 : !fir.ref<i32>
   %5 = fir.convert %4 : (i32) -> index
   %6 = arith.subi %c7, %5 : index
@@ -510,9 +510,9 @@ func.func @test_disjoint_unknown_bounds_negative_stride(%arg0: !fir.box<!fir.arr
   %c-1 = arith.constant -1 : index
   %c15 = arith.constant 15 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestElb1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestElb2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFtestElb1") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFtestElb2") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %4 = fir.load %2#0 : !fir.ref<i32>
   %5 = fir.convert %4 : (i32) -> index
   %6 = arith.subi %c14, %5 : index
@@ -549,7 +549,7 @@ func.func @test_overlap_known_triplets_negative_stride(%arg0: !fir.box<!fir.arra
   %c1 = arith.constant 1 : index
   %c5 = arith.constant 5 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %2 = fir.shape %c5 : (index) -> !fir.shape<1>
   %3 = hlfir.designate %1#0 (%c5:%c1:%c-1)  shape %2 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<5xf32>>
   %4 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<5xf32> {
@@ -577,8 +577,8 @@ func.func @test_overlap_unknown_bound_negative_stride(%arg0: !fir.box<!fir.array
   %c-1 = arith.constant -1 : index
   %c6 = arith.constant 6 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEub"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFtestEub") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %3 = fir.load %1#0 : !fir.ref<i32>
   %4 = fir.convert %3 : (i32) -> index
   %5 = arith.addi %4, %c-7 : index
@@ -611,9 +611,9 @@ func.func @test_overlap_unknown_bound_and_stride(%arg0: !fir.box<!fir.array<?xf3
   %c0 = arith.constant 0 : index
   %c6 = arith.constant 6 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEstride"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEub"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFtestEstride") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFtestEub") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %4 = fir.load %2#0 : !fir.ref<i32>
   %5 = fir.convert %4 : (i32) -> index
   %6 = fir.load %1#0 : !fir.ref<i32>
@@ -648,9 +648,9 @@ func.func @test_identical_1element_unknown_strides(%arg0: !fir.box<!fir.array<?x
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEs1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEs2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEa") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFtestEs1") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFtestEs2") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %4 = fir.load %3#0 : !fir.ref<i32>
   %5 = fir.convert %4 : (i32) -> index
   %6 = arith.divsi %5, %5 : index
@@ -685,9 +685,9 @@ func.func @test_disjoint_1element_unknown_strides(%arg0: !fir.box<!fir.array<?xi
   %c0 = arith.constant 0 : index
   %c3 = arith.constant 3 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEs1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEs2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEa") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFtestEs1") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFtestEs2") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %4 = fir.load %3#0 : !fir.ref<i32>
   %5 = fir.convert %4 : (i32) -> index
   %6 = arith.divsi %5, %5 : index
@@ -725,10 +725,10 @@ func.func @test_overlap_sub1_negative_stride(%arg0: !fir.box<!fir.array<?xi32>> 
   %c-1 = arith.constant -1 : index
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEy"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %4:2 = hlfir.declare %arg3 dummy_scope %0 {uniq_name = "_QFtestEz"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEa") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFtestEx") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFtestEy") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4:2 = hlfir.declare %arg3 dummy_scope %0 uniq_name("_QFtestEz") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %5 = fir.load %4#0 : !fir.ref<i32>
   %6 = fir.load %2#0 : !fir.ref<i32>
   %7 = arith.subi %6, %c1_i32 overflow<nsw> : i32
@@ -780,9 +780,9 @@ func.func @test_disjoint_known_bounds_unknown_stride(%arg0: !fir.box<!fir.array<
   %c8 = arith.constant 8 : index
   %c16 = arith.constant 16 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEstride"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEub"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFtestEstride") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFtestEub") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %4 = fir.load %1#0 : !fir.ref<i32>
   %5 = fir.convert %4 : (i32) -> index
   %6 = arith.addi %5, %c-8 : index

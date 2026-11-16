@@ -867,6 +867,7 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
                                    uint64_t Size, const MCSectionELF &Section) {
   uint64_t sh_link = 0;
   uint64_t sh_info = 0;
+  uint64_t EntrySize = Section.getEntrySize();
 
   switch(Section.getType()) {
   default:
@@ -901,6 +902,14 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
     sh_link = SymbolTableIndex;
     sh_info = GroupSymbolIndex;
     break;
+
+  case ELF::SHT_INIT_ARRAY:
+  case ELF::SHT_FINI_ARRAY:
+  case ELF::SHT_PREINIT_ARRAY:
+    // Match GAS, which uses the pointer size regardless of sh_size.
+    if (!EntrySize)
+      EntrySize = is64Bit() ? 8 : 4;
+    break;
   }
 
   if (Section.getFlags() & ELF::SHF_LINK_ORDER) {
@@ -914,7 +923,7 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
   writeSectionHeaderEntry(StrTabBuilder.getOffset(Section.getName()),
                           Section.getType(), Section.getFlags(), 0, Offset,
                           Size, sh_link, sh_info, Section.getAlign(),
-                          Section.getEntrySize());
+                          EntrySize);
 }
 
 void ELFWriter::writeSectionHeaders() {

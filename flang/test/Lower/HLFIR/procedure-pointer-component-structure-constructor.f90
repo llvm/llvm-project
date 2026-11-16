@@ -39,13 +39,13 @@
 ! CHECK:    %[[VAL_0:.*]] = fir.alloca !fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>
 ! CHECK:    %[[VAL_1:.*]] = fir.alloca !fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>
 ! CHECK:    %[[VAL_2:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> i32> <{bindc_name = "pp2", uniq_name = "_QFEpp2"}>
-! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEpp2"} : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>, !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>)
-! CHECK:    %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>) -> (!fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>, !fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>)
-! CHECK:    %[[VAL_23:.*]] = hlfir.designate %[[VAL_17]]#0{"pp1"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>) -> !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>
+! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFEpp2") fortran_attrs<pointer> : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>, !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>)
+! CHECK:    %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("ctor.temp") : (!fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>) -> (!fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>, !fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>)
+! CHECK:    %[[VAL_23:.*]] = hlfir.designate %[[VAL_17]]#0{"pp1"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>) -> !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>
 ! CHECK:    %[[VAL_24:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>
 ! CHECK:    fir.store %[[VAL_24]] to %[[VAL_23]] : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>
-! CHECK:    %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>) -> (!fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>, !fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>)
-! CHECK:    %[[VAL_31:.*]] = hlfir.designate %[[VAL_25]]#0{"pp1"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>) -> !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>
+! CHECK:    %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("ctor.temp") : (!fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>) -> (!fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>, !fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>)
+! CHECK:    %[[VAL_31:.*]] = hlfir.designate %[[VAL_25]]#0{"pp1"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>>) -> !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>
 ! CHECK:    %[[VAL_32:.*]] = fir.call @_QFPbar() fastmath<contract> : () -> !fir.boxproc<(!fir.ref<i32>) -> i32>
 ! CHECK:    fir.store %[[VAL_32]] to %[[VAL_31]] : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> i32>>
 ! CHECK:    return

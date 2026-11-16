@@ -284,14 +284,16 @@ bb:
 
 TEST_F(SeedBundleTest, Container) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptrA, float %val, ptr %ptrB) {
+define void @foo(ptr %ptrA, float %val, ptr %ptrB, i32 %x) {
 bb:
   %gepA0 = getelementptr float, ptr %ptrA, i32 0
   %gepA1 = getelementptr float, ptr %ptrA, i32 1
+  %gepAX = getelementptr float, ptr %ptrA, i32 %x
   %gepB0 = getelementptr float, ptr %ptrB, i32 0
   %gepB1 = getelementptr float, ptr %ptrB, i32 1
   store float %val, ptr %gepA0
   store float %val, ptr %gepA1
+  store float %val, ptr %gepAX
   store float %val, ptr %gepB0
   store float %val, ptr %gepB1
   ret void
@@ -310,9 +312,10 @@ bb:
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
   auto &BB = *F.begin();
-  auto It = std::next(BB.begin(), 4);
+  auto It = std::next(BB.begin(), 5);
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *SX = cast<sandboxir::StoreInst>(&*It++);
   auto *S2 = cast<sandboxir::StoreInst>(&*It++);
   auto *S3 = cast<sandboxir::StoreInst>(&*It++);
   sandboxir::SeedContainer SC(SE);
@@ -343,6 +346,23 @@ bb:
     ++Cnt;
   }
   EXPECT_EQ(Cnt, 0u);
+
+  {
+    // Check that inserting non-consecutive stores with same key results in two
+    // bundles.
+    sandboxir::MemSeedBundle<sandboxir::StoreInst> SB0(S0);
+    sandboxir::MemSeedBundle<sandboxir::StoreInst> SBX(SX);
+
+    sandboxir::SeedContainer SC(SE);
+    SC.insert(S0, /*AllowDiffTypes=*/true);
+    SC.insert(SX, /*AllowDiffTypes=*/true);
+    unsigned CntBndls = 0;
+    for (auto &SB : SC) {
+      EXPECT_EQ(SB.size(), 1u);
+      ++CntBndls;
+    }
+    EXPECT_EQ(CntBndls, 2u);
+  }
 }
 
 TEST_F(SeedBundleTest, ConsecutiveStores) {

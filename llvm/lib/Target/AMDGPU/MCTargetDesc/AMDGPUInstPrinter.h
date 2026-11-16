@@ -63,6 +63,7 @@ private:
                  const MCSubtargetInfo &STI, raw_ostream &O);
   void printTH(const MCInst *MI, int64_t TH, int64_t Scope, raw_ostream &O);
   void printScope(int64_t Scope, raw_ostream &O);
+  void printCFS(int64_t CFS, raw_ostream &O);
   void printDim(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
   void printR128A16(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -193,8 +194,6 @@ private:
                      const MCSubtargetInfo &STI, raw_ostream &O,
                      StringRef Prefix, bool PrintInHex, bool AlwaysPrint);
 
-  void printScaleSel(const MCInst *MI, unsigned OpNo,
-                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printBitOp3(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
 

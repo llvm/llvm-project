@@ -99,7 +99,6 @@ Tests that need more than one source file (e.g. to link several objects) are
 # Stresses: fixups for code addressing data defined in another object, which
 # the compiler usually addresses through the GOT.
 
-REQUIRES: split-file
 RUN: rm -rf %t && split-file %s %t
 RUN: %{cc} -O0 -c -o %t/def.O0.o %t/def.c
 RUN: %{cc} -O0 -c -o %t/main.O0.o %t/main.c
@@ -121,30 +120,6 @@ int main(void) {
     return 1;
   return 0;
 }
-```
-
-### Tests with more than one source file
-
-Tests that need more than one source file (e.g. to link several objects) are
-`.test` files that hold their sources, split out with `split-file`:
-
-```
-# Check that JIT'd code can load from global data defined in another object.
-
-REQUIRES: split-file
-RUN: rm -rf %t && split-file %s %t
-RUN: %{cc} -O0 -c -o %t/def.O0.o %t/def.c
-RUN: %{cc} -O0 -c -o %t/main.O0.o %t/main.c
-RUN: %{obj-jit} -show-jit-result %t/main.O0.o %t/def.O0.o | FileCheck %s
-
-CHECK: JIT result: 0
-
-#--- def.c
-int Data = 42;
-
-#--- main.c
-extern int Data;
-int main(void) { return Data == 42 ? 0 : 1; }
 ```
 
 ### Substitutions
@@ -180,7 +155,6 @@ the host:
 * **`orc-rt-cxx`**: `%{cxx}` is usable.
 * **`llvm-mc`**: `%{mc}` is usable.
 * **`llvm-jitlink`**: `%{obj-jit}` is usable.
-* **`split-file`**: `split-file` is usable.
 * **`target-arch=<arch>`**: The runtime's target architecture (`arm64` and
   `aarch64` are aliases).
 * **`target-object-format=<coff|elf|mach-o>`**: The runtime's target object

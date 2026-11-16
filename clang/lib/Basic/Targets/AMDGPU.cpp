@@ -238,7 +238,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts", "supports-wgp",
                  "supports-wave32", "xnack-support", "sramecc-support",
-                 "xnack-on-off-modes"}) {
+                 "xnack-on-off-modes", "sramecc-on-off-modes"}) {
     if (GPUKind != llvm::AMDGPU::GK_NONE)
       ReadOnlyFeatures.insert(F);
   }

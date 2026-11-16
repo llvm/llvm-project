@@ -621,6 +621,7 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
 static void **OffloadShadowVariables = nullptr;
 static int NumShadowVariables = 0;
 static int CapShadowVariables = 0;
+static bool CurrentShadowVariableRegistered = false;
 
 struct OffloadSectionShadow {
   void *Data;
@@ -630,6 +631,7 @@ struct OffloadSectionShadow {
 };
 
 struct OffloadSectionShadowGroup {
+  void *VersionShadow;
   OffloadSectionShadow *Shadows;
   int NumShadows;
   int CapShadows;
@@ -652,6 +654,8 @@ static int ensureSectionShadowCapacity(OffloadSectionShadowGroup *Group,
 }
 
 extern "C" void __llvm_profile_offload_register_shadow_variable(void *ptr) {
+  // Dependent callbacks must not use the previous group if this attempt fails.
+  CurrentShadowVariableRegistered = false;
   if (growArray((void **)&OffloadShadowVariables, &CapShadowVariables,
                 NumShadowVariables + 1, 64, sizeof(*OffloadShadowVariables)))
     return;
@@ -661,11 +665,12 @@ extern "C" void __llvm_profile_offload_register_shadow_variable(void *ptr) {
   OffloadShadowVariables[Index] = ptr;
   __builtin_memset(&OffloadSectionShadowGroups[Index], 0,
                    sizeof(OffloadSectionShadowGroups[Index]));
+  CurrentShadowVariableRegistered = true;
 }
 
 extern "C" void
 __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
-  if (NumShadowVariables == 0)
+  if (!CurrentShadowVariableRegistered)
     return;
 
   /* Match CGCUDANV.cpp: data, counters, uniform counters, then names for each
@@ -694,6 +699,13 @@ __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
     break;
   }
   ++Group->NumSections;
+}
+
+extern "C" void
+__llvm_profile_offload_register_version_shadow_variable(void *ptr) {
+  if (!CurrentShadowVariableRegistered)
+    return;
+  OffloadSectionShadowGroups[NumShadowVariables - 1].VersionShadow = ptr;
 }
 
 namespace {
@@ -827,6 +839,32 @@ int __prof_rocm::processDeviceOffloadPrf(
 
   if (CountersSize == 0 || DataSize == 0)
     return 0;
+
+  // The host and device may use different instrumentation layouts.
+#ifdef _WIN32
+  // Use the host handle to make the version address known to HIP.
+  void *VersionVar = nullptr;
+  if (!Sections || !Sections->VersionShadow ||
+      hipGetSymbolAddress(&VersionVar, Sections->VersionShadow) != 0 ||
+      !VersionVar) {
+    PROF_ERR("%s\n", "failed to get profile version symbol address");
+    return -1;
+  }
+#else
+  const void *VersionVar = HostSections.VersionVar;
+#endif
+  uint64_t Version;
+  if (!VersionVar ||
+      hipMemcpy(&Version, VersionVar, sizeof(Version), 2 /*DToH*/) != 0) {
+    PROF_ERR("%s\n", "failed to copy profile version from device");
+    return -1;
+  }
+  if (GET_VERSION(Version) != INSTR_PROF_RAW_VERSION) {
+    PROF_ERR("Device runtime and instrumentation version mismatch: "
+             "expected %d, but get %d\n",
+             INSTR_PROF_RAW_VERSION, (int)GET_VERSION(Version));
+    return -1;
+  }
 
   int ret = -1;
 
@@ -1122,7 +1160,7 @@ int __prof_rocm::processDeviceOffloadPrf(
       (__llvm_profile_data *)(BufDataBegin + DataSize), BufCountersBegin,
       BufCountersBegin + CountersSize, UCnts.HostBegin,
       UCnts.HostBegin ? UCnts.HostBegin + UniformCountersSize : nullptr,
-      BufNamesBegin, BufNamesBegin + NamesSize, nullptr);
+      BufNamesBegin, BufNamesBegin + NamesSize, &Version);
 
   if (ret != 0) {
     PROF_ERR("%s\n", "failed to write device profile using shared API");
@@ -1165,15 +1203,22 @@ static int isHipAvailable(void) {
 /*  Collect device-side profile data                                          */
 /* -------------------------------------------------------------------------- */
 
-/* Host-shadow drain: static-linked kernels (host __hipRegisterVar shadows) and
- * intercepted dynamic modules. The caller gates this on
- * (NumShadowVariables || NumDynamicModules) && isHipAvailable(); pure
- * device-linked programs (RCCL) are handled by the supplemental HSA pass. */
+/* Host-shadow drain: static-linked kernels on Windows, or if HSA loader
+ * introspection is unavailable on Linux, plus intercepted dynamic modules.
+ * The Linux HSA pass normally drains resident static images without loading
+ * images that were only registered by the host. */
 static int collectHostShadowData(void) {
   int Ret = 0;
 
-  /* Shadow variables (static-linked kernels): drain from every device. */
-  if (NumShadowVariables > 0) {
+  /* On Linux, use host shadows only if HSA cannot enumerate resident images.
+   * Looking up every shadow otherwise loads unused static images. */
+#if defined(__linux__) && !defined(_WIN32)
+  const bool CollectStaticShadows =
+      NumShadowVariables != 0 && !hsaRuntimeAvailable();
+#else
+  constexpr bool CollectStaticShadows = true;
+#endif
+  if (CollectStaticShadows && NumShadowVariables > 0) {
     int OrigDevice = -1;
     hipGetDevice(&OrigDevice);
 
@@ -1250,7 +1295,7 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
     Ret = -1;
 
 #if defined(__linux__) && !defined(_WIN32)
-  /* Supplemental HSA-introspection drain */
+  /* Drain resident device images through HSA. */
   if (drainDevicesViaHsa() != 0)
     Ret = -1;
 #endif

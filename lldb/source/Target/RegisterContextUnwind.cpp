@@ -206,7 +206,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
                current_pc);
   }
 
-  if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  if (IsTrapHandler(process)) {
     m_frame_type = eTrapHandlerFrame;
   } else {
     // FIXME:  Detect eDebuggerFrame here.
@@ -222,6 +222,16 @@ void RegisterContextUnwind::InitializeZerothFrame() {
       m_current_offset =
           m_current_pc.GetFileAddress() - m_start_pc.GetFileAddress();
     }
+    m_current_offset_backed_up_one = m_current_offset;
+  } else if (Address start =
+                 pc_module_sp ? pc_module_sp->GetUnwindTable()
+                                    .GetFunctionStartFromObjectFileUnwindInfo(
+                                        m_current_pc)
+                              : Address();
+             start.IsValid()) {
+    m_start_pc = start;
+    m_current_offset =
+        m_current_pc.GetFileAddress() - m_start_pc.GetFileAddress();
     m_current_offset_backed_up_one = m_current_offset;
   } else {
     m_start_pc = m_current_pc;
@@ -560,11 +570,11 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       decr_pc_and_recompute_addr_range = false;
     else
       decr_pc_and_recompute_addr_range = true;
-  } else if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  } else if (IsTrapHandler(process)) {
     // Signal dispatch may set the return address of the handler it calls to
-    // point to the first byte of a return trampoline (like __kernel_rt_sigreturn),
-    // so do not decrement and recompute if the symbol we already found is a trap
-    // handler.
+    // point to the first byte of a return trampoline (like
+    // __kernel_rt_sigreturn), so do not decrement and recompute if the current
+    // function is a trap handler.
     decr_pc_and_recompute_addr_range = false;
   } else if (m_behaves_like_zeroth_frame) {
     decr_pc_and_recompute_addr_range = false;
@@ -612,7 +622,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     m_current_offset_backed_up_one = std::nullopt;
   }
 
-  if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  if (IsTrapHandler(process)) {
     m_frame_type = eTrapHandlerFrame;
   } else {
     // FIXME:  Detect eDebuggerFrame here.
@@ -914,9 +924,10 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
 
   // No FuncUnwinders available for this pc (stripped function symbols, lldb
   // could not augment its function table with another source, like
-  // LC_FUNCTION_STARTS or eh_frame in ObjectFileMachO). See if eh_frame or the
-  // .ARM.exidx tables have unwind information for this address, else fall back
-  // to the architectural default unwind.
+  // LC_FUNCTION_STARTS or eh_frame in ObjectFileMachO). See if eh_frame, the
+  // .ARM.exidx tables or the object file's own unwind info (e.g. the PE EH info
+  // in .pdata) have unwind information for this address, else fall back to the
+  // architectural default unwind.
   if (!func_unwinders_sp) {
     m_frame_type = eNormalFrame;
 
@@ -929,7 +940,7 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     if (DWARFCallFrameInfo *eh_frame =
             pc_module_sp->GetUnwindTable().GetEHFrameInfo()) {
       if (std::unique_ptr<UnwindPlan> plan_up =
-              eh_frame->GetUnwindPlan(m_current_pc))
+              eh_frame->GetUnwindPlan(m_current_pc, m_start_pc))
         return plan_up;
     }
 
@@ -1301,29 +1312,48 @@ bool RegisterContextUnwind::IsSkipFrame() const {
   return m_frame_type == eSkipFrame;
 }
 
-bool RegisterContextUnwind::IsTrapHandlerSymbol(
-    lldb_private::Process *process,
-    const lldb_private::SymbolContext &m_sym_ctx) const {
+bool RegisterContextUnwind::IsTrapHandler(Process *process) const {
+  // See if signal-frame CFI exists at m_current_pc.
+  ModuleSP module_sp = m_current_pc.GetModule();
+  if (m_current_pc.IsValid() && module_sp && module_sp->GetObjectFile()) {
+    if (DWARFCallFrameInfo *eh_frame =
+            module_sp->GetUnwindTable().GetEHFrameInfo()) {
+      std::unique_ptr<UnwindPlan> plan_up =
+          eh_frame->GetUnwindPlan(m_current_pc);
+      if (plan_up && plan_up->GetUnwindPlanForSignalTrap() == eLazyBoolYes &&
+          plan_up->PlanValidAtAddress(m_current_pc))
+        return true;
+    }
+  }
+
+  // Check trap handler names provided by platform.
   PlatformSP platform_sp(process->GetTarget().GetPlatform());
   if (platform_sp) {
-    const std::vector<ConstString> trap_handler_names(
+    const std::vector<std::string> &trap_handler_names(
         platform_sp->GetTrapHandlerSymbolNames());
-    for (ConstString name : trap_handler_names) {
-      if ((m_sym_ctx.function && m_sym_ctx.function->GetName() == name) ||
-          (m_sym_ctx.symbol && m_sym_ctx.symbol->GetName() == name)) {
+    for (const std::string &name : trap_handler_names) {
+      if ((m_sym_ctx.function &&
+           m_sym_ctx.function->GetName().GetStringRef() == name) ||
+          (m_sym_ctx.symbol &&
+           m_sym_ctx.symbol->GetName().GetStringRef() == name)) {
         return true;
       }
     }
   }
-  const std::vector<ConstString> user_specified_trap_handler_names(
-      m_parent_unwind.GetUserSpecifiedTrapHandlerFunctionNames());
-  for (ConstString name : user_specified_trap_handler_names) {
-    if ((m_sym_ctx.function && m_sym_ctx.function->GetName() == name) ||
-        (m_sym_ctx.symbol && m_sym_ctx.symbol->GetName() == name)) {
+
+  // Check trap handler names provided by user.
+  const std::vector<std::string> &user_specified_trap_handler_names =
+      m_parent_unwind.GetUserSpecifiedTrapHandlerFunctionNames();
+  for (const std::string &name : user_specified_trap_handler_names) {
+    if ((m_sym_ctx.function &&
+         m_sym_ctx.function->GetName().GetStringRef() == name) ||
+        (m_sym_ctx.symbol &&
+         m_sym_ctx.symbol->GetName().GetStringRef() == name)) {
       return true;
     }
   }
 
+  // This is not a trap handler.
   return false;
 }
 
@@ -1584,7 +1614,7 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
   std::string unwindplan_name;
   if (m_full_unwind_plan_sp) {
     unwindplan_name += "via '";
-    unwindplan_name += m_full_unwind_plan_sp->GetSourceName().AsCString("");
+    unwindplan_name += m_full_unwind_plan_sp->GetSourceName();
     unwindplan_name += "'";
   }
   UNWIND_LOG(log, "no save location for {0} ({1}) {2}", regnum.GetName(),

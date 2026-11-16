@@ -6,34 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements offloading to HIP and CUDA devices.
+
+// This file implements offloading to devices.
 //
 //===----------------------------------------------------------------------===//
 
 #include "DeviceOffload.h"
-#include "IncrementalAction.h"
 
-#include "clang/Basic/TargetID.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/BackendUtil.h"
-#include "clang/CodeGen/CodeGenAction.h"
-#include "clang/Driver/OffloadBundler.h"
+#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendAction.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/AMDGPUTargetParser.h"
-#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 
@@ -42,8 +33,7 @@ IncrementalDeviceParser::IncrementalDeviceParser(
     IncrementalAction *DeviceAct,
     llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
     llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
-    : IncrementalParser(DeviceInstance, DeviceAct, Err, PTUs),
-      DeviceCI(DeviceInstance), VFS(FS),
+    : IncrementalParser(DeviceInstance, DeviceAct, Err, PTUs), VFS(FS),
       CodeGenOpts(HostInstance.getCodeGenOpts()),
       TargetOpts(DeviceInstance.getTargetOpts()) {}
 
@@ -55,168 +45,51 @@ IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
     llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
     llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
     : IncrementalDeviceParser(DeviceInstance, HostInstance, DeviceAct, FS, Err,
-                              PTUs) {
+                              PTUs),
+      DeviceCI(DeviceInstance) {
   if (Err)
     return;
-  StringRef Arch = TargetOpts.CPU;
-  if (!Arch.starts_with("gfx")) {
-    Err = llvm::joinErrors(std::move(Err), llvm::make_error<llvm::StringError>(
-                                               "Invalid HIP architecture",
-                                               llvm::inconvertibleErrorCode()));
+  if (!llvm::Triple(TargetOpts.Triple).isAMDGCN()) {
+    Err = llvm::joinErrors(
+        std::move(Err),
+        llvm::make_error<llvm::StringError>(
+            "Invalid HIP architecture for target '" + TargetOpts.Triple + "'",
+            llvm::inconvertibleErrorCode()));
     return;
   }
 }
 
-llvm::Expected<TranslationUnitDecl *>
-IncrementalHIPDeviceParser::Parse(llvm::StringRef Input) {
-  if (FrontendAction *WrappedAct = Act->getWrapped())
-    if (WrappedAct->hasIRSupport())
-      static_cast<CodeGenAction *>(WrappedAct)->reloadLinkModules(DeviceCI);
-
-  return IncrementalParser::Parse(Input);
-}
-
-llvm::Expected<llvm::StringRef> IncrementalHIPDeviceParser::GenerateHSACO() {
+llvm::Expected<llvm::StringRef>
+IncrementalHIPDeviceParser::GenerateDeviceObject() {
   auto &PTU = PTUs.back();
 
   CodeGenOptions CodeGenOptsForObj = DeviceCI.getCodeGenOpts();
   CodeGenOptsForObj.DisableLLVMPasses = true;
 
-  llvm::SmallVector<char, 0> Object;
-  auto ObjOS = std::make_unique<llvm::raw_svector_ostream>(Object);
-  clang::emitBackendOutput(DeviceCI, CodeGenOptsForObj, PTU.TheModule.get(),
-                           Backend_EmitObj, DeviceCI.getVirtualFileSystemPtr(),
-                           std::move(ObjOS));
+  ObjectContent.clear();
+  auto ObjOS = std::make_unique<llvm::raw_svector_ostream>(ObjectContent);
+  emitBackendOutput(DeviceCI, CodeGenOptsForObj, PTU.TheModule.get(),
+                    Backend_EmitObj, DeviceCI.getVirtualFileSystemPtr(),
+                    std::move(ObjOS));
 
   if (DeviceCI.getDiagnostics().hasErrorOccurred())
     return llvm::make_error<llvm::StringError>(
         "Backend code generation failed for HIP device code.",
         llvm::inconvertibleErrorCode());
 
-  std::string Exe = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
-  llvm::StringRef ExeDir = llvm::sys::path::parent_path(Exe);
-  llvm::ErrorOr<std::string> LLDPath =
-      llvm::sys::findProgramByName("ld.lld", {ExeDir});
-  if (!LLDPath)
-    LLDPath = llvm::sys::findProgramByName("ld.lld");
-  if (!LLDPath)
-    return llvm::make_error<llvm::StringError>(
-        "Could not find ld.lld next to the executable or on PATH.",
-        llvm::inconvertibleErrorCode());
-
-  int ObjFD = -1;
-  llvm::SmallString<128> ObjFile;
-  if (llvm::sys::fs::createTemporaryFile("kernel", "o", ObjFD, ObjFile))
-    return llvm::make_error<llvm::StringError>(
-        "Failed to create a temporary object file.",
-        llvm::inconvertibleErrorCode());
-  llvm::FileRemover ObjRemover(ObjFile);
-  {
-    llvm::raw_fd_ostream OS(ObjFD, /*shouldClose=*/true);
-    OS << llvm::StringRef(Object.data(), Object.size());
-  }
-
-  llvm::SmallString<128> HsacoFile;
-  if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco", HsacoFile))
-    return llvm::make_error<llvm::StringError>(
-        "Failed to create a temporary code object file.",
-        llvm::inconvertibleErrorCode());
-  llvm::FileRemover HsacoRemover(HsacoFile);
-
-  llvm::StringRef Args[] = {"ld.lld", "-shared", "--no-undefined",
-                            ObjFile,  "-o",      HsacoFile};
-  if (llvm::sys::ExecuteAndWait(*LLDPath, Args) != 0)
-    return llvm::make_error<llvm::StringError>("ld.lld invocation failed.",
-                                               llvm::inconvertibleErrorCode());
-
-  auto HsacoBuf = llvm::MemoryBuffer::getFile(HsacoFile, /*IsText=*/false);
-  if (!HsacoBuf)
-    return llvm::make_error<llvm::StringError>(
-        "Failed to read the code object.", llvm::inconvertibleErrorCode());
-
-  llvm::StringRef Buffer = (*HsacoBuf)->getBuffer();
-  HSACOContent.assign(Buffer.begin(), Buffer.end());
-  return llvm::StringRef(HSACOContent.data(), HSACOContent.size());
-}
-
-llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBundle() {
-  static constexpr unsigned CodeObjectAlign = 4096;
-
-  const PartialTranslationUnit &PTU = PTUs.back();
-
-  llvm::SmallString<128> HostFile;
-  if (llvm::sys::fs::createTemporaryFile("hip-host", "", HostFile))
-    return llvm::make_error<llvm::StringError>(
-        "Failed to create a temporary host bundle input.",
-        llvm::inconvertibleErrorCode());
-  llvm::FileRemover HostRemover(HostFile);
-
-  llvm::SmallString<128> DeviceFile;
-  int DeviceFD = -1;
-  if (llvm::sys::fs::createTemporaryFile("hip-device", "hsaco", DeviceFD,
-                                         DeviceFile))
-    return llvm::make_error<llvm::StringError>(
-        "Failed to create a temporary code object file.",
-        llvm::inconvertibleErrorCode());
-  llvm::FileRemover DeviceRemover(DeviceFile);
-  {
-    llvm::raw_fd_ostream OS(DeviceFD, /*shouldClose=*/true);
-    OS << llvm::StringRef(HSACOContent.data(), HSACOContent.size());
-  }
-
-  llvm::SmallString<128> BundleFile;
-  if (llvm::sys::fs::createTemporaryFile("hip-bundle", "hipfb", BundleFile))
-    return llvm::make_error<llvm::StringError>(
-        "Failed to create a temporary offload bundle file.",
-        llvm::inconvertibleErrorCode());
-  llvm::FileRemover BundleRemover(BundleFile);
-
-  std::string TargetID = llvm::AMDGPU::TargetID::createFromSubtargetFeatures(
-                             DeviceCI.getTarget().getTriple(), TargetOpts.CPU,
-                             llvm::join(TargetOpts.Features, ","))
-                             .getCanonicalFeatureString();
-
-  llvm::StringRef OffloadKind =
-      (TargetOpts.CodeObjectVersion == llvm::CodeObjectVersionKind::COV_2 ||
-       TargetOpts.CodeObjectVersion == llvm::CodeObjectVersionKind::COV_3)
-          ? "hip"
-          : "hipv4";
-
-  std::string HostTriple = "host-" + llvm::sys::getProcessTriple() + "-";
-  std::string DeviceTriple =
-      OffloadKind.str() + "-" +
-      normalizeForBundler(PTU.TheModule->getTargetTriple(), TargetID) + "-" +
-      TargetID;
-
-  OffloadBundlerConfig Config;
-  Config.FilesType = "o";
-  Config.BundleAlignment = CodeObjectAlign;
-  Config.HostInputIndex = 0;
-  Config.TargetNames = {HostTriple, DeviceTriple};
-  Config.InputFileNames = {std::string(HostFile), std::string(DeviceFile)};
-  Config.OutputFileNames = {std::string(BundleFile)};
-
-  if (llvm::Error Err = OffloadBundler(Config).BundleFiles())
-    return Err;
-
-  auto BundleBuf = llvm::MemoryBuffer::getFile(BundleFile, /*IsText=*/false);
-  if (!BundleBuf)
-    return llvm::make_error<llvm::StringError>(
-        "Failed to read the offload bundle.", llvm::inconvertibleErrorCode());
-
-  std::string BundleFileName = "/" + PTU.TheModule->getName().str() + ".hipfb";
-  VFS->addFile(BundleFileName, 0,
-               llvm::MemoryBuffer::getMemBufferCopy((*BundleBuf)->getBuffer()));
-
-  CodeGenOpts.OffloadBinaryToEmbedFile = std::move(BundleFileName);
-  return llvm::Error::success();
+  return llvm::StringRef(ObjectContent.data(), ObjectContent.size());
 }
 
 llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
-  llvm::Expected<llvm::StringRef> HSACO = GenerateHSACO();
-  if (!HSACO)
-    return HSACO.takeError();
-  return GenerateOffloadBundle();
+  llvm::Expected<llvm::StringRef> Object = GenerateDeviceObject();
+  if (!Object)
+    return Object.takeError();
+
+  // FIXME: Link the object into an HSACO and bundle it for the host
+  // compilation.
+  return llvm::make_error<llvm::StringError>(
+      "HIP offload binary generation is not supported yet.",
+      llvm::inconvertibleErrorCode());
 }
 
 IncrementalHIPDeviceParser::~IncrementalHIPDeviceParser() {}
@@ -249,16 +122,16 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
     return llvm::make_error<llvm::StringError>(std::move(Error),
                                                std::error_code());
   llvm::TargetOptions TO = llvm::TargetOptions();
-  llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
-      PTU.TheModule->getTargetTriple(), TargetOpts.CPU, "", TO,
-      llvm::Reloc::Model::PIC_);
+  std::unique_ptr<llvm::TargetMachine> TM(Target->createTargetMachine(
+      PTU.TheModule->getTargetTriple(), TargetOpts.CPU,
+      llvm::join(TargetOpts.Features, ","), TO, llvm::Reloc::Model::PIC_));
 
   PTXCode.clear();
   llvm::raw_svector_ostream dest(PTXCode);
 
   llvm::legacy::PassManager PM;
-  if (TargetMachine->addPassesToEmitFile(PM, dest, nullptr,
-                                         llvm::CodeGenFileType::AssemblyFile)) {
+  if (TM->addPassesToEmitFile(PM, dest, nullptr,
+                              llvm::CodeGenFileType::AssemblyFile)) {
     return llvm::make_error<llvm::StringError>(
         "NVPTX backend cannot produce PTX code.",
         llvm::inconvertibleErrorCode());
@@ -356,6 +229,7 @@ llvm::Error IncrementalCUDADeviceParser::GenerateOffloadBinary() {
   llvm::Expected<llvm::StringRef> PTX = GeneratePTX();
   if (!PTX)
     return PTX.takeError();
+
   return GenerateFatbinary();
 }
 

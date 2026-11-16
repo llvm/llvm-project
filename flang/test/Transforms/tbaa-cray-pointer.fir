@@ -23,10 +23,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %0 = fir.alloca !fir.box<!fir.ptr<f32>>
     %1 = fir.dummy_scope : !fir.dscope
     %2 = fir.alloca i64 {bindc_name = "p", uniq_name = "_QFtestEp"}
-    %3 = fir.declare %2 {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFtestEp"} : (!fir.ref<i64>) -> !fir.ref<i64>
+    %3 = fir.declare %2 uniq_name("_QFtestEp") fortran_attrs<cray_pointer> : (!fir.ref<i64>) -> !fir.ref<i64>
     %4 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
-    %5 = fir.declare %4 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
-    %6 = fir.declare %0 {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+    %5 = fir.declare %4 uniq_name("_QFtestEb") : (!fir.ref<f32>) -> !fir.ref<f32>
+    %6 = fir.declare %0 uniq_name("_QFtestEa") fortran_attrs<pointer, cray_pointee> : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
     %7 = fir.zero_bits !fir.ptr<f32>
     %8 = fir.embox %7 : (!fir.ptr<f32>) -> !fir.box<!fir.ptr<f32>>
     fir.store %8 to %6 : !fir.ref<!fir.box<!fir.ptr<f32>>>

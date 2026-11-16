@@ -12,8 +12,8 @@
 
 #include <__assert>
 #include <__config>
-#include <__memory/addressof.h>
 #include <__type_traits/integer_traits.h>
+#include <__utility/checked_int.h>
 #include <__utility/cmp.h>
 #include <limits>
 
@@ -26,17 +26,16 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
-
-template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp __saturating_add(_Tp __x, _Tp __y) noexcept {
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp __saturating_add(_Tp __x, _Tp __y) _NOEXCEPT {
+  static_assert(__is_signed_integer_v<_Tp> || __is_unsigned_integer_v<_Tp>);
 #  if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2101
   return __builtin_elementwise_add_sat(__x, __y);
 #  else
-  if (_Tp __sum; !__builtin_add_overflow(__x, __y, std::addressof(__sum)))
-    return __sum;
+  if (auto __sum = __checked_int<_Tp>(__x) + __y; !__sum.__overflowed())
+    return __sum.__value();
   // Handle overflow
-  if constexpr (__unsigned_integer<_Tp>) {
+  if _LIBCPP_CONSTEXPR (__is_unsigned_integer_v<_Tp>) {
     return std::numeric_limits<_Tp>::max();
   } else {
     // Signed addition overflow
@@ -50,13 +49,15 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __saturating_add(_Tp __x, _Tp __y) noexcept 
 #  endif
 }
 
+#if _LIBCPP_STD_VER >= 20
+
 template <__signed_or_unsigned_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp __saturating_sub(_Tp __x, _Tp __y) noexcept {
 #  if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2101
   return __builtin_elementwise_sub_sat(__x, __y);
 #  else
-  if (_Tp __sub; !__builtin_sub_overflow(__x, __y, std::addressof(__sub)))
-    return __sub;
+  if (auto __sub = __checked_int(__x) - __y; !__sub.__overflowed())
+    return __sub.__value();
   // Handle overflow
   if constexpr (__unsigned_integer<_Tp>) {
     // Overflows if (x < y)
@@ -75,8 +76,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __saturating_sub(_Tp __x, _Tp __y) noexcept 
 
 template <__signed_or_unsigned_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp __saturating_mul(_Tp __x, _Tp __y) noexcept {
-  if (_Tp __mul; !__builtin_mul_overflow(__x, __y, std::addressof(__mul)))
-    return __mul;
+  if (auto __mul = __checked_int(__x) * __y; !__mul.__overflowed())
+    return __mul.__value();
   // Handle overflow
   if constexpr (__unsigned_integer<_Tp>) {
     return std::numeric_limits<_Tp>::max();

@@ -63,11 +63,6 @@ public:
 
   CodeGenerator *getCodeGenerator() const;
 
-  /// Reload the -mlink-builtin-bitcode modules into the backend consumer.
-  /// LinkInModules() consumes them, so incremental compilation must reload them
-  /// before each translation unit (e.g. to re-link HIP device libraries).
-  void reloadLinkModules(CompilerInstance &CI);
-
   BackendConsumer *BEConsumer = nullptr;
 };
 

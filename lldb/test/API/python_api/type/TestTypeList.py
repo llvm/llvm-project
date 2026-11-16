@@ -74,6 +74,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertFalse(static_mutable_field.GetConstantValue(self.target()))
 
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         """Exercise SBType and SBTypeList API."""
         d = {"EXE": self.exe_name}
@@ -275,6 +276,7 @@ class TypeAndTypeListTestCase(TestBase):
             self.DebugSBType(int_enum_uchar)
             self.assertEqual(int_enum_uchar.GetName(), "unsigned char")
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_nested_typedef(self):
         """Exercise FindDirectNestedType for typedefs."""
         self.build()
@@ -291,7 +293,6 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(the_typedef)
         self.assertEqual(the_typedef.GetTypedefedType().GetName(), "int")
 
-    @expectedFailureWindows  # Dynamic type resolution not implemented
     def test_dynamic_values(self):
         """Test FindDirectNestedType on dynamic values"""
 
@@ -332,6 +333,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(get_function_type.is_function)
         self.assertFalse(get_function_type.is_reference)
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_GetByteAlign(self):
         """Exercise SBType::GetByteAlign"""
         self.build()

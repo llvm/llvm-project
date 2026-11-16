@@ -7,9 +7,8 @@ set(LLVM_OFFLOAD_KERNEL_INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/../kernel/include
   ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/include
   ${CMAKE_CURRENT_BINARY_DIR}/../../liboffload/API
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../include
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../plugins-nextgen/common/include)
-
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
+  
 function(add_llvm_offload_kernel_language_runtime_objects target language)
   add_library(${target} OBJECT
     src/LanguageRuntime.cpp
@@ -114,4 +113,5 @@ install(FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/UndefineLanguageNames.inc
         ${CMAKE_CURRENT_SOURCE_DIR}/include/LanguageLaunch.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/Types.h
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload/kernel/)
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload/kernel/
+        COMPONENT offload)

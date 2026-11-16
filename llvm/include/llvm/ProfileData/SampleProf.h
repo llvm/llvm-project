@@ -138,7 +138,8 @@ static inline bool formatVersionIsSupported(uint64_t Version) {
 }
 
 // Unused.  Retained for downstream uses only.
-LLVM_DEPRECATED("Use DefaultVersion or LatestVersion instead", "DefaultVersion")
+LLVM_DEPRECATED_WITH_FIXIT("Use DefaultVersion or LatestVersion instead",
+                           "DefaultVersion")
 static inline uint64_t SPVersion() { return 103; }
 
 // Section Type used by SampleProfileExtBinaryBaseReader and

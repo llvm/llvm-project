@@ -134,6 +134,8 @@ public:
         std::move(*MemAccess), std::move(JTMB), std::move(*DL));
   }
 
+  const Triple &getTargetTriple() const { return ES->getTargetTriple(); }
+
   const DataLayout &getDataLayout() const { return DL; }
 
   JITDylib &getMainJITDylib() { return MainJD; }

@@ -21,7 +21,7 @@ llvm.func @task_affinity_iterator_1d(%arr: !llvm.ptr {llvm.nocapture}) {
         %entry = omp.affinity_entry %arr, %len
             : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
         omp.yield(%entry : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
 
       omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
         omp.terminator
@@ -86,7 +86,7 @@ llvm.func @task_affinity_iterator_3d(%arr: !llvm.ptr {llvm.nocapture}) {
         %entry = omp.affinity_entry %arr, %len
             : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
         omp.yield(%entry : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
 
       omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
         omp.terminator
@@ -151,14 +151,14 @@ llvm.func @task_affinity_iterator_multiple(%arr: !llvm.ptr {llvm.nocapture}) {
         %entry0 = omp.affinity_entry %arr, %len
             : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
         omp.yield(%entry0 : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
 
       // second iterator: 1-D (3)
       %it1 = omp.iterator(%k: i64) = (%c1 to %c3 step %c1) {
         %entry1 = omp.affinity_entry %arr, %len
             : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
         omp.yield(%entry1 : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
 
       // Multiple iterators in a single affinity clause.
       omp.task affinity(%it0: !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>,
@@ -247,7 +247,7 @@ llvm.func @task_affinity_iterator_dynamic_tripcount(
         %entry = omp.affinity_entry %arr, %len
             : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
         omp.yield(%entry : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
 
       omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
         omp.terminator
@@ -260,9 +260,12 @@ llvm.func @task_affinity_iterator_dynamic_tripcount(
 }
 
 // CHECK-LABEL: define internal void @task_affinity_iterator_dynamic_tripcount
-// CHECK: [[DIFF:%.*]] = sub i64 {{.*}}, {{.*}}
-// CHECK: [[DIV:%.*]] = sdiv i64 [[DIFF]], {{.*}}
-// CHECK: [[TRIPS:%.*]] = add i64 [[DIV]], 1
+// CHECK: [[DIFF:%.*]] = sub nsw i65 {{.*}}, {{.*}}
+// CHECK: [[EMPTY:%.*]] = icmp slt i65 {{.*}}, {{.*}}
+// CHECK: [[DIV:%.*]] = udiv i65 [[DIFF]], {{.*}}
+// CHECK: [[COUNT:%.*]] = add i65 [[DIV]], 1
+// CHECK: [[CLAMPED:%.*]] = select i1 [[EMPTY]], i65 0, i65 [[COUNT]]
+// CHECK: [[TRIPS:%.*]] = trunc i65 [[CLAMPED]] to i64
 // CHECK: [[SCALED:%.*]] = mul i64 1, [[TRIPS]]
 // CHECK: [[AFFLIST:%.*]] = alloca { i64, i64, i32 }, i64 [[SCALED]]
 
@@ -277,7 +280,7 @@ llvm.func @task_affinity_iterator_negative_step(%arr: !llvm.ptr {llvm.nocapture}
         %entry = omp.affinity_entry %arr, %i
             : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
         omp.yield(%entry : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
 
       omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
         omp.terminator
@@ -302,6 +305,38 @@ llvm.func @task_affinity_iterator_negative_step(%arr: !llvm.ptr {llvm.nocapture}
 // CHECK: [[LENPTR:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 1
 // CHECK: store i64 [[PHYSIV]], ptr [[LENPTR]]
 
+llvm.func @task_affinity_iterator_empty(%arr: !llvm.ptr {llvm.nocapture}) {
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %c5 = llvm.mlir.constant(5 : i64) : i64
+  %len = llvm.mlir.constant(4 : i64) : i64
+
+  omp.parallel {
+    omp.single {
+      %it = omp.iterator(%i: i64) = (%c5 to %c1 step %c1) {
+        %entry = omp.affinity_entry %arr, %len
+            : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+        omp.yield(%entry : !omp.affinity_entry_ty<!llvm.ptr, i64>)
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+
+      omp.task affinity(
+          %it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define internal void @task_affinity_iterator_empty
+// CHECK: %[[EMPTY_AFFINITY:.*]] = alloca { i64, i64, i32 }, i64 0
+// CHECK: omp_iterator.cond:
+// CHECK: icmp ult i64 %omp_iterator.iv, 0
+// CHECK: call i32 @__kmpc_omp_reg_task_with_affinity(
+// CHECK-SAME: ptr @{{[^,]+}}, i32 %{{[^,]+}}, ptr %{{[^,]+}},
+// CHECK-SAME: i32 0, ptr %[[EMPTY_AFFINITY]])
+
 // --------------------------------------------------------------------
 // Depend clause
 // --------------------------------------------------------------------
@@ -313,7 +348,7 @@ llvm.func @omp_task_depend_iterator_simple(%addr : !llvm.ptr) {
 
   %it = omp.iterator(%iv: i64) = (%c1 to %c10 step %step) {
     omp.yield(%addr : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
 
   omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
     omp.terminator
@@ -359,7 +394,7 @@ llvm.func @omp_task_depend_iterator_mixed(%addr : !llvm.ptr, %plain : !llvm.ptr)
 
   %it = omp.iterator(%iv: i64) = (%c1 to %c10 step %step) {
     omp.yield(%addr : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
 
   omp.task depend(taskdependout -> %plain : !llvm.ptr, taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
     omp.terminator
@@ -398,7 +433,7 @@ llvm.func @omp_task_depend_iterator_dynamic(%addr : !llvm.ptr,
     %lb : i64, %ub : i64, %step : i64) {
   %it = omp.iterator(%iv: i64) = (%lb to %ub step %step) {
     omp.yield(%addr : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
 
   omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
     omp.terminator
@@ -409,9 +444,20 @@ llvm.func @omp_task_depend_iterator_dynamic(%addr : !llvm.ptr,
 // CHECK-LABEL: define void @omp_task_depend_iterator_dynamic
 //
 // Tripcount computation from dynamic bounds
-// CHECK: %[[DIFF:.*]] = sub i64 %{{.*}}, %{{.*}}
-// CHECK: %[[DIV:.*]] = sdiv i64 %[[DIFF]], %{{.*}}
-// CHECK: %[[TRIPS:.*]] = add i64 %[[DIV]], 1
+// CHECK: %[[START:.*]] = sext i64 %{{.*}} to i65
+// CHECK: %[[STOP:.*]] = sext i64 %{{.*}} to i65
+// CHECK: %[[STEP:.*]] = sext i64 %{{.*}} to i65
+// CHECK: %[[NEG:.*]] = icmp slt i65 %[[STEP]], 0
+// CHECK: %[[MAG:.*]] = sub i65 0, %[[STEP]]
+// CHECK: %[[INCR:.*]] = select i1 %[[NEG]], i65 %[[MAG]], i65 %[[STEP]]
+// CHECK: %[[LOW:.*]] = select i1 %[[NEG]], i65 %[[STOP]], i65 %[[START]]
+// CHECK: %[[HIGH:.*]] = select i1 %[[NEG]], i65 %[[START]], i65 %[[STOP]]
+// CHECK: %[[DIFF:.*]] = sub nsw i65 %[[HIGH]], %[[LOW]]
+// CHECK: %[[EMPTY:.*]] = icmp slt i65 %[[HIGH]], %[[LOW]]
+// CHECK: %[[DIV:.*]] = udiv i65 %[[DIFF]], %[[INCR]]
+// CHECK: %[[COUNT:.*]] = add i65 %[[DIV]], 1
+// CHECK: %[[CLAMPED:.*]] = select i1 %[[EMPTY]], i65 0, i65 %[[COUNT]]
+// CHECK: %[[TRIPS:.*]] = trunc i65 %[[CLAMPED]] to i64
 // CHECK: %[[SCALED:.*]] = mul i64 1, %[[TRIPS]]
 // Dynamic total = 0 + scaled trip count
 // CHECK: %[[TOTAL:.*]] = add i64 0, %[[SCALED]]
@@ -425,12 +471,35 @@ llvm.func @omp_task_depend_iterator_dynamic(%addr : !llvm.ptr,
 // CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 %[[NDEPS]], ptr %[[DEP_ARR]], i32 0, ptr null)
 // CHECK: tail call void @free(ptr %[[DEP_ARR]])
 
+// Without `inclusive`, equal bounds are empty and the span excludes the stop.
+llvm.func @omp_task_depend_iterator_dynamic_exclusive(%addr : !llvm.ptr,
+    %lb : i64, %ub : i64, %step : i64) {
+  %it = omp.iterator(%iv: i64) = (%lb to %ub step %step) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_task_depend_iterator_dynamic_exclusive
+// CHECK: %[[INCR:.*]] = select i1 %{{.*}}, i65 %{{.*}}, i65 %{{.*}}
+// CHECK: %[[LOW:.*]] = select i1 %{{.*}}, i65 %{{.*}}, i65 %{{.*}}
+// CHECK: %[[HIGH:.*]] = select i1 %{{.*}}, i65 %{{.*}}, i65 %{{.*}}
+// CHECK: %[[DIFF:.*]] = sub nsw i65 %[[HIGH]], %[[LOW]]
+// CHECK: %[[EMPTY:.*]] = icmp sle i65 %[[HIGH]], %[[LOW]]
+// CHECK: %[[SPAN:.*]] = sub i65 %[[DIFF]], 1
+// CHECK: udiv i65 %[[SPAN]], %[[INCR]]
+// CHECK: %omp_iterator.tripcount = select i1 %[[EMPTY]], i65 0,
+
 // Dynamic bounds with mixed plain + iterated depends.
 llvm.func @omp_task_depend_iterator_dynamic_mixed(%addr : !llvm.ptr,
     %plain : !llvm.ptr, %lb : i64, %ub : i64, %step : i64) {
   %it = omp.iterator(%iv: i64) = (%lb to %ub step %step) {
     omp.yield(%addr : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
 
   omp.task depend(taskdependout -> %plain : !llvm.ptr, taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
     omp.terminator
@@ -453,6 +522,116 @@ llvm.func @omp_task_depend_iterator_dynamic_mixed(%addr : !llvm.ptr,
 // CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 %[[NDEPS2]], ptr %[[DEP_ARR2]], i32 0, ptr null)
 // CHECK: tail call void @free(ptr %[[DEP_ARR2]])
 
+// A signed i64 subtraction cannot represent this span. The two iterator
+// values are INT64_MIN and -1. The final increment to INT64_MAX - 1 is also
+// representable, as required by OpenMP 5.2 section 3.2.6.
+llvm.func @omp_task_depend_iterator_wide_span(%addr : !llvm.ptr) {
+  %min = llvm.mlir.constant(-9223372036854775808 : i64) : i64
+  %zero = llvm.mlir.constant(0 : i64) : i64
+  %max = llvm.mlir.constant(9223372036854775807 : i64) : i64
+  %it = omp.iterator(%iv: i64) = (%min to %zero step %max) {
+    omp.yield(%addr : !llvm.ptr)
+  } inclusive -> !omp.iterated<!llvm.ptr>
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK-LABEL: define void @omp_task_depend_iterator_wide_span
+// CHECK: call ptr @malloc(i64 40)
+// CHECK: icmp ult i64 {{.*}}, 2
+// CHECK: call i32 @__kmpc_omp_task_with_deps(
+// CHECK-SAME: ptr {{.*}}, i32 {{.*}}, ptr {{.*}}, i32 2,
+
+// Exercise the most negative step with one iterator value, zero. The final
+// increment to INT64_MIN remains representable in the iterator type.
+llvm.func @omp_task_depend_iterator_min_step(%addr : !llvm.ptr) {
+  %zero = llvm.mlir.constant(0 : i64) : i64
+  %end = llvm.mlir.constant(-1 : i64) : i64
+  %min = llvm.mlir.constant(-9223372036854775808 : i64) : i64
+  %it = omp.iterator(%iv: i64) = (%zero to %end step %min) {
+    omp.yield(%addr : !llvm.ptr)
+  } inclusive -> !omp.iterated<!llvm.ptr>
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK-LABEL: define void @omp_task_depend_iterator_min_step
+// CHECK: call ptr @malloc(i64 20)
+// CHECK: icmp ult i64 {{.*}}, 1
+// CHECK: call i32 @__kmpc_omp_task_with_deps(
+// CHECK-SAME: ptr {{.*}}, i32 {{.*}}, ptr {{.*}}, i32 1,
+
+llvm.func @omp_task_depend_iterator_empty(%addr : !llvm.ptr) {
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %c5 = llvm.mlir.constant(5 : i64) : i64
+
+  %it = omp.iterator(%iv: i64) = (%c5 to %c1 step %c1) {
+    omp.yield(%addr : !llvm.ptr)
+  } inclusive -> !omp.iterated<!llvm.ptr>
+
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_task_depend_iterator_empty
+// CHECK: %[[EMPTY_DEP_ARR:.*]] = tail call ptr @malloc(i64 0)
+// CHECK: omp_dep_iterator.cond:
+// CHECK: icmp ult i64 %omp_dep_iterator.iv, 0
+// CHECK: omp_dep_iterator.body:
+// CHECK-NEXT: urem i64 %omp_dep_iterator.iv, 1
+// CHECK: call i32 @__kmpc_omp_task_with_deps(
+// CHECK-SAME: ptr @{{[^,]+}}, i32 %{{[^,]+}}, ptr %{{[^,]+}},
+// CHECK-SAME: i32 0, ptr %[[EMPTY_DEP_ARR]], i32 0, ptr null)
+
+llvm.func @omp_task_depend_iterator_exclusive(%addr : !llvm.ptr) {
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %c5 = llvm.mlir.constant(5 : i64) : i64
+
+  %it = omp.iterator(%iv: i64) = (%c1 to %c5 step %c1) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_task_depend_iterator_exclusive
+// CHECK: %[[EXCLUSIVE_DEP_ARR:.*]] = tail call ptr @malloc(i64 80)
+// CHECK: omp_dep_iterator.cond:
+// CHECK: icmp ult i64 %omp_dep_iterator.iv, 4
+// CHECK: call i32 @__kmpc_omp_task_with_deps(
+// CHECK-SAME: ptr @{{[^,]+}}, i32 %{{[^,]+}}, ptr %{{[^,]+}},
+// CHECK-SAME: i32 4, ptr %[[EXCLUSIVE_DEP_ARR]], i32 0, ptr null)
+
+// An inclusive i8 range may need 256 entries. Its trip count must not wrap
+// when one is added to the span in the range's own type.
+llvm.func @omp_taskwait_iterator_full_i8_range(%addr : !llvm.ptr) {
+  %lo = llvm.mlir.constant(-128 : i8) : i8
+  %hi = llvm.mlir.constant(127 : i8) : i8
+  %step = llvm.mlir.constant(1 : i8) : i8
+  %it = omp.iterator(%iv: i8) = (%lo to %hi step %step) {
+    %element = llvm.getelementptr %addr[%iv]
+        : (!llvm.ptr, i8) -> !llvm.ptr, i8
+    omp.yield(%element : !llvm.ptr)
+  } inclusive -> !omp.iterated<!llvm.ptr>
+  omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_taskwait_iterator_full_i8_range
+// CHECK: omp_dep_iterator.cond:
+// CHECK: icmp ult i64 %omp_dep_iterator.iv, 256
+// CHECK: omp_dep_iterator.body:
+// CHECK: getelementptr i8, ptr %{{.*}}, i8 %{{.*}}
+// CHECK: call void @__kmpc_omp_taskwait_deps_51(
+// CHECK-SAME: i32 256, ptr
+
 //--- target.mlir
 
 // --------------------------------------------------------------------
@@ -470,7 +649,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
     %it = omp.iterator(%iv: i64) = (%c1 to %c10 step %step) {
       omp.yield(%addr : !llvm.ptr)
-    } -> !omp.iterated<!llvm.ptr>
+    } inclusive -> !omp.iterated<!llvm.ptr>
 
     %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("data") -> !llvm.ptr
     omp.target kernel_type(generic) depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {

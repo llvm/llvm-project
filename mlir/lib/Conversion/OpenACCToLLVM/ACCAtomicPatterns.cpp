@@ -697,8 +697,16 @@ LogicalResult ACCAtomicOpConversion<AtomicUpdateOp>::matchAndRewrite(
 
   if (val && kind) {
     auto ordering = LLVM::AtomicOrdering::monotonic;
-    LLVM::AtomicRMWOp::create(rewriter, loc, *kind, xPtr,
-                              rewriter.getRemappedValue(*val), ordering);
+    Value operand = rewriter.getRemappedValue(*val);
+    // There is no atomic on i1, but it occupies a byte, and and/or/xor keep a
+    // 0/1 byte 0/1, so apply them to the byte.
+    if (operand.getType().isInteger(1) &&
+        llvm::is_contained({LLVM::AtomicBinOp::_and, LLVM::AtomicBinOp::_or,
+                            LLVM::AtomicBinOp::_xor},
+                           *kind))
+      operand =
+          LLVM::ZExtOp::create(rewriter, loc, rewriter.getI8Type(), operand);
+    LLVM::AtomicRMWOp::create(rewriter, loc, *kind, xPtr, operand, ordering);
   } else if (hasDistinctComplexLanes) {
     auto structTy = cast<LLVM::LLVMStructType>(
         this->getTypeConverter()->convertType(updateArgument.getType()));

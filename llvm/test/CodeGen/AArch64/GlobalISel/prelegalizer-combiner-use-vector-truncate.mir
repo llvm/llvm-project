@@ -50,3 +50,26 @@ body:             |
     $w0 = COPY %dst
 
 ...
+
+---
+name:            scalar_unmerge_trunc_build_vector
+body:             |
+  bb.0:
+    liveins: $x1
+
+    ; CHECK-LABEL: name: scalar_unmerge_trunc_build_vector
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %src:_(i64) = COPY $x1
+    ; CHECK-NEXT: %lo:_(i32), %hi:_(i32) = G_UNMERGE_VALUES %src(i64)
+    ; CHECK-NEXT: %t0:_(i16) = G_TRUNC %lo(i32)
+    ; CHECK-NEXT: %t1:_(i16) = G_TRUNC %hi(i32)
+    ; CHECK-NEXT: %bv:_(<2 x i16>) = G_BUILD_VECTOR %t0(i16), %t1(i16)
+    ; CHECK-NEXT: $w0 = COPY %bv(<2 x i16>)
+    %src:_(i64) = COPY $x1
+    %lo:_(i32), %hi:_(i32) = G_UNMERGE_VALUES %src:_(i64)
+    %t0:_(i16) = G_TRUNC %lo:_(i32)
+    %t1:_(i16) = G_TRUNC %hi:_(i32)
+    %bv:_(<2 x i16>) = G_BUILD_VECTOR %t0:_(i16), %t1:_(i16)
+    $w0 = COPY %bv
+...

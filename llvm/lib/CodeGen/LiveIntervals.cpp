@@ -18,10 +18,10 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalCalc.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -59,6 +59,9 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
+
+STATISTIC(NumUnreferencedIntervals,
+          "Number of intervals removed for unreferenced virtual registers");
 
 AnalysisKey LiveIntervalsAnalysis::Key;
 
@@ -104,14 +107,8 @@ static cl::opt<bool> EnablePrecomputePhysRegs(
 static bool EnablePrecomputePhysRegs = false;
 #endif // NDEBUG
 
-cl::opt<bool> llvm::UseSegmentSetForPhysRegs(
-    "use-segment-set-for-physregs", cl::Hidden, cl::init(true),
-    cl::desc(
-        "Use segment set for the computation of the live ranges of physregs."));
-
 void LiveIntervalsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addPreserved<LiveVariablesWrapperPass>();
   AU.addPreservedID(MachineLoopInfoID);
   AU.addRequiredTransitiveID(MachineDominatorsID);
   AU.addPreservedID(MachineDominatorsID);
@@ -141,16 +138,26 @@ bool LiveIntervals::invalidate(
 
 void LiveIntervals::clear() {
   // Free the live intervals themselves.
-  for (unsigned i = 0, e = VirtRegIntervals.size(); i != e; ++i)
-    delete VirtRegIntervals[Register::index2VirtReg(i)];
+  for (unsigned i = 0, e = VirtRegIntervals.size(); i != e; ++i) {
+    if (LiveInterval *LI = VirtRegIntervals[Register::index2VirtReg(i)])
+      LI->~LiveInterval();
+  }
   VirtRegIntervals.clear();
   RegMaskSlots.clear();
   RegMaskBits.clear();
   RegMaskBlocks.clear();
+  LiveOutTags.clear();
+  LiveInSegments.clear();
 
-  for (LiveRange *LR : RegUnitRanges)
-    delete LR;
+  for (LiveRange *LR : RegUnitRanges) {
+    if (LR)
+      LR->~LiveRange();
+  }
   RegUnitRanges.clear();
+
+  IntervalRecycler.clear(RangeAllocator);
+  RegUnitRangeRecycler.clear(RangeAllocator);
+  RangeAllocator.Reset();
 
   // Release VNInfo memory regions, VNInfo objects don't need to be dtor'd.
   VNInfoAllocator.Reset();
@@ -167,6 +174,8 @@ void LiveIntervals::analyze(MachineFunction &fn) {
 
   // Allocate space for all virtual registers.
   VirtRegIntervals.resize(MRI->getNumVirtRegs());
+  LiveOutTags.assign(MF->getNumBlockIDs(), 0);
+  LiveInSegments.assign(MF->getNumBlockIDs(), {0, 0});
 
   computeVirtRegs();
   computeRegMasks();
@@ -178,6 +187,19 @@ void LiveIntervals::analyze(MachineFunction &fn) {
     for (MCRegUnit Unit : TRI->regunits())
       getRegUnit(Unit);
   }
+}
+
+unsigned LiveIntervals::removeUnreferencedIntervals() {
+  unsigned Removed = 0;
+  for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    if (hasInterval(Reg) && MRI->reg_empty(Reg)) {
+      removeInterval(Reg);
+      ++Removed;
+    }
+  }
+  NumUnreferencedIntervals += Removed;
+  return Removed;
 }
 
 void LiveIntervals::print(raw_ostream &OS) const {
@@ -221,7 +243,12 @@ LLVM_DUMP_METHOD void LiveIntervals::dump() const { print(dbgs()); }
 
 LiveInterval *LiveIntervals::createInterval(Register reg) {
   float Weight = reg.isPhysical() ? huge_valf : 0.0F;
-  return new LiveInterval(reg, Weight);
+  return new (IntervalRecycler.Allocate(RangeAllocator))
+      LiveInterval(reg, Weight);
+}
+
+LiveRange *LiveIntervals::createRegUnitRange() {
+  return new (RegUnitRangeRecycler.Allocate(RangeAllocator)) LiveRange();
 }
 
 /// Compute the live interval of a virtual register, based on defs and uses.
@@ -331,6 +358,8 @@ void LiveIntervals::insertMBBInMapsImpl(
   assert(unsigned(MBB->getNumber()) == RegMaskBlocks.size() &&
          "Blocks must be added in order.");
   RegMaskBlocks.push_back(std::make_pair(RegMaskSlots.size(), 0));
+  LiveOutTags.push_back(0);
+  LiveInSegments.push_back({0, 0});
 }
 
 //===----------------------------------------------------------------------===//
@@ -353,15 +382,17 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, MCRegUnit Unit) {
 
   // The physregs aliasing Unit are the roots and their super-registers.
   // Create all values as dead defs before extending to uses. Note that roots
-  // may share super-registers. That's OK because createDeadDefs() is
+  // may share super-registers. That's OK because createDeadDef() is
   // idempotent. It is very rare for a register unit to have multiple roots, so
   // uniquing super-registers is probably not worthwhile.
   bool IsReserved = false;
+  SmallVector<SlotIndex, 32> DefIdxs;
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
     bool IsRootReserved = true;
     for (MCPhysReg Reg : TRI->superregs_inclusive(*Root)) {
-      if (!MRI->reg_empty(Reg))
-        LICalc->createDeadDefs(LR, Reg);
+      for (const MachineOperand &MO : MRI->def_operands(Reg))
+        DefIdxs.push_back(Indexes->getInstructionIndex(*MO.getParent())
+                              .getRegSlot(MO.isEarlyClobber()));
       // A register unit is considered reserved if all its roots and all their
       // super registers are reserved.
       if (!MRI->isReserved(Reg))
@@ -371,6 +402,10 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, MCRegUnit Unit) {
   }
   assert(IsReserved == MRI->isReservedRegUnit(Unit) &&
          "reserved computation mismatch");
+
+  llvm::sort(DefIdxs);
+  for (SlotIndex DefIdx : DefIdxs)
+    LR.createDeadDef(DefIdx, VNInfoAllocator);
 
   // Now extend LR to reach all uses.
   // Ignore uses of reserved registers. We only track defs of those.
@@ -382,10 +417,6 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, MCRegUnit Unit) {
       }
     }
   }
-
-  // Flush the segment set to the segment vector.
-  if (UseSegmentSetForPhysRegs)
-    LR.flushSegmentSet();
 }
 
 /// Precompute the live ranges of any register units that are live-in to an ABI
@@ -411,9 +442,8 @@ void LiveIntervals::computeLiveInRegUnits() {
       for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
         LiveRange *LR = RegUnitRanges[static_cast<unsigned>(Unit)];
         if (!LR) {
-          // Use segment set to speed-up initial computation of the live range.
           LR = RegUnitRanges[static_cast<unsigned>(Unit)] =
-              new LiveRange(UseSegmentSetForPhysRegs);
+              createRegUnitRange();
           NewRanges.push_back(Unit);
         }
         VNInfo *VNI = LR->createDeadDef(Begin, getVNInfoAllocator());
@@ -436,8 +466,13 @@ static void createSegmentsForValues(LiveRange &LR,
     if (VNI->isUnused())
       continue;
     SlotIndex Def = VNI->def;
-    LR.addSegment(LiveRange::Segment(Def, Def.getDeadSlot(), VNI));
+    LR.segments.push_back(LiveRange::Segment(Def, Def.getDeadSlot(), VNI));
   }
+
+  llvm::sort(LR.segments,
+             [](const LiveRange::Segment &A, const LiveRange::Segment &B) {
+               return A.start < B.start;
+             });
 }
 
 void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
@@ -446,7 +481,11 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
   // Keep track of the PHIs that are in use.
   SmallPtrSet<VNInfo*, 8> UsedPHIs;
   // Blocks that have already been added to WorkList as live-out.
-  SmallPtrSet<const MachineBasicBlock*, 16> LiveOut;
+  if (++LiveOutTag == 0) {
+    llvm::fill(LiveOutTags, 0);
+    LiveInSegments.assign(LiveInSegments.size(), {0, 0});
+    LiveOutTag = 1;
+  }
 
   auto getSubRange = [](const LiveInterval &I, LaneBitmask M)
         -> const LiveRange& {
@@ -463,6 +502,10 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
 
   const LiveInterval &LI = getInterval(Reg);
   const LiveRange &OldRange = getSubRange(LI, LaneMask);
+
+  // Live-in segments are found in worklist order, so collect them (at most one
+  // per block) and add them all at the end.
+  SmallVector<LiveRange::Segment, 16> LiveIns;
 
   // Extend intervals to reach all uses in WorkList.
   while (!WorkList.empty()) {
@@ -482,8 +525,10 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
         continue;
       // The PHI is live, make sure the predecessors are live-out.
       for (const MachineBasicBlock *Pred : MBB->predecessors()) {
-        if (!LiveOut.insert(Pred).second)
+        unsigned &Tag = LiveOutTags[Pred->getNumber()];
+        if (Tag == LiveOutTag)
           continue;
+        Tag = LiveOutTag;
         SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
         // A predecessor is not required to have a live-out value for a PHI.
         if (VNInfo *PVNI = OldRange.getVNInfoBefore(Stop))
@@ -492,14 +537,27 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
       continue;
     }
 
+    auto &[InTag, InIdx] = LiveInSegments[MBB->getNumber()];
+    if (InTag == LiveOutTag) {
+      LiveRange::Segment &S = LiveIns[InIdx];
+      assert(S.valno == VNI && "Unexpected existing value number");
+      S.end = std::max(S.end, Idx);
+      continue;
+    }
+
+    InTag = LiveOutTag;
+    InIdx = LiveIns.size();
+
     // VNI is live-in to MBB.
     LLVM_DEBUG(dbgs() << " live-in at " << BlockStart << '\n');
-    Segments.addSegment(LiveRange::Segment(BlockStart, Idx, VNI));
+    LiveIns.push_back(LiveRange::Segment(BlockStart, Idx, VNI));
 
     // Make sure VNI is live-out from the predecessors.
     for (const MachineBasicBlock *Pred : MBB->predecessors()) {
-      if (!LiveOut.insert(Pred).second)
+      unsigned &Tag = LiveOutTags[Pred->getNumber()];
+      if (Tag == LiveOutTag)
         continue;
+      Tag = LiveOutTag;
       SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
       if (VNInfo *OldVNI = OldRange.getVNInfoBefore(Stop)) {
         assert(OldVNI == VNI && "Wrong value out of predecessor");
@@ -519,6 +577,12 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
       }
     }
   }
+
+  llvm::sort(LiveIns,
+             [](const LiveRange::Segment &A, const LiveRange::Segment &B) {
+               return A.start < B.start;
+             });
+  Segments.addSegments(LiveIns);
 }
 
 bool LiveIntervals::shrinkToUses(LiveInterval *li,

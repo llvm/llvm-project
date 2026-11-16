@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --gpu-lower-to-xevm-pipeline="xegpu-op-level=workgroup zebin-chip=cri"
+// RUN: mlir-opt %s --gpu-lower-to-xevm-pipeline="xegpu-op-level=workgroup zebin-chip=cri binary-format=skip"
 // RUN-DISABLED: mlir-opt %s --gpu-lower-to-xevm-pipeline="xegpu-op-level=workgroup zebin-chip=cri" \
 // RUN-DISABLED: | mlir-runner \
 // RUN-DISABLED:   --shared-libs=%mlir_levelzero_runtime \
