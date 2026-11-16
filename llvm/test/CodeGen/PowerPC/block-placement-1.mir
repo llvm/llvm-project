@@ -121,7 +121,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:       []
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -167,7 +166,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:       []
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false

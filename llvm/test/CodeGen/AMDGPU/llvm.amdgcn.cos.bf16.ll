@@ -67,7 +67,7 @@ define amdgpu_kernel void @cos_bf16_constant_4_strictfp(ptr addrspace(1) %out) #
 ; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; FAKE16-NEXT:    v_cos_bf16_e64 v0, 4.0 op_sel:[1,0]
+; FAKE16-NEXT:    v_cos_bf16_e64 v0, 4.0
 ; FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -80,7 +80,7 @@ define amdgpu_kernel void @cos_bf16_constant_4_strictfp(ptr addrspace(1) %out) #
 ; REAL16-NEXT:    v_nop
 ; REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; REAL16-NEXT:    v_cos_bf16_e64 v0.l, 4.0 op_sel:[1,0]
+; REAL16-NEXT:    v_cos_bf16_e64 v0.l, 4.0
 ; REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
 ; REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -89,7 +89,7 @@ define amdgpu_kernel void @cos_bf16_constant_4_strictfp(ptr addrspace(1) %out) #
 ; GFX13-FAKE16-LABEL: cos_bf16_constant_4_strictfp:
 ; GFX13-FAKE16:       ; %bb.0:
 ; GFX13-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX13-FAKE16-NEXT:    v_cos_bf16_e64 v0, 4.0 op_sel:[1,0]
+; GFX13-FAKE16-NEXT:    v_cos_bf16_e64 v0, 4.0
 ; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -98,7 +98,7 @@ define amdgpu_kernel void @cos_bf16_constant_4_strictfp(ptr addrspace(1) %out) #
 ; GFX13-REAL16-LABEL: cos_bf16_constant_4_strictfp:
 ; GFX13-REAL16:       ; %bb.0:
 ; GFX13-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX13-REAL16-NEXT:    v_cos_bf16_e64 v0.l, 4.0 op_sel:[1,0]
+; GFX13-REAL16-NEXT:    v_cos_bf16_e64 v0.l, 4.0
 ; GFX13-REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]

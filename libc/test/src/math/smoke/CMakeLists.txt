@@ -6837,18 +6837,21 @@ add_fp_unittest(
     libc.src.math.ddivl
 )
 
-add_fp_unittest(
-  ddivf128_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    ddivf128_test.cpp
-  HDRS
-    DivTest.h
-  DEPENDS
-    libc.src.math.ddivf128
-    libc.src.__support.FPUtil.float128
-)
+# TODO: Re-enable the test for GPU.
+if(NOT LIBC_TARGET_OS_IS_GPU)
+  add_fp_unittest(
+    ddivf128_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      ddivf128_test.cpp
+    HDRS
+      DivTest.h
+    DEPENDS
+      libc.src.math.ddivf128
+      libc.src.__support.FPUtil.float128
+  )
+endif()
 
 add_fp_unittest(
   bfloat16_add_test
