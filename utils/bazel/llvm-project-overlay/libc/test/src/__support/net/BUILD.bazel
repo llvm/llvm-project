@@ -14,9 +14,7 @@ libc_test(
     name = "byte_order_test",
     srcs = ["byte_order_test.cpp"],
     deps = [
-        "//libc/hdr:stdint_proxy",
         "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
         "//libc/src/__support/net:byte_order",
     ],
 )
@@ -25,10 +23,8 @@ libc_test(
     name = "hex_test",
     srcs = ["hex_test.cpp"],
     deps = [
-        "//libc/hdr:stdint_proxy",
         "//libc/src/__support/CPP:optional",
         "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/macros:config",
         "//libc/src/__support/net:hex",
     ],
 )
