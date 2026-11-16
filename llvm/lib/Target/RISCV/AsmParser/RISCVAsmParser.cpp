@@ -228,8 +228,6 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseGPRAsFPR(OperandVector &Operands);
   ParseStatus parseGPRAsFPR64(OperandVector &Operands);
   ParseStatus parseGPRPairAsFPR64(OperandVector &Operands);
-  template <bool IsRV64Inst> ParseStatus parseGPRPair(OperandVector &Operands);
-  ParseStatus parseGPRPair(OperandVector &Operands, bool IsRV64Inst);
   ParseStatus parseFRMArg(OperandVector &Operands);
   ParseStatus parseSMTVType(OperandVector &Operands);
   ParseStatus parseFenceArg(OperandVector &Operands);
@@ -528,17 +526,6 @@ public:
   bool isGPRPair() const {
     return Kind == KindTy::Register &&
            getRISCVMCRegisterClass(RISCV::GPRPairRegClassID).contains(Reg.Reg);
-  }
-
-  bool isGPRPairC() const {
-    return Kind == KindTy::Register &&
-           getRISCVMCRegisterClass(RISCV::GPRPairCRegClassID).contains(Reg.Reg);
-  }
-
-  bool isGPRPairNoX0() const {
-    return Kind == KindTy::Register &&
-           getRISCVMCRegisterClass(RISCV::GPRPairNoX0RegClassID)
-               .contains(Reg.Reg);
   }
 
   bool isGPRF16() const {
@@ -2666,48 +2653,6 @@ ParseStatus RISCVAsmParser::parseGPRPairAsFPR64(OperandVector &Operands) {
       Reg, RISCV::sub_gpr_even,
       &getRISCVMCRegisterClass(RISCV::GPRPairRegClassID));
   Operands.push_back(RISCVOperand::createReg(Pair, S, E, /*isGPRAsFPR=*/true));
-  return ParseStatus::Success;
-}
-
-template <bool IsRV64>
-ParseStatus RISCVAsmParser::parseGPRPair(OperandVector &Operands) {
-  return parseGPRPair(Operands, IsRV64);
-}
-
-ParseStatus RISCVAsmParser::parseGPRPair(OperandVector &Operands,
-                                         bool IsRV64Inst) {
-  // If this is not an RV64 GPRPair instruction, don't parse as a GPRPair on
-  // RV64 as it will prevent matching the RV64 version of the same instruction
-  // that doesn't use a GPRPair.
-  // If this is an RV64 GPRPair instruction, there is no RV32 version so we can
-  // still parse as a pair.
-  if (!IsRV64Inst && isRV64())
-    return ParseStatus::NoMatch;
-
-  if (getLexer().isNot(AsmToken::Identifier))
-    return ParseStatus::NoMatch;
-
-  StringRef Name = getLexer().getTok().getIdentifier();
-  MCRegister Reg = matchRegisterNameHelper(Name);
-
-  if (!Reg)
-    return ParseStatus::NoMatch;
-
-  if (!getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg))
-    return ParseStatus::NoMatch;
-
-  if ((Reg - RISCV::X0) & 1)
-    return TokError("register must be even");
-
-  SMLoc S = getLoc();
-  SMLoc E = getTok().getEndLoc();
-  getLexer().Lex();
-
-  const MCRegisterInfo *RI = getContext().getRegisterInfo();
-  MCRegister Pair = RI->getMatchingSuperReg(
-      Reg, RISCV::sub_gpr_even,
-      &getRISCVMCRegisterClass(RISCV::GPRPairRegClassID));
-  Operands.push_back(RISCVOperand::createReg(Pair, S, E));
   return ParseStatus::Success;
 }
 
