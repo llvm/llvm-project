@@ -1056,11 +1056,11 @@ func.func @reduce_add_non_innermost(%arg0: memref<64x64xf32, 1>, %arg1: memref<1
   }
   return
 }
-// Test checks the loop structure is preserved after sibling fusion.
-// CHECK:         affine.for
-// CHECK-NEXT:      affine.for
-// CHECK-NEXT:        affine.for
-// CHECK:            affine.for
+// The cost model accounts for eliminated stores and chooses maximal sibling
+// fusion.
+// CHECK-COUNT-3: affine.for
+// CHECK-NOT:     affine.for
+// CHECK:         return
 
 
 
