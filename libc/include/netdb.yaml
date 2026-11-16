@@ -40,7 +40,9 @@ macros:
   - macro_name: EAI_OVERFLOW
     macro_header: netdb-macros.h
 types:
+  - type_name: size_t
   - type_name: struct_addrinfo
+  - type_name: struct_protoent
 enums: []
 objects: []
 functions:
@@ -65,3 +67,13 @@ functions:
       - type: const char *__restrict
       - type: const struct addrinfo *__restrict
       - type: struct addrinfo **__restrict
+  - name: getprotobyname_r
+    standards:
+      - gnu
+    return_type: int
+    arguments:
+      - type: const char *__restrict
+      - type: struct protoent *__restrict
+      - type: char *__restrict
+      - type: size_t
+      - type: struct protoent **__restrict

@@ -27,3 +27,27 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+if(NOT TARGET libc.src.netdb.getprotobyname_r)
+  return()
+endif()
+
+add_libc_test(
+  getprotobyname_r_test
+  SUITE
+    libc-netdb-tests
+  SRCS
+    getprotobyname_r_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_protoent
+    libc.src.__support.CPP.string_view
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.netdb.getprotobyname_r
+    libc.src.stdio.remove
+    libc.src.string.string_utils
+    libc.test.UnitTest.ErrnoCheckingTest
+)
