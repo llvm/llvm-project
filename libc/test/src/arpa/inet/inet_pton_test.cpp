@@ -15,7 +15,7 @@
 #include "hdr/sys_socket_macros.h"
 #include "hdr/types/struct_in6_addr.h"
 #include "hdr/types/struct_in_addr.h"
-#include "src/__support/net/byte_order.h"
+#include "src/__support/endian_internal.h"
 #include "src/arpa/inet/inet_pton.h"
 #include "src/string/memory_utils/inline_memcmp.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -24,7 +24,7 @@
 using LlvmLibcInetPtonTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 static uint32_t ipv4_bits(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
-  return LIBC_NAMESPACE::net::hton(
+  return LIBC_NAMESPACE::Endian::to_big_endian(
       static_cast<uint32_t>(a) << 24 | static_cast<uint32_t>(b) << 16 |
       static_cast<uint32_t>(c) << 8 | static_cast<uint32_t>(d));
 }
@@ -97,7 +97,7 @@ static bool check_ipv6(const struct in6_addr &addr, uint16_t a, uint16_t b,
   uint16_t words[8] = {a, b, c, d, e, f, g, h};
   struct in6_addr expected;
   for (size_t i = 0; i < 8; ++i)
-    expected.s6_addr16[i] = LIBC_NAMESPACE::net::hton(words[i]);
+    expected.s6_addr16[i] = LIBC_NAMESPACE::Endian::to_big_endian(words[i]);
   return LIBC_NAMESPACE::inline_memcmp(&addr, &expected,
                                        sizeof(struct in6_addr)) == 0;
 }

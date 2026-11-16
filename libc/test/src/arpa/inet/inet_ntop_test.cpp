@@ -15,7 +15,7 @@
 #include "hdr/sys_socket_macros.h"
 #include "hdr/types/struct_in6_addr.h"
 #include "hdr/types/struct_in_addr.h"
-#include "src/__support/net/byte_order.h"
+#include "src/__support/endian_internal.h"
 #include "src/arpa/inet/inet_ntop.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
@@ -33,7 +33,7 @@ TEST_F(LlvmLibcInetNtopTest, InvalidFamily) {
 
 static void *ipv4(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
   static struct in_addr addr;
-  addr.s_addr = LIBC_NAMESPACE::net::hton(
+  addr.s_addr = LIBC_NAMESPACE::Endian::to_big_endian(
       static_cast<uint32_t>(a) << 24 | static_cast<uint32_t>(b) << 16 |
       static_cast<uint32_t>(c) << 8 | static_cast<uint32_t>(d));
   return &addr;
@@ -42,14 +42,14 @@ static void *ipv4(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 static void *ipv6(uint16_t a, uint16_t b, uint16_t c, uint16_t d, uint16_t e,
                   uint16_t f, uint16_t g, uint16_t h) {
   static struct in6_addr addr;
-  addr.s6_addr16[0] = LIBC_NAMESPACE::net::hton(a);
-  addr.s6_addr16[1] = LIBC_NAMESPACE::net::hton(b);
-  addr.s6_addr16[2] = LIBC_NAMESPACE::net::hton(c);
-  addr.s6_addr16[3] = LIBC_NAMESPACE::net::hton(d);
-  addr.s6_addr16[4] = LIBC_NAMESPACE::net::hton(e);
-  addr.s6_addr16[5] = LIBC_NAMESPACE::net::hton(f);
-  addr.s6_addr16[6] = LIBC_NAMESPACE::net::hton(g);
-  addr.s6_addr16[7] = LIBC_NAMESPACE::net::hton(h);
+  addr.s6_addr16[0] = LIBC_NAMESPACE::Endian::to_big_endian(a);
+  addr.s6_addr16[1] = LIBC_NAMESPACE::Endian::to_big_endian(b);
+  addr.s6_addr16[2] = LIBC_NAMESPACE::Endian::to_big_endian(c);
+  addr.s6_addr16[3] = LIBC_NAMESPACE::Endian::to_big_endian(d);
+  addr.s6_addr16[4] = LIBC_NAMESPACE::Endian::to_big_endian(e);
+  addr.s6_addr16[5] = LIBC_NAMESPACE::Endian::to_big_endian(f);
+  addr.s6_addr16[6] = LIBC_NAMESPACE::Endian::to_big_endian(g);
+  addr.s6_addr16[7] = LIBC_NAMESPACE::Endian::to_big_endian(h);
   return &addr;
 }
 
