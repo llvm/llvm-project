@@ -844,8 +844,16 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     assert((!DT || DT->dominates(AssumeBB, CurBB)) &&
            "Blocks between Assume and CtxI must be dominated by AssumeBB");
 
-    if (pred_empty(CurBB))
-      return false;
+    if (pred_empty(CurBB)) {
+      // Reaching the entry block means there is a path to CtxI that does not
+      // pass through Assume.
+      if (CurBB->isEntryBlock())
+        return false;
+
+      // An unreachable block (for example one that SimplifyCFG has emptied but
+      // not yet removed) is on no path, so it cannot contain a free.
+      continue;
+    }
 
     // If CurBB == CtxBB (due to a loop backedge targeting CtxBB), check
     // instructions from CtxIter to the end of CtxBB (instructions before
