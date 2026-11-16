@@ -62,28 +62,20 @@ void CheckHsa(hsa_status_t S) {
   Die();
 }
 
-// PM4 type-3 header. Count is the body size minus one. Bit 1 is the compute
-// shader type.
+// PM4 type-3 header. Count is the body size minus one.
 u32 Pm4Header(u32 Opcode, u32 Dwords) {
-  return (1u << 1) | (Opcode << 8) | ((Dwords - 2) << 16) | (3u << 30);
+  return (Opcode << 8) | ((Dwords - 2) << 16) | (3u << 30);
 }
 
-// One WRITE_DATA of a contiguous run. dst_sel = TC_L2, wr_confirm, address
-// increments per dword, cache policy LRU. The control word is the same from
-// gfx9 onward; a qword is two data dwords, a longer run is more of them.
-//
-// The type-3 count is 14 bits, so one WRITE_DATA stops at 65520 bytes. The
-// indirect-buffer size is 20 bits, so one jump carries 63 of those packets
-// and one completion signal. Every packet confirms before the next starts.
-constexpr u32 kWritePacketDwords = 16384;
-constexpr u32 kPacketsPerIb = 63;
-constexpr u32 kIbDwords = kWritePacketDwords * kPacketsPerIb;
+// PRED_EXEC is two dwords and can cover 16383. The write stops short of that
+// so a chunk stays a multiple of eight bytes.
+constexpr u32 kPredDwords = 2;
+constexpr u32 kWritePacketDwords = 16382;
+constexpr u32 kIbDwords = kPredDwords + kWritePacketDwords;
 constexpr uptr kPm4IbBytes = static_cast<uptr>(kIbDwords) * sizeof(u32);
 constexpr uptr kWriteChunkBytes = (kWritePacketDwords - 4) * sizeof(u32);
-static_assert(kWritePacketDwords - 2 <= 0x3FFFu, "WRITE_DATA count is 14 bits");
-static_assert(kIbDwords <= 0xFFFFFu, "indirect buffer size is 20 bits");
-static_assert(kWriteChunkBytes % sizeof(u64) == 0, "entries are 8 bytes");
 
+// The WRITE_DATA packet allows the device to perform the write on our behalf.
 u32 EmitWriteData(u32* Out, uptr Addr, const void* Src, uptr Bytes) {
   u32 DataDwords = Bytes / sizeof(u32);
   u32 PacketDwords = DataDwords + 4;
@@ -98,8 +90,14 @@ u32 EmitWriteData(u32* Out, uptr Addr, const void* Src, uptr Bytes) {
   return PacketDwords;
 }
 
-// Vendor AQL packet that jumps to a PM4 indirect buffer. dw_cnt_remain counts
-// the dwords after that field; the firmware expects 0xA.
+// The PRED_EXEC packet targets a single XCC for the following packet.
+u32 EmitPredExec(u32* Out, u32 Follow, u32 Xcc) {
+  Out[0] = Pm4Header(0x23, kPredDwords);
+  Out[1] = (Follow & 0x3FFFu) | (1u << (24 + Xcc));
+  return kPredDwords;
+}
+
+// Vendor AQL packet that jumps to a PM4 indirect buffer.
 struct AmdAqlPm4Ib {
   u16 Header;
   u16 VenHdr;
@@ -214,6 +212,10 @@ bool Offload::Discover() {
       // The RPC interface is deliberately sized to the hardware parallel
       // limits of the device to make deadlock impossible.
       D.MaxWaves = CUs * WavesPerCU;
+      u32 Xcds = 1;
+      if (!Info(Agent, HSA_AMD_AGENT_INFO_NUM_XCC, &Xcds) || !Xcds)
+        Xcds = 1;
+      D.XCCs = Xcds;
       DeviceList.push_back(D);
     }
     return HSA_STATUS_SUCCESS;
@@ -698,12 +700,18 @@ bool Offload::CreateCommands() {
     Report("%s: device write buffer unavailable\n", SanitizerToolName);
     return false;
   }
+
+  auto Callback = [](hsa_status_t Status, hsa_queue_t*, void*) {
+    Report("ERROR: %s: device write queue failed with HSA status %u",
+           SanitizerToolName, Status);
+    Die();
+  };
   for (Device& D : DeviceList) {
     u32 Packets = 0;
     if (Api.hsa_agent_get_info(D.Agent, HSA_AGENT_INFO_QUEUE_MIN_SIZE,
                                &Packets) != HSA_STATUS_SUCCESS ||
         !Packets ||
-        Api.hsa_queue_create(D.Agent, Packets, HSA_QUEUE_TYPE_SINGLE, nullptr,
+        Api.hsa_queue_create(D.Agent, Packets, HSA_QUEUE_TYPE_SINGLE, Callback,
                              nullptr, 0, 0, &D.Queue) != HSA_STATUS_SUCCESS ||
         !CreateSignal(&D.Signal)) {
       if (D.Queue) {
@@ -722,8 +730,7 @@ void Offload::SubmitIb(Device& D, u32 Dwords) {
   AmdAqlPm4Ib Pkt = {};
   Pkt.VenHdr = 1;
   uptr Base = reinterpret_cast<uptr>(Ib);
-  // The AQL firmware rejects the compute bit on this jump.
-  Pkt.IbJump[0] = Pm4Header(0x3F, 4) & ~(1u << 1);
+  Pkt.IbJump[0] = Pm4Header(0x3F, 4);
   Pkt.IbJump[1] = static_cast<u32>(Base);
   Pkt.IbJump[2] = static_cast<u32>(Base >> 32);
   Pkt.IbJump[3] = (Dwords & 0xFFFFFu) | (1u << 23);
@@ -748,8 +755,7 @@ void Offload::Await(Device& D) {
                                        HSA_WAIT_STATE_BLOCKED) != 0);
 }
 
-// Publish a metadata write to the location. This is done through a direct write
-// from the command processor to ensure cache coherence without using a fence.
+// Publish a metadata write through the owning GPU's command processor.
 bool Offload::PublishDeviceBytes(uptr Addr, const void* Src, uptr Bytes,
                                  hsa_agent_t Agent) {
   Lock L(&OffloadMtx);
@@ -769,22 +775,22 @@ bool Offload::PublishDeviceBytes(uptr Addr, const void* Src, uptr Bytes,
     Die();
   }
 
+  // Publish the metadata writes to the device, copying the data to each XCC if
+  // present.
+  const u32 Xcds = Target->XCCs ? Target->XCCs : 1;
   for (uptr Off = 0; Off < Bytes;) {
-    u32* Out = static_cast<u32*>(Ib);
-    u32 At = 0;
-    while (Off < Bytes) {
-      uptr Step = Min(Bytes - Off, kWriteChunkBytes);
-      u32 Packet = static_cast<u32>(Step / sizeof(u32)) + 4;
-      if (At + Packet > kIbDwords)
-        break;
-      const void* Part = Src ? static_cast<const u8*>(Src) + Off : nullptr;
+    const uptr Step = Min(Bytes - Off, kWriteChunkBytes);
+    const void* Part = Src ? static_cast<const u8*>(Src) + Off : nullptr;
+    for (u32 Xcc = 0; Xcc < Xcds; ++Xcc) {
+      u32* Out = static_cast<u32*>(Ib);
+      u32 At = kPredDwords;
       At += EmitWriteData(Out + At, Addr + Off, Part, Step);
-      Off += Step;
+      EmitPredExec(Out, At - kPredDwords, Xcc);
+      CHECK_LE(At, kIbDwords);
+      SubmitIb(*Target, At);
+      Await(*Target);
     }
-    CHECK_LE(At, kIbDwords);
-    CHECK_LE(At, 0xFFFFFu);
-    SubmitIb(*Target, At);
-    Await(*Target);
+    Off += Step;
   }
   return true;
 }
