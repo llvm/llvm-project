@@ -535,6 +535,7 @@ body: |
 # CHECK-NEXT: V_ADD_F64_e64
 
 name: join_pred_intersect
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -569,6 +570,7 @@ body: |
 # CHECK-NEXT: V_CVT_F32_F64_e32
 
 name: self_loop_carried_mode
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -598,6 +600,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: self_only_pred_mode
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -617,6 +620,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: unreachable_cycle
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -638,6 +642,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: pred_later_in_layout
+tracksRegLiveness: false
 
 body: |
   bb.0:
