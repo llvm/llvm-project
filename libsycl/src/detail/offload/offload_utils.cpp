@@ -98,6 +98,31 @@ info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType) {
   }
 }
 
+std::vector<info::fp_config>
+convertFPConfigToSYCL(ol_device_fp_capability_flags_t Flags) {
+  constexpr std::pair<ol_device_fp_capability_flag_t, info::fp_config>
+      FlagMap[] = {
+          {OL_DEVICE_FP_CAPABILITY_FLAG_DENORM, info::fp_config::denorm},
+          {OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN, info::fp_config::inf_nan},
+          {OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST,
+           info::fp_config::round_to_nearest},
+          {OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO,
+           info::fp_config::round_to_zero},
+          {OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF,
+           info::fp_config::round_to_inf},
+          {OL_DEVICE_FP_CAPABILITY_FLAG_FMA, info::fp_config::fma},
+          {OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT,
+           info::fp_config::correctly_rounded_divide_sqrt},
+          {OL_DEVICE_FP_CAPABILITY_FLAG_SOFT_FLOAT,
+           info::fp_config::soft_float}};
+
+  std::vector<info::fp_config> Result;
+  for (const auto &[OLFlag, SYCLFlag] : FlagMap)
+    if (Flags & OLFlag)
+      Result.push_back(SYCLFlag);
+  return Result;
+}
+
 ol_alloc_type_t getOlAllocType(usm::alloc USMKind) {
   switch (USMKind) {
   case usm::alloc::host:
