@@ -2629,9 +2629,15 @@ static bool denormModeCompatible(DenormalMode CallerMode,
   return false;
 }
 
-static bool checkDenormMode(const Function &Caller, const Function &Callee) {
-  DenormalFPEnv CallerEnv = Caller.getDenormalFPEnv();
-  DenormalFPEnv CalleeEnv = Callee.getDenormalFPEnv();
+static DenormalFPEnv getDenormalFPEnv(AttributeSet FnAttrs) {
+  Attribute Attr = FnAttrs.getAttribute(Attribute::DenormalFPEnv);
+  return Attr.isValid() ? Attr.getDenormalFPEnv() : DenormalFPEnv::getDefault();
+}
+
+static bool checkDenormMode(AttributeSet CallerAttrs,
+                            AttributeSet CalleeAttrs) {
+  DenormalFPEnv CallerEnv = getDenormalFPEnv(CallerAttrs);
+  DenormalFPEnv CalleeEnv = getDenormalFPEnv(CalleeAttrs);
 
   if (denormModeCompatible(CallerEnv.DefaultMode, CalleeEnv.DefaultMode)) {
     DenormalMode CallerModeF32 = CallerEnv.F32Mode;
@@ -2646,22 +2652,23 @@ static bool checkDenormMode(const Function &Caller, const Function &Callee) {
   return false;
 }
 
-static bool checkStrictFP(const Function &Caller, const Function &Callee) {
+static bool checkStrictFP(AttributeSet CallerAttrs, AttributeSet CalleeAttrs) {
   // Do not inline strictfp function into non-strictfp one. It would require
   // conversion of all FP operations in host function to constrained intrinsics.
-  return !Callee.getAttributes().hasFnAttr(Attribute::StrictFP) ||
-         Caller.getAttributes().hasFnAttr(Attribute::StrictFP);
+  return !CalleeAttrs.hasAttribute(Attribute::StrictFP) ||
+         CallerAttrs.hasAttribute(Attribute::StrictFP);
 }
 
-template<typename AttrClass>
-static bool isEqual(const Function &Caller, const Function &Callee) {
-  return Caller.getFnAttribute(AttrClass::getKind()) ==
-         Callee.getFnAttribute(AttrClass::getKind());
+template <typename AttrClass>
+static bool isEqual(AttributeSet CallerAttrs, AttributeSet CalleeAttrs) {
+  return CallerAttrs.getAttribute(AttrClass::getKind()) ==
+         CalleeAttrs.getAttribute(AttrClass::getKind());
 }
 
-static bool isEqual(const Function &Caller, const Function &Callee,
-                    const StringRef &AttrName) {
-  return Caller.getFnAttribute(AttrName) == Callee.getFnAttribute(AttrName);
+static bool isEqual(AttributeSet CallerAttrs, AttributeSet CalleeAttrs,
+                    StringRef AttrName) {
+  return CallerAttrs.getAttribute(AttrName) ==
+         CalleeAttrs.getAttribute(AttrName);
 }
 
 /// Compute the logical AND of the attributes of the caller and the
@@ -2837,7 +2844,8 @@ bool AttributeFuncs::areInlineCompatible(const Function &Caller,
 
 bool AttributeFuncs::isStrictFPInlineCompatible(const Function &Caller,
                                                 const Function &Callee) {
-  return checkStrictFP(Caller, Callee);
+  return checkStrictFP(Caller.getAttributes().getFnAttrs(),
+                       Callee.getAttributes().getFnAttrs());
 }
 
 bool AttributeFuncs::areOutlineCompatible(const Function &A,
