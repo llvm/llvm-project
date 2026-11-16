@@ -199,10 +199,9 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
   // SawStore makes isSafeToMove() reject every load that is not invariant, on
   // the grounds that a store may have changed what it reads. Spill-slot reloads
   // are excluded from this check because processBlock() drops such a reload
-  // when it sees an instruction that may write the slot. Prologue and epilogue
-  // reloads are kept, since deleting one might break SEH/WinCFI unwind info.
+  // when it sees an instruction that may write the slot. An epilogue reload is
+  // kept, since deleting it might break SEH/WinCFI unwind info.
   bool SawStore = !isSpillSlotReload(*MI, TII, MFI) ||
-                  MI->getFlag(MachineInstr::FrameSetup) ||
                   MI->getFlag(MachineInstr::FrameDestroy);
   if (!MI->isSafeToMove(SawStore) || MI->isImplicitDef() || MI->isInlineAsm())
     return false;
