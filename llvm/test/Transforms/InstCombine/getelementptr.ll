@@ -2234,3 +2234,65 @@ exit:
 }
 
 !0 = !{!"branch_weights", i32 2, i32 10}
+
+; A non-negative index only implies a non-negative offset when the stride is
+; also representable in the index type. With a 16-bit index type the stride
+; 40000 is -25536 as an i16, so nusw must not be promoted to nuw.
+define ptr addrspace(1) @nusw_nneg_negative_stride(ptr addrspace(1) %p, i8 %x) {
+; CHECK-LABEL: @nusw_nneg_negative_stride(
+; CHECK-NEXT:    [[I:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw [40000 x i8], ptr addrspace(1) [[P:%.*]], i16 [[I]]
+; CHECK-NEXT:    ret ptr addrspace(1) [[GEP]]
+;
+  %i = zext i8 %x to i16
+  %gep = getelementptr nusw [40000 x i8], ptr addrspace(1) %p, i16 %i
+  ret ptr addrspace(1) %gep
+}
+
+; A stride that does not even fit in the index type must not be promoted
+; either. This used to assert in an assertions build.
+define ptr addrspace(1) @nusw_nneg_oversized_stride(ptr addrspace(1) %p, i8 %x) {
+; CHECK-LABEL: @nusw_nneg_oversized_stride(
+; CHECK-NEXT:    [[I:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw [65536 x i8], ptr addrspace(1) [[P:%.*]], i16 [[I]]
+; CHECK-NEXT:    ret ptr addrspace(1) [[GEP]]
+;
+  %i = zext i8 %x to i16
+  %gep = getelementptr nusw [65536 x i8], ptr addrspace(1) %p, i16 %i
+  ret ptr addrspace(1) %gep
+}
+
+; An oversized constant struct field offset is rejected for the same reason.
+%big = type { i32, [40000 x i8] }
+
+define ptr addrspace(1) @nusw_nneg_negative_field(ptr addrspace(1) %p) {
+; CHECK-LABEL: @nusw_nneg_negative_field(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw i8, ptr addrspace(1) [[P:%.*]], i16 -25532
+; CHECK-NEXT:    ret ptr addrspace(1) [[GEP]]
+;
+  %gep = getelementptr nusw [1 x %big], ptr addrspace(1) %p, i16 0, i32 1
+  ret ptr addrspace(1) %gep
+}
+
+; A stride and field offset that do fit still allow the promotion.
+define ptr addrspace(1) @nusw_nneg_small_stride(ptr addrspace(1) %p, i8 %x) {
+; CHECK-LABEL: @nusw_nneg_small_stride(
+; CHECK-NEXT:    [[I:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw nuw [8 x i8], ptr addrspace(1) [[P:%.*]], i16 [[I]]
+; CHECK-NEXT:    ret ptr addrspace(1) [[GEP]]
+;
+  %i = zext i8 %x to i16
+  %gep = getelementptr nusw [8 x i8], ptr addrspace(1) %p, i16 %i
+  ret ptr addrspace(1) %gep
+}
+
+%small = type { i32, [8 x i8] }
+
+define ptr addrspace(1) @nusw_nneg_small_field(ptr addrspace(1) %p) {
+; CHECK-LABEL: @nusw_nneg_small_field(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw nuw i8, ptr addrspace(1) [[P:%.*]], i16 12
+; CHECK-NEXT:    ret ptr addrspace(1) [[GEP]]
+;
+  %gep = getelementptr nusw [1 x %small], ptr addrspace(1) %p, i16 0, i32 1
+  ret ptr addrspace(1) %gep
+}
