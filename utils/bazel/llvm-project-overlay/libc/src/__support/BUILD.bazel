@@ -367,11 +367,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "checked",
+    hdrs = ["checked.h"],
+    deps = [
+        ":libc_assert",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
     name = "checked_ptr",
     hdrs = ["checked_ptr.h"],
     deps = [
         ":alloc_checker",
-        ":libc_assert",
+        ":checked",
         "//libc/hdr/types:size_t",
         "//libc/src/__support/CPP:nullptr_t",
         "//libc/src/__support/CPP:type_traits",

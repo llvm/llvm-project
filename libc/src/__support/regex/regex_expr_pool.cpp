@@ -225,29 +225,17 @@ ErrorOr<ExprId> ExprPool::make_byte_set(const ByteSet &bs) {
     return make_lit(static_cast<char>(last_bit));
 
   uint32_t bs_id = 0;
-  for (const ByteSet &existing : active_byte_sets()) {
+  for (const ByteSet &existing : byte_sets) {
     if (existing == bs)
       return intern(Expr::make_byte_set(bs_id));
     ++bs_id;
   }
 
-  if (byte_set_count == byte_set_capacity) {
-    size_t new_cap = byte_set_capacity == 0 ? INITIAL_BYTE_SETS_CAPACITY
-                                            : byte_set_capacity * GROWTH_FACTOR;
-    auto new_sets = make_unique<ByteSet[]>(new_cap);
-    if (!new_sets)
-      return Error(REG_ESPACE);
-    for (size_t i = 0; i < byte_set_count; ++i)
-      new_sets[i] = byte_sets[i];
-    byte_sets = new_sets.take_unique();
-    byte_set_capacity = new_cap;
-  }
-
+  if (!byte_sets.push_back(bs))
+    return Error(REG_ESPACE);
   ErrorOr<ExprId> id = intern(Expr::make_byte_set(bs_id));
   if (!id.has_value())
-    return id;
-  byte_sets[byte_set_count] = bs;
-  ++byte_set_count;
+    byte_sets.pop_back();
   return id;
 }
 

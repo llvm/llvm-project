@@ -21,6 +21,7 @@
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/regex/regex_ast.h"
+#include "src/__support/vector.h"
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -48,9 +49,6 @@ class ExprPool {
   /// Initial directory capacity for 8 blocks (64B), holding up to 256 nodes
   /// before directory growth.
   static constexpr size_t INITIAL_BLOCKS_CAPACITY = 8;
-  /// Initial capacity for 4 unique ByteSets (4 * 32B = 128B), allocated lazily
-  /// on the first multi-bit ByteSet so pure literal patterns allocate 0 bytes.
-  static constexpr size_t INITIAL_BYTE_SETS_CAPACITY = 4;
   /// Initial power-of-two hash table size: 64 slots (256B), holding up to 44
   /// unique nodes at 70% max load factor while keeping initial pool footprint
   /// at 512B + 64B + 256B = 832B (< 1 KiB).
@@ -69,17 +67,11 @@ class ExprPool {
   size_t node_count = 0;
 
   /// Lazily allocated array of deduplicated 256-bit character sets.
-  cpp::unique_ptr<ByteSet[]> byte_sets;
-  size_t byte_set_capacity = 0;
-  size_t byte_set_count = 0;
+  Vector<ByteSet> byte_sets;
 
   /// Open-addressing hash table storing ExprIds (0 = empty bucket).
   cpp::unique_ptr<ExprId[]> hashtable;
   size_t hashtable_capacity = 0;
-
-  cpp::span<const ByteSet> active_byte_sets() const {
-    return {byte_sets.get(), byte_set_count};
-  }
 
   cpp::span<ExprId> hashtable_slots() {
     return {hashtable.get(), hashtable_capacity};
@@ -130,10 +122,7 @@ public:
   const Expr &get(ExprId id) const { return slot_at(id); }
 
   /// Resolves a ByteSet index to its 256-bit character set.
-  const ByteSet &get_byte_set(uint32_t id) const {
-    LIBC_ASSERT(id < byte_set_count);
-    return byte_sets[id];
-  }
+  const ByteSet &get_byte_set(uint32_t id) const { return byte_sets[id]; }
 
   /// O(1) unconditional nullability query for a valid ExprId.
   bool is_nullable(ExprId id) const { return get(id).nullable; }
@@ -145,14 +134,14 @@ public:
   size_t size() const { return node_count; }
 
   /// Returns the number of unique multi-bit ByteSets interned in this pool.
-  size_t num_byte_sets() const { return byte_set_count; }
+  size_t num_byte_sets() const { return byte_sets.size(); }
 
   /// Returns the current heap bytes allocated by this pool.
   size_t allocated_bytes() const {
     return (block_count * sizeof(Block)) +
            (block_capacity * sizeof(cpp::unique_ptr<Block>)) +
            (hashtable_capacity * sizeof(ExprId)) +
-           (byte_set_capacity * sizeof(ByteSet));
+           (byte_sets.capacity() * sizeof(ByteSet));
   }
 
   // TODO: Use fluent interface (and_then, transform) for these factories once

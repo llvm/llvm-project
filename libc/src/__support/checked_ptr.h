@@ -20,55 +20,11 @@
 #include "src/__support/CPP/unique_ptr.h"
 #include "src/__support/CPP/utility.h"
 #include "src/__support/alloc-checker.h"
-#include "src/__support/libc_assert.h"
+#include "src/__support/checked.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
-namespace detail {
-
-class LIBC_TRIVIAL_ABI CheckedState {
-#ifndef NDEBUG
-  bool checked = false;
-
-public:
-  LIBC_INLINE constexpr CheckedState() = default;
-
-  // Moving disarms `other` and starts `this` unchecked so the new owner must
-  // explicitly check its value.
-  LIBC_INLINE constexpr CheckedState(CheckedState &&other) {
-    other.checked = true;
-  }
-
-  // Overwriting an existing CheckedState requires it to have been checked,
-  // disarms `other`, and resets `this` to unchecked.
-  LIBC_INLINE constexpr CheckedState &operator=(CheckedState &&other) {
-    assert_checked();
-    // Self-move-assignment leaves the (checked) state unchanged.
-    if (this == &other)
-      return *this;
-    other.checked = true;
-    checked = false;
-    return *this;
-  }
-
-  LIBC_INLINE ~CheckedState() { assert_checked(); }
-
-  LIBC_INLINE constexpr void mark_checked() { checked = true; }
-  LIBC_INLINE constexpr void assert_checked() const { LIBC_ASSERT(checked); }
-#else
-public:
-  LIBC_INLINE constexpr CheckedState() = default;
-  LIBC_INLINE constexpr CheckedState(CheckedState &&) = default;
-  LIBC_INLINE constexpr CheckedState &operator=(CheckedState &&) = default;
-
-  LIBC_INLINE constexpr void mark_checked() {}
-  LIBC_INLINE constexpr void assert_checked() const {}
-#endif
-};
-
-} // namespace detail
 
 /// A smart pointer wrapper around cpp::unique_ptr that enforces (in !NDEBUG
 /// builds) that callers check pointer nullness before accessing or destroying

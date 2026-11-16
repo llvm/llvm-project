@@ -123,6 +123,18 @@ add_libc_test(
 )
 
 add_libc_test(
+  checked_test
+  SUITE
+    libc-support-tests
+  SRCS
+    checked_test.cpp
+  DEPENDS
+    libc.src.__support.checked
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.utility
+)
+
+add_libc_test(
   checked_ptr_test
   SUITE
     libc-support-tests
@@ -285,6 +297,20 @@ add_libc_test(
     char_vector_test.cpp
   DEPENDS
     libc.src.__support.char_vector
+)
+
+add_libc_test(
+  vector_test
+  SUITE
+    libc-support-tests
+  SRCS
+    vector_test.cpp
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.checked
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.utility
+    libc.src.__support.vector
 )
 
 add_libc_test(
