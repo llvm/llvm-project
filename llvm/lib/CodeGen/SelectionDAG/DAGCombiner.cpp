@@ -14050,17 +14050,38 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
     }
   }
 
-  // If this is a masked store with an all ones mask, we can use a unmasked
-  // store.
-  // FIXME: Can we do this for indexed, compressing, or truncating stores?
-  if (MST->isUnindexed() && !MST->isCompressingStore() &&
-      !MST->isTruncatingStore()) {
-    if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()))
-      return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
-                          MST->getBasePtr(), MST->getPointerInfo(),
-                          MST->getBaseAlign(), MST->getMemOperand()->getFlags(),
-                          MST->getMMOMetadataForSubAccess());
+  // An all-ones mask makes even a compressing store an ordinary store.
+  if (ISD::isConstantSplatVectorAllOnes(Mask.getNode())) {
+    bool CanUseTruncStore =
+        !LegalOperations || !MST->isTruncatingStore() ||
+        TLI.isTruncStoreLegal(VT, MST->getMemoryVT(), MST->getAlign(),
+                              MST->getAddressSpace());
+    EVT StoreVT = MST->isTruncatingStore() ? MST->getMemoryVT() : VT;
+    bool CanUseIndexedStore =
+        MST->isUnindexed() ||
+        TLI.isIndexedStoreLegal(MST->getAddressingMode(), StoreVT);
 
+    if (CanUseTruncStore && CanUseIndexedStore) {
+      SDValue Store;
+      if (MST->isTruncatingStore())
+        Store = DAG.getTruncStore(Chain, SDLoc(N), Value, Ptr,
+                                  MST->getPointerInfo(), MST->getMemoryVT(),
+                                  MST->getBaseAlign(),
+                                  MST->getMemOperand()->getFlags(),
+                                  MST->getMMOMetadataForSubAccess());
+      else
+        Store =
+            DAG.getStore(Chain, SDLoc(N), Value, Ptr, MST->getPointerInfo(),
+                         MST->getBaseAlign(), MST->getMemOperand()->getFlags(),
+                         MST->getMMOMetadataForSubAccess());
+      if (MST->isUnindexed())
+        return Store;
+      return DAG.getIndexedStore(Store, SDLoc(N), Ptr, MST->getOffset(),
+                                 MST->getAddressingMode());
+    }
+  }
+
+  if (MST->isUnindexed() && !MST->isTruncatingStore()) {
     // Convert a masked_store with constant getactivelanemask input mask to a
     // standard store.
     if (uint64_t Lanes = calculateConstantLowMaskLanes(Mask)) {
