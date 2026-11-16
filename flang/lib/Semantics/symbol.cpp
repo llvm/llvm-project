@@ -13,6 +13,7 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <string>
@@ -72,7 +73,7 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
 }
 
 void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
-    const llvm::omp::ClauseSet &clauses, llvm::omp::Directive dir,
+    const llvm::omp::Clauses &clauses, llvm::omp::Directive dir,
     parser::CharBlock name) const {
   auto toLower = parser::ToLowerCaseLetters;
   size_t idx{0}, size{clauses.count()};
@@ -85,6 +86,14 @@ void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
     }
     os << toLower(llvm::omp::getOpenMPClauseName(clause, version_));
     switch (clause) {
+    case llvm::omp::Clause::OMPC_absent:
+      os << '(';
+      llvm::interleaveComma(
+          ompAssumesAbsent(), os, [&](llvm::omp::Directive directive) {
+            os << llvm::omp::getOpenMPDirectiveName(directive, version_);
+          });
+      os << ')';
+      break;
     case llvm::omp::Clause::OMPC_atomic_default_mem_order:
       os << '(' << toLower(EnumToString(*ompAtomicDefaultMemOrder())) << ')';
       break;
@@ -118,17 +127,22 @@ void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
 
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const WithOmpDeclarative &x) {
-  if (const llvm::omp::ClauseSet &reqs{x.ompRequires()}; reqs.count()) {
+  if (const llvm::omp::Clauses &reqs{x.ompRequires()}; reqs.count()) {
     os << " OmpRequirements:(";
     x.printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
     os << ')';
   }
-  if (const llvm::omp::ClauseSet &dtgt{x.ompDeclTarget()}; dtgt.count()) {
+  if (const llvm::omp::Clauses &assumes{x.ompAssumes()}; assumes.count()) {
+    os << " OmpAssumptions:(";
+    x.printClauseSet(os, assumes, llvm::omp::Directive::OMPD_assumes);
+    os << ')';
+  }
+  if (const llvm::omp::Clauses &dtgt{x.ompDeclTarget()}; dtgt.count()) {
     os << " OmpDeclareTargetFlags:(";
     x.printClauseSet(os, dtgt, llvm::omp::Directive::OMPD_declare_target);
     os << ')';
   }
-  if (const llvm::omp::ClauseSet &gp{x.ompGroupprivate()}; gp.count()) {
+  if (const llvm::omp::Clauses &gp{x.ompGroupprivate()}; gp.count()) {
     os << " OmpGroupprivateFlags:(";
     x.printClauseSet(os, gp, llvm::omp::Directive::OMPD_groupprivate);
     os << ')';
@@ -279,6 +293,7 @@ void ObjectEntityDetails::set_shape(const ArraySpec &shape) {
   for (const auto &shapeSpec : shape) {
     shape_.push_back(shapeSpec);
   }
+  shape_.set_rankOneBounds(shape.lboundIsRankOne(), shape.uboundIsRankOne());
 }
 void ObjectEntityDetails::set_coshape(const ArraySpec &coshape) {
   CHECK(coshape_.empty());

@@ -159,7 +159,7 @@ LLVM_ABI bool operator<(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS);
 /// This class is used to gather all the unique data bits of a node.  When all
 /// the bits are gathered this class is used to produce a hash value for the
 /// node.
-class FoldingSetNodeID {
+class LLVM_ATTRIBUTE_WARN_UNUSED FoldingSetNodeID {
   /// Vector of all the data bits that make the node unique.
   /// Use a SmallVector to avoid a heap allocation in the common case.
   SmallVector<unsigned, 32> Bits;
@@ -751,22 +751,6 @@ private:
     uint32_t Hash = Info::getHashValue(Key);
     return Hash == FoldingSetNodeIDRef::NotAHash ? 1 : Hash;
   }
-};
-
-//===----------------------------------------------------------------------===//
-/// This is a subclass of FoldingSetNode which stores a FoldingSetNodeID value
-/// rather than requiring the node to recompute it each time it is needed. This
-/// trades space for speed (which can be significant if the ID is long), and it
-/// also permits nodes to drop information that would otherwise only be required
-/// for recomputing an ID.
-class FastFoldingSetNode : public FoldingSetNode {
-  FoldingSetNodeID FastID;
-
-protected:
-  explicit FastFoldingSetNode(const FoldingSetNodeID &ID) : FastID(ID) {}
-
-public:
-  void Profile(FoldingSetNodeID &ID) const { ID.AddNodeID(FastID); }
 };
 
 //===----------------------------------------------------------------------===//

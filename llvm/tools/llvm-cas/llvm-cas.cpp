@@ -10,6 +10,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/ObjectStore.h"
@@ -20,6 +22,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -33,25 +36,13 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTION
-};
 
-class LLVMCASOptTable : public opt::GenericOptTable {
+class LLVMCASOptTable : public opt::OptTable {
 public:
-  LLVMCASOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LLVMCASOptTable() : opt::OptTable(optionTables()) {}
 };
 
 enum class CommandKind {
@@ -74,41 +65,31 @@ struct CommandOptions {
   CommandKind Command = CommandKind::Invalid;
   std::vector<std::string> Inputs;
   std::string CASPath;
+  std::string CASPluginPath;
+  SmallVector<std::pair<std::string, std::string>> CASPluginOpts;
   std::string UpstreamCASPath;
   std::string DataPath;
   bool CheckHash;
   bool AllowRecovery;
   bool Force;
   bool InProcess;
+  bool Verbose;
 
-  static CommandKind getCommandKind(opt::Arg &A) {
-    switch (A.getOption().getID()) {
-    case OPT_cas_dump:
-      return CommandKind::Dump;
-    case OPT_cat_node_data:
-      return CommandKind::CatNodeData;
-    case OPT_make_blob:
-      return CommandKind::MakeBlob;
-    case OPT_make_node:
-      return CommandKind::MakeNode;
-    case OPT_ls_node_refs:
-      return CommandKind::ListObjectReferences;
-    case OPT_import:
-      return CommandKind::Import;
-    case OPT_put_cache_key:
-      return CommandKind::PutCacheKey;
-    case OPT_get_cache_result:
-      return CommandKind::GetCacheResult;
-    case OPT_validate:
-      return CommandKind::Validate;
-    case OPT_validate_object:
-      return CommandKind::ValidateObject;
-    case OPT_validate_if_needed:
-      return CommandKind::ValidateIfNeeded;
-    case OPT_prune:
-      return CommandKind::Prune;
-    }
-    return CommandKind::Invalid;
+  static CommandKind getCommandKind(StringRef SubCommand) {
+    return StringSwitch<CommandKind>(SubCommand)
+        .Case("dump", CommandKind::Dump)
+        .Case("cat-node-data", CommandKind::CatNodeData)
+        .Case("make-blob", CommandKind::MakeBlob)
+        .Case("make-node", CommandKind::MakeNode)
+        .Case("ls-node-refs", CommandKind::ListObjectReferences)
+        .Case("import", CommandKind::Import)
+        .Case("put-cache-key", CommandKind::PutCacheKey)
+        .Case("get-cache-result", CommandKind::GetCacheResult)
+        .Case("validate", CommandKind::Validate)
+        .Case("validate-object", CommandKind::ValidateObject)
+        .Case("validate-if-needed", CommandKind::ValidateIfNeeded)
+        .Case("prune", CommandKind::Prune)
+        .Default(CommandKind::Invalid);
   }
 
   // Command requires input.
@@ -134,10 +115,25 @@ static int putCacheKey(ObjectStore &CAS, ActionCache &AC,
 static int getCacheResult(ObjectStore &CAS, ActionCache &AC, const CASID &ID);
 static int validateObject(ObjectStore &CAS, const CASID &ID);
 static int validate(ObjectStore &CAS, ActionCache &AC, bool CheckHash);
-static int validateIfNeeded(StringRef Path, bool CheckHash, bool Force,
-                            bool AllowRecovery, bool InProcess,
-                            const char *Argv0);
+static int validateIfNeeded(const CommandOptions &Opts, const char *Argv0);
 static int prune(cas::ObjectStore &CAS);
+
+/// Rewrites the legacy option spellings of subcommands, e.g. `--make-blob`
+/// or `-make-blob`, into the subcommand, e.g. `make-blob`, so that the old
+/// style of invoking llvm-cas keeps working.
+static void rewriteLegacySubCommands(const opt::OptTable &T,
+                                     MutableArrayRef<const char *> Args) {
+  for (const char *&Arg : Args) {
+    StringRef Name = Arg;
+    if (!Name.consume_front("-"))
+      continue;
+    Name.consume_front("-");
+    if (any_of(T.getSubCommands(), [&](const opt::OptTable::SubCommand &SC) {
+          return Name == SC.Name;
+        }))
+      Arg = Name.data();
+  }
+}
 
 static Expected<CommandOptions> parseOptions(int Argc, char **Argv) {
   BumpPtrAllocator Alloc;
@@ -147,37 +143,54 @@ static Expected<CommandOptions> parseOptions(int Argc, char **Argv) {
     return createStringError("cannot expand response file");
 
   LLVMCASOptTable T;
+  rewriteLegacySubCommands(T, ExpanedArgs);
   unsigned MI, MC;
   opt::InputArgList Args = T.ParseArgs(ExpanedArgs, MI, MC);
+
+  // The first positional argument that is a subcommand name is the
+  // subcommand, the rest are inputs, e.g. `cat-node-data make-blob` has input
+  // `make-blob`.
+  CommandOptions Opts;
+  StringRef SubCommand = Args.getSubCommand(
+      T.getSubCommands(),
+      [](ArrayRef<StringRef>) {
+        llvm_unreachable("later subcommand names are inputs");
+      },
+      [&](ArrayRef<StringRef> Inputs) {
+        Opts.Inputs.assign(Inputs.begin(), Inputs.end());
+      },
+      /*AllowSubCommandNamesAsPositionals=*/true);
 
   for (auto *Arg : Args.filtered(OPT_UNKNOWN)) {
     llvm::errs() << "ignoring unknown option: " << Arg->getSpelling() << '\n';
   }
 
   if (Args.hasArg(OPT_help)) {
-    T.printHelp(
-        outs(),
-        (std::string(Argv[0]) + " [action] [options] <input files>").c_str(),
-        "llvm-cas tool that performs CAS actions.", false);
+    T.printHelp(outs(),
+                (std::string(Argv[0]) + " <subcommand> [options] <input files>")
+                    .c_str(),
+                "llvm-cas tool that performs CAS actions.",
+                /*ShowHidden=*/false,
+                /*ShowAllAliases=*/false, opt::Visibility(), SubCommand);
     exit(0);
   }
 
-  CommandOptions Opts;
-  for (auto *A : Args.filtered(OPT_grp_action))
-    Opts.Command = CommandOptions::getCommandKind(*A);
-
+  Opts.Command = CommandOptions::getCommandKind(SubCommand);
   if (Opts.Command == CommandKind::Invalid)
-    return createStringError("no command action is specified");
-
-  for (auto *File : Args.filtered(OPT_INPUT))
-    Opts.Inputs.push_back(File->getValue());
+    return createStringError("no subcommand is specified");
   Opts.CASPath = Args.getLastArgValue(OPT_cas_path);
+  Opts.CASPluginPath = Args.getLastArgValue(OPT_cas_plugin_path);
+  for (StringRef PluginOpt : Args.getAllArgValues(OPT_cas_plugin_option)) {
+    auto [Name, Value] = PluginOpt.split('=');
+    Opts.CASPluginOpts.emplace_back(Name, Value);
+  }
   Opts.UpstreamCASPath = Args.getLastArgValue(OPT_upstream_cas);
   Opts.DataPath = Args.getLastArgValue(OPT_data);
   Opts.CheckHash = Args.hasArg(OPT_check_hash);
   Opts.AllowRecovery = Args.hasArg(OPT_allow_recovery);
   Opts.Force = Args.hasArg(OPT_force);
   Opts.InProcess = Args.hasArg(OPT_in_process);
+  Opts.Verbose = Args.hasArg(OPT_verbose);
 
   // Validate options.
   if (Opts.CASPath.empty())
@@ -196,10 +209,16 @@ int main(int Argc, char **Argv) {
   auto Opts = ExitOnErr(parseOptions(Argc, Argv));
 
   if (Opts.Command == CommandKind::ValidateIfNeeded)
-    return validateIfNeeded(Opts.CASPath, Opts.CheckHash, Opts.Force,
-                            Opts.AllowRecovery, Opts.InProcess, Argv[0]);
+    return validateIfNeeded(Opts, Argv[0]);
 
-  auto [CAS, AC] = ExitOnErr(createOnDiskUnifiedCASDatabases(Opts.CASPath));
+  std::shared_ptr<ObjectStore> CAS;
+  std::shared_ptr<ActionCache> AC;
+  if (!Opts.CASPluginPath.empty())
+    std::tie(CAS, AC) = ExitOnErr(createPluginCASDatabases(
+        Opts.CASPluginPath, Opts.CASPath, Opts.CASPluginOpts));
+  else
+    std::tie(CAS, AC) =
+        ExitOnErr(createOnDiskUnifiedCASDatabases(Opts.CASPath));
   assert(CAS);
 
   if (Opts.Command == CommandKind::Dump)
@@ -373,28 +392,99 @@ int validate(ObjectStore &CAS, ActionCache &AC, bool CheckHash) {
   return 0;
 }
 
-int validateIfNeeded(StringRef Path, bool CheckHash, bool Force,
-                     bool AllowRecovery, bool InProcess, const char *Argv0) {
+/// Validates the CAS in this process and prints the result.
+static Error validateInProcess(const CommandOptions &Opts) {
+  ValidationResult Result;
+  if (Error E = (Opts.CASPluginPath.empty()
+                     ? validateOnDiskUnifiedCASDatabasesIfNeeded(
+                           Opts.CASPath, Opts.CheckHash, Opts.Force)
+                     : validatePluginCASDatabasesIfNeeded(
+                           Opts.CASPluginPath, Opts.CASPath, Opts.CASPluginOpts,
+                           Opts.CheckHash, Opts.Force))
+                    .moveInto(Result))
+    return E;
+  outs() << (Result == ValidationResult::Skipped ? "validation skipped\n"
+                                                 : "validated successfully\n");
+  return Error::success();
+}
+
+/// Validates the CAS by re-executing llvm-cas with --in-process, which
+/// protects against crashes during validation. The output of the child process
+/// is forwarded, except for its errors when they would be followed by recovery
+/// and are not requested with --verbose.
+///
+/// \returns false if validation failed or crashed.
+static Expected<bool> validateOutOfProcess(const CommandOptions &Opts,
+                                           const char *Argv0) {
+  std::string Exec =
+      sys::fs::getMainExecutable(Argv0, (void *)validateOutOfProcess);
+  SmallVector<std::string> PluginOpts;
+  for (const auto &[Name, Value] : Opts.CASPluginOpts)
+    PluginOpts.push_back(Name + "=" + Value);
+
+  SmallVector<StringRef> Args{Exec, "validate-if-needed", "--in-process",
+                              "--cas", Opts.CASPath};
+  if (!Opts.CASPluginPath.empty()) {
+    Args.append({"--fcas-plugin-path", Opts.CASPluginPath});
+    for (StringRef PluginOpt : PluginOpts)
+      Args.append({"--fcas-plugin-option", PluginOpt});
+  }
+  if (Opts.CheckHash)
+    Args.push_back("--check-hash");
+  if (Opts.Force)
+    Args.push_back("--force");
+
+  // Discard stderr if quiet, and otherwise inherit all of stdin, stdout and
+  // stderr.
+  bool QuietErrors = Opts.AllowRecovery && !Opts.Verbose;
+  SmallVector<std::optional<StringRef>, 3> Redirects;
+  if (QuietErrors)
+    Redirects = {std::nullopt, std::nullopt, StringRef("")};
+
+  outs().flush();
+  std::string ErrMsg;
+  int Result = sys::ExecuteAndWait(Exec, Args, /*Env=*/std::nullopt, Redirects,
+                                   /*SecondsToWait=*/120,
+                                   /*MemoryLimit=*/0, &ErrMsg);
+  if (Result == -1)
+    return createStringError("failed to exec " + join(Args, " ") + ": " +
+                             ErrMsg);
+  if (Result == -2 && !QuietErrors)
+    errs() << "llvm-cas: validate-if-needed: validation crashed: " << ErrMsg
+           << "\n";
+  return Result == 0;
+}
+
+int validateIfNeeded(const CommandOptions &Opts, const char *Argv0) {
   ExitOnError ExitOnErr("llvm-cas: validate-if-needed: ");
-  std::string ExecStorage;
-  std::optional<StringRef> Exec;
-  if (!InProcess) {
-    ExecStorage = sys::fs::getMainExecutable(Argv0, (void *)validateIfNeeded);
-    Exec = ExecStorage;
+  if (Opts.InProcess) {
+    Error E = validateInProcess(Opts);
+    if (!E)
+      return 0;
+    if (!Opts.AllowRecovery)
+      ExitOnErr(std::move(E));
+    // The error is expected when recovering, so only print it on request. It
+    // is also recorded in the CAS log.
+    if (Opts.Verbose)
+      errs() << "llvm-cas: validate-if-needed: " << toString(std::move(E))
+             << "\n";
+    else
+      consumeError(std::move(E));
+  } else {
+    if (ExitOnErr(validateOutOfProcess(Opts, Argv0)))
+      return 0;
+    if (!Opts.AllowRecovery)
+      ExitOnErr(createStringError("cas contents invalid"));
   }
-  ValidationResult Result = ExitOnErr(validateOnDiskUnifiedCASDatabasesIfNeeded(
-      Path, CheckHash, AllowRecovery, Force, Exec));
-  switch (Result) {
-  case ValidationResult::Valid:
-    outs() << "validated successfully\n";
-    break;
-  case ValidationResult::Recovered:
-    outs() << "recovered from invalid data\n";
-    break;
-  case ValidationResult::Skipped:
-    outs() << "validation skipped\n";
-    break;
-  }
+
+  ValidationResult Result = ExitOnErr(
+      Opts.CASPluginPath.empty()
+          ? recoverOnDiskUnifiedCASDatabases(Opts.CASPath)
+          : recoverPluginCASDatabases(Opts.CASPluginPath, Opts.CASPath,
+                                      Opts.CASPluginOpts));
+  outs() << (Result == ValidationResult::Skipped
+                 ? "recovery skipped\n"
+                 : "recovered from invalid data\n");
   return 0;
 }
 

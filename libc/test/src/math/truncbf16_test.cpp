@@ -16,4 +16,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/truncbf16.h"
 
-LIST_TRUNC_TESTS(bfloat16, LIBC_NAMESPACE::truncbf16)
+LIST_TRUNC_TESTS(Truncbf16, bfloat16, LIBC_NAMESPACE::truncbf16)

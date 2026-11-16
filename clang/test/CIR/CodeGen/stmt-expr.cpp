@@ -32,9 +32,9 @@ void test1() {
 // CIR:   cir.return
 
 // LLVM: define dso_local void @_Z5test1v()
-// LLVM:   %[[A:.+]] = alloca %class.A, 
 // LLVM:   %[[REF_TMP:.+]] = alloca %class.A, 
 // LLVM:   %[[TMP:.+]] = alloca %class.A, 
+// LLVM:   %[[A:.+]] = alloca %class.A, 
 // LLVM:   br label %[[LBL4:.+]]
 // LLVM: [[LBL4]]:
 // LLVM:     call void @_ZN1AC2Ev(ptr {{.*}} %[[A]])
@@ -103,9 +103,9 @@ void gnu_statement_extension() {
 // CIR: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: cir.store {{.*}} %[[REAL]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 
-// LLVM:   %[[A_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM:   %[[B_ADDR:.*]] = alloca float, align 4
 // LLVM:   %[[TMP_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM:   br label %[[LABEL_1:.*]]
 // LLVM: [[LABEL_1]]:
 // LLVM:   %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4

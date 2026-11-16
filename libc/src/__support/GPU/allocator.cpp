@@ -94,24 +94,21 @@ static inline uint32_t xorshift32(uint32_t &state) {
 }
 
 // Rounds the input value to the closest permitted chunk size. Here we accept
-// the sum of the closest three powers of two. For a 2MiB slab size this is 48
+// the sum of the closest three powers of two. For a 2MiB slab size this is 46
 // different chunk sizes. This gives us average internal fragmentation of 87.5%.
 static inline constexpr uint32_t get_chunk_size(uint32_t x) {
   uint32_t y = x < MIN_SIZE ? MIN_SIZE : x;
   uint32_t pow2 = BITS_IN_WORD - cpp::countl_zero(y - 1);
 
-  uint32_t s0 = 0b0100 << (pow2 - 3);
-  uint32_t s1 = 0b0110 << (pow2 - 3);
-  uint32_t s2 = 0b0111 << (pow2 - 3);
-  uint32_t s3 = 0b1000 << (pow2 - 3);
+  uint32_t s0 = 0b0110 << (pow2 - 3);
+  uint32_t s1 = 0b0111 << (pow2 - 3);
+  uint32_t s2 = 0b1000 << (pow2 - 3);
 
-  if (s0 > y)
+  if (s0 >= y)
     return (s0 + MIN_ALIGNMENT) & ~MIN_ALIGNMENT;
-  if (s1 > y)
+  if (s1 >= y)
     return (s1 + MIN_ALIGNMENT) & ~MIN_ALIGNMENT;
-  if (s2 > y)
-    return (s2 + MIN_ALIGNMENT) & ~MIN_ALIGNMENT;
-  return (s3 + MIN_ALIGNMENT) & ~MIN_ALIGNMENT;
+  return (s2 + MIN_ALIGNMENT) & ~MIN_ALIGNMENT;
 }
 
 // Converts a chunk size into an index suitable for a statically sized array.
@@ -316,7 +313,7 @@ struct Slab {
         uint32_t before = 0;
         if (gpu::get_lane_id() == leader)
           before = cpp::AtomicRef(get_bitfield()[slot])
-                       .fetch_or(bitmask, cpp::MemoryOrder::RELAXED);
+                       .fetch_or(bitmask, cpp::MemoryOrder::ACQUIRE);
         before = gpu::shuffle(lane_mask, leader, before);
         if (~before & (1u << bit))
           result = ptr_from_index(index, chunk_size);
@@ -346,7 +343,7 @@ struct Slab {
     uint32_t bit = index % BITS_IN_WORD;
 
     cpp::AtomicRef(get_bitfield()[slot])
-        .fetch_and(~(1u << bit), cpp::MemoryOrder::RELAXED);
+        .fetch_and(~(1u << bit), cpp::MemoryOrder::RELEASE);
   }
 
   // The actual memory the slab will manage. All offsets are calculated at

@@ -1959,14 +1959,14 @@ static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
   Value zeroOutMask = arith::ConstantOp::create(
       rewriter, loc, DenseElementsAttr::get(deinterI8VecType, i8LowBitMask));
   Value zeroOutLow = arith::AndIOp::create(
-      rewriter, loc, deinterleaveOp.getRes1(), zeroOutMask);
+      rewriter, loc, deinterleaveOp.getResultEven(), zeroOutMask);
 
   // 3. Move high i4 values to upper side of the byte.
   constexpr int8_t bitsToShift = 4;
   auto shiftValues = arith::ConstantOp::create(
       rewriter, loc, DenseElementsAttr::get(deinterI8VecType, bitsToShift));
-  Value shlHigh = arith::ShLIOp::create(rewriter, loc, deinterleaveOp.getRes2(),
-                                        shiftValues);
+  Value shlHigh = arith::ShLIOp::create(
+      rewriter, loc, deinterleaveOp.getResultOdd(), shiftValues);
 
   // 4. Merge high and low i4 values.
   auto mergedHiLowOp = arith::OrIOp::create(rewriter, loc, zeroOutLow, shlHigh);

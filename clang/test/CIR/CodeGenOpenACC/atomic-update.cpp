@@ -53,8 +53,8 @@ void use(int x, unsigned int y, float f, HasOps ops) {
   // CHECK-NEXT: cir.store %[[RECIPE_ARG]], %[[TEMP_ALLOCA]] : !cir.float, !cir.ptr<!cir.float>
   //
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!cir.float>, !cir.float
-  // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
-  // CHECK-NEXT: %[[INC:.*]] = cir.fsub %[[TEMP_LOAD]], %[[ONE]] : !cir.float
+  // CHECK-NEXT: %[[NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.float
+  // CHECK-NEXT: %[[INC:.*]] = cir.fadd %[[TEMP_LOAD]], %[[NEGONE]] : !cir.float
   // CHECK-NEXT: cir.store {{.*}}%[[INC]], %[[TEMP_ALLOCA]] : !cir.float, !cir.ptr<!cir.float>
   // 
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!cir.float>, !cir.float

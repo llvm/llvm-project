@@ -190,15 +190,25 @@ if(CLANG_ENABLE_LIBXML2)
   endif()
 endif()
 
+# Standalone builds don't inherit this flag from the llvm/CMakeLists, so set it
+# here.
+if(CLANG_BUILT_STANDALONE)
+  option(CLANG_ENABLE_CIR "Build ClangIR support into the compiler" OFF)
+endif()
+
 if(CLANG_ENABLE_CIR)
   if (CLANG_BUILT_STANDALONE)
     message(FATAL_ERROR
       "ClangIR is not yet supported in the standalone build.")
   endif()
-  if (NOT "${LLVM_ENABLE_PROJECTS}" MATCHES "MLIR|mlir")
+  if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
     message(FATAL_ERROR
-      "Cannot build ClangIR without MLIR in LLVM_ENABLE_PROJECTS")
+      "Cannot build ClangIR without MLIR enabled")
   endif()
+  # Number of translation units the TableGen-generated CIR operation
+  # definitions are split into. Shared by the CIROps.td TableGen invocations
+  # and the MLIRCIR library sources.
+  set(CLANG_CIR_OP_SHARD_COUNT 8)
 endif()
 
 include(CheckIncludeFile)
@@ -218,6 +228,16 @@ if( CLANG_HAVE_DLFCN_H )
   list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
   check_symbol_exists(dladdr dlfcn.h CLANG_HAVE_DLADDR)
   cmake_pop_check_state()
+endif()
+
+if(NOT DEFINED CLANG_HAVE_EMUTLS_GET_ADDRESS)
+  include(CheckCXXSourceCompiles)
+  check_cxx_source_compiles([[
+    extern "C" void *__emutls_get_address(void *);
+    int main() {
+      return __emutls_get_address((void *)0) != (void *)0;
+    }
+  ]] CLANG_HAVE_EMUTLS_GET_ADDRESS)
 endif()
 
 set(CLANG_RESOURCE_DIR "" CACHE STRING
@@ -352,7 +372,15 @@ set(CLANG_VENDOR_UTI "org.llvm.clang" CACHE STRING
 set(CLANG_PYTHON_BINDINGS_VERSIONS "" CACHE STRING
     "Python versions to install libclang python bindings for")
 
-set(CLANG_LINK_CLANG_DYLIB ${LLVM_LINK_LLVM_DYLIB} CACHE BOOL
+if(LLVM_LINK_LLVM_DYLIB AND NOT MSVC)
+  # We can't rely on default visibility with MSVC. libClang should have its own
+  # annotation (CLANG_ABI) and have its API properly annotated for exports on
+  # Windows too. See https://github.com/llvm/llvm-project/issues/238871
+  set(CLANG_LINK_CLANG_DYLIB_DEFAULT 1)
+else()
+  set(CLANG_LINK_CLANG_DYLIB_DEFAULT 0)
+endif()
+set(CLANG_LINK_CLANG_DYLIB ${CLANG_LINK_CLANG_DYLIB_DEFAULT} CACHE BOOL
     "Link tools against libclang-cpp.so")
 
 if (NOT LLVM_LINK_LLVM_DYLIB AND CLANG_LINK_CLANG_DYLIB)
@@ -402,7 +430,7 @@ configure_file(
 
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common -Woverloaded-virtual")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common")
 
   # Enable -pedantic for Clang even if it's not enabled for LLVM.
   if (NOT LLVM_ENABLE_PEDANTIC)
@@ -632,6 +660,43 @@ if(CLANG_LIBS)
   endforeach()
 endif()
 
+# ClangIR's MLIR dependency is excluded from the aggregate build and install.
+# Promote and install only the MLIR targets reachable from Clang's SDK, along
+# with the headers needed to consume those targets. If Clang itself is an
+# implicit Flang dependency, Flang packages the required targets instead.
+if(CLANG_ENABLE_CIR AND "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS AND
+   NOT "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  get_property(clang_exports GLOBAL PROPERTY CLANG_EXPORTS)
+  llvm_install_dependency_target_closure(
+    PROJECT Clang
+    COMPONENT clang-dependencies
+    ROOT_TARGETS ${clang_exports})
+
+  if(NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+    get_target_property(mlir_source_dir mlir-headers SOURCE_DIR)
+    get_target_property(mlir_binary_dir mlir-headers BINARY_DIR)
+    install(DIRECTORY
+      "${mlir_source_dir}/include/mlir"
+      "${mlir_source_dir}/include/mlir-c"
+      "${mlir_binary_dir}/include/mlir"
+      "${mlir_binary_dir}/include/mlir-c"
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+      COMPONENT clang-dependency-headers
+      OPTIONAL
+      FILES_MATCHING
+      PATTERN "*.def"
+      PATTERN "*.h"
+      PATTERN "*.gen"
+      PATTERN "*.inc"
+      PATTERN "*.td"
+      PATTERN "CMakeFiles" EXCLUDE)
+  endif()
+  if(NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-clang-dependency-headers
+      DEPENDS clang-dependencies COMPONENT clang-dependency-headers)
+  endif()
+endif()
+
 add_subdirectory(cmake/modules)
 
 if(CLANG_STAGE)
@@ -851,7 +916,15 @@ if (CLANG_ENABLE_BOOTSTRAP)
   # Populate the passthrough variables
   foreach(variableName ${CLANG_BOOTSTRAP_PASSTHROUGH} ${_BOOTSTRAP_DEFAULT_PASSTHROUGH})
     if(DEFINED ${variableName})
-      if("${${variableName}}" STREQUAL "")
+      if(variableName STREQUAL "LLVM_ENABLE_PROJECTS")
+        # Forward only requested roots; the next stage re-adds dependencies.
+        set(llvm_enable_projects "${LLVM_ENABLE_PROJECTS}")
+        if(DEFINED LLVM_REQUESTED_PROJECTS)
+          set(llvm_enable_projects "${LLVM_REQUESTED_PROJECTS}")
+        endif()
+        string(REPLACE ";" "|" value "${llvm_enable_projects}")
+        unset(llvm_enable_projects)
+      elseif("${${variableName}}" STREQUAL "")
         set(value "")
       else()
         string(REPLACE ";" "|" value "${${variableName}}")

@@ -24,11 +24,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-set-wave-priority"
 
-static cl::opt<unsigned> DefaultVALUInstsThreshold(
-    "amdgpu-set-wave-priority-valu-insts-threshold",
-    cl::desc("VALU instruction count threshold for adjusting wave priority"),
-    cl::init(100), cl::Hidden);
-
 namespace {
 
 struct MBBInfo {
@@ -126,7 +121,8 @@ bool AMDGPUSetWavePriority::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
 
-  unsigned VALUInstsThreshold = DefaultVALUInstsThreshold;
+  unsigned VALUInstsThreshold =
+      ST.getCLOpts().set_wave_priority_valu_insts_threshold;
   Attribute A = F.getFnAttribute("amdgpu-wave-priority-threshold");
   if (A.isValid())
     A.getValueAsString().getAsInteger(0, VALUInstsThreshold);
@@ -155,7 +151,7 @@ bool AMDGPUSetWavePriority::run(MachineFunction &MF) {
         MaxNumVALUInstsInMiddle =
             std::max(MaxNumVALUInstsInMiddle, NumVALUInstsAtEnd);
         NumVALUInstsAtEnd = 0;
-      } else if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true)) {
+      } else if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false)) {
         if (AtStart)
           ++MBBInfos[MBB].NumVALUInstsAtStart;
         ++NumVALUInstsAtEnd;
@@ -188,7 +184,7 @@ bool AMDGPUSetWavePriority::run(MachineFunction &MF) {
 
   // Raise the priority at the beginning of the shader.
   MachineBasicBlock::iterator I = Entry.begin(), E = Entry.end();
-  while (I != E && !SIInstrInfo::isVALU(*I, /*AllowLDSDMA=*/true) &&
+  while (I != E && !SIInstrInfo::isVALU(*I, /*AllowLDSDMA=*/false) &&
          !I->isTerminator())
     ++I;
   BuildSetprioMI(Entry, I, HighPriority);

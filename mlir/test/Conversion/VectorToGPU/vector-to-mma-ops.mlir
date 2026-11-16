@@ -660,15 +660,58 @@ func.func @no_convert_read_transpose_not_last_dim(%arg0: memref<2x2x2xf16>, %arg
 
 // -----
 
-// Transpose write is not supported.
-// CHECK-LABEL: func @no_convert_write_transpose
+// CHECK-LABEL: func @write_transpose
+func.func @write_transpose(%arg0: memref<3x5xf16>, %arg1: memref<5x3xf16>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<3x5xf16>, vector<3x5xf16>
+  %B = arith.addf %A, %A : vector<3x5xf16>
+  // CHECK: gpu.subgroup_mma_store_matrix %{{.*}} leadDimension 3 transpose : !gpu.mma_matrix<3x5xf16, "COp">, memref<5x3xf16>
+  vector.transfer_write %B, %arg1[%c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<3x5xf16>, memref<5x3xf16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @write_transpose_with_strides_3d
+func.func @write_transpose_with_strides_3d(%arg0: memref<3x5xf16>, %arg1: memref<5x7x3xf16>, %arg2: memref<2x5x3xf16>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<3x5xf16>, vector<3x5xf16>
+  %B = arith.addf %A, %A : vector<3x5xf16>
+  // CHECK: gpu.subgroup_mma_store_matrix %{{.*}} leadDimension 21 transpose : !gpu.mma_matrix<3x5xf16, "COp">, memref<5x7x3xf16>
+  vector.transfer_write %B, %arg1[%c0, %c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2) -> (d2, d0)>} : vector<3x5xf16>, memref<5x7x3xf16>
+  // CHECK: gpu.subgroup_mma_store_matrix %{{.*}} leadDimension 3 transpose : !gpu.mma_matrix<3x5xf16, "COp">, memref<2x5x3xf16>
+  vector.transfer_write %B, %arg2[%c0, %c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2) -> (d2, d1)>} : vector<3x5xf16>, memref<2x5x3xf16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @write_transpose_with_strides_4d
+func.func @write_transpose_with_strides_4d(%arg0: memref<3x5xf16>, %arg1: memref<5x7x11x3xf16>, %arg2: memref<2x5x11x3xf16>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<3x5xf16>, vector<3x5xf16>
+  %B = arith.addf %A, %A : vector<3x5xf16>
+  // CHECK: gpu.subgroup_mma_store_matrix %{{.*}} leadDimension 231 transpose : !gpu.mma_matrix<3x5xf16, "COp">, memref<5x7x11x3xf16>
+  vector.transfer_write %B, %arg1[%c0, %c0, %c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d0)>} : vector<3x5xf16>, memref<5x7x11x3xf16>
+  // CHECK: gpu.subgroup_mma_store_matrix %{{.*}} leadDimension 33 transpose : !gpu.mma_matrix<3x5xf16, "COp">, memref<2x5x11x3xf16>
+  vector.transfer_write %B, %arg2[%c0, %c0, %c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d1)>} : vector<3x5xf16>, memref<2x5x11x3xf16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @no_convert_write_transpose_not_last_dim
 // CHECK-NOT: gpu
-func.func @no_convert_write_transpose(%arg0: memref<2x2xf16>) {
+func.func @no_convert_write_transpose_not_last_dim(%arg0: memref<2x2xf16>, %arg1: memref<2x2x2xf16>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f16
   %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<2x2xf16>, vector<2x2xf16>
   %B = arith.addf %A, %A : vector<2x2xf16>
-  vector.transfer_write %B, %arg0[%c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<2x2xf16>, memref<2x2xf16>
+  // Legal map, but does not map the last memref dim so should not be lowered to an MMA store.
+  vector.transfer_write %B, %arg1[%c0, %c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2) -> (d1, d0)>} : vector<2x2xf16>, memref<2x2x2xf16>
   return
 }
 
@@ -683,4 +726,66 @@ func.func @read_transpose_with_broadcast_3d(%arg0: memref<2x2x2xf16>, %arg1: mem
   %B = arith.addf %A, %A : vector<2x2xf16>
   vector.transfer_write %B, %arg1[%c0, %c0] {in_bounds = [true, true]} : vector<2x2xf16>, memref<2x2xf16>
   return
+}
+
+// -----
+
+// A transfer_write masked by an enclosing vector.mask must be left
+// unconverted: MMA conversion cannot preserve a region mask.
+
+#map1 = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK-LABEL: func @matmul_masked_write
+//   CHECK-NOT:   gpu.subgroup_mma
+//       CHECK:   vector.contract
+//       CHECK:   vector.mask %{{.*}} { vector.transfer_write
+func.func @matmul_masked_write(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>, %m: index, %n: index) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f16
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : memref<16x16xf16>, vector<16x16xf16>
+  %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
+  %mask = vector.create_mask %m, %n : vector<16x16xi1>
+  vector.mask %mask { vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<16x16xf16> } : vector<16x16xi1>
+  return
+}
+
+// -----
+
+// A masked contraction is not prepared for MMA conversion. With transposes
+// the rewrite would create ops inside the vector.mask region; with only an
+// operand swap it would swap the m and n dimensions under an unchanged mask.
+
+#map1 = affine_map<(d0, d1, d2) -> (d2, d0)>
+#map2 = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK-LABEL: func @masked_matmul_km_kn_mn
+//   CHECK-NOT:   vector.transpose
+//       CHECK:   vector.mask %{{.*}} { vector.contract
+//   CHECK-NOT:   vector.transpose
+//       CHECK:   return
+func.func @masked_matmul_km_kn_mn(%arg0: vector<16x16xf16>, %arg1: vector<16x16xf16>, %arg2: vector<16x16xf16>, %m: index, %n: index, %k: index) -> vector<16x16xf16> {
+  %mask = vector.create_mask %m, %n, %k : vector<16x16x16xi1>
+  %D = vector.mask %mask { vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16> } : vector<16x16x16xi1> -> vector<16x16xf16>
+  return %D : vector<16x16xf16>
+}
+
+// -----
+
+#map1 = affine_map<(d0, d1, d2) -> (d2, d0)>
+#map4 = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map5 = affine_map<(d0, d1, d2) -> (d1, d0)>
+
+// CHECK-LABEL: func @masked_matmul_km_nk_nm
+//  CHECK-SAME:   (%[[A:.+]]: vector<16x16xf16>, %[[B:.+]]: vector<16x16xf16>, %[[C:.+]]: vector<16x16xf16>
+//       CHECK:   vector.mask %{{.*}} { vector.contract {{.+}} %[[A]], %[[B]], %[[C]]
+//       CHECK:   return
+func.func @masked_matmul_km_nk_nm(%arg0: vector<16x16xf16>, %arg1: vector<16x16xf16>, %arg2: vector<16x16xf16>, %m: index, %n: index, %k: index) -> vector<16x16xf16> {
+  %mask = vector.create_mask %m, %n, %k : vector<16x16x16xi1>
+  %D = vector.mask %mask { vector.contract {indexing_maps = [#map1, #map4, #map5], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16> } : vector<16x16x16xi1> -> vector<16x16xf16>
+  return %D : vector<16x16xf16>
 }

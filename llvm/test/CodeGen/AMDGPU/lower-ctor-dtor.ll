@@ -17,8 +17,8 @@
 ; VISIBILITY: FUNC   WEAK PROTECTED {{.*}} amdgcn.device.fini
 ; VISIBILITY: OBJECT   WEAK DEFAULT {{.*}} amdgcn.device.fini.kd
 
-; SECTION: .init_array.1     INIT_ARRAY      {{.*}} {{.*}} 000008 00  WA  0   0  8
-; SECTION: .fini_array.1     FINI_ARRAY      {{.*}} {{.*}} 000008 00  WA  0   0  8
+; SECTION: .init_array.1     INIT_ARRAY      {{.*}} {{.*}} 000008 08  WA  0   0  8
+; SECTION: .fini_array.1     FINI_ARRAY      {{.*}} {{.*}} 000008 08  WA  0   0  8
 
 ; DISABLED-NOT: FUNC   GLOBAL PROTECTED {{.*}} amdgcn.device.init
 ; DISABLED-NOT: OBJECT GLOBAL DEFAULT {{.*}} amdgcn.device.init.kd
@@ -69,7 +69,7 @@ define internal void @bar() {
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ @__init_array_start, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]
 ; CHECK-NEXT:    [[CALLBACK:%.*]] = load ptr, ptr addrspace(1) [[PTR]], align 8
 ; CHECK-NEXT:    call void [[CALLBACK]]()
-; CHECK-NEXT:    [[NEXT]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[PTR]], i64 1
+; CHECK-NEXT:    [[NEXT]] = getelementptr i8, ptr addrspace(1) [[PTR]], i64 8
 ; CHECK-NEXT:    [[END:%.*]] = icmp eq ptr addrspace(1) [[NEXT]], @__init_array_end
 ; CHECK-NEXT:    br i1 [[END]], label [[WHILE_END]], label [[WHILE_ENTRY]]
 ; CHECK:       while.end:
@@ -79,13 +79,13 @@ define internal void @bar() {
 ; CHECK-LABEL: define weak_odr amdgpu_kernel void @amdgcn.device.fini(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr addrspace(1) getelementptr inbounds (ptr addrspace(1), ptr addrspace(1) @__fini_array_end, i64 -1), @__fini_array_start
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @__fini_array_end, i64 -8), @__fini_array_start
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[WHILE_ENTRY:%.*]], label [[WHILE_END:%.*]]
 ; CHECK:       while.entry:
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ getelementptr inbounds (ptr addrspace(1), ptr addrspace(1) @__fini_array_end, i64 -1), [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ getelementptr inbounds (i8, ptr addrspace(1) @__fini_array_end, i64 -8), [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]
 ; CHECK-NEXT:    [[CALLBACK:%.*]] = load ptr, ptr addrspace(1) [[PTR]], align 8
 ; CHECK-NEXT:    call void [[CALLBACK]]()
-; CHECK-NEXT:    [[NEXT]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[PTR]], i64 -1
+; CHECK-NEXT:    [[NEXT]] = getelementptr i8, ptr addrspace(1) [[PTR]], i64 -8
 ; CHECK-NEXT:    [[END:%.*]] = icmp ult ptr addrspace(1) [[NEXT]], @__fini_array_start
 ; CHECK-NEXT:    br i1 [[END]], label [[WHILE_END]], label [[WHILE_ENTRY]]
 ; CHECK:       while.end:

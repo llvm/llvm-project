@@ -71,3 +71,15 @@ void *test_memchr(const void *ptr, int val, __SIZE_TYPE__ size) {
 // LLVM32-DAG: call ptr @memchr(ptr noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}})
 // LLVM16-DAG: call ptr @memchr(ptr noundef %{{.*}}, i16 noundef %{{.*}}, i16 noundef %{{.*}})
 
+void test_char_memchr_deref(char arg[32]) {
+  *__builtin_char_memchr(arg, 123, 32) = 0;
+}
+
+// CIR-LABEL: @test_char_memchr_deref
+// CIR: %[[RES:.*]] = cir.libc.memchr({{.*}}) : !cir.ptr<!void>, !s32i, !u64i
+// CIR: cir.cast bitcast %[[RES]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
+
+// LLVM-LABEL: @test_char_memchr_deref
+// LLVM: call ptr @memchr(ptr noundef %{{.*}}, i32 noundef 123, i64 noundef 32)
+// LLVM: store i8 0, ptr %{{.*}}
+

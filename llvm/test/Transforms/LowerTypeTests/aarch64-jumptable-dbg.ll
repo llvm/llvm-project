@@ -36,12 +36,12 @@ define i1 @foo(ptr %p) {
 ; AARCH64: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
 ; AARCH64: @[[GLOB1:[0-9]+]] = private constant [0 x i8] zeroinitializer
 ; AARCH64: @f = alias [8 x i8], ptr @.cfi.jumptable
-; AARCH64: @g = internal alias [8 x i8], getelementptr inbounds ([2 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
+; AARCH64: @g = internal alias [8 x i8], getelementptr inbounds (i8, ptr @.cfi.jumptable, i64 8)
 ;.
 ; AARCH64-OFF: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
 ; AARCH64-OFF: @[[GLOB1:[0-9]+]] = private constant [0 x i8] zeroinitializer
 ; AARCH64-OFF: @f = alias [8 x i8], ptr @.cfi.jumptable
-; AARCH64-OFF: @g = internal alias [8 x i8], getelementptr inbounds ([2 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
+; AARCH64-OFF: @g = internal alias [8 x i8], getelementptr inbounds (i8, ptr @.cfi.jumptable, i64 8)
 ;.
 ; AARCH64-LABEL: @f.cfi(
 ; AARCH64-NEXT:    ret void
@@ -62,9 +62,9 @@ define i1 @foo(ptr %p) {
 ; AARCH64: Function Attrs: naked noinline
 ; AARCH64-LABEL: @.cfi.jumptable(
 ; AARCH64-NEXT:  entry:
-; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0A", "s"(ptr @f.cfi), !dbg [[DBG8:![0-9]+]]
-; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0A", "s"(ptr @g.cfi), !dbg [[DBG11:![0-9]+]]
-; AARCH64-NEXT:    unreachable, !dbg [[DBG11]]
+; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0A", "s"(ptr @f.cfi), !dbg [[DBG9:![0-9]+]]
+; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0A", "s"(ptr @g.cfi), !dbg [[DBG12:![0-9]+]]
+; AARCH64-NEXT:    unreachable, !dbg [[DBG12]]
 ;
 ;
 ; AARCH64-OFF-LABEL: @f.cfi(
@@ -107,14 +107,16 @@ define i1 @foo(ptr %p) {
 ; AARCH64: [[META5:![0-9]+]] = !{i32 0, !"typeid1"}
 ; AARCH64: [[META6:![0-9]+]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall_jt", scope: null, file: [[META4]], type: [[META7:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
 ; AARCH64: [[META7]] = !DISubroutineType(types: null)
-; AARCH64: [[DBG8]] = !DILocation(line: 0, scope: [[META9:![0-9]+]], inlinedAt: [[META10:![0-9]+]])
-; AARCH64: [[META9]] = distinct !DISubprogram(name: "f.cfi_jt", scope: null, file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
-; AARCH64: [[META10]] = !DILocation(line: 0, scope: [[META6]])
-; AARCH64: [[DBG11]] = !DILocation(line: 0, scope: [[META12:![0-9]+]], inlinedAt: [[META10]])
-; AARCH64: [[META12]] = distinct !DISubprogram(name: "g.cfi_jt", scope: null, file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
+; AARCH64: [[META8:![0-9]+]] = !{i64 1879002126, i64 8}
+; AARCH64: [[DBG9]] = !DILocation(line: 0, scope: [[META10:![0-9]+]], inlinedAt: [[META11:![0-9]+]])
+; AARCH64: [[META10]] = distinct !DISubprogram(name: "f.cfi_jt", scope: null, file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
+; AARCH64: [[META11]] = !DILocation(line: 0, scope: [[META6]])
+; AARCH64: [[DBG12]] = !DILocation(line: 0, scope: [[META13:![0-9]+]], inlinedAt: [[META11]])
+; AARCH64: [[META13]] = distinct !DISubprogram(name: "g.cfi_jt", scope: null, file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
 ;.
 ; AARCH64-OFF: [[META0:![0-9]+]] = !{i32 4, !"branch-target-enforcement", i32 1}
 ; AARCH64-OFF: [[META1:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
 ; AARCH64-OFF: [[META2:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; AARCH64-OFF: [[META3:![0-9]+]] = !{i32 0, !"typeid1"}
+; AARCH64-OFF: [[META4:![0-9]+]] = !{i64 1879002126, i64 8}
 ;.

@@ -3,7 +3,7 @@
 
 ; Tests for printing VPlans with reductions.
 
-define float @print_reduction(i64 %n, ptr noalias %y) {
+define float @print_reduction(i64 %n, ptr noalias %y) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_reduction'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -61,7 +61,7 @@ exit:                                          ; preds = %loop, %entry
   ret float %red.next
 }
 
-define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr noalias %dst) {
+define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr noalias %dst) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_reduction_with_invariant_store'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -121,7 +121,7 @@ exit:                                          ; preds = %loop, %entry
   ret void
 }
 
-define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
+define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_fmuladd_strict'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -185,7 +185,7 @@ exit:
   ret float %muladd
 }
 
-define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
+define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'find_last_iv'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -247,7 +247,7 @@ exit:
   ret i64 %cond
 }
 
-define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
+define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_extended_reduction'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -305,7 +305,7 @@ exit:
   ret i64 %r.0.lcssa
 }
 
-define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
+define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_mulacc'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -369,7 +369,7 @@ exit:
   ret i64 %r.0.lcssa
 }
 
-define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
+define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_mulacc_extended'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -438,7 +438,7 @@ exit:
   ret i64 %r.0.lcssa
 }
 
-define i32 @print_mulacc_negated(ptr %a, ptr %b) {
+define i32 @print_mulacc_negated(ptr %a, ptr %b) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_mulacc_negated'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -509,7 +509,7 @@ exit:
   ret i32 %add
 }
 
-define i32 @print_mulacc_extended_const(ptr %start, ptr %end) {
+define i32 @print_mulacc_extended_const(ptr %start, ptr %end) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_mulacc_extended_const'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -571,7 +571,7 @@ exit:
   ret i32 %red.next
 }
 
-define i32 @print_mulacc_extended_const_lhs(ptr %start, ptr %end) {
+define i32 @print_mulacc_extended_const_lhs(ptr %start, ptr %end) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_mulacc_extended_const_lhs'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -634,7 +634,7 @@ exit:
 }
 
 ; Constants >= 128 cannot be treated as sign-extended, so the expression shouldn't extend 128
-define i32 @print_mulacc_not_extended_const(ptr %start, ptr %end) {
+define i32 @print_mulacc_not_extended_const(ptr %start, ptr %end) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_mulacc_not_extended_const'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -697,7 +697,7 @@ exit:
   ret i32 %red.next.lcssa
 }
 
-define i64 @print_ext_mulacc_extended_const(ptr %start, ptr %end) {
+define i64 @print_ext_mulacc_extended_const(ptr %start, ptr %end) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_ext_mulacc_extended_const'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -761,7 +761,7 @@ exit:
 }
 
 ; Constants >= 128 cannot be treated as sign-extended, so the expression shouldn't extend 128
-define i64 @print_ext_mulacc_not_extended_const(ptr %start, ptr %end) {
+define i64 @print_ext_mulacc_not_extended_const(ptr %start, ptr %end) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_ext_mulacc_not_extended_const'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -829,7 +829,7 @@ exit:
 ; ExtMulAccReduction VPExpressionRecipe since the mul has two users.
 ; It can however be turned into an ExtendedReduction since that one doesn't
 ; modify the mul's operands.
-define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) {
+define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_ext_mul_two_uses'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
@@ -891,7 +891,7 @@ exit:
   ret i64 %add
 }
 
-define i32 @print_umax_reduction(ptr %y) {
+define i32 @print_umax_reduction(ptr %y) vscale_range(2, 1024) {
 ; CHECK-LABEL: VPlan for loop in 'print_umax_reduction'
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF

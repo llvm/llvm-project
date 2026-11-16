@@ -36,7 +36,7 @@ define ptr @foo(ptr nocapture readonly byval(%struct.A) align 8 %a1) #0 !prof !0
 ; CHECK-NEXT:    [[CALL2:%.*]] = call ptr @_ZN4task12promise_type17get_return_objectEv(ptr nonnull dereferenceable(1) [[__PROMISE_RELOAD_ADDR]])
 ; CHECK-NEXT:    call void @initial_suspend(ptr nonnull dereferenceable(1) [[__PROMISE_RELOAD_ADDR]])
 ; CHECK-NEXT:    [[INDEX_ADDR5:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 17
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR5]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR5]], align 1
 ; CHECK-NEXT:    call fastcc void @_ZNSt12experimental13coroutines_v116coroutine_handleIN4task12promise_typeEE12from_addressEPv(ptr [[TMP3]]) #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    ret ptr [[CALL2]]
 ;

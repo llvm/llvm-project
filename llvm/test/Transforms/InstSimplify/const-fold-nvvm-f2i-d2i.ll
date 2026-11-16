@@ -516,7 +516,7 @@ define i32 @test_nan_d2i_rm() {
 ; CHECK-LABEL: define i32 @test_nan_d2i_rm() {
 ; CHECK-NEXT:    ret i32 -2147483648
 ;
-  %res = call i32 @llvm.nvvm.d2i.rm(double 0xFFF8000000000000)
+  %res = call i32 @llvm.nvvm.d2i.rm(double -qnan)
   ret i32 %res
 }
 
@@ -524,7 +524,7 @@ define i32 @test_nan_d2i_rn() {
 ; CHECK-LABEL: define i32 @test_nan_d2i_rn() {
 ; CHECK-NEXT:    ret i32 -2147483648
 ;
-  %res = call i32 @llvm.nvvm.d2i.rn(double 0xFFF8000000000000)
+  %res = call i32 @llvm.nvvm.d2i.rn(double -qnan)
   ret i32 %res
 }
 
@@ -533,7 +533,7 @@ define i32 @test_nan_d2i_rp() {
 ; CHECK-LABEL: define i32 @test_nan_d2i_rp() {
 ; CHECK-NEXT:    ret i32 -2147483648
 ;
-  %res = call i32 @llvm.nvvm.d2i.rp(double 0xFFF8000000000000)
+  %res = call i32 @llvm.nvvm.d2i.rp(double -qnan)
   ret i32 %res
 }
 
@@ -541,7 +541,7 @@ define i32 @test_nan_d2i_rz() {
 ; CHECK-LABEL: define i32 @test_nan_d2i_rz() {
 ; CHECK-NEXT:    ret i32 -2147483648
 ;
-  %res = call i32 @llvm.nvvm.d2i.rz(double 0xFFF8000000000000)
+  %res = call i32 @llvm.nvvm.d2i.rz(double -qnan)
   ret i32 %res
 }
 
@@ -622,7 +622,7 @@ define i32 @test_nan_d2ui_rm() {
 ; CHECK-LABEL: define i32 @test_nan_d2ui_rm() {
 ; CHECK-NEXT:    ret i32 -2147483648
 ;
-  %res = call i32 @llvm.nvvm.d2ui.rm(double 0xFFF8000000000000)
+  %res = call i32 @llvm.nvvm.d2ui.rm(double -qnan)
   ret i32 %res
 }
 
@@ -630,7 +630,7 @@ define i32 @test_nan_d2ui_rn() {
 ; CHECK-LABEL: define i32 @test_nan_d2ui_rn() {
 ; CHECK-NEXT:    ret i32 -2147483648
 ;
-  %res = call i32 @llvm.nvvm.d2ui.rn(double 0xFFF8000000000000)
+  %res = call i32 @llvm.nvvm.d2ui.rn(double -qnan)
   ret i32 %res
 }
 
@@ -639,7 +639,7 @@ define i32 @test_nan_d2ui_rp() {
 ; CHECK-LABEL: define i32 @test_nan_d2ui_rp() {
 ; CHECK-NEXT:    ret i32 -2147483648
 ;
-  %res = call i32 @llvm.nvvm.d2ui.rp(double 0xFFF8000000000000)
+  %res = call i32 @llvm.nvvm.d2ui.rp(double -qnan)
   ret i32 %res
 }
 
@@ -647,7 +647,7 @@ define i32 @test_nan_d2ui_rz() {
 ; CHECK-LABEL: define i32 @test_nan_d2ui_rz() {
 ; CHECK-NEXT:    ret i32 -2147483648
 ;
-  %res = call i32 @llvm.nvvm.d2ui.rz(double 0xFFF8000000000000)
+  %res = call i32 @llvm.nvvm.d2ui.rz(double -qnan)
   ret i32 %res
 }
 

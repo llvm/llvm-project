@@ -589,7 +589,7 @@ define <2 x double> @fma_nan_and_const_0(<2 x double> %b) {
 ; CHECK-LABEL: @fma_nan_and_const_0(
 ; CHECK-NEXT:    ret <2 x double> splat (double +qnan)
 ;
-  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> %b)
+  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double +qnan, double +qnan>, <2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> %b)
   ret <2 x double> %res
 }
 
@@ -597,7 +597,7 @@ define <2 x double> @fma_nan_and_const_1(<2 x double> %b) {
 ; CHECK-LABEL: @fma_nan_and_const_1(
 ; CHECK-NEXT:    ret <2 x double> splat (double +qnan)
 ;
-  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> %b)
+  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> <double +qnan, double +qnan>, <2 x double> %b)
   ret <2 x double> %res
 }
 
@@ -605,7 +605,7 @@ define <2 x double> @fma_nan_and_const_2(<2 x double> %b) {
 ; CHECK-LABEL: @fma_nan_and_const_2(
 ; CHECK-NEXT:    ret <2 x double> splat (double +qnan)
 ;
-  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> %b, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>)
+  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> %b, <2 x double> <double +qnan, double +qnan>)
   ret <2 x double> %res
 }
 
@@ -665,14 +665,14 @@ define <2 x double> @fma_nan_0(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fma_nan_0(
 ; CHECK-NEXT:    ret <2 x double> splat (double +qnan)
 ;
-  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> %b, <2 x double> %c)
+  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double +qnan, double +qnan>, <2 x double> %b, <2 x double> %c)
   ret <2 x double> %res
 }
 define <2 x double> @fma_nan_1(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fma_nan_1(
 ; CHECK-NEXT:    ret <2 x double> splat (double +qnan)
 ;
-  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> %b, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> %c)
+  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> %b, <2 x double> <double +qnan, double +qnan>, <2 x double> %c)
   ret <2 x double> %res
 }
 
@@ -680,7 +680,7 @@ define <2 x double> @fma_nan_2(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fma_nan_2(
 ; CHECK-NEXT:    ret <2 x double> splat (double +qnan)
 ;
-  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> %b, <2 x double> %c, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>)
+  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> %b, <2 x double> %c, <2 x double> <double +qnan, double +qnan>)
   ret <2 x double> %res
 }
 
@@ -697,7 +697,7 @@ define <2 x double> @fmuladd_nan_and_const_0(<2 x double> %b) {
 ; CHECK-LABEL: @fmuladd_nan_and_const_0(
 ; CHECK-NEXT:    ret <2 x double> splat (double +qnan)
 ;
-  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> %b)
+  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double +qnan, double +qnan>, <2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> %b)
   ret <2 x double> %res
 }
 
@@ -705,7 +705,7 @@ define <2 x double> @fmuladd_nan_and_const_1(<2 x double> %b) {
 ; CHECK-LABEL: @fmuladd_nan_and_const_1(
 ; CHECK-NEXT:    ret <2 x double> splat (double +qnan)
 ;
-  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> %b)
+  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> <double +qnan, double +qnan>, <2 x double> %b)
   ret <2 x double> %res
 }
 
@@ -713,7 +713,7 @@ define <2 x double> @fmuladd_nan_and_const_2(<2 x double> %b) {
 ; CHECK-LABEL: @fmuladd_nan_and_const_2(
 ; CHECK-NEXT:    ret <2 x double> splat (double +qnan)
 ;
-  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> %b, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>)
+  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> %b, <2 x double> <double +qnan, double +qnan>)
   ret <2 x double> %res
 }
 
@@ -721,7 +721,7 @@ define <2 x double> @fmuladd_nan_0(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fmuladd_nan_0(
 ; CHECK-NEXT:    ret <2 x double> splat (double +qnan)
 ;
-  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> %b, <2 x double> %c)
+  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double +qnan, double +qnan>, <2 x double> %b, <2 x double> %c)
   ret <2 x double> %res
 }
 
@@ -729,7 +729,7 @@ define <2 x double> @fmuladd_nan_1(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fmuladd_nan_1(
 ; CHECK-NEXT:    ret <2 x double> splat (double +qnan)
 ;
-  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> %b, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> %c)
+  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> %b, <2 x double> <double +qnan, double +qnan>, <2 x double> %c)
   ret <2 x double> %res
 }
 
@@ -753,7 +753,7 @@ define <2 x double> @fmuladd_undef_2(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fmuladd_undef_2(
 ; CHECK-NEXT:    ret <2 x double> splat (double +qnan)
 ;
-  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> %b, <2 x double> %c, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>)
+  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> %b, <2 x double> %c, <2 x double> <double +qnan, double +qnan>)
   ret <2 x double> %res
 }
 
@@ -994,4 +994,54 @@ define half @fma_non_negone(half %x, half %y) {
 ;
   %sub = call half @llvm.fma.f16(half %x, half -1.5, half %y)
   ret half %sub
+}
+
+declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
+declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>)
+
+; fma is elementwise, so an undemanded result lane makes the matching operand
+; lane undemanded too: the insert into the dropped lane is removed.
+define <4 x float> @fma_undemanded_elt(<4 x float> %a, <4 x float> %b, <4 x float> %c, float %x) {
+; CHECK-LABEL: @fma_undemanded_elt(
+; CHECK-NEXT:    [[FMA:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[C:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[FMA]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %a3 = insertelement <4 x float> %a, float %x, i64 3
+  %fma = call <4 x float> @llvm.fma.v4f32(<4 x float> %a3, <4 x float> %b, <4 x float> %c)
+  %r = shufflevector <4 x float> %fma, <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+  ret <4 x float> %r
+}
+
+define <4 x float> @fmuladd_undemanded_elt(<4 x float> %a, <4 x float> %b, <4 x float> %c, float %x) {
+; CHECK-LABEL: @fmuladd_undemanded_elt(
+; CHECK-NEXT:    [[FMA:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[C:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[FMA]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %b3 = insertelement <4 x float> %b, float %x, i64 3
+  %fma = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %a, <4 x float> %b3, <4 x float> %c)
+  %r = shufflevector <4 x float> %fma, <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+  ret <4 x float> %r
+}
+
+; An operand lane that is poison makes the matching result lane poison: here all
+; demanded result lanes come from lane 3, where operand 0 is poison, so the whole
+; result folds to poison.
+define <4 x float> @fma_poison_elt_propagates(<4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: @fma_poison_elt_propagates(
+; CHECK-NEXT:    ret <4 x float> poison
+;
+  %fma = call <4 x float> @llvm.fma.v4f32(<4 x float> <float 1.0, float 2.0, float 3.0, float poison>, <4 x float> %b, <4 x float> %c)
+  %r = shufflevector <4 x float> %fma, <4 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x float> %r
+}
+
+define <4 x float> @fmuladd_poison_elt_propagates(<4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: @fmuladd_poison_elt_propagates(
+; CHECK-NEXT:    ret <4 x float> poison
+;
+  %fma = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %b, <4 x float> <float 1.0, float 2.0, float 3.0, float poison>, <4 x float> %c)
+  %r = shufflevector <4 x float> %fma, <4 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x float> %r
 }

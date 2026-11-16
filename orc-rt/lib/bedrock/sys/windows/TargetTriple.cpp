@@ -10,6 +10,12 @@
 
 namespace orc_rt::sys {
 
-std::string detectTargetTriple() noexcept { return {}; }
+std::string detectTargetTriple() noexcept {
+#if defined(_M_X64)
+  return "x86_64-pc-windows-msvc";
+#else
+#error "Unsupported Windows architecture"
+#endif
+}
 
 } // namespace orc_rt::sys

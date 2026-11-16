@@ -10,4 +10,4 @@
 
 #include "src/math/dsqrtl.h"
 
-LIST_NARROWING_SQRT_TESTS(double, long double, LIBC_NAMESPACE::dsqrtl)
+LIST_NARROWING_SQRT_TESTS(Dsqrtl, double, long double, LIBC_NAMESPACE::dsqrtl)

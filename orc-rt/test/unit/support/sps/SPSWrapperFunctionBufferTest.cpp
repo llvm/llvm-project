@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 static bool WFBEQ(const WrapperFunctionBuffer &LHS,
                   const WrapperFunctionBuffer &RHS) {

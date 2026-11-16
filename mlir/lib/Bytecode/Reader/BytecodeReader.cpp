@@ -1331,6 +1331,14 @@ LogicalResult AttrTypeReader::initialize(
 
     // Parse an individual entry.
     auto parseEntryFn = [&](BytecodeDialect *dialect) -> LogicalResult {
+      // Verify that the dialect groups don't contain more entries than were
+      // declared for this range.
+      if (currentIndex == endIndex) {
+        return offsetReader.emitError(
+            "Attribute or Type dialect group entries exceed the declared "
+            "number of entries (",
+            endIndex, ")");
+      }
       auto &entry = range[currentIndex++];
 
       uint64_t entrySize;

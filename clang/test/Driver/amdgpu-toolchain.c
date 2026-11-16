@@ -72,6 +72,12 @@
 //      UBSAN: ld.lld
 // UBSAN-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.ubsan_minimal.a"
 
+// RUN: %clang -### --target=amdgpu9.0a-amd-amdhsa -mxnack -nogpulib \
+// RUN:   -resource-dir=%S/Inputs/resource_dir_with_amdgpu_per_target_subdir \
+// RUN:   -fsanitize=address %s 2>&1 | FileCheck -check-prefixes=ASAN %s
+//     ASAN: ld.lld
+// ASAN-NOT: libclang_rt.asan
+
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
 // RUN:   -resource-dir=%S/Inputs/resource_dir_with_amdgpu_per_target_subdir \
 // RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE-AMDGPU %s

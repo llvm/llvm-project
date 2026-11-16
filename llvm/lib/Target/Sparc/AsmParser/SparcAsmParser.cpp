@@ -127,9 +127,7 @@ class SparcAsmParser : public MCTargetAsmParser {
 
   bool matchSparcAsmModifiers(const MCExpr *&EVal, SMLoc &EndLoc);
 
-  bool is64Bit() const {
-    return getSTI().getTargetTriple().getArch() == Triple::sparcv9;
-  }
+  bool is64Bit() const { return getSTI().getTargetTriple().isSPARC64(); }
 
   bool expandSET(MCInst &Inst, SMLoc IDLoc,
                  SmallVectorImpl<MCInst> &Instructions);

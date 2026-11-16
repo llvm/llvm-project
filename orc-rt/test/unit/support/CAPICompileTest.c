@@ -15,12 +15,20 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
+#include "orc-rt-c/bedrock/ControllerHandlerTag.h"
 #include "orc-rt-c/bedrock/Session.h"
 #include "orc-rt-c/support/Compiler.h"
 #include "orc-rt-c/support/CoreTypes.h"
 #include "orc-rt-c/support/Error.h"
 #include "orc-rt-c/support/Logging.h"
+#include "orc-rt-c/support/RTTI.h"
 #include "orc-rt-c/support/WrapperFunction.h"
+
+/* The _toRTTIRoot accessor defined by ORC_RT_RTTI_PARTICIPANT must be callable
+   from C. */
+orc_rt_RTTIRootRef orc_rt_test_errorToRTTIRoot(orc_rt_ErrorRef E) {
+  return orc_rt_Error_toRTTIRoot(E);
+}
 
 /* ORC_RT_HAS_BUILTIN must be usable in a preprocessor conditional in C, and
    must agree with the answer the C++ compiler gives for the same builtin. */

@@ -10,3 +10,18 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  getentropy
+  SRCS
+    getentropy.cpp
+  HDRS
+    ../getentropy.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
+    libc.src.errno.errno
+)

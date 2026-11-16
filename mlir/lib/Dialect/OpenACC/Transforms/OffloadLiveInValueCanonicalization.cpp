@@ -66,6 +66,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Analysis/TopologicalSortUtils.h"
@@ -96,7 +97,6 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 /// Returns true if all users of the given value are inside the region.
 static bool allUsersAreInsideRegion(Value val, Region &region) {
   for (Operation *user : val.getUsers())
@@ -205,6 +205,12 @@ public:
   using acc::impl::OffloadLiveInValueCanonicalizationBase<
       OffloadLiveInValueCanonicalization>::
       OffloadLiveInValueCanonicalizationBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::OffloadLiveInValueCanonicalizationBase<
+        OffloadLiveInValueCanonicalization>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
 
   /// Canonicalizes live-in values for a region by sinking or rematerializing
   /// operations. Returns true if any changes were made.
@@ -326,5 +332,4 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "Exit OffloadLiveInValueCanonicalization\n");
   }
 };
-
 } // namespace

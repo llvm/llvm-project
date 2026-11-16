@@ -699,7 +699,7 @@ void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
 
-    auto addend = rs.getAddend<ELFT>(rel, type);
+    auto addend = rs.getAddend(rel, type);
     if (expr == RE_MIPS_GOTREL && sym.isLocal()) {
       addend += sec.getFile<ELFT>()->mipsGp0;
     } else if (!RelTy::HasAddend) {
@@ -907,6 +907,10 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
     writeValue(ctx, loc, val, 32, 0);
     break;
   case R_MICROMIPS_26_S1:
+    // Like R_MIPS_26, this encodes an index within the current PC region,
+    // not a signed absolute address. The destination need not fit in 27 bits.
+    writeShuffle<e>(ctx, loc, val, 26, 1);
+    break;
   case R_MICROMIPS_PC26_S1:
     checkInt(ctx, loc, val, 27, rel);
     writeShuffle<e>(ctx, loc, val, 26, 1);

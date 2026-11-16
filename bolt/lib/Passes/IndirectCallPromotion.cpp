@@ -39,7 +39,7 @@ static cl::opt<unsigned> ICPJTRemainingPercentThreshold(
     "icp-jt-remaining-percent-threshold",
     cl::desc("The percentage threshold against remaining unpromoted indirect "
              "call count for the promotion for jump tables"),
-    cl::init(30), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(30), cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> ICPJTTotalPercentThreshold(
     "icp-jt-total-percent-threshold",

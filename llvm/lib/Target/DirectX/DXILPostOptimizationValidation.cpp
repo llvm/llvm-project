@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILPostOptimizationValidation.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
+#include "DXILSignatureAnalysis.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -329,7 +329,7 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 }
 
 PreservedAnalyses
-DXILPostOptimizationValidation::run(Module &M, ModuleAnalysisManager &MAM) {
+DXILPostOptimizationValidationPass::run(Module &M, ModuleAnalysisManager &MAM) {
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceBindingInfo &DRBI = MAM.getResult<DXILResourceBindingAnalysis>(M);
   RootSignatureBindingInfo &RSBI = MAM.getResult<RootSignatureAnalysis>(M);
@@ -375,6 +375,7 @@ public:
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<RootSignatureAnalysisWrapper>();
+    AU.addPreserved<SignatureAnalysisWrapper>();
   }
 };
 char DXILPostOptimizationValidationLegacy::ID = 0;

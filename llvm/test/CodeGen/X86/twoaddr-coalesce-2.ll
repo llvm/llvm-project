@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mattr=+sse2 -mcpu=penryn -stats 2>&1 | \
-; RUN:   grep "twoaddressinstruction" | grep "Number of instructions aggressively commuted"
+; RUN:   grep "two-address-instruction" | grep "Number of instructions aggressively commuted"
 ; rdar://6480363
 
 target triple = "i386-apple-darwin9.6"

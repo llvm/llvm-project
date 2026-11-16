@@ -9,6 +9,8 @@ add_lldb_unittest(InterpreterTests
   TestRegexCommand.cpp
   TestScriptedInterface.cpp
 
+  LINK_COMPONENTS
+      Option
   LINK_LIBS
       lldbCommands
       lldbCore

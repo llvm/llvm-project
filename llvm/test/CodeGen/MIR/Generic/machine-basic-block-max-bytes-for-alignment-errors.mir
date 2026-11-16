@@ -1,0 +1,55 @@
+# RUN: split-file %s %t
+
+;--- without-align.mir
+# RUN: not llc -run-pass=none -filetype=null %t/without-align.mir 2>&1 | FileCheck %t/without-align.mir --check-prefix=WITHOUT-ALIGN
+---
+name:            foo
+body: |
+  ; WITHOUT-ALIGN: [[@LINE+1]]:3: 'max-bytes-for-alignment' requires 'align'
+  bb.0 (max-bytes-for-alignment 8):
+...
+
+;--- not-integer.mir
+# RUN: not llc -run-pass=none -filetype=null %t/not-integer.mir 2>&1 | FileCheck %t/not-integer.mir --check-prefix=NOT-INTEGER
+---
+name:            foo
+body: |
+  ; NOT-INTEGER: [[@LINE+1]]:42: expected an integer literal after 'max-bytes-for-alignment'
+  bb.0 (align 4, max-bytes-for-alignment foo):
+...
+
+;--- missing-value.mir
+# RUN: not llc -run-pass=none -filetype=null %t/missing-value.mir 2>&1 | FileCheck %t/missing-value.mir --check-prefix=MISSING-VALUE
+---
+name:            foo
+body: |
+  ; MISSING-VALUE: [[@LINE+1]]:41: expected an integer literal after 'max-bytes-for-alignment'
+  bb.0 (align 4, max-bytes-for-alignment):
+...
+
+;--- negative.mir
+# RUN: not llc -run-pass=none -filetype=null %t/negative.mir 2>&1 | FileCheck %t/negative.mir --check-prefix=NEGATIVE
+---
+name:            foo
+body: |
+  ; NEGATIVE: [[@LINE+1]]:42: expected unsigned integer
+  bb.0 (align 4, max-bytes-for-alignment -1):
+...
+
+;--- too-large.mir
+# RUN: not llc -run-pass=none -filetype=null %t/too-large.mir 2>&1 | FileCheck %t/too-large.mir --check-prefix=TOO-LARGE
+---
+name:            foo
+body: |
+  ; TOO-LARGE: [[@LINE+1]]:42: expected 32-bit integer (too large)
+  bb.0 (align 4, max-bytes-for-alignment 4294967296):
+...
+
+;--- align-not-power-of-2.mir
+# RUN: not llc -run-pass=none -filetype=null %t/align-not-power-of-2.mir 2>&1 | FileCheck %t/align-not-power-of-2.mir --check-prefix=NOT-POWER-OF-2
+---
+name:            foo
+body: |
+  ; NOT-POWER-OF-2: [[@LINE+1]]:16: expected a power-of-2 literal after 'align'
+  bb.0 (align 3, max-bytes-for-alignment 8):
+...

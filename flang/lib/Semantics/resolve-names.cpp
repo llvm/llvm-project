@@ -44,7 +44,6 @@
 #include "flang/Support/default-kinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
@@ -220,7 +219,7 @@ public:
   MaybeSubscriptIntExpr EvaluateSubscriptIntExpr(const T &expr) {
     if (MaybeIntExpr maybeIntExpr{EvaluateIntExpr(expr)}) {
       return FoldExpr(evaluate::ConvertToType<evaluate::SubscriptInteger>(
-          std::move(*maybeIntExpr)));
+          evaluate::SubscriptIntegerKind, std::move(*maybeIntExpr)));
     } else {
       return std::nullopt;
     }
@@ -250,6 +249,7 @@ public:
   bool BeginAttrs(); // always returns true
   Attrs GetAttrs();
   std::optional<common::CUDADataAttr> cudaDataAttr() { return cudaDataAttr_; }
+  bool cudaDataAttrIsImplicit() const { return cudaDataAttrIsImplicit_; }
   Attrs EndAttrs();
   bool SetPassNameOn(Symbol &);
   void SetBindNameOn(Symbol &);
@@ -292,10 +292,12 @@ public:
   HANDLE_ATTR_CLASS(Volatile, VOLATILE)
 #undef HANDLE_ATTR_CLASS
   bool Pre(const common::CUDADataAttr);
+  bool Pre(const parser::CUDADataAttrSpec::Implicit &);
 
 protected:
   std::optional<Attrs> attrs_;
   std::optional<common::CUDADataAttr> cudaDataAttr_;
+  bool cudaDataAttrIsImplicit_{false};
 
   Attr AccessSpecToAttr(const parser::AccessSpec &x) {
     switch (x.v) {
@@ -631,7 +633,8 @@ public:
   Symbol *FindInTypeOrParents(const Scope &, const parser::Name &);
   Symbol *FindInTypeOrParents(const parser::Name &);
   Symbol *FindInScopeOrBlockConstructs(const Scope &, SourceName);
-  Symbol *FindSeparateModuleProcedureInterface(const parser::Name &);
+  Symbol *FindSeparateModuleProcedureInterface(
+      const parser::Name &, bool emitError = true);
   void EraseSymbol(const parser::Name &);
   void EraseSymbol(const Symbol &symbol) { currScope().erase(symbol.name()); }
   // Make a new symbol with the name and attrs of an existing one
@@ -764,8 +767,13 @@ public:
     symbol.attrs().set(attr);
     symbol.implicitAttrs().set(attr);
   }
-  void SetCUDADataAttr(
-      SourceName, Symbol &, std::optional<common::CUDADataAttr>);
+  void SetCUDADataAttr(SourceName, Symbol &,
+      std::optional<common::CUDADataAttr>, bool isImplicit = false);
+  // Apply -gpu=mem:managed / -gpu=mem:pinned to an unattributed
+  // allocatable or data pointer. Explicit CUDA data attributes are left
+  // unchanged. CUDA Fortran must be enabled so a pure OpenACC compilation
+  // does not route every allocatable through the CUDA Fortran pipeline.
+  void ApplyImplicitCUDADataAttr(Symbol &);
 
 protected:
   FuncResultStack &funcResultStack() { return funcResultStack_; }
@@ -815,6 +823,8 @@ protected:
     // of the specification part, since the declaration typing the index's
     // name may follow the DATA statement (F'2023 19.4 p5)
     std::vector<MutableSymbolRef> deferredDataIDoVars;
+    std::vector<const parser::ScalarLogicalConstantExpr *>
+        ompAssumesNoParallelismConditions;
     // Info about SAVE statements and attributes in current scope
     struct {
       std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -1329,7 +1339,7 @@ private:
       const parser::TypeParamValue &, common::TypeParamAttr attr);
   Attrs HandleSaveName(const SourceName &, Attrs);
   void AddSaveName(std::set<SourceName> &, const SourceName &);
-  bool HandleUnrestrictedSpecificIntrinsicFunction(const parser::Name &);
+  bool HandleSpecificIntrinsicFunction(const parser::Name &);
   const parser::Name *FindComponent(const parser::Name *, const parser::Name &);
   void Initialization(const parser::Name &, const parser::Initialization &,
       bool inComponentDecl);
@@ -1356,6 +1366,7 @@ public:
   bool Pre(const parser::AcSpec &);
   bool Pre(const parser::AcImpliedDo &);
   bool Pre(const parser::DataImpliedDo &);
+  bool Pre(const parser::DataStmt &);
   bool Pre(const parser::DataIDoObject &);
   bool Pre(const parser::DataStmtObject &);
   bool Pre(const parser::DataStmtValue &);
@@ -1842,6 +1853,49 @@ public:
   bool Pre(const parser::OmpClause::To &);
   bool Pre(const parser::OmpClause::From &);
 
+  bool Pre(const parser::OmpClause::NoParallelism &) {
+    return !inSpecificationPart_;
+  }
+
+  void Post(const parser::OmpAssumesDirective &x) {
+    if (Symbol * symbol{currScope().symbol()}) {
+      llvm::omp::Clauses clauses;
+      llvm::omp::Directives absent;
+      for (const parser::OmpClause &clause : x.v.Clauses().v) {
+        if (std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u)) {
+          clauses.set(clause.Id());
+        } else if (const auto *noParallelism{
+                       std::get_if<parser::OmpClause::NoParallelism>(
+                           &clause.u)}) {
+          if (const auto &condition{noParallelism->v}) {
+            specPartState_.ompAssumesNoParallelismConditions.push_back(
+                &condition->v);
+          } else {
+            clauses.set(clause.Id());
+          }
+        } else if (const auto *absentClause{
+                       std::get_if<parser::OmpClause::Absent>(&clause.u)}) {
+          clauses.set(clause.Id());
+          for (llvm::omp::Directive directive : absentClause->v.v) {
+            absent.set(directive);
+          }
+        }
+      }
+      common::visit(
+          [&](auto &details) {
+            if constexpr (std::is_convertible_v<decltype(details),
+                              WithOmpDeclarative &>) {
+              details.set_version(context().langOptions().getOpenMPVersion());
+              details.set_ompAssumes(details.ompAssumes() | clauses);
+              for (llvm::omp::Directive directive : absent) {
+                details.add_ompAssumesAbsent(directive);
+              }
+            }
+          },
+          symbol->details());
+    }
+  }
+
   // Make sure that the following code is properly handled:
   //
   // function baz(a)
@@ -2037,6 +2091,13 @@ bool OmpVisitor::Pre(const parser::OmpStylizedDeclaration &x) {
   BeginDecl();
   Walk(x.type.get());
   Walk(x.var);
+  // The special variables (omp_in, omp_out, omp_priv, omp_orig) are data
+  // objects. Make them object entities explicitly, so that a reference like
+  // omp_out(1) is not reinterpreted as a call to an external function.
+  // See issue #193431.
+  if (auto *symbol{std::get<parser::ObjectName>(x.var.t).symbol}) {
+    ConvertToObjectEntity(*symbol);
+  }
   return true;
 }
 
@@ -2130,47 +2191,6 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   PopScope();
 }
 
-parser::CharBlock MakeNameFromOperator(
-    const parser::DefinedOperator::IntrinsicOperator &op,
-    SemanticsContext &context) {
-  switch (op) {
-  case parser::DefinedOperator::IntrinsicOperator::Multiply:
-    return parser::CharBlock{"op.*", 4};
-  case parser::DefinedOperator::IntrinsicOperator::Add:
-    return parser::CharBlock{"op.+", 4};
-  case parser::DefinedOperator::IntrinsicOperator::Subtract:
-    return parser::CharBlock{"op.-", 4};
-
-  case parser::DefinedOperator::IntrinsicOperator::AND:
-    return parser::CharBlock{"op.AND", 6};
-  case parser::DefinedOperator::IntrinsicOperator::OR:
-    return parser::CharBlock{"op.OR", 5};
-  case parser::DefinedOperator::IntrinsicOperator::EQV:
-    return parser::CharBlock{"op.EQV", 6};
-  case parser::DefinedOperator::IntrinsicOperator::NEQV:
-    return parser::CharBlock{"op.NEQV", 7};
-
-  default:
-    context.Say("Unsupported operator in DECLARE REDUCTION"_err_en_US);
-    return parser::CharBlock{"op.?", 4};
-  }
-}
-
-parser::CharBlock MangleSpecialFunctions(const parser::CharBlock &name) {
-  return llvm::StringSwitch<parser::CharBlock>(name.ToString())
-      .Case("max", {"op.max", 6})
-      .Case("min", {"op.min", 6})
-      .Case("iand", {"op.iand", 7})
-      .Case("ior", {"op.ior", 6})
-      .Case("ieor", {"op.ieor", 7})
-      .Default(name);
-}
-
-std::string MangleDefinedOperator(const parser::CharBlock &name) {
-  CHECK(name[0] == '.' && name[name.size() - 1] == '.');
-  return "op" + name.ToString();
-}
-
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
     const parser::OmpClauseList &clauses) {
@@ -2194,8 +2214,7 @@ void OmpVisitor::ProcessReductionSpecifier(
       mangledName = context().SaveTempName(MangleDefinedOperator(name->source));
     } else {
       mangledName = MakeNameFromOperator(
-          std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u),
-          context());
+          std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u));
     }
   }
 
@@ -2574,6 +2593,7 @@ Attrs AttrsVisitor::EndAttrs() {
   Attrs result{GetAttrs()};
   attrs_.reset();
   cudaDataAttr_.reset();
+  cudaDataAttrIsImplicit_ = false;
   passName_ = std::nullopt;
   bindName_.reset();
   isCDefined_ = false;
@@ -2599,8 +2619,11 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
     return;
   }
   symbol.SetIsCDefined(isCDefined_);
-  std::optional<std::string> label{
-      evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)};
+  std::optional<std::string> label;
+  if (auto charVal{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+          evaluate::AsciiKind, bindName_)}) {
+    label = charVal->AsStdString();
+  }
   // 18.9.2(2): discard leading and trailing blanks
   if (label) {
     symbol.SetIsExplicitBindName(true);
@@ -2712,6 +2735,12 @@ bool AttrsVisitor::Pre(const common::CUDADataAttr x) {
         common::EnumToString(*cudaDataAttr_), common::EnumToString(x));
   }
   cudaDataAttr_ = x;
+  return false;
+}
+bool AttrsVisitor::Pre(const parser::CUDADataAttrSpec::Implicit &) {
+  // The (IMPLICIT) qualifier only appears in module files, marking an
+  // attribute this compiler applied rather than one the user wrote.
+  cudaDataAttrIsImplicit_ = true;
   return false;
 }
 
@@ -3424,6 +3453,12 @@ Symbol &ScopeHandler::MakeHostAssocSymbol(
   // attribute would fail.
   symbol.implicitAttrs() |= hostSymbol.implicitAttrs() & Attrs{Attr::SAVE};
   symbol.flags() = hostSymbol.flags();
+  // Locality is a property of a DO CONCURRENT construct entity and its own
+  // storage; a host-associated name never inherits it (e.g. a VOLATILE
+  // statement in a BLOCK, or a locality-spec in a nested DO CONCURRENT).
+  symbol.flags() &= ~Symbol::Flags{Symbol::Flag::LocalityLocal,
+      Symbol::Flag::LocalityLocalInit, Symbol::Flag::LocalityReduce,
+      Symbol::Flag::LocalityShared};
   return symbol;
 }
 Symbol &ScopeHandler::CopySymbol(const SourceName &name, const Symbol &symbol) {
@@ -3586,7 +3621,7 @@ bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
 }
 
 // Ensure that the symbol for an intrinsic procedure is marked with
-// the INTRINSIC attribute.  Also set PURE &/or ELEMENTAL as
+// the INTRINSIC attribute.  Also set SIMPLE, PURE &/or ELEMENTAL as
 // appropriate.
 void ScopeHandler::AcquireIntrinsicProcedureFlags(Symbol &symbol) {
   SetImplicitAttr(symbol, Attr::INTRINSIC);
@@ -3595,6 +3630,13 @@ void ScopeHandler::AcquireIntrinsicProcedureFlags(Symbol &symbol) {
   case evaluate::IntrinsicClass::elementalSubroutine:
     SetExplicitAttr(symbol, Attr::ELEMENTAL);
     SetExplicitAttr(symbol, Attr::PURE);
+    break;
+  case evaluate::IntrinsicClass::simpleElementalSubroutine:
+    SetExplicitAttr(symbol, Attr::ELEMENTAL);
+    SetExplicitAttr(symbol, Attr::SIMPLE);
+    break;
+  case evaluate::IntrinsicClass::simpleSubroutine:
+    SetExplicitAttr(symbol, Attr::SIMPLE);
     break;
   case evaluate::IntrinsicClass::impureSubroutine:
     break;
@@ -3816,8 +3858,43 @@ bool ScopeHandler::CheckDuplicatedAttrs(
   return ok;
 }
 
+void ScopeHandler::ApplyImplicitCUDADataAttr(Symbol &symbol) {
+  // Only when CUDA Fortran is enabled; otherwise -gpu=mem:managed on a
+  // non-CUDA-Fortran translation unit (e.g. pure OpenACC) would incorrectly
+  // route every allocatable through the CUDA Fortran managed descriptor
+  // pipeline.
+  if (!context().languageFeatures().IsEnabled(common::LanguageFeature::CUDA))
+    return;
+  if (!IsAllocatable(symbol) && !IsPointer(symbol))
+    return;
+  bool managed{context().languageFeatures().IsEnabled(
+      common::LanguageFeature::CudaManaged)};
+  // Implicit pinned remains allocatable-only.
+  bool pinned{!managed && IsAllocatable(symbol) &&
+      context().languageFeatures().IsEnabled(
+          common::LanguageFeature::CudaPinned)};
+  if (!managed && !pinned)
+    return;
+  // A scalar data pointer can still be an EntityDetails at this point, since
+  // only some attributes force an early conversion; arrays are always
+  // objects. Convert it now so both get the attribute. A procedure pointer is
+  // not an object and is left alone.
+  if (!ConvertToObjectEntity(symbol))
+    return;
+  auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+  if (!object || object->cudaDataAttr())
+    return;
+  if (managed) {
+    object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+    object->set_cudaDataAttrIsImplicit();
+  } else {
+    object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+    object->set_cudaDataAttrIsImplicit();
+  }
+}
+
 void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
-    std::optional<common::CUDADataAttr> attr) {
+    std::optional<common::CUDADataAttr> attr, bool isImplicit) {
   if (attr) {
     ConvertToObjectEntity(symbol);
     if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
@@ -3828,6 +3905,7 @@ void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
             std::string{common::EnumToString(*object->cudaDataAttr())}.c_str());
       } else {
         object->set_cudaDataAttr(attr);
+        object->set_cudaDataAttrIsImplicit(isImplicit);
       }
     } else {
       Say(source,
@@ -4230,6 +4308,15 @@ static bool CheckCompatibleDistinctUltimates(SemanticsContext &context,
   return true; // don't try to merge generics (or whatever)
 }
 
+// Check whether two symbols identify the same procedure. Otherwise, require
+// matching names and procedure kinds: intrinsic procedures must both be
+// intrinsic, module procedures must identify the same module symbol, and
+// external procedures must both be declared by interface bodies with equal
+// characteristics.
+// For intrinsic-module compatibility rules, a future, separate check could
+// compare the basic shapes of host and CUDA specifics, including dummy argument
+// and result types and ranks, while ignoring CUDA-specific attributes.
+// That shape comparison is not performed here.
 static bool AreSameProcedureForUseAssociation(
     SemanticsContext &context, const Symbol &p1, const Symbol &p2) {
   const Symbol &ultimate1{p1.GetUltimate()};
@@ -4281,20 +4368,26 @@ static bool HasCUDADummyDataAttribute(const Symbol &procedure) {
 
 struct IntrinsicModuleUseAssociationRule {
   const char *moduleName;
-  const char *genericName;
-  bool (*matches)(SemanticsContext &, const GenericDetails &, const Symbol &);
+  bool (*matches)(SemanticsContext &, const Symbol &, const Symbol &);
 };
 
-static bool MatchesCublasGemm(SemanticsContext &context,
-    const GenericDetails &generic, const Symbol &other) {
-  const Symbol *specific{generic.specific()};
+static bool MatchesCublasBlas(
+    SemanticsContext &context, const Symbol &generic, const Symbol &other) {
+  // Exclude CUBLAS-prefixed API names from the legacy BLAS compatibility rule.
+  const SourceName &genericName{generic.GetUltimate().name()};
+  const llvm::StringRef genericNameRef{genericName.begin(), genericName.size()};
+  if (genericNameRef.starts_with("cublas")) {
+    return false;
+  }
+  const auto &details{generic.get<GenericDetails>()};
+  const Symbol *specific{details.specific()};
   if (!specific ||
       !AreSameProcedureForUseAssociation(context, *specific, other)) {
     return false;
   }
   bool containsSpecific{false};
   bool hasCUDAOverload{false};
-  for (const Symbol &candidate : generic.specificProcs()) {
+  for (const Symbol &candidate : details.specificProcs()) {
     containsSpecific |= &candidate.GetUltimate() == &specific->GetUltimate();
     hasCUDAOverload |= HasCUDADummyDataAttribute(candidate);
   }
@@ -4307,9 +4400,8 @@ FindIntrinsicModuleUseAssociationRule(
   // Add entries here for intrinsic module generics that should take precedence
   // over an equivalent external interface during USE association.
   static const IntrinsicModuleUseAssociationRule rules[]{
-      {"cublas", "sgemm", MatchesCublasGemm},
-      {"cublas", "dgemm", MatchesCublasGemm},
-      {"cublas", "zgemm", MatchesCublasGemm},
+      {"cublas", MatchesCublasBlas},
+      {"cublas_v2", MatchesCublasBlas},
   };
   const Scope &owner{generic.GetUltimate().owner()};
   if (!owner.IsModule() || !owner.parent().IsIntrinsicModules() ||
@@ -4318,8 +4410,7 @@ FindIntrinsicModuleUseAssociationRule(
   }
   for (const auto &rule : rules) {
     if (owner.GetName().value() == rule.moduleName &&
-        generic.GetUltimate().name() == rule.genericName &&
-        rule.matches(context, generic.get<GenericDetails>(), other)) {
+        rule.matches(context, generic, other)) {
       return &rule;
     }
   }
@@ -4328,6 +4419,19 @@ FindIntrinsicModuleUseAssociationRule(
 
 void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     Symbol &originalLocal, const Symbol &useSymbol) {
+  // These attributes are never inherited from the use-associated symbol:
+  // PUBLIC/PRIVATE accessibility and SAVE are properties of the local
+  // declaration, not of the entity being use-associated.
+  static constexpr Attrs notInheritedFromUseAttrs{
+      Attr::PUBLIC, Attr::PRIVATE, Attr::SAVE};
+  // Shared bookkeeping for the UseErrorDetails and UseDetails cases below,
+  // which must stay in sync with each other.
+  auto copyAttrsAndFlags{[&](Symbol &local, const Symbol &used) {
+    local.attrs() = used.attrs() & ~notInheritedFromUseAttrs;
+    local.implicitAttrs() =
+        local.attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
+    local.flags() = used.flags();
+  }};
   Symbol *localSymbol{&originalLocal};
   if (auto *details{localSymbol->detailsIf<UseErrorDetails>()}) {
     details->add_occurrence(location, useSymbol);
@@ -4350,13 +4454,20 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       // be copied.
       localSymbol->set_details(GenericDetails{});
       localSymbol->get<GenericDetails>().set_kind(useGeneric->kind());
+    } else if (const auto *useError{useSymbol.detailsIf<UseErrorDetails>()}) {
+      // The module being use-associated wholesale already has an ambiguous
+      // name at this position (e.g. two distinct USEs of the same name that
+      // are themselves never referenced there, which F2023 14.2.2 p8 allows).
+      // Propagate that ambiguity to the local symbol rather than silently
+      // resolving it to one of the ambiguous module's own USE details; the
+      // latter would produce a local UseDetails whose target module file
+      // omits the name, so it would not survive a module file round trip.
+      localSymbol->set_details(UseErrorDetails{*useError});
+      copyAttrsAndFlags(*localSymbol, useSymbol);
+      return;
     } else { // just create UseDetails
       localSymbol->set_details(UseDetails{localName, useSymbol});
-      localSymbol->attrs() =
-          useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE, Attr::SAVE};
-      localSymbol->implicitAttrs() =
-          localSymbol->attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
-      localSymbol->flags() = useSymbol.flags();
+      copyAttrsAndFlags(*localSymbol, useSymbol);
       return;
     }
   }
@@ -4874,7 +4985,19 @@ void ModuleVisitor::ApplyDefaultAccess() {
     Symbol &symbol{*pair.second};
     if (!symbol.attrs().HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
       Attr attr{defaultAttr};
-      if (auto *generic{symbol.detailsIf<GenericDetails>()}) {
+      if (symbol.test(Symbol::Flag::EnumeratorParameter)) {
+        // F2023 7.6.2p2: the access-spec on the ENUMERATION TYPE statement
+        // supplies the default accessibility of its enumerators.  A
+        // use-associated enumerator also carries the flag but holds UseDetails,
+        // not ObjectEntityDetails; it follows the module default here.
+        if (const auto *obj{symbol.detailsIf<ObjectEntityDetails>()}) {
+          const Symbol &typeSym{obj->type()->derivedTypeSpec().typeSymbol()};
+          if (auto a{typeSym.get<DerivedTypeDetails>()
+                      .enumeratorDefaultAccess()}) {
+            attr = *a;
+          }
+        }
+      } else if (auto *generic{symbol.detailsIf<GenericDetails>()}) {
         if (generic->derivedType()) {
           // If a generic interface has a derived type of the same
           // name that has an explicit accessibility attribute, then
@@ -5515,6 +5638,11 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
 Symbol &SubprogramVisitor::PostSubprogramStmt() {
   Symbol &symbol{*currScope().symbol()};
   SetExplicitAttrs(symbol, EndAttrs());
+  if (symbol.get<SubprogramDetails>().moduleInterface()) {
+    // An omitted MODULE prefix accepted as an extension still defines the
+    // separate module procedure declared by the interface body.
+    SetExplicitAttr(symbol, Attr::MODULE);
+  }
   if (symbol.attrs().test(Attr::MODULE)) {
     symbol.attrs().set(Attr::EXTERNAL, false);
     symbol.implicitAttrs().set(Attr::EXTERNAL, false);
@@ -5741,7 +5869,8 @@ void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
   }
   SubprogramDetails &entryDetails{entrySymbol.get<SubprogramDetails>()};
   CHECK(entryDetails.entryScope() == &inclusiveScope);
-  SetCUDADataAttr(name.source, entrySymbol, cudaDataAttr());
+  SetCUDADataAttr(
+      name.source, entrySymbol, cudaDataAttr(), cudaDataAttrIsImplicit());
   entrySymbol.attrs() |= GetAttrs();
   SetBindNameOn(entrySymbol);
   for (const auto &dummyArg : std::get<std::list<parser::DummyArg>>(stmt.t)) {
@@ -5764,7 +5893,7 @@ void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
 }
 
 Symbol *ScopeHandler::FindSeparateModuleProcedureInterface(
-    const parser::Name &name) {
+    const parser::Name &name, bool emitError) {
   auto *symbol{FindSymbol(name)};
   if (symbol && symbol->has<SubprogramNameDetails>()) {
     const Scope *parent{nullptr};
@@ -5783,7 +5912,9 @@ Symbol *ScopeHandler::FindSeparateModuleProcedureInterface(
     symbol = const_cast<Symbol *>(defnIface);
   }
   if (!IsSeparateModuleProcedureInterface(symbol)) {
-    Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
+    if (emitError) {
+      Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
+    }
     symbol = nullptr;
   }
   return symbol;
@@ -5827,7 +5958,11 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
     const parser::LanguageBindingSpec *bindingSpec,
     const ProgramTree::EntryStmtList *entryStmts) {
   bool isValid{true};
-  if (hasModulePrefix && !currScope().IsModule() &&
+  if (hasModulePrefix && isAbstract()) { // C1547
+    Say(name,
+        "'%s' may not have a MODULE prefix in an ABSTRACT interface body"_err_en_US);
+    isValid = false;
+  } else if (hasModulePrefix && !currScope().IsModule() &&
       !currScope().IsSubmodule()) { // C1547
     Say(name,
         "'%s' is a MODULE procedure which must be declared within a MODULE or SUBMODULE"_err_en_US);
@@ -5848,6 +5983,25 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
       } else {
         EraseSymbol(name);
       }
+    }
+  } else if (isValid && !inInterfaceBlock() && !InModuleFile() &&
+      currScope().IsSubmodule() &&
+      context().IsEnabled(common::LanguageFeature::ImplicitModulePrefix)) {
+    // Repair only definitions in the current source: a module file already
+    // records whether its producer treated the subprogram as MODULE.
+    if (Symbol *iface{
+            FindSeparateModuleProcedureInterface(name, /*emitError=*/false)};
+        iface && &iface->owner() != &currScope()) {
+      // Repairing a same-scope interface would also require replacing its
+      // existing symbol, as the explicit MODULE path above does. That case
+      // seems less likely than a missing prefix on an ancestor interface.
+      moduleInterface = iface;
+      context().messages().Warn(/*isInModuleFile=*/false,
+          context().languageFeatures(),
+          common::LanguageFeature::ImplicitModulePrefix, name.source,
+          "Assuming a missing MODULE prefix on '%s' to repair the separate module procedure interface '%s:%s'"_port_en_US,
+          name.source, moduleInterface->owner().GetName().value(),
+          moduleInterface->name());
     }
   }
   Symbol *newSymbol{
@@ -5976,6 +6130,28 @@ const Symbol *SubprogramVisitor::CheckExtantProc(
 Symbol *SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec,
     bool hasModulePrefix) {
+  if (!inInterfaceBlock() && currScope().IsSubmodule() && !hasModulePrefix &&
+      !context().IsEnabled(common::LanguageFeature::ImplicitModulePrefix)) {
+    const Scope &parent{currScope().parent()};
+    if (parent.IsModule() || parent.IsSubmodule()) {
+      if (const Symbol *host{parent.FindSymbol(name.source)}) {
+        const Symbol &hostUlt{host->GetUltimate()};
+        const auto *hostSubp{hostUlt.detailsIf<SubprogramDetails>()};
+        if (IsSeparateModuleProcedureInterface(&hostUlt)) {
+          // Use the low-level Warn() call to avoid module-file suppression
+          // based on scope ancestry; InModuleFile() provides the appropriate
+          // check here.
+          context().messages().Warn(/*isInModuleFile=*/InModuleFile(),
+              context().languageFeatures(), common::UsageWarning::Portability,
+              name.source,
+              "Subprogram '%s' in this submodule is missing the MODULE prefix "
+              "to implement the module procedure interface from its parent; "
+              "did you mean 'MODULE %s'?"_port_en_US,
+              name.source, hostSubp->isFunction() ? "FUNCTION" : "SUBROUTINE");
+        }
+      }
+    }
+  }
   Symbol *symbol{GetSpecificFromGeneric(name)};
   const DeclTypeSpec *previousImplicitType{nullptr};
   SourceName previousName;
@@ -6191,7 +6367,8 @@ void DeclarationVisitor::Post(const parser::EntityDecl &x) {
   attrs.set(Attr::INTRINSIC, false); // dealt with in Pre(TypeDeclarationStmt)
   Symbol &symbol{DeclareUnknownEntity(name, attrs)};
   symbol.ReplaceName(name.source);
-  SetCUDADataAttr(name.source, symbol, cudaDataAttr());
+  SetCUDADataAttr(
+      name.source, symbol, cudaDataAttr(), cudaDataAttrIsImplicit());
   if (const auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
     ConvertToObjectEntity(symbol) || ConvertToProcEntity(symbol);
     symbol.set(
@@ -6345,7 +6522,7 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
     // Enumerators are treated as PARAMETER (section 7.6 paragraph (4))
     symbol = &MakeSymbol(name, Attrs{Attr::PARAMETER}, ObjectEntityDetails{});
     symbol->SetType(context().MakeNumericType(
-        TypeCategory::Integer, evaluate::CInteger::kind));
+        TypeCategory::Integer, evaluate::CIntegerKind));
   }
 
   if (auto &init{std::get<std::optional<parser::ScalarIntConstantExpr>>(
@@ -6356,7 +6533,7 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
       // F2023 7.6.1 errata f23/013: a BOZ enumerator initializer
       // has the value specified by INT(boz-literal-constant, C_INT).
       const evaluate::DynamicType cIntType{
-          TypeCategory::Integer, evaluate::CInteger::kind};
+          TypeCategory::Integer, evaluate::CIntegerKind};
       if (MaybeExpr maybeExpr{EvaluateExpr(expr)}) {
         if (auto converted{
                 evaluate::ConvertToType(cIntType, std::move(*maybeExpr))}) {
@@ -6382,8 +6559,8 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
 
   if (symbol) {
     if (enumerationState_.value) {
-      symbol->get<ObjectEntityDetails>().set_init(SomeExpr{
-          evaluate::Expr<evaluate::CInteger>{*enumerationState_.value}});
+      symbol->get<ObjectEntityDetails>().set_init(
+          SomeExpr{evaluate::MakeCIntegerExpr(*enumerationState_.value)});
     } else {
       context().SetError(*symbol);
     }
@@ -6402,16 +6579,6 @@ void DeclarationVisitor::Post(const parser::EnumDef &) {
 // F2023 R766 EnumerationTypeDef — scope is pushed in Post(EnumerationTypeStmt)
 // and popped in Post(EndEnumerationTypeStmt).
 bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
-  const auto &source{
-      std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source};
-  // ENUMERATION TYPE is an experimental feature: semantics are partially
-  // implemented.  FIR lowering is not implemented.
-  if (!context().IsEnabled(common::LanguageFeature::EnumerationType)) {
-    Say(source, "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
-    return false;
-  }
-  Say(source,
-      "ENUMERATION TYPE support is incomplete and should be enabled only for testing"_warn_en_US);
   BeginAttrs();
   return true;
 }
@@ -6421,13 +6588,10 @@ bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
 void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   const auto &name{std::get<parser::Name>(x.t)};
   Attrs attrs{EndAttrs()};
-  if (const auto &optAccessSpec{
-          std::get<std::optional<parser::AccessSpec>>(x.t)};
-      optAccessSpec) {
-    if (!NonDerivedTypeScope().IsModule()) { // F2023 C7114
-      Say(currStmtSource().value(),
-          "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
-    }
+  const auto &optAccessSpec{std::get<std::optional<parser::AccessSpec>>(x.t)};
+  if (optAccessSpec && !NonDerivedTypeScope().IsModule()) { // F2023 C7114
+    Say(currStmtSource().value(),
+        "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
   }
   // F2023 C7116: the enumeration-type-name in an enumeration-type-spec shall be
   // the name of a previously defined enumeration type.  Enumeration Types are
@@ -6443,6 +6607,12 @@ void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   }
   DerivedTypeDetails details;
   details.set_isEnumerationType(true);
+  // An access-spec on the ENUMERATION TYPE statement sets the default
+  // accessibility of its enumerators.
+  if (optAccessSpec) {
+    details.set_enumeratorDefaultAccess(
+        attrs.test(Attr::PRIVATE) ? Attr::PRIVATE : Attr::PUBLIC);
+  }
   auto &symbol{MakeSymbol(name, attrs, std::move(details))};
   symbol.ReplaceName(name.source);
   PushScope(Scope::Kind::DerivedType, &symbol);
@@ -6454,7 +6624,7 @@ void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   Symbol &ordinalSym{MakeSymbol(currScope(), ordinalName, Attrs{})};
   ordinalSym.set_details(ObjectEntityDetails{});
   ordinalSym.SetType(
-      currScope().MakeNumericType(TypeCategory::Integer, KindExpr{4}));
+      currScope().MakeNumericType(TypeCategory::Integer, MakeKindExpr(4)));
   ordinalSym.set(Symbol::Flag::CompilerCreated);
   symbol.get<DerivedTypeDetails>().add_component(ordinalSym);
 }
@@ -6473,6 +6643,13 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
   DeclTypeSpec &declType{enclosingScope.MakeDerivedType(
       DeclTypeSpec::TypeDerived, std::move(enumTypeSpec))};
   for (const parser::Name &name : x.v) {
+    // A repeated enumerator name would make MakeSymbol return the existing
+    // symbol, whose set_details() below would then abort.
+    if (Symbol *prev{FindInScope(enclosingScope, name.source)};
+        prev && !prev->has<UnknownDetails>()) {
+      SayAlreadyDeclared(name, *prev);
+      continue;
+    }
     int ordinal{typeDetails.enumeratorCount() + 1};
     // Create the enumerator symbol in the enclosing scope, not the
     // enumeration type's own DerivedType scope.
@@ -6480,10 +6657,11 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
         MakeSymbol(enclosingScope, name.source, Attrs{Attr::PARAMETER})};
     Resolve(name, enumerator);
     enumerator.set_details(ObjectEntityDetails{});
+    enumerator.set(Symbol::Flag::EnumeratorParameter);
     enumerator.SetType(declType);
     // Store the init as a StructureConstructor of the enumeration type with
     // the ordinal in the hidden __ordinal component.  This gives each
-    // enumerator a distinct Constant<SomeDerived> value.
+    // enumerator a distinct Constant<Type<TypeCategory::Derived>> value.
     evaluate::StructureConstructor enumCtor{declType.derivedTypeSpec()};
     // Look up the __ordinal component symbol in the type's scope.
     auto ordinalIter{
@@ -6492,10 +6670,11 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
     CHECK(ordinalIter != currScope().end());
     const Symbol &ordinalSym{*ordinalIter->second};
     enumCtor.Add(ordinalSym,
-        evaluate::AsGenericExpr(evaluate::Expr<evaluate::CInteger>{ordinal}));
+        evaluate::AsGenericExpr(evaluate::MakeCIntegerExpr(ordinal)));
     enumerator.get<ObjectEntityDetails>().set_init(
-        SomeExpr{evaluate::Expr<evaluate::SomeDerived>{
-            evaluate::Constant<evaluate::SomeDerived>{std::move(enumCtor)}}});
+        SomeExpr{evaluate::Expr<evaluate::Type<common::TypeCategory::Derived>>{
+            evaluate::Constant<evaluate::Type<common::TypeCategory::Derived>>{
+                std::move(enumCtor)}}});
     typeDetails.set_enumeratorCount(ordinal);
   }
   return false;
@@ -6563,7 +6742,8 @@ bool DeclarationVisitor::Pre(const parser::IntrinsicStmt &x) {
 }
 void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
   HandleAttributeStmt(Attr::INTRINSIC, name);
-  if (!IsIntrinsic(name.source, std::nullopt)) {
+  const bool isKnownIntrinsic{IsIntrinsic(name.source, std::nullopt)};
+  if (!isKnownIntrinsic) {
     Say(name.source, "'%s' is not a known intrinsic procedure"_err_en_US);
   }
   auto &symbol{DEREF(FindSymbol(name))};
@@ -6588,7 +6768,7 @@ void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
             "INTRINSIC statement for explicitly-typed '%s'"_en_US, name.source);
       }
     }
-    if (!symbol.test(Symbol::Flag::Function) &&
+    if (isKnownIntrinsic && !symbol.test(Symbol::Flag::Function) &&
         !symbol.test(Symbol::Flag::Subroutine) &&
         !context().intrinsics().IsDualIntrinsic(name.source.ToString())) {
       if (context().intrinsics().IsIntrinsicFunction(name.source.ToString())) {
@@ -6629,6 +6809,8 @@ bool DeclarationVisitor::Pre(const parser::CUDAAttributesStmt &x) {
       if (attr == common::CUDADataAttr::Value) {
         SetExplicitAttr(*symbol, Attr::VALUE);
       } else {
+        // ATTRIBUTES(...) carries a bare CUDA-data-attr, with no place for
+        // the (IMPLICIT) qualifier, so such an attribute is always the user's.
         SetCUDADataAttr(name.source, *symbol, attr);
       }
     }
@@ -6719,7 +6901,11 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
       ConvertToObjectEntity(symbol);
     }
     if (attrs.test(Attr::BIND_C)) {
-      SetBindNameOn(symbol);
+      if (symbol.detailsIf<ProcEntityDetails>() ||
+          symbol.detailsIf<ObjectEntityDetails>() ||
+          symbol.detailsIf<EntityDetails>()) {
+        SetBindNameOn(symbol);
+      }
     }
     return symbol;
   }
@@ -6889,7 +7075,7 @@ void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Character &) {
   }
   if (!charInfo_.kind) {
     charInfo_.kind =
-        KindExpr{context().GetDefaultKind(TypeCategory::Character)};
+        MakeKindExpr(context().GetDefaultKind(TypeCategory::Character));
   }
   SetDeclTypeSpec(currScope().MakeCharacterType(
       std::move(*charInfo_.length), std::move(*charInfo_.kind)));
@@ -7086,9 +7272,23 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
   if (!spec) {
     return;
   }
+  const auto &typeParamSpecs{std::get<std::list<parser::TypeParamSpec>>(x.t)};
+  // Enumeration types are a special case of derived types and are handled
+  // differently.
+  if (spec->typeSymbol().get<DerivedTypeDetails>().isEnumerationType()) {
+    if (!typeParamSpecs.empty()) { // F2023 7.6.2
+      Say(typeName.source,
+          "Enumeration type '%s' has no type parameters"_err_en_US);
+    }
+    spec->set_category(DerivedTypeSpec::Category::EnumerationType);
+    DeclTypeSpec &type{currScope().MakeDerivedType(
+        GetDeclTypeSpecCategory(), std::move(*spec))};
+    SetDeclTypeSpec(type);
+    x.derivedTypeSpec = &GetDeclTypeSpec()->derivedTypeSpec();
+    return;
+  }
   bool seenAnyName{false};
-  for (const auto &typeParamSpec :
-      std::get<std::list<parser::TypeParamSpec>>(x.t)) {
+  for (const auto &typeParamSpec : typeParamSpecs) {
     const auto &optKeyword{
         std::get<std::optional<parser::Keyword>>(typeParamSpec.t)};
     std::optional<SourceName> name;
@@ -7118,17 +7318,6 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
   // in the current scope, this spec will be moved into that collection.
   const auto &dtDetails{spec->typeSymbol().get<DerivedTypeDetails>()};
   auto category{GetDeclTypeSpecCategory()};
-
-  // Enumeration types are a special case of derived types and are handled
-  // differently.
-  if (dtDetails.isEnumerationType()) {
-    spec->set_category(DerivedTypeSpec::Category::EnumerationType);
-    DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
-    SetDeclTypeSpec(type);
-    x.derivedTypeSpec = &GetDeclTypeSpec()->derivedTypeSpec();
-    return;
-  }
-
   if (dtDetails.isForwardReferenced()) {
     DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
     SetDeclTypeSpec(type);
@@ -7543,7 +7732,9 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
   }
   if (OkToAddComponent(name)) {
     auto &symbol{DeclareObjectEntity(name, attrs)};
-    SetCUDADataAttr(name.source, symbol, cudaDataAttr());
+    SetCUDADataAttr(
+        name.source, symbol, cudaDataAttr(), cudaDataAttrIsImplicit());
+    ApplyImplicitCUDADataAttr(symbol);
     if (symbol.has<ObjectEntityDetails>()) {
       if (auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
         Initialization(name, *init, /*inComponentDecl=*/true);
@@ -7663,7 +7854,8 @@ void DeclarationVisitor::Post(const parser::ProcDecl &x) {
     attrs.set(Attr::PRIVATE);
   }
   Symbol &symbol{DeclareProcEntity(name, attrs, procInterface)};
-  SetCUDADataAttr(name.source, symbol, cudaDataAttr()); // for error
+  SetCUDADataAttr(name.source, symbol, cudaDataAttr(),
+      cudaDataAttrIsImplicit()); // for error
   symbol.ReplaceName(name.source);
   if (dtDetails) {
     dtDetails->add_component(symbol);
@@ -8274,10 +8466,13 @@ Symbol &DeclarationVisitor::MakeCommonBlockSymbol(
 }
 
 bool DeclarationVisitor::NameIsKnownOrIntrinsic(const parser::Name &name) {
-  return FindSymbol(name) || HandleUnrestrictedSpecificIntrinsicFunction(name);
+  return FindSymbol(name) || HandleSpecificIntrinsicFunction(name);
 }
 
-bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
+// Create a symbol for a specific intrinsic function. Unrestricted names
+// receive their result type here; restricted names are kept typeless so
+// that later semantic checks can diagnose their invalid use.
+bool DeclarationVisitor::HandleSpecificIntrinsicFunction(
     const parser::Name &name) {
   if (auto interface{context().intrinsics().IsSpecificIntrinsicFunction(
           name.source.ToString())}) {
@@ -8286,17 +8481,19 @@ bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
     // INTRINSIC flag will cause this symbol to have a complete interface
     // recreated for it later on demand, but capturing its result type here
     // will make GetType() return a correct result without having to
-    // probe the intrinsics table again.
+    // probe the intrinsics table again.  Restricted specific intrinsic
+    // function names are also resolved here so that their use can be
+    // diagnosed later, but they do not need a result type.
     Symbol &symbol{MakeSymbol(InclusiveScope(), name.source, Attrs{})};
     SetImplicitAttr(symbol, Attr::INTRINSIC);
-    CHECK(interface->functionResult.has_value());
-    evaluate::DynamicType dyType{
-        DEREF(interface->functionResult->GetTypeAndShape()).type()};
-    CHECK(common::IsNumericTypeCategory(dyType.category()));
-    const DeclTypeSpec &typeSpec{
-        MakeNumericType(dyType.category(), dyType.kind())};
     ProcEntityDetails details;
-    details.set_type(typeSpec);
+    if (!interface->isRestrictedSpecific) {
+      CHECK(interface->functionResult.has_value());
+      evaluate::DynamicType dyType{
+          DEREF(interface->functionResult->GetTypeAndShape()).type()};
+      CHECK(common::IsNumericTypeCategory(dyType.category()));
+      details.set_type(MakeNumericType(dyType.category(), dyType.kind()));
+    }
     symbol.set_details(std::move(details));
     symbol.set(Symbol::Flag::Function);
     if (interface->IsElemental()) {
@@ -8410,6 +8607,15 @@ Symbol &DeclarationVisitor::FindOrDeclareEnclosingEntity(
     prev = &MakeSymbol(InclusiveScope(), name.source, Attrs{});
     ConvertToObjectEntity(*prev);
     ApplyImplicitRules(*prev);
+  } else {
+    // A name in a locality-spec must be a variable (F2023 C1126). An entity
+    // declared in an enclosing BLOCK is not classified as an object or a
+    // procedure until the end of the BLOCK, so classify it now; the locality
+    // checks then diagnose a name that cannot be a variable. A nested BLOCK
+    // can reach the entity through a host-association symbol (for example,
+    // after an ASYNCHRONOUS or VOLATILE statement), so classify the ultimate
+    // entity. The locality checks still use prev, which has those attributes.
+    ConvertToObjectEntity(prev->GetUltimate());
   }
   return *prev;
 }
@@ -8583,6 +8789,11 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveExtendsType(
       Say(extendsName->source,
           "Derived type '%s' cannot extend itself"_err_en_US);
     } else if (auto dtSpec{ResolveDerivedType(*extendsName)}) {
+      // Reject now so that no parent component of enumeration type is made.
+      if (IsEnumerationType(dtSpec->typeSymbol())) {
+        Say(extendsName->source, "The parent type is not extensible"_err_en_US);
+        return std::nullopt;
+      }
       if (!dtSpec->IsForwardReferenced()) {
         return dtSpec;
       }
@@ -8641,7 +8852,8 @@ Symbol *DeclarationVisitor::MakeTypeSymbol(
       attrs.set(Attr::PRIVATE);
     }
     Symbol &result{MakeSymbol(name, attrs, std::move(details))};
-    SetCUDADataAttr(name, result, cudaDataAttr());
+
+    SetCUDADataAttr(name, result, cudaDataAttr(), cudaDataAttrIsImplicit());
     return &result;
   }
 }
@@ -8920,6 +9132,18 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
       },
       x.u);
   return false;
+}
+
+bool ConstructVisitor::Pre(const parser::DataStmt &) {
+  // C1506: an interface body may not contain a DATA statement.
+  if (const Symbol *symbol{currScope().symbol()}) {
+    if (const auto *subp{symbol->detailsIf<SubprogramDetails>()};
+        subp && subp->isInterface()) {
+      Say(currStmtSource().value(),
+          "A DATA statement may not appear in an interface body"_err_en_US);
+    }
+  }
+  return true;
 }
 
 bool ConstructVisitor::Pre(const parser::DataStmtValue &x) {
@@ -9245,13 +9469,11 @@ void ConstructVisitor::SetTypeFromAssociation(Symbol &symbol) {
   if (*pexpr) {
     const SomeExpr &expr{**pexpr};
     if (std::optional<evaluate::DynamicType> type{expr.GetType()}) {
-      if (const auto *charExpr{
-              evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeCharacter>>(
-                  expr)}) {
-        symbol.SetType(ToDeclTypeSpec(std::move(*type),
-            FoldExpr(common::visit(
-                [](const auto &kindChar) { return kindChar.LEN(); },
-                charExpr->u))));
+      if (const auto *charExpr{evaluate::UnwrapExpr<
+              evaluate::Expr<evaluate::Type<common::TypeCategory::Character>>>(
+              expr)}) {
+        symbol.SetType(
+            ToDeclTypeSpec(std::move(*type), FoldExpr(charExpr->LEN())));
       } else {
         symbol.SetType(ToDeclTypeSpec(std::move(*type)));
       }
@@ -9346,11 +9568,11 @@ const DeclTypeSpec &ConstructVisitor::ToDeclTypeSpec(
   if (length) {
     return currScope().MakeCharacterType(
         ParamValue{SomeIntExpr{*std::move(length)}, common::TypeParamAttr::Len},
-        KindExpr{type.kind()});
+        MakeKindExpr(type.kind()));
   } else {
     return currScope().MakeCharacterType(
         ParamValue::Deferred(common::TypeParamAttr::Len),
-        KindExpr{type.kind()});
+        MakeKindExpr(type.kind()));
   }
 }
 
@@ -9562,12 +9784,14 @@ public:
   bool Pre(const parser::IoControlSpec::Asynchronous &async) {
     if (auto folded{evaluate::Fold(
             context_.foldingContext(), AnalyzeExpr(context_, async.v))}) {
-      if (auto str{
-              evaluate::GetScalarConstantValue<evaluate::Ascii>(*folded)}) {
-        for (char ch : *str) {
-          if (ch != ' ') {
-            inAsyncIO_ = ch == 'y' || ch == 'Y';
-            break;
+      if (auto charVal{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+              evaluate::AsciiKind, *folded)}) {
+        if (auto str{charVal->AsStdString()}) {
+          for (char ch : *str) {
+            if (ch != ' ') {
+              inAsyncIO_ = ch == 'y' || ch == 'Y';
+              break;
+            }
           }
         }
       }
@@ -10904,28 +11128,7 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       }
     }
 
-    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
-          !object->cudaDataAttr()) {
-        // Implicitly treat allocatable/pointer arrays as managed when feature
-        // is enabled. This is done after all explicit CUDA attributes have
-        // been processed. Only applies when CUDA Fortran is enabled; otherwise
-        // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
-        // OpenACC) would incorrectly route every allocatable through the CUDA
-        // Fortran managed descriptor pipeline.
-        if (context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaManaged) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CUDA))
-          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
-        // Implicitly treat allocatable arrays as pinned when feature is
-        // enabled.
-        else if (IsAllocatable(symbol) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaPinned))
-          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
-      }
-    }
+    ApplyImplicitCUDADataAttr(symbol);
   }
   // Type the deferred data-implied-do index variables now that the whole
   // specification part has been visited (F'2023 19.4 p5).  Plain
@@ -10961,6 +11164,25 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     // TODO: warn for the case where the EQUIVALENCE statement is in a
     // procedure declaration in an interface block
     CheckEquivalenceSets();
+  }
+  if (Symbol * symbol{currScope().symbol()}) {
+    for (const auto *condition :
+        specPartState_.ompAssumesNoParallelismConditions) {
+      Walk(*condition);
+      if (auto value{EvaluateExpr(*condition)};
+          value && omp::GetLogicalValue(*value).value_or(false)) {
+        common::visit(
+            [&](auto &details) {
+              if constexpr (std::is_convertible_v<decltype(details),
+                                WithOmpDeclarative &>) {
+                llvm::omp::Clauses clauses{details.ompAssumes()};
+                clauses.set(llvm::omp::Clause::OMPC_no_parallelism);
+                details.set_ompAssumes(clauses);
+              }
+            },
+            symbol->details());
+      }
+    }
   }
 }
 
@@ -11351,6 +11573,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
 }
 
 bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
+  // Compiler entry points reject recovered parses before name resolution.
+  CHECK(!std::holds_alternative<parser::ErrorRecovery>(x.u));
   if (std::holds_alternative<common::Indirection<parser::CompilerDirective>>(
           x.u)) {
     // TODO: global directives
@@ -11436,7 +11660,12 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       }
     }
     for (SourceName used : common::visit(
-             [](const auto &indUnit) { return GetUses(indUnit.value()); },
+             common::visitors{
+                 [](const parser::ErrorRecovery &) -> std::set<SourceName> {
+                   // The variant requires this arm, but it must never execute.
+                   DIE("Parser error recovery reached name resolution");
+                 },
+                 [](const auto &indUnit) { return GetUses(indUnit.value()); }},
              progUnit.u)) {
       uses.insert(used);
     }

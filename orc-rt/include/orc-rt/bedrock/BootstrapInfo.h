@@ -38,18 +38,18 @@ public:
   /// Construct a BootstrapInfo object from the given Session, Symbols, and
   /// Values.
   BootstrapInfo(Session &S, SimpleSymbolTable Symbols = {},
-                ValueMap Values = {});
+                ValueMap Values = {}) noexcept;
 
   /// Construct with a default initial symbols and values.
   ///
-  /// Note: Uses sps_ci::addAll by default, which pulls in all sps_ci symbols
+  /// Note: Uses sps::ci::addAll by default, which pulls in all sps::ci symbols
   ///       for the host platform. Use an alternative InitialSymbolsBuilder, or
   ///       the plain BootstrapInfo constructor and manual adds, if you want
   ///       finer-grained control of what is linked.
   static Expected<BootstrapInfo>
   CreateDefault(Session &S,
-                InitialSymbolsBuilder AddInitialSymbols = sps_ci::addAll,
-                InitialValuesBuilder AddInitialValues = {});
+                InitialSymbolsBuilder AddInitialSymbols = sps::ci::addAll,
+                InitialValuesBuilder AddInitialValues = {}) noexcept;
 
   const Session &session() const noexcept { return S; }
 

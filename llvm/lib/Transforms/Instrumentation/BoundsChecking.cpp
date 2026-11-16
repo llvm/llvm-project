@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -25,7 +26,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -33,9 +33,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "bounds-checking"
-
-static cl::opt<bool> SingleTrapBB("bounds-checking-single-trap",
-                                  cl::desc("Use one trap block per function"));
 
 STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
@@ -48,7 +45,7 @@ public:
   NoSanitizeInserter() = default;
 
   void InsertHelper(Instruction *I, const Twine &Name,
-                    BasicBlock::iterator InsertPt) const override {
+                    BasicBlock::iterator InsertPt) const {
     IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
     if (!NoSanitizeMD)
       NoSanitizeMD = MDNode::get(I->getContext(), {});
@@ -198,7 +195,8 @@ getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
 
 static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
                               ScalarEvolution &SE,
-                              const BoundsCheckingPass::Options &Opts) {
+                              const BoundsCheckingPass::Options &Opts,
+                              bool SingleTrap) {
   if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
     return false;
 
@@ -206,14 +204,14 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
   EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
-  ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(), EvalOpts);
+  ObjectSizeOffsetEvaluator ObjSizeEval(*F.getParent(), &TLI, EvalOpts);
 
   // check HANDLE_MEMORY_INST in include/llvm/Instruction.def for memory
   // touching instructions
   SmallVector<std::pair<Instruction *, Value *>, 4> TrapInfo;
   for (Instruction &I : instructions(F)) {
     Value *Or = nullptr;
-    BuilderTy IRB(I.getParent(), BasicBlock::iterator(&I), TargetFolder(DL));
+    BuilderTy IRB(I.getIterator(), TargetFolder(DL));
     if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
       if (!LI->isVolatile())
         Or = getBoundsCheckCond(LI->getPointerOperand(), LI, DL, TLI,
@@ -251,8 +249,8 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   // flags, this will either create a single block for the entire function or
   // will create a fresh block every time it is called.
   BasicBlock *ReuseTrapBB = nullptr;
-  auto GetTrapBB = [&ReuseTrapBB, &Opts, &Name](BuilderTy &IRB,
-                                                BasicBlock *Cont) {
+  auto GetTrapBB = [&ReuseTrapBB, &Opts, &Name, SingleTrap](BuilderTy &IRB,
+                                                            BasicBlock *Cont) {
     Function *Fn = IRB.GetInsertBlock()->getParent();
     auto DebugLoc = IRB.getCurrentDebugLocation();
     IRBuilder<>::InsertPointGuard Guard(IRB);
@@ -286,7 +284,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     // local-bounds. Make sure to change that too.
     if (Opts.Rt && Opts.Rt->HandlerPreserveAllRegs && MayReturn)
       TrapCall->setCallingConv(CallingConv::PreserveAll);
-    if (!MayReturn && SingleTrapBB && !DebugTrapBB)
+    if (!MayReturn && SingleTrap && !DebugTrapBB)
       ReuseTrapBB = TrapBB;
 
     return TrapBB;
@@ -294,7 +292,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
 
   for (const auto &Entry : TrapInfo) {
     Instruction *Inst = Entry.first;
-    BuilderTy IRB(Inst->getParent(), BasicBlock::iterator(Inst), TargetFolder(DL));
+    BuilderTy IRB(Inst->getIterator(), TargetFolder(DL));
     insertBoundsCheck(Entry.second, IRB, GetTrapBB);
   }
 
@@ -305,7 +303,8 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
 
-  if (!addBoundsChecking(F, TLI, SE, Opts))
+  const InstrumentationOptions &CLOpts = getInstrumentationOptions(F);
+  if (!addBoundsChecking(F, TLI, SE, Opts, CLOpts.bounds_checking_single_trap))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

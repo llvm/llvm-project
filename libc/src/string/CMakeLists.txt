@@ -22,8 +22,9 @@ add_header_library(
     allocating_string_utils.h
   DEPENDS
     .memory_utils.inline_memcpy
+    .string_utils
     libc.include.stdlib
-    libc.src.__support.CPP.optional
+    libc.src.__support.checked_ptr
     libc.src.__support.macros.config
 )
 
@@ -151,6 +152,11 @@ add_entrypoint_object(
     strcoll.cpp
   HDRS
     strcoll.h
+  DEPENDS
+    .string_utils
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -159,6 +165,11 @@ add_entrypoint_object(
     strcoll_l.cpp
   HDRS
     strcoll_l.h
+  DEPENDS
+    .string_utils
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -189,6 +200,7 @@ add_entrypoint_object(
   HDRS
     strdup.h
   DEPENDS
+    .allocating_string_utils
     .memory_utils.inline_memcpy
     .string_utils
     libc.hdr.stdlib_macros
@@ -288,7 +300,7 @@ add_entrypoint_object(
     .memory_utils.inline_memcpy
     .string_utils
     libc.include.stdlib
-    libc.src.__support.CPP.new
+    libc.src.__support.checked_ptr
     libc.include.llvm-libc-types.size_t
 )
 

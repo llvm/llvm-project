@@ -148,7 +148,8 @@ DIStringTypeAttr DebugImporter::translateImpl(llvm::DIStringType *node) {
       node->getSizeInBits(), node->getAlignInBits(),
       translate(node->getStringLength()),
       translateExpression(node->getStringLengthExp()),
-      translateExpression(node->getStringLocationExp()), node->getEncoding());
+      translateExpression(node->getStringLocationExp()), node->getEncoding(),
+      translate(node->getCharType()));
 }
 
 DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {

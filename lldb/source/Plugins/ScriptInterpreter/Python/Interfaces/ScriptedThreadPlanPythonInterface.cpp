@@ -10,7 +10,9 @@
 
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ThreadPlan.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "../SWIGPythonBridge.h"
@@ -36,69 +38,77 @@ ScriptedThreadPlanPythonInterface::CreatePluginObject(
 
 llvm::Expected<bool>
 ScriptedThreadPlanPythonInterface::ExplainsStop(Event *event) {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("explains_stop", error, event);
+  llvm::Expected<std::optional<StructuredData::ObjectSP>> obj_or_err =
+      DispatchToOptional("explains_stop", event);
+  if (!obj_or_err)
+    return obj_or_err.takeError();
 
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error)) {
-    if (!obj)
-      return false;
-    return error.ToError();
-  }
+  // Absent or None: the plan doesn't claim to explain the stop.
+  StructuredData::ObjectSP obj = obj_or_err->value_or(nullptr);
+  if (!obj || !obj->IsValid())
+    return false;
 
   return obj->GetBooleanValue();
 }
 
 llvm::Expected<bool>
 ScriptedThreadPlanPythonInterface::ShouldStop(Event *event) {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("should_stop", error, event);
+  llvm::Expected<std::optional<StructuredData::ObjectSP>> obj_or_err =
+      DispatchToOptional("should_stop", event);
+  if (!obj_or_err)
+    return obj_or_err.takeError();
 
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error)) {
-    if (!obj)
-      return false;
-    return error.ToError();
-  }
+  // Absent or None: the plan doesn't ask to stop.
+  StructuredData::ObjectSP obj = obj_or_err->value_or(nullptr);
+  if (!obj || !obj->IsValid())
+    return false;
 
   return obj->GetBooleanValue();
 }
 
 llvm::Expected<bool> ScriptedThreadPlanPythonInterface::IsStale() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("is_stale", error);
+  llvm::Expected<std::optional<StructuredData::ObjectSP>> obj_or_err =
+      DispatchToOptional("is_stale");
+  if (!obj_or_err)
+    return obj_or_err.takeError();
 
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error)) {
-    if (!obj)
-      return false;
-    return error.ToError();
-  }
+  // Absent or None: assume the plan is still fresh.
+  StructuredData::ObjectSP obj = obj_or_err->value_or(nullptr);
+  if (!obj || !obj->IsValid())
+    return false;
 
   return obj->GetBooleanValue();
 }
 
-lldb::StateType ScriptedThreadPlanPythonInterface::GetRunState() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("should_step", error);
+llvm::Expected<lldb::StateType>
+ScriptedThreadPlanPythonInterface::GetRunState() {
+  llvm::Expected<std::optional<StructuredData::ObjectSP>> obj_or_err =
+      DispatchToOptional("should_step");
+  if (!obj_or_err)
+    return obj_or_err.takeError();
 
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = obj_or_err->value_or(nullptr);
+  if (!obj || !obj->IsValid())
     return lldb::eStateStepping;
 
-  return static_cast<lldb::StateType>(obj->GetUnsignedIntegerValue(
-      static_cast<uint32_t>(lldb::eStateStepping)));
+  // A thread plan's run state can formally be eStateSuspended, but that state
+  // is decided by the thread plan negotiation, not by the plan itself.  So a
+  // scripted plan's contract is only running or stepping: a bool.
+  if (StructuredData::Boolean *should_step = obj->GetAsBoolean())
+    return should_step->GetValue() ? lldb::eStateStepping : lldb::eStateRunning;
+
+  if (Log *log = GetLog(LLDBLog::Script)) {
+    StreamString reply;
+    obj->Dump(reply, /*pretty_print=*/false);
+    LLDB_LOG(log, "should_step returned {0}, not a bool; stepping.",
+             reply.GetData());
+  }
+  return lldb::eStateStepping;
 }
 
 llvm::Error
 ScriptedThreadPlanPythonInterface::GetStopDescription(lldb::StreamSP &stream) {
-  Status error;
-  Dispatch("stop_description", error, stream);
-
-  if (error.Fail())
-    return error.ToError();
-
-  return llvm::Error::success();
+  return DispatchToOptional("stop_description", stream).takeError();
 }
 
 void ScriptedThreadPlanPythonInterface::Initialize() {

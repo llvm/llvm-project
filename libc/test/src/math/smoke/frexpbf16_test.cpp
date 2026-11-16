@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/frexpbf16.h"
 
-LIST_FREXP_TESTS(bfloat16, LIBC_NAMESPACE::frexpbf16);
+LIST_FREXP_TESTS(Frexpbf16, bfloat16, LIBC_NAMESPACE::frexpbf16);

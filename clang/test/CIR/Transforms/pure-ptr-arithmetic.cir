@@ -23,14 +23,14 @@ cir.func @dead_get_member(%arg0: !cir.ptr<!rec_S>) {
 // CHECK-LABEL: @dead_base_class_addr
 // CHECK-NOT:     cir.base_class_addr
 cir.func @dead_base_class_addr(%arg0: !cir.ptr<!rec_Derived>) {
-  %0 = cir.base_class_addr %arg0 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+  %0 = cir.base_class_addr nonnull %arg0 [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
   cir.return
 }
 
 // CHECK-LABEL: @dead_derived_class_addr
 // CHECK-NOT:     cir.derived_class_addr
 cir.func @dead_derived_class_addr(%arg0: !cir.ptr<!rec_Base>) {
-  %0 = cir.derived_class_addr %arg0 : !cir.ptr<!rec_Base> nonnull [0] -> !cir.ptr<!rec_Derived>
+  %0 = cir.derived_class_addr nonnull %arg0 [0] : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
   cir.return
 }
 
@@ -41,10 +41,10 @@ cir.func @dead_vtable_get_vptr(%arg0: !cir.ptr<!rec_Derived>) {
   cir.return
 }
 
-// CHECK-LABEL: @dead_vtable_get_virtual_fn_addr
-// CHECK-NOT:     cir.vtable.get_virtual_fn_addr
-cir.func @dead_vtable_get_virtual_fn_addr(%arg0: !cir.vptr) {
-  %0 = cir.vtable.get_virtual_fn_addr %arg0[0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>
+// CHECK-LABEL: @dead_vtable_get_virtual_fn
+// CHECK-NOT:     cir.vtable.get_virtual_fn
+cir.func @dead_vtable_get_virtual_fn(%arg0: !cir.vptr) {
+  %0 = cir.vtable.get_virtual_fn %arg0[0] : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>
   cir.return
 }
 
