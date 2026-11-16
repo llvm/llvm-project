@@ -1707,20 +1707,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     TargetTriple = A->getValue();
   if (const Arg *A = Args.getLastArg(options::OPT_ccc_install_dir))
     Dir = A->getValue();
-  for (const Arg *A : Args.filtered(options::OPT_B)) {
-    A->claim();
-    PrefixDirs.push_back(A->getValue(0));
-  }
-  if (std::optional<std::string> CompilerPathValue =
-          llvm::sys::Process::GetEnv("COMPILER_PATH")) {
-    StringRef CompilerPath = *CompilerPathValue;
-    while (!CompilerPath.empty()) {
-      std::pair<StringRef, StringRef> Split =
-          CompilerPath.split(llvm::sys::EnvPathSeparator);
-      PrefixDirs.push_back(std::string(Split.first));
-      CompilerPath = Split.second;
-    }
-  }
+  tools::addPrefixDirs(Args, PrefixDirs);
   if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ))
     SysRoot = A->getValue();
   if (const Arg *A = Args.getLastArg(options::OPT__dyld_prefix_EQ))
@@ -6010,31 +5997,15 @@ void Driver::generatePrefixedToolNames(
   Names.emplace_back(Tool);
 }
 
-static bool ScanDirForExecutable(SmallString<128> &Dir, StringRef Name) {
-  llvm::sys::path::append(Dir, Name);
-  if (llvm::sys::fs::can_execute(Twine(Dir)))
-    return true;
-  llvm::sys::path::remove_filename(Dir);
-  return false;
-}
-
 std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
   SmallVector<std::string, 2> TargetSpecificExecutables;
   generatePrefixedToolNames(Name, TC, TargetSpecificExecutables);
 
   // Respect a limited subset of the '-Bprefix' functionality in GCC by
   // attempting to use this prefix when looking for program paths.
-  for (const auto &PrefixDir : PrefixDirs) {
-    if (llvm::sys::fs::is_directory(PrefixDir)) {
-      SmallString<128> P(PrefixDir);
-      if (ScanDirForExecutable(P, Name))
-        return std::string(P);
-    } else {
-      SmallString<128> P((PrefixDir + Name).str());
-      if (llvm::sys::fs::can_execute(Twine(P)))
-        return std::string(P);
-    }
-  }
+  if (std::optional<std::string> P =
+          tools::findProgramInPrefixDirs(Name, PrefixDirs))
+    return *P;
 
   const ToolChain::path_list &List = TC.getProgramPaths();
   for (const auto &TargetSpecificExecutable : TargetSpecificExecutables) {
@@ -6047,7 +6018,7 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
     // of gcc in the program path
     for (const auto &Path : List) {
       SmallString<128> P(Path);
-      if (ScanDirForExecutable(P, TargetSpecificExecutable))
+      if (tools::ScanDirForExecutable(P, TargetSpecificExecutable))
         return std::string(P);
     }
 

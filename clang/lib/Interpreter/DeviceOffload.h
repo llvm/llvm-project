@@ -47,16 +47,31 @@ protected:
 class IncrementalHIPDeviceParser : public IncrementalDeviceParser {
   CompilerInstance &DeviceCI;
   llvm::SmallVector<char, 0> ObjectContent;
+  llvm::SmallVector<char, 0> HSACOContent;
+  llvm::SmallVector<char, 0> FatbinContent;
+  // The -B prefixes and --ld-path value from the driver arguments.
+  llvm::SmallVector<std::string, 4> PrefixDirs;
+  std::string LdPath;
 
   // Generate the AMDGPU object file for the last PTU.
   llvm::Expected<llvm::StringRef> GenerateDeviceObject();
+
+  // Link the object file into a loadable AMDGPU code object (HSACO).
+  llvm::Expected<llvm::StringRef> GenerateHSACO(llvm::StringRef Object);
+
+  // Bundle the code object into a HIP fat binary.
+  llvm::Expected<llvm::StringRef> GenerateFatbinary(llvm::StringRef HSACO);
+
+  // Embed the bundle in host codegen.
+  void EmbedOffloadBundle();
 
 public:
   IncrementalHIPDeviceParser(
       CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
       IncrementalAction *DeviceAct,
       llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
-      llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs);
+      llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs,
+      llvm::ArrayRef<const char *> DriverArgs);
 
   llvm::Error GenerateOffloadBinary() override;
 
