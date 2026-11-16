@@ -41,13 +41,13 @@ module attributes {
   } {
     %c4 = llvm.mlir.constant(4 : i64) : i64
     omp.declare_simd notinbranch simdlen(2)
-                     linear(%sin : !llvm.ptr = %c4 : i64) {arg_types = [f32, f32]}
+                     linear(%sin : !llvm.ptr = %c4 : i64) <arg_types = [f32, f32]>
     omp.declare_simd notinbranch simdlen(4)
-                     linear(%sin : !llvm.ptr = %c4 : i64) {arg_types = [f32, f32]}
+                     linear(%sin : !llvm.ptr = %c4 : i64) <arg_types = [f32, f32]>
     omp.declare_simd notinbranch simdlen(64)
-                     linear(%sin : !llvm.ptr = %c4 : i64) {arg_types = [f32, f32]}
+                     linear(%sin : !llvm.ptr = %c4 : i64) <arg_types = [f32, f32]>
     omp.declare_simd notinbranch simdlen(68)
-                     linear(%sin : !llvm.ptr = %c4 : i64) {arg_types = [f32, f32]}
+                     linear(%sin : !llvm.ptr = %c4 : i64) <arg_types = [f32, f32]>
     llvm.return
   }
 
@@ -58,13 +58,13 @@ module attributes {
   } {
     %c8 = llvm.mlir.constant(8 : i64) : i64
     omp.declare_simd notinbranch simdlen(2)
-                     linear(%sin : !llvm.ptr = %c8 : i64) {arg_types = [f32, f64]}
+                     linear(%sin : !llvm.ptr = %c8 : i64) <arg_types = [f32, f64]>
     omp.declare_simd notinbranch simdlen(4)
-                     linear(%sin : !llvm.ptr = %c8 : i64) {arg_types = [f32, f64]}
+                     linear(%sin : !llvm.ptr = %c8 : i64) <arg_types = [f32, f64]>
     omp.declare_simd notinbranch simdlen(32)
-                     linear(%sin : !llvm.ptr = %c8 : i64) {arg_types = [f32, f64]}
+                     linear(%sin : !llvm.ptr = %c8 : i64) <arg_types = [f32, f64]>
     omp.declare_simd notinbranch simdlen(34)
-                     linear(%sin : !llvm.ptr = %c8 : i64) {arg_types = [f32, f64]}
+                     linear(%sin : !llvm.ptr = %c8 : i64) <arg_types = [f32, f64]>
     llvm.return
   }
 

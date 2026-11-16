@@ -2757,7 +2757,8 @@ def DeclareSimdOp
     types of the enclosing function's arguments. This is used during
     translation to recover pointee-type information lost in opaque
     `!llvm.ptr`, enabling correct lane-size (LS) computation for the
-    AArch64 AAVFABI.
+    AArch64 AAVFABI. When present, it is written in the operation's property
+    dictionary.
 
     Example:
     ```mlir
@@ -2769,6 +2770,8 @@ def DeclareSimdOp
   }] # clausesDescription;
 
   let arguments = !con(clausesArgs, (ins OptionalAttr<ArrayAttr>:$arg_types));
+
+  let assemblyFormat = clausesAssemblyFormat # " prop-dict attr-dict";
 
   let builders = [OpBuilder<(
       ins CArg<"const DeclareSimdOperands &">:$clauses)>];

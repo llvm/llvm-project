@@ -249,7 +249,7 @@ module attributes {
   } {
     %c4 = llvm.mlir.constant(4 : i64) : i64
     omp.declare_simd linear(ref(%sin : !llvm.ptr = %c4 : i64),
-                            ref(%cos : !llvm.ptr = %c4 : i64)) {arg_types = [f64, i32, i32]}
+                            ref(%cos : !llvm.ptr = %c4 : i64)) <arg_types = [f64, i32, i32]>
     llvm.return
   }
 

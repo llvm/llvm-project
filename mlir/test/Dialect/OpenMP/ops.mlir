@@ -4164,8 +4164,8 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
 
 // CHECK-LABEL: func.func @omp_declare_simd_arg_types
 func.func @omp_declare_simd_arg_types(%a: f64, %b: i32) -> () {
-  // CHECK: omp.declare_simd {arg_types = [f64, i32]}
-  omp.declare_simd {arg_types = [f64, i32]}
+  // CHECK: omp.declare_simd <arg_types = [f64, i32]>
+  omp.declare_simd <arg_types = [f64, i32]>
   return
 }
 
@@ -4173,8 +4173,8 @@ func.func @omp_declare_simd_arg_types(%a: f64, %b: i32) -> () {
 func.func @omp_declare_simd_arg_types_with_linear(%a: f64, %b: !llvm.ptr, %step: i64) -> () {
   // CHECK: omp.declare_simd
   // CHECK-SAME: linear(ref(%{{.*}} : !llvm.ptr = %{{.*}} : i64))
-  // CHECK-SAME: linear_var_types([i32]) {arg_types = [f64, i32, i64]}
-  omp.declare_simd linear(ref(%b : !llvm.ptr = %step : i64)) linear_var_types([i32]) {arg_types = [f64, i32, i64]}
+  // CHECK-SAME: linear_var_types([i32]) <arg_types = [f64, i32, i64]>
+  omp.declare_simd linear(ref(%b : !llvm.ptr = %step : i64)) linear_var_types([i32]) <arg_types = [f64, i32, i64]>
   return
 }
 

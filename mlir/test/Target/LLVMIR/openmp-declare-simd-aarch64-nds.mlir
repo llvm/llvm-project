@@ -37,7 +37,7 @@ module attributes {
   } {
     %c4 = llvm.mlir.constant(4 : i64) : i64
     omp.declare_simd notinbranch
-                     linear(%sin : !llvm.ptr = %c4 : i64) {arg_types = [f64, f32]}
+                     linear(%sin : !llvm.ptr = %c4 : i64) <arg_types = [f64, f32]>
     llvm.return
   }
 
@@ -56,7 +56,7 @@ module attributes {
   } {
     %c8 = llvm.mlir.constant(8 : i64) : i64
     omp.declare_simd notinbranch
-                     linear(%sin : !llvm.ptr = %c8 : i64) {arg_types = [f64, f64]}
+                     linear(%sin : !llvm.ptr = %c8 : i64) <arg_types = [f64, f64]>
     llvm.return
   }
 }

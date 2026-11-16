@@ -11358,7 +11358,7 @@ getNDSWDS(FunctionOpInterface funcOp,
 static LogicalResult
 convertDeclareSimdOp(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
-  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder *ompBuilder = getOpenMPBuilder(moduleTranslation);
   auto declareSimdOp = cast<omp::DeclareSimdOp>(opInst);
 
   auto funcOp = opInst.getParentOfType<FunctionOpInterface>();
