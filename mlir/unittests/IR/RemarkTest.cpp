@@ -1135,19 +1135,20 @@ TEST(Remark, LocationVisitorSupportsExistingPolicyOverrides) {
 
   MLIRContext context;
   remark::RemarkCategories categories;
-  categories.all = ".*";
+  categories.passed = "Opt";
   ASSERT_TRUE(succeeded(remark::enableOptimizationRemarks(
       context, nullptr, std::make_unique<PendingPolicy>(), categories)));
   auto *engine = context.getRemarkEngine();
   engine->enableHistory();
+  ASSERT_TRUE(engine->isPassedOptRemarkEnabled("Opt"));
   Location loc = FileLineColLoc::get(&context, "input.mlir", 1, 1);
   Location otherLoc = NameLoc::get(StringAttr::get(&context, "wrapped"), loc);
+  auto opts = remark::RemarkOpts::name("Candidate").category("Opt");
   remark::RemarkId target, other;
   {
-    auto first = remark::passed(loc, remark::RemarkOpts::name("Candidate"));
+    auto first = remark::passed(loc, opts);
     target = first.getId();
-    auto second =
-        remark::passed(otherLoc, remark::RemarkOpts::name("Candidate"));
+    auto second = remark::passed(otherLoc, opts);
     other = second.getId();
   }
   SmallVector<remark::RemarkId> visited;
