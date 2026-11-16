@@ -11,6 +11,7 @@ subroutine s1()
   real :: rCoarray[10,20,*]
   real :: rVar1, rVar2
   integer :: iVar1, iVar2
+  integer, parameter :: kConst = 1
   integer, dimension(4) :: intArray
   integer :: intScalarCoarray[*]
   integer :: intCoarray[3, 4, *]
@@ -47,6 +48,10 @@ subroutine s1()
   rVar1 = rCoarray[1,2,3,STAT=rVar2]
   !ERROR: Must be a scalar value, but is a rank-1 array
   rVar1 = rCoarray[1,2,3,STAT=intArray]
+  !ERROR: STAT= specifier must be a scalar integer variable
+  rVar1 = rCoarray[1,2,3,STAT=MASK(2)]
+  !ERROR: STAT= specifier must be a scalar integer variable
+  rVar1 = rCoarray[1,2,3,STAT=kConst] ! named constant: F'2023 C901
   ! Error on C929, no specifier can appear more than once
   !ERROR: coindexed reference has multiple STAT= specifiers
   rVar1 = rCoarray[1,2,3,STAT=iVar1, STAT=iVar2]
@@ -78,3 +83,11 @@ subroutine s1()
   !ERROR: Image selector STAT variable must not be a coindexed object
   rVar1 = rCoarray[1,2,3,stat=intCoarray[2,3, 4]]
 end subroutine s1
+
+subroutine s()
+  real, save :: c[10,20,*]
+  real :: r
+  !ERROR: STAT= specifier must be a scalar integer variable
+  !ERROR: STAT= specifier must be a scalar integer variable
+  r = c[1,2,3, STAT=MASK(2), STAT=MASK(3)]
+end subroutine s

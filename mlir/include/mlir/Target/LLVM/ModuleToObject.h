@@ -19,6 +19,9 @@
 
 namespace llvm {
 class TargetMachine;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 } // namespace llvm
 
 namespace mlir {
@@ -35,7 +38,8 @@ public:
       function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
       function_ref<void(llvm::Module &)> linkedLlvmIRCallback = {},
       function_ref<void(llvm::Module &)> optimizedLlvmIRCallback = {},
-      function_ref<void(StringRef)> isaCallback = {});
+      function_ref<void(StringRef)> isaCallback = {},
+      const llvm::cl::LibraryOptionsContext *libraryOptions = nullptr);
   virtual ~ModuleToObject();
 
   /// Returns the operation being serialized.
@@ -52,6 +56,12 @@ public:
 
 protected:
   // Hooks to be implemented by derived classes.
+
+  /// Hook for configuring the LLVM context, called by `run` before translating
+  /// the operation. By default it installs a
+  /// `remark::LLVMToMLIRDiagnosticHandler` to report LLVM diagnostics and
+  /// remarks through MLIR.
+  virtual void setupLLVMContext(llvm::LLVMContext &llvmContext);
 
   /// Hook for computing the Datalayout
   virtual void setDataLayoutAndTriple(llvm::Module &module);
@@ -134,6 +144,11 @@ protected:
   /// Callback invoked with the target ISA for the device,
   /// for example PTX assembly.
   function_ref<void(StringRef)> isaCallback;
+
+  /// LLVM library options for the LLVMContext and TargetMachine that
+  /// serialization creates, or nullptr for their defaults. They must outlive
+  /// this object.
+  const llvm::cl::LibraryOptionsContext *libraryOptions;
 
 private:
   /// The TargetMachine created for the given Triple, if available.

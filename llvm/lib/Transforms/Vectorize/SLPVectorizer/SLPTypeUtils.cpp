@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -123,6 +124,38 @@ bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
   const unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
   return NumParts > 0 && NumParts < Sz && has_single_bit(Sz / NumParts) &&
          Sz % NumParts == 0;
+}
+
+bool isAllowedNonPowerOf2VF(unsigned NumElts, bool AllowNonPowerOf2) {
+  return AllowNonPowerOf2 && has_single_bit(NumElts + 1);
+}
+
+unsigned getNumberOfPartsOrRegs(bool QueryNumParts,
+                                const TargetTransformInfo &TTI, Type *VecTy,
+                                Type *ScalarTy, bool ReVec, unsigned Limit) {
+  if (isa<StructType>(VecTy))
+    return 1;
+  unsigned NumParts = QueryNumParts ? TTI.getNumberOfParts(VecTy)
+                                    : TTI.getRegUsageForType(VecTy);
+  if (NumParts == 0 || NumParts >= Limit)
+    return 1;
+  unsigned Sz = getNumElements(VecTy);
+  unsigned ScalarSz = getNumElements(ScalarTy);
+  Type *ElementTy = toScalarizedTy(VecTy);
+  unsigned PWSz = getFullVectorNumberOfElements(TTI, ElementTy, Sz, ReVec);
+  if (NumParts >= Sz || PWSz % NumParts != 0 ||
+      (PWSz / NumParts) % ScalarSz != 0 ||
+      !hasFullVectorsOrPowerOf2(TTI, ElementTy, PWSz / NumParts, ReVec))
+    return 1;
+  const unsigned NumElts = PWSz / NumParts;
+  if (divideCeil(Sz, NumElts) != NumParts)
+    return 1;
+  return NumParts;
+}
+
+bool isTypeLimitNeutral(const Value *V, bool IsMax, const DataLayout &DL) {
+  SimplifyQuery SQ(DL);
+  return IsMax ? isKnownNonNegative(V, SQ) : isKnownNegative(V, SQ);
 }
 
 } // namespace llvm::slpvectorizer

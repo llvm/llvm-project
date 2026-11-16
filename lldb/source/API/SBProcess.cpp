@@ -702,7 +702,7 @@ void SBProcess::SendAsyncInterrupt() {
   }
 }
 
-SBThread SBProcess::GetThreadByID(tid_t tid) {
+SBThread SBProcess::GetThreadByID(lldb::tid_t tid) {
   LLDB_INSTRUMENT_VA(this, tid);
 
   SBThread sb_thread;
@@ -1454,6 +1454,8 @@ void SBProcess::SetAddressMask(AddressMaskType type, addr_t mask,
   LLDB_INSTRUMENT_VA(this, type, mask, addr_range);
 
   if (ProcessSP process_sp = GetSP()) {
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     switch (type) {
     case eAddressMaskTypeCode:
       if (addr_range == eAddressMaskRangeAll) {
@@ -1490,6 +1492,7 @@ void SBProcess::SetAddressMask(AddressMaskType type, addr_t mask,
       }
       break;
     }
+    process_sp->AddressMaskChangedCallback();
   }
 }
 

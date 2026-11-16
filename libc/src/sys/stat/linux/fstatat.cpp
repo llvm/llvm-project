@@ -1,0 +1,36 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Linux implementation of fstatat.
+///
+//===----------------------------------------------------------------------===//
+
+#include "src/sys/stat/fstatat.h"
+#include "hdr/fcntl_macros.h"
+#include "hdr/types/struct_stat.h"
+#include "src/__support/OSUtil/linux/stat/stat_via_statx.h"
+#include "src/__support/common.h"
+#include "src/__support/error_or.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
+
+LLVM_LIBC_FUNCTION(int, fstatat,
+                   (int dirfd, const char *__restrict path,
+                    struct stat *__restrict statbuf, int flags)) {
+  ErrorOr<void> result = internal::stat_via_statx(dirfd, path, flags, statbuf);
+  if (!result) {
+    libc_errno = result.error();
+    return -1;
+  }
+  return 0;
+}
+
+} // namespace LIBC_NAMESPACE_DECL

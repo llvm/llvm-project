@@ -18,7 +18,8 @@ contains
     !$omp assume no_openmp
     !$omp end assume
     !$omp metadirective when(user={condition(.true.)}: nothing)
-    !$omp error at(execution) severity(warning) message("ok")
+    !WARNING: ok
+    !$omp error at(compilation) severity(warning) message("ok")
     !$omp tile sizes(4)
     do i = 1, n
       a(i) = a(i) + 1
@@ -95,5 +96,8 @@ contains
     !ERROR: The OpenMP directive 'TASK' is not allowed in a PURE procedure
     !$omp task
     !$omp end task
+    ! ERROR is only pure when its action-time is compilation.
+    !ERROR: The OpenMP directive 'ERROR' is not allowed in a PURE procedure
+    !$omp error at(execution) severity(warning) message("bad")
   end subroutine
 end module

@@ -2,8 +2,6 @@
 Clang-Tidy
 ==========
 
-.. contents::
-
 See also:
 
 .. toctree::

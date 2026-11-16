@@ -120,7 +120,7 @@ define amdgpu_ps void @v_test_add_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> 
 ; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GCN-NEXT:    v_pk_add_bf16 v2, 0x42c83f80, v2
+; GCN-NEXT:    v_pk_add_bf16 v2, v2, 0x42c83f80
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
   %add = fadd <2 x bfloat> %a, <bfloat 1.0, bfloat 100.0>
@@ -195,7 +195,7 @@ define amdgpu_ps void @v_test_sub_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> 
 ; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GCN-NEXT:    v_pk_add_bf16 v2, 0xc2c8bf80, v2
+; GCN-NEXT:    v_pk_add_bf16 v2, v2, 0xc2c8bf80
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
   %add = fsub <2 x bfloat> %a, <bfloat 1.0, bfloat 100.0>
@@ -210,7 +210,7 @@ define amdgpu_ps void @v_test_sub_v2bf16_lv(ptr addrspace(1) %out, <2 x bfloat> 
 ; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GCN-NEXT:    v_pk_add_bf16 v2, 0x42c83f80, v2 neg_lo:[0,1] neg_hi:[0,1]
+; GCN-NEXT:    v_pk_add_bf16 v2, v2, 0x42c83f80 neg_lo:[1,0] neg_hi:[1,0]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
   %add = fsub <2 x bfloat> <bfloat 1.0, bfloat 100.0>, %a
@@ -302,7 +302,7 @@ define amdgpu_ps void @v_test_mul_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> 
 ; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GCN-NEXT:    v_pk_mul_bf16 v2, 0x42c83f80, v2
+; GCN-NEXT:    v_pk_mul_bf16 v2, v2, 0x42c83f80
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
   %mul = fmul <2 x bfloat> %a, <bfloat 1.0, bfloat 100.0>
@@ -377,7 +377,7 @@ define amdgpu_ps void @v_test_min_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> 
 ; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GCN-NEXT:    v_pk_min_num_bf16 v2, 0x42c83f80, v2
+; GCN-NEXT:    v_pk_min_num_bf16 v2, v2, 0x42c83f80
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
   %min = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 1.0, bfloat 100.0>)
@@ -452,7 +452,7 @@ define amdgpu_ps void @v_test_max_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> 
 ; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GCN-NEXT:    v_pk_max_num_bf16 v2, 0x42c83f80, v2
+; GCN-NEXT:    v_pk_max_num_bf16 v2, v2, 0x42c83f80
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
   %max = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 1.0, bfloat 100.0>)
@@ -515,7 +515,7 @@ define amdgpu_ps float @test_clamp_bf16_hi16(<2 x bfloat> %src) {
 ; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
 ; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; TRUE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0 op_sel_hi:[0,0] clamp
 ; TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
@@ -720,7 +720,7 @@ define amdgpu_ps void @v_test_mul_add_v2bf16_vll(ptr addrspace(1) %out, <2 x bfl
 ; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_mov_b32 s0, 0x43484000
 ; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GCN-NEXT:    v_pk_fma_bf16 v2, 0x42c83f80, v2, s0
+; GCN-NEXT:    v_pk_fma_bf16 v2, v2, 0x42c83f80, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
   %mul = fmul contract <2 x bfloat> %a, <bfloat 1.0, bfloat 100.0>

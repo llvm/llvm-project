@@ -47,3 +47,23 @@ namespace InitListModify {
   constexpr Aggregate aggr2 = {};
   static_assert(aggr2.x == 1 && aggr2.y == 1, "");
 }
+
+namespace UnionTrivialCopy {
+  struct A {
+    constexpr A() {}
+    struct B {
+      union U {
+        constexpr U() : y(4) {}
+        int x;
+        int y;
+      } u;
+    } b;
+  };
+  constexpr int testA() {
+    A a, b;
+    a.b.u.y = 5;
+    b = a;
+    return b.b.u.y;
+  }
+  static_assert(testA() == 5, "");
+}

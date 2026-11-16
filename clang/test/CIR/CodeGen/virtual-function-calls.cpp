@@ -41,7 +41,7 @@ A::A() {}
 // OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
 // OGCG:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]]
 // OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 2), ptr %[[THIS]]
+// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) (i8, ptr @_ZTV1A, i64 16), ptr %[[THIS]]
 
 // NOTE: The GEP in OGCG looks very different from the one generated with CIR,
 //       but it is equivalent. The OGCG GEP indexes by base pointer, then
@@ -58,8 +58,7 @@ void f1(A *a) {
 // CIR:   %[[C_LITERAL:.*]] = cir.const #cir.int<99> : !s8i
 // CIR:   %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[A]] : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
 // CIR:   %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:   %[[FN_PTR_PTR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>>
-// CIR:   %[[FN_PTR:.*]] = cir.load{{.*}} %[[FN_PTR_PTR:.*]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>
+// CIR:   %[[FN_PTR:.*]] = cir.vtable.get_virtual_fn %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>
 // CIR:   cir.call %[[FN_PTR]](%[[A]], %[[C_LITERAL]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>, !cir.ptr<!rec_A> {{.*}}, !s8i {{.*}}) -> ()
 
 // LLVM: define{{.*}} void @_Z2f1P1A(ptr {{.*}} %[[ARG0:.*]])

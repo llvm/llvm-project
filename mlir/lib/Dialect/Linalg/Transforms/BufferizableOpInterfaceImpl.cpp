@@ -123,10 +123,12 @@ struct LinalgOpInterface
     if (linalgOp.getNumLoops() != linalgOp.getNumParallelLoops())
       return false;
 
-    // All index maps of tensors must be identity maps.
+    // All indexing maps of participating tensors must be the same
+    // permutation.
     SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
     assert(linalgOp->getNumOperands() == indexingMaps.size() &&
            "unexpected number of indexing maps");
+    AffineMap commonIndexingMap;
     for (auto [operand, map] :
          llvm::zip(linalgOp->getOpOperands(), indexingMaps)) {
       // Non-tensors do not participate in bufferization, so they can be
@@ -136,10 +138,11 @@ struct LinalgOpInterface
       // Only consider operands in `opOperands`.
       if (!llvm::is_contained(opOperands, &operand))
         continue;
-      // TODO: This could be generalized to other indexing maps. (All indexing
-      // must be the same.)
-      if (!map.isIdentity())
+      if (!map.isPermutation())
         return false;
+      if (commonIndexingMap && commonIndexingMap != map)
+        return false;
+      commonIndexingMap = map;
     }
 
     return true;

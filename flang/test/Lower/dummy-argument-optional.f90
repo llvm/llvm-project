@@ -14,7 +14,7 @@ contains
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f32> {fir.bindc_name = "x", fir.optional}) {
 subroutine intrinsic_scalar(x)
   real, optional :: x
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}}uniq_name = "_QMoptFintrinsic_scalarEx"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}}uniq_name("_QMoptFintrinsic_scalarEx"){{.*}}
   ! CHECK: fir.is_present %[[DECL]]#0 : (!fir.ref<f32>) -> i1
   print *, present(x)
 end subroutine
@@ -35,7 +35,7 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "x", fir.optional}) {
 subroutine intrinsic_f77_array(x)
   real, optional :: x(100)
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name = "_QMoptFintrinsic_f77_arrayEx"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMoptFintrinsic_f77_arrayEx"){{.*}}
   ! CHECK: fir.is_present %[[DECL]]#0 : (!fir.ref<!fir.array<100xf32>>) -> i1
   print *, present(x)
 end subroutine
@@ -57,7 +57,7 @@ end subroutine
 subroutine character_scalar(x)
   ! CHECK: %[[UNBOX:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   ! CHECK: %[[REF:.*]] = fir.convert %[[UNBOX]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[REF]] typeparams %c10 dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QMoptFcharacter_scalarEx"} : (!fir.ref<!fir.char<1,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[REF]] typeparams %c10 dummy_scope %{{.*}} arg 1 uniq_name("_QMoptFcharacter_scalarEx") fortran_attrs<optional> : (!fir.ref<!fir.char<1,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
   character(10), optional :: x
   ! CHECK: fir.is_present %[[DECL]]#0 : (!fir.ref<!fir.char<1,10>>) -> i1
   print *, present(x)
@@ -123,7 +123,7 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.optional}) {
 subroutine assumed_shape(x)
   real, optional :: x(:)
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}}uniq_name = "_QMoptFassumed_shapeEx"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}}uniq_name("_QMoptFassumed_shapeEx"){{.*}}
   ! CHECK: fir.is_present %[[DECL]]#1 : (!fir.box<!fir.array<?xf32>>) -> i1
   print *, present(x)
 end subroutine
@@ -146,7 +146,7 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {fir.bindc_name = "x", fir.optional}) {
 subroutine allocatable_array(x)
   real, allocatable, optional :: x(:)
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}}uniq_name = "_QMoptFallocatable_arrayEx"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}}uniq_name("_QMoptFallocatable_arrayEx"){{.*}}
   ! CHECK: fir.is_present %[[DECL]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> i1
   print *, present(x)
 end subroutine

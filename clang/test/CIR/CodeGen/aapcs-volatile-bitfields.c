@@ -110,8 +110,9 @@ int check_load(st1 *s1) {
 
 // this volatile bit-field container overlaps with a zero-length bit-field,
 // so it may be accessed without using the container's width.  That bit-field
-// is a zero-sized member of the CIR record, so `b` sits one index later there
-// than in the classic record, at the same offset.
+// belongs to no access unit and holds no storage. It is a member of the CIR
+// record but no field of the lowered struct, so `b` sits one index later in CIR
+// than it does in LLVM, at the same offset.
 int check_load_exception(st3 *s3) {
   return s3->b;
 }
@@ -127,7 +128,7 @@ int check_load_exception(st3 *s3) {
 
 // LLVM:define dso_local i32 @check_load_exception
 // LLVM:  [[LOAD:%.*]] = load ptr, ptr {{.*}}, align 8
-// LLVM:  [[MEMBER:%.*]] = getelementptr inbounds nuw %struct.st3, ptr [[LOAD]], i32 0, i32 3
+// LLVM:  [[MEMBER:%.*]] = getelementptr inbounds nuw %struct.st3, ptr [[LOAD]], i32 0, i32 2
 // LLVM:  [[LOADVOL:%.*]] = load volatile i8, ptr [[MEMBER]], align 4
 // LLVM:  [[CLEAR:%.*]] = and i8 [[LOADVOL]], 31
 // LLVM:  [[CAST:%.*]] = zext i8 [[CLEAR]] to i32
@@ -219,7 +220,7 @@ void check_store_exception(st3 *s3) {
 
 // LLVM:define dso_local void @check_store_exception
 // LLVM:  [[LOAD:%.*]] = load ptr, ptr {{.*}}, align 8
-// LLVM:  [[MEMBER:%.*]] = getelementptr inbounds nuw %struct.st3, ptr [[LOAD]], i32 0, i32 3
+// LLVM:  [[MEMBER:%.*]] = getelementptr inbounds nuw %struct.st3, ptr [[LOAD]], i32 0, i32 2
 // LLVM:  [[LOADVOL:%.*]] = load volatile i8, ptr [[MEMBER]], align 4
 // LLVM:  [[CLEAR:%.*]] = and i8 [[LOADVOL]], -32
 // LLVM:  [[SET:%.*]] = or i8 [[CLEAR]], 2

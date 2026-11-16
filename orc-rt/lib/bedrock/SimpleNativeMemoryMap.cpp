@@ -14,8 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
+#include "orc-rt-internal/bedrock/sys/Memory.h"
 #include "orc-rt-internal/support/StringExtras.h"
-#include "orc-rt-internal/support/sys/Memory.h"
 #include "orc-rt/bedrock/Session.h"
 
 #include <optional>
@@ -32,12 +32,13 @@ SimpleNativeMemoryMap::Create(Session &S, SimpleSymbolTable &ST,
   SimpleSymbolTable SNMMST;
   if (auto Err = AddInterface(SNMMST))
     return Err;
-  std::pair<const char *, const void *> InstanceSym[] = {
-      {InstanceName, static_cast<const void *>(Instance.get())}};
+  std::pair<SymbolNameSpec, const void *> InstanceSym[] = {
+      {SymbolNameSpec::c(InstanceName),
+       static_cast<const void *>(Instance.get())}};
   if (auto Err = SNMMST.addUnique(InstanceSym))
     return std::move(Err);
 
-  if (auto Err = ST.addUnique(SNMMST))
+  if (auto Err = ST.addUnique(std::move(SNMMST)))
     return std::move(Err);
 
   return std::move(Instance);

@@ -92,15 +92,15 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @shuffle_trunc2(<4 x float> %src1, <4 x float> %src2) {
 ; CHECK-MVE-LABEL: shuffle_trunc2:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vmov q2, q0
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s4
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s5
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s6
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s3, s7
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s8
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s9
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s10
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s11
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s4, s4
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s5, s5
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s6, s6
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s7, s7
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s4, s0
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s5, s1
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s6, s2
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s7, s3
+; CHECK-MVE-NEXT:    vmov q0, q1
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: shuffle_trunc2:
@@ -152,27 +152,24 @@ entry:
 define arm_aapcs_vfpcc <16 x half> @shuffle_trunc4(<8 x float> %src1, <8 x float> %src2) {
 ; CHECK-MVE-LABEL: shuffle_trunc4:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    .vsave {d8, d9}
-; CHECK-MVE-NEXT:    vpush {d8, d9}
-; CHECK-MVE-NEXT:    vmov q4, q0
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s8
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s9
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s10
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s3, s11
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s8, s12
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s9, s13
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s10, s14
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s11, s15
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s8, s4
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s9, s5
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s10, s6
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s11, s7
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s16
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s17
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s18
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s19
-; CHECK-MVE-NEXT:    vmov q1, q2
-; CHECK-MVE-NEXT:    vpop {d8, d9}
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s8, s8
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s9, s9
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s10, s10
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s11, s11
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s12, s12
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s13, s13
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s14, s14
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s15, s15
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s8, s0
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s9, s1
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s10, s2
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s11, s3
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s12, s4
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s13, s5
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s14, s6
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s15, s7
+; CHECK-MVE-NEXT:    vmov q0, q2
+; CHECK-MVE-NEXT:    vmov q1, q3
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: shuffle_trunc4:
@@ -218,15 +215,15 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @shuffle_trunc6(<4 x float> %src1, <4 x float> %src2) {
 ; CHECK-MVE-LABEL: shuffle_trunc6:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vmov q2, q0
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s4
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s5
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s6
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s3, s7
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s8
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s9
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s10
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s11
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s4, s4
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s5, s5
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s6, s6
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s7, s7
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s4, s0
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s5, s1
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s6, s2
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s7, s3
+; CHECK-MVE-NEXT:    vmov q0, q1
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: shuffle_trunc6:
@@ -280,27 +277,24 @@ entry:
 define arm_aapcs_vfpcc <16 x half> @shuffle_trunc8(<8 x float> %src1, <8 x float> %src2) {
 ; CHECK-MVE-LABEL: shuffle_trunc8:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    .vsave {d8, d9}
-; CHECK-MVE-NEXT:    vpush {d8, d9}
-; CHECK-MVE-NEXT:    vmov q4, q0
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s8
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s9
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s10
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s3, s11
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s8, s12
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s9, s13
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s10, s14
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s11, s15
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s8, s4
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s9, s5
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s10, s6
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s11, s7
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s16
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s17
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s18
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s19
-; CHECK-MVE-NEXT:    vmov q1, q2
-; CHECK-MVE-NEXT:    vpop {d8, d9}
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s8, s8
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s9, s9
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s10, s10
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s11, s11
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s12, s12
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s13, s13
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s14, s14
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s15, s15
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s8, s0
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s9, s1
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s10, s2
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s11, s3
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s12, s4
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s13, s5
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s14, s6
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s15, s7
+; CHECK-MVE-NEXT:    vmov q0, q2
+; CHECK-MVE-NEXT:    vmov q1, q3
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: shuffle_trunc8:

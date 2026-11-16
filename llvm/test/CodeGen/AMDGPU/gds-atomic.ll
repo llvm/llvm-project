@@ -1,7 +1,9 @@
-; RUN: llc -mtriple=amdgpu7.04 < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=amdgpu9 --amdhsa-code-object-version=6 < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgpu7.04 < %s | FileCheck -check-prefixes=GCN,PREGFX11,FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,PREGFX11,FUNC %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,PREGFX11,FUNC %s
+; RUN: llc -mtriple=amdgpu9 --amdhsa-code-object-version=6 < %s | FileCheck -check-prefixes=GCN,PREGFX11,FUNC %s
+; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck -check-prefixes=GCN,PREGFX11,FUNC %s
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=GCN,GFX11,FUNC %s
 
 ; FUNC-LABEL: {{^}}atomic_add_ret_gds:
 ; GCN-DAG: v_mov_b32_e32 v[[OFF:[0-9]+]], s
@@ -106,7 +108,8 @@ define amdgpu_kernel void @atomic_imax_ret_gds(ptr addrspace(1) %out, ptr addrsp
 ; FUNC-LABEL: {{^}}atomic_xchg_ret_gds:
 ; GCN-DAG: v_mov_b32_e32 v[[OFF:[0-9]+]], s
 ; GCN-DAG: s_movk_i32 m0, 0x1000
-; GCN: ds_wrxchg_rtn_b32 v{{[0-9]+}}, v[[OFF]], v{{[0-9]+}} gds
+; PREGFX11: ds_wrxchg_rtn_b32 v{{[0-9]+}}, v[[OFF]], v{{[0-9]+}} gds
+; GFX11: ds_storexchg_rtn_b32 v{{[0-9]+}}, v[[OFF]], v{{[0-9]+}} gds
 define amdgpu_kernel void @atomic_xchg_ret_gds(ptr addrspace(1) %out, ptr addrspace(2) %gds) #1 {
   %val = atomicrmw xchg ptr addrspace(2) %gds, i32 5 acq_rel
   store i32 %val, ptr addrspace(1) %out
@@ -116,7 +119,8 @@ define amdgpu_kernel void @atomic_xchg_ret_gds(ptr addrspace(1) %out, ptr addrsp
 ; FUNC-LABEL: {{^}}atomic_cmpxchg_ret_gds:
 ; GCN-DAG: v_mov_b32_e32 v[[OFF:[0-9]+]], s
 ; GCN-DAG: s_movk_i32 m0, 0x1000
-; GCN: ds_cmpst_rtn_b32 v{{[0-9]+}}, v[[OFF:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} gds
+; PREGFX11: ds_cmpst_rtn_b32 v{{[0-9]+}}, v[[OFF]], v{{[0-9]+}}, v{{[0-9]+}} gds
+; GFX11: ds_cmpstore_rtn_b32 v{{[0-9]+}}, v[[OFF]], v{{[0-9]+}}, v{{[0-9]+}} gds
 define amdgpu_kernel void @atomic_cmpxchg_ret_gds(ptr addrspace(1) %out, ptr addrspace(2) %gds) #1 {
   %val = cmpxchg ptr addrspace(2) %gds, i32 0, i32 1 acquire acquire
   %x = extractvalue { i32, i1 } %val, 0

@@ -12,10 +12,10 @@ add_mlir_dialect_library(MLIRLLVMIRTransforms
   MLIRLLVMPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRIR
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRPass
   MLIRTransforms
-  MLIROpenMPDialect
   )

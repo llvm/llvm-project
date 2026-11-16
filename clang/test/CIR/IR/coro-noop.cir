@@ -1,0 +1,11 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!void = !cir.void
+
+module {
+  cir.func @test_coro_noop() -> !cir.ptr<!void> {
+    // CHECK: %0 = cir.coro.intrinsic.noop() : () -> !cir.ptr<!void>
+    %0 = cir.coro.intrinsic.noop() : () -> !cir.ptr<!void>
+    cir.return %0 : !cir.ptr<!void>
+  }
+}

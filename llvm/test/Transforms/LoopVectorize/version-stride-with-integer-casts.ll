@@ -151,24 +151,17 @@ define void @versioned_sext_use_in_gep(i32 %scale, ptr %dst, i64 %scale.2) {
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[SCALE]], 1
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP83:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SCALE_2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SCALE_2]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP16]]
-; CHECK-NEXT:    store ptr [[TMP83]], ptr [[TMP11]], align 8
-; CHECK-NEXT:    store ptr [[TMP83]], ptr [[TMP13]], align 8
-; CHECK-NEXT:    store ptr [[TMP83]], ptr [[TMP15]], align 8
-; CHECK-NEXT:    store ptr [[TMP83]], ptr [[TMP17]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr ptr, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -176,7 +169,7 @@ define void @versioned_sext_use_in_gep(i32 %scale, ptr %dst, i64 %scale.2) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_MUL:%.*]] = mul i64 [[IV]], [[SCALE_EXT]]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV_MUL]]
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr ptr, ptr [[DST]], i64 [[IV_MUL]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[SCALE_MUL:%.*]] = mul i64 [[SCALE_EXT]], [[SCALE_2]]
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SCALE_MUL]]
@@ -192,8 +185,8 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %iv.mul  = mul i64 %iv, %scale.ext
-  %gep.1 = getelementptr i8, ptr %dst, i64 %iv.mul
+  %iv.mul = mul i64 %iv, %scale.ext
+  %gep.1 = getelementptr ptr, ptr %dst, i64 %iv.mul
   %iv.next = add i64 %iv, 1
   %scale.mul = mul i64 %scale.ext, %scale.2
   %gep.2 = getelementptr i8, ptr %dst, i64 %scale.mul

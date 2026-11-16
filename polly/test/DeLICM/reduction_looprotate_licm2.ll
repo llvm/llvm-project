@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<flatten;delicm>' -polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<flatten;delicm>' -plugin-arg=Polly,-polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ; Use %phi instead of the normal %add; that is, the last last iteration will
 ; be ignored such the %phi cannot be written to A[3] in %body.

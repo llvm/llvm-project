@@ -47,7 +47,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 tracksDebugUserValues: true
 frameInfo:
   maxAlignment:    4

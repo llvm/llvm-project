@@ -401,8 +401,8 @@ Value VectorContractRewriter::lower(vector::ContractionOp op,
     Value out0, out1;
     if (swapOperands) {
       auto tmp = vector::DeinterleaveOp::create(rewriter, loc, row);
-      out0 = tmp.getRes1();
-      out1 = tmp.getRes2();
+      out0 = tmp.getResultEven();
+      out1 = tmp.getResultOdd();
     } else {
       // Deinterleave by pairs.
       auto row64 = vector::BitCastOp::create(rewriter, loc, accRowX264Ty, row);
@@ -410,9 +410,9 @@ Value VectorContractRewriter::lower(vector::ContractionOp op,
 
       // Bitcast back into original element type and insert into the result.
       out0 = vector::BitCastOp::create(rewriter, loc, accRowTy,
-                                       deintr64.getRes1());
+                                       deintr64.getResultEven());
       out1 = vector::BitCastOp::create(rewriter, loc, accRowTy,
-                                       deintr64.getRes2());
+                                       deintr64.getResultOdd());
     }
     result = vector::InsertOp::create(rewriter, loc, out0, result, i * 2);
     result = vector::InsertOp::create(rewriter, loc, out1, result, i * 2 + 1);
@@ -444,8 +444,7 @@ public:
     //  * M and N even and at least 2
     if (lhsType.isScalable() || !rhsType.getScalableDims()[0] ||
         rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != k || k != 8 ||
-        m < 2 || m % 2 != 0 || n < 2 || n % 2 != 0 ||
-        !rhsType.getScalableDims()[0])
+        m < 2 || m % 2 != 0 || n < 2 || n % 2 != 0)
       return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 
     // Check the output is a vector of i32 elements.
@@ -516,8 +515,7 @@ public:
     //  * M and N even and at least 2
     if (lhsType.isScalable() || !rhsType.getScalableDims()[0] ||
         rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != k || k != 4 ||
-        m < 2 || m % 2 != 0 || n < 2 || n % 2 != 0 ||
-        !rhsType.getScalableDims()[0])
+        m < 2 || m % 2 != 0 || n < 2 || n % 2 != 0)
       return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 
     // Check the output is a vector of Float32 elements.
@@ -545,7 +543,7 @@ public:
 class LowerContractionToSVEI8MMPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
 
@@ -564,7 +562,7 @@ public:
 class LowerContractionToSVEBFMMLAPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
 

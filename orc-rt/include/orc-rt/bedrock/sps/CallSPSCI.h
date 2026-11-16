@@ -14,13 +14,17 @@
 #define ORC_RT_BEDROCK_SPS_CALLSPSCI_H
 
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
+#include "orc-rt/support/sps/SPSWrapperFunction.h"
 
-namespace orc_rt::sps_ci {
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_call_void_void)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_call_main)
+
+namespace orc_rt::sps::ci {
 
 /// Add the function callers SPS interface (orc_rt_ci_sps_call*) to the
 /// controller interface.
 Error addCall(SimpleSymbolTable &ST);
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci
 
 #endif // ORC_RT_BEDROCK_SPS_CALLSPSCI_H

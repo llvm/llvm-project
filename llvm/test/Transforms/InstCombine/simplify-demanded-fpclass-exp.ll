@@ -561,7 +561,7 @@ define nofpclass(inf zero sub norm) <2 x float> @ret_only_nan__exp2_vec_partiall
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:    ret <2 x float> splat (float +qnan)
 ;
-  %exp = call <2 x float> @llvm.exp2.v2f32(<2 x float> <float 0x7ff8000000000000, float poison>)
+  %exp = call <2 x float> @llvm.exp2.v2f32(<2 x float> <float +qnan, float poison>)
   ret <2 x float> %exp
 }
 

@@ -1,5 +1,6 @@
-; RUN: llc %s -o - | FileCheck %s
-; RUN: llc %s -o - | FileCheck %s --check-prefix=NO-DUP
+; RUN: opt -S -passes=dxil-debug-info %s -o - | FileCheck %s
+; RUN: llc %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-COMMENT
+; RUN: opt -S -passes=dxil-debug-info %s -o - | FileCheck %s --check-prefix=NO-DUP
 
 target triple = "dxil-unknown-shadermodel6.3-library"
 
@@ -17,18 +18,19 @@ define void @foo() {
 ; CHECK-DAG: !llvm.dbg.cu = !{![[CU:[0-9]+]]}
 ; CHECK-DAG: ![[CU]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[FILE:[0-9]+]], producer: "handwritten", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: ![[GLOBALS:[0-9]+]], splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
 ; CHECK-DAG: ![[GLOBALS]] = !{![[GVEX:[0-9]+]], ![[GVEY:[0-9]+]]}
-; CHECK-DAG: DXIL: ![[GVEX]]: to be replaced by: ![[GVX:[0-9]+]]
+; CHECK-DAG: ![[GVEX]] = !DIGlobalVariableExpression(var: ![[GVX:[0-9]+]], expr: !DIExpression())
+; CHECK-COMMENT-DAG: DXIL: ![[GVEX]]: to be replaced by: ![[GVX]]
 ; CHECK-DAG: ![[GVX]] = !DIGlobalVariable(name: "x", scope: ![[CU]], file: ![[FILE]], line: 1, type: ![[TYPE:[0-9]+]], isLocal: false, isDefinition: true)
-; CHECK-DAG: DXIL: ![[GVEY]]: to be replaced by: ![[GVY:[0-9]+]]
+; CHECK-DAG: ![[GVEY]] = !DIGlobalVariableExpression(var: ![[GVY:[0-9]+]], expr: !DIExpression())
+; CHECK-COMMENT-DAG: DXIL: ![[GVEY]]: to be replaced by: ![[GVY]]
 ; CHECK-DAG: ![[GVY]] = !DIGlobalVariable(name: "y", scope: ![[CU]], file: ![[FILE]], line: 1, type: ![[TYPE:[0-9]+]], isLocal: false, isDefinition: true)
-; CHECK-DAG: DXIL: ![[GVY]]: additional data: ptr @y
+; CHECK-COMMENT-DAG: DXIL: ![[GVY]]: additional data: ptr @y
 ; CHECK-DAG: ![[FILE]] = !DIFile(filename: "cu.cpp", directory: "/tmp")
 ; CHECK-DAG: ![[TYPE]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 
-; NO-DUP: ![[GVY:[0-9]+]] = !DIGlobalVariable(name: "y"
-; NO-DUP-NOT: ![[GVY]] =
 ; NO-DUP: ![[GVX:[0-9]+]] = !DIGlobalVariable(name: "x"
 ; NO-DUP-NOT: ![[GVX]] =
+; NO-DUP: ![[GVY:[0-9]+]] = !DIGlobalVariable(name: "y"
 ; NO-DUP-NOT: ![[GVY]] =
 
 !llvm.dbg.cu = !{!4}

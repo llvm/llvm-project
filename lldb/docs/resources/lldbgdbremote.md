@@ -284,6 +284,43 @@ the modules will be interesting to the client.
 will be used, which may be slower if the target contains a large number of modules
 and the communication link has a non-negligible latency.
 
+## jLLDBSettings
+
+This packet requests LLDB-specific settings for the process on the current
+GDB-remote connection. It requires the `lldb-settings+` feature from
+`qSupported`.
+
+```
+LLDB SENDS:    jLLDBSettings
+STUB REPLIES:  {"dyld_plugin_name":<string>,"accelerator_plugin_name":<string>,"send_dyld_packet_to_accelerator":<boolean>}
+```
+
+The fields are:
+
+- `dyld_plugin_name`: The name of the dynamic-loader plugin LLDB should use. If
+  absent or empty LLDB will select the dynamic loader based on the target
+  triple automatically.
+- `accelerator_plugin_name`: identifies the server-side accelerator plugin.
+  This setting is only needed when `send_dyld_packet_to_accelerator` is false.
+- `send_dyld_packet_to_accelerator`: if true, LLDB sends the dynamic-loader
+  packet on this accelerator connection. If false, LLDB sends it on the native
+  process's connection, which forwards the request to the plugin named by
+  `accelerator_plugin_name`. That plugin calls
+  `LLDBServerAcceleratorPlugin::GetDynamicLoaderLibraryInfos`. This allows the
+  accelerator connection to use an external GDB server with no knowledge of
+  shared libraries, while the accelerator plugin can obtain the library list
+  through either the native or accelerator connection. If absent, this
+  defaults to true.
+
+The settings object can be extended with more fields as needed.
+
+Example:
+
+```
+LLDB SENDS:    jLLDBSettings
+STUB REPLIES:  {"dyld_plugin_name":"accelerator-gdb-remote","accelerator_plugin_name":"mock","send_dyld_packet_to_accelerator":true}
+```
+
 ## jLLDBTraceGetBinaryData
 
 Get binary data given a trace technology and a data identifier.
@@ -1643,7 +1680,7 @@ tuples to return are:
   listed (`dirty-pages:;`) indicates no dirty pages in
   this memory region.  The *absence* of this key means
   that this stub cannot determine dirty pages.
-* `protection-key:<key>` - where `<key>` is an unsigned integer memory
+* `protection-key:<key>;` - where `<key>` is an unsigned integer memory
   protection key.
 
 If the address requested is not in a mapped region (e.g. we've jumped through
@@ -2366,6 +2403,9 @@ following keys and values:
     the `description` key/value pair to describe the
     exceptional event the user should see as the stop
     reason.
+  * `dyld` - the dynamic loader has library changes for the client to process.
+    LLDB updates its loaded modules and automatically continues unless
+    `target.process.stop-on-sharedlibrary-events` is true.
   * `description` -
     An ASCII hex string that contains a more descriptive
     reason that the thread stopped. This is only needed
@@ -2668,6 +2708,8 @@ Request packet has the fields:
    3. binary-escaped-data to be written
 
 Response is `F`, followed by the number of bytes written (base 16).
+
+lldb-server ignores the offset for a file that cannot seek, such as a pipe.
 
 ### vFile:size
 

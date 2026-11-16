@@ -128,8 +128,15 @@ public:
     SameSign = 1 << 21,      // Both operands have the same sign.
     InBounds = 1 << 22,      // Pointer arithmetic remains inbounds.
                              // Implies NoUSWrap.
-    LRSplit = 1 << 23        // Instruction for live range split.
+    LRSplit = 1 << 23,       // Instruction for live range split.
+    NonNull = 1 << 24        // Address space cast source is not the null
+                             // value of the source address space.
   };
+
+  static constexpr uint32_t getPoisonGeneratingFlags() {
+    return NoUWrap | NoSWrap | NoUSWrap | IsExact | Disjoint | NonNeg |
+           FmNoNans | FmNoInfs | SameSign | InBounds;
+  }
 
 private:
   const MCInstrDesc *MCID;              // Instruction descriptor.
@@ -1520,6 +1527,11 @@ public:
     return findRegisterUseOperandIdx(Reg, TRI, false) != -1;
   }
 
+  /// Return true if two operands read (Reg, SubReg) and one is tied to a def of
+  /// another register.  Such reads may not be marked undef: rewriting the tie
+  /// would separate them.
+  LLVM_ABI bool hasTiedAndOtherReadOf(Register Reg, unsigned SubReg) const;
+
   /// Return true if the MachineInstr reads the specified virtual register.
   /// Take into account that a partial define is a
   /// read-modify-write operation.
@@ -1763,6 +1775,14 @@ public:
   /// operands for all registers in UsedRegs.
   LLVM_ABI void setPhysRegsDeadExcept(ArrayRef<Register> UsedRegs,
                                       const TargetRegisterInfo &TRI);
+
+  /// Mark the implicit physreg defs named by the instruction description as
+  /// dead.
+  void setImplicitPhysRegDefsDead() {
+    unsigned Idx = getNumExplicitOperands();
+    for (unsigned E = Idx + MCID->implicit_defs().size(); Idx != E; ++Idx)
+      getOperand(Idx).setIsDead();
+  }
 
   /// Return true if it is safe to move this instruction. If
   /// SawStore is set to true, it means that there is a store (or call) between

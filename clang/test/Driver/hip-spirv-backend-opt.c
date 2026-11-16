@@ -12,13 +12,13 @@
 // RUN:         -use-spirv-backend --offload-device-only -no-canonical-prefixes \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-TRANSLATOR,CHECK-SPIRV-BACKEND-BINARY
 
-// The new driver's behavior is to emit LLVM IR for --offload-device-only and -fgpu-rdc (independently of SPIR-V).
+// --offload-device-only with -fgpu-rdc emits LLVM IR (independently of SPIR-V).
 // RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -### -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend --offload-device-only -S -fgpu-rdc -no-canonical-prefixes \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-TRANSLATOR,CHECK-SPIRV-BACKEND-LL,CHECK-FGPU-RDC
 
-// The new driver's behavior is to emit LLVM IR for --offload-device-only and -fgpu-rdc (independently of SPIR-V).
+// --offload-device-only with -fgpu-rdc emits LLVM IR (independently of SPIR-V).
 // RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -### -x hip %s -save-temps  \
 // RUN:         -use-spirv-backend --offload-device-only -fgpu-rdc -no-canonical-prefixes \

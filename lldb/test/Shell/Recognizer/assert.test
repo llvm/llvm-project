@@ -2,9 +2,14 @@
 # XFAIL: system-netbsd
 #
 # llvm.org/pr56144
-# UNSUPPORTED: system-linux
+# system-linux only covers a Linux host; remote-linux catches the bots which
+# debug a Linux target from another host.
+# UNSUPPORTED: system-linux, remote-linux
 #
-# UNSUPPORTED: system-windows
+# https://github.com/llvm/llvm-project/issues/224600
+# ObjectFilePECOFF does not support ARM64 .pdata/.xdata.
+# UNSUPPORTED: target-windows && target-aarch64
+#
 # RUN: %clang_host -g -O0 %S/Inputs/assert.c -o %t.out
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
 run
@@ -14,5 +19,5 @@ frame recognizer info 0
 # CHECK: frame 0 is recognized by Assert StackFrame Recognizer
 set set thread-format "{${thread.stop-reason-raw}}\n"
 thread info
-# CHECK: signal SIGABRT
+# CHECK: {{(signal SIGABRT|Exception 0x[0-9a-fA-F]+)}}
 q

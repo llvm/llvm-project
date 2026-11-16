@@ -66,7 +66,7 @@ void StringTableBuilder::write(raw_ostream &OS) const {
   OS << Data;
 }
 
-using StringPair = std::pair<CachedHashStringRef, size_t>;
+using StringPair = DenseMap<CachedHashStringRef, size_t>::value_type;
 
 void StringTableBuilder::write(uint8_t *Buf) const {
   assert(isFinalized());

@@ -357,12 +357,15 @@ define void @ugt_v2f64(ptr %c, ptr %a, ptr %b) nounwind {
   ret void
 }
 
+;; MachineCSE must not merge comparisons with reversed operands.
 define void @ule_v4f32(ptr %c, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: ule_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $w0, 0($6)
-; CHECK-NEXT:    ld.w $w1, 0($5)
-; CHECK-NEXT:    fcule.w $w0, $w1, $w0
+; CHECK-NEXT:    ld.w $w0, 0($5)
+; CHECK-NEXT:    ld.w $w1, 0($6)
+; CHECK-NEXT:    fcule.w $w2, $w1, $w0
+; CHECK-NEXT:    st.w $w2, 16($4)
+; CHECK-NEXT:    fcule.w $w0, $w0, $w1
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    st.w $w0, 0($4)
   %1 = load <4 x float>, ptr %a
@@ -370,15 +373,21 @@ define void @ule_v4f32(ptr %c, ptr %a, ptr %b) nounwind {
   %3 = fcmp ule <4 x float> %1, %2
   %4 = sext <4 x i1> %3 to <4 x i32>
   store <4 x i32> %4, ptr %c
+  %5 = fcmp ule <4 x float> %2, %1
+  %6 = sext <4 x i1> %5 to <4 x i32>
+  %7 = getelementptr <4 x i32>, ptr %c, i32 1
+  store <4 x i32> %6, ptr %7
   ret void
 }
 
 define void @ule_v2f64(ptr %c, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: ule_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.d $w0, 0($6)
-; CHECK-NEXT:    ld.d $w1, 0($5)
-; CHECK-NEXT:    fcule.d $w0, $w1, $w0
+; CHECK-NEXT:    ld.d $w0, 0($5)
+; CHECK-NEXT:    ld.d $w1, 0($6)
+; CHECK-NEXT:    fcule.d $w2, $w1, $w0
+; CHECK-NEXT:    st.d $w2, 16($4)
+; CHECK-NEXT:    fcule.d $w0, $w0, $w1
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    st.d $w0, 0($4)
   %1 = load <2 x double>, ptr %a
@@ -386,15 +395,21 @@ define void @ule_v2f64(ptr %c, ptr %a, ptr %b) nounwind {
   %3 = fcmp ule <2 x double> %1, %2
   %4 = sext <2 x i1> %3 to <2 x i64>
   store <2 x i64> %4, ptr %c
+  %5 = fcmp ule <2 x double> %2, %1
+  %6 = sext <2 x i1> %5 to <2 x i64>
+  %7 = getelementptr <2 x i64>, ptr %c, i32 1
+  store <2 x i64> %6, ptr %7
   ret void
 }
 
 define void @ult_v4f32(ptr %c, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: ult_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $w0, 0($6)
-; CHECK-NEXT:    ld.w $w1, 0($5)
-; CHECK-NEXT:    fcult.w $w0, $w1, $w0
+; CHECK-NEXT:    ld.w $w0, 0($5)
+; CHECK-NEXT:    ld.w $w1, 0($6)
+; CHECK-NEXT:    fcult.w $w2, $w1, $w0
+; CHECK-NEXT:    st.w $w2, 16($4)
+; CHECK-NEXT:    fcult.w $w0, $w0, $w1
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    st.w $w0, 0($4)
   %1 = load <4 x float>, ptr %a
@@ -402,15 +417,21 @@ define void @ult_v4f32(ptr %c, ptr %a, ptr %b) nounwind {
   %3 = fcmp ult <4 x float> %1, %2
   %4 = sext <4 x i1> %3 to <4 x i32>
   store <4 x i32> %4, ptr %c
+  %5 = fcmp ult <4 x float> %2, %1
+  %6 = sext <4 x i1> %5 to <4 x i32>
+  %7 = getelementptr <4 x i32>, ptr %c, i32 1
+  store <4 x i32> %6, ptr %7
   ret void
 }
 
 define void @ult_v2f64(ptr %c, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: ult_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.d $w0, 0($6)
-; CHECK-NEXT:    ld.d $w1, 0($5)
-; CHECK-NEXT:    fcult.d $w0, $w1, $w0
+; CHECK-NEXT:    ld.d $w0, 0($5)
+; CHECK-NEXT:    ld.d $w1, 0($6)
+; CHECK-NEXT:    fcult.d $w2, $w1, $w0
+; CHECK-NEXT:    st.d $w2, 16($4)
+; CHECK-NEXT:    fcult.d $w0, $w0, $w1
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    st.d $w0, 0($4)
   %1 = load <2 x double>, ptr %a
@@ -418,6 +439,10 @@ define void @ult_v2f64(ptr %c, ptr %a, ptr %b) nounwind {
   %3 = fcmp ult <2 x double> %1, %2
   %4 = sext <2 x i1> %3 to <2 x i64>
   store <2 x i64> %4, ptr %c
+  %5 = fcmp ult <2 x double> %2, %1
+  %6 = sext <2 x i1> %5 to <2 x i64>
+  %7 = getelementptr <2 x i64>, ptr %c, i32 1
+  store <2 x i64> %6, ptr %7
   ret void
 }
 

@@ -1,0 +1,73 @@
+; Test that we can report LF_CLASS2 and friends as UDTs.
+; The only difference to the DIA/ test is in the symbol indexes.
+; RUN: llvm-pdbutil yaml2pdb %p/../Inputs/tag-types2.yaml -pdb=%t.pdb
+; RUN: llvm-pdbutil diadump -native -udts %t.pdb | FileCheck %s
+
+; CHECK: {
+; CHECK:   symIndexId: 2
+; CHECK:   symTag: UDT
+; CHECK:   name: AUnion
+; CHECK:   length: 8
+; CHECK:   udtKind: union
+; CHECK:   constructor: 0
+; CHECK:   constType: 0
+; CHECK:   hasAssignmentOperator: 0
+; CHECK:   hasCastOperator: 0
+; CHECK:   hasNestedTypes: 0
+; CHECK:   overloadedOperator: 0
+; CHECK:   isInterfaceUdt: 0
+; CHECK:   intrinsic: 0
+; CHECK:   nested: 0
+; CHECK:   packed: 0
+; CHECK:   isRefUdt: 0
+; CHECK:   scoped: 0
+; CHECK:   unalignedType: 0
+; CHECK:   isValueUdt: 0
+; CHECK:   volatileType: 0
+; CHECK: }
+; CHECK: {
+; CHECK:   symIndexId: 3
+; CHECK:   symTag: UDT
+; CHECK:   name: AClass
+; CHECK:   virtualTableShapeId: 4
+; CHECK:   length: 8
+; CHECK:   udtKind: class
+; CHECK:   constructor: 0
+; CHECK:   constType: 0
+; CHECK:   hasAssignmentOperator: 0
+; CHECK:   hasCastOperator: 0
+; CHECK:   hasNestedTypes: 0
+; CHECK:   overloadedOperator: 0
+; CHECK:   isInterfaceUdt: 0
+; CHECK:   intrinsic: 0
+; CHECK:   nested: 0
+; CHECK:   packed: 0
+; CHECK:   isRefUdt: 0
+; CHECK:   scoped: 0
+; CHECK:   unalignedType: 0
+; CHECK:   isValueUdt: 0
+; CHECK:   volatileType: 0
+; CHECK: }
+; CHECK: {
+; CHECK:   symIndexId: 5
+; CHECK:   symTag: UDT
+; CHECK:   name: AStruct
+; CHECK:   virtualTableShapeId: 4
+; CHECK:   length: 8
+; CHECK:   udtKind: struct
+; CHECK:   constructor: 0
+; CHECK:   constType: 0
+; CHECK:   hasAssignmentOperator: 0
+; CHECK:   hasCastOperator: 0
+; CHECK:   hasNestedTypes: 0
+; CHECK:   overloadedOperator: 0
+; CHECK:   isInterfaceUdt: 0
+; CHECK:   intrinsic: 0
+; CHECK:   nested: 0
+; CHECK:   packed: 0
+; CHECK:   isRefUdt: 0
+; CHECK:   scoped: 0
+; CHECK:   unalignedType: 0
+; CHECK:   isValueUdt: 0
+; CHECK:   volatileType: 0
+; CHECK: }

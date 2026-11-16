@@ -1,3 +1,6 @@
+// https://github.com/llvm/llvm-project/issues/124541
+// XFAIL: target-x86
+
 // RUN: mlir-opt -fold-tensor-subset-ops -split-input-file %s | FileCheck %s
 
 func.func @fold_vector_transfer_read_with_rank_reduced_extract_slice(

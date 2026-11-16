@@ -10,9 +10,11 @@ package(default_visibility = ["//visibility:public"])
         srcs = [src],
         data = [
             "Builtin/Bytecode/builtin_fixed_0.mlirbc",
+            "Builtin/Bytecode/builtin_fixed_1.mlirbc",
             "Vector/vector-sink-transform.mlir",
             "//llvm:llc",
             "//llvm:llvm-symbolizer",
+            "//llvm:split-file",
             "//mlir:mlir-opt",
             "//mlir:mlir-pdll",
             "//mlir:mlir-reduce",

@@ -22,57 +22,40 @@
 #include "MipsInstrInfo.h"
 #include "MipsSubtarget.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "mips-pseudo"
+#define DEBUG_TYPE "mips-expand-pseudo"
 
 namespace {
-  class MipsExpandPseudo : public MachineFunctionPass {
-  public:
-    static char ID;
-    MipsExpandPseudo() : MachineFunctionPass(ID) {}
+class MipsExpandPseudoLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  MipsExpandPseudoLegacy() : MachineFunctionPass(ID) {}
 
-    const MipsInstrInfo *TII;
-    const MipsSubtarget *STI;
+  bool runOnMachineFunction(MachineFunction &Fn) override;
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
+  StringRef getPassName() const override {
+    return "Mips pseudo instruction expansion pass";
+  }
+};
+char MipsExpandPseudoLegacy::ID = 0;
+} // namespace
 
-    StringRef getPassName() const override {
-      return "Mips pseudo instruction expansion pass";
-    }
-
-  private:
-    bool expandAtomicCmpSwap(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator MBBI,
-                             MachineBasicBlock::iterator &NextMBBI);
-    bool expandAtomicCmpSwapSubword(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator MBBI,
-                                    MachineBasicBlock::iterator &NextMBBI);
-
-    bool expandAtomicBinOp(MachineBasicBlock &BB,
-                           MachineBasicBlock::iterator I,
-                           MachineBasicBlock::iterator &NMBBI, unsigned Size);
-    bool expandAtomicBinOpSubword(MachineBasicBlock &BB,
-                                  MachineBasicBlock::iterator I,
-                                  MachineBasicBlock::iterator &NMBBI);
-
-    bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                  MachineBasicBlock::iterator &NMBB);
-    bool expandMBB(MachineBasicBlock &MBB);
-   };
-  char MipsExpandPseudo::ID = 0;
-}
-
-bool MipsExpandPseudo::expandAtomicCmpSwapSubword(
-    MachineBasicBlock &BB, MachineBasicBlock::iterator I,
-    MachineBasicBlock::iterator &NMBBI) {
+static bool expandAtomicCmpSwapSubword(MachineBasicBlock &BB,
+                                       MachineBasicBlock::iterator I,
+                                       MachineBasicBlock::iterator &NMBBI,
+                                       const MipsSubtarget *STI,
+                                       const MipsInstrInfo *TII) {
 
   MachineFunction *MF = BB.getParent();
 
@@ -80,7 +63,7 @@ bool MipsExpandPseudo::expandAtomicCmpSwapSubword(
   DebugLoc DL = I->getDebugLoc();
   unsigned LL, SC;
 
-  unsigned ZERO = Mips::ZERO;
+  unsigned ZERO = Mips::R0;
   unsigned BNE = Mips::BNE;
   unsigned BEQ = Mips::BEQ;
   unsigned SEOp =
@@ -198,9 +181,11 @@ bool MipsExpandPseudo::expandAtomicCmpSwapSubword(
   return true;
 }
 
-bool MipsExpandPseudo::expandAtomicCmpSwap(MachineBasicBlock &BB,
-                                           MachineBasicBlock::iterator I,
-                                           MachineBasicBlock::iterator &NMBBI) {
+static bool expandAtomicCmpSwap(MachineBasicBlock &BB,
+                                MachineBasicBlock::iterator I,
+                                MachineBasicBlock::iterator &NMBBI,
+                                const MipsSubtarget *STI,
+                                const MipsInstrInfo *TII) {
 
   const unsigned Size =
       I->getOpcode() == Mips::ATOMIC_CMP_SWAP_I32_POSTRA ? 4 : 8;
@@ -228,12 +213,12 @@ bool MipsExpandPseudo::expandAtomicCmpSwap(MachineBasicBlock &BB,
       BEQ = Mips::BEQ;
     }
 
-    ZERO = Mips::ZERO;
+    ZERO = Mips::R0;
     MOVE = Mips::OR;
   } else {
     LL = STI->hasMips64r6() ? Mips::LLD_R6 : Mips::LLD;
     SC = STI->hasMips64r6() ? Mips::SCD_R6 : Mips::SCD;
-    ZERO = Mips::ZERO_64;
+    ZERO = Mips::R0_64;
     BNE = Mips::BNE64;
     BEQ = Mips::BEQ64;
     MOVE = Mips::OR64;
@@ -298,9 +283,11 @@ bool MipsExpandPseudo::expandAtomicCmpSwap(MachineBasicBlock &BB,
   return true;
 }
 
-bool MipsExpandPseudo::expandAtomicBinOpSubword(
-    MachineBasicBlock &BB, MachineBasicBlock::iterator I,
-    MachineBasicBlock::iterator &NMBBI) {
+static bool expandAtomicBinOpSubword(MachineBasicBlock &BB,
+                                     MachineBasicBlock::iterator I,
+                                     MachineBasicBlock::iterator &NMBBI,
+                                     const MipsSubtarget *STI,
+                                     const MipsInstrInfo *TII) {
 
   MachineFunction *MF = BB.getParent();
 
@@ -480,7 +467,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
         .addReg(OldVal)
         .addReg(Incr);
     BuildMI(loopMBB, DL, TII->get(Mips::NOR), BinOpRes)
-        .addReg(Mips::ZERO)
+        .addReg(Mips::R0)
         .addReg(BinOpRes);
     BuildMI(loopMBB, DL, TII->get(Mips::AND), BinOpRes)
         .addReg(BinOpRes)
@@ -517,7 +504,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
           .addImm(ShiftImm);
     }
     BuildMI(loopMBB, DL, TII->get(Mips::OR), Dest)
-        .addReg(Mips::ZERO)
+        .addReg(Mips::R0)
         .addReg(StoreVal);
     DestOK = true;
     BuildMI(loopMBB, DL, TII->get(Mips::SLLV), StoreVal)
@@ -553,7 +540,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
       //      movz BinOpRes, Incr, Scratch4, BinOpRes
       BuildMI(loopMBB, DL, TII->get(OR), BinOpRes)
           .addReg(StoreVal)
-          .addReg(Mips::ZERO);
+          .addReg(Mips::R0);
       BuildMI(loopMBB, DL, TII->get(MOVIncr), BinOpRes)
           .addReg(Incr)
           .addReg(Scratch4)
@@ -561,8 +548,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
     } else {
       // if min:
       // loopMBB:  move BinOpRes, StoreVal
-      //           beq Scratch4, 0, loop1MBB
-      //           j loop2MBB
+      //           bne Scratch4, 0, loop2MBB
       // loop1MBB: move BinOpRes, Incr
       // loop2MBB: and BinOpRes, BinOpRes, Mask
       //           and StoreVal, OlddVal, Mask2
@@ -572,8 +558,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
       //
       // if max:
       // loopMBB:  move BinOpRes, Incr
-      //           beq Scratch4, 0, loop1MBB
-      //           j loop2MBB
+      //           bne Scratch4, 0, loop2MBB
       // loop1MBB: move BinOpRes, StoreVal
       // loop2MBB: and BinOpRes, BinOpRes, Mask
       //           and StoreVal, OlddVal, Mask2
@@ -583,23 +568,24 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
       if (IsMin) {
         BuildMI(loopMBB, DL, TII->get(OR), BinOpRes)
             .addReg(StoreVal)
-            .addReg(Mips::ZERO);
+            .addReg(Mips::R0);
         BuildMI(loop1MBB, DL, TII->get(OR), BinOpRes)
             .addReg(Incr)
-            .addReg(Mips::ZERO);
+            .addReg(Mips::R0);
       } else {
         BuildMI(loopMBB, DL, TII->get(OR), BinOpRes)
             .addReg(Incr)
-            .addReg(Mips::ZERO);
+            .addReg(Mips::R0);
         BuildMI(loop1MBB, DL, TII->get(OR), BinOpRes)
             .addReg(StoreVal)
-            .addReg(Mips::ZERO);
+            .addReg(Mips::R0);
       }
-      BuildMI(loopMBB, DL, TII->get(BEQ))
+      // loop1MBB is laid out directly after loopMBB, so fall through to it
+      // rather than using an unconditional jump.
+      BuildMI(loopMBB, DL, TII->get(Mips::BNE))
           .addReg(Scratch4)
-          .addReg(Mips::ZERO)
-          .addMBB(loop1MBB);
-      BuildMI(loopMBB, DL, TII->get(Mips::J)).addMBB(loop2MBB);
+          .addReg(Mips::R0)
+          .addMBB(loop2MBB);
     }
 
     //  and BinOpRes, BinOpRes, Mask
@@ -645,7 +631,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
         .addImm(0);
     BuildMI(loop2MBB, DL, TII->get(BEQ))
         .addReg(StoreVal)
-        .addReg(Mips::ZERO)
+        .addReg(Mips::R0)
         .addMBB(loopMBB);
   } else {
     BuildMI(loopMBB, DL, TII->get(Mips::AND), StoreVal)
@@ -660,7 +646,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
         .addImm(0);
     BuildMI(loopMBB, DL, TII->get(BEQ))
         .addReg(StoreVal)
-        .addReg(Mips::ZERO)
+        .addReg(Mips::R0)
         .addMBB(loopMBB);
   }
 
@@ -705,10 +691,11 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   return true;
 }
 
-bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
-                                         MachineBasicBlock::iterator I,
-                                         MachineBasicBlock::iterator &NMBBI,
-                                         unsigned Size) {
+static bool expandAtomicBinOp(MachineBasicBlock &BB,
+                              MachineBasicBlock::iterator I,
+                              MachineBasicBlock::iterator &NMBBI, unsigned Size,
+                              const MipsSubtarget *STI,
+                              const MipsInstrInfo *TII) {
   MachineFunction *MF = BB.getParent();
 
   const bool ArePtrs64bit = STI->getABI().ArePtrs64bit();
@@ -745,11 +732,11 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
       SELEQZ = Mips::SELEQZ;
     }
 
-    ZERO = Mips::ZERO;
+    ZERO = Mips::R0;
   } else {
     LL = STI->hasMips64r6() ? Mips::LLD_R6 : Mips::LLD;
     SC = STI->hasMips64r6() ? Mips::SCD_R6 : Mips::SCD;
-    ZERO = Mips::ZERO_64;
+    ZERO = Mips::R0_64;
     BEQ = Mips::BEQ64;
     SLT = Mips::SLT64;
     SLTu = Mips::SLTu64;
@@ -961,8 +948,7 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
     } else {
       // if min:
       // loopMBB:  move Scratch, OldVal
-      //           beq Scratch2_32, 0, loop1MBB
-      //           j loop2MBB
+      //           bne Scratch2_32, 0, loop2MBB
       // loop1MBB: move Scratch, Incr
       // loop2MBB: sc $2, 0($4)
       //           beqz	$2, $BB0_1
@@ -970,8 +956,7 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
       //
       // if max:
       // loopMBB:  move Scratch, Incr
-      //           beq Scratch2_32, 0, loop1MBB
-      //           j loop2MBB
+      //           bne Scratch2_32, 0, loop2MBB
       // loop1MBB: move Scratch, OldVal
       // loop2MBB: sc $2, 0($4)
       //           beqz	$2, $BB0_1
@@ -985,11 +970,13 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
             .addReg(OldVal)
             .addReg(ZERO);
       }
-      BuildMI(loopMBB, DL, TII->get(BEQ))
+      // Scratch2_32 is always a GPR32, so use the 32-bit BNE even for the
+      // 64-bit atomics. loop1MBB is laid out directly after loopMBB, so fall
+      // through to it rather than using an unconditional jump.
+      BuildMI(loopMBB, DL, TII->get(Mips::BNE))
           .addReg(Scratch2_32)
-          .addReg(ZERO)
-          .addMBB(loop1MBB);
-      BuildMI(loopMBB, DL, TII->get(Mips::J)).addMBB(loop2MBB);
+          .addReg(Mips::R0)
+          .addMBB(loop2MBB);
     }
 
   } else if (Opcode) {
@@ -1040,19 +1027,19 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   return true;
 }
 
-bool MipsExpandPseudo::expandMI(MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MBBI,
-                                MachineBasicBlock::iterator &NMBB) {
+static bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     MachineBasicBlock::iterator &NMBB,
+                     const MipsSubtarget *STI, const MipsInstrInfo *TII) {
 
   bool Modified = false;
 
   switch (MBBI->getOpcode()) {
   case Mips::ATOMIC_CMP_SWAP_I32_POSTRA:
   case Mips::ATOMIC_CMP_SWAP_I64_POSTRA:
-    return expandAtomicCmpSwap(MBB, MBBI, NMBB);
+    return expandAtomicCmpSwap(MBB, MBBI, NMBB, STI, TII);
   case Mips::ATOMIC_CMP_SWAP_I8_POSTRA:
   case Mips::ATOMIC_CMP_SWAP_I16_POSTRA:
-    return expandAtomicCmpSwapSubword(MBB, MBBI, NMBB);
+    return expandAtomicCmpSwapSubword(MBB, MBBI, NMBB, STI, TII);
   case Mips::ATOMIC_SWAP_I8_POSTRA:
   case Mips::ATOMIC_SWAP_I16_POSTRA:
   case Mips::ATOMIC_LOAD_NAND_I8_POSTRA:
@@ -1075,7 +1062,7 @@ bool MipsExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case Mips::ATOMIC_LOAD_UMIN_I16_POSTRA:
   case Mips::ATOMIC_LOAD_UMAX_I8_POSTRA:
   case Mips::ATOMIC_LOAD_UMAX_I16_POSTRA:
-    return expandAtomicBinOpSubword(MBB, MBBI, NMBB);
+    return expandAtomicBinOpSubword(MBB, MBBI, NMBB, STI, TII);
   case Mips::ATOMIC_LOAD_ADD_I32_POSTRA:
   case Mips::ATOMIC_LOAD_SUB_I32_POSTRA:
   case Mips::ATOMIC_LOAD_AND_I32_POSTRA:
@@ -1087,7 +1074,7 @@ bool MipsExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case Mips::ATOMIC_LOAD_MAX_I32_POSTRA:
   case Mips::ATOMIC_LOAD_UMIN_I32_POSTRA:
   case Mips::ATOMIC_LOAD_UMAX_I32_POSTRA:
-    return expandAtomicBinOp(MBB, MBBI, NMBB, 4);
+    return expandAtomicBinOp(MBB, MBBI, NMBB, 4, STI, TII);
   case Mips::ATOMIC_LOAD_ADD_I64_POSTRA:
   case Mips::ATOMIC_LOAD_SUB_I64_POSTRA:
   case Mips::ATOMIC_LOAD_AND_I64_POSTRA:
@@ -1099,32 +1086,33 @@ bool MipsExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case Mips::ATOMIC_LOAD_MAX_I64_POSTRA:
   case Mips::ATOMIC_LOAD_UMIN_I64_POSTRA:
   case Mips::ATOMIC_LOAD_UMAX_I64_POSTRA:
-    return expandAtomicBinOp(MBB, MBBI, NMBB, 8);
+    return expandAtomicBinOp(MBB, MBBI, NMBB, 8, STI, TII);
   default:
     return Modified;
   }
 }
 
-bool MipsExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
+static bool expandMBB(MachineBasicBlock &MBB, const MipsSubtarget *STI,
+                      const MipsInstrInfo *TII) {
   bool Modified = false;
 
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
   while (MBBI != E) {
     MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
+    Modified |= expandMI(MBB, MBBI, NMBBI, STI, TII);
     MBBI = NMBBI;
   }
 
   return Modified;
 }
 
-bool MipsExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
-  STI = &MF.getSubtarget<MipsSubtarget>();
-  TII = STI->getInstrInfo();
+static bool expandPseudosInMF(MachineFunction &MF) {
+  const MipsSubtarget *STI = &MF.getSubtarget<MipsSubtarget>();
+  const MipsInstrInfo *TII = STI->getInstrInfo();
 
   bool Modified = false;
   for (MachineBasicBlock &MBB : MF)
-    Modified |= expandMBB(MBB);
+    Modified |= expandMBB(MBB, STI, TII);
 
   if (Modified)
     MF.RenumberBlocks();
@@ -1134,6 +1122,17 @@ bool MipsExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
 
 /// createMipsExpandPseudoPass - returns an instance of the pseudo instruction
 /// expansion pass.
-FunctionPass *llvm::createMipsExpandPseudoPass() {
-  return new MipsExpandPseudo();
+FunctionPass *llvm::createMipsExpandPseudoLegacyPass() {
+  return new MipsExpandPseudoLegacy();
+}
+
+bool MipsExpandPseudoLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return expandPseudosInMF(MF);
+}
+
+PreservedAnalyses
+MipsExpandPseudoPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  return expandPseudosInMF(MF) ? getMachineFunctionPassPreservedAnalyses()
+                               : PreservedAnalyses::all();
 }

@@ -10,4 +10,4 @@
 
 #include "src/math/nearbyint.h"
 
-LIST_NEARBYINT_TESTS(double, LIBC_NAMESPACE::nearbyint)
+LIST_NEARBYINT_TESTS(Nearbyint, double, LIBC_NAMESPACE::nearbyint)

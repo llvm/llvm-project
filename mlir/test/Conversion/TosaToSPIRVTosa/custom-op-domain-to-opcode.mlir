@@ -13,7 +13,7 @@ func.func @mapped_custom(%arg0: tensor<1x16xf32>, %arg1: tensor<1x16xf32>) -> te
   // CHECK: %[[CALL:.*]] = spirv.ExperimentalML.Call opcode = 0, %[[OP_NAME]], %[[IMPLEMENTATION_ATTRS]], %arg0, %arg1 : (!spirv.array<6 x i8>, !spirv.array<17 x i8>, !spirv.arm.tensor<1x16xf32>, !spirv.arm.tensor<1x16xf32>) -> !spirv.arm.tensor<1x16xf32>
   // OVERRIDE-LABEL: spirv.ARM.Graph @mapped_custom
   // OVERRIDE: spirv.ExperimentalML.Call opcode = 7,
-  %0 = tosa.custom %arg0, %arg1 {domain_name = "my:custom", implementation_attrs = "{\"param\":\"value\"}", operator_name = "TestOp"} : (tensor<1x16xf32>, tensor<1x16xf32>) -> tensor<1x16xf32>
+  %0 = tosa.custom %arg0, %arg1 operator_name("TestOp") domain_name("my:custom") implementation_attrs("{\"param\":\"value\"}") : (tensor<1x16xf32>, tensor<1x16xf32>) -> tensor<1x16xf32>
   // CHECK: spirv.ARM.GraphOutputs %[[CALL]] : !spirv.arm.tensor<1x16xf32>
   return %0 : tensor<1x16xf32>
 }
@@ -26,7 +26,7 @@ func.func @other_custom(%arg0: tensor<1x16xf32>) -> tensor<1x16xf32> {
   // CHECK: %[[OP_NAME:.*]] = spirv.Constant [69 : i8, 120 : i8, 97 : i8, 109 : i8, 112 : i8, 108 : i8, 101 : i8, 79 : i8, 112 : i8] : !spirv.array<9 x i8>
   // CHECK: %[[IMPLEMENTATION_ATTRS:.*]] = spirv.Constant [123 : i8, 125 : i8] : !spirv.array<2 x i8>
   // CHECK: %[[CALL:.*]] = spirv.ExperimentalML.Call opcode = 42, %[[OP_NAME]], %[[IMPLEMENTATION_ATTRS]], %arg0 : (!spirv.array<9 x i8>, !spirv.array<2 x i8>, !spirv.arm.tensor<1x16xf32>) -> !spirv.arm.tensor<1x16xf32>
-  %0 = tosa.custom %arg0 {domain_name = "com.example.accel", implementation_attrs = "{}", operator_name = "ExampleOp"} : (tensor<1x16xf32>) -> tensor<1x16xf32>
+  %0 = tosa.custom %arg0 operator_name("ExampleOp") domain_name("com.example.accel") implementation_attrs("{}") : (tensor<1x16xf32>) -> tensor<1x16xf32>
   // CHECK: spirv.ARM.GraphOutputs %[[CALL]] : !spirv.arm.tensor<1x16xf32>
   return %0 : tensor<1x16xf32>
 }
@@ -39,7 +39,7 @@ func.func @empty_strings(%arg0: tensor<1x16xf32>) -> tensor<1x16xf32> {
   // CHECK: %[[OP_NAME:.*]] = spirv.Constant [0 : i8] : !spirv.array<1 x i8>
   // CHECK: %[[IMPLEMENTATION_ATTRS:.*]] = spirv.Constant [0 : i8] : !spirv.array<1 x i8>
   // CHECK: %[[CALL:.*]] = spirv.ExperimentalML.Call opcode = 0, %[[OP_NAME]], %[[IMPLEMENTATION_ATTRS]], %arg0 : (!spirv.array<1 x i8>, !spirv.array<1 x i8>, !spirv.arm.tensor<1x16xf32>) -> !spirv.arm.tensor<1x16xf32>
-  %0 = tosa.custom %arg0 {domain_name = "my:custom", implementation_attrs = "", operator_name = ""} : (tensor<1x16xf32>) -> tensor<1x16xf32>
+  %0 = tosa.custom %arg0 operator_name("") domain_name("my:custom") implementation_attrs("") : (tensor<1x16xf32>) -> tensor<1x16xf32>
   // CHECK: spirv.ARM.GraphOutputs %[[CALL]] : !spirv.arm.tensor<1x16xf32>
   return %0 : tensor<1x16xf32>
 }

@@ -10,4 +10,4 @@
 
 #include "src/math/ffma.h"
 
-LIST_NARROWING_FMA_TESTS(float, double, LIBC_NAMESPACE::ffma)
+LIST_NARROWING_FMA_TESTS(Ffma, float, double, LIBC_NAMESPACE::ffma)

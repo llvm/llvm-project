@@ -82,6 +82,88 @@ class TestFrameVarDILAssignment(TestBase):
             )
             self.expect("frame variable 'p -= 2'", substrs=["p = 0x0000000000000002"])
 
+        self.expect("frame variable 'i = 2'", substrs=["2"])
+        self.expect("frame variable 'i *= 2'", substrs=["4"])
+        self.expect("frame variable 'iref *= 2'", substrs=["8"])
+        self.expect("frame variable 'd = 2.25'", substrs=["2.25"])
+        self.expect("frame variable 'd *= 2.0'", substrs=["4.5"])
+        self.expect("frame variable 'd *= 2'", substrs=["9"])
+        self.expect(
+            "frame variable 'i *= 2.0'",
+            error=True,
+            substrs=[
+                "Incompatible types for assignment: Cannot assign 'double' to 'int'"
+            ],
+        )
+
+        self.expect("frame variable 'i = 7'", substrs=["7"])
+        self.expect("frame variable 'i /= 3'", substrs=["2"])
+        self.expect("frame variable 'iref /= 2'", substrs=["1"])
+        self.expect("frame variable 'f = 4.5f'", substrs=["4.5"])
+        self.expect("frame variable 'f /= 2.0f", substrs=["2.25"])
+        self.expect("frame variable 'f /= 2", substrs=["1.125"])
+        self.expect(
+            "frame variable 'i /= 1.0f'",
+            error=True,
+            substrs=[
+                "Incompatible types for assignment: Cannot assign 'float' to 'int'"
+            ],
+        )
+
+        self.expect("frame variable 'i = 7'", substrs=["7"])
+        self.expect("frame variable 'i %= 4'", substrs=["3"])
+        self.expect("frame variable 'iref %= 3'", substrs=["0"])
+        self.expect(
+            "frame variable 'i %= 1.0'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int' and 'double')"],
+        )
+
+        self.expect("frame variable 'i = 0xF'", substrs=["15"])
+        self.expect("frame variable 'i &= 0b101'", substrs=["5"])
+        self.expect("frame variable 'iref &= 0b100'", substrs=["4"])
+        self.expect(
+            "frame variable 'i &= 1.0'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int' and 'double')"],
+        )
+
+        self.expect("frame variable 'i = 0xF'", substrs=["15"])
+        self.expect("frame variable 'i ^= 0b1000'", substrs=["7"])
+        self.expect("frame variable 'iref ^= 0b11'", substrs=["4"])
+        self.expect(
+            "frame variable 'i ^= 1.0'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int' and 'double')"],
+        )
+
+        self.expect("frame variable 'i = 1'", substrs=["1"])
+        self.expect("frame variable 'i |= 0b110'", substrs=["7"])
+        self.expect("frame variable 'iref |= 0b1001'", substrs=["15"])
+        self.expect(
+            "frame variable 'i |= 1.0'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int' and 'double')"],
+        )
+
+        self.expect("frame variable 'i = 0xF'", substrs=["15"])
+        self.expect("frame variable 'i >>= 1'", substrs=["7"])
+        self.expect("frame variable 'iref >>= 2'", substrs=["1"])
+        self.expect(
+            "frame variable 'i >>= 1.0'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int' and 'double')"],
+        )
+
+        self.expect("frame variable 'i = 1'", substrs=["1"])
+        self.expect("frame variable 'i <<= 1'", substrs=["2"])
+        self.expect("frame variable 'iref <<= 2'", substrs=["8"])
+        self.expect(
+            "frame variable 'i <<= 1.0'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int' and 'double')"],
+        )
+
         # Check that there can be only one assignment and only at top level
         self.expect(
             "frame variable 'i = i += 1'",

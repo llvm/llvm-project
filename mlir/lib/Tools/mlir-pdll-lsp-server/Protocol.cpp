@@ -18,21 +18,6 @@
 using namespace mlir;
 using namespace mlir::lsp;
 
-// Helper that doesn't treat `null` and absent fields as failures.
-template <typename T>
-static bool mapOptOrNull(const llvm::json::Value &params,
-                         llvm::StringLiteral prop, T &out,
-                         llvm::json::Path path) {
-  const llvm::json::Object *o = params.getAsObject();
-  assert(o);
-
-  // Field is missing or null.
-  auto *v = o->get(prop);
-  if (!v || v->getAsNull())
-    return true;
-  return fromJSON(*v, out, path.field(prop));
-}
-
 //===----------------------------------------------------------------------===//
 // PDLLViewOutputParams
 //===----------------------------------------------------------------------===//
