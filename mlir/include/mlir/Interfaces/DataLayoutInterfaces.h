@@ -206,10 +206,10 @@ public:
   /// Returns the preferred of the given type in the current scope.
   uint64_t getTypePreferredAlignment(Type t) const;
 
-  /// Returns the alignment that the language requires of an object of the
-  /// given type in the current scope. Code accessing such an object may assume
-  /// this alignment and no more. It equals the ABI alignment unless the type
-  /// overrides it.
+  /// Returns the alignment that the language and target guarantee for an
+  /// object of the given type in the current scope, which is the alignment code
+  /// may assume when it knows only the object's type. It equals the ABI
+  /// alignment unless the type overrides it.
   uint64_t getTypeRequiredAlignment(Type t) const;
 
   /// Returns the bitwidth that should be used when performing index

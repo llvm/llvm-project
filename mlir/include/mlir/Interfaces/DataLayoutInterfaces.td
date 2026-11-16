@@ -478,10 +478,10 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       }]
     >,
     StaticInterfaceMethod<
-      /*description=*/"Returns the alignment that the language requires of "
-                      "an object of the given type, computed using the "
-                      "relevant entries. The data layout object can be used "
-                      "for recursive queries.",
+      /*description=*/"Returns the alignment that the language and target "
+                      "guarantee for an object of the given type, computed "
+                      "using the relevant entries. The data layout object can "
+                      "be used for recursive queries.",
       /*retTy=*/"uint64_t",
       /*methodName=*/"getTypeRequiredAlignment",
       /*args=*/(ins "::mlir::Type":$type,
@@ -707,12 +707,12 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
     >,
     InterfaceMethod<
       /*description=*/"Returns the alignment, in bytes, that the language "
-                      "requires of an object of this type. Code accessing "
-                      "such an object may assume this alignment and no more. "
-                      "It defaults to the ABI alignment. A type overrides it "
-                      "when the language it models requires less alignment "
-                      "of its objects than the ABI alignment used to lay the "
-                      "type out.",
+                      "and target guarantee for an object of this type, "
+                      "which is the alignment code may assume when it knows "
+                      "only the object's type. It defaults to the ABI "
+                      "alignment. A type overrides it when that guarantee "
+                      "differs from the ABI alignment used to lay the type "
+                      "out.",
       /*retTy=*/"uint64_t",
       /*methodName=*/"getRequiredAlignment",
       /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,

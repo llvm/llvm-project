@@ -936,10 +936,13 @@ UnionType::getRequiredAlignment(const ::mlir::DataLayout &dataLayout,
                                 ::mlir::DataLayoutEntryListRef params) const {
   if (getPacked())
     return 1;
-  mlir::Type storage = getUnionStorageType(dataLayout);
-  if (!storage)
-    return 1;
-  return dataLayout.getTypeRequiredAlignment(storage);
+  // The storage member has the largest ABI alignment, which need not be the
+  // largest required alignment, so every member contributes.
+  uint64_t unionAlignment = 1;
+  for (mlir::Type ty : getMembers())
+    unionAlignment =
+        std::max(dataLayout.getTypeRequiredAlignment(ty), unionAlignment);
+  return unionAlignment;
 }
 
 unsigned

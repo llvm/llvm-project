@@ -51,7 +51,7 @@ protected:
   /// The ABI and required alignments of \p ty in a module whose data layout
   /// aligns i8 through i128 to their widths, as x86-64 does, and caps the
   /// required alignment of a _BitInt at \p bitIntMaxAlignBits, if given.
-  Alignments targetAlignments(IntType ty,
+  Alignments targetAlignments(mlir::Type ty,
                               std::optional<uint32_t> bitIntMaxAlignBits = {}) {
     OpBuilder builder(&context);
     auto module = ModuleOp::create(builder.getUnknownLoc());
@@ -141,6 +141,20 @@ TEST_F(IntTypeABIAlignTest, BitIntHeldAsBytes) {
       IntType::get(&context, 129, true, /*isBitInt=*/true), 64);
   EXPECT_EQ(bitInt129.abi, 1u);
   EXPECT_EQ(bitInt129.required, 8u);
+}
+
+// The int member has the higher ABI alignment, so it is the union's storage
+// type and sets the union's ABI alignment. The union's required alignment is
+// the largest required alignment of any member, which is the _BitInt's 8.
+TEST_F(IntTypeABIAlignTest, UnionRequiredAlignmentUsesAllMembers) {
+  mlir::Type members[] = {IntType::get(&context, 129, true, /*isBitInt=*/true),
+                          IntType::get(&context, 32, true)};
+  auto padding = cir::ArrayType::get(IntType::get(&context, 8, false), 20);
+  auto unionTy = UnionType::get(&context, members, /*packed=*/false, padding,
+                                RecordType::getAllDataKinds(members));
+  Alignments alignments = targetAlignments(unionTy, 64);
+  EXPECT_EQ(alignments.abi, 4u);
+  EXPECT_EQ(alignments.required, 8u);
 }
 
 } // namespace
