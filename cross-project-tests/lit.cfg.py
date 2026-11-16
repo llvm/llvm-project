@@ -106,6 +106,9 @@ lldb_dap_path = llvm_config.use_llvm_tool("lldb-dap")
 if lldb_dap_path is not None:
     config.available_features.add("lldb")
 
+if config.lldb_enable_python:
+    config.available_features.add("lldb-python")
+
 if llvm_config.use_llvm_tool("llvm-ar"):
     config.available_features.add("llvm-ar")
 
