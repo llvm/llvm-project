@@ -166,7 +166,8 @@ void mlir::xevm::registerXeVMTargetInterfaceExternalModels(
 SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, XeVMTargetAttr xeTarget,
     const gpu::TargetOptions &targetOptions)
-    : ModuleToObject(module, xeTarget.getTriple(), "", {}, xeTarget.getO()),
+    : ModuleToObject(module, xeTarget.getTriple(), "", {}, xeTarget.getO(), {},
+                     {}, {}, {}, targetOptions.getLibraryOptions()),
       xeTarget(xeTarget), librariesToLink(targetOptions.getLibrariesToLink()),
       targetOptions(targetOptions) {
   if (xeTarget.getLinkFiles())
