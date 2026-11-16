@@ -1421,10 +1421,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX()) {
     bool HasInt256 = Subtarget.hasInt256();
 
-    for (auto VT : {MVT::v32i8, MVT::v16i16, MVT::v16f16, MVT::v8i32,
-                    MVT::v8f32, MVT::v4i64, MVT::v4f64})
-      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
-
     addRegisterClass(MVT::v32i8,  Subtarget.hasVLX() ? &X86::VR256XRegClass
                                                      : &X86::VR256RegClass);
     addRegisterClass(MVT::v16i16, Subtarget.hasVLX() ? &X86::VR256XRegClass
@@ -1668,6 +1664,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                     MVT::v16f16, MVT::v8f32, MVT::v4f64 }) {
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE,     VT, Custom);
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
       setOperationAction(ISD::VSELECT,            VT, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT,  VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
@@ -1822,15 +1819,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // required-vector-width function attributes.
   if (!Subtarget.useSoftFloat() && Subtarget.useAVX512Regs()) {
     bool HasBWI = Subtarget.hasBWI();
-
-    for (auto VT : {MVT::v16i32, MVT::v16f32, MVT::v8i64, MVT::v8f64})
-      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
-    if (HasBWI) {
-      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v32i16, Custom);
-      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v32f16, Custom);
-    }
-    if (Subtarget.hasVBMI())
-      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v64i8, Custom);
 
     addRegisterClass(MVT::v16i32, &X86::VR512RegClass);
     addRegisterClass(MVT::v16f32, &X86::VR512RegClass);
@@ -2103,9 +2091,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE,     VT, Custom);
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
       setOperationAction(ISD::SCALAR_TO_VECTOR,   VT, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT,  VT, Custom);
     }
+    if (!HasBWI)
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v32i16, Expand);
+    if (!Subtarget.hasVBMI())
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v64i8, Expand);
     setF16Action(MVT::v32f16, Expand);
     setOperationAction(ISD::FP_ROUND, MVT::v16f16, Custom);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::v16f16, Custom);
