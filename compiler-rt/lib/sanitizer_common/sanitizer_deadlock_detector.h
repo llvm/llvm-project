@@ -183,7 +183,9 @@ class DeadlockDetector {
         for (uptr idx = outgoing.Size(); idx != 0; --idx) {
           Edge& edge = outgoing[idx - 1];
           if (recycled_nodes_.getBit(nodeToIndex(edge.to))) {
-            Swap(edge, outgoing[outgoing.Size() - 1]);
+            if (idx != outgoing.Size())
+              internal_memcpy(&edge, &outgoing[outgoing.Size() - 1],
+                              sizeof(edge));
             outgoing.PopBack();
           } else {
             edge.held_locks.setDifference(recycled_nodes_);
@@ -310,8 +312,8 @@ class DeadlockDetector {
     return 0;
   }
 
-  bool findEdge(uptr from_node, uptr to_node, u32 *stk_from, u32 *stk_to,
-                int *unique_tid) {
+  bool findEdge(uptr from_node, uptr to_node, u32* stk_from, u32* stk_to,
+                int* unique_tid) {
     uptr from_idx = nodeToIndex(from_node);
     const auto& outgoing = edges_[from_idx];
     for (uptr idx = 0; idx < outgoing.Size(); ++idx) {
@@ -353,7 +355,8 @@ class DeadlockDetector {
   // This operation is thread-safe as it only touches the dtls.
   bool onFirstLock(DeadlockDetectorTLS<BV>* dtls, uptr node, u32 stk = 0,
                    bool wlock = true) {
-    if (!dtls->empty()) return false;
+    if (!dtls->empty())
+      return false;
     if (dtls->getEpoch() && dtls->getEpoch() == nodeToEpoch(node)) {
       dtls->addLock(nodeToIndexUnchecked(node), nodeToEpoch(node), stk, wlock);
       return true;
@@ -450,8 +453,8 @@ class DeadlockDetector {
       if (!compatible)
         continue;
       path[depth] = &edge;
-      uptr length = findGuardedPath(nodeToIndex(edge.to), path, depth + 1,
-                                    path_size);
+      uptr length =
+          findGuardedPath(nodeToIndex(edge.to), path, depth + 1, path_size);
       if (length)
         return length;
     }

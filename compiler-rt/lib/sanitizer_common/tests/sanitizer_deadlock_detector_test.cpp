@@ -164,7 +164,7 @@ TEST(DeadlockDetector, GuardedCycle) {
   for (int tid = 3; tid <= last_tid; ++tid)
     detector.addEdges(&tls, first, 0, tid);
   ASSERT_EQ(2U, detector.findGuardedCycle(&tls, first, last_tid, edges,
-                                        ARRAY_SIZE(edges)));
+                                          ARRAY_SIZE(edges)));
   EXPECT_EQ(last_tid, edges[1]->unique_tid);
   ASSERT_EQ(
       2U, detector.findGuardedCycle(&tls, first, 2, edges, ARRAY_SIZE(edges)));
@@ -237,11 +237,11 @@ TEST(DeadlockDetector, GuardedAlternativePath) {
   EXPECT_EQ(1, edges[0]->unique_tid);
   EXPECT_EQ(2, edges[1]->unique_tid);
   EXPECT_EQ(3, edges[2]->unique_tid);
-    detector.addEdges(&tls, first, 0, 4);
-    EXPECT_EQ(
+  detector.addEdges(&tls, first, 0, 4);
+  EXPECT_EQ(
       2U, detector.findGuardedCycle(&tls, first, 4, edges, ARRAY_SIZE(edges)));
-    EXPECT_EQ(3, edges[0]->unique_tid);
-    EXPECT_EQ(4, edges[1]->unique_tid);
+  EXPECT_EQ(3, edges[0]->unique_tid);
+  EXPECT_EQ(4, edges[1]->unique_tid);
   detector.removeNode(middle);
   EXPECT_EQ(
       0U, detector.findGuardedCycle(&tls, first, 3, edges, ARRAY_SIZE(edges)));
