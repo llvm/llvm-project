@@ -1732,6 +1732,10 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
     default: break;
     case 'd': // Data register (equivalent to 'r')
     case 'r': // General-purpose register
+      // MVT::Other has no size, e.g. an aggregate operand that could not be
+      // converted to an integer type.
+      if (VT == MVT::Other)
+        break;
       if (VT.getSizeInBits() == 64)
         return std::make_pair(0U, &SystemZ::GR64BitRegClass);
       else if (VT.getSizeInBits() == 128)
@@ -1750,6 +1754,8 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
 
     case 'f': // Floating-point register
       if (!useSoftFloat()) {
+        if (VT == MVT::Other)
+          break;
         if (VT.getSizeInBits() == 16)
           return std::make_pair(0U, &SystemZ::FP16BitRegClass);
         else if (VT.getSizeInBits() == 64)
@@ -1762,6 +1768,8 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
 
     case 'v': // Vector register
       if (Subtarget.hasVector()) {
+        if (VT == MVT::Other)
+          break;
         if (VT.getSizeInBits() == 16)
           return std::make_pair(0U, &SystemZ::VR16BitRegClass);
         if (VT.getSizeInBits() == 32)
