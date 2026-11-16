@@ -179,10 +179,16 @@ Makes programs 10x faster by doing Special New Thing.
 * Added the `bitinsert` and `bitextract` instructions for bit-range
   manipulation on byte type values.
 
+* The verifier now rejects a `"wchar_size"` module flag whose value is not
+  positive.
+
 ### Changes to LLVM infrastructure
 
-* Removed `mc::RegisterMCTargetOptionsFlags`.
-  A tool that created it now passes `mc::getToolOptions()`, or `codegen::getToolOptions()` with `codegen::RegisterCodeGenFlags`, to `cl::parseCommandLineOptions`.
+* `cl::ParseCommandLineOptions` no longer recognizes library options declared in TableGen, which include most CodeGen, MC, and target options.
+  A tool that passes them, such as through `-mllvm`, parses them with `cl::parseCommandLineOptions` into a `cl::LibraryOptionsContext`, assigns it to each `LLVMContext` with `getLibraryOptions().assign()`, and sets `MCTargetOptions::LibraryOptions` to it.
+
+* Removed `mc::RegisterMCTargetOptionsFlags` and `codegen::RegisterCodeGenFlags`.
+  A tool that created either now passes `mc::getToolOptions()` or `codegen::getToolOptions()` to `cl::parseCommandLineOptions`.
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
@@ -424,7 +430,7 @@ Makes programs 10x faster by doing Special New Thing.
   throughput.
 * Removed X5 from the preserve_most register list.
 * Added `-mcpu=chipsalliance-veer-eh1` for the CHIPS Alliance VeeR EH1
-  processor.
+  processor, with a scheduling model.
 * The behavior of i128 arguments with the LP64E ABI now matches gcc.
 
 ### Changes to the WebAssembly Backend

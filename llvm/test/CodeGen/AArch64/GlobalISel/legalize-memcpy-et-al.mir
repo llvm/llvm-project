@@ -172,10 +172,6 @@ body:             |
 ---
 name:            tail_with_copy_ret
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -208,10 +204,6 @@ body:             |
 ---
 name:            dont_tc_mismatched_copies
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -248,10 +240,6 @@ body:             |
 ---
 name:            dont_tc_extra_copy
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -290,10 +278,6 @@ body:             |
 ---
 name:            dont_tc_mismatched_ret
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -330,10 +314,6 @@ body:             |
 ---
 name:            dont_tc_ret_void_copy
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
