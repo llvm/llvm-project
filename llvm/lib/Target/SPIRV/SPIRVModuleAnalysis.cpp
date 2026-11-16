@@ -35,24 +35,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "spirv-module-analysis"
 
-static cl::opt<bool>
-    SPVDumpDeps("spv-dump-deps",
-                cl::desc("Dump MIR with SPIR-V dependencies info"),
-                cl::init(false));
-
-static cl::list<SPIRV::Capability::Capability>
-    AvoidCapabilities("avoid-spirv-capabilities",
-                      cl::desc("SPIR-V capabilities to avoid if there are "
-                               "other options enabling a feature"),
-                      cl::Hidden,
-                      cl::values(clEnumValN(SPIRV::Capability::Shader, "Shader",
-                                            "SPIR-V Shader capability")));
-// Use sets instead of cl::list to check "if contains" condition
-struct AvoidCapabilitiesSet {
-  SmallSet<SPIRV::Capability::Capability, 4> S;
-  AvoidCapabilitiesSet() { S.insert_range(AvoidCapabilities); }
-};
-
 char llvm::SPIRVModuleAnalysisWrapperPass::ID = 0;
 
 INITIALIZE_PASS(SPIRVModuleAnalysisWrapperPass, DEBUG_TYPE,
@@ -74,32 +56,37 @@ static unsigned getMetadataUInt(MDNode *MdNode, unsigned OpIndex,
   return DefaultVal;
 }
 
+// Return true if Cap should be avoided when another option enables the feature.
+static bool shouldAvoidCapability(const SPIRVSubtarget &ST,
+                                  SPIRV::Capability::Capability Cap) {
+  return Cap == (ST.isShader() ? SPIRV::Capability::Kernel
+                               : SPIRV::Capability::Shader) ||
+         is_contained(ST.getCLOpts().avoid_capabilities, Cap);
+}
+
 static SPIRV::Requirements
 getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
                                unsigned i, const SPIRVSubtarget &ST,
                                SPIRV::RequirementHandler &Reqs) {
-  // A set of capabilities to avoid if there is another option.
-  AvoidCapabilitiesSet AvoidCaps;
-  if (!ST.isShader())
-    AvoidCaps.S.insert(SPIRV::Capability::Shader);
-  else
-    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
-
   VersionTuple ReqMinVer = getSymbolicOperandMinVersion(Category, i);
   VersionTuple ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
   VersionTuple SPIRVVersion = ST.getSPIRVVersion();
   bool MinVerOK = SPIRVVersion.empty() || SPIRVVersion >= ReqMinVer;
   bool MaxVerOK =
       ReqMaxVer.empty() || SPIRVVersion.empty() || SPIRVVersion <= ReqMaxVer;
+  bool VerOK = MinVerOK && MaxVerOK;
   CapabilityList ReqCaps = getSymbolicOperandCapabilities(Category, i);
   ExtensionList ReqExts = getSymbolicOperandExtensions(Category, i);
+  // A met minimum version makes the extension unnecessary.
+  if (VerOK && !ReqMinVer.empty())
+    ReqExts.clear();
   if (ReqCaps.empty()) {
     if (ReqExts.empty()) {
-      if (MinVerOK && MaxVerOK)
+      if (VerOK)
         return {true, {}, {}, ReqMinVer, ReqMaxVer};
       return {false, {}, {}, VersionTuple(), VersionTuple()};
     }
-  } else if (MinVerOK && MaxVerOK) {
+  } else if (VerOK) {
     if (ReqCaps.size() == 1) {
       auto Cap = ReqCaps[0];
       if (Reqs.isCapabilityAvailable(Cap)) {
@@ -120,7 +107,7 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
           UseCaps.push_back(Cap);
       for (size_t i = 0, Sz = UseCaps.size(); i < Sz; ++i) {
         auto Cap = UseCaps[i];
-        if (i == Sz - 1 || !AvoidCaps.S.contains(Cap)) {
+        if (i == Sz - 1 || !shouldAvoidCapability(ST, Cap)) {
           ReqExts.append(getSymbolicOperandExtensions(
               SPIRV::OperandCategory::CapabilityOperand, Cap));
           return {true, {Cap}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
@@ -130,15 +117,15 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   }
   // If there are no capabilities, or we can't satisfy the version or
   // capability requirements, use the list of extensions (if the subtarget
-  // can handle them all).
-  if (llvm::all_of(ReqExts, [&ST](const SPIRV::Extension::Extension &Ext) {
+  // can handle them all). Without an extension the version must hold. An
+  // extension stands in for an unmet version.
+  if ((!ReqExts.empty() || VerOK) &&
+      llvm::all_of(ReqExts, [&ST](const SPIRV::Extension::Extension &Ext) {
         return ST.canUseExtension(Ext);
       })) {
-    return {true,
-            {},
-            std::move(ReqExts),
-            VersionTuple(),
-            VersionTuple()}; // TODO: add versions to extensions.
+    if (VerOK)
+      return {true, {}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
+    return {true, {}, std::move(ReqExts), VersionTuple(), VersionTuple()};
   }
   return {false, {}, {}, VersionTuple(), VersionTuple()};
 }
@@ -154,6 +141,7 @@ void SPIRVModuleAnalysisImpl::setBaseInfo(const Module &M) {
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
   MAI.InstrAuxDataRecords.clear();
+  MAI.DebugValueMIs.clear();
   MAI.Reqs.clear();
   MAI.Reqs.initAvailableCapabilities(*ST);
 
@@ -736,6 +724,10 @@ void SPIRVModuleAnalysisImpl::processOtherInstrs(const Module &M) {
 
     for (MachineBasicBlock &MBB : *MF)
       for (MachineInstr &MI : MBB) {
+        if (MI.isDebugValueLike()) {
+          MAI.DebugValueMIs.push_back(&MI);
+          continue;
+        }
         if (MAI.getSkipEmission(&MI))
           continue;
         const unsigned OpCode = MI.getOpcode();
@@ -853,10 +845,39 @@ void SPIRVModuleAnalysisImpl::numberRegistersGlobally(const Module &M) {
   }
 }
 
+static void addQuadControlRequirements(SPIRV::RequirementHandler &Reqs,
+                                       const SPIRVSubtarget &ST,
+                                       StringRef Feature) {
+  if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    report_fatal_error(Twine(Feature) + " requires SPIR-V 1.3", false);
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_quad_control))
+    report_fatal_error(Twine(Feature) + " requires the following SPIR-V "
+                                        "extension: SPV_KHR_quad_control",
+                       false);
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence))
+    report_fatal_error("SPV_KHR_quad_control requires the following SPIR-V "
+                       "extension: SPV_KHR_maximal_reconvergence",
+                       false);
+  Reqs.addExtension(SPIRV::Extension::SPV_KHR_quad_control);
+  Reqs.addExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence);
+}
+
 // RequirementHandler implementations.
 void SPIRV::RequirementHandler::getAndAddRequirements(
     SPIRV::OperandCategory::OperandCategory Category, uint32_t i,
     const SPIRVSubtarget &ST) {
+  if (Category == SPIRV::OperandCategory::ExecutionModeOperand &&
+      (i == SPIRV::ExecutionMode::QuadDerivativesKHR ||
+       i == SPIRV::ExecutionMode::RequireFullQuadsKHR))
+    addQuadControlRequirements(*this, ST,
+                               getSymbolicOperandMnemonic(Category, i));
+  if (Category == SPIRV::OperandCategory::ExecutionModeOperand &&
+      i == SPIRV::ExecutionMode::DerivativeGroupQuadsKHR &&
+      !ST.canUseExtension(SPIRV::Extension::SPV_KHR_compute_shader_derivatives))
+    report_fatal_error(
+        "DerivativeGroupQuadsKHR requires the following SPIR-V extension: "
+        "SPV_KHR_compute_shader_derivatives",
+        false);
   addRequirements(getSymbolicOperandRequirements(Category, i, ST, *this));
 }
 
@@ -945,14 +966,8 @@ void SPIRV::RequirementHandler::checkSatisfiable(
     IsSatisfiable = false;
   }
 
-  AvoidCapabilitiesSet AvoidCaps;
-  if (!ST.isShader())
-    AvoidCaps.S.insert(SPIRV::Capability::Shader);
-  else
-    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
-
   for (auto Cap : MinimalCaps) {
-    if (AvailableCaps.contains(Cap) && !AvoidCaps.S.contains(Cap))
+    if (AvailableCaps.contains(Cap) && !shouldAvoidCapability(ST, Cap))
       continue;
     LLVM_DEBUG(dbgs() << "Capability not supported: "
                       << getSymbolicOperandMnemonic(
@@ -1022,6 +1037,10 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
     addAvailableCaps(EnabledCapabilities);
   }
 
+  // EXT and NV use the same capability.
+  if (ST.canUseExtension(Extension::SPV_EXT_shader_subgroup_partitioned))
+    addAvailableCaps({Capability::GroupNonUniformPartitionedNV});
+
   if (!ST.isShader()) {
     initAvailableCapabilitiesForOpenCL(ST);
     return;
@@ -1071,6 +1090,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Core in Vulkan 1.1 and earlier.
   addAvailableCaps({Capability::Int64,
+                    Capability::Geometry,
                     Capability::Float16,
                     Capability::Float64,
                     Capability::GroupNonUniform,
@@ -1099,7 +1119,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Became core in Vulkan 1.1.
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
-    addAvailableCaps({Capability::DrawParameters});
+    addAvailableCaps({Capability::DrawParameters, Capability::MultiView});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1175,6 +1195,10 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
       addCoreInSPIRV13Capability(
           Reqs, ST, SPIRV::Capability::DrawParameters,
           SPIRV::Extension::SPV_KHR_shader_draw_parameters);
+      break;
+    case SPIRV::BuiltIn::ViewIndex:
+      addCoreInSPIRV13Capability(Reqs, ST, SPIRV::Capability::MultiView,
+                                 SPIRV::Extension::SPV_KHR_multiview);
       break;
     default:
       Reqs.addRequirements(getSymbolicOperandRequirements(
@@ -1770,6 +1794,14 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
       break;
     }
+    if (MI.getOperand(2).getImm() ==
+        static_cast<int64_t>(SPIRV::InstructionSet::NonSemantic_DebugBreak)) {
+      // Non-semantic instruction sets no longer require
+      // SPV_KHR_non_semantic_info as of SPIR-V 1.6
+      if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
+      break;
+    }
     if (MI.getOperand(3).getImm() ==
         static_cast<int64_t>(SPIRV::OpenCLExtInst::printf)) {
       addPrintfRequirements(MI, Reqs, ST);
@@ -1839,6 +1871,9 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpTypePipe:
   case SPIRV::OpTypeReserveId:
     Reqs.addCapability(SPIRV::Capability::Pipes);
+    break;
+  case SPIRV::OpTypePipeStorage:
+    Reqs.addCapability(SPIRV::Capability::PipeStorage);
     break;
   case SPIRV::OpTypeDeviceEvent:
   case SPIRV::OpTypeQueue:
@@ -1980,6 +2015,12 @@ void addInstrRequirements(const MachineInstr &MI,
     case SPIRV::GroupOperation::PartitionedReduceNV:
     case SPIRV::GroupOperation::PartitionedInclusiveScanNV:
     case SPIRV::GroupOperation::PartitionedExclusiveScanNV:
+      if (ST.canUseExtension(
+              SPIRV::Extension::SPV_EXT_shader_subgroup_partitioned))
+        Reqs.addExtension(
+            SPIRV::Extension::SPV_EXT_shader_subgroup_partitioned);
+      else
+        Reqs.addExtension(SPIRV::Extension::SPV_NV_shader_subgroup_partitioned);
       Reqs.addCapability(SPIRV::Capability::GroupNonUniformPartitionedNV);
       break;
     }
@@ -2135,6 +2176,10 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
     }
+    break;
+  case SPIRV::OpGroupNonUniformQuadAllKHR:
+    addQuadControlRequirements(Reqs, ST, "OpGroupNonUniformQuadAllKHR");
+    Reqs.addCapability(SPIRV::Capability::QuadControlKHR);
     break;
   case SPIRV::OpGroupNonUniformRotateKHR:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate))

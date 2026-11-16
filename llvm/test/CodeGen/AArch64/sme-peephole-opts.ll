@@ -241,30 +241,6 @@ define void @test7() nounwind "aarch64_inout_zt0" {
   ret void
 }
 
-; test that 'smstop za' is not cancelled out with 'smstart sm'.
-define void @test8() nounwind "aarch64_pstate_sm_enabled" {
-; CHECK-LABEL: test8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
-; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    smstop za
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
-; CHECK-NEXT:    ret
-  call void @callee()
-  call void @llvm.aarch64.sme.za.disable()
-  ret void
-}
-
 ; test that the 'smstart' and 'smstop' are entirely removed,
 ; along with any code to read 'vg' for the CFI.
 define void @test9() "aarch64_pstate_sm_body" {
@@ -452,62 +428,6 @@ define void @test11(ptr %p) nounwind "aarch64_pstate_sm_enabled" {
   ret void
 }
 
-; test that 'smstart sm' and 'smstop za' don't get folded away together.
-; we can further optimize this test by considering streaming mode
-; separately from ZA.
-define void @test12() "aarch64_pstate_sm_body" {
-; CHECK-LABEL: test12:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Spill
-; CHECK-NEXT:    .cfi_offset vg, -16
-; CHECK-NEXT:    .cfi_offset w30, -24
-; CHECK-NEXT:    .cfi_offset w29, -32
-; CHECK-NEXT:    .cfi_offset b8, -40
-; CHECK-NEXT:    .cfi_offset b9, -48
-; CHECK-NEXT:    .cfi_offset b10, -56
-; CHECK-NEXT:    .cfi_offset b11, -64
-; CHECK-NEXT:    .cfi_offset b12, -72
-; CHECK-NEXT:    .cfi_offset b13, -80
-; CHECK-NEXT:    .cfi_offset b14, -88
-; CHECK-NEXT:    .cfi_offset b15, -96
-; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    smstop za
-; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    .cfi_restore vg
-; CHECK-NEXT:    .cfi_restore w30
-; CHECK-NEXT:    .cfi_restore w29
-; CHECK-NEXT:    .cfi_restore b8
-; CHECK-NEXT:    .cfi_restore b9
-; CHECK-NEXT:    .cfi_restore b10
-; CHECK-NEXT:    .cfi_restore b11
-; CHECK-NEXT:    .cfi_restore b12
-; CHECK-NEXT:    .cfi_restore b13
-; CHECK-NEXT:    .cfi_restore b14
-; CHECK-NEXT:    .cfi_restore b15
-; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za.disable()
-  call void @callee()
-  call void @llvm.aarch64.sme.za.enable()
-  ret void
-}
-
 ; We conservatively don't remove the smstart/smstop pair yet when there are COPY
 ; instructions that copy SVE registers, because we can't yet conclusively prove
 ; that this is safe (although for this example, it would be).
@@ -526,7 +446,7 @@ define void @test13(ptr %ptr) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    addsvl x8, x8, #-1
-; CHECK-NEXT:    cbnz x8, .LBB14_2
+; CHECK-NEXT:    cbnz x8, .LBB12_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
@@ -536,10 +456,10 @@ define void @test13(ptr %ptr) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    addsvl x8, x8, #-1
-; CHECK-NEXT:    cbz x8, .LBB14_3
-; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:    cbz x8, .LBB12_3
+; CHECK-NEXT:  .LBB12_2:
 ; CHECK-NEXT:    brk #0x1
-; CHECK-NEXT:  .LBB14_3:
+; CHECK-NEXT:  .LBB12_3:
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl callee_farg_fret
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
@@ -586,10 +506,10 @@ define void @test14(ptr %callee) nounwind "aarch64_inout_za" {
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    sub x0, x29, #80
-; CHECK-NEXT:    cbnz x8, .LBB15_2
+; CHECK-NEXT:    cbnz x8, .LBB13_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    bl __arm_tpidr2_restore
-; CHECK-NEXT:  .LBB15_2:
+; CHECK-NEXT:  .LBB13_2:
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    sub sp, x29, #64
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload

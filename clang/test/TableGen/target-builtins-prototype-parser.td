@@ -111,6 +111,48 @@ def : Builtin {
   let Spellings = ["__builtin_17"];
 }
 
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_18 {{.*}} /* cC*vC*UcC*FC* */
+  let Prototype = "const char*(const void*, const unsigned char*, const constant_CFString*)";
+  let Spellings = ["__builtin_18"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_19 {{.*}} /* vvDC*iCcC*RcC*C* */
+  let Prototype = "void(const volatile void*, const int, const char* restrict, const char* const*)";
+  let Spellings = ["__builtin_19"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_20 {{.*}} /* vV2iC*E4fC*V2i* */
+  let Prototype = "void(const _Vector<2, int> *, const _ExtVector<4, float> *, _Vector<2, int> *)";
+  let Spellings = ["__builtin_20"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_21 {{.*}} /* V2iC*iC& */
+  let Prototype = "const _Vector<2, int> *(const int &)";
+  let Spellings = ["__builtin_21"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_22 {{.*}} /* vIUiCXdCLLiC* */
+  let Prototype = "void(const _Constant unsigned int, const _Complex double, const long long int*)";
+  let Spellings = ["__builtin_22"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_23 {{.*}} /* viC*4 */
+  let Prototype = "void(const int address_space<4> *)";
+  let Spellings = ["__builtin_23"];
+}
+
+def : Builtin, Template<["unsigned int"], [""]> {
+// CHECK: Builtin::Info{{.*}} __builtin_24 {{.*}} /* UiUiCUiC* */
+  let Prototype = "T(const T, const T*)";
+  let Spellings = ["__builtin_24"];
+}
+
 #ifdef ERROR_EXPECTED_LANES
 def : Builtin {
 // ERROR_EXPECTED_LANES: :[[# @LINE + 1]]:7: error: Expected number of lanes after '_ExtVector<'

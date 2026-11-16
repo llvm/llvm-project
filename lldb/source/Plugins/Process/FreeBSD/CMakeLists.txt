@@ -15,5 +15,5 @@ add_lldb_library(lldbPluginProcessFreeBSD
     lldbTarget
     lldbUtility
     lldbPluginProcessPOSIX
-    lldbPluginProcessUtility
+    lldbPluginRegisterNative
   )

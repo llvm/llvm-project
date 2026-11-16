@@ -256,7 +256,7 @@ define i1 @latch_counted_signed_header_check_removable(ptr %p, i64 %n) {
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp ne i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[LOOP_HEADER]], label %[[EXIT_0]]
 ; CHECK:       [[EXIT_0]]:
@@ -302,7 +302,7 @@ define i1 @latch_counted_signed_header_check_missing_precond(ptr %p, i64 %n) {
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp ne i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[LOOP_HEADER]], label %[[EXIT_0:.*]]
 ; CHECK:       [[EXIT_0]]:

@@ -638,4 +638,94 @@ define { <vscale x 2 x double>, <vscale x 2 x i32> } @unroll_two_result_op_vscal
   ret { <vscale x 2 x double>, <vscale x 2 x i32> } %res
 }
 
+define <vscale x 4 x double> @unroll_single_result_widened_op_vscale_1_1(<vscale x 4 x double> %a, <vscale x 4 x double> %b) vscale_range(1,1) #0 {
+; CHECK-LABEL: unroll_single_result_widened_op_vscale_1_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-18
+; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
+; CHECK-NEXT:    stp q23, q22, [sp, #32] // 32-byte Folded Spill
+; CHECK-NEXT:    stp q21, q20, [sp, #64] // 32-byte Folded Spill
+; CHECK-NEXT:    stp q19, q18, [sp, #96] // 32-byte Folded Spill
+; CHECK-NEXT:    stp q17, q16, [sp, #128] // 32-byte Folded Spill
+; CHECK-NEXT:    stp q15, q14, [sp, #160] // 32-byte Folded Spill
+; CHECK-NEXT:    stp q13, q12, [sp, #192] // 32-byte Folded Spill
+; CHECK-NEXT:    stp q11, q10, [sp, #224] // 32-byte Folded Spill
+; CHECK-NEXT:    stp q9, q8, [sp, #256] // 32-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-5
+; CHECK-NEXT:    stp q0, q2, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    stp q1, q3, [sp, #48] // 32-byte Folded Spill
+; CHECK-NEXT:    fmov d1, d2
+; CHECK-NEXT:    bl pow
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    str z0, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
+; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    mov z1.d, z1.d[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
+; CHECK-NEXT:    bl pow
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ldr z1, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    str z0, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldp q0, q1, [sp, #48] // 32-byte Folded Reload
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
+; CHECK-NEXT:    bl pow
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    str z0, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldp q0, q1, [sp, #48] // 32-byte Folded Reload
+; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    mov z1.d, z1.d[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
+; CHECK-NEXT:    bl pow
+; CHECK-NEXT:    fmov d1, d0
+; CHECK-NEXT:    ldp q2, q0, [sp, #16] // 32-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    mov z1.d, d1
+; CHECK-NEXT:    mov z1.d, p0/m, z2.d
+; CHECK-NEXT:    addvl sp, sp, #5
+; CHECK-NEXT:    ldp q23, q22, [sp, #32] // 32-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldp q21, q20, [sp, #64] // 32-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldp q19, q18, [sp, #96] // 32-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldp q17, q16, [sp, #128] // 32-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldp q15, q14, [sp, #160] // 32-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldp q13, q12, [sp, #192] // 32-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldp q11, q10, [sp, #224] // 32-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldp q9, q8, [sp, #256] // 32-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
+; CHECK-NEXT:    addvl sp, sp, #18
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x double> @llvm.pow(<vscale x 4 x double> %a, <vscale x 4 x double> %b)
+  ret <vscale x 4 x double> %res
+}
+
 attributes #0 = { nounwind }

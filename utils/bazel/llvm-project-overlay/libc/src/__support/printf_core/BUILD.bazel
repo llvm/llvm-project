@@ -1,0 +1,194 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "printf_config",
+    hdrs = ["printf_config.h"],
+    deps = [
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "printf_core_structs",
+    hdrs = ["core_structs.h"],
+    deps = [
+        ":printf_config",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "printf_parser",
+    hdrs = ["parser.h"],
+    deps = [
+        ":printf_config",
+        ":printf_core_structs",
+        "//libc:llvm_libc_macros_stdfix_macros",
+        "//libc/hdr/types:wint_t",
+        "//libc/src/__support:arg_list",
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support:str_to_integer",
+        "//libc/src/__support/CPP:algorithm",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/fixed_point",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "printf_writer",
+    hdrs = ["writer.h"],
+    textual_hdrs = ["overflow_modes.def"],
+    deps = [
+        ":printf_core_structs",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_support_library(
+    name = "printf_converter",
+    hdrs = [
+        "char_converter.h",
+        "converter.h",
+        "converter_atlas.h",
+        "converter_utils.h",
+        "float_dec_converter.h",
+        "float_hex_converter.h",
+        "float_inf_nan_converter.h",
+        "int_converter.h",
+        "ptr_converter.h",
+        "strerror_converter.h",
+        "string_converter.h",
+        "write_int_converter.h",
+    ],
+    deps = [
+        ":printf_config",
+        ":printf_core_structs",
+        ":printf_writer",
+        "//libc/hdr:limits_macros",
+        "//libc/hdr:wchar_macros",
+        "//libc/hdr/types:char32_t",
+        "//libc/hdr/types:char8_t",
+        "//libc/hdr/types:size_t",
+        "//libc/hdr/types:wchar_t",
+        "//libc/hdr/types:wint_t",
+        "//libc/src/__support:big_int",
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support:float_to_string",
+        "//libc/src/__support:integer_to_string",
+        "//libc/src/__support:libc_assert",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support:wctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/StringUtil",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/wchar:mbstate",
+        "//libc/src/__support/wchar:string_converter",
+        "//libc/src/__support/wchar:wcrtomb",
+        "//libc/src/string:utils",
+    ],
+)
+
+libc_support_library(
+    name = "printf_error_mapper",
+    hdrs = [
+        "error_mapper.h",
+    ] + select({
+        "@platforms//os:linux": [
+            "linux/error_mapper.h",
+        ],
+        "//conditions:default": ["generic/error_mapper.h"],
+    }),
+    deps = [
+        ":printf_core_structs",
+        "//libc/hdr:errno_macros",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:architectures",
+    ],
+)
+
+libc_support_library(
+    name = "printf_main",
+    hdrs = ["printf_main.h"],
+    deps = [
+        ":printf_converter",
+        ":printf_core_structs",
+        ":printf_error_mapper",
+        ":printf_parser",
+        ":printf_writer",
+        "//libc/src/__support:arg_list",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "vfprintf_internal",
+    hdrs = ["vfprintf_internal.h"],
+    deps = [
+        ":printf_core_structs",
+        ":printf_main",
+        ":printf_writer",
+        "//libc/hdr/types:FILE",
+        "//libc/src/__support:arg_list",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support/File:file",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "vasprintf_internal",
+    hdrs = ["vasprintf_internal.h"],
+    deps = [
+        ":printf_core_structs",
+        ":printf_main",
+        ":printf_writer",
+        "//libc/hdr/func:free",
+        "//libc/hdr/func:malloc",
+        "//libc/hdr/func:realloc",
+        "//libc/hdr/types:FILE",
+        "//libc/src/__support:arg_list",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support/macros:attributes",
+    ],
+)

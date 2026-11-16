@@ -263,6 +263,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             self, self.dbg.GetListener(), process, [lldb.eStateConnected]
         )
 
+        error = lldb.SBError()
         target.Launch(
             lldb.SBListener(),
             ["arg1", "arg2", "arg3"],  # argv
@@ -273,9 +274,9 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             None,  # working_directory
             0,  # launch_flags
             True,  # stop_at_entry
-            lldb.SBError(),
+            error,
         )  # error
-        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertSuccess(error)
         self.assertEqual(process.GetProcessID(), 16)
 
         self.assertPacketLogReceived(
@@ -323,6 +324,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             self, self.dbg.GetListener(), process, [lldb.eStateConnected]
         )
 
+        error = lldb.SBError()
         process = target.Launch(
             lldb.SBListener(),
             ["arg1", "arg2", "arg3"],  # argv
@@ -333,9 +335,9 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             None,  # working_directory
             0,  # launch_flags
             True,  # stop_at_entry
-            lldb.SBError(),
+            error,
         )  # error
-        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertSuccess(error)
         self.assertEqual(process.GetProcessID(), 16)
 
         self.assertPacketLogReceived(

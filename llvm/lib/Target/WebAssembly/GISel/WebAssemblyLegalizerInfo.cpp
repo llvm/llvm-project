@@ -226,9 +226,5 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
 bool WebAssemblyLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
-  switch (MI.getOpcode()) {
-  default:
-    break;
-  }
   return false;
 }

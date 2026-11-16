@@ -38,6 +38,10 @@ defm : BoolField<"disable-x86-domain-reassignment", "false",
 defm : BoolField<"fixup-byte-word-insts", "true",
   "Change byte and word instructions to larger sizes">;
 
+// X86FixupLEAs.cpp
+defm : ValueField<"x86-fixup-leas-search-distance-threshold", "unsigned", "5",
+  "Maximum instruction distance when searching for an ADD or SUB after a LEA">;
+
 // X86ISelDAGToDAG.cpp
 defm : BoolField<"x86-and-imm-shrink", "true",
   "Enable setting constant bits to reduce size of mask immediates">;

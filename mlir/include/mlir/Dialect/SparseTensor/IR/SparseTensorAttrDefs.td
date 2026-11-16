@@ -18,7 +18,9 @@ include "mlir/IR/TensorEncoding.td"
 // All of the sparse tensor attributes will extend this class.
 class SparseTensor_Attr<string name,
                         list<Trait> traits = []>
-    : AttrDef<SparseTensor_Dialect, name, traits>;
+    : AttrDef<SparseTensor_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/SparseTensor/IR/SparseTensor.h"];
+}
 
 //===----------------------------------------------------------------------===//
 // A simple bitset attribute wrapped around a single int64_t to encode a set of

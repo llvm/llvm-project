@@ -16,7 +16,7 @@ class LocationListLookupTestCase(TestBase):
         li = lldb.SBLaunchInfo(["a.out"])
         error = lldb.SBError()
         process = target.Launch(li, error)
-        self.assertTrue(process.IsValid())
+        self.assertSuccess(error)
         self.assertTrue(process.is_stopped)
 
         return process

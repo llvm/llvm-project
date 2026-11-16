@@ -37,6 +37,8 @@
 // Note: This test requires FEAT_PAuth_LR (and is setup to pass on other
 // targets).
 
+#if defined(_LIBUNWIND_HAVE_GETAUXVAL) ||                                      \
+    defined(_LIBUNWIND_HAVE_ELF_AUX_INFO) || defined(_LIBUNWIND_IS_BAREMETAL)
 static bool hasPAuthLR() {
   uint64_t isa_r1, isa_r2;
   asm("mrs %0, ID_AA64ISAR1_EL1" : "=r"(isa_r1));
@@ -48,6 +50,7 @@ static bool hasPAuthLR() {
 
   return api == 6 || apa == 6 || apa3 == 6;
 }
+#endif
 
 #if defined(_LIBUNWIND_HAVE_GETAUXVAL)
 static bool checkHasPAuthLR() {
