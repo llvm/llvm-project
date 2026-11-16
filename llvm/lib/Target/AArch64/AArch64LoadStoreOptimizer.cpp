@@ -2616,7 +2616,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
     if (!SuccToVisit)
       break;
     CurMBB = SuccToVisit;
-    MBBI = CurMBB->begin();
+    MBBI = skipDebugInstructionsForward(CurMBB->begin(), CurMBB->end());
   }
 
   return E;
