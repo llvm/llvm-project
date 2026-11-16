@@ -300,6 +300,8 @@ Makes programs 10x faster by doing Special New Thing.
   analysis no longer inspects the definitions of `optnone` functions, and
   interprocedural passes no longer rewrite their signatures. Use
   `Function::isNoIPA()` (or `GlobalValue::isInterposable()`) to query this.
+  MergeFunctions no longer merges `optnone` functions, so Clang's
+  `-fmerge-functions` no longer has any effect at `-O0`.
 
 - The IR Outliner has been removed, due to lack of a maintainer and the presence
   of correctness issues.
