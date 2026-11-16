@@ -797,13 +797,17 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
                                            b.getFloatAttr(elementType, 4.0));
     Value twoReal = arith::AddFOp::create(b, real, real, fmf);
     Value negTwoReal = arith::NegFOp::create(b, twoReal, fmf);
-    Value expTwoRealMinusOne = math::ExpM1Op::create(b, twoReal, fmf);
-    Value expNegTwoRealMinusOne = math::ExpM1Op::create(b, negTwoReal, fmf);
+    // Intermediate expm1s may overflow.
+    arith::FastMathFlags fmfWithInf =
+        arith::bitEnumClear(fmf, arith::FastMathFlags::ninf);
+    Value expTwoRealMinusOne = math::ExpM1Op::create(b, twoReal, fmfWithInf);
+    Value expNegTwoRealMinusOne =
+        math::ExpM1Op::create(b, negTwoReal, fmfWithInf);
     Value realNum = arith::SubFOp::create(b, expTwoRealMinusOne,
                                           expNegTwoRealMinusOne, fmf);
     Value expProduct = arith::MulFOp::create(b, expTwoRealMinusOne,
-                                             expNegTwoRealMinusOne, fmf);
-    Value expSumMinusTwo = arith::NegFOp::create(b, expProduct, fmf);
+                                             expNegTwoRealMinusOne, fmfWithInf);
+    Value expSumMinusTwo = arith::NegFOp::create(b, expProduct, fmfWithInf);
 
     Value cosImag = math::CosOp::create(b, imag, fmf);
     Value cosImagSq = arith::MulFOp::create(b, cosImag, cosImag, fmf);
@@ -813,18 +817,18 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
     Value imagNum = arith::MulFOp::create(
         b, four, arith::MulFOp::create(b, cosImag, sinImag, fmf), fmf);
 
-    Value denom =
-        arith::AddFOp::create(b, expSumMinusTwo, twoCosTwoImagPlusOne, fmf);
+    Value denom = arith::AddFOp::create(b, expSumMinusTwo, twoCosTwoImagPlusOne,
+                                        fmfWithInf);
 
     Value isInf = arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ,
-                                        expSumMinusTwo, inf, fmf);
+                                        expSumMinusTwo, inf, fmfWithInf);
     Value negOne = arith::ConstantOp::create(b, elementType,
                                              b.getFloatAttr(elementType, -1.0));
     Value realLimit = math::CopySignOp::create(b, negOne, real, fmf);
 
     Value resultReal = arith::SelectOp::create(
         b, isInf, realLimit, arith::DivFOp::create(b, realNum, denom, fmf));
-    Value resultImag = arith::DivFOp::create(b, imagNum, denom, fmf);
+    Value resultImag = arith::DivFOp::create(b, imagNum, denom, fmfWithInf);
 
     if (!arith::bitEnumContainsAll(fmf, arith::FastMathFlags::nnan |
                                             arith::FastMathFlags::ninf)) {
