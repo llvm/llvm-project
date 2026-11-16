@@ -1137,12 +1137,16 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
     // 2-byte formats require 2-byte alignment.
     // 4-byte and larger formats require 4-byte alignment.
     unsigned MergedBytes = CI.EltSize * NumCombinedComponents;
-    unsigned RequiredAlign = std::min(MergedBytes, 4u);
-    unsigned MinOff = std::min(CI.Offset, Paired.Offset);
-    if (MinOff % RequiredAlign != 0)
-      return false;
+    Align RequiredAlign(std::min(MergedBytes, 4u));
 
-    return true;
+    // The merged access starts at the address of the leading access. The
+    // leading access must already satisfy the rule above for its own size, so
+    // its address is aligned to at least the component size.
+    const CombineInfo &Leading = Paired < CI ? Paired : CI;
+    Align KnownAlign =
+        std::max(getSingleElement(Leading.I->memoperands())->getAlign(),
+                 Align(std::min(CI.EltSize, 4u)));
+    return KnownAlign >= RequiredAlign;
   }
 
   uint32_t EltOffset0 = CI.Offset / CI.EltSize;
@@ -2362,7 +2366,7 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   if (!Base.isReg())
     return;
 
-  MachineInstr *Def = MRI->getUniqueVRegDef(Base.getReg());
+  MachineInstr *Def = MRI->getVRegDef(Base.getReg());
   if (!Def)
     return;
 
@@ -2389,8 +2393,8 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   if (!BaseLo.isReg() || !BaseHi.isReg())
     return;
 
-  MachineInstr *BaseLoDef = MRI->getUniqueVRegDef(BaseLo.getReg());
-  MachineInstr *BaseHiDef = MRI->getUniqueVRegDef(BaseHi.getReg());
+  MachineInstr *BaseLoDef = MRI->getVRegDef(BaseLo.getReg());
+  MachineInstr *BaseHiDef = MRI->getVRegDef(BaseHi.getReg());
 
   if (!BaseLoDef || BaseLoDef->getOpcode() != AMDGPU::V_ADD_CO_U32_e64 ||
       !BaseHiDef || BaseHiDef->getOpcode() != AMDGPU::V_ADDC_U32_e64)

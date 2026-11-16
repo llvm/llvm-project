@@ -151,6 +151,12 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
       if (Size == VecSize || Size == 2*VecSize)
         return ABIArgInfo::getDirectInReg();
     }
+    // HLX vectors are returned in HLX registers or register pairs.
+    if (T.hasFeature("hlx")) {
+      uint64_t VecSize = 2048 * 8;
+      if (Size == VecSize || Size == 2 * VecSize)
+        return ABIArgInfo::getDirectInReg();
+    }
     // Large vector types should be returned via memory.
     if (Size > 64)
       return getNaturalAlignIndirect(RetTy,

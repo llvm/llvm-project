@@ -163,8 +163,7 @@ void ChrootChecker::checkPreCall(const CallEvent &Call,
     return;
 
   // Generate bug report.
-  ExplodedNode *Err =
-      C.generateNonFatalErrorNode(C.getState(), C.getPredecessor());
+  ExplodedNode *Err = C.generateNonFatalErrorNode();
   if (!Err)
     return;
 

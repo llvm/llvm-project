@@ -33,15 +33,6 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> KernargPreloadCount(
-    "amdgpu-kernarg-preload-count",
-    cl::desc("How many kernel arguments to preload onto SGPRs"), cl::init(0));
-
-static cl::opt<bool>
-    EnableKernargPreload("amdgpu-kernarg-preload",
-                         cl::desc("Enable preload kernel arguments to SGPRs"),
-                         cl::init(true));
-
 namespace {
 
 class AMDGPUPreloadKernelArgumentsLegacy : public ModulePass {
@@ -281,7 +272,9 @@ AMDGPUPreloadKernelArgumentsLegacy::AMDGPUPreloadKernelArgumentsLegacy(
     : ModulePass(ID), TM(TM) {}
 
 static bool markKernelArgsAsInreg(Module &M, const TargetMachine &TM) {
-  if (!EnableKernargPreload)
+  const AMDGPUOptions &CLOpts =
+      static_cast<const AMDGPUTargetMachine &>(TM).getCLOpts();
+  if (!CLOpts.kernarg_preload)
     return false;
 
   SmallVector<Function *, 4> FunctionsToErase;
@@ -296,7 +289,7 @@ static bool markKernelArgsAsInreg(Module &M, const TargetMachine &TM) {
     uint64_t ExplicitArgOffset = 0;
     const DataLayout &DL = F.getDataLayout();
     const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
-    unsigned NumPreloadsRequested = KernargPreloadCount;
+    unsigned NumPreloadsRequested = CLOpts.kernarg_preload_count;
     unsigned NumPreloadedExplicitArgs = 0;
     for (Argument &Arg : F.args()) {
       // Avoid incompatible attributes and guard against running this pass

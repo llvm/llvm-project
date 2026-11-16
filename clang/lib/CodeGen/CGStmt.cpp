@@ -468,6 +468,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPTargetParallelGenericLoopDirective(
         cast<OMPTargetParallelGenericLoopDirective>(*S));
     break;
+  case Stmt::OMPTargetGenericLoopDirectiveClass:
+    EmitOMPTargetSimdDirective(cast<OMPTargetGenericLoopDirective>(*S));
+    break;
   case Stmt::OMPParallelMaskedDirectiveClass:
     EmitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*S));
     break;

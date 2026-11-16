@@ -35,10 +35,6 @@ using namespace llvm::AMDGPU;
 #define DEBUG_TYPE "si-memory-legalizer"
 #define PASS_NAME "SI Memory Legalizer"
 
-static cl::opt<bool> AmdgcnSkipCacheInvalidations(
-    "amdgcn-skip-cache-invalidations", cl::init(false), cl::Hidden,
-    cl::desc("Use this to skip inserting cache invalidating instructions."));
-
 namespace {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
@@ -1034,7 +1030,7 @@ static bool isNonVolatileMemoryAccess(const MachineInstr &MI) {
 SICacheControl::SICacheControl(const GCNSubtarget &ST, bool TgSplit) : ST(ST) {
   TII = ST.getInstrInfo();
   IV = getIsaVersion(ST.getCPU());
-  InsertCacheInv = !AmdgcnSkipCacheInvalidations;
+  InsertCacheInv = !ST.getCLOpts().skip_cache_invalidations;
   TgSplitEnabled = TgSplit;
 }
 
@@ -2400,6 +2396,9 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
     if (MOI.isCooperative())
       Changed |= CC->handleCooperativeAtomic(*MI);
 
+    Changed |= CC->finalizeLoad(MI);
+    Changed |= CC->setCFS(MI, MOI.getCFS());
+
     if (Order == AtomicOrdering::SequentiallyConsistent)
       Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
                                 SIMemOp::LOAD | SIMemOp::STORE,
@@ -2419,8 +2418,6 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
       }
     }
 
-    Changed |= CC->finalizeLoad(MI);
-    Changed |= CC->setCFS(MI, MOI.getCFS());
     return Changed;
   }
 

@@ -4,7 +4,6 @@
 ---
 name:            1-strwpre-strwui-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$w1' }
@@ -32,7 +31,6 @@ body:             |
 ---
 name:            2-strxpre-strxui-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -61,7 +59,6 @@ body:             |
 ---
 name:            3-strspre-strsui-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$s0' }
@@ -88,7 +85,6 @@ body:             |
 ---
 name:            4-strdpre-strdui-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$d0' }
@@ -117,7 +113,6 @@ body:             |
 ---
 name:            5-strqpre-strqui-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$q0' }
@@ -146,7 +141,6 @@ body:             |
 ---
 name:            6-strqui-strqpre-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$q0' }
@@ -174,7 +168,6 @@ body:             |
 ---
 name:            7-strspre-strsui-max-offset-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$s0' }
@@ -201,7 +194,6 @@ body:             |
 ---
 name:            8-strspre-strsui-min-offset-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$s0' }
@@ -228,7 +220,6 @@ body:             |
 ---
 name:            9-strspre-strsui-mod-base-reg-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -259,7 +250,6 @@ body:             |
 ---
 name:            10-strspre-strsui-used-base-reg-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -292,7 +282,6 @@ body:             |
 ---
 name:            11-strspre-strspre-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$s0' }
@@ -328,7 +317,6 @@ body:             |
 ---
 name:            12-strspre-strsui-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$s0' }
@@ -360,7 +348,6 @@ body:             |
 ---
 name:            13-strqpre-sturqi-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$q0' }
@@ -389,7 +376,6 @@ body:             |
 ---
 name:            14-strqpre-sturqi-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$q0' }
@@ -417,7 +403,6 @@ body:             |
 ---
 name:            15-strspre-strsui-unaligned-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$s0' }
@@ -444,7 +429,6 @@ body:             |
 ---
 name:            16-strxpre-strxui-same-reg-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -472,7 +456,6 @@ body:             |
 ---
 name:            17-strwpre-strwui-same-reg-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }

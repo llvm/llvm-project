@@ -94,8 +94,9 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.sys_mman_macros
     libc.hdr.types.size_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.madvise
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -273,9 +274,11 @@ add_entrypoint_object(
   HDRS
     ../remap_file_pages.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.remap_file_pages
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 

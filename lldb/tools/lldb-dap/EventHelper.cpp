@@ -264,6 +264,7 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
       body.reason = protocol::eStoppedReasonEntry;
       break;
     case lldb::eStopReasonInterrupt:
+    case lldb::eStopReasonDynamicLoader:
       body.reason = protocol::eStoppedReasonPause;
       break;
     case lldb::eStopReasonThreadExiting:

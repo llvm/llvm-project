@@ -162,8 +162,7 @@ Derived::Derived(const void *inVoid) { squawk(); }
 // CIR:        cir.store{{.*}} %[[VPTR_BASE]], %[[BASE_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR:        %[[VPTR_BASE_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_Derived> -> !cir.ptr<!cir.vptr>
 // CIR:        %[[VPTR_BASE:.*]] = cir.load{{.*}} %[[VPTR_BASE_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:        %[[SQUAWK_FN_ADDR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR_BASE]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Derived>)>>>
-// CIR:        %[[SQUAWK:.*]] = cir.load{{.*}} %[[SQUAWK_FN_ADDR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Derived>)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_Derived>)>>
+// CIR:        %[[SQUAWK:.*]] = cir.vtable.get_virtual_fn %[[VPTR_BASE]][0] : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Derived>)>>
 // CIR:        cir.call %[[SQUAWK]](%[[THIS]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Derived>)>>, !cir.ptr<!rec_Derived> {{.*}}) -> ()
 // CIR:        cir.return
 
@@ -256,8 +255,7 @@ Derived::Derived(const void *inVoid) { squawk(); }
 // CIR:   cir.store{{.*}} %[[VPTR_GLOBAL]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR:   %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_Derived> -> !cir.ptr<!cir.vptr>
 // CIR:   %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:   %[[SQUAWK_ADDR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Derived>)>>>
-// CIR:   %[[SQUAWK:.*]] = cir.load{{.*}} %[[SQUAWK_ADDR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Derived>)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_Derived>)>>
+// CIR:   %[[SQUAWK:.*]] = cir.vtable.get_virtual_fn %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Derived>)>>
 // CIR:   cir.call %[[SQUAWK]](%[[THIS]])
 // CIR:   cir.return
 
@@ -300,8 +298,7 @@ Derived::Derived(const void *inVoid) { squawk(); }
 // CIR:   cir.store{{.*}} %[[VTT_ADDR_POINT]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR:   %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.vptr>
 // CIR:   %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:   %[[VIRTUAL_FN_ADDR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>
-// CIR:   %[[VIRTUAL_FN:.*]] = cir.load{{.*}} %[[VIRTUAL_FN_ADDR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>
+// CIR:   %[[VIRTUAL_FN:.*]] = cir.vtable.get_virtual_fn %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>
 // CIR:   cir.call %[[VIRTUAL_FN]](%[[THIS]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>, !cir.ptr<!rec_Base> {{.*}}) -> ()
 // CIR:   cir.return
 

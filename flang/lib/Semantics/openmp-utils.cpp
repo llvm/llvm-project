@@ -1174,12 +1174,6 @@ namespace {
 // parentheses).
 struct ArrayExpressionRecognizer {
   template <TypeCategory C>
-  static bool isArrayExpression(
-      const evaluate::Expr<evaluate::SomeKind<C>> &x) {
-    return common::visit([](auto &&s) { return isArrayExpression(s); }, x.u);
-  }
-
-  template <TypeCategory C>
   static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C>> &x) {
     return common::visit([](auto &&s) { return isArrayExpression(s); },
         evaluate::match::deparen(x).u);
@@ -3056,6 +3050,15 @@ bool OmpVariantMatchContext::matchesISATrait(llvm::StringRef rawString) const {
   llvm::StringRef(features_).split(
       tokens, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   return llvm::is_contained(tokens, want);
+}
+
+bool IsTypeCompatible(const DeclTypeSpec &formal, const DeclTypeSpec &actual) {
+  auto fdt = evaluate::DynamicType::From(formal);
+  auto adt = evaluate::DynamicType::From(actual);
+  if (fdt && adt) {
+    return fdt->IsTkCompatibleWith(*adt);
+  }
+  return false;
 }
 
 // User-defined reduction resolution, shared between the OpenMP semantic checks

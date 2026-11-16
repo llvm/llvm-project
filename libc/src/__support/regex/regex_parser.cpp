@@ -15,11 +15,10 @@
 
 #include "hdr/regex_macros.h"
 #include "src/__support/CPP/array.h"
-#include "src/__support/CPP/new.h"
-#include "src/__support/CPP/scope.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/alloc-checker.h"
+#include "src/__support/CPP/unique_ptr.h"
+#include "src/__support/checked_ptr.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/regex/regex_ast.h"
@@ -299,32 +298,33 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
 // Shared stack of parsed ExprId nodes across recursive parse_alt and
 // parse_concat frames.  Keeps a 64-element (256-byte) inline buffer on the
 // top-level parse_ere frame, spilling to the heap only for larger patterns.
-// TODO: Replace ParsedAtomStack with an AllocChecker-backed SmallVector /
-// unique_ptr once available in src/__support/CPP/.
+// TODO: Replace ParsedAtomStack with an AllocChecker-backed SmallVector once
+// available in src/__support/CPP/.
 struct ParsedAtomStack {
   static constexpr size_t INLINE_ATOM_COUNT = 64;
   cpp::array<ExprId, INLINE_ATOM_COUNT> inline_atoms{};
-  ExprId *heap_atoms = nullptr;
+  cpp::unique_ptr<ExprId[]> heap_atoms;
   cpp::span<ExprId> atoms{inline_atoms};
   size_t count = 0;
+
+  ParsedAtomStack() = default;
+  // `atoms` may point into `inline_atoms`, so the implicit move operations
+  // would leave the destination pointing into the source.
+  ParsedAtomStack(ParsedAtomStack &&) = delete;
+  ParsedAtomStack &operator=(ParsedAtomStack &&) = delete;
 
   bool push(ExprId id) {
     if (count >= ExprPool::MAX_NODE_LIMIT)
       return false;
     if (count == atoms.size()) {
       size_t new_cap = atoms.size() * 2;
-      AllocChecker ac;
-      ExprId *new_atoms = new (ac) ExprId[new_cap];
-      if (!ac)
+      auto new_atoms = make_unique_for_overwrite<ExprId[]>(new_cap);
+      if (!new_atoms)
         return false;
-      ExprId *dst = new_atoms;
-      for (ExprId existing : atoms) {
-        *dst = existing;
-        ++dst;
-      }
-      delete[] heap_atoms;
-      heap_atoms = new_atoms;
-      atoms = cpp::span<ExprId>(heap_atoms, new_cap);
+      for (size_t i = 0; i < count; ++i)
+        new_atoms[i] = atoms[i];
+      heap_atoms = new_atoms.take_unique();
+      atoms = cpp::span<ExprId>(heap_atoms.get(), new_cap);
     }
     atoms[count] = id;
     ++count;
@@ -418,7 +418,6 @@ ErrorOr<ExprId> parse_ere(cpp::string_view pattern, int cflags, ExprPool &pool,
   cpp::string_view rem = pattern;
   size_t re_nsub = 0;
   ParsedAtomStack stack;
-  cpp::scope_exit cleanup([&stack] { delete[] stack.heap_atoms; });
   ErrorOr<ExprId> res =
       parse_alt(rem, cflags, pool, /*depth=*/0, re_nsub, stack);
   if (!res.has_value())

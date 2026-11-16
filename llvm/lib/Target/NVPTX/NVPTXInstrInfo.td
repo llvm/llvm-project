@@ -2377,6 +2377,8 @@ def: Pat<(v2i32 (scalar_to_vector i32:$a)),
          (CVT_u64_u32 reg_or_imm:$a, CvtNONE)>;
 def: Pat<(v2f16 (scalar_to_vector f16:$a)),
          (V2I16toI32 reg_or_fpimm:$a, (i16 0))>;
+def: Pat<(v2bf16 (scalar_to_vector bf16:$a)),
+         (V2I16toI32 reg_or_fpimm:$a, (i16 0))>;
 def: Pat<(v2f32 (scalar_to_vector f32:$a)),
          (V2I32toI64 $a, (i32 0))>;
 

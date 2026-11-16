@@ -762,7 +762,7 @@ void RISCVAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   for (auto &Reg : ScratchRegs) {
     if (isRegAvailable(Reg))
       continue;
-    while (!isRegAvailable(NextReg))
+    while (NextReg <= RISCV::X31 && !isRegAvailable(NextReg))
       ++NextReg;
     Reg = NextReg++;
     if (Reg > RISCV::X31)

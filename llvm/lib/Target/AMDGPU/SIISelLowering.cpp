@@ -48,7 +48,6 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/TargetParser/AtomicScope.h"
@@ -61,16 +60,6 @@ using namespace llvm::SDPatternMatch;
 #define DEBUG_TYPE "si-lower"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
-
-static cl::opt<bool>
-    DisableLoopAlignment("amdgpu-disable-loop-alignment",
-                         cl::desc("Do not align and prefetch loops"),
-                         cl::init(false));
-
-static cl::opt<bool> UseDivergentRegisterIndexing(
-    "amdgpu-use-divergent-register-indexing", cl::Hidden,
-    cl::desc("Use indirect register addressing for divergent indexes"),
-    cl::init(false));
 
 static DenormalFPEnv getDenormalFPEnv(const MachineFunction &MF) {
   return MF.getInfo<SIMachineFunctionInfo>()->getMode().getDenormalFPEnv();
@@ -2529,6 +2518,13 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
       (Op == ISD::SINT_TO_FP || Op == ISD::UINT_TO_FP))
     return false;
 
+  // The DAGCombiner replaces a conversion from i1 with a select of the two
+  // exact results. The select avoids an f32 conversion plus rounding for
+  // f16/bf16, a 64-bit conversion for f64 and a missing libcall for f128, and
+  // is the same single v_cndmask for f32.
+  if (VT == MVT::i1 && (Op == ISD::SINT_TO_FP || Op == ISD::UINT_TO_FP))
+    return false;
+
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
 
@@ -3826,7 +3822,10 @@ SDValue SITargetLowering::LowerFormalArguments(
       llvm_unreachable("Unexpected register class in LowerFormalArguments!");
 
     Reg = MF.addLiveIn(Reg, RC);
-    SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
+    bool CopyAsI32 =
+        VT.getSizeInBits() == 16 &&
+        (RC == &AMDGPU::SGPR_32RegClass || !Subtarget->useRealTrue16Insts());
+    SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, CopyAsI32 ? MVT::i32 : VT);
     if (Arg.Flags.isInReg() && RC == &AMDGPU::VGPR_32RegClass) {
       // FIXME: Need to forward the chains created by `CopyFromReg`s, make sure
       // they will read physical regs before any side effect instructions.
@@ -3835,6 +3834,9 @@ SDValue SITargetLowering::LowerFormalArguments(
       Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
                         ReadFirstLane, Val);
     }
+
+    if (CopyAsI32)
+      Val = DAG.getBitcast(VT, DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Val));
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
@@ -14383,7 +14385,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
              : AMDGPUAS::GLOBAL_ADDRESS;
 
   unsigned NumElements = VT.getVectorNumElements();
-  if (AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) {
+  if (AS == AMDGPUAS::FLAT_ADDRESS || AMDGPU::isExtendedGlobalAddrSpace(AS)) {
     if (NumElements > 4)
       return SplitVectorStore(Op, DAG);
     // v3 stores not supported on SI.
@@ -16533,6 +16535,22 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     unsigned IntrinsicID = Op.getConstantOperandVal(0);
     // TODO: Handle more intrinsics
     switch (IntrinsicID) {
+    case Intrinsic::amdgcn_update_dpp: {
+      enum UpdateDPPOperand {
+        Src = 2,
+        RowMask = 4,
+        BankMask = 5,
+        BoundCtrl = 6,
+      };
+
+      if (QueryVT == MVT::f32 && (VT == MVT::i32 || VT == MVT::f32) &&
+          Op.getConstantOperandVal(RowMask) == 0xf &&  // Enable all rows.
+          Op.getConstantOperandVal(BankMask) == 0xf && // Enable all banks.
+          Op.getConstantOperandVal(BoundCtrl) != 0)    // Zero-fill OOB lanes.
+        return isCanonicalized(DAG, Op.getOperand(2), QueryVT, UserFlags,
+                               MaxDepth - 1);
+      return false;
+    }
     case Intrinsic::amdgcn_cvt_pkrtz:
     case Intrinsic::amdgcn_cubeid:
     case Intrinsic::amdgcn_frexp_mant:
@@ -17208,7 +17226,7 @@ bool SITargetLowering::shouldExpandVectorDynExt(unsigned EltSize,
                                                 unsigned NumElem,
                                                 bool IsDivergentIdx,
                                                 const GCNSubtarget *Subtarget) {
-  if (UseDivergentRegisterIndexing)
+  if (Subtarget->getCLOpts().use_divergent_register_indexing)
     return false;
 
   unsigned VecSize = EltSize * NumElem;
@@ -18159,10 +18177,10 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
         Src1s.begin()->SrcOp.getValueSizeInBits() >= 32) {
       SmallVector<unsigned, 4> SrcBytes;
       auto Src0Mask = Src0s.begin()->PermMask;
-      SrcBytes.push_back(Src0Mask & 0xFF000000);
+      SrcBytes.push_back((Src0Mask >> 24) & 0xFF);
       bool UniqueEntries = true;
       for (auto I = 1; I < 4; I++) {
-        auto NextByte = Src0Mask & (0xFF << ((3 - I) * 8));
+        auto NextByte = (Src0Mask >> ((3 - I) * 8)) & 0xFF;
 
         if (is_contained(SrcBytes, NextByte)) {
           UniqueEntries = false;
@@ -20321,15 +20339,27 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'v':
     case 'a':
       return C_RegisterClass;
+    case 'm':
+      return C_Memory;
     }
   } else if (Constraint.size() == 2) {
     if (Constraint == "VA")
       return C_RegisterClass;
+    if (Constraint == "RF")
+      return C_Memory;
   }
   if (isImmConstraint(Constraint)) {
     return C_Other;
   }
   return TargetLowering::getConstraintType(Constraint);
+}
+
+InlineAsm::ConstraintCode
+SITargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
+  if (ConstraintCode == "RF")
+    return InlineAsm::ConstraintCode::RF;
+
+  return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
 }
 
 static uint64_t clearUnusedBits(uint64_t Val, unsigned Size) {
@@ -20720,16 +20750,20 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
 
       KnownBits RHSKnown;
       VT.computeKnownBitsImpl(RHS, RHSKnown, DemandedElts, Depth + 1);
-      if (RHSKnown.isUnknown())
-        break;
 
+      bool SelfMultiply = LHS == RHS;
+
+      // For a self-multiply both operands are the same value, so RHSKnown also
+      // describes the LHS; avoid the duplicated query.
       KnownBits LHSKnown;
-      VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
-      if (LHSKnown.isUnknown())
-        break;
+      if (SelfMultiply)
+        LHSKnown = RHSKnown;
+      else
+        VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
 
-      bool SelfMultiply =
-          LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
+      if (SelfMultiply)
+        SelfMultiply &= isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
+
       Known = computeKnownBitsForMul24(LHSKnown, RHSKnown, Known.getBitWidth(),
                                        IID == Intrinsic::amdgcn_mul_i24,
                                        SelfMultiply);
@@ -20803,7 +20837,7 @@ Align SITargetLowering::getPrefLoopAlignment(
   // significant fetch delay after a backward branch. We use 32-byte alignment
   // with max padding of 4 bytes (one s_nop), see
   // getMaxPermittedBytesForAlignment().
-  if (ML && !DisableLoopAlignment &&
+  if (ML && getSubtarget()->getCLOpts().loop_alignment &&
       getSubtarget()->hasLoopHeadInstSplitSensitivity()) {
     // Loop rotation can make the backedge destination a block other than the
     // LoopInfo header, so prefer the block the caller is actually aligning.
@@ -20817,7 +20851,8 @@ Align SITargetLowering::getPrefLoopAlignment(
   }
 
   // Pre-GFX10 target did not benefit from loop alignment
-  if (!ML || DisableLoopAlignment || !getSubtarget()->hasInstPrefetch() ||
+  if (!ML || !getSubtarget()->getCLOpts().loop_alignment ||
+      !getSubtarget()->hasInstPrefetch() ||
       getSubtarget()->hasInstFwdPrefetchBug())
     return PrefAlign;
 

@@ -25,7 +25,7 @@ class TestInterruptThreadNames(TestBase):
         error = lldb.SBError()
         self.dbg.SetAsync(True)
         process = target.Launch(launch_info, error)
-        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertSuccess(error)
 
         listener = self.dbg.GetListener()
         broadcaster = process.GetBroadcaster()
