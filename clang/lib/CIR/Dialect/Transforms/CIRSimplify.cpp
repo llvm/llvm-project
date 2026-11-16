@@ -93,6 +93,38 @@ cir::StoreOp findDominatingInitOp(cir::AllocaOp alloca, cir::LoadOp load,
   return result;
 }
 
+/// Return true if a jump that DominanceInfo cannot see may skip `store` and
+/// land in code that `store` dominates. Until cir-flatten-cfg and
+/// cir-goto-solver run, a `cir.goto` has no CFG edge to its `cir.label`, and a
+/// `cir.switch` has none to its `cir.case` operations. A goto may come from
+/// anywhere in the function, so every label that `store` dominates is a
+/// possible target. So is every dominated case whose switch encloses `store`.
+/// Any other dominated case belongs to a switch that `store` dominates too, so
+/// that switch only jumps after `store` has run. `funcHasLabels` tells whether
+/// the function that contains `store` has any label.
+bool mayJumpPast(cir::StoreOp store, bool funcHasLabels,
+                 const DominanceInfo &domInfo) {
+  // Without labels, only an enclosing switch can jump past `store`.
+  if (!funcHasLabels && !store->getParentOfType<cir::SwitchOp>())
+    return false;
+
+  auto isJumpTarget = [&](Operation *op) {
+    if (auto caseOp = dyn_cast<cir::CaseOp>(op)) {
+      auto switchOp = caseOp->getParentOfType<cir::SwitchOp>();
+      return switchOp && switchOp->isProperAncestor(store);
+    }
+    return isa<cir::LabelOp>(op);
+  };
+
+  // Only operations nested in the region of `store` can be dominated by it.
+  WalkResult result = store->getParentRegion()->walk([&](Operation *op) {
+    if (isJumpTarget(op) && domInfo.dominates(store, op))
+      return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+  return result.wasInterrupted();
+}
+
 /// Simplify `cir.load` that loads from an alloca marked as "constant".
 ///
 /// For example:
@@ -103,8 +135,11 @@ cir::StoreOp findDominatingInitOp(cir::AllocaOp alloca, cir::LoadOp load,
 ///
 /// All uses of the load above could be replaced with the SSA value `%init`.
 struct SimplifyConstantLoad final : public OpRewritePattern<LoadOp> {
-  SimplifyConstantLoad(MLIRContext *context, RewriteDominanceInfo &domInfo)
-      : OpRewritePattern(context), domInfo(domInfo) {}
+  SimplifyConstantLoad(
+      MLIRContext *context, RewriteDominanceInfo &domInfo,
+      const llvm::SmallPtrSetImpl<Operation *> &funcsWithLabels)
+      : OpRewritePattern(context), domInfo(domInfo),
+        funcsWithLabels(funcsWithLabels) {}
 
   LogicalResult matchAndRewrite(LoadOp op,
                                 PatternRewriter &rewriter) const override {
@@ -125,12 +160,19 @@ struct SimplifyConstantLoad final : public OpRewritePattern<LoadOp> {
       return mlir::failure();
     }
 
+    // A goto or a switch may skip the store and still reach the load.
+    bool funcHasLabels =
+        funcsWithLabels.contains(op->getParentOfType<cir::FuncOp>());
+    if (mayJumpPast(initStoreOp, funcHasLabels, domInfo.getDominanceInfo()))
+      return mlir::failure();
+
     rewriter.replaceOp(op, initStoreOp.getValue());
     return mlir::success();
   }
 
 private:
   RewriteDominanceInfo &domInfo;
+  const llvm::SmallPtrSetImpl<Operation *> &funcsWithLabels;
 };
 
 /// Simplify suitable ternary operations into select operations.
@@ -421,8 +463,9 @@ struct CIRSimplifyPass : public impl::CIRSimplifyBase<CIRSimplifyPass> {
   void runOnOperation() override;
 };
 
-void populateMergeCleanupPatterns(RewritePatternSet &patterns,
-                                  RewriteDominanceInfo &domInfo) {
+void populateMergeCleanupPatterns(
+    RewritePatternSet &patterns, RewriteDominanceInfo &domInfo,
+    const llvm::SmallPtrSetImpl<Operation *> &funcsWithLabels) {
   // clang-format off
   patterns.add<
     SimplifyTernary,
@@ -431,21 +474,26 @@ void populateMergeCleanupPatterns(RewritePatternSet &patterns,
     SimplifyVecSplat
   >(patterns.getContext());
   // clang-format on
-  patterns.add<SimplifyConstantLoad>(patterns.getContext(), domInfo);
+  patterns.add<SimplifyConstantLoad>(patterns.getContext(), domInfo,
+                                     funcsWithLabels);
 }
 
 void CIRSimplifyPass::runOnOperation() {
   // Collect rewrite patterns. SimplifyConstantLoad queries dominance, so the
   // dominance info doubles as the driver's listener to stay coherent.
   RewriteDominanceInfo domInfo;
+  llvm::SmallPtrSet<Operation *, 4> funcsWithLabels;
   RewritePatternSet patterns(&getContext());
-  populateMergeCleanupPatterns(patterns, domInfo);
+  populateMergeCleanupPatterns(patterns, domInfo, funcsWithLabels);
 
-  // Collect operations to apply patterns.
+  // Collect operations to apply patterns, and the functions that have labels.
+  // No pattern adds a label, so the set stays complete during the rewrite.
   llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk([&](Operation *op) {
     if (isa<TernaryOp, SelectOp, SwitchOp, VecSplatOp, LoadOp>(op))
       ops.push_back(op);
+    else if (isa<LabelOp>(op))
+      funcsWithLabels.insert(op->getParentOfType<cir::FuncOp>());
   });
 
   // Apply patterns. Scope the rewrite to the body region, which encloses

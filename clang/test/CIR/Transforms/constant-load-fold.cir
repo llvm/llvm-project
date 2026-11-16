@@ -3,6 +3,7 @@
 !s32i = !cir.int<s, 32>
 
 cir.func private @use_ptr(!cir.ptr<!s32i>)
+cir.func private @use(!s32i)
 
 // CHECK-LABEL: cir.func @fold_constant_load
 // CHECK: %[[ALLOCA:.*]] = cir.alloca "x" {{.*}} const
@@ -137,4 +138,166 @@ cir.func @do_not_fold_atomic_store() -> !s32i {
   cir.store atomic(seq_cst) %init, %x : !s32i, !cir.ptr<!s32i>
   %value = cir.load %x : !cir.ptr<!s32i>, !s32i
   cir.return %value : !s32i
+}
+
+// Before cir-goto-solver runs, DominanceInfo does not see the jump from a
+// cir.goto to its cir.label. The goto skips the store, so the load must stay.
+// CHECK-LABEL: cir.func @do_not_fold_past_label
+// CHECK: cir.label "L"
+// CHECK-NEXT: %[[VALUE:.*]] = cir.load
+// CHECK-NEXT: cir.return %[[VALUE]]
+cir.func @do_not_fold_past_label(%cond: !cir.bool) -> !s32i {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  cir.if %cond {
+    cir.goto "L"
+  }
+  %init = cir.const #cir.int<113> : !s32i
+  cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb1
+^bb1:
+  cir.label "L"
+  %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+  cir.return %value : !s32i
+}
+
+// Nothing branches to ^bb1, so DominanceInfo treats it as dominated by the
+// store. A goto to "L" still enters it and reaches the load through ^bb2
+// without running the store.
+// CHECK-LABEL: cir.func @do_not_fold_past_label_without_predecessors
+// CHECK: cir.label "L"
+// CHECK: %[[VALUE:.*]] = cir.load
+// CHECK-NEXT: cir.return %[[VALUE]]
+cir.func @do_not_fold_past_label_without_predecessors(%cond: !cir.bool) -> !s32i {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  cir.if %cond {
+    cir.goto "L"
+  }
+  %init = cir.const #cir.int<114> : !s32i
+  cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb2
+^bb1:
+  cir.label "L"
+  cir.br ^bb2
+^bb2:
+  %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+  cir.return %value : !s32i
+}
+
+// The label follows the load, but the loop takes a goto to "L" back to the
+// load without running the store.
+// CHECK-LABEL: cir.func @do_not_fold_label_after_load_in_loop
+// CHECK: cir.while
+// CHECK: %[[VALUE:.*]] = cir.load
+// CHECK-NEXT: cir.call @use(%[[VALUE]])
+cir.func @do_not_fold_label_after_load_in_loop(%cond: !cir.bool) {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  cir.if %cond {
+    cir.goto "L"
+  }
+  %init = cir.const #cir.int<115> : !s32i
+  cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+  cir.while {
+    cir.condition(%cond)
+  } do {
+    cir.scope {
+      %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+      cir.call @use(%value) : (!s32i) -> ()
+      cir.br ^bb1
+    ^bb1:
+      cir.label "L"
+      cir.yield
+    }
+    cir.yield
+  }
+  cir.return
+}
+
+// A goto to "L" still runs the store, so the load folds.
+// CHECK-LABEL: cir.func @fold_past_label_before_store
+// CHECK: cir.label "L"
+// CHECK-NEXT: %[[INIT:.*]] = cir.const #cir.int<116>
+// CHECK-NOT: cir.load
+// CHECK: cir.return %[[INIT]]
+cir.func @fold_past_label_before_store(%cond: !cir.bool) -> !s32i {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  cir.if %cond {
+    cir.goto "L"
+  }
+  cir.br ^bb1
+^bb1:
+  cir.label "L"
+  %init = cir.const #cir.int<116> : !s32i
+  cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+  %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+  cir.return %value : !s32i
+}
+
+// Before cir-flatten-cfg runs, DominanceInfo does not see the jump from a
+// cir.switch to its cases. The switch can enter case 1 without running the
+// store in case 0, so the load must stay.
+// CHECK-LABEL: cir.func @do_not_fold_past_nested_case
+// CHECK: cir.case(equal, [#cir.int<1> : !s32i])
+// CHECK-NEXT: %[[VALUE:.*]] = cir.load
+// CHECK-NEXT: cir.call @use(%[[VALUE]])
+cir.func @do_not_fold_past_nested_case(%c: !s32i) {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  cir.switch(%c : !s32i) {
+    cir.case(equal, [#cir.int<0> : !s32i]) {
+      %init = cir.const #cir.int<117> : !s32i
+      cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+      cir.case(equal, [#cir.int<1> : !s32i]) {
+        %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+        cir.call @use(%value) : (!s32i) -> ()
+        cir.yield
+      }
+      cir.yield
+    }
+    cir.yield
+  }
+  cir.return
+}
+
+// The store runs before the switch, so no case can skip it.
+// CHECK-LABEL: cir.func @fold_into_case
+// CHECK: %[[INIT:.*]] = cir.const #cir.int<118>
+// CHECK: cir.switch
+// CHECK-NOT: cir.load
+// CHECK: cir.call @use(%[[INIT]])
+cir.func @fold_into_case(%c: !s32i) {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  %init = cir.const #cir.int<118> : !s32i
+  cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+  cir.switch(%c : !s32i) {
+    cir.case(equal, [#cir.int<0> : !s32i]) {
+      %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+      cir.call @use(%value) : (!s32i) -> ()
+      cir.yield
+    }
+    cir.yield
+  }
+  cir.return
+}
+
+// The store and the load share a case, and no other case lies between them.
+// CHECK-LABEL: cir.func @fold_within_case
+// CHECK: %[[INIT:.*]] = cir.const #cir.int<119>
+// CHECK-NOT: cir.load
+// CHECK: cir.call @use(%[[INIT]])
+cir.func @fold_within_case(%c: !s32i) {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  cir.switch(%c : !s32i) {
+    cir.case(equal, [#cir.int<0> : !s32i]) {
+      %init = cir.const #cir.int<119> : !s32i
+      cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+      %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+      cir.call @use(%value) : (!s32i) -> ()
+      cir.break
+    }
+    cir.case(equal, [#cir.int<1> : !s32i]) {
+      cir.call @use(%c) : (!s32i) -> ()
+      cir.yield
+    }
+    cir.yield
+  }
+  cir.return
 }
