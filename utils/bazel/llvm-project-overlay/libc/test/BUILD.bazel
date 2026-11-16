@@ -23,7 +23,7 @@ libc_release_library(
     name = "libc_release_test",
     libc_functions = [
         "//libc:acosf",
-        "//libc:read",
+        "//libc/src/unistd:read",
     ],
     weak_symbols = [
         "read",

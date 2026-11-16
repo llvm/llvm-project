@@ -1848,12 +1848,14 @@ module std {
       header "__optional/optional.h"
       export std.iterator.bounded_iter
       export std.iterator.capacity_aware_iterator
+      export std.iterator.static_packed_bounded_iter
       export std.utility.swap
     }
     module optional_ref {
       header "__optional/optional_ref.h"
       export std.iterator.bounded_iter
       export std.iterator.capacity_aware_iterator
+      export std.iterator.static_packed_bounded_iter
       export std.utility.swap
     }
     module swap { header "__optional/swap.h" }
@@ -2406,11 +2408,6 @@ module std {
         header "__pstl/backends/default.h"
         export std_core.utility_core.empty
       }
-      module libdispatch {
-        header "__pstl/backends/libdispatch.h"
-        export std.pstl.cpu_algos
-        export std_core.utility_core.empty
-      }
       module serial {
         header "__pstl/backends/serial.h"
         export std_core.utility_core.empty
@@ -2421,6 +2418,9 @@ module std {
         }
         module basis {
           header "__pstl/backends/statpart/basis.h"
+        }
+        module decoupled_lookback {
+          header "__pstl/backends/statpart/decoupled_lookback.h"
         }
         module fill {
           header "__pstl/backends/statpart/fill.h"
@@ -2467,6 +2467,9 @@ module std {
         module transform {
           header "__pstl/backends/statpart/transform.h"
         }
+        module transform_inclusive_scan {
+          header "__pstl/backends/statpart/transform_inclusive_scan.h"
+        }
         module transform_reduce {
           header "__pstl/backends/statpart/transform_reduce.h"
         }
@@ -2477,73 +2480,6 @@ module std {
           header "__pstl/backends/statpart/uninitialized_move.h"
         }
         header "__pstl/backends/statpart.h"
-      }
-      module std_thread {
-        header "__pstl/backends/std_thread.h"
-        export std.pstl.cpu_algos
-        export std_core.utility_core.empty
-      }
-    }
-    module cpu_algos {
-      module any_of {
-        header "__pstl/cpu_algos/any_of.h"
-      }
-      module cpu_traits {
-        header "__pstl/cpu_algos/cpu_traits.h"
-      }
-      module fill {
-        header "__pstl/cpu_algos/fill.h"
-        export std_core.utility_core.empty
-      }
-      module find_end {
-        header "__pstl/cpu_algos/find_end.h"
-      }
-      module find_if {
-        header "__pstl/cpu_algos/find_if.h"
-      }
-      module for_each {
-        header "__pstl/cpu_algos/for_each.h"
-        export std_core.utility_core.empty
-      }
-      module is_heap_until {
-        header "__pstl/cpu_algos/is_heap_until.h"
-      }
-      module merge {
-        header "__pstl/cpu_algos/merge.h"
-      }
-      module min_element {
-        header "__pstl/cpu_algos/min_element.h"
-      }
-      module minmax_element {
-        header "__pstl/cpu_algos/minmax_element.h"
-      }
-      module mismatch {
-        header "__pstl/cpu_algos/mismatch.h"
-      }
-      module reverse {
-        header "__pstl/cpu_algos/reverse.h"
-      }
-      module search {
-        header "__pstl/cpu_algos/search.h"
-      }
-      module search_n {
-        header "__pstl/cpu_algos/search_n.h"
-      }
-      module stable_sort {
-        header "__pstl/cpu_algos/stable_sort.h"
-        export std_core.utility_core.empty
-      }
-      module swap_ranges {
-        header "__pstl/cpu_algos/swap_ranges.h"
-      }
-      module transform {
-        header "__pstl/cpu_algos/transform.h"
-      }
-      module transform_reduce {
-        header "__pstl/cpu_algos/transform_reduce.h"
-      }
-      module uninitialized_algorithms {
-        header "__pstl/cpu_algos/uninitialized_algorithms.h"
       }
     }
     module dispatch           { header "__pstl/dispatch.h" }

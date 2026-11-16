@@ -474,6 +474,11 @@ struct __sanitizer_file_handle {
   int handle_type;
   unsigned char f_handle[1];  // variable sized
 };
+
+struct __sanitizer_FTW {
+  int base;
+  int level;
+};
 #  endif
 
 #  if SANITIZER_APPLE || SANITIZER_HAIKU

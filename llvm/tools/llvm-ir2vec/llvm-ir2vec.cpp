@@ -67,7 +67,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -402,7 +401,6 @@ int main(int argc, char **argv) {
     InitializeAllTargetMCs();
     InitializeAllAsmParsers();
     InitializeAllAsmPrinters();
-    static codegen::RegisterCodeGenFlags CGF;
 
     if (Error Err = mir2vec::processModule(LibraryOptions, InputFilename, OS)) {
       handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EIB) {

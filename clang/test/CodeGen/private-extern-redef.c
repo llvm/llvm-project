@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-darwin-apple -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-darwin-apple -emit-llvm -o - %s | FileCheck %s %}
 
 __private_extern__ const int I;
 __private_extern__ const int J = 927;

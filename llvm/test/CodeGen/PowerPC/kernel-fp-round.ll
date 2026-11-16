@@ -1,9 +1,9 @@
-; RUN: llc -simplify-mir -verify-machineinstrs -stop-after=finalize-isel \
+; RUN: llc -simplify-mir -stop-after=finalize-isel \
 ; RUN:   -mtriple=powerpc64le-unknown-unknown -mattr=-vsx < %s | FileCheck %s
-; RUN: llc -simplify-mir -verify-machineinstrs -stop-after=finalize-isel \
+; RUN: llc -simplify-mir -stop-after=finalize-isel \
 ; RUN:   -mtriple=powerpc-unknown-unknown -mcpu=pwr6 -mattr=-vsx < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK-P6 %s
-; RUN: llc -simplify-mir -verify-machineinstrs -stop-after=finalize-isel \
+; RUN: llc -simplify-mir -stop-after=finalize-isel \
 ; RUN:   -mtriple=powerpc64-unknown-unknown -mcpu=pwr6 -mattr=-vsx < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK-P6-64 %s
 

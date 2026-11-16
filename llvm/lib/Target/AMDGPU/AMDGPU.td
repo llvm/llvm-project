@@ -541,6 +541,9 @@ def HasSignedDotInsts : Predicate<"Subtarget->hasDot1Insts() || Subtarget->hasDo
 
 def NotHasIEEEMinimumMaximumInsts : Predicate<"!Subtarget->hasIEEEMinimumMaximumInsts()">;
 
+def HasAnyBVHInsts : Predicate<"Subtarget->hasAnyBVHInsts()">,
+  AssemblerPredicate<(any_of FeatureBVHRayTracingInsts, FeatureBVHDualAndBVH8Insts)>;
+
 def HasAnyPackedFP32Ops : Predicate<"Subtarget->hasAnyPackedFP32Ops()">,
   AssemblerPredicate<(any_of FeaturePackedFP32Ops, FeaturePackedFP32SingleSGPROps)>;
 

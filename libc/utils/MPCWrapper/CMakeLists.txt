@@ -1,8 +1,8 @@
 if(LIBC_TESTS_CAN_USE_MPC)
   add_library(libc.utils.MPCWrapper STATIC
-    MPCUtils.cpp
-    MPCUtils.h
-    mpc_inc.h
+      MPCUtils.cpp
+      MPCUtils.h
+      mpc_inc.h
   )
   _get_common_test_compile_options(compile_options "" "")
   list(REMOVE_ITEM compile_options "-ffreestanding")
@@ -17,6 +17,7 @@ if(LIBC_TESTS_CAN_USE_MPC)
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.complex_type
+    libc.src.__support.macros.config
     libc.test.UnitTest.FPTestHelpers
     libc.test.UnitTest.LibcTest
   )

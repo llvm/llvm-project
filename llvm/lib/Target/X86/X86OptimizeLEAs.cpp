@@ -520,9 +520,6 @@ bool X86OptimizeLEAsImpl::removeRedundantAddrCalc(MemOpMap &LEAs) {
              "Instruction positioning is broken");
     }
 
-    // Since we can possibly extend register lifetime, clear kill flags.
-    MRI->clearKillFlags(DefMI->getOperand(0).getReg());
-
     ++NumSubstLEAs;
     LLVM_DEBUG(dbgs() << "OptimizeLEAs: Candidate to replace: "; MI.dump(););
 
@@ -654,9 +651,6 @@ bool X86OptimizeLEAsImpl::removeRedundantLEAs(MemOpMap &LEAs) {
           else if (!Op.isJTI())
             Op.setOffset(Op.getOffset() + AddrDispShift);
         }
-
-        // Since we can possibly extend register lifetime, clear kill flags.
-        MRI->clearKillFlags(FirstVReg);
 
         ++NumRedundantLEAs;
         LLVM_DEBUG(dbgs() << "OptimizeLEAs: Remove redundant LEA: ";

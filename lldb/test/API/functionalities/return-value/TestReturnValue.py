@@ -19,7 +19,7 @@ class ReturnValueTestCase(TestBase):
         )
 
     def affected_by_pr44132(self):
-        return self.getArchitecture() in ["aarch64", "arm"] and self.getPlatform() in [
+        return self.getArchitecture() == "arm" and self.getPlatform() in [
             "freebsd",
             "linux",
         ]
