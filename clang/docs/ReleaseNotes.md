@@ -859,6 +859,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - `-Wunsequenced` now diagnoses unsequenced volatile accesses.
 
+- Added `-Wkcfi-unprototyped-call`, which warns on indirect calls through a
+  function type without a prototype (e.g. pre-C23 `int (*)()`) under
+  `-fsanitize=kcfi`, since such calls aren't checked.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
