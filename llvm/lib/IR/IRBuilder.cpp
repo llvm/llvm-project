@@ -1444,8 +1444,10 @@ CallInst *IRBuilderBase::CreateRangeAssumption(Value *Val,
                                                   getInt(Range.getUpper())}));
 }
 
-Value *IRBuilderBase::CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                                const Twine &Name, GEPNoWrapFlags NW) {
+Value *IRBuilderBase::CreateGEP(Type *Ty, Value *OrigPtr,
+                                ArrayRef<Value *> IdxList, const Twine &Name,
+                                GEPNoWrapFlags NW) {
+  Value *Ptr = OrigPtr;
   const DataLayout &DL = getDataLayout();
   if (auto *V = Folder.FoldGEP(DL, Ty, Ptr, IdxList, NW))
     return V;
@@ -1495,6 +1497,10 @@ Value *IRBuilderBase::CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
 
     Ptr = CreateScaledPtrAdd(Ptr, Stride, Op, Name, NW);
   }
+
+  // Make sure to always generate at least one GEP.
+  if (Ptr == OrigPtr)
+    return CreatePtrAddWithUnsignedOffset(Ptr, 0, Name, NW);
   return Ptr;
 }
 

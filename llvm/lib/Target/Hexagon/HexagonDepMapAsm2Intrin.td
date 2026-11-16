@@ -4092,3 +4092,323 @@ def: Pat<(int_hexagon_V6_vsubuwwsat_dv HvxWR:$src1, HvxWR:$src2),
          (V6_vsubuwwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV83, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsubuwwsat_dv_128B HvxWR:$src1, HvxWR:$src2),
          (V6_vsubuwwsat_dv HvxWR:$src1, HvxWR:$src2)>, Requires<[UseHVXV83, UseHVX128B]>;
+def: Pat<(int_hexagon_LX_abs_uh HlxLR:$src1),
+         (LX_abs_uh HlxLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_abs_uh_sat HlxLR:$src1),
+         (LX_abs_uh_sat HlxLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_abs_uhp HlxLLR:$src1),
+         (LX_abs_uhp HlxLLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_abs_uhp_sat HlxLLR:$src1),
+         (LX_abs_uhp_sat HlxLLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_abs_uw HlxLLR:$src1),
+         (LX_abs_uw HlxLLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_abs_uw_sat HlxLLR:$src1),
+         (LX_abs_uw_sat HlxLLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_absdiff_h HlxLR:$src1, HlxLR:$src2),
+         (LX_absdiff_h HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_absdiff_uh HlxLR:$src1, HlxLR:$src2),
+         (LX_absdiff_uh HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_absdiff_uw HlxLLR:$src1, HlxLLR:$src2),
+         (LX_absdiff_uw HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_absdiff_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_absdiff_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_h HlxLR:$src1, HlxLR:$src2),
+         (LX_add_h HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_h_sat HlxLR:$src1, HlxLR:$src2),
+         (LX_add_h_sat HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_hp HlxLLR:$src1, HlxLLR:$src2),
+         (LX_add_hp HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_hp_sat HlxLLR:$src1, HlxLLR:$src2),
+         (LX_add_hp_sat HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_uh_sat HlxLR:$src1, HlxLR:$src2),
+         (LX_add_uh_sat HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_uhh_sat HlxLR:$src1, HlxLR:$src2),
+         (LX_add_uhh_sat HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_uhp_h_sat HlxLLR:$src1, HlxLLR:$src2),
+         (LX_add_uhp_h_sat HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_uhp_sat HlxLLR:$src1, HlxLLR:$src2),
+         (LX_add_uhp_sat HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_uw_sat HlxLLR:$src1, HlxLLR:$src2),
+         (LX_add_uw_sat HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_uw_w_sat HlxLLR:$src1, HlxLLR:$src2),
+         (LX_add_uw_w_sat HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_add_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_w_sat HlxLLR:$src1, HlxLLR:$src2),
+         (LX_add_w_sat HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_wuh HlxLR:$src1, HlxLR:$src2),
+         (LX_add_wuh HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_wwh HlxLLR:$src1, HlxLR:$src2),
+         (LX_add_wwh HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_add_wwuh HlxLLR:$src1, HlxLR:$src2),
+         (LX_add_wwuh HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_and HlxLR:$src1, HlxLR:$src2),
+         (LX_and HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_and_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_and_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_andn HlxLR:$src1, HlxLR:$src2),
+         (LX_andn HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_andn_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_andn_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_assign HlxLR:$src1),
+         (LX_assign HlxLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_assign_r IntRegs:$src1),
+         (LX_assign_r IntRegs:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_assign_rw IntRegs:$src1),
+         (LX_assign_rw IntRegs:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_assign_s s5_0ImmPred_timm:$src1),
+         (LX_assign_s s5_0ImmPred_timm:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_assign_u u5_0ImmPred_timm:$src1),
+         (LX_assign_u u5_0ImmPred_timm:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_assign_w HlxLLR:$src1),
+         (LX_assign_w HlxLLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_avg_h HlxLR:$src1, HlxLR:$src2),
+         (LX_avg_h HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_avg_h_rnd HlxLR:$src1, HlxLR:$src2),
+         (LX_avg_h_rnd HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_avg_uh HlxLR:$src1, HlxLR:$src2),
+         (LX_avg_uh HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_avg_uh_rnd HlxLR:$src1, HlxLR:$src2),
+         (LX_avg_uh_rnd HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_avg_uw HlxLLR:$src1, HlxLLR:$src2),
+         (LX_avg_uw HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_avg_uw_rnd HlxLLR:$src1, HlxLLR:$src2),
+         (LX_avg_uw_rnd HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_avg_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_avg_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_avg_w_rnd HlxLLR:$src1, HlxLLR:$src2),
+         (LX_avg_w_rnd HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_cmp_gt_h HlxLR:$src1, HlxLR:$src2),
+         (LX_cmp_gt_h HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_cmp_gt_hp HlxLLR:$src1, HlxLLR:$src2),
+         (LX_cmp_gt_hp HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_cmp_gt_uh HlxLR:$src1, HlxLR:$src2),
+         (LX_cmp_gt_uh HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_cmp_gt_uhp HlxLLR:$src1, HlxLLR:$src2),
+         (LX_cmp_gt_uhp HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_cmp_gt_uw HlxLLR:$src1, HlxLLR:$src2),
+         (LX_cmp_gt_uw HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_cmp_gt_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_cmp_gt_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_combine_w HlxLR:$src1, HlxLR:$src2),
+         (LX_combine_w HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_conv_b_h_hi HlxLR:$src1, HlxLR:$src2),
+         (LX_conv_b_h_hi HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_conv_b_h_lo HlxLR:$src1, HlxLR:$src2),
+         (LX_conv_b_h_lo HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_conv_h_b_hi HlxLR:$src1),
+         (LX_conv_h_b_hi HlxLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_conv_h_b_lo HlxLR:$src1),
+         (LX_conv_h_b_lo HlxLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_conv_uw_uh HlxLR:$src1),
+         (LX_conv_uw_uh HlxLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_conv_w_h HlxLR:$src1),
+         (LX_conv_w_h HlxLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_hi HlxLLR:$src1),
+         (LX_hi HlxLLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_lo HlxLLR:$src1),
+         (LX_lo HlxLLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_lut4 HlxLR:$src1, DoubleRegs:$src2),
+         (LX_lut4 HlxLR:$src1, DoubleRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_lut4_mask HlxLR:$src1, DoubleRegs:$src2),
+         (LX_lut4_mask HlxLR:$src1, DoubleRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_lut4_sh HlxLR:$src1, DoubleRegs:$src2),
+         (LX_lut4_sh HlxLR:$src1, DoubleRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_lut4_sh_neg HlxLR:$src1, DoubleRegs:$src2),
+         (LX_lut4_sh_neg HlxLR:$src1, DoubleRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_max_h HlxLR:$src1, HlxLR:$src2),
+         (LX_max_h HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_max_hp HlxLLR:$src1, HlxLLR:$src2),
+         (LX_max_hp HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_max_uh HlxLR:$src1, HlxLR:$src2),
+         (LX_max_uh HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_max_uhp HlxLLR:$src1, HlxLLR:$src2),
+         (LX_max_uhp HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_max_uw HlxLLR:$src1, HlxLLR:$src2),
+         (LX_max_uw HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_max_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_max_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_min_h HlxLR:$src1, HlxLR:$src2),
+         (LX_min_h HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_min_hp HlxLLR:$src1, HlxLLR:$src2),
+         (LX_min_hp HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_min_uh HlxLR:$src1, HlxLR:$src2),
+         (LX_min_uh HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_min_uhp HlxLLR:$src1, HlxLLR:$src2),
+         (LX_min_uhp HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_min_uw HlxLLR:$src1, HlxLLR:$src2),
+         (LX_min_uw HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_min_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_min_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpa_uwuhuw_si HlxLR:$src1, HlxLLR:$src2, HlxLLR:$src3),
+         (LX_mpa_uwuhuw_si HlxLR:$src1, HlxLLR:$src2, HlxLLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpa_wh HlxLLR:$src1, HlxLR:$src2, HlxLR:$src3),
+         (LX_mpa_wh HlxLLR:$src1, HlxLR:$src2, HlxLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpa_wh_hi HlxLR:$src1, HlxLR:$src2, HlxLLR:$src3),
+         (LX_mpa_wh_hi HlxLR:$src1, HlxLR:$src2, HlxLLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpa_whuh HlxLLR:$src1, HlxLR:$src2, HlxLR:$src3),
+         (LX_mpa_whuh HlxLLR:$src1, HlxLR:$src2, HlxLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpa_whuh_lo HlxLR:$src1, HlxLR:$src2, HlxLLR:$src3),
+         (LX_mpa_whuh_lo HlxLR:$src1, HlxLR:$src2, HlxLLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpa_wuh HlxLLR:$src1, HlxLR:$src2, HlxLR:$src3),
+         (LX_mpa_wuh HlxLLR:$src1, HlxLR:$src2, HlxLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpa_wuh_hi HlxLR:$src1, HlxLR:$src2, HlxLLR:$src3),
+         (LX_mpa_wuh_hi HlxLR:$src1, HlxLR:$src2, HlxLLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpa_wuh_lo HlxLR:$src1, HlxLR:$src2, HlxLLR:$src3),
+         (LX_mpa_wuh_lo HlxLR:$src1, HlxLR:$src2, HlxLLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpa_wuhw_si HlxLR:$src1, HlxLLR:$src2, HlxLLR:$src3),
+         (LX_mpa_wuhw_si HlxLR:$src1, HlxLLR:$src2, HlxLLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpar_uwuhuw_si HlxLR:$src1, HlxLLR:$src2, IntRegs:$src3),
+         (LX_mpar_uwuhuw_si HlxLR:$src1, HlxLLR:$src2, IntRegs:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpar_wh HlxLLR:$src1, HlxLR:$src2, IntRegs:$src3),
+         (LX_mpar_wh HlxLLR:$src1, HlxLR:$src2, IntRegs:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpar_wh_hi HlxLR:$src1, IntRegs:$src2, HlxLLR:$src3),
+         (LX_mpar_wh_hi HlxLR:$src1, IntRegs:$src2, HlxLLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpar_whuh HlxLLR:$src1, HlxLR:$src2, IntRegs:$src3),
+         (LX_mpar_whuh HlxLLR:$src1, HlxLR:$src2, IntRegs:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpar_whuh_lo HlxLR:$src1, IntRegs:$src2, HlxLLR:$src3),
+         (LX_mpar_whuh_lo HlxLR:$src1, IntRegs:$src2, HlxLLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpar_wuh HlxLLR:$src1, HlxLR:$src2, IntRegs:$src3),
+         (LX_mpar_wuh HlxLLR:$src1, HlxLR:$src2, IntRegs:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpar_wuh_hi HlxLR:$src1, IntRegs:$src2, HlxLLR:$src3),
+         (LX_mpar_wuh_hi HlxLR:$src1, IntRegs:$src2, HlxLLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpar_wuh_lo HlxLR:$src1, IntRegs:$src2, HlxLLR:$src3),
+         (LX_mpar_wuh_lo HlxLR:$src1, IntRegs:$src2, HlxLLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpar_wuhw_si HlxLR:$src1, HlxLLR:$src2, IntRegs:$src3),
+         (LX_mpar_wuhw_si HlxLR:$src1, HlxLLR:$src2, IntRegs:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpy_uw_uh HlxLR:$src1, HlxLR:$src2),
+         (LX_mpy_uw_uh HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpy_w_h HlxLR:$src1, HlxLR:$src2),
+         (LX_mpy_w_h HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpy_w_huh HlxLR:$src1, HlxLR:$src2),
+         (LX_mpy_w_huh HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpyr_uw_uh HlxLR:$src1, IntRegs:$src2),
+         (LX_mpyr_uw_uh HlxLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpyr_w_h HlxLR:$src1, IntRegs:$src2),
+         (LX_mpyr_w_h HlxLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mpyr_w_huh HlxLR:$src1, IntRegs:$src2),
+         (LX_mpyr_w_huh HlxLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_mux_h HlxLR:$src1, HlxLR:$src2, HlxLR:$src3),
+         (LX_mux_h HlxLR:$src1, HlxLR:$src2, HlxLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_navg_h HlxLR:$src1, HlxLR:$src2),
+         (LX_navg_h HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_navg_uh HlxLR:$src1, HlxLR:$src2),
+         (LX_navg_uh HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_navg_uw HlxLLR:$src1, HlxLLR:$src2),
+         (LX_navg_uw HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_navg_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_navg_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_not HlxLR:$src1),
+         (LX_not HlxLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_not_w HlxLLR:$src1),
+         (LX_not_w HlxLLR:$src1)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_or HlxLR:$src1, HlxLR:$src2),
+         (LX_or HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_or_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_or_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_orn HlxLR:$src1, HlxLR:$src2),
+         (LX_orn HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_orn_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_orn_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shr_h HlxLR:$src1, HlxLR:$src2),
+         (LX_shr_h HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shr_h_w_rnd_sat HlxLLR:$src1, HlxLR:$src2),
+         (LX_shr_h_w_rnd_sat HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shr_h_w_sat HlxLLR:$src1, HlxLR:$src2),
+         (LX_shr_h_w_sat HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shr_h_w_uh HlxLLR:$src1, HlxLR:$src2),
+         (LX_shr_h_w_uh HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shr_uh_uh HlxLR:$src1, HlxLR:$src2),
+         (LX_shr_uh_uh HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shr_uh_uw_rnd_sat HlxLLR:$src1, HlxLR:$src2),
+         (LX_shr_uh_uw_rnd_sat HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shr_uh_uw_sat HlxLLR:$src1, HlxLR:$src2),
+         (LX_shr_uh_uw_sat HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shr_uh_w_rnd_sat HlxLLR:$src1, HlxLR:$src2),
+         (LX_shr_uh_w_rnd_sat HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shr_uh_w_sat HlxLLR:$src1, HlxLR:$src2),
+         (LX_shr_uh_w_sat HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shr_uw_uw HlxLLR:$src1, HlxLR:$src2),
+         (LX_shr_uw_uw HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shr_w_w HlxLLR:$src1, HlxLR:$src2),
+         (LX_shr_w_w HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shra_h_h HlxLR:$src1, HlxLR:$src2, HlxLR:$src3),
+         (LX_shra_h_h HlxLR:$src1, HlxLR:$src2, HlxLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shra_h_uh HlxLR:$src1, HlxLR:$src2, HlxLR:$src3),
+         (LX_shra_h_uh HlxLR:$src1, HlxLR:$src2, HlxLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shra_w_uw HlxLLR:$src1, HlxLLR:$src2, HlxLR:$src3),
+         (LX_shra_w_uw HlxLLR:$src1, HlxLLR:$src2, HlxLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shra_w_w HlxLLR:$src1, HlxLLR:$src2, HlxLR:$src3),
+         (LX_shra_w_w HlxLLR:$src1, HlxLLR:$src2, HlxLR:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrar_h_h HlxLR:$src1, HlxLR:$src2, IntRegs:$src3),
+         (LX_shrar_h_h HlxLR:$src1, HlxLR:$src2, IntRegs:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrar_h_uh HlxLR:$src1, HlxLR:$src2, IntRegs:$src3),
+         (LX_shrar_h_uh HlxLR:$src1, HlxLR:$src2, IntRegs:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrar_w_uw HlxLLR:$src1, HlxLLR:$src2, IntRegs:$src3),
+         (LX_shrar_w_uw HlxLLR:$src1, HlxLLR:$src2, IntRegs:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrar_w_w HlxLLR:$src1, HlxLLR:$src2, IntRegs:$src3),
+         (LX_shrar_w_w HlxLLR:$src1, HlxLLR:$src2, IntRegs:$src3)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrr_h HlxLR:$src1, IntRegs:$src2),
+         (LX_shrr_h HlxLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrr_h_w_rnd_sat HlxLLR:$src1, IntRegs:$src2),
+         (LX_shrr_h_w_rnd_sat HlxLLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrr_h_w_sat HlxLLR:$src1, IntRegs:$src2),
+         (LX_shrr_h_w_sat HlxLLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrr_h_w_uh HlxLLR:$src1, IntRegs:$src2),
+         (LX_shrr_h_w_uh HlxLLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrr_uh_uh HlxLR:$src1, IntRegs:$src2),
+         (LX_shrr_uh_uh HlxLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrr_uh_uw_rnd_sat HlxLLR:$src1, IntRegs:$src2),
+         (LX_shrr_uh_uw_rnd_sat HlxLLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrr_uh_uw_sat HlxLLR:$src1, IntRegs:$src2),
+         (LX_shrr_uh_uw_sat HlxLLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrr_uh_w_rnd_sat HlxLLR:$src1, IntRegs:$src2),
+         (LX_shrr_uh_w_rnd_sat HlxLLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrr_uh_w_sat HlxLLR:$src1, IntRegs:$src2),
+         (LX_shrr_uh_w_sat HlxLLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrr_uw_uw HlxLLR:$src1, IntRegs:$src2),
+         (LX_shrr_uw_uw HlxLLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_shrr_w_w HlxLLR:$src1, IntRegs:$src2),
+         (LX_shrr_w_w HlxLLR:$src1, IntRegs:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_h HlxLR:$src1, HlxLR:$src2),
+         (LX_sub_h HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_h_sat HlxLR:$src1, HlxLR:$src2),
+         (LX_sub_h_sat HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_hp HlxLLR:$src1, HlxLLR:$src2),
+         (LX_sub_hp HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_hp_sat HlxLLR:$src1, HlxLLR:$src2),
+         (LX_sub_hp_sat HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_ilog2_h HlxLR:$src1, u4_0ImmPred_timm:$src2),
+         (LX_sub_ilog2_h HlxLR:$src1, u4_0ImmPred_timm:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_ilog2_uh HlxLR:$src1, u4_0ImmPred_timm:$src2),
+         (LX_sub_ilog2_uh HlxLR:$src1, u4_0ImmPred_timm:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_ilog2_uw HlxLLR:$src1, u5_0ImmPred_timm:$src2),
+         (LX_sub_ilog2_uw HlxLLR:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_ilog2_w HlxLLR:$src1, u5_0ImmPred_timm:$src2),
+         (LX_sub_ilog2_w HlxLLR:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_uh_sat HlxLR:$src1, HlxLR:$src2),
+         (LX_sub_uh_sat HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_uhh_sat HlxLR:$src1, HlxLR:$src2),
+         (LX_sub_uhh_sat HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_uhp_h_sat HlxLLR:$src1, HlxLLR:$src2),
+         (LX_sub_uhp_h_sat HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_uhp_sat HlxLLR:$src1, HlxLLR:$src2),
+         (LX_sub_uhp_sat HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_uw_sat HlxLLR:$src1, HlxLLR:$src2),
+         (LX_sub_uw_sat HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_uw_w_sat HlxLLR:$src1, HlxLLR:$src2),
+         (LX_sub_uw_w_sat HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_sub_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_w_sat HlxLLR:$src1, HlxLLR:$src2),
+         (LX_sub_w_sat HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_wuh HlxLR:$src1, HlxLR:$src2),
+         (LX_sub_wuh HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_wwh HlxLLR:$src1, HlxLR:$src2),
+         (LX_sub_wwh HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_sub_wwuh HlxLLR:$src1, HlxLR:$src2),
+         (LX_sub_wwuh HlxLLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_xor HlxLR:$src1, HlxLR:$src2),
+         (LX_xor HlxLR:$src1, HlxLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;
+def: Pat<(int_hexagon_LX_xor_w HlxLLR:$src1, HlxLLR:$src2),
+         (LX_xor_w HlxLLR:$src1, HlxLLR:$src2)>, Requires<[HasV85, UseHLX, UseHLX2048B]>;

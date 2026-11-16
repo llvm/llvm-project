@@ -2676,7 +2676,7 @@ def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
 def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
     MetaVarName<"<pathname>">,
-    HelpText<"Use memory profile for profile-guided memory optimization">,
+    HelpText<"Use memory profile for profile-guided memory optimization (MemPGO)">,
     MarshallingInfoString<CodeGenOpts<"MemoryProfileUsePath">>;
 
 defm copyprof : BoolFOption<"copyprof",
@@ -3915,6 +3915,11 @@ def fmodules_validate_input_files_content:
 def fno_modules_validate_input_files_content:
   Flag <["-"], "fno_modules-validate-input-files-content">,
   Group<f_Group>;
+def fpch_base_dir_is_cwd : Flag<["-"], "fpch-base-dir-is-cwd">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Serialize precompiled header input paths relative to the current "
+           "working directory">,
+  MarshallingInfoFlag<HeaderSearchOpts<"PCHBaseDirIsCwd">>;
 def fpch_validate_input_files_content:
   Flag <["-"], "fpch-validate-input-files-content">,
   Group<f_Group>,
@@ -5170,7 +5175,7 @@ defm partition_static_data_sections: BoolFOption<"partition-static-data-sections
   CodeGenOpts<"PartitionStaticDataSections">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " partition static data sections using PGO profile information and MemProf (x86 and aarch64 ELF). See LLVM MemProf doc for usage.">>;
+  BothFlags<[], [ClangOption], " partition static data sections using MemPGO profiles with fall back to PGO (x86 and aarch64 ELF). See LLVM MemPGO doc for usage.">>;
 
 defm strict_return : BoolFOption<"strict-return",
   CodeGenOpts<"StrictReturn">, DefaultTrue,
@@ -6361,15 +6366,14 @@ def mrelax_all : Flag<["-"], "mrelax-all">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"(integrated-as) Relax all machine instructions">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxAll">>;
-def mincremental_linker_compatible : Flag<["-"], "mincremental-linker-compatible">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+defm incremental_linker_compatible : BoolMOption<"incremental-linker-compatible",
+  CodeGenOpts<"IncrementalLinkerCompatible">,
   Default<"T.isDefaultIncrementalLinkerCompatibleByDefault()">,
-  HelpText<"(integrated-as) Emit an object file which can be used with an incremental linker">,
-  MarshallingInfoFlag<CodeGenOpts<"IncrementalLinkerCompatible">>;
-def mno_incremental_linker_compatible : Flag<["-"], "mno-incremental-linker-compatible">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
-  HelpText<"(integrated-as) Emit an object file which cannot be used with an incremental linker">,
-  MarshallingInfoNegativeFlag<CodeGenOpts<"IncrementalLinkerCompatible">>;
+  PosFlag<SetTrue, [], [],
+          "(integrated-as) Emit an object file which can be used with an incremental linker">,
+  NegFlag<SetFalse, [], [],
+          "(integrated-as) Emit an object file which cannot be used with an incremental linker">,
+  BothFlags<[], [ClangOption, CC1Option, CC1AsOption]>>;
 def mrtd : Flag<["-"], "mrtd">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Make StdCall calling convention the default">;
@@ -7318,6 +7322,12 @@ def mno_hexagon_hvx : Flag<["-"], "mno-hvx">,
 def mhexagon_hvx_length_EQ : Joined<["-"], "mhvx-length=">,
   Group<m_hexagon_Features_HVX_Group>, HelpText<"Set Hexagon Vector Length">,
   Values<"64B,128B">;
+def mhexagon_hmx : Flag<["-"], "mhmx">,
+  Group<m_hexagon_Features_Group>,
+  HelpText<"Enable Hexagon Matrix eXtensions (HMX)">;
+def mno_hexagon_hmx : Flag<["-"], "mno-hmx">,
+  Group<m_hexagon_Features_Group>,
+  HelpText<"Disable Hexagon Matrix eXtensions (HMX)">;
 def mhexagon_hvx_qfloat : Flag<["-"], "mhvx-qfloat">,
   Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon HVX QFloat instructions">;
@@ -7373,6 +7383,12 @@ def mno_nvs : Flag<["-"], "mno-nvs">, Group<m_hexagon_Features_Group>,
   HelpText<"Disable generation of new-value stores">;
 def mcabac: Flag<["-"], "mcabac">, Group<m_hexagon_Features_Group>,
   HelpText<"Enable CABAC instructions">;
+def mhexagon_hlx : Flag<["-"], "mhlx">, Group<m_hexagon_Features_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable Hexagon eLementwise eXtensions">;
+def mno_hexagon_hlx : Flag<["-"], "mno-hlx">, Group<m_hexagon_Features_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable Hexagon eLementwise eXtensions">;
 
 // SPARC feature flags
 let Flags = [TargetSpecific] in {
@@ -7398,6 +7414,10 @@ def mfix_gr712rc : Flag<["-"], "mfix-gr712rc">, Group<m_sparc_Features_Group>,
   HelpText<"Enable workarounds for GR712RC errata">;
 def mfix_ut700 : Flag<["-"], "mfix-ut700">, Group<m_sparc_Features_Group>,
   HelpText<"Enable workarounds for UT700 errata">;
+def mapp_regs : Flag<["-"], "mapp-regs">, Group<m_sparc_Features_Group>,
+  HelpText<"Allow use of the G2, G3 and G4 registers (default)">;
+def mno_app_regs : Flag<["-"], "mno-app-regs">, Group<m_sparc_Features_Group>,
+  HelpText<"Reserve the G2, G3 and G4 registers">;
 foreach i = 1 ... 7 in
   def ffixed_g#i : Flag<["-"], "ffixed-g"#i>, Group<m_sparc_Features_Group>,
     HelpText<"Reserve the G"#i#" register (SPARC only)">;
@@ -8187,6 +8207,10 @@ def reloc_section_sym : Joined<["--"], "reloc-section-sym=">,
   NormalizedValuesScope<"llvm::RelocSectionSymType">,
   NormalizedValues<["All", "Internal", "None"]>,
   MarshallingInfoEnum<CodeGenOpts<"RelocSectionSym">, "All">;
+def grelocatable_dwarf : Flag<["-"], "grelocatable-dwarf">,
+  HelpText<"Relocate offsets from one DWARF section into another in Mach-O "
+           "object files">,
+  MarshallingInfoFlag<CodeGenOpts<"MachORelocatableDwarf">>;
 // The leading 'g' is misleading. This is an unwind tables option, not
 // a debug option. But uses this name for gnu compatibility.
 def gsframe : Flag<["--"], "gsframe">,
@@ -10176,11 +10200,11 @@ def fspv_extension_EQ
     : Joined<["-"], "fspv-extension=">,
       Group<dxc_Group>,
       HelpText<
-          "Specify the available SPIR-V extensions. If this option is not "
-          "specified, then all extensions are available. If KHR is specified, "
-          "then all KHR extensions will be available. If DXC is specifided, "
-          "then all extensions implemented by the DirectX Shader compiler will "
-          "be available. This option is useful for moving from DXC to Clang.">;
+          "Specify the available SPIR-V extensions. If KHR is specified, then "
+          "all KHR extensions will be available. If DXC is specified, then all "
+          "extensions implemented by the DirectX Shader compiler will be "
+          "available. If all is specified, then all extensions the SPIR-V "
+          "backend supports will be available. The default behavior is DXC.">;
 def fvk_use_dx_layout
     : DXCFlag<"fvk-use-dx-layout">,
       HelpText<"Use DirectX memory layout for Vulkan resources.">;
@@ -10227,6 +10251,16 @@ def fhlsl_spv_preserve_interface
                "dead-code elimination of variables with Location or BuiltIn "
                "decorations.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvPreserveInterface">>;
+
+def fhlsl_spv_support_nonzero_base_instance
+    : Flag<["-"], "fvk-support-nonzero-base-instance">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Follow Vulkan spec to use gl_BaseInstance as the first "
+               "vertex instance, which makes SV_InstanceID = gl_InstanceIndex "
+               "- gl_BaseInstance (without this option, SV_InstanceID = "
+               "gl_InstanceIndex).">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvSupportNonzeroBaseInstance">>;
 
 def fexperimental_logical_pointer
     : Flag<["-"], "fexperimental-logical-pointer">,

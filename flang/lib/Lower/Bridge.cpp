@@ -4472,13 +4472,15 @@ private:
         std::get<Fortran::parser::Scalar<Fortran::parser::Expr>>(stmt.t));
     // Semantics already turned enumeration CASE values into ordinals.
     std::optional<Fortran::lower::SomeExpr> enumOrdinal;
-    if (const auto *derived = std::get_if<
-            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>>(&expr->u))
+    if (const auto *derived = std::get_if<Fortran::evaluate::Expr<
+            Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>>>(
+            &expr->u))
       if (const auto *spec =
               Fortran::evaluate::GetDerivedTypeSpec(derived->GetType());
           spec && Fortran::semantics::IsEnumerationType(spec->typeSymbol())) {
         enumOrdinal = Fortran::evaluate::MakeEnumerationIntCall(
-            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>{*derived});
+            Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                Fortran::common::TypeCategory::Derived>>{*derived});
         expr = &*enumOrdinal;
       }
     bool isCharSelector = isCharacterCategory(expr->GetType()->category());
@@ -4520,13 +4522,9 @@ private:
           Fortran::semantics::GetExpr(caseValue.thing);
       if (isCharSelector)
         valueList.push_back(charValue(expr));
-      else if (isLogicalSelector)
+      else
         valueList.push_back(builder->createConvert(
             loc, selectType, createFIRExpr(toLocation(), expr, stmtCtx)));
-      else {
-        valueList.push_back(builder->createIntegerConstant(
-            loc, selectType, *Fortran::evaluate::ToInt64(*expr)));
-      }
     };
     for (Fortran::lower::pft::Evaluation *e = eval.controlSuccessor; e;
          e = e->controlSuccessor) {
@@ -6566,23 +6564,38 @@ private:
     const auto &langOptions = bridge.getSemanticsContext().langOptions();
     if (langOptions.OpenMPSimd)
       return;
+    bool noOpenmp = false;
+    bool noParallelism = false;
     const auto *assumptionScopeEnd =
         &Fortran::semantics::omp::GetProgramUnit(scope).parent();
-    bool noOpenmp = false;
-    std::set<llvm::omp::Directive> absent;
+    llvm::omp::Directives absent;
     for (const auto *assumptionScope = &scope;
          !assumptionScope->IsGlobal() && assumptionScope != assumptionScopeEnd;
          assumptionScope = &assumptionScope->parent()) {
-      if (const auto *symbol = assumptionScope->symbol();
-          symbol &&
-          symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
-        noOpenmp = true;
-      const auto &directives = assumptionScope->ompAssumesAbsent();
-      absent.insert(directives.begin(), directives.end());
+      if (const auto *symbol = assumptionScope->symbol()) {
+        Fortran::common::visit(
+            [&](const auto &details) {
+              if constexpr (std::is_convertible_v<decltype(details),
+                                                  const Fortran::semantics::
+                                                      WithOmpDeclarative &>) {
+                noOpenmp |= details.ompAssumes().test(
+                    llvm::omp::Clause::OMPC_no_openmp);
+                noParallelism |= details.ompAssumes().test(
+                    llvm::omp::Clause::OMPC_no_parallelism);
+                absent |= details.ompAssumesAbsent();
+              }
+            },
+            symbol->details());
+      }
     }
-    if (!noOpenmp && absent.empty())
+    if (!noOpenmp && !noParallelism && absent.empty())
       return;
     std::string assumptions = noOpenmp ? "omp_no_openmp" : "";
+    if (noParallelism) {
+      if (!assumptions.empty())
+        assumptions += ',';
+      assumptions += "omp_no_parallelism";
+    }
     for (llvm::omp::Directive directive : absent) {
       if (!assumptions.empty())
         assumptions += ',';
@@ -6687,31 +6700,42 @@ private:
 
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;
-    for (const Fortran::lower::pft::Variable &var :
-         Fortran::lower::pft::getScopeVariableList(scope)) {
-      // Always instantiate aggregate storage blocks.
-      if (var.isAggregateStore()) {
-        instantiateVar(var, storeMap);
-        continue;
+    {
+      // Reuse the host list to avoid repeating dependency analysis.
+      Fortran::lower::pft::VariableList localVariables;
+      const Fortran::lower::pft::VariableList *variables;
+      if (funit.getHostAssoc().hasGlobalAssociations()) {
+        variables = &Fortran::lower::pft::getScopeVariableList(
+            scope, Fortran::lower::pft::getScopeVariableListMap(funit));
+      } else {
+        localVariables = Fortran::lower::pft::getScopeVariableList(scope);
+        variables = &localVariables;
       }
-      const Fortran::semantics::Symbol &sym = var.getSymbol();
-      if (funit.parentHasHostAssoc()) {
-        // Never instantiate host associated variables, as they are already
-        // instantiated from an argument tuple. Instead, just bind the symbol
-        // to the host variable, which must be in the map.
-        const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
-        if (funit.parentHostAssoc().isAssociated(ultimate)) {
-          copySymbolBinding(ultimate, sym);
+      for (const Fortran::lower::pft::Variable &var : *variables) {
+        // Always instantiate aggregate storage blocks.
+        if (var.isAggregateStore()) {
+          instantiateVar(var, storeMap);
           continue;
         }
-      }
-      if (!sym.IsFuncResult() || !funit.primaryResult) {
-        instantiateVar(var, storeMap);
-      } else if (&sym == funit.primaryResult) {
-        instantiateVar(var, storeMap);
-        primaryFuncResultStorage = getSymbolAddress(sym);
-      } else {
-        deferredFuncResultList.push_back(var);
+        const Fortran::semantics::Symbol &sym = var.getSymbol();
+        if (funit.parentHasHostAssoc()) {
+          // Never instantiate host associated variables, as they are already
+          // instantiated from an argument tuple. Instead, just bind the symbol
+          // to the host variable, which must be in the map.
+          const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+          if (funit.parentHostAssoc().isAssociated(ultimate)) {
+            copySymbolBinding(ultimate, sym);
+            continue;
+          }
+        }
+        if (!sym.IsFuncResult() || !funit.primaryResult) {
+          instantiateVar(var, storeMap);
+        } else if (&sym == funit.primaryResult) {
+          instantiateVar(var, storeMap);
+          primaryFuncResultStorage = getSymbolAddress(sym);
+        } else {
+          deferredFuncResultList.push_back(var);
+        }
       }
     }
 
@@ -7099,6 +7123,10 @@ private:
 
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
+    auto &hostAssociations = funit.getHostAssoc();
+    const bool hasGlobals = hostAssociations.hasGlobalAssociations();
+    if (hasGlobals)
+      hostAssociations.prepareGlobalBindings(funit);
     setCurrentPosition(funit.getStartingSourceLoc());
     setCurrentFunctionUnit(&funit);
     assert(visibleCrayPointerTargets.empty() &&
@@ -7132,6 +7160,8 @@ private:
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
+    if (hasGlobals)
+      hostAssociations.releaseGlobalBindings(funit);
   }
 
   /// Lower module variable definitions to fir::globalOp and OpenMP/OpenACC
@@ -7225,29 +7255,23 @@ private:
                             T, Fortran::lower::CategoryExpression>) {
             if constexpr (T::Result::category ==
                           Fortran::common::TypeCategory::Derived) {
-              if (const auto *constant =
-                      std::get_if<Fortran::evaluate::Constant<
-                          Fortran::evaluate::SomeDerived>>(&x.u))
+              if (const auto *constant = std::get_if<
+                      Fortran::evaluate::Constant<Fortran::evaluate::Type<
+                          Fortran::common::TypeCategory::Derived>>>(&x.u))
                 return Fortran::lower::mangle::mangleArrayLiteral(eleTy,
                                                                   *constant);
               fir::emitFatalError(loc,
                                   "non a constant derived type expression");
             } else {
-              return Fortran::common::visit(
-                  [&](const auto &someKind) -> std::string {
-                    using T = std::decay_t<decltype(someKind)>;
-                    using TK = typename T::Result;
-                    if (const auto *constant =
-                            std::get_if<Fortran::evaluate::Constant<TK>>(
-                                &someKind.u)) {
-                      return Fortran::lower::mangle::mangleArrayLiteral(
-                          nullptr, *constant);
-                    }
-                    fir::emitFatalError(
-                        loc, "not a Fortran::evaluate::Constant<T> expression");
-                    return {};
-                  },
-                  x.u);
+              using TK = typename T::Result;
+              if (const auto *constant =
+                      std::get_if<Fortran::evaluate::Constant<TK>>(&x.u)) {
+                return Fortran::lower::mangle::mangleArrayLiteral(nullptr,
+                                                                  *constant);
+              }
+              fir::emitFatalError(
+                  loc, "not a Fortran::evaluate::Constant<T> expression");
+              return {};
             }
           } else {
             fir::emitFatalError(loc, "unexpected expression");

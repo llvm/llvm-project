@@ -4,7 +4,6 @@
 ---
 name:            fold_16bit_subreg_1
 tracksRegLiveness: true
-registers:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: fold_16bit_subreg_1
@@ -23,7 +22,6 @@ body:             |
 ---
 name:            fold_16bit_subreg_0
 tracksRegLiveness: true
-registers:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: fold_16bit_subreg_0
@@ -42,7 +40,6 @@ body:             |
 ---
 name:            fold_16bit_subreg_3
 tracksRegLiveness: true
-registers:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: fold_16bit_subreg_3
@@ -61,7 +58,6 @@ body:             |
 ---
 name:            fold_16bit_no_subreg
 tracksRegLiveness: true
-registers:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: fold_16bit_no_subreg
@@ -81,7 +77,6 @@ body:             |
 ---
 name:            sgpr_lo16
 tracksRegLiveness: true
-registers:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: sgpr_lo16
@@ -103,7 +98,6 @@ body:             |
 ---
 name:            fold_16bit_madmix_clamp
 tracksRegLiveness: true
-registers:
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -134,7 +128,6 @@ body:             |
 ---
 name:            fold_16bit_subreg_1_clamp
 tracksRegLiveness: true
-registers:
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -164,7 +157,6 @@ body:             |
 ---
 name:            fold_16bit_subreg_2_clamp
 tracksRegLiveness: true
-registers:
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -195,7 +187,6 @@ body:             |
 ---
 name:            fold_16bit_phyreg_clamp
 tracksRegLiveness: true
-registers:
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -227,7 +218,6 @@ body:             |
 ---
 name:            fold_16bit_undef_clamp
 tracksRegLiveness: true
-registers:
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -253,7 +243,6 @@ body:             |
 ---
 name:            fold_imm16_across_reg_sequence
 tracksRegLiveness: true
-registers:
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2

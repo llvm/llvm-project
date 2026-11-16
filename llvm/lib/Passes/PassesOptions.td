@@ -55,8 +55,6 @@ defm : BoolField<"enable-loop-flatten", "false",
   "Enable the LoopFlatten Pass">;
 defm : BoolField<"enable-loop-versioning-licm", "false",
   "Enable the experimental Loop Versioning LICM pass">;
-defm : BoolField<"enable-loopinterchange", "true",
-  "Enable the LoopInterchange Pass">;
 defm : BoolField<"enable-matrix", "false",
   "Enable lowering of the matrix intrinsics">;
 defm : BoolField<"enable-merge-functions", "false",

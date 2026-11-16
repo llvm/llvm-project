@@ -233,4 +233,15 @@ TEST(HLSLSemanticStagesTest, PrimitiveIDSignaturePoints) {
   expectOnlySignaturePoints(SemanticKind::PrimitiveID, Valid);
 }
 
+// SV_IsFrontFace is written by the geometry shader and read by the pixel
+// shader. Valid on geometry outputs and pixel inputs, where it is a
+// system-generated value.
+TEST(HLSLSemanticStagesTest, IsFrontFaceSignaturePoints) {
+  const SignaturePoint Valid[] = {
+      {Triple::Geometry, IOType::Out, SemanticInterpretation::SGV},
+      {Triple::Pixel, IOType::In, SemanticInterpretation::SGV},
+  };
+  expectOnlySignaturePoints(SemanticKind::IsFrontFace, Valid);
+}
+
 } // namespace

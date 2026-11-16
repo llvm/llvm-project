@@ -597,7 +597,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t Alignment = 0) override {
     if (Size == 0)
       return nullptr;
@@ -617,18 +617,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
     }
 
     switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
+    case OL_ALLOC_TYPE_DEVICE:
       Res = cuMemAlloc(&DevicePtr, Size);
       MemAlloc = (void *)DevicePtr;
       break;
-    case TARGET_ALLOC_HOST:
+    case OL_ALLOC_TYPE_HOST:
       Res = cuMemAllocHost(&MemAlloc, Size);
       break;
-    case TARGET_ALLOC_SHARED:
+    case OL_ALLOC_TYPE_MANAGED:
       Res = cuMemAllocManaged(&DevicePtr, Size, CU_MEM_ATTACH_GLOBAL);
       MemAlloc = (void *)DevicePtr;
       break;
+    default:
+      llvm_unreachable("unexpected allocation type");
     }
 
     if (auto Err = Plugin::check(Res, "error in cuMemAlloc[Host|Managed]: %s"))
@@ -650,7 +651,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Deallocate memory on the device or related to the device.
-  Error free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, ol_alloc_type_t Kind) override {
     if (TgtPtr == nullptr)
       return Plugin::success();
 
@@ -659,14 +660,15 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     CUresult Res;
     switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
-    case TARGET_ALLOC_SHARED:
+    case OL_ALLOC_TYPE_DEVICE:
+    case OL_ALLOC_TYPE_MANAGED:
       Res = cuMemFree((CUdeviceptr)TgtPtr);
       break;
-    case TARGET_ALLOC_HOST:
+    case OL_ALLOC_TYPE_HOST:
       Res = cuMemFreeHost(TgtPtr);
       break;
+    default:
+      llvm_unreachable("unexpected allocation type");
     }
 
     return Plugin::check(Res, "error in cuMemFree[Host]: %s");
@@ -1413,7 +1415,7 @@ private:
     // Allocate a buffer to store all of the known constructor / destructor
     // functions in so we can iterate them on the device.
     auto BufferOrErr =
-        allocate(Funcs.size() * sizeof(void *), nullptr, TARGET_ALLOC_DEVICE);
+        allocate(Funcs.size() * sizeof(void *), OL_ALLOC_TYPE_DEVICE);
     if (!BufferOrErr)
       return BufferOrErr.takeError();
 
@@ -1468,7 +1470,7 @@ private:
     if (Err)
       return Err;
 
-    return free(Buffer, TARGET_ALLOC_DEVICE);
+    return free(Buffer, OL_ALLOC_TYPE_DEVICE);
   }
 
   /// Stream manager for CUDA streams.
@@ -1691,11 +1693,18 @@ struct CUDAPluginContextTy final : public PluginContextTy {
       return Plugin::error(error::ErrorCode::NOT_FOUND,
                            "cuPointerGetAttributes failed: %d", Res);
 
-    TargetAllocTy Kind = TARGET_ALLOC_DEVICE;
+    // For pointers CUDA does not know about (e.g. plain host memory), some
+    // driver versions report success but leave the attributes unset. A valid
+    // CUmemorytype is never 0.
+    if (MemType == 0)
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+
+    ol_alloc_type_t Kind = OL_ALLOC_TYPE_DEVICE;
     if (IsManaged)
-      Kind = TARGET_ALLOC_SHARED;
+      Kind = OL_ALLOC_TYPE_MANAGED;
     else if (MemType == CU_MEMORYTYPE_HOST)
-      Kind = TARGET_ALLOC_HOST;
+      Kind = OL_ALLOC_TYPE_HOST;
 
     // Ordinal is the CUDA driver ordinal (matches CUdevice); compare against
     // that rather than the offload-side device index, which can differ under
