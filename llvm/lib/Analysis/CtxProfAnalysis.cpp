@@ -38,15 +38,6 @@ cl::opt<std::string>
     UseCtxProfile("use-ctx-profile", cl::init(""), cl::Hidden,
                   cl::desc("Use the specified contextual profile file"));
 
-static cl::opt<CtxProfAnalysisPrinterPass::PrintMode> PrintLevel(
-    "ctx-profile-printer-level",
-    cl::init(CtxProfAnalysisPrinterPass::PrintMode::YAML), cl::Hidden,
-    cl::values(clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::Everything,
-                          "everything", "print everything - most verbose"),
-               clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::YAML, "yaml",
-                          "just the yaml representation of the profile")),
-    cl::desc("Verbosity level of the contextual profile printer pass."));
-
 class ProfileAnnotatorImpl final {
   friend class ProfileAnnotator;
   class BBInfo;
@@ -519,7 +510,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
 }
 
 CtxProfAnalysisPrinterPass::CtxProfAnalysisPrinterPass(raw_ostream &OS)
-    : OS(OS), Mode(PrintLevel) {}
+    : OS(OS) {}
 
 PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
                                                   ModuleAnalysisManager &MAM) {
@@ -529,7 +520,8 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
     return PreservedAnalyses::all();
   }
 
-  if (Mode == PrintMode::Everything) {
+  const CtxProfPrintMode Mode = getAnalysisOptions(M).ctx_profile_printer_level;
+  if (Mode == CtxProfPrintMode::Everything) {
     OS << "Function Info:\n";
     for (const auto &[Guid, FuncInfo] : C.FuncInfo)
       OS << Guid << " : " << FuncInfo.Name
@@ -537,11 +529,11 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
          << ". MaxCallsiteID: " << FuncInfo.NextCallsiteIndex << "\n";
   }
 
-  if (Mode == PrintMode::Everything)
+  if (Mode == CtxProfPrintMode::Everything)
     OS << "\nCurrent Profile:\n";
   convertCtxProfToYaml(OS, C.profiles());
   OS << "\n";
-  if (Mode == PrintMode::YAML)
+  if (Mode == CtxProfPrintMode::YAML)
     return PreservedAnalyses::all();
 
   OS << "\nFlat Profile:\n";

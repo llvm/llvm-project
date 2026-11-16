@@ -30,13 +30,10 @@ namespace llvm {
 
 class AssumptionCache;
 class BasicBlock;
-class CallInst;
 class DominatorTree;
 class Function;
-class InnerLoopVectorizer;
 class IRBuilderBase;
 class LoopInfo;
-class SCEV;
 class Type;
 class VFSelectionContext;
 class VPBasicBlock;

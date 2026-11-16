@@ -313,7 +313,7 @@ def : InstRW<[GenericWriteTrap], (instrs BREAK, SYSCALL, TEQ, TEQI,
 def : InstRW<[GenericWriteJumpAndLink], (instrs BALC, BEQZALC, BGEZALC,
                                          BGTZALC, BLEZALC, BLTZALC,
                                          BNEZALC,
-                                         JIALC, JAL_R6)>;
+                                         JIALC)>;
 
 def : InstRW<[GenericWriteJump], (instrs BC, BC2EQZ, BC2NEZ, BEQC, BEQZC, BGEC,
                                   BGEUC, BGEZC, BGTZC, BLEZC, BLTC, BLTUC,
@@ -321,8 +321,7 @@ def : InstRW<[GenericWriteJump], (instrs BC, BC2EQZ, BC2NEZ, BEQC, BEQZC, BGEC,
                                   SIGRIE, PseudoIndirectBranchR6,
                                   PseudoIndrectHazardBranchR6)>;
 
-def : InstRW<[GenericWriteJump], (instrs TAILCALLR6REG, TAILCALLHBR6REG,
-                                  TAILCALL_R6)>;
+def : InstRW<[GenericWriteJump], (instrs TAILCALLR6REG, TAILCALLHBR6REG)>;
 
 def : InstRW<[GenericWriteTrap], (instrs SDBBP_R6)>;
 

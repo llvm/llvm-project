@@ -111,7 +111,6 @@ static_library("Checkers") {
     "RunLoopAutoreleaseLeakChecker.cpp",
     "STLAlgorithmModeling.cpp",
     "SetgidSetuidOrderChecker.cpp",
-    "SimpleStreamChecker.cpp",
     "SmartPtrChecker.cpp",
     "SmartPtrModeling.cpp",
     "StackAddrEscapeChecker.cpp",

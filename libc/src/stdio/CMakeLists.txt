@@ -119,6 +119,7 @@ add_entrypoint_object(
     libc.hdr.errno_macros
     libc.hdr.stdio_macros
     libc.hdr.types.off_t
+    libc.hdr.types.ssize_t
     libc.hdr.types.cookie_io_functions_t
     libc.hdr.types.FILE
     libc.src.__support.CPP.new

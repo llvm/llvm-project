@@ -297,7 +297,9 @@ public:
 
   /// Returns the current pointer if it is of the specified pointer type,
   /// otherwise returns null.
-  template <typename T> inline T dyn_cast() const {
+  template <typename T>
+  [[deprecated("Use llvm::dyn_cast or llvm::dyn_cast_if_present instead")]]
+  inline T dyn_cast() const {
     return llvm::dyn_cast_if_present<T>(*this);
   }
 

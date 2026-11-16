@@ -23,6 +23,7 @@ add_header_library(
     libc.hdr.fenv_macros
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.sanitizer
 )
@@ -116,12 +117,17 @@ add_header_library(
     .fp_bits
     .fenv_impl
     .rounding_mode
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.__support.CPP.optional
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.macros.properties.types
+    libc.src.__support.sign
 )
-
 
 add_header_library(
   sqrt
@@ -246,14 +252,19 @@ add_header_library(
   HDRS
     Hypot.h
   DEPENDS
-    .basic_operations
     .cast
+    .except_value_utils
     .fenv_impl
     .fp_bits
     .rounding_mode
-    libc.src.__support.common
+    libc.hdr.fenv_macros
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
     libc.src.__support.uint128
 )
 
@@ -275,18 +286,23 @@ add_header_library(
   DEPENDS
     .cast
     .dyadic_float
+    .except_value_utils
     .fenv_impl
     .fp_bits
     .nearest_integer_operations
     .normal_float
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.hdr.math_macros
-    libc.hdr.stdint_proxy
-    libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.types
+    libc.src.__support.sign
 )
 
 add_header_library(
