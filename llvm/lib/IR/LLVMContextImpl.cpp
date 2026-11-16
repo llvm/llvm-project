@@ -133,8 +133,6 @@ LLVMContextImpl::~LLVMContextImpl() {
   FPConstants.clear();
   FPSplatConstants.clear();
   CDSConstants.clear();
-  // TheNoneToken may be referenced by ValuesAsMetadata, so destroy it before
-  // those entries.
   TheNoneToken.reset();
 
   // Destroy attribute node lists.
