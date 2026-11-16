@@ -389,3 +389,31 @@ body: |
     early-clobber $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr20_vgpr21, 8, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
+
+# A debug instruction that refers to the A register does not end the reuse.
+---
+name: reuse_across_debug_value
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, $vgpr20_vgpr21
+    ; GCN-LABEL: name: reuse_across_debug_value
+    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, $vgpr20_vgpr21
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 1, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: DBG_VALUE $vgpr0, 0, 0
+    ; GCN-NEXT: early-clobber $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr20_vgpr21, 8, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0
+    ;
+    ; OFF-LABEL: name: reuse_across_debug_value
+    ; OFF: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, $vgpr20_vgpr21
+    ; OFF-NEXT: {{  $}}
+    ; OFF-NEXT: early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
+    ; OFF-NEXT: DBG_VALUE $vgpr0, 0, 0
+    ; OFF-NEXT: early-clobber $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr20_vgpr21, 8, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
+    ; OFF-NEXT: S_ENDPGM 0
+    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
+    DBG_VALUE $vgpr0, 0, 0
+    early-clobber $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr20_vgpr21, 8, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...

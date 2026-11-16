@@ -909,6 +909,8 @@ bool SIPreEmitPeephole::setWMMAReuseBits(MachineInstr &W1) const {
   MachineInstr *W2 = nullptr;
   for (MachineInstr &MI :
        make_range(std::next(W1.getIterator()), W1.getParent()->instr_end())) {
+    if (MI.isDebugInstr())
+      continue;
     if (isWMMAOrSWMMAC(MI)) {
       W2 = &MI;
       break;
