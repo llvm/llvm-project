@@ -11,6 +11,7 @@ add_header_library(
     arm/inline_memcpy.h
     arm/inline_memset.h
     generic/aligned_access.h
+    generic/bcmp_utils.h
     generic/byte_per_byte.h
     inline_bcmp.h
     inline_bzero.h
@@ -36,14 +37,18 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.common
+    libc.src.__support.CPP.array
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.__support.macros.is_defined
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.properties.compiler
+    libc.src.__support.macros.properties.cpu_features
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
