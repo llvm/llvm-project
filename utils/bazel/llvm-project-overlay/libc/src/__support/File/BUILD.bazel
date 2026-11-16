@@ -1,0 +1,100 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "file_io_result",
+    hdrs = ["file_io_result.h"],
+    deps = [
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "file",
+    srcs = [
+        "file.cpp",
+    ],
+    hdrs = [
+        "file.h",
+        "file_mode.h",
+    ],
+    deps = [
+        ":file_io_result",
+        "//libc:llvm_libc_types_off_t",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/hdr:stdio_macros",
+        "//libc/hdr:wchar_macros",
+        "//libc/hdr/func:aligned_alloc",
+        "//libc/hdr/func:free",
+        "//libc/hdr/func:malloc",
+        "//libc/hdr/func:realloc",
+        "//libc/hdr/types:char32_t",
+        "//libc/hdr/types:char8_t",
+        "//libc/hdr/types:off_t",
+        "//libc/hdr/types:wchar_t",
+        "//libc/hdr/types:wint_t",
+        "//libc/src/__support:alloc_checker",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support/CPP:new",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/threads:mutex",
+        "//libc/src/__support/wchar:character_converter",
+        "//libc/src/__support/wchar:mbstate",
+        "//libc/src/__support/wchar:wcrtomb",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_support_library(
+    name = "platform_file",
+    srcs = [
+        "linux/file.cpp",
+    ],
+    hdrs = [
+        "linux/file.h",
+        "linux/file_flags.h",
+    ],
+    deps = [
+        ":file",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fcntl_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/hdr:stdio_macros",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/hdr/func:free",
+        "//libc/hdr/types:mode_t",
+        "//libc/hdr/types:off_t",
+        "//libc/src/__support:alloc_checker",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support/CPP:new",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:close",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:dup3",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:fcntl",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:lseek",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:open",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:read",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:write",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)

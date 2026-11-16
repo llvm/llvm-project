@@ -37,17 +37,8 @@ foreach I = {0-4, 8} in {
   def CheckShiftBy#I                    : CheckImmOperand<3, I>;
 }
 
-// Check the extension type in the register offset addressing mode.
-let FunctionMapper = "AArch64_AM::getMemExtendType" in {
-  def CheckMemExtUXTW                   : CheckImmOperand_s<3, "AArch64_AM::UXTW">;
-  def CheckMemExtLSL                    : CheckImmOperand_s<3, "AArch64_AM::UXTX">;
-  def CheckMemExtSXTW                   : CheckImmOperand_s<3, "AArch64_AM::SXTW">;
-  def CheckMemExtSXTX                   : CheckImmOperand_s<3, "AArch64_AM::SXTX">;
-}
-
 // Check for scaling in the register offset addressing mode.
-let FunctionMapper = "AArch64_AM::getMemDoShift" in
-def CheckMemScaled                      : CheckImmOperandSimple<4>;
+def CheckMemScaled                      : CheckImmOperand<4, 1>;
 
 // Check the shifting type in arithmetic and logic instructions.
 let FunctionMapper = "AArch64_AM::getShiftType" in {

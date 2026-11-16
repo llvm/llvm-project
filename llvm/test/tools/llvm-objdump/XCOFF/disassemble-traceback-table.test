@@ -1,13 +1,20 @@
 ## Test that "llvm-objdump --traceback-table" decodes the ControlledStorageInfo,
 ## AllocaRegister, and extension table of the traceback table.
 
-# RUN: yaml2obj %s -o %t.o
-# RUN: llvm-objdump -d --traceback-table --symbol-description %t.o | \
+# RUN: yaml2obj %s --docnum=1 -o %t1.o
+# RUN: llvm-objdump -d --traceback-table --symbol-description %t1.o | \
 # RUN:   FileCheck --match-full-lines --strict-whitespace %s
 
 ## Show that --traceback-table implies --disassemble.
-# RUN: llvm-objdump --traceback-table --symbol-description %t.o | \
+# RUN: llvm-objdump --traceback-table --symbol-description %t1.o | \
 # RUN:   FileCheck --match-full-lines --strict-whitespace %s
+
+## Test that "llvm-objdump --traceback-table" successfully parses traceback
+## tables with hasVectorInfo bit set but without vector parameters
+## (NumberOfVectorParms = 0).
+# RUN: yaml2obj %s --docnum=2 -o %t2.o
+# RUN: llvm-objdump -d --traceback-table --symbol-description %t2.o | \
+# RUN:   FileCheck --match-full-lines --strict-whitespace --check-prefix=VEC-INFO %s
 
 --- !XCOFF
 FileHeader:
@@ -113,3 +120,48 @@ Symbols:
 # CHECK-NEXT:        ...
 # CHECK-NEXT:      7c: 00 12 34 00  
 # CHECK-NEXT:      80: 00 00 00     
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_TEXT ]
+    SectionData:     "9421ffc000000000000922400045070310000000000003d8000773737761705f6b0001000000000000"
+Symbols:
+  - Name:            .sswap_k
+    Value:           0
+    Section:         .text
+    Type:            0x20
+    StorageClass:    C_EXT
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        SectionOrLength:        0x29
+        SymbolAlignmentAndType: 0x21
+        StorageMappingClass:    XMC_PR
+
+# VEC-INFO:00000000 (idx: 0) .sswap_k[PR]:
+# VEC-INFO-NEXT:       0: 94 21 ff c0  	stwu 1, -64(1)
+# VEC-INFO-NEXT:       4: 00 00 00 00  	# Traceback table start
+# VEC-INFO-NEXT:       8: 00           	# Version = 0
+# VEC-INFO-NEXT:       9: 09           	# Language = CPlusPlus
+# VEC-INFO-NEXT:       a: 22           	# -isGlobalLinkage, -isOutOfLineEpilogOrPrologue
+# VEC-INFO-NEXT:                       	  +hasTraceBackTableOffset, -isInternalProcedure
+# VEC-INFO-NEXT:                       	  -hasControlledStorage, -isTOCless
+# VEC-INFO-NEXT:                       	  +isFloatingPointPresent
+# VEC-INFO-NEXT:                       	  -isFloatingPointOperationLogOrAbortEnabled
+# VEC-INFO-NEXT:       b: 40           	# -isInterruptHandler, +isFuncNamePresent, -isAllocaUsed
+# VEC-INFO-NEXT:                       	  OnConditionDirective = 0, -isCRSaved, -isLRSaved
+# VEC-INFO-NEXT:       c: 00           	# -isBackChainStored, -isFixup, NumOfFPRsSaved = 0
+# VEC-INFO-NEXT:       d: 45           	# -hasExtensionTable, +hasVectorInfo, NumOfGPRsSaved = 5
+# VEC-INFO-NEXT:       e: 07           	# NumberOfFixedParms = 7
+# VEC-INFO-NEXT:       f: 03           	# NumberOfFPParms = 1, +hasParmsOnStack
+# VEC-INFO-NEXT:      10: 10 00 00 00  	# ParmsType = i, i, i, f, i, i, i, i
+# VEC-INFO-NEXT:      14: 00 00 03 d8  	# TraceBackTableOffset = 984
+# VEC-INFO-NEXT:      18: 00 07        	# FunctionNameLen = 7
+# VEC-INFO-NEXT:      1a: 73 73 77 61  	# FunctionName = sswap_k
+# VEC-INFO-NEXT:      1e: 70 5f 6b     
+# VEC-INFO-NEXT:      21: 00           	# NumberOfVRSaved = 0, -isVRSavedOnStack, -hasVarArgs
+# VEC-INFO-NEXT:      22: 01           	# NumberOfVectorParms = 0, +hasVMXInstruction
+# VEC-INFO-NEXT:      23: 00 00 00 00  	# VectorParmsInfoString = 
+# VEC-INFO-NEXT:      27: 00 00        	# Padding

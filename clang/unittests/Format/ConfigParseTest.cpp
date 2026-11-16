@@ -185,6 +185,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakFunctionDeclarationParameters);
   CHECK_PARSE_BOOL(BreakStringLiterals);
+  CHECK_PARSE_BOOL(CompactCaseLabels);
   CHECK_PARSE_BOOL(CompactNamespaces);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
@@ -1166,6 +1167,15 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("WhitespaceSensitiveMacros: ['STRINGIZE', 'ASSERT']",
               WhitespaceSensitiveMacros,
               std::vector<std::string>({"STRINGIZE", "ASSERT"}));
+
+  CHECK_PARSE("IncludeBlocks: Merge", IncludeStyle.IncludeBlocks,
+              tooling::IncludeStyle::IBS_Merge);
+  CHECK_PARSE("IncludeBlocks: Regroup", IncludeStyle.IncludeBlocks,
+              tooling::IncludeStyle::IBS_Regroup);
+  CHECK_PARSE("IncludeBlocks: Preserve", IncludeStyle.IncludeBlocks,
+              tooling::IncludeStyle::IBS_Preserve);
+  CHECK_PARSE("IncludeBlocks: RegroupByDirectory", IncludeStyle.IncludeBlocks,
+              tooling::IncludeStyle::IBS_RegroupByDirectory);
 
   Style.IncludeStyle.IncludeCategories.clear();
   std::vector<tooling::IncludeStyle::IncludeCategory> ExpectedCategories = {

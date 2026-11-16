@@ -18,9 +18,6 @@
 #include "llvm/DebugInfo/PDB/Native/FormatUtil.h"
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
 #include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
-#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
-#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
-#include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/FormatVariadic.h"
 

@@ -160,6 +160,21 @@ TargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
       getLLVMSyncScopeStr(LangOpts, Scope, Ordering));
 }
 
+void CodeGen::addAtomicIgnoreDenormalModeMetadata(CodeGenFunction &CGF,
+                                                  llvm::Instruction &AtomicInst,
+                                                  bool AllowHalf) {
+  auto *RMW = dyn_cast<llvm::AtomicRMWInst>(&AtomicInst);
+  if (!RMW || RMW->getOperation() != llvm::AtomicRMWInst::FAdd)
+    return;
+
+  llvm::Type *Ty = RMW->getType();
+  if (!Ty->isFloatTy() && !(AllowHalf && Ty->isHalfTy()))
+    return;
+
+  RMW->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
+                   llvm::MDNode::get(CGF.getLLVMContext(), {}));
+}
+
 void TargetCodeGenInfo::addStackProbeTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM) const {
   if (llvm::Function *Fn = dyn_cast_or_null<llvm::Function>(GV)) {

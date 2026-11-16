@@ -386,10 +386,14 @@ func.func @extf_f8E8M0FNU_to_f32(%arg0 : f8E8M0FNU) -> f32 {
 // CHECK: %[[C23_i32:.+]] = arith.constant 23 : i32
 // CHECK: %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i32
 // CHECK: %[[SHLI:.+]] = arith.shli %[[EXTUI]], %[[C23_i32]] : i32
+// CHECK-DAG: %[[CF8MIN:.+]] = arith.constant 0 : i8
+// CHECK-DAG: %[[CF32MIN:.+]] = arith.constant 4194304 : i32
+// CHECK: %[[CMP_MIN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8MIN]] : i8
+// CHECK: %[[SELECT_MIN:.+]] = arith.select %[[CMP_MIN]], %[[CF32MIN]], %[[SHLI]] : i32
 // CHECK-DAG: %[[CF8NAN:.+]] = arith.constant -1 : i8
 // CHECK-DAG: %[[CF32NAN:.+]] = arith.constant -1 : i32
 // CHECK: %[[CMP_NAN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8NAN]] : i8
-// CHECK: %[[SELECT_NAN:.+]] = arith.select %[[CMP_NAN]], %[[CF32NAN]], %[[SHLI]] : i32
+// CHECK: %[[SELECT_NAN:.+]] = arith.select %[[CMP_NAN]], %[[CF32NAN]], %[[SELECT_MIN]] : i32
 // CHECK: %[[RESULT:.+]] = arith.bitcast %[[SELECT_NAN]] : i32 to f32
 // CHECK: return %[[RESULT]]
 
@@ -405,7 +409,11 @@ func.func @extf_f8E8M0FNU_to_f32_no_nan(%arg0 : f8E8M0FNU) -> f32 {
 // CHECK: %[[C23_i32:.+]] = arith.constant 23 : i32
 // CHECK: %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i32
 // CHECK: %[[SHLI:.+]] = arith.shli %[[EXTUI]], %[[C23_i32]] : i32
-// CHECK: %[[RESULT:.+]] = arith.bitcast %[[SHLI]] : i32 to f32
+// CHECK-DAG: %[[CF8MIN:.+]] = arith.constant 0 : i8
+// CHECK-DAG: %[[CF32MIN:.+]] = arith.constant 4194304 : i32
+// CHECK: %[[CMP_MIN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8MIN]] : i8
+// CHECK: %[[SELECT_MIN:.+]] = arith.select %[[CMP_MIN]], %[[CF32MIN]], %[[SHLI]] : i32
+// CHECK: %[[RESULT:.+]] = arith.bitcast %[[SELECT_MIN]] : i32 to f32
 // CHECK: return %[[RESULT]]
 
 // -----
@@ -420,10 +428,14 @@ func.func @extf_f8E8M0FNU_to_f16(%arg0 : f8E8M0FNU) -> f16 {
 // CHECK-DAG: %[[C23_i32:.+]] = arith.constant 23 : i32
 // CHECK: %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i32
 // CHECK: %[[SHLI:.+]] = arith.shli %[[EXTUI]], %[[C23_i32]] : i32
+// CHECK-DAG: %[[CF8MIN:.+]] = arith.constant 0 : i8
+// CHECK-DAG: %[[CF32MIN:.+]] = arith.constant 4194304 : i32
+// CHECK: %[[CMP_MIN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8MIN]] : i8
+// CHECK: %[[SELECT_MIN:.+]] = arith.select %[[CMP_MIN]], %[[CF32MIN]], %[[SHLI]] : i32
 // CHECK-DAG: %[[CF8NAN:.+]] = arith.constant -1 : i8
 // CHECK-DAG: %[[CF32NAN:.+]] = arith.constant -1 : i32
 // CHECK: %[[CMP_NAN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8NAN]] : i8
-// CHECK: %[[SELECT_NAN:.+]] = arith.select %[[CMP_NAN]], %[[CF32NAN]], %[[SHLI]] : i32
+// CHECK: %[[SELECT_NAN:.+]] = arith.select %[[CMP_NAN]], %[[CF32NAN]], %[[SELECT_MIN]] : i32
 // CHECK: %[[F32_RESULT:.+]] = arith.bitcast %[[SELECT_NAN]] : i32 to f32
 // CHECK: %[[F16_RESULT:.+]] = arith.truncf %[[F32_RESULT]] : f32 to f16
 // CHECK: return %[[F16_RESULT]]

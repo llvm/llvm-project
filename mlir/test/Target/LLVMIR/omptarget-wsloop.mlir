@@ -54,11 +54,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     llvm.return
   }
 
+  omp.private {type = linear} @lin.i32 : i32
+
   llvm.func @target_wsloop_linear(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} {
       %loop_ub = llvm.mlir.constant(9 : i32) : i32
       %loop_lb = llvm.mlir.constant(0 : i32) : i32
       %loop_step = llvm.mlir.constant(1 : i32) : i32
-      omp.wsloop linear(%arg0 : !llvm.ptr = %loop_step : i32) linear_var_types([i32]) {
+      omp.wsloop linear(@lin.i32 %arg0 -> %arg1 : !llvm.ptr = %loop_step : i32) linear_var_types([i32]) {
         omp.loop_nest (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
           omp.yield
         }

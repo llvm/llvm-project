@@ -8,7 +8,7 @@ define i32 @test() {
 ; CHECK-NEXT:    br label [[IF_END_I87:%.*]]
 ; CHECK:       if.end.i87:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 getelementptr (i8, <4 x ptr> <ptr inttoptr (i64 64036 to ptr), ptr inttoptr (i64 64036 to ptr), ptr inttoptr (i64 64064 to ptr), ptr inttoptr (i64 64064 to ptr)>, <4 x i64> <i64 0, i64 4, i64 0, i64 4>), <4 x i1> splat (i1 true), <4 x i32> poison)
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 undef, i32 undef, i32 0, i32 0>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    switch i32 0, label [[SW_BB509_I:%.*]] [
 ; CHECK-NEXT:      i32 1, label [[SW_BB509_I]]
 ; CHECK-NEXT:      i32 0, label [[IF_THEN458_I:%.*]]
@@ -102,7 +102,7 @@ define void @test3(float %0) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr null, align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp olt <2 x float> zeroinitializer, [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i1> [[TMP5]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i1> <i1 true, i1 true, i1 undef, i1 undef>, <4 x i1> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i1> <i1 true, i1 true, i1 poison, i1 poison>, <4 x i1> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP9]], <4 x float> [[TMP6]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]

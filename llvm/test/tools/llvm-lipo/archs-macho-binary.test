@@ -8,6 +8,7 @@
 # MULTIPLE_INPUT_OBJ: archs expects a single input file
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x00000007

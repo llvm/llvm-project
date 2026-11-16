@@ -21,7 +21,7 @@ declare void @foo(ptr)
 ; }
 
 ; CHECK: DW_TAG_subprogram
-; CHECK: DW_AT_location [DW_FORM_exprloc]      (DW_OP_breg29 SP_64+36)
+; CHECK: DW_AT_location [DW_FORM_exprloc]      (DW_OP_breg29 R29_64+36)
 ; CHECK: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000065] = "c")
 
 ; Function Attrs: nounwind
@@ -45,7 +45,7 @@ entry:
 }
 
 ; CHECK: DW_TAG_subprogram
-; CHECK: DW_AT_location [DW_FORM_exprloc]      (DW_OP_breg23 S7_64+32)
+; CHECK: DW_AT_location [DW_FORM_exprloc]      (DW_OP_breg23 R23_64+32)
 ; CHECK: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000065] = "c")
 
 define ptr @f3(i32 signext %a, i32 signext %b) !dbg !8 {

@@ -27,7 +27,7 @@ define amdgpu_kernel void @gws_barrier_offset0(i32 %val) #0 {
   ; GFX6-SDAG-NEXT:   }
   ; GFX6-SDAG-NEXT:   renamable $sgpr0 = S_GETREG_B32 515, implicit $mode
   ; GFX6-SDAG-NEXT:   S_CMP_LG_U32 killed renamable $sgpr0, 0, implicit-def $scc
-  ; GFX6-SDAG-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+  ; GFX6-SDAG-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
   ; GFX6-SDAG-NEXT: {{  $}}
   ; GFX6-SDAG-NEXT: bb.2:
   ; GFX6-SDAG-NEXT:   S_ENDPGM 0
@@ -52,7 +52,7 @@ define amdgpu_kernel void @gws_barrier_offset0(i32 %val) #0 {
   ; GFX6-GISEL-NEXT:   }
   ; GFX6-GISEL-NEXT:   renamable $sgpr0 = S_GETREG_B32 515, implicit $mode
   ; GFX6-GISEL-NEXT:   S_CMP_LG_U32 killed renamable $sgpr0, 0, implicit-def $scc
-  ; GFX6-GISEL-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+  ; GFX6-GISEL-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
   ; GFX6-GISEL-NEXT: {{  $}}
   ; GFX6-GISEL-NEXT: bb.2:
   ; GFX6-GISEL-NEXT:   S_ENDPGM 0
@@ -107,7 +107,7 @@ define amdgpu_kernel void @gws_barrier_offset63(i32 %val) #0 {
   ; GFX6-SDAG-NEXT:   }
   ; GFX6-SDAG-NEXT:   renamable $sgpr0 = S_GETREG_B32 515, implicit $mode
   ; GFX6-SDAG-NEXT:   S_CMP_LG_U32 killed renamable $sgpr0, 0, implicit-def $scc
-  ; GFX6-SDAG-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+  ; GFX6-SDAG-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
   ; GFX6-SDAG-NEXT: {{  $}}
   ; GFX6-SDAG-NEXT: bb.2:
   ; GFX6-SDAG-NEXT:   S_ENDPGM 0
@@ -132,7 +132,7 @@ define amdgpu_kernel void @gws_barrier_offset63(i32 %val) #0 {
   ; GFX6-GISEL-NEXT:   }
   ; GFX6-GISEL-NEXT:   renamable $sgpr0 = S_GETREG_B32 515, implicit $mode
   ; GFX6-GISEL-NEXT:   S_CMP_LG_U32 killed renamable $sgpr0, 0, implicit-def $scc
-  ; GFX6-GISEL-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+  ; GFX6-GISEL-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
   ; GFX6-GISEL-NEXT: {{  $}}
   ; GFX6-GISEL-NEXT: bb.2:
   ; GFX6-GISEL-NEXT:   S_ENDPGM 0

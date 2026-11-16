@@ -1,7 +1,9 @@
 // REQUIRES: nvptx-registered-target
 
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm -target-cpu sm_30 %s -o - | FileCheck %s --check-prefix=NO_SYNC
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm -target-cpu sm_30 %s -o - | FileCheck %s --check-prefix=NO_SYNC %}
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm -target-cpu sm_30 -target-feature +ptx70 -DSYNC -DCUDA_VERSION=9000 %s -o - | FileCheck %s --check-prefix=SYNC
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm -target-cpu sm_30 -target-feature +ptx70 -DSYNC -DCUDA_VERSION=9000 %s -o - | FileCheck %s --check-prefix=SYNC %}
 
 #include "Inputs/cuda.h"
 

@@ -41,7 +41,6 @@ define i1 @PR114901_flip(<4 x i32> %a) {
 ; AVX-LABEL: define i1 @PR114901_flip(
 ; AVX-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0]] {
 ; AVX-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A]], <i32 poison, i32 -8, i32 poison, i32 42>
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
 ; AVX-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP1]], i64 1
 ; AVX-NEXT:    ret i1 [[R]]
 ;

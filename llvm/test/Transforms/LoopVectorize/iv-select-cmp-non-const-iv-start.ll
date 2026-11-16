@@ -97,9 +97,9 @@ define i64 @select_non_const_iv_start_signed_guard(ptr %a, i64 %rdx_start, i64 %
 ; CHECK-VF4IC4-NEXT:    [[VEC_IND:%.*]] = add nsw <4 x i64> [[STEP_ADD_2]], splat (i64 4)
 ; CHECK-VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_START]], [[INDEX]]
 ; CHECK-VF4IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-VF4IC4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 4
-; CHECK-VF4IC4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 8
-; CHECK-VF4IC4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 12
+; CHECK-VF4IC4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 32
+; CHECK-VF4IC4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
+; CHECK-VF4IC4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 96
 ; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 4
 ; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i64>, ptr [[TMP6]], align 4
 ; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i64>, ptr [[TMP4]], align 4
@@ -359,9 +359,9 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i32> [[STEP_ADD_2]], splat (i32 4)
 ; CHECK-VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[TMP0]], [[INDEX]]
 ; CHECK-VF4IC4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-VF4IC4-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 4
-; CHECK-VF4IC4-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 8
-; CHECK-VF4IC4-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 12
+; CHECK-VF4IC4-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 16
+; CHECK-VF4IC4-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 32
+; CHECK-VF4IC4-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 48
 ; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP27]], align 4
 ; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP31]], align 4

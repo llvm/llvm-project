@@ -134,8 +134,10 @@ public:
     llvm::SmallVector<mlir::Value, 1> typeParams;
     hlfir::genLengthParameters(loc, builder, array, typeParams);
 
-    auto genKernel = [&array](mlir::Location loc, fir::FirOpBuilder &builder,
-                              mlir::ValueRange inputIndices) -> hlfir::Entity {
+    auto genKernel =
+        [&array](
+            mlir::Location loc, fir::FirOpBuilder &builder,
+            mlir::ValueRange inputIndices) -> hlfir::ElementalKernelResult {
       assert(inputIndices.size() == 2 && "checked in TransposeOp::validate");
       const std::initializer_list<mlir::Value> initList = {inputIndices[1],
                                                            inputIndices[0]};
@@ -143,7 +145,7 @@ public:
       hlfir::Entity element =
           hlfir::getElementAt(loc, builder, array, transposedIndices);
       hlfir::Entity val = hlfir::loadTrivialScalar(loc, builder, element);
-      return val;
+      return {val, std::nullopt};
     };
     hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
         loc, builder, elementType, resultShape, typeParams, genKernel,
@@ -1180,8 +1182,9 @@ mlir::LogicalResult ReductionAsElementalConverter::convert() {
       maskValue = genMaskValue(mask, isPresentPred, {});
   }
 
-  auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                       mlir::ValueRange inputIndices) -> hlfir::Entity {
+  auto genKernel =
+      [&](mlir::Location loc, fir::FirOpBuilder &builder,
+          mlir::ValueRange inputIndices) -> hlfir::ElementalKernelResult {
     // Loop over all indices in the DIM dimension, and reduce all values.
     // If DIM is not present, do total reduction.
 
@@ -1248,11 +1251,11 @@ mlir::LogicalResult ReductionAsElementalConverter::convert() {
     llvm::SmallVector<mlir::Value, 1> reductionFinalValues =
         hlfir::genLoopNestWithReductions(
             loc, builder, extents, reductionInitValues, genBody, isUnordered());
-    return genFinalResult(reductionFinalValues);
+    return {genFinalResult(reductionFinalValues), std::nullopt};
   };
 
   if (isTotalReduce) {
-    hlfir::Entity result = genKernel(loc, builder, mlir::ValueRange{});
+    hlfir::Entity result = genKernel(loc, builder, mlir::ValueRange{}).first;
     rewriter.replaceOp(op, result);
     return mlir::success();
   }
@@ -1767,8 +1770,9 @@ private:
       std::tie(boundaryVal, boundaryIsScalarPred) =
           genScalarBoundaryForEOShift(loc, builder, op);
 
-    auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                         mlir::ValueRange inputIndices) -> hlfir::Entity {
+    auto genKernel =
+        [&](mlir::Location loc, fir::FirOpBuilder &builder,
+            mlir::ValueRange inputIndices) -> hlfir::ElementalKernelResult {
       llvm::SmallVector<mlir::Value, maxRank> indices{inputIndices};
       if (!shiftVal) {
         // When the array is not a vector, section
@@ -1832,7 +1836,7 @@ private:
                 .genElse(
                     [&]() { fir::ResultOp::create(builder, loc, boundaryVal); })
                 .getResults()[0];
-        return hlfir::Entity{result};
+        return {hlfir::Entity{result}, std::nullopt};
       } else {
         // CSHIFT:
         // Element i of the result (1-based) is element
@@ -1862,7 +1866,7 @@ private:
         indices[dimVal - 1] = newIndex;
         hlfir::Entity element =
             hlfir::getElementAt(loc, builder, array, indices);
-        return hlfir::loadTrivialScalar(loc, builder, element);
+        return {hlfir::loadTrivialScalar(loc, builder, element), std::nullopt};
       }
     };
 
@@ -2446,6 +2450,116 @@ getVariable(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value val) {
   return {associate.getBase(), associate};
 }
 
+// A boxchar cannot carry volatility, and fir.box_addr drops it from a
+// POINTER/ALLOCATABLE descriptor, so follow the operand back through
+// emboxchar/box_addr/load/convert/designate to the hlfir.declare it comes
+// from and check the volatile attribute there. Any other producer is assumed
+// volatile so that a new lowering shape cannot silently drop the attribute.
+static bool mayBeVolatileCharacter(hlfir::Entity var) {
+  mlir::Value base = var;
+  while (true) {
+    if (fir::isa_volatile_type(base.getType()))
+      return true;
+    if (auto declare = base.getDefiningOp<hlfir::DeclareOp>()) {
+      auto attrs = declare.getFortranAttrs();
+      return fir::isa_volatile_type(declare.getMemref().getType()) ||
+             (attrs &&
+              fir::bitEnumContainsAny(
+                  *attrs, fir::FortranVariableFlagsEnum::fortran_volatile));
+    }
+    if (auto designate = base.getDefiningOp<hlfir::DesignateOp>())
+      base = designate.getMemref();
+    else if (auto embox = base.getDefiningOp<fir::EmboxCharOp>())
+      base = embox.getMemref();
+    else if (auto boxAddr = base.getDefiningOp<fir::BoxAddrOp>())
+      base = boxAddr.getVal();
+    else if (auto load = base.getDefiningOp<fir::LoadOp>())
+      base = load.getMemref();
+    else if (auto convert = base.getDefiningOp<fir::ConvertOp>())
+      base = convert.getValue();
+    else if (auto cast = base.getDefiningOp<fir::VolatileCastOp>())
+      base = cast.getValue();
+    else
+      return true;
+  }
+}
+
+// Inline TRIM(x) of a character variable as a copy of x(1:LEN_TRIM(x)) into a
+// heap temporary. The allocation placement passes decide whether it moves to
+// the stack.
+class CharTrimOpConversion : public mlir::OpRewritePattern<hlfir::CharTrimOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::CharTrimOp>::OpRewritePattern;
+
+  static constexpr llvm::StringRef tmpName = ".tmp.trim";
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CharTrimOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    hlfir::Entity str{op.getChr()};
+    if (!str.isVariable())
+      return rewriter.notifyMatchFailure(op, "operand is not a variable");
+    // TODO: inline once the volatility of the variable is propagated to the
+    // designators and loads generated below. Until then the inline scan and
+    // copy would be ordinary loads that LLVM may merge or hoist.
+    if (mayBeVolatileCharacter(str))
+      return rewriter.notifyMatchFailure(op, "operand may be volatile");
+
+    fir::FirOpBuilder builder{rewriter, op.getOperation()};
+    mlir::Location loc = op->getLoc();
+    mlir::MLIRContext *ctx = builder.getContext();
+    auto charTy = mlir::cast<fir::CharacterType>(str.getFortranElementType());
+    fir::KindTy kind = charTy.getFKind();
+
+    auto [exv, cleanup] = hlfir::translateToExtendedValue(loc, builder, str);
+    assert(!cleanup && "variable to Exv should not produce cleanup");
+    const fir::CharBoxValue *charBox = exv.getCharBox();
+    assert(charBox && "scalar character variable must translate to CharBox");
+
+    mlir::Type idxTy = builder.getIndexType();
+    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+    mlir::Value lenTrim =
+        fir::factory::CharacterExprHelper{builder, loc}.createLenTrim(*charBox);
+
+    // A dynamic-length character designator must be a boxchar.
+    mlir::Type substrTy = fir::BoxCharType::get(ctx, kind);
+    auto substr = hlfir::DesignateOp::create(
+        builder, loc, substrTy, str, /*component=*/{},
+        /*compShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
+        /*substring=*/mlir::ValueRange{one, lenTrim},
+        /*complexPart=*/std::nullopt, /*shape=*/mlir::Value{},
+        /*typeParams=*/mlir::ValueRange{lenTrim},
+        fir::FortranVariableFlagsAttr{});
+
+    // The temporary holds LEN_TRIM(x) characters. When LEN(x) is constant it
+    // is allocated with that length instead, so that the allocation has no
+    // operands and the placement passes can move it to the stack.
+    auto dynCharTy = fir::CharacterType::getUnknownLen(ctx, kind);
+    mlir::Value temp;
+    if (charTy.hasConstantLen())
+      temp = builder.createConvert(
+          loc, fir::HeapType::get(dynCharTy),
+          builder.createHeapTemporary(loc, charTy, tmpName));
+    else
+      temp = builder.createHeapTemporary(loc, dynCharTy, tmpName, /*shape=*/{},
+                                         /*lenParams=*/{lenTrim});
+    auto declare = hlfir::DeclareOp::create(
+        builder, loc, temp, tmpName, /*shape=*/nullptr,
+        /*typeparams=*/mlir::ValueRange{lenTrim}, /*dummy_scope=*/nullptr,
+        /*storage=*/nullptr, /*storage_offset=*/0,
+        fir::FortranVariableFlagsAttr{});
+    hlfir::Entity tempVar{declare.getBase()};
+    hlfir::AssignOp::create(builder, loc, substr, tempVar, /*realloc=*/false,
+                            /*keep_lhs_length_if_realloc=*/false,
+                            /*temporary_lhs=*/true);
+    mlir::Value result = hlfir::AsExprOp::create(
+        builder, loc, tempVar, builder.createBool(loc, /*mustFree=*/true));
+    assert(result.getType() == op.getType() && "unexpected hlfir.expr type");
+    rewriter.replaceOp(op, result);
+    return mlir::success();
+  }
+};
+
 class IndexOpConversion : public mlir::OpRewritePattern<hlfir::IndexOp> {
 public:
   using mlir::OpRewritePattern<hlfir::IndexOp>::OpRewritePattern;
@@ -2943,8 +3057,9 @@ private:
                      mlir::Value innerProductExtent) {
     mlir::OpBuilder::InsertionGuard guard(builder);
     mlir::Type resultElementType = resultType.getElementType();
-    auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                         mlir::ValueRange resultIndices) -> hlfir::Entity {
+    auto genKernel =
+        [&](mlir::Location loc, fir::FirOpBuilder &builder,
+            mlir::ValueRange resultIndices) -> hlfir::ElementalKernelResult {
       mlir::Value initValue =
           fir::factory::createZeroValue(builder, loc, resultElementType);
       // The inner product loop may be unordered if FastMathFlags::reassoc
@@ -2997,7 +3112,7 @@ private:
       llvm::SmallVector<mlir::Value, 1> innerProductValue =
           hlfir::genLoopNestWithReductions(loc, builder, {innerProductExtent},
                                            {initValue}, genBody, isUnordered);
-      return hlfir::Entity{innerProductValue[0]};
+      return {hlfir::Entity{innerProductValue[0]}, std::nullopt};
     };
     hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
         loc, builder, resultElementType, resultShape, /*typeParams=*/{},
@@ -3075,75 +3190,6 @@ private:
   }
 };
 
-static std::optional<bool> getLogicalConstant(mlir::Value value) {
-  if (auto convertOp = value.getDefiningOp<fir::ConvertOp>())
-    value = convertOp.getValue();
-  if (auto cst = fir::getIntIfConstant(value))
-    return *cst != 0;
-  return std::nullopt;
-}
-
-class PackAsReshapeConversion : public mlir::OpRewritePattern<hlfir::PackOp> {
-public:
-  using mlir::OpRewritePattern<hlfir::PackOp>::OpRewritePattern;
-
-  llvm::LogicalResult
-  matchAndRewrite(hlfir::PackOp pack,
-                  mlir::PatternRewriter &rewriter) const override {
-    if (pack.getVector())
-      return rewriter.notifyMatchFailure(pack, "PACK with VECTOR");
-    hlfir::Entity mask{pack.getMask()};
-    if (mask.getRank() != 0)
-      return rewriter.notifyMatchFailure(pack, "non-scalar mask");
-    if (!getLogicalConstant(pack.getMask()).value_or(false))
-      return rewriter.notifyMatchFailure(pack, "mask is not .TRUE.");
-    hlfir::Entity array{pack.getArray()};
-    if (!fir::isa_trivial(array.getFortranElementType()) ||
-        array.isPolymorphic())
-      return rewriter.notifyMatchFailure(pack, "unsupported array type");
-
-    mlir::Location loc = pack.getLoc();
-    fir::FirOpBuilder builder{rewriter, pack.getOperation()};
-    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nuw);
-
-    llvm::SmallVector<mlir::Value, Fortran::common::maxRank> arrayExtents =
-        hlfir::genExtentsVector(loc, builder, array);
-    mlir::Type indexType = builder.getIndexType();
-    mlir::Value totalSize = builder.createIntegerConstant(loc, indexType, 1);
-    for (mlir::Value extent : arrayExtents)
-      totalSize = mlir::arith::MulIOp::create(
-          builder, loc, totalSize,
-          builder.createConvert(loc, indexType, extent));
-
-    mlir::Type shapeElementType = builder.getIntPtrType();
-    mlir::Value totalSizeAsShapeElement =
-        builder.createConvert(loc, shapeElementType, totalSize);
-
-    mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
-    mlir::Value unitShape = fir::ShapeOp::create(builder, loc, one);
-    mlir::Type shapeExprType =
-        hlfir::ExprType::get(builder.getContext(), {1}, shapeElementType,
-                             /*polymorphic=*/false);
-
-    auto genShapeKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                              mlir::ValueRange) -> hlfir::Entity {
-      return hlfir::Entity{totalSizeAsShapeElement};
-    };
-    mlir::Value shapeExpr = hlfir::genElementalOp(
-        loc, builder, shapeElementType, unitShape, /*typeParams=*/{},
-        genShapeKernel, /*isUnordered=*/true,
-        /*polymorphicMold=*/mlir::Value{}, shapeExprType);
-
-    auto reshape = hlfir::ReshapeOp::create(
-        builder, loc, pack.getType(), pack.getArray(), shapeExpr,
-        /*pad=*/mlir::Value{}, /*order=*/mlir::Value{});
-    rewriter.replaceOp(pack, reshape);
-    rewriter.setInsertionPointAfter(reshape);
-    hlfir::DestroyOp::create(rewriter, loc, shapeExpr);
-    return mlir::success();
-  }
-};
-
 class ReshapeAsElementalConversion
     : public mlir::OpRewritePattern<hlfir::ReshapeOp> {
 public:
@@ -3215,8 +3261,9 @@ public:
           builder.createIntegerConstant(loc, indexType, idx + 1)));
     auto resultShape = fir::ShapeOp::create(builder, loc, resultExtents);
 
-    auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                         mlir::ValueRange inputIndices) -> hlfir::Entity {
+    auto genKernel =
+        [&](mlir::Location loc, fir::FirOpBuilder &builder,
+            mlir::ValueRange inputIndices) -> hlfir::ElementalKernelResult {
       mlir::Value linearIndex =
           computeLinearIndex(loc, builder, resultExtents, inputIndices);
       fir::IfOp ifOp;
@@ -3265,7 +3312,7 @@ public:
         arrayElement = ifOp.getResult(0);
       }
 
-      return hlfir::Entity{arrayElement};
+      return {hlfir::Entity{arrayElement}, std::nullopt};
     };
     hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
         loc, builder, elementType, resultShape, typeParams, genKernel,
@@ -3408,6 +3455,7 @@ public:
     patterns.insert<ArrayShiftConversion<hlfir::EOShiftOp>>(context);
     patterns.insert<CmpCharOpConversion>(context);
     patterns.insert<IndexOpConversion>(context);
+    patterns.insert<CharTrimOpConversion>(context);
     patterns.insert<MatmulConversion<hlfir::MatmulTransposeOp>>(context);
     patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
@@ -3437,7 +3485,6 @@ public:
       patterns.insert<MatmulConversion<hlfir::MatmulOp>>(context);
 
     patterns.insert<DotProductConversion>(context);
-    patterns.insert<PackAsReshapeConversion>(context);
     patterns.insert<ReshapeAsElementalConversion>(context);
 
     if (mlir::failed(mlir::applyPatternsGreedily(

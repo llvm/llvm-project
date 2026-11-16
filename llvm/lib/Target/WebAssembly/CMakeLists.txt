@@ -2,23 +2,23 @@ add_llvm_component_group(WebAssembly)
 
 set(LLVM_TARGET_DEFINITIONS WebAssembly.td)
 
-tablegen(LLVM WebAssemblyGenAsmMatcher.inc -gen-asm-matcher)
-tablegen(LLVM WebAssemblyGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM WebAssemblyGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM WebAssemblyGenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM WebAssemblyGenFastISel.inc -gen-fast-isel)
-tablegen(LLVM WebAssemblyGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM WebAssemblyGenMCCodeEmitter.inc -gen-emitter)
-tablegen(LLVM WebAssemblyGenRegisterBank.inc -gen-register-bank)
-tablegen(LLVM WebAssemblyGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM WebAssemblyGenSDNodeInfo.inc -gen-sd-node-info)
-tablegen(LLVM WebAssemblyGenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(WebAssemblyGenAsmMatcher.inc -gen-asm-matcher)
+llvm_tablegen(WebAssemblyGenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(WebAssemblyGenDAGISel.inc -gen-dag-isel)
+llvm_tablegen(WebAssemblyGenDisassemblerTables.inc -gen-disassembler)
+llvm_tablegen(WebAssemblyGenFastISel.inc -gen-fast-isel)
+llvm_tablegen(WebAssemblyGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(WebAssemblyGenMCCodeEmitter.inc -gen-emitter)
+llvm_tablegen(WebAssemblyGenRegisterBank.inc -gen-register-bank)
+llvm_tablegen(WebAssemblyGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(WebAssemblyGenSDNodeInfo.inc -gen-sd-node-info)
+llvm_tablegen(WebAssemblyGenSubtargetInfo.inc -gen-subtarget)
 
 set(LLVM_TARGET_DEFINITIONS WebAssemblyGISel.td)
-tablegen(LLVM WebAssemblyGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
-tablegen(LLVM WebAssemblyGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(WebAssemblyGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
+llvm_tablegen(WebAssemblyGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="WebAssemblyPreLegalizerCombiner")
-tablegen(LLVM WebAssemblyGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(WebAssemblyGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="WebAssemblyPostLegalizerCombiner")
 
 add_public_tablegen_target(WebAssemblyCommonTableGen)

@@ -13,6 +13,7 @@ class TestInlineStepping(TestBase):
         compiler="icc",
         bugnumber="# Not really a bug.  ICC combines two inlined functions.",
     )
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_with_python_api(self):
         """Test stepping over and into inlined functions."""
         self.build()
@@ -20,13 +21,16 @@ class TestInlineStepping(TestBase):
 
     @add_test_categories(["pyapi"])
     @skipIf(oslist=["windows"], archs=["aarch64"])  # Flaky on buildbot
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_step_over_with_python_api(self):
         """Test stepping over and into inlined functions."""
         self.build()
         self.inline_stepping_step_over()
 
     @add_test_categories(["pyapi"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
+    @expectedFailureAll(
+        oslist=["windows"], debug_info=no_match(["pdb"]), bugnumber="llvm.org/pr32343"
+    )
     def test_step_in_template_with_python_api(self):
         """Test stepping in to templated functions."""
         self.build()

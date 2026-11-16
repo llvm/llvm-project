@@ -33,16 +33,19 @@ module transitive {
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-names=root > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+// RUN: %scan-deps-filter %t/result.json --fields=modules.clang-module-deps,modules.clang-modulemap-file,modules.directory-deps,modules.file-deps,modules.link-libraries,modules.name \
+// RUN:   > %t/filtered.json
+// RUN: sed 's:\\\\\?:/:g' %t/filtered.json | FileCheck -DPREFIX=%/t %s
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/frameworks/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
-// CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/Framework.framework/Frameworks",
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/Framework.framework/Headers"
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/Framework.framework/Headers/Framework.h"
@@ -63,9 +66,6 @@ module transitive {
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
-// CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/direct.h"
@@ -85,9 +85,6 @@ module transitive {
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
-// CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/root.h",
@@ -100,9 +97,6 @@ module transitive {
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
-// CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/transitive.h"
@@ -115,6 +109,5 @@ module transitive {
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "name": "transitive"
 // CHECK-NEXT:     }
-// CHECK-NEXT:   ],
-// CHECK-NEXT:   "translation-units": []
+// CHECK-NEXT:   ]
 // CHECK-NEXT: }

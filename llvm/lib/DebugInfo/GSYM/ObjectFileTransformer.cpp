@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -170,21 +172,17 @@ static uint64_t addMachOSymbolStubs(const object::MachOObjectFile &MachO,
   return Gsym.getNumFunctionInfos() - NumBefore;
 }
 
-llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
-                                           OutputAggregator &Out,
-                                           GsymCreator &Gsym) {
+static Expected<size_t>
+loadSymbols(const object::ObjectFile &Obj,
+            object::ObjectFile::symbol_iterator_range Symbols,
+            OutputAggregator &Out, GsymCreator &Gsym, bool CopyStrings) {
   using namespace llvm::object;
 
-  const auto *MachO = dyn_cast<MachOObjectFile>(&Obj);
-  const bool IsMachO = MachO != nullptr;
+  const bool IsMachO = isa<MachOObjectFile>(&Obj);
   const bool IsELF = isa<ELFObjectFileBase>(&Obj);
+  const size_t NumBefore = Gsym.getNumFunctionInfos();
 
-  // Read build ID.
-  Gsym.setUUID(getUUID(Obj));
-
-  // Parse the symbol table.
-  size_t NumBefore = Gsym.getNumFunctionInfos();
-  for (const object::SymbolRef &Sym : Obj.symbols()) {
+  for (const object::SymbolRef &Sym : Symbols) {
     Expected<SymbolRef::Type> SymType = Sym.getType();
     if (!SymType) {
       consumeError(SymType.takeError());
@@ -199,7 +197,6 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
         !Gsym.IsValidTextAddress(*AddrOrErr))
       continue;
     // Function size for MachO files will be 0
-    constexpr bool NoCopy = false;
     const uint64_t size = IsELF ? ELFSymbolRef(Sym).getSize() : 0;
     Expected<StringRef> Name = Sym.getName();
     if (!Name) {
@@ -215,20 +212,107 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
     if (IsMachO)
       Name->consume_front("_");
     Gsym.addFunctionInfo(
-        FunctionInfo(*AddrOrErr, size, Gsym.insertString(*Name, NoCopy)));
+        FunctionInfo(*AddrOrErr, size, Gsym.insertString(*Name, CopyStrings)));
   }
-  size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
+  return Gsym.getNumFunctionInfos() - NumBefore;
+}
+
+// Add function symbols from the .gnu_debugdata section (MiniDebugInfo), which
+// contains an xz-compressed ELF file with a .symtab. Errors reading the section
+// are reported as warnings.
+static llvm::Error loadGnuDebugDataSymbols(const object::ELFObjectFileBase &Obj,
+                                           OutputAggregator &Out,
+                                           GsymCreator &Gsym) {
+  using namespace llvm::object;
+
+  std::optional<SectionRef> DebugDataSect;
+  for (const SectionRef &Sect : Obj.sections()) {
+    Expected<StringRef> SectNameOrErr = Sect.getName();
+    if (!SectNameOrErr) {
+      consumeError(SectNameOrErr.takeError());
+      continue;
+    }
+    if (*SectNameOrErr == ".gnu_debugdata") {
+      DebugDataSect = Sect;
+      break;
+    }
+  }
+  if (!DebugDataSect)
+    return Error::success();
+
+  // MiniDebugInfo leaves out symbols that are in .dynsym, so add those too.
+  Expected<size_t> DynFunctionsAdded = loadSymbols(
+      Obj, Obj.getDynamicSymbolIterators(), Out, Gsym, /*CopyStrings=*/false);
+  if (!DynFunctionsAdded)
+    return DynFunctionsAdded.takeError();
   if (Out.GetOS())
-    *Out.GetOS() << "Loaded " << FunctionsAddedCount
+    *Out.GetOS() << "Loaded " << *DynFunctionsAdded
+                 << " functions from dynamic symbol table.\n";
+
+  auto Warn = [&](const Twine &Msg) {
+    Out.Report(
+        "Failed to load the .gnu_debugdata section", [&](raw_ostream &OS) {
+          OS << "warning: unable to read the .gnu_debugdata section: " << Msg
+             << "\n";
+        });
+    return Error::success();
+  };
+
+  if (!compression::xz::isAvailable())
+    return Warn("missing LZMA support (LLVM_ENABLE_LZMA)");
+  Expected<StringRef> Contents = DebugDataSect->getContents();
+  if (!Contents)
+    return Warn(toString(Contents.takeError()));
+  SmallVector<uint8_t, 0> Decompressed;
+  if (Error E = compression::xz::decompress(arrayRefFromStringRef(*Contents),
+                                            Decompressed))
+    return Warn("failed to decompress: " + toString(std::move(E)));
+  Expected<std::unique_ptr<ObjectFile>> DebugObj =
+      ObjectFile::createELFObjectFile(
+          MemoryBufferRef(toStringRef(Decompressed), Obj.getFileName()));
+  if (!DebugObj)
+    return Warn("failed to parse the embedded ELF object: " +
+                toString(DebugObj.takeError()));
+
+  // Decompressed is freed when we return, so the names need to be copied.
+  Expected<size_t> DebugFunctionsAdded =
+      loadSymbols(**DebugObj, (*DebugObj)->symbols(), Out, Gsym,
+                  /*CopyStrings=*/true);
+  if (!DebugFunctionsAdded)
+    return Warn(toString(DebugFunctionsAdded.takeError()));
+  if (Out.GetOS())
+    *Out.GetOS() << "Loaded " << *DebugFunctionsAdded
+                 << " functions from .gnu_debugdata symbol table.\n";
+  return Error::success();
+}
+
+llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
+                                           OutputAggregator &Out,
+                                           GsymCreator &Gsym) {
+  using namespace llvm::object;
+
+  // Read build ID.
+  Gsym.setUUID(getUUID(Obj));
+
+  // Parse the symbol table.
+  Expected<size_t> FunctionsAddedCount =
+      loadSymbols(Obj, Obj.symbols(), Out, Gsym, /*CopyStrings=*/false);
+  if (!FunctionsAddedCount)
+    return FunctionsAddedCount.takeError();
+  if (Out.GetOS())
+    *Out.GetOS() << "Loaded " << *FunctionsAddedCount
                  << " functions from symbol table.\n";
 
   // Mach-O symbol stubs have no symbol table entries of their own, so
   // synthesize function infos for them using the indirect symbol table.
-  if (IsMachO) {
+  if (const auto *MachO = dyn_cast<MachOObjectFile>(&Obj)) {
     const uint64_t StubsAddedCount = addMachOSymbolStubs(*MachO, Out, Gsym);
     if (Out.GetOS())
       *Out.GetOS() << "Loaded " << StubsAddedCount
                    << " functions from symbol stubs.\n";
   }
+
+  if (const auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj))
+    return loadGnuDebugDataSymbols(*ELFObj, Out, Gsym);
   return Error::success();
 }

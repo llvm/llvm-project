@@ -118,7 +118,7 @@ END
 ! CHECK-DAG-SAME: !dbg ![[EXPVA2]]
 ! CHECK-DAG-SAME: !dbg ![[EXPVA3]]
 
-! CHECK-DAG: !DICompileUnit({{.*}}, globals: ![[GLOBALS:[0-9]+]])
+! CHECK-DAG: !DICompileUnit({{.*}}, globals: ![[GLOBALS:[0-9]+]]
 ! CHECK-DAG: ![[GLOBALS]]
 ! CHECK-DAG-SAME: ![[EXPXF1]]
 ! CHECK-DAG-SAME: ![[EXPYF1]]

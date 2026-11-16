@@ -50,7 +50,7 @@ define void @test_mixed(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
 ; CHECK-VREG:    %3:gr64, %4:gr64, %5:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 4, %2(tied-def 0), 2, 0, %1(tied-def 1), %0(tied-def 2), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG:    %6:gr32 = MOV32r0 implicit-def dead $eflags
-; CHECK-VREG:    %7:gr64 = SUBREG_TO_REG killed %6, %subreg.sub_32bit
+; CHECK-VREG:    %7:gr64 = SUBREG_TO_REG %6, %subreg.sub_32bit
 ; CHECK-VREG:    $rdi = COPY %5
 ; CHECK-VREG:    $rsi = COPY %7
 ; CHECK-VREG:    $rdx = COPY %4
@@ -215,7 +215,7 @@ define i1 @test_cross_bb(ptr addrspace(1) %a, i1 %external_cond) gc "statepoint-
 ; CHECK-VREG-NEXT:    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 ; CHECK-VREG-NEXT:    %5:gr8 = COPY $al
 ; CHECK-VREG-NEXT:    %3:gr8 = COPY %5
-; CHECK-VREG-NEXT:    TEST8ri killed %4, 1, implicit-def $eflags
+; CHECK-VREG-NEXT:    TEST8ri %4, 1, implicit-def $eflags
 ; CHECK-VREG-NEXT:    JCC_1 %bb.2, 4, implicit $eflags
 ; CHECK-VREG-NEXT:    JMP_1 %bb.1
 ; CHECK-VREG:       bb.1.left:
@@ -254,11 +254,11 @@ right:
 ; CHECK-VREG:    %5:gr32 = MOV32r0 implicit-def dead $eflags
 ; CHECK-VREG:    $edi = COPY %5
 ; CHECK-VREG:    %6:gr64 = IMPLICIT_DEF
-; CHECK-VREG:    %0:gr64 = STATEPOINT 2, 5, 1, killed %6, $edi, 2, 0, 2, 0, 2, 0, 2, 1, %2(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+; CHECK-VREG:    %0:gr64 = STATEPOINT 2, 5, 1, %6, $edi, 2, 0, 2, 0, 2, 0, 2, 1, %2(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
 ; CHECK-VREG:    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 ; CHECK-VREG:    %7:gr64 = COPY $rax
 ; CHECK-VREG:    %3:gr64 = COPY %0
-; CHECK-VREG:    TEST8ri killed %4, 1, implicit-def $eflags
+; CHECK-VREG:    TEST8ri %4, 1, implicit-def $eflags
 ; CHECK-VREG:    JCC_1 %bb.2, 5, implicit $eflags
 ; CHECK-VREG:    JMP_1 %bb.1
 ; CHECK-VREG:  bb.1.left:
@@ -361,12 +361,12 @@ define ptr addrspace(1) @test_isel_sched(ptr addrspace(1) %0, ptr addrspace(1) %
 ;CHECK-VREG:        TEST32rr %2, %2, implicit-def $eflags
 ;CHECK-VREG:        %3:gr64 = CMOV64rr %1, %0, 4, implicit $eflags
 ;CHECK-VREG:        %4:gr32 = MOV32r0 implicit-def dead $eflags
-;CHECK-VREG:        %5:gr64 = SUBREG_TO_REG killed %4, %subreg.sub_32bit
+;CHECK-VREG:        %5:gr64 = SUBREG_TO_REG %4, %subreg.sub_32bit
 ;CHECK-VREG:        $rdi = COPY %5
 ;CHECK-VREG:        $rsi = COPY %3
 ;CHECK-VREG:        %6:gr64, %7:gr64 = STATEPOINT 10, 0, 2, @bar, $rdi, $rsi, 2, 0, 2, 0, 2, 0, 2, 2, %1(tied-def 0), %0(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
 ;CHECK-VREG:        TEST32rr %2, %2, implicit-def $eflags
-;CHECK-VREG:        %8:gr64 = CMOV64rr %6, killed %7, 4, implicit $eflags
+;CHECK-VREG:        %8:gr64 = CMOV64rr %6, %7, 4, implicit $eflags
 ;CHECK-VREG:        $rax = COPY %8
 ;CHECK-VREG:        RET 0, $rax
 entry:

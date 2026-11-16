@@ -55,7 +55,7 @@ and put the following in your settings.json file:
     "LLVM_ENABLE_SPHINX" : true,
     "LIBC_INCLUDE_DOCS" : true,
     "LLVM_LIBC_INCLUDE_SCUDO" : true,
-    "COMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC": true,
+    "RUNTIMES_USE_LIBC" : "llvm-libc",
     "COMPILER_RT_BUILD_GWP_ASAN" : false,
     "COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED" : false,
     "CMAKE_EXPORT_COMPILE_COMMANDS" : true,

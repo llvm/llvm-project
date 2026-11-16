@@ -1683,66 +1683,6 @@ void hlfir::EOShiftOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
-// PackOp
-//===----------------------------------------------------------------------===//
-
-llvm::LogicalResult hlfir::PackOp::verify() {
-  hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(getType());
-  mlir::Value array = getArray();
-  auto arrayType = mlir::cast<fir::SequenceType>(
-      hlfir::getFortranElementOrSequenceType(array.getType()));
-  if (auto match = areMatchingTypes(
-          *this, hlfir::getFortranElementType(resultType),
-          arrayType.getElementType(),
-          /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
-      match.failed())
-    return emitOpError("ARRAY and the result must have the same element type");
-  if (hlfir::isPolymorphicType(resultType) !=
-      hlfir::isPolymorphicType(array.getType()))
-    return emitOpError("ARRAY must be polymorphic iff result is polymorphic");
-  if (resultType.getRank() != 1)
-    return emitOpError("result must be of rank 1");
-  if (!hlfir::isMaskArgument(getMask().getType()))
-    return emitOpError("MASK must be of logical type");
-
-  mlir::Type maskSeqTy =
-      hlfir::getFortranElementOrSequenceType(getMask().getType());
-  if (auto maskArrayType = mlir::dyn_cast<fir::SequenceType>(maskSeqTy)) {
-    llvm::ArrayRef<int64_t> arrayShape = arrayType.getShape();
-    llvm::ArrayRef<int64_t> maskShape = maskArrayType.getShape();
-    if (maskShape.size() != arrayShape.size())
-      return emitOpError("MASK must be conformable to ARRAY");
-    if (useStrictIntrinsicVerifier) {
-      constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
-      for (std::size_t i = 0; i < arrayShape.size(); ++i) {
-        if (arrayShape[i] != maskShape[i] && arrayShape[i] != unknownExtent &&
-            maskShape[i] != unknownExtent)
-          return emitOpError("MASK must be conformable to ARRAY");
-      }
-    }
-  }
-  if (mlir::Value vector = getVector()) {
-    auto vectorType = mlir::cast<fir::SequenceType>(
-        hlfir::getFortranElementOrSequenceType(vector.getType()));
-    if (vectorType.getDimension() != 1)
-      return emitOpError("VECTOR must be an array of rank 1");
-    if (auto match = areMatchingTypes(
-            *this, vectorType.getElementType(), arrayType.getElementType(),
-            /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
-        match.failed())
-      return emitOpError("ARRAY and VECTOR must have the same element type");
-  }
-  return mlir::success();
-}
-
-void hlfir::PackOp::getEffects(
-    llvm::SmallVectorImpl<
-        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
-        &effects) {
-  getIntrinsicEffects(getOperation(), effects);
-}
-
-//===----------------------------------------------------------------------===//
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 
@@ -1952,6 +1892,10 @@ mlir::Value hlfir::ElementalOp::getElementEntity() {
   return mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getElementValue();
 }
 
+mlir::Region *hlfir::ElementalOp::getElementCleanup() {
+  return &mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getCleanup();
+}
+
 llvm::LogicalResult hlfir::ElementalOp::verify() {
   mlir::Value mold = getMold();
   hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(getType());
@@ -2003,6 +1947,29 @@ llvm::LogicalResult hlfir::DestroyOp::verify() {
   return mlir::success();
 }
 
+/// Erase a character expression whose only uses are hlfir.destroy, together
+/// with these hlfir.destroy. Only the character operations creating their own
+/// result storage are considered, since other expression producers may reuse
+/// storage that the hlfir.destroy releases.
+llvm::LogicalResult
+hlfir::DestroyOp::canonicalize(DestroyOp destroy,
+                               mlir::PatternRewriter &rewriter) {
+  mlir::Value expr = destroy.getExpr();
+  mlir::Operation *producer = expr.getDefiningOp();
+  if (!mlir::isa_and_nonnull<hlfir::ConcatOp, hlfir::CharTrimOp,
+                             hlfir::SetLengthOp, hlfir::CharExtremumOp>(
+          producer) ||
+      !mlir::wouldOpBeTriviallyDead(producer) ||
+      !llvm::all_of(expr.getUsers(), [](mlir::Operation *user) {
+        return mlir::isa<hlfir::DestroyOp>(user);
+      }))
+    return mlir::failure();
+  for (mlir::Operation *user : llvm::make_early_inc_range(expr.getUsers()))
+    rewriter.eraseOp(user);
+  rewriter.eraseOp(producer);
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // CopyInOp
 //===----------------------------------------------------------------------===//
@@ -2012,7 +1979,15 @@ void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::Value temp_box, mlir::Value var_is_present) {
   return build(builder, odsState,
                {var.getType(), builder.getI1Type(), builder.getI1Type()}, var,
-               temp_box, var_is_present);
+               temp_box, var_is_present, /*alignment=*/mlir::IntegerAttr{});
+}
+
+llvm::LogicalResult hlfir::CopyInOp::verify() {
+  if (std::optional<std::int64_t> alignment = getAlignment()) {
+    if (*alignment <= 0 || (*alignment & (*alignment - 1)) != 0)
+      return emitOpError("alignment must be a positive power of two");
+  }
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,4 +1,4 @@
-// RUN:   mlir-opt %s -pass-pipeline="builtin.module(func.func(test-math-polynomial-approximation),convert-vector-to-scf,convert-scf-to-cf,convert-vector-to-llvm,convert-to-llvm,reconcile-unrealized-casts)" \
+// RUN:   mlir-opt %s -pass-pipeline="builtin.module(transform-interpreter,test-transform-dialect-erase-schedule,convert-vector-to-scf,convert-scf-to-cf,convert-vector-to-llvm,convert-to-llvm,reconcile-unrealized-casts)" \
 // RUN: | mlir-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
 // RUN:     -shared-libs=%mlir_c_runner_utils  \
@@ -857,4 +857,14 @@ func.func @main() {
   call @floorf() : () -> ()
   call @ceilf() : () -> ()
   return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.math.polynomial_approximation
+    } : !transform.any_op
+    transform.yield
+  }
 }

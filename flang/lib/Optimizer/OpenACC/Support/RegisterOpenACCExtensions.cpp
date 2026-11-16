@@ -21,9 +21,11 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCOpsInterfaces.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCTypeInterfaces.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 
 namespace fir::acc {
 void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
+  mlir::acc::registerAllExtensions(registry);
   registry.addExtension(+[](mlir::MLIRContext *ctx,
                             fir::FIROpsDialect *dialect) {
     fir::BoxType::attachInterface<OpenACCMappableModel<fir::BaseBoxType>>(*ctx);
