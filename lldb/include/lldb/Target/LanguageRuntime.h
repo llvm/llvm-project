@@ -73,6 +73,14 @@ public:
     return nullptr;
   }
 
+  /// Returns whether this runtime is the preferred runtime for \p in_value, an
+  /// object of another language, for example because code in this runtime's
+  /// language uses it. The runtime of the object's language can then return
+  /// this runtime from GetPreferredLanguageRuntime().
+  virtual bool IsPreferredLanguageRuntimeFor(ValueObject &in_value) {
+    return false;
+  }
+
   virtual llvm::Error GetObjectDescription(Stream &str,
                                            ValueObject &object) = 0;
 
