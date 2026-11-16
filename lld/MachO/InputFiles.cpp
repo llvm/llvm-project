@@ -2605,6 +2605,9 @@ void macho::extract(InputFile &file, StringRef reason) {
     return;
   }
 
+  for (Symbol *sym : file.symbols)
+    if (sym)
+      sym->hasPendingDefinition = true;
   pendingExtracts.push_back(&cast<ObjFile>(file));
 }
 
@@ -2617,6 +2620,10 @@ void macho::parsePendingExtracts() {
     else
       f.parse<ILP32>();
   }
+  for (ObjFile *f : pendingExtracts)
+    for (Symbol *sym : f->symbols)
+      if (sym)
+        sym->hasPendingDefinition = false;
   pendingExtracts.clear();
 }
 
