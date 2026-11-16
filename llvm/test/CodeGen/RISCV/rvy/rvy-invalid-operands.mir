@@ -10,6 +10,7 @@
 
 ---
 name: verify_all_invalid
+tracksRegLiveness: false
 body: |
   bb.0:
     $x10_y = YBNDSWI $x10_y, 0

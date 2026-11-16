@@ -3,6 +3,7 @@
 
 ---
 name:            Cst
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Cst
@@ -15,6 +16,7 @@ body:             |
 ...
 ---
 name:            CstZero
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstZero
@@ -27,6 +29,7 @@ body:             |
 ...
 ---
 name:            CstNegOne
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstNegOne
@@ -39,6 +42,7 @@ body:             |
 ...
 ---
 name:            CstNegFour
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstNegFour
@@ -51,6 +55,7 @@ body:             |
 ...
 ---
 name:            CstNeg
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstNeg
@@ -63,6 +68,7 @@ body:             |
 ...
 ---
 name:            ScalarVar
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ScalarVar
@@ -75,6 +81,7 @@ body:             |
 ...
 ---
 name:            ScalarRhsEarlyOut
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ScalarRhsEarlyOut
@@ -87,6 +94,7 @@ body:             |
 ...
 ---
 name:            ScalarNonNegative
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ScalarNonNegative
@@ -103,6 +111,7 @@ body:             |
 ...
 ---
 name:            ScalarLhsEarlyOut
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ScalarLhsEarlyOut
@@ -115,6 +124,7 @@ body:             |
 ...
 ---
 name:            ScalarPartKnown
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ScalarPartKnown
@@ -131,6 +141,7 @@ body:             |
 ...
 ---
 name:            VectorCstZero
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCstZero
@@ -145,6 +156,7 @@ body:             |
 ...
 ---
 name:            VectorCstNegOne
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCstNegOne
@@ -161,6 +173,7 @@ body:             |
 ...
 ---
 name:            VectorVar
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorVar
@@ -173,6 +186,7 @@ body:             |
 ...
 ---
 name:            VectorRhsEarlyOut
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorRhsEarlyOut
@@ -187,6 +201,7 @@ body:             |
 ...
 ---
 name:            VectorNonNegative
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorNonNegative
@@ -207,6 +222,7 @@ body:             |
 ...
 ---
 name:            VectorLhsEarlyOut
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorLhsEarlyOut
@@ -221,6 +237,7 @@ body:             |
 ...
 ---
 name:            VectorPartKnown
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorPartKnown
@@ -243,6 +260,7 @@ body:             |
 ...
 ---
 name:            VectorCst36
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCst36
@@ -260,6 +278,7 @@ body:             |
 
 ---
 name:            VectorCst3unknown
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCst3unknown

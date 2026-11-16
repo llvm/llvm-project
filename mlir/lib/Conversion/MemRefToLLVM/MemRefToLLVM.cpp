@@ -559,6 +559,12 @@ public:
       allocatedPtr = MemRefDescriptor(adaptor.getMemref())
                          .allocatedPtr(rewriter, op.getLoc());
     }
+    // `free` takes a pointer in the default address space. Undo the cast that
+    // the alloc lowering inserts for memrefs in another address space.
+    Type freeArgTy = getPtrType();
+    if (allocatedPtr.getType() != freeArgTy)
+      allocatedPtr = LLVM::AddrSpaceCastOp::create(rewriter, op.getLoc(),
+                                                   freeArgTy, allocatedPtr);
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFunc.value(),
                                               allocatedPtr);
     return success();

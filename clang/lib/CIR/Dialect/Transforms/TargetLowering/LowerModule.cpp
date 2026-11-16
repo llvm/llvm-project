@@ -96,14 +96,13 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
   auto targetInfo = clang::targets::AllocateTarget(triple, targetOptions);
 
   // Populate the lowering-relevant LangOptions from the module's
-  // #cir.lowering_lang_options attribute so a reloaded .cir lowers the same
+  // #cir.lowering_options attribute so a reloaded .cir lowers the same
   // way it was compiled, without a live clang::LangOptions. When the attribute
   // is absent (e.g. hand-written CIR) the defaults are kept;
   clang::LangOptions langOpts;
   if (auto loweringLangOpts =
-          mlir::dyn_cast_if_present<cir::LoweringLangOptionsAttr>(
-              module->getAttr(
-                  cir::CIRDialect::getLoweringLangOptionsAttrName()))) {
+          mlir::dyn_cast_if_present<cir::LoweringOptionsAttr>(
+              module->getAttr(cir::CIRDialect::getLoweringOptionsAttrName()))) {
     langOpts.Exceptions = loweringLangOpts.getExceptions();
     langOpts.ThreadsafeStatics = loweringLangOpts.getThreadsafeStatics();
     langOpts.CUDA = loweringLangOpts.getCuda();

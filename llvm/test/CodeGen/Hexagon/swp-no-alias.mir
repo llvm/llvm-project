@@ -138,9 +138,9 @@ body:             |
     %2:intregs = PHI %8, %bb.1, %5, %bb.2
     %3:intregs = PHI %7, %bb.1, %6, %bb.2
     %12:hvxvr = V6_vL32b_ai %3, 0 :: (load (s1024) from %ir.iptr.09, !tbaa !4)
-    V6_vS32b_ai %2, 0, killed %12 :: (store (s1024) into %ir.optr.010, !tbaa !4)
+    V6_vS32b_ai %2, 0, %12 :: (store (s1024) into %ir.optr.010, !tbaa !4)
     %13:hvxvr = V6_vL32b_ai %3, 128 :: (load (s1024) from %ir.cgep, !tbaa !4)
-    V6_vS32b_ai %2, 128, killed %13 :: (store (s1024) into %ir.cgep3, !tbaa !4)
+    V6_vS32b_ai %2, 128, %13 :: (store (s1024) into %ir.cgep3, !tbaa !4)
     %5:intregs = A2_addi %2, 256
     %6:intregs = A2_addi %3, 256
     ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0

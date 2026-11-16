@@ -43,7 +43,7 @@ curl -sS --fail --compressed -G https://lnt.llvm.org/api/suites/libcxx/series   
 # Determine which commits to refine based on the change points
 curl "https://lnt.llvm.org/api/suites/libcxx/runs?machine=<machine>&limit=10000" | jq -r '.items[].commit' > attempted.txt
 select-refinement-commits --changes changes.jsonl --attempted-commits attempted.txt \
-                          --direction increase --output refinement.txt
+                          --direction increase --min-change 0.1 --output refinement.txt
 
 # What is missing from LNT (we want at least 3 samples for each commit).
 cat anchors.txt refinement.txt | plan-benchmarks --lnt-url https://lnt.llvm.org --test-suite libcxx \
@@ -98,9 +98,10 @@ entries:
 
 The `coverage` key establishes how far back and at which frequency performance should be measured
 for that configuration. A machine without a `coverage` entry can be defined, but it won't result
-in historical data. Within it, the optional `refinement` key enables bisecting the changes found in
-that data: it gives the `metric` to use for finding changepoints, the `direction` of the changes to
-bisect (`increase`, `decrease` or `both`) and the number of commits (`max-commits`) to select at a time.
+in historical data. Inside `coverage`, the optional `refinement` key enables bisecting changes: it
+gives the `metric` to use for finding changepoints, the `direction` of the changes to bisect
+(`increase`, `decrease` or `both`), the smallest change worth bisecting (`min-change`, as the
+smallest `%` change to pursue) and the number of commits (`max-commits`) to select at a time.
 
 The `pr-benchmarks` key determines whether the machine is used when benchmarking pull requests
 with `/libcxx-bot benchmark`.

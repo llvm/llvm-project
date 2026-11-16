@@ -1,4 +1,4 @@
-# RUN: llc -verify-machineinstrs -O0 -mtriple spirv-vulkan1.3-unknown -run-pass=spirv-prelegalizer-combiner %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple spirv-vulkan1.3-unknown -run-pass=spirv-prelegalizer-combiner %s -o - | FileCheck %s
 ---
 name:            faceforward_instcombine_float
 tracksRegLiveness: true

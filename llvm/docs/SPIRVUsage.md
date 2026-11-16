@@ -211,6 +211,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds decorations to indicate that a given instruction does not cause integer wrapping.
    * - ``SPV_KHR_shader_clock``
      - Adds the extension cl_khr_kernel_clock that adds the ability for a kernel to sample the value from clocks provided by compute units.
+   * - ``SPV_KHR_storage_buffer_storage_class``
+     - Adds the StorageBuffer storage class for SPIR-V versions before 1.3.
    * - ``SPV_KHR_subgroup_rotate``
      - Adds a new instruction that enables rotating values across invocations within a subgroup.
    * - ``SPV_KHR_uniform_group_instructions``

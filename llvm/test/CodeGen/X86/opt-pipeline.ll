@@ -201,7 +201,7 @@
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       Reaching Definitions Analysis
-; CHECK-NEXT:       X86 Execution Dependency Fix
+; CHECK-NEXT:       Execution Domain Fix
 ; CHECK-NEXT:       BreakFalseDeps
 ; CHECK-NEXT:       X86 Indirect Branch Tracking
 ; CHECK-NEXT:       X86 vzeroupper inserter

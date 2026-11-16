@@ -3,6 +3,7 @@
 
 ---
 name:            const
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @const
@@ -15,6 +16,7 @@ body:             |
 ...
 ---
 name:            const_lane1
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @const_lane1
@@ -31,6 +33,7 @@ body:             |
 ...
 ---
 name:            sextsignbits
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @sextsignbits
@@ -47,6 +50,7 @@ body:             |
 ...
 ---
 name:            sextsignbits_lane1
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @sextsignbits_lane1

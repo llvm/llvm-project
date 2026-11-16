@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer %s -o - | FileCheck %s
 ---
 name:            test_scalar_add_big
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_add_big
@@ -27,6 +28,7 @@ body:             |
 ...
 ---
 name:            test_scalar_add_big_nonpow2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_add_big_nonpow2
@@ -55,6 +57,7 @@ body:             |
 ...
 ---
 name:            test_scalar_add_small
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_add_small
@@ -76,6 +79,7 @@ body:             |
 ...
 ---
 name:            test_scalar_add_narrowing
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_add_narrowing
@@ -104,6 +108,7 @@ body:             |
 ...
 ---
 name:            test_scalar_add_narrowing_s65
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_add_narrowing_s65
@@ -132,6 +137,7 @@ body:             |
 ...
 ---
 name:            test_vector_add
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_add
@@ -157,6 +163,7 @@ body:             |
 ...
 ---
 name:            test_vector_add_v16s16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_add_v16s16
@@ -177,6 +184,7 @@ body:             |
 ...
 ---
 name:            test_vector_add_v32s8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_add_v32s8
@@ -197,6 +205,7 @@ body:             |
 ...
 ---
 name:            test_vector_add_nonpow2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_add_nonpow2

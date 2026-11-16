@@ -1736,6 +1736,25 @@ def bitfield_extract_from_shr : GICombineRule<
     [{ return Helper.matchBitfieldExtractFromShr(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+// Replace a 1-bit G_UBFX of a bit that is a copy of the sign bit with a shift
+// of the sign bit into bit 0, which can fold into users such as G_ADD.
+def ubfx_sign_bit_to_lshr : GICombineRule<
+  (defs root:$root),
+  (match (G_CONSTANT $lsb, $lsbimm),
+         (G_UBFX $dst, $src, $lsb, 1):$root,
+         [{ LLT Ty = MRI.getType(${dst}.getReg());
+            unsigned BitWidth = Ty.getSizeInBits();
+            const APInt &Lsb = ${lsbimm}.getCImm()->getValue();
+            return Ty.isScalar() && Lsb.ult(BitWidth) &&
+                   VT->computeNumSignBits(${src}.getReg()) >=
+                       BitWidth - Lsb.getZExtValue(); }]),
+  (apply [{ LLT Ty = MRI.getType(${dst}.getReg());
+            LLT ShiftAmtTy =
+                Helper.getTargetLowering().getPreferredShiftAmountTy(Ty);
+            auto Amt = B.buildConstant(ShiftAmtTy, Ty.getSizeInBits() - 1);
+            B.buildLShr(${dst}.getReg(), ${src}.getReg(), Amt);
+            ${root}->eraseFromParent(); }])>;
+
 def bitfield_extract_from_shr_and : GICombineRule<
   (defs root:$dst, build_fn_matchinfo:$info),
   (match (ashr_lshr_frags $dst):$root,
@@ -1771,7 +1790,29 @@ def udiv_by_pow2 : GICombineRule<
    [{ return Helper.matchDivByPow2(*${root}, /*IsSigned=*/false); }]),
   (apply [{ Helper.applyUDivByPow2(*${root}); }])>;
 
-def intdiv_combines : GICombineGroup<[udiv_by_pow2, sdiv_by_pow2,
+// Fold (udiv x, (shl C, y)) -> (lshr x, (add y, log2(C))) for power-of-two C.
+def udiv_by_shifted_pow2 : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_UDIV $dst, $x, $y):$root,
+   [{ return Helper.matchUDivByShiftedPow2(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// Convert signed division or remainder of nonnegative operands to unsigned.
+class signed_divrem_to_unsigned<Instruction signedOpcode,
+                                Instruction unsignedOpcode> : GICombineRule<
+  (defs root:$root),
+  (match (signedOpcode $dst, $x, $y):$root,
+   [{ return Helper.matchSignedDivRemToUnsigned(*${root},
+                       TargetOpcode::}] # unsignedOpcode # [{); }]),
+  (apply (unsignedOpcode $dst, $x, $y, (MIFlags $root)))>;
+
+// Fold (sdiv x, y) -> (udiv x, y) when both operands are nonnegative.
+def sdiv_to_unsigned : signed_divrem_to_unsigned<G_SDIV, G_UDIV>;
+// Fold (srem x, y) -> (urem x, y) when both operands are nonnegative.
+def srem_to_unsigned : signed_divrem_to_unsigned<G_SREM, G_UREM>;
+
+def intdiv_combines : GICombineGroup<[udiv_by_pow2, udiv_by_shifted_pow2,
+                                      sdiv_by_pow2,
                                       udiv_by_const, sdiv_by_const,]>;
 
 def urem_by_const : GICombineRule<
@@ -2770,6 +2811,28 @@ def SubUmaxSub: GICombineRule<
                     MRI.hasOneNonDBGUse(${max}.getReg()); }]),
    (apply (G_SUB $sub1, 0, $A), 
           (G_UMIN $root, $A, $sub1))>;
+          
+// (sub 0, (smin X, (sub 0, X))) --> (smax X, (sub 0, X))
+def NegSminNeg: GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, 0, $A),
+          (G_SMIN $max, $A, $sub),
+          (G_SUB $root, 0, $max),
+          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) &&
+                    MRI.hasOneNonDBGUse(${max}.getReg()); }]),
+   (apply (G_SUB $sub1, 0, $A), 
+          (G_SMAX $root, $A, $sub1))>;
+
+// (sub 0, (umin X, (sub 0, X))) --> (umax X, (sub 0, X))
+def NegUminNeg: GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, 0, $A),
+          (G_UMIN $max, $A, $sub),
+          (G_SUB $root, 0, $max),
+          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) &&
+                    MRI.hasOneNonDBGUse(${max}.getReg()); }]),
+   (apply (G_SUB $sub1, 0, $A), 
+          (G_UMAX $root, $A, $sub1))>;
    
 def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusCMinusB,
@@ -2795,7 +2858,9 @@ def integer_reassoc_combines: GICombineGroup<[
 
 def max_min_combines: GICombineGroup<[
   SubSmaxSub, 
-  SubUmaxSub
+  SubUmaxSub,
+  NegSminNeg, 
+  NegUminNeg
 ]>;
 
 // fold (A+(shl (0-B), C)) -> (A-(shl B, C))
@@ -3124,7 +3189,7 @@ def known_bits_simplifications : GICombineGroup<[
   redundant_sext_inreg, redundant_zext_sext_inreg, redundant_aext_sext_inreg,
   redundant_zext_unmerge_sext_inreg, redundant_aext_unmerge_sext_inreg,
   redundant_and, redundant_or, urem_pow2_to_mask, zext_trunc_fold,
-  sext_inreg_to_zext_inreg]>;
+  sext_inreg_to_zext_inreg, sdiv_to_unsigned, srem_to_unsigned]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend,
                                                narrow_binop_feeding_and]>;

@@ -4183,7 +4183,7 @@ bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
     return false;
 
   // Must be an equality comparison.
-  ISD::CondCode CCVal = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CCVal = N->getOperandCondCode(2);
   if (CCVal != ExpectedCCVal)
     return false;
 

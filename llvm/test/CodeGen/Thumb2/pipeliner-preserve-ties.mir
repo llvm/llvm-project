@@ -253,7 +253,7 @@ body:             |
     successors: %bb.1(0x80000000)
 
     %6:rgpr = t2MOVi32imm @bar
-    %7:rgpr = t2SUBri killed %6, 16, 14 /* CC::al */, $noreg, $noreg
+    %7:rgpr = t2SUBri %6, 16, 14 /* CC::al */, $noreg, $noreg
     %8:rgpr = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
     %5:gpr = COPY %8
     %4:gpr = COPY %7
@@ -272,20 +272,20 @@ body:             |
     %16:rgpr = t2UXTH %15, 0, 14 /* CC::al */, $noreg
     t2STRHi12 %15, %3, 14, 14 /* CC::al */, $noreg :: (store (s16) into %ir.uglygep4, !tbaa !7)
     %17:gprnopc = t2LDRHi12 %3, 4, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep5, !tbaa !8)
-    t2CMPrr killed %17, %14, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2CMPrr %17, %14, 14 /* CC::al */, $noreg, implicit-def $cpsr
     %19:rgpr = t2ADDri %1, 1, 1 /* CC::ne */, $cpsr, $noreg, implicit %1(tied-def 0)
     %20:gprnopc = t2LDRHi12 %3, 6, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep6, !tbaa !9)
-    t2CMPrr killed %20, %16, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2CMPrr %20, %16, 14 /* CC::al */, $noreg, implicit-def $cpsr
     %22:rgpr = t2ADDri %19, 1, 1 /* CC::ne */, $cpsr, $noreg, implicit %19(tied-def 0)
     %23:gprnopc = t2LDRHi12 %3, 8, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep7, !tbaa !10)
-    t2CMPrr killed %23, %14, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2CMPrr %23, %14, 14 /* CC::al */, $noreg, implicit-def $cpsr
     %25:rgpr = t2ADDri %22, 1, 1 /* CC::ne */, $cpsr, $noreg, implicit %22(tied-def 0)
     %26:gprnopc = t2LDRHi12 %3, 10, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep8, !tbaa !11)
-    t2CMPrr killed %26, %16, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2CMPrr %26, %16, 14 /* CC::al */, $noreg, implicit-def $cpsr
     %28:rgpr = t2ADDri %25, 1, 1 /* CC::ne */, $cpsr, $noreg, implicit %25(tied-def 0)
     %2:gpr = COPY %28
     %29:gprnopc = t2LDRHi12 %3, 18, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep9, !tbaa !5)
-    t2CMPri killed %29, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2CMPri %29, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
     t2Bcc %bb.1, 1 /* CC::ne */, $cpsr
     t2B %bb.2, 14 /* CC::al */, $noreg
 

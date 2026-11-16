@@ -302,9 +302,12 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       if (auto *EVI = dyn_cast<ExtractValueInst>(Inst))
         for (unsigned Idx : EVI->indices())
           VPOperands.push_back(Plan->getConstantInt(32, Idx));
+      VPIRAttributes Attrs;
+      if (auto *CI = dyn_cast<CallInst>(Inst))
+        Attrs = VPIRAttributes(CI->getAttributes());
       NewR = VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst,
                                       VPIRFlags(*Inst), MD, Inst->getDebugLoc(),
-                                      "", Inst->getType());
+                                      "", Inst->getType(), Attrs);
     }
 
     IRDef2VPValue[Inst] = NewR;
@@ -523,7 +526,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB, DebugLoc DL) {
 /// Creates extracts for values in \p Plan defined in a loop region and used
 /// outside a loop region.
 static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
-  VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPBuilder B(MiddleVPBB->getFirstNonPhi());
   for (VPBasicBlock *EB : Plan.getExitBlocks()) {
     if (!is_contained(EB->predecessors(), MiddleVPBB))
       continue;
@@ -603,7 +606,7 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy,
   // Create resume phis in the scalar preheader for each phi in the scalar loop.
   // Their incoming value from the vector loop will be the last lane of the
   // corresponding vector loop header phi.
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPBuilder MiddleBuilder(MiddleVPBB->getFirstNonPhi());
   VPBuilder ScalarPHBuilder(ScalarPH);
   assert(equal(ScalarPH->getPredecessors(),
                ArrayRef<VPBlockBase *>({MiddleVPBB, Plan.getEntry()})) &&
@@ -887,8 +890,7 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
   });
 
   for (VPRecipeBase *HoistCandidate : HoistCandidates) {
-    HoistCandidate->moveBefore(*HoistPoint->getParent(),
-                               HoistPoint->getIterator());
+    HoistCandidate->moveBefore(HoistPoint->getIterator());
   }
 
   return true;
@@ -921,21 +923,19 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
       Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
     }
 
-    VPBasicBlock *InsertBlock = FOR->getParent();
-    VPBasicBlock::iterator InsertPt = InsertBlock->getFirstNonPhi();
+    VPBasicBlock::iterator InsertPt = FOR->getParent()->getFirstNonPhi();
     if (Previous) {
       // Sink FOR users after Previous or hoist Previous before FOR users.
       if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
           !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
         return false;
-      InsertBlock = Previous->getParent();
       InsertPt = isa<VPHeaderPHIRecipe>(Previous)
-                     ? InsertBlock->getFirstNonPhi()
+                     ? Previous->getParent()->getFirstNonPhi()
                      : std::next(Previous->getIterator());
     }
 
     // Create FirstOrderRecurrenceSplice and replace FOR uses.
-    VPBuilder LoopBuilder(InsertBlock, InsertPt);
+    VPBuilder LoopBuilder(InsertPt);
     auto *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
                                  {FOR, FOR->getBackedgeValue()});
@@ -1170,13 +1170,13 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
             Instruction::FMul,
             {CurrentLink->getOperand(0), CurrentLink->getOperand(1)},
             CurrentLinkI->getFastMathFlags());
-        LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
+        FMulRecipe->insertBefore(CurrentLink);
         VecOp = FMulRecipe;
       } else if (Kind == RecurKind::AddChainWithSubs &&
                  match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
         Type *PhiTy = PhiR->getScalarType();
         auto *Zero = Plan.getConstantInt(PhiTy, 0);
-        VPBuilder Builder(LinkVPBB, CurrentLink->getIterator());
+        VPBuilder Builder(CurrentLink);
         auto *Sub = Builder.createSub(Zero, CurrentLink->getOperand(1),
                                       CurrentLinkI->getDebugLoc());
         Sub->setUnderlyingValue(CurrentLinkI);
@@ -1375,7 +1375,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
 
   // Abstract header mask, materialized into concrete recipes later.
   VPValue *HeaderMask = LoopRegion->createHeaderMask();
-  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  VPBuilder Builder(Header->getFirstNonPhi());
   Builder.createNaryOp(VPInstruction::BranchOnCond, HeaderMask);
 
   VPBasicBlock *OrigLatch = LoopRegion->getExitingBasicBlock();
@@ -1415,7 +1415,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
     CollectBypassedOperands(R);
 
   // Insert phis for values coming past the end of the tail.
-  Builder.setInsertPoint(Latch, Latch->begin());
+  Builder.setInsertPoint(Latch->begin());
   for (const auto &[V, Users] : NeedsPhi) {
     VPValue *TailVal = Plan.getPoison(V->getScalarType());
     std::optional<VPIRFlags> Flags;
@@ -1580,39 +1580,53 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   attachVPCheckBlock(Plan, CondVPV, CheckBlockVPBB, AddBranchWeights);
 }
 
-/// Generate recipes for the memory runtime checks \p Checks using \p Builder
-/// and return the condition that is true if any check fails.
+/// Generate recipes for the memory runtime checks \p Checks of \p TheLoop
+/// using \p Builder and return the condition that is true if any check fails.
 static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
                                     VPSCEVExpander &Expander,
                                     ArrayRef<RuntimePointerCheck> Checks,
+                                    const Loop *TheLoop, ScalarEvolution &SE,
                                     DebugLoc DL) {
   // Expand each group's bounds once so all checks reuse the same frozen values.
   SmallDenseMap<const RuntimeCheckingPtrGroup *,
-                std::pair<VPValue *, VPValue *>, 8>
+                std::tuple<VPValue *, VPValue *, const SCEV *>, 8>
       GroupToBounds;
-  for (const auto &[A, B] : Checks)
+  for (const auto &[A, B] : Checks) {
     for (const RuntimeCheckingPtrGroup *CG : {A, B}) {
-      auto &[Start, End] = GroupToBounds[CG];
-      if (Start)
+      if (GroupToBounds.contains(CG))
         continue;
-      Start = Expander.expand(CG->Low);
-      End = Expander.expand(CG->High);
+      auto [Low, High, Stride] = getRuntimeCheckBounds(
+          CG, TheLoop, SE, VectorizerParams::HoistRuntimeChecks);
+      VPValue *Start = Expander.expand(Low);
+      VPValue *End = Expander.expand(High);
       if (CG->NeedsFreeze) {
         Start = Builder.createFreeze(Start, DL);
         End = Builder.createFreeze(End, DL);
       }
+      GroupToBounds[CG] = {Start, End, Stride};
     }
+  }
 
   VPValue *Cond = Plan.getFalse();
+  SmallPtrSet<const SCEV *, 4> CheckedStrides;
   for (const auto &[A, B] : Checks) {
-    auto [AStart, AEnd] = GroupToBounds[A];
-    auto [BStart, BEnd] = GroupToBounds[B];
+    auto [AStart, AEnd, AStride] = GroupToBounds[A];
+    auto [BStart, BEnd, BStride] = GroupToBounds[B];
     VPValue *Bound0 =
         Builder.createICmp(CmpInst::ICMP_ULT, AStart, BEnd, DL, "bound0");
     VPValue *Bound1 =
         Builder.createICmp(CmpInst::ICMP_ULT, BStart, AEnd, DL, "bound1");
     VPValue *IsConflict =
         Builder.createAnd(Bound0, Bound1, DL, "found.conflict");
+    for (const SCEV *Stride : {AStride, BStride}) {
+      if (!Stride || !CheckedStrides.insert(Stride).second)
+        continue;
+      VPValue *StrideV = Expander.expand(Stride);
+      VPValue *IsNegative = Builder.createICmp(
+          CmpInst::ICMP_SLT, StrideV, Plan.getZero(StrideV->getScalarType()),
+          DL, "stride.check");
+      IsConflict = Builder.createOr(IsConflict, IsNegative, DL);
+    }
     Cond = Builder.createOr(Cond, IsConflict, DL, "conflict.rdx");
   }
   return Cond;
@@ -1661,19 +1675,21 @@ static VPValue *createDiffRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
 
 void VPlanTransforms::attachMemoryChecks(
     VPlan &Plan, const RuntimePointerChecking &RtPtrChecking,
-    ScalarEvolution &SE, ElementCount VF, unsigned UF, DebugLoc DL,
+    const Loop *TheLoop, ScalarEvolution &SE, ElementCount VF, unsigned UF,
     bool AddBranchWeights) {
   assert(!RtPtrChecking.getChecks().empty() && "No checks to generate");
 
+  DebugLoc DL = TheLoop->getStartLoc();
   auto *MemCheckVPBB = Plan.createVPBasicBlock("vector.memcheck");
   VPBuilder Builder(MemCheckVPBB);
-  VPSCEVExpander Expander(Builder, SE, DL);
+  VPSCEVExpander Expander(Builder, SE, DL, TheLoop->getParentLoop());
   auto DiffChecks = RtPtrChecking.getDiffChecks();
-  VPValue *Cond = DiffChecks
-                      ? createDiffRuntimeChecks(Plan, Builder, Expander,
-                                                *DiffChecks, SE, VF, UF, DL)
-                      : createRuntimeChecks(Plan, Builder, Expander,
-                                            RtPtrChecking.getChecks(), DL);
+  VPValue *Cond =
+      DiffChecks
+          ? createDiffRuntimeChecks(Plan, Builder, Expander, *DiffChecks, SE,
+                                    VF, UF, DL)
+          : createRuntimeChecks(Plan, Builder, Expander,
+                                RtPtrChecking.getChecks(), TheLoop, SE, DL);
   attachVPCheckBlock(Plan, Cond, MemCheckVPBB, AddBranchWeights);
 }
 
@@ -1910,7 +1926,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   VPValue *AnyNaNLane =
       LatchBuilder.createNaryOp(VPInstruction::AnyOf, {AllNaNLanes});
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->begin());
+  VPBuilder MiddleBuilder(MiddleVPBB->begin());
   for (const auto &[RedPhiR, _] : MinOrMaxNumReductionsToHandle) {
     assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
                RedPhiR->getRecurrenceKind()) &&
@@ -2073,7 +2089,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     // Find final reduction computation and replace it with an
     // extract.last.active intrinsic.
     auto *RdxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(BackedgeSelect);
+        findSingleUser<VPInstruction::ComputeReductionResult>(BackedgeSelect);
     assert(RdxResult && "Could not find reduction result");
 
     // Add mask phi.
@@ -2355,8 +2371,8 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     VPValue *CmpOpA;
     VPValue *CmpOpB;
     CmpPredicate Pred;
-    auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(findUserOf(
-        MinOrMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
+    auto *Cmp = findSingleUser<VPRecipeWithIRFlags>(
+        MinOrMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB)));
     if (!Cmp || Cmp->getNumUsers() != 1 ||
         (CmpOpA != MinOrMaxOpValue && CmpOpB != MinOrMaxOpValue))
       return false;
@@ -2373,7 +2389,8 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
       return false;
 
     VPInstruction *MinOrMaxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxBackedgeR);
+        findSingleUser<VPInstruction::ComputeReductionResult>(
+            MinOrMaxBackedgeR);
     assert(MinOrMaxResult &&
            "MinOrMaxResult must be a user of MinOrMaxBackedgeR");
 
@@ -2401,7 +2418,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
     // on its ComputeReductionResult. SMax/UMax indicates FindLast.
     VPInstruction *FindIVResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(
+        findSingleUser<VPInstruction::ComputeReductionResult>(
             FindIVPhiR->getBackedgeValue());
     assert(FindIVResult &&
            "must be able to retrieve the FindIVResult VPInstruction");
@@ -2470,8 +2487,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // Reducing to a scalar min or max value is placed right before reducing to
     // its scalar iteration, in order to generate instructions that use both
     // their operands.
-    MinOrMaxResult->moveBefore(*FindIVRdxResult->getParent(),
-                               FindIVRdxResult->getIterator());
+    MinOrMaxResult->moveBefore(FindIVRdxResult->getIterator());
 
     bool IsStrictPredicate = CmpInst::isStrictPredicate(Pred);
     if (IsStrictPredicate) {
@@ -2532,7 +2548,7 @@ void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
       DebugLoc::getUnknown(), "incoming.alias.mask", I1Ty);
 
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
-  Builder = VPBuilder(Header, Header->getFirstNonPhi());
+  Builder = VPBuilder(Header->getFirstNonPhi());
 
   // Update all existing users of the header mask to "HeaderMask & AliasMask".
   auto *ClampedHeaderMask = Builder.createAnd(HeaderMask, AliasMask);

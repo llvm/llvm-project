@@ -241,11 +241,13 @@ static void liveIntervalTest(StringRef MIRFunc,
 ---
 ...
 name: func
+tracksRegLiveness: false
 registers:
   - { id: 0, class: sreg_64 }
 body: |
   bb.0:
-)MIR") + Twine(MIRFunc) + Twine("...\n")).toNullTerminatedStringRef(S);
+)MIR") + Twine(MIRFunc) + Twine("...\n"))
+                            .toNullTerminatedStringRef(S);
 
   doTest<LiveIntervalsWrapperPass>(MIRString, T, ShouldPass);
 }

@@ -32,6 +32,10 @@ _LIBCPP_PUSH_MACROS
 #    include <__pstl/backends/default.h>
 #    include <__pstl/backends/libdispatch.h>
 #    include <__pstl/backends/serial.h>
+#  elif defined(_LIBCPP_PSTL_BACKEND_STATPART)
+#    include <__pstl/backends/default.h>
+#    include <__pstl/backends/serial.h>
+#    include <__pstl/backends/statpart.h>
 #  endif
 
 #endif // _LIBCPP_STD_VER >= 17

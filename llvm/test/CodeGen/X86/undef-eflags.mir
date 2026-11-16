@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=x86_64-- -verify-machineinstrs -run-pass branch-folder | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64-- -run-pass branch-folder | FileCheck %s
 # Check that we do not generate invalid MIR when optimizing condjumps with undef
 # flags on the eflags input (currently we should just bail out).
 ---

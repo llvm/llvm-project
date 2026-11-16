@@ -1706,7 +1706,7 @@ def : Pat<(setle GPR:$rj, GPR:$rk), (XORI (SLT GPR:$rk, GPR:$rj), 1)>;
 /// Select
 
 def IntCCtoBranchOpc : SDNodeXForm<loongarch_selectcc, [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   unsigned BrCC = getBranchOpcForIntCC(CC);
   return CurDAG->getTargetConstant(BrCC, SDLoc(N), Subtarget->getGRLenVT());
 }]>;

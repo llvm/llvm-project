@@ -2316,6 +2316,16 @@ InstructionCost X86TTIImpl::getShuffleCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
+  static const CostKindTblEntry AVX512BWInLaneShuffleTbl[] = {
+      {TTI::SK_PermuteTwoSrc, MVT::v64i8, {2, 2, 2, 2}}, // 2*vpshufb + vpor
+  };
+
+  if (IsInLaneShuffle && ST->hasBWI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512BWInLaneShuffleTbl, Kind, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   static const CostKindTblEntry AVX512BWShuffleTbl[] = {
     { TTI::SK_Broadcast, MVT::v32i16, { 1, 3, 1, 1 } }, // vpbroadcastw
     { TTI::SK_Broadcast, MVT::v32f16, { 1, 3, 1, 1 } }, // vpbroadcastw

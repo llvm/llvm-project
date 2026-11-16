@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
+#include "llvm/CodeGen/CFIFixup.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
@@ -43,7 +44,6 @@
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -122,12 +122,15 @@
 #include "llvm/Transforms/Utils/CanonicalizeFreezeInLoops.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
+#include "llvm/Transforms/Utils/ProfileVerify.h"
 #include <cassert>
 #include <utility>
 
 using namespace llvm;
 
 namespace llvm {
+extern cl::opt<bool> EnableProfcheckInPipeline;
+
 #define DUMMY_MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                     \
   AnalysisKey PASS_NAME::Key;
 #include "llvm/Passes/MachinePassRegistry.def"
@@ -357,6 +360,11 @@ Error CodeGenPassBuilder::verifyStartStop(
 }
 
 void CodeGenPassBuilder::addISelPasses(PassManagerWrapper &PMW) {
+  if (EnableProfcheckInPipeline) {
+    addFunctionPass(ProfileInjectorPass(), PMW);
+    flushFPMsToMPM(PMW);
+  }
+
   addGlobalMergePass(PMW);
   if (TM.useEmulatedTLS())
     addModulePass(LowerEmuTLSPass(), PMW);
@@ -460,7 +468,7 @@ void CodeGenPassBuilder::addPassesToHandleExceptions(PassManagerWrapper &PMW) {
   // pad is shared by multiple invokes and is also a target of a normal
   // edge from elsewhere.
   if (TM.supportsExceptionModel(ExceptionHandling::SjLj)) {
-    addFunctionPass(SjLjEHPreparePass(&TM), PMW);
+    addFunctionPass(SjLjEHPreparePass(), PMW);
     HasEHPrep = true;
   }
   // We support using both GCC-style and MSVC-style exceptions on Windows, so
@@ -519,6 +527,11 @@ void CodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
     addFunctionPass(PrintFunctionPass(
                         dbgs(), "\n\n*** Final LLVM Code input to ISel ***\n"),
                     PMW);
+
+  if (EnableProfcheckInPipeline) {
+    flushFPMsToMPM(PMW);
+    addModulePass(ProfileVerifierPass(), PMW);
+  }
 
   // All passes which modify the LLVM IR are now complete; run the verifier
   // to ensure that the IR is valid.
@@ -737,6 +750,9 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
 
   addPostBBSections(PMW);
 
+  if (!Opt.DisableCFIFixup && TM.Options.EnableCFIFixup)
+    addMachineFunctionPass(CFIFixupPass(), PMW);
+
   addMachineFunctionPass(StackFrameLayoutAnalysisPass(), PMW);
 
   // Add passes that directly emit MI after all other MI passes.
@@ -884,9 +900,6 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
     addMachineFunctionPass(SSAMachineSchedulerPass(&TM), PMW);
   }
 
-  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
-  // that pass can rely on it instead of LiveVariables. This is a step toward
-  // removing LiveVariables entirely.
   addMachineFunctionPass(
       RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
 

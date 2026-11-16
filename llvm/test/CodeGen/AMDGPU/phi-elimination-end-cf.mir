@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu6.00 -run-pass liveintervals -run-pass phi-node-elimination -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -run-pass liveintervals -run-pass phi-node-elimination -o - %s | FileCheck %s
 # RUN: llc -mtriple=amdgpu6.00 --passes='require<live-intervals>,phi-node-elimination' -verify-each -o - %s | FileCheck %s
 
 # CHECK-LABEL:  phi-cf-test

@@ -204,7 +204,7 @@ body:             |
   
     %2:vr128 = MOVAPSrm %0, 1, $noreg, 0, $noreg, debug-location !32 :: (load (s128) from %ir.p1)
     DBG_VALUE %2, $noreg, !24, !DIExpression(), debug-location !33
-    MOVAPSmr %1, 1, $noreg, 0, $noreg, killed %2, debug-location !34 :: (store (s128) into %ir.p2)
+    MOVAPSmr %1, 1, $noreg, 0, $noreg, %2, debug-location !34 :: (store (s128) into %ir.p2)
   
   bb.2.if.end:
     RET 0, debug-location !36

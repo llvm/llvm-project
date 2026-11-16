@@ -877,38 +877,6 @@ static bool copySubReg(MachineInstr &I, MachineRegisterInfo &MRI,
   return true;
 }
 
-// FIXME: We need some sort of API in RBI/TRI to allow generic code to
-// constrain operands of simple instructions given a TargetRegisterClass
-// and LLT
-static bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI,
-                             const RegisterBankInfo &RBI) {
-  for (MachineOperand &MO : I.operands()) {
-    if (!MO.isReg())
-      continue;
-    Register Reg = MO.getReg();
-    if (!Reg)
-      continue;
-    if (Reg.isPhysical())
-      continue;
-    LLT Ty = MRI.getType(Reg);
-    const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-    const TargetRegisterClass *RC =
-        dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
-    if (!RC) {
-      const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
-      RC = getRegClassForTypeOnBank(Ty, RB);
-      if (!RC) {
-        LLVM_DEBUG(
-            dbgs() << "Warning: DBG_VALUE operand has unexpected size/bank\n");
-        break;
-      }
-    }
-    RBI.constrainGenericRegister(Reg, *RC, MRI);
-  }
-
-  return true;
-}
-
 static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
@@ -2605,9 +2573,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     if (I.isCopy())
       return selectCopy(I, TII, MRI, TRI, RBI);
-
-    if (I.isDebugInstr())
-      return selectDebugInstr(I, MRI, RBI);
 
     return true;
   }

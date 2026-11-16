@@ -51,7 +51,7 @@ void test_init_list_with_dtor() {
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.yield
 // CIR:   } cleanup normal {
-// CIR:     cir.call @_ZN5OuterD1Ev(%[[O]]) nothrow : (!cir.ptr<!rec_Outer> {llvm.align = 4 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}) -> ()
+// CIR:     cir.call @_ZN5OuterD1Ev(%[[O]]) nothrow : (!cir.ptr<!rec_Outer> {llvm.align = 4 : i64, llvm.dead_on_return = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}) -> ()
 // CIR:     cir.yield
 // CIR:   }
 // CIR:   cir.return

@@ -190,7 +190,7 @@
 "`LWG3149 <https://wg21.link/LWG3149>`__","``DefaultConstructible``\  should require default initialization","2019-11 (Belfast)","|Complete|","13","`#103883 <https://github.com/llvm/llvm-project/issues/103883>`__",""
 "","","","","","",""
 "`LWG1203 <https://wg21.link/LWG1203>`__","More useful rvalue stream insertion","2020-02 (Prague)","|Complete|","12","`#103884 <https://github.com/llvm/llvm-project/issues/103884>`__",""
-"`LWG2859 <https://wg21.link/LWG2859>`__","Definition of *reachable* in [ptr.launder] misses pointer arithmetic from pointer-interconvertible object","2020-02 (Prague)","","","`#100269 <https://github.com/llvm/llvm-project/issues/100269>`__",""
+"`LWG2859 <https://wg21.link/LWG2859>`__","Definition of *reachable* in [ptr.launder] misses pointer arithmetic from pointer-interconvertible object","2020-02 (Prague)","|Nothing To Do|","","`#100269 <https://github.com/llvm/llvm-project/issues/100269>`__",""
 "`LWG3018 <https://wg21.link/LWG3018>`__","``shared_ptr``\  of function type","2020-02 (Prague)","|Nothing To Do|","","`#103885 <https://github.com/llvm/llvm-project/issues/103885>`__",""
 "`LWG3050 <https://wg21.link/LWG3050>`__","Conversion specification problem in ``chrono::duration``\  constructor","2020-02 (Prague)","|Complete|","19","`#103887 <https://github.com/llvm/llvm-project/issues/103887>`__",""
 "`LWG3141 <https://wg21.link/LWG3141>`__","``CopyConstructible``\  doesn't preserve source values","2020-02 (Prague)","|Nothing To Do|","","`#103889 <https://github.com/llvm/llvm-project/issues/103889>`__",""

@@ -3,6 +3,7 @@
 
 ---
 name: opt_zerocmp_0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_zerocmp_0
@@ -17,6 +18,7 @@ body: |
 ...
 ---
 name: opt_zerocmp_1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_zerocmp_1
@@ -65,6 +67,7 @@ body: |
 ...
 ---
 name: opt_multiple_blocks_noopt_0
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: opt_multiple_blocks_noopt_0
   ; CHECK: bb.0:
@@ -99,6 +102,7 @@ body: |
 ...
 ---
 name: opt_multiple_blocks_noopt_1
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: opt_multiple_blocks_noopt_1
   ; CHECK: bb.0:
@@ -135,6 +139,7 @@ body: |
 ...
 ---
 name: opt_zerocmp_user_0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_zerocmp_user_0
@@ -149,6 +154,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_0
@@ -167,6 +173,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_1
@@ -185,6 +192,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_2
@@ -205,6 +213,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_cmp
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_cmp
@@ -223,6 +232,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_cmp_2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_cmp_2
@@ -241,6 +251,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_test_test
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_test_test
@@ -257,6 +268,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_sub
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_sub
@@ -275,6 +287,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_sub_2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_sub_2
@@ -291,6 +304,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_sub_noopt
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_sub_noopt
@@ -312,6 +326,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_test
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_test
@@ -328,6 +343,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_test_cmp
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_test_cmp
@@ -344,6 +360,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_addr
+tracksRegLiveness: false
 stack:
   - { id: 0, size: 4, alignment: 4 }
 body: |
@@ -362,6 +379,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_addr_noopt
+tracksRegLiveness: false
 stack:
   - { id: 0, size: 4, alignment: 4 }
 body: |
@@ -381,6 +399,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_0
@@ -408,6 +427,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_1
@@ -435,6 +455,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_test_cmp
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_test_cmp
@@ -457,6 +478,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_cmp_test
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_cmp_test
@@ -480,6 +502,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_noopt_0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_noopt_0
@@ -499,6 +522,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_noopt_1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_noopt_1
@@ -548,6 +572,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_noopt_2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_noopt_2
@@ -597,6 +622,7 @@ body: |
 ...
 ---
 name: opt_adjusted_imm_multiple_blocks
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: opt_adjusted_imm_multiple_blocks
   ; CHECK: bb.0:
@@ -641,6 +667,7 @@ body: |
 ...
 ---
 name: opt_adjusted_imm_multiple_blocks_noopt
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: opt_adjusted_imm_multiple_blocks_noopt
   ; CHECK: bb.0:
@@ -687,6 +714,7 @@ body: |
 ...
 ---
 name: opt_shift_cmp_zero
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_shift_cmp_zero
@@ -701,6 +729,7 @@ body: |
 ...
 ---
 name: noopt_shift_cmp_zero
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: noopt_shift_cmp_zero
@@ -716,6 +745,7 @@ body: |
 ...
 ---
 name: noopt_shift_cmp_zero_multiblock
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: noopt_shift_cmp_zero_multiblock
   ; CHECK: bb.0:
@@ -743,6 +773,7 @@ body: |
 ...
 ---
 name: opt_shift_cmp_zero_lea_count_one_use
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_shift_cmp_zero_lea_count_one_use
@@ -758,6 +789,7 @@ body: |
 ...
 ---
 name: opt_shift_cmp_zero_shl_one_one_use
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_shift_cmp_zero_shl_one_one_use
@@ -773,6 +805,7 @@ body: |
 ...
 ---
 name: noopt_shift_cmp_zero_lea_count_reused
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: noopt_shift_cmp_zero_lea_count_reused

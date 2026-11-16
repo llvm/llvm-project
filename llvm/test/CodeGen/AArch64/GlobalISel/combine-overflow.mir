@@ -3,6 +3,7 @@
 
 ---
 name:            add_unused
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -22,6 +23,7 @@ body:             |
 ...
 ---
 name:            add_canon
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -46,6 +48,7 @@ body:             |
 ...
 ---
 name:            add_const_fold
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -69,6 +72,7 @@ body:             |
 ...
 ---
 name:            add_add_zero
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -94,6 +98,7 @@ body:             |
 ...
 ---
 name:            add_multiuse
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -117,6 +122,7 @@ body:             |
 ...
 ---
 name:            add_vector
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -148,6 +154,7 @@ body:             |
 ...
 ---
 name:            add_splat_vector
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -178,6 +185,7 @@ body:             |
 ...
 ---
 name:            sub_may
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -201,6 +209,7 @@ body:             |
 ...
 ---
 name:            usub_may
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -224,6 +233,7 @@ body:             |
 ...
 ---
 name:            usub_may_carry_s11
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -247,6 +257,7 @@ body:             |
 ...
 ---
 name:            usub_may_carry_s11_vector
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1

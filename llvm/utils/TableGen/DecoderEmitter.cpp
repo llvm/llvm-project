@@ -1119,7 +1119,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       while (true) {
         CaseValue = decodeULEB128AndIncUnsafe(Ptr);
         CaseSize = decodeULEB128AndIncUnsafe(Ptr);
-        if (FieldValue == CaseValue || !CaseSize)
+        if (FieldValue <= CaseValue || !CaseSize)
           break;
         Ptr += CaseSize;
       }

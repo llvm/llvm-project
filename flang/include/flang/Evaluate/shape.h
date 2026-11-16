@@ -31,6 +31,26 @@ using ExtentExpr = Expr<ExtentType>;
 using MaybeExtentExpr = std::optional<ExtentExpr>;
 using Shape = std::vector<MaybeExtentExpr>;
 
+inline constexpr int ExtentIntKind = Fortran::evaluate::SubscriptIntegerKind;
+
+inline Constant<ExtentType> MakeExtentConstant(int64_t v) {
+  return Constant<ExtentType>{
+      ExtentIntKind, Scalar<ExtentType>{ExtentIntKind, v}};
+}
+
+inline Constant<ExtentType> MakeExtentConstant(const value::IntegerValue &v) {
+  return Constant<ExtentType>{
+      ExtentIntKind, Scalar<ExtentType>{ExtentIntKind, v}};
+}
+
+inline ExtentExpr MakeExtentExpr(int64_t v) {
+  return ExtentExpr{MakeExtentConstant(v)};
+}
+
+inline ExtentExpr MakeExtentExpr(const value::IntegerValue &v) {
+  return ExtentExpr{MakeExtentConstant(v)};
+}
+
 bool IsImpliedShape(const Symbol &);
 bool IsExplicitShape(const Symbol &);
 
@@ -150,6 +170,18 @@ inline MaybeExtentExpr GetSize(const std::optional<Shape> &maybeShape) {
 // Utility predicate: does an expression reference any implied DO index?
 bool ContainsAnyImpliedDoIndex(const ExtentExpr &);
 
+// Utility predicate: does an expression embed a RankOneBoundElement that has
+// no ubound()/lbound() provenance?  Such an element has no Fortran spelling
+// (its debug rendering is the synthetic %ROBE marker) and must never reach a
+// mod file; an inquiry whose folded result would contain one must stay intact.
+template <typename T> bool ContainsUntaggedRankOneBoundElement(const Expr<T> &);
+extern template bool ContainsUntaggedRankOneBoundElement(
+    const Expr<SomeType> &);
+extern template bool ContainsUntaggedRankOneBoundElement(
+    const Expr<SomeInteger> &);
+extern template bool ContainsUntaggedRankOneBoundElement(
+    const Expr<SubscriptInteger> &);
+
 // GetShape()
 
 class GetShapeHelper
@@ -258,7 +290,7 @@ private:
   template <typename T>
   MaybeExtentExpr GetArrayConstructorExtent(
       const ArrayConstructorValues<T> &values) const {
-    ExtentExpr result{0};
+    ExtentExpr result{MakeExtentConstant(0)};
     for (const auto &value : values) {
       if (MaybeExtentExpr n{GetArrayConstructorValueExtent(value)}) {
         AccumulateExtent(result, std::move(*n));

@@ -1999,6 +1999,14 @@ supported for the `amdgcn` target.
   to make incorrect transformations (such as promotion to `s_buffer_load`,
   which requires such componentwise alignment).
 
+  The buffer intrinsics that take their resource as a `<4 x i32>` instead of
+  a `ptr addrspace(8)` are deprecated and will be removed in a future LLVM
+  release. Add `ptr` after the
+  `raw`/`struct` component of the intrinsic name for the new version.
+  However, `llvm.amdgcn.s.buffer.load` becomes
+  `llvm.amdgcn.ptr.s.buffer.load` and needs to be annotated with `!invariant.load`
+  to preserve the old merging behavior. This migration was already done in clang.
+
 **Buffer Strided Pointer**
 
 : The buffer index pointer is an experimental address space. It represents
@@ -2757,6 +2765,19 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     This intrinsic has 1 operand:
 
     - Local pointer to the LDS barrier data.
+* - llvm.amdgcn.s.buffer.load
+  - Deprecated. Takes its buffer resource as a `<4 x i32>`. Use
+    `llvm.amdgcn.ptr.s.buffer.load`, which takes a `ptr addrspace(8)`
+    produced by `llvm.amdgcn.make.buffer.rsrc`.
+    The implicit assumptions encoded by the fact that this intrinsic was
+    tagged as not reading memory are replaced by needing to tag
+    `llvm.amdgcn.ptr.s.buffer.load` with `!invariant.load` metadata.
+* - llvm.amdgcn.{raw|struct}.\*buffer.\*
+  - Deprecated. The `buffer`, `tbuffer` and `atomic.buffer.load`
+    intrinsics that take their buffer resource as a `<4 x i32>` are
+    replaced by the variants with `ptr` inserted after the `raw` or
+    `struct` component of the name, which take a `ptr addrspace(8)`
+    produced by `llvm.amdgcn.make.buffer.rsrc`.
 :::
 
 :::{todo}
@@ -3024,10 +3045,14 @@ registers. See {ref}`amdgpu-dma-operations` for full documentation.
 ```
 llvm.amdgcn.load[.async].to.lds
 llvm.amdgcn.global.load[.async].lds
-llvm.amdgcn.{raw|struct}[.ptr].buffer.load[.async].lds
+llvm.amdgcn.{raw|struct}.ptr.buffer.load[.async].lds
 llvm.amdgcn.{global|cluster}.load.async.to.lds.b{8,32,64,128}
 llvm.amdgcn.global.store.async.from.lds.b{8,32,64,128}
 ```
+
+The `llvm.amdgcn.{raw|struct}.buffer.load[.async].lds` spellings, which take
+their buffer resource as a `<4 x i32>` rather than a `ptr addrspace(8)`,
+are deprecated.
 
 #### Tensor Intrinsics
 
@@ -3918,11 +3943,10 @@ The AMDGPU backend uses the following ELF header:
       See {ref}`amdgpu-generic-processor-versioning`
   :::
 
-  For code object V4 and later, processors with hardwired-on XNACK, such as
-  `gfx1250`, use `EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4` (zero) because
-  they do not support mode selection. Their XNACK behavior is implied by
-  `EF_AMDGPU_MACH`; a zero XNACK field does not mean replay is disabled on
-  these processors.
+  For code object V4 and later use `EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4`
+  (zero) because they do not support mode selection. Their XNACK behavior is
+  implied by `EF_AMDGPU_MACH`; a zero XNACK field does not mean replay is
+  disabled on these processors.
 
   For code object V4 and later, processors with hardwired-on SRAMECC use
   `EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4` (zero) because they do not
@@ -7285,10 +7309,10 @@ The fields used by CP for code objects before V3 also match those specified in
 * - 458
   - 1 bit
   - ENABLE_WAVEFRONT_SIZE32
-  - GFX6-GFX9
+  - GFX6-GFX9, GFX125*
     : Reserved, must be 0.
 
-    GFX10-GFX11
+    GFX10-GFX11, GFX120*, GFX13
     : - If 0 execute in wavefront size 64 mode.
       - If 1 execute in native wavefront size 32 mode.
 * - 459
@@ -14201,9 +14225,10 @@ For GFX125x:
 
 - There may be multiple L2 caches per agent. Ranges of virtual addresses can be set up as follows:
 
-  - Be non-hardware-coherent; copies of the data are not coherent between multiple L2s.
-  - Be read-write hardware-coherent with other L2 caches on the same or other agents.
-  - Bypass L2 entirely to ensure system coherence.
+  - Be read-write hardware-coherent with other L2 caches on the same or other agents (MTYPE RW).
+  - Bypass L2 entirely to ensure system coherence (MTYPE UC).
+  - Be non-hardware-coherent; copies of the data are not coherent between multiple L2s (MTYPE NC,
+    not used on gfx1250 and gfx1251).
 
 - L2 caches have multiple memory channels to service disjoint ranges of virtual
   addresses.
@@ -14630,7 +14655,8 @@ the instruction in the code sequence that references the table.
 
     3. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
 
@@ -14673,7 +14699,8 @@ the instruction in the code sequence that references the table.
 
     3. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
 
@@ -14794,7 +14821,8 @@ the instruction in the code sequence that references the table.
 
     4. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
 
@@ -14855,7 +14883,8 @@ the instruction in the code sequence that references the table.
 
     4. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
 
@@ -14928,7 +14957,8 @@ the instruction in the code sequence that references the table.
 
     2. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Ensures that following loads will not see stale data.
 
     3. `s_wait_loadcnt 0x0` must happen after `global_inv` and before subsequent memory operations.
@@ -15007,10 +15037,12 @@ the instruction in the code sequence that references the table.
     >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - Must happen before the following `global_wb`.
     > - Ensures that all global memory store/rmw operations have completed before their data is written back.
+    > - Omit if `global_wb` is omitted.
 
     2. `global_wb`
 
        > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+       > - Omit if MTYPE NC is not used.
     3. `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
@@ -15101,10 +15133,12 @@ the instruction in the code sequence that references the table.
     >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - Must happen before the following `global_wb`.
     > - Ensures that all global memory store/rmw operations have completed before their data is written back.
+    > - Omit if `global_wb` is omitted.
 
     2. `global_wb`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Omit if MTYPE NC is not used.
 
     3. `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
@@ -15164,10 +15198,12 @@ the instruction in the code sequence that references the table.
     >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - Must happen before the following `global_wb`.
     > - Ensures that all global memory store/rmw operations have completed before their data is written back.
+    > - Omit if `global_wb` is omitted.
 
     2. `global_wb`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Omit if MTYPE NC is not used.
 
     3. `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
@@ -15306,10 +15342,12 @@ the instruction in the code sequence that references the table.
     >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - Must happen before the following `global_wb`.
     > - Ensures that all global memory store/rmw operations have completed before their data is written back.
+    > - Omit if `global_wb` is omitted.
 
     2. `global_wb`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Omit if MTYPE NC is not used.
 
     3. `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
@@ -15343,7 +15381,8 @@ the instruction in the code sequence that references the table.
 
     7. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
 
@@ -15362,9 +15401,11 @@ the instruction in the code sequence that references the table.
     >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - Must happen before the following `global_wb`.
     > - Ensures that all global memory store/rmw operations have completed before their data is written back.
+    > - Omit if `global_wb` is omitted.
 
     2. `global_wb`
-       : - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+       > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+       > - Omit if MTYPE NC is not used.
     3. `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
@@ -15399,7 +15440,8 @@ the instruction in the code sequence that references the table.
 
     7. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
 
@@ -15448,9 +15490,11 @@ the instruction in the code sequence that references the table.
     >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - Must happen before the following `global_wb`.
     > - Ensures that all global memory store/rmw operations have completed before their data is written back.
+    > - Omit if `global_wb` is omitted.
 
     2. `global_wb`
-       : - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+       > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+       > - Omit if MTYPE NC is not used.
     3. `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
@@ -15470,7 +15514,8 @@ the instruction in the code sequence that references the table.
 
     4. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
     >   This satisfies the requirements of acquire.
@@ -16676,7 +16721,7 @@ within a map that has been added by the same *vendor-name*.
   - Amount of stack size used by the shader itself, not including the stack used by any of its callees.
 * - ".backend_stack_size"
   - integer
-  - Amount of stack size used by the shader, including the stack used by its known callees.
+  - Amount of stack size in bytes used by the shader, including the stack used by its known callees.
     Chain callees are excluded, since they reuse the caller's stack frame.
     Indirect calls and recursion do not contribute.
 * - ".shader_subtype"
@@ -17641,7 +17686,7 @@ terminated by an `.end_amdhsa_kernel` directive.
   - Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_wavefront_size32`
   - Target Feature Specific (wavefrontsize64)
-  - GFX10-GFX12
+  - GFX10-GFX13 (except GFX125*)
   - Controls ENABLE_WAVEFRONT_SIZE32 in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_uses_dynamic_stack`
   - 0

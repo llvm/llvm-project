@@ -353,10 +353,10 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX9-SDAG-LABEL: clpeak_imad_pat_i16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v1, v0, v1, v0
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v0, v1, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX9-SDAG-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -367,9 +367,9 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v2, v0, v1
 ; GFX9-GISEL-NEXT:    v_add_u16_e32 v3, 1, v1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v4, v3, v2
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v1, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v0, v0, v1, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v4
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v1, v3, v2, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v1, v3, v2, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
 ; GFX9-GISEL-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -1868,9 +1868,9 @@ define zeroext i16 @clpeak_umad_pat_i16(i16 zeroext %x, i16 zeroext %y) {
 ; GFX9-SDAG-LABEL: clpeak_umad_pat_i16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v1, v0, v1, v0
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v0, v1, v0
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1881,9 +1881,9 @@ define zeroext i16 @clpeak_umad_pat_i16(i16 zeroext %x, i16 zeroext %y) {
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v2, v0, v1
 ; GFX9-GISEL-NEXT:    v_add_u16_e32 v3, 1, v1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v4, v3, v2
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v1, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v0, v0, v1, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v4
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v1, v3, v2, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v1, v3, v2, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5624,10 +5624,10 @@ define signext i8 @clpeak_imad_pat_i8(i8 signext %x, i8 signext %y) {
 ; GFX9-SDAG-LABEL: clpeak_imad_pat_i8:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v1, v0, v1, v0
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v0, v1, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX9-SDAG-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5638,9 +5638,9 @@ define signext i8 @clpeak_imad_pat_i8(i8 signext %x, i8 signext %y) {
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v2, v0, v1
 ; GFX9-GISEL-NEXT:    v_add_u16_e32 v3, 1, v1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v4, v3, v2
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v1, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v0, v0, v1, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v4
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v1, v3, v2, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v1, v3, v2, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
 ; GFX9-GISEL-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -6011,16 +6011,16 @@ define <2 x i8> @clpeak_imad_pat_v2i8(<2 x i8> %x, <2 x i8> %y) {
 ; GFX9-SDAG-NEXT:    v_add_u16_e32 v1, 1, v1
 ; GFX9-SDAG-NEXT:    v_add_u16_e32 v0, 1, v0
 ; GFX9-SDAG-NEXT:    v_mul_lo_u16_e32 v4, v1, v3
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v1, v1, v3, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v1, v1, v3, v1
 ; GFX9-SDAG-NEXT:    v_mul_lo_u16_e32 v5, v0, v2
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v0, v2, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v0, v2, v0
 ; GFX9-SDAG-NEXT:    v_mul_lo_u16_e32 v1, v1, v3
 ; GFX9-SDAG-NEXT:    v_mul_lo_u16_e32 v0, v0, v2
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v3, v1, v4, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v2, v0, v5, v0
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v1, v3, v1, v3
+; GFX9-SDAG-NEXT:    v_mad_u16 v3, v1, v4, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v2, v0, v5, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v1, v3, v1, v3
 ; GFX9-SDAG-NEXT:    v_lshlrev_b16_e32 v3, 8, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v2, v0, v2
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v2, v0, v2
 ; GFX9-SDAG-NEXT:    v_or_b32_sdwa v0, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -6030,14 +6030,14 @@ define <2 x i8> @clpeak_imad_pat_v2i8(<2 x i8> %x, <2 x i8> %y) {
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_add_u16_e32 v0, 1, v0
 ; GFX9-GISEL-NEXT:    v_add_u16_e32 v1, 1, v1
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v4, v0, v2, v0
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v5, v1, v3, v1
+; GFX9-GISEL-NEXT:    v_mad_u16 v4, v0, v2, v0
+; GFX9-GISEL-NEXT:    v_mad_u16 v5, v1, v3, v1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v6, v4, v2
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v7, v5, v3
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v2, 1
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v1, v1, v3, 1
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v2, v4, v2, 1
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v3, v5, v3, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v0, v0, v2, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v1, v1, v3, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v2, v4, v2, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v3, v5, v3, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v6, v0
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v1, v7, v1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v2
@@ -10050,14 +10050,14 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX9-SDAG-LABEL: clpeak_imad_pat_i16_x2:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v1, v0, v1, v0
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v1, v0, v1, v0
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v1, v0, v1, v0
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v0, v1, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX9-SDAG-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -10068,17 +10068,17 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v2, v0, v1
 ; GFX9-GISEL-NEXT:    v_add_u16_e32 v3, 1, v1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v4, v3, v2
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v1, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v0, v0, v1, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v1, v0, v4
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v2, v3, v2, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v2, v3, v2, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v3, v2, v1
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v4, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v0, v0, v4, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v4, v0, v3
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v1, v2, v1, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v1, v2, v1, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v2, v1, v4
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v3, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v0, v0, v3, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v2
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v1, v1, v4, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v1, v1, v4, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
 ; GFX9-GISEL-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -10530,13 +10530,13 @@ define zeroext i16 @clpeak_umad_pat_i16_x2(i16 zeroext %x, i16 zeroext %y) {
 ; GFX9-SDAG-LABEL: clpeak_umad_pat_i16_x2:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v1, v0, v1, v0
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v1, v0, v1, v0
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v1, v0, v1, v0
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
+; GFX9-SDAG-NEXT:    v_mad_u16 v1, v0, v1, v0
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v0, v1, v0
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -10547,17 +10547,17 @@ define zeroext i16 @clpeak_umad_pat_i16_x2(i16 zeroext %x, i16 zeroext %y) {
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v2, v0, v1
 ; GFX9-GISEL-NEXT:    v_add_u16_e32 v3, 1, v1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v4, v3, v2
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v1, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v0, v0, v1, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v1, v0, v4
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v2, v3, v2, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v2, v3, v2, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v3, v2, v1
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v4, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v0, v0, v4, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v4, v0, v3
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v1, v2, v1, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v1, v2, v1, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v2, v1, v4
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v3, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v0, v0, v3, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v2
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v1, v1, v4, 1
+; GFX9-GISEL-NEXT:    v_mad_u16 v1, v1, v4, 1
 ; GFX9-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -11736,8 +11736,8 @@ define <2 x i16> @multi_use_mul_mad_i16_var(i16 %x, i16 %y, i16 %z0, i16 %z1) {
 ; GFX9-SDAG-LABEL: multi_use_mul_mad_i16_var:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v2, v0, v1, v2
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v0, v1, v3
+; GFX9-SDAG-NEXT:    v_mad_u16 v2, v0, v1, v2
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v0, v1, v3
 ; GFX9-SDAG-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX9-SDAG-NEXT:    v_perm_b32 v0, v0, v2, s4
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -11746,7 +11746,7 @@ define <2 x i16> @multi_use_mul_mad_i16_var(i16 %x, i16 %y, i16 %z0, i16 %z1) {
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v2, v0, v1, v2
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v1, v3
+; GFX9-GISEL-NEXT:    v_mad_u16 v0, v0, v1, v3
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -12023,7 +12023,7 @@ define i16 @other_use_mul_mad_i16_var(i16 %x, i16 %y, i16 %z, ptr addrspace(3) %
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mul_lo_u16_e32 v4, v0, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v2
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX9-NEXT:    ds_write_b16 v3, v4
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]

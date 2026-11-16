@@ -85,14 +85,14 @@ module attributes {
   cir.func private @const_variadic(!s8i, ...) -> !s32i
       attributes { memory_effects = #none, test_classify = #extend_arg }
 
-  // CHECK: cir.func{{.*}} @const_variadic(!s8i {llvm.signext}, ...) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+  // CHECK: cir.func{{.*}} @const_variadic(!s8i {llvm.noundef, llvm.signext}, ...) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
 
   // An Extend argument is rewritten but hands the callee no memory, so the
   // effects stay as written.
   cir.func private @const_extend(!s8i) -> !s32i
       attributes { memory_effects = #none, test_classify = #extend_arg }
 
-  // CHECK: cir.func{{.*}} @const_extend(!s8i {llvm.signext}) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+  // CHECK: cir.func{{.*}} @const_extend(!s8i {llvm.noundef, llvm.signext}) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
 
   // Expand replaces the record with its fields, handing the callee no
   // memory.  Only the hook reaches this, since no x86_64 classification

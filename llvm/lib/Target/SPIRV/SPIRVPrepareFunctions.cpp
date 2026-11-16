@@ -35,6 +35,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -408,7 +409,7 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   // Otherwise we should lower the intrinsic to the corresponding SPIR-V
   // instruction.
   // For @llvm.assume we have OpAssumeTrueKHR.
-  // For @llvm.expect we have OpExpectKHR.
+  // For @llvm.expect and @llvm.expect.with.probability we have OpExpectKHR.
   //
   // We need to lower this into a builtin and then the builtin into a SPIR-V
   // instruction.
@@ -421,6 +422,18 @@ static void lowerExpectAssume(IntrinsicInst *II) {
         II->getModule(), Intrinsic::SPVIntrinsics::spv_expect,
         {II->getOperand(0)->getType()});
     II->setCalledFunction(F);
+  } else if (II->getIntrinsicID() == Intrinsic::expect_with_probability) {
+    // OpExpectKHR has no probability operand. Keep the hint only if the
+    // expected value is likely, as LowerExpectIntrinsic does for PHIs.
+    Value *Res = II->getArgOperand(0);
+    double Prob =
+        cast<ConstantFP>(II->getArgOperand(2))->getValueAPF().convertToDouble();
+    if (Prob > 0.5)
+      Res = IRBuilder<>(II).CreateIntrinsic(
+          Intrinsic::SPVIntrinsics::spv_expect, {II->getType()},
+          {II->getArgOperand(0), II->getArgOperand(1)});
+    BasicBlock::iterator BI = II->getIterator();
+    ReplaceInstWithValue(BI, Res);
   } else {
     llvm_unreachable("Unknown intrinsic");
   }
@@ -575,6 +588,7 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
         break;
       case Intrinsic::assume:
       case Intrinsic::expect:
+      case Intrinsic::expect_with_probability:
         if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
           lowerExpectAssume(II);
         Changed = true;

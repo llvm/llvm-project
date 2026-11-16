@@ -255,7 +255,7 @@ body:             |
     %1 = COPY %0.sub_32
     %3 = IMPLICIT_DEF
     %2 = LI 170
-    %4 = RLWNM killed %1, %2, 20, 27
+    %4 = RLWNM %1, %2, 20, 27
     ; CHECK: RLWINM %1, 10, 20, 27
 
     ; CHECK-LATE: rlwinm 3, 3, 10, 20, 27
@@ -370,8 +370,8 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, %subreg.sub_32
-    %9 = RLDICL killed %7, 0, 32
+    %7 = INSERT_SUBREG %8, %6, %subreg.sub_32
+    %9 = RLDICL %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -429,7 +429,7 @@ body:             |
     ; CHECK: RLWINM8_rec %1, 14, 20, 27, implicit-def $cr0
     ; CHECK-LATE: rlwinm. 3, 4, 14, 20, 27
     %7 = COPY killed $cr0
-    %6 = RLDICL killed %3, 0, 32
+    %6 = RLDICL %3, 0, 32
     %8 = ISEL8 %1, %6, %7.sub_eq
     $x3 = COPY %8
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -485,7 +485,7 @@ body:             |
     %0 = COPY $x3
     %2 = COPY %1.sub_32
     %5 = LI 210
-    %8 = SLW killed %2, killed %5
+    %8 = SLW %2, %5
     ; CHECK: RLWINM %2, 18, 0, 13
 
     ; CHECK-LATE: slwi 3, 4, 18
@@ -550,8 +550,8 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, %subreg.sub_32
-    %9 = RLDICL killed %7, 0, 32
+    %7 = INSERT_SUBREG %8, %6, %subreg.sub_32
+    %9 = RLDICL %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -606,7 +606,7 @@ body:             |
     %0 = COPY $x3
     %2 = LI 48
     %5 = COPY %0.sub_32
-    %8 = SRW killed %5, killed %2
+    %8 = SRW %5, %2
     ; CHECK: LI8 0
     ; CHECK-LATE: li 3, 0
     $x3 = EXTSW_32_64 %8
@@ -670,8 +670,8 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, %subreg.sub_32
-    %9 = RLDICL killed %7, 0, 32
+    %7 = INSERT_SUBREG %8, %6, %subreg.sub_32
+    %9 = RLDICL %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -723,11 +723,11 @@ body:             |
     %0 = COPY $x3
     %2 = LI 48
     %3 = COPY %0.sub_32
-    %4 = SRAW killed %3, killed %2, implicit-def dead $carry
+    %4 = SRAW %3, %2, implicit-def dead $carry
     ; CHECK: LI 48
-    ; CHECK: SRAW8 killed %7, killed %9, implicit-def dead $carry
+    ; CHECK: SRAW8 %7, %9, implicit-def dead $carry
     ; CHECK-LATE: sraw 3, 3, 4
-    %5 = EXTSW_32_64 killed %4
+    %5 = EXTSW_32_64 %4
     $x3 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -781,12 +781,12 @@ body:             |
     %0 = COPY $x3
     %2 = LI 80
     %3 = COPY %0.sub_32
-    %4 = SRAW_rec killed %3, %2, implicit-def dead $carry, implicit-def $cr0
-    ; CHECK: SRAW8_rec killed %10, %12, implicit-def dead $carry, implicit-def $cr0
+    %4 = SRAW_rec %3, %2, implicit-def dead $carry, implicit-def $cr0
+    ; CHECK: SRAW8_rec %10, %12, implicit-def dead $carry, implicit-def $cr0
     ; CHECK-LATE: sraw. 3, 3, 4
     %5 = COPY killed $cr0
     %6 = ISEL %2, %4, %5.sub_eq
-    %7 = EXTSW_32_64 killed %6
+    %7 = EXTSW_32_64 %6
     $x3 = COPY %7
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -837,7 +837,7 @@ body:             |
     %0 = COPY $x3
     %2 = COPY %1.sub_32
     %3 = LI 140
-    %4 = RLDCL %0, killed %3, 0
+    %4 = RLDCL %0, %3, 0
     ; CHECK: RLDICL %0, 12, 0
 
     ; CHECK-LATE: rotldi 3, 3, 12
@@ -893,7 +893,7 @@ body:             |
     %0 = COPY $x3
     %2 = RLDICL %1, 0, 58
     %3 = LI -37
-    %4 = RLDCL_rec %0, killed %3, 0, implicit-def $cr0
+    %4 = RLDCL_rec %0, %3, 0, implicit-def $cr0
     ; CHECK: RLDICL_rec %0, 27, 0, implicit-def $cr0
     ; CHECK-LATE: rotldi. 5, 3, 27
     %5 = COPY killed $cr0
@@ -948,7 +948,7 @@ body:             |
     %0 = COPY $x3
     %2 = COPY %1.sub_32
     %3 = LI 300
-    %4 = RLDCR %0, killed %3, 0
+    %4 = RLDCR %0, %3, 0
     ; CHECK: RLDICR %0, 44, 0
 
     ; CHECK-LATE: rldicr 3, 3, 44, 0
@@ -1004,7 +1004,7 @@ body:             |
     %0 = COPY $x3
     %2 = RLDICL %1, 0, 58
     %3 = LI -18
-    %4 = RLDCR_rec %0, killed %3, 0, implicit-def $cr0
+    %4 = RLDCR_rec %0, %3, 0, implicit-def $cr0
     ; CHECK: RLDICR_rec %0, 46, 0, implicit-def $cr0
     ; CHECK-LATE: rldicr. 5, 3, 46, 0
     %5 = COPY killed $cr0
@@ -1057,7 +1057,7 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI -13
-    %3 = SLD %0, killed %2
+    %3 = SLD %0, %2
     ; CHECK: LI8 0
     ; CHECK-LATE: li 3, 0
     $x3 = COPY %3
@@ -1110,7 +1110,7 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 88
-    %3 = SLD_rec %0, killed %2, implicit-def $cr0
+    %3 = SLD_rec %0, %2, implicit-def $cr0
     ; CHECK: ANDI8_rec %0, 0, implicit-def $cr0
     ; CHECK-LATE: andi. 5, 3, 0
     %4 = COPY killed $cr0
@@ -1163,7 +1163,7 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 400
-    %3 = SRD %0, killed %2
+    %3 = SRD %0, %2
     ; CHECK: RLDICL %0, 48, 16
 
     ; CHECK-LATE: rldicl 3, 3, 48, 16
@@ -1217,7 +1217,7 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 64
-    %3 = SRD_rec %0, killed %2, implicit-def $cr0
+    %3 = SRD_rec %0, %2, implicit-def $cr0
     ; CHECK: ANDI8_rec %0, 0, implicit-def $cr0
     ; CHECK-LATE: andi. 5, 3, 0
     %4 = COPY killed $cr0
@@ -1270,8 +1270,8 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI -44
-    %3 = SRAD %0, killed %2, implicit-def dead $carry
-    ; CHECK: SRAD %0, killed %2, implicit-def dead $carry
+    %3 = SRAD %0, %2, implicit-def dead $carry
+    ; CHECK: SRAD %0, %2, implicit-def dead $carry
 
     ; CHECK-LATE: srad 3, 3, 4
     $x3 = COPY %3
@@ -1324,8 +1324,8 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 68
-    %3 = SRAD_rec %0, killed %2, implicit-def dead $carry, implicit-def $cr0
-    ; CHECK: SRAD_rec %0, killed %2, implicit-def dead $carry, implicit-def $cr0
+    %3 = SRAD_rec %0, %2, implicit-def dead $carry, implicit-def $cr0
+    ; CHECK: SRAD_rec %0, %2, implicit-def dead $carry, implicit-def $cr0
 
     ; CHECK-LATE: srad. 3, 3, 5
     %4 = COPY killed $cr0

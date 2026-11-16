@@ -32,6 +32,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-directive-sets.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
@@ -1178,8 +1179,8 @@ struct ArrayExpressionRecognizer {
     return common::visit([](auto &&s) { return isArrayExpression(s); }, x.u);
   }
 
-  template <TypeCategory C, int K>
-  static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C, K>> &x) {
+  template <TypeCategory C>
+  static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C>> &x) {
     return common::visit([](auto &&s) { return isArrayExpression(s); },
         evaluate::match::deparen(x).u);
   }
@@ -2377,7 +2378,8 @@ std::optional<bool> EvaluateUserCondition(
     return *constVal != 0;
 
   if (auto logicalVal =
-          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(foldedExpr))
+          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(
+              evaluate::LogicalResultKind, foldedExpr))
     return logicalVal->IsTrue();
 
   return std::nullopt;
@@ -2572,20 +2574,38 @@ std::optional<DynamicUserCondition> MakeVariantMatchInfo(
   return dynamicCond;
 }
 
+const parser::OmpContextSelector *GetContextSelector(
+    const parser::OmpClause &clause) {
+  if (auto *when{parser::Unwrap<parser::OmpWhenClause>(clause)}) {
+    const auto &modifiers{OmpGetModifiers(*when)};
+    return OmpGetUniqueModifier<parser::OmpContextSelector>(modifiers);
+  }
+  return nullptr;
+}
+
+const parser::OmpDirectiveSpecification *GetDirectiveVariant(
+    const parser::OmpClause &clause) {
+  using DirectiveSpecification =
+      common::Indirection<parser::OmpDirectiveSpecification>;
+  if (auto *when{parser::Unwrap<parser::OmpWhenClause>(clause)}) {
+    if (auto &spec{std::get<std::optional<DirectiveSpecification>>(when->t)}) {
+      return &spec->value();
+    }
+  } else if (auto *other{parser::Unwrap<parser::OmpOtherwiseClause>(clause)}) {
+    if (auto &spec{other->v}) {
+      return &spec->value();
+    }
+  } else if (auto *def{
+                 parser::Unwrap<parser::OmpDefaultVariantClause>(clause)}) {
+    return &def->v.value();
+  }
+  return nullptr;
+}
+
 std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
     const parser::OmpClauseList &clauses, SemanticsContext &context,
     const OmpVariantMatchContext &matchContext) {
   MetadirectiveCandidateSet result;
-
-  auto getContextSelector = [](const parser::OmpClause::When &whenClause)
-      -> const parser::modifier::OmpContextSelector * {
-    const auto &modifiers{std::get<0>(whenClause.v.t)};
-    if (!modifiers || modifiers->size() != 1) {
-      return nullptr;
-    }
-    return std::get_if<parser::modifier::OmpContextSelector>(
-        &modifiers->front().u);
-  };
 
   auto getVariant = [](const parser::OmpDirectiveSpecification &spec) {
     // Keep NOTHING with clauses, e.g. APPLY, so they are not silently dropped.
@@ -2595,26 +2615,23 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
         : &spec;
   };
 
-  auto getDirectiveVariant = [&](const parser::OmpClause::When &whenClause)
+  auto getDirectiveVariant = [&](const parser::OmpClause &clause)
       -> std::pair<const parser::OmpDirectiveSpecification *, bool> {
-    const auto &optionalSpec{std::get<1>(whenClause.v.t)};
-    if (!optionalSpec) {
-      return {nullptr, false};
-    }
-    return {getVariant(optionalSpec->value()), true};
+    auto *variant{GetDirectiveVariant(clause)};
+    return variant ? std::make_pair(getVariant(*variant), true)
+                   : std::make_pair(nullptr, false);
   };
 
   for (const parser::OmpClause &clause : clauses.v) {
-    if (const auto *whenClause{
-            std::get_if<parser::OmpClause::When>(&clause.u)}) {
-      const auto *ctxSel{getContextSelector(*whenClause)};
+    if (clause.Id() == llvm::omp::Clause::OMPC_when) {
+      const auto *ctxSel{GetContextSelector(clause)};
       if (!ctxSel ||
           FindUnsupportedSelectorFeature(*ctxSel, context) !=
               UnsupportedSelectorFeature::None) {
         return std::nullopt;
       }
 
-      auto [spec, isExplicit]{getDirectiveVariant(*whenClause)};
+      auto [spec, isExplicit]{getDirectiveVariant(clause)};
       llvm::omp::VariantMatchInfo rawVMI;
       std::optional<DynamicUserCondition> dynamicCondition{
           MakeVariantMatchInfo(rawVMI, *ctxSel, context)};
@@ -2799,11 +2816,9 @@ struct MetadirectiveConditionNormalizer : evaluate::rewrite::Identity {
     return common::Clone(parentheses.left());
   }
 
-  template <int KIND>
-  evaluate::Expr<evaluate::Type<common::TypeCategory::Logical, KIND>>
-  operator()(evaluate::Expr<evaluate::Type<common::TypeCategory::Logical, KIND>>
-                 &&expr,
-      const evaluate::LogicalOperation<KIND> &operation) {
+  evaluate::Expr<evaluate::Type<common::TypeCategory::Logical>> operator()(
+      evaluate::Expr<evaluate::Type<common::TypeCategory::Logical>> &&expr,
+      const evaluate::LogicalOperation &operation) {
     if ((operation.logicalOperator == evaluate::LogicalOperator::And ||
             operation.logicalOperator == evaluate::LogicalOperator::Or) &&
         AreSameMetadirectiveCondition(operation.left(), operation.right()))

@@ -1237,3 +1237,14 @@ define <16 x float> @PR218379(ptr %p0, ptr %p1) nounwind {
   %shuffle2 = shufflevector <8 x float> zeroinitializer, <8 x float> %fr, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
   ret <16 x float> %shuffle2
 }
+
+; FIXME - ensure we don't introduce POISON into DIV denominators
+define <8 x i64> @PR235659(<8 x i64> %a) {
+; CHECK-LABEL: PR235659:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret{{[l|q]}}
+  %shuffle = shufflevector <8 x i64> %a, <8 x i64> zeroinitializer, <8 x i32> <i32 poison, i32 6, i32 5, i32 9, i32 6, i32 3, i32 2, i32 13>
+  %div = sdiv <8 x i64> %shuffle, <i64 3, i64 1, i64 7, i64 -9223372036854775808, i64 3, i64 5, i64 16, i64 5>
+  %shuffle3 = shufflevector <8 x i64> %div, <8 x i64> zeroinitializer, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 poison, i32 poison, i32 poison, i32 poison>
+  ret <8 x i64> %shuffle3
+}

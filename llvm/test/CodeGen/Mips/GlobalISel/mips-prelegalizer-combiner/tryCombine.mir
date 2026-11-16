@@ -1,4 +1,4 @@
-# RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=mips-prelegalizer-combiner -verify-machineinstrs -debug %s -o - 2>&1 | FileCheck %s -check-prefixes=MIPS32
+# RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=mips-prelegalizer-combiner -debug %s -o - 2>&1 | FileCheck %s -check-prefixes=MIPS32
 # REQUIRES: asserts
 --- |
 

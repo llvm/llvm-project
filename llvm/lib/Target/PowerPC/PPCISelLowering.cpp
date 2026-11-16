@@ -3623,8 +3623,7 @@ SDValue PPCTargetLowering::LowerGlobalAddress(SDValue Op,
 SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
   const SDNodeFlags Flags = Op.getNode()->getFlags();
-  ISD::CondCode CC =
-      cast<CondCodeSDNode>(Op.getOperand(IsStrict ? 3 : 2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(IsStrict ? 3 : 2);
   SDValue LHS = Op.getOperand(IsStrict ? 1 : 0);
   SDValue RHS = Op.getOperand(IsStrict ? 2 : 1);
   SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
@@ -3704,7 +3703,7 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 SDValue PPCTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   const SDNodeFlags Flags = Op->getFlags();
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS = Op.getOperand(2);
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
@@ -8243,7 +8242,7 @@ SDValue PPCTargetLowering::LowerTRUNCATEVector(SDValue Op,
 /// LowerSELECT_CC - Lower floating point select_cc's into fsel instruction when
 /// possible.
 SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   EVT ResVT = Op.getValueType();
   EVT CmpVT = Op.getOperand(0).getValueType();
   SDValue LHS = Op.getOperand(0), RHS = Op.getOperand(1);
@@ -9521,19 +9520,27 @@ SDValue PPCTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(PPCISD::BUILD_FP128, dl, MVT::f128, Lo, Hi);
 }
 
+// Look through bitcasts and scalar_to_vector ops to find the input load.
+// If any of the nodes in the chain have multiple uses, stop searching as
+// the input load won't be removable (due to the other uses).
 static const SDValue *getNormalLoadInput(const SDValue &Op, bool &IsPermuted) {
   const SDValue *InputLoad = &Op;
-  while (InputLoad->getOpcode() == ISD::BITCAST)
+  while (InputLoad->getOpcode() == ISD::BITCAST) {
+    if (!InputLoad->hasOneUse())
+      return nullptr;
     InputLoad = &InputLoad->getOperand(0);
+  }
   if (InputLoad->getOpcode() == ISD::SCALAR_TO_VECTOR ||
       InputLoad->getOpcode() == PPCISD::SCALAR_TO_VECTOR_PERMUTED) {
+    if (!InputLoad->hasOneUse())
+      return nullptr;
     IsPermuted = InputLoad->getOpcode() == PPCISD::SCALAR_TO_VECTOR_PERMUTED;
     InputLoad = &InputLoad->getOperand(0);
   }
   if (InputLoad->getOpcode() != ISD::LOAD)
     return nullptr;
   LoadSDNode *LD = cast<LoadSDNode>(*InputLoad);
-  return ISD::isNormalLoad(LD) ? InputLoad : nullptr;
+  return (ISD::isNormalLoad(LD) && LD->hasOneUse()) ? InputLoad : nullptr;
 }
 
 // Convert the argument APFloat to a single precision APFloat if there is no
@@ -10449,12 +10456,13 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // If this is a load-and-splat, we can do that with a single instruction
   // in some cases. However if the load has multiple uses, we don't want to
-  // combine it because that will just produce multiple loads.
+  // combine it because that will just produce multiple loads. Since we are
+  // looking through bitcasts and scalar_to_vector, we must also ensure that
+  // the intermediate nodes have a single use.
   bool IsPermutedLoad = false;
   const SDValue *InputLoad = getNormalLoadInput(V1, IsPermutedLoad);
   if (InputLoad && Subtarget.hasVSX() && V2.isUndef() &&
-      (PPC::isSplatShuffleMask(SVOp, 4) || PPC::isSplatShuffleMask(SVOp, 8)) &&
-      InputLoad->hasOneUse()) {
+      (PPC::isSplatShuffleMask(SVOp, 4) || PPC::isSplatShuffleMask(SVOp, 8))) {
     bool IsFourByte = PPC::isSplatShuffleMask(SVOp, 4);
     int SplatIdx =
       PPC::getSplatIdxForPPCMnemonics(SVOp, IsFourByte ? 4 : 8, DAG);
@@ -15463,7 +15471,7 @@ SDValue PPCTargetLowering::ConvertSETCCToSubtract(SDNode *N,
     if (U->getOpcode() != ISD::ZERO_EXTEND)
       return SDValue();
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   auto OpSize = N->getOperand(0).getValueSizeInBits();
 
   unsigned Size = DAG.getDataLayout().getLargestLegalIntTypeSizeInBits();
@@ -15513,8 +15521,7 @@ SDValue PPCTargetLowering::DAGCombineTruncBoolExt(SDNode *N,
     // If we're looking at a comparison, then we need to make sure that the
     // high bits (all except for the first) don't matter the result.
     ISD::CondCode CC =
-      cast<CondCodeSDNode>(N->getOperand(
-        N->getOpcode() == ISD::SETCC ? 2 : 4))->get();
+        N->getOperandCondCode(N->getOpcode() == ISD::SETCC ? 2 : 4);
     unsigned OpBits = N->getOperand(0).getValueSizeInBits();
 
     if (ISD::isSignedIntSetCC(CC)) {
@@ -16098,7 +16105,7 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
 
   assert(N->getOpcode() == ISD::SETCC && "Should be called with a SETCC node");
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   assert((CC == ISD::SETNE || CC == ISD::SETEQ) &&
          "CC mus be ISD::SETNE or ISD::SETEQ");
 
@@ -16181,7 +16188,7 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
 static bool canConvertSETCCToXori(SDNode *N) {
   assert(N->getOpcode() == ISD::SETCC && "Should be SETCC SDNode here.");
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   if (CC != ISD::SETEQ)
     return false;
 
@@ -16221,8 +16228,7 @@ static SDValue ConvertSETCCToXori(SDNode *N, SelectionDAG &DAG) {
   SDValue RHS = N->getOperand(1);
   SDLoc DL(N);
 
-  [[maybe_unused]] ISD::CondCode CC =
-      cast<CondCodeSDNode>(N->getOperand(2))->get();
+  [[maybe_unused]] ISD::CondCode CC = N->getOperandCondCode(2);
   assert((CC == ISD::SETEQ) && "CC must be ISD::SETEQ.");
   // Rewrite it as XORI (and X, 1), 1.
   auto MakeXor1 = [&](SDValue V) {
@@ -16265,7 +16271,7 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
   if (N0.getOpcode() != ISD::SETCC)
     return SDValue();
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+  ISD::CondCode CC = N0.getOperandCondCode(2);
   SDValue LHS = N0.getOperand(0);
   SDValue RHS = N0.getOperand(1);
 
@@ -16312,7 +16318,7 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
   if (canConvertSETCCToXori(N))
     return ConvertSETCCToXori(N, DCI.DAG);
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   if (CC == ISD::SETNE || CC == ISD::SETEQ) {
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
@@ -17713,7 +17719,7 @@ static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
   SDValue CmpRHS = N->getOperand(1);
   SDValue TrueVal = N->getOperand(2);
   SDValue FalseVal = N->getOperand(3);
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+  ISD::CondCode CC = N->getOperandCondCode(4);
 
   // Check if condition is (X == 0)
   if (CC != ISD::SETEQ || !isNullConstant(CmpRHS))
@@ -17809,7 +17815,7 @@ static SDValue combineZextSetccWithZero(SDNode *N, SelectionDAG &DAG) {
 
   SDValue LHS = Src.getOperand(0);
   SDValue RHS = Src.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Src.getOperand(2))->get();
+  ISD::CondCode CC = Src.getOperandCondCode(2);
 
   if (!isNullConstant(RHS) && !isNullConstant(LHS))
     return SDValue();
@@ -18636,7 +18642,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     // compare down to code that is difficult to reassemble.
     // This code also handles branches that depend on the result of a store
     // conditional.
-    ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+    ISD::CondCode CC = N->getOperandCondCode(1);
     SDValue LHS = N->getOperand(2), RHS = N->getOperand(3);
 
     int CompareOpc;
@@ -20167,7 +20173,7 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
   auto *Constant = cast<ConstantSDNode>(Cmp.getOperand(1));
   int64_t NegConstant = 0 - Constant->getSExtValue();
 
-  switch(cast<CondCodeSDNode>(Cmp.getOperand(2))->get()) {
+  switch (Cmp.getOperandCondCode(2)) {
   default: break;
   case ISD::SETNE: {
     //                                 when C == 0

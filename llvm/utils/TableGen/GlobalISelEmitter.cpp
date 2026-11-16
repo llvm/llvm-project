@@ -553,7 +553,7 @@ GlobalISelEmitter::getEquivNode(const Record &Equiv,
   }
 
   if (!Equiv.isValueUnset("IfConvergent") &&
-      N.getIntrinsicInfo(CGP)->isConvergent)
+      N.getIntrinsicInfo(CGP)->isConvergent())
     return &Target.getInstruction(Equiv.getValueAsDef("IfConvergent"));
 
   bool IsAnyExtLoad = false;

@@ -983,13 +983,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       // Handle types larger than i64 by scalarizing/lowering.
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
-      // The range of a fp16 value fits into an i17, so we can lower the width
-      // to i64.
-      .narrowScalarIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[1] == f16 && Query.Types[0].getSizeInBits() > 64;
-          },
-          changeTo(0, i64))
+      // NOTE: narrowScalarIf is invalid for the saturating conversions,
+      // infinities need the full width of the target integer type.
       .lowerIf(::any(scalarWiderThan(0, 64), scalarWiderThan(1, 64)), 0)
       .moreElementsToNextPow2(0)
       .widenScalarToNextPow2(0, /*MinSize=*/32)

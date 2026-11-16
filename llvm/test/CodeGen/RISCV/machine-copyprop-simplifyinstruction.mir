@@ -6,6 +6,7 @@
 
 ---
 name: add1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: add1
@@ -17,6 +18,7 @@ body: |
 ...
 ---
 name: add2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: add2
@@ -28,6 +30,7 @@ body: |
 ...
 ---
 name: or1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: or1
@@ -39,6 +42,7 @@ body: |
 ...
 ---
 name: or2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: or2
@@ -50,6 +54,7 @@ body: |
 ...
 ---
 name: xor1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: xor1
@@ -61,6 +66,7 @@ body: |
 ...
 ---
 name: xor2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: xor2
@@ -73,6 +79,7 @@ body: |
 ---
 ---
 name: xor3
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: xor3
@@ -84,6 +91,7 @@ body: |
 ...
 ---
 name: addw1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: addw1
@@ -95,6 +103,7 @@ body: |
 ...
 ---
 name: addw2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: addw2
@@ -106,6 +115,7 @@ body: |
 ...
 ---
 name: sub
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sub
@@ -117,6 +127,7 @@ body: |
 ...
 ---
 name: subw
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: subw
@@ -128,6 +139,7 @@ body: |
 ...
 ---
 name: sh1add1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sh1add1
@@ -139,6 +151,7 @@ body: |
 ...
 ---
 name: sh1add2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sh1add2
@@ -150,6 +163,7 @@ body: |
 ...
 ---
 name: sh1add.uw1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sh1add.uw1
@@ -161,6 +175,7 @@ body: |
 ...
 ---
 name: sh1add.uw2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sh1add.uw2
@@ -172,6 +187,7 @@ body: |
 ...
 ---
 name: sh2add1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sh2add1
@@ -183,6 +199,7 @@ body: |
 ...
 ---
 name: sh2add2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sh2add2
@@ -194,6 +211,7 @@ body: |
 ...
 ---
 name: sh2add.uw1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sh2add.uw1
@@ -205,6 +223,7 @@ body: |
 ...
 ---
 name: sh2add.uw2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sh2add.uw2
@@ -216,6 +235,7 @@ body: |
 ...
 ---
 name: sh3add1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sh3add1
@@ -227,6 +247,7 @@ body: |
 ...
 ---
 name: sh3add2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sh3add2
@@ -238,6 +259,7 @@ body: |
 ...
 ---
 name: sh3add.uw1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sh3add.uw1
@@ -249,6 +271,7 @@ body: |
 ...
 ---
 name: sh3add.uw2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sh3add.uw2
@@ -260,6 +283,7 @@ body: |
 ...
 ---
 name: andi
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: andi
@@ -271,6 +295,7 @@ body: |
 ...
 ---
 name: and1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: and1
@@ -282,6 +307,7 @@ body: |
 ...
 ---
 name: and2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: and2
@@ -293,6 +319,7 @@ body: |
 ...
 ---
 name: mul1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: mul1
@@ -304,6 +331,7 @@ body: |
 ...
 ---
 name: mul2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: mul2
@@ -315,6 +343,7 @@ body: |
 ...
 ---
 name: mulh1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: mulh1
@@ -326,6 +355,7 @@ body: |
 ...
 ---
 name: mulh2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: mulh2
@@ -337,6 +367,7 @@ body: |
 ...
 ---
 name: mulhsu1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: mulhsu1
@@ -348,6 +379,7 @@ body: |
 ...
 ---
 name: mulhsu2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: mulhsu2
@@ -359,6 +391,7 @@ body: |
 ...
 ---
 name: mulhu1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: mulhu1
@@ -370,6 +403,7 @@ body: |
 ...
 ---
 name: mulhu2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: mulhu2
@@ -381,6 +415,7 @@ body: |
 ...
 ---
 name: mulw1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: mulw1
@@ -392,6 +427,7 @@ body: |
 ...
 ---
 name: mulw2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: mulw2
@@ -403,6 +439,7 @@ body: |
 ...
 ---
 name: slli
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: slli
@@ -414,6 +451,7 @@ body: |
 ...
 ---
 name: srli
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: srli
@@ -425,6 +463,7 @@ body: |
 ...
 ---
 name: srai
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: srai
@@ -436,6 +475,7 @@ body: |
 ...
 ---
 name: slliw
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: slliw
@@ -447,6 +487,7 @@ body: |
 ...
 ---
 name: srliw
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: srliw
@@ -458,6 +499,7 @@ body: |
 ...
 ---
 name: sraiw
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sraiw
@@ -469,6 +511,7 @@ body: |
 ...
 ---
 name: slli_uw
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: slli_uw
@@ -480,6 +523,7 @@ body: |
 ...
 ---
 name: ori
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: ori
@@ -491,6 +535,7 @@ body: |
 ...
 ---
 name: xori
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: xori
@@ -502,6 +547,7 @@ body: |
 ...
 ---
 name: sltiu1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sltiu1
@@ -513,6 +559,7 @@ body: |
 ...
 ---
 name: sltiu2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sltiu2
@@ -524,6 +571,7 @@ body: |
 ...
 ---
 name: sltu
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sltu
@@ -535,6 +583,7 @@ body: |
 ...
 ---
 name: add.uw1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: add.uw1
@@ -546,6 +595,7 @@ body: |
 ...
 ---
 name: add.uw2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: add.uw2
@@ -557,6 +607,7 @@ body: |
 ...
 ---
 name: sext.h
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sext.h
@@ -568,6 +619,7 @@ body: |
 ...
 ---
 name: sext.b
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sext.b
@@ -579,6 +631,7 @@ body: |
 ...
 ---
 name: zext.h.rv32
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: zext.h.rv32
@@ -590,6 +643,7 @@ body: |
 ...
 ---
 name: zext.h.rv64
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: zext.h.rv64
@@ -601,6 +655,7 @@ body: |
 ...
 ---
 name: sll1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sll1
@@ -612,6 +667,7 @@ body: |
 ...
 ---
 name: sll2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sll2
@@ -623,6 +679,7 @@ body: |
 ...
 ---
 name: sr11
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sr11
@@ -634,6 +691,7 @@ body: |
 ...
 ---
 name: sr12
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sr12
@@ -645,6 +703,7 @@ body: |
 ...
 ---
 name: sra1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sra1
@@ -656,6 +715,7 @@ body: |
 ...
 ---
 name: sra2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sra2
@@ -667,6 +727,7 @@ body: |
 ...
 ---
 name: sllw
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sllw
@@ -678,6 +739,7 @@ body: |
 ...
 ---
 name: srlw
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: srlw
@@ -689,6 +751,7 @@ body: |
 ...
 ---
 name: sraw
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sraw
@@ -700,6 +763,7 @@ body: |
 ...
 ---
 name: min
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: min
@@ -711,6 +775,7 @@ body: |
 ...
 ---
 name: minu
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: minu
@@ -722,6 +787,7 @@ body: |
 ...
 ---
 name: max
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: max
@@ -733,6 +799,7 @@ body: |
 ...
 ---
 name: maxu
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: maxu
@@ -744,6 +811,7 @@ body: |
 ...
 ---
 name: multipass
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: multipass
@@ -756,6 +824,7 @@ body: |
 ...
 ---
 name: beq
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: beq
   ; CHECK: bb.0:
@@ -774,6 +843,7 @@ body: |
 ...
 ---
 name: bne
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: bne
   ; CHECK: bb.0:
@@ -792,6 +862,7 @@ body: |
 ...
 ---
 name: bltu
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: bltu
   ; CHECK: bb.0:
@@ -810,6 +881,7 @@ body: |
 ...
 ---
 name: bgeu
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: bgeu
   ; CHECK: bb.0:

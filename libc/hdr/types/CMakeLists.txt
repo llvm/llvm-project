@@ -1389,3 +1389,11 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.idtype_t
 )
+
+add_proxy_header_library(
+  eventfd_t
+  HDRS
+    eventfd_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.eventfd_t
+)

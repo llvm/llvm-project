@@ -7,35 +7,39 @@
 //===----------------------------------------------------------------------===//
 
 #include "VE.h"
+#include "VEInstrInfo.h"
+#include "VERegisterInfo.h"
 #include "VESubtarget.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/Pass.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "lvl-gen"
 
 namespace {
-struct LVLGen : public MachineFunctionPass {
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-
+struct VELVLGenLegacy : public MachineFunctionPass {
   static char ID;
-  LVLGen() : MachineFunctionPass(ID) {}
-  bool runOnMachineBasicBlock(MachineBasicBlock &MBB);
+  VELVLGenLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &F) override;
 
-  unsigned getVL(const MachineInstr &MI);
-  int getVLIndex(unsigned Opcode);
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
-char LVLGen::ID = 0;
+char VELVLGenLegacy::ID = 0;
 
 } // end of anonymous namespace
 
-FunctionPass *llvm::createLVLGenPass() { return new LVLGen; }
+FunctionPass *llvm::createVELVLGenLegacyPass() { return new VELVLGenLegacy; }
 
-int LVLGen::getVLIndex(unsigned Opcode) {
+static int getVLIndex(unsigned Opcode, const VEInstrInfo *TII) {
   const MCInstrDesc &MCID = TII->get(Opcode);
 
   // If an instruction has VLIndex information, return it.
@@ -47,15 +51,17 @@ int LVLGen::getVLIndex(unsigned Opcode) {
 
 // returns a register holding a vector length. NoRegister is returned when
 // this MI does not have a vector length.
-unsigned LVLGen::getVL(const MachineInstr &MI) {
-  int Index = getVLIndex(MI.getOpcode());
+static unsigned getVL(const MachineInstr &MI, const VEInstrInfo *TII) {
+  int Index = getVLIndex(MI.getOpcode(), TII);
   if (Index >= 0)
     return MI.getOperand(Index).getReg();
 
   return VE::NoRegister;
 }
 
-bool LVLGen::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
+static bool runLVLGenOnMachineBasicBlock(MachineBasicBlock &MBB,
+                                         const VEInstrInfo *TII,
+                                         const VERegisterInfo *TRI) {
 #define RegName(no)                                                            \
   (MBB.getParent()->getSubtarget<VESubtarget>().getRegisterInfo()->getName(no))
 
@@ -72,7 +78,7 @@ bool LVLGen::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     // possible.  Therefore, we use a regular scalar register to hold immediate
     // values to load VL register.  And try to reuse identical scalar registers
     // to avoid new LVLr instructions as much as possible.
-    unsigned Reg = getVL(*MI);
+    unsigned Reg = getVL(*MI, TII);
     if (Reg != VE::NoRegister) {
       LLVM_DEBUG(dbgs() << "Vector instruction found: ");
       LLVM_DEBUG(MI->dump());
@@ -112,7 +118,7 @@ bool LVLGen::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-bool LVLGen::runOnMachineFunction(MachineFunction &F) {
+static bool runLVLGenOnMachineFunction(MachineFunction &F) {
   LLVM_DEBUG(dbgs() << "********** Begin LVLGen **********\n");
   LLVM_DEBUG(dbgs() << "********** Function: " << F.getName() << '\n');
   LLVM_DEBUG(F.dump());
@@ -120,11 +126,11 @@ bool LVLGen::runOnMachineFunction(MachineFunction &F) {
   bool Changed = false;
 
   const VESubtarget &Subtarget = F.getSubtarget<VESubtarget>();
-  TII = Subtarget.getInstrInfo();
-  TRI = Subtarget.getRegisterInfo();
+  const VEInstrInfo *TII = Subtarget.getInstrInfo();
+  const VERegisterInfo *TRI = Subtarget.getRegisterInfo();
 
   for (MachineBasicBlock &MBB : F)
-    Changed |= runOnMachineBasicBlock(MBB);
+    Changed |= runLVLGenOnMachineBasicBlock(MBB, TII, TRI);
 
   if (Changed) {
     LLVM_DEBUG(dbgs() << "\n");
@@ -132,4 +138,16 @@ bool LVLGen::runOnMachineFunction(MachineFunction &F) {
   }
   LLVM_DEBUG(dbgs() << "********** End LVLGen **********\n");
   return Changed;
+}
+
+bool VELVLGenLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runLVLGenOnMachineFunction(MF);
+}
+
+PreservedAnalyses VELVLGenPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+  return runLVLGenOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

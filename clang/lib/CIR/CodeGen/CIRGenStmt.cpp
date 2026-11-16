@@ -1038,18 +1038,19 @@ cir::LoopHintAttr CIRGenFunction::getLoopHints(ArrayRef<const Attr *> attrs,
     llvm_unreachable("unknown unroll state");
   };
 
-  // Only OMP seems to generate this, so leave as an NYI for now.
+  // Only OMP seems to generate this, so leave as an NYI for now. The dialect
+  // can comprehend this/it will work correctly, but no tests exist. Once we get
+  // good OMP tests for this, we should be able to remove this NYI.
   if (loopAttrs.VectorizeEnable ==
           CodeGenUtils::LoopAttributes::LVEnableState::Disable ||
       loopAttrs.VectorizeEnable ==
           CodeGenUtils::LoopAttributes::LVEnableState::Full)
     cgm.errorNYI(SourceLocation{}, "unsupported vector-enable loop state");
 
-  bool vectorizeEnable = loopAttrs.VectorizeEnable ==
-                         CodeGenUtils::LoopAttributes::LVEnableState::Enable;
   auto hints = cir::LoopHintAttr::get(
-      ctx, convertFlag(loopAttrs.MustProgress), convertFlag(vectorizeEnable),
-      loopAttrs.VectorizeWidth, convertStateToBool(loopAttrs.VectorizeScalable),
+      ctx, convertFlag(loopAttrs.MustProgress),
+      convertStateToBool(loopAttrs.VectorizeEnable), loopAttrs.VectorizeWidth,
+      convertStateToBool(loopAttrs.VectorizeScalable),
       convertStateToBool(loopAttrs.VectorizePredicateEnable),
       loopAttrs.InterleaveCount, convertUnrollMode(loopAttrs.UnrollEnable),
       loopAttrs.UnrollCount, convertUnrollMode(loopAttrs.UnrollAndJamEnable),

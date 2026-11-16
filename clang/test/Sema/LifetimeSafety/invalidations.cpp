@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-invalidation -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-invalidation -Wlifetime-safety-experimental-destructor-use -Wno-dangling -verify %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -596,13 +596,17 @@ struct S {
 
   void InvalidatedFieldLocalVector() {
     std::vector<std::string> strings;
-    FieldFromLocalVector = *strings.begin(); // expected-warning {{local variable 'strings' escapes to the field 'FieldFromLocalVector' and is later invalidated}}
-    strings.push_back("1"); // expected-note {{local variable 'strings' is invalidated here}}
+    FieldFromLocalVector = *strings.begin(); // expected-warning {{local variable 'strings' escapes to the field 'FieldFromLocalVector' and is later invalidated}} \
+                                             // expected-note {{result of call to 'begin' aliases the storage of local variable 'strings'}} \
+                                             // expected-note {{result of call to 'operator*' aliases the storage of local variable 'strings' because the implicit object parameter is inferred as lifetimebound}}
+    strings.push_back("1");                  // expected-note {{local variable 'strings' is invalidated here}}
   }
 
   void InvalidatedFieldByValueParamVector(std::vector<std::string> strings) {
-    FieldFromByValueParamVector = *strings.begin(); // expected-warning {{parameter 'strings' escapes to the field 'FieldFromByValueParamVector' and is later invalidated}}
-    strings.push_back("1"); // expected-note {{parameter 'strings' is invalidated here}}
+    FieldFromByValueParamVector = *strings.begin(); // expected-warning {{parameter 'strings' escapes to the field 'FieldFromByValueParamVector' and is later invalidated}} \
+                                                    // expected-note {{result of call to 'begin' aliases the storage of parameter 'strings'}} \
+                                                    // expected-note {{result of call to 'operator*' aliases the storage of parameter 'strings' because the implicit object parameter is inferred as lifetimebound}}
+    strings.push_back("1");                         // expected-note {{parameter 'strings' is invalidated here}}
   }
 
   void InvalidatedFieldLocalString() {
@@ -624,7 +628,7 @@ struct S {
   void InvalidatedFieldDelete() {
     int *p = new int; // expected-warning {{allocated object escapes to the field 'FieldFromNew' and is later invalidated}}
     FieldFromNew = p;
-    delete p; // expected-note {{allocated object is freed here}}
+    delete p;         // expected-note {{allocated object is freed here}}
   }
 
   void InvalidatedFieldDeleteParam(int *p) { // expected-warning {{parameter 'p' escapes to the field 'FieldFromPointerParam' and is later invalidated}}
@@ -656,8 +660,10 @@ struct S {
 
 void InvalidatedGlobalLocalVector() {
   std::vector<std::string> strings;
-  GlobalFromLocalVector = *strings.begin(); // expected-warning {{local variable 'strings' escapes to the global variable 'GlobalFromLocalVector' and is later invalidated}}
-  strings.push_back("1"); // expected-note {{local variable 'strings' is invalidated here}}
+  GlobalFromLocalVector = *strings.begin(); // expected-warning {{local variable 'strings' escapes to the global variable 'GlobalFromLocalVector' and is later invalidated}} \
+                                            // expected-note {{result of call to 'begin' aliases the storage of local variable 'strings'}} \
+                                            // expected-note {{result of call to 'operator*' aliases the storage of local variable 'strings' because the implicit object parameter is inferred as lifetimebound}}
+  strings.push_back("1");                   // expected-note {{local variable 'strings' is invalidated here}}
 }
 
 void InvalidatedGlobalByValueParamString(std::string s) {
@@ -671,9 +677,9 @@ void InvalidatedGlobalRefParamString(std::string &s) { // expected-warning {{par
 }
 
 void InvalidatedGlobalDelete() {
-  int *p = new int; // expected-warning {{allocated object escapes to the global variable 'GlobalFromNew' and is later invalidated}}
+  int *p = new int;  // expected-warning {{allocated object escapes to the global variable 'GlobalFromNew' and is later invalidated}}
   GlobalFromNew = p;
-  delete p; // expected-note {{allocated object is freed here}}
+  delete p;          // expected-note {{allocated object is freed here}}
 }
 
 void InvalidatedGlobalDeleteParam(int *p) { // expected-warning {{parameter 'p' escapes to the global variable 'GlobalFromPointerParam' and is later invalidated}}
@@ -1009,3 +1015,65 @@ struct S {
   }            // expected-note {{later used here}}
 };
 } // namespace CapturedByThis
+
+namespace implicit_use_after_free {
+struct [[gsl::Pointer]] Ref {
+  const int *p;
+  Ref &operator=(const int *q [[clang::lifetime_capture_by_this]]);
+  ~Ref();
+};
+void cleanup_ref(Ref *r);
+
+void via_destructor() {
+  Ref r;
+  int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
+  r = h;
+  delete h;            // expected-note {{allocated object is freed here}}
+}                      // expected-note {{later used by the destructor of 'r' at scope exit}}
+
+void via_cleanup() {
+  Ref g __attribute__((cleanup(cleanup_ref)));
+  int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
+  g = h;
+  delete h;            // expected-note {{allocated object is freed here}}
+}                      // expected-note {{later used by the cleanup function of 'g' at scope exit}}
+
+struct [[gsl::Pointer]] ViewRef {
+  std::string_view sv;
+  ViewRef &operator=(std::string_view s [[clang::lifetime_capture_by_this]]);
+  ~ViewRef();
+};
+void via_destructor_invalidated() {
+  std::string s;
+  ViewRef r;
+  r = s;            // expected-warning {{local variable 's' is later invalidated}}
+  s.push_back('x'); // expected-note {{local variable 's' is invalidated here}}
+}                   // expected-note {{later used by the destructor of 'r' at scope exit}}
+} // namespace implicit_use_after_free
+
+namespace static_member_container {
+struct S {
+  static std::vector<int> v;
+};
+
+void ViaObject(S &s) {
+  auto it = s.v.begin();  // expected-warning {{static variable 'v' is later invalidated}} \
+                          // expected-note {{result of call to 'begin' aliases the storage of static variable 'v'}}
+  s.v.push_back(1);       // expected-note {{static variable 'v' is invalidated here}}
+  use(*it);               // expected-note {{later used here}}
+}
+
+void BorrowQualifiedInvalidateViaObject(S &s) {
+  auto it = S::v.begin(); // expected-warning {{static variable 'v' is later invalidated}} \
+                          // expected-note {{result of call to 'begin' aliases the storage of static variable 'v'}}
+  s.v.push_back(1);       // expected-note {{static variable 'v' is invalidated here}}
+  use(*it);               // expected-note {{later used here}}
+}
+
+void BorrowViaObjectInvalidateQualified(S &s) {
+  auto it = s.v.begin();  // expected-warning {{static variable 'v' is later invalidated}} \
+                          // expected-note {{result of call to 'begin' aliases the storage of static variable 'v'}}
+  S::v.push_back(1);      // expected-note {{static variable 'v' is invalidated here}}
+  use(*it);               // expected-note {{later used here}}
+}
+} // namespace static_member_container

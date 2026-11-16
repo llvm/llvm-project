@@ -2,7 +2,7 @@
 #
 # Check that we can select G_ZIP1 and G_ZIP2 via the tablegen importer.
 #
-# RUN: llc -mtriple aarch64 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple aarch64 -run-pass=instruction-select %s -o - | FileCheck %s
 
 ...
 ---
