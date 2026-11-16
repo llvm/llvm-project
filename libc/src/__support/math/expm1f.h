@@ -159,7 +159,7 @@ LIBC_INLINE float expm1f(float x) {
   float kf = fputil::nearest_integer(x * 0x1.0p7f);
   int x_hi = static_cast<int>(kf);
   // Subtract (hi + mid) from x to get lo.
-  double xd = static_cast<double>(fputil::multiply_add(kf, -0x1.0p-7f, x));
+  double xd = static_cast<double>(fputil::sub_multiply(x, kf, 0x1.0p-7f));
   x_hi += 104 << 7;
   // hi = x_hi >> 7
   double exp_hi = EXP_M1[x_hi >> 7];
@@ -174,7 +174,7 @@ LIBC_INLINE float expm1f(float x) {
   double exp_lo =
       fputil::polyeval(xd, 0x1.0p0, 0x1.ffffffffff777p-1, 0x1.000000000071cp-1,
                        0x1.555566668e5e7p-3, 0x1.55555555ef243p-5);
-  return static_cast<float>(fputil::multiply_add(exp_hi_mid, exp_lo, -1.0));
+  return static_cast<float>(fputil::multiply_sub(exp_hi_mid, exp_lo, 1.0));
 }
 
 } // namespace math

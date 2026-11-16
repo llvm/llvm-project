@@ -39,13 +39,13 @@ LIBC_INLINE double sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
   //        + u_lo (1 + u_hi^2 * (-1/2 + u_hi^2 / 24))
   double u_hi_sq = u.hi * u.hi; // Error < ulp(u_hi^2) < 2^(-6 - 52) = 2^-58.
   // p1 ~ 1/120 + u_hi^2 / 5040.
-  double p1 = fputil::multiply_add(u_hi_sq, -0x1.a01a01a01a01ap-13,
-                                   0x1.1111111111111p-7);
+  double p1 = fputil::sub_multiply(0x1.1111111111111p-7, u_hi_sq,
+                                   0x1.a01a01a01a01ap-13);
   // q1 ~ -1/2 + u_hi^2 / 24.
-  double q1 = fputil::multiply_add(u_hi_sq, 0x1.5555555555555p-5, -0x1.0p-1);
+  double q1 = fputil::multiply_sub(u_hi_sq, 0x1.5555555555555p-5, 0x1.0p-1);
   double u_hi_3 = u_hi_sq * u.hi;
   // p2 ~ -1/6 + u_hi^2 (1/120 - u_hi^2 * 1/5040)
-  double p2 = fputil::multiply_add(u_hi_sq, p1, -0x1.5555555555555p-3);
+  double p2 = fputil::multiply_sub(u_hi_sq, p1, 0x1.5555555555555p-3);
   // q2 ~ 1 + u_hi^2 (-1/2 + u_hi^2 / 24)
   double q2 = fputil::multiply_add(u_hi_sq, q1, 1.0);
   double sin_lo = fputil::multiply_add(u_hi_3, p2, u.lo * q2);
@@ -78,10 +78,10 @@ LIBC_INLINE double sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
   // r1 ~ -1/720 + u_hi^2 / 40320
-  double r1 = fputil::multiply_add(u_hi_sq, 0x1.a01a01a01a01ap-16,
-                                   -0x1.6c16c16c16c17p-10);
+  double r1 = fputil::multiply_sub(u_hi_sq, 0x1.a01a01a01a01ap-16,
+                                   0x1.6c16c16c16c17p-10);
   // s1 ~ -1 + u_hi^2 / 6
-  double s1 = fputil::multiply_add(u_hi_sq, 0x1.5555555555555p-3, -1.0);
+  double s1 = fputil::multiply_sub(u_hi_sq, 0x1.5555555555555p-3, 1.0);
   double u_hi_4 = u_hi_sq * u_hi_sq;
   double u_hi_u_lo = u.hi * u.lo;
   // r2 ~ 1/24 + u_hi^2 (-1/720 + u_hi^2 / 40320)

@@ -68,7 +68,7 @@ struct ExpRangeReduction {
   int x_hi = x_hi_mid >> 3;
   int x_mid = x_hi_mid & 0x7;
   // lo = x - (hi + mid) = round(x * 2^3) * (-2^(-3)) + x
-  float lo = fputil::multiply_add(kf, -0x1.0p-3f, xf);
+  float lo = fputil::sub_multiply(xf, kf, 0x1.0p-3f);
 
   float exp_hi = EXP_HI[x_hi + 18];
   float exp_mid = EXP_MID[x_mid];

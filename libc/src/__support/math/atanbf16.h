@@ -69,7 +69,7 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
     if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
       // Keep the small correction normal even for the smallest bfloat16 input.
       double xd = xf;
-      return fputil::cast<bfloat16>(fputil::multiply_add(xd, -0x1p-9, xd));
+      return fputil::cast<bfloat16>(fputil::sub_multiply(xd, xd, 0x1p-9));
     }
 
     float x_sq = xf * xf;

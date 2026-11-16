@@ -208,11 +208,11 @@ LIBC_INLINE LIBC_CONSTEXPR NumberPair<T> exact_mult(T a, T b) {
 
   if constexpr (TargetHasFmaInstruction<T>::VALUE) {
     r.hi = a * b;
-    // Prevent `-r.hi` below from being rewritten into `a * (-b)` when `a * b`
-    // is duplicated (e.g. by SLP vectorization), which breaks directed
-    // rounding modes (`RU(a * (-b)) != -RU(a * b)`).
+    // Prevent `-r.hi` inside `multiply_sub` from being rewritten into
+    // `a * (-b)` when `a * b` is duplicated (e.g. by SLP vectorization), which
+    // breaks directed rounding modes (`RU(a * (-b)) != -RU(a * b)`).
     LIBC_DO_NOT_OPTIMIZE_ROUNDING(r.hi);
-    r.lo = fputil::multiply_add(a, b, -r.hi);
+    r.lo = fputil::multiply_sub(a, b, r.hi);
   } else {
     // Dekker's Product.
     NumberPair<T> as = split(a);
@@ -289,8 +289,8 @@ LIBC_INLINE NumberPair<T> div(const NumberPair<T> &a, const NumberPair<T> &b) {
   LIBC_DO_NOT_OPTIMIZE_ROUNDING(r.hi);
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA
-  T e_hi = fputil::multiply_add(b.hi, -r.hi, a.hi);
-  T e_lo = fputil::multiply_add(b.lo, -r.hi, a.lo);
+  T e_hi = fputil::sub_multiply(a.hi, b.hi, r.hi);
+  T e_lo = fputil::sub_multiply(a.lo, b.lo, r.hi);
 #else
   NumberPair<T> b_hi_r_hi = fputil::exact_mult(b.hi, -r.hi);
   NumberPair<T> b_lo_r_hi = fputil::exact_mult(b.lo, -r.hi);

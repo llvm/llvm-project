@@ -61,7 +61,7 @@ LIBC_INLINE double initial_approximation(double x) {
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 LIBC_INLINE double get_error(const DoubleDouble &x_3,
                              const DoubleDouble &a_sq) {
-  return fputil::multiply_add(x_3.hi, a_sq.hi, -1.0) +
+  return fputil::multiply_sub(x_3.hi, a_sq.hi, 1.0) +
          fputil::multiply_add(x_3.lo, a_sq.hi, x_3.hi * a_sq.lo);
 }
 #else
@@ -288,7 +288,7 @@ LIBC_INLINE double cbrt(double x) {
   DoubleDouble r2 = fputil::quick_mult(a, x2);
 
   double r2_upper = r2.hi + fputil::multiply_add(a, 0x1.0p-102, r2.lo);
-  double r2_lower = r2.hi + fputil::multiply_add(a, -0x1.0p-102, r2.lo);
+  double r2_lower = r2.hi + fputil::sub_multiply(r2.lo, a, 0x1.0p-102);
 
   // Ziv's accuracy test.
   if (LIBC_LIKELY(r2_upper == r2_lower))

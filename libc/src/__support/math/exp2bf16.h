@@ -144,7 +144,7 @@ LIBC_INLINE bfloat16 exp2bf16(bfloat16 x) {
 
   // lo = x - (hi + mid) = x - k / 2^n
   //    = k * (-2^(-n)) + x
-  float lo = fputil::multiply_add(k_float, -0.0625f, x_float);
+  float lo = fputil::sub_multiply(x_float, k_float, 0.0625f);
 
   float exp2_mid = exp2bf16_internal::EXP2_MID[j];
 

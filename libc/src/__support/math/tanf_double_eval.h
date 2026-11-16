@@ -161,7 +161,7 @@ LIBC_INLINE float tanf(float x) {
   using fputil::multiply_add;
   return static_cast<float>(
       multiply_add(sin_y, cos_k, multiply_add(cosm1_y, sin_k, sin_k)) /
-      multiply_add(sin_y, -sin_k, multiply_add(cosm1_y, cos_k, cos_k)));
+      fputil::sub_multiply(multiply_add(cosm1_y, cos_k, cos_k), sin_y, sin_k));
 }
 
 } // namespace double_eval

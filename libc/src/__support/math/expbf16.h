@@ -174,7 +174,7 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
   int x_hi = x_hi_mid >> 5;
   int x_mid = x_hi_mid & 0b11111;
   // lo = x - (hi + mid) = round(x * 4) / (-4) + x
-  float lo = fputil::multiply_add(kf, -0.25f, xf);
+  float lo = fputil::sub_multiply(xf, kf, 0.25f);
 
   float exp_hi = expbf16_internal::EXP_HI[x_hi + 12];
   float exp_mid = expbf16_internal::EXP_MID[x_mid];

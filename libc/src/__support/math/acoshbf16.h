@@ -136,7 +136,7 @@ LIBC_INLINE LIBC_CONSTEXPR bfloat16 acoshbf16(bfloat16 x) {
   // this avoids overflow when squaring the largest finite BFloat16 inputs.
   // Convert directly to BFloat16 to avoid an intermediate float rounding.
   double xd = static_cast<double>(xf);
-  double sqrt_term = fputil::sqrt<double>(fputil::multiply_add(xd, xd, -1.0));
+  double sqrt_term = fputil::sqrt<double>(fputil::multiply_sub(xd, xd, 1.0));
   double result = log_eval(xd + sqrt_term);
 
   return fputil::cast<bfloat16>(result);

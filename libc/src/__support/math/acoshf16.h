@@ -108,7 +108,7 @@ LIBC_INLINE constexpr float16 acoshf16(float16 x) {
   }
 
   // acosh(x) = log(x + sqrt(x^2 - 1))
-  float sqrt_term = fputil::sqrt<float>(fputil::multiply_add(xf, xf, -1.0f));
+  float sqrt_term = fputil::sqrt<float>(fputil::multiply_sub(xf, xf, 1.0f));
   float result = static_cast<float>(log_eval(xf + sqrt_term));
 
   return fputil::cast<float16>(result);
