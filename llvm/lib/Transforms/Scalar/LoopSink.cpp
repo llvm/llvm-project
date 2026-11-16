@@ -181,8 +181,8 @@ static bool
 sinkInstruction(const ScalarOptions &Opts, Loop &L, Instruction &I,
                 const SmallVectorImpl<BasicBlock *> &ColdLoopBBs,
                 const SmallDenseMap<BasicBlock *, int, 16> &LoopBlockNumber,
-                LoopInfo &LI, DominatorTree &DT, BlockFrequencyInfo &BFI,
-                MemorySSAUpdater *MSSAU) {
+                LoopInfo &LI, const SinkAndHoistDependencies &Deps,
+                BlockFrequencyInfo &BFI) {
   // Compute the set of blocks in loop L which contain a use of I.
   SmallPtrSet<BasicBlock *, 2> BBs;
   for (auto &U : I.uses()) {
@@ -218,7 +218,7 @@ sinkInstruction(const ScalarOptions &Opts, Loop &L, Instruction &I,
 
   // Find the set of BBs that we should insert a copy of I.
   SmallPtrSet<BasicBlock *, 2> BBsToSinkInto =
-      findBBsToSinkInto(Opts, L, BBs, ColdLoopBBs, DT, BFI);
+      findBBsToSinkInto(Opts, L, BBs, ColdLoopBBs, Deps.DT, BFI);
   if (BBsToSinkInto.empty())
     return false;
 
@@ -250,16 +250,16 @@ sinkInstruction(const ScalarOptions &Opts, Loop &L, Instruction &I,
     IC->setName(I.getName());
     IC->insertBefore(N->getFirstInsertionPt());
 
-    if (MSSAU && MSSAU->getMemorySSA()->getMemoryAccess(&I)) {
+    if (Deps.MSSAU.getMemorySSA()->getMemoryAccess(&I)) {
       // Create a new MemoryAccess and let MemorySSA set its defining access.
-      MemoryAccess *NewMemAcc =
-          MSSAU->createMemoryAccessInBB(IC, nullptr, N, MemorySSA::Beginning);
+      MemoryAccess *NewMemAcc = Deps.MSSAU.createMemoryAccessInBB(
+          IC, nullptr, N, MemorySSA::Beginning);
       if (NewMemAcc) {
         if (auto *MemDef = dyn_cast<MemoryDef>(NewMemAcc))
-          MSSAU->insertDef(MemDef, /*RenameUses=*/true);
+          Deps.MSSAU.insertDef(MemDef, /*RenameUses=*/true);
         else {
           auto *MemUse = cast<MemoryUse>(NewMemAcc);
-          MSSAU->insertUse(MemUse, /*RenameUses=*/true);
+          Deps.MSSAU.insertUse(MemUse, /*RenameUses=*/true);
         }
       }
     }
@@ -271,7 +271,7 @@ sinkInstruction(const ScalarOptions &Opts, Loop &L, Instruction &I,
       return UIToReplace->getParent() == N && !isa<PHINode>(UIToReplace);
     });
     // Replaces uses of I with IC in blocks dominated by N
-    replaceDominatedUsesWith(&I, IC, DT, N);
+    replaceDominatedUsesWith(&I, IC, Deps.DT, N);
     LLVM_DEBUG(dbgs() << "Sinking a clone of " << I << " To: " << N->getName()
                       << '\n');
     NumLoopSunkCloned++;
@@ -280,10 +280,9 @@ sinkInstruction(const ScalarOptions &Opts, Loop &L, Instruction &I,
   NumLoopSunk++;
   I.moveBefore(MoveBB->getFirstInsertionPt());
 
-  if (MSSAU)
-    if (MemoryUseOrDef *OldMemAcc = cast_or_null<MemoryUseOrDef>(
-            MSSAU->getMemorySSA()->getMemoryAccess(&I)))
-      MSSAU->moveToPlace(OldMemAcc, MoveBB, MemorySSA::Beginning);
+  if (MemoryUseOrDef *OldMemAcc = cast_or_null<MemoryUseOrDef>(
+          Deps.MSSAU.getMemorySSA()->getMemoryAccess(&I)))
+    Deps.MSSAU.moveToPlace(OldMemAcc, MoveBB, MemorySSA::Beginning);
 
   return true;
 }
@@ -339,8 +338,8 @@ static bool sinkLoopInvariantInstructions(Loop &L,
            "Insts in a loop's preheader should have loop invariant operands!");
     if (!canSinkOrHoistInst(I, Deps, &L, false, LICMFlags))
       continue;
-    if (sinkInstruction(Opts, L, I, ColdLoopBBs, LoopBlockNumber, LI, Deps.DT,
-                        BFI, &Deps.MSSAU)) {
+    if (sinkInstruction(Opts, L, I, ColdLoopBBs, LoopBlockNumber, LI, Deps,
+                        BFI)) {
       Changed = true;
       if (SE)
         SE->forgetBlockAndLoopDispositions(&I);
