@@ -16,6 +16,7 @@ class Transform_Attr<string name, string attrMnemonic,
                      list<Trait> traits = [],
                      string baseCppClass = "::mlir::Attribute">
     : AttrDef<Transform_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/Transform/IR/TransformAttrs.h"];
   let mnemonic = attrMnemonic;
 }
 

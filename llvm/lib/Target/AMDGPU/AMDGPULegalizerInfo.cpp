@@ -45,14 +45,6 @@ using namespace LegalizeMutations;
 using namespace LegalityPredicates;
 using namespace MIPatternMatch;
 
-// Hack until load/store selection patterns support any tuple of legal types.
-static cl::opt<bool> EnableNewLegality(
-  "amdgpu-global-isel-new-legality",
-  cl::desc("Use GlobalISel desired legality, rather than try to use"
-           "rules compatible with selection patterns"),
-  cl::init(false),
-  cl::ReallyHidden);
-
 static constexpr unsigned MaxRegisterSize = 1024;
 
 // Round the number of elements to the next power of two elements
@@ -530,8 +522,8 @@ static bool hasBufferRsrcWorkaround(const LLT Ty) {
 // workaround this. Eventually it should ignore the type for loads and only care
 // about the size. Return true in cases where we will workaround this for now by
 // bitcasting.
-static bool loadStoreBitcastWorkaround(const LLT Ty) {
-  if (EnableNewLegality)
+static bool loadStoreBitcastWorkaround(const GCNSubtarget &ST, const LLT Ty) {
+  if (ST.getCLOpts().global_isel_new_legality)
     return false;
 
   const unsigned Size = Ty.getSizeInBits();
@@ -552,7 +544,7 @@ static bool loadStoreBitcastWorkaround(const LLT Ty) {
 static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query) {
   const LLT Ty = Query.Types[0];
   return isRegisterType(ST, Ty) && isLoadStoreSizeLegal(ST, Query) &&
-         !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(Ty);
+         !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(ST, Ty);
 }
 
 /// Return true if a load or store of the type should be lowered with a bitcast
@@ -564,7 +556,7 @@ static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
   if (Size != MemSizeInBits)
     return Size <= 32 && Ty.isVector();
 
-  if (loadStoreBitcastWorkaround(Ty) && isRegisterType(ST, Ty))
+  if (loadStoreBitcastWorkaround(ST, Ty) && isRegisterType(ST, Ty))
     return true;
 
   // Don't try to handle bitcasting vector ext loads for now.
@@ -5098,7 +5090,8 @@ bool AMDGPULegalizerInfo::loadInputValue(
   };
 
   if (ST.hasArchitectedSGPRs() &&
-      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
+      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx ||
+       AMDGPU::isChainCC(CC) || CC == CallingConv::AMDGPU_Gfx_WholeWave)) {
     AMDGPU::ClusterDimsAttr ClusterDims = MFI->getClusterDims();
     bool HasFixedDims = ClusterDims.isFixedDims();
 
@@ -8269,8 +8262,10 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
 
 bool AMDGPULegalizerInfo::legalizeStackSave(MachineInstr &MI,
                                             MachineIRBuilder &B) const {
-  const SITargetLowering *TLI = ST.getTargetLowering();
-  Register StackPtr = TLI->getStackPointerRegisterToSaveRestore();
+  // Entry functions still hold the SP_REG placeholder until finalizeLowering.
+  const SIMachineFunctionInfo *Info =
+      B.getMF().getInfo<SIMachineFunctionInfo>();
+  Register StackPtr = Info->getStackPtrOffsetReg();
   Register DstReg = MI.getOperand(0).getReg();
   B.buildInstr(AMDGPU::G_AMDGPU_WAVE_ADDRESS, {DstReg}, {StackPtr});
   MI.eraseFromParent();
@@ -8888,10 +8883,18 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     B.buildStore(MI.getOperand(2), MI.getOperand(1), **MI.memoperands_begin());
     MI.eraseFromParent();
     return true;
+  case Intrinsic::amdgcn_av_load_b8:
+  case Intrinsic::amdgcn_av_load_b16:
+  case Intrinsic::amdgcn_av_load_b32:
+  case Intrinsic::amdgcn_av_load_b64:
   case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b8:
+  case Intrinsic::amdgcn_av_store_b16:
+  case Intrinsic::amdgcn_av_store_b32:
+  case Intrinsic::amdgcn_av_store_b64:
   case Intrinsic::amdgcn_av_store_b128: {
     assert(MI.hasOneMemOperand() && "Expected IRTranslator to set MemOp!");
-    if (IntrID == Intrinsic::amdgcn_av_load_b128)
+    if (MI.getNumExplicitDefs())
       B.buildLoad(MI.getOperand(0), MI.getOperand(2), **MI.memoperands_begin());
     else
       B.buildStore(MI.getOperand(2), MI.getOperand(1),

@@ -347,14 +347,30 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C, Value *&D, Value *&E,
       std::make_pair(LeftType, RightType));
 }
 
+/// When foldLogOpOfMaskedICmps returns RHS for a logical and/or, we need to
+/// make sure that RHS is not more poisonous, e.g. as a result of poison flags
+/// on icmp or trunc, or via poison elements in vector constants. Using freeze
+/// is insufficient here, because we need the constants to match those the
+/// analysis was performed on.
+/// D and E are expected to be poison-free constants here.
+static Value *getReconstructedMaskedICmp(IRBuilderBase &Builder, bool IsLogical,
+                                         Value *RHS, Value *A, Value *D,
+                                         Value *E, ICmpInst::Predicate PredR) {
+  if (!IsLogical)
+    return RHS;
+
+  Value *And = Builder.CreateAnd(A, D);
+  return Builder.CreateICmp(PredR, And, E);
+}
+
 /// Try to fold (icmp(A & B) ==/!= C) &/| (icmp(A & D) ==/!= E) into a single
 /// (icmp(A & X) ==/!= Y), where the left-hand side is of type Mask_NotAllZeros
 /// and the right hand side is of type BMask_Mixed. For example,
 /// (icmp (A & 12) != 0) & (icmp (A & 15) == 8) -> (icmp (A & 15) == 8).
 /// Also used for logical and/or, must be poison safe.
 static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-    Value *LHS, Value *RHS, bool IsAnd, Value *A, Value *B, Value *D, Value *E,
-    ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
+    Value *LHS, Value *RHS, bool IsAnd, bool IsLogical, Value *A, Value *B,
+    Value *D, Value *E, ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
     InstCombiner::BuilderTy &Builder) {
   // We are given the canonical form:
   //   (icmp ne (A & B), 0) & (icmp eq (A & D), E).
@@ -475,22 +491,16 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
   // RHS. For example,
   // (icmp ne (A & 255), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   // (icmp ne (A & 15), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
-  if (IsSuperSetOrEqual(BCst, DCst)) {
-    // We can't guarantee that samesign hold after this fold.
-    if (auto *ICmp = dyn_cast<ICmpInst>(RHS))
-      ICmp->setSameSign(false);
-    return RHS;
-  }
+  if (IsSuperSetOrEqual(BCst, DCst))
+    return getReconstructedMaskedICmp(Builder, IsLogical, RHS, A, D, E, PredR);
+
   // Otherwise, B is a subset of D. If B and E have a common bit set,
   // ie. (B & E) != 0, then LHS is subsumed by RHS. For example.
   // (icmp ne (A & 12), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   assert(IsSubSetOrEqual(BCst, DCst) && "Precondition due to above code");
-  if ((*BCst & ECst) != 0) {
-    // We can't guarantee that samesign hold after this fold.
-    if (auto *ICmp = dyn_cast<ICmpInst>(RHS))
-      ICmp->setSameSign(false);
-    return RHS;
-  }
+  if ((*BCst & ECst) != 0)
+    return getReconstructedMaskedICmp(Builder, IsLogical, RHS, A, D, E, PredR);
+
   // Otherwise, LHS and RHS contradict and the whole expression becomes false
   // (or true if negated.) For example,
   // (icmp ne (A & 7), 0) & (icmp eq (A & 15), 8) -> false.
@@ -503,9 +513,10 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
 /// aren't of the common mask pattern type.
 /// Also used for logical and/or, must be poison safe.
 static Value *foldLogOpOfMaskedICmpsAsymmetric(
-    Value *LHS, Value *RHS, bool IsAnd, Value *A, Value *B, Value *C, Value *D,
-    Value *E, ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
-    unsigned LHSMask, unsigned RHSMask, InstCombiner::BuilderTy &Builder) {
+    Value *LHS, Value *RHS, bool IsAnd, bool IsLogical, Value *A, Value *B,
+    Value *C, Value *D, Value *E, ICmpInst::Predicate PredL,
+    ICmpInst::Predicate PredR, unsigned LHSMask, unsigned RHSMask,
+    InstCombiner::BuilderTy &Builder) {
   assert(ICmpInst::isEquality(PredL) && ICmpInst::isEquality(PredR) &&
          "Expected equality predicates for masked type of icmps.");
   // Handle Mask_NotAllZeros-BMask_Mixed cases.
@@ -519,12 +530,13 @@ static Value *foldLogOpOfMaskedICmpsAsymmetric(
   }
   if ((LHSMask & Mask_NotAllZeros) && (RHSMask & BMask_Mixed)) {
     if (Value *V = foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-            LHS, RHS, IsAnd, A, B, D, E, PredL, PredR, Builder)) {
+            LHS, RHS, IsAnd, IsLogical, A, B, D, E, PredL, PredR, Builder)) {
       return V;
     }
   } else if ((LHSMask & BMask_Mixed) && (RHSMask & Mask_NotAllZeros)) {
     if (Value *V = foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-            RHS, LHS, IsAnd, A, D, B, C, PredR, PredL, Builder)) {
+            RHS, LHS, IsAnd, /*IsLogical=*/false, A, D, B, C, PredR, PredL,
+            Builder)) {
       return V;
     }
   }
@@ -551,9 +563,9 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
   if (Mask == 0) {
     // Even if the two sides don't share a common pattern, check if folding can
     // still happen.
-    if (Value *V = foldLogOpOfMaskedICmpsAsymmetric(
-            LHS, RHS, IsAnd, A, B, C, D, E, PredL, PredR, LHSMask, RHSMask,
-            Builder))
+    if (Value *V = foldLogOpOfMaskedICmpsAsymmetric(LHS, RHS, IsAnd, IsLogical,
+                                                    A, B, C, D, E, PredL, PredR,
+                                                    LHSMask, RHSMask, Builder))
       return V;
     return nullptr;
   }
@@ -620,13 +632,9 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
       APInt NewMask = *ConstB & *ConstD;
       if (NewMask == *ConstB)
         return LHS;
-      if (NewMask == *ConstD) {
-        if (IsLogical) {
-          if (auto *RHSI = dyn_cast<Instruction>(RHS))
-            RHSI->dropPoisonGeneratingFlags();
-        }
-        return RHS;
-      }
+      if (NewMask == *ConstD)
+        return getReconstructedMaskedICmp(Builder, IsLogical, RHS, A, D, E,
+                                          PredR);
     }
 
     if (Mask & AMask_NotAllOnes) {
@@ -2729,6 +2737,34 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         }
       }
     }
+
+    // and (or (shr (sub C, X), ShAmt), X), C  -->  umin(X, C)
+    // The fold holds when all of:
+    // - C is a low-bit mask: C = (1<<S)-1
+    // - S u<= ShAmt       -- When X u<= C, sub(C, X) u< 1<<ShAmt, so shr is 0
+    // - ShAmt + S u<= BW  -- the borrow's all-ones run reaches up to bit S-1
+    // - X u< 1<<ShAmt     -- bounds X - C u< 1<<ShAmt in the X u> C case
+    // Then shr(sub(C, X), ShAmt) is 0 when X u<= C and has all of C's bits set
+    // when X u> C, so (shr | X) & C clamps X to C. For ashr, the bound on X
+    // also means sub(C, X) is negative when X u> C, so shr is all-ones and
+    // ShAmt + S u<= BW is not needed.
+    const APInt *ShAmtC;
+    Instruction *Shr;
+    if (C->isMask() &&
+        match(Op0, m_OneUse(m_c_Or(
+                       m_CombineAnd(m_Instruction(Shr),
+                                    m_Shr(m_Sub(m_SpecificInt(*C), m_Value(X)),
+                                          m_APInt(ShAmtC))),
+                       m_Deferred(X)))) &&
+        ShAmtC->ult(Width)) {
+      unsigned S = C->popcount();
+      unsigned ShAmt = ShAmtC->getZExtValue();
+      bool IsAShr = Shr->getOpcode() == Instruction::AShr;
+      if (S <= ShAmt && (IsAShr || ShAmt + S <= Width) &&
+          MaskedValueIsZero(X, APInt::getBitsSetFrom(Width, ShAmt), &I))
+        return replaceInstUsesWith(
+            I, Builder.CreateBinaryIntrinsic(Intrinsic::umin, X, Op1));
+    }
   }
 
   // If we are clearing the sign bit of a floating-point value, convert this to
@@ -4517,6 +4553,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // be simplified by a later pass either, so we try swapping the inner/outer
   // ORs in the hopes that we'll be able to simplify it this way.
   // (X|C) | V --> (X|V) | C
+  // V | (X|C) --> (X|V) | C
   // Pass the disjoint flag in the following two patterns:
   // 1. or-disjoint (or-disjoint X, C), V -->
   //    or-disjoint (or-disjoint X, V), C
@@ -4524,12 +4561,16 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // 2. or-disjoint (or X, C), V -->
   //    or (or-disjoint X, V), C
   ConstantInt *CI;
-  if (Op0->hasOneUse() && !match(Op1, m_ConstantInt()) &&
-      match(Op0, m_Or(m_Value(A), m_ConstantInt(CI)))) {
+  Instruction *InnerOr;
+  Value *V;
+  if (match(&I, m_c_Or(m_OneUse(m_Instruction(
+                           InnerOr, m_Or(m_Value(A), m_ConstantInt(CI)))),
+                       m_Value(V))) &&
+      !match(V, m_ConstantInt())) {
     bool IsDisjointOuter = cast<PossiblyDisjointInst>(I).isDisjoint();
-    bool IsDisjointInner = cast<PossiblyDisjointInst>(Op0)->isDisjoint();
-    Value *Inner = Builder.CreateOr(A, Op1, "", /*IsDisjoint=*/IsDisjointOuter);
-    Inner->takeName(Op0);
+    bool IsDisjointInner = cast<PossiblyDisjointInst>(InnerOr)->isDisjoint();
+    Value *Inner = Builder.CreateOr(A, V, "", /*IsDisjoint=*/IsDisjointOuter);
+    Inner->takeName(InnerOr);
     return IsDisjointOuter && IsDisjointInner
                ? BinaryOperator::CreateDisjointOr(Inner, CI)
                : BinaryOperator::CreateOr(Inner, CI);

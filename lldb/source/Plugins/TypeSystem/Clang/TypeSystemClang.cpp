@@ -126,9 +126,9 @@ TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
          lldb_private::Language::LanguageIsCPlusPlus(language) ||
          lldb_private::Language::LanguageIsObjC(language) ||
          lldb_private::Language::LanguageIsPascal(language) ||
-         // Use Clang for Rust until there is a proper language plugin for it
+         // Use Clang for Rust until there is a Rust type system
          language == eLanguageTypeRust ||
-         // Use Clang for D until there is a proper language plugin for it
+         // Use Clang for D until there is a D type system
          language == eLanguageTypeD ||
          // Open Dylan compiler debug info is designed to be Clang-compatible
          language == eLanguageTypeDylan;
@@ -3750,6 +3750,16 @@ bool TypeSystemClang::HasPointerAuthQualifier(
   return GetCanonicalQualType(type).getPointerAuth().isPresent();
 }
 
+std::optional<uint32_t> TypeSystemClang::GetTargetAddressSpace(
+    lldb::opaque_compiler_type_t type) const {
+  if (!type)
+    return std::nullopt;
+  clang::LangAS as = GetCanonicalQualType(type).getAddressSpace();
+  if (!clang::isTargetAddressSpace(as))
+    return std::nullopt;
+  return clang::toTargetAddressSpace(as);
+}
+
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {
   if (auto *record_decl =
       TypeSystemClang::GetAsRecordDecl(type)) {
@@ -4687,6 +4697,18 @@ TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
 }
 
 CompilerType
+TypeSystemClang::AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                                         uint32_t address_space) {
+  assert(type);
+  assert(address_space <= clang::Qualifiers::MaxAddressSpace);
+  clang::QualType qual_type = GetQualType(type);
+  auto lang_as = static_cast<clang::LangAS>(address_space);
+  if (lang_as == clang::LangAS::Default || qual_type.hasAddressSpace())
+    return GetType(qual_type);
+  return GetType(getASTContext().getAddrSpaceQualType(qual_type, lang_as));
+}
+
+CompilerType
 TypeSystemClang::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType result(GetQualType(type));
@@ -4819,20 +4841,19 @@ TypeSystemClang::GetObjCBitSize(QualType qual_type,
         return *bit_size;
     }
   } else {
-    static bool g_printed = false;
-    if (!g_printed) {
+    static std::once_flag g_once_flag;
+    std::call_once(g_once_flag, [&] {
       StreamString s;
       DumpTypeDescription(qual_type.getAsOpaquePtr(), s);
-
-      llvm::outs() << "warning: trying to determine the size of type ";
-      llvm::outs() << s.GetString() << "\n";
-      llvm::outs() << "without a valid ExecutionContext. this is not "
-                      "reliable. please file a bug against LLDB.\n";
-      llvm::outs() << "backtrace:\n";
-      llvm::sys::PrintStackTrace(llvm::outs());
-      llvm::outs() << "\n";
-      g_printed = true;
-    }
+      std::string backtrace;
+      llvm::raw_string_ostream os(backtrace);
+      llvm::sys::PrintStackTrace(os);
+      Debugger::ReportInternalError(
+          llvm::formatv("determining the size of type {0} without a valid "
+                        "ExecutionContext is not reliable\n{1}",
+                        s.GetString(), llvm::StringRef(backtrace).rtrim())
+              .str());
+    });
   }
 
   return getASTContext().getTypeSize(qual_type) +

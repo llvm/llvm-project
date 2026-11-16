@@ -16,26 +16,28 @@ set(LLVM_SUBPROJECT_TITLE "liboffload")
 set(OFFLOAD_MIN_CUDA_VERSION 11.8.0)
 set(OFFLOAD_MIN_CUDA_VERSION_CODE 11080)
 
-# libomptarget is not supported on Windows.
-set(BUILD_LIBOMPTARGET ON)
+option(BUILD_LIBOMPTARGET "Build the OpenMP offloading runtime library libomptarget." ON)
+option(BUILD_LIBACCTARGET "Build the OpenACC offloading runtime library libacctarget." ON)
+# libomptarget and libacctarget are not supported on Windows.
 if(MSVC)
-  set(BUILD_LIBOMPTARGET OFF)
-  message(STATUS "libomptarget is not supported on Windows, skipping.")
+  set(BUILD_LIBOMPTARGET OFF CACHE BOOL "" FORCE)
+  set(BUILD_LIBACCTARGET OFF CACHE BOOL "" FORCE)
+  message(STATUS "libomptarget and libacctarget are not supported on Windows, skipping.")
 endif()
 
 # Check that the library can actually be built.
 if(APPLE OR WASM)
-  message(WARNING "libomptarget cannot be built on MacOS X and WASM!")
+  message(WARNING "offload cannot be built on MacOS X and WASM!")
   return()
 elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^(amdgpu|amdgcn|nvptx|spirv)" OR
        "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^(amdgpu|amdgcn|nvptx|spirv)")
   message(WARNING "offload cannot be built on GPU targets yet.")
   return()
 elseif(NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-  message(WARNING "Host compiler must support C++17 to build libomptarget!")
+  message(WARNING "Host compiler must support C++17 to build offload!")
   return()
 elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-  message(WARNING "libomptarget on 32-bit systems is not supported!")
+  message(WARNING "offload on 32-bit systems is not supported!")
   return()
 endif()
 
@@ -317,6 +319,7 @@ else()
 endif()
 
 pythonize_bool(LIBOMPTARGET_OMPT_SUPPORT)
+pythonize_bool(BUILD_LIBACCTARGET)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(LIBOMPTARGET_BINARY_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -357,6 +360,12 @@ add_dependencies(install-offload-stripped offload)
 
 add_subdirectory(tools/offload-tblgen)
 
+# Invokes offload-tblgen; see tablegen_internal() for the calling convention.
+function(offload_tablegen ofn)
+  tablegen_internal(OFFLOAD ${ARGV})
+  set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} PARENT_SCOPE)
+endfunction()
+
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
 add_subdirectory(tools)
@@ -364,8 +373,14 @@ add_subdirectory(docs)
 
 add_subdirectory(liboffload)
 
+add_subdirectory(libompaccsupport)
+
 if(BUILD_LIBOMPTARGET)
   add_subdirectory(libomptarget)
+endif()
+
+if(BUILD_LIBACCTARGET)
+  add_subdirectory(libacctarget)
 endif()
 
 add_subdirectory(languages)
