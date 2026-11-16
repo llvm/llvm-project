@@ -54,9 +54,8 @@ public:
   mlir::Speculation::Speculatability getSpeculatability() {
     // Masked exceptions cannot trap. When strict_except is false, exception
     // side effects are non-deterministic, so speculation is still safe.
-    FPEnvConstrainedOpInterface fenvOp = getFenvOp();
-    if (fenvOp.getFenvExceptionMode() == cir::FPExceptionMode::Masked &&
-        !fenvOp.getFenvStrictExcept())
+    cir::FenvAttr fenv = getFenvOp().getFenvAttr();
+    if (!fenv || fenv.canIgnoreExceptions())
       return mlir::Speculation::Speculatable;
 
     return mlir::Speculation::NotSpeculatable;
