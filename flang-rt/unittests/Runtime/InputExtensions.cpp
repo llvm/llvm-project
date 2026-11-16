@@ -116,6 +116,8 @@ TEST(InputExtensionTests, TabInField_I) {
     const char *format, *data;
     std::int64_t expect;
   } test[] = {
+      {"(I4)", "\t123", 123},
+      {"(I4)", "1\t23", 123},
       {"(BN,I4)", "\t123", 123},
       {"(BN,I4)", "1\t23", 123},
       {"(BN,I4)", "123\t", 123},
@@ -130,7 +132,7 @@ TEST(InputExtensionTests, TabInField_I) {
     auto cookie{IONAME(BeginInternalFormattedInput)(test[j].data,
         std::strlen(test[j].data), test[j].format,
         std::strlen(test[j].format))};
-    std::int64_t got;
+    std::int64_t got{-1};
     IONAME(InputInteger)(cookie, got);
     ASSERT_EQ(got, test[j].expect)
         << "expected " << test[j].expect << ", got " << got;
@@ -145,6 +147,8 @@ TEST(InputExtensionTests, TabInField_F) {
     const char *format, *data;
     double expect;
   } test[] = {
+      {"(F4.0)", "\t123", 123},
+      {"(F4.0)", "1\t23", 123},
       {"(BN,F4.0)", "\t123", 123},
       {"(BN,F4.0)", "1\t23", 123},
       {"(BN,F4.0)", "123\t", 123},
@@ -159,7 +163,7 @@ TEST(InputExtensionTests, TabInField_F) {
     auto cookie{IONAME(BeginInternalFormattedInput)(test[j].data,
         std::strlen(test[j].data), test[j].format,
         std::strlen(test[j].format))};
-    float got;
+    float got{-1};
     IONAME(InputReal32)(cookie, got);
     ASSERT_EQ(got, test[j].expect)
         << "expected " << test[j].expect << ", got " << got;
@@ -183,7 +187,7 @@ TEST(InputExtensionTests, TabInField_L) {
     auto cookie{IONAME(BeginInternalFormattedInput)(test[j].data,
         std::strlen(test[j].data), test[j].format,
         std::strlen(test[j].format))};
-    bool got;
+    bool got{!test[j].expect};
     IONAME(InputLogical)(cookie, got);
     ASSERT_EQ(got, test[j].expect)
         << "expected " << test[j].expect << ", got " << got;
@@ -193,12 +197,27 @@ TEST(InputExtensionTests, TabInField_L) {
   }
 }
 
+// Character (A) input transfers a tab unchanged.
+TEST(InputExtensionTests, TabInField_A) {
+  static const char data[]{"X\tY"};
+  static const char format[]{"(A3)"};
+  auto cookie{IONAME(BeginInternalFormattedInput)(
+      data, std::strlen(data), format, std::strlen(format))};
+  char got[3]{'?', '?', '?'};
+  ASSERT_TRUE(IONAME(InputAscii)(cookie, got, sizeof got));
+  for (std::size_t k{0}; k < sizeof got; ++k) {
+    ASSERT_EQ(got[k], data[k]) << "at position " << k;
+  }
+  auto status{IONAME(EndIoStatement)(cookie)};
+  ASSERT_EQ(status, 0) << "error status " << status;
+}
+
 // A tab also separates values in list-directed input.
 TEST(InputExtensionTests, TabSeparator_ListDirected) {
   static const char data[]{"1\t2 \t3"};
   auto cookie{IONAME(BeginInternalListInput)(data, std::strlen(data))};
   for (std::int64_t expect{1}; expect <= 3; ++expect) {
-    std::int64_t got;
+    std::int64_t got{-1};
     IONAME(InputInteger)(cookie, got);
     ASSERT_EQ(got, expect) << "expected " << expect << ", got " << got;
   }
