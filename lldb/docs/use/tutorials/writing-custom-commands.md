@@ -295,9 +295,10 @@ def __lldb_init_module(debugger, internal_dict):
 
 where debugger and internal_dict are as above, that function will get run when
 the module is loaded allowing you to add whatever commands you want into the
-current debugger. Note that this function will only be run when using the LLDB
-command `command script import`, it will not get run if anyone imports your
-module from another module.
+current debugger. Note that LLDB only runs this function when it loads your
+module itself: with `command script import`, or when it loads your module along
+with a binary, as [Shipping Debugging Support with a Binary](shipping-debugging-support-with-a-binary.md) explains. It doesn't run when another Python
+module imports yours.
 
 Another way to load custom commands in lldb is to use the
 `@lldb.command(command_name=None, doc=None)` decorator.

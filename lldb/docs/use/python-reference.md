@@ -26,4 +26,6 @@ tutorials/writing-custom-commands
 tutorials/implementing-standalone-scripts
 tutorials/custom-frame-recognizers
 tutorials/extending-target-stop-hooks
+tutorials/shipping-debugging-support-with-a-binary
+tutorials/auto-loading-scripts-from-dsyms
 ```
