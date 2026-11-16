@@ -1,3 +1,17 @@
+posix: posix-2024
+types:
+  cpu_set_t:
+    extension: gnu
+  pid_t:
+    in-latest-posix: ''
+  size_t:
+    extension: gnu
+  struct sched_param:
+    in-latest-posix: ''
+  struct timespec:
+    in-latest-posix: ''
+  time_t:
+    in-latest-posix: ''
 macros:
   SCHED_FIFO:
     in-latest-posix: ''
@@ -25,3 +39,13 @@ functions:
     in-latest-posix: ''
   sched_yield:
     in-latest-posix: ''
+  clone:
+    extension: linux
+  getcpu:
+    extension: linux
+  sched_getaffinity:
+    extension: gnu
+  sched_getcpu:
+    extension: gnu
+  sched_setaffinity:
+    extension: gnu

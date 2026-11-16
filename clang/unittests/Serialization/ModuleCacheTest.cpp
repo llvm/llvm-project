@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Driver/CreateInvocationFromArgs.h"
@@ -16,6 +17,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -31,7 +33,7 @@ class ModuleCacheTest : public ::testing::Test {
     ASSERT_FALSE(sys::fs::createUniqueDirectory("modulecache-test", TestDir));
 
     ModuleCachePath = SmallString<256>(TestDir);
-    sys::path::append(ModuleCachePath, "mcp");
+    sys::path::append(ModuleCachePath, ModuleCacheDir);
     ASSERT_FALSE(sys::fs::create_directories(ModuleCachePath));
   }
 
@@ -40,6 +42,7 @@ class ModuleCacheTest : public ::testing::Test {
 public:
   SmallString<256> TestDir;
   SmallString<256> ModuleCachePath;
+  static constexpr StringRef ModuleCacheDir = "mcp";
 
   void addFile(StringRef Path, StringRef Contents) {
     ASSERT_FALSE(sys::path::is_absolute(Path));
@@ -293,6 +296,51 @@ TEST_F(ModuleCacheTest, RebuildFinalizedModuleAfterInputChange) {
   EXPECT_NE(Captured[2].Message.find("'M'"), std::string::npos);
   EXPECT_EQ(Captured[3].ID,
             (unsigned)diag::note_ast_file_input_files_validation_status);
+}
+
+// Test that even for a small file not mmapped, the access time is still updated
+// upon read. Accurate atime is necessary for clang's pruning logic.
+#ifndef _WIN32
+TEST_F(ModuleCacheTest, ReadRefreshesAccessTime) {
+  SmallString<256> RelPath(ModuleCacheDir);
+  sys::path::append(RelPath, "Small.pcm");
+  addFile(RelPath, "not really a module file");
+  SmallString<256> Path(TestDir);
+  sys::path::append(Path, RelPath);
+
+  using namespace std::chrono;
+  sys::TimePoint<> Now = time_point_cast<seconds>(system_clock::now());
+  sys::TimePoint<> OldModTime = Now - hours(24 * 10);
+  sys::TimePoint<> OldAccessTime = Now - hours(2);
+  ASSERT_FALSE(sys::fs::setLastAccessAndModificationTime(Path, OldAccessTime,
+                                                         OldModTime));
+
+  off_t Size;
+  time_t ModTime;
+  Expected<std::unique_ptr<MemoryBuffer>> Buf = readImpl(Path, Size, ModTime);
+  ASSERT_TRUE(static_cast<bool>(Buf));
+  EXPECT_EQ(Size, 24);
+  EXPECT_EQ(ModTime, sys::toTimeT(OldModTime));
+
+  sys::fs::file_status Status;
+  ASSERT_FALSE(sys::fs::status(Path, Status));
+  EXPECT_GE(Status.getLastAccessedTime(), Now);
+  EXPECT_EQ(Status.getLastModificationTime(), OldModTime);
+}
+#endif
+
+// Test that the reported size covers the entire written contents, even if the
+// stream hasn't flushed them to the file on its own.
+TEST_F(ModuleCacheTest, WriteReportsFullSize) {
+  SmallString<256> Path(ModuleCachePath);
+  sys::path::append(Path, "M.pcm");
+
+  StringRef Contents = "contents\n";
+  off_t Size;
+  time_t ModTime;
+  ASSERT_EQ(writeImpl(Path, MemoryBufferRef(Contents, Path), Size, ModTime),
+            std::error_code{});
+  EXPECT_EQ(Size, off_t(Contents.size()));
 }
 
 } // anonymous namespace

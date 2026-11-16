@@ -71,7 +71,6 @@ protected:
     MemoryBufferRef Source(StringRef(ElfBuf, sizeof(ElfBuf)), "ELF");
     ObjFile = cantFail(ObjectFile::createObjectFile(Source));
 
-    Relocation::Arch = ObjFile->makeTriple().getArch();
     BC = cantFail(BinaryContext::createBinaryContext(
         ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
         ObjFile->getFileName(), nullptr, /*IsPIC*/ false,
@@ -151,6 +150,8 @@ TEST_F(PreAggregatedTestHelper, parseHexField) {
   EXPECT_EQ(*Res, 0ULL);
 }
 
+#ifdef X86_AVAILABLE
+
 namespace llvm {
 namespace bolt {
 
@@ -228,8 +229,6 @@ TEST_F(MMapEventsTestHelper, MatchIgnoreBuildId) {
   EXPECT_TRUE(PIDs.count(100));
   EXPECT_TRUE(PIDs.count(200));
 }
-
-#ifdef X86_AVAILABLE
 
 namespace llvm {
 namespace bolt {

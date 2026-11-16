@@ -94,14 +94,14 @@ class BNEZC64_DESC : CMP_CBR_EQNE_Z_DESC_BASE<"bnezc", brtarget21, GPR64Opnd>;
 class JIALC64_DESC : JMP_IDX_COMPACT_DESC_BASE<"jialc", calloffset16,
                                                GPR64Opnd> {
   bit isCall = 1;
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class JIC64_DESC : JMP_IDX_COMPACT_DESC_BASE<"jic", jmpoffset16,
                                              GPR64Opnd> {
   bit isBarrier = 1;
   bit isTerminator = 1;
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
 }
 
 class LL64_R6_DESC : LL_R6_DESC_BASE<"ll", GPR32Opnd, mem_simm9_exp>;
@@ -191,7 +191,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
 //
 //===----------------------------------------------------------------------===//
 
-def : MipsInstAlias<"jr $rs", (JALR64 ZERO_64, GPR64Opnd:$rs), 1>, ISA_MIPS64R6;
+def : MipsInstAlias<"jr $rs", (JALR64 R0_64, GPR64Opnd:$rs), 1>, ISA_MIPS64R6;
 
 def : MipsInstAlias<"jrc $rs", (JIC64 GPR64Opnd:$rs, 0), 1>, ISA_MIPS64R6;
 
@@ -321,8 +321,8 @@ def : MipsPat<(i64 (sext (i32 (urem GPR32:$src, GPR32:$src2)))),
 
 let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
                             NoIndirectJumpGuards] in {
-  def TAILCALL64R6REG : TailCallRegR6<JALR64, ZERO_64, GPR64Opnd>, ISA_MIPS64R6;
-  def PseudoIndirectBranch64R6 : PseudoIndirectBranchBaseR6<JALR64, ZERO_64,
+  def TAILCALL64R6REG : TailCallRegR6<JALR64, R0_64, GPR64Opnd>, ISA_MIPS64R6;
+  def PseudoIndirectBranch64R6 : PseudoIndirectBranchBaseR6<JALR64, R0_64,
                                                             GPR64Opnd>,
                                  ISA_MIPS64R6;
 }

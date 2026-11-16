@@ -30,7 +30,7 @@ define void @reverse_store(ptr %a, i64 %n) !dbg !3 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[TMP8]], !dbg [[DBG7:![0-9]+]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub nuw nsw i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 0, [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP10]], i64 [[TMP12]], !dbg [[DBG8:![0-9]+]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [8 x i8], ptr [[TMP10]], i64 [[TMP12]], !dbg [[DBG8:![0-9]+]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]]), !dbg [[DBG8]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP14]], ptr align 8 [[TMP13]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]]), !dbg [[DBG8]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]

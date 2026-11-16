@@ -5,16 +5,16 @@
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax --defsym ELF64=1 %s -o %t.64.o
 # RUN: ld.lld -Ttext=0x10000 -section-start=.got=0x20000 --emit-relocs %t.32.o -o %t.32
 # RUN: ld.lld -Ttext=0x10000 -section-start=.got=0x20000 --emit-relocs %t.64.o -o %t.64
-# RUN: llvm-objdump -dr %t.32 | FileCheck %s --check-prefixes=RELAX,RELAX32
-# RUN: llvm-objdump -dr %t.64 | FileCheck %s --check-prefixes=RELAX,RELAX64
+# RUN: llvm-objdump --no-print-imm-hex -dr %t.32 | FileCheck %s --check-prefixes=RELAX,RELAX32
+# RUN: llvm-objdump --no-print-imm-hex -dr %t.64 | FileCheck %s --check-prefixes=RELAX,RELAX64
 
 ## -r should keep original relocations.
 # RUN: ld.lld -r %t.64.o -o %t.64.r
-# RUN: llvm-objdump -dr %t.64.r | FileCheck %s --check-prefix=CHECKR
+# RUN: llvm-objdump --no-print-imm-hex -dr %t.64.r | FileCheck %s --check-prefix=CHECKR
 
 ## --no-relax should keep original relocations.
 # RUN: ld.lld -Ttext=0x10000 -section-start=.got=0x20000 --emit-relocs --no-relax %t.64.o -o %t.64.norelax
-# RUN: llvm-objdump -dr %t.64.norelax | FileCheck %s --check-prefix=NORELAX
+# RUN: llvm-objdump --no-print-imm-hex -dr %t.64.norelax | FileCheck %s --check-prefix=NORELAX
 
 # RELAX32:     00010000 <_start>:
 # RELAX32-NEXT:  pcaddu12i $a0, 0

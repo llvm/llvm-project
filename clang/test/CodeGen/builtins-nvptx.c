@@ -339,91 +339,94 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
                           unsigned short *usp, unsigned short us, int *ip,
                           int i, unsigned int *uip, unsigned ui, long *lp,
                           long l, long long *llp, long long ll) {
-  // CHECK: atomicrmw add ptr {{.*}} monotonic, align 4
+  // CHECK: atomicrmw add ptr {{.*}} syncscope("device") monotonic, align 4
   __nvvm_atom_add_gen_i(ip, i);
-  // CHECK: atomicrmw add ptr {{.*}} monotonic, align {{4|8}}
+  // CHECK: atomicrmw add ptr {{.*}} syncscope("device") monotonic, align {{4|8}}
   __nvvm_atom_add_gen_l(&dl, l);
-  // CHECK: atomicrmw add ptr {{.*}} monotonic, align 8
+  // CHECK: atomicrmw add ptr {{.*}} syncscope("device") monotonic, align 8
   __nvvm_atom_add_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw sub ptr {{.*}} monotonic, align 4
+  // CHECK: atomicrmw sub ptr {{.*}} syncscope("device") monotonic, align 4
   __nvvm_atom_sub_gen_i(ip, i);
-  // CHECK: atomicrmw sub ptr {{.*}} monotonic, align {{4|8}}
+  // CHECK: atomicrmw sub ptr {{.*}} syncscope("device") monotonic, align {{4|8}}
   __nvvm_atom_sub_gen_l(&dl, l);
-  // CHECK: atomicrmw sub ptr {{.*}} monotonic, align 8
+  // CHECK: atomicrmw sub ptr {{.*}} syncscope("device") monotonic, align 8
   __nvvm_atom_sub_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw and ptr {{.*}} monotonic, align 4
+  // CHECK: atomicrmw and ptr {{.*}} syncscope("device") monotonic, align 4
   __nvvm_atom_and_gen_i(ip, i);
-  // CHECK: atomicrmw and ptr {{.*}} monotonic, align {{4|8}}
+  // CHECK: atomicrmw and ptr {{.*}} syncscope("device") monotonic, align {{4|8}}
   __nvvm_atom_and_gen_l(&dl, l);
-  // CHECK: atomicrmw and ptr {{.*}} monotonic, align 8
+  // CHECK: atomicrmw and ptr {{.*}} syncscope("device") monotonic, align 8
   __nvvm_atom_and_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw or ptr {{.*}} monotonic, align 4
+  // CHECK: atomicrmw or ptr {{.*}} syncscope("device") monotonic, align 4
   __nvvm_atom_or_gen_i(ip, i);
-  // CHECK: atomicrmw or ptr {{.*}} monotonic, align {{4|8}}
+  // CHECK: atomicrmw or ptr {{.*}} syncscope("device") monotonic, align {{4|8}}
   __nvvm_atom_or_gen_l(&dl, l);
-  // CHECK: atomicrmw or ptr {{.*}} monotonic, align 8
+  // CHECK: atomicrmw or ptr {{.*}} syncscope("device") monotonic, align 8
   __nvvm_atom_or_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw xor ptr {{.*}} monotonic, align 4
+  // CHECK: atomicrmw xor ptr {{.*}} syncscope("device") monotonic, align 4
   __nvvm_atom_xor_gen_i(ip, i);
-  // CHECK: atomicrmw xor ptr {{.*}} monotonic, align {{4|8}}
+  // CHECK: atomicrmw xor ptr {{.*}} syncscope("device") monotonic, align {{4|8}}
   __nvvm_atom_xor_gen_l(&dl, l);
-  // CHECK: atomicrmw xor ptr {{.*}} monotonic, align 8
+  // CHECK: atomicrmw xor ptr {{.*}} syncscope("device") monotonic, align 8
   __nvvm_atom_xor_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw xchg ptr {{.*}} monotonic, align 4
+  // CHECK: atomicrmw xchg ptr {{.*}} syncscope("device") monotonic, align 4
   __nvvm_atom_xchg_gen_i(ip, i);
-  // CHECK: atomicrmw xchg ptr {{.*}} monotonic, align {{4|8}}
+  // CHECK: atomicrmw xchg ptr {{.*}} syncscope("device") monotonic, align {{4|8}}
   __nvvm_atom_xchg_gen_l(&dl, l);
-  // CHECK: atomicrmw xchg ptr {{.*}} monotonic, align 8
+  // CHECK: atomicrmw xchg ptr {{.*}} syncscope("device") monotonic, align 8
   __nvvm_atom_xchg_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw max ptr {{.*}} monotonic, align 4
+  // CHECK: atomicrmw max ptr {{.*}} syncscope("device") monotonic, align 4
   __nvvm_atom_max_gen_i(ip, i);
-  // CHECK: atomicrmw umax ptr {{.*}} monotonic, align 4
+  // CHECK: atomicrmw umax ptr {{.*}} syncscope("device") monotonic, align 4
   __nvvm_atom_max_gen_ui((unsigned int *)ip, i);
-  // CHECK: atomicrmw max ptr {{.*}} monotonic, align {{4|8}}
+  // CHECK: atomicrmw max ptr {{.*}} syncscope("device") monotonic, align {{4|8}}
   __nvvm_atom_max_gen_l(&dl, l);
-  // CHECK: atomicrmw umax ptr {{.*}} monotonic, align {{4|8}}
+  // CHECK: atomicrmw umax ptr {{.*}} syncscope("device") monotonic, align {{4|8}}
   __nvvm_atom_max_gen_ul((unsigned long *)&dl, l);
-  // CHECK: atomicrmw max ptr {{.*}} monotonic, align 8
+  // CHECK: atomicrmw max ptr {{.*}} syncscope("device") monotonic, align 8
   __nvvm_atom_max_gen_ll(&sll, ll);
-  // CHECK: atomicrmw umax ptr {{.*}} monotonic, align 8
+  // CHECK: atomicrmw umax ptr {{.*}} syncscope("device") monotonic, align 8
   __nvvm_atom_max_gen_ull((unsigned long long *)&sll, ll);
 
-  // CHECK: atomicrmw min ptr {{.*}} monotonic, align 4
+  // CHECK: atomicrmw min ptr {{.*}} syncscope("device") monotonic, align 4
   __nvvm_atom_min_gen_i(ip, i);
-  // CHECK: atomicrmw umin ptr {{.*}} monotonic, align 4
+  // CHECK: atomicrmw umin ptr {{.*}} syncscope("device") monotonic, align 4
   __nvvm_atom_min_gen_ui((unsigned int *)ip, i);
-  // CHECK: atomicrmw min ptr {{.*}} monotonic, align {{4|8}}
+  // CHECK: atomicrmw min ptr {{.*}} syncscope("device") monotonic, align {{4|8}}
   __nvvm_atom_min_gen_l(&dl, l);
-  // CHECK: atomicrmw umin ptr {{.*}} monotonic, align {{4|8}}
+  // CHECK: atomicrmw umin ptr {{.*}} syncscope("device") monotonic, align {{4|8}}
   __nvvm_atom_min_gen_ul((unsigned long *)&dl, l);
-  // CHECK: atomicrmw min ptr {{.*}} monotonic, align 8
+  // CHECK: atomicrmw min ptr {{.*}} syncscope("device") monotonic, align 8
   __nvvm_atom_min_gen_ll(&sll, ll);
-  // CHECK: atomicrmw umin ptr {{.*}} monotonic, align 8
+  // CHECK: atomicrmw umin ptr {{.*}} syncscope("device") monotonic, align 8
   __nvvm_atom_min_gen_ull((unsigned long long *)&sll, ll);
 
-  // CHECK: cmpxchg ptr {{.*}} monotonic monotonic, align 4
+  // CHECK: cmpxchg ptr {{.*}} syncscope("device") monotonic monotonic, align 4
   // CHECK-NEXT: extractvalue { i32, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_i(ip, 0, i);
-  // CHECK: cmpxchg ptr {{.*}} monotonic monotonic, align {{4|8}}
+  // CHECK: cmpxchg ptr {{.*}} syncscope("device") monotonic monotonic, align {{4|8}}
   // CHECK-NEXT: extractvalue { {{i32|i64}}, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_l(&dl, 0, l);
-  // CHECK: cmpxchg ptr {{.*}} monotonic monotonic, align 8
+  // CHECK: cmpxchg ptr {{.*}} syncscope("device") monotonic monotonic, align 8
   // CHECK-NEXT: extractvalue { i64, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_ll(&sll, 0, ll);
 
-  // CHECK: atomicrmw fadd ptr {{.*}} monotonic, align 4
+  // CUDA's atomicAdd() lowers to this builtin. The native atom.add has a fixed
+  // denormal behavior, so the atomic is marked to keep it from being expanded
+  // into a CAS loop when the function's denormal mode disagrees.
+  // CHECK: atomicrmw fadd ptr {{.*}} syncscope("device") monotonic, align 4, !atomic.ignore.denormal.mode
   __nvvm_atom_add_gen_f(fp, f);
 
-  // CHECK: atomicrmw uinc_wrap ptr {{.*}} monotonic, align 4
+  // CHECK: atomicrmw uinc_wrap ptr {{.*}} syncscope("device") monotonic, align 4
   __nvvm_atom_inc_gen_ui(uip, ui);
 
-  // CHECK: atomicrmw udec_wrap ptr {{.*}} monotonic, align 4
+  // CHECK: atomicrmw udec_wrap ptr {{.*}} syncscope("device") monotonic, align 4
   __nvvm_atom_dec_gen_ui(uip, ui);
 
 
@@ -1648,13 +1651,13 @@ __device__ void nvvm_min_max_sm80() {
 // CHECK-LABEL: nvvm_fma_bf16_bf16x2_sm80
 __device__ void nvvm_fma_bf16_bf16x2_sm80() {
 #if __CUDA_ARCH__ >= 800
-  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fma.rn.bf16
+  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fma.bf16({{.*}}i32 1)
   __nvvm_fma_rn_bf16(BF16, BF16_2, BF16_2);
-  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fma.rn.relu.bf16
+  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fma.relu.bf16({{.*}}i32 1)
   __nvvm_fma_rn_relu_bf16(BF16, BF16_2, BF16_2);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fma.rn.bf16x2
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fma.v2bf16({{.*}}i32 1)
   __nvvm_fma_rn_bf16x2(BF16X2, BF16X2_2, BF16X2_2);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fma.rn.relu.bf16x2
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fma.relu.v2bf16({{.*}}i32 1)
   __nvvm_fma_rn_relu_bf16x2(BF16X2, BF16X2_2, BF16X2_2);
 #endif
   // CHECK: ret void
@@ -1720,21 +1723,21 @@ __device__ void nvvm_add_fma_f32_sat() {
   // CHECK: call float @llvm.nvvm.fadd.ftz.sat.f32({{.*}}i32 2)
   __nvvm_add_rp_ftz_sat_f(1.0f, 2.0f);
 
-  // CHECK: call float @llvm.nvvm.fma.rn.sat.f
+  // CHECK: call float @llvm.nvvm.fma.sat.f32({{.*}}i32 1)
   __nvvm_fma_rn_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rn.ftz.sat.f
+  // CHECK: call float @llvm.nvvm.fma.ftz.sat.f32({{.*}}i32 1)
   __nvvm_fma_rn_ftz_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rz.sat.f
+  // CHECK: call float @llvm.nvvm.fma.sat.f32({{.*}}i32 0)
   __nvvm_fma_rz_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rz.ftz.sat.f
+  // CHECK: call float @llvm.nvvm.fma.ftz.sat.f32({{.*}}i32 0)
   __nvvm_fma_rz_ftz_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rm.sat.f
+  // CHECK: call float @llvm.nvvm.fma.sat.f32({{.*}}i32 3)
   __nvvm_fma_rm_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rm.ftz.sat.f
+  // CHECK: call float @llvm.nvvm.fma.ftz.sat.f32({{.*}}i32 3)
   __nvvm_fma_rm_ftz_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rp.sat.f
+  // CHECK: call float @llvm.nvvm.fma.sat.f32({{.*}}i32 2)
   __nvvm_fma_rp_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rp.ftz.sat.f
+  // CHECK: call float @llvm.nvvm.fma.ftz.sat.f32({{.*}}i32 2)
   __nvvm_fma_rp_ftz_sat_f(1.0f, 2.0f, 3.0f);
 
   // CHECK: ret void
@@ -1756,13 +1759,13 @@ __device__ void nvvm_add_mul_f16_sat() {
   // CHECK: call <2 x half> @llvm.nvvm.fadd.ftz.sat.v2f16({{.*}}i32 1)
   __nvvm_add_rn_ftz_sat_v2f16(F16X2, F16X2_2);
 
-  // CHECK: call half @llvm.nvvm.mul.rn.sat.f16
+  // CHECK: call half @llvm.nvvm.fmul.sat.f16({{.*}}i32 1)
   __nvvm_mul_rn_sat_f16(F16, F16_2);
-  // CHECK: call half @llvm.nvvm.mul.rn.ftz.sat.f16
+  // CHECK: call half @llvm.nvvm.fmul.ftz.sat.f16({{.*}}i32 1)
   __nvvm_mul_rn_ftz_sat_f16(F16, F16_2);
-  // CHECK: call <2 x half> @llvm.nvvm.mul.rn.sat.v2f16
+  // CHECK: call <2 x half> @llvm.nvvm.fmul.sat.v2f16({{.*}}i32 1)
   __nvvm_mul_rn_sat_v2f16(F16X2, F16X2_2);
-  // CHECK: call <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16
+  // CHECK: call <2 x half> @llvm.nvvm.fmul.ftz.sat.v2f16({{.*}}i32 1)
   __nvvm_mul_rn_ftz_sat_v2f16(F16X2, F16X2_2);
   
   // CHECK: ret void

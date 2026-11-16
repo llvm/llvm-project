@@ -287,6 +287,9 @@ public:
   void emitAtomicHintPseudoExpansionRO(const MachineInstr *MI);
   void emitAtomicHintPseudoExpansionImm(const MachineInstr *MI);
 
+  // Emit expansion of atomic fetch with hint pseudo instructions
+  void emitAtomicFetchHintPseudoExpansion(const MachineInstr *MI);
+
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
     EmitToStreamer(*OutStreamer, Inst);
@@ -355,6 +358,7 @@ private:
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
 
   void emitFunctionBodyEnd() override;
+  void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
   void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
@@ -1152,6 +1156,29 @@ void AArch64AsmPrinter::emitLOHs() {
   }
 }
 
+// Unwinding can get confused if the last instruction in an exception-handling
+// region (function, funclet, try block, etc.) is a call, because the return
+// address then points to the *next* region (see
+// X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH for the X86 equivalent).
+// Trap after a noreturn call that would end a function or funclet, and elide
+// the trap when the next instruction is in the same function.
+void AArch64AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
+  if (MBB.succ_empty() && MF->usesWindowsUnwindInfo()) {
+    auto Next = std::next(MBB.getIterator());
+    if (Next == MF->end() || Next->isEHFuncletEntry()) {
+      for (const MachineInstr &MI : reverse(MBB)) {
+        if (MI.isMetaInstruction() || AArch64InstrInfo::isSEHInstruction(MI))
+          continue;
+        if (MI.isCall() && !MI.isReturn())
+          EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK).addImm(1));
+        break;
+      }
+    }
+  }
+
+  AsmPrinter::emitBasicBlockEnd(MBB);
+}
+
 void AArch64AsmPrinter::emitFunctionBodyEnd() {
   if (!AArch64FI->getLOHRelated().empty())
     emitLOHs();
@@ -1781,8 +1808,11 @@ void AArch64AsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
   MachineBasicBlock::const_iterator MII(MI);
   ++MII;
   while (NumNOPBytes > 0) {
+    if (MII != MBB.end() && MII->isDebugInstr()) {
+      ++MII;
+      continue;
+    }
     if (MII == MBB.end() || MII->isCall() ||
-        MII->getOpcode() == AArch64::DBG_VALUE ||
         MII->getOpcode() == TargetOpcode::PATCHPOINT ||
         MII->getOpcode() == TargetOpcode::STACKMAP)
       break;
@@ -3402,6 +3432,20 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionImm(
   EmitToStreamer(*OutStreamer, Store);
 }
 
+void AArch64AsmPrinter::emitAtomicFetchHintPseudoExpansion(
+    const MachineInstr *MI) {
+  EmitToStreamer(
+      MCInstBuilder(AArch64::HINT).addImm(MI->getOperand(4).getImm()));
+
+  MCInst Fetch;
+  Fetch.setOpcode(MI->getOperand(3).getImm());
+  Fetch.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+  Fetch.addOperand(MCOperand::createReg(MI->getOperand(1).getReg()));
+  Fetch.addOperand(MCOperand::createReg(MI->getOperand(2).getReg()));
+  Fetch.setFlags(MI->getFlags());
+  EmitToStreamer(*OutStreamer, Fetch);
+}
+
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "AArch64GenMCPseudoLowering.inc"
@@ -3547,8 +3591,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
     return;
 
-  case AArch64::EMITBKEY: {
-    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+  case AArch64::EMITBKEY:
+  case AArch64::EMITNONHINTED: {
+    ExceptionHandling ExceptionHandlingType = getModuleExceptionModel();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;
@@ -3556,12 +3601,16 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (getFunctionCFISectionType(*MF) == CFISection::None)
       return;
 
-    OutStreamer->emitCFIBKeyFrame();
+    if (MI->getOpcode() == AArch64::EMITBKEY)
+      OutStreamer->emitCFIBKeyFrame();
+    else
+      OutStreamer->emitCFINonHintPAuthFrame();
+
     return;
   }
 
   case AArch64::EMITMTETAGGED: {
-    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+    ExceptionHandling ExceptionHandlingType = getModuleExceptionModel();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;
@@ -3933,6 +3982,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
 
+  case AArch64::SEH_EndC:
+    TS->emitARM64WinCFIEndC();
+    return;
+
   case AArch64::SEH_StackAlloc:
     TS->emitARM64WinCFIAllocStack(MI->getOperand(0).getImm());
     return;
@@ -4040,8 +4093,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case AArch64::SEH_SaveAnyRegI:
-    assert(MI->getOperand(1).getImm() <= 1008 &&
-           "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
+    assert((isShiftedUInt<6, 3>((uint64_t)MI->getOperand(1).getImm())) &&
+           "SaveAnyRegI SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegI(MI->getOperand(0).getImm(),
                                    MI->getOperand(1).getImm());
     return;
@@ -4049,18 +4102,30 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::SEH_SaveAnyRegIP:
     assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
            "Non-consecutive registers not allowed for save_any_reg");
-    assert(MI->getOperand(2).getImm() <= 1008 &&
-           "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
+    assert((isShiftedUInt<6, 4>((uint64_t)MI->getOperand(2).getImm())) &&
+           "SaveAnyRegIP SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegIP(MI->getOperand(0).getImm(),
                                     MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_SaveAnyRegQ:
+    assert((isShiftedUInt<6, 4>((uint64_t)MI->getOperand(1).getImm())) &&
+           "SaveAnyRegQ SEH opcode offset must fit into 6 bits");
+    TS->emitARM64WinCFISaveAnyRegQ(MI->getOperand(0).getImm(),
+                                   MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveAnyRegQX:
+    assert((isShiftedUInt<6, 4>(-(uint64_t)MI->getOperand(1).getImm())) &&
+           "SaveAnyRegQX SEH opcode offset must fit into 6 bits");
+    TS->emitARM64WinCFISaveAnyRegQX(MI->getOperand(0).getImm(),
+                                    -MI->getOperand(1).getImm());
     return;
 
   case AArch64::SEH_SaveAnyRegQP:
     assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
            "Non-consecutive registers not allowed for save_any_reg");
-    assert(MI->getOperand(2).getImm() >= 0 &&
-           "SaveAnyRegQP SEH opcode offset must be non-negative");
-    assert(MI->getOperand(2).getImm() <= 1008 &&
+    assert((isShiftedUInt<6, 4>((uint64_t)MI->getOperand(2).getImm())) &&
            "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegQP(MI->getOperand(0).getImm(),
                                     MI->getOperand(2).getImm());
@@ -4069,9 +4134,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::SEH_SaveAnyRegQPX:
     assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
            "Non-consecutive registers not allowed for save_any_reg");
-    assert(MI->getOperand(2).getImm() < 0 &&
-           "SaveAnyRegQPX SEH opcode offset must be negative");
-    assert(MI->getOperand(2).getImm() >= -1008 &&
+    assert((isShiftedUInt<6, 4>(-(uint64_t)MI->getOperand(2).getImm())) &&
            "SaveAnyRegQPX SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegQPX(MI->getOperand(0).getImm(),
                                      -MI->getOperand(2).getImm());
@@ -4124,6 +4187,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::ATOMIC_STORE_HINT_W:
   case AArch64::ATOMIC_STORE_HINT_X:
     emitAtomicHintPseudoExpansion(MI);
+    return;
+  case AArch64::ATOMIC_FETCH_HINT_W:
+  case AArch64::ATOMIC_FETCH_HINT_X:
+    emitAtomicFetchHintPseudoExpansion(MI);
     return;
   case AArch64::ATOMIC_STORE_HINT_BroW:
   case AArch64::ATOMIC_STORE_HINT_HroW:

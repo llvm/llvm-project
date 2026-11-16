@@ -21,7 +21,7 @@
 
 // Configs that have expensive unaligned access
 // Little Endian
-// RUN: %clang_cc1 -triple=amdgpu-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
+// RUN: %clang_cc1 -triple=amdgpu-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64-AS1 %s
 // RUN: %clang_cc1 -triple=arc-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
 // RUN: %clang_cc1 -triple=bpf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
 // RUN: %clang_cc1 -triple=csky %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
@@ -30,7 +30,7 @@
 // RUN: %clang_cc1 -triple=nvptx-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
 // RUN: %clang_cc1 -triple=riscv32 %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
 // RUN: %clang_cc1 -triple=riscv64 %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
-// RUN: %clang_cc1 -triple=spir-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
+// RUN: %clang_cc1 -triple=spir-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32-AS1 %s
 // RUN: %clang_cc1 -triple=xcore-none-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
 
 // Big endian
@@ -123,11 +123,15 @@ struct D : virtual Char {
 } d;
 // CHECK-LABEL: LLVMType:%struct.D =
 // LAYOUT64-SAME: type <{ ptr, [3 x i8], %struct.Char, [4 x i8] }>
+// LAYOUT64-AS1-SAME: type <{ ptr addrspace(1), [3 x i8], %struct.Char, [4 x i8] }>
 // LAYOUT32-SAME: type { ptr, [3 x i8], %struct.Char }
+// LAYOUT32-AS1-SAME: type { ptr addrspace(1), [3 x i8], %struct.Char }
 // LAYOUT-DWN32-SAME: type { ptr, [3 x i8], %struct.Char }
 // CHECK-NEXT: NonVirtualBaseLLVMType:
 // LAYOUT64-SAME: %struct.D.base = type <{ ptr, i32 }>
+// LAYOUT64-AS1-SAME: %struct.D.base = type <{ ptr addrspace(1), i32 }>
 // LAYOUT32-SAME: %struct.D = type { ptr, [3 x i8], %struct.Char }
+// LAYOUT32-AS1-SAME: %struct.D = type { ptr addrspace(1), [3 x i8], %struct.Char }
 // LAYOUT-DWN32-SAME: %struct.D = type { ptr, [3 x i8], %struct.Char }
 // CHECK: BitFields:[
 // LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0 StorageSize:24 StorageOffset:{{(4|8)}}
@@ -143,11 +147,15 @@ struct E : virtual Int {
 } e;
 // CHECK-LABEL: LLVMType:%struct.E =
 // LAYOUT64-SAME: type <{ ptr, i32, %struct.Int }>
+// LAYOUT64-AS1-SAME: type <{ ptr addrspace(1), i32, %struct.Int }>
 // LAYOUT32-SAME: type { ptr, i32, %struct.Int }
+// LAYOUT32-AS1-SAME: type { ptr addrspace(1), i32, %struct.Int }
 // LAYOUT-DWN32-SAME: type { ptr, i32, %struct.Int }
 // CHECK-NEXT: NonVirtualBaseLLVMType:%struct.E.base =
 // LAYOUT64-SAME: type <{ ptr, i32 }>
+// LAYOUT64-AS1-SAME: type <{ ptr addrspace(1), i32 }>
 // LAYOUT32-SAME: type { ptr, i32 }
+// LAYOUT32-AS1-SAME: type { ptr addrspace(1), i32 }
 // LAYOUT-DWN32-SAME: type { ptr, i32 }
 // CHECK: BitFields:[
 // LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0 StorageSize:32 StorageOffset:{{(4|8)}}

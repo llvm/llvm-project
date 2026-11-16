@@ -111,7 +111,7 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   CudaHeapAllocPromotion
-// PASSES-NEXT:   MemoryAllocationOpt
+// PASSES-NEXT:   AllocationPlacement
 
 // PASSES-NEXT: Inliner
 // PASSES-NEXT: SimplifyRegionLite

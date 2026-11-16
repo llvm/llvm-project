@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple m68k -emit-llvm -O2 %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple m68k -emit-llvm -O2 %s -o - | FileCheck %s %}
 
 /// Check GCC register names and alias can be used in register variable definition.
 

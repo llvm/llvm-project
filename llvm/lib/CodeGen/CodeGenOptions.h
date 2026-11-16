@@ -16,4 +16,16 @@
 #define OPTIONS_STRUCT_DECL
 #include "CodeGenOptions.inc"
 
+namespace llvm {
+
+class LLVMContext;
+class MachineFunction;
+class Module;
+
+const CodeGenOptions &getCodeGenOptions(const LLVMContext &C);
+const CodeGenOptions &getCodeGenOptions(const Module &M);
+const CodeGenOptions &getCodeGenOptions(const MachineFunction &MF);
+
+} // namespace llvm
+
 #endif // LLVM_LIB_CODEGEN_CODEGENOPTIONS_H

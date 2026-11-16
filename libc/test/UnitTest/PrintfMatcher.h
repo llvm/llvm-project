@@ -16,20 +16,19 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
-void display(const printf_core::BasicFormatSection<char> &format_section);
-void display(const printf_core::BasicFormatSection<wchar_t> &format_section);
+void display(const printf_core::FormatSection<char> &format_section);
+void display(const printf_core::FormatSection<wchar_t> &format_section);
 
 template <typename CharT>
-class FormatSectionMatcher
-    : public Matcher<printf_core::BasicFormatSection<CharT>> {
-  printf_core::BasicFormatSection<CharT> expected;
-  printf_core::BasicFormatSection<CharT> actual;
+class FormatSectionMatcher : public Matcher<printf_core::FormatSection<CharT>> {
+  printf_core::FormatSection<CharT> expected;
+  printf_core::FormatSection<CharT> actual;
 
 public:
-  FormatSectionMatcher(printf_core::BasicFormatSection<CharT> expectedValue)
+  FormatSectionMatcher(printf_core::FormatSection<CharT> expectedValue)
       : expected(expectedValue) {}
 
-  bool match(printf_core::BasicFormatSection<CharT> actualValue) {
+  bool match(printf_core::FormatSection<CharT> actualValue) {
     actual = actualValue;
     return expected == actual;
   }
@@ -46,7 +45,7 @@ public:
 
 template <typename CharT>
 FormatSectionMatcher<CharT>
-MakeFormatSectionMatcher(printf_core::BasicFormatSection<CharT> expected) {
+MakeFormatSectionMatcher(printf_core::FormatSection<CharT> expected) {
   return FormatSectionMatcher<CharT>(expected);
 }
 

@@ -11,10 +11,10 @@ define void @test(ptr %out, ptr %in, double %a, double %b, double %c, double %d)
 ; CHECK-SAME: ptr [[OUT:%.*]], ptr [[IN:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[S6:%.*]] = fmul double [[A]], 1.250000e+00
-; CHECK-NEXT:    [[S0:%.*]] = fadd double [[A]], 1.000000e+00
 ; CHECK-NEXT:    [[S9:%.*]] = fadd double [[A]], [[A]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[IN]], align 8
 ; CHECK-NEXT:    [[S2:%.*]] = fadd double [[C]], [[A]]
+; CHECK-NEXT:    [[S0:%.*]] = fadd double [[A]], 1.000000e+00
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[S6]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP0]], [[TMP2]]

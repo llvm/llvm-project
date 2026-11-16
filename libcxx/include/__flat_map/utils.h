@@ -37,7 +37,7 @@ struct __flat_map_utils {
   // roll back the changes it made to the map. If it cannot roll back the changes, it will
   // clear the map.
   template <class _Map, class _IterK, class _IterM, class _KeyArg, class... _MArgs>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static typename _Map::iterator __emplace_exact_pos(
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 static typename _Map::iterator __emplace_exact_pos(
       _Map& __map, _IterK&& __it_key, _IterM&& __it_mapped, _KeyArg&& __key, _MArgs&&... __mapped_args) {
     auto __on_key_failed = std::__make_exception_guard([&]() noexcept {
       using _KeyContainer = typename _Map::key_container_type;
@@ -82,7 +82,7 @@ struct __flat_map_utils {
   }
 
   template <class _Map, class _InputIterator, class _Sentinel>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static typename _Map::size_type
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 static typename _Map::size_type
   __append(_Map& __map, _InputIterator __first, _Sentinel __last) {
     typename _Map::size_type __num_appended = 0;
     for (; __first != __last; ++__first) {
@@ -95,7 +95,7 @@ struct __flat_map_utils {
   }
 
   template <class _Map, class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static typename _Map::size_type
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 static typename _Map::size_type
   __append(_Map& __map, _InputIterator __first, _InputIterator __last)
     requires __is_product_iterator_of_size<_InputIterator, 2>::value
   {
