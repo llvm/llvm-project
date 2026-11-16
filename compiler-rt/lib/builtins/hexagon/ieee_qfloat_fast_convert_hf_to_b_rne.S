@@ -15,7 +15,7 @@
 
 #include "../assembly.h"
 
-#if __HEXAGON_ARCH__ == 79
+#if (__HEXAGON_ARCH__ == 79) && defined(__HVX__)
 .p2align 5
 DEFINE_COMPILERRT_FUNCTION(__qf_fast_convert_hf_to_b_rne)
 //V0.hf and V1.hf has value to be converted
