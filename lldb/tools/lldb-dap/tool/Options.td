@@ -35,11 +35,10 @@ def connection
           "Connections are specified like 'listen://[host]:port' or "
           "'accept:///path'.">;
 
-def launch_target: S<"launch-target">,
-  MetaVarName<"<target>">,
-  HelpText<"Launch a target for the launchInTerminal request. Any argument "
-    "provided after this one will be passed to the target. The parameter "
-    "--comm-file must also be specified.">;
+def launch_target: F<"launch-target">,
+  HelpText<"Launch a target for the runInTerminal request: the target and "
+    "its arguments must be passed after '--'. The parameter --comm-file must also be "
+    "specified.">;
 
 def comm_file: S<"comm-file">,
   MetaVarName<"<file>">,
@@ -48,7 +47,7 @@ def comm_file: S<"comm-file">,
 
 def debugger_pid: S<"debugger-pid">,
   MetaVarName<"<pid>">,
-  HelpText<"The PID of the lldb-dap instance that sent the launchInTerminal "
+  HelpText<"The PID of the lldb-dap instance that sent the runInTerminal "
     "request when using --launch-target.">;
 
 def stdio: S<"stdio">,
