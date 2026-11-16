@@ -24,7 +24,7 @@
 // CHECK-NEXT: AvailabilityDomain (SubjectMatchRule_variable)
 // CHECK-NEXT: AvailableOnlyInDefaultEvalMethod (SubjectMatchRule_type_alias)
 // CHECK-NEXT: BPFFastCall (SubjectMatchRule_hasType_functionType)
-// CHECK-NEXT: BPFPreserveAccessIndex (SubjectMatchRule_record)
+// CHECK-NEXT: BPFPreserveAccessIndex (SubjectMatchRule_record, SubjectMatchRule_enum)
 // CHECK-NEXT: BPFPreserveStaticOffset (SubjectMatchRule_record)
 // CHECK-NEXT: BTFDeclTag (SubjectMatchRule_variable, SubjectMatchRule_function, SubjectMatchRule_record, SubjectMatchRule_field, SubjectMatchRule_type_alias)
 // CHECK-NEXT: BuiltinAlias (SubjectMatchRule_function)
