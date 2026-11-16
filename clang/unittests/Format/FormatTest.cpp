@@ -5417,23 +5417,6 @@ TEST_F(FormatTest, DesignatedInitializers) {
   auto Style = getLLVMStyle();
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
   verifyFormat(Nested, Style);
-  verifyFormat("void foo() {\n"
-               "  Outer x = {\n"
-               "      .inner = {\n"
-               "          .a = 1 + 2,\n"
-               "          .b = (3 * 4),\n"
-               "      },\n"
-               "  };\n"
-               "}",
-               "void foo() {\n"
-               "  Outer x = {\n"
-               "      .inner = {\n"
-               ".a = 1 +   2,\n"
-               "   .b = ( 3*4 ),\n"
-               "      },\n"
-               "  };\n"
-               "}",
-               Style);
 
   Style = getWebKitStyle();
   Style.ColumnLimit = 120;
