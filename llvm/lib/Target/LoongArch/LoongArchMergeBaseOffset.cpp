@@ -494,7 +494,7 @@ bool LoongArchMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi20,
     // Offset is simply an immediate operand.
     int64_t Offset = Tail.getOperand(2).getImm();
     if (Tail.getOpcode() == LoongArch::ADDU16I_D)
-      Offset = SignExtend64<32>(Offset << 16);
+      Offset = SignExtend64<32>(static_cast<uint64_t>(Offset) << 16);
 
     // We might have two ADDIs in a row.
     Register TailDestReg = Tail.getOperand(0).getReg();
