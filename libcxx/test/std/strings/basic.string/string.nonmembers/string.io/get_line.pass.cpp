@@ -19,6 +19,7 @@
 
 #include "make_string.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 #include "stream_types.h"
 #include "test_macros.h"
 
@@ -119,6 +120,7 @@ int main(int, char**) {
   test_alloc<std::allocator>();
 #if TEST_STD_VER >= 11
   test_alloc<min_allocator>();
+  test_alloc<fancy_pointer_allocator>();
 #endif
   test_tiny_allocator();
 

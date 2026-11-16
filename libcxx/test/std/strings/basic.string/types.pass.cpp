@@ -79,6 +79,7 @@ int main(int, char**) {
   static_assert((std::is_same<std::basic_string<char>::allocator_type, std::allocator<char> >::value), "");
 #if TEST_STD_VER >= 11
   test<std::char_traits<char>, min_allocator<char> >();
+  test<std::char_traits<char>, fancy_pointer_allocator<char> >();
 #endif
 
   return 0;

@@ -17,6 +17,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 #include "asan_testing.h"
 #include "operator_hijacker.h"
 
@@ -31,6 +32,11 @@ TEST_CONSTEXPR_CXX20 void test(S s1, S s2) {
   assert(s2 == s1_);
   LIBCPP_ASSERT(is_string_asan_correct(s1));
   LIBCPP_ASSERT(is_string_asan_correct(s2));
+
+  s1.swap(s1);
+  LIBCPP_ASSERT(s1.__invariants());
+  assert(s1 == s2_);
+  LIBCPP_ASSERT(is_string_asan_correct(s1));
 }
 
 template <class S>
@@ -64,6 +70,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
   test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
   test_string<std::basic_string<char, std::char_traits<char>, operator_hijacker_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>>();
 #endif
 
   return true;
