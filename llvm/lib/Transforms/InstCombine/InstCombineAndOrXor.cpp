@@ -2448,8 +2448,8 @@ foldRoundUpToPow2Alignment(BinaryOperator &I,
 }
 
 /// Reassociate and/or expressions to see if we can fold the inner and/or ops.
-/// TODO: Make this recursive; it's a little tricky because an arbitrary
-/// number of and/or instructions might have to be created.
+/// The search for a second operand to fold with is bounded, see
+/// MaxChainDepth below.
 Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
                                                  Instruction &I, bool IsAnd,
                                                  bool RHSIsLogical) {
@@ -2465,6 +2465,37 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
   else if (Value *Res = foldBooleanAndOr(LHS, Y, I, IsAnd, /*IsLogical=*/false))
     Folded = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res)
                           : Builder.CreateBinOp(Opcode, X, Res);
+
+  // LHS bop ((.. bop X') bop Y) --> ((.. bop (LHS bop X')) bop Y) when LHS
+  // folds with a leaf of a chain of the same bitwise operation. Only the
+  // one-use chain nodes on the path to that leaf are rebuilt.
+  auto FoldIntoChain = [&](auto &Self, Value *Chain,
+                           unsigned Depth) -> Value * {
+    auto *BO = dyn_cast<BinaryOperator>(Chain);
+    if (!Depth || !BO || BO->getOpcode() != Opcode || !BO->hasOneUse())
+      return nullptr;
+    Value *A = BO->getOperand(0), *B = BO->getOperand(1);
+    for (bool Swap : {false, true}) {
+      Value *Leaf = Swap ? B : A, *Rest = Swap ? A : B;
+      Value *Res = foldBooleanAndOr(LHS, Leaf, I, IsAnd, /*IsLogical=*/false);
+      if (!Res)
+        Res = Self(Self, Leaf, Depth - 1);
+      if (Res)
+        return Builder.CreateBinOp(Opcode, Res, Rest);
+    }
+    return nullptr;
+  };
+  constexpr unsigned MaxChainDepth = 4;
+  if (!Folded) {
+    // LHS bop (X lop Y) --> (LHS bop X) lop Y, looking inside X, and
+    // LHS bop (X lop Y) --> X lop (LHS bop Y), looking inside Y.
+    if (Value *Res = FoldIntoChain(FoldIntoChain, X, MaxChainDepth))
+      Folded = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, Res, Y)
+                            : Builder.CreateBinOp(Opcode, Res, Y);
+    else if (Value *Res = FoldIntoChain(FoldIntoChain, Y, MaxChainDepth))
+      Folded = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res)
+                            : Builder.CreateBinOp(Opcode, X, Res);
+  }
   if (SelectInst *SI = dyn_cast_or_null<SelectInst>(Folded); SI != nullptr)
     // If the bop I was originally a lop, we could recover branch weight
     // information using that lop's weights. However, InstCombine usually

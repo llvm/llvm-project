@@ -3877,13 +3877,11 @@ define i1 @complicated_zero_equality_test(i64 %v1) {
 
 define i1 @or_icmp_with_chain_leaf(i8 %x, i8 %y, i8 %p, i8 %q) {
 ; CHECK-LABEL: @or_icmp_with_chain_leaf(
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[PZ:%.*]] = icmp eq i8 [[P:%.*]], 0
 ; CHECK-NEXT:    [[QZ:%.*]] = icmp eq i8 [[Q:%.*]], 0
+; CHECK-NEXT:    [[LT:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[O1:%.*]] = or i1 [[LT]], [[PZ]]
-; CHECK-NEXT:    [[O2:%.*]] = or i1 [[O1]], [[QZ]]
-; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[GT]], [[O2]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[O1]], [[QZ]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %lt = icmp ult i8 %x, %y
@@ -3898,13 +3896,11 @@ define i1 @or_icmp_with_chain_leaf(i8 %x, i8 %y, i8 %p, i8 %q) {
 
 define i1 @or_icmp_with_chain_leaf_commuted(i8 %x, i8 %y, i8 %p, i8 %q) {
 ; CHECK-LABEL: @or_icmp_with_chain_leaf_commuted(
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[PZ:%.*]] = icmp eq i8 [[P:%.*]], 0
 ; CHECK-NEXT:    [[QZ:%.*]] = icmp eq i8 [[Q:%.*]], 0
+; CHECK-NEXT:    [[LT:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[O1:%.*]] = or i1 [[LT]], [[PZ]]
-; CHECK-NEXT:    [[O2:%.*]] = or i1 [[O1]], [[QZ]]
-; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[O2]], [[GT]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[O1]], [[QZ]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %lt = icmp ult i8 %x, %y
@@ -3919,13 +3915,11 @@ define i1 @or_icmp_with_chain_leaf_commuted(i8 %x, i8 %y, i8 %p, i8 %q) {
 
 define i1 @and_icmp_with_chain_leaf(i8 %x, i8 %y, i8 %p, i8 %q) {
 ; CHECK-LABEL: @and_icmp_with_chain_leaf(
-; CHECK-NEXT:    [[GE:%.*]] = icmp uge i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[PZ:%.*]] = icmp ne i8 [[P:%.*]], 0
 ; CHECK-NEXT:    [[QZ:%.*]] = icmp ne i8 [[Q:%.*]], 0
+; CHECK-NEXT:    [[GE:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[A1:%.*]] = and i1 [[GE]], [[PZ]]
-; CHECK-NEXT:    [[A2:%.*]] = and i1 [[A1]], [[QZ]]
-; CHECK-NEXT:    [[LE:%.*]] = icmp ule i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[LE]], [[A2]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[A1]], [[QZ]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ge = icmp uge i8 %x, %y
@@ -3940,13 +3934,11 @@ define i1 @and_icmp_with_chain_leaf(i8 %x, i8 %y, i8 %p, i8 %q) {
 
 define <2 x i1> @or_icmp_with_chain_leaf_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %p, <2 x i8> %q) {
 ; CHECK-LABEL: @or_icmp_with_chain_leaf_vec(
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[PZ:%.*]] = icmp eq <2 x i8> [[P:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[QZ:%.*]] = icmp eq <2 x i8> [[Q:%.*]], zeroinitializer
+; CHECK-NEXT:    [[LT:%.*]] = icmp ne <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[O1:%.*]] = or <2 x i1> [[LT]], [[PZ]]
-; CHECK-NEXT:    [[O2:%.*]] = or <2 x i1> [[O1]], [[QZ]]
-; CHECK-NEXT:    [[GT:%.*]] = icmp ugt <2 x i8> [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[GT]], [[O2]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[O1]], [[QZ]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %lt = icmp ult <2 x i8> %x, %y
