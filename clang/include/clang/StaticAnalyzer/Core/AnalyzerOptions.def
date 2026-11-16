@@ -234,8 +234,7 @@ ANALYZER_OPTION(
     "analysis entry points, regardless of the including file's name. "
     "This practice is also known as unity build, jumbo build, unified build, "
     "blob build, amalgamated build, monolithic build, conglomerate build, "
-    "single compilation unit (SCU), single translation unit (STU), or "
-    "unified sources.",
+    "single compilation unit, single translation unit, or unified sources.",
     "")
 
 ANALYZER_OPTION(bool, ShouldReportIssuesInMainSourceFile,
