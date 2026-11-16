@@ -1,4 +1,4 @@
-//===-- SPSRemoteSymbolLookupSetTest.cpp ----------------------------------===//
+//===-- SPSSymbolLookupSetTest.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Test SPS serialization for SymbolLookupFlags and RemoteSymbolLookupSet APIs.
+// Test SPS serialization for SymbolLookupFlags, SymbolLookupSet, and
+// RemoteSymbolLookupSet.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/support/sps/SPSRemoteSymbolLookupSet.h"
+#include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 
 #include "SimplePackedSerializationTestUtils.h"
 #include "gtest/gtest.h"
@@ -26,14 +27,14 @@ static bool seqEqual(const SeqT &LHS, const SeqT &RHS) {
          std::equal(LHS.begin(), LHS.end(), RHS.begin());
 }
 
-TEST(SPSRemoteSymbolLookupSetTest, SymbolLookupFlagsSerialization) {
+TEST(SPSSymbolLookupSetTest, SymbolLookupFlagsSerialization) {
   blobSerializationRoundTrip<bool, SymbolLookupFlags>(
       SymbolLookupFlags::RequiredSymbol);
   blobSerializationRoundTrip<bool, SymbolLookupFlags>(
       SymbolLookupFlags::WeaklyReferencedSymbol);
 }
 
-TEST(SPSRemoteSymbolLookupSetTest, SymbolLookupFlagsWireFormat) {
+TEST(SPSSymbolLookupSetTest, SymbolLookupFlagsWireFormat) {
   // RequiredSymbol must serialize as true and WeaklyReferencedSymbol as false
   // to match the controller's RemoteSymbolLookupSetElement::Required field.
   for (auto [F, Required] :
@@ -50,7 +51,7 @@ TEST(SPSRemoteSymbolLookupSetTest, SymbolLookupFlagsWireFormat) {
   }
 }
 
-TEST(SPSRemoteSymbolLookupSetTest, RemoteSymbolLookupSetSerialization) {
+TEST(SPSSymbolLookupSetTest, RemoteSymbolLookupSetSerialization) {
   blobSerializationRoundTrip<SPSSymbolLookupSet, RemoteSymbolLookupSet>(
       RemoteSymbolLookupSet(), seqEqual<RemoteSymbolLookupSet>);
   blobSerializationRoundTrip<SPSSymbolLookupSet, RemoteSymbolLookupSet>(
@@ -58,4 +59,22 @@ TEST(SPSRemoteSymbolLookupSetTest, RemoteSymbolLookupSetSerialization) {
           {{"foo", SymbolLookupFlags::RequiredSymbol},
            {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}}),
       seqEqual<RemoteSymbolLookupSet>);
+}
+
+TEST(SPSSymbolLookupSetTest, SymbolLookupSetSerialization) {
+  // An interned set serializes as names and flags, and reads back as a
+  // RemoteSymbolLookupSet.
+  StringPool SP;
+  SymbolLookupSet LS(
+      {{SP.intern("foo"), SymbolLookupFlags::RequiredSymbol},
+       {SP.intern("bar"), SymbolLookupFlags::WeaklyReferencedSymbol}});
+
+  auto B = spsSerialize<SPSArgList<SPSSymbolLookupSet>>(LS);
+  ASSERT_TRUE(B);
+  RemoteSymbolLookupSet RLS;
+  ASSERT_TRUE(spsDeserialize<SPSArgList<SPSSymbolLookupSet>>(*B, RLS));
+  RemoteSymbolLookupSet Expected(
+      {{"foo", SymbolLookupFlags::RequiredSymbol},
+       {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}});
+  EXPECT_TRUE(seqEqual(RLS, Expected));
 }

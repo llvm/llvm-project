@@ -1,4 +1,4 @@
-//===-- SPSRemoteSymbolLookupSet.h -- SPS lookup set support ----*- C++ -*-===//
+//===-- SPSSymbolLookupSet.h -- SPS lookup set support ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SPSSerialization for relevant types in SymbolLookupFlags.h and
-// RemoteSymbolLookupSet.h.
+// The SPSSymbolLookupSet tag, and SPSSerialization for relevant types in
+// SymbolLookupFlags.h, SymbolLookupSet.h, and RemoteSymbolLookupSet.h.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SUPPORT_SPS_SPSREMOTESYMBOLLOOKUPSET_H
-#define ORC_RT_SUPPORT_SPS_SPSREMOTESYMBOLLOOKUPSET_H
+#ifndef ORC_RT_SUPPORT_SPS_SPSSYMBOLLOOKUPSET_H
+#define ORC_RT_SUPPORT_SPS_SPSSYMBOLLOOKUPSET_H
 
 #include "orc-rt/support/RemoteSymbolLookupSet.h"
+#include "orc-rt/support/SymbolLookupSet.h"
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
 
 namespace orc_rt {
@@ -45,6 +46,16 @@ public:
   }
 };
 
+/// Trivial SymbolLookupSet -> SPSSequence<SPSElementTagT> serialization.
+///
+/// Serialization only: names are interned, and deserialization has no
+/// StringPool to intern into. Deserialize to RemoteSymbolLookupSet instead.
+template <typename SPSElementTagT>
+class TrivialSPSSequenceSerialization<SPSElementTagT, SymbolLookupSet> {
+public:
+  static constexpr bool available = true;
+};
+
 /// Trivial RemoteSymbolLookupSet -> SPSSequence<SPSElementTagT> serialization.
 template <typename SPSElementTagT>
 class TrivialSPSSequenceSerialization<SPSElementTagT, RemoteSymbolLookupSet> {
@@ -72,4 +83,4 @@ public:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SUPPORT_SPS_SPSREMOTESYMBOLLOOKUPSET_H
+#endif // ORC_RT_SUPPORT_SPS_SPSSYMBOLLOOKUPSET_H
