@@ -708,7 +708,7 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
               const Expr<SomeType> &value{values.begin()->second.value()};
               if (auto flag{ToInt64(value)}) {
                 if (flag != _FORTRAN_RUNTIME_IEEE_DENORM) {
-                  // Check for suppport for standard exceptions.
+                  // Check for support for standard exceptions.
                   return MakeConstantExpr<T>(kind,
                       context.targetCharacteristics().ieeeFeatures().test(
                           IeeeFeature::Flags));

@@ -90,11 +90,13 @@ add_entrypoint_object(
   HDRS
     ../sigaltstack.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.signal_macros
     libc.hdr.types.stack_t
-    libc.include.sys_syscall
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sigaltstack
+    libc.src.__support.common
     libc.src.__support.libc_errno
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 

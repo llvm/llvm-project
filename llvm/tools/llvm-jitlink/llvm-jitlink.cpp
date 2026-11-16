@@ -225,7 +225,7 @@ static cl::list<std::string> InputArgv("args", cl::Positional,
 
 static cl::opt<bool>
     DebuggerSupport("debugger-support",
-                    cl::desc("Enable debugger suppport (default = !-noexec)"),
+                    cl::desc("Enable debugger support (default = !-noexec)"),
                     cl::init(true), cl::Hidden, cl::cat(JITLinkCategory));
 
 static cl::opt<bool> PerfSupport("perf-support",

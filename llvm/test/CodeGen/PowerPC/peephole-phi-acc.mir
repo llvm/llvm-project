@@ -176,32 +176,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: uaccrc, preferred-register: '' }
-  - { id: 1, class: uaccrc, preferred-register: '' }
-  - { id: 2, class: uaccrc, preferred-register: '' }
-  - { id: 3, class: g8rc, preferred-register: '' }
-  - { id: 4, class: vrrc, preferred-register: '' }
-  - { id: 5, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 6, class: gprc, preferred-register: '' }
-  - { id: 7, class: accrc, preferred-register: '' }
-  - { id: 8, class: crrc, preferred-register: '' }
-  - { id: 9, class: vsrc, preferred-register: '' }
-  - { id: 10, class: accrc, preferred-register: '' }
-  - { id: 11, class: accrc, preferred-register: '' }
-  - { id: 12, class: accrc, preferred-register: '' }
-  - { id: 13, class: accrc, preferred-register: '' }
-  - { id: 14, class: vsrc, preferred-register: '' }
-  - { id: 15, class: vsrprc, preferred-register: '' }
-  - { id: 16, class: vsrprc, preferred-register: '' }
-  - { id: 17, class: vsrc, preferred-register: '' }
-  - { id: 18, class: vsrprc, preferred-register: '' }
-  - { id: 19, class: vsrprc, preferred-register: '' }
-  - { id: 20, class: vsrc, preferred-register: '' }
-  - { id: 21, class: vsrprc, preferred-register: '' }
-  - { id: 22, class: vsrprc, preferred-register: '' }
-  - { id: 23, class: vsrc, preferred-register: '' }
-  - { id: 24, class: vsrprc, preferred-register: '' }
 liveins:
   - { reg: '$x3', virtual-reg: '%3' }
   - { reg: '$v2', virtual-reg: '%4' }
@@ -259,8 +233,8 @@ body:             |
     ; the label.
     ; CHECK-LABEL: name: phiCopy
     ; CHECK-LABEL: bb.{{[0-9]}}.if.end:
-    ; CHECK-NEXT: :accrc = PHI %7, %bb.0, %10, %bb.1
-    ; CHECK-NEXT: %2:uaccrc = PHI
+    ; CHECK-NEXT: :accrc = PHI %4, %bb.0, %9, %bb.1
+    ; CHECK-NEXT: %11:uaccrc = PHI
     %2:uaccrc = PHI %0, %bb.0, %1, %bb.1
     %13:accrc = COPY %2
     %12:accrc = XXMFACC %13
@@ -290,32 +264,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: uaccrc, preferred-register: '' }
-  - { id: 1, class: uaccrc, preferred-register: '' }
-  - { id: 2, class: g8rc, preferred-register: '' }
-  - { id: 3, class: vrrc, preferred-register: '' }
-  - { id: 4, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 5, class: uaccrc, preferred-register: '' }
-  - { id: 6, class: gprc, preferred-register: '' }
-  - { id: 7, class: crrc, preferred-register: '' }
-  - { id: 8, class: vsrc, preferred-register: '' }
-  - { id: 9, class: accrc, preferred-register: '' }
-  - { id: 10, class: uaccrc, preferred-register: '' }
-  - { id: 11, class: accrc, preferred-register: '' }
-  - { id: 12, class: accrc, preferred-register: '' }
-  - { id: 13, class: accrc, preferred-register: '' }
-  - { id: 14, class: vsrc, preferred-register: '' }
-  - { id: 15, class: vsrprc, preferred-register: '' }
-  - { id: 16, class: vsrprc, preferred-register: '' }
-  - { id: 17, class: vsrc, preferred-register: '' }
-  - { id: 18, class: vsrprc, preferred-register: '' }
-  - { id: 19, class: vsrprc, preferred-register: '' }
-  - { id: 20, class: vsrc, preferred-register: '' }
-  - { id: 21, class: vsrprc, preferred-register: '' }
-  - { id: 22, class: vsrprc, preferred-register: '' }
-  - { id: 23, class: vsrc, preferred-register: '' }
-  - { id: 24, class: vsrprc, preferred-register: '' }
 liveins:
   - { reg: '$x3', virtual-reg: '%2' }
   - { reg: '$v2', virtual-reg: '%3' }
@@ -378,7 +326,7 @@ body:             |
     ; CHECK-LABEL: name: phiCopyUndef
     ; CHECK-LABEL: bb.{{[0-9]}}.if.end:
     ; CHECK-NEXT: :accrc = PHI
-    ; CHECK-NEXT: %1:uaccrc = PHI
+    ; CHECK-NEXT: %11:uaccrc = PHI
     %1:uaccrc = PHI %5, %bb.3, %0, %bb.1
     %13:accrc = COPY %1
     %12:accrc = XXMFACC %13
@@ -408,62 +356,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 1, class: uaccrc, preferred-register: '' }
-  - { id: 2, class: uaccrc, preferred-register: '' }
-  - { id: 3, class: uaccrc, preferred-register: '' }
-  - { id: 4, class: uaccrc, preferred-register: '' }
-  - { id: 5, class: uaccrc, preferred-register: '' }
-  - { id: 6, class: uaccrc, preferred-register: '' }
-  - { id: 7, class: g8rc, preferred-register: '' }
-  - { id: 8, class: vrrc, preferred-register: '' }
-  - { id: 9, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 10, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 11, class: uaccrc, preferred-register: '' }
-  - { id: 12, class: crrc, preferred-register: '' }
-  - { id: 13, class: uaccrc, preferred-register: '' }
-  - { id: 14, class: gprc, preferred-register: '' }
-  - { id: 15, class: crrc, preferred-register: '' }
-  - { id: 16, class: uaccrc, preferred-register: '' }
-  - { id: 17, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 18, class: gprc, preferred-register: '' }
-  - { id: 19, class: g8rc, preferred-register: '' }
-  - { id: 20, class: g8rc, preferred-register: '' }
-  - { id: 21, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 22, class: g8rc, preferred-register: '' }
-  - { id: 23, class: vsrc, preferred-register: '' }
-  - { id: 24, class: accrc, preferred-register: '' }
-  - { id: 25, class: accrc, preferred-register: '' }
-  - { id: 26, class: accrc, preferred-register: '' }
-  - { id: 27, class: accrc, preferred-register: '' }
-  - { id: 28, class: accrc, preferred-register: '' }
-  - { id: 29, class: accrc, preferred-register: '' }
-  - { id: 30, class: accrc, preferred-register: '' }
-  - { id: 31, class: accrc, preferred-register: '' }
-  - { id: 32, class: accrc, preferred-register: '' }
-  - { id: 33, class: crrc, preferred-register: '' }
-  - { id: 34, class: gprc, preferred-register: '' }
-  - { id: 35, class: g8rc, preferred-register: '' }
-  - { id: 36, class: g8rc, preferred-register: '' }
-  - { id: 37, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 38, class: g8rc, preferred-register: '' }
-  - { id: 39, class: vsrc, preferred-register: '' }
-  - { id: 40, class: accrc, preferred-register: '' }
-  - { id: 41, class: accrc, preferred-register: '' }
-  - { id: 42, class: accrc, preferred-register: '' }
-  - { id: 43, class: accrc, preferred-register: '' }
-  - { id: 44, class: vsrc, preferred-register: '' }
-  - { id: 45, class: vsrprc, preferred-register: '' }
-  - { id: 46, class: vsrprc, preferred-register: '' }
-  - { id: 47, class: vsrc, preferred-register: '' }
-  - { id: 48, class: vsrprc, preferred-register: '' }
-  - { id: 49, class: vsrprc, preferred-register: '' }
-  - { id: 50, class: vsrc, preferred-register: '' }
-  - { id: 51, class: vsrprc, preferred-register: '' }
-  - { id: 52, class: vsrprc, preferred-register: '' }
-  - { id: 53, class: vsrc, preferred-register: '' }
-  - { id: 54, class: vsrprc, preferred-register: '' }
 liveins:
   - { reg: '$x3', virtual-reg: '%7' }
   - { reg: '$v2', virtual-reg: '%8' }
@@ -561,7 +453,7 @@ body:             |
     ; CHECK-NEXT: successors: %bb.{{[0-9]}}(0x{{[0-9a-f]+}}), %bb.{{[0-9]}}(0x{{[0-9a-f]+}})
     ; CHECK-NEXT: {{ }}
     ; CHECK-NEXT: :accrc = PHI
-    ; CHECK-NEXT: %2:uaccrc = PHI
+    ; CHECK-NEXT: %25:uaccrc = PHI
     %2:uaccrc = PHI %1, %bb.4, %3, %bb.5
     %39:vsrc = COPY %8
     %41:accrc = COPY %2
@@ -618,63 +510,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 1, class: uaccrc, preferred-register: '' }
-  - { id: 2, class: uaccrc, preferred-register: '' }
-  - { id: 3, class: uaccrc, preferred-register: '' }
-  - { id: 4, class: uaccrc, preferred-register: '' }
-  - { id: 5, class: uaccrc, preferred-register: '' }
-  - { id: 6, class: uaccrc, preferred-register: '' }
-  - { id: 7, class: g8rc, preferred-register: '' }
-  - { id: 8, class: vrrc, preferred-register: '' }
-  - { id: 9, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 10, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 11, class: uaccrc, preferred-register: '' }
-  - { id: 12, class: crrc, preferred-register: '' }
-  - { id: 13, class: uaccrc, preferred-register: '' }
-  - { id: 14, class: gprc, preferred-register: '' }
-  - { id: 15, class: crrc, preferred-register: '' }
-  - { id: 16, class: uaccrc, preferred-register: '' }
-  - { id: 17, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 18, class: gprc, preferred-register: '' }
-  - { id: 19, class: g8rc, preferred-register: '' }
-  - { id: 20, class: g8rc, preferred-register: '' }
-  - { id: 21, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 22, class: g8rc, preferred-register: '' }
-  - { id: 23, class: vsrc, preferred-register: '' }
-  - { id: 24, class: accrc, preferred-register: '' }
-  - { id: 25, class: accrc, preferred-register: '' }
-  - { id: 26, class: accrc, preferred-register: '' }
-  - { id: 27, class: accrc, preferred-register: '' }
-  - { id: 28, class: accrc, preferred-register: '' }
-  - { id: 29, class: accrc, preferred-register: '' }
-  - { id: 30, class: accrc, preferred-register: '' }
-  - { id: 31, class: accrc, preferred-register: '' }
-  - { id: 32, class: accrc, preferred-register: '' }
-  - { id: 33, class: crrc, preferred-register: '' }
-  - { id: 34, class: gprc, preferred-register: '' }
-  - { id: 35, class: g8rc, preferred-register: '' }
-  - { id: 36, class: g8rc, preferred-register: '' }
-  - { id: 37, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 38, class: g8rc, preferred-register: '' }
-  - { id: 39, class: vsrc, preferred-register: '' }
-  - { id: 40, class: accrc, preferred-register: '' }
-  - { id: 41, class: accrc, preferred-register: '' }
-  - { id: 42, class: accrc, preferred-register: '' }
-  - { id: 43, class: accrc, preferred-register: '' }
-  - { id: 44, class: vsrc, preferred-register: '' }
-  - { id: 45, class: vsrprc, preferred-register: '' }
-  - { id: 46, class: vsrprc, preferred-register: '' }
-  - { id: 47, class: vsrc, preferred-register: '' }
-  - { id: 48, class: vsrprc, preferred-register: '' }
-  - { id: 49, class: vsrprc, preferred-register: '' }
-  - { id: 50, class: vsrc, preferred-register: '' }
-  - { id: 51, class: vsrprc, preferred-register: '' }
-  - { id: 52, class: vsrprc, preferred-register: '' }
-  - { id: 53, class: vsrc, preferred-register: '' }
-  - { id: 54, class: vsrprc, preferred-register: '' }
-  - { id: 55, class: crrc, preferred-register: '' }
 liveins:
   - { reg: '$x3', virtual-reg: '%7' }
   - { reg: '$v2', virtual-reg: '%8' }
@@ -752,8 +587,8 @@ body:             |
     ; CHECK-LABEL: bb.{{[0-9]}}.for.cond.cleanup.loopexit.unr-lcssa:
     ; CHECK-NEXT: successors: %bb.{{[0-9]}}(0x{{[0-9a-f]+}}), %bb.{{[0-9]}}(0x{{[0-9a-f]+}})
     ; CHECK-NEXT: {{ }}
-    ; CHECK-NEXT: %1:uaccrc = PHI
-    ; CHECK-NEXT: %33:crrc
+    ; CHECK-NEXT: %17:uaccrc = PHI
+    ; CHECK-NEXT: %20:crrc
     %1:uaccrc = PHI %13, %bb.1, %6, %bb.7, %2, %bb.5
     %33:crrc = CMPLWI %0, 0
     BCC 76, %33, %bb.6
@@ -777,8 +612,8 @@ body:             |
     ; CHECK-NEXT: successors: %bb.{{[0-9]}}(0x{{[0-9a-f]+}}), %bb.{{[0-9]}}(0x{{[0-9a-f]+}})
     ; CHECK-NOT: uaccrc = PHI
     ; CHECK-NOT: accrc = PHI
-    ; CHECK: %2:uaccrc = PHI
-    ; CHECK-NEXT: %39:vsrc
+    ; CHECK: %19:uaccrc = PHI
+    ; CHECK-NEXT: %27:vsrc
     %2:uaccrc = PHI %1, %bb.4, %3, %bb.5
     %39:vsrc = COPY %8
     %41:accrc = COPY %2

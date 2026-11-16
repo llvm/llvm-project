@@ -20,6 +20,7 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaBPF.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -448,6 +449,9 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
         return StmtError();
 
       InputExpr = Exprs[i] = Result.get();
+
+      if (!Info.allowsRegister() && !Info.allowsMemory())
+        InputExpr = Exprs[i] = BPF().checkAsmImmediateOperand(InputExpr);
 
       if (Info.requiresImmediateConstant() && !Info.allowsRegister()) {
         if (!InputExpr->isValueDependent()) {
