@@ -186,13 +186,6 @@ static bool isSpillSlotReload(const MachineInstr &MI,
          MFI.isSpillSlotObjectIndex(FI);
 }
 
-// Return true if MI may write the spill slot that Reload reads.
-static bool mayClobberReload(const MachineInstr &MI,
-                             const MachineInstr &Reload) {
-  return MI.mayStore() && MI.mayAlias(static_cast<AAResults *>(nullptr), Reload,
-                                      /*UseTBAA=*/false);
-}
-
 // Return true if MI is a potential candidate for reuse/removal and if so
 // also the register it defines in DefedReg.  A candidate is a simple
 // instruction that has only one register definition and the only reg it may
@@ -206,8 +199,11 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
   // SawStore makes isSafeToMove() reject every load that is not invariant, on
   // the grounds that a store may have changed what it reads. Spill-slot reloads
   // are excluded from this check because processBlock() drops such a reload
-  // when it sees an instruction that may write the slot.
-  bool SawStore = !isSpillSlotReload(*MI, TII, MFI);
+  // when it sees an instruction that may write the slot. Prologue and epilogue
+  // reloads are kept, since deleting one might break SEH/WinCFI unwind info.
+  bool SawStore = !isSpillSlotReload(*MI, TII, MFI) ||
+                  MI->getFlag(MachineInstr::FrameSetup) ||
+                  MI->getFlag(MachineInstr::FrameDestroy);
   if (!MI->isSafeToMove(SawStore) || MI->isImplicitDef() || MI->isInlineAsm())
     return false;
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
@@ -250,8 +246,6 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
 
   // Process MBB.
   MachineFunction *MF = MBB->getParent();
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-  const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   Register FrameReg = TRI->getFrameRegister(*MF);
   for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
@@ -264,13 +258,13 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     }
 
     Register DefedReg;
-    bool IsCandidate = isCandidate(&MI, DefedReg, FrameReg, TII, MFI);
+    bool IsCandidate = isCandidate(&MI, DefedReg, FrameReg, *TII, MFI);
 
     // Check for an earlier identical and reusable instruction.
     if (IsCandidate && MBBDefs.hasIdentical(DefedReg, &MI)) {
       LLVM_DEBUG(dbgs() << "Removing redundant instruction in "
                         << printMBBReference(*MBB) << ":  " << MI);
-      if (isSpillSlotReload(MI, TII, MFI))
+      if (isSpillSlotReload(MI, *TII, MFI))
         ++NumSpillSlotReloadsRemoved;
       removeRedundantDef(&MI);
       Changed = true;
@@ -280,11 +274,13 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     // Clear any entries in map that MI clobbers. A register redefinition
     // invalidates every kind of tracked instruction, and a store that may write
     // a spill slot invalidates a reload of that slot.
+    bool MIMayStore = MI.mayStore();
     MBBDefs.remove_if([&](const auto &Entry) {
       Register Reg = Entry.first;
       if (MI.modifiesRegister(Reg, TRI) ||
-          (isSpillSlotReload(*Entry.second, TII, MFI) &&
-           mayClobberReload(MI, *Entry.second))) {
+          (MIMayStore && isSpillSlotReload(*Entry.second, *TII, MFI) &&
+           MI.mayAlias(static_cast<AAResults *>(nullptr), *Entry.second,
+                       /*UseTBAA=*/false))) {
         MBBKills.erase(Reg);
         return true;
       }

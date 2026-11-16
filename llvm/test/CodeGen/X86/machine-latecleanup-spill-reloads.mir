@@ -60,6 +60,14 @@
     ret void
   }
 
+  define void @fixed_spill_slot_reload_is_not_reused() {
+    ret void
+  }
+
+  define void @ordered_spill_slot_reload_is_not_removed() {
+    ret void
+  }
+
   declare void @sink()
 
   attributes #0 = { "frame-pointer"="all" }
@@ -358,7 +366,7 @@ body:             |
 ---
 # The load reads a frame object that is not a spill slot, and the store names
 # that object through its IR value. Reusing the load would return the value
-# from before the store, so isNonFixedSpillSlotReload() must refuse to track it.
+# from before the store, so isSpillSlotReload() must refuse to track it.
 name:            non_spill_slot_reload_is_not_reused_across_ir_store
 tracksRegLiveness: true
 frameInfo:
@@ -432,5 +440,53 @@ body:             |
     MOV8mr $rsp, 1, $noreg, 52, $noreg, $cl :: (store (s8) into %stack.0 + 12, align 4)
     $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.0)
     MOV64mr $rsp, 1, $noreg, 56, $noreg, $rax :: (store (s64) into %stack.1)
+    RET64
+...
+---
+# A fixed spill slot may overlap other fixed objects, so its reload is not
+# tracked.
+name:            fixed_spill_slot_reload_is_not_reused
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       48
+  maxAlignment:    8
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 8 }
+stack:
+  - { id: 0, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fixed_spill_slot_reload_is_not_reused
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %fixed-stack.0)
+    ; CHECK-NEXT: $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %fixed-stack.0)
+    $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %fixed-stack.0)
+    $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %fixed-stack.0)
+    MOV64mr $rsp, 1, $noreg, 32, $noreg, $rax :: (store (s64) into %stack.0)
+    RET64
+...
+---
+# isSafeToMove() rejects volatile and atomic reloads, so they are kept even
+# after an identical reload.
+name:            ordered_spill_slot_reload_is_not_removed
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       48
+  maxAlignment:    8
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: ordered_spill_slot_reload_is_not_removed
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (volatile load (s64) from %stack.0)
+    ; CHECK-NEXT: $rcx = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: $rcx = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load monotonic (s64) from %stack.0)
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (volatile load (s64) from %stack.0)
+    $rcx = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    $rcx = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load monotonic (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, $rcx :: (store (s64) into %stack.1)
     RET64
 ...
