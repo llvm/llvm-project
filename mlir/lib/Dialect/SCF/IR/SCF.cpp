@@ -1772,13 +1772,12 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
 
 /// Replace a read of the init value of a shared_outs in the body with a read of
 /// the tied block argument, when the read is a tensor.extract_slice of a tile
-/// that the iteration writes with a tensor.parallel_insert_slice. Bufferization
-/// then sees that the read and the write of the tile use one buffer, instead of
-/// copying the whole tensor.
+/// that the iteration also writes with a tensor.parallel_insert_slice. This lets
+/// bufferization read and write the tile in place, without copying the whole
+/// tensor.
 ///
-/// A read of a tile that the iteration does not write is left alone. After
-/// bufferization the block argument is updated in place by the other
-/// iterations, while the init value is not.
+/// Reads of other tiles are left alone, because other iterations may update
+/// them in the block argument but not in the init value.
 ///
 /// Example:
 ///  INPUT:
@@ -1794,6 +1793,9 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
 ///   scf.forall (%i) ... shared_outs(%arg1 = %a) {
 ///     tensor.extract_slice %arg1[%i] [1]
 ///     ...
+///     scf.forall.in_parallel {
+///       tensor.parallel_insert_slice ... into %arg1[%i] [1]
+///     }
 ///   }
 struct ForallOpReplaceInitUsesWithBlockArg : public OpRewritePattern<ForallOp> {
   using OpRewritePattern<ForallOp>::OpRewritePattern;
@@ -1824,15 +1826,15 @@ struct ForallOpReplaceInitUsesWithBlockArg : public OpRewritePattern<ForallOp> {
                 cast<tensor::ParallelInsertSliceOp>(combiningOp));
           });
 
-      // A use of the init that reads, inside the body, one of those tiles.
-      auto readsWrittenTile = [&](OpOperand &use) {
+      // Whether `use` of the init reads, inside the body, one of those tiles.
+      auto isReadOfWrittenTile = [&](OpOperand &use) {
         auto extractOp = dyn_cast<tensor::ExtractSliceOp>(use.getOwner());
         return extractOp && op->isProperAncestor(extractOp) &&
                isEquivalentToAny(op.getContext(),
                                  HyperrectangularSlice(extractOp), written);
       };
       for (OpOperand &use : llvm::make_early_inc_range(llvm::make_filter_range(
-               init->get().getUses(), readsWrittenTile))) {
+               init->get().getUses(), isReadOfWrittenTile))) {
         // Read the block argument instead. Both are the same tensor here, and
         // for the block argument bufferization can tell that the tile is read
         // and written in place, with no copy.
