@@ -823,6 +823,8 @@ protected:
     // of the specification part, since the declaration typing the index's
     // name may follow the DATA statement (F'2023 19.4 p5)
     std::vector<MutableSymbolRef> deferredDataIDoVars;
+    std::vector<const parser::ScalarLogicalConstantExpr *>
+        ompAssumesNoParallelismConditions;
     // Info about SAVE statements and attributes in current scope
     struct {
       std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -1851,21 +1853,46 @@ public:
   bool Pre(const parser::OmpClause::To &);
   bool Pre(const parser::OmpClause::From &);
 
+  bool Pre(const parser::OmpClause::NoParallelism &) {
+    return !inSpecificationPart_;
+  }
+
   void Post(const parser::OmpAssumesDirective &x) {
-    if (llvm::any_of(x.v.Clauses().v, [](const parser::OmpClause &clause) {
-          return std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u);
-        })) {
-      if (Symbol * symbol{currScope().symbol()}) {
-        symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
-      }
-    }
-    for (const parser::OmpClause &clause : x.v.Clauses().v) {
-      if (const auto *absent{
-              std::get_if<parser::OmpClause::Absent>(&clause.u)}) {
-        for (llvm::omp::Directive directive : absent->v.v) {
-          currScope().add_ompAssumesAbsent(directive);
+    if (Symbol * symbol{currScope().symbol()}) {
+      llvm::omp::Clauses clauses;
+      llvm::omp::Directives absent;
+      for (const parser::OmpClause &clause : x.v.Clauses().v) {
+        if (std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u)) {
+          clauses.set(clause.Id());
+        } else if (const auto *noParallelism{
+                       std::get_if<parser::OmpClause::NoParallelism>(
+                           &clause.u)}) {
+          if (const auto &condition{noParallelism->v}) {
+            specPartState_.ompAssumesNoParallelismConditions.push_back(
+                &condition->v);
+          } else {
+            clauses.set(clause.Id());
+          }
+        } else if (const auto *absentClause{
+                       std::get_if<parser::OmpClause::Absent>(&clause.u)}) {
+          clauses.set(clause.Id());
+          for (llvm::omp::Directive directive : absentClause->v.v) {
+            absent.set(directive);
+          }
         }
       }
+      common::visit(
+          [&](auto &details) {
+            if constexpr (std::is_convertible_v<decltype(details),
+                              WithOmpDeclarative &>) {
+              details.set_version(context().langOptions().getOpenMPVersion());
+              details.set_ompAssumes(details.ompAssumes() | clauses);
+              for (llvm::omp::Directive directive : absent) {
+                details.add_ompAssumesAbsent(directive);
+              }
+            }
+          },
+          symbol->details());
     }
   }
 
@@ -11137,6 +11164,25 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     // TODO: warn for the case where the EQUIVALENCE statement is in a
     // procedure declaration in an interface block
     CheckEquivalenceSets();
+  }
+  if (Symbol * symbol{currScope().symbol()}) {
+    for (const auto *condition :
+        specPartState_.ompAssumesNoParallelismConditions) {
+      Walk(*condition);
+      if (auto value{EvaluateExpr(*condition)};
+          value && omp::GetLogicalValue(*value).value_or(false)) {
+        common::visit(
+            [&](auto &details) {
+              if constexpr (std::is_convertible_v<decltype(details),
+                                WithOmpDeclarative &>) {
+                llvm::omp::Clauses clauses{details.ompAssumes()};
+                clauses.set(llvm::omp::Clause::OMPC_no_parallelism);
+                details.set_ompAssumes(clauses);
+              }
+            },
+            symbol->details());
+      }
+    }
   }
 }
 

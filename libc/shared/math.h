@@ -88,6 +88,7 @@
 #include "math/cosf.h"
 #include "math/cosf16.h"
 #include "math/cosh.h"
+#include "math/coshbf16.h"
 #include "math/coshf.h"
 #include "math/coshf16.h"
 #include "math/cospif.h"

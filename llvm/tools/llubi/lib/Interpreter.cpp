@@ -1252,6 +1252,247 @@ public:
       ++CurrentFrame->PC;
   }
 
+  AnyValue computeDivRem(unsigned Opcode, const AnyValue &LHS,
+                         const AnyValue &RHS, bool IsExact = false) {
+    const bool IsSigned =
+        Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
+    // Priority: Immediate UB > poison > normal value.
+    if (RHS.isPoison()) {
+      reportImmediateUB() << "Division by zero (refine RHS to 0).";
+      return AnyValue::poison();
+    }
+    const APInt &RHSVal = RHS.asInteger();
+    if (RHSVal.isZero()) {
+      reportImmediateUB() << "Division by zero.";
+      return AnyValue::poison();
+    }
+    if (LHS.isPoison()) {
+      if (IsSigned && RHSVal.isAllOnes())
+        reportImmediateUB()
+            << "Signed division overflow (refine LHS to INT_MIN).";
+      return AnyValue::poison();
+    }
+    const APInt &LHSVal = LHS.asInteger();
+    if (IsSigned && LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
+      if (Opcode == Instruction::SRem)
+        reportImmediateUB() << "Signed division overflow. LHS: " << LHSVal
+                            << ", RHS: " << RHSVal;
+      else
+        reportImmediateUB() << "Signed division overflow.";
+      return AnyValue::poison();
+    }
+
+    APInt Q, R;
+    if (IsSigned)
+      APInt::sdivrem(LHSVal, RHSVal, Q, R);
+    else
+      APInt::udivrem(LHSVal, RHSVal, Q, R);
+    if (Opcode == Instruction::SRem || Opcode == Instruction::URem)
+      return R;
+    if (IsExact && !R.isZero())
+      return AnyValue::poison();
+    return Q;
+  }
+
+  AnyValue callVectorReduction(Type *RetTy, FastMathFlags FMF,
+                               Intrinsic::ID IID, ArrayRef<AnyValue> Args) {
+    switch (IID) {
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_umax:
+    case Intrinsic::vector_reduce_umin: {
+      std::optional<APInt> Res;
+      for (const auto &V : Args[0].asAggregate()) {
+        if (V.isPoison()) {
+          Res.reset();
+          break;
+        }
+        const auto &IntV = V.asInteger();
+        if (!Res) {
+          Res = IntV;
+          continue;
+        }
+        switch (IID) {
+        case Intrinsic::vector_reduce_add:
+          *Res += IntV;
+          break;
+        case Intrinsic::vector_reduce_mul:
+          *Res *= IntV;
+          break;
+        case Intrinsic::vector_reduce_and:
+          *Res &= IntV;
+          break;
+        case Intrinsic::vector_reduce_or:
+          *Res |= IntV;
+          break;
+        case Intrinsic::vector_reduce_xor:
+          *Res ^= IntV;
+          break;
+        case Intrinsic::vector_reduce_smax:
+          *Res = APIntOps::smax(*Res, IntV);
+          break;
+        case Intrinsic::vector_reduce_smin:
+          *Res = APIntOps::smin(*Res, IntV);
+          break;
+        case Intrinsic::vector_reduce_umax:
+          *Res = APIntOps::umax(*Res, IntV);
+          break;
+        case Intrinsic::vector_reduce_umin:
+          *Res = APIntOps::umin(*Res, IntV);
+          break;
+        default:
+          llvm_unreachable("Unexpected intrinsic ID");
+        }
+      }
+      return Res ? *Res : AnyValue::poison();
+    }
+    case Intrinsic::vector_reduce_fadd:
+    case Intrinsic::vector_reduce_fmul:
+    case Intrinsic::vector_reduce_fmaximum:
+    case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum: {
+      const auto DenormMode = getCurrentDenormalMode(RetTy);
+      const bool HasStart = IID == Intrinsic::vector_reduce_fadd ||
+                            IID == Intrinsic::vector_reduce_fmul;
+      const AnyValue &Vector = HasStart ? Args[1] : Args[0];
+      std::optional<APFloat> Res;
+      if (HasStart) {
+        if (Args[0].isPoison())
+          return AnyValue::poison();
+        const AnyValue ValidatedStart =
+            handleFMFFlags(Args[0], FMF, /*IsInput=*/true);
+        if (ValidatedStart.isPoison())
+          return AnyValue::poison();
+        Res = handleDenormal(ValidatedStart.asFloat(), DenormMode.Input,
+                             /*IsInput=*/true);
+      }
+      for (const auto &V : Vector.asAggregate()) {
+        if (V.isPoison())
+          return AnyValue::poison();
+        const AnyValue ValidatedOp = handleFMFFlags(V, FMF, /*IsInput=*/true);
+        if (ValidatedOp.isPoison())
+          return AnyValue::poison();
+        APFloat Op = handleDenormal(ValidatedOp.asFloat(), DenormMode.Input,
+                                    /*IsInput=*/true);
+        if (!Res) {
+          Res = std::move(Op);
+          continue;
+        }
+        switch (IID) {
+        case Intrinsic::vector_reduce_fadd:
+          *Res = *Res + Op;
+          break;
+        case Intrinsic::vector_reduce_fmul:
+          *Res = *Res * Op;
+          break;
+        case Intrinsic::vector_reduce_fmaximum:
+          *Res = maximum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fminimum:
+          *Res = minimum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fmaximumnum:
+          *Res = maximumnum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fminimumnum:
+          *Res = minimumnum(*Res, Op);
+          break;
+        default:
+          llvm_unreachable("Unexpected intrinsic ID");
+        }
+      }
+      assert(Res.has_value());
+      const AnyValue ValidatedRes =
+          handleFMFFlags(*Res, FMF, /*IsInput=*/false);
+      if (ValidatedRes.isPoison())
+        return AnyValue::poison();
+      const APFloat FRes =
+          handleDenormal(ValidatedRes.asFloat(), DenormMode.Output,
+                         /*IsInput=*/false);
+      SmallVector<const APFloat *, 8> InputVec;
+      InputVec.reserve(Vector.asAggregate().size());
+      transform(
+          Vector.asAggregate(), std::back_inserter(InputVec),
+          [](const AnyValue &V) -> const APFloat * { return &V.asFloat(); });
+      return applyNaNPropagation(FRes, InputVec);
+    }
+    case Intrinsic::vector_reduce_fmax:
+    case Intrinsic::vector_reduce_fmin: {
+      const auto DenormMode = getCurrentDenormalMode(RetTy);
+      const auto &Vector = Args[0].asAggregate();
+      SmallVector<APFloat, 8> InputFloats;
+      SmallVector<const APFloat *, 8> InputVec;
+      InputFloats.reserve(Vector.size());
+      InputVec.reserve(Vector.size());
+      for (const auto &V : Vector) {
+        if (V.isPoison())
+          return AnyValue::poison();
+        const AnyValue ValidatedOp = handleFMFFlags(V, FMF, /*IsInput=*/true);
+        if (ValidatedOp.isPoison())
+          return AnyValue::poison();
+        InputFloats.push_back(handleDenormal(
+            ValidatedOp.asFloat(), DenormMode.Input, /*IsInput=*/true));
+        InputVec.push_back(&InputFloats.back());
+      }
+      assert(!InputVec.empty());
+      SmallVector<APFloat, 8> Worklist(InputFloats);
+      const bool HasSNaN =
+          any_of(InputVec, [](const APFloat *V) { return V->isSignaling(); });
+      while (Worklist.size() > 1) {
+        size_t LHSIdx = 0;
+        size_t RHSIdx = 1;
+        if (HasSNaN) {
+          LHSIdx = Ctx.getRandomUInt64() % Worklist.size();
+          RHSIdx = Ctx.getRandomUInt64() % (Worklist.size() - 1);
+          if (RHSIdx >= LHSIdx)
+            ++RHSIdx;
+        }
+
+        APFloat Res =
+            IID == Intrinsic::vector_reduce_fmax
+                ? maxnumWithSNaNQuieting(Worklist[LHSIdx], Worklist[RHSIdx])
+                : minnumWithSNaNQuieting(Worklist[LHSIdx], Worklist[RHSIdx]);
+        if (LHSIdx < RHSIdx)
+          std::swap(LHSIdx, RHSIdx);
+        Worklist.erase(Worklist.begin() + LHSIdx);
+        Worklist.erase(Worklist.begin() + RHSIdx);
+        Worklist.push_back(std::move(Res));
+      }
+
+      AnyValue ValidatedRes =
+          handleFMFFlags(Worklist.front(), FMF, /*IsInput=*/false);
+      if (ValidatedRes.isPoison())
+        return AnyValue::poison();
+      APFloat FRes = handleDenormal(ValidatedRes.asFloat(), DenormMode.Output,
+                                    /*IsInput=*/false);
+
+      return applyNaNPropagation(FRes, InputVec);
+    }
+    default:
+      llvm_unreachable("Unexpected vector reduction intrinsic ID");
+    }
+  }
+
+  AnyValue countTrailingZeroElements(Type *RetTy, ArrayRef<AnyValue> Vec,
+                                     bool IsZeroPoison, size_t Length) {
+    const unsigned RetBW = RetTy->getIntegerBitWidth();
+    if (!isUIntN(RetBW, Vec.size()))
+      return AnyValue::poison();
+    for (const AnyValue &V : Vec.take_front(Length))
+      if (V.isPoison())
+        return AnyValue::poison();
+    for (size_t I = 0; I != Length; ++I)
+      if (!Vec[I].asInteger().isZero())
+        return APInt(RetBW, I);
+    return IsZeroPoison ? AnyValue::poison() : AnyValue(APInt(RetBW, Length));
+  }
+
   AnyValue callIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args) {
     Intrinsic::ID IID = CB.getIntrinsicID();
     Type *RetTy = CB.getType();
@@ -1594,52 +1835,8 @@ public:
     case Intrinsic::vector_reduce_smax:
     case Intrinsic::vector_reduce_smin:
     case Intrinsic::vector_reduce_umax:
-    case Intrinsic::vector_reduce_umin: {
-      std::optional<APInt> Res;
-      for (const auto &V : Args[0].asAggregate()) {
-        if (V.isPoison()) {
-          Res.reset();
-          break;
-        }
-        const auto &IntV = V.asInteger();
-        if (!Res) {
-          Res = IntV;
-          continue;
-        }
-        switch (IID) {
-        case Intrinsic::vector_reduce_add:
-          *Res += IntV;
-          break;
-        case Intrinsic::vector_reduce_mul:
-          *Res *= IntV;
-          break;
-        case Intrinsic::vector_reduce_and:
-          *Res &= IntV;
-          break;
-        case Intrinsic::vector_reduce_or:
-          *Res |= IntV;
-          break;
-        case Intrinsic::vector_reduce_xor:
-          *Res ^= IntV;
-          break;
-        case Intrinsic::vector_reduce_smax:
-          *Res = APIntOps::smax(*Res, IntV);
-          break;
-        case Intrinsic::vector_reduce_smin:
-          *Res = APIntOps::smin(*Res, IntV);
-          break;
-        case Intrinsic::vector_reduce_umax:
-          *Res = APIntOps::umax(*Res, IntV);
-          break;
-        case Intrinsic::vector_reduce_umin:
-          *Res = APIntOps::umin(*Res, IntV);
-          break;
-        default:
-          llvm_unreachable("Unexpected intrinsic ID");
-        }
-      }
-      return Res ? *Res : AnyValue::poison();
-    }
+    case Intrinsic::vector_reduce_umin:
+      return callVectorReduction(RetTy, FMF, IID, Args);
     case Intrinsic::vector_insert: {
       assert(!Args[2].isPoison() &&
              "Verifier should reject poison vector_insert immarg.");
@@ -1825,125 +2022,10 @@ public:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
     case Intrinsic::vector_reduce_fmaximumnum:
-    case Intrinsic::vector_reduce_fminimumnum: {
-      const auto DenormMode = getCurrentDenormalMode(RetTy);
-      const bool HasStart = IID == Intrinsic::vector_reduce_fadd ||
-                            IID == Intrinsic::vector_reduce_fmul;
-      const AnyValue &Vector = HasStart ? Args[1] : Args[0];
-      std::optional<APFloat> Res;
-      if (HasStart) {
-        if (Args[0].isPoison())
-          return AnyValue::poison();
-        const AnyValue ValidatedStart =
-            handleFMFFlags(Args[0], FMF, /*IsInput=*/true);
-        if (ValidatedStart.isPoison())
-          return AnyValue::poison();
-        Res = handleDenormal(ValidatedStart.asFloat(), DenormMode.Input,
-                             /*IsInput=*/true);
-      }
-      for (const auto &V : Vector.asAggregate()) {
-        if (V.isPoison())
-          return AnyValue::poison();
-        const AnyValue ValidatedOp = handleFMFFlags(V, FMF, /*IsInput=*/true);
-        if (ValidatedOp.isPoison())
-          return AnyValue::poison();
-        APFloat Op = handleDenormal(ValidatedOp.asFloat(), DenormMode.Input,
-                                    /*IsInput=*/true);
-        if (!Res) {
-          Res = std::move(Op);
-          continue;
-        }
-        switch (IID) {
-        case Intrinsic::vector_reduce_fadd:
-          *Res = *Res + Op;
-          break;
-        case Intrinsic::vector_reduce_fmul:
-          *Res = *Res * Op;
-          break;
-        case Intrinsic::vector_reduce_fmaximum:
-          *Res = maximum(*Res, Op);
-          break;
-        case Intrinsic::vector_reduce_fminimum:
-          *Res = minimum(*Res, Op);
-          break;
-        case Intrinsic::vector_reduce_fmaximumnum:
-          *Res = maximumnum(*Res, Op);
-          break;
-        case Intrinsic::vector_reduce_fminimumnum:
-          *Res = minimumnum(*Res, Op);
-          break;
-        default:
-          llvm_unreachable("Unexpected intrinsic ID");
-        }
-      }
-      assert(Res.has_value());
-      const AnyValue ValidatedRes =
-          handleFMFFlags(*Res, FMF, /*IsInput=*/false);
-      if (ValidatedRes.isPoison())
-        return AnyValue::poison();
-      const APFloat FRes =
-          handleDenormal(ValidatedRes.asFloat(), DenormMode.Output,
-                         /*IsInput=*/false);
-      SmallVector<const APFloat *, 8> InputVec;
-      InputVec.reserve(Vector.asAggregate().size());
-      transform(
-          Vector.asAggregate(), std::back_inserter(InputVec),
-          [](const AnyValue &V) -> const APFloat * { return &V.asFloat(); });
-      return applyNaNPropagation(FRes, InputVec);
-    }
+    case Intrinsic::vector_reduce_fminimumnum:
     case Intrinsic::vector_reduce_fmax:
-    case Intrinsic::vector_reduce_fmin: {
-      const auto DenormMode = getCurrentDenormalMode(RetTy);
-      const auto &Vector = Args[0].asAggregate();
-      SmallVector<APFloat, 8> InputFloats;
-      SmallVector<const APFloat *, 8> InputVec;
-      InputFloats.reserve(Vector.size());
-      InputVec.reserve(Vector.size());
-      for (const auto &V : Vector) {
-        if (V.isPoison())
-          return AnyValue::poison();
-        const AnyValue ValidatedOp = handleFMFFlags(V, FMF, /*IsInput=*/true);
-        if (ValidatedOp.isPoison())
-          return AnyValue::poison();
-        InputFloats.push_back(handleDenormal(ValidatedOp.asFloat(),
-                                             DenormMode.Input,
-                                             /*IsInput=*/true));
-        InputVec.push_back(&InputFloats.back());
-      }
-      assert(!InputVec.empty());
-      SmallVector<APFloat, 8> Worklist(InputFloats);
-      const bool HasSNaN =
-          any_of(InputVec, [](const APFloat *V) { return V->isSignaling(); });
-      while (Worklist.size() > 1) {
-        size_t LHSIdx = 0;
-        size_t RHSIdx = 1;
-        if (HasSNaN) {
-          LHSIdx = Ctx.getRandomUInt64() % Worklist.size();
-          RHSIdx = Ctx.getRandomUInt64() % (Worklist.size() - 1);
-          if (RHSIdx >= LHSIdx)
-            ++RHSIdx;
-        }
-
-        APFloat Res =
-            IID == Intrinsic::vector_reduce_fmax
-                ? maxnumWithSNaNQuieting(Worklist[LHSIdx], Worklist[RHSIdx])
-                : minnumWithSNaNQuieting(Worklist[LHSIdx], Worklist[RHSIdx]);
-        if (LHSIdx < RHSIdx)
-          std::swap(LHSIdx, RHSIdx);
-        Worklist.erase(Worklist.begin() + LHSIdx);
-        Worklist.erase(Worklist.begin() + RHSIdx);
-        Worklist.push_back(std::move(Res));
-      }
-
-      AnyValue ValidatedRes =
-          handleFMFFlags(Worklist.front(), FMF, /*IsInput=*/false);
-      if (ValidatedRes.isPoison())
-        return AnyValue::poison();
-      APFloat FRes = handleDenormal(ValidatedRes.asFloat(), DenormMode.Output,
-                                    /*IsInput=*/false);
-
-      return applyNaNPropagation(FRes, InputVec);
-    }
+    case Intrinsic::vector_reduce_fmin:
+      return callVectorReduction(RetTy, FMF, IID, Args);
     case Intrinsic::fabs: {
       return visitBitwiseFPUnOpWithResult(
           RetTy, FMF, Args[0],
@@ -2111,29 +2193,9 @@ public:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();
     case Intrinsic::experimental_cttz_elts: {
-      auto *IsZeroPoisonC = cast<ConstantInt>(CB.getArgOperand(1));
-      const bool IsZeroPoison = IsZeroPoisonC->isOne();
-
       const auto &Vec = Args[0].asAggregate();
-      const unsigned RetBW = RetTy->getIntegerBitWidth();
-
-      if (!isUIntN(RetBW, Vec.size()))
-        return AnyValue::poison();
-
-      for (const AnyValue &V : Vec)
-        if (V.isPoison())
-          return AnyValue::poison();
-
-      uint64_t Count = 0;
-      for (const AnyValue &V : Vec) {
-        if (!V.asInteger().isZero())
-          break;
-        ++Count;
-      }
-
-      if (Count == Vec.size() && IsZeroPoison)
-        return AnyValue::poison();
-      return APInt(RetBW, Count);
+      return countTrailingZeroElements(RetTy, Vec, Args[1].asInteger().isOne(),
+                                       Vec.size());
     }
     case Intrinsic::experimental_get_vector_length: {
       auto *VFC = cast<ConstantInt>(CB.getArgOperand(1));
@@ -2593,114 +2655,26 @@ public:
   }
 
   void visitSDiv(BinaryOperator &I) {
-    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-      // Priority: Immediate UB > poison > normal value
-      if (RHS.isPoison()) {
-        reportImmediateUB() << "Division by zero (refine RHS to 0).";
-        return AnyValue::poison();
-      }
-      const APInt &RHSVal = RHS.asInteger();
-      if (RHSVal.isZero()) {
-        reportImmediateUB() << "Division by zero.";
-        return AnyValue::poison();
-      }
-      if (LHS.isPoison()) {
-        if (RHSVal.isAllOnes())
-          reportImmediateUB()
-              << "Signed division overflow (refine LHS to INT_MIN).";
-        return AnyValue::poison();
-      }
-      const APInt &LHSVal = LHS.asInteger();
-      if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
-        reportImmediateUB() << "Signed division overflow.";
-        return AnyValue::poison();
-      }
-
-      if (I.isExact()) {
-        APInt Q, R;
-        APInt::sdivrem(LHSVal, RHSVal, Q, R);
-        if (!R.isZero())
-          return AnyValue::poison();
-        return Q;
-      } else {
-        return LHSVal.sdiv(RHSVal);
-      }
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) {
+      return computeDivRem(I.getOpcode(), LHS, RHS, I.isExact());
     });
   }
 
   void visitSRem(BinaryOperator &I) {
-    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-      // Priority: Immediate UB > poison > normal value
-      if (RHS.isPoison()) {
-        reportImmediateUB() << "Division by zero (refine RHS to 0).";
-        return AnyValue::poison();
-      }
-      const APInt &RHSVal = RHS.asInteger();
-      if (RHSVal.isZero()) {
-        reportImmediateUB() << "Division by zero.";
-        return AnyValue::poison();
-      }
-      if (LHS.isPoison()) {
-        if (RHSVal.isAllOnes())
-          reportImmediateUB()
-              << "Signed division overflow (refine LHS to INT_MIN).";
-        return AnyValue::poison();
-      }
-      const APInt &LHSVal = LHS.asInteger();
-      if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
-        reportImmediateUB() << "Signed division overflow. LHS: " << LHSVal
-                            << ", RHS: " << RHSVal;
-        return AnyValue::poison();
-      }
-
-      return LHSVal.srem(RHSVal);
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) {
+      return computeDivRem(I.getOpcode(), LHS, RHS);
     });
   }
 
   void visitUDiv(BinaryOperator &I) {
-    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-      // Priority: Immediate UB > poison > normal value
-      if (RHS.isPoison()) {
-        reportImmediateUB() << "Division by zero (refine RHS to 0).";
-        return AnyValue::poison();
-      }
-      const APInt &RHSVal = RHS.asInteger();
-      if (RHSVal.isZero()) {
-        reportImmediateUB() << "Division by zero.";
-        return AnyValue::poison();
-      }
-      if (LHS.isPoison())
-        return AnyValue::poison();
-      const APInt &LHSVal = LHS.asInteger();
-
-      if (I.isExact()) {
-        APInt Q, R;
-        APInt::udivrem(LHSVal, RHSVal, Q, R);
-        if (!R.isZero())
-          return AnyValue::poison();
-        return Q;
-      } else {
-        return LHSVal.udiv(RHSVal);
-      }
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) {
+      return computeDivRem(I.getOpcode(), LHS, RHS, I.isExact());
     });
   }
 
   void visitURem(BinaryOperator &I) {
-    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-      // Priority: Immediate UB > poison > normal value
-      if (RHS.isPoison()) {
-        reportImmediateUB() << "Division by zero (refine RHS to 0).";
-        return AnyValue::poison();
-      }
-      const APInt &RHSVal = RHS.asInteger();
-      if (RHSVal.isZero()) {
-        reportImmediateUB() << "Division by zero.";
-        return AnyValue::poison();
-      }
-      if (LHS.isPoison())
-        return AnyValue::poison();
-      const APInt &LHSVal = LHS.asInteger();
-      return LHSVal.urem(RHSVal);
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) {
+      return computeDivRem(I.getOpcode(), LHS, RHS);
     });
   }
 

@@ -643,7 +643,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, {MVT::v4i16, MVT::v8i8},
                          Custom);
     } else {
-      setOperationAction(ISD::MUL, P64VecVTs, Legal);
+      setOperationAction(ISD::MUL, MVT::v2i32, Legal);
+      setOperationAction(ISD::MUL, {MVT::v4i16, MVT::v8i8}, Custom);
       setOperationAction({ISD::MULHS, ISD::MULHU}, {MVT::v2i32, MVT::v4i16},
                          Legal);
       setOperationAction({ISD::MULHS, ISD::MULHU}, MVT::v8i8, Custom);
@@ -9630,10 +9631,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       }
       return DAG.getNode(ISD::TRUNCATE, DL, VT, Res);
     }
-    // Lower v8i8 MULHS/MULHU on RV64 via a pair of widening byte multiplies
-    // (picking out the even/odd result lanes) recombined with PPAIRO.
-    if (Subtarget.hasStdExtP() && Subtarget.is64Bit() && VT == MVT::v8i8 &&
-        Opc != ISD::MUL) {
+    // Lower packed MUL and byte MULHS/MULHU on RV64 via a pair of widening
+    // multiplies, selecting the low/high halves with PPAIRE/PPAIRO.
+    if (Subtarget.hasStdExtP() && Subtarget.is64Bit() &&
+        ((Opc == ISD::MUL && (VT == MVT::v8i8 || VT == MVT::v4i16)) ||
+         (VT == MVT::v8i8 && (Opc == ISD::MULHS || Opc == ISD::MULHU)))) {
       SDLoc DL(Op);
       SDValue LHS = Op.getOperand(0);
       SDValue RHS = Op.getOperand(1);
@@ -9641,9 +9643,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                          : RISCVISD::PMUL_HALVES_00;
       unsigned HiOpc = Opc == ISD::MULHU ? RISCVISD::PMULU_HALVES_11
                                          : RISCVISD::PMUL_HALVES_11;
-      SDValue Lo = DAG.getNode(LoOpc, DL, MVT::v4i16, LHS, RHS);
-      SDValue Hi = DAG.getNode(HiOpc, DL, MVT::v4i16, LHS, RHS);
-      return DAG.getNode(RISCVISD::PPAIRO, DL, VT, DAG.getBitcast(VT, Lo),
+      MVT WideVT = VT == MVT::v8i8 ? MVT::v4i16 : MVT::v2i32;
+      SDValue Lo = DAG.getNode(LoOpc, DL, WideVT, LHS, RHS);
+      SDValue Hi = DAG.getNode(HiOpc, DL, WideVT, LHS, RHS);
+      unsigned PairOpc = Opc == ISD::MUL ? RISCVISD::PPAIRE : RISCVISD::PPAIRO;
+      return DAG.getNode(PairOpc, DL, VT, DAG.getBitcast(VT, Lo),
                          DAG.getBitcast(VT, Hi));
     }
     return lowerToScalableOp(Op, DAG);
@@ -17597,11 +17601,13 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue ShAmt = N->getOperand(1);
 
       unsigned WideOpc = 0;
-      APInt HighMask = APInt::getHighBitsSet(64, 32);
-      if (DAG.MaskedValueIsZero(LHS, HighMask))
-        WideOpc = RISCVISD::WSLL;
-      else if (DAG.ComputeMaxSignificantBits(LHS) <= 32)
-        WideOpc = RISCVISD::WSLA;
+      if (N->getOpcode() == ISD::SHL) {
+        APInt HighMask = APInt::getHighBitsSet(64, 32);
+        if (DAG.MaskedValueIsZero(LHS, HighMask))
+          WideOpc = RISCVISD::WSLL;
+        else if (DAG.ComputeMaxSignificantBits(LHS) <= 32)
+          WideOpc = RISCVISD::WSLA;
+      }
 
       if (WideOpc) {
         SDValue Res =
@@ -20066,7 +20072,7 @@ static SDValue combinePExtWideningAddAcc(SDNode *N, SelectionDAG &DAG,
   if (N->getOpcode() != ISD::ADD)
     return SDValue();
 
-  MVT VT = N->getSimpleValueType(0);
+  EVT VT = N->getValueType(0);
   if (VT != MVT::v4i16 && VT != MVT::v2i32)
     return SDValue();
 
@@ -20145,7 +20151,7 @@ static SDValue combinePExtWideningSubAcc(SDNode *N, SelectionDAG &DAG,
   if (N->getOpcode() != ISD::SUB)
     return SDValue();
 
-  MVT VT = N->getSimpleValueType(0);
+  EVT VT = N->getValueType(0);
   if (VT != MVT::v4i16 && VT != MVT::v2i32)
     return SDValue();
 
@@ -25672,15 +25678,29 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     break;
   }
+  case RISCVISD::PSLL:
+  case RISCVISD::PSSHA:
+  case RISCVISD::PSSHAR:
+  case RISCVISD::PSSHL:
+  case RISCVISD::PSSHLR:
+  case RISCVISD::SHAR:
+  case RISCVISD::SHLR: {
+    if (isNullConstant(N->getOperand(1)))
+      return N->getOperand(0);
+    break;
+  }
   case RISCVISD::PSRL:
   case RISCVISD::PSRA: {
+    auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    if (!C2)
+      break;
+    if (C2->isZero())
+      return N->getOperand(0);
+
     // Fold (PSRL/PSRA (trunc (PSRL X, C1)), C2) -> (trunc (PSRL/PSRA X, C1+C2))
     // Fold (PSRL/PSRA (concat (trunc (PSRL X, C1)), (trunc (PSRL Y, C1))), C2)
     //   -> (concat (trunc (PSRL/PSRA X, C1+C2)), (trunc (PSRL/PSRA Y, C1+C2)))
     // In both cases C1 must equal the number of bits discarded by the truncate.
-    auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
-    if (!C2)
-      break;
     // Match (trunc (PSRL X, C1)) where C1 == bits discarded by the truncate
     // and C1+C2 is a valid shift. Returns {NarrowVT, WideVT, NewShAmt, X}
     // without creating any DAG nodes.
@@ -31276,8 +31296,8 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
     // Mark RVV intrinsic as supported.
     if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(II->getIntrinsicID())) {
-      // GISel doesn't support tuple types yet. It also doesn't suport returning
-      // a struct containing a scalable vector like vleff.
+      // GISel doesn't support tuple types yet. It also doesn't support
+      // returning a struct containing a scalable vector like vleff.
       if (Inst.getType()->isRISCVVectorTupleTy() ||
           Inst.getType()->isStructTy())
         return true;
