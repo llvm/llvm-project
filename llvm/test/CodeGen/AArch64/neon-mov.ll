@@ -499,42 +499,24 @@ define <2 x double> @fmov2d() {
 }
 
 define <2 x double> @fmov2d_neg0() {
-; CHECK-NOFP16-SD-LABEL: fmov2d_neg0:
-; CHECK-NOFP16-SD:       // %bb.0:
-; CHECK-NOFP16-SD-NEXT:    movi d0, #0000000000000000
-; CHECK-NOFP16-SD-NEXT:    fneg v0.2d, v0.2d
-; CHECK-NOFP16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: fmov2d_neg0:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    movi d0, #0000000000000000
-; CHECK-FP16-SD-NEXT:    fneg v0.2d, v0.2d
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NOFP16-GI-LABEL: fmov2d_neg0:
-; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NOFP16-GI-NEXT:    fneg v0.2d, v0.2d
-; CHECK-NOFP16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: fmov2d_neg0:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-FP16-GI-NEXT:    fneg v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: fmov2d_neg0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    fneg v0.2d, v0.2d
+; CHECK-NEXT:    ret
 	ret <2 x double> <double -0.0, double -0.0>
 }
 
 define <1 x double> @fmov1d_neg0() {
 ; CHECK-NOFP16-SD-LABEL: fmov1d_neg0:
 ; CHECK-NOFP16-SD:       // %bb.0:
-; CHECK-NOFP16-SD-NEXT:    movi d0, #0000000000000000
+; CHECK-NOFP16-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NOFP16-SD-NEXT:    fneg d0, d0
 ; CHECK-NOFP16-SD-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: fmov1d_neg0:
 ; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    movi d0, #0000000000000000
+; CHECK-FP16-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-FP16-SD-NEXT:    fneg d0, d0
 ; CHECK-FP16-SD-NEXT:    ret
 ;

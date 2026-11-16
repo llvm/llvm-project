@@ -74,8 +74,8 @@ define void @widen_f16_build_vector(ptr %addr) {
 ; CHECK-SD-LABEL: widen_f16_build_vector:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #13294 // =0x33ee
-; CHECK-SD-NEXT:    dup v0.4h, w8
-; CHECK-SD-NEXT:    str s0, [x0]
+; CHECK-SD-NEXT:    movk w8, #13294, lsl #16
+; CHECK-SD-NEXT:    str w8, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: widen_f16_build_vector:
@@ -157,19 +157,12 @@ define <2 x double> @poszero_v2f64(<2 x double> %a) {
 }
 
 define <2 x double> @negzero_v2f64(<2 x double> %a) {
-; CHECK-SD-LABEL: negzero_v2f64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi d1, #0000000000000000
-; CHECK-SD-NEXT:    fneg v1.2d, v1.2d
-; CHECK-SD-NEXT:    fmul v0.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: negzero_v2f64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    fneg v1.2d, v1.2d
-; CHECK-GI-NEXT:    fmul v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: negzero_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    fneg v1.2d, v1.2d
+; CHECK-NEXT:    fmul v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
   %b = fmul <2 x double> %a, <double -0.0, double -0.0>
   ret <2 x double> %b
 }

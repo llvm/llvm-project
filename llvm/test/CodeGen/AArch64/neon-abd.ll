@@ -558,9 +558,8 @@ define <2 x i32> @combine_sabd_2s_zerosign_negative(<2 x i32> %a, <2 x i32> %b) 
 define <8 x i32> @sabd_8h_splat_imm(<8 x i16> %a) {
 ; CHECK-LABEL: sabd_8h_splat_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.4h, #89
-; CHECK-NEXT:    movi v1.8h, #89
-; CHECK-NEXT:    sabdl2 v1.4s, v0.8h, v1.8h
+; CHECK-NEXT:    movi v2.8h, #89
+; CHECK-NEXT:    sabdl2 v1.4s, v0.8h, v2.8h
 ; CHECK-NEXT:    sabdl v0.4s, v0.4h, v2.4h
 ; CHECK-NEXT:    ret
   %conv = sext <8 x i16> %a to <8 x i32>
@@ -577,9 +576,8 @@ define <8 x i32> @sabd_8h_splat_imm(<8 x i16> %a) {
 define <8 x i32> @uabd_8h_splat_imm(<8 x i16> %a) {
 ; CHECK-LABEL: uabd_8h_splat_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.4h, #89
-; CHECK-NEXT:    movi v1.8h, #89
-; CHECK-NEXT:    uabdl2 v1.4s, v0.8h, v1.8h
+; CHECK-NEXT:    movi v2.8h, #89
+; CHECK-NEXT:    uabdl2 v1.4s, v0.8h, v2.8h
 ; CHECK-NEXT:    uabdl v0.4s, v0.4h, v2.4h
 ; CHECK-NEXT:    ret
   %conv = zext <8 x i16> %a to <8 x i32>
@@ -791,7 +789,7 @@ define <4 x i16> @abs_diff_add_v4i16_rii(<4 x i16> %a) {
 define <2 x i64> @uabd_known_order_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: uabd_known_order_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d2, #0000000000000000
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ushr v0.2d, v0.2d, #1
 ; CHECK-NEXT:    fneg v2.2d, v2.2d
 ; CHECK-NEXT:    orr v1.16b, v1.16b, v2.16b

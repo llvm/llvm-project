@@ -788,7 +788,7 @@ define i32 @test_unsigned_f128_i32(fp128 %f) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    movi d1, #0000000000000000
+; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    bl __getf2
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload

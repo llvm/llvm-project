@@ -201,11 +201,8 @@ public:
       return false;
 
     APInt Imm;
-    if (Op.getOperand(1).getOpcode() == AArch64ISD::MOVI &&
-        Op.getOperand(1).getConstantOperandAPInt(0).isSplat(
-            VT.getScalarSizeInBits()))
-      Imm = Op.getOperand(1).getConstantOperandAPInt(0).trunc(
-          VT.getScalarSizeInBits());
+    if (ISD::isConstantSplatVector(Op.getOperand(1).getNode(), Imm))
+      Imm = Imm.trunc(VT.getScalarSizeInBits());
     else if (Op.getOperand(1).getOpcode() == AArch64ISD::DUP &&
              isa<ConstantSDNode>(Op.getOperand(1).getOperand(0)))
       Imm = APInt(VT.getScalarSizeInBits(),
@@ -638,16 +635,15 @@ static bool isIntImmediateEq(SDValue N, const uint64_t ImmExpected) {
 // Decodes the integer splat value from a NEON splat operation.
 static std::optional<APInt> GetNEONSplatValue(SDValue N) {
   unsigned RegWidth = N.getScalarValueSizeInBits();
-  if (N.getOpcode() == AArch64ISD::MOVI &&
-      N.getConstantOperandAPInt(0).isSplat(RegWidth))
-    return N.getConstantOperandAPInt(0).trunc(RegWidth);
+  if (N.getOpcode() == ISD::BITCAST &&
+      N.getOperand(0).getScalarValueSizeInBits() == RegWidth)
+    N = N.getOperand(0);
   if (N.getOpcode() == AArch64ISD::DUP)
     if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(0)))
       return Const->getAPIntValue().trunc(RegWidth);
-  if (ISD::isConstantSplatVectorAllZeros(N.getNode()))
-    return APInt(RegWidth, 0);
-  if (ISD::isConstantSplatVectorAllOnes(N.getNode()))
-    return APInt::getAllOnes(RegWidth);
+  APInt Imm;
+  if (ISD::isConstantSplatVector(N.getNode(), Imm))
+    return Imm.trunc(RegWidth);
   return std::nullopt;
 }
 
@@ -4237,12 +4233,14 @@ static bool checkCVTFixedPointOperandWithFBitsForVectors(SelectionDAG *CurDAG,
 
   APFloat FVal(0.0);
   switch (N->getOpcode()) {
-  case AArch64ISD::MOVI:
-    if (N.getConstantOperandAPInt(0).isSplat(RegWidth))
-      FVal = ImmToFloat(N.getConstantOperandAPInt(0).trunc(RegWidth));
+  case ISD::BUILD_VECTOR: {
+    APInt Imm;
+    if (ISD::isConstantSplatVector(N.getNode(), Imm))
+      FVal = ImmToFloat(Imm.trunc(RegWidth));
     else
       return false;
     break;
+  }
   case AArch64ISD::DUP:
     if (isa<ConstantSDNode>(N.getOperand(0)))
       FVal = ImmToFloat(N.getConstantOperandAPInt(0).trunc(RegWidth));
@@ -5104,6 +5102,10 @@ static SDValue getZeroRegister(SelectionDAG &DAG, SDLoc DL, EVT VT) {
                             VT == MVT::i32 ? AArch64::WZR : AArch64::XZR, VT);
 }
 
+// In AArch64ISelLowering.cpp
+bool resolveBuildVector(BuildVectorSDNode *BVN, APInt &CnstBits,
+                        APInt &UndefBits);
+
 void AArch64DAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
@@ -5199,15 +5201,28 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                                 VT))
       break;
     [[fallthrough]];
-  case AArch64ISD::MOVI: {
+  case AArch64ISD::DUP:
+  case ISD::BUILD_VECTOR: {
     APInt DefBits;
     if (Node->getOpcode() == ISD::ConstantFP) {
       APInt Imm = *Node->bitcastToAPInt();
       DefBits = Imm.getBitWidth() >= 64 ? Imm : APInt::getSplat(64, Imm);
+    } else if (Node->getOpcode() == AArch64ISD::DUP) {
+      if (!isa<ConstantSDNode>(Node->getOperand(0)))
+        break;
+      DefBits = APInt::getSplat(
+          VT.getSizeInBits(),
+          Node->getConstantOperandAPInt(0).trunc(VT.getScalarSizeInBits()));
     } else {
-      APInt Imm = Node->getConstantOperandAPInt(0);
-      DefBits = APInt::getSplat(VT.getSizeInBits(), Imm);
+      DefBits = APInt(VT.getSizeInBits(), 0);
+      APInt UndefBits(VT.getSizeInBits(), 0);
+      BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Node);
+      resolveBuildVector(BVN, DefBits, UndefBits);
     }
+
+    if (DefBits == 0 ||
+        (DefBits.isAllOnes() && Node->getOpcode() == ISD::BUILD_VECTOR))
+      break;
 
     SmallVector<AArch64_IMM::ImmInsnModel> Insns;
     if (AArch64_IMM::expandVectorMOVImm(DefBits, Insns, *Subtarget)) {
@@ -5218,7 +5233,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       for (AArch64_IMM::ImmInsnModel Insn : Insns) {
         switch (Insn.Opcode) {
         case AArch64::FMOVD0:
-          Src = CurDAG->getMachineNode(Insn.Opcode, DL, MVT::f64);
+          Src = CurDAG->getMachineNode(Insn.Opcode, DL, VT);
           if (FVT.getSizeInBits() > 64)
             Src = CurDAG->getMachineNode(
                 TargetOpcode::SUBREG_TO_REG, DL, VT, SDValue(Src, 0),

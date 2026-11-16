@@ -2961,21 +2961,6 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     Known = KnownBits::shl(Known, Known2);
     break;
   }
-  case AArch64ISD::MOVI: {
-    // MOVI has any type, the constant is the i64 value. Get the full width
-    // constant value and find the common bits of size EltSize.
-    EVT VT = Op.getValueType();
-    APInt Imm =
-        APInt::getSplat(VT.getSizeInBits(), Op->getConstantOperandAPInt(0));
-    unsigned EltSize = Known.getBitWidth();
-    unsigned Lanes = VT.getSizeInBits() / EltSize;
-    Known.setAllConflict();
-    for (unsigned I = 0; I < Lanes; I++)
-      if (DemandedElts[I])
-        Known = Known.intersectWith(
-            KnownBits::makeConstant(Imm.lshr(I * EltSize).trunc(EltSize)));
-    break;
-  }
   case AArch64ISD::LOADgot:
   case AArch64ISD::ADDlow: {
     if (!Subtarget->isTargetILP32())
@@ -12450,16 +12435,6 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
   unsigned BitWidth = In1.getScalarValueSizeInBits();
   SDValue SignMaskV = DAG.getConstant(~APInt::getSignMask(BitWidth), DL, VecVT);
 
-  // We want to materialize a mask with every bit but the high bit set, but the
-  // AdvSIMD immediate moves cannot materialize that in a single instruction for
-  // 64-bit elements. Instead, materialize all bits set and then negate that.
-  if (VT == MVT::f64 || VT == MVT::v2f64) {
-    SignMaskV = DAG.getConstant(APInt::getAllOnes(BitWidth), DL, VecVT);
-    SignMaskV = DAG.getNode(ISD::BITCAST, DL, MVT::v2f64, SignMaskV);
-    SignMaskV = DAG.getNode(ISD::FNEG, DL, MVT::v2f64, SignMaskV);
-    SignMaskV = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, SignMaskV);
-  }
-
   SDValue BSP =
       DAG.getNode(AArch64ISD::BSP, DL, VecVT, SignMaskV, VecVal1, VecVal2);
   if (VT == MVT::f16 || VT == MVT::bf16)
@@ -16385,9 +16360,8 @@ SDValue AArch64TargetLowering::LowerDUPQLane(SDValue Op,
   return DAG.getNode(ISD::BITCAST, DL, VT, TBL);
 }
 
-
-static bool resolveBuildVector(BuildVectorSDNode *BVN, APInt &CnstBits,
-                               APInt &UndefBits) {
+bool resolveBuildVector(BuildVectorSDNode *BVN, APInt &CnstBits,
+                        APInt &UndefBits) {
   EVT VT = BVN->getValueType(0);
   APInt SplatBits, SplatUndef;
   unsigned SplatBitSize;
@@ -16851,29 +16825,54 @@ static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
   SmallVector<AArch64_IMM::ImmInsnModel> Insns;
-  if (expandVectorMOVImm(DefBits, Insns, *ST))
-    return DAG.getNode(AArch64ISD::MOVI, DL, VT,
-                       DAG.getConstant(DefBits.trunc(64), DL, MVT::i64));
+  if (expandVectorMOVImm(DefBits, Insns, *ST)) {
+    if (DefBits.isSplat(VT.getScalarSizeInBits()) &&
+        VT.getScalarType().isInteger()) {
+      EVT EltVT = VT.getScalarType();
+      APInt Val = DefBits.trunc(VT.getScalarSizeInBits());
+      if (Val == 0 || Val.isAllOnes())
+        return Op;
+      if (VT.getScalarSizeInBits() < 32) {
+        EltVT = MVT::i32;
+        Val = Val.zext(32);
+      }
+      return DAG.getNode(AArch64ISD::DUP, Op, VT,
+                         DAG.getConstant(Val, Op, EltVT));
+    }
+    return Op;
+  }
 
   // See if a fneg of the constant can be materialized with a MOVI, etc
   auto TryWithFNeg = [&](APInt DefBits, MVT FVT) {
     // FNegate each sub-element of the constant
-    assert(VT.getSizeInBits() % FVT.getScalarSizeInBits() == 0);
+    unsigned EltSize = FVT.getScalarSizeInBits();
+    assert(VT.getSizeInBits() % EltSize == 0);
     APInt Neg =
         APInt::getHighBitsSet(FVT.getSizeInBits(), 1).zext(VT.getSizeInBits());
     APInt NegBits(VT.getSizeInBits(), 0);
-    unsigned NumElts = VT.getSizeInBits() / FVT.getScalarSizeInBits();
+    unsigned NumElts = VT.getSizeInBits() / EltSize;
     for (unsigned i = 0; i < NumElts; i++)
-      NegBits |= Neg << (FVT.getScalarSizeInBits() * i);
+      NegBits |= Neg << (EltSize * i);
     NegBits = DefBits ^ NegBits;
 
     SmallVector<AArch64_IMM::ImmInsnModel> Insns;
     if (expandVectorMOVImm(NegBits, Insns, *ST)) {
       SDLoc DL(Op);
-      MVT VFVT = NumElts == 1 ? FVT : MVT::getVectorVT(FVT, NumElts);
-      SDValue MOVI =
-          DAG.getNode(AArch64ISD::MOVI, DL, VFVT,
-                      DAG.getConstant(NegBits.trunc(64), DL, MVT::i64));
+      EVT VFVT = MVT::getVectorVT(FVT, NumElts);
+      EVT IVT = FVT.changeTypeToInteger();
+      if (IVT.getScalarSizeInBits() < 32)
+        IVT = MVT::i32;
+
+      SmallVector<SDValue> Ops(NumElts);
+      for (unsigned I = 0; I < NumElts; I++) {
+        APInt Elt = NegBits.lshr(I * EltSize).trunc(EltSize);
+        if (Elt.getBitWidth() < 32)
+          Elt = Elt.zext(32);
+        Ops[I] = DAG.getConstant(Elt, DL, IVT);
+      }
+      SDValue MOVI = DAG.getBuildVector(VFVT.changeTypeToInteger(), DL, Ops);
+      // This NVCast is to prevent it from constant folding the fneg.
+      MOVI = DAG.getNode(AArch64ISD::NVCAST, DL, VFVT, MOVI);
       return DAG.getNode(AArch64ISD::NVCAST, DL, VT,
                          DAG.getNode(ISD::FNEG, DL, VFVT, MOVI));
     }
@@ -23061,11 +23060,8 @@ static SDValue performConcatVectorsCombine(SDNode *N,
       return false;
 
     APInt Imm;
-    if (Op.getOperand(1).getOpcode() == AArch64ISD::MOVI &&
-        Op.getOperand(1).getConstantOperandAPInt(0).isSplat(
-            VT.getScalarSizeInBits()))
-      Imm = Op.getOperand(1).getConstantOperandAPInt(0).trunc(
-          VT.getScalarSizeInBits());
+    if (ISD::isConstantSplatVector(Op.getOperand(1).getNode(), Imm))
+      Imm = Imm.trunc(VT.getScalarSizeInBits());
     else if (Op.getOperand(1).getOpcode() == AArch64ISD::DUP &&
              isa<ConstantSDNode>(Op.getOperand(1).getOperand(0)))
       Imm = APInt(VT.getScalarSizeInBits(),
@@ -23297,7 +23293,6 @@ static SDValue tryExtendDUPToExtractHigh(SDValue N, SelectionDAG &DAG) {
   case AArch64ISD::DUPLANE16:
   case AArch64ISD::DUPLANE32:
   case AArch64ISD::DUPLANE64:
-  case AArch64ISD::MOVI:
     break;
   default:
     // FMOV could be supported, but isn't very useful, as it would only occur
@@ -32260,20 +32255,6 @@ static SDValue performPredicateLoadCombine(SDNode *N,
   return LoadPred;
 }
 
-static SDValue performBitcastCombine(SDNode *N,
-                                     TargetLowering::DAGCombinerInfo &DCI,
-                                     const AArch64Subtarget *ST) {
-  if (SDValue R = performPredicateLoadCombine(N, DCI, DCI.DAG))
-    return R;
-
-  // MOVI does not change per return type, so remove the bitcast providing it
-  // does not change the bits.
-  if (N->getOperand(0).getOpcode() == AArch64ISD::MOVI && ST->isLittleEndian())
-    return DCI.DAG.getNode(AArch64ISD::MOVI, SDLoc(N), N->getValueType(0),
-                           N->getOperand(0).getOperand(0));
-  return SDValue();
-}
-
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -32638,7 +32619,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::CTPOP:
     return performCTPOPCombine(N, DCI, DAG);
   case ISD::BITCAST:
-    return performBitcastCombine(N, DCI, Subtarget);
+    return performPredicateLoadCombine(N, DCI, DAG);
   }
   return SDValue();
 }
@@ -36798,10 +36779,10 @@ bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
 
   // TODO: Add more target nodes.
   switch (Op.getOpcode()) {
-  case AArch64ISD::MOVI:
   case AArch64ISD::VASHR:
   case AArch64ISD::VLSHR:
   case AArch64ISD::VSHL:
+  case AArch64ISD::DUP:
     return false;
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
@@ -36813,13 +36794,14 @@ bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
   // load/broadcast from memory.
   while (Op.getOpcode() == ISD::BITCAST ||
          Op.getOpcode() == AArch64ISD::NVCAST ||
-         (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR && Op.hasOneUse()) ||
-         (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.hasOneUse() &&
-          Op.getOperand(0).isUndef()))
+         (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+          !Op.getOperand(0).hasOneUse()) ||
+         (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          !Op.getOperand(1).hasOneUse() && Op.getOperand(0).isUndef()))
     Op = Op.getOperand(Op.getOpcode() == ISD::INSERT_SUBVECTOR ? 1 : 0);
 
   return Op.getOpcode() == AArch64ISD::DUP ||
-         Op.getOpcode() == AArch64ISD::MOVI ||
+         Op.getOpcode() == ISD::BUILD_VECTOR ||
          // ConstantBuildVector / TryWithFNeg may represent a negated constant
          // as fneg(movi).
          (Op.getOpcode() == ISD::FNEG &&

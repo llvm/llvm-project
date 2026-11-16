@@ -531,7 +531,6 @@ def SDT_AArch64Zip   : SDTypeProfile<1, 2, [SDTCisVec<0>,
 def SDT_AArch64Addhn : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
                                             SDTCisSameAs<1, 2>,
                                             SDTCisOpSmallerThanOp<0, 1>]>;
-def SDT_AArch64MOVI : SDTypeProfile<1, 1, [SDTCisInt<1>]>;
 def SDT_AArch64vecimm : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                            SDTCisInt<2>, SDTCisInt<3>]>;
 def SDT_AArch64UnaryVec: SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
@@ -971,9 +970,6 @@ def AArch64uzp1      : SDNode<"AArch64ISD::UZP1", SDT_AArch64Zip>;
 def AArch64uzp2      : SDNode<"AArch64ISD::UZP2", SDT_AArch64Zip>;
 def AArch64trn1      : SDNode<"AArch64ISD::TRN1", SDT_AArch64Zip>;
 def AArch64trn2      : SDNode<"AArch64ISD::TRN2", SDT_AArch64Zip>;
-
-// Vector immediate moves
-def AArch64movi : SDNode<"AArch64ISD::MOVI", SDT_AArch64MOVI>;
 
 def AArch64rev16 : SDNode<"AArch64ISD::REV16", SDT_AArch64Rev>;
 def AArch64rev32 : SDNode<"AArch64ISD::REV32", SDT_AArch64Rev>;
@@ -6434,12 +6430,12 @@ multiclass SelectVectorPartialReduceAdd<ValueType DstVT, ValueType SrcVT, dag im
             (!cast<Instruction>("UADDLP" # SrcVT # "_" # DstVT) $Input)>;
 }
 
-defm : SelectVectorPartialReduceAdd<v4i16, v8i8, (AArch64movi (i64 0x0101010101010101))>;
-defm : SelectVectorPartialReduceAdd<v2i32, v4i16, (AArch64movi (i64 0x0001000100010001))>;
-defm : SelectVectorPartialReduceAdd<v1i64, v2i32, (AArch64movi (i64 0x0000000100000001))>;
-defm : SelectVectorPartialReduceAdd<v8i16, v16i8, (AArch64movi (i64 0x0101010101010101))>;
-defm : SelectVectorPartialReduceAdd<v4i32, v8i16, (AArch64movi (i64 0x0001000100010001))>;
-defm : SelectVectorPartialReduceAdd<v2i64, v4i32, (AArch64movi (i64 0x0000000100000001))>;
+defm : SelectVectorPartialReduceAdd<v4i16, v8i8, (AArch64dup (i32 0x01))>;
+defm : SelectVectorPartialReduceAdd<v2i32, v4i16, (AArch64dup (i32 0x0001))>;
+defm : SelectVectorPartialReduceAdd<v1i64, v2i32, (AArch64dup (i32 0x00000001))>;
+defm : SelectVectorPartialReduceAdd<v8i16, v16i8, (AArch64dup (i32 0x01))>;
+defm : SelectVectorPartialReduceAdd<v4i32, v8i16, (AArch64dup (i32 0x0001))>;
+defm : SelectVectorPartialReduceAdd<v2i64, v4i32, (AArch64dup (i32 0x00000001))>;
 
 def : Pat<(v4f16  (AArch64rev32 V64:$Rn)),  (REV32v4i16 V64:$Rn)>;
 def : Pat<(v4f16  (AArch64rev64 V64:$Rn)),  (REV64v4i16 V64:$Rn)>;
@@ -9339,7 +9335,7 @@ def : Pat<(add (AArch64bici (v8i16 V128:$src), (i32 255), (i32 8)),
           (UADDLPv16i8_v8i16 V128:$src)>;
 
 let Predicates = [IsLE] in
-def : Pat<(add (and (v4i32 V128:$src), (v4i32 (AArch64movi (i64 0x0000ffff0000ffff)))),
+def : Pat<(add (and (v4i32 V128:$src), (v4i32 (AArch64dup (i32 0x0000ffff)))),
                (AArch64vlshr (v4i32 V128:$src), (i32 16))),
           (UADDLPv8i16_v4i32 V128:$src)>;
 
@@ -10237,9 +10233,9 @@ defm : CVTFRecipPat<v4f16, v4i16, V64, fixedpoint_recip_v4f16>;
 defm : CVTFRecipPat<v8f16, v8i16, V128, fixedpoint_recip_v8f16>;
 }
 
-def VImm0080:         PatLeaf<(AArch64movi (i64 0x0080008000800080))>;
-def VImm00008000:     PatLeaf<(AArch64movi (i64 0x0000800000008000))>;
-def VImm0000000080000000: PatLeaf<(bitconvert (v2f64 (fneg (AArch64movi (i64 0x8000000080000000)))))>;
+def VImm0080:         PatLeaf<(AArch64dup (i32 0x0080))>;
+def VImm00008000:     PatLeaf<(AArch64dup (i32 0x00008000))>;
+def VImm0000000080000000: PatLeaf<(bitconvert (v2f64 (fneg (bitconvert (v2i64 (AArch64dup (i64 0x8000000080000000)))))))>;
 
 // RADDHN patterns for when RSHRN shifts by half the size of the vector element
 def : Pat<(v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))),

@@ -3935,7 +3935,6 @@ define i32 @add_v24i8_v24i32_zext(<24 x i8> %x) {
 ; CHECK-SD-DOT-NEXT:    add x9, sp, #80
 ; CHECK-SD-DOT-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-SD-DOT-NEXT:    mov v0.b[1], w1
-; CHECK-SD-DOT-NEXT:    movi v5.8b, #1
 ; CHECK-SD-DOT-NEXT:    ld1 { v1.b }[2], [x9]
 ; CHECK-SD-DOT-NEXT:    add x9, sp, #88
 ; CHECK-SD-DOT-NEXT:    mov v0.b[2], w2
@@ -3952,7 +3951,7 @@ define i32 @add_v24i8_v24i32_zext(<24 x i8> %x) {
 ; CHECK-SD-DOT-NEXT:    mov v0.b[5], w5
 ; CHECK-SD-DOT-NEXT:    ld1 { v1.b }[7], [x9]
 ; CHECK-SD-DOT-NEXT:    mov v0.b[6], w6
-; CHECK-SD-DOT-NEXT:    udot v4.2s, v1.8b, v5.8b
+; CHECK-SD-DOT-NEXT:    udot v4.2s, v1.8b, v2.8b
 ; CHECK-SD-DOT-NEXT:    mov v0.b[7], w7
 ; CHECK-SD-DOT-NEXT:    addp v1.2s, v4.2s, v4.2s
 ; CHECK-SD-DOT-NEXT:    fmov w9, s1
@@ -4207,7 +4206,6 @@ define i32 @add_v24i8_v24i32_sext(<24 x i8> %x) {
 ; CHECK-SD-DOT-NEXT:    add x9, sp, #80
 ; CHECK-SD-DOT-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-SD-DOT-NEXT:    mov v0.b[1], w1
-; CHECK-SD-DOT-NEXT:    movi v5.8b, #1
 ; CHECK-SD-DOT-NEXT:    ld1 { v1.b }[2], [x9]
 ; CHECK-SD-DOT-NEXT:    add x9, sp, #88
 ; CHECK-SD-DOT-NEXT:    mov v0.b[2], w2
@@ -4224,7 +4222,7 @@ define i32 @add_v24i8_v24i32_sext(<24 x i8> %x) {
 ; CHECK-SD-DOT-NEXT:    mov v0.b[5], w5
 ; CHECK-SD-DOT-NEXT:    ld1 { v1.b }[7], [x9]
 ; CHECK-SD-DOT-NEXT:    mov v0.b[6], w6
-; CHECK-SD-DOT-NEXT:    sdot v4.2s, v1.8b, v5.8b
+; CHECK-SD-DOT-NEXT:    sdot v4.2s, v1.8b, v2.8b
 ; CHECK-SD-DOT-NEXT:    mov v0.b[7], w7
 ; CHECK-SD-DOT-NEXT:    addp v1.2s, v4.2s, v4.2s
 ; CHECK-SD-DOT-NEXT:    fmov w9, s1

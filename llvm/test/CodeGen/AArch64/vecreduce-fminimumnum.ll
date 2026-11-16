@@ -567,7 +567,7 @@ define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:  .LBB16_8:
 ; CHECK-NEXT:    str q1, [sp] // 16-byte Spill
-; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    bl __eqtf2
 ; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    cmp w0, #0

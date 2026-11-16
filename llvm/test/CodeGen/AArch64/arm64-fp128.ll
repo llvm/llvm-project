@@ -1448,10 +1448,10 @@ define <2 x fp128> @vec_neg_sub(<2 x fp128> %in) {
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    str q1, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
-; CHECK-SD-NEXT:    movi d0, #0000000000000000
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    bl __subtf3
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-SD-NEXT:    movi d0, #0000000000000000
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-SD-NEXT:    bl __subtf3
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b

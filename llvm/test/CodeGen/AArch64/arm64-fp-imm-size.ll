@@ -39,15 +39,10 @@ define float @bar() optsize {
 }
 
 define fp128 @baz() optsize {
-; CHECK-SD-LABEL: baz:
-; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:    movi d0, #0000000000000000
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: baz:
-; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: baz:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    movi.2d v0, #0000000000000000
+; CHECK-NEXT:    ret
   ret fp128 0xL00000000000000000000000000000000
 }
 

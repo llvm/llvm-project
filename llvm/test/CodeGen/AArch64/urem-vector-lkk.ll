@@ -11,7 +11,7 @@ define <4 x i16> @fold_urem_vec_1(<4 x i16> %x) {
 ; CHECK-NEXT:    adrp x8, .LCPI0_1
 ; CHECK-NEXT:    ushl v1.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    umull v1.4s, v1.4h, v2.4h
-; CHECK-NEXT:    movi d2, #0000000000000000
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-NEXT:    fneg d2, d2
 ; CHECK-NEXT:    sub v3.4h, v0.4h, v1.4h

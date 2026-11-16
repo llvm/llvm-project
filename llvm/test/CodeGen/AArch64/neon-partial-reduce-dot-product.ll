@@ -1191,11 +1191,10 @@ entry:
 define <4 x i32> @partial_reduce_shl_sext_const_rhs6(<16 x i8> %l, <4 x i32> %part) {
 ; CHECK-NODOT-LABEL: partial_reduce_shl_sext_const_rhs6:
 ; CHECK-NODOT:       // %bb.0:
-; CHECK-NODOT-NEXT:    movi v2.8b, #64
-; CHECK-NODOT-NEXT:    movi v3.16b, #64
-; CHECK-NODOT-NEXT:    smull v2.8h, v0.8b, v2.8b
-; CHECK-NODOT-NEXT:    smull2 v0.8h, v0.16b, v3.16b
-; CHECK-NODOT-NEXT:    sadalp v1.4s, v2.8h
+; CHECK-NODOT-NEXT:    movi v2.16b, #64
+; CHECK-NODOT-NEXT:    smull v3.8h, v0.8b, v2.8b
+; CHECK-NODOT-NEXT:    smull2 v0.8h, v0.16b, v2.16b
+; CHECK-NODOT-NEXT:    sadalp v1.4s, v3.8h
 ; CHECK-NODOT-NEXT:    sadalp v1.4s, v0.8h
 ; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NODOT-NEXT:    ret
@@ -1296,11 +1295,10 @@ define <4 x i32> @partial_reduce_shl_sext_non_const_rhs(<16 x i8> %l, <4 x i32> 
 define <4 x i32> @partial_reduce_shl_zext_const_rhs6(<16 x i8> %l, <4 x i32> %part) {
 ; CHECK-NODOT-LABEL: partial_reduce_shl_zext_const_rhs6:
 ; CHECK-NODOT:       // %bb.0:
-; CHECK-NODOT-NEXT:    movi v2.8b, #64
-; CHECK-NODOT-NEXT:    movi v3.16b, #64
-; CHECK-NODOT-NEXT:    umull v2.8h, v0.8b, v2.8b
-; CHECK-NODOT-NEXT:    umull2 v0.8h, v0.16b, v3.16b
-; CHECK-NODOT-NEXT:    uadalp v1.4s, v2.8h
+; CHECK-NODOT-NEXT:    movi v2.16b, #64
+; CHECK-NODOT-NEXT:    umull v3.8h, v0.8b, v2.8b
+; CHECK-NODOT-NEXT:    umull2 v0.8h, v0.16b, v2.16b
+; CHECK-NODOT-NEXT:    uadalp v1.4s, v3.8h
 ; CHECK-NODOT-NEXT:    uadalp v1.4s, v0.8h
 ; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NODOT-NEXT:    ret
