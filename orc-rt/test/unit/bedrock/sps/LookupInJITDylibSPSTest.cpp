@@ -18,6 +18,7 @@
 
 #include "orc-rt/bedrock/sps/LookupInJITDylibSPS.h"
 #include "orc-rt/support/sps/SPSJITDylibLookupFlags.h"
+#include "orc-rt/support/sps/SPSSymbolLookupResult.h"
 #include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
