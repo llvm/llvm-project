@@ -303,11 +303,6 @@ INITIALIZE_PASS_END(ShrinkWrapLegacy, DEBUG_TYPE, "Shrink Wrap Pass", false,
 
 bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
                                      bool StackAddressUsed) const {
-  // Debug instructions must not affect code generation. Their register
-  // operands are debug uses, which readsReg() still reports as reads.
-  if (MI.isDebugInstr())
-    return false;
-
   /// Check if \p Op is known to access an address not on the function's stack .
   /// At the moment, accesses where the underlying object is a global, function
   /// argument, or jump table are considered non-stack accesses. Note that the
@@ -568,7 +563,8 @@ bool ShrinkWrapImpl::checkIfRestoreSplittable(
     SmallVectorImpl<MachineBasicBlock *> &DirtyPreds,
     SmallVectorImpl<MachineBasicBlock *> &CleanPreds,
     const TargetInstrInfo *TII, RegScavenger *RS) {
-  for (const MachineInstr &MI : *CurRestore)
+  for (const MachineInstr &MI :
+       instructionsWithoutDebug(CurRestore->begin(), CurRestore->end()))
     if (useOrDefCSROrFI(MI, RS, /*StackAddressUsed=*/true))
       return false;
 
@@ -630,7 +626,8 @@ bool ShrinkWrapImpl::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
       DirtyBBs.insert(&MBB);
       continue;
     }
-    for (const MachineInstr &MI : MBB)
+    for (const MachineInstr &MI :
+         instructionsWithoutDebug(MBB.begin(), MBB.end()))
       if (useOrDefCSROrFI(MI, RS, /*StackAddressUsed=*/true)) {
         DirtyBBs.insert(&MBB);
         break;
@@ -875,7 +872,8 @@ bool ShrinkWrapImpl::performShrinkWrapping(
       }
     }
 
-    for (const MachineInstr &MI : *MBB) {
+    for (const MachineInstr &MI :
+         instructionsWithoutDebug(MBB->begin(), MBB->end())) {
       if (useOrDefCSROrFI(MI, RS, StackAddressUsed)) {
         // Save (resp. restore) point must dominate (resp. post dominate)
         // MI. Look for the proper basic block for those.
