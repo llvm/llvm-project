@@ -276,6 +276,14 @@ __device__ void test_frexp_exp_f32(int* out, float a) {
   *out = __builtin_amdgcn_frexp_expf(a);
 }
 
+// CIR-LABEL: @_Z18test_frexp_exp_f64Pid
+// CIR: cir.call_llvm_intrinsic "amdgcn.frexp.exp" {{.*}} : (!cir.double) -> !s32i
+// LLVM: define{{.*}} void @_Z18test_frexp_exp_f64Pid
+// LLVM: call{{.*}} i32 @llvm.amdgcn.frexp.exp.i32.f64(double %{{.*}})
+__device__ void test_frexp_exp_f64(int* out, double a) {
+  *out = __builtin_amdgcn_frexp_exp(a);
+}
+
 // CIR-LABEL: @_Z14test_fract_f32Pff
 // CIR: cir.call_llvm_intrinsic "amdgcn.fract" {{.*}} : (!cir.float) -> !cir.float
 // LLVM: define{{.*}} void @_Z14test_fract_f32Pff
