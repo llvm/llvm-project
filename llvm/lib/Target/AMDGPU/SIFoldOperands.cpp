@@ -2477,12 +2477,14 @@ bool SIFoldOperandsImpl::tryFoldClamp(MachineInstr &MI) {
   // Def changes the value of every register in the chain, so each of them must
   // have no other users.
   MachineInstr *Def = MRI->getVRegDef(ClampSrc->getReg());
-  while (Def->isCopy()) {
+  while (Def && Def->isCopy()) {
     Register CopySrcReg = Def->getOperand(1).getReg();
     if (!CopySrcReg.isVirtual() || !MRI->hasOneNonDBGUser(CopySrcReg))
       return false;
     Def = MRI->getVRegDef(CopySrcReg);
   }
+  if (!Def)
+    return false;
 
   // The type of clamp must be compatible.
   if (!SIInstrInfo::hasSameClamp(*Def, MI))
