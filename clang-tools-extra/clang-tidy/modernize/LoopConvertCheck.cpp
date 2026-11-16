@@ -60,6 +60,7 @@ static constexpr char LoopNameIterator[] = "forLoopIterator";
 static constexpr char LoopNameReverseIterator[] = "forLoopReverseIterator";
 static constexpr char LoopNamePseudoArray[] = "forLoopPseudoArray";
 static constexpr char ConditionBoundName[] = "conditionBound";
+static constexpr char InclusiveConditionName[] = "inclusiveCondition";
 static constexpr char InitVarName[] = "initVar";
 static constexpr char BeginCallName[] = "beginCall";
 static constexpr char EndCallName[] = "endCall";
@@ -120,7 +121,16 @@ static StatementMatcher makeArrayLoopMatcher() {
 
   return forStmt(unless(isInTemplateInstantiation()),
                  hasLoopInit(declStmt(hasSingleDecl(initToZeroMatcher()))),
-                 hasCondition(arrayConditionMatcher(ArrayBoundMatcher)),
+                 hasCondition(
+                     anyOf(arrayConditionMatcher(ArrayBoundMatcher),
+                           binaryOperator(
+                               anyOf(allOf(hasOperatorName("<="),
+                                           hasLHS(integerComparisonMatcher()),
+                                           hasRHS(ArrayBoundMatcher)),
+                                     allOf(hasOperatorName(">="),
+                                           hasLHS(ArrayBoundMatcher),
+                                           hasRHS(integerComparisonMatcher()))))
+                               .bind(InclusiveConditionName))),
                  hasIncrement(
                      unaryOperator(hasOperatorName("++"),
                                    hasUnaryOperand(incrementVarMatcher()))))
@@ -1061,9 +1071,10 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
   if (!ContainerExpr && !BoundExpr)
     return;
 
-  ForLoopIndexUseVisitor Finder(Context, LoopVar, EndVar, ContainerExpr,
-                                BoundExpr,
-                                Descriptor.ContainerNeedsDereference);
+  ForLoopIndexUseVisitor Finder(
+      Context, LoopVar, EndVar, ContainerExpr, BoundExpr,
+      Descriptor.ContainerNeedsDereference,
+      Nodes.getNodeAs<BinaryOperator>(InclusiveConditionName) != nullptr);
 
   // Find expressions and variables on which the container depends.
   if (ContainerExpr) {
