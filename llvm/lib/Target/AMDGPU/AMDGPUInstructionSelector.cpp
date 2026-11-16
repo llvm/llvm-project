@@ -13,6 +13,7 @@
 
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPU.h"
+#include "AMDGPUBitOp3.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPURegisterBankInfo.h"
@@ -61,6 +62,7 @@ void AMDGPUInstructionSelector::setupMF(MachineFunction &MF,
   MRI = &MF.getRegInfo();
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   Subtarget->checkSubtargetFeatures(MF.getFunction());
+  LogicConstants.reset();
   InstructionSelector::setupMF(MF, VT, CoverageInfo, PSI, BFI);
 }
 
@@ -4430,6 +4432,137 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(Register R,
   return std::make_pair(NumOpcodes + 1, TTbl);
 }
 
+namespace {
+/// How the V_BITOP3 cost check sees GlobalISel registers, after copies
+/// (AMDGPUBitOp3.h).
+struct BitOp3MIRView {
+  const MachineRegisterInfo &MRI;
+  const RegisterBankInfo &RBI;
+  const TargetRegisterInfo &TRI;
+  const GCNSubtarget &ST;
+  const BasicBlock *BB;
+  AMDGPU::LogicConstantBlocks &LogicConstants;
+
+  bool isLogicOp(Register R) const {
+    unsigned Opc = MRI.getVRegDef(R)->getOpcode();
+    return Opc == TargetOpcode::G_AND || Opc == TargetOpcode::G_OR ||
+           Opc == TargetOpcode::G_XOR;
+  }
+  std::pair<Register, Register> getOperands(Register R) const {
+    const MachineInstr &MI = *MRI.getVRegDef(R);
+    return {getSrcRegIgnoringCopies(MI.getOperand(1).getReg(), MRI),
+            getSrcRegIgnoringCopies(MI.getOperand(2).getReg(), MRI)};
+  }
+  // Users through copies count. A user can be dead: selection is bottom-up,
+  // and an instruction whose uses were all selected away, for example into a
+  // V_BITOP3 further down, is only erased when the walk reaches it.
+  bool areUsersIn(Register R, ArrayRef<Register> Removed) const {
+    SmallVector<Register, 4> Worklist = {R};
+    while (!Worklist.empty()) {
+      for (const MachineInstr &U :
+           MRI.use_nodbg_instructions(Worklist.pop_back_val())) {
+        Register Def = U.getNumExplicitDefs() == 1 && U.getOperand(0).isReg()
+                           ? U.getOperand(0).getReg()
+                           : Register();
+        if (!Def.isVirtual())
+          return false;
+        if (is_contained(Removed, Def) || isTriviallyDead(U, MRI))
+          continue;
+        if (!U.isCopy())
+          return false;
+        Worklist.push_back(Def);
+      }
+    }
+    return true;
+  }
+
+  AMDGPU::LogicOp getOp(Register R) const {
+    LLT Ty = MRI.getType(R);
+    if (!Ty.isScalar() || Ty.getSizeInBits() != 32)
+      return AMDGPU::LogicOp::None;
+    switch (MRI.getVRegDef(R)->getOpcode()) {
+    case TargetOpcode::G_AND:
+      return AMDGPU::LogicOp::And;
+    case TargetOpcode::G_OR:
+      return AMDGPU::LogicOp::Or;
+    case TargetOpcode::G_XOR:
+      return AMDGPU::LogicOp::Xor;
+    default:
+      return AMDGPU::LogicOp::None;
+    }
+  }
+  bool isAllOnes(Register R) const { return mi_match(R, MRI, m_AllOnesInt()); }
+  bool isDivergent(Register R) const {
+    const RegisterBank *RB = RBI.getRegBank(R, MRI, TRI);
+    return RB && RB->getID() == AMDGPU::VGPRRegBankID;
+  }
+  bool hasOneUse(Register R) const { return MRI.hasOneNonDBGUse(R); }
+
+  bool is16Bit(Register R) const {
+    return MRI.getType(R).getSizeInBits() == 16;
+  }
+  bool hasSDWA() const { return ST.hasSDWA(); }
+  // An AND with 0xff.
+  bool isByteMask(Register R) const {
+    const MachineInstr &Def = *MRI.getVRegDef(R);
+    std::optional<ValueAndVReg> C =
+        getIConstantVRegValWithLookThrough(Def.getOperand(2).getReg(), MRI);
+    return Def.getOpcode() == TargetOpcode::G_AND && C && C->Value == 0xff;
+  }
+
+  // A constant that is not an inline constant is encoded as a literal.
+  bool isLiteral(Register R) const {
+    std::optional<ValueAndVReg> C = getIConstantVRegValWithLookThrough(R, MRI);
+    return C && !AMDGPU::isInlinableLiteral32(C->Value.getSExtValue(),
+                                              ST.hasInv2PiInlineImm());
+  }
+  // A source that is not in a VGPR is read over the constant bus, except an
+  // inline constant, which becomes an immediate operand.
+  bool needsBus(Register R) const {
+    if (getIConstantVRegValWithLookThrough(R, MRI))
+      return isLiteral(R);
+    return !isDivergent(getSrcRegIgnoringCopies(R, MRI));
+  }
+  bool hasVOP3Literal() const { return ST.hasVOP3Literal(); }
+  // The limit is the same for V_BITOP3_B16 and the instructions above.
+  unsigned getBusLimit() const {
+    return ST.getConstantBusLimit(AMDGPU::V_BITOP3_B32_e64);
+  }
+  // Whether a user of R other than the operations in Removed may need R in a
+  // register: a divergent logic operation, which may become a VOP3 too, or
+  // an instruction already selected to a VOP3 without a 32-bit encoding.
+  // Users through copies count.
+  bool hasOtherRegisterUse(Register R, ArrayRef<Register> Removed) const {
+    const SIInstrInfo *TII = ST.getInstrInfo();
+    SmallVector<Register, 4> Worklist = {R};
+    while (!Worklist.empty()) {
+      for (const MachineInstr &U :
+           MRI.use_nodbg_instructions(Worklist.pop_back_val())) {
+        unsigned Opc = U.getOpcode();
+        if (U.isCopy()) {
+          if (U.getOperand(0).getReg().isVirtual())
+            Worklist.push_back(U.getOperand(0).getReg());
+        } else if (Opc == TargetOpcode::G_AND || Opc == TargetOpcode::G_OR ||
+                   Opc == TargetOpcode::G_XOR) {
+          Register Def = U.getOperand(0).getReg();
+          if (!is_contained(Removed, Def) && isDivergent(Def))
+            return true;
+        } else if (!isPreISelGenericOpcode(Opc) && TII->isVOP3(Opc) &&
+                   !TII->hasVALU32BitEncoding(Opc)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  // R is a literal.
+  bool isUsedInOtherBlock(Register R) const {
+    return LogicConstants.isUsedInOtherBlock(
+        BB, getIConstantVRegValWithLookThrough(R, MRI)->Value.getZExtValue());
+  }
+};
+} // namespace
+
 bool AMDGPUInstructionSelector::selectBITOP3(MachineInstr &MI) const {
   if (!Subtarget->hasBitOp3Insts())
     return false;
@@ -4456,20 +4589,10 @@ bool AMDGPUInstructionSelector::selectBITOP3(MachineInstr &MI) const {
   unsigned Size = MRI->getType(DstReg).getSizeInBits();
   assert((Size == 16 || Size == 32) && "unexpected VALU logic op size");
   const bool IsB32 = Size == 32;
-  if (NumOpcodes == 2 && IsB32) {
-    // Avoid using BITOP3 for OR3, XOR3, AND_OR. This is not faster but makes
-    // asm more readable. This cannot be modeled with AddedComplexity because
-    // selector does not know how many operations did we match.
-    if (mi_match(MI, *MRI, m_GXor(m_GXor(m_Reg(), m_Reg()), m_Reg())) ||
-        mi_match(MI, *MRI, m_GOr(m_GOr(m_Reg(), m_Reg()), m_Reg())) ||
-        mi_match(MI, *MRI, m_GOr(m_GAnd(m_Reg(), m_Reg()), m_Reg())))
-      return false;
-  } else if (NumOpcodes < 4) {
-    // For a uniform case threshold should be higher to account for moves
-    // between VGPRs and SGPRs. It needs one operand in a VGPR, rest two can be
-    // in SGPRs and a readtfirstlane after.
+  BitOp3MIRView View{
+      *MRI, RBI, TRI, STI, MI.getParent()->getBasicBlock(), LogicConstants};
+  if (!AMDGPU::isBitOp3Profitable(DstReg, ArrayRef<Register>(Src), View))
     return false;
-  }
 
   unsigned Opc = IsB32 ? AMDGPU::V_BITOP3_B32_e64 : AMDGPU::V_BITOP3_B16_e64;
   if (!IsB32 && STI.hasTrue16BitInsts())

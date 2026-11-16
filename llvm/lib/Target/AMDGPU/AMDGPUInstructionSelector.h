@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRUCTIONSELECTOR_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRUCTIONSELECTOR_H
 
+#include "AMDGPUBitOp3.h"
 #include "SIDefines.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/IR/InstrTypes.h"
@@ -50,6 +51,10 @@ class AMDGPUInstructionSelector final : public InstructionSelector {
 private:
   MachineRegisterInfo *MRI;
   const GCNSubtarget *Subtarget;
+
+  // The constants of the logic operations in each block of the current
+  // function, for the V_BITOP3 cost check.
+  mutable AMDGPU::LogicConstantBlocks LogicConstants;
 
 public:
   AMDGPUInstructionSelector(const GCNSubtarget &STI,

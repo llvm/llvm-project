@@ -13,6 +13,7 @@
 
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPU.h"
+#include "AMDGPUBitOp3.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
@@ -188,6 +189,7 @@ bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   Subtarget->checkSubtargetFeatures(MF.getFunction());
   Mode = SIModeRegisterDefaults(MF.getFunction(), *Subtarget);
+  LogicConstants.reset();
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
@@ -4795,6 +4797,92 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
   return std::make_pair(NumOpcodes + 1, TTbl);
 }
 
+namespace {
+/// How the V_BITOP3 cost check sees SelectionDAG values (AMDGPUBitOp3.h).
+struct BitOp3DAGView {
+  const GCNSubtarget &ST;
+  const BasicBlock *BB;
+  AMDGPU::LogicConstantBlocks &LogicConstants;
+
+  static bool isIn(ArrayRef<SDValue> Values, const SDNode *N) {
+    return any_of(Values, [&](SDValue V) { return V.getNode() == N; });
+  }
+
+  bool isLogicOp(SDValue V) const {
+    unsigned Opc = V.getOpcode();
+    return Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR;
+  }
+  std::pair<SDValue, SDValue> getOperands(SDValue V) const {
+    return {V.getOperand(0), V.getOperand(1)};
+  }
+  bool areUsersIn(SDValue V, ArrayRef<SDValue> Removed) const {
+    return all_of(V->users(), [&](SDNode *U) { return isIn(Removed, U); });
+  }
+
+  AMDGPU::LogicOp getOp(SDValue V) const {
+    if (V.getValueType() != MVT::i32)
+      return AMDGPU::LogicOp::None;
+    switch (V.getOpcode()) {
+    case ISD::AND:
+      return AMDGPU::LogicOp::And;
+    case ISD::OR:
+      return AMDGPU::LogicOp::Or;
+    case ISD::XOR:
+      return AMDGPU::LogicOp::Xor;
+    default:
+      return AMDGPU::LogicOp::None;
+    }
+  }
+  bool isAllOnes(SDValue V) const { return isAllOnesConstant(V); }
+  bool isDivergent(SDValue V) const { return V->isDivergent(); }
+  bool hasOneUse(SDValue V) const { return V.hasOneUse(); }
+
+  bool is16Bit(SDValue V) const { return V.getValueType() == MVT::i16; }
+  bool hasSDWA() const { return ST.hasSDWA(); }
+  // An AND with 0xff.
+  bool isByteMask(SDValue V) const {
+    return V.getOpcode() == ISD::AND && isa<ConstantSDNode>(V.getOperand(1)) &&
+           V.getConstantOperandVal(1) == 0xff;
+  }
+
+  // A constant that is not an inline constant is encoded as a literal.
+  bool isLiteral(SDValue V) const {
+    auto *C = dyn_cast<ConstantSDNode>(V);
+    return C && !AMDGPU::isInlinableLiteral32(C->getSExtValue(),
+                                              ST.hasInv2PiInlineImm());
+  }
+  // A source in an SGPR or a literal is read over the constant bus.
+  bool needsBus(SDValue V) const {
+    return isa<ConstantSDNode>(V) ? isLiteral(V) : !V->isDivergent();
+  }
+  bool hasVOP3Literal() const { return ST.hasVOP3Literal(); }
+  // The limit is the same for V_BITOP3_B16 and the instructions above.
+  unsigned getBusLimit() const {
+    return ST.getConstantBusLimit(AMDGPU::V_BITOP3_B32_e64);
+  }
+  // Whether a user of V other than the operations in Removed may need V in a
+  // register: a divergent logic operation, which may become a VOP3 too, or
+  // an instruction already selected to a VOP3 without a 32-bit encoding.
+  bool hasOtherRegisterUse(SDValue V, ArrayRef<SDValue> Removed) const {
+    const SIInstrInfo *TII = ST.getInstrInfo();
+    return any_of(V->users(), [&](SDNode *U) {
+      if (isIn(Removed, U))
+        return false;
+      if (U->isMachineOpcode()) {
+        unsigned Opc = U->getMachineOpcode();
+        return TII->isVOP3(Opc) && !TII->hasVALU32BitEncoding(Opc);
+      }
+      return isLogicOp(SDValue(U, 0)) && U->isDivergent();
+    });
+  }
+  // V is a literal.
+  bool isUsedInOtherBlock(SDValue V) const {
+    return LogicConstants.isUsedInOtherBlock(
+        BB, cast<ConstantSDNode>(V)->getZExtValue());
+  }
+};
+} // namespace
+
 bool AMDGPUDAGToDAGISel::SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1,
                                       SDValue &Src2, SDValue &Tbl) const {
   SmallVector<SDValue, 3> Src;
@@ -4808,24 +4896,16 @@ bool AMDGPUDAGToDAGISel::SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1,
   if (NumOpcodes < 2 || Src.empty())
     return false;
 
-  // For a uniform case threshold should be higher to account for moves between
-  // VGPRs and SGPRs. It needs one operand in a VGPR, rest two can be in SGPRs
-  // and a readtfirstlane after.
-  if (NumOpcodes < 4 && !In->isDivergent())
-    return false;
-
-  if (NumOpcodes == 2 && In.getValueType() == MVT::i32) {
-    // Avoid using BITOP3 for OR3, XOR3, AND_OR. This is not faster but makes
-    // asm more readable. This cannot be modeled with AddedComplexity because
-    // selector does not know how many operations did we match.
-    if ((In.getOpcode() == ISD::XOR || In.getOpcode() == ISD::OR) &&
-        (In.getOperand(0).getOpcode() == In.getOpcode() ||
-         In.getOperand(1).getOpcode() == In.getOpcode()))
+  if (!In->isDivergent()) {
+    // For a uniform case threshold should be higher to account for moves
+    // between VGPRs and SGPRs. It needs one operand in a VGPR, rest two can be
+    // in SGPRs and a readtfirstlane after.
+    if (NumOpcodes < 4)
       return false;
-
-    if (In.getOpcode() == ISD::OR &&
-        (In.getOperand(0).getOpcode() == ISD::AND ||
-         In.getOperand(1).getOpcode() == ISD::AND))
+  } else {
+    BitOp3DAGView View{*Subtarget, FuncInfo->MBB->getBasicBlock(),
+                       LogicConstants};
+    if (!AMDGPU::isBitOp3Profitable(In, ArrayRef<SDValue>(Src), View))
       return false;
   }
 
