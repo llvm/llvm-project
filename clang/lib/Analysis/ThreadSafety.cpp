@@ -388,20 +388,11 @@ private:
     auto I = llvm::find_if(*this, [&](FactID ID) { return P(FM[ID]); });
     return I != end() ? &FM[*I] : nullptr;
   }
-
-  /// Whether \p FE is a try fact of \p CapE, unresolved: the capability may
-  /// be held through it.
-  static bool isConditionalOf(const FactEntry &FE, const CapabilityExpr &CapE) {
-    const auto *W = dyn_cast<TryFactEntry>(&FE);
-    return W && W->conditional() && W->matches(CapE);
-  }
-
-  /// Whether \p FE is the try fact of \p CapE from the call \p Origin in
-  /// lock kind \p Kind, whatever its state: a try fact's identity.
-  static bool isTryFactOf(const FactEntry &FE, const CapabilityExpr &CapE,
-                          const Expr *Origin, LockKind Kind) {
-    const auto *W = dyn_cast<TryFactEntry>(&FE);
-    return W && W->origin() == Origin && W->kind() == Kind && W->matches(CapE);
+  /// The first element of the view \p R satisfying \p P, or null.
+  template <typename Range, typename Pred>
+  static auto *firstOf(Range &&R, Pred P) {
+    auto I = llvm::find_if(R, P);
+    return I != R.end() ? &*I : nullptr;
   }
 
 public:
@@ -485,6 +476,30 @@ public:
   }
   /// \}
 
+  /// \name Facts of one capability
+  /// Lazy views of the facts of \p CapE -- all of them, or only its try
+  /// facts -- filtered from the set in place: nothing is copied or
+  /// reordered. A view is invalidated by any change to the set; to remove
+  /// facts, use eraseTryFacts(), or copy the view first.
+  /// \{
+  auto factsOf(const FactManager &FM, const CapabilityExpr &CapE) const {
+    return llvm::map_range(
+        llvm::make_filter_range(
+            FactIDs, [&FM, CapE](FactID ID) { return FM[ID].matches(CapE); }),
+        [&FM](FactID ID) -> const FactEntry & { return FM[ID]; });
+  }
+
+  auto tryFactsOf(const FactManager &FM, const CapabilityExpr &CapE) const {
+    return llvm::map_range(
+        llvm::make_filter_range(
+            factsOf(FM, CapE),
+            [](const FactEntry &FE) { return isa<TryFactEntry>(FE); }),
+        [](const FactEntry &FE) -> const TryFactEntry & {
+          return cast<TryFactEntry>(FE);
+        });
+  }
+  /// \}
+
   /// \name Definite facts
   /// The one fact stating that \p CapE is held (or, negated, not held).
   /// \{
@@ -494,11 +509,9 @@ public:
     });
   }
 
-  const FactEntry *findDefinite(FactManager &FM,
+  const FactEntry *findDefinite(const FactManager &FM,
                                 const CapabilityExpr &CapE) const {
-    return findEntry(FM, [&](const FactEntry &FE) {
-      return isDefinite(FE) && FE.matches(CapE);
-    });
+    return firstOf(factsOf(FM, CapE), isDefinite);
   }
 
   const FactEntry *findDefiniteUniv(FactManager &FM,
@@ -523,105 +536,57 @@ public:
   /// \name Try facts
   /// The try facts of \p CapE.
   /// \{
-  iterator findTryFactIter(FactManager &FM, const CapabilityExpr &CapE,
-                           const Expr *Origin, LockKind Kind) {
-    return findIf(FM, [&](const FactEntry &FE) {
-      return isTryFactOf(FE, CapE, Origin, Kind);
-    });
-  }
-
-  const TryFactEntry *findTryFact(FactManager &FM, const CapabilityExpr &CapE,
+  /// The try fact of \p CapE from the call \p Origin in lock kind \p Kind,
+  /// whatever its state: a try fact's identity.
+  const TryFactEntry *findTryFact(const FactManager &FM,
+                                  const CapabilityExpr &CapE,
                                   const Expr *Origin, LockKind Kind) const {
-    return cast_or_null<TryFactEntry>(findEntry(FM, [&](const FactEntry &FE) {
-      return isTryFactOf(FE, CapE, Origin, Kind);
-    }));
+    return firstOf(tryFactsOf(FM, CapE), [&](const TryFactEntry &W) {
+      return W.origin() == Origin && W.kind() == Kind;
+    });
   }
 
   /// The first unresolved try fact of \p CapE, whichever its origin: the
   /// capability may be held.
-  const TryFactEntry *firstConditional(FactManager &FM,
+  const TryFactEntry *firstConditional(const FactManager &FM,
                                        const CapabilityExpr &CapE) const {
-    return cast_or_null<TryFactEntry>(findEntry(
-        FM, [&](const FactEntry &FE) { return isConditionalOf(FE, CapE); }));
+    return firstOf(tryFactsOf(FM, CapE),
+                   [](const TryFactEntry &W) { return W.conditional(); });
   }
 
-  bool anyConditional(FactManager &FM, const CapabilityExpr &CapE) const {
+  bool anyConditional(const FactManager &FM, const CapabilityExpr &CapE) const {
     return firstConditional(FM, CapE) != nullptr;
   }
 
-  /// Whether every unresolved try fact of \p CapE has the lock kind \p Kind.
-  bool conditionalsAllOfKind(FactManager &FM, const CapabilityExpr &CapE,
-                             LockKind Kind) const {
-    return llvm::all_of(*this, [&](FactID ID) {
-      return !isConditionalOf(FM[ID], CapE) || FM[ID].kind() == Kind;
-    });
-  }
-
-  /// Collect every try fact of \p CapE, resolved or not, into \p Out, so
-  /// that a caller can mutate the set while visiting them.
-  void collectTryFacts(FactManager &FM, const CapabilityExpr &CapE,
-                       SmallVectorImpl<const TryFactEntry *> &Out) const {
-    for (FactID ID : *this)
-      if (const auto *W = dyn_cast<TryFactEntry>(&FM[ID]);
-          W && W->matches(CapE))
-        Out.push_back(W);
-  }
-
-  /// Remove every unresolved try fact of \p CapE originating from
-  /// \p Origin (one per lock kind); returns whether there was any.
-  bool removeConditionalsOf(FactManager &FM, const CapabilityExpr &CapE,
-                            const Expr *Origin) {
+  /// Remove every try fact of \p CapE that satisfies \p P; returns whether
+  /// there was any.
+  template <typename Pred>
+  bool eraseTryFacts(const FactManager &FM, const CapabilityExpr &CapE,
+                     Pred P) {
     const size_t Before = FactIDs.size();
     llvm::erase_if(FactIDs, [&](FactID ID) {
       const auto *W = dyn_cast<TryFactEntry>(&FM[ID]);
-      return W && W->conditional() && W->origin() == Origin && W->matches(CapE);
+      return W && W->matches(CapE) && P(*W);
     });
     return FactIDs.size() != Before;
   }
-
-  /// Remove every unresolved try fact of \p CapE: the capability is no
-  /// longer possibly held through any of them.
-  void removeAllConditional(FactManager &FM, const CapabilityExpr &CapE) {
-    llvm::erase_if(FactIDs,
-                   [&](FactID ID) { return isConditionalOf(FM[ID], CapE); });
-  }
-
-  /// The hold of \p CapE is gone: every ProvedHeld try fact of it no longer
-  /// proves a live level, and is dropped.
-  void releaseProved(FactManager &FM, const CapabilityExpr &CapE) {
-    llvm::erase_if(FactIDs, [&](FactID ID) {
-      const auto *W = dyn_cast<TryFactEntry>(&FM[ID]);
-      return W && W->provedHeld() && W->matches(CapE);
-    });
-  }
   /// \}
-
-  /// The definite fact of \p CapE, or else its first unresolved try fact:
-  /// whether the capability is held or may be held. A resolved try fact is
-  /// neither.
-  const FactEntry *findDefiniteOrConditional(FactManager &FM,
-                                             const CapabilityExpr &CapE) const {
-    return findEntry(FM, [&](const FactEntry &FE) {
-      return isa<TryFactEntry>(FE) ? isConditionalOf(FE, CapE)
-                                   : FE.matches(CapE);
-    });
-  }
 
   /// \name Counterparts
   /// The fact of the same form as \p F -- definite, or the try fact of the
   /// same call in the same kind -- for \p F's capability: what a join
   /// pairs \p F with.
   /// \{
-  iterator findCounterpartIter(FactManager &FM, const FactEntry &F) {
-    if (const auto *W = dyn_cast<TryFactEntry>(&F))
-      return findTryFactIter(FM, F, W->origin(), W->kind());
-    return findDefiniteIter(FM, F);
-  }
-
-  const FactEntry *findCounterpart(FactManager &FM, const FactEntry &F) const {
+  const FactEntry *findCounterpart(const FactManager &FM,
+                                   const FactEntry &F) const {
     if (const auto *W = dyn_cast<TryFactEntry>(&F))
       return findTryFact(FM, F, W->origin(), W->kind());
     return findDefinite(FM, F);
+  }
+
+  iterator findCounterpartIter(FactManager &FM, const FactEntry &F) {
+    const FactEntry *C = findCounterpart(FM, F);
+    return C ? findFactIter(FM, *C) : end();
   }
   /// \}
   /// Whether a definite fact of the capability declared by \p Vd is present.
@@ -1413,7 +1378,7 @@ public:
     }
     // The hold is gone: whatever try-acquire's success proved a level of
     // it no longer proves a live one.
-    FSet.releaseProved(FactMan, Cp);
+    FSet.eraseTryFacts(FactMan, Cp, std::mem_fn(&TryFactEntry::provedHeld));
     if (!Cp.negative() && !FSet.anyConditional(FactMan, Cp)) {
       // Provably released -- unless a conditional try fact remains, in
       // which case the capability is now back to conditionally held.
@@ -1517,7 +1482,7 @@ static bool handleUncheckedConditionalUnlock(FactSet &FSet,
   if (Handler) {
     Handler->handleUnmatchedUnlock(Cp.getKind(), Cp.toString(), UnlockLoc,
                                    SourceLocation(), true);
-    FSet.removeAllConditional(FactMan, Cp);
+    FSet.eraseTryFacts(FactMan, Cp, std::mem_fn(&TryFactEntry::conditional));
     // A pre-existing negative fact survives a try-acquire (it is consumed
     // only on the success edge), so do not add a duplicate over it.
     if (!Cp.negative())
@@ -1552,14 +1517,17 @@ static void addLockOverConditional(FactSet &FSet, FactManager &FactMan,
                                    const FactEntry *Entry,
                                    const FactEntry &Cond,
                                    ThreadSafetyHandler *Handler) {
-  const bool SameKind =
-      FSet.conditionalsAllOfKind(FactMan, *Entry, Entry->kind());
+  const bool SameKind = llvm::all_of(
+      FSet.tryFactsOf(FactMan, *Entry), [&](const TryFactEntry &W) {
+        return !W.conditional() || W.kind() == Entry->kind();
+      });
   if (Handler &&
       !(Entry->reentrant() && isa<LockableFactEntry>(Entry) && SameKind))
     Handler->handleDoubleLock(Entry->getKind(), Entry->toString(), Cond.loc(),
                               Entry->loc(), /*MaybeHeld=*/true);
   if (!SameKind)
-    FSet.removeAllConditional(FactMan, *Entry);
+    FSet.eraseTryFacts(FactMan, *Entry,
+                       std::mem_fn(&TryFactEntry::conditional));
   FSet.addLock(FactMan, Entry);
 }
 
@@ -1632,10 +1600,9 @@ public:
 
     for (const auto &UnderlyingMutex : getManaged()) {
       // Held or possibly held: either way the scope still has it to release.
-      const auto *Entry =
-          FSet.findDefiniteOrConditional(FactMan, UnderlyingMutex.Cap);
-      if ((UnderlyingMutex.Kind == UCK_Acquired && Entry) ||
-          (UnderlyingMutex.Kind != UCK_Acquired && !Entry)) {
+      const bool Held = FSet.findDefinite(FactMan, UnderlyingMutex.Cap) ||
+                        FSet.anyConditional(FactMan, UnderlyingMutex.Cap);
+      if ((UnderlyingMutex.Kind == UCK_Acquired) == Held) {
         // If this scoped lock manages another mutex, and if the underlying
         // mutex is still/not held, then warn about the underlying mutex.
         Handler.handleMutexHeldEndOfScope(UnderlyingMutex.Cap.getKind(),
@@ -1723,7 +1690,7 @@ private:
       // As in LockableFactEntry::handleUnlock(): released -- unless a
       // conditional try fact remains, in which case the capability is now
       // merely conditionally held.
-      FSet.releaseProved(FactMan, Cp);
+      FSet.eraseTryFacts(FactMan, Cp, std::mem_fn(&TryFactEntry::provedHeld));
       if (!FSet.anyConditional(FactMan, Cp))
         installNegativeFact(FSet, FactMan, !Cp, loc,
                             /*KeepExisting=*/false);
@@ -2056,7 +2023,8 @@ void ThreadSafetyAnalyzer::addLock(FactSet &FSet, const FactEntry *Entry,
       // diagnostic: it claims exactly that knowledge, and the conditional
       // acquisitions are subsumed by it -- their results, once checked,
       // must not add levels the assert already accounts for.
-      FSet.removeAllConditional(FactMan, *Entry);
+      FSet.eraseTryFacts(FactMan, *Entry,
+                         std::mem_fn(&TryFactEntry::conditional));
       FSet.addLock(FactMan, Entry);
       return;
     }
@@ -2126,8 +2094,9 @@ void ThreadSafetyAnalyzer::addTryLock(FactSet &FSet, const CapabilityExpr &CE,
       return;
     }
   }
-  SmallVector<const TryFactEntry *, 2> TryFacts;
-  FSet.collectTryFacts(FactMan, CE, TryFacts);
+  // Copied: the loop may remove what it visits.
+  const auto TryFacts = llvm::to_vector<2>(
+      llvm::make_pointer_range(FSet.tryFactsOf(FactMan, CE)));
   for (const TryFactEntry *W : TryFacts) {
     if (W->conditional()) {
       if (W->kind() != LK || W->origin() == Call) {
@@ -3635,13 +3604,11 @@ const FactEntry *LocksetJoin::demoteToConditional(const FactEntry &Def,
     warnReentrancyMismatch(Def, LEK);
   // The call's try fact in the merged set is conditional: the proof it
   // gave on its side does not hold on the other.
-  if (FactSet::iterator It =
-          EntrySet.findTryFactIter(FactMan, Def, Origin, Def.kind());
-      It != EntrySet.end()) {
-    const auto &W = cast<TryFactEntry>(FactMan[*It]);
-    if (!W.conditional())
+  if (const TryFactEntry *W =
+          EntrySet.findTryFact(FactMan, Def, Origin, Def.kind())) {
+    if (!W->conditional())
       EntrySet.replaceFact(
-          FactMan, It, W.withState(FactMan, TryFactEntry::State::Conditional));
+          FactMan, *W, W->withState(FactMan, TryFactEntry::State::Conditional));
   } else {
     EntrySet.addLock(FactMan, LDef.asConditional(FactMan, Origin));
   }
