@@ -18,8 +18,8 @@
 
 #include "orc-rt/bedrock/sps/LookupInJITDylibSPS.h"
 #include "orc-rt/support/sps/SPSJITDylibLookupFlags.h"
-#include "orc-rt/support/sps/SPSRemoteSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSSymbolLookupResult.h"
+#include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "BedrockTestUtils.h"
@@ -99,7 +99,7 @@ static void transportFailure(orc_rt_SessionRef S,
 static Expected<SymbolLookupResult> runLookup(orc_rt_WrapperFunction Handler,
                                               ControllerState &CS,
                                               JITDylibLookupFlags JDLookupFlags,
-                                              const RemoteSymbolLookupSet &LS) {
+                                              const SymbolLookupSet &LS) {
   Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
   DirectControllerAccess::HandlerMap HM;
   HM[&orc_rt_tag_sps_lookupInJITDylib] = Handler;
@@ -124,8 +124,10 @@ TEST(LookupInJITDylibSPSTest, EmptyLookup) {
 TEST(LookupInJITDylibSPSTest, ArgumentsRoundTrip) {
   // Names, order, and both SymbolLookupFlags values must reach the controller
   // intact.
-  RemoteSymbolLookupSet LS{{"foo", SymbolLookupFlags::RequiredSymbol},
-                           {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}};
+  StringPool SP;
+  SymbolLookupSet LS{
+      {SP.intern("foo"), SymbolLookupFlags::RequiredSymbol},
+      {SP.intern("bar"), SymbolLookupFlags::WeaklyReferencedSymbol}};
   ControllerState CS;
   CS.ToReturn.resize(LS.size());
 
@@ -134,8 +136,10 @@ TEST(LookupInJITDylibSPSTest, ArgumentsRoundTrip) {
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   ASSERT_TRUE(CS.Called);
   ASSERT_EQ(CS.Received.size(), LS.size());
-  for (size_t I = 0; I != LS.size(); ++I)
-    EXPECT_EQ(CS.Received[I], LS[I]) << "at index " << I;
+  for (size_t I = 0; I != LS.size(); ++I) {
+    EXPECT_EQ(CS.Received[I].first, *LS[I].first) << "at index " << I;
+    EXPECT_EQ(CS.Received[I].second, LS[I].second) << "at index " << I;
+  }
 }
 
 TEST(LookupInJITDylibSPSTest, JITDylibLookupFlagsRoundTrip) {
@@ -153,10 +157,11 @@ TEST(LookupInJITDylibSPSTest, ResultsRoundTrip) {
   // All three result states must come back as sent. In particular, "not
   // found" (nullopt) must stay distinct from "found at null".
   int X = 0;
-  RemoteSymbolLookupSet LS{
-      {"found", SymbolLookupFlags::RequiredSymbol},
-      {"notFound", SymbolLookupFlags::RequiredSymbol},
-      {"foundAtNull", SymbolLookupFlags::WeaklyReferencedSymbol}};
+  StringPool SP;
+  SymbolLookupSet LS{
+      {SP.intern("found"), SymbolLookupFlags::RequiredSymbol},
+      {SP.intern("notFound"), SymbolLookupFlags::RequiredSymbol},
+      {SP.intern("foundAtNull"), SymbolLookupFlags::WeaklyReferencedSymbol}};
   ControllerState CS;
   CS.ToReturn.push_back(&X);
   CS.ToReturn.push_back(std::nullopt);
@@ -174,8 +179,9 @@ TEST(LookupInJITDylibSPSTest, ResultsRoundTrip) {
 TEST(LookupInJITDylibSPSTest, ResultSizeMismatchFails) {
   // A result whose length doesn't match the lookup set must be rejected, not
   // passed on to a client that will index it by lookup-set position.
-  RemoteSymbolLookupSet LS{{"foo", SymbolLookupFlags::RequiredSymbol},
-                           {"bar", SymbolLookupFlags::RequiredSymbol}};
+  StringPool SP;
+  SymbolLookupSet LS{{SP.intern("foo"), SymbolLookupFlags::RequiredSymbol},
+                     {SP.intern("bar"), SymbolLookupFlags::RequiredSymbol}};
   ControllerState CS;
   CS.ToReturn.resize(1);
 
@@ -187,20 +193,22 @@ TEST(LookupInJITDylibSPSTest, ResultSizeMismatchFails) {
 
 TEST(LookupInJITDylibSPSTest, LookupErrorPropagates) {
   // An error from the controller's lookup is reported to the caller.
+  StringPool SP;
   ControllerState CS;
-  EXPECT_THAT_EXPECTED(runLookup(lookupFailure, CS,
-                                 JITDylibLookupFlags::MatchAllSymbols,
-                                 {{"foo", SymbolLookupFlags::RequiredSymbol}}),
-                       FailedWithMessage("lookup failed"));
+  EXPECT_THAT_EXPECTED(
+      runLookup(lookupFailure, CS, JITDylibLookupFlags::MatchAllSymbols,
+                {{SP.intern("foo"), SymbolLookupFlags::RequiredSymbol}}),
+      FailedWithMessage("lookup failed"));
 }
 
 TEST(LookupInJITDylibSPSTest, TransportErrorPropagates) {
   // A failure to call the controller is reported to the caller.
+  StringPool SP;
   ControllerState CS;
-  EXPECT_THAT_EXPECTED(runLookup(transportFailure, CS,
-                                 JITDylibLookupFlags::MatchAllSymbols,
-                                 {{"foo", SymbolLookupFlags::RequiredSymbol}}),
-                       FailedWithMessage("transport failed"));
+  EXPECT_THAT_EXPECTED(
+      runLookup(transportFailure, CS, JITDylibLookupFlags::MatchAllSymbols,
+                {{SP.intern("foo"), SymbolLookupFlags::RequiredSymbol}}),
+      FailedWithMessage("transport failed"));
 }
 
 } // namespace
