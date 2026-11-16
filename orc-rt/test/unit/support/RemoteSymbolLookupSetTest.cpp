@@ -1,4 +1,4 @@
-//===- SymbolLookupSetTest.cpp --------------------------------------------===//
+//===- RemoteSymbolLookupSetTest.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,26 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Test SymbolLookupSet APIs.
+// Test RemoteSymbolLookupSet APIs.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/support/SymbolLookupSet.h"
+#include "orc-rt/support/RemoteSymbolLookupSet.h"
 
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
 
-TEST(SymbolLookupSetTest, DefaultConstructedIsEmpty) {
-  SymbolLookupSet S;
+TEST(RemoteSymbolLookupSetTest, DefaultConstructedIsEmpty) {
+  RemoteSymbolLookupSet S;
   EXPECT_TRUE(S.empty());
   EXPECT_EQ(S.size(), 0U);
   EXPECT_EQ(S.begin(), S.end());
 }
 
-TEST(SymbolLookupSetTest, InitializerList) {
-  SymbolLookupSet S({{"foo", SymbolLookupFlags::RequiredSymbol},
-                     {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}});
+TEST(RemoteSymbolLookupSetTest, InitializerList) {
+  RemoteSymbolLookupSet S({{"foo", SymbolLookupFlags::RequiredSymbol},
+                           {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}});
   ASSERT_EQ(S.size(), 2U);
   EXPECT_FALSE(S.empty());
   EXPECT_EQ(S[0].first, "foo");
@@ -34,8 +34,8 @@ TEST(SymbolLookupSetTest, InitializerList) {
   EXPECT_EQ(S[1].second, SymbolLookupFlags::WeaklyReferencedSymbol);
 }
 
-TEST(SymbolLookupSetTest, PushBackAndIterate) {
-  SymbolLookupSet S;
+TEST(RemoteSymbolLookupSetTest, PushBackAndIterate) {
+  RemoteSymbolLookupSet S;
   S.reserve(2);
   S.push_back({"foo", SymbolLookupFlags::RequiredSymbol});
   S.push_back({"bar", SymbolLookupFlags::WeaklyReferencedSymbol});

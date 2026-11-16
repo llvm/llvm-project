@@ -15,8 +15,8 @@
 
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/JITDylibLookupFlags.h"
+#include "orc-rt/support/RemoteSymbolLookupSet.h"
 #include "orc-rt/support/SymbolLookupResult.h"
-#include "orc-rt/support/SymbolLookupSet.h"
 #include "orc-rt/support/move_only_function.h"
 
 namespace orc_rt {
@@ -37,7 +37,7 @@ namespace sps {
 void lookupInJITDylib(
     move_only_function<void(Expected<SymbolLookupResult>)> OnComplete,
     Session &S, const void *JITDylibKeyAddr, JITDylibLookupFlags JDLookupFlags,
-    const SymbolLookupSet &LS) noexcept;
+    const RemoteSymbolLookupSet &LS) noexcept;
 
 } // namespace sps
 } // namespace orc_rt
