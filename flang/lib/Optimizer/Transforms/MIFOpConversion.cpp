@@ -1311,11 +1311,11 @@ struct MIFAllocCoarrayOpConversion
         getSizeInBytes(builder, loc, mod, dl, typeConverter, op.getBox());
     mlir::Value stat = op.getStat();
     mlir::Type statTy = getPRIFStatType(builder);
-    if (!stat)
+    if (!stat) {
       stat = fir::AbsentOp::create(builder, loc, statTy);
     else {
       // Workaround for https://github.com/BerkeleyLab/caffeine/issues/380
-      // Ensures deterministic behavior even for Caffeine versions 
+      // Ensures deterministic behavior even for Caffeine versions
       // prior to 0.8.4 that don't correctly set stat=0 on success.
       mlir::Value zero =
           builder.createIntegerConstant(loc, fir::unwrapRefType(statTy), 0);

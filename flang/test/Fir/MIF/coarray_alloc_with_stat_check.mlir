@@ -155,10 +155,9 @@ func.func @_QPdefault_init() {
 // CHECK:   %[[VAL_23:.*]] = fir.load %[[VAL_12]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>>
 // CHECK:   %[[VAL_24:.*]] = fir.box_elesize %[[VAL_23]] : (!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>) -> i64
 // CHECK:   %[[VAL_25:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]+}}>>
-// CHECK:   %[[C30_I32:.*]] = arith.constant 30 : i32
 // CHECK:   %[[VAL_26:.*]] = fir.convert %[[VAL_23]] : (!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>) -> !fir.box<none>
 // CHECK:   %[[VAL_27:.*]] = fir.convert %[[VAL_25]] : (!fir.ref<!fir.char<1,{{[0-9]+}}>>) -> !fir.ref<i8>
-// CHECK:   %[[VAL_28:.*]] = fir.call @_FortranASize(%[[VAL_26]], %[[VAL_27]], %[[C30_I32]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> i64
+// CHECK:   %[[VAL_28:.*]] = fir.call @_FortranASize(%[[VAL_26]], %[[VAL_27]], %[[CST1:.*]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> i64
 // CHECK:   %[[VAL_29:.*]] = arith.muli %[[VAL_24]], %[[VAL_28]] : i64
 // CHECK:   fir.store %[[VAL_29]] to %[[VAL_0]] : !fir.ref<i64>
 // CHECK:   %[[C0_I32_1:.*]] = arith.constant 0 : i32
@@ -272,10 +271,9 @@ func.func @_QPdefault_init() {
 // CHECK:   %[[VAL_34:.*]] = fir.convert %[[VAL_32]] : (i64) -> !fir.llvm_ptr<i8>
 // CHECK:   fir.call @_FortranAAllocatableSetBaseAddr(%[[VAL_33]], %[[VAL_34]]) : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 // CHECK:   %[[VAL_35:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]+}}>>
-// CHECK:   %[[C76_I32:.*]] = arith.constant 76 : i32
 // CHECK:   %[[VAL_36:.*]] = fir.convert %[[VAL_11]]#0 : {{.*}} -> !fir.box<none>
 // CHECK:   %[[VAL_37:.*]] = fir.convert %[[VAL_35]] : (!fir.ref<!fir.char<1,{{[0-9]+}}>>) -> !fir.ref<i8>
-// CHECK:   fir.call @_FortranAInitialize(%[[VAL_36]], %[[VAL_37]], %[[C76_I32]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:   fir.call @_FortranAInitialize(%[[VAL_36]], %[[VAL_37]], %[[CST2:.*]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
 // CHECK:   %[[VAL_38:.*]] = fir.absent !fir.box<!fir.char<1,?>>
 // CHECK:   %[[VAL_39:.*]] = fir.convert %[[VAL_13]] : (!fir.box<none>) -> !fir.box<!fir.char<1,?>>
 // CHECK:   fir.call @_QMprifPprif_sync_all(%[[VAL_6]], %[[VAL_39]], %[[VAL_38]]) : (!fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
