@@ -18,8 +18,8 @@
 #define ORC_RT_INTERNAL_BEDROCK_SYS_DYNAMICLIBRARY_H
 
 #include "orc-rt/support/Error.h"
+#include "orc-rt/support/RemoteSymbolLookupSet.h"
 #include "orc-rt/support/SymbolLookupResult.h"
-#include "orc-rt/support/SymbolLookupSet.h"
 
 #include <string>
 
@@ -42,7 +42,7 @@ Error unloadLibrary(void *Handle);
 /// (possibly null) address if it is: a symbol genuinely located at address zero
 /// is reported as null rather than as missing.
 SymbolLookupResult lookupLibrarySymbols(void *Handle,
-                                        const SymbolLookupSet &Symbols);
+                                        const RemoteSymbolLookupSet &Symbols);
 
 } // namespace orc_rt::sys
 

@@ -18,8 +18,8 @@
 
 #include "orc-rt/bedrock/sps/LookupInJITDylibSPS.h"
 #include "orc-rt/support/sps/SPSJITDylibLookupFlags.h"
+#include "orc-rt/support/sps/SPSRemoteSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSSymbolLookupResult.h"
-#include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "BedrockTestUtils.h"
@@ -45,7 +45,7 @@ using LookupJITDylibSPSSig = SPSExpected<SPSSymbolLookupResult>(
 struct ControllerState {
   bool Called = false;
   std::optional<JITDylibLookupFlags> ReceivedJDLookupFlags;
-  SymbolLookupSet Received;
+  RemoteSymbolLookupSet Received;
   SymbolLookupResult ToReturn;
 };
 
@@ -58,7 +58,7 @@ static void recordingLookup(orc_rt_SessionRef S,
       S, ArgBytes, Return, CallId,
       [](move_only_function<void(Expected<SymbolLookupResult>)> OnComplete,
          void *Key, JITDylibLookupFlags JDLookupFlags,
-         const SymbolLookupSet &LS) {
+         const RemoteSymbolLookupSet &LS) {
         auto &CS = *static_cast<ControllerState *>(Key);
         CS.Called = true;
         CS.ReceivedJDLookupFlags = JDLookupFlags;
@@ -77,7 +77,7 @@ static void lookupFailure(orc_rt_SessionRef S,
       S, ArgBytes, Return, CallId,
       [](move_only_function<void(Expected<SymbolLookupResult>)> OnComplete,
          void *Key, JITDylibLookupFlags JDLookupFlags,
-         const SymbolLookupSet &LS) {
+         const RemoteSymbolLookupSet &LS) {
         OnComplete(make_error<StringError>("lookup failed"));
       });
 }
@@ -99,7 +99,7 @@ static void transportFailure(orc_rt_SessionRef S,
 static Expected<SymbolLookupResult> runLookup(orc_rt_WrapperFunction Handler,
                                               ControllerState &CS,
                                               JITDylibLookupFlags JDLookupFlags,
-                                              const SymbolLookupSet &LS) {
+                                              const RemoteSymbolLookupSet &LS) {
   Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
   DirectControllerAccess::HandlerMap HM;
   HM[&orc_rt_tag_sps_lookupInJITDylib] = Handler;
@@ -124,8 +124,8 @@ TEST(LookupInJITDylibSPSTest, EmptyLookup) {
 TEST(LookupInJITDylibSPSTest, ArgumentsRoundTrip) {
   // Names, order, and both SymbolLookupFlags values must reach the controller
   // intact.
-  SymbolLookupSet LS{{"foo", SymbolLookupFlags::RequiredSymbol},
-                     {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}};
+  RemoteSymbolLookupSet LS{{"foo", SymbolLookupFlags::RequiredSymbol},
+                           {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}};
   ControllerState CS;
   CS.ToReturn.resize(LS.size());
 
@@ -153,7 +153,7 @@ TEST(LookupInJITDylibSPSTest, ResultsRoundTrip) {
   // All three result states must come back as sent. In particular, "not
   // found" (nullopt) must stay distinct from "found at null".
   int X = 0;
-  SymbolLookupSet LS{
+  RemoteSymbolLookupSet LS{
       {"found", SymbolLookupFlags::RequiredSymbol},
       {"notFound", SymbolLookupFlags::RequiredSymbol},
       {"foundAtNull", SymbolLookupFlags::WeaklyReferencedSymbol}};
@@ -174,8 +174,8 @@ TEST(LookupInJITDylibSPSTest, ResultsRoundTrip) {
 TEST(LookupInJITDylibSPSTest, ResultSizeMismatchFails) {
   // A result whose length doesn't match the lookup set must be rejected, not
   // passed on to a client that will index it by lookup-set position.
-  SymbolLookupSet LS{{"foo", SymbolLookupFlags::RequiredSymbol},
-                     {"bar", SymbolLookupFlags::RequiredSymbol}};
+  RemoteSymbolLookupSet LS{{"foo", SymbolLookupFlags::RequiredSymbol},
+                           {"bar", SymbolLookupFlags::RequiredSymbol}};
   ControllerState CS;
   CS.ToReturn.resize(1);
 
