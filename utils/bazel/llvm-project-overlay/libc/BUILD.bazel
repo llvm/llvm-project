@@ -192,7 +192,7 @@ libc_support_library(
 )
 
 libc_header_library(
-    name = "libcxx_shared_headers",
+    name = "shared_libcxx_headers",
     hdrs = [
         "shared/fp_bits.h",
         "shared/libc_common.h",
@@ -205,6 +205,16 @@ libc_header_library(
         "//libc/src/__support:str_to_integer",
         "//libc/src/__support/FPUtil:fp_bits",
     ],
+)
+
+alias(
+    name = "libcxx_shared_headers",
+    actual = ":shared_libcxx_headers",
+)
+
+alias(
+    name = "libcxx_shared_headers_hdrs",
+    actual = ":shared_libcxx_headers_hdrs",
 )
 
 # This target is only used by APFloat.cpp in the Support library.
@@ -276,6 +286,7 @@ cc_library(
         "//libc/src/__support/macros/properties:compiler",
         "//libc/src/__support/macros/properties:cpu_features",
         "//libc/src/__support/macros/properties:types",
+        "//libc/src/__support/math:acos",
         "//libc/src/__support/math:range_reduction",
         "//libc/src/__support/math:range_reduction_double",
         "//libc/src/__support/math:sincos_eval",
@@ -509,7 +520,7 @@ alias(
 ########################### math support library ###############################
 
 libc_support_library(
-    name = "__support_math_static_rounding_expf",
+    name = "shared_math_static_rounding_expf",
     hdrs = ["shared/math/static_rounding/expf.h"],
     deps = [
         ":shared_libc_common",
@@ -520,7 +531,7 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_math_static_rounding_exp2f",
+    name = "shared_math_static_rounding_exp2f",
     hdrs = ["shared/math/static_rounding/exp2f.h"],
     deps = [
         ":shared_libc_common",
@@ -531,7 +542,7 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_math_static_rounding_exp10f",
+    name = "shared_math_static_rounding_exp10f",
     hdrs = ["shared/math/static_rounding/exp10f.h"],
     deps = [
         ":shared_libc_common",
