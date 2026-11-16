@@ -59,6 +59,10 @@ public:
                 PatchableFunctionPass, ShrinkWrapPass, LiveDebugValuesPass,
                 MachineLateInstrsCleanupPass, RemoveLoadsIntoFakeUsesPass,
                 BranchFolderPass, MachineBlockPlacementPass>();
+    // Logical SPIR-V cannot express the pointer induction variables that loop
+    // strength reduction creates.
+    if (TM.getSubtargetImpl()->isLogicalSPIRV())
+      Opt.DisableLSR = true;
   }
 
   void addIRPasses(PassManagerWrapper &PMW) override;

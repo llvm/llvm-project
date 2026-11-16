@@ -457,9 +457,6 @@ struct AllocationTraceInfoTy {
   /// The allocated device pointer.
   void *DevicePtr = nullptr;
 
-  /// The corresponding host pointer (can be null).
-  void *HostPtr = nullptr;
-
   /// The size of the allocation.
   uint64_t Size = 0;
 
@@ -708,8 +705,7 @@ public:
   ContextAllocatorTy(PluginContextTy &Context, GenericDeviceTy &Device)
       : Context(Context), Device(Device) {}
 
-  llvm::Expected<void *> allocate(size_t Size, void *HstPtr,
-                                  ol_alloc_type_t Kind,
+  llvm::Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                                   size_t Alignment) override;
   llvm::Error free(void *TgtPtr, ol_alloc_type_t Kind) override;
 
@@ -744,19 +740,15 @@ struct PluginContextTy {
   virtual Error initAsyncInfoImpl(GenericDeviceTy &Device,
                                   AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
-  /// Allocate Size bytes of Kind memory accessible from Device. HostPtr is an
-  /// optional hint (e.g. for pinned-buffer registration); pass nullptr when
-  /// unused.
+  /// Allocate Size bytes of Kind memory accessible from Device.
   llvm::Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
-                                  void *HostPtr, ol_alloc_type_t Kind,
-                                  size_t Alignment,
+                                  ol_alloc_type_t Kind, size_t Alignment,
                                   GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Serve an allocation requested through allocate, which decides pooling.
   virtual llvm::Expected<void *>
-  allocateImpl(GenericDeviceTy &Device, int64_t Size, void *HostPtr,
-               ol_alloc_type_t Kind, size_t Alignment,
-               GenericProfilerTy *ProfilerPtr = nullptr);
+  allocateImpl(GenericDeviceTy &Device, int64_t Size, ol_alloc_type_t Kind,
+               size_t Alignment, GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Free a pointer returned by allocate; resolves owner/kind via
   /// getAllocInfo. Requires a non-empty device set, so this is only valid on
@@ -937,7 +929,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error getDeviceMemorySize(uint64_t &DSize);
 
   /// Allocate data on the device or involving the device.
-  Expected<void *> dataAlloc(int64_t Size, void *HostPtr, ol_alloc_type_t Kind,
+  Expected<void *> dataAlloc(int64_t Size, ol_alloc_type_t Kind,
                              size_t Alignment,
                              GenericProfilerTy *ProfilerPtr = nullptr);
 
@@ -945,11 +937,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error dataDelete(void *TgtPtr, ol_alloc_type_t Kind,
                    GenericProfilerTy *ProfilerPtr = nullptr);
 
-  /// Record the allocation of \p Size bytes of \p Kind memory at \p DevicePtr,
-  /// associated to \p HostPtr, with the stack it was made from. Does nothing
-  /// if allocation traces are not tracked.
-  void recordAllocation(void *DevicePtr, void *HostPtr, int64_t Size,
-                        ol_alloc_type_t Kind);
+  /// Record the allocation of \p Size bytes of \p Kind memory at \p DevicePtr
+  /// with the stack it was made from. Does nothing if allocation traces are not
+  /// tracked.
+  void recordAllocation(void *DevicePtr, int64_t Size, ol_alloc_type_t Kind);
 
   /// Record the deallocation of \p Kind memory at \p DevicePtr, and report it
   /// if the allocation it refers to was never made, is already deallocated, or

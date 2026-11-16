@@ -382,8 +382,7 @@ static void markUsedByKernel(Function *Func, GlobalVariable *SGV) {
   Function *Decl = Intrinsic::getOrInsertDeclaration(Func->getParent(),
                                                      Intrinsic::donothing, {});
 
-  Value *UseInstance[1] = {
-      Builder.CreateConstInBoundsGEP1_32(SGV->getValueType(), SGV, 0)};
+  Value *UseInstance[] = {SGV};
 
   Builder.CreateCall(Decl, {},
                      {OperandBundleDefT<Value *>("ExplicitUse", UseInstance)});

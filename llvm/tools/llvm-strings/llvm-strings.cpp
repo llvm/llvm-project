@@ -93,7 +93,11 @@
 #elif MBTOC == MBTOC_WCHAR
 #include <cwchar>
 #elif MBTOC == MBTOC_ICONV
+#ifdef ICONVH
+#include ICONVH
+#else
 #include <iconv.h>
+#endif
 #endif
 
 using namespace llvm;
