@@ -164,6 +164,7 @@ enum MlirLLVMCConv {
   MlirLLVMCConvTail = 18,
   MlirLLVMCConvCFGuard_Check = 19,
   MlirLLVMCConvSwiftTail = 20,
+  MlirLLVMCConvPreserveNone = 21,
   MlirLLVMCConvX86_StdCall = 64,
   MlirLLVMCConvX86_FastCall = 65,
   MlirLLVMCConvARM_APCS = 66,

@@ -688,10 +688,8 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
     fieldType = fieldType->getPointeeType();
   }
 
-  if (field->hasAttr<AnnotateAttr>()) {
-    cgm.errorNYI(field->getSourceRange(), "emitLValueForField: AnnotateAttr");
-    return LValue();
-  }
+  if (field->hasAttr<AnnotateAttr>())
+    addr = emitFieldAnnotations(field, addr);
 
   LValue lv = makeAddrLValue(addr, fieldType, fieldBaseInfo);
   lv.getQuals().addCVRQualifiers(recordCVR);
@@ -3097,12 +3095,6 @@ Address CIRGenFunction::createMemTemp(QualType ty, CharUnits align,
   Address result =
       createTempAlloca(convertTypeForMem(ty), /*destAddrSpace=*/{}, align, loc,
                        name, /*arraySize=*/nullptr, alloca, ip);
-  if (ty->isConstantMatrixType()) {
-    assert(!cir::MissingFeatures::matrixType());
-    cgm.errorNYI(loc, "createMemTemp constant matrix type");
-    return Address::invalid();
-  }
-
   return result;
 }
 
