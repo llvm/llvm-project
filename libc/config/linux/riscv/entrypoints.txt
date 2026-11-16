@@ -1440,6 +1440,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.scandir
     libc.src.dirent.fdopendir
 
+    # net/if.h entrypoints
+    libc.src.net.if.if_freenameindex
+    libc.src.net.if.if_nameindex
+
     # pthread.h entrypoints
     libc.src.pthread.__pthread_cleanup_pop
     libc.src.pthread.__pthread_cleanup_push
@@ -1837,10 +1841,6 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.libintl.ngettext
       libc.src.libintl.ngettext_l
       libc.src.libintl.textdomain
-
-      # net/if.h entrypoints
-      libc.src.net.if.if_freenameindex
-      libc.src.net.if.if_nameindex
 
       # netdb.h entrypoints
       libc.src.netdb.freeaddrinfo

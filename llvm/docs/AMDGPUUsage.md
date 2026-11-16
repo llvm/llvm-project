@@ -3531,7 +3531,8 @@ The AMDGPU backend supports the following calling conventions:
 
     Arguments are passed in SGPRs, starting at s0, if they have the `inreg` attribute, and in VGPRs otherwise, starting at v8.
     Using more SGPRs or VGPRs than available in the subtarget is not allowed.
-    Chain functions receive a stack pointer from their caller (in s32), similar to `amdgpu_gfx` functions.
+    Chain functions receive a stack pointer from their caller (in s32), similar to `amdgpu_gfx` functions. This points to the bottom of the stack.
+    Referencing values on the caller's stack is undefined behaviour.
     If needed, the frame pointer is s33 and the base pointer is s34.
     `inreg` arguments are allocated around s[32:34], i.e. they continue at s35 if they would otherwise land in one of s32 through s34.
     The gap is always present, irrespective of whether or not the function ends up using a frame or a base pointer.
