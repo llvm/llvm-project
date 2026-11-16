@@ -1089,7 +1089,12 @@ public:
             return LookAheadHeuristics::ScoreConsecutiveExtracts;
           if (isUndefVector(EV2).all() && EV2->getType() == EV1->getType())
             return LookAheadHeuristics::ScoreConsecutiveExtracts;
-          if (EV2 == EV1) {
+          if (EV2 == EV1 && isa<FixedVectorType>(EV1->getType())) {
+            // Out-of-range indices produce poison, which is as profitable as
+            // undefs.
+            unsigned NumElts = getNumElements(EV1->getType());
+            if (Ex1Idx->uge(NumElts) || Ex2Idx->uge(NumElts))
+              return LookAheadHeuristics::ScoreConsecutiveExtracts;
             int Idx1 = Ex1Idx->getZExtValue();
             int Idx2 = Ex2Idx->getZExtValue();
             int Dist = Idx2 - Idx1;
@@ -9922,7 +9927,8 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
   if (VL.size() == SmallVecWidth &&
       NumUniqueScalarValues == SmallVecUniqueThreshold && !BuildGatherOnly &&
       !(S && (S.getOpcode() == Instruction::Load ||
-              S.getOpcode() == Instruction::PHI))) {
+              S.getOpcode() == Instruction::PHI ||
+              S.getOpcode() == Instruction::Freeze))) {
     // Keep originals with identity reuse - no packing, no extra shuffle.
     ReuseShuffleIndices.clear();
     return true;
@@ -10151,7 +10157,9 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
   const auto [PackProfitable, UseOriginal] = EstimatePackPlusShuffleVsInserts();
 
   if (PackProfitable) {
-    if (UseOriginal) {
+    // The lanes of the vector freeze are frozen independently, the repeated
+    // freezes are packed to stay the same value.
+    if (UseOriginal && (!S || S.getOpcode() != Instruction::Freeze)) {
       // Prefer original scalars - avoid shuffling.
       ReuseShuffleIndices.clear();
     } else {

@@ -104,6 +104,8 @@
 //  V:{num}: -> requires vectors of at least {num} bits to be legal
 //  C<{num},M_0,...,M_k> -> callback behavior: argument {num} is called with
 //                          argument M_0, ..., M_k as payload
+//  R<{num}:{lo}:{hi},...> -> constant argument {num} must be in [{lo}, {hi})
+//                           (half-open, matching the IR range attribute)
 //  z -> this is a function in (possibly-versioned) namespace std
 //  E -> this function can be constant evaluated by Clang frontend
 //  G -> this is a C++20 consteval function
