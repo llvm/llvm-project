@@ -1640,7 +1640,7 @@ def FeatureVendorXSfvfofp4min
 def HasVendorXSfvfofp4min
     : Predicate<"Subtarget->hasVendorXSfvfofp4min()">,
       AssemblerPredicate<(all_of FeatureVendorXSfvfofp4min),
-                          "'XSfvfofp4min' (SiFive Vector OFP4 Conversion Instruction)">;
+                         "'XSfvfofp4min' (SiFive Vector OFP4 Conversion Instruction)">;
 
 // Core-V Extensions
 
