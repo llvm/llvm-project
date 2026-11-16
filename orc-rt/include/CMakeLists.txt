@@ -58,6 +58,7 @@ set(ORC_RT_HEADERS
     orc-rt/support/RTTI.h
     orc-rt/support/StringPool.h
     orc-rt/support/SymbolLookupFlags.h
+    orc-rt/support/SymbolLookupResult.h
     orc-rt/support/SymbolLookupSet.h
     orc-rt/support/WrapperFunction.h
     orc-rt/support/bind.h
@@ -69,6 +70,7 @@ set(ORC_RT_HEADERS
     orc-rt/support/sps/SPSAllocAction.h
     orc-rt/support/sps/SPSJITDylibLookupFlags.h
     orc-rt/support/sps/SPSMemoryFlags.h
+    orc-rt/support/sps/SPSSymbolLookupResult.h
     orc-rt/support/sps/SPSSymbolLookupSet.h
     orc-rt/support/sps/SPSWrapperFunction.h
     orc-rt/support/sps/SPSWrapperFunctionBuffer.h
