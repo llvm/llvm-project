@@ -159,11 +159,12 @@ calculateMispredictionRate(const BinaryBasicBlock &BB) {
           TotalMispredictionCount};
 }
 
-// Returns conditional succ bias if the profile is available, -1 otherwise.
+// Returns conditional successor bias in percent if the profile is available,
+// -1 otherwise.
 int calculateConditionBias(const BinaryBasicBlock &BB,
                            const BinaryBasicBlock &ConditionalSucc) {
   if (auto BranchStats = BB.getBranchStats(&ConditionalSucc))
-    return BranchStats->first;
+    return 100.0f * BranchStats->first;
   return -1;
 }
 
