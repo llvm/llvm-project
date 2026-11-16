@@ -261,13 +261,14 @@ bool SPIRVRemoveAggregateTypesImpl::removeAggregateTypesFromCalls(Function *F) {
 
 bool SPIRVRemoveAggregateTypesImpl::runOnModule(Module &M) {
   bool Changed = false;
-  std::vector<Function *> FuncsWorklist;
+  // A snapshot: the clones made below are not visited again.
+  SmallVector<Function *> OriginalFuncs;
   for (Function &F : M) {
     Changed |= removeAggregateTypesFromCalls(&F);
-    FuncsWorklist.push_back(&F);
+    OriginalFuncs.push_back(&F);
   }
 
-  for (auto *F : FuncsWorklist) {
+  for (Function *F : OriginalFuncs) {
     Function *NewF = removeAggregateTypesFromSignature(F);
 
     if (NewF != F) {
