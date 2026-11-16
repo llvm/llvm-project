@@ -366,7 +366,7 @@ void DwarfStreamer::emitDebugNames(DWARF5AccelTable &Table) {
                                           (uint64_t)UniqueIdToCuMap.size() - 1);
   /// llvm-dwarfutil doesn't support type units + .debug_names right now.
   // FIXME: add support for type units + .debug_names. For now the behavior is
-  // unsuported.
+  // unsupported.
   emitDWARF5AccelTable(
       Asm.get(), Table, CompUnits,
       [&](const DWARF5AccelTableData &Entry)

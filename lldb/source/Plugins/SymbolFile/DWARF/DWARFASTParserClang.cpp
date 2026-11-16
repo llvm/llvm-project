@@ -393,9 +393,8 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
     auto qual_type = ClangUtil::GetQualType(type);
     if (ast_importer.RequireCompleteType(qual_type))
       return;
-    die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
-        "Unable to complete the Decl context for DIE {0} at offset "
-        "{1:x16}.\nPlease file a bug report.",
+    die.GetDWARF()->GetObjectFile()->GetModule()->ReportInternalError(
+        "Unable to complete the Decl context for DIE {0} at offset {1:x16}",
         type_name_cstr ? type_name_cstr : "", die.GetOffset());
   }
 
@@ -661,11 +660,9 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
       type_sp = ParsePointerToMemberType(die, attrs);
       break;
     default:
-      dwarf->GetObjectFile()->GetModule()->ReportError(
-          "[{0:x16}]: unhandled type tag {1:x4} ({2}), "
-          "please file a bug and "
-          "attach the file at the start of this error message",
-          die.GetOffset(), tag, DW_TAG_value_to_name(tag));
+      dwarf->GetObjectFile()->GetModule()->ReportInternalError(
+          "[{0:x16}]: unhandled type tag {1:x4} ({2})", die.GetOffset(), tag,
+          DW_TAG_value_to_name(tag));
       break;
     }
     UpdateSymbolContextScopeForType(sc, die, type_sp);
@@ -1098,10 +1095,9 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
   }
 
   if (!CompleteEnumType(def_die, type_sp.get(), clang_type)) {
-    dwarf->GetObjectFile()->GetModule()->ReportError(
+    dwarf->GetObjectFile()->GetModule()->ReportInternalError(
         "DWARF DIE at {0:x16} named \"{1}\" was not able to start its "
-        "definition.\nPlease file a bug and attach the file at the "
-        "start of this error message",
+        "definition",
         def_die.GetOffset(), attrs.name.GetCString());
   }
   return type_sp;
@@ -1170,11 +1166,9 @@ bool DWARFASTParserClang::ParseObjCMethod(
       attrs.is_artificial, is_variadic, attrs.is_objc_direct_call);
 
   if (!objc_method_decl) {
-    dwarf->GetObjectFile()->GetModule()->ReportError(
-        "[{0:x16}]: invalid Objective-C method {1:x4} ({2}), "
-        "please file a bug and attach the file at the start of "
-        "this error message",
-        die.GetOffset(), tag, DW_TAG_value_to_name(tag));
+    dwarf->GetObjectFile()->GetModule()->ReportInternalError(
+        "[{0:x16}]: invalid Objective-C method {1:x4} ({2})", die.GetOffset(),
+        tag, DW_TAG_value_to_name(tag));
     return false;
   }
 
@@ -1627,14 +1621,12 @@ void DWARFASTParserClang::ParseInheritance(
 
   Type *base_class_type = die.ResolveTypeUID(encoding_form.Reference());
   if (base_class_type == nullptr) {
-    module_sp->ReportError("{0:x16}: DW_TAG_inheritance failed to "
-                           "resolve the base class at {1:x16}"
-                           " from enclosing type {2:x16}. \nPlease file "
-                           "a bug and attach the file at the start of "
-                           "this error message",
-                           die.GetOffset(),
-                           encoding_form.Reference().GetOffset(),
-                           parent_die.GetOffset());
+    module_sp->ReportInternalError("{0:x16}: DW_TAG_inheritance failed to "
+                                   "resolve the base class at {1:x16}"
+                                   " from enclosing type {2:x16}",
+                                   die.GetOffset(),
+                                   encoding_form.Reference().GetOffset(),
+                                   parent_die.GetOffset());
     return;
   }
 
