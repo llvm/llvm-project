@@ -33,7 +33,6 @@
 ---
 name:            foo
 alignment:       8
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }

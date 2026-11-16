@@ -73,7 +73,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprnopc }
   - { id: 1, class: gpr }

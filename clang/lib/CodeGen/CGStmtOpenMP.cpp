@@ -355,7 +355,7 @@ public:
         }
       }
     }
-    if (!isOpenMPSimdDirective(getEffectiveDirectiveKind(S)))
+    if (!isOpenMPSimdDirective(S.getDirectiveKind()))
       CGF.EmitOMPPrivateClause(S, InlinedShareds);
     if (const auto *TG = dyn_cast<OMPTaskgroupDirective>(&S)) {
       if (const Expr *E = TG->getReductionRef())
@@ -396,14 +396,16 @@ public:
 
 } // namespace
 
-// Map `loop` with a bind clause, `teams loop`, and `target teams loop` to the
-// construct CodeGen emits.
+// Map `loop` with a bind clause, `teams loop`, `target loop`, and
+// `target teams loop` to the construct CodeGen emits.
 static OpenMPDirectiveKind
 getEffectiveDirectiveKind(const OMPExecutableDirective &S) {
   OpenMPDirectiveKind Kind = S.getDirectiveKind();
 
   if (Kind == OMPD_teams_loop)
     return OMPD_teams_distribute;
+  if (Kind == OMPD_target_loop)
+    return OMPD_target_simd;
   if (Kind == OMPD_target_teams_loop)
     return cast<OMPTargetTeamsGenericLoopDirective>(S).canBeParallelFor()
                ? OMPD_target_teams_distribute_parallel_for
@@ -3210,8 +3212,7 @@ static void emitCommonSimdLoop(CodeGenFunction &CGF, const OMPLoopDirective &S,
     BodyCodeGen(CGF);
   };
   const Expr *IfCond = nullptr;
-  OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(S);
-  if (isOpenMPSimdDirective(EKind)) {
+  if (isOpenMPSimdDirective(S.getDirectiveKind())) {
     for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
       if (CGF.getLangOpts().OpenMP >= 50 &&
           (C->getNameModifier() == OMPD_unknown ||
@@ -4013,7 +4014,7 @@ void CodeGenFunction::EmitOMPDistributeSimdDirective(
 }
 
 void CodeGenFunction::EmitOMPTargetSimdDeviceFunction(
-    CodeGenModule &CGM, StringRef ParentName, const OMPTargetSimdDirective &S) {
+    CodeGenModule &CGM, StringRef ParentName, const OMPLoopDirective &S) {
   // Emit SPMD target parallel for region as a standalone region.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     emitOMPSimdRegion(CGF, S, Action);
@@ -4026,8 +4027,7 @@ void CodeGenFunction::EmitOMPTargetSimdDeviceFunction(
   assert(Fn && Addr && "Target device function emission failed.");
 }
 
-void CodeGenFunction::EmitOMPTargetSimdDirective(
-    const OMPTargetSimdDirective &S) {
+void CodeGenFunction::EmitOMPTargetSimdDirective(const OMPLoopDirective &S) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     emitOMPSimdRegion(CGF, S, Action);
   };
@@ -7522,6 +7522,20 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
     }
   }
 
+  // The fp atomics hints override -f[no-]atomic-ignore-denormal-mode for this
+  // construct. The safe hint takes precedence if both are given.
+  AtomicOptions AtomicOpts = CGM.getAtomicOpts();
+  if (const auto *HintClause = S.getSingleClause<OMPHintClause>()) {
+    uint64_t Hint = HintClause->getHint()
+                        ->EvaluateKnownConstInt(getContext())
+                        .getZExtValue();
+    if (Hint & llvm::to_underlying(OMPSyncHint::OMPXSafeFPAtomics))
+      AtomicOpts.ignore_denormal_mode = false;
+    else if (Hint & llvm::to_underlying(OMPSyncHint::OMPXFastFPAtomics))
+      AtomicOpts.ignore_denormal_mode = true;
+  }
+  CGAtomicOptionsRAII AtomicOptsRAII(CGM, AtomicOpts);
+
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(S.getAssociatedStmt());
   emitOMPAtomicExpr(*this, Kind, AO, FailAO, S.isPostfixUpdate(), S.getX(),
@@ -7582,19 +7596,16 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
     CGM.getDiags().Report(diag::err_missing_mandatory_offloading);
   }
 
-  StringRef ParentName;
-  // In case we have Ctors/Dtors we use the complete type variant to produce
-  // the mangling of the device outlined kernel. Lambdas and blocks at
-  // namespace scope have no parent function.
-  if (!CGF.CurFuncDecl)
-    ParentName = CGF.CurFn->getName();
-  else if (const auto *D = dyn_cast<CXXConstructorDecl>(CGF.CurFuncDecl))
-    ParentName = CGM.getMangledName(GlobalDecl(D, Ctor_Complete));
-  else if (const auto *D = dyn_cast<CXXDestructorDecl>(CGF.CurFuncDecl))
-    ParentName = CGM.getMangledName(GlobalDecl(D, Dtor_Complete));
-  else
-    ParentName =
-        CGM.getMangledName(GlobalDecl(cast<FunctionDecl>(CGF.CurFuncDecl)));
+  // Lambdas and blocks at namespace scope have no parent function. Regions in
+  // constructs outlined from such a lambda are named after its call operator,
+  // as the device names them.
+  const Decl *CodeDecl = CGF.CurFuncDecl ? CGF.CurFuncDecl : CGF.CurCodeDecl;
+  while (const auto *CD = dyn_cast_or_null<CapturedDecl>(CodeDecl))
+    CodeDecl = Decl::castFromDeclContext(CD->getParent());
+  const auto *ParentFD = dyn_cast_or_null<FunctionDecl>(CodeDecl);
+  StringRef ParentName =
+      ParentFD ? CGM.getOpenMPRuntime().getTargetRegionParentName(ParentFD)
+               : CGF.CurFn->getName();
 
   // Emit target region as a standalone region.
   CGM.getOpenMPRuntime().emitTargetOutlinedFunction(S, ParentName, Fn, FnID,
@@ -8168,9 +8179,8 @@ void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
 
 CodeGenFunction::JumpDest
 CodeGenFunction::getOMPCancelDestination(OpenMPDirectiveKind Kind) {
-  if (Kind == OMPD_parallel || Kind == OMPD_task ||
-      Kind == OMPD_target_parallel || Kind == OMPD_taskloop ||
-      Kind == OMPD_master_taskloop || Kind == OMPD_parallel_master_taskloop)
+  if (Kind == OMPD_parallel || Kind == OMPD_target_parallel ||
+      isOpenMPTaskingDirective(Kind))
     return ReturnBlock;
   assert(Kind == OMPD_for || Kind == OMPD_section || Kind == OMPD_sections ||
          Kind == OMPD_parallel_sections || Kind == OMPD_parallel_for ||

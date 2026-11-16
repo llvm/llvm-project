@@ -769,11 +769,10 @@ struct IRPosition {
 
   /// Return the value this abstract attribute is associated with.
   Value &getAssociatedValue() const {
-    if (getCallSiteArgNo() < 0 || isa<Argument>(&getAnchorValue()))
-      return getAnchorValue();
-    assert(isa<CallBase>(&getAnchorValue()) && "Expected a call base!");
-    return *cast<CallBase>(&getAnchorValue())
-                ->getArgOperand(getCallSiteArgNo());
+    // A call site argument position is encoded by the argument operand use.
+    if (getEncodingBits() == ENC_CALL_SITE_ARGUMENT_USE)
+      return *getAsUsePtr()->get();
+    return getAnchorValue();
   }
 
   /// Return the type this abstract attribute is associated with.
@@ -947,13 +946,16 @@ private:
   /// argument or call site argument. See also `getCalleeArgNo` and
   /// `getCallSiteArgNo`.
   int getArgNo(bool CallbackCalleeArgIfApplicable) const {
-    if (CallbackCalleeArgIfApplicable)
-      if (Argument *Arg = getAssociatedArgument())
-        return Arg->getArgNo();
     switch (getPositionKind()) {
     case IRPosition::IRP_ARGUMENT:
       return cast<Argument>(getAsValuePtr())->getArgNo();
     case IRPosition::IRP_CALL_SITE_ARGUMENT: {
+      // Only call site arguments can be associated with a callback callee
+      // argument.
+      if (CallbackCalleeArgIfApplicable) {
+        if (Argument *Arg = getAssociatedArgument())
+          return Arg->getArgNo();
+      }
       Use &U = *getAsUsePtr();
       return cast<CallBase>(U.getUser())->getArgOperandNo(&U);
     }
@@ -973,7 +975,11 @@ private:
   }
 
   /// Verify internal invariants.
+#ifdef EXPENSIVE_CHECKS
   LLVM_ABI void verify();
+#else
+  void verify() {}
+#endif
 
   /// Return the underlying pointer as Value *, valid for all positions but
   /// IRP_CALL_SITE_ARGUMENT.
@@ -1251,7 +1257,11 @@ struct InformationCache {
     return FI.CalledViaMustTail || FI.ContainsMustTailCall;
   }
 
-  bool isOnlyUsedByAssume(const Instruction &I) const {
+  bool isOnlyUsedByAssume(const Instruction &I) {
+    const Function &F = *I.getFunction();
+    FunctionInfo &FI = getFunctionInfo(F);
+    if (!FI.AssumeOnlyValuesCollected)
+      collectAssumeOnlyValues(FI);
     return AssumeOnlyValues.contains(&I);
   }
 
@@ -1298,6 +1308,17 @@ struct InformationCache {
   LLVM_ABI ArrayRef<Function *>
   getIndirectlyCallableFunctions(Attributor &A) const;
 
+  /// Return true if \p F has an exact definition or is inlineable.
+  ///
+  /// This is computed once when the information of \p F is initialized. For
+  /// functions that are not initialized yet, only the definition is checked,
+  /// as InlineableFunctions is also only filled on initialization.
+  bool isExactOrInlineable(const Function &F) const {
+    if (const FunctionInfo *FI = FuncInfoMap.lookup(&F))
+      return FI->IsExactOrInlineable;
+    return F.hasExactDefinition();
+  }
+
   /// Return the flat address space if the associated target has.
   LLVM_ABI std::optional<unsigned> getFlatAddressSpace() const;
 
@@ -1306,6 +1327,9 @@ struct InformationCache {
 private:
   struct FunctionInfo {
     LLVM_ABI ~FunctionInfo();
+
+    /// Whether the function has an exact definition or is inlineable.
+    bool IsExactOrInlineable = false;
 
     /// A nested map that remembers all instructions in a function with a
     /// certain instruction opcode (Instruction::getOpcode()).
@@ -1323,6 +1347,10 @@ private:
 
     /// Function has the `"kernel"` attribute
     bool IsKernel;
+
+    /// The values only used by `llvm.assume`s in the function have been added
+    /// to AssumeOnlyValues.
+    bool AssumeOnlyValuesCollected = false;
   };
 
   /// A map type from functions to informatio about it.
@@ -1330,17 +1358,24 @@ private:
 
   /// Return information about the function \p F, potentially by creating it.
   FunctionInfo &getFunctionInfo(const Function &F) {
-    FunctionInfo *&FI = FuncInfoMap[&F];
-    if (!FI) {
-      FI = new (Allocator) FunctionInfo();
-      initializeInformationCache(F, *FI);
-    }
+    auto [It, Inserted] = FuncInfoMap.try_emplace(&F);
+    if (!Inserted)
+      return *It->second;
+
+    // Initialization can grow the map, so don't keep a reference into it.
+    FunctionInfo *FI = new (Allocator) FunctionInfo();
+    It->second = FI;
+    initializeInformationCache(F, *FI);
     return *FI;
   }
 
   /// Vector of functions that might be callable indirectly, i.a., via a
   /// function pointer.
   SmallVector<Function *> IndirectlyCallableFunctions;
+
+  /// Add the values only used by `llvm.assume`s in the function of \p FI to
+  /// AssumeOnlyValues. This is done on demand, as few users need them.
+  LLVM_ABI void collectAssumeOnlyValues(FunctionInfo &FI);
 
   /// Initialize the function information cache \p FI for the function \p F.
   ///
@@ -1375,6 +1410,24 @@ private:
   /// Give the Attributor access to the members so
   /// Attributor::identifyDefaultAbstractAttributes(...) can initialize them.
   friend struct Attributor;
+};
+
+/// A set of kinds of abstract attributes, given by their IDs. The kinds
+/// declared here are tested with a bit mask, others with a list of IDs.
+class AAKindSet {
+public:
+  /// Return the set of the kinds with the IDs \p KindIDs.
+  template <const char *...KindIDs> static constexpr AAKindSet get();
+
+  /// Return true if abstract attributes of type \p AAType are in the set.
+  template <typename AAType> bool contains() const;
+
+private:
+  constexpr AAKindSet(uint64_t Mask, ArrayRef<const char *> IDs)
+      : Mask(Mask), IDs(IDs) {}
+
+  uint64_t Mask;
+  ArrayRef<const char *> IDs;
 };
 
 /// Configuration for the Attributor.
@@ -1421,8 +1474,8 @@ struct AttributorConfig {
   /// Helper to update an underlying call graph and to delete functions.
   CallGraphUpdater &CGUpdater;
 
-  /// If not null, a set limiting the attribute opportunities.
-  DenseSet<const char *> *Allowed = nullptr;
+  /// If set, the only kinds of abstract attributes to create.
+  std::optional<AAKindSet> Allowed;
 
   /// Maximum number of iterations to run until fixpoint.
   std::optional<unsigned> MaxFixpointIterations;
@@ -1752,7 +1805,7 @@ struct Attributor {
     if (!AAType::isValidIRPositionForInit(*this, IRP))
       return false;
 
-    if (Configuration.Allowed && !Configuration.Allowed->count(&AAType::ID))
+    if (Configuration.Allowed && !Configuration.Allowed->contains<AAType>())
       return false;
 
     // For now we skip anything in naked and optnone functions.
@@ -1787,7 +1840,7 @@ struct Attributor {
   /// If a function is exactly defined or it has alwaysinline attribute
   /// and is viable to be inlined, we say it is IPO amendable
   bool isFunctionIPOAmendable(const Function &F) {
-    return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F) ||
+    return InfoCache.isExactOrInlineable(F) ||
            (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
   }
 
@@ -2494,7 +2547,18 @@ private:
   /// the inner level.
   ///{
   using AAMapKeyTy = std::pair<const char *, IRPosition>;
-  DenseMap<AAMapKeyTy, AbstractAttribute *> AAMap;
+  /// The IDs are adjacent bytes and the positions of a value differ only in
+  /// the low bits, both of which the default hash functions mostly ignore.
+  struct AAMapKeyInfo : DenseMapInfo<AAMapKeyTy> {
+    static unsigned getHashValue(const AAMapKeyTy &Key) {
+      const IRPosition &IRP = Key.second;
+      auto ID = reinterpret_cast<uintptr_t>(Key.first);
+      auto Pos = reinterpret_cast<uintptr_t>(static_cast<void *>(IRP));
+      auto Ctx = reinterpret_cast<uintptr_t>(IRP.getCallBaseContext());
+      return detail::combineHashValue(unsigned(ID), unsigned(Pos ^ Ctx));
+    }
+  };
+  DenseMap<AAMapKeyTy, AbstractAttribute *, AAMapKeyInfo> AAMap;
   ///}
 
   /// Map to remember all requested signature changes (= argument replacements).
@@ -3173,6 +3237,10 @@ struct StateWrapper : public BaseType, public StateTy {
   StateType &getState() override { return *this; }
 
   const StateType &getState() const override { return *this; }
+
+  bool isAtFixpoint() const final { return StateTy::isAtFixpoint(); }
+
+  bool isStateAtFixpoint() const final { return StateTy::isAtFixpoint(); }
 };
 
 /// Helper class that provides common functionality to manifest IR attributes.
@@ -3312,10 +3380,10 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
 
   /// Return false if an AA should not be updated for \p IRP.
   static bool isValidIRPositionForUpdate(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFnInterfaceKind())
+      return true;
     Function *AssociatedFn = IRP.getAssociatedFunction();
-    bool IsFnInterface = IRP.isFnInterfaceKind();
-    assert((!IsFnInterface || AssociatedFn) &&
-           "Function interface without a function?");
+    assert(AssociatedFn && "Function interface without a function?");
 
     // TODO: Not all attributes require an exact definition. Find a way to
     //       enable deduction for some but not all attributes in case the
@@ -3324,7 +3392,7 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
     // TODO: We could always determine abstract attributes and if sufficient
     //       information was found we could duplicate the functions that do not
     //       have an exact definition.
-    return !IsFnInterface || A.isFunctionIPOAmendable(*AssociatedFn);
+    return A.isFunctionIPOAmendable(*AssociatedFn);
   }
 
   /// Initialize the state with the information in the Attributor \p A.
@@ -3348,6 +3416,10 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// Return the internal abstract state for inspection.
   virtual StateType &getState() = 0;
   virtual const StateType &getState() const = 0;
+
+  /// Return true if the state is at a fixpoint, like
+  /// getState().isAtFixpoint() but with a single virtual call.
+  virtual bool isStateAtFixpoint() const { return getState().isAtFixpoint(); }
 
   /// Return an IR position, see struct IRPosition.
   const IRPosition &getIRPosition() const { return *this; };
@@ -6383,6 +6455,72 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
   };
 }
 } // namespace AA
+
+namespace detail {
+template <const char *...IDs> struct AAKindIDList {};
+
+/// The IDs of the abstract attributes declared here, by their bit in
+/// AAKindSet.
+using AAKindIDs = AAKindIDList<
+    &AANoUnwind::ID, &AANoSync::ID, &AAMustProgress::ID, &AANonNull::ID,
+    &AANoRecurse::ID, &AAWillReturn::ID, &AAUndefinedBehavior::ID,
+    &AAIntraFnReachability::ID, &AANoAlias::ID, &AANoFree::ID, &AANoReturn::ID,
+    &AAIsDead::ID, &AADereferenceable::ID, &AAAlign::ID, &AAInstanceInfo::ID,
+    &AANoCapture::ID, &AAValueSimplify::ID, &AAHeapToStack::ID,
+    &AAPrivatizablePtr::ID, &AAMemoryBehavior::ID, &AAMemoryLocation::ID,
+    &AAValueConstantRange::ID, &AAPotentialConstantValues::ID,
+    &AAPotentialValues::ID, &AANoUndef::ID, &AANoFPClass::ID, &AACallEdges::ID,
+    &AAExecutionDomain::ID, &AAInterFnReachability::ID, &AANonConvergent::ID,
+    &AAPointerInfo::ID, &AAAssumptionInfo::ID, &AAUnderlyingObjects::ID,
+    &AAInvariantLoadPointer::ID, &AAAddressSpace::ID, &AANoAliasAddrSpace::ID,
+    &AAAllocationInfo::ID, &AAGlobalValueInfo::ID, &AAIndirectCallInfo::ID,
+    &AADenormalFPMath::ID>;
+
+template <const char *...IDs>
+constexpr size_t getNumAAKinds(AAKindIDList<IDs...>) {
+  return sizeof...(IDs);
+}
+
+constexpr size_t NumAAKinds = getNumAAKinds(AAKindIDs());
+static_assert(NumAAKinds <= 64, "Too many kinds for the mask");
+
+/// Return the bit of \p ID in AAKindSet, or the number of kinds if it has
+/// none. The IDs are compared as template arguments since older compilers
+/// cannot compare their addresses in constant expressions.
+template <const char *ID, const char *...IDs>
+constexpr size_t getAAKindBit(AAKindIDList<IDs...>) {
+  constexpr bool Matches[] = {
+      std::is_same_v<AAKindIDList<ID>, AAKindIDList<IDs>>...};
+  for (size_t I = 0; I != sizeof...(IDs); ++I) {
+    if (Matches[I])
+      return I;
+  }
+  return sizeof...(IDs);
+}
+
+/// Return the bit of \p ID in the mask of AAKindSet, or 0 if it has none.
+template <const char *ID> constexpr uint64_t getAAKindMask() {
+  constexpr size_t Bit = getAAKindBit<ID>(AAKindIDs());
+  return Bit < NumAAKinds ? uint64_t(1) << Bit : 0;
+}
+
+/// The storage of the IDs of an AAKindSet.
+template <const char *...IDs>
+inline constexpr const char *AAKindSetIDs[] = {IDs...};
+} // namespace detail
+
+template <const char *...KindIDs> constexpr AAKindSet AAKindSet::get() {
+  return AAKindSet((detail::getAAKindMask<KindIDs>() | ...),
+                   detail::AAKindSetIDs<KindIDs...>);
+}
+
+template <typename AAType> bool AAKindSet::contains() const {
+  constexpr uint64_t KindMask = detail::getAAKindMask<&AAType::ID>();
+  if constexpr (KindMask != 0)
+    return Mask & KindMask;
+  else
+    return is_contained(IDs, &AAType::ID);
+}
 
 } // end namespace llvm
 

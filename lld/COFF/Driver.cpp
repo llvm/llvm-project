@@ -20,6 +20,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Filesystem.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Timer.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -1656,7 +1657,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope2("Parse cl::opt");
     cl::ResetAllOptionOccurrences();
-    cl::parseCommandLineOptions(config->libraryOptions, v);
+    cl::parseCommandLineOptions(config->libraryOptions, getToolOptions(), v);
   }
 
   // Handle /errorlimit early, because error() depends on it.

@@ -31,10 +31,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableMachineCombinerPass(
-    "systemz-machine-combiner",
-    cl::desc("Enable the machine combiner pass"),
-    cl::init(true), cl::Hidden);
+cl::opt<bool>
+    EnableMachineCombinerPass("systemz-machine-combiner",
+                              cl::desc("Enable the machine combiner pass"),
+                              cl::init(true), cl::Hidden);
 
 static cl::opt<bool> GenericSched(
     "generic-sched", cl::Hidden, cl::init(false),
@@ -47,16 +47,16 @@ LLVMInitializeSystemZTarget() {
   // Register the target.
   RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeSystemZAlignGlobalsLegacyPass(PR);
   initializeSystemZAsmPrinterPass(PR);
-  initializeSystemZElimComparePass(PR);
-  initializeSystemZShortenInstPass(PR);
-  initializeSystemZLongBranchPass(PR);
-  initializeSystemZLDCleanupPass(PR);
-  initializeSystemZShortenInstPass(PR);
-  initializeSystemZPostRewritePass(PR);
-  initializeSystemZTDCPassPass(PR);
+  initializeSystemZElimCompareLegacyPass(PR);
+  initializeSystemZShortenInstLegacyPass(PR);
+  initializeSystemZLongBranchLegacyPass(PR);
+  initializeSystemZLDCleanupLegacyPass(PR);
+  initializeSystemZPostRewriteLegacyPass(PR);
+  initializeSystemZTDCLegacyPass(PR);
   initializeSystemZDAGToDAGISelLegacyPass(PR);
-  initializeSystemZCopyPhysRegsPass(PR);
+  initializeSystemZCopyPhysRegsLegacyPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -226,8 +226,8 @@ public:
 
 void SystemZPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createSystemZAlignGlobalsPass());
-    addPass(createSystemZTDCPass());
+    addPass(createSystemZAlignGlobalsLegacyPass());
+    addPass(createSystemZTDCLegacyPass());
     addPass(createLoopDataPrefetchPass());
   }
 
@@ -237,10 +237,11 @@ void SystemZPassConfig::addIRPasses() {
 }
 
 bool SystemZPassConfig::addInstSelector() {
-  addPass(createSystemZISelDag(getSystemZTargetMachine(), getOptLevel()));
+  addPass(
+      createSystemZISelDagLegacyPass(getSystemZTargetMachine(), getOptLevel()));
 
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createSystemZLDCleanupPass(getSystemZTargetMachine()));
+    addPass(createSystemZLDCleanupLegacyPass(getSystemZTargetMachine()));
 
   return false;
 }
@@ -255,18 +256,18 @@ bool SystemZPassConfig::addILPOpts() {
 }
 
 void SystemZPassConfig::addPreRegAlloc() {
-  addPass(createSystemZCopyPhysRegsPass(getSystemZTargetMachine()));
+  addPass(createSystemZCopyPhysRegsLegacyPass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPostRewrite() {
-  addPass(createSystemZPostRewritePass(getSystemZTargetMachine()));
+  addPass(createSystemZPostRewriteLegacyPass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPostRegAlloc() {
   // PostRewrite needs to be run at -O0 also (in which case addPostRewrite()
   // is not called).
   if (getOptLevel() == CodeGenOptLevel::None)
-    addPass(createSystemZPostRewritePass(getSystemZTargetMachine()));
+    addPass(createSystemZPostRewriteLegacyPass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPreSched2() {
@@ -279,7 +280,7 @@ void SystemZPassConfig::addPreEmitPass() {
   // vector instructions will be shortened into opcodes that compare
   // elimination recognizes.
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createSystemZShortenInstPass(getSystemZTargetMachine()));
+    addPass(createSystemZShortenInstLegacyPass(getSystemZTargetMachine()));
 
   // We eliminate comparisons here rather than earlier because some
   // transformations can change the set of available CC values and we
@@ -305,8 +306,8 @@ void SystemZPassConfig::addPreEmitPass() {
   // between the comparison and the branch, but it isn't clear whether
   // preventing that would be a win or not.
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createSystemZElimComparePass(getSystemZTargetMachine()));
-  addPass(createSystemZLongBranchPass(getSystemZTargetMachine()));
+    addPass(createSystemZElimCompareLegacyPass(getSystemZTargetMachine()));
+  addPass(createSystemZLongBranchLegacyPass(getSystemZTargetMachine()));
 
   // Do final scheduling after all other optimizations, to get an
   // optimal input for the decoder (branch relaxation must happen

@@ -29,7 +29,6 @@
 name:            frame_index
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr64sp, preferred-register: '', flags: [  ] }
@@ -47,14 +46,12 @@ body:             |
     $x0 = COPY %0(p0)
 ...
 
----
 
 ---
 # CHECK-LABEL: name: ptr_mask
 name:            ptr_mask
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 # CHECK:  body:
 # CHECK: %2:gpr64sp = ANDXri %0, 8060
@@ -73,7 +70,6 @@ body:             |
 name:            global_local
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr }
 
@@ -90,7 +86,6 @@ body:             |
 name:            global_got
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr }
 
@@ -107,7 +102,6 @@ body:             |
 name:            icmp
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '', flags: [  ] }
@@ -162,7 +156,6 @@ body:             |
 name:            fcmp
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '', flags: [  ] }
@@ -188,7 +181,7 @@ registers:
 
 body:             |
   bb.0:
-    liveins: $w0, $x0
+    liveins: $d0, $x0
 
     %0(f32) = COPY $s0
     %1(i32) = G_FCMP floatpred(one), %0, %0
@@ -205,7 +198,6 @@ body:             |
 name:            phi
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '', flags: [  ] }
@@ -243,7 +235,6 @@ body:             |
 name:            select
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '', flags: [  ] }

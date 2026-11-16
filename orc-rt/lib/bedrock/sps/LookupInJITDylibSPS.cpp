@@ -15,6 +15,7 @@
 #include "orc-rt-c/bedrock/ControllerHandlerTag.h"
 #include "orc-rt-internal/support/StringExtras.h"
 #include "orc-rt/bedrock/Session.h"
+#include "orc-rt/support/sps/SPSJITDylibLookupFlags.h"
 #include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
@@ -24,10 +25,10 @@ namespace orc_rt::sps {
 
 void lookupInJITDylib(
     move_only_function<void(Expected<SymbolLookupResult>)> OnComplete,
-    Session &S, const void *JITDylibKeyAddr,
+    Session &S, const void *JITDylibKeyAddr, JITDylibLookupFlags JDLookupFlags,
     const SymbolLookupSet &LS) noexcept {
-  using SPSSig =
-      SPSExpected<SPSSymbolLookupResult>(SPSExecutorAddr, SPSSymbolLookupSet);
+  using SPSSig = SPSExpected<SPSSymbolLookupResult>(
+      SPSExecutorAddr, SPSJITDylibLookupFlags, SPSSymbolLookupSet);
   SPSWrapperFunction<SPSSig>::call(
       S.controllerCaller(&orc_rt_tag_sps_lookupInJITDylib),
       [OnComplete = std::move(OnComplete), NumSymbols = LS.size()](
@@ -47,7 +48,7 @@ void lookupInJITDylib(
                   .str()));
         OnComplete(std::move(*Result));
       },
-      JITDylibKeyAddr, LS);
+      JITDylibKeyAddr, JDLookupFlags, LS);
 }
 
 } // namespace orc_rt::sps

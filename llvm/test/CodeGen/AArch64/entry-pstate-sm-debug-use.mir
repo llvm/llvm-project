@@ -25,7 +25,6 @@
 ---
 name:            debug_uses
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr64 }

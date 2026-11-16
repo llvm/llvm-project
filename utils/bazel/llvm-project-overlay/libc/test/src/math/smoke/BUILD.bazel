@@ -357,6 +357,9 @@ math_test(
 math_test(
     name = "daddf128",
     hdrs = ["AddTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -2720,6 +2723,11 @@ math_test(name = "log10f16")
 math_test(name = "log2f16")
 
 math_test(name = "log2p1f16")
+
+math_test(
+    name = "log10p1bf16",
+    deps = ["//libc:__support_fputil_bfloat16"],
+)
 
 math_test(name = "log10p1f16")
 

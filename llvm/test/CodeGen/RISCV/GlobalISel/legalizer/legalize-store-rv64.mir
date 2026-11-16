@@ -7,7 +7,6 @@
 ---
 name:            store_i8
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -48,7 +47,6 @@ body:             |
 ---
 name:            store_i16
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -89,7 +87,6 @@ body:             |
 ---
 name:            store_i32
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -130,7 +127,6 @@ body:             |
 ---
 name:            store_i64
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -167,7 +163,6 @@ body:             |
 ---
 name:            store_i128
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -204,7 +199,6 @@ body:             |
 ---
 name:            store_ptr
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -241,7 +235,6 @@ body:             |
 ---
 name:            store_i16_unaligned
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -291,7 +284,6 @@ body:             |
 ---
 name:            store_i32_unaligned
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -354,7 +346,6 @@ body:             |
 ---
 name:            store_i32_align2
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -404,7 +395,6 @@ body:             |
 ---
 name:            store_i64_align2
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

@@ -26,7 +26,6 @@ name:            check_sext_not_lost
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }

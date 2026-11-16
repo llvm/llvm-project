@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-spirv-to-llvm -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='allow-pattern-rollback=0' -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.Branch

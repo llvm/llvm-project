@@ -435,7 +435,8 @@ int main(int argc, char **argv, char * const *envp) {
   InitializeNativeTargetAsmParser();
 
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              ArrayRef(argv, argc),
                               "llvm interpreter & dynamic compiler\n");
 
   if (HostJITTriple) {

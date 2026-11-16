@@ -4,7 +4,6 @@
 
 ---
 name:            scalable_v16i1
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64common, preferred-register: '' }
   - { id: 1, class: ppr, preferred-register: '' }
@@ -35,7 +34,6 @@ body:             |
 ...
 ---
 name:            scalable_neg_v16i1
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64common, preferred-register: '' }
   - { id: 1, class: ppr, preferred-register: '' }

@@ -124,7 +124,7 @@ public:
 class LLVM_ABI LibraryOptionsParser final : public cl::LibraryOptions {
 public:
   template <typename T>
-  explicit LibraryOptionsParser(std::in_place_type_t<T>)
+  constexpr explicit LibraryOptionsParser(std::in_place_type_t<T>)
       : LibraryOptions(T::PerContext), Table(T::optTable), Global(&T::Global),
         Default(&T::Default),
         Apply([](void *Opts, const Arg &A, BumpPtrAllocator &Alloc) {
@@ -138,13 +138,13 @@ public:
   void forEachOption(
       function_ref<void(StringRef, StringRef, StringRef)> Fn) const override;
   Error parse(void *Opts, ArrayRef<const char *> Args, unsigned &Consumed,
-              BumpPtrAllocator &Alloc) override;
-  void *global() override { return Global; }
+              BumpPtrAllocator &Alloc) const override;
+  void *global() const override { return Global; }
   const void *getDefault() const override { return Default; }
   void *copyDefault(BumpPtrAllocator &Alloc) const override {
     return Copy(Alloc);
   }
-  void reset() override { Reset(); }
+  void reset() const override { Reset(); }
 
 private:
   const OptTable &(*Table)();

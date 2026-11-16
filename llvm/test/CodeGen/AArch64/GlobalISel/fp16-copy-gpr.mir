@@ -24,7 +24,6 @@ name:            fp16_to_gpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: fpr }
@@ -77,7 +76,6 @@ name:            gpr_to_fp16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -106,7 +104,6 @@ name:            gpr_to_fp16_physreg
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }

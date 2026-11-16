@@ -1718,6 +1718,10 @@ Constant *llvm::ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
   if (isa<PoisonValue>(Base) && isa<PoisonValue>(Val))
     return Base;
 
+  // TODO: Fold vectors element by element.
+  if (Base->getType()->isVectorTy())
+    return nullptr;
+
   auto *COffset = dyn_cast<ConstantInt>(Offset);
   if (!COffset)
     return nullptr;
@@ -1763,6 +1767,10 @@ Constant *llvm::ConstantFoldBitExtractOperands(Type *Ty, Constant *Src,
   // bitextract C, undef -> poison
   if (isa<PoisonValue>(Src) || isa<UndefValue>(Offset))
     return PoisonValue::get(Ty);
+
+  // TODO: Fold vectors element by element.
+  if (Ty->isVectorTy())
+    return nullptr;
 
   auto *COffset = dyn_cast<ConstantInt>(Offset);
   if (!COffset)
@@ -1829,6 +1837,8 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::uadd_sat:
   case Intrinsic::ssub_sat:
   case Intrinsic::usub_sat:
+  case Intrinsic::sshl_sat:
+  case Intrinsic::ushl_sat:
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
   case Intrinsic::bitreverse:
@@ -3919,6 +3929,15 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantInt::get(Ty, C0->usub_sat(*C1));
       else
         return ConstantInt::get(Ty, C0->ssub_sat(*C1));
+    case Intrinsic::ushl_sat:
+    case Intrinsic::sshl_sat:
+      if (!C0 || !C1)
+        return nullptr;
+      if (C1->uge(C1->getBitWidth()))
+        return PoisonValue::get(Ty);
+      if (IntrinsicID == Intrinsic::ushl_sat)
+        return ConstantInt::get(Ty, C0->ushl_sat(*C1));
+      return ConstantInt::get(Ty, C0->sshl_sat(*C1));
     case Intrinsic::cttz:
     case Intrinsic::ctlz:
       assert(C1 && "Must be constant int");

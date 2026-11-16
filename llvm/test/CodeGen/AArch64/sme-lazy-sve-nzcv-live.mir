@@ -26,7 +26,6 @@
 ---
 name:            cmp_branch
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false

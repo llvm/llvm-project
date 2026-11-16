@@ -1,7 +1,8 @@
 ! Real DO controls are a Fortran extension. An implicit acc.loop (a DO inside
 ! a compute construct with no !$acc loop) converts a non-integer control to
-! the induction variable's integer type. An integer control is left unchanged.
-! An explicit !$acc loop is left unchanged.
+! the induction variable's integer type. An integer control whose kind differs
+! from the induction variable is converted to that kind. An explicit !$acc loop
+! with a non-integer bound is rejected in semantics.
 
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 

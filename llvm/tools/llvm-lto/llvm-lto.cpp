@@ -1010,8 +1010,8 @@ int main(int argc, char **argv) {
   InitializeAllAsmParsers();
 
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
-                              "llvm LTO linker\n");
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              ArrayRef(argv, argc), "llvm LTO linker\n");
 
   if (OptLevel < '0' || OptLevel > '3')
     error("optimization level must be between 0 and 3");

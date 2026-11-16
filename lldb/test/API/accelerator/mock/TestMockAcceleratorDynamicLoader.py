@@ -123,6 +123,36 @@ class MockAcceleratorDynamicLoaderTestCase(TestBase):
     @skipIfRemote
     @skipIfDarwin  # qProcessInfo cannot encode an AMDGPU architecture on Darwin.
     @add_test_categories(["llgs"])
+    def test_dynamic_loader_stop_from_accelerator_process(self):
+        """The mock accelerator reports a dynamic-loader stop through LLGS."""
+        library_path = self.create_library()
+        self.set_mock_env("LLDB_MOCK_ACCELERATOR_DYLD_CONNECTION", "accelerator")
+        self.set_mock_env("LLDB_MOCK_ACCELERATOR_LIBRARY_PATH", library_path)
+        self.set_mock_env("LLDB_MOCK_ACCELERATOR_DYNAMIC_LOADER_STOP_ON_RESUME", "1")
+
+        native_target, native_process = self.launch_native()
+        accelerator_target = self.connect_accelerator(
+            native_target, native_process, "accelerator"
+        )
+        self.runCmd("settings set target.process.stop-on-sharedlibrary-events true")
+        self.addTearDownHook(
+            lambda: self.runCmd(
+                "settings set target.process.stop-on-sharedlibrary-events false"
+            )
+        )
+        accelerator_process = accelerator_target.GetProcess()
+
+        self.assertSuccess(accelerator_process.Continue())
+
+        self.assertState(accelerator_process.GetState(), lldb.eStateStopped)
+        self.assertStopReason(
+            accelerator_process.GetSelectedThread().GetStopReason(),
+            lldb.eStopReasonDynamicLoader,
+        )
+
+    @skipIfRemote
+    @skipIfDarwin  # qProcessInfo cannot encode an AMDGPU architecture on Darwin.
+    @add_test_categories(["llgs"])
     def test_library_from_native_plugin(self):
         """The accelerator loader routes through the native LLGS plugin."""
         library_path = self.create_library()

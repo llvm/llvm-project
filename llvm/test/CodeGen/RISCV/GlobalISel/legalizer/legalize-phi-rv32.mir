@@ -103,7 +103,6 @@
 ---
 name:            phi_i1
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -163,7 +162,6 @@ body:             |
 ---
 name:            phi_i8
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -223,7 +221,6 @@ body:             |
 ---
 name:            phi_i16
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -283,7 +280,6 @@ body:             |
 ---
 name:            phi_i32
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -337,7 +333,6 @@ body:             |
 ---
 name:            phi_ptr
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -391,7 +386,6 @@ body:             |
 ---
 name:            phi_i48
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -467,7 +461,6 @@ body:             |
 ---
 name:            phi_i64
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -537,7 +530,6 @@ body:             |
 ---
 name:            phi_i72
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

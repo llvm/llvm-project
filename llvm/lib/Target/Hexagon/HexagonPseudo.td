@@ -501,6 +501,40 @@ def PS_vloadrq_ai: Pseudo<(outs HvxQR:$Qd),
       (ins IntRegs:$Rs, s32_0Imm:$Off), "", []>,
       Requires<[HasV60,UseHVX]>;
 
+// HLX vector load and store pseudos
+let Predicates = [UseHLX], isPseudo = 1, isCodeGenOnly = 1,
+    accessSize = HLXVectorAccess, hasSideEffects = 0, mayLoad = 1, isHLX = 1 in
+def LX_L16b_pseudo : LDInst<
+    (outs HlxLR:$dst),
+    (ins IntRegs:$src),
+    "",
+    [], "", HLX_LD_tc_ld_SLOT1>;
+
+let Predicates = [UseHLX], isPseudo = 1, isCodeGenOnly = 1,
+    accessSize = HLXVectorAccess, hasSideEffects = 0, mayStore = 1, isHLX = 1 in
+def LX_S16b_pseudo : STInst<
+    (outs),
+    (ins IntRegs:$dst, HlxLR:$L),
+    "",
+    [], "", HLX_ST_tc_st_SLOT0>;
+
+// HLX vector spill pseudos
+let Predicates = [UseHLX], isPseudo = 1, isCodeGenOnly = 1,
+    mayLoad = 1, accessSize = HLXVectorAccess, hasSideEffects = 0 in
+class LDril_template<RegisterClass RC, InstHexagon rootInst>
+  : InstHexagon<(outs RC:$dst), (ins IntRegs:$addr, s32_0Imm:$off),
+    "", [], "", rootInst.Itinerary, rootInst.Type>;
+
+def PS_loadrl : LDril_template<HlxLR, LX_L16b_pseudo>;
+
+let Predicates = [UseHLX], isPseudo = 1, isCodeGenOnly = 1,
+    mayStore = 1, accessSize = HLXVectorAccess, hasSideEffects = 0 in
+class STril_template<RegisterClass RC, InstHexagon rootInst>
+  : InstHexagon<(outs), (ins IntRegs:$addr, s32_0Imm:$off, RC:$src),
+    "", [], "", rootInst.Itinerary, rootInst.Type>;
+
+def PS_storerl : STril_template<HlxLR, LX_S16b_pseudo>;
+
 
 let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
 class VSELInst<dag outs, dag ins, InstHexagon rootInst>
@@ -660,4 +694,3 @@ def PS_trap1 : HInst<(outs), (ins u8_0Imm:$Ii), "trap1(#$Ii)", tc_53c851ab,
   let Inst{13-13} = 0b0;
   let Inst{31-16} = 0b0101010010000000;
 }
-

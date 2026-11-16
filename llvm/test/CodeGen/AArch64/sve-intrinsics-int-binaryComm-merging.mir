@@ -16,7 +16,6 @@
 ---
 name:            fmul_float_zero
 alignment:       4
-tracksRegLiveness: true
 tracksDebugUserValues: true
 registers:       []
 liveins:

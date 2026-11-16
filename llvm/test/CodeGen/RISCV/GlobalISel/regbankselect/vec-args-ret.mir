@@ -10,7 +10,6 @@
 ---
 name:            test_ret_nxv1i8
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -35,7 +34,6 @@ body:             |
 ---
 name:            test_ret_nxv2i8
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -60,7 +58,6 @@ body:             |
 ---
 name:            test_ret_nxv4i8
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -85,7 +82,6 @@ body:             |
 ---
 name:            test_ret_nxv8i8
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -110,7 +106,6 @@ body:             |
 ---
 name:            test_ret_nxv16i8
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -135,7 +130,6 @@ body:             |
 ---
 name:            test_ret_nxv32i8
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -160,7 +154,6 @@ body:             |
 ---
 name:            test_ret_nxv64i8
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -185,7 +178,6 @@ body:             |
 ---
 name:            test_ret_nxv1i16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -210,7 +202,6 @@ body:             |
 ---
 name:            test_ret_nxv2i16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -235,7 +226,6 @@ body:             |
 ---
 name:            test_ret_nxv4i16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -260,7 +250,6 @@ body:             |
 ---
 name:            test_ret_nxv8i16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -285,7 +274,6 @@ body:             |
 ---
 name:            test_ret_nxv16i16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -310,7 +298,6 @@ body:             |
 ---
 name:            test_ret_nxv32i16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -335,7 +322,6 @@ body:             |
 ---
 name:            test_ret_nxv1i32
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -360,7 +346,6 @@ body:             |
 ---
 name:            test_ret_nxv2i32
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -385,7 +370,6 @@ body:             |
 ---
 name:            test_ret_nxv4i32
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -410,7 +394,6 @@ body:             |
 ---
 name:            test_ret_nxv8i32
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -435,7 +418,6 @@ body:             |
 ---
 name:            test_ret_nxv16i32
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -460,7 +442,6 @@ body:             |
 ---
 name:            test_ret_nxv1i64
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -485,7 +466,6 @@ body:             |
 ---
 name:            test_ret_nxv2i64
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -510,7 +490,6 @@ body:             |
 ---
 name:            test_ret_nxv4i64
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -535,7 +514,6 @@ body:             |
 ---
 name:            test_ret_nxv8i64
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -560,7 +538,6 @@ body:             |
 ---
 name:            test_ret_nxv64i1
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -585,7 +562,6 @@ body:             |
 ---
 name:            test_ret_nxv32i1
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -610,7 +586,6 @@ body:             |
 ---
 name:            test_ret_nxv16i1
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -635,7 +610,6 @@ body:             |
 ---
 name:            test_ret_nxv8i1
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -660,7 +634,6 @@ body:             |
 ---
 name:            test_ret_nxv4i1
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -685,7 +658,6 @@ body:             |
 ---
 name:            test_ret_nxv2i1
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -710,7 +682,6 @@ body:             |
 ---
 name:            test_ret_nxv1i1
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -735,7 +706,6 @@ body:             |
 ---
 name:            test_ret_nxv1f32
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -760,7 +730,6 @@ body:             |
 ---
 name:            test_ret_nxv2f32
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -785,7 +754,6 @@ body:             |
 ---
 name:            test_ret_nxv4f32
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -810,7 +778,6 @@ body:             |
 ---
 name:            test_ret_nxv8f32
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -835,7 +802,6 @@ body:             |
 ---
 name:            test_ret_nxv16f32
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -860,7 +826,6 @@ body:             |
 ---
 name:            test_ret_nxv1f64
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -885,7 +850,6 @@ body:             |
 ---
 name:            test_ret_nxv2f64
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -910,7 +874,6 @@ body:             |
 ---
 name:            test_ret_nxv4f64
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -935,7 +898,6 @@ body:             |
 ---
 name:            test_ret_nxv8f64
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -960,7 +922,6 @@ body:             |
 ---
 name:            test_ret_nxv1f16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -985,7 +946,6 @@ body:             |
 ---
 name:            test_ret_nxv2f16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -1010,7 +970,6 @@ body:             |
 ---
 name:            test_ret_nxv4f16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -1035,7 +994,6 @@ body:             |
 ---
 name:            test_ret_nxv8f16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -1060,7 +1018,6 @@ body:             |
 ---
 name:            test_ret_nxv16f16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -1085,7 +1042,6 @@ body:             |
 ---
 name:            test_ret_nxv32f16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -1110,7 +1066,6 @@ body:             |
 ---
 name:            test_ret_nxv1b16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -1135,7 +1090,6 @@ body:             |
 ---
 name:            test_ret_nxv2b16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -1160,7 +1114,6 @@ body:             |
 ---
 name:            test_ret_nxv4b16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -1185,7 +1138,6 @@ body:             |
 ---
 name:            test_ret_nxv8b16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -1210,7 +1162,6 @@ body:             |
 ---
 name:            test_ret_nxv16b16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8
@@ -1235,7 +1186,6 @@ body:             |
 ---
 name:            test_ret_nxv32b16
 legalized:         true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $v8

@@ -48,7 +48,6 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/TargetParser/AtomicScope.h"
@@ -61,16 +60,6 @@ using namespace llvm::SDPatternMatch;
 #define DEBUG_TYPE "si-lower"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
-
-static cl::opt<bool>
-    DisableLoopAlignment("amdgpu-disable-loop-alignment",
-                         cl::desc("Do not align and prefetch loops"),
-                         cl::init(false));
-
-static cl::opt<bool> UseDivergentRegisterIndexing(
-    "amdgpu-use-divergent-register-indexing", cl::Hidden,
-    cl::desc("Use indirect register addressing for divergent indexes"),
-    cl::init(false));
 
 static DenormalFPEnv getDenormalFPEnv(const MachineFunction &MF) {
   return MF.getInfo<SIMachineFunctionInfo>()->getMode().getDenormalFPEnv();
@@ -14383,7 +14372,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
              : AMDGPUAS::GLOBAL_ADDRESS;
 
   unsigned NumElements = VT.getVectorNumElements();
-  if (AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) {
+  if (AS == AMDGPUAS::FLAT_ADDRESS || AMDGPU::isExtendedGlobalAddrSpace(AS)) {
     if (NumElements > 4)
       return SplitVectorStore(Op, DAG);
     // v3 stores not supported on SI.
@@ -17224,7 +17213,7 @@ bool SITargetLowering::shouldExpandVectorDynExt(unsigned EltSize,
                                                 unsigned NumElem,
                                                 bool IsDivergentIdx,
                                                 const GCNSubtarget *Subtarget) {
-  if (UseDivergentRegisterIndexing)
+  if (Subtarget->getCLOpts().use_divergent_register_indexing)
     return false;
 
   unsigned VecSize = EltSize * NumElem;
@@ -18175,10 +18164,10 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
         Src1s.begin()->SrcOp.getValueSizeInBits() >= 32) {
       SmallVector<unsigned, 4> SrcBytes;
       auto Src0Mask = Src0s.begin()->PermMask;
-      SrcBytes.push_back(Src0Mask & 0xFF000000);
+      SrcBytes.push_back((Src0Mask >> 24) & 0xFF);
       bool UniqueEntries = true;
       for (auto I = 1; I < 4; I++) {
-        auto NextByte = Src0Mask & (0xFF << ((3 - I) * 8));
+        auto NextByte = (Src0Mask >> ((3 - I) * 8)) & 0xFF;
 
         if (is_contained(SrcBytes, NextByte)) {
           UniqueEntries = false;
@@ -20736,16 +20725,20 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
 
       KnownBits RHSKnown;
       VT.computeKnownBitsImpl(RHS, RHSKnown, DemandedElts, Depth + 1);
-      if (RHSKnown.isUnknown())
-        break;
 
+      bool SelfMultiply = LHS == RHS;
+
+      // For a self-multiply both operands are the same value, so RHSKnown also
+      // describes the LHS; avoid the duplicated query.
       KnownBits LHSKnown;
-      VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
-      if (LHSKnown.isUnknown())
-        break;
+      if (SelfMultiply)
+        LHSKnown = RHSKnown;
+      else
+        VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
 
-      bool SelfMultiply =
-          LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
+      if (SelfMultiply)
+        SelfMultiply &= isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
+
       Known = computeKnownBitsForMul24(LHSKnown, RHSKnown, Known.getBitWidth(),
                                        IID == Intrinsic::amdgcn_mul_i24,
                                        SelfMultiply);
@@ -20819,7 +20812,7 @@ Align SITargetLowering::getPrefLoopAlignment(
   // significant fetch delay after a backward branch. We use 32-byte alignment
   // with max padding of 4 bytes (one s_nop), see
   // getMaxPermittedBytesForAlignment().
-  if (ML && !DisableLoopAlignment &&
+  if (ML && getSubtarget()->getCLOpts().loop_alignment &&
       getSubtarget()->hasLoopHeadInstSplitSensitivity()) {
     // Loop rotation can make the backedge destination a block other than the
     // LoopInfo header, so prefer the block the caller is actually aligning.
@@ -20833,7 +20826,8 @@ Align SITargetLowering::getPrefLoopAlignment(
   }
 
   // Pre-GFX10 target did not benefit from loop alignment
-  if (!ML || DisableLoopAlignment || !getSubtarget()->hasInstPrefetch() ||
+  if (!ML || !getSubtarget()->getCLOpts().loop_alignment ||
+      !getSubtarget()->hasInstPrefetch() ||
       getSubtarget()->hasInstFwdPrefetchBug())
     return PrefAlign;
 

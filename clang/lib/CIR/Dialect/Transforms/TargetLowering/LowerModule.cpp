@@ -116,6 +116,8 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     langOpts.setClangABICompat(static_cast<clang::LangOptions::ClangABI>(
         loweringLangOpts.getClangAbiCompat()));
     langOpts.LongDoubleSize = loweringLangOpts.getLongDoubleSize();
+    langOpts.RelativeCXXABIVTables =
+        loweringLangOpts.getRelativeCxxAbiVtables();
   }
   // Some langopts are still not lowered.
   assert(!cir::MissingFeatures::lowerModuleLangOpts());

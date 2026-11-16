@@ -22,7 +22,6 @@
 ...
 ---
 name:            test_add
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64, preferred-register: '' }
   - { id: 1, class: gpr64sp, preferred-register: '' }

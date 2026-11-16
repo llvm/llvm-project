@@ -754,11 +754,10 @@ void ModFileWriter::PutEnumerationType(const Symbol &typeSymbol) {
           int ordinal{0};
           if (const auto &init{obj->init()}) {
             // The init may be a bare StructureConstructor or a
-            // Constant<SomeDerived> (after folding). Use
+            // Constant<Type<TypeCategory::Derived>> (after folding). Use
             // GetScalarConstantValue which handles both.
-            if (auto ctor{
-                    evaluate::GetScalarConstantValue<evaluate::SomeDerived>(
-                        *init)}) {
+            if (auto ctor{evaluate::GetScalarConstantValue<
+                    evaluate::Type<common::TypeCategory::Derived>>(*init)}) {
               for (const auto &[compRef, val] : *ctor) {
                 if (auto intVal{evaluate::ToInt64(val.value())}) {
                   ordinal = static_cast<int>(*intVal);

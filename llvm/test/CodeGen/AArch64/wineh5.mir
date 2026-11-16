@@ -90,7 +90,6 @@ legalized:       true
 regBankSelected: true
 selected:        true
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       true
 registers:
 liveins:

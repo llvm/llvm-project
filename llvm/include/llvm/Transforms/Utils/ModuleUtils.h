@@ -128,6 +128,8 @@ filterDeadComdatFunctions(SmallVectorImpl<Function *> &DeadComdatFunctions);
 /// the names of the module's strong external symbols that are not comdat
 /// members.
 ///
+/// The result is a hex string without a leading separator.
+///
 /// This identifier is normally guaranteed to be unique, or the program would
 /// fail to link due to multiply defined symbols.
 ///

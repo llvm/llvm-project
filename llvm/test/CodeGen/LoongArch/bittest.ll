@@ -231,7 +231,7 @@ define i1 @bittest_constant_by_var_shr_i64(i64 %b) nounwind {
 ; LA32-NEXT:    ori $a1, $a1, 722
 ; LA32-NEXT:    srl.w $a1, $a1, $a0
 ; LA32-NEXT:    addi.w $a0, $a0, -32
-; LA32-NEXT:    slti $a0, $a0, 0
+; LA32-NEXT:    srli.w $a0, $a0, 31
 ; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    ret
 ;
@@ -251,15 +251,14 @@ define i1 @bittest_constant_by_var_shr_i64(i64 %b) nounwind {
 define i1 @bittest_constant_by_var_shl_i64(i64 %b) nounwind {
 ; LA32-LABEL: bittest_constant_by_var_shl_i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $a1, $a0, -32
-; LA32-NEXT:    slti $a1, $a1, 0
-; LA32-NEXT:    sub.w $a1, $zero, $a1
-; LA32-NEXT:    ori $a2, $zero, 1
-; LA32-NEXT:    sll.w $a0, $a2, $a0
-; LA32-NEXT:    lu12i.w $a2, 301408
-; LA32-NEXT:    ori $a2, $a2, 722
-; LA32-NEXT:    and $a0, $a0, $a2
-; LA32-NEXT:    and $a0, $a1, $a0
+; LA32-NEXT:    ori $a1, $zero, 1
+; LA32-NEXT:    sll.w $a1, $a1, $a0
+; LA32-NEXT:    addi.w $a0, $a0, -32
+; LA32-NEXT:    srai.w $a0, $a0, 31
+; LA32-NEXT:    and $a0, $a0, $a1
+; LA32-NEXT:    lu12i.w $a1, 301408
+; LA32-NEXT:    ori $a1, $a1, 722
+; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    sltu $a0, $zero, $a0
 ; LA32-NEXT:    ret
 ;
@@ -344,9 +343,8 @@ define signext i32 @bit_10_z_select_i32(i32 signext %a, i32 signext %b, i32 sign
 ; LA64-LABEL: bit_10_z_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 1024
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i32 %a, 1024
@@ -393,9 +391,8 @@ define signext i32 @bit_11_z_select_i32(i32 signext %a, i32 signext %b, i32 sign
 ; LA64-LABEL: bit_11_z_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 2048
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i32 %a, 2048
@@ -443,9 +440,8 @@ define signext i32 @bit_20_z_select_i32(i32 signext %a, i32 signext %b, i32 sign
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    lu12i.w $a3, 256
 ; LA64-NEXT:    and $a0, $a0, $a3
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i32 %a, 1048576
@@ -491,9 +487,8 @@ define signext i32 @bit_31_z_select_i32(i32 signext %a, i32 signext %b, i32 sign
 ; LA64-LABEL: bit_31_z_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrins.d $a0, $zero, 30, 0
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i32 %a, 2147483648
@@ -516,7 +511,6 @@ define signext i32 @bit_31_nz_select_i32(i32 signext %a, i32 signext %b, i32 sig
 ; LA64-LABEL: bit_31_nz_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrins.d $a0, $zero, 30, 0
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -543,9 +537,8 @@ define i64 @bit_10_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_10_z_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 1024
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 1024
@@ -597,9 +590,8 @@ define i64 @bit_11_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_11_z_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 2048
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 2048
@@ -652,9 +644,8 @@ define i64 @bit_20_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    lu12i.w $a3, 256
 ; LA64-NEXT:    and $a0, $a0, $a3
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 1048576
@@ -707,9 +698,8 @@ define i64 @bit_31_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-NEXT:    lu12i.w $a3, -524288
 ; LA64-NEXT:    lu32i.d $a3, 0
 ; LA64-NEXT:    and $a0, $a0, $a3
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 2147483648
@@ -762,9 +752,8 @@ define i64 @bit_32_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-NEXT:    ori $a3, $zero, 0
 ; LA64-NEXT:    lu32i.d $a3, 1
 ; LA64-NEXT:    and $a0, $a0, $a3
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 4294967296
@@ -816,9 +805,8 @@ define i64 @bit_55_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    lu52i.d $a3, $zero, 8
 ; LA64-NEXT:    and $a0, $a0, $a3
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 36028797018963968
@@ -869,9 +857,8 @@ define i64 @bit_63_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_63_z_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrins.d $a0, $zero, 62, 0
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 9223372036854775808
@@ -1594,9 +1581,8 @@ define signext i32 @bit_10_1_z_select_i32(i32 signext %a, i32 signext %b, i32 si
 ; LA64-LABEL: bit_10_1_z_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 1023
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i32 %a, 1023
@@ -1619,7 +1605,6 @@ define signext i32 @bit_10_1_nz_select_i32(i32 signext %a, i32 signext %b, i32 s
 ; LA64-LABEL: bit_10_1_nz_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 1023
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -1644,9 +1629,8 @@ define signext i32 @bit_11_1_z_select_i32(i32 signext %a, i32 signext %b, i32 si
 ; LA64-LABEL: bit_11_1_z_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 2047
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i32 %a, 2047
@@ -1669,7 +1653,6 @@ define signext i32 @bit_11_1_nz_select_i32(i32 signext %a, i32 signext %b, i32 s
 ; LA64-LABEL: bit_11_1_nz_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 2047
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -1694,9 +1677,8 @@ define signext i32 @bit_16_1_z_select_i32(i32 signext %a, i32 signext %b, i32 si
 ; LA64-LABEL: bit_16_1_z_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i32 %a, 65535
@@ -1719,7 +1701,6 @@ define signext i32 @bit_16_1_nz_select_i32(i32 signext %a, i32 signext %b, i32 s
 ; LA64-LABEL: bit_16_1_nz_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -1744,9 +1725,8 @@ define signext i32 @bit_20_1_z_select_i32(i32 signext %a, i32 signext %b, i32 si
 ; LA64-LABEL: bit_20_1_z_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 19, 0
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i32 %a, 1048575
@@ -1769,7 +1749,6 @@ define signext i32 @bit_20_1_nz_select_i32(i32 signext %a, i32 signext %b, i32 s
 ; LA64-LABEL: bit_20_1_nz_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 19, 0
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -1794,9 +1773,8 @@ define signext i32 @bit_31_1_z_select_i32(i32 signext %a, i32 signext %b, i32 si
 ; LA64-LABEL: bit_31_1_z_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 30, 0
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i32 %a, 2147483647
@@ -1819,7 +1797,6 @@ define signext i32 @bit_31_1_nz_select_i32(i32 signext %a, i32 signext %b, i32 s
 ; LA64-LABEL: bit_31_1_nz_select_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 30, 0
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -1842,9 +1819,8 @@ define signext i32 @bit_32_1_z_select_i32(i32 signext %a, i32 signext %b, i32 si
 ;
 ; LA64-LABEL: bit_32_1_z_select_i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i32 %a, 4294967295
@@ -1865,7 +1841,6 @@ define signext i32 @bit_32_1_nz_select_i32(i32 signext %a, i32 signext %b, i32 s
 ;
 ; LA64-LABEL: bit_32_1_nz_select_i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -1892,9 +1867,8 @@ define i64 @bit_10_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_10_1_z_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 1023
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 1023
@@ -1919,7 +1893,6 @@ define i64 @bit_10_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_10_1_nz_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 1023
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -1946,9 +1919,8 @@ define i64 @bit_11_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_11_1_z_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 2047
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 2047
@@ -1973,7 +1945,6 @@ define i64 @bit_11_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_11_1_nz_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 2047
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -2000,9 +1971,8 @@ define i64 @bit_16_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_16_1_z_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 65535
@@ -2026,7 +1996,6 @@ define i64 @bit_16_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_16_1_nz_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -2053,9 +2022,8 @@ define i64 @bit_20_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_20_1_z_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 19, 0
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 1048575
@@ -2080,7 +2048,6 @@ define i64 @bit_20_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_20_1_nz_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 19, 0
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -2107,9 +2074,8 @@ define i64 @bit_31_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_31_1_z_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 30, 0
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 2147483647
@@ -2134,7 +2100,6 @@ define i64 @bit_31_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_31_1_nz_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 30, 0
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -2160,9 +2125,8 @@ define i64 @bit_32_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_32_1_z_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 4294967295
@@ -2186,7 +2150,6 @@ define i64 @bit_32_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_32_1_nz_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -2216,9 +2179,8 @@ define i64 @bit_55_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_55_1_z_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 54, 0
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 36028797018963967
@@ -2246,7 +2208,6 @@ define i64 @bit_55_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_55_1_nz_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 54, 0
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -2276,9 +2237,8 @@ define i64 @bit_63_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_63_1_z_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 62, 0
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 9223372036854775807
@@ -2306,7 +2266,6 @@ define i64 @bit_63_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA64-LABEL: bit_63_1_nz_select_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 62, 0
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
@@ -2332,9 +2291,8 @@ define i64 @bit_64_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ;
 ; LA64-LABEL: bit_64_1_z_select_i64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sltui $a0, $a0, 1
-; LA64-NEXT:    masknez $a2, $a2, $a0
-; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a2, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %1 = and i64 %a, 18446744073709551615
@@ -2358,7 +2316,6 @@ define i64 @bit_64_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ;
 ; LA64-LABEL: bit_64_1_nz_select_i64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sltu $a0, $zero, $a0
 ; LA64-NEXT:    masknez $a2, $a2, $a0
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
 ; LA64-NEXT:    or $a0, $a0, $a2

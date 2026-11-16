@@ -18,6 +18,7 @@ add_public_tablegen_target(HexagonCommonTableGen)
 
 add_llvm_target(HexagonCodeGen
   BitTracker.cpp
+  HLXExpandPseudos.cpp
   HexagonAlignGlobalArrays.cpp
   HexagonAsmPrinter.cpp
   HexagonBitSimplify.cpp
@@ -49,6 +50,7 @@ add_llvm_target(HexagonCodeGen
   HexagonISelDAGToDAG.cpp
   HexagonISelDAGToDAGHVX.cpp
   HexagonISelLowering.cpp
+  HexagonISelLoweringHLX.cpp
   HexagonISelLoweringHVX.cpp
   HexagonLoopAlign.cpp
   HexagonLoopIdiomRecognition.cpp

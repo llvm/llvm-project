@@ -1116,7 +1116,6 @@ name:            add_v8i16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr }
   - { id: 1, class: fpr }
@@ -1146,7 +1145,6 @@ name:            add_v16i8
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr }
   - { id: 1, class: fpr }
@@ -1175,7 +1173,6 @@ body:             |
 name:            add_v4i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -1198,7 +1195,6 @@ body:             |
 name:            or_v4i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -1221,7 +1217,6 @@ body:             |
 name:            xor_v4i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -1244,7 +1239,6 @@ body:             |
 name:            mul_v4i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1

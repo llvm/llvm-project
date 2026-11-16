@@ -15,6 +15,33 @@ using namespace llvm;
 // pin vtable to this file
 void HexagonMachineFunctionInfo::anchor() {}
 
+HexagonMachineFunctionInfo::HexagonMachineFunctionInfo(
+    const HexagonMachineFunctionInfo &Other)
+    : SRetReturnReg(Other.SRetReturnReg),
+      StackAlignBaseReg(Other.StackAlignBaseReg),
+      VarArgsFrameIndex(Other.VarArgsFrameIndex),
+      RegSavedAreaStartFrameIndex(Other.RegSavedAreaStartFrameIndex),
+      FirstNamedArgFrameIndex(Other.FirstNamedArgFrameIndex),
+      LastNamedArgFrameIndex(Other.LastNamedArgFrameIndex),
+      HasClobberLR(Other.HasClobberLR), HasEHReturn(Other.HasEHReturn),
+      PacketInfo(Other.PacketInfo) {
+  DenseMap<int, int> ClonedIndices;
+  const MachineFrameInfo &OtherMFI = Other.VTCMFrameInfo;
+  for (int I = OtherMFI.getObjectIndexBegin(), E = OtherMFI.getObjectIndexEnd();
+       I != E; ++I) {
+    if (OtherMFI.isDeadObjectIndex(I))
+      continue;
+    int NewI = VTCMFrameInfo.CreateStackObject(
+        OtherMFI.getObjectSize(I), OtherMFI.getObjectAlign(I),
+        OtherMFI.isSpillSlotObjectIndex(I), OtherMFI.getObjectAllocation(I));
+    VTCMFrameInfo.setObjectOffset(NewI, OtherMFI.getObjectOffset(I));
+    ClonedIndices[I] = NewI;
+  }
+  VTCMFrameInfo.setStackSize(OtherMFI.getStackSize());
+  for (const auto &[From, To] : Other.VTCMMap)
+    VTCMMap[From] = ClonedIndices.lookup(To);
+}
+
 MachineFunctionInfo *HexagonMachineFunctionInfo::clone(
     BumpPtrAllocator &Allocator, MachineFunction &DestMF,
     const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)

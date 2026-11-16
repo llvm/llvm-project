@@ -16,7 +16,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -29,38 +29,17 @@
 
 namespace cir {
 
-enum class OverflowBehavior {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
+/// No-wrap flags of a pointer offset computation: the subset of
+/// llvm::GEPNoWrapFlags that `cir.get_element` carries as its `in_bounds` and
+/// `no_unsigned_wrap` properties.
+enum class PtrOffsetFlags {
   None = 0,
-  NoSignedWrap = 1 << 0,
+  InBounds = 1 << 0,
   NoUnsignedWrap = 1 << 1,
-  Saturated = 1 << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/NoUnsignedWrap)
 };
-
-constexpr OverflowBehavior operator|(OverflowBehavior a, OverflowBehavior b) {
-  return static_cast<OverflowBehavior>(llvm::to_underlying(a) |
-                                       llvm::to_underlying(b));
-}
-
-constexpr OverflowBehavior operator&(OverflowBehavior a, OverflowBehavior b) {
-  return static_cast<OverflowBehavior>(llvm::to_underlying(a) &
-                                       llvm::to_underlying(b));
-}
-
-constexpr OverflowBehavior &operator|=(OverflowBehavior &a,
-                                       OverflowBehavior b) {
-  a = a | b;
-  return a;
-}
-
-constexpr OverflowBehavior &operator&=(OverflowBehavior &a,
-                                       OverflowBehavior b) {
-  a = a & b;
-  return a;
-}
-
-constexpr bool testFlag(OverflowBehavior ob, OverflowBehavior flag) {
-  return (ob & flag) != OverflowBehavior::None;
-}
 
 class CIRBaseBuilderTy : public mlir::OpBuilder {
 
@@ -854,57 +833,56 @@ public:
   }
 
   mlir::Value createMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                        OverflowBehavior ob = OverflowBehavior::None) {
-    auto op = cir::MulOp::create(*this, loc, lhs, rhs);
-    op.setNoUnsignedWrap(testFlag(ob, OverflowBehavior::NoUnsignedWrap));
-    op.setNoSignedWrap(testFlag(ob, OverflowBehavior::NoSignedWrap));
-    return op;
+                        OverflowFlags flags = OverflowFlags::None) {
+    return cir::MulOp::create(*this, loc, lhs, rhs, flags);
   }
   mlir::Value createNSWMul(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createMul(loc, lhs, rhs, OverflowBehavior::NoSignedWrap);
+    return createMul(loc, lhs, rhs, OverflowFlags::NoSignedWrap);
   }
   mlir::Value createNUWAMul(mlir::Location loc, mlir::Value lhs,
                             mlir::Value rhs) {
-    return createMul(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
+    return createMul(loc, lhs, rhs, OverflowFlags::NoUnsignedWrap);
+  }
+
+  mlir::Value createAddSat(mlir::Location loc, mlir::Value lhs,
+                           mlir::Value rhs) {
+    return cir::AddSatOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createSubSat(mlir::Location loc, mlir::Value lhs,
+                           mlir::Value rhs) {
+    return cir::SubSatOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                        OverflowBehavior ob = OverflowBehavior::None) {
-    auto op = cir::SubOp::create(*this, loc, lhs, rhs);
-    op.setNoUnsignedWrap(testFlag(ob, OverflowBehavior::NoUnsignedWrap));
-    op.setNoSignedWrap(testFlag(ob, OverflowBehavior::NoSignedWrap));
-    op.setSaturated(testFlag(ob, OverflowBehavior::Saturated));
-    return op;
+                        OverflowFlags flags = OverflowFlags::None) {
+    return cir::SubOp::create(*this, loc, lhs, rhs, flags);
   }
 
   mlir::Value createNSWSub(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createSub(loc, lhs, rhs, OverflowBehavior::NoSignedWrap);
+    return createSub(loc, lhs, rhs, OverflowFlags::NoSignedWrap);
   }
 
   mlir::Value createNUWSub(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createSub(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
+    return createSub(loc, lhs, rhs, OverflowFlags::NoUnsignedWrap);
   }
 
   mlir::Value createAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                        OverflowBehavior ob = OverflowBehavior::None) {
-    auto op = cir::AddOp::create(*this, loc, lhs, rhs);
-    op.setNoUnsignedWrap(testFlag(ob, OverflowBehavior::NoUnsignedWrap));
-    op.setNoSignedWrap(testFlag(ob, OverflowBehavior::NoSignedWrap));
-    op.setSaturated(testFlag(ob, OverflowBehavior::Saturated));
-    return op;
+                        OverflowFlags flags = OverflowFlags::None) {
+    return cir::AddOp::create(*this, loc, lhs, rhs, flags);
   }
 
   mlir::Value createNSWAdd(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createAdd(loc, lhs, rhs, OverflowBehavior::NoSignedWrap);
+    return createAdd(loc, lhs, rhs, OverflowFlags::NoSignedWrap);
   }
 
   mlir::Value createNUWAdd(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createAdd(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
+    return createAdd(loc, lhs, rhs, OverflowFlags::NoUnsignedWrap);
   }
 
   mlir::Value createDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {

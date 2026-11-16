@@ -43,6 +43,9 @@ struct interop_spec_t {
                       // plugin)
 };
 
+/// Specification meaning "no interop supported".
+inline constexpr interop_spec_t NoInteropSpec{omp_ifr_none, {true, 0}, 0};
+
 struct interop_flags_t {
   uint32_t implicit : 1; // dispatch (true) or interop (false)
   uint32_t nowait : 1;   // has nowait flag

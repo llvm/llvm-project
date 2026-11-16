@@ -541,3 +541,44 @@ entry:
 }
 
 declare i32 @llvm.vector.reduce.add.v64i32(<64 x i32>)
+
+define i32 @PR240667(<16 x i8> %a) {
+; AVXVNNI-LABEL: PR240667:
+; AVXVNNI:       # %bb.0:
+; AVXVNNI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVXVNNI-NEXT:    {vex} vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVXVNNI-NEXT:    vmovd %xmm1, %eax
+; AVXVNNI-NEXT:    retq
+;
+; AVX512VNNI-LABEL: PR240667:
+; AVX512VNNI:       # %bb.0:
+; AVX512VNNI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VNNI-NEXT:    vmovdqa %xmm0, %xmm0
+; AVX512VNNI-NEXT:    vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
+; AVX512VNNI-NEXT:    vmovd %xmm1, %eax
+; AVX512VNNI-NEXT:    vzeroupper
+; AVX512VNNI-NEXT:    retq
+;
+; AVX512VLVNNI-LABEL: PR240667:
+; AVX512VLVNNI:       # %bb.0:
+; AVX512VLVNNI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VLVNNI-NEXT:    vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
+; AVX512VLVNNI-NEXT:    vmovd %xmm1, %eax
+; AVX512VLVNNI-NEXT:    retq
+  %conv1 = zext <16 x i8> %a to <16 x i32>
+  %mul = mul <16 x i32> %conv1, splat (i32 1)
+  %shuffle = shufflevector <16 x i32> %mul, <16 x i32> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %shuffle2 = shufflevector <16 x i32> %mul, <16 x i32> zeroinitializer, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %add = add <8 x i32> %shuffle, %shuffle2
+  %shuffle3 = shufflevector <8 x i32> %add, <8 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shuffle4 = shufflevector <8 x i32> %add, <8 x i32> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %add5 = add <4 x i32> %shuffle3, %shuffle4
+  %shuffle6 = shufflevector <4 x i32> %add5, <4 x i32> zeroinitializer, <2 x i32> <i32 0, i32 1>
+  %shuffle7 = shufflevector <4 x i32> %add5, <4 x i32> zeroinitializer, <2 x i32> <i32 2, i32 3>
+  %add8 = add <2 x i32> %shuffle6, %shuffle7
+  %shuffle9 = shufflevector <2 x i32> %add8, <2 x i32> zeroinitializer, <1 x i32> zeroinitializer
+  %shuffle10 = shufflevector <2 x i32> %add8, <2 x i32> zeroinitializer, <1 x i32> <i32 1>
+  %add11 = add <1 x i32> %shuffle9, %shuffle10
+  %vecext = extractelement <1 x i32> %add11, i64 0
+  ret i32 %vecext
+}

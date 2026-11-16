@@ -6634,7 +6634,7 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
     enumerator.SetType(declType);
     // Store the init as a StructureConstructor of the enumeration type with
     // the ordinal in the hidden __ordinal component.  This gives each
-    // enumerator a distinct Constant<SomeDerived> value.
+    // enumerator a distinct Constant<Type<TypeCategory::Derived>> value.
     evaluate::StructureConstructor enumCtor{declType.derivedTypeSpec()};
     // Look up the __ordinal component symbol in the type's scope.
     auto ordinalIter{
@@ -6645,8 +6645,9 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
     enumCtor.Add(ordinalSym,
         evaluate::AsGenericExpr(evaluate::MakeCIntegerExpr(ordinal)));
     enumerator.get<ObjectEntityDetails>().set_init(
-        SomeExpr{evaluate::Expr<evaluate::SomeDerived>{
-            evaluate::Constant<evaluate::SomeDerived>{std::move(enumCtor)}}});
+        SomeExpr{evaluate::Expr<evaluate::Type<common::TypeCategory::Derived>>{
+            evaluate::Constant<evaluate::Type<common::TypeCategory::Derived>>{
+                std::move(enumCtor)}}});
     typeDetails.set_enumeratorCount(ordinal);
   }
   return false;
@@ -9441,13 +9442,11 @@ void ConstructVisitor::SetTypeFromAssociation(Symbol &symbol) {
   if (*pexpr) {
     const SomeExpr &expr{**pexpr};
     if (std::optional<evaluate::DynamicType> type{expr.GetType()}) {
-      if (const auto *charExpr{
-              evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeCharacter>>(
-                  expr)}) {
-        symbol.SetType(ToDeclTypeSpec(std::move(*type),
-            FoldExpr(common::visit(
-                [](const auto &kindChar) { return kindChar.LEN(); },
-                charExpr->u))));
+      if (const auto *charExpr{evaluate::UnwrapExpr<
+              evaluate::Expr<evaluate::Type<common::TypeCategory::Character>>>(
+              expr)}) {
+        symbol.SetType(
+            ToDeclTypeSpec(std::move(*type), FoldExpr(charExpr->LEN())));
       } else {
         symbol.SetType(ToDeclTypeSpec(std::move(*type)));
       }

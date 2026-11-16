@@ -18,7 +18,6 @@
 name:            xor_s32_gpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 registers:
   - { id: 0, class: gpr }
@@ -47,7 +46,6 @@ body:             |
 name:            xor_s64_gpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 registers:
   - { id: 0, class: gpr }
@@ -77,7 +75,6 @@ body:             |
 name:            xor_constant_n1_s32_gpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 registers:
   - { id: 0, class: gpr }
@@ -105,7 +102,6 @@ body:             |
 name:            xor_constant_n1_s64_gpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 registers:
   - { id: 0, class: gpr }
@@ -133,7 +129,6 @@ body:             |
 name:            xor_constant_n1_s32_gpr_2bb
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 registers:
   - { id: 0, class: gpr }
@@ -150,6 +145,8 @@ body:             |
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK-NEXT:   [[ORNWrr:%[0-9]+]]:gpr32 = ORNWrr $wzr, [[COPY]]
   ; CHECK-NEXT:   $w0 = COPY [[ORNWrr]]
@@ -159,6 +156,7 @@ body:             |
     %1(i32) = G_CONSTANT i32 -1
     G_BR %bb.1
   bb.1:
+    liveins: $w0
     %0(i32) = COPY $w0
     %2(i32) = G_XOR %0, %1
     $w0 = COPY %2(i32)

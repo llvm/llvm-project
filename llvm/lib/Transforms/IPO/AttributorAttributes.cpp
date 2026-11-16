@@ -7822,10 +7822,11 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
     IRPosition::Kind Kind = IRP.getPositionKind();
     if (Kind == IRPosition::IRP_CALL_SITE ||
         Kind == IRPosition::IRP_CALL_SITE_ARGUMENT) {
-      if (auto *I = dyn_cast<Instruction>(&IRP.getAnchorValue())) {
-        if (!I->mayReadFromMemory())
+      if (auto *CB = dyn_cast<CallBase>(&IRP.getAnchorValue())) {
+        ModRefInfo MR = CB->getMemoryEffects().getModRef();
+        if (!isRefSet(MR))
           State.addKnownBits(NO_READS);
-        if (!I->mayWriteToMemory())
+        if (!isModSet(MR))
           State.addKnownBits(NO_WRITES);
       }
     }

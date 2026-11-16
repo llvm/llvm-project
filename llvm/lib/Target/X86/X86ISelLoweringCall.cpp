@@ -617,14 +617,12 @@ void X86TargetLowering::insertSSPDeclarations(
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT provides functionalities for stack protection.
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
-                        PointerType::getUnqual(M.getContext()));
+    const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
+    RTLCI.getOrInsertImplGlobal(M, SecurityCookieVar);
 
     // MSVC CRT has a function to validate security cookie.
     FunctionCallee SecurityCheckCookie =
-        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
-                              Type::getVoidTy(M.getContext()),
-                              PointerType::getUnqual(M.getContext()));
+        RTLCI.getOrInsertLibcallDecl(M, SecurityCheckCookieLibcall);
 
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::X86_FastCall);

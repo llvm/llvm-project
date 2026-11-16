@@ -1637,6 +1637,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
   if (Subtarget->useFlatForGlobal())
     return false;
 
+  Addr = Expand32BitAddress(Addr);
   SDLoc DL(Addr);
 
   Idxen = CurDAG->getTargetConstant(0, DL, MVT::i1);
@@ -1934,6 +1935,8 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(
   int64_t OffsetVal = 0;
 
   unsigned AS = findMemSDNode(N)->getAddressSpace();
+  if (AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
+    Addr = Expand32BitAddress(Addr);
 
   bool CanHaveFlatSegmentOffsetBug =
       Subtarget->hasFlatSegmentOffsetBug() &&
@@ -2081,6 +2084,8 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
   using AMDGPU::FlatAddrSpace;
   int64_t ImmOffset = 0;
   ScaleOffset = false;
+
+  Addr = Expand32BitAddress(Addr);
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.

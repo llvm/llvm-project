@@ -552,10 +552,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   // Lowering widens s64 to s128, which needs
   // SPV_ALTERA_arbitrary_precision_integers. Mark s64 unsupported otherwise.
-  auto &MulFix = getActionDefinitionsBuilder({G_SMULFIX, G_UMULFIX});
+  auto &MulFix = getActionDefinitionsBuilder(
+      {G_SMULFIX, G_UMULFIX, G_SMULFIXSAT, G_UMULFIXSAT});
   if (!HasArbitraryPrecisionInts)
     MulFix.unsupportedFor({s64});
   MulFix.lower();
+
+  getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_USAT_U}).lower();
 
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .legalForCartesianProduct(allIntScalarsAndVectors,

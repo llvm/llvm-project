@@ -1309,11 +1309,6 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
       A->getScalarType() == Def->getScalarType())
     return A;
 
-  // Simplify MaskedCond with no block mask to its single operand.
-  if (match(Def, m_VPInstruction<VPInstruction::MaskedCond>()) &&
-      !cast<VPInstruction>(Def)->isMasked())
-    return Def->getOperand(0);
-
   // Look through ExtractLastLane.
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
     if (match(A, m_BuildVector())) {
@@ -1907,8 +1902,10 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Skip recipes that aren't single scalars.
-      if (!vputils::isSingleScalar(RepOrWidenR))
+      // Skip recipes that aren't single scalars or have no underlying
+      // instruction to create a single-scalar recipe from.
+      if (!RepOrWidenR->getUnderlyingValue() ||
+          !vputils::isSingleScalar(RepOrWidenR))
         continue;
 
       // Predicate to check if a user of Op introduces extra broadcasts.
@@ -2218,9 +2215,9 @@ static bool isVectorLatchCheck(VPRecipeBase *Term, VPValue *Cond, VPlan &Plan) {
 
   // The active-lane-mask form used when the tail is folded by masking.
   return match(Cond,
-               m_Not(m_ExtractVectorForPart(
-                   m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()),
-                   m_ZeroInt())));
+               m_Not(m_CombineOr(m_WideActiveLaneMask(),
+                                 m_ExtractVectorForPart(m_WideActiveLaneMask(),
+                                                        m_ZeroInt()))));
 }
 
 /// Try to simplify the branch condition of \p Plan. This may restrict the
@@ -2617,7 +2614,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   // cannot use RAUW after creating a new truncate, as this would could make
   // other uses have different types for their operands, making them invalidly
   // typed.
-  DenseMap<VPValue *, VPWidenCastRecipe *> ProcessedTruncs;
+  // An operand may be shared by recipes narrowed to different widths, so the
+  // truncates are keyed by operand and narrowed type.
+  DenseMap<std::pair<VPValue *, Type *>, VPWidenCastRecipe *> ProcessedTruncs;
   VPBasicBlock *PH = Plan.getVectorPreheader();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
@@ -2671,7 +2670,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         if (OpSizeInBits == NewResSizeInBits)
           continue;
         assert(OpSizeInBits > NewResSizeInBits && "nothing to truncate");
-        auto [ProcessedIter, Inserted] = ProcessedTruncs.try_emplace(Op);
+        auto [ProcessedIter, Inserted] =
+            ProcessedTruncs.try_emplace({Op, NewResTy});
         if (Inserted) {
           VPBuilder Builder;
           if (isa<VPIRValue>(Op))
@@ -4324,20 +4324,37 @@ void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
   assert(UF > 1 && "Expected plan to have an UF > 1");
 
   auto m_ContiguousVecPtr = m_VecPtr(m_VPValue(), m_One());
+  VPValue *Multiplier = Plan.getConstantInt(64, 1);
+
+  VPActiveLaneMaskPHIRecipe *MaskPhi = nullptr;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      VPValue *Mask = nullptr;
       VPValue *StoredValue = nullptr;
-      if (!match(&R, m_WidenLoad(m_ContiguousVecPtr)) &&
-          !match(&R, m_WidenStore(m_ContiguousVecPtr, m_VPValue(StoredValue))))
+      if (!match(&R,
+                 m_CombineOr(
+                     m_WidenLoad(m_ContiguousVecPtr),
+                     m_WidenStore(m_ContiguousVecPtr, m_VPValue(StoredValue)),
+                     m_MaskedLoad(m_ContiguousVecPtr, m_VPValue(Mask)),
+                     m_MaskedStore(m_ContiguousVecPtr, m_VPValue(StoredValue),
+                                   m_VPValue(Mask)))))
         continue;
 
       auto *MemOp = cast<VPWidenMemoryRecipe>(&R);
       assert(MemOp->isConsecutive() && "Expected consecutive load/store");
 
-      // TODO: Support masked loads/stores. This requires widening the header
-      // mask to the same factor as the memory operation.
-      assert(!MemOp->isMasked() && "Masked accesses are not supported yet");
+      // If there's a mask, ensure it's a wide active-lane-mask.
+      if (Mask &&
+          !match(Mask,
+                 m_ActiveLaneMaskPhi(
+                     m_VPInstruction<VPInstruction::ExtractVectorForPart>(),
+                     m_VPInstruction<VPInstruction::ExtractVectorForPart>())))
+        continue;
+
+      auto MaskSource = MemOp->isMasked()
+                            ? TargetTransformInfo::MaskSource::ActiveLaneMask
+                            : TargetTransformInfo::MaskSource::None;
 
       Type *AccessType = StoredValue ? StoredValue->getScalarType()
                                      : R.getVPSingleValue()->getScalarType();
@@ -4349,37 +4366,74 @@ void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
         CastHint = Cast->getOpcode();
 
       VectorType *VectorAccessType = VectorType::get(AccessType, VF);
-      if (!TTI.hasMultiVectorLoadStore(
-              /*NumVectors=*/UF, TargetTransformInfo::MaskSource::None,
-              VectorAccessType, IsStore, CastHint))
+      if (!TTI.hasMultiVectorLoadStore(/*NumVectors=*/UF, MaskSource,
+                                       VectorAccessType, IsStore, CastHint))
         continue;
 
       DebugLoc DL = R.getDebugLoc();
       VPValue *Ptr = MemOp->getAddr();
       VPValue *Align = Plan.getConstantInt(64, MemOp->getAlign().value());
-      VPValue *Multiplier = Plan.getConstantInt(64, 1);
 
       VPBuilder Builder(&R);
+      VPInstruction *NewMemOp;
       if (IsStore) {
         VPValue *WideStoredValue = Builder.createNaryOp(
             VPInstruction::ConcatVectors, {StoredValue}, DL);
-        Builder.createNaryOp(VPInstruction::WideVectorStore,
-                             {Multiplier, Ptr, Align, WideStoredValue}, nullptr,
-                             {}, *MemOp, R.getDebugLoc());
+        NewMemOp = Builder.createNaryOp(
+            VPInstruction::WideVectorStore,
+            {Multiplier, Ptr, Align, WideStoredValue}, nullptr, {}, *MemOp, DL);
       } else {
         VPValue *OldLoad = R.getVPSingleValue();
-        VPValue *Load = Builder.createNaryOp(
+        NewMemOp = Builder.createNaryOp(
             VPInstruction::WideVectorLoad, {Multiplier, Ptr, Align}, nullptr,
-            {}, *MemOp, R.getDebugLoc(), "", OldLoad->getScalarType());
+            {}, *MemOp, DL, "", OldLoad->getScalarType());
         VPValue *Extract =
             Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
-                                 {Load, Plan.getConstantInt(64, 0)}, DL);
+                                 {NewMemOp, Plan.getConstantInt(64, 0)}, DL);
         OldLoad->replaceAllUsesWith(Extract);
       }
 
       R.eraseFromParent();
+      if (Mask) {
+        assert((!MaskPhi || Mask == MaskPhi) && "Expected a single mask phi");
+        NewMemOp->addMask(Mask);
+        MaskPhi = cast<VPActiveLaneMaskPHIRecipe>(Mask);
+      }
     }
   }
+
+  if (!MaskPhi)
+    return;
+
+  // Widen the mask phi to match the width of the masked loads/stores. This
+  // effectively means removing the `extract-vector-for-part` from the preheader
+  // and latch instead placing a single extract in the header. The
+  // wide-vector-load/store operations can use the mask phi directly.
+  auto *EntryMask = cast<VPInstruction>(MaskPhi->getStartValue());
+  auto *LoopMask = cast<VPInstruction>(MaskPhi->getBackedgeValue());
+  auto *EntryALM = cast<VPInstruction>(EntryMask->getOperand(0));
+  auto *LoopALM = cast<VPInstruction>(LoopMask->getOperand(0));
+
+  assert((EntryALM->getOpcode() == VPInstruction::WideActiveLaneMask &&
+          LoopALM->getOpcode() == VPInstruction::WideActiveLaneMask) &&
+         "Expected incoming values of Phi to be WideActiveLaneMask");
+
+  auto Builder = VPBuilder(&*MaskPhi->getParent()->getFirstNonPhi());
+  auto *MaskPart = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
+                                        {MaskPhi, Plan.getConstantInt(64, 0)});
+
+  MaskPhi->replaceUsesWithIf(
+      MaskPart, match_fn(m_Unless(m_CombineOr(
+                    m_Specific(MaskPart),
+                    m_VPInstruction<VPInstruction::WideVectorLoad>(),
+                    m_VPInstruction<VPInstruction::WideVectorStore>()))));
+
+  // Remove extra ExtractVectorForPart operations.
+  assert(EntryMask->getOpcode() == VPInstruction::ExtractVectorForPart &&
+         LoopMask->getOpcode() == VPInstruction::ExtractVectorForPart &&
+         "Expected entry/loop extract-vector-for-part ops");
+  EntryMask->replaceAllUsesWith(EntryALM);
+  LoopMask->replaceAllUsesWith(LoopALM);
 }
 
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be

@@ -3,7 +3,6 @@
 ---
 name:            cb_diamond
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
@@ -64,7 +63,6 @@ body:             |
 ---
 name:            cb_triangle
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
@@ -116,7 +114,6 @@ body:             |
 ---
 name:            cb_triangle_w_imm
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
@@ -168,7 +165,6 @@ body:             |
 ---
 name:            cb_triangle_x_imm
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
@@ -220,7 +216,6 @@ body:             |
 ---
 name:            cbb_diamond_no_ext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
@@ -281,7 +276,6 @@ body:             |
 ---
 name:            cbb_diamond_zext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
@@ -343,7 +337,6 @@ body:             |
 ---
 name:            cbb_diamond_sext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
@@ -405,7 +398,6 @@ body:             |
 ---
 name:            cbh_diamond_zext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
@@ -467,7 +459,6 @@ body:             |
 ---
 name:            cbh_diamond_sext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
@@ -529,7 +520,6 @@ body:             |
 ---
 name:            cbh_diamond_lhs_sext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
@@ -591,7 +581,6 @@ body:             |
 ---
 name:            cbh_diamond_rhs_sext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false

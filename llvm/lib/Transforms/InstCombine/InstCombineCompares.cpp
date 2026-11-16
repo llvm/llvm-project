@@ -288,7 +288,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // Now that we've scanned the entire array, emit our new comparison(s).  We
   // order the state machines in complexity of the generated code.
 
-  // If inbounds keyword is not present, Idx * Stride can overflow.
+  // If nusw (implied by inbounds) is not present, Idx * Stride can overflow.
   // Let's assume that Stride is 2 and the wanted value is at offset 0.
   // Then, there are two possible values for Idx to match offset 0:
   // 0x00..00, 0x80..00.
@@ -296,7 +296,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // comparison is false if Idx was 0x80..00.
   // We need to erase the highest countTrailingZeros(ElementSize) bits of Idx.
   auto MaskIdx = [&](Value *Idx) {
-    if (!Expr.Flags.isInBounds() && Stride.countr_zero() != 0) {
+    if (!Expr.Flags.hasNoUnsignedSignedWrap() && Stride.countr_zero() != 0) {
       Value *Mask = Constant::getAllOnesValue(Idx->getType());
       Mask = Builder.CreateLShr(Mask, Stride.countr_zero());
       Idx = Builder.CreateAnd(Idx, Mask);
@@ -4498,6 +4498,41 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
     return nullptr;
 
   switch (LHSI->getOpcode()) {
+  // umax(X, Y) == null -> (X == null) && (Y == null).
+  // umax(X, Y) != null -> (X != null) || (Y != null).
+  case Instruction::Select: {
+    CmpInst::Predicate Pred = I.getPredicate();
+    if (!ICmpInst::isEquality(Pred) || !RHSC->getType()->isPtrOrPtrVectorTy())
+      break;
+
+    // Require zero address bits, the minimum unsigned pointer value.
+    Constant *RHSIndexBits = ConstantFoldCastOperand(
+        Instruction::PtrToAddr, RHSC, DL.getIndexType(RHSC->getType()), DL);
+    if (!RHSIndexBits || !RHSIndexBits->isNullValue())
+      break;
+
+    auto *SI = cast<SelectInst>(LHSI);
+    // Both the select and its comparison must die to avoid adding instructions.
+    if (!SI->hasOneUse() || !SI->getCondition()->hasOneUse())
+      break;
+
+    // Require the condition to compare the select operands directly.
+    Value *A = SI->getTrueValue();
+    Value *B = SI->getFalseValue();
+    CmpPredicate SelectPred;
+    if (!match(SI->getCondition(),
+               m_c_ICmp(SelectPred, m_Specific(A), m_Specific(B))) ||
+        (SelectPred != ICmpInst::ICMP_UGT && SelectPred != ICmpInst::ICMP_UGE))
+      break;
+
+    Value *ACmp = Builder.CreateICmp(Pred, A, RHSC);
+    Value *BCmp = Builder.CreateICmp(Pred, B, RHSC);
+    // The original icmp propagates poison from both operands; and/or is safe.
+    return BinaryOperator::Create(Pred == ICmpInst::ICMP_EQ ? Instruction::And
+                                                            : Instruction::Or,
+                                  ACmp, BCmp);
+  }
+
   case Instruction::IntToPtr:
     // icmp pred inttoptr(X), null -> icmp pred X, null pointer value
     if (isa<ConstantPointerNull>(RHSC)) {

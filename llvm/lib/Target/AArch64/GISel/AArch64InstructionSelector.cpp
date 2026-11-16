@@ -509,9 +509,6 @@ private:
                      int OpIdx = -1) const;
   void renderFPImm64(MachineInstrBuilder &MIB, const MachineInstr &MI,
                      int OpIdx = -1) const;
-  void renderFPImm32SIMDModImmType4(MachineInstrBuilder &MIB,
-                                    const MachineInstr &MI,
-                                    int OpIdx = -1) const;
 
   // Materialize a GlobalValue or BlockAddress using a movz+movk sequence.
   void materializeLargeCMVal(MachineInstr &I, const Value *V, unsigned OpFlags);
@@ -7709,7 +7706,6 @@ AArch64InstructionSelector::tryFoldAddLowIntoImm(MachineInstr &RootDef,
     return std::nullopt;
 
   unsigned OpFlags = STI.ClassifyGlobalReference(GV, MF.getTarget());
-  MachineIRBuilder MIRBuilder(RootDef);
   Register AdrpReg = Adrp.getOperand(0).getReg();
   return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(AdrpReg); },
            [=](MachineInstrBuilder &MIB) {
@@ -8206,17 +8202,6 @@ void AArch64InstructionSelector::renderFPImm64(MachineInstrBuilder &MIB,
          "Expected G_FCONSTANT");
   MIB.addImm(
       AArch64_AM::getFP64Imm(MI.getOperand(1).getFPImm()->getValueAPF()));
-}
-
-void AArch64InstructionSelector::renderFPImm32SIMDModImmType4(
-    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
-  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT && OpIdx == -1 &&
-         "Expected G_FCONSTANT");
-  MIB.addImm(AArch64_AM::encodeAdvSIMDModImmType4(MI.getOperand(1)
-                                                      .getFPImm()
-                                                      ->getValueAPF()
-                                                      .bitcastToAPInt()
-                                                      .getZExtValue()));
 }
 
 bool AArch64InstructionSelector::isLoadStoreOfNumBytes(

@@ -225,7 +225,6 @@ public:
            AliasAnalysis *AA, MemorySSA *MSSA)
       : Opts(Opts), DT(DT), PDT(PDT), AA(AA), MSSA(MSSA),
         MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {
-    MSSA->ensureOptimizedUses();
   }
 
   bool run(Function &F);
@@ -459,8 +458,7 @@ private:
 
   // Remove all the instructions in Candidates and replace their usage with
   // Repl. Returns the number of instructions removed.
-  unsigned rauw(const SmallVecInsn &Candidates, Instruction *Repl,
-                MemoryUseOrDef *NewMemAcc);
+  unsigned rauw(const SmallVecInsn &Candidates, Instruction *Repl);
 
   // Replace all Memory PHI usage with NewMemAcc.
   void raMPHIuw(MemoryUseOrDef *NewMemAcc);
@@ -620,8 +618,6 @@ bool GVNHoist::hasEHOrLoadsOnPath(const Instruction *NewPt, MemoryDef *Def,
   const BasicBlock *NewBB = NewPt->getParent();
   const BasicBlock *OldBB = Def->getBlock();
   assert(DT->dominates(NewBB, OldBB) && "invalid path");
-  assert(DT->dominates(Def->getDefiningAccess()->getBlock(), NewBB) &&
-         "def does not dominate new hoisting point");
 
   // Walk all basic blocks reachable in depth-first iteration on the inverse
   // CFG from OldBB to NewBB. These blocks are all the blocks that may be
@@ -694,7 +690,7 @@ bool GVNHoist::safeToHoistLdSt(const Instruction *NewPt,
   const BasicBlock *UBB = U->getBlock();
 
   // Check for dependences on the Memory SSA.
-  MemoryAccess *D = U->getDefiningAccess();
+  MemoryAccess *D = MSSA->getWalker()->getClobberingMemoryAccess(U);
   BasicBlock *DBB = D->getBlock();
   if (DT->properlyDominates(NewBB, DBB))
     // Cannot move the load or store to NewBB above its definition in DBB.
@@ -949,21 +945,14 @@ void GVNHoist::updateAlignment(Instruction *I, Instruction *Repl) {
   }
 }
 
-unsigned GVNHoist::rauw(const SmallVecInsn &Candidates, Instruction *Repl,
-                        MemoryUseOrDef *NewMemAcc) {
+unsigned GVNHoist::rauw(const SmallVecInsn &Candidates, Instruction *Repl) {
   unsigned NR = 0;
   for (Instruction *I : Candidates) {
     if (I != Repl) {
       ++NR;
       updateAlignment(I, Repl);
-      if (NewMemAcc) {
-        // Update the uses of the old MSSA access with NewMemAcc.
-        MemoryAccess *OldMA = MSSA->getMemoryAccess(I);
-        OldMA->replaceAllUsesWith(NewMemAcc);
+      if (MemoryAccess *OldMA = MSSA->getMemoryAccess(I))
         MSSAUpdater->removeMemoryAccess(OldMA);
-      } else if (MemoryAccess *OldMA = MSSA->getMemoryAccess(I)) {
-        MSSAUpdater->removeMemoryAccess(OldMA);
-      }
 
       patchReplacementInstruction(I, Repl, /*DoesKMove=*/true);
       I->replaceAllUsesWith(Repl);
@@ -993,13 +982,13 @@ unsigned GVNHoist::removeAndReplace(const SmallVecInsn &Candidates,
                                     bool MoveAccess) {
   MemoryUseOrDef *NewMemAcc = MSSA->getMemoryAccess(Repl);
   if (MoveAccess && NewMemAcc) {
-    // The definition of this ld/st will not change: ld/st hoisting is
-    // legal when the ld/st is not moved past its current definition.
+    // The ld/st is not moved past its clobbering access, but a store may be
+    // moved past MemoryDefs that do not alias it; moveToPlace renames those.
     MSSAUpdater->moveToPlace(NewMemAcc, DestBB, MemorySSA::BeforeTerminator);
   }
 
-  // Replace all other instructions with Repl with memory access NewMemAcc.
-  unsigned NR = rauw(Candidates, Repl, NewMemAcc);
+  // Replace all other instructions with Repl.
+  unsigned NR = rauw(Candidates, Repl);
 
   // Remove MemorySSA phi nodes with the same arguments.
   if (NewMemAcc)

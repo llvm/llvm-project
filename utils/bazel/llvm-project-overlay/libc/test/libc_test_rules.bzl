@@ -116,7 +116,7 @@ def libc_test(
         copts = copts + libc_common_copts(),
         target_compatible_with = target_compatible_with,
         linkopts = linkopts,
-        linkstatic = 1,
+        linkstatic = True,
         tags = tags,
         **kwargs
     )
@@ -142,6 +142,6 @@ def libc_test_library(
         deps = deps + libc_common_deps(),
         copts = copts + libc_common_copts(),
         local_defines = local_defines + _TEST_DEFINES + LIBC_CONFIGURE_OPTIONS,
-        linkstatic = 1,
+        linkstatic = True,
         **kwargs
     )

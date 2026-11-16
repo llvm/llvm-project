@@ -583,11 +583,9 @@ entry:
 define void @merge_reorder_load(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_reorder_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void

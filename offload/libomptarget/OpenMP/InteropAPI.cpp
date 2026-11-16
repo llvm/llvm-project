@@ -69,34 +69,6 @@ const char *getForeignRuntimeIdToStr(const omp_foreign_runtime_id_t FrId) {
   return ForeignRuntimeStrTbl[FrId];
 }
 
-constexpr interop_spec_t NoInteropSpec{omp_ifr_none, {true, 0}, 0};
-
-/// Return the interop specification supported by \p Device for the given
-/// interop type, or NoInteropSpec if the device supports none.
-/// TODO: the user-provided preference list is not honored yet.
-interop_spec_t selectInteropPreference(DeviceTy &Device, int32_t InteropType,
-                                       int32_t NumPrefers,
-                                       interop_spec_t *Prefers) {
-
-  interop_spec_t SelectedSpec = NoInteropSpec;
-  switch (Device.getBackend()) {
-  case OL_PLATFORM_BACKEND_CUDA:
-    SelectedSpec.fr_id = omp_ifr_cuda;
-    break;
-  case OL_PLATFORM_BACKEND_AMDGPU:
-    // TODO: update once targetsync is supported.
-    if (InteropType == kmp_interop_type_targetsync)
-      return NoInteropSpec;
-    SelectedSpec.fr_id = omp_ifr_hsa;
-    break;
-  case OL_PLATFORM_BACKEND_LEVEL_ZERO:
-    SelectedSpec.fr_id = omp_ifr_level_zero;
-    break;
-  default:;
-  }
-  return SelectedSpec;
-}
-
 omp_vendor_id_t getVendorForForeignRuntime(int32_t FrId) {
   // Vendor of each foreign runtime, indexed by omp_foreign_runtime_id_t.
   static constexpr omp_vendor_id_t VendorTbl[omp_ifr_last] = {
@@ -316,8 +288,8 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
   }
   auto &Device = *DeviceOrErr;
   omp_interop_val_t *Interop = omp_interop_none;
-  auto InteropSpec =
-      selectInteropPreference(Device, InteropType, NumPrefers, Prefers);
+  auto InteropSpec = Device.getConfig().selectInteropPreference(
+      InteropType, NumPrefers, Prefers);
   if (InteropSpec.fr_id == omp_ifr_none) {
     ODBG(ODT_Interface) << "Interop request not supported by device "
                         << DeviceNum;

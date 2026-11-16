@@ -14300,6 +14300,2311 @@ tc_40d64c94, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
+def LX_L16b_tmp : HInst<
+(outs HlxLR:$Ld16),
+(ins IntRegs:$Rs32),
+"$Ld16.tmp = mem($Rs32)",
+tc_4222e6bf, TypeLD>, Enc_c31661, Requires<[HasV85,UseHLX]> {
+let Inst{13-4} = 0b0100000000;
+let Inst{31-21} = 0b10011000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = HLXVectorAccess;
+let isHLX = 1;
+let isTmpWrite = 1;
+let mayLoad = 1;
+}
+def LX_S16b_new : HInst<
+(outs),
+(ins IntRegs:$Rs32, HlxLR:$Ku16),
+"mem($Rs32) = $Ku16.new",
+tc_5deb5e47, TypeST>, Enc_f4847b, Requires<[HasV85,UseHLX]> {
+let Inst{13-4} = 0b0000000000;
+let Inst{31-21} = 0b10100100100;
+let accessSize = HLXVectorAccess;
+let isNVStore = 1;
+let isNewValue = 1;
+let isHLX = 1;
+let mayStore = 1;
+let opNewValue = 1;
+}
+def LX_S16b_p_new : HInst<
+(outs),
+(ins PredRegs:$Pv4, IntRegs:$Rs32, HlxLR:$Ku16),
+"if ($Pv4) mem($Rs32) = $Ku16.new",
+tc_5deb5e47, TypeST>, Enc_1d91c3, Requires<[HasV85,UseHLX]> {
+let Inst{8-4} = 0b00100;
+let Inst{13-11} = 0b000;
+let Inst{31-21} = 0b10100100100;
+let isPredicated = 1;
+let accessSize = HLXVectorAccess;
+let isNVStore = 1;
+let isNewValue = 1;
+let isHLX = 1;
+let mayStore = 1;
+let opNewValue = 2;
+}
+def LX_abs_uh : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16),
+"$Ld16.uh = abs($Lu16.h)",
+tc_9f6cd987, TypeM>, Enc_8a698e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1010;
+let Inst{31-16} = 0b1110010100000001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_abs_uh_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16),
+"$Ld16.h = abs($Lu16.h):sat",
+tc_9f6cd987, TypeM>, Enc_8a698e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1010;
+let Inst{31-16} = 0b1110010100000001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_abs_uhp : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16),
+"$Ldd16.uh = abs($Luu16.h)",
+tc_ed03645c, TypeM>, Enc_74c3ca, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1100;
+let Inst{31-16} = 0b1110111100000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_abs_uhp_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16),
+"$Ldd16.h = abs($Luu16.h):sat",
+tc_ed03645c, TypeM>, Enc_74c3ca, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1100;
+let Inst{31-16} = 0b1110111100000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_abs_uw : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16),
+"$Ldd16.uw = abs($Luu16.w)",
+tc_ed03645c, TypeM>, Enc_74c3ca, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1100;
+let Inst{31-16} = 0b1110111100000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_abs_uw_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16),
+"$Ldd16.w = abs($Luu16.w):sat",
+tc_ed03645c, TypeM>, Enc_74c3ca, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1100;
+let Inst{31-16} = 0b1110111100000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_absdiff_h : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.uh = absdiff($Lu16.h,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_absdiff_uh : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.uh = absdiff($Lu16.uh,$Lv16.uh)",
+tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_absdiff_uw : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uw = absdiff($Luu16.uw,$Lvv16.uw)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_absdiff_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uw = absdiff($Luu16.w,$Lvv16.w)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_h : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = add($Lu16.h,$Lv16.h)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_h_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = add($Lu16.h,$Lv16.h):sat",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_hp : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.h = add($Luu16.h,$Lvv16.h)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_hp_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.h = add($Luu16.h,$Lvv16.h):sat",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_uh_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.uh = add($Lu16.uh,$Lv16.uh):sat",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_uhh_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.uh = add($Lu16.h,$Lv16.h):sat",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_uhp_h_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uh = add($Luu16.h,$Lvv16.h):sat",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_uhp_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uh = add($Luu16.uh,$Lvv16.uh):sat",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_uw_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uw = add($Luu16.uw,$Lvv16.uw):sat",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_uw_w_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uw = add($Luu16.w,$Lvv16.w):sat",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.w = add($Luu16.w,$Lvv16.w)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_w_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.w = add($Luu16.w,$Lvv16.w):sat",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_wuh : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ldd16.w = add($Lu16.uh,$Lv16.uh)",
+tc_5da50c4b, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_wwh : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ldd16.w = add($Luu16.w,$Lv16.h)",
+tc_5da50c4b, TypeM>, Enc_ffaf7c, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1111;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_add_wwuh : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ldd16.w = add($Luu16.w,$Lv16.uh)",
+tc_5da50c4b, TypeM>, Enc_ffaf7c, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1111;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_and : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16 = and($Lu16,$Lv16)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_and_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16 = and($Luu16,$Lvv16)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_andn : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16 = andn($Lu16,$Lv16)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_andn_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16 = andn($Luu16,$Lvv16)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_assign : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16),
+"$Ld16.h = $Lu16.h",
+tc_9f6cd987, TypeM>, Enc_8a698e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1110;
+let Inst{31-16} = 0b1110010100000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_assign_alt : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16),
+"$Ld16 = $Lu16",
+tc_9f6cd987, TypeMAPPING>, Requires<[HasV85,UseHLX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+}
+def LX_assign_r : HInst<
+(outs HlxLR:$Ld16),
+(ins IntRegs:$Rt32),
+"$Ld16.h = $Rt32.h",
+tc_9f6cd987, TypeM>, Enc_e0a1c0, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{13-5} = 0b100100001;
+let Inst{31-21} = 0b11100101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_assign_rw : HInst<
+(outs HlxLLR:$Ldd16),
+(ins IntRegs:$Rt32),
+"$Ldd16.w = $Rt32.w",
+tc_9f6cd987, TypeM>, Enc_575e48, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{13-5} = 0b100100001;
+let Inst{31-21} = 0b11100101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_assign_s : HInst<
+(outs HlxLR:$Ld16),
+(ins s5_0Imm:$Ii),
+"$Ld16.h = #$Ii",
+tc_9f6cd987, TypeM>, Enc_cf1295, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{13-5} = 0b101000001;
+let Inst{31-21} = 0b11100101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_assign_u : HInst<
+(outs HlxLR:$Ld16),
+(ins u5_0Imm:$Ii),
+"$Ld16.uh = #$Ii",
+tc_9f6cd987, TypeM>, Enc_cf1295, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{13-5} = 0b101000001;
+let Inst{31-21} = 0b11100101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_assign_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16),
+"$Ldd16.w = $Luu16.w",
+tc_9f6cd987, TypeM>, Enc_74c3ca, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1110;
+let Inst{31-16} = 0b1110010100000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_assign_w_alt : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16),
+"$Ldd16 = $Luu16",
+tc_9f6cd987, TypeMAPPING>, Requires<[HasV85,UseHLX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+}
+def LX_avg_h : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = avg($Lu16.h,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_avg_h_rnd : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = avg($Lu16.h,$Lv16.h):rnd",
+tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_avg_uh : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.uh = avg($Lu16.uh,$Lv16.uh)",
+tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_avg_uh_rnd : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.uh = avg($Lu16.uh,$Lv16.uh):rnd",
+tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_avg_uw : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uw = avg($Luu16.uw,$Lvv16.uw)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_avg_uw_rnd : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uw = avg($Luu16.uw,$Lvv16.uw):rnd",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_avg_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.w = avg($Luu16.w,$Lvv16.w)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_avg_w_rnd : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.w = avg($Luu16.w,$Lvv16.w):rnd",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_cmp_gt_h : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = cmp.gt($Lu16.h,$Lv16.h)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_cmp_gt_hp : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.h = cmp.gt($Luu16.h,$Lvv16.h)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_cmp_gt_uh : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = cmp.gt($Lu16.uh,$Lv16.uh)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_cmp_gt_uhp : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.h = cmp.gt($Luu16.uh,$Lvv16.uh)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_cmp_gt_uw : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.w = cmp.gt($Luu16.uw,$Lvv16.uw)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_cmp_gt_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.w = cmp.gt($Luu16.w,$Lvv16.w)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_combine_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ldd16 = combine($Lu16,$Lv16)",
+tc_c21d7447, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let isRegSequence = 1;
+}
+def LX_conv_b_h_hi : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.b = packhi($Lu16.h,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_conv_b_h_lo : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.b = packlo($Lu16.h,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_conv_h_b_hi : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16),
+"$Ldd16.h = unpackhi($Lu16.b)",
+tc_ed03645c, TypeM>, Enc_d84d31, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1101;
+let Inst{31-16} = 0b1110110100000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_conv_h_b_lo : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16),
+"$Ldd16.h = unpacklo($Lu16.b)",
+tc_ed03645c, TypeM>, Enc_d84d31, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1101;
+let Inst{31-16} = 0b1110110100000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_conv_uw_uh : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16),
+"$Ldd16.uw = zxt($Lu16.uh)",
+tc_9f6cd987, TypeM>, Enc_d84d31, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1010;
+let Inst{31-16} = 0b1110010100000001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_conv_w_h : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16),
+"$Ldd16.w = sxt($Lu16.h)",
+tc_9f6cd987, TypeM>, Enc_d84d31, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1010;
+let Inst{31-16} = 0b1110010100000001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_hi : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16),
+"$Ld16 = hi($Luu16)",
+PSEUDO, TypeM>, Requires<[HasV85,UseHLX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let isPseudo = 1;
+}
+def LX_lo : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16),
+"$Ld16 = lo($Luu16)",
+PSEUDO, TypeM>, Requires<[HasV85,UseHLX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let isPseudo = 1;
+}
+def LX_lut4 : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, DoubleRegs:$Rtt32),
+"$Ld16.h = lut4($Lu16.uh,$Rtt32.h)",
+tc_c21d7447, TypeM>, Enc_b8c282, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1000;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_lut4_mask : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, DoubleRegs:$Rtt32),
+"$Ld16.h = lut4($Lu16.uh,$Rtt32.h):mask",
+tc_c21d7447, TypeM>, Enc_b8c282, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1000;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_lut4_sh : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16, DoubleRegs:$Rtt32),
+"$Ldd16.w = lut4($Lu16.uh,$Rtt32.uh):>>1",
+tc_c21d7447, TypeM>, Enc_9f9d78, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1000;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_lut4_sh_neg : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16, DoubleRegs:$Rtt32),
+"$Ldd16.w = lut4($Lu16.uh,$Rtt32.uh):>>1:neg",
+tc_c21d7447, TypeM>, Enc_9f9d78, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1000;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_max_h : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = max($Lu16.h,$Lv16.h)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_max_hp : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.h = max($Luu16.h,$Lvv16.h)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1110;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_max_uh : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.uh = max($Lu16.uh,$Lv16.uh)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_max_uhp : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uh = max($Luu16.uh,$Lvv16.uh)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1110;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_max_uw : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uw = max($Luu16.uw,$Lvv16.uw)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1111;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_max_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.w = max($Luu16.w,$Lvv16.w)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1111;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_min_h : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = min($Lu16.h,$Lv16.h)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_min_hp : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.h = min($Luu16.h,$Lvv16.h)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1110;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_min_uh : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.uh = min($Lu16.uh,$Lv16.uh)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_min_uhp : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uh = min($Luu16.uh,$Lvv16.uh)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1110;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_min_uw : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uw = min($Luu16.uw,$Lvv16.uw)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1111;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_min_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.w = min($Luu16.w,$Lvv16.w)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1111;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_mpa_uwuhuw_si : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLR:$Lu16, HlxLLR:$Lxx16in, HlxLLR:$Lvv16),
+"$Lxx16.uw = add(mpy($Lu16.uh,hi($Lxx16in).uh),$Lvv16.w)",
+tc_c21d7447, TypeM>, Enc_c0f4b3, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100111111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpa_wh : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLLR:$Lxx16in, HlxLR:$Lu16, HlxLR:$Lv16),
+"$Lxx16.w += mpy($Lu16.h,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpa_wh_hi : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16, HlxLLR:$Lxx16in),
+"$Lxx16.uw = add(mpy($Lu16.h,$Lv16.uh),hi($Lxx16in).uh)",
+tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1100;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpa_whuh : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLLR:$Lxx16in, HlxLR:$Lu16, HlxLR:$Lv16),
+"$Lxx16.w += mpy($Lu16.h,$Lv16.uh)",
+tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpa_whuh_lo : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16, HlxLLR:$Lxx16in),
+"$Lxx16.w = add(mpy($Lu16.h,$Lv16.uh),lo($Lxx16in).uh)",
+tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpa_wuh : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLLR:$Lxx16in, HlxLR:$Lu16, HlxLR:$Lv16),
+"$Lxx16.w += mpy($Lu16.uh,$Lv16.uh)",
+tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpa_wuh_hi : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16, HlxLLR:$Lxx16in),
+"$Lxx16.uw = add(mpy($Lu16.uh,$Lv16.uh),hi($Lxx16in).uh)",
+tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1100;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpa_wuh_lo : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16, HlxLLR:$Lxx16in),
+"$Lxx16.uw = add(mpy($Lu16.uh,$Lv16.uh),lo($Lxx16in).uh)",
+tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpa_wuhw_si : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLR:$Lu16, HlxLLR:$Lxx16in, HlxLLR:$Lvv16),
+"$Lxx16.w = add(mpy($Lu16.uh,hi($Lxx16in).h),$Lvv16.w)",
+tc_c21d7447, TypeM>, Enc_c0f4b3, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100111111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpar_uwuhuw_si : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLR:$Lu16, HlxLLR:$Lxx16in, IntRegs:$Rt32),
+"$Lxx16.uw = add(mpy($Lu16.uh,hi($Lxx16in).uh),$Rt32.w)",
+tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1101;
+let Inst{31-21} = 0b11100111111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpar_wh : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLLR:$Lxx16in, HlxLR:$Lu16, IntRegs:$Rt32),
+"$Lxx16.w += mpy($Lu16.h,$Rt32.h)",
+tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1010;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpar_wh_hi : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLR:$Lu16, IntRegs:$Rt32, HlxLLR:$Lxx16in),
+"$Lxx16.uw = add(mpy($Lu16.h,$Rt32.uh),hi($Lxx16in).uh)",
+tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1100;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpar_whuh : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLLR:$Lxx16in, HlxLR:$Lu16, IntRegs:$Rt32),
+"$Lxx16.w += mpy($Lu16.h,$Rt32.uh)",
+tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1010;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpar_whuh_lo : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLR:$Lu16, IntRegs:$Rt32, HlxLLR:$Lxx16in),
+"$Lxx16.w = add(mpy($Lu16.h,$Rt32.uh),lo($Lxx16in).uh)",
+tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1011;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpar_wuh : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLLR:$Lxx16in, HlxLR:$Lu16, IntRegs:$Rt32),
+"$Lxx16.w += mpy($Lu16.uh,$Rt32.uh)",
+tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1001;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpar_wuh_hi : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLR:$Lu16, IntRegs:$Rt32, HlxLLR:$Lxx16in),
+"$Lxx16.uw = add(mpy($Lu16.uh,$Rt32.uh),hi($Lxx16in).uh)",
+tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1100;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpar_wuh_lo : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLR:$Lu16, IntRegs:$Rt32, HlxLLR:$Lxx16in),
+"$Lxx16.uw = add(mpy($Lu16.uh,$Rt32.uh),lo($Lxx16in).uh)",
+tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1011;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpar_wuhw_si : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLR:$Lu16, HlxLLR:$Lxx16in, IntRegs:$Rt32),
+"$Lxx16.w = add(mpy($Lu16.uh,hi($Lxx16in).h),$Rt32.w)",
+tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1101;
+let Inst{31-21} = 0b11100111111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_mpy_uw_uh : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ldd16.uw = mpy($Lu16.uh,$Lv16.uh)",
+tc_c21d7447, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_mpy_w_h : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ldd16.w = mpy($Lu16.h,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_mpy_w_huh : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ldd16.w = mpy($Lu16.h,$Lv16.uh)",
+tc_c21d7447, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_mpyr_uw_uh : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16, IntRegs:$Rt32),
+"$Ldd16.uw = mpy($Lu16.uh,$Rt32.uh)",
+tc_c21d7447, TypeM>, Enc_5fe423, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1000;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_mpyr_w_h : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16, IntRegs:$Rt32),
+"$Ldd16.w = mpy($Lu16.h,$Rt32.h)",
+tc_c21d7447, TypeM>, Enc_5fe423, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1001;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_mpyr_w_huh : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16, IntRegs:$Rt32),
+"$Ldd16.w = mpy($Lu16.h,$Rt32.uh)",
+tc_c21d7447, TypeM>, Enc_5fe423, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1000;
+let Inst{31-21} = 0b11100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_mux_h : HInst<
+(outs HlxLR:$Lx16),
+(ins HlxLR:$Lx16in, HlxLR:$Lu16, HlxLR:$Lv16),
+"$Lx16.h = mux($Lx16in.h,$Lu16.h,$Lv16.h)",
+tc_6fc5dbea, TypeM>, Enc_649e79, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lx16 = $Lx16in";
+}
+def LX_mux_h_alt : HInst<
+(outs HlxLR:$Lx16),
+(ins HlxLR:$Lv16, HlxLR:$Lx16in, HlxLR:$Lu16),
+"if($Lv16.h<0) $Lx16.h = $Lu16.h",
+tc_6fc5dbea, TypeMAPPING>, Requires<[HasV85,UseHLX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let Constraints = "$Lx16 = $Lx16in";
+}
+def LX_navg_h : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = navg($Lu16.h,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1100;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_navg_uh : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = navg($Lu16.uh,$Lv16.uh)",
+tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1100;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_navg_uw : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.w = navg($Luu16.uw,$Lvv16.uw)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1100;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_navg_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.w = navg($Luu16.w,$Lvv16.w)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1100;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_not : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16),
+"$Ld16 = not($Lu16)",
+tc_9f6cd987, TypeM>, Enc_8a698e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1101;
+let Inst{31-16} = 0b1110010100000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_not_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16),
+"$Ldd16 = not($Luu16)",
+tc_ed03645c, TypeM>, Enc_74c3ca, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1001;
+let Inst{31-16} = 0b1110111100100000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_or : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16 = or($Lu16,$Lv16)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1110;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_or_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16 = or($Luu16,$Lvv16)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_orn : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16 = orn($Lu16,$Lv16)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1110;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_orn_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16 = orn($Luu16,$Lvv16)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shr_h : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = shr($Lu16.h,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shr_h_w_rnd_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ld16.h = shr($Luu16.w,$Lv16.h):rnd:sat",
+tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shr_h_w_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ld16.h = shr($Luu16.w,$Lv16.h):sat",
+tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1100;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shr_h_w_uh : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ld16.h = shr($Luu16.w,$Lv16.uh)",
+tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1100;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shr_uh_uh : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.uh = shr($Lu16.uh,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shr_uh_uw_rnd_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ld16.uh = shr($Luu16.uw,$Lv16.h):rnd:sat",
+tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1110;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shr_uh_uw_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ld16.uh = shr($Luu16.uw,$Lv16.h):sat",
+tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1111;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shr_uh_w_rnd_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ld16.uh = shr($Luu16.w,$Lv16.h):rnd:sat",
+tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1110;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shr_uh_w_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ld16.uh = shr($Luu16.w,$Lv16.h):sat",
+tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shr_uw_uw : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ldd16.uw = shr($Luu16.uw,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_ffaf7c, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shr_w_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ldd16.w = shr($Luu16.w,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_ffaf7c, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shra_h_h : HInst<
+(outs HlxLR:$Lx16),
+(ins HlxLR:$Lx16in, HlxLR:$Lu16, HlxLR:$Lv16),
+"$Lx16.h += shr($Lu16.h,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_649e79, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1110;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lx16 = $Lx16in";
+}
+def LX_shra_h_uh : HInst<
+(outs HlxLR:$Lx16),
+(ins HlxLR:$Lx16in, HlxLR:$Lu16, HlxLR:$Lv16),
+"$Lx16.h += shr($Lu16.uh,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_649e79, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1110;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lx16 = $Lx16in";
+}
+def LX_shra_w_uw : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLLR:$Lxx16in, HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Lxx16.w += shr($Luu16.uw,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_4dcf21, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1111;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_shra_w_w : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLLR:$Lxx16in, HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Lxx16.w += shr($Luu16.w,$Lv16.h)",
+tc_c21d7447, TypeM>, Enc_4dcf21, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1111;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_shrar_h_h : HInst<
+(outs HlxLR:$Lx16),
+(ins HlxLR:$Lx16in, HlxLR:$Lu16, IntRegs:$Rt32),
+"$Lx16.h += shr($Lu16.h,$Rt32.h)",
+tc_c21d7447, TypeM>, Enc_692b4c, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1110;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lx16 = $Lx16in";
+}
+def LX_shrar_h_uh : HInst<
+(outs HlxLR:$Lx16),
+(ins HlxLR:$Lx16in, HlxLR:$Lu16, IntRegs:$Rt32),
+"$Lx16.h += shr($Lu16.uh,$Rt32.h)",
+tc_c21d7447, TypeM>, Enc_692b4c, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1110;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lx16 = $Lx16in";
+}
+def LX_shrar_w_uw : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLLR:$Lxx16in, HlxLLR:$Luu16, IntRegs:$Rt32),
+"$Lxx16.w += shr($Luu16.uw,$Rt32.h)",
+tc_c21d7447, TypeM>, Enc_569cd5, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1111;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_shrar_w_w : HInst<
+(outs HlxLLR:$Lxx16),
+(ins HlxLLR:$Lxx16in, HlxLLR:$Luu16, IntRegs:$Rt32),
+"$Lxx16.w += shr($Luu16.w,$Rt32.h)",
+tc_c21d7447, TypeM>, Enc_569cd5, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1111;
+let Inst{31-21} = 0b11101101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let Constraints = "$Lxx16 = $Lxx16in";
+}
+def LX_shrr_h : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, IntRegs:$Rt32),
+"$Ld16.h = shr($Lu16.h,$Rt32.h)",
+tc_c21d7447, TypeM>, Enc_62f19e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1010;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shrr_h_w_rnd_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, IntRegs:$Rt32),
+"$Ld16.h = shr($Luu16.w,$Rt32.h):rnd:sat",
+tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1101;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shrr_h_w_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, IntRegs:$Rt32),
+"$Ld16.h = shr($Luu16.w,$Rt32.h):sat",
+tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1100;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shrr_h_w_uh : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, IntRegs:$Rt32),
+"$Ld16.h = shr($Luu16.w,$Rt32.uh)",
+tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1100;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shrr_uh_uh : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, IntRegs:$Rt32),
+"$Ld16.uh = shr($Lu16.uh,$Rt32.h)",
+tc_c21d7447, TypeM>, Enc_62f19e, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1010;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shrr_uh_uw_rnd_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, IntRegs:$Rt32),
+"$Ld16.uh = shr($Luu16.uw,$Rt32.h):rnd:sat",
+tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1110;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shrr_uh_uw_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, IntRegs:$Rt32),
+"$Ld16.uh = shr($Luu16.uw,$Rt32.h):sat",
+tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1111;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shrr_uh_w_rnd_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, IntRegs:$Rt32),
+"$Ld16.uh = shr($Luu16.w,$Rt32.h):rnd:sat",
+tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1110;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shrr_uh_w_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, IntRegs:$Rt32),
+"$Ld16.uh = shr($Luu16.w,$Rt32.h):sat",
+tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1101;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shrr_uw_uw : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, IntRegs:$Rt32),
+"$Ldd16.uw = shr($Luu16.uw,$Rt32.h)",
+tc_c21d7447, TypeM>, Enc_f58d1d, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1011;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_shrr_w_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, IntRegs:$Rt32),
+"$Ldd16.w = shr($Luu16.w,$Rt32.h)",
+tc_c21d7447, TypeM>, Enc_f58d1d, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1011;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_h : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = sub($Lu16.h,$Lv16.h)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1100;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_h_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.h = sub($Lu16.h,$Lv16.h):sat",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1100;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_hp : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.h = sub($Luu16.h,$Lvv16.h)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_hp_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.h = sub($Luu16.h,$Lvv16.h):sat",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_ilog2_h : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, u4_0Imm:$Ii),
+"$Ld16.h = sub(ilog2($Lu16.h),#$Ii)",
+tc_c21d7447, TypeM>, Enc_3286a7, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_ilog2_uh : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, u4_0Imm:$Ii),
+"$Ld16.h = sub(ilog2($Lu16.uh),#$Ii)",
+tc_c21d7447, TypeM>, Enc_3286a7, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_ilog2_uw : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, u5_0Imm:$Ii),
+"$Ld16.h = sub(ilog2($Luu16.uw),#$Ii)",
+tc_c21d7447, TypeM>, Enc_5734a8, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1001;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_ilog2_w : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLLR:$Luu16, u5_0Imm:$Ii),
+"$Ld16.h = sub(ilog2($Luu16.w),#$Ii)",
+tc_c21d7447, TypeM>, Enc_5734a8, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1001;
+let Inst{31-21} = 0b11101101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_uh_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.uh = sub($Lu16.uh,$Lv16.uh):sat",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1111;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_uhh_sat : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16.uh = sub($Lu16.h,$Lv16.h):sat",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1111;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_uhp_h_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uh = sub($Luu16.h,$Lvv16.h):sat",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_uhp_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uh = sub($Luu16.uh,$Lvv16.uh):sat",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1011;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_uw_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uw = sub($Luu16.uw,$Lvv16.uw):sat",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_uw_w_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.uw = sub($Luu16.w,$Lvv16.w):sat",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.w = sub($Luu16.w,$Lvv16.w)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_w_sat : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16.w = sub($Luu16.w,$Lvv16.w):sat",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1001;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_wuh : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ldd16.w = sub($Lu16.uh,$Lv16.uh)",
+tc_5da50c4b, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1010;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_wwh : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ldd16.w = sub($Luu16.w,$Lv16.h)",
+tc_5da50c4b, TypeM>, Enc_ffaf7c, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_sub_wwuh : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLR:$Lv16),
+"$Ldd16.w = sub($Luu16.w,$Lv16.uh)",
+tc_5da50c4b, TypeM>, Enc_ffaf7c, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b0;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_xor : HInst<
+(outs HlxLR:$Ld16),
+(ins HlxLR:$Lu16, HlxLR:$Lv16),
+"$Ld16 = xor($Lu16,$Lv16)",
+tc_5da50c4b, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b1;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1101;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11100101000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_xor_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
+"$Ldd16 = xor($Luu16,$Lvv16)",
+tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+let Inst{0-0} = 0b0;
+let Inst{5-5} = 0b1;
+let Inst{13-10} = 0b1000;
+let Inst{16-16} = 0b0;
+let Inst{31-21} = 0b11101111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+}
+def LX_zero : HInst<
+(outs HlxLR:$Ld16),
+(ins),
+"$Ld16 = #0",
+tc_5da50c4b, TypeMAPPING>, Requires<[HasV85,UseHLX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+}
+def LX_zero_w : HInst<
+(outs HlxLLR:$Ldd16),
+(ins),
+"$Ldd16 = #0",
+tc_c21d7447, TypeMAPPING>, Requires<[HasV85,UseHLX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isHLX = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+}
 def M2_acci : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
@@ -18395,6 +20700,117 @@ let hasNewValue = 1;
 let opNewValue = 0;
 let prefersSlot3 = 1;
 let Defs = [USR_OVF];
+}
+def M8_cvt_rs_hf : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"cvt.hf = acc($Rs32)",
+tc_db96aa6b, TypeST>, Enc_ecbcc8, Requires<[HasV73,UseHMX]> {
+let Inst{13-0} = 0b01101000010000;
+let Inst{31-21} = 0b10100110111;
+let hasSideEffects = 1;
+}
+def M8_mxclracc_hf : HInst<
+(outs),
+(ins),
+"mxclracc.hf",
+tc_77f94a5e, TypeST>, Enc_e3b0c4, Requires<[HasV68,UseHMX]> {
+let Inst{13-0} = 0b00000000010011;
+let Inst{31-16} = 0b1010011011100000;
+let hasSideEffects = 1;
+}
+def M8_mxmem : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"mxmem($Rs32,$Rt32) = cvt",
+tc_74e96cae, TypeST>, Enc_ca3887, Requires<[HasV73,UseHMX]> {
+let Inst{7-0} = 0b00011000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10100110111;
+let hasSideEffects = 1;
+let mayStore = 1;
+}
+def M8_mxmem2_bias : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"bias = mxmem2($Rs32)",
+tc_28a44d1d, TypeLD>, Enc_ecbcc8, Requires<[HasV68,UseHMX]> {
+let Inst{13-0} = 0b00001111111110;
+let Inst{31-21} = 0b10010010000;
+let hasSideEffects = 1;
+let mayLoad = 1;
+let isRestrictNoSlot1Store = 1;
+}
+def M8_mxmem2_st_bias : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"mxmem2($Rs32) = bias",
+tc_db96aa6b, TypeST>, Enc_ecbcc8, Requires<[HasV68,UseHMX]> {
+let Inst{13-0} = 0b00000000010110;
+let Inst{31-21} = 0b10100110111;
+let hasSideEffects = 1;
+let isRestrictNoSlot1Store = 1;
+let mayStore = 1;
+}
+def M8_mxmem_blk_sm_act_hf : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"activation.hf = mxmem($Rs32,$Rt32)",
+tc_3fb06227, TypeLD>, Enc_ca3887, Requires<[HasV68,UseHMX]> {
+let Inst{7-0} = 0b11100100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10010010000;
+let hasSideEffects = 1;
+let mayLoad = 1;
+let isHMXActivate = 1;
+}
+def M8_mxmem_sm_act_hf : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"activation.hf = mxmem($Rs32,$Rt32):deep",
+tc_3fb06227, TypeLD>, Enc_ca3887, Requires<[HasV68,UseHMX]> {
+let Inst{7-0} = 0b11100010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10010010000;
+let hasSideEffects = 1;
+let mayLoad = 1;
+let isHMXActivate = 1;
+}
+def M8_mxmem_wei_hf : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"weight.hf = mxmem($Rs32,$Rt32)",
+tc_1e779a4b, TypeLD>, Enc_ca3887, Requires<[HasV68,UseHMX]> {
+let Inst{7-0} = 0b11101111;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010010000;
+let hasSideEffects = 1;
+let mayLoad = 1;
+let isHMXWeight = 1;
+}
+def M8_mxmemdp_wei_hf : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"weight.hf = mxmem($Rs32,$Rt32):deep",
+tc_1e779a4b, TypeLD>, Enc_ca3887, Requires<[HasV68,UseHMX]> {
+let Inst{7-0} = 0b11110100;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010010000;
+let hasSideEffects = 1;
+let mayLoad = 1;
+let isHMXWeight = 1;
+}
+def M8_mxmems_blk_sm_act_hf : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"activation.hf = mxmem($Rs32,$Rt32):single",
+tc_3fb06227, TypeLD>, Enc_ca3887, Requires<[HasV68,UseHMX]> {
+let Inst{7-0} = 0b11111000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10010010000;
+let hasSideEffects = 1;
+let mayLoad = 1;
+let isHMXActivate = 1;
 }
 def PS_loadrbabs : HInst<
 (outs IntRegs:$Rd32),
@@ -29027,7 +31443,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -29051,7 +31467,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -29074,7 +31490,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -29097,7 +31513,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -29119,7 +31535,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -29142,7 +31558,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -29165,7 +31581,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -29187,7 +31603,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -29209,7 +31625,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -29340,7 +31756,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ai";
@@ -29363,7 +31779,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ai";
@@ -29385,7 +31801,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_pi";
@@ -29407,7 +31823,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ppu";
@@ -29428,7 +31844,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_pi";
@@ -29450,7 +31866,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ppu";
@@ -29472,7 +31888,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ai";
@@ -29493,7 +31909,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_pi";
@@ -29514,7 +31930,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ppu";
@@ -32962,7 +35378,7 @@ let Inst{31-16} = 0b0001111000000001;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vassignp : HInst<
@@ -33404,7 +35820,7 @@ let Inst{31-21} = 0b00011110101;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vconv_bf_qf32 : HInst<

@@ -55,7 +55,6 @@
 name:            test_func
 alignment:       4
 legalized:       false
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }

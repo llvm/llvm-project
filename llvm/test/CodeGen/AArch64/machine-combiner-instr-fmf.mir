@@ -10,7 +10,6 @@
 ---
 name:            scalar_fmadd_fast
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32 }
   - { id: 1, class: fpr32 }
@@ -50,7 +49,6 @@ body:             |
 ---
 name:            scalar_fmadd_contract
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32 }
   - { id: 1, class: fpr32 }
@@ -90,7 +88,6 @@ body:             |
 ---
 name:            scalar_fmadd_contract_op0
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32 }
   - { id: 1, class: fpr32 }
@@ -130,7 +127,6 @@ body:             |
 ---
 name:            scalar_fmadd_contract_op1
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32 }
   - { id: 1, class: fpr32 }
@@ -171,7 +167,6 @@ body:             |
 ---
 name:            scalar_fmadd_nsz
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32 }
   - { id: 1, class: fpr32 }
@@ -210,7 +205,6 @@ body:             |
 ---
 name:            vector_fmadd_fast
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -249,7 +243,6 @@ body:             |
 ---
 name:            vector_fmadd_contract
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -289,7 +282,6 @@ body:             |
 ---
 name:            vector_fmadd_contract_op0
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -329,7 +321,6 @@ body:             |
 ---
 name:            vector_fmadd_contract_op1
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -369,7 +360,6 @@ body:             |
 ---
 name:            vector_fmadd_nsz
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }

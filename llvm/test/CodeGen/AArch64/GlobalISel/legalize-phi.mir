@@ -7,7 +7,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -99,7 +98,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -157,7 +155,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -248,7 +245,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -317,7 +313,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -376,7 +371,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -482,7 +476,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -585,7 +578,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: legalize_phi_check_insertpt
   ; CHECK: bb.0:
@@ -625,7 +617,6 @@ body:             |
 ...
 ---
 name:            legalize_phi_vector
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: legalize_phi_vector
   ; CHECK: bb.0:
@@ -653,7 +644,6 @@ body:             |
 ...
 ---
 name:             s88
-tracksRegLiveness: true
 liveins:
 body:             |
   ; CHECK-LABEL: name: s88
@@ -704,7 +694,6 @@ body:             |
 ---
 name:            v4s64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: v4s64
   ; CHECK: bb.0:
@@ -759,7 +748,6 @@ body:             |
 ---
 name:            v8s32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: v8s32
   ; CHECK: bb.0:
@@ -803,7 +791,6 @@ body:             |
 ---
 name:            v16s16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: v16s16
   ; CHECK: bb.0:
@@ -847,7 +834,6 @@ body:             |
 ---
 name:            v32s8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: v32s8
   ; CHECK: bb.0:
@@ -891,7 +877,6 @@ body:             |
 ---
 name:            v4p0
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: v4p0
   ; CHECK: bb.0:
@@ -950,7 +935,6 @@ body:             |
 ---
 name:            v4s1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: v4s1
   ; CHECK: bb.0.entry:

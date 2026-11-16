@@ -548,7 +548,6 @@ name:            store_4xi16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr }
   - { id: 1, class: gpr }
@@ -575,7 +574,6 @@ name:            store_4xi32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr }
   - { id: 1, class: gpr }
@@ -602,7 +600,6 @@ name:            store_8xi16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr }
   - { id: 1, class: gpr }
@@ -629,7 +626,6 @@ name:            store_16xi8
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr }
   - { id: 1, class: gpr }
@@ -655,7 +651,6 @@ body:             |
 name:            store_adrp_add_low
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -676,7 +671,6 @@ body:             |
 name:            store_adrp_add_low_foldable_offset
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -697,7 +691,6 @@ body:             |
 name:            store_adrp_add_low_unfoldable_offset
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0

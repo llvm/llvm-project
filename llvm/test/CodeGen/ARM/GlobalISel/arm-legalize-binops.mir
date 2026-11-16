@@ -44,7 +44,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -76,7 +75,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -108,7 +106,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -133,7 +130,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -165,7 +161,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -197,7 +192,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -222,7 +216,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -254,7 +247,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -286,7 +278,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -311,7 +302,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -343,7 +333,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -375,7 +364,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -400,7 +388,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -435,7 +422,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -467,7 +453,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -499,7 +484,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -524,7 +508,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -559,7 +542,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -591,7 +573,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -623,7 +604,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -648,7 +628,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -683,7 +662,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -708,7 +686,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -733,7 +710,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -758,7 +734,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -788,7 +763,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -818,7 +792,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -846,7 +819,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

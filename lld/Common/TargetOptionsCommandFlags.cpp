@@ -17,6 +17,10 @@ lld::getTargetOptions(const llvm::cl::LibraryOptionsContext &libraryOptions) {
   return llvm::codegen::getTargetOptions(libraryOptions, llvm::Triple());
 }
 
+llvm::ArrayRef<const llvm::cl::LibraryOptions *> lld::getToolOptions() {
+  return llvm::codegen::getToolOptions();
+}
+
 std::optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel() {
   return llvm::codegen::getExplicitRelocModel();
 }

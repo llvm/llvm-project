@@ -585,7 +585,6 @@ name:            load_4xi16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: fpr }
@@ -612,7 +611,6 @@ name:            load_4xi32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: fpr }
@@ -639,7 +637,6 @@ name:            load_8xi16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: fpr }
@@ -666,7 +663,6 @@ name:            load_16xi8
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: fpr }
@@ -693,7 +689,6 @@ name:            anyext_on_fpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -727,7 +722,6 @@ name:            anyext_on_fpr8
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }

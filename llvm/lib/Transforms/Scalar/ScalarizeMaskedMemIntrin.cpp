@@ -231,6 +231,7 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
 
   Instruction *InsertPt = CI;
   IRBuilder<> Builder(InsertPt);
+  Builder.disableGEPCanonicalization();
   BasicBlock *IfBlock = CI->getParent();
 
   // Short-cut if the mask is all-true.
@@ -416,6 +417,7 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
 
   Instruction *InsertPt = CI;
   IRBuilder<> Builder(InsertPt);
+  Builder.disableGEPCanonicalization();
 
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
@@ -828,6 +830,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL,
 
   Instruction *InsertPt = CI;
   IRBuilder<> Builder(InsertPt);
+  Builder.disableGEPCanonicalization();
   BasicBlock *IfBlock = CI->getParent();
 
   unsigned VectorWidth = VecType->getNumElements();
@@ -971,6 +974,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL,
 
   Instruction *InsertPt = CI;
   IRBuilder<> Builder(InsertPt);
+  Builder.disableGEPCanonicalization();
   BasicBlock *IfBlock = CI->getParent();
 
   Type *EltTy = VecType->getElementType();

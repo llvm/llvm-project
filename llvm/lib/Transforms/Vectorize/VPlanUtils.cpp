@@ -994,12 +994,21 @@ splitInvariantSum(const SCEVAddExpr *S, const Loop *L, ScalarEvolution &SE) {
 }
 
 VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
-  VPValue *Base = expand(SE.getPointerBase(S));
-  VPValue *Offset = expand(SE.removePointerBase(S));
+  const SCEV *Base = SE.getPointerBase(S);
+  const SCEV *Offset = SE.removePointerBase(S);
+  // If the pointer is invariant in HoistOutOf, use the sum of all invariant
+  // operands as base, so it is hoisted whole.
+  if (auto *AddE = dyn_cast<SCEVAddExpr>(S)) {
+    auto [InvS, VarS] = splitInvariantSum(AddE, HoistOutOf, SE);
+    if (InvS && InvS->getType()->isPointerTy() && canExpandInIR(InvS))
+      std::tie(Base, Offset) = std::tie(InvS, VarS);
+  }
   GEPNoWrapFlags GEPFlags = S->hasNoUnsignedWrap()
                                 ? GEPNoWrapFlags::noUnsignedWrap()
                                 : GEPNoWrapFlags::none();
-  return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
+  VPValue *BaseV = expand(Base);
+  VPValue *OffsetV = expand(Offset);
+  return Builder.createNoWrapPtrAdd(BaseV, OffsetV, GEPFlags, DL);
 }
 
 VPValue *VPSCEVExpander::expandAddOps(ArrayRef<const SCEV *> Operands,
@@ -1511,7 +1520,14 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
         // Optimizing WideALM can only happen after the Plan is unrolled.
         if (!Plan.isUnrolled())
           return nullptr;
+
         Multiplier = cast<ConstantInt>(Ops[2])->getZExtValue();
+
+        // TODO: We can't fold if any users expect require a wide value.
+        if (Multiplier != 1 &&
+            !all_of(R.users(), match_fn(m_ExtractVectorForPart())))
+          return nullptr;
+
         Ops.pop_back();
       }
 

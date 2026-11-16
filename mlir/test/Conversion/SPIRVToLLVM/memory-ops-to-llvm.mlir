@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='allow-pattern-rollback=0' %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.AccessChain
@@ -22,6 +23,82 @@ spirv.func @access_chain_array(%arg0 : i32) "None" {
   // CHECK: llvm.getelementptr %{{.*}}[%[[ZERO]], %{{.*}}] : (!llvm.ptr, i32, i32) -> !llvm.ptr, !llvm.array<4 x array<4 x f32>>
   %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<!spirv.array<4xf32>, Function>
   %2 = spirv.Load "Function" %1 ["Volatile"] : !spirv.array<4xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.InBoundsAccessChain
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @in_bounds_access_chain
+spirv.func @in_bounds_access_chain() "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  %0 = spirv.Constant 1: i32
+  %1 = spirv.Variable : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.getelementptr inbounds %{{.*}}[%[[ZERO]], 1, %[[ONE]]] : (!llvm.ptr, i32, i32) -> !llvm.ptr, !llvm.struct<packed (f32, array<4 x f32>)>
+  %2 = spirv.InBoundsAccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
+  spirv.Return
+}
+
+// CHECK-LABEL: @in_bounds_access_chain_no_indices
+spirv.func @in_bounds_access_chain_no_indices() "None" {
+  // CHECK: %[[VAR:.*]] = llvm.alloca
+  // CHECK-NOT: llvm.getelementptr
+  // CHECK: llvm.load %[[VAR]]
+  %0 = spirv.Variable : !spirv.ptr<!spirv.array<4xf32>, Function>
+  %1 = "spirv.InBoundsAccessChain"(%0) : (!spirv.ptr<!spirv.array<4xf32>, Function>) -> !spirv.ptr<!spirv.array<4xf32>, Function>
+  %2 = spirv.Load "Function" %1 : !spirv.array<4xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.PtrAccessChain
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ptr_access_chain_scalar
+// CHECK-SAME:    %[[PTR:.*]]: !llvm.ptr, %[[IDX:.*]]: i64
+spirv.func @ptr_access_chain_scalar(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: i64) "None" {
+  // CHECK: llvm.getelementptr %[[PTR]][%[[IDX]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+  %0 = spirv.PtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64 -> !spirv.ptr<f32, CrossWorkgroup>
+  spirv.Return
+}
+
+// CHECK-LABEL: @ptr_access_chain_scalar_i32
+// CHECK-SAME:    %[[PTR:.*]]: !llvm.ptr, %[[IDX:.*]]: i32
+spirv.func @ptr_access_chain_scalar_i32(%arg0: !spirv.ptr<i32, CrossWorkgroup>, %arg1: i32) "None" {
+  // CHECK: llvm.getelementptr %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, i32
+  %0 = spirv.PtrAccessChain %arg0[%arg1] : !spirv.ptr<i32, CrossWorkgroup>, i32 -> !spirv.ptr<i32, CrossWorkgroup>
+  spirv.Return
+}
+
+// CHECK-LABEL: @ptr_access_chain_struct
+// CHECK-SAME:    %[[PTR:.*]]: !llvm.ptr, %[[IDX:.*]]: i64
+spirv.func @ptr_access_chain_struct(%arg0: !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, CrossWorkgroup>, %arg1: i64) "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  %0 = spirv.Constant 1 : i32
+  // CHECK: llvm.getelementptr %[[PTR]][%[[IDX]], 1, %[[ONE]]] : (!llvm.ptr, i64, i32) -> !llvm.ptr, !llvm.struct<packed (f32, array<4 x f32>)>
+  %1 = spirv.PtrAccessChain %arg0[%arg1 %0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, CrossWorkgroup>, i64, i32, i32 -> !spirv.ptr<f32, CrossWorkgroup>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.InBoundsPtrAccessChain
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @in_bounds_ptr_access_chain_scalar
+// CHECK-SAME:    %[[PTR:.*]]: !llvm.ptr, %[[IDX:.*]]: i64
+spirv.func @in_bounds_ptr_access_chain_scalar(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: i64) "None" {
+  // CHECK: llvm.getelementptr inbounds %[[PTR]][%[[IDX]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+  %0 = spirv.InBoundsPtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64 -> !spirv.ptr<f32, CrossWorkgroup>
+  spirv.Return
+}
+
+// CHECK-LABEL: @in_bounds_ptr_access_chain_array
+// CHECK-SAME:    %[[PTR:.*]]: !llvm.ptr, %[[IDX:.*]]: i32, %[[ELEM:.*]]: i64
+spirv.func @in_bounds_ptr_access_chain_array(%arg0: !spirv.ptr<!spirv.array<4xi32>, CrossWorkgroup>, %arg1: i32, %arg2: i64) "None" {
+  // CHECK: llvm.getelementptr inbounds %[[PTR]][%[[ELEM]], %[[IDX]]] : (!llvm.ptr, i64, i32) -> !llvm.ptr, !llvm.array<4 x i32>
+  %0 = spirv.InBoundsPtrAccessChain %arg0[%arg2 %arg1] : !spirv.ptr<!spirv.array<4xi32>, CrossWorkgroup>, i64, i32 -> !spirv.ptr<i32, CrossWorkgroup>
   spirv.Return
 }
 

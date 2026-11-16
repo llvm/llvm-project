@@ -102,7 +102,7 @@ TosaProfileCompliance::TosaProfileCompliance() {
   static const TypeInfo fp6e3m2T = {mlir::Float6E3M2FNType::getTypeID(), 6};
   static const TypeInfo fp4e2m1T = {mlir::Float4E2M1FNType::getTypeID(), 4};
   static const TypeInfo fp8ue8m0T = {mlir::Float8E8M0FNUType::getTypeID(), 8};
-  static const TypeInfo mxint8T = {mlir::tosa::mxint8Type::getTypeID(), 8};
+  static const TypeInfo mxint8T = {mlir::MXI8Type::getTypeID(), 8};
 
   // Block scaled formats
   const TypeID blockScaledID = mlir::tosa::BlockScaledType::getTypeID();
@@ -112,7 +112,7 @@ TosaProfileCompliance::TosaProfileCompliance() {
   const TypeID fp8e4m3ID = mlir::Float8E4M3FNType::getTypeID();
   const TypeID fp8e5m2ID = mlir::Float8E5M2Type::getTypeID();
   const TypeID fp8ue8m0ID = mlir::Float8E8M0FNUType::getTypeID();
-  const TypeID mxint8ID = mlir::tosa::mxint8Type::getTypeID();
+  const TypeID mxint8ID = mlir::MXI8Type::getTypeID();
 
   static const TypeInfo bs32_fp8ue8m0_fp4e2m1T = {
       blockScaledID, 4, fp4e2m1ID, fp8ue8m0ID,
@@ -793,7 +793,7 @@ TosaProfileCompliance::stringifyTypeInfo(const TypeInfo &typeInfo) {
       return {"fp4e2m1"};
     } else if (typeInfo.typeID == mlir::Float8E8M0FNUType::getTypeID()) {
       return {"fp8e8m0"};
-    } else if (typeInfo.typeID == tosa::mxint8Type::getTypeID()) {
+    } else if (typeInfo.typeID == MXI8Type::getTypeID()) {
       return {"mxint8"};
     }
     llvm_unreachable("unknown type");

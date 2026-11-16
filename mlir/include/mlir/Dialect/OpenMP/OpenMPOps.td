@@ -1271,9 +1271,11 @@ def TaskloopWrapperOp : OpenMP_Op<"taskloop.wrapper", traits = [
 }
 
 def TaskgroupOp : OpenMP_Op<"taskgroup", traits = [
-    AttrSizedOperandSegments, AutomaticAllocationScope
+    AttrSizedOperandSegments, AutomaticAllocationScope,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>, RecursiveMemoryEffects
   ], clauses = [
-    OpenMP_AllocateClause, OpenMP_TaskReductionClause
+    OpenMP_AllocateClause,
+    OpenMP_TaskReductionClauseSkip<boundedRecipeEffects = true>
   ], singleRegion = true> {
   let summary = "taskgroup construct";
   let description = [{
@@ -1296,7 +1298,7 @@ def TaskgroupOp : OpenMP_Op<"taskgroup", traits = [
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<TaskReductionRegion>(
         $region, $task_reduction_vars, type($task_reduction_vars),
-        $task_reduction_byref, $task_reduction_syms) attr-dict
+        $task_reduction_byref, $task_reduction_syms) prop-dict attr-dict
   }];
 
   let hasVerifier = 1;
@@ -1929,7 +1931,8 @@ def OrderedRegionOp : OpenMP_Op<"ordered.region", clauses = [
 //===----------------------------------------------------------------------===//
 
 def TaskwaitOp
-    : OpenMP_Op<"taskwait", traits = [AttrSizedOperandSegments],
+    : OpenMP_Op<"taskwait", traits = [AttrSizedOperandSegments,
+                MemoryEffects<[MemRead, MemWrite]>],
                 clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
   let summary = "taskwait construct";
   let description = [{
@@ -2785,6 +2788,12 @@ def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments],
 
     The region may contain multiple blocks. Exactly one of them is terminated
     by `omp.yield`; every other block branches to a block of the region.
+
+    Each range has a nonzero step and an exclusive upper bound unless
+    `inclusive` is specified. A range is empty when its lower bound is beyond
+    its upper bound in the direction of the step (or equal to an exclusive
+    upper bound). If any range is empty, the result is an empty list and the
+    region is not evaluated.
 
     Example:
       %it = omp.iterator(%i, %j) =

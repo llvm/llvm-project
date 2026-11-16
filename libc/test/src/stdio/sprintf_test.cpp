@@ -775,7 +775,14 @@ TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
   ASSERT_STREQ_LEN(written, buff, "0x1.999999999999999999999999999ap-4");
 #endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wliteral-range"
+#endif
   written = LIBC_NAMESPACE::sprintf(buff, "%La", 1.0e1000L);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   ASSERT_STREQ_LEN(written, buff, "0xf.38db1f9dd3dac05p+3318");
 #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
@@ -790,7 +797,14 @@ TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
 #endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128 &&
        // LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wliteral-range"
+#endif
   written = LIBC_NAMESPACE::sprintf(buff, "%La", 1.0e-1000L);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   ASSERT_STREQ_LEN(written, buff, "0x8.68a9188a89e1467p-3325");
 #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
@@ -915,7 +929,14 @@ TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
   ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
 #endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wliteral-range"
+#endif
   written = LIBC_NAMESPACE::sprintf(buff, "%.1La", 0xf.fffffffffffffffp16380L);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   ASSERT_STREQ_LEN(written, buff, "0x1.0p+16384");
 #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)

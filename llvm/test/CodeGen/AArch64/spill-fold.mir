@@ -17,7 +17,6 @@
 # CHECK-LABEL: name: test_subreg_spill_fold
 # Ensure that the spilled subreg COPY is eliminated and folded into the spill store.
 name:            test_subreg_spill_fold
-tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr64 }
 body:             |
@@ -32,7 +31,6 @@ body:             |
 # CHECK-LABEL: name: test_subreg_spill_fold2
 # Similar to test_subreg_spill_fold, but with a %0 register class not containing %WZR.
 name:            test_subreg_spill_fold2
-tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr64sp }
 body:             |
@@ -47,7 +45,6 @@ body:             |
 # CHECK-LABEL: name: test_subreg_spill_fold3
 # Similar to test_subreg_spill_fold, but with a cross register class copy.
 name:            test_subreg_spill_fold3
-tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr64 }
 body:             |
@@ -62,7 +59,6 @@ body:             |
 # CHECK-LABEL: name: test_subreg_spill_fold4
 # A spilled write to a 128-bit register needs a 128-bit store
 name:            test_subreg_spill_fold4
-tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr128 }
 body:             |
@@ -78,7 +74,6 @@ body:             |
 # CHECK-LABEL: name: test_subreg_fill_fold
 # Ensure that the filled COPY is eliminated and folded into the fill load.
 name:            test_subreg_fill_fold
-tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr64 }
@@ -95,7 +90,6 @@ body:             |
 # CHECK-LABEL: name: test_subreg_fill_fold2
 # Similar to test_subreg_fill_fold, but with a cross-class copy.
 name:            test_subreg_fill_fold2
-tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: fpr64 }
@@ -112,7 +106,6 @@ body:             |
 # CHECK-LABEL: name: test_subreg_fill_fold3
 # A filled copy from a sub-register should load the whole register
 name:              test_subreg_fill_fold3
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128 }
 liveins:
@@ -132,7 +125,6 @@ body:             |
 # Ensure the COPY is maintained when its result register class is not compatible
 # with the fill load's.
 name:            test_subreg_fill_fold4
-tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr64sp }
@@ -150,11 +142,11 @@ body:             |
 # CHECK-LABEL: name: test_nzcv_spill_fold
 # Ensure that nzcv COPY cannot be folded.
 name:            test_nzcv_spill_fold
-tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr64 }
 body:             |
   bb.0:
+    liveins: $nzcv
     ; CHECK: %1:gpr64 = COPY $nzcv
     ; CHECK: STRXui %1, %stack.0, 0 :: (store (s64) into %stack.0)
     %0 = COPY $nzcv

@@ -214,7 +214,6 @@ body: |
 # Check that we are able to propagate register banks from phis.
 name:            phiPropagation
 legalized:       true
-tracksRegLiveness:   true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr32, preferred-register: '', flags: [  ] }
 # CHECK-NEXT:   - { id: 1, class: gpr64sp, preferred-register: '', flags: [  ] }
@@ -555,7 +554,6 @@ body:             |
 # CHECK-LABEL: name: bitcast_s128
 name:            bitcast_s128
 legalized: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _}
   - { id: 1, class: _}
@@ -582,7 +580,6 @@ body:             |
 # The mapping should be the same as G_BITCAST.
 name:            copy_s128
 legalized: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _}
   - { id: 1, class: _}
@@ -616,7 +613,6 @@ body:             |
 # it is not necessarily the case.
 name:            copy_s128_from_load
 legalized: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128}
   - { id: 1, class: _}
@@ -643,7 +639,6 @@ body:             |
 # exist in a copy.
 name:            copy_fp16
 legalized: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _}
   - { id: 1, class: _}
@@ -937,7 +932,6 @@ body:             |
 name:            passFp16ViaAllocas
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
