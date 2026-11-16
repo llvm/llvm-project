@@ -16,16 +16,12 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $r0
 
     ; CHECK: [[X:%[0-9]+]]:_(i32) = COPY $r0
-    %0(i32) = COPY $r0
+    %0:_(i32) = COPY $r0
 
     ; CLZ: [[R:%[0-9]+]]:_(i32) = G_CTLZ [[X]]
     ; LIBCALLS-NOT: G_CTLZ
@@ -40,7 +36,7 @@ body:             |
     ; LIBCALLS: [[BITS:%[0-9]+]]:_(i32) = G_CONSTANT i32 32
     ; LIBCALLS: [[R:%[0-9]+]]:_(i32) = G_SELECT [[CMP]](i1), [[BITS]], [[COUNT]]
     ; LIBCALLS-NOT: G_CTLZ
-    %1(i32) = G_CTLZ %0
+    %1:_(i32) = G_CTLZ %0
 
     ; CHECK: $r0 = COPY [[R]]
     $r0 = COPY %1(i32)
@@ -53,16 +49,12 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $r0
 
     ; CHECK: [[X:%[0-9]+]]:_(i32) = COPY $r0
-    %0(i32) = COPY $r0
+    %0:_(i32) = COPY $r0
 
     ; CLZ: [[R:%[0-9]+]]:_(i32) = G_CTLZ [[X]]
     ; LIBCALLS-NOT: G_CTLZ
@@ -72,7 +64,7 @@ body:             |
     ; LIBCALLS: [[R:%[0-9]+]]:_(i32) = COPY $r0
     ; LIBCALLS: ADJCALLSTACKUP
     ; LIBCALLS-NOT: G_CTLZ
-    %1(i32) = G_CTLZ_ZERO_POISON %0
+    %1:_(i32) = G_CTLZ_ZERO_POISON %0
 
     ; CHECK: $r0 = COPY [[R]]
     $r0 = COPY %1(i32)
@@ -85,12 +77,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0
@@ -98,8 +84,8 @@ body:             |
     ; CHECK: [[X:%[0-9]+]]:_(i32) = COPY $r0
     ; CHECK: [[BITMASK:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
     ; CHECK: [[X32:%[0-9]+]]:_(i32) = G_AND [[X]], [[BITMASK]]
-    %0(i32) = COPY $r0
-    %1(i16) = G_TRUNC %0(i32)
+    %0:_(i32) = COPY $r0
+    %1:_(i16) = G_TRUNC %0(i32)
 
     ; Check that the operation is performed for 32 bits
     ; CLZ: [[COUNT:%[0-9]+]]:_(i32) = G_CTLZ [[X32]]
@@ -117,13 +103,13 @@ body:             |
     ; LIBCALLS-NOT: G_CTLZ
     ; CHECK: [[BITDIFF:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
     ; CHECK: [[R32:%[0-9]+]]:_(i32) = nuw G_SUB [[COUNT]], [[BITDIFF]]
-    %2(i16) = G_CTLZ %1
+    %2:_(i16) = G_CTLZ %1
 
     ; LIBCALLS: [[SHIFTEDR:%[0-9]+]]:_(i32) = G_SHL [[R32]], [[BITDIFF]]
     ; LIBCALLS: [[R:%[0-9]+]]:_(i32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]
     ; LIBCALLS: $r0 = COPY [[R]]
     ; CLZ: $r0 = COPY [[R32]]
-    %3(i32) = G_SEXT %2(i16)
+    %3:_(i32) = G_SEXT %2(i16)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -134,19 +120,13 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0
 
     ; CHECK: [[X:%[0-9]+]]:_(i32) = COPY $r0
-    %0(i32) = COPY $r0
-    %1(i8) = G_TRUNC %0(i32)
+    %0:_(i32) = COPY $r0
+    %1:_(i8) = G_TRUNC %0(i32)
 
     ; Check that the operation is performed for 32 bits
     ; CHECK: [[BITDIFF:%[0-9]+]]:_(i32) = G_CONSTANT i32 24
@@ -160,13 +140,13 @@ body:             |
     ; LIBCALLS-NOT: G_CTLZ
     ; CLZ: [[COUNT:%[0-9]+]]:_(i32) = G_CTLZ [[R32]]
     ; CLZ-NOT: G_CTLZ_ZERO_POISON
-    %2(i8) = G_CTLZ_ZERO_POISON %1
+    %2:_(i8) = G_CTLZ_ZERO_POISON %1
 
     ; LIBCALLS: [[SHIFTEDR:%[0-9]+]]:_(i32) = G_SHL [[COUNT]], [[BITDIFF]]
     ; LIBCALLS: [[R:%[0-9]+]]:_(i32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]
     ; CLZ: $r0 = COPY [[COUNT]]
     ; LIBCALLS: $r0 = COPY [[R]]
-    %3(i32) = G_SEXT %2(i8)
+    %3:_(i32) = G_SEXT %2(i8)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...

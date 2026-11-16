@@ -24,6 +24,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/SemaAMDGPU.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
@@ -2262,12 +2263,11 @@ static void checkIntToPointerCast(bool CStyle, const SourceRange &OpRange,
   // Not warning on reinterpret_cast, boolean, constant expressions, etc
   // are not explicit design choices, but consistent with GCC's behavior.
   // Feel free to modify them if you've reason/evidence for an alternative.
-  if (CStyle && SrcType->isIntegralType(Self.Context)
-      && !SrcType->isBooleanType()
-      && !SrcType->isEnumeralType()
-      && !SrcExpr->isIntegerConstantExpr(Self.Context)
-      && Self.Context.getTypeSize(DestType) >
-         Self.Context.getTypeSize(SrcType)) {
+  if (CStyle && SrcType->isIntegralType(Self.Context) &&
+      !SrcType->isBooleanType() && !SrcType->isEnumeralType() &&
+      !SrcExpr->isIntegerConstantExpr(Self.Context) &&
+      !SemaBPF::isPreserveAIEnumeratorRef(SrcExpr->IgnoreParens()) &&
+      Self.Context.getTypeSize(DestType) > Self.Context.getTypeSize(SrcType)) {
     // Separate between casts to void* and non-void* pointers.
     // Some APIs use (abuse) void* for something like a user context,
     // and often that value is an integer even if it isn't a pointer itself.

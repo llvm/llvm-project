@@ -1374,6 +1374,21 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
     RC.EnumValue = Idx;
   CodeGenRegisterClass::computeSubClasses(*this);
 
+  for (const CodeGenRegisterClass &RC : RegClasses) {
+    if (!RC.Allocatable || RC.getMembers().empty())
+      continue;
+    for (unsigned I = 0, E = RC.getNumOrders(); I != E; ++I) {
+      if (!RC.getOrder(I).empty())
+        continue;
+      const Record *Def = RC.getDef();
+      PrintError(Def ? Def->getLoc() : ArrayRef<SMLoc>(),
+                 "allocatable register class '" + RC.getName() +
+                     "' has an empty allocation order" +
+                     (I == 0 ? Twine() : " for AltOrder " + Twine(I - 1)) +
+                     (Def ? "" : "; define the inferred class explicitly"));
+    }
+  }
+
   // Read in the register category definitions.
   for (const Record *R : Records.getAllDerivedDefinitions("RegisterCategory"))
     RegCategories.emplace_back(*this, R);

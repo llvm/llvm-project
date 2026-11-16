@@ -536,7 +536,6 @@ However for values of NaN, the results are undefined.
 }];
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Discards the current pixel if the specified value is less than zero.
@@ -1314,7 +1313,6 @@ def hlsl_mad : HLSLThreeArgBuiltin<"mad", "__builtin_hlsl_mad"> {
 \param B The second addition value.
 }];
   let VaryingTypes = AllNumericTypes;
-  let VaryingMatDims = [];
    let VaryingLongVector = 1;
 }
 

@@ -42,7 +42,7 @@ NeedsCtor needsCtor;
 // CIR-BEFORE-LPP:   cir.call @_ZN9NeedsCtorC1Ev(%[[THIS]]) : (!cir.ptr<!rec_NeedsCtor> {{.*}}) -> ()
 
 // CIR: cir.global external @needsCtor = #cir.zero : !rec_NeedsCtor
-// CIR: cir.func internal private @__cxx_global_var_init() {
+// CIR: cir.func internal private @__cxx_global_var_init(){{.*}} {
 // CIR:   %0 = cir.get_global @needsCtor : !cir.ptr<!rec_NeedsCtor>
 // CIR:   cir.call @_ZN9NeedsCtorC1Ev(%0) : (!cir.ptr<!rec_NeedsCtor> {{.*}}) -> ()
 
@@ -64,7 +64,7 @@ NeedsDtor needsDtor;
 // CIR-BEFORE-LPP:   cir.call @_ZN9NeedsDtorD1Ev(%[[THIS]]) : (!cir.ptr<!rec_NeedsDtor>) -> ()
 
 // CIR: cir.global external @needsDtor = #cir.zero : !rec_NeedsDtor
-// CIR: cir.func internal private @__cxx_global_var_init.1() {
+// CIR: cir.func internal private @__cxx_global_var_init.1(){{.*}} {
 // CIR:   %[[OBJ:.*]] = cir.get_global @needsDtor : !cir.ptr<!rec_NeedsDtor>
 // CIR:   %[[DTOR:.*]] = cir.get_global @_ZN9NeedsDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_NeedsDtor>)>>
 // CIR:   %[[DTOR_CAST:.*]] = cir.cast bitcast %[[DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_NeedsDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
@@ -93,7 +93,7 @@ NeedsCtorDtor needsCtorDtor;
 // CIR-BEFORE-LPP:   cir.call @_ZN13NeedsCtorDtorD1Ev(%[[THIS]]) : (!cir.ptr<!rec_NeedsCtorDtor>) -> ()
 
 // CIR: cir.global external @needsCtorDtor = #cir.zero : !rec_NeedsCtorDtor
-// CIR: cir.func internal private @__cxx_global_var_init.2() {
+// CIR: cir.func internal private @__cxx_global_var_init.2(){{.*}} {
 // CIR:   %[[OBJ:.*]] = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
 // CIR:   cir.call @_ZN13NeedsCtorDtorC1Ev(%[[OBJ]]) : (!cir.ptr<!rec_NeedsCtorDtor> {{.*}}) -> ()
 // CIR:   %[[OBJ:.*]] = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
@@ -193,7 +193,7 @@ ArrayDtor arrDtor[16];
 // CIR-BEFORE-LPP:        }
 
 // CIR: cir.global external @arrDtor = #cir.zero : !cir.array<!rec_ArrayDtor x 16>
-// CIR: cir.func internal private @__cxx_global_array_dtor(%[[ARR_ARG:.*]]: !cir.ptr<!void> {{.*}}) {
+// CIR: cir.func internal private @__cxx_global_array_dtor(%[[ARR_ARG:.*]]: !cir.ptr<!void> {{.*}}){{.*}} {
 // CIR:   %[[ARR:.*]] = cir.cast bitcast %[[ARR_ARG]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!rec_ArrayDtor x 16>>
 // CIR:   %[[CONST16:.*]] = cir.const #cir.int<16> : !u64i
 // CIR:   %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>> -> !cir.ptr<!rec_ArrayDtor>
@@ -215,7 +215,7 @@ ArrayDtor arrDtor[16];
 // CIR:   cir.return
 // CIR: }
 //
-// CIR: cir.func internal private @__cxx_global_var_init.5() {
+// CIR: cir.func internal private @__cxx_global_var_init.5(){{.*}} {
 // CIR:   %[[ARR:.*]] = cir.get_global @arrDtor : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>>
 // CIR:   %[[DTOR:.*]] = cir.get_global @__cxx_global_array_dtor : !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[DTOR_CAST:.*]] = cir.cast bitcast %[[DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!void>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
@@ -283,7 +283,7 @@ double &&globalDoubleRef = static_cast<double &&>(globalInt);
 
 // CIR: cir.global external @globalInt = #cir.int<0> : !s32i
 // CIR: cir.global external @globalDoubleRef = #cir.ptr<null> : !cir.ptr<!cir.double>
-// CIR: cir.func internal private @__cxx_global_var_init.6() {
+// CIR: cir.func internal private @__cxx_global_var_init.6(){{.*}} {
 // CIR:   %[[GET_SELF:.*]] = cir.get_global @globalDoubleRef : !cir.ptr<!cir.ptr<!cir.double>>
 // CIR:   %[[GET_BACKING_VAR:.*]] = cir.get_global @_ZGR15globalDoubleRef_ : !cir.ptr<!cir.double>
 // CIR:   %[[GET_INT_VAR:.*]] = cir.get_global @globalInt : !cir.ptr<!s32i>
@@ -307,7 +307,7 @@ double &&globalDoubleRef = static_cast<double &&>(globalInt);
 
 // Common init function for all globals with default priority
 
-// CIR: cir.func internal private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
+// CIR: cir.func internal private @_GLOBAL__sub_I_[[FILENAME:.*]](){{.*}} {
 // CIR:   cir.call @__cxx_global_var_init() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.1() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.2() : () -> ()

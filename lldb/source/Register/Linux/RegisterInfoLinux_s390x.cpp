@@ -49,8 +49,7 @@ static uint32_t GetUserRegisterInfoCount(const ArchSpec &target_arch) {
   }
 }
 
-RegisterInfoLinux_s390x::RegisterInfoLinux_s390x(
-    const ArchSpec &target_arch)
+RegisterInfoLinux_s390x::RegisterInfoLinux_s390x(const ArchSpec &target_arch)
     : lldb_private::RegisterInfoInterface(target_arch),
       m_register_info_p(GetRegisterInfoPtr(target_arch)),
       m_register_info_count(GetRegisterInfoCount(target_arch)),

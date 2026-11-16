@@ -8,10 +8,6 @@
 
 ---
 name:            test_v_wmma_f32_16x16x16_f16_twoaddr_w32
-registers:
-  - { id: 0, class: vreg_256 }
-  - { id: 1, class: vreg_256 }
-  - { id: 2, class: vreg_256 }
 body:             |
   bb.0:
 
@@ -26,10 +22,6 @@ body:             |
 
 ---
 name:            test_v_wmma_f32_16x16x16_bf16_twoaddr_w32
-registers:
-  - { id: 0, class: vreg_256 }
-  - { id: 1, class: vreg_256 }
-  - { id: 2, class: vreg_256 }
 body:             |
   bb.0:
 
@@ -44,10 +36,6 @@ body:             |
 
 ---
 name:            test_v_wmma_f16_16x16x16_f16_twoaddr_w32
-registers:
-  - { id: 0, class: vreg_256 }
-  - { id: 1, class: vreg_256 }
-  - { id: 2, class: vreg_256 }
 body:             |
   bb.0:
 
@@ -62,10 +50,6 @@ body:             |
 
 ---
 name:            test_v_wmma_bf16_16x16x16_bf16_twoaddr_w32
-registers:
-  - { id: 0, class: vreg_256 }
-  - { id: 1, class: vreg_256 }
-  - { id: 2, class: vreg_256 }
 body:             |
   bb.0:
 
@@ -80,10 +64,6 @@ body:             |
 
 ---
 name:            test_v_wmma_i32_16x16x16_iu8_twoaddr_w32
-registers:
-  - { id: 0, class: vreg_256 }
-  - { id: 1, class: vreg_128 }
-  - { id: 2, class: vreg_256 }
 body:             |
   bb.0:
 
@@ -98,10 +78,6 @@ body:             |
 
 ---
 name:            test_v_wmma_i32_16x16x16_iu4_twoaddr_w32
-registers:
-  - { id: 0, class: vreg_256 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_256 }
 body:             |
   bb.0:
 
@@ -116,10 +92,6 @@ body:             |
 
 ---
 name:            test_v_wmma_f32_16x16x16_f16_twoaddr_w64
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_256 }
-  - { id: 2, class: vreg_128 }
 body:             |
   bb.0:
 
@@ -134,10 +106,6 @@ body:             |
 
 ---
 name:            test_v_wmma_f32_16x16x16_bf16_twoaddr_w64
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_256 }
-  - { id: 2, class: vreg_128 }
 body:             |
   bb.0:
 
@@ -152,10 +120,6 @@ body:             |
 
 ---
 name:            test_v_wmma_f16_16x16x16_f16_twoaddr_w64
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_256 }
-  - { id: 2, class: vreg_128 }
 body:             |
   bb.0:
 
@@ -170,10 +134,6 @@ body:             |
 
 ---
 name:            test_v_wmma_bf16_16x16x16_bf16_twoaddr_w64
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_256 }
-  - { id: 2, class: vreg_128 }
 body:             |
   bb.0:
 
@@ -188,10 +148,6 @@ body:             |
 
 ---
 name:            test_v_wmma_i32_16x16x16_iu8_twoaddr_w64
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_128 }
-  - { id: 2, class: vreg_128 }
 body:             |
   bb.0:
 
@@ -206,10 +162,6 @@ body:             |
 
 ---
 name:            test_v_wmma_i32_16x16x16_iu4_twoaddr_w64
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_128 }
 body:             |
   bb.0:
 

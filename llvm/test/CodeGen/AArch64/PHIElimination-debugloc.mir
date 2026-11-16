@@ -24,10 +24,9 @@
   !7 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
   !8 = !DISubroutineType(types: !{})
   !14 = !DILocation(line: 1, column: 0, scope: !7)
-
+...
 ---
 name: test
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $nzcv, $wzr

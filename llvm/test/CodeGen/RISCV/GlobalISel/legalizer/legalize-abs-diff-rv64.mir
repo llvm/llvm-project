@@ -6,7 +6,6 @@
 
 ---
 name:            abds_i8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -52,7 +51,6 @@ body:             |
 ...
 ---
 name:            abds_i16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -99,7 +97,6 @@ body:             |
 ...
 ---
 name:            abds_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -148,12 +145,14 @@ body:             |
 ...
 ---
 name:            abds_i64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
 
     ; RV64I-LABEL: name: abds_i64
-    ; RV64I: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64I: liveins: $x10, $x11
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY1]]
     ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[COPY1]], [[COPY]]
@@ -163,7 +162,9 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: abds_i64
-    ; RV64ZBB: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB: liveins: $x10, $x11
+    ; RV64ZBB-NEXT: {{  $}}
+    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64ZBB-NEXT: [[SMAX:%[0-9]+]]:_(s64) = G_SMAX [[COPY]], [[COPY1]]
     ; RV64ZBB-NEXT: [[SMIN:%[0-9]+]]:_(s64) = G_SMIN [[COPY]], [[COPY1]]
@@ -178,7 +179,6 @@ body:             |
 ...
 ---
 name:            abdu_i8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -224,7 +224,6 @@ body:             |
 ...
 ---
 name:            abdu_i16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -271,7 +270,6 @@ body:             |
 ...
 ---
 name:            abdu_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -322,12 +320,14 @@ body:             |
 ...
 ---
 name:            abdu_i64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
 
     ; RV64I-LABEL: name: abdu_i64
-    ; RV64I: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64I: liveins: $x10, $x11
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY1]]
     ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[COPY1]], [[COPY]]
@@ -337,7 +337,9 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: abdu_i64
-    ; RV64ZBB: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB: liveins: $x10, $x11
+    ; RV64ZBB-NEXT: {{  $}}
+    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64ZBB-NEXT: [[UMAX:%[0-9]+]]:_(s64) = G_UMAX [[COPY]], [[COPY1]]
     ; RV64ZBB-NEXT: [[UMIN:%[0-9]+]]:_(s64) = G_UMIN [[COPY]], [[COPY1]]

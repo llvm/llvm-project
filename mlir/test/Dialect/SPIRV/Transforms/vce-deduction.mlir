@@ -42,6 +42,19 @@ spirv.module Logical GLSL450 attributes {
   }
 }
 
+// Nontemporal image operand is available since v1.6.
+
+// CHECK: requires #spirv.vce<v1.6, [Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Shader], []>, #spirv.resource_limits<>>
+} {
+  spirv.func @image_read_nontemporal(%img : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, %coord : vector<2xsi32>) -> vector<4xf32> "None" {
+    %0 = spirv.ImageRead %img, %coord ["Nontemporal"] : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, vector<2xsi32> -> vector<4xf32>
+    spirv.ReturnValue %0 : vector<4xf32>
+  }
+}
+
 // -----
 
 // Test rejecting an op whose max version is below what the target
