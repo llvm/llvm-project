@@ -1992,8 +1992,10 @@ static Value rewriteI8ToI2Trunc(PatternRewriter &rewriter, Location loc,
   // vec02   = [0,4],... [2,6],...
   // vec13   = [1,5],... [3,7],...
   auto evenOdd = vector::DeinterleaveOp::create(rewriter, loc, srcValue);
-  auto vec02 = vector::DeinterleaveOp::create(rewriter, loc, evenOdd.getRes1());
-  auto vec13 = vector::DeinterleaveOp::create(rewriter, loc, evenOdd.getRes2());
+  auto vec02 =
+      vector::DeinterleaveOp::create(rewriter, loc, evenOdd.getResultEven());
+  auto vec13 =
+      vector::DeinterleaveOp::create(rewriter, loc, evenOdd.getResultOdd());
 
   // 2. Zero out the upper side of each i8 element, then move the low i2 to
   // its position in the byte. Position 3 needs no mask, the upper bits are
@@ -2008,12 +2010,14 @@ static Value rewriteI8ToI2Trunc(PatternRewriter &rewriter, Location loc,
     return arith::ShLIOp::create(rewriter, loc, value, shiftValues);
   };
   Value elem0 =
-      arith::AndIOp::create(rewriter, loc, vec02.getRes1(), zeroOutMask);
+      arith::AndIOp::create(rewriter, loc, vec02.getResultEven(), zeroOutMask);
   Value elem1 = shiftLeft(
-      arith::AndIOp::create(rewriter, loc, vec13.getRes1(), zeroOutMask), 2);
+      arith::AndIOp::create(rewriter, loc, vec13.getResultEven(), zeroOutMask),
+      2);
   Value elem2 = shiftLeft(
-      arith::AndIOp::create(rewriter, loc, vec02.getRes2(), zeroOutMask), 4);
-  Value elem3 = shiftLeft(vec13.getRes2(), 6);
+      arith::AndIOp::create(rewriter, loc, vec02.getResultOdd(), zeroOutMask),
+      4);
+  Value elem3 = shiftLeft(vec13.getResultOdd(), 6);
 
   // 3. Merge the four i2 values.
   Value merged = arith::OrIOp::create(rewriter, loc, elem0, elem1);
