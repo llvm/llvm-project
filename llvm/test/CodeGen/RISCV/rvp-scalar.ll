@@ -4131,7 +4131,6 @@ define i32 @nclipru_u32_imm_zero(i64 %a) {
 ;
 ; RV64-LABEL: nclipru_u32_imm_zero:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    shlr a0, a0, zero
 ; RV64-NEXT:    pnclipup.w a0, a0, zero
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.nclipru.u32(i64 %a, i32 0)
@@ -4146,7 +4145,6 @@ define i32 @nsrar_i32_imm_zero(i64 %a) {
 ;
 ; RV64-LABEL: nsrar_i32_imm_zero:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srari a0, a0, 0
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.nsrar.i32(i64 %a, i32 0)
   ret i32 %res
@@ -4160,7 +4158,6 @@ define i32 @nclipr_i32_imm_zero(i64 %a) {
 ;
 ; RV64-LABEL: nclipr_i32_imm_zero:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srari a0, a0, 0
 ; RV64-NEXT:    pnclipp.w a0, a0, zero
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.nclipr.i32(i64 %a, i32 0)
@@ -4189,7 +4186,6 @@ define i32 @nclipr_i32_imm_modulo_zero(i64 %a) {
 ;
 ; RV64-LABEL: nclipr_i32_imm_modulo_zero:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srari a0, a0, 0
 ; RV64-NEXT:    pnclipp.w a0, a0, zero
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.nclipr.i32(i64 %a, i32 64)

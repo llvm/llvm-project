@@ -25672,15 +25672,29 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     break;
   }
+  case RISCVISD::PSLL:
+  case RISCVISD::PSSHA:
+  case RISCVISD::PSSHAR:
+  case RISCVISD::PSSHL:
+  case RISCVISD::PSSHLR:
+  case RISCVISD::SHAR:
+  case RISCVISD::SHLR: {
+    if (isNullConstant(N->getOperand(1)))
+      return N->getOperand(0);
+    break;
+  }
   case RISCVISD::PSRL:
   case RISCVISD::PSRA: {
+    auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    if (!C2)
+      break;
+    if (C2->isZero())
+      return N->getOperand(0);
+
     // Fold (PSRL/PSRA (trunc (PSRL X, C1)), C2) -> (trunc (PSRL/PSRA X, C1+C2))
     // Fold (PSRL/PSRA (concat (trunc (PSRL X, C1)), (trunc (PSRL Y, C1))), C2)
     //   -> (concat (trunc (PSRL/PSRA X, C1+C2)), (trunc (PSRL/PSRA Y, C1+C2)))
     // In both cases C1 must equal the number of bits discarded by the truncate.
-    auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
-    if (!C2)
-      break;
     // Match (trunc (PSRL X, C1)) where C1 == bits discarded by the truncate
     // and C1+C2 is a valid shift. Returns {NarrowVT, WideVT, NewShAmt, X}
     // without creating any DAG nodes.
