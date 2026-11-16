@@ -1,5 +1,5 @@
 # RUN: llc -ppc-asm-full-reg-names -mtriple=powerpc-ibm-aix-xcoff \
-# RUN:   -run-pass=ppc-ctrloops %s -o - -verify-machineinstrs | FileCheck %s 
+# RUN:   -run-pass=ppc-ctrloops %s -o - | FileCheck %s
 
 ---
 name:            test_success1

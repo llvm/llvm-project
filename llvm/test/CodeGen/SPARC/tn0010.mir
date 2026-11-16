@@ -21,6 +21,7 @@
 # CHECK-NEXT: NOP
 # CHECK-NEXT: LDSTUBArr
 name:            er-5-1
+tracksRegLiveness: false
 registers:
   - { id: 0, class: intregs }
 body:             |
@@ -37,12 +38,13 @@ body:             |
     %0 = LDSTUBri $o2, 10
     %0 = LDrr $g0, $o0
     %0 = LDSTUBArr $o2, $o3, 10
-
+...
 ---
 # CHECK:      bb.2:
 # CHECK-NEXT: NOP
 # CHECK-NEXT: CASArr
 name:            er-5-2
+tracksRegLiveness: false
 registers:
   - { id: 0, class: intregs }
 body:             |
@@ -58,23 +60,25 @@ body:             |
 
   bb.2:
     %0 = CASArr $o1, $o2, %0, 10
-
+...
 ---
 # CHECK:      bb.0.entry:
 # CHECK-NEXT: NOP
 # CHECK-NEXT: CASArr
 name:            er-5-3
+tracksRegLiveness: false
 registers:
   - { id: 0, class: intregs }
 body:             |
   bb.0.entry:
     %0 = CASArr $o1, $o2, %0, 10
-
+...
 ---
 # CHECK:      bb.1.entry:
 # CHECK:      NOP
 # CHECK-NEXT: CASArr
 name:            er-5-4
+tracksRegLiveness: false
 registers:
   - { id: 0, class: intregs }
 body:             |

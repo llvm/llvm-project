@@ -5,11 +5,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
-// FIXME: Add LLVM and OGCG checks for the virtual base once cir.vtable.get_vptr
-// keeps the address space.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -DVBASE %s -o %t-vbase.cir
-// RUN: FileCheck --input-file=%t-vbase.cir %s -check-prefix=CIR-VBASE
-
 // A base or derived class subobject is in the address space of the object.
 
 #define AS1 __attribute__((address_space(1)))
@@ -104,17 +99,26 @@ AS3 D *to_derived_as3(AS3 B *b) { return static_cast<AS3 D *>(b); }
 // OGCG: %[[DERIVED:.*]] = getelementptr inbounds i8, ptr addrspace(3) %{{.*}}, i64 -4
 // OGCG: phi ptr addrspace(3) [ %[[DERIVED]], %{{.*}} ], [ null, %{{.*}} ]
 
-#ifdef VBASE
 struct V { int v; };
 struct W : virtual V { int w; };
 
 AS1 V *to_virtual_base(AS1 W *w) { return w; }
 
-// CIR-VBASE-LABEL: cir.func {{.*}}@_Z15to_virtual_basePU3AS11W
-// CIR-VBASE: cir.ternary
-// CIR-VBASE:   cir.const #cir.ptr<null> : !cir.ptr<!rec_V, target_address_space(1)>
-// CIR-VBASE: }, false {
-// CIR-VBASE:   %[[BYTES:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_W, target_address_space(1)> -> !cir.ptr<!u8i, target_address_space(1)>
-// CIR-VBASE:   cir.ptr_stride %[[BYTES]], %{{.*}} : (!cir.ptr<!u8i, target_address_space(1)>, !s64i) -> !cir.ptr<!u8i, target_address_space(1)>
-// CIR-VBASE: }) : (!cir.bool) -> !cir.ptr<!rec_V, target_address_space(1)>
-#endif
+// CIR-LABEL: cir.func {{.*}}@_Z15to_virtual_basePU3AS11W
+// CIR: cir.ternary
+// CIR:   cir.const #cir.ptr<null> : !cir.ptr<!rec_V, target_address_space(1)>
+// CIR: }, false {
+// CIR:   cir.vtable.get_vptr %{{.*}} : !cir.ptr<!rec_W, target_address_space(1)> -> !cir.ptr<!cir.vptr, target_address_space(1)>
+// CIR:   %[[BYTES:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_W, target_address_space(1)> -> !cir.ptr<!u8i, target_address_space(1)>
+// CIR:   cir.ptr_stride %[[BYTES]], %{{.*}} : (!cir.ptr<!u8i, target_address_space(1)>, !s64i) -> !cir.ptr<!u8i, target_address_space(1)>
+// CIR: }) : (!cir.bool) -> !cir.ptr<!rec_V, target_address_space(1)>
+
+// LLVM-LABEL: define {{.*}}@_Z15to_virtual_basePU3AS11W
+// LLVM: load ptr, ptr addrspace(1) %[[W:.*]], align 8
+// LLVM: %[[VBASE:.*]] = getelementptr i8, ptr addrspace(1) %[[W]], i64 %{{.*}}
+// LLVM: phi ptr addrspace(1) [ %[[VBASE]], %{{.*}} ], [ null, %{{.*}} ]
+
+// OGCG-LABEL: define {{.*}}@_Z15to_virtual_basePU3AS11W
+// OGCG: load ptr, ptr addrspace(1) %[[W:.*]], align 8
+// OGCG: %[[VBASE:.*]] = getelementptr inbounds i8, ptr addrspace(1) %[[W]], i64 %{{.*}}
+// OGCG: phi ptr addrspace(1) [ %[[VBASE]], %{{.*}} ], [ null, %{{.*}} ]

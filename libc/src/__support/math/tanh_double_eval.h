@@ -121,7 +121,7 @@ LIBC_MATH_SMALL_TABLES_INLINE double tanh_eval(double x) {
   // k_biased = fma(x_a, LOG2_E_2, ROUND_BIAS) and extract in parallel:
   //   kd = (k_biased & ROUND_MASK) - ROUND_SHIFT
   //   k  = (k_bits >> 32) & 0x3'ffff.
-  constexpr double LOG2_E_2 = 2.0 * LOG2_E.hi;
+  constexpr double LOG2_E_2 = 2.0 * LOG2_E_DD.hi;
   double k_biased = fputil::multiply_add(x_a, LOG2_E_2, ROUND_BIAS);
   double kd = fputil::fp_and(k_biased, ROUND_MASK) - ROUND_SHIFT;
   int k = static_cast<int>(cpp::bit_cast<uint64_t>(k_biased) >> 32) & 0x3'ffff;
@@ -269,7 +269,7 @@ LIBC_MATH_SMALL_TABLES_INLINE double tanh_eval(double x) {
   double x_a = xbits.abs().get_val();
   double x_2 = 2.0 * x_a;
 
-  constexpr double LOG2_E_SCALE = EXP_SCALE * LOG2_E.hi;
+  constexpr double LOG2_E_SCALE = EXP_SCALE * LOG2_E_DD.hi;
   // Using ROUND_BIAS, ROUND_SHIFT, and ROUND_MASK (see exp_utils.h), we compute
   // k_biased = fma(x_2, LOG2_E_SCALE, ROUND_BIAS) and extract in parallel:
   //   kd  = (k_biased & ROUND_MASK) - ROUND_SHIFT

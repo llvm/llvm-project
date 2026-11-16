@@ -3924,10 +3924,8 @@ void AsmPrinter::emitLabelDifferenceAsULEB128(const MCSymbol *Hi,
 void AsmPrinter::emitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
                                      unsigned Size,
                                      bool IsSectionRelative) const {
-  if (MAI.needsDwarfSectionOffsetDirective() && IsSectionRelative) {
-    OutStreamer->emitCOFFSecRel32(Label, Offset);
-    if (Size > 4)
-      OutStreamer->emitZeros(Size - 4);
+  if (IsSectionRelative) {
+    OutStreamer->emitDwarfSectionOffset(Label, Offset, Size);
     return;
   }
 
@@ -4653,6 +4651,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   }
 
   if (isa<ConstantPointerNull>(CV)) {
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
     AP.OutStreamer->emitIntValue(0, Size);
     return;
   }

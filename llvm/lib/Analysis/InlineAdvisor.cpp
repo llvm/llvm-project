@@ -28,7 +28,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -41,10 +40,6 @@ using namespace llvm;
 // to inline a function A into B, we analyze the callers of B in order to see
 // if those would be more profitable and blocked inline steps.
 STATISTIC(NumCallerCallersAnalyzed, "Number of caller-callers analyzed");
-
-namespace llvm {
-extern cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats;
-} // namespace llvm
 
 namespace {
 using namespace llvm::ore;
@@ -531,7 +526,8 @@ InlineAdvisor::InlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
           (IC && getAnalysisOptions(M).annotate_inline_phase)
               ? llvm::AnnotateInlinePassName(*IC)
               : DEBUG_TYPE) {
-  if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No) {
+  if (getAnalysisOptions(M).inliner_function_import_stats !=
+      InlinerFunctionImportStatsOpts::No) {
     ImportedFunctionsStats =
         std::make_unique<ImportedFunctionsInliningStatistics>();
     ImportedFunctionsStats->setModuleInfo(M);
@@ -539,11 +535,10 @@ InlineAdvisor::InlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
 }
 
 InlineAdvisor::~InlineAdvisor() {
-  if (ImportedFunctionsStats) {
-    assert(InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No);
-    ImportedFunctionsStats->dump(InlinerFunctionImportStats ==
-                                 InlinerFunctionImportStatsOpts::Verbose);
-  }
+  if (ImportedFunctionsStats)
+    ImportedFunctionsStats->dump(
+        getAnalysisOptions(M).inliner_function_import_stats ==
+        InlinerFunctionImportStatsOpts::Verbose);
 }
 
 std::unique_ptr<InlineAdvice> InlineAdvisor::getMandatoryAdvice(CallBase &CB,

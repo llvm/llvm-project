@@ -301,7 +301,7 @@ define i32 @select_between_constants(i1 %c, i32 %y) {
 ; CHECK-LABEL: 'select_between_constants'
 ; CHECK-NEXT:  Classifying expressions for: @select_between_constants
 ; CHECK-NEXT:    %r = select i1 %c, i32 42, i32 24
-; CHECK-NEXT:    --> %r U: [8,59) S: [8,59)
+; CHECK-NEXT:    --> %r U: [24,43) S: [24,43)
 ; CHECK-NEXT:  Determining loop execution counts for: @select_between_constants
 ;
   %r = select i1 %c, i32 42, i32 24

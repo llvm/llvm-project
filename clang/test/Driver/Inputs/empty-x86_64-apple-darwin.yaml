@@ -1,5 +1,6 @@
 # Created by `clang -target x86_64-apple-darwin10 -c -x c /dev/null -o - | obj2yaml`.
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

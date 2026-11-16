@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/cstddef/nullptr_t.h"
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "test/UnitTest/Test.h"
@@ -18,6 +19,7 @@
 using LIBC_NAMESPACE::cpp::function_ref;
 using LIBC_NAMESPACE::cpp::is_assignable_v;
 using LIBC_NAMESPACE::cpp::is_constructible_v;
+using LIBC_NAMESPACE::cpp::nullptr_t;
 
 static int forty_two() { return 42; }
 static int seven() { return 7; }
@@ -43,7 +45,7 @@ using IntIntFn = function_ref<int(int)>;
 
 // Like std::function_ref, there is no empty state.
 static_assert(!is_constructible_v<IntFn>);
-static_assert(!is_constructible_v<IntFn, decltype(nullptr)>);
+static_assert(!is_constructible_v<IntFn, nullptr_t>);
 static_assert(!is_constructible_v<bool, IntFn>);
 
 // Callables with incompatible signatures are rejected.
@@ -61,7 +63,7 @@ static_assert(is_assignable_v<IntFn &, int (&)()>);
 static_assert(is_constructible_v<IntFn, Functor>);
 static_assert(!is_assignable_v<IntFn &, Functor>);
 static_assert(!is_assignable_v<IntFn &, Functor &>);
-static_assert(!is_assignable_v<IntFn &, decltype(nullptr)>);
+static_assert(!is_assignable_v<IntFn &, nullptr_t>);
 
 TEST(LlvmLibcFunctionRefTest, Lambda) {
   int offset = 10;
