@@ -418,7 +418,7 @@ bool SanitizerArgs::needsCfiCrossDsoRt() const {
 }
 
 bool SanitizerArgs::needsCfiCrossDsoDiagRt() const {
-  // UBSsan handles CFI diagnostics without cross-DSO suppport.
+  // UBSsan handles CFI diagnostics without cross-DSO support.
   return (Sanitizers.Mask & SanitizerKind::CFI & ~TrapSanitizers.Mask) &&
          CfiCrossDso && !ImplicitCfiRuntime;
 }
