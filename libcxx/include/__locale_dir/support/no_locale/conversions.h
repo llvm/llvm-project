@@ -21,10 +21,11 @@
 #  pragma GCC system_header
 #endif
 
+#if defined(_LIBCPP_BUILDING_LIBRARY)
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
 
-#if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __mb_len_max(__locale_t) { return MB_CUR_MAX; }
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -64,9 +65,9 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
   return std::mbsrtowcs(__dest, __src, __len, __ps);
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#endif   // _LIBCPP_BUILDING_LIBRARY
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
+#endif // _LIBCPP_BUILDING_LIBRARY
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_NO_LOCALE_CONVERSIONS_H

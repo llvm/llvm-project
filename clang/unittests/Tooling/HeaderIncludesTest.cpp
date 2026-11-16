@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
-#include "../Tooling/ReplacementTest.h"
-#include "../Tooling/RewriterTestContext.h"
 #include "clang/Format/Format.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/StringRef.h"
 
 #include "gtest/gtest.h"
+#include <cassert>
 
 namespace clang {
 namespace tooling {
@@ -43,6 +43,16 @@ protected:
     return *Result;
   }
 
+  std::string
+  insertBatch(llvm::StringRef Code,
+              llvm::ArrayRef<HeaderIncludes::HeaderToInsert> Headers) {
+    HeaderIncludes Includes(FileName, Code, Style);
+    auto Replaces = Includes.insert(Headers);
+    auto Result = applyAllReplacements(Code, Replaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    return *Result;
+  }
+
   std::string FileName = "fix.cpp";
   IncludeStyle Style = format::getLLVMStyle().IncludeStyle;
 };
@@ -65,7 +75,7 @@ TEST_F(HeaderIncludesTest, RepeatedIncludes) {
 
 TEST_F(HeaderIncludesTest, InsertImportWithSameInclude) {
   std::string Code = "#include \"a.h\"\n";
-  std::string Expected = Code + "#import \"a.h\"\n";
+  std::string Expected = "#import \"a.h\"\n";
   EXPECT_EQ(Expected, insert(Code, "\"a.h\"", IncludeDirective::Import));
 }
 
@@ -80,6 +90,65 @@ TEST_F(HeaderIncludesTest, DeleteImportAndSameInclude) {
 #import <abc.h>
 int x;)cpp";
   EXPECT_EQ("\nint x;", remove(Code, "<abc.h>"));
+}
+
+TEST_F(HeaderIncludesTest, DeleteMixedImportAndIncludeQuoted) {
+  std::string Code = R"cpp(
+#include "a.h"
+#import "a.h"
+int x;)cpp";
+  EXPECT_EQ("\nint x;", remove(Code, "\"a.h\""));
+}
+
+TEST_F(HeaderIncludesTest, ImportWithSpacesAndTabs) {
+  std::string Code = "int x;\n";
+  // The parser should detect these as existing imports if we had them,
+  // but here we are testing insertion/detection integration.
+  // Let's verify that a file with weird spacing is parsed correctly.
+  std::string CodeWithSpaces =
+      "#  import   \"a.h\"\n#\tinclude\t\"b.h\"\nint x;\n";
+
+  // Try inserting "a.h" again as import - should be blocked by the existing one
+  // if the regex captures it correctly.
+  EXPECT_EQ(CodeWithSpaces,
+            insert(CodeWithSpaces, "\"a.h\"", IncludeDirective::Import));
+
+  // Try inserting "b.h" again as include - should be blocked.
+  EXPECT_EQ(CodeWithSpaces,
+            insert(CodeWithSpaces, "\"b.h\"", IncludeDirective::Include));
+
+  // Try inserting "b.h" again as import - should replace.
+  std::string ExpectedAfterBImport =
+      "#  import   \"a.h\"\n#import \"b.h\"\nint x;\n";
+  EXPECT_EQ(ExpectedAfterBImport,
+            insert(CodeWithSpaces, "\"b.h\"", IncludeDirective::Import));
+}
+
+TEST_F(HeaderIncludesTest, InsertIncludeWhenImportExists) {
+  std::string Code = "#import \"a.h\"\n";
+  EXPECT_EQ(Code, insert(Code, "\"a.h\"", IncludeDirective::Include));
+}
+
+TEST_F(HeaderIncludesTest, InsertImportWhenIncludeExistsAngled) {
+  std::string Code = "#include <a.h>\n";
+  std::string Expected = "#import <a.h>\n";
+  // Replaces #include with #import.
+  EXPECT_EQ(Expected, insert(Code, "<a.h>", IncludeDirective::Import));
+}
+
+TEST_F(HeaderIncludesTest, InsertImportAngledWhenIncludeQuotedExists) {
+  std::string Code = "#include \"a.h\"\n";
+  std::string Expected = Code + "#import <a.h>\n";
+  // Different quotation, so it should insert alongside, not replace.
+  EXPECT_EQ(Expected, insert(Code, "<a.h>", IncludeDirective::Import));
+}
+
+TEST_F(HeaderIncludesTest, InsertImportQuotedWhenIncludeAngledExists) {
+  std::string Code = "#include <a.h>\n";
+  std::string Expected = "#import \"a.h\"\n#include <a.h>\n";
+  // Different quotation, so it should insert alongside, not replace.
+  // " comes before < in ASCII, so it is inserted before.
+  EXPECT_EQ(Expected, insert(Code, "\"a.h\"", IncludeDirective::Import));
 }
 
 TEST_F(HeaderIncludesTest, NoExistingIncludeWithDefine) {
@@ -142,6 +211,20 @@ TEST_F(HeaderIncludesTest, InsertAfterMainHeader) {
 
   FileName = "bar.cpp";
   EXPECT_NE(Expected, insert(Code, "<a>")) << "Not main header";
+}
+
+TEST_F(HeaderIncludesTest, InsertAfterMainHeaderWithSpecialChars) {
+  std::string Code = "#include \"fix+bar.h\"\n"
+                     "\n"
+                     "int main() {}";
+  std::string Expected = "#include \"fix+bar.h\"\n"
+                         "#include <a>\n"
+                         "\n"
+                         "int main() {}";
+  Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp)
+              .IncludeStyle;
+  FileName = "fix+bar.cpp";
+  EXPECT_EQ(Expected, insert(Code, "<a>"));
 }
 
 TEST_F(HeaderIncludesTest, InsertMainHeader) {
@@ -678,7 +761,6 @@ int main() {
     std::vector<int> ints {};
 })cpp";
 
-  auto InsertedCode = insert(Code, "<vector>");
   EXPECT_EQ(Expected, insert(Code, "<vector>"));
 }
 
@@ -794,6 +876,117 @@ int main() {
 })cpp";
 
   EXPECT_EQ(Expected, insert(Code, "<vector>"));
+}
+
+TEST_F(HeaderIncludesTest, BatchInsertSortingAndGrouping) {
+  std::string Code = R"cpp(
+void test();
+)cpp";
+  std::string Expected =
+      "\n#include \"a.h\"\n#include \"b.h\"\n#include <foo>\nvoid test();\n";
+
+  EXPECT_EQ(Expected,
+            insertBatch(Code, {HeaderIncludes::HeaderToInsert("\"b.h\""),
+                               HeaderIncludes::HeaderToInsert("\"a.h\""),
+                               HeaderIncludes::HeaderToInsert("<foo>")}));
+}
+
+TEST_F(HeaderIncludesTest, BatchInsertMainHeader) {
+  FileName = "foo.cc";
+  Style.IncludeIsMainRegex = "$";
+  std::string Code = R"cpp(
+void test();
+)cpp";
+  std::string Expected = "\n#include \"foo.h\"\n#include \"a.h\"\n#include "
+                         "\"b.h\"\n#include <vector>\nvoid test();\n";
+
+  EXPECT_EQ(Expected,
+            insertBatch(Code, {HeaderIncludes::HeaderToInsert("\"b.h\""),
+                               HeaderIncludes::HeaderToInsert("\"foo.h\""),
+                               HeaderIncludes::HeaderToInsert("\"a.h\""),
+                               HeaderIncludes::HeaderToInsert("<vector>")}));
+}
+
+TEST_F(HeaderIncludesTest, BatchInsertDuplicateHeadersSameQuotes) {
+  std::string Code = R"cpp(
+void test();
+)cpp";
+  std::string Expected = "\n#include \"a.h\"\n#include <foo>\nvoid test();\n";
+
+  EXPECT_EQ(Expected,
+            insertBatch(Code, {HeaderIncludes::HeaderToInsert("\"a.h\""),
+                               HeaderIncludes::HeaderToInsert("\"a.h\""),
+                               HeaderIncludes::HeaderToInsert("<foo>")}));
+}
+
+TEST_F(HeaderIncludesTest, BatchInsertDuplicateHeadersMixedQuotes) {
+  std::string Code = R"cpp(
+void test();
+)cpp";
+  std::string Expected = "\n#include \"a.h\"\n#include <a.h>\nvoid test();\n";
+
+  EXPECT_EQ(Expected,
+            insertBatch(Code, {HeaderIncludes::HeaderToInsert("\"a.h\""),
+                               HeaderIncludes::HeaderToInsert("<a.h>")}));
+}
+
+TEST_F(HeaderIncludesTest, BatchInsertDuplicateHeadersMixedDirectives) {
+  std::string Code = R"cpp(
+void test();
+)cpp";
+  std::string Expected = "\n#import \"a.h\"\n#include <foo>\nvoid test();\n";
+
+  EXPECT_EQ(
+      Expected,
+      insertBatch(
+          Code,
+          {HeaderIncludes::HeaderToInsert("\"a.h\"", IncludeDirective::Include),
+           HeaderIncludes::HeaderToInsert("\"a.h\"", IncludeDirective::Import),
+           HeaderIncludes::HeaderToInsert("<foo>")}));
+}
+
+TEST_F(HeaderIncludesTest, BatchInsertIntoExistingIncludes) {
+  std::string Code = R"cpp(#include "b.h"
+
+void test();
+)cpp";
+  std::string Expected = R"cpp(#include "a.h"
+#include "b.h"
+#include "c.h"
+#include <vector>
+
+void test();
+)cpp";
+
+  EXPECT_EQ(Expected,
+            insertBatch(Code, {HeaderIncludes::HeaderToInsert("\"c.h\""),
+                               HeaderIncludes::HeaderToInsert("\"a.h\""),
+                               HeaderIncludes::HeaderToInsert("<vector>")}));
+}
+
+TEST_F(HeaderIncludesTest, BatchInsertEmptyFile) {
+  std::string Code = "";
+  std::string Expected = "#include \"a.h\"\n#include <foo>\n";
+
+  EXPECT_EQ(Expected,
+            insertBatch(Code, {HeaderIncludes::HeaderToInsert("<foo>"),
+                               HeaderIncludes::HeaderToInsert("\"a.h\"")}));
+}
+
+TEST_F(HeaderIncludesTest, BatchInsertImportsAlongsideIncludes) {
+  std::string Code = R"objc(
+void test();
+)objc";
+  std::string Expected =
+      "\n#import \"a.h\"\n#include \"b.h\"\n#import <foo>\nvoid test();\n";
+
+  EXPECT_EQ(
+      Expected,
+      insertBatch(
+          Code,
+          {HeaderIncludes::HeaderToInsert("\"b.h\"", IncludeDirective::Include),
+           HeaderIncludes::HeaderToInsert("\"a.h\"", IncludeDirective::Import),
+           HeaderIncludes::HeaderToInsert("<foo>", IncludeDirective::Import)}));
 }
 
 } // namespace

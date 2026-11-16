@@ -24,7 +24,7 @@ using namespace llvm::opt;
 
 static bool isSupportedMCU(const StringRef MCU) {
   return llvm::StringSwitch<bool>(MCU)
-#define MSP430_MCU(NAME) .Case(NAME, true)
+#define MSP430_MCU(NAME, CPU, HWMULT) .Case(NAME, true)
 #include "clang/Basic/MSP430Target.def"
       .Default(false);
 }
@@ -34,7 +34,7 @@ static StringRef getSupportedHWMult(const Arg *MCU) {
     return "none";
 
   return llvm::StringSwitch<StringRef>(MCU->getValue())
-#define MSP430_MCU_FEAT(NAME, HWMULT) .Case(NAME, HWMULT)
+#define MSP430_MCU(NAME, CPU, HWMULT) .Case(NAME, HWMULT)
 #include "clang/Basic/MSP430Target.def"
       .Default("none");
 }
@@ -157,6 +157,7 @@ void MSP430ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void MSP430ToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                             ArgStringList &CC1Args,
+                                            BoundArch BA,
                                             Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
 

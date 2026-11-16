@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefixes=X86,CXX11X86
 // RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefixes=X86,CXX17X86
-// RUN: %clang_cc1 -std=c++11 %s -emit-llvm -o - -triple amdgcn-amd-amdhsa | FileCheck %s --check-prefixes=AMD,CXX11AMD
-// RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple amdgcn-amd-amdhsa | FileCheck %s --check-prefixes=AMD,CXX17AMD
+// RUN: %clang_cc1 -std=c++11 %s -emit-llvm -o - -triple amdgpu-amd-amdhsa | FileCheck %s --check-prefixes=AMD,CXX11AMD
+// RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple amdgpu-amd-amdhsa | FileCheck %s --check-prefixes=AMD,CXX17AMD
 
 struct A {
   static const int Foo = 123;

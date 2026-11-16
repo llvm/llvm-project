@@ -193,4 +193,5 @@ static bool CC_PPC32_SPE_RetF64(unsigned &ValNo, MVT &ValVT,
   return true;
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "PPCGenCallingConv.inc"

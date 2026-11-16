@@ -315,16 +315,15 @@ void trap2() {
 
 // OGCG-LABEL: define{{.*}} void @_Z5trap2v
 // OGCG:         call void @llvm.trap()
-// OGCG-NEXT:    call void @_Z2f1v()
-// OGCG:         ret void
-// OGCG:       }
+// OGCG-NEXT:    unreachable
+// OGCG-NEXT:  }
 
 void *test_alloca(unsigned long n) {
   return __builtin_alloca(n);
 }
 
 // CIR-LABEL: @_Z11test_allocam(
-// CIR:         %{{.+}} = cir.alloca !u8i, !cir.ptr<!u8i>, %{{.+}} : !u64i, ["bi_alloca"]
+// CIR:         %{{.+}} = cir.alloca "bi_alloca" {{.*}} size(%{{.+}}) : !cir.ptr<!u8i>
 
 // LLVM-LABEL: @_Z11test_allocam(
 // LLVM:         alloca i8, i64 %{{.+}}
@@ -339,8 +338,8 @@ bool test_multiple_allocas(unsigned long n) {
 }
 
 // CIR-LABEL: @_Z21test_multiple_allocasm(
-// CIR:         %{{.+}} = cir.alloca !u8i, !cir.ptr<!u8i>, %{{.+}} : !u64i, ["bi_alloca"]
-// CIR:         %{{.+}} = cir.alloca !u8i, !cir.ptr<!u8i>, %{{.+}} : !u64i, ["bi_alloca"]
+// CIR:         %{{.+}} = cir.alloca "bi_alloca" {{.*}} size(%{{.+}}) : !cir.ptr<!u8i>
+// CIR:         %{{.+}} = cir.alloca "bi_alloca" {{.*}} size(%{{.+}}) : !cir.ptr<!u8i>
 
 // LLVM-LABEL: @_Z21test_multiple_allocasm(
 // LLVM:         alloca i8, i64 %{{.+}}

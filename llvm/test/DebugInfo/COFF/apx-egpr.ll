@@ -14,7 +14,7 @@
 ; OBJ-NEXT: }
 
 ; This test is to check CodeView register IDs for APX EGPR.
-define i32 @test() !dbg !4 {
+define i32 @test() nounwind !dbg !4 {
 entry:
   %0 = call i32 asm sideeffect "nop", "={r16},~{dirflag},~{fpsr},~{flags}"(), !dbg !7
   #dbg_value(i32 %0, !8, !DIExpression(), !10)

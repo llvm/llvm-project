@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK --check-prefix=GFX8 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu8.03-amd-amdhsa -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK --check-prefix=GFX8 %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK %s
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %s | FileCheck --check-prefix=CHECK --check-prefix=GFX8 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu8.03-amd-amdhsa < %s | FileCheck --check-prefix=CHECK --check-prefix=GFX8 %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck --check-prefix=CHECK %s
 
 
 ; CHECK:	amdhsa.kernels:
@@ -81,7 +81,7 @@
 ; CHECK-NEXT:      - .offset:         136
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_completion_action
-; CHECK:          - .offset:          144
+; CHECK-NEXT:      - .offset:         144
 ; CHECK-NEXT:        .size:           4
 ; CHECK-NEXT:        .value_kind:     hidden_dynamic_lds_size
 ; GFX8-NEXT:      - .offset:         216
@@ -121,4 +121,3 @@ entry:
 !2 = !{!"2:1:8:%g\5Cn"}
 
 attributes #0 = { optnone noinline }
-

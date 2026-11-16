@@ -1,6 +1,6 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: cp -r %S/Inputs/Foundation/Foundation.framework %t/System/Library/Frameworks/
+; RUN: cp -R %S/Inputs/Foundation/Foundation.framework %t/System/Library/Frameworks/
 ; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
 ; RUN: yaml2obj %t/Mismatch.yaml -o %t/System/Library/Frameworks/Mismatch.framework/Mismatch
 
@@ -111,6 +111,7 @@ FatArchs:
     align:           14
 Slices:
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x1000007
@@ -434,6 +435,7 @@ Slices:
         - ''
       FunctionStarts:  [ 0x1090, 0x10A0, 0x10B0, 0x10C0 ]
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x100000C

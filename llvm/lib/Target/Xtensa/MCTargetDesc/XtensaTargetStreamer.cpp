@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "XtensaTargetStreamer.h"
+#include "MCTargetDesc/XtensaMCAsmInfo.h"
 #include "XtensaInstPrinter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
@@ -61,7 +62,12 @@ void XtensaTargetAsmStreamer::emitLiteral(MCSymbol *LblSym, const MCExpr *Value,
     LiteralStr << CE->getValue() << "\n";
   } else if (auto SRE = dyn_cast<MCSymbolRefExpr>(Value)) {
     const MCSymbol &Sym = SRE->getSymbol();
-    LiteralStr << Sym.getName() << "\n";
+    Xtensa::Specifier Spec =
+        static_cast<Xtensa::Specifier>(SRE->getSpecifier());
+    LiteralStr << Sym.getName();
+    if (Spec == Xtensa::S_TPOFF)
+      LiteralStr << "@TPOFF";
+    LiteralStr << '\n';
   } else {
     llvm_unreachable("unexpected constant pool entry type");
   }
@@ -112,6 +118,8 @@ void XtensaTargetELFStreamer::startLiteralSection(MCSection *BaseSection) {
       SectionName, ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
 
   ConstSection->setAlignment(Align(4));
+  MCStreamer &OutStreamer = getStreamer();
+  OutStreamer.switchSection(ConstSection);
 }
 
 MCELFStreamer &XtensaTargetELFStreamer::getStreamer() {

@@ -1,14 +1,14 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,SI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,VI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX9-ERR,SICIVI9-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX10-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX1250-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu6.00 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,SI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu8.02 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,VI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu9.00 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX9-ERR,SICIVI9-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu10.10 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu12.50 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX1250-ERR --implicit-check-not=error: %s
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SIVICI %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefixes=SIVICI,CIVI9 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefixes=GFX9,CIVI9 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck -check-prefix=GFX1250 %s
+// RUN: not llvm-mc -triple=amdgpu6.00 -show-encoding %s | FileCheck -check-prefix=SIVICI %s
+// RUN: not llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck -check-prefixes=SIVICI,CIVI9 %s
+// RUN: not llvm-mc -triple=amdgpu9.00 -show-encoding %s | FileCheck -check-prefixes=GFX9,CIVI9 %s
+// RUN: not llvm-mc -triple=amdgpu10.10 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
+// RUN: not llvm-mc -triple=amdgpu12.50 -show-encoding %s | FileCheck -check-prefix=GFX1250 %s
 
 s_add_i32 s106, s0, s1
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register index is out of range
@@ -132,7 +132,7 @@ s_mov_b32 tba_lo, 0
 v_cvt_f32_f64 v0, v[255:256]
 // SICIVI9-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register index is out of range
 // GFX10-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: register index is out of range
-// GFX1250-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX1250-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_mqsad_u32_u8 v[254:257], v[0:1], -4.0, v[2:5]
 // SI-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

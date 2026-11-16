@@ -12,25 +12,44 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineModuleSlotTracker.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Function.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 
-PreservedAnalyses PrintMIRPreparePass::run(Module &M, ModuleAnalysisManager &) {
-  printMIR(OS, M);
-  return PreservedAnalyses::all();
+void PrintMIRPass::printMachineFunction(MachineFunction &MF,
+                                        FunctionAnalysisManager &FAM,
+                                        MachineFunctionAnalysisManager &MFAM) {
+  const VirtRegMap *VRM = MFAM.getCachedResult<VirtRegMapAnalysis>(MF);
+  MachineModuleSlotTracker MST(
+      [&](const Function &F) {
+        return &FAM.getResult<MachineFunctionAnalysis>(
+                       const_cast<Function &>(F))
+                    .getMF();
+      },
+      &MF);
+  MST.renumberMetadataForAssembly();
+  printMIR(OS, FAM, MF, VRM);
 }
 
-PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
-                                    MachineFunctionAnalysisManager &MFAM) {
-  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
-                  .getManager();
-
-  printMIR(OS, FAM, MF);
+PreservedAnalyses PrintMIRPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  M.renumberMetadataForAssembly();
+  printMIR(OS, M);
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  for (Function &F : M) {
+    if (F.isDeclaration() || F.hasAvailableExternallyLinkage())
+      continue;
+    MachineFunction &MF = FAM.getResult<MachineFunctionAnalysis>(F).getMF();
+    auto &MFAM = FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(F)
+                     .getManager();
+    printMachineFunction(MF, FAM, MFAM);
+  }
   return PreservedAnalyses::all();
 }
 
@@ -50,6 +69,7 @@ struct MIRPrintingPass : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
+    AU.addUsedIfAvailable<VirtRegMapWrapperLegacy>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -60,12 +80,20 @@ struct MIRPrintingPass : public MachineFunctionPass {
     MachineModuleInfo *MMI =
         &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
-    printMIR(StrOS, *MMI, MF);
+    const VirtRegMap *VRM = nullptr;
+    if (auto *W = getAnalysisIfAvailable<VirtRegMapWrapperLegacy>())
+      VRM = &W->getVRM();
+
+    MachineModuleSlotTracker MST(
+        [&](const Function &F) { return MMI->getMachineFunction(F); }, &MF);
+    MST.renumberMetadataForAssembly();
+    printMIR(StrOS, *MMI, MF, VRM);
     MachineFunctions.append(Str);
     return false;
   }
 
   bool doFinalization(Module &M) override {
+    M.renumberMetadataForAssembly();
     printMIR(OS, M);
     OS << MachineFunctions;
     return false;
@@ -75,9 +103,6 @@ struct MIRPrintingPass : public MachineFunctionPass {
 char MIRPrintingPass::ID = 0;
 
 } // end anonymous namespace
-
-char &llvm::MIRPrintingPassID = MIRPrintingPass::ID;
-INITIALIZE_PASS(MIRPrintingPass, "mir-printer", "MIR Printer", false, false)
 
 MachineFunctionPass *llvm::createPrintMIRPass(raw_ostream &OS) {
   return new MIRPrintingPass(OS);

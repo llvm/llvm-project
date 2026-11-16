@@ -49,14 +49,14 @@ void RestrictedIncludesPPCallbacks::EndOfMainFile() {
           Include.Loc, Include.Loc.getLocWithOffset(ToLen));
 
       if (!Include.IsInMainFile) {
-        auto D = Check.diag(
+        const auto D = Check.diag(
             Include.Loc,
             "system include %0 not allowed, transitively included from %1");
         D << Include.IncludeFile << SM.getFilename(Include.Loc);
         D << FixItHint::CreateRemoval(ToRange);
         continue;
       }
-      auto D = Check.diag(Include.Loc, "system include %0 not allowed");
+      const auto D = Check.diag(Include.Loc, "system include %0 not allowed");
       D << Include.IncludeFile;
       D << FixItHint::CreateRemoval(ToRange);
     }

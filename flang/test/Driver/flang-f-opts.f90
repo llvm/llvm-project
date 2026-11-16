@@ -11,6 +11,18 @@
 
 ! RUN: %flang -### -S -fprofile-generate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE-LLVM %s
 ! CHECK-PROFILE-GENERATE-LLVM: "-fprofile-generate"
+
+! RUN: rm -rf %t.pgodir && mkdir -p %t.pgodir
+! RUN: %flang -### -fprofile-generate=%t.pgodir %s 2>&1| FileCheck -check-prefix=PROFILE-GENERATE-EQ %s
+! PROFILE-GENERATE-EQ: "-fprofile-generate={{.*}}pgodir"
+
+! RUN: %flang -### -fprofile-generate -fno-profile-generate %s 2>&1 | FileCheck -check-prefix=NO-PROFILE-GENERATE %s
+! NO-PROFILE-GENERATE: "-fc1"
+! NO-PROFILE-GENERATE-NOT: "-fprofile-generate"
+
+! RUN: %flang -### -fno-profile-generate -fprofile-generate %s 2>&1 | FileCheck -check-prefix=PROFILE-GENERATE %s
+! PROFILE-GENERATE: "-fprofile-generate"
+
 ! RUN: %flang -### -S -fprofile-use=%S %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-DIR %s
 ! CHECK-PROFILE-USE-DIR: "-fprofile-use={{.*}}"
 !

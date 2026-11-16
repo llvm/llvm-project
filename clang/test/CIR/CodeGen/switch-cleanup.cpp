@@ -20,7 +20,7 @@ void simple_stmt_body(int x) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z16simple_stmt_bodyi
 // CIR:         cir.scope {
-// CIR:           cir.alloca !rec_BitVector, !cir.ptr<!rec_BitVector>, ["bv"]
+// CIR:           cir.alloca "bv" {{.*}} : !cir.ptr<!rec_BitVector>
 // CIR:           cir.switch(%{{.*}} : !s32i) {
 // CIR:             cir.cleanup.scope {
 // CIR:               cir.yield
@@ -53,7 +53,7 @@ void compound_stmt_body(int x) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z18compound_stmt_bodyi
 // CIR:         cir.scope {
-// CIR:           cir.alloca !rec_BitVector, !cir.ptr<!rec_BitVector>, ["bv"]
+// CIR:           cir.alloca "bv" {{.*}} : !cir.ptr<!rec_BitVector>
 // CIR:           cir.switch(%{{.*}} : !s32i) {
 // CIR:             cir.cleanup.scope {
 // CIR:               cir.yield
@@ -88,7 +88,7 @@ void cleanup_in_case(int x) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z15cleanup_in_casei
 // CIR:         cir.scope {
-// CIR:           cir.alloca !rec_BitVector, !cir.ptr<!rec_BitVector>, ["bv"]
+// CIR:           cir.alloca "bv" {{.*}} : !cir.ptr<!rec_BitVector>
 // CIR:           cir.switch(%{{.*}} : !s32i) {
 // CIR:             cir.case(default, []) {
 // CIR:               cir.break
@@ -149,7 +149,7 @@ void cleanup_in_while_in_switch(int x) {
 // CIR:                 cir.condition
 // CIR:               } do {
 // CIR:                 cir.scope {
-// CIR:                   cir.alloca !rec_BitVector, !cir.ptr<!rec_BitVector>, ["bv"]
+// CIR:                   cir.alloca "bv" {{.*}} : !cir.ptr<!rec_BitVector>
 // CIR:                   cir.case(default, []) {
 // CIR:                     cir.break
 // CIR:                   }
@@ -178,10 +178,7 @@ void cleanup_in_while_in_switch(int x) {
 // LLVM:           i32 0, label %[[CASE_ZERO:.*]]
 // LLVM:         ]
 // LLVM:       [[DEAD_BLOCK:.*]]:
-// LLVMCIR:      br label %[[SWITCH_BODY:.*]]
-// OGCG:         br label %[[WHILE_COND:.*]]
-// LLVMCIR:    [[SWITCH_BODY]]:
-// LLVMCIR:      br label %[[WHILE_COND:.*]]
+// LLVM:         br label %[[WHILE_COND:.*]]
 // LLVM:       [[WHILE_COND]]:
 // LLVM:         icmp
 // LLVM:         br i1 %{{.*}}, label %[[WHILE_BODY:.*]], label %[[WHILE_END:.*]]

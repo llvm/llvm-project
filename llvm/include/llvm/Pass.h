@@ -59,13 +59,11 @@ enum PassManagerType {
   PMT_CallGraphPassManager,  ///< CGPassManager
   PMT_FunctionPassManager,   ///< FPPassManager
   PMT_LoopPassManager,       ///< LPPassManager
-  PMT_RegionPassManager,     ///< RGPassManager
   PMT_Last
 };
 
 // Different types of passes.
 enum PassKind {
-  PT_Region,
   PT_Loop,
   PT_Function,
   PT_CallGraphSCC,
@@ -322,6 +320,11 @@ public:
   /// runOnFunction - Virtual method overriden by subclasses to do the
   /// per-function processing of the pass.
   virtual bool runOnFunction(Function &F) = 0;
+
+  /// For --print-changed, serialize the IR unit this pass operates on. The
+  /// default prints \p F; MachineFunctionPass prints its MachineFunction.
+  /// Returns false if there is nothing to report.
+  virtual bool printIRUnit(raw_ostream &OS, Function &F);
 
   void assignPassManager(PMStack &PMS, PassManagerType T) override;
 

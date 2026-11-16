@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang-rt/runtime/io-stmt.h"
-#include "unit.h"
 #include "flang-rt/runtime/connection.h"
 #include "flang-rt/runtime/emit-encoded.h"
 #include "flang-rt/runtime/format.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang-rt/runtime/utf.h"
 #include <algorithm>
 #include <cstdio>
@@ -219,9 +219,7 @@ template <Direction DIR>
 void InternalListIoStatementState<DIR>::CompleteOperation() {
   if (!this->completedOperation()) {
     if constexpr (DIR == Direction::Output) {
-      if (unit_.furthestPositionInRecord > 0) {
-        unit_.AdvanceRecord(*this);
-      }
+      unit_.AdvanceRecord(*this);
     }
     IoStatementBase::CompleteOperation();
   }
@@ -685,6 +683,14 @@ common::optional<char32_t> IoStatementState::NextInField(
             return common::nullopt;
           }
           break;
+        case '!':
+          // Extension (gfortran, ifx, classic nvfortran): in NAMELIST input,
+          // '!' terminates a value even when not preceded by a separator,
+          // so that "name=value!comment" is accepted.
+          if (edit.IsNamelist()) {
+            return common::nullopt;
+          }
+          break;
         case ',':
           if (!(edit.modes.editingFlags & decimalComma)) {
             return common::nullopt;
@@ -915,7 +921,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     auto start{fastField.connection().positionInRecord};
     int r{0};
     do {
-      static auto constexpr clamp{(std::numeric_limits<int>::max() - '9') / 10};
+      static auto constexpr clamp{
+          (common::numeric_limits<int>::max() - '9') / 10};
       if (r >= clamp) {
         r = 0;
         break;
@@ -980,7 +987,9 @@ template <Direction DIR>
 ChildIoStatementState<DIR>::ChildIoStatementState(
     ChildIo &child, const char *sourceFile, int sourceLine)
     : IoStatementBase{sourceFile, sourceLine}, child_{child},
-      mutableModes_{child.parent().mutableModes()} {}
+      mutableModes_{child.parent().mutableModes()} {
+  mutableModes_.inNamelist = false;
+}
 
 template <Direction DIR>
 const NonTbpDefinedIoTable *
@@ -1475,7 +1484,7 @@ bool InquireUnitState::Inquire(
     } else if (unit().openRecl) {
       result = *unit().openRecl;
     } else {
-      result = std::numeric_limits<std::int32_t>::max();
+      result = common::numeric_limits<std::int32_t>::max();
     }
     return true;
   case HashInquiryKeyword("SIZE"):

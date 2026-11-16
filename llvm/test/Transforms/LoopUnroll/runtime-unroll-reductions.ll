@@ -484,6 +484,146 @@ exit:
   ret float %res
 }
 
+define float @test_fmuladd_reduction(ptr %a, ptr %b, i64 %n) {
+; CHECK-LABEL: define float @test_fmuladd_reduction(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
+; CHECK:       [[ENTRY_NEW]]:
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[IV_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_1:%.*]] = phi float [ 0.000000e+00, %[[ENTRY_NEW]] ], [ [[RDX_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi float [ 0.000000e+00, %[[ENTRY_NEW]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[NITER_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[X:%.*]] = load float, ptr [[GEP_A]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = load float, ptr [[GEP_B]], align 4
+; CHECK-NEXT:    [[RDX_NEXT]] = call reassoc nsz float @llvm.fmuladd.f32(float [[X]], float [[Y]], float [[RDX]])
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[X_1:%.*]] = load float, ptr [[GEP_A_1]], align 4
+; CHECK-NEXT:    [[Y_1:%.*]] = load float, ptr [[GEP_B_1]], align 4
+; CHECK-NEXT:    [[RDX_NEXT_1]] = call reassoc nsz float @llvm.fmuladd.f32(float [[X_1]], float [[Y_1]], float [[RDX_1]])
+; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[EXIT_UNR_LCSSA]]:
+; CHECK-NEXT:    [[RES_PH:%.*]] = phi float [ [[RDX_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_UNR:%.*]] = phi float [ [[RDX_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc nnan ninf nsz float [[RDX_NEXT_1]], [[RDX_NEXT]]
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_EPIL_PREHEADER]]:
+; CHECK-NEXT:    [[IV_EPIL_INIT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[RDX_EPIL_INIT:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[BIN_RDX]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
+; CHECK-NEXT:    br label %[[LOOP_EPIL:.*]]
+; CHECK:       [[LOOP_EPIL]]:
+; CHECK-NEXT:    [[GEP_A_EPIL:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV_EPIL_INIT]]
+; CHECK-NEXT:    [[GEP_B_EPIL:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV_EPIL_INIT]]
+; CHECK-NEXT:    [[X_EPIL:%.*]] = load float, ptr [[GEP_A_EPIL]], align 4
+; CHECK-NEXT:    [[Y_EPIL:%.*]] = load float, ptr [[GEP_B_EPIL]], align 4
+; CHECK-NEXT:    [[RDX_NEXT_EPIL:%.*]] = call reassoc nnan ninf nsz float @llvm.fmuladd.f32(float [[X_EPIL]], float [[Y_EPIL]], float [[RDX_EPIL_INIT]])
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi float [ [[BIN_RDX]], %[[EXIT_UNR_LCSSA]] ], [ [[RDX_NEXT_EPIL]], %[[LOOP_EPIL]] ]
+; CHECK-NEXT:    ret float [[RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi float [ 0.0, %entry ], [ %rdx.next, %loop ]
+  %gep.a = getelementptr inbounds float, ptr %a, i64 %iv
+  %gep.b = getelementptr inbounds float, ptr %b, i64 %iv
+  %x = load float, ptr %gep.a, align 4
+  %y = load float, ptr %gep.b, align 4
+  %rdx.next = call reassoc nnan ninf nsz float @llvm.fmuladd.f32(float %x, float %y, float %rdx)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
+
+exit:
+  %res = phi float [ %rdx.next, %loop ]
+  ret float %res
+}
+
+define float @test_fmuladd_reduction_constant_op(ptr %a, i64 %n) {
+; CHECK-LABEL: define float @test_fmuladd_reduction_constant_op(
+; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
+; CHECK:       [[ENTRY_NEW]]:
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[IV_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi float [ 0.000000e+00, %[[ENTRY_NEW]] ], [ [[RDX_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[NITER_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[X:%.*]] = load float, ptr [[GEP_A]], align 4
+; CHECK-NEXT:    [[RDX_NEXT:%.*]] = call reassoc nnan ninf nsz float @llvm.fmuladd.f32(float [[X]], float 1.000000e+00, float [[RDX]])
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[X_1:%.*]] = load float, ptr [[GEP_A_1]], align 4
+; CHECK-NEXT:    [[RDX_NEXT_1]] = call reassoc nnan ninf nsz float @llvm.fmuladd.f32(float [[X_1]], float 1.000000e+00, float [[RDX_NEXT]])
+; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[EXIT_UNR_LCSSA]]:
+; CHECK-NEXT:    [[RES_PH:%.*]] = phi float [ [[RDX_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_UNR:%.*]] = phi float [ [[RDX_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_EPIL_PREHEADER]]:
+; CHECK-NEXT:    [[IV_EPIL_INIT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[RDX_EPIL_INIT:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[RDX_UNR]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
+; CHECK-NEXT:    br label %[[LOOP_EPIL:.*]]
+; CHECK:       [[LOOP_EPIL]]:
+; CHECK-NEXT:    [[GEP_A_EPIL:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV_EPIL_INIT]]
+; CHECK-NEXT:    [[X_EPIL:%.*]] = load float, ptr [[GEP_A_EPIL]], align 4
+; CHECK-NEXT:    [[RDX_NEXT_EPIL:%.*]] = call reassoc nnan ninf nsz float @llvm.fmuladd.f32(float [[X_EPIL]], float 1.000000e+00, float [[RDX_EPIL_INIT]])
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi float [ [[RES_PH]], %[[EXIT_UNR_LCSSA]] ], [ [[RDX_NEXT_EPIL]], %[[LOOP_EPIL]] ]
+; CHECK-NEXT:    ret float [[RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi float [ 0.0, %entry ], [ %rdx.next, %loop ]
+  %gep.a = getelementptr inbounds float, ptr %a, i64 %iv
+  %x = load float, ptr %gep.a, align 4
+  %rdx.next = call reassoc nnan ninf nsz float @llvm.fmuladd.f32(float %x, float 1.0, float %rdx)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
+
+exit:
+  %res = phi float [ %rdx.next, %loop ]
+  ret float %res
+}
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.unroll.count", i32 2}
 
@@ -500,4 +640,6 @@ exit:
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]]}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]]}
 ;.

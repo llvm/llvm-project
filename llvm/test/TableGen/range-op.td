@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 // CHECK: def range_op_ranges {
 def range_op_ranges {

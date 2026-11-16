@@ -10,10 +10,10 @@
 // relocations and determines what auxiliary data structures (GOT, PLT, copy
 // relocations) need to be created during linking.
 //
-// The main entry point is scanRelocations<ELFT>(), which calls scanSection()
-// to process all relocations within an input section. For each relocation,
-// scan() analyzes the type and target, and determines whether a synthetic
-// section entry or dynamic relocation is needed.
+// The main entry point is scanRelocations(), which calls scanSection() to
+// process all relocations within an input section. For each relocation,
+// scanSection() analyzes the type and target, and determines whether a
+// synthetic section entry or dynamic relocation is needed.
 //
 // Note: This file analyzes what needs to be done but doesn't apply the
 // actual relocations - that happens later in InputSection::writeTo().
@@ -38,9 +38,11 @@
 #include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Parallel.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Support/Parallel.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -149,6 +151,13 @@ static bool isRelExpr(RelExpr expr) {
                RE_LOONGARCH_PC_INDIRECT>(expr);
 }
 
+// True if a reference to a non-absolute symbol is independent of the load base
+// of the ELF file.
+static bool isLoadBaseIndependent(Ctx &ctx, RelExpr expr, RelType type) {
+  return oneof<R_SIZE, RE_RISCV_LEB128>(expr) || isRelExpr(expr) ||
+         ctx.target->usesOnlyLowPageBits(type);
+}
+
 static RelExpr toPlt(RelExpr expr) {
   switch (expr) {
   case RE_LOONGARCH_PAGE_PC:
@@ -241,16 +250,15 @@ static SmallPtrSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
 // location.
 static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
                                uint64_t value, uint64_t size) {
-  Symbol old = sym;
-  Defined(ctx, sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
+  uint16_t versionId = sym.versionId;
+  Defined(sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
           size, &sec)
       .overwrite(sym);
 
-  sym.versionId = old.versionId;
+  sym.versionId = versionId;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
-  sym.flags.store(old.flags.load(std::memory_order_relaxed) & NEEDS_GOT,
-                  std::memory_order_relaxed);
+  sym.flags.fetch_and(NEEDS_GOT | NEEDS_GOT_AUTH, std::memory_order_relaxed);
 }
 
 // Reserve space in .bss or .bss.rel.ro for copy relocation.
@@ -360,7 +368,7 @@ public:
         ++i;
       if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off) {
         Err(ctx) << ".eh_frame: relocation is not in any piece";
-        return 0;
+        return -1;
       }
       it = i;
     }
@@ -653,12 +661,12 @@ void elf::reportUndefinedSymbols(Ctx &ctx) {
 
 // Report an undefined symbol if necessary.
 // Returns true if the undefined symbol will produce an error message.
-bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
-  std::lock_guard<std::mutex> lock(ctx.relocMutex);
+bool elf::maybeReportUndefined(Ctx &ctx, Undefined &sym, InputSectionBase &sec,
+                               uint64_t offset) {
   // If versioned, issue an error (even if the symbol is weak) because we don't
   // know the defining filename which is required to construct a Verneed entry.
   if (sym.hasVersionSuffix) {
-    ctx.undefErrs.push_back({&sym, {{sec, offset}}, false});
+    ctx.undefErrs.push_back({&sym, {{&sec, offset}}, false});
     return true;
   }
   if (sym.isWeak())
@@ -677,14 +685,19 @@ bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
   // PPC32 .got2 is similar but cannot be fixed. Multiple .got2 is infeasible
   // because .LC0-.LTOC is not representable if the two labels are in different
   // .got2
-  if (sym.discardedSecIdx != 0 && (sec->name == ".got2" || sec->name == ".toc"))
+  if (sym.discardedSecIdx != 0 && (sec.name == ".got2" || sec.name == ".toc"))
     return false;
 
   bool isWarning =
       (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Warn && canBeExternal) ||
       ctx.arg.noinhibitExec;
-  ctx.undefErrs.push_back({&sym, {{sec, offset}}, isWarning});
+  ctx.undefErrs.push_back({&sym, {{&sec, offset}}, isWarning});
   return !isWarning;
+}
+
+bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
+  std::lock_guard<std::mutex> lock(ctx.relocMutex);
+  return elf::maybeReportUndefined(ctx, sym, *sec, offset);
 }
 
 bool RelocScan::checkTlsLe(uint64_t offset, Symbol &sym, RelType type) {
@@ -697,10 +710,10 @@ bool RelocScan::checkTlsLe(uint64_t offset, Symbol &sym, RelType type) {
   return true;
 }
 
-template <bool shard = false>
+template <bool concurrent = false>
 static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
                              uint64_t offsetInSec, Symbol &sym, int64_t addend,
-                             RelExpr expr, RelType type) {
+                             RelExpr expr, RelType type, unsigned shard = 0) {
   bool isAArch64Auth =
       ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64;
 
@@ -722,15 +735,15 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   if (sym.isTagged())
     relrDyn = nullptr;
   if (relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
-    relrDyn->addRelativeReloc<shard>(isec, offsetInSec, sym, addend, type,
-                                     expr);
+    relrDyn->addRelativeReloc<concurrent>(isec, offsetInSec, sym, addend, type,
+                                          expr, shard);
     return;
   }
   RelType relativeType = ctx.target->relativeRel;
   if (isAArch64Auth)
     relativeType = R_AARCH64_AUTH_RELATIVE;
-  ctx.in.relaDyn->addRelativeReloc<shard>(relativeType, isec, offsetInSec, sym,
-                                          addend, type, expr);
+  ctx.in.relaDyn->addRelativeReloc<concurrent>(relativeType, isec, offsetInSec,
+                                               sym, addend, type, expr, shard);
   // With MTE globals, we always want to derive the address tag by `ldg`-ing
   // the symbol. When we have a RELATIVE relocation though, we no longer have
   // a reference to the symbol. Because of this, when we have an addend that
@@ -748,13 +761,18 @@ template <class PltSection, class GotPltSection>
 static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
                         RelocationBaseSection &rel, RelType type, Symbol &sym) {
   plt.addEntry(sym);
+  bool isPreemptible = sym.isPreemptible;
+  RelExpr expr = isPreemptible ? R_ADDEND : R_ABS;
+  if (!ctx.target->usesGotPlt) {
+    rel.addReloc(
+        {type, &plt, sym.getPltOffset(ctx), isPreemptible, sym, 0, expr});
+    return;
+  }
   gotPlt.addEntry(sym);
-  if (sym.isPreemptible)
-    rel.addReloc(
-        {type, &gotPlt, sym.getGotPltOffset(ctx), true, sym, 0, R_ADDEND});
-  else
-    rel.addReloc(
-        {type, &gotPlt, sym.getGotPltOffset(ctx), false, sym, 0, R_ABS});
+  if (sym.isPreemptible && ctx.arg.zMarkPlt && type == ctx.target->pltRel)
+    expr = R_PLT;
+  rel.addReloc(
+      {type, &gotPlt, sym.getGotPltOffset(ctx), isPreemptible, sym, 0, expr});
 }
 
 void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
@@ -789,9 +807,11 @@ static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
     return;
   }
 
-  // Signed GOT requires dynamic relocation.
-  ctx.in.relaDyn->addReloc(
-      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, false, sym, 0, R_ABS});
+  // Signed GOT requires dynamic relocation unless the symbol is
+  // non-preemptible and undefined.
+  if (!sym.isUndefined())
+    ctx.in.relaDyn->addReloc(
+        {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, false, sym, 0, R_ABS});
 }
 
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
@@ -851,8 +871,12 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // only the low bits are used.
   if (e == R_GOT || e == R_PLT)
     return ctx.target->usesOnlyLowPageBits(type) || !ctx.arg.isPic;
-  // R_AARCH64_AUTH_ABS64 and iRelSymbolicRel require a dynamic relocation.
-  if (e == RE_AARCH64_AUTH || type == ctx.target->iRelSymbolicRel)
+  // R_AARCH64_AUTH_ABS64 requires a dynamic relocation unless the symbol is
+  // non-preemptible and undefined.
+  if (e == RE_AARCH64_AUTH && (!sym.isUndefined() || sym.isPreemptible))
+    return false;
+  // iRelSymbolicRel requires a dynamic relocation.
+  if (type == ctx.target->iRelSymbolicRel)
     return false;
 
   // The behavior of an undefined weak reference is implementation defined.
@@ -865,22 +889,11 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (!ctx.arg.isPic)
     return true;
 
-  // Constant when referencing a non-preemptible symbol.
-  if (e == R_SIZE || e == RE_RISCV_LEB128)
-    return true;
-
-  // For the target and the relocation, we want to know if they are
-  // absolute or relative.
   bool absVal = isAbsoluteOrTls(sym) && e != RE_PPC64_TOCBASE;
-  bool relE = isRelExpr(e);
-  if (absVal && !relE)
+  if (!absVal)
+    return isLoadBaseIndependent(ctx, e, type);
+  if (oneof<R_SIZE, RE_RISCV_LEB128>(e) || !isRelExpr(e))
     return true;
-  if (!absVal && relE)
-    return true;
-  if (!absVal && !relE)
-    return ctx.target->usesOnlyLowPageBits(type);
-
-  assert(absVal && relE);
 
   // Allow R_PLT_PC (optimized to R_PC here) to a hidden undefined weak symbol
   // in PIC mode. This is a little strange, but it allows us to link function
@@ -925,10 +938,10 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     } else if (!isAbsoluteOrTls(sym)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
-      // If the target adjusted the expression to R_RELAX_GOT_PC, we may end up
-      // needing the GOT if we can't relax everything.
-      if (expr == R_RELAX_GOT_PC)
-        ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+      // If the target adjusted the expression to an optimizable form, we may
+      // end up needing the GOT if we can't optimize everything.
+      if (expr == R_RELAX_GOT_PC || expr == R_RELAX_GOT_PC_NOPIC)
+        ctx.in.got->hasDeferredEntries.store(true, std::memory_order_relaxed);
     }
   }
 
@@ -954,7 +967,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     } else if (!sym.isTls() || ctx.arg.emachine != EM_LOONGARCH) {
       // Many LoongArch TLS relocs reuse the RE_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
-      sym.setFlags(NEEDS_GOT | NEEDS_GOT_NONAUTH);
+      sym.setFlags(NEEDS_GOT);
     }
   } else if (needsPlt(expr)) {
     sym.setFlags(NEEDS_PLT);
@@ -981,8 +994,7 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
   }
 
   // Use a simple -z notext rule that treats all sections except .eh_frame as
-  // writable. GNU ld does not produce dynamic relocations in .eh_frame (and our
-  // SectionBase::getOffset would incorrectly adjust the offset).
+  // writable. GNU ld does not produce dynamic relocations in .eh_frame.
   //
   // For MIPS, we don't implement GNU ld's DW_EH_PE_absptr to DW_EH_PE_pcrel
   // conversion. We still emit a dynamic relocation.
@@ -995,7 +1007,7 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
         ((rel == ctx.target->symbolicRel ||
           (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) &&
          !sym.isPreemptible)) {
-      addRelativeReloc<true>(ctx, *sec, offset, sym, addend, expr, type);
+      addRelativeReloc<true>(ctx, *sec, offset, sym, addend, expr, type, shard);
       return;
     }
     if (rel != 0) {
@@ -1044,9 +1056,11 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
 
   // When producing an executable, we can perform copy relocations (for
   // STT_OBJECT) and canonical PLT (for STT_FUNC) if sym is defined by a DSO.
+  // In a PIE, the reference must be independent of the load base.
   // Copy relocations/canonical PLT entries are unsupported for
   // R_AARCH64_AUTH_ABS64.
   if (!ctx.arg.shared && sym.isShared() &&
+      (!ctx.arg.pie || isLoadBaseIndependent(ctx, expr, type)) &&
       !(ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) {
     if (!canDefineSymbolInExecutable(ctx, sym)) {
       auto diag = Err(ctx);
@@ -1120,38 +1134,38 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
   printLocation(diag, *sec, sym, offset);
 }
 
-template <class ELFT, class RelTy>
-void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+template <class RelTy>
+void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                                 unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   // Many relocations end up in sec.relocations.
   sec.relocations.reserve(rels.size());
 
-  for (auto it = rels.begin(); it != rels.end(); ++it) {
-    auto type = it->getType(false);
-    rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
+  for (const RelTy &rel : rels) {
+    RelType type = rel.getType(false);
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.file->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelExpr expr = getRelExpr(type, sym, sec.content().data() + offset);
+
+    // Error if the target symbol is undefined. Symbol index 0 may be used by
+    // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    rs.process(expr, type, offset, sym, rs.getAddend(rel, type));
   }
 }
 
-template <class ELFT> void TargetInfo::scanSection1(InputSectionBase &sec) {
-  const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
-  if (rels.areRelocsCrel())
-    scanSectionImpl<ELFT>(sec, rels.crels);
-  else if (rels.areRelocsRel())
-    scanSectionImpl<ELFT>(sec, rels.rels);
-  else
-    scanSectionImpl<ELFT>(sec, rels.relas);
-}
-
-void TargetInfo::scanSection(InputSectionBase &sec) {
-  invokeELFT(scanSection1, sec);
+void TargetInfo::scanSection(InputSectionBase &sec, unsigned shard) {
+  invokeELFT(elf::scanSection1, *this, sec, shard);
 }
 
 void RelocScan::scanEhSection(EhInputSection &s) {
   sec = &s;
   OffsetGetter getter(s);
-  auto rels = s.rels;
-  s.relocations.reserve(rels.size());
-  for (auto &r : rels) {
+  s.relocations.reserve(s.rels.size());
+  for (const Relocation &r : s.rels) {
     // Ignore R_*_NONE and other marker relocations.
     if (r.expr == R_NONE)
       continue;
@@ -1167,7 +1181,7 @@ void RelocScan::scanEhSection(EhInputSection &s) {
   }
 }
 
-template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
+void elf::scanRelocations(Ctx &ctx) {
   // Scan all relocations. Each relocation goes through a series of tests to
   // determine if it needs special treatment, such as creating GOT, PLT,
   // copy relocations, etc. Note that relocations for non-alloc sections are
@@ -1175,44 +1189,28 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
 
   // MIPS modifies MipsGotSection during relocation scanning, which is not
   // suitable for parallelism.
-  bool serial = ctx.arg.emachine == EM_MIPS;
-  parallel::TaskGroup tg;
-  auto outerFn = [&]() {
-    for (ELFFileBase *f : ctx.objectFiles) {
-      auto fn = [f, &ctx]() {
-        for (InputSectionBase *s : f->getSections()) {
-          if (s && s->kind() == SectionBase::Regular && s->isLive() &&
-              (s->flags & SHF_ALLOC) &&
-              !(s->type == SHT_ARM_EXIDX && ctx.arg.emachine == EM_ARM))
-            ctx.target->scanSection(*s);
+  size_t numWorkers = ctx.arg.emachine == EM_MIPS ? 1 : ctx.arg.threadCount;
+  // Item 0 scans special sections (claimed first since .eh_frame is large)
+  // while item i scans ctx.objectFiles[i - 1].
+  parallelForSharded(
+      numWorkers, ctx.objectFiles.size() + 1, [&](size_t shard, size_t i) {
+        if (i != 0) {
+          for (InputSectionBase *s : ctx.objectFiles[i - 1]->getSections())
+            if (s && s->kind() == SectionBase::Regular && s->isLive() &&
+                (s->flags & SHF_ALLOC) &&
+                !(s->type == SHT_ARM_EXIDX && ctx.arg.emachine == EM_ARM))
+              ctx.target->scanSection(*s, shard);
+          return;
         }
-      };
-      if (serial)
-        fn();
-      else
-        tg.spawn(fn);
-    }
-    auto scanEH = [&] {
-      RelocScan scanner(ctx);
-      for (EhInputSection *sec : ctx.in.ehFrame->sections)
-        scanner.scanEhSection(*sec);
-      ARMExidxSyntheticSection *armExidx = ctx.in.armExidx.get();
-      if (armExidx && armExidx->isLive())
-        for (InputSection *sec : armExidx->exidxSections)
-          if (sec->isLive())
-            ctx.target->scanSection(*sec);
-    };
-    if (serial)
-      scanEH();
-    else
-      tg.spawn(scanEH);
-  };
-  // If `serial` is true, call `spawn` to ensure that `scanner` runs in a thread
-  // with valid getThreadIndex().
-  if (serial)
-    tg.spawn(outerFn);
-  else
-    outerFn();
+        RelocScan scanner(ctx, nullptr, shard);
+        for (EhInputSection *sec : ctx.in.ehFrame->sections)
+          scanner.scanEhSection(*sec);
+        ARMExidxSyntheticSection *armExidx = ctx.in.armExidx.get();
+        if (armExidx && armExidx->isLive())
+          for (InputSection *sec : armExidx->exidxSections)
+            if (sec->isLive())
+              ctx.target->scanSection(*sec, shard);
+      });
 }
 
 RelocationBaseSection &elf::getIRelativeSection(Ctx &ctx) {
@@ -1237,34 +1235,45 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   // ("canonicalizing" it), so all references see the same address, and the
   // resolver is called exactly once. This may result in two GOT entries: one
   // in .got.plt for the IRELATIVE, and one in .got pointing to the canonical
-  // IPLT entry (for GOT-generating relocations).
-  //
-  // We clone the symbol to preserve the original resolver address for the
-  // IRELATIVE addend. The clone is tracked in ctx.irelativeSyms so that linker
-  // relaxation can adjust its value when the resolver address changes.
+  // IPLT entry (for GOT-generating relocations). We clone the symbol to
+  // preserve the original resolver address for the IRELATIVE addend. The clone
+  // is tracked in ctx.irelativeSyms so that linker relaxation can adjust its
+  // value when the resolver address changes.
   //
   // Note: IRELATIVE relocations are needed even in static executables; see
   // `addRelIpltSymbols`.
   if (!sym.isGnuIFunc() || sym.isPreemptible || ctx.arg.zIfuncNoplt)
     return false;
   // Skip unreferenced non-preemptible ifunc.
-  if (!(flags & (NEEDS_GOT | NEEDS_PLT | HAS_DIRECT_RELOC)))
+  if (!(flags & (NEEDS_GOT | NEEDS_GOT_AUTH | NEEDS_PLT | HAS_DIRECT_RELOC)))
     return true;
+  // We only support one kind of GOT entry, and IPLT entries currently always
+  // use non-AUTH GOT entries.
+  if (flags & NEEDS_GOT_AUTH) {
+    auto diag = Err(ctx);
+    diag << "AUTH GOT entry for non-preemptible ifunc '" << sym.getName()
+         << "' requested, but R_AARCH64_AUTH_IRELATIVE is not supported yet";
+    return true;
+  }
 
-  sym.isInIplt = true;
-
-  auto *irelativeSym = makeDefined(cast<Defined>(sym));
-  irelativeSym->allocateAux(ctx);
-  ctx.irelativeSyms.push_back(irelativeSym);
-  auto &dyn = getIRelativeSection(ctx);
-  addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, dyn, ctx.target->iRelativeRel,
-              *irelativeSym);
-  sym.allocateAux(ctx);
-  ctx.symAux.back().pltIdx = ctx.symAux[irelativeSym->auxIdx].pltIdx;
+  auto addIpltEntry = [&](Symbol &irelativeSym) {
+    irelativeSym.isInIplt = true;
+    irelativeSym.allocateAux(ctx);
+    auto &dyn = getIRelativeSection(ctx);
+    addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, dyn,
+                ctx.target->iRelativeRel, irelativeSym);
+  };
 
   if (flags & HAS_DIRECT_RELOC) {
     // Change the value to the IPLT and redirect all references to it.
     auto &d = cast<Defined>(sym);
+    auto *irelativeSym = addSyntheticLocal(ctx, d.getName(), d.type, d.value,
+                                           d.size, *d.section);
+    addIpltEntry(*irelativeSym);
+    ctx.irelativeSyms.push_back(irelativeSym);
+    sym.isInIplt = true;
+    sym.allocateAux(ctx);
+    ctx.symAux.back().pltIdx = ctx.symAux[irelativeSym->auxIdx].pltIdx;
     d.section = ctx.in.iplt.get();
     d.value = d.getPltIdx(ctx) * ctx.target->ipltEntrySize;
     d.size = 0;
@@ -1272,14 +1281,14 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
     // don't try to call the PLT as if it were an ifunc resolver.
     d.type = STT_FUNC;
 
-    if (flags & NEEDS_GOT) {
-      assert(!(flags & NEEDS_GOT_AUTH) &&
-             "R_AARCH64_AUTH_IRELATIVE is not supported yet");
+    if (flags & NEEDS_GOT)
       addGotEntry(ctx, sym);
+  } else {
+    addIpltEntry(sym);
+    if (flags & NEEDS_GOT) {
+      // Redirect GOT accesses to point to the Igot.
+      sym.gotInIgot = true;
     }
-  } else if (flags & NEEDS_GOT) {
-    // Redirect GOT accesses to point to the Igot.
-    sym.gotInIgot = true;
   }
   return true;
 }
@@ -1298,8 +1307,8 @@ void elf::postScanRelocations(Ctx &ctx) {
       return;
     sym.allocateAux(ctx);
 
-    if (flags & NEEDS_GOT) {
-      if ((flags & NEEDS_GOT_AUTH) && (flags & NEEDS_GOT_NONAUTH)) {
+    if (flags & (NEEDS_GOT | NEEDS_GOT_AUTH)) {
+      if ((flags & NEEDS_GOT) && (flags & NEEDS_GOT_AUTH)) {
         auto diag = Err(ctx);
         diag << "both AUTH and non-AUTH GOT entries for '" << sym.getName()
              << "' requested, but only one type of GOT entry per symbol is "
@@ -1340,11 +1349,10 @@ void elf::postScanRelocations(Ctx &ctx) {
 
     if (!sym.isTls())
       return;
-    bool isLocalInExecutable = !sym.isPreemptible && !ctx.arg.shared;
     GotSection *got = ctx.in.got.get();
 
-    if (flags & NEEDS_TLSDESC) {
-      if ((flags & NEEDS_TLSDESC_AUTH) && (flags & NEEDS_TLSDESC_NONAUTH)) {
+    if (flags & (NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH)) {
+      if ((flags & NEEDS_TLSDESC) && (flags & NEEDS_TLSDESC_AUTH)) {
         Err(ctx)
             << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
             << "' requested, but only one type of TLSDESC entry per symbol is "
@@ -1354,7 +1362,7 @@ void elf::postScanRelocations(Ctx &ctx) {
       got->addTlsDescEntry(sym);
       RelType tlsDescRel = ctx.target->tlsDescRel;
       if (flags & NEEDS_TLSDESC_AUTH) {
-        got->addTlsDescAuthEntry();
+        got->addTlsDescAuthEntry(sym);
         tlsDescRel = ELF::R_AARCH64_AUTH_TLSDESC;
       }
       ctx.in.relaDyn->addAddendOnlyRelocIfNonPreemptible(
@@ -1363,21 +1371,22 @@ void elf::postScanRelocations(Ctx &ctx) {
     if (flags & NEEDS_TLSGD) {
       got->addDynTlsEntry(sym);
       uint64_t off = got->getGlobalDynOffset(sym);
-      if (isLocalInExecutable)
-        // Write one to the GOT slot.
-        got->addConstant({R_ADDEND, ctx.target->symbolicRel, off, 1, &sym});
-      else
+      uint64_t offsetOff = off + ctx.arg.wordsize;
+      if (sym.isPreemptible) {
         ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel, *got, off,
                                        sym);
-
-      // If the symbol is preemptible we need the dynamic linker to write
-      // the offset too.
-      uint64_t offsetOff = off + ctx.arg.wordsize;
-      if (sym.isPreemptible)
+        // If the symbol is preemptible we need the dynamic linker to write
+        // the offset too.
         ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsOffsetRel, *got,
                                        offsetOff, sym);
-      else
+      } else {
+        if (ctx.arg.shared)
+          ctx.in.relaDyn->addReloc({ctx.target->tlsModuleIndexRel, got, off});
+        else
+          // Write one to the GOT slot.
+          got->addConstant({R_ADDEND, ctx.target->symbolicRel, off, 1, &sym});
         got->addConstant({R_ABS, ctx.target->tlsOffsetRel, offsetOff, 0, &sym});
+      }
     }
     if (flags & NEEDS_GOT_DTPREL) {
       got->addEntry(sym);
@@ -1788,6 +1797,22 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
   return ts;
 }
 
+static bool isThunkSectionCompatible(InputSection *source, Thunk &thunk) {
+  // Thunks that precede their target section are logically an alternative entry
+  // point and can always compatible.
+  if (thunk.getTargetInputSection())
+    return true;
+
+  SectionBase *target = thunk.getThunkTargetSym()->section;
+  OutputSection *sourceOS = source->getOutputSection();
+  OutputSection *targetOS = target->getOutputSection();
+  assert(sourceOS && targetOS);
+
+  // Thunks in a different Overlay Output Section can't be reused
+  // as we can't guarantee that the Overlay will be in memory.
+  return (sourceOS == targetOS || !targetOS->inOverlay);
+}
+
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
                                                 Relocation &rel, uint64_t src) {
   SmallVector<std::unique_ptr<Thunk>, 0> *thunkVec = nullptr;
@@ -1812,7 +1837,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
 
   // Check existing Thunks for Sym to see if they can be reused
   for (auto &t : *thunkVec)
-    if (t->isCompatibleWith(*isec, rel) &&
+    if (isThunkSectionCompatible(isec, *t) && t->isCompatibleWith(*isec, rel) &&
         ctx.target->inBranchRange(rel.type, src,
                                   t->getThunkTargetSym()->getVA(ctx, -pcBias)))
       return std::make_pair(t.get(), false);
@@ -1956,8 +1981,12 @@ bool ThunkCreator::createThunks(uint32_t pass,
               rel.addend = -getPCBias(ctx, *isec, rel);
           }
 
-        for (auto &p : isd->thunkSections)
+        for (auto &p : isd->thunkSections) {
+          // Sort in pass 0, which creates most thunks.
+          if (pass == 0)
+            p.first->sortByDestination();
           addressesChanged |= p.first->assignOffsets();
+        }
       });
 
   for (auto &p : thunkedSections)
@@ -2016,11 +2045,6 @@ template <class ELFT> void elf::checkNoCrossRefs(Ctx &ctx) {
     }
   }
 }
-
-template void elf::scanRelocations<ELF32LE>(Ctx &);
-template void elf::scanRelocations<ELF32BE>(Ctx &);
-template void elf::scanRelocations<ELF64LE>(Ctx &);
-template void elf::scanRelocations<ELF64BE>(Ctx &);
 
 template void elf::checkNoCrossRefs<ELF32LE>(Ctx &);
 template void elf::checkNoCrossRefs<ELF32BE>(Ctx &);

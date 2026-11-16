@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -48,11 +49,7 @@ public:
 };
 
 template <> struct DenseMapInfo<CachedHashStringRef> {
-  static CachedHashStringRef getEmptyKey() {
-    return CachedHashStringRef(DenseMapInfo<StringRef>::getEmptyKey(), 0);
-  }
   static unsigned getHashValue(const CachedHashStringRef &S) {
-    assert(!isEqual(S, getEmptyKey()) && "Cannot hash the empty key!");
     return S.hash();
   }
   static bool isEqual(const CachedHashStringRef &LHS,
@@ -65,23 +62,19 @@ template <> struct DenseMapInfo<CachedHashStringRef> {
 /// A container which contains a string, which it owns, plus a precomputed hash.
 ///
 /// We do not null-terminate the string.
-class CachedHashString {
+class LLVM_ATTRIBUTE_WARN_UNUSED CachedHashString {
   friend struct DenseMapInfo<CachedHashString>;
 
   char *P;
   uint32_t Size;
   uint32_t Hash;
 
-  static char *getEmptyKeyPtr() { return DenseMapInfo<char *>::getEmptyKey(); }
+  static char *getEmptyKeyPtr() {
+    // Assume no pointer requires more than 4096 (1 << 12) bytes of alignment.
+    return reinterpret_cast<char *>(static_cast<uintptr_t>(-1) << 12);
+  }
 
   bool isEmpty() const { return P == getEmptyKeyPtr(); }
-
-  struct ConstructEmptyTy {};
-
-  CachedHashString(ConstructEmptyTy, char *EmptyKeyPtr)
-      : P(EmptyKeyPtr), Size(0), Hash(0) {
-    assert(isEmpty());
-  }
 
   // TODO: Use small-string optimization to avoid allocating.
 
@@ -142,14 +135,7 @@ public:
 };
 
 template <> struct DenseMapInfo<CachedHashString> {
-  static CachedHashString getEmptyKey() {
-    return CachedHashString(CachedHashString::ConstructEmptyTy(),
-                            CachedHashString::getEmptyKeyPtr());
-  }
-  static unsigned getHashValue(const CachedHashString &S) {
-    assert(!isEqual(S, getEmptyKey()) && "Cannot hash the empty key!");
-    return S.hash();
-  }
+  static unsigned getHashValue(const CachedHashString &S) { return S.hash(); }
   static bool isEqual(const CachedHashString &LHS,
                       const CachedHashString &RHS) {
     if (LHS.hash() != RHS.hash())

@@ -27,3 +27,17 @@ func.func @_QFPs(%arg0: !fir.ref<i32> {fir.host_assoc}) {
 }
 
 // CHECK: func.func @_QFPs(%arg0: !fir.ref<i32> {fir.host_assoc, llvm.nest})
+
+// -----
+
+// Test with a mid-list argument shift: the target ABI splits the complex value
+// into two scalars, inserting an argument. fir.host_assoc on the following
+// argument must move with the shift and stay together with the llvm.nest that
+// is derived from it, not land on one of the split scalars.
+
+func.func @_QFPg(%arg0: complex<f64>, %arg1: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) {
+  return
+}
+
+// CHECK-LABEL: func.func @_QFPg
+// CHECK-SAME:    %{{.*}}: f64, %{{.*}}: f64, %{{.*}}: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc, llvm.nest})

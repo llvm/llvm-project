@@ -19,7 +19,7 @@ int test_float_isinf_sign(float x) {
 
   // LLVM-LABEL: test_float_isinf_sign
   // LLVM: %[[ARG:.*]] = load float, ptr %{{.*}}
-  // LLVM: %[[IS_INF:.*]] = call i1 @llvm.is.fpclass.f32(float %[[ARG]], i32 516)
+  // LLVM: %[[IS_INF:.*]] = call i1 @llvm.is.fpclass.f32(float %[[ARG]], /* (inf) */ i32 516)
   // LLVM: %[[BITCAST:.*]] = bitcast float %[[ARG]] to i32
   // LLVM: %[[IS_NEG:.*]] = icmp slt i32 %[[BITCAST]], 0
   // LLVM: %[[SIGN:.*]] = select i1 %[[IS_NEG]], i32 -1, i32 1

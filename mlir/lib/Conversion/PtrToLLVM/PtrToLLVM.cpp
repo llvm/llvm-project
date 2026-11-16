@@ -15,8 +15,10 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
 #include "mlir/Dialect/Ptr/IR/PtrOps.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/Support/LogicalResult.h"
 #include <type_traits>
 
 using namespace mlir;
@@ -71,6 +73,16 @@ struct TypeOffsetOpConversion
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
   LogicalResult
   matchAndRewrite(ptr::TypeOffsetOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+//===----------------------------------------------------------------------===//
+// ConstantOpConversion
+//===----------------------------------------------------------------------===//
+struct ConstantOpConversion : public ConvertOpToLLVMPattern<ptr::ConstantOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(ptr::ConstantOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 } // namespace
@@ -287,8 +299,14 @@ PtrAddOpConversion::matchAndRewrite(ptr::PtrAddOp op, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
   // Get and check the base.
   Value base = adaptor.getBase();
-  if (!isa<LLVM::LLVMPointerType>(base.getType()))
+  if (!isa<LLVM::LLVMPointerType>(getElementTypeOrSelf(base.getType())))
     return rewriter.notifyMatchFailure(op, "Incompatible pointer type");
+
+  // A vector offset can broadcast a scalar base to a vector result.
+  Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType ||
+      !isa<LLVM::LLVMPointerType>(getElementTypeOrSelf(resultType)))
+    return rewriter.notifyMatchFailure(op, "Incompatible result type");
 
   // Get the offset.
   Value offset = adaptor.getOffset();
@@ -314,8 +332,8 @@ PtrAddOpConversion::matchAndRewrite(ptr::PtrAddOp op, OpAdaptor adaptor,
   }
 
   // Create the GEP operation with appropriate arguments
-  rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, base.getType(), elementType,
-                                           base, ValueRange{offset}, flags);
+  rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, resultType, elementType, base,
+                                           ValueRange{offset}, flags);
   return success();
 }
 
@@ -367,6 +385,36 @@ LogicalResult TypeOffsetOpConversion::matchAndRewrite(
 
   // Replace the original op with a PtrToIntOp using the computed offset.
   rewriter.replaceOpWithNewOp<LLVM::PtrToIntOp>(op, rTy, offset.getRes());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConstantOpConversion
+//===----------------------------------------------------------------------===//
+
+LogicalResult ConstantOpConversion::matchAndRewrite(
+    ptr::ConstantOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  TypedAttr value = op.getValue();
+  Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return rewriter.notifyMatchFailure(op, "Couldn't convert the result type");
+
+  if (isa<ptr::NullAttr>(value)) {
+    rewriter.replaceOpWithNewOp<LLVM::ZeroOp>(op, resultType);
+    return success();
+  }
+  auto addrAttr = dyn_cast<ptr::AddressAttr>(value);
+  // Early-exit if unknown attribute.
+  if (!addrAttr) {
+    return rewriter.notifyMatchFailure(
+        op, "unsupported value attribute kind: " +
+                value.getAbstractAttribute().getName());
+  }
+  Type intType = rewriter.getIntegerType(addrAttr.getValue().getBitWidth());
+  Value intConst = LLVM::ConstantOp::create(rewriter, op.getLoc(), intType,
+                                            addrAttr.getValue());
+  rewriter.replaceOpWithNewOp<LLVM::IntToPtrOp>(op, resultType, intConst);
   return success();
 }
 
@@ -433,7 +481,8 @@ void mlir::ptr::populatePtrToLLVMConversionPatterns(
 
   // Add conversion patterns.
   patterns.add<FromPtrOpConversion, GetMetadataOpConversion, PtrAddOpConversion,
-               ToPtrOpConversion, TypeOffsetOpConversion>(converter);
+               ToPtrOpConversion, TypeOffsetOpConversion, ConstantOpConversion>(
+      converter);
 }
 
 void mlir::ptr::registerConvertPtrToLLVMInterface(DialectRegistry &registry) {

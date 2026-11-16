@@ -83,7 +83,7 @@ define void @pr63840_crash(i64 %sext974, i64 %sext982, i8 %x) {
 ; CHECK-NEXT:    [[PHI1094]] = phi i64 [ [[LSR_IV_NEXT8_LCSSA]], [[BB992]] ], [ [[ADD1054]], [[BB1059]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 1
 ; CHECK-NEXT:    [[LSR_IV_NEXT4]] = add i64 [[LSR_IV3]], [[SEXT1046]]
-; CHECK-NEXT:    [[ICMP1050:%.*]] = icmp ult i64 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    [[ICMP1050:%.*]] = icmp ugt i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[ICMP1050]], label [[BB1053:%.*]], label [[BB1051:%.*]]
 ;
 bb:
@@ -120,6 +120,6 @@ bb1064:                                           ; preds = %bb1059, %bb1053
 bb1092:                                           ; preds = %bb1059, %bb992
   %phi1093 = phi i64 [ 0, %bb992 ], [ %add1060, %bb1059 ]
   %phi1094 = phi i64 [ %add1047, %bb992 ], [ %add1054, %bb1059 ]
-  %icmp1050 = icmp ult i64 %phi1093, 0
+  %icmp1050 = icmp ugt i64 %phi1093, 0
   br i1 %icmp1050, label %bb1053, label %bb1051
 }

@@ -39,13 +39,13 @@ difficult to navigate. We would appreciate help with:
       diagnostic group flags</a> (adding code examples of what is diagnosed, or
       other relevant information), or</li>
   <li>documenting <a href="https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Options/Options.td">
-      command line options</a>, or</li>
+      command-line options</a>, or</li>
   <li>help with completing other missing documentation.</li>
 </ul>
 These projects are independent of each other.</li>
 
 <li><b>Complete the investigation into Clang's C conformance</b>: Clang's
-<a href="c_status.html">C status page</a> contain a number of entries marked as
+<a href="c_status.html">C status page</a> contains a number of entries marked as
 <code>Unknown</code>. Completing the investigation involves adding
 <a href="https://github.com/llvm/llvm-project/tree/main/clang/test/C">test
 coverage</a> for the various standards papers and updating the documentation
@@ -77,14 +77,14 @@ and
 defect reports and updating the documentation accordingly.</li>
 
 <li><b>Bug triage</b>: Clang's <a href="https://github.com/llvm/llvm-project/issues">
-issue tracker</a>currently has over 20,000 open issues, many of which are not
+issue tracker</a> currently has over 20,000 open issues, many of which are not
 appropriately tagged, are no longer reproducible, could use a reduced test case,
-or otherwise needs some manual interaction. We can always use help with
+or otherwise need some manual interaction. We can always use help with
 <a href="https://llvm.org/docs/BugLifeCycle.html#triaging-bugs">bug triage and
 issue tracker maintenance</a>.
 </li>
 
-<li><b>Improve build times with Clang</b>: the time it takes Clang to process a
+<li><b>Improve build times with Clang</b>: The time it takes Clang to process a
 translation unit is very important to our users; the lower the build time, the
 better the overall user experience. It would be good to improve Clang's
 performance as well as to find ways to proactively alert us when we've
@@ -97,22 +97,22 @@ great application of this functionality, which generates code documentation
 from source code. The tool is in early stages of development and could use more
 dedicated effort to complete the implementation.</li>
 
-<li><b>Self-testing using clang</b>: There are several neat ways to
-improve the quality of clang by self-testing. Some examples:
+<li><b>Self-testing using Clang</b>: There are several neat ways to
+improve the quality of Clang by self-testing. Some examples:
 <ul>
   <li>Improve the reliability of AST printing and serialization by
-  ensuring that the AST produced by clang on an input doesn't change
+  ensuring that the AST produced by Clang on an input doesn't change
   when it is reparsed or unserialized.
 
   <li>Improve parser reliability and error generation by automatically
-  or randomly changing the input checking that clang doesn't crash and
+  or randomly changing the input checking that Clang doesn't crash and
   that it doesn't generate excessive errors for small input
   changes. Manipulating the input at both the text and token levels is
   likely to produce interesting test cases.
 </ul>
 </li>
 
-<li><b>Continue work on C++20, C++23, C++2c, and C23 support</b>:
+<li><b>Continue work on C++20, C++23, C++2c, C++2d, and C23 support</b>:
   There are still several C++20 features to complete, and work has begun on
   supporting the latest language standards. Please see the
   <a href="cxx_status.html">C++ status report page</a> to find out what is
@@ -120,7 +120,7 @@ improve the quality of clang by self-testing. Some examples:
 
 <li><b>StringRef'ize APIs</b>: A thankless but incredibly useful project is
 StringRef'izing (converting to use <tt>llvm::StringRef</tt> instead of <tt>const
-char *</tt> or <tt>std::string</tt>) various clang interfaces. This generally
+char *</tt> or <tt>std::string</tt>) various Clang interfaces. This generally
 simplifies the code and makes it more efficient.</li>
 
 <li><b>Configuration Manager</b>: Clang/LLVM works on a large number of
@@ -142,7 +142,7 @@ current Host to the identified Target.</p>
 
 <p>The second stage would be to produce a configuration file (that can be used
 independently of the Host) so that Clang can read it and not need a gazillion
-of command-line options. Such file should be simple JSON / INI or anything that
+command-line options. Such a file should be simple JSON / INI or anything that
 a text editor could change.</p></li>
 </ul>
 

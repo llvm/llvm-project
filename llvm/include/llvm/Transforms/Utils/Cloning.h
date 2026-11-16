@@ -370,6 +370,8 @@ LLVM_ABI InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 ///
 /// Updates LoopInfo and DominatorTree assuming the loop is dominated by block
 /// \p LoopDomBB.  Insert the new blocks before block specified in \p Before.
+/// The client needs to further update the CFG and DominatorTree after calling
+/// this function, to ensure the IR remains valid.
 /// Note: Only innermost loops are supported.
 LLVM_ABI Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                                       Loop *OrigLoop, ValueToValueMapTy &VMap,
@@ -417,7 +419,9 @@ identifyNoAliasScopesToClone(BasicBlock::iterator Start,
 /// The 'Ext' string is added as an extension to the name.
 /// Afterwards, the ClonedScopes contains the mapping of the original scope
 /// MDNode onto the cloned scope.
-/// Be aware that the cloned scopes are still part of the original scope domain.
+/// Be aware that the cloned scopes are still part of the original scope domain,
+/// unless that domain has disjoint scopes, in which case they are placed in a
+/// clone of the domain.
 LLVM_ABI void cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
                                  DenseMap<MDNode *, MDNode *> &ClonedScopes,
                                  StringRef Ext, LLVMContext &Context);

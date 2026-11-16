@@ -42,7 +42,6 @@ private:
     TrampolineKey(const FragmentNum SourceFN, const MCSymbol *const Target)
         : SourceFN(SourceFN), Target(Target) {}
 
-    static inline TrampolineKey getEmptyKey() { return TrampolineKey(); };
     static unsigned getHashValue(const TrampolineKey &Val) {
       return llvm::hash_combine(Val.SourceFN.get(), Val.Target);
     }

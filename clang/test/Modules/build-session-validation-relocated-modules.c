@@ -10,7 +10,7 @@
 // NO_RELOC-NOT: checking if module {{.*}} has relocated
 
 // RUN: mkdir %t/preferred_frameworks/
-// RUN: cp -r %t/fallback_frameworks/IndirectDep.framework %t/preferred_frameworks/
+// RUN: cp -R %t/fallback_frameworks/IndirectDep.framework %t/preferred_frameworks/
 
 // Verify no relocation checks happen because pcms are newer than timestamp.
 // RUN: %clang -fmodules -fimplicit-module-maps  -fsyntax-only %t/tu1.c \

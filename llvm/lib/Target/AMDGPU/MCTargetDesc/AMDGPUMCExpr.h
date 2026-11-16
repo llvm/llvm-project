@@ -47,7 +47,7 @@ public:
   };
 
   // Relocation specifiers.
-  enum Specifier {
+  enum Specifier : uint16_t {
     S_None,
     S_GOTPCREL,      // symbol@gotpcrel
     S_GOTPCREL32_LO, // symbol@gotpcrel32@lo
@@ -78,6 +78,10 @@ private:
 public:
   static const AMDGPUMCExpr *
   create(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
+
+  /// \returns the required operand count for \p Kind, or 0 for the variadic
+  /// kinds (or/max/min). Used at parse time and by the create() assert.
+  static unsigned getNumExpectedArgs(VariantKind Kind);
 
   static const AMDGPUMCExpr *createOr(ArrayRef<const MCExpr *> Args,
                                       MCContext &Ctx) {

@@ -15,7 +15,7 @@
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=COMMON --check-prefix=NO-LIVENESS
 #
 # RUN: llvm-bolt -v=1 %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model \
-# RUN:   --liveness-analysis | FileCheck %s --check-prefix=BOLT-INFO-LIVENESS
+# RUN:   --fix-branches-with-liveness | FileCheck %s --check-prefix=BOLT-INFO-LIVENESS
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=COMMON --check-prefix=LIVENESS
 
 # COMMON: Disassembly of section .text:

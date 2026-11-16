@@ -14,18 +14,20 @@
 
 // RUN: clang-scan-deps -format experimental-full -j 1 \
 // RUN:   -compilation-database %t/compile-commands.json -o %t/deps1.json 
-// RUN: cat %t/deps1.json | FileCheck %s --check-prefix=DEPS1 
+// RUN: %scan-deps-filter %t/deps1.json --fields=modules.clang-module-deps,modules.clang-modulemap-file,modules.name \
+// RUN:   | FileCheck %s --check-prefix=DEPS1
 
 // Model update where same framework appears in earlier search path.
 // This can occur on an incremental build where dependency relationships are updated.
 // RUN: sleep 1
 // RUN: mkdir %t/preferred_frameworks/
-// RUN: cp -r %t/fallback_frameworks/MovedDep.framework %t/preferred_frameworks/
+// RUN: cp -R %t/fallback_frameworks/MovedDep.framework %t/preferred_frameworks/
 // RUN: touch %t/fallback_frameworks/InvalidatedDep.framework/Modules/module.modulemap
 
 // RUN: clang-scan-deps -format experimental-full -j 1 \
 // RUN:   -compilation-database %t/compile-commands.json -o %t/deps2.json
-// RUN: cat %t/deps2.json | FileCheck %s --check-prefix=DEPS2
+// RUN: %scan-deps-filter %t/deps2.json --fields=modules.clang-module-deps,modules.clang-modulemap-file,modules.name \
+// RUN:   | FileCheck %s --check-prefix=DEPS2
 
 // DEPS1: "clang-module-deps": [],
 // DEPS1-NEXT: "clang-modulemap-file": "{{.*}}fallback_frameworks{{.*}}MovedDep.framework

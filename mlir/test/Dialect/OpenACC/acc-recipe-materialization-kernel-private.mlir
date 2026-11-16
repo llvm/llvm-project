@@ -17,8 +17,8 @@ func.func @kpriv_(%arg0: memref<i32>, %arg1: memref<32xi32>) {
   %iv_alloc = memref.alloca() : memref<i32>
   %start = memref.load %arg0[] : memref<i32>
   memref.store %start, %iv_alloc[] : memref<i32>
-  %copy = acc.copyin varPtr(%arg1 : memref<32xi32>) -> memref<32xi32> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "a"}
-  %priv = acc.private varPtr(%iv_alloc : memref<i32>) recipe(@privatization_memref_i32) -> memref<i32> {implicit = true, name = "s"}
+  %copy = acc.copyin varPtr(%arg1 : memref<32xi32>) dataClause(acc_copy) implicit(true) name("a") -> memref<32xi32>
+  %priv = acc.private varPtr(%iv_alloc : memref<i32>) recipe(@privatization_memref_i32) implicit(true) name("s") -> memref<i32>
   acc.kernels dataOperands(%copy : memref<32xi32>) private(%priv : memref<i32>) {
     acc.loop control(%arg2 : index) = (%c1 : index) to (%c32 : index) step (%c1 : index) {
       %iv = arith.index_cast %arg2 : index to i32
@@ -26,9 +26,9 @@ func.func @kpriv_(%arg0: memref<i32>, %arg1: memref<32xi32>) {
       %s_val = memref.load %priv[] : memref<i32>
       memref.store %s_val, %copy[%arg2] : memref<32xi32>
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.terminator
   }
-  acc.copyout accPtr(%copy : memref<32xi32>) to varPtr(%arg1 : memref<32xi32>) {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "a"}
+  acc.copyout accPtr(%copy : memref<32xi32>) to varPtr(%arg1 : memref<32xi32>) dataClause(acc_copy) implicit(true) name("a")
   return
 }

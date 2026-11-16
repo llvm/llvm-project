@@ -34,7 +34,10 @@
 #include "llvm/Support/raw_ostream.h"
 
 #ifdef _WIN32
-#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
+#include "lldb/Host/Config.h"
+#if LLDB_ENABLE_PYTHON
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
+#endif
 #endif
 
 #include <algorithm>
@@ -76,24 +79,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Options.inc"
-#undef OPTION
-};
-
-class LLDBOptTable : public opt::GenericOptTable {
+class LLDBOptTable : public opt::OptTable {
 public:
-  LLDBOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LLDBOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 
@@ -645,12 +636,15 @@ void Driver::UpdateWindowSize() {
   struct winsize window_size;
   if ((isatty(STDIN_FILENO) != 0) &&
       ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
-    if (window_size.ws_col > 0)
-      m_debugger.SetTerminalWidth(window_size.ws_col);
+    if (window_size.ws_col > 0) {
+      // Set both dimensions together to avoid recomputing from a stale value.
 #ifndef _WIN32
-    if (window_size.ws_row > 0)
-      m_debugger.SetTerminalHeight(window_size.ws_row);
+      m_debugger.SetTerminalDimensions(window_size.ws_col, window_size.ws_row);
+#else
+      m_debugger.SetTerminalDimensions(window_size.ws_col,
+                                       m_debugger.GetTerminalHeight());
 #endif
+    }
   }
 }
 
@@ -735,13 +729,6 @@ int main(int argc, char const *argv[]) {
                         "~/Library/Logs/DiagnosticReports/.\n");
 #endif
 
-#ifdef _WIN32
-  auto python_path_or_err = SetupPythonRuntimeLibrary();
-  if (!python_path_or_err)
-    llvm::WithColor::error()
-        << llvm::toString(python_path_or_err.takeError()) << '\n';
-#endif
-
   // Parse arguments.
   LLDBOptTable T;
   unsigned MissingArgIndex;
@@ -773,6 +760,21 @@ int main(int argc, char const *argv[]) {
                  << " --help' for a complete list of options.\n";
     return 1;
   }
+
+#if defined(_WIN32) && LLDB_ENABLE_PYTHON
+  // liblldb.dll has direct imports from python3xx.dll (the script interpreter
+  // plugin is statically linked into liblldb), so the loader needs to find
+  // python3xx.dll before lldb.exe's delay-load thunk for liblldb fires on the
+  // first SB call below. The runtime loader is statically linked into lldb.exe
+  // via lldbHost (it has no LLDB_API export), so this call does not itself
+  // trigger the liblldb.dll load.
+  llvm::Expected<lldb_private::ScriptInterpreterRuntimeLoader &> python_loader =
+      lldb_private::ScriptInterpreterRuntimeLoader::Get(eScriptLanguagePython);
+  if (!python_loader)
+    WithColor::warning() << llvm::toString(python_loader.takeError()) << '\n';
+  else if (llvm::Error err = python_loader->Load())
+    WithColor::warning() << llvm::toString(std::move(err)) << '\n';
+#endif
 
   SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {

@@ -795,80 +795,44 @@ define void @test_neg_i512(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 }
 
 define i128 @PR196493(i1 %c, i128 %a, ptr %m) nounwind {
-; X86-SSE2-LABEL: PR196493:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    andl $-16, %esp
-; X86-SSE2-NEXT:    subl $16, %esp
-; X86-SSE2-NEXT:    movl 8(%ebp), %eax
-; X86-SSE2-NEXT:    movl 40(%ebp), %ecx
-; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
-; X86-SSE2-NEXT:    movzbl 12(%ebp), %ecx
-; X86-SSE2-NEXT:    andl $1, %ecx
-; X86-SSE2-NEXT:    negl %ecx
-; X86-SSE2-NEXT:    movd %ecx, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X86-SSE2-NEXT:    pand %xmm2, %xmm0
-; X86-SSE2-NEXT:    movdqa %xmm0, (%eax)
-; X86-SSE2-NEXT:    movl %ebp, %esp
-; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    retl $4
+; X86-SSE-LABEL: PR196493:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pushl %ebp
+; X86-SSE-NEXT:    movl %esp, %ebp
+; X86-SSE-NEXT:    andl $-16, %esp
+; X86-SSE-NEXT:    subl $16, %esp
+; X86-SSE-NEXT:    movl 8(%ebp), %eax
+; X86-SSE-NEXT:    movl 40(%ebp), %ecx
+; X86-SSE-NEXT:    movzbl 12(%ebp), %edx
+; X86-SSE-NEXT:    andl $1, %edx
+; X86-SSE-NEXT:    negl %edx
+; X86-SSE-NEXT:    movd %edx, %xmm0
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X86-SSE-NEXT:    pand (%ecx), %xmm0
+; X86-SSE-NEXT:    movdqa %xmm0, (%eax)
+; X86-SSE-NEXT:    movl %ebp, %esp
+; X86-SSE-NEXT:    popl %ebp
+; X86-SSE-NEXT:    retl $4
 ;
 ; X64-SSE2-LABEL: PR196493:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-SSE2-NEXT:    andl $1, %edi
 ; X64-SSE2-NEXT:    negl %edi
 ; X64-SSE2-NEXT:    movd %edi, %xmm0
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X64-SSE2-NEXT:    pand %xmm1, %xmm0
+; X64-SSE2-NEXT:    pand (%rcx), %xmm0
 ; X64-SSE2-NEXT:    movq %xmm0, %rax
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X64-SSE2-NEXT:    movq %xmm0, %rdx
 ; X64-SSE2-NEXT:    retq
 ;
-; X86-SSE4-LABEL: PR196493:
-; X86-SSE4:       # %bb.0:
-; X86-SSE4-NEXT:    pushl %ebp
-; X86-SSE4-NEXT:    movl %esp, %ebp
-; X86-SSE4-NEXT:    andl $-16, %esp
-; X86-SSE4-NEXT:    subl $16, %esp
-; X86-SSE4-NEXT:    movl 8(%ebp), %eax
-; X86-SSE4-NEXT:    movl 40(%ebp), %ecx
-; X86-SSE4-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE4-NEXT:    pinsrd $1, 4(%ecx), %xmm0
-; X86-SSE4-NEXT:    pinsrd $2, 8(%ecx), %xmm0
-; X86-SSE4-NEXT:    pinsrd $3, 12(%ecx), %xmm0
-; X86-SSE4-NEXT:    movzbl 12(%ebp), %ecx
-; X86-SSE4-NEXT:    andl $1, %ecx
-; X86-SSE4-NEXT:    negl %ecx
-; X86-SSE4-NEXT:    movd %ecx, %xmm1
-; X86-SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X86-SSE4-NEXT:    pand %xmm0, %xmm1
-; X86-SSE4-NEXT:    movdqa %xmm1, (%eax)
-; X86-SSE4-NEXT:    movl %ebp, %esp
-; X86-SSE4-NEXT:    popl %ebp
-; X86-SSE4-NEXT:    retl $4
-;
 ; X64-SSE4-LABEL: PR196493:
 ; X64-SSE4:       # %bb.0:
-; X64-SSE4-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-SSE4-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64-SSE4-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-SSE4-NEXT:    andl $1, %edi
 ; X64-SSE4-NEXT:    negl %edi
 ; X64-SSE4-NEXT:    movd %edi, %xmm0
 ; X64-SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X64-SSE4-NEXT:    pand %xmm1, %xmm0
+; X64-SSE4-NEXT:    pand (%rcx), %xmm0
 ; X64-SSE4-NEXT:    movq %xmm0, %rax
 ; X64-SSE4-NEXT:    pextrq $1, %xmm0, %rdx
 ; X64-SSE4-NEXT:    retq
@@ -881,16 +845,12 @@ define i128 @PR196493(i1 %c, i128 %a, ptr %m) nounwind {
 ; X86-AVX1-NEXT:    subl $16, %esp
 ; X86-AVX1-NEXT:    movl 8(%ebp), %eax
 ; X86-AVX1-NEXT:    movl 40(%ebp), %ecx
-; X86-AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-AVX1-NEXT:    vpinsrd $1, 4(%ecx), %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpinsrd $2, 8(%ecx), %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpinsrd $3, 12(%ecx), %xmm0, %xmm0
-; X86-AVX1-NEXT:    movzbl 12(%ebp), %ecx
-; X86-AVX1-NEXT:    andl $1, %ecx
-; X86-AVX1-NEXT:    negl %ecx
-; X86-AVX1-NEXT:    vmovd %ecx, %xmm1
-; X86-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X86-AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; X86-AVX1-NEXT:    movzbl 12(%ebp), %edx
+; X86-AVX1-NEXT:    andl $1, %edx
+; X86-AVX1-NEXT:    negl %edx
+; X86-AVX1-NEXT:    vmovd %edx, %xmm0
+; X86-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X86-AVX1-NEXT:    vpand (%ecx), %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
@@ -898,14 +858,11 @@ define i128 @PR196493(i1 %c, i128 %a, ptr %m) nounwind {
 ;
 ; X64-AVX1-LABEL: PR196493:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X64-AVX1-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64-AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; X64-AVX1-NEXT:    andl $1, %edi
 ; X64-AVX1-NEXT:    negl %edi
-; X64-AVX1-NEXT:    vmovd %edi, %xmm1
-; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X64-AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovd %edi, %xmm0
+; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X64-AVX1-NEXT:    vpand (%rcx), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vmovq %xmm0, %rax
 ; X64-AVX1-NEXT:    vpextrq $1, %xmm0, %rdx
 ; X64-AVX1-NEXT:    retq
@@ -918,16 +875,12 @@ define i128 @PR196493(i1 %c, i128 %a, ptr %m) nounwind {
 ; X86-AVX2-NEXT:    subl $16, %esp
 ; X86-AVX2-NEXT:    movl 8(%ebp), %eax
 ; X86-AVX2-NEXT:    movl 40(%ebp), %ecx
-; X86-AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-AVX2-NEXT:    vpinsrd $1, 4(%ecx), %xmm0, %xmm0
-; X86-AVX2-NEXT:    vpinsrd $2, 8(%ecx), %xmm0, %xmm0
-; X86-AVX2-NEXT:    vpinsrd $3, 12(%ecx), %xmm0, %xmm0
-; X86-AVX2-NEXT:    movzbl 12(%ebp), %ecx
-; X86-AVX2-NEXT:    andl $1, %ecx
-; X86-AVX2-NEXT:    negl %ecx
-; X86-AVX2-NEXT:    vmovd %ecx, %xmm1
-; X86-AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X86-AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; X86-AVX2-NEXT:    movzbl 12(%ebp), %edx
+; X86-AVX2-NEXT:    andl $1, %edx
+; X86-AVX2-NEXT:    negl %edx
+; X86-AVX2-NEXT:    vmovd %edx, %xmm0
+; X86-AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
+; X86-AVX2-NEXT:    vpand (%ecx), %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-AVX2-NEXT:    movl %ebp, %esp
 ; X86-AVX2-NEXT:    popl %ebp
@@ -935,14 +888,11 @@ define i128 @PR196493(i1 %c, i128 %a, ptr %m) nounwind {
 ;
 ; X64-AVX2-LABEL: PR196493:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X64-AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64-AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; X64-AVX2-NEXT:    andl $1, %edi
 ; X64-AVX2-NEXT:    negl %edi
-; X64-AVX2-NEXT:    vmovd %edi, %xmm1
-; X64-AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vmovd %edi, %xmm0
+; X64-AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpand (%rcx), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vmovq %xmm0, %rax
 ; X64-AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
 ; X64-AVX2-NEXT:    retq
@@ -981,4 +931,3 @@ define i128 @PR196493(i1 %c, i128 %a, ptr %m) nounwind {
 ; X64-AVX: {{.*}}
 ; X64-SSE: {{.*}}
 ; X86-AVX: {{.*}}
-; X86-SSE: {{.*}}

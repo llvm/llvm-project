@@ -23,7 +23,7 @@ define void @partial_reduce_extends_shared_with_reduction(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], [[VEC_EPILOG_PH:label %.*]], label %[[VECTOR_PH1:.*]]
 ; CHECK:       [[VECTOR_PH1]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -33,7 +33,7 @@ define void @partial_reduce_extends_shared_with_reduction(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i64> [ zeroinitializer, %[[VECTOR_PH1]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <8 x i64> [ zeroinitializer, %[[VECTOR_PH1]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [2 x i8], ptr [[PTR]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[TMP1]], i64 8
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i16>, ptr [[TMP9]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i16> [[WIDE_LOAD]] to <8 x i32>
@@ -89,4 +89,4 @@ exit:
 }
 
 declare void @use(i64, i64)
-attributes #0 = { "target-cpu"="neoverse-v2" }
+attributes #0 = { "target-cpu"="neoverse-v2" vscale_range(1,16) }

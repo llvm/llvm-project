@@ -92,12 +92,12 @@ for.end19:
 ; DELIN-NEXT: ...
 
 ;;--------------------------------------Test case 02------------------------------------
-;; [FIXME] This loop though valid is currently not interchanged due to the
-;; limitation that we cannot split the inner loop latch due to multiple use of inner induction
-;; variable.(used to increment the loop counter and to access A[j+1][i+1]
+;; A guarded, imperfect nest that must not be interchanged; see the
+;; explanation above the DELIN checks below.
 ;;  for(int i=0;i<N-1;i++)
-;;    for(int j=1;j<N-1;j++)
-;;      A[j+1][i+1] = A[j+1][i+1] + k;
+;;    if(N-1>1)                       // guard: inner loop skipped when N<=2
+;;      for(int j=1;j<N-1;j++)
+;;        A[j+1][i+1] = A[j+1][i+1] + k;
 
 define void @test02(i32 %k, i32 %N) {
  entry:
@@ -159,12 +159,15 @@ define void @test02(i32 %k, i32 %N) {
 ; DELIN-NEXT:   - String:          Computed dependence info, invoking the transform.
 ; DELIN-NEXT: ...
 
-; DELIN: --- !Passed
+; Guarded nest: %for.cond1.preheader runs the inner loop only when
+; %cmp324 = (N-1 > 1). The inner exit (inner IV == N-2) only terminates under
+; that guard, so interchanging it loops forever for N == 2.
+; DELIN: --- !Missed
 ; DELIN-NEXT: Pass:            loop-interchange
-; DELIN-NEXT: Name:            Interchanged
+; DELIN-NEXT: Name:            NotTightlyNested
 ; DELIN-NEXT: Function:        test02
 ; DELIN-NEXT: Args:
-; DELIN-NEXT:   - String:           Loop interchanged with enclosing loop.
+; DELIN-NEXT:   - String:          Cannot interchange loops because they are not tightly nested.
 ; DELIN-NEXT: ...
 
 ;;-----------------------------------Test case 03-------------------------------

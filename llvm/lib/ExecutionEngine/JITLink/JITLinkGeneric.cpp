@@ -54,11 +54,7 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
   Ctx->getMemoryManager().allocate(
       Ctx->getJITLinkDylib(), *G,
       [S = std::move(Self)](AllocResult AR) mutable {
-        // FIXME: Once MSVC implements c++17 order of evaluation rules for calls
-        // this can be simplified to
-        //          S->linkPhase2(std::move(S), std::move(AR));
-        auto *TmpSelf = S.get();
-        TmpSelf->linkPhase2(std::move(S), std::move(AR));
+        S->linkPhase2(std::move(S), std::move(AR));
       });
 }
 
@@ -95,10 +91,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
       dbgs() << "No external symbols for " << G->getName()
              << ". Proceeding immediately with link phase 3.\n";
     });
-    // FIXME: Once MSVC implements c++17 order of evaluation rules for calls
-    // this can be simplified. See below.
-    auto &TmpSelf = *Self;
-    TmpSelf.linkPhase3(std::move(Self), AsyncLookupResult());
+    Self->linkPhase3(std::move(Self), AsyncLookupResult());
     return;
   }
 
@@ -108,22 +101,11 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
            << " (may trigger materialization/linking of other graphs)...\n";
   });
 
-  // We're about to hand off ownership of ourself to the continuation. Grab a
-  // pointer to the context so that we can call it to initiate the lookup.
-  //
-  // FIXME: Once MSVC implements c++17 order of evaluation rules for calls this
-  // can be simplified to:
-  //
-  // Ctx->lookup(std::move(UnresolvedExternals),
-  //             [Self=std::move(Self)](Expected<AsyncLookupResult> Result) {
-  //               Self->linkPhase3(std::move(Self), std::move(Result));
-  //             });
   Ctx->lookup(std::move(ExternalSymbols),
               createLookupContinuation(
                   [S = std::move(Self)](
                       Expected<AsyncLookupResult> LookupResult) mutable {
-                    auto &TmpSelf = *S;
-                    TmpSelf.linkPhase3(std::move(S), std::move(LookupResult));
+                    S->linkPhase3(std::move(S), std::move(LookupResult));
                   }));
 }
 
@@ -137,7 +119,7 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
     return abandonAllocAndBailOut(std::move(Self), LR.takeError());
 
   // Assign addresses to external addressables.
-  applyLookupResult(*LR);
+  applyLookupResult(std::move(*LR));
 
   LLVM_DEBUG({
     dbgs() << "Link graph before pre-fixup passes:\n";
@@ -171,11 +153,7 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
   }
 
   Alloc->finalize([S = std::move(Self)](FinalizeResult FR) mutable {
-    // FIXME: Once MSVC implements c++17 order of evaluation rules for calls
-    // this can be simplified to
-    //          S->linkPhase2(std::move(S), std::move(AR));
-    auto *TmpSelf = S.get();
-    TmpSelf->linkPhase4(std::move(S), std::move(FR));
+    S->linkPhase4(std::move(S), std::move(FR));
   });
 }
 
@@ -263,7 +241,11 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
 void JITLinkerBase::abandonAllocAndBailOut(std::unique_ptr<JITLinkerBase> Self,
                                            Error Err) {
   assert(Err && "Should not be bailing out on success value");
-  assert(Alloc && "can not call abandonAllocAndBailOut before allocation");
+
+  // Empty graphs skip allocation, so there may be nothing to abandon.
+  if (!Alloc)
+    return Ctx->notifyFailed(std::move(Err));
+
   Alloc->abandon([S = std::move(Self), E1 = std::move(Err)](Error E2) mutable {
     S->Ctx->notifyFailed(joinErrors(std::move(E1), std::move(E2)));
   });

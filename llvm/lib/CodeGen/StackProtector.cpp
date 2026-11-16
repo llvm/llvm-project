@@ -134,7 +134,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
   }
 
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  const LibcallLoweringModuleAnalysisResult *LibcallLowering =
+  const ModuleLibcallLoweringInfo *LibcallLowering =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
 
   if (!LibcallLowering) {
@@ -146,7 +146,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
   const TargetSubtargetInfo *STI = TM->getSubtargetImpl(F);
   const TargetLowering *TLI = STI->getTargetLowering();
   const LibcallLoweringInfo &Libcalls =
-      LibcallLowering->getLibcallLowering(*STI);
+      getLibcallLowering(*LibcallLowering, *STI);
 
   ++NumFunProtected;
   bool Changed = InsertStackProtectors(*TLI, Libcalls, &F, DT ? &DTU : nullptr,
@@ -322,7 +322,7 @@ static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
       // Ignore intrinsics that do not become real instructions.
       // TODO: Narrow this to intrinsics that have store-like effects.
       const auto *CI = cast<CallInst>(I);
-      if (!CI->isDebugOrPseudoInst() && !CI->isLifetimeStartOrEnd())
+      if (!isa<PseudoProbeInst>(CI) && !CI->isLifetimeStartOrEnd())
         return true;
       break;
     }
@@ -610,7 +610,7 @@ bool InsertStackProtectors(const TargetLowering &TLI,
   // impossible to emit the check in IR, so the target *must* support stack
   // protection in SDAG.
   bool SupportsSelectionDAGSP =
-      TLI.useStackGuardXorFP() ||
+      TLI.useStackGuardMixFP() ||
       (EnableSelectionDAGSP && !TLI.getTargetMachine().Options.EnableFastISel);
   AllocaInst *AI = nullptr; // Place on stack that stores the stack guard.
   BasicBlock *FailBB = nullptr;
@@ -756,29 +756,33 @@ BasicBlock *CreateFailBB(Function *F, const LibcallLoweringInfo &Libcalls) {
   if (F->getSubprogram())
     B.SetCurrentDebugLocation(
         DILocation::get(Context, 0, 0, F->getSubprogram()));
-  FunctionCallee StackChkFail;
-  SmallVector<Value *, 1> Args;
+  bool IsSmashHandler = false;
+  RTLIB::LibcallImpl ChkFailImpl =
+      Libcalls.getLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL);
+  if (ChkFailImpl == RTLIB::Unsupported) {
+    ChkFailImpl = Libcalls.getLibcallImpl(RTLIB::STACK_SMASH_HANDLER);
+    IsSmashHandler = true;
+  }
 
-  if (RTLIB::LibcallImpl ChkFailImpl =
-          Libcalls.getLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL)) {
-    StackChkFail = M->getOrInsertFunction(
-        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(ChkFailImpl),
-        Type::getVoidTy(Context));
-  } else if (RTLIB::LibcallImpl SSHImpl =
-                 Libcalls.getLibcallImpl(RTLIB::STACK_SMASH_HANDLER)) {
-    StackChkFail = M->getOrInsertFunction(
-        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(SSHImpl),
-        Type::getVoidTy(Context), PointerType::getUnqual(Context));
-    Args.push_back(B.CreateGlobalString(F->getName(), "SSH"));
-  } else {
+  if (ChkFailImpl == RTLIB::Unsupported) {
     Context.emitError("no libcall available for stack protector");
+    B.CreateUnreachable();
+    return FailBB;
   }
 
-  if (StackChkFail) {
-    CallInst *Call = B.CreateCall(StackChkFail, Args);
-    Call->addFnAttr(Attribute::NoReturn);
+  FunctionCallee StackChkFail =
+      Libcalls.getRuntimeLibcallsInfo().getOrInsertLibcallDecl(*M, ChkFailImpl);
+
+  CallInst *Call;
+  if (IsSmashHandler) {
+    Call =
+        B.CreateCall(StackChkFail, B.CreateGlobalString(F->getName(), "SSH"));
+  } else {
+    Call = B.CreateCall(StackChkFail);
   }
 
+  Call->setCallingConv(Libcalls.getLibcallImplCallingConv(ChkFailImpl));
+  Call->addFnAttr(Attribute::NoReturn);
   B.CreateUnreachable();
   return FailBB;
 }

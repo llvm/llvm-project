@@ -2,6 +2,7 @@ import("//llvm/lib/Target/targets.gni")
 
 group("unittests") {
   deps = [
+    "ABI:ABITests",
     "ADT:ADTTests",
     "Analysis:AnalysisTests",
     "AsmParser:AsmParserTests",
@@ -96,7 +97,10 @@ group("unittests") {
     deps += [ "Target/ARM:ARMTests" ]
   }
   if (llvm_build_LoongArch) {
-    deps += [ "Target/LoongArch:LoongArchTests" ]
+    deps += [
+      "MC/LoongArch:LoongArchMCTests",
+      "Target/LoongArch:LoongArchTests",
+    ]
   }
   if (llvm_build_Mips) {
     deps += [ "tools/llvm-exegesis/Mips:LLVMExegesisMipsTests" ]

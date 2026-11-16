@@ -16,7 +16,6 @@ define internal void @select_i32(i32 %self, ptr nonnull %value) {
 ; M68000-NEXT:    move.w %d2, %ccr
 ; M68000-NEXT:    bne .LBB0_2
 ; M68000-NEXT:  ; %bb.1: ; %start
-; M68000-NEXT:    and.l #255, %d1
 ; M68000-NEXT:    and.l #1, %d1
 ; M68000-NEXT:    cmpi.l #0, %d1
 ; M68000-NEXT:    bne .LBB0_3
@@ -41,7 +40,6 @@ define internal void @select_i32(i32 %self, ptr nonnull %value) {
 ; M68020-NEXT:    move.w %d2, %ccr
 ; M68020-NEXT:    bne .LBB0_2
 ; M68020-NEXT:  ; %bb.1: ; %start
-; M68020-NEXT:    and.l #255, %d1
 ; M68020-NEXT:    and.l #1, %d1
 ; M68020-NEXT:    cmpi.l #0, %d1
 ; M68020-NEXT:    bne .LBB0_3
@@ -86,7 +84,6 @@ define internal void @select_i16(i16 %self, ptr nonnull %value) {
 ; M68000-NEXT:    move.w %d2, %ccr
 ; M68000-NEXT:    bne .LBB1_2
 ; M68000-NEXT:  ; %bb.1: ; %start
-; M68000-NEXT:    and.l #255, %d1
 ; M68000-NEXT:    and.w #1, %d1
 ; M68000-NEXT:    cmpi.w #0, %d1
 ; M68000-NEXT:    bne .LBB1_3
@@ -111,7 +108,6 @@ define internal void @select_i16(i16 %self, ptr nonnull %value) {
 ; M68020-NEXT:    move.w %d2, %ccr
 ; M68020-NEXT:    bne .LBB1_2
 ; M68020-NEXT:  ; %bb.1: ; %start
-; M68020-NEXT:    and.l #255, %d1
 ; M68020-NEXT:    and.w #1, %d1
 ; M68020-NEXT:    cmpi.w #0, %d1
 ; M68020-NEXT:    bne .LBB1_3

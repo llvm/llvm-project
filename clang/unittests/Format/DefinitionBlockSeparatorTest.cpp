@@ -137,6 +137,36 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                "}",
                Style);
 
+  // There should not be an extra line when formatting is disabled.
+  verifyFormat("// clang-format off\n"
+               "void function()\n"
+               "{\n"
+               "\n"
+               "}\n"
+               "// clang-format on",
+               Style,
+               "// clang-format off\n"
+               "void function()\n"
+               "{\n"
+               "\n"
+               "}\n"
+               "// clang-format on",
+               /*Inverse=*/false);
+  verifyFormat("class X {\n"
+               "  // clang-format off\n"
+               "#pragma warning(suppress : 4373)\n"
+               "  void foo() {}\n"
+               "  // clang-format on\n"
+               "};\n",
+               Style,
+               "class X {\n"
+               "  // clang-format off\n"
+               "#pragma warning(suppress : 4373)\n"
+               "  void foo() {}\n"
+               "  // clang-format on\n"
+               "};\n",
+               /*Inverse=*/false);
+
   verifyFormat("enum Foo { FOO, BAR };\n"
                "\n"
                "enum Bar { FOOBAR, BARFOO };",
@@ -361,6 +391,35 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                Style, Prefix + Infix + Postfix);
 }
 
+TEST_F(DefinitionBlockSeparatorTest, AlwaysMaxEmptyLinesZeroAllman) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  Style.MaxEmptyLinesToKeep = 0;
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
+
+  verifyFormat("int my_function(int a)\n"
+               "\n"
+               "{\n"
+               "  return a;\n"
+               "}\n"
+               "int other_function(int a)\n"
+               "\n"
+               "{\n"
+               "  return a;\n"
+               "}",
+               Style,
+               "int my_function(int a)\n"
+               "{\n"
+               "  return a;\n"
+               "}\n"
+               "\n"
+               "int other_function(int a)\n"
+               "{\n"
+               "  return a;\n"
+               "}");
+}
+
 TEST_F(DefinitionBlockSeparatorTest, Never) {
   FormatStyle Style = getLLVMStyle();
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
@@ -516,6 +575,23 @@ TEST_F(DefinitionBlockSeparatorTest, TryBlocks) {
                "{\n"
                "}",
                Style, "", /*Inverse=*/false);
+}
+
+TEST_F(DefinitionBlockSeparatorTest, MacroExpansion) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+  Style.Macros = {"AUTO_RETURN(a)=-> decltype(auto) { return a; }"};
+  verifyFormat("auto a(int t) AUTO_RETURN(g(t))\n"
+               "auto b(int t) AUTO_RETURN(g(t))\n"
+               "\n"
+               "int f(bool c) {\n"
+               "  if (c) {\n"
+               "    return 1;\n"
+               "  } else {\n"
+               "    return 2;\n"
+               "  }\n"
+               "}",
+               Style);
 }
 
 TEST_F(DefinitionBlockSeparatorTest, Leave) {

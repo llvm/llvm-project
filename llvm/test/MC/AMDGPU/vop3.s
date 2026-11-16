@@ -1,14 +1,14 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=SICI
-// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii -show-encoding %s | FileCheck %s --check-prefix=CI --check-prefix=SICI
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI
+// RUN: not llvm-mc -triple=amdgpu6.00 -show-encoding %s | FileCheck %s --check-prefix=SICI
+// RUN: not llvm-mc -triple=amdgpu7.01 -show-encoding %s | FileCheck %s --check-prefix=CI --check-prefix=SICI
+// RUN: not llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck %s --check-prefix=VI
 
 // Make sure interp instructions disassemble regardless of lds bank count
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx810 -show-encoding %s | FileCheck %s --check-prefix=VI
+// RUN: not llvm-mc -triple=amdgpu8.10 -show-encoding %s | FileCheck %s --check-prefix=VI
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii %s -filetype=null 2>&1 | FileCheck %s -check-prefix=NOCI --check-prefix=NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx810 %s -filetype=null 2>&1 | FileCheck -check-prefix=NOVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu6.00 %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu7.01 %s -filetype=null 2>&1 | FileCheck %s -check-prefix=NOCI --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu8.02 %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu8.10 %s -filetype=null 2>&1 | FileCheck -check-prefix=NOVI --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // VOPC Instructions
@@ -143,15 +143,14 @@ v_mov_b32_e64 v1, v2
 // VI:   v_mov_b32_e64 v1, v2 ; encoding: [0x01,0x00,0x41,0xd1,0x02,0x01,0x00,0x00]
 
 // Force e64 encoding for special instructions.
-// FIXME, we should be printing the _e64 suffix for v_nop and v_clrexcp.
 
 v_nop_e64
-// SICI: v_nop ; encoding: [0x00,0x00,0x00,0xd3,0x00,0x00,0x00,0x00]
-// VI:   v_nop ; encoding: [0x00,0x00,0x40,0xd1,0x00,0x00,0x00,0x00]
+// SICI: v_nop_e64 ; encoding: [0x00,0x00,0x00,0xd3,0x00,0x00,0x00,0x00]
+// VI:   v_nop_e64 ; encoding: [0x00,0x00,0x40,0xd1,0x00,0x00,0x00,0x00]
 
 v_clrexcp_e64
-// SICI: v_clrexcp ; encoding: [0x00,0x00,0x82,0xd3,0x00,0x00,0x00,0x00]
-// VI:   v_clrexcp ; encoding: [0x00,0x00,0x75,0xd1,0x00,0x00,0x00,0x00]
+// SICI: v_clrexcp_e64 ; encoding: [0x00,0x00,0x82,0xd3,0x00,0x00,0x00,0x00]
+// VI:   v_clrexcp_e64 ; encoding: [0x00,0x00,0x75,0xd1,0x00,0x00,0x00,0x00]
 
 //
 // Modifier tests:

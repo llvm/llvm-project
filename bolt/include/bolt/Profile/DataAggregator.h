@@ -35,9 +35,9 @@ class BoltAddressTranslation;
 /// The aggregator works by dispatching two separate perf-script jobs that
 /// read perf samples and perf task annotations. Later, we read the output
 /// files to extract information about which PID was used for this binary.
-/// With the PID, we filter the samples and extract all LBR entries.
+/// With the PID, we filter the samples and extract all brstack entries.
 ///
-/// To aggregate LBR entries, we rely on a BinaryFunction map to locate the
+/// To aggregate brstack entries, we rely on a BinaryFunction map to locate the
 /// original function where the event happened. Then, we convert a raw address
 /// to an offset relative to the start of this function and aggregate branch
 /// information for each function.
@@ -45,13 +45,18 @@ class BoltAddressTranslation;
 /// This must be coordinated with RewriteInstance so we have BinaryFunctions in
 /// State::Disassembled. After this state, BinaryFunction will drop the
 /// instruction map with original addresses we rely on to validate the traces
-/// found in the LBR.
+/// found in the brstack.
 ///
 /// The last step is to write the aggregated data to disk in the output file
 /// specified by the user.
 class DataAggregator : public DataReader {
 public:
-  explicit DataAggregator(StringRef Filename) : DataReader(Filename) {}
+  explicit DataAggregator(StringRef Filename) : DataReader(Filename) {
+    InputFilenames.emplace_back(Filename);
+  }
+
+  DataAggregator(StringRef Filename, raw_ostream &Diag)
+      : DataReader(Filename, Diag) {}
 
   ~DataAggregator();
 
@@ -80,16 +85,22 @@ public:
   /// Check whether \p FileName is a perf.data file
   static bool checkPerfDataMagic(StringRef FileName);
 
+  /// Checks if a file starts with a specific magic string.
+  static bool checkInputFileMagic(StringRef FileName, StringLiteral MagicStr);
+
 private:
   struct LBREntry {
     uint64_t From;
     uint64_t To;
     bool Mispred;
+    bool IsReturn;
   };
   friend raw_ostream &operator<<(raw_ostream &OS, const LBREntry &);
 
   friend struct PerfSpeEventsTestHelper;
   friend struct PreAggregatedTestHelper;
+  friend struct PerfScriptTestHelper;
+  friend struct MMapEventsTestHelper;
 
   struct PerfBranchSample {
     SmallVector<LBREntry, 32> LBR;
@@ -138,6 +149,7 @@ private:
     uint64_t TakenCount{0};
     uint64_t MispredCount{0};
   };
+  friend raw_ostream &operator<<(raw_ostream &OS, const TakenBranchInfo &TBI);
 
   /// Intermediate storage for profile data. We save the results of parsing
   /// and use them later for processing and assigning profile.
@@ -150,8 +162,10 @@ private:
   std::vector<PerfMemSample> MemSamples;
 
   /// Perf.data or pre-aggregated inputs to aggregate and merge into this
-  /// reader.
-  std::vector<std::string> InputFilenames;
+  /// reader. The first entry is the primary profile input.
+  SmallVector<std::string, 1> InputFilenames;
+
+  bool Parsed{false};
 
   /// Filter pre-aggregated entries belonging to a DSO with this buildid.
   /// Set when processing a shared library, empty implies main binary.
@@ -176,14 +190,20 @@ private:
 
   /// Perf process spawning bookkeeping
   struct PerfProcessInfo {
-    static constexpr StringLiteral EventNamesStr[] = {"BUILDIDS", "MAIN", "MEM",
-                                                      "MMAP", "TASK"};
+    static constexpr StringLiteral PerfProcessTypeNames[] = {
+        "BUILDIDS", "MAIN", "MEM", "MMAP", "TASK"};
 
     enum PerfProcessType Type;
     bool IsFinished{false};
     sys::ProcessInfo PI{};
     SmallVector<char, 256> StdoutPath{};
     SmallVector<char, 256> StderrPath{};
+
+    /// Helper variables for parsing perfscript profile.
+    /// Length: Total size of the content from \p Offset.
+    uint64_t Length{0};
+    /// Position where content begins in the file.
+    uint64_t Offset{0};
   };
 
   /// Process info for spawned processes
@@ -234,8 +254,8 @@ private:
   BoltAddressTranslation *BAT{nullptr};
 
   /// Update function execution profile with a recorded trace.
-  /// A trace is region of code executed between two LBR entries supplied in
-  /// execution order.
+  /// A trace is a region of code executed between two brstack entries supplied
+  /// in execution order.
   ///
   /// Return a vector of offsets corresponding to a trace in a function
   /// if the trace is valid, std::nullopt otherwise.
@@ -254,7 +274,7 @@ private:
 
   /// Launch a perf subprocess with given args and save output for later
   /// parsing.
-  void launchPerfProcess(StringRef Name, PerfProcessInfo &PPI, StringRef Args);
+  Error launchPerfProcess(StringRef Name, PerfProcessInfo &PPI, StringRef Args);
 
   /// Helps to generate pre-parsed perf text profile.
   ErrorOr<uint64_t> getFileSize(StringRef File);
@@ -277,7 +297,7 @@ private:
   static StringRef getLocationName(const BinaryFunction &Func, bool BAT);
 
   /// Semantic actions - parser hooks to interpret parsed perf samples
-  /// Register a sample (non-LBR mode), i.e. a new hit at \p Address
+  /// Register a sample (non-brstack mode), i.e. a new hit at \p Address
   bool doBasicSample(BinaryFunction &Func, const uint64_t Address,
                      uint64_t Count);
 
@@ -297,7 +317,7 @@ private:
   /// Register a \p Branch.
   bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds);
 
-  /// Register a trace between two LBR entries supplied in execution order.
+  /// Register a trace between two brstack entries supplied in execution order.
   bool doTrace(const Trace &Trace, uint64_t Count, bool IsReturn);
 
   /// Parser helpers
@@ -305,13 +325,13 @@ private:
   /// everything
   bool hasData() const { return !ParsingBuf.empty(); }
 
-  /// Print heat map based on LBR samples.
+  /// Print heat map based on brstack samples.
   std::error_code printLBRHeatMap();
 
   /// Parse a single perf sample containing a PID associated with a sequence of
-  /// LBR entries. If the PID does not correspond to the binary we are looking
-  /// for, return std::errc::no_such_process. If other parsing errors occur,
-  /// return the error. Otherwise, return the parsed sample.
+  /// brstack entries. If the PID does not correspond to the binary we are
+  /// looking for, return std::errc::no_such_process. If other parsing errors
+  /// occur, return the error. Otherwise, return the parsed sample.
   ErrorOr<PerfBranchSample> parseBranchSample();
 
   /// Parse a single perf sample containing a PID associated with an event name
@@ -322,11 +342,11 @@ private:
   /// address.
   ErrorOr<PerfMemSample> parseMemSample();
 
-  /// Parse pre-aggregated LBR samples created by an external tool
+  /// Parse pre-aggregated brstack samples created by an external tool
   std::error_code parseAggregatedLBREntry();
 
   /// Parse either buildid:offset or just offset, representing a location in the
-  /// binary. Used exclusively for pre-aggregated LBR samples.
+  /// binary. Used exclusively for pre-aggregated brstack samples.
   ErrorOr<Location> parseLocationOrOffset();
 
   /// Check if a field separator is the next char to parse and, if yes, consume
@@ -340,16 +360,14 @@ private:
   /// consume it (peek only).
   bool checkNewLine();
 
-  using PerfProcessErrorCallbackTy = std::function<void(int, StringRef)>;
   /// Prepare to parse data from a given perf script invocation.
-  /// Returns an invocation exit code.
-  int prepareToParse(StringRef Name, PerfProcessInfo &Process,
-                     PerfProcessErrorCallbackTy Callback);
+  /// Returns an error if the perf invocation fails.
+  Error prepareToParse(StringRef Name, PerfProcessInfo &Process);
 
-  /// Parse a single LBR entry as output by perf script -Fbrstack
+  /// Parse a single brstack entry as output by perf script -Fbrstack
   ErrorOr<LBREntry> parseLBREntry();
 
-  /// Parse LBR sample.
+  /// Parse a brstack sample.
   void parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
 
   /// Parse and pre-aggregate branch events.
@@ -358,10 +376,14 @@ private:
   /// Process all branch events.
   void processBranchEvents();
 
-  /// Parse the full output generated by perf script to report non-LBR samples.
+  /// Parse the full output generated by perf script to report main samples.
+  std::error_code parseMainEvents();
+
+  /// Parse the full output generated by perf script to report non-brstack
+  /// samples.
   std::error_code parseBasicEvents();
 
-  /// Process non-LBR events.
+  /// Process non-brstack events.
   void processBasicEvents();
 
   /// Parse the full output generated by perf script to report memory events.
@@ -373,8 +395,9 @@ private:
   /// Parse a single line of a PERF_RECORD_MMAP2 event looking for a mapping
   /// between the binary name and its memory layout in a process with a given
   /// PID.
-  /// On success return a <FileName, MMapInfo> pair.
-  ErrorOr<std::pair<StringRef, MMapInfo>> parseMMapEvent();
+  /// On success return a <FileName, BuildId, MMapInfo> pair. BuildId may be
+  /// empty.
+  ErrorOr<std::tuple<StringRef, StringRef, MMapInfo>> parseMMapEvent();
 
   /// Parse PERF_RECORD_FORK event.
   std::optional<ForkInfo> parseForkEvent();
@@ -395,10 +418,13 @@ private:
   std::optional<std::pair<StringRef, StringRef>> parseNameBuildIDPair();
 
   /// Coordinate reading and parsing of perf.data file
-  void parsePerfData();
+  Error parsePerfData();
 
   /// Parse this aggregator's input file.
-  void parseInput();
+  Error parseInput();
+
+  /// Parse all input files and merge successfully parsed profiles.
+  Error parseAllInputs(BinaryContext &BC);
 
   /// Merge parsed profile data from another aggregation job.
   void mergeFrom(const DataAggregator &Other);
@@ -413,18 +439,18 @@ private:
   /// write a query to produce a pre-aggregated file. This function deals with
   /// this case.
   ///
-  /// The pre-aggregated file contains aggregated LBR data, but without binary
-  /// knowledge. BOLT will parse it and, using information from the disassembled
-  /// binary, augment it with fall-through edge frequency information. After
-  /// this step is finished, this data can be either written to disk to be
-  /// consumed by BOLT later, or can be used by BOLT immediately if kept in
-  /// memory.
+  /// The pre-aggregated file contains aggregated brstack data, but without
+  /// binary knowledge. BOLT will parse it and, using information from the
+  /// disassembled binary, augment it with fall-through edge frequency
+  /// information. After this step is finished, this data can be either written
+  /// to disk to be consumed by BOLT later, or can be used by BOLT immediately
+  /// if kept in memory.
   ///
   /// File format syntax:
   /// E <event>
   /// S <start> <count>
-  /// [TR] <start> <end> <ft_end> <count>
-  /// B <start> <end> <count> <mispred_count>
+  /// [TR] <start> <end> <ft_end> <count> [<mispred_count>]
+  /// B <start> <end> <count> [<mispred_count>]
   /// [Ffr] <start> <end> <count>
   ///
   /// where <start>, <end>, <ft_end> have the format [<id>:]<offset>
@@ -462,25 +488,35 @@ private:
   ///
   /// Trace profile combining branches and fall-throughs:
   /// T 4b196f 4b19e0 4b19ef 2
+  /// T 4b196f 4b19e0 4b19ef 2 1
   ///
   /// Legacy branch profile with separate branches and fall-throughs:
   /// F 41be50 41be50 3
   /// F 41be90 41be90 4
   /// B 4b1942 39b57f0 3 0
   /// B 4b196f 4b19e0 2 0
-  void parsePreAggregated();
+  /// B 4b196f 4b19e0 2
+  std::error_code parsePreAggregated();
 
-  /// Parse the full output of pre-aggregated LBR samples generated by
+  /// Parse the full output of pre-aggregated brstack samples generated by
   /// an external tool.
   std::error_code parsePreAggregatedLBRSamples();
 
+  /// Coordinate reading pre-parsed perf-script:
+  /// - open file header to determine offset and length for each part,
+  /// - read perf script slices.
+  Error parsePerfScript();
+
+  /// Parse the header of the perf text file.
+  std::error_code parsePerfScriptFileHeader();
+
   /// Dump pre-parsed perf profile data into a single file.
   /// The generator relies on the aggregator work to spawn the required
-  /// perf-script jobs based on the the aggregation type, and merges
+  /// perf-script jobs based on the aggregation type, and merges
   /// their results into a single file.
-  /// This hybrid profile contains all required events such as BuildID,
+  /// This hybrid profile contains all required items such as BuildID,
   /// MMAP, TASK, MAIN (brstack or basic samples), or MEM for the aggregation.
-  /// The generator also creates a file header, where these events
+  /// The generator also creates a file header, where these data types
   /// are listed along with the length information of their contents.
   /// The given length numbers in the header are in bytes, they are used
   /// as an offset in the pre-parsed profile.
@@ -501,7 +537,8 @@ private:
   /// based on how it was collected by Linux Perf.
   ///
   /// Example how you can generate pre-parsed profile for 'basic' aggregation:
-  /// perf2bolt -p perf.data BINARY -o perf.text --ba --generate-perf-script
+  /// perf2bolt -p perf.data BINARY -o perf.text --ba
+  /// --profile-format=perfscript
   ///
   /// This is how a pre-parsed profile data looks like for Basic Aggregation:
   /// PERFTEXT;BUILDIDS=32;MMAP=2DC6C0;MAIN=1388;TASK=55730;MEM=128;
@@ -517,7 +554,7 @@ private:
   /// ...
   /// 1234 mem-loads: efgh1234 efgh1234
   /// 1234 mem-loads: efgh4567 efgh8910
-  Error generatePerfTextData();
+  Error generatePerfScriptData();
 
   /// If \p Address falls into the binary address space based on memory
   /// mapping info \p MMI, then adjust it for further processing by subtracting
@@ -533,20 +570,20 @@ private:
     }
   }
 
-  /// Adjust addresses in \p LBR entry.
+  /// Adjust addresses in the brstack entry \p LBR.
   void adjustLBR(LBREntry &LBR, const MMapInfo &MMI) const {
     adjustAddress(LBR.From, MMI);
     adjustAddress(LBR.To, MMI);
   }
 
-  /// Ignore kernel/user transition LBR if requested
+  /// Ignore brstack entries involving kernel addresses if requested.
   bool ignoreKernelInterrupt(LBREntry &LBR) const;
 
   /// Populate functions in \p BC with profile.
   void processProfile(BinaryContext &BC);
 
   /// Start an aggregation job asynchronously.
-  void start();
+  Error start();
 
   /// Returns true if this aggregation job is using a translation table to
   /// remap samples collected on binaries already processed by BOLT.
@@ -566,7 +603,7 @@ private:
                                StringRef OutputFilename) const;
 
   /// Filter out binaries based on PID
-  void filterBinaryMMapInfo();
+  Error filterBinaryMMapInfo();
 
   /// If we have a build-id available for the input file, use it to assist
   /// matching profile to a binary.
@@ -576,7 +613,7 @@ private:
   /// If \p FileBuildID has no match, then issue an error and exit.
   void processFileBuildID(StringRef FileBuildID);
 
-  /// Infer missing fall-throughs for branch-only traces (LBR top-of-stack
+  /// Infer missing fall-throughs for branch-only traces (brstack top-of-stack
   /// entries).
   void imputeFallThroughs();
 
@@ -649,19 +686,26 @@ public:
 
 inline raw_ostream &operator<<(raw_ostream &OS,
                                const DataAggregator::LBREntry &L) {
-  OS << formatv("{0:x} -> {1:x}/{2}", L.From, L.To, L.Mispred ? 'M' : 'P');
+  OS << formatv("{0:x} -> {1:x}/{2}/{3}", L.From, L.To, L.Mispred ? 'M' : 'P',
+                L.IsReturn ? "RET" : "-");
   return OS;
 }
 
 inline raw_ostream &operator<<(raw_ostream &OS,
                                const DataAggregator::Trace &T) {
-  OS << formatv("T {0:x-} {1:x-} {2:x-}", T.Branch, T.From, T.To);
+  OS << formatv("{0:x-} {1:x-} {2:x-}", T.Branch, T.From, T.To);
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const DataAggregator::TakenBranchInfo &TBI) {
+  OS << TBI.TakenCount << " " << TBI.MispredCount;
   return OS;
 }
 
 inline raw_ostream &operator<<(raw_ostream &OS,
                                const DataAggregator::PerfProcessType &T) {
-  OS << DataAggregator::PerfProcessInfo::EventNamesStr[T];
+  OS << DataAggregator::PerfProcessInfo::PerfProcessTypeNames[T];
   return OS;
 }
 } // namespace bolt

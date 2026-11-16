@@ -1,7 +1,7 @@
-; RUN: opt -S -mtriple=amdgcn- -passes=sroa %s -o %t.sroa.ll
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-ALLOCA %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-PROMOTE %s
-; RUN: opt -S -mtriple=amdgcn-- -passes='sroa,amdgpu-promote-alloca,instcombine' < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgpu- -passes=sroa %s -o %t.sroa.ll
+; RUN: llc -mtriple=amdgpu8.02-- -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-ALLOCA %s
+; RUN: llc -mtriple=amdgpu8.02-- < %t.sroa.ll | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-PROMOTE %s
+; RUN: opt -S -mtriple=amdgpu-- -passes='sroa,amdgpu-promote-alloca,instcombine' < %s | FileCheck -check-prefix=OPT %s
 
 ; OPT-LABEL: @vector_read_alloca_bitcast(
 ; OPT-NOT:   alloca
@@ -258,7 +258,7 @@ bb13:                                             ; preds = %.preheader
 ; OPT: store i32 %0, ptr addrspace(1) %out, align 4
 
 ; GCN-LABEL: {{^}}vector_read_alloca_bitcast_assume:
-; GCN-COUNT: buffer_store_dword
+; GCN-ALLOCA-COUNT-4: buffer_store_dword
 
 define amdgpu_kernel void @vector_read_alloca_bitcast_assume(ptr addrspace(1) %out, i32 %index) {
 entry:
@@ -362,12 +362,12 @@ define amdgpu_kernel void @vector_bitcast_from_alloca_array(ptr addrspace(1) %ou
 ; OPT-LABEL: @vector_bitcast_to_array_from_alloca_array(
 ; OPT-NOT:   alloca
 ; OPT-NEXT: store i32 1, ptr addrspace(1) %out, align 4
-; OPT-NEXT: %out.repack1 = getelementptr inbounds nuw i8, ptr addrspace(1) %out, i64 4
-; OPT-NEXT: store i32 2, ptr addrspace(1) %out.repack1, align 4
-; OPT-NEXT: %out.repack2 = getelementptr inbounds nuw i8, ptr addrspace(1) %out, i64 8
-; OPT-NEXT: store i32 3, ptr addrspace(1) %out.repack2, align 4
-; OPT-NEXT: %out.repack3 = getelementptr inbounds nuw i8, ptr addrspace(1) %out, i64 12
-; OPT-NEXT: store i32 4, ptr addrspace(1) %out.repack3, align 4
+; OPT-NEXT: [[OUT_REPACK1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) %out, i64 4
+; OPT-NEXT: store i32 2, ptr addrspace(1) [[OUT_REPACK1]], align 4
+; OPT-NEXT: [[OUT_REPACK2:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) %out, i64 8
+; OPT-NEXT: store i32 3, ptr addrspace(1) [[OUT_REPACK2]], align 4
+; OPT-NEXT: [[OUT_REPACK3:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) %out, i64 12
+; OPT-NEXT: store i32 4, ptr addrspace(1) [[OUT_REPACK3]], align 4
 
 ; GCN-LABEL: {{^}}vector_bitcast_to_array_from_alloca_array:
 ; GCN: v_mov_b32_e32 v0, 1

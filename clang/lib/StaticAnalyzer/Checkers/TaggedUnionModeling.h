@@ -15,7 +15,6 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "llvm/ADT/FoldingSet.h"
 #include <numeric>
 
 namespace clang::ento::tagged_union_modeling {
@@ -27,7 +26,6 @@ bool isCopyConstructorCall(const CallEvent &Call);
 bool isCopyAssignmentCall(const CallEvent &Call);
 bool isMoveAssignmentCall(const CallEvent &Call);
 bool isMoveConstructorCall(const CallEvent &Call);
-bool isStdType(const Type *Type, const std::string &TypeName);
 bool isStdVariant(const Type *Type);
 
 // When invalidating regions, we also have to follow that by invalidating the

@@ -1112,6 +1112,54 @@ define <16 x i32> @combine_vcompressd_splat(i16 %m) {
   ret <16 x i32> %res
 }
 
+define <8 x i32> @concat_vrotli_v4i32(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: concat_vrotli_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vprold $3, %zmm0, %zmm0
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %r0 = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a0, <4 x i32> %a0, <4 x i32> splat (i32 3))
+  %r1 = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a1, <4 x i32> %a1, <4 x i32> splat (i32 3))
+  %shuffle = shufflevector <4 x i32> %r0, <4 x i32> %r1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i32> %shuffle
+}
+
+define <8 x i32> @concat_vrotlv_v4i32(<4 x i32> %a0, <4 x i32> %a1, <8 x i32> %a2) {
+; CHECK-LABEL: concat_vrotlv_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vprolvd %zmm2, %zmm0, %zmm0
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %lo = shufflevector <8 x i32> %a2, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %hi = shufflevector <8 x i32> %a2, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %r0 = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a0, <4 x i32> %a0, <4 x i32> %lo)
+  %r1 = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a1, <4 x i32> %a1, <4 x i32> %hi)
+  %shuffle = shufflevector <4 x i32> %r0, <4 x i32> %r1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i32> %shuffle
+}
+
+define <8 x i64> @concat_nonuniform_permq_v4i64_v8i64(<4 x i64> %a0, <4 x i64> %a1, <2 x i64> %a2) nounwind {
+; CHECK-LABEL: concat_nonuniform_permq_v4i64_v8i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [1,3,2,0,11,10,9,8]
+; CHECK-NEXT:    vpermi2q %zmm1, %zmm0, %zmm3
+; CHECK-NEXT:    vpsrlq %xmm2, %zmm3, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %perm0 = shufflevector <4 x i64> %a0, <4 x i64> poison, <4 x i32> <i32 1, i32 3, i32 2, i32 0>
+  %perm1 = shufflevector <4 x i64> %a1, <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %shift0 = tail call noundef <4 x i64> @llvm.x86.avx2.psrl.q(<4 x i64> %perm0, <2 x i64> %a2)
+  %shift1 = tail call noundef <4 x i64> @llvm.x86.avx2.psrl.q(<4 x i64> %perm1, <2 x i64> %a2)
+  %shuffle = shufflevector <4 x i64> %shift0, <4 x i64> %shift1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i64> %shuffle
+}
+
 define <8 x i64> @PR179008(ptr %p0) {
 ; X86-AVX512F-LABEL: PR179008:
 ; X86-AVX512F:       # %bb.0:
@@ -1145,4 +1193,152 @@ define <8 x i64> @PR179008(ptr %p0) {
   %load = load <8 x i64>, ptr %p0, align 1
   %shuf = shufflevector <8 x i64> %load, <8 x i64> <i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 0, i64 0, i64 0>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 13, i32 14, i32 15>
   ret <8 x i64> %shuf
+}
+
+define <16 x float> @PR218379(ptr %p0, ptr %p1) nounwind {
+; X86-LABEL: PR218379:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    calll 0
+; X86-NEXT:    vmovaps %ymm0, %ymm0
+; X86-NEXT:    vmovaps %zmm0, (%edi)
+; X86-NEXT:    vmovaps %zmm0, (%esi)
+; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR218379:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %r14
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movq %rsi, %rbx
+; X64-NEXT:    movq %rdi, %r14
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    callq *%rax
+; X64-NEXT:    vmovaps %ymm0, %ymm0
+; X64-NEXT:    vmovaps %zmm0, (%r14)
+; X64-NEXT:    vmovaps %zmm0, (%rbx)
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    addq $8, %rsp
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    popq %r14
+; X64-NEXT:    retq
+  %call = call <8 x float> null()
+  %fr = freeze <8 x float> poison
+  %shuffle = shufflevector <8 x float> %call, <8 x float> %fr, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x float> %shuffle, ptr %p0
+  %shuffle1 = shufflevector <8 x float> %call, <8 x float> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x float> %shuffle1, ptr %p1
+  %shuffle2 = shufflevector <8 x float> zeroinitializer, <8 x float> %fr, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+  ret <16 x float> %shuffle2
+}
+
+; Ensure we don't introduce POISON into DIV denominators
+define <8 x i64> @PR235659(<8 x i64> %a) {
+; X86-LABEL: PR235659:
+; X86:       # %bb.0:
+; X86-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X86-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [0,6,5,11,6,3,2,15]
+; X86-NEXT:    vpermi2q %zmm2, %zmm0, %zmm1
+; X86-NEXT:    vpmovsxdq {{.*#+}} zmm0 = [1431655765,0,1227133513,2147483647,1431655765,1717986918,18446744071562067968,1717986918]
+; X86-NEXT:    vpmuludq %zmm0, %zmm1, %zmm3
+; X86-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [0,0,0,0,0,0,0,0,0,0,0,0,4294967295,0,0,0]
+; X86-NEXT:    vpmuludq %zmm2, %zmm1, %zmm4
+; X86-NEXT:    vpsllq $32, %zmm4, %zmm4
+; X86-NEXT:    vpaddq %zmm4, %zmm3, %zmm4
+; X86-NEXT:    vpsraq $32, %zmm1, %zmm3
+; X86-NEXT:    vpmovzxdq {{.*#+}} zmm5 = [1431655766,0,613566757,4294967295,1431655766,1717986919,1,1717986919]
+; X86-NEXT:    vpmuludq %zmm5, %zmm3, %zmm6
+; X86-NEXT:    vpmuludq %zmm5, %zmm1, %zmm7
+; X86-NEXT:    vpsrlq $32, %zmm7, %zmm7
+; X86-NEXT:    vpaddq %zmm7, %zmm6, %zmm6
+; X86-NEXT:    vpsrlq $32, %zmm3, %zmm7
+; X86-NEXT:    vpmuludq %zmm5, %zmm7, %zmm5
+; X86-NEXT:    vpsllq $32, %zmm5, %zmm5
+; X86-NEXT:    vpaddq %zmm5, %zmm6, %zmm5
+; X86-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm5, %zmm6
+; X86-NEXT:    vpaddq %zmm6, %zmm4, %zmm4
+; X86-NEXT:    vpsraq $32, %zmm4, %zmm4
+; X86-NEXT:    vpsraq $32, %zmm5, %zmm5
+; X86-NEXT:    vpaddq %zmm4, %zmm5, %zmm4
+; X86-NEXT:    vpmuludq %zmm2, %zmm3, %zmm2
+; X86-NEXT:    vpmuludq %zmm0, %zmm7, %zmm5
+; X86-NEXT:    vpaddq %zmm5, %zmm2, %zmm2
+; X86-NEXT:    vpsllq $32, %zmm2, %zmm2
+; X86-NEXT:    vpmuludq %zmm0, %zmm3, %zmm0
+; X86-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
+; X86-NEXT:    vpsrlq $32, %zmm1, %zmm2
+; X86-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [0,1,0,18446744073709551615,0,0,1,0]
+; X86-NEXT:    vpmuludq %zmm3, %zmm2, %zmm2
+; X86-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm5 # [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+; X86-NEXT:    vpaddq %zmm2, %zmm5, %zmm2
+; X86-NEXT:    vpmuludq %zmm3, %zmm1, %zmm1
+; X86-NEXT:    vpsllq $32, %zmm2, %zmm2
+; X86-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
+; X86-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; X86-NEXT:    vpaddq %zmm4, %zmm0, %zmm0
+; X86-NEXT:    vpsrlq $63, %zmm0, %zmm1
+; X86-NEXT:    vpsraq $1, %zmm0, %zmm0
+; X86-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; X86-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [5,5,5,5]
+; X86-NEXT:    vpermq %zmm0, %zmm1, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR235659:
+; X64:       # %bb.0:
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,6,5,11,6,3,2,15]
+; X64-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
+; X64-NEXT:    vpmovsxdq {{.*#+}} zmm0 = [1431655765,0,1227133513,2147483647,1431655765,1717986918,18446744071562067968,1717986918]
+; X64-NEXT:    vpmuludq %zmm0, %zmm2, %zmm1
+; X64-NEXT:    vpmovsxbd {{.*#+}} zmm3 = [0,0,0,0,0,0,0,0,0,0,0,0,4294967295,0,0,0]
+; X64-NEXT:    vpmuludq %zmm3, %zmm2, %zmm4
+; X64-NEXT:    vpsllq $32, %zmm4, %zmm4
+; X64-NEXT:    vpaddq %zmm4, %zmm1, %zmm1
+; X64-NEXT:    vpsraq $32, %zmm2, %zmm4
+; X64-NEXT:    vpmovzxdq {{.*#+}} zmm5 = [1431655766,0,613566757,4294967295,1431655766,1717986919,1,1717986919]
+; X64-NEXT:    vpmuludq %zmm5, %zmm4, %zmm6
+; X64-NEXT:    vpsrlq $32, %zmm4, %zmm7
+; X64-NEXT:    vpmuludq %zmm5, %zmm7, %zmm8
+; X64-NEXT:    vpsllq $32, %zmm8, %zmm8
+; X64-NEXT:    vpmuludq %zmm5, %zmm2, %zmm5
+; X64-NEXT:    vpsrlq $32, %zmm5, %zmm5
+; X64-NEXT:    vpaddq %zmm5, %zmm6, %zmm5
+; X64-NEXT:    vpaddq %zmm8, %zmm5, %zmm5
+; X64-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm5, %zmm6
+; X64-NEXT:    vpaddq %zmm6, %zmm1, %zmm1
+; X64-NEXT:    vpsraq $32, %zmm1, %zmm1
+; X64-NEXT:    vpsraq $32, %zmm5, %zmm5
+; X64-NEXT:    vpaddq %zmm1, %zmm5, %zmm1
+; X64-NEXT:    vpmuludq %zmm3, %zmm4, %zmm3
+; X64-NEXT:    vpmuludq %zmm0, %zmm7, %zmm5
+; X64-NEXT:    vpaddq %zmm5, %zmm3, %zmm3
+; X64-NEXT:    vpsllq $32, %zmm3, %zmm3
+; X64-NEXT:    vpmuludq %zmm0, %zmm4, %zmm0
+; X64-NEXT:    vpaddq %zmm3, %zmm0, %zmm0
+; X64-NEXT:    vpsrlq $32, %zmm2, %zmm3
+; X64-NEXT:    vpmovsxbq {{.*#+}} zmm4 = [0,1,0,18446744073709551615,0,0,1,0]
+; X64-NEXT:    vpmuludq %zmm4, %zmm3, %zmm3
+; X64-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm5 # [0,0,0,4294967295,0,0,0,0]
+; X64-NEXT:    vpaddq %zmm3, %zmm5, %zmm3
+; X64-NEXT:    vpsllq $32, %zmm3, %zmm3
+; X64-NEXT:    vpmuludq %zmm4, %zmm2, %zmm2
+; X64-NEXT:    vpaddq %zmm3, %zmm2, %zmm2
+; X64-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
+; X64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; X64-NEXT:    vpsrlq $63, %zmm0, %zmm1
+; X64-NEXT:    vpsraq $1, %zmm0, %zmm0
+; X64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; X64-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [5,5,5,5]
+; X64-NEXT:    vpermq %zmm0, %zmm1, %zmm0
+; X64-NEXT:    retq
+  %shuffle = shufflevector <8 x i64> %a, <8 x i64> zeroinitializer, <8 x i32> <i32 poison, i32 6, i32 5, i32 9, i32 6, i32 3, i32 2, i32 13>
+  %div = sdiv <8 x i64> %shuffle, <i64 3, i64 1, i64 7, i64 -9223372036854775808, i64 3, i64 5, i64 16, i64 5>
+  %shuffle3 = shufflevector <8 x i64> %div, <8 x i64> zeroinitializer, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 poison, i32 poison, i32 poison, i32 poison>
+  ret <8 x i64> %shuffle3
 }

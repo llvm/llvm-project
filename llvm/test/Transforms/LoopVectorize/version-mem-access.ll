@@ -77,7 +77,6 @@ define void @fn1(ptr noalias %x, ptr noalias %c, double %a) {
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[CONV2]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[LOOP_PREHEADER:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[CONV2]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[CONV]], 1
@@ -129,14 +128,8 @@ define void @stride_poison(ptr %dst) mustprogress {
 ; CHECK-LABEL: define void @stride_poison(
 ; CHECK-SAME: ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 poison, i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 99, [[UMAX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 2
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 2
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], poison
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -147,11 +140,10 @@ define void @stride_poison(ptr %dst) mustprogress {
 ; CHECK-NEXT:    store i8 0, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], poison
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH:.*]]
+; CHECK-NEXT:    br i1 poison, [[EXIT:label %.*]], label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
@@ -179,7 +171,7 @@ define void @load_symbolic_stride_versioned_to_one(ptr noalias %src, ptr noalias
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

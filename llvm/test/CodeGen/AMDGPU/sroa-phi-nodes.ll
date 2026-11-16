@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn -O2 -S %s -o - -stop-after=sroa | FileCheck %s
+; RUN: opt -mtriple=amdgpu9.42 -O2 -S %s -o - -stop-after=sroa | FileCheck %s
 
 ; This testcase is dervied from warp's reduce.cu.
 ;
@@ -10,8 +10,8 @@
 ; Note that this large increase in phi count by SROA depends on allowing jump-threading
 ; through blocks that define values that are live outside of the block.
 ; There is no large increase in phi count with:
-; 
-;   opt -mtriple=amdgcn -O2 -S %s -o - -stop-after=sroa -max-jump-threading-live-blocks=0
+;
+;   opt -mtriple=amdgpu -O2 -S %s -o - -stop-after=sroa -max-jump-threading-live-blocks=0
 
 
 ; CHECK-LABEL: @_func7(
@@ -156,9 +156,9 @@ block8:                                                ; preds = %block5
   br label %block5, !llvm.loop !3
 }
 
-attributes #0 = { convergent inlinehint mustprogress nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx942" "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-fmin-fmax-global-f64,+atomic-global-pk-add-bf16-inst,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+fp8-conversion-insts,+fp8-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gfx940-insts,+lerp-inst,+mai-insts,+qsad-insts,+s-memrealtime,+s-memtime-inst,+sad-insts,+wavefrontsize64,+xf32-insts" }
-attributes #1 = { alwaysinline convergent mustprogress nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx942" "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-fmin-fmax-global-f64,+atomic-global-pk-add-bf16-inst,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+fp8-conversion-insts,+fp8-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gfx940-insts,+lerp-inst,+mai-insts,+qsad-insts,+s-memrealtime,+s-memtime-inst,+sad-insts,+wavefrontsize64,+xf32-insts" }
-attributes #2 = { convergent mustprogress nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx942" "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-fmin-fmax-global-f64,+atomic-global-pk-add-bf16-inst,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+fp8-conversion-insts,+fp8-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gfx940-insts,+lerp-inst,+mai-insts,+qsad-insts,+s-memrealtime,+s-memtime-inst,+sad-insts,+wavefrontsize64,+xf32-insts" }
+attributes #0 = { convergent inlinehint mustprogress nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #1 = { alwaysinline convergent mustprogress nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #2 = { convergent mustprogress nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #3 = { convergent nounwind }
 
 !0 = distinct !{!0, !1, !2}

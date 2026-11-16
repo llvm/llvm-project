@@ -18,6 +18,6 @@ CHECK-NEXT: Loop basic blocks: .Ltmp[[#MAIN_OUTER_HDR]], .Ltmp[[#]]
 CHECK:      Binary Function "foo" after building cfg
 CHECK:      Loop Info for Function "foo"
 CHECK:      Outer loop header: .Ltmp[[#FOO_OUTER_HDR:]]
-CHECK-NEXT: Loop basic blocks: .Ltmp[[#FOO_OUTER_HDR]], .Ltmp[[#]], .LFT[[#]], .Ltmp[[#]], .Ltmp[[#FOO_INNER_HDR:]], .Ltmp[[#]], .Ltmp[[#FOO_INNER_BB:]]
+CHECK-NEXT: Loop basic blocks: .Ltmp[[#FOO_OUTER_HDR]], .Ltmp[[#]], .LFT[[#]], .Ltmp[[#]], .Ltmp[[#FOO_INNER_HDR:]], .Ltmp[[#FOO_INNER_BB:]], .Ltmp[[#]]
 CHECK:      Nested loop header: .Ltmp[[#FOO_INNER_HDR]]
 CHECK-NEXT: Loop basic blocks: .Ltmp[[#FOO_INNER_HDR]], .Ltmp[[#FOO_INNER_BB]]

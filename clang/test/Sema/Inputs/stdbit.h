@@ -112,4 +112,50 @@ unsigned int stdc_rotate_right_ui(unsigned int, unsigned int);
 unsigned long stdc_rotate_right_ul(unsigned long, unsigned int);
 unsigned long long stdc_rotate_right_ull(unsigned long long, unsigned int);
 
+void stdc_memreverse8(__SIZE_TYPE__, unsigned char *);
+__UINT8_TYPE__ stdc_memreverse8u8(__UINT8_TYPE__);
+__UINT16_TYPE__ stdc_memreverse8u16(__UINT16_TYPE__);
+__UINT32_TYPE__ stdc_memreverse8u32(__UINT32_TYPE__);
+__UINT64_TYPE__ stdc_memreverse8u64(__UINT64_TYPE__);
+
+__UINT_LEAST8_TYPE__ stdc_load8_leu8(const unsigned char *);
+__UINT_LEAST16_TYPE__ stdc_load8_leu16(const unsigned char *);
+__UINT_LEAST32_TYPE__ stdc_load8_leu32(const unsigned char *);
+__UINT_LEAST64_TYPE__ stdc_load8_leu64(const unsigned char *);
+
+__UINT_LEAST8_TYPE__ stdc_load8_beu8(const unsigned char *);
+__UINT_LEAST16_TYPE__ stdc_load8_beu16(const unsigned char *);
+__UINT_LEAST32_TYPE__ stdc_load8_beu32(const unsigned char *);
+__UINT_LEAST64_TYPE__ stdc_load8_beu64(const unsigned char *);
+
+__UINT_LEAST8_TYPE__ stdc_load8_aligned_leu8(const unsigned char *);
+__UINT_LEAST16_TYPE__ stdc_load8_aligned_leu16(const unsigned char *);
+__UINT_LEAST32_TYPE__ stdc_load8_aligned_leu32(const unsigned char *);
+__UINT_LEAST64_TYPE__ stdc_load8_aligned_leu64(const unsigned char *);
+
+__UINT_LEAST8_TYPE__ stdc_load8_aligned_beu8(const unsigned char *);
+__UINT_LEAST16_TYPE__ stdc_load8_aligned_beu16(const unsigned char *);
+__UINT_LEAST32_TYPE__ stdc_load8_aligned_beu32(const unsigned char *);
+__UINT_LEAST64_TYPE__ stdc_load8_aligned_beu64(const unsigned char *);
+
+__INT_LEAST8_TYPE__ stdc_load8_les8(const unsigned char *);
+__INT_LEAST16_TYPE__ stdc_load8_les16(const unsigned char *);
+__INT_LEAST32_TYPE__ stdc_load8_les32(const unsigned char *);
+__INT_LEAST64_TYPE__ stdc_load8_les64(const unsigned char *);
+
+__INT_LEAST8_TYPE__ stdc_load8_bes8(const unsigned char *);
+__INT_LEAST16_TYPE__ stdc_load8_bes16(const unsigned char *);
+__INT_LEAST32_TYPE__ stdc_load8_bes32(const unsigned char *);
+__INT_LEAST64_TYPE__ stdc_load8_bes64(const unsigned char *);
+
+__INT_LEAST8_TYPE__ stdc_load8_aligned_les8(const unsigned char *);
+__INT_LEAST16_TYPE__ stdc_load8_aligned_les16(const unsigned char *);
+__INT_LEAST32_TYPE__ stdc_load8_aligned_les32(const unsigned char *);
+__INT_LEAST64_TYPE__ stdc_load8_aligned_les64(const unsigned char *);
+
+__INT_LEAST8_TYPE__ stdc_load8_aligned_bes8(const unsigned char *);
+__INT_LEAST16_TYPE__ stdc_load8_aligned_bes16(const unsigned char *);
+__INT_LEAST32_TYPE__ stdc_load8_aligned_bes32(const unsigned char *);
+__INT_LEAST64_TYPE__ stdc_load8_aligned_bes64(const unsigned char *);
+
 #endif

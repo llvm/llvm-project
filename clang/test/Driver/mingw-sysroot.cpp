@@ -10,8 +10,11 @@
 // RUN: rm -rf %t.dir/testroot-clang
 // RUN: mkdir -p %t.dir/testroot-clang/bin
 // RUN: ln -s %clang %t.dir/testroot-clang/bin/x86_64-w64-mingw32-clang
+// RUN: ln -s %clang %t.dir/testroot-clang/bin/aarch64-w64-mingw32-clang
+// RUN: ln -s %clang %t.dir/testroot-clang/bin/arm64ec-w64-mingw32-clang
 // RUN: ln -s %S/Inputs/mingw_ubuntu_posix_tree/usr/x86_64-w64-mingw32 %t.dir/testroot-clang/x86_64-w64-mingw32
 // RUN: ln -s %S/Inputs/mingw_arch_tree/usr/i686-w64-mingw32 %t.dir/testroot-clang/i686-w64-mingw32
+// RUN: ln -s %S/Inputs/mingw_ubuntu_posix_tree/usr/x86_64-w64-mingw32 %t.dir/testroot-clang/aarch64-w64-mingw32
 
 // RUN: rm -rf %t.dir/testroot-clang-native
 // RUN: mkdir -p %t.dir/testroot-clang-native/bin
@@ -23,6 +26,7 @@
 // RUN: mkdir -p %t.dir/testroot-custom-triple/bin
 // RUN: ln -s %clang %t.dir/testroot-custom-triple/bin/clang
 // RUN: ln -s %S/Inputs/mingw_ubuntu_posix_tree/usr/x86_64-w64-mingw32 %t.dir/testroot-custom-triple/x86_64-w64-mingw32foo
+// RUN: ln -s %S/Inputs/mingw_ubuntu_posix_tree/usr/x86_64-w64-mingw32 %t.dir/testroot-custom-triple/aarch64-w64-mingw32foo
 
 // If we find a gcc in the path with the right triplet prefix, pick that as
 // sysroot:
@@ -103,3 +107,19 @@
 
 // RUN: %t.dir/testroot-custom-triple/bin/clang -no-canonical-prefixes --target=x86_64-w64-mingw32foo -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CUSTOM_TRIPLE %s
 // CHECK_TESTROOT_CUSTOM_TRIPLE: "{{[^"]+}}/testroot-custom-triple{{/|\\\\}}x86_64-w64-mingw32foo{{/|\\\\}}include"
+
+// Check that the arm64ec target uses the aarch64 sysroot if a separate arm64ec sysroot is not found.
+
+// RUN: %t.dir/testroot-clang/bin/aarch64-w64-mingw32-clang -no-canonical-prefixes --target=aarch64-w64-mingw32 -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CLANG_AARCH64 %s
+// RUN: %t.dir/testroot-clang/bin/arm64ec-w64-mingw32-clang -no-canonical-prefixes --target=arm64ec-w64-mingw32 -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CLANG_AARCH64 %s
+// CHECK_TESTROOT_CLANG_AARCH64: "{{[^"]+}}/testroot-clang{{/|\\\\}}aarch64-w64-mingw32{{/|\\\\}}include"
+
+// RUN: %t.dir/testroot-custom-triple/bin/clang -no-canonical-prefixes --target=aarch64-w64-mingw32foo -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CUSTOM_TRIPLE_AARCH64 %s
+// RUN: %t.dir/testroot-custom-triple/bin/clang -no-canonical-prefixes --target=arm64ec-w64-mingw32foo -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CUSTOM_TRIPLE_AARCH64 %s
+// CHECK_TESTROOT_CUSTOM_TRIPLE_AARCH64: "{{[^"]+}}/testroot-custom-triple{{/|\\\\}}aarch64-w64-mingw32foo{{/|\\\\}}include"
+
+// Check that the arm64ec sysroot is still preferred when available.
+
+// RUN: ln -s %S/Inputs/mingw_ubuntu_posix_tree/usr/x86_64-w64-mingw32 %t.dir/testroot-custom-triple/arm64ec-w64-mingw32foo
+// RUN: %t.dir/testroot-custom-triple/bin/clang -no-canonical-prefixes --target=arm64ec-w64-mingw32foo -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CUSTOM_TRIPLE_ARM64EC %s
+// CHECK_TESTROOT_CUSTOM_TRIPLE_ARM64EC: "{{[^"]+}}/testroot-custom-triple{{/|\\\\}}arm64ec-w64-mingw32foo{{/|\\\\}}include"

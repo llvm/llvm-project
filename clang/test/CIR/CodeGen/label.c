@@ -44,8 +44,6 @@ labelC:
 // LLVM: define dso_local void @multiple_labels(){{.*}}
 // LLVM:   br label %1
 // LLVM: 1:
-// LLVM:   br label %2
-// LLVM: 2:
 // LLVM:   ret void
 
 // OGCG: define dso_local void @multiple_labels
@@ -78,17 +76,13 @@ labelD:
 // LLVM: 3:
 // LLVM:   [[LOAD:%.*]] = load i32, ptr [[COND:%.*]], align 4
 // LLVM:   [[CMP:%.*]] = icmp ne i32 [[LOAD]], 0
-// LLVM:   br i1 [[CMP]], label %6, label %10
+// LLVM:   br i1 [[CMP]], label %6, label %9
 // LLVM: 6:
-// LLVM:   br label %7
-// LLVM: 7:
 // LLVM:   [[LOAD2:%.*]] = load i32, ptr [[COND]], align 4
 // LLVM:   [[ADD1:%.*]] = add nsw i32 [[LOAD2]], 1
 // LLVM:   store i32 [[ADD1]], ptr [[COND]], align 4
-// LLVM:   br label %10
-// LLVM: 10:
-// LLVM:   br label %11
-// LLVM: 11:
+// LLVM:   br label %9
+// LLVM: 9:
 // LLVM:  ret void
 
 // OGCG: define dso_local void @label_in_if
@@ -179,21 +173,17 @@ void foo() {
 
 // CIR: cir.func {{.*}} @foo
 // CIR:   cir.scope {
-// CIR:     %0 = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["agg.tmp0"]
+// CIR:     %0 = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_S>
 // CIR:      cir.br ^bb1
 // CIR:    ^bb1:
 // CIR:     cir.label "label"
 
 // LLVM: define dso_local void @foo(){{.*}} {
-// LLVM:  [[ALLOC:%.*]] = alloca %struct.S, i64 1, align 1
+// LLVM:  %{{.*}} = alloca %struct.S, align 1
 // LLVM:  br label %2
 // LLVM:2:
-// LLVM:  br label %3
-// LLVM:3:
-// LLVM:  [[CALL:%.*]] = call %struct.S @get()
-// LLVM:  store %struct.S [[CALL]], ptr [[ALLOC]], align 1
-// LLVM:  [[LOAD:%.*]] = load %struct.S, ptr [[ALLOC]], align 1
-// LLVM:  call void @bar(%struct.S [[LOAD]])
+// LLVM:  call void @get()
+// LLVM:  call void @bar()
 
 // OGCG: define dso_local void @foo()
 // OGCG:   %agg.tmp = alloca %struct.S, align 1

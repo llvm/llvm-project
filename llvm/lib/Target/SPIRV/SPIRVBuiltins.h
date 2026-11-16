@@ -34,7 +34,7 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall,
 /// Register(0) otherwise.
 /// \p OrigRetTy is the type of the \p OrigRet.
 /// \p Args are the arguments of the lowered builtin call.
-std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
+std::optional<bool> lowerBuiltin(StringRef DemangledCall,
                                  InstructionSet::InstructionSet Set,
                                  MachineIRBuilder &MIRBuilder,
                                  const Register OrigRet, const Type *OrigRetTy,
@@ -44,8 +44,12 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
 /// Helper function for finding a builtin function attributes
 /// by a demangled function name. Defined in SPIRVBuiltins.cpp.
 std::tuple<int, unsigned, unsigned>
-mapBuiltinToOpcode(const StringRef DemangledCall,
+mapBuiltinToOpcode(StringRef DemangledCall,
                    SPIRV::InstructionSet::InstructionSet Set);
+
+/// Whether lowerBuiltin() recognizes \p DemangledCall in \p Set.
+bool isBuiltin(StringRef DemangledCall,
+               SPIRV::InstructionSet::InstructionSet Set);
 
 /// Parses the provided \p ArgIdx argument base type in the \p DemangledCall
 /// skeleton. A base type is either a basic type (e.g. i32 for int), pointer
@@ -55,10 +59,10 @@ mapBuiltinToOpcode(const StringRef DemangledCall,
 ///
 /// \p DemangledCall is the skeleton of the lowered builtin function call.
 /// \p ArgIdx is the index of the argument to parse.
-Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
-                                       unsigned ArgIdx, LLVMContext &Ctx);
+Type *parseBuiltinCallArgumentBaseType(StringRef DemangledCall, unsigned ArgIdx,
+                                       LLVMContext &Ctx);
 bool parseBuiltinTypeStr(SmallVector<StringRef, 10> &BuiltinArgsTypeStrs,
-                         const StringRef DemangledCall, LLVMContext &Ctx);
+                         StringRef DemangledCall, LLVMContext &Ctx);
 Type *parseBuiltinCallArgumentType(StringRef TypeStr, LLVMContext &Ctx);
 
 /// Translates a string representing a SPIR-V or OpenCL builtin type to a
@@ -83,6 +87,9 @@ SPIRVTypeInst lowerBuiltinType(const Type *Type,
                                AccessQualifier::AccessQualifier AccessQual,
                                MachineIRBuilder &MIRBuilder,
                                SPIRVGlobalRegistry *GR);
+
+/// Returns true if \p Name is a pipe or address-space-cast OpenCL builtin.
+bool isPipeOrAddressSpaceCastBuiltin(StringRef Name);
 } // namespace SPIRV
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVBUILTINS_H

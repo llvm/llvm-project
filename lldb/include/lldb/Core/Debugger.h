@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_DEBUGGER_H
 #define LLDB_CORE_DEBUGGER_H
 
+#include <atomic>
 #include <cstdint>
 
 #include <memory>
@@ -16,24 +17,28 @@
 #include <vector>
 
 #include "lldb/Core/DebuggerEvents.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/Statusline.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/Telemetry.h"
+#include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-defines.h"
@@ -45,6 +50,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -100,6 +106,7 @@ class Debugger : public std::enable_shared_from_this<Debugger>,
                  public Properties {
 public:
   using DebuggerList = std::vector<lldb::DebuggerSP>;
+  using DebuggerIterable = LockingAdaptedIterable<std::mutex, DebuggerList>;
 
   static llvm::StringRef GetStaticBroadcasterClass();
 
@@ -134,6 +141,9 @@ public:
   static size_t GetNumDebuggers();
 
   static lldb::DebuggerSP GetDebuggerAtIndex(size_t index);
+
+  /// Get locking iterator for debuggers.
+  static DebuggerIterable Debuggers();
 
   static bool FormatDisassemblerAddress(const FormatEntity::Entry *format,
                                         const SymbolContext *sc,
@@ -219,6 +229,8 @@ public:
   ///     A global shared target list.
   TargetList &GetTargetList() { return m_target_list; }
 
+  TargetGroupList &GetTargetGroupList() { return m_target_group_list; }
+
   PlatformList &GetPlatformList() { return m_platform_list; }
 
   void DispatchInputInterrupt();
@@ -258,13 +270,17 @@ public:
 
   void ClearIOHandlers();
 
-  bool EnableLog(llvm::StringRef channel,
-                 llvm::ArrayRef<const char *> categories,
-                 llvm::StringRef log_file, uint32_t log_options,
-                 size_t buffer_size, LogHandlerKind log_handler_kind,
-                 llvm::raw_ostream &error_stream);
+  llvm::Error EnableLog(llvm::StringRef channel,
+                        llvm::ArrayRef<const char *> categories,
+                        llvm::StringRef log_file, uint32_t log_options,
+                        size_t buffer_size, LogHandlerKind log_handler_kind);
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
+
+  /// Copy this debugger's file-backed log files into the given directory, for
+  /// inclusion in a diagnostics bundle. Returns the names of the files that
+  /// were copied. Best-effort: files that cannot be copied are skipped.
+  std::vector<std::string> CopyLogFilesToDirectory(const FileSpec &dir);
 
   Status SetPropertyValue(const ExecutionContext *exe_ctx,
                           VarSetOperationType op, llvm::StringRef property_path,
@@ -299,6 +315,10 @@ public:
   uint64_t GetTerminalHeight() const;
 
   bool SetTerminalHeight(uint64_t term_height);
+
+  /// Set the terminal width and height together, so observers are notified
+  /// once with both dimensions current.
+  bool SetTerminalDimensions(uint64_t term_width, uint64_t term_height);
 
   llvm::StringRef GetPrompt() const;
 
@@ -336,11 +356,23 @@ public:
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
 
+  llvm::StringRef GetLabelAnsiPrefix() const;
+
+  llvm::StringRef GetLabelAnsiSuffix() const;
+
+  llvm::StringRef GetTitleAnsiPrefix() const;
+
+  llvm::StringRef GetTitleAnsiSuffix() const;
+
+  llvm::StringRef GetDividerAnsiPrefix() const;
+
+  llvm::StringRef GetDividerAnsiSuffix() const;
+
   llvm::StringRef GetDisabledAnsiPrefix() const;
 
   llvm::StringRef GetDisabledAnsiSuffix() const;
 
-  bool GetUseAutosuggestion() const;
+  AutosuggestionMode GetAutosuggestionMode() const;
 
   llvm::StringRef GetAutosuggestionAnsiPrefix() const;
 
@@ -398,6 +430,10 @@ public:
 
   const std::string &GetInstanceName() const { return m_instance_name; }
 
+  /// The pool for strings handed out through the SB API that belong to this
+  /// debugger.
+  StringPoolRef GetStringPool() const { return m_string_pool; }
+
   bool GetShowInlineDiagnostics() const;
 
   bool SetShowInlineDiagnostics(bool);
@@ -450,7 +486,13 @@ public:
   /// Redraw the statusline if enabled.
   void RedrawStatusline(std::optional<ExecutionContextRef> exe_ctx_ref);
 
-  /// Flush cached state (e.g. stale execution context in the statusline).
+  /// Whether the statusline can be drawn: show-statusline is enabled and the
+  /// output is an escape-code-capable terminal.
+  bool StatuslineSupported();
+
+  /// Discard the statusline's cached frame at its next redraw. This function
+  /// is thread-safe and takes no lock, so callers may hold the target API
+  /// mutex.
   void FlushStatusLine();
 
   /// This is the correct way to query the state of Interruption.
@@ -582,6 +624,19 @@ public:
               std::optional<lldb::user_id_t> debugger_id = std::nullopt,
               std::once_flag *once = nullptr);
 
+  /// Report an error that may be a bug in LLDB.
+  ///
+  /// Like ReportError, but each debugger follows the error with a note
+  /// suggesting the 'bugreport' command, see ShouldSuggestBugReport.
+  static void
+  ReportInternalError(std::string message,
+                      std::optional<lldb::user_id_t> debugger_id = std::nullopt,
+                      std::once_flag *once = nullptr);
+
+  /// Returns true the first time this debugger sees \p failure while
+  /// diagnostics.suggest-bugreport is on.
+  bool ShouldSuggestBugReport(llvm::StringRef failure);
+
   /// Report info events.
   ///
   /// Unlike warning and error events, info events are not broadcast but are
@@ -694,7 +749,8 @@ protected:
 
   static void ReportDiagnosticImpl(lldb::Severity severity, std::string message,
                                    std::optional<lldb::user_id_t> debugger_id,
-                                   std::once_flag *once);
+                                   std::once_flag *once,
+                                   bool internal_error = false);
 
   void HandleDestroyCallback();
 
@@ -709,7 +765,6 @@ protected:
   /// @}
 
   bool IsEscapeCodeCapableTTY();
-  bool StatuslineSupported();
 
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
                      bool cancel_top_handler = true);
@@ -763,6 +818,7 @@ protected:
 
   TerminalState m_terminal_state;
   TargetList m_target_list;
+  TargetGroupList m_target_group_list;
 
   PlatformList m_platform_list;
   lldb::ListenerSP m_listener_sp;
@@ -787,10 +843,16 @@ protected:
   /// Mutex protecting the m_statusline member.
   std::mutex m_statusline_mutex;
   std::optional<Statusline> m_statusline;
+  /// Raised by FlushStatusLine to request a flush at the next redraw.
+  std::atomic<bool> m_flush_statusline = false;
+
+  /// Hashes of the failures this debugger already suggested 'bugreport' for.
+  ThreadSafeDenseSet<llvm::stable_hash> m_suggested_bugreports;
 
   llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;
   std::shared_ptr<CallbackLogHandler> m_callback_handler_sp;
   const std::string m_instance_name;
+  StringPoolRef m_string_pool;
   static LoadPluginCallbackType g_load_plugin_callback;
   typedef std::vector<llvm::sys::DynamicLibrary> LoadedPluginsList;
   LoadedPluginsList m_loaded_plugins;
@@ -801,7 +863,6 @@ protected:
   lldb::ListenerSP m_forward_listener_sp;
   llvm::once_flag m_clear_once;
   lldb::TargetSP m_dummy_target_sp;
-  Diagnostics::CallbackID m_diagnostics_callback_id;
 
   /// Bookkeeping for command line progress events.
   /// @{

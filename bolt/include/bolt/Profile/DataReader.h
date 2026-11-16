@@ -236,8 +236,10 @@ struct FuncBasicSampleData {
 ///
 class DataReader : public ProfileReaderBase {
 public:
-  explicit DataReader(StringRef Filename)
-      : ProfileReaderBase(Filename), Diag(errs()) {}
+  explicit DataReader(StringRef Filename) : DataReader(Filename, errs()) {}
+
+  DataReader(StringRef Filename, raw_ostream &Diag)
+      : ProfileReaderBase(Filename), Diag(Diag) {}
 
   StringRef getReaderName() const override { return "branch profile reader"; }
 
@@ -278,13 +280,13 @@ protected:
   float evaluateProfileData(BinaryFunction &BF,
                             const FuncBranchData &BranchData) const;
 
-  /// If our profile data comes from sample addresses instead of LBR entries,
-  /// collect sample count for all addresses in this function address space,
-  /// aggregating them per basic block and assigning an execution count to each
-  /// basic block based on the number of samples recorded at those addresses.
-  /// The last step is to infer edge counts based on BB execution count. Note
-  /// this is the opposite of the LBR way, where we infer BB execution count
-  /// based on edge counts.
+  /// If our profile data comes from sample addresses instead of brstack
+  /// entries, collect sample count for all addresses in this function address
+  /// space, aggregating them per basic block and assigning an execution count
+  /// to each basic block based on the number of samples recorded at those
+  /// addresses. The last step is to infer edge counts based on BB execution
+  /// count. Note this is the opposite of the brstack way, where we infer BB
+  /// execution count based on edge counts.
   void readBasicSampleData(BinaryFunction &BF);
 
   /// Convert function-level branch data into instruction annotations.
@@ -331,10 +333,10 @@ protected:
   /// offset d.
   std::error_code parse();
 
-  /// When no_lbr is the first line of the file, activate No LBR mode. In this
-  /// mode we read the addresses where samples were recorded directly instead of
-  /// LBR entries. The line format is almost the same, except for a missing <to>
-  /// triple and a missing mispredictions field:
+  /// When no_lbr is the first line of the file, activate non-brstack mode. In
+  /// this mode we read the addresses where samples were recorded directly
+  /// instead of brstack entries. The line format is almost the same, except for
+  /// a missing <to> triple and a missing mispredictions field:
   ///
   /// no_lbr
   /// <is symbol?> <closest elf symbol or DSO name> <relative address> <count>
@@ -347,6 +349,15 @@ protected:
   ///  1 BZ2_hbMakeCodeLengths 29c 1
   ///
   std::error_code parseInNoLBRMode();
+
+  /// When "symbols" is the first line of the file, activate Symbols mode. Each
+  /// subsequent line contains a single symbol name (no counts or offsets).
+  ///
+  /// symbols                          # First line of fdata file
+  /// main
+  /// BZ2_compressBlock
+  ///
+  std::error_code parseInSymbolsMode();
 
   /// Return branch data matching one of the names in \p FuncNames.
   FuncBranchData *
@@ -413,7 +424,8 @@ protected:
   /// Dumps the entire data structures parsed. Used for debugging.
   void dump() const;
 
-  /// Return false only if we are running with profiling data that lacks LBR.
+  /// Return false only if we are running with profiling data that lacks
+  /// brstack.
   bool hasLBR() const { return !NoLBRMode; }
 
   /// Return true if the profiling data was collected in a bolted binary. This
@@ -455,7 +467,7 @@ protected:
   ErrorOr<BasicSampleInfo> parseSampleInfo();
   ErrorOr<MemInfo> parseMemInfo();
   ErrorOr<bool> maybeParseNoLBRFlag();
-  ErrorOr<bool> maybeParseBATFlag();
+  ErrorOr<bool> maybeParseFlag(StringRef Flag);
   bool hasBranchData();
   bool hasMemData();
 
@@ -472,6 +484,7 @@ protected:
   FuncsToMemDataMapTy FuncsToMemData;
   bool NoLBRMode{false};
   bool BATMode{false};
+  bool SymbolsMode{false};
   StringSet<> EventNames;
   static const char FieldSeparator = ' ';
 
@@ -488,9 +501,6 @@ public:
 /// DenseMapInfo allows us to use the DenseMap LLVM data structure to store
 /// Locations
 template <> struct DenseMapInfo<bolt::Location> {
-  static inline bolt::Location getEmptyKey() {
-    return bolt::Location(true, StringRef(), static_cast<uint64_t>(-1LL));
-  }
   static unsigned getHashValue(const bolt::Location &L) {
     return (unsigned(DenseMapInfo<StringRef>::getHashValue(L.Name)) >> 4) ^
            (unsigned(L.Offset));

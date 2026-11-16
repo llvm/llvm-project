@@ -12,13 +12,13 @@
 // This file contains Unicode characters; please do not "fix" them!
 
 // This was fine in C11, is now an error in C23.
-extern int ٢;  // c23-error {{character <U+0662> not allowed at the start of an identifier}} \
+extern int ٢;  // c23-error {{character '٢' U+0662 not allowed at the start of an identifier}} \
                   c23-warning {{declaration does not declare anything}}
 
 // This was an error in C11 but is an extension in C23.
-extern int ∞;  // c11-error {{unexpected character <U+221E>}} \
+extern int ∞;  // c11-error {{unexpected character '∞' U+221E}} \
                   c11-warning {{declaration does not declare anything}} \
-                  c23-warning {{mathematical notation character <U+221E> in an identifier is a Clang extension}}
+                  c23-warning {{mathematical notation character '∞' U+221E in an identifier is a Clang extension}}
 
 int \u1DC0;  // both-error {{expected identifier or '('}}
 int e\u1DC0; // Ok

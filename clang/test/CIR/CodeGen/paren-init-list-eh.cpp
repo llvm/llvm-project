@@ -22,7 +22,7 @@ void test_init_list_with_dtor() {
 }
 
 // CIR: cir.func {{.*}} @_Z24test_init_list_with_dtorv
-// CIR:   %[[O:.*]] = cir.alloca !rec_Outer, !cir.ptr<!rec_Outer>, ["o", init]
+// CIR:   %[[O:.*]] = cir.alloca "o" {{.*}} init : !cir.ptr<!rec_Outer>
 // CIR:   %[[S1:.*]] = cir.get_member %[[O]][0] {name = "s1"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Struk>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR:   cir.call @_ZN5StrukC1Ei(%[[S1]], %[[ONE]])
@@ -64,8 +64,6 @@ void test_init_list_with_dtor() {
 // LLVM:   %[[X_ADDR:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 2
 // LLVM:   store i32 3, ptr %[[X_ADDR]]
 // LLVM:   br label %[[EXIT_CLEANUP_SCOPE:.*]]
-// LLVM: [[EXIT_CLEANUP_SCOPE]]:
-// LLVM:   br label %[[DONE:.*]]
 // LLVM: [[LPAD]]:
 // LLVM:   %[[EXN:.*]] = landingpad { ptr, i32 }
 // LLVM:                    cleanup
@@ -79,6 +77,9 @@ void test_init_list_with_dtor() {
 // LLVM:   %[[EXN_INS:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_ADDR_PHI]], 0
 // LLVM:   %[[EXN_INS2:.*]] = insertvalue { ptr, i32 } %[[EXN_INS]], i32 %[[EXN_SELECTOR_PHI]], 1
 // LLVM:   resume { ptr, i32 } %[[EXN_INS2]]
+// LLVM: [[EXIT_CLEANUP_SCOPE]]:
+// LLVM:   call void @_ZN5OuterD1Ev(ptr{{.*}} %[[O]])
+// LLVM:   br label %[[DONE:.*]]
 // LLVM: [[DONE]]:
 // LLVM:   ret void
 

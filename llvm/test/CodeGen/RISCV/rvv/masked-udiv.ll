@@ -147,17 +147,16 @@ define <2 x i128> @udiv_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 ; CHECK-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    sub sp, sp, a3
-; CHECK-NEXT:    mv a4, a1
-; CHECK-NEXT:    addi a3, sp, 16
-; CHECK-NEXT:    vs1r.v v0, (a3) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    ld a6, 16(a1)
-; CHECK-NEXT:    ld a1, 24(a1)
-; CHECK-NEXT:    ld a3, 24(a2)
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    addi a3, sp, 16
+; CHECK-NEXT:    vs1r.v v0, (a3) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vmv.x.s a5, v8
+; CHECK-NEXT:    ld a6, 16(a1)
+; CHECK-NEXT:    ld a4, 24(a1)
+; CHECK-NEXT:    ld a3, 24(a2)
 ; CHECK-NEXT:    andi a7, a5, 1
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    bnez a7, .LBB13_2
@@ -167,13 +166,14 @@ define <2 x i128> @udiv_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 ; CHECK-NEXT:  .LBB13_2:
 ; CHECK-NEXT:    ld a5, 16(a2)
 ; CHECK-NEXT:  .LBB13_3:
-; CHECK-NEXT:    ld s1, 0(a4)
-; CHECK-NEXT:    ld s2, 8(a4)
+; CHECK-NEXT:    ld s1, 0(a1)
+; CHECK-NEXT:    ld s2, 8(a1)
 ; CHECK-NEXT:    ld s3, 0(a2)
 ; CHECK-NEXT:    ld s6, 8(a2)
 ; CHECK-NEXT:    neg a0, a7
 ; CHECK-NEXT:    and a3, a0, a3
 ; CHECK-NEXT:    mv a0, a6
+; CHECK-NEXT:    mv a1, a4
 ; CHECK-NEXT:    mv a2, a5
 ; CHECK-NEXT:    call __udivti3
 ; CHECK-NEXT:    mv s4, a0
@@ -217,32 +217,32 @@ define <3 x i10> @udiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; CHECK-LABEL: udiv_v3i10:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld a3, 0(a2)
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 7
-; CHECK-NEXT:    ld a4, 8(a2)
+; CHECK-NEXT:    ld a4, 0(a1)
+; CHECK-NEXT:    ld a5, 8(a2)
 ; CHECK-NEXT:    ld a2, 16(a2)
-; CHECK-NEXT:    vmv.v.x v9, a3
-; CHECK-NEXT:    ld a3, 0(a1)
-; CHECK-NEXT:    ld a5, 8(a1)
-; CHECK-NEXT:    ld a1, 16(a1)
-; CHECK-NEXT:    vmand.mm v0, v0, v8
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a3
-; CHECK-NEXT:    vslide1down.vx v9, v9, a4
-; CHECK-NEXT:    li a3, 1023
+; CHECK-NEXT:    ld a3, 8(a1)
+; CHECK-NEXT:    ld a1, 16(a1)
+; CHECK-NEXT:    vmv.v.x v9, a4
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a5
-; CHECK-NEXT:    vslide1down.vx v9, v9, a2
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vslidedown.vi v9, v9, 1
+; CHECK-NEXT:    vslide1down.vx v9, v9, a3
+; CHECK-NEXT:    vmv.v.i v10, 7
+; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    vslide1down.vx v9, v9, a1
+; CHECK-NEXT:    vmand.mm v0, v0, v10
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vand.vx v9, v9, a3
-; CHECK-NEXT:    vand.vx v8, v8, a3
-; CHECK-NEXT:    vdivu.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vslidedown.vi v9, v9, 1
+; CHECK-NEXT:    li a1, 1023
+; CHECK-NEXT:    vand.vx v8, v8, a1
+; CHECK-NEXT:    vand.vx v9, v9, a1
+; CHECK-NEXT:    vdivu.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    andi a1, a1, 1023
 ; CHECK-NEXT:    vmv.x.s a2, v9
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vmv.x.s a3, v8
+; CHECK-NEXT:    andi a1, a1, 1023
 ; CHECK-NEXT:    andi a2, a2, 1023
 ; CHECK-NEXT:    slli a3, a3, 20
 ; CHECK-NEXT:    slli a2, a2, 10

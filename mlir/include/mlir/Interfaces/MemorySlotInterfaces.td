@@ -18,6 +18,7 @@ def PromotableAllocationOpInterface
     SSA values.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -97,6 +98,7 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
     load must semantically happen first.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -121,11 +123,13 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
         storing a value to a slot must always be able to provide the value it
         stores. This method is only called once per slot promotion, and only
         on operations that store to the slot according to the `storesTo` method.
-        The returned value must dominate all operations dominated by the storing
-        operation.
 
-        The builder is located immediately after the memory operation on call.
-        No IR deletion is allowed in this method. IR mutations must not
+        The returned value must dominate the memory operation. This ensures
+        that new uses inserted by `visitReplacedValues` after the memory
+        operation are properly dominated.
+
+        The builder is positioned immediately before the memory operation on
+        call. No IR deletion is allowed in this method. IR mutations must not
         introduce new uses of the memory slot. Existing control flow must not
         be modified.
       }],
@@ -180,6 +184,26 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
            "::mlir::Value":$reachingDefinition,
            "const ::mlir::DataLayout &":$dataLayout)
     >,
+    InterfaceMethod<[{
+        Returns whether this operation owns the blocking uses of a single
+        wrapped `PromotableMemOpInterface` operation. If true, it must have one
+        single-block region containing only that operation and a terminator.
+        All blocking uses must belong to the wrapped operation, not this
+        operation or its terminator. Only a single level of nesting is
+        supported.
+
+        Promotion calls this operation's interface methods with the wrapped
+        operation's operands in `blockingUses`, without consulting
+        `PromotableRegionOpInterface` for its region. The builder inserts IR
+        outside the region, before or after this operation.
+
+        The results of this operation must not alias the slot.
+
+        No IR mutation is allowed in this method.
+      }],
+      "bool", "ownsWrappedBlockingUses", (ins), [{}],
+      /*defaultImplementation=*/[{ return false; }]
+    >,
   ];
 }
 
@@ -190,6 +214,7 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
     of a memory slot.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -235,29 +260,30 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
            "::mlir::OpBuilder &":$builder)
     >,
     InterfaceMethod<[{
-        This method allows the promoted operation to visit the SSA values used
-        in place of the memory slot once the promotion process of the memory
-        slot is complete.
+        Indicates whether the promoted operation needs to visit the SSA values
+        that replace the memory slot.
 
-        If this method returns true, the `visitReplacedValues` method on this
-        operation will be called after the main mutation stage finishes
-        (i.e., after all ops have been processed with `removeBlockingUses`).
+        If true, `visitReplacedValues` will be called once for this operation
+        after all reaching definitions have been computed but before any
+        blocking uses are removed.
 
-        Operations should only visit the replaced values if the intended
-        transformation applies to all the replaced values. Furthermore, replaced
-        values must not be deleted.
+        This should only return true if the intended transformation applies
+        to all replaced values. Replaced values must not be deleted.
       }], "bool", "requiresReplacedValues", (ins), [{}],
       [{ return false; }]
     >,
     InterfaceMethod<[{
-        Transforms the IR using the SSA values that replaced the memory slot.
+        Transforms the IR using the SSA values replacing the memory slot.
 
-        This method will only be called after all blocking uses have been
-        scheduled for removal and if `requiresReplacedValues` returned
-        true.
+        Called after all reaching definitions for the slot have been computed
+        but before any blocking uses are removed, provided
+        `requiresReplacedValues` returns true. `mutatedDefs` contains the
+        replacing values. Any new uses of a load result created here will be
+        automatically redirected to its reaching definition when the load is
+        replaced.
 
-        The builder is located after the promotable operation on call. During
-        the transformation, *no operation should be deleted*.
+        The builder is positioned after the promotable operation.
+        No operations may be deleted during this transformation.
       }],
       "void", "visitReplacedValues",
       (ins "::llvm::ArrayRef<std::pair<::mlir::Operation*, ::mlir::Value>>":$mutatedDefs,
@@ -280,6 +306,7 @@ def PromotableAliaserInterface : OpInterface<"PromotableAliaserInterface"> {
     after the slot has been promoted.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let verify = [{
     if (!::mlir::isa<::mlir::PromotableOpInterface,
@@ -304,7 +331,8 @@ def PromotableAliaserInterface : OpInterface<"PromotableAliaserInterface"> {
 
         Exposing an alias requires implementing the two projection methods
         below to bridge values between the parent and new slot element types.
-        If these projections cannot be performed, leave `newMemorySlots` empty.
+        If these projections cannot be performed, `newMemorySlots` must be left
+        empty.
 
         No IR mutation is allowed in this method.
       }],
@@ -356,6 +384,7 @@ def PromotableRegionOpInterface
     within the operation's regions.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -448,6 +477,7 @@ def DestructurableAllocationOpInterface
     destructured into multiple smaller allocations.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -502,6 +532,7 @@ def SafeMemorySlotAccessOpInterface
     Describes operations using memory slots in a safe manner.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -531,6 +562,7 @@ def DestructurableAccessorOpInterface
     Describes operations that can access a sub-element of a destructurable slot.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -575,6 +607,7 @@ def DestructurableTypeInterface
     Describes a type that can be broken down into indexable sub-element types.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{

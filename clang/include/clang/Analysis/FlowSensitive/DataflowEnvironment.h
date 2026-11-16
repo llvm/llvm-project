@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
@@ -33,6 +34,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -156,19 +158,82 @@ public:
     }
   };
 
-  /// Creates an environment that uses `DACtx` to store objects that encompass
-  /// the state of a program. `FlowConditionToken` sets the flow condition
-  /// associated with the environment. Generally, new environments should be
-  /// initialized with a fresh token, by using one of the other
-  /// constructors. This constructor is for specialized use, including
-  /// deserialization and delegation from other constructors.
-  Environment(DataflowAnalysisContext &DACtx, Atom FlowConditionToken)
-      : DACtx(&DACtx), FlowConditionToken(FlowConditionToken) {}
+  /// Abstract interface for modeling boolean formulas and path conditions in
+  /// an `Environment`.
+  class BoolModel {
+  public:
+    explicit BoolModel(BoolModelKind K) : K(K) {}
+    virtual ~BoolModel() = default;
+
+    BoolModelKind getKind() const { return K; }
+
+    /// Returns an exact copy of this model state.
+    virtual std::unique_ptr<BoolModel> clone() const = 0;
+
+    /// If this model state was cloned, updates this model state to be a fork
+    /// so that mutations to either model state will not affect the other.
+    virtual void onFork() = 0;
+
+    /// Records a fact that must be true if this point in the program is
+    /// reached.
+    virtual void assume(const Formula &F) = 0;
+
+    /// Returns true if `F` is always true when this point is reached.
+    /// Returns false if the formula may be false (or the flow condition isn't
+    /// sufficiently precise to prove that it is true).
+    /// See `Environment::proves` for more details.
+    virtual bool proves(const Formula &F) const = 0;
+
+    /// Returns true if `F` may be true when this point is reached.
+    /// Returns false if the formula is always false when this point is reached
+    /// (or the flow condition is overly constraining).
+    /// See `Environment::allows` for more details.
+    virtual bool allows(const Formula &F) const = 0;
+
+    /// Joins two distinct boolean values `Val1` (from `Model1`) and `Val2`
+    /// (from `Model2`) into `JoinedEnv`.
+    /// Requires `Model1` and `Model2` to have the same kind as `this`.
+    virtual BoolValue &joinBoolValues(BoolValue &Val1, const BoolModel &Model1,
+                                      BoolValue &Val2, const BoolModel &Model2,
+                                      Environment &JoinedEnv) = 0;
+
+    /// Populates `this` with the join of `ModelA` and `ModelB`.
+    ///
+    /// Requirements: `ModelA` and `ModelB` must have the same kind as `this`.
+    virtual void join(const BoolModel &ModelA, const BoolModel &ModelB) = 0;
+
+    /// Widens `this` with respect to `PrevModel` and returns whether the state
+    /// changed relative to `PrevModel`.
+    ///
+    /// Requirements: `PrevModel` must have the same kind as `this`.
+    virtual LatticeEffect widen(const BoolModel &PrevModel) = 0;
+
+    /// Returns whether this boolean model state is equivalent to `Other` for
+    /// convergence purposes.
+    /// Requirements: `Other` must have the same kind as `this`.
+    virtual bool isEquivalentTo(const BoolModel &Other) const = 0;
+
+    /// Returns the flow condition token (only meaningful for SAT-based models).
+    virtual Atom getFlowConditionToken() const = 0;
+
+    virtual void dump(raw_ostream &OS) const = 0;
+
+  private:
+    BoolModelKind K;
+  };
 
   /// Creates an environment that uses `DACtx` to store objects that encompass
-  /// the state of a program. Populates a fresh atom as flow condition token.
-  explicit Environment(DataflowAnalysisContext &DACtx)
-      : Environment(DACtx, DACtx.arena().makeFlowConditionToken()) {}
+  /// the state of a program. `FlowConditionToken` sets the flow condition
+  /// associated with the environment (requires `DACtx.getOptions().BoolModel ==
+  /// BoolModelKind::SAT`). Generally, new environments should be initialized
+  /// using one of the other constructors. This constructor is for specialized
+  /// use, such as deserialization.
+  Environment(DataflowAnalysisContext &DACtx, Atom FlowConditionToken);
+
+  /// Creates an environment that uses `DACtx` to store objects that encompass
+  /// the state of a program. Initializes the boolean model configured in
+  /// `DACtx.getOptions().BoolModel`.
+  explicit Environment(DataflowAnalysisContext &DACtx);
 
   /// Creates an environment that uses `DACtx` to store objects that encompass
   /// the state of a program, with `S` as the statement to analyze.
@@ -278,6 +343,14 @@ public:
                            Environment &JoinedEnv,
                            Environment::ValueModel &Model);
 
+  /// Joins two distinct boolean values `Val1` (from `Env1`) and `Val2` (from
+  /// `Env2`) into this environment.
+  BoolValue &joinBoolValues(BoolValue &Val1, const Environment &Env1,
+                            BoolValue &Val2, const Environment &Env2) {
+    return BoolState->joinBoolValues(Val1, *Env1.BoolState, Val2,
+                                     *Env2.BoolState, *this);
+  }
+
   /// Widens the environment point-wise, using `PrevEnv` as needed to inform the
   /// approximation.
   ///
@@ -359,8 +432,32 @@ public:
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
   /// in the environment.
+  /// If you want to look up the storage location for a specific `CXXThisExpr`,
+  /// use the overload that takes a `CXXThisExpr`.
   RecordStorageLocation *getThisPointeeStorageLocation() const {
     return ThisPointeeLoc;
+  }
+
+  /// Returns the storage location assigned to the `this` pointee in the
+  /// environment given a specific `CXXThisExpr`. Returns null if the `this`
+  /// pointee has no assigned storage location in the environment.
+  /// Note that `this` can be used in a non-member context, e.g.:
+  ///
+  /// \code
+  ///   struct S {
+  ///     int x;
+  ///     int y = this->x;
+  ///   };
+  ///   int foo() {
+  ///     return S{10}.y;  // will have a `this` for initializing `S::y`.
+  ///   }
+  /// \endcode
+  RecordStorageLocation *
+  getThisPointeeStorageLocation(const CXXThisExpr &ThisExpr) const {
+    auto It = ThisExprOverrides->find(&ThisExpr);
+    if (It == ThisExprOverrides->end())
+      return ThisPointeeLoc;
+    return It->second;
   }
 
   /// Sets the storage location assigned to the `this` pointee in the
@@ -644,7 +741,9 @@ public:
   /// In particular, where the FC token appears in flow conditions of successor
   /// environments, it means "point X may have been reached", not
   /// "point X was reached".
-  Atom getFlowConditionToken() const { return FlowConditionToken; }
+  Atom getFlowConditionToken() const {
+    return BoolState->getFlowConditionToken();
+  }
 
   /// Record a fact that must be true if this point in the program is reached.
   void assume(const Formula &);
@@ -692,9 +791,11 @@ public:
 private:
   using PrValueToResultObject =
       llvm::DenseMap<const Expr *, RecordStorageLocation *>;
+  using ThisExprOverridesMap =
+      llvm::DenseMap<const CXXThisExpr *, RecordStorageLocation *>;
 
-  // The copy-constructor is for use in fork() only.
-  Environment(const Environment &) = default;
+  // The copy-constructor is for use in fork() and pushCall() only.
+  Environment(const Environment &);
 
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
   /// return null.
@@ -755,6 +856,15 @@ private:
                        RecordStorageLocation *ThisPointeeLoc,
                        RecordStorageLocation *LocForRecordReturnVal);
 
+  static ThisExprOverridesMap
+  buildThisExprOverridesMap(const FunctionDecl *FuncDecl,
+                            RecordStorageLocation *ThisPointeeLoc,
+                            const PrValueToResultObject &ResultObjectMap);
+
+  static ThisExprOverridesMap
+  buildThisExprOverridesMap(Stmt *S, RecordStorageLocation *ThisPointeeLoc,
+                            const PrValueToResultObject &ResultObjectMap);
+
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
 
@@ -801,6 +911,11 @@ private:
   // analysis target is not a method.
   RecordStorageLocation *ThisPointeeLoc = nullptr;
 
+  // Maps from `CXXThisExpr`s to their storage locations, if it should be
+  // different from `ThisPointeeLoc` (for example, CXXThisExpr that are
+  // under a CXXDefaultInitExpr under an InitListExpr).
+  std::shared_ptr<ThisExprOverridesMap> ThisExprOverrides;
+
   // Maps from declarations and glvalue expression to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these
   // include only storage locations that are in scope for a particular basic
@@ -814,7 +929,8 @@ private:
   llvm::MapVector<const Expr *, Value *> ExprToVal;
   llvm::MapVector<const StorageLocation *, Value *> LocToVal;
 
-  Atom FlowConditionToken;
+  // The flow condition abstracted in a boolean model.
+  std::unique_ptr<BoolModel> BoolState;
 };
 
 /// Returns the storage location for the implicit object of a

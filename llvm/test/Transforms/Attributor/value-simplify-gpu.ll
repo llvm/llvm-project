@@ -2,7 +2,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s | FileCheck %s --check-prefixes=CHECK,TUNIT
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
 @ReachableKernel = internal addrspace(3) global i32 3, align 4

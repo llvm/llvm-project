@@ -14,13 +14,14 @@
 #ifndef LLVM_LIB_TARGET_BPF_BTFDEBUG_H
 #define LLVM_LIB_TARGET_BPF_BTFDEBUG_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
 #include <cstdint>
 #include <map>
 #include <set>
-#include <unordered_map>
 
 namespace llvm {
 
@@ -125,12 +126,13 @@ public:
 /// Handle struct/union type.
 class BTFTypeStruct : public BTFTypeBase {
   const DICompositeType *STy;
+  std::vector<const DINode *> Elements;
   bool HasBitField;
   std::vector<struct BTF::BTFMember> Members;
 
 public:
-  BTFTypeStruct(const DICompositeType *STy, bool IsStruct, bool HasBitField,
-                uint32_t NumMembers);
+  BTFTypeStruct(const DICompositeType *STy, ArrayRef<const DINode *> Elements,
+                bool IsStruct, bool HasBitField, uint32_t NumMembers);
   uint32_t getSize() override {
     return BTFTypeBase::getSize() + Members.size() * BTF::BTFMemberSize;
   }
@@ -142,12 +144,18 @@ public:
 /// Handle function pointer.
 class BTFTypeFuncProto : public BTFTypeBase {
   const DISubroutineType *STy;
-  std::unordered_map<uint32_t, StringRef> FuncArgNames;
+  SmallDenseMap<uint32_t, StringRef> FuncArgNames;
+  SmallVector<uint32_t, 8> AliveParamIndices;
+  bool UseFilteredParams = false;
   std::vector<struct BTF::BTFParam> Parameters;
+  bool VoidReturn = false;
 
 public:
   BTFTypeFuncProto(const DISubroutineType *STy, uint32_t NumParams,
-                   const std::unordered_map<uint32_t, StringRef> &FuncArgNames);
+                   const SmallDenseMap<uint32_t, StringRef> &FuncArgNames,
+                   bool UseFilteredParams = false,
+                   ArrayRef<uint32_t> AliveParamIndices = {},
+                   bool VoidReturn = false);
   uint32_t getSize() override {
     return BTFTypeBase::getSize() + Parameters.size() * BTF::BTFParamSize;
   }
@@ -295,7 +303,7 @@ class BTFDebug : public DebugHandlerBase {
   bool MapDefNotCollected;
   BTFStringTable StringTable;
   std::vector<std::unique_ptr<BTFTypeBase>> TypeEntries;
-  std::unordered_map<const DIType *, uint32_t> DIToIdMap;
+  DenseMap<const DIType *, uint32_t> DIToIdMap;
   std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
   std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   std::map<uint32_t, std::vector<BTFFieldReloc>> FieldRelocTable;
@@ -323,10 +331,10 @@ class BTFDebug : public DebugHandlerBase {
   void visitTypeEntry(const DIType *Ty, uint32_t &TypeId, bool CheckPointer,
                       bool SeenPointer);
   void visitBasicType(const DIBasicType *BTy, uint32_t &TypeId);
-  void visitSubroutineType(
-      const DISubroutineType *STy, bool ForSubprog,
-      const std::unordered_map<uint32_t, StringRef> &FuncArgNames,
-      uint32_t &TypeId);
+  void
+  visitSubroutineType(const DISubroutineType *STy, bool ForSubprog,
+                      const SmallDenseMap<uint32_t, StringRef> &FuncArgNames,
+                      uint32_t &TypeId, bool VoidReturn = false);
   void visitFwdDeclType(const DICompositeType *CTy, bool IsUnion,
                         uint32_t &TypeId);
   void visitCompositeType(const DICompositeType *CTy, uint32_t &TypeId);
@@ -365,8 +373,9 @@ class BTFDebug : public DebugHandlerBase {
                               int ComponentId);
 
   /// Generate types for DISubprogram and it's arguments.
-  uint32_t processDISubprogram(const DISubprogram *SP, uint32_t ProtoTypeId,
-                               uint8_t Scope);
+  uint32_t processDISubprogram(
+      const DISubprogram *SP, uint32_t ProtoTypeId, uint8_t Scope,
+      const SmallDenseMap<uint32_t, uint32_t> *ArgIndexMap = nullptr);
 
   /// Generate BTF type_tag's. If BaseTypeId is nonnegative, the last
   /// BTF type_tag in the chain points to BaseTypeId. Otherwise, it points to

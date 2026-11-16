@@ -20,11 +20,6 @@ namespace llvm {
 
 // Traits for using WasmSignature in a DenseMap.
 template <> struct DenseMapInfo<wasm::WasmSignature, void> {
-  static wasm::WasmSignature getEmptyKey() {
-    wasm::WasmSignature Sig;
-    Sig.State = wasm::WasmSignature::Empty;
-    return Sig;
-  }
   static unsigned getHashValue(const wasm::WasmSignature &Sig) {
     uintptr_t H = hash_value(Sig.State);
     for (auto Ret : Sig.Returns)
@@ -41,9 +36,6 @@ template <> struct DenseMapInfo<wasm::WasmSignature, void> {
 
 // Traits for using WasmGlobalType in a DenseMap
 template <> struct DenseMapInfo<wasm::WasmGlobalType, void> {
-  static wasm::WasmGlobalType getEmptyKey() {
-    return wasm::WasmGlobalType{1, true};
-  }
   static unsigned getHashValue(const wasm::WasmGlobalType &GlobalType) {
     return hash_combine(GlobalType.Type, GlobalType.Mutable);
   }
@@ -55,9 +47,6 @@ template <> struct DenseMapInfo<wasm::WasmGlobalType, void> {
 
 // Traits for using WasmLimits in a DenseMap
 template <> struct DenseMapInfo<wasm::WasmLimits, void> {
-  static wasm::WasmLimits getEmptyKey() {
-    return wasm::WasmLimits{0xff, 0xff, 0xff, 0xff};
-  }
   static unsigned getHashValue(const wasm::WasmLimits &Limits) {
     unsigned Hash = hash_value(Limits.Flags);
     Hash = hash_combine(Hash, Limits.Minimum);
@@ -74,10 +63,6 @@ template <> struct DenseMapInfo<wasm::WasmLimits, void> {
 
 // Traits for using WasmTableType in a DenseMap
 template <> struct DenseMapInfo<wasm::WasmTableType, void> {
-  static wasm::WasmTableType getEmptyKey() {
-    return wasm::WasmTableType{
-        wasm::ValType(0), DenseMapInfo<wasm::WasmLimits, void>::getEmptyKey()};
-  }
   static unsigned getHashValue(const wasm::WasmTableType &TableType) {
     return hash_combine(
         TableType.ElemType,

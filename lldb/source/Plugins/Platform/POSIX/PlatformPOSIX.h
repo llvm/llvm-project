@@ -67,7 +67,7 @@ public:
   lldb_private::Status UnloadImage(lldb_private::Process *process,
                                    uint32_t image_token) override;
 
-  lldb_private::ConstString GetFullNameForDylib(lldb_private::ConstString basename) override;
+  std::string GetFullNameForDylib(llvm::StringRef basename) override;
 
 protected:
   std::unique_ptr<lldb_private::OptionGroupPlatformRSync>
@@ -86,9 +86,8 @@ protected:
                           llvm::StringRef expr_prefix,
                           lldb::ValueObjectSP &result_valobj_sp);
 
-  std::unique_ptr<lldb_private::UtilityFunction>
-  MakeLoadImageUtilityFunction(lldb_private::ExecutionContext &exe_ctx,
-                               lldb_private::Status &error);
+  llvm::Expected<std::unique_ptr<lldb_private::UtilityFunction>>
+  MakeLoadImageUtilityFunction(lldb_private::ExecutionContext &exe_ctx);
 
   virtual
   llvm::StringRef GetLibdlFunctionDeclarations(lldb_private::Process *process);

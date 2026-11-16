@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+v8.4a %s -o - -global-isel=1 -global-isel-abort=1 | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+lse2 %s -o - -global-isel=1 -global-isel-abort=1 | FileCheck %s
 
-define void @test_atomic_load(ptr %addr) {
-; CHECK-LABEL: test_atomic_load:
+define void @test_atomic_load_128_monotonic(ptr %addr) {
+; CHECK-LABEL: test_atomic_load_128_monotonic:
 
 ; CHECK: ldp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x0]
 ; CHECK: mov v[[Q:[0-9]+]].d[0], [[LO]]
@@ -11,12 +11,24 @@ define void @test_atomic_load(ptr %addr) {
   %res.0 = load atomic i128, ptr %addr monotonic, align 16
   store i128 %res.0, ptr %addr
 
+  ret void
+}
+
+define void @test_atomic_load_128_unordered(ptr %addr) {
+; CHECK-LABEL: test_atomic_load_128_unordered:
+
 ; CHECK: ldp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x0]
 ; CHECK: mov v[[Q:[0-9]+]].d[0], [[LO]]
 ; CHECK: mov v[[Q]].d[1], [[HI]]
 ; CHECK: str q[[Q]], [x0]
   %res.1 = load atomic i128, ptr %addr unordered, align 16
   store i128 %res.1, ptr %addr
+
+  ret void
+}
+
+define void @test_atomic_load_128_acquire(ptr %addr) {
+; CHECK-LABEL: test_atomic_load_128_acquire:
 
 ; CHECK: ldp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x0]
 ; CHECK: dmb ish
@@ -26,6 +38,13 @@ define void @test_atomic_load(ptr %addr) {
   %res.2 = load atomic i128, ptr %addr acquire, align 16
   store i128 %res.2, ptr %addr
 
+  ret void
+}
+
+define void @test_atomic_load_128_seq_cst(ptr %addr) {
+; CHECK-LABEL: test_atomic_load_128_seq_cst:
+
+; CHECK: ldar {{x[0-9]+|xzr}}, [x0]
 ; CHECK: ldp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x0]
 ; CHECK: dmb ish
 ; CHECK: mov v[[Q:[0-9]+]].d[0], [[LO]]
@@ -34,6 +53,11 @@ define void @test_atomic_load(ptr %addr) {
   %res.3 = load atomic i128, ptr %addr seq_cst, align 16
   store i128 %res.3, ptr %addr
 
+  ret void
+}
+
+define void @test_atomic_load_128_monotonic_folded_offset_8(ptr %addr) {
+; CHECK-LABEL: test_atomic_load_128_monotonic_folded_offset_8:
 
 ; CHECK: ldp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x0, #8]
 ; CHECK: mov v[[Q:[0-9]+]].d[0], [[LO]]
@@ -43,6 +67,12 @@ define void @test_atomic_load(ptr %addr) {
   %res.5 = load atomic i128, ptr %addr8.1 monotonic, align 16
   store i128 %res.5, ptr %addr
 
+  ret void
+}
+
+define void @test_atomic_load_128_monotonic_folded_max_offset(ptr %addr) {
+; CHECK-LABEL: test_atomic_load_128_monotonic_folded_max_offset:
+
 ; CHECK: ldp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x0, #504]
 ; CHECK: mov v[[Q:[0-9]+]].d[0], [[LO]]
 ; CHECK: mov v[[Q]].d[1], [[HI]]
@@ -50,6 +80,12 @@ define void @test_atomic_load(ptr %addr) {
   %addr8.2 = getelementptr i8,  ptr %addr, i32 504
   %res.6 = load atomic i128, ptr %addr8.2 monotonic, align 16
   store i128 %res.6, ptr %addr
+
+  ret void
+}
+
+define void @test_atomic_load_128_monotonic_folded_min_offset(ptr %addr) {
+; CHECK-LABEL: test_atomic_load_128_monotonic_folded_min_offset:
 
 ; CHECK: ldp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x0, #-512]
 ; CHECK: mov v[[Q:[0-9]+]].d[0], [[LO]]
@@ -116,32 +152,67 @@ define void @test_nonfolded_load3(ptr %addr) {
   ret void
 }
 
-define void @test_atomic_store(ptr %addr, i128 %val) {
-; CHECK-LABEL: test_atomic_store:
+define void @test_atomic_store_128_monotonic(ptr %addr, i128 %val) {
+; CHECK-LABEL: test_atomic_store_128_monotonic:
 
 ; CHECK: stp x2, x3, [x0]
   store atomic i128 %val, ptr %addr monotonic, align 16
 
+  ret void
+}
+
+define void @test_atomic_store_128_unordered(ptr %addr, i128 %val) {
+; CHECK-LABEL: test_atomic_store_128_unordered:
+
 ; CHECK: stp x2, x3, [x0]
   store atomic i128 %val, ptr %addr unordered, align 16
+
+  ret void
+}
+
+define void @test_atomic_store_128_release(ptr %addr, i128 %val) {
+; CHECK-LABEL: test_atomic_store_128_release:
 
 ; CHECK: dmb ish
 ; CHECK: stp x2, x3, [x0]
   store atomic i128 %val, ptr %addr release, align 16
+
+  ret void
+}
+
+define void @test_atomic_store_128_seq_cst(ptr %addr, i128 %val) {
+; CHECK-LABEL: test_atomic_store_128_seq_cst:
 
 ; CHECK: dmb ish
 ; CHECK: stp x2, x3, [x0]
 ; CHECK: dmb ish
   store atomic i128 %val, ptr %addr seq_cst, align 16
 
+  ret void
+}
+
+define void @test_atomic_store_128_monotonic_folded_offset_8(ptr %addr, i128 %val) {
+; CHECK-LABEL: test_atomic_store_128_monotonic_folded_offset_8:
 
 ; CHECK: stp x2, x3, [x0, #8]
   %addr8.1 = getelementptr i8,  ptr %addr, i32 8
   store atomic i128 %val, ptr %addr8.1 monotonic, align 16
 
+  ret void
+}
+
+define void @test_atomic_store_128_monotonic_folded_max_offset(ptr %addr, i128 %val) {
+; CHECK-LABEL: test_atomic_store_128_monotonic_folded_max_offset:
+
 ; CHECK: stp x2, x3, [x0, #504]
   %addr8.2 = getelementptr i8,  ptr %addr, i32 504
   store atomic i128 %val, ptr %addr8.2 monotonic, align 16
+
+  ret void
+}
+
+define void @test_atomic_store_128_monotonic_folded_min_offset(ptr %addr, i128 %val) {
+; CHECK-LABEL: test_atomic_store_128_monotonic_folded_min_offset:
 
 ; CHECK: stp x2, x3, [x0, #-512]
   %addr8.3 = getelementptr i8,  ptr %addr, i32 -512

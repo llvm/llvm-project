@@ -607,7 +607,7 @@ static std::optional<DependencyScanResult> scanDependencies(
     ArrayRef<std::unique_ptr<Command>> Jobs,
     llvm::DenseMap<StringRef, const StdModuleManifest::Module *> ManifestLookup,
     StringRef ModuleCachePath, StringRef WorkingDirectory,
-    DiagnosticsEngine &Diags) {
+    StringRef DepScanLogPath, DiagnosticsEngine &Diags) {
   llvm::PrettyStackTraceString CrashInfo("Performing module dependency scan.");
 
   // Classify the jobs based on scan eligibility.
@@ -645,6 +645,7 @@ static std::optional<DependencyScanResult> scanDependencies(
   const bool HasStdlibModuleInputs = !StdlibModuleScanIndexByID.empty();
 
   deps::DependencyScanningServiceOptions Opts;
+  Opts.LogPath = DepScanLogPath.str();
   deps::DependencyScanningService ScanningService(std::move(Opts));
 
   std::unique_ptr<llvm::ThreadPoolInterface> ThreadPool;
@@ -1294,7 +1295,7 @@ createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
   const auto &D = C.getDriver();
   return std::make_unique<Command>(
       *PA, ImportingJob.getCreator(), ResponseFileSupport::AtFileUTF8(),
-      D.getClangProgramPath(), JobArgs,
+      D.getDriverProgramPath(), JobArgs,
       /*Inputs=*/ArrayRef<InputInfo>{},
       /*Outputs=*/ArrayRef<InputInfo>{}, D.getPrependArg());
 }
@@ -1655,8 +1656,18 @@ void driver::modules::runModulesDriver(
   auto MaybeCWD = C.getDriver().getVFS().getCurrentWorkingDirectory();
   const auto CWD = MaybeCWD ? std::move(*MaybeCWD) : ".";
 
-  auto MaybeScanResults = scanDependencies(Jobs, ManifestEntryBySource,
-                                           *MaybeModuleCachePath, CWD, Diags);
+  const llvm::opt::Arg *LogPathArg =
+      C.getArgs().getLastArg(options::OPT_fdepscan_log_path);
+  StringRef DepScanLogPath =
+      LogPathArg ? StringRef(LogPathArg->getValue()).trim() : StringRef();
+  if (LogPathArg && DepScanLogPath.empty()) {
+    Diags.Report(diag::err_drv_depscan_log_path_empty);
+    return;
+  }
+
+  auto MaybeScanResults =
+      scanDependencies(Jobs, ManifestEntryBySource, *MaybeModuleCachePath, CWD,
+                       DepScanLogPath, Diags);
   if (!MaybeScanResults) {
     Diags.Report(diag::err_dependency_scan_failed);
     return;

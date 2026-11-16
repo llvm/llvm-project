@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
 
@@ -27,6 +28,8 @@ namespace lldb_private {
 
 namespace {
 
+#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
+#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
 /// Absolute path of \p module, or the running executable when null.
 std::string GetModulePath(HMODULE module) {
   std::vector<WCHAR> buffer(MAX_PATH);
@@ -45,8 +48,8 @@ std::string GetModulePath(HMODULE module) {
   }
   return "";
 }
+#endif // ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
 
-#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
 std::string ExeRelativeCandidate() {
 #ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
   std::string exe = GetModulePath(nullptr);
@@ -60,9 +63,9 @@ std::string ExeRelativeCandidate() {
   return std::string(path);
 #else
   return "";
-#endif
+#endif // ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
 }
-#endif
+#endif // ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
 
 } // namespace
 

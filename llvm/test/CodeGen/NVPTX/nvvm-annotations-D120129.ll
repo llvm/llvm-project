@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=nvptx64-unknown-unknown | FileCheck %s
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-unknown-unknown | %ptxas-verify %}
 ;
-; NVPTXTargetLowering::getFunctionParamOptimizedAlign, which was introduces in
+; NVPTXTargetLowering::getPromotedParamTypeAlign, which was introduces in
 ; D120129, contained a poorly designed assertion checking that a function with
 ; internal or private linkage is not a kernel. It relied on invariants that
 ; were not actually guaranteed, and that resulted in compiler crash with some

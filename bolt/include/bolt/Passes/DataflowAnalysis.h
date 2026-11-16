@@ -565,11 +565,6 @@ public:
 /// DenseMapInfo allows us to use the DenseMap LLVM data structure to store
 /// ProgramPoints.
 template <> struct DenseMapInfo<bolt::ProgramPoint> {
-  static inline bolt::ProgramPoint getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<MCInst *>::NumLowBitsAvailable;
-    return bolt::ProgramPoint(reinterpret_cast<MCInst *>(Val));
-  }
   static unsigned getHashValue(const bolt::ProgramPoint &PP) {
     return (unsigned((uintptr_t)PP.Data.BB) >> 4) ^
            (unsigned((uintptr_t)PP.Data.BB) >> 9);

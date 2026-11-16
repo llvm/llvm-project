@@ -17,6 +17,7 @@
             font-style: italic;
          }
         .complete { background-color: #99FF99; }
+        .experimental { background-color: #FFB000 }
       </style>
 
 .. role:: notstarted
@@ -25,12 +26,14 @@
 .. role:: inreview
 .. role:: partial
 .. role:: complete
+.. role:: experimental
 
 .. |Not Started| replace:: :notstarted:`Not Started`
 .. |Nothing To Do| replace:: :nothingtodo:`Nothing To Do`
 .. |In Progress| replace:: :inprogress:`In Progress`
 .. |Review| replace:: :inreview:`Review`
 .. |Partial| replace:: :partial:`Partial`
+.. |Experimental| replace:: :experimental:`Experimental`
 .. |Complete| replace:: :complete:`Complete`
 
 .. |sect| unicode:: U+00A7

@@ -4,7 +4,7 @@
 define void @f(i32 %ptr_i, ptr %ptr2, i1 %cond) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[PTR_I:%.*]] to ptr, !nofree [[META0:![0-9]+]]
+; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[PTR_I:%.*]] to ptr, !nofreeobj [[META0:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i32 16), "dereferenceable"(ptr [[PTR]], i32 16) ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[FOR_BODY_LR_PH:%.*]], label [[IF0:%.*]]
 ; CHECK:       if0:
@@ -27,7 +27,7 @@ define void @f(i32 %ptr_i, ptr %ptr2, i1 %cond) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %ptr = inttoptr i32 %ptr_i to ptr, !nofree !{}
+  %ptr = inttoptr i32 %ptr_i to ptr, !nofreeobj !{}
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i32 16), "dereferenceable"(ptr %ptr, i32 16) ]
   br i1 %cond, label %for.body.lr.ph, label %if0
 
@@ -66,12 +66,12 @@ define void @f_nofree_nosync(i32 %ptr_i, ptr %ptr2, i1 %cond) nofree nosync {
 ; CHECK-NEXT:    store i32 0, ptr [[PTR2:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY_LR_PH]]
 ; CHECK:       for.body.lr.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[IF_END:%.*]] ]
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_END]], label [[IF:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[PTR2]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:

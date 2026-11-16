@@ -21,12 +21,14 @@
 #include "LiveRangeUtils.h"
 #include "RegisterCoalescer.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -540,6 +542,28 @@ LiveRange::iterator LiveRange::addSegment(Segment S) {
   return CalcLiveRangeUtilVector(this).addSegment(S);
 }
 
+LiveRange::iterator LiveRange::mergeAdjacentSegments(iterator I) {
+  assert(segmentSet == nullptr && "Cannot merge with active segment set");
+  assert(I != end() && "Cannot merge end iterator");
+
+  if (I != begin()) {
+    iterator Prev = std::prev(I);
+    if (Prev->valno == I->valno && Prev->end == I->start) {
+      Prev->end = I->end;
+      segments.erase(I);
+      I = Prev;
+    }
+  }
+
+  iterator Next = std::next(I);
+  if (Next != end() && I->valno == Next->valno && I->end == Next->start) {
+    I->end = Next->end;
+    segments.erase(Next);
+  }
+
+  return I;
+}
+
 void LiveRange::append(const Segment S) {
   // Check that the segment belongs to the back of the list.
   assert(segments.empty() || segments.back().end <= S.start);
@@ -754,34 +778,10 @@ VNInfo *LiveRange::MergeValueNumberInto(VNInfo *V1, VNInfo *V2) {
     iterator S = I++;
     if (S->valno != V1) continue;  // Not a V1 Segment.
 
-    // Okay, we found a V1 live range.  If it had a previous, touching, V2 live
-    // range, extend it.
-    if (S != begin()) {
-      iterator Prev = S-1;
-      if (Prev->valno == V2 && Prev->end == S->start) {
-        Prev->end = S->end;
-
-        // Erase this live-range.
-        segments.erase(S);
-        I = Prev+1;
-        S = Prev;
-      }
-    }
-
-    // Okay, now we have a V1 or V2 live range that is maximally merged forward.
-    // Ensure that it is a V2 live-range.
+    // After changing this segment to V2, it may touch an adjacent V2 segment.
+    // Merge with either neighbor before continuing.
     S->valno = V2;
-
-    // If we can merge it into later V2 segments, do so now.  We ignore any
-    // following V1 segments, as they will be merged in subsequent iterations
-    // of the loop.
-    if (I != end()) {
-      if (I->start == S->end && I->valno == V2) {
-        S->end = I->end;
-        segments.erase(I);
-        I = S+1;
-      }
-    }
+    I = std::next(mergeAdjacentSegments(S));
   }
 
   // Now that V1 is dead, remove it.
@@ -1337,7 +1337,9 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
   EqClass.clear();
   EqClass.grow(LR.getNumValNums());
 
+  const MachineDominatorTree &MDT = LIS.getDomTree();
   const VNInfo *used = nullptr, *unused = nullptr;
+  bool HasUnreachablePHIDef = false;
 
   // Determine connections.
   for (const VNInfo *VNI : LR.valnos) {
@@ -1352,6 +1354,7 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
     if (VNI->isPHIDef()) {
       const MachineBasicBlock *MBB = LIS.getMBBFromIndex(VNI->def);
       assert(MBB && "Phi-def has no defining MBB");
+      HasUnreachablePHIDef |= !MDT.isReachableFromEntry(MBB);
       // Connect to values live out of predecessors.
       for (MachineBasicBlock *Pred : MBB->predecessors())
         if (const VNInfo *PVNI = LR.getVNInfoBefore(LIS.getMBBEndIdx(Pred)))
@@ -1369,6 +1372,40 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
   // Lump all the unused values in with the last used value.
   if (used && unused)
     EqClass.join(used->id, unused->id);
+
+  if (HasUnreachablePHIDef) {
+    const VNInfo *Defined = nullptr;
+    unsigned NumVals = LR.getNumValNums();
+    BitVector KeepSeparate(NumVals);
+    SmallVector<unsigned, 8> Leaders(NumVals);
+    for (const VNInfo *VNI : LR.valnos) {
+      if (VNI->isUnused())
+        continue;
+
+      unsigned Leader = EqClass.findLeader(VNI->id);
+      Leaders[VNI->id] = Leader;
+      if (!VNI->isPHIDef()) {
+        KeepSeparate.set(Leader);
+        Defined = VNI;
+      } else if (MDT.isReachableFromEntry(LIS.getMBBFromIndex(VNI->def))) {
+        KeepSeparate.set(Leader);
+      }
+    }
+
+    if (Defined) {
+      for (const VNInfo *VNI : LR.valnos) {
+        if (VNI->isUnused())
+          continue;
+
+        unsigned Leader = Leaders[VNI->id];
+        if (KeepSeparate.test(Leader))
+          continue;
+
+        EqClass.join(Defined->id, VNI->id);
+        KeepSeparate.set(Leader);
+      }
+    }
+  }
 
   EqClass.compress();
   return EqClass.getNumClasses();

@@ -293,7 +293,7 @@ define void @vec3_fpext_cost(ptr %Colour, float %0) {
 ; CHECK-LABEL: @vec3_fpext_cost(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX80:%.*]] = getelementptr float, ptr [[COLOUR:%.*]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[TMP2]] to <2 x double>
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP3]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)
@@ -350,11 +350,11 @@ define void @fpext_gather(ptr %dst, double %conv) {
 ;
 ; NO-INST-COUNT-LABEL: @fpext_gather(
 ; NO-INST-COUNT-NEXT:  entry:
-; NO-INST-COUNT-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[CONV:%.*]], i32 0
+; NO-INST-COUNT-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[CONV:%.*]], i64 0
 ; NO-INST-COUNT-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
 ; NO-INST-COUNT-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
 ; NO-INST-COUNT-NEXT:    [[LENGTHS:%.*]] = getelementptr float, ptr [[DST:%.*]], i64 0
-; NO-INST-COUNT-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; NO-INST-COUNT-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
 ; NO-INST-COUNT-NEXT:    store float [[TMP3]], ptr [[LENGTHS]], align 4
 ; NO-INST-COUNT-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr float, ptr [[DST]], i64 1
 ; NO-INST-COUNT-NEXT:    store <2 x float> [[TMP2]], ptr [[ARRAYIDX32]], align 4

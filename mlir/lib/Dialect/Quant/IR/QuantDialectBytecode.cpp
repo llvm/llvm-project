@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::quant;
@@ -30,8 +29,33 @@ static LogicalResult readDoubleAPFloat(DialectBytecodeReader &reader,
   return success();
 }
 
+static LogicalResult readOptionalSignedVarInt(DialectBytecodeReader &reader,
+                                              std::optional<int64_t> &val) {
+  bool hasValue;
+  if (failed(reader.readBool(hasValue)))
+    return failure();
+  if (hasValue) {
+    int64_t v;
+    if (failed(reader.readSignedVarInt(v)))
+      return failure();
+    val = v;
+  } else {
+    val = std::nullopt;
+  }
+  return success();
+}
+
+static void writeOptionalSignedVarInt(DialectBytecodeWriter &writer,
+                                      std::optional<int64_t> val) {
+  writer.writeOwnedBool(val.has_value());
+  if (val.has_value())
+    writer.writeSignedVarInt(*val);
+}
+} // namespace
+
 #include "mlir/Dialect/Quant/IR/QuantDialectBytecode.cpp.inc"
 
+namespace {
 /// This class implements the bytecode interface for the Quant dialect.
 struct QuantDialectBytecodeInterface : public BytecodeDialectInterface {
   QuantDialectBytecodeInterface(Dialect *dialect)

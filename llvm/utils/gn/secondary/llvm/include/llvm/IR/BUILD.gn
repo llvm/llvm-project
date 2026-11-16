@@ -51,6 +51,10 @@ gen_arch_intrinsics("IntrinsicsARM") {
   intrinsic_prefix = "arm"
 }
 
+gen_arch_intrinsics("IntrinsicsAVR") {
+  intrinsic_prefix = "avr"
+}
+
 gen_arch_intrinsics("IntrinsicsBPF") {
   intrinsic_prefix = "bpf"
 }
@@ -131,6 +135,7 @@ group("public_tablegen") {
     ":IntrinsicsAArch64",
     ":IntrinsicsAMDGPU",
     ":IntrinsicsARM",
+    ":IntrinsicsAVR",
     ":IntrinsicsBPF",
     ":IntrinsicsDirectX",
     ":IntrinsicsHexagon",

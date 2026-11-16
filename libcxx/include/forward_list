@@ -37,7 +37,7 @@ public:
         noexcept(is_nothrow_default_constructible<allocator_type>::value);
     explicit forward_list(const allocator_type& a);
     explicit forward_list(size_type n);
-    explicit forward_list(size_type n, const allocator_type& a); // C++14
+    explicit forward_list(size_type n, const allocator_type& a);
     forward_list(size_type n, const value_type& v);
     forward_list(size_type n, const value_type& v, const allocator_type& a);
     template <class InputIterator>
@@ -336,7 +336,7 @@ template <class _NodeConstPtr>
 class __forward_list_const_iterator;
 
 template <class _NodePtr>
-class __forward_list_iterator {
+class _LIBCPP_WARN_UNUSED __forward_list_iterator {
   typedef __forward_node_traits<_NodePtr> __traits;
   typedef typename __traits::__node_type __node_type;
   typedef typename __traits::__begin_node __begin_node_type;
@@ -396,7 +396,7 @@ public:
 };
 
 template <class _NodeConstPtr>
-class __forward_list_const_iterator {
+class _LIBCPP_WARN_UNUSED __forward_list_const_iterator {
   static_assert(!is_const<typename pointer_traits<_NodeConstPtr>::element_type>::value, "");
   typedef _NodeConstPtr _NodePtr;
 
@@ -625,7 +625,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __forward_list_base<_Tp, _Alloc>::clear() _NO
 }
 
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
-class forward_list : private __forward_list_base<_Tp, _Alloc> {
+class _LIBCPP_WARN_UNUSED forward_list : private __forward_list_base<_Tp, _Alloc> {
   typedef __forward_list_base<_Tp, _Alloc> __base;
   typedef typename __base::__node_allocator __node_allocator;
   typedef typename __base::__node_type __node_type;
@@ -664,9 +664,7 @@ public:
       _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value) {} // = default;
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI explicit forward_list(const allocator_type& __a);
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI explicit forward_list(size_type __n);
-#  if _LIBCPP_STD_VER >= 14
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI explicit forward_list(size_type __n, const allocator_type& __a);
-#  endif
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI forward_list(size_type __n, const value_type& __v);
 
   template <__enable_if_t<__is_allocator_v<_Alloc>, int> = 0>
@@ -941,7 +939,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 forward_list<_Tp, _Alloc>::forward_list(size_type 
   }
 }
 
-#  if _LIBCPP_STD_VER >= 14
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 forward_list<_Tp, _Alloc>::forward_list(size_type __n, const allocator_type& __base_alloc)
     : __base(__base_alloc) {
@@ -952,7 +949,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 forward_list<_Tp, _Alloc>::forward_list(size_type 
     }
   }
 }
-#  endif
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 forward_list<_Tp, _Alloc>::forward_list(size_type __n, const value_type& __v) {
@@ -1603,20 +1599,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#    include <algorithm>
-#    include <atomic>
-#    include <concepts>
-#    include <cstdint>
-#    include <cstdlib>
-#    include <cstring>
-#    include <functional>
-#    include <iosfwd>
-#    include <iterator>
-#    include <stdexcept>
-#    include <type_traits>
-#    include <typeinfo>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_FORWARD_LIST

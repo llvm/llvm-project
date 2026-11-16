@@ -75,6 +75,7 @@ CSKYToolChain::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
 
 void CSKYToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                           llvm::opt::ArgStringList &CC1Args,
+                                          BoundArch BA,
                                           Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
 }

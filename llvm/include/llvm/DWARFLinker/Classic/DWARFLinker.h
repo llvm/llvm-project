@@ -277,6 +277,9 @@ public:
     Options.Threads = NumThreads;
   }
 
+  /// The classic linker does not use a shared thread pool.
+  void setThreadPool(ThreadPoolInterface *Pool) override {}
+
   /// Add kind of accelerator tables to be generated.
   void addAccelTableKind(AccelTableKind Kind) override {
     assert(!llvm::is_contained(Options.AccelTables, Kind));
@@ -709,10 +712,6 @@ private:
 
     llvm::StringRef getCanonicalDIEName(DWARFDie Die, const DWARFFile &File,
                                         CompileUnit *Unit);
-
-    uint32_t hashFullyQualifiedName(DWARFDie DIE, CompileUnit &U,
-                                    const DWARFFile &File,
-                                    int RecurseDepth = 0);
 
     /// Helper for cloneDIE.
     void addObjCAccelerator(CompileUnit &Unit, const DIE *Die,

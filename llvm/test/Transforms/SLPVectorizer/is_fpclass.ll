@@ -4,7 +4,7 @@
 define <2 x i1> @scalarize_is_fpclass(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x i1> @scalarize_is_fpclass
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X]], i32 123)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X]], /* (nan zero nsub nnorm) */ i32 123)
 ; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %x.i0 = extractelement <2 x float> %x, i32 0

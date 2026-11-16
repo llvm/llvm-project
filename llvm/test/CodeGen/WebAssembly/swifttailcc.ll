@@ -12,10 +12,11 @@ define swifttailcc void @basic_swifttailcc(ptr swiftasync %ctx) {
   ret void
 }
 
-; All Swift parameter attributes together — no padding needed.
+; All Swift parameter attributes together — no padding needed. swiftasync is
+; moved to parameter 0.
 define swifttailcc void @full_swift_params(i32 %x, ptr swiftasync %ctx, ptr swiftself %self, ptr swifterror %err) {
 ; CHECK-LABEL: full_swift_params:
-; CHECK:         .functype full_swift_params (i32, [[PTR]], [[PTR]], [[PTR]]) -> ()
+; CHECK:         .functype full_swift_params ([[PTR]], i32, [[PTR]], [[PTR]]) -> ()
   ret void
 }
 
@@ -84,9 +85,10 @@ define swifttailcc void @mixed_cc(ptr swiftasync %ctx) {
 
 ; Signature padding: a swifttailcc function with no Swift attributes gets
 ; swiftself, swifterror, and swiftasync dummy params padded automatically.
+; The swiftasync one is parameter 0.
 define swifttailcc void @no_swift_params(i32 %x) {
 ; CHECK-LABEL: no_swift_params:
-; CHECK:         .functype no_swift_params (i32, [[PTR]], [[PTR]], [[PTR]]) -> ()
+; CHECK:         .functype no_swift_params ([[PTR]], i32, [[PTR]], [[PTR]]) -> ()
   ret void
 }
 
@@ -119,7 +121,7 @@ define swifttailcc void @varargs_tail(ptr swiftasync %ctx) {
 ; padded Wasm type, so without the skip a wrapper would break this).
 define swifttailcc void @indirect_target(i32, i32) {
 ; CHECK-LABEL: indirect_target:
-; CHECK:         .functype indirect_target (i32, i32, [[PTR]], [[PTR]], [[PTR]]) -> ()
+; CHECK:         .functype indirect_target ([[PTR]], i32, i32, [[PTR]], [[PTR]]) -> ()
   ret void
 }
 @fn_ptr = global ptr @indirect_target
@@ -129,19 +131,19 @@ define swifttailcc void @test_indirect_consistency() {
   %p = load ptr, ptr @fn_ptr
 
   ; No swift attrs — swiftself, swifterror, swiftasync all padded.
-; CHECK: call_indirect __indirect_function_table, (i32, i32, [[PTR]], [[PTR]], [[PTR]]) -> ()
+; CHECK: call_indirect __indirect_function_table, ([[PTR]], i32, i32, [[PTR]], [[PTR]]) -> ()
   call swifttailcc void %p(i32 1, i32 2)
 
   ; swiftasync present — swiftself and swifterror padded.
-; CHECK: call_indirect __indirect_function_table, (i32, i32, [[PTR]], [[PTR]], [[PTR]]) -> ()
+; CHECK: call_indirect __indirect_function_table, ([[PTR]], i32, i32, [[PTR]], [[PTR]]) -> ()
   call swifttailcc void %p(i32 1, i32 2, ptr swiftasync null)
 
   ; swiftself present — swifterror and swiftasync padded.
-; CHECK: call_indirect __indirect_function_table, (i32, i32, [[PTR]], [[PTR]], [[PTR]]) -> ()
+; CHECK: call_indirect __indirect_function_table, ([[PTR]], i32, i32, [[PTR]], [[PTR]]) -> ()
   call swifttailcc void %p(i32 1, i32 2, ptr swiftself null)
 
   ; swiftasync + swiftself present — swifterror padded.
-; CHECK: call_indirect __indirect_function_table, (i32, i32, [[PTR]], [[PTR]], [[PTR]]) -> ()
+; CHECK: call_indirect __indirect_function_table, ([[PTR]], i32, i32, [[PTR]], [[PTR]]) -> ()
   call swifttailcc void %p(i32 1, i32 2, ptr swiftasync null, ptr swiftself null)
 
   ret void

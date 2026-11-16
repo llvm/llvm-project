@@ -17,39 +17,39 @@ template <class T>
 class Cls2 {
 public:
   // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f1Ev(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F1:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F1:![0-9]+]]
   void f1() {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f2ES0_(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F2:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F2:![0-9]+]]
   void f2(T a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f3EPS0_(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F3:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F3:![0-9]+]]
   void f3(T *a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f4EPKS0_(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F4:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F4:![0-9]+]]
   void f4(const T *a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f5ERS0_(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F5:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F5:![0-9]+]]
   void f5(T &a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls2I4Cls1E2f6ERKS0_(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F6:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F6:![0-9]+]]
   void f6(const T &a) {}
 
   // Mixed type function pointer member
   T *(*fp)(T a, T *b, const T *c, T &d, const T &e);
 };
 
-// FT: [[F_TCLS2F1]] = !{i64 0, !"_ZTSFvvE.generalized"}
-// FT: [[F_TCLS2F2]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
-// FT: [[F_TCLS2F3]] = !{i64 0, !"_ZTSFvP4Cls1E.generalized"}
-// FT: [[F_TCLS2F4]] = !{i64 0, !"_ZTSFvPK4Cls1E.generalized"}
-// FT: [[F_TCLS2F5]] = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
-// FT: [[F_TCLS2F6]] = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}
+// FT: [[F_TCLS2F1]] = !{!"_ZTSFvvE"}
+// FT: [[F_TCLS2F2]] = !{!"_ZTSFv4Cls1E"}
+// FT: [[F_TCLS2F3]] = !{!"_ZTSFvP4Cls1E"}
+// FT: [[F_TCLS2F4]] = !{!"_ZTSFvPK4Cls1E"}
+// FT: [[F_TCLS2F5]] = !{!"_ZTSFvR4Cls1E"}
+// FT: [[F_TCLS2F6]] = !{!"_ZTSFvRK4Cls1E"}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Callsites (check for indirect callsite operand bundles)
@@ -58,7 +58,7 @@ template <class T>
 T *T_func(T a, T *b, const T *c, T &d, const T &e) { return b; }
 
 // CST-LABEL: define {{.*}} @_Z3foov
-// CST-SAME: {{.*}} !type [[F_TCLS2F1:![0-9]+]]
+// CST-SAME: {{.*}} !callgraph [[F_TCLS2F1:![0-9]+]]
 void foo() {
   // Methods for Cls2<Cls1> is checked above within the template description.
   Cls2<Cls1> Obj;
@@ -99,19 +99,19 @@ void foo() {
 }
 
 // CST-LABEL: define {{.*}} @_Z6T_funcI4Cls1EPT_S1_S2_PKS1_RS1_RS3_(
-// CST-SAME: {{.*}} !type [[F_TFUNC_CLS1:![0-9]+]]
+// CST-SAME: {{.*}} !callgraph [[F_TFUNC_CLS1:![0-9]+]]
 
-// CST: [[F_TCLS2F1]] = !{i64 0, !"_ZTSFvvE.generalized"}
+// CST: [[F_TCLS2F1]] = !{!"_ZTSFvvE"}
 // CST: [[F_TFUNC_CLS1_CT]] = !{[[F_TFUNC_CLS1:![0-9]+]]}
-// CST: [[F_TFUNC_CLS1]] = !{i64 0, !"_ZTSFP4Cls1S_S0_PKS_RS_RS1_E.generalized"}
+// CST: [[F_TFUNC_CLS1]] = !{!"_ZTSFP4Cls1S_S0_PKS_RS_RS1_E"}
 // CST: [[F_TCLS2F1_CT]] = !{[[F_TCLS2F1:![0-9]+]]}
 // CST: [[F_TCLS2F2_CT]] = !{[[F_TCLS2F2:![0-9]+]]}
-// CST: [[F_TCLS2F2]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
+// CST: [[F_TCLS2F2]] = !{!"_ZTSFv4Cls1E"}
 // CST: [[F_TCLS2F3_CT]] = !{[[F_TCLS2F3:![0-9]+]]}
-// CST: [[F_TCLS2F3]] = !{i64 0, !"_ZTSFvP4Cls1E.generalized"}
+// CST: [[F_TCLS2F3]] = !{!"_ZTSFvP4Cls1E"}
 // CST: [[F_TCLS2F4_CT]] = !{[[F_TCLS2F4:![0-9]+]]}
-// CST: [[F_TCLS2F4]] = !{i64 0, !"_ZTSFvPK4Cls1E.generalized"}
+// CST: [[F_TCLS2F4]] = !{!"_ZTSFvPK4Cls1E"}
 // CST: [[F_TCLS2F5_CT]] = !{[[F_TCLS2F5:![0-9]+]]}
-// CST: [[F_TCLS2F5]] = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
+// CST: [[F_TCLS2F5]] = !{!"_ZTSFvR4Cls1E"}
 // CST: [[F_TCLS2F6_CT]] = !{[[F_TCLS2F6:![0-9]+]]}
-// CST: [[F_TCLS2F6]] = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}
+// CST: [[F_TCLS2F6]] = !{!"_ZTSFvRK4Cls1E"}

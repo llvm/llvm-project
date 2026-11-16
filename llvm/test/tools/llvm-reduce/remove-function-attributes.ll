@@ -3,7 +3,7 @@
 ; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefix=CHECK-FINAL %s < %t
 
-; CHECK-INTERESTINGNESS: declare
+; CHECK-INTERESTINGNESS: {{^}}declare
 ; CHECK-INTERESTINGNESS-SAME: "attr0"
 ; CHECK-INTERESTINGNESS-SAME: void @f0
 ; CHECK-INTERESTINGNESS-SAME: i32

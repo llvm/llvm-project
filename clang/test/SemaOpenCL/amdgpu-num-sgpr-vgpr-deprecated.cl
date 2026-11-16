@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple amdgcn-- -verify -fsyntax-only %s
-// RUN: %clang_cc1 -triple amdgcn-- -verify=silenced -Wno-deprecated-declarations -fsyntax-only %s
+// RUN: %clang_cc1 -triple amdgpu-- -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple amdgpu-- -verify=silenced -Wno-deprecated-declarations -fsyntax-only %s
 
 // silenced-no-diagnostics
 

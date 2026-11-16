@@ -1,16 +1,9 @@
-# RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+experimental-zvfbfa %s \
+# RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+zve32x %s \
 # RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
-# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-zvfbfa %s \
-# RUN:        | llvm-objdump -d --mattr=+experimental-zvfbfa --no-print-imm-hex - \
-# RUN:        | FileCheck %s --check-prefix=CHECK-INST
-# RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+experimental-zvfofp8min %s \
-# RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
-# RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
-# RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
-# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-zvfofp8min %s \
-# RUN:        | llvm-objdump -d --mattr=+experimental-zvfofp8min --no-print-imm-hex - \
+# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+zve32x %s \
+# RUN:        | llvm-objdump -d --mattr=+zve32x --no-print-imm-hex - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
 vsetvli a2, a0, e8alt, m1, ta, ma

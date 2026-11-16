@@ -27,11 +27,11 @@ public:
   }
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const override;
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   bool useIntegratedAs() const override { return true; }
@@ -54,6 +54,16 @@ public:
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &Args,
       llvm::opt::ArgStringList &CC1Args) const override;
+  VersionTuple
+  computeMSVCVersion(const Driver *D,
+                     const llvm::opt::ArgList &Args) const override;
+
+  llvm::SmallVector<BitCodeLibraryInfo, 12>
+  getDeviceLibs(const llvm::opt::ArgList &Args, BoundArch BA,
+                const Action::OffloadKind DeviceOffloadingKind) const override;
+
+protected:
+  Tool *buildLinker() const override;
 
 private:
   const ToolChain &HostTC;

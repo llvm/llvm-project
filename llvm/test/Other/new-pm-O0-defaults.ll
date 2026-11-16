@@ -42,8 +42,10 @@
 ; CHECK-MATRIX-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-CORO-NEXT: Running pass: CoroConditionalWrapper
 ; CHECK-ALLOCTOKEN-NEXT: Running pass: AllocTokenPass
+; CHECK-CORO-NEXT: Running pass: LowerCommentStringPass
 ; CHECK-PRE-LINK: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRE-LINK-NEXT: Running pass: NameAnonGlobalPass
+; CHECK-PRE-LINK-NEXT: Running pass: AssignGUIDPass
 ; CHECK-THINLTO: Running pass: DropTypeTestsPass
 ; CHECK-THINLTO-NEXT: Running pass: CoroConditionalWrapper
 ; CHECK-THINLTO-NEXT: Running pass: AllocTokenPass
@@ -64,7 +66,7 @@
 ; CHECK-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.
-; CHECK-LABEL: define void @foo(i32 %n) local_unnamed_addr {
+; CHECK-LABEL: define void @foo(i32 %n) local_unnamed_addr
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   br label %loop
 ; CHECK:      loop:

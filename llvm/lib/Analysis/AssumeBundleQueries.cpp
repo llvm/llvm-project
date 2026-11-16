@@ -13,13 +13,11 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/DebugCounter.h"
 
 #define DEBUG_TYPE "assume-queries"
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 STATISTIC(NumAssumeQueries, "Number of Queries into an assume assume bundles");
 STATISTIC(
@@ -38,33 +36,6 @@ static Value *getValueFromBundleOpInfo(AssumeInst &Assume,
                                        unsigned Idx) {
   assert(bundleHasArgument(BOI, Idx) && "index out of range");
   return (Assume.op_begin() + BOI.Begin + Idx)->get();
-}
-
-bool llvm::hasAttributeInAssume(AssumeInst &Assume, Value *IsOn,
-                                StringRef AttrName, uint64_t *ArgVal) {
-  assert(Attribute::isExistingAttribute(AttrName) &&
-         "this attribute doesn't exist");
-  assert((ArgVal == nullptr || Attribute::isIntAttrKind(
-                                   Attribute::getAttrKindFromName(AttrName))) &&
-         "requested value for an attribute that has no argument");
-  if (Assume.bundle_op_infos().empty())
-    return false;
-
-  for (auto &BOI : Assume.bundle_op_infos()) {
-    if (BOI.Tag->getKey() != AttrName)
-      continue;
-    if (IsOn && (BOI.End - BOI.Begin <= ABA_WasOn ||
-                 IsOn != getValueFromBundleOpInfo(Assume, BOI, ABA_WasOn)))
-      continue;
-    if (ArgVal) {
-      assert(BOI.End - BOI.Begin > ABA_Argument);
-      *ArgVal =
-          cast<ConstantInt>(getValueFromBundleOpInfo(Assume, BOI, ABA_Argument))
-              ->getZExtValue();
-    }
-    return true;
-  }
-  return false;
 }
 
 void llvm::fillMapFromAssume(AssumeInst &Assume, RetainedKnowledgeMap &Result) {
@@ -106,27 +77,35 @@ llvm::getKnowledgeFromBundle(AssumeInst &Assume,
   Result.AttrKind = Attribute::getAttrKindFromName(BOI.Tag->getKey());
   if (bundleHasArgument(BOI, ABA_WasOn))
     Result.WasOn = getValueFromBundleOpInfo(Assume, BOI, ABA_WasOn);
-  auto GetArgOr1 = [&](unsigned Idx) -> uint64_t {
+  auto GetArgOr = [&](unsigned Idx, uint64_t Default) -> uint64_t {
     if (auto *ConstInt = dyn_cast<ConstantInt>(
             getValueFromBundleOpInfo(Assume, BOI, ABA_Argument + Idx)))
       return ConstInt->getZExtValue();
-    return 1;
+    return Default;
   };
-  if (BOI.End - BOI.Begin > ABA_Argument)
-    Result.ArgValue = GetArgOr1(0);
+  if (BOI.End - BOI.Begin > ABA_Argument) {
+    switch (Result.AttrKind) {
+    case Attribute::Alignment:
+      Result.ArgValue = GetArgOr(0, 1);
+      break;
+    case Attribute::Dereferenceable:
+    case Attribute::DereferenceableOrNull:
+      Result.ArgValue = GetArgOr(0, 0);
+      break;
+    case Attribute::None:
+      Result.ArgValue = 0;
+      break;
+    default:
+      llvm_unreachable("Attribute kind does not support argument");
+    }
+  }
   Result.IRArgValue = bundleHasArgument(BOI, ABA_Argument)
                           ? getValueFromBundleOpInfo(Assume, BOI, ABA_Argument)
                           : nullptr;
   if (Result.AttrKind == Attribute::Alignment)
     if (BOI.End - BOI.Begin > ABA_Argument + 1)
-      Result.ArgValue = MinAlign(Result.ArgValue, GetArgOr1(1));
+      Result.ArgValue = MinAlign(Result.ArgValue, GetArgOr(1, 1));
   return Result;
-}
-
-RetainedKnowledge llvm::getKnowledgeFromOperandInAssume(AssumeInst &Assume,
-                                                        unsigned Idx) {
-  CallBase::BundleOpInfo BOI = Assume.getBundleOpInfoForOperand(Idx);
-  return getKnowledgeFromBundle(Assume, BOI);
 }
 
 bool llvm::isAssumeWithEmptyBundle(const AssumeInst &Assume) {
@@ -134,27 +113,6 @@ bool llvm::isAssumeWithEmptyBundle(const AssumeInst &Assume) {
                  [](const CallBase::BundleOpInfo &BOI) {
                    return BOI.Tag->getKey() != IgnoreBundleTag;
                  });
-}
-
-static CallInst::BundleOpInfo *getBundleFromUse(const Use *U) {
-  if (!match(U->getUser(),
-             m_Intrinsic<Intrinsic::assume>(m_Unless(m_Specific(U->get())))))
-    return nullptr;
-  auto *Intr = cast<IntrinsicInst>(U->getUser());
-  return &Intr->getBundleOpInfoForOperand(U->getOperandNo());
-}
-
-RetainedKnowledge
-llvm::getKnowledgeFromUse(const Use *U,
-                          ArrayRef<Attribute::AttrKind> AttrKinds) {
-  CallInst::BundleOpInfo* Bundle = getBundleFromUse(U);
-  if (!Bundle)
-    return RetainedKnowledge::none();
-  RetainedKnowledge RK =
-      getKnowledgeFromBundle(*cast<AssumeInst>(U->getUser()), *Bundle);
-  if (llvm::is_contained(AttrKinds, RK.AttrKind))
-    return RK;
-  return RetainedKnowledge::none();
 }
 
 RetainedKnowledge

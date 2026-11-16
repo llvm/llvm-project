@@ -10,9 +10,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class ExprInsideLambdaTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def expectExprError(self, expr: str, expected: str):

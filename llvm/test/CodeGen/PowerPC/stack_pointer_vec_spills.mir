@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 \
-# RUN:     -start-before=prologepilog -ppc-enable-pe-vector-spills \
+# RUN:     -start-before=prolog-epilog -ppc-enable-pe-vector-spills \
 # RUN:     -ppc-asm-full-reg-names -verify-machineinstrs %s -o - | FileCheck %s
 
 ---

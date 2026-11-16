@@ -1,8 +1,6 @@
-// RUN: rm -rf %t && mkdir -p %t
-// RUN: split-file %s %t
-// RUN: clang-doc -format=html %t/compile_commands.json %t/main.cpp
-
-//--- main.cpp
+// RUN: rm -rf %t
+// RUN: clang-doc -format=html --output=%t --source-root=%S %s --
+// RUN: FileCheck %s --input-file=%t/json/GlobalNamespace/_ZTV3Foo.json
 
 class Foo {
   void getFoo();
@@ -12,9 +10,5 @@ int main() {
   return 0;
 }
 
-//--- compile_commands.json
-[{
-  "directory" : "foo",
-  "file" : "main.cpp",
-  "command" : "clang main.cpp -c"
-}]
+// CHECK-NOT: FileURL
+// CHECK: "Filename":"DR-131697.cpp"

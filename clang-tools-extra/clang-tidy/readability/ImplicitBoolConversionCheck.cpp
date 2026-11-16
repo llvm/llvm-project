@@ -47,7 +47,7 @@ AST_MATCHER(Stmt, isNULLMacroExpansion) {
 
 static StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
                                                     QualType Type,
-                                                    ASTContext &Context) {
+                                                    const ASTContext &Context) {
   switch (CastExprKind) {
   case CK_IntegralToBoolean:
     return Type->isUnsignedIntegerType() ? "0u" : "0";
@@ -71,7 +71,7 @@ static bool isUnaryLogicalNotOperator(const Stmt *Statement) {
   return UnaryOperatorExpr && UnaryOperatorExpr->getOpcode() == UO_LNot;
 }
 
-static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
+static void fixGenericExprCastToBool(const DiagnosticBuilder &Diag,
                                      const ImplicitCastExpr *Cast,
                                      const Stmt *Parent, ASTContext &Context,
                                      bool UseUpperCaseLiteralSuffix) {
@@ -167,7 +167,7 @@ static bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
   return !AllowedCharacters.contains(SpaceBeforeStmtStr.back());
 }
 
-static void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
+static void fixGenericExprCastFromBool(const DiagnosticBuilder &Diag,
                                        const ImplicitCastExpr *Cast,
                                        ASTContext &Context,
                                        StringRef OtherType) {
@@ -197,7 +197,7 @@ static void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
 
 static StringRef
 getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
-                            QualType DestType, ASTContext &Context) {
+                            QualType DestType, const ASTContext &Context) {
   // Prior to C++11, false literal could be implicitly converted to pointer.
   if (!Context.getLangOpts().CPlusPlus11 &&
       (DestType->isPointerType() || DestType->isMemberPointerType()) &&
@@ -282,7 +282,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                  expr(hasType(qualType().bind("type")),
                       hasParent(initListExpr(hasParent(explicitCastExpr(
                           hasType(qualType(equalsBoundNode("type"))))))))));
-  auto ImplicitCastFromBool = implicitCastExpr(
+  const auto ImplicitCastFromBool = implicitCastExpr(
       anyOf(hasCastKind(CK_IntegralCast), hasCastKind(CK_IntegralToFloating),
             // Prior to C++11 cast from bool literal to pointer was allowed.
             allOf(anyOf(hasCastKind(CK_NullToPointer),
@@ -335,10 +335,11 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                                          hasLHS(expr(hasType(booleanType()))));
   auto BitfieldAssignment = binaryOperator(
       hasLHS(memberExpr(hasDeclaration(fieldDecl(hasBitWidth(1))))));
-  auto BitfieldConstruct = cxxConstructorDecl(hasDescendant(cxxCtorInitializer(
-      withInitializer(equalsBoundNode("implicitCastFromBool")),
-      forField(hasBitWidth(1)))));
-  auto BoolTernaryCondition = conditionalOperator(
+  const auto BitfieldConstruct =
+      cxxConstructorDecl(hasDescendant(cxxCtorInitializer(
+          withInitializer(equalsBoundNode("implicitCastFromBool")),
+          forField(hasBitWidth(1)))));
+  const auto BoolTernaryCondition = conditionalOperator(
       hasCondition(equalsBoundNode("implicitCastFromBool")));
   Finder->addMatcher(
       traverse(
@@ -407,9 +408,10 @@ void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
     return;
   }
 
-  auto Diag = diag(Context.getSourceManager().getFileLoc(Cast->getBeginLoc()),
-                   "implicit conversion %0 -> 'bool'")
-              << Cast->getSubExpr()->getType();
+  const auto Diag =
+      diag(Context.getSourceManager().getFileLoc(Cast->getBeginLoc()),
+           "implicit conversion %0 -> 'bool'")
+      << Cast->getSubExpr()->getType();
 
   const StringRef EquivalentLiteral =
       getEquivalentBoolLiteralForExpr(Cast->getSubExpr(), Context);
@@ -426,9 +428,10 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
     ASTContext &Context) {
   const QualType DestType =
       NextImplicitCast ? NextImplicitCast->getType() : Cast->getType();
-  auto Diag = diag(Context.getSourceManager().getFileLoc(Cast->getBeginLoc()),
-                   "implicit conversion 'bool' -> %0")
-              << DestType;
+  const auto Diag =
+      diag(Context.getSourceManager().getFileLoc(Cast->getBeginLoc()),
+           "implicit conversion 'bool' -> %0")
+      << DestType;
 
   if (const auto *BoolLiteral =
           dyn_cast<CXXBoolLiteralExpr>(Cast->getSubExpr()->IgnoreParens())) {

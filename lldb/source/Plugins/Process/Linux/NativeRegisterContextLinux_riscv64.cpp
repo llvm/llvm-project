@@ -10,23 +10,25 @@
 
 #include "NativeRegisterContextLinux_riscv64.h"
 
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/Linux/Procfs.h"
+#include "Register/Common/RegisterInfo_riscv64.h"
+#include "Register/Arch/lldb-riscv-register-enums.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/Linux/Procfs.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
-#include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
-
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules
+#include <elf.h>
 #include <sys/ptrace.h>
 #include <sys/uio.h>
-// NT_PRSTATUS and NT_FPREGSET definition
-#include <elf.h>
+
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -37,9 +39,9 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     const ArchSpec &target_arch, NativeThreadLinux &native_thread) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::riscv64: {
-    Flags opt_regsets(RegisterInfoPOSIX_riscv64::eRegsetMaskDefault);
+    Flags opt_regsets(RegisterInfo_riscv64::eRegsetMaskDefault);
 
-    RegisterInfoPOSIX_riscv64::FPR fpr;
+    RegisterInfo_riscv64::FPR fpr;
     struct iovec ioVec;
     ioVec.iov_base = &fpr;
     ioVec.iov_len = sizeof(fpr);
@@ -49,11 +51,11 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
                                           native_thread.GetID(), &regset,
                                           &ioVec, sizeof(fpr))
             .Success()) {
-      opt_regsets.Set(RegisterInfoPOSIX_riscv64::eRegsetMaskFP);
+      opt_regsets.Set(RegisterInfo_riscv64::eRegsetMaskFP);
     }
 
     auto register_info_up =
-        std::make_unique<RegisterInfoPOSIX_riscv64>(target_arch, opt_regsets);
+        std::make_unique<RegisterInfo_riscv64>(target_arch, opt_regsets);
     return std::make_unique<NativeRegisterContextLinux_riscv64>(
         target_arch, native_thread, std::move(register_info_up));
   }
@@ -69,7 +71,7 @@ NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
 
 NativeRegisterContextLinux_riscv64::NativeRegisterContextLinux_riscv64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-    std::unique_ptr<RegisterInfoPOSIX_riscv64> register_info_up)
+    std::unique_ptr<RegisterInfo_riscv64> register_info_up)
     : NativeRegisterContextRegisterInfo(native_thread,
                                         register_info_up.release()),
       NativeRegisterContextLinux(native_thread) {
@@ -80,9 +82,9 @@ NativeRegisterContextLinux_riscv64::NativeRegisterContextLinux_riscv64(
   m_fpu_is_valid = false;
 }
 
-const RegisterInfoPOSIX_riscv64 &
+const RegisterInfo_riscv64 &
 NativeRegisterContextLinux_riscv64::GetRegisterInfo() const {
-  return static_cast<const RegisterInfoPOSIX_riscv64 &>(
+  return static_cast<const RegisterInfo_riscv64 &>(
       NativeRegisterContextRegisterInfo::GetRegisterInfoInterface());
 }
 
@@ -284,7 +286,7 @@ size_t NativeRegisterContextLinux_riscv64::GetRegContextSize() {
 
 bool NativeRegisterContextLinux_riscv64::IsGPR(unsigned reg) const {
   return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_riscv64::GPRegSet;
+         RegisterInfo_riscv64::GPRegSet;
 }
 
 bool NativeRegisterContextLinux_riscv64::IsFPR(unsigned reg) const {

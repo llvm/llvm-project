@@ -64,6 +64,9 @@ LIBC_INLINE float16 tanhf16(float16 x) {
 
     // When -2^(-14) <= x <= -2^(-9).
     if (x_u >= 0x8400U && x_u <= 0x9800U) {
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      return x;
+#else
       switch (fputil::quick_get_round()) {
       case FE_TONEAREST:
       case FE_DOWNWARD:
@@ -71,6 +74,7 @@ LIBC_INLINE float16 tanhf16(float16 x) {
       default:
         return FPBits(static_cast<uint16_t>(x_u - 1U)).get_val();
       }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
 
     // When |x| <= 0x1.d2p-4.
@@ -98,12 +102,18 @@ LIBC_INLINE float16 tanhf16(float16 x) {
     // When |x| >= atanh(1 - 2^(-11)).
     fputil::raise_except_if_required(FE_INEXACT);
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    if (x_abs >= 0x4482U) {
+      return FPBits::one(x_bits.sign()).get_val();
+    }
+#else
     int rounding_mode = fputil::quick_get_round();
     if ((rounding_mode == FE_TONEAREST && x_abs >= 0x4482U) ||
         (rounding_mode == FE_UPWARD && x_bits.is_pos()) ||
         (rounding_mode == FE_DOWNWARD && x_bits.is_neg())) {
       return FPBits::one(x_bits.sign()).get_val();
     }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     if (x_bits.is_pos())
       return fputil::cast<float16>(0x1.ffcp-1);
     return fputil::cast<float16>(-0x1.ffcp-1);

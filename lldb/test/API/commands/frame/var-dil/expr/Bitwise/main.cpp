@@ -1,12 +1,24 @@
 #include <cstdint>
+#include <limits>
+
 enum UnscopedEnum { kZero, kOne };
 
 int main(int argc, char **argv) {
+  bool var_true = true;
+  bool var_false = false;
+
+  unsigned long long ull_max = std::numeric_limits<unsigned long long>::max();
+  unsigned long long ull_zero = 0;
+
   struct S {
   } s;
 
   auto enum_one = UnscopedEnum::kOne;
   uint64_t i64 = 1;
+  uint32_t mask_ff = 0xFF;
+
+  uint16_t sh = 1;
+  uint16_t &sh_ref = sh;
 
   return 0; // Set a breakpoint here
 }

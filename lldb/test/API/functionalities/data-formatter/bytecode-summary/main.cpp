@@ -34,13 +34,13 @@ int main(int argc, char **argv) {
 __attribute__((used, section(FORMATTER_SECTION)))
 unsigned char _MyOptional_type_summary[] =
         "\x01"             // version
-        "\xa4"             // record size
+        "\xa2"             // record size
         "\x01"             // record size
         "\x10"             // type name size
         "^MyOptional<.+>$" // type name
         "\x00"             // flags
         "\x00"             // sig_summary
-        "\x8e"             // program size
+        "\x8d"             // program size
         "\x01"             // program size
         "\x1\x22\x7Storage#\x12\x60\x1,C\x10\x1\x5\x11\x2\x1\x22\x6hasVal#"
         "\x12\x60\x1,\x10\x1e\x2\x22\x1b<could not read MyOptional>\x10G#!\x60 "

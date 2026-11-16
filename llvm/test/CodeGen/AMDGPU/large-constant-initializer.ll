@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s
+; RUN: llc -mtriple=amdgpu6.00 < %s
+; RUN: llc -mtriple=amdgpu8.02 < %s
 ; CHECK: s_endpgm
 
 @gv = external unnamed_addr addrspace(4) constant [239 x i32], align 4

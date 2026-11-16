@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/scalbnbf16.h"
 
-LIST_SCALBN_TESTS(bfloat16, int, LIBC_NAMESPACE::scalbnbf16)
+LIST_SCALBN_TESTS(Scalbnbf16, bfloat16, int, LIBC_NAMESPACE::scalbnbf16)

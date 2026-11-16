@@ -249,7 +249,7 @@ define nofpclass(nan) half @ret_nonan__fmuladd__no_nan_all_src__drop_ub_attrs_md
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nnan half @llvm.fmuladd.f16(half [[NOT_NAN0]], half [[NOT_NAN1]], half [[NOT_NAN2]])
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
-  %result = call noundef half @llvm.fmuladd.f16(half %not.nan0, half %not.nan1, half noundef %not.nan2), !unknown.md !0, !noundef !0
+  %result = call noundef half @llvm.fmuladd.f16(half %not.nan0, half %not.nan1, half noundef %not.nan2), !unknown.md !0
   ret half %result
 }
 
@@ -259,7 +259,7 @@ define nofpclass(nan inf) half @ret_noinf_nonan__fmuladd__no_inf_all_src__drop_u
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf half @llvm.fmuladd.f16(half [[NOT_NAN_OR_INF0]], half [[NOT_NAN_OR_INF1]], half [[NOT_NAN_OR_INF2]])
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
-  %result = call noundef half @llvm.fmuladd.f16(half %not.nan.or.inf0, half %not.nan.or.inf1, half %not.nan.or.inf2), !unknown.md !0, !noundef !0
+  %result = call noundef half @llvm.fmuladd.f16(half %not.nan.or.inf0, half %not.nan.or.inf1, half %not.nan.or.inf2), !unknown.md !0
   ret half %result
 }
 
@@ -269,7 +269,7 @@ define nofpclass(nan) half @ret_nonan__fma_square__no_nan_all_src(half nofpclass
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nnan half @llvm.fma.f16(half [[NOT_NAN0]], half [[NOT_NAN0]], half [[NOT_NAN1]])
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
-  %result = call noundef half @llvm.fma.f16(half %not.nan0, half %not.nan0, half %not.nan1), !unknown.md !0, !noundef !0
+  %result = call noundef half @llvm.fma.f16(half %not.nan0, half %not.nan0, half %not.nan1), !unknown.md !0
   ret half %result
 }
 
@@ -279,7 +279,7 @@ define nofpclass(inf) half @ret_noinf__fma_square__no_inf_all_src(half nofpclass
 ; CHECK-NEXT:    [[RESULT:%.*]] = call ninf half @llvm.fma.f16(half [[NOT_NAN0]], half [[NOT_NAN0]], half [[NOT_NAN1]])
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
-  %result = call noundef half @llvm.fma.f16(half %not.nan0, half %not.nan0, half %not.nan1), !unknown.md !0, !noundef !0
+  %result = call noundef half @llvm.fma.f16(half %not.nan0, half %not.nan0, half %not.nan1), !unknown.md !0
   ret half %result
 }
 
@@ -289,7 +289,7 @@ define nofpclass(nan inf) half @ret_nonan_noinf__fma_square__no_nan_no_inf_all_s
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf nsz half @llvm.fma.f16(half [[NOT_NAN0]], half [[NOT_NAN0]], half [[NOT_NAN1]])
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
-  %result = call nsz noundef half @llvm.fma.f16(half %not.nan0, half %not.nan0, half %not.nan1), !unknown.md !0, !noundef !0
+  %result = call nsz noundef half @llvm.fma.f16(half %not.nan0, half %not.nan0, half %not.nan1), !unknown.md !0
   ret half %result
 }
 
@@ -362,5 +362,81 @@ define nofpclass(snan) half @qnan_result_demands_snan_src2(i1 %cond, half %unkno
   %result = call half @llvm.fma.f16(half %unknown1, half %unknown2, half %select)
   ret half %result
 }
+
+; fma can rule out NaN in places that fmuladd cannot. This is because fma can
+; distinguish between exact infinities and overflow.
+
+define nofpclass(inf zero sub norm) half @ret__only_nan__fma__no_nan_inf_zero__no_nan_inf_zero__no_nan_pinf(half nofpclass(nan inf zero) %arg0, half nofpclass(nan inf zero) %arg1, half nofpclass(nan pinf) %arg2) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret__only_nan__fma__no_nan_inf_zero__no_nan_inf_zero__no_nan_pinf(
+; CHECK-SAME: half nofpclass(nan inf zero) [[ARG0:%.*]], half nofpclass(nan inf zero) [[ARG1:%.*]], half nofpclass(nan pinf) [[ARG2:%.*]]) {
+; CHECK-NEXT:    ret half poison
+;
+  %result = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
+  ret half %result
+}
+
+define nofpclass(inf zero sub norm) half @ret__only_nan__fmuladd__no_nan_inf_zero__no_nan_inf_zero__no_nan_pinf(half nofpclass(nan inf zero) %arg0, half nofpclass(nan inf zero) %arg1, half nofpclass(nan pinf) %arg2) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret__only_nan__fmuladd__no_nan_inf_zero__no_nan_inf_zero__no_nan_pinf(
+; CHECK-SAME: half nofpclass(nan inf zero) [[ARG0:%.*]], half nofpclass(nan inf zero) [[ARG1:%.*]], half nofpclass(nan pinf) [[ARG2:%.*]]) {
+; CHECK-NEXT:    ret half +qnan
+;
+  %result = call half @llvm.fmuladd.f16(half %arg0, half %arg1, half %arg2)
+  ret half %result
+}
+
+define nofpclass(inf zero sub norm) half @ret__only_nan__fma__no_nan_inf_zero__no_nan_inf_zero__no_nan_ninf(half nofpclass(nan inf zero) %arg0, half nofpclass(nan inf zero) %arg1, half nofpclass(nan ninf) %arg2) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret__only_nan__fma__no_nan_inf_zero__no_nan_inf_zero__no_nan_ninf(
+; CHECK-SAME: half nofpclass(nan inf zero) [[ARG0:%.*]], half nofpclass(nan inf zero) [[ARG1:%.*]], half nofpclass(nan ninf) [[ARG2:%.*]]) {
+; CHECK-NEXT:    ret half poison
+;
+  %result = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
+  ret half %result
+}
+
+define nofpclass(inf zero sub norm) half @ret__only_nan__fmuladd__no_nan_inf_zero__no_nan_inf_zero__no_nan_ninf(half nofpclass(nan inf zero) %arg0, half nofpclass(nan inf zero) %arg1, half nofpclass(nan ninf) %arg2) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret__only_nan__fmuladd__no_nan_inf_zero__no_nan_inf_zero__no_nan_ninf(
+; CHECK-SAME: half nofpclass(nan inf zero) [[ARG0:%.*]], half nofpclass(nan inf zero) [[ARG1:%.*]], half nofpclass(nan ninf) [[ARG2:%.*]]) {
+; CHECK-NEXT:    ret half +qnan
+;
+  %result = call half @llvm.fmuladd.f16(half %arg0, half %arg1, half %arg2)
+  ret half %result
+}
+
+define nofpclass(inf zero sub norm) half @ret__only_nan__fma_square__no_nan_inf_zero__no_nan_pinf(half noundef nofpclass(nan inf zero) %arg0, half nofpclass(nan pinf) %arg1) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret__only_nan__fma_square__no_nan_inf_zero__no_nan_pinf(
+; CHECK-SAME: half noundef nofpclass(nan inf zero) [[ARG0:%.*]], half nofpclass(nan pinf) [[ARG1:%.*]]) {
+; CHECK-NEXT:    ret half poison
+;
+  %result = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
+  ret half %result
+}
+
+define nofpclass(inf zero sub norm) half @ret__only_nan__fmuladd_square__no_nan_inf_zero__no_nan_pinf(half noundef nofpclass(nan inf zero) %arg0, half nofpclass(nan pinf) %arg1) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret__only_nan__fmuladd_square__no_nan_inf_zero__no_nan_pinf(
+; CHECK-SAME: half noundef nofpclass(nan inf zero) [[ARG0:%.*]], half nofpclass(nan pinf) [[ARG1:%.*]]) {
+; CHECK-NEXT:    ret half +qnan
+;
+  %result = call half @llvm.fmuladd.f16(half %arg0, half %arg0, half %arg1)
+  ret half %result
+}
+
+define nofpclass(inf zero sub norm) half @ret__only_nan__fma_square__no_nan_inf_zero__no_nan_ninf(half noundef nofpclass(nan inf zero) %arg0, half nofpclass(nan ninf) %arg1) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret__only_nan__fma_square__no_nan_inf_zero__no_nan_ninf(
+; CHECK-SAME: half noundef nofpclass(nan inf zero) [[ARG0:%.*]], half nofpclass(nan ninf) [[ARG1:%.*]]) {
+; CHECK-NEXT:    ret half poison
+;
+  %result = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
+  ret half %result
+}
+
+define nofpclass(inf zero sub norm) half @ret__only_nan__fmuladd_square__no_nan_inf_zero__no_nan_ninf(half noundef nofpclass(nan inf zero) %arg0, half nofpclass(nan ninf) %arg1) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret__only_nan__fmuladd_square__no_nan_inf_zero__no_nan_ninf(
+; CHECK-SAME: half noundef nofpclass(nan inf zero) [[ARG0:%.*]], half nofpclass(nan ninf) [[ARG1:%.*]]) {
+; CHECK-NEXT:    ret half poison
+;
+  %result = call half @llvm.fmuladd.f16(half %arg0, half %arg0, half %arg1)
+  ret half %result
+}
+
 
 !0 = !{}

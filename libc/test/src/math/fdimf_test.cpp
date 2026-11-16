@@ -14,22 +14,24 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using LlvmLibcFDimTest = FDimTestTemplate<float>;
+using LlvmLibcFdimfTest = FDimTestTemplate<float>;
 
-TEST_F(LlvmLibcFDimTest, NaNArg_fdimf) {
+TEST_F(LlvmLibcFdimfTest, NaNArg_fdimf) {
   test_na_n_arg(&LIBC_NAMESPACE::fdimf);
 }
 
-TEST_F(LlvmLibcFDimTest, InfArg_fdimf) { test_inf_arg(&LIBC_NAMESPACE::fdimf); }
+TEST_F(LlvmLibcFdimfTest, InfArg_fdimf) {
+  test_inf_arg(&LIBC_NAMESPACE::fdimf);
+}
 
-TEST_F(LlvmLibcFDimTest, NegInfArg_fdimf) {
+TEST_F(LlvmLibcFdimfTest, NegInfArg_fdimf) {
   test_neg_inf_arg(&LIBC_NAMESPACE::fdimf);
 }
 
-TEST_F(LlvmLibcFDimTest, BothZero_fdimf) {
+TEST_F(LlvmLibcFdimfTest, BothZero_fdimf) {
   test_both_zero(&LIBC_NAMESPACE::fdimf);
 }
 
-TEST_F(LlvmLibcFDimTest, InFloatRange_fdimf) {
+TEST_F(LlvmLibcFdimfTest, InFloatRange_fdimf) {
   test_in_range(&LIBC_NAMESPACE::fdimf);
 }

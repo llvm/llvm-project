@@ -1,4 +1,4 @@
-RUN: %dexter_regression_test_run --binary %s --use-script --skip-run -- %s 2>&1 | FileCheck %s
+RUN: %dexter_regression_test_run --binary %s --skip-run -- %s 2>&1 | FileCheck %s
 
 Provides a valid test case and checks that we can parse it successfully and print the script back out correctly.
 
@@ -6,8 +6,12 @@ CHECK:      ? !where {function: foo}
 CHECK-NEXT: : !value 'x': 5
 CHECK-NEXT:   ? !where {file: lib.cpp, lines: !range [10, 20]}
 CHECK-NEXT:   : !value 'y': 10
+CHECK-NEXT:   ? !and {lines: 14}
+CHECK-NEXT:   : !then 'finish'
 CHECK-NEXT: ? !where {lines: 5}
-CHECK-NEXT: : !value 'z': bees
+CHECK-NEXT: : ? !and {lines: 5}
+CHECK-NEXT:   : !value 'y': 7
+CHECK-NEXT:   !value 'z': bees
 
 
 ---
@@ -15,6 +19,9 @@ CHECK-NEXT: : !value 'z': bees
     !value x: 5
     !where {file: "lib.cpp", lines: !range [10, 20]}:
         !value y: 10
+        !and {lines: 14}: !then finish
 !where {lines: 5}:
+    !and {lines: 5}:
+        !value y: 7
     !value z: bees
 ...

@@ -829,7 +829,7 @@ public:
   ///     plan could not be queued.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepInRange(
       bool abort_other_plans, const AddressRange &range,
-      const SymbolContext &addr_context, const char *step_in_target,
+      const SymbolContext &addr_context, llvm::StringRef step_in_target,
       lldb::RunMode stop_other_threads, Status &status,
       LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
@@ -839,7 +839,7 @@ public:
   // step over a longer address range in a single operation.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepInRange(
       bool abort_other_plans, const LineEntry &line_entry,
-      const SymbolContext &addr_context, const char *step_in_target,
+      const SymbolContext &addr_context, llvm::StringRef step_in_target,
       lldb::RunMode stop_other_threads, Status &status,
       LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
@@ -1461,6 +1461,10 @@ protected:
       m_active_frame_providers_by_thread;
   lldb::StackFrameListSP m_prev_frames_sp; ///< The previous stack frames from
                                            ///the last time this thread stopped.
+  /// The unwinder frame list from the last time this thread stopped. New
+  /// unwinder frame lists take their previous frames from here rather than
+  /// from m_prev_frames_sp.
+  lldb::StackFrameListSP m_prev_unwinder_frames_sp;
   std::optional<lldb::addr_t>
       m_prev_framezero_pc; ///< Frame 0's PC the last
                            /// time this thread was stopped.

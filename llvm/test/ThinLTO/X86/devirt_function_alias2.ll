@@ -6,7 +6,7 @@
 ;; Test pure ThinLTO
 
 ;; Generate unsplit module with summary for ThinLTO index-based WPD.
-; RUN: opt -thinlto-bc -o %t1.o %s
+; RUN: opt -passes=assign-guid -thinlto-bc -o %t1.o %s
 
 ;; Check that we have properly recorded the alias in the vtable summary.
 ; RUN: llvm-dis -o - %t1.o | FileCheck %s --check-prefix SUMMARY
@@ -25,12 +25,12 @@
 ; RUN: llvm-dis %t2.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR1
 
 ; PRINT-DAG: Devirtualized call to {{.*}} (_ZN1D1mEiAlias)
-; REMARK-DAG: single-impl: devirtualized a call to _ZN1D1mEiAlias
+; REMARK-DAG: single-impl: devirtualized a call to _ZN1D1mEi
 
 ;; Test hybrid Thin/Regular LTO
 
 ;; Generate split module with summary for hybrid Thin/Regular LTO WPD.
-; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t3.o %s
+; RUN: opt -passes=assign-guid -thinlto-bc -thinlto-split-lto-unit -o %t3.o %s
 
 ; RUN: llvm-lto2 run %t3.o -save-temps -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
@@ -45,7 +45,7 @@
 ; RUN: llvm-dis %t4.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR1
 
 ;; Test Regular LTO
-; RUN: opt -o %t5.o %s
+; RUN: opt -passes=assign-guid -o %t5.o %s
 ; RUN: llvm-lto2 run %t5.o -save-temps -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -o %t6 \
@@ -63,13 +63,15 @@ target triple = "x86_64-grtev4-linux-gnu"
 
 @_ZTV1D = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr undef, ptr @_ZN1D1mEiAlias] }, !type !3
 
-define i32 @_ZN1D1mEi(ptr %this, i32 %a) {
+define i32 @_ZN1D1mEi(ptr %this, i32 %a) #0 {
    ret i32 0;
 }
 
 @_ZN1D1mEiAlias = unnamed_addr alias i32 (ptr, i32), ptr @_ZN1D1mEi
 
-; CHECK-IR1-LABEL: define i32 @test
+attributes #0 = { noinline optnone }
+
+; CHECK-IR1-LABEL: define {{.*}}i32 @test
 define i32 @test(ptr %obj2, i32 %a) {
 entry:
   %vtable2 = load ptr, ptr %obj2

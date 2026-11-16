@@ -1,6 +1,5 @@
-; RUN: opt -passes=amdgpu-attributor < %s | llc | FileCheck %s
+; RUN: opt -mtriple=amdgpu9.00-amd-amdhsa -passes=amdgpu-attributor < %s | llc | FileCheck %s
 
-target triple = "amdgcn-amd-amdhsa"
 
 ; The call to intrinsic implicitarg_ptr reaches a load through a phi. The
 ; offsets of the phi cannot be determined, and hence the attirbutor assumes that

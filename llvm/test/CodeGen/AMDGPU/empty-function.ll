@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=SI %s
 
 ; Make sure we don't assert on empty functions
 

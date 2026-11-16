@@ -7,7 +7,7 @@ add_flang_library(HLFIRTransforms
   InlineElementals.cpp
   InlineHLFIRAssign.cpp
   SeparateAllocatableAssign.cpp
-  InlineHLFIRCopyIn.cpp
+  InlineHLFIRCopy.cpp
   LowerHLFIRIntrinsics.cpp
   LowerHLFIROrderedAssignments.cpp
   ScheduleOrderedAssignments.cpp
@@ -29,7 +29,6 @@ add_flang_library(HLFIRTransforms
   FIRSupport
   FIRTransforms
   FlangOpenMPTransforms
-  FortranEvaluate
   FortranSupport
   HLFIRDialect
 
@@ -42,6 +41,7 @@ add_flang_library(HLFIRTransforms
   ${dialect_libs}
 
   MLIR_LIBS
+  MLIRAnalysisBase
   MLIRIR
   ${dialect_libs}
 )

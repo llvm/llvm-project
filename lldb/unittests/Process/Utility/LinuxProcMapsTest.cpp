@@ -99,7 +99,18 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0x55a4512f7000, 0x55a451b68000),
                                  eLazyBoolYes, eLazyBoolYes, eLazyBoolNo,
                                  eLazyBoolNo, eLazyBoolYes,
-                                 ConstString("[heap]")),
+                                 ConstString("[heap]"))
+                    .SetIsStackMemory(eLazyBoolNo),
+            },
+            ""),
+        std::make_tuple(
+            "7ffcad8f7000-7ffcad918000 rw-p 00000000 00:00 0    [stack]",
+            MemoryRegionInfos{
+                MemoryRegionInfo(make_range(0x7ffcad8f7000, 0x7ffcad918000),
+                                 eLazyBoolYes, eLazyBoolYes, eLazyBoolNo,
+                                 eLazyBoolNo, eLazyBoolYes,
+                                 ConstString("[stack]"))
+                    .SetIsStackMemory(eLazyBoolYes),
             },
             ""),
         // Multiple entries

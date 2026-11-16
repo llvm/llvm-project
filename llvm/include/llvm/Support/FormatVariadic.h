@@ -65,11 +65,11 @@ struct ReplacementItem {
 class formatv_object_base {
 protected:
   StringRef Fmt;
-  ArrayRef<support::detail::format_adapter *> Adapters;
+  ArrayRef<support::detail::FormatFunctorRef> Adapters;
   bool Validate;
 
   formatv_object_base(StringRef Fmt,
-                      ArrayRef<support::detail::format_adapter *> Adapters,
+                      ArrayRef<support::detail::FormatFunctorRef> Adapters,
                       bool Validate)
       : Fmt(Fmt), Adapters(Adapters), Validate(Validate) {}
 
@@ -89,9 +89,9 @@ public:
         continue;
       }
 
-      auto *W = Adapters[R.Index];
+      auto &W = Adapters[R.Index];
 
-      FmtAlign Align(*W, R.Where, R.Width, R.Pad);
+      FmtAlign Align(W, R.Where, R.Width, R.Pad);
       Align.format(S, R.Options);
     }
   }
@@ -122,21 +122,19 @@ template <typename Tuple> class formatv_object : public formatv_object_base {
   // of the parameters, we have to own the storage for the parameters here, and
   // have the base class store type-erased pointers into this tuple.
   Tuple Parameters;
-  std::array<support::detail::format_adapter *, std::tuple_size<Tuple>::value>
+  std::array<support::detail::FormatFunctorRef, std::tuple_size<Tuple>::value>
       ParameterPointers;
 
   // The parameters are stored in a std::tuple, which does not provide runtime
   // indexing capabilities.  In order to enable runtime indexing, we use this
   // structure to put the parameters into a std::array.  Since the parameters
   // are not all the same type, we use some type-erasure by wrapping the
-  // parameters in a template class that derives from a non-template superclass.
-  // Essentially, we are converting a std::tuple<Derived<Ts...>> to a
-  // std::array<Base*>.
+  // parameters in a template class and refer to them using function_refs.
   struct create_adapters {
     template <typename... Ts>
-    std::array<support::detail::format_adapter *, std::tuple_size<Tuple>::value>
+    std::array<support::detail::FormatFunctorRef, std::tuple_size<Tuple>::value>
     operator()(Ts &...Items) {
-      return {{&Items...}};
+      return {{Items...}};
     }
   };
 
@@ -248,7 +246,7 @@ public:
 template <typename... Ts>
 inline auto formatv(bool Validate, const char *Fmt, Ts &&...Vals) {
   auto Params = std::make_tuple(
-      support::detail::build_format_adapter(std::forward<Ts>(Vals))...);
+      support::detail::FormatFunctor(std::forward<Ts>(Vals))...);
   return formatv_object<decltype(Params)>(Fmt, std::move(Params), Validate);
 }
 

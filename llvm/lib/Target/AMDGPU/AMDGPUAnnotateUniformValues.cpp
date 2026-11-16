@@ -60,7 +60,7 @@ public:
 } // End anonymous namespace
 
 void AMDGPUAnnotateUniformValues::visitCondBrInst(CondBrInst &I) {
-  if (UA->isUniformAtDef(&I))
+  if (UA->isUniformTerminator(&I))
     setUniformMetadata(&I);
 }
 

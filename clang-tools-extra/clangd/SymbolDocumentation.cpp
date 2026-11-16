@@ -34,9 +34,10 @@ void commandToMarkup(markup::Paragraph &Out, StringRef Command,
                      comments::CommandMarkerKind CommandMarker,
                      StringRef Args) {
   Out.appendBoldText(commandMarkerAsString(CommandMarker) + Command.str());
-  Out.appendSpace();
-  if (!Args.empty())
+  if (!Args.empty()) {
+    Out.appendSpace();
     Out.appendCode(Args.str());
+  }
 }
 
 template <typename T> std::string getArgText(const T *Command) {
@@ -108,6 +109,7 @@ public:
 
       commandToMarkup(Out, C->getCommandName(Traits), C->getCommandMarker(),
                       "");
+      LastChunkEndsWithNewline = false;
     }
   }
 
@@ -159,7 +161,11 @@ public:
     }
   }
 
-  void visitTextComment(const comments::TextComment *C) { Out << C->getText(); }
+  void visitTextComment(const comments::TextComment *C) {
+    Out << C->getText();
+    if (C->hasTrailingNewline())
+      Out << "\n";
+  }
 
   void visitInlineCommandComment(const comments::InlineCommandComment *C) {
     Out << commandMarkerAsString(C->getCommandMarker());
@@ -167,7 +173,6 @@ public:
     std::string ArgText = getArgText(C);
     if (!ArgText.empty())
       Out << " " << ArgText;
-    Out << " ";
   }
 
   void visitHTMLStartTagComment(const comments::HTMLStartTagComment *STC) {
@@ -251,10 +256,7 @@ public:
       commandToMarkup(P, B->getCommandName(Traits), B->getCommandMarker(),
                       ArgText);
       if (B->getParagraph() && !B->getParagraph()->isWhitespace()) {
-        // For commands with arguments, the paragraph starts after the first
-        // space. Therefore we need to append a space manually in this case.
-        if (!ArgText.empty())
-          P.appendSpace();
+        P.appendSpace();
         ParagraphToMarkupDocument(P, Traits).visit(B->getParagraph());
       }
     }

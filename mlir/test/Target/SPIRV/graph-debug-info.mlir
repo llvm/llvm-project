@@ -69,14 +69,14 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.6, [VulkanMemoryModel, Shader
   spirv.GlobalVariable @test_res_0 bind(0, 1) : !spirv.ptr<!spirv.arm.tensor<2x9x3x32xi8>, UniformConstant>
   spirv.ARM.GraphEntryPoint @test, @test_arg_0, @test_res_0
   spirv.ARM.Graph @test(%arg0: !spirv.arm.tensor<2x9x3x32xi16> loc("tensor_0")) -> (!spirv.arm.tensor<2x9x3x32xi8>) attributes {entry_point = true} {
-    %weight = spirv.ARM.GraphConstant {graph_constant_id = 0 : i32} : !spirv.arm.tensor<32x1x1x32xi8>
-    %bias = spirv.ARM.GraphConstant {graph_constant_id = 1 : i32} : !spirv.arm.tensor<32xi64>
+    %weight = spirv.ARM.GraphConstant id = 0 : !spirv.arm.tensor<32x1x1x32xi8>
+    %bias = spirv.ARM.GraphConstant id = 1 : !spirv.arm.tensor<32xi64>
     %0 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
     %1 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
     // CHECK: %[[CONV2D:.*]] = spirv.Tosa.Conv2D{{.*}}loc(#loc[[SAME_OP:.*]])
     %conv2d = spirv.Tosa.Conv2D pad = [0, 0, 0, 0], stride = [1, 1], dilation = [1, 1], acc_type = <INT48>, local_bound = false, %arg0, %weight, %bias, %0, %1  : !spirv.arm.tensor<2x9x3x32xi16>, !spirv.arm.tensor<32x1x1x32xi8>, !spirv.arm.tensor<32xi64>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<2x9x3x32xi64> loc("op_0")
-    %multiplier = spirv.ARM.GraphConstant {graph_constant_id = 2 : i32} : !spirv.arm.tensor<1xi16>
-    %shift = spirv.ARM.GraphConstant {graph_constant_id = 3 : i32} : !spirv.arm.tensor<1xi8>
+    %multiplier = spirv.ARM.GraphConstant id = 2 : !spirv.arm.tensor<1xi16>
+    %shift = spirv.ARM.GraphConstant id = 3 : !spirv.arm.tensor<1xi8>
     %5 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi64>
     %6 = spirv.Constant dense<-4> : !spirv.arm.tensor<1xi8>
     // CHECK: {{%.*}} = spirv.Tosa.Rescale{{.*}}loc(#loc[[SAME_OP]])
@@ -99,14 +99,14 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.6, [VulkanMemoryModel, Shader
   spirv.GlobalVariable @test_res_0 bind(0, 1) : !spirv.ptr<!spirv.arm.tensor<2x9x3x32xi8>, UniformConstant>
   spirv.ARM.GraphEntryPoint @test, @test_arg_0, @test_res_0
   spirv.ARM.Graph @test(%arg0: !spirv.arm.tensor<2x9x3x32xi16> loc("tensor_0")) -> (!spirv.arm.tensor<2x9x3x32xi8>) attributes {entry_point = true} {
-    %weight = spirv.ARM.GraphConstant {graph_constant_id = 0 : i32} : !spirv.arm.tensor<32x1x1x32xi8>
-    %bias = spirv.ARM.GraphConstant {graph_constant_id = 1 : i32} : !spirv.arm.tensor<32xi64>
+    %weight = spirv.ARM.GraphConstant id = 0 : !spirv.arm.tensor<32x1x1x32xi8>
+    %bias = spirv.ARM.GraphConstant id = 1 : !spirv.arm.tensor<32xi64>
     %0 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi16>
     %1 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
     // CHECK: %[[CONV2D:.*]] = spirv.Tosa.Conv2D{{.*}}loc(#loc[[MULTI_OP0:.*]])
     %conv2d = spirv.Tosa.Conv2D pad = [0, 0, 0, 0], stride = [1, 1], dilation = [1, 1], acc_type = <INT48>, local_bound = false, %arg0, %weight, %bias, %0, %1  : !spirv.arm.tensor<2x9x3x32xi16>, !spirv.arm.tensor<32x1x1x32xi8>, !spirv.arm.tensor<32xi64>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<2x9x3x32xi64> loc("op_0")
-    %multiplier = spirv.ARM.GraphConstant {graph_constant_id = 2 : i32} : !spirv.arm.tensor<1xi16>
-    %shift = spirv.ARM.GraphConstant {graph_constant_id = 3 : i32} : !spirv.arm.tensor<1xi8>
+    %multiplier = spirv.ARM.GraphConstant id = 2 : !spirv.arm.tensor<1xi16>
+    %shift = spirv.ARM.GraphConstant id = 3 : !spirv.arm.tensor<1xi8>
     %5 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi64>
     %6 = spirv.Constant dense<-4> : !spirv.arm.tensor<1xi8>
     // CHECK: {{%.*}} = spirv.Tosa.Rescale{{.*}}loc(#loc[[MULTI_OP1:.*]])

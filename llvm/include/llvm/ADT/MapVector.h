@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -244,6 +245,14 @@ public:
   /// time.
   template <class Predicate> void remove_if(Predicate Pred);
 
+  /// Return the approximate size (in bytes) of the data structure.
+  /// This is just the raw memory used by MapVector.
+  /// If entries are pointers to objects, the size of the referenced objects
+  /// are not included.
+  [[nodiscard]] size_t getMemorySize() const {
+    return capacity_in_bytes(Map) + capacity_in_bytes(Vector);
+  }
+
 private:
   template <typename VectorT, typename LookupKeyT>
   [[nodiscard]] static auto findInVector(VectorT &Vec, const LookupKeyT &Key) {
@@ -330,9 +339,18 @@ void MapVector<KeyT, ValueT, MapType, VectorType, N>::remove_if(Function Pred) {
 /// A MapVector that performs no allocations if smaller than a certain
 /// size.
 template <typename KeyT, typename ValueT, unsigned N>
-struct SmallMapVector : MapVector<KeyT, ValueT, DenseMap<KeyT, unsigned>,
-                                  SmallVector<std::pair<KeyT, ValueT>, N>, N> {
-};
+struct LLVM_ATTRIBUTE_WARN_UNUSED SmallMapVector
+    : MapVector<KeyT, ValueT, DenseMap<KeyT, unsigned>,
+                SmallVector<std::pair<KeyT, ValueT>, N>, N> {};
+
+template <typename KeyT, typename ValueT,
+          typename MapType = DenseMap<KeyT, unsigned>,
+          typename VectorType = SmallVector<std::pair<KeyT, ValueT>, 0>,
+          unsigned N = 0>
+[[nodiscard]] size_t
+capacity_in_bytes(const MapVector<KeyT, ValueT, MapType, VectorType, N> &X) {
+  return X.getMemorySize();
+}
 
 } // end namespace llvm
 

@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s
+// RUN: %clang_cc1 -std=c++11 -verify %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++2a -verify %s -fexperimental-new-constant-interpreter
+
 typedef int (*fp)(int);
 int surrogate(int);
 struct Incomplete;  // expected-note{{forward declaration of 'Incomplete'}} \
@@ -118,7 +121,8 @@ template <typename T> class C {
 
 int fn3(bool b) __attribute__((enable_if(b, ""))); // FIXME: This test should net 0 error messages.
 template <class T> void test3() {
-  fn3(sizeof(T) == 1); // expected-error{{no matching function for call to 'fn3'}} expected-note@-2{{candidate disabled}}
+  fn3(sizeof(T) == 1); // expected-error{{no matching function for call to 'fn3'}} \
+                       // expected-note@-2{{candidate disabled}}
 }
 
 template <typename T>
@@ -138,7 +142,8 @@ void test4() {
 void h(int);
 template <typename T> void outer() {
   void local_function() __attribute__((enable_if(::h(T()), "")));
-  local_function(); // expected-error{{no matching function for call to 'local_function'}} expected-note@-1{{candidate disabled}}
+  local_function(); // expected-error{{no matching function for call to 'local_function'}} \
+                    // expected-note@-1{{candidate disabled}}
 };
 
 namespace PR20988 {
@@ -160,7 +165,8 @@ namespace PR20988 {
 
   int fn3(bool b) __attribute__((enable_if(b, ""))); // FIXME: This test should net 0 error messages.
   template <class T> void test3() {
-    fn3(sizeof(T) == 1); // expected-error{{no matching function for call to 'fn3'}} expected-note@-2{{candidate disabled}}
+    fn3(sizeof(T) == 1); // expected-error {{no matching function for call to 'fn3'}} \
+                         // expected-note@-2 {{candidate disabled}}
   }
 }
 
@@ -188,14 +194,22 @@ namespace FnPtrs {
     a = &ovlBar;
   }
 
-  int ovlConflict(int m) __attribute__((enable_if(true, "")));
-  int ovlConflict(int m) __attribute__((enable_if(1, "")));
+  int ovlConflict(int m) __attribute__((enable_if(true, ""))); // #ovl_1
+  int ovlConflict(int m) __attribute__((enable_if(1, "")));    // #ovl_2
   void test3() {
-    int (*p)(int) = ovlConflict; // expected-error{{address of overloaded function 'ovlConflict' is ambiguous}} expected-note@191{{candidate function}} expected-note@192{{candidate function}}
-    int (*p2)(int) = &ovlConflict; // expected-error{{address of overloaded function 'ovlConflict' is ambiguous}} expected-note@191{{candidate function}} expected-note@192{{candidate function}}
+    int (*p)(int) = ovlConflict; // expected-error {{address of overloaded function 'ovlConflict' is ambiguous}} \
+                                 // expected-note@#ovl_1 {{candidate function}} \
+                                 // expected-note@#ovl_2 {{candidate function}}
+    int (*p2)(int) = &ovlConflict; // expected-error {{address of overloaded function 'ovlConflict' is ambiguous}} \
+                                   // expected-note@#ovl_1 {{candidate function}} \
+                                   // expected-note@#ovl_2 {{candidate function}}
     int (*a)(int);
-    a = ovlConflict; // expected-error{{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} expected-note@191{{candidate function}} expected-note@192{{candidate function}}
-    a = &ovlConflict; // expected-error{{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} expected-note@191{{candidate function}} expected-note@192{{candidate function}}
+    a = ovlConflict; // expected-error {{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} \
+                     // expected-note@#ovl_1 {{candidate function}} \
+                     // expected-note@#ovl_2 {{candidate function}}
+    a = &ovlConflict; // expected-error {{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} \
+                      // expected-note@#ovl_1 {{candidate function}} \
+                      // expected-note@#ovl_2 {{candidate function}}
   }
 
   template <typename T>
@@ -211,37 +225,59 @@ namespace FnPtrs {
   }
 
   template <typename T>
-  T templatedBar(T m) __attribute__((enable_if(m > 0, ""))) { return T(); }
+  T templatedBar(T m) __attribute__((enable_if(m > 0, ""))) { return T(); } // #tbar
   void test5() {
-    int (*p)(int) = templatedBar<int>; // expected-error{{address of overloaded function 'templatedBar' does not match required type 'int (int)'}} expected-note@214{{candidate function made ineligible by enable_if}}
-    int (*p2)(int) = &templatedBar<int>; // expected-error{{address of overloaded function 'templatedBar' does not match required type 'int (int)'}} expected-note@214{{candidate function made ineligible by enable_if}}
+    int (*p)(int) = templatedBar<int>; // expected-error {{address of overloaded function 'templatedBar' does not match required type 'int (int)'}} \
+                                       // expected-note@#tbar {{candidate function made ineligible by enable_if}}
+    int (*p2)(int) = &templatedBar<int>; // expected-error {{address of overloaded function 'templatedBar' does not match required type 'int (int)'}} \
+                                         // expected-note@#tbar {{candidate function made ineligible by enable_if}}
     int (*a)(int);
-    a = templatedBar<int>; // expected-error{{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} expected-note@214{{candidate function made ineligible by enable_if}}
-    a = &templatedBar<int>; // expected-error{{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} expected-note@214{{candidate function made ineligible by enable_if}}
+    a = templatedBar<int>; // expected-error {{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} \
+                           // expected-note@#tbar {{candidate function made ineligible by enable_if}}
+    a = &templatedBar<int>; // expected-error {{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} \
+                            // expected-note@#tbar {{candidate function made ineligible by enable_if}}
   }
 
   template <typename T>
-  T templatedConflict(T m) __attribute__((enable_if(false, ""))) { return T(); }
+  T templatedConflict(T m) __attribute__((enable_if(false, ""))) { return T(); } // #conflict1
   template <typename T>
-  T templatedConflict(T m) __attribute__((enable_if(true, ""))) { return T(); }
+  T templatedConflict(T m) __attribute__((enable_if(true, ""))) { return T(); } // #conflict2
   template <typename T>
-  T templatedConflict(T m) __attribute__((enable_if(1, ""))) { return T(); }
+  T templatedConflict(T m) __attribute__((enable_if(1, ""))) { return T(); }    // #conflict3
   void test6() {
-    int (*p)(int) = templatedConflict<int>; // expected-error{{address of overloaded function 'templatedConflict' is ambiguous}} expected-note@224{{candidate function made ineligible by enable_if}} expected-note@226{{candidate function}} expected-note@228{{candidate function}}
-    int (*p0)(int) = &templatedConflict<int>; // expected-error{{address of overloaded function 'templatedConflict' is ambiguous}} expected-note@224{{candidate function made ineligible by enable_if}} expected-note@226{{candidate function}} expected-note@228{{candidate function}}
+    int (*p)(int) = templatedConflict<int>; // expected-error {{address of overloaded function 'templatedConflict' is ambiguous}} \
+                                            // expected-note@#conflict1 {{candidate function made ineligible by enable_if}} \
+                                            // expected-note@#conflict2 {{candidate function}} \
+                                            // expected-note@#conflict3 {{candidate function}}
+    int (*p0)(int) = &templatedConflict<int>; // expected-error {{address of overloaded function 'templatedConflict' is ambiguous}} \
+                                              // expected-note@#conflict1 {{candidate function made ineligible by enable_if}} \
+                                              // expected-note@#conflict2 {{candidate function}} \
+                                              // expected-note@#conflict3 {{candidate function}}
     int (*a)(int);
-    a = templatedConflict<int>; // expected-error{{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} expected-note@226{{candidate function}} expected-note@228{{candidate function}}
-    a = &templatedConflict<int>; // expected-error{{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} expected-note@226{{candidate function}} expected-note@228{{candidate function}}
+    a = templatedConflict<int>; // expected-error {{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} \
+                                // expected-note@#conflict2 {{candidate function}} \
+                                // expected-note@#conflict3 {{candidate function}}
+    a = &templatedConflict<int>; // expected-error {{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} \
+                                 // expected-note@#conflict2 {{candidate function}} \
+                                 // expected-note@#conflict3 {{candidate function}}
   }
 
-  int ovlNoCandidate(int m) __attribute__((enable_if(false, "")));
-  int ovlNoCandidate(int m) __attribute__((enable_if(0, "")));
+  int ovlNoCandidate(int m) __attribute__((enable_if(false, ""))); // #ovlno1
+  int ovlNoCandidate(int m) __attribute__((enable_if(0, "")));     // #ovlno2
   void test7() {
-    int (*p)(int) = ovlNoCandidate; // expected-error{{address of overloaded function 'ovlNoCandidate' does not match required type}} expected-note@237{{made ineligible by enable_if}} expected-note@238{{made ineligible by enable_if}}
-    int (*p2)(int) = &ovlNoCandidate; // expected-error{{address of overloaded function 'ovlNoCandidate' does not match required type}} expected-note@237{{made ineligible by enable_if}} expected-note@238{{made ineligible by enable_if}}
+    int (*p)(int) = ovlNoCandidate; // expected-error {{address of overloaded function 'ovlNoCandidate' does not match required type}} \
+                                    // expected-note@#ovlno1 {{made ineligible by enable_if}} \
+                                    // expected-note@#ovlno2 {{made ineligible by enable_if}}
+    int (*p2)(int) = &ovlNoCandidate; // expected-error {{address of overloaded function 'ovlNoCandidate' does not match required type}} \
+                                      // expected-note@#ovlno1 {{made ineligible by enable_if}} \
+                                      // expected-note@#ovlno2 {{made ineligible by enable_if}}
     int (*a)(int);
-    a = ovlNoCandidate; // expected-error{{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} expected-note@237{{made ineligible by enable_if}} expected-note@238{{made ineligible by enable_if}}
-    a = &ovlNoCandidate; // expected-error{{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} expected-note@237{{made ineligible by enable_if}} expected-note@238{{made ineligible by enable_if}}
+    a = ovlNoCandidate; // expected-error {{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} \
+                        // expected-note@#ovlno1 {{made ineligible by enable_if}} \
+                        // expected-note@#ovlno2 {{made ineligible by enable_if}}
+    a = &ovlNoCandidate; // expected-error {{assigning to 'int (*)(int)' from incompatible type '<overloaded function type>'}} \
+                         // expected-note@#ovlno1 {{made ineligible by enable_if}} \
+                         // expected-note@#ovlno2 {{made ineligible by enable_if}}
   }
 
   int noOvlNoCandidate(int m) __attribute__((enable_if(false, "")));
@@ -608,6 +644,45 @@ void Substitute(Arg) __attribute__((enable_if(PlaceholderBitmask, ""))) {
 
 }
 
+}
+
+namespace GH199527 {
+struct S { // expected-note {{definition of 'GH199527::S' is not complete until the closing '}'}}
+  ~S() {}
+  bool b;
+  // expected-error@+1{{member access into incomplete type 'S'}}
+  void foo(S b) __attribute__((enable_if(b.b, "")));
+};
+
+template<typename T>
+struct S2 {
+  bool b;
+  void foo(S2 b) const __attribute__((enable_if(b.b, "templ_foo_disabled"))); // #FOO
+};
+
+void use() {
+  S2<int> s_whatever;
+  S2<int> s_true{true};
+  S2<int> s_false{false};
+
+
+  // Both fail because this isn't a constexpr.
+  // expected-error@+2{{no matching member function for call to 'foo'}}
+  // expected-note@#FOO{{candidate disabled: templ_foo_disabled}}
+  s_whatever.foo(s_true);
+  // expected-error@+2{{no matching member function for call to 'foo'}}
+  // expected-note@#FOO{{candidate disabled: templ_foo_disabled}}
+  s_whatever.foo(s_false);
+
+  constexpr S2<int> ce_s_whatever{};
+  constexpr S2<int> ce_s_true{true};
+  constexpr S2<int> ce_s_false{false};
+
+  ce_s_whatever.foo(ce_s_true);
+  // expected-error@+2{{no matching member function for call to 'foo'}}
+  // expected-note@#FOO{{candidate disabled: templ_foo_disabled}}
+  ce_s_whatever.foo(ce_s_false);
+}
 }
 
 namespace DefaultArgs {

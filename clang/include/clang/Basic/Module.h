@@ -403,6 +403,9 @@ public:
   /// The location of the umbrella header or directory declaration.
   SourceLocation UmbrellaDeclLoc;
 
+  /// Directories this module depends on the listing of.
+  std::vector<std::string> DirectoryDependencies;
+
   /// The module signature.
   ASTFileSignature Signature;
 
@@ -994,6 +997,15 @@ public:
   /// header.
   OptionalDirectoryEntryRef getEffectiveUmbrellaDir() const;
 
+  /// Record that this module depends on the listing of \p Path, which must name
+  /// a location in an underlying file system, not in a VFS overlay. Callers
+  /// normally want \c ModuleMap::recordDirectoryDependencies.
+  void addDirectoryDependency(StringRef Path);
+
+  ArrayRef<std::string> getDirectoryDependencies() const {
+    return DirectoryDependencies;
+  }
+
   /// Add a top-level header associated with this module.
   void addTopHeader(FileEntryRef File);
 
@@ -1156,10 +1168,6 @@ private:
 } // namespace clang
 
 template <> struct llvm::DenseMapInfo<clang::ModuleFileKey> {
-  static clang::ModuleFileKey getEmptyKey() {
-    return DenseMapInfo<const void *>::getEmptyKey();
-  }
-
   static unsigned getHashValue(const clang::ModuleFileKey &Val) {
     return hash_combine(Val.Ptr, Val.ImplicitModulePathSuffix);
   }

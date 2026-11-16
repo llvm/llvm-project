@@ -11,6 +11,9 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/math/cosf_double_eval.h"
+#include "src/__support/math/cosf_float_eval.h"
 #include "src/math/cosf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -26,9 +29,28 @@
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
-using LlvmLibcCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+
+class LlvmLibcCosfTest : public LIBC_NAMESPACE::testing::FPTest<float> {
+public:
+  void test_eval_in_float_range(float (*func)(float), double tolerance,
+                                bool all_rounding) {
+    constexpr uint32_t COUNT = 1'231;
+    constexpr uint32_t STEP = UINT32_MAX / COUNT;
+    for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+      float x = FPBits(v).get_val();
+      if (FPBits(v).is_nan() || FPBits(v).is_inf())
+        continue;
+      if (all_rounding) {
+        ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cos, x, func(x),
+                                       tolerance);
+      } else {
+        ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, func(x), tolerance);
+      }
+    }
+  }
+};
 
 TEST_F(LlvmLibcCosfTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(aNaN));
@@ -124,3 +146,17 @@ TEST_F(LlvmLibcCosfTest, SDCOMP_26094) {
               TOLERANCE + 0.5);
   }
 }
+
+// Exercise both implementations independently of the configured selector.
+TEST_F(LlvmLibcCosfTest, DoubleEvalInFloatRange) {
+  test_eval_in_float_range(&LIBC_NAMESPACE::math::double_eval::cosf,
+                           TOLERANCE + 0.5,
+                           /*all_rounding=*/TOLERANCE == 0);
+}
+
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
+TEST_F(LlvmLibcCosfTest, FloatEvalInFloatRange) {
+  test_eval_in_float_range(&LIBC_NAMESPACE::math::float_eval::cosf, 3.5,
+                           /*all_rounding=*/false);
+}
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT

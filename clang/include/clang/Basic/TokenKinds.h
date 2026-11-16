@@ -17,7 +17,15 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Compiler.h"
 
+#include <cassert>
+
 namespace clang {
+
+/// Constants for TokenKinds.def
+enum TokenKey : unsigned {
+#define EMIT_TOKENKEY
+#include "clang/Basic/BuiltinTraits.inc"
+};
 
 namespace tok {
 
@@ -133,9 +141,6 @@ inline constexpr bool isRegularKeywordAttribute(TokenKind K) {
 
 namespace llvm {
 template <> struct DenseMapInfo<clang::tok::PPKeywordKind> {
-  static inline clang::tok::PPKeywordKind getEmptyKey() {
-    return clang::tok::PPKeywordKind::pp_not_keyword;
-  }
   static unsigned getHashValue(const clang::tok::PPKeywordKind &Val) {
     return static_cast<unsigned>(Val);
   }

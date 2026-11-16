@@ -6,35 +6,61 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++17
 // <optional>
 
 // template <class T, class U> constexpr bool operator>=(const optional<T>& x, const U& v);
 // template <class T, class U> constexpr bool operator>=(const U& v, const optional<T>& x);
 
 #include <optional>
+#include <type_traits>
 
 #include "test_comparisons.h"
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 26
+#  define STATIC_ASSERT_OPTIONAL_CMP static_assert
+#else
+#  define STATIC_ASSERT_OPTIONAL_CMP LIBCPP_STATIC_ASSERT
+#endif
+
+struct tester {};
+
+template <class T, std::enable_if_t<std::is_class_v<T>, int> = 0> // intentionally underconstrained
+constexpr bool operator>=(const tester& a, const T& t) {
+  return t.compare(a) <= 0;
+}
+template <class T, std::enable_if_t<std::is_class_v<T>, int> = 0> // intentionally underconstrained
+constexpr bool operator>=(const T& t, const tester& a) {
+  return t.compare(a) >= 0;
+}
+
+template <class T, class U>
+constexpr std::optional<bool> try_cmp_gteq(const T& t, const U& u) {
+  if constexpr (HasOperatorGreaterThanEqual<const T, const U>)
+    return t >= u;
+  else
+    return {};
+}
 
 // Test SFINAE.
-static_assert(HasOperatorGreaterThanEqual<std::optional<ThreeWayComparable>, int>);
-static_assert(HasOperatorGreaterThanEqual<std::optional<ThreeWayComparable>, ThreeWayComparable>);
+STATIC_ASSERT_OPTIONAL_CMP(HasOperatorGreaterThanEqual<std::optional<TotallyOrdered>, int>);
+STATIC_ASSERT_OPTIONAL_CMP(HasOperatorGreaterThanEqual<std::optional<TotallyOrdered>, TotallyOrdered>);
 
-static_assert(!HasOperatorGreaterThanEqual<std::optional<NonComparable>, NonComparable>);
-static_assert(!HasOperatorGreaterThanEqual<std::optional<ThreeWayComparable>, NonComparable>);
-static_assert(!HasOperatorGreaterThanEqual<std::optional<NonComparable>, ThreeWayComparable>);
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorGreaterThanEqual<std::optional<NonComparable>, NonComparable>);
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorGreaterThanEqual<std::optional<TotallyOrdered>, NonComparable>);
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorGreaterThanEqual<std::optional<NonComparable>, TotallyOrdered>);
 
-static_assert(HasOperatorGreaterThanEqual<int, std::optional<ThreeWayComparable>>);
-static_assert(HasOperatorGreaterThanEqual<ThreeWayComparable, std::optional<ThreeWayComparable>>);
+STATIC_ASSERT_OPTIONAL_CMP(HasOperatorGreaterThanEqual<int, std::optional<TotallyOrdered>>);
+STATIC_ASSERT_OPTIONAL_CMP(HasOperatorGreaterThanEqual<TotallyOrdered, std::optional<TotallyOrdered>>);
 
-static_assert(!HasOperatorGreaterThanEqual<NonComparable, std::optional<NonComparable>>);
-static_assert(!HasOperatorGreaterThanEqual<NonComparable, std::optional<ThreeWayComparable>>);
-static_assert(!HasOperatorGreaterThanEqual<ThreeWayComparable, std::optional<NonComparable>>);
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorGreaterThanEqual<NonComparable, std::optional<NonComparable>>);
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorGreaterThanEqual<NonComparable, std::optional<TotallyOrdered>>);
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorGreaterThanEqual<TotallyOrdered, std::optional<NonComparable>>);
 
-#endif
+// LWG4072: avoid ambiguity with optional's own comparison operators
+STATIC_ASSERT_OPTIONAL_CMP(try_cmp_gteq(std::optional<int>{}, std::optional<tester>{}) == std::optional<bool>{});
+STATIC_ASSERT_OPTIONAL_CMP(try_cmp_gteq(std::optional<int>{}, std::optional<int>{}) == std::optional<bool>{true});
 
 using std::optional;
 

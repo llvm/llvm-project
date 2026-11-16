@@ -1,39 +1,31 @@
-; Verify that fp128 intrinsics only lower to `long double` calls (e.g. sinl) on
-; platforms where 128 and `long double` have the same layout. Otherwise, lower
-; to f128 versions (e.g. sinf128).
+; Verify that fp128 intrinsics lower to the `l`-suffixed long double calls (e.g.
+; sinl) only on platforms where `long double` is fp128, and otherwise to the
+; explicit f128 versions (e.g. sinf128).
 ;
 ; Targets include:
-; * aarch64 (long double == f128, should use ld syms)
-; * arm (long double == f64, should use f128 syms)
-; * s390x (long double == f128, should use ld syms, some hardware support)
-; * x86, x64 (80-bit long double, should use ld syms)
-; * gnu (has f128 symbols on all platforms so we can use those)
-; * musl (no f128 symbols available)
-; * Windows and MacOS (no f128 symbols, long double == f64)
-
-; FIXME(#44744): arm32, x86-{32,64} musl targets, MacOS, and Windows don't have
-; f128 long double. They should be passing with CHECK-F128 rather than
-; CHECK-USELD.
+; * aarch64 linux (long double == f128, uses ld syms)
+; * riscv32 (long double == f128, uses ld syms)
+; * s390x (long double == f128, uses ld syms, some hardware support)
+; * powerpc, x86 gnu (long double != f128, have f128 syms, use those)
+;
+; Targets whose `long double` is not fp128 and which have no f128 libm symbols
+; (arm, x86 musl, MacOS, Windows) have no valid fp128 math libcall and are not
+; exercised here; see #44744.
 
 ; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-linux-gnu    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
 ; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-linux-musl   | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
 ; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-none         | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=arm64-apple-macosx           | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-; RUN: %if arm-registered-target     %{ llc < %s -mtriple=arm-none-eabi                | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-; RUN: %if arm-registered-target     %{ llc < %s -mtriple=arm-unknown-linux-gnueabi    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
 ; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc-unknown-linux-gnu    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
 ; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc64-unknown-linux-gnu  | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
 ; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc64-unknown-linux-musl | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
 ; RUN: %if riscv-registered-target   %{ llc < %s -mtriple=riscv32-unknown-linux-gnu    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
 ; RUN: %if systemz-registered-target %{ llc < %s -mtriple=s390x-unknown-linux-gnu      | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-S390X %}
 ; RUN: %if x86-registered-target     %{ llc < %s -mtriple=i686-unknown-linux-gnu       | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
-; RUN: %if x86-registered-target     %{ llc < %s -mtriple=i686-unknown-linux-musl      | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
 ; RUN: %if x86-registered-target     %{ llc < %s -mtriple=x86_64-unknown-linux-gnu     | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
-; RUN: %if x86-registered-target     %{ llc < %s -mtriple=x86_64-unknown-linux-musl    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-;
-; FIXME(#144006): Windows-MSVC should also be run but has a ldexp selection
-; failure.
-; %if x86-registered-target     %{ llc < %s -mtriple=x86_64-pc-windows-msvc       -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
+
+; FIXME(#144006): Windows-MSVC should also be run but has a ldexp selection failure.
+; %if x86-registered-target     %{ llc < %s -mtriple=x86_64-pc-windows-msvc       | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
+; %if aarch64-registered-target %{ llc < %s -mtriple=arm64ec-pc-windows-msvc      | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
 
 define fp128 @test_acos(fp128 %a) {
 ; CHECK-ALL-LABEL:  test_acos:

@@ -12,14 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SampleProfileMatcher.h"
+#include "IPOOptions.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/LongestCommonSequence.h"
-
-#include <unordered_set>
 
 using namespace llvm;
 using namespace sampleprof;
@@ -31,42 +30,6 @@ STATISTIC(NumDirectProfileMatch,
 
 namespace llvm {
 
-static cl::opt<unsigned> FuncProfileSimilarityThreshold(
-    "func-profile-similarity-threshold", cl::Hidden, cl::init(80),
-    cl::desc("Consider a profile matches a function if the similarity of their "
-             "callee sequences is above the specified percentile."));
-
-static cl::opt<unsigned> MinFuncCountForCGMatching(
-    "min-func-count-for-cg-matching", cl::Hidden, cl::init(5),
-    cl::desc("The minimum number of basic blocks required for a function to "
-             "run stale profile call graph matching."));
-
-static cl::opt<unsigned> MinCallCountForCGMatching(
-    "min-call-count-for-cg-matching", cl::Hidden, cl::init(3),
-    cl::desc("The minimum number of call anchors required for a function to "
-             "run stale profile call graph matching."));
-
-static cl::opt<bool> LoadFuncProfileforCGMatching(
-    "load-func-profile-for-cg-matching", cl::Hidden, cl::init(true),
-    cl::desc(
-        "Load top-level profiles that the sample reader initially skipped for "
-        "the call-graph matching (only meaningful for extended binary "
-        "format)"));
-
-extern cl::opt<bool> SalvageStaleProfile;
-extern cl::opt<bool> SalvageUnusedProfile;
-extern cl::opt<bool> PersistProfileStaleness;
-extern cl::opt<bool> ReportProfileStaleness;
-
-static cl::opt<unsigned> SalvageUnusedProfileMaxFunctions(
-    "salvage-unused-profile-max-functions", cl::Hidden, cl::init(UINT_MAX),
-    cl::desc("The maximum number of functions in a module, above which salvage "
-             "unused profile will be skipped."));
-
-static cl::opt<unsigned> SalvageStaleProfileMaxCallsites(
-    "salvage-stale-profile-max-callsites", cl::Hidden, cl::init(UINT_MAX),
-    cl::desc("The maximum number of callsites in a function, above which stale "
-             "profile matching will be skipped."));
 
 } // end namespace llvm
 
@@ -160,17 +123,48 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
     const LineLocation &Loc = I.first;
     if (isInvalidLineOffset(Loc.LineOffset))
       continue;
-    for (const auto &C : I.second.getCallTargets())
+
+    const auto &CallTargets = I.second.getCallTargets();
+    const bool HasSampledTarget =
+        llvm::any_of(CallTargets, [](const auto &C) { return C.second != 0; });
+    for (const auto &C : CallTargets) {
+      // Zero-count targets remain meaningful in the profile, but should not
+      // obscure a uniquely sampled callee when choosing a matching anchor.
+      // Ignore them here when sampled targets exist; retain all-zero locations.
+      if (HasSampledTarget && C.second == 0)
+        continue;
       InsertAnchor(Loc, C.first, ProfileAnchors);
+    }
   }
 
   for (const auto &I : FS.getCallsiteSamples()) {
     const LineLocation &Loc = I.first;
     if (isInvalidLineOffset(Loc.LineOffset))
       continue;
-    for (const auto &C : I.second)
+
+    const auto &Callees = I.second;
+    const bool HasSampledCallee = llvm::any_of(
+        Callees, [](const auto &C) { return C.second.getTotalSamples() != 0; });
+    for (const auto &C : Callees) {
+      // Apply the same anchor selection policy to inline callees, preserving
+      // zero-sample frames in the profile.
+      if (HasSampledCallee && C.second.getTotalSamples() == 0)
+        continue;
       InsertAnchor(Loc, C.first, ProfileAnchors);
+    }
   }
+}
+
+bool SampleProfileMatcher::anchorsMatch(const FunctionId &IRAnchor,
+                                        const FunctionId &ProfileAnchor) const {
+  // Check whether the callees at an already-aligned location are compatible.
+  // An indirect IR call has no statically known callee, so any profiled target
+  // is compatible. The reverse is not true: multiple sampled profile targets
+  // cannot match a direct IR call. This is only a compatibility test; an
+  // indirect anchor carries no callee identity and must not be used to
+  // establish the location alignment itself.
+  return IRAnchor == ProfileAnchor ||
+         IRAnchor == FunctionId(UnknownIndirectCallee);
 }
 
 bool SampleProfileMatcher::functionHasProfile(const FunctionId &IRFuncName,
@@ -340,8 +334,9 @@ void SampleProfileMatcher::runStaleProfileMatching(
   if (FilteredIRAnchorsList.empty() || FilteredProfileAnchorList.empty())
     return;
 
-  if (FilteredIRAnchorsList.size() > SalvageStaleProfileMaxCallsites ||
-      FilteredProfileAnchorList.size() > SalvageStaleProfileMaxCallsites) {
+  if (FilteredIRAnchorsList.size() > Opts.salvage_stale_profile_max_callsites ||
+      FilteredProfileAnchorList.size() >
+          Opts.salvage_stale_profile_max_callsites) {
     LLVM_DEBUG(dbgs() << "Skip stale profile matching for " << F.getName()
                       << " because the number of callsites in the IR is "
                       << FilteredIRAnchorsList.size()
@@ -363,6 +358,67 @@ void SampleProfileMatcher::runStaleProfileMatching(
   LocToLocMap MatchedAnchors =
       longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList,
                             RunCGMatching /* Match unused functions */);
+
+  // Scan through the matched anchors to make sure functions and profiles are
+  // 1:1 mapped. If the profile has already been mapped to another function
+  // during previous fuzzy matching, create a new profile with the same sample
+  // counts and assumed to be pre-inlined.
+  for (const auto &IR : IRAnchors) {
+    bool ProfileConflicted = false;
+    const auto &Loc = IR.first;
+    Function *Callee = M.getFunction(IR.second.stringRef());
+    if (!Callee)
+      continue;
+    FunctionId ProfAnchor;
+    auto AnchorLoc = MatchedAnchors.find(Loc);
+    if (AnchorLoc == MatchedAnchors.end()) {
+      // Search within the module and find if we have conflicts in pre-matched
+      // profiles for this anchor
+      auto PreMatched = FuncToProfileNameMap.find(Callee);
+      if (PreMatched == FuncToProfileNameMap.end())
+        continue;
+      ProfAnchor = PreMatched->second;
+    } else {
+      const auto &Prof = ProfileAnchors.find(AnchorLoc->second);
+      if (Prof == ProfileAnchors.end())
+        continue;
+      ProfAnchor = Prof->second;
+    }
+
+    // Conflicting profile previously matched
+    auto Cached = MatchedAnchorCache.find(ProfAnchor);
+    if (Cached == MatchedAnchorCache.end())
+      MatchedAnchorCache[ProfAnchor] = Callee;
+    else if (Cached->second != Callee)
+      ProfileConflicted = true;
+
+    if (ProfileConflicted) {
+      // Create a flattened profile using the IR function name to avoid profile
+      // name conflicts
+      const auto *FSForMatching = getFlattenedSamplesFor(ProfAnchor);
+      if (!FSForMatching)
+        FSForMatching = Reader.getSamplesFor(ProfAnchor.stringRef());
+      if (!FSForMatching)
+        continue;
+
+      FunctionId NewAnchor(
+          FunctionSamples::getCanonicalFnName(IR.second.stringRef()));
+      auto R = FuncProfileMatchCache.find({Callee, NewAnchor});
+      if (R != FuncProfileMatchCache.end() && R->second)
+        continue;
+      FunctionSamples &NewFS = FlattenedProfiles.create(NewAnchor);
+      NewFS.merge(*FSForMatching);
+      FuncToProfileNameMap[Callee] = NewAnchor;
+      FuncProfileMatchCache[{Callee, NewAnchor}] = true;
+
+      // Update profile in the sample profile reader
+      SampleProfileMap &Profiles = Reader.getProfiles();
+      SampleContext FContext(NewAnchor);
+      auto Res = Profiles.try_emplace(FContext.getHashCode(), FContext, NewFS);
+      FunctionSamples &FProfile = Res.first->second;
+      FProfile.setContext(FContext);
+    }
+  }
 
   // CFG level matching:
   // Apply the callsite matchings to infer matching for the basic
@@ -388,7 +444,7 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
       // Fallback for profiles loaded by functionMatchesProfileHelper but not
       // yet in FlattenedProfiles. This should be rare now that
       // functionMatchesProfileHelper flattens after loading.
-      if (!FSForMatching && LoadFuncProfileforCGMatching)
+      if (!FSForMatching && Opts.load_func_profile_for_cg_matching)
         FSForMatching = Reader.getSamplesFor(R->second.stringRef());
     }
   }
@@ -406,7 +462,7 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
   findProfileAnchors(*FSForMatching, ProfileAnchors);
 
   // Compute the callsite match states for profile staleness report.
-  if (ReportProfileStaleness || PersistProfileStaleness)
+  if (Opts.report_profile_staleness || Opts.persist_profile_staleness)
     recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors, nullptr);
 
   if (!SalvageStaleProfile)
@@ -431,7 +487,8 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
   runStaleProfileMatching(F, IRAnchors, ProfileAnchors, IRToProfileLocationMap,
                           RunCFGMatching, RunCGMatching);
   // Find and update callsite match states after matching.
-  if (RunCFGMatching && (ReportProfileStaleness || PersistProfileStaleness))
+  if (RunCFGMatching &&
+      (Opts.report_profile_staleness || Opts.persist_profile_staleness))
     recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors,
                               &IRToProfileLocationMap);
 }
@@ -464,10 +521,10 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     if (It == ProfileAnchors.end())
       continue;
     const auto &ProfCalleeId = It->second;
-    if (IRCalleeId == ProfCalleeId) {
+    if (anchorsMatch(IRCalleeId, ProfCalleeId)) {
       auto It = CallsiteMatchStates.find(ProfileLoc);
       if (It == CallsiteMatchStates.end())
-        CallsiteMatchStates.emplace(ProfileLoc, MatchState::InitialMatch);
+        CallsiteMatchStates.try_emplace(ProfileLoc, MatchState::InitialMatch);
       else if (IsPostMatch) {
         if (It->second == MatchState::InitialMatch)
           It->second = MatchState::UnchangedMatch;
@@ -484,7 +541,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     assert(!I.second.stringRef().empty() && "Callees should not be empty");
     auto It = CallsiteMatchStates.find(Loc);
     if (It == CallsiteMatchStates.end())
-      CallsiteMatchStates.emplace(Loc, MatchState::InitialMismatch);
+      CallsiteMatchStates.try_emplace(Loc, MatchState::InitialMismatch);
     else if (IsPostMatch) {
       // Update the state if it's not matched(UnchangedMatch or
       // RecoveredMismatch).
@@ -594,7 +651,7 @@ void SampleProfileMatcher::countMismatchCallsites(const FunctionSamples &FS) {
 
 void SampleProfileMatcher::countCallGraphRecoveredSamples(
     const FunctionSamples &FS,
-    std::unordered_set<FunctionId> &CallGraphRecoveredProfiles) {
+    DenseSet<FunctionId> &CallGraphRecoveredProfiles) {
   if (CallGraphRecoveredProfiles.count(FS.getFunction())) {
     NumCallGraphRecoveredFuncSamples += FS.getTotalSamples();
     return;
@@ -608,10 +665,10 @@ void SampleProfileMatcher::countCallGraphRecoveredSamples(
 }
 
 void SampleProfileMatcher::computeAndReportProfileStaleness() {
-  if (!ReportProfileStaleness && !PersistProfileStaleness)
+  if (!Opts.report_profile_staleness && !Opts.persist_profile_staleness)
     return;
 
-  std::unordered_set<FunctionId> CallGraphRecoveredProfiles;
+  DenseSet<FunctionId> CallGraphRecoveredProfiles;
   if (SalvageUnusedProfile) {
     for (const auto &I : FuncToProfileNameMap) {
       CallGraphRecoveredProfiles.insert(I.second);
@@ -647,7 +704,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
     countMismatchedCallsiteSamples(*FS);
   }
 
-  if (ReportProfileStaleness) {
+  if (Opts.report_profile_staleness) {
     if (FunctionSamples::ProfileIsProbeBased) {
       errs() << "(" << NumStaleProfileFunc << "/" << TotalProfiledFunc
              << ") of functions' profile are invalid and ("
@@ -674,7 +731,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
            << ") of samples are recovered by stale profile matching.\n";
   }
 
-  if (PersistProfileStaleness) {
+  if (Opts.persist_profile_staleness) {
     LLVMContext &Ctx = M.getContext();
     MDBuilder MDB(Ctx);
 
@@ -712,11 +769,6 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
   // TODO: Support MD5 profile.
   if (FunctionSamples::UseMD5)
     return;
-  StringSet<> NamesInProfile;
-  if (auto NameTable = Reader.getNameTable()) {
-    for (auto Name : *NameTable)
-      NamesInProfile.insert(Name.stringRef());
-  }
 
   for (auto &F : M) {
     // Skip declarations, as even if the function can be matched, we have
@@ -732,7 +784,7 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
     // For extended binary, functions fully inlined may not be loaded in the
     // top-level profile, so check the NameTable which has the all symbol names
     // in profile.
-    if (NamesInProfile.count(CanonFName))
+    if (Reader.contains(CanonFName))
       continue;
 
     // For extended binary, non-profiled function symbols are in the profile
@@ -770,10 +822,11 @@ static std::string getDemangledBaseName(ItaniumPartialDemangler &Demangler,
 }
 
 void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
-  if (FunctionsWithoutProfile.empty() || !LoadFuncProfileforCGMatching)
+  if (FunctionsWithoutProfile.empty() ||
+      !Opts.load_func_profile_for_cg_matching)
     return;
-  auto *NameTable = Reader.getNameTable();
-  if (!NameTable)
+  auto NameTable = Reader.getNameTable();
+  if (NameTable.empty())
     return;
 
   ItaniumPartialDemangler Demangler;
@@ -800,7 +853,7 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
   // Scan the profile NameTable for candidates whose demangled basename matches
   // a unique orphan. Use a map to track exactly one candidate per basename.
   StringMap<FunctionId> CandidateByBaseName;
-  for (auto &ProfileFuncId : *NameTable) {
+  for (FunctionId ProfileFuncId : NameTable) {
     StringRef ProfName = ProfileFuncId.stringRef();
     if (ProfName.empty())
       continue;
@@ -842,6 +895,7 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
       continue;
 
     FuncToProfileNameMap[OrphanFunc] = ProfId;
+    MatchedAnchorCache[ProfId] = OrphanFunc;
     if (const auto *FS = Reader.getSamplesFor(ProfId.stringRef()))
       NewlyLoadedProfiles.create(FS->getFunction()).merge(*FS);
     MatchCount++;
@@ -885,7 +939,7 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   // However, if a function is renamed, sample loader skips to load its original
   // profile(which has a different name), we will miss this case. To address
   // this, we load the top-level profile candidate explicitly for the matching.
-  if (!FSForMatching && LoadFuncProfileforCGMatching) {
+  if (!FSForMatching && Opts.load_func_profile_for_cg_matching) {
     DenseSet<StringRef> TopLevelFunc({ProfFunc.stringRef()});
     if (std::error_code EC = Reader.read(TopLevelFunc))
       return false;
@@ -911,8 +965,9 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   // The check for similarity or checksum may not be reliable if the function is
   // tiny, we use the number of basic block as a proxy for the function
   // complexity and skip the matching if it's too small.
-  if (IRFunc.size() < MinFuncCountForCGMatching ||
-      FSForMatching->getBodySamples().size() < MinFuncCountForCGMatching)
+  if (IRFunc.size() < Opts.min_func_count_for_cg_matching ||
+      FSForMatching->getBodySamples().size() <
+          Opts.min_func_count_for_cg_matching)
     return false;
 
   // For probe-based function, we first trust the checksum info. If the checksum
@@ -939,8 +994,8 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
                         FilteredProfileAnchorList);
 
   // Similarly skip the matching if the num of anchors is not enough.
-  if (FilteredIRAnchorsList.size() < MinCallCountForCGMatching ||
-      FilteredProfileAnchorList.size() < MinCallCountForCGMatching)
+  if (FilteredIRAnchorsList.size() < Opts.min_call_count_for_cg_matching ||
+      FilteredProfileAnchorList.size() < Opts.min_call_count_for_cg_matching)
     return false;
 
   // Use the diff algorithm to find the LCS between IR and profile.
@@ -960,7 +1015,7 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
                     << format("%.2f", Similarity) << "\n");
   assert((Similarity >= 0 && Similarity <= 1.0) &&
          "Similarity value should be in [0, 1]");
-  return Similarity * 100 > FuncProfileSimilarityThreshold;
+  return Similarity * 100 > Opts.func_profile_similarity_threshold;
 }
 
 // If FindMatchedProfileOnly is set to true, only use the processed function
@@ -1019,8 +1074,8 @@ void SampleProfileMatcher::runOnModule() {
                                    FunctionSamples::ProfileIsCS);
   // Disable SalvageUnusedProfile if the module has an extremely large number of
   // functions to limit compile time.
-  SalvageUnusedProfile =
-      SalvageUnusedProfile && M.size() < SalvageUnusedProfileMaxFunctions;
+  SalvageUnusedProfile = SalvageUnusedProfile &&
+                         M.size() < Opts.salvage_unused_profile_max_functions;
 
   if (SalvageUnusedProfile) {
     findFunctionsWithoutProfile();

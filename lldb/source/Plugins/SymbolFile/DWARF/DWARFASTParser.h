@@ -29,7 +29,7 @@ class SymbolFileDWARF;
 
 class DWARFASTParser {
 public:
-  enum class Kind { DWARFASTParserClang };
+  enum class Kind { DWARFASTParserClang, DWARFASTParserFortran };
   DWARFASTParser(Kind kind) : m_kind(kind) {}
 
   virtual ~DWARFASTParser() = default;
@@ -67,6 +67,8 @@ public:
   lldb_private::Type *GetTypeForDIE(const DWARFDIE &die);
 
   static lldb::AccessType GetAccessTypeFromDWARF(uint32_t dwarf_accessibility);
+
+  static DWARFDIE GetAnnotation(const DWARFDIE &die, llvm::StringRef name);
 
   Kind GetKind() const { return m_kind; }
 

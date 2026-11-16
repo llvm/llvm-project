@@ -3,10 +3,9 @@
 
 define <4 x i16> @shuffle(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @shuffle(
-; CHECK-NEXT:    [[ZEXTA:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[ZEXTB:%.*]] = zext <2 x i8> [[B:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[ZEXTA]], <2 x i32> [[ZEXTB]], <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <4 x i32> [[SHUF]] to <4 x i16>
+; CHECK-NEXT:    [[ZEXTA:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[ZEXTB:%.*]] = zext <2 x i8> [[B:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <2 x i16> [[ZEXTA]], <2 x i16> [[ZEXTB]], <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <4 x i16> [[TRUNC]]
 ;
   %zexta = zext <2 x i8> %a to <2 x i32>
@@ -18,9 +17,8 @@ define <4 x i16> @shuffle(<2 x i8> %a, <2 x i8> %b) {
 
 define <2 x i16> @unary_shuffle(<2 x i8> %a) {
 ; CHECK-LABEL: @unary_shuffle(
-; CHECK-NEXT:    [[ZEXTA:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[ZEXTA]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i32> [[SHUF]] to <2 x i16>
+; CHECK-NEXT:    [[ZEXTA:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <2 x i16> [[ZEXTA]], <2 x i16> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x i16> [[TRUNC]]
 ;
   %zexta = zext <2 x i8> %a to <2 x i32>
@@ -31,9 +29,7 @@ define <2 x i16> @unary_shuffle(<2 x i8> %a) {
 
 define <4 x i16> @const_shuffle() {
 ; CHECK-LABEL: @const_shuffle(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 7>, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <4 x i32> [[SHUF]] to <4 x i16>
-; CHECK-NEXT:    ret <4 x i16> [[TRUNC]]
+; CHECK-NEXT:    ret <4 x i16> <i16 7, i16 3, i16 2, i16 1>
 ;
   %shuf = shufflevector <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 7>, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %trunc = trunc <4 x i32> %shuf to <4 x i16>
@@ -86,4 +82,20 @@ define <2 x i16> @extract_mul_insert(<2 x i8> %x) {
   %insr = insertelement <2 x i32> %lshr, i32 %mul, i32 1
   %trunc = trunc <2 x i32> %insr to <2 x i16>
   ret <2 x i16> %trunc
+}
+
+; The index is not part of the expression graph and must remain available to
+; the rebuilt insertelement.
+define i8 @insert_index_is_reduced_value() {
+; CHECK-LABEL: @insert_index_is_reduced_value(
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <1 x i32> zeroinitializer, i32 0, i32 0
+; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <1 x i32> [[VECINS]], i32 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[VECEXT]] to i8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+  %cast = trunc i64 0 to i32
+  %vecins = insertelement <1 x i32> zeroinitializer, i32 %cast, i32 %cast
+  %vecext = extractelement <1 x i32> %vecins, i32 0
+  %trunc = trunc i32 %vecext to i8
+  ret i8 %trunc
 }

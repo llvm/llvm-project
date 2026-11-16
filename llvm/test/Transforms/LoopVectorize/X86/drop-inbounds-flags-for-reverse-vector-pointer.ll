@@ -16,12 +16,12 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 10, i64 9, i64 8, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 10, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i8> [[VEC_IND1]], splat (i8 10)
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 10, [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i64> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i32, ptr [[NNO]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP23]], i64 -3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP23]], i64 -12
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP6]], <4 x i1> [[REVERSE]], <4 x i32> poison)
 ; CHECK-NEXT:    [[REVERSE1:%.*]] = shufflevector <4 x i32> [[WIDE_MASKED_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>

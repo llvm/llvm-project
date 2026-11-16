@@ -179,6 +179,25 @@ TEST(KnownBitsTest, SelfAddExhaustive) {
   });
 }
 
+TEST(KnownBitsTest, SelfAddWide) {
+  // SelfAdd lowers to shl(X, 1), whose getMaxShiftAmount extracts
+  // Log2_32(BitWidth) bits from the shift amount. For source widths >= 512 that
+  // is more than the 8-bit shift amount used by the lowering, which used to
+  // assert in APInt::extractBitsAsZExtValue.
+  // 1 << 23 is IntegerType::MAX_INT_BITS, the widest integer IR can produce.
+  for (unsigned Bits : {256u, 512u, 1024u, 1u << 23}) {
+    for (const APInt &X : {APInt(Bits, 1), APInt::getMaxValue(Bits)}) {
+      KnownBits Known = KnownBits::makeConstant(X);
+      KnownBits Computed = KnownBits::add(Known, Known, /*NSW=*/false,
+                                          /*NUW=*/false, /*SelfAdd=*/true);
+      // X + X == X << 1 (truncated to Bits); the result is fully known.
+      APInt Doubled = X << 1;
+      EXPECT_EQ(Computed.One, Doubled);
+      EXPECT_EQ(Computed.Zero, ~Doubled);
+    }
+  }
+}
+
 TEST(KnownBitsTest, AddCarryExhaustive) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
@@ -635,6 +654,8 @@ TEST(KnownBitsTest, BinaryExhaustive) {
   testBinaryOpExhaustive("avgCeilS", KnownBits::avgCeilS, APIntOps::avgCeilS);
 
   testBinaryOpExhaustive("clmul", KnownBits::clmul, APIntOps::clmul);
+  testBinaryOpExhaustive("pext", KnownBits::pext, APIntOps::pext);
+  testBinaryOpExhaustive("pdep", KnownBits::pdep, APIntOps::pdep);
 }
 
 TEST(KnownBitsTest, UnaryExhaustive) {
@@ -671,6 +692,138 @@ TEST(KnownBitsTest, UnaryExhaustive) {
         return KnownBits::mul(Known, Known, /*SelfMultiply=*/true);
       },
       [](const APInt &N) { return N * N; }, /*CheckOptimality=*/false);
+}
+
+TEST(KnownBitsTest, NonZeroDenomSDiv) {
+  KnownBits Num = KnownBits::makeConstant(APInt(4, -8, true));
+
+  KnownBits X(4);
+  KnownBits Mask = KnownBits::makeConstant(APInt(4, 0b0100));
+  KnownBits Denom = X & Mask;
+
+  KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+  KnownBits Answer(4);
+  Answer.One.setHighBits(3);
+
+  EXPECT_EQ(Result, Answer);
+}
+
+TEST(KnownBitsTest, NonZeroDenomSDivI8) {
+  KnownBits Num = KnownBits::makeConstant(APInt(8, -128, true));
+
+  // 0b0??????? -> minimum non-zero denominator is 1.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b01111111));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(1);
+
+    EXPECT_EQ(Result, Answer);
+  }
+
+  // 0b0??????0 -> minimum non-zero denominator is 2.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b01111110));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(2);
+
+    EXPECT_EQ(Result, Answer);
+  }
+
+  // 0b0000000? -> minimum non-zero denominator is 1.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b00000001));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(1);
+
+    EXPECT_EQ(Result, Answer);
+  }
+
+  // 0b000000?? -> minimum non-zero denominator is 1.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b00000011));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(1);
+
+    EXPECT_EQ(Result, Answer);
+  }
+
+  // 0b00000?0? -> minimum non-zero denominator is 1.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b00000101));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(1);
+
+    EXPECT_EQ(Result, Answer);
+  }
+
+  // 0b000000?0 -> minimum non-zero denominator is 2.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b00000010));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(2);
+
+    EXPECT_EQ(Result, Answer);
+  }
+
+  // 0b0?000000 -> minimum non-zero denominator is 64.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b01000000));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(7);
+
+    EXPECT_EQ(Result, Answer);
+  }
+}
+
+TEST(KnownBitsTest, NonZeroDenomSDivI32) {
+  KnownBits Num = KnownBits::makeConstant(APInt(32, INT32_MIN, true));
+
+  KnownBits X(32);
+  KnownBits Mask = KnownBits::makeConstant(APInt(32, 0x00000002));
+  KnownBits Denom = X & Mask;
+
+  KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+  KnownBits Answer(32);
+  Answer.One.setHighBits(2);
+
+  EXPECT_EQ(Result, Answer);
 }
 
 TEST(KnownBitsTest, FunnelShiftExhaustive) {
@@ -1094,6 +1247,43 @@ TEST(KnownBitsTest, TruncateSatExhaustive) {
       });
     }
   }
+}
+
+TEST(KnownBitsTest, TightenDivisionBounds) {
+  KnownBits LHS(8);
+  KnownBits RHS(8);
+
+  // LHS = 0101 0??? (80-87)
+  LHS.One = APInt(8, 0x50);  // 0101 0000
+  LHS.Zero = APInt(8, 0xA8); // 1010 1000
+
+  // RHS = 0000 10?? (8-11)
+  RHS.One = APInt(8, 0x08);  // 0000 1000
+  RHS.Zero = APInt(8, 0xF4); // 1111 0100
+
+  // We try first with Exact set to false to get the result without tighter
+  // bounds
+  KnownBits InexactRes = KnownBits::udiv(LHS, RHS, /*Exact=*/false);
+
+  // Lower Bound: 0000 0111 (7)
+  // Upper Bound: 0000 1010 (10)
+  // Expected Inexact result: 0000 ????
+  // Only 4 Known bits are expected
+  EXPECT_EQ(InexactRes.Zero, APInt(8, 0xF0)); // 11110000
+  EXPECT_EQ(InexactRes.One, APInt(8, 0x00));  // 00000000
+  EXPECT_FALSE(InexactRes.hasConflict());
+
+  // We set now Exact to true to test the difference
+  KnownBits Res = KnownBits::udiv(LHS, RHS, /*Exact=*/true);
+
+  // Lower Bound: 0000 1000 (8)
+  // Upper Bound: 0000 1010 (10)
+  // Expected result: 0000 10??
+  // We get 6 known bits when tightening the bounds, 2 more than with Exact set
+  // to False
+  EXPECT_EQ(Res.Zero, APInt(8, 0xF4)); // 11110100
+  EXPECT_EQ(Res.One, APInt(8, 0x08));  // 00001000
+  EXPECT_FALSE(Res.hasConflict());
 }
 
 } // end anonymous namespace

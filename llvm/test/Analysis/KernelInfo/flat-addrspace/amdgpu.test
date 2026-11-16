@@ -6,7 +6,7 @@
 ; REQUIRES: amdgpu-registered-target
 
 ; RUN: opt -pass-remarks=kernel-info -passes=kernel-info \
-; RUN:     -mtriple="amdgcn-amd-amdhsa" \
+; RUN:     -mtriple="amdgpu-amd-amdhsa" \
 ; RUN:     -disable-output %S/Inputs/test.ll 2>&1 | \
 ; RUN:   FileCheck -match-full-lines -implicit-check-not='flat address space' \
 ; RUN:       %S/Inputs/test.ll

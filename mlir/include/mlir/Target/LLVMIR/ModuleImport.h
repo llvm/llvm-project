@@ -19,10 +19,12 @@
 #include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/LLVMImportInterface.h"
 #include "mlir/Target/LLVMIR/TypeFromLLVM.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Module.h"
 
 namespace llvm {
 class BasicBlock;
+class ModuleSlotTracker;
 class CallBase;
 class DbgVariableIntrinsic;
 class Function;
@@ -50,6 +52,7 @@ public:
   ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
                bool emitExpensiveWarnings, bool importEmptyDICompositeTypes,
                bool preferUnregisteredIntrinsics, bool importStructsAsLiterals);
+  ~ModuleImport();
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
@@ -254,6 +257,12 @@ public:
     return tbaaMapping.lookup(node);
   }
 
+  /// Looks up a converted `!tbaa.struct` node. Returns null when the
+  /// node was never converted or could not be modeled.
+  Attribute lookupTBAAStructAttr(const llvm::MDNode *node) const {
+    return tbaaStructMapping.lookup(node);
+  }
+
   /// Returns the access group attributes that map to the access group nodes
   /// starting from the access group metadata `node`. Returns failure, if any of
   /// the attributes cannot be found.
@@ -314,6 +323,13 @@ public:
   }
 
 private:
+  /// Renders `value` into a bounded string for a diagnostic.
+  std::string renderValue(const llvm::Value &value);
+  /// Renders `node` into a bounded string for a diagnostic.
+  std::string renderMetadata(const llvm::Metadata *node);
+  /// Shared slot tracker for diagnostics, created on first use.
+  llvm::ModuleSlotTracker &getDiagSlotTracker();
+
   /// Clears the accumulated state before processing a new region.
   void clearRegionState() {
     valueMapping.clear();
@@ -378,6 +394,19 @@ private:
   /// the resulting dialect attributes to the converted operation `op`. Emits a
   /// warning if the conversion of a supported metadata kind fails.
   void setNonDebugMetadataAttrs(llvm::Instruction *inst, Operation *op);
+  /// Returns the symbol reference for a global value that has a corresponding
+  /// imported MLIR symbol, or a null attribute otherwise.
+  FlatSymbolRefAttr getMetadataGlobalValueSymbolRef(llvm::GlobalValue *global);
+  /// Returns a symbol ref if `md` refers to an imported global value.
+  FlatSymbolRefAttr getMetadataOperandSymbolRef(const llvm::Metadata *md);
+  /// Converts `md` to the matching LLVM dialect metadata attribute, or returns
+  /// a null attribute if the metadata cannot be represented.
+  Attribute convertMetadataToAttr(const llvm::Metadata *md);
+  /// Recursively converts `md` and tracks the current path and previously
+  /// converted nodes to reject cycles and preserve shared subgraphs.
+  Attribute convertMetadataToAttrImpl(
+      const llvm::Metadata *md, SmallPtrSetImpl<const llvm::Metadata *> &path,
+      DenseMap<const llvm::Metadata *, Attribute> &attrMap);
   /// Imports `inst` and populates valueMapping[inst] with the result of the
   /// imported operation or noResultOpMapping[inst] with the imported operation
   /// if it has no result.
@@ -448,6 +477,12 @@ private:
   /// (unless all dependencies have been converted by a previous
   /// invocation of this function).
   LogicalResult processTBAAMetadata(const llvm::MDNode *node);
+  /// Converts a `!tbaa.struct` node to the `tbaa_struct` attribute. The
+  /// node's tags must already be converted (see the pre-walk in
+  /// convertMetadata). Returns null for nodes that cannot be modeled;
+  /// callers record the null in tbaaStructMapping so the node is
+  /// declined at attach time.
+  Attribute convertTBAAStructMetadata(const llvm::MDNode *node);
   /// Converts all LLVM access groups starting from `node` to MLIR access group
   /// operations and stores a mapping from every nested access group node to the
   /// translated attribute. Returns success if all conversions succeed and
@@ -516,6 +551,12 @@ private:
   /// Mapping between LLVM TBAA metadata nodes and LLVM dialect TBAA attributes
   /// corresponding to these nodes.
   DenseMap<const llvm::MDNode *, Attribute> tbaaMapping;
+  /// Mapping between LLVM `!tbaa.struct` nodes and the converted
+  /// `tbaa_struct` attributes. Kept separate from tbaaMapping so a struct
+  /// node can never be mistaken for a TBAA tag or type descriptor node,
+  /// which processTBAAMetadata casts to those attribute kinds. A null
+  /// value records that the node was converted and could not be modeled.
+  DenseMap<const llvm::MDNode *, Attribute> tbaaStructMapping;
   /// Mapping between LLVM comdat structs and symbol references to LLVM dialect
   /// comdat selector operations corresponding to these structs.
   DenseMap<const llvm::Comdat *, SymbolRefAttr> comdatMapping;
@@ -525,6 +566,13 @@ private:
   std::unique_ptr<detail::DebugImporter> debugImporter;
   /// Loop annotation importer.
   std::unique_ptr<detail::LoopAnnotationImporter> loopAnnotationImporter;
+  /// Slot tracker shared by every diagnostic that renders an LLVM entity.
+  /// Metadata::print and Value::print each construct their own tracker when
+  /// not given one, and building one walks the module, so a per-call tracker
+  /// makes a per-instruction diagnostic quadratic in module size. Sharing one
+  /// makes that walk a per-import cost instead. Created lazily, so an import
+  /// that renders nothing never pays for it at all.
+  std::unique_ptr<llvm::ModuleSlotTracker> diagSlotTracker;
 
   /// An option to control if expensive but uncritical diagnostics should be
   /// emitted. Avoids generating warnings for unhandled debug intrinsics and

@@ -10,7 +10,7 @@ typedef void (*CallbackFn)(int);
 
 // Callback function with "internal" linkage.
 // CHECK-LABEL: define internal void @_ZL10myCallbacki(
-// CHECK-SAME: {{.*}} !type [[F_CALLBACK:![0-9]+]]
+// CHECK-SAME: {{.*}} !callgraph [[F_CALLBACK:![0-9]+]]
 static void myCallback(int value) 
 {
     volatile int sink = value;
@@ -27,4 +27,4 @@ int takeCallbackAddress() {
     return 0;
 }
 
-// CHECK: [[F_CALLBACK]]   = !{i64 0, !"_ZTSFviE.generalized"}
+// CHECK: [[F_CALLBACK]]   = !{!"_ZTSFviE"}

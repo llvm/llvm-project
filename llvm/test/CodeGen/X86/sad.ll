@@ -1149,12 +1149,10 @@ define dso_local i32 @sad_unroll_nonzero_initial(ptr %arg, ptr %arg1, ptr %arg2,
 ; AVX1-NEXT:    vmovdqu (%rdx), %xmm1
 ; AVX1-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [1,0,0,0]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    incl %eax
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: sad_unroll_nonzero_initial:
@@ -1165,11 +1163,9 @@ define dso_local i32 @sad_unroll_nonzero_initial(ptr %arg, ptr %arg1, ptr %arg2,
 ; AVX2-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX2-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,0,0,0]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    incl %eax
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: sad_unroll_nonzero_initial:
@@ -1332,6 +1328,44 @@ define i32 @PR143456(ptr %p0, ptr %p1) {
   %res = zext i8 %elt to i32
   ret i32 %res
 }
+
+; combineBasicSADPattern didn't account for halving in vector sizes every iteration.
+define i32 @PR239204(<16 x i8> %a, <16 x i8> %b) {
+; SSE2-LABEL: PR239204:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    psadbw %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSE2-NEXT:    paddq %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: PR239204:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
+  %max = call <16 x i8> @llvm.umax.v16i8(<16 x i8> %a, <16 x i8> %b)
+  %min = call <16 x i8> @llvm.umin.v16i8(<16 x i8> %a, <16 x i8> %b)
+  %d = sub <16 x i8> %max, %min
+  %w = zext <16 x i8> %d to <16 x i32>
+  %l8 = shufflevector <16 x i32> %w, <16 x i32> %w, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %h8 = shufflevector <16 x i32> %w, <16 x i32> %w, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s8 = add <8 x i32> %l8, %h8
+  %l4 = shufflevector <8 x i32> %s8, <8 x i32> %s8, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %h4 = shufflevector <8 x i32> %s8, <8 x i32> %s8, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %s4 = add <4 x i32> %l4, %h4
+  %l2 = shufflevector <4 x i32> %s4, <4 x i32> %s4, <2 x i32> <i32 0, i32 1>
+  %h2 = shufflevector <4 x i32> %s4, <4 x i32> %s4, <2 x i32> <i32 2, i32 3>
+  %s2 = add <2 x i32> %l2, %h2
+  %l1 = shufflevector <2 x i32> %s2, <2 x i32> %s2, <1 x i32> zeroinitializer
+  %h1 = shufflevector <2 x i32> %s2, <2 x i32> %s2, <1 x i32> <i32 1>
+  %s1 = add <1 x i32> %l1, %h1
+  %r = extractelement <1 x i32> %s1, i64 0
+  ret i32 %r
+}
+
 declare <8 x i8> @llvm.umax.v8i8(<8 x i8>, <8 x i8>)
 declare <8 x i8> @llvm.umin.v8i8(<8 x i8>, <8 x i8>)
 declare i8 @llvm.vector.reduce.add.v8i8(<8 x i8>)

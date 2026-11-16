@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP10M1F_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP10M1F_H
 
-#include "exp10f_utils.h"
+#include "hdr/errno_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -17,9 +17,9 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math/exp10f_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -114,16 +114,10 @@ LIBC_INLINE float exp10m1f(float x) {
 
   // When x >= log10(2^128), or x is nan
   if (LIBC_UNLIKELY(xbits.is_pos() && x_u >= 0x421a'209bU)) {
-    if (xbits.is_finite()) {
-      int rounding = fputil::quick_get_round();
-      if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-        return FPBits::max_normal().get_val();
+    if (xbits.is_finite())
+      return fputil::set_overflow<float>();
 
-      fputil::set_errno_if_required(ERANGE);
-      fputil::raise_except_if_required(FE_OVERFLOW);
-    }
-
-    // x >= log10(2^128) and 10^x - 1 rounds to +inf, or x is +inf or nan
+    // x is +inf or nan
     return x + FPBits::inf().get_val();
   }
 
@@ -164,10 +158,15 @@ LIBC_INLINE float exp10m1f(float x) {
     if (xbits.is_nan())
       return x;
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    if (x_u == 0xc0f0d2f1)     // x = log10(2^-25)
+      return -0x1.ffff'fep-1f; // -1.0f + 0x1.0p-24f
+#else
     int rounding = fputil::quick_get_round();
     if (rounding == FE_UPWARD || rounding == FE_TOWARDZERO ||
         (rounding == FE_TONEAREST && x_u == 0xc0f0d2f1))
       return -0x1.ffff'fep-1f; // -1.0f + 0x1.0p-24f
+#endif
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_UNDERFLOW);
@@ -193,21 +192,33 @@ LIBC_INLINE float exp10m1f(float x) {
     case 0x40e00000U: // x = 7.0f
       return 9'999'999.0f;
     case 0x41000000U: { // x = 8.0f
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      return 100'000'000.0f;
+#else
       int rounding = fputil::quick_get_round();
       if (rounding == FE_UPWARD || rounding == FE_TONEAREST)
         return 100'000'000.0f;
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       return 99'999'992.0f;
     }
     case 0x41100000U: { // x = 9.0f
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      return 1'000'000'000.0f;
+#else
       int rounding = fputil::quick_get_round();
       if (rounding == FE_UPWARD || rounding == FE_TONEAREST)
         return 1'000'000'000.0f;
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       return 999'999'936.0f;
     }
     case 0x41200000U: { // x = 10.0f
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      return 10'000'000'000.0f;
+#else
       int rounding = fputil::quick_get_round();
       if (rounding == FE_UPWARD || rounding == FE_TONEAREST)
         return 10'000'000'000.0f;
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       return 9'999'998'976.0f;
     }
     }

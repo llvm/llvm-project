@@ -4,7 +4,9 @@
 #define register_ompt_callback_t(name, type)                                   \
   do {                                                                         \
     type f_##name = &on_##name;                                                \
-    if (ompt_set_callback(name, (ompt_callback_t)f_##name) == ompt_set_never)  \
+    ompt_set_result_t result =                                                 \
+        ompt_set_callback(name, (ompt_callback_t)f_##name);                    \
+    if (result == ompt_set_never || result == ompt_set_error)                  \
       printf("0: Could not register callback '" #name "'\n");                  \
   } while (0)
 
@@ -12,6 +14,7 @@
 
 // OMPT entry point handles
 static ompt_set_callback_t ompt_set_callback = 0;
+ompt_get_unique_id_t ompt_get_unique_id = 0;
 
 // Init functions
 int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
@@ -19,6 +22,10 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   ompt_set_callback = (ompt_set_callback_t)lookup("ompt_set_callback");
 
   if (!ompt_set_callback)
+    return 0; // failed
+
+  ompt_get_unique_id = (ompt_get_unique_id_t)lookup("ompt_get_unique_id");
+  if (!ompt_get_unique_id)
     return 0; // failed
 
   register_ompt_callback(ompt_callback_device_initialize);

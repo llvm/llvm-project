@@ -269,8 +269,8 @@ namespace cwg625 { // cwg625: 2.9
   void f(int);
   void (*p)(auto) = f;
   // cxx98-error@-1 {{'auto' type specifier is a C++11 extension}}
-  // cxx98-17-error@-2 {{'auto' not allowed in function prototype}}
-  // since-cxx20-error@-3 {{'auto' not allowed in function prototype that is not a function declaration}}
+  // cxx98-17-error@-2 {{'auto' parameters are a C++20 extension}}
+  // expected-error@-3 {{'auto' not allowed in function prototype that is not a function declaration}}
 } // namespace cwg625
 
 namespace cwg626 { // cwg626: 2.7
@@ -396,7 +396,7 @@ namespace cwg637 { // cwg637: 3.0
   }
 } // namespace cwg637
 
-namespace cwg638 { // cwg638: no
+namespace cwg638 { // cwg638: 24
   template<typename T> struct A {
     struct B;
     void f();
@@ -407,26 +407,29 @@ namespace cwg638 { // cwg638: no
   };
 
   class X {
-    typedef int type;
+    typedef int type; // #cwg638-X-type
     template<class T> friend struct A<T>::B;
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::f();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::g();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::C::h();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::C' for friend class declaration is not supported; turning off access control for 'X'}}
+    // expected-error@-1 {{'A<T>::C' does not name a class template}}
   };
 
   template<> struct A<int> {
-    X::type a; // FIXME: private
+    X::type a;
+    // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
+    //   expected-note@#cwg638-X-type {{implicitly declared private here}}
     struct B {
       X::type b; // ok
     };
-    int f() { X::type c; } // FIXME: private
+    int f() { X::type c; }
+    // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
+    //   expected-note@#cwg638-X-type {{implicitly declared private here}}
     void g() { X::type d; } // ok
     struct D {
-      void h() { X::type e; } // FIXME: private
+      void h() { X::type e; }
+      // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
+      //   expected-note@#cwg638-X-type {{implicitly declared private here}}
     };
   };
 } // namespace cwg638
@@ -534,10 +537,18 @@ namespace cwg644 { // cwg644: partial
   static_assert(__is_literal_type(B), "");
 
   struct C : virtual A {};
+#if __cplusplus >= 202400L
+  static_assert(__is_literal_type(C), "");
+#else
   static_assert(!__is_literal_type(C), "");
+#endif
 
   struct D { C c; };
+#if __cplusplus >= 202400L
+  static_assert(__is_literal_type(D), "");
+#else
   static_assert(!__is_literal_type(D), "");
+#endif
 
   // FIXME: According to CWG644, E<C> is a literal type despite having virtual
   // base classes. This appears to be a wording defect.
@@ -545,7 +556,11 @@ namespace cwg644 { // cwg644: partial
   struct E : T {
     constexpr E() = default;
   };
+#if __cplusplus >= 202400L
+  static_assert(__is_literal_type(E<C>), "");
+#else
   static_assert(!__is_literal_type(E<C>), "");
+#endif
 #endif
 } // namespace cwg644
 

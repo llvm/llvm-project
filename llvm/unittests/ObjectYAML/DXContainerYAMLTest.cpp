@@ -11,6 +11,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -33,7 +34,7 @@ TEST(DXCFile, ParseEmptyParts) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
 Header:
-  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
   Version:
     Major:           1
@@ -82,7 +83,7 @@ Parts:
   // should result in the same final output.
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
 Header:
-  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
   Version:
     Major:           1
@@ -116,7 +117,7 @@ TEST(RootSignature, ParseRootFlags) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-    Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+    Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                       0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
     Version:
       Major:           1
@@ -156,7 +157,7 @@ TEST(RootSignature, HeaderData) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                         0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
       Version:
         Major:           1
@@ -208,7 +209,7 @@ TEST(RootSignature, ParseRootConstants) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                         0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
       Version:
         Major:           1
@@ -260,7 +261,7 @@ TEST(RootSignature, ParseRootDescriptorsV10) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                         0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
       Version:
         Major:           1
@@ -277,9 +278,9 @@ TEST(RootSignature, ParseRootDescriptorsV10) {
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 44
-      Parameters:         
-      - ParameterType: CBV 
-        ShaderVisibility: Domain 
+      Parameters:
+      - ParameterType: CBV
+        ShaderVisibility: Domain
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
@@ -311,7 +312,7 @@ TEST(RootSignature, ParseRootDescriptorsV11) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                         0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
       Version:
         Major:           1
@@ -328,7 +329,7 @@ TEST(RootSignature, ParseRootDescriptorsV11) {
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 48
-      Parameters:         
+      Parameters:
       - ParameterType: CBV
         ShaderVisibility: Domain
         Descriptor:
@@ -363,7 +364,7 @@ TEST(RootSignature, ParseDescriptorTableV10) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                         0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
       Version:
         Major:           1
@@ -380,7 +381,7 @@ TEST(RootSignature, ParseDescriptorTableV10) {
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 64
-      Parameters:         
+      Parameters:
       - ParameterType: DescriptorTable
         ShaderVisibility: Domain
         Table:
@@ -419,7 +420,7 @@ TEST(RootSignature, ParseDescriptorTableV11) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                         0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
       Version:
         Major:           1
@@ -436,7 +437,7 @@ TEST(RootSignature, ParseDescriptorTableV11) {
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 68
-      Parameters:         
+      Parameters:
       - ParameterType: DescriptorTable
         ShaderVisibility: Domain
         Table:
@@ -476,7 +477,7 @@ TEST(RootSignature, ParseStaticSamplers) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
 Header:
-  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
   Version:
     Major:           1
@@ -493,8 +494,8 @@ Parts:
       NumStaticSamplers: 1
       StaticSamplersOffset: 24
       Parameters: []
-      Samplers: 
-        - Filter: MinLinearMagMipPoint 
+      Samplers:
+        - Filter: MinLinearMagMipPoint
           AddressU: Wrap
           AddressV: Mirror
           AddressW: MirrorOnce
@@ -504,7 +505,7 @@ Parts:
           BorderColor: TransparentBlack
           MinLOD: 4.56
           MaxLOD: 8.90
-          ShaderRegister: 31 
+          ShaderRegister: 31
           RegisterSpace: 32
           ShaderVisibility:  Mesh
       AllowInputAssemblerInputLayout: true
@@ -535,7 +536,7 @@ TEST(RootSignature, ParseStaticSamplersV13) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
 Header:
-  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
   Version:
     Major:           1
@@ -552,8 +553,8 @@ Parts:
       NumStaticSamplers: 1
       StaticSamplersOffset: 24
       Parameters: []
-      Samplers: 
-        - ShaderRegister: 31 
+      Samplers:
+        - ShaderRegister: 31
           RegisterSpace: 32
           ShaderVisibility:  All
           SAMPLER_FLAG_UINT_BORDER_COLOR: true
@@ -611,6 +612,35 @@ Parts:
 
   EXPECT_EQ(Storage.size(), 56u);
   EXPECT_TRUE(memcmp(Buffer, Storage.data(), 56u) == 0);
+}
+
+TEST(DXCFile, ParsePRIVPart) {
+  SmallString<128> Storage;
+
+  ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+  PartOffsets:     [ 36 ]
+Parts:
+  - Name:            PRIV
+    Size:            5
+    PrivateData:     [ 0xDE, 0xAD, 0xBE, 0xEF, 0x42 ]
+    )"));
+
+  uint8_t Buffer[] = {0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x31, 0x00, 0x00,
+                      0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+                      0x50, 0x52, 0x49, 0x56, 0x05, 0x00, 0x00, 0x00, 0xDE,
+                      0xAD, 0xBE, 0xEF, 0x42};
+
+  EXPECT_EQ(Storage.size(), 49u);
+  EXPECT_TRUE(memcmp(Buffer, Storage.data(), 49u) == 0);
 }
 
 TEST(DXCFile, ParseVERSPart) {
@@ -693,4 +723,191 @@ TEST(DXCFile, ComputeVERSPart) {
   EXPECT_EQ(VERS->CustomVersionString, PACKAGE_VERSION);
   EXPECT_EQ(VERS->Parameters.ContentSizeInBytes,
             VERS->CommitSha.size() + 1 + VERS->CustomVersionString.size() + 1);
+}
+
+TEST(DXCFile, ParseSRCIPart) {
+  if (!compression::zlib::isAvailable())
+    GTEST_SKIP() << "Test skipped because zlib is not available.";
+
+  SmallString<128> Storage;
+
+  ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+Parts:
+  - Name:            SRCI
+    Size:            276
+    SourceInfo:
+      Header:
+        Flags:           0
+        SectionCount:    3
+      Names:
+        SectionHeader:
+          AlignedSizeInBytes: 104
+          Flags:           0
+          Type:            SourceNames
+        Header:
+          Flags:           0
+          Count:           3
+          EntriesSizeInBytes: 84
+        Entries:
+          - AlignedSizeInBytes: 28
+            Flags:           0
+            NameSizeInBytes: 11
+            ContentSizeInBytes: 13
+            FileName:        smoke.hlsl
+          - AlignedSizeInBytes: 28
+            Flags:           0
+            NameSizeInBytes: 11
+            ContentSizeInBytes: 12
+            FileName:        inc2.hlsli
+          - AlignedSizeInBytes: 28
+            Flags:           0
+            NameSizeInBytes: 11
+            ContentSizeInBytes: 12
+            FileName:        inc1.hlsli
+      Contents:
+        SectionHeader:
+          Flags:           0
+          Type:            SourceContents
+        Header:
+          Flags:           0
+          Type:            Zlib
+          UncompressedEntriesSizeInBytes: 76
+          Count:           3
+        Entries:
+          - AlignedSizeInBytes: 28
+            Flags:           0
+            ContentSizeInBytes: 13
+            FileContent:     smoke_source
+          - AlignedSizeInBytes: 24
+            Flags:           0
+            ContentSizeInBytes: 12
+            FileContent:     inc2_source
+          - AlignedSizeInBytes: 24
+            Flags:           0
+            ContentSizeInBytes: 12
+            FileContent:     inc1_source
+      Args:
+        SectionHeader:
+          AlignedSizeInBytes: 88
+          Flags:           0
+          Type:            Args
+        Header:
+          Flags:           0
+          SizeInBytes:     67
+          Count:           5
+        Args:
+          - Arg:             E
+            Value:           main
+          - Arg:             T
+            Value:           ps_6_0
+          - Arg:             Zi
+            Value:           ''
+          - Arg:             Fd
+            Value:           fd_zs.test.tmp.pdb
+          - Arg:             Fo
+            Value:           fd_zs.test.tmp.dxo_fd
+    )"));
+
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(MemoryBufferRef(Storage, "")));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<mcdxbc::SourceInfo> &SRCI = C.getSourceInfo();
+  ASSERT_TRUE(SRCI.has_value());
+
+  EXPECT_EQ(SRCI->Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Parameters.SectionCount, 3u);
+  // Source info section size depends on Zlib version used.
+  EXPECT_EQ(SRCI->Parameters.AlignedSizeInBytes,
+            sizeof(dxbc::SourceInfo::Header) +
+                SRCI->Names.GenericHeader.AlignedSizeInBytes +
+                SRCI->Contents.GenericHeader.AlignedSizeInBytes +
+                SRCI->Args.GenericHeader.AlignedSizeInBytes);
+
+  EXPECT_EQ(SRCI->Names.GenericHeader.AlignedSizeInBytes, 104u);
+  EXPECT_EQ(SRCI->Names.GenericHeader.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.GenericHeader.Type,
+            dxbc::SourceInfo::SectionType::SourceNames);
+  EXPECT_EQ(SRCI->Names.Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.Parameters.Count, 3u);
+  EXPECT_EQ(SRCI->Names.Parameters.EntriesSizeInBytes, 84u);
+
+  EXPECT_EQ(SRCI->Names.Entries[0].Parameters.AlignedSizeInBytes, 28u);
+  EXPECT_EQ(SRCI->Names.Entries[0].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.Entries[0].Parameters.NameSizeInBytes, 11u);
+  EXPECT_EQ(SRCI->Names.Entries[0].Parameters.ContentSizeInBytes, 13u);
+  EXPECT_EQ(SRCI->Names.Entries[0].FileName, "smoke.hlsl");
+
+  EXPECT_EQ(SRCI->Names.Entries[1].Parameters.AlignedSizeInBytes, 28u);
+  EXPECT_EQ(SRCI->Names.Entries[1].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.Entries[1].Parameters.NameSizeInBytes, 11u);
+  EXPECT_EQ(SRCI->Names.Entries[1].Parameters.ContentSizeInBytes, 12u);
+  EXPECT_EQ(SRCI->Names.Entries[1].FileName, "inc2.hlsli");
+
+  EXPECT_EQ(SRCI->Names.Entries[2].Parameters.AlignedSizeInBytes, 28u);
+  EXPECT_EQ(SRCI->Names.Entries[2].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.Entries[2].Parameters.NameSizeInBytes, 11u);
+  EXPECT_EQ(SRCI->Names.Entries[2].Parameters.ContentSizeInBytes, 12u);
+  EXPECT_EQ(SRCI->Names.Entries[2].FileName, "inc1.hlsli");
+
+  EXPECT_EQ(SRCI->Contents.GenericHeader.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.GenericHeader.Type,
+            dxbc::SourceInfo::SectionType::SourceContents);
+  EXPECT_EQ(SRCI->Contents.GenericHeader.AlignedSizeInBytes,
+            sizeof(dxbc::SourceInfo::SectionHeader) +
+                SRCI->Contents.Parameters.AlignedSizeInBytes);
+
+  EXPECT_EQ(SRCI->Contents.Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.Parameters.Type,
+            dxbc::SourceInfo::Contents::CompressionType::Zlib);
+  // EntriesSizeInBytes depends on Zlib version used.
+  EXPECT_GT(SRCI->Contents.Parameters.EntriesSizeInBytes, 0u);
+  EXPECT_LE(SRCI->Contents.Parameters.EntriesSizeInBytes,
+            SRCI->Contents.Parameters.UncompressedEntriesSizeInBytes);
+  EXPECT_EQ(SRCI->Contents.Parameters.UncompressedEntriesSizeInBytes, 76u);
+  EXPECT_EQ(SRCI->Contents.Parameters.Count, 3u);
+  EXPECT_EQ(SRCI->Contents.Parameters.AlignedSizeInBytes,
+            alignTo(sizeof(dxbc::SourceInfo::Contents::Header) +
+                        SRCI->Contents.Parameters.EntriesSizeInBytes,
+                    dxbc::DXCONTAINER_STRUCT_ALIGNMENT));
+
+  ASSERT_EQ(SRCI->Contents.Entries.size(), 3u);
+  EXPECT_EQ(SRCI->Contents.Entries[0].Parameters.AlignedSizeInBytes, 28u);
+  EXPECT_EQ(SRCI->Contents.Entries[0].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.Entries[0].Parameters.ContentSizeInBytes, 13u);
+  EXPECT_EQ(SRCI->Contents.Entries[0].FileContent, "smoke_source");
+
+  EXPECT_EQ(SRCI->Contents.Entries[1].Parameters.AlignedSizeInBytes, 24u);
+  EXPECT_EQ(SRCI->Contents.Entries[1].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.Entries[1].Parameters.ContentSizeInBytes, 12u);
+  EXPECT_EQ(SRCI->Contents.Entries[1].FileContent, "inc2_source");
+
+  EXPECT_EQ(SRCI->Contents.Entries[2].Parameters.AlignedSizeInBytes, 24u);
+  EXPECT_EQ(SRCI->Contents.Entries[2].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.Entries[2].Parameters.ContentSizeInBytes, 12u);
+  EXPECT_EQ(SRCI->Contents.Entries[2].FileContent, "inc1_source");
+
+  EXPECT_EQ(SRCI->Args.GenericHeader.AlignedSizeInBytes, 88u);
+  EXPECT_EQ(SRCI->Args.GenericHeader.Flags, 0u);
+  EXPECT_EQ(SRCI->Args.GenericHeader.Type, dxbc::SourceInfo::SectionType::Args);
+  EXPECT_EQ(SRCI->Args.Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Args.Parameters.SizeInBytes, 67u);
+  EXPECT_EQ(SRCI->Args.Parameters.Count, 5u);
+
+  EXPECT_EQ(SRCI->Args.Args[0].first, "E");
+  EXPECT_EQ(SRCI->Args.Args[0].second, "main");
+  EXPECT_EQ(SRCI->Args.Args[1].first, "T");
+  EXPECT_EQ(SRCI->Args.Args[1].second, "ps_6_0");
+  EXPECT_EQ(SRCI->Args.Args[2].first, "Zi");
+  EXPECT_EQ(SRCI->Args.Args[2].second, "");
+  EXPECT_EQ(SRCI->Args.Args[3].first, "Fd");
+  EXPECT_EQ(SRCI->Args.Args[3].second, "fd_zs.test.tmp.pdb");
+  EXPECT_EQ(SRCI->Args.Args[4].first, "Fo");
+  EXPECT_EQ(SRCI->Args.Args[4].second, "fd_zs.test.tmp.dxo_fd");
 }

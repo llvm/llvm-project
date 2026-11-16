@@ -137,9 +137,9 @@ public:
       auto deinterleave =
           vector::DeinterleaveOp::create(rewriter, loc, extractSrc);
       evenResult = vector::InsertOp::create(
-          rewriter, loc, deinterleave.getRes1(), evenResult, position);
+          rewriter, loc, deinterleave.getResultEven(), evenResult, position);
       oddResult = vector::InsertOp::create(
-          rewriter, loc, deinterleave.getRes2(), oddResult, position);
+          rewriter, loc, deinterleave.getResultOdd(), oddResult, position);
     }
     rewriter.replaceOp(op, ValueRange{evenResult, oddResult});
     return success();

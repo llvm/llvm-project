@@ -34,6 +34,11 @@ static llvm::Expected<bool> *g_fcxx_modules_workaround [[maybe_unused]];
 
 #define LLDB_MINIMUM_PYTHON_VERSION 0x03080000
 
+// Config.h must be included before Python.h so that
+// LLDB_ENABLE_PYTHON_LIMITED_API is defined when pyconfig.h selects the Windows
+// import library via #pragma comment.
+#include "lldb/Host/Config.h"
+
 #if LLDB_ENABLE_PYTHON_LIMITED_API
 // If defined, LLDB will be ABI-compatible with all Python 3 releases from the
 // specified one onward, and can use Limited API introduced up to that version.

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-enable-object-linking < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.08-amd-amdhsa -amdgpu-enable-object-linking < %s | FileCheck %s
 
 ; Verify that .amdgpu_num_agpr IS emitted when AGPRs are used on a target
 ; that supports them (gfx908 has a separate AGPR file).

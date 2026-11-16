@@ -23,6 +23,8 @@
 
 namespace Fortran::semantics {
 
+KindExpr MakeKindExpr(int v) { return evaluate::MakeSubscriptIntExpr(v); }
+
 DerivedTypeSpec::DerivedTypeSpec(SourceName name, const Symbol &typeSymbol)
     : name_{name}, originalTypeSymbol_{typeSymbol},
       typeSymbol_{typeSymbol.GetUltimate()} {
@@ -38,10 +40,6 @@ void DerivedTypeSpec::set_scope(const Scope &scope) {
 void DerivedTypeSpec::ReplaceScope(const Scope &scope) {
   CHECK(scope.IsDerivedType());
   scope_ = &scope;
-}
-
-const Scope *DerivedTypeSpec::GetScope() const {
-  return scope_ ? scope_ : typeSymbol_.scope();
 }
 
 void DerivedTypeSpec::AddRawParamValue(
@@ -118,7 +116,7 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
   auto &messages{foldingContext.messages()};
   for (const Symbol &symbol : OrderParameterDeclarations(typeSymbol_)) {
     SourceName name{symbol.name()};
-    int parameterKind{evaluate::TypeParamInquiry::Result::kind};
+    int parameterKind{evaluate::TypeParamInquiry::ResultKind};
     // Compute the integer kind value of the type parameter,
     // which may depend on the values of earlier ones.
     if (const auto *typeSpec{symbol.GetType()}) {
@@ -372,6 +370,23 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     return;
   }
   instantiated_ = true;
+
+  if (IsEnumerationType()) {
+    // Enumeration types have no components, no parameters, and need
+    // no instantiation, but scope_ must be set so that callers of
+    // scope() (e.g., GetAlignment, MeasureSizeInBytes) can access
+    // the type's size and alignment.
+    scope_ = typeSymbol_.scope();
+    Scope &mutableTypeScope{const_cast<Scope &>(*scope_)};
+    if (!mutableTypeScope.derivedTypeSpec()) {
+      mutableTypeScope.set_derivedTypeSpec(*this);
+    }
+    // Size the type now so that any enclosing type instantiated before the
+    // whole-program offset pass measures this component correctly.
+    ComputeOffsets(containingScope.context(), mutableTypeScope);
+    return;
+  }
+
   auto &context{containingScope.context()};
   auto &foldingContext{context.foldingContext()};
   if (IsForwardReferenced()) {
@@ -426,7 +441,7 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
               std::move(DEREF(evaluate::UnwrapExpr<SomeIntExpr>(*expr))));
           if (auto dyType{expr->GetType()}) {
             instanceDetails.set_type(newScope.MakeNumericType(
-                TypeCategory::Integer, KindExpr{dyType->kind()}));
+                TypeCategory::Integer, MakeKindExpr(dyType->kind())));
           }
         }
         if (!instanceDetails.type()) {
@@ -651,7 +666,7 @@ const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
     if (MaybeExpr analyzed{AnalyzeExpr(scope_.context(), *originalKindExpr)}) {
       if (auto *intExpr{evaluate::UnwrapExpr<SomeIntExpr>(*analyzed)}) {
         kindExpr = evaluate::ConvertToType<evaluate::SubscriptInteger>(
-            std::move(*intExpr));
+            evaluate::SubscriptIntegerKind, std::move(*intExpr));
       }
     }
   }
@@ -682,13 +697,13 @@ const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
   }
   switch (spec.category()) {
   case DeclTypeSpec::Numeric:
-    return scope_.MakeNumericType(intrinsic.category(), KindExpr{kind});
+    return scope_.MakeNumericType(intrinsic.category(), MakeKindExpr(kind));
   case DeclTypeSpec::Logical:
-    return scope_.MakeLogicalType(KindExpr{kind});
+    return scope_.MakeLogicalType(MakeKindExpr(kind));
   case DeclTypeSpec::Character:
     return scope_.MakeCharacterType(
         FoldCharacterLength(foldingContext(), spec.characterTypeSpec()),
-        KindExpr{kind});
+        MakeKindExpr(kind));
   default:
     CRASH_NO_CASE;
   }
@@ -780,6 +795,10 @@ std::string DerivedTypeSpec::VectorTypeAsFortran() const {
 std::string DerivedTypeSpec::AsFortran() const {
   std::string buf;
   llvm::raw_string_ostream ss{buf};
+  if (IsEnumerationType()) {
+    ss << "ENUMERATION TYPE :: " << originalTypeSymbol_.name();
+    return buf;
+  }
   ss << originalTypeSymbol_.name();
   if (!rawParameters_.empty()) {
     CHECK(parameters_.empty());
@@ -817,7 +836,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DerivedTypeSpec &x) {
   return o << x.AsFortran();
 }
 
-Bound::Bound(common::ConstantSubscript bound) : expr_{bound} {}
+Bound::Bound(common::ConstantSubscript bound)
+    : expr_{evaluate::MakeSubscriptIntExpr(bound)} {}
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const Bound &x) {
   if (x.isStar()) {
@@ -867,8 +887,7 @@ ParamValue::ParamValue(SomeIntExpr &&expr, common::TypeParamAttr attr)
     : attr_{attr}, expr_{std::move(expr)} {}
 ParamValue::ParamValue(
     common::ConstantSubscript value, common::TypeParamAttr attr)
-    : ParamValue(SomeIntExpr{evaluate::Expr<evaluate::SubscriptInteger>{value}},
-          attr) {}
+    : ParamValue(SomeIntExpr{evaluate::MakeSubscriptIntExpr(value)}, attr) {}
 
 void ParamValue::SetExplicit(SomeIntExpr &&x) {
   category_ = Category::Explicit;
@@ -993,6 +1012,14 @@ std::string DeclTypeSpec::AsFortran() const {
       return "RECORD" + derivedTypeSpec().typeSymbol().name().ToString();
     } else if (derivedTypeSpec().IsVectorType()) {
       return derivedTypeSpec().VectorTypeAsFortran();
+    } else if (derivedTypeSpec()
+                   .typeSymbol()
+                   .get<DerivedTypeDetails>()
+                   .isEnumerationType()) {
+      // Preserve the in-scope (possibly USE-renamed) spelling so the name
+      // written to a module file resolves on readback.
+      return "TYPE(" +
+          derivedTypeSpec().originalTypeSymbol().name().ToString() + ')';
     } else {
       return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
     }

@@ -6,15 +6,18 @@ add_mlir_dialect_library(MLIRTosaTransforms
   TosaDecomposeTransposeConv.cpp
   TosaDecomposeDepthwise.cpp
   TosaFolders.cpp
+  TosaGatherScatterHardening.cpp
   TosaInferShapes.cpp
   TosaLayerwiseConstantFoldPass.cpp
   TosaMakeBroadcastable.cpp
   TosaOptionalDecompositions.cpp
+  TosaReduceReshapes.cpp
   TosaReduceTransposes.cpp
   TosaTypeConverters.cpp
   TosaProfileCompliance.cpp
   TosaValidation.cpp
   TosaNarrowTypes.cpp
+  TosaConvertIntegerTypesBitwidth.cpp
   TosaInputShape.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -25,7 +28,6 @@ add_mlir_dialect_library(MLIRTosaTransforms
 
   LINK_LIBS PUBLIC
   MLIRFuncDialect
-  MLIRFuncTransformOps
   MLIRPass
   MLIRTosaDialect
   MLIRTransformUtils

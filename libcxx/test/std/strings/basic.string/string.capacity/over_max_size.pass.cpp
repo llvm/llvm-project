@@ -8,13 +8,8 @@
 
 // UNSUPPORTED: no-exceptions
 
-// This test fails when using a built library that does not contain
-// 15860446a8c3, which changed the return value of max_size(). Without
-// that change, the built library believes the max size to be one greater
-// than it really is, and we fail to throw `length_error` from `string::resize()`,
-// which is explicitly instantiated in the built library.
-//
-// UNSUPPORTED: using-built-library-before-llvm-21
+// The allocations are done in the dylib, so we need to use an up-to-date one
+// XFAIL: using-built-library-before-llvm-23
 
 // <string>
 

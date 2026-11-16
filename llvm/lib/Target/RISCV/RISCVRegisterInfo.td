@@ -10,6 +10,9 @@
 //  Declarations that describe the RISC-V register files
 //===----------------------------------------------------------------------===//
 
+defvar RV32 = DefaultMode;
+def RV64 : HwMode<[IsRV64]>;
+
 let Namespace = "RISCV" in {
 class RISCVReg<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
   let HWEncoding{4-0} = Enc;
@@ -237,12 +240,12 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
   def X8_Y : RISCVCapReg<X8, "x8", ["s0", "fp"]>, DwarfRegAlias<X8>;
   def X9_Y : RISCVCapReg<X9, "x9", ["s1"]>, DwarfRegAlias<X9>;
-  def X10_Y : RISCVCapReg<X10, "x10", ["a0"]>, DwarfRegAlias<X0>;
-  def X11_Y : RISCVCapReg<X11, "x11", ["a1"]>, DwarfRegAlias<X1>;
-  def X12_Y : RISCVCapReg<X12, "x12", ["a2"]>, DwarfRegAlias<X2>;
-  def X13_Y : RISCVCapReg<X13, "x13", ["a3"]>, DwarfRegAlias<X3>;
-  def X14_Y : RISCVCapReg<X14, "x14", ["a4"]>, DwarfRegAlias<X4>;
-  def X15_Y : RISCVCapReg<X15, "x15", ["a5"]>, DwarfRegAlias<X5>;
+  def X10_Y : RISCVCapReg<X10, "x10", ["a0"]>, DwarfRegAlias<X10>;
+  def X11_Y : RISCVCapReg<X11, "x11", ["a1"]>, DwarfRegAlias<X11>;
+  def X12_Y : RISCVCapReg<X12, "x12", ["a2"]>, DwarfRegAlias<X12>;
+  def X13_Y : RISCVCapReg<X13, "x13", ["a3"]>, DwarfRegAlias<X13>;
+  def X14_Y : RISCVCapReg<X14, "x14", ["a4"]>, DwarfRegAlias<X14>;
+  def X15_Y : RISCVCapReg<X15, "x15", ["a5"]>, DwarfRegAlias<X15>;
   let CostPerUse = [0, 1] in {
   def X16_Y : RISCVCapReg<X16, "x16", ["a6"]>, DwarfRegAlias<X16>;
   def X17_Y : RISCVCapReg<X17, "x17", ["a7"]>, DwarfRegAlias<X17>;
@@ -287,6 +290,7 @@ def XLenVecI16VT : ValueTypeByHwMode<[RV32,  RV64],
                                      [v2i16, v4i16]>;
 def XLenVecI32VT : ValueTypeByHwMode<[RV64],
                                      [v2i32]>;
+
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -319,27 +323,39 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
                                 (sequence "X%u", 28, 31),
                                 (sequence "X%u", 8, 9),
                                 (sequence "X%u", 18, 27),
-                                (sequence "X%u", 0, 4))>;
-
-def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
-                         (add (sequence "X%u_Y", 10, 17),
-                              (sequence "X%u_Y", 5, 7),
-                              (sequence "X%u_Y", 28, 31),
-                              (sequence "X%u_Y", 8, 9),
-                              (sequence "X%u_Y", 18, 27),
-                              (sequence "X%u_Y", 0, 4))> {
-  let RegInfos = YLenRI;
-  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*RVELimit=*/16>";
+                                (sequence "X%u", 0, 4))> {
+  let DiagnosticType = "InvalidRegClassGPR";
+  let DiagnosticString = "register must be a GPR";
 }
 
-def GPRX0 : GPRRegisterClass<(add X0)>;
+class YGPRRegisterClass<dag regList>
+    : RISCVRegisterClass<[YLenVT], 64, regList> {
+  let RegInfos = YLenRI;
+  let CoerceFromRegClass = GPR;
+}
+
+def YGPR : YGPRRegisterClass<(add (sequence "X%u_Y", 10, 17),
+                                  (sequence "X%u_Y", 5, 7),
+                                  (sequence "X%u_Y", 28, 31),
+                                  (sequence "X%u_Y", 8, 9),
+                                  (sequence "X%u_Y", 18, 27),
+                                  (sequence "X%u_Y", 0, 4))> {
+  let DiagnosticString = GPR.DiagnosticString;
+}
+
+def GPRX0 : GPRRegisterClass<(add X0)> {
+  let DiagnosticType = "InvalidRegClassGPRX0";
+  let DiagnosticString = "register must be zero (x0)";
+}
 
 def GPRX1 : GPRRegisterClass<(add X1)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X1, 1>";
   let DiagnosticType = "InvalidRegClassGPRX1";
   let DiagnosticString = "register must be ra (x1)";
 }
 
 def GPRX5 : GPRRegisterClass<(add X5)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X5, 5>";
   let DiagnosticType = "InvalidRegClassGPRX5";
   let DiagnosticString = "register must be t0 (x5)";
 }
@@ -347,6 +363,9 @@ def GPRX5 : GPRRegisterClass<(add X5)> {
 def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)> {
   let DiagnosticType = "InvalidRegClassGPRNoX0";
   let DiagnosticString = "register must be a GPR excluding zero (x0)";
+}
+def YGPRNoX0 : YGPRRegisterClass<(sub YGPR, X0_Y)> {
+  let DiagnosticString = GPRNoX0.DiagnosticString;
 }
 
 def GPRNoX2 : GPRRegisterClass<(sub GPR, X2)> {
@@ -372,6 +391,7 @@ def GPRJALRNonX7 : GPRRegisterClass<(sub GPRJALR, X7)>;
 def GPRC : GPRRegisterClass<(add (sequence "X%u", 10, 15),
                                  (sequence "X%u", 8, 9))> {
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8, 8>";
+  let DiagnosticString = "register must be a GPR from x8 to x15";
 }
 
 // For indirect tail calls, we can't use callee-saved registers, as they are
@@ -384,17 +404,25 @@ def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
 def GPRTCNonX7 : GPRRegisterClass<(sub GPRTC, X7)>;
 
 def SP : GPRRegisterClass<(add X2)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X2, 2>";
   let DiagnosticType = "InvalidRegClassSP";
   let DiagnosticString = "register must be sp (x2)";
 }
 
-// Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
-def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
-                                 (sequence "X%u", 18, 23))>;
+// Callee-saved Registers from s0 to s7, used by instructions in Zcmp and Xqccmp.
+def GPRS07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
+                                 (sequence "X%u", 18, 23))> {
+  let DiagnosticType = "InvalidRegClassGPRS07";
+  let DiagnosticString = "register must be GPR from s0 to s7 (x8, x9 or x18-x23)";
+}
 
 def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
   let DiagnosticType = "InvalidRegClassGPRX1X5";
   let DiagnosticString = "register must be ra or t0 (x1 or x5)";
+  // sspopchk/sspush (RISCVInstrInfoZicfiss.td) share their encoding with the
+  // generic mop.r.28/mop.rr.7 Zimop instructions except for this operand, so
+  // fall back to decoding those when the register isn't x1 or x5.
+  let hasCompleteDecoder = false;
 }
 
 def GPRNoX31 : GPRRegisterClass<(sub GPR, X31)> {
@@ -410,21 +438,9 @@ def XLenPairRI : RegInfoByHwMode<
       [RV32,                RV64],
       [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>;
 
-// Dummy zero register for use in the register pair containing X0 (as X1 is
-// not read to or written when the X0 register pair is used).
-def DUMMY_REG_PAIR_WITH_X0 : RISCVReg<0, "0">;
-
-// Must add DUMMY_REG_PAIR_WITH_X0 to a separate register class to prevent the
-// register's existence from changing codegen (due to the regPressureSetLimit
-// for the GPR register class being altered).
-def GPRAll : GPRRegisterClass<(add GPR, DUMMY_REG_PAIR_WITH_X0)>;
-
 let RegAltNameIndices = [ABIRegAltName] in {
-  def X0_Pair : RISCVRegWithSubRegs<0, X0.AsmName,
-                                    [X0, DUMMY_REG_PAIR_WITH_X0],
-                                    X0.AltNames> {
-    let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
-    let CoveredBySubRegs = 1;
+  def X0_Pair : RISCVRegWithSubRegs<0, X0.AsmName, [X0], X0.AltNames> {
+    let SubRegIndices = [sub_gpr_even];
   }
   foreach I = 1-15 in {
     defvar Index = !shl(I, 1);
@@ -441,22 +457,35 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
 }
 
-let RegInfos = XLenPairRI, CopyCost = 2 in {
-def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT, XLenPairVecI8VT, XLenPairVecI16VT, XLenPairVecI32VT], 64, (add
+class GPRPairRegisterClass<dag regList>
+    : RISCVRegisterClass<[XLenPairVT, XLenPairFVT, XLenPairVecI8VT,
+                          XLenPairVecI16VT, XLenPairVecI32VT], 64, regList> {
+  let RegInfos = XLenPairRI;
+  let CopyCost = 2;
+  let CoerceFromRegClass = GPR;
+}
+
+def GPRPair : GPRPairRegisterClass<(add
     X10_X11, X12_X13, X14_X15, X16_X17,
     X6_X7,
     X28_X29, X30_X31,
     X8_X9,
     X18_X19, X20_X21, X22_X23, X24_X25, X26_X27,
     X0_Pair, X2_X3, X4_X5
-)>;
+)> {
+  let DiagnosticString = "register must be even";
+}
 
-def GPRPairNoX0 : RISCVRegisterClass<[XLenPairVT, XLenPairFVT, XLenPairVecI8VT, XLenPairVecI16VT, XLenPairVecI32VT], 64, (sub GPRPair, X0_Pair)>;
+def GPRPairNoX0 : GPRPairRegisterClass<(sub GPRPair, X0_Pair)> {
+  let DiagnosticString =
+      "register pair must start with an even GPR other than x0";
+}
 
-def GPRPairC : RISCVRegisterClass<[XLenPairVT, XLenPairFVT, XLenPairVecI8VT, XLenPairVecI16VT, XLenPairVecI32VT], 64, (add
+def GPRPairC : GPRPairRegisterClass<(add
   X10_X11, X12_X13, X14_X15, X8_X9
-)>;
-} // let RegInfos = XLenPairRI, CopyCost = 2
+)> {
+  let DiagnosticString = "register pair must start with x8, x10, x12, or x14";
+}
 
 //===----------------------------------------------------------------------===//
 // Floating Point registers
@@ -536,21 +565,45 @@ class FPRCRegisterClass<list<ValueType> regTypes, int align, string regSuffix>
 // meaning caller-save regs are listed before callee-save.
 // We start by allocating argument registers in reverse order since they are
 // compressible.
-def FPR16 : FPRRegisterClass<[f16, bf16], 16, "H">;
+def FPR64 : FPRRegisterClass<[f64], 64, "D"> {
+  let DiagnosticType   = "InvalidRegClassFPR64";
+  let DiagnosticString = "register must be a FPR";
+}
 
-def FPR16C : FPRCRegisterClass<[f16, bf16], 16, "H">;
+def FPR64C : FPRCRegisterClass<[f64], 64, "D"> {
+  let DiagnosticType   = "InvalidRegClassFPR64C";
+  let DiagnosticString = "register must be a FPR from f8 to f15 (fs0-fs1, fa0-fa5)";
+}
 
-def FPR32 : FPRRegisterClass<[f32], 32, "F">;
+def FPR16 : FPRRegisterClass<[f16, bf16], 16, "H"> {
+  let CoerceFromRegClass = FPR64;
+  let DiagnosticType   = "InvalidRegClassFPR16";
+  let DiagnosticString = "register must be a FPR";
+}
 
-def FPR32C : FPRCRegisterClass<[f32], 32, "F">;
+def FPR16C : FPRCRegisterClass<[f16, bf16], 16, "H"> {
+  let CoerceFromRegClass = FPR64;
+  let DiagnosticType   = "InvalidRegClassFPR16C";
+  let DiagnosticString = "register must be a FPR from f8 to f15 (fs0-fs1, fa0-fa5)";
+}
 
-// The order of registers represents the preferred allocation sequence,
-// meaning caller-save regs are listed before callee-save.
-def FPR64 : FPRRegisterClass<[f64], 64, "D">;
+def FPR32 : FPRRegisterClass<[f32], 32, "F"> {
+  let CoerceFromRegClass = FPR64;
+  let DiagnosticType   = "InvalidRegClassFPR32";
+  let DiagnosticString = "register must be a FPR";
+}
 
-def FPR64C : FPRCRegisterClass<[f64], 64, "D">;
+def FPR32C : FPRCRegisterClass<[f32], 32, "F"> {
+  let CoerceFromRegClass = FPR64;
+  let DiagnosticType   = "InvalidRegClassFPR32C";
+  let DiagnosticString = "register must be a FPR from f8 to f15 (fs0-fs1, fa0-fa5)";
+}
 
-def FPR128 : FPRRegisterClass<[f128], 128, "Q">;
+def FPR128 : FPRRegisterClass<[f128], 128, "Q"> {
+  let CoerceFromRegClass = FPR64;
+  let DiagnosticType   = "InvalidRegClassFPR128";
+  let DiagnosticString = "register must be a FPR";
+}
 
 //===----------------------------------------------------------------------===//
 // GPR Classes for "H/F/D in X"
@@ -569,6 +622,7 @@ def GPRF16C : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 15),
                                                  (sequence "X%u_H", 8, 9))> {
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8_H, 8>";
 }
+def GPRF16X0 : RISCVRegisterClass<[f16], 16, (add X0_H)>;
 def GPRF16NoX0 : RISCVRegisterClass<[f16], 16, (sub GPRF16, X0_H)>;
 
 def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
@@ -583,6 +637,7 @@ def GPRF32C : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 15),
                                                  (sequence "X%u_W", 8, 9))> {
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8_W, 8>";
 }
+def GPRF32X0 : RISCVRegisterClass<[f32], 32, (add X0_W)>;
 def GPRF32NoX0 : RISCVRegisterClass<[f32], 32, (sub GPRF32, X0_W)>;
 
 //===----------------------------------------------------------------------===//
@@ -870,23 +925,32 @@ def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1>;
 
 def VRM2 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
                              (sequence "V%uM2", 6, 0, 2)), 2> {
+  let CoerceFromRegClass = VR;
   let DecoderMethod = "DecodeVectorRegisterClass<RISCV::VRM2RegClassID, 32, 2>";
 }
 
-def VRM2NoV0 : VReg<VM2VTs, (sub VRM2, V0M2), 2>;
+def VRM2NoV0 : VReg<VM2VTs, (sub VRM2, V0M2), 2> {
+  let CoerceFromRegClass = VR;
+}
 
 def VRM4 : VReg<VM4VTs, (add V8M4, V12M4, V16M4, V20M4,
                              V24M4, V28M4, V4M4, V0M4), 4> {
+  let CoerceFromRegClass = VR;
   let DecoderMethod = "DecodeVectorRegisterClass<RISCV::VRM4RegClassID, 32, 4>";
 }
 
-def VRM4NoV0 : VReg<VM4VTs, (sub VRM4, V0M4), 4>;
+def VRM4NoV0 : VReg<VM4VTs, (sub VRM4, V0M4), 4> {
+  let CoerceFromRegClass = VR;
+}
 
 def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8> {
+  let CoerceFromRegClass = VR;
   let DecoderMethod = "DecodeVectorRegisterClass<RISCV::VRM8RegClassID, 32, 8>";
 }
 
-def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
+def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8> {
+  let CoerceFromRegClass = VR;
+}
 
 // Fractional LMUL register classes for inline assembly.
 // The ZZZ_ prefix is to make sure these are ordered after VR/VRNoV0 in the
@@ -1004,7 +1068,11 @@ let RegAltNameIndices = [ABIRegAltName] in
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
-def FPR256 : FPRRegisterClass<[v8i32, v8f32], 256, "Q2">;
+def FPR256 : FPRRegisterClass<[v8i32, v8f32], 256, "Q2"> {
+  let CoerceFromRegClass = FPR64;
+  let DiagnosticType   = "InvalidRegClassFPR256";
+  let DiagnosticString = "register must be a FPR";
+}
 
 // Mask registers m0 to m7
 foreach Index = 0-7 in
@@ -1018,3 +1086,11 @@ def MR : RISCVRegisterClass<[i8, v8i1], 8,
 }
 
 def MR0 : RISCVRegisterClass<[i8, v8i1], 8, (add M0)>;
+
+//===----------------------------------------------------------------------===//
+// Register categories.
+//
+
+def GeneralPurposeRegisters : RegisterCategory<[GPR, GPRF16, GPRF32]>;
+
+def FixedRegisters : RegisterCategory<[GPRX0, GPRF16X0, GPRF32X0]>;

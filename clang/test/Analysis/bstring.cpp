@@ -19,12 +19,13 @@
 // RUN: %{analyzer} \
 // RUN:     -analyzer-checker=alpha.unix.cstring.BufferOverlap \
 // RUN:     -analyzer-checker=unix.cstring.NotNullTerminated \
+// RUN:     -analyzer-disable-checker=unix.cstring.UninitializedRead \
 // RUN:     -verify=expected,no-oob %s
 
 // UninitializedRead enabled without OutOfBounds: verifies that
 // UninitializedRead works independently of OutOfBounds.
 // RUN: %{analyzer} \
-// RUN:     -analyzer-checker=alpha.unix.cstring.UninitializedRead \
+// RUN:     -analyzer-checker=unix.cstring.UninitializedRead \
 // RUN:     -verify=expected,no-oob,uninit %s
 
 #include "Inputs/system-header-simulator-cxx.h"

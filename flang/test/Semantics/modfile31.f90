@@ -15,6 +15,12 @@ module m1
     enumerator :: oak, beech = -rank(x)*x(1), pine, poplar = brown
   end enum
 
+  ! F2023 7.6.1 errata f23/013: BOZ enumerator initializers are
+  ! interpreted as INT(boz, C_INT), and following enumerators increment.
+  enum, bind(C)
+    enumerator :: boz = z'2a', after_boz
+  end enum
+
 end
 
 !Expect: m1.mod
@@ -31,5 +37,6 @@ end
 !intrinsic::rank
 !integer(4),parameter::pine=-3_4
 !integer(4),parameter::poplar=3_4
+!integer(4),parameter::boz=42_4
+!integer(4),parameter::after_boz=43_4
 !end
-

@@ -1,5 +1,6 @@
 
 set(LLVM_LINK_COMPONENTS
+  Analysis
   Core
   ExecutionEngine
   IRReader
@@ -18,20 +19,25 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(OrcJITTests
-  CallableTraitsHelperTest.cpp
-  CallSPSViaEPCTest.cpp
+  COFFAutoImportGeneratorTest.cpp
+  ConnectionSpecTest.cpp
   CoreAPIsTest.cpp
   ExecutorAddressTest.cpp
   ExecutionSessionWrapperFunctionCallsTest.cpp
   EPCGenericJITLinkMemoryManagerTest.cpp
   EPCGenericMemoryAccessTest.cpp
+  EPCGenericDylibManagerTest.cpp
   IndirectionUtilsTest.cpp
+  InProcessEPCTest.cpp
+  InstanceSymbolGeneratorTest.cpp
   JITTargetMachineBuilderTest.cpp
   LazyCallThroughAndReexportsTest.cpp
   LibraryResolverTest.cpp
   LinkGraphLinkingLayerTest.cpp
-  LookupAndRecordAddrsTest.cpp
+  LLJITTest.cpp
+  LookupAndApplyTest.cpp
   MachOBuilderTest.cpp
+  ManglerTest.cpp
   MachOPlatformTest.cpp
   MapperJITLinkMemoryManagerTest.cpp
   MemoryFlagsTest.cpp
@@ -40,11 +46,16 @@ add_llvm_unittest(OrcJITTests
   ObjectLinkingLayerTest.cpp
   OrcCAPITest.cpp
   OrcTestCommon.cpp
+  ProxyTest.cpp
   ResourceTrackerTest.cpp
   RTDyldObjectLinkingLayerTest.cpp
   SharedMemoryMapperTest.cpp
   SimpleExecutorMemoryManagerTest.cpp
   SimplePackedSerializationTest.cpp
+  SimpleRemoteEPCUtilsTest.cpp
+  SPSHandlerSpecTest.cpp
+  SPSProxySpecTest.cpp
+  SymbolLookupSetTest.cpp
   SymbolStringPoolTest.cpp
   TaskDispatchTest.cpp
   ThreadSafeModuleTest.cpp

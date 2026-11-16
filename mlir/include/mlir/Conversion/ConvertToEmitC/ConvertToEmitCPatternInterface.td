@@ -6,6 +6,7 @@ include "mlir/IR/Interfaces.td"
 def ConvertToEmitCPatternInterface : DialectInterface<"ConvertToEmitCPatternInterface"> {
   let description = [{}];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"];
 
   let methods = [
     PureVirtualInterfaceMethod<[{
@@ -14,7 +15,8 @@ def ConvertToEmitCPatternInterface : DialectInterface<"ConvertToEmitCPatternInte
       }],
       "void", "populateConvertToEmitCConversionPatterns",
       (ins "::mlir::ConversionTarget &":$target, "::mlir::TypeConverter &":$typeConverter,
-           "::mlir::RewritePatternSet &":$patterns)
+           "::mlir::RewritePatternSet &":$patterns,
+           "::std::optional<bool>":$lowerToCpp)
     >
   ];
 }

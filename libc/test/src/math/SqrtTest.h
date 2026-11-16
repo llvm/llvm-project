@@ -53,12 +53,16 @@ public:
   }
 };
 
-#define LIST_SQRT_TESTS(T, func)                                               \
-  using LlvmLibcSqrtTest = SqrtTest<T, T>;                                     \
-  TEST_F(LlvmLibcSqrtTest, DenormalValues) { test_denormal_values(&func); }    \
-  TEST_F(LlvmLibcSqrtTest, NormalRange) { test_normal_range(&func); }
+#define LIST_SQRT_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = SqrtTest<T, T>;                                 \
+  TEST_F(LlvmLibc##Name##Test, DenormalValues) {                               \
+    test_denormal_values(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
-#define LIST_NARROWING_SQRT_TESTS(OutType, InType, func)                       \
-  using LlvmLibcSqrtTest = SqrtTest<OutType, InType>;                          \
-  TEST_F(LlvmLibcSqrtTest, DenormalValues) { test_denormal_values(&func); }    \
-  TEST_F(LlvmLibcSqrtTest, NormalRange) { test_normal_range(&func); }
+#define LIST_NARROWING_SQRT_TESTS(Name, OutType, InType, func)                 \
+  using LlvmLibc##Name##Test = SqrtTest<OutType, InType>;                      \
+  TEST_F(LlvmLibc##Name##Test, DenormalValues) {                               \
+    test_denormal_values(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }

@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+
+#include "hdr/signal_macros.h"
 #include "src/time/asctime.h"
+#include "src/time/time_utils.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
@@ -23,10 +26,7 @@ static inline char *call_asctime(struct tm *tm_data, int year, int month,
 }
 
 TEST_F(LlvmLibcAsctime, Nullptr) {
-  char *result;
-  result = LIBC_NAMESPACE::asctime(nullptr);
-  ASSERT_ERRNO_EQ(EINVAL);
-  ASSERT_STREQ(nullptr, result);
+  EXPECT_DEATH([] { LIBC_NAMESPACE::asctime(nullptr); }, WITH_SIGNAL(-1));
 }
 
 // Weekdays are in the range 0 to 6. Test passing invalid value in wday.
@@ -185,8 +185,6 @@ TEST_F(LlvmLibcAsctime, EndOf32BitEpochYear) {
 }
 
 TEST_F(LlvmLibcAsctime, Max64BitYear) {
-  if (sizeof(time_t) == 4)
-    return;
   // Mon Jan 1 12:50:50 2170 (200 years from 1970),
   struct tm tm_data;
   char *result;
@@ -212,6 +210,6 @@ TEST_F(LlvmLibcAsctime, Max64BitYear) {
                         50,         // sec
                         2,          // wday
                         50);        // yday
-  ASSERT_ERRNO_EQ(EOVERFLOW);
+  ASSERT_ERRNO_EQ(LIBC_NAMESPACE::time_utils::TIME_OVERFLOW);
   ASSERT_STREQ(nullptr, result);
 }

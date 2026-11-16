@@ -1,6 +1,7 @@
 set (FILES
   ConnectionFileDescriptorTest.cpp
   FileActionTest.cpp
+  FileCacheTest.cpp
   FileSystemTest.cpp
   FileTest.cpp
   HostInfoTest.cpp
@@ -10,9 +11,9 @@ set (FILES
   NativeProcessProtocolTest.cpp
   PipeTest.cpp
   ProcessLaunchInfoTest.cpp
+  ProcessRunLockTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp
-  StripConPTYSequencesTest.cpp
   ThreadLauncherTest.cpp
   XMLTest.cpp
 )
@@ -33,6 +34,13 @@ endif()
 if (LLDB_ENABLE_TERMIOS)
   list(APPEND FILES
     posix/TerminalTest.cpp
+  )
+endif()
+
+if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+  list(APPEND FILES
+    windows/PathUtilsTest.cpp
+    windows/StripConPTYSequencesTest.cpp
   )
 endif()
 

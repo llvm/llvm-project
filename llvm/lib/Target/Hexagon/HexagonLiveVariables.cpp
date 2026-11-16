@@ -167,8 +167,6 @@ void HexagonLiveVariables::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachinePostDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
   AU.addPreserved("packets");
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -439,7 +437,6 @@ void HexagonLiveVariablesImpl::constructUseDef(MachineBasicBlock *MBB) {
 
     SmallVector<MachineOperand *, 4> UseRegs;
     SmallVector<MachineOperand *, 4> DefRegs;
-    SmallVector<unsigned, 1> RegMasks;
     // Process all of the operands of the instruction...
     unsigned NumOperandsToProcess = MI->getNumOperands();
     for (unsigned i = 0; i != NumOperandsToProcess; ++i) {

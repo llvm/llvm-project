@@ -8,7 +8,6 @@
 
 #include "LibCxx.h"
 
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
@@ -67,7 +66,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   lldb::ValueObjectSP m_pair_sp; ///< ValueObject for the key/value pair
@@ -388,7 +387,7 @@ lldb::ValueObjectSP lldb_private::formatters::
 
 llvm::Expected<size_t>
 lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "first")
     return 0;
   if (name == "second")

@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-fract rdivi(int a, int b);
+fract rdivi(int n, int d);
 
 } // namespace LIBC_NAMESPACE_DECL
 

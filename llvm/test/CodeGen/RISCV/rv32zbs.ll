@@ -58,8 +58,8 @@ define i32 @bclr_i32_mask_multiple(i32 %a, i32 %b, i32 %shamt) nounwind {
 ;
 ; RV32ZBS-LABEL: bclr_i32_mask_multiple:
 ; RV32ZBS:       # %bb.0:
-; RV32ZBS-NEXT:    bclr a0, a0, a2
 ; RV32ZBS-NEXT:    bset a1, a1, a2
+; RV32ZBS-NEXT:    bclr a0, a0, a2
 ; RV32ZBS-NEXT:    add a0, a0, a1
 ; RV32ZBS-NEXT:    ret
   %shamt_masked = and i32 %shamt, 63
@@ -75,15 +75,15 @@ define i64 @bclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: bclr_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    andi a3, a2, 63
-; RV32I-NEXT:    li a4, 1
-; RV32I-NEXT:    addi a5, a3, -32
-; RV32I-NEXT:    sll a2, a4, a2
-; RV32I-NEXT:    sll a3, a4, a3
-; RV32I-NEXT:    srli a5, a5, 31
-; RV32I-NEXT:    neg a4, a5
-; RV32I-NEXT:    addi a5, a5, -1
-; RV32I-NEXT:    and a2, a4, a2
-; RV32I-NEXT:    and a3, a5, a3
+; RV32I-NEXT:    addi a4, a3, -32
+; RV32I-NEXT:    li a5, 1
+; RV32I-NEXT:    srli a4, a4, 31
+; RV32I-NEXT:    sll a2, a5, a2
+; RV32I-NEXT:    neg a6, a4
+; RV32I-NEXT:    sll a3, a5, a3
+; RV32I-NEXT:    addi a4, a4, -1
+; RV32I-NEXT:    and a2, a6, a2
+; RV32I-NEXT:    and a3, a4, a3
 ; RV32I-NEXT:    not a2, a2
 ; RV32I-NEXT:    not a3, a3
 ; RV32I-NEXT:    and a0, a2, a0
@@ -93,11 +93,11 @@ define i64 @bclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32ZBSNOZBB-LABEL: bclr_i64:
 ; RV32ZBSNOZBB:       # %bb.0:
 ; RV32ZBSNOZBB-NEXT:    andi a3, a2, 63
-; RV32ZBSNOZBB-NEXT:    bset a2, zero, a2
 ; RV32ZBSNOZBB-NEXT:    addi a4, a3, -32
-; RV32ZBSNOZBB-NEXT:    bset a3, zero, a3
 ; RV32ZBSNOZBB-NEXT:    srli a4, a4, 31
+; RV32ZBSNOZBB-NEXT:    bset a2, zero, a2
 ; RV32ZBSNOZBB-NEXT:    neg a5, a4
+; RV32ZBSNOZBB-NEXT:    bset a3, zero, a3
 ; RV32ZBSNOZBB-NEXT:    addi a4, a4, -1
 ; RV32ZBSNOZBB-NEXT:    and a2, a5, a2
 ; RV32ZBSNOZBB-NEXT:    and a3, a4, a3
@@ -110,16 +110,16 @@ define i64 @bclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32ZBSZBB-LABEL: bclr_i64:
 ; RV32ZBSZBB:       # %bb.0:
 ; RV32ZBSZBB-NEXT:    andi a3, a2, 63
+; RV32ZBSZBB-NEXT:    addi a4, a3, -32
+; RV32ZBSZBB-NEXT:    srli a4, a4, 31
+; RV32ZBSZBB-NEXT:    bset a3, zero, a3
+; RV32ZBSZBB-NEXT:    addi a5, a4, -1
+; RV32ZBSZBB-NEXT:    neg a4, a4
 ; RV32ZBSZBB-NEXT:    bset a2, zero, a2
-; RV32ZBSZBB-NEXT:    bset a4, zero, a3
-; RV32ZBSZBB-NEXT:    addi a3, a3, -32
-; RV32ZBSZBB-NEXT:    srli a3, a3, 31
-; RV32ZBSZBB-NEXT:    addi a5, a3, -1
-; RV32ZBSZBB-NEXT:    neg a3, a3
-; RV32ZBSZBB-NEXT:    and a4, a5, a4
-; RV32ZBSZBB-NEXT:    and a2, a3, a2
+; RV32ZBSZBB-NEXT:    and a3, a5, a3
+; RV32ZBSZBB-NEXT:    and a2, a4, a2
 ; RV32ZBSZBB-NEXT:    andn a0, a0, a2
-; RV32ZBSZBB-NEXT:    andn a1, a1, a4
+; RV32ZBSZBB-NEXT:    andn a1, a1, a3
 ; RV32ZBSZBB-NEXT:    ret
   %and = and i64 %b, 63
   %shl = shl nuw i64 1, %and
@@ -212,25 +212,25 @@ define i64 @bset_i64(i64 %a, i64 %b) nounwind {
 define signext i64 @bset_i64_zero(i64 signext %a) nounwind {
 ; RV32I-LABEL: bset_i64_zero:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a1, a0, -32
-; RV32I-NEXT:    li a2, 1
-; RV32I-NEXT:    srli a1, a1, 31
-; RV32I-NEXT:    sll a2, a2, a0
-; RV32I-NEXT:    neg a0, a1
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    li a1, 1
+; RV32I-NEXT:    addi a2, a0, -32
+; RV32I-NEXT:    srli a2, a2, 31
+; RV32I-NEXT:    neg a3, a2
+; RV32I-NEXT:    sll a1, a1, a0
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    and a0, a3, a1
+; RV32I-NEXT:    and a1, a2, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBS-LABEL: bset_i64_zero:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    addi a1, a0, -32
-; RV32ZBS-NEXT:    bset a2, zero, a0
 ; RV32ZBS-NEXT:    srli a1, a1, 31
-; RV32ZBS-NEXT:    neg a0, a1
+; RV32ZBS-NEXT:    neg a2, a1
+; RV32ZBS-NEXT:    bset a3, zero, a0
 ; RV32ZBS-NEXT:    addi a1, a1, -1
-; RV32ZBS-NEXT:    and a0, a0, a2
-; RV32ZBS-NEXT:    and a1, a1, a2
+; RV32ZBS-NEXT:    and a0, a2, a3
+; RV32ZBS-NEXT:    and a1, a1, a3
 ; RV32ZBS-NEXT:    ret
   %shl = shl i64 1, %a
   ret i64 %shl
@@ -350,10 +350,10 @@ define i64 @bext_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    srl a0, a1, a3
 ; CHECK-NEXT:    j .LBB14_3
 ; CHECK-NEXT:  .LBB14_2:
-; CHECK-NEXT:    srl a0, a0, a2
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    not a2, a3
-; CHECK-NEXT:    sll a1, a1, a2
+; CHECK-NEXT:    not a3, a3
+; CHECK-NEXT:    srl a0, a0, a2
+; CHECK-NEXT:    sll a1, a1, a3
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:  .LBB14_3:
 ; CHECK-NEXT:    andi a0, a0, 1
@@ -829,8 +829,8 @@ define i32 @bset_trailing_ones_i32_no_mask(i32 %a) nounwind {
 define i64 @bset_trailing_ones_i64_mask(i64 %a) nounwind {
 ; CHECK-LABEL: bset_trailing_ones_i64_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a2, a0, 63
 ; CHECK-NEXT:    li a3, -1
+; CHECK-NEXT:    andi a2, a0, 63
 ; CHECK-NEXT:    addi a1, a2, -32
 ; CHECK-NEXT:    sll a0, a3, a0
 ; CHECK-NEXT:    bltz a1, .LBB45_2
@@ -838,8 +838,8 @@ define i64 @bset_trailing_ones_i64_mask(i64 %a) nounwind {
 ; CHECK-NEXT:    sll a2, a3, a2
 ; CHECK-NEXT:    j .LBB45_3
 ; CHECK-NEXT:  .LBB45_2:
-; CHECK-NEXT:    not a2, a2
 ; CHECK-NEXT:    lui a3, 524288
+; CHECK-NEXT:    not a2, a2
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    srl a2, a3, a2
 ; CHECK-NEXT:    or a2, a0, a2
@@ -866,8 +866,8 @@ define i64 @bset_trailing_ones_i64_no_mask(i64 %a) nounwind {
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    j .LBB46_3
 ; CHECK-NEXT:  .LBB46_2:
-; CHECK-NEXT:    not a0, a0
 ; CHECK-NEXT:    lui a3, 524288
+; CHECK-NEXT:    not a0, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    srl a0, a3, a0
 ; CHECK-NEXT:    or a0, a1, a0

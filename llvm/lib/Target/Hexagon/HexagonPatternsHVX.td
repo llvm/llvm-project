@@ -384,7 +384,7 @@ let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
     def: Pat<(VecF16  (splat_vector u16_0ImmPred:$V)), (PS_vsplatih imm:$V)>;
     def: Pat<(VecBF16  (splat_vector u16_0ImmPred:$V)), (PS_vsplatih imm:$V)>;
     def: Pat<(VecF32  (splat_vector anyint:$V)),       (PS_vsplatiw imm:$V)>;
-    def: Pat<(VecF32  (splat_vector f32ImmPred:$V)),   (PS_vsplatiw (ftoi $V))>;
+    def: Pat<(VecF32  (splat_vector f32ImmPred:$V)),   (PS_vsplatiw (bitcast_fpimm_to_i32 $V))>;
   }
   let AddedComplexity = 20 in {
     def: Pat<(VecF16  (splat_vector I32:$Rs)), (PS_vsplatrh $Rs)>;
@@ -596,7 +596,7 @@ let Predicates = [UseHVXV68, UseHVXIEEEFP] in {
            (V6_vmpy_sf_sf HVF32:$Rs, HVF32:$Rt)>;
 
   def: Pat<(VecF16 (pf1<fpround> HWF32:$Vuu)),
-           (V6_vdealh (V6_vcvt_hf_sf (HiVec HvxWR:$Vuu), (LoVec HvxWR:$Vuu)))>;
+           (V6_vdealh (V6_vcvt_hf_sf (LoVec HvxWR:$Vuu), (HiVec HvxWR:$Vuu)))>;
   def: Pat<(VecPF32 (pf1<fpextend> HVF16:$Vu)),
            (V6_vcvt_sf_hf (V6_vshuffh HvxVR:$Vu))>;
 
@@ -672,6 +672,26 @@ let Predicates = [UseHVXV68, UseHVX128B, UseHVXQFloat] in {
   def: OpR_RR_pat<V6_vmax_hf, pf2<fmaximumnum>, VecF16, HVF16>;
   def: OpR_RR_pat<V6_vmin_sf, pf2<fminimumnum>, VecF32, HVF32>;
   def: OpR_RR_pat<V6_vmax_sf, pf2<fmaximumnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vmin_hf, pf2<fminimum>,    VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vmax_hf, pf2<fmaximum>,    VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vmin_sf, pf2<fminimum>,    VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vmax_sf, pf2<fmaximum>,    VecF32, HVF32>;
+}
+
+// V6_veqsf/V6_veqhf use IEEE-754 float equality (NaN != NaN), which correctly
+// detects NaN. Override the integer V6_veqw/V6_veqh setoeq patterns on
+// v81+QFloat so that NaN handling works correctly.
+let Predicates = [UseHVXV81, UseHVXQFloat] in {
+  let AddedComplexity = 10 in {
+    def: OpR_RR_pat<V6_veqsf, setoeq, VecQ32, HVF32>;
+    def: OpR_RR_pat<V6_veqhf, setoeq, VecQ16, HVF16>;
+    def: AccRRR_pat<V6_veqhf_and,    And,         setoeq,  HQ16, HVF16, HVF16>;
+    def: AccRRR_pat<V6_veqhf_or,      Or,         setoeq,  HQ16, HVF16, HVF16>;
+    def: AccRRR_pat<V6_veqhf_xor,    Xor,         setoeq,  HQ16, HVF16, HVF16>;
+    def: AccRRR_pat<V6_veqsf_and,    And,         setoeq,  HQ32, HVF32, HVF32>;
+    def: AccRRR_pat<V6_veqsf_or,      Or,         setoeq,  HQ32, HVF32, HVF32>;
+    def: AccRRR_pat<V6_veqsf_xor,    Xor,         setoeq,  HQ32, HVF32, HVF32>;
+  }
 }
 
 let Predicates = [UseHVXV68, UseHVX128B, UseHVXIEEEFP] in {
@@ -685,6 +705,10 @@ let Predicates = [UseHVXV68, UseHVX128B, UseHVXIEEEFP] in {
   def: OpR_RR_pat<V6_vfmax_hf, pf2<fmaximumnum>, VecF16, HVF16>;
   def: OpR_RR_pat<V6_vfmin_sf, pf2<fminimumnum>, VecF32, HVF32>;
   def: OpR_RR_pat<V6_vfmax_sf, pf2<fmaximumnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vfmin_hf, pf2<fminimum>,    VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vfmax_hf, pf2<fmaximum>,    VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vfmin_sf, pf2<fminimum>,    VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vfmax_sf, pf2<fmaximum>,    VecF32, HVF32>;
 }
 
 let Predicates = [UseHVX] in {
@@ -1018,16 +1042,23 @@ let Predicates = [UseHVX] in {
   def: AccRRR_pat<V6_vgtuw_xor,   Xor, setugt,   HQ32, HVI32, HVI32>;
 }
 
+let Predicates = [UseHVX] in {
+  def: Pat<(vselect VecQ8:$Qu, VecQ8:$Qs, VecQ8:$Qt),
+           (V6_pred_or (V6_pred_and $Qs, $Qu), (V6_pred_and_n $Qt, $Qu))>;
+  def: Pat<(vselect VecQ16:$Qu, VecQ16:$Qs, VecQ16:$Qt),
+           (V6_pred_or (V6_pred_and $Qs, $Qu), (V6_pred_and_n $Qt, $Qu))>;
+  def: Pat<(vselect VecQ32:$Qu, VecQ32:$Qs, VecQ32:$Qt),
+           (V6_pred_or (V6_pred_and $Qs, $Qu), (V6_pred_and_n $Qt, $Qu))>;
+}
+
 let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
   def: OpR_RR_pat<V6_veqh,              seteq,  VecQ16, HVF16>;
-  def: OpR_RR_pat<V6_veqh,             setoeq,  VecQ16, HVF16>;
   def: OpR_RR_pat<V6_veqh,             setueq,  VecQ16, HVF16>;
   def: OpR_RR_pat<V6_vgthf,             setgt,  VecQ16, HVF16>;
   def: OpR_RR_pat<V6_vgthf,            setogt,  VecQ16, HVF16>;
   def: OpR_RR_pat<V6_vgthf,            setugt,  VecQ16, HVF16>;
 
   def: OpR_RR_pat<V6_veqw,              seteq,  VecQ32, HVF32>;
-  def: OpR_RR_pat<V6_veqw,             setoeq,  VecQ32, HVF32>;
   def: OpR_RR_pat<V6_veqw,             setueq,  VecQ32, HVF32>;
   def: OpR_RR_pat<V6_vgtsf,             setgt,  VecQ32, HVF32>;
   def: OpR_RR_pat<V6_vgtsf,            setogt,  VecQ32, HVF32>;
@@ -1036,9 +1067,6 @@ let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
   def: AccRRR_pat<V6_veqh_and,    And,          seteq,  HQ16, HVF16, HVF16>;
   def: AccRRR_pat<V6_veqh_or,      Or,          seteq,  HQ16, HVF16, HVF16>;
   def: AccRRR_pat<V6_veqh_xor,    Xor,          seteq,  HQ16, HVF16, HVF16>;
-  def: AccRRR_pat<V6_veqh_and,    And,         setoeq,  HQ16, HVF16, HVF16>;
-  def: AccRRR_pat<V6_veqh_or,      Or,         setoeq,  HQ16, HVF16, HVF16>;
-  def: AccRRR_pat<V6_veqh_xor,    Xor,         setoeq,  HQ16, HVF16, HVF16>;
   def: AccRRR_pat<V6_veqh_and,    And,         setueq,  HQ16, HVF16, HVF16>;
   def: AccRRR_pat<V6_veqh_or,      Or,         setueq,  HQ16, HVF16, HVF16>;
   def: AccRRR_pat<V6_veqh_xor,    Xor,         setueq,  HQ16, HVF16, HVF16>;
@@ -1055,9 +1083,6 @@ let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
   def: AccRRR_pat<V6_veqw_and,    And,          seteq,  HQ32, HVF32, HVF32>;
   def: AccRRR_pat<V6_veqw_or,      Or,          seteq,  HQ32, HVF32, HVF32>;
   def: AccRRR_pat<V6_veqw_xor,    Xor,          seteq,  HQ32, HVF32, HVF32>;
-  def: AccRRR_pat<V6_veqw_and,    And,         setoeq,  HQ32, HVF32, HVF32>;
-  def: AccRRR_pat<V6_veqw_or,      Or,         setoeq,  HQ32, HVF32, HVF32>;
-  def: AccRRR_pat<V6_veqw_xor,    Xor,         setoeq,  HQ32, HVF32, HVF32>;
   def: AccRRR_pat<V6_veqw_and,    And,         setueq,  HQ32, HVF32, HVF32>;
   def: AccRRR_pat<V6_veqw_or,      Or,         setueq,  HQ32, HVF32, HVF32>;
   def: AccRRR_pat<V6_veqw_xor,    Xor,         setueq,  HQ32, HVF32, HVF32>;
@@ -1125,7 +1150,7 @@ def: Pat<(VecI32 (abs HVI32:$Vs)), (V6_vabsw HvxVR:$Vs)>;
 multiclass Saturates<ValueType HvxTy_i8, ValueType HvxTy_i16> {
   def: Pat<(VecI8 (ssat HWI16:$Vss, HvxTy_i8)),
            (V6_vpackhb_sat (HiVec $Vss), (LoVec $Vss))>;
-  def: Pat<(VecI8 (ssat (concat_vectors HWI32:$Vss, HWI32:$Vtt), HvxTy_i8)),
+  def: Pat<(VecI8 (ssat (VecQI32 (concat_vectors HWI32:$Vss, HWI32:$Vtt)), HvxTy_i8)),
            (V6_vpackhb_sat (V6_vpackwh_sat (HiVec $Vtt), (LoVec $Vtt)),
                            (V6_vpackwh_sat (HiVec $Vss), (LoVec $Vss)))>;
   def: Pat<(VecI16 (ssat HWI32:$Vss, HvxTy_i16)),
@@ -1133,7 +1158,7 @@ multiclass Saturates<ValueType HvxTy_i8, ValueType HvxTy_i16> {
 
   def: Pat<(VecI8 (usat HWI16:$Vss, HvxTy_i8)),
            (V6_vpackhub_sat (HiVec $Vss), (LoVec $Vss))>;
-  def: Pat<(VecI8 (usat (concat_vectors HWI32:$Vss, HWI32:$Vtt), HvxTy_i8)),
+  def: Pat<(VecI8 (usat (VecQI32 (concat_vectors HWI32:$Vss, HWI32:$Vtt)), HvxTy_i8)),
            (V6_vpackhub_sat (V6_vpackwuh_sat (HiVec $Vtt), (LoVec $Vtt)),
                             (V6_vpackwuh_sat (HiVec $Vss), (LoVec $Vss)))>;
   def: Pat<(VecI16 (usat HWI32:$Vss, HvxTy_i16)),

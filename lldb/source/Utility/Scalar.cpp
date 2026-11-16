@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 
+#include <algorithm>
 #include <cinttypes>
 #include <cstdio>
 
@@ -471,10 +472,12 @@ bool Scalar::ShiftRightLogical(const Scalar &rhs) {
 }
 
 Scalar &Scalar::operator>>=(const Scalar &rhs) {
-  if (m_type == e_int && rhs.m_type == e_int)
-    m_integer >>= rhs.m_integer.getZExtValue();
-  else
+  if (m_type == e_int && rhs.m_type == e_int) {
+    // Avoid APSInt assertion when exceeding the width is a sign or zero fill.
+    m_integer >>= rhs.m_integer.getLimitedValue(m_integer.getBitWidth());
+  } else {
     m_type = e_void;
+  }
   return *this;
 }
 
@@ -820,7 +823,8 @@ bool Scalar::ExtractBitfield(uint32_t bit_size, uint32_t bit_offset) {
     break;
 
   case Scalar::e_int:
-    m_integer >>= bit_offset;
+    // Avoid APSInt assertion when exceeding the width.
+    m_integer >>= std::min(bit_offset, m_integer.getBitWidth());
     m_integer = m_integer.extOrTrunc(bit_size).extOrTrunc(8 * GetByteSize());
     return true;
   }

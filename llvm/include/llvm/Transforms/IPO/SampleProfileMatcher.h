@@ -14,19 +14,25 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
 
-#include <unordered_set>
-
 namespace llvm {
+
+struct IPOOptions;
 
 using AnchorList = std::vector<std::pair<LineLocation, FunctionId>>;
 using AnchorMap = std::map<LineLocation, FunctionId>;
 
 // Sample profile matching - fuzzy match.
 class SampleProfileMatcher {
+  const IPOOptions &Opts;
+  // -salvage-stale-profile and -salvage-unused-profile, resolved by the loader.
+  bool SalvageStaleProfile;
+  bool SalvageUnusedProfile;
   Module &M;
   SampleProfileReader &Reader;
   LazyCallGraph &CG;
@@ -37,6 +43,8 @@ class SampleProfileMatcher {
   // mapping from the source location of current build to the source location
   // in the profile.
   StringMap<LocToLocMap> FuncMappings;
+  // Hash mapping cache for matched anchor pairs in stale profile matching
+  DenseMap<FunctionId, const Function *> MatchedAnchorCache;
 
   // Match state for an anchor/callsite.
   enum class MatchState {
@@ -59,21 +67,12 @@ class SampleProfileMatcher {
   // For each function, store every callsite and its matching state into this
   // map, of which each entry is a pair of callsite location and MatchState.
   // This is used for profile staleness computation and report.
-  StringMap<std::unordered_map<LineLocation, MatchState, LineLocationHash>>
-      FuncCallsiteMatchStates;
+  StringMap<DenseMap<LineLocation, MatchState>> FuncCallsiteMatchStates;
 
-  struct FuncToProfileNameMapHash {
-    uint64_t
-    operator()(const std::pair<const Function *, FunctionId> &P) const {
-      return hash_combine(P.first, P.second);
-    }
-  };
   // A map from a pair of function and profile name to a boolean value
   // indicating whether they are matched. This is used as a cache for the
   // matching result.
-  std::unordered_map<std::pair<const Function *, FunctionId>, bool,
-                     FuncToProfileNameMapHash>
-      FuncProfileMatchCache;
+  DenseMap<std::pair<const Function *, FunctionId>, bool> FuncProfileMatchCache;
   // The new functions found by the call graph matching. The map's key is the
   // the new(renamed) function pointer and the value is old(unused) profile
   // name.
@@ -82,16 +81,15 @@ class SampleProfileMatcher {
   // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
   // which maps the function name to the matched profile name. This is used
   // for sample loader to look up profile using the new name.
-  HashKeyMap<std::unordered_map, FunctionId, FunctionId> *FuncNameToProfNameMap;
+  HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap;
 
   // A map pointer to the SymbolMap in SampleProfileLoader, which stores all
   // the original matched symbols before the matching. this is to determine if
   // the profile is unused(to be matched) or not.
-  HashKeyMap<std::unordered_map, FunctionId, Function *> *SymbolMap;
+  HashKeyMap<DenseMap, FunctionId, Function *> *SymbolMap;
 
   // The new functions from IR.
-  HashKeyMap<std::unordered_map, FunctionId, Function *>
-      FunctionsWithoutProfile;
+  HashKeyMap<DenseMap, FunctionId, Function *> FunctionsWithoutProfile;
 
   // Pointer to the Profile Symbol List in the reader.
   std::shared_ptr<ProfileSymbolList> PSL;
@@ -121,15 +119,18 @@ class SampleProfileMatcher {
 
 public:
   SampleProfileMatcher(
-      Module &M, SampleProfileReader &Reader, LazyCallGraph &CG,
-      const PseudoProbeManager *ProbeManager, ThinOrFullLTOPhase LTOPhase,
-      HashKeyMap<std::unordered_map, FunctionId, Function *> &SymMap,
+      const IPOOptions &Opts, Module &M, SampleProfileReader &Reader,
+      LazyCallGraph &CG, const PseudoProbeManager *ProbeManager,
+      ThinOrFullLTOPhase LTOPhase,
+      HashKeyMap<DenseMap, FunctionId, Function *> &SymMap,
       std::shared_ptr<ProfileSymbolList> PSL,
-      HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-          &FuncNameToProfNameMap)
-      : M(M), Reader(Reader), CG(CG), ProbeManager(ProbeManager),
-        LTOPhase(LTOPhase), FuncNameToProfNameMap(&FuncNameToProfNameMap),
-        SymbolMap(&SymMap), PSL(PSL) {};
+      HashKeyMap<DenseMap, FunctionId, FunctionId> &FuncNameToProfNameMap,
+      bool SalvageStaleProfile, bool SalvageUnusedProfile)
+      : Opts(Opts), SalvageStaleProfile(SalvageStaleProfile),
+        SalvageUnusedProfile(SalvageUnusedProfile), M(M), Reader(Reader),
+        CG(CG), ProbeManager(ProbeManager), LTOPhase(LTOPhase),
+        FuncNameToProfNameMap(&FuncNameToProfNameMap), SymbolMap(&SymMap),
+        PSL(PSL) {};
   LLVM_ABI void runOnModule();
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
@@ -165,6 +166,8 @@ private:
   void findIRAnchors(const Function &F, AnchorMap &IRAnchors) const;
   void findProfileAnchors(const FunctionSamples &FS,
                           AnchorMap &ProfileAnchors) const;
+  bool anchorsMatch(const FunctionId &IRAnchor,
+                    const FunctionId &ProfileAnchor) const;
   // Record the callsite match states for profile staleness report, the result
   // is saved in FuncCallsiteMatchStates.
   void recordCallsiteMatchStates(const Function &F, const AnchorMap &IRAnchors,
@@ -189,9 +192,9 @@ private:
            State == MatchState::RemovedMatch;
   };
 
-  void countCallGraphRecoveredSamples(
-      const FunctionSamples &FS,
-      std::unordered_set<FunctionId> &MatchedUnusedProfile);
+  void
+  countCallGraphRecoveredSamples(const FunctionSamples &FS,
+                                 DenseSet<FunctionId> &MatchedUnusedProfile);
   // Count the samples of checksum mismatched function for the top-level
   // function and all inlinees.
   void countMismatchedFuncSamples(const FunctionSamples &FS, bool IsTopLevel);
@@ -242,7 +245,6 @@ private:
   // Match orphan IR functions to unused top-level profile entries by demangled
   // basename, without requiring a matched caller in the call graph.
   void matchFunctionsWithoutProfileByBasename();
-  void reportOrPersistProfileStats();
 };
 } // end namespace llvm
 #endif // LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H

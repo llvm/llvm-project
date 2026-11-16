@@ -10,7 +10,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "DXILFlattenArrays.h"
 #include "DirectX.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -23,7 +22,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <utility>
 
@@ -232,14 +230,10 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         cast<GetElementPtrInst>(PtrOpGEPCE->getAsInstruction());
     OldGEPI->insertBefore(GEP.getIterator());
 
-    IRBuilder<> Builder(&GEP);
     SmallVector<Value *> Indices(GEP.indices());
-    Value *NewGEP =
-        Builder.CreateGEP(GEP.getSourceElementType(), OldGEPI, Indices,
-                          GEP.getName(), GEP.getNoWrapFlags());
-    assert(isa<GetElementPtrInst>(NewGEP) &&
-           "Expected newly-created GEP to be an instruction");
-    GetElementPtrInst *NewGEPI = cast<GetElementPtrInst>(NewGEP);
+    GetElementPtrInst *NewGEPI = GetElementPtrInst::Create(
+        GEP.getSourceElementType(), OldGEPI, Indices, GEP.getNoWrapFlags(),
+        GEP.getName(), GEP.getIterator());
 
     GEP.replaceAllUsesWith(NewGEPI);
     GEP.eraseFromParent();
@@ -344,19 +338,10 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
 
     // Construct a new GEP for the flattened array to replace the current GEP
-    Value *NewGEP = Builder.CreateGEP(
+    GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
         Info.RootFlattenedArrayType, Info.RootPointerOperand,
-        {ZeroIndex, FlattenedIndex}, GEP.getName(), GEP.getNoWrapFlags());
-
-    // If the pointer operand is a global variable and all indices are 0,
-    // IRBuilder::CreateGEP will return the global variable instead of creating
-    // a GEP instruction or GEP ConstantExpr. In this case we have to create and
-    // insert our own GEP instruction.
-    if (!isa<GEPOperator>(NewGEP))
-      NewGEP = GetElementPtrInst::Create(
-          Info.RootFlattenedArrayType, Info.RootPointerOperand,
-          {ZeroIndex, FlattenedIndex}, GEP.getNoWrapFlags(), GEP.getName(),
-          Builder.GetInsertPoint());
+        {ZeroIndex, FlattenedIndex}, GEP.getNoWrapFlags(), GEP.getName(),
+        Builder.GetInsertPoint());
 
     // Replace the current GEP with the new GEP. Store GEPInfo into the map
     // for later use in case this GEP was not the end of the chain
@@ -459,7 +444,7 @@ static void flattenGlobalArrays(
 
     // Copy relevant attributes
     NewGlobal->setUnnamedAddr(G.getUnnamedAddr());
-    if (G.getAlignment() > 0) {
+    if (G.getAlign()) {
       NewGlobal->setAlignment(G.getAlign());
     }
 
@@ -491,7 +476,8 @@ static bool flattenArrays(Module &M) {
   return MadeChange;
 }
 
-PreservedAnalyses DXILFlattenArrays::run(Module &M, ModuleAnalysisManager &) {
+PreservedAnalyses DXILFlattenArraysPass::run(Module &M,
+                                             ModuleAnalysisManager &) {
   bool MadeChanges = flattenArrays(M);
   if (!MadeChanges)
     return PreservedAnalyses::all();

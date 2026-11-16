@@ -8,33 +8,21 @@ define void @step_direction_unknown(i32 %arg, ptr %dst) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 -1, [[ARG]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[ADD]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 [[ADD]]
-; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[TMP2]], i32 1023)
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP1]], i1 [[TMP4]], i1 false
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[ADD]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_SCEVCHECK]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_SCEVCHECK]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <4 x i32> [[TMP8]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP9]], i64 1
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP9]], i64 2
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP9]], i64 3
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP9]], i64 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP9]], i64 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP9]], i64 3
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP15]], align 8
@@ -45,8 +33,9 @@ define void @step_direction_unknown(i32 %arg, ptr %dst) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %add = add i32 %arg, 1
@@ -93,7 +82,7 @@ define void @integer_induction_wraps_scev_predicate_known(i32 %x, ptr %call, ptr
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -122,22 +111,21 @@ define void @implied_wrap_predicate(ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: define void @implied_wrap_predicate(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A3:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[C2:%.*]] = ptrtoaddr ptr [[C]] to i64
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[A3:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[A3]], 16
-; CHECK-NEXT:    [[UMAX4:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 add (i64 ptrtoint (ptr @h to i64), i64 1))
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[UMAX4]], -9
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[A3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 add (i64 ptrtoaddr (ptr @h to i64), i64 1))
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -9
+; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP2]], [[A3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP20]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[A1]], 16
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP5]], i64 add (i64 ptrtoint (ptr @h to i64), i64 1))
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[A3]], 16
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP5]], i64 add (i64 ptrtoaddr (ptr @h to i64), i64 1))
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[UMAX]], -9
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], [[A1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], [[A3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i16
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i16 2, [[TMP9]]
@@ -146,11 +134,12 @@ define void @implied_wrap_predicate(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[C2]], [[A1]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], 32
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[C2]], [[A3]]
+; CHECK-NEXT:    [[TMP21:%.*]] = sub i64 [[TMP14]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP21]], 31
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP4]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i16 1, [[DOTCAST]]
@@ -165,7 +154,7 @@ define void @implied_wrap_predicate(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
@@ -201,10 +190,6 @@ define void @no_signed_wrap_iv_via_btc(ptr %dst, i32 %N) mustprogress {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[N]], -100
 ; CHECK-NEXT:    [[SUB4:%.*]] = add i32 [[N]], -99
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[SUB4]], i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SMAX]], 100
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[N]]
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER]]
@@ -212,10 +197,14 @@ define void @no_signed_wrap_iv_via_btc(ptr %dst, i32 %N) mustprogress {
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[SUB4]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[SMAX]], 100
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP7]], [[N]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP2]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -226,7 +215,7 @@ define void @no_signed_wrap_iv_via_btc(ptr %dst, i32 %N) mustprogress {
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[OUTER_LOOPEXIT]], label %[[SCALAR_PH]]

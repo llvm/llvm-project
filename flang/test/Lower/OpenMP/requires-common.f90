@@ -6,7 +6,7 @@
 ! This test checks the lowering of requires into MLIR
 
 !CHECK:      module attributes {
-!CHECK-SAME: omp.requires = #omp<clause_requires unified_shared_memory>
+!CHECK-SAME: omp.requires = #omp.clause_requires<unified_shared_memory>
 block data init
   !$omp requires unified_shared_memory
   integer :: x

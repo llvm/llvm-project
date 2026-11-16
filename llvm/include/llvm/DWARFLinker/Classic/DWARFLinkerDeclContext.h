@@ -94,7 +94,7 @@ public:
 
   uint32_t getQualifiedNameHash() const { return QualifiedNameHash; }
 
-  bool setLastSeenDIE(CompileUnit &U, const DWARFDie &Die);
+  LLVM_ABI bool setLastSeenDIE(CompileUnit &U, const DWARFDie &Die);
 
   void setHasCanonicalDIE() { HasCanonicalDIE = true; }
 
@@ -143,10 +143,9 @@ public:
   ///
   /// FIXME: The invalid bit along the return value is to emulate some
   /// dsymutil-classic functionality.
-  PointerIntPair<DeclContext *, 1> getChildDeclContext(DeclContext &Context,
-                                                       const DWARFDie &DIE,
-                                                       CompileUnit &Unit,
-                                                       bool InClangModule);
+  LLVM_ABI PointerIntPair<DeclContext *, 1>
+  getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
+                      CompileUnit &Unit, bool InClangModule);
 
   DeclContext &getRoot() { return Root; }
 
@@ -172,15 +171,11 @@ private:
 
 /// Info type for the DenseMap storing the DeclContext pointers.
 struct DeclMapInfo : private DenseMapInfo<DeclContext *> {
-  using DenseMapInfo<DeclContext *>::getEmptyKey;
-
   static unsigned getHashValue(const DeclContext *Ctxt) {
     return Ctxt->QualifiedNameHash;
   }
 
   static bool isEqual(const DeclContext *LHS, const DeclContext *RHS) {
-    if (RHS == getEmptyKey())
-      return RHS == LHS;
     return LHS->QualifiedNameHash == RHS->QualifiedNameHash &&
            LHS->Line == RHS->Line && LHS->ByteSize == RHS->ByteSize &&
            LHS->NameForUniquing.data() == RHS->NameForUniquing.data() &&

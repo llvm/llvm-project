@@ -36,6 +36,7 @@ public:
 
 private:
   const bool InsertPlainNamesInForwardDecls;
+  const std::vector<StringRef> IgnoredTypes;
 };
 
 } // namespace clang::tidy::readability

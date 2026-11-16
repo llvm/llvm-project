@@ -1,12 +1,15 @@
 set(LLVM_LINK_COMPONENTS
+  BinaryFormat
   DebugInfoDWARF
   Object
   MC
+  TargetParser
   ${BOLT_TARGETS_TO_BUILD}
   )
 
 add_bolt_unittest(CoreTests
   BinaryContext.cpp
+  Relocation.cpp
   ClusteredRows.cpp
   MCPlusBuilder.cpp
   MemoryMaps.cpp
@@ -24,12 +27,12 @@ target_link_libraries(CoreTests
   PRIVATE
   LLVMBOLTCore
   LLVMBOLTRewrite
-  LLVMBOLTPasses
   LLVMBOLTProfile
   LLVMBOLTUtils
   )
 
 foreach (tgt ${BOLT_TARGETS_TO_BUILD})
+  target_link_libraries(CoreTests PRIVATE LLVMBOLTTarget${tgt})
   include_directories(
     ${LLVM_MAIN_SRC_DIR}/lib/Target/${tgt}
     ${LLVM_BINARY_DIR}/lib/Target/${tgt}

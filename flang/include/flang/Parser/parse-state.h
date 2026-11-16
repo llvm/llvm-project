@@ -17,14 +17,10 @@
 
 #include "user-state.h"
 #include "flang/Common/idioms.h"
-#include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Support/Fortran-features.h"
 #include <cstddef>
-#include <cstring>
-#include <list>
-#include <memory>
 #include <optional>
 #include <utility>
 

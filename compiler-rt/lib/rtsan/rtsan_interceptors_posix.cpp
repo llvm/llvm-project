@@ -869,28 +869,32 @@ INTERCEPTOR(void *, calloc, SIZE_T num, SIZE_T size) {
 }
 
 INTERCEPTOR(void, free, void *ptr) {
-  if (DlsymAlloc::PointerIsMine(ptr))
-    return DlsymAlloc::Free(ptr);
-
   // According to the C and C++ standard, freeing a nullptr is guaranteed to be
   // a no-op (and thus real-time safe). This can be confirmed for looking at
   // __libc_free in the glibc source.
-  if (ptr != nullptr)
-    __rtsan_notify_intercepted_call("free");
+  // Crucially must be done before DlsymAlloc::Free, as it can crash on
+  // nullptr input on linux.
+  if (UNLIKELY(!ptr))
+    return;
+
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+
+  __rtsan_notify_intercepted_call("free");
 
   return REAL(free)(ptr);
 }
 
 #if SANITIZER_INTERCEPT_FREE_SIZED
 INTERCEPTOR(void, free_sized, void *ptr, SIZE_T size) {
+  // see above comment in `free` interceptor
+  if (UNLIKELY(!ptr))
+    return;
+
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
 
-  // According to the C and C++ standard, freeing a nullptr is guaranteed to be
-  // a no-op (and thus real-time safe). This can be confirmed for looking at
-  // __libc_free in the glibc source.
-  if (ptr != nullptr)
-    __rtsan_notify_intercepted_call("free_sized");
+  __rtsan_notify_intercepted_call("free_sized");
 
   if (REAL(free_sized))
     return REAL(free_sized)(ptr, size);
@@ -904,14 +908,14 @@ INTERCEPTOR(void, free_sized, void *ptr, SIZE_T size) {
 #if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
 INTERCEPTOR(void, free_aligned_sized, void *ptr, SIZE_T alignment,
             SIZE_T size) {
+  // see above comment in `free` interceptor
+  if (UNLIKELY(!ptr))
+    return;
+
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
 
-  // According to the C and C++ standard, freeing a nullptr is guaranteed to be
-  // a no-op (and thus real-time safe). This can be confirmed for looking at
-  // __libc_free in the glibc source.
-  if (ptr != nullptr)
-    __rtsan_notify_intercepted_call("free_aligned_sized");
+  __rtsan_notify_intercepted_call("free_aligned_sized");
 
   if (REAL(free_aligned_sized))
     return REAL(free_aligned_sized)(ptr, alignment, size);
@@ -1531,7 +1535,10 @@ INTERCEPTOR(INT_TYPE_SYSCALL, syscall, INT_TYPE_SYSCALL number, ...) {
   arg_type arg6 = va_arg(args, arg_type);
 
   // these are various examples of things that COULD be passed
+  // On 32-bit platforms, 64-bit types like off_t are split across two args.
+#if SANITIZER_WORDSIZE >= 64
   static_assert(sizeof(arg_type) >= sizeof(off_t));
+#endif
   static_assert(sizeof(arg_type) >= sizeof(struct flock *));
   static_assert(sizeof(arg_type) >= sizeof(const char *));
   static_assert(sizeof(arg_type) >= sizeof(int));

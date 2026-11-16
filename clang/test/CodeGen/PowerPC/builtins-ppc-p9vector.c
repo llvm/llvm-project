@@ -1268,3 +1268,20 @@ vector unsigned long long test_vbpermd(void) {
   // CHECK-BE: @llvm.ppc.altivec.vbpermd(<2 x i64>
   return vec_bperm(vula, vuca);
 }
+
+vector unsigned __int128 test_vec_msum_u128(void) {
+  // CHECK: @llvm.ppc.altivec.vmsumudm(<2 x i64>
+  // CHECK-NEXT: ret <1 x i128>
+  // CHECK-BE: @llvm.ppc.altivec.vmsumudm(<2 x i64>
+  // CHECK-BE-NEXT: ret <1 x i128>
+  return vec_msum(vula, vulb, vui128a);
+}
+
+vector unsigned __int128 test_vec_vmsumudm(void) {
+  // CHECK: @llvm.ppc.altivec.vmsumudm(<2 x i64>
+  // CHECK-NEXT: ret <1 x i128>
+  // CHECK-BE: @llvm.ppc.altivec.vmsumudm(<2 x i64>
+  // CHECK-BE-NEXT: ret <1 x i128>
+  return vec_vmsumudm(vula, vulb, vui128a);
+}
+

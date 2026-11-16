@@ -39,15 +39,18 @@ STRING_EXTENSION_OUTSIDE(SBModule)
 
         def __iter__(self):
             '''Iterate over all symbols in a lldb.SBModule object.'''
-            return lldb_iter(self, 'GetNumSymbols', 'GetSymbolAtIndex')
+            for i in range(self.GetNumSymbols()):
+                yield self.GetSymbolAtIndex(i)
 
         def section_iter(self):
             '''Iterate over all sections in a lldb.SBModule object.'''
-            return lldb_iter(self, 'GetNumSections', 'GetSectionAtIndex')
+            for i in range(self.GetNumSections()):
+                yield self.GetSectionAtIndex(i)
 
         def compile_unit_iter(self):
             '''Iterate over all compile units in a lldb.SBModule object.'''
-            return lldb_iter(self, 'GetNumCompileUnits', 'GetCompileUnitAtIndex')
+            for i in range(self.GetNumCompileUnits()):
+                yield self.GetCompileUnitAtIndex(i)
 
         def symbol_in_section_iter(self, section):
             '''Given a module and its contained section, returns an iterator on the
@@ -220,7 +223,7 @@ STRING_EXTENSION_OUTSIDE(SBModule)
         sections = property(get_sections_array, None, doc='''A read only property that returns a list() of lldb.SBSection objects contained in this module.''')
         compile_units = property(get_compile_units_array, None, doc='''A read only property that returns a list() of lldb.SBCompileUnit objects contained in this module.''')
         section = property(get_sections_access_object, None, doc='''A read only property that can be used to access symbols by index ("section = module.section[0]"), name ("sections = module.section[\'main\']"), or using a regular expression ("sections = module.section[re.compile(...)]"). The return value is a single lldb.SBSection object for array access, and a list() of lldb.SBSection objects for name and regular expression access''')
-        section = property(get_sections_access_object, None, doc='''A read only property that can be used to access compile units by index ("compile_unit = module.compile_unit[0]"), name ("compile_unit = module.compile_unit[\'main.cpp\']"), or using a regular expression ("compile_unit = module.compile_unit[re.compile(...)]"). The return value is a single lldb.SBCompileUnit object for array access or by full or partial path, and a list() of lldb.SBCompileUnit objects regular expressions.''')
+        compile_unit = property(get_compile_units_access_object, None, doc='''A read only property that can be used to access compile units by index ("compile_unit = module.compile_unit[0]"), name ("compile_unit = module.compile_unit[\'main.cpp\']"), or using a regular expression ("compile_unit = module.compile_unit[re.compile(...)]"). The return value is a single lldb.SBCompileUnit object for array access or by full or partial path, and a list() of lldb.SBCompileUnit objects regular expressions.''')
 
         def get_uuid(self):
             return uuid.UUID (self.GetUUIDString())
@@ -232,6 +235,7 @@ STRING_EXTENSION_OUTSIDE(SBModule)
         addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this module.''')
         triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this module.''')
         num_symbols = property(GetNumSymbols, None, doc='''A read only property that returns number of symbols in the module symbol table as an integer.''')
+        symtab_state = property(GetSymtabState, None, doc='''A read only property that returns lldb.SymtabState flags (lldb.eSymtabStateLoadedFromCache, lldb.eSymtabStateParsedFromObjectFile, lldb.eSymtabStateSavedToCache, lldb.eSymtabStateSymbolFileAddedSymbols) describing the module's symbol table state.''')
         num_sections = property(GetNumSections, None, doc='''A read only property that returns number of sections in the module as an integer.''')
 
     %}

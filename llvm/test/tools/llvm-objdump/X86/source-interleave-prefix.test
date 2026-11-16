@@ -1,19 +1,19 @@
 ;; Test --prefix option.
 
-;; Separators change from platform to platform. In POSIX the full path for the
-;; directory './Inputs' appended with the file 'source-interleave-x86_64.c' is
-;; './Inputs/source-interleave-x86_64.c'. For Windows it is
-;; './Inputs\source-interleave-x86_64.c'. Platform specific tests are needed
-;; since '\' may or may not be a separator.
+;; Source paths taken from the debug info are normalized to the separator native
+;; to the host, which [[SEP]] expands to. Platform specific tests are still
+;; needed since '\' may or may not be a separator.
 
 ;; Test prefix option ignored for relative paths.
-;; For the test below it is possible to accept both '/' and '\' as a separator.
+;; './Inputs' is joined to the file name with the preferred separator, so on
+;; Windows the recorded path reads './Inputs\source-interleave-x86_64.c'.
+;; Normalization folds away the leading './' and unifies the separators.
 
 ; RUN: sed -e "s,SRC_COMPDIR,./Inputs,g" %p/Inputs/source-interleave.ll > %t-relative-path.ll
 ; RUN: llc -o %t-relative-path.o -filetype=obj -mtriple=x86_64-pc-linux %t-relative-path.ll
 ; RUN: llvm-objdump --prefix myprefix --source %t-relative-path.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-relative-path.o -DPREFIX=. -DCOMPDIR=/Inputs
-; CHECK-BROKEN-PREFIX: warning: '[[FILE]]': failed to find source [[PREFIX]][[COMPDIR]]{{[/\\]}}source-interleave-x86_64.c
+; RUN:   FileCheck %s --check-prefix=CHECK-RELATIVE-PREFIX -DFILE=%t-relative-path.o -DSEP=%{fs-sep}
+; CHECK-RELATIVE-PREFIX: warning: '[[FILE]]': failed to find source Inputs[[SEP]]source-interleave-x86_64.c
 
 ;; Test invalid source interleave fixed by adding the correct prefix.
 
@@ -27,19 +27,23 @@
 
 ; RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %p/Inputs/source-interleave.ll > %t-correct-prefix.ll
 ; RUN: llc -o %t-correct-prefix.o -filetype=obj -mtriple=x86_64-pc-linux %t-correct-prefix.ll
+;; The compilation directory is written with '/' but is normalized, so the
+;; reported path is %p rather than %/p. llvm-objdump does not insert a
+;; separator between the prefix and a path that has a root name.
 ; RUN: llvm-objdump --prefix myprefix --source %t-correct-prefix.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-correct-prefix.o -DPREFIX=myprefix%/p -DCOMPDIR=/Inputs
+; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-correct-prefix.o -DPREFIX=myprefix%p -DSEP=%{fs-sep}
 
 ;; Using only a prefix separator is the same as not using the `--prefix` option.
 
 ; RUN: llvm-objdump --prefix / --source %t-missing-prefix.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-missing-prefix.o -DPREFIX='' -DCOMPDIR=/Inputs
+; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-missing-prefix.o -DPREFIX='' -DSEP=%{fs-sep}
+; CHECK-BROKEN-PREFIX: warning: '[[FILE]]': failed to find source [[PREFIX]][[SEP]]Inputs[[SEP]]source-interleave-x86_64.c
 
 ;; All trailing separators on the prefix are discarded.
 ;; The prefix 'myprefix//' is converted to 'myprefix'.
 
 ; RUN: llvm-objdump --prefix myprefix// --source %t-missing-prefix.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-missing-prefix.o -DPREFIX=myprefix -DCOMPDIR=/Inputs
+; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-missing-prefix.o -DPREFIX=myprefix -DSEP=%{fs-sep}
 
 ;; Test invalid source interleave fixed by adding the correct prefix and
 ;; stripping out an extra directory from the path.

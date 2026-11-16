@@ -4,12 +4,14 @@
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 //
-// RUN: %clang -std=c++20 %t/mod.cppm --precompile \
+// clang-repl compiles position-independent code, so the module must be
+// precompiled with a matching PIC level (see pcm-pic-mismatch.cpp).
+// RUN: %clang -fPIC -std=c++20 %t/mod.cppm --precompile \
 // RUN:     -o %t/mod.pcm --target=x86_64-linux-gnu
 // RUN: %clang -fPIC %t/mod.pcm -c -o %t/mod.o --target=x86_64-linux-gnu
 // RUN: %clang -nostdlib -fPIC -shared %t/mod.o -o %t/libmod.so --target=x86_64-linux-gnu
 //
-// RUN: cat %t/import.cpp | env LD_LIBRARY_PATH=%t:$LD_LIBRARY_PATH \
+// RUN: cat %t/import.cpp | env LD_LIBRARY_PATH=%t:%ld_library_path \
 // RUN:     clang-repl -Xcc=-std=c++20 -Xcc=-fmodule-file=M=%t/mod.pcm \
 // RUN:     -Xcc=--target=x86_64-linux-gnu | FileCheck %t/import.cpp
 

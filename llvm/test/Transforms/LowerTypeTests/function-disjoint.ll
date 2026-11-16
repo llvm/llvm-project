@@ -39,10 +39,10 @@ define i1 @foo(ptr %p) {
   ret i1 %z
 }
 
-; X64: define private void @[[JT1]]() #{{.*}} align 8 {
+; X64: define private void @[[JT1]]() #{{.*}} prefalign(8)
 ; X64:   call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g.cfi)
 
-; X64: define private void @[[JT0]]() #{{.*}} align 8 {
+; X64: define private void @[[JT0]]() #{{.*}} prefalign(8)
 ; X64:   call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f.cfi)
 
 ; WASM32: ![[I1]] = !{i64 2}

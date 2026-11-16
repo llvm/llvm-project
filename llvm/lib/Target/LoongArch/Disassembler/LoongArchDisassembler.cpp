@@ -142,18 +142,30 @@ static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address,
                                       const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
-  Inst.addOperand(MCOperand::createImm(Imm + P));
+  const int64_t DecodedImm = Imm + P;
+  if (!Decoder->tryAddingSymbolicOperand(Inst, DecodedImm, Address,
+                                         /*IsBranch=*/false, /*Offset=*/0,
+                                         /*OpSize=*/0, /*InstSize=*/4))
+    Inst.addOperand(MCOperand::createImm(DecodedImm));
   return MCDisassembler::Success;
 }
 
-template <unsigned N, unsigned S = 0>
+template <unsigned N, unsigned S = 0, bool IsPCRelBranch = false>
 static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address,
                                       const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
   // Shift left Imm <S> bits, then sign-extend the number in the bottom <N+S>
   // bits.
-  Inst.addOperand(MCOperand::createImm(SignExtend64<N + S>(Imm << S)));
+  const int64_t DecodedImm = SignExtend64<N + S>(Imm << S);
+  const int64_t Value =
+      IsPCRelBranch ? static_cast<int64_t>(static_cast<uint64_t>(Address) +
+                                           static_cast<uint64_t>(DecodedImm))
+                    : DecodedImm;
+  if (!Decoder->tryAddingSymbolicOperand(Inst, Value, Address, IsPCRelBranch,
+                                         /*Offset=*/0, /*OpSize=*/0,
+                                         /*InstSize=*/4))
+    Inst.addOperand(MCOperand::createImm(DecodedImm));
   return MCDisassembler::Success;
 }
 
@@ -186,6 +198,8 @@ DecodeStatus LoongArchDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                    ArrayRef<uint8_t> Bytes,
                                                    uint64_t Address,
                                                    raw_ostream &CS) const {
+  CommentStream = &CS;
+
   uint32_t Insn;
   DecodeStatus Result;
 

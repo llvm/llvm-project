@@ -90,7 +90,6 @@ group("all-checks") {
     "//clang-tools-extra/clang-tidy/performance",
     "//clang-tools-extra/clang-tidy/portability",
     "//clang-tools-extra/clang-tidy/readability",
-    "//clang-tools-extra/clang-tidy/zircon",
   ]
   if (clang_tidy_enable_static_analyzer) {
     deps += [ "//clang-tools-extra/clang-tidy/mpi" ]

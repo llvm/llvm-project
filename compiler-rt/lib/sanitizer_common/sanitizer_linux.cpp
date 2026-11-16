@@ -17,6 +17,7 @@
     SANITIZER_SOLARIS || SANITIZER_HAIKU
 
 #  include "sanitizer_common.h"
+#  include "sanitizer_dl.h"
 #  include "sanitizer_flags.h"
 #  include "sanitizer_getauxval.h"
 #  include "sanitizer_internal_defs.h"
@@ -616,10 +617,23 @@ uptr internal_rename(const char *oldpath, const char *newpath) {
 uptr internal_sched_yield() { return internal_syscall(SYSCALL(sched_yield)); }
 
 void internal_usleep(u64 useconds) {
+#    if SANITIZER_LINUX && defined(__NR_clock_nanosleep_time64)
+  struct {
+    s64 tv_sec;
+    s64 tv_nsec;
+  } ts64;
+  ts64.tv_sec = useconds / 1000000;
+  ts64.tv_nsec = (useconds % 1000000) * 1000;
+  [[maybe_unused]] uptr Res = internal_syscall(
+      SYSCALL(clock_nanosleep_time64), CLOCK_MONOTONIC, 0, &ts64, &ts64);
+  [[maybe_unused]] int Err;
+  DCHECK(!internal_iserror(Res, &Err) || Err != ENOSYS);
+#    else
   struct timespec ts;
   ts.tv_sec = useconds / 1000000;
   ts.tv_nsec = (useconds % 1000000) * 1000;
   internal_syscall(SYSCALL(nanosleep), &ts, &ts);
+#    endif
 }
 
 uptr internal_execve(const char *filename, char *const argv[],
@@ -1403,7 +1417,7 @@ void ForEachMappedRegion(link_map *map, void (*cb)(const void *, uptr)) {
   typedef ElfW(Phdr) Elf_Phdr;
   typedef ElfW(Ehdr) Elf_Ehdr;
 #    endif  // !SANITIZER_FREEBSD
-  char *base = (char *)map->l_addr;
+  char* base = DladdrElfHeaderBase((void*)map->l_ld, (char*)map->l_addr);
   Elf_Ehdr *ehdr = (Elf_Ehdr *)base;
   char *phdrs = base + ehdr->e_phoff;
   char *phdrs_end = phdrs + ehdr->e_phnum * ehdr->e_phentsize;
@@ -2489,7 +2503,7 @@ static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
 #      if SANITIZER_LINUX
          ctx->uc_mcontext.gregs[RegNum]
 #      elif SANITIZER_NETBSD
-         ctx->uc_mcontext.__gregs[RegNum]
+         (unsigned long long)ctx->uc_mcontext.__gregs[RegNum]
 #      endif
   );
 #    elif defined(__i386__)

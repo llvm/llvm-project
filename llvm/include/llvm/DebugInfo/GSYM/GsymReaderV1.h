@@ -18,7 +18,7 @@ class MemoryBuffer;
 namespace gsym {
 
 /// GsymReaderV1 reads GSYM V1 data from a buffer.
-class GsymReaderV1 : public GsymReader {
+class LLVM_ABI GsymReaderV1 : public GsymReader {
   friend class GsymReader;
   const Header *Hdr = nullptr;
   std::unique_ptr<Header> SwappedHdr;
@@ -42,9 +42,12 @@ public:
   uint8_t getStringOffsetSize() const override {
     return Header::getStringOffsetSize();
   }
+  StringRef getUUID() const override {
+    return StringRef(reinterpret_cast<const char *>(Hdr->UUID), Hdr->UUIDSize);
+  }
 
   using GsymReader::dump;
-  LLVM_ABI void dump(raw_ostream &OS) override;
+  void dump(raw_ostream &OS) override;
 };
 
 } // namespace gsym

@@ -4,6 +4,11 @@
 # RUN: llvm-objcopy %t %t.copy
 # RUN: cmp %t %t.copy
 
+## arm64_32 uses the same ARM64_RELOC_ADDEND relocation.
+# RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %s -o %t.arm64_32
+# RUN: llvm-objcopy %t.arm64_32 %t.arm64_32.copy
+# RUN: cmp %t.arm64_32 %t.arm64_32.copy
+
 .text
 .globl _foo, _bar
 _foo:

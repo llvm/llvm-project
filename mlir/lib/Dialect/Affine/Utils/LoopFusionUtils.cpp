@@ -242,6 +242,50 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> srcOps,
   return loopDepth;
 }
 
+/// Computes in 'srcSlice' the sibling fusion slice from a single pair of loads
+/// to 'memref' in 'opsA' and 'opsB', preferring a maximal one. Read-after-read
+/// pairs don't constrain legality, so the slices of all pairs aren't unioned.
+static FusionResult computeSiblingSlice(ArrayRef<Operation *> opsA,
+                                        ArrayRef<Operation *> opsB,
+                                        Value memref, unsigned dstLoopDepth,
+                                        unsigned numCommonLoops,
+                                        bool isBackwardSlice,
+                                        ComputationSliceState *srcSlice) {
+  auto isLoadFromMemRef = [&](Operation *op) {
+    auto load = dyn_cast<AffineReadOpInterface>(op);
+    return load && load.getMemRef() == memref;
+  };
+
+  std::optional<ComputationSliceState> validSlice;
+  FusionResult failure = FusionResult::FailPrecondition;
+  for (Operation *a : llvm::make_filter_range(opsA, isLoadFromMemRef)) {
+    for (Operation *b : llvm::make_filter_range(opsB, isLoadFromMemRef)) {
+      ComputationSliceState slice;
+      SliceComputationResult result = affine::computeSliceUnion(
+          a, b, dstLoopDepth, numCommonLoops, isBackwardSlice, &slice);
+      if (result.value == SliceComputationResult::IncorrectSliceFailure) {
+        failure = FusionResult::FailIncorrectSlice;
+        continue;
+      }
+      if (result.value != SliceComputationResult::Success)
+        continue;
+      if (slice.isMaximal().value_or(false)) {
+        *srcSlice = slice;
+        return FusionResult::Success;
+      }
+      if (!validSlice)
+        validSlice = slice;
+    }
+  }
+
+  if (!validSlice) {
+    LDBG() << "No valid sibling fusion slice";
+    return failure;
+  }
+  *srcSlice = *validSlice;
+  return FusionResult::Success;
+}
+
 // TODO: This pass performs some computation that is the same for all the depths
 // (e.g., getMaxLoopDepth). Implement a version of this utility that processes
 // all the depths at once or only the legal maximal depth for maximal fusion.
@@ -325,13 +369,10 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
     break;
   case FusionStrategy::Sibling:
     // Sibling fusion (AffineLoopFusion pass) only takes into account the loads
-    // to 'memref' in 'srcForOp' to compute the slice union.
-    for (Operation *op : opsA) {
-      auto load = dyn_cast<AffineReadOpInterface>(op);
-      if (load && load.getMemRef() == fusionStrategy.getSiblingFusionMemRef())
-        strategyOpsA.push_back(op);
-    }
-    break;
+    // to 'memref' to compute the slice.
+    return computeSiblingSlice(
+        opsA, opsB, fusionStrategy.getSiblingFusionMemRef(), dstLoopDepth,
+        numCommonLoops, isSrcForOpBeforeDstForOp, srcSlice);
   }
 
   // Compute union of computation slices computed between all pairs of ops
@@ -357,7 +398,7 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
 static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
                                                     bool siblingFusionUser) {
   // Check if the reduction loop is a single iteration loop.
-  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
+  std::optional<APInt> tripCount = forOp.getStaticTripCount();
   if (!tripCount || *tripCount != 1)
     return failure();
   auto *parentOp = forOp->getParentOp();
@@ -496,14 +537,14 @@ bool mlir::affine::getLoopNestStats(AffineForOp forOpRoot,
 
     // Record trip count for 'forOp'. Set flag if trip count is not
     // constant.
-    std::optional<uint64_t> maybeConstTripCount = getConstantTripCount(forOp);
+    std::optional<APInt> maybeConstTripCount = forOp.getStaticTripCount();
     if (!maybeConstTripCount) {
       // Currently only constant trip count loop nests are supported.
       LDBG() << "Non-constant trip count unsupported";
       return WalkResult::interrupt();
     }
 
-    stats->tripCountMap[childForOp] = *maybeConstTripCount;
+    stats->tripCountMap[childForOp] = maybeConstTripCount->getZExtValue();
     return WalkResult::advance();
   });
   return !walkResult.wasInterrupted();

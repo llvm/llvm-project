@@ -98,6 +98,43 @@ getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
     lb.erase();
 }
 
+/// Returns the max of the bound given by `map` applied to `operands` and the
+/// lower bound of `forOp`, as a map over the updated `operands`. Returns `map`
+/// unchanged if it is known not to be below the lower bound. Both bounds must
+/// have a single result.
+static AffineMap getMaxWithLowerBound(AffineForOp forOp, AffineMap map,
+                                      SmallVectorImpl<Value> &operands) {
+  AffineMap lbMap = forOp.getLowerBoundMap();
+  assert(map.getNumResults() == 1 && lbMap.getNumResults() == 1 &&
+         "expected single-result bounds");
+  // Place the dims and symbols of the lower bound after those of `map`.
+  unsigned numDims = map.getNumDims();
+  unsigned numLbDims = lbMap.getNumDims();
+  AffineMap shiftedLbMap =
+      lbMap.shiftDims(numDims).shiftSymbols(map.getNumSymbols());
+  AffineMap maxMap = AffineMap::get(
+      shiftedLbMap.getNumDims(), shiftedLbMap.getNumSymbols(),
+      {map.getResult(0), shiftedLbMap.getResult(0)}, forOp.getContext());
+  ValueRange lbOperands = forOp.getLowerBoundOperands();
+  SmallVector<Value, 4> maxOperands(operands.begin(),
+                                    operands.begin() + numDims);
+  llvm::append_range(maxOperands, lbOperands.take_front(numLbDims));
+  llvm::append_range(maxOperands,
+                     ArrayRef<Value>(operands).drop_front(numDims));
+  llvm::append_range(maxOperands, lbOperands.drop_front(numLbDims));
+  fullyComposeAffineMapAndOperands(&maxMap, &maxOperands);
+  canonicalizeMapAndOperands(&maxMap, &maxOperands);
+  maxMap = simplifyAffineMap(maxMap);
+
+  AffineExpr diff =
+      simplifyAffineExpr(maxMap.getResult(0) - maxMap.getResult(1),
+                         maxMap.getNumDims(), maxMap.getNumSymbols());
+  if (auto cst = dyn_cast<AffineConstantExpr>(diff); cst && cst.getValue() >= 0)
+    return map;
+  operands.assign(maxOperands.begin(), maxOperands.end());
+  return maxMap;
+}
+
 /// Helper to replace uses of loop carried values (iter_args) and loop
 /// yield values while promoting single iteration affine.for ops.
 static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
@@ -117,7 +154,7 @@ static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// was known to have a single iteration.
 LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
-  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
+  std::optional<APInt> tripCount = forOp.getStaticTripCount();
   if (!tripCount || *tripCount != 1)
     return failure();
 
@@ -239,12 +276,12 @@ LogicalResult mlir::affine::affineForOpBodySkew(AffineForOp forOp,
   // conditional guards (or context information to prevent such versioning). The
   // better way to pipeline for such loops is to first tile them and extract
   // constant trip count "full tiles" before applying this.
-  auto mayBeConstTripCount = getConstantTripCount(forOp);
+  auto mayBeConstTripCount = forOp.getStaticTripCount();
   if (!mayBeConstTripCount) {
     LLVM_DEBUG(forOp.emitRemark("non-constant trip count loop not handled"));
     return success();
   }
-  uint64_t tripCount = *mayBeConstTripCount;
+  uint64_t tripCount = mayBeConstTripCount->getZExtValue();
 
   assert(isOpwiseShiftValid(forOp, shifts) &&
          "shifts will lead to an invalid transformation\n");
@@ -707,8 +744,10 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
   // Bounds for intra-tile loops.
   for (unsigned i = 0; i < width; i++) {
     int64_t largestDiv = getLargestDivisorOfTripCount(origLoops[i]);
-    std::optional<uint64_t> mayBeConstantCount =
-        getConstantTripCount(origLoops[i]);
+    AffineForOp forOp = origLoops[i];
+    std::optional<uint64_t> mayBeConstantCount = std::nullopt;
+    if (auto staticTripCount = forOp.getStaticTripCount())
+      mayBeConstantCount = staticTripCount->getZExtValue();
     // The lower bound is just the tile-space loop.
     AffineMap lbMap = b.getDimIdentityMap();
     newLoops[width + i].setLowerBound(
@@ -869,9 +908,9 @@ void mlir::affine::getPerfectlyNestedLoops(
 
 /// Unrolls this loop completely.
 LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
-  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<APInt> mayBeConstantTripCount = forOp.getStaticTripCount();
   if (mayBeConstantTripCount.has_value()) {
-    uint64_t tripCount = *mayBeConstantTripCount;
+    uint64_t tripCount = mayBeConstantTripCount->getZExtValue();
     if (tripCount == 0)
       return success();
     if (tripCount == 1)
@@ -885,10 +924,10 @@ LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
 /// whichever is lower.
 LogicalResult mlir::affine::loopUnrollUpToFactor(AffineForOp forOp,
                                                  uint64_t unrollFactor) {
-  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<APInt> mayBeConstantTripCount = forOp.getStaticTripCount();
   if (mayBeConstantTripCount.has_value() &&
-      *mayBeConstantTripCount < unrollFactor)
-    return loopUnrollByFactor(forOp, *mayBeConstantTripCount);
+      mayBeConstantTripCount->ult(unrollFactor))
+    return loopUnrollByFactor(forOp, mayBeConstantTripCount->getZExtValue());
   return loopUnrollByFactor(forOp, unrollFactor);
 }
 
@@ -980,7 +1019,12 @@ static LogicalResult generateCleanupLoopForUnroll(AffineForOp forOp,
   if (!cleanupMap)
     return failure();
 
-  cleanupForOp.setLowerBound(cleanupOperands, cleanupMap);
+  // The cleanup loop must not execute if `forOp` does not, but `cleanupMap` is
+  // below the lower bound of `forOp` if the trip count is negative.
+  SmallVector<Value, 4> cleanupLbOperands(cleanupOperands);
+  AffineMap cleanupLbMap =
+      getMaxWithLowerBound(forOp, cleanupMap, cleanupLbOperands);
+  cleanupForOp.setLowerBound(cleanupLbOperands, cleanupLbMap);
   // Promote the loop body up if this has turned into a single iteration loop.
   (void)promoteIfSingleIteration(cleanupForOp);
 
@@ -998,7 +1042,9 @@ LogicalResult mlir::affine::loopUnrollByFactor(
     bool cleanUpUnroll) {
   assert(unrollFactor > 0 && "unroll factor should be positive");
 
-  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<uint64_t> mayBeConstantTripCount = std::nullopt;
+  if (auto staticTripCount = forOp.getStaticTripCount())
+    mayBeConstantTripCount = staticTripCount->getZExtValue();
   if (unrollFactor == 1) {
     if (mayBeConstantTripCount == 1 && failed(promoteIfSingleIteration(forOp)))
       return failure();
@@ -1060,10 +1106,10 @@ LogicalResult mlir::affine::loopUnrollByFactor(
 
 LogicalResult mlir::affine::loopUnrollJamUpToFactor(AffineForOp forOp,
                                                     uint64_t unrollJamFactor) {
-  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<APInt> mayBeConstantTripCount = forOp.getStaticTripCount();
   if (mayBeConstantTripCount.has_value() &&
-      *mayBeConstantTripCount < unrollJamFactor)
-    return loopUnrollJamByFactor(forOp, *mayBeConstantTripCount);
+      mayBeConstantTripCount->getZExtValue() < unrollJamFactor)
+    return loopUnrollJamByFactor(forOp, mayBeConstantTripCount->getZExtValue());
   return loopUnrollJamByFactor(forOp, unrollJamFactor);
 }
 
@@ -1085,7 +1131,9 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
                                                   uint64_t unrollJamFactor) {
   assert(unrollJamFactor > 0 && "unroll jam factor should be positive");
 
-  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<uint64_t> mayBeConstantTripCount = std::nullopt;
+  if (auto staticTripCount = forOp.getStaticTripCount())
+    mayBeConstantTripCount = staticTripCount->getZExtValue();
   if (unrollJamFactor == 1) {
     if (mayBeConstantTripCount == 1 && failed(promoteIfSingleIteration(forOp)))
       return failure();
@@ -1564,20 +1612,6 @@ stripmineSink(AffineForOp forOp, uint64_t factor,
   }
 
   return innerLoops;
-}
-
-// Stripmines a `forOp` by `factor` and sinks it under a single `target`.
-// Returns the new AffineForOps, nested immediately under `target`.
-template <typename SizeType>
-static AffineForOp stripmineSink(AffineForOp forOp, SizeType factor,
-                                 AffineForOp target) {
-  // TODO: Use cheap structural assertions that targets are nested under
-  // forOp and that targets are not nested under each other when DominanceInfo
-  // exposes the capability. It seems overkill to construct a whole function
-  // dominance tree at this point.
-  auto res = stripmineSink(forOp, factor, ArrayRef<AffineForOp>(target));
-  assert(res.size() == 1 && "Expected 1 inner forOp");
-  return res[0];
 }
 
 SmallVector<SmallVector<AffineForOp, 8>, 8>

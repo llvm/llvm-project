@@ -1,6 +1,6 @@
 ; RUN: llvm-as %s -o %t.bc
 ; RUN: llvm-as %p/Inputs/merge-functions-foo.ll -o %t-foo.bc
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    -plugin-opt=merge-functions \
 ; RUN:    -plugin-opt=save-temps \
