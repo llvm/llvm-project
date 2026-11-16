@@ -319,11 +319,8 @@ void ICF::run() {
   constexpr size_t blockSize = 1024;
   size_t numChunks = chunks.size();
   size_t numBlocks = divideCeil(numChunks, blockSize);
-  SmallVector<uint64_t, 0> hashes, nextHashes;
-  hashes.resize_for_overwrite(numChunks);
-  nextHashes.resize_for_overwrite(numChunks);
-  SmallVector<uint32_t, 0> edgeEnd;
-  edgeEnd.resize_for_overwrite(numChunks);
+  SmallVector<uint64_t, 0> hashes(numChunks, llvm::for_overwrite);
+  SmallVector<uint32_t, 0> edgeEnd(numChunks, llvm::for_overwrite);
   SmallVector<SmallVector<uint32_t, 0>, 0> blockEdges(numBlocks);
   parallelFor(0, numBlocks, [&](size_t b) {
     SmallVectorImpl<uint32_t> &edges = blockEdges[b];
@@ -339,6 +336,7 @@ void ICF::run() {
 
   // Propagate hashes over edges for 7 rounds. Each round saves up to one
   // segregate() pass. 7 is empirical: even Chromium then needs just two passes.
+  SmallVector<uint64_t, 0> nextHashes(numChunks, llvm::for_overwrite);
   for (int round = 7; round--;) {
     parallelFor(0, numBlocks, [&](size_t b) {
       ArrayRef<uint32_t> edges = blockEdges[b];
@@ -356,8 +354,7 @@ void ICF::run() {
 
   // From now on, sections in Chunks are ordered so that sections in
   // the same group are consecutive in the vector.
-  SmallVector<uint64_t, 0> keys;
-  keys.resize_for_overwrite(numChunks);
+  SmallVector<uint64_t, 0> keys(numChunks, llvm::for_overwrite);
   parallelFor(0, numChunks, [&](size_t i) {
     // mix()'s low bits depend only on the inputs' low bits. Fold the high half,
     // and set MSB to 1 to avoid collisions with non-hash classes.
