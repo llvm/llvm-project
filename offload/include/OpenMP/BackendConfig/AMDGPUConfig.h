@@ -16,6 +16,17 @@ namespace llvm::omp::target {
 /// Constants of the AMDGPU backend.
 struct AMDGPUConfig final : BackendConfig {
   AMDGPUConfig() { DefaultGenericSPMDTeamsPerCU = 6; }
+
+  interop_spec_t
+  selectInteropPreference(int32_t InteropType, int32_t NumPrefers,
+                          interop_spec_t *Prefers) const override {
+    // TODO: update once targetsync is supported.
+    if (InteropType == kmp_interop_type_targetsync)
+      return NoInteropSpec;
+    return interop_spec_t{/*fr_id=*/omp_ifr_hsa,
+                          /*attrs=*/{/*inorder=*/true, /*reserved=*/0},
+                          /*impl_attrs=*/0};
+  }
 };
 
 } // namespace llvm::omp::target

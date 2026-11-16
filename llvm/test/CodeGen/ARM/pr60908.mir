@@ -4,7 +4,6 @@
 # Positive test: $d15 has sub-register $s30, which should be propagated.
 ---
 name:            test_d15
-tracksRegLiveness: true
 liveins:
   - { reg: '$d15' }
 body:             |
@@ -25,7 +24,6 @@ body:             |
 # Negative test: $d18 does not have sub-registers.
 ---
 name:            test_d18
-tracksRegLiveness: true
 liveins:
   - { reg: '$d18' }
 body:             |

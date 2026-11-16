@@ -29,6 +29,7 @@ static_library("Expression") {
     "ExpressionParser.cpp",
     "ExpressionTypeSystemHelper.cpp",
     "ExpressionVariable.cpp",
+    "ExternalSymbolResolver.cpp",
     "FunctionCaller.cpp",
     "IRExecutionUnit.cpp",
     "IRInterpreter.cpp",

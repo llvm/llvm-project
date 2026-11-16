@@ -72,7 +72,8 @@ def Vector_ContractionOp :
     intermediate result to the accumulator argument of rank K, and returns a
     vector result of rank K (where K = num_lhs_free_dims + num_rhs_free_dims +
     num_batch_dims (see dimension type descriptions below)). For K = 0 (no
-    free or batch dimensions), the accumulator and output are a scalar.
+    free or batch dimensions), the accumulator and output are either a scalar
+    or a 0-D vector, i.e. both variants are supported: `f32` and `vector<f32>`.
 
     If operands and the result have types of different bitwidths, operands are
     promoted to have the same bitwidth as the result before performing the
@@ -217,6 +218,8 @@ def Vector_ContractionOp :
     llvm::SmallVector<::mlir::AffineMap, 4> getIndexingMapsArray() {
       return llvm::to_vector<4>(getIndexingMaps().getAsValueRange<::mlir::AffineMapAttr>());
     }
+
+    bool isAddKind() { return getKind() == vector::CombiningKind::ADD;}
 
     // Returns the bounds of each dimension in the iteration space spanned
     // by the iterator types of this operation.

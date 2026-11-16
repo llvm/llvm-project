@@ -150,11 +150,11 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   return false;
 }
 
-// True unless the pair provably writes different physical registers. Pre-RA
-// the dests are still virtual, and post-RA it requires a genuine WAW (same dest
-// reg).
-static bool mayHaveWAWDependency(const MachineInstr &FirstMI,
-                                 const MachineInstr &SecondMI) {
+// True unless the pair provably defines different physical registers. This is
+// an exact match, so it doesn't account for subreg overlap. Pre-RA the dests
+// are still virtual, so it returns true.
+static bool mayDefSameReg(const MachineInstr &FirstMI,
+                          const MachineInstr &SecondMI) {
   Register DestFirst = FirstMI.getOperand(0).getReg();
   Register DestSecond = SecondMI.getOperand(0).getReg();
   if (!DestFirst.isPhysical() || !DestSecond.isPhysical())
@@ -176,7 +176,7 @@ static bool isAESPair(const MachineInstr *FirstMI,
     if (FirstMI->getOpcode() != AArch64::AESErr)
       return false;
     return SecondOpcode == AArch64::AESMCrrTied ||
-           mayHaveWAWDependency(*FirstMI, SecondMI);
+           mayDefSameReg(*FirstMI, SecondMI);
   // AES decode.
   case AArch64::AESIMCrr:
   case AArch64::AESIMCrrTied:
@@ -185,7 +185,7 @@ static bool isAESPair(const MachineInstr *FirstMI,
     if (FirstMI->getOpcode() != AArch64::AESDrr)
       return false;
     return SecondOpcode == AArch64::AESIMCrrTied ||
-           mayHaveWAWDependency(*FirstMI, SecondMI);
+           mayDefSameReg(*FirstMI, SecondMI);
   }
 
   return false;
@@ -583,7 +583,8 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
     return false;
 
   // (NOT write P)
-  if (definesRegInClass(MI, {&AArch64::PPRRegClass, &AArch64::PPR2RegClass}))
+  if (definesRegInClass(MI, {&AArch64::PPRRegClass, &AArch64::PPR2RegClass,
+                             &AArch64::PNRRegClass}))
     return false;
 
   // (NOT write GPR)
@@ -662,7 +663,7 @@ static bool isFMinFMaxPair(const MachineInstr *FirstMI,
   if (getFMinFMaxKind(FirstMI->getOpcode()) != SecondKind)
     return false;
 
-  return mayHaveWAWDependency(*FirstMI, SecondMI);
+  return mayDefSameReg(*FirstMI, SecondMI);
 }
 
 /// \brief Check if the instr pair, FirstMI and SecondMI, should be fused

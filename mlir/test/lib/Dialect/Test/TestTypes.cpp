@@ -588,6 +588,17 @@ TestTypeOpAsmTypeInterfaceType::getAlias(::llvm::raw_ostream &os) const {
   return mlir::success(getElementType() == memref.getElementType());
 }
 
+bool TestTensorLikeWrapperType::isTensorLike() const {
+  return isa<::mlir::bufferization::TensorLikeType>(getInner());
+}
+
+::mlir::LogicalResult TestTensorLikeWrapperType::verifyCompatibleBufferType(
+    ::mlir::bufferization::BufferLikeType bufferType,
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) const {
+  return cast<::mlir::bufferization::TensorLikeType>(getInner())
+      .verifyCompatibleBufferType(bufferType, emitError);
+}
+
 //===----------------------------------------------------------------------===//
 // TestTypeNewlineAndIndent
 //===----------------------------------------------------------------------===//
