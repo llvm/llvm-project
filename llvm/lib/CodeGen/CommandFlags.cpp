@@ -116,20 +116,14 @@ codegen::getExplicitEmulatedTLS(const cl::LibraryOptionsContext &C) {
   return toOptional(C.get<CodeGenToolOptions>().emulated_tls);
 }
 
-#define CGOPT(TY, NAME)                                                        \
-  static cl::opt<TY> *NAME##View;                                              \
-  TY codegen::get##NAME(const cl::LibraryOptionsContext &) {                   \
-    assert(NAME##View && "Flag not registered.");                              \
-    return *NAME##View;                                                        \
-  }
+std::string codegen::getMTune(const cl::LibraryOptionsContext &C) {
+  return C.get<CodeGenToolOptions>().mtune.str();
+}
 
-CGOPT(std::string, MTune)
-CGOPT(codegen::SaveStatsMode, SaveStats)
-
-#define CGBINDOPT(NAME)                                                        \
-  do {                                                                         \
-    NAME##View = std::addressof(NAME);                                         \
-  } while (0)
+codegen::SaveStatsMode
+codegen::getSaveStats(const cl::LibraryOptionsContext &C) {
+  return C.get<CodeGenToolOptions>().save_stats;
+}
 
 ArrayRef<const cl::LibraryOptions *> codegen::getToolOptions() {
   static constexpr opt::LibraryOptionsParser Parser(
@@ -138,31 +132,6 @@ ArrayRef<const cl::LibraryOptions *> codegen::getToolOptions() {
   static const cl::LibraryOptions *const Libraries[] = {mc::getToolOptions()[0],
                                                         &Parser};
   return Libraries;
-}
-
-codegen::RegisterMTuneFlag::RegisterMTuneFlag() {
-  static cl::opt<std::string> MTune(
-      "mtune",
-      cl::desc("Tune for a specific CPU microarchitecture (-mtune=help for "
-               "details)"),
-      cl::value_desc("tune-cpu-name"), cl::init(""));
-  CGBINDOPT(MTune);
-}
-
-codegen::RegisterSaveStatsFlag::RegisterSaveStatsFlag() {
-  static cl::opt<SaveStatsMode> SaveStats(
-      "save-stats",
-      cl::desc(
-          "Save LLVM statistics to a file in the current directory"
-          "(`-save-stats`/`-save-stats=cwd`) or the directory of the output"
-          "file (`-save-stats=obj`). (default: cwd)"),
-      cl::values(clEnumValN(SaveStatsMode::Cwd, "cwd",
-                            "Save to the current working directory"),
-                 clEnumValN(SaveStatsMode::Cwd, "", ""),
-                 clEnumValN(SaveStatsMode::Obj, "obj",
-                            "Save to the output file directory")),
-      cl::init(SaveStatsMode::None), cl::ValueOptional);
-  CGBINDOPT(SaveStats);
 }
 
 static BasicBlockSection getBBSectionsMode(const CodeGenToolOptions &Opts,
