@@ -51,6 +51,8 @@
 
 namespace llvm {
 
+class MachineDominatorTree;
+
 enum WindowSchedulingFlag {
   WS_Off,  /// Turn off window algorithm.
   WS_On,   /// Use window algorithm after SMS algorithm fails.
@@ -76,6 +78,7 @@ protected:
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
+  MachineDominatorTree *MDT = nullptr;
 
   /// To innovatively identify the dependencies between MIs across two trips, we
   /// construct a DAG for a new MBB, which is created by copying the original
@@ -121,7 +124,8 @@ protected:
   unsigned BaseII = 0;
 
 public:
-  WindowScheduler(MachineSchedContext *C, MachineLoop &ML);
+  WindowScheduler(MachineSchedContext *C, MachineLoop &ML,
+                  MachineDominatorTree *MDT = nullptr);
   virtual ~WindowScheduler() = default;
 
   bool run();

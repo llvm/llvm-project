@@ -343,6 +343,7 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
     }
 
     IRBuilder<> IRB(InsertBefore);
+    IRB.disableGEPCanonicalization();
     InstrumentedAddress =
         IRB.CreateGEP(VTy, Addr, {Zero, ConstantInt::get(IntptrTy, Idx)});
     instrumentAddress(I, InsertBefore, InstrumentedAddress, IsWrite);

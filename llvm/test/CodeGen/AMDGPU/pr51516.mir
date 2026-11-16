@@ -113,7 +113,7 @@ body:             |
     GLOBAL_STORE_DWORDX4_SADDR %3, %13, %2.sub0_sub1, 0, 0, implicit $exec
     %12.sub0:vreg_128 = COPY %11.sub2
     %12.sub2:vreg_128 = COPY %11.sub3
-    GLOBAL_STORE_DWORDX4_SADDR %3, %12, %2.sub0_sub1, 16, 0, implicit $exec, implicit killed %1
+    GLOBAL_STORE_DWORDX4_SADDR %3, %12, %2.sub0_sub1, 16, 0, implicit $exec, implicit %1
     S_ENDPGM 0
 
 ...

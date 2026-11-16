@@ -73,7 +73,6 @@
 ---
 name:            fn2
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 registers:

@@ -1997,6 +1997,10 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     if (m_process_sp) {
       m_process_sp->ModulesDidLoad(module_list);
     }
+    m_scratch_type_system_map.ForEach([&](lldb::TypeSystemSP type_system) {
+      type_system->ModulesDidLoad(module_list);
+      return true;
+    });
     RunModuleHooks(/*is_load=*/true);
     auto data_sp =
         std::make_shared<TargetEventData>(shared_from_this(), module_list);
@@ -2241,6 +2245,7 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   if (file_cache_read_buffer && file_cache_bytes_read > 0) {
     // Reading from the process failed. If we've previously succeeded in reading
     // something from the file cache, then copy that over and return that.
+    error.Clear();
     std::memcpy(dst, file_cache_read_buffer.get(), file_cache_bytes_read);
     return file_cache_bytes_read;
   }

@@ -317,6 +317,7 @@ public:
   bool iss7_0Imm() const { return CheckImmRange(7, 0, true, false, false); }
   bool iss6_0Imm() const { return CheckImmRange(6, 0, true, false, false); }
   bool iss6_3Imm() const { return CheckImmRange(6, 3, true, false, false); }
+  bool iss5_0Imm() const { return CheckImmRange(5, 0, true, false, false); }
   bool iss4_0Imm() const { return CheckImmRange(4, 0, true, false, false); }
   bool iss4_1Imm() const { return CheckImmRange(4, 1, true, false, false); }
   bool iss4_2Imm() const { return CheckImmRange(4, 2, true, false, false); }
