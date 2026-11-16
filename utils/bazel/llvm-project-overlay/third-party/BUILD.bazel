@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
-load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load(":cc_library_wrapper.bzl", "cc_library_wrapper")
 
 package(default_visibility = ["//visibility:public"])
@@ -30,7 +29,6 @@ config_setting(
     name = "llvm_libxml2_auto_macos",
     constraint_values = ["@platforms//os:macos"],
     flag_values = {":llvm_enable_libxml2": "auto"},
-    visibility = ["//visibility:private"],
 )
 
 config_setting(
@@ -42,7 +40,6 @@ config_setting(
 config_setting(
     name = "llvm_libxml2_system",
     flag_values = {":llvm_enable_libxml2": "system"},
-    visibility = ["//visibility:private"],
 )
 
 selects.config_setting_group(
