@@ -19,6 +19,11 @@
 
 #include <immintrin.h>
 
+// Not reachable from device code, as in MSVC STL headers that use the
+// intrinsics on the host only.
+inline float unused(float x) { return _mm_set1_ps(x)[0]; }
+float host_only(float x) { return _mm_add_ps(_mm_set1_ps(x), _mm_set1_ps(x))[0]; }
+
 #ifndef X86_BUILTIN
 [[clang::sycl_external]] float add(float x, float y) {
   // sse-error@+1 {{SYCL device code cannot call '_mm_set1_ps', which requires the 'sse' host feature}}
