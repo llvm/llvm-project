@@ -85,11 +85,11 @@ subg x0, x1, #16, #2, #99
 // CHECK-NEXT: addg x0, x1
 // CHECK: too few operands for instruction
 // CHECK-NEXT: addg x0, x1, #0
-// CHECK: index must be a multiple of 16 in range [0, 1008]
+// CHECK: immediate must be a multiple of 16 in range [0, 1008]
 // CHECK-NEXT: addg x0, x1, #1024, #0
-// CHECK: index must be a multiple of 16 in range [0, 1008]
+// CHECK: immediate must be a multiple of 16 in range [0, 1008]
 // CHECK-NEXT: addg x0, x1, #8, #0
-// CHECK: index must be a multiple of 16 in range [0, 1008]
+// CHECK: immediate must be a multiple of 16 in range [0, 1008]
 // CHECK-NEXT: addg x0, x1, #-16, #0
 // CHECK: immediate must be an integer in range [0, 15]
 // CHECK-NEXT: addg x0, x1, #0, #16
@@ -120,11 +120,11 @@ subg x0, x1, #16, #2, #99
 // CHECK-NEXT: subg x0, x1
 // CHECK: too few operands for instruction
 // CHECK-NEXT: subg x0, x1, #0
-// CHECK: index must be a multiple of 16 in range [0, 1008]
+// CHECK: immediate must be a multiple of 16 in range [0, 1008]
 // CHECK-NEXT: subg x0, x1, #1024, #0
-// CHECK: index must be a multiple of 16 in range [0, 1008]
+// CHECK: immediate must be a multiple of 16 in range [0, 1008]
 // CHECK-NEXT: subg x0, x1, #8, #0
-// CHECK: index must be a multiple of 16 in range [0, 1008]
+// CHECK: immediate must be a multiple of 16 in range [0, 1008]
 // CHECK-NEXT: subg x0, x1, #-16, #0
 // CHECK: immediate must be an integer in range [0, 15]
 // CHECK-NEXT: subg x0, x1, #0, #16
@@ -207,11 +207,11 @@ stg x0, [#1]
 // CHECK-NEXT: stg sp
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stg #1
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stg x0, [x0, x1]
@@ -245,11 +245,11 @@ stzg x0, [#1]
 // CHECK-NEXT: stzg sp
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stzg #1
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stzg x0, [x0, x1]
@@ -268,11 +268,11 @@ stg x0, [w0]!
 stg x0, [xzr]!
 stg x0, [#1]!
 
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stg x0, [x0, x1]!
@@ -291,11 +291,11 @@ stzg x0, [w0]!
 stzg x0, [xzr]!
 stzg x0, [#1]!
 
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stzg x0, [x0, x1]!
@@ -314,11 +314,11 @@ stg x0, [w0], #255
 stg x0, [xzr], #255
 stg x0, [#1], #255
 
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stg x0, [x0], x1
@@ -337,11 +337,11 @@ stzg x0, [w0], #255
 stzg x0, [xzr], #255
 stzg x0, [#1], #255
 
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stzg x0, [x0], x1
@@ -375,11 +375,11 @@ st2g x0, [#1]
 // CHECK-NEXT: st2g sp
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: st2g #1
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: st2g x0, [x0, x1]
@@ -413,11 +413,11 @@ stz2g x0, [#1]
 // CHECK-NEXT: stz2g sp
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stz2g #1
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stz2g x0, [x0, x1]
@@ -436,11 +436,11 @@ st2g x0, [w0, #256]!
 st2g x0, [xzr, #256]!
 st2g x0, [#1, #256]!
 
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: st2g x0, [x0, x1]!
@@ -459,11 +459,11 @@ stz2g x0, [w0, #255]!
 stz2g x0, [xzr, #255]!
 stz2g x0, [#1, #255]!
 
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stz2g x0, [x0, x1]!
@@ -482,11 +482,11 @@ st2g x0, [w0], #255
 st2g x0, [xzr], #255
 st2g x0, [#1], #255
 
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: st2g x0, [x0], x1
@@ -505,11 +505,11 @@ stz2g x0, [w0], #255
 stz2g x0, [xzr], #255
 stz2g x0, [#1], #255
 
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #-4112
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #4096
-// CHECK: index must be a multiple of 16 in range [-4096, 4080]
+// CHECK: immediate must be a multiple of 16 in range [-4096, 4080]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stz2g x0, [x0], x1
@@ -540,11 +540,11 @@ stgp x0, x1, [#1, #1]
 // CHECK-NEXT: stgp x0, sp
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stgp x0, x1, [xzr
-// CHECK: index must be a multiple of 16 in range [-1024, 1008]
+// CHECK: immediate must be a multiple of 16 in range [-1024, 1008]
 // CHECK-NEXT: #-1040
-// CHECK: index must be a multiple of 16 in range [-1024, 1008]
+// CHECK: immediate must be a multiple of 16 in range [-1024, 1008]
 // CHECK-NEXT: #1024
-// CHECK: index must be a multiple of 16 in range [-1024, 1008]
+// CHECK: immediate must be a multiple of 16 in range [-1024, 1008]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stgp x0, x1, [x2, x3]
@@ -581,11 +581,11 @@ stgp x0, x1, [#1, #1]!
 // CHECK-NEXT: stgp x0, sp
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stgp x0, x1, [xzr
-// CHECK: index must be a multiple of 16 in range [-1024, 1008]
+// CHECK: immediate must be a multiple of 16 in range [-1024, 1008]
 // CHECK-NEXT: #-1040
-// CHECK: index must be a multiple of 16 in range [-1024, 1008]
+// CHECK: immediate must be a multiple of 16 in range [-1024, 1008]
 // CHECK-NEXT: #1024
-// CHECK: index must be a multiple of 16 in range [-1024, 1008]
+// CHECK: immediate must be a multiple of 16 in range [-1024, 1008]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stgp x0, x1, [x2, x3]!
@@ -622,11 +622,11 @@ stgp x0, x1, [#1], #1
 // CHECK-NEXT: stgp x0, sp
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stgp x0, x1, [xzr
-// CHECK: index must be a multiple of 16 in range [-1024, 1008]
+// CHECK: immediate must be a multiple of 16 in range [-1024, 1008]
 // CHECK-NEXT: #-1040
-// CHECK: index must be a multiple of 16 in range [-1024, 1008]
+// CHECK: immediate must be a multiple of 16 in range [-1024, 1008]
 // CHECK-NEXT: #1024
-// CHECK: index must be a multiple of 16 in range [-1024, 1008]
+// CHECK: immediate must be a multiple of 16 in range [-1024, 1008]
 // CHECK-NEXT: #8
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: stgp x0, x1, [x2], x3
@@ -886,9 +886,9 @@ ldg x0, [#1, #255]
 // CHECK-NEXT: ldg sp, [x0, #0]
 // CHECK:      invalid operand for instruction
 // CHECK-NEXT: ldg x0, [x0, x0]
-// CHECK:      index must be a multiple of 16 in range [-4096, 4080].
+// CHECK:      immediate must be a multiple of 16 in range [-4096, 4080].
 // CHECK-NEXT: ldg x0, [x0, #4096]
-// CHECK:      index must be a multiple of 16 in range [-4096, 4080].
+// CHECK:      immediate must be a multiple of 16 in range [-4096, 4080].
 // CHECK-NEXT: ldg x0, [x0, #-4112]
 // CHECK:      invalid operand for instruction
 // CHECK-NEXT: ldg #1, [x0, #255]

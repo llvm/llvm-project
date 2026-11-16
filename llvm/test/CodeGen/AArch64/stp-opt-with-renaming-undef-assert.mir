@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=aarch64 -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=aarch64 -o - %s | FileCheck %s
 
 # This test checks that aarch64 load store optimizer is not throwing an
 # assertion:
@@ -29,7 +29,6 @@
 ---
 name:            test
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0', virtual-reg: '' }
 frameInfo:

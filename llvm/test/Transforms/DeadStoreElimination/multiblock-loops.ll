@@ -73,7 +73,7 @@ define void @test21(ptr noalias %P) {
 ; CHECK-LABEL: @test21(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARRAYIDX0]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARRAYIDX0]], i32 4
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP0]], i8 0, i64 24, i1 false)
 ; CHECK-NEXT:    br label [[FOR:%.*]]
 ; CHECK:       for:

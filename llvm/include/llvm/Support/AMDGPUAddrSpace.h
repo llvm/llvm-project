@@ -180,7 +180,7 @@ static constexpr unsigned LLVMToDWARFAddrSpaceMapping[] = {
 ///
 /// This maps private/scratch to the focused lane view.
 ///
-/// These mappings must be kept in sync with llvm/docs/AMDGPUUsage.rst
+/// These mappings must be kept in sync with llvm/docs/AMDGPUUsage.md
 /// table "AMDGPU DWARF Address Space Mapping".
 ///
 /// Note: This could return std::optional<int> but that would require

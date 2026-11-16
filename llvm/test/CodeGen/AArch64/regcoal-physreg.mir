@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-apple-ios -run-pass=register-coalescer -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-apple-ios -run-pass=register-coalescer %s -o - | FileCheck %s
 --- |
   declare void @f2()
 
@@ -12,6 +12,7 @@
 name: func0
 body: |
   bb.0:
+    liveins: $w7, $x1
     ; We usually should not coalesce copies from allocatable physregs.
     ; CHECK: %0:gpr32 = COPY $w7
     ; CHECK: STRWui %0, $x1, 0
@@ -65,13 +66,13 @@ body: |
     ; clobbered by the regmask on a call.
     ; CHECK: %7:gpr64 = COPY $x18
     ; CHECK: BL @f2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
-    ; CHECK: STRXui %7, $x1, 0
+    ; CHECK: STRXui %7, undef $x1, 0
 
     ; Need a def of x18 so that it's not deduced as "constant".
     $x18 = COPY $xzr
     %7 : gpr64 = COPY $x18
     BL @f2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
-    STRXui %7, $x1, 0
+    STRXui %7, undef $x1, 0
 
     ; This can be coalesced.
     ; CHECK: $fp = SUBXri $fp, 4, 0

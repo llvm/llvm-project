@@ -99,8 +99,8 @@ static bool initGlobalBaseReg(MachineFunction &MF) {
           .addExternalSymbol("_GLOBAL_OFFSET_TABLE_",
                              X86II::MO_PIC_BASE_OFFSET);
       BuildMI(FirstMBB, MBBI, DL, TII->get(X86::ADD64rr), PC)
-          .addReg(PBReg, RegState::Kill)
-          .addReg(GOTReg, RegState::Kill)
+          .addReg(PBReg)
+          .addReg(GOTReg)
           .setOperandDead(3); // implicit-def $eflags
     } else {
       // In other code models, use a RIP-relative LEA to materialize the
