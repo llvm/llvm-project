@@ -1704,6 +1704,18 @@ public:
         Kind, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc);
   }
 
+  /// Build a new OpenMP metadirective.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult RebuildOMPMetaDirective(SourceLocation StartLoc,
+                                     SourceLocation EndLoc,
+                                     ArrayRef<OMPTraitInfo *> TraitInfos,
+                                     ArrayRef<Stmt *> Variants) {
+    return getSema().OpenMP().ActOnOpenMPMetaDirective(StartLoc, EndLoc,
+                                                       TraitInfos, Variants);
+  }
+
   /// Build a new OpenMP informational directive.
   StmtResult RebuildOMPInformationalDirective(OpenMPDirectiveKind Kind,
                                               DeclarationNameInfo DirName,
@@ -3880,8 +3892,8 @@ public:
   concepts::NestedRequirement *
   RebuildNestedRequirement(StringRef InvalidConstraintEntity,
                            const ASTConstraintSatisfaction &Satisfaction) {
-    return SemaRef.BuildNestedRequirement(InvalidConstraintEntity,
-                                          Satisfaction);
+    return new (getSema().Context)
+        concepts::NestedRequirement(InvalidConstraintEntity, &Satisfaction);
   }
 
   concepts::NestedRequirement *RebuildNestedRequirement(Expr *Constraint) {
@@ -5328,7 +5340,6 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
         PackLocIterator;
 
       TemplateArgumentListInfo *PackOutput = &Outputs;
-      TemplateArgumentListInfo New;
 
       if (TransformTemplateArguments(
               PackLocIterator(*this, In.getArgument().pack_begin()),
@@ -6213,14 +6224,15 @@ QualType TreeTransform<Derived>::TransformDependentVectorType(
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-  ExprResult Size = getDerived().TransformExpr(T->getSizeExpr());
+  Expr *OrigSize = TL.getSizeExpr();
+  ExprResult Size = getDerived().TransformExpr(OrigSize);
   Size = SemaRef.ActOnConstantExpression(Size);
   if (Size.isInvalid())
     return QualType();
 
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || ElementType != T->getElementType() ||
-      Size.get() != T->getSizeExpr()) {
+      Size.get() != OrigSize) {
     Result = getDerived().RebuildDependentVectorType(
         ElementType, Size.get(), T->getAttributeLoc(), T->getVectorKind());
     if (Result.isNull())
@@ -6232,9 +6244,13 @@ QualType TreeTransform<Derived>::TransformDependentVectorType(
     DependentVectorTypeLoc NewTL =
         TLB.push<DependentVectorTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
+    NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+    NewTL.setSizeExpr(Size.get());
   } else {
     VectorTypeLoc NewTL = TLB.push<VectorTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
+    NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+    NewTL.setSizeExpr(Size.get());
   }
 
   return Result;
@@ -6246,7 +6262,6 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
                                       DependentSizedExtVectorTypeLoc TL) {
   const DependentSizedExtVectorType *T = TL.getTypePtr();
 
-  // FIXME: ext vector locs should be nested
   QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
   if (ElementType.isNull())
     return QualType();
@@ -6255,18 +6270,17 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-  ExprResult Size = getDerived().TransformExpr(T->getSizeExpr());
+  Expr *OrigSize = TL.getSizeExpr();
+  ExprResult Size = getDerived().TransformExpr(OrigSize);
   Size = SemaRef.ActOnConstantExpression(Size);
   if (Size.isInvalid())
     return QualType();
 
   QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() ||
-      ElementType != T->getElementType() ||
-      Size.get() != T->getSizeExpr()) {
-    Result = getDerived().RebuildDependentSizedExtVectorType(ElementType,
-                                                             Size.get(),
-                                                         T->getAttributeLoc());
+  if (getDerived().AlwaysRebuild() || ElementType != T->getElementType() ||
+      Size.get() != OrigSize) {
+    Result = getDerived().RebuildDependentSizedExtVectorType(
+        ElementType, Size.get(), T->getAttributeLoc());
     if (Result.isNull())
       return QualType();
   }
@@ -6276,9 +6290,13 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
     DependentSizedExtVectorTypeLoc NewTL
       = TLB.push<DependentSizedExtVectorTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
+    NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+    NewTL.setSizeExpr(Size.get());
   } else {
     ExtVectorTypeLoc NewTL = TLB.push<ExtVectorTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
+    NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+    NewTL.setSizeExpr(Size.get());
   }
 
   return Result;
@@ -6428,6 +6446,8 @@ QualType TreeTransform<Derived>::TransformVectorType(TypeLocBuilder &TLB,
 
   VectorTypeLoc NewTL = TLB.push<VectorTypeLoc>(Result);
   NewTL.setNameLoc(TL.getNameLoc());
+  NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+  NewTL.setSizeExpr(TL.getSizeExpr());
 
   return Result;
 }
@@ -6443,15 +6463,16 @@ QualType TreeTransform<Derived>::TransformExtVectorType(TypeLocBuilder &TLB,
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() ||
       ElementType != T->getElementType()) {
-    Result = getDerived().RebuildExtVectorType(ElementType,
-                                               T->getNumElements(),
-                                               /*FIXME*/ SourceLocation());
+    Result = getDerived().RebuildExtVectorType(ElementType, T->getNumElements(),
+                                               TL.getAttrNameLoc());
     if (Result.isNull())
       return QualType();
   }
 
   ExtVectorTypeLoc NewTL = TLB.push<ExtVectorTypeLoc>(Result);
   NewTL.setNameLoc(TL.getNameLoc());
+  NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+  NewTL.setSizeExpr(TL.getSizeExpr());
 
   return Result;
 }
@@ -10072,12 +10093,45 @@ StmtResult TreeTransform<Derived>::TransformOMPInformationalDirective(
 template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
-  // TODO: Fix This
-  llvm::omp::Version OMPVersion =
-      getDerived().getSema().getLangOpts().getOpenMPVersion();
-  SemaRef.Diag(D->getBeginLoc(), diag::err_omp_instantiation_not_supported)
-      << getOpenMPDirectiveName(D->getDirectiveKind(), OMPVersion);
-  return StmtError();
+  // Every variant is a complete directive (or the plain associated statement),
+  // so it is transformed on its own.
+  SmallVector<Stmt *, 4> Variants;
+  for (Stmt *V : D->variants()) {
+    StmtResult NewV = getDerived().TransformStmt(V);
+    if (NewV.isInvalid())
+      return StmtError();
+    Variants.push_back(NewV.get());
+  }
+
+  // Copy the trait infos and transform their score and condition expressions.
+  // The implicit 'otherwise' trait info is added back by Sema.
+  ArrayRef<OMPTraitInfo *> OldTraitInfos = D->traitInfos();
+  if (D->hasImplicitOtherwise())
+    OldTraitInfos = OldTraitInfos.drop_back();
+  SmallVector<OMPTraitInfo *, 4> TraitInfos;
+  for (const OMPTraitInfo *OldTI : OldTraitInfos) {
+    OMPTraitInfo &TI = getSema().getASTContext().getNewOMPTraitInfo();
+    TI = *OldTI;
+    auto TransformScoreOrCondition = [&](Expr *&E, bool IsScore) {
+      if (!E)
+        return false;
+      EnterExpressionEvaluationContext Ctx(
+          getSema(),
+          IsScore ? Sema::ExpressionEvaluationContext::ConstantEvaluated
+                  : Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+      ExprResult ER = getDerived().TransformExpr(E);
+      if (!ER.isUsable())
+        return true;
+      E = ER.get();
+      return false;
+    };
+    if (TI.anyScoreOrCondition(TransformScoreOrCondition))
+      return StmtError();
+    TraitInfos.push_back(&TI);
+  }
+
+  return getDerived().RebuildOMPMetaDirective(D->getBeginLoc(), D->getEndLoc(),
+                                              TraitInfos, Variants);
 }
 
 template <typename Derived>
@@ -10953,6 +11007,17 @@ TreeTransform<Derived>::TransformOMPTargetParallelGenericLoopDirective(
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
       OMPD_target_parallel_loop, DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPTargetGenericLoopDirective(
+    OMPTargetGenericLoopDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_loop, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;

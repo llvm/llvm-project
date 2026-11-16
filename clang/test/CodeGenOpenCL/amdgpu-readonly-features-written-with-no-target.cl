@@ -4,9 +4,13 @@
 // if there is no target specified.
 
 // RUN: %clang_cc1 -triple amdgpu -emit-llvm -o - %s | FileCheck --check-prefix=NOCPU %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu -emit-llvm -o - %s | FileCheck --check-prefix=NOCPU %s %}
 // RUN: %clang_cc1 -triple amdgpu9.42 -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu9.42 -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -triple amdgpu11.00 -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu11.00 -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -triple amdgpu12.00 -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu12.00 -emit-llvm -o - %s | FileCheck %s %}
 
 __attribute__((target("gws,image-insts,vmem-to-lds-load-insts"))) void test() {}
 

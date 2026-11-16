@@ -3,7 +3,7 @@
 # RUN: llvm-mc --filetype=obj --triple=loongarch64-unknown-elf %s -o %t.o
 
 # RUN: ld.lld %t.o --section-start=.text=0x20000 --section-start=.data=0x21000 --section-start=.got=0x21080 -o %t.1
-# RUN: llvm-objdump --no-show-raw-insn -d %t.1 | FileCheck --match-full-lines %s
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t.1 | FileCheck --match-full-lines %s
 # CHECK: 20000: pcaddu12i $t0, 1
 # CHECK: 20004: pcaddu12i $t0, 1
 
