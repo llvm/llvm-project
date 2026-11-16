@@ -2813,11 +2813,13 @@ private:
   void ParseParameterDeclarationClause(
       Declarator &D, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc) {
+      SourceLocation &EllipsisLoc,
+      LateParsedAttrList *LateParamAttrs = nullptr) {
     return ParseParameterDeclarationClause(
         D.getContext(), attrs, ParamInfo, EllipsisLoc,
         D.getCXXScopeSpec().isSet() &&
-            D.isFunctionDeclaratorAFunctionDeclaration());
+            D.isFunctionDeclaratorAFunctionDeclaration(),
+        LateParamAttrs);
   }
 
   /// ParseParameterDeclarationClause - Parse a (possibly empty) parameter-list
@@ -2858,7 +2860,8 @@ private:
   void ParseParameterDeclarationClause(
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false);
+      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false,
+      LateParsedAttrList *LateParamAttrs = nullptr);
 
   /// \verbatim
   /// [C90]   direct-declarator '[' constant-expression[opt] ']'
@@ -5475,10 +5478,6 @@ private:
   /// This is managed by the \c InMessageExpressionRAIIObject class, and
   /// should not be set directly.
   bool InMessageExpression;
-
-  /// While the parameters of a non-static member function are parsed, its
-  /// class, through whose 'this' an attribute on a parameter names a member.
-  CXXRecordDecl *ParamAttrThisRecord = nullptr;
 
   /// True if we are within an Objective-C container while parsing C-like decls.
   ///

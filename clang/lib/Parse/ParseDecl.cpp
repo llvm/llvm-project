@@ -523,12 +523,6 @@ unsigned Parser::ParseAttributeArgsCommon(
   if (ChangeKWThisToIdent && Tok.is(tok::kw_this))
     Tok.setKind(tok::identifier);
 
-  // On a parameter of a non-static member function, an unevaluated argument
-  // names a member through 'this', as on the function itself.
-  Sema::CXXThisScopeRAII ThisScope(
-      Actions, ParamAttrThisRecord, Qualifiers(),
-      attributeParsedArgsUnevaluated(*AttrName, Form.getSyntax(), ScopeName));
-
   ArgsVector ArgExprs;
   if (Tok.is(tok::identifier)) {
     // If this attribute wants an 'identifier' argument, make it so.
@@ -2192,6 +2186,11 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
        TemplateInfo.Kind == ParsedTemplateKind::ExplicitSpecialization);
   SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
 
+  // Save late-parsed attributes for now; they need to be parsed in the
+  // appropriate function scope after the function Decl has been constructed.
+  // These will be parsed in ParseFunctionDefinition or ParseLexedAttrList.
+  LateParsedAttrList LateParsedAttrs(true);
+  D.setDeclarationLateAttrs(&LateParsedAttrs);
   ParseDeclarator(D);
 
   if (IsTemplateSpecOrInst)
@@ -2216,10 +2215,6 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     ParseTrailingRequiresClauseWithScope(D);
   }
 
-  // Save late-parsed attributes for now; they need to be parsed in the
-  // appropriate function scope after the function Decl has been constructed.
-  // These will be parsed in ParseFunctionDefinition or ParseLexedAttrList.
-  LateParsedAttrList LateParsedAttrs(true);
   if (D.isFunctionDeclarator()) {
     MaybeParseGNUAttributes(D, &LateParsedAttrs);
 
@@ -7407,37 +7402,6 @@ void Parser::InitCXXThisScopeForDeclaratorIfRelevant(
                     IsCXX11MemberFunction);
 }
 
-/// The class of the function declared by D, if it is a non-static member
-/// function, or null.
-static CXXRecordDecl *getParamAttrThisRecord(Sema &Actions, Declarator &D) {
-  auto *RD = dyn_cast<CXXRecordDecl>(Actions.CurContext);
-  if (!RD || D.getDeclSpec().isFriendSpecified())
-    return nullptr;
-  // Not isStaticMember(): until the function chunk is added, it reads a member
-  // function template as a variable template, which is static.
-  if (D.getContext() == DeclaratorContext::Member) {
-    const UnqualifiedId &Name = D.getName();
-    bool IsStatic =
-        D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
-        (Name.getKind() == UnqualifiedIdKind::IK_OperatorFunctionId &&
-         CXXMethodDecl::isStaticOverloadedOperator(
-             Name.OperatorFunctionId.Operator));
-    return IsStatic ? nullptr : RD;
-  }
-  // An out-of-line definition does not say whether it is static, so require
-  // every member of that name to be a non-static function.
-  if (!D.getCXXScopeSpec().isSet())
-    return nullptr;
-  DeclContextLookupResult R =
-      RD->lookup(Actions.GetNameForDeclarator(D).getName());
-  if (R.empty() || !llvm::all_of(R, [](const NamedDecl *ND) {
-        const auto *MD = dyn_cast_or_null<CXXMethodDecl>(ND->getAsFunction());
-        return MD && MD->isImplicitObjectMemberFunction();
-      }))
-    return nullptr;
-  return RD;
-}
-
 void Parser::ParseFunctionDeclarator(Declarator &D,
                                      ParsedAttributes &FirstArgAttrs,
                                      BalancedDelimiterTracker &Tracker,
@@ -7494,15 +7458,19 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     ProhibitAttributes(FnAttrs);
   } else {
     if (Tok.isNot(tok::r_paren)) {
-      // A nested prototype, such as a callback's, keeps the enclosing one's
-      // class. A function with an explicit object parameter, which comes
-      // first, has no 'this'.
-      CXXRecordDecl *ThisRecord = ParamAttrThisRecord;
-      if (D.isFunctionDeclaratorAFunctionDeclaration())
-        ThisRecord =
-            Tok.is(tok::kw_this) ? nullptr : getParamAttrThisRecord(Actions, D);
-      llvm::SaveAndRestore SaveThisRecord(ParamAttrThisRecord, ThisRecord);
-      ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, EllipsisLoc);
+      // In C++, the late-parsed attributes of a function's parameters join the
+      // function's own, which are parsed in its scope once it is declared.
+      // On an out-of-line declaration, whether the function is static isn't
+      // known until it is matched to its declaration. Those of a nested
+      // prototype, such as a callback's, belong to no function and are parsed
+      // in the clause.
+      LateParsedAttrList *FnLateAttrs = nullptr;
+      if (getLangOpts().CPlusPlus &&
+          D.isFunctionDeclaratorAFunctionDeclaration() &&
+          D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_typedef)
+        FnLateAttrs = D.getDeclarationLateAttrs();
+      ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, EllipsisLoc,
+                                      FnLateAttrs);
     } else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
 
@@ -7728,7 +7696,8 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 void Parser::ParseParameterDeclarationClause(
     DeclaratorContext DeclaratorCtx, ParsedAttributes &FirstArgAttrs,
     SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-    SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration) {
+    SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration,
+    LateParsedAttrList *OuterLateParamAttrs) {
 
   // Avoid exceeding the maximum function scope depth.
   // See https://bugs.llvm.org/show_bug.cgi?id=19607
@@ -7763,9 +7732,12 @@ void Parser::ParseParameterDeclarationClause(
   // prototype that is declared later, such as a callback parameter whose
   // attribute names a lock passed after it. Defer those to the end of the
   // clause, where every parameter is declared and the prototype scope is still
-  // open, so no scope need be re-entered.
-  LateParsedAttrList LateParamAttrs(/*PSoon=*/true,
-                                    /*LateAttrParseExperimentalExtOnly=*/true);
+  // open, so no scope need be re-entered. If the caller passes
+  // OuterLateParamAttrs, late-parse every late-parsed attribute, not just the
+  // experimental ones.
+  LateParsedAttrList LateParamAttrs(
+      /*PSoon=*/true,
+      /*LateAttrParseExperimentalExtOnly=*/!OuterLateParamAttrs);
 
   do {
     // FIXME: Issue a diagnostic if we parsed an attribute-specifier-seq
@@ -8019,8 +7991,28 @@ void Parser::ParseParameterDeclarationClause(
     // If the next token is a comma, consume it and keep reading arguments.
   } while (TryConsumeToken(tok::comma));
 
+  // Split the attributes of the declared parameters into those with a decl,
+  // which go to the caller, and those without, which are parsed and diagnosed
+  // now.
+  if (OuterLateParamAttrs) {
+    unsigned Kept = 0;
+    for (LateParsedAttribute *LA : LateParamAttrs) {
+      if (LA->Decls.empty()) {
+        LateParamAttrs[Kept++] = LA;
+        continue;
+      }
+      OuterLateParamAttrs->push_back(LA);
+      // Attributes in a class are parsed at the end of the class, along
+      // with other late-parsed declarations.
+      if (!ClassStack.empty() && !OuterLateParamAttrs->parseSoon())
+        getCurrentClass().LateParsedDeclarations.push_back(LA);
+    }
+    LateParamAttrs.resize(Kept);
+  }
+
   // Every parameter is declared and still in scope, so a deferred attribute can
-  // name any of them.
+  // name any of them. One whose parameter was not declared has no decl, and is
+  // diagnosed.
   if (!LateParamAttrs.empty())
     ParseLexedAttributeList(LateParamAttrs, /*D=*/nullptr, /*EnterScope=*/false,
                             /*OnDefinition=*/false);

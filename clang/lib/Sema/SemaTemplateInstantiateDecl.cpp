@@ -32,6 +32,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
@@ -890,8 +891,27 @@ instantiateAttrOnDecl(Sema &S,
   // Allow 'this' within late-parsed attributes.
   auto *ND = cast<NamedDecl>(New);
   auto *ThisContext = dyn_cast_or_null<CXXRecordDecl>(ND->getDeclContext());
-  Sema::CXXThisScopeRAII ThisScope(S, ThisContext, Qualifiers(),
-                                   ND->isCXXInstanceMember());
+  Qualifiers ThisQuals;
+  bool HasThis = ND->isCXXInstanceMember();
+  // An attribute on a parameter names a member through the 'this' of the
+  // parameter's function, if it has an implicit object parameter; otherwise
+  // there is none, hiding any outer one. A lambda's parameters keep the 'this'
+  // around the lambda.
+  std::optional<llvm::SaveAndRestore<QualType>> NoThis;
+  if (auto *FD = isa<ParmVarDecl>(ND)
+                     ? dyn_cast<FunctionDecl>(ND->getDeclContext())
+                     : nullptr;
+      FD && !isLambdaCallOperator(FD)) {
+    auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    HasThis = MD && MD->isImplicitObjectMemberFunction();
+    if (HasThis) {
+      ThisContext = MD->getParent();
+      ThisQuals = MD->getMethodQualifiers();
+    } else {
+      NoThis.emplace(S.CXXThisTypeOverride, QualType());
+    }
+  }
+  Sema::CXXThisScopeRAII ThisScope(S, ThisContext, ThisQuals, HasThis);
 
   Attr *NewAttr =
       sema::instantiateTemplateAttribute(TmplAttr, S.Context, S, TemplateArgs);
@@ -3039,7 +3059,13 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
   }
 
   SmallVector<ParmVarDecl *, 4> Params;
-  TypeSourceInfo *TInfo = SubstFunctionType(D, Params);
+  Sema::LateInstantiatedAttrVec ParamAttrs;
+  llvm::scope_exit FreeParamAttrs(
+      [&, Outer = SemaRef.CurrentInstantiationScope] {
+        for (const Sema::LateInstantiatedAttribute &LA : ParamAttrs)
+          LocalInstantiationScope::deleteScopes(LA.Scope, Outer);
+      });
+  TypeSourceInfo *TInfo = SubstFunctionType(D, Params, ParamAttrs);
   if (!TInfo)
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
@@ -3149,6 +3175,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     if (Params[P])
       Params[P]->setOwningFunction(Function);
   Function->setParams(Params);
+  instantiateParamLateAttrs(ParamAttrs);
 
   if (TrailingRequiresClause)
     Function->setTrailingRequiresClause(TrailingRequiresClause);
@@ -3457,7 +3484,13 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   }
 
   SmallVector<ParmVarDecl *, 4> Params;
-  TypeSourceInfo *TInfo = SubstFunctionType(D, Params);
+  Sema::LateInstantiatedAttrVec ParamAttrs;
+  llvm::scope_exit FreeParamAttrs(
+      [&, Outer = SemaRef.CurrentInstantiationScope] {
+        for (const Sema::LateInstantiatedAttribute &LA : ParamAttrs)
+          LocalInstantiationScope::deleteScopes(LA.Scope, Outer);
+      });
+  TypeSourceInfo *TInfo = SubstFunctionType(D, Params, ParamAttrs);
   if (!TInfo)
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
@@ -3618,6 +3651,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   for (unsigned P = 0; P < Params.size(); ++P)
     Params[P]->setOwningFunction(Method);
   Method->setParams(Params);
+  instantiateParamLateAttrs(ParamAttrs);
 
   if (InitMethodInstantiation(Method, D))
     Method->setInvalidDecl();
@@ -5469,8 +5503,28 @@ TemplateDeclInstantiator::InstantiateVarTemplatePartialSpecialization(
   return InstPartialSpec;
 }
 
+/// Instantiate the late-parsed attributes of the parameters of a function,
+/// which SubstFunctionType deferred until it is declared. In a class, they are
+/// deferred again until it is instantiated.
+void TemplateDeclInstantiator::instantiateParamLateAttrs(
+    Sema::LateInstantiatedAttrVec &ParamAttrs) {
+  if (!LateAttrs) {
+    SemaRef.InstantiateLateAttrs(TemplateArgs, ParamAttrs,
+                                 SemaRef.CurrentInstantiationScope);
+    return;
+  }
+  for (const Sema::LateInstantiatedAttribute &LA : ParamAttrs) {
+    LateAttrs->push_back(Sema::LateInstantiatedAttribute(
+        LA.TmplAttr, LA.Scope->cloneScopes(StartingScope), LA.NewDecl));
+    LocalInstantiationScope::deleteScopes(LA.Scope,
+                                          SemaRef.CurrentInstantiationScope);
+  }
+  ParamAttrs.clear();
+}
+
 TypeSourceInfo *TemplateDeclInstantiator::SubstFunctionType(
-    FunctionDecl *D, SmallVectorImpl<ParmVarDecl *> &Params) {
+    FunctionDecl *D, SmallVectorImpl<ParmVarDecl *> &Params,
+    Sema::LateInstantiatedAttrVec &ParamAttrs) {
   TypeSourceInfo *OldTInfo = D->getTypeSourceInfo();
   assert(OldTInfo && "substituting function without type source info");
   assert(Params.empty() && "parameter vector is non-empty at start");
@@ -5484,7 +5538,7 @@ TypeSourceInfo *TemplateDeclInstantiator::SubstFunctionType(
 
   TypeSourceInfo *NewTInfo = SemaRef.SubstFunctionDeclType(
       OldTInfo, TemplateArgs, D->getTypeSpecStartLoc(), D->getDeclName(),
-      ThisContext, ThisTypeQuals, EvaluateConstraints);
+      ThisContext, ThisTypeQuals, EvaluateConstraints, D, &ParamAttrs);
   if (!NewTInfo)
     return nullptr;
 

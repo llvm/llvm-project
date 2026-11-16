@@ -721,8 +721,10 @@ enum class TemplateSubstitutionKind : char {
     }
 
     // Helper functions for instantiating methods.
-    TypeSourceInfo *SubstFunctionType(FunctionDecl *D,
-                                      SmallVectorImpl<ParmVarDecl *> &Params);
+    TypeSourceInfo *
+    SubstFunctionType(FunctionDecl *D, SmallVectorImpl<ParmVarDecl *> &Params,
+                      Sema::LateInstantiatedAttrVec &ParamAttrs);
+    void instantiateParamLateAttrs(Sema::LateInstantiatedAttrVec &ParamAttrs);
     bool InitFunctionInstantiation(FunctionDecl *New, FunctionDecl *Tmpl);
     bool InitMethodInstantiation(CXXMethodDecl *New, CXXMethodDecl *Tmpl);
 
