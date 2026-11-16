@@ -60913,9 +60913,49 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDNode *N,
                           PMADDBuilder);
 }
 
+// Given PMADD(A,B) and PMADD(C,D) whose upper products are zero, return
+// PMADD(Pack(A,C), Pack(B,D)) so that the implicit add of PMADD replaces the
+// ADD of the two.
+//
+// With B the input element width, Pack works in each 2B-bit element:
+//   Pack(Lo, Hi) = Lo | (Hi << B)
+// placing the even input elements of Lo and Hi in the even and odd input
+// elements of the result.
+//
+// The odd input elements of Hi do not matter, as their products are zero,
+// but both inputs of the Lo PMADD must have zero odd elements so that no
+// masking is needed.
+static SDValue getPackedPMADD(SelectionDAG &DAG, SDValue N0, SDValue N1,
+                              const APInt &DemandedHiElts, const SDLoc &DL) {
+  auto HiEltsZero = [&](SDValue N) {
+    return DAG.MaskedVectorIsZero(N.getOperand(0), DemandedHiElts) &&
+           DAG.MaskedVectorIsZero(N.getOperand(1), DemandedHiElts);
+  };
+  if (!HiEltsZero(N0)) {
+    if (!HiEltsZero(N1))
+      return SDValue();
+    std::swap(N0, N1);
+  }
+
+  EVT VT = N0.getValueType();
+  MVT OpVT = N0.getOperand(0).getSimpleValueType();
+  SDValue ShAmt =
+      DAG.getShiftAmountConstant(OpVT.getScalarSizeInBits(), VT, DL);
+  auto Pack = [&](SDValue Lo, SDValue Hi) {
+    Hi = DAG.getNode(ISD::SHL, DL, VT, DAG.getBitcast(VT, Hi), ShAmt);
+    return DAG.getBitcast(
+        OpVT, DAG.getNode(ISD::OR, DL, VT, DAG.getBitcast(VT, Lo), Hi));
+  };
+
+  SDValue LHS = Pack(N0.getOperand(0), N1.getOperand(0));
+  SDValue RHS = Pack(N0.getOperand(1), N1.getOperand(1));
+  return DAG.getNode(N0.getOpcode(), DL, VT, LHS, RHS);
+}
+
 // ADD(PMADD(X,Y),PMADD(Z,W)) -> PMADD(SHUFFLE(X,Z), SHUFFLE(Y,W))
 // If the upper product in each pair of both PMADDs is zero, merge the operand
-// elements and use the implicit add of PMADD.
+// elements and use the implicit add of PMADD. PMADDUBSW packs the operands
+// with SHIFT+OR instead of shuffles, as its vXi8 shuffles are expensive.
 static SDValue combineAddOfPMADD(SelectionDAG &DAG, SDValue N0, SDValue N1,
                                  const SDLoc &DL, EVT VT) {
   if (N0.getOpcode() != N1.getOpcode() ||
@@ -60942,6 +60982,15 @@ static SDValue combineAddOfPMADD(SelectionDAG &DAG, SDValue N0, SDValue N1,
   if (N0.getOpcode() == X86ISD::VPMADDUBSW &&
       !DAG.willNotOverflowAdd(/*IsSigned=*/true, N0, N1))
     return SDValue();
+
+  // Both PMADDs must disappear or the packing ops are pure overhead. The worst
+  // case costs an instruction or two more than the separate PMADDs, but saves
+  // a PMADD on AVX512.
+  if (N0.getOpcode() == X86ISD::VPMADDUBSW) {
+    if (!N0.hasOneUse() || !N1.hasOneUse())
+      return SDValue();
+    return getPackedPMADD(DAG, N0, N1, DemandedHiElts, DL);
+  }
 
   // Create a shuffle mask packing the lower elements from each PMADD.
   SmallVector<int> Mask;

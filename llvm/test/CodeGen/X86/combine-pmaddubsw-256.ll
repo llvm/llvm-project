@@ -143,32 +143,28 @@ define <16 x i16> @combine_pmaddubsw_add_negative_overflow(<32 x i8> %a0, <32 x 
 define <16 x i16> @combine_pmaddubsw_add_independent_inputs(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> %a2, <32 x i8> %a3) {
 ; AVX2-LABEL: combine_pmaddubsw_add_independent_inputs:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
-; AVX2-NEXT:    vpshufb %ymm4, %ymm3, %ymm3
-; AVX2-NEXT:    vpshufb %ymm4, %ymm1, %ymm1
-; AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0],ymm3[0],ymm1[1],ymm3[1],ymm1[2],ymm3[2],ymm1[3],ymm3[3],ymm1[4],ymm3[4],ymm1[5],ymm3[5],ymm1[6],ymm3[6],ymm1[7],ymm3[7],ymm1[16],ymm3[16],ymm1[17],ymm3[17],ymm1[18],ymm3[18],ymm1[19],ymm3[19],ymm1[20],ymm3[20],ymm1[21],ymm3[21],ymm1[22],ymm3[22],ymm1[23],ymm3[23]
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm3 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX2-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpshufb %ymm4, %ymm2, %ymm2
-; AVX2-NEXT:    vpshufb %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[1],ymm2[1],ymm0[2],ymm2[2],ymm0[3],ymm2[3],ymm0[4],ymm2[4],ymm0[5],ymm2[5],ymm0[6],ymm2[6],ymm0[7],ymm2[7],ymm0[16],ymm2[16],ymm0[17],ymm2[17],ymm0[18],ymm2[18],ymm0[19],ymm2[19],ymm0[20],ymm2[20],ymm0[21],ymm2[21],ymm0[22],ymm2[22],ymm0[23],ymm2[23]
-; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0]
+; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX2-NEXT:    vpand %ymm5, %ymm1, %ymm1
 ; AVX2-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm1
+; AVX2-NEXT:    vpand %ymm5, %ymm3, %ymm2
+; AVX2-NEXT:    vpmaddubsw %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_pmaddubsw_add_independent_inputs:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
-; AVX512-NEXT:    vpshufb %ymm4, %ymm3, %ymm3
-; AVX512-NEXT:    vpshufb %ymm4, %ymm1, %ymm1
-; AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0],ymm3[0],ymm1[1],ymm3[1],ymm1[2],ymm3[2],ymm1[3],ymm3[3],ymm1[4],ymm3[4],ymm1[5],ymm3[5],ymm1[6],ymm3[6],ymm1[7],ymm3[7],ymm1[16],ymm3[16],ymm1[17],ymm3[17],ymm1[18],ymm3[18],ymm1[19],ymm3[19],ymm1[20],ymm3[20],ymm1[21],ymm3[21],ymm1[22],ymm3[22],ymm1[23],ymm3[23]
-; AVX512-NEXT:    vpbroadcastb {{.*#+}} ymm3 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX512-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; AVX512-NEXT:    vpshufb %ymm4, %ymm2, %ymm2
-; AVX512-NEXT:    vpshufb %ymm4, %ymm0, %ymm0
-; AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[1],ymm2[1],ymm0[2],ymm2[2],ymm0[3],ymm2[3],ymm0[4],ymm2[4],ymm0[5],ymm2[5],ymm0[6],ymm2[6],ymm0[7],ymm2[7],ymm0[16],ymm2[16],ymm0[17],ymm2[17],ymm0[18],ymm2[18],ymm0[19],ymm2[19],ymm0[20],ymm2[20],ymm0[21],ymm2[21],ymm0[22],ymm2[22],ymm0[23],ymm2[23]
-; AVX512-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX512-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0]
+; AVX512-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; AVX512-NEXT:    vpbroadcastb {{.*#+}} ymm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX512-NEXT:    vpand %ymm5, %ymm1, %ymm1
 ; AVX512-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpand %ymm4, %ymm2, %ymm1
+; AVX512-NEXT:    vpand %ymm5, %ymm3, %ymm2
+; AVX512-NEXT:    vpmaddubsw %ymm2, %ymm1, %ymm1
+; AVX512-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %mask = bitcast <16 x i16> splat (i16 127) to <32 x i8>
   %and0 = and <32 x i8> %a0, %mask
@@ -189,30 +185,26 @@ declare <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8>, <32 x i8>)
 define <16 x i16> @combine_pmaddubsw_add_first_both_zero(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> %a2, <32 x i8> %a3) {
 ; AVX2-LABEL: combine_pmaddubsw_add_first_both_zero:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30,u,u,u,u,u,u,u,u]
-; AVX2-NEXT:    vpshufb %ymm4, %ymm2, %ymm2
-; AVX2-NEXT:    vpshufb %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[1],ymm2[1],ymm0[2],ymm2[2],ymm0[3],ymm2[3],ymm0[4],ymm2[4],ymm0[5],ymm2[5],ymm0[6],ymm2[6],ymm0[7],ymm2[7],ymm0[16],ymm2[16],ymm0[17],ymm2[17],ymm0[18],ymm2[18],ymm0[19],ymm2[19],ymm0[20],ymm2[20],ymm0[21],ymm2[21],ymm0[22],ymm2[22],ymm0[23],ymm2[23]
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
-; AVX2-NEXT:    vpshufb %ymm2, %ymm3, %ymm3
-; AVX2-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0],ymm3[0],ymm1[1],ymm3[1],ymm1[2],ymm3[2],ymm1[3],ymm3[3],ymm1[4],ymm3[4],ymm1[5],ymm3[5],ymm1[6],ymm3[6],ymm1[7],ymm3[7],ymm1[16],ymm3[16],ymm1[17],ymm3[17],ymm1[18],ymm3[18],ymm1[19],ymm3[19],ymm1[20],ymm3[20],ymm1[21],ymm3[21],ymm1[22],ymm3[22],ymm1[23],ymm3[23]
+; AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX2-NEXT:    vpand %ymm0, %ymm4, %ymm0
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX2-NEXT:    vpsllw $8, %ymm2, %ymm2
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpsllw $8, %ymm3, %ymm2
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_pmaddubsw_add_first_both_zero:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30,u,u,u,u,u,u,u,u]
-; AVX512-NEXT:    vpshufb %ymm4, %ymm2, %ymm2
-; AVX512-NEXT:    vpshufb %ymm4, %ymm0, %ymm0
-; AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[1],ymm2[1],ymm0[2],ymm2[2],ymm0[3],ymm2[3],ymm0[4],ymm2[4],ymm0[5],ymm2[5],ymm0[6],ymm2[6],ymm0[7],ymm2[7],ymm0[16],ymm2[16],ymm0[17],ymm2[17],ymm0[18],ymm2[18],ymm0[19],ymm2[19],ymm0[20],ymm2[20],ymm0[21],ymm2[21],ymm0[22],ymm2[22],ymm0[23],ymm2[23]
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
-; AVX512-NEXT:    vpshufb %ymm2, %ymm3, %ymm3
-; AVX512-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
-; AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0],ymm3[0],ymm1[1],ymm3[1],ymm1[2],ymm3[2],ymm1[3],ymm3[3],ymm1[4],ymm3[4],ymm1[5],ymm3[5],ymm1[6],ymm3[6],ymm1[7],ymm3[7],ymm1[16],ymm3[16],ymm1[17],ymm3[17],ymm1[18],ymm3[18],ymm1[19],ymm3[19],ymm1[20],ymm3[20],ymm1[21],ymm3[21],ymm1[22],ymm3[22],ymm1[23],ymm3[23]
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
-; AVX512-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX512-NEXT:    vpsllw $8, %ymm2, %ymm2
+; AVX512-NEXT:    vpternlogq {{.*#+}} ymm2 = ymm2 | (ymm4 & ymm0)
+; AVX512-NEXT:    vpsllw $8, %ymm3, %ymm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = (ymm0 & m32bcst) | ymm1
+; AVX512-NEXT:    vpmaddubsw %ymm0, %ymm2, %ymm0
 ; AVX512-NEXT:    retq
   %v0 = and <32 x i8> %a0, bitcast (<16 x i16> splat (i16 255) to <32 x i8>)
   %v1 = and <32 x i8> %a1, bitcast (<16 x i16> splat (i16 63) to <32 x i8>)

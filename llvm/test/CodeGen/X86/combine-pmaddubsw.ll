@@ -359,49 +359,56 @@ define <8 x i16> @combine_pmaddubsw_add_negative_overflow(<16 x i8> %a0, <16 x i
 ; Independent inputs require new shuffles. Preserve the two PMADDUBSWs
 ; and the ADD instead of introducing those shuffles.
 define <8 x i16> @combine_pmaddubsw_add_independent_inputs(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2, <16 x i8> %a3) {
-; SSE-LABEL: combine_pmaddubsw_add_independent_inputs:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movq {{.*#+}} xmm4 = [0,2,4,6,8,10,12,14,0,0,0,0,0,0,0,0]
-; SSE-NEXT:    pshufb %xmm4, %xmm3
-; SSE-NEXT:    pshufb %xmm4, %xmm1
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3],xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; SSE-NEXT:    pand %xmm3, %xmm1
-; SSE-NEXT:    pshufb %xmm4, %xmm2
-; SSE-NEXT:    pshufb %xmm4, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; SSE-NEXT:    pand %xmm3, %xmm0
-; SSE-NEXT:    pmaddubsw %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSSE3-LABEL: combine_pmaddubsw_add_independent_inputs:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0]
+; SSSE3-NEXT:    pand %xmm4, %xmm0
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; SSSE3-NEXT:    pand %xmm5, %xmm1
+; SSSE3-NEXT:    pmaddubsw %xmm1, %xmm0
+; SSSE3-NEXT:    pand %xmm2, %xmm4
+; SSSE3-NEXT:    pand %xmm5, %xmm3
+; SSSE3-NEXT:    pmaddubsw %xmm3, %xmm4
+; SSSE3-NEXT:    paddw %xmm4, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: combine_pmaddubsw_add_independent_inputs:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm4 = [127,127,127,127,127,127,127,127]
+; SSE41-NEXT:    pand %xmm4, %xmm0
+; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; SSE41-NEXT:    pand %xmm5, %xmm1
+; SSE41-NEXT:    pmaddubsw %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm2, %xmm4
+; SSE41-NEXT:    pand %xmm5, %xmm3
+; SSE41-NEXT:    pmaddubsw %xmm3, %xmm4
+; SSE41-NEXT:    paddw %xmm4, %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_pmaddubsw_add_independent_inputs:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovq {{.*#+}} xmm4 = [0,2,4,6,8,10,12,14,0,0,0,0,0,0,0,0]
-; AVX1-NEXT:    vpshufb %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3],xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
-; AVX1-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0]
+; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm4, %xmm2, %xmm1
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm2
+; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_pmaddubsw_add_independent_inputs:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm4 = [0,2,4,6,8,10,12,14,0,0,0,0,0,0,0,0]
-; AVX2-NEXT:    vpshufb %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
-; AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3],xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm3 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX2-NEXT:    vpand %xmm3, %xmm1, %xmm1
-; AVX2-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
-; AVX2-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
-; AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; AVX2-NEXT:    vpand %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm4 = [127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0]
+; AVX2-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX2-NEXT:    vpand %xmm5, %xmm1, %xmm1
 ; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm4, %xmm2, %xmm1
+; AVX2-NEXT:    vpand %xmm5, %xmm3, %xmm2
+; AVX2-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %mask = bitcast <8 x i16> splat (i16 127) to <16 x i8>
   %and0 = and <16 x i8> %a0, %mask
@@ -420,29 +427,40 @@ define <8 x i16> @combine_pmaddubsw_add_independent_inputs(<16 x i8> %a0, <16 x 
 define <8 x i16> @combine_pmaddubsw_add_first_both_zero(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2, <16 x i8> %a3) {
 ; SSE-LABEL: combine_pmaddubsw_add_first_both_zero:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movq {{.*#+}} xmm4 = [0,2,4,6,8,10,12,14,0,0,0,0,0,0,0,0]
-; SSE-NEXT:    pshufb %xmm4, %xmm2
-; SSE-NEXT:    pshufb %xmm4, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; SSE-NEXT:    pshufb %xmm4, %xmm3
-; SSE-NEXT:    pshufb %xmm4, %xmm1
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3],xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    pmaddubsw %xmm1, %xmm0
+; SSE-NEXT:    psllw $8, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    psllw $8, %xmm3
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; SSE-NEXT:    por %xmm1, %xmm3
+; SSE-NEXT:    pmaddubsw %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_pmaddubsw_add_first_both_zero:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm4 = [0,2,4,6,8,10,12,14,0,0,0,0,0,0,0,0]
-; AVX-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
-; AVX-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
-; AVX-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; AVX-NEXT:    vpshufb %xmm4, %xmm3, %xmm2
-; AVX-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
-; AVX-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: combine_pmaddubsw_add_first_both_zero:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpsllw $8, %xmm2, %xmm2
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsllw $8, %xmm3, %xmm2
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pmaddubsw_add_first_both_zero:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX2-NEXT:    vpand %xmm0, %xmm4, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpsllw $8, %xmm2, %xmm2
+; AVX2-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpsllw $8, %xmm3, %xmm2
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX2-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
   %v0 = and <16 x i8> %a0, bitcast (<8 x i16> splat (i16 255) to <16 x i8>)
   %v1 = and <16 x i8> %a1, bitcast (<8 x i16> splat (i16 63) to <16 x i8>)
   %v2 = and <16 x i8> %a2, bitcast (<8 x i16> splat (i16 255) to <16 x i8>)
@@ -457,30 +475,40 @@ define <8 x i16> @combine_pmaddubsw_add_first_both_zero(<16 x i8> %a0, <16 x i8>
 define <8 x i16> @combine_pmaddubsw_add_first_both_zero_commuted(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2, <16 x i8> %a3) {
 ; SSE-LABEL: combine_pmaddubsw_add_first_both_zero_commuted:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movq {{.*#+}} xmm4 = [0,2,4,6,8,10,12,14,0,0,0,0,0,0,0,0]
-; SSE-NEXT:    pshufb %xmm4, %xmm0
-; SSE-NEXT:    pshufb %xmm4, %xmm2
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
-; SSE-NEXT:    pshufb %xmm4, %xmm1
-; SSE-NEXT:    pshufb %xmm4, %xmm3
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3],xmm3[4],xmm1[4],xmm3[5],xmm1[5],xmm3[6],xmm1[6],xmm3[7],xmm1[7]
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    psllw $8, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    psllw $8, %xmm3
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE-NEXT:    pmaddubsw %xmm3, %xmm2
-; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    por %xmm1, %xmm3
+; SSE-NEXT:    pmaddubsw %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_pmaddubsw_add_first_both_zero_commuted:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm4 = [0,2,4,6,8,10,12,14,0,0,0,0,0,0,0,0]
-; AVX-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
-; AVX-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
-; AVX-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
-; AVX-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
-; AVX-NEXT:    vpshufb %xmm4, %xmm3, %xmm2
-; AVX-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: combine_pmaddubsw_add_first_both_zero_commuted:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpsllw $8, %xmm2, %xmm2
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsllw $8, %xmm3, %xmm2
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pmaddubsw_add_first_both_zero_commuted:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX2-NEXT:    vpand %xmm0, %xmm4, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpsllw $8, %xmm2, %xmm2
+; AVX2-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpsllw $8, %xmm3, %xmm2
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX2-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
   %v0 = and <16 x i8> %a0, bitcast (<8 x i16> splat (i16 255) to <16 x i8>)
   %v1 = and <16 x i8> %a1, bitcast (<8 x i16> splat (i16 63) to <16 x i8>)
   %v2 = and <16 x i8> %a2, bitcast (<8 x i16> splat (i16 255) to <16 x i8>)
@@ -493,39 +521,43 @@ define <8 x i16> @combine_pmaddubsw_add_first_both_zero_commuted(<16 x i8> %a0, 
 
 ; Keep a PMADD with an additional store use instead of adding packing ops.
 define <8 x i16> @combine_pmaddubsw_add_first_both_zero_multiuse(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2, <16 x i8> %a3, ptr %sideout) {
-; SSE-LABEL: combine_pmaddubsw_add_first_both_zero_multiuse:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    movdqa %xmm0, %xmm4
-; SSE-NEXT:    pmaddubsw %xmm1, %xmm4
-; SSE-NEXT:    movdqu %xmm4, (%rdi)
-; SSE-NEXT:    movq {{.*#+}} xmm4 = [0,2,4,6,8,10,12,14,0,0,0,0,0,0,0,0]
-; SSE-NEXT:    pshufb %xmm4, %xmm1
-; SSE-NEXT:    pshufb %xmm4, %xmm3
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3],xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
-; SSE-NEXT:    pshufb %xmm4, %xmm2
-; SSE-NEXT:    pshufb %xmm4, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; SSE-NEXT:    pmaddubsw %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSSE3-LABEL: combine_pmaddubsw_add_first_both_zero_multiuse:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSSE3-NEXT:    pand %xmm4, %xmm0
+; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSSE3-NEXT:    pmaddubsw %xmm1, %xmm0
+; SSSE3-NEXT:    pand %xmm2, %xmm4
+; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; SSSE3-NEXT:    pmaddubsw %xmm3, %xmm4
+; SSSE3-NEXT:    movdqu %xmm0, (%rdi)
+; SSSE3-NEXT:    paddw %xmm4, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: combine_pmaddubsw_add_first_both_zero_multiuse:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pand %xmm4, %xmm0
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    pmaddubsw %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm2, %xmm4
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; SSE41-NEXT:    pmaddubsw %xmm3, %xmm4
+; SSE41-NEXT:    movdqu %xmm0, (%rdi)
+; SSE41-NEXT:    paddw %xmm4, %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_pmaddubsw_add_first_both_zero_multiuse:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm4
-; AVX1-NEXT:    vmovdqu %xmm4, (%rdi)
-; AVX1-NEXT:    vmovq {{.*#+}} xmm4 = [0,2,4,6,8,10,12,14,0,0,0,0,0,0,0,0]
-; AVX1-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
-; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3],xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
-; AVX1-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
-; AVX1-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
 ; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm4, %xmm2, %xmm1
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm2
+; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqu %xmm0, (%rdi)
+; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_pmaddubsw_add_first_both_zero_multiuse:
@@ -533,17 +565,12 @@ define <8 x i16> @combine_pmaddubsw_add_first_both_zero_multiuse(<16 x i8> %a0, 
 ; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX2-NEXT:    vpand %xmm4, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm4
-; AVX2-NEXT:    vmovdqu %xmm4, (%rdi)
-; AVX2-NEXT:    vmovq {{.*#+}} xmm4 = [0,2,4,6,8,10,12,14,0,0,0,0,0,0,0,0]
-; AVX2-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
-; AVX2-NEXT:    vpshufb %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
-; AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3],xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
-; AVX2-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
-; AVX2-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
-; AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
 ; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm4, %xmm2, %xmm1
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm2
+; AVX2-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vmovdqu %xmm0, (%rdi)
+; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %v0 = and <16 x i8> %a0, bitcast (<8 x i16> splat (i16 255) to <16 x i8>)
   %v1 = and <16 x i8> %a1, bitcast (<8 x i16> splat (i16 63) to <16 x i8>)
