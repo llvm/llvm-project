@@ -150,14 +150,17 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   if (!Stride.uge(EltSize.getFixedValue()))
     return nullptr;
 
-  // With nusw (implied by inbounds), Idx * Stride does not wrap as a signed
-  // quantity, and the following enumeration over ArrayElementCount is valid so
-  // long as the stride is positive. Conversely, without nusw, Idx * Stride is
-  // computed modulo 2^N (see MaskIdx below), and the masking in MaskIdx below
-  // is only exact when the stride is a power of two.
-  bool StrideIsValid = Expr.Flags.hasNoUnsignedSignedWrap()
-                           ? !Stride.isNegative()
-                           : Stride.isPowerOf2();
+  // - With nuw: `Idx * Stride` does not wrap and all strides are valid.
+  // - With nusw: `Idx * Stride` does not wrap as signed, and the following
+  //   enumeration over ArrayElementCount is valid so long as the stride is
+  //   positive.
+  // - Without nusw or nuw: `Idx * Stride` is computed modulo 2^N (see MaskIdx
+  //   below), and the masking in MaskIdx below is only exact when the stride
+  //   is a power of two.
+  bool StrideIsValid =
+      Expr.Flags.hasNoUnsignedWrap() ||
+      (Expr.Flags.hasNoUnsignedSignedWrap() ? !Stride.isNegative()
+                                            : Stride.isPowerOf2());
   if (!StrideIsValid)
     return nullptr;
 
@@ -287,15 +290,17 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // Now that we've scanned the entire array, emit our new comparison(s).  We
   // order the state machines in complexity of the generated code.
 
-  // If nusw (implied by inbounds) is not present, Idx * Stride can overflow.
+  // If none of nusw (implied by inbounds) or nuw is present, Idx * Stride can
+  // overflow.
   // Let's assume that Stride is 2 and the wanted value is at offset 0.
   // Then, there are two possible values for Idx to match offset 0:
   // 0x00..00, 0x80..00.
   // Emitting 'icmp eq Idx, 0' isn't correct in this case because the
   // comparison is false if Idx was 0x80..00.
-  // We need to erase the highest countTrailingZeros(ElementSize) bits of Idx.
+  // We need to erase the highest countTrailingZeros(Stride) bits of Idx.
   auto MaskIdx = [&](Value *Idx) {
-    if (!Expr.Flags.hasNoUnsignedSignedWrap() && Stride.countr_zero() != 0) {
+    if (!Expr.Flags.hasNoUnsignedWrap() &&
+        !Expr.Flags.hasNoUnsignedSignedWrap() && Stride.countr_zero() != 0) {
       Value *Mask = Constant::getAllOnesValue(Idx->getType());
       Mask = Builder.CreateLShr(Mask, Stride.countr_zero());
       Idx = Builder.CreateAnd(Idx, Mask);
