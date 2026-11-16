@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple i386-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple i386-apple-darwin10 -emit-llvm -o - | FileCheck %s %}
 struct __attribute((packed)) x {int a : 24;};
 int a(struct x* g) {
   // CHECK: load i24

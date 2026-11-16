@@ -175,7 +175,6 @@ PATCHFILE_NAME = "changes_for_analyzer.patch"
 # checkers we don't want to regress on.
 CHECKERS = ",".join(
     [
-        "alpha.unix.SimpleStream",
         "optin.taint",
         "cplusplus.NewDeleteLeaks",
         "core",

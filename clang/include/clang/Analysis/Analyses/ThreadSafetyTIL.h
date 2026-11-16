@@ -847,6 +847,18 @@ public:
     else Flags &= 0xFFFE;
   }
 
+  /// Set when the record is not the field's record, nor derived from it: the
+  /// owning object could not be reached (that would take a `container_of`).
+  /// The field is then printed qualified with its record, `inner->Outer::mu`.
+  bool isQualified() const { return (Flags & 0x02) != 0; }
+
+  void setQualified(bool b) {
+    if (b)
+      Flags |= 0x02;
+    else
+      Flags &= 0xFFFD;
+  }
+
   StringRef slotName() const {
     if (Cvdecl->getDeclName().isIdentifier())
       return Cvdecl->getName();

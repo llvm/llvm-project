@@ -47,6 +47,17 @@ struct ABICompatInfo {
   ABICompatInfo() : IsMatrixHA(true) {}
 };
 
+/// How promotable integer arguments are passed on X86
+/// (-mextend-small-integers).
+enum class SmallIntABICompatKind {
+  /// Compat with platform ABI (high bits unspecified).
+  Platform,
+  /// Compat with old Clang ABI (high bits zero/sign-extended).
+  Clang,
+  /// Compat with both. Extend in caller, don't assume in callee.
+  Both,
+};
+
 /// Flags controlling X86-specific ABI compatibility behaviour.
 struct X86ABICompatInfo : ABICompatInfo {
   bool PassInt128VectorsInMem : 1;
@@ -55,11 +66,13 @@ struct X86ABICompatInfo : ABICompatInfo {
   bool HonorsRevision98 : 1;
   bool Clang11Compat : 1;
   bool ClassifyUnnamedBitFields : 1;
+  SmallIntABICompatKind SmallIntABICompat;
 
   X86ABICompatInfo()
       : PassInt128VectorsInMem(true), ReturnCXXRecordGreaterThan128InMem(true),
         ClassifyIntegerMMXAsSSE(true), HonorsRevision98(true),
-        Clang11Compat(true), ClassifyUnnamedBitFields(true) {}
+        Clang11Compat(true), ClassifyUnnamedBitFields(true),
+        SmallIntABICompat(SmallIntABICompatKind::Both) {}
 };
 
 class TargetInfo {
@@ -83,6 +96,10 @@ public:
   /// Address space in which indirect arguments are allocated (the target's
   /// alloca/stack space).
   virtual unsigned getAllocaAddrSpace() const { return 0; }
+
+  /// Address space of the sret pointer of a record that cannot be passed in
+  /// registers (e.g. one with a non-trivial copy constructor or destructor).
+  virtual unsigned getSRetAddrSpace() const { return 0; }
 
   /// Whether the target has a 128-bit integer type. Default true.
   virtual bool hasInt128Type() const { return true; }
@@ -175,6 +192,10 @@ LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
 LLVM_ABI std::unique_ptr<TargetInfo>
 createAMDGPUTargetInfo(TypeBuilder &TB,
                        bool CoerceGenericPtrArgToGlobal = false);
+
+LLVM_ABI std::unique_ptr<TargetInfo>
+createSPIRVTargetInfo(TypeBuilder &TB, unsigned DefaultAddrSpace,
+                      bool KernelPassAggregatesIndirect = false);
 
 /// The AVX ABI level for X86 targets.
 enum class X86AVXABILevel {

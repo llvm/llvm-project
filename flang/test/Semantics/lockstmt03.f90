@@ -50,14 +50,14 @@ program test_lock_stmt
 
 ! C1173 - stat-variable and errmsg-variable shall not be a coindexed object
 
-  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
+  !ERROR: The stat-variable or errmsg-variable in a lock-stat-list may not be a coindexed object
   lock(lock_var, stat=coindexed_int[1])
 
-  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
+  !ERROR: The stat-variable or errmsg-variable in a lock-stat-list may not be a coindexed object
   lock(lock_var, errmsg=coindexed_msg[1])
 
-  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
-  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
+  !ERROR: The stat-variable or errmsg-variable in a lock-stat-list may not be a coindexed object
+  !ERROR: The stat-variable or errmsg-variable in a lock-stat-list may not be a coindexed object
   lock(lock_var, acquired_lock=coindexed_logical[1], stat=coindexed_int[1], errmsg=coindexed_msg[1])
 
 ! C1181 - No specifier shall appear more than once in a given lock-stat-list
@@ -65,35 +65,35 @@ program test_lock_stmt
   !ERROR: Multiple ACQUIRED_LOCK specifiers
   lock(lock_var, acquired_lock=bool, acquired_lock=repeated_bool)
 
-  !ERROR: The stat-variable in a sync-stat-list may not be repeated
+  !ERROR: The stat-variable in a lock-stat-list may not be repeated
   lock(lock_var, stat=status, stat=repeated_stat)
 
-  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
+  !ERROR: The errmsg-variable in a lock-stat-list may not be repeated
   lock(lock_var, errmsg=error_message, errmsg=repeated_msg)
 
   !ERROR: Multiple ACQUIRED_LOCK specifiers
   lock(lock_var, acquired_lock=bool, stat=status, errmsg=error_message, acquired_lock=repeated_bool)
 
-  !ERROR: The stat-variable in a sync-stat-list may not be repeated
+  !ERROR: The stat-variable in a lock-stat-list may not be repeated
   lock(lock_var, acquired_lock=bool, stat=status, errmsg=error_message, stat=repeated_stat)
 
-  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
+  !ERROR: The errmsg-variable in a lock-stat-list may not be repeated
   lock(lock_var, acquired_lock=bool, stat=status, errmsg=error_message, errmsg=repeated_msg)
 
-  !ERROR: The stat-variable in a sync-stat-list may not be repeated
+  !ERROR: The stat-variable in a lock-stat-list may not be repeated
   !ERROR: Multiple ACQUIRED_LOCK specifiers
   lock(lock_var, acquired_lock=bool, stat=status, errmsg=error_message, acquired_lock=repeated_bool, stat=repeated_stat)
 
-  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
+  !ERROR: The errmsg-variable in a lock-stat-list may not be repeated
   !ERROR: Multiple ACQUIRED_LOCK specifiers
   lock(lock_var, acquired_lock=bool, stat=status, errmsg=error_message, acquired_lock=repeated_bool, errmsg=repeated_msg)
 
-  !ERROR: The stat-variable in a sync-stat-list may not be repeated
-  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
+  !ERROR: The stat-variable in a lock-stat-list may not be repeated
+  !ERROR: The errmsg-variable in a lock-stat-list may not be repeated
   lock(lock_var, acquired_lock=bool, stat=status, errmsg=error_message, stat=repeated_stat, errmsg=repeated_msg)
 
-  !ERROR: The stat-variable in a sync-stat-list may not be repeated
-  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
+  !ERROR: The stat-variable in a lock-stat-list may not be repeated
+  !ERROR: The errmsg-variable in a lock-stat-list may not be repeated
   !ERROR: Multiple ACQUIRED_LOCK specifiers
   lock(lock_var, acquired_lock=bool, stat=status, errmsg=error_message, acquired_lock=repeated_bool, stat=repeated_stat, errmsg=repeated_msg)
 

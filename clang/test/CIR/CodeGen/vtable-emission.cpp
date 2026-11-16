@@ -18,7 +18,7 @@ void S::key() {}
 // CHECK-DAG: !rec_anon_struct = !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 4>}>
 
 // The definition of the key function should result in the vtable being emitted.
-// CHECK:      cir.global "private" constant external @_ZTV1S = #cir.vtable<{
+// CHECK:      cir.global constant external @_ZTV1S = #cir.vtable<{
 // CHECK-SAME:     #cir.const_array<[
 // CHECK-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CHECK-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
@@ -32,4 +32,4 @@ void S::key() {}
 // CHECK: cir.func {{.*}} @_ZN1S3keyEv
 
 // The reference from the vtable should result in nonKey being emitted.
-// CHECK: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN1S6nonKeyEv
+// CHECK: cir.func no_inline comdat alignment(2) linkonce_odr unnamed_addr @_ZN1S6nonKeyEv

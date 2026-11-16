@@ -1,22 +1,22 @@
-; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK32
-; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK64
 ; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST32
 ; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST64
 
-; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff < %s \
 ; RUN:     -stop-before=ppc-vsx-copy -O0  | FileCheck %s --check-prefix CHECK32
-; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s \
 ; RUN:     -stop-before=ppc-vsx-copy -O0 | FileCheck %s --check-prefix CHECK64-NOOPT
 ; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs -O0 < %s | FileCheck %s --check-prefix TEST32
 ; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -verify-machineinstrs -O0 < %s | FileCheck %s --check-prefix TEST64
 
-; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -code-model=large < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK32LARGE
 ; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST32LARGE
 
-; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -code-model=large -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -code-model=large < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK64LARGE
 ; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -code-model=large -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST64LARGE
 

@@ -149,7 +149,8 @@ EXTERN size_t omp_get_gprivate_limit(int DeviceNum, omp_access_t AccessGroup) {
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  return DeviceOrErr->getInfo<uint64_t>(DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
+  return DeviceOrErr->getInfo<uint64_t>(
+      OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE);
 }
 
 EXTERN void *omp_target_alloc(size_t Size, int DeviceNum) {
