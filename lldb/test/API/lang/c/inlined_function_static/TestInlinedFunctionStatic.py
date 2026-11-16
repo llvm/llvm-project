@@ -21,6 +21,8 @@ class TestInlinedFunctionStatic(TestBase):
             self.expect_var_path(name, type="int", value=value)
             self.expect_expr(name, result_type="int", result_value=value)
 
+    # Clang emits no CodeView record for a static variable of an inlined function.
+    @skipIf(debug_info=["pdb"])
     def test(self):
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
