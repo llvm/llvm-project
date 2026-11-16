@@ -45,15 +45,12 @@ LLVM_ABI std::string getMTune(const cl::LibraryOptionsContext &C);
 
 LLVM_ABI std::vector<std::string> getMAttrs(const cl::LibraryOptionsContext &C);
 
-LLVM_ABI Reloc::Model getRelocModel(const cl::LibraryOptionsContext &C);
 LLVM_ABI std::optional<Reloc::Model>
 getExplicitRelocModel(const cl::LibraryOptionsContext &C);
 
-LLVM_ABI CodeModel::Model getCodeModel(const cl::LibraryOptionsContext &C);
 LLVM_ABI std::optional<CodeModel::Model>
 getExplicitCodeModel(const cl::LibraryOptionsContext &C);
 
-LLVM_ABI uint64_t getLargeDataThreshold(const cl::LibraryOptionsContext &C);
 LLVM_ABI std::optional<uint64_t>
 getExplicitLargeDataThreshold(const cl::LibraryOptionsContext &C);
 
@@ -65,15 +62,12 @@ LLVM_ABI CodeGenFileType getFileType(const cl::LibraryOptionsContext &C);
 LLVM_ABI llvm::FloatABI::ABIType
 getFloatABIForCalls(const cl::LibraryOptionsContext &C);
 
-LLVM_ABI bool getDataSections(const cl::LibraryOptionsContext &C);
 LLVM_ABI std::optional<bool>
 getExplicitDataSections(const cl::LibraryOptionsContext &C);
 
-LLVM_ABI bool getFunctionSections(const cl::LibraryOptionsContext &C);
 LLVM_ABI std::optional<bool>
 getExplicitFunctionSections(const cl::LibraryOptionsContext &C);
 
-LLVM_ABI bool getEmulatedTLS(const cl::LibraryOptionsContext &C);
 LLVM_ABI std::optional<bool>
 getExplicitEmulatedTLS(const cl::LibraryOptionsContext &C);
 
@@ -81,27 +75,9 @@ enum SaveStatsMode { None, Cwd, Obj };
 
 LLVM_ABI SaveStatsMode getSaveStats(const cl::LibraryOptionsContext &C);
 
-/// Create this object with static storage to register codegen-related command
-/// line options.
-struct RegisterCodeGenFlags {
-  LLVM_ABI RegisterCodeGenFlags();
-};
-
 /// The options that a tool reading getTargetOptions passes to
 /// cl::parseCommandLineOptions.
 LLVM_ABI ArrayRef<const cl::LibraryOptions *> getToolOptions();
-
-/// Tools that support subtarget tuning should create this object with static
-/// storage to register the -mtune command line option.
-struct RegisterMTuneFlag {
-  LLVM_ABI RegisterMTuneFlag();
-};
-
-/// Tools that support stats saving should create this object with static
-/// storage to register the --save-stats command line option.
-struct RegisterSaveStatsFlag {
-  LLVM_ABI RegisterSaveStatsFlag();
-};
 
 /// Common utility function tightly tied to the options listed here. Initializes
 /// a TargetOptions object with CodeGen options and returns it.
