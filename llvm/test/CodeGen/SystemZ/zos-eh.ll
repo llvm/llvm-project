@@ -39,7 +39,7 @@ declare i32 @__zos_cxx_personality_v2(...)
 ; CHECK-NEXT:  DC XL1'01'
 ; CHECK-NEXT: * >> Action Record 1 <<
 ; CHECK-NEXT: *   Filter TypeInfo -1
-; CHECK-NEXT:  DC XL1'7F'
+; CHECK-NEXT:  DC CE'"'
 ; CHECK-NEXT: *   No further actions
 ; CHECK-NEXT:  DC XL1'00'
 ; CHECK-NEXT:  DS 0B

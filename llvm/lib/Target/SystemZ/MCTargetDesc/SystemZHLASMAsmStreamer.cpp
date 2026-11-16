@@ -7,13 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZHLASMAsmStreamer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Signals.h"
 #include <sstream>
 
@@ -362,14 +365,49 @@ void SystemZHLASMAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDS(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
+static bool isPrintableText(StringRef Text) {
+  return all_of(Text, [](char C) { return isPrint(C); });
+}
+
+// Emit Text inside a character constant, doubling the characters that HLASM
+// would otherwise treat as the delimiter or as a variable substitution.
+static void emitQuotedText(raw_ostream &OS, StringRef Text) {
+  for (char C : Text) {
+    if (C == '\'' || C == '&')
+      OS << C;
+    OS << C;
+  }
+}
+
 void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
   for (size_t I = 0, E = Data.size(); I < E; I += MaxXLLen) {
     StringRef Chunk = Data.substr(I, MaxXLLen);
-    OS << " DC XL" << Chunk.size() << '\'' << toHex(Chunk) << '\'';
+    // Printable text is emitted as a character constant: CE for EBCDIC-1047
+    // (converted to ASCII for the output) or CA for ASCII.
+    SmallString<MaxXLLen> EBCDICText;
+    ConverterEBCDIC::convertToUTF8(Chunk, EBCDICText);
+    if (isPrintableText(EBCDICText)) {
+      OS << " DC CE'";
+      emitQuotedText(OS, EBCDICText);
+      OS << '\'';
+    } else if (isPrintableText(Chunk)) {
+      OS << " DC CA'";
+      emitQuotedText(OS, Chunk);
+      OS << '\'';
+    } else {
+      OS << " DC XL" << Chunk.size() << '\'' << toHex(Chunk) << '\'';
+    }
     EmitEOL();
   }
+}
+
+void SystemZHLASMAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) {
+  // Integers are not character data, so they are emitted as XL constants
+  // rather than going through the text check in emitBytes.
+  uint64_t Masked = Value & maskTrailingOnes<uint64_t>(8 * Size);
+  emitValue(MCConstantExpr::create(Masked, getContext()), Size);
 }
 
 void SystemZHLASMAsmStreamer::emitFill(const MCExpr &NumBytes,
