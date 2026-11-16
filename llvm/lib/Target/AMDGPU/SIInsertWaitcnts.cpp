@@ -614,9 +614,10 @@ public:
                                      Wait.get(AMDGPU::KM_CNT) != 0))
       return true;
     for (AMDGPU::InstCounterType T : {AMDGPU::LOAD_CNT, AMDGPU::STORE_CNT,
-                                      AMDGPU::SAMPLE_CNT, AMDGPU::BVH_CNT})
+                                      AMDGPU::SAMPLE_CNT, AMDGPU::BVH_CNT}) {
       if (Wait.get(T) != 0 && hasPendingEvent(T))
         return true;
+    }
     return false;
   }
 
