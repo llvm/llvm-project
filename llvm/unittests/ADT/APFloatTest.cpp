@@ -11512,7 +11512,8 @@ TEST(APFloatTest, PPCDoubleDoubleScalbnOverflow) {
 
   APFloat PositiveResult = scalbn(Positive, 100, RM);
 
-  EXPECT_TRUE(PositiveResult.bitwiseIsEqual(APFloat::getInf(APFloat::PPCDoubleDouble(), false)));
+  EXPECT_TRUE(PositiveResult.bitwiseIsEqual(
+      APFloat::getInf(APFloat::PPCDoubleDouble(), false)));
 
   // Input: (-2^1000, +2^10)
   APInt NegativeBits(128, {0xFE70000000000000ULL, 0x4090000000000000ULL});
@@ -11521,7 +11522,8 @@ TEST(APFloatTest, PPCDoubleDoubleScalbnOverflow) {
 
   APFloat NegativeResult = scalbn(Negative, 100, RM);
 
-  EXPECT_TRUE(NegativeResult.bitwiseIsEqual(APFloat::getInf(APFloat::PPCDoubleDouble(), true)));
+  EXPECT_TRUE(NegativeResult.bitwiseIsEqual(
+      APFloat::getInf(APFloat::PPCDoubleDouble(), true)));
 }
 
 namespace {
