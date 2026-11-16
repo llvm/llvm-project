@@ -144,6 +144,22 @@ public:
   }
 };
 
+class PredicateRangeAssume : public PredicateBundleAssume {
+public:
+  ConstantRange Range;
+
+  PredicateRangeAssume(Value *Op, IntrinsicInst *AssumeInst,
+                       ConstantRange Range)
+      : PredicateBundleAssume(Op, AssumeInst, BundleAttr::Range),
+        Range(std::move(Range)) {}
+
+  static bool classof(const PredicateBase *PB) {
+    return PB->Type == PT_BundleAssume &&
+           static_cast<const PredicateBundleAssume *>(PB)->AttrKind ==
+               BundleAttr::Range;
+  }
+};
+
 class PredicateConditionAssume : public PredicateAssume {
 public:
   PredicateConditionAssume(Value *Op, IntrinsicInst *AssumeInst,

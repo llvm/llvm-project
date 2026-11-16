@@ -365,11 +365,23 @@ void PredicateInfoBuilder::processAssume(
     SmallVectorImpl<Value *> &OpsToRename) {
   if (II->hasOperandBundles()) {
     for (auto OBU : II->operand_bundles()) {
-      if (getBundleAttrFromOBU(OBU) == BundleAttr::NonNull) {
-        if (auto [Ptr] = getAssumeNonNullInfo(OBU); shouldRename(Ptr))
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::NonNull: {
+        auto [Ptr] = getAssumeNonNullInfo(OBU);
+        if (shouldRename(Ptr))
           addInfoFor(OpsToRename, Ptr,
                      new (Allocator)
                          PredicateBundleAssume(Ptr, II, BundleAttr::NonNull));
+      } break;
+      case BundleAttr::Range: {
+        auto [Val, Range] = getAssumeRangeInfo(OBU);
+        if (shouldRename(Val))
+          addInfoFor(OpsToRename, Val,
+                     new (Allocator)
+                         PredicateRangeAssume(Val, II, std::move(Range)));
+      } break;
+      default:
+        break;
       }
     }
     return;
@@ -725,10 +737,15 @@ PredicateInfo::PredicateInfo(Function &F, DominatorTree &DT,
 std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
   switch (Type) {
   case PT_BundleAssume: {
-    assert(cast<PredicateBundleAssume>(this)->AttrKind == BundleAttr::NonNull &&
-           "Cannot handle anything other than NonNull");
-    return {{CmpInst::ICMP_NE, ConstantPointerNull::get(
-                                   cast<PointerType>(OriginalOp->getType()))}};
+    switch (cast<PredicateBundleAssume>(this)->AttrKind) {
+    case BundleAttr::NonNull:
+      return {{CmpInst::ICMP_NE, ConstantPointerNull::get(cast<PointerType>(
+                                     OriginalOp->getType()))}};
+    case BundleAttr::Range:
+      return std::nullopt;
+    default:
+      llvm_unreachable("Unexpected bundle attribute in PredicateAssumeBundle");
+    }
   }
 
   case PT_ConditionAssume:
@@ -846,6 +863,9 @@ public:
         OS << "; assume predicate info {";
         if (auto *PBA = dyn_cast<PredicateBundleAssume>(PA)) {
           OS << " Attribute: " << getNameFromBundleAttr(PBA->AttrKind);
+          if (auto *PRA = dyn_cast<PredicateRangeAssume>(PBA)) {
+            OS << ", Range: " << PRA->Range;
+          }
         } else {
           assert(isa<PredicateConditionAssume>(PA));
           OS << " Comparison:" << *PA->Condition;
