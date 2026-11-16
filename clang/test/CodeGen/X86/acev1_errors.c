@@ -32,17 +32,17 @@ void test_tile_range_errors(__m512bh bf, __m512i i) {
   _tile_op4mxbss_ps(8, i, i, 0);  // expected-error {{argument value 8 is outside the valid range [0, 7]}}
 
   // Row read tile index errors
-  _tile_cvtrow_epi32_ps(8, 0);  // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  _tile_cvtrowh_ps_pbh(8, 0);   // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  _tile_cvtrowl_ps_pbh(8, 0);   // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  _tile_cvtrowh_ps_ph(8, 0);    // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  _tile_cvtrowl_ps_ph(8, 0);    // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  _tile_extractrow(8, 0);       // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  _tile_ace_cvtrow_epi32_ps(8, 0);  // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  _tile_ace_cvtrowh_ps_pbh(8, 0);   // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  _tile_ace_cvtrowl_ps_pbh(8, 0);   // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  _tile_ace_cvtrowh_ps_ph(8, 0);    // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  _tile_ace_cvtrowl_ps_ph(8, 0);    // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  _tile_ace_extractrow(8, 0);       // expected-error {{argument value 8 is outside the valid range [0, 7]}}
 }
 
 void test_tile_id_constness(__m512bh bf, __m512i i) {
   // The tile index must be an integer constant expression.
-  _tile_ace_zero(TILE_ID); // expected-error {{argument to '__builtin_ia32_tilezero' must be a constant integer}}
+  _tile_ace_zero(TILE_ID); // expected-error {{argument to '__builtin_ia32_acev1_tilezero' must be a constant integer}}
 
   _tile_insertcol(TILE_ID, i, 0); // expected-error {{argument to '__builtin_ia32_tilemovcolinsert' must be a constant integer}}
   _tile_insertrow(TILE_ID, i, 0); // expected-error {{argument to '__builtin_ia32_tilemovrowinsert' must be a constant integer}}
@@ -59,12 +59,12 @@ void test_tile_id_constness(__m512bh bf, __m512i i) {
   _tile_op4mxbf8_ps(TILE_ID, i, i, 0);  // expected-error {{argument to '__builtin_ia32_top4mxbf8ps' must be a constant integer}}
   _tile_op4mxbss_ps(TILE_ID, i, i, 0);  // expected-error {{argument to '__builtin_ia32_top4mxbssps' must be a constant integer}}
 
-  _tile_cvtrow_epi32_ps(TILE_ID, 0); // expected-error {{argument to '__builtin_ia32_tcvtrowd2ps' must be a constant integer}}
-  _tile_cvtrowh_ps_pbh(TILE_ID, 0);  // expected-error {{argument to '__builtin_ia32_tcvtrowps2bf16h' must be a constant integer}}
-  _tile_cvtrowl_ps_pbh(TILE_ID, 0);  // expected-error {{argument to '__builtin_ia32_tcvtrowps2bf16l' must be a constant integer}}
-  _tile_cvtrowh_ps_ph(TILE_ID, 0);   // expected-error {{argument to '__builtin_ia32_tcvtrowps2phh' must be a constant integer}}
-  _tile_cvtrowl_ps_ph(TILE_ID, 0);   // expected-error {{argument to '__builtin_ia32_tcvtrowps2phl' must be a constant integer}}
-  _tile_extractrow(TILE_ID, 0);      // expected-error {{argument to '__builtin_ia32_tilemovrow' must be a constant integer}}
+  _tile_ace_cvtrow_epi32_ps(TILE_ID, 0); // expected-error {{argument to '__builtin_ia32_acev1_tcvtrowd2ps' must be a constant integer}}
+  _tile_ace_cvtrowh_ps_pbh(TILE_ID, 0);  // expected-error {{argument to '__builtin_ia32_acev1_tcvtrowps2bf16h' must be a constant integer}}
+  _tile_ace_cvtrowl_ps_pbh(TILE_ID, 0);  // expected-error {{argument to '__builtin_ia32_acev1_tcvtrowps2bf16l' must be a constant integer}}
+  _tile_ace_cvtrowh_ps_ph(TILE_ID, 0);   // expected-error {{argument to '__builtin_ia32_acev1_tcvtrowps2phh' must be a constant integer}}
+  _tile_ace_cvtrowl_ps_ph(TILE_ID, 0);   // expected-error {{argument to '__builtin_ia32_acev1_tcvtrowps2phl' must be a constant integer}}
+  _tile_ace_extractrow(TILE_ID, 0);      // expected-error {{argument to '__builtin_ia32_acev1_tilemovrowextract' must be a constant integer}}
 }
 
 void test_scale_group_errors(__m512i i) {

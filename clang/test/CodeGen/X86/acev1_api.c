@@ -10,7 +10,7 @@
 // Test __acetile zero
 void test_tile_ace_zero(__acetile *dst) {
   // CHECK-LABEL: @test_tile_ace_zero
-  // CHECK: call x86_amx @llvm.x86.tilezero.internal
+  // CHECK: call x86_amx @llvm.x86.acev1.tilezero.internal
   // CHECK: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_zero(dst);
 }
@@ -122,49 +122,49 @@ void test_tile_ace_setcol(__acetile *dst, __m512i src) {
 // Test tile getrow (ACE-specific: tile row to ZMM)
 __m512i test_tile_ace_getrow(__acetile *src) {
   // CHECK-LABEL: @test_tile_ace_getrow
-  // CHECK: call <16 x i32> @llvm.x86.tilemovrow.internal
+  // CHECK: call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal
   return __tile_ace_getrow(src, 0);
 }
 
 // Test tile row read with INT32 to FP32 conversion (ACE-specific)
 __m512 test_tile_ace_cvtrowd2ps(__acetile *src) {
   // CHECK-LABEL: @test_tile_ace_cvtrowd2ps
-  // CHECK: call <16 x float> @llvm.x86.tcvtrowd2ps.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
+  // CHECK: call <16 x float> @llvm.x86.acev1.tcvtrowd2ps.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
   return __tile_ace_cvtrowd2ps(src, 2);
 }
 
 // Test tile row read with FP32 to BF16 conversion, high half of each dword
 __m512bh test_tile_ace_cvtrowps2bf16h(__acetile *src) {
   // CHECK-LABEL: @test_tile_ace_cvtrowps2bf16h
-  // CHECK: call <32 x bfloat> @llvm.x86.tcvtrowps2bf16h.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
+  // CHECK: call <32 x bfloat> @llvm.x86.acev1.tcvtrowps2bf16h.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
   return __tile_ace_cvtrowps2bf16h(src, 4);
 }
 
 // Test tile row read with FP32 to BF16 conversion, low half of each dword
 __m512bh test_tile_ace_cvtrowps2bf16l(__acetile *src) {
   // CHECK-LABEL: @test_tile_ace_cvtrowps2bf16l
-  // CHECK: call <32 x bfloat> @llvm.x86.tcvtrowps2bf16l.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
+  // CHECK: call <32 x bfloat> @llvm.x86.acev1.tcvtrowps2bf16l.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
   return __tile_ace_cvtrowps2bf16l(src, 6);
 }
 
 // Test tile row read with FP32 to FP16 conversion, high half of each dword
 __m512h test_tile_ace_cvtrowps2phh(__acetile *src) {
   // CHECK-LABEL: @test_tile_ace_cvtrowps2phh
-  // CHECK: call <32 x half> @llvm.x86.tcvtrowps2phh.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
+  // CHECK: call <32 x half> @llvm.x86.acev1.tcvtrowps2phh.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
   return __tile_ace_cvtrowps2phh(src, 8);
 }
 
 // Test tile row read with FP32 to FP16 conversion, low half of each dword
 __m512h test_tile_ace_cvtrowps2phl(__acetile *src) {
   // CHECK-LABEL: @test_tile_ace_cvtrowps2phl
-  // CHECK: call <32 x half> @llvm.x86.tcvtrowps2phl.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
+  // CHECK: call <32 x half> @llvm.x86.acev1.tcvtrowps2phl.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
   return __tile_ace_cvtrowps2phl(src, 10);
 }
 
 // Integration test: ACE computation workflow
 void test_ace_workflow(__m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_ace_workflow
-  // CHECK: call x86_amx @llvm.x86.tilezero.internal
+  // CHECK: call x86_amx @llvm.x86.acev1.tilezero.internal
   // CHECK: call x86_amx @llvm.x86.acev1.top4buud.internal
   __acetile acc;
   __tile_ace_zero(&acc);

@@ -25,14 +25,14 @@ void test_tile_ace_setcol(__acetile *dst, __m512i src) {
 // Test tile getrow - read tile row to ZMM (ACE-specific)
 __m512i test_tile_ace_getrow(__acetile *src) {
   // CHECK-LABEL: @test_tile_ace_getrow
-  // CHECK: call <16 x i32> @llvm.x86.tilemovrow.internal
+  // CHECK: call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal
   return __tile_ace_getrow(src, 0);
 }
 
 // Test combined tile operations
 void test_tile_movement_combined(void) {
   // CHECK-LABEL: @test_tile_movement_combined
-  // CHECK: call x86_amx @llvm.x86.tilezero.internal
+  // CHECK: call x86_amx @llvm.x86.acev1.tilezero.internal
   // CHECK: call x86_amx @llvm.x86.acev1.tilemovrowinsert.internal
   // CHECK: call x86_amx @llvm.x86.acev1.tilemovcolinsert.internal
   __acetile tile;
@@ -46,10 +46,10 @@ void test_tile_movement_combined(void) {
 // Integration test: complete ACE tile workflow with data movement
 void test_ace_data_workflow(__m512i *input, __m512i *output) {
   // CHECK-LABEL: @test_ace_data_workflow
-  // CHECK: call x86_amx @llvm.x86.tilezero.internal
+  // CHECK: call x86_amx @llvm.x86.acev1.tilezero.internal
   // CHECK: call x86_amx @llvm.x86.acev1.tilemovrowinsert.internal
   // CHECK: call x86_amx @llvm.x86.acev1.top4buud.internal
-  // CHECK: call <16 x i32> @llvm.x86.tilemovrow.internal
+  // CHECK: call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal
   __acetile tile;
   __tile_ace_zero(&tile);
 

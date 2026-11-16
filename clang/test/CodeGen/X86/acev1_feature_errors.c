@@ -16,9 +16,9 @@ void test_needs_acev1(__m512bh bf, __m512i i) {
   _tile_op2bf16_ps(0, bf, bf); // nofeature-error {{'__builtin_ia32_top2bf16ps' needs target feature acev1}}
   _tile_op4mxbf8_ps(0, i, i, 0); // nofeature-error {{'__builtin_ia32_top4mxbf8ps' needs target feature acev1}}
 
-  _tile_ace_zero(0); // nofeature-error {{'__builtin_ia32_tilezero' needs target feature amx-tile|acev1}}
-  _tile_cvtrow_epi32_ps(0, 0); // nofeature-error {{'__builtin_ia32_tcvtrowd2ps' needs target feature amx-avx512,avx10.2|acev1}}
-  _tile_extractrow(0, 0); // nofeature-error {{'__builtin_ia32_tilemovrow' needs target feature amx-avx512,avx10.2|acev1}}
+  _tile_ace_zero(0); // nofeature-error {{'__builtin_ia32_acev1_tilezero' needs target feature acev1}}
+  _tile_ace_cvtrow_epi32_ps(0, 0); // nofeature-error {{'__builtin_ia32_acev1_tcvtrowd2ps' needs target feature acev1}}
+  _tile_ace_extractrow(0, 0); // nofeature-error {{'__builtin_ia32_acev1_tilemovrowextract' needs target feature acev1}}
 
   _tile_ace_loadconfig(&i); // nofeature-error {{always_inline function '_tile_ace_loadconfig' requires target feature 'acev1'}}
   _tile_ace_storeconfig(&i); // nofeature-error {{always_inline function '_tile_ace_storeconfig' requires target feature 'acev1'}}

@@ -211,7 +211,8 @@ void X86FastPreTileConfigImpl::InitializeTileConfigStackSpace() {
   }
   // Fill in the palette first.
   // Use Palette 2 for ACE v1, Palette 1 for AMX.
-  int PaletteId = ST->hasACEV1() ? 2 : 1;
+  int PaletteId =
+      X86FI->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA ? 2 : 1;
   addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOV8mi)), CfgSS)
       .addImm(PaletteId);
 }

@@ -25,15 +25,15 @@ define void @spill_nine_tiles_bf16(ptr %out, <32 x bfloat> %a, <32 x bfloat> %b)
 ; Reload loads each row back and writes it into the tile.
 ; ACE-COUNT-16:  tilemovrow ${{[0-9]+}}, %zmm{{[0-9]+}}, %tmm{{[0-7]}}
 entry:
-  %t0 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t1 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t2 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t3 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t4 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t5 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t6 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t7 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t8 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %t0 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t1 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t2 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t3 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t4 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t5 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t6 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t7 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t8 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
 
   %d0 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t0, <32 x bfloat> %a, <32 x bfloat> %b)
   %d1 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t1, <32 x bfloat> %a, <32 x bfloat> %b)
@@ -46,23 +46,23 @@ entry:
   %d8 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t8, <32 x bfloat> %a, <32 x bfloat> %b)
 
   ; Keep all nine results live to the end so the allocator has to spill.
-  %r0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d0, i32 0)
+  %r0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d0, i32 0)
   store volatile <16 x i32> %r0, ptr %out, align 64
-  %r1 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d1, i32 0)
+  %r1 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d1, i32 0)
   store volatile <16 x i32> %r1, ptr %out, align 64
-  %r2 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d2, i32 0)
+  %r2 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d2, i32 0)
   store volatile <16 x i32> %r2, ptr %out, align 64
-  %r3 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d3, i32 0)
+  %r3 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d3, i32 0)
   store volatile <16 x i32> %r3, ptr %out, align 64
-  %r4 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d4, i32 0)
+  %r4 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d4, i32 0)
   store volatile <16 x i32> %r4, ptr %out, align 64
-  %r5 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d5, i32 0)
+  %r5 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d5, i32 0)
   store volatile <16 x i32> %r5, ptr %out, align 64
-  %r6 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d6, i32 0)
+  %r6 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d6, i32 0)
   store volatile <16 x i32> %r6, ptr %out, align 64
-  %r7 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d7, i32 0)
+  %r7 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d7, i32 0)
   store volatile <16 x i32> %r7, ptr %out, align 64
-  %r8 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d8, i32 0)
+  %r8 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d8, i32 0)
   store volatile <16 x i32> %r8, ptr %out, align 64
 
   ret void
@@ -76,15 +76,15 @@ define void @spill_nine_tiles_int(ptr %out, <64 x i8> %a) nounwind {
 ; ACE-COUNT-16:  tilemovrow ${{[0-9]+}}, %tmm{{[0-7]}}, %zmm{{[0-9]+}}
 ; ACE-COUNT-16:  tilemovrow ${{[0-9]+}}, %zmm{{[0-9]+}}, %tmm{{[0-7]}}
 entry:
-  %t0 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t1 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t2 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t3 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t4 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t5 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t6 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t7 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %t8 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %t0 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t1 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t2 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t3 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t4 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t5 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t6 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t7 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t8 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
 
   %d0 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t0, <64 x i8> %a, <64 x i8> %a)
   %d1 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t1, <64 x i8> %a, <64 x i8> %a)
@@ -96,29 +96,29 @@ entry:
   %d7 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t7, <64 x i8> %a, <64 x i8> %a)
   %d8 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %t8, <64 x i8> %a, <64 x i8> %a)
 
-  %r0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d0, i32 0)
+  %r0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d0, i32 0)
   store volatile <16 x i32> %r0, ptr %out, align 64
-  %r1 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d1, i32 0)
+  %r1 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d1, i32 0)
   store volatile <16 x i32> %r1, ptr %out, align 64
-  %r2 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d2, i32 0)
+  %r2 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d2, i32 0)
   store volatile <16 x i32> %r2, ptr %out, align 64
-  %r3 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d3, i32 0)
+  %r3 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d3, i32 0)
   store volatile <16 x i32> %r3, ptr %out, align 64
-  %r4 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d4, i32 0)
+  %r4 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d4, i32 0)
   store volatile <16 x i32> %r4, ptr %out, align 64
-  %r5 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d5, i32 0)
+  %r5 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d5, i32 0)
   store volatile <16 x i32> %r5, ptr %out, align 64
-  %r6 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d6, i32 0)
+  %r6 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d6, i32 0)
   store volatile <16 x i32> %r6, ptr %out, align 64
-  %r7 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d7, i32 0)
+  %r7 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d7, i32 0)
   store volatile <16 x i32> %r7, ptr %out, align 64
-  %r8 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d8, i32 0)
+  %r8 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d8, i32 0)
   store volatile <16 x i32> %r8, ptr %out, align 64
 
   ret void
 }
 
-declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
+declare x86_amx @llvm.x86.acev1.tilezero.internal(i16, i16)
 declare x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16, i16, i16, x86_amx, <32 x bfloat>, <32 x bfloat>)
 declare x86_amx @llvm.x86.acev1.top4bssd.internal(i16, i16, i16, x86_amx, <64 x i8>, <64 x i8>)
-declare <16 x i32> @llvm.x86.tilemovrow.internal(i16, i16, x86_amx, i32)
+declare <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16, i16, x86_amx, i32)

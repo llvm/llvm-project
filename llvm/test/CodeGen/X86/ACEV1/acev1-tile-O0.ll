@@ -25,8 +25,8 @@ define void @extract_one_row(ptr %out) nounwind {
 ; CHECK:         tilezero %tmm{{[0-7]}}
 ; CHECK:         tilemovrow ${{[0-9]+}}, %tmm{{[0-7]}}, %zmm{{[0-9]+}}
 entry:
-  %t = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %r = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %t, i32 0)
+  %t = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %r = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %t, i32 0)
   store volatile <16 x i32> %r, ptr %out, align 64
   ret void
 }
@@ -40,10 +40,10 @@ define void @extract_several_rows(ptr %out) nounwind {
 ; CHECK:         tilemovrow ${{[0-9]+}}, %tmm{{[0-7]}}, %zmm{{[0-9]+}}
 ; CHECK:         tilemovrow ${{[0-9]+}}, %tmm{{[0-7]}}, %zmm{{[0-9]+}}
 entry:
-  %t = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %r0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %t, i32 0)
+  %t = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %r0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %t, i32 0)
   store volatile <16 x i32> %r0, ptr %out, align 64
-  %r7 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %t, i32 7)
+  %r7 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %t, i32 7)
   store volatile <16 x i32> %r7, ptr %out, align 64
   ret void
 }
@@ -56,12 +56,12 @@ define void @extract_row_convert(ptr %out) nounwind {
 ; CHECK:         tilezero %tmm{{[0-7]}}
 ; CHECK:         tcvtrowd2ps ${{[0-9]+}}, %tmm{{[0-7]}}, %zmm{{[0-9]+}}
 entry:
-  %t = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %r = call <16 x float> @llvm.x86.tcvtrowd2ps.internal(i16 16, i16 64, x86_amx %t, i32 0)
+  %t = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %r = call <16 x float> @llvm.x86.acev1.tcvtrowd2ps.internal(i16 16, i16 64, x86_amx %t, i32 0)
   store volatile <16 x float> %r, ptr %out, align 64
   ret void
 }
 
-declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
-declare <16 x i32> @llvm.x86.tilemovrow.internal(i16, i16, x86_amx, i32)
-declare <16 x float> @llvm.x86.tcvtrowd2ps.internal(i16, i16, x86_amx, i32)
+declare x86_amx @llvm.x86.acev1.tilezero.internal(i16, i16)
+declare <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16, i16, x86_amx, i32)
+declare <16 x float> @llvm.x86.acev1.tcvtrowd2ps.internal(i16, i16, x86_amx, i32)

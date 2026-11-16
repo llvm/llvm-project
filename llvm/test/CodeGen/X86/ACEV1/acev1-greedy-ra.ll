@@ -13,12 +13,12 @@ define void @test_acev1_ra(ptr %out, <32 x bfloat> %zmm_a, <32 x bfloat> %zmm_b)
   ; CHECK: PTOP2BF16PStrrV
   ; CHECK: PTILEMOVROWrtiV
 entry:
-  %c = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
 
   %d = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %c, <32 x bfloat> %zmm_a, <32 x bfloat> %zmm_b)
 
   ; Extract using TILEMOVROW (ACE v1 pattern)
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
 
   ret void
@@ -32,14 +32,14 @@ define void @test_acev1_ra_multi(ptr %out, <32 x bfloat> %zmm_a, <32 x bfloat> %
   ; CHECK: PTILEZEROV
   ; CHECK: PTOP2BF16PStrrV
 entry:
-  %c1 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
-  %c2 = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c1 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %c2 = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
 
   %d1 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %c1, <32 x bfloat> %zmm_a, <32 x bfloat> %zmm_b)
   %d2 = tail call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %c2, <32 x bfloat> %zmm_a, <32 x bfloat> %zmm_b)
 
   ; Extract using TILEMOVROW
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d2, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d2, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
 
   ret void
@@ -53,13 +53,13 @@ define void @test_acev1_ra_int(ptr %out, <64 x i8> %a_i8) nounwind {
   ; CHECK: PTOP4BSSDtrrV
   ; CHECK: PTOP4BUUDtrrV
 entry:
-  %c = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
 
   %d1 = tail call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %c, <64 x i8> %a_i8, <64 x i8> %a_i8)
   %d2 = tail call x86_amx @llvm.x86.acev1.top4buud.internal(i16 16, i16 64, i16 64, x86_amx %d1, <64 x i8> %a_i8, <64 x i8> %a_i8)
 
   ; Extract using TILEMOVROW
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d2, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d2, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
 
   ret void
@@ -70,7 +70,7 @@ define void @test_acev1_ra_branch(ptr %out, i32 %cond, <32 x bfloat> %zmm_a, <32
   ; CHECK-LABEL: name: test_acev1_ra_branch
   ; CHECK: PLDTILECFGV
 entry:
-  %c = tail call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = tail call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
 
   %icmp = icmp eq i32 %cond, 0
   br i1 %icmp, label %then, label %else
@@ -87,14 +87,14 @@ merge:
   %result = phi x86_amx [ %d1, %then ], [ %d2, %else ]
 
   ; Extract using TILEMOVROW
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %result, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %result, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
 
   ret void
 }
 
-declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
+declare x86_amx @llvm.x86.acev1.tilezero.internal(i16, i16)
 declare x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16, i16, i16, x86_amx, <32 x bfloat>, <32 x bfloat>)
 declare x86_amx @llvm.x86.acev1.top4bssd.internal(i16, i16, i16, x86_amx, <64 x i8>, <64 x i8>)
 declare x86_amx @llvm.x86.acev1.top4buud.internal(i16, i16, i16, x86_amx, <64 x i8>, <64 x i8>)
-declare <16 x i32> @llvm.x86.tilemovrow.internal(i16, i16, x86_amx, i32)
+declare <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16, i16, x86_amx, i32)

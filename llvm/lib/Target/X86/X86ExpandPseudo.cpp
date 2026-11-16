@@ -617,7 +617,19 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case X86::PTCVTROWPS2PHLrteV:
   case X86::PTCVTROWPS2PHLrtiV:
   case X86::PTILEMOVROWrteV:
-  case X86::PTILEMOVROWrtiV: {
+  case X86::PTILEMOVROWrtiV:
+  case X86::ACE_PTCVTROWD2PSrteV:
+  case X86::ACE_PTCVTROWD2PSrtiV:
+  case X86::ACE_PTCVTROWPS2BF16HrteV:
+  case X86::ACE_PTCVTROWPS2BF16HrtiV:
+  case X86::ACE_PTCVTROWPS2BF16LrteV:
+  case X86::ACE_PTCVTROWPS2BF16LrtiV:
+  case X86::ACE_PTCVTROWPS2PHHrteV:
+  case X86::ACE_PTCVTROWPS2PHHrtiV:
+  case X86::ACE_PTCVTROWPS2PHLrteV:
+  case X86::ACE_PTCVTROWPS2PHLrtiV:
+  case X86::ACE_PTILEMOVROWrteV:
+  case X86::ACE_PTILEMOVROWrtiV: {
     for (unsigned i = 2; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc;
@@ -635,39 +647,51 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
       Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
       break;
     case X86::PTCVTROWD2PSrteV:
+    case X86::ACE_PTCVTROWD2PSrteV:
       Opc = X86::TCVTROWD2PSrte;
       break;
     case X86::PTCVTROWD2PSrtiV:
+    case X86::ACE_PTCVTROWD2PSrtiV:
       Opc = X86::TCVTROWD2PSrti;
       break;
     case X86::PTCVTROWPS2BF16HrteV:
+    case X86::ACE_PTCVTROWPS2BF16HrteV:
       Opc = X86::TCVTROWPS2BF16Hrte;
       break;
     case X86::PTCVTROWPS2BF16HrtiV:
+    case X86::ACE_PTCVTROWPS2BF16HrtiV:
       Opc = X86::TCVTROWPS2BF16Hrti;
       break;
     case X86::PTCVTROWPS2BF16LrteV:
+    case X86::ACE_PTCVTROWPS2BF16LrteV:
       Opc = X86::TCVTROWPS2BF16Lrte;
       break;
     case X86::PTCVTROWPS2BF16LrtiV:
+    case X86::ACE_PTCVTROWPS2BF16LrtiV:
       Opc = X86::TCVTROWPS2BF16Lrti;
       break;
     case X86::PTCVTROWPS2PHHrteV:
+    case X86::ACE_PTCVTROWPS2PHHrteV:
       Opc = X86::TCVTROWPS2PHHrte;
       break;
     case X86::PTCVTROWPS2PHHrtiV:
+    case X86::ACE_PTCVTROWPS2PHHrtiV:
       Opc = X86::TCVTROWPS2PHHrti;
       break;
     case X86::PTCVTROWPS2PHLrteV:
+    case X86::ACE_PTCVTROWPS2PHLrteV:
       Opc = X86::TCVTROWPS2PHLrte;
       break;
     case X86::PTCVTROWPS2PHLrtiV:
+    case X86::ACE_PTCVTROWPS2PHLrtiV:
       Opc = X86::TCVTROWPS2PHLrti;
       break;
     case X86::PTILEMOVROWrteV:
+    case X86::ACE_PTILEMOVROWrteV:
       Opc = X86::TILEMOVROWrte;
       break;
     case X86::PTILEMOVROWrtiV:
+    case X86::ACE_PTILEMOVROWrtiV:
       Opc = X86::TILEMOVROWrti;
       break;
     default:
@@ -797,7 +821,8 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     return true;
   }
 #undef GET_EGPR_IF_ENABLED
-  case X86::PTILEZEROV: {
+  case X86::PTILEZEROV:
+  case X86::ACE_PTILEZEROV: {
     for (int i = 2; i > 0; --i) // Remove row, col
       MI.removeOperand(i);
     MI.setDesc(TII->get(X86::TILEZERO));

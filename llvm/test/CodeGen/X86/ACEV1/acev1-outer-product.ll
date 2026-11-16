@@ -14,11 +14,11 @@ define void @test_top2bf16ps(ptr %out, <32 x bfloat> %zmm_a, <32 x bfloat> %zmm_
 ; CHECK:       top2bf16ps
 ; CHECK:       tilemovrow
 ; CHECK:       tilerelease
-  %c = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
   %d = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %c, <32 x bfloat> %zmm_a, <32 x bfloat> %zmm_b)
 
   ; Extract using TILEMOVROW (ACE v1 pattern)
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
   ret void
 }
@@ -31,10 +31,10 @@ define void @test_top4buud(ptr %out, <64 x i8> %a_i8) {
 ; CHECK:       top4buud
 ; CHECK:       tilemovrow
 ; CHECK:       tilerelease
-  %c = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
   %d = call x86_amx @llvm.x86.acev1.top4buud.internal(i16 16, i16 64, i16 64, x86_amx %c, <64 x i8> %a_i8, <64 x i8> %a_i8)
 
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
   ret void
 }
@@ -47,10 +47,10 @@ define void @test_top4bssd(ptr %out, <64 x i8> %a_i8) {
 ; CHECK:       top4bssd
 ; CHECK:       tilemovrow
 ; CHECK:       tilerelease
-  %c = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
   %d = call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64, x86_amx %c, <64 x i8> %a_i8, <64 x i8> %a_i8)
 
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
   ret void
 }
@@ -63,10 +63,10 @@ define void @test_top4busd(ptr %out, <64 x i8> %a_i8) {
 ; CHECK:       top4busd
 ; CHECK:       tilemovrow
 ; CHECK:       tilerelease
-  %c = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
   %d = call x86_amx @llvm.x86.acev1.top4busd.internal(i16 16, i16 64, i16 64, x86_amx %c, <64 x i8> %a_i8, <64 x i8> %a_i8)
 
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
   ret void
 }
@@ -79,10 +79,10 @@ define void @test_top4bsud(ptr %out, <64 x i8> %a_i8) {
 ; CHECK:       top4bsud
 ; CHECK:       tilemovrow
 ; CHECK:       tilerelease
-  %c = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
   %d = call x86_amx @llvm.x86.acev1.top4bsud.internal(i16 16, i16 64, i16 64, x86_amx %c, <64 x i8> %a_i8, <64 x i8> %a_i8)
 
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
   ret void
 }
@@ -95,10 +95,10 @@ define void @test_top4mxhf8ps_internal(ptr %out, <64 x i8> %zmm_a, <64 x i8> %zm
 ; CHECK:       top4mxhf8ps
 ; CHECK:       tilemovrow
 ; CHECK:       tilerelease
-  %c = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
   %d = call x86_amx @llvm.x86.acev1.top4mxhf8ps.internal(i16 16, i16 64, i16 64, i8 5, x86_amx %c, <64 x i8> %zmm_a, <64 x i8> %zmm_b)
 
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
   ret void
 }
@@ -111,10 +111,10 @@ define void @test_top4mxbhf8ps_internal(ptr %out, <64 x i8> %zmm_a, <64 x i8> %z
 ; CHECK:       top4mxbhf8ps
 ; CHECK:       tilemovrow
 ; CHECK:       tilerelease
-  %c = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
   %d = call x86_amx @llvm.x86.acev1.top4mxbhf8ps.internal(i16 16, i16 64, i16 64, i8 3, x86_amx %c, <64 x i8> %zmm_a, <64 x i8> %zmm_b)
 
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
   ret void
 }
@@ -127,10 +127,10 @@ define void @test_top4mxhbf8ps_internal(ptr %out, <64 x i8> %zmm_a, <64 x i8> %z
 ; CHECK:       top4mxhbf8ps
 ; CHECK:       tilemovrow
 ; CHECK:       tilerelease
-  %c = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
   %d = call x86_amx @llvm.x86.acev1.top4mxhbf8ps.internal(i16 16, i16 64, i16 64, i8 7, x86_amx %c, <64 x i8> %zmm_a, <64 x i8> %zmm_b)
 
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
   ret void
 }
@@ -143,10 +143,10 @@ define void @test_top4mxbf8ps_internal(ptr %out, <64 x i8> %zmm_a, <64 x i8> %zm
 ; CHECK:       top4mxbf8ps
 ; CHECK:       tilemovrow
 ; CHECK:       tilerelease
-  %c = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
   %d = call x86_amx @llvm.x86.acev1.top4mxbf8ps.internal(i16 16, i16 64, i16 64, i8 1, x86_amx %c, <64 x i8> %zmm_a, <64 x i8> %zmm_b)
 
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
   ret void
 }
@@ -159,10 +159,10 @@ define void @test_top4mxbssps_internal(ptr %out, <64 x i8> %zmm_a, <64 x i8> %zm
 ; CHECK:       top4mxbssps
 ; CHECK:       tilemovrow
 ; CHECK:       tilerelease
-  %c = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
   %d = call x86_amx @llvm.x86.acev1.top4mxbssps.internal(i16 16, i16 64, i16 64, i8 9, x86_amx %c, <64 x i8> %zmm_a, <64 x i8> %zmm_b)
 
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
   ret void
 }
@@ -177,7 +177,7 @@ define void @test_chained_outer_products(ptr %out, <32 x bfloat> %zmm_bf16, <64 
 ; CHECK:       top4buud
 ; CHECK:       tilemovrow
 ; CHECK:       tilerelease
-  %c = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
+  %c = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
 
   ; BF16 outer product
   %d1 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %c, <32 x bfloat> %zmm_bf16, <32 x bfloat> %zmm_bf16)
@@ -187,12 +187,12 @@ define void @test_chained_outer_products(ptr %out, <32 x bfloat> %zmm_bf16, <64 
   %d3 = call x86_amx @llvm.x86.acev1.top4buud.internal(i16 16, i16 64, i16 64, x86_amx %d2, <64 x i8> %a_i8, <64 x i8> %a_i8)
 
   ; Extract using TILEMOVROW
-  %row0 = call <16 x i32> @llvm.x86.tilemovrow.internal(i16 16, i16 64, x86_amx %d3, i32 0)
+  %row0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d3, i32 0)
   store volatile <16 x i32> %row0, ptr %out, align 64
   ret void
 }
 
-declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
+declare x86_amx @llvm.x86.acev1.tilezero.internal(i16, i16)
 declare x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16, i16, i16, x86_amx, <32 x bfloat>, <32 x bfloat>)
 declare x86_amx @llvm.x86.acev1.top4buud.internal(i16, i16, i16, x86_amx, <64 x i8>, <64 x i8>)
 declare x86_amx @llvm.x86.acev1.top4bssd.internal(i16, i16, i16, x86_amx, <64 x i8>, <64 x i8>)
@@ -203,4 +203,4 @@ declare x86_amx @llvm.x86.acev1.top4mxbhf8ps.internal(i16, i16, i16, i8, x86_amx
 declare x86_amx @llvm.x86.acev1.top4mxhbf8ps.internal(i16, i16, i16, i8, x86_amx, <64 x i8>, <64 x i8>)
 declare x86_amx @llvm.x86.acev1.top4mxbf8ps.internal(i16, i16, i16, i8, x86_amx, <64 x i8>, <64 x i8>)
 declare x86_amx @llvm.x86.acev1.top4mxbssps.internal(i16, i16, i16, i8, x86_amx, <64 x i8>, <64 x i8>)
-declare <16 x i32> @llvm.x86.tilemovrow.internal(i16, i16, x86_amx, i32)
+declare <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16, i16, x86_amx, i32)

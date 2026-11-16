@@ -39272,10 +39272,10 @@ X86TargetLowering::emitPatchableEventCall(MachineInstr &MI,
 namespace {
 enum class TileProgModelType {
   None,          // Not a tile instruction
-  ACE_DirectReg, // ACE-only, always ACE_DirectReg
-  ACE_ManagedRA, // ACE-only, always ACE_ManagedRA
-  AMX_DirectReg, // AMX/ACE, DirectReg (checks subtarget)
-  AMX_ManagedRA, // AMX/ACE, ManagedRA (checks subtarget)
+  ACE_DirectReg, // ACE-spelled, sets ACEProgModel to DirectReg
+  ACE_ManagedRA, // ACE-spelled, sets ACEProgModel to ManagedRA
+  AMX_DirectReg, // AMX-spelled, sets AMXProgModel to DirectReg
+  AMX_ManagedRA, // AMX-spelled, sets AMXProgModel to ManagedRA
 };
 
 struct TileOpcodeModelEntry {
@@ -39285,7 +39285,7 @@ struct TileOpcodeModelEntry {
 
 // Centralized table mapping tile opcodes to their program model type
 static const TileOpcodeModelEntry TileOpcodeModels[] = {
-    // AMX/ACE DirectReg (macro API) - checks subtarget for ACE vs AMX
+    // AMX DirectReg (macro API)
     {X86::PTILEZERO, TileProgModelType::AMX_DirectReg},
     {X86::PTCVTROWPS2BF16Hrti, TileProgModelType::AMX_DirectReg},
     {X86::PTCVTROWPS2BF16Lrti, TileProgModelType::AMX_DirectReg},
@@ -39300,10 +39300,23 @@ static const TileOpcodeModelEntry TileOpcodeModels[] = {
     {X86::PTCVTROWD2PSrte, TileProgModelType::AMX_DirectReg},
     {X86::PTILEMOVROWrte, TileProgModelType::AMX_DirectReg},
 
-    // AMX/ACE ManagedRA (struct API) - checks subtarget for ACE vs AMX
+    // AMX ManagedRA (struct API)
     {X86::PTILEZEROV, TileProgModelType::AMX_ManagedRA},
 
-    // ACE-only DirectReg (macro API)
+    // ACE DirectReg (macro API)
+    {X86::ACE_PTILEZERO, TileProgModelType::ACE_DirectReg},
+    {X86::ACE_PTCVTROWPS2BF16Hrte, TileProgModelType::ACE_DirectReg},
+    {X86::ACE_PTCVTROWPS2BF16Lrte, TileProgModelType::ACE_DirectReg},
+    {X86::ACE_PTCVTROWPS2PHHrte, TileProgModelType::ACE_DirectReg},
+    {X86::ACE_PTCVTROWPS2PHLrte, TileProgModelType::ACE_DirectReg},
+    {X86::ACE_PTCVTROWD2PSrte, TileProgModelType::ACE_DirectReg},
+    {X86::ACE_PTILEMOVROWrte, TileProgModelType::ACE_DirectReg},
+    {X86::ACE_PTCVTROWD2PSrti, TileProgModelType::ACE_DirectReg},
+    {X86::ACE_PTCVTROWPS2BF16Hrti, TileProgModelType::ACE_DirectReg},
+    {X86::ACE_PTCVTROWPS2BF16Lrti, TileProgModelType::ACE_DirectReg},
+    {X86::ACE_PTCVTROWPS2PHHrti, TileProgModelType::ACE_DirectReg},
+    {X86::ACE_PTCVTROWPS2PHLrti, TileProgModelType::ACE_DirectReg},
+    {X86::ACE_PTILEMOVROWrti, TileProgModelType::ACE_DirectReg},
     {X86::PTILEMOVCOLtri, TileProgModelType::ACE_DirectReg},
     {X86::PTILEMOVCOLtre, TileProgModelType::ACE_DirectReg},
     {X86::PTILEMOVROWtri, TileProgModelType::ACE_DirectReg},
@@ -39319,7 +39332,20 @@ static const TileOpcodeModelEntry TileOpcodeModels[] = {
     {X86::PTOP4MXBF8PStrri, TileProgModelType::ACE_DirectReg},
     {X86::PTOP4MXBSSPStrri, TileProgModelType::ACE_DirectReg},
 
-    // ACE-only ManagedRA (struct API)
+    // ACE ManagedRA (struct API)
+    {X86::ACE_PTILEZEROV, TileProgModelType::ACE_ManagedRA},
+    {X86::ACE_PTCVTROWPS2BF16HrtiV, TileProgModelType::ACE_ManagedRA},
+    {X86::ACE_PTCVTROWPS2BF16LrtiV, TileProgModelType::ACE_ManagedRA},
+    {X86::ACE_PTCVTROWPS2PHHrtiV, TileProgModelType::ACE_ManagedRA},
+    {X86::ACE_PTCVTROWPS2PHLrtiV, TileProgModelType::ACE_ManagedRA},
+    {X86::ACE_PTCVTROWD2PSrtiV, TileProgModelType::ACE_ManagedRA},
+    {X86::ACE_PTILEMOVROWrtiV, TileProgModelType::ACE_ManagedRA},
+    {X86::ACE_PTCVTROWPS2BF16HrteV, TileProgModelType::ACE_ManagedRA},
+    {X86::ACE_PTCVTROWPS2BF16LrteV, TileProgModelType::ACE_ManagedRA},
+    {X86::ACE_PTCVTROWPS2PHHrteV, TileProgModelType::ACE_ManagedRA},
+    {X86::ACE_PTCVTROWPS2PHLrteV, TileProgModelType::ACE_ManagedRA},
+    {X86::ACE_PTCVTROWD2PSrteV, TileProgModelType::ACE_ManagedRA},
+    {X86::ACE_PTILEMOVROWrteV, TileProgModelType::ACE_ManagedRA},
     {X86::PTILEMOVCOLtreV, TileProgModelType::ACE_ManagedRA},
     {X86::PTILEMOVROWtreV, TileProgModelType::ACE_ManagedRA},
     {X86::PTOP2BF16PStrrV, TileProgModelType::ACE_ManagedRA},
@@ -39336,8 +39362,7 @@ static const TileOpcodeModelEntry TileOpcodeModels[] = {
 
 // Set tile program model based on opcode. Returns true if model was set.
 static bool setTileProgModelForOpcode(unsigned Opcode,
-                                      X86MachineFunctionInfo *MFI,
-                                      const X86Subtarget &Subtarget) {
+                                      X86MachineFunctionInfo *MFI) {
   for (const auto &Entry : TileOpcodeModels) {
     if (Entry.Opcode == Opcode) {
       switch (Entry.ModelType) {
@@ -39350,16 +39375,10 @@ static bool setTileProgModelForOpcode(unsigned Opcode,
         MFI->setACEProgModel(ACEProgModelEnum::ACE_ManagedRA);
         return true;
       case TileProgModelType::AMX_DirectReg:
-        if (Subtarget.hasACEV1())
-          MFI->setACEProgModel(ACEProgModelEnum::ACE_DirectReg);
-        else
-          MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
+        MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
         return true;
       case TileProgModelType::AMX_ManagedRA:
-        if (Subtarget.hasACEV1())
-          MFI->setACEProgModel(ACEProgModelEnum::ACE_ManagedRA);
-        else
-          MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
+        MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
         return true;
       }
     }
@@ -39377,7 +39396,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   // Centralized tile program model handling
   auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
-  setTileProgModelForOpcode(MI.getOpcode(), MFI, Subtarget);
+  setTileProgModelForOpcode(MI.getOpcode(), MFI);
 
   auto TMMImmToTMMReg = [](unsigned Imm) {
     assert (Imm < 8 && "Illegal tmm index");
@@ -39797,7 +39816,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
-  case X86::PTILEZERO: {
+  case X86::PTILEZERO:
+  case X86::ACE_PTILEZERO: {
     unsigned Imm = MI.getOperand(0).getImm();
     BuildMI(*BB, MI, MIMD, TII->get(X86::TILEZERO), TMMImmToTMMReg(Imm));
     MI.eraseFromParent();
@@ -39816,6 +39836,19 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTOP4MXHBF8PStrriV:
   case X86::PTOP4MXBF8PStrriV:
   case X86::PTOP4MXBSSPStrriV:
+  case X86::ACE_PTILEZEROV:
+  case X86::ACE_PTCVTROWPS2BF16HrtiV:
+  case X86::ACE_PTCVTROWPS2BF16LrtiV:
+  case X86::ACE_PTCVTROWPS2PHHrtiV:
+  case X86::ACE_PTCVTROWPS2PHLrtiV:
+  case X86::ACE_PTCVTROWD2PSrtiV:
+  case X86::ACE_PTILEMOVROWrtiV:
+  case X86::ACE_PTCVTROWPS2BF16HrteV:
+  case X86::ACE_PTCVTROWPS2BF16LrteV:
+  case X86::ACE_PTCVTROWPS2PHHrteV:
+  case X86::ACE_PTCVTROWPS2PHLrteV:
+  case X86::ACE_PTCVTROWD2PSrteV:
+  case X86::ACE_PTILEMOVROWrteV:
     return BB;
   case X86::PTILELOADDRS:
   case X86::PTILELOADDRST1:
@@ -39868,28 +39901,40 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTCVTROWPS2PHHrti:
   case X86::PTCVTROWPS2PHLrti:
   case X86::PTCVTROWD2PSrti:
-  case X86::PTILEMOVROWrti: {
+  case X86::PTILEMOVROWrti:
+  case X86::ACE_PTCVTROWPS2BF16Hrti:
+  case X86::ACE_PTCVTROWPS2BF16Lrti:
+  case X86::ACE_PTCVTROWPS2PHHrti:
+  case X86::ACE_PTCVTROWPS2PHLrti:
+  case X86::ACE_PTCVTROWD2PSrti:
+  case X86::ACE_PTILEMOVROWrti: {
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc;
     switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected instruction!");
     case X86::PTCVTROWD2PSrti:
+    case X86::ACE_PTCVTROWD2PSrti:
       Opc = X86::TCVTROWD2PSrti;
       break;
     case X86::PTCVTROWPS2BF16Hrti:
+    case X86::ACE_PTCVTROWPS2BF16Hrti:
       Opc = X86::TCVTROWPS2BF16Hrti;
       break;
     case X86::PTCVTROWPS2PHHrti:
+    case X86::ACE_PTCVTROWPS2PHHrti:
       Opc = X86::TCVTROWPS2PHHrti;
       break;
     case X86::PTCVTROWPS2BF16Lrti:
+    case X86::ACE_PTCVTROWPS2BF16Lrti:
       Opc = X86::TCVTROWPS2BF16Lrti;
       break;
     case X86::PTCVTROWPS2PHLrti:
+    case X86::ACE_PTCVTROWPS2PHLrti:
       Opc = X86::TCVTROWPS2PHLrti;
       break;
     case X86::PTILEMOVROWrti:
+    case X86::ACE_PTILEMOVROWrti:
       Opc = X86::TILEMOVROWrti;
       break;
     }
@@ -39906,28 +39951,40 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTCVTROWPS2PHHrte:
   case X86::PTCVTROWPS2PHLrte:
   case X86::PTCVTROWD2PSrte:
-  case X86::PTILEMOVROWrte: {
+  case X86::PTILEMOVROWrte:
+  case X86::ACE_PTCVTROWPS2BF16Hrte:
+  case X86::ACE_PTCVTROWPS2BF16Lrte:
+  case X86::ACE_PTCVTROWPS2PHHrte:
+  case X86::ACE_PTCVTROWPS2PHLrte:
+  case X86::ACE_PTCVTROWD2PSrte:
+  case X86::ACE_PTILEMOVROWrte: {
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc;
     switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected instruction!");
     case X86::PTCVTROWD2PSrte:
+    case X86::ACE_PTCVTROWD2PSrte:
       Opc = X86::TCVTROWD2PSrte;
       break;
     case X86::PTCVTROWPS2BF16Hrte:
+    case X86::ACE_PTCVTROWPS2BF16Hrte:
       Opc = X86::TCVTROWPS2BF16Hrte;
       break;
     case X86::PTCVTROWPS2BF16Lrte:
+    case X86::ACE_PTCVTROWPS2BF16Lrte:
       Opc = X86::TCVTROWPS2BF16Lrte;
       break;
     case X86::PTCVTROWPS2PHHrte:
+    case X86::ACE_PTCVTROWPS2PHHrte:
       Opc = X86::TCVTROWPS2PHHrte;
       break;
     case X86::PTCVTROWPS2PHLrte:
+    case X86::ACE_PTCVTROWPS2PHLrte:
       Opc = X86::TCVTROWPS2PHLrte;
       break;
     case X86::PTILEMOVROWrte:
+    case X86::ACE_PTILEMOVROWrte:
       Opc = X86::TILEMOVROWrte;
       break;
     }
