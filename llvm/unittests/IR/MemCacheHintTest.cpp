@@ -142,4 +142,107 @@ TEST_F(MemCacheHintTest, RemoveAbsentHint) {
   EXPECT_EQ(Copy->getMetadata(LLVMContext::MD_mem_cache_hint), MD);
 }
 
+TEST_F(MemCacheHintTest, CommonReadHints) {
+  auto *Ty = FixedVectorType::get(Builder.getInt32Ty(), 4);
+  Value *Mask = Builder.CreateVectorSplat(4, Builder.getTrue());
+  Value *Pointers = Builder.CreateVectorSplat(4, Source);
+  auto *Load = Builder.CreateLoad(Ty, Source);
+  auto *MaskedLoad = Builder.CreateMaskedLoad(Ty, Source, Align(4), Mask);
+  auto *Gather = Builder.CreateMaskedGather(Ty, Pointers, Align(4), Mask);
+  Value *Sources[] = {Load, MaskedLoad, Gather};
+  MDNode *Hint = hint("read");
+  for (Value *V : Sources)
+    setMemCacheHint(*cast<Instruction>(V), 0, Hint);
+  auto *Target = Builder.CreateLoad(Ty, Dest);
+  propagateMemCacheHint(*Target, Sources);
+  EXPECT_EQ(Target->getMetadata(LLVMContext::MD_mem_cache_hint),
+            attachment(0, Hint));
+}
+
+TEST_F(MemCacheHintTest, CommonWriteHints) {
+  Value *Data = Builder.CreateVectorSplat(4, Builder.getInt32(1));
+  Value *Mask = Builder.CreateVectorSplat(4, Builder.getTrue());
+  Value *Pointers = Builder.CreateVectorSplat(4, Dest);
+  auto *Store = Builder.CreateStore(Data, Dest);
+  auto *MaskedStore = Builder.CreateMaskedStore(Data, Dest, Align(4), Mask);
+  auto *Scatter = Builder.CreateMaskedScatter(Data, Pointers, Align(4), Mask);
+  Value *Sources[] = {Store, MaskedStore, Scatter};
+  MDNode *Hint = hint("write");
+  for (Value *V : Sources)
+    setMemCacheHint(*cast<Instruction>(V), 1, Hint);
+  auto *Target = Builder.CreateStore(Data, Dest);
+  setMemCacheHint(*Target, 1, hint("old"));
+  propagateMemCacheHint(*Target, Sources);
+  EXPECT_EQ(Target->getMetadata(LLVMContext::MD_mem_cache_hint),
+            attachment(1, Hint));
+}
+
+TEST_F(MemCacheHintTest, MissingOrConflictingHints) {
+  auto *A = Builder.CreateLoad(Builder.getInt32Ty(), Source);
+  auto *B = Builder.CreateLoad(Builder.getInt32Ty(), Source);
+  auto *Target = Builder.CreateLoad(Builder.getInt32Ty(), Source);
+  Value *Sources[] = {A, B};
+  MDNode *Hint = hint("read");
+  setMemCacheHint(*A, 0, Hint);
+  setMemCacheHint(*Target, 0, hint("old"));
+  propagateMemCacheHint(*Target, Sources);
+  EXPECT_EQ(Target->getMetadata(LLVMContext::MD_mem_cache_hint), nullptr);
+  setMemCacheHint(*B, 0, hint("different"));
+  setMemCacheHint(*Target, 0, hint("old"));
+  propagateMemCacheHint(*Target, Sources);
+  EXPECT_EQ(Target->getMetadata(LLVMContext::MD_mem_cache_hint), nullptr);
+  setMemCacheHint(*B, 0, Hint);
+  propagateMemCacheHint(*Target, Sources);
+  EXPECT_EQ(Target->getMetadata(LLVMContext::MD_mem_cache_hint),
+            attachment(0, Hint));
+  setMemCacheHint(*A, 0, nullptr);
+  propagateMemCacheHint(*Target, Sources);
+  EXPECT_EQ(Target->getMetadata(LLVMContext::MD_mem_cache_hint), nullptr);
+}
+
+TEST_F(MemCacheHintTest, ReadWriteMismatch) {
+  auto *Load = Builder.CreateLoad(Builder.getInt32Ty(), Source);
+  auto *Store = Builder.CreateStore(Builder.getInt32(1), Dest);
+  auto *TargetLoad = Builder.CreateLoad(Builder.getInt32Ty(), Source);
+  auto *TargetStore = Builder.CreateStore(Builder.getInt32(1), Dest);
+  MDNode *Read = hint("read"), *Write = hint("write");
+  setMemCacheHint(*Load, 0, Read);
+  setMemCacheHint(*Store, 1, Write);
+  setMemCacheHint(*TargetLoad, 0, Read);
+  setMemCacheHint(*TargetStore, 1, Write);
+  propagateMemCacheHint(*TargetLoad, {Store});
+  propagateMemCacheHint(*TargetStore, {Load});
+  EXPECT_EQ(TargetLoad->getMetadata(LLVMContext::MD_mem_cache_hint), nullptr);
+  EXPECT_EQ(TargetStore->getMetadata(LLVMContext::MD_mem_cache_hint), nullptr);
+}
+
+TEST_F(MemCacheHintTest, UnsupportedAccess) {
+  auto *Load = Builder.CreateLoad(Builder.getInt32Ty(), Source);
+  auto *Copy = createMemCpy();
+  auto *Target = Builder.CreateLoad(Builder.getInt32Ty(), Source);
+  MDNode *Hint = hint("read");
+  setMemCacheHint(*Load, 0, Hint);
+  setMemCacheHint(*Copy, 0, Hint);
+  propagateMemCacheHint(*Copy, {Load});
+  EXPECT_EQ(Copy->getMetadata(LLVMContext::MD_mem_cache_hint), nullptr);
+  setMemCacheHint(*Copy, 0, Hint);
+  setMemCacheHint(*Target, 0, Hint);
+  propagateMemCacheHint(*Target, {Load, Copy});
+  EXPECT_EQ(Target->getMetadata(LLVMContext::MD_mem_cache_hint), nullptr);
+}
+
+TEST_F(MemCacheHintTest, EmptyOrNonInstructionSources) {
+  auto *Load = Builder.CreateLoad(Builder.getInt32Ty(), Source);
+  MDNode *Hint = hint("read");
+  setMemCacheHint(*Load, 0, Hint);
+  propagateMemCacheHint(*Load, {});
+  EXPECT_EQ(Load->getMetadata(LLVMContext::MD_mem_cache_hint), nullptr);
+  setMemCacheHint(*Load, 0, Hint);
+  propagateMemCacheHint(*Load, {Builder.getInt32(0)});
+  EXPECT_EQ(Load->getMetadata(LLVMContext::MD_mem_cache_hint), nullptr);
+  setMemCacheHint(*Load, 0, Hint);
+  propagateMemCacheHint(*Load, {Load, Builder.getInt32(0)});
+  EXPECT_EQ(Load->getMetadata(LLVMContext::MD_mem_cache_hint), nullptr);
+}
+
 } // namespace

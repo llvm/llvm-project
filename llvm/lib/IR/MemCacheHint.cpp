@@ -10,9 +10,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -61,4 +63,53 @@ void llvm::setMemCacheHint(Instruction &I, unsigned OperandNo, MDNode *Hint) {
   I.setMetadata(LLVMContext::MD_mem_cache_hint,
                 Operands.empty() ? nullptr
                                  : MDNode::get(I.getContext(), Operands));
+}
+
+// The supported accesses have one memory operand. Its position also
+// distinguishes reads (0) from writes (1).
+static std::optional<unsigned> getPointerOperandIndex(const Instruction &I) {
+  if (isa<LoadInst>(I))
+    return LoadInst::getPointerOperandIndex();
+  if (isa<StoreInst>(I))
+    return StoreInst::getPointerOperandIndex();
+  const auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return std::nullopt;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_gather:
+    return 0;
+  case Intrinsic::masked_store:
+  case Intrinsic::masked_scatter:
+    return 1;
+  default:
+    return std::nullopt;
+  }
+}
+
+static MDNode *getCommonCacheHint(const Instruction &Dest,
+                                  ArrayRef<Value *> Sources) {
+  std::optional<unsigned> PointerIndex = getPointerOperandIndex(Dest);
+  if (!PointerIndex || Sources.empty())
+    return nullptr;
+
+  const auto *First = dyn_cast<Instruction>(Sources.front());
+  if (!First)
+    return nullptr;
+  MDNode *MD = First->getMetadata(LLVMContext::MD_mem_cache_hint);
+  if (!MD)
+    return nullptr;
+
+  for (Value *V : Sources) {
+    const auto *Source = dyn_cast<Instruction>(V);
+    if (!Source || getPointerOperandIndex(*Source) != PointerIndex ||
+        Source->getMetadata(LLVMContext::MD_mem_cache_hint) != MD)
+      return nullptr;
+  }
+  return MD;
+}
+
+void llvm::propagateMemCacheHint(Instruction &Dest, ArrayRef<Value *> Sources) {
+  Dest.setMetadata(LLVMContext::MD_mem_cache_hint,
+                   getCommonCacheHint(Dest, Sources));
 }
