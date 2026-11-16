@@ -59,8 +59,6 @@ defm : BoolField<"enable-loop-trap-analysis", "false",
 /* TO_UPSTREAM(BoundsSafety) OFF */
 defm : BoolField<"enable-loop-versioning-licm", "false",
   "Enable the experimental Loop Versioning LICM pass">;
-defm : BoolField<"enable-loopinterchange", "true",
-  "Enable the LoopInterchange Pass">;
 defm : BoolField<"enable-matrix", "false",
   "Enable lowering of the matrix intrinsics">;
 defm : BoolField<"enable-merge-functions", "false",
