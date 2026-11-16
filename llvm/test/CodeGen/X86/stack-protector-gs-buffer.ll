@@ -38,7 +38,7 @@ define void @address_taken() #0 {
 ; CHECK-LABEL: marked_small:
 ; CHECK:         __security_cookie
 define void @marked_small() #0 {
-  %a = alloca [6 x i8], !stack-protector !1, !stack-protector.layout !3
+  %a = alloca [6 x i8], !stack-protector !1, !stack-protector-layout !3
   call void @use(ptr %a)
   ret void
 }
@@ -46,7 +46,7 @@ define void @marked_small() #0 {
 ; CHECK-LABEL: marked_large:
 ; CHECK:         __security_cookie
 define void @marked_large() #0 {
-  %a = alloca [64 x i8], !stack-protector !1, !stack-protector.layout !4
+  %a = alloca [64 x i8], !stack-protector !1, !stack-protector-layout !4
   call void @use(ptr %a)
   ret void
 }
@@ -55,7 +55,7 @@ define void @marked_large() #0 {
 ; CHECK-LABEL: marked_scalar:
 ; CHECK:         __security_cookie
 define void @marked_scalar() #0 {
-  %a = alloca i32, !stack-protector !1, !stack-protector.layout !3
+  %a = alloca i32, !stack-protector !1, !stack-protector-layout !3
   call void @use(ptr %a)
   ret void
 }
@@ -78,7 +78,7 @@ define void @marked_ignore() #0 {
 ; CHECK-NOT:     __security_cookie
 ; CHECK:       .seh_endproc
 define void @layout_only() #0 {
-  %a = alloca [64 x i8], !stack-protector.layout !4
+  %a = alloca [64 x i8], !stack-protector-layout !4
   call void @use(ptr %a)
   ret void
 }
@@ -88,7 +88,7 @@ define void @layout_only() #0 {
 ; CHECK-NOT:     __security_cookie
 ; CHECK:       .seh_endproc
 define void @layout_with_ignore() #0 {
-  %a = alloca [64 x i8], !stack-protector !0, !stack-protector.layout !4
+  %a = alloca [64 x i8], !stack-protector !0, !stack-protector-layout !4
   call void @use(ptr %a)
   ret void
 }
@@ -106,7 +106,7 @@ define void @marked_without_layout() #0 {
 ; CHECK-LABEL: marked_bad_layout:
 ; CHECK:         __security_cookie
 define void @marked_bad_layout() #0 {
-  %a = alloca [64 x i8], !stack-protector !1, !stack-protector.layout !5
+  %a = alloca [64 x i8], !stack-protector !1, !stack-protector-layout !5
   call void @use(ptr %a)
   ret void
 }
@@ -141,7 +141,7 @@ define void @small_alloca() #0 {
 ; CHECK-LABEL: sret_slot:
 ; CHECK:         __security_cookie
 define void @sret_slot() #0 {
-  %a = alloca [64 x i8], !stack-protector !1, !stack-protector.layout !4
+  %a = alloca [64 x i8], !stack-protector !1, !stack-protector-layout !4
   call void @make(ptr sret([64 x i8]) %a)
   ret void
 }
@@ -153,7 +153,7 @@ define void @sret_slot() #0 {
 ; CHECK-LABEL: variadic:
 ; CHECK:         __security_cookie
 define void @variadic(i32 %n, ...) #0 {
-  %a = alloca [64 x i8], !stack-protector !1, !stack-protector.layout !4
+  %a = alloca [64 x i8], !stack-protector !1, !stack-protector-layout !4
   call void @use(ptr %a)
   ret void
 }
@@ -195,7 +195,7 @@ define void @strong_still_protects() #2 {
 ; CHECK-LABEL: strong_honours_mark:
 ; CHECK:         __security_cookie
 define void @strong_honours_mark() #2 {
-  %a = alloca i32, !stack-protector !1, !stack-protector.layout !3
+  %a = alloca i32, !stack-protector !1, !stack-protector-layout !3
   store i32 0, ptr %a
   ret void
 }

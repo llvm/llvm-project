@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
 
-; "stack-protector.layout" metadata only says how an alloca is laid out if it is
+; "stack-protector-layout" metadata only says how an alloca is laid out if it is
 ; protected. It composes with the heuristic the function's attributes select:
 ; here the ordinary sspstrong heuristic decides which allocas are protected, and
 ; the metadata decides how they are laid out.
@@ -26,8 +26,8 @@ define void @plain() sspstrong {
 ; CHECK-NEXT:    leaq 108(%rsp), %rdx
 ; CHECK:         __security_cookie
 define void @swapped() sspstrong {
-  %big = alloca [64 x i8], !stack-protector.layout !0
-  %small = alloca [4 x i8], !stack-protector.layout !1
+  %big = alloca [64 x i8], !stack-protector-layout !0
+  %small = alloca [4 x i8], !stack-protector-layout !1
   call void @use(ptr %big, ptr %small)
   ret void
 }
@@ -38,7 +38,7 @@ define void @swapped() sspstrong {
 ; CHECK-NOT:     __security_cookie
 ; CHECK:       .seh_endproc
 define void @unprotected() sspstrong {
-  %x = alloca i32, !stack-protector.layout !1
+  %x = alloca i32, !stack-protector-layout !1
   store i32 0, ptr %x
   ret void
 }

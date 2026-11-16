@@ -89,12 +89,12 @@ static std::optional<uint32_t> getSSPAllocaMD(const AllocaInst &AI) {
   return CI->getLimitedValue(SSPAMD_Force);
 }
 
-/// Read the "stack-protector.layout" metadata of \p AI, if it has any: whether
+/// Read the "stack-protector-layout" metadata of \p AI, if it has any: whether
 /// the alloca should be laid out like a small or a large array, if it is
 /// protected.
 static std::optional<MachineFrameInfo::SSPLayoutKind>
 getSSPAllocaLayoutMD(const AllocaInst &AI) {
-  const MDNode *MD = AI.getMetadata("stack-protector.layout");
+  const MDNode *MD = AI.getMetadata("stack-protector-layout");
   if (!MD || MD->getNumOperands() != 1)
     return std::nullopt;
   const auto *S = dyn_cast<MDString>(MD->getOperand(0));

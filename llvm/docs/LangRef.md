@@ -9225,7 +9225,7 @@ The metadata contains a single integer:
 The value `1` lets a frontend classify an allocation itself, which is
 necessary when the decision depends on source-level information that lowering
 to IR does not preserve. It says nothing about where the alloca goes in the
-frame; see `stack-protector.layout` below.
+frame; see `stack-protector-layout` below.
 
 ```
  %a = alloca [1000 x i8], align 1, !stack-protector !0
@@ -9235,9 +9235,9 @@ frame; see `stack-protector.layout` below.
 !1 = !{i32 1}
 ```
 
-#### '`stack-protector.layout`' Metadata
+#### '`stack-protector-layout`' Metadata
 
-The `stack-protector.layout` metadata may be attached to alloca instructions.
+The `stack-protector-layout` metadata may be attached to alloca instructions.
 It says how the given alloca should be laid out *if it is protected*: like a
 small (`< ssp-buffer-size`) array, or like a large (`>= ssp-buffer-size`)
 array. It does not make the alloca protected or unprotected. Whether it is is
@@ -9252,7 +9252,7 @@ requires a protector but that has no layout metadata is laid out according to
 its size.
 
 ```
- %a = alloca [1000 x i8], align 1, !stack-protector !0, !stack-protector.layout !1
+ %a = alloca [1000 x i8], align 1, !stack-protector !0, !stack-protector-layout !1
 
 !0 = !{i32 1}
 !1 = !{!"large"}
