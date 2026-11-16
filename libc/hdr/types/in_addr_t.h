@@ -19,7 +19,7 @@
 
 #else
 
-#include <netinet/in.h>
+#include "hdr/netinet_in_overlay.h"
 
 #endif // LIBC_FULL_BUILD
 

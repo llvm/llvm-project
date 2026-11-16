@@ -20,7 +20,7 @@
 
 #else // Overlay mode
 
-#include <netinet/in.h>
+#include "hdr/netinet_in_overlay.h"
 
 #endif // LLVM_LIBC_FULL_BUILD
 

@@ -578,6 +578,8 @@ add_proxy_header_library(
   struct_in_addr
   HDRS
     struct_in_addr.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_in_addr
 )
@@ -586,6 +588,8 @@ add_proxy_header_library(
   struct_in6_addr
   HDRS
     struct_in6_addr.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_in6_addr
 )
@@ -594,6 +598,8 @@ add_proxy_header_library(
   struct_ip_mreq
   HDRS
     struct_ip_mreq.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_ip_mreq
 )
@@ -602,6 +608,8 @@ add_proxy_header_library(
   struct_ip_mreq_source
   HDRS
     struct_ip_mreq_source.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_ip_mreq_source
 )
@@ -610,6 +618,8 @@ add_proxy_header_library(
   struct_ip_mreqn
   HDRS
     struct_ip_mreqn.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_ip_mreqn
 )
@@ -618,6 +628,8 @@ add_proxy_header_library(
   struct_ip_msfilter
   HDRS
     struct_ip_msfilter.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_ip_msfilter
 )
@@ -626,6 +638,8 @@ add_proxy_header_library(
   struct_group_req
   HDRS
     struct_group_req.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_group_req
 )
@@ -634,6 +648,8 @@ add_proxy_header_library(
   struct_group_source_req
   HDRS
     struct_group_source_req.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_group_source_req
 )
@@ -642,6 +658,8 @@ add_proxy_header_library(
   struct_ip_opts
   HDRS
     struct_ip_opts.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_ip_opts
 )
@@ -650,6 +668,8 @@ add_proxy_header_library(
   struct_ipv6_mreq
   HDRS
     struct_ipv6_mreq.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_ipv6_mreq
 )
@@ -658,6 +678,8 @@ add_proxy_header_library(
   in_addr_t
   HDRS
     in_addr_t.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.in_addr_t
 )
@@ -700,6 +722,8 @@ add_proxy_header_library(
   struct_addrinfo
   HDRS
     struct_addrinfo.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_addrinfo
 )
@@ -726,6 +750,8 @@ add_proxy_header_library(
   struct_sockaddr_in
   HDRS
     struct_sockaddr_in.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_sockaddr_in
 )
@@ -734,6 +760,8 @@ add_proxy_header_library(
   struct_sockaddr_in6
   HDRS
     struct_sockaddr_in6.h
+  DEPENDS
+    libc.hdr.netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_sockaddr_in6
 )

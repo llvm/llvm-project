@@ -20,6 +20,7 @@
 
 #else // Overlay mode
 
+#include "hdr/netinet_in_overlay.h"
 #include <netdb.h>
 
 #endif // LIBC_FULL_BUILD

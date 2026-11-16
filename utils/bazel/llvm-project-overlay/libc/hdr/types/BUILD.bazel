@@ -374,16 +374,28 @@ libc_support_library(
 libc_support_library(
     name = "in_addr_t",
     hdrs = ["in_addr_t.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc/hdr:netinet_in_overlay"],
+    }),
 )
 
 libc_support_library(
     name = "struct_in_addr",
     hdrs = ["struct_in_addr.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc/hdr:netinet_in_overlay"],
+    }),
 )
 
 libc_support_library(
     name = "struct_in6_addr",
     hdrs = ["struct_in6_addr.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc/hdr:netinet_in_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -398,11 +410,19 @@ libc_support_library(
 libc_support_library(
     name = "struct_sockaddr_in",
     hdrs = ["struct_sockaddr_in.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc/hdr:netinet_in_overlay"],
+    }),
 )
 
 libc_support_library(
     name = "struct_sockaddr_in6",
     hdrs = ["struct_sockaddr_in6.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc/hdr:netinet_in_overlay"],
+    }),
 )
 
 libc_support_library(

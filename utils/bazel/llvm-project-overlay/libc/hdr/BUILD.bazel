@@ -64,8 +64,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "netinet_in_overlay",
+    hdrs = ["netinet_in_overlay.h"],
+    target_compatible_with = select({
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
     name = "netinet_in_macros",
     hdrs = ["netinet_in_macros.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": [":netinet_in_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -180,7 +193,10 @@ libc_support_library(
     hdrs = ["inet-address-macros.h"],
     deps = [
         "//libc:llvm_libc_macros_inet_address_macros",
-    ],
+    ] + select({
+        "//libc:full_build": [],
+        "//conditions:default": [":netinet_in_overlay"],
+    }),
 )
 
 libc_support_library(

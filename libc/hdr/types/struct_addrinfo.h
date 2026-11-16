@@ -20,6 +20,10 @@
 
 #else
 
+// <netdb.h> may include <netinet/in.h> transitively. We include our overlay
+// explicitly, so we can apply appropriate fixups.
+#include "hdr/netinet_in_overlay.h"
+
 #include <netdb.h>
 
 #endif // LIBC_FULL_BUILD

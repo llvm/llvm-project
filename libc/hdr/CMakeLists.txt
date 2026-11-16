@@ -88,10 +88,13 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.glob_macros
 )
 
+add_header_library(netinet_in_overlay HDRS netinet_in_overlay.h)
 add_proxy_header_library(
   inet_address_macros
   HDRS
     inet-address-macros.h
+  DEPENDS
+    .netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.inet_address_macros
 )
@@ -108,6 +111,8 @@ add_proxy_header_library(
   netdb_macros
   HDRS
     netdb_macros.h
+  DEPENDS
+    .netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.netdb_macros
 )
@@ -116,6 +121,8 @@ add_proxy_header_library(
   netinet_in_macros
   HDRS
     netinet_in_macros.h
+  DEPENDS
+    .netinet_in_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.netinet_in_macros
 )
