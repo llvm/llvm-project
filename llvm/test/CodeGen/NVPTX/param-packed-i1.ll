@@ -8,6 +8,7 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_50 -O0 -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_50 -O3 -verify-machineinstrs | FileCheck %s
 
+; Read lane 1 of a two-lane Boolean vector stored in one byte.
 ; CHECK-LABEL: .entry lane1_v2i1(
 ; CHECK: .b8 lane1_v2i1_param_0[1]
 ; CHECK: ld.param.b8 {{.*}}, [lane1_v2i1_param_0+1];
@@ -19,6 +20,7 @@ define ptx_kernel void @lane1_v2i1(<2 x i1> %value, ptr addrspace(1) %output) {
   ret void
 }
 
+; Read lane 7 of an eight-lane Boolean vector stored in one byte.
 ; CHECK-LABEL: .entry lane7_v8i1(
 ; CHECK: .b8 lane7_v8i1_param_0[1]
 ; CHECK: ld.param.b8 {{.*}}, [lane7_v8i1_param_0+7];
@@ -30,6 +32,7 @@ define ptx_kernel void @lane7_v8i1(<8 x i1> %value, ptr addrspace(1) %output) {
   ret void
 }
 
+; Read lane 8 of a nine-lane Boolean vector, crossing into the second byte.
 ; CHECK-LABEL: .entry lane8_v9i1(
 ; CHECK: .b8 lane8_v9i1_param_0[2]
 ; CHECK: ld.param.b8 {{.*}}, [lane8_v9i1_param_0+8];
@@ -41,6 +44,7 @@ define ptx_kernel void @lane8_v9i1(<9 x i1> %value, ptr addrspace(1) %output) {
   ret void
 }
 
+; Read lane 15 of a 16-lane Boolean vector stored in two bytes.
 ; CHECK-LABEL: .entry lane15_v16i1(
 ; CHECK: .b8 lane15_v16i1_param_0[2]
 ; CHECK: ld.param.v2.b8 {{.*}}, [lane15_v16i1_param_0+14];
@@ -52,6 +56,7 @@ define ptx_kernel void @lane15_v16i1(<16 x i1> %value, ptr addrspace(1) %output)
   ret void
 }
 
+; Read lane 31 of a 32-lane Boolean vector stored in four bytes.
 ; CHECK-LABEL: .entry lane31_v32i1(
 ; CHECK: .b8 lane31_v32i1_param_0[4]
 ; CHECK: ld.param.b32 {{.*}}, [lane31_v32i1_param_0+28];
@@ -63,6 +68,7 @@ define ptx_kernel void @lane31_v32i1(<32 x i1> %value, ptr addrspace(1) %output)
   ret void
 }
 
+; Read lane 63 of a 64-lane Boolean vector stored in eight bytes.
 ; CHECK-LABEL: .entry lane63_v64i1(
 ; CHECK: .b8 lane63_v64i1_param_0[8]
 ; CHECK: ld.param.b32 {{.*}}, [lane63_v64i1_param_0+60];
@@ -74,6 +80,7 @@ define ptx_kernel void @lane63_v64i1(<64 x i1> %value, ptr addrspace(1) %output)
   ret void
 }
 
+; Read all eight Boolean lanes and store their bits as one byte.
 ; CHECK-LABEL: .entry all_lanes_v8i1(
 ; CHECK: .b8 all_lanes_v8i1_param_0[1]
 ; CHECK: ld.param.b8 {{.*}}, [all_lanes_v8i1_param_0+7];
@@ -84,6 +91,7 @@ define ptx_kernel void @all_lanes_v8i1(<8 x i1> %value, ptr addrspace(1) %output
   ret void
 }
 
+; Load scalar and vector fields from their separate positions in a struct.
 ; CHECK-LABEL: .entry mixed_scalar_vector(
 ; CHECK: .b8 mixed_scalar_vector_param_0[8]
 ; CHECK: ld.param.b8 {{.*}}, [mixed_scalar_vector_param_0+8];
@@ -101,6 +109,7 @@ define ptx_kernel void @mixed_scalar_vector({ i1, <8 x i1>, i32 } %value, ptr ad
   ret void
 }
 
+; Pass and return nine Boolean lanes using two bytes.
 ; CHECK-LABEL: roundtrip_v9i1(
 ; CHECK: .b8 roundtrip_v9i1_param_0[2]
 ; CHECK: ld.param.b8 {{.*}}, [roundtrip_v9i1_param_0+8];
@@ -118,6 +127,7 @@ define <9 x i1> @roundtrip_v9i1(<9 x i1> %value) {
 
 declare <9 x i1> @callee_v9i1(<9 x i1>)
 
+; Read the only lane of a one-lane Boolean vector.
 ; CHECK-LABEL: .entry single_lane_vector(
 ; CHECK: .b8 single_lane_vector_param_0[1]
 ; CHECK: ld.param.b8 {{.*}}, [single_lane_vector_param_0];
@@ -130,6 +140,7 @@ define ptx_kernel void @single_lane_vector(<1 x i1> %value, ptr addrspace(1) %ou
   ret void
 }
 
+; Load two Boolean vectors from a nested array, respecting field padding.
 ; CHECK-LABEL: .entry nested_vector_array(
 ; CHECK: .b8 nested_vector_array_param_0[12]
 ; CHECK: ld.param.b32 {{.*}}, [nested_vector_array_param_0+16];
@@ -151,6 +162,7 @@ define ptx_kernel void @nested_vector_array({ i8, [2 x <16 x i1>], i32 } %value,
   ret void
 }
 
+; Use a returned Boolean vector as an integer without crashing the compiler.
 ; CHECK-LABEL: .entry returned_bits_v16i1(
 ; CHECK: .b8 returned_bits_v16i1_param_0[2]
 ; CHECK: .b8 param0[2];
