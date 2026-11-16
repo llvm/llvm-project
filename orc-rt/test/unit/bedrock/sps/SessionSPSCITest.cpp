@@ -12,6 +12,7 @@
 
 #include "orc-rt/bedrock/sps/SessionSPSCI.h"
 #include "orc-rt/bedrock/Session.h"
+#include "orc-rt/support/sps/SPSSymbolLookupResult.h"
 #include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
