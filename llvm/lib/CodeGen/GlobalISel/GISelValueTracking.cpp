@@ -2558,12 +2558,26 @@ bool GISelValueTracking::isKnownNeverLogicalZero(Register Val, unsigned Depth) {
 /// Compute number of sign bits for the intersection of \p Src0 and \p Src1
 unsigned GISelValueTracking::computeNumSignBitsMin(Register Src0, Register Src1,
                                                    const APInt &DemandedElts,
-                                                   unsigned Depth) {
+                                                   unsigned Depth,
+                                                   std::optional<bool> *IsNeg) {
+  if (IsNeg)
+    *IsNeg = std::nullopt;
   // Test src1 first, since we canonicalize simpler expressions to the RHS.
-  unsigned Src1SignBits = computeNumSignBits(Src1, DemandedElts, Depth);
+  std::optional<bool> IsNeg1;
+  unsigned Src1SignBits =
+      computeNumSignBits(Src1, DemandedElts, Depth, &IsNeg1);
   if (Src1SignBits == 1)
     return 1;
-  return std::min(computeNumSignBits(Src0, DemandedElts, Depth), Src1SignBits);
+  std::optional<bool> IsNeg0;
+  unsigned Result = std::min(
+      computeNumSignBits(Src0, DemandedElts, Depth, &IsNeg0), Src1SignBits);
+  if (IsNeg) {
+    if (IsNeg0 == false && IsNeg1 == false)
+      *IsNeg = false;
+    else if (IsNeg0 == true && IsNeg1 == true)
+      *IsNeg = true;
+  }
+  return Result;
 }
 
 /// Compute the known number of sign bits with attached range metadata in the
@@ -2595,12 +2609,20 @@ static unsigned computeNumSignBitsFromRangeMetadata(const GAnyLoad *Ld,
 
 unsigned GISelValueTracking::computeNumSignBits(Register R,
                                                 const APInt &DemandedElts,
-                                                unsigned Depth) {
+                                                unsigned Depth,
+                                                std::optional<bool> *IsNeg) {
+  if (IsNeg)
+    *IsNeg = std::nullopt;
+
   MachineInstr &MI = *MRI.getVRegDef(R);
   unsigned Opcode = MI.getOpcode();
 
-  if (Opcode == TargetOpcode::G_CONSTANT)
-    return MI.getOperand(1).getCImm()->getValue().getNumSignBits();
+  if (Opcode == TargetOpcode::G_CONSTANT) {
+    const APInt &Val = MI.getOperand(1).getCImm()->getValue();
+    if (IsNeg)
+      *IsNeg = Val.isNegative(); // All bits known; sign bit fully determined.
+    return Val.getNumSignBits();
+  }
 
   if (Depth == getMaxDepth())
     return 1;
@@ -2625,7 +2647,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     if (Src.getReg().isVirtual() && Src.getSubReg() == 0 &&
         MRI.getType(Src.getReg()).isValid()) {
       // Don't increment Depth for this one since we didn't do any work.
-      return computeNumSignBits(Src.getReg(), DemandedElts, Depth);
+      return computeNumSignBits(Src.getReg(), DemandedElts, Depth, IsNeg);
     }
 
     return 1;
@@ -2633,14 +2655,14 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   case TargetOpcode::G_FREEZE: {
     Register Src = MI.getOperand(1).getReg();
     if (isGuaranteedNotToBeUndefOrPoison(Src, MRI, Depth + 1))
-      return computeNumSignBits(Src, DemandedElts, Depth + 1);
+      return computeNumSignBits(Src, DemandedElts, Depth + 1, IsNeg);
     break;
   }
   case TargetOpcode::G_SEXT: {
     Register Src = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(Src);
     unsigned Tmp = TyBits - SrcTy.getScalarSizeInBits();
-    return computeNumSignBits(Src, DemandedElts, Depth + 1) + Tmp;
+    return computeNumSignBits(Src, DemandedElts, Depth + 1, IsNeg) + Tmp;
   }
   case TargetOpcode::G_ASSERT_SEXT:
   case TargetOpcode::G_SEXT_INREG: {
@@ -2686,7 +2708,10 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
 
     // e.g. i16->i32 = '16' bits known.
     const MachineMemOperand *MMO = *MI.memoperands_begin();
-    return TyBits - MMO->getSizeInBits().getValue();
+    unsigned ZExtBits = TyBits - MMO->getSizeInBits().getValue();
+    if (IsNeg && ZExtBits)
+      *IsNeg = false;
+    return ZExtBits;
   }
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR:
@@ -2771,7 +2796,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     // equal to the magnitude of the LHS. Therefore, the result should have
     // at least as many sign bits as the left hand side.
     Register Src = MI.getOperand(1).getReg();
-    return computeNumSignBits(Src, DemandedElts, Depth + 1);
+    return computeNumSignBits(Src, DemandedElts, Depth + 1, IsNeg);
   }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();
@@ -2787,7 +2812,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   case TargetOpcode::G_SELECT: {
     return computeNumSignBitsMin(MI.getOperand(2).getReg(),
                                  MI.getOperand(3).getReg(), DemandedElts,
-                                 Depth + 1);
+                                 Depth + 1, IsNeg);
   }
   case TargetOpcode::G_SMIN:
   case TargetOpcode::G_SMAX:
@@ -2796,7 +2821,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     // TODO: Handle clamp pattern with number of sign bits for SMIN/SMAX.
     return computeNumSignBitsMin(MI.getOperand(1).getReg(),
                                  MI.getOperand(2).getReg(), DemandedElts,
-                                 Depth + 1);
+                                 Depth + 1, IsNeg);
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_SADDE:
   case TargetOpcode::G_UADDO:
@@ -3052,14 +3077,14 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     Register EltNo = Extract.getIndexReg();
     LLT VecVT = MRI.getType(InVec);
     if (VecVT.isScalableVector())
-      return computeNumSignBits(InVec, APInt(1, 1), Depth + 1);
+      return computeNumSignBits(InVec, APInt(1, 1), Depth + 1, IsNeg);
     unsigned NumSrcElts = VecVT.getNumElements();
     std::optional<APInt> ConstEltNo = getIConstantVRegVal(EltNo, MRI);
     APInt DemandedSrcElts =
         ConstEltNo && ConstEltNo->ult(NumSrcElts)
             ? APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue())
             : APInt::getAllOnes(NumSrcElts);
-    return computeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
+    return computeNumSignBits(InVec, DemandedSrcElts, Depth + 1, IsNeg);
   }
   case TargetOpcode::G_EXTRACT_SUBVECTOR: {
     // Offset the demanded elts by the subvector index.
@@ -3073,7 +3098,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       unsigned NumSrcElts = SrcTy.getNumElements();
       DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
     }
-    return computeNumSignBits(SrcReg, DemandedSrcElts, Depth + 1);
+    return computeNumSignBits(SrcReg, DemandedSrcElts, Depth + 1, IsNeg);
   }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     // Collect the minimum number of sign bits that are shared by every vector
@@ -3122,14 +3147,21 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
   // use this information.
   KnownBits Known = getKnownBits(R, DemandedElts, Depth);
+  if (IsNeg) {
+    if (Known.isNegative())
+      *IsNeg = true;
+    else if (Known.isNonNegative())
+      *IsNeg = false;
+  }
   return std::max(FirstAnswer, Known.countMinSignBits());
 }
 
-unsigned GISelValueTracking::computeNumSignBits(Register R, unsigned Depth) {
+unsigned GISelValueTracking::computeNumSignBits(Register R, unsigned Depth,
+                                                std::optional<bool> *IsNeg) {
   LLT Ty = MRI.getType(R);
   APInt DemandedElts =
       Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
-  return computeNumSignBits(R, DemandedElts, Depth);
+  return computeNumSignBits(R, DemandedElts, Depth, IsNeg);
 }
 
 std::optional<ConstantRange> GISelValueTracking::getValidShiftAmountRange(

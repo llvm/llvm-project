@@ -106,8 +106,8 @@ public:
   void applyMinMaxToMinMax3(MachineInstr &MI,
                             MinMaxToMinMax3MatchInfo &MatchInfo) const;
 
-  bool matchCombine_mul24(MachineInstr &MI) const;
-  void applyCombine_mul24(MachineInstr &MI) const;
+  bool matchCombine_mul24(MachineInstr &MI, bool &IsSigned) const;
+  void applyCombine_mul24(MachineInstr &MI, bool IsSigned) const;
 
 private:
   SIModeRegisterDefaults getMode() const;
@@ -527,28 +527,39 @@ void AMDGPURegBankCombinerImpl::applyMinMaxToMinMax3(
   return;
 }
 
-bool AMDGPURegBankCombinerImpl::matchCombine_mul24(MachineInstr &MI) const {
+bool AMDGPURegBankCombinerImpl::matchCombine_mul24(MachineInstr &MI,
+                                                   bool &IsSigned) const {
   Register Dst = MI.getOperand(0).getReg();
-  if (MRI.getType(Dst) != LLT::scalar(32) || !isVgprRegBank(Dst))
+  if (!isVgprRegBank(Dst))
     return false;
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
-  if (STI.hasMulU24() && VT->getKnownBits(Src0).countMinLeadingZeros() >= 8 &&
-      VT->getKnownBits(Src1).countMinLeadingZeros() >= 8)
+  std::optional<bool> IsNeg0, IsNeg1;
+  unsigned NSB0 = VT->computeNumSignBits(Src0, 0, &IsNeg0);
+  bool Src0FitsU24 = STI.hasMulU24() && IsNeg0 == false && NSB0 >= 8;
+  bool Src0FitsI24 = STI.hasMulI24() && NSB0 >= 9;
+  if (!Src0FitsU24 && !Src0FitsI24)
+    return false;
+
+  unsigned NSB1 = VT->computeNumSignBits(Src1, 0, &IsNeg1);
+  if (Src0FitsU24 && IsNeg1 == false && NSB1 >= 8) {
+    IsSigned = false;
     return true;
-  return STI.hasMulI24() && VT->computeNumSignBits(Src0) >= 9 &&
-         VT->computeNumSignBits(Src1) >= 9;
+  }
+  if (Src0FitsI24 && NSB1 >= 9) {
+    IsSigned = true;
+    return true;
+  }
+  return false;
 }
 
-void AMDGPURegBankCombinerImpl::applyCombine_mul24(MachineInstr &MI) const {
+void AMDGPURegBankCombinerImpl::applyCombine_mul24(MachineInstr &MI,
+                                                   bool IsSigned) const {
   Register Dst = MI.getOperand(0).getReg();
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
   Intrinsic::ID IntrID =
-      (STI.hasMulU24() && VT->getKnownBits(Src0).countMinLeadingZeros() >= 8 &&
-       VT->getKnownBits(Src1).countMinLeadingZeros() >= 8)
-          ? Intrinsic::amdgcn_mul_u24
-          : Intrinsic::amdgcn_mul_i24;
+      IsSigned ? Intrinsic::amdgcn_mul_i24 : Intrinsic::amdgcn_mul_u24;
   B.buildIntrinsic(IntrID, ArrayRef<Register>{Dst}).addUse(Src0).addUse(Src1);
   MI.eraseFromParent();
 }

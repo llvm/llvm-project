@@ -48,8 +48,12 @@ class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
   void computeKnownBitsMin(Register Src0, Register Src1, KnownBits &Known,
                            const APInt &DemandedElts, unsigned Depth = 0);
 
+  /// Compute the minimum number of sign bits for \p Src0 and \p Src1.
+  /// If \p IsNeg is provided, it is set to true if both are known negative,
+  /// false if both are known non-negative, or std::nullopt if unknown.
   unsigned computeNumSignBitsMin(Register Src0, Register Src1,
-                                 const APInt &DemandedElts, unsigned Depth = 0);
+                                 const APInt &DemandedElts, unsigned Depth = 0,
+                                 std::optional<bool> *IsNeg = nullptr);
 
   void computeKnownFPClass(Register R, KnownFPClass &Known,
                            FPClassTest InterestedClasses, unsigned Depth);
@@ -91,9 +95,14 @@ public:
   void computeKnownBitsImpl(Register R, KnownBits &Known,
                             const APInt &DemandedElts, unsigned Depth = 0);
 
+  /// Compute the number of sign bits. If \p IsNeg is provided, it is set to
+  /// true if the value is known negative, false if known non-negative, or
+  /// std::nullopt if unknown.
   unsigned computeNumSignBits(Register R, const APInt &DemandedElts,
-                              unsigned Depth = 0);
-  unsigned computeNumSignBits(Register R, unsigned Depth = 0);
+                              unsigned Depth = 0,
+                              std::optional<bool> *IsNeg = nullptr);
+  unsigned computeNumSignBits(Register R, unsigned Depth = 0,
+                              std::optional<bool> *IsNeg = nullptr);
 
   // KnownBitsAPI
   KnownBits getKnownBits(Register R);

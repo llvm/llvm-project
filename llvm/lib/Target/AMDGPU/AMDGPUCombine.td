@@ -163,11 +163,12 @@ def fold_fabs_fptrunc : GICombineRule<
   (apply [{ Helper.applyFoldFAbsFptrunc(*${fabs}, *${fptrunc}); }])>;
 
 // Utilize 24-bit v_mul instructions
+def mul24_matchdata : GIDefMatchData<"bool">;
 def mul24 : GICombineRule<
-  (defs root:$mul),
-  (match (G_MUL $dst, $src0, $src1):$mul,
-         [{ return matchCombine_mul24(*${mul}); }]),
-  (apply [{ applyCombine_mul24(*${mul}); }])>;
+  (defs root:$mul, mul24_matchdata:$matchinfo),
+  (match (G_MUL i32:$dst, $src0, $src1):$mul,
+         [{ return matchCombine_mul24(*${mul}, ${matchinfo}); }]),
+  (apply [{ applyCombine_mul24(*${mul}, ${matchinfo}); }])>;
 
 // Detects s_mul_u64 instructions whose higher bits are zero/sign extended.
 def smulu64 : GICombineRule<
