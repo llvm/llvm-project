@@ -12571,6 +12571,12 @@ static unsigned getRVPScalarOpcode(unsigned IntNo) {
     return ISD::AVGSUBFLOORU;
   case Intrinsic::riscv_ssh1sadd_i32:
     return RISCVISD::SSH1SADD;
+  case Intrinsic::riscv_mseq_u32:
+    return RISCVISD::MSEQ;
+  case Intrinsic::riscv_mslt_i32:
+    return RISCVISD::MSLT;
+  case Intrinsic::riscv_msltu_u32:
+    return RISCVISD::MSLTU;
   case Intrinsic::riscv_mulhr_i32:
     return RISCVISD::MULHR;
   case Intrinsic::riscv_mulhru_u32:
@@ -13574,6 +13580,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_asub_i32:
   case Intrinsic::riscv_asubu_u32:
   case Intrinsic::riscv_ssh1sadd_i32:
+  case Intrinsic::riscv_mseq_u32:
+  case Intrinsic::riscv_mslt_i32:
+  case Intrinsic::riscv_msltu_u32:
   case Intrinsic::riscv_mulhr_i32:
   case Intrinsic::riscv_mulhru_u32:
   case Intrinsic::riscv_mulhsu_i32:
@@ -17601,11 +17610,13 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue ShAmt = N->getOperand(1);
 
       unsigned WideOpc = 0;
-      APInt HighMask = APInt::getHighBitsSet(64, 32);
-      if (DAG.MaskedValueIsZero(LHS, HighMask))
-        WideOpc = RISCVISD::WSLL;
-      else if (DAG.ComputeMaxSignificantBits(LHS) <= 32)
-        WideOpc = RISCVISD::WSLA;
+      if (N->getOpcode() == ISD::SHL) {
+        APInt HighMask = APInt::getHighBitsSet(64, 32);
+        if (DAG.MaskedValueIsZero(LHS, HighMask))
+          WideOpc = RISCVISD::WSLL;
+        else if (DAG.ComputeMaxSignificantBits(LHS) <= 32)
+          WideOpc = RISCVISD::WSLA;
+      }
 
       if (WideOpc) {
         SDValue Res =
@@ -18658,6 +18669,33 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
       }
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_mseq_u32:
+    case Intrinsic::riscv_mslt_i32:
+    case Intrinsic::riscv_msltu_u32: {
+      if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
+        return;
+      ISD::CondCode CC;
+      switch (IntNo) {
+      case Intrinsic::riscv_mseq_u32:
+        CC = ISD::SETEQ;
+        break;
+      case Intrinsic::riscv_mslt_i32:
+        CC = ISD::SETLT;
+        break;
+      case Intrinsic::riscv_msltu_u32:
+        CC = ISD::SETULT;
+        break;
+      default:
+        llvm_unreachable("Unexpected comparison intrinsic");
+      }
+      SDValue LHS =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
+      SDValue RHS =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
+      SDValue Cmp = DAG.getSetCC(DL, MVT::v2i32, LHS, RHS, CC);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Cmp, 0));
       return;
     }
     case Intrinsic::riscv_aadd_i32:
@@ -20070,7 +20108,7 @@ static SDValue combinePExtWideningAddAcc(SDNode *N, SelectionDAG &DAG,
   if (N->getOpcode() != ISD::ADD)
     return SDValue();
 
-  MVT VT = N->getSimpleValueType(0);
+  EVT VT = N->getValueType(0);
   if (VT != MVT::v4i16 && VT != MVT::v2i32)
     return SDValue();
 
@@ -20149,7 +20187,7 @@ static SDValue combinePExtWideningSubAcc(SDNode *N, SelectionDAG &DAG,
   if (N->getOpcode() != ISD::SUB)
     return SDValue();
 
-  MVT VT = N->getSimpleValueType(0);
+  EVT VT = N->getValueType(0);
   if (VT != MVT::v4i16 && VT != MVT::v2i32)
     return SDValue();
 

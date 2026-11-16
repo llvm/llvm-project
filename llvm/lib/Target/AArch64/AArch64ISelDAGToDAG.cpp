@@ -2836,6 +2836,10 @@ void AArch64DAGToDAGISel::SelectLoadLane(SDNode *N, unsigned NumVecs,
     ReplaceUses(SDValue(N, i), NV);
   }
 
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
+
   ReplaceUses(SDValue(N, NumVecs), SDValue(Ld, 1));
   CurDAG->RemoveDeadNode(N);
 }
@@ -2888,6 +2892,10 @@ void AArch64DAGToDAGISel::SelectPostLoadLane(SDNode *N, unsigned NumVecs,
       ReplaceUses(SDValue(N, i), NV);
     }
   }
+
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
 
   // Update the Chain
   ReplaceUses(SDValue(N, NumVecs + 1), SDValue(Ld, 2));
