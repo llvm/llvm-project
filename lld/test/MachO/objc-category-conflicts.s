@@ -42,7 +42,7 @@
 ## Check that we don't emit any warnings without --check-category-conflicts.
 # RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
 # RUN:   /dev/null 2>&1 | FileCheck %s --implicit-check-not 'warning' --allow-empty
-# RUN: %no-fatal-warnings-lld -objc_relative_method_lists --no-check-category-conflicts -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
+# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists -objc_category_merging --no-check-category-conflicts -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
 # RUN:   /dev/null 2>&1 | FileCheck %s --implicit-check-not 'warning' --allow-empty
 
 # CATCLS:      warning: method '+s1' has conflicting definitions:
