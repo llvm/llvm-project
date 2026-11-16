@@ -203,6 +203,59 @@ struct MMapEvent {
 };
 
 class ProfiledBinary {
+public:
+  // Why static inference stops. Earlier values take priority at shared
+  // addresses. Function and code boundaries outrank conditional transfers and
+  // x86 calls to the next IP, so comparing an observed range cannot skip those
+  // boundaries.
+  enum class RangeEndReason {
+    Call,
+    Return,
+    Branch,  // Unconditional branch.
+    Trap,    // An exception, system call, hypercall, or halt.
+    SVC,     // AArch64 supervisor call.
+    VMEntry, // Transfer to a virtual-machine guest.
+    Barrier, // A control-flow barrier with no fall-through, not a memory fence.
+    CodeGap, // The next decoded instruction is not adjacent to the current one.
+    CodeEnd, // The last decoded instruction.
+    FunctionBoundary, // Before another function, a function entry, or uncovered
+                      // code.
+    FallThroughCall,  // An x86 direct call to the next instruction.
+    Conditional       // May fall through without transferring control.
+  };
+
+  // Return a diagnostic name for a static stopping condition.
+  static StringRef rangeEndName(RangeEndReason Reason);
+
+  // Compare static boundaries with a recorded inclusive range. Differences do
+  // not establish whether the trace or the static analysis is incorrect.
+  struct RangeComparison {
+    // Relation between static boundaries and the observed inclusive range.
+    enum Kind {
+      // External, reversed, or non-instruction endpoints.
+      NotComparable,
+      // The start has no known function coverage.
+      NoFunctionCoverage,
+      // The observed end is the first static boundary.
+      Same,
+      // The observed range ends before the first static boundary.
+      ShorterDynamic,
+      // Only conditional transfers or x86 calls to the next IP precede the end.
+      LongerFallthroughDynamic,
+      // The observed range crosses a boundary other than a conditional transfer
+      // or an x86 call to the next IP.
+      LongerDynamic
+    } Status;
+    // First static boundary, or the non-skippable boundary crossed by the
+    // range. Valid only when a comparable static range is available.
+    uint64_t StaticEnd = 0;
+    std::optional<RangeEndReason> Reason = std::nullopt;
+  };
+
+  // Return a diagnostic name for a range comparison result.
+  static StringRef rangeComparisonName(RangeComparison::Kind Kind);
+
+private:
   // The executable binary file.
   object::OwningBinary<object::Binary> OBinary;
   // Absolute path of the executable binary.
@@ -283,13 +336,20 @@ class ProfiledBinary {
   // An array of Addresses of all instructions sorted in increasing order. The
   // sorting is needed to fast advance to the next forward/backward instruction.
   std::vector<uint64_t> CodeAddressVec;
-  // Addresses that end an inferred executable range: transfer instructions,
-  // traps, SVC, and the last instructions before a code gap or a function
-  // boundary. Sorted in increasing order and filled on the first findRangeEnd
-  // query, so an input that needs no range inference never pays for it.
+  // Addresses that end an inferred executable range: instructions that may
+  // transfer control or halt execution, and the last instructions before a code
+  // gap or a function boundary. Sorted in increasing order and built on demand
+  // by inference and comparison queries for instructions in known functions.
   std::vector<uint64_t> RangeEnds;
-  // Whether RangeEnds has been built, which its emptiness does not indicate.
-  bool RangeEndsBuilt = false;
+  // Collected only with --check-lbr-ranges for instructions in known functions.
+  // NextNonSkippableEnd is the first static range end at or after this one
+  // other than a conditional transfer or an x86 call to the next instruction.
+  // Every covered region ends at such a boundary.
+  struct RangeEndInfo {
+    RangeEndReason Reason;
+    uint64_t NextNonSkippableEnd;
+  };
+  DenseMap<uint64_t, RangeEndInfo> RangeEndInfoMap;
   // A set of call instruction addresses. Used by virtual unwinding.
   DenseSet<uint64_t> CallAddressSet;
   // A set of return instruction addresses. Used by virtual unwinding.
@@ -302,9 +362,9 @@ class ProfiledBinary {
   DenseSet<uint64_t> IndirectBranchAddressSet;
   // A set of branch target addresses (destinations of branches/calls).
   DenseSet<uint64_t> BranchTargetAddressSet;
-  // A set of the addresses of non-transfer instructions that stop range
-  // inference: traps and the AArch64 SVC system call. buildRangeEnds ends an
-  // inferred range there.
+  // Traps, barriers, and named stops in known functions that end inferred
+  // ranges. Kept separate from the unwinder's call, return, and branch
+  // classifications.
   DenseSet<uint64_t> RangeStopAddressSet;
 
   // Estimate and track function prolog and epilog ranges.
@@ -349,6 +409,9 @@ class ProfiledBinary {
   StringMap<MCDecodedPseudoProbeInlineTree *> TopLevelProbeFrameMap;
 
   bool UseFSDiscriminator = false;
+
+  // Whether disassembly records extra boundaries for static range-end analysis.
+  bool CollectRangeEnds;
 
   // Whether we need to symbolize all instructions to get function context size.
   bool TrackFuncContextSize = false;
@@ -428,20 +491,39 @@ class ProfiledBinary {
   /// Dissassemble the text section and build various address maps.
   void disassemble(const object::ObjectFile *O);
 
+  // Match internal MC opcode names (not assembly mnemonics) for AArch64/X86
+  // transfers and halts lacking branch/call/return flags. Faults or
+  // interception alone do not end a static range. Set Reason on a match when
+  // non-null.
+  bool isNamedRangeStop(StringRef Name,
+                        std::optional<RangeEndReason> *Reason) const;
+
   /// Helper function to dissassemble the symbol and extract info for unwinding
   bool dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
                           SectionSymbolsTy &Symbols,
                           const object::SectionRef &Section);
-  /// Collect the addresses that end an inferred executable range into
-  /// RangeEnds. Called on the first findRangeEnd query.
+
+  /// Build RangeEnds for instructions covered by known functions.
   void buildRangeEnds();
+
+  // Find the first range end at or after Address. Address must be an
+  // instruction covered by a known function.
+  uint64_t findCoveredRangeEnd(uint64_t Address);
+
+  // Record why an inferred range ends at Address. For an existing address,
+  // keep the reason listed first in RangeEndReason. Return the stored entry;
+  // inserting another address may invalidate the returned reference.
+  RangeEndInfo &recordRangeEndReason(uint64_t Address, RangeEndReason Reason);
+
   /// Symbolize a given instruction pointer and return a full call context.
   SampleContextFrameVector symbolize(const InstructionPointer &IP,
                                      bool UseCanonicalFnName = false,
                                      bool UseProbeDiscriminator = false);
 
 public:
-  ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
+  // CollectRangeEnds enables static range-end analysis with a lazy index.
+  ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath,
+                 bool CollectRangeEnds);
   ~ProfiledBinary();
 
   /// Decode the interesting parts of the binary and build internal data
@@ -525,14 +607,19 @@ public:
   }
 
   // Return the end of the executable range that starts at Address: the nearest
-  // instruction at or after it that is a transfer, trap, or SVC, without
-  // crossing a code gap or a function boundary, or the last instruction before
-  // either boundary. Return zero when Address is not an instruction, and
-  // Address itself when no function range covers it, which keeps an inferred
-  // range out of code that may belong to another function. Set *Uncovered, when
-  // given, to whether the range had to be reduced to Address; it is assigned on
-  // every path.
-  uint64_t findRangeEnd(uint64_t Address, bool *Uncovered = nullptr);
+  // instruction at or after it that may transfer control or halt execution, or
+  // the last instruction before a code gap or function boundary. Return zero
+  // when Address is not an instruction. If no function range covers Address,
+  // return Address itself to avoid extending into code with an unknown
+  // function. Requires static range-end analysis to be enabled at construction.
+  uint64_t findRangeEnd(uint64_t Address);
+
+  // Compare an inclusive execution range with static control-flow boundaries.
+  // Return their relation and the relevant static end and reason, if known.
+  // FRange is the known function range covering Start, or null if none exists.
+  // Requires collected range-end reasons.
+  RangeComparison compareRange(uint64_t Start, uint64_t End,
+                               const FuncRange *FRange);
 
   bool rangeCrossUncondBranch(uint64_t Start, uint64_t End) {
     if (Start >= End)

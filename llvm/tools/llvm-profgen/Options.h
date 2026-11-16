@@ -24,6 +24,8 @@ extern cl::opt<bool> EnableCSPreInliner;
 extern cl::opt<bool> UseContextCostForPreInliner;
 extern cl::opt<bool> LoadFunctionFromSymbol;
 extern cl::opt<bool> TimeProfGen;
+extern cl::opt<bool> InferLBRLeafRange;
+extern cl::opt<bool> CheckLBRRanges;
 
 } // end namespace llvm
 

@@ -9,6 +9,7 @@
 #include "ErrorHandling.h"
 #include "Options.h"
 #include "ProfileGenerator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/ProfileData/ETMTraceDecoder.h"
@@ -20,6 +21,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <array>
 
 #define DEBUG_TYPE "perf-reader"
 
@@ -66,6 +68,18 @@ static cl::opt<int> CSProfMaxUnsymbolizedCtxDepth(
 
 cl::opt<bool> TimeProfGen("time-profgen", cl::desc("Time llvm-profgen phases"),
                           cl::init(false), cl::cat(ProfGenCategory));
+
+cl::opt<bool> InferLBRLeafRange(
+    "infer-lbr-leaf-range", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Infer a range from the newest LBR/BRBE target to the first static "
+        "boundary; it may extend beyond the sampled IP"),
+    cl::cat(ProfGenCategory));
+cl::opt<bool> CheckLBRRanges(
+    "check-lbr-ranges", cl::Hidden, cl::init(false),
+    cl::desc("Compare observed LBR/BRBE ranges with static boundaries without "
+             "changing profile counters"),
+    cl::cat(ProfGenCategory));
 
 static const char *TimerGroupName = "profgen";
 static const char *TimerGroupDesc = "llvm-profgen";
@@ -306,6 +320,17 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
     return false;
 
   NumTotalBranches += State.LBRStack.size();
+  if (InferLBRLeafRange) {
+    const LBREntry &Branch = State.getCurrentLBR();
+    if (Branch.Target != ExternalAddr) {
+      // Probe unwinding does not move IP back to the newest branch target.
+      auto SavedIP = State.InstPtr;
+      State.InstPtr.update(Binary->findRangeEnd(Branch.Target));
+      unwindLinear(State, Repeat);
+      State.InstPtr = SavedIP;
+    }
+  }
+
   // Now process the LBR samples in parrallel with stack sample
   // Note that we do not reverse the LBR entry order so we can
   // unwind the sample stack as we walk through LBR entries.
@@ -1073,6 +1098,9 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
                                              uint64_t Repeat) {
   SampleCounter &Counter = SampleCounters.begin()->second;
   uint64_t EndAddress = 0;
+  if (InferLBRLeafRange && !Sample->LBRStack.empty() &&
+      Sample->LBRStack.front().Target != ExternalAddr)
+    EndAddress = Binary->findRangeEnd(Sample->LBRStack.front().Target);
   for (const LBREntry &LBR : Sample->LBRStack) {
     uint64_t SourceAddress = LBR.Source;
     uint64_t TargetAddress = LBR.Target;
@@ -1084,8 +1112,8 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
       Counter.recordBranchCount(SourceAddress, TargetAddress, Repeat);
     }
 
-    // If this not the first LBR, update the range count between TO of current
-    // LBR and FROM of next LBR.
+    // Update the range count between TO of the current LBR and FROM of the
+    // previous (newer) LBR. The first LBR can use an inferred end.
     uint64_t StartAddress = TargetAddress;
     if (Binary->addressIsCode(StartAddress) &&
         Binary->addressIsCode(EndAddress) &&
@@ -1324,23 +1352,51 @@ void PerfScriptReader::warnTruncatedStack() {
       "likely caused by frame pointer omission.");
 }
 
+// Print nonzero categories by descending count, preserving the order below
+// for equal counts.
+static void printRangeComparisonSummary(
+    uint64_t Total,
+    const std::array<uint64_t, ProfiledBinary::RangeComparison::LongerDynamic +
+                                   1> &Counts) {
+  using Comparison = ProfiledBinary::RangeComparison;
+  std::array Kinds = {Comparison::Same,
+                      Comparison::ShorterDynamic,
+                      Comparison::LongerFallthroughDynamic,
+                      Comparison::LongerDynamic,
+                      Comparison::NoFunctionCoverage,
+                      Comparison::NotComparable};
+  llvm::stable_sort(Kinds, [&](auto Left, auto Right) {
+    return Counts[Left] > Counts[Right];
+  });
+  errs() << "LBR range comparison (weighted ranges): total=" << Total << "\n";
+  for (auto Kind : Kinds)
+    if (Counts[Kind])
+      errs() << "  " << ProfiledBinary::rangeComparisonName(Kind) << ": "
+             << Counts[Kind] << "\n";
+}
+
 void PerfScriptReader::warnInvalidRange() {
+  const bool CheckRanges = CheckLBRRanges;
   DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> Ranges;
 
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
     uint64_t Count = Item.second;
-    uint64_t EndAddress = 0;
+    std::optional<uint64_t> EndAddress;
     for (const LBREntry &LBR : Sample->LBRStack) {
       uint64_t SourceAddress = LBR.Source;
       uint64_t StartAddress = LBR.Target;
-      if (EndAddress != 0)
-        Ranges[{StartAddress, EndAddress}] += Count;
+      // A recorded source at address zero is not a missing endpoint.
+      // Include it only when range checking is enabled.
+      if (EndAddress && (CheckRanges || *EndAddress != 0))
+        Ranges[{StartAddress, *EndAddress}] += Count;
       EndAddress = SourceAddress;
     }
   }
 
   if (Ranges.empty()) {
+    if (CheckRanges)
+      printRangeComparisonSummary(0, {});
     WithColor::warning() << "No samples in perf script!\n";
     return;
   }
@@ -1363,29 +1419,74 @@ void PerfScriptReader::warnInvalidRange() {
       "profile and binary mismatch.";
   const char *BogusRangeMsg = "Range start is after or too far from range end.";
 
+  bool HasWarningRanges = false;
   uint64_t TotalRangeNum = 0;
+  uint64_t ComparedRangeNum = 0;
   uint64_t InstNotBoundary = 0;
   uint64_t UnmatchedRange = 0;
   uint64_t RecoveredRange = 0;
   uint64_t RangeCrossFunc = 0;
   uint64_t BogusRange = 0;
+  using Comparison = ProfiledBinary::RangeComparison;
+  constexpr size_t NumReasons =
+      static_cast<size_t>(ProfiledBinary::RangeEndReason::Conditional) + 1;
+  // Initialize diagnostic counters and examples only when checking is enabled.
+  std::array<uint64_t, Comparison::LongerDynamic + 1> Compared;
+  std::array<uint64_t, NumReasons> Crossed;
+  std::optional<std::map<std::pair<uint64_t, uint64_t>, Comparison>> Examples;
+  if (CheckRanges) {
+    Compared.fill(0);
+    Crossed.fill(0);
+    if (ShowDetailedWarning)
+      Examples.emplace();
+  }
+  constexpr size_t MaxExamples = 8;
 
   for (auto &I : Ranges) {
     uint64_t StartAddress = I.first.first;
     uint64_t EndAddress = I.first.second;
+
+    bool StartIsCode = Binary->addressIsCode(StartAddress);
+    FuncRange *FRange = nullptr;
+    if (CheckRanges) {
+      if (StartIsCode)
+        FRange = Binary->findFuncRange(StartAddress);
+      Comparison Result =
+          Binary->compareRange(StartAddress, EndAddress, FRange);
+      Compared[Result.Status] += I.second;
+      ComparedRangeNum += I.second;
+      if (Result.Status == Comparison::LongerDynamic)
+        Crossed[static_cast<size_t>(*Result.Reason)] += I.second;
+      // Omit expected fall-through differences and external address markers.
+      if (Examples && Result.Status != Comparison::Same &&
+          Result.Status != Comparison::LongerFallthroughDynamic &&
+          StartAddress != ExternalAddr && EndAddress != ExternalAddr) {
+        // Keep the lowest (start, end) pairs, regardless of iteration order.
+        auto Key = std::make_pair(StartAddress, EndAddress);
+        if (Examples->size() < MaxExamples || Key < Examples->rbegin()->first) {
+          Examples->emplace(Key, Result);
+          if (Examples->size() > MaxExamples)
+            Examples->erase(std::prev(Examples->end()));
+        }
+      }
+    }
+
+    // Keep zero endpoints in the comparison, but omit them from warning totals.
+    if (EndAddress == 0)
+      continue;
+    HasWarningRanges = true;
     TotalRangeNum += I.second;
 
-    if (!Binary->addressIsCode(StartAddress) &&
-        !Binary->addressIsCode(EndAddress))
+    if (!StartIsCode && !Binary->addressIsCode(EndAddress))
       continue;
 
-    if (!Binary->addressIsCode(StartAddress) ||
-        !Binary->addressIsTransfer(EndAddress)) {
+    if (!StartIsCode || !Binary->addressIsTransfer(EndAddress)) {
       InstNotBoundary += I.second;
       WarnInvalidRange(StartAddress, EndAddress, EndNotBoundaryMsg);
     }
 
-    auto *FRange = Binary->findFuncRange(StartAddress);
+    if (!CheckRanges || !StartIsCode)
+      FRange = Binary->findFuncRange(StartAddress);
     if (!FRange) {
       UnmatchedRange += I.second;
       WarnInvalidRange(StartAddress, EndAddress, DanglingRangeMsg);
@@ -1400,14 +1501,15 @@ void PerfScriptReader::warnInvalidRange() {
       WarnInvalidRange(StartAddress, EndAddress, RangeCrossFuncMsg);
     }
 
-    if (Binary->addressIsCode(StartAddress) &&
-        Binary->addressIsCode(EndAddress) &&
+    if (StartIsCode && Binary->addressIsCode(EndAddress) &&
         !isValidFallThroughRange(StartAddress, EndAddress, Binary)) {
       BogusRange += I.second;
       WarnInvalidRange(StartAddress, EndAddress, BogusRangeMsg);
     }
   }
 
+  if (!HasWarningRanges)
+    WithColor::warning() << "No samples in perf script!\n";
   emitWarningSummary(
       InstNotBoundary, TotalRangeNum,
       "of samples are from ranges that are not on instruction boundary.");
@@ -1424,6 +1526,29 @@ void PerfScriptReader::warnInvalidRange() {
       BogusRange, TotalRangeNum,
       "of samples are from ranges that have range start after or too far from "
       "range end acrossing the unconditinal jmp.");
+  if (CheckRanges) {
+    printRangeComparisonSummary(ComparedRangeNum, Compared);
+    for (size_t I = 0; I < Crossed.size(); ++I)
+      if (Crossed[I])
+        errs() << "  "
+               << ProfiledBinary::rangeComparisonName(Comparison::LongerDynamic)
+               << " crossed "
+               << ProfiledBinary::rangeEndName(
+                      static_cast<ProfiledBinary::RangeEndReason>(I))
+               << ": " << Crossed[I] << "\n";
+    if (Examples)
+      for (const auto &[Range, Result] : *Examples) {
+        errs() << "  [" << Twine::utohexstr(Range.first) << ","
+               << Twine::utohexstr(Range.second) << "] category="
+               << ProfiledBinary::rangeComparisonName(Result.Status);
+        if (Result.Reason)
+          errs() << " static-end=" << Twine::utohexstr(Result.StaticEnd) << " ("
+                 << ProfiledBinary::rangeEndName(*Result.Reason) << ")";
+        else
+          errs() << " no comparable static range";
+        errs() << "\n";
+      }
+  }
 }
 
 void PerfScriptReader::warnIfBranchTargetMismatch() {

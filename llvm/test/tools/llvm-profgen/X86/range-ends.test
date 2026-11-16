@@ -1,0 +1,247 @@
+# REQUIRES: x86-registered-target
+# DEFINE: %{raw} = llvm-profgen --skip-symbolization
+# DEFINE: %{infer} = %{raw} --infer-lbr-leaf-range
+# DEFINE: %{both} = %{infer} --check-lbr-ranges
+# DEFINE: %{check} = FileCheck %s --match-full-lines
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/main
+# RUN: %{raw} --binary=%t/main -ps %t/lbr -o %t/base
+# RUN: %{raw} --binary=%t/main -ps %t/lbr --check-lbr-ranges -o %t/check
+# RUN: diff %t/base %t/check
+# RUN: %{both} --binary=%t/main -ps %t/lbr --show-detailed-warning -o %t/ranges 2>%t/errors
+# RUN: %{infer} --binary=%t/main -ps %t/lbr -o %t/infer
+# RUN: diff %t/infer %t/ranges
+# RUN: cat %t/ranges %t/errors | %{check} --check-prefixes=RANGES,COMPARE
+# RUN: yaml2obj -DCLASS=ELFCLASS32 -DMACHINE=EM_386 -DPREFIX=CE %t/binary.yaml -o %t/into32
+# RUN: %{both} --binary=%t/into32 -ps %t/into --show-detailed-warning -o %t/into.profile 2>%t/into.err
+# RUN: cat %t/into.profile %t/into.err | %{check} --check-prefixes=INTO,INTO-CHECK --implicit-check-not=crossed
+# RUN: %{raw} --binary=%t/main -ps %t/zero --check-lbr-ranges -o %t/zero.profile 2>%t/zero.err
+# RUN: %{raw} --binary=%t/main -ps %t/zero -o %t/zero.base 2>&1 | %{check} --check-prefix=ZERO-OFF
+# RUN: diff %t/zero.base %t/zero.profile
+# RUN: cat %t/zero.profile %t/zero.err | %{check} --check-prefixes=ZERO,ZERO-CHECK
+# RUN: %{raw} --binary=%t/main -ps %t/external --check-lbr-ranges --show-detailed-warning -o %t/external.out \
+# RUN:   2>%t/external.err
+# RUN: FileCheck %s --check-prefix=EXTERNAL --input-file=%t/external.err
+# RUN: %{raw} --binary=%t/main -ps %t/external-leaf -o %t/external.base
+# RUN: %{infer} --binary=%t/main -ps %t/external-leaf -o %t/external.infer
+# RUN: diff %t/external.base %t/external.infer
+# RUN: %{raw} --binary=%t/main -ps %t/external-hybrid -o %t/hybrid.base 2>%t/hybrid.base.err
+# RUN: %{infer} --binary=%t/main -ps %t/external-hybrid -o %t/hybrid.infer 2>%t/hybrid.infer.err
+# RUN: diff %t/hybrid.base %t/hybrid.infer
+# RUN: diff %t/hybrid.base.err %t/hybrid.infer.err
+# RUN: %{raw} --binary=%S/Inputs/noinline-cs-noprobe.perfbin -ps %S/Inputs/cs-interrupt.perfscript \
+# RUN:   --check-lbr-ranges --show-detailed-warning -o %t/interrupt 2>%t/interrupt.err
+# RUN: FileCheck %s --check-prefix=INTERRUPT --input-file=%t/interrupt.err
+# RUN: cat %S/Inputs/inline-cs-noprobe.perfscript %t/leaves > %t/inline.samples
+# RUN: %{both} --binary=%S/Inputs/inline-cs-noprobe.perfbin -ps %t/inline.samples -o %t/inline
+# RUN: %{check} --check-prefix=INLINE --input-file=%t/inline
+# RUN: %{infer} --binary=%S/Inputs/inline-cs-noprobe.perfbin -ps %t/inline.samples -o %t/inline.base
+# RUN: diff %t/inline.base %t/inline
+# RUN: %{infer} --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin -ps %S/Inputs/inline-cs-pseudoprobe.perfscript -o \
+# RUN:   %t/probes
+# RUN: %{check} --check-prefix=PROBES --input-file=%t/probes
+# RUN: %{both} --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin -ps %S/Inputs/inline-cs-pseudoprobe.perfscript -o \
+# RUN:   %t/probes.checked
+# RUN: diff %t/probes %t/probes.checked
+# RUN: %{infer} --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin -ps %t/callers -o %t/callers.raw
+# RUN: %{check} --check-prefix=CALLERS --implicit-check-not='{{[0-9a-f]+-[0-9a-f]+:}}' --input-file=%t/callers.raw
+# RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin -ps %t/callers --infer-lbr-leaf-range \
+# RUN:   --format=text --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0 -o \
+# RUN:   %t/callers.text
+# RUN: %{check} --check-prefix=CALLERS-TEXT --implicit-check-not='[bar]' --input-file=%t/callers.text
+
+## CPUID reaches RET; calls to the next instruction end inference but allow dynamic fall-through.
+# RANGES: 40
+# RANGES-COUNT-30: [[S:[1-9a-f]]]0-[[S]]{{0|f}}:1
+# RANGES-NEXT: 100-10f:2
+# RANGES-NEXT: 110-111:1
+# RANGES-NEXT: 120-121:1
+# RANGES-NEXT: 130-131:1
+# RANGES-COUNT-6: [[S:1[456]]]0-[[S]]{{0|f}}:1
+# RANGES-NEXT: 44
+# RANGES-COUNT-22: 1->{{[0-9a-f]+}}:1
+# RANGES-COUNT-22: [[B:[0-9a-f]+]]f->[[B]]0:1
+# COMPARE: LBR range comparison (weighted ranges): total=22{{$}}
+# COMPARE-NEXT: longer-dynamic: 17{{$}}
+# COMPARE-NEXT: longer-fallthrough-dynamic: 4{{$}}
+# COMPARE-NEXT: same: 1{{$}}
+# COMPARE-NEXT: longer-dynamic crossed call: 1{{$}}
+# COMPARE-NEXT: longer-dynamic crossed return: 3{{$}}
+# COMPARE-NEXT: longer-dynamic crossed branch: 2{{$}}
+# COMPARE-NEXT: longer-dynamic crossed trap: 7{{$}}
+# COMPARE-NEXT: longer-dynamic crossed VM entry: 3{{$}}
+# COMPARE-NEXT: longer-dynamic crossed function boundary: 1{{$}}
+# COMPARE-NEXT: [30,3f] category=longer-dynamic static-end=30 (return){{$}}
+# COMPARE-NEXT: [40,4f] category=longer-dynamic static-end=40 (trap){{$}}
+# COMPARE-NEXT: [50,5f] category=longer-dynamic static-end=50 (VM entry){{$}}
+# COMPARE-NEXT: [60,6f] category=longer-dynamic static-end=60 (VM entry){{$}}
+# COMPARE-NEXT: [70,7f] category=longer-dynamic static-end=70 (VM entry){{$}}
+# COMPARE-NEXT: [80,8f] category=longer-dynamic static-end=80 (return){{$}}
+# COMPARE-NEXT: [90,9f] category=longer-dynamic static-end=90 (branch){{$}}
+# COMPARE-NEXT: [a0,af] category=longer-dynamic static-end=a0 (trap){{$}}
+# COMPARE-NOT: {{^}}  [
+## INTO ends inference; unused 64-bit blocks may fail decoding in this mode.
+# INTO: 0-0:1
+# INTO-CHECK: LBR range comparison (weighted ranges): total=1{{$}}
+# INTO-CHECK-NEXT: longer-fallthrough-dynamic: 1{{$}}
+# INTO-CHECK-NOT: {{^}}  [
+## Check zero endpoints at full weight without changing other warnings.
+# ZERO-OFF: warning: No samples in perf script!
+# ZERO: 0-0:4294967297
+# ZERO-CHECK: warning: No samples in perf script!
+# ZERO-CHECK: LBR range comparison (weighted ranges): total=4294967297{{$}}
+# ZERO-CHECK-NEXT: same: 4294967297{{$}}
+## Omit external endpoints from examples, even though marker 1 is also code.
+# EXTERNAL: LBR range comparison (weighted ranges): total=3{{$}}
+# EXTERNAL-NEXT: not-comparable: 2{{$}}
+# EXTERNAL-NEXT: longer-fallthrough-dynamic: 1{{$}}
+# EXTERNAL-NOT: {{^}}  [
+# INTERRUPT: LBR range comparison (weighted ranges): total=28{{$}}
+# INTERRUPT-NEXT: same: 16{{$}}
+# INTERRUPT-NEXT: longer-fallthrough-dynamic: 9{{$}}
+# INTERRUPT-NEXT: not-comparable: 2{{$}}
+# INTERRUPT-NEXT: shorter-dynamic: 1{{$}}
+# INTERRUPT-NEXT: [4005b0,4005c3] category=shorter-dynamic static-end=4005c8 (conditional transfer){{$}}
+## Starts before, within and after bar must split at inline context boundaries.
+# INLINE-LABEL: [main:1 @ foo]
+# INLINE-NEXT: 7
+# INLINE: 67e-69b:2
+# INLINE: 69d-6ad:1
+# INLINE-NEXT: 6a5-6ad:1
+# INLINE-NEXT: 6bd-6c8:19
+# INLINE-NEXT: 6c2-6c8:1
+# INLINE-NEXT: 8
+# INLINE: 6c8->67e:15
+# INLINE-COUNT-6: 6c8->{{69d|6a5|6af|6b5|6bd|6c2}}:1
+# INLINE-LABEL: [main:1 @ foo:3.1 @ bar]
+# INLINE-NEXT: 2
+# INLINE-NEXT: 6af-6bb:17
+# INLINE-NEXT: 6b5-6bb:1
+# PROBES-LABEL: []
+# PROBES-NEXT: 3
+# PROBES: 80e-82b:2
+# PROBES: 858->80e:15
+## Probe leaves from a call, external entry and external resumption use the sampled caller chain.
+# CALLERS: [0x7f4 @ 0x7bf]
+# CALLERS-NEXT: 2
+# CALLERS-NEXT: 760-77f:8
+# CALLERS-NEXT: 76a-77f:7
+# CALLERS-NEXT: 0
+# CALLERS-TEXT: [main:2 @ foo:8 @ bar]:16:8
+# CALLERS-TEXT-NEXT: 1: 8
+# CALLERS-TEXT-NEXT: 4: 8
+
+#--- lbr
+10 0x1f/0x10/P/-/-/0 0x9000/0x10/P/-/-/0
+20 0x2f/0x20/P/-/-/0 0x9000/0x20/P/-/-/0
+30 0x3f/0x30/P/-/-/0 0x9000/0x30/P/-/-/0
+40 0x4f/0x40/P/-/-/0 0x9000/0x40/P/-/-/0
+50 0x5f/0x50/P/-/-/0 0x9000/0x50/P/-/-/0
+60 0x6f/0x60/P/-/-/0 0x9000/0x60/P/-/-/0
+70 0x7f/0x70/P/-/-/0 0x9000/0x70/P/-/-/0
+80 0x8f/0x80/P/-/-/0 0x9000/0x80/P/-/-/0
+90 0x9f/0x90/P/-/-/0 0x9000/0x90/P/-/-/0
+a0 0xaf/0xa0/P/-/-/0 0x9000/0xa0/P/-/-/0
+b0 0xbf/0xb0/P/-/-/0 0x9000/0xb0/P/-/-/0
+c0 0xcf/0xc0/P/-/-/0 0x9000/0xc0/P/-/-/0
+d0 0xdf/0xd0/P/-/-/0 0x9000/0xd0/P/-/-/0
+e0 0xef/0xe0/P/-/-/0 0x9000/0xe0/P/-/-/0
+f0 0xff/0xf0/P/-/-/0 0x9000/0xf0/P/-/-/0
+100 0x10f/0x100/P/-/-/0 0x9000/0x100/P/-/-/0
+110 0x11f/0x110/P/-/-/0 0x9000/0x110/P/-/-/0
+120 0x12f/0x120/P/-/-/0 0x9000/0x120/P/-/-/0
+130 0x13f/0x130/P/-/-/0 0x9000/0x130/P/-/-/0
+140 0x14f/0x140/P/-/-/0 0x9000/0x140/P/-/-/0
+150 0x15f/0x150/P/-/-/0 0x9000/0x150/P/-/-/0
+160 0x16f/0x160/P/-/-/0 0x9000/0x160/P/-/-/0
+#--- into
+6 0x8/0x0/P/-/-/0 0x9000/0x0/P/-/-/0
+#--- zero
+4294967297
+6 0x0/0x6/P/-/-/0 0x8/0x0/P/-/-/0
+#--- external
+1000 0x11f/0x0/P/-/-/0 0x11f/0x9000/P/-/-/0 0x9000/0x110/P/-/-/0
+1000 0x1/0x8/P/-/-/0 0x8/0x0/P/-/-/0
+#--- external-leaf
+1000 0x8/0x9000/P/-/-/0
+#--- external-hybrid
+        6
+0x8/0x9000/P/-/-/0
+#--- callers
+PERF_RECORD_MMAP2 1243676/1243676: [0x301000(0x1000) @ 0 00:1d 224517108 1044165]: r-xp /home/noinline-cs-pseudoprobe.perfbin
+
+3
+        30176a
+        3017c4
+        3017f9
+0x3017bf/0x301760/P/-/-/0 0x3017f4/0x301780/P/-/-/0
+
+5
+        30176a
+        3017c4
+        3017f9
+0x9000/0x301760/P/-/-/0 0x3017bf/0x9000/P/-/-/0
+
+7
+        30176a
+        3017c4
+        3017f9
+0x9000/0x30176a/P/-/-/0 0x3017bf/0x9000/P/-/-/0
+
+#--- leaves
+PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]: r-xp /home/inline-cs-noprobe.perfbin
+
+	4006a1
+0x4006c8/0x40069d/P/-/-/0
+
+	4006a1
+0x4006c8/0x4006af/P/-/-/0
+
+	4006a1
+0x4006c8/0x4006c2/P/-/-/0
+
+	4006a1
+0x4006c8/0x4006b5/P/-/-/0
+
+	4006a1
+0x4006c8/0x4006bd/P/-/-/0
+
+	4006a1
+0x4006c8/0x4006a5/P/-/-/0
+#--- binary.yaml
+--- !ELF
+FileHeader: { Class: [[CLASS=ELFCLASS64]], Data: ELFDATA2LSB, Type: ET_DYN, Machine: [[MACHINE=EM_X86_64]] }
+Sections:
+  ## Block 0: RET at 0, call-to-next at 1, RET at 8; other blocks end in RET.
+  ## The call-to-next at 0x121 is also the last instruction in its function.
+  - { Name: .text, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
+      Address: 0, Offset: 0x1000, AddressAlign: 1,
+      Content: "[[PREFIX=C3]]E8000000009090C3909090909090900F01D7909090909090909090909090C30F3790909090909090909090909090C30F079\
+        0909090909090909090909090C3F49090909090909090909090909090C30F01C2909090909090909090909090C30F01C3909090909090909\
+        090909090C30F01D8909090909090909090909090C3F30F01EC9090909090909090909090C3D500A1002000000000000090909090C30F01C\
+        1909090909090909090909090C30F01D9909090909090909090909090C3660F01CC9090909090909090909090C3660F01CF9090909090909\
+        090909090C3660F01CD9090909090909090909090C30F01DE909090909090909090909090C30FA290909090909090909090909090C390E80\
+        0000000909090909090909090C390E8000000000F0B90909090909090C390E800000000E8F5FFFFFF90909090C3CC9090909090909090909\
+        090909090C30F0590909090909090909090909090C3C6F800909090909090909090909090C3" }
+ProgramHeaders:
+  - { Type: PT_LOAD, Flags: [ PF_X, PF_R ], VAddr: 0, Offset: 0, FileSize: 0x1170, MemSize: 0x1170 }
+Symbols:
+  - { Name: ranges, Type: STT_FUNC, Section: .text, Binding: STB_GLOBAL, Value: 0, Size: 294 }
+  - { Name: tail, Type: STT_FUNC, Section: .text, Binding: STB_GLOBAL, Value: 294, Size: 74 }
+DWARF:
+  debug_abbrev:
+    - Table:
+        - { Code: 1, Tag: DW_TAG_compile_unit, Children: DW_CHILDREN_yes, Attributes: [
+            { Attribute: DW_AT_name, Form: DW_FORM_string }, { Attribute: DW_AT_low_pc, Form: DW_FORM_addr },
+            { Attribute: DW_AT_high_pc, Form: DW_FORM_data8 }] }
+        - { Code: 2, Tag: DW_TAG_subprogram, Children: DW_CHILDREN_no, Attributes: [
+            { Attribute: DW_AT_name, Form: DW_FORM_string }, { Attribute: DW_AT_low_pc, Form: DW_FORM_addr },
+            { Attribute: DW_AT_high_pc, Form: DW_FORM_data8 }] }
+  debug_info:
+    - Version: 4
+      Entries:
+        - { AbbrCode: 1, Values: [{ CStr: ranges.c }, { Value: 0 }, { Value: 368 }] }
+        - { AbbrCode: 2, Values: [{ CStr: ranges }, { Value: 0 }, { Value: 294 }] }
+        - { AbbrCode: 2, Values: [{ CStr: tail }, { Value: 294 }, { Value: 74 }] }
+        - AbbrCode: 0

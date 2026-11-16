@@ -104,6 +104,16 @@ static cl::opt<std::string>
 
 // Validate the command line input.
 static void validateCommandLine() {
+  if (InferLBRLeafRange || CheckLBRRanges) {
+    if (ShowDisassemblyOnly)
+      exitWithError(
+          "--infer-lbr-leaf-range and --check-lbr-ranges cannot be used "
+          "with --show-disassembly-only");
+    if (!PerfScriptFilename.getNumOccurrences() &&
+        !PerfDataFilename.getNumOccurrences())
+      exitWithError("--infer-lbr-leaf-range and --check-lbr-ranges require "
+                    "--perfscript or --perfdata input");
+  }
   // Allow the missing perfscript if we only use to show binary disassembly.
   if (!ShowDisassemblyOnly) {
     // Validate input profile is provided only once
@@ -188,8 +198,8 @@ int main(int argc, const char *argv[]) {
   validateCommandLine();
 
   // Load symbols and disassemble the code of a given binary.
-  std::unique_ptr<ProfiledBinary> Binary =
-      std::make_unique<ProfiledBinary>(BinaryPath, DebugBinPath);
+  std::unique_ptr<ProfiledBinary> Binary = std::make_unique<ProfiledBinary>(
+      BinaryPath, DebugBinPath, InferLBRLeafRange || CheckLBRRanges);
   Binary->load(TargetTriple);
 
   if (ShowDisassemblyOnly)
