@@ -436,11 +436,13 @@ if.end:
 define void @test.not.uge.uge.nonconst(ptr %start, ptr %low, ptr %high, i8 %off) {
 ; CHECK-LABEL: @test.not.uge.uge.nonconst(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[START:%.*]], i8 [[OFF:%.*]]
+; CHECK-NEXT:    [[ADD_PTR_I_IDX:%.*]] = sext i8 [[OFF:%.*]] to i64
+; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[START:%.*]], i64 [[ADD_PTR_I_IDX]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[ADD_PTR_I]], [[HIGH:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[START_OFF_2:%.*]] = getelementptr inbounds i8, ptr [[START]], i8 [[OFF]]
+; CHECK-NEXT:    [[START_OFF_2_IDX:%.*]] = sext i8 [[OFF]] to i64
+; CHECK-NEXT:    [[START_OFF_2:%.*]] = getelementptr inbounds i8, ptr [[START]], i64 [[START_OFF_2_IDX]]
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp uge ptr [[START_OFF_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[T_0]])
 ; CHECK-NEXT:    ret void
@@ -448,18 +450,21 @@ define void @test.not.uge.uge.nonconst(ptr %start, ptr %low, ptr %high, i8 %off)
 ; CHECK-NEXT:    [[START_1:%.*]] = getelementptr inbounds i8, ptr [[START]], i64 1
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp uge ptr [[START_1]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[C_0]])
-; CHECK-NEXT:    [[START_OFF:%.*]] = getelementptr inbounds i8, ptr [[START]], i8 [[OFF]]
+; CHECK-NEXT:    [[START_OFF_IDX:%.*]] = sext i8 [[OFF]] to i64
+; CHECK-NEXT:    [[START_OFF:%.*]] = getelementptr inbounds i8, ptr [[START]], i64 [[START_OFF_IDX]]
 ; CHECK-NEXT:    [[F_0:%.*]] = icmp uge ptr [[START_OFF]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[F_0]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %add.ptr.i = getelementptr inbounds i8, ptr %start, i8 %off
+  %add.ptr.i.idx = sext i8 %off to i64
+  %add.ptr.i = getelementptr inbounds i8, ptr %start, i64 %add.ptr.i.idx
   %c.1 = icmp uge ptr %add.ptr.i, %high
   br i1 %c.1, label %if.then, label %if.end
 
 if.then:
-  %start.off.2 = getelementptr inbounds i8, ptr %start, i8 %off
+  %start.off.2.idx = sext i8 %off to i64
+  %start.off.2 = getelementptr inbounds i8, ptr %start, i64 %start.off.2.idx
   %t.0 = icmp uge ptr %start.off.2, %high
   call void @use(i1 %t.0)
   ret void
@@ -468,7 +473,8 @@ if.end:
   %start.1 = getelementptr inbounds i8, ptr %start, i64 1
   %c.0 = icmp uge ptr %start.1, %high
   call void @use(i1 %c.0)
-  %start.off = getelementptr inbounds i8, ptr %start, i8 %off
+  %start.off.idx = sext i8 %off to i64
+  %start.off = getelementptr inbounds i8, ptr %start, i64 %start.off.idx
   %f.0 = icmp uge ptr %start.off, %high
   call void @use(i1 %f.0)
   ret void
@@ -488,17 +494,21 @@ define void @test.ult.gep.shl(ptr readonly %src, ptr readnone %max, i8 %idx) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CHECK_MAX:%.*]], label [[TRAP]]
 ; CHECK:       check.max:
 ; CHECK-NEXT:    [[IDX_SHL_1:%.*]] = shl nuw nsw i8 [[IDX]], 1
-; CHECK-NEXT:    [[ADD_PTR_SHL_1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i8 [[IDX_SHL_1]]
+; CHECK-NEXT:    [[ADD_PTR_SHL_1_IDX:%.*]] = sext i8 [[IDX_SHL_1]] to i64
+; CHECK-NEXT:    [[ADD_PTR_SHL_1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[ADD_PTR_SHL_1_IDX]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IDX_SHL_2:%.*]] = shl nuw nsw i8 [[IDX]], 2
-; CHECK-NEXT:    [[ADD_PTR_SHL_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i8 [[IDX_SHL_2]]
+; CHECK-NEXT:    [[ADD_PTR_SHL_2_IDX:%.*]] = sext i8 [[IDX_SHL_2]] to i64
+; CHECK-NEXT:    [[ADD_PTR_SHL_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[ADD_PTR_SHL_2_IDX]]
 ; CHECK-NEXT:    [[C_MAX_1:%.*]] = icmp ult ptr [[ADD_PTR_SHL_2]], [[MAX]]
 ; CHECK-NEXT:    call void @use(i1 [[C_MAX_1]])
 ; CHECK-NEXT:    [[IDX_SHL_NOT_NUW:%.*]] = shl nuw nsw i8 [[IDX]], 1
-; CHECK-NEXT:    [[ADD_PTR_SHL_NOT_NUW:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i8 [[IDX_SHL_NOT_NUW]]
+; CHECK-NEXT:    [[ADD_PTR_SHL_NOT_NUW_IDX:%.*]] = sext i8 [[IDX_SHL_NOT_NUW]] to i64
+; CHECK-NEXT:    [[ADD_PTR_SHL_NOT_NUW:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[ADD_PTR_SHL_NOT_NUW_IDX]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IDX_SHL_3:%.*]] = shl nuw nsw i8 [[IDX]], 3
-; CHECK-NEXT:    [[ADD_PTR_SHL_3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i8 [[IDX_SHL_3]]
+; CHECK-NEXT:    [[ADD_PTR_SHL_3_IDX:%.*]] = sext i8 [[IDX_SHL_3]] to i64
+; CHECK-NEXT:    [[ADD_PTR_SHL_3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[ADD_PTR_SHL_3_IDX]]
 ; CHECK-NEXT:    [[C_MAX_3:%.*]] = icmp ult ptr [[ADD_PTR_SHL_3]], [[MAX]]
 ; CHECK-NEXT:    call void @use(i1 [[C_MAX_3]])
 ; CHECK-NEXT:    ret void
@@ -517,19 +527,23 @@ check.idx:
 
 check.max:
   %idx.shl.1 = shl nsw nuw i8 %idx, 1
-  %add.ptr.shl.1 = getelementptr inbounds i32, ptr %src, i8 %idx.shl.1
+  %add.ptr.shl.1.idx = sext i8 %idx.shl.1 to i64
+  %add.ptr.shl.1 = getelementptr inbounds i32, ptr %src, i64 %add.ptr.shl.1.idx
   %c.max.0 = icmp ult ptr %add.ptr.shl.1, %max
   call void @use(i1 %c.max.0)
   %idx.shl.2 = shl nuw i8 %idx, 2
-  %add.ptr.shl.2 = getelementptr inbounds i32, ptr %src, i8 %idx.shl.2
+  %add.ptr.shl.2.idx = sext i8 %idx.shl.2 to i64
+  %add.ptr.shl.2 = getelementptr inbounds i32, ptr %src, i64 %add.ptr.shl.2.idx
   %c.max.1 = icmp ult ptr %add.ptr.shl.2, %max
   call void @use(i1 %c.max.1)
   %idx.shl.not.nuw = shl i8 %idx, 1
-  %add.ptr.shl.not.nuw = getelementptr inbounds i32, ptr %src, i8 %idx.shl.not.nuw
+  %add.ptr.shl.not.nuw.idx = sext i8 %idx.shl.not.nuw to i64
+  %add.ptr.shl.not.nuw = getelementptr inbounds i32, ptr %src, i64 %add.ptr.shl.not.nuw.idx
   %c.max.2 = icmp ult ptr %add.ptr.shl.not.nuw, %max
   call void @use(i1 %c.max.2)
   %idx.shl.3 = shl nuw i8 %idx, 3
-  %add.ptr.shl.3 = getelementptr inbounds i32, ptr %src, i8 %idx.shl.3
+  %add.ptr.shl.3.idx = sext i8 %idx.shl.3 to i64
+  %add.ptr.shl.3 = getelementptr inbounds i32, ptr %src, i64 %add.ptr.shl.3.idx
   %c.max.3 = icmp ult ptr %add.ptr.shl.3, %max
   call void @use(i1 %c.max.3)
   ret void

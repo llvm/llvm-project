@@ -12,8 +12,8 @@ struct CompleteS {
 
 void cxx_paren_list_init_expr() { CompleteS a(1, 'a'); }
 
-// CIR-DAG: cir.global "private" constant cir_private @[[PAREN_A:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<97> : !s8i}> : !rec_CompleteS
-// LLVM-DAG: @[[PAREN_A:.*]] = private constant %struct.CompleteS { i32 1, i8 97 }
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[PAREN_A:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<97> : !s8i}> : !rec_CompleteS
+// LLVM-DAG: @[[PAREN_A:.*]] = private unnamed_addr constant %struct.CompleteS { i32 1, i8 97 }
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_CompleteS>
 // CIR: %[[CONST:.*]] = cir.get_global @[[PAREN_A]] : !cir.ptr<!rec_CompleteS>
@@ -51,7 +51,7 @@ void test_init_list_with_dtor() {
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.yield
 // CIR:   } cleanup normal {
-// CIR:     cir.call @_ZN5OuterD1Ev(%[[O]]) nothrow : (!cir.ptr<!rec_Outer> {llvm.align = 4 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}) -> ()
+// CIR:     cir.call @_ZN5OuterD1Ev(%[[O]]) nothrow : (!cir.ptr<!rec_Outer> {llvm.align = 4 : i64, llvm.dead_on_return = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}) -> ()
 // CIR:     cir.yield
 // CIR:   }
 // CIR:   cir.return

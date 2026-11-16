@@ -418,7 +418,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 namespace {
 class CreateGroupOpLowering : public OpConversionPattern<CreateGroupOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(CreateGroupOp op, OpAdaptor adaptor,
@@ -437,7 +437,7 @@ public:
 namespace {
 class AddToGroupOpLowering : public OpConversionPattern<AddToGroupOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(AddToGroupOp op, OpAdaptor adaptor,

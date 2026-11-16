@@ -13,7 +13,7 @@ define void @test(i1 %tobool.not, <8 x double> %p.0) {
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT:%.*]], label [[R:%.*]], label [[WHILE_BODY_AB_CRIT_EDGE:%.*]]
 ; CHECK:       while.body.ab_crit_edge:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x double> [[P_0:%.*]], <8 x double> poison, <2 x i32> <i32 poison, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[P_0]], <8 x double> <double 0.000000e+00, double poison, double undef, double undef, double undef, double undef, double undef, double undef>, <2 x i32> <i32 8, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[P_0]], <8 x double> <double 0.000000e+00, double poison, double poison, double poison, double poison, double poison, double poison, double poison>, <2 x i32> <i32 8, i32 1>
 ; CHECK-NEXT:    br label [[AB:%.*]]
 ; CHECK:       r:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[P_02]], <8 x double> poison, <2 x i32> <i32 0, i32 1>

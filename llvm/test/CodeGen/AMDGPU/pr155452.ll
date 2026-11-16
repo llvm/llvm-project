@@ -4,15 +4,15 @@
 define amdgpu_kernel void @my_kernel(i64 %foo, i32 %bar) {
 ; CHECK-LABEL: my_kernel:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s7, s[8:9], 0x2
+; CHECK-NEXT:    s_load_dword s2, s[8:9], 0x2
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; CHECK-NEXT:    s_mov_b32 s3, 0x100f000
-; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_abs_i32 s6, s7
+; CHECK-NEXT:    s_abs_i32 s6, s2
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v0, s6
 ; CHECK-NEXT:    s_sub_i32 s0, 0, s6
-; CHECK-NEXT:    s_ashr_i32 s7, s7, 31
+; CHECK-NEXT:    s_ashr_i32 s7, s2, 31
+; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    v_rcp_f32_e32 v0, v0
 ; CHECK-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; CHECK-NEXT:    v_cvt_u32_f32_e32 v0, v0
@@ -20,7 +20,7 @@ define amdgpu_kernel void @my_kernel(i64 %foo, i32 %bar) {
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 1
 ; CHECK-NEXT:    v_mul_hi_u32 v1, v0, v1
 ; CHECK-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
-; CHECK-NEXT:    s_and_b64 vcc, exec, -1
+; CHECK-NEXT:    s_mov_b64 vcc, exec
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_waitcnt expcnt(0)

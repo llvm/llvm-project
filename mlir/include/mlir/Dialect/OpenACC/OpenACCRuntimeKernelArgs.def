@@ -1,0 +1,55 @@
+//===- OpenACCRuntimeKernelArgs.def - kernel argument struct ----*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+/// \file
+///
+/// X-macro catalog of the argument struct passed to `__tgt_acc_kernel`. Field
+/// order, field types, and padding are part of the runtime ABI. Include this
+/// file after defining ACC_KERNEL_ARG_FIELD.
+///
+/// ACC_KERNEL_ARG_FIELD(Field, TypeToken)
+///   Field     - enumerator used as KernelArgumentField::Field, in
+///               declaration order
+///   TypeToken - MLIR LLVM type token in scope at the inclusion site
+///               (Int32, Int64, Ptr, Int64x3)
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef ACC_KERNEL_ARG_FIELD
+#error "define ACC_KERNEL_ARG_FIELD before including this file"
+#endif
+
+// ABI version of this struct. Zero is the layout these fields describe.
+ACC_KERNEL_ARG_FIELD(Version, Int32)
+// Number of kernel arguments, the length of each pointer array below.
+ACC_KERNEL_ARG_FIELD(ArgNum, Int32)
+// Base pointer of each argument.
+ACC_KERNEL_ARG_FIELD(ArgBasePtrs, Ptr)
+// Pointer to the argument data.
+ACC_KERNEL_ARG_FIELD(ArgPtrs, Ptr)
+// Size of each argument in bytes.
+ACC_KERNEL_ARG_FIELD(ArgSizes, Ptr)
+// Map-type flags of each argument.
+ACC_KERNEL_ARG_FIELD(ArgTypes, Ptr)
+// Name of each argument for diagnostics, null where unknown.
+ACC_KERNEL_ARG_FIELD(ArgNames, Ptr)
+// Mapper for each argument.
+ACC_KERNEL_ARG_FIELD(ArgMappers, Ptr)
+// Descriptor of each argument, null where the argument has none.
+ACC_KERNEL_ARG_FIELD(ArgDescs, Ptr)
+// Loop trip count.
+ACC_KERNEL_ARG_FIELD(Tripcount, Int64)
+// Grid sizes, one entry for each of the three dimensions.
+ACC_KERNEL_ARG_FIELD(NumGangs, Int64x3)
+// Worker count.
+ACC_KERNEL_ARG_FIELD(NumWorkers, Int64)
+// Vector length.
+ACC_KERNEL_ARG_FIELD(VectorLength, Int64)
+// Dynamic shared memory, in bytes.
+ACC_KERNEL_ARG_FIELD(SmemSize, Int64)
+
+#undef ACC_KERNEL_ARG_FIELD

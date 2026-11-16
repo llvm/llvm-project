@@ -779,18 +779,18 @@ def _usingLLDBServerOnWindows():
     )
 
 
-def expectedFailureWindowsAndLLDBServer(bugnumber=None):
+def expectedFailureWindowsAndLLDBServer(bugnumber=None, archs=None):
     """Mark a test as xfail on Windows when driving lldb-server."""
     if not _usingLLDBServerOnWindows():
         return lambda func: func
-    return expectedFailureOS(["windows"], bugnumber)
+    return expectedFailureOS(["windows"], bugnumber, archs=archs)
 
 
-def expectedFailureWindowsAndNoLLDBServer(bugnumber=None):
+def expectedFailureWindowsAndNoLLDBServer(bugnumber=None, archs=None):
     """Mark a test as xfail on Windows when using the in-process plugin."""
     if _usingLLDBServerOnWindows():
         return lambda func: func
-    return expectedFailureOS(["windows"], bugnumber)
+    return expectedFailureOS(["windows"], bugnumber, archs=archs)
 
 
 # TODO: This decorator does not do anything. Remove it.
@@ -1319,6 +1319,16 @@ def requireClang(func):
     compiler = os.path.basename(lldbplatformutil.getCompiler())
     return unittest.skipUnless(
         compiler.startswith("clang"), UnsupportedReason("requires clang")
+    )(func)
+
+
+def requireMinidumpSave(func):
+    """Mark the item as requiring the ability to save a Minidump file. Which
+    is not implemented for all architectures."""
+    arch = lldbplatformutil.getArchitecture()
+    return unittest.skipUnless(
+        arch in ["aarch64", "x86_64", "arm64", "arm64e"],
+        UnsupportedReason(f"Minidump saving is not implemented for {arch}"),
     )(func)
 
 

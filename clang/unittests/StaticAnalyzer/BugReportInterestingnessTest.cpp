@@ -97,7 +97,9 @@ void InterestingnessTestChecker::handleCheck(const CallEvent &Call,
 
 void InterestingnessTestChecker::handleBug(const CallEvent &Call,
                                            CheckerContext &C) const {
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
+  if (!N)
+    return;
   C.emitReport(
       std::make_unique<PathSensitiveBugReport>(BT_TestBug, "test bug", N));
 }

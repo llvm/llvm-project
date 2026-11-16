@@ -11,6 +11,7 @@
 # CHECK-NEXT: Total         12
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACE
   cputype:    0x0000000C

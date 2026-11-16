@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Driver.h"
+#include "ClangCLArgs.h"
 #include "ToolChains/AIX.h"
 #include "ToolChains/AMDGPU.h"
 #include "ToolChains/AVR.h"
@@ -353,52 +354,51 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
 // Determine which compilation mode we are in. We look for options which
 // affect the phase, starting with the earliest phases, and record which
 // option we used to determine the final phase.
-phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
+phases::ID Driver::getFinalPhase(const ArgList &Args,
                                  Arg **FinalPhaseArg) const {
   Arg *PhaseArg = nullptr;
   phases::ID FinalPhase;
 
   // -{E,EP,P,M,MM} only run the preprocessor.
-  if (CCCIsCPP() || (PhaseArg = DAL.getLastArg(options::OPT_E)) ||
-      (PhaseArg = DAL.getLastArg(options::OPT__SLASH_EP)) ||
-      (PhaseArg = DAL.getLastArg(options::OPT_M, options::OPT_MM)) ||
-      (PhaseArg = DAL.getLastArg(options::OPT__SLASH_P)) ||
-      CCGenDiagnostics) {
+  if (CCCIsCPP() || (PhaseArg = Args.getLastArg(options::OPT_E)) ||
+      (PhaseArg = Args.getLastArg(options::OPT__SLASH_EP)) ||
+      (PhaseArg = Args.getLastArg(options::OPT_M, options::OPT_MM)) ||
+      (PhaseArg = Args.getLastArg(options::OPT__SLASH_P)) || CCGenDiagnostics) {
     FinalPhase = phases::Preprocess;
 
     // --precompile only runs up to precompilation.
     // Options that cause the output of C++20 compiled module interfaces or
     // header units have the same effect.
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT__precompile)) ||
+  } else if ((PhaseArg = Args.getLastArg(options::OPT__precompile)) ||
              (PhaseArg =
-                  DAL.getLastArg(options::OPT__precompile_reduced_bmi)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_extract_api)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_fmodule_header,
-                                        options::OPT_fmodule_header_EQ))) {
+                  Args.getLastArg(options::OPT__precompile_reduced_bmi)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_extract_api)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_fmodule_header,
+                                         options::OPT_fmodule_header_EQ))) {
     FinalPhase = phases::Precompile;
     // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||
+  } else if ((PhaseArg = Args.getLastArg(options::OPT_fsyntax_only)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_print_supported_cpus)) ||
              (PhaseArg =
-                  DAL.getLastArg(options::OPT_print_enabled_extensions)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_emit_cir)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {
+                  Args.getLastArg(options::OPT_print_enabled_extensions)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_module_file_info)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_verify_pch)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_rewrite_objc)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_rewrite_legacy_objc)) ||
+             (PhaseArg = Args.getLastArg(options::OPT__analyze)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_emit_cir)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_emit_ast))) {
     FinalPhase = phases::Compile;
 
   // -S only runs up to the backend.
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT_S))) {
+  } else if ((PhaseArg = Args.getLastArg(options::OPT_S))) {
     FinalPhase = phases::Backend;
 
   // -c compilation only runs up to the assembler.
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT_c))) {
+  } else if ((PhaseArg = Args.getLastArg(options::OPT_c))) {
     FinalPhase = phases::Assemble;
 
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT_emit_interface_stubs))) {
+  } else if ((PhaseArg = Args.getLastArg(options::OPT_emit_interface_stubs))) {
     FinalPhase = phases::IfsMerge;
 
     // Otherwise do everything.
@@ -459,9 +459,14 @@ Arg *clang::driver::makeInputArg(DerivedArgList &Args, const OptTable &Opts,
   return A;
 }
 
-DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
+DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args,
+                                           const llvm::Triple &Triple) const {
   const llvm::opt::OptTable &Opts = getOpts();
   DerivedArgList *DAL = new DerivedArgList(Args);
+
+  std::optional<ClangCLArgs> CLArgs;
+  if (IsCLMode())
+    CLArgs.emplace(Args, Triple);
 
   bool HasNostdlib = Args.hasArg(options::OPT_nostdlib);
   bool HasNostdlibxx = Args.hasArg(options::OPT_nostdlibxx);
@@ -477,6 +482,21 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
     }
     if (A->getOption().matches(options::OPT_end_no_unused_arguments)) {
       IgnoreUnused = false;
+      continue;
+    }
+
+    if (CLArgs && CLArgs->translateArg(A, *DAL))
+      continue;
+
+    // Preserve MSVC macro syntax for Clang's other driver modes as well.
+    if ((CLArgs || Triple.isWindowsMSVCEnvironment()) &&
+        A->getOption().matches(options::OPT_D)) {
+      const char *Value =
+          ClangCLArgs::translateMacroDefinition(A->getValue(), Args);
+      if (Value == A->getValue())
+        DAL->append(A);
+      else
+        DAL->AddJoinedArg(A, Opts.getOption(options::OPT_D), Value);
       continue;
     }
 
@@ -733,8 +753,10 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
   }
 #endif
 
-  // Currently the only architecture supported by *-uefi triples are x86_64.
-  if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64)
+  // Currently the only architectures supported by *-uefi triples are x86_64
+  // and aarch64.
+  if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64 &&
+      Target.getArch() != llvm::Triple::aarch64)
     D.Diag(diag::err_target_unknown_triple) << Target.str();
 
   // The `-maix[32|64]` flags are only valid for AIX targets.
@@ -936,6 +958,8 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
         Args.push_back("--only=amdgpu");
       else if (Kind == Action::OFK_Cuda)
         Args.push_back("--only=nvptx");
+      else if (Kind == Action::OFK_SYCL)
+        Args.push_back("--only=intel");
     }
     auto StdoutOrErr = C.getDriver().executeProgram(Args);
 
@@ -962,6 +986,13 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
 }
 
 using TripleSet = std::multiset<llvm::Triple>;
+
+/// \return the SPIR-V target for SYCL on \p HostTriple: spirv64 on a 64-bit
+/// host, spirv32 otherwise.
+static llvm::Triple getSYCLDefaultTriple(const llvm::Triple &HostTriple) {
+  return llvm::Triple(HostTriple.isArch64Bit() ? llvm::Triple::spirv64
+                                               : llvm::Triple::spirv32);
+}
 
 // Attempts to infer the correct offloading toolchain triple by looking at the
 // requested offloading kind and architectures.
@@ -1023,6 +1054,11 @@ static TripleSet inferOffloadToolchains(Compilation &C,
 
     llvm::Triple Triple =
         OffloadArchToTriple(C.getDefaultToolChain().getTriple(), ID);
+    // For SYCL, compile an Intel GPU or CPU, an IGCA target or "generic" for
+    // SPIR-V: spirv64-unknown-unknown on a 64-bit host, spirv32-unknown-unknown
+    // otherwise.
+    if (Kind == Action::OFK_SYCL && (ID.isIntel() || ID.isGeneric()))
+      Triple = getSYCLDefaultTriple(C.getDefaultToolChain().getTriple());
     if (UsesLLVMOffloading)
       Triple.setEnvironment(llvm::Triple::LLVM);
 
@@ -1055,10 +1091,7 @@ static TripleSet inferOffloadToolchains(Compilation &C,
     Triples.insert(llvm::Triple(Arch, llvm::Triple::NoSubArch,
                                 llvm::Triple::NVIDIA, llvm::Triple::CUDA));
   } else if (Archs.empty() && Kind == Action::OFK_SYCL)
-    Triples.insert(
-        llvm::Triple(C.getDefaultToolChain().getTriple().isArch64Bit()
-                         ? llvm::Triple::spirv64
-                         : llvm::Triple::spirv32));
+    Triples.insert(getSYCLDefaultTriple(C.getDefaultToolChain().getTriple()));
 
   // We need to dispatch these to the appropriate toolchain now.
   C.getArgs().eraseArg(options::OPT_offload_arch_EQ);
@@ -1134,6 +1167,8 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
 
   // Build an offloading toolchain for every requested target and kind.
   llvm::StringMap<StringRef> FoundNormalizedTriples;
+  bool UsesLLVMOffloading = C.getInputArgs().hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
   for (const llvm::Triple &Target : Triples) {
     // OpenMP offloading requires a compatible libomp.
     if (Kinds.contains(Action::OFK_OpenMP)) {
@@ -1151,6 +1186,14 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         if (Arg *IncompatArg = C.getInputArgs().getLastArg(ID))
           Diag(clang::diag::err_drv_argument_not_allowed_with)
               << IncompatArg->getSpelling() << "-fsycl";
+
+      // The CUDA toolchain supports only CUDA and OpenMP, so diagnose SYCL
+      // offloading to an NVIDIA GPU here, unless it uses -foffload-via-llvm.
+      if (Target.isNVPTX() && !UsesLLVMOffloading) {
+        Diag(diag::err_drv_invalid_or_unsupported_offload_target)
+            << Target.str();
+        continue;
+      }
     }
 
     // Create a device toolchain for every specified kind and triple.
@@ -1783,7 +1826,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   }
 
   // Perform the default argument translations.
-  DerivedArgList *TranslatedArgs = TranslateInputArgs(*UArgs);
+  DerivedArgList *TranslatedArgs = TranslateInputArgs(*UArgs, TC.getTriple());
 
   // Check if the environment version is valid except wasm case.
   llvm::Triple Triple = TC.getTriple();
@@ -3385,27 +3428,25 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
                              const InputList &Inputs,
                              ActionList &Actions) const {
 
-  // Diagnose misuse of /Fo.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fo)) {
-    StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
-        !llvm::sys::path::is_separator(V.back())) {
-      // Check whether /Fo tries to name an output file for multiple inputs.
-      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
-          << A->getSpelling() << V;
-      Args.eraseArg(options::OPT__SLASH_Fo);
-    }
-  }
+  // Diagnose misuse of /Fo and /Fa.
+  if (Arg *FoArg = Args.getLastArg(options::OPT__SLASH_Fo),
+      *FaArg = Args.getLastArg(options::OPT__SLASH_Fa);
+      FoArg || FaArg) {
+    // Linker inputs do not produce the outputs named by /Fo and /Fa.
+    unsigned NumCompiledInputs = llvm::count_if(
+        Inputs, [](const InputTy &I) { return I.first != types::TY_Object; });
 
-  // Diagnose misuse of /Fa.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fa)) {
-    StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
-        !llvm::sys::path::is_separator(V.back())) {
-      // Check whether /Fa tries to name an asm file for multiple inputs.
-      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
-          << A->getSpelling() << V;
-      Args.eraseArg(options::OPT__SLASH_Fa);
+    for (Arg *A : {FoArg, FaArg}) {
+      if (!A)
+        continue;
+      StringRef V = A->getValue();
+      if (NumCompiledInputs > 1 && !V.empty() &&
+          !llvm::sys::path::is_separator(V.back())) {
+        // Check whether /Fo or /Fa names an output file for multiple inputs.
+        Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
+            << A->getSpelling() << V;
+        Args.eraseArg(A->getOption().getID());
+      }
     }
   }
 
@@ -3898,16 +3939,29 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
 }
 
-/// Returns the canonical name for the offloading architecture when using a HIP
-/// or CUDA architecture.
+/// \return true if \p Triple is a SPIR-V target with no vendor or OS, such as
+/// spirv64-unknown-unknown.
+static bool isPlainSPIRV(const llvm::Triple &Triple) {
+  return Triple.isSPIRV() &&
+         Triple.getVendor() == llvm::Triple::UnknownVendor &&
+         Triple.getOS() == llvm::Triple::UnknownOS;
+}
+
+/// Returns the canonical name for the offloading architecture \p ArchStr on
+/// \p Triple, or an empty string after diagnosing an architecture that
+/// \p Triple does not support.
 static StringRef getCanonicalArchString(Compilation &C,
                                         const llvm::opt::DerivedArgList &Args,
                                         StringRef ArchStr,
-                                        const llvm::Triple &Triple) {
-  // Lookup the CUDA / HIP architecture string. Only report an error if we were
-  // expecting the triple to be only NVPTX / AMDGPU.
+                                        const llvm::Triple &Triple,
+                                        Action::OffloadKind Kind) {
   OffloadArch Arch =
       StringToOffloadArch(getProcessorFromTargetID(Triple, ArchStr));
+  // On SPIR-V, an Intel name or "generic" takes no target features, so
+  // "xe-pvc:foo" is not "xe-pvc".
+  if (Triple.isSPIRV() && (Arch.isIntel() || Arch.isGeneric()) &&
+      ArchStr.contains(':'))
+    Arch = OffloadArch::getUnknown();
   if (Triple.isNVPTX() && (Arch.isUnknown() || !Arch.isNVPTX())) {
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
         << "CUDA" << ArchStr;
@@ -3928,19 +3982,40 @@ static StringRef getCanonicalArchString(Compilation &C,
         return StringRef();
       }
     }
+  } else if (Triple.isSPIRV() && ArchStr.starts_with("igca") &&
+             !Arch.isIntelIGCA()) {
+    // Only an invalid IGCA target stops here; a valid one still needs the
+    // SPIR-V target checks below.
+    C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+        << "IGCA" << ArchStr;
+    return StringRef();
+  } else if (Kind == Action::OFK_SYCL && isPlainSPIRV(Triple) &&
+             !ArchStr.empty() && !Arch.isIntel() && !Arch.isGeneric()) {
+    // A SYCL device on a plain SPIR-V target is an Intel GPU or CPU, an IGCA
+    // target or "generic". Reject anything else, as for CUDA and HIP, rather
+    // than build for a device that does not exist.
+    C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+        << "SYCL" << ArchStr;
+    return StringRef();
+  } else if (Kind == Action::OFK_SYCL && Triple.isSPIRV() &&
+             !isPlainSPIRV(Triple) && Arch.isIntel()) {
+    // An Intel name or IGCA target always uses a plain SPIR-V target, so
+    // reject it on any other SPIR-V target, e.g. spirv64-amd-amdhsa.
+    C.getDriver().Diag(clang::diag::err_target_unsupported_arch)
+        << ArchStr << Triple.str();
+    return StringRef();
   }
 
   if (Arch.isNVPTX())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
   if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
-    llvm::StringMap<bool> Features;
-    std::optional<StringRef> Arch = parseTargetID(Triple, ArchStr, &Features);
-    if (!Arch) {
+    std::optional<std::string> TargetID = getCanonicalTargetID(Triple, ArchStr);
+    if (!TargetID) {
       C.getDriver().Diag(clang::diag::err_drv_bad_target_id) << ArchStr;
       return StringRef();
     }
-    return Args.MakeArgStringRef(getCanonicalTargetID(*Arch, Features));
+    return Args.MakeArgStringRef(*TargetID);
   }
 
   // If the input isn't CUDA or HIP just return the architecture.
@@ -3991,7 +4066,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
 
           for (auto ArchStr : *GPUsOrErr) {
             StringRef CanonicalStr = getCanonicalArchString(
-                C, Args, Args.MakeArgString(ArchStr), TC.getTriple());
+                C, Args, Args.MakeArgString(ArchStr), TC.getTriple(), Kind);
             if (!CanonicalStr.empty())
               Archs.insert(CanonicalStr);
             else
@@ -3999,7 +4074,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
           }
         } else {
           StringRef CanonicalStr =
-              getCanonicalArchString(C, Args, Arch, TC.getTriple());
+              getCanonicalArchString(C, Args, Arch, TC.getTriple(), Kind);
           if (!CanonicalStr.empty())
             Archs.insert(CanonicalStr);
           else
@@ -4012,7 +4087,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
           Archs.clear();
         } else {
           StringRef ArchStr =
-              getCanonicalArchString(C, Args, Arch, TC.getTriple());
+              getCanonicalArchString(C, Args, Arch, TC.getTriple(), Kind);
           Archs.erase(ArchStr);
         }
       }
@@ -4068,7 +4143,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
                                   ? ""
                                   : OffloadArchToString(TripleOffloadArch);
     StringRef CanonicalStr =
-        getCanonicalArchString(C, Args, ArchStr, TC.getTriple());
+        getCanonicalArchString(C, Args, ArchStr, TC.getTriple(), Kind);
     if (!CanonicalStr.empty())
       Archs.insert(CanonicalStr);
   }
@@ -4530,7 +4605,8 @@ Action *Driver::ConstructPhaseAction(
 
 static bool isOffloadDeviceCC1JobCandidate(Command &Job) {
   const Action &Source = Job.getSource();
-  if (!isa<CompileJobAction>(Source) && !isa<BackendJobAction>(Source))
+  if (!isa<CompileJobAction>(Source) && !isa<BackendJobAction>(Source) &&
+      !isa<AssembleJobAction>(Source))
     return false;
 
   if (Job.getBoundArch().empty() && !Source.getOffloadingArch().empty())
@@ -5181,6 +5257,16 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
         /*CreatePrefixForHost=*/true);
   }
 
+  StringRef DefaultExt = ".json";
+  StringRef DefaultExtNoDot = "json";
+  if (const Arg *CompressArg =
+          Args.getLastArgNoClaim(options::OPT_ftime_trace_compress_EQ)) {
+    if (StringRef(CompressArg->getValue()) == "zstd") {
+      DefaultExt = ".json.zst";
+      DefaultExtNoDot = "json.zst";
+    }
+  }
+
   SmallString<128> Path;
   if (A->getOption().matches(options::OPT_ftime_trace_EQ)) {
     Path = A->getValue();
@@ -5189,7 +5275,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
                                ? llvm::sys::path::stem(Result.getFilename())
                                : llvm::sys::path::stem(BaseInput));
       Tmp += OffloadingPrefix;
-      Tmp += ".json";
+      Tmp += DefaultExt;
       llvm::sys::path::append(Path, Tmp);
     }
   } else {
@@ -5199,7 +5285,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       Path = DumpDir->getValue();
       Path += llvm::sys::path::stem(BaseInput);
       Path += OffloadingPrefix;
-      Path += ".json";
+      Path += DefaultExt;
     } else if (!OffloadingPrefix.empty()) {
       // For offloading, derive path from -o output directory combined with
       // the input filename and offload prefix.
@@ -5208,10 +5294,10 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
         Path = llvm::sys::path::parent_path(FinalOutput->getValue());
       llvm::sys::path::append(Path, TraceName);
-      Path += ".json";
+      Path += DefaultExt;
     } else {
       Path = Result.getFilename();
-      llvm::sys::path::replace_extension(Path, "json");
+      llvm::sys::path::replace_extension(Path, DefaultExtNoDot);
     }
   }
   const char *ResultFile = C.getArgs().MakeArgString(Path);
@@ -5825,15 +5911,14 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     NamedOutput = C.getArgs().MakeArgString(TempPath.c_str());
   }
 
-  // If we're saving temps and the temp file conflicts with the input file,
-  // then avoid overwriting input file.
-  if (!AtTopLevel && isSaveTempsEnabled() && NamedOutput == BaseName) {
+  // If we're saving temps and the temp file is the input file, then avoid
+  // overwriting the input file. Compare the files, not their names: the output
+  // can name the input by another path (e.g. "sub/t.s" from -save-temps=obj),
+  // or with different case on a case-insensitive file system ("t.s" for an
+  // input "t.S").
+  if (!AtTopLevel && isSaveTempsEnabled()) {
     bool SameFile = false;
-    SmallString<256> Result;
-    llvm::sys::fs::current_path(Result);
-    llvm::sys::path::append(Result, BaseName);
-    llvm::sys::fs::equivalent(BaseInput, Result.c_str(), SameFile);
-    // Must share the same path to conflict.
+    llvm::sys::fs::equivalent(BaseInput, NamedOutput, SameFile);
     if (SameFile) {
       StringRef Name = llvm::sys::path::filename(BaseInput);
       std::pair<StringRef, StringRef> Split = Name.split('.');

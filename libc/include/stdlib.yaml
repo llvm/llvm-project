@@ -2,6 +2,7 @@ header: stdlib.h
 standards:
   - stdc
 merge_yaml_files:
+  - stdlib-alloca.yaml
   - stdlib-malloc.yaml
 macros:
   - macro_name: "NULL"
@@ -97,6 +98,12 @@ functions:
       - type: size_t
       - type: size_t
       - type: __search_compare_t
+  - name: clearenv
+    standards:
+      - gnu
+    return_type: int
+    arguments:
+      - type: void
   - name: div
     standards:
       - stdc

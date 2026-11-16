@@ -133,9 +133,9 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    [[TMP250:%.*]] = insertelement <4 x float> [[TMP249]], float [[TMP238]], i64 2
 ; CHECK-NEXT:    [[TMP251:%.*]] = insertelement <4 x float> [[TMP250]], float [[TMP247]], i64 3
 ; CHECK-NEXT:    [[GEP_KERNEL:%.*]] = getelementptr inbounds [512 x float], ptr @kernel, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr inbounds float, ptr [[GEP_KERNEL]], i64 4
-; CHECK-NEXT:    [[TMP252:%.*]] = getelementptr inbounds float, ptr [[GEP_KERNEL]], i64 8
-; CHECK-NEXT:    [[TMP253:%.*]] = getelementptr inbounds float, ptr [[GEP_KERNEL]], i64 12
+; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr inbounds i8, ptr [[GEP_KERNEL]], i64 16
+; CHECK-NEXT:    [[TMP252:%.*]] = getelementptr inbounds i8, ptr [[GEP_KERNEL]], i64 32
+; CHECK-NEXT:    [[TMP253:%.*]] = getelementptr inbounds i8, ptr [[GEP_KERNEL]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP_KERNEL]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP49]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x float>, ptr [[TMP252]], align 4
@@ -145,9 +145,9 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    [[TMP254:%.*]] = fmul fast <4 x float> [[TMP235]], [[WIDE_LOAD14]]
 ; CHECK-NEXT:    [[TMP255:%.*]] = fmul fast <4 x float> [[TMP251]], [[WIDE_LOAD15]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [512 x float], ptr @kernel2, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds float, ptr [[TMP52]], i64 4
-; CHECK-NEXT:    [[TMP256:%.*]] = getelementptr inbounds float, ptr [[TMP52]], i64 8
-; CHECK-NEXT:    [[TMP257:%.*]] = getelementptr inbounds float, ptr [[TMP52]], i64 12
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP52]], i64 16
+; CHECK-NEXT:    [[TMP256:%.*]] = getelementptr inbounds i8, ptr [[TMP52]], i64 32
+; CHECK-NEXT:    [[TMP257:%.*]] = getelementptr inbounds i8, ptr [[TMP52]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP52]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP53]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD18:%.*]] = load <4 x float>, ptr [[TMP256]], align 4
@@ -157,9 +157,9 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    [[TMP258:%.*]] = fmul fast <4 x float> [[TMP254]], [[WIDE_LOAD18]]
 ; CHECK-NEXT:    [[TMP259:%.*]] = fmul fast <4 x float> [[TMP255]], [[WIDE_LOAD19]]
 ; CHECK-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [512 x float], ptr @kernel3, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP57:%.*]] = getelementptr inbounds float, ptr [[TMP56]], i64 4
-; CHECK-NEXT:    [[TMP260:%.*]] = getelementptr inbounds float, ptr [[TMP56]], i64 8
-; CHECK-NEXT:    [[TMP261:%.*]] = getelementptr inbounds float, ptr [[TMP56]], i64 12
+; CHECK-NEXT:    [[TMP57:%.*]] = getelementptr inbounds i8, ptr [[TMP56]], i64 16
+; CHECK-NEXT:    [[TMP260:%.*]] = getelementptr inbounds i8, ptr [[TMP56]], i64 32
+; CHECK-NEXT:    [[TMP261:%.*]] = getelementptr inbounds i8, ptr [[TMP56]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP56]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP57]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD22:%.*]] = load <4 x float>, ptr [[TMP260]], align 4
@@ -169,9 +169,9 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    [[TMP262:%.*]] = fmul fast <4 x float> [[TMP258]], [[WIDE_LOAD22]]
 ; CHECK-NEXT:    [[TMP279:%.*]] = fmul fast <4 x float> [[TMP259]], [[WIDE_LOAD23]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = getelementptr inbounds [512 x float], ptr @kernel4, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds float, ptr [[TMP60]], i64 4
-; CHECK-NEXT:    [[TMP280:%.*]] = getelementptr inbounds float, ptr [[TMP60]], i64 8
-; CHECK-NEXT:    [[TMP283:%.*]] = getelementptr inbounds float, ptr [[TMP60]], i64 12
+; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds i8, ptr [[TMP60]], i64 16
+; CHECK-NEXT:    [[TMP280:%.*]] = getelementptr inbounds i8, ptr [[TMP60]], i64 32
+; CHECK-NEXT:    [[TMP283:%.*]] = getelementptr inbounds i8, ptr [[TMP60]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP60]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x float>, ptr [[TMP61]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD26:%.*]] = load <4 x float>, ptr [[TMP280]], align 4
@@ -375,20 +375,20 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_PH]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP300]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_PH]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX37:%.*]] = phi float [ [[TMP300]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX36:%.*]] = phi float [ [[TMP301]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_PH]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX37:%.*]] = phi float [ [[TMP302]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_PH]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX38:%.*]] = phi float [ [[TMP302]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[N_MOD_VF38:%.*]] = and i64 [[SIZE]], 3
 ; CHECK-NEXT:    [[N_VEC39:%.*]] = sub i64 [[SIZE]], [[N_MOD_VF38]]
-; CHECK-NEXT:    [[TMP303:%.*]] = insertelement <4 x float> zeroinitializer, float [[BC_MERGE_RDX]], i64 0
-; CHECK-NEXT:    [[TMP304:%.*]] = insertelement <4 x float> zeroinitializer, float [[BC_MERGE_RDX36]], i64 0
 ; CHECK-NEXT:    [[TMP305:%.*]] = insertelement <4 x float> zeroinitializer, float [[BC_MERGE_RDX37]], i64 0
+; CHECK-NEXT:    [[TMP329:%.*]] = insertelement <4 x float> zeroinitializer, float [[BC_MERGE_RDX36]], i64 0
+; CHECK-NEXT:    [[TMP384:%.*]] = insertelement <4 x float> zeroinitializer, float [[BC_MERGE_RDX38]], i64 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT48:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI41:%.*]] = phi <4 x float> [ [[TMP303]], %[[VEC_EPILOG_PH]] ], [ [[TMP337:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI42:%.*]] = phi <4 x float> [ [[TMP304]], %[[VEC_EPILOG_PH]] ], [ [[TMP358:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI43:%.*]] = phi <4 x float> [ [[TMP305]], %[[VEC_EPILOG_PH]] ], [ [[TMP379:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI41:%.*]] = phi <4 x float> [ [[TMP305]], %[[VEC_EPILOG_PH]] ], [ [[TMP337:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI42:%.*]] = phi <4 x float> [ [[TMP329]], %[[VEC_EPILOG_PH]] ], [ [[TMP358:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI43:%.*]] = phi <4 x float> [ [[TMP384]], %[[VEC_EPILOG_PH]] ], [ [[TMP379:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP306:%.*]] = add i64 [[IV1]], 1
 ; CHECK-NEXT:    [[TMP307:%.*]] = add i64 [[IV1]], 2
 ; CHECK-NEXT:    [[TMP308:%.*]] = add i64 [[IV1]], 3

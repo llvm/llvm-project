@@ -66,6 +66,7 @@ class MachineConstantPoolValue;
 class MCSymbol;
 class raw_ostream;
 class SDNode;
+class SDValue;
 class SelectionDAG;
 class Type;
 class Value;
@@ -86,50 +87,49 @@ namespace ISD {
 
   /// Node predicates
 
-/// If N is a BUILD_VECTOR or SPLAT_VECTOR node whose elements are all the
+/// If V is a BUILD_VECTOR or SPLAT_VECTOR value whose elements are all the
 /// same constant or undefined, return true and return the constant value in
 /// \p SplatValue.
-LLVM_ABI bool isConstantSplatVector(const SDNode *N, APInt &SplatValue);
+LLVM_ABI bool isConstantSplatVector(SDValue V, APInt &SplatValue);
 
-/// Return true if the specified node is a BUILD_VECTOR or SPLAT_VECTOR where
+/// Return true if the specified value is a BUILD_VECTOR or SPLAT_VECTOR where
 /// all of the elements are ~0 or undef. If \p BuildVectorOnly is set to
 /// true, it only checks BUILD_VECTOR.
-LLVM_ABI bool isConstantSplatVectorAllOnes(const SDNode *N,
+LLVM_ABI bool isConstantSplatVectorAllOnes(SDValue V,
                                            bool BuildVectorOnly = false);
 
-/// Return true if the specified node is a BUILD_VECTOR or SPLAT_VECTOR where
+/// Return true if the specified value is a BUILD_VECTOR or SPLAT_VECTOR where
 /// all of the elements are 0 or undef. If \p BuildVectorOnly is set to true, it
 /// only checks BUILD_VECTOR.
-LLVM_ABI bool isConstantSplatVectorAllZeros(const SDNode *N,
+LLVM_ABI bool isConstantSplatVectorAllZeros(SDValue V,
                                             bool BuildVectorOnly = false);
 
-/// Return true if the specified node is a BUILD_VECTOR where all of the
+/// Return true if the specified value is a BUILD_VECTOR where all of the
 /// elements are ~0 or undef.
-LLVM_ABI bool isBuildVectorAllOnes(const SDNode *N);
+LLVM_ABI bool isBuildVectorAllOnes(SDValue V);
 
-/// Return true if the specified node is a BUILD_VECTOR where all of the
+/// Return true if the specified value is a BUILD_VECTOR where all of the
 /// elements are 0 or undef.
-LLVM_ABI bool isBuildVectorAllZeros(const SDNode *N);
+LLVM_ABI bool isBuildVectorAllZeros(SDValue V);
 
-/// Return true if the specified node is a BUILD_VECTOR node of all
+/// Return true if the specified value is a BUILD_VECTOR node of all
 /// ConstantSDNode or undef.
-LLVM_ABI bool isBuildVectorOfConstantSDNodes(const SDNode *N);
+LLVM_ABI bool isBuildVectorOfConstantSDNodes(SDValue V);
 
-/// Return true if the specified node is a BUILD_VECTOR node of all
+/// Return true if the specified value is a BUILD_VECTOR node of all
 /// ConstantFPSDNode or undef.
-LLVM_ABI bool isBuildVectorOfConstantFPSDNodes(const SDNode *N);
+LLVM_ABI bool isBuildVectorOfConstantFPSDNodes(SDValue V);
 
-/// Returns true if the specified node is a vector where all elements can
+/// Returns true if the specified value is a vector where all elements can
 /// be truncated to the specified element size without a loss in meaning.
-LLVM_ABI bool isVectorShrinkable(const SDNode *N, unsigned NewEltSize,
-                                 bool Signed);
+LLVM_ABI bool isVectorShrinkable(SDValue V, unsigned NewEltSize, bool Signed);
 
-/// Return true if the node has at least one operand and all operands of the
-/// specified node are ISD::UNDEF.
-LLVM_ABI bool allOperandsUndef(const SDNode *N);
+/// Return true if the value has at least one operand and all operands of the
+/// specified value are ISD::UNDEF.
+LLVM_ABI bool allOperandsUndef(SDValue V);
 
-/// Return true if the specified node is FREEZE(UNDEF).
-LLVM_ABI bool isFreezeUndef(const SDNode *N);
+/// Return true if the specified value is FREEZE(UNDEF).
+LLVM_ABI bool isFreezeUndef(SDValue V);
 
 } // end namespace ISD
 
@@ -212,6 +212,7 @@ public:
   inline const SDValue &getOperand(unsigned i) const;
   inline uint64_t getConstantOperandVal(unsigned i) const;
   inline const APInt &getConstantOperandAPInt(unsigned i) const;
+  inline ISD::CondCode getOperandCondCode(unsigned i) const;
   inline bool isTargetOpcode() const;
   inline bool isMachineOpcode() const;
   inline bool isUndef() const;
@@ -1060,6 +1061,9 @@ public:
   /// Helper method returns the APInt value of a ConstantSDNode.
   inline const APInt &getAsAPIntVal() const;
 
+  /// Helper method returns the CondCode of a CondCodeSDNode.
+  inline ISD::CondCode getOperandCondCode(unsigned Num) const;
+
   inline std::optional<APInt> bitcastToAPInt() const;
 
   const SDValue &getOperand(unsigned Num) const {
@@ -1302,6 +1306,10 @@ inline uint64_t SDValue::getConstantOperandVal(unsigned i) const {
 
 inline const APInt &SDValue::getConstantOperandAPInt(unsigned i) const {
   return Node->getConstantOperandAPInt(i);
+}
+
+inline ISD::CondCode SDValue::getOperandCondCode(unsigned i) const {
+  return Node->getOperandCondCode(i);
 }
 
 inline bool SDValue::isTargetOpcode() const {
@@ -2077,11 +2085,6 @@ LLVM_ABI bool isOneOrOneSplatFP(SDValue V, bool AllowUndefs = false);
 /// Does not permit build vector implicit truncation.
 LLVM_ABI bool isAllOnesOrAllOnesSplat(SDValue V, bool AllowUndefs = false);
 
-/// Return true if the value is a constant 1 integer or a splatted vector of a
-/// constant 1 integer (with no undefs).
-/// Does not permit build vector implicit truncation.
-LLVM_ABI bool isOnesOrOnesSplat(SDValue N, bool AllowUndefs = false);
-
 /// Return true if the value is a constant 0 integer or a splatted vector of a
 /// constant 0 integer (with no undefs).
 /// Build vector implicit truncation is allowed.
@@ -2638,6 +2641,10 @@ public:
     return N->getOpcode() == ISD::CONDCODE;
   }
 };
+
+ISD::CondCode SDNode::getOperandCondCode(unsigned Num) const {
+  return cast<CondCodeSDNode>(getOperand(Num))->get();
+}
 
 /// This class is used to represent EVT's, which are used
 /// to parameterize some operations.
@@ -3500,20 +3507,21 @@ namespace ISD {
     return St && St->getAddressingMode() == ISD::UNINDEXED;
   }
 
-  /// Returns true if the specified node is a non-extending and unindexed
-  /// masked load.
+  /// Returns true if the specified node is a non-extending, non-expanding, and
+  /// unindexed masked load.
   inline bool isNormalMaskedLoad(const SDNode *N) {
     auto *Ld = dyn_cast<MaskedLoadSDNode>(N);
     return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
-           Ld->getAddressingMode() == ISD::UNINDEXED;
+           Ld->getAddressingMode() == ISD::UNINDEXED && !Ld->isExpandingLoad();
   }
 
-  /// Returns true if the specified node is a non-extending and unindexed
-  /// masked store.
+  /// Returns true if the specified node is a non-extending, non-compressing,
+  /// and unindexed masked store.
   inline bool isNormalMaskedStore(const SDNode *N) {
     auto *St = dyn_cast<MaskedStoreSDNode>(N);
     return St && !St->isTruncatingStore() &&
-           St->getAddressingMode() == ISD::UNINDEXED;
+           St->getAddressingMode() == ISD::UNINDEXED &&
+           !St->isCompressingStore();
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or

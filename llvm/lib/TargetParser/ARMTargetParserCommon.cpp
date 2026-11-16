@@ -153,7 +153,7 @@ bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
     PBP.BranchTargetEnforcement = true;
     PBP.GuardedControlStack = true;
     PBP.BranchProtectionPAuthLR = EnablePAuthLR;
-    if (Triple.isAArch64() && Triple.isOSWindows())
+    if (Triple.isAArch64() && Triple.isOSWindowsOrUEFI())
       PBP.Key = "b_key";
     return true;
   }
@@ -168,7 +168,7 @@ bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
     }
     if (Opt == "pac-ret") {
       PBP.Scope = "non-leaf";
-      if (Triple.isAArch64() && Triple.isOSWindows())
+      if (Triple.isAArch64() && Triple.isOSWindowsOrUEFI())
         PBP.Key = "b_key";
 
       for (; I + 1 != E; ++I) {

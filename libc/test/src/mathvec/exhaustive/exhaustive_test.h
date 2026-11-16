@@ -13,6 +13,7 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/simd.h"
+#include "src/__support/macros/attributes.h"
 #include "test/UnitTest/SIMDMatcher.h"
 
 #include <atomic>
@@ -38,7 +39,7 @@ template <typename OutType, typename InType = OutType>
 using ScalarUnaryOp = OutType(InType);
 
 template <typename OutType, typename InType = OutType>
-using VectorUnaryOp =
+using VectorUnaryOp = LIBC_VECTOR_PCS
     LIBC_NAMESPACE::cpp::simd<OutType>(LIBC_NAMESPACE::cpp::simd<InType>);
 
 template <typename OutType, typename InType,
