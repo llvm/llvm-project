@@ -456,8 +456,8 @@ TEST(DeclPrinter, TestMemberFunctionOutside_FullyQualifiedName) {
 
 TEST(DeclPrinter, TestDestructor_FullyQualifiedName) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
-      "namespace ns { struct X { ~X(); }; }",
-      cxxDestructorDecl().bind("id"), "ns::X::~X()",
+      "namespace ns { struct X { ~X(); }; }", cxxDestructorDecl().bind("id"),
+      "ns::X::~X()",
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
 }
 
