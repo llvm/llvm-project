@@ -6,8 +6,8 @@
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// Checks that CallConvLowering classifies AMDGPU kernel arguments under the
-// kernel convention.
+// Checks that CallConvLowering passes HIP kernel arguments the same way as
+// the existing LLVM codegen, through the kernarg segment.
 
 #define __global__ __attribute__((global))
 #define __device__ __attribute__((device))
@@ -48,6 +48,34 @@ __global__ void kern_bitint(_BitInt(65) b) {}
 
 // CIR: cir.func {{.*}}@_Z11kern_bitintDB65_(%arg0: !cir.int<s, 65, bitint> {{.*}}){{.*}}cc(amdgpu_kernel)
 // LLVM: define {{.*}}amdgpu_kernel void @_Z11kern_bitintDB65_(i65 noundef %{{.*}})
+
+// Kernel arguments are read from the kernarg segment, so sub-word integers
+// and bool are not extended, unlike in a device function.
+__global__ void kern_char(char c) {}
+
+// CIR: cir.func {{.*}}@_Z9kern_charc(%arg0: !s8i {llvm.noundef}{{.*}}cc(amdgpu_kernel)
+// LLVM: define {{.*}}amdgpu_kernel void @_Z9kern_charc(i8 noundef %{{.*}})
+
+__global__ void kern_uchar(unsigned char c) {}
+
+// CIR: cir.func {{.*}}@_Z10kern_ucharh(%arg0: !u8i {llvm.noundef}{{.*}}cc(amdgpu_kernel)
+// LLVM: define {{.*}}amdgpu_kernel void @_Z10kern_ucharh(i8 noundef %{{.*}})
+
+__global__ void kern_short(short s) {}
+
+// CIR: cir.func {{.*}}@_Z10kern_shorts(%arg0: !s16i {llvm.noundef}{{.*}}cc(amdgpu_kernel)
+// LLVM: define {{.*}}amdgpu_kernel void @_Z10kern_shorts(i16 noundef %{{.*}})
+
+__global__ void kern_bool(bool b) {}
+
+// CIR: cir.func {{.*}}@_Z9kern_boolb(%arg0: !cir.bool {llvm.noundef}{{.*}}cc(amdgpu_kernel)
+// LLVM: define {{.*}}amdgpu_kernel void @_Z9kern_boolb(i1 noundef %{{.*}})
+
+// The same argument to a device function is extended.
+__device__ void dev_char(char c) {}
+
+// CIR: cir.func {{.*}}@_Z8dev_charc(%arg0: !s8i {{.*}}llvm.signext
+// LLVM: define {{.*}}void @_Z8dev_charc(i8 noundef signext %{{.*}})
 
 // Vectors, including 16-bit and 3-element ones, pass whole.
 __global__ void kern_float4(float4 v) {}
@@ -143,31 +171,3 @@ __global__ void kern_ptr_pair(ptr_pair_t p) {}
 // CIR:   cir.copy %[[P]] align(8) to %{{.*}} align(8) : !cir.ptr<!rec_ptr_pair_t, target_address_space(4)>, !cir.ptr<!rec_ptr_pair_t>
 // LLVM: define {{.*}}amdgpu_kernel void @_Z13kern_ptr_pair10ptr_pair_t(ptr addrspace(4) noundef byref(%struct.ptr_pair_t) align 8 %[[P:.*]])
 // LLVM:   call void @llvm.memcpy.{{.*}}(ptr{{.*}} align 8 %{{.*}}, ptr addrspace(4) align 8 %[[P]], i64 16, i1 false)
-
-// Kernel arguments are read from the kernarg segment, so sub-word integers
-// and bool are not extended, unlike in a device function.
-__global__ void kern_char(char c) {}
-
-// CIR: cir.func {{.*}}@_Z9kern_charc(%arg0: !s8i {llvm.noundef}{{.*}}cc(amdgpu_kernel)
-// LLVM: define {{.*}}amdgpu_kernel void @_Z9kern_charc(i8 noundef %{{.*}})
-
-__global__ void kern_uchar(unsigned char c) {}
-
-// CIR: cir.func {{.*}}@_Z10kern_ucharh(%arg0: !u8i {llvm.noundef}{{.*}}cc(amdgpu_kernel)
-// LLVM: define {{.*}}amdgpu_kernel void @_Z10kern_ucharh(i8 noundef %{{.*}})
-
-__global__ void kern_short(short s) {}
-
-// CIR: cir.func {{.*}}@_Z10kern_shorts(%arg0: !s16i {llvm.noundef}{{.*}}cc(amdgpu_kernel)
-// LLVM: define {{.*}}amdgpu_kernel void @_Z10kern_shorts(i16 noundef %{{.*}})
-
-__global__ void kern_bool(bool b) {}
-
-// CIR: cir.func {{.*}}@_Z9kern_boolb(%arg0: !cir.bool {llvm.noundef}{{.*}}cc(amdgpu_kernel)
-// LLVM: define {{.*}}amdgpu_kernel void @_Z9kern_boolb(i1 noundef %{{.*}})
-
-// The same argument to a device function is extended.
-__device__ void dev_char(char c) {}
-
-// CIR: cir.func {{.*}}@_Z8dev_charc(%arg0: !s8i {{.*}}llvm.signext
-// LLVM: define {{.*}}void @_Z8dev_charc(i8 noundef signext %{{.*}})
