@@ -41,6 +41,7 @@ bool isEmptyFieldForABI(const ASTContext &context, const FieldDecl *fd);
 /// pointer is neither a base nor a field.
 bool isEmptyRecordForABI(const ASTContext &context, QualType t);
 
+class CallArgList;
 class CIRGenFunction;
 
 class TargetCIRGenInfo {
@@ -90,7 +91,7 @@ public:
     return nullptr;
   }
 
-  /// Determine whether a call to an unprototyped functions under
+  /// Determine whether a call to an unprototyped function under
   /// the given calling convention should use the variadic
   /// convention or the non-variadic convention.
   ///
@@ -132,7 +133,8 @@ public:
   ///   A foo(B, C, D, ...);
   /// may need to adjust the debugger-support code in Sema to do the
   /// right thing when calling a function with no know signature.
-  virtual bool isNoProtoCallVariadic(const FunctionNoProtoType *fnType) const;
+  virtual bool isNoProtoCallVariadic(const CallArgList &args,
+                                     const FunctionNoProtoType *fnType) const;
 
   /// Returns true if inlining the function call would produce incorrect code
   /// for the current target and should be ignored (even with the always_inline

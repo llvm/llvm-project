@@ -15,11 +15,10 @@ void toUnion() {
   //
   (void)(union Union) getF();
   // CIR: %[[F_FUNC:.*]] = cir.get_global @getF : !cir.ptr<!cir.func<(...) -> !cir.float>>
-  // CIR:  %[[F_CAST:.*]] = cir.cast bitcast %[[F_FUNC]] : !cir.ptr<!cir.func<(...) -> !cir.float>> -> !cir.ptr<!cir.func<() -> !cir.float>>
-  // CIR: cir.call %[[F_CAST:.*]]() : (!cir.ptr<!cir.func<() -> !cir.float>>) -> !cir.float
+  // CIR: cir.call %[[F_FUNC]]() : (!cir.ptr<!cir.func<(...) -> !cir.float>>) -> !cir.float
   // CIR: cir.return
 
-  // LLVM: call float @getF()
+  // LLVM: call float (...) @getF()
   // LLVM: ret void
 
   // OGCG-LABEL: define dso_local void @toUnion()

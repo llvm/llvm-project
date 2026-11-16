@@ -182,7 +182,7 @@ void foo() {
 // LLVM:  %{{.*}} = alloca %struct.S, align 1
 // LLVM:  br label %2
 // LLVM:2:
-// LLVM:  call void @get()
+// LLVM:  call void (...) @get()
 // LLVM:  call void @bar()
 
 // OGCG: define dso_local void @foo()
