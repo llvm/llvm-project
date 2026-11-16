@@ -1381,8 +1381,7 @@ bool CodeGenFunction::EmitLifetimeStart(llvm::Value *Addr) {
   assert(Addr->getType()->getPointerAddressSpace() ==
              CGM.getDataLayout().getAllocaAddrSpace() &&
          "Pointer should be in alloca address space");
-  llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMLifetimeStartFn(), {Addr});
-  C->setDoesNotThrow();
+  Builder.CreateCall(CGM.getLLVMLifetimeStartFn(), {Addr});
   return true;
 }
 
@@ -1393,15 +1392,13 @@ void CodeGenFunction::EmitLifetimeEnd(llvm::Value *Addr) {
   assert(Addr->getType()->getPointerAddressSpace() ==
              CGM.getDataLayout().getAllocaAddrSpace() &&
          "Pointer should be in alloca address space");
-  llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMLifetimeEndFn(), {Addr});
-  C->setDoesNotThrow();
+  Builder.CreateCall(CGM.getLLVMLifetimeEndFn(), {Addr});
 }
 
 void CodeGenFunction::EmitFakeUse(Address Addr) {
   auto NL = ApplyDebugLocation::CreateEmpty(*this);
   llvm::Value *V = Builder.CreateLoad(Addr, "fake.use");
   llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMFakeUseFn(), {V});
-  C->setDoesNotThrow();
   C->setTailCallKind(llvm::CallInst::TCK_NoTail);
 }
 
