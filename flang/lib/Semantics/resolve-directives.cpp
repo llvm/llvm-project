@@ -514,15 +514,23 @@ public:
       const auto version{context_.langOptions().getOpenMPVersion()};
       if (version == 51 || version == 52) {
         Scope &programUnit{const_cast<Scope &>(omp::GetProgramUnit(thisScope))};
-        if (x.moduleName.symbol->test(Symbol::Flag::OmpAssumesNoOpenmp)) {
-          if (auto *symbol{const_cast<Symbol *>(programUnit.symbol())}) {
-            symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
-          }
-        }
-        if (const auto *moduleScope{x.moduleName.symbol->scope()}) {
-          for (llvm::omp::Directive directive :
-              moduleScope->ompAssumesAbsent()) {
-            programUnit.add_ompAssumesAbsent(directive);
+        if (auto *symbol{const_cast<Symbol *>(programUnit.symbol())}) {
+          if (const auto *moduleDetails{
+                  x.moduleName.symbol->detailsIf<ModuleDetails>()}) {
+            common::visit(
+                [&](auto &details) {
+                  if constexpr (std::is_convertible_v<decltype(details),
+                                    WithOmpDeclarative &>) {
+                    details.set_version(version);
+                    details.set_ompAssumes(
+                        details.ompAssumes() | moduleDetails->ompAssumes());
+                    for (llvm::omp::Directive directive :
+                        moduleDetails->ompAssumesAbsent()) {
+                      details.add_ompAssumesAbsent(directive);
+                    }
+                  }
+                },
+                symbol->details());
           }
         }
       }
