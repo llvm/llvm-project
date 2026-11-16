@@ -194,7 +194,7 @@ private:
     unsigned BitWidth = IntTy->getScalarSizeInBits();
     if (!IntTy->isVectorTy() || BitWidth == 32 || OffsetInfo.isConstant() ||
         OffsetInfo.isUniform())
-      return 0;
+      return TTI::TCC_Free;
     return thisT()->getCastInstrCost(
         BitWidth > 32 ? Instruction::ZExt : Instruction::Trunc, IntTy,
         IntTy->getWithNewBitWidth(32), TTI::CastContextHint::None, CostKind);
