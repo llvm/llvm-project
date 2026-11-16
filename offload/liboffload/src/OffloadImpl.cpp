@@ -1712,11 +1712,8 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
 }
 
 namespace tmp {
-// Temporary helpers to help transition of libomptarget to liboffload
-DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
-  return Program->Image;
-}
-
+// Helpers for virtual address management that are only used RecordReplay until
+// it transitions to a new code.
 void *__ol_tgt_GetSuggestedVirtualAddress(ol_device_handle_t Device) {
   return Device->Device->getSuggestedVirtualAddress();
 }
