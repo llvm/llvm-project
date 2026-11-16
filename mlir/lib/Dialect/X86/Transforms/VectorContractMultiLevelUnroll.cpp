@@ -632,7 +632,7 @@ static void makeAccResultBackedByMemory(MLUCandidate &candidate,
     auto isSafeToUseView = [&]() {
       // A single register tile reads all of its input before writing.
       if (candidate.accIsZeroInit ||
-          candidate.accType.getShape() == candidate.accRegTileType.getShape())
+          candidate.accType == candidate.accRegTileType)
         return true;
       auto accMemInView = candidate.accMemIn.getDefiningOp<memref::SubViewOp>();
       if (!accMemInView)

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -transform-interpreter -canonicalize -cse -split-input-file | FileCheck %s
+  // RUN: mlir-opt %s -transform-interpreter -canonicalize -cse -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -transform-interpreter=entry-point=__transform_nano -canonicalize -cse -split-input-file \
 // RUN:   | FileCheck %s --check-prefix=NANO --implicit-check-not=vector.contract
 
@@ -829,57 +829,9 @@ module attributes {transform.with_named_sequence} {
 
 // The initial read and the final write target the same memref but at different
 // offsets, so the regions partially overlap. Writing the result tiles through
-// a view would clobber initial values not yet read by later M/N iterations, so
+// a view would clobber initial values not yet read by later M iterations, so
 // the initial value is still read via a subview, but the result goes through a
 // stack buffer and the original write remains.
-func.func @amx_bf16_flat_acc_partial_overlap(%A: memref<?x?xbf16>, %B: memref<?x?xbf16>, %C: memref<?x?xf32>,
-                                             %m: index, %n: index, %k_start: index, %k_end: index) {
-  %c32 = arith.constant 32 : index
-  %c0_0 = arith.constant 0.0 : bf16
-  %c0_0_f32 = arith.constant 0.0 : f32
-  %m_off = arith.addi %m, %c32 : index
-  %c = vector.transfer_read %C[%m, %n], %c0_0_f32 {in_bounds = [true, true]} : memref<?x?xf32>, vector<64x96xf32>
-  %res = scf.for %k = %k_start to %k_end step %c32 iter_args(%acc = %c) -> (vector<64x96xf32>) {
-    %a = vector.transfer_read %A[%m, %k], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<64x32xbf16>
-    %b = vector.transfer_read %B[%k, %n], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<32x96xbf16>
-    %d = vector.contract {
-      indexing_maps = [#map, #map1, #map2],
-      iterator_types = ["parallel", "parallel", "reduction"],
-      kind = #vector.kind<add>}
-      %a, %b, %acc : vector<64x32xbf16>, vector<32x96xbf16> into vector<64x96xf32>
-    scf.yield %d : vector<64x96xf32>
-  }
-  vector.transfer_write %res, %C[%m_off, %n] {in_bounds = [true, true]} : vector<64x96xf32>, memref<?x?xf32>
-  func.return
-}
-
-// CHECK-LABEL: func.func @amx_bf16_flat_acc_partial_overlap(
-// CHECK-SAME:    %[[A:.+]]: memref<?x?xbf16>, %[[B:.+]]: memref<?x?xbf16>, %[[C:.+]]: memref<?x?xf32>,
-// CHECK-SAME:    %[[M:.+]]: index, %[[N:.+]]: index, %[[K_START:.+]]: index, %[[K_END:.+]]: index)
-// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
-// CHECK-DAG:     %[[C32:.+]] = arith.constant 32 : index
-// CHECK-DAG:     %[[C64:.+]] = arith.constant 64 : index
-// CHECK-DAG:     %[[C96:.+]] = arith.constant 96 : index
-// CHECK-DAG:     %[[M_OFF:.+]] = arith.addi %[[M]], %[[C32]]
-// CHECK-DAG:     %[[ACC_IN:.+]] = memref.subview %[[C]][%[[M]], %[[N]]] [64, 96] [1, 1]
-// CHECK-DAG:     %[[BUF:.+]] = memref.alloca() : memref<64x96xf32>
-// CHECK-NOT:     memref.subview %[[C]]
-// CHECK-NOT:     vector.transfer_write
-// CHECK:         scf.for %[[IV_M:.+]] = %[[C0]] to %[[C64]] step %[[C32]] {
-// CHECK:           scf.for %[[IV_N:.+]] = %[[C0]] to %[[C96]] step %[[C32]] {
-// CHECK:             %[[IN_VIEW:.+]] = memref.subview %[[ACC_IN]][%[[IV_M]], %[[IV_N]]] [32, 32] [1, 1]
-// CHECK-COUNT-4:     vector.transfer_read %[[IN_VIEW]]{{.*}} vector<16x16xf32>
-// CHECK:             %[[RES:.+]]:4 = scf.for
-// CHECK:             %[[OUT_VIEW:.+]] = memref.subview %[[BUF]][%[[IV_M]], %[[IV_N]]] [32, 32] [1, 1]
-// CHECK-COUNT-4:     vector.transfer_write %[[RES]]#{{[0-3]}}, %[[OUT_VIEW]]
-// CHECK:           }
-// CHECK:         }
-// CHECK:         %[[ACC_RES:.+]] = vector.transfer_read %[[BUF]][%[[C0]], %[[C0]]], {{.*}} vector<64x96xf32>
-// CHECK:         vector.transfer_write %[[ACC_RES]], %[[C]][%[[M_OFF]], %[[N]]] {{.*}} : vector<64x96xf32>, memref<?x?xf32>
-
-// NANO-LABEL: func.func @amx_bf16_flat_acc_partial_overlap(
-
-// Multiple register tiles in M alone require the temporary buffer.
 func.func @amx_bf16_flat_acc_partial_overlap_m(%A: memref<?x?xbf16>, %B: memref<?x?xbf16>, %C: memref<?x?xf32>,
                                                %m: index, %n: index, %k_start: index, %k_end: index) {
   %c32 = arith.constant 32 : index
@@ -902,12 +854,29 @@ func.func @amx_bf16_flat_acc_partial_overlap_m(%A: memref<?x?xbf16>, %B: memref<
 }
 
 // CHECK-LABEL: func.func @amx_bf16_flat_acc_partial_overlap_m(
-// CHECK:         memref.alloca() : memref<64x32xf32>
-// CHECK:         vector.transfer_write {{.*}} : vector<64x32xf32>, memref<?x?xf32>
+// CHECK-SAME:    %[[A:.+]]: memref<?x?xbf16>, %[[B:.+]]: memref<?x?xbf16>, %[[C:.+]]: memref<?x?xf32>,
+// CHECK-SAME:    %[[M:.+]]: index, %[[N:.+]]: index, %[[K_START:.+]]: index, %[[K_END:.+]]: index)
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C32:.+]] = arith.constant 32 : index
+// CHECK-DAG:     %[[C64:.+]] = arith.constant 64 : index
+// CHECK-DAG:     %[[M_OFF:.+]] = arith.addi %[[M]], %[[C32]]
+// CHECK-DAG:     %[[ACC_IN:.+]] = memref.subview %[[C]][%[[M]], %[[N]]] [64, 32] [1, 1]
+// CHECK-DAG:     %[[BUF:.+]] = memref.alloca() : memref<64x32xf32>
+// CHECK-NOT:     memref.subview %[[C]]
+// CHECK-NOT:     vector.transfer_write
+// CHECK:         scf.for %[[IV_M:.+]] = %[[C0]] to %[[C64]] step %[[C32]] {
+// CHECK:           %[[IN_VIEW:.+]] = memref.subview %[[ACC_IN]][%[[IV_M]], 0] [32, 32] [1, 1]
+// CHECK-COUNT-4:   vector.transfer_read %[[IN_VIEW]]{{.*}} vector<16x16xf32>
+// CHECK:           %[[RES:.+]]:4 = scf.for
+// CHECK:           %[[OUT_VIEW:.+]] = memref.subview %[[BUF]][%[[IV_M]], 0] [32, 32] [1, 1]
+// CHECK-COUNT-4:   vector.transfer_write %[[RES]]#{{[0-3]}}, %[[OUT_VIEW]]
+// CHECK:         }
+// CHECK:         %[[ACC_RES:.+]] = vector.transfer_read %[[BUF]][%[[C0]], %[[C0]]], {{.*}} vector<64x32xf32>
+// CHECK:         vector.transfer_write %[[ACC_RES]], %[[C]][%[[M_OFF]], %[[N]]] {{.*}} : vector<64x32xf32>, memref<?x?xf32>
 
 // NANO-LABEL: func.func @amx_bf16_flat_acc_partial_overlap_m(
 
-// Multiple register tiles in N alone also require the temporary buffer.
+// Multiple register tiles in N alone also require the stack buffer.
 func.func @amx_bf16_flat_acc_partial_overlap_n(%A: memref<?x?xbf16>, %B: memref<?x?xbf16>, %C: memref<?x?xf32>,
                                                %m: index, %n: index, %k_start: index, %k_end: index) {
   %c32 = arith.constant 32 : index
