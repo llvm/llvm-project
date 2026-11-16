@@ -34,6 +34,8 @@ private:
                      MCRegister &SrcReg32, bool &SrcIsHi, bool &SrcIsImm,
                      int64_t &ImmVal) const;
 
+  void clearKillsBetween(MachineInstr &Begin, MachineInstr &End,
+                         MCRegister Reg) const;
   bool mergeSingleMovB16Pair(MachineInstr &Lo, MachineInstr &Hi,
                              bool IsHiFirst) const;
   bool mergeMovB16Pairs(MachineFunction &MF) const;
@@ -100,6 +102,19 @@ void SIPostRA16BitMovFolding::getMovB16Info(
   } else {
     SrcIsHi = false;
     SrcReg32 = SrcReg16;
+  }
+}
+
+void SIPostRA16BitMovFolding::clearKillsBetween(MachineInstr &Begin,
+                                                MachineInstr &End,
+                                                MCRegister Reg) const {
+  assert(Reg && "Expected a register source");
+  for (MachineInstr &MI :
+       drop_begin(make_range(Begin.getIterator(), End.getIterator()))) {
+    for (MachineOperand &MO : MI.uses()) {
+      if (MO.isReg() && MO.isKill() && TRI->regsOverlap(MO.getReg(), Reg))
+        MO.setIsKill(false);
+    }
   }
 }
 
@@ -219,6 +234,7 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
         .addReg(HiSrc32)
         .addReg(LoSrc32)
         .addImm((MaskHiSrc << 16) | MaskLoSrc);
+    clearKillsBetween(FirstMI, Selected, FirstSrc16);
     Lo.eraseFromParent();
     Hi.eraseFromParent();
     return true;
@@ -251,6 +267,8 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
             Dst32)
         .addImm(0x0000ffff)
         .addReg(LoSrc32);
+    if (FirstSrc16)
+      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     Lo.eraseFromParent();
     Hi.eraseFromParent();
     return true;
@@ -265,6 +283,8 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
             Dst32)
         .addImm(16)
         .addReg(LoSrc32);
+    if (FirstSrc16)
+      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     Lo.eraseFromParent();
     Hi.eraseFromParent();
     return true;
@@ -279,6 +299,8 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
             Dst32)
         .addImm(16)
         .addReg(HiSrc32);
+    if (FirstSrc16)
+      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     Lo.eraseFromParent();
     Hi.eraseFromParent();
     return true;
@@ -292,6 +314,8 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
             Dst32)
         .addImm(0xffff0000)
         .addReg(HiSrc32);
+    if (FirstSrc16)
+      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     Lo.eraseFromParent();
     Hi.eraseFromParent();
     return true;
