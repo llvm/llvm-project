@@ -265,8 +265,7 @@ define void @test10() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <16 x i8> [[TMP4]] to <16 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i16> [[TMP5]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc <16 x i16> [[TMP7]] to <16 x i8>
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <16 x i8> [[TMP8]] to <16 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <16 x i16> [[TMP7]] to <16 x i32>
 ; CHECK-NEXT:    store <16 x i32> [[TMP9]], ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -672,7 +671,7 @@ define void @zext_nneg(ptr %p, ptr %q) {
 ; CHECK-LABEL: @zext_nneg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg <8 x i8> [[TMP0]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[TMP2]], splat (i32 65536)
 ; CHECK-NEXT:    store <8 x i32> [[TMP1]], ptr [[Q:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -707,7 +706,7 @@ define void @uitofp_nneg(ptr %p, ptr %q) {
 ; CHECK-LABEL: @uitofp_nneg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = uitofp <8 x i32> [[TMP0]] to <8 x float>
+; CHECK-NEXT:    [[TMP1:%.*]] = uitofp nneg <8 x i32> [[TMP0]] to <8 x float>
 ; CHECK-NEXT:    store <8 x float> [[TMP1]], ptr [[Q:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;

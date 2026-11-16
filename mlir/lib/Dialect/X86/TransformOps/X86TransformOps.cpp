@@ -19,7 +19,6 @@
 #include "mlir/Dialect/X86/Transforms.h"
 #include "mlir/Dialect/X86/X86Dialect.h"
 
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/RegionKindInterface.h"
 
 using namespace mlir;

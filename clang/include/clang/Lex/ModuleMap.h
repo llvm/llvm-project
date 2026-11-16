@@ -103,9 +103,6 @@ class ModuleMap {
   /// nullptr is stored for modules that are known to fail to load.
   llvm::DenseMap<const IdentifierInfo *, Module *> CachedModuleLoads;
 
-  /// Shadow modules created while building this module map.
-  llvm::SmallVector<Module*, 2> ShadowModules;
-
   /// The number of modules we have created in total.
   unsigned NumCreatedModules = 0;
 
@@ -525,6 +522,17 @@ public:
   Module *findModule(StringRef Name) const;
 
   Module *findOrLoadModule(StringRef Name);
+
+  /// Determine if a top-level module named \p Name was loaded or parsed.
+  bool isModuleKnown(StringRef Name) const {
+    return Modules.contains(Name) || ParsedModules.contains(Name);
+  }
+
+  /// Find the module map that defines the top-level module \p Name, without
+  /// loading it.
+  /// For an inferred module, this is the module map that allows inferring it
+  /// and requires loading.
+  OptionalFileEntryRef getModuleMapFileForName(StringRef Name) const;
 
   Module *findOrInferSubmodule(Module *Parent, StringRef Name);
 

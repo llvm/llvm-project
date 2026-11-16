@@ -305,18 +305,35 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName,
   if (Module || !AllowSearch || !HSOpts.ImplicitModuleMaps)
     return Module;
 
-  if (!lookupModuleWithPrivateFallbacks(ModuleName, ImportLoc,
-                                        AllowExtraModuleMapSearch))
+  if (!lookupModuleWithPrivateFallbacks(
+          ModuleName, ImportLoc, AllowExtraModuleMapSearch, /*Load=*/true))
     return nullptr;
   return ModMap.findOrLoadModule(ModuleName);
 }
 
+OptionalFileEntryRef
+HeaderSearch::lookupModuleMapFileForModule(StringRef ModuleName,
+                                           bool AllowExtraModuleMapSearch) {
+  assert(HSOpts.LazyLoadModuleMaps &&
+         "module map lookup requires lazy loading support");
+  if (!ModMap.isModuleKnown(ModuleName)) {
+    if (!HSOpts.ImplicitModuleMaps)
+      return std::nullopt;
+    // If the module map has not already been parsed, look it up.
+    if (!lookupModuleWithPrivateFallbacks(ModuleName, SourceLocation(),
+                                          AllowExtraModuleMapSearch,
+                                          /*Load=*/false))
+      return std::nullopt;
+  }
+  return ModMap.getModuleMapFileForName(ModuleName);
+}
+
 bool HeaderSearch::lookupModuleWithPrivateFallbacks(
     StringRef ModuleName, SourceLocation ImportLoc,
-    bool AllowExtraModuleMapSearch) {
+    bool AllowExtraModuleMapSearch, bool Load) {
   StringRef SearchName = ModuleName;
   if (lookupModuleImpl(ModuleName, SearchName, ImportLoc,
-                       AllowExtraModuleMapSearch))
+                       AllowExtraModuleMapSearch, Load))
     return true;
 
   // The facility for "private modules" -- adjacent, optional module maps named
@@ -330,20 +347,26 @@ bool HeaderSearch::lookupModuleWithPrivateFallbacks(
   // dependency cycles.
   if (SearchName.consume_back("_Private") &&
       lookupModuleImpl(ModuleName, SearchName, ImportLoc,
-                       AllowExtraModuleMapSearch))
+                       AllowExtraModuleMapSearch, Load))
     return true;
   if (SearchName.consume_back("Private") &&
       lookupModuleImpl(ModuleName, SearchName, ImportLoc,
-                       AllowExtraModuleMapSearch))
+                       AllowExtraModuleMapSearch, Load))
     return true;
   return false;
 }
 
 bool HeaderSearch::lookupModuleImpl(StringRef ModuleName, StringRef SearchName,
                                     SourceLocation ImportLoc,
-                                    bool AllowExtraModuleMapSearch) {
-  // Look through the various header search paths to load any available module
-  // maps, searching for a module map that describes this module.
+                                    bool AllowExtraModuleMapSearch, bool Load) {
+  auto FindModule = [&] {
+    return Load ? ModMap.findOrLoadModule(ModuleName) != nullptr
+                : ModMap.isModuleKnown(ModuleName);
+  };
+
+  // Look through the various header search paths to parse, and load if
+  // requested, searching for a module map that describes
+  // this module.
   for (DirectoryLookup &Dir : search_dir_range()) {
     if (Dir.isFramework()) {
       // Search for or infer a module map for a framework. Here we use
@@ -355,8 +378,9 @@ bool HeaderSearch::lookupModuleImpl(StringRef ModuleName, StringRef SearchName,
       if (auto FrameworkDir =
               FileMgr.getOptionalDirectoryRef(FrameworkDirName)) {
         bool IsSystem = Dir.getDirCharacteristic() != SrcMgr::C_User;
-        if (loadFrameworkModule(ModuleName, *FrameworkDir, IsSystem,
-                                /*ImplicitlyDiscovered=*/true))
+        parseFrameworkModuleMap(*FrameworkDir, IsSystem,
+                                /*ImplicitlyDiscovered=*/true, Load);
+        if (FindModule())
           return true;
       }
     }
@@ -375,8 +399,8 @@ bool HeaderSearch::lookupModuleImpl(StringRef ModuleName, StringRef SearchName,
     if (parseModuleMapFile(NormalDir, IsSystem, /*ImplicitlyDiscovered=*/true,
                            /*IsFramework*/ false) == MMR_NewlyProcessed) {
       // We just parsed a module map file; check whether the module can be
-      // loaded now.
-      if (ModMap.findOrLoadModule(ModuleName))
+      // found now.
+      if (FindModule())
         return true;
     }
 
@@ -389,7 +413,7 @@ bool HeaderSearch::lookupModuleImpl(StringRef ModuleName, StringRef SearchName,
                            /*ImplicitlyDiscovered=*/true,
                            /*IsFramework*/ false) == MMR_NewlyProcessed) {
       // If we just parsed a module map file, look for the module again.
-      if (ModMap.findOrLoadModule(ModuleName))
+      if (FindModule())
         return true;
     }
 
@@ -399,13 +423,13 @@ bool HeaderSearch::lookupModuleImpl(StringRef ModuleName, StringRef SearchName,
       if (Dir.haveLoadedAllModuleMaps())
         continue;
 
-      // Load all module maps in the immediate subdirectories of this search
+      // Look up all module maps in the immediate subdirectories of this search
       // directory if ModuleName was from @import.
       if (AllowExtraModuleMapSearch)
-        loadSubdirectoryModuleMaps(Dir);
+        parseSubdirectoryModuleMaps(Dir, Load);
 
       // Look again for the module.
-      if (ModMap.findOrLoadModule(ModuleName))
+      if (FindModule())
         return true;
     }
   }
@@ -2134,6 +2158,17 @@ bool HeaderSearch::hasModuleMapError(ModuleMapResult Result) {
   llvm_unreachable("Unknown module map result");
 }
 
+bool HeaderSearch::parseModuleMapFile(FileEntryRef File, bool IsSystem,
+                                      bool ImplicitlyDiscovered) {
+  assert(HSOpts.LazyLoadModuleMaps &&
+         "module map parsing requires lazy loading support");
+  OptionalDirectoryEntryRef Dir =
+      getModuleMapHomeDir(File, /*OriginalModuleMapFile=*/StringRef());
+  assert(Dir && "module map home directory must exist");
+  return hasModuleMapError(
+      parseModuleMapFileImpl(File, IsSystem, ImplicitlyDiscovered, *Dir));
+}
+
 HeaderSearch::ModuleMapResult HeaderSearch::parseAndLoadModuleMapFileImpl(
     FileEntryRef File, bool IsSystem, bool ImplicitlyDiscovered,
     DirectoryEntryRef Dir, FileID ID, unsigned *Offset, bool DiagnosePrivMMap) {
@@ -2232,8 +2267,17 @@ HeaderSearch::lookupModuleMapFile(DirectoryEntryRef Dir, bool IsFramework) {
 Module *HeaderSearch::loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
                                           bool IsSystem,
                                           bool ImplicitlyDiscovered) {
-  // Try to load a module map file.
-  switch (parseAndLoadModuleMapFile(Dir, IsSystem, ImplicitlyDiscovered,
+  parseFrameworkModuleMap(Dir, IsSystem, ImplicitlyDiscovered, /*Load=*/true);
+  return ModMap.findOrLoadModule(Name);
+}
+
+void HeaderSearch::parseFrameworkModuleMap(DirectoryEntryRef Dir, bool IsSystem,
+                                           bool ImplicitlyDiscovered,
+                                           bool Load) {
+  // Try to parse a module map file, and load it if Load is set.
+  switch (Load ? parseAndLoadModuleMapFile(Dir, IsSystem, ImplicitlyDiscovered,
+                                           /*IsFramework*/ true)
+               : parseModuleMapFile(Dir, IsSystem, ImplicitlyDiscovered,
                                     /*IsFramework*/ true)) {
   case MMR_InvalidModuleMap:
     // Try to infer a module map from the framework directory.
@@ -2242,14 +2286,10 @@ Module *HeaderSearch::loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
     break;
 
   case MMR_NoDirectory:
-    return nullptr;
-
   case MMR_AlreadyProcessed:
   case MMR_NewlyProcessed:
     break;
   }
-
-  return ModMap.findOrLoadModule(Name);
 }
 
 HeaderSearch::ModuleMapResult
@@ -2267,40 +2307,9 @@ HeaderSearch::ModuleMapResult
 HeaderSearch::parseAndLoadModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
                                         bool ImplicitlyDiscovered,
                                         bool IsFramework) {
-  auto InsertRes = DirectoryModuleMap.insert(std::pair{
-      Dir, ModuleMapDirectoryState{{}, {}, ModuleMapDirectoryState::Invalid}});
-  ModuleMapDirectoryState &MMState = InsertRes.first->second;
-  if (!InsertRes.second) {
-    switch (MMState.Status) {
-    case ModuleMapDirectoryState::Parsed:
-      break;
-    case ModuleMapDirectoryState::Loaded:
-      return MMR_AlreadyProcessed;
-    case ModuleMapDirectoryState::Invalid:
-      return MMR_InvalidModuleMap;
-    };
-  }
-
-  if (!MMState.ModuleMapFile) {
-    MMState.ModuleMapFile = lookupModuleMapFile(Dir, IsFramework);
-    if (MMState.ModuleMapFile)
-      MMState.PrivateModuleMapFile =
-          getPrivateModuleMap(*MMState.ModuleMapFile, FileMgr, Diags);
-  }
-
-  if (MMState.ModuleMapFile) {
-    ModuleMapResult Result = parseAndLoadModuleMapFileImpl(
-        *MMState.ModuleMapFile, IsSystem, ImplicitlyDiscovered, Dir);
-    // Add Dir explicitly in case ModuleMapFile is in a subdirectory.
-    // E.g. Foo.framework/Modules/module.modulemap
-    //      ^Dir                  ^ModuleMapFile
-    if (Result == MMR_NewlyProcessed)
-      MMState.Status = ModuleMapDirectoryState::Loaded;
-    else if (Result == MMR_InvalidModuleMap)
-      MMState.Status = ModuleMapDirectoryState::Invalid;
-    return Result;
-  }
-  return MMR_InvalidModuleMap;
+  return parseModuleMapFileImpl(Dir, IsSystem, ImplicitlyDiscovered,
+                                IsFramework,
+                                /*Load=*/true);
 }
 
 HeaderSearch::ModuleMapResult
@@ -2316,16 +2325,24 @@ HeaderSearch::parseModuleMapFile(StringRef DirName, bool IsSystem,
 HeaderSearch::ModuleMapResult
 HeaderSearch::parseModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
                                  bool ImplicitlyDiscovered, bool IsFramework) {
-  if (!HSOpts.LazyLoadModuleMaps)
-    return parseAndLoadModuleMapFile(Dir, IsSystem, ImplicitlyDiscovered,
-                                     IsFramework);
+  return parseModuleMapFileImpl(Dir, IsSystem, ImplicitlyDiscovered,
+                                IsFramework,
+                                /*Load=*/!HSOpts.LazyLoadModuleMaps);
+}
 
+HeaderSearch::ModuleMapResult
+HeaderSearch::parseModuleMapFileImpl(DirectoryEntryRef Dir, bool IsSystem,
+                                     bool ImplicitlyDiscovered,
+                                     bool IsFramework, bool Load) {
   auto InsertRes = DirectoryModuleMap.insert(std::pair{
       Dir, ModuleMapDirectoryState{{}, {}, ModuleMapDirectoryState::Invalid}});
   ModuleMapDirectoryState &MMState = InsertRes.first->second;
   if (!InsertRes.second) {
     switch (MMState.Status) {
     case ModuleMapDirectoryState::Parsed:
+      if (Load)
+        break;
+      [[fallthrough]];
     case ModuleMapDirectoryState::Loaded:
       return MMR_AlreadyProcessed;
     case ModuleMapDirectoryState::Invalid:
@@ -2341,13 +2358,17 @@ HeaderSearch::parseModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
   }
 
   if (MMState.ModuleMapFile) {
-    ModuleMapResult Result = parseModuleMapFileImpl(
-        *MMState.ModuleMapFile, IsSystem, ImplicitlyDiscovered, Dir);
+    ModuleMapResult Result =
+        Load ? parseAndLoadModuleMapFileImpl(*MMState.ModuleMapFile, IsSystem,
+                                             ImplicitlyDiscovered, Dir)
+             : parseModuleMapFileImpl(*MMState.ModuleMapFile, IsSystem,
+                                      ImplicitlyDiscovered, Dir);
     // Add Dir explicitly in case ModuleMapFile is in a subdirectory.
     // E.g. Foo.framework/Modules/module.modulemap
     //      ^Dir                  ^ModuleMapFile
     if (Result == MMR_NewlyProcessed)
-      MMState.Status = ModuleMapDirectoryState::Parsed;
+      MMState.Status = Load ? ModuleMapDirectoryState::Loaded
+                            : ModuleMapDirectoryState::Parsed;
     else if (Result == MMR_InvalidModuleMap)
       MMState.Status = ModuleMapDirectoryState::Invalid;
     return Result;
@@ -2397,7 +2418,7 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
 
       // Try to load module map files for immediate subdirectories of this
       // search directory.
-      loadSubdirectoryModuleMaps(DL);
+      parseSubdirectoryModuleMaps(DL, /*Load=*/true);
     }
   }
 
@@ -2421,7 +2442,8 @@ void HeaderSearch::loadTopLevelSystemModules() {
   }
 }
 
-void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
+void HeaderSearch::parseSubdirectoryModuleMaps(DirectoryLookup &SearchDir,
+                                               bool Load) {
   assert(HSOpts.ImplicitModuleMaps &&
          "Should not be loading subdirectory module maps");
 
@@ -2439,13 +2461,20 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
     if (Dir->type() == llvm::sys::fs::file_type::regular_file)
       continue;
     bool IsFramework = llvm::sys::path::extension(Dir->path()) == ".framework";
-    if (IsFramework == SearchDir.isFramework())
+    if (IsFramework != SearchDir.isFramework())
+      continue;
+    if (Load)
       parseAndLoadModuleMapFile(
           Dir->path(), SearchDir.isSystemHeaderDirectory(),
           /*ImplicitlyDiscovered=*/true, SearchDir.isFramework());
+    else
+      parseModuleMapFile(Dir->path(), SearchDir.isSystemHeaderDirectory(),
+                         /*ImplicitlyDiscovered=*/true,
+                         SearchDir.isFramework());
   }
 
-  SearchDir.setLoadedAllModuleMaps(true);
+  if (Load)
+    SearchDir.setLoadedAllModuleMaps(true);
 }
 
 std::string HeaderSearch::suggestPathToFileForDiagnostics(

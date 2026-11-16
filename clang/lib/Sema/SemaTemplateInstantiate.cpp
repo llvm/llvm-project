@@ -1168,6 +1168,13 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
         DiagFunc(Active->PointOfInstantiation,
                  PDiag(diag::note_comparison_synthesized_at)
                      << (int)DFK.asComparison() << RecordType);
+      } else if (DFK.isPostfixOperator()) {
+        // The declared return type of a defaulted postfix operator is the
+        // type for which it is defaulted.
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(diag::note_postfix_operator_synthesized_at)
+                     << (int)DFK.asPostfixOperator()
+                     << FD->getReturnType().getUnqualifiedType());
       }
       break;
     }
@@ -1324,7 +1331,7 @@ namespace {
     bool BailOutOnIncomplete;
 
     std::optional<llvm::FoldingSetNodeID> TemplateArgsHashValue;
-    llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+    llvm::DenseMap<llvm::FoldingSetNodeIDRef, TemplateArgumentLoc>
         *CurrentCachedTemplateArgs = nullptr;
 
     // While the parameters of a prototype are being substituted, the vector is
@@ -1365,7 +1372,7 @@ namespace {
     TemplateInstantiator(
         ForParameterMappingSubstitution_t, Sema &SemaRef, SourceLocation Loc,
         const MultiLevelTemplateArgumentList &TemplateArgs,
-        llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc> *Cache)
+        llvm::DenseMap<llvm::FoldingSetNodeIDRef, TemplateArgumentLoc> *Cache)
         : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
           EvaluateLambdaConstraint(true), BailOutOnIncomplete(false),
           CurrentCachedTemplateArgs(Cache) {
@@ -1657,7 +1664,7 @@ namespace {
         }
         bool Ret = inherited::TransformTemplateArgument(Input, Output, Uneval);
         if (!Ret)
-          Cache->insert({ID, Output});
+          Cache->try_emplace(ID.Intern(SemaRef.BumpAlloc), Output);
         return Ret;
       }
       switch (Arg.getKind()) {
@@ -3332,9 +3339,13 @@ ParmVarDecl *Sema::SubstParmVarDecl(
     CurrentInstantiationScope->InstantiatedLocal(OldParm, NewParm);
   }
 
-  // FIXME: OldParm may come from a FunctionProtoType, in which case CurContext
-  // can be anything, is this right ?
-  NewParm->setDeclContext(CurContext);
+  // A parameter that is not a function's own, such as one of a function
+  // pointer's pointee, belongs to no function (see ActOnParamDeclarator); keep
+  // it in the translation unit, where CheckParameter created it.
+  // FIXME: For other parameters from a FunctionProtoType, CurContext can be
+  // anything; is this right?
+  if (!OldParm->getDeclContext()->isTranslationUnit())
+    NewParm->setDeclContext(CurContext);
 
   NewParm->setScopeInfo(OldParm->getFunctionScopeDepth(),
                         OldParm->getFunctionScopeIndex() + indexAdjustment);

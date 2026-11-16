@@ -48,23 +48,20 @@ struct Buffers {
   Buffer misaligned_buffer;
 };
 
-using MemcpyImplementations = testing::TypeList<
-#ifdef LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
-    builtin::Memcpy<1>,  //
-    builtin::Memcpy<2>,  //
-    builtin::Memcpy<3>,  //
-    builtin::Memcpy<4>,  //
-    builtin::Memcpy<8>,  //
-    builtin::Memcpy<16>, //
-    builtin::Memcpy<32>, //
-    builtin::Memcpy<64>
-#endif // LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
-    >;
-
 // Convenient helper to turn a span into cpp::byte *.
 static inline cpp::byte *as_byte(cpp::span<char> span) {
   return reinterpret_cast<cpp::byte *>(span.data());
 }
+
+#ifdef LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
+using MemcpyImplementations = testing::Types<builtin::Memcpy<1>,  //
+                                             builtin::Memcpy<2>,  //
+                                             builtin::Memcpy<3>,  //
+                                             builtin::Memcpy<4>,  //
+                                             builtin::Memcpy<8>,  //
+                                             builtin::Memcpy<16>, //
+                                             builtin::Memcpy<32>, //
+                                             builtin::Memcpy<64>>;
 
 // Adapt CheckMemcpy signature to op implementation signatures.
 template <auto FnImpl>
@@ -77,8 +74,11 @@ void CopyBlockAdaptor(cpp::span<char> dst, cpp::span<char> src,
   FnImpl(as_byte(dst), as_byte(src));
 }
 
-TYPED_TEST(LlvmLibcOpTest, Memcpy, MemcpyImplementations) {
-  using Impl = ParamType;
+template <typename T> class LlvmLibcOpMemcpyTest : public testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcOpMemcpyTest, MemcpyImplementations);
+
+TYPED_TEST(LlvmLibcOpMemcpyTest, Memcpy) {
+  using Impl = TypeParam;
   constexpr size_t kSize = Impl::SIZE;
   { // Test block operation
     static constexpr auto BlockImpl = CopyBlockAdaptor<kSize, Impl::block>;
@@ -116,8 +116,9 @@ TYPED_TEST(LlvmLibcOpTest, Memcpy, MemcpyImplementations) {
     }
   }
 }
+#endif // LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 
-using MemsetImplementations = testing::TypeList<
+using MemsetImplementations = testing::Types<
 #ifdef LLVM_LIBC_HAS_BUILTIN_MEMSET_INLINE
     builtin::Memset<1>,  //
     builtin::Memset<2>,  //
@@ -159,8 +160,11 @@ void SetBlockAdaptor(cpp::span<char> dst, uint8_t value,
   FnImpl(as_byte(dst), value);
 }
 
-TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
-  using Impl = ParamType;
+template <typename T> class LlvmLibcOpMemsetTest : public testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcOpMemsetTest, MemsetImplementations);
+
+TYPED_TEST(LlvmLibcOpMemsetTest, Memset) {
+  using Impl = TypeParam;
   constexpr size_t kSize = Impl::SIZE;
   { // Test block operation
     static constexpr auto BlockImpl = SetBlockAdaptor<kSize, Impl::block>;
@@ -202,7 +206,7 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif // LIBC_TARGET_ARCH_IS_X86_64
 
-using BcmpImplementations = testing::TypeList<
+using BcmpImplementations = testing::Types<
 #ifdef LIBC_TARGET_ARCH_IS_X86_64
 #ifdef __SSE4_1__
     generic::Bcmp<__m128i>,
@@ -249,8 +253,11 @@ int CmpBlockAdaptor(cpp::span<char> p1, cpp::span<char> p2,
   return (int)FnImpl(as_byte(p1), as_byte(p2));
 }
 
-TYPED_TEST(LlvmLibcOpTest, Bcmp, BcmpImplementations) {
-  using Impl = ParamType;
+template <typename T> class LlvmLibcOpBcmpTest : public testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcOpBcmpTest, BcmpImplementations);
+
+TYPED_TEST(LlvmLibcOpBcmpTest, Bcmp) {
+  using Impl = TypeParam;
   constexpr size_t kSize = Impl::SIZE;
   { // Test block operation
     static constexpr auto BlockImpl = CmpBlockAdaptor<kSize, Impl::block>;
@@ -297,7 +304,7 @@ TYPED_TEST(LlvmLibcOpTest, Bcmp, BcmpImplementations) {
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif // LIBC_TARGET_ARCH_IS_X86_64
 
-using MemcmpImplementations = testing::TypeList<
+using MemcmpImplementations = testing::Types<
 #if defined(LIBC_TARGET_ARCH_IS_X86_64) && !defined(LIBC_TARGET_OS_IS_WINDOWS)
 #ifdef __SSE4_1__
     generic::Memcmp<__m128i>, //
@@ -330,8 +337,11 @@ using MemcmpImplementations = testing::TypeList<
 #pragma GCC diagnostic pop
 #endif // LIBC_TARGET_ARCH_IS_X86_64
 
-TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
-  using Impl = ParamType;
+template <typename T> class LlvmLibcOpMemcmpTest : public testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcOpMemcmpTest, MemcmpImplementations);
+
+TYPED_TEST(LlvmLibcOpMemcmpTest, Memcmp) {
+  using Impl = TypeParam;
   constexpr size_t kSize = Impl::SIZE;
   { // Test block operation
     static constexpr auto BlockImpl = CmpBlockAdaptor<kSize, Impl::block>;

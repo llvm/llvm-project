@@ -195,6 +195,11 @@ public:
 /// Checks if \p I is a call to llvm.fma or llvm.fmuladd.
 bool isFMAOrFMulAdd(const Instruction *I);
 
+/// How the FP identity ops of the copyable lanes produce the lane values:
+/// exactly, inexactly (a NaN may be quieted and a subnormal flushed, so the
+/// vector is valid only for FP math) or with the original values blended in.
+enum class FPCopyables { Exact, Inexact, Blended };
+
 /// Main data required for vectorization of instructions.
 class InstructionsState {
   /// MainOp and AltOp are primarily determined by getSameOpcode. Currently,
@@ -230,6 +235,8 @@ class InstructionsState {
   /// fmuladd(a, b, -0.0)/fmuladd(1.0, a, b), absorbing the binop instead of
   /// computing and gathering its result.
   bool AbsorbCopyableFMulOrFAdd = false;
+  /// How the FP identity ops produce the values of the copyable lanes.
+  FPCopyables FPCopyablesKind = FPCopyables::Exact;
 
 public:
   Instruction *getMainOp() const {
@@ -346,6 +353,15 @@ public:
   void setAbsorbCopyableFMulOrFAdd(bool Absorb) {
     AbsorbCopyableFMulOrFAdd = Absorb;
   }
+
+  /// Returns how the FP identity ops produce the values of the copyable lanes.
+  FPCopyables getFPCopyables() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return FPCopyablesKind;
+  }
+
+  /// Sets how the FP identity ops produce the values of the copyable lanes.
+  void setFPCopyables(FPCopyables Kind) { FPCopyablesKind = Kind; }
 };
 
 /// Checks if \p V is a single-use fmul/fadd with operands outside \p VL.
@@ -387,6 +403,39 @@ SmallVector<SmallVector<Value *>> scanAltAssociativeOperands(
     const InstructionsState &S, const TargetLibraryInfo &TLI,
     ArrayRef<Value *> VL, ArrayRef<Value *> Op0, ArrayRef<Value *> Op1,
     SmallVectorImpl<Value *> &ReassocScalars, SmallBitVector &SubLanes);
+
+/// Returns main/alternate instructions for the given \p VL. Unlike
+/// getSameOpcode supports non-compatible instructions for better SplitVectorize
+/// node support.
+/// \returns first main/alt instructions, if only poisons and instruction with
+/// only 2 opcodes exists. Returns pair of nullptr otherwise.
+std::pair<Instruction *, Instruction *>
+getMainAltOpsNoStateVL(ArrayRef<Value *> VL);
+
+/// Detects an extractvalue bundle that can be widened by vectorizing the
+/// underlying struct-returning calls.
+///
+/// \p VL is a bundle whose state \p S is Instruction::ExtractValue. The
+/// bundle is acceptable for widening into one struct-of-vectors call only
+/// when:
+///   - every element of \p VL is an ExtractValueInst,
+///   - every ExtractValueInst extracts the same struct field (its
+///     getIndices() matches the main op's indices),
+///   - the aggregate operands form a uniform set of CallInsts (per
+///     getSameOpcode) that is not an alt-shuffle and whose return type is
+///     a literal struct, and
+///   - every user of every such call is itself an ExtractValueInst, so the
+///     external-use extraction code can rebuild scalars via extractvalue +
+///     extractelement without needing an insertvalue chain.
+///
+/// On success returns true and fills \p Indices with the common field
+/// index path and \p Calls with the per-lane aggregate calls (in VL order),
+/// for the caller to feed as the operand of the new tree entry. Otherwise
+/// returns false and leaves the output parameters untouched.
+bool checkEVsForVecCalls(ArrayRef<Value *> VL, const InstructionsState &S,
+                         const TargetLibraryInfo &TLI,
+                         SmallVectorImpl<unsigned> &Indices,
+                         SmallVectorImpl<Value *> &Calls);
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOMPATIBILITYANALYSIS_H
