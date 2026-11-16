@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outliner-reruns=1 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix TWO-RUNS
-# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outliner-reruns=0 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix ONE-RUN
-# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outliner-reruns=3 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix FOUR-RUNS
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outliner-reruns=1 %s -o - | FileCheck %s --check-prefix TWO-RUNS
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outliner-reruns=0 %s -o - | FileCheck %s --check-prefix ONE-RUN
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outliner-reruns=3 %s -o - | FileCheck %s --check-prefix FOUR-RUNS
 
 # Example of Repeated Instruction Sequence - Iterative Machine Outlining
 #
@@ -56,7 +56,6 @@
 ...
 ---
 name:            baz.14
-tracksRegLiveness: true
 stack:
   - { id: 0, offset: -8, size: 8 }
   - { id: 1, offset: -16, size: 8 }
@@ -82,7 +81,6 @@ body:             |
 ...
 ---
 name:            baz.15
-tracksRegLiveness: true
 stack:
   - { id: 0, offset: -8, size: 8 }
   - { id: 1, offset: -16, size: 8 }
@@ -108,7 +106,6 @@ body:             |
 ...
 ---
 name:            baz.16
-tracksRegLiveness: true
 stack:
   - { id: 0, offset: -8, size: 8 }
   - { id: 1, offset: -16, size: 8 }

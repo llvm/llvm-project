@@ -38,7 +38,7 @@ define void @cse_trip_count_expression(ptr %a, ptr %p) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:    WIDEN-PHI vp<[[VP13:%[0-9]+]]> = phi [ vp<%induction>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
 ; CHECK-NEXT:    CLONE ir<%gep> = getelementptr ir<%a>, vp<%index>
-; CHECK-NEXT:    WIDEN store ir<%gep>, vp<[[VP13]]>
+; CHECK-NEXT:    WIDEN store ir<%gep>, vp<[[VP13]]>, align 4
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
 ; CHECK-NEXT:    EMIT vp<%vec.ind.next> = add vp<[[VP13]]>, vp<[[VP12]]>
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
@@ -107,10 +107,10 @@ define void @hoisted_stride_check_and_trip_count_expand_same_scev(ptr %dst, ptr 
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:    CLONE ir<%idx> = add ir<%row>, vp<%index>
 ; CHECK-NEXT:    CLONE ir<%gep.src> = getelementptr ir<%src>, ir<%idx>
-; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep.src> (!alias.scope !11)
+; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep.src>, align 1 (!alias.scope !11)
 ; CHECK-NEXT:    WIDEN-CAST ir<%ext> = zext ir<%l> to i32
 ; CHECK-NEXT:    CLONE ir<%gep.dst> = getelementptr ir<%dst>, ir<%idx>
-; CHECK-NEXT:    WIDEN store ir<%gep.dst>, ir<%ext> (!alias.scope !12, !noalias !11)
+; CHECK-NEXT:    WIDEN store ir<%gep.dst>, ir<%ext>, align 4 (!alias.scope !12, !noalias !11)
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP11]]>

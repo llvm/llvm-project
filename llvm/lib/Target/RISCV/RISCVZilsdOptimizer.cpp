@@ -29,7 +29,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -72,7 +71,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -105,13 +103,11 @@ class RISCVPreAllocZilsdOptImpl {
   const RISCVRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
   AliasAnalysis *AA;
-  MachineDominatorTree *DT;
   Align RequiredAlign;
 
 public:
   bool runOnMachineFunction(MachineFunction &MF,
-                            function_ref<AliasAnalysis *()> GetAA,
-                            function_ref<MachineDominatorTree *()> GetMDT);
+                            function_ref<AliasAnalysis *()> GetAA);
 };
 
 } // end anonymous namespace
@@ -121,7 +117,6 @@ char RISCVPreAllocZilsdOptLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(RISCVPreAllocZilsdOptLegacy, "riscv-prera-zilsd-opt",
                       "RISC-V pre-allocation Zilsd optimization", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(RISCVPreAllocZilsdOptLegacy, "riscv-prera-zilsd-opt",
                     "RISC-V pre-allocation Zilsd optimization", false, false)
 
@@ -130,8 +125,7 @@ INITIALIZE_PASS_END(RISCVPreAllocZilsdOptLegacy, "riscv-prera-zilsd-opt",
 //===----------------------------------------------------------------------===//
 
 bool RISCVPreAllocZilsdOptImpl::runOnMachineFunction(
-    MachineFunction &MF, function_ref<AliasAnalysis *()> GetAA,
-    function_ref<MachineDominatorTree *()> GetMDT) {
+    MachineFunction &MF, function_ref<AliasAnalysis *()> GetAA) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
   if (!STI->getCLOpts().zilsd_opt)
     return false;
@@ -144,7 +138,6 @@ bool RISCVPreAllocZilsdOptImpl::runOnMachineFunction(
   TRI = STI->getRegisterInfo();
   MRI = &MF.getRegInfo();
   AA = GetAA();
-  DT = GetMDT();
 
   // Check alignment: default is 8-byte, but allow 4-byte with tune feature
   // If unaligned scalar memory is enabled, allow any alignment
@@ -545,25 +538,20 @@ bool RISCVPreAllocZilsdOptLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
   RISCVPreAllocZilsdOptImpl Impl;
-  return Impl.runOnMachineFunction(
-      MF, [&]() { return &getAnalysis<AAResultsWrapperPass>().getAAResults(); },
-      [&]() {
-        return &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-      });
+  return Impl.runOnMachineFunction(MF, [&]() {
+    return &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  });
 }
 
 PreservedAnalyses
 RISCVPreAllocZilsdOptPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
   RISCVPreAllocZilsdOptImpl Impl;
-  bool Changed = Impl.runOnMachineFunction(
-      MF,
-      [&]() {
-        return &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
-                    .getManager()
-                    .getResult<AAManager>(MF.getFunction());
-      },
-      [&]() { return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF); });
+  bool Changed = Impl.runOnMachineFunction(MF, [&]() {
+    return &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                .getManager()
+                .getResult<AAManager>(MF.getFunction());
+  });
   return Changed ? getMachineFunctionPassPreservedAnalyses()
                        .preserveSet<CFGAnalyses>()
                  : PreservedAnalyses::all();
