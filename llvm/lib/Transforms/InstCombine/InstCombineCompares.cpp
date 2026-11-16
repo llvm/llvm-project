@@ -276,10 +276,9 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     if (i < 64 && IsTrueForElt)
       MagicBitvector |= 1ULL << i;
 
-    // If all of our states become overdefined, bail out early.  Since the
-    // predicate is expensive, only check it every 8 elements.  This is only
-    // really useful for really huge arrays.
-    if ((i & 8) == 0 && i >= 64 && SecondTrueElement == Overdefined &&
+    // If all of our states become overdefined and we need more than 64 bits in
+    // the bit vector, bail out.
+    if (i >= 64 && SecondTrueElement == Overdefined &&
         SecondFalseElement == Overdefined && TrueRangeEnd == Overdefined &&
         FalseRangeEnd == Overdefined)
       return nullptr;
