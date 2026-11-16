@@ -56,6 +56,48 @@ CHECK-UTF8:cdef{{\xc2\xa0}}
 CHECK-UTF8:defg
 CHECK-UTF8:efgh
 
+# Check UTF-16 and UTF-32 separately.
+# UTF-16LE:
+RUN: echo -n -e 'a\0\n\0' > %t
+RUN: echo -n -e 'a\0b\0\n\0' > %t
+RUN: echo -n -e 'a\0b\0c\0\n\0' > %t
+RUN: echo -n -e 'a\0b\0c\0d\0\n\0' > %t
+RUN: echo -n -e 'b\0c\0d\0e\0\0240\0\n\0' >> %t
+RUN: echo -n -e 'c\0d\0e\0f\0\0240\0\0237\0\n\0' >> %t
+RUN: echo -n -e '\0\0330d\0e\0f\0g\0\0337\0337\n\0' >> %t
+RUN: echo -n -e '\0\0330\0\0330e\0f\0g\0h\0\0337\0337\n\0' >> %t
+RUN: llvm-strings -e l %t | FileCheck --check-prefixes CHECK,CHECK-UTF8 --strict-whitespace --match-full-lines %s
+# UTF-16BE:
+RUN: echo -n -e '\0a\0\n' > %t
+RUN: echo -n -e '\0a\0b\0\n' > %t
+RUN: echo -n -e '\0a\0b\0c\0\n' > %t
+RUN: echo -n -e '\0a\0b\0c\0d\0\n' > %t
+RUN: echo -n -e '\0b\0c\0d\0e\0\0240\0\n' >> %t
+RUN: echo -n -e '\0c\0d\0e\0f\0\0240\0\0237\0\n' >> %t
+RUN: echo -n -e '\0330\0\0d\0e\0f\0g\0337\0337\0\n' >> %t
+RUN: echo -n -e '\0330\0\0330\0\0e\0f\0g\0h\0337\0337\0\n' >> %t
+RUN: llvm-strings -e b %t | FileCheck --check-prefixes CHECK,CHECK-UTF8 --strict-whitespace --match-full-lines %s
+# UTF-32LE:
+RUN: echo -n -e 'a\0\0\0\n\0\0\0' > %t
+RUN: echo -n -e 'a\0\0\0b\0\0\0\n\0\0\0' > %t
+RUN: echo -n -e 'a\0\0\0b\0\0\0c\0\0\0\n\0\0\0' > %t
+RUN: echo -n -e 'a\0\0\0b\0\0\0c\0\0\0d\0\0\0\n\0\0\0' > %t
+RUN: echo -n -e 'b\0\0\0c\0\0\0d\0\0\0e\0\0\0\0240\0\0\0\n\0\0\0' >> %t
+RUN: echo -n -e 'c\0\0\0d\0\0\0e\0\0\0f\0\0\0\0240\0\0\0\0237\0\0\0\n\0\0\0' >> %t
+RUN: echo -n -e '\0\0330\0\0d\0\0\0e\0\0\0f\0\0\0g\0\0\0\0337\0337\0\0\n\0\0\0' >> %t
+RUN: echo -n -e '\0\0330\0\0\0\0337\0\0e\0\0\0f\0\0\0g\0\0\0h\0\0\0\0377\0377\0377\0377\n\0\0\0' >> %t
+RUN: llvm-strings -e L %t | FileCheck --check-prefixes CHECK,CHECK-UTF8 --strict-whitespace --match-full-lines %s
+# UTF-32BE:
+RUN: echo -n -e '\0\0\0a\0\0\0\n' > %t
+RUN: echo -n -e '\0\0\0a\0\0\0b\0\0\0\n' > %t
+RUN: echo -n -e '\0\0\0a\0\0\0b\0\0\0c\0\0\0\n' > %t
+RUN: echo -n -e '\0\0\0a\0\0\0b\0\0\0c\0\0\0d\0\0\0\n' > %t
+RUN: echo -n -e '\0\0\0b\0\0\0c\0\0\0d\0\0\0e\0\0\0\0240\0\0\0\n' >> %t
+RUN: echo -n -e '\0\0\0c\0\0\0d\0\0\0e\0\0\0f\0\0\0\0240\0\0\0\0237\0\0\0\n' >> %t
+RUN: echo -n -e '\0\0\0330\0\0\0\0d\0\0\0e\0\0\0f\0\0\0g\0\0\0337\0337\0\0\0\n' >> %t
+RUN: echo -n -e '\0\0\0330\0\0\0\0337\0\0\0\0e\0\0\0f\0\0\0g\0\0\0h\0377\0377\0377\0377\0\0\0\n' >> %t
+RUN: llvm-strings -e B %t | FileCheck --check-prefixes CHECK,CHECK-UTF8 --strict-whitespace --match-full-lines %s
+
 # Check that invalid --encoding values are rejected.
 RUN: not llvm-strings --encoding x 2>&1 %t | FileCheck --check-prefix CHECK-ERROR %s
 RUN: not llvm-strings -e x 2>&1 %t | FileCheck --check-prefix CHECK-ERROR %s
