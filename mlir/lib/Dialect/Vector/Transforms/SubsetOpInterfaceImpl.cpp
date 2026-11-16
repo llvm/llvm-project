@@ -33,9 +33,7 @@ struct XferOpSubsetOpInterface
     if (isMaskedTransfer(transfer))
       return false;
     auto other = dyn_cast<VectorTransferOpInterface>(candidate.getOperation());
-    if (other && (isMaskedTransfer(other) ||
-                  transfer.getVectorType() != other.getVectorType() ||
-                  transfer.getPermutationMap() != other.getPermutationMap()))
+    if (other && isMaskedTransfer(other))
       return false;
     return mlir::detail::defaultOperatesOnEquivalentSubset(op, candidate,
                                                            equivalenceFn);
@@ -59,6 +57,14 @@ struct TransferReadOpSubsetExtractionOpInterface
           TransferReadOpSubsetExtractionOpInterface, vector::TransferReadOp> {
   OpOperand &getSourceOperand(Operation *op) const {
     return cast<vector::TransferReadOp>(op).getBaseMutable();
+  }
+
+  bool canForwardFromInsertion(Operation *op,
+                               SubsetInsertionOpInterface insertion) const {
+    auto read = cast<vector::TransferReadOp>(op);
+    auto write = dyn_cast<vector::TransferWriteOp>(insertion.getOperation());
+    return write && read.getVectorType() == write.getVectorType() &&
+           read.getPermutationMap() == write.getPermutationMap();
   }
 };
 
