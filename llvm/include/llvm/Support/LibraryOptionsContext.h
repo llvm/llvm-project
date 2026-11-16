@@ -36,11 +36,6 @@ public:
   // The arguments assigned so far.
   ArrayRef<const char *> args() const { return SavedArgs; }
 
-  // The library that parsed each argument in args().
-  ArrayRef<const LibraryOptions *> argLibraries() const {
-    return SavedLibraries;
-  }
-
   // T's values, or T::Default if none of its options is parsed.
   template <typename T> const T &get() const {
     auto It = Values.find(&T::Default);
