@@ -11,6 +11,17 @@ package(default_visibility = ["//visibility:public"])
 licenses(["notice"])
 
 libc_test(
+    name = "double_double_test",
+    srcs = ["double_double_test.cpp"],
+    deps = [
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
     name = "fpbits_test",
     srcs = ["fpbits_test.cpp"],
     deps = [
