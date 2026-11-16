@@ -8,10 +8,7 @@
 define void @load_v4i8_v16i8(ptr %q, ptr %p) {
 ; CHECK-LABEL: load_v4i8_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    ld1r { v0.4s }, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
   %x = load <4 x i8>, ptr %q
@@ -23,13 +20,7 @@ define void @load_v4i8_v16i8(ptr %q, ptr %p) {
 define void @load_v2i8_v16i8(ptr %q, ptr %p) {
 ; CHECK-LABEL: load_v2i8_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr h1, [x0]
-; CHECK-NEXT:    movi v0.2d, #0xff00ff00ff00ff
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    dup v2.16b, v1.b[4]
-; CHECK-NEXT:    dup v1.16b, v1.b[0]
-; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ld1r { v0.8h }, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
   %x = load <2 x i8>, ptr %q
@@ -41,12 +32,7 @@ define void @load_v2i8_v16i8(ptr %q, ptr %p) {
 define void @load_v2i16_v8i16(ptr %q, ptr %p) {
 ; CHECK-LABEL: load_v2i16_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    movi v0.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    dup v2.8h, v1.h[2]
-; CHECK-NEXT:    dup v1.8h, v1.h[0]
-; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ld1r { v0.4s }, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
   %x = load <2 x i16>, ptr %q
@@ -58,10 +44,7 @@ define void @load_v2i16_v8i16(ptr %q, ptr %p) {
 define void @load_v4i8_v64i8_wide(ptr %q, ptr %p) {
 ; CHECK-LABEL: load_v4i8_v64i8_wide:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    ld1r { v0.4s }, [x0]
 ; CHECK-NEXT:    stp q0, q0, [x1]
 ; CHECK-NEXT:    stp q0, q0, [x1, #32]
 ; CHECK-NEXT:    ret

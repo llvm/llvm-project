@@ -23068,6 +23068,24 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     }
   }
 
+  // If we have a concat of the same v4i8 load repeated, convert it to a splat
+  // of an i32 load. Avoids v4i8 load legalization.
+  auto *LD = dyn_cast<LoadSDNode>(N0);
+  EVT SrcVT = N0.getValueType();
+  if ((SrcVT == MVT::v4i8 || SrcVT == MVT::v2i16 || SrcVT == MVT::v2i8) &&
+      all_equal(N->op_values()) && LD && ISD::isNormalLoad(LD) &&
+      LD->isSimple() && N0->hasNUsesOfValue(N->getNumOperands(), 0)) {
+
+    MVT IVT = MVT::getIntegerVT(SrcVT.getSizeInBits());
+    EVT NVT = EVT::getVectorVT(*DAG.getContext(), IVT, N->getNumOperands());
+
+    SDValue NewLoad = DAG.getLoad(IVT, DL, LD->getChain(), LD->getBasePtr(),
+                                LD->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLoad.getValue(1));
+
+    return DAG.getBitcast(VT, DAG.getSplatBuildVector(NVT, DL, NewLoad));
+  }
+
   // Canonicalise concat_vectors to replace concatenations of truncated nots
   // with nots of concatenated truncates. This in some cases allows for multiple
   // redundant negations to be eliminated.
