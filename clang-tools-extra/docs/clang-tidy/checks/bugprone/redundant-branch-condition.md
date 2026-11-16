@@ -86,7 +86,7 @@ if (onFire && fireFighters < 10 && alarmActive) {
 ```
 
 The check also detects negated redundant condition variables inside longer chains of
-logical "and" (`&&`) and logical "or" (`||`) expressions:
+logical `and` (`&&`) and logical `or` (`||`) expressions:
 
 ```c
 bool onFire = isBurning();
