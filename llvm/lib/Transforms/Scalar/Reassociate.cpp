@@ -2262,14 +2262,6 @@ Instruction *ReassociatePass::canonicalizeNegFPConstantsForOp(Instruction *I,
            ++Idx) {
         if (DVR->getVariableLocationOp(Idx) != Negatible)
           continue;
-        // An arg list can have no DW_OP_LLVM_arg operations. In that case,
-        // appendOpsToArg would treat it as a non-variadic expression and
-        // prepend ops (or assert for a nonzero index). Leave unused args alone.
-        if (DVR->hasArgList() && none_of(NewExpr->expr_ops(), [Idx](auto Op) {
-              auto Arg = dyn_cast<DIExpression::ArgOp>(Op);
-              return Arg && Arg.getIndex() == Idx;
-            }))
-          continue;
         NewExpr =
             DIExpression::appendOpsToArg(NewExpr, NegOps, Idx, StackValue);
       }
