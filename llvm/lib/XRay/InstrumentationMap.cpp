@@ -54,8 +54,6 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
         InstrumentationMap::SledContainer &Sleds,
         InstrumentationMap::FunctionAddressMap &FunctionAddresses,
         InstrumentationMap::FunctionAddressReverseMap &FunctionIds) {
-  InstrumentationMap Map;
-
   // Find the section named "xray_instr_map".
   if ((!ObjFile.getBinary()->isELF() && !ObjFile.getBinary()->isMachO()) ||
       !(ObjFile.getBinary()->getArch() == Triple::x86_64 ||

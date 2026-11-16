@@ -40,6 +40,10 @@ struct HasRAIteratorCollection {
   SomeRAIterator &end();
 };
 
+struct IncompleteIteratorCategory {
+  using iterator_category = struct Incomplete;
+};
+
 void func_call();
 
 template<typename Int, typename IntPtr, typename Float, typename Struct, typename Iterator, typename RandAccessIterator>
@@ -137,6 +141,15 @@ void SeqLoopRules() {
 
 #pragma acc serial loop seq
   for(f = 0;;f+=1);
+
+#pragma acc loop
+  // expected-error@+6{{loop variable of loop associated with an OpenACC 'loop' construct must be of integer, pointer, or random-access-iterator type (is 'IncompleteIteratorCategory')}}
+  // expected-note@-2{{'loop' construct is here}}
+  // expected-error@+4{{OpenACC 'loop' construct must have a terminating condition}}
+  // expected-note@-4{{'loop' construct is here}}
+  // expected-error@+2{{OpenACC 'loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
+  // expected-note@-6{{'loop' construct is here}}
+  for (IncompleteIteratorCategory iic ;;);
 }
 
 
@@ -382,6 +395,15 @@ void LoopRules() {
 
 #pragma acc parallel loop
   for(f = 0;f != end;f+=1);
+
+#pragma acc loop
+  // expected-error@+6{{loop variable of loop associated with an OpenACC 'loop' construct must be of integer, pointer, or random-access-iterator type (is 'IncompleteIteratorCategory')}}
+  // expected-note@-2{{'loop' construct is here}}
+  // expected-error@+4{{OpenACC 'loop' construct must have a terminating condition}}
+  // expected-note@-4{{'loop' construct is here}}
+  // expected-error@+2{{OpenACC 'loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
+  // expected-note@-6{{'loop' construct is here}}
+  for (IncompleteIteratorCategory iic;;);
 }
 
 void inst() {

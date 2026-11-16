@@ -212,10 +212,10 @@ public:
     return Status::FromErrorString("not implemented");
   }
 
-  virtual bool GenerateWatchpointCommandCallbackData(StringList &input,
-                                                     std::string &output,
-                                                     bool is_callback) {
-    return false;
+  virtual llvm::Error GenerateWatchpointCommandCallbackData(StringList &input,
+                                                            std::string &output,
+                                                            bool is_callback) {
+    return llvm::createStringError("not implemented");
   }
 
   virtual bool GenerateTypeScriptFunction(const char *oneliner,

@@ -138,6 +138,8 @@ struct Configuration {
   bool emitEncryptionInfo = false;
   bool emitInitOffsets = false;
   bool emitChainedFixups = false;
+  bool noFixupChainsIgnored = false;
+  uint16_t chainedFixupsPointerFormat = 0;
   bool emitRelativeMethodLists = false;
   bool thinLTOEmitImportsFiles;
   bool thinLTOEmitIndexFiles;

@@ -683,7 +683,13 @@ bool ImplicitNullChecksImpl::analyzeBlockForNullChecks(
 
   SmallVector<MachineInstr *, 8> InstsSeenSoFar;
 
-  for (auto &MI : *NotNullSucc) {
+  // Skip debug instructions and pseudo probes: neither has execution
+  // semantics, so neither can be the faulting operation nor consume
+  // MaxInstsToConsider.  PSEUDO_PROBE is marked as having side effects to keep
+  // it from being dropped, so canHandle() would otherwise reject the block.
+  // Only the faulting operation is hoisted; the probes stay in place.
+  for (MachineInstr &MI :
+       instructionsWithoutDebug(NotNullSucc->begin(), NotNullSucc->end())) {
     if (!canHandle(&MI) || InstsSeenSoFar.size() >= MaxInstsToConsider)
       return false;
 
