@@ -315,10 +315,10 @@ FileIOResult File::read_from_platform(uint8_t *dst, size_t min_bytes,
     LIBC_ASSERT(fetched_size <= dstref.size());
     total_read += fetched_size;
     if (result.has_error() || fetched_size == 0) {
-      if (!result.has_error())
-        eof = true;
-      else
+      if (result.has_error())
         err = true;
+      else
+        eof = true;
       return {total_read, result.error};
     }
     dstref = dstref.subspan(fetched_size);
