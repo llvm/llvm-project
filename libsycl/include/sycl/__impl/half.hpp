@@ -191,7 +191,7 @@ public:
   operator>>(std::basic_istream<CharT, Traits> &lhs, half &rhs) {
     float Value = 0.0f;
     lhs >> Value;
-    rhs = Value;
+    rhs = half(Value);
     return lhs;
   }
 
