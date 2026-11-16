@@ -314,156 +314,140 @@ void test_placement_new_indirect() {
   sink = new (span.storage) PlacedNoPtr();
 }
 
-// A variable is used only if the function defines it exactly once, so that
-// its value does not depend on control flow. A null pointer initializer does
-// not count as a definition.
+// A variable is used only if it is initialized by the allocation call and is
+// otherwise only read, so that its value does not depend on control flow.
 struct Storage {
   void *p;
   size_t n;
-  size_t size() const;
-  void reset();
 };
 Storage alloc_storage(size_t) __attribute__((malloc_span));
+// CHECK-LABEL: define dso_local void @_Z32test_placement_new_read_only_varb(
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call { ptr, i64 } @_Z13alloc_storagem(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+void test_placement_new_read_only_var(bool c) {
+  // Used inside a branch and a loop, and read elsewhere.
+  void *p = malloc(64);
+  if (c)
+    sink = new (p) PlacedNoPtr();
+  sink = p;
+  void *q = malloc(64);
+  for (int i = 0; i < 2; ++i)
+    sink = new (q) PlacedWithPtr();
+  // Fields of a by-value result are reads of the variable.
+  Storage s = alloc_storage(64);
+  sink = new (s.p) PlacedNoPtr();
+  sink = reinterpret_cast<void *>(s.n);
+}
+
+// Any use of the variable other than a read may change its value and
+// disqualifies it: assignment (so the storage the placement new ends up in
+// would depend on control flow, and the sizeof or cast of the other
+// allocation would be overridden), compound assignment, increment,
+// address-of, a write to one of its fields, a member call, binding to a
+// reference directly or as a call argument, and a by-reference capture.
+// Nothing is inferred for any of these allocations; with the variable
+// disqualified, the cast of the result still applies.
+void rebind(void *&p);
 void peek(void *const &p);
-// CHECK-LABEL: define dso_local void @_Z36test_placement_new_single_definitionb(
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
-// CHECK: call { ptr, i64 } @_Z13alloc_storagem(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
-void test_placement_new_single_definition(bool c) {
-  // Declared without initializer, assigned once.
-  void *p;
-  p = malloc(64);
+struct Rebinder {
+  Rebinder(void *&p);
+};
+// CHECK-LABEL: define dso_local void @_Z26test_placement_new_writtenb(
+// CHECK: call noalias ptr @malloc(i64 noundef 8)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 8)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 32)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 32)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_CHAR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_CHAR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call { ptr, i64 } @_Z13alloc_storagem(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: ret void
+void test_placement_new_written(bool c) {
+  // Freed and reassigned before the placement new.
+  void *p1 = malloc(8);
+  free(p1);
+  p1 = malloc(8);
+  sink = new (p1) long(10);
+  // Redefined in one branch of an if, used in the other.
+  void *p2 = malloc(64);
+  if (c)
+    p2 = malloc(32);
+  else
+    sink = new (p2) PlacedNoPtr();
+  // Captured by reference and reassigned before the lambda runs.
+  void *p3 = malloc(64);
+  auto construct = [&] { sink = new (p3) PlacedNoPtr(); };
+  p3 = malloc(32);
+  construct();
+  // The assignment of the placement new's result.
+  void *p4 = malloc(64);
+  p4 = new (p4) PlacedNoPtr();
+  char *p5 = static_cast<char *>(malloc(64));
+  p5 += 8;
+  sink = new (p5) PlacedNoPtr();
+  char *p6 = static_cast<char *>(malloc(64));
+  ++p6;
+  sink = new (p6) PlacedNoPtr();
+  void *p7 = malloc(64);
+  sink = &p7;
+  sink = new (p7) PlacedNoPtr();
+  Storage s = alloc_storage(64);
+  s.p = sink;
+  sink = new (s.p) PlacedNoPtr();
+  void *p8 = malloc(64);
+  void *&p8ref = p8;
+  p8ref = sink;
+  sink = new (p8) PlacedNoPtr();
+  void *p9 = malloc(64);
+  rebind(p9);
+  sink = new (p9) PlacedNoPtr();
+  void *p10 = malloc(64);
+  Rebinder rebinder(p10);
+  sink = new (p10) PlacedNoPtr();
+  // Binding to a const reference is not a read either.
+  void *p11 = malloc(64);
+  peek(p11);
+  sink = new (p11) PlacedNoPtr();
+}
+
+// A parameter's incoming value is unknown, and a variable assigned after its
+// declaration is not initialized by the allocation call.
+// CHECK-LABEL: define dso_local void @_Z34test_placement_new_not_initializedPvb(
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: ret void
+void test_placement_new_not_initialized(void *p, bool c) {
+  if (c)
+    p = malloc(64);
   sink = new (p) PlacedNoPtr();
-  // Initialized to null, assigned once in a branch.
   void *q = nullptr;
   if (c)
     q = malloc(64);
   if (q)
-    sink = new (q) PlacedWithPtr();
-  // Defined once, used inside a branch and a loop.
-  void *r = malloc(64);
-  if (c)
-    sink = new (r) PlacedNoPtr();
-  void *s = malloc(64);
-  for (int i = 0; i < 2; ++i)
-    sink = new (s) PlacedWithPtr();
-  // Reads through a const reference or a const member function are not
-  // writes.
-  void *t = malloc(64);
-  peek(t);
-  sink = new (t) PlacedNoPtr();
-  Storage u = alloc_storage(64);
-  (void)u.size();
-  sink = new (u.p) PlacedWithPtr();
-}
-
-// Reassigned variables are not used: the storage the placement new ends up in
-// depends on control flow, and the sizeof or cast of the other definition
-// would be overridden. Nothing is inferred for any of these allocations.
-// CHECK-LABEL: define dso_local void @_Z29test_placement_new_reassignedb(
-// CHECK: call noalias ptr @malloc(i64 noundef 8)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 8)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 32)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 32)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: ret void
-void test_placement_new_reassigned(bool c) {
-  // Freed and reassigned before the placement new.
-  void *p = malloc(8);
-  free(p);
-  p = malloc(8);
-  sink = new (p) long(10);
-  // Redefined in one branch of an if, used in the other.
-  void *q = malloc(64);
-  if (c)
-    q = malloc(32);
-  else
     sink = new (q) PlacedNoPtr();
-  // Captured by reference and reassigned before the lambda runs.
-  void *r = malloc(64);
-  auto construct = [&] { sink = new (r) PlacedNoPtr(); };
-  r = malloc(32);
-  construct();
-  // The assignment of the placement new's result is a second definition.
-  void *s = malloc(64);
-  s = new (s) PlacedNoPtr();
-}
-
-// A parameter's incoming value is a definition that cannot be seen, so
-// parameters are not used.
-// CHECK-LABEL: define dso_local void @_Z28test_placement_new_parameterPvb(
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: ret void
-void test_placement_new_parameter(void *p, bool c) {
-  if (c)
-    p = malloc(64);
-  sink = new (p) PlacedNoPtr();
-}
-
-// Other writes to the variable disqualify it as well: address-of, compound
-// assignment, increment, a write to one of its fields, a non-const member
-// call, and binding to a non-const reference, directly, as a call argument,
-// or as a constructor argument.
-void rebind(void *&p);
-struct Rebinder {
-  Rebinder(void *&p);
-};
-// CHECK-LABEL: define dso_local void @_Z31test_placement_new_other_writesv(
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_CHAR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_CHAR]]
-// CHECK: call { ptr, i64 } @_Z13alloc_storagem(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: call { ptr, i64 } @_Z13alloc_storagem(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: ret void
-void test_placement_new_other_writes() {
-  void *p = malloc(64);
-  sink = &p;
-  sink = new (p) PlacedNoPtr();
-  // With the variable disqualified, the cast of the result applies instead.
-  char *p2 = static_cast<char *>(malloc(64));
-  p2 += 8;
-  sink = new (p2) PlacedNoPtr();
-  char *p3 = static_cast<char *>(malloc(64));
-  ++p3;
-  sink = new (p3) PlacedNoPtr();
-  Storage s1 = alloc_storage(64);
-  s1.p = sink;
-  sink = new (s1.p) PlacedNoPtr();
-  Storage s2 = alloc_storage(64);
-  s2.reset();
-  sink = new (s2.p) PlacedNoPtr();
-  void *q = malloc(64);
-  void *&qref = q;
-  qref = sink;
-  sink = new (q) PlacedNoPtr();
-  void *r = malloc(64);
-  rebind(r);
-  sink = new (r) PlacedNoPtr();
-  void *t = malloc(64);
-  Rebinder rebinder(t);
-  sink = new (t) PlacedNoPtr();
 }
 
 // Variables without local storage may be written by any call in between.
@@ -471,14 +455,13 @@ void *global_storage;
 // CHECK-LABEL: define dso_local void @_Z28test_placement_new_non_localv(
 // CHECK: call noalias ptr @malloc(i64 noundef 64)
 // CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK: invoke noalias ptr @malloc(i64 noundef 64)
 // CHECK-NOT: !alloc_token
 // CHECK: ret void
 void test_placement_new_non_local() {
   global_storage = malloc(64);
   sink = new (global_storage) PlacedNoPtr();
-  static void *static_storage;
-  static_storage = malloc(64);
+  static void *static_storage = malloc(64);
   sink = new (static_storage) PlacedNoPtr();
 }
 

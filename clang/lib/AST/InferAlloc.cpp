@@ -193,26 +193,34 @@ QualType infer_alloc::inferPossibleType(
   return AllocType;
 }
 
-namespace {
-/// Strips the wrappers a placement argument may have around the expression
-/// that produced the storage: parentheses, casts, and non-static member
-/// accesses of a by-value result (e.g. the pointer member of a size-returning
-/// allocation result). Anything that follows a pointer into different storage
-/// (`->`, `*`) or names a different object (`&`) stops the walk.
-const Expr *stripToStorageSource(const Expr *E) {
-  while (true) {
-    E = E->IgnoreParenCasts();
-    const auto *ME = dyn_cast<MemberExpr>(E);
-    if (!ME || ME->isArrow() || !isa<FieldDecl>(ME->getMemberDecl()))
-      return E;
-    E = ME->getBase();
+/// Strips parentheses and non-static field accesses of a by-value object
+/// (e.g. the pointer member of a size-returning allocation result) from an
+/// lvalue, down to the expression naming the object. Indirect member accesses
+/// (`->`) name other storage and stop the walk.
+static const Expr *stripFields(const Expr *E) {
+  E = E->IgnoreParens();
+  while (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (ME->isArrow() || !isa<FieldDecl>(ME->getMemberDecl()))
+      break;
+    // The base of a member of a temporary is a MaterializeTemporaryExpr.
+    E = ME->getBase()->IgnoreParenImpCasts();
   }
+  return E;
 }
 
-/// Finds the allocation call an initializer or assigned value consists of,
-/// looking through parentheses, casts, temporaries, and the trivial copy or
-/// move a class-typed value may carry.
-const CallExpr *initializingCall(const Expr *Init) {
+/// Strips the wrappers a placement argument may have around the expression
+/// that produced the storage: parentheses, casts, and non-static member
+/// accesses of a by-value result. Anything that follows a pointer into
+/// different storage (`->`, `*`) or names a different object (`&`) stops the
+/// walk.
+static const Expr *stripToStorageSource(const Expr *E) {
+  return stripFields(E->IgnoreParenCasts());
+}
+
+/// Finds the allocation call an initializer consists of, looking through
+/// parentheses, casts, temporaries, and the trivial copy or move a class-typed
+/// value may carry.
+static const CallExpr *initializingCall(const Expr *Init) {
   while (Init) {
     Init = Init->IgnoreImplicit()->IgnoreParenCasts();
     const auto *CE = dyn_cast<CXXConstructExpr>(Init);
@@ -227,53 +235,26 @@ const CallExpr *initializingCall(const Expr *Init) {
   return dyn_cast_or_null<CallExpr>(Init);
 }
 
-/// Returns true if \p Init is a null pointer constant (nullptr, NULL, 0).
-bool isNullPointerInit(const Expr *Init) {
-  Init = Init->IgnoreParenCasts();
-  if (isa<CXXNullPtrLiteralExpr, GNUNullExpr>(Init))
-    return true;
-  const auto *IL = dyn_cast<IntegerLiteral>(Init);
-  return IL && IL->getValue() == 0;
-}
-
-/// Returns the local variable an lvalue expression writes to: the variable
-/// itself, or the variable whose non-static field is written (`res.p = ...`).
-/// \p Direct is set when the variable itself is the lvalue.
-const VarDecl *writtenVar(const Expr *E, bool &Direct) {
-  E = E->IgnoreParens();
-  Direct = true;
-  while (const auto *ME = dyn_cast<MemberExpr>(E)) {
-    if (ME->isArrow() || !isa<FieldDecl>(ME->getMemberDecl()))
-      return nullptr;
-    E = ME->getBase()->IgnoreParenImpCasts();
-    Direct = false;
-  }
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
-        VD && VD->hasLocalStorage())
-      return VD;
-  return nullptr;
-}
-
+namespace {
 /// Records, per allocation call, the type placement-constructed into its
 /// result.
 ///
-/// A placement argument that names a local variable (not a parameter, whose
-/// incoming value is a definition that cannot be seen) is resolved only if the
-/// function body contains exactly one definition of that variable (its
-/// initializer, or one assignment; a null pointer initializer does not count)
-/// and no other write to it: no compound assignment, increment, address-of,
-/// write to one of its fields, non-const member call, or binding to a
-/// non-const reference. Every value such a variable ever holds then comes from
-/// that one definition, so the attribution holds under any control flow,
-/// including loops, lambdas, and exceptions. Variables with more than one
-/// definition or any other write are not used for inference.
+/// A placement argument that names a local variable is resolved only if the
+/// variable is initialized by the allocation call and is otherwise only ever
+/// read: every other reference to it (or to one of its fields) is consumed by
+/// an lvalue-to-rvalue conversion. Any other use (assignment, compound
+/// assignment, increment, address-of, binding to a reference, a member or
+/// operator call, a by-reference capture) may change its value and
+/// disqualifies it, so the value is known regardless of control flow.
+/// Parameters are not used, as their incoming value is unknown.
 class PlacementNewCollector : public ConstDynamicRecursiveASTVisitor {
 public:
   explicit PlacementNewCollector(
       llvm::DenseMap<const CallExpr *, QualType> &CallTypes)
       : CallTypes(CallTypes) {}
 
+  // Resolved after the traversal: a use that is not a read may follow the
+  // placement new and still disqualify the variable.
   void finish() {
     for (const auto &[VD, T] : Uses)
       if (const CallExpr *CE = Defs.lookup(VD))
@@ -281,50 +262,27 @@ public:
   }
 
   bool VisitVarDecl(const VarDecl *VD) override {
-    if (!VD->hasInit())
-      return true;
-    if (VD->hasLocalStorage() && !isNullPointerInit(VD->getInit()))
-      addDef(VD, VD->getInit());
-    // `T &r = p;` lets the variable be written through the reference.
-    if (VD->getType()->isReferenceType())
-      noteWrite(VD->getInit());
+    if (VD->hasLocalStorage() && !isa<ParmVarDecl>(VD))
+      if (const CallExpr *CE = initializingCall(VD->getInit()))
+        Defs.try_emplace(VD, CE);
     return true;
   }
 
-  bool VisitBinaryOperator(const BinaryOperator *BO) override {
-    if (!BO->isAssignmentOp())
-      return true;
-    bool Direct = false;
-    if (const VarDecl *VD = writtenVar(BO->getLHS(), Direct))
-      addDef(VD,
-             Direct && BO->getOpcode() == BO_Assign ? BO->getRHS() : nullptr);
+  // A read of the variable or of one of its fields. Traversal is pre-order,
+  // so the conversion is seen before the DeclRefExpr below it.
+  bool VisitImplicitCastExpr(const ImplicitCastExpr *ICE) override {
+    if (ICE->getCastKind() == CK_LValueToRValue)
+      if (const auto *DRE =
+              dyn_cast<DeclRefExpr>(stripFields(ICE->getSubExpr())))
+        Reads.insert(DRE);
     return true;
   }
 
-  bool VisitUnaryOperator(const UnaryOperator *UO) override {
-    // The variable may be written through the pointer, or is modified.
-    if (UO->getOpcode() == UO_AddrOf || UO->isIncrementDecrementOp())
-      noteWrite(UO->getSubExpr());
-    return true;
-  }
-
-  bool VisitCallExpr(const CallExpr *CE) override {
-    // Arguments bound to non-const references may be written by the callee.
-    if (const FunctionDecl *FD = CE->getDirectCallee())
-      noteReferenceArgs(FD, CE->arguments());
-    return true;
-  }
-
-  bool VisitCXXConstructExpr(const CXXConstructExpr *CE) override {
-    noteReferenceArgs(CE->getConstructor(), CE->arguments());
-    return true;
-  }
-
-  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) override {
-    // A non-const member function may modify a class-typed variable.
-    const CXXMethodDecl *MD = MCE->getMethodDecl();
-    if (MD && !MD->isConst() && !MD->isStatic())
-      noteWrite(MCE->getImplicitObjectArgument());
+  // Any other reference may modify the variable.
+  bool VisitDeclRefExpr(const DeclRefExpr *DRE) override {
+    if (!Reads.contains(DRE))
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+        Defs.erase(VD);
     return true;
   }
 
@@ -344,42 +302,12 @@ public:
     if (const auto *CE = dyn_cast<CallExpr>(Source))
       record(CE, T);
     else if (const auto *DRE = dyn_cast<DeclRefExpr>(Source))
-      // A parameter's incoming value is a definition that cannot be seen.
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
-          VD && VD->hasLocalStorage() && !isa<ParmVarDecl>(VD))
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
         Uses.emplace_back(VD, T);
     return true;
   }
 
 private:
-  /// Records a definition of \p VD with \p Value (null for a write that is not
-  /// a plain assignment). A second definition disqualifies the variable.
-  void addDef(const VarDecl *VD, const Expr *Value) {
-    auto [It, Inserted] =
-        Defs.try_emplace(VD, Value ? initializingCall(Value) : nullptr);
-    if (!Inserted)
-      It->second = nullptr;
-  }
-
-  void noteWrite(const Expr *E) {
-    bool Direct = false;
-    if (const VarDecl *VD = writtenVar(E, Direct))
-      addDef(VD, nullptr);
-  }
-
-  void noteReferenceArgs(const FunctionDecl *FD,
-                         CallExpr::const_arg_range Args) {
-    unsigned I = 0;
-    for (const Expr *Arg : Args) {
-      if (I >= FD->getNumParams())
-        break;
-      QualType ParamTy = FD->getParamDecl(I++)->getType();
-      if (ParamTy->isLValueReferenceType() &&
-          !ParamTy.getNonReferenceType().isConstQualified())
-        noteWrite(Arg);
-    }
-  }
-
   void record(const CallExpr *CE, QualType T) {
     auto [It, Inserted] = CallTypes.try_emplace(CE, T);
     // Different types constructed into the same storage: ambiguous.
@@ -389,9 +317,10 @@ private:
   }
 
   llvm::DenseMap<const CallExpr *, QualType> &CallTypes;
-  // Variable -> its single defining allocation call; null once the variable
-  // has a second definition or another write.
+  // Variable -> the allocation call initializing it; erased on any use that
+  // is not a read.
   llvm::DenseMap<const VarDecl *, const CallExpr *> Defs;
+  llvm::SmallPtrSet<const DeclRefExpr *, 16> Reads;
   llvm::SmallVector<std::pair<const VarDecl *, QualType>> Uses;
 };
 } // namespace

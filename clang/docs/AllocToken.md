@@ -64,9 +64,10 @@ the allocation call and its context, in this order: a `sizeof` in the size
 argument, a placement `new` into the result, and a cast of the result. The
 heuristics are syntactic: `sizeof` expressions and casts ignore control flow
 and reassignments, and a placement `new` through a variable is only used if
-the function defines the variable exactly once (variables that are reassigned
-are not used for inference). If no type can be inferred, the allocation
-receives the fallback token.
+the variable is initialized by the allocation call and otherwise only read
+(variables that are reassigned, or whose address or reference is taken, are
+not used for inference). If no type can be inferred, the allocation receives
+the fallback token.
 
 ## Querying Token IDs with `__builtin_infer_alloc_token`
 

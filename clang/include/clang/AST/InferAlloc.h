@@ -45,9 +45,10 @@ QualType inferPossibleType(
 ///   auto res = size_returning_alloc(size);
 ///   new (res.p) MyType();              // infers 'MyType' (via member .p)
 ///
-/// A variable is only used if the function defines it exactly once and never
-/// writes to it otherwise, so that its value is known regardless of control
-/// flow; reassigned variables are not used for inference.
+/// A variable is only used if it is initialized by the allocation call and is
+/// otherwise only ever read, so that its value is known regardless of control
+/// flow; variables that are assigned to, or whose address or reference is
+/// taken, are not used for inference.
 llvm::DenseMap<const CallExpr *, QualType>
 collectPlacementNewTypes(const Stmt *Body);
 
