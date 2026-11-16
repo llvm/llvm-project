@@ -233,6 +233,107 @@ def : AliasOf<"disable-partial-inlining", "partial-inlining=false">;
 defm : ValueField<"funcspec-max-iters", "unsigned", "10",
   "The maximum number of iterations function specialization is run">;
 
+// SampleProfile.cpp
+defm : BoolField<"annotate-sample-profile-inline-phase", "false",
+  "Annotate LTO phase (prelink / postlink), or main (no LTO) for sample-profile inline pass name">;
+defm : ValueField<"hot-func-cutoff-for-staleness-error", "unsigned", "800000",
+  "A function is considered hot for staleness error check if its total sample count is above the specified percentile">;
+defm : ValueField<"min-functions-for-staleness-error", "unsigned", "50",
+  "Skip the check if the number of hot functions is smaller than the specified number">;
+defm : BoolField<"overwrite-existing-weights", "false",
+  "Ignore existing branch weights on IR and always overwrite">;
+defm : ValueField<"percent-mismatch-for-staleness-error", "unsigned", "80",
+  "Reject the profile if the mismatch percent is higher than the given number">;
+defm : BoolField<"persist-profile-staleness", "false",
+  "Compute stale profile statistical metrics and write it into the native object file(.llvm_stats section)">;
+defm : BoolField<"profile-accurate-for-symsinlist", "true",
+  "For symbols in profile symbol list, regard their profiles to be accurate. It may be overridden by profile-sample-accurate">;
+defm : BoolField<"profile-sample-accurate", "false",
+  "If the sample profile is accurate, we will mark all un-sampled callsite and function as having 0 samples. Otherwise, treat un-sampled callsites and functions conservatively as unknown">;
+defm : BoolField<"profile-sample-block-accurate", "false",
+  "If the sample profile is accurate, we will mark all un-sampled branches and calls as having 0 samples. Otherwise, treat them conservatively as unknown">;
+defm : BoolField<"report-profile-staleness", "false",
+  "Compute and report stale profile statistical metrics">;
+defm : OptionalBoolField<"salvage-stale-profile",
+  "Salvage stale profile by fuzzy matching and use the remapped location for sample profile query">;
+defm : OptionalBoolField<"salvage-unused-profile",
+  "Salvage unused profile by matching with new functions on call graph">;
+// Since profiles are consumed by many passes, turning off this option has
+// side effects. For instance, pre-link SCC inliner would see merged profiles
+// and inline the hot functions (that are skipped in this pass).
+defm : OptionalBoolField<"sample-loader-inlining",
+  "If false, artificially skip inline transformation in sample-loader pass, and merge (or scale) profiles (as configured by --sample-profile-merge-inlinee)">;
+// Command line option to specify the file to read samples from. This is
+// mainly used for debugging.
+defm : ValueField<"sample-profile-file", "StringRef", "",
+  "Profile file loaded by -sample-profile">;
+defm : ValueField<"sample-profile-icp-max-prom", "unsigned", "3",
+  "Max number of promotions for a single indirect call callsite in sample profile loader">;
+defm : ValueField<"sample-profile-icp-relative-hotness", "unsigned", "25",
+  "Relative hotness percentage threshold for indirect call promotion in priority-based sample profile loader inlining">;
+defm : ValueField<"sample-profile-icp-relative-hotness-skip", "unsigned", "1",
+  "Skip relative hotness check for ICP up to given number of targets">;
+defm : ValueField<"sample-profile-inline-replay", "StringRef", "",
+  "Optimization remarks file containing inline remarks to be replayed by inlining from sample profile loader">;
+defm : EnumField<"sample-profile-inline-replay-fallback", "ReplayInlinerSettings::Fallback", "",
+  "Original,AlwaysInline,NeverInline",
+  ["ReplayInlinerSettings::Fallback::Original", "ReplayInlinerSettings::Fallback::AlwaysInline", "ReplayInlinerSettings::Fallback::NeverInline"],
+  "How sample profile inline replay treats sites that don't come from the replay. Original: defers to original advisor, AlwaysInline: inline all sites not in replay, NeverInline: inline no sites not in replay">;
+defm : EnumField<"sample-profile-inline-replay-format", "CallSiteFormat::Format", "CallSiteFormat::Format::LineColumnDiscriminator",
+  "Line,LineColumn,LineDiscriminator,LineColumnDiscriminator",
+  ["CallSiteFormat::Format::Line", "CallSiteFormat::Format::LineColumn", "CallSiteFormat::Format::LineDiscriminator", "CallSiteFormat::Format::LineColumnDiscriminator"],
+  "How sample profile inline replay file is formatted">;
+defm : EnumField<"sample-profile-inline-replay-scope", "ReplayInlinerSettings::Scope", "",
+  "Function,Module",
+  ["ReplayInlinerSettings::Scope::Function", "ReplayInlinerSettings::Scope::Module"],
+  "Whether inline replay should be applied to the entire Module or just the Functions (default) that are present as callers in remarks during sample profile inlining">;
+defm : OptionalBoolField<"sample-profile-inline-size",
+  "Inline cold call sites in profile loader if it's beneficial for code size">;
+defm : BoolField<"sample-profile-merge-inlinee", "true",
+  "Merge past inlinee's profile to outline version if sample profile loader decided not to inline a call site. It will only be enabled when top-down order of profile loading is enabled">;
+defm : OptionalBoolField<"sample-profile-prioritized-inline",
+  "Use call site prioritized inlining for sample profile loader. Currently only CSSPGO is supported">;
+defm : OptionalBoolField<"sample-profile-recursive-inline",
+  "Allow sample loader inliner to inline recursive calls">;
+// The named file contains a set of transformations that may have been applied
+// to the symbol names between the program from which the sample data was
+// collected and the current program's symbols.
+defm : ValueField<"sample-profile-remapping-file", "StringRef", "",
+  "Profile remapping file loaded by -sample-profile">;
+defm : BoolField<"sample-profile-remove-probe", "false",
+  "Remove pseudo-probe after sample profile annotation">;
+defm : BoolField<"sample-profile-top-down-load", "true",
+  "Do profile annotation and inlining for functions in top-down order of call graph during sample profile loading. It only works for new pass manager">;
+defm : OptionalBoolField<"sample-profile-use-preinliner",
+  "Use the preinliner decisions stored in profile context">;
+defm : BoolField<"use-profiled-call-graph", "true",
+  "Process functions in a top-down order defined by the profiled call graph when -sample-profile-top-down-load is on">;
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"disable-sample-loader-inlining", "sample-loader-inlining=false">;
+def : AliasOf<"precent-mismatch-for-staleness-error", "percent-mismatch-for-staleness-error">;
+
+// SampleProfileMatcher.cpp
+defm : ValueField<"func-profile-similarity-threshold", "unsigned", "80",
+  "Consider a profile matches a function if the similarity of their callee sequences is above the specified percentile">;
+defm : BoolField<"load-func-profile-for-cg-matching", "true",
+  "Load top-level profiles that the sample reader initially skipped for the call-graph matching (only meaningful for extended binary format)">;
+defm : ValueField<"min-call-count-for-cg-matching", "unsigned", "3",
+  "The minimum number of call anchors required for a function to run stale profile call graph matching">;
+defm : ValueField<"min-func-count-for-cg-matching", "unsigned", "5",
+  "The minimum number of basic blocks required for a function to run stale profile call graph matching">;
+defm : ValueField<"salvage-stale-profile-max-callsites", "unsigned", "std::numeric_limits<unsigned>::max()",
+  "The maximum number of callsites in a function, above which stale profile matching will be skipped">;
+defm : ValueField<"salvage-unused-profile-max-functions", "unsigned", "std::numeric_limits<unsigned>::max()",
+  "The maximum number of functions in a module, above which salvage unused profile will be skipped">;
+
+// SampleProfileProbe.cpp
+defm : BoolField<"update-pseudo-probe", "true",
+  "Update pseudo probe distribution factor">;
+defm : BoolField<"verify-pseudo-probe", "false",
+  "Do pseudo probe verification">;
+defm : ListField<"verify-pseudo-probe-funcs", "StringRef",
+  "The option to specify the name of the functions to verify">;
+
 // StripSymbols.cpp
 defm : BoolField<"strip-global-constants", "false",
   "Removes debug compile units which reference to non-existing global constants">;

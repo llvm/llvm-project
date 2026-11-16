@@ -292,9 +292,9 @@ define void @first_order_recurrence_i64_scaled_load_and_store(ptr noalias %src, 
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i64> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[WIDE_LOAD3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 4
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 6
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 32
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
@@ -308,9 +308,9 @@ define void @first_order_recurrence_i64_scaled_load_and_store(ptr noalias %src, 
 ; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i64> [[TMP7]], [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add <2 x i64> [[TMP8]], [[WIDE_LOAD3]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i64 2
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i64 4
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i64 6
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i64 16
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i64 32
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i64 48
 ; CHECK-NEXT:    store <2 x i64> [[TMP9]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    store <2 x i64> [[TMP10]], ptr [[TMP14]], align 8
 ; CHECK-NEXT:    store <2 x i64> [[TMP11]], ptr [[TMP15]], align 8
@@ -603,9 +603,9 @@ define void @extending_load(ptr noalias %dst, ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP3]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP3]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP3]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 4
@@ -646,7 +646,7 @@ define void @extending_load(ptr noalias %dst, ptr %src, i64 %n) {
 ; CHECK-UF2-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK1]], i64 0)
 ; CHECK-UF2-TF-NEXT:    [[ACTIVE_LANE_MASK6:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK1]], i64 2)
 ; CHECK-UF2-TF-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-UF2-TF-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i64 [[TMP1]]
+; CHECK-UF2-TF-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP3]], i64 [[TMP1]]
 ; CHECK-UF2-TF-NEXT:    [[WIDE_MASKED_LOAD8:%.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr align 4 [[TMP3]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i32> poison)
 ; CHECK-UF2-TF-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr align 4 [[TMP8]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK6]], <vscale x 2 x i32> poison)
 ; CHECK-UF2-TF-NEXT:    [[TMP11:%.*]] = sext <vscale x 2 x i32> [[WIDE_MASKED_LOAD8]] to <vscale x 2 x i64>
@@ -710,24 +710,24 @@ define void @reverse_stride(ptr noalias %c, ptr noalias  %a, ptr noalias %b, i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 0, [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP7]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP9]], [[TMP4]]
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 [[TMP27]]
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP7]], i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = mul i64 -2, [[TMP4]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = sub i64 [[TMP29]], [[TMP8]]
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 [[TMP33]]
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP7]], i64 [[TMP33]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = mul i64 -3, [[TMP4]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = sub i64 [[TMP35]], [[TMP8]]
-; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 [[TMP36]]
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP7]], i64 [[TMP36]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load <vscale x 4 x i32>, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load <vscale x 4 x i32>, ptr [[TMP28]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = load <vscale x 4 x i32>, ptr [[TMP34]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = load <vscale x 4 x i32>, ptr [[TMP37]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 [[TMP27]]
-; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 [[TMP33]]
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 [[TMP36]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP15]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP15]], i64 [[TMP27]]
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP15]], i64 [[TMP33]]
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP15]], i64 [[TMP36]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = load <vscale x 4 x i32>, ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = load <vscale x 4 x i32>, ptr [[TMP38]], align 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = load <vscale x 4 x i32>, ptr [[TMP39]], align 4
@@ -737,10 +737,10 @@ define void @reverse_stride(ptr noalias %c, ptr noalias  %a, ptr noalias %b, i64
 ; CHECK-NEXT:    [[TMP23:%.*]] = add nsw <vscale x 4 x i32> [[TMP19]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = add nsw <vscale x 4 x i32> [[TMP20]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw i32, ptr [[C]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[TMP25]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[TMP25]], i64 [[TMP27]]
-; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds i32, ptr [[TMP25]], i64 [[TMP33]]
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i32, ptr [[TMP25]], i64 [[TMP36]]
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP25]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP25]], i64 [[TMP27]]
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP25]], i64 [[TMP33]]
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP25]], i64 [[TMP36]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP21]], ptr [[TMP26]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP22]], ptr [[TMP30]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP23]], ptr [[TMP41]], align 4
@@ -774,23 +774,23 @@ define void @reverse_stride(ptr noalias %c, ptr noalias  %a, ptr noalias %b, i64
 ; CHECK-UF2-TF-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP6]]
 ; CHECK-UF2-TF-NEXT:    [[TMP8:%.*]] = sub nuw nsw i64 [[TMP4]], 1
 ; CHECK-UF2-TF-NEXT:    [[TMP9:%.*]] = sub i64 0, [[TMP8]]
-; CHECK-UF2-TF-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[TMP7]], i64 [[TMP9]]
+; CHECK-UF2-TF-NEXT:    [[TMP15:%.*]] = getelementptr [4 x i8], ptr [[TMP7]], i64 [[TMP9]]
 ; CHECK-UF2-TF-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP9]], [[TMP4]]
-; CHECK-UF2-TF-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[TMP7]], i64 [[TMP17]]
+; CHECK-UF2-TF-NEXT:    [[TMP18:%.*]] = getelementptr [4 x i8], ptr [[TMP7]], i64 [[TMP17]]
 ; CHECK-UF2-TF-NEXT:    [[REVERSE8:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK5]])
 ; CHECK-UF2-TF-NEXT:    [[REVERSE9:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK6]])
 ; CHECK-UF2-TF-NEXT:    [[WIDE_MASKED_LOAD11:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> [[REVERSE8]], <vscale x 4 x i32> poison)
 ; CHECK-UF2-TF-NEXT:    [[WIDE_MASKED_LOAD12:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP18]], <vscale x 4 x i1> [[REVERSE9]], <vscale x 4 x i32> poison)
 ; CHECK-UF2-TF-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP6]]
-; CHECK-UF2-TF-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP19]], i64 [[TMP9]]
-; CHECK-UF2-TF-NEXT:    [[TMP23:%.*]] = getelementptr i32, ptr [[TMP19]], i64 [[TMP17]]
+; CHECK-UF2-TF-NEXT:    [[TMP22:%.*]] = getelementptr [4 x i8], ptr [[TMP19]], i64 [[TMP9]]
+; CHECK-UF2-TF-NEXT:    [[TMP23:%.*]] = getelementptr [4 x i8], ptr [[TMP19]], i64 [[TMP17]]
 ; CHECK-UF2-TF-NEXT:    [[WIDE_MASKED_LOAD15:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP22]], <vscale x 4 x i1> [[REVERSE8]], <vscale x 4 x i32> poison)
 ; CHECK-UF2-TF-NEXT:    [[WIDE_MASKED_LOAD16:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP23]], <vscale x 4 x i1> [[REVERSE9]], <vscale x 4 x i32> poison)
 ; CHECK-UF2-TF-NEXT:    [[TMP26:%.*]] = add nsw <vscale x 4 x i32> [[WIDE_MASKED_LOAD15]], [[WIDE_MASKED_LOAD11]]
 ; CHECK-UF2-TF-NEXT:    [[TMP27:%.*]] = add nsw <vscale x 4 x i32> [[WIDE_MASKED_LOAD16]], [[WIDE_MASKED_LOAD12]]
 ; CHECK-UF2-TF-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw i32, ptr [[C]], i64 [[TMP6]]
-; CHECK-UF2-TF-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP28]], i64 [[TMP9]]
-; CHECK-UF2-TF-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[TMP28]], i64 [[TMP17]]
+; CHECK-UF2-TF-NEXT:    [[TMP31:%.*]] = getelementptr [4 x i8], ptr [[TMP28]], i64 [[TMP9]]
+; CHECK-UF2-TF-NEXT:    [[TMP32:%.*]] = getelementptr [4 x i8], ptr [[TMP28]], i64 [[TMP17]]
 ; CHECK-UF2-TF-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP26]], ptr align 4 [[TMP31]], <vscale x 4 x i1> [[REVERSE8]])
 ; CHECK-UF2-TF-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP27]], ptr align 4 [[TMP32]], <vscale x 4 x i1> [[REVERSE9]])
 ; CHECK-UF2-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
@@ -963,11 +963,11 @@ define void @store_address(ptr noalias %x, ptr noalias %y, i64 %n) {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]], !dbg [[DBG31]]
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <vscale x 2 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]], !dbg [[DBG31]]
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <vscale x 2 x i64> [[STEP_ADD_2]], [[BROADCAST_SPLAT]], !dbg [[DBG31]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[VEC_IND]], !dbg [[DBG35:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr [[X]], <vscale x 2 x i64> [[VEC_IND]], !dbg [[DBG35:![0-9]+]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 2 x ptr> [[WIDE_GEP]], i64 0
-; CHECK-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD]], !dbg [[DBG35]]
-; CHECK-NEXT:    [[WIDE_GEP2:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD_2]], !dbg [[DBG35]]
-; CHECK-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD_3]], !dbg [[DBG35]]
+; CHECK-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr inbounds [8 x i8], ptr [[X]], <vscale x 2 x i64> [[STEP_ADD]], !dbg [[DBG35]]
+; CHECK-NEXT:    [[WIDE_GEP2:%.*]] = getelementptr inbounds [8 x i8], ptr [[X]], <vscale x 2 x i64> [[STEP_ADD_2]], !dbg [[DBG35]]
+; CHECK-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds [8 x i8], ptr [[X]], <vscale x 2 x i64> [[STEP_ADD_3]], !dbg [[DBG35]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> poison, <vscale x 2 x ptr> [[WIDE_GEP]], i64 0), !dbg [[DBG36:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> [[TMP6]], <vscale x 2 x ptr> [[WIDE_GEP1]], i64 2), !dbg [[DBG36]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> [[TMP7]], <vscale x 2 x ptr> [[WIDE_GEP2]], i64 4), !dbg [[DBG36]]
@@ -999,9 +999,9 @@ define void @store_address(ptr noalias %x, ptr noalias %y, i64 %n) {
 ; CHECK-UF2-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-UF2-TF-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG19]]
 ; CHECK-UF2-TF-NEXT:    [[STEP_ADD:%.*]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]], !dbg [[DBG19]]
-; CHECK-UF2-TF-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[VEC_IND]], !dbg [[DBG23:![0-9]+]]
+; CHECK-UF2-TF-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr [[X]], <vscale x 2 x i64> [[VEC_IND]], !dbg [[DBG23:![0-9]+]]
 ; CHECK-UF2-TF-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 2 x ptr> [[WIDE_GEP]], i64 0
-; CHECK-UF2-TF-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD]], !dbg [[DBG23]]
+; CHECK-UF2-TF-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr inbounds [8 x i8], ptr [[X]], <vscale x 2 x i64> [[STEP_ADD]], !dbg [[DBG23]]
 ; CHECK-UF2-TF-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x ptr> @llvm.vector.insert.nxv4p0.nxv2p0(<vscale x 4 x ptr> poison, <vscale x 2 x ptr> [[WIDE_GEP]], i64 0), !dbg [[DBG24:![0-9]+]]
 ; CHECK-UF2-TF-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x ptr> @llvm.vector.insert.nxv4p0.nxv2p0(<vscale x 4 x ptr> [[TMP6]], <vscale x 2 x ptr> [[WIDE_GEP1]], i64 2), !dbg [[DBG24]]
 ; CHECK-UF2-TF-NEXT:    call void @llvm.masked.store.nxv4p0.p0(<vscale x 4 x ptr> [[TMP7]], ptr align 8 [[TMP5]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]]), !dbg [[DBG24]]
@@ -1112,9 +1112,9 @@ define void @i32_fold_wide_active_lane_mask(ptr noalias %x) vscale_range(1, 2) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 8
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 12
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 16
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 32
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[X]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4

@@ -15,7 +15,6 @@
 ...
 ---
 name:            stack_local
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64common }
   - { id: 1, class: gpr64 }

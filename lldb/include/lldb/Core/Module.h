@@ -12,6 +12,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -530,6 +531,14 @@ public:
 
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
+  uint64_t GetObjectSize() const { return m_object_size; }
+
+  /// Describe this module, preserving the parsed object's bounds and any
+  /// already-provided bytes.
+  ///
+  /// This may load the module's object file.
+  ModuleSpec GetModuleSpec();
+
   /// Get the object file representation for the current architecture.
   ///
   /// If the object file has not been located or parsed yet, this function
@@ -596,11 +605,16 @@ public:
   /// enable the ObjectFile plugins to read the header of the object file
   /// without going back to the process.
   ///
+  /// If \a disable_memory_symtab_caching is true, the symbol table for the
+  /// object file will not be loaded from or saved to the index cache, even if
+  /// caching of memory modules is enabled.
+  ///
   /// \return
   ///     The object file loaded from memory or nullptr, if the operation
   ///     failed (see the `error` for more information in that case).
   ObjectFile *GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
                                   lldb::addr_t header_addr, Status &error,
+                                  bool disable_memory_symtab_caching,
                                   size_t size_to_read = 512);
 
   /// Get the module's symbol file
@@ -628,6 +642,14 @@ public:
   /// Like GetSymtab, but the returned handle holds the Module mutex for its
   /// lifetime.
   LockedPtr<Symtab> GetSymtabLocked(bool can_create = true);
+
+  /// Get a bitmask of lldb::SymtabState flags describing the object file's
+  /// symbol table state.
+  ///
+  /// This does not cause the symbol table to be created. If it hasn't been
+  /// created yet, or no state has been recorded for it, lldb::eSymtabStateNone
+  /// is returned.
+  uint32_t GetSymtabState();
 
   /// Get a reference to the UUID value contained in this object.
   ///
@@ -819,6 +841,14 @@ public:
   template <typename... Args>
   void ReportError(const char *format, Args &&...args) {
     ReportError(llvm::formatv(format, std::forward<Args>(args)...));
+  }
+
+  /// Report an error that may be a bug in LLDB, see
+  /// Debugger::ReportInternalError.
+  template <typename... Args>
+  void ReportInternalError(const char *format, Args &&...args) {
+    ReportError(llvm::formatv(format, std::forward<Args>(args)...),
+                /*internal_error=*/true);
   }
 
   // Only report an error once when the module is first detected to be modified
@@ -1044,20 +1074,32 @@ public:
   /// differentiate these different files.
   std::string GetCacheKey();
 
+  enum LLDBIndexType {
+    eLLDBIndexTypeSymtab,
+    eLLDBIndexTypeDwarfIndex,
+    eLLDBIndexTypeMemoryModuleSymtab
+  };
+
   /// Get the global index file cache.
   ///
   /// LLDB can cache data for a module between runs. This cache directory can be
   /// used to stored data that previously was manually created each time you
-  /// debug. Examples include debug information indexes, symbol tables, symbol
-  /// table indexes, and more.
+  /// debug. Examples include debug information indexes, symbol tables, memory
+  /// module headerbytes, and more.
   ///
-  /// \param[in] memory_module
-  ///     True if this binary exists only in memory.
+  /// The argument provided indicates the type of file that is being
+  /// read/written to in DataFileCache, and the user's settings for that
+  /// type of file will be consulted to decide whether it should be cached
+  /// or not.
+  ///
+  /// \param[in] type
+  ///     The type of file this code will read/write into the DataFileCache.
   ///
   /// \returns
-  ///   If caching is enabled in the lldb settings, return a pointer to the data
-  ///   file cache. If caching is not enabled, return NULL.
-  static DataFileCache *GetIndexCache(bool memory_module);
+  ///   If lldb settings have caching enabled for this type of file, return
+  ///   a pointer to the data file cache. If caching is not enabled,
+  ///   return nullptr.
+  static DataFileCache *GetIndexCache(LLDBIndexType type);
 
 protected:
   // Member Variables
@@ -1087,6 +1129,7 @@ protected:
       m_memory_module_addr; ///< For a Module read from memory,
                             ///  the address it was read from.
   uint64_t m_object_offset = 0;
+  uint64_t m_object_size = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
 
   /// DataExtractor containing the module image, if it was provided at
@@ -1148,11 +1191,8 @@ protected:
 
   StatisticsMap m_symbol_locator_duration_map;
 
-  /// A set of hashes of all warnings and errors, to avoid reporting them
-  /// multiple times to the same Debugger.
-  llvm::DenseMap<llvm::stable_hash, std::unique_ptr<std::once_flag>>
-      m_shown_diagnostics;
-  std::recursive_mutex m_diagnostic_mutex;
+  /// Hashes of the warnings and errors already reported, to report each once.
+  ThreadSafeDenseSet<llvm::stable_hash> m_shown_diagnostics;
 
   void SymbolIndicesToSymbolContextList(Symtab *symtab,
                                         std::vector<uint32_t> &symbol_indexes,
@@ -1176,9 +1216,11 @@ private:
   void LogMessageVerboseBacktrace(Log *log,
                                   const llvm::formatv_object_base &payload);
   void ReportWarning(const llvm::formatv_object_base &payload);
-  void ReportError(const llvm::formatv_object_base &payload);
+  void ReportError(const llvm::formatv_object_base &payload,
+                   bool internal_error = false);
   void ReportErrorIfModifyDetected(const llvm::formatv_object_base &payload);
-  std::once_flag *GetDiagnosticOnceFlag(llvm::StringRef msg);
+  /// Returns true the first time \p msg is passed.
+  bool ShouldReportDiagnostic(llvm::StringRef msg);
 };
 
 } // namespace lldb_private
