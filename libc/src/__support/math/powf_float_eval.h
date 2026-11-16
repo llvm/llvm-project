@@ -18,6 +18,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
@@ -171,10 +172,10 @@ LIBC_INLINE float powf(float x, float y) {
   float z = y * fputil::multiply_add(dx, LOG2_E.hi, e_x_hi);
 
   if (LIBC_UNLIKELY(z > 132.0f))
-    return set_overflow(out_sign);
+    return fputil::set_overflow<float>(out_sign);
 
   if (LIBC_UNLIKELY(z < -155.0f))
-    return set_underflow(out_sign);
+    return fputil::set_underflow<float>(out_sign);
 
   // Approximate the tail Q(dx) using Estrin's scheme:
   float dx2 = dx * dx;
@@ -212,14 +213,14 @@ LIBC_INLINE float powf(float x, float y) {
   float rem = rem_hi + total_lo;
 
   if (LIBC_UNLIKELY(k > 128))
-    return set_overflow(out_sign);
+    return fputil::set_overflow<float>(out_sign);
 
   if (LIBC_UNLIKELY(k < -150))
-    return set_underflow(out_sign);
+    return fputil::set_underflow<float>(out_sign);
 
   float result = exp2f_eval(rem, k);
   if (LIBC_UNLIKELY(k == 128 && FPBits(result).is_inf()))
-    return set_overflow(out_sign);
+    return fputil::set_overflow<float>(out_sign);
 
   if (LIBC_UNLIKELY(k <= -126 && !FPBits(result).is_normal())) {
     fputil::set_errno_if_required(ERANGE);

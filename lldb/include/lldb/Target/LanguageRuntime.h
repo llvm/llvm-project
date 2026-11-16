@@ -120,7 +120,7 @@ public:
   // ExecutionContextScope in which one can actually fetch any specialization
   // information required.
   virtual CompilerType GetConcreteType(ExecutionContextScope *exe_scope,
-                                       ConstString abstract_type_name) {
+                                       llvm::StringRef abstract_type_name) {
     return CompilerType();
   }
 
@@ -141,6 +141,27 @@ public:
   /// known at runtime.
   virtual llvm::Error FixupVariableLocation(Variable &variable, Value &value) {
     return llvm::Error::success();
+  }
+
+  /// This allows a language runtime to evaluate
+  /// DW_OP_entry_value(\p entry_value) in \p frame without call site
+  /// information from the caller, when the runtime knows the value the
+  /// register had on entry. For example, a runtime that unwinds the frame
+  /// with GetRuntimeUnwindPlan() may know how that value relates to the CFA.
+  ///
+  /// \param[in,out] following
+  ///     The operations after the DW_OP_entry_value. The runtime may
+  ///     evaluate the first of them together with the entry value, and
+  ///     consume them from the front, when it knows their combined result
+  ///     but not the entry value alone.
+  ///
+  /// \return
+  ///     The entry value, or std::nullopt to look it up in the call site
+  ///     parameters of the caller.
+  virtual std::optional<Value>
+  EvaluateEntryValue(StackFrame &frame, llvm::ArrayRef<uint8_t> entry_value,
+                     llvm::ArrayRef<uint8_t> &following) {
+    return std::nullopt;
   }
 
   virtual void SetExceptionBreakpoints() {}
@@ -204,7 +225,7 @@ public:
 
   /// Identify whether a name is a runtime value that should not be hidden by
   /// from the user interface.
-  virtual bool IsAllowedRuntimeValue(ConstString name) { return false; }
+  virtual bool IsAllowedRuntimeValue(llvm::StringRef name) { return false; }
 
   virtual std::optional<CompilerType> GetRuntimeType(CompilerType base_type) {
     return std::nullopt;
@@ -224,7 +245,7 @@ public:
   // Given the name of a runtime symbol (e.g. in Objective-C, an ivar offset
   // symbol), try to determine from the runtime what the value of that symbol
   // would be. Useful when the underlying binary is stripped.
-  virtual lldb::addr_t LookupRuntimeSymbol(ConstString name) {
+  virtual lldb::addr_t LookupRuntimeSymbol(llvm::StringRef name) {
     return LLDB_INVALID_ADDRESS;
   }
 

@@ -26,7 +26,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/MathExtras.h"
 
 #include "CIROpDefinitions.h"
@@ -790,6 +789,22 @@ cir::PtrSpecAttr getPointerSpec(mlir::DataLayoutEntryListRef params,
                                kDefaultPointerAlignment * kBitsInByte,
                                kDefaultPointerSizeBits);
 }
+
+// TargetInfo::getBitIntMaxAlign() when the module has no #cir.bitint_spec
+// entry. That is LongLongAlign's initial value.
+constexpr static uint64_t kDefaultBitIntMaxAlignBits = 64;
+
+/// The _BitInt alignment cap in bits. The #cir.bitint_spec entry holds
+/// TargetInfo::getBitIntMaxAlign().
+uint64_t getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params) {
+  for (mlir::DataLayoutEntryInterface entry : params) {
+    if (!entry.isTypeEntry())
+      continue;
+    if (auto spec = mlir::dyn_cast<cir::BitIntSpecAttr>(entry.getValue()))
+      return spec.getMaxAlign();
+  }
+  return kDefaultBitIntMaxAlignBits;
+}
 } // namespace
 
 llvm::TypeSize
@@ -1087,7 +1102,7 @@ unsigned
 IntType::getStorageTypeWidth(const mlir::DataLayout &dataLayout) const {
   if (!isBitInt())
     return getWidth();
-  uint64_t alignBits = getABIAlignment(dataLayout, {}) * 8;
+  uint64_t alignBits = dataLayout.getTypeABIAlignment(*this) * 8;
   return static_cast<unsigned>(llvm::alignTo(getWidth(), alignBits));
 }
 
@@ -1104,10 +1119,9 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                   mlir::DataLayoutEntryListRef params) const {
   unsigned width = getWidth();
   if (isBitInt()) {
-    // _BitInt alignment: min(PowerOf2Ceil(width), 64 bits) in bytes.
-    // Matches Clang's TargetInfo::getBitIntAlign with default max = 64.
-    uint64_t alignBits =
-        std::min(llvm::PowerOf2Ceil(width), static_cast<uint64_t>(64));
+    uint64_t maxAlignBits = getBitIntMaxAlignBits(params);
+    uint64_t alignBits = std::min(
+        static_cast<uint64_t>(llvm::PowerOf2Ceil(width)), maxAlignBits);
     return std::max(alignBits / 8, static_cast<uint64_t>(1));
   }
   // Round up to a power-of-two byte alignment.  DataLayout consumers such as
@@ -1117,6 +1131,40 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
   // keeps __int128 at 16.
   uint64_t alignBits = llvm::PowerOf2Ceil(width);
   return std::max(alignBits / 8, static_cast<uint64_t>(1));
+}
+
+bool IntType::areCompatible(mlir::DataLayoutEntryListRef oldLayout,
+                            mlir::DataLayoutEntryListRef newLayout,
+                            mlir::DataLayoutSpecInterface,
+                            const mlir::DataLayoutIdentifiedEntryMap &) const {
+  // A nested spec may only repeat the same _BitInt max alignment.
+  uint64_t oldMax = getBitIntMaxAlignBits(oldLayout);
+  for (mlir::DataLayoutEntryInterface newEntry : newLayout) {
+    if (!newEntry.isTypeEntry())
+      continue;
+    auto newSpec = mlir::dyn_cast<cir::BitIntSpecAttr>(newEntry.getValue());
+    if (newSpec && newSpec.getMaxAlign() != oldMax)
+      return false;
+  }
+  return true;
+}
+
+llvm::LogicalResult IntType::verifyEntries(mlir::DataLayoutEntryListRef entries,
+                                           mlir::Location loc) const {
+  cir::IntType keyTy = getBitIntMaxAlignKey(getContext());
+  for (mlir::DataLayoutEntryInterface entry : entries) {
+    if (!entry.isTypeEntry())
+      continue;
+    auto key = mlir::cast<IntType>(mlir::cast<mlir::Type>(entry.getKey()));
+    if (key != keyTy)
+      return mlir::emitError(loc)
+             << "expected _BitInt data layout entry to be keyed on " << keyTy
+             << ", got " << key;
+    if (!mlir::isa<cir::BitIntSpecAttr>(entry.getValue()))
+      return mlir::emitError(loc) << "expected layout attribute for " << key
+                                  << " to be a #cir.bitint_spec attribute";
+  }
+  return mlir::success();
 }
 
 mlir::LogicalResult
