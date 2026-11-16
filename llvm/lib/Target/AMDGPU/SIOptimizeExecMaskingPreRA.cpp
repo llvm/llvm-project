@@ -477,6 +477,7 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
           I->eraseFromParent();
           MRI->replaceRegWith(SavedExec, ExecReg);
           LIS->removeInterval(SavedExec);
+          RecalcRegs.erase(SavedExec);
           Changed = true;
         }
       }
