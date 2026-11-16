@@ -5285,11 +5285,12 @@ static SDValue getEXTEND_VECTOR_INREG(unsigned Opcode, const SDLoc &DL, EVT VT,
   return DAG.getNode(Opcode, DL, VT, In);
 }
 
-// Create OR(AND(LHS,MASK),AND(RHS,~MASK)) bit select pattern
+// Create OR(AND(FREEZE(LHS),MASK),AND(FREEZE(RHS),~MASK)) bit select pattern.
+// Freeze inputs to prevent AND(poison,0) -> poison folds.
 static SDValue getBitSelect(const SDLoc &DL, MVT VT, SDValue LHS, SDValue RHS,
                             SDValue Mask, SelectionDAG &DAG) {
-  LHS = DAG.getNode(ISD::AND, DL, VT, LHS, Mask);
-  RHS = DAG.getNode(X86ISD::ANDNP, DL, VT, Mask, RHS);
+  LHS = DAG.getNode(ISD::AND, DL, VT, DAG.getFreeze(LHS), Mask);
+  RHS = DAG.getNode(X86ISD::ANDNP, DL, VT, Mask, DAG.getFreeze(RHS));
   return DAG.getNode(ISD::OR, DL, VT, LHS, RHS);
 }
 

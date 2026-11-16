@@ -3305,31 +3305,32 @@ define void @PR45604(ptr %dst, ptr %src) {
 ; SSE2-LABEL: PR45604:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rsi), %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,65535,65535,65535,0,65535,65535,65535]
-; SSE2-NEXT:    movdqa %xmm2, %xmm3
-; SSE2-NEXT:    pandn %xmm1, %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,0,0,0,11,0,0,0,0,0,0,0,11,0,0,0]
-; SSE2-NEXT:    por %xmm1, %xmm3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,1,1]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,5,5,5,5]
-; SSE2-NEXT:    movdqa %xmm2, %xmm5
-; SSE2-NEXT:    pandn %xmm4, %xmm5
-; SSE2-NEXT:    por %xmm1, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,2,2,2]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,5,5,5,5]
-; SSE2-NEXT:    movdqa %xmm2, %xmm6
-; SSE2-NEXT:    pandn %xmm4, %xmm6
-; SSE2-NEXT:    por %xmm1, %xmm6
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,65535,0,65535,65535,65535]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [u,0,11,0,u,0,11,0]
+; SSE2-NEXT:    pand %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,5,5,5]
+; SSE2-NEXT:    movdqa %xmm1, %xmm4
+; SSE2-NEXT:    pandn %xmm3, %xmm4
+; SSE2-NEXT:    por %xmm2, %xmm4
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,1,1]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,5,5,5]
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    pandn %xmm3, %xmm5
+; SSE2-NEXT:    por %xmm2, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,2,2,2]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,5,5,5]
+; SSE2-NEXT:    movdqa %xmm1, %xmm6
+; SSE2-NEXT:    pandn %xmm3, %xmm6
+; SSE2-NEXT:    por %xmm2, %xmm6
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
-; SSE2-NEXT:    pandn %xmm0, %xmm2
-; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, 48(%rdi)
+; SSE2-NEXT:    pandn %xmm0, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, 48(%rdi)
 ; SSE2-NEXT:    movdqa %xmm6, 32(%rdi)
 ; SSE2-NEXT:    movdqa %xmm5, 16(%rdi)
-; SSE2-NEXT:    movdqa %xmm3, (%rdi)
+; SSE2-NEXT:    movdqa %xmm4, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: PR45604:

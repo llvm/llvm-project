@@ -143,11 +143,11 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; AVX256VL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX256VL-NEXT:    vpermq {{.*#+}} ymm2 = ymm1[2,3,0,1]
 ; AVX256VL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1],ymm2[2],ymm1[3],ymm2[4,5],ymm1[6],ymm2[7]
-; AVX256VL-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[6,7,12,13],zero,zero,ymm1[8,9,6,7,14,15,14,15,0,1,22,23,28,29,18,19,26,27,22,23],zero,zero,ymm1[30,31,16,17]
+; AVX256VL-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[6,7,12,13,u,u,8,9,6,7,14,15,14,15,0,1,22,23,28,29,18,19,26,27,22,23,u,u,30,31,16,17]
 ; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm2 {%k1} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm2, %xmm2
 ; AVX256VL-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[1,1,1,1]
-; AVX256VL-NEXT:    vpternlogq {{.*#+}} ymm2 = (ymm2 & ~mem) | ymm1
+; AVX256VL-NEXT:    vpternlogq {{.*#+}} ymm2 = ymm2 ^ (mem & (ymm2 ^ ymm1))
 ; AVX256VL-NEXT:    vpmovsxwd %ymm2, %zmm1
 ; AVX256VL-NEXT:    vpslld $31, %zmm1, %zmm1
 ; AVX256VL-NEXT:    vptestmd %zmm1, %zmm1, %k1

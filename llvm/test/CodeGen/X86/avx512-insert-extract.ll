@@ -646,7 +646,8 @@ define <4 x i32> @insert_v4i32(<4 x i32> %x, i32 %y, ptr %ptr) nounwind {
 define <32 x i16> @insert_v32i16(<32 x i16> %x, i16 %y, ptr %ptr) nounwind {
 ; KNL-LABEL: insert_v32i16:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm1
+; KNL-NEXT:    movzwl (%rsi), %eax
+; KNL-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm1
 ; KNL-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm1
 ; KNL-NEXT:    vmovd %edi, %xmm0
 ; KNL-NEXT:    vpbroadcastw %xmm0, %ymm0

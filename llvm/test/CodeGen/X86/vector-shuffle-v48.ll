@@ -54,9 +54,9 @@ define <32 x i8> @foo(ptr %x0) {
 ; AVX512F-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[u,u,u,u,u,u,1,2,4,5,7,8,10,11,13,14]
 ; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
 ; AVX512F-NEXT:    vmovdqu 16(%rdi), %xmm2
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm2[0,2,3,5,6],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512F-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,3,4,6,7,9,10,12,13,15],zero,zero,zero,zero,zero,ymm0[24,25,27,28,30,31,u,u,u,u,u,u,u,u,u,u]
-; AVX512F-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[u,u,u,u,u,u,u,u,u,u,u,0,2,3,5,6]
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,3,4,6,7,9,10,12,13,15,u,u,u,u,u,24,25,27,28,30,31,u,u,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm2 ^ (mem & (ymm0 ^ ymm2))
 ; AVX512F-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2],ymm1[3,4,5,6,7],ymm0[8,9,10],ymm1[11,12,13,14,15]
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512F-NEXT:    retq

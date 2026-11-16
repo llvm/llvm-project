@@ -13,8 +13,8 @@ define i64 @PR214388(i8 %arg)  {
 ; SSE2-NEXT:    movl $20, %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
