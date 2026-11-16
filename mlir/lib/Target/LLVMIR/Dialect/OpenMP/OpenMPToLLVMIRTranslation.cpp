@@ -1012,24 +1012,34 @@ static bool isInOutlinedRegion(Operation *op) {
       op->getParentOfType<omp::OutlineableOpenMPOpInterface>());
 }
 
-/// Returns true if \p ptr is a `noalias` pointer argument of the function being
-/// built, possibly with an offset. For Fortran these are dummy arguments.
-static bool isNoAliasArgument(llvm::Value *ptr) {
-  auto *arg = llvm::dyn_cast<llvm::Argument>(ptr->stripInBoundsOffsets());
-  return arg && arg->hasNoAliasAttr();
+/// Returns true if accesses through \p arg must be kept ordered with sync
+/// markers. This holds for `noalias` pointer arguments, which for Fortran are
+/// dummy arguments. A `noalias` argument that is also `readonly` (an INTENT(IN)
+/// dummy at -O1 and above) is skipped: alias analysis already assumes that its
+/// memory doesn't change during the call, so a marker can't help.
+static bool needsSyncMarker(const llvm::Argument &arg) {
+  return arg.getType()->isPointerTy() && arg.hasNoAliasAttr() &&
+         !arg.onlyReadsMemory();
 }
 
-/// Collects the `noalias` pointer arguments of the function that \p op is
-/// translated into; these are the dummy arguments a flush must keep ordered.
+/// Returns true if \p ptr points into an argument of the function being built
+/// that needs sync markers, possibly with an offset.
+static bool isArgumentToMark(llvm::Value *ptr) {
+  auto *arg = llvm::dyn_cast<llvm::Argument>(ptr->stripInBoundsOffsets());
+  return arg && needsSyncMarker(*arg);
+}
+
+/// Collects the arguments of the function that \p op is translated into that
+/// need sync markers; these are the dummy arguments a flush must keep ordered.
 static llvm::SmallVector<llvm::Value *>
-collectNoAliasPointerArgs(Operation *op, llvm::IRBuilderBase &builder) {
+collectArgumentsToMark(Operation *op, llvm::IRBuilderBase &builder) {
   llvm::SmallVector<llvm::Value *> ptrs;
   llvm::BasicBlock *insertBB = builder.GetInsertBlock();
   if (!insertBB || isInOutlinedRegion(op))
     return ptrs;
   if (llvm::Function *fn = insertBB->getParent())
     for (llvm::Argument &arg : fn->args())
-      if (arg.getType()->isPointerTy() && arg.hasNoAliasAttr())
+      if (needsSyncMarker(arg))
         ptrs.push_back(&arg);
   return ptrs;
 }
@@ -1091,8 +1101,7 @@ static llvm::Error
 convertRegionWithSyncMarkers(Operation &op, Region &region, StringRef blockName,
                              llvm::IRBuilderBase &builder,
                              LLVM::ModuleTranslation &moduleTranslation) {
-  llvm::SmallVector<llvm::Value *> ptrs =
-      collectNoAliasPointerArgs(&op, builder);
+  llvm::SmallVector<llvm::Value *> ptrs = collectArgumentsToMark(&op, builder);
   llvm::DebugLoc loc = builder.getCurrentDebugLocation();
   emitSyncMarkers(builder, ptrs, loc);
   llvm::Expected<llvm::BasicBlock *> contBlock =
@@ -10852,7 +10861,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
   // debug location of an outlined function in the builder.
   llvm::SmallVector<llvm::Value *> syncPtrs;
   if (impliesFlushAll(op, ompBuilder->Config.isTargetDevice()))
-    syncPtrs = collectNoAliasPointerArgs(op, builder);
+    syncPtrs = collectArgumentsToMark(op, builder);
   llvm::DebugLoc opDebugLoc = builder.getCurrentDebugLocation();
   emitSyncMarkers(builder, syncPtrs, opDebugLoc);
 
@@ -10888,11 +10897,11 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             // that their accesses stay ordered across the flush.
             llvm::SmallVector<llvm::Value *> flushPtrs;
             if (op.getVarList().empty()) {
-              flushPtrs = collectNoAliasPointerArgs(op, builder);
+              flushPtrs = collectArgumentsToMark(op, builder);
             } else if (!isInOutlinedRegion(op)) {
               for (mlir::Value flushVar : op.getVarList()) {
                 llvm::Value *ptr = moduleTranslation.lookupValue(flushVar);
-                if (isNoAliasArgument(ptr) &&
+                if (isArgumentToMark(ptr) &&
                     !llvm::is_contained(flushPtrs, ptr))
                   flushPtrs.push_back(ptr);
               }

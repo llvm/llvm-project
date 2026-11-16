@@ -148,6 +148,23 @@ llvm.func @flush_list(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.no
   llvm.return
 }
 
+// `noalias readonly` arguments (Fortran INTENT(IN) dummies) aren't marked, not
+// even when they are listed in a flush: alias analysis assumes that their
+// memory doesn't change during the call.
+// CHECK-LABEL: define void @readonly_arg(
+// CHECK-SAME: ptr noalias %[[A:[0-9]+]], ptr noalias readonly %{{[0-9]+}})
+// CHECK: call void @llvm.omp.sync.marker.p0(ptr %[[A]])
+// CHECK-NEXT: call i32 @__kmpc_global_thread_num
+// CHECK-NEXT: call void @__kmpc_barrier
+// CHECK-NEXT: call void @llvm.omp.sync.marker.p0(ptr %[[A]])
+// CHECK-NEXT: call void @__kmpc_flush
+// CHECK-NEXT: ret void
+llvm.func @readonly_arg(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias, llvm.readonly}) {
+  omp.barrier
+  omp.flush (%arg1 : !llvm.ptr)
+  llvm.return
+}
+
 // Atomic operations that are not relaxed imply a flush.
 // CHECK-LABEL: define void @atomic_acquire(
 // CHECK-SAME: ptr noalias %[[A:[0-9]+]], ptr %{{[0-9]+}}, ptr %{{[0-9]+}})

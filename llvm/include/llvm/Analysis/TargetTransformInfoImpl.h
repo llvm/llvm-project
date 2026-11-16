@@ -943,6 +943,7 @@ public:
     case Intrinsic::annotation:
     case Intrinsic::assume:
     case Intrinsic::sideeffect:
+    case Intrinsic::omp_sync_marker:
     case Intrinsic::pseudoprobe:
     case Intrinsic::arithmetic_fence:
     case Intrinsic::invariant_start:
