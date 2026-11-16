@@ -966,19 +966,30 @@ FailureOr<Value> ContractionOpLowering::matchAndRewriteMaskableOp(
     return newOp;
   }
 
-  // Find the first free dimension in LHS and then in RHS, and lower when found.
   std::vector<DimPair> freeDimMap = op.getFreeDimMap();
-  for (bool onLhs : {true, false}) {
-    const DimPair *first = nullptr;
-    auto getDim = [&](const DimPair &dims) {
-      return onLhs ? dims.first : dims.second;
-    };
-    for (const DimPair &dims : freeDimMap)
-      if (getDim(dims) >= 0 && (!first || getDim(dims) < getDim(*first)))
-        first = &dims;
-    if (first)
-      return lowerParallel(rewriter, op, first->first, first->second, mask);
+
+  // Find first free dimension in LHS, and lower when found.
+  const DimPair *dimsToProcess = nullptr;
+  for (const DimPair &dims : freeDimMap) {
+    if (dims.first < 0)
+      continue;
+    if (!dimsToProcess || dims.first < dimsToProcess->first)
+      dimsToProcess = &dims;
   }
+  if (dimsToProcess)
+    return lowerParallel(rewriter, op, dimsToProcess->first,
+                         dimsToProcess->second, mask);
+
+  // Find first free dimension in RHS, and lower when found.
+  for (const DimPair &dims : freeDimMap) {
+    if (dims.second < 0)
+      continue;
+    if (!dimsToProcess || dims.second < dimsToProcess->second)
+      dimsToProcess = &dims;
+  }
+  if (dimsToProcess)
+    return lowerParallel(rewriter, op, dimsToProcess->first,
+                         dimsToProcess->second, mask);
 
   // Lower the first remaining contracting dimension.
   std::vector<DimPair> contractingDimMap = op.getContractingDimMap();
