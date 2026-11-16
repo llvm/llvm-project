@@ -1,4 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -test-loop-fusion=test-loop-fusion-dependence-check -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-loop-fusion=test-loop-fusion-utilities -split-input-file | FileCheck %s --check-prefix=UTILITY
 
 // -----
 
@@ -109,7 +110,6 @@ func.func @should_not_fuse_across_intermediate_store() {
   affine.for %i0 = 0 to 10 {
     // expected-remark@-1 {{block-level dependence preventing fusion of loop nest 0 into loop nest 1 at depth 0}}
     %v0 = affine.load %0[%i0] : memref<10xf32>
-    "op0"(%v0) : (f32) -> ()
   }
 
   // Should not fuse loop nests '%i0' and '%i1' across top-level store.
@@ -118,7 +118,6 @@ func.func @should_not_fuse_across_intermediate_store() {
   affine.for %i1 = 0 to 10 {
     // expected-remark@-1 {{block-level dependence preventing fusion of loop nest 1 into loop nest 0 at depth 0}}
     %v1 = affine.load %0[%i1] : memref<10xf32>
-    "op1"(%v1) : (f32) -> ()
   }
   return
 }
@@ -138,7 +137,6 @@ func.func @should_not_fuse_across_intermediate_load() {
 
   // Should not fuse loop nests '%i0' and '%i1' across top-level load.
   %v0 = affine.load %0[%c0] : memref<10xf32>
-  "op0"(%v0) : (f32) -> ()
 
   affine.for %i1 = 0 to 10 {
     // expected-remark@-1 {{block-level dependence preventing fusion of loop nest 1 into loop nest 0 at depth 0}}
@@ -165,7 +163,6 @@ func.func @should_not_fuse_across_ssa_value_def() {
 
   // Loop nest '%i0" cannot be fused past load from '%1' due to RAW dependence.
   %v1 = affine.load %1[%c0] : memref<10xf32>
-  "op0"(%v1) : (f32) -> ()
 
   // Loop nest '%i1' cannot be fused past SSA value def '%c2' which it uses.
   %c2 = arith.constant 2 : index
@@ -306,6 +303,58 @@ func.func @should_not_fuse_across_store_in_loop_at_depth1() {
 
 // -----
 
+// The public utility must reject an unknown effect even when no MDG was built
+// by the caller first.
+
+// UTILITY-LABEL: func.func @utility_rejects_unknown_effect_in_candidate_loop
+// UTILITY:      affine.for
+// UTILITY:        "unknown.effect"() : () -> ()
+// UTILITY-NEXT: affine.store
+// UTILITY-NEXT: }
+// UTILITY-NEXT: affine.for
+func.func @utility_rejects_unknown_effect_in_candidate_loop(
+    %in: memref<8xi32>, %out: memref<8xi32>) {
+  %tmp = memref.alloc() : memref<8xi32>
+  affine.for %i = 0 to 8 {
+    %v = affine.load %in[%i] : memref<8xi32>
+    "unknown.effect"() : () -> ()
+    affine.store %v, %tmp[%i] : memref<8xi32>
+  }
+  affine.for %j = 0 to 8 {
+    %v = affine.load %tmp[%j] : memref<8xi32>
+    affine.store %v, %out[%j] : memref<8xi32>
+  }
+  return
+}
+
+// -----
+
+// Allocation effects are not safe to clone into a sliced loop body, even when
+// the effect has no associated memref value.
+
+// UTILITY-LABEL: func.func @utility_rejects_allocate_effect_in_candidate_loop
+// UTILITY:      affine.for
+// UTILITY:        "test.side_effect_op"
+// UTILITY-NEXT: affine.store
+// UTILITY-NEXT: }
+// UTILITY-NEXT: affine.for
+func.func @utility_rejects_allocate_effect_in_candidate_loop(
+    %in: memref<8xi32>, %out: memref<8xi32>) {
+  %tmp = memref.alloc() : memref<8xi32>
+  affine.for %i = 0 to 8 {
+    %v = affine.load %in[%i] : memref<8xi32>
+    "test.side_effect_op"() {effects = [{effect = "allocate"}]} : () -> i32
+    affine.store %v, %tmp[%i] : memref<8xi32>
+  }
+  affine.for %j = 0 to 8 {
+    %v = affine.load %tmp[%j] : memref<8xi32>
+    affine.store %v, %out[%j] : memref<8xi32>
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @should_not_fuse_across_ssa_value_def_at_depth1() {
 func.func @should_not_fuse_across_ssa_value_def_at_depth1() {
   %0 = memref.alloc() : memref<10x10xf32>
@@ -323,7 +372,6 @@ func.func @should_not_fuse_across_ssa_value_def_at_depth1() {
     // RAW dependence from store in loop nest '%i1' to 'load %1' prevents
     // fusion loop nest '%i1' into loops after load.
     %v1 = affine.load %1[%i0, %c0] : memref<10x10xf32>
-    "op0"(%v1) : (f32) -> ()
 
     // Loop nest '%i2' cannot be fused past SSA value def '%c2' which it uses.
     %c2 = arith.constant 2 : index

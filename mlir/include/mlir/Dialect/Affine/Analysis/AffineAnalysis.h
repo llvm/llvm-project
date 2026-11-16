@@ -211,6 +211,12 @@ inline bool hasDependence(DependenceResult result) {
   return result.value == DependenceResult::HasDependence;
 }
 
+/// Returns true unless the provided DependenceResult proves that no dependence
+/// exists.
+inline bool mayHaveDependence(DependenceResult result) {
+  return result.value != DependenceResult::NoDependence;
+}
+
 /// Returns true if the provided DependenceResult corresponds to the absence of
 /// a dependence.
 inline bool noDependence(DependenceResult result) {
@@ -219,8 +225,8 @@ inline bool noDependence(DependenceResult result) {
 
 /// Returns in 'depCompsVec', dependence components for dependences between all
 /// load and store ops in loop nest rooted at 'forOp', at loop depths in range
-/// [1, maxLoopDepth].
-void getDependenceComponents(
+/// [1, maxLoopDepth]. Returns failure if any dependence cannot be analyzed.
+LogicalResult getDependenceComponents(
     AffineForOp forOp, unsigned maxLoopDepth,
     std::vector<SmallVector<DependenceComponent, 2>> *depCompsVec);
 
