@@ -551,6 +551,7 @@ add_header_macro(
   ../libc/include/stdlib.yaml
   stdlib.h
   DEPENDS
+    .llvm-libc-macros.alloca_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.stdlib_macros
     .llvm-libc-types.__atexithandler_t
@@ -1038,9 +1039,13 @@ add_header_macro(
   sys/time.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.sys_select_macros
     .llvm-libc-macros.sys_time_macros
+    .llvm-libc-types.fd_set
     .llvm-libc-types.struct_itimerval
     .llvm-libc-types.struct_timeval
+    .llvm-libc-types.suseconds_t
+    .llvm-libc-types.time_t
 )
 
 add_header_macro(

@@ -4112,16 +4112,6 @@ SIRegisterInfo::getEquivalentSGPRClass(const TargetRegisterClass *VRC) const {
   return SRC;
 }
 
-const TargetRegisterClass *
-SIRegisterInfo::getCompatibleSubRegClass(const TargetRegisterClass *SuperRC,
-                                         const TargetRegisterClass *SubRC,
-                                         unsigned SubIdx) const {
-  // Ensure this subregister index is aligned in the super register.
-  const TargetRegisterClass *MatchRC =
-      getMatchingSuperRegClass(SuperRC, SubRC, SubIdx);
-  return MatchRC && MatchRC->hasSubClassEq(SuperRC) ? MatchRC : nullptr;
-}
-
 bool SIRegisterInfo::opCanUseInlineConstant(unsigned OpType) const {
   if (OpType >= AMDGPU::OPERAND_REG_INLINE_AC_FIRST &&
       OpType <= AMDGPU::OPERAND_REG_INLINE_AC_LAST)
@@ -4394,8 +4384,7 @@ bool SIRegisterInfo::isRegWithinOccupancyBudget(
   else
     MaxVGPR = std::max(MaxVGPR, RegEndIndex);
 
-  return static_cast<unsigned>(
-             AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), MaxAGPR, MaxVGPR)) <=
+  return AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), MaxAGPR, MaxVGPR) <=
          MaxVGPRsForCurrentOccupancy;
 }
 
