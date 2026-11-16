@@ -543,7 +543,7 @@ void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
   EmitEOL();
 
   // The instruction printer emits a single leading blank.
-  OS.indent(Indent-1);
+  OS.indent(Indent - 1);
   InstPrinter->printInst(&Inst, 0, "", STI, OS);
   EmitEOL();
 }
