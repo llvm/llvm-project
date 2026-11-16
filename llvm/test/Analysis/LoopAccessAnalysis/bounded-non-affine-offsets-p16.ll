@@ -8,10 +8,29 @@ target datalayout = "p:16:16"
 define void @range_bounds_half_address_space_apart(ptr %lut, ptr noalias %src.0, ptr noalias %src.1, ptr %dst) {
 ; CHECK-LABEL: 'range_bounds_half_address_space_apart'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.dst = getelementptr inbounds nuw i8, ptr %dst, i16 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.lut.1 = getelementptr nuw i8, ptr %lut, i16 %off.1
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.dst = getelementptr inbounds nuw i8, ptr %dst, i16 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.lut.0 = getelementptr nuw i8, ptr %lut, i16 %off.0
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %dst High: (16 + %dst))
+; CHECK-NEXT:            Member: {%dst,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: (-32768 + %lut) High: ((-127 umin (-1 + (-1 * (ptrtoaddr ptr %lut to i16)))) + %lut))
+; CHECK-NEXT:            Member: (-32768 + (128 * (zext i8 (trunc i16 (%l.src.1 /u 128) to i8) to i16))<nuw><nsw> + %lut)<nuw>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %lut High: ((-127 umin (-1 + (-1 * (ptrtoaddr ptr %lut to i16)))) + %lut))
+; CHECK-NEXT:            Member: ((128 * (%l.src.0 /u 128))<nuw> + %lut)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
