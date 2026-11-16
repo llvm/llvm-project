@@ -16,6 +16,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "RISCV.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
@@ -23,10 +24,16 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define GET_GICOMBINER_DEPS
@@ -36,6 +43,7 @@
 #define DEBUG_TYPE "riscv-postlegalizer-combiner"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 namespace {
 
@@ -54,12 +62,7 @@ bool matchFoldFPZeroStore(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (!SrcReg.isVirtual())
     return false;
 
-  MachineInstr *Def = MRI.getVRegDef(SrcReg);
-  if (!Def || Def->getOpcode() != TargetOpcode::G_FCONSTANT)
-    return false;
-
-  auto *CFP = Def->getOperand(1).getFPImm();
-  if (!CFP || !CFP->getValueAPF().isPosZero())
+  if (!mi_match(SrcReg, MRI, m_PosZeroFP()))
     return false;
 
   unsigned ValBits = MRI.getType(SrcReg).getSizeInBits();
@@ -91,6 +94,57 @@ void applyFoldFPZeroStore(MachineInstr &MI, MachineRegisterInfo &MRI,
                                "(XLEN={1}, ValBits={2}):\n  {3}\n",
                                DEBUG_TYPE, XLen, ValBits, MI));
 #endif
+}
+
+// Match (X << (8 - Y)) - (X >> Y), where only bit Y in each byte of X
+// can be nonzero. For Y == 0 the right operand is X itself.
+bool matchSubShiftsToOrcB(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          const RISCVSubtarget &STI, GISelValueTracking &VT,
+                          Register &MatchInfo) {
+  if (!STI.hasStdExtZbb())
+    return false;
+
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (Ty != LLT::scalar(STI.getXLen()))
+    return false;
+
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  Register Src;
+  int64_t LeftShift;
+  if (!mi_match(LHS, MRI, m_GShl(m_Reg(Src), m_ICst(LeftShift))) ||
+      LeftShift < 1 || LeftShift > 8 || MRI.getType(Src) != Ty)
+    return false;
+
+  unsigned RightShift = 8 - LeftShift;
+  if (RightShift == 0) {
+    if (RHS != Src)
+      return false;
+  } else {
+    int64_t Shift;
+    if (!mi_match(RHS, MRI, m_GLShr(m_SpecificReg(Src), m_ICst(Shift))) ||
+        Shift != RightShift)
+      return false;
+  }
+
+  // At least one shift must disappear to make the replacement profitable.
+  if (!MRI.hasOneNonDBGUse(LHS) &&
+      (RightShift == 0 || !MRI.hasOneNonDBGUse(RHS)))
+    return false;
+
+  APInt Mask = APInt::getSplat(STI.getXLen(), APInt(8, 1U << RightShift));
+  if (!VT.maskedValueIsZero(Src, ~Mask))
+    return false;
+
+  MatchInfo = Src;
+  return true;
+}
+
+void applySubShiftsToOrcB(MachineInstr &MI, MachineIRBuilder &B, Register Src) {
+  // The Zbb predicate and native XLEN type make this intrinsic legal here.
+  // Leave dead shifts to the combiner's DCE so other users remain intact.
+  B.buildIntrinsic(Intrinsic::riscv_orc_b, {MI.getOperand(0)}).addUse(Src);
+  MI.eraseFromParent();
 }
 
 class RISCVPostLegalizerCombinerImpl : public Combiner {
@@ -136,11 +190,11 @@ RISCVPostLegalizerCombinerImpl::RISCVPostLegalizerCombinerImpl(
 {
 }
 
-class RISCVPostLegalizerCombiner : public MachineFunctionPass {
+class RISCVPostLegalizerCombinerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVPostLegalizerCombiner();
+  RISCVPostLegalizerCombinerLegacy();
 
   StringRef getPassName() const override {
     return "RISCVPostLegalizerCombiner";
@@ -148,13 +202,11 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-private:
-  RISCVPostLegalizerCombinerImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
 
-void RISCVPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
+void RISCVPostLegalizerCombinerLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
@@ -166,31 +218,32 @@ void RISCVPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-RISCVPostLegalizerCombiner::RISCVPostLegalizerCombiner()
-    : MachineFunctionPass(ID) {
-  if (!RuleConfig.parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
-}
+RISCVPostLegalizerCombinerLegacy::RISCVPostLegalizerCombinerLegacy()
+    : MachineFunctionPass(ID) {}
 
-bool RISCVPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
+static bool
+runCombinerOnMachineFunction(MachineFunction &MF,
+                             function_ref<bool()> ShouldSkip,
+                             function_ref<GISelValueTracking *()> GetVT,
+                             function_ref<MachineDominatorTree *()> GetMDT,
+                             function_ref<GISelCSEInfo *()> GetCSEInfo) {
   if (MF.getProperties().hasFailedISel())
     return false;
   assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
-  auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !ShouldSkip();
+
+  RISCVPostLegalizerCombinerImplRuleConfig RuleConfig;
+  if (!RuleConfig.parseCommandLineOption())
+    reportFatalUsageError("Invalid rule identifier");
 
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   const auto *LI = ST.getLegalizerInfo();
 
-  GISelValueTracking *VT =
-      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
-  MachineDominatorTree *MDT =
-      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
+  GISelValueTracking *VT = GetVT();
+  MachineDominatorTree *MDT = GetMDT();
+  GISelCSEInfo *CSEInfo = GetCSEInfo();
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
@@ -200,16 +253,53 @@ bool RISCVPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char RISCVPostLegalizerCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(RISCVPostLegalizerCombiner, DEBUG_TYPE,
+char RISCVPostLegalizerCombinerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(RISCVPostLegalizerCombinerLegacy, DEBUG_TYPE,
                       "Combine RISC-V MachineInstrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
-INITIALIZE_PASS_END(RISCVPostLegalizerCombiner, DEBUG_TYPE,
+INITIALIZE_PASS_END(RISCVPostLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine RISC-V MachineInstrs after legalization", false,
                     false)
 
-FunctionPass *llvm::createRISCVPostLegalizerCombiner() {
-  return new RISCVPostLegalizerCombiner();
+FunctionPass *llvm::createRISCVPostLegalizerCombinerLegacyPass() {
+  return new RISCVPostLegalizerCombinerLegacy();
+}
+
+bool RISCVPostLegalizerCombinerLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return runCombinerOnMachineFunction(
+      MF, [&]() { return skipFunction(MF.getFunction()); },
+      [&]() {
+        return &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+      },
+      [&]() {
+        return &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+      },
+      [&]() {
+        TargetPassConfig *TPC = &getAnalysis<TargetPassConfig>();
+        GISelCSEAnalysisWrapper &Wrapper =
+            getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+        return &Wrapper.get(TPC->getCSEConfig());
+      });
+}
+
+PreservedAnalyses
+RISCVPostLegalizerCombinerPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runCombinerOnMachineFunction(
+      MF,
+      [&]() {
+        return MF.getFunction().hasOptNone() ||
+               shouldSkipOptimizationForOptBisect(MF.getFunction());
+      },
+      [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
+      [&]() { return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF); },
+      [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); });
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                       .preserve<GISelValueTrackingAnalysis>()
+                       .preserve<GISelCSEAnalysis>()
+                 : PreservedAnalyses::all();
 }

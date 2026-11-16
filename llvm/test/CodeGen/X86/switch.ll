@@ -27,11 +27,10 @@ define void @basic(i32 %x) {
 ; NOOPT:       # %bb.0: # %entry
 ; NOOPT-NEXT:    pushq %rax
 ; NOOPT-NEXT:    .cfi_def_cfa_offset 16
+; NOOPT-NEXT:    decl %edi
 ; NOOPT-NEXT:    movl %edi, %eax
-; NOOPT-NEXT:    decl %eax
-; NOOPT-NEXT:    movl %eax, %ecx
-; NOOPT-NEXT:    movq %rcx, (%rsp) # 8-byte Spill
-; NOOPT-NEXT:    subl $4, %eax
+; NOOPT-NEXT:    movq %rax, (%rsp) # 8-byte Spill
+; NOOPT-NEXT:    subl $4, %edi
 ; NOOPT-NEXT:    ja .LBB0_4
 ; NOOPT-NEXT:  # %bb.5: # %entry
 ; NOOPT-NEXT:    movq (%rsp), %rax # 8-byte Reload
@@ -166,11 +165,10 @@ define void @basic_nojumptable_false(i32 %x) "no-jump-tables"="false" {
 ; NOOPT:       # %bb.0: # %entry
 ; NOOPT-NEXT:    pushq %rax
 ; NOOPT-NEXT:    .cfi_def_cfa_offset 16
+; NOOPT-NEXT:    decl %edi
 ; NOOPT-NEXT:    movl %edi, %eax
-; NOOPT-NEXT:    decl %eax
-; NOOPT-NEXT:    movl %eax, %ecx
-; NOOPT-NEXT:    movq %rcx, (%rsp) # 8-byte Spill
-; NOOPT-NEXT:    subl $4, %eax
+; NOOPT-NEXT:    movq %rax, (%rsp) # 8-byte Spill
+; NOOPT-NEXT:    subl $4, %edi
 ; NOOPT-NEXT:    ja .LBB2_4
 ; NOOPT-NEXT:  # %bb.5: # %entry
 ; NOOPT-NEXT:    movq (%rsp), %rax # 8-byte Reload
@@ -2602,9 +2600,8 @@ define void @range_with_unreachable_fallthrough(i32 %i) {
 ; NOOPT:       # %bb.0: # %entry
 ; NOOPT-NEXT:    pushq %rax
 ; NOOPT-NEXT:    .cfi_def_cfa_offset 16
-; NOOPT-NEXT:    movl %edi, %eax
-; NOOPT-NEXT:    decl %eax
-; NOOPT-NEXT:    subl $3, %eax
+; NOOPT-NEXT:    decl %edi
+; NOOPT-NEXT:    subl $3, %edi
 ; NOOPT-NEXT:    jb .LBB25_1
 ; NOOPT-NEXT:    jmp .LBB25_5
 ; NOOPT-NEXT:  .LBB25_5: # %entry

@@ -199,13 +199,17 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   VNInfo *TheVNI = nullptr;
 
   bool FoundUndef = false;
+  bool FoundUnreachable = false;
 
   // Using Seen as a visited set, perform a BFS for all reaching defs.
   for (unsigned i = 0; i != WorkList.size(); ++i) {
     MachineBasicBlock *MBB = MF->getBlockNumbered(WorkList[i]);
 
+    bool Unreachable = !DomTree->isReachableFromEntry(MBB);
+    FoundUnreachable |= Unreachable;
+
 #ifndef NDEBUG
-    if (MBB->pred_empty()) {
+    if (!Unreachable && MBB->pred_empty()) {
       MBB->getParent()->verify(nullptr, nullptr, &errs());
       errs() << "Use of " << printReg(PhysReg, MRI->getTargetRegisterInfo())
              << " does not have a corresponding definition on every path:\n";
@@ -270,26 +274,27 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
 
   LiveIn.clear();
   FoundUndef |= (TheVNI == nullptr || TheVNI == &UndefVNI);
-  if (!Undefs.empty() && FoundUndef)
+  if ((!Undefs.empty() && FoundUndef) || FoundUnreachable)
     UniqueVNI = false;
 
   // Both updateSSA() and LiveRangeUpdater benefit from ordered blocks, but
   // neither require it. Skip the sorting overhead for small updates.
   if (WorkList.size() > 4)
-    array_pod_sort(WorkList.begin(), WorkList.end());
+    llvm::sort(WorkList, std::less<>());
 
   // If a unique reaching def was found, blit in the live ranges immediately.
   if (UniqueVNI) {
     assert(TheVNI != nullptr && TheVNI != &UndefVNI);
     LiveRangeUpdater Updater(&LR);
     for (unsigned BN : WorkList) {
+      MachineBasicBlock *MBB = MF->getBlockNumbered(BN);
       SlotIndex Start, End;
-      std::tie(Start, End) = Indexes->getMBBRange(BN);
+      std::tie(Start, End) = Indexes->getMBBRange(MBB);
       // Trim the live range in UseMBB.
       if (BN == UseMBBNum && Use.isValid())
         End = Use;
       else
-        Map[MF->getBlockNumbered(BN)] = LiveOutPair(TheVNI, nullptr);
+        Map[MBB] = LiveOutPair(TheVNI, nullptr);
       Updater.add(Start, End, TheVNI);
     }
     return true;
@@ -314,10 +319,25 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   LiveIn.reserve(WorkList.size());
   for (unsigned BN : WorkList) {
     MachineBasicBlock *MBB = MF->getBlockNumbered(BN);
+    MachineDomTreeNode *Node = DomTree->getNode(MBB);
+    if (!Node) {
+      assert(Alloc && "Need VNInfo allocator to create PHI-defs");
+      SlotIndex Start, End;
+      std::tie(Start, End) = Indexes->getMBBRange(MBB);
+      VNInfo *VNI = LR.getNextValue(Start, *Alloc);
+      if (MBB == &UseMBB && Use.isValid())
+        End = Use;
+      else
+        Map[MBB] = LiveOutPair(VNI, nullptr);
+      LR.addSegment(LiveRange::Segment(Start, End, VNI));
+      continue;
+    }
+
     if (!Undefs.empty() &&
         !isDefOnEntry(LR, Undefs, *MBB, DefOnEntry, UndefOnEntry))
       continue;
-    addLiveInBlock(LR, DomTree->getNode(MBB));
+
+    addLiveInBlock(LR, Node);
     if (MBB == &UseMBB)
       LiveIn.back().Kill = Use;
   }
@@ -346,8 +366,8 @@ void LiveRangeCalc::updateSSA() {
       MachineDomTreeNode *IDom = Node->getIDom();
       LiveOutPair IDomValue;
 
-      // We need a live-in value to a block with no immediate dominator?
-      // This is probably an unreachable block that has survived somehow.
+      // Unreachable blocks already received phi-defs in findReachingDefs, so
+      // only the entry block has no immediate dominator.
       bool needPHI = !IDom || !Seen.test(IDom->getBlock()->getNumber());
 
       // IDom dominates all of our predecessors, but it may not be their

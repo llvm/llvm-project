@@ -88,11 +88,10 @@ static bool isRValueReferenceParam(const Expr *Invocation,
       return true;
     if (const auto *ConstructCallExpr =
             dyn_cast<CXXConstructExpr>(Invocation)) {
-      if (const auto *ConstructorDecl = ConstructCallExpr->getConstructor()) {
-        if (!ConstructorDecl->isCopyOrMoveConstructor() &&
-            !ConstructorDecl->isDefaultConstructor())
-          return true;
-      }
+      if (const auto *ConstructorDecl = ConstructCallExpr->getConstructor();
+          ConstructorDecl && !ConstructorDecl->isCopyOrMoveConstructor() &&
+          !ConstructorDecl->isDefaultConstructor())
+        return true;
     }
   }
   return false;

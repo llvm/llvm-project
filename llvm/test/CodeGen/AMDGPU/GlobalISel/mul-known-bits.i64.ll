@@ -201,13 +201,16 @@ define amdgpu_kernel void @v_mul_i64_masked_src0_hi(ptr addrspace(1) %out, ptr a
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; GFX10-NEXT:    ; kill: killed $vgpr0
+; GFX10-NEXT:    ; kill: killed $sgpr2_sgpr3
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    global_load_dword v4, v0, s[2:3]
-; GFX10-NEXT:    global_load_dwordx2 v[2:3], v0, s[6:7]
+; GFX10-NEXT:    global_load_dwordx2 v[2:3], v0, s[2:3]
+; GFX10-NEXT:    global_load_dwordx2 v[3:4], v0, s[6:7]
+; GFX10-NEXT:    ; kill: killed $sgpr6_sgpr7
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_mad_u64_u32 v[0:1], s2, v4, v2, 0
-; GFX10-NEXT:    v_mad_u64_u32 v[1:2], s2, v4, v3, v[1:2]
+; GFX10-NEXT:    v_mad_u64_u32 v[0:1], s2, v2, v3, 0
+; GFX10-NEXT:    v_mad_u64_u32 v[1:2], s2, v2, v4, v[1:2]
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX10-NEXT:    s_endpgm
@@ -222,13 +225,13 @@ define amdgpu_kernel void @v_mul_i64_masked_src0_hi(ptr addrspace(1) %out, ptr a
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_load_b32 v6, v0, s[2:3]
-; GFX11-NEXT:    global_load_b64 v[2:3], v0, s[4:5]
+; GFX11-NEXT:    global_load_b64 v[2:3], v0, s[2:3]
+; GFX11-NEXT:    global_load_b64 v[3:4], v0, s[4:5]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v6, v2, 0
+; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v2, v3, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_mad_u64_u32 v[4:5], null, v6, v3, v[1:2]
-; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, v4
+; GFX11-NEXT:    v_mad_u64_u32 v[5:6], null, v2, v4, v[1:2]
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, v5
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
  %tid = call i32 @llvm.amdgcn.workitem.id.x()

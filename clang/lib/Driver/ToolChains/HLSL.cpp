@@ -140,6 +140,9 @@ std::optional<llvm::Triple> tryParseTriple(StringRef Profile) {
   case 9:
     SubArch = llvm::Triple::DXILSubArch_v1_9;
     break;
+  case 10:
+    SubArch = llvm::Triple::DXILSubArch_v1_10;
+    break;
   case OfflineLibMinor:
     // Always consider minor version x as the latest supported DXIL version
     SubArch = llvm::Triple::LatestDXILSubArch;
@@ -243,9 +246,11 @@ void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
 }
 
 SmallString<1024> getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
-  if (SpvExtensionArgs.empty()) {
-    return StringRef("-spirv-ext=all");
-  }
+  // The backend uses any enabled extension it can, so `all` makes modules
+  // declare extensions that a Vulkan application may not have enabled.
+  const std::string DefaultExtension = "DXC";
+  if (SpvExtensionArgs.empty())
+    SpvExtensionArgs = ArrayRef<std::string>(DefaultExtension);
 
   llvm::SmallString<1024> LlvmOption;
   raw_svector_ostream out(LlvmOption);
@@ -262,7 +267,7 @@ SmallString<1024> getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
 }
 
 bool isValidSPIRVExtensionName(const std::string &str) {
-  std::regex pattern("dxc|DXC|khr|KHR|SPV_[a-zA-Z0-9_]+");
+  std::regex pattern("dxc|DXC|khr|KHR|all|SPV_[a-zA-Z0-9_]+");
   return std::regex_match(str, pattern);
 }
 
@@ -441,7 +446,23 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
       Args.hasArg(options::OPT_dxc_row_major))
     getDriver().Diag(diag::err_drv_dxc_invalid_matrix_layout);
 
+  if (Args.hasArg(options::OPT_dxc_pack_prefix_stable) &&
+      Args.hasArg(options::OPT_dxc_pack_optimized))
+    getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+        << "-pack-prefix-stable" << "-pack-optimized";
+
   for (Arg *A : Args) {
+    if (A->getOption().matches(options::OPT_dxc_pack_prefix_stable) ||
+        A->getOption().matches(options::OPT_dxc_pack_optimized)) {
+      DAL->AddJoinedArg(
+          nullptr,
+          Opts.getOption(options::OPT_fdx_semantic_signature_packing_mode_EQ),
+          A->getOption().matches(options::OPT_dxc_pack_prefix_stable)
+              ? "prefix-stable"
+              : "optimized");
+      A->claim();
+      continue;
+    }
     if (A->getOption().getID() == options::OPT_dxc_all_resources_bound) {
       DAL->AddFlagArg(nullptr,
                       Opts.getOption(options::OPT_hlsl_all_resources_bound));
@@ -529,6 +550,17 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
 
     if (A->getOption().getID() == options::OPT_fvk_use_gl_layout) {
       getDriver().Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
+      A->claim();
+      continue;
+    }
+
+    if ((A->getOption().getID() ==
+             options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order ||
+         A->getOption().getID() ==
+             options::OPT_fhlsl_spv_support_nonzero_base_instance) &&
+        getArch() != llvm::Triple::spirv) {
+      getDriver().Diag(diag::err_drv_argument_only_allowed_with)
+          << A->getAsString(Args) << "-spirv";
       A->claim();
       continue;
     }

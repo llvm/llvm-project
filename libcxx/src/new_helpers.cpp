@@ -11,9 +11,9 @@
 
 namespace std { // purposefully not versioned
 
-#ifndef __GLIBCXX__
+#if !defined(__GLIBCXX__) && !defined(_LIBCPP_ABI_VCRUNTIME)
 const nothrow_t nothrow{};
-#endif
+#endif // !defined(__GLIBCXX__) && !defined(_LIBCPP_ABI_VCRUNTIME)
 
 #ifndef LIBSTDCXX
 

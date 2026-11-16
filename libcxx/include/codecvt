@@ -61,7 +61,7 @@ class codecvt_utf8_utf16
 
 #  if _LIBCPP_HAS_LOCALIZATION
 
-#    include <__locale>
+#    include <__locale_dir/codecvt.h>
 #    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

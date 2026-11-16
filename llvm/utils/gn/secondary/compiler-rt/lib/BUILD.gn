@@ -1,7 +1,7 @@
 group("lib") {
   deps = [
-    "//compiler-rt/lib/sanitizer_ignorelists($host_toolchain)",
     "//compiler-rt/lib/builtins",
+    "//compiler-rt/lib/sanitizer_ignorelists($host_toolchain)",
   ]
   if (current_os == "linux" && current_cpu == "x64") {
     deps += [ "//compiler-rt/lib/msan" ]

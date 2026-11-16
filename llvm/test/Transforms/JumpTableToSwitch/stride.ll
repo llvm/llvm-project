@@ -4,10 +4,16 @@
 @func_array = constant [2 x ptr] [ptr @func0, ptr @func1]
 
 define i32 @func0() {
+; CHECK-LABEL: define i32 @func0() {
+; CHECK-NEXT:    ret i32 1
+;
   ret i32 1
 }
 
 define i32 @func1() {
+; CHECK-LABEL: define i32 @func1() {
+; CHECK-NEXT:    ret i32 2
+;
   ret i32 2
 }
 
@@ -18,7 +24,7 @@ define i32 @check_stride(i32 %index) {
 ; CHECK-NEXT:    [[FUNC_PTR:%.*]] = load ptr, ptr [[GEP]], align 8
 ; CHECK-NEXT:    switch i32 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[CALL_0:%.*]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    ], !prof [[PROF0:![0-9]+]]
 ; CHECK:       default.switch.case.unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       call.0:
@@ -34,3 +40,6 @@ define i32 @check_stride(i32 %index) {
   ret i32 %result
 }
 
+;.
+; CHECK: [[PROF0]] = !{!"unknown", !"jump-table-to-switch"}
+;.

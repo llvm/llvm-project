@@ -9,7 +9,7 @@ from lldbsuite.test import lldbutil
 
 class TestStack(TestBase):
     @add_test_categories(["libc++"])
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     @skipIfLinux  # Declaration in some Linux headers causes LLDB to crash.
     @skipIf(bugnumber="rdar://97622854")
     @skipIf(macos_sdk_version=["<", "16.0"])

@@ -50,3 +50,7 @@ float3 test_sqrt_float3(float3 p0) { return sqrt(p0); }
 // CHECK: %{{.*}} = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.sqrt.v4f32
 // CHECK: ret <4 x float> %{{.*}}
 float4 test_sqrt_float4(float4 p0) { return sqrt(p0); }
+
+// CHECK-LABEL: test_sqrt_float5
+// CHECK: call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.sqrt.v5f32
+vector<float, 5> test_sqrt_float5(vector<float, 5> p0) { return sqrt(p0); }

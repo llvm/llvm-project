@@ -28,8 +28,8 @@
 void p_vxv(int *v1, int *v2, int *v3, int n);
 void t_vxv(int *v1, int *v2, int *v3, int n);
 
-#pragma omp declare variant(p_vxv) match(construct={parallel})
 #pragma omp declare variant(t_vxv) match(construct={target})
+#pragma omp declare variant(p_vxv) match(construct={parallel})
 void vxv(int *v1, int *v2, int *v3, int n) {
     for (int i = 0; i < n; i++) v3[i] = v1[i] * v2[i];
 }

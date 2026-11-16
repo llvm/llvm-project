@@ -157,7 +157,7 @@ Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
     const Twine &Path, vfs::FileSystem &FS,
     const InstrProfCorrelator *Correlator,
     const object::BuildIDFetcher *BIDFetcher,
-    const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
+    std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind,
     std::function<void(Error)> Warn) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
@@ -170,7 +170,7 @@ Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
 Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
     std::unique_ptr<MemoryBuffer> Buffer, const InstrProfCorrelator *Correlator,
     const object::BuildIDFetcher *BIDFetcher,
-    const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
+    std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind,
     std::function<void(Error)> Warn) {
   if (Buffer->getBufferSize() == 0)
     return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
@@ -444,8 +444,12 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
     Record.Counts.push_back(Count);
   }
 
-  // Bitmap byte information is indicated with special character.
-  if (Line->starts_with("$")) {
+  // Bitmap byte information is indicated by '$' followed by an integer. Only
+  // treat numeric-looking lines as bitmap records so function names such as
+  // Swift manglings beginning with "$s" remain unambiguous.
+  StringRef BitmapSize =
+      Line->starts_with("$") ? Line->drop_front(1).trim() : StringRef();
+  if (!BitmapSize.empty() && isDigit(BitmapSize.front())) {
     Record.BitmapBytes.clear();
     // Read the number of bitmap bytes.
     uint64_t NumBitmapBytes;
@@ -455,7 +459,7 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
     if (NumBitmapBytes != 0) {
       // Read each bitmap and fill our internal storage with the values.
       Record.BitmapBytes.reserve(NumBitmapBytes);
-      for (uint8_t I = 0; I < NumBitmapBytes; ++I) {
+      for (uint64_t I = 0; I < NumBitmapBytes; ++I) {
         if (Line.is_at_end())
           return error(instrprof_error::truncated);
         uint8_t BitmapByte;
@@ -513,7 +517,8 @@ Error RawInstrProfReader<IntPtrT>::readHeader() {
   if (!hasFormat(*DataBuffer))
     return error(instrprof_error::bad_magic);
   if (DataBuffer->getBufferSize() < sizeof(RawInstrProf::Header))
-    return error(instrprof_error::bad_header);
+    return error(instrprof_error::bad_header,
+                 std::string("profile file header is truncated"));
   auto *Header = reinterpret_cast<const RawInstrProf::Header *>(
       DataBuffer->getBufferStart());
   ShouldSwapBytes = Header->Magic != RawInstrProf::getMagic<IntPtrT>();
@@ -589,15 +594,23 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
                   "\nPLEASE update this tool to version in the raw profile, or "
                   "regenerate raw profile with expected version.")
                      .str());
-
   uint64_t BinaryIdSize = swap(Header.BinaryIdsSize);
   // Binary id start just after the header if exists.
   const uint8_t *BinaryIdStart =
       reinterpret_cast<const uint8_t *>(&Header) + sizeof(RawInstrProf::Header);
   const uint8_t *BinaryIdEnd = BinaryIdStart + BinaryIdSize;
   const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
-  if (BinaryIdSize % sizeof(uint64_t) || BinaryIdEnd > BufferEnd)
-    return error(instrprof_error::bad_header);
+  if (BinaryIdSize % sizeof(uint64_t))
+    return error(
+        instrprof_error::bad_header,
+        ("BinaryIdSize (" + Twine(BinaryIdSize) + ") is not a multiple of 8")
+            .str());
+  if (BinaryIdEnd > BufferEnd)
+    return error(instrprof_error::header_size_mismatch,
+                 ("Header.BinaryIdSize = " + Twine(BinaryIdSize) + " bytes; " +
+                  Twine(BufferEnd - BinaryIdStart) + " bytes available")
+                     .str());
+
   ArrayRef<uint8_t> BinaryIdsBuffer(BinaryIdStart, BinaryIdSize);
   if (!BinaryIdsBuffer.empty()) {
     if (Error Err = readBinaryIdsInternal(*DataBuffer, BinaryIdsBuffer,
@@ -650,13 +663,34 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
 
   auto *Start = reinterpret_cast<const char *>(&Header);
   if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
-    return error(instrprof_error::bad_header);
+    // clang-format off
+    return error(
+        instrprof_error::header_size_mismatch,
+        ("profile file size (" + Twine(DataBuffer->getBufferSize()) +
+         " bytes) smaller than expected (at least " + Twine(ValueDataOffset) +
+         " bytes: " +
+         Twine(sizeof(RawInstrProf::Header)) + "(Header) + " +
+         Twine(BinaryIdSize) + "(BinaryIdSize) + " +
+         Twine(DataSize) + "(DataSize) + " +
+         Twine(CountersSize) + "(CountersSize) + " +
+         Twine(NumBitmapBytes) + "(NumBitmapBytes) + " +
+         Twine(UniformCountersSectionSize) + "(UniformCountersSectionSize) + " +
+         Twine(NamesSize) + "(NamesSize) + " +
+         Twine(VTableSectionSize) + "(VTableSectionSize) + " +
+         Twine(VTableNameSize) + "(VTableNameSize) + " +
+         Twine(PaddingBytesBeforeCounters + PaddingBytesAfterCounters +
+               PaddingBytesAfterBitmapBytes + PaddingBytesAfterUniformCounters +
+               PaddingBytesAfterNames + PaddingBytesAfterVTableProfData +
+               PaddingBytesAfterVTableNames) +
+         "(Padding))")
+            .str());
+  // clang-format on
 
   if (BIDFetcher) {
     std::vector<object::BuildID> BinaryIDs;
     if (Error E = readBinaryIds(BinaryIDs))
       return E;
-    if (auto E = InstrProfCorrelator::get("", BIDFetcherCorrelatorKind,
+    if (auto E = InstrProfCorrelator::get("", *BIDFetcherCorrelatorKind,
                                           BIDFetcher, BinaryIDs)
                      .moveInto(BIDFetcherCorrelator)) {
       return E;
@@ -1373,7 +1407,10 @@ Error IndexedInstrProfReader::readHeader() {
     uint64_t BinaryIdsSize =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     if (BinaryIdsSize % sizeof(uint64_t))
-      return error(instrprof_error::bad_header);
+      return error(
+          instrprof_error::bad_header,
+          ("BinaryIdSize (" + Twine(BinaryIdsSize) + ") is not a multiple of 8")
+              .str());
     // Set the binary ids start.
     BinaryIdsBuffer = ArrayRef<uint8_t>(Ptr, BinaryIdsSize);
     if (Ptr > (const unsigned char *)DataBuffer->getBufferEnd())
@@ -1522,36 +1559,6 @@ Expected<NamedInstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
   return error(instrprof_error::unknown_function);
 }
 
-static Expected<memprof::MemProfRecord>
-getMemProfRecordV2(const memprof::IndexedMemProfRecord &IndexedRecord,
-                   MemProfFrameHashTable &MemProfFrameTable,
-                   MemProfCallStackHashTable &MemProfCallStackTable) {
-  memprof::FrameIdConverter<MemProfFrameHashTable> FrameIdConv(
-      MemProfFrameTable);
-
-  memprof::CallStackIdConverter<MemProfCallStackHashTable> CSIdConv(
-      MemProfCallStackTable, FrameIdConv);
-
-  memprof::MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
-
-  // Check that all call stack ids were successfully converted to call stacks.
-  if (CSIdConv.LastUnmappedId) {
-    return make_error<InstrProfError>(
-        instrprof_error::hash_mismatch,
-        "memprof call stack not found for call stack id " +
-            Twine(*CSIdConv.LastUnmappedId));
-  }
-
-  // Check that all frame ids were successfully converted to frames.
-  if (FrameIdConv.LastUnmappedId) {
-    return make_error<InstrProfError>(instrprof_error::hash_mismatch,
-                                      "memprof frame not found for frame id " +
-                                          Twine(*FrameIdConv.LastUnmappedId));
-  }
-
-  return Record;
-}
-
 Expected<memprof::MemProfRecord>
 IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
   // TODO: Add memprof specific errors.
@@ -1566,17 +1573,9 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
 
   const memprof::IndexedMemProfRecord &IndexedRecord = *Iter;
   switch (Version) {
-  case memprof::Version2:
-    assert(MemProfFrameTable && "MemProfFrameTable must be available");
-    assert(MemProfCallStackTable && "MemProfCallStackTable must be available");
-    return getMemProfRecordV2(IndexedRecord, *MemProfFrameTable,
-                              *MemProfCallStackTable);
   // Combine V3 and V4 cases as the record conversion logic is the same.
   case memprof::Version3:
   case memprof::Version4:
-    assert(!MemProfFrameTable && "MemProfFrameTable must not be available");
-    assert(!MemProfCallStackTable &&
-           "MemProfCallStackTable must not be available");
     assert(FrameBase && "FrameBase must be available");
     assert(CallStackBase && "CallStackBase must be available");
     {

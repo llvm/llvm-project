@@ -59,20 +59,20 @@ Optimization remarks can be emitted as diagnostics. These diagnostics will be
 propagated to front-ends if desired, or emitted by tools like {doc}`llc
 <CommandGuide/llc>` or {doc}`opt <CommandGuide/opt>`.
 
-```{option} -pass-remarks=<regex>
+:::{option} -pass-remarks=<regex>
 Enables optimization remarks from passes whose name match the given (POSIX)
 regular expression.
-```
+:::
 
-```{option} -pass-remarks-missed=<regex>
+:::{option} -pass-remarks-missed=<regex>
 Enables missed optimization remarks from passes whose name match the given
 (POSIX) regular expression.
-```
+:::
 
-```{option} -pass-remarks-analysis=<regex>
+:::{option} -pass-remarks-analysis=<regex>
 Enables optimization analysis remarks from passes whose name match the given
 (POSIX) regular expression.
-```
+:::
 
 ### Serialized remarks
 
@@ -92,69 +92,69 @@ following options:
 
 `Basic options`
 
-```{option} -pass-remarks-output=<filename>
+:::{option} -pass-remarks-output=<filename>
 Enables the serialization of remarks to a file specified in `<filename>`.
 
 By default, the output is serialized to {ref}`YAML <yamlremarks>`.
-```
+:::
 
-```{option} -pass-remarks-format=<format>
+:::{option} -pass-remarks-format=<format>
 Specifies the output format of the serialized remarks.
 
 Supported formats:
 
 - {ref}`yaml <yamlremarks>` (default)
 - {ref}`bitstream <bitstreamremarks>`
-```
+:::
 
 `Content configuration`
 
-```{option} -pass-remarks-filter=<regex>
+:::{option} -pass-remarks-filter=<regex>
 Only passes whose name match the given (POSIX) regular expression will be
 serialized to the final output.
-```
+:::
 
-```{option} -pass-remarks-with-hotness
+:::{option} -pass-remarks-with-hotness
 With PGO, include profile count in optimization remarks.
-```
+:::
 
-```{option} -pass-remarks-hotness-threshold
+:::{option} -pass-remarks-hotness-threshold
 The minimum profile count required for an optimization remark to be
 emitted.
-```
+:::
 
 Other tools that support remarks:
 
 {program}`llvm-lto`
 
-```{option} -lto-pass-remarks-output=<filename>
-```
+:::{option} -lto-pass-remarks-output=<filename>
+:::
 
-```{option} -lto-pass-remarks-filter=<regex>
-```
+:::{option} -lto-pass-remarks-filter=<regex>
+:::
 
-```{option} -lto-pass-remarks-format=<format>
-```
+:::{option} -lto-pass-remarks-format=<format>
+:::
 
-```{option} -lto-pass-remarks-with-hotness
-```
+:::{option} -lto-pass-remarks-with-hotness
+:::
 
-```{option} -lto-pass-remarks-hotness-threshold
-```
+:::{option} -lto-pass-remarks-hotness-threshold
+:::
 
 {program}`gold-plugin` and {program}`lld`
 
-```{option} -opt-remarks-filename=<filename>
-```
+:::{option} -opt-remarks-filename=<filename>
+:::
 
-```{option} -opt-remarks-filter=<regex>
-```
+:::{option} -opt-remarks-filter=<regex>
+:::
 
-```{option} -opt-remarks-format=<format>
-```
+:::{option} -opt-remarks-format=<format>
+:::
 
-```{option} -opt-remarks-with-hotness
-```
+:::{option} -opt-remarks-with-hotness
+:::
 
 (yamlremarks)=
 

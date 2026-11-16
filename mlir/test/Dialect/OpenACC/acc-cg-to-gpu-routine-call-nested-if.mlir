@@ -27,7 +27,7 @@ func.func @routine_call_in_nested_if(%arg0: memref<4xf32>, %arg1: memref<4xf32>)
       scf.reduce
     } {acc.par_dims = #acc<par_dims[block_x]>}
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 

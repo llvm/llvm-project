@@ -711,6 +711,117 @@ TEST(VerifierTest, ElementwiseLoadOddSizedVector) {
       << Error;
 }
 
+TEST(VerifierTest, ElementwiseStoreNonAtomic) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+  Constant *Value = ConstantVector::getSplat(ElementCount::getFixed(4),
+                                             ConstantInt::get(I32Ty, 0));
+
+  new StoreInst(Value, Ptr,
+                LoadStoreInstProperties{/*IsVolatile=*/false, Align(4),
+                                        AtomicOrdering::NotAtomic,
+                                        SyncScope::System,
+                                        /*IsElementwise=*/true},
+                Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("non-atomic store cannot be elementwise"))
+      << Error;
+}
+
+TEST(VerifierTest, ElementwiseStoreScalar) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+  Constant *Value = ConstantInt::get(I32Ty, 0);
+
+  new StoreInst(Value, Ptr,
+                LoadStoreInstProperties{/*IsVolatile=*/false, Align(4),
+                                        AtomicOrdering::Monotonic,
+                                        SyncScope::System,
+                                        /*IsElementwise=*/true},
+                Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomic elementwise store operand must have fixed vector type!"))
+      << Error;
+}
+
+TEST(VerifierTest, ElementwiseStoreOddSizedVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+  Constant *Value = ConstantVector::getSplat(ElementCount::getFixed(5),
+                                             ConstantInt::get(I32Ty, 0));
+
+  new StoreInst(Value, Ptr,
+                LoadStoreInstProperties{/*IsVolatile=*/false, Align(4),
+                                        AtomicOrdering::Monotonic,
+                                        SyncScope::System,
+                                        /*IsElementwise=*/true},
+                Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomic memory access' operand must have a power-of-two size"))
+      << Error;
+}
+
+TEST(VerifierTest, ElementwiseStoreSequentiallyConsistent) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+  Constant *Value = ConstantVector::getSplat(ElementCount::getFixed(4),
+                                             ConstantInt::get(I32Ty, 0));
+
+  new StoreInst(Value, Ptr,
+                LoadStoreInstProperties{/*IsVolatile=*/false, Align(4),
+                                        AtomicOrdering::SequentiallyConsistent,
+                                        SyncScope::System,
+                                        /*IsElementwise=*/true},
+                Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomic elementwise store cannot be sequentially consistent."))
+      << Error;
+}
+
 TEST(VerifierTest, GetElementPtrInst) {
   LLVMContext C;
   Module M("M", C);
@@ -796,28 +907,5 @@ TEST(VerifierTest, IntrinsicRetInvalidStruct) {
         "elements, but got"))
         << Error;
   }
-}
-
-TEST(VerifierTest, InvalidStrictFPAttribute) {
-  LLVMContext Ctx;
-  Module M("M", Ctx);
-  FunctionType *FuncTy =
-      FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
-  Function *F =
-      Function::Create(FuncTy, Function::ExternalLinkage, "strictfp_test", M);
-  BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", F);
-  Type *FloatTy = Type::getFloatTy(Ctx);
-
-  Function *CosF =
-      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::cos, FloatTy);
-  CallInst *CI = CallInst::Create(CosF, ConstantFP::getNullValue(FloatTy),
-                                  "strictfp_call", Entry);
-  CI->addFnAttr(Attribute::StrictFP);
-  ReturnInst::Create(Ctx, Entry);
-
-  std::string Error;
-  raw_string_ostream ErrorOS(Error);
-  // FIXME: Missing verifier check for strictfp.
-  EXPECT_FALSE(verifyModule(M, &ErrorOS));
 }
 } // end anonymous namespace

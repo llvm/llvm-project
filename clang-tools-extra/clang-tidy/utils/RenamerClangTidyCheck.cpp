@@ -69,12 +69,10 @@ public:
 
 static const NamedDecl *findDecl(const RecordDecl &RecDecl,
                                  StringRef DeclName) {
-  for (const Decl *D : RecDecl.decls()) {
-    if (const auto *ND = dyn_cast<NamedDecl>(D)) {
-      if (ND->getDeclName().isIdentifier() && ND->getName() == DeclName)
-        return ND;
-    }
-  }
+  for (const Decl *D : RecDecl.decls())
+    if (const auto *ND = dyn_cast<NamedDecl>(D);
+        ND && ND->getDeclName().isIdentifier() && ND->getName() == DeclName)
+      return ND;
   return nullptr;
 }
 
@@ -107,10 +105,10 @@ static const NamedDecl *getFailureForNamedDecl(const NamedDecl *ND) {
 
   if (const auto *Method = dyn_cast<CXXMethodDecl>(ND)) {
     if (const CXXMethodDecl *Overridden = getOverrideMethod(Method))
-      Canonical = cast<NamedDecl>(Overridden->getCanonicalDecl());
+      Canonical = Overridden->getCanonicalDecl();
     else if (const FunctionTemplateDecl *Primary = Method->getPrimaryTemplate())
       if (const FunctionDecl *TemplatedDecl = Primary->getTemplatedDecl())
-        Canonical = cast<NamedDecl>(TemplatedDecl->getCanonicalDecl());
+        Canonical = TemplatedDecl->getCanonicalDecl();
 
     if (Canonical != ND)
       return Canonical;
@@ -278,6 +276,11 @@ public:
     return true;
   }
 
+  bool VisitSizeOfPackExpr(SizeOfPackExpr *SizeOfPack) {
+    Check->addUsage(SizeOfPack->getPack(), SizeOfPack->getPackLoc(), SM);
+    return true;
+  }
+
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Loc) {
     if (const NestedNameSpecifier Spec = Loc.getNestedNameSpecifier();
         Spec.getKind() == NestedNameSpecifier::Kind::Namespace) {
@@ -351,9 +354,8 @@ public:
     if (!Decl)
       return true;
 
-    if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl))
-      if (const NamedDecl *TemplDecl = ClassDecl->getTemplatedDecl())
-        Check->addUsage(TemplDecl, Loc.getTemplateNameLoc(), SM);
+    if (const NamedDecl *TemplDecl = Decl->getTemplatedDecl())
+      Check->addUsage(TemplDecl, Loc.getTemplateNameLoc(), SM);
 
     return true;
   }

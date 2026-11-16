@@ -1220,7 +1220,7 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    LLDB_LOG(log, "EntitySymbol::Materialize [address = {0}, m_symbol = {1}]",
+    LLDB_LOG(log, "EntitySymbol::Materialize [address = {0:x}, m_symbol = {1}]",
              (uint64_t)load_addr, m_symbol.GetName());
 
     const Address sym_address = m_symbol.GetAddress();

@@ -28,12 +28,15 @@ static const FormatToken &getLineStart(const FormatToken &Tok) {
   return *Result;
 }
 
-static unsigned indentLevelFor(const WhitespaceManager::Change &C) {
+static unsigned indentLevelFor(const WhitespaceManager::Change &C,
+                               FormatStyle::UseTabStyle UseTab) {
   if (!C.AlignedTo)
     return C.Tok->IndentLevel;
 
   const FormatToken &LineStart = getLineStart(*C.AlignedTo);
-  return std::max(LineStart.IndentLevel, LineStart.AppliedIndentLevel);
+  return UseTab == FormatStyle::UT_ForIndentation
+             ? LineStart.IndentLevel
+             : std::max(LineStart.IndentLevel, LineStart.AppliedIndentLevel);
 }
 
 bool WhitespaceManager::Change::IsBeforeInFile::operator()(
@@ -67,19 +70,17 @@ WhitespaceManager::Change::Change(
       StartOfBlockComment(nullptr), IndentationOffset(0), ConditionalsLevel(0) {
 }
 
-void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
-                                          unsigned Spaces,
-                                          unsigned StartOfTokenColumn,
-                                          const FormatToken *AlignedTo,
-                                          bool InPPDirective,
-                                          unsigned IndentedFromColumn) {
+void WhitespaceManager::replaceWhitespace(
+    FormatToken &Tok, unsigned Newlines, unsigned Spaces,
+    unsigned StartOfTokenColumn, const FormatToken *AlignedTo,
+    bool InPPDirective, unsigned IndentedFromColumn, bool CreateReplacement) {
   if (Tok.Finalized || (Tok.MacroCtx && Tok.MacroCtx->Role == MR_ExpandedArg))
     return;
-  Tok.setDecision((Newlines > 0) ? FD_Break : FD_Continue);
-  Changes.push_back(Change(Tok, /*CreateReplacement=*/true, Tok.WhitespaceRange,
-                           Spaces, StartOfTokenColumn, IndentedFromColumn,
-                           Newlines, "", "", AlignedTo,
-                           InPPDirective && !Tok.IsFirst,
+  if (CreateReplacement)
+    Tok.setDecision((Newlines > 0) ? FD_Break : FD_Continue);
+  Changes.push_back(Change(Tok, CreateReplacement, Tok.WhitespaceRange, Spaces,
+                           StartOfTokenColumn, IndentedFromColumn, Newlines, "",
+                           "", AlignedTo, InPPDirective && !Tok.IsFirst,
                            /*IsInsideToken=*/false));
 }
 
@@ -1635,7 +1636,7 @@ void WhitespaceManager::generateChanges() {
       }
       // FIXME: This assert should hold if we computed the column correctly.
       // assert((int)C.StartOfTokenColumn >= C.Spaces);
-      unsigned IndentLevel = indentLevelFor(C);
+      unsigned IndentLevel = indentLevelFor(C, Style.UseTab);
       appendIndentText(ReplacementText, IndentLevel, std::max(0, C.Spaces),
                        std::max((int)C.StartOfTokenColumn, C.Spaces) -
                            std::max(0, C.Spaces),

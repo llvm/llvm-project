@@ -23,7 +23,7 @@ struct TestOperationEqualPass
     ModuleOp module = getOperation();
     // Expects two operations at the top-level:
     int opCount = module.getBody()->getOperations().size();
-    if (module->hasAttr("test.includes_setup")) {
+    if (module->hasDiscardableAttr("test.includes_setup")) {
       if (opCount < 2) {
         module.emitError()
             << "expected at least 2 top-level ops in the module, got "
@@ -41,9 +41,9 @@ struct TestOperationEqualPass
     llvm::outs() << first->getName().getStringRef() << " with attr "
                  << first->getDiscardableAttrDictionary();
     OperationEquivalence::Flags flags{};
-    if (!first->hasAttr("strict_loc_check"))
+    if (!first->hasDiscardableAttr("strict_loc_check"))
       flags |= OperationEquivalence::IgnoreLocations;
-    if (first->hasAttr("ignore_commutativity"))
+    if (first->hasDiscardableAttr("ignore_commutativity"))
       flags |= OperationEquivalence::IgnoreCommutativity;
     if (OperationEquivalence::isEquivalentTo(first, &module.getBody()->back(),
                                              flags))

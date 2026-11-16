@@ -19,6 +19,9 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
@@ -139,7 +142,7 @@ convertOperandBundles(OperandRangeRange bundleOperands,
 static LogicalResult
 convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
                            LLVM::ModuleTranslation &moduleTranslation) {
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  llvm::Module *module = builder.getModule();
   llvm::Intrinsic::ID id =
       llvm::Intrinsic::lookupIntrinsicID(op.getIntrinAttr());
   if (!id)
@@ -231,6 +234,62 @@ convertNamedMetadataOp(NamedMetadataOp op,
     }
     namedMD->addOperand(mdNode);
   }
+  return success();
+}
+
+/// Translate `llvm.getelementptr`. `inrange` is only representable on LLVM
+/// constant GEP expressions.
+static LogicalResult convertGEPOp(GEPOp op, llvm::IRBuilderBase &builder,
+                                  LLVM::ModuleTranslation &moduleTranslation) {
+  SmallVector<llvm::Value *> indices;
+  indices.reserve(op.getRawConstantIndices().size());
+  for (PointerUnion<IntegerAttr, Value> valueOrAttr : op.getIndices()) {
+    if (Value value = dyn_cast_if_present<Value>(valueOrAttr))
+      indices.push_back(moduleTranslation.lookupValue(value));
+    else
+      indices.push_back(
+          builder.getInt32(cast<IntegerAttr>(valueOrAttr).getInt()));
+  }
+
+  llvm::Type *elementType = moduleTranslation.convertType(op.getElemType());
+  llvm::GEPNoWrapFlags nwFlags =
+      llvm::GEPNoWrapFlags::fromRaw(static_cast<unsigned>(op.getNoWrapFlags()));
+  ConstantRangeAttr inrangeAttr = op.getInrangeAttr();
+  llvm::Value *base = moduleTranslation.lookupValue(op.getBase());
+  llvm::Value *res;
+  if (inrangeAttr || !builder.GetInsertPoint().isValid()) {
+    StringRef WhyConstExpr =
+        inrangeAttr ? "'inrange' GEP" : "global initializer GEP";
+    auto *baseConst = dyn_cast<llvm::Constant>(base);
+    if (!baseConst || !llvm::all_of(indices, [](llvm::Value *value) {
+          return isa<llvm::Constant>(value);
+        }))
+      return op.emitError(WhyConstExpr + " requires the base and indices to "
+                                         "translate to LLVM constants");
+
+    std::optional<llvm::ConstantRange> inrangeCR;
+    if (inrangeAttr)
+      inrangeCR = llvm::ConstantRange::getNonEmpty(inrangeAttr.getLower(),
+                                                   inrangeAttr.getUpper());
+
+    SmallVector<llvm::Constant *> constIndices;
+    constIndices.reserve(indices.size());
+    for (llvm::Value *value : indices)
+      constIndices.push_back(cast<llvm::Constant>(value));
+    const llvm::DataLayout &dataLayout =
+        moduleTranslation.getLLVMModule()->getDataLayout();
+    res = llvm::ConstantExpr::getGetElementPtr(
+        dataLayout, elementType, baseConst, constIndices, nwFlags, inrangeCR);
+    if (!res)
+      return op.emitError("failed to lower " + WhyConstExpr +
+                          " to a constant byte offset");
+    // Fold the constant as CreateGEP did through the TargetFolder. This also
+    // infers inbounds and nuw when the offset stays within the global.
+    res = llvm::ConstantFoldConstant(cast<llvm::Constant>(res), dataLayout);
+  } else {
+    res = builder.CreateGEP(elementType, base, indices, "", nwFlags);
+  }
+  moduleTranslation.mapValue(op.getRes()) = res;
   return success();
 }
 
@@ -511,6 +570,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
                                            "zero-call-used-regs",
                                            zcsr.getValue()));
+    if (callOp.getUniformWorkGroupSizeAttr())
+      call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                           "uniform-work-group-size"));
     if (StringAttr trapFunc = callOp.getTrapFuncNameAttr())
       call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
                                            "trap-func-name",
@@ -604,8 +666,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         moduleTranslation.lookupValues(inlineAsmOp.getOperands()));
     inst->setTailCallKind(convertTailCallKindToLLVM(
         inlineAsmOp.getTailCallKindAttr().getTailCallKind()));
+    if (inlineAsmOp.getConvergent())
+      inst->addFnAttr(llvm::Attribute::Convergent);
     if (auto maybeOperandAttrs = inlineAsmOp.getOperandAttrs()) {
-      llvm::AttributeList attrList;
+      llvm::AttributeList attrList = inst->getAttributes();
       for (const auto &it : llvm::enumerate(*maybeOperandAttrs)) {
         Attribute attr = it.value();
         if (!attr)
@@ -639,7 +703,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                               invOp.getOpBundleTags(), moduleTranslation);
     ArrayRef<llvm::Value *> operandsRef(operands);
     llvm::InvokeInst *result;
-    if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee")) {
+    if (auto attr = invOp.getCalleeAttr()) {
       if (llvm::Function *function =
               moduleTranslation.lookupFunction(attr.getValue())) {
         result = builder.CreateInvoke(
@@ -665,6 +729,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           operandsRef.drop_front(), opBundles);
     }
     result->setCallingConv(convertCConvToLLVM(invOp.getCConv()));
+    if (invOp.getUniformWorkGroupSizeAttr())
+      result->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                             "uniform-work-group-size"));
     moduleTranslation.convertFunctionAttrCollection(
         invOp.getDefaultFuncAttrsAttr(), result,
         ModuleTranslation::convertDefaultFuncAttr);
@@ -851,6 +918,39 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   return failure();
 }
 
+/// Builds a call stack node: one constant integer per source-location hash.
+/// Shared by `!callsite` and by the first operand of every `!memprof` MIB.
+static llvm::MDNode *convertCallStack(llvm::LLVMContext &ctx,
+                                      ArrayRef<int64_t> ids) {
+  llvm::Type *i64 = llvm::Type::getInt64Ty(ctx);
+  SmallVector<llvm::Metadata *> operands;
+  operands.reserve(ids.size());
+  for (int64_t id : ids)
+    operands.push_back(llvm::ConstantAsMetadata::get(
+        llvm::ConstantInt::get(i64, static_cast<uint64_t>(id))));
+  return llvm::MDNode::get(ctx, operands);
+}
+
+/// Builds one `!memprof` MemInfoBlock: the allocation call stack, the one
+/// allocation-type tag, then the `(context id, total size)` pairs. Both the
+/// single tag and the order are what the verifier requires, not a free choice.
+static llvm::MDNode *convertMemProfMIB(llvm::LLVMContext &ctx,
+                                       MemProfMIBAttr mib) {
+  llvm::Type *i64 = llvm::Type::getInt64Ty(ctx);
+  SmallVector<llvm::Metadata *> operands;
+  operands.push_back(convertCallStack(ctx, mib.getCallStack().asArrayRef()));
+  operands.push_back(llvm::MDString::get(ctx, mib.getAllocType().getValue()));
+  for (MemProfContextSizeAttr entry : mib.getContextSizes()) {
+    llvm::Metadata *pair[] = {
+        llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::get(i64, entry.getId())),
+        llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::get(i64, entry.getSize()))};
+    operands.push_back(llvm::MDNode::get(ctx, pair));
+  }
+  return llvm::MDNode::get(ctx, operands);
+}
+
 static LogicalResult
 amendOperationImpl(Operation &op, ArrayRef<llvm::Instruction *> instructions,
                    NamedAttribute attribute,
@@ -880,6 +980,55 @@ amendOperationImpl(Operation &op, ArrayRef<llvm::Instruction *> instructions,
     }
     for (llvm::Instruction *inst : instructions)
       inst->setMetadata(llvm::LLVMContext::MD_mmra, mmraMd);
+    return success();
+  }
+  // `!memprof` is call-only (the verifier rejects it anywhere else), so it
+  // goes on the calls the op produced rather than on every instruction.
+  if (name == LLVMDialect::getMemProfAttrName()) {
+    auto mibs = dyn_cast<ArrayAttr>(attribute.getValue());
+    if (!mibs)
+      return op.emitOpError("expected an array for ")
+             << LLVMDialect::getMemProfAttrName();
+    if (mibs.empty())
+      return op.emitOpError("expected at least one memprof_mib for ")
+             << LLVMDialect::getMemProfAttrName();
+    for (Attribute mibAttr : mibs)
+      if (!isa<MemProfMIBAttr>(mibAttr))
+        return op.emitOpError("expected a memprof_mib for ")
+               << LLVMDialect::getMemProfAttrName();
+    // The verifier rejects `!memprof` without `!callsite`, so diagnose the
+    // missing partner here rather than emitting IR that fails verification.
+    if (!op.hasAttr(LLVMDialect::getCallsiteAttrName()))
+      return op.emitOpError("expected an llvm.callsite attribute alongside ")
+             << LLVMDialect::getMemProfAttrName();
+    SmallVector<llvm::Metadata *> nodes;
+    for (Attribute mibAttr : mibs)
+      nodes.push_back(convertMemProfMIB(moduleTranslation.getLLVMContext(),
+                                        cast<MemProfMIBAttr>(mibAttr)));
+    llvm::MDNode *memprof =
+        llvm::MDNode::get(moduleTranslation.getLLVMContext(), nodes);
+    for (llvm::Instruction *inst : instructions) {
+      if (!isa<llvm::CallBase>(inst))
+        continue;
+      inst->setMetadata(llvm::LLVMContext::MD_memprof, memprof);
+    }
+    return success();
+  }
+  if (name == LLVMDialect::getCallsiteAttrName()) {
+    auto callStack = dyn_cast<DenseI64ArrayAttr>(attribute.getValue());
+    if (!callStack)
+      return op.emitOpError("expected a dense i64 array for ")
+             << LLVMDialect::getCallsiteAttrName();
+    if (callStack.empty())
+      return op.emitOpError("expected a non-empty call stack for ")
+             << LLVMDialect::getCallsiteAttrName();
+    llvm::MDNode *callsite = convertCallStack(
+        moduleTranslation.getLLVMContext(), callStack.asArrayRef());
+    for (llvm::Instruction *inst : instructions) {
+      if (!isa<llvm::CallBase>(inst))
+        continue;
+      inst->setMetadata(llvm::LLVMContext::MD_callsite, callsite);
+    }
     return success();
   }
   return success();

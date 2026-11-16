@@ -27,6 +27,14 @@ def fold_fp_zero_store : GICombineRule<
          [{ return matchFoldFPZeroStore(*${root}, MRI, STI, ${matchinfo}); }]),
   (apply [{ applyFoldFPZeroStore(*${root}, MRI, B, STI, ${matchinfo}); }])>;
 
+def sub_shifts_to_orc_b_matchdata : GIDefMatchData<"Register">;
+def sub_shifts_to_orc_b : GICombineRule<
+  (defs root:$root, sub_shifts_to_orc_b_matchdata:$matchinfo),
+  (match (G_SUB $dst, $lhs, $rhs):$root,
+         [{ return matchSubShiftsToOrcB(*${root}, MRI, STI,
+                                      *Helper.getValueTracking(), ${matchinfo}); }]),
+  (apply [{ applySubShiftsToOrcB(*${root}, B, ${matchinfo}); }])>;
+
 // Post-legalization combines which are primarily optimizations.
 // TODO: Add more combines.
 def RISCVPostLegalizerCombiner
@@ -34,5 +42,5 @@ def RISCVPostLegalizerCombiner
                  [sub_to_add, combines_for_extload, redundant_and,
                   identity_combines, shift_immed_chain,
                   commute_constant_to_rhs, simplify_neg_minmax,
-                  fold_fp_zero_store]> {
+                  fold_fp_zero_store, sub_shifts_to_orc_b]> {
 }

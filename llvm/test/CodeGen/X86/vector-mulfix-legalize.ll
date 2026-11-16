@@ -75,14 +75,8 @@ define <4 x i16> @umulfixsat(<4 x i16> %a) {
 ; CHECK-NEXT:    pmullw %xmm1, %xmm2
 ; CHECK-NEXT:    psrlw $15, %xmm2
 ; CHECK-NEXT:    pmulhuw %xmm1, %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; CHECK-NEXT:    psubusw %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm0, %xmm3
-; CHECK-NEXT:    paddw %xmm3, %xmm3
-; CHECK-NEXT:    por %xmm2, %xmm3
-; CHECK-NEXT:    pxor %xmm0, %xmm0
-; CHECK-NEXT:    pcmpeqw %xmm1, %xmm0
-; CHECK-NEXT:    por %xmm3, %xmm0
+; CHECK-NEXT:    paddw %xmm0, %xmm0
+; CHECK-NEXT:    por %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %t = call <4 x i16> @llvm.umul.fix.sat.v4i16(<4 x i16> <i16 1, i16 2, i16 3, i16 4>, <4 x i16> %a, i32 15)
   ret <4 x i16> %t

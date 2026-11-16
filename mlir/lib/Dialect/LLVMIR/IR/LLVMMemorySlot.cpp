@@ -38,7 +38,7 @@ llvm::SmallVector<MemorySlot> LLVM::AllocaOp::getPromotableSlots() {
 
 Value LLVM::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                       OpBuilder &builder) {
-  return LLVM::UndefOp::create(builder, getLoc(), slot.elemType);
+  return LLVM::UndefOp::create(builder, getLoc(), slot.valueType);
 }
 
 void LLVM::AllocaOp::handleBlockArgument(const MemorySlot &slot,
@@ -358,7 +358,7 @@ static Value createInsertAndCast(OpBuilder &builder, Location loc,
 Value LLVM::StoreOp::getStored(const MemorySlot &slot, OpBuilder &builder,
                                Value reachingDef,
                                const DataLayout &dataLayout) {
-  assert(reachingDef && reachingDef.getType() == slot.elemType &&
+  assert(reachingDef && reachingDef.getType() == slot.valueType &&
          "expected the reaching definition's type to match the slot's type");
   return createInsertAndCast(builder, getLoc(), getValue(), reachingDef,
                              dataLayout);
@@ -376,7 +376,8 @@ bool LLVM::LoadOp::canUsesBeRemoved(
   // be removed (provided it is not volatile).
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
          areConversionCompatible(dataLayout, getResult().getType(),
-                                 slot.elemType, /*narrowingConversion=*/true) &&
+                                 slot.valueType,
+                                 /*narrowingConversion=*/true) &&
          !getVolatile_();
 }
 
@@ -404,7 +405,7 @@ bool LLVM::StoreOp::canUsesBeRemoved(
   // store OF the slot pointer, only INTO the slot pointer.
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
          getValue() != slot.ptr &&
-         areConversionCompatible(dataLayout, slot.elemType,
+         areConversionCompatible(dataLayout, slot.valueType,
                                  getValue().getType(),
                                  /*narrowingConversion=*/false) &&
          !getVolatile_();
@@ -421,7 +422,7 @@ DeletionKind LLVM::StoreOp::removeBlockingUses(
 static bool isValidAccessType(const MemorySlot &slot, Type accessType,
                               const DataLayout &dataLayout) {
   return dataLayout.getTypeSize(accessType) <=
-         dataLayout.getTypeSize(slot.elemType);
+         dataLayout.getTypeSize(slot.valueType);
 }
 
 LogicalResult LLVM::LoadOp::ensureOnlySafeAccesses(
@@ -442,7 +443,7 @@ LogicalResult LLVM::StoreOp::ensureOnlySafeAccesses(
 static Type getTypeAtIndex(const DestructurableMemorySlot &slot,
                            Attribute index) {
   auto subelementIndexMap =
-      cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap();
+      cast<DestructurableTypeInterface>(slot.valueType).getSubelementIndexMap();
   if (!subelementIndexMap)
     return {};
   assert(!subelementIndexMap->empty());
@@ -619,18 +620,6 @@ DeletionKind LLVM::LaunderInvariantGroupOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
-bool LLVM::StripInvariantGroupOp::canUsesBeRemoved(
-    const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses,
-    const DataLayout &dataLayout) {
-  return forwardToUsers(*this, newBlockingUses);
-}
-
-DeletionKind LLVM::StripInvariantGroupOp::removeBlockingUses(
-    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
-  return DeletionKind::Delete;
-}
-
 bool LLVM::DbgDeclareOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses,
@@ -695,7 +684,9 @@ bool LLVM::GEPOp::canUsesBeRemoved(
     SmallVectorImpl<OpOperand *> &newBlockingUses,
     const DataLayout &dataLayout) {
   // GEP can be removed as long as it is a no-op and its users can be removed.
-  if (!hasAllZeroIndices(*this))
+  // `inrange` is only valid on constant GEP expressions, so an inrange GEP on
+  // an alloca is illegal and we bail out.
+  if (getInrangeAttr() || !hasAllZeroIndices(*this))
     return false;
   return forwardToUsers(*this, newBlockingUses);
 }
@@ -735,20 +726,8 @@ static std::optional<uint64_t> gepToByteOffset(const DataLayout &dataLayout,
               return false;
             })
             .Case([&](LLVM::LLVMStructType structType) {
-              ArrayRef<Type> body = structType.getBody();
-              assert(index < body.size() && "expected valid struct indexing");
-              for (uint32_t i : llvm::seq(index)) {
-                if (!structType.isPacked())
-                  offset = llvm::alignTo(
-                      offset, dataLayout.getTypeABIAlignment(body[i]));
-                offset += dataLayout.getTypeSize(body[i]);
-              }
-
-              // Align for the current type as well.
-              if (!structType.isPacked())
-                offset = llvm::alignTo(
-                    offset, dataLayout.getTypeABIAlignment(body[index]));
-              currentType = body[index];
+              offset += structType.getElementOffset(dataLayout, index);
+              currentType = structType.getBody()[index];
               return false;
             })
             .Default([&](Type type) {
@@ -793,7 +772,7 @@ getSubslotAccessInfo(const DestructurableMemorySlot &slot,
     return index >= (1 << LLVM::kGEPConstantBitWidth);
   };
 
-  Type type = slot.elemType;
+  Type type = slot.valueType;
   if (*offset >= dataLayout.getTypeSize(type))
     return {};
   return TypeSwitch<Type, std::optional<SubslotAccessInfo>>(type)
@@ -809,31 +788,22 @@ getSubslotAccessInfo(const DestructurableMemorySlot &slot,
       })
       .Case([&](LLVM::LLVMStructType structType)
                 -> std::optional<SubslotAccessInfo> {
-        uint64_t distanceToStart = 0;
         // Walk over the elements of the struct to find in which of
         // them the offset is.
         for (auto [index, elem] : llvm::enumerate(structType.getBody())) {
-          uint64_t elemSize = dataLayout.getTypeSize(elem);
-          if (!structType.isPacked()) {
-            distanceToStart = llvm::alignTo(
-                distanceToStart, dataLayout.getTypeABIAlignment(elem));
-            // If the offset is in padding, cancel the rewrite.
-            if (offset < distanceToStart)
-              return {};
-          }
+          uint64_t elemOffset = structType.getElementOffset(dataLayout, index);
+          // If the offset is in padding, cancel the rewrite.
+          if (*offset < elemOffset)
+            return {};
 
-          if (offset < distanceToStart + elemSize) {
+          if (*offset < elemOffset + dataLayout.getTypeSize(elem)) {
             if (isOutOfBoundsGEPIndex(index))
               return {};
             // The offset is within this element, stop iterating the
             // struct and return the index.
             return SubslotAccessInfo{static_cast<uint32_t>(index),
-                                     *offset - distanceToStart};
+                                     *offset - elemOffset};
           }
-
-          // The offset is not within this element, continue walking
-          // over the struct.
-          distanceToStart += elemSize;
         }
 
         return {};
@@ -855,7 +825,7 @@ LogicalResult LLVM::GEPOp::ensureOnlySafeAccesses(
   std::optional<uint64_t> gepOffset = gepToByteOffset(dataLayout, *this);
   if (!gepOffset)
     return failure();
-  uint64_t slotSize = dataLayout.getTypeSize(slot.elemType);
+  uint64_t slotSize = dataLayout.getTypeSize(slot.valueType);
   // Check that the access is strictly inside the slot.
   if (*gepOffset >= slotSize)
     return failure();
@@ -874,6 +844,10 @@ bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
     return false;
 
   if (getBase() != slot.ptr)
+    return false;
+  // `inrange` is only valid on constant GEP expressions, so an inrange GEP on
+  // an alloca is illegal and SROA bails out.
+  if (getInrangeAttr())
     return false;
   std::optional<SubslotAccessInfo> accessInfo =
       getSubslotAccessInfo(slot, dataLayout, *this);
@@ -1025,7 +999,7 @@ static bool definitelyWritesOnlyWithinSlot(MemIntr op, const MemorySlot &slot,
     return false;
 
   std::optional<uint64_t> memIntrLen = getStaticMemIntrLen(op);
-  return memIntrLen && *memIntrLen <= dataLayout.getTypeSize(slot.elemType);
+  return memIntrLen && *memIntrLen <= dataLayout.getTypeSize(slot.valueType);
 }
 
 /// Checks whether all indices are i32. This is used to check GEPs can index
@@ -1048,13 +1022,14 @@ static bool memsetCanRewire(MemsetIntr op, const DestructurableMemorySlot &slot,
                             SmallPtrSetImpl<Attribute> &usedIndices,
                             SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
                             const DataLayout &dataLayout) {
-  if (&slot.elemType.getDialect() != op.getOperation()->getDialect())
+  if (&slot.valueType.getDialect() != op.getOperation()->getDialect())
     return false;
 
   if (op.getIsVolatile())
     return false;
 
-  if (!cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap())
+  if (!cast<DestructurableTypeInterface>(slot.valueType)
+           .getSubelementIndexMap())
     return false;
 
   if (!areAllIndicesI32(slot))
@@ -1105,7 +1080,7 @@ static Value memsetGetStored(MemsetIntr op, const MemorySlot &slot,
 
     return currentValue;
   };
-  return TypeSwitch<Type, Value>(slot.elemType)
+  return TypeSwitch<Type, Value>(slot.valueType)
       .Case([&](IntegerType type) -> Value {
         return buildMemsetValue(type.getWidth());
       })
@@ -1124,7 +1099,7 @@ memsetCanUsesBeRemoved(MemsetIntr op, const MemorySlot &slot,
                        SmallVectorImpl<OpOperand *> &newBlockingUses,
                        const DataLayout &dataLayout) {
   bool canConvertType =
-      TypeSwitch<Type, bool>(slot.elemType)
+      TypeSwitch<Type, bool>(slot.valueType)
           .Case<IntegerType, FloatType>([](auto type) {
             return type.getWidth() % 8 == 0 && type.getWidth() > 0;
           })
@@ -1135,7 +1110,7 @@ memsetCanUsesBeRemoved(MemsetIntr op, const MemorySlot &slot,
   if (op.getIsVolatile())
     return false;
 
-  return getStaticMemIntrLen(op) == dataLayout.getTypeSize(slot.elemType);
+  return getStaticMemIntrLen(op) == dataLayout.getTypeSize(slot.valueType);
 }
 
 template <class MemsetIntr>
@@ -1145,39 +1120,30 @@ memsetRewire(MemsetIntr op, const DestructurableMemorySlot &slot,
              const DataLayout &dataLayout) {
 
   std::optional<DenseMap<Attribute, Type>> types =
-      cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap();
+      cast<DestructurableTypeInterface>(slot.valueType).getSubelementIndexMap();
 
   IntegerAttr memsetLenAttr = createMemsetLenAttr(op);
 
-  bool packed = false;
-  if (auto structType = dyn_cast<LLVM::LLVMStructType>(slot.elemType))
-    packed = structType.isPacked();
+  auto structType = dyn_cast<LLVM::LLVMStructType>(slot.valueType);
 
   Type i32 = IntegerType::get(op.getContext(), 32);
   uint64_t memsetLen = memsetLenAttr.getValue().getZExtValue();
-  uint64_t covered = 0;
   for (size_t i = 0; i < types->size(); i++) {
     // Create indices on the fly to get elements in the right order.
     Attribute index = IntegerAttr::get(i32, i);
     Type elemType = types->at(index);
     uint64_t typeSize = dataLayout.getTypeSize(elemType);
-
-    if (!packed)
-      covered =
-          llvm::alignTo(covered, dataLayout.getTypeABIAlignment(elemType));
-
-    if (covered >= memsetLen)
+    uint64_t offset = structType ? structType.getElementOffset(dataLayout, i)
+                                 : i * dataLayout.getTypeAllocSize(elemType);
+    if (offset >= memsetLen)
       break;
 
     // If this subslot is used, apply a new memset to it.
-    // Otherwise, only compute its offset within the original memset.
     if (subslots.contains(index)) {
-      uint64_t newMemsetSize = std::min(memsetLen - covered, typeSize);
+      uint64_t newMemsetSize = std::min(memsetLen - offset, typeSize);
       createMemsetIntr(builder, op, memsetLenAttr, newMemsetSize, subslots,
                        index);
     }
-
-    covered += typeSize;
   }
 
   return DeletionKind::Delete;
@@ -1297,7 +1263,8 @@ static bool memcpyStoresTo(MemcpyLike op, const MemorySlot &slot) {
 template <class MemcpyLike>
 static Value memcpyGetStored(MemcpyLike op, const MemorySlot &slot,
                              OpBuilder &builder) {
-  return LLVM::LoadOp::create(builder, op.getLoc(), slot.elemType, op.getSrc());
+  return LLVM::LoadOp::create(builder, op.getLoc(), slot.valueType,
+                              op.getSrc());
 }
 
 template <class MemcpyLike>
@@ -1315,7 +1282,7 @@ memcpyCanUsesBeRemoved(MemcpyLike op, const MemorySlot &slot,
   if (op.getIsVolatile())
     return false;
 
-  return getStaticMemIntrLen(op) == dataLayout.getTypeSize(slot.elemType);
+  return getStaticMemIntrLen(op) == dataLayout.getTypeSize(slot.valueType);
 }
 
 template <class MemcpyLike>
@@ -1348,14 +1315,15 @@ static bool memcpyCanRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
   if (op.getIsVolatile())
     return false;
 
-  if (!cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap())
+  if (!cast<DestructurableTypeInterface>(slot.valueType)
+           .getSubelementIndexMap())
     return false;
 
   if (!areAllIndicesI32(slot))
     return false;
 
   // Only full copies are supported.
-  if (getStaticMemIntrLen(op) != dataLayout.getTypeSize(slot.elemType))
+  if (getStaticMemIntrLen(op) != dataLayout.getTypeSize(slot.valueType))
     return false;
 
   if (op.getSrc() == slot.ptr)
@@ -1428,13 +1396,13 @@ memcpyRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
                cast<IntegerAttr>(index).getValue().getZExtValue())};
     Value subslotPtrInOther = LLVM::GEPOp::create(
         builder, op.getLoc(), LLVM::LLVMPointerType::get(op.getContext()),
-        slot.elemType, isDst ? op.getSrc() : op.getDst(), gepIndices);
+        slot.valueType, isDst ? op.getSrc() : op.getDst(), gepIndices);
 
     // Then create a new memcpy out of this source pointer.
     createMemcpyLikeToReplace(builder, dataLayout, op,
                               isDst ? subslot.ptr : subslotPtrInOther,
                               isDst ? subslotPtrInOther : subslot.ptr,
-                              subslot.elemType, op.getIsVolatile());
+                              subslot.valueType, op.getIsVolatile());
   }
 
   assert(subslots.size() == slotsTreated);

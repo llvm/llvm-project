@@ -64,6 +64,40 @@ except ImportError:
 // Parameter types will be used in the autodoc string.
 %feature("autodoc", "1");
 
+// Match the documentation-link aliases in docs/doxygen.cfg.in, using Sphinx
+// references for the generated Python docstrings. The trailing space separates
+// the expansion from the text following the command.
+%feature("doxygen:alias:lldbformatting") ":doc:`/use/formatting` ";
+
+#if SWIG_VERSION >= 0x040500
+%feature("python:annotations", "typing");
+
+// The default pytyping entry maps to `typing.Any`. Use the proxy names here.
+// They might generate incorrect annotations (`SWIGTYPE_*`) in more complex scenarios.
+%typemap(pytyping) SWIGTYPE      "$&pytypename";
+%typemap(pytyping) SWIGTYPE []   "typing.Optional[$pytypename]";
+%typemap(pytyping) SWIGTYPE *    "typing.Optional[$pytypename]";
+%typemap(pytyping) SWIGTYPE &    "$pytypename";
+%typemap(pytyping) SWIGTYPE &&   "$pytypename";
+%typemap(pytyping) enum SWIGTYPE "int";
+
+// Exclude operator==/!=. They generate `__eq__(self, rhs: T) -> bool`.
+// However, `rhs` should be `object`.
+%feature("python:annotations", "0") operator==;
+%feature("python:annotations", "0") operator!=;
+
+// OUTPUT/INOUT is not supported by the typing annotations right now.
+%feature("python:annotations", "0") lldb::SBDebugger::GetProgressFromEvent;
+%feature("python:annotations", "0") lldb::SBDebugger::RunCommandInterpreter;
+%feature("python:annotations", "0") lldb::SBFile::Read;
+%feature("python:annotations", "0") lldb::SBFile::Write;
+#else
+// Make sure `typing` is imported in all cases (Swig < 4.5.0).
+%pythoncode %{
+import typing
+%}
+#endif // SWIG_VERSION >= 0x040500
+
 // Include lldb-python first as it sets Py_LIMITED_API.
 %begin %{
 #include "../source/Plugins/ScriptInterpreter/Python/lldb-python.h"

@@ -1,8 +1,5 @@
 # Clang Compiler User's Manual
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -278,7 +275,7 @@ specific parts of the diagnostic, e.g.,
 
 ::::{raw} html
 <pre>
-  <b><span style="color:black">test.c:28:8: <span style="color:magenta">warning</span>: extra tokens at end of #endif directive [-Wextra-tokens]</span></b>
+  <b>test.c:28:8: <span style="color:magenta">warning</span>: extra tokens at end of #endif directive [-Wextra-tokens]</b>
   #endif bad
          <span style="color:green">^</span>
          <span style="color:green">//</span>
@@ -1141,11 +1138,14 @@ x86_64-pc-linux-gnu.cfg
 
 It is not an error if either of these files is not found.
 
-The configuration file consists of command-line options specified on one or
-more lines. Lines composed of whitespace characters only are ignored as well as
-lines in which the first non-blank character is `#`. Long options may be split
-between several lines by a trailing backslash. Here is an example of a
-configuration file:
+The configuration file consists of command-line options specified on one or more
+lines. Lines composed of whitespace characters only are ignored as well as lines
+in which the first non-blank character is `#`. A `#` elsewhere on a line also
+starts a comment that runs to the end of the line, as long as it begins a new
+word (i.e. is preceded by whitespace) and is not inside a quoted string. Long
+options may be split between several lines by a trailing backslash.
+
+Here is an example of a configuration file:
 
 ```
 # Several options on line
@@ -1157,6 +1157,8 @@ include/c++/5.4.0
 
 # other config files may be included
 @linux.options
+
+-Wall # trailing comments are supported
 ```
 
 Files included by `@file` directives in configuration files are resolved
@@ -1530,13 +1532,12 @@ compilation on systems with very large system headers (e.g., macOS).
 
 #### Generating a PCH File
 
-To generate a PCH file using Clang, one invokes Clang with the
-`-x <language>-header` option. This mirrors the interface in GCC
-for generating PCH files:
+To generate a PCH file, compile the header with `-c`, using `-x <language>-header` if the file extension does not identify it as a header.
+This mirrors the interface in GCC for generating PCH files:
 
 ```console
-$ gcc -x c-header test.h -o test.h.gch
-$ clang -x c-header test.h -o test.h.pch
+$ gcc -c -x c-header test.h -o test.h.gch
+$ clang -c -x c-header test.h -o test.h.pch
 ```
 
 #### Using a PCH File
@@ -1558,7 +1559,7 @@ included within a source file or indirectly via {option}`-include`.
 For example:
 
 ```console
-$ clang -x c-header test.h -o test.h.pch
+$ clang -c -x c-header test.h -o test.h.pch
 $ cat test.c
 #include "test.h"
 $ clang test.c -o test
@@ -1571,15 +1572,27 @@ specified on the command line using `-include-pch`.
 
 #### Ignoring a PCH File
 
-To ignore PCH options, a `-ignore-pch` option is passed to `clang`:
+To ignore PCH options, pass `-ignore-pch` to `clang`:
 
 ```console
-$ clang -x c-header test.h -Xclang -ignore-pch -o test.h.pch
-$ clang -include-pch test.h.pch -Xclang -ignore-pch test.c -o test
+$ clang -c -x c-header test.h -ignore-pch -o test.h.pch
+$ clang -include-pch test.h.pch -ignore-pch test.c -o test
 ```
 
 This option disables precompiled headers, overrides -emit-pch and -include-pch.
 test.h.pch is not generated and not used as a prefix header.
+
+#### Working-Directory-Relative PCH Files
+
+The `-fpch-base-dir-is-cwd` option serializes precompiled header input paths
+relative to the current working directory. This allows a build tree containing
+the PCH and its inputs to be moved, provided that the PCH is consumed from the
+corresponding working directory and the inputs retain the same relative layout.
+Paths outside the working directory remain absolute.
+
+Unlike `--relocatable-pch`, this option does not store a base directory or re-root
+paths using `-isysroot` when loading the PCH. The option is only needed when
+building the PCH and cannot be combined with `--relocatable-pch`.
 
 #### Relocatable PCH Files
 
@@ -1607,7 +1620,7 @@ the resulting PCH file should be relocatable. Second, pass
 relative to the build directory. For example:
 
 ```console
-# clang -x c-header --relocatable-pch -isysroot /path/to/build /path/to/build/mylib.h mylib.h.pch
+# clang -c -x c-header --relocatable-pch -isysroot /path/to/build /path/to/build/mylib.h -o mylib.h.pch
 ```
 
 When loading the relocatable PCH file, the various headers used in the
@@ -2834,6 +2847,37 @@ $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 ```
 :::
 
+:::{option} -f[no-]keep-inline-functions
+
+Force inline functions to be emitted into the object file, even when they
+have been inlined into all callers or are otherwise unused.
+
+Except as noted below, the option keeps definitions of inline functions that
+are available in the current translation unit. LTO observes the kept
+definitions as being marked as used.
+
+In C, functions declared with inline are kept, except where they are
+C99 inline definitions or GNU C89/C90 extern inline functions. This
+includes __attribute__((gnu_inline)) extern inline functions.
+
+In C++, the option applies to functions declared inline (explicitly
+or implicitly via constexpr or an in-class member-function definition),
+including template specializations whose definitions are generated in this
+translation unit. Inline functions with the gnu_inline attribute and
+specializations subject to C++ explicit instantiation declarations
+(extern template) are not kept. C++20 immediate functions (e.g., consteval)
+are never emitted.
+
+With C++20 named modules, the option applies to inline functions defined
+in the current module unit, including functions that are not exported.
+Imported definitions are affected when their definition is available in the
+current translation unit.
+
+-fno-keep-inline-functions (the default) restores normal inlining
+behaviour.
+
+:::
+
 :::{option} -f[no-]basic-block-address-map:
 Emits a `SHT_LLVM_BB_ADDR_MAP` section which includes address offsets for each
 basic block in the program, relative to the parent function address.
@@ -2955,6 +2999,54 @@ that preserves the behavior of pointer subtraction even when the standard
 requirements are violated. This is primarily intended for low-level code,
 such as kernels and boot loaders, that performs pointer arithmetic over
 externally defined memory layouts rather than ordinary C or C++ objects.
+:::
+
+:::{option} -ftrivial-auto-var-init=[uninitialized, zero, pattern]
+
+Initialize automatic variables that would otherwise be left uninitialized.
+`zero` stores zeroes and `pattern` stores a repeated, target-specific byte
+pattern chosen to be likely to fault or to look obviously wrong if it is ever
+used as a pointer or a length. The default, `uninitialized`, disables the
+feature.
+
+This is a hardening measure, not a correctness feature: reading an
+uninitialized variable remains undefined behavior, and the flag only bounds the
+damage by making the value deterministic. Use `-Wuninitialized`, or a tool like
+{doc}`MemorySanitizer`, to find such reads in the first place.
+
+Individual variables can opt out with `__attribute__((uninitialized))`, and
+whole functions with `__attribute__((no_trivial_auto_var_init))`.
+`-ftrivial-auto-var-init-max-size=` skips variables above a given size, and
+`-ftrivial-auto-var-init-stop-after=` stops after a given number of variables;
+both exist to bound code size while triaging.
+
+The initialization is normally emitted where the variable is declared. A `goto`
+or a `switch` can jump over a declaration, in which case that point is never
+reached:
+
+```c
+switch (c) {
+  int x;         // jumped over by every case label
+case 1:
+  use(&x);       // x would be uninitialized without special handling
+}
+```
+
+Clang emits the initialization at each jump that bypasses the declaration,
+since such a jump re-enters the variable's scope. A variable bypassed inside a
+loop is therefore re-initialized on every iteration, and a jump whose source and
+destination are both inside the variable's scope does not re-initialize it,
+because that jump never ends the variable's lifetime.
+
+In a function containing a computed `goto` (`goto *ptr`), the jumps that bypass
+a given declaration cannot be identified, so every variable in the function is
+instead initialized once, in the function's entry block.
+
+Note that in C this deliberately does not implement C 6.2.4p6, under which an
+object's lifetime begins at entry into the block containing its declaration
+rather than at the declaration itself. Modelling that would mean initializing
+at block entry, which is more expensive and no more useful for the jumps this
+feature exists to guard against. Clang applies the C++ rule in both languages.
 :::
 
 (strict_aliasing)=
@@ -3435,9 +3527,11 @@ better runtime performance. Frontend-based instrumentation, on the other hand,
 has better source correlation, so it should be used with source line-based
 coverage testing.
 
-The flag `-fcs-profile-generate` also instruments programs using the same
-instrumentation method as `-fprofile-generate`. However, it performs a
-post-inline late instrumentation and can produce context-sensitive profiles.
+After inlining, the `-fcs-profile-generate` option inserts additional
+instrumentation to collect context-sensitive profile information. It can be
+used without an existing profile that has been collected using `-fprofile-generate`.
+However, it is common to merge the profiles generated from each option. A worked
+example is given when discussing `-fcs-profile-generate` further.
 
 Here are the steps for using profile guided optimization with
 instrumentation:
@@ -3566,41 +3660,68 @@ To override the path and filename at compile time, use
 :::{option} -fcs-profile-generate[=<dirname>]
 
 The `-fcs-profile-generate` and `-fcs-profile-generate=` flags will use
-the same instrumentation method, and generate the same profile as in the
-`-fprofile-generate` and `-fprofile-generate=` flags. The difference is
-that the instrumentation is performed after inlining so that the resulted
-profile has a better context sensitive information. They cannot be used
-together with `-fprofile-generate` and `-fprofile-generate=` flags.
-They are typically used in conjunction with `-fprofile-use` flag.
-The profile generated by `-fcs-profile-generate` and `-fprofile-generate`
-can be merged by llvm-profdata. A use example:
+the same IR instrumentation method as the `-fprofile-generate` and
+`-fprofile-generate=` flags, but insert instrumentation after inlining. This
+collects the context-sensitive information in the profile. They cannot be used
+together with the `-fprofile-generate` and `-fprofile-generate=` flags in the
+same compiler invocation. They are typically used in conjunction with
+the `-fprofile-use` flag. The profiles generated by `-fcs-profile-generate`
+and `-fprofile-generate` can be merged by llvm-profdata to produce
+a context-sensitive PGO optimized executable. A worked example
+of this two-stage profiling workflow is described below:
+
+The first stage is to compile and run an executable with IR instrumentation to
+produce a base profile using the `-fprofile-generate` option, which is stored
+in `profiles/base/` in the example below. `llvm-profdata` is used to convert
+the raw profile data into a readable format for Clang.
 
 ```console
-$ clang++ -O2 -fprofile-generate=yyy/zzz code.cc -o code
-$ ./code
-$ llvm-profdata merge -output=code.profdata yyy/zzz/
+# General form: clang++ -O2 -fprofile-generate=<pathToBaseProfile> <source> -o <executable>
+$ clang++ -O2 -fprofile-generate=profiles/base main.cpp -o main-base
+$ ./main-base
+$ llvm-profdata merge profiles/base/ -o base.profdata
 ```
 
-The first few steps are the same as that in `-fprofile-generate`
-compilation. Then perform a second round of instrumentation.
+The converted profile, `base.profdata`, above, will be
+outputted into the current directory. At this stage, the next step is
+to produce an instrumented build of the source code with context-sensitive
+instrumentation. This can be done using the `-fcs-profile-generate` option.
+
+We still use the base profile collected using the IR instrumentation
+because it is used to guide inlining decisions, which can then be used by the
+context-sensitive instrumentation to generate a context-sensitive profile.
 
 ```console
-$ clang++ -O2 -fprofile-use=code.profdata -fcs-profile-generate=sss/ttt \
-  -o cs_code
-$ ./cs_code
-$ llvm-profdata merge -output=cs_code.profdata sss/ttt code.profdata
+# General form: clang++ -O2 -fprofile-use=<baseProfile> -fcs-profile-generate=<pathToCSProfile> <source> -o <executable>
+$ clang++ -O2 -fprofile-use=base.profdata -fcs-profile-generate=profiles/cs/ main.cpp -o main-cs
 ```
 
-The resulted `cs_code.prodata` combines `code.profdata` and the profile
-generated from binary `cs_code`. Profile `cs_code.profata` can be used by
-`-fprofile-use` compilation.
+Running this executable allows us to collect the context-sensitive
+profile information. In this example, the profile will be written
+to `profiles/cs/`.
 
 ```console
-$ clang++ -O2 -fprofile-use=cs_code.profdata
+$ ./main-cs
 ```
 
-The above command will read both profiles to the compiler at the identical
-point of instrumentations.
+When using profiles collected using both the `-fprofile-generate` and
+`-fcs-profile-generate` options, they must be merged into one profile.
+This is because they provide information for different stages of the
+compilation pipeline. It should be noted that the combined profile
+will be written into the current directory.
+
+```console
+$ llvm-profdata merge base.profdata profiles/cs/ -o combined.profdata
+```
+
+Using this new profile, we can compile the final optimized executable
+with CSPGO optimization using the `-fprofile-use` option. The command
+below will ensure that the compilation uses the base profile before
+inlining and the context-sensitive profile after inlining.
+
+```console
+$ clang++ -O2 -fprofile-use=combined.profdata main.cpp -o main-final
+```
 :::
 
 :::{option} -fprofile-use[=<pathname>]
@@ -5531,7 +5652,7 @@ Execute `clang-cl /?` to see a list of supported options:
 >   -fmacro-backtrace-limit=<value>
 >                           Set the maximum number of entries to print in a macro expansion backtrace (0 = no limit)
 >   -fmemory-profile-use=<pathname>
->                           Use memory profile for profile-guided memory optimization
+>                           Use memory profile for profile-guided memory optimization (MemPGO)
 >   -fmerge-all-constants   Allow merging of constants
 >   -fmodule-file=[<name>=]<file>
 >                           Specify the mapping of module name to precompiled module file, or load a module file if name is omitted.
@@ -6065,7 +6186,7 @@ Execute `clang-cl /?` to see a list of supported options:
 >   -no-hip-rt              Do not link against HIP runtime libraries
 >   --no-offload-arch=<value>
 >                           Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
->   --no-offload-new-driver Don't Use the new driver for offloading compilation.
+>   --no-offload-new-driver Deprecated; the legacy offloading driver has been removed.
 >   --no-offloadlib         Do not link device library for CUDA/HIP/SYCL device compilation
 >   --no-wasm-opt           Disable the wasm-opt optimizer
 >   -nobuiltininc           Disable builtin #include directories only
@@ -6080,7 +6201,7 @@ Execute `clang-cl /?` to see a list of supported options:
 >   --offload-host-device   Compile for both the offloading host and device (default).
 >   --offload-host-only     Only compile for the offloading host.
 >   --offload-jobs=<value>  Specify the number of threads to use for device offloading tasks during compilation. Can be a positive integer or the string 'jobserver' to use the make-style jobserver from the environment.
->   --offload-new-driver    Use the new driver for offloading compilation.
+>   --offload-new-driver    Deprecated; the new driver is always used for offloading compilation.
 >   --offload-targets=<value>
 >                           Specify a list of target architectures to use for offloading.
 >   --offloadlib            Link device libraries for GPU device compilation

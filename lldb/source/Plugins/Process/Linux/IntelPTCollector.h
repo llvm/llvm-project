@@ -9,14 +9,15 @@
 #ifndef liblldb_IntelPTCollector_H_
 #define liblldb_IntelPTCollector_H_
 
-#include "IntelPTMultiCoreTrace.h"
-#include "IntelPTPerThreadProcessTrace.h"
-#include "IntelPTSingleBufferTrace.h"
-#include "Perf.h"
+#include "Plugins/Process/Linux/IntelPTMultiCoreTrace.h"
+#include "Plugins/Process/Linux/IntelPTPerThreadProcessTrace.h"
+#include "Plugins/Process/Linux/IntelPTSingleBufferTrace.h"
+#include "Plugins/Process/Linux/Perf.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
+
 #include <linux/perf_event.h>
 #include <sys/mman.h>
 #include <unistd.h>

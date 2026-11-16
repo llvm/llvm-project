@@ -83,111 +83,59 @@ define i8 @test_extract_3(<4 x i8> %a) #0 {
 }
 
 define i8 @test_extract_i(<4 x i8> %a, i64 %idx) #0 {
-; O0-LABEL: test_extract_i(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<5>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd1, [test_extract_i_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_extract_i_param_0];
-; O0-NEXT:    cvt.u32.u64 %r2, %rd1;
-; O0-NEXT:    or.b32 %r3, %r2, 30576;
-; O0-NEXT:    prmt.b32 %r4, %r1, 0, %r3;
-; O0-NEXT:    st.param.b32 [func_retval0], %r4;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_extract_i(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<5>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_extract_i_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_extract_i_param_1];
-; O3-NEXT:    or.b32 %r3, %r2, 30576;
-; O3-NEXT:    prmt.b32 %r4, %r1, 0, %r3;
-; O3-NEXT:    st.param.b32 [func_retval0], %r4;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_extract_i(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_extract_i_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_extract_i_param_1];
+; CHECK-NEXT:    or.b32 %r3, %r2, 30576;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
   %e = extractelement <4 x i8> %a, i64 %idx
   ret i8 %e
 }
 
 define <4 x i8> @test_add(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_add(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<13>;
-; O0-NEXT:    .reg .b32 %r<18>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_add_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_add_param_0];
-; O0-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
-; O0-NEXT:    cvt.u16.u32 %rs1, %r3;
-; O0-NEXT:    prmt.b32 %r4, %r1, 0, 0x7773U;
-; O0-NEXT:    cvt.u16.u32 %rs2, %r4;
-; O0-NEXT:    add.s16 %rs3, %rs2, %rs1;
-; O0-NEXT:    cvt.u32.u16 %r5, %rs3;
-; O0-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; O0-NEXT:    cvt.u16.u32 %rs4, %r6;
-; O0-NEXT:    prmt.b32 %r7, %r1, 0, 0x7772U;
-; O0-NEXT:    cvt.u16.u32 %rs5, %r7;
-; O0-NEXT:    add.s16 %rs6, %rs5, %rs4;
-; O0-NEXT:    cvt.u32.u16 %r8, %rs6;
-; O0-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
-; O0-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; O0-NEXT:    cvt.u16.u32 %rs7, %r10;
-; O0-NEXT:    prmt.b32 %r11, %r1, 0, 0x7771U;
-; O0-NEXT:    cvt.u16.u32 %rs8, %r11;
-; O0-NEXT:    add.s16 %rs9, %rs8, %rs7;
-; O0-NEXT:    cvt.u32.u16 %r12, %rs9;
-; O0-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; O0-NEXT:    cvt.u16.u32 %rs10, %r13;
-; O0-NEXT:    prmt.b32 %r14, %r1, 0, 0x7770U;
-; O0-NEXT:    cvt.u16.u32 %rs11, %r14;
-; O0-NEXT:    add.s16 %rs12, %rs11, %rs10;
-; O0-NEXT:    cvt.u32.u16 %r15, %rs12;
-; O0-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
-; O0-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r17;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_add(
-; O3:       {
-; O3-NEXT:    .reg .b16 %rs<13>;
-; O3-NEXT:    .reg .b32 %r<18>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_add_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_add_param_1];
-; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
-; O3-NEXT:    cvt.u16.u32 %rs1, %r3;
-; O3-NEXT:    prmt.b32 %r4, %r1, 0, 0x7773U;
-; O3-NEXT:    cvt.u16.u32 %rs2, %r4;
-; O3-NEXT:    add.s16 %rs3, %rs2, %rs1;
-; O3-NEXT:    cvt.u32.u16 %r5, %rs3;
-; O3-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; O3-NEXT:    cvt.u16.u32 %rs4, %r6;
-; O3-NEXT:    prmt.b32 %r7, %r1, 0, 0x7772U;
-; O3-NEXT:    cvt.u16.u32 %rs5, %r7;
-; O3-NEXT:    add.s16 %rs6, %rs5, %rs4;
-; O3-NEXT:    cvt.u32.u16 %r8, %rs6;
-; O3-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
-; O3-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; O3-NEXT:    cvt.u16.u32 %rs7, %r10;
-; O3-NEXT:    prmt.b32 %r11, %r1, 0, 0x7771U;
-; O3-NEXT:    cvt.u16.u32 %rs8, %r11;
-; O3-NEXT:    add.s16 %rs9, %rs8, %rs7;
-; O3-NEXT:    cvt.u32.u16 %r12, %rs9;
-; O3-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; O3-NEXT:    cvt.u16.u32 %rs10, %r13;
-; O3-NEXT:    prmt.b32 %r14, %r1, 0, 0x7770U;
-; O3-NEXT:    cvt.u16.u32 %rs11, %r14;
-; O3-NEXT:    add.s16 %rs12, %rs11, %rs10;
-; O3-NEXT:    cvt.u32.u16 %r15, %rs12;
-; O3-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
-; O3-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r17;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_add(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<13>;
+; CHECK-NEXT:    .reg .b32 %r<18>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_add_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_add_param_1];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x7773U;
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r4;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, %rs1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs3;
+; CHECK-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; CHECK-NEXT:    cvt.u16.u32 %rs4, %r6;
+; CHECK-NEXT:    prmt.b32 %r7, %r1, 0, 0x7772U;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, %rs4;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    prmt.b32 %r11, %r1, 0, 0x7771U;
+; CHECK-NEXT:    cvt.u16.u32 %rs8, %r11;
+; CHECK-NEXT:    add.s16 %rs9, %rs8, %rs7;
+; CHECK-NEXT:    cvt.u32.u16 %r12, %rs9;
+; CHECK-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; CHECK-NEXT:    cvt.u16.u32 %rs10, %r13;
+; CHECK-NEXT:    prmt.b32 %r14, %r1, 0, 0x7770U;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r14;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, %rs10;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs12;
+; CHECK-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r17;
+; CHECK-NEXT:    ret;
   %r = add <4 x i8> %a, %b
   ret <4 x i8> %r
 }
@@ -259,629 +207,336 @@ define <4 x i8> @test_add_imm_1(<4 x i8> %a) #0 {
 }
 
 define <4 x i8> @test_sub(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_sub(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<13>;
-; O0-NEXT:    .reg .b32 %r<18>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_sub_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_sub_param_0];
-; O0-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
-; O0-NEXT:    cvt.u16.u32 %rs1, %r3;
-; O0-NEXT:    prmt.b32 %r4, %r1, 0, 0x7773U;
-; O0-NEXT:    cvt.u16.u32 %rs2, %r4;
-; O0-NEXT:    sub.s16 %rs3, %rs2, %rs1;
-; O0-NEXT:    cvt.u32.u16 %r5, %rs3;
-; O0-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; O0-NEXT:    cvt.u16.u32 %rs4, %r6;
-; O0-NEXT:    prmt.b32 %r7, %r1, 0, 0x7772U;
-; O0-NEXT:    cvt.u16.u32 %rs5, %r7;
-; O0-NEXT:    sub.s16 %rs6, %rs5, %rs4;
-; O0-NEXT:    cvt.u32.u16 %r8, %rs6;
-; O0-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
-; O0-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; O0-NEXT:    cvt.u16.u32 %rs7, %r10;
-; O0-NEXT:    prmt.b32 %r11, %r1, 0, 0x7771U;
-; O0-NEXT:    cvt.u16.u32 %rs8, %r11;
-; O0-NEXT:    sub.s16 %rs9, %rs8, %rs7;
-; O0-NEXT:    cvt.u32.u16 %r12, %rs9;
-; O0-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; O0-NEXT:    cvt.u16.u32 %rs10, %r13;
-; O0-NEXT:    prmt.b32 %r14, %r1, 0, 0x7770U;
-; O0-NEXT:    cvt.u16.u32 %rs11, %r14;
-; O0-NEXT:    sub.s16 %rs12, %rs11, %rs10;
-; O0-NEXT:    cvt.u32.u16 %r15, %rs12;
-; O0-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
-; O0-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r17;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_sub(
-; O3:       {
-; O3-NEXT:    .reg .b16 %rs<13>;
-; O3-NEXT:    .reg .b32 %r<18>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_sub_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_sub_param_1];
-; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
-; O3-NEXT:    cvt.u16.u32 %rs1, %r3;
-; O3-NEXT:    prmt.b32 %r4, %r1, 0, 0x7773U;
-; O3-NEXT:    cvt.u16.u32 %rs2, %r4;
-; O3-NEXT:    sub.s16 %rs3, %rs2, %rs1;
-; O3-NEXT:    cvt.u32.u16 %r5, %rs3;
-; O3-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; O3-NEXT:    cvt.u16.u32 %rs4, %r6;
-; O3-NEXT:    prmt.b32 %r7, %r1, 0, 0x7772U;
-; O3-NEXT:    cvt.u16.u32 %rs5, %r7;
-; O3-NEXT:    sub.s16 %rs6, %rs5, %rs4;
-; O3-NEXT:    cvt.u32.u16 %r8, %rs6;
-; O3-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
-; O3-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; O3-NEXT:    cvt.u16.u32 %rs7, %r10;
-; O3-NEXT:    prmt.b32 %r11, %r1, 0, 0x7771U;
-; O3-NEXT:    cvt.u16.u32 %rs8, %r11;
-; O3-NEXT:    sub.s16 %rs9, %rs8, %rs7;
-; O3-NEXT:    cvt.u32.u16 %r12, %rs9;
-; O3-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; O3-NEXT:    cvt.u16.u32 %rs10, %r13;
-; O3-NEXT:    prmt.b32 %r14, %r1, 0, 0x7770U;
-; O3-NEXT:    cvt.u16.u32 %rs11, %r14;
-; O3-NEXT:    sub.s16 %rs12, %rs11, %rs10;
-; O3-NEXT:    cvt.u32.u16 %r15, %rs12;
-; O3-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
-; O3-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r17;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_sub(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<13>;
+; CHECK-NEXT:    .reg .b32 %r<18>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_sub_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_sub_param_1];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x7773U;
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r4;
+; CHECK-NEXT:    sub.s16 %rs3, %rs2, %rs1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs3;
+; CHECK-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; CHECK-NEXT:    cvt.u16.u32 %rs4, %r6;
+; CHECK-NEXT:    prmt.b32 %r7, %r1, 0, 0x7772U;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    sub.s16 %rs6, %rs5, %rs4;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    prmt.b32 %r11, %r1, 0, 0x7771U;
+; CHECK-NEXT:    cvt.u16.u32 %rs8, %r11;
+; CHECK-NEXT:    sub.s16 %rs9, %rs8, %rs7;
+; CHECK-NEXT:    cvt.u32.u16 %r12, %rs9;
+; CHECK-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; CHECK-NEXT:    cvt.u16.u32 %rs10, %r13;
+; CHECK-NEXT:    prmt.b32 %r14, %r1, 0, 0x7770U;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r14;
+; CHECK-NEXT:    sub.s16 %rs12, %rs11, %rs10;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs12;
+; CHECK-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r17;
+; CHECK-NEXT:    ret;
   %r = sub <4 x i8> %a, %b
   ret <4 x i8> %r
 }
 
 define <4 x i8> @test_smax(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_smax(
-; O0:       {
-; O0-NEXT:    .reg .pred %p<5>;
-; O0-NEXT:    .reg .b32 %r<26>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_smax_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_smax_param_0];
-; O0-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
-; O0-NEXT:    prmt.b32 %r4, %r1, 0, 0x8880U;
-; O0-NEXT:    setp.gt.s32 %p1, %r4, %r3;
-; O0-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
-; O0-NEXT:    prmt.b32 %r6, %r1, 0, 0x9991U;
-; O0-NEXT:    setp.gt.s32 %p2, %r6, %r5;
-; O0-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
-; O0-NEXT:    prmt.b32 %r8, %r1, 0, 0xaaa2U;
-; O0-NEXT:    setp.gt.s32 %p3, %r8, %r7;
-; O0-NEXT:    prmt.b32 %r9, %r2, 0, 0xbbb3U;
-; O0-NEXT:    prmt.b32 %r10, %r1, 0, 0xbbb3U;
-; O0-NEXT:    setp.gt.s32 %p4, %r10, %r9;
-; O0-NEXT:    prmt.b32 %r11, %r2, 0, 0x7770U;
-; O0-NEXT:    prmt.b32 %r12, %r2, 0, 0x7771U;
-; O0-NEXT:    prmt.b32 %r13, %r2, 0, 0x7772U;
-; O0-NEXT:    prmt.b32 %r14, %r2, 0, 0x7773U;
-; O0-NEXT:    prmt.b32 %r15, %r1, 0, 0x7773U;
-; O0-NEXT:    selp.b32 %r16, %r15, %r14, %p4;
-; O0-NEXT:    prmt.b32 %r17, %r1, 0, 0x7772U;
-; O0-NEXT:    selp.b32 %r18, %r17, %r13, %p3;
-; O0-NEXT:    prmt.b32 %r19, %r18, %r16, 0x3340U;
-; O0-NEXT:    prmt.b32 %r20, %r1, 0, 0x7771U;
-; O0-NEXT:    selp.b32 %r21, %r20, %r12, %p2;
-; O0-NEXT:    prmt.b32 %r22, %r1, 0, 0x7770U;
-; O0-NEXT:    selp.b32 %r23, %r22, %r11, %p1;
-; O0-NEXT:    prmt.b32 %r24, %r23, %r21, 0x3340U;
-; O0-NEXT:    prmt.b32 %r25, %r24, %r19, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r25;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_smax(
-; O3:       {
-; O3-NEXT:    .reg .pred %p<5>;
-; O3-NEXT:    .reg .b32 %r<26>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_smax_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_smax_param_1];
-; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
-; O3-NEXT:    prmt.b32 %r4, %r1, 0, 0x8880U;
-; O3-NEXT:    setp.gt.s32 %p1, %r4, %r3;
-; O3-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
-; O3-NEXT:    prmt.b32 %r6, %r1, 0, 0x9991U;
-; O3-NEXT:    setp.gt.s32 %p2, %r6, %r5;
-; O3-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
-; O3-NEXT:    prmt.b32 %r8, %r1, 0, 0xaaa2U;
-; O3-NEXT:    setp.gt.s32 %p3, %r8, %r7;
-; O3-NEXT:    prmt.b32 %r9, %r2, 0, 0xbbb3U;
-; O3-NEXT:    prmt.b32 %r10, %r1, 0, 0xbbb3U;
-; O3-NEXT:    setp.gt.s32 %p4, %r10, %r9;
-; O3-NEXT:    prmt.b32 %r11, %r2, 0, 0x7770U;
-; O3-NEXT:    prmt.b32 %r12, %r2, 0, 0x7771U;
-; O3-NEXT:    prmt.b32 %r13, %r2, 0, 0x7772U;
-; O3-NEXT:    prmt.b32 %r14, %r2, 0, 0x7773U;
-; O3-NEXT:    prmt.b32 %r15, %r1, 0, 0x7773U;
-; O3-NEXT:    selp.b32 %r16, %r15, %r14, %p4;
-; O3-NEXT:    prmt.b32 %r17, %r1, 0, 0x7772U;
-; O3-NEXT:    selp.b32 %r18, %r17, %r13, %p3;
-; O3-NEXT:    prmt.b32 %r19, %r18, %r16, 0x3340U;
-; O3-NEXT:    prmt.b32 %r20, %r1, 0, 0x7771U;
-; O3-NEXT:    selp.b32 %r21, %r20, %r12, %p2;
-; O3-NEXT:    prmt.b32 %r22, %r1, 0, 0x7770U;
-; O3-NEXT:    selp.b32 %r23, %r22, %r11, %p1;
-; O3-NEXT:    prmt.b32 %r24, %r23, %r21, 0x3340U;
-; O3-NEXT:    prmt.b32 %r25, %r24, %r19, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r25;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_smax(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<5>;
+; CHECK-NEXT:    .reg .b32 %r<26>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_smax_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_smax_param_1];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x8880U;
+; CHECK-NEXT:    setp.gt.s32 %p1, %r4, %r3;
+; CHECK-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
+; CHECK-NEXT:    prmt.b32 %r6, %r1, 0, 0x9991U;
+; CHECK-NEXT:    setp.gt.s32 %p2, %r6, %r5;
+; CHECK-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
+; CHECK-NEXT:    prmt.b32 %r8, %r1, 0, 0xaaa2U;
+; CHECK-NEXT:    setp.gt.s32 %p3, %r8, %r7;
+; CHECK-NEXT:    prmt.b32 %r9, %r2, 0, 0xbbb3U;
+; CHECK-NEXT:    prmt.b32 %r10, %r1, 0, 0xbbb3U;
+; CHECK-NEXT:    setp.gt.s32 %p4, %r10, %r9;
+; CHECK-NEXT:    prmt.b32 %r11, %r2, 0, 0x7770U;
+; CHECK-NEXT:    prmt.b32 %r12, %r2, 0, 0x7771U;
+; CHECK-NEXT:    prmt.b32 %r13, %r2, 0, 0x7772U;
+; CHECK-NEXT:    prmt.b32 %r14, %r2, 0, 0x7773U;
+; CHECK-NEXT:    prmt.b32 %r15, %r1, 0, 0x7773U;
+; CHECK-NEXT:    selp.b32 %r16, %r15, %r14, %p4;
+; CHECK-NEXT:    prmt.b32 %r17, %r1, 0, 0x7772U;
+; CHECK-NEXT:    selp.b32 %r18, %r17, %r13, %p3;
+; CHECK-NEXT:    prmt.b32 %r19, %r18, %r16, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r20, %r1, 0, 0x7771U;
+; CHECK-NEXT:    selp.b32 %r21, %r20, %r12, %p2;
+; CHECK-NEXT:    prmt.b32 %r22, %r1, 0, 0x7770U;
+; CHECK-NEXT:    selp.b32 %r23, %r22, %r11, %p1;
+; CHECK-NEXT:    prmt.b32 %r24, %r23, %r21, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r25, %r24, %r19, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r25;
+; CHECK-NEXT:    ret;
   %cmp = icmp sgt <4 x i8> %a, %b
   %r = select <4 x i1> %cmp, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %r
 }
 
 define <4 x i8> @test_umax(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_umax(
-; O0:       {
-; O0-NEXT:    .reg .pred %p<5>;
-; O0-NEXT:    .reg .b32 %r<18>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_umax_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_umax_param_0];
-; O0-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; O0-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
-; O0-NEXT:    setp.gt.u32 %p1, %r4, %r3;
-; O0-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; O0-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
-; O0-NEXT:    setp.gt.u32 %p2, %r6, %r5;
-; O0-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
-; O0-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
-; O0-NEXT:    setp.gt.u32 %p3, %r8, %r7;
-; O0-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
-; O0-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
-; O0-NEXT:    setp.gt.u32 %p4, %r10, %r9;
-; O0-NEXT:    selp.b32 %r11, %r10, %r9, %p4;
-; O0-NEXT:    selp.b32 %r12, %r8, %r7, %p3;
-; O0-NEXT:    prmt.b32 %r13, %r12, %r11, 0x3340U;
-; O0-NEXT:    selp.b32 %r14, %r6, %r5, %p2;
-; O0-NEXT:    selp.b32 %r15, %r4, %r3, %p1;
-; O0-NEXT:    prmt.b32 %r16, %r15, %r14, 0x3340U;
-; O0-NEXT:    prmt.b32 %r17, %r16, %r13, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r17;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_umax(
-; O3:       {
-; O3-NEXT:    .reg .pred %p<5>;
-; O3-NEXT:    .reg .b32 %r<18>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_umax_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_umax_param_1];
-; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; O3-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
-; O3-NEXT:    setp.gt.u32 %p1, %r4, %r3;
-; O3-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; O3-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
-; O3-NEXT:    setp.gt.u32 %p2, %r6, %r5;
-; O3-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
-; O3-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
-; O3-NEXT:    setp.gt.u32 %p3, %r8, %r7;
-; O3-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
-; O3-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
-; O3-NEXT:    setp.gt.u32 %p4, %r10, %r9;
-; O3-NEXT:    selp.b32 %r11, %r10, %r9, %p4;
-; O3-NEXT:    selp.b32 %r12, %r8, %r7, %p3;
-; O3-NEXT:    prmt.b32 %r13, %r12, %r11, 0x3340U;
-; O3-NEXT:    selp.b32 %r14, %r6, %r5, %p2;
-; O3-NEXT:    selp.b32 %r15, %r4, %r3, %p1;
-; O3-NEXT:    prmt.b32 %r16, %r15, %r14, 0x3340U;
-; O3-NEXT:    prmt.b32 %r17, %r16, %r13, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r17;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_umax(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<5>;
+; CHECK-NEXT:    .reg .b32 %r<18>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_umax_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_umax_param_1];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
+; CHECK-NEXT:    setp.gt.u32 %p1, %r4, %r3;
+; CHECK-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
+; CHECK-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
+; CHECK-NEXT:    setp.gt.u32 %p2, %r6, %r5;
+; CHECK-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
+; CHECK-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
+; CHECK-NEXT:    setp.gt.u32 %p3, %r8, %r7;
+; CHECK-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
+; CHECK-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
+; CHECK-NEXT:    setp.gt.u32 %p4, %r10, %r9;
+; CHECK-NEXT:    selp.b32 %r11, %r10, %r9, %p4;
+; CHECK-NEXT:    selp.b32 %r12, %r8, %r7, %p3;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r11, 0x3340U;
+; CHECK-NEXT:    selp.b32 %r14, %r6, %r5, %p2;
+; CHECK-NEXT:    selp.b32 %r15, %r4, %r3, %p1;
+; CHECK-NEXT:    prmt.b32 %r16, %r15, %r14, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r17, %r16, %r13, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r17;
+; CHECK-NEXT:    ret;
   %cmp = icmp ugt <4 x i8> %a, %b
   %r = select <4 x i1> %cmp, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %r
 }
 
 define <4 x i8> @test_smin(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_smin(
-; O0:       {
-; O0-NEXT:    .reg .pred %p<5>;
-; O0-NEXT:    .reg .b32 %r<26>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_smin_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_smin_param_0];
-; O0-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
-; O0-NEXT:    prmt.b32 %r4, %r1, 0, 0x8880U;
-; O0-NEXT:    setp.le.s32 %p1, %r4, %r3;
-; O0-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
-; O0-NEXT:    prmt.b32 %r6, %r1, 0, 0x9991U;
-; O0-NEXT:    setp.le.s32 %p2, %r6, %r5;
-; O0-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
-; O0-NEXT:    prmt.b32 %r8, %r1, 0, 0xaaa2U;
-; O0-NEXT:    setp.le.s32 %p3, %r8, %r7;
-; O0-NEXT:    prmt.b32 %r9, %r2, 0, 0xbbb3U;
-; O0-NEXT:    prmt.b32 %r10, %r1, 0, 0xbbb3U;
-; O0-NEXT:    setp.le.s32 %p4, %r10, %r9;
-; O0-NEXT:    prmt.b32 %r11, %r2, 0, 0x7770U;
-; O0-NEXT:    prmt.b32 %r12, %r2, 0, 0x7771U;
-; O0-NEXT:    prmt.b32 %r13, %r2, 0, 0x7772U;
-; O0-NEXT:    prmt.b32 %r14, %r2, 0, 0x7773U;
-; O0-NEXT:    prmt.b32 %r15, %r1, 0, 0x7773U;
-; O0-NEXT:    selp.b32 %r16, %r15, %r14, %p4;
-; O0-NEXT:    prmt.b32 %r17, %r1, 0, 0x7772U;
-; O0-NEXT:    selp.b32 %r18, %r17, %r13, %p3;
-; O0-NEXT:    prmt.b32 %r19, %r18, %r16, 0x3340U;
-; O0-NEXT:    prmt.b32 %r20, %r1, 0, 0x7771U;
-; O0-NEXT:    selp.b32 %r21, %r20, %r12, %p2;
-; O0-NEXT:    prmt.b32 %r22, %r1, 0, 0x7770U;
-; O0-NEXT:    selp.b32 %r23, %r22, %r11, %p1;
-; O0-NEXT:    prmt.b32 %r24, %r23, %r21, 0x3340U;
-; O0-NEXT:    prmt.b32 %r25, %r24, %r19, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r25;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_smin(
-; O3:       {
-; O3-NEXT:    .reg .pred %p<5>;
-; O3-NEXT:    .reg .b32 %r<26>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_smin_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_smin_param_1];
-; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
-; O3-NEXT:    prmt.b32 %r4, %r1, 0, 0x8880U;
-; O3-NEXT:    setp.le.s32 %p1, %r4, %r3;
-; O3-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
-; O3-NEXT:    prmt.b32 %r6, %r1, 0, 0x9991U;
-; O3-NEXT:    setp.le.s32 %p2, %r6, %r5;
-; O3-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
-; O3-NEXT:    prmt.b32 %r8, %r1, 0, 0xaaa2U;
-; O3-NEXT:    setp.le.s32 %p3, %r8, %r7;
-; O3-NEXT:    prmt.b32 %r9, %r2, 0, 0xbbb3U;
-; O3-NEXT:    prmt.b32 %r10, %r1, 0, 0xbbb3U;
-; O3-NEXT:    setp.le.s32 %p4, %r10, %r9;
-; O3-NEXT:    prmt.b32 %r11, %r2, 0, 0x7770U;
-; O3-NEXT:    prmt.b32 %r12, %r2, 0, 0x7771U;
-; O3-NEXT:    prmt.b32 %r13, %r2, 0, 0x7772U;
-; O3-NEXT:    prmt.b32 %r14, %r2, 0, 0x7773U;
-; O3-NEXT:    prmt.b32 %r15, %r1, 0, 0x7773U;
-; O3-NEXT:    selp.b32 %r16, %r15, %r14, %p4;
-; O3-NEXT:    prmt.b32 %r17, %r1, 0, 0x7772U;
-; O3-NEXT:    selp.b32 %r18, %r17, %r13, %p3;
-; O3-NEXT:    prmt.b32 %r19, %r18, %r16, 0x3340U;
-; O3-NEXT:    prmt.b32 %r20, %r1, 0, 0x7771U;
-; O3-NEXT:    selp.b32 %r21, %r20, %r12, %p2;
-; O3-NEXT:    prmt.b32 %r22, %r1, 0, 0x7770U;
-; O3-NEXT:    selp.b32 %r23, %r22, %r11, %p1;
-; O3-NEXT:    prmt.b32 %r24, %r23, %r21, 0x3340U;
-; O3-NEXT:    prmt.b32 %r25, %r24, %r19, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r25;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_smin(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<5>;
+; CHECK-NEXT:    .reg .b32 %r<26>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_smin_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_smin_param_1];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x8880U;
+; CHECK-NEXT:    setp.le.s32 %p1, %r4, %r3;
+; CHECK-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
+; CHECK-NEXT:    prmt.b32 %r6, %r1, 0, 0x9991U;
+; CHECK-NEXT:    setp.le.s32 %p2, %r6, %r5;
+; CHECK-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
+; CHECK-NEXT:    prmt.b32 %r8, %r1, 0, 0xaaa2U;
+; CHECK-NEXT:    setp.le.s32 %p3, %r8, %r7;
+; CHECK-NEXT:    prmt.b32 %r9, %r2, 0, 0xbbb3U;
+; CHECK-NEXT:    prmt.b32 %r10, %r1, 0, 0xbbb3U;
+; CHECK-NEXT:    setp.le.s32 %p4, %r10, %r9;
+; CHECK-NEXT:    prmt.b32 %r11, %r2, 0, 0x7770U;
+; CHECK-NEXT:    prmt.b32 %r12, %r2, 0, 0x7771U;
+; CHECK-NEXT:    prmt.b32 %r13, %r2, 0, 0x7772U;
+; CHECK-NEXT:    prmt.b32 %r14, %r2, 0, 0x7773U;
+; CHECK-NEXT:    prmt.b32 %r15, %r1, 0, 0x7773U;
+; CHECK-NEXT:    selp.b32 %r16, %r15, %r14, %p4;
+; CHECK-NEXT:    prmt.b32 %r17, %r1, 0, 0x7772U;
+; CHECK-NEXT:    selp.b32 %r18, %r17, %r13, %p3;
+; CHECK-NEXT:    prmt.b32 %r19, %r18, %r16, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r20, %r1, 0, 0x7771U;
+; CHECK-NEXT:    selp.b32 %r21, %r20, %r12, %p2;
+; CHECK-NEXT:    prmt.b32 %r22, %r1, 0, 0x7770U;
+; CHECK-NEXT:    selp.b32 %r23, %r22, %r11, %p1;
+; CHECK-NEXT:    prmt.b32 %r24, %r23, %r21, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r25, %r24, %r19, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r25;
+; CHECK-NEXT:    ret;
   %cmp = icmp sle <4 x i8> %a, %b
   %r = select <4 x i1> %cmp, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %r
 }
 
 define <4 x i8> @test_umin(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_umin(
-; O0:       {
-; O0-NEXT:    .reg .pred %p<5>;
-; O0-NEXT:    .reg .b32 %r<18>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_umin_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_umin_param_0];
-; O0-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; O0-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
-; O0-NEXT:    setp.le.u32 %p1, %r4, %r3;
-; O0-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; O0-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
-; O0-NEXT:    setp.le.u32 %p2, %r6, %r5;
-; O0-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
-; O0-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
-; O0-NEXT:    setp.le.u32 %p3, %r8, %r7;
-; O0-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
-; O0-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
-; O0-NEXT:    setp.le.u32 %p4, %r10, %r9;
-; O0-NEXT:    selp.b32 %r11, %r10, %r9, %p4;
-; O0-NEXT:    selp.b32 %r12, %r8, %r7, %p3;
-; O0-NEXT:    prmt.b32 %r13, %r12, %r11, 0x3340U;
-; O0-NEXT:    selp.b32 %r14, %r6, %r5, %p2;
-; O0-NEXT:    selp.b32 %r15, %r4, %r3, %p1;
-; O0-NEXT:    prmt.b32 %r16, %r15, %r14, 0x3340U;
-; O0-NEXT:    prmt.b32 %r17, %r16, %r13, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r17;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_umin(
-; O3:       {
-; O3-NEXT:    .reg .pred %p<5>;
-; O3-NEXT:    .reg .b32 %r<18>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_umin_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_umin_param_1];
-; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; O3-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
-; O3-NEXT:    setp.le.u32 %p1, %r4, %r3;
-; O3-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; O3-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
-; O3-NEXT:    setp.le.u32 %p2, %r6, %r5;
-; O3-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
-; O3-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
-; O3-NEXT:    setp.le.u32 %p3, %r8, %r7;
-; O3-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
-; O3-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
-; O3-NEXT:    setp.le.u32 %p4, %r10, %r9;
-; O3-NEXT:    selp.b32 %r11, %r10, %r9, %p4;
-; O3-NEXT:    selp.b32 %r12, %r8, %r7, %p3;
-; O3-NEXT:    prmt.b32 %r13, %r12, %r11, 0x3340U;
-; O3-NEXT:    selp.b32 %r14, %r6, %r5, %p2;
-; O3-NEXT:    selp.b32 %r15, %r4, %r3, %p1;
-; O3-NEXT:    prmt.b32 %r16, %r15, %r14, 0x3340U;
-; O3-NEXT:    prmt.b32 %r17, %r16, %r13, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r17;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_umin(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<5>;
+; CHECK-NEXT:    .reg .b32 %r<18>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_umin_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_umin_param_1];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
+; CHECK-NEXT:    setp.le.u32 %p1, %r4, %r3;
+; CHECK-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
+; CHECK-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
+; CHECK-NEXT:    setp.le.u32 %p2, %r6, %r5;
+; CHECK-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
+; CHECK-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
+; CHECK-NEXT:    setp.le.u32 %p3, %r8, %r7;
+; CHECK-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
+; CHECK-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
+; CHECK-NEXT:    setp.le.u32 %p4, %r10, %r9;
+; CHECK-NEXT:    selp.b32 %r11, %r10, %r9, %p4;
+; CHECK-NEXT:    selp.b32 %r12, %r8, %r7, %p3;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r11, 0x3340U;
+; CHECK-NEXT:    selp.b32 %r14, %r6, %r5, %p2;
+; CHECK-NEXT:    selp.b32 %r15, %r4, %r3, %p1;
+; CHECK-NEXT:    prmt.b32 %r16, %r15, %r14, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r17, %r16, %r13, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r17;
+; CHECK-NEXT:    ret;
   %cmp = icmp ule <4 x i8> %a, %b
   %r = select <4 x i1> %cmp, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %r
 }
 
 define <4 x i8> @test_eq(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) #0 {
-; O0-LABEL: test_eq(
-; O0:       {
-; O0-NEXT:    .reg .pred %p<5>;
-; O0-NEXT:    .reg .b32 %r<23>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r3, [test_eq_param_2];
-; O0-NEXT:    ld.param.b32 %r2, [test_eq_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_eq_param_0];
-; O0-NEXT:    prmt.b32 %r4, %r2, 0, 0x7770U;
-; O0-NEXT:    prmt.b32 %r5, %r1, 0, 0x7770U;
-; O0-NEXT:    setp.eq.b32 %p1, %r5, %r4;
-; O0-NEXT:    prmt.b32 %r6, %r2, 0, 0x7771U;
-; O0-NEXT:    prmt.b32 %r7, %r1, 0, 0x7771U;
-; O0-NEXT:    setp.eq.b32 %p2, %r7, %r6;
-; O0-NEXT:    prmt.b32 %r8, %r2, 0, 0x7772U;
-; O0-NEXT:    prmt.b32 %r9, %r1, 0, 0x7772U;
-; O0-NEXT:    setp.eq.b32 %p3, %r9, %r8;
-; O0-NEXT:    prmt.b32 %r10, %r2, 0, 0x7773U;
-; O0-NEXT:    prmt.b32 %r11, %r1, 0, 0x7773U;
-; O0-NEXT:    setp.eq.b32 %p4, %r11, %r10;
-; O0-NEXT:    prmt.b32 %r12, %r3, 0, 0x7773U;
-; O0-NEXT:    selp.b32 %r13, %r11, %r12, %p4;
-; O0-NEXT:    prmt.b32 %r14, %r3, 0, 0x7772U;
-; O0-NEXT:    selp.b32 %r15, %r9, %r14, %p3;
-; O0-NEXT:    prmt.b32 %r16, %r15, %r13, 0x3340U;
-; O0-NEXT:    prmt.b32 %r17, %r3, 0, 0x7771U;
-; O0-NEXT:    selp.b32 %r18, %r7, %r17, %p2;
-; O0-NEXT:    prmt.b32 %r19, %r3, 0, 0x7770U;
-; O0-NEXT:    selp.b32 %r20, %r5, %r19, %p1;
-; O0-NEXT:    prmt.b32 %r21, %r20, %r18, 0x3340U;
-; O0-NEXT:    prmt.b32 %r22, %r21, %r16, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r22;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_eq(
-; O3:       {
-; O3-NEXT:    .reg .pred %p<5>;
-; O3-NEXT:    .reg .b32 %r<23>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_eq_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_eq_param_1];
-; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; O3-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
-; O3-NEXT:    setp.eq.b32 %p1, %r4, %r3;
-; O3-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; O3-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
-; O3-NEXT:    setp.eq.b32 %p2, %r6, %r5;
-; O3-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
-; O3-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
-; O3-NEXT:    setp.eq.b32 %p3, %r8, %r7;
-; O3-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
-; O3-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
-; O3-NEXT:    setp.eq.b32 %p4, %r10, %r9;
-; O3-NEXT:    ld.param.b32 %r11, [test_eq_param_2];
-; O3-NEXT:    prmt.b32 %r12, %r11, 0, 0x7773U;
-; O3-NEXT:    selp.b32 %r13, %r10, %r12, %p4;
-; O3-NEXT:    prmt.b32 %r14, %r11, 0, 0x7772U;
-; O3-NEXT:    selp.b32 %r15, %r8, %r14, %p3;
-; O3-NEXT:    prmt.b32 %r16, %r15, %r13, 0x3340U;
-; O3-NEXT:    prmt.b32 %r17, %r11, 0, 0x7771U;
-; O3-NEXT:    selp.b32 %r18, %r6, %r17, %p2;
-; O3-NEXT:    prmt.b32 %r19, %r11, 0, 0x7770U;
-; O3-NEXT:    selp.b32 %r20, %r4, %r19, %p1;
-; O3-NEXT:    prmt.b32 %r21, %r20, %r18, 0x3340U;
-; O3-NEXT:    prmt.b32 %r22, %r21, %r16, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r22;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_eq(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<5>;
+; CHECK-NEXT:    .reg .b32 %r<23>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_eq_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_eq_param_1];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
+; CHECK-NEXT:    setp.eq.b32 %p1, %r4, %r3;
+; CHECK-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
+; CHECK-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
+; CHECK-NEXT:    setp.eq.b32 %p2, %r6, %r5;
+; CHECK-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
+; CHECK-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
+; CHECK-NEXT:    setp.eq.b32 %p3, %r8, %r7;
+; CHECK-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
+; CHECK-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
+; CHECK-NEXT:    setp.eq.b32 %p4, %r10, %r9;
+; CHECK-NEXT:    ld.param.b32 %r11, [test_eq_param_2];
+; CHECK-NEXT:    prmt.b32 %r12, %r11, 0, 0x7773U;
+; CHECK-NEXT:    selp.b32 %r13, %r10, %r12, %p4;
+; CHECK-NEXT:    prmt.b32 %r14, %r11, 0, 0x7772U;
+; CHECK-NEXT:    selp.b32 %r15, %r8, %r14, %p3;
+; CHECK-NEXT:    prmt.b32 %r16, %r15, %r13, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r17, %r11, 0, 0x7771U;
+; CHECK-NEXT:    selp.b32 %r18, %r6, %r17, %p2;
+; CHECK-NEXT:    prmt.b32 %r19, %r11, 0, 0x7770U;
+; CHECK-NEXT:    selp.b32 %r20, %r4, %r19, %p1;
+; CHECK-NEXT:    prmt.b32 %r21, %r20, %r18, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r22, %r21, %r16, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r22;
+; CHECK-NEXT:    ret;
   %cmp = icmp eq <4 x i8> %a, %b
   %r = select <4 x i1> %cmp, <4 x i8> %a, <4 x i8> %c
   ret <4 x i8> %r
 }
 
 define <4 x i8> @test_ne(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) #0 {
-; O0-LABEL: test_ne(
-; O0:       {
-; O0-NEXT:    .reg .pred %p<5>;
-; O0-NEXT:    .reg .b32 %r<23>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r3, [test_ne_param_2];
-; O0-NEXT:    ld.param.b32 %r2, [test_ne_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_ne_param_0];
-; O0-NEXT:    prmt.b32 %r4, %r2, 0, 0x7770U;
-; O0-NEXT:    prmt.b32 %r5, %r1, 0, 0x7770U;
-; O0-NEXT:    setp.ne.b32 %p1, %r5, %r4;
-; O0-NEXT:    prmt.b32 %r6, %r2, 0, 0x7771U;
-; O0-NEXT:    prmt.b32 %r7, %r1, 0, 0x7771U;
-; O0-NEXT:    setp.ne.b32 %p2, %r7, %r6;
-; O0-NEXT:    prmt.b32 %r8, %r2, 0, 0x7772U;
-; O0-NEXT:    prmt.b32 %r9, %r1, 0, 0x7772U;
-; O0-NEXT:    setp.ne.b32 %p3, %r9, %r8;
-; O0-NEXT:    prmt.b32 %r10, %r2, 0, 0x7773U;
-; O0-NEXT:    prmt.b32 %r11, %r1, 0, 0x7773U;
-; O0-NEXT:    setp.ne.b32 %p4, %r11, %r10;
-; O0-NEXT:    prmt.b32 %r12, %r3, 0, 0x7773U;
-; O0-NEXT:    selp.b32 %r13, %r11, %r12, %p4;
-; O0-NEXT:    prmt.b32 %r14, %r3, 0, 0x7772U;
-; O0-NEXT:    selp.b32 %r15, %r9, %r14, %p3;
-; O0-NEXT:    prmt.b32 %r16, %r15, %r13, 0x3340U;
-; O0-NEXT:    prmt.b32 %r17, %r3, 0, 0x7771U;
-; O0-NEXT:    selp.b32 %r18, %r7, %r17, %p2;
-; O0-NEXT:    prmt.b32 %r19, %r3, 0, 0x7770U;
-; O0-NEXT:    selp.b32 %r20, %r5, %r19, %p1;
-; O0-NEXT:    prmt.b32 %r21, %r20, %r18, 0x3340U;
-; O0-NEXT:    prmt.b32 %r22, %r21, %r16, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r22;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_ne(
-; O3:       {
-; O3-NEXT:    .reg .pred %p<5>;
-; O3-NEXT:    .reg .b32 %r<23>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_ne_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_ne_param_1];
-; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; O3-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
-; O3-NEXT:    setp.ne.b32 %p1, %r4, %r3;
-; O3-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; O3-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
-; O3-NEXT:    setp.ne.b32 %p2, %r6, %r5;
-; O3-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
-; O3-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
-; O3-NEXT:    setp.ne.b32 %p3, %r8, %r7;
-; O3-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
-; O3-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
-; O3-NEXT:    setp.ne.b32 %p4, %r10, %r9;
-; O3-NEXT:    ld.param.b32 %r11, [test_ne_param_2];
-; O3-NEXT:    prmt.b32 %r12, %r11, 0, 0x7773U;
-; O3-NEXT:    selp.b32 %r13, %r10, %r12, %p4;
-; O3-NEXT:    prmt.b32 %r14, %r11, 0, 0x7772U;
-; O3-NEXT:    selp.b32 %r15, %r8, %r14, %p3;
-; O3-NEXT:    prmt.b32 %r16, %r15, %r13, 0x3340U;
-; O3-NEXT:    prmt.b32 %r17, %r11, 0, 0x7771U;
-; O3-NEXT:    selp.b32 %r18, %r6, %r17, %p2;
-; O3-NEXT:    prmt.b32 %r19, %r11, 0, 0x7770U;
-; O3-NEXT:    selp.b32 %r20, %r4, %r19, %p1;
-; O3-NEXT:    prmt.b32 %r21, %r20, %r18, 0x3340U;
-; O3-NEXT:    prmt.b32 %r22, %r21, %r16, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r22;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_ne(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<5>;
+; CHECK-NEXT:    .reg .b32 %r<23>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_ne_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_ne_param_1];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
+; CHECK-NEXT:    setp.ne.b32 %p1, %r4, %r3;
+; CHECK-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
+; CHECK-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
+; CHECK-NEXT:    setp.ne.b32 %p2, %r6, %r5;
+; CHECK-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
+; CHECK-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
+; CHECK-NEXT:    setp.ne.b32 %p3, %r8, %r7;
+; CHECK-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
+; CHECK-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
+; CHECK-NEXT:    setp.ne.b32 %p4, %r10, %r9;
+; CHECK-NEXT:    ld.param.b32 %r11, [test_ne_param_2];
+; CHECK-NEXT:    prmt.b32 %r12, %r11, 0, 0x7773U;
+; CHECK-NEXT:    selp.b32 %r13, %r10, %r12, %p4;
+; CHECK-NEXT:    prmt.b32 %r14, %r11, 0, 0x7772U;
+; CHECK-NEXT:    selp.b32 %r15, %r8, %r14, %p3;
+; CHECK-NEXT:    prmt.b32 %r16, %r15, %r13, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r17, %r11, 0, 0x7771U;
+; CHECK-NEXT:    selp.b32 %r18, %r6, %r17, %p2;
+; CHECK-NEXT:    prmt.b32 %r19, %r11, 0, 0x7770U;
+; CHECK-NEXT:    selp.b32 %r20, %r4, %r19, %p1;
+; CHECK-NEXT:    prmt.b32 %r21, %r20, %r18, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r22, %r21, %r16, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r22;
+; CHECK-NEXT:    ret;
   %cmp = icmp ne <4 x i8> %a, %b
   %r = select <4 x i1> %cmp, <4 x i8> %a, <4 x i8> %c
   ret <4 x i8> %r
 }
 
 define <4 x i8> @test_mul(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_mul(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<13>;
-; O0-NEXT:    .reg .b32 %r<18>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_mul_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_mul_param_0];
-; O0-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
-; O0-NEXT:    cvt.u16.u32 %rs1, %r3;
-; O0-NEXT:    prmt.b32 %r4, %r1, 0, 0x7773U;
-; O0-NEXT:    cvt.u16.u32 %rs2, %r4;
-; O0-NEXT:    mul.lo.s16 %rs3, %rs2, %rs1;
-; O0-NEXT:    cvt.u32.u16 %r5, %rs3;
-; O0-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; O0-NEXT:    cvt.u16.u32 %rs4, %r6;
-; O0-NEXT:    prmt.b32 %r7, %r1, 0, 0x7772U;
-; O0-NEXT:    cvt.u16.u32 %rs5, %r7;
-; O0-NEXT:    mul.lo.s16 %rs6, %rs5, %rs4;
-; O0-NEXT:    cvt.u32.u16 %r8, %rs6;
-; O0-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
-; O0-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; O0-NEXT:    cvt.u16.u32 %rs7, %r10;
-; O0-NEXT:    prmt.b32 %r11, %r1, 0, 0x7771U;
-; O0-NEXT:    cvt.u16.u32 %rs8, %r11;
-; O0-NEXT:    mul.lo.s16 %rs9, %rs8, %rs7;
-; O0-NEXT:    cvt.u32.u16 %r12, %rs9;
-; O0-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; O0-NEXT:    cvt.u16.u32 %rs10, %r13;
-; O0-NEXT:    prmt.b32 %r14, %r1, 0, 0x7770U;
-; O0-NEXT:    cvt.u16.u32 %rs11, %r14;
-; O0-NEXT:    mul.lo.s16 %rs12, %rs11, %rs10;
-; O0-NEXT:    cvt.u32.u16 %r15, %rs12;
-; O0-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
-; O0-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r17;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_mul(
-; O3:       {
-; O3-NEXT:    .reg .b16 %rs<13>;
-; O3-NEXT:    .reg .b32 %r<18>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_mul_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_mul_param_1];
-; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
-; O3-NEXT:    cvt.u16.u32 %rs1, %r3;
-; O3-NEXT:    prmt.b32 %r4, %r1, 0, 0x7773U;
-; O3-NEXT:    cvt.u16.u32 %rs2, %r4;
-; O3-NEXT:    mul.lo.s16 %rs3, %rs2, %rs1;
-; O3-NEXT:    cvt.u32.u16 %r5, %rs3;
-; O3-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; O3-NEXT:    cvt.u16.u32 %rs4, %r6;
-; O3-NEXT:    prmt.b32 %r7, %r1, 0, 0x7772U;
-; O3-NEXT:    cvt.u16.u32 %rs5, %r7;
-; O3-NEXT:    mul.lo.s16 %rs6, %rs5, %rs4;
-; O3-NEXT:    cvt.u32.u16 %r8, %rs6;
-; O3-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
-; O3-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; O3-NEXT:    cvt.u16.u32 %rs7, %r10;
-; O3-NEXT:    prmt.b32 %r11, %r1, 0, 0x7771U;
-; O3-NEXT:    cvt.u16.u32 %rs8, %r11;
-; O3-NEXT:    mul.lo.s16 %rs9, %rs8, %rs7;
-; O3-NEXT:    cvt.u32.u16 %r12, %rs9;
-; O3-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; O3-NEXT:    cvt.u16.u32 %rs10, %r13;
-; O3-NEXT:    prmt.b32 %r14, %r1, 0, 0x7770U;
-; O3-NEXT:    cvt.u16.u32 %rs11, %r14;
-; O3-NEXT:    mul.lo.s16 %rs12, %rs11, %rs10;
-; O3-NEXT:    cvt.u32.u16 %r15, %rs12;
-; O3-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
-; O3-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r17;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_mul(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<13>;
+; CHECK-NEXT:    .reg .b32 %r<18>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_mul_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_mul_param_1];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x7773U;
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r4;
+; CHECK-NEXT:    mul.lo.s16 %rs3, %rs2, %rs1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs3;
+; CHECK-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; CHECK-NEXT:    cvt.u16.u32 %rs4, %r6;
+; CHECK-NEXT:    prmt.b32 %r7, %r1, 0, 0x7772U;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    mul.lo.s16 %rs6, %rs5, %rs4;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    prmt.b32 %r11, %r1, 0, 0x7771U;
+; CHECK-NEXT:    cvt.u16.u32 %rs8, %r11;
+; CHECK-NEXT:    mul.lo.s16 %rs9, %rs8, %rs7;
+; CHECK-NEXT:    cvt.u32.u16 %r12, %rs9;
+; CHECK-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; CHECK-NEXT:    cvt.u16.u32 %rs10, %r13;
+; CHECK-NEXT:    prmt.b32 %r14, %r1, 0, 0x7770U;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r14;
+; CHECK-NEXT:    mul.lo.s16 %rs12, %rs11, %rs10;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs12;
+; CHECK-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r17;
+; CHECK-NEXT:    ret;
   %r = mul <4 x i8> %a, %b
   ret <4 x i8> %r
 }
 
 define <4 x i8> @test_or(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_or(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_or_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_or_param_0];
-; O0-NEXT:    or.b32 %r3, %r1, %r2;
-; O0-NEXT:    st.param.b32 [func_retval0], %r3;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_or(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<4>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_or_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_or_param_1];
-; O3-NEXT:    or.b32 %r3, %r1, %r2;
-; O3-NEXT:    st.param.b32 [func_retval0], %r3;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_or(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_or_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_or_param_1];
+; CHECK-NEXT:    or.b32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
   %r = or <4 x i8> %a, %b
   ret <4 x i8> %r
 }
@@ -889,17 +544,14 @@ define <4 x i8> @test_or(<4 x i8> %a, <4 x i8> %b) #0 {
 define <4 x i8> @test_or_computed(i8 %a) {
 ; O0-LABEL: test_or_computed(
 ; O0:       {
-; O0-NEXT:    .reg .b16 %rs<2>;
-; O0-NEXT:    .reg .b32 %r<6>;
+; O0-NEXT:    .reg .b32 %r<5>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b8 %rs1, [test_or_computed_param_0];
-; O0-NEXT:    mov.b32 %r1, 0;
-; O0-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
-; O0-NEXT:    cvt.u32.u16 %r3, %rs1;
-; O0-NEXT:    prmt.b32 %r4, %r3, 5, 0x3340U;
-; O0-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r5;
+; O0-NEXT:    ld.param.b8 %r1, [test_or_computed_param_0];
+; O0-NEXT:    prmt.b32 %r2, %r1, 5, 0x3340U;
+; O0-NEXT:    prmt.b32 %r3, 0, 0, 0x3340U;
+; O0-NEXT:    prmt.b32 %r4, %r2, %r3, 0x5410U;
+; O0-NEXT:    st.param.b32 [func_retval0], %r4;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_or_computed(
@@ -947,27 +599,16 @@ define <4 x i8> @test_or_imm_1(<4 x i8> %a) #0 {
 }
 
 define <4 x i8> @test_xor(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_xor(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_xor_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_xor_param_0];
-; O0-NEXT:    xor.b32 %r3, %r1, %r2;
-; O0-NEXT:    st.param.b32 [func_retval0], %r3;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_xor(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<4>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_xor_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_xor_param_1];
-; O3-NEXT:    xor.b32 %r3, %r1, %r2;
-; O3-NEXT:    st.param.b32 [func_retval0], %r3;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_xor(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_xor_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_xor_param_1];
+; CHECK-NEXT:    xor.b32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
   %r = xor <4 x i8> %a, %b
   ret <4 x i8> %r
 }
@@ -975,20 +616,17 @@ define <4 x i8> @test_xor(<4 x i8> %a, <4 x i8> %b) #0 {
 define <4 x i8> @test_xor_computed(i8 %a) {
 ; O0-LABEL: test_xor_computed(
 ; O0:       {
-; O0-NEXT:    .reg .b16 %rs<2>;
-; O0-NEXT:    .reg .b32 %r<9>;
+; O0-NEXT:    .reg .b32 %r<8>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b8 %rs1, [test_xor_computed_param_0];
-; O0-NEXT:    mov.b32 %r1, 0;
+; O0-NEXT:    ld.param.b8 %r1, [test_xor_computed_param_0];
 ; O0-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
-; O0-NEXT:    cvt.u32.u16 %r3, %rs1;
-; O0-NEXT:    prmt.b32 %r4, %r3, 0, 0x3340U;
-; O0-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O0-NEXT:    prmt.b32 %r6, %r3, 5, 0x3340U;
-; O0-NEXT:    prmt.b32 %r7, %r6, %r2, 0x5410U;
-; O0-NEXT:    xor.b32 %r8, %r7, %r5;
-; O0-NEXT:    st.param.b32 [func_retval0], %r8;
+; O0-NEXT:    prmt.b32 %r3, 0, 0, 0x3340U;
+; O0-NEXT:    prmt.b32 %r4, %r2, %r3, 0x5410U;
+; O0-NEXT:    prmt.b32 %r5, %r1, 5, 0x3340U;
+; O0-NEXT:    prmt.b32 %r6, %r5, %r3, 0x5410U;
+; O0-NEXT:    xor.b32 %r7, %r6, %r4;
+; O0-NEXT:    st.param.b32 [func_retval0], %r7;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_xor_computed(
@@ -1039,27 +677,16 @@ define <4 x i8> @test_xor_imm_1(<4 x i8> %a) #0 {
 }
 
 define <4 x i8> @test_and(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_and(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_and_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_and_param_0];
-; O0-NEXT:    and.b32 %r3, %r1, %r2;
-; O0-NEXT:    st.param.b32 [func_retval0], %r3;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_and(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<4>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_and_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_and_param_1];
-; O3-NEXT:    and.b32 %r3, %r1, %r2;
-; O3-NEXT:    st.param.b32 [func_retval0], %r3;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_and(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_and_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_and_param_1];
+; CHECK-NEXT:    and.b32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
   %r = and <4 x i8> %a, %b
   ret <4 x i8> %r
 }
@@ -1067,17 +694,14 @@ define <4 x i8> @test_and(<4 x i8> %a, <4 x i8> %b) #0 {
 define <4 x i8> @test_and_computed(i8 %a) {
 ; O0-LABEL: test_and_computed(
 ; O0:       {
-; O0-NEXT:    .reg .b16 %rs<2>;
-; O0-NEXT:    .reg .b32 %r<6>;
+; O0-NEXT:    .reg .b32 %r<5>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b8 %rs1, [test_and_computed_param_0];
-; O0-NEXT:    mov.b32 %r1, 0;
+; O0-NEXT:    ld.param.b8 %r1, [test_and_computed_param_0];
 ; O0-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
-; O0-NEXT:    cvt.u32.u16 %r3, %rs1;
-; O0-NEXT:    prmt.b32 %r4, %r3, 0, 0x3340U;
-; O0-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r5;
+; O0-NEXT:    prmt.b32 %r3, 0, 0, 0x3340U;
+; O0-NEXT:    prmt.b32 %r4, %r2, %r3, 0x5410U;
+; O0-NEXT:    st.param.b32 [func_retval0], %r4;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_and_computed(
@@ -1125,91 +749,53 @@ define <4 x i8> @test_and_imm_1(<4 x i8> %a) #0 {
 }
 
 define void @test_ldst_v2i8(ptr %a, ptr %b) {
-; O0-LABEL: test_ldst_v2i8(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<2>;
-; O0-NEXT:    .reg .b64 %rd<3>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd2, [test_ldst_v2i8_param_1];
-; O0-NEXT:    ld.param.b64 %rd1, [test_ldst_v2i8_param_0];
-; O0-NEXT:    ld.b32 %r1, [%rd1];
-; O0-NEXT:    st.b32 [%rd2], %r1;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_ldst_v2i8(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<2>;
-; O3-NEXT:    .reg .b64 %rd<3>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b64 %rd1, [test_ldst_v2i8_param_0];
-; O3-NEXT:    ld.b32 %r1, [%rd1];
-; O3-NEXT:    ld.param.b64 %rd2, [test_ldst_v2i8_param_1];
-; O3-NEXT:    st.b32 [%rd2], %r1;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_ldst_v2i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldst_v2i8_param_0];
+; CHECK-NEXT:    ld.b32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_ldst_v2i8_param_1];
+; CHECK-NEXT:    st.b32 [%rd2], %r1;
+; CHECK-NEXT:    ret;
   %t1 = load <4 x i8>, ptr %a
   store <4 x i8> %t1, ptr %b, align 16
   ret void
 }
 
 define void @test_ldst_v3i8(ptr %a, ptr %b) {
-; O0-LABEL: test_ldst_v3i8(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<3>;
-; O0-NEXT:    .reg .b64 %rd<3>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd2, [test_ldst_v3i8_param_1];
-; O0-NEXT:    ld.param.b64 %rd1, [test_ldst_v3i8_param_0];
-; O0-NEXT:    ld.b32 %r1, [%rd1];
-; O0-NEXT:    st.b16 [%rd2], %r1;
-; O0-NEXT:    prmt.b32 %r2, %r1, 0, 0x7772U;
-; O0-NEXT:    st.b8 [%rd2+2], %r2;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_ldst_v3i8(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<3>;
-; O3-NEXT:    .reg .b64 %rd<3>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b64 %rd1, [test_ldst_v3i8_param_0];
-; O3-NEXT:    ld.b32 %r1, [%rd1];
-; O3-NEXT:    ld.param.b64 %rd2, [test_ldst_v3i8_param_1];
-; O3-NEXT:    st.b16 [%rd2], %r1;
-; O3-NEXT:    prmt.b32 %r2, %r1, 0, 0x7772U;
-; O3-NEXT:    st.b8 [%rd2+2], %r2;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_ldst_v3i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldst_v3i8_param_0];
+; CHECK-NEXT:    ld.b32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_ldst_v3i8_param_1];
+; CHECK-NEXT:    st.b16 [%rd2], %r1;
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x7772U;
+; CHECK-NEXT:    st.b8 [%rd2+2], %r2;
+; CHECK-NEXT:    ret;
   %t1 = load <3 x i8>, ptr %a
   store <3 x i8> %t1, ptr %b, align 16
   ret void
 }
 
 define void @test_ldst_v4i8(ptr %a, ptr %b) {
-; O0-LABEL: test_ldst_v4i8(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<2>;
-; O0-NEXT:    .reg .b64 %rd<3>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd2, [test_ldst_v4i8_param_1];
-; O0-NEXT:    ld.param.b64 %rd1, [test_ldst_v4i8_param_0];
-; O0-NEXT:    ld.b32 %r1, [%rd1];
-; O0-NEXT:    st.b32 [%rd2], %r1;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_ldst_v4i8(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<2>;
-; O3-NEXT:    .reg .b64 %rd<3>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b64 %rd1, [test_ldst_v4i8_param_0];
-; O3-NEXT:    ld.b32 %r1, [%rd1];
-; O3-NEXT:    ld.param.b64 %rd2, [test_ldst_v4i8_param_1];
-; O3-NEXT:    st.b32 [%rd2], %r1;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_ldst_v4i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldst_v4i8_param_0];
+; CHECK-NEXT:    ld.b32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_ldst_v4i8_param_1];
+; CHECK-NEXT:    st.b32 [%rd2], %r1;
+; CHECK-NEXT:    ret;
   %t1 = load <4 x i8>, ptr %a
   store <4 x i8> %t1, ptr %b, align 16
   ret void
@@ -1222,12 +808,12 @@ define void @test_ldst_v4i8_unaligned(ptr %a, ptr %b) {
 ; O0-NEXT:    .reg .b64 %rd<3>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd2, [test_ldst_v4i8_unaligned_param_1];
 ; O0-NEXT:    ld.param.b64 %rd1, [test_ldst_v4i8_unaligned_param_0];
 ; O0-NEXT:    ld.b8 %r1, [%rd1];
 ; O0-NEXT:    ld.b8 %r2, [%rd1+1];
 ; O0-NEXT:    ld.b8 %r3, [%rd1+2];
 ; O0-NEXT:    ld.b8 %r4, [%rd1+3];
+; O0-NEXT:    ld.param.b64 %rd2, [test_ldst_v4i8_unaligned_param_1];
 ; O0-NEXT:    st.b8 [%rd2+3], %r4;
 ; O0-NEXT:    st.b8 [%rd2+2], %r3;
 ; O0-NEXT:    st.b8 [%rd2+1], %r2;
@@ -1258,29 +844,17 @@ define void @test_ldst_v4i8_unaligned(ptr %a, ptr %b) {
 
 
 define void @test_ldst_v8i8(ptr %a, ptr %b) {
-; O0-LABEL: test_ldst_v8i8(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<3>;
-; O0-NEXT:    .reg .b64 %rd<3>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd2, [test_ldst_v8i8_param_1];
-; O0-NEXT:    ld.param.b64 %rd1, [test_ldst_v8i8_param_0];
-; O0-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
-; O0-NEXT:    st.v2.b32 [%rd2], {%r1, %r2};
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_ldst_v8i8(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<3>;
-; O3-NEXT:    .reg .b64 %rd<3>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b64 %rd1, [test_ldst_v8i8_param_0];
-; O3-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
-; O3-NEXT:    ld.param.b64 %rd2, [test_ldst_v8i8_param_1];
-; O3-NEXT:    st.v2.b32 [%rd2], {%r1, %r2};
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_ldst_v8i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldst_v8i8_param_0];
+; CHECK-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_ldst_v8i8_param_1];
+; CHECK-NEXT:    st.v2.b32 [%rd2], {%r1, %r2};
+; CHECK-NEXT:    ret;
   %t1 = load <8 x i8>, ptr %a
   store <8 x i8> %t1, ptr %b, align 16
   ret void
@@ -1289,127 +863,70 @@ define void @test_ldst_v8i8(ptr %a, ptr %b) {
 declare <4 x i8> @test_callee(<4 x i8> %a, <4 x i8> %b) #0
 
 define <4 x i8> @test_call(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_call(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_call_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_call_param_0];
-; O0-NEXT:    { // callseq 0, 0
-; O0-NEXT:    .param .align 4 .b8 param0[4];
-; O0-NEXT:    .param .align 4 .b8 param1[4];
-; O0-NEXT:    .param .align 4 .b8 retval0[4];
-; O0-NEXT:    st.param.b32 [param1], %r2;
-; O0-NEXT:    st.param.b32 [param0], %r1;
-; O0-NEXT:    call.uni (retval0), test_callee, (param0, param1);
-; O0-NEXT:    ld.param.b32 %r3, [retval0];
-; O0-NEXT:    } // callseq 0
-; O0-NEXT:    st.param.b32 [func_retval0], %r3;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_call(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<4>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_call_param_0];
-; O3-NEXT:    { // callseq 0, 0
-; O3-NEXT:    .param .align 4 .b8 param0[4];
-; O3-NEXT:    .param .align 4 .b8 param1[4];
-; O3-NEXT:    .param .align 4 .b8 retval0[4];
-; O3-NEXT:    ld.param.b32 %r2, [test_call_param_1];
-; O3-NEXT:    st.param.b32 [param1], %r2;
-; O3-NEXT:    st.param.b32 [param0], %r1;
-; O3-NEXT:    call.uni (retval0), test_callee, (param0, param1);
-; O3-NEXT:    ld.param.b32 %r3, [retval0];
-; O3-NEXT:    } // callseq 0
-; O3-NEXT:    st.param.b32 [func_retval0], %r3;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_call(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_call_param_0];
+; CHECK-NEXT:    { // callseq 0, 0
+; CHECK-NEXT:    .param .align 4 .b8 param0[4];
+; CHECK-NEXT:    .param .align 4 .b8 param1[4];
+; CHECK-NEXT:    .param .align 4 .b8 retval0[4];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_call_param_1];
+; CHECK-NEXT:    st.param.b32 [param1], %r2;
+; CHECK-NEXT:    st.param.b32 [param0], %r1;
+; CHECK-NEXT:    call.uni (retval0), test_callee, (param0, param1);
+; CHECK-NEXT:    ld.param.b32 %r3, [retval0];
+; CHECK-NEXT:    } // callseq 0
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
   %r = call <4 x i8> @test_callee(<4 x i8> %a, <4 x i8> %b)
   ret <4 x i8> %r
 }
 
 define <4 x i8> @test_call_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_call_flipped(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_call_flipped_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_call_flipped_param_0];
-; O0-NEXT:    { // callseq 1, 0
-; O0-NEXT:    .param .align 4 .b8 param0[4];
-; O0-NEXT:    .param .align 4 .b8 param1[4];
-; O0-NEXT:    .param .align 4 .b8 retval0[4];
-; O0-NEXT:    st.param.b32 [param1], %r1;
-; O0-NEXT:    st.param.b32 [param0], %r2;
-; O0-NEXT:    call.uni (retval0), test_callee, (param0, param1);
-; O0-NEXT:    ld.param.b32 %r3, [retval0];
-; O0-NEXT:    } // callseq 1
-; O0-NEXT:    st.param.b32 [func_retval0], %r3;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_call_flipped(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<4>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_call_flipped_param_0];
-; O3-NEXT:    { // callseq 1, 0
-; O3-NEXT:    .param .align 4 .b8 param0[4];
-; O3-NEXT:    .param .align 4 .b8 param1[4];
-; O3-NEXT:    .param .align 4 .b8 retval0[4];
-; O3-NEXT:    st.param.b32 [param1], %r1;
-; O3-NEXT:    ld.param.b32 %r2, [test_call_flipped_param_1];
-; O3-NEXT:    st.param.b32 [param0], %r2;
-; O3-NEXT:    call.uni (retval0), test_callee, (param0, param1);
-; O3-NEXT:    ld.param.b32 %r3, [retval0];
-; O3-NEXT:    } // callseq 1
-; O3-NEXT:    st.param.b32 [func_retval0], %r3;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_call_flipped(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_call_flipped_param_0];
+; CHECK-NEXT:    { // callseq 1, 0
+; CHECK-NEXT:    .param .align 4 .b8 param0[4];
+; CHECK-NEXT:    .param .align 4 .b8 param1[4];
+; CHECK-NEXT:    .param .align 4 .b8 retval0[4];
+; CHECK-NEXT:    st.param.b32 [param1], %r1;
+; CHECK-NEXT:    ld.param.b32 %r2, [test_call_flipped_param_1];
+; CHECK-NEXT:    st.param.b32 [param0], %r2;
+; CHECK-NEXT:    call.uni (retval0), test_callee, (param0, param1);
+; CHECK-NEXT:    ld.param.b32 %r3, [retval0];
+; CHECK-NEXT:    } // callseq 1
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
   %r = call <4 x i8> @test_callee(<4 x i8> %b, <4 x i8> %a)
   ret <4 x i8> %r
 }
 
 define <4 x i8> @test_tailcall_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_tailcall_flipped(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_tailcall_flipped_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_tailcall_flipped_param_0];
-; O0-NEXT:    { // callseq 2, 0
-; O0-NEXT:    .param .align 4 .b8 param0[4];
-; O0-NEXT:    .param .align 4 .b8 param1[4];
-; O0-NEXT:    .param .align 4 .b8 retval0[4];
-; O0-NEXT:    st.param.b32 [param1], %r1;
-; O0-NEXT:    st.param.b32 [param0], %r2;
-; O0-NEXT:    call.uni (retval0), test_callee, (param0, param1);
-; O0-NEXT:    ld.param.b32 %r3, [retval0];
-; O0-NEXT:    } // callseq 2
-; O0-NEXT:    st.param.b32 [func_retval0], %r3;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_tailcall_flipped(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<4>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_tailcall_flipped_param_0];
-; O3-NEXT:    { // callseq 2, 0
-; O3-NEXT:    .param .align 4 .b8 param0[4];
-; O3-NEXT:    .param .align 4 .b8 param1[4];
-; O3-NEXT:    .param .align 4 .b8 retval0[4];
-; O3-NEXT:    st.param.b32 [param1], %r1;
-; O3-NEXT:    ld.param.b32 %r2, [test_tailcall_flipped_param_1];
-; O3-NEXT:    st.param.b32 [param0], %r2;
-; O3-NEXT:    call.uni (retval0), test_callee, (param0, param1);
-; O3-NEXT:    ld.param.b32 %r3, [retval0];
-; O3-NEXT:    } // callseq 2
-; O3-NEXT:    st.param.b32 [func_retval0], %r3;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_tailcall_flipped(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tailcall_flipped_param_0];
+; CHECK-NEXT:    { // callseq 2, 0
+; CHECK-NEXT:    .param .align 4 .b8 param0[4];
+; CHECK-NEXT:    .param .align 4 .b8 param1[4];
+; CHECK-NEXT:    .param .align 4 .b8 retval0[4];
+; CHECK-NEXT:    st.param.b32 [param1], %r1;
+; CHECK-NEXT:    ld.param.b32 %r2, [test_tailcall_flipped_param_1];
+; CHECK-NEXT:    st.param.b32 [param0], %r2;
+; CHECK-NEXT:    call.uni (retval0), test_callee, (param0, param1);
+; CHECK-NEXT:    ld.param.b32 %r3, [retval0];
+; CHECK-NEXT:    } // callseq 2
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
   %r = tail call <4 x i8> @test_callee(<4 x i8> %b, <4 x i8> %a)
   ret <4 x i8> %r
 }
@@ -1418,17 +935,20 @@ define <4 x i8> @test_select(<4 x i8> %a, <4 x i8> %b, i1 zeroext %c) #0 {
 ; O0-LABEL: test_select(
 ; O0:       {
 ; O0-NEXT:    .reg .pred %p<2>;
-; O0-NEXT:    .reg .b16 %rs<3>;
-; O0-NEXT:    .reg .b32 %r<4>;
+; O0-NEXT:    .reg .b16 %rs<4>;
+; O0-NEXT:    .reg .b32 %r<2>;
+; O0-NEXT:    .reg .b64 %rd<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b8 %rs1, [test_select_param_2];
-; O0-NEXT:    and.b16 %rs2, %rs1, 1;
-; O0-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; O0-NEXT:    ld.param.b32 %r2, [test_select_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_select_param_0];
-; O0-NEXT:    selp.b32 %r3, %r1, %r2, %p1;
-; O0-NEXT:    st.param.b32 [func_retval0], %r3;
+; O0-NEXT:    mov.b16 %rs2, %rs1;
+; O0-NEXT:    and.b16 %rs3, %rs2, 1;
+; O0-NEXT:    setp.ne.b16 %p1, %rs3, 0;
+; O0-NEXT:    mov.b64 %rd1, test_select_param_1;
+; O0-NEXT:    mov.b64 %rd2, test_select_param_0;
+; O0-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p1;
+; O0-NEXT:    ld.param.b32 %r1, [%rd3];
+; O0-NEXT:    st.param.b32 [func_retval0], %r1;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_select(
@@ -1453,148 +973,79 @@ define <4 x i8> @test_select(<4 x i8> %a, <4 x i8> %b, i1 zeroext %c) #0 {
 }
 
 define <4 x i8> @test_select_cc(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) #0 {
-; O0-LABEL: test_select_cc(
-; O0:       {
-; O0-NEXT:    .reg .pred %p<5>;
-; O0-NEXT:    .reg .b32 %r<28>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r4, [test_select_cc_param_3];
-; O0-NEXT:    ld.param.b32 %r3, [test_select_cc_param_2];
-; O0-NEXT:    ld.param.b32 %r2, [test_select_cc_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_select_cc_param_0];
-; O0-NEXT:    prmt.b32 %r5, %r4, 0, 0x7770U;
-; O0-NEXT:    prmt.b32 %r6, %r3, 0, 0x7770U;
-; O0-NEXT:    setp.ne.b32 %p1, %r6, %r5;
-; O0-NEXT:    prmt.b32 %r7, %r4, 0, 0x7771U;
-; O0-NEXT:    prmt.b32 %r8, %r3, 0, 0x7771U;
-; O0-NEXT:    setp.ne.b32 %p2, %r8, %r7;
-; O0-NEXT:    prmt.b32 %r9, %r4, 0, 0x7772U;
-; O0-NEXT:    prmt.b32 %r10, %r3, 0, 0x7772U;
-; O0-NEXT:    setp.ne.b32 %p3, %r10, %r9;
-; O0-NEXT:    prmt.b32 %r11, %r4, 0, 0x7773U;
-; O0-NEXT:    prmt.b32 %r12, %r3, 0, 0x7773U;
-; O0-NEXT:    setp.ne.b32 %p4, %r12, %r11;
-; O0-NEXT:    prmt.b32 %r13, %r2, 0, 0x7773U;
-; O0-NEXT:    prmt.b32 %r14, %r1, 0, 0x7773U;
-; O0-NEXT:    selp.b32 %r15, %r14, %r13, %p4;
-; O0-NEXT:    prmt.b32 %r16, %r2, 0, 0x7772U;
-; O0-NEXT:    prmt.b32 %r17, %r1, 0, 0x7772U;
-; O0-NEXT:    selp.b32 %r18, %r17, %r16, %p3;
-; O0-NEXT:    prmt.b32 %r19, %r18, %r15, 0x3340U;
-; O0-NEXT:    prmt.b32 %r20, %r2, 0, 0x7771U;
-; O0-NEXT:    prmt.b32 %r21, %r1, 0, 0x7771U;
-; O0-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
-; O0-NEXT:    prmt.b32 %r23, %r2, 0, 0x7770U;
-; O0-NEXT:    prmt.b32 %r24, %r1, 0, 0x7770U;
-; O0-NEXT:    selp.b32 %r25, %r24, %r23, %p1;
-; O0-NEXT:    prmt.b32 %r26, %r25, %r22, 0x3340U;
-; O0-NEXT:    prmt.b32 %r27, %r26, %r19, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r27;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_select_cc(
-; O3:       {
-; O3-NEXT:    .reg .pred %p<5>;
-; O3-NEXT:    .reg .b32 %r<28>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_select_cc_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_select_cc_param_3];
-; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; O3-NEXT:    ld.param.b32 %r4, [test_select_cc_param_2];
-; O3-NEXT:    prmt.b32 %r5, %r4, 0, 0x7770U;
-; O3-NEXT:    setp.ne.b32 %p1, %r5, %r3;
-; O3-NEXT:    prmt.b32 %r6, %r2, 0, 0x7771U;
-; O3-NEXT:    prmt.b32 %r7, %r4, 0, 0x7771U;
-; O3-NEXT:    setp.ne.b32 %p2, %r7, %r6;
-; O3-NEXT:    prmt.b32 %r8, %r2, 0, 0x7772U;
-; O3-NEXT:    prmt.b32 %r9, %r4, 0, 0x7772U;
-; O3-NEXT:    setp.ne.b32 %p3, %r9, %r8;
-; O3-NEXT:    prmt.b32 %r10, %r2, 0, 0x7773U;
-; O3-NEXT:    prmt.b32 %r11, %r4, 0, 0x7773U;
-; O3-NEXT:    setp.ne.b32 %p4, %r11, %r10;
-; O3-NEXT:    ld.param.b32 %r12, [test_select_cc_param_1];
-; O3-NEXT:    prmt.b32 %r13, %r12, 0, 0x7773U;
-; O3-NEXT:    prmt.b32 %r14, %r1, 0, 0x7773U;
-; O3-NEXT:    selp.b32 %r15, %r14, %r13, %p4;
-; O3-NEXT:    prmt.b32 %r16, %r12, 0, 0x7772U;
-; O3-NEXT:    prmt.b32 %r17, %r1, 0, 0x7772U;
-; O3-NEXT:    selp.b32 %r18, %r17, %r16, %p3;
-; O3-NEXT:    prmt.b32 %r19, %r18, %r15, 0x3340U;
-; O3-NEXT:    prmt.b32 %r20, %r12, 0, 0x7771U;
-; O3-NEXT:    prmt.b32 %r21, %r1, 0, 0x7771U;
-; O3-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
-; O3-NEXT:    prmt.b32 %r23, %r12, 0, 0x7770U;
-; O3-NEXT:    prmt.b32 %r24, %r1, 0, 0x7770U;
-; O3-NEXT:    selp.b32 %r25, %r24, %r23, %p1;
-; O3-NEXT:    prmt.b32 %r26, %r25, %r22, 0x3340U;
-; O3-NEXT:    prmt.b32 %r27, %r26, %r19, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r27;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_select_cc(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<5>;
+; CHECK-NEXT:    .reg .b32 %r<28>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_select_cc_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_select_cc_param_3];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
+; CHECK-NEXT:    ld.param.b32 %r4, [test_select_cc_param_2];
+; CHECK-NEXT:    prmt.b32 %r5, %r4, 0, 0x7770U;
+; CHECK-NEXT:    setp.ne.b32 %p1, %r5, %r3;
+; CHECK-NEXT:    prmt.b32 %r6, %r2, 0, 0x7771U;
+; CHECK-NEXT:    prmt.b32 %r7, %r4, 0, 0x7771U;
+; CHECK-NEXT:    setp.ne.b32 %p2, %r7, %r6;
+; CHECK-NEXT:    prmt.b32 %r8, %r2, 0, 0x7772U;
+; CHECK-NEXT:    prmt.b32 %r9, %r4, 0, 0x7772U;
+; CHECK-NEXT:    setp.ne.b32 %p3, %r9, %r8;
+; CHECK-NEXT:    prmt.b32 %r10, %r2, 0, 0x7773U;
+; CHECK-NEXT:    prmt.b32 %r11, %r4, 0, 0x7773U;
+; CHECK-NEXT:    setp.ne.b32 %p4, %r11, %r10;
+; CHECK-NEXT:    ld.param.b32 %r12, [test_select_cc_param_1];
+; CHECK-NEXT:    prmt.b32 %r13, %r12, 0, 0x7773U;
+; CHECK-NEXT:    prmt.b32 %r14, %r1, 0, 0x7773U;
+; CHECK-NEXT:    selp.b32 %r15, %r14, %r13, %p4;
+; CHECK-NEXT:    prmt.b32 %r16, %r12, 0, 0x7772U;
+; CHECK-NEXT:    prmt.b32 %r17, %r1, 0, 0x7772U;
+; CHECK-NEXT:    selp.b32 %r18, %r17, %r16, %p3;
+; CHECK-NEXT:    prmt.b32 %r19, %r18, %r15, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r20, %r12, 0, 0x7771U;
+; CHECK-NEXT:    prmt.b32 %r21, %r1, 0, 0x7771U;
+; CHECK-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
+; CHECK-NEXT:    prmt.b32 %r23, %r12, 0, 0x7770U;
+; CHECK-NEXT:    prmt.b32 %r24, %r1, 0, 0x7770U;
+; CHECK-NEXT:    selp.b32 %r25, %r24, %r23, %p1;
+; CHECK-NEXT:    prmt.b32 %r26, %r25, %r22, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r27, %r26, %r19, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r27;
+; CHECK-NEXT:    ret;
   %cc = icmp ne <4 x i8> %c, %d
   %r = select <4 x i1> %cc, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %r
 }
 
 define <4 x i32> @test_select_cc_i32_i8(<4 x i32> %a, <4 x i32> %b,
-; O0-LABEL: test_select_cc_i32_i8(
-; O0:       {
-; O0-NEXT:    .reg .pred %p<5>;
-; O0-NEXT:    .reg .b32 %r<23>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [test_select_cc_i32_i8_param_1];
-; O0-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [test_select_cc_i32_i8_param_0];
-; O0-NEXT:    ld.param.b32 %r10, [test_select_cc_i32_i8_param_3];
-; O0-NEXT:    ld.param.b32 %r9, [test_select_cc_i32_i8_param_2];
-; O0-NEXT:    prmt.b32 %r11, %r10, 0, 0x7770U;
-; O0-NEXT:    prmt.b32 %r12, %r9, 0, 0x7770U;
-; O0-NEXT:    setp.ne.b32 %p1, %r12, %r11;
-; O0-NEXT:    prmt.b32 %r13, %r10, 0, 0x7771U;
-; O0-NEXT:    prmt.b32 %r14, %r9, 0, 0x7771U;
-; O0-NEXT:    setp.ne.b32 %p2, %r14, %r13;
-; O0-NEXT:    prmt.b32 %r15, %r10, 0, 0x7772U;
-; O0-NEXT:    prmt.b32 %r16, %r9, 0, 0x7772U;
-; O0-NEXT:    setp.ne.b32 %p3, %r16, %r15;
-; O0-NEXT:    prmt.b32 %r17, %r10, 0, 0x7773U;
-; O0-NEXT:    prmt.b32 %r18, %r9, 0, 0x7773U;
-; O0-NEXT:    setp.ne.b32 %p4, %r18, %r17;
-; O0-NEXT:    selp.b32 %r19, %r4, %r8, %p4;
-; O0-NEXT:    selp.b32 %r20, %r3, %r7, %p3;
-; O0-NEXT:    selp.b32 %r21, %r2, %r6, %p2;
-; O0-NEXT:    selp.b32 %r22, %r1, %r5, %p1;
-; O0-NEXT:    st.param.v4.b32 [func_retval0], {%r22, %r21, %r20, %r19};
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_select_cc_i32_i8(
-; O3:       {
-; O3-NEXT:    .reg .pred %p<5>;
-; O3-NEXT:    .reg .b32 %r<23>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [test_select_cc_i32_i8_param_0];
-; O3-NEXT:    ld.param.b32 %r5, [test_select_cc_i32_i8_param_3];
-; O3-NEXT:    prmt.b32 %r6, %r5, 0, 0x7770U;
-; O3-NEXT:    ld.param.b32 %r7, [test_select_cc_i32_i8_param_2];
-; O3-NEXT:    prmt.b32 %r8, %r7, 0, 0x7770U;
-; O3-NEXT:    setp.ne.b32 %p1, %r8, %r6;
-; O3-NEXT:    prmt.b32 %r9, %r5, 0, 0x7771U;
-; O3-NEXT:    prmt.b32 %r10, %r7, 0, 0x7771U;
-; O3-NEXT:    setp.ne.b32 %p2, %r10, %r9;
-; O3-NEXT:    prmt.b32 %r11, %r5, 0, 0x7772U;
-; O3-NEXT:    prmt.b32 %r12, %r7, 0, 0x7772U;
-; O3-NEXT:    setp.ne.b32 %p3, %r12, %r11;
-; O3-NEXT:    prmt.b32 %r13, %r5, 0, 0x7773U;
-; O3-NEXT:    prmt.b32 %r14, %r7, 0, 0x7773U;
-; O3-NEXT:    setp.ne.b32 %p4, %r14, %r13;
-; O3-NEXT:    ld.param.v4.b32 {%r15, %r16, %r17, %r18}, [test_select_cc_i32_i8_param_1];
-; O3-NEXT:    selp.b32 %r19, %r4, %r18, %p4;
-; O3-NEXT:    selp.b32 %r20, %r3, %r17, %p3;
-; O3-NEXT:    selp.b32 %r21, %r2, %r16, %p2;
-; O3-NEXT:    selp.b32 %r22, %r1, %r15, %p1;
-; O3-NEXT:    st.param.v4.b32 [func_retval0], {%r22, %r21, %r20, %r19};
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_select_cc_i32_i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<5>;
+; CHECK-NEXT:    .reg .b32 %r<23>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [test_select_cc_i32_i8_param_0];
+; CHECK-NEXT:    ld.param.b32 %r5, [test_select_cc_i32_i8_param_3];
+; CHECK-NEXT:    prmt.b32 %r6, %r5, 0, 0x7770U;
+; CHECK-NEXT:    ld.param.b32 %r7, [test_select_cc_i32_i8_param_2];
+; CHECK-NEXT:    prmt.b32 %r8, %r7, 0, 0x7770U;
+; CHECK-NEXT:    setp.ne.b32 %p1, %r8, %r6;
+; CHECK-NEXT:    prmt.b32 %r9, %r5, 0, 0x7771U;
+; CHECK-NEXT:    prmt.b32 %r10, %r7, 0, 0x7771U;
+; CHECK-NEXT:    setp.ne.b32 %p2, %r10, %r9;
+; CHECK-NEXT:    prmt.b32 %r11, %r5, 0, 0x7772U;
+; CHECK-NEXT:    prmt.b32 %r12, %r7, 0, 0x7772U;
+; CHECK-NEXT:    setp.ne.b32 %p3, %r12, %r11;
+; CHECK-NEXT:    prmt.b32 %r13, %r5, 0, 0x7773U;
+; CHECK-NEXT:    prmt.b32 %r14, %r7, 0, 0x7773U;
+; CHECK-NEXT:    setp.ne.b32 %p4, %r14, %r13;
+; CHECK-NEXT:    ld.param.v4.b32 {%r15, %r16, %r17, %r18}, [test_select_cc_i32_i8_param_1];
+; CHECK-NEXT:    selp.b32 %r19, %r4, %r18, %p4;
+; CHECK-NEXT:    selp.b32 %r20, %r3, %r17, %p3;
+; CHECK-NEXT:    selp.b32 %r21, %r2, %r16, %p2;
+; CHECK-NEXT:    selp.b32 %r22, %r1, %r15, %p1;
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r22, %r21, %r20, %r19};
+; CHECK-NEXT:    ret;
                                            <4 x i8> %c, <4 x i8> %d) #0 {
   %cc = icmp ne <4 x i8> %c, %d
   %r = select <4 x i1> %cc, <4 x i32> %a, <4 x i32> %b
@@ -1602,69 +1053,37 @@ define <4 x i32> @test_select_cc_i32_i8(<4 x i32> %a, <4 x i32> %b,
 }
 
 define <4 x i8> @test_select_cc_i8_i32(<4 x i8> %a, <4 x i8> %b,
-; O0-LABEL: test_select_cc_i8_i32(
-; O0:       {
-; O0-NEXT:    .reg .pred %p<5>;
-; O0-NEXT:    .reg .b32 %r<26>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.v4.b32 {%r7, %r8, %r9, %r10}, [test_select_cc_i8_i32_param_3];
-; O0-NEXT:    ld.param.v4.b32 {%r3, %r4, %r5, %r6}, [test_select_cc_i8_i32_param_2];
-; O0-NEXT:    ld.param.b32 %r2, [test_select_cc_i8_i32_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_select_cc_i8_i32_param_0];
-; O0-NEXT:    setp.ne.b32 %p1, %r3, %r7;
-; O0-NEXT:    setp.ne.b32 %p2, %r4, %r8;
-; O0-NEXT:    setp.ne.b32 %p3, %r5, %r9;
-; O0-NEXT:    setp.ne.b32 %p4, %r6, %r10;
-; O0-NEXT:    prmt.b32 %r11, %r2, 0, 0x7773U;
-; O0-NEXT:    prmt.b32 %r12, %r1, 0, 0x7773U;
-; O0-NEXT:    selp.b32 %r13, %r12, %r11, %p4;
-; O0-NEXT:    prmt.b32 %r14, %r2, 0, 0x7772U;
-; O0-NEXT:    prmt.b32 %r15, %r1, 0, 0x7772U;
-; O0-NEXT:    selp.b32 %r16, %r15, %r14, %p3;
-; O0-NEXT:    prmt.b32 %r17, %r16, %r13, 0x3340U;
-; O0-NEXT:    prmt.b32 %r18, %r2, 0, 0x7771U;
-; O0-NEXT:    prmt.b32 %r19, %r1, 0, 0x7771U;
-; O0-NEXT:    selp.b32 %r20, %r19, %r18, %p2;
-; O0-NEXT:    prmt.b32 %r21, %r2, 0, 0x7770U;
-; O0-NEXT:    prmt.b32 %r22, %r1, 0, 0x7770U;
-; O0-NEXT:    selp.b32 %r23, %r22, %r21, %p1;
-; O0-NEXT:    prmt.b32 %r24, %r23, %r20, 0x3340U;
-; O0-NEXT:    prmt.b32 %r25, %r24, %r17, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r25;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_select_cc_i8_i32(
-; O3:       {
-; O3-NEXT:    .reg .pred %p<5>;
-; O3-NEXT:    .reg .b32 %r<26>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_select_cc_i8_i32_param_0];
-; O3-NEXT:    ld.param.v4.b32 {%r2, %r3, %r4, %r5}, [test_select_cc_i8_i32_param_2];
-; O3-NEXT:    ld.param.v4.b32 {%r6, %r7, %r8, %r9}, [test_select_cc_i8_i32_param_3];
-; O3-NEXT:    setp.ne.b32 %p1, %r2, %r6;
-; O3-NEXT:    setp.ne.b32 %p2, %r3, %r7;
-; O3-NEXT:    setp.ne.b32 %p3, %r4, %r8;
-; O3-NEXT:    setp.ne.b32 %p4, %r5, %r9;
-; O3-NEXT:    ld.param.b32 %r10, [test_select_cc_i8_i32_param_1];
-; O3-NEXT:    prmt.b32 %r11, %r10, 0, 0x7773U;
-; O3-NEXT:    prmt.b32 %r12, %r1, 0, 0x7773U;
-; O3-NEXT:    selp.b32 %r13, %r12, %r11, %p4;
-; O3-NEXT:    prmt.b32 %r14, %r10, 0, 0x7772U;
-; O3-NEXT:    prmt.b32 %r15, %r1, 0, 0x7772U;
-; O3-NEXT:    selp.b32 %r16, %r15, %r14, %p3;
-; O3-NEXT:    prmt.b32 %r17, %r16, %r13, 0x3340U;
-; O3-NEXT:    prmt.b32 %r18, %r10, 0, 0x7771U;
-; O3-NEXT:    prmt.b32 %r19, %r1, 0, 0x7771U;
-; O3-NEXT:    selp.b32 %r20, %r19, %r18, %p2;
-; O3-NEXT:    prmt.b32 %r21, %r10, 0, 0x7770U;
-; O3-NEXT:    prmt.b32 %r22, %r1, 0, 0x7770U;
-; O3-NEXT:    selp.b32 %r23, %r22, %r21, %p1;
-; O3-NEXT:    prmt.b32 %r24, %r23, %r20, 0x3340U;
-; O3-NEXT:    prmt.b32 %r25, %r24, %r17, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r25;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_select_cc_i8_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<5>;
+; CHECK-NEXT:    .reg .b32 %r<26>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_select_cc_i8_i32_param_0];
+; CHECK-NEXT:    ld.param.v4.b32 {%r2, %r3, %r4, %r5}, [test_select_cc_i8_i32_param_2];
+; CHECK-NEXT:    ld.param.v4.b32 {%r6, %r7, %r8, %r9}, [test_select_cc_i8_i32_param_3];
+; CHECK-NEXT:    setp.ne.b32 %p1, %r2, %r6;
+; CHECK-NEXT:    setp.ne.b32 %p2, %r3, %r7;
+; CHECK-NEXT:    setp.ne.b32 %p3, %r4, %r8;
+; CHECK-NEXT:    setp.ne.b32 %p4, %r5, %r9;
+; CHECK-NEXT:    ld.param.b32 %r10, [test_select_cc_i8_i32_param_1];
+; CHECK-NEXT:    prmt.b32 %r11, %r10, 0, 0x7773U;
+; CHECK-NEXT:    prmt.b32 %r12, %r1, 0, 0x7773U;
+; CHECK-NEXT:    selp.b32 %r13, %r12, %r11, %p4;
+; CHECK-NEXT:    prmt.b32 %r14, %r10, 0, 0x7772U;
+; CHECK-NEXT:    prmt.b32 %r15, %r1, 0, 0x7772U;
+; CHECK-NEXT:    selp.b32 %r16, %r15, %r14, %p3;
+; CHECK-NEXT:    prmt.b32 %r17, %r16, %r13, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r18, %r10, 0, 0x7771U;
+; CHECK-NEXT:    prmt.b32 %r19, %r1, 0, 0x7771U;
+; CHECK-NEXT:    selp.b32 %r20, %r19, %r18, %p2;
+; CHECK-NEXT:    prmt.b32 %r21, %r10, 0, 0x7770U;
+; CHECK-NEXT:    prmt.b32 %r22, %r1, 0, 0x7770U;
+; CHECK-NEXT:    selp.b32 %r23, %r22, %r21, %p1;
+; CHECK-NEXT:    prmt.b32 %r24, %r23, %r20, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r25, %r24, %r17, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r25;
+; CHECK-NEXT:    ret;
                                           <4 x i32> %c, <4 x i32> %d) #0 {
   %cc = icmp ne <4 x i32> %c, %d
   %r = select <4 x i1> %cc, <4 x i8> %a, <4 x i8> %b
@@ -1689,41 +1108,23 @@ define <4 x i8> @test_trunc_2xi32(<4 x i32> %a) #0 {
 }
 
 define <4 x i8> @test_trunc_2xi64(<4 x i64> %a) #0 {
-; O0-LABEL: test_trunc_2xi64(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<8>;
-; O0-NEXT:    .reg .b64 %rd<5>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [test_trunc_2xi64_param_0+16];
-; O0-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_trunc_2xi64_param_0];
-; O0-NEXT:    cvt.u32.u64 %r1, %rd4;
-; O0-NEXT:    cvt.u32.u64 %r2, %rd3;
-; O0-NEXT:    prmt.b32 %r3, %r2, %r1, 0x3340U;
-; O0-NEXT:    cvt.u32.u64 %r4, %rd2;
-; O0-NEXT:    cvt.u32.u64 %r5, %rd1;
-; O0-NEXT:    prmt.b32 %r6, %r5, %r4, 0x3340U;
-; O0-NEXT:    prmt.b32 %r7, %r6, %r3, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r7;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_trunc_2xi64(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<8>;
-; O3-NEXT:    .reg .b64 %rd<5>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_trunc_2xi64_param_0];
-; O3-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [test_trunc_2xi64_param_0+16];
-; O3-NEXT:    cvt.u32.u64 %r1, %rd4;
-; O3-NEXT:    cvt.u32.u64 %r2, %rd3;
-; O3-NEXT:    prmt.b32 %r3, %r2, %r1, 0x3340U;
-; O3-NEXT:    cvt.u32.u64 %r4, %rd2;
-; O3-NEXT:    cvt.u32.u64 %r5, %rd1;
-; O3-NEXT:    prmt.b32 %r6, %r5, %r4, 0x3340U;
-; O3-NEXT:    prmt.b32 %r7, %r6, %r3, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r7;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_trunc_2xi64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<8>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_trunc_2xi64_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [test_trunc_2xi64_param_0+16];
+; CHECK-NEXT:    cvt.u32.u64 %r1, %rd4;
+; CHECK-NEXT:    cvt.u32.u64 %r2, %rd3;
+; CHECK-NEXT:    prmt.b32 %r3, %r2, %r1, 0x3340U;
+; CHECK-NEXT:    cvt.u32.u64 %r4, %rd2;
+; CHECK-NEXT:    cvt.u32.u64 %r5, %rd1;
+; CHECK-NEXT:    prmt.b32 %r6, %r5, %r4, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r7, %r6, %r3, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r7;
+; CHECK-NEXT:    ret;
   %r = trunc <4 x i64> %a to <4 x i8>
   ret <4 x i8> %r
 }
@@ -1843,17 +1244,14 @@ define float @test_bitcast_4xi8_to_float(<4 x i8> %a) #0 {
 define <2 x half> @test_bitcast_4xi8_to_2xhalf(i8 %a) #0 {
 ; O0-LABEL: test_bitcast_4xi8_to_2xhalf(
 ; O0:       {
-; O0-NEXT:    .reg .b16 %rs<2>;
-; O0-NEXT:    .reg .b32 %r<6>;
+; O0-NEXT:    .reg .b32 %r<5>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b8 %rs1, [test_bitcast_4xi8_to_2xhalf_param_0];
-; O0-NEXT:    mov.b32 %r1, 6;
-; O0-NEXT:    prmt.b32 %r2, %r1, 7, 0x3340U;
-; O0-NEXT:    cvt.u32.u16 %r3, %rs1;
-; O0-NEXT:    prmt.b32 %r4, %r3, 5, 0x3340U;
-; O0-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r5;
+; O0-NEXT:    ld.param.b8 %r1, [test_bitcast_4xi8_to_2xhalf_param_0];
+; O0-NEXT:    prmt.b32 %r2, %r1, 5, 0x3340U;
+; O0-NEXT:    prmt.b32 %r3, 6, 7, 0x3340U;
+; O0-NEXT:    prmt.b32 %r4, %r2, %r3, 0x5410U;
+; O0-NEXT:    st.param.b32 [func_retval0], %r4;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_bitcast_4xi8_to_2xhalf(
@@ -1901,252 +1299,134 @@ define <4 x i8> @test_shufflevector(<4 x i8> %a) #0 {
 }
 
 define <4 x i8> @test_shufflevector_2(<4 x i8> %a, <4 x i8> %b) #0 {
-; O0-LABEL: test_shufflevector_2(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [test_shufflevector_2_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_shufflevector_2_param_0];
-; O0-NEXT:    prmt.b32 %r3, %r1, %r2, 0x2537U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r3;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_shufflevector_2(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<4>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_shufflevector_2_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_shufflevector_2_param_1];
-; O3-NEXT:    prmt.b32 %r3, %r1, %r2, 0x2537U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r3;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_shufflevector_2(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_shufflevector_2_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_shufflevector_2_param_1];
+; CHECK-NEXT:    prmt.b32 %r3, %r1, %r2, 0x2537U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
   %s = shufflevector <4 x i8> %a, <4 x i8> %b, <4 x i32> <i32 7, i32 3, i32 5, i32 2>
   ret <4 x i8> %s
 }
 
 
 define <4 x i8> @test_insertelement(<4 x i8> %a, i8 %x) #0 {
-; O0-LABEL: test_insertelement(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<2>;
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b8 %rs1, [test_insertelement_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [test_insertelement_param_0];
-; O0-NEXT:    cvt.u32.u16 %r2, %rs1;
-; O0-NEXT:    bfi.b32 %r3, %r2, %r1, 8, 8;
-; O0-NEXT:    st.param.b32 [func_retval0], %r3;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_insertelement(
-; O3:       {
-; O3-NEXT:    .reg .b32 %r<4>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.b32 %r1, [test_insertelement_param_0];
-; O3-NEXT:    ld.param.b8 %r2, [test_insertelement_param_1];
-; O3-NEXT:    bfi.b32 %r3, %r2, %r1, 8, 8;
-; O3-NEXT:    st.param.b32 [func_retval0], %r3;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_insertelement(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_insertelement_param_0];
+; CHECK-NEXT:    ld.param.b8 %r2, [test_insertelement_param_1];
+; CHECK-NEXT:    bfi.b32 %r3, %r2, %r1, 8, 8;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
   %i = insertelement <4 x i8> %a, i8 %x, i64 1
   ret <4 x i8> %i
 }
 
 define <4 x i8> @test_fptosi_4xhalf_to_4xi8(<4 x half> %a) #0 {
-; O0-LABEL: test_fptosi_4xhalf_to_4xi8(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<13>;
-; O0-NEXT:    .reg .b32 %r<12>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_fptosi_4xhalf_to_4xi8_param_0];
-; O0-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; O0-NEXT:    cvt.rzi.s16.f16 %rs3, %rs2;
-; O0-NEXT:    cvt.rzi.s16.f16 %rs4, %rs1;
-; O0-NEXT:    mov.b32 %r3, {%rs4, %rs3};
-; O0-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; O0-NEXT:    cvt.u32.u16 %r4, %rs6;
-; O0-NEXT:    cvt.u32.u16 %r5, %rs5;
-; O0-NEXT:    prmt.b32 %r6, %r5, %r4, 0x3340U;
-; O0-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
-; O0-NEXT:    cvt.rzi.s16.f16 %rs9, %rs8;
-; O0-NEXT:    cvt.rzi.s16.f16 %rs10, %rs7;
-; O0-NEXT:    mov.b32 %r7, {%rs10, %rs9};
-; O0-NEXT:    mov.b32 {%rs11, %rs12}, %r7;
-; O0-NEXT:    cvt.u32.u16 %r8, %rs12;
-; O0-NEXT:    cvt.u32.u16 %r9, %rs11;
-; O0-NEXT:    prmt.b32 %r10, %r9, %r8, 0x3340U;
-; O0-NEXT:    prmt.b32 %r11, %r10, %r6, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r11;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_fptosi_4xhalf_to_4xi8(
-; O3:       {
-; O3-NEXT:    .reg .b16 %rs<13>;
-; O3-NEXT:    .reg .b32 %r<10>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [test_fptosi_4xhalf_to_4xi8_param_0];
-; O3-NEXT:    cvt.rzi.s16.f16 %rs5, %rs4;
-; O3-NEXT:    cvt.rzi.s16.f16 %rs6, %rs3;
-; O3-NEXT:    mov.b32 %r1, {%rs6, %rs5};
-; O3-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
-; O3-NEXT:    cvt.u32.u16 %r2, %rs8;
-; O3-NEXT:    cvt.u32.u16 %r3, %rs7;
-; O3-NEXT:    prmt.b32 %r4, %r3, %r2, 0x3340U;
-; O3-NEXT:    cvt.rzi.s16.f16 %rs9, %rs2;
-; O3-NEXT:    cvt.rzi.s16.f16 %rs10, %rs1;
-; O3-NEXT:    mov.b32 %r5, {%rs10, %rs9};
-; O3-NEXT:    mov.b32 {%rs11, %rs12}, %r5;
-; O3-NEXT:    cvt.u32.u16 %r6, %rs12;
-; O3-NEXT:    cvt.u32.u16 %r7, %rs11;
-; O3-NEXT:    prmt.b32 %r8, %r7, %r6, 0x3340U;
-; O3-NEXT:    prmt.b32 %r9, %r8, %r4, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r9;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_fptosi_4xhalf_to_4xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<13>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [test_fptosi_4xhalf_to_4xi8_param_0];
+; CHECK-NEXT:    cvt.rzi.s16.f16 %rs5, %rs4;
+; CHECK-NEXT:    cvt.rzi.s16.f16 %rs6, %rs3;
+; CHECK-NEXT:    mov.b32 %r1, {%rs6, %rs5};
+; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs8;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs7;
+; CHECK-NEXT:    prmt.b32 %r4, %r3, %r2, 0x3340U;
+; CHECK-NEXT:    cvt.rzi.s16.f16 %rs9, %rs2;
+; CHECK-NEXT:    cvt.rzi.s16.f16 %rs10, %rs1;
+; CHECK-NEXT:    mov.b32 %r5, {%rs10, %rs9};
+; CHECK-NEXT:    mov.b32 {%rs11, %rs12}, %r5;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs12;
+; CHECK-NEXT:    cvt.u32.u16 %r7, %rs11;
+; CHECK-NEXT:    prmt.b32 %r8, %r7, %r6, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r4, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
+; CHECK-NEXT:    ret;
   %r = fptosi <4 x half> %a to <4 x i8>
   ret <4 x i8> %r
 }
 
 define <4 x i8> @test_fptoui_4xhalf_to_4xi8(<4 x half> %a) #0 {
-; O0-LABEL: test_fptoui_4xhalf_to_4xi8(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<13>;
-; O0-NEXT:    .reg .b32 %r<12>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_fptoui_4xhalf_to_4xi8_param_0];
-; O0-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; O0-NEXT:    cvt.rzi.u16.f16 %rs3, %rs2;
-; O0-NEXT:    cvt.rzi.u16.f16 %rs4, %rs1;
-; O0-NEXT:    mov.b32 %r3, {%rs4, %rs3};
-; O0-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; O0-NEXT:    cvt.u32.u16 %r4, %rs6;
-; O0-NEXT:    cvt.u32.u16 %r5, %rs5;
-; O0-NEXT:    prmt.b32 %r6, %r5, %r4, 0x3340U;
-; O0-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
-; O0-NEXT:    cvt.rzi.u16.f16 %rs9, %rs8;
-; O0-NEXT:    cvt.rzi.u16.f16 %rs10, %rs7;
-; O0-NEXT:    mov.b32 %r7, {%rs10, %rs9};
-; O0-NEXT:    mov.b32 {%rs11, %rs12}, %r7;
-; O0-NEXT:    cvt.u32.u16 %r8, %rs12;
-; O0-NEXT:    cvt.u32.u16 %r9, %rs11;
-; O0-NEXT:    prmt.b32 %r10, %r9, %r8, 0x3340U;
-; O0-NEXT:    prmt.b32 %r11, %r10, %r6, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r11;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_fptoui_4xhalf_to_4xi8(
-; O3:       {
-; O3-NEXT:    .reg .b16 %rs<13>;
-; O3-NEXT:    .reg .b32 %r<10>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0:
-; O3-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [test_fptoui_4xhalf_to_4xi8_param_0];
-; O3-NEXT:    cvt.rzi.u16.f16 %rs5, %rs4;
-; O3-NEXT:    cvt.rzi.u16.f16 %rs6, %rs3;
-; O3-NEXT:    mov.b32 %r1, {%rs6, %rs5};
-; O3-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
-; O3-NEXT:    cvt.u32.u16 %r2, %rs8;
-; O3-NEXT:    cvt.u32.u16 %r3, %rs7;
-; O3-NEXT:    prmt.b32 %r4, %r3, %r2, 0x3340U;
-; O3-NEXT:    cvt.rzi.u16.f16 %rs9, %rs2;
-; O3-NEXT:    cvt.rzi.u16.f16 %rs10, %rs1;
-; O3-NEXT:    mov.b32 %r5, {%rs10, %rs9};
-; O3-NEXT:    mov.b32 {%rs11, %rs12}, %r5;
-; O3-NEXT:    cvt.u32.u16 %r6, %rs12;
-; O3-NEXT:    cvt.u32.u16 %r7, %rs11;
-; O3-NEXT:    prmt.b32 %r8, %r7, %r6, 0x3340U;
-; O3-NEXT:    prmt.b32 %r9, %r8, %r4, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r9;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_fptoui_4xhalf_to_4xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<13>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [test_fptoui_4xhalf_to_4xi8_param_0];
+; CHECK-NEXT:    cvt.rzi.u16.f16 %rs5, %rs4;
+; CHECK-NEXT:    cvt.rzi.u16.f16 %rs6, %rs3;
+; CHECK-NEXT:    mov.b32 %r1, {%rs6, %rs5};
+; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs8;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs7;
+; CHECK-NEXT:    prmt.b32 %r4, %r3, %r2, 0x3340U;
+; CHECK-NEXT:    cvt.rzi.u16.f16 %rs9, %rs2;
+; CHECK-NEXT:    cvt.rzi.u16.f16 %rs10, %rs1;
+; CHECK-NEXT:    mov.b32 %r5, {%rs10, %rs9};
+; CHECK-NEXT:    mov.b32 {%rs11, %rs12}, %r5;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs12;
+; CHECK-NEXT:    cvt.u32.u16 %r7, %rs11;
+; CHECK-NEXT:    prmt.b32 %r8, %r7, %r6, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r4, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
+; CHECK-NEXT:    ret;
   %r = fptoui <4 x half> %a to <4 x i8>
   ret <4 x i8> %r
 }
 
 define void @test_srem_v4i8(ptr %a, ptr %b, ptr %c) {
-; O0-LABEL: test_srem_v4i8(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<13>;
-; O0-NEXT:    .reg .b32 %r<16>;
-; O0-NEXT:    .reg .b64 %rd<4>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0: // %entry
-; O0-NEXT:    ld.param.b64 %rd3, [test_srem_v4i8_param_2];
-; O0-NEXT:    ld.param.b64 %rd2, [test_srem_v4i8_param_1];
-; O0-NEXT:    ld.param.b64 %rd1, [test_srem_v4i8_param_0];
-; O0-NEXT:    ld.b32 %r1, [%rd1];
-; O0-NEXT:    ld.b32 %r2, [%rd2];
-; O0-NEXT:    prmt.b32 %r3, %r2, 0, 0xbbb3U;
-; O0-NEXT:    cvt.u16.u32 %rs1, %r3;
-; O0-NEXT:    prmt.b32 %r4, %r1, 0, 0xbbb3U;
-; O0-NEXT:    cvt.u16.u32 %rs2, %r4;
-; O0-NEXT:    rem.s16 %rs3, %rs2, %rs1;
-; O0-NEXT:    cvt.u32.u16 %r5, %rs3;
-; O0-NEXT:    prmt.b32 %r6, %r2, 0, 0xaaa2U;
-; O0-NEXT:    cvt.u16.u32 %rs4, %r6;
-; O0-NEXT:    prmt.b32 %r7, %r1, 0, 0xaaa2U;
-; O0-NEXT:    cvt.u16.u32 %rs5, %r7;
-; O0-NEXT:    rem.s16 %rs6, %rs5, %rs4;
-; O0-NEXT:    cvt.u32.u16 %r8, %rs6;
-; O0-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
-; O0-NEXT:    cvt.s8.s32 %rs7, %r2;
-; O0-NEXT:    cvt.s8.s32 %rs8, %r1;
-; O0-NEXT:    rem.s16 %rs9, %rs8, %rs7;
-; O0-NEXT:    cvt.u32.u16 %r10, %rs9;
-; O0-NEXT:    prmt.b32 %r11, %r2, 0, 0x9991U;
-; O0-NEXT:    cvt.u16.u32 %rs10, %r11;
-; O0-NEXT:    prmt.b32 %r12, %r1, 0, 0x9991U;
-; O0-NEXT:    cvt.u16.u32 %rs11, %r12;
-; O0-NEXT:    rem.s16 %rs12, %rs11, %rs10;
-; O0-NEXT:    cvt.u32.u16 %r13, %rs12;
-; O0-NEXT:    prmt.b32 %r14, %r10, %r13, 0x3340U;
-; O0-NEXT:    prmt.b32 %r15, %r14, %r9, 0x5410U;
-; O0-NEXT:    st.b32 [%rd3], %r15;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_srem_v4i8(
-; O3:       {
-; O3-NEXT:    .reg .b16 %rs<13>;
-; O3-NEXT:    .reg .b32 %r<16>;
-; O3-NEXT:    .reg .b64 %rd<4>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0: // %entry
-; O3-NEXT:    ld.param.b64 %rd1, [test_srem_v4i8_param_0];
-; O3-NEXT:    ld.b32 %r1, [%rd1];
-; O3-NEXT:    ld.param.b64 %rd2, [test_srem_v4i8_param_1];
-; O3-NEXT:    ld.b32 %r2, [%rd2];
-; O3-NEXT:    ld.param.b64 %rd3, [test_srem_v4i8_param_2];
-; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0xbbb3U;
-; O3-NEXT:    cvt.u16.u32 %rs1, %r3;
-; O3-NEXT:    prmt.b32 %r4, %r1, 0, 0xbbb3U;
-; O3-NEXT:    cvt.u16.u32 %rs2, %r4;
-; O3-NEXT:    rem.s16 %rs3, %rs2, %rs1;
-; O3-NEXT:    cvt.u32.u16 %r5, %rs3;
-; O3-NEXT:    prmt.b32 %r6, %r2, 0, 0xaaa2U;
-; O3-NEXT:    cvt.u16.u32 %rs4, %r6;
-; O3-NEXT:    prmt.b32 %r7, %r1, 0, 0xaaa2U;
-; O3-NEXT:    cvt.u16.u32 %rs5, %r7;
-; O3-NEXT:    rem.s16 %rs6, %rs5, %rs4;
-; O3-NEXT:    cvt.u32.u16 %r8, %rs6;
-; O3-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
-; O3-NEXT:    cvt.s8.s32 %rs7, %r2;
-; O3-NEXT:    cvt.s8.s32 %rs8, %r1;
-; O3-NEXT:    rem.s16 %rs9, %rs8, %rs7;
-; O3-NEXT:    cvt.u32.u16 %r10, %rs9;
-; O3-NEXT:    prmt.b32 %r11, %r2, 0, 0x9991U;
-; O3-NEXT:    cvt.u16.u32 %rs10, %r11;
-; O3-NEXT:    prmt.b32 %r12, %r1, 0, 0x9991U;
-; O3-NEXT:    cvt.u16.u32 %rs11, %r12;
-; O3-NEXT:    rem.s16 %rs12, %rs11, %rs10;
-; O3-NEXT:    cvt.u32.u16 %r13, %rs12;
-; O3-NEXT:    prmt.b32 %r14, %r10, %r13, 0x3340U;
-; O3-NEXT:    prmt.b32 %r15, %r14, %r9, 0x5410U;
-; O3-NEXT:    st.b32 [%rd3], %r15;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_srem_v4i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<13>;
+; CHECK-NEXT:    .reg .b32 %r<16>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_srem_v4i8_param_0];
+; CHECK-NEXT:    ld.b32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_srem_v4i8_param_1];
+; CHECK-NEXT:    ld.b32 %r2, [%rd2];
+; CHECK-NEXT:    ld.param.b64 %rd3, [test_srem_v4i8_param_2];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0xbbb3U;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0xbbb3U;
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r4;
+; CHECK-NEXT:    rem.s16 %rs3, %rs2, %rs1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs3;
+; CHECK-NEXT:    prmt.b32 %r6, %r2, 0, 0xaaa2U;
+; CHECK-NEXT:    cvt.u16.u32 %rs4, %r6;
+; CHECK-NEXT:    prmt.b32 %r7, %r1, 0, 0xaaa2U;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    rem.s16 %rs6, %rs5, %rs4;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; CHECK-NEXT:    cvt.s8.s32 %rs7, %r2;
+; CHECK-NEXT:    cvt.s8.s32 %rs8, %r1;
+; CHECK-NEXT:    rem.s16 %rs9, %rs8, %rs7;
+; CHECK-NEXT:    cvt.u32.u16 %r10, %rs9;
+; CHECK-NEXT:    prmt.b32 %r11, %r2, 0, 0x9991U;
+; CHECK-NEXT:    cvt.u16.u32 %rs10, %r11;
+; CHECK-NEXT:    prmt.b32 %r12, %r1, 0, 0x9991U;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r12;
+; CHECK-NEXT:    rem.s16 %rs12, %rs11, %rs10;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs12;
+; CHECK-NEXT:    prmt.b32 %r14, %r10, %r13, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r15, %r14, %r9, 0x5410U;
+; CHECK-NEXT:    st.b32 [%rd3], %r15;
+; CHECK-NEXT:    ret;
 entry:
   %t57 = load <4 x i8>, ptr %a, align 4
   %t59 = load <4 x i8>, ptr %b, align 4
@@ -2169,8 +1449,6 @@ define void @test_srem_v3i8(ptr %a, ptr %b, ptr %c) {
 ; O0-NEXT:    .reg .b64 %rd<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0: // %entry
-; O0-NEXT:    ld.param.b64 %rd3, [test_srem_v3i8_param_2];
-; O0-NEXT:    ld.param.b64 %rd2, [test_srem_v3i8_param_1];
 ; O0-NEXT:    ld.param.b64 %rd1, [test_srem_v3i8_param_0];
 ; O0-NEXT:    ld.b8 %rs1, [%rd1];
 ; O0-NEXT:    ld.b8 %rs2, [%rd1+1];
@@ -2178,12 +1456,14 @@ define void @test_srem_v3i8(ptr %a, ptr %b, ptr %c) {
 ; O0-NEXT:    or.b16 %rs4, %rs3, %rs1;
 ; O0-NEXT:    cvt.u32.u16 %r1, %rs4;
 ; O0-NEXT:    ld.s8 %rs5, [%rd1+2];
+; O0-NEXT:    ld.param.b64 %rd2, [test_srem_v3i8_param_1];
 ; O0-NEXT:    ld.b8 %rs6, [%rd2];
 ; O0-NEXT:    ld.b8 %rs7, [%rd2+1];
 ; O0-NEXT:    shl.b16 %rs8, %rs7, 8;
 ; O0-NEXT:    or.b16 %rs9, %rs8, %rs6;
 ; O0-NEXT:    cvt.u32.u16 %r2, %rs9;
 ; O0-NEXT:    ld.s8 %rs10, [%rd2+2];
+; O0-NEXT:    ld.param.b64 %rd3, [test_srem_v3i8_param_2];
 ; O0-NEXT:    cvt.s16.s8 %rs11, %rs9;
 ; O0-NEXT:    cvt.s16.s8 %rs12, %rs4;
 ; O0-NEXT:    rem.s16 %rs13, %rs12, %rs11;
@@ -2252,73 +1532,39 @@ entry:
 }
 
 define void @test_sext_v4i1_to_v4i8(ptr %a, ptr %b, ptr %c) {
-; O0-LABEL: test_sext_v4i1_to_v4i8(
-; O0:       {
-; O0-NEXT:    .reg .pred %p<5>;
-; O0-NEXT:    .reg .b32 %r<18>;
-; O0-NEXT:    .reg .b64 %rd<4>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0: // %entry
-; O0-NEXT:    ld.param.b64 %rd3, [test_sext_v4i1_to_v4i8_param_2];
-; O0-NEXT:    ld.param.b64 %rd2, [test_sext_v4i1_to_v4i8_param_1];
-; O0-NEXT:    ld.param.b64 %rd1, [test_sext_v4i1_to_v4i8_param_0];
-; O0-NEXT:    ld.b32 %r1, [%rd1];
-; O0-NEXT:    ld.b32 %r2, [%rd2];
-; O0-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; O0-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
-; O0-NEXT:    setp.gt.u32 %p1, %r4, %r3;
-; O0-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; O0-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
-; O0-NEXT:    setp.gt.u32 %p2, %r6, %r5;
-; O0-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
-; O0-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
-; O0-NEXT:    setp.gt.u32 %p3, %r8, %r7;
-; O0-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
-; O0-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
-; O0-NEXT:    setp.gt.u32 %p4, %r10, %r9;
-; O0-NEXT:    selp.b32 %r11, -1, 0, %p4;
-; O0-NEXT:    selp.b32 %r12, -1, 0, %p3;
-; O0-NEXT:    prmt.b32 %r13, %r12, %r11, 0x3340U;
-; O0-NEXT:    selp.b32 %r14, -1, 0, %p2;
-; O0-NEXT:    selp.b32 %r15, -1, 0, %p1;
-; O0-NEXT:    prmt.b32 %r16, %r15, %r14, 0x3340U;
-; O0-NEXT:    prmt.b32 %r17, %r16, %r13, 0x5410U;
-; O0-NEXT:    st.b32 [%rd3], %r17;
-; O0-NEXT:    ret;
-;
-; O3-LABEL: test_sext_v4i1_to_v4i8(
-; O3:       {
-; O3-NEXT:    .reg .pred %p<5>;
-; O3-NEXT:    .reg .b32 %r<18>;
-; O3-NEXT:    .reg .b64 %rd<4>;
-; O3-EMPTY:
-; O3-NEXT:  // %bb.0: // %entry
-; O3-NEXT:    ld.param.b64 %rd1, [test_sext_v4i1_to_v4i8_param_0];
-; O3-NEXT:    ld.b32 %r1, [%rd1];
-; O3-NEXT:    ld.param.b64 %rd2, [test_sext_v4i1_to_v4i8_param_1];
-; O3-NEXT:    ld.b32 %r2, [%rd2];
-; O3-NEXT:    ld.param.b64 %rd3, [test_sext_v4i1_to_v4i8_param_2];
-; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; O3-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
-; O3-NEXT:    setp.gt.u32 %p1, %r4, %r3;
-; O3-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; O3-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
-; O3-NEXT:    setp.gt.u32 %p2, %r6, %r5;
-; O3-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
-; O3-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
-; O3-NEXT:    setp.gt.u32 %p3, %r8, %r7;
-; O3-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
-; O3-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
-; O3-NEXT:    setp.gt.u32 %p4, %r10, %r9;
-; O3-NEXT:    selp.b32 %r11, -1, 0, %p4;
-; O3-NEXT:    selp.b32 %r12, -1, 0, %p3;
-; O3-NEXT:    prmt.b32 %r13, %r12, %r11, 0x3340U;
-; O3-NEXT:    selp.b32 %r14, -1, 0, %p2;
-; O3-NEXT:    selp.b32 %r15, -1, 0, %p1;
-; O3-NEXT:    prmt.b32 %r16, %r15, %r14, 0x3340U;
-; O3-NEXT:    prmt.b32 %r17, %r16, %r13, 0x5410U;
-; O3-NEXT:    st.b32 [%rd3], %r17;
-; O3-NEXT:    ret;
+; CHECK-LABEL: test_sext_v4i1_to_v4i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<5>;
+; CHECK-NEXT:    .reg .b32 %r<18>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_sext_v4i1_to_v4i8_param_0];
+; CHECK-NEXT:    ld.b32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_sext_v4i1_to_v4i8_param_1];
+; CHECK-NEXT:    ld.b32 %r2, [%rd2];
+; CHECK-NEXT:    ld.param.b64 %rd3, [test_sext_v4i1_to_v4i8_param_2];
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x7770U;
+; CHECK-NEXT:    setp.gt.u32 %p1, %r4, %r3;
+; CHECK-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
+; CHECK-NEXT:    prmt.b32 %r6, %r1, 0, 0x7771U;
+; CHECK-NEXT:    setp.gt.u32 %p2, %r6, %r5;
+; CHECK-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
+; CHECK-NEXT:    prmt.b32 %r8, %r1, 0, 0x7772U;
+; CHECK-NEXT:    setp.gt.u32 %p3, %r8, %r7;
+; CHECK-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
+; CHECK-NEXT:    prmt.b32 %r10, %r1, 0, 0x7773U;
+; CHECK-NEXT:    setp.gt.u32 %p4, %r10, %r9;
+; CHECK-NEXT:    selp.b32 %r11, -1, 0, %p4;
+; CHECK-NEXT:    selp.b32 %r12, -1, 0, %p3;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r11, 0x3340U;
+; CHECK-NEXT:    selp.b32 %r14, -1, 0, %p2;
+; CHECK-NEXT:    selp.b32 %r15, -1, 0, %p1;
+; CHECK-NEXT:    prmt.b32 %r16, %r15, %r14, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r17, %r16, %r13, 0x5410U;
+; CHECK-NEXT:    st.b32 [%rd3], %r17;
+; CHECK-NEXT:    ret;
 entry:
   %t1 = load <4 x i8>, ptr %a, align 4
   %t2 = load <4 x i8>, ptr %b, align 4

@@ -276,18 +276,53 @@ entry:
 }
 
 define void @basic_store_zero_combine(ptr %0, i32 %1, i32 %2) {
-; SLOW-LABEL: basic_store_zero_combine:
-; SLOW:       # %bb.0:
-; SLOW-NEXT:    sw zero, 0(a0)
-; SLOW-NEXT:    sw zero, 4(a0)
-; SLOW-NEXT:    ret
-;
-; FAST-LABEL: basic_store_zero_combine:
-; FAST:       # %bb.0:
-; FAST-NEXT:    sd zero, 0(a0)
-; FAST-NEXT:    ret
+; CHECK-LABEL: basic_store_zero_combine:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sw zero, 0(a0)
+; CHECK-NEXT:    sw zero, 4(a0)
+; CHECK-NEXT:    ret
   store i32 0, ptr %0, align 4
   %4 = getelementptr inbounds i32, ptr %0, i32 1
   store i32 0, ptr %4, align 4
+  ret void
+}
+
+declare void @llvm.memset.p0.i32(ptr, i8, i32, i1 immarg)
+
+define void @no_coalesce() #0 {
+; CHECK-LABEL: no_coalesce:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    j .LBB12_2
+; CHECK-NEXT:  .LBB12_1: # %crash
+; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
+; CHECK-NEXT:    sd a0, 0(zero)
+; CHECK-NEXT:    sw a1, 8(zero)
+; CHECK-NEXT:    sw a1, 0(zero)
+; CHECK-NEXT:    sw a1, 4(zero)
+; CHECK-NEXT:  .LBB12_2: # %loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    bnez a1, .LBB12_1
+; CHECK-NEXT:  # %bb.3: # %loop
+; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
+; CHECK-NEXT:    beqz a1, .LBB12_2
+; CHECK-NEXT:  # %bb.4: # %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  switch i8 0, label %loop [
+    i8 1, label %crash
+    i8 3, label %exit
+  ]
+
+crash:
+  store i64 1, ptr null, align 8
+  call void @llvm.memset.p0.i32(ptr null, i8 0, i32 12, i1 false)
+  br label %loop
+
+exit:
   ret void
 }

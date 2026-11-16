@@ -158,7 +158,7 @@ define amdgpu_kernel void @opt_select_i64_or_cmp_f32(ptr addrspace(1) %out, floa
 }
 
 ; GCN-LABEL: {{^}}regression:
-; GCN: v_cmp_neq_f32_e64 s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}, 1.0
+; GCN: v_cmp_neq_f32_e64 vcc, s{{[0-9]+}}, 1.0
 
 define amdgpu_kernel void @regression(ptr addrspace(1) %out, float %c0, float %c1) #0 {
 entry:

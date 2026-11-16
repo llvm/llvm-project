@@ -25,6 +25,14 @@ double3 fma_double3(double3 a, double3 b, double3 c) { return fma(a, b, c); }
 // CHECK: ret <4 x double>
 double4 fma_double4(double4 a, double4 b, double4 c) { return fma(a, b, c); }
 
+// CHECK-LABEL: define {{.*}} <5 x double> @{{.*}}fma_double5{{.*}}(
+// CHECK: call reassoc nnan ninf nsz arcp afn <5 x double> @llvm.fma.v5f64(<5 x double>
+// CHECK: ret <5 x double>
+vector<double, 5> fma_double5(vector<double, 5> a, vector<double, 5> b,
+                              vector<double, 5> c) {
+  return fma(a, b, c);
+}
+
 // No double1x1 fma overload exists, so overload resolution picks the scalar
 // double overload. The double1x1 matrix arguments are truncated to scalar.
 // CHECK-LABEL: define {{.*}} double @{{.*}}fma_double1x1{{.*}}(

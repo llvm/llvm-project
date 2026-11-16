@@ -489,6 +489,176 @@ entry:
   ret void
 }
 
+; The lanes nest the chain on different sides, so each lane has a copyable
+; leaf, modeled as V + -0.0. The modeled identities form an identity-only
+; column, which is not combined.
+;
+; S[0] = (A[0] + B[0]) + C[0]
+; S[1] = C[1] + (A[1] + B[1])
+define void @test_reassoc_fadd_identity(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_fadd_identity(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd reassoc nsz <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz <2 x double> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds double, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds double, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds double, ptr %Carray, i64 1
+  %idxS1 = getelementptr inbounds double, ptr %Sarray, i64 1
+
+  %A0 = load double, ptr %Aarray, align 8
+  %A1 = load double, ptr %idxA1, align 8
+
+  %B0 = load double, ptr %Barray, align 8
+  %B1 = load double, ptr %idxB1, align 8
+
+  %C0 = load double, ptr %Carray, align 8
+  %C1 = load double, ptr %idxC1, align 8
+
+  %addA0B0 = fadd reassoc nsz double %A0, %B0
+  %add0 = fadd reassoc nsz double %addA0B0, %C0
+
+  %addA1B1 = fadd reassoc nsz double %A1, %B1
+  %add1 = fadd reassoc nsz double %C1, %addA1B1
+
+  store double %add0, ptr %Sarray, align 8
+  store double %add1, ptr %idxS1, align 8
+  ret void
+}
+
+; The fmul form of the chain above, the copyable leaves are modeled as
+; V * 1.0.
+;
+; S[0] = (A[0] * B[0]) * C[0]
+; S[1] = C[1] * (A[1] * B[1])
+define void @test_reassoc_fmul_identity(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_fmul_identity(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nsz <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul reassoc nsz <2 x double> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds double, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds double, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds double, ptr %Carray, i64 1
+  %idxS1 = getelementptr inbounds double, ptr %Sarray, i64 1
+
+  %A0 = load double, ptr %Aarray, align 8
+  %A1 = load double, ptr %idxA1, align 8
+
+  %B0 = load double, ptr %Barray, align 8
+  %B1 = load double, ptr %idxB1, align 8
+
+  %C0 = load double, ptr %Carray, align 8
+  %C1 = load double, ptr %idxC1, align 8
+
+  %mulA0B0 = fmul reassoc nsz double %A0, %B0
+  %mul0 = fmul reassoc nsz double %mulA0B0, %C0
+
+  %mulA1B1 = fmul reassoc nsz double %A1, %B1
+  %mul1 = fmul reassoc nsz double %C1, %mulA1B1
+
+  store double %mul0, ptr %Sarray, align 8
+  store double %mul1, ptr %idxS1, align 8
+  ret void
+}
+
+; C[0] is a copyable leaf of the subtracted fadd column, A[1] of the fsub
+; column. Both are modeled with +0.0, the identity of a subtracted column:
+; x - -0.0 would turn a -0.0 lane into +0.0 without nsz. The modeled
+; identities form an identity-only column, which is not combined.
+;
+; S[0] = (A[0] - B[0]) - C[0]
+; S[1] = A[1] - (B[1] + C[1])
+define void @test_reassoc_fsub_identity(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_fsub_identity(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub reassoc <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub reassoc <2 x double> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds double, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds double, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds double, ptr %Carray, i64 1
+  %idxS1 = getelementptr inbounds double, ptr %Sarray, i64 1
+
+  %A0 = load double, ptr %Aarray, align 8
+  %A1 = load double, ptr %idxA1, align 8
+
+  %B0 = load double, ptr %Barray, align 8
+  %B1 = load double, ptr %idxB1, align 8
+
+  %C0 = load double, ptr %Carray, align 8
+  %C1 = load double, ptr %idxC1, align 8
+
+  %subA0B0 = fsub reassoc double %A0, %B0
+  %sub0 = fsub reassoc double %subA0B0, %C0
+
+  %addB1C1 = fadd reassoc nsz double %B1, %C1
+  %sub1 = fsub reassoc double %A1, %addB1C1
+
+  store double %sub0, ptr %Sarray, align 8
+  store double %sub1, ptr %idxS1, align 8
+  ret void
+}
+
+; Subtracting -0.0 turns -0.0 into +0.0, so without nsz the subtracted -0.0
+; column is still combined.
+;
+; S[0] = (A[0] - B[0]) - -0.0
+; S[1] = (A[1] - -0.0) - B[1]
+define void @test_reassoc_fsub_neg_zero(ptr %Aarray, ptr %Barray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_fsub_neg_zero(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub reassoc <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub reassoc <2 x double> [[TMP2]], splat (double -0.000000e+00)
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds double, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds double, ptr %Barray, i64 1
+  %idxS1 = getelementptr inbounds double, ptr %Sarray, i64 1
+
+  %A0 = load double, ptr %Aarray, align 8
+  %A1 = load double, ptr %idxA1, align 8
+
+  %B0 = load double, ptr %Barray, align 8
+  %B1 = load double, ptr %idxB1, align 8
+
+  %subA0B0 = fsub reassoc double %A0, %B0
+  %sub0 = fsub reassoc double %subA0B0, -0.0
+
+  %subA10 = fsub reassoc double %A1, -0.0
+  %sub1 = fsub reassoc double %subA10, %B1
+
+  store double %sub0, ptr %Sarray, align 8
+  store double %sub1, ptr %idxS1, align 8
+  ret void
+}
+
 ; The same 4 load families per lane, but each lane's chain consumes them in
 ; a different order: lane 0 is ((B+D)+C)+A, lane 1 is ((A+B)+C)+D. Peeling
 ; goes through transient mixed columns (a load leaf against a nested add),
@@ -1306,16 +1476,16 @@ backedge:                                         ; preds = %loop
 define i32 @gathered_peeled_scalar_late() {
 ; CHECK-LABEL: define i32 @gathered_peeled_scalar_late(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:  [[DOTPREHEADER_PEEL_BEGIN:.*:]]
+; CHECK-NEXT:  [[DOTPREHEADER_PEEL_BEGIN:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 0, [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i32> zeroinitializer, [[TMP4]]
-; CHECK-NEXT:    br [[DOTPREHEADER:label %.*]]
-; CHECK:       [[_PREHEADER:.*:]]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ [[TMP6]], [[DOTPREHEADER_PEEL_BEGIN1:%.*]] ], [ zeroinitializer, %[[K_EXIT_7:.*]] ]
+; CHECK-NEXT:    br label %[[DOTPREHEADER:.*]]
+; CHECK:       [[DOTPREHEADER]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ [[TMP6]], %[[DOTPREHEADER_PEEL_BEGIN]] ], [ zeroinitializer, %[[K_EXIT_7:.*]] ]
 ; CHECK-NEXT:    br i1 false, label %[[K_EXIT_THREAD:.*]], label %[[K_EXIT:.*]]
 ; CHECK:       [[K_EXIT_THREAD]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i32> [[TMP8]], zeroinitializer
@@ -1325,7 +1495,7 @@ define i32 @gathered_peeled_scalar_late() {
 ; CHECK-NEXT:    br label %[[K_EXIT_7]]
 ; CHECK:       [[K_EXIT_7]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i32> [ [[TMP7]], %[[K_EXIT]] ], [ [[TMP10]], %[[K_EXIT_THREAD]] ]
-; CHECK-NEXT:    br [[DOTPREHEADER]]
+; CHECK-NEXT:    br label %[[DOTPREHEADER]]
 ;
 .preheader.peel.begin:
   %.reass5.7.peel = add i32 0, 0
@@ -1357,4 +1527,95 @@ k.exit.7:                                         ; preds = %k.exit, %k.exit.thr
   %5 = phi i32 [ %invariant.op233, %k.exit ], [ %.reass250, %k.exit.thread ]
   %6 = phi i32 [ %.reass5.4, %k.exit ], [ %4, %k.exit.thread ]
   br label %.preheader
+}
+
+@a = global i32 0, align 4
+@b = global i64 0, align 8
+@c = global i32 0, align 4
+
+; The copyable element %add4 is peeled into the flattened node; its schedule
+; data must be released exactly once.
+define void @test_reassoc_copyable_chain_link() {
+; CHECK-LABEL: define void @test_reassoc_copyable_chain_link(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @a, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @c, align 4
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @b, align 8
+; CHECK-NEXT:    [[CONV2:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub i64 [[TMP2]], [[CONV2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[REASS_SUB]], 1
+; CHECK-NEXT:    [[ADD4:%.*]] = sub nsw i64 7, [[CONV1]]
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[CONV1]], [[ADD4]]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], [[REM]]
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[IF_END:.*]], label %[[WHILE_BODY:.*]]
+; CHECK:       [[WHILE_BODY]]:
+; CHECK-NEXT:    br label %[[WHILE_BODY]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i32, ptr @a, align 4
+  %1 = load i32, ptr @c, align 4
+  %conv1 = sext i32 %1 to i64
+  %2 = load i64, ptr @b, align 8
+  %conv2 = zext i32 %0 to i64
+  %reass.sub = sub i64 %2, %conv2
+  %add = add i64 %reass.sub, 1
+  %add4 = sub nsw i64 7, %conv1
+  %rem = srem i64 %conv1, %add4
+  %and = and i64 %add, %rem
+  %tobool.not = icmp eq i64 %and, 0
+  br i1 %tobool.not, label %if.end, label %while.body
+
+while.body:
+  br label %while.body
+
+if.end:
+  ret void
+}
+
+; Same as above, but the copyable element is a sub in an add-family node.
+define i32 @test_reassoc_copyable_sub_chain_link() {
+; CHECK-LABEL: define i32 @test_reassoc_copyable_sub_chain_link(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @b, align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 2
+; CHECK-NEXT:    store i32 [[ADD]], ptr @c, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[ADD]], 30
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i32 1073741824, [[TMP1]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 2, [[ADD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0]], 1
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub i32 [[DIV]], [[TMP2]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[REASS_SUB]], -5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD1]], [[SUB]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    store i32 0, ptr @a, align 4
+; CHECK-NEXT:    br label %[[IF_END]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %0 = load i32, ptr @b, align 4
+  %add = add nsw i32 %0, 2
+  store i32 %add, ptr @c, align 4
+  %1 = shl i32 %add, 30
+  %add1 = sub i32 1073741824, %1
+  %div = sdiv i32 2, %add
+  %2 = shl i32 %0, 1
+  %reass.sub = sub i32 %div, %2
+  %sub = add i32 %reass.sub, -5
+  %cmp = icmp slt i32 %add1, %sub
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  store i32 0, ptr @a, align 4
+  br label %if.end
+
+if.end:
+  ret i32 0
 }

@@ -27,4 +27,4 @@ add_lit_testsuite(check-tysan "Running the TypeSanitizer tests"
   ${TYSAN_TESTSUITES}
   DEPENDS ${TYSAN_TEST_DEPS}
   )
-set_target_properties(check-tysan PROPERTIES FOLDER "Compiler-RT Misc")
+set_target_properties(check-tysan PROPERTIES FOLDER "compiler-rt Misc")

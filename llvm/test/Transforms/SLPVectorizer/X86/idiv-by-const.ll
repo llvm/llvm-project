@@ -1111,25 +1111,10 @@ define void @v4i64_urem(ptr noalias %x, ptr noalias %dst) {
 ; AVX512F-LABEL: define void @v4i64_urem(
 ; AVX512F-SAME: ptr noalias [[X:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; AVX512F-NEXT:    [[X0:%.*]] = getelementptr i64, ptr [[X]], i64 0
-; AVX512F-NEXT:    [[V0:%.*]] = load i64, ptr [[X0]], align 8
-; AVX512F-NEXT:    [[D0:%.*]] = urem i64 [[V0]], 7
 ; AVX512F-NEXT:    [[O0:%.*]] = getelementptr i64, ptr [[DST]], i64 0
-; AVX512F-NEXT:    store i64 [[D0]], ptr [[O0]], align 8
-; AVX512F-NEXT:    [[X1:%.*]] = getelementptr i64, ptr [[X]], i64 1
-; AVX512F-NEXT:    [[V1:%.*]] = load i64, ptr [[X1]], align 8
-; AVX512F-NEXT:    [[D1:%.*]] = urem i64 [[V1]], 7
-; AVX512F-NEXT:    [[O1:%.*]] = getelementptr i64, ptr [[DST]], i64 1
-; AVX512F-NEXT:    store i64 [[D1]], ptr [[O1]], align 8
-; AVX512F-NEXT:    [[X2:%.*]] = getelementptr i64, ptr [[X]], i64 2
-; AVX512F-NEXT:    [[V2:%.*]] = load i64, ptr [[X2]], align 8
-; AVX512F-NEXT:    [[D2:%.*]] = urem i64 [[V2]], 7
-; AVX512F-NEXT:    [[O2:%.*]] = getelementptr i64, ptr [[DST]], i64 2
-; AVX512F-NEXT:    store i64 [[D2]], ptr [[O2]], align 8
-; AVX512F-NEXT:    [[X3:%.*]] = getelementptr i64, ptr [[X]], i64 3
-; AVX512F-NEXT:    [[V3:%.*]] = load i64, ptr [[X3]], align 8
-; AVX512F-NEXT:    [[D3:%.*]] = urem i64 [[V3]], 7
-; AVX512F-NEXT:    [[O3:%.*]] = getelementptr i64, ptr [[DST]], i64 3
-; AVX512F-NEXT:    store i64 [[D3]], ptr [[O3]], align 8
+; AVX512F-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[X0]], align 8
+; AVX512F-NEXT:    [[TMP2:%.*]] = urem <4 x i64> [[TMP1]], splat (i64 7)
+; AVX512F-NEXT:    store <4 x i64> [[TMP2]], ptr [[O0]], align 8
 ; AVX512F-NEXT:    ret void
 ;
 ; AVX512DQ-LABEL: define void @v4i64_urem(
@@ -1201,97 +1186,37 @@ define void @v4i64_urem_nonuniform(ptr noalias %x, ptr noalias %dst) {
 ; AVX2-LABEL: define void @v4i64_urem_nonuniform(
 ; AVX2-SAME: ptr noalias [[X:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:    [[X0:%.*]] = getelementptr i64, ptr [[X]], i64 0
-; AVX2-NEXT:    [[V0:%.*]] = load i64, ptr [[X0]], align 8
-; AVX2-NEXT:    [[D0:%.*]] = urem i64 [[V0]], 3
 ; AVX2-NEXT:    [[O0:%.*]] = getelementptr i64, ptr [[DST]], i64 0
-; AVX2-NEXT:    store i64 [[D0]], ptr [[O0]], align 8
-; AVX2-NEXT:    [[X1:%.*]] = getelementptr i64, ptr [[X]], i64 1
-; AVX2-NEXT:    [[V1:%.*]] = load i64, ptr [[X1]], align 8
-; AVX2-NEXT:    [[D1:%.*]] = urem i64 [[V1]], 5
-; AVX2-NEXT:    [[O1:%.*]] = getelementptr i64, ptr [[DST]], i64 1
-; AVX2-NEXT:    store i64 [[D1]], ptr [[O1]], align 8
-; AVX2-NEXT:    [[X2:%.*]] = getelementptr i64, ptr [[X]], i64 2
-; AVX2-NEXT:    [[V2:%.*]] = load i64, ptr [[X2]], align 8
-; AVX2-NEXT:    [[D2:%.*]] = urem i64 [[V2]], 7
-; AVX2-NEXT:    [[O2:%.*]] = getelementptr i64, ptr [[DST]], i64 2
-; AVX2-NEXT:    store i64 [[D2]], ptr [[O2]], align 8
-; AVX2-NEXT:    [[X3:%.*]] = getelementptr i64, ptr [[X]], i64 3
-; AVX2-NEXT:    [[V3:%.*]] = load i64, ptr [[X3]], align 8
-; AVX2-NEXT:    [[D3:%.*]] = urem i64 [[V3]], 11
-; AVX2-NEXT:    [[O3:%.*]] = getelementptr i64, ptr [[DST]], i64 3
-; AVX2-NEXT:    store i64 [[D3]], ptr [[O3]], align 8
+; AVX2-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[X0]], align 8
+; AVX2-NEXT:    [[TMP2:%.*]] = urem <4 x i64> [[TMP1]], <i64 3, i64 5, i64 7, i64 11>
+; AVX2-NEXT:    store <4 x i64> [[TMP2]], ptr [[O0]], align 8
 ; AVX2-NEXT:    ret void
 ;
 ; AVX512F-LABEL: define void @v4i64_urem_nonuniform(
 ; AVX512F-SAME: ptr noalias [[X:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; AVX512F-NEXT:    [[X0:%.*]] = getelementptr i64, ptr [[X]], i64 0
-; AVX512F-NEXT:    [[V0:%.*]] = load i64, ptr [[X0]], align 8
-; AVX512F-NEXT:    [[D0:%.*]] = urem i64 [[V0]], 3
 ; AVX512F-NEXT:    [[O0:%.*]] = getelementptr i64, ptr [[DST]], i64 0
-; AVX512F-NEXT:    store i64 [[D0]], ptr [[O0]], align 8
-; AVX512F-NEXT:    [[X1:%.*]] = getelementptr i64, ptr [[X]], i64 1
-; AVX512F-NEXT:    [[V1:%.*]] = load i64, ptr [[X1]], align 8
-; AVX512F-NEXT:    [[D1:%.*]] = urem i64 [[V1]], 5
-; AVX512F-NEXT:    [[O1:%.*]] = getelementptr i64, ptr [[DST]], i64 1
-; AVX512F-NEXT:    store i64 [[D1]], ptr [[O1]], align 8
-; AVX512F-NEXT:    [[X2:%.*]] = getelementptr i64, ptr [[X]], i64 2
-; AVX512F-NEXT:    [[V2:%.*]] = load i64, ptr [[X2]], align 8
-; AVX512F-NEXT:    [[D2:%.*]] = urem i64 [[V2]], 7
-; AVX512F-NEXT:    [[O2:%.*]] = getelementptr i64, ptr [[DST]], i64 2
-; AVX512F-NEXT:    store i64 [[D2]], ptr [[O2]], align 8
-; AVX512F-NEXT:    [[X3:%.*]] = getelementptr i64, ptr [[X]], i64 3
-; AVX512F-NEXT:    [[V3:%.*]] = load i64, ptr [[X3]], align 8
-; AVX512F-NEXT:    [[D3:%.*]] = urem i64 [[V3]], 11
-; AVX512F-NEXT:    [[O3:%.*]] = getelementptr i64, ptr [[DST]], i64 3
-; AVX512F-NEXT:    store i64 [[D3]], ptr [[O3]], align 8
+; AVX512F-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[X0]], align 8
+; AVX512F-NEXT:    [[TMP2:%.*]] = urem <4 x i64> [[TMP1]], <i64 3, i64 5, i64 7, i64 11>
+; AVX512F-NEXT:    store <4 x i64> [[TMP2]], ptr [[O0]], align 8
 ; AVX512F-NEXT:    ret void
 ;
 ; AVX512DQ-LABEL: define void @v4i64_urem_nonuniform(
 ; AVX512DQ-SAME: ptr noalias [[X:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; AVX512DQ-NEXT:    [[X0:%.*]] = getelementptr i64, ptr [[X]], i64 0
-; AVX512DQ-NEXT:    [[V0:%.*]] = load i64, ptr [[X0]], align 8
-; AVX512DQ-NEXT:    [[D0:%.*]] = urem i64 [[V0]], 3
 ; AVX512DQ-NEXT:    [[O0:%.*]] = getelementptr i64, ptr [[DST]], i64 0
-; AVX512DQ-NEXT:    store i64 [[D0]], ptr [[O0]], align 8
-; AVX512DQ-NEXT:    [[X1:%.*]] = getelementptr i64, ptr [[X]], i64 1
-; AVX512DQ-NEXT:    [[V1:%.*]] = load i64, ptr [[X1]], align 8
-; AVX512DQ-NEXT:    [[D1:%.*]] = urem i64 [[V1]], 5
-; AVX512DQ-NEXT:    [[O1:%.*]] = getelementptr i64, ptr [[DST]], i64 1
-; AVX512DQ-NEXT:    store i64 [[D1]], ptr [[O1]], align 8
-; AVX512DQ-NEXT:    [[X2:%.*]] = getelementptr i64, ptr [[X]], i64 2
-; AVX512DQ-NEXT:    [[V2:%.*]] = load i64, ptr [[X2]], align 8
-; AVX512DQ-NEXT:    [[D2:%.*]] = urem i64 [[V2]], 7
-; AVX512DQ-NEXT:    [[O2:%.*]] = getelementptr i64, ptr [[DST]], i64 2
-; AVX512DQ-NEXT:    store i64 [[D2]], ptr [[O2]], align 8
-; AVX512DQ-NEXT:    [[X3:%.*]] = getelementptr i64, ptr [[X]], i64 3
-; AVX512DQ-NEXT:    [[V3:%.*]] = load i64, ptr [[X3]], align 8
-; AVX512DQ-NEXT:    [[D3:%.*]] = urem i64 [[V3]], 11
-; AVX512DQ-NEXT:    [[O3:%.*]] = getelementptr i64, ptr [[DST]], i64 3
-; AVX512DQ-NEXT:    store i64 [[D3]], ptr [[O3]], align 8
+; AVX512DQ-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[X0]], align 8
+; AVX512DQ-NEXT:    [[TMP2:%.*]] = urem <4 x i64> [[TMP1]], <i64 3, i64 5, i64 7, i64 11>
+; AVX512DQ-NEXT:    store <4 x i64> [[TMP2]], ptr [[O0]], align 8
 ; AVX512DQ-NEXT:    ret void
 ;
 ; AVX512DQ256-LABEL: define void @v4i64_urem_nonuniform(
 ; AVX512DQ256-SAME: ptr noalias [[X:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; AVX512DQ256-NEXT:    [[X0:%.*]] = getelementptr i64, ptr [[X]], i64 0
-; AVX512DQ256-NEXT:    [[V0:%.*]] = load i64, ptr [[X0]], align 8
-; AVX512DQ256-NEXT:    [[D0:%.*]] = urem i64 [[V0]], 3
 ; AVX512DQ256-NEXT:    [[O0:%.*]] = getelementptr i64, ptr [[DST]], i64 0
-; AVX512DQ256-NEXT:    store i64 [[D0]], ptr [[O0]], align 8
-; AVX512DQ256-NEXT:    [[X1:%.*]] = getelementptr i64, ptr [[X]], i64 1
-; AVX512DQ256-NEXT:    [[V1:%.*]] = load i64, ptr [[X1]], align 8
-; AVX512DQ256-NEXT:    [[D1:%.*]] = urem i64 [[V1]], 5
-; AVX512DQ256-NEXT:    [[O1:%.*]] = getelementptr i64, ptr [[DST]], i64 1
-; AVX512DQ256-NEXT:    store i64 [[D1]], ptr [[O1]], align 8
-; AVX512DQ256-NEXT:    [[X2:%.*]] = getelementptr i64, ptr [[X]], i64 2
-; AVX512DQ256-NEXT:    [[V2:%.*]] = load i64, ptr [[X2]], align 8
-; AVX512DQ256-NEXT:    [[D2:%.*]] = urem i64 [[V2]], 7
-; AVX512DQ256-NEXT:    [[O2:%.*]] = getelementptr i64, ptr [[DST]], i64 2
-; AVX512DQ256-NEXT:    store i64 [[D2]], ptr [[O2]], align 8
-; AVX512DQ256-NEXT:    [[X3:%.*]] = getelementptr i64, ptr [[X]], i64 3
-; AVX512DQ256-NEXT:    [[V3:%.*]] = load i64, ptr [[X3]], align 8
-; AVX512DQ256-NEXT:    [[D3:%.*]] = urem i64 [[V3]], 11
-; AVX512DQ256-NEXT:    [[O3:%.*]] = getelementptr i64, ptr [[DST]], i64 3
-; AVX512DQ256-NEXT:    store i64 [[D3]], ptr [[O3]], align 8
+; AVX512DQ256-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[X0]], align 8
+; AVX512DQ256-NEXT:    [[TMP2:%.*]] = urem <4 x i64> [[TMP1]], <i64 3, i64 5, i64 7, i64 11>
+; AVX512DQ256-NEXT:    store <4 x i64> [[TMP2]], ptr [[O0]], align 8
 ; AVX512DQ256-NEXT:    ret void
 ;
   %x0 = getelementptr i64, ptr %x, i64 0
@@ -1499,45 +1424,15 @@ define void @v8i64_urem_nonuniform(ptr noalias %x, ptr noalias %dst) {
 ; AVX2-LABEL: define void @v8i64_urem_nonuniform(
 ; AVX2-SAME: ptr noalias [[X:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:    [[X0:%.*]] = getelementptr i64, ptr [[X]], i64 0
-; AVX2-NEXT:    [[V0:%.*]] = load i64, ptr [[X0]], align 8
-; AVX2-NEXT:    [[D0:%.*]] = urem i64 [[V0]], 3
 ; AVX2-NEXT:    [[O0:%.*]] = getelementptr i64, ptr [[DST]], i64 0
-; AVX2-NEXT:    store i64 [[D0]], ptr [[O0]], align 8
-; AVX2-NEXT:    [[X1:%.*]] = getelementptr i64, ptr [[X]], i64 1
-; AVX2-NEXT:    [[V1:%.*]] = load i64, ptr [[X1]], align 8
-; AVX2-NEXT:    [[D1:%.*]] = urem i64 [[V1]], 5
-; AVX2-NEXT:    [[O1:%.*]] = getelementptr i64, ptr [[DST]], i64 1
-; AVX2-NEXT:    store i64 [[D1]], ptr [[O1]], align 8
-; AVX2-NEXT:    [[X2:%.*]] = getelementptr i64, ptr [[X]], i64 2
-; AVX2-NEXT:    [[V2:%.*]] = load i64, ptr [[X2]], align 8
-; AVX2-NEXT:    [[D2:%.*]] = urem i64 [[V2]], 7
-; AVX2-NEXT:    [[O2:%.*]] = getelementptr i64, ptr [[DST]], i64 2
-; AVX2-NEXT:    store i64 [[D2]], ptr [[O2]], align 8
-; AVX2-NEXT:    [[X3:%.*]] = getelementptr i64, ptr [[X]], i64 3
-; AVX2-NEXT:    [[V3:%.*]] = load i64, ptr [[X3]], align 8
-; AVX2-NEXT:    [[D3:%.*]] = urem i64 [[V3]], 11
-; AVX2-NEXT:    [[O3:%.*]] = getelementptr i64, ptr [[DST]], i64 3
-; AVX2-NEXT:    store i64 [[D3]], ptr [[O3]], align 8
+; AVX2-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[X0]], align 8
+; AVX2-NEXT:    [[TMP2:%.*]] = urem <4 x i64> [[TMP1]], <i64 3, i64 5, i64 7, i64 11>
+; AVX2-NEXT:    store <4 x i64> [[TMP2]], ptr [[O0]], align 8
 ; AVX2-NEXT:    [[X4:%.*]] = getelementptr i64, ptr [[X]], i64 4
-; AVX2-NEXT:    [[V4:%.*]] = load i64, ptr [[X4]], align 8
-; AVX2-NEXT:    [[D4:%.*]] = urem i64 [[V4]], 13
 ; AVX2-NEXT:    [[O4:%.*]] = getelementptr i64, ptr [[DST]], i64 4
-; AVX2-NEXT:    store i64 [[D4]], ptr [[O4]], align 8
-; AVX2-NEXT:    [[X5:%.*]] = getelementptr i64, ptr [[X]], i64 5
-; AVX2-NEXT:    [[V5:%.*]] = load i64, ptr [[X5]], align 8
-; AVX2-NEXT:    [[D5:%.*]] = urem i64 [[V5]], 17
-; AVX2-NEXT:    [[O5:%.*]] = getelementptr i64, ptr [[DST]], i64 5
-; AVX2-NEXT:    store i64 [[D5]], ptr [[O5]], align 8
-; AVX2-NEXT:    [[X6:%.*]] = getelementptr i64, ptr [[X]], i64 6
-; AVX2-NEXT:    [[V6:%.*]] = load i64, ptr [[X6]], align 8
-; AVX2-NEXT:    [[D6:%.*]] = urem i64 [[V6]], 19
-; AVX2-NEXT:    [[O6:%.*]] = getelementptr i64, ptr [[DST]], i64 6
-; AVX2-NEXT:    store i64 [[D6]], ptr [[O6]], align 8
-; AVX2-NEXT:    [[X7:%.*]] = getelementptr i64, ptr [[X]], i64 7
-; AVX2-NEXT:    [[V7:%.*]] = load i64, ptr [[X7]], align 8
-; AVX2-NEXT:    [[D7:%.*]] = urem i64 [[V7]], 23
-; AVX2-NEXT:    [[O7:%.*]] = getelementptr i64, ptr [[DST]], i64 7
-; AVX2-NEXT:    store i64 [[D7]], ptr [[O7]], align 8
+; AVX2-NEXT:    [[TMP3:%.*]] = load <4 x i64>, ptr [[X4]], align 8
+; AVX2-NEXT:    [[TMP4:%.*]] = urem <4 x i64> [[TMP3]], <i64 13, i64 17, i64 19, i64 23>
+; AVX2-NEXT:    store <4 x i64> [[TMP4]], ptr [[O4]], align 8
 ; AVX2-NEXT:    ret void
 ;
 ; AVX512F-LABEL: define void @v8i64_urem_nonuniform(
@@ -1562,9 +1457,14 @@ define void @v8i64_urem_nonuniform(ptr noalias %x, ptr noalias %dst) {
 ; AVX512DQ256-SAME: ptr noalias [[X:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; AVX512DQ256-NEXT:    [[X0:%.*]] = getelementptr i64, ptr [[X]], i64 0
 ; AVX512DQ256-NEXT:    [[O0:%.*]] = getelementptr i64, ptr [[DST]], i64 0
-; AVX512DQ256-NEXT:    [[TMP1:%.*]] = load <8 x i64>, ptr [[X0]], align 8
-; AVX512DQ256-NEXT:    [[TMP2:%.*]] = urem <8 x i64> [[TMP1]], <i64 3, i64 5, i64 7, i64 11, i64 13, i64 17, i64 19, i64 23>
-; AVX512DQ256-NEXT:    store <8 x i64> [[TMP2]], ptr [[O0]], align 8
+; AVX512DQ256-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[X0]], align 8
+; AVX512DQ256-NEXT:    [[TMP2:%.*]] = urem <4 x i64> [[TMP1]], <i64 3, i64 5, i64 7, i64 11>
+; AVX512DQ256-NEXT:    store <4 x i64> [[TMP2]], ptr [[O0]], align 8
+; AVX512DQ256-NEXT:    [[X4:%.*]] = getelementptr i64, ptr [[X]], i64 4
+; AVX512DQ256-NEXT:    [[O4:%.*]] = getelementptr i64, ptr [[DST]], i64 4
+; AVX512DQ256-NEXT:    [[TMP3:%.*]] = load <4 x i64>, ptr [[X4]], align 8
+; AVX512DQ256-NEXT:    [[TMP4:%.*]] = urem <4 x i64> [[TMP3]], <i64 13, i64 17, i64 19, i64 23>
+; AVX512DQ256-NEXT:    store <4 x i64> [[TMP4]], ptr [[O4]], align 8
 ; AVX512DQ256-NEXT:    ret void
 ;
   %x0 = getelementptr i64, ptr %x, i64 0
@@ -1800,49 +1700,19 @@ define void @v4i64_srem_nonuniform(ptr noalias %x, ptr noalias %dst) {
 ; AVX512DQ-LABEL: define void @v4i64_srem_nonuniform(
 ; AVX512DQ-SAME: ptr noalias [[X:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; AVX512DQ-NEXT:    [[X0:%.*]] = getelementptr i64, ptr [[X]], i64 0
-; AVX512DQ-NEXT:    [[V0:%.*]] = load i64, ptr [[X0]], align 8
-; AVX512DQ-NEXT:    [[D0:%.*]] = srem i64 [[V0]], 3
 ; AVX512DQ-NEXT:    [[O0:%.*]] = getelementptr i64, ptr [[DST]], i64 0
-; AVX512DQ-NEXT:    store i64 [[D0]], ptr [[O0]], align 8
-; AVX512DQ-NEXT:    [[X1:%.*]] = getelementptr i64, ptr [[X]], i64 1
-; AVX512DQ-NEXT:    [[V1:%.*]] = load i64, ptr [[X1]], align 8
-; AVX512DQ-NEXT:    [[D1:%.*]] = srem i64 [[V1]], 5
-; AVX512DQ-NEXT:    [[O1:%.*]] = getelementptr i64, ptr [[DST]], i64 1
-; AVX512DQ-NEXT:    store i64 [[D1]], ptr [[O1]], align 8
-; AVX512DQ-NEXT:    [[X2:%.*]] = getelementptr i64, ptr [[X]], i64 2
-; AVX512DQ-NEXT:    [[V2:%.*]] = load i64, ptr [[X2]], align 8
-; AVX512DQ-NEXT:    [[D2:%.*]] = srem i64 [[V2]], 7
-; AVX512DQ-NEXT:    [[O2:%.*]] = getelementptr i64, ptr [[DST]], i64 2
-; AVX512DQ-NEXT:    store i64 [[D2]], ptr [[O2]], align 8
-; AVX512DQ-NEXT:    [[X3:%.*]] = getelementptr i64, ptr [[X]], i64 3
-; AVX512DQ-NEXT:    [[V3:%.*]] = load i64, ptr [[X3]], align 8
-; AVX512DQ-NEXT:    [[D3:%.*]] = srem i64 [[V3]], 11
-; AVX512DQ-NEXT:    [[O3:%.*]] = getelementptr i64, ptr [[DST]], i64 3
-; AVX512DQ-NEXT:    store i64 [[D3]], ptr [[O3]], align 8
+; AVX512DQ-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[X0]], align 8
+; AVX512DQ-NEXT:    [[TMP2:%.*]] = srem <4 x i64> [[TMP1]], <i64 3, i64 5, i64 7, i64 11>
+; AVX512DQ-NEXT:    store <4 x i64> [[TMP2]], ptr [[O0]], align 8
 ; AVX512DQ-NEXT:    ret void
 ;
 ; AVX512DQ256-LABEL: define void @v4i64_srem_nonuniform(
 ; AVX512DQ256-SAME: ptr noalias [[X:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; AVX512DQ256-NEXT:    [[X0:%.*]] = getelementptr i64, ptr [[X]], i64 0
-; AVX512DQ256-NEXT:    [[V0:%.*]] = load i64, ptr [[X0]], align 8
-; AVX512DQ256-NEXT:    [[D0:%.*]] = srem i64 [[V0]], 3
 ; AVX512DQ256-NEXT:    [[O0:%.*]] = getelementptr i64, ptr [[DST]], i64 0
-; AVX512DQ256-NEXT:    store i64 [[D0]], ptr [[O0]], align 8
-; AVX512DQ256-NEXT:    [[X1:%.*]] = getelementptr i64, ptr [[X]], i64 1
-; AVX512DQ256-NEXT:    [[V1:%.*]] = load i64, ptr [[X1]], align 8
-; AVX512DQ256-NEXT:    [[D1:%.*]] = srem i64 [[V1]], 5
-; AVX512DQ256-NEXT:    [[O1:%.*]] = getelementptr i64, ptr [[DST]], i64 1
-; AVX512DQ256-NEXT:    store i64 [[D1]], ptr [[O1]], align 8
-; AVX512DQ256-NEXT:    [[X2:%.*]] = getelementptr i64, ptr [[X]], i64 2
-; AVX512DQ256-NEXT:    [[V2:%.*]] = load i64, ptr [[X2]], align 8
-; AVX512DQ256-NEXT:    [[D2:%.*]] = srem i64 [[V2]], 7
-; AVX512DQ256-NEXT:    [[O2:%.*]] = getelementptr i64, ptr [[DST]], i64 2
-; AVX512DQ256-NEXT:    store i64 [[D2]], ptr [[O2]], align 8
-; AVX512DQ256-NEXT:    [[X3:%.*]] = getelementptr i64, ptr [[X]], i64 3
-; AVX512DQ256-NEXT:    [[V3:%.*]] = load i64, ptr [[X3]], align 8
-; AVX512DQ256-NEXT:    [[D3:%.*]] = srem i64 [[V3]], 11
-; AVX512DQ256-NEXT:    [[O3:%.*]] = getelementptr i64, ptr [[DST]], i64 3
-; AVX512DQ256-NEXT:    store i64 [[D3]], ptr [[O3]], align 8
+; AVX512DQ256-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[X0]], align 8
+; AVX512DQ256-NEXT:    [[TMP2:%.*]] = srem <4 x i64> [[TMP1]], <i64 3, i64 5, i64 7, i64 11>
+; AVX512DQ256-NEXT:    store <4 x i64> [[TMP2]], ptr [[O0]], align 8
 ; AVX512DQ256-NEXT:    ret void
 ;
   %x0 = getelementptr i64, ptr %x, i64 0
@@ -2213,9 +2083,14 @@ define void @v8i64_srem_nonuniform(ptr noalias %x, ptr noalias %dst) {
 ; AVX512DQ256-SAME: ptr noalias [[X:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; AVX512DQ256-NEXT:    [[X0:%.*]] = getelementptr i64, ptr [[X]], i64 0
 ; AVX512DQ256-NEXT:    [[O0:%.*]] = getelementptr i64, ptr [[DST]], i64 0
-; AVX512DQ256-NEXT:    [[TMP1:%.*]] = load <8 x i64>, ptr [[X0]], align 8
-; AVX512DQ256-NEXT:    [[TMP2:%.*]] = srem <8 x i64> [[TMP1]], <i64 3, i64 5, i64 7, i64 11, i64 13, i64 17, i64 19, i64 23>
-; AVX512DQ256-NEXT:    store <8 x i64> [[TMP2]], ptr [[O0]], align 8
+; AVX512DQ256-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[X0]], align 8
+; AVX512DQ256-NEXT:    [[TMP2:%.*]] = srem <4 x i64> [[TMP1]], <i64 3, i64 5, i64 7, i64 11>
+; AVX512DQ256-NEXT:    store <4 x i64> [[TMP2]], ptr [[O0]], align 8
+; AVX512DQ256-NEXT:    [[X4:%.*]] = getelementptr i64, ptr [[X]], i64 4
+; AVX512DQ256-NEXT:    [[O4:%.*]] = getelementptr i64, ptr [[DST]], i64 4
+; AVX512DQ256-NEXT:    [[TMP3:%.*]] = load <4 x i64>, ptr [[X4]], align 8
+; AVX512DQ256-NEXT:    [[TMP4:%.*]] = srem <4 x i64> [[TMP3]], <i64 13, i64 17, i64 19, i64 23>
+; AVX512DQ256-NEXT:    store <4 x i64> [[TMP4]], ptr [[O4]], align 8
 ; AVX512DQ256-NEXT:    ret void
 ;
   %x0 = getelementptr i64, ptr %x, i64 0

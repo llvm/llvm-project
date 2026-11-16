@@ -29,7 +29,12 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include <bitset>
+#include <cstdint>
 #include <memory>
+#include <optional>
+
+#define OPTIONS_STRUCT_DECL
+#include "RISCVOptions.inc"
 
 #define GET_RISCV_MACRO_FUSION_PRED_DECL
 #include "RISCVGenMacroFusion.inc"
@@ -71,6 +76,10 @@ struct RISCVTuneInfo {
   unsigned MaxLoadsPerMemcmpOptSize;
   unsigned MaxLoadsPerMemcmp;
 
+  // How many vector elements can be coalesced if on the
+  // same cache line
+  uint8_t MaxVectorCoalesceElts;
+
   // The direction of PostRA scheduling.
   MISched::Direction PostRASchedDirection;
 
@@ -87,7 +96,6 @@ public:
   enum RISCVProcFamilyEnum : uint8_t {
     Others,
     SiFive7,
-    VentanaVeyron,
     MIPSP8700,
     Andes45,
   };
@@ -97,6 +105,8 @@ public:
   };
   // clang-format on
 private:
+  const RISCVOptions &CLOpts;
+
   virtual void anchor();
 
   RISCVProcFamilyEnum RISCVProcFamily = Others;
@@ -113,8 +123,10 @@ private:
   unsigned RVVVectorBitsMin;
   unsigned RVVVectorBitsMax;
   uint8_t MaxInterleaveFactor = 2;
-  RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
-  std::bitset<RISCV::NUM_TARGET_REGS> UserReservedRegister;
+  RISCVABI::ABI TargetABI = RISCVABI::ABI::Unknown;
+  // Set by the reserve-xN subtarget features, indexed by N. RISCVRegisterInfo
+  // expands this to include aliases.
+  std::bitset<32> UserReservedXRegs;
   const RISCVTuneInfoTable::RISCVTuneInfo *TuneInfo;
 
   RISCVFrameLowering FrameLowering;
@@ -144,6 +156,7 @@ public:
   const RISCVFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
   }
+  const RISCVOptions &getCLOpts() const { return CLOpts; }
   const RISCVInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const RISCVRegisterInfo *getRegisterInfo() const override {
     return &InstrInfo.getRegisterInfo();
@@ -177,10 +190,9 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
-  LLVM_DEPRECATED("Now Equivalent to hasStdExtZcd", "hasStdExtZcd")
-  bool hasStdExtCOrZcd() const { return HasStdExtZcd; }
-  LLVM_DEPRECATED("Now Equivalent to hasStdExtZcf", "hasStdExtZcf")
-  bool hasStdExtCOrZcfOrZce() const { return HasStdExtZcf; }
+  bool hasYInstructions() const {
+    return HasStdExtYCapMode || HasStdExtZyhybrid;
+  }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
@@ -207,10 +219,6 @@ public:
   }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
-
-  bool hasCZEROLike() const {
-    return HasStdExtZicond || HasVendorXVentanaCondOps;
-  }
 
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
@@ -288,14 +296,15 @@ public:
   }
 
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
-  bool isSoftFPABI() const {
-    return TargetABI == RISCVABI::ABI_LP64 ||
-           TargetABI == RISCVABI::ABI_ILP32 ||
-           TargetABI == RISCVABI::ABI_ILP32E;
+  bool isSoftFPABI() const { return RISCVABI::isSoftFP(TargetABI); }
+  /// Returns the X registers reserved by the reserve-xN features, indexed by N.
+  /// Aliases of these registers are not included.
+  const std::bitset<32> &getUserReservedXRegs() const {
+    return UserReservedXRegs;
   }
   bool isRegisterReservedByUser(Register i) const override {
     assert(i.id() < RISCV::NUM_TARGET_REGS && "Register out of range");
-    return UserReservedRegister[i.id()];
+    return getRegisterInfo()->isRegisterReservedByUser(i.id());
   }
 
   TargetRegisterClass const *getLargestFPRegClass() const {
@@ -308,8 +317,11 @@ public:
     return nullptr;
   };
 
-  // XRay support - require D and C extensions.
-  bool isXRaySupported() const override { return hasStdExtD() && hasStdExtC(); }
+  // XRay support - require D and Zcf/Zcd extensions. Effectively D and C
+  // without checking the C feature.
+  bool isXRaySupported() const override {
+    return hasStdExtD() && (is64Bit() || hasStdExtZcf()) && hasStdExtZcd();
+  }
 
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }
@@ -399,7 +411,6 @@ public:
   unsigned getMispredictionPenalty() const override;
   unsigned getLoadLatency() const override;
 
-  unsigned getMaxLMULForFixedLengthVectors() const;
   bool useRVVForFixedLengthVectors() const;
 
   bool enableSubRegLiveness() const override;
@@ -455,6 +466,10 @@ public:
   unsigned getMaxLoadsPerMemcmp(bool OptSize) const {
     return OptSize ? TuneInfo->MaxLoadsPerMemcmpOptSize
                    : TuneInfo->MaxLoadsPerMemcmp;
+  }
+
+  uint8_t getMaxVectorCoalesceElts() const {
+    return TuneInfo->MaxVectorCoalesceElts;
   }
 
   MISched::Direction getPostRASchedDirection() const {

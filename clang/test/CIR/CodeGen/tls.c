@@ -6,10 +6,10 @@
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ogcg.ll %s
 
 extern __thread int b;
-// CIR: cir.global "private" external tls_dyn @b : !s32i
+// CIR: cir.global "private" external tls_model = tls_dyn @b : !s32i
 
 __thread int a;
-// CIR: cir.global external tls_dyn @a = #cir.int<0> : !s32i
+// CIR: cir.global external tls_model = tls_dyn @a = #cir.int<0> : !s32i
 
 int c(void) { return *&b; }
 // CIR: cir.func no_inline dso_local @c() -> !s32i

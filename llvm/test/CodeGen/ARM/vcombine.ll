@@ -5,9 +5,9 @@
 define <16 x i8> @vcombine8(ptr %A, ptr %B) nounwind {
 ; CHECK-LE-LABEL: vcombine8:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vldr d18, [r1]
+; CHECK-LE-NEXT:    vldr d17, [r1]
 ; CHECK-LE-NEXT:    vldr d16, [r0]
-; CHECK-LE-NEXT:    vmov r2, r3, d18
+; CHECK-LE-NEXT:    vmov r2, r3, d17
 ; CHECK-LE-NEXT:    vmov r0, r1, d16
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
@@ -32,9 +32,9 @@ define <16 x i8> @vcombine8(ptr %A, ptr %B) nounwind {
 define <8 x i16> @vcombine16(ptr %A, ptr %B) nounwind {
 ; CHECK-LE-LABEL: vcombine16:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vldr d18, [r1]
+; CHECK-LE-NEXT:    vldr d17, [r1]
 ; CHECK-LE-NEXT:    vldr d16, [r0]
-; CHECK-LE-NEXT:    vmov r2, r3, d18
+; CHECK-LE-NEXT:    vmov r2, r3, d17
 ; CHECK-LE-NEXT:    vmov r0, r1, d16
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
@@ -59,9 +59,9 @@ define <8 x i16> @vcombine16(ptr %A, ptr %B) nounwind {
 define <4 x i32> @vcombine32(ptr %A, ptr %B) nounwind {
 ; CHECK-LE-LABEL: vcombine32:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vldr d18, [r1]
+; CHECK-LE-NEXT:    vldr d17, [r1]
 ; CHECK-LE-NEXT:    vldr d16, [r0]
-; CHECK-LE-NEXT:    vmov r2, r3, d18
+; CHECK-LE-NEXT:    vmov r2, r3, d17
 ; CHECK-LE-NEXT:    vmov r0, r1, d16
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
@@ -87,9 +87,9 @@ define <4 x i32> @vcombine32(ptr %A, ptr %B) nounwind {
 define <4 x float> @vcombinefloat(ptr %A, ptr %B) nounwind {
 ; CHECK-LE-LABEL: vcombinefloat:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vldr d18, [r1]
+; CHECK-LE-NEXT:    vldr d17, [r1]
 ; CHECK-LE-NEXT:    vldr d16, [r0]
-; CHECK-LE-NEXT:    vmov r2, r3, d18
+; CHECK-LE-NEXT:    vmov r2, r3, d17
 ; CHECK-LE-NEXT:    vmov r0, r1, d16
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
@@ -115,17 +115,17 @@ define <4 x float> @vcombinefloat(ptr %A, ptr %B) nounwind {
 define <2 x i64> @vcombine64(ptr %A, ptr %B) nounwind {
 ; CHECK-LE-LABEL: vcombine64:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vldr d18, [r1]
+; CHECK-LE-NEXT:    vldr d17, [r1]
 ; CHECK-LE-NEXT:    vldr d16, [r0]
-; CHECK-LE-NEXT:    vmov r2, r3, d18
+; CHECK-LE-NEXT:    vmov r2, r3, d17
 ; CHECK-LE-NEXT:    vmov r0, r1, d16
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
 ; CHECK-BE-LABEL: vcombine64:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    vldr d18, [r1]
+; CHECK-BE-NEXT:    vldr d17, [r1]
 ; CHECK-BE-NEXT:    vldr d16, [r0]
-; CHECK-BE-NEXT:    vmov r3, r2, d18
+; CHECK-BE-NEXT:    vmov r3, r2, d17
 ; CHECK-BE-NEXT:    vmov r1, r0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
 
@@ -179,9 +179,9 @@ define <8 x i16> @vcombine_vdup(<8 x i16> %src, ptr nocapture readonly %p) {
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    ldr r0, [sp]
 ; CHECK-LE-NEXT:    vld1.16 {d16[]}, [r0:16]!
-; CHECK-LE-NEXT:    vld1.16 {d18[]}, [r0:16]
+; CHECK-LE-NEXT:    vld1.16 {d17[]}, [r0:16]
 ; CHECK-LE-NEXT:    vmov r0, r1, d16
-; CHECK-LE-NEXT:    vmov r2, r3, d18
+; CHECK-LE-NEXT:    vmov r2, r3, d17
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
 ; CHECK-BE-LABEL: vcombine_vdup:

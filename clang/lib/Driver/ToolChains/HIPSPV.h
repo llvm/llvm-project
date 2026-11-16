@@ -105,9 +105,6 @@ public:
   bool SupportsProfiling() const override { return false; }
 
   LTOKind getDefaultLTOMode() const override { return LTOK_Full; }
-  LTOKind
-  getLTOMode(const llvm::opt::ArgList &Args,
-             Action::OffloadKind Kind = Action::OFK_None) const override;
 
   const ToolChain *HostTC = nullptr;
 

@@ -84,8 +84,8 @@ RESOURCE<float> Buffer;
 
 // CHECK: FinalAttr {{.*}} Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
-// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // CHECK-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 
@@ -137,6 +137,31 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-HANDLE: DeclRefExpr {{.*}} 'const hlsl::[[RESOURCE]]<element_type>' lvalue ParmVar {{.*}} 'other' 'const hlsl::[[RESOURCE]]<element_type> &'
 // CHECK-NEXT: ReturnStmt
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: AlwaysInlineAttr
+
+// Heap info constructor
+
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (hlsl::__detail::heap_resource_info)' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} HeapResInfo 'hlsl::__detail::heap_resource_info'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: BinaryOperator {{.*}} '='
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: CStyleCastExpr {{.*}} '__hlsl_resource_t
+// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromheap' '__hlsl_resource_t (__hlsl_resource_t, unsigned int) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: MemberExpr {{.*}} 'unsigned int' lvalue .Index
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::__detail::heap_resource_info' lvalue ParmVar {{.*}} 'HeapResInfo' 'hlsl::__detail::heap_resource_info'
+// CHECK-COUNTER-HANDLE-NEXT: BinaryOperator {{.*}} '='
+// CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} lvalue .__counter_handle
+// CHECK-COUNTER-HANDLE-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-COUNTER-HANDLE-NEXT: CStyleCastExpr {{.*}} '__hlsl_resource_t
+// CHECK-COUNTER-HANDLE-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_counterhandlefromheap' '__hlsl_resource_t (__hlsl_resource_t) noexcept'
+// CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-COUNTER-HANDLE-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: AlwaysInlineAttr
 
 // Static __createFromBinding method
@@ -338,8 +363,8 @@ RESOURCE<float> Buffer;
 // CHECK-LOAD-NEXT: CallExpr
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_with_status' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-LOAD-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
-// CHECK-LOAD-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-LOAD-UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
+// CHECK-LOAD-SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // CHECK-LOAD-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
@@ -355,7 +380,7 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-NEXT: CallExpr
 // CHECK-COUNTER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (__hlsl_resource_t, int) noexcept'
 // CHECK-COUNTER-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__counter_handle
 // CHECK-COUNTER-NEXT: CXXThisExpr {{.*}} 'hlsl::RWStructuredBuffer<element_type>' lvalue implicit this
@@ -371,7 +396,7 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-NEXT: CallExpr
 // CHECK-COUNTER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (__hlsl_resource_t, int) noexcept'
 // CHECK-COUNTER-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__counter_handle
 // CHECK-COUNTER-NEXT: CXXThisExpr {{.*}} 'hlsl::RWStructuredBuffer<element_type>' lvalue implicit this
@@ -389,7 +414,7 @@ RESOURCE<float> Buffer;
 // CHECK-APPEND-NEXT: CallExpr
 // CHECK-APPEND-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-APPEND-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-APPEND-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-APPEND-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // CHECK-APPEND-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-APPEND-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
 // CHECK-APPEND-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
@@ -397,7 +422,7 @@ RESOURCE<float> Buffer;
 // CHECK-APPEND-NEXT: CallExpr
 // CHECK-APPEND-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (__hlsl_resource_t, int) noexcept'
 // CHECK-APPEND-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-APPEND-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-APPEND-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // CHECK-APPEND-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-APPEND-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__counter_handle
 // CHECK-APPEND-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
@@ -414,7 +439,7 @@ RESOURCE<float> Buffer;
 // CHECK-CONSUME-NEXT: CallExpr
 // CHECK-CONSUME-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-CONSUME-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-CONSUME-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-CONSUME-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // CHECK-CONSUME-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-CONSUME-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
 // CHECK-CONSUME-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
@@ -422,7 +447,7 @@ RESOURCE<float> Buffer;
 // CHECK-CONSUME-NEXT: CallExpr
 // CHECK-CONSUME-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (__hlsl_resource_t, int) noexcept'
 // CHECK-CONSUME-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-CONSUME-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-CONSUME-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // CHECK-CONSUME-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-CONSUME-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__counter_handle
 // CHECK-CONSUME-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
@@ -453,13 +478,13 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: BuiltinType {{.*}} 'float'
 // CHECK-NEXT: FinalAttr {{.*}} Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit referenced __handle '__hlsl_resource_t
-// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // CHECK-ROV-SAME{LITERAL}: [[hlsl::is_rov]]
 // CHECK-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(float)]]
 // CHECK-COUNTER-HANDLE: FieldDecl {{.*}} implicit referenced __counter_handle '__hlsl_resource_t
-// CHECK-COUNTER-HANDLE-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-COUNTER-HANDLE-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // CHECK-COUNTER-HANDLE-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-COUNTER-HANDLE-SAME{LITERAL}: [[hlsl::is_counter]]
 // CHECK-COUNTER-HANDLE-SAME{LITERAL}: [[hlsl::contained_type(float)]]

@@ -1,7 +1,13 @@
 ; RUN: llc <%s --mtriple s390x-ibm-zos --filetype=obj | \
 ; RUN:   od -Ax -tx1 -v | FileCheck --ignore-case %s
+; RUN: llc <%s --mtriple s390x-ibm-zos | FileCheck --check-prefix CHECK-ASM %s
 
 @x = common global i32 0, align 4
+
+; CHECK-ASM: x CSECT
+; CHECK-ASM: C_WSA64 CATTR ALIGN(2),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(x)
+; CHECK-ASM: x XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
+; CHECK-ASM-NEXT: DC 4XL1'00'
 
 ; ESD record, type SD.
 ; The name is x.
@@ -24,5 +30,5 @@
 ; CHECK-NEXT: 000280 03 00 00 03 [[X_PR:00 00 00 07]] [[X_WSA]] 00 00 00 00
 ; CHECK-NEXT: 000290 00 00 00 00 00 00 00 00 00 00 00 04 00 00 00 00
 ; CHECK-NEXT: 0002a0 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00
-; CHECK-NEXT: 0002b0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01
+; CHECK-NEXT: 0002b0 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 01
 ; CHECK-NEXT: 0002c0 00 04 22 00 00 00 00 01 a7 00 00 00 00 00 00 00

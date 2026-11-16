@@ -10,17 +10,13 @@ define double @findratio() {
 ; CHECK-LABEL: define double @findratio() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr null, align 8
-; CHECK-NEXT:    [[MUL14:%.*]] = fmul double [[TMP0]], 0.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    [[SUB19:%.*]] = fsub double [[TMP1]], 0.000000e+00
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call double @llvm.fmuladd.f64(double [[MUL14]], double [[SUB19]], double 0.000000e+00)
-; CHECK-NEXT:    [[SUB15:%.*]] = fsub double 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    [[MUL16:%.*]] = fmul double [[TMP0]], [[SUB15]]
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double [[MUL16]])
-; CHECK-NEXT:    [[MUL17:%.*]] = fmul double 0.000000e+00, [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double [[TMP2]])
-; CHECK-NEXT:    [[MUL26:%.*]] = fmul double 0.000000e+00, [[TMP4]]
-; CHECK-NEXT:    [[ADD383:%.*]] = fadd double [[MUL17]], [[MUL26]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], <double 1.000000e+00, double 0.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP3]], <2 x double> <double 0.000000e+00, double +qnan>, <2 x double> <double -0.000000e+00, double 0.000000e+00>)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> zeroinitializer, <2 x double> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> zeroinitializer, [[TMP5]]
+; CHECK-NEXT:    [[ADD383:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP6]])
 ; CHECK-NEXT:    ret double [[ADD383]]
 ;
 entry:
@@ -43,3 +39,35 @@ entry:
 declare double @llvm.fmuladd.f64(double, double, double) #0
 
 attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+
+; The operand of the absorbed copyable fmul is itself a copyable lane of the
+; child node; the def-use dependency of that operand on the absorbed fmul must
+; be released when the fmul is scheduled.
+define void @absorbed_fmul_copyable_operand() {
+; CHECK-LABEL: define void @absorbed_fmul_copyable_operand() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr poison, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x float> [[TMP0]], <float 1.000000e+00, float 0.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP1]], <4 x float> zeroinitializer, <4 x float> <float -0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>)
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr poison, align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load float, ptr poison, align 4
+  %mul60 = fmul float %0, 0.000000e+00
+  store float %mul60, ptr poison, align 4
+  %arrayidx65 = getelementptr i8, ptr poison, i64 4
+  %1 = load float, ptr %arrayidx65, align 4
+  %neg = fmul float %1, 0.000000e+00
+  %2 = call float @llvm.fmuladd.f32(float %neg, float 0.000000e+00, float 0.000000e+00)
+  store float %2, ptr %arrayidx65, align 4
+  %arrayidx65.1 = getelementptr i8, ptr poison, i64 8
+  %3 = load float, ptr %arrayidx65.1, align 4
+  %4 = call float @llvm.fmuladd.f32(float %3, float 0.000000e+00, float 0.000000e+00)
+  store float %4, ptr %arrayidx65.1, align 4
+  %arrayidx65.2 = getelementptr i8, ptr poison, i64 12
+  %5 = load float, ptr %arrayidx65.2, align 4
+  %6 = call float @llvm.fmuladd.f32(float %5, float 0.000000e+00, float 0.000000e+00)
+  store float %6, ptr %arrayidx65.2, align 4
+  ret void
+}

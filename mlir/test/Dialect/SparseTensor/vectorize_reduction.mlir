@@ -14,7 +14,7 @@
 // CHECK-ON-DAG:       %[[VAL_3:.*]] = arith.constant dense<0> : vector<8xi32>
 // CHECK-ON-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-ON-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-ON-DAG:       %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xi32>
 // CHECK-ON-DAG:       %[[VAL_8:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<i32> to memref<i32>
 // CHECK-ON:           %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<i32>
@@ -40,7 +40,7 @@
 // CHECK-OFF-SAME:      %[[VAL_1:.*]]: tensor<?xi32, #sparse{{[0-9]*}}>) -> tensor<i32> {
 // CHECK-OFF-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF-DAG:       %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-OFF-DAG:       %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-OFF-DAG:       %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xi32>
 // CHECK-OFF-DAG:       %[[VAL_6:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<i32> to memref<i32>
 // CHECK-OFF:           %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<i32>
@@ -91,7 +91,7 @@ func.func @sparse_reduction_ori(%argx: tensor<i32>,
 // CHECK-ON-DAG:       %[[VAL_3:.*]] = arith.constant dense<0> : vector<8xi32>
 // CHECK-ON-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-ON-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-ON-DAG:       %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xi32>
 // CHECK-ON-DAG:       %[[VAL_8:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<i32> to memref<i32>
 // CHECK-ON:           %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<i32>
@@ -117,7 +117,7 @@ func.func @sparse_reduction_ori(%argx: tensor<i32>,
 // CHECK-OFF-SAME:      %[[VAL_1:.*]]: tensor<?xi32, #sparse{{[0-9]*}}>) -> tensor<i32> {
 // CHECK-OFF-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF-DAG:       %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-OFF-DAG:       %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-OFF-DAG:       %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xi32>
 // CHECK-OFF-DAG:       %[[VAL_6:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<i32> to memref<i32>
 // CHECK-OFF:           %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<i32>
@@ -166,7 +166,7 @@ func.func @sparse_reduction_ori_accumulator_on_rhs(%argx: tensor<i32>,
 // CHECK-ON-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:       %[[VAL_4:.*]] = arith.constant dense<0> : vector<8xi32>
 // CHECK-ON-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-ON-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-ON-DAG:       %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xi32>
 // CHECK-ON-DAG:       %[[VAL_8:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<i32> to memref<i32>
 // CHECK-ON:           %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<i32>
@@ -192,7 +192,7 @@ func.func @sparse_reduction_ori_accumulator_on_rhs(%argx: tensor<i32>,
 // CHECK-OFF-SAME:      %[[VAL_1:.*]]: tensor<?xi32, #sparse{{[0-9]*}}>) -> tensor<i32> {
 // CHECK-OFF-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF-DAG:       %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-OFF-DAG:       %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-OFF-DAG:       %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xi32>
 // CHECK-OFF-DAG:       %[[VAL_6:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<i32> to memref<i32>
 // CHECK-OFF:           %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<i32>
@@ -241,7 +241,7 @@ func.func @sparse_reduction_subi(%argx: tensor<i32>,
 // CHECK-ON-DAG:  %[[VAL_3:.*]] = arith.constant dense<0> : vector<8xi32>
 // CHECK-ON-DAG:  %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:  %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON-DAG:  %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-ON-DAG:  %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-ON-DAG:  %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xi32>
 // CHECK-ON-DAG:  %[[VAL_8:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<i32> to memref<i32>
 // CHECK-ON:  %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<i32>
@@ -267,7 +267,7 @@ func.func @sparse_reduction_subi(%argx: tensor<i32>,
 // CHECK-OFF-SAME:  %[[VAL_1:.*]]: tensor<?xi32, #sparse{{[0-9]*}}>) -> tensor<i32> {
 // CHECK-OFF-DAG:   %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:   %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF-DAG:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-OFF-DAG:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-OFF-DAG:   %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xi32>
 // CHECK-OFF-DAG:   %[[VAL_6:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<i32> to memref<i32>
 // CHECK-OFF:   %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<i32>
@@ -317,7 +317,7 @@ func.func @sparse_reduction_xor(%argx: tensor<i32>,
 // CHECK-ON-DAG:   %[[VAL_3:.*]] = arith.constant dense<0> : vector<8xi32>
 // CHECK-ON-DAG:   %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:   %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON-DAG:   %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-ON-DAG:   %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-ON-DAG:   %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xi32>
 // CHECK-ON-DAG:   %[[VAL_8:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<i32> to memref<i32>
 // CHECK-ON:   %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<i32>
@@ -343,7 +343,7 @@ func.func @sparse_reduction_xor(%argx: tensor<i32>,
 // CHECK-OFF-SAME:   %[[VAL_1:.*]]: tensor<?xi32, #sparse{{[0-9]*}}>) -> tensor<i32> {
 // CHECK-OFF-DAG:   %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:   %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF-DAG:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-OFF-DAG:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-OFF-DAG:   %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse{{[0-9]*}}> to memref<?xi32>
 // CHECK-OFF-DAG:   %[[VAL_6:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<i32> to memref<i32>
 // CHECK-OFF:   %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<i32>
@@ -393,7 +393,7 @@ func.func @sparse_reduction_addi(%argx: tensor<i32>,
 // CHECK-ON-DAG:   %[[VAL_3:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
 // CHECK-ON-DAG:   %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:   %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON-DAG:   %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xf32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-ON-DAG:   %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xf32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-ON-DAG:   %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse{{[0-9]*}}> to memref<?xf32>
 // CHECK-ON-DAG:   %[[VAL_8:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<f32> to memref<f32>
 // CHECK-ON:   %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<f32>
@@ -419,7 +419,7 @@ func.func @sparse_reduction_addi(%argx: tensor<i32>,
 // CHECK-OFF-SAME:   %[[VAL_1:.*]]: tensor<?xf32, #sparse{{[0-9]*}}>) -> tensor<f32> {
 // CHECK-OFF-DAG:   %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:   %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF-DAG:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xf32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-OFF-DAG:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xf32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-OFF-DAG:   %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse{{[0-9]*}}> to memref<?xf32>
 // CHECK-OFF-DAG:   %[[VAL_6:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<f32> to memref<f32>
 // CHECK-OFF:   %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<f32>
@@ -469,7 +469,7 @@ func.func @sparse_reduction_subf(%argx: tensor<f32>,
 // CHECK-ON-DAG:   %[[VAL_3:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
 // CHECK-ON-DAG:   %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:   %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON-DAG:   %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xf32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-ON-DAG:   %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xf32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-ON-DAG:   %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse{{[0-9]*}}> to memref<?xf32>
 // CHECK-ON-DAG:   %[[VAL_8:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<f32> to memref<f32>
 // CHECK-ON:   %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<f32>
@@ -495,7 +495,7 @@ func.func @sparse_reduction_subf(%argx: tensor<f32>,
 // CHECK-OFF-SAME:  %[[VAL_1:.*]]: tensor<?xf32, #sparse{{[0-9]*}}>) -> tensor<f32> {
 // CHECK-OFF-DAG:   %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:   %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF-DAG:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xf32, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-OFF-DAG:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] level = 0 : tensor<?xf32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-OFF-DAG:   %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse{{[0-9]*}}> to memref<?xf32>
 // CHECK-OFF-DAG:   %[[VAL_6:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<f32> to memref<f32>
 // CHECK-OFF:   %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<f32>

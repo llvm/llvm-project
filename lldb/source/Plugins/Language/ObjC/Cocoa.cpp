@@ -30,6 +30,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/ErrorExtras.h"
+#include <cmath>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1049,7 +1050,8 @@ public:
 
   bool MightHaveChildren() override { return false; }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 };

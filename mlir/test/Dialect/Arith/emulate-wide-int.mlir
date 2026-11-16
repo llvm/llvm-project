@@ -114,16 +114,16 @@ func.func @addi_scalar_a_b(%a : i64, %b : i64) -> i64 {
 
 // CHECK-LABEL: func @addi_vector_a_b
 // CHECK-SAME:    ([[ARG0:%.+]]: vector<4x2xi32>, [[ARG1:%.+]]: vector<4x2xi32>) -> vector<4x2xi32>
-// CHECK-NEXT:    [[LOW0:%.+]]   = vector.extract_strided_slice [[ARG0]] {offsets = [0, 0], sizes = [4, 1], strides = [1, 1]} : vector<4x2xi32> to vector<4x1xi32>
-// CHECK-NEXT:    [[HIGH0:%.+]]  = vector.extract_strided_slice [[ARG0]] {offsets = [0, 1], sizes = [4, 1], strides = [1, 1]} : vector<4x2xi32> to vector<4x1xi32>
-// CHECK-NEXT:    [[LOW1:%.+]]   = vector.extract_strided_slice [[ARG1]] {offsets = [0, 0], sizes = [4, 1], strides = [1, 1]} : vector<4x2xi32> to vector<4x1xi32>
-// CHECK-NEXT:    [[HIGH1:%.+]]  = vector.extract_strided_slice [[ARG1]] {offsets = [0, 1], sizes = [4, 1], strides = [1, 1]} : vector<4x2xi32> to vector<4x1xi32>
+// CHECK-NEXT:    [[LOW0:%.+]]   = vector.extract_strided_slice [[ARG0]] offsets = [0, 0], sizes = [4, 1], strides = [1, 1] : vector<4x2xi32> to vector<4x1xi32>
+// CHECK-NEXT:    [[HIGH0:%.+]]  = vector.extract_strided_slice [[ARG0]] offsets = [0, 1], sizes = [4, 1], strides = [1, 1] : vector<4x2xi32> to vector<4x1xi32>
+// CHECK-NEXT:    [[LOW1:%.+]]   = vector.extract_strided_slice [[ARG1]] offsets = [0, 0], sizes = [4, 1], strides = [1, 1] : vector<4x2xi32> to vector<4x1xi32>
+// CHECK-NEXT:    [[HIGH1:%.+]]  = vector.extract_strided_slice [[ARG1]] offsets = [0, 1], sizes = [4, 1], strides = [1, 1] : vector<4x2xi32> to vector<4x1xi32>
 // CHECK-NEXT:    [[SUM_L:%.+]], [[CB:%.+]] = arith.addui_extended [[LOW0]], [[LOW1]] : vector<4x1xi32>, vector<4x1xi1>
 // CHECK-NEXT:    [[CARRY:%.+]]  = arith.extui [[CB]] : vector<4x1xi1> to vector<4x1xi32>
 // CHECK-NEXT:    [[SUM_H0:%.+]] = arith.addi [[CARRY]], [[HIGH0]] : vector<4x1xi32>
 // CHECK-NEXT:    [[SUM_H1:%.+]] = arith.addi [[SUM_H0]], [[HIGH1]] : vector<4x1xi32>
-// CHECK:         [[INS0:%.+]]   = vector.insert_strided_slice [[SUM_L]], {{%.+}} {offsets = [0, 0], strides = [1, 1]} : vector<4x1xi32> into vector<4x2xi32>
-// CHECK-NEXT:    [[INS1:%.+]]   = vector.insert_strided_slice [[SUM_H1]], [[INS0]] {offsets = [0, 1], strides = [1, 1]} : vector<4x1xi32> into vector<4x2xi32>
+// CHECK:         [[INS0:%.+]]   = vector.insert_strided_slice [[SUM_L]], {{%.+}} offsets = [0, 0], strides = [1, 1] : vector<4x1xi32> into vector<4x2xi32>
+// CHECK-NEXT:    [[INS1:%.+]]   = vector.insert_strided_slice [[SUM_H1]], [[INS0]] offsets = [0, 1], strides = [1, 1] : vector<4x1xi32> into vector<4x2xi32>
 // CHECK-NEXT:    return [[INS1]] : vector<4x2xi32>
 func.func @addi_vector_a_b(%a : vector<4xi64>, %b : vector<4xi64>) -> vector<4xi64> {
     %x = arith.addi %a, %b : vector<4xi64>
@@ -150,16 +150,16 @@ func.func @subi_scalar(%a : i64, %b : i64) -> i64 {
 
 // CHECK-LABEL: func @subi_vector
 // CHECK-SAME:    ([[ARG0:%.+]]: vector<4x2xi32>, [[ARG1:%.+]]: vector<4x2xi32>) -> vector<4x2xi32>
-// CHECK-NEXT:    [[LOW0:%.+]]   = vector.extract_strided_slice [[ARG0]] {offsets = [0, 0], sizes = [4, 1], strides = [1, 1]} : vector<4x2xi32> to vector<4x1xi32>
-// CHECK-NEXT:    [[HIGH0:%.+]]  = vector.extract_strided_slice [[ARG0]] {offsets = [0, 1], sizes = [4, 1], strides = [1, 1]} : vector<4x2xi32> to vector<4x1xi32>
-// CHECK-NEXT:    [[LOW1:%.+]]   = vector.extract_strided_slice [[ARG1]] {offsets = [0, 0], sizes = [4, 1], strides = [1, 1]} : vector<4x2xi32> to vector<4x1xi32>
-// CHECK-NEXT:    [[HIGH1:%.+]]  = vector.extract_strided_slice [[ARG1]] {offsets = [0, 1], sizes = [4, 1], strides = [1, 1]} : vector<4x2xi32> to vector<4x1xi32>
+// CHECK-NEXT:    [[LOW0:%.+]]   = vector.extract_strided_slice [[ARG0]] offsets = [0, 0], sizes = [4, 1], strides = [1, 1] : vector<4x2xi32> to vector<4x1xi32>
+// CHECK-NEXT:    [[HIGH0:%.+]]  = vector.extract_strided_slice [[ARG0]] offsets = [0, 1], sizes = [4, 1], strides = [1, 1] : vector<4x2xi32> to vector<4x1xi32>
+// CHECK-NEXT:    [[LOW1:%.+]]   = vector.extract_strided_slice [[ARG1]] offsets = [0, 0], sizes = [4, 1], strides = [1, 1] : vector<4x2xi32> to vector<4x1xi32>
+// CHECK-NEXT:    [[HIGH1:%.+]]  = vector.extract_strided_slice [[ARG1]] offsets = [0, 1], sizes = [4, 1], strides = [1, 1] : vector<4x2xi32> to vector<4x1xi32>
 // CHECK-NEXT:    [[SUB_L:%.+]], [[BB:%.+]] = arith.subui_extended [[LOW0]], [[LOW1]] : vector<4x1xi32>, vector<4x1xi1>
 // CHECK-NEXT:    [[BORROW:%.+]] = arith.extui [[BB]] : vector<4x1xi1> to vector<4x1xi32>
 // CHECK-NEXT:    [[SUB_H0:%.+]] = arith.subi [[HIGH0]], [[BORROW]] : vector<4x1xi32>
 // CHECK-NEXT:    [[SUB_H1:%.+]] = arith.subi [[SUB_H0]], [[HIGH1]] : vector<4x1xi32>
-// CHECK:         [[INS0:%.+]]   = vector.insert_strided_slice [[SUB_L]], {{%.+}} {offsets = [0, 0], strides = [1, 1]} : vector<4x1xi32> into vector<4x2xi32>
-// CHECK-NEXT:    [[INS1:%.+]]   = vector.insert_strided_slice [[SUB_H1]], [[INS0]] {offsets = [0, 1], strides = [1, 1]} : vector<4x1xi32> into vector<4x2xi32>
+// CHECK:         [[INS0:%.+]]   = vector.insert_strided_slice [[SUB_L]], {{%.+}} offsets = [0, 0], strides = [1, 1] : vector<4x1xi32> into vector<4x2xi32>
+// CHECK-NEXT:    [[INS1:%.+]]   = vector.insert_strided_slice [[SUB_H1]], [[INS0]] offsets = [0, 1], strides = [1, 1] : vector<4x1xi32> into vector<4x2xi32>
 // CHECK-NEXT:    return [[INS1]] : vector<4x2xi32>
 func.func @subi_vector(%a : vector<4xi64>, %b : vector<4xi64>) -> vector<4xi64> {
     %x = arith.subi %a, %b : vector<4xi64>
@@ -183,10 +183,10 @@ func.func @cmpi_eq_scalar(%a : i64, %b : i64) -> i1 {
 
 // CHECK-LABEL: func.func @cmpi_eq_vector
 // CHECK-SAME:    ([[ARG0:%.+]]: vector<3x2xi32>, [[ARG1:%.+]]: vector<3x2xi32>) -> vector<3xi1>
-// CHECK-NEXT:    [[LOW0:%.+]]  = vector.extract_strided_slice [[ARG0]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK-NEXT:    [[HIGH0:%.+]] = vector.extract_strided_slice [[ARG0]] {offsets = [0, 1], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK-NEXT:    [[LOW1:%.+]]  = vector.extract_strided_slice [[ARG1]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK-NEXT:    [[HIGH1:%.+]] = vector.extract_strided_slice [[ARG1]] {offsets = [0, 1], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[LOW0:%.+]]  = vector.extract_strided_slice [[ARG0]] offsets = [0, 0], sizes = [3, 1], strides = [1, 1] : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[HIGH0:%.+]] = vector.extract_strided_slice [[ARG0]] offsets = [0, 1], sizes = [3, 1], strides = [1, 1] : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[LOW1:%.+]]  = vector.extract_strided_slice [[ARG1]] offsets = [0, 0], sizes = [3, 1], strides = [1, 1] : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[HIGH1:%.+]] = vector.extract_strided_slice [[ARG1]] offsets = [0, 1], sizes = [3, 1], strides = [1, 1] : vector<3x2xi32> to vector<3x1xi32>
 // CHECK-NEXT:    [[CLOW:%.+]]  = arith.cmpi eq, [[LOW0]], [[LOW1]] : vector<3x1xi32>
 // CHECK-NEXT:    [[CHIGH:%.+]] = arith.cmpi eq, [[HIGH0]], [[HIGH1]] : vector<3x1xi32>
 // CHECK-NEXT:    [[RES:%.+]]   = arith.andi [[CLOW]], [[CHIGH]] : vector<3x1xi1>
@@ -360,8 +360,8 @@ func.func @extsi_scalar(%a : i16) -> i64 {
 // CHECK-NEXT:    [[CMP:%.+]]   = arith.cmpi slt, [[EXT]], [[CSTE]] : vector<3x1xi32>
 // CHECK-NEXT:    [[HIGH:%.+]]  = arith.extsi [[CMP]] : vector<3x1xi1> to vector<3x1xi32>
 // CHECK-NEXT:    [[CSTZ:%.+]]  = arith.constant dense<0> : vector<3x2xi32>
-// CHECK-NEXT:    [[INS0:%.+]]  = vector.insert_strided_slice [[EXT]], [[CSTZ]] {offsets = [0, 0], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
-// CHECK-NEXT:    [[INS1:%.+]]  = vector.insert_strided_slice [[HIGH]], [[INS0]] {offsets = [0, 1], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
+// CHECK-NEXT:    [[INS0:%.+]]  = vector.insert_strided_slice [[EXT]], [[CSTZ]] offsets = [0, 0], strides = [1, 1] : vector<3x1xi32> into vector<3x2xi32>
+// CHECK-NEXT:    [[INS1:%.+]]  = vector.insert_strided_slice [[HIGH]], [[INS0]] offsets = [0, 1], strides = [1, 1] : vector<3x1xi32> into vector<3x2xi32>
 // CHECK-NEXT:    return [[INS1]] : vector<3x2xi32>
 func.func @extsi_vector(%a : vector<3xi16>) -> vector<3xi64> {
     %r = arith.extsi %a : vector<3xi16> to vector<3xi64>
@@ -394,7 +394,7 @@ func.func @extui_scalar2(%a : i32) -> i64 {
 // CHECK-NEXT:    [[SHAPE:%.+]] = vector.shape_cast [[ARG]] : vector<3xi16> to vector<3x1xi16>
 // CHECK-NEXT:    [[EXT:%.+]]   = arith.extui [[SHAPE]] : vector<3x1xi16> to vector<3x1xi32>
 // CHECK-NEXT:    [[CST:%.+]]   = arith.constant dense<0> : vector<3x2xi32>
-// CHECK-NEXT:    [[INS0:%.+]]  = vector.insert_strided_slice [[EXT]], [[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
+// CHECK-NEXT:    [[INS0:%.+]]  = vector.insert_strided_slice [[EXT]], [[CST]] offsets = [0, 0], strides = [1, 1] : vector<3x1xi32> into vector<3x2xi32>
 // CHECK:         return [[INS0]] : vector<3x2xi32>
 func.func @extui_vector(%a : vector<3xi16>) -> vector<3xi64> {
     %r = arith.extui %a : vector<3xi16> to vector<3xi64>
@@ -413,7 +413,7 @@ func.func @index_cast_int_to_index_scalar(%a : i64) -> index {
 
 // CHECK-LABEL: func @index_cast_int_to_index_vector
 // CHECK-SAME:    ([[ARG:%.+]]: vector<3x2xi32>) -> vector<3xindex>
-// CHECK-NEXT:    [[EXT:%.+]]   = vector.extract_strided_slice [[ARG]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[EXT:%.+]]   = vector.extract_strided_slice [[ARG]] offsets = [0, 0], sizes = [3, 1], strides = [1, 1] : vector<3x2xi32> to vector<3x1xi32>
 // CHECK-NEXT:    [[SHAPE:%.+]] = vector.shape_cast [[EXT]] : vector<3x1xi32> to vector<3xi32>
 // CHECK-NEXT:    [[RES:%.+]]   = arith.index_cast [[SHAPE]] : vector<3xi32> to vector<3xindex>
 // CHECK-NEXT:    return [[RES]] : vector<3xindex>
@@ -434,7 +434,7 @@ func.func @index_castui_int_to_index_scalar(%a : i64) -> index {
 
 // CHECK-LABEL: func @index_castui_int_to_index_vector
 // CHECK-SAME:    ([[ARG:%.+]]: vector<3x2xi32>) -> vector<3xindex>
-// CHECK-NEXT:    [[EXT:%.+]]   = vector.extract_strided_slice [[ARG]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[EXT:%.+]]   = vector.extract_strided_slice [[ARG]] offsets = [0, 0], sizes = [3, 1], strides = [1, 1] : vector<3x2xi32> to vector<3x1xi32>
 // CHECK-NEXT:    [[SHAPE:%.+]] = vector.shape_cast [[EXT]] : vector<3x1xi32> to vector<3xi32>
 // CHECK-NEXT:    [[RES:%.+]]   = arith.index_castui [[SHAPE]] : vector<3xi32> to vector<3xindex>
 // CHECK-NEXT:    return [[RES]] : vector<3xindex>
@@ -490,7 +490,7 @@ func.func @index_castui_index_to_int_scalar(%a : index) -> i64 {
 // CHECK-NEXT:    [[CAST:%.+]]  = arith.index_castui [[ARG]] : vector<3xindex> to vector<3xi32>
 // CHECK-NEXT:    [[SHAPE:%.+]] = vector.shape_cast [[CAST]] : vector<3xi32> to vector<3x1xi32>
 // CHECK-NEXT:    [[CST:%.+]]   = arith.constant dense<0> : vector<3x2xi32>
-// CHECK-NEXT:    [[RES:%.+]]   = vector.insert_strided_slice [[SHAPE]], [[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
+// CHECK-NEXT:    [[RES:%.+]]   = vector.insert_strided_slice [[SHAPE]], [[CST]] offsets = [0, 0], strides = [1, 1] : vector<3x1xi32> into vector<3x2xi32>
 // CHECK-NEXT:    return [[RES]] : vector<3x2xi32>
 func.func @index_castui_index_to_int_vector(%a : vector<3xindex>) -> vector<3xi64> {
     %r = arith.index_castui %a : vector<3xindex> to vector<3xi64>
@@ -518,7 +518,7 @@ func.func @trunci_scalar2(%a : i64) -> i16 {
 
 // CHECK-LABEL: func @trunci_vector
 // CHECK-SAME:    ([[ARG:%.+]]: vector<3x2xi32>) -> vector<3xi16>
-// CHECK-NEXT:    [[EXTR:%.+]]  = vector.extract_strided_slice [[ARG]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[EXTR:%.+]]  = vector.extract_strided_slice [[ARG]] offsets = [0, 0], sizes = [3, 1], strides = [1, 1] : vector<3x2xi32> to vector<3x1xi32>
 // CHECK-NEXT:    [[SHAPE:%.+]] = vector.shape_cast [[EXTR]] : vector<3x1xi32> to vector<3xi32>
 // CHECK-NEXT:    [[TRNC:%.+]]  = arith.trunci [[SHAPE]] : vector<3xi32> to vector<3xi16>
 // CHECK-NEXT:    return [[TRNC]] : vector<3xi16>
@@ -965,8 +965,8 @@ func.func @uitofp_i64_f64(%a : i64) -> f64 {
 
 // CHECK-LABEL: func @uitofp_i64_f64_vector
 // CHECK-SAME:    ([[ARG:%.+]]: vector<3x2xi32>) -> vector<3xf64>
-// CHECK-NEXT:    [[EXTLOW:%.+]] = vector.extract_strided_slice [[ARG]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
-// CHECK-NEXT:    [[EXTHI:%.+]]  = vector.extract_strided_slice [[ARG]] {offsets = [0, 1], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[EXTLOW:%.+]] = vector.extract_strided_slice [[ARG]] offsets = [0, 0], sizes = [3, 1], strides = [1, 1] : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[EXTHI:%.+]]  = vector.extract_strided_slice [[ARG]] offsets = [0, 1], sizes = [3, 1], strides = [1, 1] : vector<3x2xi32> to vector<3x1xi32>
 // CHECK-NEXT:    [[LOW:%.+]]    = vector.shape_cast [[EXTLOW]] : vector<3x1xi32> to vector<3xi32>
 // CHECK-NEXT:    [[HI:%.+]]     = vector.shape_cast [[EXTHI]] : vector<3x1xi32> to vector<3xi32>
 // CHECK-NEXT:    [[CST0:%.+]]   = arith.constant dense<0> : vector<3xi32>
@@ -1069,8 +1069,8 @@ func.func @fptoui_i64_f64(%a : f64) -> i64 {
 // CHECK-NEXT:      [[LOWHALF:%.+]] = arith.fptoui [[REM]] : vector<3xf64> to vector<3xi32>
 // CHECK-DAG:       [[HIGHHALFX1:%.+]] = vector.shape_cast [[HIGHHALF]] : vector<3xi32> to vector<3x1xi32>
 // CHECK-DAG:       [[LOWHALFX1:%.+]] = vector.shape_cast [[LOWHALF]] : vector<3xi32> to vector<3x1xi32>
-// CHECK:           %{{.+}} = vector.insert_strided_slice [[LOWHALFX1]], %{{.+}} {offsets = [0, 0], strides = [1, 1]}
-// CHECK-NEXT:      [[RESVEC:%.+]] = vector.insert_strided_slice [[HIGHHALFX1]], %{{.+}} {offsets = [0, 1], strides = [1, 1]}
+// CHECK:           %{{.+}} = vector.insert_strided_slice [[LOWHALFX1]], %{{.+}} offsets = [0, 0], strides = [1, 1]
+// CHECK-NEXT:      [[RESVEC:%.+]] = vector.insert_strided_slice [[HIGHHALFX1]], %{{.+}} offsets = [0, 1], strides = [1, 1]
 // CHECK:           return [[RESVEC]] : vector<3x2xi32>
 func.func @fptoui_i64_f64_vector(%a : vector<3xf64>) -> vector<3xi64> {
     %r = arith.fptoui %a : vector<3xf64> to vector<3xi64>
@@ -1127,10 +1127,10 @@ func.func @fptosi_i64_f64(%a : f64) -> i64 {
 // CHECK-NEXT:      [[LOWHALF:%.+]] = arith.fptoui [[REM]] : vector<3xf64> to vector<3xi32>
 // CHECK-NEXT:      [[HIGHHALFX1:%.+]] = vector.shape_cast [[HIGHHALF]] : vector<3xi32> to vector<3x1xi32>
 // CHECK-NEXT:      [[LOWHALFX1:%.+]] = vector.shape_cast [[LOWHALF]] : vector<3xi32> to vector<3x1xi32>
-// CHECK:           vector.insert_strided_slice [[LOWHALFX1]], %{{.+}} {offsets = [0, 0], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
+// CHECK:           vector.insert_strided_slice [[LOWHALFX1]], %{{.+}} offsets = [0, 0], strides = [1, 1] : vector<3x1xi32> into vector<3x2xi32>
 // CHECK-NEXT:      [[FPTOUIRESVEC:%.+]] = vector.insert_strided_slice [[HIGHHALFX1]]
 // CHECK:           [[ZEROCSTINTHALF:%.+]] = vector.extract_strided_slice [[ZEROCSTINT]]
-// CHECK-SAME:      {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-SAME:      offsets = [0, 0], sizes = [3, 1], strides = [1, 1] : vector<3x2xi32> to vector<3x1xi32>
 // CHECK:           [[SUB:%.+]], %{{.+}} = arith.subui_extended [[ZEROCSTINTHALF]], %{{.+}} : vector<3x1xi32>, vector<3x1xi1>
 // CHECK-NEXT:      arith.extui
 // CHECK-NEXT:      arith.subi
@@ -1138,9 +1138,9 @@ func.func @fptosi_i64_f64(%a : f64) -> i64 {
 // CHECK:           vector.insert_strided_slice [[SUB]]
 // CHECK-NEXT:      [[SUBVEC:%.+]] = vector.insert_strided_slice
 // CHECK:           [[SUB:%.+]] = vector.extract_strided_slice [[SUBVEC]]
-// CHECK-SAME:      {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-SAME:      offsets = [0, 0], sizes = [3, 1], strides = [1, 1] : vector<3x2xi32> to vector<3x1xi32>
 // CHECK:           [[LOWRES:%.+]] = vector.extract_strided_slice [[FPTOUIRESVEC]]
-// CHECK-SAME:      {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-SAME:      offsets = [0, 0], sizes = [3, 1], strides = [1, 1] : vector<3x2xi32> to vector<3x1xi32>
 // CHECK:           [[ISNEGATIVEX1:%.+]] = vector.shape_cast [[ISNEGATIVE]] : vector<3xi1> to vector<3x1xi1>
 // CHECK:           [[ABSRES:%.+]] = arith.select [[ISNEGATIVEX1]], [[SUB]], [[LOWRES]] : vector<3x1xi1>, vector<3x1xi32>
 // CHECK-NEXT:      arith.select [[ISNEGATIVEX1]]

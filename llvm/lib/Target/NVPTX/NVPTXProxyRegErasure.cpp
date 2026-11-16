@@ -25,31 +25,7 @@
 
 using namespace llvm;
 
-namespace {
-
-struct NVPTXProxyRegErasure : public MachineFunctionPass {
-  static char ID;
-  NVPTXProxyRegErasure() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return "NVPTX Proxy Register Instruction Erasure";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-};
-
-} // namespace
-
-char NVPTXProxyRegErasure::ID = 0;
-
-INITIALIZE_PASS(NVPTXProxyRegErasure, "nvptx-proxyreg-erasure",
-                "NVPTX ProxyReg Erasure", false, false)
-
-bool NVPTXProxyRegErasure::runOnMachineFunction(MachineFunction &MF) {
+static bool eraseProxyRegs(MachineFunction &MF) {
   SmallVector<MachineInstr *, 16> RemoveList;
 
   // ProxyReg instructions forward a register as another: `%dst = mov.iN %src`.
@@ -88,16 +64,49 @@ bool NVPTXProxyRegErasure::runOnMachineFunction(MachineFunction &MF) {
     MI->eraseFromParent();
   }
 
-  // Now go replace the registers and remove kill flags conservatively.
+  // Now go replace the registers.
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (auto [From, To] : RAUWBatch) {
+  for (auto [From, To] : RAUWBatch)
     MRI.replaceRegWith(From, To);
-    MRI.clearKillFlags(To);
-  }
 
   return true;
 }
 
-MachineFunctionPass *llvm::createNVPTXProxyRegErasurePass() {
-  return new NVPTXProxyRegErasure();
+namespace {
+
+struct NVPTXProxyRegErasureLegacyPass : public MachineFunctionPass {
+  static char ID;
+  NVPTXProxyRegErasureLegacyPass() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return eraseProxyRegs(MF);
+  }
+
+  StringRef getPassName() const override {
+    return "NVPTX Proxy Register Instruction Erasure";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+} // namespace
+
+char NVPTXProxyRegErasureLegacyPass::ID = 0;
+
+INITIALIZE_PASS(NVPTXProxyRegErasureLegacyPass, "nvptx-proxyreg-erasure",
+                "NVPTX ProxyReg Erasure", false, false)
+
+MachineFunctionPass *llvm::createNVPTXProxyRegErasureLegacyPass() {
+  return new NVPTXProxyRegErasureLegacyPass();
+}
+
+PreservedAnalyses
+NVPTXProxyRegErasurePass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  if (!eraseProxyRegs(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

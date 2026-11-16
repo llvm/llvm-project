@@ -257,15 +257,13 @@ def add_release_notes(
         )
     )
     check_name_dashes = f"{module}-{check_name}"
-    filename = os.path.normpath(
-        os.path.join(module_path, "../../docs/ReleaseNotes.rst")
-    )
+    filename = os.path.normpath(os.path.join(module_path, "../../docs/ReleaseNotes.md"))
     with open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
 
-    lineMatcher = re.compile("New checks")
-    nextSectionMatcher = re.compile("New check aliases")
-    checkMatcher = re.compile("- New :doc:`(.*)")
+    lineMatcher = re.compile(r"#### New checks")
+    nextSectionMatcher = re.compile(r"#### New check aliases")
+    checkMatcher = re.compile(r"- New \{doc\}`(.*)")
 
     print(f"Updating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
@@ -288,21 +286,16 @@ def add_release_notes(
                     f.write(line)
                     continue
 
-                if line.startswith("^^^^"):
-                    f.write(line)
-                    continue
-
                 if header_found and add_note_here:
-                    if not line.startswith("^^^^"):
-                        f.write(
-                            f"""- New :doc:`{check_name_dashes}
+                    f.write(
+                        f"""- New {{doc}}`{check_name_dashes}
   <clang-tidy/checks/{module}/{check_name}>` check.
 
 {wrapped_desc}
 
 """
-                        )
-                        note_added = True
+                    )
+                    note_added = True
 
             f.write(line)
 
@@ -605,12 +598,16 @@ def update_checks_list(clang_tidy_path: str) -> None:
                 f.write("| --- | --- |\n")
                 f.writelines(sorted(filter(None, map(format_link, doc_files))))
                 # and the aliases
-                f.write("\n## Check aliases\n\n")
+                f.write("\n:::\n\n## Check aliases\n\n")
+                f.write(":::{table}\n")
+                f.write(":class: clang-tidy-checks-table\n")
+                f.write(":widths: 45 45 10\n\n")
                 f.write("| Name | Redirect | Offers fixes |\n")
                 f.write("| --- | --- | --- |\n")
                 alias_rows = list(map(format_link_alias, doc_files))
                 alias_rows.extend(clang_analyzer_alias_rows)
                 f.writelines(sorted(filter(None, alias_rows)))
+                f.write("\n:::\n")
                 break
 
 

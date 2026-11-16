@@ -481,3 +481,26 @@ int test26(short n) {
   return ~n == 32768; // expected-warning {{result of comparison of 16-bit signed value == 32768 is always false}}
 }
 #endif
+
+// GH203575
+typedef unsigned gh203575_uvec __attribute__((__vector_size__(sizeof(int))));
+
+int gh203575_1(gh203575_uvec *c) {
+  return -1 == -*c; // expected-warning {{comparison of integers of different signs: 'int' and 'gh203575_uvec' (vector of 1 'unsigned int' value)}}
+}
+
+int gh203575_2(gh203575_uvec *c) {
+  return -8 == -*c; // expected-warning {{comparison of integers of different signs: 'int' and 'gh203575_uvec' (vector of 1 'unsigned int' value)}}
+}
+
+int gh203575_3(gh203575_uvec *c) {
+  return -1 == ~*c; // expected-warning {{comparison of integers of different signs: 'int' and 'gh203575_uvec' (vector of 1 'unsigned int' value)}}
+}
+
+int gh203575_4(gh203575_uvec a, gh203575_uvec b) {
+  return a == -b; // no-warning
+}
+
+int gh203575_5(gh203575_uvec a, gh203575_uvec b) {
+  return a == ~b; // no-warning
+}

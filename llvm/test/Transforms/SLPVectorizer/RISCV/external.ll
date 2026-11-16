@@ -5,21 +5,16 @@ define void @external(ptr %dest, ptr %dest2, ptr %src) {
 ; DEFAULT-LABEL: define void @external(
 ; DEFAULT-SAME: ptr [[DEST:%.*]], ptr [[DEST2:%.*]], ptr [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; DEFAULT-NEXT:  [[ENTRY:.*:]]
+; DEFAULT-NEXT:    [[INC7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 7
+; DEFAULT-NEXT:    [[TMP3:%.*]] = load float, ptr [[INC7]], align 2
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[SRC]], align 4
-; DEFAULT-NEXT:    [[L0:%.*]] = load float, ptr [[SRC]], align 4
-; DEFAULT-NEXT:    store <8 x float> [[TMP0]], ptr [[DEST]], align 4
-; DEFAULT-NEXT:    [[D1:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 1
-; DEFAULT-NEXT:    [[D3:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 3
 ; DEFAULT-NEXT:    [[D4:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 4
 ; DEFAULT-NEXT:    [[D5:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 5
 ; DEFAULT-NEXT:    [[D6:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 6
 ; DEFAULT-NEXT:    [[D7:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 7
-; DEFAULT-NEXT:    store float [[L0]], ptr [[DEST2]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <2 x i32> <i32 1, i32 2>
-; DEFAULT-NEXT:    store <2 x float> [[TMP1]], ptr [[D1]], align 2
-; DEFAULT-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP0]], i64 3
-; DEFAULT-NEXT:    store float [[TMP2]], ptr [[D3]], align 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP0]], i64 7
+; DEFAULT-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[SRC]], align 4
+; DEFAULT-NEXT:    store <8 x float> [[TMP0]], ptr [[DEST]], align 4
+; DEFAULT-NEXT:    store <4 x float> [[TMP1]], ptr [[DEST2]], align 4
 ; DEFAULT-NEXT:    store float [[TMP3]], ptr [[D7]], align 2
 ; DEFAULT-NEXT:    ret void
 ;
@@ -79,22 +74,19 @@ define void @external_schedule(ptr %dest, ptr %dest2, ptr %dest3, ptr %src, ptr 
 ; DEFAULT-LABEL: define void @external_schedule(
 ; DEFAULT-SAME: ptr [[DEST:%.*]], ptr [[DEST2:%.*]], ptr [[DEST3:%.*]], ptr [[SRC:%.*]], ptr [[SRC1:%.*]]) #[[ATTR0]] {
 ; DEFAULT-NEXT:  [[ENTRY:.*:]]
+; DEFAULT-NEXT:    [[INC7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 7
 ; DEFAULT-NEXT:    [[D4:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 4
 ; DEFAULT-NEXT:    [[D5:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 5
 ; DEFAULT-NEXT:    [[D6:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 6
 ; DEFAULT-NEXT:    [[D7:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 7
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC1]], align 4
 ; DEFAULT-NEXT:    store i8 0, ptr [[DEST3]], align 4
+; DEFAULT-NEXT:    [[TMP7:%.*]] = load float, ptr [[INC7]], align 2
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[SRC]], align 4
-; DEFAULT-NEXT:    [[L0:%.*]] = load float, ptr [[SRC]], align 4
+; DEFAULT-NEXT:    [[TMP5:%.*]] = load <4 x float>, ptr [[SRC]], align 4
 ; DEFAULT-NEXT:    store <8 x float> [[TMP1]], ptr [[DEST]], align 4
-; DEFAULT-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <4 x i32> <i32 poison, i32 1, i32 2, i32 3>
-; DEFAULT-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[L0]], i64 0
-; DEFAULT-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; DEFAULT-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP4]], <4 x i32> <i32 8, i32 1, i32 2, i32 3>
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[TMP5]], [[TMP0]]
 ; DEFAULT-NEXT:    store <4 x float> [[TMP6]], ptr [[DEST2]], align 4
-; DEFAULT-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP1]], i64 7
 ; DEFAULT-NEXT:    store float [[TMP7]], ptr [[D7]], align 2
 ; DEFAULT-NEXT:    ret void
 ;

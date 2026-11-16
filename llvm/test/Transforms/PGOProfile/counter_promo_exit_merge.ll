@@ -49,15 +49,15 @@ bb14:                                             ; preds = %bb4.bb14_crit_edge,
 ; PROMO: %[[MERGE1:[a-z0-9]+]] = phi {{.*}}
 ; PROMO-NEXT: %[[MERGE2:[a-z0-9.]+]] = phi {{.*}}
 ; PROMO-NEXT: %[[MERGE3:[a-z0-9.]+]] = phi {{.*}}
-; PROMO-NEXT: %[[PROMO3:[a-z0-9.]+]] = load{{.*}}@__profc_foo{{.*}}1)
+; PROMO-NEXT: %[[PROMO3:[a-z0-9.]+]] = load{{.*}}@__profc_foo{{.*}} 8)
 ; PROMO-NEXT: {{.*}} = add {{.*}}%[[PROMO3]], %[[MERGE3]]
-; PROMO-NEXT: store{{.*}}@__profc_foo{{.*}}1)
-; PROMO-NEXT: %[[PROMO2:[a-z0-9.]+]] = load{{.*}}@__profc_foo{{.*}}2)
+; PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 8)
+; PROMO-NEXT: %[[PROMO2:[a-z0-9.]+]] = load{{.*}}@__profc_foo{{.*}} 16)
 ; PROMO-NEXT: {{.*}} = add {{.*}}%[[PROMO2]], %[[MERGE2]]
-; PROMO-NEXT: store{{.*}}@__profc_foo{{.*}}2)
-; PROMO-NEXT: %[[PROMO1:[a-z0-9.]+]] = load{{.*}}@__profc_foo{{.*}}3)
+; PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 16)
+; PROMO-NEXT: %[[PROMO1:[a-z0-9.]+]] = load{{.*}}@__profc_foo{{.*}} 24)
 ; PROMO-NEXT: {{.*}} = add {{.*}}%[[PROMO1]], %[[MERGE1]]
-; PROMO-NEXT: store{{.*}}@__profc_foo{{.*}}3)
+; PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 24)
 
 bb15:                                             ; preds = %bb14
   call void @llvm.instrprof.increment(ptr @__profn_foo, i64 63969943867, i32 5, i32 4)

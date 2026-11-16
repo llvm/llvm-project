@@ -33,7 +33,8 @@ class TestAttr<string name, string attrMnemonic>
 
 class TestOp<string mnemonic, list<Trait> traits = []>
     : Op<Python_Test_Dialect, mnemonic, traits> {
-  let assemblyFormat = "operands attr-dict functional-type(operands, results)";
+  let assemblyFormat =
+      "operands prop-dict attr-dict functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//

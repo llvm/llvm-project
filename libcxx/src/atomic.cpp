@@ -469,7 +469,7 @@ __atomic_wait_global_table(void const* __location, __cxx_contention_t __old_valu
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void __atomic_wait_global_table_with_timeout(
-    void const* __location, __cxx_contention_t __old_value, uint64_t __timeout_ns) _NOEXCEPT {
+    void const* __location, __cxx_contention_t __old_value, uint64_t __timeout_ns) noexcept {
   auto const __entry = __get_contention_state(__location);
   __contention_wait<sizeof(__cxx_atomic_contention_t)>(
       &__entry->__waiter_count_global, &__entry->__platform_state, &__old_value, __timeout_ns);

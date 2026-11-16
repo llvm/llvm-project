@@ -5,11 +5,11 @@
 // CHECK: {{.*}} = add i32 {{.*}}, 1
 module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.mlir.global weak_odr hidden local_unnamed_addr constant @__oclc_ABI_version(400 : i32) {addr_space = 4 : i32} : i32
-  llvm.func @_QQmain() attributes {fir.bindc_name = "main", omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
-    %0 = llvm.mlir.constant(99 : index) : i64
-    %1 = llvm.mlir.constant(0 : index) : i64
-    %2 = llvm.mlir.constant(1 : index) : i64
-    %3 = llvm.mlir.constant(100 : index) : i64
+  llvm.func @_QQmain() attributes {fir.bindc_name = "main", omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
+    %0 = llvm.mlir.constant(99 : i64) : i64
+    %1 = llvm.mlir.constant(0 : i64) : i64
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.mlir.constant(100 : i64) : i64
     %4 = llvm.mlir.constant(1 : i64) : i64
     %5 = llvm.alloca %4 x i32 {bindc_name = "array_length"} : (i64) -> !llvm.ptr<5>
     %6 = llvm.addrspacecast %5 : !llvm.ptr<5> to !llvm.ptr
@@ -18,14 +18,14 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     %9 = llvm.addrspacecast %8 : !llvm.ptr<5> to !llvm.ptr
     %10 = llvm.mlir.addressof @_QFEint_array : !llvm.ptr
     %11 = omp.map.bounds lower_bound(%1 : i64) upper_bound(%0 : i64) extent(%3 : i64) stride(%2 : i64) start_idx(%2 : i64)
-    %12 = omp.map.info var_ptr(%10 : !llvm.ptr, !llvm.array<100 x i32>) map_clauses(from) capture(ByRef) bounds(%11) -> !llvm.ptr {name = "int_array"}
+    %12 = omp.map.info var_ptr(%10 : !llvm.ptr, !llvm.array<100 x i32>) map_clauses(from) capture(ByRef) bounds(%11) name("int_array") -> !llvm.ptr
     omp.target_data map_entries(%12 : !llvm.ptr) {
-      %13 = omp.map.info var_ptr(%10 : !llvm.ptr, !llvm.array<100 x i32>) map_clauses(from) capture(ByRef) bounds(%11) -> !llvm.ptr {name = "int_array"}
-      %14 = omp.map.info var_ptr(%9 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "index_"}
+      %13 = omp.map.info var_ptr(%10 : !llvm.ptr, !llvm.array<100 x i32>) map_clauses(from) capture(ByRef) bounds(%11) name("int_array") -> !llvm.ptr
+      %14 = omp.map.info var_ptr(%9 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("index_") -> !llvm.ptr
       %15 = llvm.mlir.constant(100 : i32) : i32
       %16 = llvm.mlir.constant(1 : i32) : i32
       omp.target kernel_type(spmd) host_eval(%15 -> %arg0, %16 -> %arg1 : i32, i32) map_entries(%13 -> %arg2, %14 -> %arg3 : !llvm.ptr, !llvm.ptr) {
-        %17 = llvm.mlir.constant(100 : index) : i64
+        %17 = llvm.mlir.constant(100 : i64) : i64
         omp.parallel {
           %18 = llvm.mlir.constant(1 : i64) : i64
           %19 = llvm.alloca %18 x i32 {pinned} : (i64) -> !llvm.ptr<5>

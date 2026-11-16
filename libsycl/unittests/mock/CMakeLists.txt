@@ -5,16 +5,16 @@ add_library(ol_mock STATIC
 # LLVMOffload provides generated Offload API headers used by the mock.
 add_dependencies(ol_mock
   LLVMOffload
-  llvm_gtest
+  default_gtest
 )
 target_include_directories(ol_mock
   PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}"
     $<TARGET_PROPERTY:LLVMOffload,INTERFACE_INCLUDE_DIRECTORIES>
-    $<TARGET_PROPERTY:llvm_gtest,INTERFACE_INCLUDE_DIRECTORIES>
+    $<TARGET_PROPERTY:default_gtest,INTERFACE_INCLUDE_DIRECTORIES>
 )
 
 target_link_libraries(ol_mock
   PRIVATE
-  llvm_gtest
+  default_gtest
 )

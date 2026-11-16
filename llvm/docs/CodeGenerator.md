@@ -16,9 +16,9 @@
 ```
 
 
-```{warning}
+:::{warning}
 This is a work in progress.
-```
+:::
 ## Introduction
 
 The LLVM target-independent code generator is a framework that provides a suite
@@ -459,6 +459,31 @@ definition.
 After register allocation, machine code is no longer in SSA-form because there
 are no virtual registers left in the code.
 
+(undef-and-poison-in-mir)=
+
+#### Undefined values, poison, and freeze
+
+After instruction selection, machine code has no exact equivalent of LLVM IR's
+`undef`, `poison`, or `freeze`.
+
+`IMPLICIT_DEF` defines a register without assigning a value. Currently, both
+`undef` and `poison` select to it in SelectionDAG and GlobalISel. Before
+register allocation, `ProcessImplicitDefs` deletes most `IMPLICIT_DEF`s of
+virtual registers and sets the `undef` flag on their uses. The `undef` flag
+marks a register use as having a value that doesn't matter. Different
+instructions with `undef` uses of the same register may observe different
+values.
+
+Selectors lower `freeze` to a `COPY`. If the copied value is undefined,
+different uses can observe different values, which violates the IR semantics of
+`freeze`.
+
+Machine instructions may also have any of the following poison-generating flags:
+`nuw`, `nsw`, `exact`, `disjoint`, `nneg`, `nusw`, `inbounds`, `samesign`,
+`nnan`, and `ninf`. These have the same definitions as the IR versions. A
+transformation must drop a flag if the new instruction could violate the flag's
+condition for inputs where the original instruction did not.
+
 (MachineBasicBlock)=
 
 ### The `MachineBasicBlock` class
@@ -713,7 +738,7 @@ description (`*.td`) files.  Our goal is for the entire instruction selector
 to be generated from these `.td` files, though currently there are still
 things that require custom C++ code.
 
-[GlobalISel](https://llvm.org/docs/GlobalISel/index.html) is another
+[GlobalISel](GlobalISel/index.md) is another
 instruction selection framework.
 
 (SelectionDAG)=
@@ -1196,9 +1221,9 @@ of the basic block.  Live intervals for virtual registers are computed for some
 ordering of the machine instructions `[1, N]`.  A live interval is an interval
 `[i, j)`, where `1 >= i >= j > N`, for which a variable is live.
 
-```{note}
+:::{note}
 More to come...
-```
+:::
 (Register Allocation)=
 (register allocator)=
 
@@ -1448,9 +1473,9 @@ $ llc -regalloc=pbqp file.bc -o pbqp.s
 
 ### Prolog/Epilog Code Insertion
 
-```{note}
+:::{note}
 To Be Written
-```
+:::
 ### Compact Unwind
 
 Throwing an exception requires *unwinding* out of a function. The information on
@@ -1522,9 +1547,9 @@ the function in bits 9-12 (mask: `0x00001C00`).
 
 ### Late Machine Code Optimizations
 
-```{note}
+:::{note}
 To Be Written
-```
+:::
 (Code Emission)=
 
 ### Code Emission
@@ -1645,9 +1670,9 @@ compiler.
 
 ### Instruction Parsing
 
-```{note}
+:::{note}
 To Be Written
-```
+:::
 ### Instruction Alias Processing
 
 Once the instruction is parsed, it enters the MatchInstructionImpl function.
@@ -1750,9 +1775,9 @@ as the third parameter to the InstAlias definition.
 
 ### Instruction Matching
 
-```{note}
+:::{note}
 To Be Written
-```
+:::
 (Implementations of the abstract target description interfaces)=
 (implement the target description)=
 
@@ -2091,9 +2116,9 @@ makes it convenient to locate programmatically and during debugging.
 
 #### Dynamic Allocation
 
-```{note}
+:::{note}
 TODO - More to come.
-```
+:::
 ### The NVPTX backend
 
 The NVPTX code generator under lib/Target/NVPTX is an open-source version of

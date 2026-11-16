@@ -37,10 +37,10 @@ void PreferRegisterOverUnsignedCheck::check(
   bool NeedsQualification = true;
   const DeclContext *Context = UserVarDecl->getDeclContext();
   while (Context) {
-    if (const auto *Namespace = dyn_cast<NamespaceDecl>(Context))
-      if (isa<TranslationUnitDecl>(Namespace->getDeclContext()) &&
-          Namespace->getName() == "llvm")
-        NeedsQualification = false;
+    if (const auto *Namespace = dyn_cast<NamespaceDecl>(Context);
+        Namespace && isa<TranslationUnitDecl>(Namespace->getDeclContext()) &&
+        Namespace->getName() == "llvm")
+      NeedsQualification = false;
     for (const auto *UsingDirective : Context->using_directives()) {
       const NamespaceDecl *Namespace = UsingDirective->getNominatedNamespace();
       if (isa<TranslationUnitDecl>(Namespace->getDeclContext()) &&

@@ -4,10 +4,7 @@ Test lldb-dap terminated event
 
 import json
 
-from lldbsuite.test.decorators import (
-    skipIfTargetDoesNotSupportSharedLibraries,
-    skipIfWindows,
-)
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs

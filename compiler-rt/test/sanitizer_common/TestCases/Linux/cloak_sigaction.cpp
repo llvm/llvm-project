@@ -17,6 +17,8 @@
 // RUN: %env_tool_opts=handle_segv=2:cloak_sanitizer_signal_handlers=false not %run %t 2>&1 | FileCheck %s --check-prefixes=NONDEFAULT,SANITIZER
 // RUN: %env_tool_opts=handle_segv=2:cloak_sanitizer_signal_handlers=true not %run %t 2>&1 | FileCheck %s --check-prefixes=DEFAULT,SANITIZER
 
+// UNSUPPORTED: rtsan
+
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>

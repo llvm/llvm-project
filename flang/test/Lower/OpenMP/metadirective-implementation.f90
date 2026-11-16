@@ -1,8 +1,21 @@
 ! Test lowering of OpenMP metadirective with implementation selectors.
 
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 %s -o - \
+! RUN:   | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 %s -o - | FileCheck %s
+
+! MATCH_NONE accepts an unknown vendor; clause order breaks the scoring tie.
+! CHECK-LABEL: func.func @_QPtest_unknown_vendor_match_none()
+! CHECK-NOT: omp.barrier
+! CHECK: omp.taskyield
+! CHECK-NEXT: return
+subroutine test_unknown_vendor_match_none()
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(bogus_vendor), extension(match_none)}: &
+  !$omp& taskyield) &
+  !$omp& when(user={condition(.true.)}: barrier)
+end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_vendor_llvm()
 ! CHECK:         omp.taskwait
@@ -28,6 +41,54 @@ subroutine test_vendor_no_match()
 #else
   !$omp & default(nothing)
 #endif
+end subroutine
+
+! A selected variant provides a positive control: its clause expression is
+! lowered and attached to the replacement directive.
+! CHECK-LABEL: func.func @_QPtest_selected_clause(
+! CHECK:         %[[NUM_THREADS:.*]] = fir.call @_QPmetadirective_num_threads()
+! CHECK:         omp.parallel num_threads(%[[NUM_THREADS]] : i32)
+! CHECK:           hlfir.assign
+! CHECK:         return
+subroutine test_selected_clause(x)
+  integer :: x, metadirective_num_threads
+  external :: metadirective_num_threads
+  !$omp begin metadirective &
+  !$omp & when(implementation={vendor(llvm)}: &
+  !$omp &   parallel num_threads(metadirective_num_threads())) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+  x = 1
+  !$omp end metadirective
+end subroutine
+
+! A statically applicable but lower-ranked candidate must not have its clauses
+! lowered either.
+! CHECK-LABEL: func.func @_QPtest_unselected_ranked_clause(
+! CHECK-NOT:     fir.call @_QPmetadirective_num_threads
+! CHECK:         omp.parallel
+! CHECK-NOT:     num_threads
+! CHECK-NOT:     fir.call @_QPmetadirective_num_threads
+! CHECK:           hlfir.assign
+! CHECK-NOT:     fir.call @_QPmetadirective_num_threads
+! CHECK:         return
+subroutine test_unselected_ranked_clause(x)
+  integer :: x, metadirective_num_threads
+  external :: metadirective_num_threads
+  !$omp begin metadirective &
+  !$omp & when(user={condition(score(1): .true.)}: &
+  !$omp &   parallel num_threads(metadirective_num_threads())) &
+  !$omp & when(user={condition(score(2): .true.)}: parallel) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+  x = 1
+  !$omp end metadirective
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_standalone_barrier_match()

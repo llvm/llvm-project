@@ -100,3 +100,20 @@ class ScriptedStackFrameRecognizer(metaclass=ABCMeta):
             default.
         """
         return ""
+
+    def get_step_through_plan(self, thread):
+        """Provide a 'step through' plan from the stopped frame.
+        Args:
+            thread (lldb.SBThread): passed in is the one to step.  You
+            will only be asked to step through from the zeroth frame of that
+            thread.
+
+        Returns:
+            Python dictionary with two keys:
+
+            class_name : name of a class implementing a ScriptedThreadPlan.
+            extra_args : a dictionary that will be passed to the
+            __init__ of your scripted thread plan.  The extra_args is optional.
+        """
+
+        return None

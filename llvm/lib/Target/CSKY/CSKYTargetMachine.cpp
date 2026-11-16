@@ -40,7 +40,7 @@ CSKYTargetMachine::CSKYTargetMachine(const Target &T, const Triple &TT,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                RM.value_or(Reloc::Static),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<CSKYELFTargetObjectFile>()) {
@@ -61,8 +61,6 @@ CSKYTargetMachine::getSubtargetImpl(const Function &F) const {
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
   FloatABI::ABIType FloatABI = F.getParent()->getFloatABI();
-  if (FloatABI == FloatABI::Default)
-    FloatABI = Options.FloatABIType;
 
   std::string Key = CPU + TuneCPU + FS;
   Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";

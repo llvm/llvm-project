@@ -37,8 +37,8 @@ end module
 !--- use.f90
 ! Two distinct scoped ops keyed by their source module (m1 vs m2); the global
 ! builtin name is never used for these user reductions, and no clause aborts.
-! CHECK-DAG: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*m1[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*}}" : !fir.ref
-! CHECK-DAG: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*m2[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*}}" : !fir.ref
+! CHECK-DAG: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*m1[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*}}" byref_element_type({{.*}}) : !fir.ref
+! CHECK-DAG: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*m2[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*}}" byref_element_type({{.*}}) : !fir.ref
 ! CHECK-NOT: @add_reduction
 ! CHECK-NOT: not yet implemented
 

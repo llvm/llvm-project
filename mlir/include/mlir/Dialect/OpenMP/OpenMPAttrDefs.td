@@ -19,6 +19,7 @@ include "mlir/IR/CommonAttrConstraints.td"
 class OpenMP_Attr<string name, string attrMnemonic, list<Trait> traits = [],
                   string baseCppClass = "::mlir::Attribute">
     : AttrDef<OpenMP_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/OpenMP/OpenMPOpsAttributes.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -43,9 +44,10 @@ def AtomicControlAttr : OpenMP_Attr<"AtomicControl", "atomic_control"> {
 
 def DeclareTargetAttr : OpenMP_Attr<"DeclareTarget", "declaretarget"> {
   let parameters =
-      (ins OptionalParameter<"DeclareTargetDeviceTypeAttr">:$device_type,
-          OptionalParameter<"DeclareTargetCaptureClauseAttr">:$capture_clause,
-          OptionalParameter<"BoolAttr">:$automap);
+      (ins "mlir::omp::DeclareTargetDeviceType":$device_type,
+          "mlir::omp::DeclareTargetCaptureClause":$capture_clause,
+          DefaultValuedParameter<"bool", "false">:$automap,
+          DefaultValuedParameter<"bool", "false">:$implicit);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -67,6 +69,16 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// ReductionModifierArrayAttr
+//===----------------------------------------------------------------------===//
+
+def ReductionModifierArrayAttr
+    : TypedArrayAttrBase<ReductionModifierAttr,
+                         "array of reduction modifiers"> {
+  let constBuilderCall = ?;
 }
 
 //===----------------------------------------------------------------------===//
@@ -97,6 +109,17 @@ def VersionAttr : OpenMP_Attr<"Version", "version"> {
   let parameters = (ins
     "uint32_t":$version
   );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// IntegerWrapAroundAttr
+//===----------------------------------------------------------------------===//
+
+def IntegerWrapAroundAttr
+    : OpenMP_Attr<"IntegerWrapAround", "integer_wrap_around"> {
+  let parameters = (ins "bool":$integer_wrap_around);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }

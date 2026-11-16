@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInvocation.h"
+
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ModuleFileExtension.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -424,6 +425,77 @@ TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentReset) {
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-no-clear-ast-before-backend"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-clear-ast-before-backend"))));
+}
+
+// Boolean option with a keypath that defaults to a target-dependent expression.
+// IncrementalLinkerCompatible defaults to true on MSVC/UEFI, and false on
+// others.
+
+TEST_F(CommandLineTest, BoolOptionDefaultTargetDependentPresentNoneGNU) {
+  const char *Args[] = {"-triple", "x86_64-w64-windows-gnu"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_FALSE(Invocation.getCodeGenOpts().IncrementalLinkerCompatible);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mincremental-linker-compatible"))));
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mno-incremental-linker-compatible"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultTargetDependentPresentNoneMSVC) {
+  const char *Args[] = {"-triple", "x86_64-pc-windows-msvc"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_TRUE(Invocation.getCodeGenOpts().IncrementalLinkerCompatible);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mincremental-linker-compatible"))));
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mno-incremental-linker-compatible"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultTargetDependentPresentNoneUEFI) {
+  const char *Args[] = {"-triple", "x86_64-unknown-uefi"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_TRUE(Invocation.getCodeGenOpts().IncrementalLinkerCompatible);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mincremental-linker-compatible"))));
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mno-incremental-linker-compatible"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultTargetDependentPresentChangeGNU) {
+  const char *Args[] = {"-triple", "x86_64-w64-windows-gnu",
+                        "-mincremental-linker-compatible"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_TRUE(Invocation.getCodeGenOpts().IncrementalLinkerCompatible);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs,
+              Contains(StrEq("-mincremental-linker-compatible")));
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mno-incremental-linker-compatible"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultTargetDependentPresentChangeMSVC) {
+  const char *Args[] = {"-triple", "x86_64-pc-windows-msvc",
+                        "-mno-incremental-linker-compatible"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_FALSE(Invocation.getCodeGenOpts().IncrementalLinkerCompatible);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs,
+              Contains(StrEq("-mno-incremental-linker-compatible")));
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mincremental-linker-compatible"))));
 }
 
 // Boolean option that gets the CC1Option flag from a let statement (which

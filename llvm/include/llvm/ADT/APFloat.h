@@ -163,6 +163,8 @@ public:
     S_IEEEsingle,
     S_IEEEdouble,
     S_IEEEquad,
+    // TODO: Documentation is missing.
+    S_x87DoubleExtended,
     // The IBM double-double semantics. Such a number consists of a pair of
     // IEEE 64-bit doubles (Hi, Lo), where |Hi| > |Lo|, and if normal,
     // (double)(Hi + Lo) == Hi. The numeric value it's modeling is Hi + Lo.
@@ -262,9 +264,7 @@ public:
     // Unlike IEEE-754 types, there are no infinity values, and NaN is
     // represented with the exponent and mantissa bits set to all 1s.
     S_Float8E5M3FNU,
-    // TODO: Documentation is missing.
-    S_x87DoubleExtended,
-    S_MaxSemantics = S_x87DoubleExtended,
+    S_MaxSemantics = S_Float8E5M3FNU,
   };
 
   LLVM_ABI static const llvm::fltSemantics &EnumToSemantics(Semantics S);
@@ -276,6 +276,9 @@ private:
   LLVM_ABI static const fltSemantics semIEEEsingle;
   LLVM_ABI static const fltSemantics semIEEEdouble;
   LLVM_ABI static const fltSemantics semIEEEquad;
+  LLVM_ABI static const fltSemantics semX87DoubleExtended;
+  LLVM_ABI static const fltSemantics semPPCDoubleDouble;
+  LLVM_ABI static const fltSemantics semPPCDoubleDoubleLegacy;
   LLVM_ABI static const fltSemantics semFloat8E5M2;
   LLVM_ABI static const fltSemantics semFloat8E5M2FNUZ;
   LLVM_ABI static const fltSemantics semFloat8E4M3;
@@ -289,10 +292,7 @@ private:
   LLVM_ABI static const fltSemantics semFloat6E3M2FN;
   LLVM_ABI static const fltSemantics semFloat6E2M3FN;
   LLVM_ABI static const fltSemantics semFloat4E2M1FN;
-  LLVM_ABI static const fltSemantics semX87DoubleExtended;
   LLVM_ABI static const fltSemantics semBogus;
-  LLVM_ABI static const fltSemantics semPPCDoubleDouble;
-  LLVM_ABI static const fltSemantics semPPCDoubleDoubleLegacy;
 
   friend class detail::IEEEFloat;
   friend class detail::DoubleAPFloat;
@@ -304,6 +304,9 @@ public:
   static const fltSemantics &IEEEsingle() { return semIEEEsingle; }
   static const fltSemantics &IEEEdouble() { return semIEEEdouble; }
   static const fltSemantics &IEEEquad() { return semIEEEquad; }
+  static const fltSemantics &x87DoubleExtended() {
+    return semX87DoubleExtended;
+  }
   static const fltSemantics &PPCDoubleDouble() { return semPPCDoubleDouble; }
   static const fltSemantics &PPCDoubleDoubleLegacy() {
     return semPPCDoubleDoubleLegacy;
@@ -323,9 +326,6 @@ public:
   static const fltSemantics &Float6E3M2FN() { return semFloat6E3M2FN; }
   static const fltSemantics &Float6E2M3FN() { return semFloat6E2M3FN; }
   static const fltSemantics &Float4E2M1FN() { return semFloat4E2M1FN; }
-  static const fltSemantics &x87DoubleExtended() {
-    return semX87DoubleExtended;
-  }
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
@@ -336,6 +336,14 @@ public:
   // the value of fltNonfiniteBehavior, hasZero, hasSignedRepr.
   LLVM_ABI static bool isRepresentableBy(const fltSemantics &A,
                                          const fltSemantics &B);
+
+  /// Returns whether converting a value from \p From to \p To is known to
+  /// preserve all information. If \p IgnoreNaNs is true, differences between
+  /// NaN representations are ignored, but NaNs must remain NaNs and infinities
+  /// must remain infinities.
+  LLVM_ABI static bool isLosslesslyConvertibleTo(const fltSemantics &From,
+                                                 const fltSemantics &To,
+                                                 bool IgnoreNaNs = false);
 
   /// @}
 
@@ -1614,6 +1622,21 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(
         toString(Str, FormatPrecision, FormatMaxPadding, TruncateZero));
   }
+
+  /// Format the value as toString does and return true if the string parses
+  /// back bitwise equal. Non-finite spellings ("+Inf", "NaN") parse back
+  /// here but may not fit a caller's grammar.
+  LLVM_ABI bool toStringRoundTrip(SmallVectorImpl<char> &Str,
+                                  unsigned FormatPrecision = 0,
+                                  unsigned FormatMaxPadding = 3,
+                                  bool TruncateZero = true) const;
+
+  /// Like toString, but picks the smallest FormatPrecision whose output
+  /// parses back bitwise equal: "3.14", not "3.1400000000000001". An integer
+  /// in fixed notation keeps its digits: "100", not "1.0E+2".
+  LLVM_ABI void toStringShortest(SmallVectorImpl<char> &Str,
+                                 unsigned FormatMaxPadding = 3,
+                                 bool TruncateZero = true) const;
 
   LLVM_ABI void print(raw_ostream &) const;
 

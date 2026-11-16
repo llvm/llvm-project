@@ -8,6 +8,7 @@
 
 #include "LTO.h"
 #include "Config.h"
+#include "Driver.h"
 #include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -55,9 +56,10 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
 
 static lto::Config createConfig(Ctx &ctx) {
   lto::Config c;
+  c.LibraryOptions = &ctx.arg.libraryOptions;
 
   // LLD supports the new relocations and address-significance tables.
-  c.Options = initTargetOptionsFromCodeGenFlags();
+  c.Options = getTargetOptions(ctx.arg.libraryOptions);
   c.Options.EmitAddrsig = true;
   for (StringRef C : ctx.arg.mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
@@ -88,8 +90,8 @@ static lto::Config createConfig(Ctx &ctx) {
                        << MBOrErr.getError().message();
       } else {
         c.Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
+        c.Options.BBSections = BasicBlockSection::List;
       }
-      c.Options.BBSections = BasicBlockSection::List;
     }
   }
 
@@ -98,7 +100,7 @@ static lto::Config createConfig(Ctx &ctx) {
   c.Options.UniqueBasicBlockSectionNames =
       ctx.arg.ltoUniqueBasicBlockSectionNames;
 
-  if (auto relocModel = getRelocModelFromCMModel())
+  if (auto relocModel = getRelocModelFromCMModel(ctx.arg.libraryOptions))
     c.RelocModel = *relocModel;
   else if (ctx.arg.relocatable)
     c.RelocModel = std::nullopt;
@@ -107,12 +109,12 @@ static lto::Config createConfig(Ctx &ctx) {
   else
     c.RelocModel = Reloc::Static;
 
-  c.CodeModel = getCodeModelFromCMModel();
+  c.CodeModel = getCodeModelFromCMModel(ctx.arg.libraryOptions);
   c.DisableVerify = ctx.arg.disableVerify;
   c.DiagHandler = diagnosticHandler;
   c.OptLevel = ctx.arg.ltoo;
-  c.CPU = getCPUStr();
-  c.MAttrs = getMAttrs();
+  c.CPU = getCPUStr(ctx.arg.libraryOptions);
+  c.MAttrs = getMAttrs(ctx.arg.libraryOptions);
   c.CGOptLevel = ctx.arg.ltoCgo;
 
   c.PTO.LoopVectorization = c.OptLevel > 1;
@@ -167,6 +169,12 @@ static lto::Config createConfig(Ctx &ctx) {
   if (ctx.arg.ltoEmitAsm) {
     c.CGFileType = CodeGenFileType::AssemblyFile;
     c.Options.MCOptions.AsmVerbose = true;
+  }
+
+  if (ctx.arg.thinLTOIndexOnly) {
+    c.PostRegularLTOLinkHook = [&ctx]() {
+      markBuffersAsDontNeed(ctx, /*skipLinkedOutput=*/true);
+    };
   }
 
   if (!ctx.arg.saveTempsArgs.empty())
@@ -341,7 +349,8 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
   FileCache cache;
   if (!ctx.arg.thinLTOCacheDir.empty())
     cache = check(localCache("ThinLTO", "Thin", ctx.arg.thinLTOCacheDir,
-                             createAddBufferFn(files, filenames)));
+                             createAddBufferFn(files, filenames),
+                             !ctx.arg.dtltoDistributor.empty()));
 
   if (!ctx.bitcodeFiles.empty())
     checkError(ctx.e, ltoObj->run(
@@ -382,12 +391,6 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
     check(
         pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files));
 
-  if (!ctx.arg.ltoObjPath.empty()) {
-    saveBuffer(buf[0].second, ctx.arg.ltoObjPath);
-    for (unsigned i = 1; i != maxTasks; ++i)
-      saveBuffer(buf[i].second, ctx.arg.ltoObjPath + Twine(i));
-  }
-
   bool savePrelink = ctx.arg.saveTempsArgs.contains("prelink");
   SmallVector<std::unique_ptr<InputFile>, 0> ret;
   const char *ext = ctx.arg.ltoEmitAsm ? ".s" : ".o";
@@ -406,6 +409,8 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
       objBuf = buf[i].second;
       bitcodeFilePath = buf[i].first;
     }
+    if (!ctx.arg.ltoObjPath.empty())
+      saveBuffer(objBuf, ctx.arg.ltoObjPath + (i == 0 ? "" : Twine(i)));
     if (objBuf.empty())
       continue;
 

@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(acc-cg-to-gpu))" | FileCheck %s
 
 // CHECK-LABEL: func.func @threadprivate
-// CHECK:       acc.privatize [#acc<par_dims[thread_x]>] : () -> !acc.private_type<memref<i32>>
+// CHECK:       acc.privatize par_dims(#acc<par_dims[thread_x]>) : () -> !acc.private_type<memref<i32>>
 // CHECK:       gpu.launch
 // CHECK:         memref.alloca() : memref<i32>
 // CHECK-NOT:     acc.gpu_shared_memory
@@ -10,7 +10,7 @@ func.func @threadprivate(%host: memref<i32>) {
   %c99 = arith.constant 99 : i32
   memref.store %c99, %host[] : memref<i32>
   %init = memref.load %host[] : memref<i32>
-  %priv = acc.privatize [#acc<par_dims[thread_x]>] : () -> !acc.private_type<memref<i32>>
+  %priv = acc.privatize par_dims(#acc<par_dims[thread_x]>) : () -> !acc.private_type<memref<i32>>
 
   acc.compute_region ins(%priv_in = %priv, %init_in = %init) :
       (!acc.private_type<memref<i32>>, i32) {
@@ -20,7 +20,7 @@ func.func @threadprivate(%host: memref<i32>) {
     %next = arith.addi %v, %v : i32
     memref.store %next, %local[] : memref<i32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -37,9 +37,9 @@ func.func @threadprivate(%host: memref<i32>) {
 func.func @dynamic_threadprivate(%n: index) {
   %c4 = arith.constant 4 : index
   %c128 = arith.constant 128 : index
-  %bx = acc.par_width %c4 {par_dim = #acc.par_dim<block_x>}
-  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
-  %private = acc.privatize(%n) [#acc<par_dims[block_x, thread_x]>]
+  %bx = acc.par_width %c4 par_dim(#acc.par_dim<block_x>)
+  %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
+  %private = acc.privatize(%n) par_dims(#acc<par_dims[block_x, thread_x]>)
       : (index) -> !acc.private_type<memref<?xi32>>
 
   acc.compute_region launch(%kbx = %bx, %ktx = %tx)
@@ -51,6 +51,6 @@ func.func @dynamic_threadprivate(%n: index) {
         : (!acc.private_type<memref<?xi32>>) -> memref<?xi32>
     memref.store %one, %local[%c0] : memref<?xi32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }

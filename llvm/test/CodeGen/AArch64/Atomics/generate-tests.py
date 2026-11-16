@@ -24,6 +24,9 @@ class ByteSizes:
     def __iter__(self):
         return iter(self._data)
 
+    def __add__(self, other):
+        return self._data + other._data
+
 
 # fmt: off
 Type = ByteSizes([
@@ -158,6 +161,8 @@ class FPFeature(enum.Flag):
     def mattr(self):
         if self == FPFeature.v8a_fp:
             return "+v8a"
+        if self == FPFeature.lsfe:
+            return "+lsfe,+fullfp16"
         return "+" + self.name
 
 
@@ -195,7 +200,7 @@ def relpath():
 
 
 def generate_unused_res_test(featname, ordering, op, alignval):
-    if featname != "lsfe" or op == "fsub" or alignval == 1:
+    if featname != "lsfe" or alignval == 1:
         return False
     if ordering not in [AtomicOrder.monotonic, AtomicOrder.release]:
         return False
@@ -209,6 +214,7 @@ def align(val, aligned: bool) -> int:
 def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
     instr = "atomicrmw"
     generate_unused = False
+    attrs = " #0" if featname == "lsfe" else ""
     tests = []
     for op in atomicrmw_ops:
         for aligned in Aligned:
@@ -219,7 +225,7 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
                     tests.append(
                         textwrap.dedent(
                             f"""
-                        define dso_local {ty} @{name}(ptr %ptr, {ty} %value) {{
+                        define dso_local {ty} @{name}(ptr %ptr, {ty} %value){attrs} {{
                             %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {alignval}
                             ret {ty} %r
                         }}
@@ -232,13 +238,25 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
                         tests.append(
                             textwrap.dedent(
                                 f"""
-                           define dso_local void @{name}(ptr %ptr, {ty} %value) {{
+                           define dso_local void @{name}(ptr %ptr, {ty} %value){attrs} {{
                                %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {alignval}
                                ret void
                            }}
                         """
                             )
                         )
+
+    if featname == "lsfe":
+        tests.append(
+            textwrap.dedent(
+                f"""
+                define dso_local fp128 @atomicrmw_fadd_fp128_aligned_monotonic(ptr %ptr, fp128 %value){attrs} {{
+                    %r = {instr} fadd ptr %ptr, fp128 %value monotonic, align 16
+                    ret fp128 %r
+                }}
+            """
+            )
+        )
 
     if generate_unused:
         f.write(
@@ -249,6 +267,36 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
 
     for test in tests:
         f.write(test)
+
+    if featname == "lsfe":
+        f.write(
+            textwrap.dedent(
+                """
+                define dso_local float @atomicrmw_fadd_float_aligned_seq_cst_trapping(ptr %ptr, float %value) {
+                    %r = atomicrmw fadd ptr %ptr, float %value seq_cst, align 4
+                    ret float %r
+                }
+
+                define dso_local float @atomicrmw_fadd_float_aligned_seq_cst_strictfp(ptr %ptr, float %value) #1 {
+                    %r = atomicrmw fadd ptr %ptr, float %value seq_cst, align 4
+                    ret float %r
+                }
+
+                define dso_local float @atomicrmw_fsub_float_aligned_seq_cst_trapping(ptr %ptr, float %value) {
+                    %r = atomicrmw fsub ptr %ptr, float %value seq_cst, align 4
+                    ret float %r
+                }
+
+                define dso_local float @atomicrmw_fsub_float_aligned_seq_cst_strictfp(ptr %ptr, float %value) #1 {
+                    %r = atomicrmw fsub ptr %ptr, float %value seq_cst, align 4
+                    ret float %r
+                }
+
+                attributes #0 = { "no-trapping-math"="true" }
+                attributes #1 = { strictfp "no-trapping-math"="true" }
+                """
+            )
+        )
 
 
 def emit_load_tests(f, datatypes, alignments, orderings):
@@ -275,14 +323,14 @@ def emit_load_tests(f, datatypes, alignments, orderings):
 
 
 def all_load(f, feature):
-    emit_load_tests(f, Type, Aligned, ATOMIC_LOAD_ORDERS)
+    emit_load_tests(f, Type + FPType, Aligned, ATOMIC_LOAD_ORDERS)
     if feature in [Feature.lse2, Feature.rcpc3, Feature.lse2_lse128]:
         emit_load_tests(f, FP128LoadType, [Aligned.aligned], [AtomicOrder.seq_cst])
 
 
 def all_store(f):
     for aligned in Aligned:
-        for ty, val in Type:
+        for ty, val in Type + FPType:
             alignval = align(val, aligned)
             for ordering in ATOMIC_STORE_ORDERS:  # FIXME stores
                 name = f"store_atomic_{ty}_{aligned}_{ordering}"
@@ -383,6 +431,8 @@ def write_lit_tests(feature, datatypes, ops):
         for feat in feature:
             with open(f"{triple}-atomicrmw-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld[^r]|st[^r]|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'
+                if feat.name == "lsfe":
+                    filter_args = filter_args.replace("|orn", "|fneg|orn")
                 header(f, triple, [feat], filter_args)
                 all_atomicrmw(f, datatypes, ops, feat.name)
 

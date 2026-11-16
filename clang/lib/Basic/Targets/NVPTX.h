@@ -39,6 +39,9 @@ static constexpr LangASMap NVPTXAddrSpaceMap = {
     {LangAS::sycl_global_device, 1},
     {LangAS::sycl_global_host, 1},
     {LangAS::sycl_local, 3},
+    {LangAS::sycl_private, 0},
+    {LangAS::sycl_generic, 0},
+    {LangAS::sycl_constant, 4},
 };
 
 /// The DWARF address class. Taken from
@@ -82,6 +85,8 @@ public:
   }
 
   bool hasFeature(StringRef Feature) const override;
+
+  bool setABI(const std::string &Name) override;
 
   virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
     // The generic address space AS(0) is a superset of all the other address
@@ -130,18 +135,24 @@ public:
     return TargetInfo::CharPtrBuiltinVaList;
   }
 
+  // StringToOffloadArch also recognizes other vendors' GPUs, so accept only an
+  // NVPTX one.
   bool isValidCPUName(StringRef Name) const override {
-    return !StringToOffloadArch(Name).isUnknown();
+    return StringToOffloadArch(Name).isNVPTX();
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
-    fillValidOffloadArchList(Values);
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
+  Values.push_back(NAME);
+#include "llvm/TargetParser/NVPTXTargetParser.def"
   }
 
   bool setCPU(StringRef Name) override {
     GPU = StringToOffloadArch(Name);
-    return !GPU.isUnknown();
+    return GPU.isNVPTX();
   }
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 
   void setSupportedOpenCLOpts() override {
     auto &Opts = getSupportedOpenCLOpts();

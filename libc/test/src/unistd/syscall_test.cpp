@@ -34,8 +34,7 @@ TEST_F(LlvmLibcSyscallTest, TrivialCall) {
 
 TEST_F(LlvmLibcSyscallTest, SymlinkCreateDestroy) {
   constexpr const char LINK_VAL[] = "syscall_readlink_test_value";
-  constexpr const char LINK[] =
-      APPEND_LIBC_TEST("testdata/syscall_readlink.test.link");
+  constexpr const char LINK[] = "testdata/syscall_readlink.test.link";
 
 #ifdef SYS_symlink
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_symlink, LINK_VAL, LINK), 0l);
@@ -72,8 +71,7 @@ TEST_F(LlvmLibcSyscallTest, FileReadWrite) {
   constexpr const char HELLO[] = "hello";
   constexpr int HELLO_SIZE = sizeof(HELLO);
 
-  constexpr const char *TEST_FILE =
-      APPEND_LIBC_TEST("testdata/syscall_pread_pwrite.test");
+  constexpr const char *TEST_FILE = "testdata/syscall_pread_pwrite.test";
 
 #ifdef SYS_open
   long fd =
@@ -100,13 +98,11 @@ TEST_F(LlvmLibcSyscallTest, FileReadWrite) {
 
 TEST_F(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
   constexpr const char *TEST_DIR = "testdata";
-  constexpr const char *TEST_FILE = APPEND_LIBC_TEST("syscall_linkat.test");
-  constexpr const char *TEST_FILE_PATH =
-      APPEND_LIBC_TEST("testdata/syscall_linkat.test");
-  constexpr const char *TEST_FILE_LINK =
-      APPEND_LIBC_TEST("syscall_linkat.test.link");
+  constexpr const char *TEST_FILE = "syscall_linkat.test";
+  constexpr const char *TEST_FILE_PATH = "testdata/syscall_linkat.test";
+  constexpr const char *TEST_FILE_LINK = "syscall_linkat.test.link";
   constexpr const char *TEST_FILE_LINK_PATH =
-      APPEND_LIBC_TEST("testdata/syscall_linkat.test.link");
+      "testdata/syscall_linkat.test.link";
 
   // The test strategy is as follows:
   //   1. Create a normal file

@@ -73,7 +73,7 @@ def MY_LOAD_STACK_GUARD :
   let OutOperandList = (outs XRegs:$dst);
 }
 
-// ERROR-MISSING: error: missing target override for pseudoinstruction using PointerLikeRegClass
+// ERROR-MISSING: error: missing target override for pseudoinstruction using ptr_rc
 // ERROR-MISSING note: target should define equivalent instruction with RegisterClassLike replacement; (use RemapAllTargetPseudoPointerOperands?)
 
 
@@ -98,8 +98,8 @@ def MY_LOAD_STACK_GUARD_1 : TargetSpecializedStandardPseudoInstruction<LOAD_STAC
 #ifdef ERROR_NONPSEUDO
 
 // FIXME: Double error
-// ERROR-NONPSEUDO: [[@LINE+2]]:5: error: non-pseudoinstruction user of PointerLikeRegClass
-// ERROR-NONPSEUDO: [[@LINE+1]]:5: error: non-pseudoinstruction user of PointerLikeRegClass
+// ERROR-NONPSEUDO: [[@LINE+2]]:5: error: non-pseudoinstruction user of ptr_rc
+// ERROR-NONPSEUDO: [[@LINE+1]]:5: error: non-pseudoinstruction user of ptr_rc
 def NON_PSEUDO : TestInstruction {
   let OutOperandList = (outs XRegs:$dst);
   let InOperandList = (ins ptr_rc:$src);

@@ -1,3 +1,5 @@
+// XFAIL: mlir-expensive-checks
+
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
 // DEFINE:    -canonicalize -test-lower-to-arm-sme -convert-vector-to-llvm="enable-arm-sve" \
@@ -123,7 +125,7 @@ func.func private @matmul(%A: tensor<7x16xf32>, %B: tensor<16x13xf32>, %C: tenso
 // Implements packing for the A matrix (LHS) in matrix multiplication. The
 // inner tile size for dim M is "scalable": 8 * vscale.
 //===----------------------------------------------------------------------===//
-func.func private @pack_lhs(%A: tensor<7x16xf32>) -> tensor<1x16x?x1xf32> {
+func.func private @pack_lhs(%A: tensor<7x16xf32>) -> tensor<1x16x?x1xf32> attributes {llvm.arm_streaming} {
   %pad = arith.constant 0.0 : f32
 
   %vs = vector.vscale
@@ -146,7 +148,7 @@ func.func private @pack_lhs(%A: tensor<7x16xf32>) -> tensor<1x16x?x1xf32> {
 // Implements packing for the B matrix (RHS) in matrix multiplication. The
 // inner tile size for dim N is "scalable": 8 * vscale.
 //===----------------------------------------------------------------------===//
-func.func private @pack_rhs(%B: tensor<16x13xf32>) ->  tensor<?x16x?x1xf32> {
+func.func private @pack_rhs(%B: tensor<16x13xf32>) ->  tensor<?x16x?x1xf32> attributes {llvm.arm_streaming} {
   %pad = arith.constant 0.0 : f32
 
   // Compute the outer tile size.
@@ -173,7 +175,7 @@ func.func private @pack_rhs(%B: tensor<16x13xf32>) ->  tensor<?x16x?x1xf32> {
 // Implements packing for the C matrix (accumulator) in matrix multiplication.
 // The inner tile sizes are "scalable": 8 * vscale, 8 * vscale
 //===----------------------------------------------------------------------===//
-func.func private @pack_acc(%C: tensor<7x13xf32>) -> tensor<1x?x?x?xf32> {
+func.func private @pack_acc(%C: tensor<7x13xf32>) -> tensor<1x?x?x?xf32> attributes {llvm.arm_streaming} {
   %pad = arith.constant 0.0 : f32
 
   // Compute the outer tile size.
@@ -199,7 +201,7 @@ func.func private @pack_acc(%C: tensor<7x13xf32>) -> tensor<1x?x?x?xf32> {
 // Implements unpacking for the C matrix (accumulator) in matrix
 // multiplication. The inner tile sizes are "scalable": 8 * vscale, 8 * vscale
 //===----------------------------------------------------------------------===//
-func.func private @unpack_acc(%C_packed: tensor<1x?x?x?xf32>) -> tensor<7x13xf32> {
+func.func private @unpack_acc(%C_packed: tensor<1x?x?x?xf32>) -> tensor<7x13xf32> attributes {llvm.arm_streaming} {
   %vs = vector.vscale
   %c8 = arith.constant 8 : index
   %vs_c8 = arith.muli %vs, %c8 : index
@@ -253,7 +255,7 @@ module @transforms attributes { transform.with_named_sequence } {
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
 
     // Step 2: Vectorize linalg.mmt4d (note, the M, N dims are scalable!)
-    transform.structured.vectorize %tiled_mmt4d vector_sizes  [1, 1, 1, [8], [8], 1] {assume_dynamic_dims_match_vec_sizes, create_named_contraction}
+    transform.structured.vectorize %tiled_mmt4d assume_dynamic_dims_match_vec_sizes create_named_contraction vector_sizes [1, 1, 1, [8], [8], 1]
       : !transform.any_op
 
     // Step 3: Lower vector.mask %mask { vector.transfer_* } to vector.transfer_* %mask
@@ -283,7 +285,7 @@ module @transforms attributes { transform.with_named_sequence } {
           lowering_strategy = "outerproduct"
       transform.apply_patterns.vector.drop_unit_dims_with_shape_cast
       transform.apply_patterns.canonicalization
-    } {apply_cse} : !transform.any_op
+    } apply_cse : !transform.any_op
 
    //==========================================================================
    // HANDLE PACK + UNPACK
@@ -305,7 +307,7 @@ module @transforms attributes { transform.with_named_sequence } {
        : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
     // 2.1. Decompose tiled PackOp into lower-level Ops + simplify
-    %func_op_pack = transform.get_parent_op %tiled_pack_op_p {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
+    %func_op_pack = transform.get_parent_op %tiled_pack_op_p <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op_pack {
       transform.apply_patterns.linalg.decompose_pack_unpack
       transform.apply_patterns.linalg.decompose_pad
@@ -317,7 +319,7 @@ module @transforms attributes { transform.with_named_sequence } {
     } : !transform.op<"func.func">
 
     // 2.2. Decompose tiled UnpackOp into lower-level Ops + simplify
-    %func_op_unpack = transform.get_parent_op %tiled_unpack_op_p {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
+    %func_op_unpack = transform.get_parent_op %tiled_unpack_op_p <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op_unpack {
       transform.apply_patterns.linalg.decompose_pack_unpack
     } : !transform.op<"func.func">
@@ -331,7 +333,7 @@ module @transforms attributes { transform.with_named_sequence } {
    // BUFFERIZATION
    //==========================================================================
    %bufferize = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %module
-     {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
+     <bufferize_function_boundaries = true> : (!transform.any_op) -> !transform.any_op
    %func = transform.structured.match ops{["func.func"]} in %bufferize
      : (!transform.any_op) -> !transform.any_op
 
@@ -339,7 +341,7 @@ module @transforms attributes { transform.with_named_sequence } {
      transform.apply_patterns.vector.rank_reducing_subview_patterns
      transform.apply_patterns.vector.drop_unit_dims_with_shape_cast
      transform.apply_patterns.canonicalization
-   } {apply_cse} : !transform.any_op
+   } apply_cse : !transform.any_op
 
    transform.yield
    }

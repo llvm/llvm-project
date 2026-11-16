@@ -79,8 +79,13 @@ target_include_directories(libompdevice PRIVATE
 target_compile_options(libompdevice PRIVATE ${compile_options})
 if(NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" AND
    NOT "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
+  # LLVM_USE_SPLIT_DWARF puts -Wl,--gdb-index in CMAKE_EXE_LINKER_FLAGS, which
+  # every executable target inherits. A gdb index means nothing for a
+  # relocatable link that emits bitcode, and lld rejects the combination, so
+  # drop it again here.
   target_link_options(libompdevice PRIVATE
-                  "-flto" "-r" "-nostdlib" "-Wl,--lto-emit-llvm")
+                  "-flto" "-r" "-nostdlib" "-Wl,--lto-emit-llvm"
+                  "-Wl,--no-gdb-index")
 else()
   target_link_options(libompdevice PRIVATE
                   "-nostdlib" "-emit-llvm")

@@ -69,9 +69,9 @@ void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Ignore lambda functions as they are internal and implicit.
-  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl))
-    if (MethodDecl->getParent()->isLambda())
-      return;
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl);
+      MethodDecl && MethodDecl->getParent()->isLambda())
+    return;
 
   // Check if decl starts with LIBC_INLINE
   const auto Loc = FullSourceLoc(Result.SourceManager->getFileLoc(SrcBegin),

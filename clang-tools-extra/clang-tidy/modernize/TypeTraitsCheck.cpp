@@ -292,10 +292,10 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
     if (!DRE->hasQualifier())
       return;
     if (const auto *CTSD = dyn_cast_if_present<ClassTemplateSpecializationDecl>(
-            DRE->getQualifier().getAsRecordDecl())) {
-      if (isNamedDeclInStdTraitsSet(CTSD, ValueTraits))
-        EmitValueWarning(DRE->getQualifierLoc(), DRE->getEndLoc());
-    }
+            DRE->getQualifier().getAsRecordDecl());
+        CTSD && isNamedDeclInStdTraitsSet(CTSD, ValueTraits))
+      EmitValueWarning(DRE->getQualifierLoc(), DRE->getEndLoc());
+
     return;
   }
 
@@ -303,11 +303,11 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
     const NestedNameSpecifierLoc QualLoc = TL->getQualifierLoc();
     const NestedNameSpecifier NNS = QualLoc.getNestedNameSpecifier();
     if (const auto *CTSD = dyn_cast_if_present<ClassTemplateSpecializationDecl>(
-            NNS.getAsRecordDecl())) {
-      if (isNamedDeclInStdTraitsSet(CTSD, TypeTraits))
-        EmitTypeWarning(TL->getQualifierLoc(), TL->getEndLoc(),
-                        TL->getElaboratedKeywordLoc());
-    }
+            NNS.getAsRecordDecl());
+        CTSD && isNamedDeclInStdTraitsSet(CTSD, TypeTraits))
+      EmitTypeWarning(TL->getQualifierLoc(), TL->getEndLoc(),
+                      TL->getElaboratedKeywordLoc());
+
     return;
   }
 

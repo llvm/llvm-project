@@ -152,6 +152,10 @@ def OIListCustom : TestFormat_Op<[{
         | `nowait`
         | `reduction` custom<ReductionClause>($arg1, type($arg1))) attr-dict
 }], [AttrSizedOperandSegments]>, Arguments<(ins Optional<AnyType>:$arg0, Optional<AnyType>:$arg1)>;
+def OIListWithSeparator : TestFormat_Op<[{
+  oilist<`,`>( `keyword` $arg0 `:` type($arg0)
+             | `otherkeyword` $arg1 `:` type($arg1)) attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Optional<AnyType>:$arg0, Optional<AnyType>:$arg1)>;
 
 //===----------------------------------------------------------------------===//
 // Optional Groups

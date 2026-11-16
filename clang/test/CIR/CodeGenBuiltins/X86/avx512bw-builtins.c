@@ -4,10 +4,10 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw  -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw  -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefix=OGCG
@@ -864,6 +864,30 @@ __m256i test_mm512_maskz_cvtepi16_epi8(__mmask32 __M, __m512i __A) {
   // OGCG: %[[SEL:.*]] = select <32 x i1> %[[MASK_VEC]], <32 x i8> %[[TRUNC]], <32 x i8> {{.*}}
   // OGCG: bitcast <32 x i8> %[[SEL]] to <4 x i64>
   return _mm512_maskz_cvtepi16_epi8(__M, __A);
+}
+
+__m512i test_mm512_mulhi_epi16(__m512i __A, __m512i __B) {
+  // CIR-LABEL: _mm512_mulhi_epi16
+  // CIR: cir.call_llvm_intrinsic "smulh" %{{.*}}, %{{.*}} : (!cir.vector<32 x !s16i>, !cir.vector<32 x !s16i>) -> !cir.vector<32 x !s16i>
+
+  // LLVM-LABEL: test_mm512_mulhi_epi16
+  // LLVM: call <32 x i16> @llvm.smulh.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}})
+
+  // OGCG-LABEL: test_mm512_mulhi_epi16
+  // OGCG: call <32 x i16> @llvm.smulh.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}})
+  return _mm512_mulhi_epi16(__A, __B);
+}
+
+__m512i test_mm512_mulhi_epu16(__m512i __A, __m512i __B) {
+  // CIR-LABEL: _mm512_mulhi_epu16
+  // CIR: cir.call_llvm_intrinsic "umulh" %{{.*}}, %{{.*}} : (!cir.vector<32 x !u16i>, !cir.vector<32 x !u16i>) -> !cir.vector<32 x !u16i>
+
+  // LLVM-LABEL: test_mm512_mulhi_epu16
+  // LLVM: call <32 x i16> @llvm.umulh.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}})
+
+  // OGCG-LABEL: test_mm512_mulhi_epu16
+  // OGCG: call <32 x i16> @llvm.umulh.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}})
+  return _mm512_mulhi_epu16(__A, __B);
 }
 
 __m512i test_mm512_alignr_epi8(__m512i __A,__m512i __B) {

@@ -85,13 +85,15 @@ public:
       }
       return false;
     };
-    for (auto [O, _] : LiveOrigins.getLiveOriginsAt(&F))
-      for (LoanID LiveLoan : LoanPropagation.getLoans(O, &F)) {
-        const Loan *LiveLoanPtr = LoanMgr.getLoan(LiveLoan);
-        if (IsInvalidated(LiveLoanPtr->getAccessPath()))
-          MovedLoans =
-              MovedLoansMapFactory.add(MovedLoans, LiveLoan, F.getMoveExpr());
-      }
+    LiveOriginSet Origins = LiveOrigins.getLiveOriginsAt(&F);
+    for (const LivenessMap &Live : {Origins.Persistent, Origins.BlockLocal})
+      for (auto [O, _] : Live)
+        for (LoanID LiveLoan : LoanPropagation.getLoans(O, &F)) {
+          const Loan *LiveLoanPtr = LoanMgr.getLoan(LiveLoan);
+          if (IsInvalidated(LiveLoanPtr->getAccessPath()))
+            MovedLoans =
+                MovedLoansMapFactory.add(MovedLoans, LiveLoan, F.getMoveExpr());
+        }
     return Lattice(MovedLoans);
   }
 

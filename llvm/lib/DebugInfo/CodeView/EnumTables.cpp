@@ -373,6 +373,18 @@ EnumStrings<uint8_t> getThunkOrdinalNames() {
   return ThunkOrdinalNames;
 }
 
+EnumStrings<uint8_t> getEncodedFramePtrRegNames() {
+  constexpr EnumStringDef<uint8_t> EncodedFramePtrRegNameDefs[] = {
+      CV_ENUM_CLASS_ENT(EncodedFramePtrReg, None),
+      CV_ENUM_CLASS_ENT(EncodedFramePtrReg, StackPtr),
+      CV_ENUM_CLASS_ENT(EncodedFramePtrReg, FramePtr),
+      CV_ENUM_CLASS_ENT(EncodedFramePtrReg, BasePtr),
+  };
+  static constexpr auto EncodedFramePtrRegNames =
+      BUILD_ENUM_STRINGS(EncodedFramePtrRegNameDefs);
+  return EncodedFramePtrRegNames;
+}
+
 EnumStrings<uint16_t> getTrampolineNames() {
   constexpr EnumStringDef<uint16_t> TrampolineNameDefs[] = {
       CV_ENUM_CLASS_ENT(TrampolineType, TrampIncremental),
@@ -620,6 +632,16 @@ EnumStrings<uint16_t> getJumpTableEntrySizeNames() {
   static constexpr auto JumpTableEntrySizeNames =
       BUILD_ENUM_STRINGS(JumpTableEntrySizeNameDefs);
   return JumpTableEntrySizeNames;
+}
+
+EnumStrings<uint16_t> getAssociationKindNames() {
+  constexpr EnumStringDef<uint16_t> AssociationKindNameDefs[] = {
+      CV_ENUM_CLASS_ENT(AssociationKind, None),
+      CV_ENUM_CLASS_ENT(AssociationKind, Coroutine),
+  };
+  static constexpr auto AssociationKindNames =
+      BUILD_ENUM_STRINGS(AssociationKindNameDefs);
+  return AssociationKindNames;
 }
 
 } // end namespace codeview

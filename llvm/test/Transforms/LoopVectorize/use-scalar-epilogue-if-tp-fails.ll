@@ -37,7 +37,7 @@ define void @basic_loop(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[SIZE:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[SIZE]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[SIZE]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[SIZE]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[SIZE]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[N_VEC]]
@@ -98,7 +98,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; FORCED-TF-NEXT:    br label [[VECTOR_PH:%.*]]
 ; FORCED-TF:       vector.ph:
 ; FORCED-TF-NEXT:    [[N_RND_UP:%.*]] = add i32 [[SIZE:%.*]], 3
-; FORCED-TF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; FORCED-TF-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; FORCED-TF-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; FORCED-TF-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[SIZE]], 1
 ; FORCED-TF-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[SIZE]]
@@ -164,7 +164,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[SIZE:%.*]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[SIZE]], 1
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[SIZE]]
@@ -244,5 +244,5 @@ end:
 }
 
 !1 = distinct !{!1, !2, !3}
-!2 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.predicate.enable"}
 !3 = !{!"llvm.loop.vectorize.enable"}

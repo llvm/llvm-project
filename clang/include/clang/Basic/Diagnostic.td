@@ -224,8 +224,8 @@ multiclass CompatWarning<
                     !strconcat(message, " incompatible with C++98"),
                     !strconcat(message, " incompatible with ", lang, " standards before ", lang, std_ver_name))>,
         InGroup<!cast<DiagGroup>(!if(is_cxx_11,
-                                     prefix#"98Compat",
-                                     prefix#"Pre"#diag_group_ver_str#"Compat"))>,
+                                     !strconcat(prefix, "98Compat", !if(ext_warn, "", "Pedantic")),
+                                     !strconcat(prefix, "Pre", diag_group_ver_str, "Compat", !if(ext_warn, "", "Pedantic"))))>,
         DefaultIgnore;
 
     def : CompatWarningId<
@@ -268,6 +268,7 @@ multiclass C2yCompat<string message, bit ext_warn = false> : CompatWarning<messa
 
 // Definitions for Diagnostics.
 include "DiagnosticASTKinds.td"
+include "DiagnosticCodeGenKinds.td"
 include "DiagnosticCommentKinds.td"
 include "DiagnosticCommonKinds.td"
 include "DiagnosticCrossTUKinds.td"

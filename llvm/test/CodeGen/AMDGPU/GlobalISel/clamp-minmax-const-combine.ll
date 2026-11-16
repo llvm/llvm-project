@@ -524,7 +524,7 @@ define amdgpu_ps float @test_min_max_f32_sgpr(float inreg %a) {
 ;
 ; GFX1170-LABEL: test_min_max_f32_sgpr:
 ; GFX1170:       ; %bb.0:
-; GFX1170-NEXT:    s_max_f32 s0, s2, 0
+; GFX1170-NEXT:    s_max_f32 s0, s0, 0
 ; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1170-NEXT:    s_min_f32 s0, s0, 1.0
 ; GFX1170-NEXT:    v_mov_b32_e32 v0, s0
@@ -532,7 +532,7 @@ define amdgpu_ps float @test_min_max_f32_sgpr(float inreg %a) {
 ;
 ; GFX12-LABEL: test_min_max_f32_sgpr:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_max_num_f32 s0, s2, 0
+; GFX12-NEXT:    s_max_num_f32 s0, s0, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_min_num_f32 s0, s0, 1.0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
@@ -551,7 +551,7 @@ define amdgpu_ps float @test_min_max_f32_sgpr_1(float inreg %a) {
 ;
 ; GFX1170-LABEL: test_min_max_f32_sgpr_1:
 ; GFX1170:       ; %bb.0: ; %.entry
-; GFX1170-NEXT:    s_max_f32 s0, s2, 0
+; GFX1170-NEXT:    s_max_f32 s0, s0, 0
 ; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1170-NEXT:    s_min_f32 s0, s0, 1.0
 ; GFX1170-NEXT:    s_fmaak_f32 s0, s0, 0, 0x0
@@ -561,7 +561,7 @@ define amdgpu_ps float @test_min_max_f32_sgpr_1(float inreg %a) {
 ;
 ; GFX12-LABEL: test_min_max_f32_sgpr_1:
 ; GFX12:       ; %bb.0: ; %.entry
-; GFX12-NEXT:    s_max_num_f32 s0, s2, 0
+; GFX12-NEXT:    s_max_num_f32 s0, s0, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_min_num_f32 s0, s0, 1.0
 ; GFX12-NEXT:    s_fmaak_f32 s0, s0, 0, 0x0
@@ -585,22 +585,22 @@ define amdgpu_ps float @test_min_max_f32_sgpr_fma_user(float inreg %a, float inr
 ;
 ; GFX1170-LABEL: test_min_max_f32_sgpr_fma_user:
 ; GFX1170:       ; %bb.0:
-; GFX1170-NEXT:    s_max_f32 s0, s2, 0
+; GFX1170-NEXT:    s_max_f32 s0, s0, 0
 ; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1170-NEXT:    s_min_f32 s0, s0, 1.0
-; GFX1170-NEXT:    s_fmac_f32 s4, s0, s3
+; GFX1170-NEXT:    s_fmac_f32 s2, s0, s1
 ; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX1170-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1170-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1170-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: test_min_max_f32_sgpr_fma_user:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_max_num_f32 s0, s2, 0
+; GFX12-NEXT:    s_max_num_f32 s0, s0, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_min_num_f32 s0, s0, 1.0
-; GFX12-NEXT:    s_fmac_f32 s4, s0, s3
+; GFX12-NEXT:    s_fmac_f32 s2, s0, s1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    ; return to shader part epilog
   %mx = call float @llvm.maxnum.f32(float %a, float 0.000000e+00)
   %mn = call float @llvm.minnum.f32(float %mx, float 1.000000e+00)

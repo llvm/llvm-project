@@ -52,9 +52,6 @@ private:
   friend unsigned encode(struct MaybeAlign A);
   friend struct MaybeAlign decodeMaybeAlign(unsigned Value);
 
-  struct FromShiftValue {};
-  constexpr Align(FromShiftValue, uint8_t Shift) : ShiftValue(Shift) {}
-
 public:
   /// Default is byte-aligned.
   constexpr Align() = default;
@@ -72,6 +69,14 @@ public:
     assert(ShiftValue < 64 && "Broken invariant");
   }
 
+  /// Returns an alignment of `1 << Log2Value` bytes.
+  constexpr static Align fromLog2(unsigned Log2Value) {
+    assert(Log2Value < 64 && "Alignment exponent is too large");
+    Align Out;
+    Out.ShiftValue = Log2Value;
+    return Out;
+  }
+
   /// This is a hole in the type system and should not be abused.
   /// Needed to interact with C for instance.
   constexpr uint64_t value() const { return uint64_t(1) << ShiftValue; }
@@ -86,7 +91,7 @@ public:
 
   /// Allow constructions of constexpr Align.
   template <size_t kValue> constexpr static Align Constant() {
-    return Align(FromShiftValue{}, ConstantLog2<kValue>());
+    return fromLog2(ConstantLog2<kValue>());
   }
 
   /// Allow constructions of constexpr Align from types.

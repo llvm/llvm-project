@@ -16,7 +16,7 @@ out_of_line_destructor::~out_of_line_destructor() {
     some_function();
 }
 
-// CIR: !rec_out_of_line_destructor = !cir.struct<"out_of_line_destructor" {!s32i}>
+// CIR: !rec_out_of_line_destructor = !cir.struct<"out_of_line_destructor" {data !s32i}>
 
 // CIR: cir.func {{.*}} @_ZN22out_of_line_destructorD2Ev(%{{.+}}: !cir.ptr<!rec_out_of_line_destructor>
 // CIR:   cir.call @_Z13some_functionv() nothrow : () -> () 
@@ -104,9 +104,9 @@ void test_array_destructor() {
 
 
 // LLVM: define{{.*}} void @_Z21test_array_destructorv()
-// LLVM:   %[[ARR_CUR:.*]] = alloca ptr
 // LLVM:   %[[ARR:.*]] = alloca [5 x %struct.array_element]
 // LLVM:   %[[TMP:.*]] = alloca ptr
+// LLVM:   %[[ARR_CUR:.*]] = alloca ptr
 // LLVM:   %[[ARR_PTR:.*]] = getelementptr %struct.array_element, ptr %[[ARR]], i32 0
 // LLVM:   store ptr %[[ARR_PTR]], ptr %[[TMP]]
 // LLVM:   %[[END_PTR:.*]] = getelementptr %struct.array_element, ptr %[[ARR_PTR]], i64 5

@@ -24,6 +24,8 @@
 
 namespace clang::ssaf {
 
+class MultiArchCreateCLI;
+
 /// Represents a multi-architecture shared library.
 ///
 /// A MultiArchSharedLibrary bundles per-architecture LUSummaryEncoding
@@ -34,6 +36,7 @@ namespace clang::ssaf {
 /// namespace identifying that shared library, and every member's
 /// \c LUNamespace must equal it exactly.
 class MultiArchSharedLibrary {
+  friend class MultiArchCreateCLI;
   friend class SerializationFormat;
   friend class TestFixture;
 

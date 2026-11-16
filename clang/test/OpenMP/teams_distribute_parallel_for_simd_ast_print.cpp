@@ -148,12 +148,18 @@ T tmain(T argc) {
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
 #pragma omp target
+#if defined(OMP5) || defined(OMP51)
 #pragma omp teams distribute parallel for simd allocate(b) private(argc, b), firstprivate(c, d), collapse(2) allocate(d)
+#else
+#pragma omp teams distribute parallel for simd private(argc, b), firstprivate(c, d), collapse(2)
+#endif
   for (int i = 0; i < 10; ++i)
     for (int j = 0; j < 10; ++j)
       foo();
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute parallel for simd allocate(b) private(argc,b) firstprivate(c,d) collapse(2) allocate(d)
+// OMP45-NEXT: #pragma omp teams distribute parallel for simd private(argc,b) firstprivate(c,d) collapse(2)
+// OMP50-NEXT: #pragma omp teams distribute parallel for simd allocate(b) private(argc,b) firstprivate(c,d) collapse(2) allocate(d)
+// OMP51-NEXT: #pragma omp teams distribute parallel for simd allocate(b) private(argc,b) firstprivate(c,d) collapse(2) allocate(d)
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
 // CHECK-NEXT: for (int j = 0; j < 10; ++j)
 // CHECK-NEXT: foo();

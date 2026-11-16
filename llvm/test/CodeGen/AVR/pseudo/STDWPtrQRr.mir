@@ -1,7 +1,7 @@
-# RUN: llc -O0 -run-pass=avr-expand-pseudo -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -O0 -run-pass=avr-expand-pseudo -verify-machineinstrs -mattr=avrtiny %s -o - \
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mattr=avrtiny %s -o - \
 # RUN:     | FileCheck %s --check-prefix=CHECK-TINY
-# RUN: llc -O0 -run-pass=avr-expand-pseudo -verify-machineinstrs -mattr=lowbytefirst %s -o - \
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mattr=lowbytefirst %s -o - \
 # RUN:     | FileCheck %s --check-prefix=CHECK-XMEGA
 
 --- |

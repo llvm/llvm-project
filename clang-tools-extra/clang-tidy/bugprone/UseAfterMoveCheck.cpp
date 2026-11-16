@@ -424,13 +424,12 @@ void UseAfterMoveFinder::getDeclRefs(
             !MovedAs->hasMemberName(Member->getMemberDecl()->getIdentifier())) {
           continue;
         }
-        if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block) {
+        if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block &&
+            (Operator || !isSpecifiedAfterMove(DeclRef->getDecl())))
           // Ignore uses of a standard smart pointer or classes annotated as
           // "null_after_move" (smart-pointer-like behavior) that don't
           // dereference the pointer.
-          if (Operator || !isSpecifiedAfterMove(DeclRef->getDecl()))
-            DeclRefs->insert(DeclRef);
-        }
+          DeclRefs->insert(DeclRef);
       }
     };
 

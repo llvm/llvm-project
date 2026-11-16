@@ -42,7 +42,7 @@ void loop4(int *List, int Length) {
 
 // CHECK: ![[LOOP1]] = distinct !{![[LOOP1]], [[MP:![0-9]+]], ![[VEC_WIDTH_1:.*]], ![[FIXED_WIDTH:.*]], ![[VEC_ENABLE:.*]]}
 // CHECK: ![[VEC_WIDTH_1]] = !{!"llvm.loop.vectorize.width", i32 1}
-// CHECK: ![[FIXED_WIDTH]] = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+// CHECK: ![[FIXED_WIDTH]] = !{!"llvm.loop.vectorize.scalable.disable"}
 // CHECK: ![[VEC_ENABLE]] = !{!"llvm.loop.vectorize.enable"}
 
 // CHECK: ![[LOOP2]] = distinct !{![[LOOP2]], [[MP]], ![[VEC_WIDTH_2:.*]], ![[FIXED_WIDTH:.*]], ![[VEC_ENABLE]]}

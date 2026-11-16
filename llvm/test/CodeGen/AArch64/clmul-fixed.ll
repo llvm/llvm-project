@@ -1507,7 +1507,7 @@ define <1 x i128> @clmul_v1i128_neon_zext(<1 x i64> %x, <1 x i64> %y) {
 ; CHECK-AES-NEXT:    ret
   %zextx = zext <1 x i64> %x to <1 x i128>
   %zexty = zext <1 x i64> %y to <1 x i128>
-  %a = call <1 x i128> @llvm.clmul.v2i128(<1 x i128> %zextx, <1 x i128> %zexty)
+  %a = call <1 x i128> @llvm.clmul.v1i128(<1 x i128> %zextx, <1 x i128> %zexty)
   ret <1 x i128> %a
 }
 
@@ -1841,7 +1841,7 @@ define <8 x i8> @clmulr_v8i8_neon(<8 x i8> %a, <8 x i8> %b) nounwind {
 ; CHECK-NEXT:    ret
   %a.ext = zext <8 x i8> %a to <8 x i16>
   %b.ext = zext <8 x i8> %b to <8 x i16>
-  %clmul = call <8 x i16> @llvm.clmul.v16i16(<8 x i16> %a.ext, <8 x i16> %b.ext)
+  %clmul = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> %a.ext, <8 x i16> %b.ext)
   %res.ext = lshr <8 x i16> %clmul, splat (i16 7)
   %res = trunc <8 x i16> %res.ext to <8 x i8>
   ret <8 x i8> %res
@@ -1925,7 +1925,7 @@ define <4 x i16> @clmulr_v4i16_neon(<4 x i16> %a, <4 x i16> %b) nounwind {
 ; CHECK-AES-NEXT:    mov v2.d[1], v4.d[0]
 ; CHECK-AES-NEXT:    mov v0.d[1], v3.d[0]
 ; CHECK-AES-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
-; CHECK-AES-NEXT:    shrn v0.4h, v0.4s, #15
+; CHECK-AES-NEXT:    addhn v0.4h, v0.4s, v0.4s
 ; CHECK-AES-NEXT:    ret
   %a.ext = zext <4 x i16> %a to <4 x i32>
   %b.ext = zext <4 x i16> %b to <4 x i32>
@@ -2148,7 +2148,7 @@ define <2 x i32> @clmulr_v2i32_neon(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-AES-NEXT:    pmull2 v2.1q, v0.2d, v1.2d
 ; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
 ; CHECK-AES-NEXT:    mov v0.d[1], v2.d[0]
-; CHECK-AES-NEXT:    shrn v0.2s, v0.2d, #31
+; CHECK-AES-NEXT:    addhn v0.2s, v0.2d, v0.2d
 ; CHECK-AES-NEXT:    ret
   %a.ext = zext <2 x i32> %a to <2 x i64>
   %b.ext = zext <2 x i32> %b to <2 x i64>
@@ -2403,7 +2403,7 @@ define <1 x i64> @clmulr_v1i64_neon(<1 x i64> %a, <1 x i64> %b) nounwind {
 ; CHECK-AES-NEXT:    ret
   %a.ext = zext <1 x i64> %a to <1 x i128>
   %b.ext = zext <1 x i64> %b to <1 x i128>
-  %clmul = call <1 x i128> @llvm.clmul.v2i128(<1 x i128> %a.ext, <1 x i128> %b.ext)
+  %clmul = call <1 x i128> @llvm.clmul.v1i128(<1 x i128> %a.ext, <1 x i128> %b.ext)
   %res.ext = lshr <1 x i128> %clmul, splat (i128 63)
   %res = trunc <1 x i128> %res.ext to <1 x i64>
   ret <1 x i64> %res
@@ -2437,7 +2437,7 @@ define <8 x i8> @clmulh_v8i8_neon(<8 x i8> %a, <8 x i8> %b) nounwind {
 ; CHECK-NEXT:    ret
   %a.ext = zext <8 x i8> %a to <8 x i16>
   %b.ext = zext <8 x i8> %b to <8 x i16>
-  %clmul = call <8 x i16> @llvm.clmul.v16i16(<8 x i16> %a.ext, <8 x i16> %b.ext)
+  %clmul = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> %a.ext, <8 x i16> %b.ext)
   %res.ext = lshr <8 x i16> %clmul, splat (i16 8)
   %res = trunc <8 x i16> %res.ext to <8 x i8>
   ret <8 x i8> %res

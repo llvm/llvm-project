@@ -112,7 +112,7 @@ func.func @to_buffer_read_only(%idx : index, %f: f32) -> f32 {
   // Some op may write into the result of to_buffer later.
   // CHECK: bufferization.to_buffer
   // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
-  %m = bufferization.to_buffer %t {read_only} : tensor<5xf32> to memref<5xf32>
+  %m = bufferization.to_buffer %t read_only : tensor<5xf32> to memref<5xf32>
   %2 = tensor.extract %t[%idx] : tensor<5xf32>
   return %2 : f32
 }
@@ -200,4 +200,45 @@ func.func @shorter_inplace_attr(%arg0: tensor<4xi32>) -> (tensor<4xi32>, tensor<
   // The __inplace_operands_attr__ has only one entry but the return has two
   // tensor operands.  The analysis must expand the annotation without crashing.
   return {__inplace_operands_attr__ = ["false"]} %arg0, %arg0 : tensor<4xi32>, tensor<4xi32>
+}
+
+// -----
+
+// A tensor yielded from `scf.index_switch` aliases with the switch's result,
+// just like `scf.if`. Writing to that result must therefore not modify a
+// non-writable input in place.
+// CHECK-LABEL: func @index_switch_non_writable(
+// CHECK-ALIAS-SETS-LABEL: func @index_switch_non_writable(
+func.func @index_switch_non_writable(%t: tensor<4xf32> {bufferization.writable = false},
+                                     %v: vector<4xf32>, %i: index) -> tensor<4xf32> {
+  %c0 = arith.constant 0 : index
+  // CHECK-ALIAS-SETS: %[[switch:.*]] = scf.index_switch
+  // CHECK-ALIAS-SETS-SAME: __opresult_alias_set_attr__ = {{.*}}%[[switch]]{{.*}}%arg0
+  %0 = scf.index_switch %i -> tensor<4xf32>
+  default {
+    scf.yield %t : tensor<4xf32>
+  }
+  // CHECK: vector.transfer_write {{.*}} {__inplace_operands_attr__ = ["none", "false", "none"]
+  %1 = vector.transfer_write %v, %0[%c0] {in_bounds = [true]} : vector<4xf32>, tensor<4xf32>
+  return %1 : tensor<4xf32>
+}
+
+// -----
+
+// Each `scf.index_switch` result aliases the correspondingly-indexed operand
+// yielded by every case and by the default region.
+// CHECK-ALIAS-SETS-LABEL: func @index_switch_multi_result(
+func.func @index_switch_multi_result(%a: tensor<4xf32> {bufferization.writable = false},
+                                     %b: tensor<4xf32>, %i: index)
+    -> (tensor<4xf32>, tensor<4xf32>) {
+  // CHECK-ALIAS-SETS: %[[sw:.*]]:2 = scf.index_switch
+  // CHECK-ALIAS-SETS-SAME: __opresult_alias_set_attr__ = {{.*}}"%[[sw]]#0", "%arg0"{{.*}}"%[[sw]]#1", "%arg1"
+  %0, %1 = scf.index_switch %i -> tensor<4xf32>, tensor<4xf32>
+  case 1 {
+    scf.yield %a, %b : tensor<4xf32>, tensor<4xf32>
+  }
+  default {
+    scf.yield %a, %b : tensor<4xf32>, tensor<4xf32>
+  }
+  return %0, %1 : tensor<4xf32>, tensor<4xf32>
 }

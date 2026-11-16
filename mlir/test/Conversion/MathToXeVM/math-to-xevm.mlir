@@ -1,13 +1,15 @@
-// RUN: mlir-opt %s -convert-math-to-xevm \
-// RUN:   | FileCheck %s -check-prefixes='CHECK,CHECK-ARITH' 
-// RUN: mlir-opt %s -convert-math-to-xevm='convert-arith=false' \
+// RUN: mlir-opt %s -convert-math-to-xevm='convert-to-ocl=false' \
+// RUN:   | FileCheck %s -check-prefixes='CHECK,CHECK-ARITH'
+// RUN: mlir-opt %s -convert-math-to-xevm='convert-to-ocl=false convert-arith=false' \
 // RUN:   | FileCheck %s -check-prefixes='CHECK,CHECK-NO-ARITH'
 
-// RUN: mlir-opt --pass-pipeline="builtin.module(convert-math-to-xevm)" %s \
+// RUN: mlir-opt --pass-pipeline="builtin.module(convert-math-to-xevm{convert-to-ocl=false})" %s \
 // RUN:   | FileCheck %s -check-prefixes='CHECK-MODULE,CHECK-ENTIRE-MODULE'
-// RUN: mlir-opt --pass-pipeline="builtin.module(gpu.module(convert-math-to-xevm))" %s \
+// RUN: mlir-opt --pass-pipeline="builtin.module(gpu.module(convert-math-to-xevm{convert-to-ocl=false}))" %s \
 // RUN:   | FileCheck %s -check-prefixes='CHECK-MODULE,CHECK-ONLY-GPU'
 
+// This test pins the native (`afn`) half of MathToXeVM, so it turns
+// convert-to-ocl off. See math-to-ocl.mlir for the precise-OCL half.
 // This test:
 // - check that MathToXeVM converts fastmath math/arith ops properly;
 // - check that MathToXeVM handles nested modules while respecting pass manager.
@@ -38,7 +40,9 @@ module @test_module {
   // CHECK-ARITH-DAG: llvm.func @_Z25__spirv_ocl_native_divideff(f32, f32) -> f32
 
   // CHECK-LABEL: func @math_ops
-  func.func @math_ops() {
+  // The powf and divf results are returned because the algebraic
+  // simplifications run first, and their driver drops ops that are dead.
+  func.func @math_ops() -> (f16, f32) {
 
     %c1_f16 = arith.constant 1. : f16
     %c1_f32 = arith.constant 1. : f32
@@ -66,6 +70,9 @@ module @test_module {
     %exp_afn_f32 = math.exp %c1_f32 fastmath<afn> : f32
     // CHECK: llvm.call @_Z22__spirv_ocl_native_expd(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f64) -> f64
     %exp_afn_f64 = math.exp %c1_f64 fastmath<afn> : f64
+
+    // CHECK: llvm.call @_Z22__spirv_ocl_native_expd(%{{.*}}) {aaa = 0 : i32, fastmathFlags = #llvm.fastmath<afn>} : (f64) -> f64
+    %exp_with_discardable_attr = math.exp %c1_f64 fastmath<afn> {aaa = 0 : i32} : f64
 
     // CHECK: math.exp
     %exp_none_f16 = math.exp %c1_f16 fastmath<none> : f16
@@ -149,8 +156,12 @@ module @test_module {
     // CHECK: llvm.call @_Z24__spirv_ocl_native_log10d(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f64) -> f64
     %log10_afn_f64 = math.log10 %c1_f64 fastmath<afn> : f64
 
+    // The exponent must not be one the algebraic simplifications rewrite, or
+    // there is no `math.powf` left to lower. See algebraic-simplification.mlir.
+    %c4_f16 = arith.constant 4. : f16
+
     // CHECK: llvm.call @_Z23__spirv_ocl_native_powrDhDh(%{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f16, f16) -> f16
-    %powr_afn_f16 = math.powf %c1_f16, %c1_f16 fastmath<afn> : f16
+    %powr_afn_f16 = math.powf %c1_f16, %c4_f16 fastmath<afn> : f16
 
     // CHECK: llvm.call @_Z24__spirv_ocl_native_rsqrtd(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f64) -> f64
     %rsqrt_afn_f64 = math.rsqrt %c1_f64 fastmath<afn> : f64
@@ -171,7 +182,7 @@ module @test_module {
     // CHECK-NO-ARITH: arith.divf
     %divf_afn_f32 = arith.divf %c6_9_f32, %c7_f32 fastmath<afn> : f32
 
-    return
+    return %powr_afn_f16, %divf_afn_f32 : f16, f32
   }
 
   // Check that MathToXeVM handles nested modules while respecting pass manager:

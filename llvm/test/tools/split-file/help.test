@@ -1,6 +1,5 @@
-RUN: split-file --help 2>&1 | FileCheck --implicit-check-not='General Options:' %s
+RUN: split-file --help 2>&1 | FileCheck %s
 CHECK: OVERVIEW: Split input {{.*}}
 CHECK: USAGE: split-file [options] filename directory
-CHECK: Generic Options:
-CHECK: split-file Options:
+CHECK: OPTIONS:
 CHECK:   --no-leading-lines
