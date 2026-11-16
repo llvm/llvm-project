@@ -63,4 +63,23 @@ TEST(RecyclerTest, MoveConstructor) {
   EXPECT_EQ(Allocator.DeallocCount, 2);
 }
 
+TEST(RecyclerTest, ClearLargeBumpAllocatorAfterReset) {
+  struct LargeObject {
+    alignas(8) char Data[32768];
+  };
+  LargeBumpPtrAllocator Allocator;
+  Recycler<LargeObject> R;
+  LargeObject *Object = R.Allocate(Allocator);
+  R.Deallocate(Allocator, Object);
+
+  // The recycled object is in a custom slab released by Reset. Clearing the
+  // recycler must discard its free list without accessing that storage.
+  Allocator.Reset();
+  EXPECT_EQ(0U, Allocator.GetNumSlabs());
+  R.clear(Allocator);
+  (void)R.Allocate(Allocator);
+  EXPECT_EQ(1U, Allocator.GetNumSlabs());
+  R.clear(Allocator);
+}
+
 } // end anonymous namespace

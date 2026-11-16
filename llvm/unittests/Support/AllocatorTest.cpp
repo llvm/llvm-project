@@ -46,6 +46,21 @@ TEST(AllocatorTest, Basics) {
   EXPECT_EQ(1U, Alloc.GetNumSlabs());
 }
 
+TEST(AllocatorTest, LargeSlabs) {
+  LargeBumpPtrAllocator Alloc;
+  Alloc.setRedZoneSize(0);
+  Alloc.Allocate(10000, 1);
+  EXPECT_EQ(1U, Alloc.GetNumSlabs());
+  EXPECT_EQ(16384U, Alloc.getTotalMemory());
+  Alloc.Allocate(10000, 1);
+  EXPECT_EQ(2U, Alloc.GetNumSlabs());
+  EXPECT_EQ(32768U, Alloc.getTotalMemory());
+
+  Alloc.Reset();
+  EXPECT_EQ(1U, Alloc.GetNumSlabs());
+  EXPECT_EQ(16384U, Alloc.getTotalMemory());
+}
+
 // Allocate enough bytes to create three slabs.
 TEST(AllocatorTest, ThreeSlabs) {
   BumpPtrAllocator Alloc;

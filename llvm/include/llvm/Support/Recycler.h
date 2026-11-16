@@ -74,8 +74,10 @@ public:
   template<class AllocatorType>
   void clear(AllocatorType &Allocator) {
     if constexpr (std::is_same_v<std::decay_t<AllocatorType>,
-                                 BumpPtrAllocator>) {
-      // For BumpPtrAllocator, Deallocate is a no-op, so just drop the free
+                                 BumpPtrAllocator> ||
+                  std::is_same_v<std::decay_t<AllocatorType>,
+                                 LargeBumpPtrAllocator>) {
+      // For bump allocators, Deallocate is a no-op, so just drop the free
       // list.
       FreeList = nullptr;
     } else {
