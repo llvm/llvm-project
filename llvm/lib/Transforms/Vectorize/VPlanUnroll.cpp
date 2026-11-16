@@ -852,11 +852,14 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   }
 
   // Create a BuildVector in successor block for every VPPhi in (first lane's)
-  // exiting block having vector uses. All their
-  // operands are initialized to poison and will be replaced when processing
-  // each clone, except for the operand of the first lane which set here.
-  // BuildVectors are recorded to be replaced later by chains of insert-element
-  // and widen phis.
+  // exiting block not only used by its first lane. All their operands are
+  // initialized to poison and will be replaced when processing each clone,
+  // except for the operand of the first lane which set here.
+  // BuildVectors of values with vector users are recorded to be replaced later
+  // by chains of insert-element and widen phis. Their scalar users keep
+  // extracting lanes, to avoid keeping the per-lane phis live as well. For
+  // values only used as scalars, combineRecipes folds the lane extracts to the
+  // per-lane phis.
   unsigned NumLanes = VF.getFixedValue();
   SmallVector<VPInstruction *> BuildVectors;
   for (auto &R : FirstLaneExiting->phis()) {
@@ -868,7 +871,8 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
     VPValue *Poison = Plan.getPoison(ScalarTy);
     SmallVector<VPValue *> BVOps(NumLanes, Poison);
     auto *BV = new VPInstruction(VPInstruction::BuildVector, BVOps);
-    BuildVectors.push_back(BV);
+    if (!vputils::onlyScalarValuesOrLanesUsed(Phi))
+      BuildVectors.push_back(BV);
     Phi->replaceAllUsesWith(BV);
     BV->setOperand(0, Phi);
     BV->insertBefore(Successor->getFirstNonPhi());
