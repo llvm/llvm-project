@@ -42,8 +42,7 @@ Fuzzer and AI-generated testcases should:
 
 If you're planning to file more than three bug reports using a particular
 framework, please make a thread on [LLVM Discourse](https://discourse.llvm.org/)
-to plan out how to file those reports. If you don't do this, your reports may be
-deleted.
+to plan out how to file those reports. 
 
 (crashes the compiler)=
 
