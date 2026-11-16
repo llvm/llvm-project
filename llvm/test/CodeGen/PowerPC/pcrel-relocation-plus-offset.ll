@@ -46,6 +46,85 @@ entry:
   ret i32 %0
 }
 
+; Offsets outside of +/-16MB are not folded into the PC-relative relocation,
+; since the relocation also includes the distance to the PC and could go out
+; of range at link time.
+define dso_local signext i32 @getElementLocalLargestOffset() local_unnamed_addr {
+; CHECK-S-LABEL: getElementLocalLargestOffset:
+; CHECK-S:       # %bb.0: # %entry
+; CHECK-S-NEXT:    plwa r3, array2@PCREL+16777212(0), 1
+; CHECK-S-NEXT:    blr
+; CHECK-O-LABEL: <getElementLocalLargestOffset>:
+; CHECK-O:         plwa 3, 0(0), 1
+; CHECK-O-NEXT:      R_PPC64_PCREL34      array2+0xfffffc
+; CHECK-O-NEXT:    blr
+entry:
+  %0 = load i32, ptr getelementptr inbounds (i8, ptr @array2, i64 16777212), align 4
+  ret i32 %0
+}
+
+define dso_local signext i32 @getElementLocalTooLargeOffset() local_unnamed_addr {
+; CHECK-S-LABEL: getElementLocalTooLargeOffset:
+; CHECK-S:       # %bb.0: # %entry
+; CHECK-S-NEXT:    paddi r3, 0, array2@PCREL, 1
+; CHECK-S-NEXT:    plwa r3, 16777216(r3), 0
+; CHECK-S-NEXT:    blr
+; CHECK-O-LABEL: <getElementLocalTooLargeOffset>:
+; CHECK-O:         paddi 3, 0, 0, 1
+; CHECK-O-NEXT:      R_PPC64_PCREL34      array2
+; CHECK-O-NEXT:    plwa 3, 16777216(3), 0
+; CHECK-O-NEXT:    blr
+entry:
+  %0 = load i32, ptr getelementptr inbounds (i8, ptr @array2, i64 16777216), align 4
+  ret i32 %0
+}
+
+define dso_local signext i32 @getElementLocalSmallestOffset() local_unnamed_addr {
+; CHECK-S-LABEL: getElementLocalSmallestOffset:
+; CHECK-S:       # %bb.0: # %entry
+; CHECK-S-NEXT:    plwa r3, array2@PCREL-16777216(0), 1
+; CHECK-S-NEXT:    blr
+; CHECK-O-LABEL: <getElementLocalSmallestOffset>:
+; CHECK-O:         plwa 3, 0(0), 1
+; CHECK-O-NEXT:      R_PPC64_PCREL34      array2-0x1000000
+; CHECK-O-NEXT:    blr
+entry:
+  %0 = load i32, ptr getelementptr inbounds (i8, ptr @array2, i64 -16777216), align 4
+  ret i32 %0
+}
+
+define dso_local signext i32 @getElementLocalTooSmallOffset() local_unnamed_addr {
+; CHECK-S-LABEL: getElementLocalTooSmallOffset:
+; CHECK-S:       # %bb.0: # %entry
+; CHECK-S-NEXT:    paddi r3, 0, array2@PCREL, 1
+; CHECK-S-NEXT:    plwa r3, -16777220(r3), 0
+; CHECK-S-NEXT:    blr
+; CHECK-O-LABEL: <getElementLocalTooSmallOffset>:
+; CHECK-O:         paddi 3, 0, 0, 1
+; CHECK-O-NEXT:      R_PPC64_PCREL34      array2
+; CHECK-O-NEXT:    plwa 3, -16777220(3), 0
+; CHECK-O-NEXT:    blr
+entry:
+  %0 = load i32, ptr getelementptr inbounds (i8, ptr @array2, i64 -16777220), align 4
+  ret i32 %0
+}
+
+define dso_local signext i32 @getElementLocalHugeOffset() local_unnamed_addr {
+; CHECK-S-LABEL: getElementLocalHugeOffset:
+; CHECK-S:       # %bb.0: # %entry
+; CHECK-S-NEXT:    paddi r3, 0, array2@PCREL, 1
+; CHECK-S-NEXT:    plwa r3, 8589934588(r3), 0
+; CHECK-S-NEXT:    blr
+; CHECK-O-LABEL: <getElementLocalHugeOffset>:
+; CHECK-O:         paddi 3, 0, 0, 1
+; CHECK-O-NEXT:      R_PPC64_PCREL34      array2
+; CHECK-O-NEXT:    plwa 3, 8589934588(3), 0
+; CHECK-O-NEXT:    blr
+entry:
+  %0 = load i32, ptr getelementptr inbounds (i8, ptr @array2, i64 8589934588), align 4
+  ret i32 %0
+}
+
 define dso_local signext i32 @getElementExtern4() local_unnamed_addr {
 ; CHECK-S-LABEL: getElementExtern4:
 ; CHECK-S:       # %bb.0: # %entry
