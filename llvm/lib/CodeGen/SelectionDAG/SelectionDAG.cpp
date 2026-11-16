@@ -226,7 +226,6 @@ bool ISD::isConstantSplatVectorAllZeros(SDValue V, bool BuildVectorOnly) {
   while (V.getOpcode() == ISD::BITCAST)
     V = V.getOperand(0);
 
-  SDValue V(const_cast<SDNode *>(N), 0);
   if (!BuildVectorOnly && (isNullConstant(V) || isNullFPConstant(V)))
     return true;
 
