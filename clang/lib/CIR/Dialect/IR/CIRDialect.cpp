@@ -4827,8 +4827,7 @@ getLoadEffects(OpOperand &addr, bool isVolatileOrAtomic,
 
 void cir::LoadOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  getLoadEffects(getAddrMutable(), getIsVolatile() || getMemOrder().has_value(),
-                 effects);
+  getLoadEffects(getAddrMutable(), isVolatileOrAtomic(), effects);
 }
 
 void cir::GetBitfieldOp::getEffects(
