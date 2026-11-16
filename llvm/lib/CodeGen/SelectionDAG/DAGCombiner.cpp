@@ -4387,6 +4387,8 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
 
     // Convert 0 - abs(x).
+    // Preserve the direct sub/neg/smin expansion when available. Otherwise,
+    // form ABD before expanding ABS.
     if (ISD::isAbsOpcode(N1.getOpcode()) && N1.hasOneUse() &&
         !TLI.isOperationLegalOrCustom(N1.getOpcode(), VT)) {
       if (!(TLI.isOperationLegal(ISD::SUB, VT) &&
@@ -6052,6 +6054,9 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
       return DAG.getNode(ISD::SUB, DL, VT, N1, N0);
   }
 
+  // If ABD is only used by a negation, avoid narrowing a legal type to an
+  // illegal type. The resulting zero extension can prevent folding the
+  // negation into the ABD expansion.
   bool IsNegated = N->hasOneUse() && sd_match(N->use_begin()->getUser(),
                                               m_Neg(m_Specific(SDValue(N, 0))));
 
@@ -6075,6 +6080,8 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
   if (sd_match(N, m_c_BinOp(ISD::ABDU, m_ZExt(m_Value(X)), m_Value(Y))) ||
       sd_match(N, m_c_BinOp(ISD::ABDS, m_SExt(m_Value(X)), m_Value(Y)))) {
     EVT SmallVT = X.getValueType();
+    // keep a legal type for a negated ABD if narrowing would introduce
+    // an illegal type and a zero extension before the negation.
     if ((!LegalOperations || hasOperation(Opcode, SmallVT)) &&
         (!IsNegated || !TLI.isTypeLegal(VT) || TLI.isTypeLegal(SmallVT))) {
       uint64_t Bits = SmallVT.getScalarSizeInBits();
