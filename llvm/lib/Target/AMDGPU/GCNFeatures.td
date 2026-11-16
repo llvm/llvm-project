@@ -2539,6 +2539,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureFP8ConversionInsts,
    FeatureCvtFP8ByteSel,
    FeatureOCPFP8ConversionInsts,
+   FeatureFP8ConversionFP16Ovfl,
    FeatureFP8F16ConversionInsts,
    FeatureF16FP8ConversionInsts,
    FeaturePackedTID,

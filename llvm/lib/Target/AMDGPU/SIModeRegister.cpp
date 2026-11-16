@@ -190,7 +190,11 @@ static bool isFPTruncRoundPseudo(const MachineInstr &MI) {
 static bool isSaturatingCvt(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case AMDGPU::V_CVT_PK_FP8_F32_sat_e64:
+  case AMDGPU::V_CVT_PK_FP8_F32_gfx1250_sat_t16_e64:
+  case AMDGPU::V_CVT_PK_FP8_F32_gfx1250_sat_fake16_e64:
   case AMDGPU::V_CVT_PK_BF8_F32_sat_e64:
+  case AMDGPU::V_CVT_PK_BF8_F32_sat_t16_e64:
+  case AMDGPU::V_CVT_PK_BF8_F32_sat_fake16_e64:
     return true;
   default:
     return false;
@@ -317,7 +321,10 @@ Status SIModeRegister::getFP16OvflMode(const MachineInstr &MI) const {
   if (!(DefaultStatus.Mask & FP16_OVFL_MASK))
     return Status();
 
-  return readsMode(MI) ? Status(FP16_OVFL_MASK, 0) : Status();
+  // WMMA and SWMMAC depend on FP16_OVFL without reading the mode register.
+  if (readsMode(MI) || SIInstrInfo::isMFMAorWMMA(MI))
+    return Status(FP16_OVFL_MASK, 0);
+  return Status();
 }
 
 // Insert a setreg instruction to update the Mode register.
