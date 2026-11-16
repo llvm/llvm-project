@@ -1144,7 +1144,7 @@ foreach eew = [8, 16, 32, 64] in {
 }
 
 let Predicates = [HasVInstructions] in {
-let ElementsDependOn = EltDepsNone in
+let ElementsDependOn = EltDepsNone, DestEEW = EEW1 in
 def VLM_V : VUnitStrideMaskLoad<"vlm.v">,
              Sched<[WriteVLDM_WorstCase, ReadVLDX]>;
 def VSM_V : VUnitStrideMaskStore<"vsm.v">,

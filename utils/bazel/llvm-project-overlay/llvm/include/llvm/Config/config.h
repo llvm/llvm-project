@@ -39,6 +39,10 @@
    backslashes. */
 /* LLVM_WINDOWS_PREFER_FORWARD_SLASH defined in Bazel */
 
+/* Define to 1 to use only APIs available in restricted Windows environments
+   (no shell32), and to 0 otherwise. */
+#define LLVM_WINDOWS_RESTRICTED_APIS 0
+
 /* Define to 1 if you have the `backtrace' function. */
 /* HAVE_BACKTRACE defined in Bazel */
 

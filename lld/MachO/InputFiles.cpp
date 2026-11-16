@@ -58,6 +58,7 @@
 
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -189,7 +190,14 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   uint32_t cpuType;
   std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(config->arch());
 
-  if (hdr->cputype != cpuType) {
+  // arm64 and arm64e are ABI incompatible. arm64e.x1 has the arm64e ABI but
+  // needs a newer CPU, so neither takes it.
+  uint32_t subtype = hdr->cpusubtype & ~CPU_SUBTYPE_MASK;
+  bool isArm64e = subtype == CPU_SUBTYPE_ARM64E;
+  if (hdr->cputype != cpuType ||
+      (is_contained({AK_arm64, AK_arm64e}, config->arch()) &&
+       (subtype == CPU_SUBTYPE_ARM64E_X1 ||
+        isArm64e != (config->arch() == AK_arm64e)))) {
     Architecture arch =
         getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
     auto msg = config->errorForArchMismatch
@@ -505,6 +513,18 @@ static Defined *findSymbolAtOffset(const ConcatInputSection *isec,
   return d;
 }
 
+namespace {
+// The in-object form of the target of an ARM64_RELOC_AUTHENTICATED_POINTER.
+struct AuthEmbeddedPointer {
+  uint64_t addend : 32;
+  uint64_t diversity : 16;
+  uint64_t addrDiv : 1;
+  uint64_t key : 2;
+  uint64_t reserved : 12;
+  uint64_t auth : 1;
+};
+} // namespace
+
 template <class SectionHeader>
 static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
                                    relocation_info rel) {
@@ -529,6 +549,14 @@ static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
   if (!relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
     error(message("has invalid width of " + std::to_string(1 << rel.r_length) +
                   " bytes"));
+  }
+  if (valid && relocAttrs.hasAttr(RelocAttrBits::AUTH)) {
+    auto ptr = bit_cast<AuthEmbeddedPointer>(
+        read64le(file->mb.getBufferStart() + sec.offset + rel.r_address));
+    if (!ptr.auth)
+      error(message("requires bit 63 to be set"));
+    if (ptr.reserved)
+      error(message("requires bits 51..62 to be zero"));
   }
   return valid;
 }
@@ -589,6 +617,15 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     r.pcrel = relInfo.r_pcrel;
     r.length = relInfo.r_length;
     r.offset = relInfo.r_address;
+
+    if (target->hasAttr(relInfo.r_type, RelocAttrBits::AUTH)) {
+      auto ptr = bit_cast<AuthEmbeddedPointer>(
+          read64le(buf + sec.offset + relInfo.r_address));
+      r.setAuthInfo({static_cast<uint16_t>(ptr.diversity),
+                     static_cast<PtrAuthKey>(ptr.key),
+                     static_cast<bool>(ptr.addrDiv)});
+    }
+
     if (relInfo.r_extern) {
       r.referent = symbols[relInfo.r_symbolnum];
       r.setAddend(isSubtrahend ? 0 : totalAddend);
@@ -1196,7 +1233,7 @@ void ObjFile::parseDeferredRelocations() {
 
 void macho::parseDeferredRelocations() {
   TimeTraceScope timeScope("Parse relocations");
-  parallelForEach(inputFiles, [](InputFile *file) {
+  parallelForEachFineGrained(inputFiles, [](InputFile *file) {
     if (auto *objFile = dyn_cast<ObjFile>(file))
       objFile->parseDeferredRelocations();
   });
@@ -1459,8 +1496,8 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
   // Note: pcSym may *not* be exactly at the PC; there's usually a non-zero
   // addend.
   auto *pcSym = cast<Defined>(cast<macho::Symbol *>(subtrahend.referent));
-  Defined *target =
-      cast_or_null<Defined>(minuend.referent.dyn_cast<macho::Symbol *>());
+  Defined *target = cast_or_null<Defined>(
+      dyn_cast_if_present<macho::Symbol *>(minuend.referent));
   if (!pcSym) {
     auto *targetIsec =
         cast<ConcatInputSection>(cast<InputSection *>(minuend.referent));

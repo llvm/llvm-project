@@ -17,8 +17,6 @@
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/RegionKindInterface.h"
 
 namespace mlir {
 class TilingInterface;
@@ -36,9 +34,7 @@ struct SCFTilingResult;
 
 namespace tensor {
 class InsertSliceOp;
-class PackOp;
 class PadOp;
-class UnPackOp;
 } // namespace tensor
 
 namespace transform {

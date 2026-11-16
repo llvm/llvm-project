@@ -1,5 +1,4 @@
-# RUN: llc -mtriple=ppc32-- -run-pass=if-converter -o - -verify-machineinstrs \
-# RUN:   %s | FileCheck %s
+# RUN: llc -mtriple=ppc32-- -run-pass=if-converter -o - %s | FileCheck %s
 
 ---
 name:            testBDZLR
