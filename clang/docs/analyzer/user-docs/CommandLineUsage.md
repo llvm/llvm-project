@@ -33,8 +33,8 @@ In a unity build (also called a jumbo build or unified-sources build), a source
 file includes other source files. By default, the analyzer never treats
 functions in those included files as analysis entry points. Set
 `unitybuild-file-extensions` to a semicolon-separated list of extensions to
-analyze functions in matching included files as entry points, even when the
-files are included through other source files or headers. For example:
+allow analyzing functions in files with those extensions as entry points, when
+the files are included through other source files or headers. For example:
 
 ```console
 $ clang --analyze -Xclang -analyzer-config -Xclang 'unitybuild-file-extensions=.c;.cc;.cpp;.cxx;.m;.mm' unified.cpp
