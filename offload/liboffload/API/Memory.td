@@ -248,7 +248,8 @@ def olMemcpy3D : Function {
         "Size.x is the width of the copied region in bytes, Size.y the number of rows and Size.z the number of slices.",
         "Pitch is the distance in bytes between consecutive rows; SlicePitch the distance in bytes between consecutive slices.",
         "For host pointers, use the host device belonging to the OL_PLATFORM_BACKEND_HOST platform, or pass NULL.",
-        "Two non-host devices must be able to exchange data directly.",
+        "Two non-host devices must be able to exchange data directly; unlike olMemcpy there is no fallback through a host buffer, and OL_ERRC_UNSUPPORTED is returned otherwise.",
+        "The source and destination regions must not overlap.",
         "The copy is performed by the destination device for a host-to-device copy, and by the source device otherwise (as for olMemcpy). The queue, if given, must belong to that device.",
         "SlicePitch must be a multiple of Pitch and large enough to hold the rows copied; it is ignored for a single-slice copy at z offset 0.",
         "If a queue is not specified, the copy happens synchronously"

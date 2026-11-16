@@ -212,3 +212,202 @@ TEST_P(olMemcpy3DTest, InvalidSlicePitchNotMultiple) {
                copy3D(nullptr, Buf.data(), Host, Zero, Pitch, SlicePitch + 1,
                       Buf.data(), Host, Zero, Pitch, SlicePitch, Extent));
 }
+
+TEST_P(olMemcpy3DTest, SuccessZeroExtentYZ) {
+  std::vector<uint8_t> Buf(Total, 7);
+  ol_dimensions_t Zero = {0, 0, 0};
+  ASSERT_SUCCESS(copy3D(nullptr, Buf.data(), Host, Zero, 1, 1, Buf.data(), Host,
+                        Zero, 1, 1, {Pitch, 0, 1}));
+  ASSERT_SUCCESS(copy3D(nullptr, Buf.data(), Host, Zero, 1, 1, Buf.data(), Host,
+                        Zero, 1, 1, {Pitch, Rows, 0}));
+}
+
+TEST_P(olMemcpy3DTest, InvalidSourceLayout) {
+  std::vector<uint8_t> Buf(Total);
+  ol_dimensions_t Zero = {0, 0, 0};
+  // Row pitch too small.
+  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
+               copy3D(nullptr, Buf.data(), Host, Zero, Pitch, SlicePitch,
+                      Buf.data(), Host, Zero, Pitch - 1, SlicePitch,
+                      {Pitch, 1, 1}));
+  // Slice pitch too small.
+  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
+               copy3D(nullptr, Buf.data(), Host, Zero, Pitch, SlicePitch,
+                      Buf.data(), Host, Zero, Pitch, SlicePitch - 1,
+                      {Pitch, Rows, 2}));
+  // Slice pitch not a multiple of the pitch.
+  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
+               copy3D(nullptr, Buf.data(), Host, Zero, Pitch, SlicePitch,
+                      Buf.data(), Host, Zero, Pitch, SlicePitch + 1,
+                      {Pitch, Rows, 2}));
+}
+
+TEST_P(olMemcpy3DTest, InvalidPitchDueToXOffset) {
+  std::vector<uint8_t> Buf(Total);
+  ol_dimensions_t Zero = {0, 0, 0};
+  // Pitch holds the width, but not offset + width.
+  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
+               copy3D(nullptr, Buf.data(), Host, {1, 0, 0}, Pitch, SlicePitch,
+                      Buf.data(), Host, Zero, Pitch, SlicePitch,
+                      {Pitch, 1, 1}));
+  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
+               copy3D(nullptr, Buf.data(), Host, Zero, Pitch, SlicePitch,
+                      Buf.data(), Host, {1, 0, 0}, Pitch, SlicePitch,
+                      {Pitch, 1, 1}));
+}
+
+TEST_P(olMemcpy3DTest, InvalidSlicePitchDueToYOffset) {
+  std::vector<uint8_t> Buf(Total);
+  ol_dimensions_t Zero = {0, 0, 0};
+  // SlicePitch holds Rows rows, but not Rows + 1.
+  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
+               copy3D(nullptr, Buf.data(), Host, {0, 1, 0}, Pitch, SlicePitch,
+                      Buf.data(), Host, Zero, Pitch, SlicePitch,
+                      {Pitch, Rows, 2}));
+}
+
+TEST_P(olMemcpy3DTest, SuccessZeroSlicePitchSingleSlice) {
+  std::vector<uint8_t> Input(SlicePitch);
+  std::iota(Input.begin(), Input.end(), 1);
+  std::vector<uint8_t> Output(SlicePitch, 0);
+  ol_dimensions_t Zero = {0, 0, 0};
+  ASSERT_SUCCESS(copy3D(nullptr, Output.data(), Host, Zero, Pitch, 0,
+                        Input.data(), Host, Zero, Pitch, 0, {Pitch, Rows, 1}));
+  ASSERT_EQ(Input, Output);
+}
+
+TEST_P(olMemcpy3DTest, InvalidSlicePitchSingleSliceZOffset) {
+  std::vector<uint8_t> Buf(Total);
+  ol_dimensions_t Zero = {0, 0, 0};
+  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
+               copy3D(nullptr, Buf.data(), Host, {0, 0, 1}, Pitch, 0,
+                      Buf.data(), Host, Zero, Pitch, SlicePitch,
+                      {Pitch, Rows, 1}));
+}
+
+// One side starts at a z offset, the other is a plain 2D buffer whose slice
+// pitch is garbage and must be ignored.
+TEST_P(olMemcpy3DTest, SuccessMixedSliceUsageIgnoresUnusedSlicePitch) {
+  std::vector<uint8_t> Input(Total);
+  std::iota(Input.begin(), Input.end(), 0);
+  std::vector<uint8_t> Output(SlicePitch, 0);
+
+  void *Alloc;
+  ASSERT_SUCCESS(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Total, &Alloc));
+  ASSERT_SUCCESS(olMemcpy(Queue, Alloc, Device, Input.data(), Host, Total));
+  ol_dimensions_t Zero = {0, 0, 0};
+  ASSERT_SUCCESS(copy3D(Queue, Output.data(), Host, Zero, Pitch,
+                        /*SlicePitch=*/SIZE_MAX - 1, Alloc, Device, {0, 0, 3},
+                        Pitch, SlicePitch, {Pitch, Rows, 1}));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+  for (size_t I = 0; I < SlicePitch; ++I)
+    ASSERT_EQ(Output[I], Input[3 * SlicePitch + I]);
+  ASSERT_SUCCESS(olMemFree(Context, Alloc));
+}
+
+TEST_P(olMemcpy3DTest, InvalidQueueWrongDevice) {
+  ol_device_handle_t Other = nullptr;
+  for (const auto &D : TestEnvironment::getDevices())
+    if (D.Handle != Device && D.Handle != Host) {
+      Other = D.Handle;
+      break;
+    }
+  if (!Other)
+    GTEST_SKIP() << "Needs a second device";
+
+  ol_context_handle_t Ctx;
+  ol_device_handle_t Both[] = {Device, Other};
+  ASSERT_SUCCESS(olCreateContext(2, Both, &Ctx));
+  void *Alloc;
+  ASSERT_SUCCESS(olMemAlloc(Ctx, Device, OL_ALLOC_TYPE_DEVICE, Total, &Alloc));
+  ol_queue_handle_t OtherQueue;
+  ASSERT_SUCCESS(olCreateQueue(Ctx, Other, &OtherQueue));
+
+  std::vector<uint8_t> Buf(Total);
+  ol_dimensions_t Zero = {0, 0, 0};
+  ASSERT_ERROR(OL_ERRC_INVALID_QUEUE,
+               copy3D(OtherQueue, Alloc, Device, Zero, Pitch, SlicePitch,
+                      Buf.data(), Host, Zero, Pitch, SlicePitch,
+                      {Pitch, Rows, Slices}));
+  ASSERT_SUCCESS(olDestroyQueue(OtherQueue));
+  ASSERT_SUCCESS(olMemFree(Ctx, Alloc));
+  ASSERT_SUCCESS(olDestroyContext(Ctx));
+}
+
+TEST_P(olMemcpy3DTest, SuccessDtoDNoQueue) {
+  std::vector<uint8_t> Input(Total);
+  std::iota(Input.begin(), Input.end(), 0);
+  std::vector<uint8_t> Output(Total, 0);
+
+  void *A, *B;
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Total, &A));
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Total, &B));
+  ASSERT_SUCCESS(olMemcpy(nullptr, A, Device, Input.data(), Host, Total));
+  ol_dimensions_t Zero = {0, 0, 0};
+  ASSERT_SUCCESS(copy3D(nullptr, B, Device, Zero, Pitch, SlicePitch, A, Device,
+                        Zero, Pitch, SlicePitch, {Pitch, Rows, Slices}));
+  ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, B, Device, Total));
+  ASSERT_EQ(Input, Output);
+  ASSERT_SUCCESS(olMemFree(Context, A));
+  ASSERT_SUCCESS(olMemFree(Context, B));
+}
+
+// Device to device across two different devices. Either succeeds (devices can
+// exchange data directly) or reports UNSUPPORTED.
+TEST_P(olMemcpy3DTest, DtoDTwoDevices) {
+  ol_device_handle_t Other = nullptr;
+  for (const auto &D : TestEnvironment::getDevices())
+    if (D.Handle != Device && D.Handle != Host) {
+      Other = D.Handle;
+      break;
+    }
+  if (!Other)
+    GTEST_SKIP() << "Needs a second device";
+
+  ol_context_handle_t Ctx;
+  ol_device_handle_t Both[] = {Device, Other};
+  ASSERT_SUCCESS(olCreateContext(2, Both, &Ctx));
+  std::vector<uint8_t> Input(Total);
+  std::iota(Input.begin(), Input.end(), 0);
+  std::vector<uint8_t> Output(Total, 0);
+  void *A, *B;
+  ASSERT_SUCCESS(olMemAlloc(Ctx, Device, OL_ALLOC_TYPE_DEVICE, Total, &A));
+  ASSERT_SUCCESS(olMemAlloc(Ctx, Other, OL_ALLOC_TYPE_DEVICE, Total, &B));
+  ASSERT_SUCCESS(olMemcpy(nullptr, A, Device, Input.data(), Host, Total));
+
+  ol_dimensions_t Zero = {0, 0, 0};
+  ol_result_t Res =
+      copy3D(nullptr, B, Other, Zero, Pitch, SlicePitch, A, Device, Zero, Pitch,
+             SlicePitch, {Pitch, Rows, Slices});
+  if (Res && Res->Code == OL_ERRC_UNSUPPORTED) {
+    ASSERT_SUCCESS(olMemFree(Ctx, A));
+    ASSERT_SUCCESS(olMemFree(Ctx, B));
+    ASSERT_SUCCESS(olDestroyContext(Ctx));
+    GTEST_SKIP() << "Devices cannot exchange data directly";
+  }
+  ASSERT_SUCCESS(Res);
+  ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, B, Other, Total));
+  ASSERT_EQ(Input, Output);
+  ASSERT_SUCCESS(olMemFree(Ctx, A));
+  ASSERT_SUCCESS(olMemFree(Ctx, B));
+  ASSERT_SUCCESS(olDestroyContext(Ctx));
+}
+
+TEST_P(olMemcpy3DTest, InvalidNullPointers) {
+  std::vector<uint8_t> Buf(Total);
+  ol_memcpy3d_layout_t L = {{0, 0, 0}, Pitch, SlicePitch};
+  ol_dimensions_t Extent = {Pitch, Rows, 1};
+  ASSERT_ERROR(
+      OL_ERRC_INVALID_NULL_POINTER,
+      olMemcpy3D(nullptr, nullptr, Host, &L, Buf.data(), Host, &L, Extent));
+  ASSERT_ERROR(
+      OL_ERRC_INVALID_NULL_POINTER,
+      olMemcpy3D(nullptr, Buf.data(), Host, &L, nullptr, Host, &L, Extent));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+               olMemcpy3D(nullptr, Buf.data(), Host, nullptr, Buf.data(), Host,
+                          &L, Extent));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+               olMemcpy3D(nullptr, Buf.data(), Host, &L, Buf.data(), Host,
+                          nullptr, Extent));
+}

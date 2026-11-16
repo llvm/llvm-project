@@ -886,15 +886,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = getStream(AsyncInfoWrapper, Stream))
       return Err;
 
-    auto LayoutHeight = [&](size_t Pitch, size_t SlicePitch, size_t Off) {
-      return (Copy.Extent[2] > 1 || Off > 0) ? SlicePitch / Pitch : 0;
+    // liboffload has validated the layouts and zeroed unused slice pitches.
+    auto LayoutHeight = [&](size_t Pitch, size_t SlicePitch) {
+      return Copy.usesSlices() ? SlicePitch / Pitch : 0;
     };
-    bool UsesSlices =
-        Copy.Extent[2] > 1 || Copy.DstOffset[2] > 0 || Copy.SrcOffset[2] > 0;
-    if (UsesSlices && (Copy.DstSlicePitch % Copy.DstPitch ||
-                       Copy.SrcSlicePitch % Copy.SrcPitch))
-      return Plugin::error(ErrorCode::INVALID_SIZE,
-                           "slice pitch must be a multiple of the row pitch");
 
     CUDA_MEMCPY3D Params = {};
     Params.srcMemoryType = CU_MEMORYTYPE_UNIFIED;
@@ -903,16 +898,14 @@ struct CUDADeviceTy : public GenericDeviceTy {
     Params.srcY = Copy.SrcOffset[1];
     Params.srcZ = Copy.SrcOffset[2];
     Params.srcPitch = Copy.SrcPitch;
-    Params.srcHeight =
-        LayoutHeight(Copy.SrcPitch, Copy.SrcSlicePitch, Copy.SrcOffset[2]);
+    Params.srcHeight = LayoutHeight(Copy.SrcPitch, Copy.SrcSlicePitch);
     Params.dstMemoryType = CU_MEMORYTYPE_UNIFIED;
     Params.dstDevice = (CUdeviceptr)Copy.DstPtr;
     Params.dstXInBytes = Copy.DstOffset[0];
     Params.dstY = Copy.DstOffset[1];
     Params.dstZ = Copy.DstOffset[2];
     Params.dstPitch = Copy.DstPitch;
-    Params.dstHeight =
-        LayoutHeight(Copy.DstPitch, Copy.DstSlicePitch, Copy.DstOffset[2]);
+    Params.dstHeight = LayoutHeight(Copy.DstPitch, Copy.DstSlicePitch);
     Params.WidthInBytes = Copy.Extent[0];
     Params.Height = Copy.Extent[1];
     Params.Depth = Copy.Extent[2];
