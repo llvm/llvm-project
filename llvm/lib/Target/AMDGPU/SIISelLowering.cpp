@@ -49,6 +49,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/TargetParser/AtomicScope.h"
 #include "llvm/Transforms/Utils/LowerAtomic.h"
@@ -18575,6 +18576,9 @@ SDValue SITargetLowering::performFMulCombine(SDNode *N,
     return SDValue();
   }
 
+  if (SDValue V = performFMulExpCombine(N, DCI))
+    return V;
+
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
@@ -18626,6 +18630,88 @@ SDValue SITargetLowering::performFMulCombine(SDNode *N,
   }
 
   return SDValue();
+}
+
+// Fold a constant scale into the exponent, where it merges into an fma:
+//   fmul (fexp2 (fmul a, b)), C -> fexp2 (fma a, b, log2(C))
+//   fmul (fexp x), C            -> fexp2 (fma x, log2(e), log2(C))
+//   fmul (fpow x, Y), C         -> exp (fma (log x), Y, log2(C))
+//
+// contract is required on the multiply that the fma replaces: the inner fmul
+// of an fexp2, the fpow, or this fmul when folding an fexp. reassoc and afn
+// are required on this fmul. GlobalISel does not fold this.
+SDValue SITargetLowering::performFMulExpCombine(SDNode *N,
+                                                DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  // fexp and fexp2 are custom lowered, so they can't be created after
+  // LegalizeDAG. fexp in particular is gone by then, expanded to a multiply
+  // by log2(e).
+  if (DCI.isAfterLegalizeDAG() || N->getValueType(0) != MVT::f32)
+    return SDValue();
+
+  SDNodeFlags Flags = N->getFlags();
+  if (!Flags.hasAllowReassociation() || !Flags.hasApproximateFuncs())
+    return SDValue();
+
+  // With other users the exp would have to be duplicated.
+  SDValue Exp = N->getOperand(0);
+  auto *C = dyn_cast<ConstantFPSDNode>(N->getOperand(1));
+  if (!C || !Exp.hasOneUse() || !Exp->getFlags().hasApproximateFuncs())
+    return SDValue();
+
+  const APFloat &CVal = C->getValueAPF();
+  if (!CVal.isNormal() || CVal.isNegative() || CVal.isExactlyValue(1.0))
+    return SDValue();
+
+  // log2(C) is rarely an inline constant, so the fma needs a literal.
+  if (!getSubtarget()->hasVOP3Literal() ||
+      !isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), MVT::f32))
+    return SDValue();
+
+  Flags &= Exp->getFlags();
+  SDLoc SL(N);
+  SDValue A, B;
+  unsigned ExpOpc;
+  if (Exp.getOpcode() == ISD::FEXP2) {
+    SDValue Arg = Exp.getOperand(0);
+    if (Arg.getOpcode() != ISD::FMUL || !Arg.hasOneUse() ||
+        !Arg->getFlags().hasAllowContract())
+      return SDValue();
+    Flags &= Arg->getFlags();
+    A = Arg.getOperand(0);
+    B = Arg.getOperand(1);
+    // Keep fexp2 so its lowering still adds denormal handling if required.
+    ExpOpc = ISD::FEXP2;
+  } else if (Exp.getOpcode() == ISD::FEXP) {
+    // Contract the scale into the multiply by log2(e) that fexp lowering
+    // would insert.
+    if (!N->getFlags().hasAllowContract())
+      return SDValue();
+    A = Exp.getOperand(0);
+    B = DAG.getConstantFP(numbers::log2e, SL, MVT::f32);
+    // Keep fexp2 so its lowering still adds denormal handling if required.
+    ExpOpc = ISD::FEXP2;
+  } else if (Exp.getOpcode() == ISD::FPOW) {
+    // fpow is selected with v_mul_legacy_f32, which matches an IEEE multiply
+    // for a normal exponent.
+    auto *Y = dyn_cast<ConstantFPSDNode>(Exp.getOperand(1));
+    if (!Y || !Y->getValueAPF().isNormal() ||
+        !Exp->getFlags().hasAllowContract())
+      return SDValue();
+    // Drop ninf: log2(0) is -inf even though pow(0, Y) is finite.
+    Flags.setNoInfs(false);
+    A = DAG.getNode(AMDGPUISD::LOG, SL, MVT::f32, Exp.getOperand(0), Flags);
+    B = Exp.getOperand(1);
+    ExpOpc = AMDGPUISD::EXP;
+  } else {
+    return SDValue();
+  }
+
+  // Computed in double and rounded once to f32.
+  SDValue K =
+      DAG.getConstantFP(std::log2(CVal.convertToDouble()), SL, MVT::f32);
+  SDValue Fma = DAG.getNode(ISD::FMA, SL, MVT::f32, A, B, K, Flags);
+  return DAG.getNode(ExpOpc, SL, MVT::f32, Fma, Flags);
 }
 
 SDValue SITargetLowering::performFMACombine(SDNode *N,
