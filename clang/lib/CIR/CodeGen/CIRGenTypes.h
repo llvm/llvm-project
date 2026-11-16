@@ -45,6 +45,7 @@ class CIRGenBuilderTy;
 class CIRGenCXXABI;
 class CIRGenModule;
 class FunctionArgList;
+class TargetCIRGenInfo;
 
 /// This class organizes the cross-module state that is used while lowering
 /// AST types to CIR types.
@@ -225,6 +226,9 @@ public:
 
   const CIRGenFunctionInfo &arrangeFreeFunctionCall(const CallArgList &args,
                                                     const FunctionType *fnType);
+  const CIRGenFunctionInfo &
+  arrangeFreeFunctionCall(const CallArgList &args, const FunctionType *fnType,
+                          const TargetCIRGenInfo &targetInfo);
 
   /// Convert a clang calling convention to a CIR calling convention.
   cir::CallingConv clangCallConvToCIRCallConv(clang::CallingConv cc);
