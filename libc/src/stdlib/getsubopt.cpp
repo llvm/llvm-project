@@ -56,7 +56,8 @@ LLVM_LIBC_FUNCTION(int, getsubopt,
       return idx;
   }
 
-  // Token was not found in the tokens array; valuep points to the unmatched token.
+  // Token was not found in the tokens array; valuep points to the unmatched
+  // token.
   *valuep = token_start;
   return -1;
 }
