@@ -68,8 +68,8 @@ libc_test_library(
     name = "atoi_test_helper",
     hdrs = ["AtoiTest.h"],
     deps = [
-        "//libc:__support_cpp_limits",
-        "//libc:__support_cpp_type_traits",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:type_traits",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
@@ -105,8 +105,8 @@ libc_test(
     name = "atof_test",
     srcs = ["atof_test.cpp"],
     deps = [
-        "//libc:__support_fputil_fp_bits",
         "//libc:atof",
+        "//libc/src/__support/FPUtil:fp_bits",
     ],
 )
 
@@ -123,7 +123,7 @@ libc_test_library(
     name = "qsort_test_helper",
     hdrs = ["SortingTest.h"],
     deps = [
-        "//libc:__support_macros_config",
+        "//libc/src/__support/macros:config",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
@@ -143,13 +143,6 @@ libc_test(
     name = "realpath_test",
     srcs = ["realpath_test.cpp"],
     deps = [
-        "//libc:__support_c_string",
-        "//libc:__support_cpp_string",
-        "//libc:__support_cpp_string_view",
-        "//libc:__support_cpp_utility",
-        "//libc:__support_fixedvector",
-        "//libc:__support_libc_assert",
-        "//libc:__support_osutil_path",
         "//libc:chdir",
         "//libc:close",
         "//libc:getcwd",
@@ -164,6 +157,13 @@ libc_test(
         "//libc:symlinkat",
         "//libc:types_size_t",
         "//libc:unlinkat",
+        "//libc/src/__support:c_string",
+        "//libc/src/__support:fixedvector",
+        "//libc/src/__support:libc_assert",
+        "//libc/src/__support/CPP:string",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/CPP:utility",
+        "//libc/src/__support/OSUtil:path",
     ],
 )
 
@@ -209,9 +209,9 @@ libc_test(
     name = "strfromf_test",
     srcs = ["strfromf_test.cpp"],
     deps = [
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_macros_properties_architectures",
         "//libc:strfromf",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros/properties:architectures",
     ],
 )
 
@@ -219,10 +219,10 @@ libc_test(
     name = "strfromf128_test",
     srcs = ["strfromf128_test.cpp"],
     deps = [
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_macros_properties_architectures",
         "//libc:strfromf",
         "//libc:strfromf128",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros/properties:architectures",
     ],
 )
 
@@ -230,9 +230,9 @@ libc_test(
     name = "strfromd_test",
     srcs = ["strfromd_test.cpp"],
     deps = [
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_macros_properties_architectures",
         "//libc:strfromd",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros/properties:architectures",
     ],
 )
 
@@ -240,9 +240,9 @@ libc_test(
     name = "strfroml_test",
     srcs = ["strfroml_test.cpp"],
     deps = [
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_macros_properties_architectures",
         "//libc:strfroml",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros/properties:architectures",
     ],
 )
 
@@ -250,11 +250,11 @@ libc_test_library(
     name = "strtol_test_helper",
     hdrs = ["StrtolTest.h"],
     deps = [
-        "//libc:__support_cpp_limits",
-        "//libc:__support_cpp_type_traits",
-        "//libc:__support_ctype_utils",
-        "//libc:__support_macros_properties_architectures",
         "//libc:hdr_errno_macros",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:architectures",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
@@ -299,8 +299,8 @@ libc_test(
     name = "strtof_test",
     srcs = ["strtof_test.cpp"],
     deps = [
-        "//libc:__support_fputil_fp_bits",
         "//libc:strtof",
+        "//libc/src/__support/FPUtil:fp_bits",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -309,8 +309,8 @@ libc_test(
     name = "strtod_test",
     srcs = ["strtod_test.cpp"],
     deps = [
-        "//libc:__support_fputil_fp_bits",
         "//libc:strtod",
+        "//libc/src/__support/FPUtil:fp_bits",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -319,8 +319,8 @@ libc_test(
     name = "strtold_test",
     srcs = ["strtold_test.cpp"],
     deps = [
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_uint128",
         "//libc:strtold",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/FPUtil:fp_bits",
     ],
 )
