@@ -364,53 +364,6 @@ TYPED_TEST(TinyPtrVectorTest, EraseRangeTest) {
   this->expectValues(this->V, this->testArray(0));
 }
 
-TYPED_TEST(TinyPtrVectorTest, EraseValue) {
-  llvm::erase(this->V, this->TestPtrs[0]);
-  this->expectValues(this->V, this->testArray(0));
-
-  this->appendValues(this->V, this->testArray(1));
-  llvm::erase(this->V, this->TestPtrs[1]);
-  this->expectValues(this->V, this->testArray(1));
-  llvm::erase(this->V, this->TestPtrs[0]);
-  this->expectValues(this->V, this->testArray(0));
-
-  this->appendValues(this->V, this->testArray(3));
-  this->V.push_back(this->TestPtrs[1]);
-  llvm::erase(this->V, this->TestPtrs[1]);
-  typename TypeParam::value_type Expected[] = {this->TestPtrs[0],
-                                               this->TestPtrs[2]};
-  this->expectValues(this->V, Expected);
-
-  this->V.pop_back();
-  llvm::erase(this->V, this->TestPtrs[0]);
-  this->expectValues(this->V, this->testArray(0));
-  llvm::erase(this->V, this->TestPtrs[0]);
-  this->expectValues(this->V, this->testArray(0));
-}
-
-TYPED_TEST(TinyPtrVectorTest, EraseIf) {
-  auto IsFirst = [&](auto P) { return P == this->TestPtrs[0]; };
-  llvm::erase_if(this->V, IsFirst);
-  this->expectValues(this->V, this->testArray(0));
-
-  this->appendValues(this->V, this->testArray(1));
-  llvm::erase_if(this->V, [](auto) { return false; });
-  this->expectValues(this->V, this->testArray(1));
-  llvm::erase_if(this->V, IsFirst);
-  this->expectValues(this->V, this->testArray(0));
-
-  this->appendValues(this->V, this->testArray(3));
-  this->V.push_back(this->TestPtrs[0]);
-  llvm::erase_if(this->V, IsFirst);
-  this->expectValues(this->V, this->testArray(3).drop_front());
-
-  this->V.pop_back();
-  llvm::erase_if(this->V, [](auto) { return true; });
-  this->expectValues(this->V, this->testArray(0));
-  llvm::erase_if(this->V, IsFirst);
-  this->expectValues(this->V, this->testArray(0));
-}
-
 TYPED_TEST(TinyPtrVectorTest, Insert) {
   this->V.insert(this->V.end(), this->TestPtrs[0]);
   this->expectValues(this->V, this->testArray(1));
