@@ -8743,19 +8743,19 @@ struct SelectBroadcastCondition : OpRewritePattern<arith::SelectOp> {
   }
 };
 
-/// Fold select(mask, maskedload(base, mask, old), new) by using the select's
-/// false value as the load's passthrough.
+/// Use the select's false value as the masked load's passthrough.
 ///
 /// Before:
 /// ```mlir
-/// %load = vector.maskedload %base[%idx], %mask, %old
+/// %load = vector.maskedload %base[%idx], %mask, %old_passthrough
 ///     : memref<?xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
-/// %result = arith.select %mask, %load, %new : vector<4xi1>, vector<4xf32>
+/// %result = arith.select %mask, %load, %passthrough
+///     : vector<4xi1>, vector<4xf32>
 /// ```
 ///
 /// After:
 /// ```mlir
-/// %result = vector.maskedload %base[%idx], %mask, %new
+/// %result = vector.maskedload %base[%idx], %mask, %passthrough
 ///     : memref<?xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
 /// ```
 struct FoldSelectIntoMaskedLoad final : OpRewritePattern<arith::SelectOp> {
@@ -8775,21 +8775,22 @@ struct FoldSelectIntoMaskedLoad final : OpRewritePattern<arith::SelectOp> {
     // Keep the load in place so it cannot cross a write to the same memory.
     // Check availability at the load or at its enclosing operation in the
     // passthrough's block, without building a dominator tree.
-    Value passthru = select.getFalseValue();
-    Block *passthruBlock = passthru.getParentBlock();
+    Value passthrough = select.getFalseValue();
+    Block *passthroughBlock = passthrough.getParentBlock();
+    // Graph regions do not guarantee SSA dominance.
     if (mayBeGraphRegion(*load->getParentRegion()) ||
-        mayBeGraphRegion(*passthruBlock->getParent()))
+        mayBeGraphRegion(*passthroughBlock->getParent()))
       return failure();
-    Operation *loadInPassthruBlock =
-        passthruBlock->findAncestorOpInBlock(*load.getOperation());
-    if (!loadInPassthruBlock)
+    Operation *loadInPassthroughBlock =
+        passthroughBlock->findAncestorOpInBlock(*load.getOperation());
+    if (!loadInPassthroughBlock)
       return failure();
-    if (Operation *def = passthru.getDefiningOp();
-        def && !def->isBeforeInBlock(loadInPassthruBlock))
+    if (Operation *def = passthrough.getDefiningOp();
+        def && !def->isBeforeInBlock(loadInPassthroughBlock))
       return failure();
 
     rewriter.modifyOpInPlace(
-        load, [&] { load.getPassThruMutable().assign(passthru); });
+        load, [&] { load.getPassThruMutable().assign(passthrough); });
     rewriter.replaceOp(select, load.getResult());
     return success();
   }
