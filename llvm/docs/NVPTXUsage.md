@@ -874,69 +874,75 @@ declare i1 @llvm.nvvm.mbarrier.test.wait.parity.conditional{.relaxed}.scope.clus
 
 ##### Overview:
 
-The `@llvm.nvvm.mbarrier.test.wait.{primary,conditional}` intrinsics test
-for the completion of the primary or the conditional phase of an mbarrier
-object at `%addr`, as selected by the `.primary` and `.conditional`
-qualifiers. These intrinsics require `sm_90` or higher and PTX ISA 9.3
-or later.
+The `@llvm.nvvm.mbarrier.test.wait.{primary,conditional}` intrinsics test for
+the completion of the primary or the conditional phase of the mbarrier
+object at `%addr`. The `.primary` and `.conditional` suffixes select the phase
+to observe and correspond to the `.phase_type::primary` and
+`.phase_type::conditional` qualifiers of the PTX instruction; these
+intrinsics are therefore referred to as phase-qualified, in contrast to the
+phase-unqualified `llvm.nvvm.mbarrier.test.wait.*` intrinsics described
+above. These intrinsics require `sm_90` or higher and PTX ISA 9.3 or later.
 
-Every mbarrier object has a primary phase and a conditional phase:
+Every mbarrier object has a primary phase and a conditional phase. The
+primary phase completes when both the pending arrival count and the
+`tx-count` of the mbarrier object have reached zero, as described in the
+[MBarrier family of Intrinsics](#mbarrier-family-of-intrinsics) overview. A
+`layout::v1` mbarrier object additionally stores a payload report for each
+primary phase, and its conditional phase completes together with the
+primary phase only if the payload report of the completing phase is zero,
+that is, if no operation tracked by that phase performed a report-on
+operation. Payload reports are produced by features such as
+[TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting),
+and consist of a report predicate and a report value.
 
-- The primary phase is the phase tracked by the pending arrival count and
-  the tx-count, as described in the overview of the mbarrier intrinsics;
-  it completes when both counts have reached zero.
-- The conditional phase completes together with the primary phase only
-  when no operation tracked by the completing phase performed a
-  report-on operation, i.e. only when the payload report of the
-  completing phase is zero. Payload reports are produced by features
-  such as
-  [TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
-
-The test for completion can be done with either the `state` or the
-phase-parity of the requested phase, like for the unqualified
-`llvm.nvvm.mbarrier.test.wait.*` intrinsics described above. The
-`.primary` variants accept both forms, while the `.conditional` variants
-are parity-only and do not support the `i64 %state` operand.
+Completion can be tested in the same two ways as for the phase-unqualified
+`test.wait` intrinsics described above: with the `%state` operand returned
+by an `llvm.nvvm.mbarrier.arrive.*` intrinsic on the same mbarrier object,
+or with the phase parity of the requested phase. The `.primary` variants
+accept both forms, while the `.conditional` variants are parity-only and
+take no `%state` operand.
 
 The `.primary` variants return `{i1, i1, i32}`, in this fixed order:
 
-0. `waitComplete`: whether the requested primary phase has completed.
-1. `reportSeen`: whether the completed phase recorded a nonzero payload
-   report. It is only defined when `waitComplete` is true.
-2. `reportValue`: the 8-bit payload report of the completed phase,
-   zero-extended to `i32`. It is only defined when `waitComplete` is true.
+- `waitComplete`: whether the requested primary phase has completed.
+- `reportSeen`: whether the completed phase recorded a nonzero payload
+  report. It is only defined when `waitComplete` is true.
+- `reportValue`: the 8-bit payload report of the completed phase,
+  zero-extended to `i32`. It is only defined when `waitComplete` is true.
 
-The `.conditional` variants return only `i1 waitComplete`.
+The `.conditional` variants return only `waitComplete`, because a wait on
+the conditional phase does not report a payload.
 
-`reportSeen` is **not** a success predicate: in TMA data validity
-reporting it indicates that the copied data matched the sentinel pattern
-and must not be consumed as-is, and in general a payload report can
-describe errors, warnings or other information. A primary phase can
-therefore complete without advancing the conditional phase. In a typical
-pattern, a producer warp waits on the primary phase, inspects `reportSeen`
-and `reportValue` and reissues a failed operation, while consumer warps
-keep waiting on the conditional phase, whose parity does not change until
-a clean attempt completes.
+`reportSeen` is **not** a success predicate. In TMA data-validity reporting
+it indicates that a tracked copy matched the sentinel pattern, so the
+copied data must not be consumed; in general a nonzero payload report can
+describe an error, a warning, or other information. The primary phase can
+therefore complete without the conditional phase advancing. In a typical
+pattern, the thread that issues the copy waits on the primary phase,
+inspects `reportSeen` and `reportValue`, and re-issues the operation if
+needed, while the threads that consume the data wait on the conditional
+phase, whose parity does not change until an attempt completes with a zero
+payload report.
 
-For `layout::v0` mbarrier objects the payload report is always zero and
-the primary and conditional phases advance together. The unqualified
-`llvm.nvvm.mbarrier.test.wait.*` intrinsics described above observe the
-primary phase and are unaffected by payload reports.
+For `layout::v0` mbarrier objects the payload report is always zero, so the
+primary and conditional phases always advance together. The
+phase-unqualified `llvm.nvvm.mbarrier.test.wait.*` intrinsics described
+above observe the primary phase and do not expose the payload report.
 
 ##### Semantics:
 
-The `.scope.{cta/cluster}` denotes the set of threads that the test_wait
-operation can directly synchronize with. The mbarrier object must be
-located in shared::cta space for both scopes; otherwise the behavior of
-these intrinsics is undefined.
+The `.scope.{cta/cluster}` qualifier denotes the set of threads that the
+`test_wait` operation can directly synchronize with. The mbarrier object
+must be located in `shared::cta` space for either scope; otherwise the
+behavior of these intrinsics is undefined.
 
-These intrinsics have `acquire` semantics by default, with the ordering
-guarantees of the unqualified `test.wait` intrinsics described above at
-the specified CTA or cluster scope. The `.relaxed` variants of these
-intrinsics do not provide any memory ordering or visibility guarantees.
+These intrinsics have `acquire` semantics by default and provide the
+ordering guarantees described for the phase-unqualified `test.wait`
+intrinsics above, at the specified CTA or cluster scope. Their `.relaxed`
+variants provide no memory ordering or visibility guarantees.
 
-These intrinsics are non-blocking and immediately return the completion
-status without suspending the executing thread.
+These intrinsics are non-blocking: they return the completion status
+immediately, without suspending the executing thread.
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait).
 
@@ -992,23 +998,27 @@ declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.conditional{.relaxed}.scope.cl
 
 ##### Overview:
 
-The `@llvm.nvvm.mbarrier.try.wait.{primary,conditional}` intrinsics
-test for the completion of the primary or the conditional phase of an
-mbarrier object at `%addr`. Unlike the phase-qualified `test.wait`
-intrinsics described above, which perform a non-blocking test, these
-intrinsics may block the executing thread until the requested phase
-completes or a system-dependent time limit expires. This time limit is
-configurable through the `.tl` variants of these intrinsics, where the
-`%timelimit` operand (an unsigned integer) specifies the limit in
-nanoseconds.
+The `@llvm.nvvm.mbarrier.try.wait.{primary,conditional}` intrinsics test for
+the completion of the primary or the conditional phase of the mbarrier
+object at `%addr`, with the same phase selection as the phase-qualified
+`test.wait` intrinsics described above.
 
-A `try.wait` performs a single potentially suspending attempt: it can
-return with `waitComplete` false when the time limit expires, so
-blocking until the completion of the requested phase requires a loop
-around the intrinsic in the caller. Other semantics, including the
-primary and conditional phase model, the payload report results, the
-memory ordering guarantees and the required target, are identical to
-those of the phase-qualified `test.wait` intrinsics described above.
+Unlike a `test.wait`, which only tests for completion, a `try.wait` may
+block the executing thread: if the requested phase is not yet complete, the
+thread is suspended and resumes execution when the phase completes or when
+a system-dependent time limit elapses. The `.tl` variants accept an unsigned
+32-bit `%timelimit` operand that specifies that time limit in nanoseconds,
+in place of the system-dependent value.
+
+A single `try.wait` performs one such attempt, so it can return with
+`waitComplete` false when the time limit elapses before the requested phase
+completes. A caller that must wait for the completion of the phase has to
+invoke the intrinsic again, for example in a loop.
+
+All other semantics, including the primary and conditional phase model, the
+payload report results, the memory ordering guarantees and the target
+requirements, are identical to those of the phase-qualified `test.wait`
+intrinsics described above.
 
 ### Electing a thread
 
