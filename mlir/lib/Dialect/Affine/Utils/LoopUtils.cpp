@@ -1622,7 +1622,7 @@ mlir::affine::tile(ArrayRef<AffineForOp> forOps, ArrayRef<uint64_t> sizes,
   for (auto it : llvm::zip(forOps, sizes)) {
     auto step = stripmineSink(std::get<0>(it), std::get<1>(it), currentTargets);
     res.push_back(step);
-    currentTargets = step;
+    currentTargets = std::move(step);
   }
   return res;
 }
