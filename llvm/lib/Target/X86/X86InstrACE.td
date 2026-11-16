@@ -12,6 +12,184 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// ACE multiclasses
+//
+// Most ACE operations need three definitions: the instruction itself, a pseudo
+// for the user-facing intrinsic that takes an immediate tile ID, and a pseudo
+// for the internal intrinsic that takes a shape and a tile register so the
+// register allocator can assign TMMs. The multiclasses below emit all of them
+// from one mnemonic, which also names the intrinsics.
+//===----------------------------------------------------------------------===//
+
+// BSRMOVH and BSRMOVL move half of the block scale register, which is wider
+// than a vector register, in either direction.
+multiclass ACE_BSRMOV_HALF<string Half, Prefix P> {
+  defvar Insert = !cast<Intrinsic>("int_x86_acev1_bsr0mov"#Half#"insert");
+  defvar Extract = !cast<Intrinsic>("int_x86_acev1_bsr0mov"#Half#"extract");
+
+  let SchedRW = [WriteSystem], OpPrefix = P in {
+    let Defs = [BSR0], Uses = [BSR0] in {
+      def rr_set : I<0x95, MRM0r, (outs),
+                     (ins VR512:$src),
+                     !strconcat("bsrmov", Half, "\t{$src, %bsr0|bsr0, $src}"),
+                     [(Insert (v64i8 VR512:$src))]>,
+                     EVEX, T_MAP6, REX_W, EVEX_V512;
+
+      let mayLoad = 1 in
+      def rm_set : I<0x95, MRM0m, (outs),
+                     (ins f512mem:$src),
+                     !strconcat("bsrmov", Half, "\t{$src, %bsr0|bsr0, $src}"),
+                     []>,
+                     EVEX, T_MAP6, REX_W, EVEX_V512, EVEX_CD8<64, CD8VF>;
+    }
+
+    let Uses = [BSR0] in {
+      def rr_get : I<0x95, MRM0r, (outs VR512:$dst),
+                     (ins),
+                     !strconcat("bsrmov", Half, "\t{%bsr0, $dst|$dst, bsr0}"),
+                     [(set (v64i8 VR512:$dst), (Extract))]>,
+                     EVEX, T_MAP6, EVEX_V512;
+
+      let mayStore = 1 in
+      def mr_get : I<0x95, MRM0m, (outs),
+                     (ins f512mem:$dst),
+                     !strconcat("bsrmov", Half, "\t{%bsr0, $dst|$dst, bsr0}"),
+                     [(store (v64i8 (Extract)), addr:$dst)]>,
+                     EVEX, T_MAP6, EVEX_V512, EVEX_CD8<64, CD8VF>;
+    }
+  }
+}
+
+// TILEMOVCOL and TILEMOVROW in the tile-destination direction write one column
+// or row and keep the rest, so $dst is a source too. Only the register index
+// form has an internal twin; the shape operands carry the index.
+multiclass ACE_TILEMOVE<bits<8> OpcImm, bits<8> OpcReg, string Opstr,
+                        string IntName> {
+  let Constraints = "$src0 = $dst", SchedRW = [WriteSystem] in {
+    def tri : Ii8<OpcImm, MRMSrcReg, (outs TILE:$dst),
+                  (ins TILE:$src0, VR512:$src, u8imm:$idx),
+                  !strconcat(Opstr, "\t{$idx, $src, $dst|$dst, $src, $idx}"),
+                  []>,
+                  EVEX, PD, TA, REX_W, EVEX_V512;
+
+    def tre : I<OpcReg, MRMSrcReg4VOp3, (outs TILE:$dst),
+                (ins TILE:$src0, VR512:$src, GR32:$idx),
+                !strconcat(Opstr, "\t{$idx, $src, $dst|$dst, $src, $idx}"),
+                []>,
+                EVEX, PD, T8, REX_W, VVVV, EVEX_V512;
+  }
+
+  let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
+    def "P"#NAME#"tri" : PseudoI<(outs),
+                                 (ins u8imm:$dst, VR512:$src, u8imm:$idx), []>;
+
+    def "P"#NAME#"tre" : PseudoI<(outs),
+                                 (ins u8imm:$dst, VR512:$src, GR32:$idx), []>;
+  }
+
+  let isPseudo = true, hasNoSchedulingInfo = 1, usesCustomInserter = 1 in
+  def "P"#NAME#"treV"
+      : PseudoI<(outs TILE:$dst),
+                (ins GR16:$row, GR16:$col, VR512:$src, GR32:$idx),
+                [(set TILE:$dst,
+                  (!cast<Intrinsic>("int_x86_acev1_"#IntName#"_internal")
+                   GR16:$row, GR16:$col, VR512:$src, GR32:$idx))]>;
+}
+
+// Outer products accumulate into the destination tile, so $src1 is tied to it.
+multiclass ACE_TOP<bits<8> Opc, string Opstr, Prefix P> {
+  let Constraints = "$src1 = $dst", SchedRW = [WriteSystem], OpPrefix = P in
+  def trr : I<Opc, MRMSrcReg4VOp3, (outs TILE:$dst),
+              (ins TILE:$src1, VR512:$src2, VR512:$src3),
+              !strconcat(Opstr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+              []>,
+              EVEX, VVVV, T8, EVEX_V512;
+
+  let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
+  def "P"#NAME#"trr"
+      : PseudoI<(outs), (ins u8imm:$dst, VR512:$src1, VR512:$src2),
+                [(!cast<Intrinsic>("int_x86_acev1_"#Opstr)
+                  timm:$dst, VR512:$src1, VR512:$src2)]>;
+
+  let isPseudo = true, hasNoSchedulingInfo = 1, usesCustomInserter = 1,
+      Constraints = "$src1 = $dst" in
+  def "P"#NAME#"trrV"
+      : PseudoI<(outs TILE:$dst),
+                (ins GR16:$row, GR16:$col, GR16:$k,
+                     TILE:$src1, VR512:$src2, VR512:$src3),
+                [(set TILE:$dst,
+                  (!cast<Intrinsic>("int_x86_acev1_"#Opstr#"_internal")
+                   GR16:$row, GR16:$col, GR16:$k,
+                   TILE:$src1, VR512:$src2, VR512:$src3))]>;
+}
+
+// The mixed-precision outer products take an immediate selecting the element
+// formats and read the scales from the block scale register.
+multiclass ACE_TOP4MX<bits<8> Opc, string Opstr, Prefix P> {
+  let Constraints = "$src1 = $dst", SchedRW = [WriteSystem], Uses = [BSR0],
+      OpPrefix = P in
+  def trri : Ii8<Opc, MRMSrcReg, (outs TILE:$dst),
+                 (ins TILE:$src1, VR512:$src3, VR512:$src2, u8imm:$imm),
+                 !strconcat(Opstr,
+                     "\t{$imm, $src3, $src2, $dst|$dst, $src2, $src3, $imm}"),
+                 []>,
+                 EVEX, VVVV, TA, EVEX_V512;
+
+  let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
+  def "P"#NAME#"trri"
+      : PseudoI<(outs),
+                (ins u8imm:$dst, VR512:$src1, VR512:$src2, u8imm:$imm),
+                [(!cast<Intrinsic>("int_x86_acev1_"#Opstr)
+                  timm:$dst, VR512:$src1, VR512:$src2, timm:$imm)]>;
+
+  let isPseudo = true, hasNoSchedulingInfo = 1, usesCustomInserter = 1,
+      Constraints = "$src1 = $dst", Uses = [BSR0] in
+  def "P"#NAME#"trriV"
+      : PseudoI<(outs TILE:$dst),
+                (ins GR16:$row, GR16:$col, GR16:$k, u8imm:$imm,
+                     TILE:$src1, VR512:$src2, VR512:$src3),
+                [(set TILE:$dst,
+                  (!cast<Intrinsic>("int_x86_acev1_"#Opstr#"_internal")
+                   GR16:$row, GR16:$col, GR16:$k, timm:$imm,
+                   TILE:$src1, VR512:$src2, VR512:$src3))]>;
+}
+
+// The row reads have no ACE-specific encoding - they are the AMX instructions
+// under palette 2 - so only pseudos are needed here. The opcode is what
+// records the ACE programming model.
+multiclass ACE_ROWREAD<string Opstr> {
+  let SchedRW = [WriteSystem], usesCustomInserter = 1 in {
+    def rte : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, GR32:$src2),
+                      [(set VR512:$dst,
+                        (!cast<Intrinsic>("int_x86_acev1_"#Opstr)
+                         timm:$src1, GR32:$src2))]>;
+
+    // One ACE intrinsic covers both index forms, so a constant index matches
+    // the immediate encoding here and anything else falls back to the register
+    // one.
+    def rti : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
+                      [(set VR512:$dst,
+                        (!cast<Intrinsic>("int_x86_acev1_"#Opstr)
+                         timm:$src1, imm:$src2))]>;
+  }
+
+  let isPseudo = true, hasNoSchedulingInfo = 1, SchedRW = [WriteSystem],
+      usesCustomInserter = 1 in {
+    def rtiV : PseudoI<(outs VR512:$dst),
+                       (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u6imm:$src4),
+                       [(set VR512:$dst,
+                         (!cast<Intrinsic>("int_x86_acev1_"#Opstr#"_internal")
+                          GR16:$src1, GR16:$src2, TILE:$src3, imm:$src4))]>;
+
+    def rteV : PseudoI<(outs VR512:$dst),
+                       (ins GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4),
+                       [(set VR512:$dst,
+                         (!cast<Intrinsic>("int_x86_acev1_"#Opstr#"_internal")
+                          GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4))]>;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // ACE instructions
 
 let Predicates = [HasACEV1, In64BitMode] in {
@@ -39,301 +217,56 @@ let SchedRW = [WriteSystem], Defs = [BSR0] in {
 }
 
 // BSRMOVH - Move Half to/from BSR
-let SchedRW = [WriteSystem] in {
-  let Defs = [BSR0], Uses = [BSR0] in {
-    def BSRMOVHrr_set : I<0x95, MRM0r, (outs),
-                          (ins VR512:$src),
-                          "bsrmovh\t{$src, %bsr0|bsr0, $src}",
-                          [(int_x86_acev1_bsr0movhinsert (v64i8 VR512:$src))]>,
-                          EVEX, XD, T_MAP6, REX_W, EVEX_V512;
-
-    let mayLoad = 1 in
-    def BSRMOVHrm_set : I<0x95, MRM0m, (outs),
-                          (ins f512mem:$src),
-                          "bsrmovh\t{$src, %bsr0|bsr0, $src}", []>,
-                          EVEX, XD, T_MAP6, REX_W, EVEX_V512, EVEX_CD8<64, CD8VF>;
-  }
-
-  let Uses = [BSR0] in {
-    def BSRMOVHrr_get : I<0x95, MRM0r, (outs VR512:$dst),
-                          (ins),
-                          "bsrmovh\t{%bsr0, $dst|$dst, bsr0}",
-                          [(set (v64i8 VR512:$dst), (int_x86_acev1_bsr0movhextract))]>,
-                          EVEX, XD, T_MAP6, EVEX_V512;
-
-    let mayStore = 1 in
-    def BSRMOVHmr_get : I<0x95, MRM0m, (outs),
-                          (ins f512mem:$dst),
-                          "bsrmovh\t{%bsr0, $dst|$dst, bsr0}",
-                          [(store (v64i8 (int_x86_acev1_bsr0movhextract)), addr:$dst)]>,
-                          EVEX, XD, T_MAP6, EVEX_V512, EVEX_CD8<64, CD8VF>;
-  }
-}
+defm BSRMOVH : ACE_BSRMOV_HALF<"h", XD>;
 
 // BSRMOVL - Move Low to/from BSR
-let SchedRW = [WriteSystem] in {
-  let Defs = [BSR0], Uses = [BSR0] in {
-    def BSRMOVLrr_set : I<0x95, MRM0r, (outs),
-                          (ins VR512:$src),
-                          "bsrmovl\t{$src, %bsr0|bsr0, $src}",
-                          [(int_x86_acev1_bsr0movlinsert (v64i8 VR512:$src))]>,
-                          EVEX, XS, T_MAP6, REX_W, EVEX_V512;
-
-    let mayLoad = 1 in
-    def BSRMOVLrm_set : I<0x95, MRM0m, (outs),
-                          (ins f512mem:$src),
-                          "bsrmovl\t{$src, %bsr0|bsr0, $src}", []>,
-                          EVEX, XS, T_MAP6, REX_W, EVEX_V512, EVEX_CD8<64, CD8VF>;
-  }
-
-  let Uses = [BSR0] in {
-    def BSRMOVLrr_get : I<0x95, MRM0r, (outs VR512:$dst),
-                          (ins),
-                          "bsrmovl\t{%bsr0, $dst|$dst, bsr0}",
-                          [(set (v64i8 VR512:$dst), (int_x86_acev1_bsr0movlextract))]>,
-                          EVEX, XS, T_MAP6, EVEX_V512;
-
-    let mayStore = 1 in
-    def BSRMOVLmr_get : I<0x95, MRM0m, (outs),
-                          (ins f512mem:$dst),
-                          "bsrmovl\t{%bsr0, $dst|$dst, bsr0}",
-                          [(store (v64i8 (int_x86_acev1_bsr0movlextract)), addr:$dst)]>,
-                          EVEX, XS, T_MAP6, EVEX_V512, EVEX_CD8<64, CD8VF>;
-  }
-}
+defm BSRMOVL : ACE_BSRMOV_HALF<"l", XS>;
 
 // TILEMOVCOL - Move Column from Vector to Tile
-// Writes one column and keeps the rest, so $dst is a source too.
-let Constraints = "$src0 = $dst", SchedRW = [WriteSystem] in {
-  def TILEMOVCOLtri : Ii8<0x2F, MRMSrcReg, (outs TILE:$dst),
-                          (ins TILE:$src0, VR512:$src, u8imm:$idx),
-                          "tilemovcol\t{$idx, $src, $dst|$dst, $src, $idx}", []>,
-                          EVEX, PD, TA, REX_W, EVEX_V512;
-
-  def TILEMOVCOLtre : I<0x4B, MRMSrcReg4VOp3, (outs TILE:$dst),
-                        (ins TILE:$src0, VR512:$src, GR32:$idx),
-                        "tilemovcol\t{$idx, $src, $dst|$dst, $src, $idx}", []>,
-                        EVEX, PD, T8, REX_W, VVVV, EVEX_V512;
-}
+defm TILEMOVCOL : ACE_TILEMOVE<0x2F, 0x4B, "tilemovcol", "tilemovcolinsert">;
 
 // TILEMOVROW - Move Row from Vector to Tile
-// Writes one row and keeps the rest, so $dst is a source too.
-let Constraints = "$src0 = $dst", SchedRW = [WriteSystem] in {
-  def TILEMOVROWtri : Ii8<0x07, MRMSrcReg, (outs TILE:$dst),
-                          (ins TILE:$src0, VR512:$src, u8imm:$idx),
-                          "tilemovrow\t{$idx, $src, $dst|$dst, $src, $idx}", []>,
-                          EVEX, PD, TA, REX_W, EVEX_V512;
-
-  def TILEMOVROWtre : I<0x4A, MRMSrcReg4VOp3, (outs TILE:$dst),
-                        (ins TILE:$src0, VR512:$src, GR32:$idx),
-                        "tilemovrow\t{$idx, $src, $dst|$dst, $src, $idx}", []>,
-                        EVEX, PD, T8, REX_W, VVVV, EVEX_V512;
-}
+defm TILEMOVROW : ACE_TILEMOVE<0x07, 0x4A, "tilemovrow", "tilemovrowinsert">;
 
 // Outer Product Instructions
 // TOP2BF16PS - Outer Product BF16 to Single Precision
-let Constraints = "$src1 = $dst", SchedRW = [WriteSystem] in {
-  def TOP2BF16PStrr : I<0x5C, MRMSrcReg4VOp3, (outs TILE:$dst),
-                        (ins TILE:$src1, VR512:$src2, VR512:$src3),
-                        "top2bf16ps\t{$src3, $src2, $dst|$dst, $src2, $src3}", []>,
-                        EVEX, VVVV, XS, T8, EVEX_V512;
-}
+defm TOP2BF16PS : ACE_TOP<0x5C, "top2bf16ps", XS>;
 
 // TOP4 Instructions - integer outer products
-let Constraints = "$src1 = $dst", SchedRW = [WriteSystem] in {
-  def TOP4BUUDtrr : I<0x5E, MRMSrcReg4VOp3, (outs TILE:$dst),
-                      (ins TILE:$src1, VR512:$src2, VR512:$src3),
-                      "top4buud\t{$src3, $src2, $dst|$dst, $src2, $src3}", []>,
-                      EVEX, VVVV, T8, EVEX_V512;
-
-  def TOP4BUSDtrr : I<0x5E, MRMSrcReg4VOp3, (outs TILE:$dst),
-                      (ins TILE:$src1, VR512:$src2, VR512:$src3),
-                      "top4busd\t{$src3, $src2, $dst|$dst, $src2, $src3}", []>,
-                      EVEX, VVVV, PD, T8, EVEX_V512;
-
-  def TOP4BSSDtrr : I<0x5E, MRMSrcReg4VOp3, (outs TILE:$dst),
-                      (ins TILE:$src1, VR512:$src2, VR512:$src3),
-                      "top4bssd\t{$src3, $src2, $dst|$dst, $src2, $src3}", []>,
-                      EVEX, VVVV, XD, T8, EVEX_V512;
-
-  def TOP4BSUDtrr : I<0x5E, MRMSrcReg4VOp3, (outs TILE:$dst),
-                      (ins TILE:$src1, VR512:$src2, VR512:$src3),
-                      "top4bsud\t{$src3, $src2, $dst|$dst, $src2, $src3}", []>,
-                      EVEX, VVVV, XS, T8, EVEX_V512;
-}
+defm TOP4BUUD : ACE_TOP<0x5E, "top4buud", PS>;
+defm TOP4BUSD : ACE_TOP<0x5E, "top4busd", PD>;
+defm TOP4BSSD : ACE_TOP<0x5E, "top4bssd", XD>;
+defm TOP4BSUD : ACE_TOP<0x5E, "top4bsud", XS>;
 
 // TOP4MX Instructions - Mixed Precision Outer Products with Immediate
-let Constraints = "$src1 = $dst", SchedRW = [WriteSystem], Uses = [BSR0] in {
-  def TOP4MXBF8PStrri : Ii8<0x8D, MRMSrcReg, (outs TILE:$dst),
-                            (ins TILE:$src1, VR512:$src3, VR512:$src2, u8imm:$imm),
-                            "top4mxbf8ps\t{$imm, $src3, $src2, $dst|$dst, $src2, $src3, $imm}", []>,
-                            EVEX, VVVV, TA, EVEX_V512;
-
-  def TOP4MXHF8PStrri : Ii8<0x8D, MRMSrcReg, (outs TILE:$dst),
-                            (ins TILE:$src1, VR512:$src3, VR512:$src2, u8imm:$imm),
-                            "top4mxhf8ps\t{$imm, $src3, $src2, $dst|$dst, $src2, $src3, $imm}", []>,
-                            EVEX, VVVV, PD, TA, EVEX_V512;
-
-  def TOP4MXBHF8PStrri : Ii8<0x8D, MRMSrcReg, (outs TILE:$dst),
-                             (ins TILE:$src1, VR512:$src3, VR512:$src2, u8imm:$imm),
-                             "top4mxbhf8ps\t{$imm, $src3, $src2, $dst|$dst, $src2, $src3, $imm}", []>,
-                             EVEX, VVVV, XD, TA, EVEX_V512;
-
-  def TOP4MXHBF8PStrri : Ii8<0x8D, MRMSrcReg, (outs TILE:$dst),
-                             (ins TILE:$src1, VR512:$src3, VR512:$src2, u8imm:$imm),
-                             "top4mxhbf8ps\t{$imm, $src3, $src2, $dst|$dst, $src2, $src3, $imm}", []>,
-                             EVEX, VVVV, XS, TA, EVEX_V512;
-
-  def TOP4MXBSSPStrri : Ii8<0x8F, MRMSrcReg, (outs TILE:$dst),
-                            (ins TILE:$src1, VR512:$src3, VR512:$src2, u8imm:$imm),
-                            "top4mxbssps\t{$imm, $src3, $src2, $dst|$dst, $src2, $src3, $imm}", []>,
-                            EVEX, VVVV, XD, TA, EVEX_V512;
-}
+defm TOP4MXHF8PS : ACE_TOP4MX<0x8D, "top4mxhf8ps", PD>;
+defm TOP4MXBHF8PS : ACE_TOP4MX<0x8D, "top4mxbhf8ps", XD>;
+defm TOP4MXHBF8PS : ACE_TOP4MX<0x8D, "top4mxhbf8ps", XS>;
+defm TOP4MXBF8PS : ACE_TOP4MX<0x8D, "top4mxbf8ps", PS>;
+defm TOP4MXBSSPS : ACE_TOP4MX<0x8F, "top4mxbssps", XD>;
 
 //===----------------------------------------------------------------------===//
 // ACE Pseudo Instructions
 // These are used by intrinsics and expanded via custom inserter
 //===----------------------------------------------------------------------===//
 
-// Pseudo instructions for user-facing intrinsics (immediate tile IDs).
-// usesCustomInserter expands these to real instructions in X86ISelLowering.
-let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-  def PBSRINIT : PseudoI<(outs), (ins),
-                         [(int_x86_acev1_bsr0init)]>;
+// Pseudo instruction for a user-facing intrinsic with no instruction operands.
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
+def PBSRINIT : PseudoI<(outs), (ins), [(int_x86_acev1_bsr0init)]>;
 
-  def PTILEMOVCOLtri : PseudoI<(outs), (ins u8imm:$dst, VR512:$src, u8imm:$idx), []>;
+// ACE twins of the AMX row reads, so the ACE model reaches MIR. The ACE read
+// direction of TILEMOVROW has an intrinsic name of its own.
+defm ACE_PTCVTROWD2PS : ACE_ROWREAD<"tcvtrowd2ps">;
+defm ACE_PTCVTROWPS2BF16H : ACE_ROWREAD<"tcvtrowps2bf16h">;
+defm ACE_PTCVTROWPS2BF16L : ACE_ROWREAD<"tcvtrowps2bf16l">;
+defm ACE_PTCVTROWPS2PHH : ACE_ROWREAD<"tcvtrowps2phh">;
+defm ACE_PTCVTROWPS2PHL : ACE_ROWREAD<"tcvtrowps2phl">;
+defm ACE_PTILEMOVROW : ACE_ROWREAD<"tilemovrowextract">;
 
-  def PTILEMOVCOLtre : PseudoI<(outs), (ins u8imm:$dst, VR512:$src, GR32:$idx), []>;
-
-  def PTILEMOVROWtri : PseudoI<(outs), (ins u8imm:$dst, VR512:$src, u8imm:$idx), []>;
-
-  def PTILEMOVROWtre : PseudoI<(outs), (ins u8imm:$dst, VR512:$src, GR32:$idx), []>;
-
-  def PTOP2BF16PStrr : PseudoI<(outs), (ins u8imm:$dst, VR512:$src1, VR512:$src2),
-                               [(int_x86_acev1_top2bf16ps timm:$dst, VR512:$src1, VR512:$src2)]>;
-
-  def PTOP4BUUDtrr : PseudoI<(outs), (ins u8imm:$dst, VR512:$src1, VR512:$src2),
-                             [(int_x86_acev1_top4buud timm:$dst, VR512:$src1, VR512:$src2)]>;
-
-  def PTOP4BUSDtrr : PseudoI<(outs), (ins u8imm:$dst, VR512:$src1, VR512:$src2),
-                             [(int_x86_acev1_top4busd timm:$dst, VR512:$src1, VR512:$src2)]>;
-
-  def PTOP4BSSDtrr : PseudoI<(outs), (ins u8imm:$dst, VR512:$src1, VR512:$src2),
-                             [(int_x86_acev1_top4bssd timm:$dst, VR512:$src1, VR512:$src2)]>;
-
-  def PTOP4BSUDtrr : PseudoI<(outs), (ins u8imm:$dst, VR512:$src1, VR512:$src2),
-                             [(int_x86_acev1_top4bsud timm:$dst, VR512:$src1, VR512:$src2)]>;
-
-  def PTOP4MXHF8PStrri : PseudoI<(outs), (ins u8imm:$dst, VR512:$src1, VR512:$src2, u8imm:$imm),
-                                 [(int_x86_acev1_top4mxhf8ps timm:$dst, VR512:$src1, VR512:$src2, timm:$imm)]>;
-
-  def PTOP4MXBHF8PStrri : PseudoI<(outs), (ins u8imm:$dst, VR512:$src1, VR512:$src2, u8imm:$imm),
-                                  [(int_x86_acev1_top4mxbhf8ps timm:$dst, VR512:$src1, VR512:$src2, timm:$imm)]>;
-
-  def PTOP4MXHBF8PStrri : PseudoI<(outs), (ins u8imm:$dst, VR512:$src1, VR512:$src2, u8imm:$imm),
-                                  [(int_x86_acev1_top4mxhbf8ps timm:$dst, VR512:$src1, VR512:$src2, timm:$imm)]>;
-
-  def PTOP4MXBF8PStrri : PseudoI<(outs), (ins u8imm:$dst, VR512:$src1, VR512:$src2, u8imm:$imm),
-                                 [(int_x86_acev1_top4mxbf8ps timm:$dst, VR512:$src1, VR512:$src2, timm:$imm)]>;
-
-  def PTOP4MXBSSPStrri : PseudoI<(outs), (ins u8imm:$dst, VR512:$src1, VR512:$src2, u8imm:$imm),
-                                 [(int_x86_acev1_top4mxbssps timm:$dst, VR512:$src1, VR512:$src2, timm:$imm)]>;
-}
-
-// Pseudo instructions for internal intrinsics (register allocation).
-let isPseudo = true, hasNoSchedulingInfo = 1, usesCustomInserter = 1 in {
-  def PTILEMOVCOLtreV : PseudoI<(outs TILE:$dst),
-                                (ins GR16:$row, GR16:$col, VR512:$src, GR32:$idx),
-                                [(set TILE:$dst,
-                                  (int_x86_acev1_tilemovcolinsert_internal GR16:$row, GR16:$col,
-                                   VR512:$src, GR32:$idx))]>;
-
-  def PTILEMOVROWtreV : PseudoI<(outs TILE:$dst),
-                                (ins GR16:$row, GR16:$col, VR512:$src, GR32:$idx),
-                                [(set TILE:$dst,
-                                  (int_x86_acev1_tilemovrowinsert_internal GR16:$row, GR16:$col,
-                                   VR512:$src, GR32:$idx))]>;
-
-  let Constraints = "$src1 = $dst" in
-  def PTOP2BF16PStrrV : PseudoI<(outs TILE:$dst),
-                                (ins GR16:$row, GR16:$col, GR16:$k,
-                                     TILE:$src1, VR512:$src2, VR512:$src3),
-                                [(set TILE:$dst,
-                                  (int_x86_acev1_top2bf16ps_internal GR16:$row, GR16:$col, GR16:$k,
-                                   TILE:$src1, VR512:$src2, VR512:$src3))]>;
-
-  let Constraints = "$src1 = $dst" in
-  def PTOP4BUUDtrrV : PseudoI<(outs TILE:$dst),
-                              (ins GR16:$row, GR16:$col, GR16:$k,
-                                   TILE:$src1, VR512:$src2, VR512:$src3),
-                              [(set TILE:$dst,
-                                (int_x86_acev1_top4buud_internal GR16:$row, GR16:$col, GR16:$k,
-                                 TILE:$src1, VR512:$src2, VR512:$src3))]>;
-
-  let Constraints = "$src1 = $dst" in
-  def PTOP4BUSDtrrV : PseudoI<(outs TILE:$dst),
-                              (ins GR16:$row, GR16:$col, GR16:$k,
-                                   TILE:$src1, VR512:$src2, VR512:$src3),
-                              [(set TILE:$dst,
-                                (int_x86_acev1_top4busd_internal GR16:$row, GR16:$col, GR16:$k,
-                                 TILE:$src1, VR512:$src2, VR512:$src3))]>;
-
-  let Constraints = "$src1 = $dst" in
-  def PTOP4BSSDtrrV : PseudoI<(outs TILE:$dst),
-                              (ins GR16:$row, GR16:$col, GR16:$k,
-                                   TILE:$src1, VR512:$src2, VR512:$src3),
-                              [(set TILE:$dst,
-                                (int_x86_acev1_top4bssd_internal GR16:$row, GR16:$col, GR16:$k,
-                                 TILE:$src1, VR512:$src2, VR512:$src3))]>;
-
-  let Constraints = "$src1 = $dst" in
-  def PTOP4BSUDtrrV : PseudoI<(outs TILE:$dst),
-                              (ins GR16:$row, GR16:$col, GR16:$k,
-                                   TILE:$src1, VR512:$src2, VR512:$src3),
-                              [(set TILE:$dst,
-                                (int_x86_acev1_top4bsud_internal GR16:$row, GR16:$col, GR16:$k,
-                                 TILE:$src1, VR512:$src2, VR512:$src3))]>;
-
-  let Constraints = "$src1 = $dst", Uses = [BSR0] in
-  def PTOP4MXHF8PStrriV : PseudoI<(outs TILE:$dst),
-                                  (ins GR16:$row, GR16:$col, GR16:$k, u8imm:$imm,
-                                       TILE:$src1, VR512:$src2, VR512:$src3),
-                                  [(set TILE:$dst,
-                                    (int_x86_acev1_top4mxhf8ps_internal GR16:$row, GR16:$col, GR16:$k, timm:$imm,
-                                     TILE:$src1, VR512:$src2, VR512:$src3))]>;
-
-  let Constraints = "$src1 = $dst", Uses = [BSR0] in
-  def PTOP4MXBHF8PStrriV : PseudoI<(outs TILE:$dst),
-                                   (ins GR16:$row, GR16:$col, GR16:$k, u8imm:$imm,
-                                        TILE:$src1, VR512:$src2, VR512:$src3),
-                                   [(set TILE:$dst,
-                                     (int_x86_acev1_top4mxbhf8ps_internal GR16:$row, GR16:$col, GR16:$k, timm:$imm,
-                                      TILE:$src1, VR512:$src2, VR512:$src3))]>;
-
-  let Constraints = "$src1 = $dst", Uses = [BSR0] in
-  def PTOP4MXHBF8PStrriV : PseudoI<(outs TILE:$dst),
-                                   (ins GR16:$row, GR16:$col, GR16:$k, u8imm:$imm,
-                                        TILE:$src1, VR512:$src2, VR512:$src3),
-                                   [(set TILE:$dst,
-                                     (int_x86_acev1_top4mxhbf8ps_internal GR16:$row, GR16:$col, GR16:$k, timm:$imm,
-                                      TILE:$src1, VR512:$src2, VR512:$src3))]>;
-
-  let Constraints = "$src1 = $dst", Uses = [BSR0] in
-  def PTOP4MXBF8PStrriV : PseudoI<(outs TILE:$dst),
-                                  (ins GR16:$row, GR16:$col, GR16:$k, u8imm:$imm,
-                                       TILE:$src1, VR512:$src2, VR512:$src3),
-                                  [(set TILE:$dst,
-                                    (int_x86_acev1_top4mxbf8ps_internal GR16:$row, GR16:$col, GR16:$k, timm:$imm,
-                                     TILE:$src1, VR512:$src2, VR512:$src3))]>;
-
-  let Constraints = "$src1 = $dst", Uses = [BSR0] in
-  def PTOP4MXBSSPStrriV : PseudoI<(outs TILE:$dst),
-                                  (ins GR16:$row, GR16:$col, GR16:$k, u8imm:$imm,
-                                       TILE:$src1, VR512:$src2, VR512:$src3),
-                                  [(set TILE:$dst,
-                                    (int_x86_acev1_top4mxbssps_internal GR16:$row, GR16:$col, GR16:$k, timm:$imm,
-                                     TILE:$src1, VR512:$src2, VR512:$src3))]>;
-}
+// ACE twin of the AMX tile-zero user-facing pseudo.
+let SchedRW = [WriteSystem], usesCustomInserter = 1 in
+def ACE_PTILEZERO : PseudoI<(outs), (ins u8imm:$src),
+                            [(int_x86_acev1_tilezero timm:$src)]>;
 
 // ACE twin of the AMX tile-zero RA pseudo, so the ACE model reaches MIR.
 let isPseudo = true, isReMaterializable = 1, isAsCheapAsAMove = 1,
@@ -341,95 +274,6 @@ let isPseudo = true, isReMaterializable = 1, isAsCheapAsAMove = 1,
 def ACE_PTILEZEROV : PseudoI<(outs TILE:$dst), (ins GR16:$src1, GR16:$src2),
                              [(set TILE:$dst, (int_x86_acev1_tilezero_internal
                                GR16:$src1, GR16:$src2))]>;
-
-// ACE twins of the AMX row-read RA pseudos, so the ACE model reaches MIR.
-let isPseudo = true, hasNoSchedulingInfo = 1, SchedRW = [WriteSystem],
-    usesCustomInserter = 1 in {
-  def ACE_PTCVTROWD2PSrtiV : PseudoI<(outs VR512:$dst),
-                                     (ins GR16:$src1, GR16:$src2, TILE:$src3,
-                                          i32u6imm:$src4),
-                                     [(set VR512:$dst,
-                                       (int_x86_acev1_tcvtrowd2ps_internal
-                                        GR16:$src1, GR16:$src2, TILE:$src3,
-                                        imm:$src4))]>;
-  def ACE_PTCVTROWD2PSrteV : PseudoI<(outs VR512:$dst),
-                                     (ins GR16:$src1, GR16:$src2, TILE:$src3,
-                                          GR32:$src4),
-                                     [(set VR512:$dst,
-                                       (int_x86_acev1_tcvtrowd2ps_internal
-                                        GR16:$src1, GR16:$src2, TILE:$src3,
-                                        GR32:$src4))]>;
-  def ACE_PTCVTROWPS2BF16HrtiV : PseudoI<(outs VR512:$dst),
-                                         (ins GR16:$src1, GR16:$src2, TILE:$src3,
-                                              i32u6imm:$src4),
-                                         [(set VR512:$dst,
-                                           (int_x86_acev1_tcvtrowps2bf16h_internal
-                                            GR16:$src1, GR16:$src2, TILE:$src3,
-                                            imm:$src4))]>;
-  def ACE_PTCVTROWPS2BF16HrteV : PseudoI<(outs VR512:$dst),
-                                         (ins GR16:$src1, GR16:$src2, TILE:$src3,
-                                              GR32:$src4),
-                                         [(set VR512:$dst,
-                                           (int_x86_acev1_tcvtrowps2bf16h_internal
-                                            GR16:$src1, GR16:$src2, TILE:$src3,
-                                            GR32:$src4))]>;
-  def ACE_PTCVTROWPS2BF16LrtiV : PseudoI<(outs VR512:$dst),
-                                         (ins GR16:$src1, GR16:$src2, TILE:$src3,
-                                              i32u6imm:$src4),
-                                         [(set VR512:$dst,
-                                           (int_x86_acev1_tcvtrowps2bf16l_internal
-                                            GR16:$src1, GR16:$src2, TILE:$src3,
-                                            imm:$src4))]>;
-  def ACE_PTCVTROWPS2BF16LrteV : PseudoI<(outs VR512:$dst),
-                                         (ins GR16:$src1, GR16:$src2, TILE:$src3,
-                                              GR32:$src4),
-                                         [(set VR512:$dst,
-                                           (int_x86_acev1_tcvtrowps2bf16l_internal
-                                            GR16:$src1, GR16:$src2, TILE:$src3,
-                                            GR32:$src4))]>;
-  def ACE_PTCVTROWPS2PHHrtiV : PseudoI<(outs VR512:$dst),
-                                       (ins GR16:$src1, GR16:$src2, TILE:$src3,
-                                            i32u6imm:$src4),
-                                       [(set VR512:$dst,
-                                         (int_x86_acev1_tcvtrowps2phh_internal
-                                          GR16:$src1, GR16:$src2, TILE:$src3,
-                                          imm:$src4))]>;
-  def ACE_PTCVTROWPS2PHHrteV : PseudoI<(outs VR512:$dst),
-                                       (ins GR16:$src1, GR16:$src2, TILE:$src3,
-                                            GR32:$src4),
-                                       [(set VR512:$dst,
-                                         (int_x86_acev1_tcvtrowps2phh_internal
-                                          GR16:$src1, GR16:$src2, TILE:$src3,
-                                          GR32:$src4))]>;
-  def ACE_PTCVTROWPS2PHLrtiV : PseudoI<(outs VR512:$dst),
-                                       (ins GR16:$src1, GR16:$src2, TILE:$src3,
-                                            i32u6imm:$src4),
-                                       [(set VR512:$dst,
-                                         (int_x86_acev1_tcvtrowps2phl_internal
-                                          GR16:$src1, GR16:$src2, TILE:$src3,
-                                          imm:$src4))]>;
-  def ACE_PTCVTROWPS2PHLrteV : PseudoI<(outs VR512:$dst),
-                                       (ins GR16:$src1, GR16:$src2, TILE:$src3,
-                                            GR32:$src4),
-                                       [(set VR512:$dst,
-                                         (int_x86_acev1_tcvtrowps2phl_internal
-                                          GR16:$src1, GR16:$src2, TILE:$src3,
-                                          GR32:$src4))]>;
-  def ACE_PTILEMOVROWrtiV : PseudoI<(outs VR512:$dst),
-                                    (ins GR16:$src1, GR16:$src2, TILE:$src3,
-                                         i32u6imm:$src4),
-                                    [(set VR512:$dst,
-                                      (int_x86_acev1_tilemovrowextract_internal
-                                       GR16:$src1, GR16:$src2, TILE:$src3,
-                                       imm:$src4))]>;
-  def ACE_PTILEMOVROWrteV : PseudoI<(outs VR512:$dst),
-                                    (ins GR16:$src1, GR16:$src2, TILE:$src3,
-                                         GR32:$src4),
-                                    [(set VR512:$dst,
-                                      (int_x86_acev1_tilemovrowextract_internal
-                                       GR16:$src1, GR16:$src2, TILE:$src3,
-                                       GR32:$src4))]>;
-}
 
 // Pseudo instructions for tile spill and reload (register allocation)
 let isPseudo = true, hasNoSchedulingInfo = 1 in {
@@ -441,39 +285,3 @@ let isPseudo = true, hasNoSchedulingInfo = 1 in {
 }
 
 } // end HasACEV1, In64BitMode
-
-// ACE twins of the user-facing DirectReg pseudos (immediate tile IDs).
-// They expand like the AMX pseudos; the opcode is what records the ACE model.
-class ACERowReadPseudo<Intrinsic intr>
-    : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, GR32:$src2),
-              [(set VR512:$dst, (intr timm:$src1, GR32:$src2))]>;
-
-// One ACE intrinsic covers both row index forms, so a constant index matches
-// the immediate encoding here and anything else falls back to the register one.
-class ACERowReadPseudoI<Intrinsic intr>
-    : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
-              [(set VR512:$dst, (intr timm:$src1, imm:$src2))]>;
-
-let Predicates = [HasACEV1, In64BitMode], SchedRW = [WriteSystem],
-    usesCustomInserter = 1 in {
-  def ACE_PTILEZERO : PseudoI<(outs), (ins u8imm:$src),
-                              [(int_x86_acev1_tilezero timm:$src)]>;
-
-  def ACE_PTCVTROWD2PSrte : ACERowReadPseudo<int_x86_acev1_tcvtrowd2ps>;
-  def ACE_PTCVTROWPS2BF16Hrte
-      : ACERowReadPseudo<int_x86_acev1_tcvtrowps2bf16h>;
-  def ACE_PTCVTROWPS2BF16Lrte
-      : ACERowReadPseudo<int_x86_acev1_tcvtrowps2bf16l>;
-  def ACE_PTCVTROWPS2PHHrte : ACERowReadPseudo<int_x86_acev1_tcvtrowps2phh>;
-  def ACE_PTCVTROWPS2PHLrte : ACERowReadPseudo<int_x86_acev1_tcvtrowps2phl>;
-  def ACE_PTILEMOVROWrte : ACERowReadPseudo<int_x86_acev1_tilemovrowextract>;
-
-  def ACE_PTCVTROWD2PSrti : ACERowReadPseudoI<int_x86_acev1_tcvtrowd2ps>;
-  def ACE_PTCVTROWPS2BF16Hrti
-      : ACERowReadPseudoI<int_x86_acev1_tcvtrowps2bf16h>;
-  def ACE_PTCVTROWPS2BF16Lrti
-      : ACERowReadPseudoI<int_x86_acev1_tcvtrowps2bf16l>;
-  def ACE_PTCVTROWPS2PHHrti : ACERowReadPseudoI<int_x86_acev1_tcvtrowps2phh>;
-  def ACE_PTCVTROWPS2PHLrti : ACERowReadPseudoI<int_x86_acev1_tcvtrowps2phl>;
-  def ACE_PTILEMOVROWrti : ACERowReadPseudoI<int_x86_acev1_tilemovrowextract>;
-}
