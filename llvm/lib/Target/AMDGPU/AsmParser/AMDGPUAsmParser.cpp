@@ -2248,7 +2248,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
       if (Lit == LitModifier::None && AsmParser->hasInv2PiInlineImm() &&
           Literal == 0x3fc45f306725feed) {
         // This is the 1/(2*pi) which is going to be truncated to bf16 with the
-        // loss of precision. The constant represents ideomatic fp32 value of
+        // loss of precision. The constant represents idiomatic fp32 value of
         // 1/(2*pi) = 0.15915494 since bf16 is in fact fp32 with cleared low 16
         // bits. Prevent rounding below.
         Inst.addOperand(MCOperand::createImm(0x3e22));
