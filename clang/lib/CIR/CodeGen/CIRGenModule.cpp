@@ -16,6 +16,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
@@ -3480,6 +3481,14 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
     setCIRFunctionAttributes(globalDecl,
                              getTypes().arrangeGlobalDeclaration(globalDecl),
                              func, isThunk);
+
+  // Add the Returned attribute for "this", except for iOS 5 and earlier
+  // where substantial code, including the libstdc++ dylib, was compiled with
+  // GCC and does not actually return "this".
+  if (!isThunk && getCXXABI().hasThisReturn(globalDecl) &&
+      !(getTriple().isiOS() && getTriple().isOSVersionLT(6)))
+    func.setArgAttr(0, mlir::LLVM::LLVMDialect::getReturnedAttrName(),
+                    mlir::UnitAttr::get(&getMLIRContext()));
 
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
