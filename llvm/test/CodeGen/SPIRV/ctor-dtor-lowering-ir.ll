@@ -6,7 +6,6 @@
 ; 1. The init/fini kernels are created.
 ; 2. Symbol mangling includes function name, hash, and priority.
 ; 3. Array boundary globals are created.
-; 4. The pass only runs when offload metadata is present.
 
 define void @high_priority() addrspace(9) {
 entry:
