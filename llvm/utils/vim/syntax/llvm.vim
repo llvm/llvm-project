@@ -49,6 +49,7 @@ syn keyword llvmKeyword
       \ alignstack
       \ allocsize
       \ alwaysinline
+      \ alwaysuniform
       \ appending
       \ argmemonly
       \ arm_aapcs_vfpcc
@@ -128,6 +129,7 @@ syn keyword llvmKeyword
       \ nocapture
       \ nocf_check
       \ no_cfi
+      \ nodivergencesource
       \ noduplicate
       \ nofree
       \ noimplicitfloat
