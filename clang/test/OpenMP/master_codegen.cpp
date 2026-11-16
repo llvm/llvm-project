@@ -131,7 +131,7 @@ void lambda_master(int a, int b) {
   auto l2 = [=]() {
 #pragma omp parallel master
     {
-      // OGCG: call i32 @__kmpc_master(
+      // ALL: call i32 @__kmpc_master(
       int c = a + b;
     }
   };
