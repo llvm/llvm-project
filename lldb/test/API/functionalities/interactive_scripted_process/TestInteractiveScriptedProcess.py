@@ -80,9 +80,7 @@ class TestInteractiveScriptedProcess(TestBase):
         # Launch Even Child Scripted Process
         error = lldb.SBError()
         even_process = even_target.Launch(muxed_launch_info, error)
-        self.assertTrue(
-            even_process, "Couldn't launch multiplexed even scripted process"
-        )
+        self.assertSuccess(error, "Couldn't launch multiplexed even scripted process")
         self.multiplex(even_process)
 
         # Check that the even process started running
@@ -114,7 +112,7 @@ class TestInteractiveScriptedProcess(TestBase):
         # Launch Odd Child Scripted Process
         error = lldb.SBError()
         odd_process = odd_target.Launch(muxed_launch_info, error)
-        self.assertTrue(odd_process, "Couldn't launch multiplexed odd scripted process")
+        self.assertSuccess(error, "Couldn't launch multiplexed odd scripted process")
         self.multiplex(odd_process)
 
         # Check that the odd process started running

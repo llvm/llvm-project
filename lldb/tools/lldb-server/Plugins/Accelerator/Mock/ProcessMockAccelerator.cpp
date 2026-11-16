@@ -26,8 +26,8 @@ llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 ProcessMockAccelerator::Manager::Launch(ProcessLaunchInfo &launch_info,
                                         NativeDelegate &native_delegate) {
   return std::make_unique<ProcessMockAccelerator>(
-      kMockPid, m_arch, m_dynamic_loader_library_path, m_native_memory_address,
-      m_native_memory_size, native_delegate);
+      kMockPid, m_mainloop, m_arch, m_dynamic_loader_library_path,
+      m_native_memory_address, m_native_memory_size, native_delegate);
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -38,11 +38,12 @@ ProcessMockAccelerator::Manager::Attach(lldb::pid_t pid,
 }
 
 ProcessMockAccelerator::ProcessMockAccelerator(
-    lldb::pid_t pid, ArchSpec arch, std::string dynamic_loader_library_path,
+    lldb::pid_t pid, MainLoop &main_loop, ArchSpec arch,
+    std::string dynamic_loader_library_path,
     std::optional<uint64_t> native_memory_address,
     std::optional<uint64_t> native_memory_size, NativeDelegate &delegate)
     : NativeProcessProtocol(pid, /*terminal_fd=*/-1, delegate),
-      m_arch(std::move(arch)),
+      m_main_loop(main_loop), m_arch(std::move(arch)),
       m_dynamic_loader_library_path(std::move(dynamic_loader_library_path)),
       m_native_memory_address(native_memory_address),
       m_native_memory_size(native_memory_size) {
@@ -57,6 +58,18 @@ void ProcessMockAccelerator::HandleNativeProcessExit(
 
 Status ProcessMockAccelerator::Resume(const ResumeActionList &resume_actions) {
   SetState(eStateRunning, /*notify_delegates=*/true);
+  if (m_stop_reason_on_resume) {
+    StopReason reason = *m_stop_reason_on_resume;
+    m_stop_reason_on_resume.reset();
+    // Defer the stop until LLGS has sent the continue response.
+    m_main_loop.AddPendingCallback([this, reason](MainLoopBase &) {
+      if (!IsRunning())
+        return;
+      static_cast<ThreadMockAccelerator *>(GetCurrentThread())
+          ->SetStopReason(reason);
+      SetState(eStateStopped, /*notify_delegates=*/true);
+    });
+  }
   return Status();
 }
 

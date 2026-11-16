@@ -232,7 +232,6 @@ define float @from_e5m3fnu_dynamic(i8 %x) {
 ; CHECK-LABEL: from_e5m3fnu_dynamic:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; CHECK-NEXT:    v_and_b32_e32 v1, 7, v0
 ; CHECK-NEXT:    v_bfe_u32 v0, v0, 3, 5
 ; CHECK-NEXT:    v_ffbh_u32_e32 v2, v1

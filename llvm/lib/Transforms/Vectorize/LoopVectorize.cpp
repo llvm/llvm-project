@@ -5576,9 +5576,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   RUN_VPLAN_PASS(VPlanTransforms::replaceWideCanonicalIVWithWideIV, BestVPlan,
                  *PSE.getSE(), TTI, Config.CostKind, BestVF, BestUF);
-  if (!BestVPlan.hasTailFolded() &&
-      TTI.hasMultiVectorLoadStore(BestUF,
-                                  TargetTransformInfo::MaskSource::None))
+  if (TTI.hasMultiVectorLoadStore(
+          BestUF, BestVPlan.hasTailFolded()
+                      ? TargetTransformInfo::MaskSource::ActiveLaneMask
+                      : TargetTransformInfo::MaskSource::None))
     RUN_VPLAN_PASS(VPlanTransforms::widenMemoryAccessesByUF, BestVPlan, BestVF,
                    BestUF, TTI);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
@@ -5599,7 +5600,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     assert(BestVPlan.hasTailFolded() && "Expected tail folding to be enabled");
     RUN_VPLAN_PASS(VPlanTransforms::materializeAliasMaskCheckBlock, BestVPlan,
                    *Legal->getRuntimePointerChecking()->getDiffChecks(),
-                   HasBranchWeights);
+                   *PSE.getSE(), HasBranchWeights);
     ++LoopsPartialAliasVectorized;
   }
 
@@ -5923,8 +5924,8 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
-  if (CM.isMaskRequired(HistInfo->Store))
-    HGramOps.push_back(VPI->getMask());
+  if (VPValue *Mask = VPI->getMask())
+    HGramOps.push_back(Mask);
 
   return new VPHistogramRecipe(HistInfo->UpdateKind, HGramOps,
                                cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
@@ -6314,6 +6315,8 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
       RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,
                      Config.getMaxSafeElements());
       RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
+      VPCostContext CostCtx(*TLI, *Plan, *CM, Config);
+      RUN_VPLAN_PASS(VPlanTransforms::foldPredicateMerge, *Plan, CostCtx);
     }
 
     if (auto P =
@@ -7981,8 +7984,8 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
   // will simplify all loops, regardless of whether anything end up being
   // vectorized.
   for (const auto &L : *LI)
-    Changed |= CFGChanged |=
-        simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
+    Changed |= CFGChanged |= simplifyLoop(L, DT, LI, SE, AC, nullptr,
+                                          false /* PreserveLCSSA */, TTI);
 
   // Build up a worklist of inner-loops to vectorize. This is necessary as
   // the act of vectorizing or partially unrolling a loop creates new loops

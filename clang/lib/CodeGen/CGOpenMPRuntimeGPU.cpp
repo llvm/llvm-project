@@ -635,6 +635,7 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_target_teams_distribute_parallel_for:
   case OMPD_target_teams_distribute_parallel_for_simd:
   case OMPD_target_simd:
+  case OMPD_target_loop:
   case OMPD_target_teams_distribute_simd:
     return true;
   case OMPD_target_teams_distribute:

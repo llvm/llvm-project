@@ -21,3 +21,4 @@ void foo() {}
 //  LITTLE-DAG:     f64 = dense<64> : vector<2xi64>,
 //  LITTLE-DAG:     "dlti.stack_alignment" = 128 : i64
 //  LITTLE-DAG:     "dlti.endianness" = "little"
+//  LITTLE-DAG:     !cir.int<u, 1, bitint> = #cir.bitint_spec<max_align = 64>

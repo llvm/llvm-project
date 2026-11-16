@@ -453,7 +453,6 @@ body: |
 ...
 ---
 name: phi
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi
   ; CHECK: bb.0:
@@ -483,7 +482,6 @@ body: |
 ...
 ---
 name: phi_user_invalid_sew
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_user_invalid_sew
   ; CHECK: bb.0:
@@ -513,7 +511,6 @@ body: |
 ...
 ---
 name: phi_different_incoming_sew
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_different_incoming_sew
   ; CHECK: bb.0:
@@ -543,7 +540,6 @@ body: |
 ...
 ---
 name: phi_cycle_direct
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_cycle_direct
   ; CHECK: bb.0:
@@ -568,7 +564,6 @@ body: |
 ...
 ---
 name: phi_cycle_indirect
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_cycle_indirect
   ; CHECK: bb.0:
@@ -593,7 +588,6 @@ body: |
 ...
 ---
 name: EMUL_is_unknown
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: EMUL_is_unknown
@@ -715,7 +709,6 @@ body: |
 ...
 ---
 name: recurrence
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: recurrence
   ; CHECK: bb.0:
@@ -749,7 +742,6 @@ body: |
 ...
 ---
 name: recurrence_cant_reduce
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: recurrence_cant_reduce
   ; CHECK: bb.0:
@@ -793,7 +785,6 @@ body: |
 ...
 ---
 name: vslidedown_vx
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x8
@@ -812,7 +803,6 @@ body: |
 ---
 # Make sure we ignore LIs (ADDI $x0, -1)
 name: vslidedown_vx_li
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x8
@@ -971,7 +961,6 @@ body: |
 ---
 # Although %vl doesn't dominate all uses of %x, we only need it to dominate the uses of %x in %bb.1 in order to sink it.
 name: vl_doesnt_dominate_sink_use_in_other_block
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: vl_doesnt_dominate_sink_use_in_other_block
   ; CHECK: bb.0:

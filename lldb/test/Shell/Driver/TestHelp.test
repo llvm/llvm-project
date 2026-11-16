@@ -1,5 +1,5 @@
 RUN: %lldb --help | FileCheck %s
-RUN: cat %S/../../../docs/man/lldb.rst | FileCheck %s
+RUN: cat %S/../../../docs/man/lldb.md | FileCheck %s
 
 CHECK: ATTACHING
 CHECK: --attach-name
