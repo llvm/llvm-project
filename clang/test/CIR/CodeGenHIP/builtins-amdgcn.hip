@@ -435,3 +435,89 @@ __device__ void test_wave_shuffle(int* out, int a, int b)
 {
   *out = __builtin_amdgcn_wave_shuffle(a, b);
 }
+
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef unsigned int v2u32 __attribute__((ext_vector_type(2)));
+typedef unsigned int v4u32 __attribute__((ext_vector_type(4)));
+
+// CIR-LABEL: @_Z24test_raw_buffer_store_b8hu22__amdgpu_buffer_rsrc_t
+// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.store" {{.*}} : (!u8i, !cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !void
+// LLVM: define{{.*}} void @_Z24test_raw_buffer_store_b8hu22__amdgpu_buffer_rsrc_t
+// LLVM: call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 %{{.+}}, ptr addrspace(8) %{{.+}}, i32 0, i32 0, i32 0)
+__device__ void test_raw_buffer_store_b8(u8 val, __amdgpu_buffer_rsrc_t rsrc) {
+  __builtin_amdgcn_raw_buffer_store_b8(val, rsrc, 0, 0, 0);
+}
+
+// CIR-LABEL: @_Z25test_raw_buffer_store_b16tu22__amdgpu_buffer_rsrc_t
+// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.store" {{.*}} : (!u16i, !cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !void
+// LLVM: define{{.*}} void @_Z25test_raw_buffer_store_b16tu22__amdgpu_buffer_rsrc_t
+// LLVM: call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 %{{.+}}, ptr addrspace(8) %{{.+}}, i32 0, i32 0, i32 0)
+__device__ void test_raw_buffer_store_b16(u16 val, __amdgpu_buffer_rsrc_t rsrc) {
+  __builtin_amdgcn_raw_buffer_store_b16(val, rsrc, 0, 0, 0);
+}
+
+// CIR-LABEL: @_Z25test_raw_buffer_store_b32ju22__amdgpu_buffer_rsrc_t
+// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.store" {{.*}} : (!u32i, !cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !void
+// LLVM: define{{.*}} void @_Z25test_raw_buffer_store_b32ju22__amdgpu_buffer_rsrc_t
+// LLVM: call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %{{.+}}, ptr addrspace(8) %{{.+}}, i32 0, i32 0, i32 0)
+__device__ void test_raw_buffer_store_b32(u32 val, __amdgpu_buffer_rsrc_t rsrc) {
+  __builtin_amdgcn_raw_buffer_store_b32(val, rsrc, 0, 0, 0);
+}
+
+// CIR-LABEL: @_Z25test_raw_buffer_store_b64Dv2_ju22__amdgpu_buffer_rsrc_t
+// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.store" {{.*}} : (!cir.vector<2 x !u32i>, !cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !void
+// LLVM: define{{.*}} void @_Z25test_raw_buffer_store_b64Dv2_ju22__amdgpu_buffer_rsrc_t
+// LLVM: call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> %{{.+}}, ptr addrspace(8) %{{.+}}, i32 0, i32 0, i32 0)
+__device__ void test_raw_buffer_store_b64(v2u32 val, __amdgpu_buffer_rsrc_t rsrc) {
+  __builtin_amdgcn_raw_buffer_store_b64(val, rsrc, 0, 0, 0);
+}
+
+// CIR-LABEL: @_Z26test_raw_buffer_store_b128Dv4_ju22__amdgpu_buffer_rsrc_t
+// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.store" {{.*}} : (!cir.vector<4 x !u32i>, !cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !void
+// LLVM: define{{.*}} void @_Z26test_raw_buffer_store_b128Dv4_ju22__amdgpu_buffer_rsrc_t
+// LLVM: call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> %{{.+}}, ptr addrspace(8) %{{.+}}, i32 0, i32 0, i32 0)
+__device__ void test_raw_buffer_store_b128(v4u32 val, __amdgpu_buffer_rsrc_t rsrc) {
+  __builtin_amdgcn_raw_buffer_store_b128(val, rsrc, 0, 0, 0);
+}
+
+// CIR-LABEL: @_Z23test_raw_buffer_load_b8u22__amdgpu_buffer_rsrc_t
+// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.load" {{.*}} : (!cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !u8i
+// LLVM: define{{.*}} @_Z23test_raw_buffer_load_b8u22__amdgpu_buffer_rsrc_t
+// LLVM: call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) %{{.+}}, i32 0, i32 0, i32 0)
+__device__ u8 test_raw_buffer_load_b8(__amdgpu_buffer_rsrc_t rsrc) {
+  return __builtin_amdgcn_raw_buffer_load_b8(rsrc, 0, 0, 0);
+}
+
+// CIR-LABEL: @_Z24test_raw_buffer_load_b16u22__amdgpu_buffer_rsrc_t
+// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.load" {{.*}} : (!cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !u16i
+// LLVM: define{{.*}} @_Z24test_raw_buffer_load_b16u22__amdgpu_buffer_rsrc_t
+// LLVM: call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) %{{.+}}, i32 0, i32 0, i32 0)
+__device__ u16 test_raw_buffer_load_b16(__amdgpu_buffer_rsrc_t rsrc) {
+  return __builtin_amdgcn_raw_buffer_load_b16(rsrc, 0, 0, 0);
+}
+
+// CIR-LABEL: @_Z24test_raw_buffer_load_b32u22__amdgpu_buffer_rsrc_t
+// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.load" {{.*}} : (!cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !u32i
+// LLVM: define{{.*}} @_Z24test_raw_buffer_load_b32u22__amdgpu_buffer_rsrc_t
+// LLVM: call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %{{.+}}, i32 0, i32 0, i32 0)
+__device__ u32 test_raw_buffer_load_b32(__amdgpu_buffer_rsrc_t rsrc) {
+  return __builtin_amdgcn_raw_buffer_load_b32(rsrc, 0, 0, 0);
+}
+
+// CIR-LABEL: @_Z24test_raw_buffer_load_b64u22__amdgpu_buffer_rsrc_t
+// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.load" {{.*}} : (!cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !cir.vector<2 x !u32i>
+// LLVM: define{{.*}} @_Z24test_raw_buffer_load_b64u22__amdgpu_buffer_rsrc_t
+// LLVM: call <2 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v2i32(ptr addrspace(8) %{{.+}}, i32 0, i32 0, i32 0)
+__device__ v2u32 test_raw_buffer_load_b64(__amdgpu_buffer_rsrc_t rsrc) {
+  return __builtin_amdgcn_raw_buffer_load_b64(rsrc, 0, 0, 0);
+}
+
+// CIR-LABEL: @_Z25test_raw_buffer_load_b128u22__amdgpu_buffer_rsrc_t
+// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.load" {{.*}} : (!cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !cir.vector<4 x !u32i>
+// LLVM: define{{.*}} @_Z25test_raw_buffer_load_b128u22__amdgpu_buffer_rsrc_t
+// LLVM: call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) %{{.+}}, i32 0, i32 0, i32 0)
+__device__ v4u32 test_raw_buffer_load_b128(__amdgpu_buffer_rsrc_t rsrc) {
+  return __builtin_amdgcn_raw_buffer_load_b128(rsrc, 0, 0, 0);
+}
