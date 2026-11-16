@@ -78,6 +78,14 @@ bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->usesScalars(Def); });
 }
 
+bool vputils::onlyScalarValuesOrLanesUsed(const VPValue *Def) {
+  return all_of(Def->users(), [Def](VPUser *U) {
+    uint64_t Lane;
+    return U->usesScalars(Def) ||
+           match(U, m_ExtractElement(m_Specific(Def), m_ConstantInt(Lane)));
+  });
+}
+
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
                                                 bool ExpandInIR) {
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
