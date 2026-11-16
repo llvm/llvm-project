@@ -330,7 +330,13 @@ SBValue SBThread::GetStopReturnOrErrorValue(bool &is_swift_error_value) {
   if (exe_ctx->HasThreadScope()) {
     StopInfoSP stop_info_sp = exe_ctx->GetThreadPtr()->GetStopInfo();
     if (stop_info_sp) {
-      return_valobj_sp = StopInfo::GetReturnValueObject(stop_info_sp, is_swift_error_value);
+      ThreadPlanReturnValue return_value =
+          StopInfo::GetReturnValue(stop_info_sp);
+      if (auto *returned = std::get_if<ReturnedValue>(&return_value))
+        return_valobj_sp = returned->valobj_sp;
+      else if (auto *thrown = std::get_if<ThrownError>(&return_value))
+        return_valobj_sp = thrown->valobj_sp;
+      is_swift_error_value = std::holds_alternative<ThrownError>(return_value);
     }
   }
 
