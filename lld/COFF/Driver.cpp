@@ -412,7 +412,7 @@ void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
       createFutureForFile(std::string(path), ctx.config.prefetchInputs));
   std::string pathStr = std::string(path);
   enqueueTask([=]() {
-    llvm::TimeTraceScope timeScope("File: ", path);
+    llvm::TimeTraceScope timeScope("File: ", pathStr);
     auto [mb, ec] = future->get();
     if (ec) {
       // Retry reading pathStr directly before consulting findFileIfNew: if the

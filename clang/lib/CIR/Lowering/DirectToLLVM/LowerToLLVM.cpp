@@ -12,6 +12,7 @@
 
 #include "LowerToLLVM.h"
 #include "LowerToLLVMMetadata.h"
+#include "LowerToLLVMOffloadPrintf.h"
 #include "LowerToLLVMOpenCLMetadata.h"
 
 #include <array>
@@ -699,11 +700,33 @@ static mlir::Value createConstrainedFPIntrinsicCall(
 }
 
 template <typename LLVMOp>
+mlir::LogicalResult lowerFPOp(mlir::Operation *op, mlir::ValueRange operands,
+                              cir::FastMathFlagsAttr fastmath,
+                              const mlir::TypeConverter &typeConverter,
+                              mlir::ConversionPatternRewriter &rewriter) {
+  mlir::Type llvmResTy = typeConverter.convertType(op->getResultTypes()[0]);
+  if (!llvmResTy)
+    return op->emitError("expected LLVM result type for floating-point op");
+
+  auto newOp = rewriter.replaceOpWithNewOp<LLVMOp>(
+      op, mlir::TypeRange{llvmResTy}, operands,
+      cir::getDefaultProperties<LLVMOp>(op->getContext()));
+  if (fastmath)
+    mlir::cast<mlir::LLVM::FastmathFlagsInterface>(newOp.getOperation())
+        .setFastmathAttr(mlir::LLVM::FastmathFlagsAttr::get(
+            rewriter.getContext(), convertFastMathFlags(fastmath.getValue())));
+  return mlir::success();
+}
+
+template <typename LLVMOp>
 mlir::LogicalResult lowerConstrainableFPOp(
     mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
     cir::FastMathFlagsAttr fastmath, const mlir::TypeConverter &typeConverter,
     mlir::ConversionPatternRewriter &rewriter,
     llvm::StringRef constrainedMnemonic, bool hasRoundingMode) {
+  if (!fenv)
+    return lowerFPOp<LLVMOp>(op, operands, fastmath, typeConverter, rewriter);
+
   mlir::Type llvmResTy = typeConverter.convertType(op->getResultTypes()[0]);
   if (!llvmResTy)
     return op->emitError("expected LLVM result type for floating-point op");
@@ -711,17 +734,6 @@ mlir::LogicalResult lowerConstrainableFPOp(
   mlir::LLVM::FastmathFlags fastmathFlags = {};
   if (fastmath)
     fastmathFlags = convertFastMathFlags(fastmath.getValue());
-
-  if (!fenv) {
-    auto newOp = rewriter.replaceOpWithNewOp<LLVMOp>(
-        op, mlir::TypeRange{llvmResTy}, operands,
-        cir::getDefaultProperties<LLVMOp>(op->getContext()));
-    if (fastmathFlags != mlir::LLVM::FastmathFlags::none)
-      mlir::cast<mlir::LLVM::FastmathFlagsInterface>(newOp.getOperation())
-          .setFastmathAttr(mlir::LLVM::FastmathFlagsAttr::get(
-              rewriter.getContext(), fastmathFlags));
-    return mlir::success();
-  }
 
   return lowerToConstrainedFPIntrinsic(op, operands, fenv, llvmResTy, rewriter,
                                        constrainedMnemonic, hasRoundingMode,
@@ -2950,7 +2962,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     std::optional<mlir::Attribute> denseAttr;
     if (constArr &&
         (denseAttr = lowerConstArrayAttr(constArr, symbolTables, typeConverter,
-                                         preConversionTypes))) {
+                                         preConversionTypes, moduleOp))) {
       attr = denseAttr.value();
     } else {
       const mlir::Value initVal =
@@ -5236,6 +5248,9 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   // Collect annotation info from cir.func / cir.global before conversion;
   // the annotations attribute is filtered out during FuncOp/GlobalOp lowering.
   collectGlobalAnnotations(module);
+
+  // Resolve constant printf strings while their producers are still CIR.
+  annotateAMDGPUPrintfStrings(module, symbolTables);
 
   mlir::ConversionTarget target(getContext());
   target.addLegalOp<mlir::ModuleOp>();

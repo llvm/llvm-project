@@ -16171,27 +16171,20 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(
         FlagMask = ScalarEvolution::setFlags(FlagMask, SCEV::FlagNSW);
     }
 
+    const SCEV *visit(const SCEV *Expr) {
+      if (isa<SCEVUnknown, SCEVPtrToAddrExpr, SCEVZeroExtendExpr,
+              SCEVSignExtendExpr, SCEVUMinExpr, SCEVSMinExpr, SCEVAddExpr>(
+              Expr))
+        if (const SCEV *S = lookup(Expr))
+          return S;
+      return SCEVRewriteVisitor::visit(Expr);
+    }
+
     const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) { return Expr; }
 
-    const SCEV *visitUnknown(const SCEVUnknown *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-      return Expr;
-    }
-
-    const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitPtrToAddrExpr(
-          Expr);
-    }
-
     const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-
-      // If we didn't find the extact ZExt expr in the map, check if there's
-      // an entry for a smaller ZExt we can use instead.
+      // If there is no replacement for the exact ZExt expr, check if there's
+      // one for a smaller ZExt we can use instead.
       Type *Ty = Expr->getType();
       const SCEV *Op = Expr->getOperand(0);
       unsigned Bitwidth = Ty->getScalarSizeInBits() / 2;
@@ -16204,33 +16197,10 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(
         Bitwidth = Bitwidth / 2;
       }
 
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitZeroExtendExpr(
-          Expr);
-    }
-
-    const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSignExtendExpr(
-          Expr);
-    }
-
-    const SCEV *visitUMinExpr(const SCEVUMinExpr *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitUMinExpr(Expr);
-    }
-
-    const SCEV *visitSMinExpr(const SCEVSMinExpr *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSMinExpr(Expr);
+      return SCEVRewriteVisitor::visitZeroExtendExpr(Expr);
     }
 
     const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-
       // Helper to check if S is a subtraction (A - B) where A != B, and if so,
       // return UMax(S, 1).
       auto RewriteSubtraction = [&](const SCEV *S) -> const SCEV * {
@@ -16288,8 +16258,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(
       SmallVector<SCEVUse, 2> Operands;
       bool Changed = false;
       for (SCEVUse Op : Expr->operands()) {
-        Operands.push_back(
-            SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visit(Op));
+        Operands.push_back(visit(Op));
         Changed |= Op != Operands.back();
       }
       // We are only replacing operands with equivalent values, so transfer the
@@ -16304,8 +16273,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(
       SmallVector<SCEVUse, 2> Operands;
       bool Changed = false;
       for (SCEVUse Op : Expr->operands()) {
-        Operands.push_back(
-            SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visit(Op));
+        Operands.push_back(visit(Op));
         Changed |= Op != Operands.back();
       }
       // We are only replacing operands with equivalent values, so transfer the

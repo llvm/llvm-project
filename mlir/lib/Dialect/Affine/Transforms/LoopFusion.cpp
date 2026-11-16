@@ -1220,11 +1220,11 @@ public:
 
       // Check if fusion would be profitable and at what depth.
 
-      // Get unique 'sibNode' load op to 'memref'.
+      // Get a 'sibNode' load op to 'memref'. Its footprint is used to evaluate
+      // reuse for fusion profitability.
       SmallVector<Operation *, 2> sibLoadOpInsts;
       sibNode->getLoadOpsForMemref(memref, &sibLoadOpInsts);
-      // Currently findSiblingNodeToFuse searches for siblings with one load.
-      Operation *sibLoadOpInst = llvm::getSingleElement(sibLoadOpInsts);
+      Operation *sibLoadOpInst = sibLoadOpInsts.front();
 
       // Gather 'dstNode' load ops to 'memref'.
       SmallVector<Operation *, 2> dstLoadOpInsts;
@@ -1365,9 +1365,8 @@ public:
     // Returns true if 'sibNode' can be fused with 'dstNode' for input reuse
     // on 'memref'.
     auto canFuseWithSibNode = [&](Node *sibNode, Value memref) {
-      // Skip if 'outEdge' is not a read-after-write dependence.
-      // TODO: Remove restrict to single load op restriction.
-      if (sibNode->getLoadOpCount(memref) != 1)
+      // Skip if 'sibNode' doesn't load from 'memref'.
+      if (sibNode->getLoadOpCount(memref) == 0)
         return false;
       // Skip if there exists a path of dependent edges between
       // 'sibNode' and 'dstNode'.

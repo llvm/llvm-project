@@ -379,6 +379,9 @@ Makes programs 10x faster by doing Special New Thing.
 * Using the hard-float procedure call standard without floating-point registers
   is now an error. Previously this would fall back to the soft-float PCS while
   still emitting the hard-float ABI attribute tag.
+* The `hlt` instruction is now supported on A/R-profile architectures earlier
+  than Armv8, where it is undefined. This is required by the Arm semihosting
+  specification v2.0 and supported in GNU binutils since v2.33.
 
 ### Changes to the AVR Backend
 
@@ -430,7 +433,7 @@ Makes programs 10x faster by doing Special New Thing.
   throughput.
 * Removed X5 from the preserve_most register list.
 * Added `-mcpu=chipsalliance-veer-eh1` for the CHIPS Alliance VeeR EH1
-  processor.
+  processor, with a scheduling model.
 * The behavior of i128 arguments with the LP64E ABI now matches gcc.
 
 ### Changes to the WebAssembly Backend
