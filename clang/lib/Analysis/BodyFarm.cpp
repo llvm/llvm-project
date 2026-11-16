@@ -13,7 +13,6 @@
 
 #include "clang/Analysis/BodyFarm.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -236,11 +235,6 @@ MemberExpr *ASTMaker::makeMemberExpression(Expr *base, ValueDecl *MemberDecl,
 }
 
 ValueDecl *ASTMaker::findMemberField(const RecordDecl *RD, StringRef Name) {
-
-  CXXBasePaths Paths(
-      /* FindAmbiguities=*/false,
-      /* RecordPaths=*/false,
-      /* DetectVirtual=*/ false);
   const IdentifierInfo &II = C.Idents.get(Name);
   DeclarationName DeclName = C.DeclarationNames.getIdentifier(&II);
 

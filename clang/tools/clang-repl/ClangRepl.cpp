@@ -16,17 +16,16 @@
 #include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/CodeCompletion.h"
-#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
@@ -39,8 +38,6 @@
 
 #include <string>
 #include <vector>
-
-#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 
 // Disable LSan for this test.
 // FIXME: Re-enable once we can assume GCC 13.2 or higher.
@@ -110,7 +107,10 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
       (OOPExecutor.getNumOccurrences() ||
        OOPExecutorConnect.getNumOccurrences()))
     return llvm::make_error<llvm::StringError>(
-        "Out-of-process execution is only supported on Unix platforms",
+        SystemTriple.isOSEmscripten()
+            ? "Out-of-process execution is not supported by the WebAssembly "
+              "executor"
+            : "Out-of-process execution is only supported on Unix platforms",
         llvm::inconvertibleErrorCode());
 
   // If -slab-allocate is passed, check that we're not trying to use it in
@@ -261,13 +261,8 @@ int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   ExitOnErr.setBanner("clang-repl: ");
-  llvm::cl::ParseCommandLineOptions(argc, argv);
-
   llvm::llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
-  std::vector<const char *> ClangArgv(ClangArgs.size());
-  std::transform(ClangArgs.begin(), ClangArgs.end(), ClangArgv.begin(),
-                 [](const std::string &s) -> const char * { return s.data(); });
   // Initialize all targets (required for device offloading)
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargets();
@@ -275,18 +270,24 @@ int main(int argc, const char **argv) {
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllAsmParsers();
 
+  // Parse after the target initialization, which registers target library
+  // options. Pass library options to the compiler as -mllvm.
+  llvm::cl::LibraryOptionsContext LibOpts;
+  llvm::cl::parseCommandLineOptions(LibOpts, llvm::ArrayRef(argv, argc));
+  std::vector<const char *> ClangArgv;
+  for (const std::string &Arg : ClangArgs)
+    ClangArgv.push_back(Arg.c_str());
+  for (const char *Arg : LibOpts.args()) {
+    ClangArgv.push_back("-mllvm");
+    ClangArgv.push_back(Arg);
+  }
+
+  auto IEB = clang::IncrementalExecutorBuilder::createDefault();
   if (OptHostSupportsJit) {
-    auto J = llvm::orc::LLJITBuilder().create();
-    if (J)
-      llvm::outs() << "true\n";
-    else {
-      llvm::consumeError(J.takeError());
-      llvm::outs() << "false\n";
-    }
+    llvm::outs() << (IEB->supportsJIT() ? "true\n" : "false\n");
     return 0;
   } else if (OptHostJitTriple) {
-    auto J = ExitOnErr(llvm::orc::LLJITBuilder().create());
-    auto T = J->getTargetTriple();
+    auto T = ExitOnErr(IEB->getHostJITTriple());
     llvm::outs() << T.normalize() << '\n';
     return 0;
   }
@@ -296,21 +297,20 @@ int main(int argc, const char **argv) {
   clang::IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs(ClangArgv);
 
-  auto IEB = std::make_unique<clang::IncrementalExecutorBuilder>();
-  IEB->IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
-  IEB->OOPExecutor = OOPExecutor;
-  if (!OrcRuntimePath.empty())
-    IEB->OrcRuntimePath = OrcRuntimePath;
-  else
-    CB.SetDriverCompilationCallback(IEB->UpdateOrcRuntimePathCB);
-
   auto SizeOrErr = getSlabAllocSize(SlabAllocateSizeString);
   if (!SizeOrErr) {
     llvm::logAllUnhandledErrors(SizeOrErr.takeError(), llvm::errs(), "error: ");
     return EXIT_FAILURE;
   }
-  IEB->SlabAllocateSize = *SizeOrErr;
-  IEB->UseSharedMemory = UseSharedMemory;
+
+  clang::IncrementalExecutorBuilder::Options ExecutorOpts;
+  ExecutorOpts.IsOutOfProcess =
+      !OOPExecutor.empty() || !OOPExecutorConnect.empty();
+  ExecutorOpts.ExecutorPath = OOPExecutor;
+  ExecutorOpts.RuntimePath = OrcRuntimePath;
+  ExecutorOpts.SlabAllocateSize = *SizeOrErr;
+  ExecutorOpts.UseSharedMemory = UseSharedMemory;
+  ExitOnErr(IEB->configure(CB, ExecutorOpts));
 
   // If both -cuda and -hip are passed, the one that appears later wins.
   // FIXME: Support both CUDA and HIP setups at the same time, for example with

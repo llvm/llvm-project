@@ -134,8 +134,11 @@ module acc_declare
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}) {
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMacc_declareFacc_declare_deviceptrEa") {acc.declare = #acc.declare<dataClause =  acc_deviceptr>} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %[[DEVICEPTR:.*]] = acc.deviceptr varPtr(%[[DECL]]#0 : !fir.ref<!fir.array<100xi32>>) name("a") -> !fir.ref<!fir.array<100xi32>>
-! CHECK: acc.declare_enter dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK: %[[TOKEN:.*]] = acc.declare_enter dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+! CHECK: acc.declare_exit token(%[[TOKEN]]) dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK-NOT: acc.delete
+! CHECK: return
 
   subroutine acc_declare_link(a)
     integer :: a(100), i
@@ -207,7 +210,8 @@ module acc_declare
 ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.array<100xf32> <{bindc_name = "dataparam", uniq_name = "_QMacc_declareFacc_declare_deviceptr2Edataparam"}>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ALLOCA]](%{{.*}}) uniq_name("_QMacc_declareFacc_declare_deviceptr2Edataparam") {acc.declare = #acc.declare<dataClause =  acc_deviceptr>} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
 ! CHECK: %[[DEVICEPTR:.*]] = acc.deviceptr varPtr(%[[DECL]]#0 : !fir.ref<!fir.array<100xf32>>) name("dataparam") -> !fir.ref<!fir.array<100xf32>>
-! CHECK: acc.declare_enter dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xf32>>)
+! CHECK: %[[TOKEN:.*]] = acc.declare_enter dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xf32>>)
+! CHECK: acc.declare_exit token(%[[TOKEN]]) dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xf32>>)
 
   function acc_declare_in_func()
     real :: a(1024)

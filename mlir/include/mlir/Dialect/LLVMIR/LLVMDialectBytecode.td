@@ -67,7 +67,7 @@ class EnumClassFlag<string flag, string getter> :
 
 def DIBasicTypeAttr : DialectAttribute<(attr
   VarInt:$tag,
-  String:$name,
+  OptionalAttribute<"StringAttr">:$name,
   VarInt:$sizeInBits,
   VarInt:$encoding
 )>;
@@ -330,6 +330,7 @@ def LoopAnnotationAttr : DialectAttribute<(attr
   OptionalAttribute<"LoopUnswitchAttr">:$unswitch,
   OptionalAttribute<"BoolAttr">:$mustProgress,
   OptionalAttribute<"BoolAttr">:$isVectorized,
+  VarInt:$align,
   OptionalAttribute<"FusedLoc">:$startLoc,
   OptionalAttribute<"FusedLoc">:$endLoc,
   OptionalArrayRef<"AccessGroupAttr">:$parallelAccesses

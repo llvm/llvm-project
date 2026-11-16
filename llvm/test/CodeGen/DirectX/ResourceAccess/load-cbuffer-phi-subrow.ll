@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-resource-type -dxil-resource-access -mtriple=dxil-pc-shadermodel6.3-library %s -o /dev/null
+; RUN: opt -S -dxil-resource-type -dxil-resource-access -mtriple=dxil-pc-shadermodel6.3-library %s -disable-output
 ;
 ; Reproducer: both incoming pointers address row 0, but select different i32
 ; components. The merged byte offset is 0 or 4. Resource access lowering

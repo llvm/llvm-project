@@ -250,7 +250,7 @@ public:
   /// values
   ///                       correspond to the desired instruction.
   /// @param uid          - The unique ID of the instruction.
-  /// @param is32bit      - Instructon is only 32-bit
+  /// @param is32bit      - Instruction is only 32-bit
   /// @param noPrefix     - Instruction record has no prefix.
   /// @param ignoresVEX_L - Instruction ignores VEX.L
   /// @param ignoresVEX_W - Instruction ignores VEX.W

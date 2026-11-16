@@ -50,6 +50,7 @@ private:
   FailureOr<BoolAttr> lookupBoolNode(StringRef name, bool negated = false);
   FailureOr<BoolAttr> lookupIntNodeAsBoolAttr(StringRef name);
   FailureOr<IntegerAttr> lookupIntNode(StringRef name);
+  FailureOr<uint32_t> lookupUInt32Node(StringRef name);
   FailureOr<SmallVector<llvm::MDNode *>> lookupMDNodes(StringRef name);
   FailureOr<LoopAnnotationAttr> lookupFollowupNode(StringRef name);
   FailureOr<BoolAttr> lookupBooleanUnitNode(StringRef enableName,
@@ -194,6 +195,14 @@ LoopMetadataConversion::lookupIntNodeAsBoolAttr(StringRef name) {
   return BoolAttr::get(ctx, val->getValue().getLimitedValue(1));
 }
 
+/// Like lookupIntNode, but yields the value itself, with 0 for a missing node.
+FailureOr<uint32_t> LoopMetadataConversion::lookupUInt32Node(StringRef name) {
+  FailureOr<IntegerAttr> attr = lookupIntNode(name);
+  if (failed(attr))
+    return failure();
+  return *attr ? uint32_t(attr->getValue().getZExtValue()) : uint32_t(0);
+}
+
 FailureOr<IntegerAttr> LoopMetadataConversion::lookupIntNode(StringRef name) {
   const llvm::MDNode *property = lookupAndEraseProperty(name);
   if (!property)
@@ -254,6 +263,8 @@ LoopMetadataConversion::lookupFollowupNode(StringRef name) {
 }
 
 static bool isEmptyOrNull(const Attribute attr) { return !attr; }
+
+static bool isEmptyOrNull(uint32_t value) { return !value; }
 
 template <typename T>
 static bool isEmptyOrNull(const SmallVectorImpl<T> &vec) {
@@ -454,7 +465,7 @@ LoopMetadataConversion::convertFollowup(const llvm::MDNode *followup) {
   // An explicit empty follow-up is different from an absent follow-up.
   if (followup->getNumOperands() == 1)
     return LoopAnnotationAttr::get(ctx, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
-                                   {}, {}, {}, {}, {}, {});
+                                   {}, {}, {}, {}, {}, {}, {});
 
   return LoopMetadataConversion(followup, loc, /*id=*/{},
                                 loopAnnotationImporter, activeNodes)
@@ -485,6 +496,7 @@ LoopAnnotationAttr LoopMetadataConversion::convertProperties() {
   FailureOr<BoolAttr> mustProgress = lookupUnitNode("llvm.loop.mustprogress");
   FailureOr<BoolAttr> isVectorized =
       lookupIntNodeAsBoolAttr("llvm.loop.isvectorized");
+  FailureOr<uint32_t> align = lookupUInt32Node("llvm.loop.align");
   FailureOr<SmallVector<AccessGroupAttr>> parallelAccesses =
       convertParallelAccesses();
 
@@ -502,13 +514,14 @@ LoopAnnotationAttr LoopMetadataConversion::convertProperties() {
   if (anyFailedOrAllEmpty(disableNonForced, vecAttr, interleaveAttr, unrollAttr,
                           unrollAndJamAttr, licmAttr, distributeAttr,
                           pipelineAttr, peeledAttr, unswitchAttr, mustProgress,
-                          isVectorized, startLoc, endLoc, parallelAccesses))
+                          isVectorized, align, startLoc, endLoc,
+                          parallelAccesses))
     return {};
 
   return LoopAnnotationAttr::get(
       ctx, id, *disableNonForced, *vecAttr, *interleaveAttr, *unrollAttr,
       *unrollAndJamAttr, *licmAttr, *distributeAttr, *pipelineAttr, *peeledAttr,
-      *unswitchAttr, *mustProgress, *isVectorized, *startLoc, *endLoc,
+      *unswitchAttr, *mustProgress, *isVectorized, *align, *startLoc, *endLoc,
       *parallelAccesses);
 }
 

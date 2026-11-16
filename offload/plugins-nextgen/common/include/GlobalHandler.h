@@ -157,18 +157,16 @@ public:
   bool isSymbolInImage(GenericDeviceTy &Device, DeviceImageTy &Image,
                        StringRef SymName);
 
-  /// Get the address and size of a global in the image. Address is
+  /// Get the address and size of a global in the image. If the global exists
+  /// but has no contents in the image (e.g. `.bss`), succeeds with a null
+  /// address and size 0; fails only if it is not in the image or the image
+  /// cannot be read. Address is
   /// returned in \p ImageGlobal and the global name is passed in \p
   /// ImageGlobal. If no size is present in \p ImageGlobal, then the size of the
   /// global will be stored there. If it is present, it will be validated
   /// against the real size of the global.
   Error getGlobalMetadataFromImage(GenericDeviceTy &Device,
                                    DeviceImageTy &Image, GlobalTy &ImageGlobal);
-
-  /// Read the memory associated with a global from the image and store it on
-  /// the host. The name, size, and destination are defined by \p HostGlobal.
-  Error readGlobalFromImage(GenericDeviceTy &Device, DeviceImageTy &Image,
-                            const GlobalTy &HostGlobal);
 
   /// Get the address and size of a global from the device. Address is
   /// returned in \p ImageGlobal and the global name is passed in \p

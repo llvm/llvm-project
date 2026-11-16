@@ -1,9 +1,9 @@
-add_libc_testsuite(libc_include_tests)
+add_libc_testsuite(libc-include-tests)
 
 add_libc_test(
   alloca_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     alloca_test.cpp
   DEPENDS
@@ -13,7 +13,7 @@ add_libc_test(
 add_libc_test(
   assert_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     assert_test.cpp
   DEPENDS
@@ -23,7 +23,7 @@ add_libc_test(
 add_libc_test(
   complex_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     complex_test.cpp
   DEPENDS
@@ -33,7 +33,7 @@ add_libc_test(
 add_libc_test(
   unistd_macros_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     unistd_macros_test.cpp
   DEPENDS
@@ -42,22 +42,34 @@ add_libc_test(
 add_libc_test(
   sys_queue_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     sys/queue_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.sys_queue_macros
     libc.src.__support.char_vector
     libc.src.__support.CPP.string
-  COMPILE_OPTIONS
-    # This is needed because the __containerof macro uses statement expression.
-    -Wno-gnu-statement-expression-from-macro-expansion
 )
+
+if(LIBC_TARGET_OS_IS_LINUX)
+  add_libc_test(
+    sys_time_macros_test
+    SUITE
+      libc-include-tests
+    SRCS
+      sys_time_macros_test.cpp
+    DEPENDS
+      libc.include.llvm-libc-macros.sys_time_macros
+      libc.include.llvm-libc-types.struct_timeval
+      libc.include.llvm-libc-types.suseconds_t
+      libc.include.llvm-libc-types.time_t
+  )
+endif()
 
 add_libc_test(
   stdbit_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   HDRS
     stdbit_stub.h
   SRCS
@@ -75,7 +87,7 @@ add_libc_test(
   stdbit_c_test
   C_TEST
   SUITE
-    libc_include_tests
+    libc-include-tests
   HDRS
     stdbit_stub.h
   SRCS
@@ -97,7 +109,7 @@ add_libc_test(
 add_libc_test(
   stdckdint_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     stdckdint_test.cpp
   DEPENDS
@@ -107,7 +119,7 @@ add_libc_test(
 add_libc_test(
   sched_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     sched_test.cpp
   DEPENDS
@@ -118,7 +130,7 @@ add_libc_test(
 add_libc_test(
   issubnormal_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     issubnormal_test.cpp
   DEPENDS
@@ -128,7 +140,7 @@ add_libc_test(
 add_libc_test(
   issubnormalf_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     issubnormalf_test.cpp
   DEPENDS
@@ -138,7 +150,7 @@ add_libc_test(
 add_libc_test(
   issubnormall_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     issubnormall_test.cpp
   DEPENDS
@@ -148,7 +160,7 @@ add_libc_test(
 add_libc_test(
   isnormal_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isnormal_test.cpp
   DEPENDS
@@ -158,7 +170,7 @@ add_libc_test(
 add_libc_test(
   isnormalf_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isnormalf_test.cpp
   DEPENDS
@@ -168,7 +180,7 @@ add_libc_test(
 add_libc_test(
   isnormall_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isnormall_test.cpp
   DEPENDS
@@ -178,7 +190,7 @@ add_libc_test(
 add_libc_test(
   fpclassify_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     fpclassify_test.cpp
   DEPENDS
@@ -188,7 +200,7 @@ add_libc_test(
 add_libc_test(
   fpclassifyf_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     fpclassifyf_test.cpp
   DEPENDS
@@ -198,7 +210,7 @@ add_libc_test(
 add_libc_test(
   fpclassifyl_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     fpclassifyl_test.cpp
   DEPENDS
@@ -208,7 +220,7 @@ add_libc_test(
 add_libc_test(
   iszero_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     iszero_test.cpp
   DEPENDS
@@ -218,7 +230,7 @@ add_libc_test(
 add_libc_test(
   iszerof_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     iszerof_test.cpp
   DEPENDS
@@ -228,7 +240,7 @@ add_libc_test(
 add_libc_test(
   iszerol_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     iszerol_test.cpp
   DEPENDS
@@ -238,7 +250,7 @@ add_libc_test(
 add_libc_test(
   netinet_in_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     netinet_in_test.cpp
   DEPENDS
@@ -250,7 +262,7 @@ add_subdirectory(net)
 add_libc_test(
   signbit_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     signbit_test.cpp
   DEPENDS
@@ -260,7 +272,7 @@ add_libc_test(
 add_libc_test(
   signbitf_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     signbitf_test.cpp
   DEPENDS
@@ -270,7 +282,7 @@ add_libc_test(
 add_libc_test(
   signbitl_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     signbitl_test.cpp
   DEPENDS
@@ -280,7 +292,7 @@ add_libc_test(
 add_libc_test(
   isnan_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isnan_test.cpp
   DEPENDS
@@ -290,7 +302,7 @@ add_libc_test(
 add_libc_test(
   isnanf_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isnanf_test.cpp
   DEPENDS
@@ -300,7 +312,7 @@ add_libc_test(
 add_libc_test(
   isnanl_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isnanl_test.cpp
   DEPENDS
@@ -310,7 +322,7 @@ add_libc_test(
 add_libc_test(
   isinf_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isinf_test.cpp
   DEPENDS
@@ -320,7 +332,7 @@ add_libc_test(
 add_libc_test(
   isinff_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isinff_test.cpp
   DEPENDS
@@ -330,7 +342,7 @@ add_libc_test(
 add_libc_test(
   isinfl_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isinfl_test.cpp
   DEPENDS
@@ -340,7 +352,7 @@ add_libc_test(
 add_libc_test(
   isfinite_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isfinite_test.cpp
   DEPENDS
@@ -350,7 +362,7 @@ add_libc_test(
 add_libc_test(
   isfinitef_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isfinitef_test.cpp
   DEPENDS
@@ -360,7 +372,7 @@ add_libc_test(
 add_libc_test(
   isfinitel_test
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isfinitel_test.cpp
   DEPENDS
@@ -371,7 +383,7 @@ add_libc_test(
   signbit_c_test
   C_TEST
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     signbit_test.c
   COMPILE_OPTIONS
@@ -385,7 +397,7 @@ add_libc_test(
   isnan_c_test
   C_TEST
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isnan_test.c
   COMPILE_OPTIONS
@@ -399,7 +411,7 @@ add_libc_test(
   isnormal_c_test
   C_TEST
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isnormal_test.c
   COMPILE_OPTIONS
@@ -414,7 +426,7 @@ add_libc_test(
 #   issignaling_c_test
 #   C_TEST
 #   SUITE
-#     libc_include_tests
+#     libc-include-tests
 #   SRCS
 #     issignaling_test.c
 #   COMPILE_OPTIONS
@@ -431,7 +443,7 @@ add_libc_test(
 #   iscanonical_c_test
 #   C_TEST
 #   SUITE
-#     libc_include_tests
+#     libc-include-tests
 #   SRCS
 #     iscanonical_test.c
 #   COMPILE_OPTIONS
@@ -450,7 +462,7 @@ add_libc_test(
   isinf_c_test
   C_TEST
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isinf_test.c
   COMPILE_OPTIONS
@@ -464,7 +476,7 @@ add_libc_test(
   isfinite_c_test
   C_TEST
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     isfinite_test.c
   COMPILE_OPTIONS
@@ -478,7 +490,7 @@ add_libc_test(
   issubnormal_c_test
   C_TEST
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     issubnormal_test.c
   COMPILE_OPTIONS
@@ -492,7 +504,7 @@ add_libc_test(
   fpclassify_c_test
   C_TEST
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     fpclassify_test.c
   COMPILE_OPTIONS
@@ -506,7 +518,7 @@ add_libc_test(
   iszero_c_test
   C_TEST
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     iszero_test.c
   COMPILE_OPTIONS
@@ -520,7 +532,7 @@ add_libc_test(
   math_constants_c_test
   C_TEST
   SUITE
-    libc_include_tests
+    libc-include-tests
   SRCS
     math_constants_test.c
   COMPILE_OPTIONS
@@ -543,7 +555,7 @@ function(add_header_test target_name source_file deps std_mode)
       C_TEST
       FULL_BUILD_ONLY
       SUITE
-        libc_include_tests
+        libc-include-tests
       SRCS
         ${source_file}
       COMPILE_OPTIONS

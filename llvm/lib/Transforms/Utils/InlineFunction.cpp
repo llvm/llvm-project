@@ -162,8 +162,7 @@ namespace {
     /// a simple branch. When there is more than one predecessor, we need to
     /// split the landing pad block after the landingpad instruction and jump
     /// to there.
-    void forwardResume(ResumeInst *RI,
-                       SmallPtrSetImpl<LandingPadInst*> &InlinedLPads);
+    void forwardResume(ResumeInst *RI);
 
     /// Add incoming-PHI values to the unwind destination block for the given
     /// basic block, using the values for the original invoke's source block.
@@ -234,8 +233,7 @@ BasicBlock *LandingPadInliningInfo::getInnerResumeDest() {
 /// When the landing pad block has only one predecessor, this is a simple
 /// branch. When there is more than one predecessor, we need to split the
 /// landing pad block after the landingpad instruction and jump to there.
-void LandingPadInliningInfo::forwardResume(
-    ResumeInst *RI, SmallPtrSetImpl<LandingPadInst *> &InlinedLPads) {
+void LandingPadInliningInfo::forwardResume(ResumeInst *RI) {
   BasicBlock *Dest = getInnerResumeDest();
   BasicBlock *Src = RI->getParent();
 
@@ -631,8 +629,9 @@ static void HandleInlinedLandingPad(InvokeInst *II, BasicBlock *FirstNewBlock,
   // rewrite.
   LandingPadInliningInfo Invoke(II);
 
-  // Get all of the inlined landing pad instructions.
-  SmallPtrSet<LandingPadInst*, 16> InlinedLPads;
+  // Get all of the inlined landing pad instructions. Keep them in block order
+  // so the clauses appended below get a deterministic use-list order.
+  SmallSetVector<LandingPadInst *, 16> InlinedLPads;
   for (Function::iterator I = FirstNewBlock->getIterator(), E = Caller->end();
        I != E; ++I)
     if (InvokeInst *II = dyn_cast<InvokeInst>(I->getTerminator()))
@@ -662,7 +661,7 @@ static void HandleInlinedLandingPad(InvokeInst *II, BasicBlock *FirstNewBlock,
 
     // Forward any resumes that are remaining here.
     if (ResumeInst *RI = dyn_cast<ResumeInst>(BB->getTerminator()))
-      Invoke.forwardResume(RI, InlinedLPads);
+      Invoke.forwardResume(RI);
   }
 
   // Now that everything is happy, we have one final detail.  The PHI nodes in
@@ -1834,7 +1833,7 @@ static void HandleByValArgumentInit(Type *ByValType, Value *Dst, Value *Src,
   IRBuilder<> Builder(InsertBlock->begin());
 
   Value *Size =
-      Builder.getInt64(M->getDataLayout().getTypeStoreSize(ByValType));
+      Builder.getInt64(M->getDataLayout().getTypeAllocSize(ByValType));
 
   Align DstAlign = Dst->getPointerAlignment(M->getDataLayout());
 
@@ -1901,33 +1900,6 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
   // Uses of the argument in the function should use our new alloca
   // instead.
   return NewAlloca;
-}
-
-// Check whether this Value is used by a lifetime intrinsic.
-static bool isUsedByLifetimeMarker(Value *V) {
-  for (User *U : V->users())
-    if (isa<LifetimeIntrinsic>(U))
-      return true;
-  return false;
-}
-
-// Check whether the given alloca already has
-// lifetime.start or lifetime.end intrinsics.
-static bool hasLifetimeMarkers(AllocaInst *AI) {
-  Type *Ty = AI->getType();
-  Type *Int8PtrTy =
-      PointerType::get(Ty->getContext(), Ty->getPointerAddressSpace());
-  if (Ty == Int8PtrTy)
-    return isUsedByLifetimeMarker(AI);
-
-  // Do a scan to find all the casts to i8*.
-  for (User *U : AI->users()) {
-    if (U->getType() != Int8PtrTy) continue;
-    if (U->stripPointerCasts() != AI) continue;
-    if (isUsedByLifetimeMarker(U))
-      return true;
-  }
-  return false;
 }
 
 /// Return the result of AI->isStaticAlloca() if AI were moved to the entry
@@ -2261,32 +2233,32 @@ void llvm::updateProfileCallee(
 }
 
 /// An operand bundle "clang.arc.attachedcall" on a call indicates the call
-/// result is implicitly consumed by a call to retainRV or claimRV immediately
-/// after the call. This function inlines the retainRV/claimRV calls.
+/// result is implicitly consumed by a call to retainRV/claimRV/unsafeClaimRV
+/// immediately after the call. This function inlines those consuming calls.
 ///
 /// There are three cases to consider:
 ///
 /// 1. If there is a call to autoreleaseRV that takes a pointer to the returned
 ///    object in the callee return block, the autoreleaseRV call and the
-///    retainRV/claimRV call in the caller cancel out. If the call in the caller
-///    is a claimRV call, a call to objc_release is emitted.
+///    retainRV/claimRV/unsafeClaimRV call in the caller cancel out. If the call
+///    in the caller is an unsafeClaimRV call, a call to objc_release is
+///    emitted.
 ///
 /// 2. If there is a call in the callee return block that doesn't have operand
 ///    bundle "clang.arc.attachedcall", the operand bundle on the original call
 ///    is transferred to the call in the callee.
 ///
 /// 3. Otherwise, a call to objc_retain is inserted if the call in the caller is
-///    a retainRV call.
+///    not an unsafeClaimRV call.
 static void
 inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
                            const SmallVectorImpl<ReturnInst *> &Returns) {
   assert(objcarc::isRetainOrClaimRV(RVCallKind) && "unexpected ARC function");
-  bool IsRetainRV = RVCallKind == objcarc::ARCInstKind::RetainRV,
-       IsUnsafeClaimRV = !IsRetainRV;
+  bool IsUnsafeClaimRV = RVCallKind == objcarc::ARCInstKind::UnsafeClaimRV;
 
   for (auto *RI : Returns) {
     Value *RetOpnd = objcarc::GetRCIdentityRoot(RI->getOperand(0));
-    bool InsertRetainCall = IsRetainRV;
+    bool InsertRetainCall = !IsUnsafeClaimRV;
     IRBuilder<> Builder(*RI->getModule());
 
     // Walk backwards through the basic block looking for either a matching
@@ -2305,10 +2277,10 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
           break;
 
         // If we've found a matching authoreleaseRV call:
-        // - If claimRV is attached to the call, insert a call to objc_release
-        //   and erase the autoreleaseRV call.
-        // - If retainRV is attached to the call, just erase the autoreleaseRV
-        //   call.
+        // - If unsafeClaimRV is attached to the call, insert a call to
+        //   objc_release and erase the autoreleaseRV call.
+        // - If retainRV/claimRV is attached to the call, just erase the
+        //   autoreleaseRV call.
         if (IsUnsafeClaimRV) {
           Builder.SetInsertPoint(II);
           Builder.CreateIntrinsic(Intrinsic::objc_release, RetOpnd);
@@ -3171,7 +3143,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
       // If the alloca is already scoped to something smaller than the whole
       // function then there's no need to add redundant, less accurate markers.
-      if (hasLifetimeMarkers(AI))
+      if (any_of(AI->users(), IsaPred<LifetimeIntrinsic>))
         continue;
 
       std::optional<TypeSize> Size = AI->getAllocationSize(AI->getDataLayout());

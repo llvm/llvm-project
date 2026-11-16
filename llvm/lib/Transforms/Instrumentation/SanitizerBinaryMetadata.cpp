@@ -484,8 +484,7 @@ SanitizerBinaryMetadataPass::run(Module &M, AnalysisManager<Module> &AM) {
       return PreservedAnalyses::all();
   }
 
-  const InstrumentationOptions &CLOpts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &CLOpts = getInstrumentationOptions(M);
   SanitizerBinaryMetadata Pass(CLOpts, M, Options, std::move(Ignorelist));
   if (Pass.run())
     return PreservedAnalyses::none();

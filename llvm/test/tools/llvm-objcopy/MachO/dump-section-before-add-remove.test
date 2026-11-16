@@ -14,6 +14,7 @@
 # NODUMP: error: '[[INPUT]]': section '__TEXT,__const' not found
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007

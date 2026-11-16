@@ -4547,6 +4547,7 @@ def SPIRV_OC_OpVectorShuffle                  : I32EnumAttrCase<"OpVectorShuffle
 def SPIRV_OC_OpCompositeConstruct             : I32EnumAttrCase<"OpCompositeConstruct", 80>;
 def SPIRV_OC_OpCompositeExtract               : I32EnumAttrCase<"OpCompositeExtract", 81>;
 def SPIRV_OC_OpCompositeInsert                : I32EnumAttrCase<"OpCompositeInsert", 82>;
+def SPIRV_OC_OpCopyObject                     : I32EnumAttrCase<"OpCopyObject", 83>;
 def SPIRV_OC_OpTranspose                      : I32EnumAttrCase<"OpTranspose", 84>;
 def SPIRV_OC_OpSampledImage                   : I32EnumAttrCase<"OpSampledImage", 86>;
 def SPIRV_OC_OpImageSampleImplicitLod         : I32EnumAttrCase<"OpImageSampleImplicitLod", 87>;
@@ -4797,7 +4798,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpMemberDecorate, SPIRV_OC_OpVectorExtractDynamic,
       SPIRV_OC_OpVectorInsertDynamic, SPIRV_OC_OpVectorShuffle,
       SPIRV_OC_OpCompositeConstruct, SPIRV_OC_OpCompositeExtract,
-      SPIRV_OC_OpCompositeInsert, SPIRV_OC_OpTranspose,
+      SPIRV_OC_OpCompositeInsert, SPIRV_OC_OpCopyObject, SPIRV_OC_OpTranspose,
       SPIRV_OC_OpSampledImage,
       SPIRV_OC_OpImageSampleImplicitLod, SPIRV_OC_OpImageSampleExplicitLod,
       SPIRV_OC_OpImageSampleProjDrefImplicitLod, SPIRV_OC_OpImageFetch,
