@@ -17041,6 +17041,13 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   if (SDValue Res = tryToFoldExtendSelectLoad(N, TLI, DAG, DL, Level))
     return Res;
 
+  // The sign extensions of the low bits of the lanes may fold only after the
+  // operand chain of the extension is formed.
+  if (VT.isVector())
+    for (SDNode *User : N->users())
+      if (User->getOpcode() == ISD::SIGN_EXTEND_INREG)
+        AddToWorklist(User);
+
   return SDValue();
 }
 
@@ -17538,6 +17545,27 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
          DAG.ComputeMaxSignificantBits(N00) <= ExtVTBits) &&
         (!LegalOperations || TLI.isOperationLegal(ISD::SIGN_EXTEND, VT)))
       return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N00);
+
+    // fold (sext_in_reg (sext (extract_subvector (aext x)))) ->
+    //      (sext (extract_subvector (sext x)))
+    // fold (sext_in_reg (aext (extract_subvector (aext x)))) ->
+    //      (sext (extract_subvector (sext x)))
+    // if x is small enough, since the extensions and the subvector extract
+    // keep the low bits of the lanes.
+    if (N00.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        N00.getOperand(0).getOpcode() == ISD::ANY_EXTEND) {
+      EVT InnerVT = N00.getOperand(0).getValueType();
+      SDValue X = N00.getOperand(0).getOperand(0);
+      if ((!LegalOperations ||
+           (TLI.isOperationLegal(ISD::SIGN_EXTEND, InnerVT) &&
+            TLI.isOperationLegal(ISD::SIGN_EXTEND, VT))) &&
+          DAG.ComputeMaxSignificantBits(X) <= ExtVTBits) {
+        SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, DL, InnerVT, X);
+        Ext = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, N00.getValueType(), Ext,
+                          N00.getOperand(1));
+        return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Ext);
+      }
+    }
   }
 
   // fold (sext_in_reg (*_extend_vector_inreg x)) -> (sext_vector_inreg x)
