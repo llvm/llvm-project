@@ -163,6 +163,8 @@ enum BuiltinCheckKind : unsigned char {
   BCK_CTZPassedZero,
   BCK_CLZPassedZero,
   BCK_AssumePassedFalse,
+  BCK_NonUniformLane,
+  BCK_InactiveLane,
 };
 
 struct InvalidBuiltinData {

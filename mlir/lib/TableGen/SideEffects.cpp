@@ -32,6 +32,10 @@ std::string SideEffect::getInterfaceTrait() const {
                               : (cppNamespace + "::" + trait).str();
 }
 
+std::vector<StringRef> SideEffect::getCppIncludes() const {
+  return def->getValueAsListOfStrings("cppIncludes");
+}
+
 StringRef SideEffect::getResource() const {
   return def->getValueAsString("resource");
 }

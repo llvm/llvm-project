@@ -299,12 +299,12 @@ public:
   }
 
   /// Replace uses of results of this operation with the provided `values` if
-  /// the given callback returns true.
+  /// the given callback returns true. Returns whether any uses were replaced.
   template <typename ValuesT>
-  void replaceUsesWithIf(ValuesT &&values,
+  bool replaceUsesWithIf(ValuesT &&values,
                          function_ref<bool(OpOperand &)> shouldReplace) {
-    getResults().replaceUsesWithIf(std::forward<ValuesT>(values),
-                                   shouldReplace);
+    return getResults().replaceUsesWithIf(std::forward<ValuesT>(values),
+                                          shouldReplace);
   }
 
   /// Destroys this operation and its subclass data.
@@ -345,7 +345,9 @@ public:
 
   void print(raw_ostream &os, const OpPrintingFlags &flags = {});
   void print(raw_ostream &os, AsmState &state);
-  void dump();
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump();
+#endif
 
   // Dump pretty printed IR. This method is helpful for better readability if
   // the Operation is not verified because it won't disable custom printers to

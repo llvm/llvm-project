@@ -490,6 +490,10 @@ namespace llvm {
     /// may have grown since it was inserted).
     LLVM_ABI iterator addSegment(Segment S);
 
+    /// Add \p NewSegs, sorted by start, in one pass. Gives the same result as
+    /// calling addSegment() for each.
+    LLVM_ABI void addSegments(ArrayRef<Segment> NewSegs);
+
     /// Merge the segment pointed to by @p I with its immediate neighbors when
     /// they use the same value number and touch it. @p I must be a valid
     /// iterator into this live range. Returns an iterator to the merged
@@ -1030,8 +1034,9 @@ namespace llvm {
   public:
     explicit ConnectedVNInfoEqClasses(LiveIntervals &lis) : LIS(lis) {}
 
-    /// Classify the values in \p LR into connected components.
-    /// Returns the number of connected components.
+    /// Classify the values in \p LR into connected components. A component
+    /// made only of phi-defs in unreachable blocks has no def of its own, so
+    /// it is joined with one that does. Returns the number of components.
     LLVM_ABI unsigned Classify(const LiveRange &LR);
 
     /// getEqClass - Classify creates equivalence classes numbered 0..N. Return

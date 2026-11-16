@@ -68,6 +68,16 @@ define i32 @ptrtoaddr_inttoptr_diff_size2() {
   ret i32 %toaddr
 }
 
+; ptrtoint keeps all pointer bits, not just the address bits.
+define i128 @ptrtoint_inttoptr_diff_size_addrsize() {
+; CHECK-LABEL: define i128 @ptrtoint_inttoptr_diff_size_addrsize() {
+; CHECK-NEXT:    ret i128 18446744073709551615
+;
+  %toptr = inttoptr i128 -1 to ptr addrspace(1)
+  %toint = ptrtoint ptr addrspace(1) %toptr to i128
+  ret i128 %toint
+}
+
 define i64 @ptrtoaddr_inttoptr_noas1() {
 ; CHECK-LABEL: define i64 @ptrtoaddr_inttoptr_noas1() {
 ; CHECK-NEXT:    ret i64 1
@@ -273,7 +283,7 @@ define ptr @gep_of_sub_ptrtoaddr_ashr(ptr %p, i64 %x) {
   %gep1.addr = ptrtoaddr ptr %gep1 to i64
   %p.addr = ptrtoaddr ptr %p to i64
   %sub = sub i64 %gep1.addr, %p.addr
-  %ashr = ashr i64 %sub, 1
+  %ashr = ashr exact i64 %sub, 1
   %gep2 = getelementptr i16, ptr %p, i64 %ashr
   ret ptr %gep2
 }
@@ -288,7 +298,7 @@ define ptr addrspace(1) @gep_of_sub_ptrtoaddr_ashr_addrsize(ptr addrspace(1) %p,
   %gep1.addr = ptrtoaddr ptr addrspace(1) %gep1 to i32
   %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
   %sub = sub i32 %gep1.addr, %p.addr
-  %sdiv = sdiv i32 %sub, 3
+  %sdiv = sdiv exact i32 %sub, 3
   %gep2 = getelementptr [3 x i8], ptr addrspace(1) %p, i32 %sdiv
   ret ptr addrspace(1) %gep2
 }

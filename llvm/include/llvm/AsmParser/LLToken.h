@@ -401,6 +401,8 @@ enum Kind {
   kw_summaries,
   kw_flags,
   kw_blockcount,
+  kw_cfiFunctionDefs,
+  kw_cfiFunctionDecls,
   kw_linkage,
   kw_visibility,
   kw_notEligibleToImport,
@@ -486,6 +488,7 @@ enum Kind {
   kw_versions,
   kw_memProf,
   kw_notcold,
+  kw_ambiguous,
 
   // GV's with __attribute__((no_sanitize("address"))), or things in
   // -fsanitize-ignorelist when built with ASan.

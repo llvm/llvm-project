@@ -8,7 +8,6 @@ add_libc_test(
     uname_test.cpp
   DEPENDS
     libc.include.sys_utsname
-    libc.src.errno.errno
     libc.src.__support.common
     libc.src.sys.utsname.uname
     libc.test.UnitTest.ErrnoSetterMatcher

@@ -163,8 +163,9 @@ public:
       return isa<UndefValue>(V) ? 0 : 1;
 
     using namespace llvm::PatternMatch;
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (isa<CastInst>(V) || match(V, m_Neg(m_Value())) ||
-        match(V, m_Not(m_Value())) || match(V, m_FNeg(m_Value())))
+        match(V, m_Not(m_Value())) || match(V, m_FNegOrFSubNegZero(m_Value())))
       return 2;
 
     return 3;
@@ -352,7 +353,8 @@ public:
   static Value *stripSignOnlyFPOps(Value *Val) {
     using namespace llvm::PatternMatch;
 
-    match(Val, m_FNeg(m_Value(Val)));
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    match(Val, m_FNegOrFSubNegZero(m_Value(Val)));
     match(Val, m_FAbs(m_Value(Val)));
     match(Val, m_CopySign(m_Value(Val), m_Value()));
     return Val;

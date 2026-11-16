@@ -8,8 +8,11 @@
 name:            abs_i8
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; RV64I-LABEL: name: abs_i8
-    ; RV64I: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64I: liveins: $x10
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY]], 8
     ; RV64I-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
     ; RV64I-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
@@ -24,7 +27,9 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: abs_i8
-    ; RV64ZBB: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB: liveins: $x10
+    ; RV64ZBB-NEXT: {{  $}}
+    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY]], 8
     ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ASSERT_ZEXT]], 8
     ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
@@ -46,8 +51,11 @@ body:             |
 name:            abs_i16
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; RV64I-LABEL: name: abs_i16
-    ; RV64I: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64I: liveins: $x10
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 16
     ; RV64I-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
     ; RV64I-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[ASSERT_SEXT]], [[C]](s64)
@@ -60,7 +68,9 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: abs_i16
-    ; RV64ZBB: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB: liveins: $x10
+    ; RV64ZBB-NEXT: {{  $}}
+    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 16
     ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C]], [[ASSERT_SEXT]]
@@ -80,8 +90,11 @@ body:             |
 name:            abs_i32
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; RV64I-LABEL: name: abs_i32
-    ; RV64I: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64I: liveins: $x10
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 32
     ; RV64I-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
     ; RV64I-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[ASSERT_SEXT]], [[C]](s64)
@@ -92,7 +105,9 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: abs_i32
-    ; RV64ZBB: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB: liveins: $x10
+    ; RV64ZBB-NEXT: {{  $}}
+    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 32
     ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C]], [[ASSERT_SEXT]]
@@ -112,8 +127,11 @@ body:             |
 name:            abs_i64
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; RV64I-LABEL: name: abs_i64
-    ; RV64I: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64I: liveins: $x10
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; RV64I-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[COPY]], [[C]](s64)
     ; RV64I-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[ASHR]]
@@ -122,7 +140,9 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: abs_i64
-    ; RV64ZBB: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB: liveins: $x10
+    ; RV64ZBB-NEXT: {{  $}}
+    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C]], [[COPY]]
     ; RV64ZBB-NEXT: [[SMAX:%[0-9]+]]:_(s64) = G_SMAX [[COPY]], [[SUB]]

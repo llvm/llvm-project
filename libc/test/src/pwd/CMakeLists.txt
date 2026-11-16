@@ -30,7 +30,6 @@ add_libc_test(
     libc.hdr.types.struct_passwd
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
-    libc.src.errno.errno
     libc.src.pwd.endpwent
     libc.src.pwd.getpwent
     libc.src.pwd.pwd_utils
@@ -82,7 +81,6 @@ add_libc_test(
     libc.hdr.types.uid_t
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
-    libc.src.errno.errno
     libc.src.pwd.endpwent
     libc.src.pwd.getpwent
     libc.src.pwd.getpwnam
@@ -131,7 +129,6 @@ add_libc_test(
     libc.hdr.types.uid_t
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
-    libc.src.errno.errno
     libc.src.pwd.getpwuid
     libc.src.pwd.pwd_utils
     libc.src.stdio.remove
