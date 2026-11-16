@@ -2521,6 +2521,7 @@ func.func @test_reshape_rank_mismatch(%arg0 : tensor<?xf32>) -> () {
   // expected-error@+1 {{'tosa.reshape' op new shape does not match result rank}}
   %0 = "tosa.reshape"(%arg0, %s) : (tensor<?xf32>, !tosa.shape<2>) -> tensor<?xf32>
   return
+}
 
 // -----
 
