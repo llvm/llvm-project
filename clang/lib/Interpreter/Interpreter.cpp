@@ -232,8 +232,15 @@ static llvm::Error ExecuteIncrementalAction(CompilerInstance &CI,
   // LLVMContext.
   std::string Msg;
   llvm::raw_string_ostream OS(Msg);
-  if (!CI.parseLLVMArgs(&OS))
+  if (!CI.parseLLVMArgs(&OS)) {
+    // Without a preprocessor, the SourceManager never adopts the buffers.
+    PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
+    if (!PPOpts.RetainRemappedFileBuffers)
+      for (auto &RB : PPOpts.RemappedFileBuffers)
+        delete RB.second;
+    PPOpts.clearRemappedFiles();
     return llvm::createStringError(llvm::StringRef(Msg).rtrim());
+  }
   if (!CI.ExecuteAction(Act) || CI.getDiagnostics().hasErrorOccurred()) {
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Failed to execute incremental action");
