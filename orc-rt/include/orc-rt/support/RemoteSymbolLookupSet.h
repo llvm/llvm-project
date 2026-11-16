@@ -1,4 +1,4 @@
-//===-- SymbolLookupSet.h -- Symbol lookup sets -----------------*- C++ -*-===//
+//===-- RemoteSymbolLookupSet.h -- Remote symbol lookup sets ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SymbolLookupSet type.
+// RemoteSymbolLookupSet type.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SUPPORT_SYMBOLLOOKUPSET_H
-#define ORC_RT_SUPPORT_SYMBOLLOOKUPSET_H
+#ifndef ORC_RT_SUPPORT_REMOTESYMBOLLOOKUPSET_H
+#define ORC_RT_SUPPORT_REMOTESYMBOLLOOKUPSET_H
 
 #include "orc-rt/support/SymbolLookupFlags.h"
 
@@ -25,7 +25,10 @@ namespace orc_rt {
 
 /// An ordered sequence of symbol names to look up, each paired with a
 /// SymbolLookupFlags value describing how the symbol is referenced.
-class SymbolLookupSet {
+///
+/// Names are held as plain std::strings, the form in which lookup requests
+/// arrive from the controller (cf. llvm::orc::RemoteSymbolLookupSet).
+class RemoteSymbolLookupSet {
   using VectorType = std::vector<std::pair<std::string, SymbolLookupFlags>>;
 
 public:
@@ -33,8 +36,8 @@ public:
   using iterator = VectorType::iterator;
   using const_iterator = VectorType::const_iterator;
 
-  SymbolLookupSet() = default;
-  SymbolLookupSet(std::initializer_list<value_type> Symbols)
+  RemoteSymbolLookupSet() = default;
+  RemoteSymbolLookupSet(std::initializer_list<value_type> Symbols)
       : Symbols(Symbols) {}
 
   iterator begin() { return Symbols.begin(); }
@@ -57,4 +60,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SUPPORT_SYMBOLLOOKUPSET_H
+#endif // ORC_RT_SUPPORT_REMOTESYMBOLLOOKUPSET_H
