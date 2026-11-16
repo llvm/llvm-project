@@ -192,7 +192,8 @@ public:
     DXILSubArch_v1_7,
     DXILSubArch_v1_8,
     DXILSubArch_v1_9,
-    LatestDXILSubArch = DXILSubArch_v1_9,
+    DXILSubArch_v1_10,
+    LatestDXILSubArch = DXILSubArch_v1_10,
 
     // AMDGPU sub-arch
     AMDGPUSubArch6,

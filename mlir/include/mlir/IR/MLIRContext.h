@@ -58,7 +58,7 @@ class RemarkEngine;
 ///  while (auto *request = nextCompilationRequests()) {
 ///    MLIRContext ctx(registry, MLIRContext::Threading::DISABLED);
 ///    ctx.setThreadPool(myThreadPool);
-///    processRequest(request, cxt);
+///    processRequest(request, ctx);
 ///  }
 ///
 /// Clients that manage their own threads can enable thread-safe context access

@@ -37,6 +37,7 @@ def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
   let details = [
       "The allocation is scoped to `Context` and `Device` must belong to it.",
+      "The returned pointer is aligned to at least `alignof(std::max_align_t)` bytes, regardless of allocation size.",
       "This function can only be used to create device or managed allocations. To create a host allocation use `olMemAllocHost`."
   ];
   let params = [
@@ -62,7 +63,8 @@ def olMemAlloc : Function {
 def olMemAllocHost : Function {
   let desc = "Creates a host memory allocation accessible from the specified device.";
   let details = [
-      "The allocation is scoped to `Context` and `Device` must belong to it."
+      "The allocation is scoped to `Context` and `Device` must belong to it.",
+      "The returned pointer is aligned to at least `alignof(std::max_align_t)` bytes, regardless of allocation size."
   ];
   let params = [
     Param<"ol_context_handle_t", "Context", "handle of the context", PARAM_IN>,
@@ -260,7 +262,7 @@ def olMemRegister : Function {
         "not allowed. The pinned pointer can be accessed both on host and device and",
         "no guarantees are made about consistency.",
         "The pinned pointer should be used to execute memory transfers",
-        "as it is a stable pointer for memory access."  
+        "as it is a stable pointer for memory access."
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,

@@ -51,7 +51,8 @@ define amdgpu_kernel void @example() sanitize_address {
 ; CHECK-NEXT:    [[VEC_LDS_PTRS:%.*]] = insertelement <2 x ptr addrspace(3)> poison, ptr addrspace(3) [[TMP22]], i32 0
 ; CHECK-NEXT:    [[VEC_LDS_PTRS1:%.*]] = insertelement <2 x ptr addrspace(3)> [[VEC_LDS_PTRS]], ptr addrspace(3) [[TMP24]], i32 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = ptrtoint <2 x ptr addrspace(3)> [[VEC_LDS_PTRS1]] to <2 x i32>
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP20]], <2 x i32> [[TMP25]]
+; CHECK-NEXT:    [[TMP26:%.*]] = sext <2 x i32> [[TMP25]] to <2 x i64>
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP20]], <2 x i64> [[TMP26]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = addrspacecast <2 x ptr addrspace(1)> [[TMP31]] to <2 x ptr>
 ; CHECK-NEXT:    [[ELEM0:%.*]] = extractelement <2 x ptr> [[TMP32]], i32 0
 ; CHECK-NEXT:    store i32 42, ptr [[ELEM0]], align 4

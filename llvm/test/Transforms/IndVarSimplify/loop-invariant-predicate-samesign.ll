@@ -56,11 +56,11 @@ define void @samesign_ugt_unsigned_latch(i8 %start, i8 %inv) {
 ; CHECK-LABEL: define void @samesign_ugt_unsigned_latch(
 ; CHECK-SAME: i8 [[START:%.*]], i8 [[INV:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[START]], [[INV]]
+; CHECK-NEXT:    [[LATCH_COND:%.*]] = icmp ugt i8 [[START]], [[INV]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[START]], [[INV]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP]])
-; CHECK-NEXT:    [[LATCH_COND:%.*]] = icmp ugt i8 [[START]], [[INV]]
 ; CHECK-NEXT:    br i1 [[LATCH_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -132,13 +132,13 @@ define void @samesign_ugt_signed_latch_iv_keeps_sign(i8 %start, i8 %inv) {
 ; CHECK-NEXT:    [[GUARD:%.*]] = and i1 [[INV_NEG]], [[START_NONNEG]]
 ; CHECK-NEXT:    br i1 [[GUARD]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[LATCH_COND:%.*]] = icmp sgt i8 [[START]], [[INV]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[IV]], [[INV]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; CHECK-NEXT:    [[LATCH_COND:%.*]] = icmp sgt i8 [[START]], [[INV]]
 ; CHECK-NEXT:    br i1 [[LATCH_COND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]

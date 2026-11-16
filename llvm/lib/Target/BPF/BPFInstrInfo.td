@@ -868,6 +868,12 @@ let isReturn = 1, isTerminator = 1, hasDelaySlot=0, isBarrier = 1,
   def UNWIND_EXIT : RET<1, "unwind_exit", []>;
 }
 
+// llvm.bpf.unwind.exit. BPFUnwindLower replaces it with unwind_exit, or with a
+// branch to the landing pad when invoked.
+let isCall = 1, hasSideEffects = 1, isCodeGenOnly = 1 in
+def UNWIND_EXIT_PSEUDO : Pseudo<(outs), (ins), "#UNWIND_EXIT_PSEUDO",
+                                [(int_bpf_unwind_exit)]>;
+
 // ADJCALLSTACKDOWN/UP pseudo insns
 let Defs = [R11], Uses = [R11], isCodeGenOnly = 1 in {
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i64imm:$amt1, i64imm:$amt2),
@@ -979,10 +985,6 @@ let Predicates = [BPFNoALU32] in {
             (XADDW ADDRri:$addr, GPR:$val)>;
   def : Pat<(atomic_load_add_i64 ADDRri:$addr, GPR:$val),
             (XADDD ADDRri:$addr, GPR:$val)>;
-  // No atomic fetch on non-ALU32 CPUs: lower a used-result relaxed sub to plain
-  // XADDD rather than the ALU32-only XFADDD.
-  def : Pat<(atomic_load_sub_i64_monotonic ADDRri:$addr, GPR:$val),
-            (XADDD ADDRri:$addr, (NEG_64 GPR:$val))>;
 }
 
 // Atomic Fetch-and-<add, and, or, xor> operations
@@ -1048,7 +1050,7 @@ class binop_has_use<SDPatternOperator operator>
                 (operator node:$A, node:$B),
                 [{ return !SDValue(N, 0).use_empty(); }]>;
 
-foreach op = [add, sub, and, or, xor] in {
+foreach op = [add, and, or, xor] in {
 def atomic_load_ # op # _i64_monotonic_nu:
     binop_no_use <!cast<SDPatternOperator>("atomic_load_"#op# _i64_monotonic)>;
 def atomic_load_ # op # _i64_monotonic_hu:
@@ -1092,18 +1094,6 @@ let Predicates = [BPFHasALU32] in {
       def : Pat<(P[0] ADDRri:$addr, GPR32:$val), (P[1]  ADDRri:$addr, GPR32:$val)>;
     }
 
-    // atomic_load_sub can be represented as a neg followed
-    // by an atomic_load_add.
-    foreach P = [[atomic_load_sub_i32_monotonic_nu, XADDW32],
-                 [atomic_load_sub_i32_monotonic_hu, XFADDW32],
-                 [atomic_load_sub_i32_acquire,   XFADDW32],
-                 [atomic_load_sub_i32_release,   XFADDW32],
-                 [atomic_load_sub_i32_acq_rel,   XFADDW32],
-                 [atomic_load_sub_i32_seq_cst,   XFADDW32],
-                ] in {
-      def : Pat<(P[0] ADDRri:$addr, GPR32:$val), (P[1]  ADDRri:$addr, (NEG_32 GPR32:$val))>;
-    }
-
     foreach P = [// add
               [atomic_load_add_i64_monotonic_nu, XADDD],
               [atomic_load_add_i64_monotonic_hu, XFADDD],
@@ -1114,16 +1104,6 @@ let Predicates = [BPFHasALU32] in {
             ] in {
     def : Pat<(P[0] ADDRri:$addr, GPR:$val), (P[1]  ADDRri:$addr, GPR:$val)>;
   }
-}
-
-foreach P = [[atomic_load_sub_i64_monotonic_nu, XADDD],
-             [atomic_load_sub_i64_monotonic_hu, XFADDD],
-             [atomic_load_sub_i64_acquire,   XFADDD],
-             [atomic_load_sub_i64_release,   XFADDD],
-             [atomic_load_sub_i64_acq_rel,   XFADDD],
-             [atomic_load_sub_i64_seq_cst,   XFADDD],
-            ] in {
-  def : Pat<(P[0] ADDRri:$addr, GPR:$val), (P[1]  ADDRri:$addr, (NEG_64 GPR:$val))>;
 }
 
 foreach P = [// and

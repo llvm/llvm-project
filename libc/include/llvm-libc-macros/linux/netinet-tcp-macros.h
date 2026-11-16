@@ -46,6 +46,7 @@
 #define TCP_FASTOPEN_KEY 33 // unsigned char[]
 #define TCP_FASTOPEN_NO_COOKIE 34
 #define TCP_INQ 36
+#define TCP_CM_INQ TCP_INQ
 #define TCP_TX_DELAY 37
 #define TCP_IS_MPTCP 43
 #define TCP_RTO_MAX_MS 44
