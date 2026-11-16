@@ -23,6 +23,7 @@ def loongarch_xvperm: SDNode<"LoongArchISD::XVPERM", SDT_LoongArchXVPERM>;
 def loongarch_xvreplve0: SDNode<"LoongArchISD::XVREPLVE0", SDT_LoongArchXVREPLVE0>;
 def loongarch_xvreplve0q: SDNode<"LoongArchISD::XVREPLVE0Q", SDT_LoongArchXVREPLVE0>;
 def loongarch_xvinsve0 : SDNode<"LoongArchISD::XVINSVE0", SDT_LoongArchV2RUimm>;
+def loongarch_xvpermiq : SDNode<"LoongArchISD::XVPERMIQ", SDT_LoongArchV2RUimm>;
 
 // Vector mask set by condition
 def loongarch_xvmskltz: SDNode<"LoongArchISD::XVMSKLTZ", SDT_LoongArchVMSKCOND>;
@@ -2684,6 +2685,11 @@ def : Pat<(loongarch_xvpermi v4i64:$xj, immZExt8: $ui8),
           (XVPERMI_D v4i64:$xj, immZExt8: $ui8)>;
 def : Pat<(loongarch_xvpermi v4f64:$xj, immZExt8: $ui8),
           (XVPERMI_D v4f64:$xj, immZExt8: $ui8)>;
+
+// XVPERMI_Q
+foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
+def : Pat<(loongarch_xvpermiq (vt LASX256:$xd), (vt LASX256:$xj), immZExt8:$ui8),
+          (XVPERMI_Q LASX256:$xd, LASX256:$xj, immZExt8:$ui8)>;
 
 // XVPERM_W
 def : Pat<(loongarch_xvperm v8i32:$xj, v8i32:$xk),

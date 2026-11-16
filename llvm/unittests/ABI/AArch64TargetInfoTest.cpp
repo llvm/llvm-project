@@ -613,6 +613,70 @@ TEST_F(AArch64TargetInfoTest, ClassifySVETuplesDirect) {
   }
 }
 
+// An opaque 8-bit float is passed and returned directly in a SIMD and
+// floating-point register. It is not promoted, and a record of one is an
+// ordinary aggregate rather than a homogeneous aggregate. Eight of them
+// fill the FP register file, so a following pure scalable aggregate is
+// indirect.
+TEST_F(AArch64TargetInfoTest, ClassifyOpaqueFloat8) {
+  const ABIType *MFP8 = TB.getOpaqueFloat8Type(llvm::Align(1));
+
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS}) {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, MFP8, {MFP8});
+    FI->getReturnInfo() = ArgInfo::getIgnore();
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getReturnInfo());
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+
+  {
+    const ABIType *Wrapped = makeRecord({FieldInfo(MFP8, 0)}, 8, llvm::Align(1),
+                                        /*UnadjustedAlign=*/llvm::Align(1));
+    auto Classify = [&](AArch64ABIKind Kind, bool BigEndian) {
+      AArch64ABIOptions Opts(Kind);
+      Opts.IsBigEndian = BigEndian;
+      std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {Wrapped});
+      TI->computeInfo(*FI);
+      return FI->getArgInfo(0).Info;
+    };
+    expectDirectCoercedInteger(
+        Classify(AArch64ABIKind::AAPCS, /*BigEndian=*/false), 8);
+    expectDirectCoercedInteger(
+        Classify(AArch64ABIKind::AAPCS, /*BigEndian=*/true), 64);
+    expectDirectCoercedInteger(
+        Classify(AArch64ABIKind::DarwinPCS, /*BigEndian=*/false), 64);
+    expectDirectCoercedInteger(
+        Classify(AArch64ABIKind::Win64, /*BigEndian=*/false), 8);
+  }
+
+  {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
+    const ABIType *One =
+        makeRecord({FieldInfo(FixedSVInt32, 0)}, 256, llvm::Align(16),
+                   /*UnadjustedAlign=*/llvm::Align(16));
+    const ABIType *Full[] = {MFP8, MFP8, MFP8, MFP8, MFP8,
+                             MFP8, MFP8, MFP8, One};
+    std::unique_ptr<FunctionInfo> FullFI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, Full);
+    TI->computeInfo(*FullFI);
+    expectAlignedIndirect(FullFI->getArgInfo(8).Info, llvm::Align(16),
+                          /*ByVal=*/false);
+
+    const ABIType *Room[] = {MFP8, MFP8, MFP8, MFP8, MFP8, MFP8, MFP8, One};
+    std::unique_ptr<FunctionInfo> RoomFI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, Room);
+    TI->computeInfo(*RoomFI);
+    EXPECT_TRUE(RoomFI->getArgInfo(7).Info.isCoerceAndExpand());
+  }
+}
+
 // Fixed-length SVE data vectors are coerced to the scalable vector that
 // occupies the same register. The scalable element count depends only on the
 // element size, so the two vector lengths of the same element type coerce to

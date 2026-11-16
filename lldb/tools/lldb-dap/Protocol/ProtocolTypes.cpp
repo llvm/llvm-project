@@ -1172,6 +1172,10 @@ json::Value toJSON(const ExceptionDetails &ED) {
 
 llvm::json::Value toJSON(const CompileUnit &CU) {
   json::Object result{{"id", CU.id}, {"compileUnitPath", CU.compileUnitPath}};
+  if (CU.language)
+    result.insert({"language", *CU.language});
+  if (CU.isOptimized)
+    result.insert({"isOptimized", *CU.isOptimized});
   return result;
 }
 
@@ -1226,6 +1230,8 @@ llvm::json::Value toJSON(const StackFrame &SF) {
     result.insert({"moduleId", *SF.moduleId});
   if (SF.compileUnitId)
     result.insert({"compileUnitId", *SF.compileUnitId});
+  if (SF.languageSpecificData)
+    result.insert({"$__lldb_languageSpecificData", *SF.languageSpecificData});
   if (SF.presentationHint != StackFrame::ePresentationHintNone)
     result.insert({"presentationHint", SF.presentationHint});
 

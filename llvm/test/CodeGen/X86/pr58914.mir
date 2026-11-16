@@ -30,7 +30,7 @@ body:             |
   bb.1:
     successors: %bb.1(0x7c000000)
     %2:vk16wm = COPY $rsp
-    %3:vr256x = VMOVUPDZ256rmk %1, killed %2, %stack.0, 8, %0, 0, $noreg
+    %3:vr256x = VMOVUPDZ256rmk %1, %2, %stack.0, 8, %0, 0, $noreg
     RET %3
 
 ...

@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -2434,26 +2435,51 @@ LogicalResult spirv::Deserializer::processSwitch(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "OpSwitch must at least specify selector and "
                                  "a default target");
 
-  if (operands.size() % 2)
-    return emitError(unknownLoc,
-                     "OpSwitch must at have an even number of operands: "
-                     "selector, default target and any number of literal and "
-                     "label <id> pairs");
-
   Value selector = getValue(operands[0]);
+  if (!selector)
+    return emitError(unknownLoc, "unknown OpSwitch selector <id>: ")
+           << operands[0];
+  auto selectorType = dyn_cast<IntegerType>(selector.getType());
+  if (!selectorType)
+    return emitError(unknownLoc, "OpSwitch selector must be an integer");
+
+  // Each case literal has the width of the selector type. Literals wider than
+  // one word span multiple words with the low-order word first.
+  unsigned bitWidth = selectorType.getWidth();
+  unsigned literalWords = llvm::divideCeil(bitWidth, 32);
+  unsigned wordsPerCase = literalWords + 1;
+  if ((operands.size() - 2) % wordsPerCase != 0)
+    return emitError(unknownLoc, "OpSwitch must specify selector, default "
+                                 "target and any number of literal and label "
+                                 "<id> pairs, where each literal of a ")
+           << bitWidth << "-bit selector spans " << literalWords << " word(s)";
+
   Block *defaultBlock = getOrCreateBlock(operands[1]);
   Location loc = createFileLineColLoc(opBuilder);
 
-  SmallVector<int32_t> literals;
+  SmallVector<APInt> literals;
   SmallVector<Block *> blocks;
-  for (unsigned i = 2, e = operands.size(); i < e; i += 2) {
-    literals.push_back(operands[i]);
-    blocks.push_back(getOrCreateBlock(operands[i + 1]));
+  for (unsigned i = 2, e = operands.size(); i < e; i += wordsPerCase) {
+    APInt literal;
+    if (bitWidth <= 32) {
+      // Sub-word literals occupy the low-order bits of the word and are
+      // sign-extended for signed selector types, so truncate to the selector
+      // width.
+      literal = APInt(bitWidth, operands[i], /*isSigned=*/true,
+                      /*implicitTrunc=*/true);
+    } else {
+      literal = APInt(bitWidth, 0);
+      for (unsigned w = 0; w < literalWords; ++w)
+        literal.insertBits(APInt(32, operands[i + w]), w * 32);
+    }
+    literals.push_back(literal);
+    blocks.push_back(getOrCreateBlock(operands[i + literalWords]));
   }
 
   SmallVector<ValueRange> targetOperands(blocks.size(), {});
   spirv::SwitchOp::create(opBuilder, loc, selector, defaultBlock,
-                          ArrayRef<Value>(), literals, blocks, targetOperands);
+                          ArrayRef<Value>(), ArrayRef<APInt>(literals), blocks,
+                          targetOperands);
 
   return success();
 }
@@ -3030,8 +3056,9 @@ LogicalResult spirv::Deserializer::splitSelectionHeader() {
     // Do not split a block that only contains a conditional branch / switch,
     // unless it is also a merge block of another construct - in that case we
     // want to split the block. We do not want two constructs to share header /
-    // merge block.
-    if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock) {
+    // merge block. The entry block cannot join a region, so split it too.
+    if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock ||
+        isFnEntryBlock(block)) {
       Block *newBlock = block->splitBlock(terminator);
       OpBuilder builder(block, block->end());
       spirv::BranchOp::create(builder, block->getParent()->getLoc(), newBlock);

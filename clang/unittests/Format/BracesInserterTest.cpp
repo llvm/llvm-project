@@ -240,6 +240,49 @@ TEST_F(BracesInserterTest, InsertBraces) {
                "#endif",
                Style);
 
+  verifyFormat("void f() {\n"
+               "#if A\n"
+               "  a();\n"
+               "#else\n"
+               "  b();\n"
+               "#endif\n"
+               "  if (c) {\n"
+               "    h();\n"
+               "  }\n"
+               "}",
+               "void f() {\n"
+               "#if A\n"
+               "  a();\n"
+               "#else\n"
+               "  b();\n"
+               "#endif\n"
+               "  if (c) h();\n"
+               "}",
+               Style);
+
+  verifyFormat("void f() {\n"
+               "#if A\n"
+               "  a();\n"
+               "#else\n"
+               "  b();\n"
+               "#endif\n"
+               "  if (c) {\n"
+               "    if (d) {\n"
+               "      h();\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               "void f() {\n"
+               "#if A\n"
+               "  a();\n"
+               "#else\n"
+               "  b();\n"
+               "#endif\n"
+               "  if (c)\n"
+               "    if (d) h();\n"
+               "}",
+               Style);
+
   verifyFormat("#if 0\n"
                "#elif 1\n"
                "#endif\n"

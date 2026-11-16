@@ -323,8 +323,12 @@ protected:
             if (SV1->getOperand(0)->getType() ==
                     SV2->getOperand(0)->getType() &&
                 SV1->getOperand(0)->getType() != SV1->getType() &&
-                isUndefVector(SV1->getOperand(1), UseMask1).all() &&
-                isUndefVector(SV2->getOperand(1), UseMask2).all()) {
+                isUndefVector</*IsPoisonOnly=*/true>(SV1->getOperand(1),
+                                                     UseMask1)
+                    .all() &&
+                isUndefVector</*IsPoisonOnly=*/true>(SV2->getOperand(1),
+                                                     UseMask2)
+                    .all()) {
               Op1 = SV1->getOperand(0);
               Op2 = SV2->getOperand(0);
               SmallVector<int> ShuffleMask1(SV1->getShuffleMask());

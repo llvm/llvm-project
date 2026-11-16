@@ -13,6 +13,7 @@
 
 ---
 name:            square
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: square
   ; CHECK: bb.0:

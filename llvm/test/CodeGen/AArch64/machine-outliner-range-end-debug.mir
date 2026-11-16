@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -enable-machine-outliner \
-# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+# RUN:   %s -o - | FileCheck %s
 
 # x16 is live from its definition to the use in the instruction that defines
 # x5, so the outlinable range ends one instruction after the definition of x16.

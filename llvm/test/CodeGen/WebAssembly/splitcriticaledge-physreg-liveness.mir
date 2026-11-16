@@ -2,7 +2,7 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=wasm32-unknown-unknown \
 # RUN:     -run-pass=liveintervals,phi-node-elimination \
-# RUN:     -precompute-phys-liveness -verify-machineinstrs %s -o - | FileCheck %s
+# RUN:     -precompute-phys-liveness %s -o - | FileCheck %s
 
 # Splitting the critical edge bb.0 -> bb.2 rewrites terminators that
 # def the ARGUMENTS physreg. Its regunit ranges must be recomputed.

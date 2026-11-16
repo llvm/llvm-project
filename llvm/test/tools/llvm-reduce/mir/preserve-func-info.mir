@@ -12,7 +12,6 @@
 # RESULT-NEXT: regBankSelected: true
 # RESULT-NEXT: selected:        true
 # RESULT-NEXT: failedISel:      true
-# RESULT-NEXT: tracksRegLiveness: true
 # RESULT-NEXT: hasWinCFI:       true
 # RESULT-NEXT: noPhis:          false
 # RESULT-NEXT: isSSA:           false

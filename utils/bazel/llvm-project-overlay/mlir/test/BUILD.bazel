@@ -1021,6 +1021,19 @@ cc_library(
 )
 
 cc_library(
+    name = "TestPtr",
+    srcs = glob(["lib/Dialect/Ptr/*.cpp"]),
+    deps = [
+        "//llvm:Support",
+        "//mlir:DataLayoutInterfaces",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:Pass",
+        "//mlir:PtrDialect",
+    ],
+)
+
+cc_library(
     name = "TestSCF",
     srcs = glob(["lib/Dialect/SCF/*.cpp"]),
     includes = ["lib/Dialect/Test"],

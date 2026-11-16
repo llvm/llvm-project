@@ -407,29 +407,31 @@ void IRNormalizer::foldInstructionName(Instruction *I) const {
   I->setName(Name);
 }
 
-/// Reorders instructions by walking up the tree from each operand of an output
-/// instruction and reducing the def-use distance.
-/// This method assumes that output instructions were collected top-down,
-/// otherwise the def-use chain may be broken.
-/// This method is a wrapper for recursive reorderInstruction().
+/// Reorders the instructions in each basic block. Instructions that access
+/// memory, have side effects or are terminators are visited from first to
+/// last, so they keep their relative order. Each one first pulls in the
+/// operands it needs, so other instructions move down to just before their
+/// first user in the block, or to the end of the block if they have none.
 ///
-/// \see reorderInstruction()
+/// \see reorderDefinition()
 void IRNormalizer::reorderInstructions(Function &F) const {
   for (auto &BB : F) {
     LLVM_DEBUG(dbgs() << "Reordering instructions in basic block: "
                       << BB.getName() << "\n");
     // Find the source nodes of the DAG of instructions in this basic block.
-    // Source nodes are instructions that have side effects, are terminators, or
-    // don't have a parent in the DAG of instructions.
+    // Source nodes are instructions that access memory, have side effects, are
+    // terminators, or don't have a parent in the DAG of instructions.
     //
-    // We must iterate from the first to the last instruction otherwise side
-    // effecting instructions could be reordered.
+    // We must iterate from the first to the last instruction to preserve the
+    // order of memory accesses and other side effects. SSA operand dependencies
+    // alone do not prevent a read from moving past a write to the same memory.
 
     std::stack<Instruction *> TopologicalSort;
     SmallPtrSet<const Instruction *, 32> Visited;
     for (auto &I : BB) {
-      // First process side effecting and terminating instructions.
-      if (!(isOutput(&I) || I.isTerminator()))
+      // First process memory accessing, side effecting and terminating
+      // instructions.
+      if (!(isOutput(&I) || I.mayReadOrWriteMemory() || I.isTerminator()))
         continue;
       LLVM_DEBUG(dbgs() << "\tReordering from source effecting instruction: ";
                  I.dump());

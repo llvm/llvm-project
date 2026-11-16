@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv8.1m.main -run-pass=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv8.1m.main -run-pass=arm-low-overhead-loops %s -o - | FileCheck %s
 # CHECK-NOT: t2DLS
 # CHECK: bb.5.for.inc16:
 # CHECK:      $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr

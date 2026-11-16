@@ -1369,10 +1369,14 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     if (!CB->hasOperandBundles() || CanIgnoreOperandBundles(*CB)) {
       if (auto *Callee =
               dyn_cast_if_present<Function>(CB->getCalledOperand())) {
-        IRPositions.emplace_back(IRPosition::returned(*Callee));
+        // The returned position of the callee does not describe the call if
+        // the call uses a different return type.
+        bool SameType = Callee->getReturnType() == CB->getType();
+        if (SameType)
+          IRPositions.emplace_back(IRPosition::returned(*Callee));
         IRPositions.emplace_back(IRPosition::function(*Callee));
         for (const Argument &Arg : Callee->args())
-          if (Arg.hasReturnedAttr()) {
+          if (SameType && Arg.hasReturnedAttr()) {
             IRPositions.emplace_back(
                 IRPosition::callsite_argument(*CB, Arg.getArgNo()));
             IRPositions.emplace_back(
@@ -2411,7 +2415,10 @@ ChangeStatus Attributor::manifestAttributes() {
         isa<Function>(It.getFirst())
             ? IRPosition::function(*cast<Function>(It.getFirst()))
             : IRPosition::callsite_function(*cast<CallBase>(It.getFirst()));
+    if (IRP.getAttrList() == AL)
+      continue;
     IRP.setAttrList(AL);
+    AttrModifiedFunctions.insert(IRP.getAnchorScope());
   }
 
   return ManifestChange;
@@ -2521,11 +2528,17 @@ ChangeStatus Attributor::cleanupIR() {
                       << " instead of " << *OldV << "\n");
     U->set(NewV);
 
-    if (Instruction *I = dyn_cast<Instruction>(OldV)) {
+    // The new value may reference a function, e.g., if an argument is replaced
+    // by a function pointer, so the call graph of the user's function changes.
+    if (I) {
       CGModifiedFunctions.insert(I->getFunction());
-      if (!isa<PHINode>(I) && !ToBeDeletedInsts.count(I) &&
-          isInstructionTriviallyDead(I))
-        DeadInsts.push_back(I);
+      if (auto *C = dyn_cast<Constant>(NewV))
+        Configuration.CGUpdater.addReferences(*I->getFunction(), *C);
+    }
+    if (Instruction *OldI = dyn_cast<Instruction>(OldV)) {
+      if (!isa<PHINode>(OldI) && !ToBeDeletedInsts.count(OldI) &&
+          isInstructionTriviallyDead(OldI))
+        DeadInsts.push_back(OldI);
     }
     if (isa<UndefValue>(NewV) && isa<CallBase>(U->getUser())) {
       auto *CB = cast<CallBase>(U->getUser());
@@ -4048,18 +4061,35 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
     PreservedAnalyses FuncPA;
     // We haven't changed the CFG for modified functions.
     FuncPA.preserveSet<CFGAnalyses>();
-    for (Function *Changed : A.getModifiedFunctions()) {
-      FAM.invalidate(*Changed, FuncPA);
-      // Also invalidate any direct callers of changed functions since analyses
-      // may care about attributes of direct callees. For example, MemorySSA
-      // cares about whether or not a call's callee modifies memory and queries
-      // that through function attributes.
-      for (auto *U : Changed->users()) {
-        if (auto *Call = dyn_cast<CallBase>(U)) {
-          if (Call->getCalledFunction() == Changed)
-            FAM.invalidate(*Call->getFunction(), FuncPA);
-        }
+    // Functions whose instructions did not change do not need to be simplified
+    // again if their SCC is revisited.
+    PreservedAnalyses AttrOnlyPA = FuncPA;
+    AttrOnlyPA.preserve<ShouldNotRunFunctionPassesAnalysis>();
+
+    const SmallSetVector<Function *, 8> &IRModified = A.getModifiedFunctions();
+
+    // Also invalidate any direct callers of changed functions since analyses
+    // may care about attributes of direct callees. For example, MemorySSA
+    // cares about whether or not a call's callee modifies memory and queries
+    // that through function attributes.
+    auto InvalidateCallers = [&](Function &Changed) {
+      for (auto *U : Changed.users()) {
+        auto *Call = dyn_cast<CallBase>(U);
+        if (Call && Call->getCalledFunction() == &Changed)
+          FAM.invalidate(*Call->getFunction(), AttrOnlyPA);
       }
+    };
+
+    for (Function *Changed : IRModified) {
+      FAM.invalidate(*Changed, FuncPA);
+      InvalidateCallers(*Changed);
+    }
+
+    for (Function *Changed : A.getAttrModifiedFunctions()) {
+      if (IRModified.contains(Changed))
+        continue;
+      FAM.invalidate(*Changed, AttrOnlyPA);
+      InvalidateCallers(*Changed);
     }
   }
   LLVM_DEBUG(dbgs() << "[Attributor] Done with " << Functions.size()

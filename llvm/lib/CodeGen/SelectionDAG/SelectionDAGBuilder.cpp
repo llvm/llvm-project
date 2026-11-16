@@ -85,6 +85,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -331,6 +332,19 @@ static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
   return Ctx.emitError(I, ErrMsg);
 }
 
+/// Emit a fatal error if the broken down registers don't match part type
+/// or count.
+static void ensureMatchedVecRegParts(unsigned NumRegs, unsigned NumParts,
+                                     MVT RegisterVT, MVT PartVT) {
+  if (NumRegs == NumParts && RegisterVT == PartVT)
+    return;
+
+  llvm::reportFatalInternalError(
+      Twine("Part count doesn't match vector breakdown! ") + Twine(NumRegs) +
+      " registers, " + Twine(NumParts) + " parts, " + RegisterVT.getString() +
+      " RegisterVT, " + PartVT.getString() + " PartVT");
+}
+
 /// getCopyFromPartsVector - Create a value that contains the specified legal
 /// parts combined into the value they represent.  If the parts combine to a
 /// type larger than ValueVT then AssertOp can be used to specify whether the
@@ -365,9 +379,7 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                      NumIntermediates, RegisterVT);
     }
 
-    assert(NumRegs == NumParts && "Part count doesn't match vector breakdown!");
-    NumParts = NumRegs; // Silence a compiler warning.
-    assert(RegisterVT == PartVT && "Part type doesn't match vector breakdown!");
+    ensureMatchedVecRegParts(NumRegs, NumParts, RegisterVT, PartVT);
     assert(RegisterVT.getSizeInBits() ==
            Parts[0].getSimpleValueType().getSizeInBits() &&
            "Part type sizes don't match!");
@@ -770,10 +782,7 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                    NumIntermediates, RegisterVT);
   }
 
-  assert(NumRegs == NumParts && "Part count doesn't match vector breakdown!");
-  NumParts = NumRegs; // Silence a compiler warning.
-  assert(RegisterVT == PartVT && "Part type doesn't match vector breakdown!");
-
+  ensureMatchedVecRegParts(NumRegs, NumParts, RegisterVT, PartVT);
   assert(IntermediateVT.isScalableVector() == ValueVT.isScalableVector() &&
          "Mixing scalable and fixed vectors when copying in parts");
 
@@ -2625,8 +2634,10 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   if (BPI != nullptr) {
     // See if we are either likely to get an early out or compute both lhs/rhs
     // of the condition.
-    BasicBlock *IfFalse = I.getSuccessor(0);
-    BasicBlock *IfTrue = I.getSuccessor(1);
+    BasicBlock *IfTrue = I.getSuccessor(0);
+    BasicBlock *IfFalse = I.getSuccessor(1);
+    if (ProfcheckDisableMetadataFixes)
+      std::swap(IfTrue, IfFalse);
 
     std::optional<bool> Likely;
     if (BPI->isEdgeHot(I.getParent(), IfTrue))
@@ -6799,7 +6810,6 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
   SDValue Mask = getValue(I.getOperand(2));
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  DataLayout TargetDL = DAG.getDataLayout();
   EVT VT = Inc.getValueType();
   Align Alignment = DAG.getEVTAlign(VT);
 
@@ -7570,7 +7580,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::set_fpenv: {
-    const DataLayout DLayout = DAG.getDataLayout();
     SDValue Env = getValue(I.getArgOperand(0));
     EVT EnvVT = Env.getValueType();
     Align TempAlign = DAG.getEVTAlign(EnvVT);
@@ -10785,7 +10794,7 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         InlineAsm::Flag ResOpType(InlineAsm::Kind::Mem, 1);
 
         SDValue AsmOp = InOperandVal;
-        if (isFunction(InOperandVal)) {
+        if (TLI.supportsInlineAsmFuncOperands() && isFunction(InOperandVal)) {
           auto *GA = cast<GlobalAddressSDNode>(InOperandVal);
           ResOpType = InlineAsm::Flag(InlineAsm::Kind::Func, 1);
           AsmOp = DAG.getTargetGlobalAddress(GA->getGlobal(), DL,

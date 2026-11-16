@@ -100,7 +100,7 @@ body:             |
     %1:intregs = PHI %7, %bb.1, %6, %bb.3
     %3:intregs = PHI %11, %bb.1, %4, %bb.3
     %12:intregs = L2_loadri_io %1, 40 :: (load (s32) from %ir.cgep, !tbaa !5)
-    L4_add_memopw_io %1, 0, killed %12 :: (store (s32) into %ir.lsr.iv15, !tbaa !5), (load (s32) from %ir.lsr.iv15, !tbaa !5)
+    L4_add_memopw_io %1, 0, %12 :: (store (s32) into %ir.lsr.iv15, !tbaa !5), (load (s32) from %ir.lsr.iv15, !tbaa !5)
     L4_add_memopw_io %1, 8, %3 :: (store (s32) into %ir.cgep18, !tbaa !5), (load (s32) from %ir.cgep18, !tbaa !5)
     %4:intregs = nuw nsw A2_addi %3, 1
     %6:intregs = A2_addi %1, 4

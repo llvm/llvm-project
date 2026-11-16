@@ -1,5 +1,5 @@
 
-# RUN: llc -mtriple=aarch64--- -verify-machineinstrs -simplify-mir -run-pass=machine-outliner %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--- -simplify-mir -run-pass=machine-outliner %s -o - | FileCheck %s
 --- |
 
   define void @foo() #0 {

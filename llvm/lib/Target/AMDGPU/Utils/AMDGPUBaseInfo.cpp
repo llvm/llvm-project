@@ -3358,9 +3358,17 @@ struct LDSDMAIntrinsic {
 };
 const LDSDMAIntrinsic *lookupLDSDMAIntrinsic(unsigned Intr);
 
+struct ExponentOnlyScaleIntrinsic {
+  unsigned Intr;
+  uint8_t ScaleArg;
+};
+const ExponentOnlyScaleIntrinsic *
+lookupExponentOnlyScaleIntrinsic(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
 #define GET_LDSDMAIntrinsicTable_IMPL
+#define GET_ExponentOnlyScaleIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -3379,6 +3387,13 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID) {
 
 bool isLDSDMAIntrinsic(unsigned IntrID) {
   return lookupLDSDMAIntrinsic(IntrID);
+}
+
+std::optional<unsigned> getExponentOnlyScaleArgIdx(unsigned IntrID) {
+  if (const ExponentOnlyScaleIntrinsic *Info =
+          lookupExponentOnlyScaleIntrinsic(IntrID))
+    return Info->ScaleArg;
+  return std::nullopt;
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,

@@ -116,6 +116,7 @@ add_entrypoint_object(
   HDRS
     fopencookie.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.stdio_macros
     libc.hdr.types.off_t
     libc.hdr.types.cookie_io_functions_t

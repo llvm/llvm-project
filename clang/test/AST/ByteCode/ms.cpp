@@ -24,4 +24,7 @@ auto foo() {
 label:
 } // both-warning {{C++23 extension}}
 
-
+int somefunc();
+void fnptrinmemcmp() { static_assert(__builtin_memcmp(&somefunc, &somefunc, 1) == 0, ""); } // both-warning 2{{implicit conversion between pointer-to-function and pointer-to-object is a Microsoft extension}} \
+                                                                                            // both-error {{not an integral constant expression}} \
+                                                                                            // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}

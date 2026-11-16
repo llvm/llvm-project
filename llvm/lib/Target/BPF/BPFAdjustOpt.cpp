@@ -71,6 +71,15 @@ private:
 bool BPFAdjustOptImpl::run() {
   bool Changed = adjustICmpToBuiltin();
 
+  // The verifier checks a global function on its own against its BTF type,
+  // and freplace can replace it. The callers know the prototype and no more.
+  for (Function &F : *M) {
+    if (F.isDeclaration() || F.hasLocalLinkage())
+      continue;
+    F.addFnAttr(Attribute::NoIPA);
+    Changed = true;
+  }
+
   for (Function &F : *M)
     for (auto &BB : F) {
       adjustBasicBlock(BB);

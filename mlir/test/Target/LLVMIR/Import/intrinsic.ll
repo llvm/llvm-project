@@ -1124,6 +1124,13 @@ define void @vector_deinterleave2(<4 x double> %0, <vscale x 8 x i32> %1) {
   ret void
 }
 
+; CHECK-LABEL: llvm.func @vector_repeat
+define void @vector_repeat(<4 x float> %0) {
+  ; CHECK: llvm.intr.vector.repeat(%{{.*}}) : (vector<4xf32>) -> vector<[4]xf32>
+  %4 = call <vscale x 4 x float> @llvm.vector.repeat.nxv4f32.v4f32(<4 x float> %0);
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @vector_predication_intrinsics
 define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x float> %2, <8 x float> %3, <8 x i64> %4, <8 x double> %5, <8 x ptr> %6, i32 %7, float %8, ptr %9, ptr %10, <8 x i1> %11, i32 %12) {
   ; CHECK: llvm.add %{{.*}}, %{{.*}} : vector<8xi32>
@@ -2063,6 +2070,9 @@ declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
 declare <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr>, <8 x i64>)
 declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
 declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float>, i64)
+declare { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double>)
+declare { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32>)
+declare <vscale x 4 x float> @llvm.vector.repeat.nxv4f32.v4f32(<4 x float>)
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float>, <4 x float>, metadata, metadata)
 declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)

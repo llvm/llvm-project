@@ -20,12 +20,12 @@ ORC_RT_SPS_ALLOC_ACTION_IMPL(
     orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections,
     (SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr, SPSExecutorAddrRange,
      SPSExecutorAddrRange),
-    &StandaloneMachOUnwindInfoRegistrar::registerSections)
+    &sys::darwin::StandaloneMachOUnwindInfoRegistrar::registerSections)
 
 ORC_RT_SPS_ALLOC_ACTION_IMPL(
     orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections,
     (SPSSequence<SPSExecutorAddrRange>),
-    &StandaloneMachOUnwindInfoRegistrar::deregisterSections)
+    &sys::darwin::StandaloneMachOUnwindInfoRegistrar::deregisterSections)
 
 static std::pair<SymbolNameSpec, const void *>
     orc_rt_ci_StandaloneMachOUnwindInfoRegistrar_sps_interface[] = {

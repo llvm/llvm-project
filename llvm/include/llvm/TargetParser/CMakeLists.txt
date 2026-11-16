@@ -1,17 +1,17 @@
 set(LLVM_TARGET_DEFINITIONS ${PROJECT_SOURCE_DIR}/lib/Target/AArch64/AArch64TargetParserDef.td)
-tablegen(LLVM AArch64TargetParserDef.inc -gen-arm-target-def EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/AArch64)
+llvm_tablegen(AArch64TargetParserDef.inc -gen-arm-target-def EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/AArch64)
 
 set(LLVM_TARGET_DEFINITIONS ${PROJECT_SOURCE_DIR}/lib/Target/RISCV/RISCV.td)
-tablegen(LLVM RISCVTargetParserDef.inc -gen-riscv-target-def EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/RISCV)
+llvm_tablegen(RISCVTargetParserDef.inc -gen-riscv-target-def EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/RISCV)
 
 set(LLVM_TARGET_DEFINITIONS ${PROJECT_SOURCE_DIR}/lib/Target/PowerPC/PPCTargetParserDef.td)
-tablegen(LLVM PPCGenTargetFeatures.inc -gen-target-features EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/PowerPC)
+llvm_tablegen(PPCGenTargetFeatures.inc -gen-target-features EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/PowerPC)
 
 set(LLVM_TARGET_DEFINITIONS ${PROJECT_SOURCE_DIR}/lib/Target/AMDGPU/R600TargetParserDef.td)
-tablegen(LLVM R600TargetParserDef.inc -gen-amdgpu-target-def EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/AMDGPU)
+llvm_tablegen(R600TargetParserDef.inc -gen-amdgpu-target-def EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/AMDGPU)
 
 set(LLVM_TARGET_DEFINITIONS ${PROJECT_SOURCE_DIR}/lib/Target/AMDGPU/AMDGPUTargetParserDef.td)
-tablegen(LLVM AMDGPUTargetParserDef.inc -gen-amdgpu-target-def EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/AMDGPU)
+llvm_tablegen(AMDGPUTargetParserDef.inc -gen-amdgpu-target-def EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/AMDGPU)
 
 # This covers all of the tablegen calls above.
 add_public_tablegen_target(target_parser_gen)

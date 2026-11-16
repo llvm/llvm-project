@@ -2607,6 +2607,18 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         GA->getGlobal(), dl, GA->getValueType(0), 0, X86II::MO_NO_FLAG);
   }
 
+  if (Is64Bit && !Subtarget.isTarget64BitILP32() &&
+      Callee.getValueType() == MVT::i32) {
+    // On 64-bit targets, extend 32-bit MS __ptr32 callees before the call.
+    // Use sign-extension for __sptr and zero-extension for __uptr.
+    assert(CB && "CallBase expected for 32-bit callee");
+    ISD::NodeType ExtOpc = ISD::SIGN_EXTEND;
+    unsigned AS = CB->getCalledOperand()->getType()->getPointerAddressSpace();
+    if (AS == X86AS::PTR32_UPTR)
+      ExtOpc = ISD::ZERO_EXTEND;
+    Callee = DAG.getNode(ExtOpc, dl, MVT::i64, Callee);
+  }
+
   SmallVector<SDValue, 8> Ops;
 
   if (!IsSibcall && isTailCall && !IsMustTail) {

@@ -3,6 +3,7 @@
 # RUN: | FileCheck %s
 ---
 name:            sub_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: sub_i8
@@ -23,6 +24,7 @@ body:             |
 ...
 ---
 name:            sub_i15
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: sub_i15
@@ -43,6 +45,7 @@ body:             |
 ...
 ---
 name:            sub_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: sub_i16
@@ -63,6 +66,7 @@ body:             |
 ...
 ---
 name:            sub_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: sub_i32
@@ -83,7 +87,30 @@ body:             |
 
 ...
 ---
+name:            sub_nsw_nuw_i32
+tracksRegLiveness: false
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: sub_nsw_nuw_i32
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
+    ; CHECK-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s32) = G_TRUNC %0(s64)
+    %3:_(s32) = G_TRUNC %1(s64)
+    %4:_(s32) = nsw nuw G_SUB %2, %3
+    %5:_(s64) = G_ANYEXT %4(s32)
+    $x10 = COPY %5(s64)
+    PseudoRET implicit $x10
+
+...
+---
 name:            sub_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: sub_i64
@@ -101,6 +128,7 @@ body:             |
 ...
 ---
 name:            sub_i72
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: sub_i72
@@ -133,6 +161,7 @@ body:             |
 ...
 ---
 name:            sub_i128
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: sub_i128
@@ -162,6 +191,7 @@ body:             |
 ...
 ---
 name:            sub_i192
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: sub_i192

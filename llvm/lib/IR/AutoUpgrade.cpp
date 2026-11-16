@@ -1439,14 +1439,6 @@ shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(Function *F, StringRef Name) {
 }
 
 static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
-  if (Name.consume_front("fma.rn."))
-    return StringSwitch<Intrinsic::ID>(Name)
-        .Case("bf16", Intrinsic::nvvm_fma_rn_bf16)
-        .Case("bf16x2", Intrinsic::nvvm_fma_rn_bf16x2)
-        .Case("relu.bf16", Intrinsic::nvvm_fma_rn_relu_bf16)
-        .Case("relu.bf16x2", Intrinsic::nvvm_fma_rn_relu_bf16x2)
-        .Default(Intrinsic::not_intrinsic);
-
   if (Name.consume_front("fmax."))
     return StringSwitch<Intrinsic::ID>(Name)
         .Case("bf16", Intrinsic::nvvm_fmax_bf16)
@@ -1525,19 +1517,42 @@ static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
   return true;
 }
 
-// Overloaded fadd/fmul intrinsic IDs, indexed by [`.ftz`][`.sat`].
-static constexpr Intrinsic::ID NVVMFAddIIDs[2][2] = {
-    {Intrinsic::nvvm_fadd, Intrinsic::nvvm_fadd_sat},
-    {Intrinsic::nvvm_fadd_ftz, Intrinsic::nvvm_fadd_ftz_sat}};
-static constexpr Intrinsic::ID NVVMFMulIIDs[2][2] = {
-    {Intrinsic::nvvm_fmul, Intrinsic::nvvm_fmul_sat},
-    {Intrinsic::nvvm_fmul_ftz, Intrinsic::nvvm_fmul_ftz_sat}};
+// Overloaded fadd/fmul/fma intrinsic IDs, indexed by
+// [`.ftz`][none|`.sat`|`.relu`].
+static constexpr Intrinsic::ID NVVMFAddIIDs[2][3] = {
+    {Intrinsic::nvvm_fadd, Intrinsic::nvvm_fadd_sat, Intrinsic::not_intrinsic},
+    {Intrinsic::nvvm_fadd_ftz, Intrinsic::nvvm_fadd_ftz_sat,
+     Intrinsic::not_intrinsic}};
+static constexpr Intrinsic::ID NVVMFMulIIDs[2][3] = {
+    {Intrinsic::nvvm_fmul, Intrinsic::nvvm_fmul_sat, Intrinsic::not_intrinsic},
+    {Intrinsic::nvvm_fmul_ftz, Intrinsic::nvvm_fmul_ftz_sat,
+     Intrinsic::not_intrinsic}};
+static constexpr Intrinsic::ID NVVMFMAIIDs[2][3] = {
+    {Intrinsic::nvvm_fma, Intrinsic::nvvm_fma_sat, Intrinsic::nvvm_fma_relu},
+    {Intrinsic::nvvm_fma_ftz, Intrinsic::nvvm_fma_ftz_sat,
+     Intrinsic::nvvm_fma_ftz_relu}};
+
+// Returns true if the legacy nvvm.{add,mul,fma}.<rnd>{.ftz}{.sat|.relu}.<Type>
+// intrinsic with these modifiers existed.
+static bool isValidLegacyNVVMFPArithIntrinsic(const Intrinsic::ID (&IIDs)[2][3],
+                                              StringRef Type, bool IsRN,
+                                              bool IsFTZ, bool IsSat,
+                                              bool IsRelu) {
+  const bool IsFMA = &IIDs == &NVVMFMAIIDs;
+  const bool IsFMul = &IIDs == &NVVMFMulIIDs;
+  return StringSwitch<bool>(Type)
+      .Case("f", !IsRelu && !(IsSat && IsFMul))
+      .Case("d", !IsFTZ && !IsSat && !IsRelu)
+      .Case("f16", IsRN && (IsFMA || IsSat))
+      .Case("v2f16", IsRN && !IsFMA && IsSat)
+      .Case("f16x2", IsRN && IsFMA)
+      .Cases({"bf16", "bf16x2"}, IsRN && IsFMA && !IsFTZ && !IsSat)
+      .Default(false);
+}
 
 static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
-getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID (&IIDs)[2][2]) {
+getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID (&IIDs)[2][3]) {
   auto [Modifiers, Type] = Name.rsplit('.');
-  if (!is_contained({"f", "d", "f16", "v2f16"}, Type))
-    return std::nullopt;
 
   std::optional<llvm::RoundingMode> RoundingMode =
       StringSwitch<std::optional<llvm::RoundingMode>>(Modifiers.take_front(2))
@@ -1552,10 +1567,21 @@ getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID (&IIDs)[2][2]) {
   StringRef Rest = Modifiers.drop_front(2);
   const bool IsFTZ = Rest.consume_front(".ftz");
   const bool IsSat = Rest.consume_front(".sat");
+  const bool IsRelu = !IsSat && Rest.consume_front(".relu");
   if (!Rest.empty())
     return std::nullopt;
 
-  return std::make_pair(IIDs[IsFTZ][IsSat], *RoundingMode);
+  const Intrinsic::ID IID = IIDs[IsFTZ][IsSat ? 1 : IsRelu ? 2 : 0];
+  if (IID == Intrinsic::not_intrinsic)
+    return std::nullopt;
+
+  // Reject combinations that never existed as legacy intrinsics.
+  const bool IsRN = *RoundingMode == llvm::RoundingMode::NearestTiesToEven;
+  if (!isValidLegacyNVVMFPArithIntrinsic(IIDs, Type, IsRN, IsFTZ, IsSat,
+                                         IsRelu))
+    return std::nullopt;
+
+  return std::make_pair(IID, *RoundingMode);
 }
 
 static Intrinsic::ID shouldUpgradeNVPTXMBarrierInitIntrinsic(StringRef Name) {
@@ -2206,6 +2232,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
         Expand =
             Name == "f" || Name == "ftz.f" || Name == "d" || Name == "f16x2";
+      else if (Name.consume_front("fma."))
+        // nvvm.fma.<rnd>{.ftz}{.sat|.relu}.{f,d,f16,f16x2,bf16,bf16x2}
+        Expand = getNVVMFPArithUpgrade(Name, NVVMFMAIIDs).has_value();
       else if (Name.consume_front("atomic.load."))
         // nvvm.atomic.load.add.{f32,f64}.p
         // nvvm.atomic.load.{inc,dec}.32.p
@@ -3264,15 +3293,28 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
 
 static Value *upgradeNVVMFPArithCall(IRBuilder<> &Builder, CallBase *CI,
                                      StringRef Name,
-                                     const Intrinsic::ID (&IIDs)[2][2]) {
+                                     const Intrinsic::ID (&IIDs)[2][3]) {
   auto Result = getNVVMFPArithUpgrade(Name, IIDs);
-  assert(Result && "unsupported nvvm.add.*/nvvm.mul.* intrinsic");
+  assert(Result && "unsupported nvvm.{add,mul,fma}.* intrinsic");
   auto [IID, RoundingMode] = *Result;
-  Value *A = CI->getArgOperand(0);
-  return Builder.CreateIntrinsic(
-      A->getType(), IID,
-      {A, CI->getArgOperand(1),
-       Builder.getInt32(static_cast<int>(RoundingMode))});
+
+  // The legacy bf16 variants used integer storage types for the bf16
+  // operands; bitcast them to the floating-point types of the new
+  // overloaded intrinsic.
+  Type *Ty = CI->getType();
+  const bool IsLegacyBF16Storage = Ty->getScalarType()->isIntegerTy();
+  if (IsLegacyBF16Storage)
+    Ty = Name.ends_with("bf16x2")
+             ? FixedVectorType::get(Builder.getBFloatTy(), 2)
+             : static_cast<Type *>(Builder.getBFloatTy());
+
+  SmallVector<Value *, 4> Args;
+  for (Value *Arg : CI->args())
+    Args.push_back(IsLegacyBF16Storage ? Builder.CreateBitCast(Arg, Ty) : Arg);
+  Args.push_back(Builder.getInt32(static_cast<int>(RoundingMode)));
+
+  Value *Rep = Builder.CreateIntrinsic(Ty, IID, Args);
+  return IsLegacyBF16Storage ? Builder.CreateBitCast(Rep, CI->getType()) : Rep;
 }
 
 static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
@@ -3306,6 +3348,9 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Intrinsic::ID IID = Name.starts_with("ftz") ? Intrinsic::nvvm_ex2_approx_ftz
                                                 : Intrinsic::nvvm_ex2_approx;
     Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
+  } else if (Name.consume_front("fma.")) {
+    // nvvm.fma.<rnd>{.ftz}{.sat|.relu}.{f,d,f16,f16x2,bf16,bf16x2}
+    Rep = upgradeNVVMFPArithCall(Builder, CI, Name, NVVMFMAIIDs);
   } else if (Name.starts_with("atomic.load.add.f32.p") ||
              Name.starts_with("atomic.load.add.f64.p")) {
     Value *Ptr = CI->getArgOperand(0);

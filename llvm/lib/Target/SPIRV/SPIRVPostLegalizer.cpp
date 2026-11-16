@@ -317,6 +317,8 @@ static SPIRVTypeInst deduceResultTypeFromOperands(MachineInstr *I,
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_TRUNC:
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
     return deduceIntTypeFromResult(ResVReg, MIB, GR);
   case TargetOpcode::G_BUILD_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, I->getNumOperands());
@@ -329,6 +331,8 @@ static SPIRVTypeInst deduceResultTypeFromOperands(MachineInstr *I,
     auto IntrinsicID = cast<GIntrinsic>(I)->getIntrinsicID();
     if (IntrinsicID == Intrinsic::spv_gep)
       return deduceGEPType(I, GR, MIB);
+    if (IntrinsicID == Intrinsic::spv_extractelt)
+      return deduceTypeFromSingleOperand(I, MIB, GR, 2);
     break;
   }
   case TargetOpcode::G_LOAD: {

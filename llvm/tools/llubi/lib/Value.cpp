@@ -99,9 +99,9 @@ void AnyValue::print(Context &Ctx, raw_ostream &OS) const {
     // exponential notation if it is lossless, otherwise output it in
     // hexadecimal notation.
     SmallString<16> StrVal;
-    FloatVal.toString(StrVal, /*FormatPrecision=*/6, /*FormatMaxPadding=*/0,
-                      /*TruncateZero=*/false);
-    if (APFloat(FloatVal.getSemantics(), StrVal).bitwiseIsEqual(FloatVal)) {
+    if (FloatVal.toStringRoundTrip(StrVal, /*FormatPrecision=*/6,
+                                   /*FormatMaxPadding=*/0,
+                                   /*TruncateZero=*/false)) {
       OS << StrVal;
     } else {
       StrVal.clear();

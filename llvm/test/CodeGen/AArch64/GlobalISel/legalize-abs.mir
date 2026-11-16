@@ -3,6 +3,7 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer -mattr=+cssc -global-isel-abort=1 %s -o - | FileCheck %s --check-prefix=CHECK-CSSC
 ---
 name:            abs_s32
+tracksRegLiveness: false
 liveins:
 body:             |
   bb.0:
@@ -24,6 +25,7 @@ body:             |
 ...
 ---
 name:            abs_s64
+tracksRegLiveness: false
 liveins:
 body:             |
   bb.0:

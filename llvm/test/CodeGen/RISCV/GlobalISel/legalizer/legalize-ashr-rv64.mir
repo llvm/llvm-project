@@ -3,6 +3,7 @@
 # RUN: | FileCheck %s
 ---
 name:            ashr_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i8
@@ -28,6 +29,7 @@ body:             |
 ...
 ---
 name:            ashr_i15
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i15
@@ -53,6 +55,7 @@ body:             |
 ...
 ---
 name:            ashr_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i16
@@ -78,6 +81,7 @@ body:             |
 ...
 ---
 name:            ashr_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i32
@@ -98,6 +102,7 @@ body:             |
 ...
 ---
 name:            ashr_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i64
@@ -115,6 +120,7 @@ body:             |
 ...
 ---
 name:            ashr_i72
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i72
@@ -161,6 +167,7 @@ body:             |
 ...
 ---
 name:            ashr_i128
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i128
@@ -201,6 +208,7 @@ body:             |
 ...
 ---
 name:            ashr_i192
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i192
@@ -292,6 +300,7 @@ body:             |
 ...
 ---
 name:            ashr_i48
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -316,6 +325,30 @@ body:             |
     %4:_(s48) = G_ASHR %0, %1(s48)
     %5:_(s64) = G_ANYEXT %4(s48)
     $x10 = COPY %5(s64)
+    PseudoRET implicit $x10
+
+...
+---
+name:            ashr_i32_const_exact
+body:             |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: ashr_i32_const_exact
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s64) = exact G_ASHR [[SEXT_INREG]], [[C]](s64)
+    ; CHECK-NEXT: $x10 = COPY [[ASHR]](s64)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s32) = G_TRUNC %0(s64)
+    %2:_(s32) = G_CONSTANT i32 5
+    %3:_(s32) = exact G_ASHR %1, %2(s32)
+    %4:_(s64) = G_ANYEXT %3(s32)
+    $x10 = COPY %4(s64)
     PseudoRET implicit $x10
 
 ...

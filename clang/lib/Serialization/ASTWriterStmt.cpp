@@ -504,10 +504,10 @@ void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
 static void
 addConstraintSatisfaction(ASTRecordWriter &Record,
                           const ASTConstraintSatisfaction &Satisfaction) {
-  Record.push_back(Satisfaction.IsSatisfied);
-  Record.push_back(Satisfaction.ContainsErrors);
-  if (!Satisfaction.IsSatisfied) {
-    Record.push_back(Satisfaction.NumRecords);
+  Record.push_back(Satisfaction.isSatisfied());
+  Record.push_back(Satisfaction.containsErrors());
+  if (!Satisfaction.isSatisfied()) {
+    Record.push_back(Satisfaction.record_size());
     for (const auto &DetailRecord : Satisfaction) {
       if (auto *Diag = dyn_cast<const ConstraintSubstitutionDiagnostic *>(
               DetailRecord)) {

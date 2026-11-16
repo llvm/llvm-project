@@ -907,6 +907,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::HybridPatchable:
       case Attribute::NoRecurse:
       case Attribute::InlineHint:
+      case Attribute::LikelyModuleLocal:
       case Attribute::MinSize:
       case Attribute::NoCallback:
       case Attribute::NoDuplicate:
@@ -931,6 +932,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::SanitizeMemory:
       case Attribute::SanitizeNumericalStability:
       case Attribute::SanitizeThread:
+      case Attribute::SanitizeConcurrency:
       case Attribute::SanitizeType:
       case Attribute::SanitizeHWAddress:
       case Attribute::SanitizeMemTag:

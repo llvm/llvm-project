@@ -469,6 +469,24 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       decl.SetColumn(form_value.Unsigned());
       break;
 
+    case DW_AT_address_class: {
+      uint64_t val = form_value.Unsigned();
+      if (val == llvm::dwarf::DW_ADDR_none)
+        break;
+      constexpr uint64_t max_target_as =
+          clang::Qualifiers::MaxAddressSpace -
+          llvm::to_underlying(clang::LangAS::FirstTargetAddressSpace);
+      if (val <= max_target_as) {
+        address_class =
+            clang::getLangASFromTargetAS(static_cast<unsigned>(val));
+      } else {
+        die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
+            "[{0:x16}]: invalid DW_AT_address_class {1:x}", die.GetOffset(),
+            val);
+      }
+      break;
+    }
+
     case DW_AT_declaration:
       is_forward_declaration = form_value.Boolean();
       break;
@@ -812,6 +830,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   }
   case DW_TAG_pointer_type:
     encoding_data_type = Type::eEncodingIsPointerUID;
+    payload = TypePayloadClang(attrs.address_class);
     break;
   case DW_TAG_reference_type:
     encoding_data_type = Type::eEncodingIsLValueReferenceUID;

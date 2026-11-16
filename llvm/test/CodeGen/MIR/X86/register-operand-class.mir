@@ -12,6 +12,7 @@
 # CHECK:   - { id: 3, class: gr16, preferred-register: '', flags: [   ] }
 # CHECK:   - { id: 4, class: _, preferred-register: '', flags: [   ] }
 name: func
+tracksRegLiveness: false
 body: |
   bb.0:
     %0 : gr32 = COPY $rax

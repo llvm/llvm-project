@@ -8,6 +8,7 @@
 
 #include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/Attribute.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;
@@ -145,6 +146,30 @@ bool EnumInfo::printBitEnumPrimaryGroups() const {
 
 bool EnumInfo::printBitEnumQuoted() const {
   return def->getValueAsBit("printBitEnumQuoted");
+}
+
+StringRef EnumInfo::getBitEnumSeparator() const {
+  return def->getValueAsString("separator");
+}
+
+EnumInfo::BitEnumSeparatorKind EnumInfo::getBitEnumSeparatorKind() const {
+  StringRef separator = getBitEnumSeparator().trim();
+  if (separator == "|")
+    return BitEnumSeparatorKind::VerticalBar;
+  if (separator == ",")
+    return BitEnumSeparatorKind::Comma;
+  PrintFatalError(def->getLoc(), "bit enum separator must be '|' or ',', "
+                                 "optionally surrounded by spaces");
+}
+
+StringRef EnumInfo::getBitEnumSeparatorParser() const {
+  switch (getBitEnumSeparatorKind()) {
+  case BitEnumSeparatorKind::VerticalBar:
+    return "parseOptionalVerticalBar";
+  case BitEnumSeparatorKind::Comma:
+    return "parseOptionalComma";
+  }
+  llvm_unreachable("unknown bit enum separator kind");
 }
 
 const Record &EnumInfo::getDef() const { return *def; }

@@ -223,8 +223,8 @@ void MipsPassConfig::addIRPasses() {
 // Install an instruction selector pass using
 // the ISelDag to gen Mips code.
 bool MipsPassConfig::addInstSelector() {
-  addPass(createMips16ISelDag(getMipsTargetMachine(), getOptLevel()));
-  addPass(createMipsSEISelDag(getMipsTargetMachine(), getOptLevel()));
+  addPass(createMips16ISelDAGLegacyPass(getMipsTargetMachine(), getOptLevel()));
+  addPass(createMipsSEISelDAGLegacyPass(getMipsTargetMachine(), getOptLevel()));
   return false;
 }
 

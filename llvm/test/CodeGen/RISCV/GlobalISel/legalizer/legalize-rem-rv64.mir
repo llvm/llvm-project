@@ -5,6 +5,7 @@
 # RUN: | FileCheck %s -check-prefix=CHECK-M
 ---
 name:            srem_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: srem_i8
@@ -47,6 +48,7 @@ body:             |
 ...
 ---
 name:            srem_i15
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: srem_i15
@@ -89,6 +91,7 @@ body:             |
 ...
 ---
 name:            srem_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: srem_i16
@@ -131,6 +134,7 @@ body:             |
 ...
 ---
 name:            srem_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: srem_i32
@@ -167,6 +171,7 @@ body:             |
 ...
 ---
 name:            srem_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: srem_i64
@@ -196,6 +201,7 @@ body:             |
 ...
 ---
 name:            srem_i72
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: srem_i72
@@ -261,6 +267,7 @@ body:             |
 ...
 ---
 name:            srem_i128
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: srem_i128
@@ -313,6 +320,7 @@ body:             |
 ...
 ---
 name:            urem_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: urem_i8
@@ -351,6 +359,7 @@ body:             |
 ...
 ---
 name:            urem_i15
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: urem_i15
@@ -389,6 +398,7 @@ body:             |
 ...
 ---
 name:            urem_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: urem_i16
@@ -427,6 +437,7 @@ body:             |
 ...
 ---
 name:            urem_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: urem_i32
@@ -462,6 +473,7 @@ body:             |
 ...
 ---
 name:            urem_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: urem_i64
@@ -491,6 +503,7 @@ body:             |
 ...
 ---
 name:            urem_i72
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: urem_i72
@@ -558,6 +571,7 @@ body:             |
 ...
 ---
 name:            urem_i128
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: urem_i128

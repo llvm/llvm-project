@@ -28,7 +28,7 @@ module attributes {
   }
 
   // Ignore slot drops; Extend shifts to position 1 and gets llvm.signext.
-  // CHECK:      cir.func{{.*}} @callee(%arg0: !s32i, %arg1: !s8i {llvm.signext}) -> !s32i
+  // CHECK:      cir.func{{.*}} @callee(%arg0: !s32i, %arg1: !s8i {llvm.noundef, llvm.signext}) -> !s32i
   // CHECK-NEXT:   cir.return %arg0 : !s32i
 
   cir.func @caller(%arg0: !s32i, %arg1: !s32i, %arg2: !s8i) -> !s32i
@@ -37,8 +37,8 @@ module attributes {
     cir.return %0 : !s32i
   }
 
-  // CHECK:      cir.func{{.*}} @caller(%arg0: !s32i, %arg1: !s8i {llvm.signext}) -> !s32i
-  // CHECK-NEXT:   %[[R:.*]] = cir.call @callee(%arg0, %arg1) : (!s32i, !s8i {llvm.signext}) -> !s32i
+  // CHECK:      cir.func{{.*}} @caller(%arg0: !s32i, %arg1: !s8i {llvm.noundef, llvm.signext}) -> !s32i
+  // CHECK-NEXT:   %[[R:.*]] = cir.call @callee(%arg0, %arg1) : (!s32i, !s8i {llvm.noundef, llvm.signext}) -> !s32i
   // CHECK-NEXT:   cir.return %[[R]] : !s32i
 
 }

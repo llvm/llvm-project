@@ -211,12 +211,6 @@ public:
   /// \param Init First part of the for loop.
   void ActOnOpenMPLoopInitialization(SourceLocation ForLoc, Stmt *Init);
 
-  /// Called on well-formed '\#pragma omp metadirective' after parsing
-  /// of the  associated statement.
-  StmtResult ActOnOpenMPMetaDirective(ArrayRef<OMPClause *> Clauses,
-                                      Stmt *AStmt, SourceLocation StartLoc,
-                                      SourceLocation EndLoc);
-
   /// Called for metadirectives with user conditions that require runtime
   /// selection. \p Variants holds one complete directive (or the plain
   /// associated statement) per entry of \p TraitInfos.
@@ -1009,10 +1003,6 @@ public:
                                      SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc);
-  /// Called on well-formed 'when' clause.
-  OMPClause *ActOnOpenMPWhenClause(OMPTraitInfo &TI, SourceLocation StartLoc,
-                                   SourceLocation LParenLoc,
-                                   SourceLocation EndLoc);
   /// Called on well-formed 'default' clause.
   OMPClause *
   ActOnOpenMPDefaultClause(llvm::omp::DefaultKind M, SourceLocation MLoc,

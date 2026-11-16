@@ -23,6 +23,7 @@
 ...
 ---
 name: a
+tracksRegLiveness: false
 body: |
   bb.0:
     BLR_BTI @_setjmp, $x0, $w1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp

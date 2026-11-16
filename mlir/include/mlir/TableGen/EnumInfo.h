@@ -134,6 +134,18 @@ public:
   bool printBitEnumPrimaryGroups() const;
   bool printBitEnumQuoted() const;
 
+  // Returns the string printed between the cases of a bit enum.
+  StringRef getBitEnumSeparator() const;
+
+  // The token that separates the cases of a bit enum, ignoring the spaces
+  // around it.
+  enum class BitEnumSeparatorKind { VerticalBar, Comma };
+  BitEnumSeparatorKind getBitEnumSeparatorKind() const;
+
+  // Returns the name of the `AsmParser` method that parses the separator
+  // between the cases of a bit enum.
+  StringRef getBitEnumSeparatorParser() const;
+
   // Returns the TableGen definition this EnumAttrCase was constructed from.
   const llvm::Record &getDef() const;
 

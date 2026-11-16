@@ -2315,8 +2315,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(std::string type_name,
     // It's not generally possible to get a type object here. For example, this
     // command can be run before loading any binaries. Do just a best-effort
     // name-based lookup here to try to prevent conflicts.
-    FormattersMatchCandidate candidate_type(ConstString(type_name), nullptr,
-                                            TypeImpl(),
+    FormattersMatchCandidate candidate_type(type_name, nullptr, TypeImpl(),
                                             FormattersMatchCandidate::Flags());
     if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter)) {
       if (error)
@@ -2456,8 +2455,7 @@ private:
       // this command can be run before loading any binaries. Do just a
       // best-effort name-based lookup here to try to prevent conflicts.
       FormattersMatchCandidate candidate_type(
-          ConstString(type_name), nullptr, TypeImpl(),
-          FormattersMatchCandidate::Flags());
+          type_name, nullptr, TypeImpl(), FormattersMatchCandidate::Flags());
       lldb::SyntheticChildrenSP entry;
       if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth)) {
         if (error)

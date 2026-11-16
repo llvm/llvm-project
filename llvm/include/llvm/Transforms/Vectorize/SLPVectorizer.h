@@ -156,6 +156,14 @@ private:
                              slpvectorizer::BoUpSLP &R,
                              SmallVectorImpl<WeakTrackingVH> &PostponedInsts);
 
+  /// Tries to vectorize the horizontal reductions, rooted at the seed values
+  /// \p Vals (or at the incoming values of the non-header PHI nodes in \p
+  /// Vals), before the seeds themselves, if they are the reductions of the
+  /// loop accumulators, vectorizable along their own reduced values.
+  /// \returns true if any reduction was vectorized.
+  bool vectorizeSeedReductions(ArrayRef<Value *> Vals,
+                               slpvectorizer::BoUpSLP &R);
+
   /// Make an attempt to vectorize reduction and then try to vectorize
   /// postponed binary operations.
   /// \returns true on any successfull vectorization.

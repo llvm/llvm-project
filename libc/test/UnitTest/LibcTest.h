@@ -24,6 +24,7 @@
 // This file can only include headers from src/__support/ or test/UnitTest. No
 // other headers should be included.
 
+#include "src/__support/CPP/cstddef/nullptr_t.h"
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
@@ -214,11 +215,11 @@ protected:
     return testMatch(Matcher.match(Value), Matcher, ValueStr, MatcherStr, Loc);
   }
 
-  bool testProcessExits(cpp::function<void(void)> Func, int ExitCode,
+  bool testProcessExits(cpp::function_ref<void(void)> Func, int ExitCode,
                         const char *LHSStr, const char *RHSStr,
                         internal::Location Loc);
 
-  bool testProcessKilled(cpp::function<void(void)> Func, int Signal,
+  bool testProcessKilled(cpp::function_ref<void(void)> Func, int Signal,
                          const char *LHSStr, const char *RHSStr,
                          internal::Location Loc);
 
