@@ -15,7 +15,6 @@ libc_test(
     srcs = ["double_double_test.cpp"],
     deps = [
         "//libc/src/__support/FPUtil:double_double",
-        "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:optimization",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
