@@ -60918,18 +60918,19 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDNode *N,
 // ADD of the two.
 //
 // With B the input element width, Pack works in each 2B-bit element:
-//   Pack(Lo, Hi) = Lo | (Hi << B)
+//   Pack(Lo, Hi) = (Lo & LoMask) | (Hi << B)
 // placing the even input elements of Lo and Hi in the even and odd input
-// elements of the result.
+// elements of the result. This is the same as interleaving the even input
+// elements with a shuffle.
 //
-// The odd input elements of Hi do not matter, as their products are zero,
-// but both inputs of the Lo PMADD must have zero odd elements so that no
-// masking is needed.
+// The odd input elements of Hi do not matter, as the shift discards them. The
+// mask clears the odd input elements of Lo, and is omitted for inputs whose
+// odd elements are already known zero.
 static SDValue getPackedPMADD(SelectionDAG &DAG, SDValue N0, SDValue N1,
                               const APInt &DemandedHiElts, const SDLoc &DL) {
-  auto HiEltsZero = [&](SDValue N) {
-    return DAG.MaskedVectorIsZero(N.getOperand(0), DemandedHiElts) &&
-           DAG.MaskedVectorIsZero(N.getOperand(1), DemandedHiElts);
+  auto NumHiEltsZero = [&](SDValue N) {
+    return (unsigned)DAG.MaskedVectorIsZero(N.getOperand(0), DemandedHiElts) +
+           (unsigned)DAG.MaskedVectorIsZero(N.getOperand(1), DemandedHiElts);
   };
 
   EVT VT = N0.getValueType();
@@ -60952,22 +60953,23 @@ static SDValue getPackedPMADD(SelectionDAG &DAG, SDValue N0, SDValue N1,
     });
   };
 
-  if (!HiEltsZero(N0)) {
-    if (!HiEltsZero(N1))
-      return SDValue();
+  // Use the PMADD needing fewer masks as Lo. On a tie, use the shifted down
+  // one as Hi so that the packing can fold back to the unshifted inputs.
+  unsigned NumZero0 = NumHiEltsZero(N0), NumZero1 = NumHiEltsZero(N1);
+  if (NumZero1 > NumZero0 || (NumZero1 == NumZero0 && HasShiftedDownInput(N0) &&
+                              !HasShiftedDownInput(N1)))
     std::swap(N0, N1);
-  } else if (HiEltsZero(N1) && HasShiftedDownInput(N0) &&
-             !HasShiftedDownInput(N1)) {
-    // Both PMADDs can be Lo. Use the shifted down one as Hi so that the
-    // packing can fold back to the unshifted inputs.
-    std::swap(N0, N1);
-  }
 
   SDValue ShAmt = DAG.getShiftAmountConstant(EltBits, VT, DL);
+  SDValue LoMask = DAG.getConstant(
+      APInt::getLowBitsSet(VT.getScalarSizeInBits(), EltBits), DL, VT);
   auto Pack = [&](SDValue Lo, SDValue Hi) {
+    bool LoHiEltsZero = DAG.MaskedVectorIsZero(Lo, DemandedHiElts);
+    Lo = DAG.getBitcast(VT, Lo);
+    if (!LoHiEltsZero)
+      Lo = DAG.getNode(ISD::AND, DL, VT, Lo, LoMask);
     Hi = DAG.getNode(ISD::SHL, DL, VT, DAG.getBitcast(VT, Hi), ShAmt);
-    return DAG.getBitcast(
-        OpVT, DAG.getNode(ISD::OR, DL, VT, DAG.getBitcast(VT, Lo), Hi));
+    return DAG.getBitcast(OpVT, DAG.getNode(ISD::OR, DL, VT, Lo, Hi));
   };
 
   SDValue LHS = Pack(N0.getOperand(0), N1.getOperand(0));
@@ -61006,9 +61008,10 @@ static SDValue combineAddOfPMADD(SelectionDAG &DAG, SDValue N0, SDValue N1,
       !DAG.willNotOverflowAdd(/*IsSigned=*/true, N0, N1))
     return SDValue();
 
-  // Both PMADDs must disappear or the packing ops are pure overhead. The worst
-  // case costs an instruction or two more than the separate PMADDs, but saves
-  // a PMADD on AVX512.
+  // Both PMADDs must disappear or the packing ops are pure overhead. In the
+  // worst case, where each PMADD has only one input with zero odd elements,
+  // the extra masks cost a few more instructions than the separate PMADDs,
+  // though AVX512 folds most of them into VPTERNLOG.
   if (N0.getOpcode() == X86ISD::VPMADDUBSW) {
     if (!N0.hasOneUse() || !N1.hasOneUse())
       return SDValue();

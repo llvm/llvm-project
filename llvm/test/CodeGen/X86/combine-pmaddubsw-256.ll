@@ -132,8 +132,8 @@ define <16 x i16> @combine_pmaddubsw_add_negative_overflow(<32 x i8> %a0, <32 x 
   ret <16 x i16> %res
 }
 
-; Independent inputs require new shuffles. Preserve the two PMADDUBSWs
-; and the ADD instead of introducing those shuffles.
+; Each PMADDUBSW has only one input with zero odd bytes, so packing the
+; independent inputs needs an extra mask on the low signed input.
 define <16 x i16> @combine_pmaddubsw_add_independent_inputs(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> %a2, <32 x i8> %a3) {
 ; AVX2-LABEL: combine_pmaddubsw_add_independent_inputs:
 ; AVX2:       # %bb.0:
@@ -141,24 +141,28 @@ define <16 x i16> @combine_pmaddubsw_add_independent_inputs(<32 x i8> %a0, <32 x
 ; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
 ; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX2-NEXT:    vpand %ymm5, %ymm1, %ymm1
+; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm2
+; AVX2-NEXT:    vpand %ymm5, %ymm3, %ymm3
+; AVX2-NEXT:    vpsllw $8, %ymm3, %ymm3
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX2-NEXT:    vpor %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpsllw $8, %ymm2, %ymm2
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm1
-; AVX2-NEXT:    vpand %ymm5, %ymm3, %ymm2
-; AVX2-NEXT:    vpmaddubsw %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_pmaddubsw_add_independent_inputs:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0]
-; AVX512-NEXT:    vpand %ymm4, %ymm0, %ymm0
 ; AVX512-NEXT:    vpbroadcastb {{.*#+}} ymm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX512-NEXT:    vpand %ymm5, %ymm1, %ymm1
-; AVX512-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpand %ymm4, %ymm2, %ymm1
-; AVX512-NEXT:    vpand %ymm5, %ymm3, %ymm2
-; AVX512-NEXT:    vpmaddubsw %ymm2, %ymm1, %ymm1
-; AVX512-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpand %ymm4, %ymm2, %ymm2
+; AVX512-NEXT:    vpand %ymm5, %ymm3, %ymm3
+; AVX512-NEXT:    vpsllw $8, %ymm3, %ymm3
+; AVX512-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 | (ymm1 & m32bcst)
+; AVX512-NEXT:    vpsllw $8, %ymm2, %ymm1
+; AVX512-NEXT:    vpternlogq {{.*#+}} ymm1 = ymm1 | (ymm0 & ymm4)
+; AVX512-NEXT:    vpmaddubsw %ymm3, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %mask = bitcast <16 x i16> splat (i16 127) to <32 x i8>
   %and0 = and <32 x i8> %a0, %mask

@@ -350,8 +350,8 @@ define <8 x i16> @combine_pmaddubsw_add_negative_overflow(<16 x i8> %a0, <16 x i
   ret <8 x i16> %res
 }
 
-; Independent inputs require new shuffles. Preserve the two PMADDUBSWs
-; and the ADD instead of introducing those shuffles.
+; Each PMADDUBSW has only one input with zero odd bytes, so packing the
+; independent inputs needs an extra mask on the low signed input.
 define <8 x i16> @combine_pmaddubsw_add_independent_inputs(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2, <16 x i8> %a3) {
 ; SSSE3-LABEL: combine_pmaddubsw_add_independent_inputs:
 ; SSSE3:       # %bb.0:
@@ -359,11 +359,14 @@ define <8 x i16> @combine_pmaddubsw_add_independent_inputs(<16 x i8> %a0, <16 x 
 ; SSSE3-NEXT:    pand %xmm4, %xmm0
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; SSSE3-NEXT:    pand %xmm5, %xmm1
-; SSSE3-NEXT:    pmaddubsw %xmm1, %xmm0
 ; SSSE3-NEXT:    pand %xmm2, %xmm4
 ; SSSE3-NEXT:    pand %xmm5, %xmm3
-; SSSE3-NEXT:    pmaddubsw %xmm3, %xmm4
-; SSSE3-NEXT:    paddw %xmm4, %xmm0
+; SSSE3-NEXT:    psllw $8, %xmm3
+; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSSE3-NEXT:    por %xmm3, %xmm1
+; SSSE3-NEXT:    psllw $8, %xmm4
+; SSSE3-NEXT:    por %xmm4, %xmm0
+; SSSE3-NEXT:    pmaddubsw %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: combine_pmaddubsw_add_independent_inputs:
@@ -372,11 +375,14 @@ define <8 x i16> @combine_pmaddubsw_add_independent_inputs(<16 x i8> %a0, <16 x 
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; SSE41-NEXT:    pand %xmm5, %xmm1
-; SSE41-NEXT:    pmaddubsw %xmm1, %xmm0
 ; SSE41-NEXT:    pand %xmm2, %xmm4
 ; SSE41-NEXT:    pand %xmm5, %xmm3
-; SSE41-NEXT:    pmaddubsw %xmm3, %xmm4
-; SSE41-NEXT:    paddw %xmm4, %xmm0
+; SSE41-NEXT:    psllw $8, %xmm3
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    por %xmm3, %xmm1
+; SSE41-NEXT:    psllw $8, %xmm4
+; SSE41-NEXT:    por %xmm4, %xmm0
+; SSE41-NEXT:    pmaddubsw %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_pmaddubsw_add_independent_inputs:
@@ -385,11 +391,14 @@ define <8 x i16> @combine_pmaddubsw_add_independent_inputs(<16 x i8> %a0, <16 x 
 ; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpand %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpsllw $8, %xmm3, %xmm3
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpor %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpsllw $8, %xmm2, %xmm2
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm4, %xmm2, %xmm1
-; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm2
-; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_pmaddubsw_add_independent_inputs:
@@ -398,11 +407,14 @@ define <8 x i16> @combine_pmaddubsw_add_independent_inputs(<16 x i8> %a0, <16 x 
 ; AVX2-NEXT:    vpand %xmm4, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX2-NEXT:    vpand %xmm5, %xmm1, %xmm1
+; AVX2-NEXT:    vpand %xmm4, %xmm2, %xmm2
+; AVX2-NEXT:    vpand %xmm5, %xmm3, %xmm3
+; AVX2-NEXT:    vpsllw $8, %xmm3, %xmm3
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpor %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vpsllw $8, %xmm2, %xmm2
+; AVX2-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm4, %xmm2, %xmm1
-; AVX2-NEXT:    vpand %xmm5, %xmm3, %xmm2
-; AVX2-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %mask = bitcast <8 x i16> splat (i16 127) to <16 x i8>
   %and0 = and <16 x i8> %a0, %mask

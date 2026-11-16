@@ -92,20 +92,21 @@ define <32 x i16> @combine_pmaddubsw_add_negative_overflow(<64 x i8> %a0, <64 x 
   ret <32 x i16> %res
 }
 
-; Independent inputs require new shuffles. Preserve the two PMADDUBSWs
-; and the ADD instead of introducing those shuffles.
+; Each PMADDUBSW has only one input with zero odd bytes, so packing the
+; independent inputs needs an extra mask on the low signed input.
 define <32 x i16> @combine_pmaddubsw_add_independent_inputs(<64 x i8> %a0, <64 x i8> %a1, <64 x i8> %a2, <64 x i8> %a3) {
 ; AVX512-LABEL: combine_pmaddubsw_add_independent_inputs:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpbroadcastw {{.*#+}} zmm4 = [127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0,127,0]
-; AVX512-NEXT:    vpandq %zmm4, %zmm0, %zmm0
 ; AVX512-NEXT:    vpbroadcastb {{.*#+}} zmm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX512-NEXT:    vpandq %zmm5, %zmm1, %zmm1
-; AVX512-NEXT:    vpmaddubsw %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpandq %zmm4, %zmm2, %zmm1
-; AVX512-NEXT:    vpandq %zmm5, %zmm3, %zmm2
-; AVX512-NEXT:    vpmaddubsw %zmm2, %zmm1, %zmm1
-; AVX512-NEXT:    vpaddw %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpandq %zmm4, %zmm2, %zmm2
+; AVX512-NEXT:    vpandq %zmm5, %zmm3, %zmm3
+; AVX512-NEXT:    vpsllw $8, %zmm3, %zmm3
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm3 = zmm3 | (zmm1 & m32bcst)
+; AVX512-NEXT:    vpsllw $8, %zmm2, %zmm1
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 | (zmm0 & zmm4)
+; AVX512-NEXT:    vpmaddubsw %zmm3, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %mask = bitcast <32 x i16> splat (i16 127) to <64 x i8>
   %and0 = and <64 x i8> %a0, %mask
