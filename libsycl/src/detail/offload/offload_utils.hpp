@@ -140,6 +140,14 @@ void callAndThrow(ContextImpl &Context, FunctionType &Function,
 /// \return sycl::backend matching specified liboffload backend.
 backend convertBackend(ol_platform_backend_t Backend);
 
+/// Checks whether libsycl uses devices of a liboffload backend.
+///
+/// \param Backend liboffload backend.
+///
+/// \return true for backends accepted by convertBackend() and for the host
+/// backend, which is used internally.
+bool isBackendSupported(ol_platform_backend_t Backend);
+
 /// Converts SYCL device type to liboffload type.
 ///
 /// \param DeviceType SYCL device type.

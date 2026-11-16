@@ -65,6 +65,18 @@ add_libc_test(
 )
 
 add_libc_test(
+  functional_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    functional_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.functional
+    libc.src.__support.CPP.nullptr_t
+    libc.src.__support.CPP.type_traits
+)
+
+add_libc_test(
   stringview_test
   SUITE
     libc-cpp-utils-tests
@@ -120,7 +132,6 @@ add_libc_test(
     libc.src.__support.CPP.utility
 )
 
-
 # This test fails with invalid address space operations on sm_60
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
@@ -163,6 +174,7 @@ add_libc_test(
     unique_ptr_test.cpp
   DEPENDS
     libc.hdr.signal_macros
+    libc.src.__support.CPP.nullptr_t
     libc.src.__support.CPP.unique_ptr
     libc.src.__support.CPP.utility
 )

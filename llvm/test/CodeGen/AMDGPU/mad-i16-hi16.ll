@@ -8,17 +8,15 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11-TRUE16,GFX11-TRUE16-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11-TRUE16,GFX11-TRUE16-GISEL %s
 
-; Scalar i16 multiply-add reading the high half of a packed register. On GFX10+
-; v_mad_u16 supports op_sel, so the high halves can be read directly. GFX9
-; selects v_mad_legacy_u16, which does not have op_sel.
+; Scalar i16 multiply-add reading the high half of a packed register. On GFX9+
+; v_mad_u16 supports op_sel, so the high halves can be read directly.
 
 ; Only src0 comes from a high half.
 define i16 @mad_u16_hi_src0(<2 x i16> %a, i16 %b, i16 %c) {
 ; GFX9-LABEL: mad_u16_hi_src0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v2
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v2 op_sel:[1,0,0,0]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: mad_u16_hi_src0:
@@ -49,8 +47,7 @@ define i16 @mad_u16_hi_src1(i16 %a, <2 x i16> %b, i16 %c) {
 ; GFX9-LABEL: mad_u16_hi_src1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v2
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v2 op_sel:[0,1,0,0]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: mad_u16_hi_src1:
@@ -81,8 +78,7 @@ define i16 @mad_u16_hi_src2(i16 %a, i16 %b, <2 x i16> %c) {
 ; GFX9-LABEL: mad_u16_hi_src2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v2
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v2 op_sel:[0,0,1,0]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: mad_u16_hi_src2:
@@ -113,10 +109,7 @@ define i16 @mad_u16_hi_srcs(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c) {
 ; GFX9-LABEL: mad_u16_hi_srcs:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v2
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v2 op_sel:[1,1,1,0]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: mad_u16_hi_srcs:
@@ -149,8 +142,7 @@ define i16 @mad_u16_lo_hi_same_reg(<2 x i16> %a, i16 %c) {
 ; GFX9-LABEL: mad_u16_lo_hi_same_reg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v2, v1
+; GFX9-NEXT:    v_mad_u16 v0, v0, v0, v1 op_sel:[0,1,0,0]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: mad_u16_lo_hi_same_reg:
@@ -183,8 +175,7 @@ define i16 @mad_u16_hi_src0_lshr(i32 %a, i16 %b, i16 %c) {
 ; GFX9-LABEL: mad_u16_hi_src0_lshr:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v2
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v2 op_sel:[1,0,0,0]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: mad_u16_hi_src0_lshr:
@@ -217,10 +208,7 @@ define <2 x i16> @mad_u16_hi_srcs_hi_dst(<2 x i16> %a, <2 x i16> %b, <2 x i16> %
 ; GFX9-SDAG-LABEL: mad_u16_hi_srcs_hi_dst:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v0, v1, v3
+; GFX9-SDAG-NEXT:    v_mad_u16 v0, v0, v1, v2 op_sel:[1,1,1,0]
 ; GFX9-SDAG-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX9-SDAG-NEXT:    v_perm_b32 v0, v0, v2, s4
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -228,10 +216,8 @@ define <2 x i16> @mad_u16_hi_srcs_hi_dst(<2 x i16> %a, <2 x i16> %b, <2 x i16> %
 ; GFX9-GISEL-LABEL: mad_u16_hi_srcs_hi_dst:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v1, v3
+; GFX9-GISEL-NEXT:    v_mad_u16 v0, v0, v1, v2 op_sel:[1,1,1,0]
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v2, v1, v0
@@ -306,7 +292,7 @@ define i16 @mad_u16_fneg_src0(half %a, i16 %b, i16 %c) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v2
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: mad_u16_fneg_src0:

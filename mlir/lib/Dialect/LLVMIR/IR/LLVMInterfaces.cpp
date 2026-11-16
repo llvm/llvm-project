@@ -65,6 +65,32 @@ mlir::LLVM::detail::verifyAliasAnalysisOpInterface(Operation *op) {
 }
 
 //===----------------------------------------------------------------------===//
+// TBAAStructOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::LLVM::detail::verifyTBAAStructOpInterface(Operation *op) {
+  auto iface = cast<TBAAStructOpInterface>(op);
+  ArrayAttr fields = iface.getTBAAStructOrNull();
+  if (!fields)
+    return success();
+
+  if (failed(isArrayOf<TBAAStructFieldAttr>(op, fields)))
+    return failure();
+
+  // Field offsets must be non-decreasing, matching LLVM's verifier rule.
+  // Compare unsigned: LLVM zero-extends the offsets before comparing.
+  std::optional<uint64_t> prevOffset;
+  for (Attribute field : fields) {
+    uint64_t offset = cast<TBAAStructFieldAttr>(field).getOffset();
+    if (prevOffset && offset < *prevOffset)
+      return op->emitOpError(
+          "tbaa.struct field offsets must be non-decreasing");
+    prevOffset = offset;
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DereferenceableOpInterface
 //===----------------------------------------------------------------------===//
 
