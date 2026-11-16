@@ -764,10 +764,8 @@ define amdgpu_cs <2 x i8> @abs_sgpr_v2i8(<2 x i8> inreg %arg) {
 ;
 ; SDAG10-LABEL: abs_sgpr_v2i8:
 ; SDAG10:       ; %bb.0:
-; SDAG10-NEXT:    s_bfe_i32 s1, s1, 0x80000
-; SDAG10-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; SDAG10-NEXT:    s_sext_i32_i16 s1, s1
-; SDAG10-NEXT:    s_sext_i32_i16 s0, s0
+; SDAG10-NEXT:    s_sext_i32_i8 s1, s1
+; SDAG10-NEXT:    s_sext_i32_i8 s0, s0
 ; SDAG10-NEXT:    s_abs_i32 s1, s1
 ; SDAG10-NEXT:    s_abs_i32 s0, s0
 ; SDAG10-NEXT:    s_lshl_b32 s2, s1, 8
@@ -780,10 +778,8 @@ define amdgpu_cs <2 x i8> @abs_sgpr_v2i8(<2 x i8> inreg %arg) {
 ; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG1250-NEXT:    v_nop
 ; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG1250-NEXT:    s_bfe_i32 s1, s1, 0x80000
-; SDAG1250-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; SDAG1250-NEXT:    s_sext_i32_i16 s1, s1
-; SDAG1250-NEXT:    s_sext_i32_i16 s0, s0
+; SDAG1250-NEXT:    s_sext_i32_i8 s1, s1
+; SDAG1250-NEXT:    s_sext_i32_i8 s0, s0
 ; SDAG1250-NEXT:    s_abs_i32 s1, s1
 ; SDAG1250-NEXT:    s_abs_i32 s0, s0
 ; SDAG1250-NEXT:    s_lshl_b32 s2, s1, 8
@@ -964,15 +960,12 @@ define amdgpu_cs <3 x i8> @abs_sgpr_v3i8(<3 x i8> inreg %arg) {
 ;
 ; SDAG10-LABEL: abs_sgpr_v3i8:
 ; SDAG10:       ; %bb.0:
-; SDAG10-NEXT:    s_bfe_i32 s1, s1, 0x80000
-; SDAG10-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; SDAG10-NEXT:    s_sext_i32_i16 s1, s1
-; SDAG10-NEXT:    s_bfe_i32 s2, s2, 0x80000
-; SDAG10-NEXT:    s_sext_i32_i16 s0, s0
+; SDAG10-NEXT:    s_sext_i32_i8 s1, s1
+; SDAG10-NEXT:    s_sext_i32_i8 s0, s0
 ; SDAG10-NEXT:    s_abs_i32 s1, s1
 ; SDAG10-NEXT:    s_abs_i32 s0, s0
 ; SDAG10-NEXT:    s_lshl_b32 s1, s1, 8
-; SDAG10-NEXT:    s_sext_i32_i16 s2, s2
+; SDAG10-NEXT:    s_sext_i32_i8 s2, s2
 ; SDAG10-NEXT:    s_or_b32 s0, s0, s1
 ; SDAG10-NEXT:    s_abs_i32 s2, s2
 ; SDAG10-NEXT:    s_and_b32 s1, s0, 0xffff
@@ -987,15 +980,12 @@ define amdgpu_cs <3 x i8> @abs_sgpr_v3i8(<3 x i8> inreg %arg) {
 ; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG1250-NEXT:    v_nop
 ; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG1250-NEXT:    s_bfe_i32 s1, s1, 0x80000
-; SDAG1250-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; SDAG1250-NEXT:    s_sext_i32_i16 s1, s1
-; SDAG1250-NEXT:    s_bfe_i32 s2, s2, 0x80000
-; SDAG1250-NEXT:    s_sext_i32_i16 s0, s0
+; SDAG1250-NEXT:    s_sext_i32_i8 s1, s1
+; SDAG1250-NEXT:    s_sext_i32_i8 s0, s0
 ; SDAG1250-NEXT:    s_abs_i32 s1, s1
 ; SDAG1250-NEXT:    s_abs_i32 s0, s0
 ; SDAG1250-NEXT:    s_lshl_b32 s1, s1, 8
-; SDAG1250-NEXT:    s_sext_i32_i16 s2, s2
+; SDAG1250-NEXT:    s_sext_i32_i8 s2, s2
 ; SDAG1250-NEXT:    s_or_b32 s0, s0, s1
 ; SDAG1250-NEXT:    s_abs_i32 s2, s2
 ; SDAG1250-NEXT:    s_and_b32 s1, s0, 0xffff
