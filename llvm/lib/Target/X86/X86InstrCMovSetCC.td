@@ -104,8 +104,7 @@ let Predicates = [HasCMOV, HasNDD] in {
   def : Pat<(X86cmov (loadi64 ndd_addr:$src1), GR64:$src2, timm:$cond, EFLAGS),
             (CMOV64rm_ND GR64:$src2, ndd_addr:$src1, (inv_cond_XFORM timm:$cond))>;
 }
-// Register-operand CFCMOV for select with zero. With
-// -x86-cf-reg-operand=false, XOR + CMOV is used instead.
+// Select with zero. Without prefer-cf-reg-operand, XOR + CMOV is used.
 let Predicates = [HasCMOV, HasCF, UseCFRegOperand] in {
   def : Pat<(X86cmov 0, GR16:$src1, timm:$cond, EFLAGS),
             (CFCMOV16rr GR16:$src1, timm:$cond)>;
@@ -121,9 +120,9 @@ let Predicates = [HasCMOV, HasCF, UseCFRegOperand] in {
             (CFCMOV64rr GR64:$src1, (inv_cond_XFORM timm:$cond))>;
 }
 
-// Memory-operand CFCMOV (conditional faulting load/store) is only selected
-// with -x86-cf-mem-operand.
-let Predicates = [HasCMOV, HasCF, UseCFMemOperand] in {
+// Conditional faulting load/store. CLOAD/CSTORE are only formed with
+// prefer-cf-mem-operand.
+let Predicates = [HasCMOV, HasCF] in {
   def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),
             (CFCMOV16rm addr:$src1, timm:$cond)>;
   def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),

@@ -375,8 +375,8 @@ def FeatureCCMP : SubtargetFeature<"ccmp", "HasCCMP", "true",
                                    "Support conditional cmp & test instructions">;
 def FeatureNF : SubtargetFeature<"nf", "HasNF", "true",
                                  "Support status flags update suppression">;
-// CFCMOV selection is controlled by -x86-cf-reg-operand (default on) and
-// -x86-cf-mem-operand (default off).
+// CFCMOV selection is controlled by the tuning features TuningPreferCFRegOperand
+// and TuningPreferCFMemOperand.
 def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
@@ -907,6 +907,17 @@ def TuningPreferLegacySetCC
     : SubtargetFeature<"prefer-legacy-setcc", "PreferLegacySetCC", "true",
                        "Prefer to emit legacy SetCC.", [], InlineIgnore>;
 
+def TuningPreferCFRegOperand
+    : SubtargetFeature<"prefer-cf-reg-operand", "PreferCFRegOperand", "true",
+                       "Prefer CFCMOV with register operands (select with zero)",
+                       [], InlineIgnore>;
+
+def TuningPreferCFMemOperand
+    : SubtargetFeature<"prefer-cf-mem-operand", "PreferCFMemOperand", "true",
+                       "Prefer CFCMOV with memory operands (conditional faulting "
+                       "load/store)",
+                       [], InlineIgnore>;
+
 //===----------------------------------------------------------------------===//
 // X86 CPU Families
 // TODO: Remove these - use general tuning features to determine codegen.
@@ -1316,7 +1327,8 @@ def ProcessorFeatures {
                                                   FeatureAMXFP8];
   list<SubtargetFeature> DMRFeatures =
     !listconcat(GNRDFeatures, DMRAdditionalFeatures);
-  list<SubtargetFeature> DMRAdditionalTuning = [TuningPreferLegacySetCC];
+  list<SubtargetFeature> DMRAdditionalTuning = [TuningPreferLegacySetCC,
+                                                 TuningPreferCFRegOperand];
   list<SubtargetFeature> DMRTuning = !listconcat(GNRTuning, DMRAdditionalTuning);
 
   // Atom
@@ -1490,7 +1502,8 @@ def ProcessorFeatures {
                                                   FeaturePREFETCHI];
   list<SubtargetFeature> NVLFeatures =
       !listconcat(PTLFeatures, NVLAdditionalFeatures);
-  list<SubtargetFeature> NVLAdditionalTuning = [TuningPreferLegacySetCC];
+  list<SubtargetFeature> NVLAdditionalTuning = [TuningPreferLegacySetCC,
+                                                 TuningPreferCFRegOperand];
   list<SubtargetFeature> NVLTuning = !listconcat(ADLTuning, NVLAdditionalTuning);
 
   // Clearwaterforest
