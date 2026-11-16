@@ -292,6 +292,13 @@ def z_tls_ldcall        : SDNode<"SystemZISD::TLS_LDCALL", SDT_ZCall,
                                  [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
                                   SDNPVariadic]>;
 
+// XPLINK: restore the stack pointer to the value in R1 (glued in). Calls the
+// stack restore stub of the module, which copies the frame header and sets
+// R4 with signals delayed. Operand 0 is the chain operand.
+def z_xplink_stackrestore : SDNode<"SystemZISD::XPLINK_STACKRESTORE", SDTNone,
+                                   [SDNPHasChain, SDNPInGlue,
+                                    SDNPSideEffect]>;
+
 // Wraps a TargetGlobalAddress that should be loaded using PC-relative
 // accesses (LARL).  Operand 0 is the address.
 def z_pcrel_wrapper     : SDNode<"SystemZISD::PCREL_WRAPPER", SDT_ZWrapPtr, []>;
