@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck %s --check-prefix=RV64
 ; RUN: llc -mtriple=riscv64 -mattr=+m -global-isel -verify-machineinstrs -O0 \
 ; RUN:   < %s | FileCheck %s --check-prefix=RV64-O0
+; RUN: llc -mtriple=riscv64 -mattr=+m,+zba -global-isel -verify-machineinstrs \
+; RUN:   < %s | FileCheck %s --check-prefix=RV64ZBA
 
 ; Test that a sign-extended i32 register-register add/sub on RV64 is selected
 ; as a single ADDW/SUBW instead of ADDW/SUBW followed by a separate sext.w,
@@ -18,6 +20,11 @@ define signext i32 @add_sext(i32 signext %a, i32 signext %b) nounwind {
 ; RV64-O0:       # %bb.0:
 ; RV64-O0-NEXT:    addw a0, a0, a1
 ; RV64-O0-NEXT:    ret
+;
+; RV64ZBA-LABEL: add_sext:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    addw a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %r = add i32 %a, %b
   ret i32 %r
 }
@@ -32,6 +39,11 @@ define signext i32 @sub_sext(i32 signext %a, i32 signext %b) nounwind {
 ; RV64-O0:       # %bb.0:
 ; RV64-O0-NEXT:    subw a0, a0, a1
 ; RV64-O0-NEXT:    ret
+;
+; RV64ZBA-LABEL: sub_sext:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    subw a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %r = sub i32 %a, %b
   ret i32 %r
 }
@@ -58,6 +70,13 @@ define signext i32 @sub_of_add(i32 signext %s, i32 signext %a, i32 %x) nounwind 
 ; RV64-O0-NEXT:    subw a0, a0, a1
 ; RV64-O0-NEXT:    addi sp, sp, 16
 ; RV64-O0-NEXT:    ret
+;
+; RV64ZBA-LABEL: sub_of_add:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    mul a2, a2, a2
+; RV64ZBA-NEXT:    sub a0, a0, a1
+; RV64ZBA-NEXT:    subw a0, a0, a2
+; RV64ZBA-NEXT:    ret
   %b = mul i32 %x, %x
   %t = add i32 %b, %a
   %r = sub i32 %s, %t
@@ -79,6 +98,84 @@ define signext i32 @add_imm(i32 signext %a) nounwind {
 ; RV64-O0-NEXT:    addiw a0, a0, 2047
 ; RV64-O0-NEXT:    sext.w a0, a0
 ; RV64-O0-NEXT:    ret
+;
+; RV64ZBA-LABEL: add_imm:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    addi a0, a0, 2047
+; RV64ZBA-NEXT:    addiw a0, a0, 2047
+; RV64ZBA-NEXT:    ret
   %r = add i32 %a, 4094
+  ret i32 %r
+}
+
+; Adds of a shift are left to fused shift-add patterns only when the subtarget
+; has one for that shift amount.
+
+define signext i32 @add_shl1(i32 signext %a, i32 signext %b) nounwind {
+; RV64-LABEL: add_shl1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+;
+; RV64-O0-LABEL: add_shl1:
+; RV64-O0:       # %bb.0:
+; RV64-O0-NEXT:    slliw a0, a0, 1
+; RV64-O0-NEXT:    addw a0, a0, a1
+; RV64-O0-NEXT:    ret
+;
+; RV64ZBA-LABEL: add_shl1:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh1add a0, a0, a1
+; RV64ZBA-NEXT:    sext.w a0, a0
+; RV64ZBA-NEXT:    ret
+  %s = shl i32 %a, 1
+  %r = add i32 %s, %b
+  ret i32 %r
+}
+
+define signext i32 @add_shl4(i32 signext %a, i32 signext %b) nounwind {
+; RV64-LABEL: add_shl4:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 4
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+;
+; RV64-O0-LABEL: add_shl4:
+; RV64-O0:       # %bb.0:
+; RV64-O0-NEXT:    slliw a0, a0, 4
+; RV64-O0-NEXT:    addw a0, a0, a1
+; RV64-O0-NEXT:    ret
+;
+; RV64ZBA-LABEL: add_shl4:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a0, a0, 4
+; RV64ZBA-NEXT:    addw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %s = shl i32 %a, 4
+  %r = add i32 %s, %b
+  ret i32 %r
+}
+
+define signext i32 @sub_shl1(i32 signext %a, i32 signext %b) nounwind {
+; RV64-LABEL: sub_shl1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    subw a0, a1, a0
+; RV64-NEXT:    ret
+;
+; RV64-O0-LABEL: sub_shl1:
+; RV64-O0:       # %bb.0:
+; RV64-O0-NEXT:    slliw a0, a0, 1
+; RV64-O0-NEXT:    subw a0, a1, a0
+; RV64-O0-NEXT:    ret
+;
+; RV64ZBA-LABEL: sub_shl1:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a0, a0, 1
+; RV64ZBA-NEXT:    subw a0, a1, a0
+; RV64ZBA-NEXT:    ret
+  %s = shl i32 %a, 1
+  %r = sub i32 %b, %s
   ret i32 %r
 }
