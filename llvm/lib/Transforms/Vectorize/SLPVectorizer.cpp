@@ -29837,10 +29837,43 @@ void BoUpSLP::computeMinimumValueSizes() {
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         *VectorizableTree[NodeIdx], IsTopRoot, IsProfitableToDemoteRoot, Limit,
         IsTruncRoot, IsSignedCmp);
+    auto IsDemotedUser = [&](const Instruction *UI) {
+      return isVectorized(UI) &&
+             all_of(getTreeEntries(UI), [&](const TreeEntry *TE) {
+               return MinBWs.contains(TE) || is_contained(ToDemote, TE->Idx);
+             });
+    };
+    // The extension, demoted below its source width, becomes a truncation of
+    // the source, which the vectorized users in the original type extend back.
+    // Keep such extensions in the original type.
+    if (MaxBitWidth != 0) {
+      SmallVector<unsigned> WideExts(
+          make_filter_range(ToDemote, [&](unsigned Idx) {
+            const TreeEntry &TE = *VectorizableTree[Idx];
+            Value *Src;
+            if (TE.State != TreeEntry::Vectorize || TE.isAltShuffle() ||
+                !match(TE.getMainOp(), m_ZExtOrSExt(m_Value(Src))) ||
+                Src->getType()->getScalarSizeInBits() <= MaxBitWidth)
+              return false;
+            return any_of(TE.Scalars, [&](Value *V) {
+              return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
+                       auto *UI = cast<Instruction>(U);
+                       return !isa<CmpInst>(UI) &&
+                              (!isa<CastInst>(UI) ||
+                               (UI->getType()->isIntOrIntVectorTy() &&
+                                UI->getType()->getScalarSizeInBits() >
+                                    MaxBitWidth)) &&
+                              isVectorized(UI) && !IsDemotedUser(UI);
+                     });
+            });
+          }));
+      erase_if(ToDemote,
+               [&](unsigned Idx) { return is_contained(WideExts, Idx); });
+    }
     // The extension of a demoted scalar, which does not fit into the demoted
     // type, restores only its demanded bits. Keep the original bitwidth if the
-    // scalar users may depend on the other bits via poison-generating
-    // annotations or there are too many users to check.
+    // users, not demoted with the scalar, may depend on the other bits via
+    // poison-generating annotations or there are too many users to check.
     auto HasUnsafeScalarUsers = [&](Value *V) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I)
@@ -29859,9 +29892,9 @@ void BoUpSLP::computeMinimumValueSizes() {
           if (++NumUsers > UsesLimit)
             return true;
           auto *UI = cast<Instruction>(U);
-          if (isVectorized(UI) || UserIgnoreSet.contains(UI) ||
+          if (UserIgnoreSet.contains(UI) ||
               !UI->getType()->isIntOrIntVectorTy() ||
-              !Visited.insert(UI).second)
+              !Visited.insert(UI).second || IsDemotedUser(UI))
             continue;
           if (UI->hasPoisonGeneratingAnnotations())
             return true;
