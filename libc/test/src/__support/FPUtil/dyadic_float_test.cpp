@@ -107,3 +107,4 @@ TEST_EDGE_RANGES(LongDouble, long double);
 #ifdef LIBC_TYPES_HAS_FLOAT16
 TEST_EDGE_RANGES(Float16, float16);
 #endif
+TEST_EDGE_RANGES(SoftFloat16, LIBC_NAMESPACE::fputil::Float16);

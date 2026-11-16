@@ -1,17 +1,24 @@
-//===-- Unit tests for float16 type ---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unit tests for the Float16 type.
+///
+//===----------------------------------------------------------------------===//
 
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/float16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPCommon.h"
 
 using Float16 = LIBC_NAMESPACE::fputil::Float16;
+using Float16Bits = LIBC_NAMESPACE::fputil::FPBits<Float16>;
 using LlvmLibcFloat16ConversionTest = LIBC_NAMESPACE::testing::FPTest<Float16>;
 
 // range: [0, inf]
@@ -26,7 +33,7 @@ using MPFRNumber = LIBC_NAMESPACE::testing::mpfr::MPFRNumber;
 
 TEST_F(LlvmLibcFloat16ConversionTest, ToFloatPositiveRange) {
   for (uint16_t bits = POS_START; bits <= POS_STOP; bits++) {
-    Float16 f16_num{bits};
+    Float16 f16_num = Float16Bits(bits).get_val();
     MPFRNumber mpfr_num{f16_num};
 
     // float16 to float
@@ -43,7 +50,7 @@ TEST_F(LlvmLibcFloat16ConversionTest, ToFloatPositiveRange) {
 
 TEST_F(LlvmLibcFloat16ConversionTest, ToFloatNegativeRange) {
   for (uint16_t bits = NEG_START; bits <= NEG_STOP; bits++) {
-    Float16 f16_num{bits};
+    Float16 f16_num = Float16Bits(bits).get_val();
     MPFRNumber mpfr_num{f16_num};
 
     // float16 to float

@@ -1,9 +1,15 @@
-//===-- Definition of float16 data type. ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Definition of Float16, a software-emulated IEEE 754 binary16 type that is
+/// available regardless of compiler support for _Float16.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT16_H
@@ -28,6 +34,11 @@ struct Float16 {
   uint16_t bits;
 
   LIBC_INLINE Float16() = default;
+  LIBC_INLINE constexpr Float16(const Float16 &) = default;
+  LIBC_INLINE constexpr Float16(Float16 &&) = default;
+  LIBC_INLINE constexpr Float16 &operator=(const Float16 &) = default;
+  LIBC_INLINE constexpr Float16 &operator=(Float16 &&) = default;
+  LIBC_INLINE ~Float16() = default;
 
   template <size_t Bits>
   LIBC_INLINE constexpr explicit Float16(const DyadicFloat<Bits> &df)
@@ -40,17 +51,21 @@ struct Float16 {
     if constexpr (cpp::is_floating_point_v<T>) {
       bits = fputil::cast<Float16>(value).bits;
     } else if constexpr (cpp::is_integral_v<T>) {
+      using UnsignedT = cpp::make_unsigned_t<T>;
       Sign sign = Sign::POS;
+      auto unsigned_value = static_cast<UnsignedT>(value);
 
       if constexpr (cpp::is_signed_v<T>) {
         if (value < 0) {
           sign = Sign::NEG;
-          value = -value;
+          // Negate in the unsigned domain so that the minimum value of T does
+          // not overflow.
+          unsigned_value = static_cast<UnsignedT>(-unsigned_value);
         }
       }
 
-      fputil::DyadicFloat<cpp::numeric_limits<cpp::make_unsigned_t<T>>::digits>
-          xd(sign, 0, value);
+      fputil::DyadicFloat<cpp::numeric_limits<UnsignedT>::digits> xd(
+          sign, 0, unsigned_value);
       bits = xd.template as<Float16, /*ShouldSignalExceptions=*/true>().bits;
 
     } else if constexpr (cpp::is_convertible_v<T, Float16>) {

@@ -706,13 +706,13 @@ add_fp_unittest(
   NO_RUN_POSTBUILD
   NEED_MPFR
   SUITE
-    libc_math_exhaustive_tests
+    libc-math-exhaustive-tests
   SRCS
     float16_test.cpp
   DEPENDS
     .exhaustive_test
-    libc.src.__support.FPUtil.float16
     libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.float16
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread

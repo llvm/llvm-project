@@ -1,13 +1,19 @@
-//===-- Exhaustive tests for float -> float16 conversion ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Exhaustive tests for float -> Float16 conversion.
+///
+//===----------------------------------------------------------------------===//
 
 #include "exhaustive_test.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/float16.h"
 #include "utils/MPFRWrapper/MPCommon.h"
 
 using namespace LIBC_NAMESPACE::fputil;
@@ -54,11 +60,11 @@ using LlvmLibcFloat16FromFloatTest = LlvmLibcFloat16ExhaustiveTest<float>;
 constexpr uint32_t POS_START = 0x0000'0000U;
 constexpr uint32_t POS_STOP = 0x7f80'0000U;
 
-// Negative Range: [-Inf, 0];
-constexpr uint32_t NEG_START = 0xb000'0000U;
+// Negative Range: [-0, -Inf];
+constexpr uint32_t NEG_START = 0x8000'0000U;
 constexpr uint32_t NEG_STOP = 0xff80'0000U;
 
-TEST_F(LlvmLibcFloat16FromFloatTest, PostiveRange) {
+TEST_F(LlvmLibcFloat16FromFloatTest, PositiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP);
 }
 
