@@ -1,0 +1,118 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_function", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "__restore_rt",
+    srcs = ["linux/__restore.cpp"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "__signal_utils",
+    hdrs = ["linux/signal_utils.h"],
+    full_build_only = True,
+    # Only compatible with full build mode on Linux. Overlay mode has header
+    # conflicts with system headers (e.g. sa_handler macro in glibc).
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__restore_rt",
+        "//libc:hdr_signal_macros",
+        "//libc:types_siginfo_t",
+        "//libc:types_sigset_t",
+        "//libc:types_size_t",
+        "//libc:types_struct_sigaction",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support/OSUtil:linux_sigmask",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/OSUtil:vdso",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/threads:raw_rwlock",
+    ],
+)
+
+libc_function(
+    name = "kill",
+    srcs = ["linux/kill.cpp"],
+    hdrs = ["kill.h"],
+    deps = [
+        "//libc:types_pid_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:kill",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "sigaction",
+    srcs = ["linux/sigaction.cpp"],
+    hdrs = ["sigaction.h"],
+    # Full-build only, since it depends on __signal_utils.
+    full_build_only = True,
+    deps = [
+        ":__signal_utils",
+        "//libc:types_struct_sigaction",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "sigaltstack",
+    srcs = ["linux/sigaltstack.cpp"],
+    hdrs = ["sigaltstack.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_signal_macros",
+        "//libc:types_stack_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sigaltstack",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "signal",
+    srcs = ["linux/signal.cpp"],
+    hdrs = ["signal.h"],
+    # Full-build only, since it depends on sigaction.
+    full_build_only = True,
+    deps = [
+        ":sigaction",
+        "//libc:hdr_signal_macros",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)

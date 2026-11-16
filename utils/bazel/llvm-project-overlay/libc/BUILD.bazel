@@ -2,8 +2,6 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# LLVM libc project.
-load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@rules_cc//cc:defs.bzl", "cc_library")
@@ -11,13 +9,11 @@ load("@rules_python//python:defs.bzl", "py_binary")
 load(
     ":libc_build_rules.bzl",
     "libc_common_copts",
-    "libc_function",
     "libc_generated_header",
     "libc_header_info",
     "libc_header_library",
     "libc_support_library",
 )
-load(":platforms.bzl", "PLATFORM_CPU_X86_64")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -1837,535 +1833,225 @@ cc_library(
 
 ############################### errno ########################################
 
-libc_support_library(
-    name = "errno",
-    srcs = ["src/errno/libc_errno.cpp"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_function(
+alias(
     name = "program_invocation_name",
-    srcs = ["src/errno/program_invocation_name.cpp"],
-    hdrs = ["src/errno/program_invocation_name.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/errno:program_invocation_name",
 )
 
-libc_function(
+alias(
     name = "program_invocation_short_name",
-    srcs = ["src/errno/program_invocation_short_name.cpp"],
-    hdrs = ["src/errno/program_invocation_short_name.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/errno:program_invocation_short_name",
 )
 
 ############################### arpa/inet targets ##############################
 
-libc_function(
+alias(
     name = "htonl",
-    srcs = ["src/arpa/inet/htonl.cpp"],
-    hdrs = ["src/arpa/inet/htonl.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/arpa/inet:htonl",
 )
 
-libc_function(
+alias(
     name = "htons",
-    srcs = ["src/arpa/inet/htons.cpp"],
-    hdrs = ["src/arpa/inet/htons.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/arpa/inet:htons",
 )
 
-libc_function(
+alias(
     name = "inet_addr",
-    srcs = ["src/arpa/inet/inet_addr.cpp"],
-    hdrs = ["src/arpa/inet/inet_addr.h"],
-    deps = [
-        ":hdr_netinet_in_macros",
-        ":types_in_addr_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/__support/net:address",
-    ],
+    actual = "//libc/src/arpa/inet:inet_addr",
 )
 
-libc_function(
+alias(
     name = "inet_aton",
-    srcs = ["src/arpa/inet/inet_aton.cpp"],
-    hdrs = ["src/arpa/inet/inet_aton.h"],
-    deps = [
-        ":types_struct_in_addr",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/__support/net:address",
-    ],
+    actual = "//libc/src/arpa/inet:inet_aton",
 )
 
-libc_function(
+alias(
     name = "inet_ntoa",
-    srcs = ["src/arpa/inet/inet_ntoa.cpp"],
-    hdrs = ["src/arpa/inet/inet_ntoa.h"],
-    deps = [
-        ":hdr_inet_address_macros",
-        ":types_struct_in_addr",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:span",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/net:address",
-    ],
+    actual = "//libc/src/arpa/inet:inet_ntoa",
 )
 
-libc_function(
+alias(
     name = "inet_ntop",
-    srcs = ["src/arpa/inet/inet_ntop.cpp"],
-    hdrs = ["src/arpa/inet/inet_ntop.h"],
-    deps = [
-        ":hdr_errno_macros",
-        ":hdr_sys_socket_macros",
-        ":types_socklen_t",
-        ":types_struct_in6_addr",
-        ":types_struct_in_addr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/CPP:span",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/__support/net:address",
-    ],
+    actual = "//libc/src/arpa/inet:inet_ntop",
 )
 
-libc_function(
+alias(
     name = "inet_pton",
-    srcs = ["src/arpa/inet/inet_pton.cpp"],
-    hdrs = ["src/arpa/inet/inet_pton.h"],
-    deps = [
-        ":hdr_errno_macros",
-        ":hdr_stdint_proxy",
-        ":hdr_sys_socket_macros",
-        ":types_struct_in6_addr",
-        ":types_struct_in_addr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/__support/net:address",
-    ],
+    actual = "//libc/src/arpa/inet:inet_pton",
 )
 
-libc_function(
+alias(
     name = "ntohl",
-    srcs = ["src/arpa/inet/ntohl.cpp"],
-    hdrs = ["src/arpa/inet/ntohl.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/arpa/inet:ntohl",
 )
 
-libc_function(
+alias(
     name = "ntohs",
-    srcs = ["src/arpa/inet/ntohs.cpp"],
-    hdrs = ["src/arpa/inet/ntohs.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/arpa/inet:ntohs",
 )
 
 ################################# ctype targets ################################
 
-libc_function(
+alias(
     name = "isalnum",
-    srcs = ["src/ctype/isalnum.cpp"],
-    hdrs = ["src/ctype/isalnum.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isalnum",
 )
 
-libc_function(
+alias(
     name = "isalpha",
-    srcs = ["src/ctype/isalpha.cpp"],
-    hdrs = ["src/ctype/isalpha.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isalpha",
 )
 
-libc_function(
+alias(
     name = "isascii",
-    srcs = ["src/ctype/isascii.cpp"],
-    hdrs = ["src/ctype/isascii.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isascii",
 )
 
-libc_function(
+alias(
     name = "isblank",
-    srcs = ["src/ctype/isblank.cpp"],
-    hdrs = ["src/ctype/isblank.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isblank",
 )
 
-libc_function(
+alias(
     name = "iscntrl",
-    srcs = ["src/ctype/iscntrl.cpp"],
-    hdrs = ["src/ctype/iscntrl.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:iscntrl",
 )
 
-libc_function(
+alias(
     name = "isdigit",
-    srcs = ["src/ctype/isdigit.cpp"],
-    hdrs = ["src/ctype/isdigit.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isdigit",
 )
 
-libc_function(
+alias(
     name = "isgraph",
-    srcs = ["src/ctype/isgraph.cpp"],
-    hdrs = ["src/ctype/isgraph.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isgraph",
 )
 
-libc_function(
+alias(
     name = "islower",
-    srcs = ["src/ctype/islower.cpp"],
-    hdrs = ["src/ctype/islower.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:islower",
 )
 
-libc_function(
+alias(
     name = "isprint",
-    srcs = ["src/ctype/isprint.cpp"],
-    hdrs = ["src/ctype/isprint.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isprint",
 )
 
-libc_function(
+alias(
     name = "ispunct",
-    srcs = ["src/ctype/ispunct.cpp"],
-    hdrs = ["src/ctype/ispunct.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:ispunct",
 )
 
-libc_function(
+alias(
     name = "isspace",
-    srcs = ["src/ctype/isspace.cpp"],
-    hdrs = ["src/ctype/isspace.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isspace",
 )
 
-libc_function(
+alias(
     name = "isupper",
-    srcs = ["src/ctype/isupper.cpp"],
-    hdrs = ["src/ctype/isupper.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isupper",
 )
 
-libc_function(
+alias(
     name = "isxdigit",
-    srcs = ["src/ctype/isxdigit.cpp"],
-    hdrs = ["src/ctype/isxdigit.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isxdigit",
 )
 
-libc_function(
+alias(
     name = "toascii",
-    srcs = ["src/ctype/toascii.cpp"],
-    hdrs = ["src/ctype/toascii.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:toascii",
 )
 
-libc_function(
+alias(
     name = "tolower",
-    srcs = ["src/ctype/tolower.cpp"],
-    hdrs = ["src/ctype/tolower.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:tolower",
 )
 
-libc_function(
+alias(
     name = "toupper",
-    srcs = ["src/ctype/toupper.cpp"],
-    hdrs = ["src/ctype/toupper.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:toupper",
 )
 
 ################################ fenv targets ################################
 
-libc_function(
+alias(
     name = "fetestexcept",
-    srcs = ["src/fenv/fetestexcept.cpp"],
-    hdrs = ["src/fenv/fetestexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fetestexcept",
 )
 
-libc_function(
+alias(
     name = "fetestexceptflag",
-    srcs = ["src/fenv/fetestexceptflag.cpp"],
-    hdrs = ["src/fenv/fetestexceptflag.h"],
-    deps = [
-        ":types_fexcept_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fetestexceptflag",
 )
 
-libc_function(
+alias(
     name = "feclearexcept",
-    srcs = ["src/fenv/feclearexcept.cpp"],
-    hdrs = ["src/fenv/feclearexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:feclearexcept",
 )
 
-libc_function(
+alias(
     name = "feraiseexcept",
-    srcs = ["src/fenv/feraiseexcept.cpp"],
-    hdrs = ["src/fenv/feraiseexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:feraiseexcept",
 )
 
-libc_function(
+alias(
     name = "fegetround",
-    srcs = ["src/fenv/fegetround.cpp"],
-    hdrs = ["src/fenv/fegetround.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fegetround",
 )
 
-libc_function(
+alias(
     name = "fesetround",
-    srcs = ["src/fenv/fesetround.cpp"],
-    hdrs = ["src/fenv/fesetround.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fesetround",
 )
 
-libc_function(
+alias(
     name = "fedisableexcept",
-    srcs = ["src/fenv/fedisableexcept.cpp"],
-    hdrs = ["src/fenv/fedisableexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fedisableexcept",
 )
 
-libc_function(
+alias(
     name = "feenableexcept",
-    srcs = ["src/fenv/feenableexcept.cpp"],
-    hdrs = ["src/fenv/feenableexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:feenableexcept",
 )
 
-libc_function(
+alias(
     name = "fegetexcept",
-    srcs = ["src/fenv/fegetexcept.cpp"],
-    hdrs = ["src/fenv/fegetexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fegetexcept",
 )
 
-libc_function(
+alias(
     name = "fegetenv",
-    srcs = ["src/fenv/fegetenv.cpp"],
-    hdrs = ["src/fenv/fegetenv.h"],
-    deps = [
-        ":types_fenv_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fegetenv",
 )
 
-libc_function(
+alias(
     name = "fesetenv",
-    srcs = ["src/fenv/fesetenv.cpp"],
-    hdrs = ["src/fenv/fesetenv.h"],
-    deps = [
-        ":types_fenv_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fesetenv",
 )
 
-libc_function(
+alias(
     name = "feupdateenv",
-    srcs = ["src/fenv/feupdateenv.cpp"],
-    hdrs = ["src/fenv/feupdateenv.h"],
-    deps = [
-        ":types_fenv_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:feupdateenv",
 )
 
-libc_function(
+alias(
     name = "fesetexcept",
-    srcs = ["src/fenv/fesetexcept.cpp"],
-    hdrs = ["src/fenv/fesetexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fesetexcept",
 )
 
-libc_function(
+alias(
     name = "fegetexceptflag",
-    srcs = ["src/fenv/fegetexceptflag.cpp"],
-    hdrs = ["src/fenv/fegetexceptflag.h"],
-    deps = [
-        ":types_fexcept_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fegetexceptflag",
 )
 
-libc_function(
+alias(
     name = "fesetexceptflag",
-    srcs = ["src/fenv/fesetexceptflag.cpp"],
-    hdrs = ["src/fenv/fesetexceptflag.h"],
-    deps = [
-        ":types_fexcept_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fesetexceptflag",
 )
 
-libc_function(
+alias(
     name = "feholdexcept",
-    srcs = ["src/fenv/feholdexcept.cpp"],
-    hdrs = ["src/fenv/feholdexcept.h"],
-    deps = [
-        ":types_fenv_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:feholdexcept",
 )
 
 ########################### math support library ###############################
@@ -2394,260 +2080,111 @@ libc_support_library(
 
 ############################### complex targets ################################
 
-libc_function(
+alias(
     name = "cimag",
-    srcs = ["src/complex/generic/cimag.cpp"],
-    hdrs = ["src/complex/cimag.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:cimag",
 )
 
-libc_function(
+alias(
     name = "cimagf",
-    srcs = ["src/complex/generic/cimagf.cpp"],
-    hdrs = ["src/complex/cimagf.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:cimagf",
 )
 
-libc_function(
+alias(
     name = "cimagf128",
-    srcs = ["src/complex/generic/cimagf128.cpp"],
-    hdrs = ["src/complex/cimagf128.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-        "//libc/src/__support/macros/properties:types",
-    ],
+    actual = "//libc/src/complex:cimagf128",
 )
 
-libc_function(
+alias(
     name = "cimagf16",
-    srcs = ["src/complex/generic/cimagf16.cpp"],
-    hdrs = ["src/complex/cimagf16.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-        "//libc/src/__support/macros/properties:types",
-    ],
+    actual = "//libc/src/complex:cimagf16",
 )
 
-libc_function(
+alias(
     name = "cimagl",
-    srcs = ["src/complex/generic/cimagl.cpp"],
-    hdrs = ["src/complex/cimagl.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:cimagl",
 )
 
-libc_function(
+alias(
     name = "conj",
-    srcs = ["src/complex/generic/conj.cpp"],
-    hdrs = ["src/complex/conj.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:conj",
 )
 
-libc_function(
+alias(
     name = "conjf",
-    srcs = ["src/complex/generic/conjf.cpp"],
-    hdrs = ["src/complex/conjf.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:conjf",
 )
 
-libc_function(
+alias(
     name = "conjf128",
-    srcs = ["src/complex/generic/conjf128.cpp"],
-    hdrs = ["src/complex/conjf128.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-    ],
+    actual = "//libc/src/complex:conjf128",
 )
 
-libc_function(
+alias(
     name = "conjf16",
-    srcs = ["src/complex/generic/conjf16.cpp"],
-    hdrs = ["src/complex/conjf16.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-    ],
+    actual = "//libc/src/complex:conjf16",
 )
 
-libc_function(
+alias(
     name = "conjl",
-    srcs = ["src/complex/generic/conjl.cpp"],
-    hdrs = ["src/complex/conjl.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:conjl",
 )
 
-libc_function(
+alias(
     name = "cproj",
-    srcs = ["src/complex/generic/cproj.cpp"],
-    hdrs = ["src/complex/cproj.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:cproj",
 )
 
-libc_function(
+alias(
     name = "cprojf",
-    srcs = ["src/complex/generic/cprojf.cpp"],
-    hdrs = ["src/complex/cprojf.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:cprojf",
 )
 
-libc_function(
+alias(
     name = "cprojf128",
-    srcs = ["src/complex/generic/cprojf128.cpp"],
-    hdrs = ["src/complex/cprojf128.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-    ],
+    actual = "//libc/src/complex:cprojf128",
 )
 
-libc_function(
+alias(
     name = "cprojf16",
-    srcs = ["src/complex/generic/cprojf16.cpp"],
-    hdrs = ["src/complex/cprojf16.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-    ],
+    actual = "//libc/src/complex:cprojf16",
 )
 
-libc_function(
+alias(
     name = "cprojl",
-    srcs = ["src/complex/generic/cprojl.cpp"],
-    hdrs = ["src/complex/cprojl.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:cprojl",
 )
 
-libc_function(
+alias(
     name = "creal",
-    srcs = ["src/complex/generic/creal.cpp"],
-    hdrs = ["src/complex/creal.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:creal",
 )
 
-libc_function(
+alias(
     name = "crealf",
-    srcs = ["src/complex/generic/crealf.cpp"],
-    hdrs = ["src/complex/crealf.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:crealf",
 )
 
-libc_function(
+alias(
     name = "crealf128",
-    srcs = ["src/complex/generic/crealf128.cpp"],
-    hdrs = ["src/complex/crealf128.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-        "//libc/src/__support/macros/properties:types",
-    ],
+    actual = "//libc/src/complex:crealf128",
 )
 
-libc_function(
+alias(
     name = "crealf16",
-    srcs = ["src/complex/generic/crealf16.cpp"],
-    hdrs = ["src/complex/crealf16.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-        "//libc/src/__support/macros/properties:types",
-    ],
+    actual = "//libc/src/complex:crealf16",
 )
 
-libc_function(
+alias(
     name = "creall",
-    srcs = ["src/complex/generic/creall.cpp"],
-    hdrs = ["src/complex/creall.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:creall",
 )
 
 ################################ link targets ##################################
 
-libc_function(
+alias(
     name = "_r_debug",
-    srcs = ["src/link/_r_debug.cpp"],
-    hdrs = ["src/link/_r_debug.h"],
-    deps = [
-        ":types_struct_r_debug",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/link:_r_debug",
 )
 
 ################################ math targets ##################################
@@ -3247,1886 +2784,607 @@ bit_prefix_list = [
 
 ############################### stdlib targets ###############################
 
-libc_support_library(
-    name = "stdlib_exit_handler",
-    hdrs = ["src/stdlib/exit_handler.h"],
-    # Full-build only, as overlay mode must use the host libc's cleanup.
-    full_build_only = True,
-    deps = [
-        "//libc/src/__support:blockstore",
-        "//libc/src/__support:common",
-        "//libc/src/__support:fixedvector",
-        "//libc/src/__support/CPP:mutex",
-        "//libc/src/__support/CPP:new",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/threads:mutex",
-    ],
-)
-
-libc_function(
+alias(
     name = "_Exit",
-    srcs = ["src/stdlib/_Exit.cpp"],
-    hdrs = ["src/stdlib/_Exit.h"],
-    # Full-build only, as overlay mode must use the host libc's cleanup.
-    full_build_only = True,
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil:exit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:_Exit",
 )
 
-libc_function(
+alias(
     name = "atexit",
-    srcs = ["src/stdlib/atexit.cpp"],
-    hdrs = ["src/stdlib/atexit.h"],
-    # Full-build only, as overlay mode must use the host libc's cleanup.
-    full_build_only = True,
-    deps = [
-        ":stdlib_exit_handler",
-        ":types_atexithandler_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:atexit",
 )
 
-libc_function(
+alias(
     name = "exit",
-    srcs = ["src/stdlib/exit.cpp"],
-    hdrs = ["src/stdlib/exit.h"],
-    # Full-build only, as overlay mode must use the host libc's cleanup.
-    full_build_only = True,
-    deps = [
-        ":fflush_internal",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil:exit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/threads:thread_headers",
-    ],
+    actual = "//libc/src/stdlib:exit",
 )
 
-libc_function(
+alias(
     name = "abs",
-    srcs = ["src/stdlib/abs.cpp"],
-    hdrs = ["src/stdlib/abs.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:integer_operations",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:abs",
 )
 
-libc_function(
+alias(
     name = "labs",
-    srcs = ["src/stdlib/labs.cpp"],
-    hdrs = ["src/stdlib/labs.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:integer_operations",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:labs",
 )
 
-libc_function(
+alias(
     name = "llabs",
-    srcs = ["src/stdlib/llabs.cpp"],
-    hdrs = ["src/stdlib/llabs.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:integer_operations",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:llabs",
 )
 
-libc_function(
+alias(
     name = "div",
-    srcs = ["src/stdlib/div.cpp"],
-    hdrs = ["src/stdlib/div.h"],
-    deps = [
-        ":types_div_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:integer_operations",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:div",
 )
 
-libc_function(
+alias(
     name = "ldiv",
-    srcs = ["src/stdlib/ldiv.cpp"],
-    hdrs = ["src/stdlib/ldiv.h"],
-    deps = [
-        ":types_ldiv_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:integer_operations",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:ldiv",
 )
 
-libc_function(
+alias(
     name = "lldiv",
-    srcs = ["src/stdlib/lldiv.cpp"],
-    hdrs = ["src/stdlib/lldiv.h"],
-    deps = [
-        ":types_lldiv_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:integer_operations",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:lldiv",
 )
 
-libc_function(
+alias(
     name = "atoi",
-    srcs = ["src/stdlib/atoi.cpp"],
-    hdrs = ["src/stdlib/atoi.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support:str_to_integer",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:atoi",
 )
 
-libc_function(
+alias(
     name = "atol",
-    srcs = ["src/stdlib/atol.cpp"],
-    hdrs = ["src/stdlib/atol.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support:str_to_integer",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:atol",
 )
 
-libc_function(
+alias(
     name = "atoll",
-    srcs = ["src/stdlib/atoll.cpp"],
-    hdrs = ["src/stdlib/atoll.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support:str_to_integer",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:atoll",
 )
 
-libc_function(
+alias(
     name = "atof",
-    srcs = ["src/stdlib/atof.cpp"],
-    hdrs = ["src/stdlib/atof.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support:str_to_float",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:atof",
 )
 
-libc_function(
+alias(
     name = "bsearch",
-    srcs = ["src/stdlib/bsearch.cpp"],
-    hdrs = ["src/stdlib/bsearch.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:bsearch",
 )
 
-libc_support_library(
-    name = "stdlib_abort_utils",
-    hdrs = ["src/stdlib/abort_utils.h"],
-    deps = [
-        "//libc/src/__support/macros/properties:architectures",
-    ] + select({
-        "@platforms//os:linux": [
-            ":stdlib_linux_abort_utils",
-        ],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "stdlib_linux_abort_utils",
-    hdrs = ["src/stdlib/linux/abort_utils.h"],
-    full_build_only = True,
-    # Full-build only, as overlay mode must use the host libc's cleanup.
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__signal_utils",
-        ":types_struct_sigaction",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil:exit",
-        "//libc/src/__support/OSUtil:linux_sigmask",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:raise",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_function(
+alias(
     name = "abort",
-    srcs = ["src/stdlib/abort.cpp"],
-    hdrs = ["src/stdlib/abort.h"],
-    # Full-build only, as overlay mode must use the host libc's abort.
-    full_build_only = True,
-    deps = [
-        ":stdlib_abort_utils",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:abort",
 )
 
-libc_support_library(
-    name = "stdlib_environ_internal",
-    srcs = ["src/stdlib/environ_internal.cpp"],
-    hdrs = ["src/stdlib/environ_internal.h"],
-    deps = [
-        ":config_app_h",
-        ":environ",
-        ":string_memory_utils",
-        ":types_size_t",
-        "//libc/src/__support:checked_ptr",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:new",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_function(
+alias(
     name = "getenv",
-    srcs = ["src/stdlib/getenv.cpp"],
-    hdrs = ["src/stdlib/getenv.h"],
-    deps = [
-        ":stdlib_environ_internal",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:getenv",
 )
 
-libc_support_library(
-    name = "__stack_chk_fail",
-    srcs = ["src/compiler/generic/__stack_chk_fail.cpp"],
-    hdrs = ["src/compiler/__stack_chk_fail.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        ":stdlib_abort_utils",
-        "//libc/src/__support/OSUtil:io",
-    ],
-)
-
-libc_support_library(
-    name = "qsort_util",
-    hdrs = [
-        "src/stdlib/heap_sort.h",
-        "src/stdlib/qsort_data.h",
-        "src/stdlib/qsort_pivot.h",
-        "src/stdlib/qsort_util.h",
-        "src/stdlib/quick_sort.h",
-    ],
-    deps = [
-        ":hdr_stdint_proxy",
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/CPP:cstddef",
-        "//libc/src/__support/CPP:utility",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_function(
+alias(
     name = "qsort",
-    srcs = ["src/stdlib/qsort.cpp"],
-    hdrs = ["src/stdlib/qsort.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        ":qsort_util",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:qsort",
 )
 
-libc_function(
+alias(
     name = "qsort_r",
-    srcs = ["src/stdlib/qsort_r.cpp"],
-    hdrs = ["src/stdlib/qsort_r.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        ":qsort_util",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:qsort_r",
 )
 
-libc_support_library(
-    name = "rand_util",
-    srcs = ["src/stdlib/rand_util.cpp"],
-    hdrs = ["src/stdlib/rand_util.h"],
-    deps = [
-        "//libc/src/__support/CPP:atomic",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_function(
+alias(
     name = "rand",
-    srcs = ["src/stdlib/rand.cpp"],
-    hdrs = ["src/stdlib/rand.h"],
-    deps = [
-        ":hdr_stdlib_macros",
-        ":rand_util",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/threads:sleep",
-    ],
+    actual = "//libc/src/stdlib:rand",
 )
 
-libc_function(
+alias(
     name = "realpath",
-    srcs = ["src/stdlib/linux/realpath.cpp"],
-    hdrs = ["src/stdlib/realpath.h"],
-    deps = [
-        ":hdr_errno_macros",
-        ":hdr_fcntl_macros",
-        ":hdr_limits_macros",
-        ":hdr_sys_stat_macros",
-        ":string_memory_utils",
-        ":types_mode_t",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/CPP:string",
-        "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/OSUtil:linux_stat_kernel_statx_types",
-        "//libc/src/__support/OSUtil:path",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getcwd",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:readlink",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:statx",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:realpath",
 )
 
-libc_function(
+alias(
     name = "srand",
-    srcs = ["src/stdlib/srand.cpp"],
-    hdrs = ["src/stdlib/srand.h"],
-    deps = [
-        ":rand_util",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:srand",
 )
 
-libc_support_library(
-    name = "str_from_util",
-    hdrs = ["src/stdlib/str_from_util.h"],
-    deps = [
-        ":types_size_t",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support:str_to_integer",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/CPP:type_traits",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/printf_core:printf_converter",
-        "//libc/src/__support/printf_core:printf_core_structs",
-        "//libc/src/__support/printf_core:printf_error_mapper",
-        "//libc/src/__support/printf_core:printf_writer",
-    ],
-)
-
-libc_function(
+alias(
     name = "strfromf",
-    srcs = ["src/stdlib/strfromf.cpp"],
-    hdrs = ["src/stdlib/strfromf.h"],
-    deps = [
-        ":str_from_util",
-        ":types_size_t",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:strfromf",
 )
 
-libc_function(
+alias(
     name = "strfromf128",
-    srcs = ["src/stdlib/strfromf128.cpp"],
-    hdrs = ["src/stdlib/strfromf128.h"],
-    deps = [
-        ":llvm_libc_types_float128",
-        ":str_from_util",
-        ":types_size_t",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:strfromf128",
 )
 
-libc_function(
+alias(
     name = "strfromd",
-    srcs = ["src/stdlib/strfromd.cpp"],
-    hdrs = ["src/stdlib/strfromd.h"],
-    deps = [
-        ":str_from_util",
-        ":types_size_t",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:strfromd",
 )
 
-libc_function(
+alias(
     name = "strfroml",
-    srcs = ["src/stdlib/strfroml.cpp"],
-    hdrs = ["src/stdlib/strfroml.h"],
-    deps = [
-        ":str_from_util",
-        ":types_size_t",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:strfroml",
 )
 
-libc_function(
+alias(
     name = "strtol",
-    srcs = ["src/stdlib/strtol.cpp"],
-    hdrs = ["src/stdlib/strtol.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support:str_to_integer",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:strtol",
 )
 
-libc_function(
+alias(
     name = "strtoll",
-    srcs = ["src/stdlib/strtoll.cpp"],
-    hdrs = ["src/stdlib/strtoll.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support:str_to_integer",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:strtoll",
 )
 
-libc_function(
+alias(
     name = "strtoul",
-    srcs = ["src/stdlib/strtoul.cpp"],
-    hdrs = ["src/stdlib/strtoul.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support:str_to_integer",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:strtoul",
 )
 
-libc_function(
+alias(
     name = "strtoull",
-    srcs = ["src/stdlib/strtoull.cpp"],
-    hdrs = ["src/stdlib/strtoull.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support:str_to_integer",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:strtoull",
 )
 
-libc_function(
+alias(
     name = "strtof",
-    srcs = ["src/stdlib/strtof.cpp"],
-    hdrs = ["src/stdlib/strtof.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support:str_to_float",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:strtof",
 )
 
-libc_function(
+alias(
     name = "strtod",
-    srcs = ["src/stdlib/strtod.cpp"],
-    hdrs = ["src/stdlib/strtod.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support:str_to_float",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:strtod",
 )
 
-libc_function(
+alias(
     name = "strtold",
-    srcs = ["src/stdlib/strtold.cpp"],
-    hdrs = ["src/stdlib/strtold.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support:str_to_float",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdlib:strtold",
 )
 
 ############################### string targets ###############################
 
-libc_support_library(
-    name = "string_memory_utils",
-    hdrs = [
-        "src/string/memory_utils/op_aarch64.h",
-        "src/string/memory_utils/op_builtin.h",
-        "src/string/memory_utils/op_generic.h",
-        "src/string/memory_utils/op_riscv.h",
-        "src/string/memory_utils/op_x86.h",
-        "src/string/memory_utils/utils.h",
-    ],
-    textual_hdrs = [
-        "src/string/memory_utils/aarch64/inline_bcmp.h",
-        "src/string/memory_utils/aarch64/inline_memcmp.h",
-        "src/string/memory_utils/aarch64/inline_memcpy.h",
-        "src/string/memory_utils/aarch64/inline_memmove.h",
-        "src/string/memory_utils/aarch64/inline_memset.h",
-        "src/string/memory_utils/aarch64/inline_strlen.h",
-        "src/string/memory_utils/arm/common.h",
-        "src/string/memory_utils/arm/inline_memcpy.h",
-        "src/string/memory_utils/arm/inline_memset.h",
-        "src/string/memory_utils/generic/aligned_access.h",
-        "src/string/memory_utils/generic/byte_per_byte.h",
-        "src/string/memory_utils/generic/inline_strlen.h",
-        "src/string/memory_utils/inline_bcmp.h",
-        "src/string/memory_utils/inline_bzero.h",
-        "src/string/memory_utils/inline_memcmp.h",
-        "src/string/memory_utils/inline_memcpy.h",
-        "src/string/memory_utils/inline_memmem.h",
-        "src/string/memory_utils/inline_memmove.h",
-        "src/string/memory_utils/inline_memset.h",
-        "src/string/memory_utils/inline_strcmp.h",
-        "src/string/memory_utils/inline_strstr.h",
-        "src/string/memory_utils/riscv/inline_bcmp.h",
-        "src/string/memory_utils/riscv/inline_memcmp.h",
-        "src/string/memory_utils/riscv/inline_memcpy.h",
-        "src/string/memory_utils/riscv/inline_memmove.h",
-        "src/string/memory_utils/riscv/inline_memset.h",
-        "src/string/memory_utils/x86_64/inline_bcmp.h",
-        "src/string/memory_utils/x86_64/inline_memcmp.h",
-        "src/string/memory_utils/x86_64/inline_memcpy.h",
-        "src/string/memory_utils/x86_64/inline_memmove.h",
-        "src/string/memory_utils/x86_64/inline_memset.h",
-        "src/string/memory_utils/x86_64/inline_strlen.h",
-    ],
-    deps = [
-        ":hdr_stdint_proxy",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:array",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/CPP:cstddef",
-        "//libc/src/__support/CPP:simd",
-        "//libc/src/__support/CPP:type_traits",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:is_defined",
-        "//libc/src/__support/macros:optimization",
-        "//libc/src/__support/macros/properties:architectures",
-        "//libc/src/__support/macros/properties:compiler",
-        "//libc/src/__support/macros/properties:cpu_features",
-        "//libc/src/__support/macros/properties:types",
-    ],
-)
-
-libc_support_library(
-    name = "allocating_string_utils",
-    hdrs = ["src/string/allocating_string_utils.h"],
-    deps = [
-        ":string_memory_utils",
-        ":string_utils",
-        "//libc/src/__support:checked_ptr",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "string_utils",
-    hdrs = [
-        "src/string/string_length.h",
-        "src/string/string_utils.h",
-    ],
-    deps = [
-        ":hdr_limits_macros",
-        ":hdr_stdint_proxy",
-        ":llvm_libc_types_size_t",
-        ":string_memory_utils",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:bitset",
-        "//libc/src/__support/CPP:type_traits",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:optimization",
-    ],
-)
-
-libc_function(
+alias(
     name = "index",
-    srcs = ["src/strings/index.cpp"],
-    hdrs = ["src/strings/index.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/strings:index",
 )
 
-libc_function(
+alias(
     name = "rindex",
-    srcs = ["src/strings/rindex.cpp"],
-    hdrs = ["src/strings/rindex.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/strings:rindex",
 )
 
-libc_function(
+alias(
     name = "memchr",
-    srcs = ["src/string/memchr.cpp"],
-    hdrs = ["src/string/memchr.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:memchr",
 )
 
-libc_function(
+alias(
     name = "memcpy",
-    srcs = ["src/string/memcpy.cpp"],
-    hdrs = ["src/string/memcpy.h"],
-    deps = [
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:memcpy",
 )
 
-libc_function(
+alias(
     name = "memccpy",
-    srcs = ["src/string/memccpy.cpp"],
-    hdrs = ["src/string/memccpy.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:memccpy",
 )
 
-libc_function(
+alias(
     name = "memset",
-    srcs = ["src/string/memset.cpp"],
-    hdrs = ["src/string/memset.h"],
-    deps = [
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:memset",
 )
 
-libc_function(
+alias(
     name = "memset_explicit",
-    srcs = ["src/string/memset_explicit.cpp"],
-    hdrs = ["src/string/memset_explicit.h"],
-    deps = [
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:memset_explicit",
 )
 
-libc_function(
+alias(
     name = "memmove",
-    srcs = ["src/string/memmove.cpp"],
-    hdrs = ["src/string/memmove.h"],
-    deps = [
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:memmove",
 )
 
-libc_function(
+alias(
     name = "memmem",
-    srcs = ["src/string/memmem.cpp"],
-    hdrs = ["src/string/memmem.h"],
-    deps = [
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:memmem",
 )
 
-libc_function(
+alias(
     name = "mempcpy",
-    srcs = ["src/string/mempcpy.cpp"],
-    hdrs = ["src/string/mempcpy.h"],
-    deps = [
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:mempcpy",
 )
 
-libc_function(
+alias(
     name = "bcopy",
-    srcs = ["src/strings/bcopy.cpp"],
-    hdrs = ["src/strings/bcopy.h"],
-    deps = [
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/strings:bcopy",
 )
 
-libc_function(
+alias(
     name = "memcmp",
-    srcs = ["src/string/memcmp.cpp"],
-    hdrs = ["src/string/memcmp.h"],
-    deps = [
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support:integer_operations",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:memcmp",
 )
 
-libc_function(
+alias(
     name = "bcmp",
-    srcs = ["src/strings/bcmp.cpp"],
-    hdrs = ["src/strings/bcmp.h"],
-    deps = [
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/strings:bcmp",
 )
 
-libc_function(
+alias(
     name = "bzero",
-    srcs = ["src/strings/bzero.cpp"],
-    hdrs = ["src/strings/bzero.h"],
-    deps = [
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/strings:bzero",
 )
 
-libc_function(
+alias(
     name = "memrchr",
-    srcs = ["src/string/memrchr.cpp"],
-    hdrs = ["src/string/memrchr.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:memrchr",
 )
 
-libc_function(
+alias(
     name = "stpcpy",
-    srcs = ["src/string/stpcpy.cpp"],
-    hdrs = ["src/string/stpcpy.h"],
-    deps = [
-        ":string_memory_utils",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:stpcpy",
 )
 
-libc_function(
+alias(
     name = "stpncpy",
-    srcs = ["src/string/stpncpy.cpp"],
-    hdrs = ["src/string/stpncpy.h"],
-    deps = [
-        ":string_memory_utils",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:stpncpy",
 )
 
-libc_function(
+alias(
     name = "strlen",
-    srcs = ["src/string/strlen.cpp"],
-    hdrs = ["src/string/strlen.h"],
-    deps = [
-        ":llvm_libc_types_size_t",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strlen",
 )
 
-libc_function(
+alias(
     name = "strsignal",
-    srcs = ["src/string/strsignal.cpp"],
-    hdrs = ["src/string/strsignal.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/StringUtil",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strsignal",
 )
 
-libc_function(
+alias(
     name = "strcpy",
-    srcs = ["src/string/strcpy.cpp"],
-    hdrs = ["src/string/strcpy.h"],
-    deps = [
-        ":llvm_libc_types_size_t",
-        ":string_memory_utils",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strcpy",
 )
 
-libc_function(
+alias(
     name = "strlcpy",
-    srcs = ["src/string/strlcpy.cpp"],
-    hdrs = ["src/string/strlcpy.h"],
-    deps = [
-        ":llvm_libc_types_size_t",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strlcpy",
 )
 
-libc_function(
+alias(
     name = "strncpy",
-    srcs = ["src/string/strncpy.cpp"],
-    hdrs = ["src/string/strncpy.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strncpy",
 )
 
-libc_function(
+alias(
     name = "strcmp",
-    srcs = ["src/string/strcmp.cpp"],
-    hdrs = ["src/string/strcmp.h"],
-    deps = [
-        ":string_memory_utils",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strcmp",
 )
 
-libc_function(
+alias(
     name = "strncmp",
-    srcs = ["src/string/strncmp.cpp"],
-    hdrs = ["src/string/strncmp.h"],
-    deps = [
-        ":string_memory_utils",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strncmp",
 )
 
-libc_function(
+alias(
     name = "strcasecmp",
-    srcs = ["src/strings/strcasecmp.cpp"],
-    hdrs = ["src/strings/strcasecmp.h"],
-    deps = [
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/strings:strcasecmp",
 )
 
-libc_function(
+alias(
     name = "strncasecmp",
-    srcs = ["src/strings/strncasecmp.cpp"],
-    hdrs = ["src/strings/strncasecmp.h"],
-    deps = [
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/strings:strncasecmp",
 )
 
-libc_function(
+alias(
     name = "strchr",
-    srcs = ["src/string/strchr.cpp"],
-    hdrs = ["src/string/strchr.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strchr",
 )
 
-libc_function(
+alias(
     name = "strrchr",
-    srcs = ["src/string/strrchr.cpp"],
-    hdrs = ["src/string/strrchr.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strrchr",
 )
 
-libc_function(
+alias(
     name = "strchrnul",
-    srcs = ["src/string/strchrnul.cpp"],
-    hdrs = ["src/string/strchrnul.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strchrnul",
 )
 
-libc_function(
+alias(
     name = "strsep",
-    srcs = ["src/string/strsep.cpp"],
-    hdrs = ["src/string/strsep.h"],
-    deps = [
-        ":hdr_signal_macros",
-        ":string_memory_utils",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strsep",
 )
 
-libc_function(
+alias(
     name = "strstr",
-    srcs = ["src/string/strstr.cpp"],
-    hdrs = ["src/string/strstr.h"],
-    deps = [
-        ":string_memory_utils",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strstr",
 )
 
-libc_function(
+alias(
     name = "strcasestr",
-    srcs = ["src/string/strcasestr.cpp"],
-    hdrs = ["src/string/strcasestr.h"],
-    deps = [
-        ":string_memory_utils",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strcasestr",
 )
 
-libc_function(
+alias(
     name = "strcat",
-    srcs = ["src/string/strcat.cpp"],
-    hdrs = ["src/string/strcat.h"],
-    deps = [
-        ":llvm_libc_types_size_t",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strcat",
 )
 
-libc_function(
+alias(
     name = "strlcat",
-    srcs = ["src/string/strlcat.cpp"],
-    hdrs = ["src/string/strlcat.h"],
-    deps = [
-        ":llvm_libc_types_size_t",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strlcat",
 )
 
-libc_function(
+alias(
     name = "strncat",
-    srcs = ["src/string/strncat.cpp"],
-    hdrs = ["src/string/strncat.h"],
-    deps = [
-        ":llvm_libc_types_size_t",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strncat",
 )
 
-libc_function(
+alias(
     name = "strnlen",
-    srcs = ["src/string/strnlen.cpp"],
-    hdrs = ["src/string/strnlen.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strnlen",
 )
 
-libc_function(
+alias(
     name = "strcspn",
-    srcs = ["src/string/strcspn.cpp"],
-    hdrs = ["src/string/strcspn.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strcspn",
 )
 
-libc_function(
+alias(
     name = "strdup",
-    srcs = ["src/string/strdup.cpp"],
-    hdrs = ["src/string/strdup.h"],
-    deps = [
-        ":allocating_string_utils",
-        ":hdr_stdlib_macros",
-        ":llvm_libc_types_size_t",
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strdup",
 )
 
-libc_function(
+alias(
     name = "strspn",
-    srcs = ["src/string/strspn.cpp"],
-    hdrs = ["src/string/strspn.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:bitset",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strspn",
 )
 
-libc_function(
+alias(
     name = "strpbrk",
-    srcs = ["src/string/strpbrk.cpp"],
-    hdrs = ["src/string/strpbrk.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strpbrk",
 )
 
-libc_function(
+alias(
     name = "strtok",
-    srcs = ["src/string/strtok.cpp"],
-    hdrs = ["src/string/strtok.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strtok",
 )
 
-libc_function(
+alias(
     name = "strtok_r",
-    srcs = ["src/string/strtok_r.cpp"],
-    hdrs = ["src/string/strtok_r.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strtok_r",
 )
 
 ################################ fcntl targets #################################
 
-libc_function(
+alias(
     name = "open",
-    srcs = ["src/fcntl/linux/open.cpp"],
-    hdrs = ["src/fcntl/open.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        ":types_mode_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:open",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fcntl:open",
 )
 
-libc_function(
+alias(
     name = "fcntl",
-    srcs = ["src/fcntl/linux/fcntl.cpp"],
-    hdrs = ["src/fcntl/fcntl.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:fcntl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fcntl",
 )
 
-libc_function(
+alias(
     name = "openat",
-    srcs = ["src/fcntl/linux/openat.cpp"],
-    hdrs = ["src/fcntl/openat.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        ":types_mode_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:openat",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fcntl:openat",
 )
 
-libc_function(
+alias(
     name = "creat",
-    srcs = ["src/fcntl/linux/creat.cpp"],
-    hdrs = ["src/fcntl/creat.h"],
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:open",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fcntl:creat",
 )
 
 ################################ time targets ##################################
 
-libc_function(
-    name = "clock",
-    srcs = ["src/time/linux/clock.cpp"],
-    hdrs = ["src/time/clock.h"],
-    deps = [
-        ":hdr_time_macros",
-        ":types_clock_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/time",
-        "//libc/src/__support/time:clock_gettime",
-    ],
-)
 ################################ unistd targets ################################
 
-libc_function(
+alias(
+    name = "clock",
+    actual = "//libc/src/time:clock",
+)
+
+alias(
     name = "access",
-    srcs = ["src/unistd/linux/access.cpp"],
-    hdrs = ["src/unistd/access.h"],
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:access",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:access",
 )
 
-libc_function(
+alias(
     name = "chdir",
-    srcs = ["src/unistd/linux/chdir.cpp"],
-    hdrs = ["src/unistd/chdir.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:chdir",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:chdir",
 )
 
-libc_function(
+alias(
     name = "chown",
-    srcs = ["src/unistd/linux/chown.cpp"],
-    hdrs = ["src/unistd/chown.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_gid_t",
-        ":types_uid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:chown",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:chown",
 )
 
-libc_function(
+alias(
     name = "close",
-    srcs = ["src/unistd/linux/close.cpp"],
-    hdrs = ["src/unistd/close.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:close",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:close",
 )
 
-libc_function(
+alias(
     name = "dup",
-    srcs = ["src/unistd/linux/dup.cpp"],
-    hdrs = ["src/unistd/dup.h"],
-    deps = [
-        ":errno",
-        ":hdr_unistd_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:dup",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:dup",
 )
 
-libc_function(
+alias(
     name = "dup2",
-    srcs = ["src/unistd/linux/dup2.cpp"],
-    hdrs = ["src/unistd/dup2.h"],
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        ":hdr_unistd_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:dup2",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:dup2",
 )
 
-libc_function(
+alias(
     name = "dup3",
-    srcs = ["src/unistd/linux/dup3.cpp"],
-    hdrs = ["src/unistd/dup3.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":hdr_unistd_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:dup3",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:dup3",
 )
 
-libc_function(
+alias(
     name = "environ",
-    srcs = ["src/unistd/environ.cpp"],
-    hdrs = ["src/unistd/environ.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:environ",
 )
 
-libc_function(
+alias(
     name = "fchdir",
-    srcs = ["src/unistd/linux/fchdir.cpp"],
-    hdrs = ["src/unistd/fchdir.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:fchdir",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:fchdir",
 )
 
-libc_function(
+alias(
     name = "getcpu",
-    srcs = ["src/sched/linux/getcpu.cpp"],
-    hdrs = ["src/sched/getcpu.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getcpu",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sched:getcpu",
 )
 
-libc_function(
+alias(
     name = "sched_getcpu",
-    srcs = ["src/sched/linux/sched_getcpu.cpp"],
-    hdrs = ["src/sched/sched_getcpu.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getcpu",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sched:sched_getcpu",
 )
 
-libc_function(
+alias(
     name = "sched_get_priority_max",
-    srcs = ["src/sched/linux/sched_get_priority_max.cpp"],
-    hdrs = ["src/sched/sched_get_priority_max.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_get_priority_max",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sched:sched_get_priority_max",
 )
 
-libc_function(
+alias(
     name = "sched_get_priority_min",
-    srcs = ["src/sched/linux/sched_get_priority_min.cpp"],
-    hdrs = ["src/sched/sched_get_priority_min.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_get_priority_min",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sched:sched_get_priority_min",
 )
 
-libc_function(
+alias(
     name = "sched_getparam",
-    srcs = ["src/sched/linux/sched_getparam.cpp"],
-    hdrs = ["src/sched/sched_getparam.h"],
-    deps = [
-        ":errno",
-        ":types_pid_t",
-        ":types_struct_sched_param",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_getparam",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sched:sched_getparam",
 )
 
-libc_function(
+alias(
     name = "sched_getscheduler",
-    srcs = ["src/sched/linux/sched_getscheduler.cpp"],
-    hdrs = ["src/sched/sched_getscheduler.h"],
-    deps = [
-        ":errno",
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_getscheduler",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sched:sched_getscheduler",
 )
 
-libc_function(
+alias(
     name = "sched_rr_get_interval",
-    srcs = ["src/sched/linux/sched_rr_get_interval.cpp"],
-    hdrs = ["src/sched/sched_rr_get_interval.h"],
-    deps = [
-        ":errno",
-        ":types_pid_t",
-        ":types_struct_timespec",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_rr_get_interval",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sched:sched_rr_get_interval",
 )
 
-libc_function(
+alias(
     name = "sched_setaffinity",
-    srcs = ["src/sched/linux/sched_setaffinity.cpp"],
-    hdrs = ["src/sched/sched_setaffinity.h"],
-    deps = [
-        ":errno",
-        ":types_cpu_set_t",
-        ":types_pid_t",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/CPP:span",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_setaffinity",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sched:sched_setaffinity",
 )
 
-libc_function(
+alias(
     name = "sched_setparam",
-    srcs = ["src/sched/linux/sched_setparam.cpp"],
-    hdrs = ["src/sched/sched_setparam.h"],
-    deps = [
-        ":errno",
-        ":types_pid_t",
-        ":types_struct_sched_param",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_setparam",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sched:sched_setparam",
 )
 
-libc_function(
+alias(
     name = "sched_setscheduler",
-    srcs = ["src/sched/linux/sched_setscheduler.cpp"],
-    hdrs = ["src/sched/sched_setscheduler.h"],
-    deps = [
-        ":errno",
-        ":types_pid_t",
-        ":types_struct_sched_param",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_setscheduler",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sched:sched_setscheduler",
 )
 
-libc_function(
+alias(
     name = "sched_yield",
-    srcs = ["src/sched/linux/sched_yield.cpp"],
-    hdrs = ["src/sched/sched_yield.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_yield",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sched:sched_yield",
 )
 
-libc_function(
+alias(
     name = "fchown",
-    srcs = ["src/unistd/linux/fchown.cpp"],
-    hdrs = ["src/unistd/fchown.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_gid_t",
-        ":types_uid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:fchown",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:fchown",
 )
 
-libc_function(
+alias(
     name = "fsync",
-    srcs = ["src/unistd/linux/fsync.cpp"],
-    hdrs = ["src/unistd/fsync.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:fsync",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:fsync",
 )
 
-libc_function(
+alias(
     name = "ftruncate",
-    srcs = ["src/unistd/linux/ftruncate.cpp"],
-    hdrs = ["src/unistd/ftruncate.h"],
-    deps = [
-        ":errno",
-        ":hdr_stdint_proxy",
-        ":hdr_unistd_macros",
-        ":types_off_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:ftruncate",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:ftruncate",
 )
 
-libc_function(
+alias(
     name = "getcwd",
-    srcs = ["src/unistd/linux/getcwd.cpp"],
-    hdrs = ["src/unistd/getcwd.h"],
-    deps = [
-        ":allocating_string_utils",
-        ":hdr_unistd_macros",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:checked_ptr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getcwd",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getcwd",
 )
 
-libc_function(
+alias(
     name = "geteuid",
-    srcs = ["src/unistd/linux/geteuid.cpp"],
-    hdrs = ["src/unistd/geteuid.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_uid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:geteuid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:geteuid",
 )
 
-libc_function(
+alias(
     name = "gethostname",
-    srcs = ["src/unistd/linux/gethostname.cpp"],
-    hdrs = ["src/unistd/gethostname.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":string_utils",
-        ":types_size_t",
-        ":types_struct_utsname",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:uname",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:gethostname",
 )
 
-libc_function(
+alias(
     name = "getpagesize",
-    srcs = ["src/unistd/linux/getpagesize.cpp"],
-    hdrs = ["src/unistd/getpagesize.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil:linux_auxv",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getpagesize",
 )
 
-libc_function(
+alias(
     name = "getpid",
-    srcs = ["src/unistd/linux/getpid.cpp"],
-    hdrs = ["src/unistd/getpid.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getpid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getpid",
 )
 
-libc_function(
+alias(
     name = "getppid",
-    srcs = ["src/unistd/linux/getppid.cpp"],
-    hdrs = ["src/unistd/getppid.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getppid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getppid",
 )
 
-libc_function(
+alias(
     name = "fork",
-    srcs = ["src/unistd/linux/fork.cpp"],
-    hdrs = ["src/unistd/fork.h"],
-    full_build_only = True,
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":hdr_signal_macros",
-        ":hdr_unistd_macros",
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/threads:fork_callbacks",
-        "//libc/src/__support/threads:identifier",
-        "//libc/src/__support/threads:thread",
-        "//libc/src/__support/threads:thread_headers",
-    ],
+    actual = "//libc/src/unistd:fork",
 )
 
-libc_function(
+alias(
     name = "poll",
-    srcs = ["src/poll/linux/poll.cpp"],
-    hdrs = ["src/poll/poll.h"],
-    deps = [
-        ":errno",
-        ":types_nfds_t",
-        ":types_struct_pollfd",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:poll",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/poll",
 )
 
-libc_support_library(
-    name = "__restore_rt",
-    srcs = ["src/signal/linux/__restore.cpp"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__signal_utils",
-    hdrs = ["src/signal/linux/signal_utils.h"],
-    full_build_only = True,
-    # Only compatible with full build mode on Linux. Overlay mode has header
-    # conflicts with system headers (e.g. sa_handler macro in glibc).
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__restore_rt",
-        ":hdr_signal_macros",
-        ":types_siginfo_t",
-        ":types_sigset_t",
-        ":types_size_t",
-        ":types_struct_sigaction",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support/OSUtil:linux_sigmask",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil:vdso",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/threads:raw_rwlock",
-    ],
-)
-
-libc_function(
+alias(
     name = "kill",
-    srcs = ["src/signal/linux/kill.cpp"],
-    hdrs = ["src/signal/kill.h"],
-    deps = [
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:kill",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/signal:kill",
 )
 
-libc_function(
+alias(
     name = "sigaction",
-    srcs = ["src/signal/linux/sigaction.cpp"],
-    hdrs = ["src/signal/sigaction.h"],
-    # Full-build only, since it depends on __signal_utils.
-    full_build_only = True,
-    deps = [
-        ":__signal_utils",
-        ":types_struct_sigaction",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/signal:sigaction",
 )
 
-libc_function(
+alias(
     name = "sigaltstack",
-    srcs = ["src/signal/linux/sigaltstack.cpp"],
-    hdrs = ["src/signal/sigaltstack.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":hdr_errno_macros",
-        ":hdr_signal_macros",
-        ":types_stack_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sigaltstack",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/signal:sigaltstack",
 )
 
-libc_function(
+alias(
     name = "signal",
-    srcs = ["src/signal/linux/signal.cpp"],
-    hdrs = ["src/signal/signal.h"],
-    # Full-build only, since it depends on sigaction.
-    full_build_only = True,
-    deps = [
-        ":hdr_signal_macros",
-        ":sigaction",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/signal",
 )
 
-libc_function(
+alias(
     name = "waitpid",
-    srcs = ["src/sys/wait/linux/waitpid.cpp"],
-    hdrs = ["src/sys/wait/waitpid.h"],
-    deps = [
-        ":errno",
-        ":hdr_signal_macros",
-        ":hdr_sys_wait_macros",
-        ":types_pid_t",
-        ":types_siginfo_t",
-        ":types_struct_rusage",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_assert",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:wait4",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/wait:waitpid",
 )
 
-libc_function(
+alias(
     name = "getsid",
-    srcs = ["src/unistd/linux/getsid.cpp"],
-    hdrs = ["src/unistd/getsid.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getsid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getsid",
 )
 
-libc_function(
+alias(
     name = "getuid",
-    srcs = ["src/unistd/linux/getuid.cpp"],
-    hdrs = ["src/unistd/getuid.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_uid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getuid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getuid",
 )
 
-libc_function(
+alias(
     name = "getegid",
-    srcs = ["src/unistd/linux/getegid.cpp"],
-    hdrs = ["src/unistd/getegid.h"],
-    deps = [
-        ":types_gid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getegid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getegid",
 )
 
-libc_function(
+alias(
     name = "getgid",
-    srcs = ["src/unistd/linux/getgid.cpp"],
-    hdrs = ["src/unistd/getgid.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_gid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getgid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getgid",
 )
 
 # libc_function(
@@ -5144,236 +3402,74 @@ libc_function(
 #     ],
 # )
 
-libc_function(
+alias(
     name = "isatty",
-    srcs = ["src/unistd/linux/isatty.cpp"],
-    hdrs = ["src/unistd/isatty.h"],
-    deps = [
-        ":errno",
-        ":hdr_unistd_macros",
-        ":sys_ioctl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:ioctl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:isatty",
 )
 
-libc_function(
+alias(
     name = "link",
-    srcs = ["src/unistd/linux/link.cpp"],
-    hdrs = ["src/unistd/link.h"],
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        ":hdr_unistd_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:link",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:link",
 )
 
-libc_function(
+alias(
     name = "linkat",
-    srcs = ["src/unistd/linux/linkat.cpp"],
-    hdrs = ["src/unistd/linkat.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:linkat",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:linkat",
 )
 
-libc_function(
+alias(
     name = "pipe",
-    srcs = ["src/unistd/linux/pipe.cpp"],
-    hdrs = ["src/unistd/pipe.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pipe",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-    ],
+    actual = "//libc/src/unistd:pipe",
 )
 
-libc_function(
+alias(
     name = "lseek",
-    srcs = ["src/unistd/linux/lseek.cpp"],
-    hdrs = ["src/unistd/lseek.h"],
-    deps = [
-        ":errno",
-        ":hdr_unistd_macros",
-        ":types_off_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:lseek",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:lseek",
 )
 
-libc_function(
+alias(
     name = "pread",
-    srcs = ["src/unistd/linux/pread.cpp"],
-    hdrs = ["src/unistd/pread.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":hdr_unistd_macros",
-        ":types_off_t",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pread",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-    ],
+    actual = "//libc/src/unistd:pread",
 )
 
-libc_function(
+alias(
     name = "pwrite",
-    srcs = ["src/unistd/linux/pwrite.cpp"],
-    hdrs = ["src/unistd/pwrite.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":hdr_unistd_macros",
-        ":types_off_t",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pwrite",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:pwrite",
 )
 
-libc_function(
+alias(
     name = "read",
-    srcs = ["src/unistd/linux/read.cpp"],
-    hdrs = ["src/unistd/read.h"],
-    deps = [
-        ":errno",
-        ":hdr_unistd_macros",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:read",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-    ],
+    actual = "//libc/src/unistd:read",
 )
 
-libc_function(
+alias(
     name = "readlink",
-    srcs = ["src/unistd/linux/readlink.cpp"],
-    hdrs = ["src/unistd/readlink.h"],
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        ":hdr_unistd_macros",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:readlink",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:readlink",
 )
 
-libc_function(
+alias(
     name = "readlinkat",
-    srcs = ["src/unistd/linux/readlinkat.cpp"],
-    hdrs = ["src/unistd/readlinkat.h"],
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        ":hdr_unistd_macros",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:readlinkat",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:readlinkat",
 )
 
-libc_function(
+alias(
     name = "rmdir",
-    srcs = ["src/unistd/linux/rmdir.cpp"],
-    hdrs = ["src/unistd/rmdir.h"],
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:rmdir",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:rmdir",
 )
 
-libc_function(
+alias(
     name = "setsid",
-    srcs = ["src/unistd/linux/setsid.cpp"],
-    hdrs = ["src/unistd/setsid.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:setsid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:setsid",
 )
 
-libc_function(
+alias(
     name = "symlink",
-    srcs = ["src/unistd/linux/symlink.cpp"],
-    hdrs = ["src/unistd/symlink.h"],
-    deps = [
-        ":errno",
-        ":hdr_unistd_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:symlink",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:symlink",
 )
 
-libc_function(
+alias(
     name = "symlinkat",
-    srcs = ["src/unistd/linux/symlinkat.cpp"],
-    hdrs = ["src/unistd/symlinkat.h"],
-    deps = [
-        ":errno",
-        ":hdr_unistd_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:symlinkat",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:symlinkat",
 )
 
 #TODO: Enable once fullbuild is added to bazel, since this depends on a macro
@@ -5391,2039 +3487,618 @@ libc_function(
 #     ],
 # )
 
-libc_function(
+alias(
     name = "swab",
-    srcs = ["src/unistd/swab.cpp"],
-    hdrs = ["src/unistd/swab.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:swab",
 )
 
-libc_function(
+alias(
     name = "truncate",
-    srcs = ["src/unistd/linux/truncate.cpp"],
-    hdrs = ["src/unistd/truncate.h"],
-    deps = [
-        ":errno",
-        ":hdr_unistd_macros",
-        ":types_off_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:truncate",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:truncate",
 )
 
-libc_function(
+alias(
     name = "unlink",
-    srcs = ["src/unistd/linux/unlink.cpp"],
-    hdrs = ["src/unistd/unlink.h"],
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:unlink",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:unlink",
 )
 
-libc_function(
+alias(
     name = "unlinkat",
-    srcs = ["src/unistd/linux/unlinkat.cpp"],
-    hdrs = ["src/unistd/unlinkat.h"],
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:unlinkat",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:unlinkat",
 )
 
-# WARNING: NOT FULLY IMPLEMENTED, FOR TESTING USE ONLY
-libc_function(
+alias(
     name = "sysconf",
-    srcs = ["src/unistd/linux/sysconf.cpp"],
-    hdrs = ["src/unistd/sysconf.h"],
-    full_build_only = True,
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":hdr_limits_macros",
-        ":hdr_sys_auxv_macros",
-        ":hdr_sys_resource_macros",
-        ":hdr_unistd_macros",
-        ":types_struct_rlimit",
-        ":types_struct_sysinfo",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:linux_auxv",
-        "//libc/src/__support/OSUtil:linux_sysinfo",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:prlimit",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sysinfo",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:sysconf",
 )
 
-libc_function(
+alias(
     name = "write",
-    srcs = ["src/unistd/linux/write.cpp"],
-    hdrs = ["src/unistd/write.h"],
-    deps = [
-        ":errno",
-        ":hdr_unistd_macros",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:write",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:write",
 )
 
 ################################ stdio targets #################################
 
-libc_support_library(
-    name = "stdin",
-    srcs = ["src/stdio/linux/stdin.cpp"],
-    hdrs = ["src/stdio/stdin.h"],
-    deps = [
-        ":types_FILE",
-        "//libc/src/__support:common",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/File:platform_file",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "stdout",
-    srcs = ["src/stdio/linux/stdout.cpp"],
-    hdrs = ["src/stdio/stdout.h"],
-    deps = [
-        ":types_FILE",
-        "//libc/src/__support:common",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/File:platform_file",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "stderr",
-    srcs = ["src/stdio/linux/stderr.cpp"],
-    hdrs = ["src/stdio/stderr.h"],
-    deps = [
-        ":types_FILE",
-        "//libc/src/__support:common",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/File:platform_file",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "fflush_internal",
-    srcs = ["src/stdio/generic/fflush_internal.cpp"],
-    hdrs = ["src/stdio/fflush_internal.h"],
-    deps = [
-        ":stderr",
-        ":stdin",
-        ":stdout",
-        ":types_FILE",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/File:platform_file",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_function(
+alias(
     name = "fflush",
-    srcs = ["src/stdio/fflush.cpp"],
-    hdrs = ["src/stdio/fflush.h"],
-    deps = [
-        ":errno",
-        ":fflush_internal",
-        ":hdr_stdio_macros",
-        ":types_FILE",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:fflush",
 )
 
-libc_function(
+alias(
     name = "fclose",
-    srcs = ["src/stdio/generic/fclose.cpp"],
-    hdrs = ["src/stdio/fclose.h"],
-    deps = [
-        ":types_FILE",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/File:platform_file",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:fclose",
 )
 
-libc_function(
+alias(
     name = "fopen",
-    srcs = ["src/stdio/generic/fopen.cpp"],
-    hdrs = ["src/stdio/fopen.h"],
-    deps = [
-        ":types_FILE",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/File:platform_file",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/stdio:fopen",
 )
 
-libc_function(
+alias(
     name = "fread",
-    srcs = ["src/stdio/generic/fread.cpp"],
-    hdrs = ["src/stdio/fread.h"],
-    deps = [
-        ":types_FILE",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/File:platform_file",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:fread",
 )
 
-libc_function(
+alias(
     name = "fwrite",
-    srcs = ["src/stdio/generic/fwrite.cpp"],
-    hdrs = ["src/stdio/fwrite.h"],
-    deps = [
-        ":types_FILE",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/File:platform_file",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:fwrite",
 )
 
-libc_function(
+alias(
     name = "feof",
-    srcs = ["src/stdio/generic/feof.cpp"],
-    hdrs = ["src/stdio/feof.h"],
-    deps = [
-        ":types_FILE",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/File:platform_file",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:feof",
 )
 
-libc_function(
+alias(
     name = "ferror",
-    srcs = ["src/stdio/generic/ferror.cpp"],
-    hdrs = ["src/stdio/ferror.h"],
-    deps = [
-        ":types_FILE",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/File:platform_file",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:ferror",
 )
 
-libc_function(
+alias(
     name = "asprintf",
-    srcs = ["src/stdio/asprintf.cpp"],
-    hdrs = ["src/stdio/asprintf.h"],
-    deps = [
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/printf_core:printf_core_structs",
-        "//libc/src/__support/printf_core:printf_error_mapper",
-        "//libc/src/__support/printf_core:vasprintf_internal",
-    ],
+    actual = "//libc/src/stdio:asprintf",
 )
 
-libc_function(
+alias(
     name = "sprintf",
-    srcs = ["src/stdio/sprintf.cpp"],
-    hdrs = ["src/stdio/sprintf.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/printf_core:printf_config",
-        "//libc/src/__support/printf_core:printf_core_structs",
-        "//libc/src/__support/printf_core:printf_error_mapper",
-        "//libc/src/__support/printf_core:printf_main",
-        "//libc/src/__support/printf_core:printf_writer",
-    ],
+    actual = "//libc/src/stdio:sprintf",
 )
 
-libc_function(
+alias(
     name = "snprintf",
-    srcs = ["src/stdio/snprintf.cpp"],
-    hdrs = ["src/stdio/snprintf.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/printf_core:printf_core_structs",
-        "//libc/src/__support/printf_core:printf_error_mapper",
-        "//libc/src/__support/printf_core:printf_main",
-        "//libc/src/__support/printf_core:printf_writer",
-    ],
+    actual = "//libc/src/stdio:snprintf",
 )
 
-libc_function(
+alias(
     name = "printf",
-    srcs = ["src/stdio/generic/printf.cpp"],
-    hdrs = ["src/stdio/printf.h"],
-    deps = [
-        ":errno",
-        ":stdout",
-        ":types_FILE",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/printf_core:printf_core_structs",
-        "//libc/src/__support/printf_core:printf_error_mapper",
-        "//libc/src/__support/printf_core:vfprintf_internal",
-    ],
+    actual = "//libc/src/stdio:printf",
 )
 
-libc_function(
+alias(
     name = "fprintf",
-    srcs = ["src/stdio/generic/fprintf.cpp"],
-    hdrs = ["src/stdio/fprintf.h"],
-    deps = [
-        ":errno",
-        ":types_FILE",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/printf_core:printf_core_structs",
-        "//libc/src/__support/printf_core:printf_error_mapper",
-        "//libc/src/__support/printf_core:vfprintf_internal",
-    ],
+    actual = "//libc/src/stdio:fprintf",
 )
 
-libc_function(
+alias(
     name = "vasprintf",
-    srcs = ["src/stdio/vasprintf.cpp"],
-    hdrs = ["src/stdio/vasprintf.h"],
-    deps = [
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/printf_core:printf_core_structs",
-        "//libc/src/__support/printf_core:printf_error_mapper",
-        "//libc/src/__support/printf_core:vasprintf_internal",
-    ],
+    actual = "//libc/src/stdio:vasprintf",
 )
 
-libc_function(
+alias(
     name = "vsprintf",
-    srcs = ["src/stdio/vsprintf.cpp"],
-    hdrs = ["src/stdio/vsprintf.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/printf_core:printf_core_structs",
-        "//libc/src/__support/printf_core:printf_error_mapper",
-        "//libc/src/__support/printf_core:printf_main",
-        "//libc/src/__support/printf_core:printf_writer",
-    ],
+    actual = "//libc/src/stdio:vsprintf",
 )
 
-libc_function(
+alias(
     name = "vsnprintf",
-    srcs = ["src/stdio/vsnprintf.cpp"],
-    hdrs = ["src/stdio/vsnprintf.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/printf_core:printf_core_structs",
-        "//libc/src/__support/printf_core:printf_error_mapper",
-        "//libc/src/__support/printf_core:printf_main",
-        "//libc/src/__support/printf_core:printf_writer",
-    ],
+    actual = "//libc/src/stdio:vsnprintf",
 )
 
-libc_function(
+alias(
     name = "vprintf",
-    srcs = ["src/stdio/generic/vprintf.cpp"],
-    hdrs = ["src/stdio/vprintf.h"],
-    deps = [
-        ":errno",
-        ":stdout",
-        ":types_FILE",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/printf_core:printf_core_structs",
-        "//libc/src/__support/printf_core:printf_error_mapper",
-        "//libc/src/__support/printf_core:vfprintf_internal",
-    ],
+    actual = "//libc/src/stdio:vprintf",
 )
 
-libc_function(
+alias(
     name = "vfprintf",
-    srcs = ["src/stdio/generic/vfprintf.cpp"],
-    hdrs = ["src/stdio/vfprintf.h"],
-    deps = [
-        ":errno",
-        ":types_FILE",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/printf_core:printf_core_structs",
-        "//libc/src/__support/printf_core:printf_error_mapper",
-        "//libc/src/__support/printf_core:vfprintf_internal",
-    ],
+    actual = "//libc/src/stdio:vfprintf",
 )
 
-libc_support_library(
-    name = "scanf_config",
-    hdrs = ["src/stdio/scanf_core/scanf_config.h"],
-)
-
-libc_support_library(
-    name = "scanf_core_structs",
-    hdrs = ["src/stdio/scanf_core/core_structs.h"],
-    deps = [
-        ":scanf_config",
-        "//libc/src/__support/CPP:bitset",
-        "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/FPUtil:fp_bits",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "scanf_parser",
-    hdrs = ["src/stdio/scanf_core/parser.h"],
-    deps = [
-        ":scanf_config",
-        ":scanf_core_structs",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support:str_to_integer",
-        "//libc/src/__support/CPP:algorithm",
-        "//libc/src/__support/CPP:bitset",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "scanf_reader",
-    hdrs = ["src/stdio/scanf_core/reader.h"],
-    deps = [
-        ":types_FILE",
-        "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "scanf_string_reader",
-    hdrs = ["src/stdio/scanf_core/string_reader.h"],
-    deps = [
-        ":scanf_reader",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "scanf_converter",
-    srcs = [
-        "src/stdio/scanf_core/converter_utils.h",
-        "src/stdio/scanf_core/current_pos_converter.h",
-        "src/stdio/scanf_core/float_converter.h",
-        "src/stdio/scanf_core/int_converter.h",
-        "src/stdio/scanf_core/ptr_converter.h",
-        "src/stdio/scanf_core/string_converter.h",
-    ],
-    hdrs = ["src/stdio/scanf_core/converter.h"],
-    deps = [
-        ":scanf_core_structs",
-        ":scanf_reader",
-        "//libc/src/__support:char_vector",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support:str_to_float",
-        "//libc/src/__support/CPP:bitset",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "scanf_main",
-    hdrs = ["src/stdio/scanf_core/scanf_main.h"],
-    deps = [
-        ":scanf_config",
-        ":scanf_converter",
-        ":scanf_core_structs",
-        ":scanf_parser",
-        ":scanf_reader",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "vfscanf_internal",
-    hdrs = ["src/stdio/scanf_core/vfscanf_internal.h"],
-    deps = [
-        ":scanf_main",
-        ":scanf_reader",
-        ":types_FILE",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:architectures",
-    ],
-)
-
-libc_function(
+alias(
     name = "scanf",
-    srcs = ["src/stdio/generic/scanf.cpp"],
-    hdrs = ["src/stdio/scanf.h"],
-    deps = [
-        ":stdin",
-        ":types_FILE",
-        ":vfscanf_internal",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:scanf",
 )
 
-libc_function(
+alias(
     name = "vscanf",
-    srcs = ["src/stdio/generic/vscanf.cpp"],
-    hdrs = ["src/stdio/vscanf.h"],
-    deps = [
-        ":stdin",
-        ":types_FILE",
-        ":vfscanf_internal",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:vscanf",
 )
 
-libc_function(
+alias(
     name = "fscanf",
-    srcs = ["src/stdio/generic/fscanf.cpp"],
-    hdrs = ["src/stdio/fscanf.h"],
-    deps = [
-        ":types_FILE",
-        ":vfscanf_internal",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:fscanf",
 )
 
-libc_function(
+alias(
     name = "vfscanf",
-    srcs = ["src/stdio/generic/vfscanf.cpp"],
-    hdrs = ["src/stdio/vfscanf.h"],
-    deps = [
-        ":types_FILE",
-        ":vfscanf_internal",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:vfscanf",
 )
 
-libc_function(
+alias(
     name = "sscanf",
-    srcs = ["src/stdio/sscanf.cpp"],
-    hdrs = ["src/stdio/sscanf.h"],
-    deps = [
-        ":hdr_stdio_macros",
-        ":scanf_main",
-        ":scanf_string_reader",
-        ":types_FILE",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:sscanf",
 )
 
-libc_function(
+alias(
     name = "vsscanf",
-    srcs = ["src/stdio/vsscanf.cpp"],
-    hdrs = ["src/stdio/vsscanf.h"],
-    deps = [
-        ":hdr_stdio_macros",
-        ":scanf_main",
-        ":scanf_string_reader",
-        ":types_FILE",
-        "//libc/src/__support:arg_list",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/File:file",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:vsscanf",
 )
 
-libc_function(
+alias(
     name = "remove",
-    srcs = ["src/stdio/linux/remove.cpp"],
-    hdrs = ["src/stdio/remove.h"],
-    deps = [
-        ":errno",
-        ":hdr_errno_macros",
-        ":hdr_fcntl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:unlinkat",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:remove",
 )
 
-libc_function(
+alias(
     name = "rename",
-    srcs = ["src/stdio/linux/rename.cpp"],
-    hdrs = ["src/stdio/rename.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        ":llvm_libc_macros_fcntl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:rename",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/stdio:rename",
 )
 
 ############################### sys/mman targets ###############################
 
-libc_function(
+alias(
     name = "madvise",
-    srcs = ["src/sys/mman/linux/madvise.cpp"],
-    hdrs = ["src/sys/mman/madvise.h"],
-    deps = [
-        ":errno",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:madvise",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:madvise",
 )
 
-libc_function(
+alias(
     name = "mincore",
-    srcs = ["src/sys/mman/linux/mincore.cpp"],
-    hdrs = ["src/sys/mman/mincore.h"],
-    deps = [
-        ":errno",
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:mincore",
 )
 
-libc_function(
+alias(
     name = "mlock",
-    srcs = ["src/sys/mman/linux/mlock.cpp"],
-    hdrs = ["src/sys/mman/mlock.h"],
-    deps = [
-        ":errno",
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:mlock",
 )
 
-libc_function(
+alias(
     name = "mlock2",
-    srcs = ["src/sys/mman/linux/mlock2.cpp"],
-    hdrs = ["src/sys/mman/mlock2.h"],
-    deps = [
-        ":errno",
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:mlock2",
 )
 
-libc_function(
+alias(
     name = "mlockall",
-    srcs = ["src/sys/mman/linux/mlockall.cpp"],
-    hdrs = ["src/sys/mman/mlockall.h"],
-    deps = [
-        ":errno",
-        ":hdr_sys_mman_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:mlockall",
 )
 
-libc_function(
+alias(
     name = "mmap",
-    srcs = ["src/sys/mman/linux/mmap.cpp"],
-    hdrs = ["src/sys/mman/mmap.h"],
-    deps = [
-        ":errno",
-        ":hdr_sys_mman_macros",
-        ":types_off_t",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mmap",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:mmap",
 )
 
-libc_function(
+alias(
     name = "mprotect",
-    srcs = ["src/sys/mman/linux/mprotect.cpp"],
-    hdrs = ["src/sys/mman/mprotect.h"],
-    deps = [
-        ":errno",
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mprotect",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:mprotect",
 )
 
-libc_function(
+alias(
     name = "mremap",
-    srcs = ["src/sys/mman/linux/mremap.cpp"],
-    hdrs = ["src/sys/mman/mremap.h"],
-    deps = [
-        ":errno",
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mremap",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:mremap",
 )
 
-libc_function(
+alias(
     name = "msync",
-    srcs = ["src/sys/mman/linux/msync.cpp"],
-    hdrs = ["src/sys/mman/msync.h"],
-    deps = [
-        ":errno",
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:msync",
 )
 
-libc_function(
+alias(
     name = "munlock",
-    srcs = ["src/sys/mman/linux/munlock.cpp"],
-    hdrs = ["src/sys/mman/munlock.h"],
-    deps = [
-        ":errno",
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:munlock",
 )
 
-libc_function(
+alias(
     name = "munlockall",
-    srcs = ["src/sys/mman/linux/munlockall.cpp"],
-    hdrs = ["src/sys/mman/munlockall.h"],
-    deps = [
-        ":errno",
-        ":hdr_sys_mman_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:munlockall",
 )
 
-libc_function(
+alias(
     name = "munmap",
-    srcs = ["src/sys/mman/linux/munmap.cpp"],
-    hdrs = ["src/sys/mman/munmap.h"],
-    deps = [
-        ":errno",
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:munmap",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:munmap",
 )
 
-libc_function(
+alias(
     name = "memfd_create",
-    srcs = ["src/sys/mman/linux/memfd_create.cpp"],
-    hdrs = ["src/sys/mman/memfd_create.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:memfd_create",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:memfd_create",
 )
 
-libc_function(
+alias(
     name = "pkey_alloc",
-    srcs = ["src/sys/mman/linux/pkey_alloc.cpp"],
-    hdrs = ["src/sys/mman/pkey_alloc.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pkey_alloc",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:pkey_alloc",
 )
 
-libc_function(
+alias(
     name = "pkey_free",
-    srcs = ["src/sys/mman/linux/pkey_free.cpp"],
-    hdrs = ["src/sys/mman/pkey_free.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pkey_free",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:pkey_free",
 )
 
-libc_function(
+alias(
     name = "pkey_get",
-    srcs = ["src/sys/mman/linux/pkey_get.cpp"],
-    hdrs = ["src/sys/mman/pkey_get.h"],
-    deps = [
-        ":errno",
-        ":pkey_common",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:architectures",
-    ],
+    actual = "//libc/src/sys/mman:pkey_get",
 )
 
-libc_function(
+alias(
     name = "pkey_mprotect",
-    srcs = ["src/sys/mman/linux/pkey_mprotect.cpp"],
-    hdrs = ["src/sys/mman/pkey_mprotect.h"],
-    deps = [
-        ":errno",
-        ":hdr_errno_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mprotect",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pkey_mprotect",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:pkey_mprotect",
 )
 
-libc_function(
+alias(
     name = "pkey_set",
-    srcs = ["src/sys/mman/linux/pkey_set.cpp"],
-    hdrs = ["src/sys/mman/pkey_set.h"],
-    deps = [
-        ":errno",
-        ":pkey_common",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:pkey_set",
 )
 
-libc_support_library(
-    name = "pkey_common",
-    hdrs = [
-        "src/sys/mman/linux/pkey_common.h",
-    ] + selects.with_or({
-        PLATFORM_CPU_X86_64: ["src/sys/mman/linux/x86_64/pkey_common.h"],
-        "//conditions:default": ["src/sys/mman/linux/generic/pkey_common.h"],
-    }),
-    deps = [
-        ":hdr_errno_macros",
-        ":hdr_stdint_proxy",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support/macros/properties:architectures",
-    ],
-)
-
-libc_function(
+alias(
     name = "posix_madvise",
-    srcs = ["src/sys/mman/linux/posix_madvise.cpp"],
-    hdrs = ["src/sys/mman/posix_madvise.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:madvise",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:posix_madvise",
 )
 
-libc_function(
+alias(
     name = "remap_file_pages",
-    srcs = ["src/sys/mman/linux/remap_file_pages.cpp"],
-    hdrs = ["src/sys/mman/remap_file_pages.h"],
-    deps = [
-        ":errno",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:remap_file_pages",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:remap_file_pages",
 )
 
-libc_support_library(
-    name = "shm_common",
-    hdrs = ["src/sys/mman/linux/shm_common.h"],
-    deps = [
-        ":hdr_errno_macros",
-        ":string_memory_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support/CPP:array",
-        "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_function(
+alias(
     name = "shm_open",
-    srcs = ["src/sys/mman/linux/shm_open.cpp"],
-    hdrs = ["src/sys/mman/shm_open.h"],
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        ":shm_common",
-        ":types_mode_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:open",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:shm_open",
 )
 
-libc_function(
+alias(
     name = "shm_unlink",
-    srcs = ["src/sys/mman/linux/shm_unlink.cpp"],
-    hdrs = ["src/sys/mman/shm_unlink.h"],
-    deps = [
-        ":errno",
-        ":shm_common",
-        ":types_mode_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:unlink",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:shm_unlink",
 )
 
 ############################# sys/random targets #############################
 
-libc_function(
+alias(
     name = "getrandom",
-    srcs = ["src/sys/random/linux/getrandom.cpp"],
-    hdrs = ["src/sys/random/getrandom.h"],
-    deps = [
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getrandom",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/random:getrandom",
 )
 
 ############################## sys/prctl targets ##############################
 
-libc_function(
+alias(
     name = "prctl",
-    srcs = ["src/sys/prctl/linux/prctl.cpp"],
-    hdrs = ["src/sys/prctl/prctl.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/prctl",
 )
 
 ############################# sys/resource targets #############################
 
-libc_function(
+alias(
     name = "getrlimit",
-    srcs = ["src/sys/resource/linux/getrlimit.cpp"],
-    hdrs = ["src/sys/resource/getrlimit.h"],
-    deps = [
-        ":errno",
-        ":types_struct_rlimit",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:prlimit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/resource:getrlimit",
 )
 
-libc_function(
+alias(
     name = "setrlimit",
-    srcs = ["src/sys/resource/linux/setrlimit.cpp"],
-    hdrs = ["src/sys/resource/setrlimit.h"],
-    deps = [
-        ":errno",
-        ":types_struct_rlimit",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:prlimit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/resource:setrlimit",
 )
 
 ############################### sys/sem targets ################################
 
-libc_function(
+alias(
     name = "semctl",
-    srcs = ["src/sys/sem/linux/semctl.cpp"],
-    hdrs = ["src/sys/sem/semctl.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":hdr_errno_macros",
-        ":hdr_sys_ipc_macros",
-        ":hdr_sys_sem_macros",
-        ":types_struct_semid_ds",
-        ":types_struct_seminfo",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:semctl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/sem:semctl",
 )
 
-libc_function(
+alias(
     name = "semget",
-    srcs = ["src/sys/sem/linux/semget.cpp"],
-    hdrs = ["src/sys/sem/semget.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_key_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:semget",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/sem:semget",
 )
 
-libc_function(
+alias(
     name = "semop",
-    srcs = ["src/sys/sem/linux/semop.cpp"],
-    hdrs = ["src/sys/sem/semop.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_size_t",
-        ":types_struct_sembuf",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:semop",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/sem:semop",
 )
 
 ############################# sys/sendfile targets #############################
 
-libc_function(
+alias(
     name = "sendfile",
-    srcs = ["src/sys/sendfile/linux/sendfile.cpp"],
-    hdrs = ["src/sys/sendfile/sendfile.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_off_t",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sendfile",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/sendfile",
 )
 
 ############################### sys/stat targets ###############################
 
-libc_function(
+alias(
     name = "mkdir",
-    srcs = ["src/sys/stat/linux/mkdir.cpp"],
-    hdrs = ["src/sys/stat/mkdir.h"],
-    deps = [
-        ":errno",
-        ":hdr_fcntl_macros",
-        ":types_mode_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mkdir",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/stat:mkdir",
 )
 
-libc_function(
+alias(
     name = "mkdirat",
-    srcs = ["src/sys/stat/linux/mkdirat.cpp"],
-    hdrs = ["src/sys/stat/mkdirat.h"],
-    deps = [
-        ":errno",
-        ":types_mode_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mkdirat",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/stat:mkdirat",
 )
 
 ############################## sys/socket targets ##############################
 
-libc_function(
+alias(
     name = "accept",
-    srcs = ["src/sys/socket/linux/accept.cpp"],
-    hdrs = ["src/sys/socket/accept.h"],
-    deps = [
-        ":errno",
-        ":types_socklen_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:accept",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:accept",
 )
 
-libc_function(
+alias(
     name = "accept4",
-    srcs = ["src/sys/socket/linux/accept4.cpp"],
-    hdrs = ["src/sys/socket/accept4.h"],
-    deps = [
-        ":errno",
-        ":types_socklen_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:accept4",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:accept4",
 )
 
-libc_function(
+alias(
     name = "bind",
-    srcs = ["src/sys/socket/linux/bind.cpp"],
-    hdrs = ["src/sys/socket/bind.h"],
-    deps = [
-        ":errno",
-        ":types_socklen_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:bind",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:bind",
 )
 
-libc_function(
+alias(
     name = "connect",
-    srcs = ["src/sys/socket/linux/connect.cpp"],
-    hdrs = ["src/sys/socket/connect.h"],
-    deps = [
-        ":errno",
-        ":types_socklen_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:connect",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:connect",
 )
 
-libc_function(
+alias(
     name = "getpeername",
-    srcs = ["src/sys/socket/linux/getpeername.cpp"],
-    hdrs = ["src/sys/socket/getpeername.h"],
-    deps = [
-        ":errno",
-        ":types_socklen_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getpeername",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:getpeername",
 )
 
-libc_function(
+alias(
     name = "getsockname",
-    srcs = ["src/sys/socket/linux/getsockname.cpp"],
-    hdrs = ["src/sys/socket/getsockname.h"],
-    deps = [
-        ":errno",
-        ":types_socklen_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getsockname",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:getsockname",
 )
 
-libc_function(
+alias(
     name = "getsockopt",
-    srcs = ["src/sys/socket/linux/getsockopt.cpp"],
-    hdrs = ["src/sys/socket/getsockopt.h"],
-    deps = [
-        ":errno",
-        ":types_socklen_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getsockopt",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:getsockopt",
 )
 
-libc_function(
+alias(
     name = "listen",
-    srcs = ["src/sys/socket/linux/listen.cpp"],
-    hdrs = ["src/sys/socket/listen.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:listen",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:listen",
 )
 
-libc_function(
+alias(
     name = "recv",
-    srcs = ["src/sys/socket/linux/recv.cpp"],
-    hdrs = ["src/sys/socket/recv.h"],
-    deps = [
-        ":errno",
-        ":types_size_t",
-        ":types_socklen_t",
-        ":types_ssize_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:recvfrom",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-    ],
+    actual = "//libc/src/sys/socket:recv",
 )
 
-libc_function(
+alias(
     name = "recvfrom",
-    srcs = ["src/sys/socket/linux/recvfrom.cpp"],
-    hdrs = ["src/sys/socket/recvfrom.h"],
-    deps = [
-        ":errno",
-        ":types_socklen_t",
-        ":types_ssize_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:recvfrom",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-    ],
+    actual = "//libc/src/sys/socket:recvfrom",
 )
 
-libc_function(
+alias(
     name = "recvmmsg",
-    srcs = ["src/sys/socket/linux/recvmmsg.cpp"],
-    hdrs = ["src/sys/socket/recvmmsg.h"],
-    deps = [
-        ":errno",
-        ":types_struct_mmsghdr",
-        ":types_struct_timespec",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:recvmmsg",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:recvmmsg",
 )
 
-libc_function(
+alias(
     name = "recvmsg",
-    srcs = ["src/sys/socket/linux/recvmsg.cpp"],
-    hdrs = ["src/sys/socket/recvmsg.h"],
-    deps = [
-        ":errno",
-        ":types_ssize_t",
-        ":types_struct_msghdr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:recvmsg",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-    ],
+    actual = "//libc/src/sys/socket:recvmsg",
 )
 
-libc_function(
+alias(
     name = "send",
-    srcs = ["src/sys/socket/linux/send.cpp"],
-    hdrs = ["src/sys/socket/send.h"],
-    deps = [
-        ":errno",
-        ":types_size_t",
-        ":types_socklen_t",
-        ":types_ssize_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sendto",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:send",
 )
 
-libc_function(
+alias(
     name = "sendmmsg",
-    srcs = ["src/sys/socket/linux/sendmmsg.cpp"],
-    hdrs = ["src/sys/socket/sendmmsg.h"],
-    deps = [
-        ":errno",
-        ":types_struct_mmsghdr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sendmmsg",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:sendmmsg",
 )
 
-libc_function(
+alias(
     name = "sendmsg",
-    srcs = ["src/sys/socket/linux/sendmsg.cpp"],
-    hdrs = ["src/sys/socket/sendmsg.h"],
-    deps = [
-        ":errno",
-        ":types_ssize_t",
-        ":types_struct_msghdr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sendmsg",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:sendmsg",
 )
 
-libc_function(
+alias(
     name = "sendto",
-    srcs = ["src/sys/socket/linux/sendto.cpp"],
-    hdrs = ["src/sys/socket/sendto.h"],
-    deps = [
-        ":errno",
-        ":types_socklen_t",
-        ":types_ssize_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sendto",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:sendto",
 )
 
-libc_function(
+alias(
     name = "setsockopt",
-    srcs = ["src/sys/socket/linux/setsockopt.cpp"],
-    hdrs = ["src/sys/socket/setsockopt.h"],
-    deps = [
-        ":errno",
-        ":types_socklen_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:setsockopt",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:setsockopt",
 )
 
-libc_function(
+alias(
     name = "shutdown",
-    srcs = ["src/sys/socket/linux/shutdown.cpp"],
-    hdrs = ["src/sys/socket/shutdown.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:shutdown",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:shutdown",
 )
 
-libc_function(
+alias(
     name = "sockatmark",
-    srcs = ["src/sys/socket/linux/sockatmark.cpp"],
-    hdrs = ["src/sys/socket/sockatmark.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:ioctl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket:sockatmark",
 )
 
-libc_function(
+alias(
     name = "socket",
-    srcs = ["src/sys/socket/linux/socket.cpp"],
-    hdrs = ["src/sys/socket/socket.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:socket",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/socket",
 )
 
-libc_function(
+alias(
     name = "socketpair",
-    srcs = ["src/sys/socket/linux/socketpair.cpp"],
-    hdrs = ["src/sys/socket/socketpair.h"],
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:socketpair",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-    ],
+    actual = "//libc/src/sys/socket:socketpair",
 )
 
 ############################### sys/uio targets ################################
 
-libc_function(
+alias(
     name = "readv",
-    srcs = ["src/sys/uio/linux/readv.cpp"],
-    hdrs = ["src/sys/uio/readv.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_ssize_t",
-        ":types_struct_iovec",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:readv",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/uio:readv",
 )
 
-libc_function(
+alias(
     name = "writev",
-    srcs = ["src/sys/uio/linux/writev.cpp"],
-    hdrs = ["src/sys/uio/writev.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_ssize_t",
-        ":types_struct_iovec",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:writev",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/uio:writev",
 )
 
 ############################# sys/utsname targets ##############################
 
-libc_function(
+alias(
     name = "uname",
-    srcs = ["src/sys/utsname/linux/uname.cpp"],
-    hdrs = ["src/sys/utsname/uname.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_struct_utsname",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:uname",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/utsname:uname",
 )
 
 ############################## sys/epoll targets ###############################
 
-libc_function(
+alias(
     name = "epoll_create",
-    srcs = ["src/sys/epoll/linux/epoll_create.cpp"],
-    hdrs = ["src/sys/epoll/epoll_create.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:epoll_create",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/epoll:epoll_create",
 )
 
-libc_function(
+alias(
     name = "epoll_create1",
-    srcs = ["src/sys/epoll/linux/epoll_create1.cpp"],
-    hdrs = ["src/sys/epoll/epoll_create1.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:epoll_create1",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/epoll:epoll_create1",
 )
 
-libc_function(
+alias(
     name = "epoll_ctl",
-    srcs = ["src/sys/epoll/linux/epoll_ctl.cpp"],
-    hdrs = ["src/sys/epoll/epoll_ctl.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":hdr_sys_epoll_macros",
-        ":types_struct_epoll_event",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:epoll_ctl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/epoll:epoll_ctl",
 )
 
-libc_function(
+alias(
     name = "epoll_pwait",
-    srcs = ["src/sys/epoll/linux/epoll_pwait.cpp"],
-    hdrs = ["src/sys/epoll/epoll_pwait.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_sigset_t",
-        ":types_struct_epoll_event",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:epoll_pwait",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-    ],
+    actual = "//libc/src/sys/epoll:epoll_pwait",
 )
 
-libc_function(
+alias(
     name = "epoll_pwait2",
-    srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
-    hdrs = ["src/sys/epoll/epoll_pwait2.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_sigset_t",
-        ":types_struct_epoll_event",
-        ":types_struct_timespec",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:epoll_pwait2",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-    ],
+    actual = "//libc/src/sys/epoll:epoll_pwait2",
 )
 
-libc_function(
+alias(
     name = "epoll_wait",
-    srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
-    hdrs = ["src/sys/epoll/epoll_wait.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":errno",
-        ":types_struct_epoll_event",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:epoll_wait",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-    ],
+    actual = "//libc/src/sys/epoll:epoll_wait",
 )
 
 ############################## wchar targets ###############################
 
-libc_support_library(
-    name = "wchar_utils",
-    hdrs = ["src/wchar/wchar_utils.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:attributes",
-    ],
-)
-
-libc_function(
+alias(
     name = "btowc",
-    srcs = ["src/wchar/btowc.cpp"],
-    hdrs = ["src/wchar/btowc.h"],
-    deps = [
-        ":hdr_wchar_macros",
-        ":types_wint_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:btowc",
 )
 
-libc_function(
+alias(
     name = "wcpcpy",
-    srcs = ["src/wchar/wcpcpy.cpp"],
-    hdrs = ["src/wchar/wcpcpy.h"],
-    deps = [
-        ":string_utils",
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wcpcpy",
 )
 
-libc_function(
+alias(
     name = "wcpncpy",
-    srcs = ["src/wchar/wcpncpy.cpp"],
-    hdrs = ["src/wchar/wcpncpy.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcpncpy",
 )
 
-libc_function(
+alias(
     name = "wcscat",
-    srcs = ["src/wchar/wcscat.cpp"],
-    hdrs = ["src/wchar/wcscat.h"],
-    deps = [
-        ":string_utils",
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wcscat",
 )
 
-libc_function(
+alias(
     name = "wcschr",
-    srcs = ["src/wchar/wcschr.cpp"],
-    hdrs = ["src/wchar/wcschr.h"],
-    deps = [
-        ":types_wchar_t",
-        ":wchar_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcschr",
 )
 
-libc_function(
+alias(
     name = "wcscmp",
-    srcs = ["src/wchar/wcscmp.cpp"],
-    hdrs = ["src/wchar/wcscmp.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcscmp",
 )
 
-libc_function(
+alias(
     name = "wcscpy",
-    srcs = ["src/wchar/wcscpy.cpp"],
-    hdrs = ["src/wchar/wcscpy.h"],
-    deps = [
-        ":string_utils",
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wcscpy",
 )
 
-libc_function(
+alias(
     name = "wcscspn",
-    srcs = ["src/wchar/wcscspn.cpp"],
-    hdrs = ["src/wchar/wcscspn.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        ":wchar_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcscspn",
 )
 
-libc_function(
+alias(
     name = "wcslcat",
-    srcs = ["src/wchar/wcslcat.cpp"],
-    hdrs = ["src/wchar/wcslcat.h"],
-    deps = [
-        ":string_utils",
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wcslcat",
 )
 
-libc_function(
+alias(
     name = "wcslcpy",
-    srcs = ["src/wchar/wcslcpy.cpp"],
-    hdrs = ["src/wchar/wcslcpy.h"],
-    deps = [
-        ":string_utils",
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wcslcpy",
 )
 
-libc_function(
+alias(
     name = "wcslen",
-    srcs = ["src/wchar/wcslen.cpp"],
-    hdrs = ["src/wchar/wcslen.h"],
-    deps = [
-        ":string_utils",
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wcslen",
 )
 
-libc_function(
+alias(
     name = "wcsncat",
-    srcs = ["src/wchar/wcsncat.cpp"],
-    hdrs = ["src/wchar/wcsncat.h"],
-    deps = [
-        ":string_utils",
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wcsncat",
 )
 
-libc_function(
+alias(
     name = "wcsncmp",
-    srcs = ["src/wchar/wcsncmp.cpp"],
-    hdrs = ["src/wchar/wcsncmp.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcsncmp",
 )
 
-libc_function(
+alias(
     name = "wcsncpy",
-    srcs = ["src/wchar/wcsncpy.cpp"],
-    hdrs = ["src/wchar/wcsncpy.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wcsncpy",
 )
 
-libc_function(
+alias(
     name = "wcspbrk",
-    srcs = ["src/wchar/wcspbrk.cpp"],
-    hdrs = ["src/wchar/wcspbrk.h"],
-    deps = [
-        ":types_wchar_t",
-        ":wchar_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcspbrk",
 )
 
-libc_function(
+alias(
     name = "wcsrchr",
-    srcs = ["src/wchar/wcsrchr.cpp"],
-    hdrs = ["src/wchar/wcsrchr.h"],
-    deps = [
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcsrchr",
 )
 
-libc_function(
+alias(
     name = "wcsspn",
-    srcs = ["src/wchar/wcsspn.cpp"],
-    hdrs = ["src/wchar/wcsspn.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        ":wchar_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcsspn",
 )
 
-libc_function(
+alias(
     name = "wcsstr",
-    srcs = ["src/wchar/wcsstr.cpp"],
-    hdrs = ["src/wchar/wcsstr.h"],
-    deps = [
-        ":string_utils",
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wcsstr",
 )
 
-libc_function(
+alias(
     name = "wctob",
-    srcs = ["src/wchar/wctob.cpp"],
-    hdrs = ["src/wchar/wctob.h"],
-    deps = [
-        ":hdr_stdio_macros",
-        ":types_wint_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wctob",
 )
 
-libc_function(
+alias(
     name = "wmemchr",
-    srcs = ["src/wchar/wmemchr.cpp"],
-    hdrs = ["src/wchar/wmemchr.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wmemchr",
 )
 
-libc_function(
+alias(
     name = "wmemcmp",
-    srcs = ["src/wchar/wmemcmp.cpp"],
-    hdrs = ["src/wchar/wmemcmp.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wmemcmp",
 )
 
-libc_function(
+alias(
     name = "wmemcpy",
-    srcs = ["src/wchar/wmemcpy.cpp"],
-    hdrs = ["src/wchar/wmemcpy.h"],
-    deps = [
-        ":string_memory_utils",
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wmemcpy",
 )
 
-libc_function(
+alias(
     name = "wmemmove",
-    srcs = ["src/wchar/wmemmove.cpp"],
-    hdrs = ["src/wchar/wmemmove.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wmemmove",
 )
 
-libc_function(
+alias(
     name = "wmempcpy",
-    srcs = ["src/wchar/wmempcpy.cpp"],
-    hdrs = ["src/wchar/wmempcpy.h"],
-    deps = [
-        ":string_memory_utils",
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wmempcpy",
 )
 
-libc_function(
+alias(
     name = "wmemset",
-    srcs = ["src/wchar/wmemset.cpp"],
-    hdrs = ["src/wchar/wmemset.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wmemset",
 )

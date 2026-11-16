@@ -1,0 +1,172 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_function")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_function(
+    name = "getcpu",
+    srcs = ["linux/getcpu.cpp"],
+    hdrs = ["getcpu.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getcpu",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "sched_getcpu",
+    srcs = ["linux/sched_getcpu.cpp"],
+    hdrs = ["sched_getcpu.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getcpu",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "sched_get_priority_max",
+    srcs = ["linux/sched_get_priority_max.cpp"],
+    hdrs = ["sched_get_priority_max.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_get_priority_max",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "sched_get_priority_min",
+    srcs = ["linux/sched_get_priority_min.cpp"],
+    hdrs = ["sched_get_priority_min.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_get_priority_min",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "sched_getparam",
+    srcs = ["linux/sched_getparam.cpp"],
+    hdrs = ["sched_getparam.h"],
+    deps = [
+        "//libc:types_pid_t",
+        "//libc:types_struct_sched_param",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_getparam",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "sched_getscheduler",
+    srcs = ["linux/sched_getscheduler.cpp"],
+    hdrs = ["sched_getscheduler.h"],
+    deps = [
+        "//libc:types_pid_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_getscheduler",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "sched_rr_get_interval",
+    srcs = ["linux/sched_rr_get_interval.cpp"],
+    hdrs = ["sched_rr_get_interval.h"],
+    deps = [
+        "//libc:types_pid_t",
+        "//libc:types_struct_timespec",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_rr_get_interval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "sched_setaffinity",
+    srcs = ["linux/sched_setaffinity.cpp"],
+    hdrs = ["sched_setaffinity.h"],
+    deps = [
+        "//libc:types_cpu_set_t",
+        "//libc:types_pid_t",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_setaffinity",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "sched_setparam",
+    srcs = ["linux/sched_setparam.cpp"],
+    hdrs = ["sched_setparam.h"],
+    deps = [
+        "//libc:types_pid_t",
+        "//libc:types_struct_sched_param",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_setparam",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "sched_setscheduler",
+    srcs = ["linux/sched_setscheduler.cpp"],
+    hdrs = ["sched_setscheduler.h"],
+    deps = [
+        "//libc:types_pid_t",
+        "//libc:types_struct_sched_param",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_setscheduler",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "sched_yield",
+    srcs = ["linux/sched_yield.cpp"],
+    hdrs = ["sched_yield.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_yield",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)

@@ -54,7 +54,7 @@ def libc_test(
         "//libc:hdr_stdint_proxy",
         "//libc/src/__support/macros:config",
         "//libc/src/__support:libc_errno",
-        "//libc:errno",
+        "//libc/src/errno",
         "//libc:func_aligned_alloc",
         "//libc:func_free",
         "//libc:func_malloc",
@@ -66,7 +66,7 @@ def libc_test(
             # The compiler may emit references to symbols it expects to exist,
             # like `memset`. These dependencies hermetically provide them.
             "//libc/test/UnitTest:HermeticTestUtils",
-            "//libc:__stack_chk_fail",  # Needed if -fstack-protector is set.
+            "//libc/src/compiler:__stack_chk_fail",  # Needed if -fstack-protector is set.
         ],
         "//conditions:default": [],
     })

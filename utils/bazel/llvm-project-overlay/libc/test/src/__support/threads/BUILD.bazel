@@ -27,14 +27,14 @@ libc_test(
         "//libc:hdr_signal_macros",
         "//libc:hdr_sys_mman_macros",
         "//libc:llvm_libc_macros_time_macros",
-        "//libc:mmap",
-        "//libc:munmap",
         "//libc/src/__support/CPP:atomic",
         "//libc/src/__support/OSUtil:exit",
         "//libc/src/__support/OSUtil:syscall",
         "//libc/src/__support/threads:raw_mutex",
         "//libc/src/__support/threads:sleep",
         "//libc/src/__support/time:clock_gettime",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:munmap",
     ],
 )
 

@@ -141,11 +141,11 @@ libc_test(
     name = "printf_writer_test",
     srcs = ["printf_core/writer_test.cpp"],
     deps = [
-        "//libc:string_memory_utils",
         "//libc/src/__support:arg_list",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/printf_core:printf_core_structs",
         "//libc/src/__support/printf_core:printf_writer",
+        "//libc/src/string/memory_utils",
     ],
 )
 
