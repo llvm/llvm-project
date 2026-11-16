@@ -70,25 +70,20 @@ define i8 @all_sign_bit_ashr(i8 %x) {
 define <4 x i32> @all_sign_bit_ashr_vec0(<4 x i32> %x) {
 ; SSE-LABEL: all_sign_bit_ashr_vec0:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    psubd %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    pslld $31, %xmm0
+; SSE-NEXT:    psrad $31, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: all_sign_bit_ashr_vec0:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: all_sign_bit_ashr_vec0:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
-; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %and = and <4 x i32> %x, <i32 1, i32 1, i32 1 , i32 1>
   %neg = sub <4 x i32> zeroinitializer, %and
@@ -99,27 +94,23 @@ define <4 x i32> @all_sign_bit_ashr_vec0(<4 x i32> %x) {
 define <4 x i32> @all_sign_bit_ashr_vec1(<4 x i32> %x) {
 ; SSE-LABEL: all_sign_bit_ashr_vec1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    pslld $31, %xmm0
+; SSE-NEXT:    psrad $31, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: all_sign_bit_ashr_vec1:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: all_sign_bit_ashr_vec1:
 ; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
-; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
   %and = and <4 x i32> %x, <i32 1, i32 1, i32 1 , i32 1>
   %sub = sub <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %and

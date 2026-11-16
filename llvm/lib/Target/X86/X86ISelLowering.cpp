@@ -61314,6 +61314,25 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                                                      /*AllowOpaques*/ false);
   };
 
+  // sub(0, and(X, 1)) -> ashr(shl(X, SizeInBits - 1), SizeInBits - 1)
+  if (VT.isVector()) {
+    if (VT.getVectorElementType() == MVT::i16 ||
+        VT.getVectorElementType() == MVT::i32 ||
+        (VT.getVectorElementType() == MVT::i64 && Subtarget.hasAVX512())) {
+      APInt C;
+      if (Op1.getOpcode() == ISD::AND && Op1->hasOneUse() &&
+          ISD::isBuildVectorAllZeros(Op0.getNode()) &&
+          ISD::isConstantSplatVector(Op1.getOperand(1).getNode(), C) &&
+          C.isOne()) {
+        SDValue VecConst = DAG.getConstant(
+            VT.getVectorElementType().getSizeInBits() - 1, DL, VT);
+        SDValue Shl =
+            DAG.getNode(ISD::SHL, DL, VT, Op1.getOperand(0), VecConst);
+        return DAG.getNode(ISD::SRA, DL, VT, Shl, VecConst);
+      }
+    }
+  }
+
   // X86 can't encode an immediate LHS of a sub. See if we can push the
   // negation into a preceding instruction. If the RHS of the sub is a XOR with
   // one use and a constant, invert the immediate, saving one register.
