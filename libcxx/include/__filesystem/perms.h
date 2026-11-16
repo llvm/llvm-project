@@ -51,27 +51,27 @@ enum class perms : unsigned {
   unknown    = 0xFFFF,
 };
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr perms operator&(perms __lhs, perms __rhs) {
+[[nodiscard]] inline constexpr perms operator&(perms __lhs, perms __rhs) {
   return static_cast<perms>(static_cast<unsigned>(__lhs) & static_cast<unsigned>(__rhs));
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr perms operator|(perms __lhs, perms __rhs) {
+[[nodiscard]] inline constexpr perms operator|(perms __lhs, perms __rhs) {
   return static_cast<perms>(static_cast<unsigned>(__lhs) | static_cast<unsigned>(__rhs));
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr perms operator^(perms __lhs, perms __rhs) {
+[[nodiscard]] inline constexpr perms operator^(perms __lhs, perms __rhs) {
   return static_cast<perms>(static_cast<unsigned>(__lhs) ^ static_cast<unsigned>(__rhs));
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr perms operator~(perms __lhs) {
+[[nodiscard]] inline constexpr perms operator~(perms __lhs) {
   return static_cast<perms>(~static_cast<unsigned>(__lhs));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline perms& operator&=(perms& __lhs, perms __rhs) { return __lhs = __lhs & __rhs; }
+inline perms& operator&=(perms& __lhs, perms __rhs) { return __lhs = __lhs & __rhs; }
 
-_LIBCPP_HIDE_FROM_ABI inline perms& operator|=(perms& __lhs, perms __rhs) { return __lhs = __lhs | __rhs; }
+inline perms& operator|=(perms& __lhs, perms __rhs) { return __lhs = __lhs | __rhs; }
 
-_LIBCPP_HIDE_FROM_ABI inline perms& operator^=(perms& __lhs, perms __rhs) { return __lhs = __lhs ^ __rhs; }
+inline perms& operator^=(perms& __lhs, perms __rhs) { return __lhs = __lhs ^ __rhs; }
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

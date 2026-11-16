@@ -97,6 +97,7 @@ void CompileUnit::maybeResetToLoadedStage() {
   Abbreviations.clear();
   OutUnitDIE = nullptr;
   DebugAddrIndexMap.clear();
+  DebugStringIndexMap.clear();
   StmtSeqListAttributes.clear();
 
   llvm::fill(OutDieOffsetArray, 0);

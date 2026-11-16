@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILPrettyPrinter.h"
 #include "DXILWriter/DXILDebugInfoMap.h"
 #include "DirectX.h"
 #include "llvm/ADT/DenseSet.h"

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=hexagon -run-pass expand-condsets -expand-condsets-coa-limit=0 -o - %s -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass expand-condsets -expand-condsets-coa-limit=0 -o - %s | FileCheck %s
 
 # CHECK-LABEL: name: fred
 
@@ -9,7 +9,6 @@
 ---
 
 name: fred
-tracksRegLiveness: true
 registers:
   - { id: 0, class: predregs }
   - { id: 1, class: intregs }

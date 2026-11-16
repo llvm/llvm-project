@@ -23,6 +23,7 @@ namespace llvm {
   class InstrItineraryData;
   class ResourcePriorityQueue;
   class SelectionDAGISel;
+  struct SelectionDAGOptions;
   class TargetInstrInfo;
   class TargetRegisterInfo;
 
@@ -59,6 +60,7 @@ namespace llvm {
     const TargetRegisterInfo *TRI;
     const TargetLowering *TLI;
     const TargetInstrInfo *TII;
+    const SelectionDAGOptions *Opts;
     const InstrItineraryData* InstrItins;
     /// ResourcesModel - Represents VLIW state.
     /// Not limited to VLIW targets per say, but assumes

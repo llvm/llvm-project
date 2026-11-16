@@ -741,7 +741,7 @@ struct MaxMin_match {
         assert(Cond.getNumOperands() == 3);
         SDValue L = Cond.getOperand(0);
         SDValue R = Cond.getOperand(1);
-        ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+        ISD::CondCode CC = Cond.getOperandCondCode(2);
         return MatchMinMax(L, R, TrueValue, FalseValue, CC);
       }
     }
@@ -752,7 +752,7 @@ struct MaxMin_match {
       SDValue R = N.getOperand(1);
       SDValue TrueValue = N.getOperand(2);
       SDValue FalseValue = N.getOperand(3);
-      ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+      ISD::CondCode CC = N->getOperandCondCode(4);
       return MatchMinMax(L, R, TrueValue, FalseValue, CC);
     }
 
