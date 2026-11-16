@@ -41862,7 +41862,8 @@ static SDValue combineX86ShuffleChain(
   }
 
   // See if we can combine a single input shuffle with zeros to a bit-mask,
-  // which is much simpler than any shuffle.
+  // which is much simpler than any shuffle. Ensure we freeze the input to
+  // prevent AND(poison,M) -> poison folds.
   if (UnaryShuffle && MaskContainsZeros && AllowVariablePerLaneMask &&
       isSequentialOrUndefOrZeroInRange(Mask, 0, NumMaskElts, 0) &&
       TLI.isTypeLegal(MaskVT)) {
@@ -41881,7 +41882,7 @@ static SDValue combineX86ShuffleChain(
       EltBits[i] = AllOnes;
     }
     SDValue BitMask = getConstVector(EltBits, UndefElts, MaskVT, DAG, DL);
-    Res = CanonicalizeShuffleInput(MaskVT, V1);
+    Res = DAG.getFreeze(CanonicalizeShuffleInput(MaskVT, V1));
     unsigned AndOpcode =
         MaskVT.isFloatingPoint() ? unsigned(X86ISD::FAND) : unsigned(ISD::AND);
     Res = DAG.getNode(AndOpcode, DL, MaskVT, Res, BitMask);
@@ -47913,10 +47914,6 @@ static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
   if (ExtractVT != MVT::i32)
     return SDValue();
 
-  EVT VT = Extract->getOperand(0).getValueType();
-  if (!isPowerOf2_32(VT.getVectorNumElements()))
-    return SDValue();
-
   // Match shuffle + add pyramid.
   ISD::NodeType BinOp;
   SDValue Root = DAG.matchBinOpReduction(Extract, BinOp, {ISD::ADD});
@@ -47935,6 +47932,10 @@ static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
   if (!Root || Root.getOpcode() != ISD::MUL)
     return SDValue();
 
+  EVT RootVT = Root.getValueType();
+  if (!isPowerOf2_32(RootVT.getVectorNumElements()))
+    return SDValue();
+
   // Check whether we have an extend and mul pattern
   SDValue LHS, RHS;
   if (!detectExtMul(DAG, Root, LHS, RHS))
@@ -47947,7 +47948,7 @@ static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
 
   // If the original vector was wider than 4 elements, sum over the results
   // in the DP vector.
-  unsigned Stages = Log2_32(VT.getVectorNumElements());
+  unsigned Stages = Log2_32(RootVT.getVectorNumElements());
   EVT DpVT = DP.getValueType();
 
   if (Stages > StageBias) {

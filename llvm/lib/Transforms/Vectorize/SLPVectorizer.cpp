@@ -1089,7 +1089,12 @@ public:
             return LookAheadHeuristics::ScoreConsecutiveExtracts;
           if (isUndefVector(EV2).all() && EV2->getType() == EV1->getType())
             return LookAheadHeuristics::ScoreConsecutiveExtracts;
-          if (EV2 == EV1) {
+          if (EV2 == EV1 && isa<FixedVectorType>(EV1->getType())) {
+            // Out-of-range indices produce poison, which is as profitable as
+            // undefs.
+            unsigned NumElts = getNumElements(EV1->getType());
+            if (Ex1Idx->uge(NumElts) || Ex2Idx->uge(NumElts))
+              return LookAheadHeuristics::ScoreConsecutiveExtracts;
             int Idx1 = Ex1Idx->getZExtValue();
             int Idx2 = Ex2Idx->getZExtValue();
             int Dist = Idx2 - Idx1;
@@ -9922,7 +9927,8 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
   if (VL.size() == SmallVecWidth &&
       NumUniqueScalarValues == SmallVecUniqueThreshold && !BuildGatherOnly &&
       !(S && (S.getOpcode() == Instruction::Load ||
-              S.getOpcode() == Instruction::PHI))) {
+              S.getOpcode() == Instruction::PHI ||
+              S.getOpcode() == Instruction::Freeze))) {
     // Keep originals with identity reuse - no packing, no extra shuffle.
     ReuseShuffleIndices.clear();
     return true;
@@ -10151,7 +10157,9 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
   const auto [PackProfitable, UseOriginal] = EstimatePackPlusShuffleVsInserts();
 
   if (PackProfitable) {
-    if (UseOriginal) {
+    // The lanes of the vector freeze are frozen independently, the repeated
+    // freezes are packed to stay the same value.
+    if (UseOriginal && (!S || S.getOpcode() != Instruction::Freeze)) {
       // Prefer original scalars - avoid shuffling.
       ReuseShuffleIndices.clear();
     } else {
@@ -29829,10 +29837,43 @@ void BoUpSLP::computeMinimumValueSizes() {
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         *VectorizableTree[NodeIdx], IsTopRoot, IsProfitableToDemoteRoot, Limit,
         IsTruncRoot, IsSignedCmp);
+    auto IsDemotedUser = [&](const Instruction *UI) {
+      return isVectorized(UI) &&
+             all_of(getTreeEntries(UI), [&](const TreeEntry *TE) {
+               return MinBWs.contains(TE) || is_contained(ToDemote, TE->Idx);
+             });
+    };
+    // The extension, demoted below its source width, becomes a truncation of
+    // the source, which the vectorized users in the original type extend back.
+    // Keep such extensions in the original type.
+    if (MaxBitWidth != 0) {
+      SmallVector<unsigned> WideExts(
+          make_filter_range(ToDemote, [&](unsigned Idx) {
+            const TreeEntry &TE = *VectorizableTree[Idx];
+            Value *Src;
+            if (TE.State != TreeEntry::Vectorize || TE.isAltShuffle() ||
+                !match(TE.getMainOp(), m_ZExtOrSExt(m_Value(Src))) ||
+                Src->getType()->getScalarSizeInBits() <= MaxBitWidth)
+              return false;
+            return any_of(TE.Scalars, [&](Value *V) {
+              return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
+                       auto *UI = cast<Instruction>(U);
+                       return !isa<CmpInst>(UI) &&
+                              (!isa<CastInst>(UI) ||
+                               (UI->getType()->isIntOrIntVectorTy() &&
+                                UI->getType()->getScalarSizeInBits() >
+                                    MaxBitWidth)) &&
+                              isVectorized(UI) && !IsDemotedUser(UI);
+                     });
+            });
+          }));
+      erase_if(ToDemote,
+               [&](unsigned Idx) { return is_contained(WideExts, Idx); });
+    }
     // The extension of a demoted scalar, which does not fit into the demoted
     // type, restores only its demanded bits. Keep the original bitwidth if the
-    // scalar users may depend on the other bits via poison-generating
-    // annotations or there are too many users to check.
+    // users, not demoted with the scalar, may depend on the other bits via
+    // poison-generating annotations or there are too many users to check.
     auto HasUnsafeScalarUsers = [&](Value *V) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I)
@@ -29851,9 +29892,9 @@ void BoUpSLP::computeMinimumValueSizes() {
           if (++NumUsers > UsesLimit)
             return true;
           auto *UI = cast<Instruction>(U);
-          if (isVectorized(UI) || UserIgnoreSet.contains(UI) ||
+          if (UserIgnoreSet.contains(UI) ||
               !UI->getType()->isIntOrIntVectorTy() ||
-              !Visited.insert(UI).second)
+              !Visited.insert(UI).second || IsDemotedUser(UI))
             continue;
           if (UI->hasPoisonGeneratingAnnotations())
             return true;
