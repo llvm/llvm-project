@@ -111,7 +111,44 @@ def : PatGpr<int_riscv_orc_b, ORC_B>;
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
 
+// A register-register binop whose only user is the pattern root, so that
+// folding it does not duplicate it. Constant operands are left to the
+// immediate patterns (e.g. ADDIW, or ADDI+ADDIW for AddiPair immediates), and
+// operands shifted left by a constant are left to fused shift-add patterns
+// (e.g. Zba SH*ADD).
+class binop_oneuse_nonimm_nonshl<SDPatternOperator binop>
+  : PatFrag<(ops node:$x, node:$y), (binop node:$x, node:$y), [{
+  if (!N->hasOneUse() || isa<ConstantSDNode>(Operands[1]))
+    return false;
+  for (SDValue Op : {Operands[0], Operands[1]})
+    if (Op.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Op.getOperand(1)))
+      return false;
+  return true;
+}]> {
+  let PredicateCodeUsesOperands = 1;
+  let GISelPredicateCode = [{
+    if (!MRI.hasOneNonDBGUse(MI.getOperand(0).getReg()))
+      return false;
+    for (const MachineOperand *Op : {Operands[0], Operands[1]}) {
+      if (getIConstantVRegValWithLookThrough(Op->getReg(), MRI))
+        return false;
+      const MachineInstr *Def = MRI.getVRegDef(Op->getReg());
+      if (Def && Def->getOpcode() == TargetOpcode::G_SHL &&
+          getIConstantVRegValWithLookThrough(Def->getOperand(2).getReg(), MRI))
+        return false;
+    }
+    return true;
+  }];
+}
+
 let Predicates = [IsRV64] in {
 def : Pat<(sext_inreg (i64 (add GPR:$rs1, simm12_lo:$imm)), i32),
           (ADDIW GPR:$rs1, simm12_lo:$imm)>;
+// Fold the sign extension into ADDW/SUBW. Otherwise the add/sub is selected
+// as ADDW/SUBW followed by a separate sext.w that is only removed after
+// MachineCombiner has run, which hides the add/sub from its reassociation.
+def : Pat<(sext_inreg (i64 (binop_oneuse_nonimm_nonshl<add> GPR:$rs1, GPR:$rs2)), i32),
+          (ADDW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sext_inreg (i64 (binop_oneuse_nonimm_nonshl<sub> GPR:$rs1, GPR:$rs2)), i32),
+          (SUBW GPR:$rs1, GPR:$rs2)>;
 }
