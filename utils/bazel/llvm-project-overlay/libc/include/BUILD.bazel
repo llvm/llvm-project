@@ -1,0 +1,184 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//libc:libc_build_rules.bzl", "libc_generated_header", "libc_header_info")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+LLVM_LIBC_HEADERS = [
+    libc_header_info(
+        "assert",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "errno",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "link",
+    ),
+    libc_header_info(
+        "math",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "stdbit",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "stdfix",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "sys/prctl",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "sys/syscall",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "arpa/inet",
+        other_srcs = ["htons-family.yaml"],
+    ),
+    libc_header_info("complex"),
+    libc_header_info("ctype"),
+    libc_header_info("dirent"),
+    libc_header_info("dlfcn"),
+    libc_header_info("elf"),
+    libc_header_info("endian"),
+    libc_header_info("fcntl"),
+    libc_header_info("features"),
+    libc_header_info("fenv"),
+    libc_header_info("float"),
+    libc_header_info("inttypes"),
+    libc_header_info("limits"),
+    libc_header_info("locale"),
+    libc_header_info(
+        "netinet/in",
+        other_srcs = ["htons-family.yaml"],
+    ),
+    libc_header_info("nl_types"),
+    libc_header_info("poll"),
+    libc_header_info("llvm-libc-proxy/elf_proxy"),
+    libc_header_info("pthread"),
+    libc_header_info("sched"),
+    libc_header_info("search"),
+    libc_header_info("setjmp"),
+    libc_header_info("signal"),
+    libc_header_info("spawn"),
+    libc_header_info("stdckdint"),
+    libc_header_info("stdint"),
+    libc_header_info("stdio"),
+    libc_header_info(
+        "string",
+    ),
+    libc_header_info("strings"),
+    libc_header_info("sys/auxv"),
+    libc_header_info("sys/epoll"),
+    libc_header_info("sys/ioctl"),
+    libc_header_info("sys/ipc"),
+    libc_header_info("sys/mman"),
+    libc_header_info("sys/random"),
+    libc_header_info("sys/resource"),
+    libc_header_info(
+        "sys/select",
+        other_srcs = ["sys/select-time.yaml"],
+    ),
+    libc_header_info("sys/socket"),
+    libc_header_info("sys/stat"),
+    libc_header_info("sys/statvfs"),
+    libc_header_info(
+        "sys/time",
+        other_srcs = ["sys/select-time.yaml"],
+    ),
+    libc_header_info("sys/types"),
+    libc_header_info("sys/utsname"),
+    libc_header_info("sys/wait"),
+    libc_header_info("sysexits"),
+    libc_header_info("termios"),
+    libc_header_info("threads"),
+    libc_header_info("time"),
+    libc_header_info("uchar"),
+    libc_header_info("unistd"),
+    libc_header_info("wchar"),
+    libc_header_info("wctype"),
+    libc_header_info(
+        "stdlib",
+        other_srcs = [
+            "stdlib-alloca.yaml",
+            "stdlib-malloc.yaml",
+        ],
+    ),
+    libc_header_info(
+        "malloc",
+        other_srcs = ["stdlib-malloc.yaml"],
+    ),
+]
+
+[
+    libc_generated_header(
+        name = info.target_name,
+        hdr = info.staging_path,
+        other_srcs = info.other_srcs,
+        proxy = info.proxy,
+        yaml_template = info.yaml_template,
+    )
+    for info in LLVM_LIBC_HEADERS
+]
+
+# Static headers that need to be in staging/include
+STATIC_HEADERS = glob(
+    ["llvm-libc-types/**/*.h"],
+) + glob(
+    ["llvm-libc-macros/**/*.h"],
+    exclude = [
+        "llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
+        "llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF-disable.h",
+    ],
+) + ["__llvm-libc-common.h"]
+
+[
+    copy_file(
+        name = "copy_staging/" + f,
+        src = f,
+        out = "staging/include/" + f,
+    )
+    for f in STATIC_HEADERS
+]
+
+copy_file(
+    name = "copy_modular_format_header",
+    src = select({
+        "//libc:modular_format_enable": "llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
+        "//conditions:default": "llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF-disable.h",
+    }),
+    out = "staging/include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
+)
+
+STATIC_AND_CONDITIONAL_HEADERS = STATIC_HEADERS + ["llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"]
+
+cc_library(
+    name = "public_headers",
+    hdrs = [header.target_name for header in LLVM_LIBC_HEADERS],
+    includes = ["staging/include"],
+    textual_hdrs = ["staging/include/" + f for f in STATIC_AND_CONDITIONAL_HEADERS],
+)
+
+# Textual versions of the static headers. These are taken from the source tree
+# and are separate from the generated headers above. They are used for
+# testing purposes.
+cc_library(
+    name = "public_headers_deps",
+    textual_hdrs = STATIC_AND_CONDITIONAL_HEADERS,
+)
