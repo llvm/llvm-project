@@ -1087,3 +1087,76 @@ define <4 x half> @minmax_bitcast_v4f16_maximumnum(<4 x half> %x) {
   %result = call <4 x half> @llvm.maximumnum.v4f16(<4 x half> %x, <4 x half> bitcast (<4 x i16> <i16 15360, i16 16128, i16 16256, i16 16384> to <4 x half>))
   ret <4 x half> %result
 }
+
+;###############################################################
+;#                 Fast-math flag consistency                  #
+;###############################################################
+; m(m nsz (X, Y), X) cannot be replaced by the inner call: with nsz, the inner
+; min/max may return either sign of zero, while the outer call without nsz
+; fixes which one. The inner call's flags must be a subset of the outer one's.
+
+define float @minimum_inner_nsz(float %x) {
+; CHECK-LABEL: @minimum_inner_nsz(
+; CHECK-NEXT:    [[Y:%.*]] = call nsz float @llvm.minimum.f32(float 0.000000e+00, float [[X:%.*]])
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.minimum.f32(float [[Y]], float [[X]])
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %y = call nsz float @llvm.minimum.f32(float 0.0, float %x)
+  %z = call float @llvm.minimum.f32(float %y, float %x)
+  ret float %z
+}
+
+define float @maximum_inner_nsz(float %x) {
+; CHECK-LABEL: @maximum_inner_nsz(
+; CHECK-NEXT:    [[Y:%.*]] = call nsz float @llvm.maximum.f32(float -0.000000e+00, float [[X:%.*]])
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximum.f32(float [[Y]], float [[X]])
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %y = call nsz float @llvm.maximum.f32(float -0.0, float %x)
+  %z = call float @llvm.maximum.f32(float %y, float %x)
+  ret float %z
+}
+
+define float @minimumnum_inner_nsz(float %x) {
+; CHECK-LABEL: @minimumnum_inner_nsz(
+; CHECK-NEXT:    [[Y:%.*]] = call nsz float @llvm.minimumnum.f32(float 0.000000e+00, float [[X:%.*]])
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.minimumnum.f32(float [[Y]], float [[X]])
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %y = call nsz float @llvm.minimumnum.f32(float 0.0, float %x)
+  %z = call float @llvm.minimumnum.f32(float %y, float %x)
+  ret float %z
+}
+
+define float @maximumnum_inner_nsz(float %x) {
+; CHECK-LABEL: @maximumnum_inner_nsz(
+; CHECK-NEXT:    [[Y:%.*]] = call nsz float @llvm.maximumnum.f32(float -0.000000e+00, float [[X:%.*]])
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximumnum.f32(float [[Y]], float [[X]])
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %y = call nsz float @llvm.maximumnum.f32(float -0.0, float %x)
+  %z = call float @llvm.maximumnum.f32(float %y, float %x)
+  ret float %z
+}
+
+; The fold still applies when the outer call has every flag the inner one has.
+
+define float @minimum_both_nsz(float %x) {
+; CHECK-LABEL: @minimum_both_nsz(
+; CHECK-NEXT:    [[Y:%.*]] = call nsz float @llvm.minimum.f32(float 0.000000e+00, float [[X:%.*]])
+; CHECK-NEXT:    ret float [[Y]]
+;
+  %y = call nsz float @llvm.minimum.f32(float 0.0, float %x)
+  %z = call nsz float @llvm.minimum.f32(float %y, float %x)
+  ret float %z
+}
+
+define float @minimum_outer_nsz(float %x) {
+; CHECK-LABEL: @minimum_outer_nsz(
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.minimum.f32(float 0.000000e+00, float [[X:%.*]])
+; CHECK-NEXT:    ret float [[Y]]
+;
+  %y = call float @llvm.minimum.f32(float 0.0, float %x)
+  %z = call nsz float @llvm.minimum.f32(float %y, float %x)
+  ret float %z
+}
