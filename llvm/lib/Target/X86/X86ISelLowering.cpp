@@ -11367,7 +11367,8 @@ static SDValue lowerShuffleWithPACK(const SDLoc &DL, MVT VT, SDValue V1,
 /// Try to emit a bitmask instruction for a shuffle.
 ///
 /// This handles cases where we can model a blend exactly as a bitmask due to
-/// one of the inputs being zeroable.
+/// one of the inputs being zeroable, and freezing the other to prevent
+/// AND(poison,0) -> poison folds.
 static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
                                      SDValue V2, ArrayRef<int> Mask,
                                      const APInt &Zeroable, SelectionDAG &DAG) {
@@ -11394,7 +11395,7 @@ static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
 
   MVT LogicVT = VT.changeTypeToInteger();
   SDValue VMask = getConstVector(VMaskOps, LogicVT, DAG, DL);
-  V = DAG.getBitcast(LogicVT, V);
+  V = DAG.getBitcast(LogicVT, DAG.getFreeze(V));
   SDValue And = DAG.getNode(ISD::AND, DL, LogicVT, V, VMask);
   return DAG.getBitcast(VT, And);
 }
