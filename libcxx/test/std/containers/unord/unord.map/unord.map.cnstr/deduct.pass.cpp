@@ -92,6 +92,7 @@
 #include "../../../test_hash.h"
 #include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
+#include "type_algorithms.h"
 
 using P  = std::pair<int, long>;
 using PC = std::pair<const int, long>;
@@ -335,6 +336,67 @@ int main(int, char**) {
     ASSERT_SAME_TYPE(decltype(um4), std::unordered_map<int, char>);
   }
 #endif
+
+  // LWG 2982: Making size_type consistent in associative container deduction guides
+  {
+    using Iter      = const P*;
+    using Hash      = std::hash<int>;
+    using InitList  = std::initializer_list<P>;
+    using AllocList = types::type_list<test_allocator<PC>, other_allocator<PC>>;
+
+    // Test multiple allocators with different size_types (unsigned int and size_t)
+    types::for_each(
+        AllocList(), types::apply_type_identity{[](auto alloc_id) {
+          using Alloc    = typename decltype(alloc_id)::type;
+          using SizeType = std::__unordered_container_size_type<Alloc>;
+
+          // Ensure deduction guides only accept the exact SizeType and SFINAE away for other integer types.
+          types::for_each(
+              types::unsigned_integer_types(), types::apply_type_identity{[](auto id) {
+                using UI = typename decltype(id)::type;
+
+                // (iter, iter, size, alloc)
+                static_assert(SFINAEs_away<std::unordered_map, Iter, Iter, OnlyConvertibleTo<UI>, Alloc> ==
+                              !std::is_same_v<UI, SizeType>);
+
+                // (iter, iter, size, hash, alloc)
+                static_assert(SFINAEs_away<std::unordered_map, Iter, Iter, OnlyConvertibleTo<UI>, Hash, Alloc> ==
+                              !std::is_same_v<UI, SizeType>);
+
+                // (init_list, size, alloc)
+                static_assert(SFINAEs_away<std::unordered_map, InitList, OnlyConvertibleTo<UI>, Alloc> ==
+                              !std::is_same_v<UI, SizeType>);
+
+                // (init_list, size, hash, alloc)
+                static_assert(SFINAEs_away<std::unordered_map, InitList, OnlyConvertibleTo<UI>, Hash, Alloc> ==
+                              !std::is_same_v<UI, SizeType>);
+
+#if TEST_STD_VER >= 23
+                using Range = std::array<P, 0>;
+
+                // (from_range, range, size, alloc)
+                static_assert(
+                    SFINAEs_away<std::unordered_map, std::from_range_t, Range, OnlyConvertibleTo<UI>, Alloc> ==
+                    !std::is_same_v<UI, SizeType>);
+
+                // (from_range, range, size, hash, alloc)
+                static_assert(
+                    SFINAEs_away<std::unordered_map, std::from_range_t, Range, OnlyConvertibleTo<UI>, Hash, Alloc> ==
+                    !std::is_same_v<UI, SizeType>);
+#endif
+              }});
+        }});
+
+    { // (iter, iter, size, alloc) - runtime check
+      using Alloc     = test_allocator<PC>;
+      using SizeType  = std::__unordered_container_size_type<Alloc>;
+      const P arr[]   = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 1}, {3, 1}};
+      std::unordered_map m(std::begin(arr), std::end(arr), OnlyConvertibleTo<SizeType>{}, Alloc(0, 45));
+      ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, std::hash<int>, std::equal_to<int>, Alloc>);
+      assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
+      assert(m.get_allocator().get_id() == 45);
+    }
+  }
 
   UnorderedContainerDeductionGuidesSfinaeAway<std::unordered_map, std::unordered_map<int, long>>();
 
