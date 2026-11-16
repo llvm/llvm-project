@@ -2049,18 +2049,12 @@ std::tuple<ProgramStateRef, SVal> StreamChecker::checkCommonPreconditions(
   ProgramStateRef State = C.getState();
   SVal StreamVal = getStreamArg(Desc, Call);
 
-  if (EnsureStreamNonNull) {
+  if (EnsureStreamNonNull)
     State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo),
                                 C, State);
-    if (!State)
-      return std::make_tuple(State, StreamVal);
-  }
-  if (EnsureStreamOpened) {
+  if (State && EnsureStreamOpened)
     State = ensureStreamOpened(StreamVal, C, State);
-    if (!State)
-      return std::make_tuple(State, StreamVal);
-  }
-  if (EnsureNoFilePositionIndeterminate)
+  if (State && EnsureNoFilePositionIndeterminate)
     State = ensureNoFilePositionIndeterminate(StreamVal, C, State);
 
   return std::make_tuple(State, StreamVal);
