@@ -28,6 +28,13 @@ module attributes {test.versioned_cu = #versioned_cu} {
   llvm.func @unnamed_di_basic_type() attributes {di = #di_basic_type} {
     llvm.return
   }
+  llvm.func @di_enumerators() attributes {
+    enum0 = #llvm.di_enumerator<name = "zero", value = 0 : i64>,
+    enum1 = #llvm.di_enumerator<value = 42 : i64>,
+    enum2 = #llvm.di_enumerator<name = "u64_max", value = -1 : i64, isUnsigned = true>
+  } {
+    llvm.return
+  }
 } loc(#loc)
 #di_file = #llvm.di_file<"test.f90" in "">
 #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_program>

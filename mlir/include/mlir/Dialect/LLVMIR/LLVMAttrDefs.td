@@ -987,11 +987,11 @@ def LLVM_DIEnumeratorAttr : LLVM_Attr<"DIEnumerator", "di_enumerator",
                                       /*traits=*/[], "DINodeAttr"> {
   let parameters = (ins
     OptionalParameter<"StringAttr">:$name,
-    APIntParameter<"">:$value,
+    "IntegerAttr":$value,
     DefaultValuedParameter<"bool", "false">:$isUnsigned
   );
-  let assemblyFormat =
-      "`<` (`name` `=` $name^ `,` ` `)? custom<WidthAPInt>($value, $isUnsigned) `>`";
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
