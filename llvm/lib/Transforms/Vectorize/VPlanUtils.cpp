@@ -78,6 +78,14 @@ bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->usesScalars(Def); });
 }
 
+bool vputils::onlyScalarValuesOrLanesUsed(const VPValue *Def) {
+  return all_of(Def->users(), [Def](VPUser *U) {
+    uint64_t Lane;
+    return U->usesScalars(Def) ||
+           match(U, m_ExtractElement(m_Specific(Def), m_ConstantInt(Lane)));
+  });
+}
+
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
                                                 bool ExpandInIR) {
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
@@ -385,9 +393,10 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
             return SE.getAddExpr(Start, SE.getMulExpr(Index, Step));
           })
           .Case([&SE, &PSE, L](const VPScalarIVStepsRecipe *R) {
+            // A start index, set for parts and lanes other than the first,
+            // adds StartIndex * Step, which is not modeled.
             const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
-            const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
-            if (isa<SCEVCouldNotCompute>(IV) || !isa<SCEVConstant>(Step))
+            if (isa<SCEVCouldNotCompute>(IV) || R->getStartIndex())
               return SE.getCouldNotCompute();
             return IV;
           })
