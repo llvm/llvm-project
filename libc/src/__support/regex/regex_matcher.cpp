@@ -100,6 +100,13 @@ ErrorOr<ExprId> derivative(ExprId id, char c, ExprPool &pool,
       return d_r;
     return pool.make_alt(*d_l, *d_r);
   }
+  case ExprKind::Star: {
+    // Kleene Rule: D_c(R*) = D_c(R) . R*
+    ErrorOr<ExprId> d_body = derivative(e.body, c, pool, ctx_before);
+    if (!d_body.has_value())
+      return d_body;
+    return pool.make_concat(*d_body, id);
+  }
   }
   __builtin_unreachable();
 }

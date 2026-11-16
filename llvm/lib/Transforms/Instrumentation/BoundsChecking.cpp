@@ -303,8 +303,7 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
 
-  const InstrumentationOptions &CLOpts =
-      F.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &CLOpts = getInstrumentationOptions(F);
   if (!addBoundsChecking(F, TLI, SE, Opts, CLOpts.bounds_checking_single_trap))
     return PreservedAnalyses::all();
 

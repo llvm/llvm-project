@@ -42,7 +42,6 @@ using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
 
-using GenericDeviceTy = llvm::omp::target::plugin::GenericDeviceTy;
 
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name);
@@ -150,7 +149,8 @@ EXTERN size_t omp_get_gprivate_limit(int DeviceNum, omp_access_t AccessGroup) {
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  return DeviceOrErr->getInfo<uint64_t>(DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
+  return DeviceOrErr->getInfo<uint64_t>(
+      OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE);
 }
 
 EXTERN void *omp_target_alloc(size_t Size, int DeviceNum) {
@@ -339,31 +339,13 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
     if (!SrcDeviceOrErr)
       FATAL_MESSAGE(SrcDevice, "%s",
                     toString(SrcDeviceOrErr.takeError()).c_str());
-    AsyncInfoTy AsyncInfo(*SrcDeviceOrErr);
     auto DstDeviceOrErr = PM->getDevice(DstDevice);
     if (!DstDeviceOrErr)
       FATAL_MESSAGE(DstDevice, "%s",
                     toString(DstDeviceOrErr.takeError()).c_str());
-    // First try to use D2D memcpy which is more efficient. If fails, fall back
-    // to inefficient way.
-    if (SrcDeviceOrErr->isDataExchangable(*DstDeviceOrErr)) {
-      AsyncInfoTy AsyncInfo(*SrcDeviceOrErr);
-      Rc = SrcDeviceOrErr->dataExchange(SrcAddr, *DstDeviceOrErr, DstAddr,
-                                        Length, AsyncInfo);
-      if (Rc == OFFLOAD_SUCCESS)
-        return OFFLOAD_SUCCESS;
-    }
-
-    void *Buffer = malloc(Length);
-    {
-      AsyncInfoTy AsyncInfo(*SrcDeviceOrErr);
-      Rc = SrcDeviceOrErr->retrieveData(Buffer, SrcAddr, Length, AsyncInfo);
-    }
-    if (Rc == OFFLOAD_SUCCESS) {
-      AsyncInfoTy AsyncInfo(*DstDeviceOrErr);
-      Rc = DstDeviceOrErr->submitData(DstAddr, Buffer, Length, AsyncInfo);
-    }
-    free(Buffer);
+    AsyncInfoTy AsyncInfo(*SrcDeviceOrErr);
+    Rc = SrcDeviceOrErr->dataExchange(SrcAddr, *DstDeviceOrErr, DstAddr, Length,
+                                      AsyncInfo);
   }
 
   ODBG(ODT_Interface) << __func__ << " returns " << Rc;
@@ -490,10 +472,16 @@ EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes,
     if (!DeviceOrErr)
       FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
     AsyncInfoTy AsyncInfo(*DeviceOrErr);
-    if (auto Error = DeviceOrErr->RTL->getDevice(DeviceOrErr->RTLDeviceID)
-                         .dataFill(Ptr, &ByteVal, 1, NumBytes, AsyncInfo)) {
+    ol_queue_handle_t Queue = AsyncInfo.getQueue();
+    if (!Queue) {
+      ODBG(ODT_Interface) << "Failed to get queue for async memset on device "
+                          << DeviceNum;
+      return Ptr;
+    }
+    if (auto Res = olMemFill(Queue, Ptr, 1, &ByteVal, NumBytes)) {
       ODBG(ODT_Interface)
-          << __func__ << " failed to fill memory due to error with dataFill";
+          << __func__ << " failed to fill memory due to error with dataFill:"
+          << Res->Details;
       // If the dataFill failed, let's just not do anything.
       // omp_target_memset does not have any good way to fail.
       // Depending on the RTL implementation, the application will

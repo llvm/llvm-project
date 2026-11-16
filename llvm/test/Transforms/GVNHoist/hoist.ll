@@ -4,6 +4,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 @GlobalVar = internal global float 1.000000e+00
+@LoadedVar = external global i32
+@StoredVar = external global i32
 
 ; Check that all scalar expressions are hoisted.
 define float @scalarsHoisting(float %d, float %min, float %max, float %a) {
@@ -883,4 +885,157 @@ c:
 x:
   %r2 = load i8, ptr %word, align 1
   ret i8 %r2
+}
+
+; The loads in left.a and left.b are hoisted into left first. The store in left
+; does not alias @LoadedVar, so the merged load must keep its optimized
+; MemorySSA clobber and be hoisted with the load in right into entry.
+define i32 @hoistLoadPastNoAliasStore(i1 %c, i1 %d) {
+; CHECK-LABEL: @hoistLoadPastNoAliasStore(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LA:%.*]] = load i32, ptr @LoadedVar, align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    store i32 0, ptr @StoredVar, align 4
+; CHECK-NEXT:    br i1 [[D:%.*]], label [[LEFT_A:%.*]], label [[LEFT_B:%.*]]
+; CHECK:       left.a:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       left.b:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       right:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[LA]], [[LEFT_A]] ], [ [[LA]], [[LEFT_B]] ], [ [[LA]], [[RIGHT]] ]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  store i32 0, ptr @StoredVar
+  br i1 %d, label %left.a, label %left.b
+
+left.a:
+  %la = load i32, ptr @LoadedVar
+  br label %exit
+
+left.b:
+  %lb = load i32, ptr @LoadedVar
+  br label %exit
+
+right:
+  %lr = load i32, ptr @LoadedVar
+  br label %exit
+
+exit:
+  %r = phi i32 [ %la, %left.a ], [ %lb, %left.b ], [ %lr, %right ]
+  ret i32 %r
+}
+
+; The stores to %q are hoisted into entry past the store to %out in left, which
+; does not alias %q. The load in right must still see the store to %p in right,
+; so it must not be merged with the load in left and hoisted.
+define void @hoistLoadAfterHoistedStore(i1 %c, ptr noalias %p, ptr noalias %q, ptr noalias %out) {
+; CHECK-LABEL: @hoistLoadAfterHoistedStore(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[L]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+; CHECK:       right:
+; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 [[R]], ptr [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %l = load i32, ptr %p, align 4
+  store i32 %l, ptr %out, align 4
+  store i32 1, ptr %q, align 4
+  ret void
+
+right:
+  store i32 1, ptr %p, align 4
+  store i32 1, ptr %q, align 4
+  %r = load i32, ptr %p, align 4
+  store i32 %r, ptr %out, align 4
+  ret void
+}
+
+; The hoisted mul replaces the extractvalue of smul.with.overflow, whose result
+; wraps on overflow, so the nsw flag on the mul must be dropped.
+define i32 @hoist_mul_with_overflow(i1 %c, i32 %x) {
+; CHECK-LABEL: @hoist_mul_with_overflow(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    ret i32 [[P]]
+; CHECK:       right:
+; CHECK-NEXT:    [[OV:%.*]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[X]], i32 [[X]])
+; CHECK-NEXT:    ret i32 [[P]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %p = mul nsw i32 %x, %x
+  ret i32 %p
+
+right:
+  %ov = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %x, i32 %x)
+  %r = extractvalue { i32, i1 } %ov, 0
+  ret i32 %r
+}
+
+define i32 @hoist_add_with_overflow(i1 %c, i32 %x, i32 %y) {
+; CHECK-LABEL: @hoist_add_with_overflow(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    ret i32 [[P]]
+; CHECK:       right:
+; CHECK-NEXT:    [[OV:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i32 [[P]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %p = add nuw nsw i32 %x, %y
+  ret i32 %p
+
+right:
+  %ov = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)
+  %r = extractvalue { i32, i1 } %ov, 0
+  ret i32 %r
+}
+
+; Both sides are plain binops: the common flags are kept.
+define i32 @hoist_mul_common_flags(i1 %c, i32 %x) {
+; CHECK-LABEL: @hoist_mul_common_flags(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = mul nsw i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    ret i32 [[P]]
+; CHECK:       right:
+; CHECK-NEXT:    ret i32 [[P]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %p = mul nsw nuw i32 %x, %x
+  ret i32 %p
+
+right:
+  %r = mul nsw i32 %x, %x
+  ret i32 %r
 }

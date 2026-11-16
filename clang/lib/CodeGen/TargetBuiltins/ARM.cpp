@@ -186,6 +186,8 @@ translateAarch64ToMsvcIntrin(unsigned BuiltinID) {
   case clang::AArch64::BI_InterlockedDecrement_nf:
   case clang::AArch64::BI_InterlockedDecrement64_nf:
     return MSVCIntrin::_InterlockedDecrement_nf;
+  case clang::AArch64::BI_ReadWriteBarrier:
+    return MSVCIntrin::_ReadWriteBarrier;
   }
   llvm_unreachable("must return from switch");
 }
@@ -337,6 +339,10 @@ translateArmToMsvcIntrin(unsigned BuiltinID) {
   case clang::ARM::BI_InterlockedDecrement_nf:
   case clang::ARM::BI_InterlockedDecrement64_nf:
     return MSVCIntrin::_InterlockedDecrement_nf;
+  case clang::ARM::BI_ReadWriteBarrier:
+  case clang::ARM::BI_ReadBarrier:
+  case clang::ARM::BI_WriteBarrier:
+    return MSVCIntrin::_ReadWriteBarrier;
   }
   llvm_unreachable("must return from switch");
 }
@@ -4872,10 +4878,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F);
   }
 
-  if (BuiltinID == clang::AArch64::BI_ReadWriteBarrier)
-    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
-                               llvm::SyncScope::SingleThread);
-
   // CRC32
   Intrinsic::ID CRCIntrinsicID = Intrinsic::not_intrinsic;
   switch (BuiltinID) {
@@ -7314,12 +7316,17 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
                         : EmitLValue(Arg).emitRawPointer(*this);
     }
 
-    // Enable underlying preserve_*_access_index() generation.
+    // Enable underlying preserve_*_access_index() generation. Field info
+    // never dereferences the field, so skip preserve_static_offset markers:
+    // the backend would replace the access indices under them with plain GEPs.
     bool OldIsInPreservedAIRegion = IsInPreservedAIRegion;
+    bool OldIsInPreserveFieldInfo = IsInPreserveFieldInfo;
     IsInPreservedAIRegion = true;
+    IsInPreserveFieldInfo = true;
     Value *FieldAddr = IsBitField ? EmitLValue(Arg).getRawBitFieldPointer(*this)
                                   : EmitLValue(Arg).emitRawPointer(*this);
     IsInPreservedAIRegion = OldIsInPreservedAIRegion;
+    IsInPreserveFieldInfo = OldIsInPreserveFieldInfo;
 
     ConstantInt *C = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
     Value *InfoKind = ConstantInt::get(Int64Ty, C->getSExtValue());

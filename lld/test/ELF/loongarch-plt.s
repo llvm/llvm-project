@@ -8,7 +8,7 @@
 # RUN: llvm-readelf -S -s %t.32 | FileCheck --check-prefixes=SEC,NM %s
 # RUN: llvm-readobj -r %t.32 | FileCheck --check-prefix=RELOC32 %s
 # RUN: llvm-readelf -x .got.plt %t.32 | FileCheck --check-prefix=GOTPLT32 %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.32 | FileCheck --check-prefixes=DIS,DIS32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.32 | FileCheck --check-prefixes=DIS,DIS32 %s
 
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t1.s -o %t1.64.o
 # RUN: ld.lld -shared %t1.64.o -soname=t1.64.so -o %t1.64.so
@@ -17,7 +17,7 @@
 # RUN: llvm-readelf -S -s %t.64 | FileCheck --check-prefixes=SEC,NM %s
 # RUN: llvm-readobj -r %t.64 | FileCheck --check-prefix=RELOC64 %s
 # RUN: llvm-readelf -x .got.plt %t.64 | FileCheck --check-prefix=GOTPLT64 %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.64 | FileCheck --check-prefixes=DIS,DIS64 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.64 | FileCheck --check-prefixes=DIS,DIS64 %s
 
 # SEC: .plt PROGBITS {{0*}}00020020
 

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <array>
+#include <atomic>
 #include <functional>
 #include <map>
 #include <mutex>
@@ -18,9 +20,12 @@
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Version/Version.h"
 
+#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -124,6 +129,28 @@ Language *Language::FindPlugin(LanguageType language,
   return result;
 }
 
+Language *
+Language::FindPluginForManglingScheme(Mangled::ManglingScheme scheme) {
+  // Mangled calls this for every name it demangles, so avoid the lock in
+  // FindPlugin(). Language instances are never destroyed, and the language of
+  // a scheme never changes, so the plugin can be cached once it's found.
+  static std::array<std::atomic<Language *>, Mangled::g_num_mangling_schemes>
+      g_plugins;
+  if (scheme >= g_plugins.size())
+    return nullptr;
+  if (Language *language = g_plugins[scheme].load(std::memory_order_acquire))
+    return language;
+
+  lldb::LanguageType language_type =
+      Mangled::GetLanguageForManglingScheme(scheme);
+  if (language_type == eLanguageTypeUnknown)
+    return nullptr;
+  Language *language = FindPlugin(language_type);
+  if (language)
+    g_plugins[scheme].store(language, std::memory_order_release);
+  return language;
+}
+
 void Language::ForEach(
     llvm::function_ref<IterationAction(Language *)> callback) {
   // If we want to iterate over all languages, we first have to complete the
@@ -153,6 +180,22 @@ void Language::ForEach(
     if (callback(lang) == IterationAction::Stop)
       break;
   }
+}
+
+std::string Language::GetVersionWithLanguageInfo() {
+  std::string version;
+  llvm::raw_string_ostream os(version);
+  os << lldb_private::GetVersion();
+  llvm::StringSet<> plugin_names;
+  ForEach([&](Language *language) {
+    if (!plugin_names.insert(language->GetPluginName()).second)
+      return IterationAction::Continue;
+    std::string info = language->GetVersionInfo();
+    if (!info.empty())
+      os << '\n' << info;
+    return IterationAction::Continue;
+  });
+  return version;
 }
 
 llvm::Expected<LanguageType>

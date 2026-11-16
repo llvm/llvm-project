@@ -869,10 +869,18 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
           CIRGenFunction::ArrayInitLoopExprScope loopExprScope(
               cgf, setArrayInitLoopExprScope, idx);
 
-          if (arrayFiller)
+          // C++17 [class.temporary]p5:
+          // "when a default constructor is called to initialize an element of
+          // an array with no corresponding initializer [...] the destruction
+          // of every temporary created in a default argument is sequenced
+          // before the construction of the next array element, if any."
+          if (arrayFiller) {
+            CIRGenFunction::FullExprCleanupScope scope(cgf, arrayFiller);
+            scope.deferLifetimeExtendedCleanups();
             emitInitializationToLValue(arrayFiller, elementLV);
-          else
+          } else {
             emitNullInitializationToLValue(loc, elementLV);
+          }
 
           // Advance pointer and store them to temporary variable
           cir::ConstantOp one = builder.getConstInt(
@@ -1050,6 +1058,8 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
       cgf.cgm.lambdaFieldToName[curField] = fieldName;
     } else if (capture.capturesThis()) {
       cgf.cgm.lambdaFieldToName[curField] = "this";
+    } else if (capture.capturesVLAType()) {
+      cgf.cgm.lambdaFieldToName[curField] = "vla-size";
     } else {
       cgf.cgm.errorNYI(e->getSourceRange(), "Unhandled capture kind");
       cgf.cgm.lambdaFieldToName[curField] = "unhandled-capture-kind";
@@ -1058,8 +1068,10 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
     // Emit initialization
     LValue lv =
         cgf.emitLValueForFieldInitialization(slotLV, curField, fieldName);
-    if (curField->hasCapturedVLAType())
-      cgf.cgm.errorNYI(e->getSourceRange(), "lambda captured VLA type");
+    if (curField->hasCapturedVLAType()) {
+      cgf.emitLambdaVLACapture(curField->getCapturedVLAType(), lv);
+      continue;
+    }
 
     emitInitializationToLValue(captureInit, lv);
 

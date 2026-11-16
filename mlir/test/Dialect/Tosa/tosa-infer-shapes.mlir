@@ -2340,3 +2340,17 @@ func.func @while_with_sparse_tensor_encoding() {
   }
   return
 }
+
+// -----
+
+// A resize with invalid (non-positive) scale values cannot infer an output
+// shape, so the result type is left unchanged.
+// CHECK-LABEL: @resize_invalid_scale
+func.func @resize_invalid_scale(%arg0: tensor<1x50x48x1xf32>) {
+  %scale = tosa.const_shape values(dense<[2, 0, -1, 2]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %offset = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %border = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // CHECK: -> tensor<?x?x?x?xf32>
+  %0 = tosa.resize %arg0, %scale, %offset, %border mode<NEAREST_NEIGHBOR> : (tensor<1x50x48x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
+  return
+}

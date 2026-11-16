@@ -4,13 +4,13 @@
 // Immediate out of lower bound [-8, 7].
 
 st1d z25.d, p4, [x16, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1d z25.d, p4, [x16, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // Immediate out of upper bound [-8, 7].
 st1d z16.d, p4, [x2, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1d z16.d, p4, [x2, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -118,27 +118,27 @@ st1d z0.s, p0, [z0.s, #8]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1d z0.d, p0, [z0.d, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: st1d z0.d, p0, [z0.d, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1d z0.d, p0, [z0.d, #-8]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: st1d z0.d, p0, [z0.d, #-8]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1d z0.d, p0, [z0.d, #249]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: st1d z0.d, p0, [z0.d, #249]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1d z0.d, p0, [z0.d, #256]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: st1d z0.d, p0, [z0.d, #256]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1d z0.d, p0, [z0.d, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: st1d z0.d, p0, [z0.d, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

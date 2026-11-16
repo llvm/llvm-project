@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -56,6 +57,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(RABasic, "regallocbasic", "Basic Register Allocator", false,
                     false)
 
@@ -107,6 +109,7 @@ void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<VirtRegMapWrapperLegacy>();
   AU.addRequired<LiveRegMatrixWrapperLegacy>();
   AU.addPreserved<LiveRegMatrixWrapperLegacy>();
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -174,7 +177,7 @@ MCRegister RABasic::selectOrSplit(const LiveInterval &VirtReg,
 
   // Check for an available register in this class.
   auto Order =
-      AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
+      AllocationOrder::create(VirtReg.reg(), *VRM, *RegClassInfo, Matrix);
   for (MCRegister PhysReg : Order) {
     assert(PhysReg.isValid());
     // Check for interference in PhysReg
@@ -226,9 +229,11 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   auto &LiveStks = getAnalysis<LiveStacksWrapperLegacy>().getLS();
   auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
-  RegAllocBase::init(getAnalysis<VirtRegMapWrapperLegacy>().getVRM(),
-                     getAnalysis<LiveIntervalsWrapperPass>().getLIS(),
-                     getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM());
+  RegAllocBase::init(
+      getAnalysis<VirtRegMapWrapperLegacy>().getVRM(),
+      getAnalysis<LiveIntervalsWrapperPass>().getLIS(),
+      getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM(),
+      getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI());
   VirtRegAuxInfo VRAI(*MF, *LIS, *VRM,
                       getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI,
                       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());

@@ -224,6 +224,21 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementDerivedMasks) {
   EXPECT_EQ(Elem->getNeverWritesMask(), 0xD);
 }
 
+TEST_F(HLSLSemanticSignatureMetadataTest, UnallocatedBarycentricMasks) {
+  MDNode *Node = getElement(/*SigId=*/0, "SV_Barycentrics", /*CompType=*/9,
+                            /*SemanticKind=*/28, /*Indices=*/{0},
+                            /*InterpMode=*/2, /*Rows=*/1, /*Cols=*/3,
+                            /*StartRow=*/UnallocatedRow,
+                            /*StartCol=*/UnallocatedCol, /*UsageMask=*/0x5,
+                            /*DynIndexMask=*/0, /*GSStream=*/0);
+  Expected<SemanticSignatureElement> Elem =
+      SemanticSignatureElement::fromMetadata(Node);
+  ASSERT_THAT_EXPECTED(Elem, Succeeded());
+  EXPECT_FALSE(Elem->isAllocated());
+  EXPECT_EQ(Elem->getDeclaredMask(), 0x7);
+  EXPECT_EQ(Elem->getAlwaysReadsMask(), 0x5);
+}
+
 // A geometry shader output carries a non-zero stream index
 TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementGSStream) {
   MDNode *Node = getElement(/*SigId=*/0, "A", /*CompType=*/9,

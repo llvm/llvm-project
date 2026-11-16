@@ -58,7 +58,6 @@ add_mlir_dialect_library(MLIRGPUDialect
 add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/AllReduceLowering.cpp
   Transforms/AsyncRegionRewriter.cpp
-  Transforms/BufferDeallocationOpInterfaceImpl.cpp
   Transforms/DecomposeMemRefs.cpp
   Transforms/EliminateBarriers.cpp
   Transforms/GlobalIdRewriter.cpp
@@ -66,15 +65,10 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/IndexedAccessOpInterfaceImpl.cpp
   Transforms/MemoryPromotion.cpp
   Transforms/ModuleToBinary.cpp
-  Transforms/NVVMAttachTarget.cpp
   Transforms/ParallelLoopMapper.cpp
-  Transforms/PromoteShuffleToAMDGPU.cpp
-  Transforms/ROCDLAttachTarget.cpp
-  Transforms/SPIRVAttachTarget.cpp
   Transforms/ShuffleRewriter.cpp
   Transforms/SubgroupIdRewriter.cpp
   Transforms/SubgroupReduceLowering.cpp
-  Transforms/XeVMAttachTarget.cpp
 
   OBJECT
 
@@ -86,30 +80,107 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRParallelLoopMapperEnumsGen
 
   LINK_LIBS PUBLIC
-  MLIRAMDGPUDialect
   MLIRAffineUtils
   MLIRArithDialect
   MLIRAsyncDialect
-  MLIRBufferizationDialect
   MLIRDataLayoutInterfaces
   MLIRDialectUtils
-  MLIRExecutionEngineUtils
   MLIRGPUDialect
   MLIRGPUUtils
   MLIRIR
   MLIRIndexDialect
-  MLIRLLVMDialect
   MLIRMemRefDialect
-  MLIRNVVMTarget
   MLIRPass
-  MLIRROCDLDialect
-  MLIRROCDLTarget
   MLIRSCFDialect
-  MLIRSPIRVTarget
   MLIRSideEffectInterfaces
   MLIRSupport
   MLIRTransformUtils
   MLIRVectorDialect
+  )
+
+add_mlir_dialect_library(MLIRGPUBufferDeallocationOpInterfaceImpl
+  Transforms/BufferDeallocationOpInterfaceImpl.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
+
+  LINK_LIBS PUBLIC
+  MLIRBufferizationDialect
+  MLIRGPUDialect
+  MLIRIR
+  )
+
+add_mlir_dialect_library(MLIRGPUNVVMTransforms
+  Transforms/NVVM/NVVMAttachTarget.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU/Transforms/NVVM
+
+  DEPENDS
+  MLIRGPUNVVMPassIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRGPUDialect
+  MLIRIR
+  MLIRNVVMDialect
+  MLIRPass
+  MLIRSupport
+  )
+
+add_mlir_dialect_library(MLIRGPUROCDLTransforms
+  Transforms/ROCDL/PromoteShuffleToAMDGPU.cpp
+  Transforms/ROCDL/ROCDLAttachTarget.cpp
+  Transforms/ROCDL/SubgroupReduceToDPP.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU/Transforms/ROCDL
+
+  DEPENDS
+  MLIRGPUROCDLPassIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRAMDGPUDialect
+  MLIRArithDialect
+  MLIRGPUDialect
+  MLIRGPUUtils
+  MLIRIR
+  MLIRPass
+  MLIRROCDLDialect
+  MLIRSupport
+  MLIRVectorDialect
+  )
+
+add_mlir_dialect_library(MLIRGPUSPIRVTransforms
+  Transforms/SPIRV/SPIRVAttachTarget.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU/Transforms/SPIRV
+
+  DEPENDS
+  MLIRGPUSPIRVPassIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRGPUDialect
+  MLIRIR
+  MLIRPass
+  MLIRSPIRVDialect
+  MLIRSupport
+  )
+
+add_mlir_dialect_library(MLIRGPUXeVMTransforms
+  Transforms/XeVM/XeVMAttachTarget.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU/Transforms/XeVM
+
+  DEPENDS
+  MLIRGPUXeVMPassIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRGPUDialect
+  MLIRIR
+  MLIRPass
+  MLIRSupport
   MLIRXeVMDialect
   )
 

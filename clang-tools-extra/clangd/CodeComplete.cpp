@@ -2414,10 +2414,9 @@ SignatureHelp signatureHelp(PathRef FileName, Position Pos,
 
 bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
   auto InTopLevelScope = [](const NamedDecl &ND) {
-    switch (ND.getDeclContext()->getDeclKind()) {
+    switch (ND.getNonTransparentDeclContext()->getDeclKind()) {
     case Decl::TranslationUnit:
     case Decl::Namespace:
-    case Decl::LinkageSpec:
       return true;
     default:
       break;

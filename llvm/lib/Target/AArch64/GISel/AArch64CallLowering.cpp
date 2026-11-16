@@ -1555,6 +1555,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           ? alignTo(Assigner.StackSize, 16)
           : 0;
 
+  // See AArch64FunctionInfo::HasWinCallToCalleePopFunction.
+  if (Subtarget.isTargetWindows() && CalleePopBytes != 0)
+    MF.getInfo<AArch64FunctionInfo>()->setHasWinCallToCalleePopFunction(true);
+
   CallSeqStart.addImm(Assigner.StackSize).addImm(0);
   MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)
       .addImm(Assigner.StackSize)
