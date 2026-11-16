@@ -540,8 +540,6 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
   uint64_t TgtAddress = getSymbolAddress(BC, RealTargetSym, TgtBB);
   uint64_t DotAddress = BBAddresses[&StubBB];
   const int64_t Offset = static_cast<int64_t>(TgtAddress - DotAddress);
-  uint64_t PCRelTgtAddress = DotAddress > TgtAddress ? DotAddress - TgtAddress
-                                                     : TgtAddress - DotAddress;
 
   // If it fits in one instruction, do not relax
   if (isIntN(RangeSingleInstr, Offset))
@@ -554,8 +552,8 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
     if (Bits >= RangeShortJmp)
       return Error::success();
 
-    LLVM_DEBUG(dbgs() << "Relaxing stub to short jump. PCRelTgtAddress = "
-                      << Twine::utohexstr(PCRelTgtAddress)
+    LLVM_DEBUG(dbgs() << "Relaxing stub to short jump. Offset = "
+                      << Twine::utohexstr(Offset)
                       << " RealTargetSym = " << RealTargetSym->getName()
                       << "\n");
     relaxStubToShortJmp(StubBB, RealTargetSym);
@@ -570,9 +568,10 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
     return createFatalBOLTError(
         "BOLT-ERROR: Unable to relax stub for PIC binary\n");
 
-  LLVM_DEBUG(dbgs() << "Relaxing stub to long jump. PCRelTgtAddress = "
-                    << Twine::utohexstr(PCRelTgtAddress)
-                    << " RealTargetSym = " << RealTargetSym->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Relaxing stub to long jump. PageOffset = "
+                    << Twine::utohexstr(PageOffset)
+                    << " RealTargetSym = " << RealTargetSym->getName()
+                    << "\n");
   relaxStubToLongJmp(StubBB, RealTargetSym);
   StubBits[&StubBB] = static_cast<int>(BC.AsmInfo->getCodePointerSize() * 8);
   Modified = true;
