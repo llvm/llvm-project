@@ -2,9 +2,9 @@
 // RUN: %env_tsan_opts=detect_deadlocks=1 %run %t 2>&1 | FileCheck %s
 
 #include <atomic>
+#include <cstdio>
 #include <mutex>
 #include <thread>
-#include <cstdio>
 
 std::mutex m1;
 std::mutex m2;

@@ -121,9 +121,6 @@ class DeadlockDetectorTLS {
     return write_bv_;
   }
 
-  uptr getNumLocks() const { return n_all_locks_; }
-  uptr getLock(uptr idx) const { return all_locks_with_contexts_[idx].lock; }
-
  private:
   BV bv_;
   BV write_bv_;
