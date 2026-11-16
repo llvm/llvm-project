@@ -1005,6 +1005,13 @@ public:
   /// Emits AMDGPU specific Metadata.
   void emitAMDGPUMetadata();
 
+  /// Build (or fetch from the dedup cache) the args ArrayAttr for an
+  /// annotation. Returns the empty ArrayAttr when the annotation has none.
+  mlir::ArrayAttr getOrCreateAnnotationArgs(const clang::AnnotateAttr *attr);
+
+  /// Create cir::AnnotationAttr for a single AnnotateAttr.
+  cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
+
   /// Add global annotations for a global value (GlobalOp or FuncOp).
   void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
 
@@ -1034,13 +1041,6 @@ private:
 
   /// Emit all the global annotations.
   void emitGlobalAnnotations();
-
-  /// Build (or fetch from the dedup cache) the args ArrayAttr for an
-  /// annotation. Returns the empty ArrayAttr when the annotation has none.
-  mlir::ArrayAttr getOrCreateAnnotationArgs(const clang::AnnotateAttr *attr);
-
-  /// Create cir::AnnotationAttr for a single AnnotateAttr on a global.
-  cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
 };
 } // namespace CIRGen
 

@@ -127,6 +127,7 @@ TEST(ASTNodeKind, ConstexprHasPointerIdentity) {
   EXPECT_FALSE(HasPointerIdentity<TypeLoc>);
   EXPECT_FALSE(HasPointerIdentity<QualType>);
   EXPECT_FALSE(HasPointerIdentity<NestedNameSpecifier>);
+  EXPECT_FALSE(HasPointerIdentity<ObjCProtocolLoc>);
   EXPECT_FALSE(HasPointerIdentity<Foo>);
 
   constexpr bool DefaultConstructedHasPointerIdentity =
@@ -244,9 +245,48 @@ TEST(DynTypedNode, QualType) {
   EXPECT_FALSE(Node < Node);
 }
 
+TEST(DynTypedNode, ObjCProtocolLoc) {
+  static constexpr StringRef Code = R"cc(
+    @protocol P
+    @end
+    @interface I <P>
+    @end
+    @interface J <P>
+    @end
+  )cc";
+  auto AST =
+      clang::tooling::buildASTFromCodeWithArgs(Code, {"-x", "objective-c"});
+  auto IMatches =
+      match(objcInterfaceDecl(hasName("I")).bind("i"), AST->getASTContext());
+  auto JMatches =
+      match(objcInterfaceDecl(hasName("J")).bind("j"), AST->getASTContext());
+  ASSERT_EQ(IMatches.size(), 1u);
+  ASSERT_EQ(JMatches.size(), 1u);
+  const auto *I = IMatches[0].getNodeAs<ObjCInterfaceDecl>("i");
+  const auto *J = JMatches[0].getNodeAs<ObjCInterfaceDecl>("j");
+
+  // Both references name the same protocol at different locations.
+  ObjCProtocolLoc InI(*I->protocol_begin(), *I->protocol_loc_begin());
+  ObjCProtocolLoc InJ(*J->protocol_begin(), *J->protocol_loc_begin());
+  ASSERT_EQ(InI.getProtocol(), InJ.getProtocol());
+
+  DynTypedNode Node = DynTypedNode::create(InI);
+  DynTypedNode Copy = DynTypedNode::create(InI);
+  DynTypedNode Other = DynTypedNode::create(InJ);
+  EXPECT_EQ(Node.getMemoizationData(), nullptr);
+  EXPECT_TRUE(Node == Copy);
+  EXPECT_FALSE(Node < Copy);
+  EXPECT_FALSE(Copy < Node);
+  EXPECT_EQ(DynTypedNode::DenseMapInfo::getHashValue(Node),
+            DynTypedNode::DenseMapInfo::getHashValue(Copy));
+  EXPECT_FALSE(Node == Other);
+  EXPECT_NE(Node < Other, Other < Node);
+}
+
 TEST(DynTypedNode, NestedNameSpecifier) {
-  std::string code = R"cc(namespace a { struct b {}; } a::b x;)cc";
-  auto AST = clang::tooling::buildASTFromCode(code);
+  static constexpr StringRef Code =
+      R"cc(namespace a { struct b {}; } a::b x;)cc";
+  auto AST = clang::tooling::buildASTFromCode(Code);
   auto matches =
       match(nestedNameSpecifier(specifiesNamespace(hasName("a"))).bind("nns"),
             AST->getASTContext());
@@ -268,8 +308,8 @@ TEST(DynTypedNode, NestedNameSpecifier) {
 }
 
 TEST(DynTypedNode, TypeLoc) {
-  std::string code = R"cc(void example() { int abc; })cc";
-  auto AST = clang::tooling::buildASTFromCode(code);
+  static constexpr StringRef Code = R"cc(void example() { int abc; })cc";
+  auto AST = clang::tooling::buildASTFromCode(Code);
   auto matches =
       match(traverse(TK_AsIs,
                      varDecl(hasName("abc"), hasTypeLoc(typeLoc().bind("tl")))),
@@ -283,8 +323,8 @@ TEST(DynTypedNode, TypeLoc) {
 }
 
 TEST(DynTypedNode, PointerTypeLoc) {
-  std::string code = R"cc(void example() { int *abc; })cc";
-  auto AST = clang::tooling::buildASTFromCode(code);
+  static constexpr StringRef Code = R"cc(void example() { int *abc; })cc";
+  auto AST = clang::tooling::buildASTFromCode(Code);
   auto matches =
       match(traverse(TK_AsIs, varDecl(hasName("abc"),
                                       hasTypeLoc(typeLoc().bind("ptl")))),

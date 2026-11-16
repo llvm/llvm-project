@@ -14300,6 +14300,22 @@ tc_40d64c94, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
+def LX_L16b_p_tmp : HInst<
+(outs HlxLR:$Ld16),
+(ins PredRegs:$Pv4, IntRegs:$Rs32),
+"if ($Pv4) $Ld16.tmp = mem($Rs32)",
+tc_fedb7e19, TypeLD>, Enc_88ba65, Requires<[HasV85,UseHLX]> {
+let Inst{8-4} = 0b00100;
+let Inst{13-11} = 0b010;
+let Inst{31-21} = 0b10011000000;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = HLXVectorAccess;
+let isHLX = 1;
+let isTmpWrite = 1;
+let mayLoad = 1;
+}
 def LX_L16b_tmp : HInst<
 (outs HlxLR:$Ld16),
 (ins IntRegs:$Rs32),
