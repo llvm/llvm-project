@@ -860,12 +860,12 @@ define void @rewrite_zext_of_mul_ule(i32 %a, i32 %b) {
 ; CHECK-NEXT:    %n = zext i32 %mul to i64
 ; CHECK-NEXT:    --> (zext i32 (%a * %b) to i64) U: [0,4294967296) S: [0,4294967296)
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %ph ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,4294967295) S: [0,4294967295) Exits: (-1 + (zext i32 (%a * %b) to i64))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,16) S: [0,16) Exits: (-1 + (zext i32 (%a * %b) to i64))<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4294967296) S: [1,4294967296) Exits: (zext i32 (%a * %b) to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,17) S: [1,17) Exits: (zext i32 (%a * %b) to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_of_mul_ule
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (zext i32 (%a * %b) to i64))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4294967294
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 15
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (zext i32 (%a * %b) to i64))<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -897,12 +897,12 @@ define void @rewrite_sext_of_mul_sgt(i32 %a) {
 ; CHECK-NEXT:    %n = sext i32 %mul to i64
 ; CHECK-NEXT:    --> (sext i32 (2 * %a)<nsw> to i64) U: [0,-1) S: [-2147483648,2147483647)
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-2) S: [0,-2) Exits: (-1 + (sext i32 (2 * %a)<nsw> to i64))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2147483647) S: [0,2147483647) Exits: (-1 + (sext i32 (2 * %a)<nsw> to i64))<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,-1) S: [1,-1) Exits: (sext i32 (2 * %a)<nsw> to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2147483648) S: [1,2147483648) Exits: (sext i32 (2 * %a)<nsw> to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_sext_of_mul_sgt
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (sext i32 (2 * %a)<nsw> to i64))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2147483646
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (sext i32 (2 * %a)<nsw> to i64))<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 2
 ;
@@ -930,14 +930,14 @@ define void @rewrite_sext_of_mul_eq(i32 %a, i32 %b) {
 ; CHECK-NEXT:    %n = sext i32 %mul to i64
 ; CHECK-NEXT:    --> (sext i32 (%a * %b)<nsw> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + (sext i32 (%a * %b)<nsw> to i64))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,7) S: [0,7) Exits: (-1 + (sext i32 (%a * %b)<nsw> to i64))<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (sext i32 (%a * %b)<nsw> to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,8) S: [1,8) Exits: (sext i32 (%a * %b)<nsw> to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_sext_of_mul_eq
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (sext i32 (%a * %b)<nsw> to i64))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 6
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (sext i32 (%a * %b)<nsw> to i64))<nsw>
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 7
 ;
 entry:
   %mul = mul nsw i32 %a, %b
