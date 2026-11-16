@@ -3955,22 +3955,33 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     // When a BUILD_VECTOR consists of the same element (ignoring undefs),
     // prefer emitting a broadcast instead of multiple insertions.
     if (IsRepeated && SeqLen == 1) {
-      // Integer vectors benefit from splat unconditionally.
-      if (ResTy.isInteger())
-        return DAG.getSplatBuildVector(ResTy, DL, Sequence[0]);
-
-      // Only certain floating-point cases suffer performance regressions,
-      // exclude those specific cases.
       bool IsSplatBetter = true;
-      if (NumUndefElts == NumElts - 1)
-        IsSplatBetter = false;
-      if (NumUndefElts == NumElts - 2 && !UndefElements[0])
-        IsSplatBetter = false;
-      if (ResTy == MVT::v8f32 && NumUndefElts == NumElts - 2 &&
-          ((!UndefElements[1] && !UndefElements[2]) ||
-           (!UndefElements[1] && !UndefElements[3]) ||
-           (!UndefElements[2] && !UndefElements[3])))
-        IsSplatBetter = false;
+
+      // Integer vectors benefit from splat except in the case where the only
+      // non-undef element is at index 0 and is a load with a base+offset addr.
+      if (ResTy.isInteger()) {
+        SDValue Op0 = Node->getOperand(0);
+        if (NumUndefElts == NumElts - 1 && Op0.getOpcode() == ISD::LOAD &&
+            DAG.isBaseWithConstantOffset(Op0.getOperand(1)))
+          IsSplatBetter = false;
+      }
+
+      // Several floating-point cases suffer performance regressions or have
+      // no improvement when
+      //   only one element is non-undef,
+      //   one of the only two non-undefs at index 0,
+      //   the two non-undefs of v8f32 buildvector at index (1,2)/(1,3)/(2,3).
+      if (ResTy.isFloatingPoint()) {
+        if (NumUndefElts == NumElts - 1)
+          IsSplatBetter = false;
+        if (NumUndefElts == NumElts - 2 && !UndefElements[0])
+          IsSplatBetter = false;
+        if (ResTy == MVT::v8f32 && NumUndefElts == NumElts - 2 &&
+            ((!UndefElements[1] && !UndefElements[2]) ||
+             (!UndefElements[1] && !UndefElements[3]) ||
+             (!UndefElements[2] && !UndefElements[3])))
+          IsSplatBetter = false;
+      }
 
       if (IsSplatBetter)
         return DAG.getSplatBuildVector(ResTy, DL, Sequence[0]);

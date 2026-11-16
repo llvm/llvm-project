@@ -56,13 +56,13 @@ define <16 x i16> @load_to_16xi16_offset(ptr %p) {
 ; LA32-LABEL: load_to_16xi16_offset:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $a0, $a0, -3
-; LA32-NEXT:    xvldrepl.h $xr0, $a0, 0
+; LA32-NEXT:    vldrepl.h $vr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_to_16xi16_offset:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $a0, $a0, -3
-; LA64-NEXT:    xvldrepl.h $xr0, $a0, 0
+; LA64-NEXT:    vldrepl.h $vr0, $a0, 0
 ; LA64-NEXT:    ret
   %gep = getelementptr i8, ptr %p, i64 -3
   %v = load i16, ptr %gep
@@ -80,8 +80,7 @@ define <4 x i64> @load_to_4xi64_offset(ptr %p) {
 ;
 ; LA64-LABEL: load_to_4xi64_offset:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $a0, $a0, 6
-; LA64-NEXT:    xvldrepl.d $xr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 6
 ; LA64-NEXT:    ret
   %gep = getelementptr i8, ptr %p, i64 6
   %v = load i64, ptr %gep

@@ -80,8 +80,7 @@ define <2 x i64> @load_to_2xi64_offset(ptr %p) {
 ;
 ; LA64-LABEL: load_to_2xi64_offset:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $a0, $a0, 6
-; LA64-NEXT:    vldrepl.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 6
 ; LA64-NEXT:    ret
   %gep = getelementptr i8, ptr %p, i64 6
   %v = load i64, ptr %gep
