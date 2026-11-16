@@ -41,7 +41,13 @@ public:
                               float128
 #endif
                               ,
-                              bfloat16, fputil::Float16, fputil::Float128
+                              bfloat16
+
+                              ,
+                              fputil::Float16
+
+                              ,
+                              fputil::Float128
 
                               ,
                               fputil::Float80>();

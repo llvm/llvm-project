@@ -3552,8 +3552,8 @@ add_header_library(
     fabsf16.h
   DEPENDS
     libc.include.llvm-libc-macros.float16_macros
-    libc.src.__support.FPUtil.float16
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float16
     libc.src.__support.macros.config
   FLAGS
     MISC_MATH_BASIC_OPS_OPT
