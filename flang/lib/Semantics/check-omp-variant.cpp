@@ -771,7 +771,25 @@ void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   EnterDirectiveNest(MetadirectiveNest);
 }
 
-void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
+void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &x) {
+  // Perform semantic checks on declarative variants on this METADIRECTIVE.
+  if (!partStack_.empty() && partStack_.back() == PartKind::SpecificationPart) {
+    OmpVariantMatchContext matchContext{context_};
+    for (const parser::OmpClause &clause : x.v.Clauses().v) {
+      auto *variant{GetDirectiveVariant(clause)};
+      if (!variant) {
+        continue;
+      }
+      if (!MayVariantBeSelected(
+              GetContextSelector(clause), context_, matchContext)) {
+        continue;
+      }
+      llvm::omp::Directive dirId{variant->DirId()};
+      if (dirId == llvm::omp::Directive::OMPD_declare_reduction) {
+        CheckDeclareReduction(*variant);
+      }
+    }
+  }
   ExitDirectiveNest(MetadirectiveNest);
 }
 

@@ -422,7 +422,6 @@ protected:
 
 public:
   const CXXDestructorDecl *getDestructorDecl(ASTContext &astContext) const;
-  bool isNoReturn(ASTContext &astContext) const;
 
 private:
   friend class CFGElement;

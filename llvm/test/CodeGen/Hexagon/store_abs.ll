@@ -2,7 +2,7 @@
 ; REQUIRES: asserts
 
 ; Test that the compiler doesn't assert when attempting to
-; generate a store absolute set insturction where the base
+; generate a store absolute set instruction where the base
 ; register and destination register are same.
 
 target triple = "hexagon-unknown--elf"

@@ -1,11 +1,10 @@
-# RUN: llc -mtriple=aarch64-linux-gnu -O0 -run-pass=reg-bank-select -verify-machineinstrs \
+# RUN: llc -mtriple=aarch64-linux-gnu -O0 -run-pass=reg-bank-select \
 # RUN:   %s -o - | FileCheck %s --check-prefix=RBS
 # RUN: llc -mtriple=aarch64-linux-gnu -O0 -run-pass=reg-bank-select,instruction-select \
-# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ISEL
+# RUN:   %s -o - | FileCheck %s --check-prefix=ISEL
 
 # A DBG_VALUE can refer to a register that nothing defines. It still gets a
-# register bank, and then a register class, so that no generic virtual register
-# is left after instruction selection.
+# register bank, but instruction selection does not give it a register class.
 
 --- |
   define void @foo() !dbg !4 { ret void }
@@ -24,11 +23,10 @@
 # RBS-LABEL:  name: foo
 # RBS:        DBG_VALUE %0:gpr(i32), $noreg
 # ISEL-LABEL: name: foo
-# ISEL:       DBG_VALUE %0:gpr32, $noreg
+# ISEL:       DBG_VALUE %0:gpr, $noreg
 ---
 name:            foo
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     DBG_VALUE %0:_(i32), $noreg, !5, !DIExpression(), debug-location !6

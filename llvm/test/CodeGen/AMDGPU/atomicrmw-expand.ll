@@ -491,8 +491,6 @@ define i64 @optnone_atomicrmw_add_i64_expand(i64 %val) #1 {
 ; GFX90A-LABEL: optnone_atomicrmw_add_i64_expand:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v3, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX90A-NEXT:    s_getpc_b64 s[6:7]
 ; GFX90A-NEXT:    s_add_u32 s6, s6, global@rel32@lo+4
@@ -504,20 +502,21 @@ define i64 @optnone_atomicrmw_add_i64_expand(i64 %val) #1 {
 ; GFX90A-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_vccnz .LBB4_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
-; GFX90A-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX90A-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v0
-; GFX90A-NEXT:    v_add_co_u32_e64 v2, s[4:5], v0, v2
-; GFX90A-NEXT:    v_addc_co_u32_e64 v3, s[4:5], v1, v3, s[4:5]
-; GFX90A-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen
-; GFX90A-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
+; GFX90A-NEXT:    v_mov_b32_e32 v3, v2
+; GFX90A-NEXT:    v_add_co_u32_e64 v4, s[4:5], v2, v0
+; GFX90A-NEXT:    v_addc_co_u32_e64 v5, s[4:5], v3, v1, s[4:5]
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[2:3], v[2:3] op_sel:[0,1]
+; GFX90A-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen
+; GFX90A-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen
 ; GFX90A-NEXT:    s_branch .LBB4_3
 ; GFX90A-NEXT:  .LBB4_2: ; %atomicrmw.global
 ; GFX90A-NEXT:    s_getpc_b64 s[4:5]
 ; GFX90A-NEXT:    s_add_u32 s4, s4, global@rel32@lo+4
 ; GFX90A-NEXT:    s_addc_u32 s5, s5, global@rel32@hi+12
-; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-NEXT:    flat_atomic_add_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], s[4:5], s[4:5] op_sel:[0,1]
+; GFX90A-NEXT:    flat_atomic_add_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX90A-NEXT:  .LBB4_3: ; %atomicrmw.phi
 ; GFX90A-NEXT:  ; %bb.4: ; %atomicrmw.end
 ; GFX90A-NEXT:    s_mov_b32 s4, 32
