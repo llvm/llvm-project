@@ -15,6 +15,7 @@
 #include "hdr/signal_macros.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 
@@ -149,20 +150,26 @@ LLVM_LIBC_FUNCTION(int, str2sig,
     return 0;
   }
   if (name.starts_with("RTMIN+")) {
-    auto parse_res = internal::strtointeger<int>(str + 6, 10);
-    if (parse_res.has_error())
+    const char *digits = str + 6;
+    if (!internal::isdigit(*digits))
       return -1;
-    int offset = parse_res.value();
+    auto parse_res = internal::strtointeger<int>(digits, 10);
+    if (parse_res.has_error() || digits[parse_res.parsed_len] != '\0')
+      return -1;
+    int offset = parse_res.value;
     if (offset < 0 || SIGRTMIN + offset > SIGRTMAX)
       return -1;
     *signump = SIGRTMIN + offset;
     return 0;
   }
   if (name.starts_with("RTMAX-")) {
-    auto parse_res = internal::strtointeger<int>(str + 6, 10);
-    if (parse_res.has_error())
+    const char *digits = str + 6;
+    if (!internal::isdigit(*digits))
       return -1;
-    int offset = parse_res.value();
+    auto parse_res = internal::strtointeger<int>(digits, 10);
+    if (parse_res.has_error() || digits[parse_res.parsed_len] != '\0')
+      return -1;
+    int offset = parse_res.value;
     if (offset < 0 || SIGRTMAX - offset < SIGRTMIN)
       return -1;
     *signump = SIGRTMAX - offset;
@@ -170,13 +177,16 @@ LLVM_LIBC_FUNCTION(int, str2sig,
   }
 #endif
 
-  // POSIX also allows decimal integer string representation of signals.
-  auto parse_res = internal::strtointeger<int>(str, 10);
-  if (!parse_res.has_error()) {
-    int num = parse_res.value();
-    if (num > 0 && num <= NSIG) {
-      *signump = num;
-      return 0;
+  // POSIX also allows decimal integer string representation of signals without
+  // a sign.
+  if (internal::isdigit(*str)) {
+    auto parse_res = internal::strtointeger<int>(str, 10);
+    if (!parse_res.has_error() && str[parse_res.parsed_len] == '\0') {
+      int num = parse_res.value;
+      if (num > 0 && num <= NSIG) {
+        *signump = num;
+        return 0;
+      }
     }
   }
 

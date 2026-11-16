@@ -105,4 +105,11 @@ TEST(LlvmLibcStr2SigTest, InvalidStrings) {
   EXPECT_EQ(LIBC_NAMESPACE::str2sig("", &signum), -1);
   EXPECT_EQ(LIBC_NAMESPACE::str2sig(nullptr, &signum), -1);
   EXPECT_EQ(LIBC_NAMESPACE::str2sig("INT", nullptr), -1);
+  EXPECT_EQ(LIBC_NAMESPACE::str2sig("+9", &signum), -1);
+  EXPECT_EQ(LIBC_NAMESPACE::str2sig("-9", &signum), -1);
+  EXPECT_EQ(LIBC_NAMESPACE::str2sig("9abc", &signum), -1);
+  EXPECT_EQ(LIBC_NAMESPACE::str2sig(" 9", &signum), -1);
+  EXPECT_EQ(LIBC_NAMESPACE::str2sig("RTMIN+", &signum), -1);
+  EXPECT_EQ(LIBC_NAMESPACE::str2sig("RTMIN+1abc", &signum), -1);
+  EXPECT_EQ(LIBC_NAMESPACE::str2sig("RTMAX-", &signum), -1);
 }

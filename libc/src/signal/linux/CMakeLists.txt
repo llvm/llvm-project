@@ -309,6 +309,7 @@ add_entrypoint_object(
     libc.hdr.signal_macros
     libc.src.__support.CPP.string_view
     libc.src.__support.common
+    libc.src.__support.ctype_utils
     libc.src.__support.macros.config
     libc.src.__support.str_to_integer
 )
