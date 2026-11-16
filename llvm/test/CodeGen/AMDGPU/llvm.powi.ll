@@ -78,8 +78,8 @@ define i16 @v_powi_f16(i16 %l, i32 %r) {
 ; GFX8-NEXT:    v_cmp_eq_f32_e64 s[4:5], v4, v1
 ; GFX8-NEXT:    s_and_b64 vcc, s[4:5], vcc
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc
-; GFX8-NEXT:    v_cmp_class_f32_e64 s[4:5], v2, 24
 ; GFX8-NEXT:    v_cmp_neq_f32_e32 vcc, v4, v1
+; GFX8-NEXT:    v_cmp_class_f32_e64 s[4:5], v2, 24
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
 ; GFX8-NEXT:    s_and_b64 vcc, s[4:5], vcc
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
