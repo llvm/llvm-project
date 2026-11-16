@@ -575,6 +575,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_mutex_timedlock
+  SRCS
+    pthread_mutex_timedlock.cpp
+  HDRS
+    pthread_mutex_timedlock.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_timespec
+    libc.include.pthread
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.mutex
+    libc.src.__support.time.abs_timeout
+)
+
+add_entrypoint_object(
   pthread_mutex_trylock
   SRCS
     pthread_mutex_trylock.cpp

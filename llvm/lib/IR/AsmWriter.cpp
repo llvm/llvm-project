@@ -3358,7 +3358,9 @@ void AssemblyWriter::printModuleSummaryIndex() {
   // Print the TypeIdMap entries.
   for (const auto &TID : TheIndex->typeIds()) {
     Out << "^" << Machine.getTypeIdSlot(TID.second.first)
-        << " = typeid: (name: \"" << TID.second.first << "\"";
+        << " = typeid: (name: \"";
+    printEscapedString(TID.second.first, Out);
+    Out << "\"";
     printTypeIdSummary(TID.second.second);
     Out << ") ; guid = " << TID.first << "\n";
   }
@@ -3367,10 +3369,30 @@ void AssemblyWriter::printModuleSummaryIndex() {
   for (auto &TId : TheIndex->typeIdCompatibleVtableMap()) {
     auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(TId.first);
     Out << "^" << Machine.getTypeIdCompatibleVtableSlot(TId.first)
-        << " = typeidCompatibleVTable: (name: \"" << TId.first << "\"";
+        << " = typeidCompatibleVTable: (name: \"";
+    printEscapedString(TId.first, Out);
+    Out << "\"";
     printTypeIdCompatibleVtableSummary(TId.second);
     Out << ") ; guid = " << GUID << "\n";
   }
+
+  // Print the CFI function entries (the names of the functions with jump
+  // table entries, with the GUIDs that ThinLTO uses for them).
+  auto PrintCfiFunctions = [&](const CfiFunctionIndex &CfiIndex,
+                               StringRef EntryName) {
+    if (CfiIndex.empty())
+      return;
+    Out << "^" << NumSlots++ << " = " << EntryName << ": (";
+    ListSeparator FS;
+    for (const auto &[Name, GUID] : CfiIndex.getSortedSymbols()) {
+      Out << FS << "(guid: " << GUID << ", name: \"";
+      printEscapedString(Name, Out);
+      Out << "\")";
+    }
+    Out << ")\n";
+  };
+  PrintCfiFunctions(TheIndex->cfiFunctionDefs(), "cfiFunctionDefs");
+  PrintCfiFunctions(TheIndex->cfiFunctionDecls(), "cfiFunctionDecls");
 
   // Don't emit flags when it's not really needed (value is zero by default).
   if (TheIndex->getFlags()) {
@@ -3485,8 +3507,11 @@ void AssemblyWriter::printWPDRes(const WholeProgramDevirtResolution &WPDRes) {
   Out << "wpdRes: (kind: ";
   Out << getWholeProgDevirtResKindName(WPDRes.TheKind);
 
-  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl)
-    Out << ", singleImplName: \"" << WPDRes.SingleImplName << "\"";
+  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl) {
+    Out << ", singleImplName: \"";
+    printEscapedString(WPDRes.SingleImplName, Out);
+    Out << "\"";
+  }
 
   if (!WPDRes.ResByArg.empty()) {
     Out << ", resByArg: (";
@@ -3893,10 +3918,13 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
 
 void AssemblyWriter::printSummaryInfo(unsigned Slot, const ValueInfo &VI) {
   Out << "^" << Slot << " = gv: (";
-  if (VI.hasName() && !VI.name().empty())
-    Out << "name: \"" << VI.name() << "\"";
-  else
+  if (VI.hasName() && !VI.name().empty()) {
+    Out << "name: \"";
+    printEscapedString(VI.name(), Out);
+    Out << "\"";
+  } else {
     Out << "guid: " << VI.getGUID();
+  }
   if (!VI.getSummaryList().empty()) {
     Out << ", summaries: (";
     ListSeparator FS;

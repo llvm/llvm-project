@@ -124,6 +124,7 @@ add_math_entrypoint_object(cosf)
 add_math_entrypoint_object(cosf16)
 
 add_math_entrypoint_object(cosh)
+add_math_entrypoint_object(coshbf16)
 add_math_entrypoint_object(coshf)
 add_math_entrypoint_object(coshf16)
 
@@ -420,6 +421,7 @@ add_math_entrypoint_object(ldexpbf16)
 add_math_entrypoint_object(log10)
 add_math_entrypoint_object(log10f)
 add_math_entrypoint_object(log10f16)
+add_math_entrypoint_object(log10p1bf16)
 add_math_entrypoint_object(log10p1f16)
 
 add_math_entrypoint_object(log1p)

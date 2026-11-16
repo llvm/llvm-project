@@ -416,7 +416,7 @@ class FunctionDifferenceEngine {
   // assumption to be checked later in BlockDiffCandidates.
   bool diff(const Instruction *L, const Instruction *R, bool Complain,
             bool TryUnify, bool AllowAssumptions) {
-    // FIXME: metadata (if Complain is set)
+    // FIXME: metadata other than TBAA and alias scopes (if Complain is set)
     AssumptionContext ACValue = {L->getParent(), R->getParent()};
     // nullptr AssumptionContext disables assumption generation.
     const AssumptionContext *AC = AllowAssumptions ? &ACValue : nullptr;
@@ -430,6 +430,12 @@ class FunctionDifferenceEngine {
     if (hasDifferentFlags(L, R)) {
       if (Complain)
         Engine.log("different instruction flags");
+      return true;
+    }
+
+    if (!hasSameAliasingMetadata(L, R)) {
+      if (Complain)
+        Engine.log("different aliasing metadata");
       return true;
     }
 

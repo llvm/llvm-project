@@ -251,7 +251,7 @@ SPIRVExtensionsParser::checkExtensions(ArrayRef<std::string> ExtNames,
     if (Ext == "all") {
       for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
         AllowedExtensions.insert(ExtensionEnum);
-      break;
+      return StringRef();
     }
     auto It = SPIRVExtensionMap.find(Ext);
     if (It == SPIRVExtensionMap.end())

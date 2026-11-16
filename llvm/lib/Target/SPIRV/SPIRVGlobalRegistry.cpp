@@ -1853,7 +1853,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateOpTypeByOpcode(
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateUnknownType(
     const Type *Ty, MachineIRBuilder &MIRBuilder, unsigned Opcode,
-    const ArrayRef<MCOperand> Operands) {
+    const ArrayRef<MachineOperand> Operands) {
   if (const MachineInstr *MI = findMI(Ty, false, &MIRBuilder.getMF()))
     return MI;
   Register ResVReg = createTypeVReg(MIRBuilder);
@@ -1862,12 +1862,10 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateUnknownType(
         MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::UNKNOWN_type)
                                       .addDef(ResVReg)
                                       .addImm(Opcode);
-        for (MCOperand Operand : Operands) {
-          if (Operand.isReg()) {
-            MIB.addUse(Operand.getReg());
-          } else if (Operand.isImm()) {
-            MIB.addImm(Operand.getImm());
-          }
+        for (const MachineOperand &Operand : Operands) {
+          assert((Operand.isReg() || Operand.isImm()) &&
+                 "Expected register or immediate operand");
+          MIB.add(Operand);
         }
         return MIB;
       });
@@ -2203,6 +2201,7 @@ SPIRVGlobalRegistry::getRegClass(SPIRVTypeInst SpvType) const {
   case SPIRV::OpTypeFloat:
     return &SPIRV::fIDRegClass;
   case SPIRV::OpTypePointer:
+  case SPIRV::OpTypeUntypedPointerKHR:
     return &SPIRV::pIDRegClass;
   case SPIRV::OpTypeVector:
   case SPIRV::OpTypeVectorIdEXT: {
@@ -2210,7 +2209,7 @@ SPIRVGlobalRegistry::getRegClass(SPIRVTypeInst SpvType) const {
     unsigned ElemOpcode = ElemType ? ElemType->getOpcode() : 0;
     if (ElemOpcode == SPIRV::OpTypeFloat)
       return &SPIRV::vfIDRegClass;
-    if (ElemOpcode == SPIRV::OpTypePointer)
+    if (ElemType && ElemType.isPointer())
       return &SPIRV::vpIDRegClass;
     return &SPIRV::viIDRegClass;
   }

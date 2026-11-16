@@ -42,7 +42,7 @@ body: |
     ; CHECK-NEXT: DBG_VALUE [[S_ADD_U32_]], $noreg, !7, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
     ; CHECK-NEXT: DBG_VALUE [[S_ADD_U32_]], $noreg, !7, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
     ; CHECK-NEXT: DBG_VALUE [[S_ADD_U32_]], $noreg, !7, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
-    ; CHECK-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit $scc
+    ; CHECK-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 9, [[S_MOV_B32_1]], implicit $scc
     ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_U32_]], [[S_CSELECT_B32_]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_ADD_I32_]]
     %0:sreg_32 = S_ADD_I32 $sgpr0, 1, implicit-def dead $scc
