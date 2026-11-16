@@ -134,7 +134,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
     return;
   }
 
-  if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
+  if (INFO_VERBOSITY(OMP_INFOTYPE_KERNEL_ARGS))
     printKernelArguments(Loc, DeviceId, ArgNum, ArgSizes, ArgTypes, ArgNames,
                          RegionTypeMsg);
   ODBG_OS(ODT_Kernel, [&](llvm::raw_ostream &Os) {
@@ -407,7 +407,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
       UserArgCount > 0)
     --UserArgCount;
 
-  if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
+  if (INFO_VERBOSITY(OMP_INFOTYPE_KERNEL_ARGS))
     printKernelArguments(Loc, DeviceId, UserArgCount, KernelArgs->ArgSizes,
                          KernelArgs->ArgTypes, KernelArgs->ArgNames,
                          "Entering OpenMP kernel");

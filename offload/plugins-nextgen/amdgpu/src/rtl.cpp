@@ -2842,8 +2842,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                "failed to find `lld` on the PATH.");
 
     std::string LLDPath = ErrorOrPath.get();
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId(),
-         "Using `%s` to link JITed amdgcn output.", LLDPath.c_str());
+    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId())
+        << "Using `" << LLDPath << "` to link JITed amdgcn output.";
 
     std::string MCPU = "-plugin-opt=mcpu=" + getComputeUnitKind();
     StringRef Args[] = {LLDPath,
@@ -4748,7 +4748,7 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(
     GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
     uint32_t NumThreads[3], uint32_t NumBlocks[3]) const {
   // Only do all this when the output is requested
-  if (!(getInfoLevel() & OMP_INFOTYPE_PLUGIN_KERNEL))
+  if (!INFO_VERBOSITY(OMP_INFOTYPE_PLUGIN_KERNEL))
     return Plugin::success();
 
   // General Info
@@ -4776,13 +4776,15 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(
   // LDS Usage: Amount of bytes used in LDS storage
   // S/VGPR Count: the number of S/V GPRs occupied by the kernel
   // S/VGPR Spill Count: how many S/VGPRs are spilled by the kernel
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
-       "#Args: %d Teams x Thrds: %4ux%4u (MaxFlatWorkGroupSize: %u) LDS "
-       "Usage: %uB #SGPRs/VGPRs: %u/%u #SGPR/VGPR Spills: %u/%u\n",
-       ArgNum, NumGroups[0] * NumGroups[1] * NumGroups[2],
-       ThreadsPerGroup[0] * ThreadsPerGroup[1] * ThreadsPerGroup[2],
-       MaxFlatWorkgroupSize, GroupSegmentSize, SGPRCount, VGPRCount,
-       SGPRSpillCount, VGPRSpillCount);
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId())
+      << "#Args: " << ArgNum << " Teams x Thrds: "
+      << format_decimal(NumGroups[0] * NumGroups[1] * NumGroups[2], 4) << "x"
+      << format_decimal(
+             ThreadsPerGroup[0] * ThreadsPerGroup[1] * ThreadsPerGroup[2], 4)
+      << " (MaxFlatWorkGroupSize: " << MaxFlatWorkgroupSize
+      << ") LDS Usage: " << GroupSegmentSize << "B #SGPRs/VGPRs: " << SGPRCount
+      << "/" << VGPRCount << " #SGPR/VGPR Spills: " << SGPRSpillCount << "/"
+      << VGPRSpillCount;
 
   return Plugin::success();
 }
