@@ -1960,11 +1960,6 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (int_amdgcn_endpgm),
-    (S_ENDPGM (i16 0))
->;
-
-def : GCNPat <
   (i64 (UniformUnaryFrag<ctpop> i64:$src)),
     (i64 (REG_SEQUENCE SReg_64,
      (i32 (COPY_TO_REGCLASS (S_BCNT1_I32_B64 $src), SReg_32)), sub0,
