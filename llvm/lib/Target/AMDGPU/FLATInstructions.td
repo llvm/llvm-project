@@ -481,7 +481,7 @@ class FLAT_Global_Tensor_Pseudo<string opName, bit EnableSaddr = 0> : FLAT_Pseud
   opName,
   (outs ),
   !con(!if(EnableSaddr, (ins SReg_64:$saddr, flat_offset:$offset), (ins )), (ins CPol_0:$cpol)),
-  !if(EnableSaddr, " $saddr$offset", " ")#"$cpol"> {
+  !if(EnableSaddr, " $saddr$offset", "")#"$cpol"> {
 
   let is_flat_global = 1;
   let has_vdst = 0;
@@ -1297,7 +1297,7 @@ defm SCRATCH_LOAD_LDS_USHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_u
 defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_sshort">;
 defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_dword">;
 
-let SubtargetPredicate = isGFX125xOnly in {
+let SubtargetPredicate = HasLoadMonitorInsts in {
 defm FLAT_LOAD_MONITOR_B32    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b32",  VGPROp_32>;
 defm FLAT_LOAD_MONITOR_B64    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b64",  VGPROp_64>;
 defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128", VGPROp_128>;
@@ -1305,7 +1305,7 @@ defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128",
 defm GLOBAL_LOAD_MONITOR_B32  : FLAT_Global_Load_Pseudo <"global_load_monitor_b32",  VGPROp_32>;
 defm GLOBAL_LOAD_MONITOR_B64  : FLAT_Global_Load_Pseudo <"global_load_monitor_b64",  VGPROp_64>;
 defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b128", VGPROp_128>;
-} // End SubtargetPredicate = isGFX125xOnly
+} // End SubtargetPredicate = HasLoadMonitorInsts
 
 let SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32 in {
 let Uses = [M0, EXEC] in { // Use M0 for broadcast workgroup mask.
@@ -2371,7 +2371,7 @@ let WaveSizePredicate = isWave32,  OtherPredicates = [HasTransposeLoadF4F6Insts]
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
 }
 
-let OtherPredicates = [isGFX125xOnly] in {
+let SubtargetPredicate = HasLoadMonitorInsts in {
   def  : FlatLoadPat <FLAT_LOAD_MONITOR_B32,  AMDGPUflat_load_monitor,  i32>;
   def  : FlatLoadPat <FLAT_LOAD_MONITOR_B64,  AMDGPUflat_load_monitor,  v2i32>;
   def  : FlatLoadPat <FLAT_LOAD_MONITOR_B128, AMDGPUflat_load_monitor, v4i32>;
@@ -2379,7 +2379,7 @@ let OtherPredicates = [isGFX125xOnly] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B32,  AMDGPUglobal_load_monitor,  i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B64,  AMDGPUglobal_load_monitor,  v2i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B128, AMDGPUglobal_load_monitor, v4i32>;
-} // End SubtargetPredicate = isGFX125xOnly
+} // End SubtargetPredicate = HasLoadMonitorInsts
 
 let OtherPredicates = [isGFX1250Plus] in {
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B32,  int_amdgcn_cluster_load_b32,  i32>;
@@ -2679,11 +2679,7 @@ defm FLAT_ATOMIC_FMAX_X2       : FLAT_Real_Atomics_ci <0x60, "FLAT_ATOMIC_MAX_F6
 //===----------------------------------------------------------------------===//
 
 class FLAT_Real_vi <bits<7> op, FLAT_Pseudo ps, bit has_sccb = ps.has_sccb> :
-  FLAT_Real <op, ps>,
-  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.VI> {
-  let AssemblerPredicate = isGFX8GFX9;
-  let DecoderNamespace = "GFX8";
-
+  FLAT_Real <op, ps>, Select_vi <ps.PseudoInstr> {
   let Inst{25} = !if(has_sccb, cpol{CPolBit.SCC}, ps.sccbValue);
   let AsmString = ps.Mnemonic #
                   !subst("$sccb", !if(has_sccb, "$sccb",""), ps.AsmOperands);
@@ -2909,14 +2905,14 @@ let AssemblerPredicate = isGFX8GFX9NotGFX940 in {
   // These instructions are encoded differently on gfx90* and gfx94*.
   defm GLOBAL_ATOMIC_ADD_F32    : FLAT_Global_Real_Atomics_vi <0x04d, 0>;
   defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Real_Atomics_vi <0x04e, 0>;
-}
 
-defm FLAT_ATOMIC_ADD_F64   : FLAT_Real_Atomics_vi<0x4f, 0>;
-defm FLAT_ATOMIC_MIN_F64   : FLAT_Real_Atomics_vi<0x50, 0>;
-defm FLAT_ATOMIC_MAX_F64   : FLAT_Real_Atomics_vi<0x51, 0>;
-defm GLOBAL_ATOMIC_ADD_F64 : FLAT_Global_Real_Atomics_vi<0x4f, 0>;
-defm GLOBAL_ATOMIC_MIN_F64 : FLAT_Global_Real_Atomics_vi<0x50, 0>;
-defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Real_Atomics_vi<0x51, 0>;
+  defm FLAT_ATOMIC_ADD_F64   : FLAT_Real_Atomics_vi<0x4f, 0>;
+  defm FLAT_ATOMIC_MIN_F64   : FLAT_Real_Atomics_vi<0x50, 0>;
+  defm FLAT_ATOMIC_MAX_F64   : FLAT_Real_Atomics_vi<0x51, 0>;
+  defm GLOBAL_ATOMIC_ADD_F64 : FLAT_Global_Real_Atomics_vi<0x4f, 0>;
+  defm GLOBAL_ATOMIC_MIN_F64 : FLAT_Global_Real_Atomics_vi<0x50, 0>;
+  defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Real_Atomics_vi<0x51, 0>;
+}
 
 multiclass FLAT_Real_AllAddr_gfx940<bits<7> op> {
   def _gfx940       : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME)>;
@@ -2927,12 +2923,16 @@ multiclass FLAT_Real_Atomics_gfx940 <bits<7> op> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
   def _gfx940     : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(ps.PseudoInstr)>;
   def _RTN_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN")>;
+  def _RTN_agpr_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN_agpr")>;
 }
 
 multiclass FLAT_Global_Real_Atomics_gfx940<bits<7> op> :
   FLAT_Real_AllAddr_gfx940<op> {
   def _RTN_gfx940       : FLAT_Real_gfx940 <op, !cast<FLAT_Pseudo>(NAME#"_RTN")>;
   def _SADDR_RTN_gfx940 : FLAT_Real_gfx940 <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN")>;
+
+  def _RTN_agpr_gfx940       : FLAT_Real_gfx940 <op, !cast<FLAT_Pseudo>(NAME#"_RTN_agpr")>;
+  def _SADDR_RTN_agpr_gfx940 : FLAT_Real_gfx940 <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN_agpr")>;
 }
 
 let AssemblerPredicate = isGFX940Plus in {
@@ -2957,10 +2957,7 @@ let AssemblerPredicate = isGFX940Plus in {
 //===----------------------------------------------------------------------===//
 
 class FLAT_Real_gfx10<bits<7> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
-    FLAT_Real<op, ps, opName>, SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX10> {
-  let AssemblerPredicate = isGFX10Only;
-  let DecoderNamespace = "GFX10";
-
+    FLAT_Real<op, ps, opName>, Select <GFX10Gen, ps.PseudoInstr> {
   let Inst{11-0}  = offset{11-0};
   let Inst{12}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, ps.dlcValue);
   let Inst{54-48} = !cond(ps.enabled_saddr : saddr,
@@ -3203,11 +3200,7 @@ class get_FLAT_ps<string name> {
 multiclass FLAT_Real_gfx11 <bits<7> op,
                             string name = get_FLAT_ps<NAME>.Mnemonic> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
-  def _gfx11 : FLAT_Real <op, ps, name>,
-               SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX11> {
-    let AssemblerPredicate = isGFX11Only;
-    let DecoderNamespace = "GFX11";
-
+  def _gfx11 : FLAT_Real <op, ps, name>, Select <GFX11Gen, ps.PseudoInstr> {
     let Inst{13}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, ps.dlcValue);
     let Inst{14}    = !if(ps.has_glc, cpol{CPolBit.GLC}, ps.glcValue);
     let Inst{15}    = cpol{CPolBit.SLC};
@@ -3398,11 +3391,7 @@ defm SCRATCH_STORE_SHORT_D16_HI : SCRATCH_Real_AllAddr_gfx11<0x25, "scratch_stor
 
 multiclass VFLAT_Real_gfx12 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
-  def _gfx12 : VFLAT_Real <op, ps, name>,
-               SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX12> {
-    let AssemblerPredicate = isGFX12Only;
-    let DecoderNamespace = "GFX12";
-
+  def _gfx12 : VFLAT_Real <op, ps, name>, Select <GFX12Gen, ps.PseudoInstr> {
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
     let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
   }
@@ -3628,11 +3617,7 @@ defm SCRATCH_STORE_BLOCK           : VSCRATCH_Real_AllAddr_gfx12<0x54>;
 multiclass VFLAT_Real_gfx1250<bits<8> op,
                               string name = get_FLAT_ps<NAME>.Mnemonic> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
-  def _gfx1250 : VFLAT_Real<op, ps, name>,
-                 SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1250> {
-    let AssemblerPredicate = isGFX125xOnly;
-    let DecoderNamespace = "GFX1250";
-
+  def _gfx1250 : VFLAT_Real<op, ps, name>, Select <GFX1250Gen, ps.PseudoInstr> {
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
     let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
   }
@@ -3720,11 +3705,7 @@ defm GLOBAL_ATOMIC_MAX_F64            : VFLAT_Real_Atomics_gfx1250<0x05c, "globa
 //===----------------------------------------------------------------------===//
 
 class VFLAT_Real_Base_gfx13 <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic>
- : VFLAT_Real <op, ps, opName>,
-   SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX13> {
-  let AssemblerPredicate = isGFX13Only;
-  let DecoderNamespace = "GFX13";
-
+ : VFLAT_Real <op, ps, opName>, Select <GFX13Gen, ps.PseudoInstr> {
   let Inst{9-8} = cpol{8-7}; // cache fill size
   let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
 }

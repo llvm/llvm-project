@@ -654,6 +654,22 @@ func.func @printf(%fmt : !spirv.ptr<i8, UniformConstant>, %arg1 : i32, %arg2 : i
 
 // -----
 
+func.func @printf_i64_result(%fmt : !spirv.ptr<i8, UniformConstant>) -> () {
+  // expected-error @+1 {{op result #0 must be Int32}}
+  %0 = spirv.CL.printf %fmt : !spirv.ptr<i8, UniformConstant> -> i64
+  return
+}
+
+// -----
+
+func.func @printf_i32_format(%fmt : !spirv.ptr<i32, UniformConstant>) -> () {
+  // expected-error @+1 {{op operand #0 must be pointer to 8-bit integer}}
+  %0 = spirv.CL.printf %fmt : !spirv.ptr<i32, UniformConstant> -> i32
+  return
+}
+
+// -----
+
 func.func @tan(%arg0 : f32) -> () {
   // CHECK: spirv.CL.tan {{%.*}} : f32
   %2 = spirv.CL.tan %arg0 : f32

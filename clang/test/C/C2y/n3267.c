@@ -253,3 +253,25 @@ void negative_test_while_init_clause() {
                               expected-note {{to match this '('}}
                               expected-error {{use of undeclared identifier 'x'}} */
 }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wgnu-pointer-arith"
+#pragma clang diagnostic warning "-Wgnu-statement-expression"
+
+void extension_in_if(void *p, void *q) {
+  (void)__extension__(p + 1);
+  if (__extension__(p + 1)) {}
+  if (__extension__(p + 1) ==
+      (q + 1)) {} // expected-warning {{arithmetic on a pointer to void is a GNU extension}}
+  if (__extension__({ 0; })) {}
+  if (__extension__ void *r = p + 1) {}
+  if (__extension__ void *r = p + 1;
+      r == (q + 1)) {} // expected-warning {{arithmetic on a pointer to void is a GNU extension}}
+  switch (__extension__({ 0; })) {
+  default:
+    break;
+  }
+  while (__extension__(p + 1)) {}
+}
+
+#pragma clang diagnostic pop

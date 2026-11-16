@@ -887,7 +887,7 @@ func.func @replace_duplicate_iter_args(%lb: index, %ub: index, %step: index, %a:
 
 // -----
 
-func.func private @do(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32>
+func.func private @do(%arg0: tensor<?x?xf32>) -> tensor<32x1024xf32>
 
 func.func @matmul_on_tensors(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {
   %c0 = arith.constant 0 : index
@@ -895,8 +895,9 @@ func.func @matmul_on_tensors(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {
   %c1024 = arith.constant 1024 : index
   %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
   %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
-    %2 = func.call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
-    scf.yield %2 : tensor<?x?xf32>
+    %2 = func.call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<32x1024xf32>
+    %3 = tensor.cast %2 : tensor<32x1024xf32> to tensor<?x?xf32>
+    scf.yield %3 : tensor<?x?xf32>
   } {some_attr}
   return %1 : tensor<?x?xf32>
 }
@@ -906,12 +907,108 @@ func.func @matmul_on_tensors(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {
 //   CHECK-NOT: tensor.cast
 //       CHECK: %[[FOR_RES:.*]] = scf.for {{.*}} iter_args(%[[ITER_T0:.*]] = %[[T0]]) -> (tensor<32x1024xf32>) {
 //       CHECK:   %[[CAST:.*]] = tensor.cast %[[ITER_T0]] : tensor<32x1024xf32> to tensor<?x?xf32>
-//       CHECK:   %[[DONE:.*]] = func.call @do(%[[CAST]]) : (tensor<?x?xf32>) -> tensor<?x?xf32>
-//       CHECK:   %[[UNCAST:.*]] = tensor.cast %[[DONE]] : tensor<?x?xf32> to tensor<32x1024xf32>
-//       CHECK:   scf.yield %[[UNCAST]] : tensor<32x1024xf32>
+//       CHECK:   %[[DONE:.*]] = func.call @do(%[[CAST]]) : (tensor<?x?xf32>) -> tensor<32x1024xf32>
+//       CHECK:   scf.yield %[[DONE]] : tensor<32x1024xf32>
 //       CHECK: } {some_attr}
 //       CHECK: %[[RES:.*]] = tensor.cast
 //       CHECK: return %[[RES]] : tensor<?x?xf32>
+
+// -----
+
+// The inner loop inserts into the tensor it carries, so both loops keep the
+// static shape and the cast moves into the outer loop.
+
+func.func @tensor_cast_into_for_nested_tied_yield(%t0: tensor<32x1024xf32>, %f: f32) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c32 = arith.constant 32 : index
+  %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
+  %1 = scf.for %i = %c0 to %c32 step %c1 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
+    %2 = scf.for %j = %c0 to %c32 step %c1 iter_args(%iter_t1 = %iter_t0) -> (tensor<?x?xf32>) {
+      %3 = tensor.insert %f into %iter_t1[%i, %j] : tensor<?x?xf32>
+      scf.yield %3 : tensor<?x?xf32>
+    }
+    scf.yield %2 : tensor<?x?xf32>
+  }
+  return %1 : tensor<?x?xf32>
+}
+// CHECK-LABEL: func @tensor_cast_into_for_nested_tied_yield
+//       CHECK:   scf.for {{.*}} -> (tensor<32x1024xf32>) {
+//       CHECK:     scf.for {{.*}} -> (tensor<32x1024xf32>) {
+
+// -----
+
+// The loop may change the shape it carries, so the cast stays outside it.
+
+func.func private @resize(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32>
+
+func.func @no_tensor_cast_into_for_unknown_yield(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %c1024 = arith.constant 1024 : index
+  %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
+  %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
+    %2 = func.call @resize(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
+    scf.yield %2 : tensor<?x?xf32>
+  }
+  return %1 : tensor<?x?xf32>
+}
+// CHECK-LABEL: func @no_tensor_cast_into_for_unknown_yield
+//       CHECK:   %[[CAST:.*]] = tensor.cast
+//       CHECK:   scf.for {{.*}} iter_args(%{{.*}} = %[[CAST]]) -> (tensor<?x?xf32>) {
+
+// -----
+
+// The loop yields a cast from another static type, so the cast stays outside it.
+
+func.func private @reshape(%arg0: tensor<?x?xf32>) -> tensor<16x2048xf32>
+
+func.func @no_tensor_cast_into_for_other_static_yield(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %c1024 = arith.constant 1024 : index
+  %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
+  %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
+    %2 = func.call @reshape(%iter_t0) : (tensor<?x?xf32>) -> tensor<16x2048xf32>
+    %3 = tensor.cast %2 : tensor<16x2048xf32> to tensor<?x?xf32>
+    scf.yield %3 : tensor<?x?xf32>
+  }
+  return %1 : tensor<?x?xf32>
+}
+// CHECK-LABEL: func @no_tensor_cast_into_for_other_static_yield
+//       CHECK:   %[[CAST:.*]] = tensor.cast
+//       CHECK:   scf.for {{.*}} iter_args(%{{.*}} = %[[CAST]]) -> (tensor<?x?xf32>) {
+
+// -----
+
+// The loop yields a cast from the same partially static type, so the cast
+// moves into the loop. The size of the dynamic dimension may change between
+// iterations; the type the loop carries says nothing about it.
+
+func.func private @resize_rows(%arg0: tensor<?x?xf32>) -> tensor<?x16xf32>
+
+func.func @tensor_cast_into_for_dynamic_dim_yield(%t0: tensor<?x16xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %0 = tensor.cast %t0 : tensor<?x16xf32> to tensor<?x?xf32>
+  %1 = scf.for %i = %c0 to %c8 step %c1 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
+    %2 = func.call @resize_rows(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x16xf32>
+    %3 = tensor.cast %2 : tensor<?x16xf32> to tensor<?x?xf32>
+    scf.yield %3 : tensor<?x?xf32>
+  }
+  return %1 : tensor<?x?xf32>
+}
+// CHECK-LABEL: func @tensor_cast_into_for_dynamic_dim_yield
+//  CHECK-SAME:     %[[T0:[0-9a-z]*]]: tensor<?x16xf32>
+//   CHECK-NOT:   tensor.cast
+//       CHECK:   %[[FOR_RES:.*]] = scf.for {{.*}} iter_args(%[[ITER_T0:.*]] = %[[T0]]) -> (tensor<?x16xf32>) {
+//       CHECK:     %[[CAST:.*]] = tensor.cast %[[ITER_T0]] : tensor<?x16xf32> to tensor<?x?xf32>
+//       CHECK:     %[[DONE:.*]] = func.call @resize_rows(%[[CAST]]) : (tensor<?x?xf32>) -> tensor<?x16xf32>
+//       CHECK:     scf.yield %[[DONE]] : tensor<?x16xf32>
+//       CHECK:   }
+//       CHECK:   %[[RES:.*]] = tensor.cast %[[FOR_RES]] : tensor<?x16xf32> to tensor<?x?xf32>
+//       CHECK:   return %[[RES]] : tensor<?x?xf32>
 
 // -----
 
@@ -2731,3 +2828,85 @@ func.func @select_chain(%p: i1, %a: i32, %b: i32, %c: i32) -> i32 {
   return %y : i32
 }
 func.func private @consume_pair(i32, i32)
+
+// -----
+
+// bounds that look like ub < lb when read as signed must not erase an
+// unsigned scf.parallel. The unsigned trip count is 4.
+// CHECK-LABEL: func @unsigned_parallel_not_erased
+// CHECK-SAME: (%[[A:.*]]: memref<4xi64>)
+// CHECK-DAG: %[[LB:.*]] = arith.constant 9223372036854775806 : index
+// CHECK-DAG: %[[UB:.*]] = arith.constant -9223372036854775806 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: scf.parallel unsigned (%[[I:.*]]) = (%[[LB]]) to (%[[UB]]) step (%[[C1]]) {
+// CHECK:   %[[OFF:.*]] = arith.subi %[[I]], %[[LB]] : index
+// CHECK:   %[[V:.*]] = arith.index_cast %[[OFF]] : index to i64
+// CHECK:   memref.store %[[V]], %[[A]][%[[OFF]]] : memref<4xi64>
+// CHECK:   scf.reduce
+func.func @unsigned_parallel_not_erased(%arg0: memref<4xi64>) {
+  %lb = arith.constant 9223372036854775806 : index
+  %ub = arith.constant -9223372036854775806 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel unsigned (%i) = (%lb) to (%ub) step (%c1) {
+    %off = arith.subi %i, %lb : index
+    %v = arith.index_cast %off : index to i64
+    memref.store %v, %arg0[%off] : memref<4xi64>
+    scf.reduce
+  }
+  return
+}
+
+// -----
+
+// removing the single-iteration dim must keep `unsigned` on the rebuilt loop.
+// CHECK-LABEL: func @unsigned_parallel_single_iter_dim_keeps_unsigned
+// CHECK-SAME: (%[[A:.*]]: memref<4xi64>, %[[LB:.*]]: index, %[[UB:.*]]: index)
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-NOT: scf.parallel (%{{.*}}, %{{.*}})
+// CHECK: scf.parallel unsigned (%[[I:.*]]) = (%[[LB]]) to (%[[UB]]) step (%[[C1]]) {
+// CHECK:   %[[OFF:.*]] = arith.subi %[[I]], %[[LB]] : index
+// CHECK:   %[[V:.*]] = arith.index_cast %[[OFF]] : index to i64
+// CHECK:   memref.store %[[V]], %[[A]][%[[OFF]]] : memref<4xi64>
+func.func @unsigned_parallel_single_iter_dim_keeps_unsigned(
+    %arg0: memref<4xi64>, %lb: index, %ub: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel unsigned (%k, %i) = (%c0, %lb) to (%c1, %ub) step (%c1, %c1) {
+    %off0 = arith.subi %i, %lb : index
+    %off = arith.addi %off0, %k : index
+    %v = arith.index_cast %off : index to i64
+    memref.store %v, %arg0[%off] : memref<4xi64>
+    scf.reduce
+  }
+  return
+}
+
+// -----
+
+// a signed outer loop and an unsigned inner loop must not be merged.
+// CHECK-LABEL: func @mixed_signedness_parallel_not_merged
+// CHECK-SAME: (%[[A:.*]]: memref<2x4xi64>, %[[LB:.*]]: index, %[[UB:.*]]: index)
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: scf.parallel (%[[K:.*]]) = (%[[C0]]) to (%[[C2]]) step (%[[C1]]) {
+// CHECK:   scf.parallel unsigned (%[[I:.*]]) = (%[[LB]]) to (%[[UB]]) step (%[[C1]]) {
+// CHECK:     %[[OFF:.*]] = arith.subi %[[I]], %[[LB]] : index
+// CHECK:     %[[V:.*]] = arith.index_cast %[[OFF]] : index to i64
+// CHECK:     memref.store %[[V]], %[[A]][%[[K]], %[[OFF]]] : memref<2x4xi64>
+func.func @mixed_signedness_parallel_not_merged(
+    %arg0: memref<2x4xi64>, %lb: index, %ub: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  scf.parallel (%k) = (%c0) to (%c2) step (%c1) {
+    scf.parallel unsigned (%i) = (%lb) to (%ub) step (%c1) {
+      %off = arith.subi %i, %lb : index
+      %v = arith.index_cast %off : index to i64
+      memref.store %v, %arg0[%k, %off] : memref<2x4xi64>
+      scf.reduce
+    }
+    scf.reduce
+  }
+  return
+}

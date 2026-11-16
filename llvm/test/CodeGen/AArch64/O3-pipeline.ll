@@ -158,10 +158,8 @@
 ; CHECK-NEXT:       AArch64 Stack Tagging PreRA
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
-; CHECK-NEXT:       Machine Cycle Info Analysis
-; CHECK-NEXT:       Machine Block Frequency Analysis
+; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Early Machine Loop Invariant Code Motion
-; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Cycle Info Analysis
 ; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Common Subexpression Elimination

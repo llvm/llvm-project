@@ -228,6 +228,19 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 
 static llvm::Error ExecuteIncrementalAction(CompilerInstance &CI,
                                             IncrementalAction &Act) {
+  // Parse -mllvm before the action gives CI's library options to the
+  // LLVMContext.
+  std::string Msg;
+  llvm::raw_string_ostream OS(Msg);
+  if (!CI.parseLLVMArgs(&OS)) {
+    // Without a preprocessor, the SourceManager never adopts the buffers.
+    PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
+    if (!PPOpts.RetainRemappedFileBuffers)
+      for (auto &RB : PPOpts.RemappedFileBuffers)
+        delete RB.second;
+    PPOpts.clearRemappedFiles();
+    return llvm::createStringError(llvm::StringRef(Msg).rtrim());
+  }
   if (!CI.ExecuteAction(Act) || CI.getDiagnostics().hasErrorOccurred()) {
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Failed to execute incremental action");
@@ -442,9 +455,6 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
-
-  // Honor -mllvm options
-  CI->parseLLVMArgs();
 
   Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
     return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
@@ -680,7 +690,12 @@ Interpreter::Parse(llvm::StringRef Code) {
     if (auto E = DeviceTU.takeError())
       return std::move(E);
 
-    DeviceParser->RegisterPTU(*DeviceTU);
+    PartialTranslationUnit &DevicePTU = DeviceParser->RegisterPTU(*DeviceTU);
+
+    // Under -emit-llvm, print the device module IR before it is lowered.
+    if (DevicePTU.TheModule &&
+        DeviceCI->getFrontendOpts().ProgramAction == frontend::EmitLLVM)
+      DevicePTU.TheModule->print(llvm::outs(), /*AAW=*/nullptr);
 
     llvm::Error Err = DeviceParser->GenerateOffloadBinary();
     if (Err)
@@ -719,10 +734,6 @@ llvm::Error Interpreter::CreateExecutor() {
 
   if (!IncrExecutorBuilder)
     IncrExecutorBuilder = IncrementalExecutorBuilder::createDefault();
-
-  // Propagate mllvm args so the wasm executor can restore them after each
-  // lldMain invocation (which resets all cl options for test isolation).
-  IncrExecutorBuilder->LLVMArgs = CI->getFrontendOpts().LLVMArgs;
 
   auto ExecutorOrErr = IncrExecutorBuilder->create(*TSCtx, CI->getTarget());
   if (ExecutorOrErr)

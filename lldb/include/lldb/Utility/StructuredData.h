@@ -616,6 +616,7 @@ public:
   }
 
   static ObjectSP ParseJSON(llvm::StringRef json_text);
+  static ObjectSP ParseJSONValue(const llvm::json::Value &value);
   static ObjectSP ParseJSONFromFile(const FileSpec &file, Status &error);
   static bool IsRecordType(const ObjectSP object_sp);
 };

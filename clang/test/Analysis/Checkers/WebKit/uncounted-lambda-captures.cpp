@@ -734,3 +734,26 @@ void instantiate_dependent_callables(NoEscapeCallable& noEscape,
 void lambda_in_system_header(RefCountable* ref_countable) {
   lambdaInSystemHeader(ref_countable);
 }
+
+void lambda_discarded_with_void_cast(RefCountable* obj) {
+  auto lambda = [&]() {
+    obj->method();
+  };
+  (void)lambda;
+  static_cast<void>(lambda);
+  (void(lambda));
+  (void)(lambda);
+  auto scope = WTF::makeScopeExit([&] {
+    obj->method();
+  });
+  (void)scope;
+}
+
+void lambda_escapes_after_void_cast(RefCountable* obj) {
+  auto lambda = [&]() {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  };
+  (void)lambda;
+  callFunctionOpaque(lambda);
+}

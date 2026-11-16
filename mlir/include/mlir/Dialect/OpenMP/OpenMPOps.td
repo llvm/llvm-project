@@ -247,7 +247,7 @@ def ParallelOp : OpenMP_Op<"parallel", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
+        $private_syms, $private_needs_barrier, $reduction_mods, $reduction_vars,
         type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -294,7 +294,7 @@ def TeamsOp : OpenMP_Op<"teams", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
+        $private_syms, $private_needs_barrier, $reduction_mods, $reduction_vars,
         type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -306,7 +306,8 @@ def TeamsOp : OpenMP_Op<"teams", traits = [
 //===----------------------------------------------------------------------===//
 
 def SectionOp : OpenMP_Op<"section", traits = [
-    BlockArgOpenMPOpInterface, HasParent<"SectionsOp">
+    BlockArgOpenMPOpInterface, HasParent<"SectionsOp">,
+    RecursiveMemoryEffects
   ], singleRegion = true> {
   let summary = "section directive";
   let description = [{
@@ -329,10 +330,12 @@ def SectionOp : OpenMP_Op<"section", traits = [
 
 def SectionsOp : OpenMP_Op<"sections", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
-    HasParallelRegion
+    HasParallelRegion,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>, RecursiveMemoryEffects
   ], clauses = [
-    OpenMP_AllocateClause, OpenMP_NowaitClause, OpenMP_PrivateClause,
-    OpenMP_ReductionClause
+    OpenMP_AllocateClause, OpenMP_NowaitClause,
+    OpenMP_PrivateClauseSkip<boundedRecipeEffects = true>,
+    OpenMP_ReductionClauseSkip<boundedRecipeEffects = true>
   ], singleRegion = true> {
   let summary = "sections construct";
   let description = [{
@@ -354,8 +357,8 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
-        type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
+        $private_syms, $private_needs_barrier, $reduction_mods, $reduction_vars,
+        type($reduction_vars), $reduction_byref, $reduction_syms) prop-dict attr-dict
   }];
 
   let hasVerifier = 1;
@@ -367,10 +370,12 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
 //===----------------------------------------------------------------------===//
 
 def SingleOp : OpenMP_Op<"single", traits = [
-    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>, RecursiveMemoryEffects
   ], clauses = [
-    OpenMP_AllocateClause, OpenMP_CopyprivateClause, OpenMP_NowaitClause,
-    OpenMP_PrivateClause
+    OpenMP_AllocateClause,
+    OpenMP_CopyprivateClauseSkip<boundedRecipeEffects = true>, OpenMP_NowaitClause,
+    OpenMP_PrivateClauseSkip<boundedRecipeEffects = true>
   ], singleRegion = true> {
   let summary = "single directive";
   let description = [{
@@ -387,7 +392,7 @@ def SingleOp : OpenMP_Op<"single", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier) attr-dict
+        $private_syms, $private_needs_barrier) prop-dict attr-dict
   }];
 
   let hasVerifier = 1;
@@ -416,7 +421,7 @@ def ScopeOp
 
   let assemblyFormat = clausesAssemblyFormat#[{
     custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
+        $private_syms, $private_needs_barrier, $reduction_mods, $reduction_vars,
         type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -863,7 +868,7 @@ def LoopOp : OpenMP_Op<"loop", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
+        $private_syms, $private_needs_barrier, $reduction_mods, $reduction_vars,
         type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -919,7 +924,7 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
         type($linear_vars), $linear_step_vars, type($linear_step_vars),
         $linear_var_types, $linear_modifiers, $linear_syms, $private_vars,
         type($private_vars), $private_syms, $private_needs_barrier,
-        $reduction_mod, $reduction_vars, type($reduction_vars),
+        $reduction_mods, $reduction_vars, type($reduction_vars),
         $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -976,7 +981,7 @@ def SimdOp : OpenMP_Op<"simd", traits = [
         type($linear_vars), $linear_step_vars, type($linear_step_vars),
         $linear_var_types, $linear_modifiers, $linear_syms, $private_vars,
         type($private_vars), $private_syms, $private_needs_barrier,
-        $reduction_mod, $reduction_vars, type($reduction_vars),
+        $reduction_mods, $reduction_vars, type($reduction_vars),
         $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -1199,7 +1204,7 @@ def TaskloopContextOp : OpenMP_Op<"taskloop.context", traits = [
         $region, $in_reduction_vars, type($in_reduction_vars),
         $in_reduction_byref, $in_reduction_syms, $private_vars,
         type($private_vars), $private_syms, $private_needs_barrier,
-        $reduction_mod, $reduction_vars, type($reduction_vars),
+        $reduction_mods, $reduction_vars, type($reduction_vars),
         $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -1266,9 +1271,11 @@ def TaskloopWrapperOp : OpenMP_Op<"taskloop.wrapper", traits = [
 }
 
 def TaskgroupOp : OpenMP_Op<"taskgroup", traits = [
-    AttrSizedOperandSegments, AutomaticAllocationScope
+    AttrSizedOperandSegments, AutomaticAllocationScope,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>, RecursiveMemoryEffects
   ], clauses = [
-    OpenMP_AllocateClause, OpenMP_TaskReductionClause
+    OpenMP_AllocateClause,
+    OpenMP_TaskReductionClauseSkip<boundedRecipeEffects = true>
   ], singleRegion = true> {
   let summary = "taskgroup construct";
   let description = [{
@@ -1291,7 +1298,7 @@ def TaskgroupOp : OpenMP_Op<"taskgroup", traits = [
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<TaskReductionRegion>(
         $region, $task_reduction_vars, type($task_reduction_vars),
-        $task_reduction_byref, $task_reduction_syms) attr-dict
+        $task_reduction_byref, $task_reduction_syms) prop-dict attr-dict
   }];
 
   let hasVerifier = 1;
@@ -1405,6 +1412,18 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
     (zero-based). This works well with the `PointerLikeType`
     requirement in data clauses - since a `lower_bound` of 0 means looking
     at data at the zero offset from pointer.
+
+    For target-update translation, bounds are ordered from fastest to slowest
+    varying dimension. With `stride_in_bytes`, `stride` is the byte distance
+    between adjacent elements of that source dimension, including any faster
+    varying dimensions. Otherwise strides are measured in scalar elements.
+    When the mapped type is a nested LLVM array, translation reconstructs the
+    physical element strides from its complete shape; this also supports
+    existing static-array bounds that carry unit strides. When only the scalar
+    element type is available, each explicit element stride must already
+    include the complete source extents of faster varying dimensions. Selected
+    section lengths must not replace those source extents when computing a
+    physical stride. Explicit byte strides take precedence over the type shape.
 
     This operation must have an `upper_bound` or `extent` (or both are allowed -
     but not checked for consistency). When the source language's arrays are
@@ -1924,7 +1943,8 @@ def OrderedRegionOp : OpenMP_Op<"ordered.region", clauses = [
 //===----------------------------------------------------------------------===//
 
 def TaskwaitOp
-    : OpenMP_Op<"taskwait", traits = [AttrSizedOperandSegments],
+    : OpenMP_Op<"taskwait", traits = [AttrSizedOperandSegments,
+                MemoryEffects<[MemRead, MemWrite]>],
                 clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
   let summary = "taskwait construct";
   let description = [{
@@ -2780,6 +2800,12 @@ def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments],
 
     The region may contain multiple blocks. Exactly one of them is terminated
     by `omp.yield`; every other block branches to a block of the region.
+
+    Each range has a nonzero step and an exclusive upper bound unless
+    `inclusive` is specified. A range is empty when its lower bound is beyond
+    its upper bound in the direction of the step (or equal to an exclusive
+    upper bound). If any range is empty, the result is an empty list and the
+    region is not evaluated.
 
     Example:
       %it = omp.iterator(%i, %j) =

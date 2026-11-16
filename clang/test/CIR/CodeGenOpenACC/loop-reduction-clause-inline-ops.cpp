@@ -387,7 +387,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -530,7 +530,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -679,7 +679,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -828,7 +828,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -971,7 +971,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -1056,7 +1056,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -1140,7 +1140,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -1287,7 +1287,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -1375,7 +1375,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>

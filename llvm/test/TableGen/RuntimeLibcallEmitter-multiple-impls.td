@@ -40,9 +40,9 @@ def TheSystemLibraryA : SystemRuntimeLibrary<isTargetArchA, ["liba"]>;
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libb(
 // CHECK:    static const RTLIB::LibcallImpl LibraryCalls[] = {
-// CHECK-NEXT:        RTLIB::impl_other_func, // other_func
 // CHECK-NEXT:        RTLIB::impl_func_a, // func_a
 // CHECK-NEXT:        RTLIB::impl_func_b, // func_b
+// CHECK-NEXT:        RTLIB::impl_other_func, // other_func
 // CHECK-NEXT:    };
 
 def LibB : LibcallLibrary<"libb", (add func_a, other_func, func_b)>;
@@ -52,10 +52,10 @@ def TheSystemLibraryB : SystemRuntimeLibrary<isTargetArchB, ["libb"]>;
 // CHECK:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl_dup0, // dup0
 // CHECK-NEXT:         RTLIB::impl_dup1, // dup1
-// CHECK-NEXT:         RTLIB::impl_other_func, // other_func
 // CHECK-NEXT:         RTLIB::impl_func_a, // func_a
 // CHECK-NEXT:         RTLIB::impl_func_b, // func_b
 // CHECK-NEXT:         RTLIB::impl_func_c, // func_c
+// CHECK-NEXT:         RTLIB::impl_other_func, // other_func
 // CHECK-NEXT:     };
 
 def LibC : LibcallLibrary<"libc",

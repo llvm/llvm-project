@@ -89,10 +89,10 @@ _BitInt(129) local_arr(void) {
 // CIR: cir.copy %[[CONST_ARR]] align(16) to %[[ARR]] align(16) : !cir.ptr<!cir.array<!cir.int<s, 129, bitint> x 2>>
 // CIR: %[[THREE:.*]] = cir.const #cir.int<3> : !cir.int<s, 129, bitint>
 // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR: %[[GET_ELT_ONE:.*]] = cir.get_element %[[ARR]][%[[ONE]] : !s64i] : !cir.ptr<!cir.array<!cir.int<s, 129, bitint> x 2>> -> !cir.ptr<!cir.int<s, 129, bitint>>
+// CIR: %[[GET_ELT_ONE:.*]] = cir.get_element inbounds %[[ARR]][%[[ONE]] : !s64i] : !cir.ptr<!cir.array<!cir.int<s, 129, bitint> x 2>> -> !cir.ptr<!cir.int<s, 129, bitint>>
 // CIR: cir.store align(8) %[[THREE]], %[[GET_ELT_ONE]] : !cir.int<s, 129, bitint>, !cir.ptr<!cir.int<s, 129, bitint>>
 // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CIR: %[[GET_ELT_ZERO:.*]] = cir.get_element %[[ARR]][%[[ZERO]] : !s64i] : !cir.ptr<!cir.array<!cir.int<s, 129, bitint> x 2>> -> !cir.ptr<!cir.int<s, 129, bitint>>
+// CIR: %[[GET_ELT_ZERO:.*]] = cir.get_element inbounds %[[ARR]][%[[ZERO]] : !s64i] : !cir.ptr<!cir.array<!cir.int<s, 129, bitint> x 2>> -> !cir.ptr<!cir.int<s, 129, bitint>>
 // CIR: %[[LOAD_ELT_ZERO:.*]] = cir.load align(16) %[[GET_ELT_ZERO]] : !cir.ptr<!cir.int<s, 129, bitint>>, !cir.int<s, 129, bitint>
 // CIR: cir.store %[[LOAD_ELT_ZERO]], %[[RET_ARG]] : !cir.int<s, 129, bitint>, !cir.ptr<!cir.int<s, 129, bitint>>
 
@@ -100,9 +100,13 @@ _BitInt(129) local_arr(void) {
 // LLVM-SAME: ptr{{.*}}%[[RET_ARG:.*]])
 // LLVM: %[[ARR:.*]] = alloca [2 x [24 x i8]], align 16
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[ARR]], ptr align 16 @__const.local_arr.arr, i64 48, i1 false)
-// LLVM: %[[GET_ELT_ONE:.*]] = getelementptr{{.*}} [2 x [24 x i8]], ptr %[[ARR]], i{{.*}} 0, i64 1
+// LLVM: %[[GET_ELT_ONE:.*]] = getelementptr inbounds [2 x [24 x i8]], ptr %[[ARR]],
+// CIRONLY-SAME: i32 0, i64 1
+// OGCG-SAME: i64 0, i64 1
 // LLVM: store i192 3, ptr %[[GET_ELT_ONE]], align 8
-// LLVM: %[[GET_ELT_ZERO:.*]] = getelementptr{{.*}} [2 x [24 x i8]], ptr %[[ARR]], i{{.*}} 0, i64 0
+// LLVM: %[[GET_ELT_ZERO:.*]] = getelementptr inbounds [2 x [24 x i8]], ptr %[[ARR]],
+// CIRONLY-SAME: i32 0, i64 0
+// OGCG-SAME: i64 0, i64 0
 // LLVM: %[[LOAD_ELT_ZERO:.*]] = load i192, ptr %[[GET_ELT_ZERO]], align 16
 // LLVM: %[[TRUNC_ELT:.*]] = trunc i192 %[[LOAD_ELT_ZERO]] to i129
 // LLVM: %[[EXT_ELT:.*]] = sext i129 %[[TRUNC_ELT]] to i192
