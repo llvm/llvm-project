@@ -1,4 +1,8 @@
-# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+
+# Bugzilla 46767: Placing BL @f4 inside the LDPXi sequence prevents thunk
+# outlining even with BTI enabled, ensuring the repeated sequence reaches the
+# MachineOutlinerDefault 2-fixup pruning check and is pruned.
 
 # CHECK-NOT: OUTLINED_FUNCTION
 
@@ -13,58 +17,60 @@
 name: f1
 body: |
   bb.0:
-  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
     $x20, $x19 = LDPXi $sp, 11
     $x20, $x19 = LDPXi $sp, 12
     $x20, $x19 = LDPXi $sp, 13
     $x20, $x19 = LDPXi $sp, 14
+    BL @f4, implicit $sp
     $x20, $x19 = LDPXi $sp, 18
     $x20, $x19 = LDPXi $sp, 19
     $x20, $x19 = LDPXi $sp, 20
     $x20, $x19 = LDPXi $sp, 21
-    BLR $x20, implicit $sp
   bb.2:
-  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
     RET undef $lr
 ...
 ---
 name: f2
 body: |
   bb.0:
-  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
     $x20, $x19 = LDPXi $sp, 11
     $x20, $x19 = LDPXi $sp, 12
     $x20, $x19 = LDPXi $sp, 13
     $x20, $x19 = LDPXi $sp, 14
+    BL @f4, implicit $sp
     $x20, $x19 = LDPXi $sp, 18
     $x20, $x19 = LDPXi $sp, 19
     $x20, $x19 = LDPXi $sp, 20
     $x20, $x19 = LDPXi $sp, 21
-    BLR $x20, implicit $sp
   bb.2:
-  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
     RET undef $lr
 ...
 ---
 name: f3
 body: |
   bb.0:
-  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
     $x20, $x19 = LDPXi $sp, 11
     $x20, $x19 = LDPXi $sp, 12
     $x20, $x19 = LDPXi $sp, 13
     $x20, $x19 = LDPXi $sp, 14
+    BL @f4, implicit $sp
     $x20, $x19 = LDPXi $sp, 18
     $x20, $x19 = LDPXi $sp, 19
     $x20, $x19 = LDPXi $sp, 20
     $x20, $x19 = LDPXi $sp, 21
-    BLR $x20, implicit $sp
   bb.2:
-  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
     RET undef $lr
 ...
 ---
 name: f4
+frameInfo:
+  isCalleeSavedInfoValid: true
 body: |
   bb.0:
     RET undef $lr
