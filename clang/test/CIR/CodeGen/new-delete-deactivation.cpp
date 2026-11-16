@@ -249,8 +249,6 @@ A *deact_while_cond(int n) {
 // LLVM:           to label %[[INVOKE_CONT2:.*]] unwind label %[[UNWIND_INNER:.*]]
 // LLVM: [[INVOKE_CONT2]]:
 // LLVM:   store i8 0, ptr %[[ACTIVE]]
-// LLVM:   br label %[[NORMAL_CLEANUP:.*]]
-// LLVM: [[NORMAL_CLEANUP]]:
 // LLVM:   call void @_ZN1BD1Ev(ptr {{.*}} %[[TMP]]) #[[ATTR_NOUNWIND]]
 // LLVM: [[UNWIND_INNER]]:
 // LLVM:   landingpad { ptr, i32 }

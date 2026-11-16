@@ -63,25 +63,17 @@ void test_init_list_with_dtor() {
 // LLVM: [[CONT]]:
 // LLVM:   %[[X_ADDR:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 2
 // LLVM:   store i32 3, ptr %[[X_ADDR]]
-// LLVM:   br label %[[EXIT_CLEANUP_SCOPE:.*]]
+// LLVM:   call void @_ZN5OuterD1Ev(ptr{{.*}} %[[O]])
+// LLVM:   ret void
 // LLVM: [[LPAD]]:
 // LLVM:   %[[EXN:.*]] = landingpad { ptr, i32 }
 // LLVM:                    cleanup
 // LLVM:   %[[EXN_ADDR:.*]] = extractvalue { ptr, i32 } %[[EXN]], 0
 // LLVM:   %[[EXN_SELECTOR:.*]] = extractvalue { ptr, i32 } %[[EXN]], 1
-// LLVM:   br label %[[EH_CLEANUP:.*]]
-// LLVM: [[EH_CLEANUP]]:
-// LLVM:   %[[EXN_ADDR_PHI:.*]] = phi ptr [ %[[EXN_ADDR]], %[[LPAD]] ]
-// LLVM:   %[[EXN_SELECTOR_PHI:.*]] = phi i32 [ %[[EXN_SELECTOR]], %[[LPAD]] ]
 // LLVM:   call void @_ZN5StrukD1Ev(ptr {{.*}} %[[S1_ADDR]])
-// LLVM:   %[[EXN_INS:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_ADDR_PHI]], 0
-// LLVM:   %[[EXN_INS2:.*]] = insertvalue { ptr, i32 } %[[EXN_INS]], i32 %[[EXN_SELECTOR_PHI]], 1
+// LLVM:   %[[EXN_INS:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_ADDR]], 0
+// LLVM:   %[[EXN_INS2:.*]] = insertvalue { ptr, i32 } %[[EXN_INS]], i32 %[[EXN_SELECTOR]], 1
 // LLVM:   resume { ptr, i32 } %[[EXN_INS2]]
-// LLVM: [[EXIT_CLEANUP_SCOPE]]:
-// LLVM:   call void @_ZN5OuterD1Ev(ptr{{.*}} %[[O]])
-// LLVM:   br label %[[DONE:.*]]
-// LLVM: [[DONE]]:
-// LLVM:   ret void
 
 // OGCG: define {{.*}} void @_Z24test_init_list_with_dtorv
 // OGCG:   %[[O:.*]] = alloca %struct.Outer

@@ -161,13 +161,9 @@ void outer() throw() {
 // LLVM-NOT:     resume
 // LLVM:         br label %[[TRY_CONT]]
 
-// The CIR pipeline routes the non-matching exception through the
-// specification's own dispatch block before reaching the unexpected handler.
+// The CIR pipeline likewise reaches the unexpected handler directly from the
+// non-matching edge once the specification's dispatch blocks are merged.
 // LLVMCIR:    {{^}}[[NOMATCH]]:
-// LLVMCIR:      br label %[[FILTER_DISPATCH:[0-9]+]]
-// LLVMCIR:    {{^}}[[FILTER_DISPATCH]]:
-// LLVMCIR:      br label %[[UNEXPECTED:[0-9]+]]
-// LLVMCIR:    {{^}}[[UNEXPECTED]]:
 // LLVMCIR:      call void @__cxa_call_unexpected(ptr %{{.*}})
 // LLVMCIR-NEXT: unreachable
 

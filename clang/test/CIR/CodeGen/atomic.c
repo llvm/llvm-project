@@ -3149,8 +3149,6 @@ int atomic_load_dynamic_order(int *ptr, int order) {
 
   // LLVM:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
   // LLVM-NEXT:   %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
-  // LLVM-NEXT:   br label %[[SWITCH_BLK:.+]]
-  // LLVM:      [[SWITCH_BLK]]:
   // LLVM-NEXT:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
   // LLVM-NEXT:     i32 1, label %[[ACQUIRE_BLK:.+]]
   // LLVM-NEXT:     i32 2, label %[[ACQUIRE_BLK]]
@@ -3224,8 +3222,6 @@ void atomic_store_dynamic_order(int *ptr, int order) {
 
   // LLVM:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
   // LLVM:        %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
-  // LLVM:        br label %[[SWITCH_BLK:.+]]
-  // LLVM:      [[SWITCH_BLK]]:
   // LLVM-NEXT:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
   // LLVM-NEXT:     i32 3, label %[[RELEASE_BLK:.+]]
   // LLVM-NEXT:     i32 5, label %[[SEQ_CST_BLK:.+]]
@@ -3309,8 +3305,6 @@ int atomic_load_and_store_dynamic_order(int *ptr, int order) {
 
   // LLVM:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
   // LLVM:        %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
-  // LLVM:        br label %[[SWITCH_BLK:.+]]
-  // LLVM:      [[SWITCH_BLK]]:
   // LLVM-NEXT:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
   // LLVM-NEXT:     i32 1, label %[[ACQUIRE_BLK:.+]]
   // LLVM-NEXT:     i32 2, label %[[ACQUIRE_BLK]]

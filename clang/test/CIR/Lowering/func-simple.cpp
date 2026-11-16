@@ -25,8 +25,6 @@ int scopes() {
 }
 // CHECK: define{{.*}} i32 @_Z6scopesv(){{.*}} {
 // CHECK:   %[[RV:.*]] = alloca i32, align 4
-// CHECK:   br label %[[LABEL1:.*]]
-// CHECK: [[LABEL1]]:
 // CHECK:   store i32 99, ptr %[[RV]], align 4
 // CHECK:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
 // CHECK:   ret i32 %[[R]]

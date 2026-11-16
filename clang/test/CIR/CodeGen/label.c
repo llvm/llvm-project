@@ -17,8 +17,6 @@ labelA:
 // CIR:    cir.return
 
 // LLVM:define dso_local void @label
-// LLVM:   br label %1
-// LLVM: 1:
 // LLVM:  ret void
 
 // OGCG: define dso_local void @label
@@ -42,8 +40,6 @@ labelC:
 // CIR:    cir.return
 
 // LLVM: define dso_local void @multiple_labels(){{.*}}
-// LLVM:   br label %1
-// LLVM: 1:
 // LLVM:   ret void
 
 // OGCG: define dso_local void @multiple_labels
@@ -72,17 +68,15 @@ labelD:
 // CIR:    cir.return
 
 // LLVM: define dso_local void @label_in_if{{.*}}
-// LLVM:   br label %3
-// LLVM: 3:
 // LLVM:   [[LOAD:%.*]] = load i32, ptr [[COND:%.*]], align 4
 // LLVM:   [[CMP:%.*]] = icmp ne i32 [[LOAD]], 0
-// LLVM:   br i1 [[CMP]], label %6, label %9
-// LLVM: 6:
+// LLVM:   br i1 [[CMP]], label %5, label %8
+// LLVM: 5:
 // LLVM:   [[LOAD2:%.*]] = load i32, ptr [[COND]], align 4
 // LLVM:   [[ADD1:%.*]] = add nsw i32 [[LOAD2]], 1
 // LLVM:   store i32 [[ADD1]], ptr [[COND]], align 4
-// LLVM:   br label %9
-// LLVM: 9:
+// LLVM:   br label %8
+// LLVM: 8:
 // LLVM:  ret void
 
 // OGCG: define dso_local void @label_in_if
@@ -151,8 +145,6 @@ end:
 // CIR:  }
 
 // LLVM: define dso_local void @labelWithoutMatch
-// LLVM:   br label %1
-// LLVM: 1:
 // LLVM:   ret void
 
 // OGCG: define dso_local void @labelWithoutMatch
@@ -180,8 +172,6 @@ void foo() {
 
 // LLVM: define dso_local void @foo(){{.*}} {
 // LLVM:  %{{.*}} = alloca %struct.S, align 1
-// LLVM:  br label %2
-// LLVM:2:
 // LLVM:  call void @get()
 // LLVM:  call void @bar()
 

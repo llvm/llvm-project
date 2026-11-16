@@ -32,31 +32,23 @@ A *a() {
 // LLVM:   %[[RETVAL:.*]] = alloca ptr
 // LLVM:   %[[NEW_RESULT:.*]] = alloca ptr
 // LLVM:   %[[PTR:.*]] = call noalias nonnull ptr @_Znwm(i64 8) #[[ATTR_BUILTIN_NEW:.*]]
-// LLVM:   br label %[[EH_SCOPE:.*]]
-// LLVM: [[EH_SCOPE]]:
 // LLVM:   store ptr %[[PTR]], ptr %[[NEW_RESULT]]
 // LLVM:   invoke void @_ZN1AC1Ei(ptr {{.*}} %[[PTR]], i32 5)
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[INVOKE_CONT]]:
-// LLVM:   br label %[[EH_SCOPE_END:.*]]
+// LLVM:   %[[LOAD:.*]] = load ptr, ptr %[[NEW_RESULT]]
+// LLVM:   store ptr %[[LOAD]], ptr %[[RETVAL]]
+// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
+// LLVM:   ret ptr %[[RET]]
 // LLVM: [[UNWIND]]:
 // LLVM:   %[[EXN:.*]] = landingpad { ptr, i32 }
 // LLVM:          cleanup
 // LLVM:   %[[EXN_PTR:.*]] = extractvalue { ptr, i32 } %[[EXN]], 0
 // LLVM:   %[[TYPEID:.*]] = extractvalue { ptr, i32 } %[[EXN]], 1
-// LLVM:   br label %[[EH_CLEANUP:.*]]
-// LLVM: [[EH_CLEANUP]]:
-// LLVM:   %[[EXN_PTR_PHI:.*]] = phi ptr [ %[[EXN_PTR]], %[[UNWIND]] ]
-// LLVM:   %[[TYPEID_PHI:.*]] = phi i32 [ %[[TYPEID]], %[[UNWIND]] ]
 // LLVM:   call void @_ZdlPv(ptr %[[PTR]]) #[[ATTR_BUILTIN_DEL:.*]]
-// LLVM:   %[[EXN_INSERT:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_PTR_PHI]], 0
-// LLVM:   %[[EXN_INSERT_2:.*]] = insertvalue { ptr, i32 } %[[EXN_INSERT]], i32 %[[TYPEID_PHI]], 1
+// LLVM:   %[[EXN_INSERT:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_PTR]], 0
+// LLVM:   %[[EXN_INSERT_2:.*]] = insertvalue { ptr, i32 } %[[EXN_INSERT]], i32 %[[TYPEID]], 1
 // LLVM:   resume { ptr, i32 } %[[EXN_INSERT_2]]
-// LLVM: [[EH_SCOPE_END]]:
-// LLVM:   %[[LOAD:.*]] = load ptr, ptr %[[NEW_RESULT]]
-// LLVM:   store ptr %[[LOAD]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
-// LLVM:   ret ptr %[[RET]]
 
 // OGCG: define {{.*}} ptr @_Z1av() {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:   %[[EXN_SLOT:.*]] = alloca ptr
@@ -107,8 +99,6 @@ A *b() {
 // LLVM:   %[[RETVAL:.*]] = alloca ptr
 // LLVM:   %[[NEW_RESULT:.*]] = alloca ptr
 // LLVM:   %[[PTR:.*]] = call noalias nonnull ptr @_Znwm(i64 8) #[[ATTR_BUILTIN_NEW]]
-// LLVM:   br label %[[EH_SCOPE:.*]]
-// LLVM: [[EH_SCOPE]]:
 // LLVM:   store ptr %[[PTR]], ptr %[[NEW_RESULT]]
 // LLVM:   %[[FOO:.*]] = invoke i32 @_Z3foov()
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[UNWIND:.*]]
@@ -116,25 +106,19 @@ A *b() {
 // LLVM:   invoke void @_ZN1AC1Ei(ptr {{.*}} %[[PTR]], i32 %[[FOO]])
 // LLVM:           to label %[[INVOKE_CONT_2:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[INVOKE_CONT_2]]:
-// LLVM:   br label %[[EH_SCOPE_END:.*]]
+// LLVM:   %[[LOAD:.*]] = load ptr, ptr %[[NEW_RESULT]]
+// LLVM:   store ptr %[[LOAD]], ptr %[[RETVAL]]
+// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
+// LLVM:   ret ptr %[[RET]]
 // LLVM: [[UNWIND]]:
 // LLVM:   %[[EXN:.*]] = landingpad { ptr, i32 }
 // LLVM:          cleanup
 // LLVM:   %[[EXN_PTR:.*]] = extractvalue { ptr, i32 } %[[EXN]], 0
 // LLVM:   %[[TYPEID:.*]] = extractvalue { ptr, i32 } %[[EXN]], 1
-// LLVM:   br label %[[EH_CLEANUP:.*]]
-// LLVM: [[EH_CLEANUP]]:
-// LLVM:   %[[EXN_PTR_PHI:.*]] = phi ptr [ %[[EXN_PTR]], %[[UNWIND]] ]
-// LLVM:   %[[TYPEID_PHI:.*]] = phi i32 [ %[[TYPEID]], %[[UNWIND]] ]
 // LLVM:   call void @_ZdlPv(ptr %[[PTR]]) #[[ATTR_BUILTIN_DEL]]
-// LLVM:   %[[EXN_INSERT:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_PTR_PHI]], 0
-// LLVM:   %[[EXN_INSERT_2:.*]] = insertvalue { ptr, i32 } %[[EXN_INSERT]], i32 %[[TYPEID_PHI]], 1
+// LLVM:   %[[EXN_INSERT:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_PTR]], 0
+// LLVM:   %[[EXN_INSERT_2:.*]] = insertvalue { ptr, i32 } %[[EXN_INSERT]], i32 %[[TYPEID]], 1
 // LLVM:   resume { ptr, i32 } %[[EXN_INSERT_2]]
-// LLVM: [[EH_SCOPE_END]]:
-// LLVM:   %[[LOAD:.*]] = load ptr, ptr %[[NEW_RESULT]]
-// LLVM:   store ptr %[[LOAD]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
-// LLVM:   ret ptr %[[RET]]
 
 // OGCG: define {{.*}} ptr @_Z1bv() {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:   %[[EXN_SLOT:.*]] = alloca ptr
@@ -197,31 +181,23 @@ B *c() {
 // LLVM:   %[[RETVAL:.*]] = alloca ptr
 // LLVM:   %[[NEW_RESULT:.*]] = alloca ptr
 // LLVM:   %[[PTR:.*]] = call ptr @_ZN1BnwEm(i64 4)
-// LLVM:   br label %[[EH_SCOPE:.*]]
-// LLVM: [[EH_SCOPE]]:
 // LLVM:   store ptr %[[PTR]], ptr %[[NEW_RESULT]]
 // LLVM:   invoke void @_ZN1BC1Ei(ptr {{.*}} %[[PTR]], i32 5)
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[INVOKE_CONT]]:
-// LLVM:   br label %[[EH_SCOPE_END:.*]]
+// LLVM:   %[[LOAD:.*]] = load ptr, ptr %[[NEW_RESULT]]
+// LLVM:   store ptr %[[LOAD]], ptr %[[RETVAL]]
+// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
+// LLVM:   ret ptr %[[RET]]
 // LLVM: [[UNWIND]]:
 // LLVM:   %[[EXN:.*]] = landingpad { ptr, i32 }
 // LLVM:          cleanup
 // LLVM:   %[[EXN_PTR:.*]] = extractvalue { ptr, i32 } %[[EXN]], 0
 // LLVM:   %[[TYPEID:.*]] = extractvalue { ptr, i32 } %[[EXN]], 1
-// LLVM:   br label %[[EH_CLEANUP:.*]]
-// LLVM: [[EH_CLEANUP]]:
-// LLVM:   %[[EXN_PTR_PHI:.*]] = phi ptr [ %[[EXN_PTR]], %[[UNWIND]] ]
-// LLVM:   %[[TYPEID_PHI:.*]] = phi i32 [ %[[TYPEID]], %[[UNWIND]] ]
 // LLVM:   call void @_ZN1BdlEPv(ptr %[[PTR]])
-// LLVM:   %[[EXN_INSERT:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_PTR_PHI]], 0
-// LLVM:   %[[EXN_INSERT_2:.*]] = insertvalue { ptr, i32 } %[[EXN_INSERT]], i32 %[[TYPEID_PHI]], 1
+// LLVM:   %[[EXN_INSERT:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_PTR]], 0
+// LLVM:   %[[EXN_INSERT_2:.*]] = insertvalue { ptr, i32 } %[[EXN_INSERT]], i32 %[[TYPEID]], 1
 // LLVM:   resume { ptr, i32 } %[[EXN_INSERT_2]]
-// LLVM: [[EH_SCOPE_END]]:
-// LLVM:   %[[LOAD:.*]] = load ptr, ptr %[[NEW_RESULT]]
-// LLVM:   store ptr %[[LOAD]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
-// LLVM:   ret ptr %[[RET]]
 
 // OGCG: define {{.*}} ptr @_Z1cv() {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:   %[[EXN_SLOT:.*]] = alloca ptr

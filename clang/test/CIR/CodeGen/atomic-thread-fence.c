@@ -330,8 +330,6 @@ void variable_atomic_thread_fences(int memorder) {
 
   // LLVM-LABEL: variable_atomic_thread_fences
   // LLVM:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
-  // LLVM:   br label %[[SWITCH_BLK:.+]]
-  // LLVM: [[SWITCH_BLK]]:
   // LLVM:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
   // LLVM:     i32 1, label %[[ACQUIRE_BLK:.+]]
   // LLVM:     i32 2, label %[[ACQUIRE_BLK]]
@@ -407,8 +405,6 @@ void variable_c11_atomic_thread_fences(int memorder) {
 
   // LLVM-LABEL: variable_c11_atomic_thread_fences
   // LLVM:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
-  // LLVM:   br label %[[SWITCH_BLK:.+]]
-  // LLVM: [[SWITCH_BLK]]:
   // LLVM:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
   // LLVM:     i32 1, label %[[ACQUIRE_BLK:.+]]
   // LLVM:     i32 2, label %[[ACQUIRE_BLK]]
@@ -484,8 +480,6 @@ void variable_atomic_signal_fences(int memorder) {
 
   // LLVM-LABEL: variable_atomic_signal_fences
   // LLVM:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
-  // LLVM:   br label %[[SWITCH_BLK:.+]]
-  // LLVM: [[SWITCH_BLK]]:
   // LLVM:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
   // LLVM:     i32 1, label %[[ACQUIRE_BLK:.+]]
   // LLVM:     i32 2, label %[[ACQUIRE_BLK]]
@@ -561,8 +555,6 @@ void variable_c11_atomic_signal_fences(int memorder) {
 
   // LLVM-LABEL: variable_c11_atomic_signal_fences
   // LLVM:   %[[ORDER:.+]] = load i32, ptr %[[PTR:.+]], align 4
-  // LLVM:   br label %[[SWITCH_BLK:.+]]
-  // LLVM: [[SWITCH_BLK]]:
   // LLVM:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
   // LLVM:     i32 1, label %[[ACQUIRE_BLK:.+]]
   // LLVM:     i32 2, label %[[ACQUIRE_BLK]]

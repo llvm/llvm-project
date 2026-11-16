@@ -60,9 +60,9 @@ namespace PR37560 {
 
 // CIR emits the global initializers before the other functions.
 // LLVM-LABEL: define {{.*}}@__cxx_global_var_init(
-// LLVM: icmp ne {{.*}}, getelementptr inbounds nuw (i8, ptr @{{.*}}, i64 600)
 // LLVM: call {{.*}}@_ZN14NonTrivialInit1AC1Ev(
 // LLVM: getelementptr {{.*}}, i64 1
+// LLVM: icmp ne {{.*}}, getelementptr inbounds nuw (i8, ptr @{{.*}}, i64 600)
 // LLVM: call i32 @__cxa_atexit(
 // LLVM-LABEL: define {{.*}}@__cxx_global_var_init.1(
 // LLVM: getelementptr inbounds {{.*}} @_ZN8ZeroInit7data_e1E

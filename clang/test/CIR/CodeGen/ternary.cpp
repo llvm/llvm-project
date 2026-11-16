@@ -88,8 +88,6 @@ int foo(int a, int b) {
 // LLVM: %[[B:.*]] = alloca i32
 // LLVM: store i32 %[[ARG0]], ptr %[[A]]
 // LLVM: store i32 %[[ARG1]], ptr %[[B]]
-// LLVM: br label %[[ENTRY_BB:.*]]
-// LLVM: [[ENTRY_BB]]:
 // LLVM: %[[AVAL:.*]] = load i32, ptr %[[A]]
 // LLVM: %[[BVAL:.*]] = load i32, ptr %[[B]]
 // LLVM: %[[CMP:.*]] = icmp slt i32 %[[AVAL]], %[[BVAL]]
@@ -173,8 +171,6 @@ void test_cond_lvalue_assign(bool flag) {
 // LLVM:   br label %[[MERGE_BB]]
 // LLVM: [[MERGE_BB]]:
 // LLVM:   %[[PHI_PTR:.*]] = phi ptr [ %[[B]], %[[FALSE_BB]] ], [ %[[A]], %[[TRUE_BB]] ]
-// LLVM:   br label %[[CONT_BB:.*]]
-// LLVM: [[CONT_BB]]:
 // LLVM:   store i32 42, ptr %[[PHI_PTR]]
 
 // OGCG-LABEL: define{{.*}} void @_Z23test_cond_lvalue_assignb(
@@ -223,8 +219,6 @@ int& test_cond_lvalue_ref(bool cond, int x, int y) {
 // LLVM:   br label %[[MERGE_BB]]
 // LLVM: [[MERGE_BB]]:
 // LLVM:   %[[PHI:.*]] = phi ptr [ %[[Y]], %[[FALSE_BB]] ], [ %[[X]], %[[TRUE_BB]] ]
-// LLVM:   br label %[[CONT:.*]]
-// LLVM: [[CONT]]:
 // LLVM:   store ptr %[[PHI]]
 // LLVM:   %[[RET:.*]] = load ptr
 // LLVM:   ret ptr %[[RET]]
@@ -278,8 +272,6 @@ void test_cond_lvalue_compound(bool flag) {
 // LLVM:   br label %[[MERGE_BB]]
 // LLVM: [[MERGE_BB]]:
 // LLVM:   %[[PTR:.*]] = phi ptr [ %[[B]], %[[FALSE_BB]] ], [ %[[A]], %[[TRUE_BB]] ]
-// LLVM:   br label %[[CONT:.*]]
-// LLVM: [[CONT]]:
 // LLVM:   %[[OLD:.*]] = load i32, ptr %[[PTR]]
 // LLVM:   %[[NEW:.*]] = add{{.*}} i32 %[[OLD]], 3
 // LLVM:   store i32 %[[NEW]], ptr %[[PTR]]

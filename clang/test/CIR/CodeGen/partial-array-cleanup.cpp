@@ -73,25 +73,20 @@ void test_partial_array_cleanup() {
 // LLVM:       %[[ITER:.*]] = alloca ptr
 // LLVM:       store ptr %[[BEGIN]], ptr %[[ITER]]
 //
-//            --- ctor loop condition ---
-// LLVM:     [[CLEANUP_SCOPE:.*]]:
-// LLVM:       br label %[[CTOR_LOOP_COND:.*]]
-//
-// LLVM:     [[CTOR_LOOP_COND:]]:
-// LLVM:       %[[COND_CUR:.*]] = load ptr, ptr %[[ITER]]
-// LLVM:       %[[CTOR_DONE:.*]] = icmp ne ptr %[[COND_CUR]], %[[END]]
-// LLVM:       br i1 %[[CTOR_DONE]], label %[[CTOR_BODY:.*]], label %[[CTOR_EXIT:.*]]
-//
 //            --- ctor loop body ---
+// LLVM:       br label %[[CTOR_BODY:.*]]
 // LLVM:     [[CTOR_BODY]]:
 // LLVM:       %[[CUR:.*]] = load ptr, ptr %[[ITER]]
 // LLVM:       invoke void @_ZN1SC1Ev(ptr{{.*}} %[[CUR]])
 // LLVM:         to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
 //
+//            --- ctor loop condition ---
 // LLVM:     [[CTOR_CONT]]:
 // LLVM:       %[[NEXT:.*]] = getelementptr %struct.S, ptr %[[CUR]], i64 1
 // LLVM:       store ptr %[[NEXT]], ptr %[[ITER]]
-// LLVM:       br label %[[CTOR_LOOP_COND]]
+// LLVM:       %[[COND_CUR:.*]] = load ptr, ptr %[[ITER]]
+// LLVM:       %[[CTOR_DONE:.*]] = icmp ne ptr %[[COND_CUR]], %[[END]]
+// LLVM:       br i1 %[[CTOR_DONE]], label %[[CTOR_BODY]], label %[[CTOR_EXIT:.*]]
 //
 //            --- landing pad + cleanup guard ---
 // LLVM:     [[LPAD]]:
@@ -105,19 +100,15 @@ void test_partial_array_cleanup() {
 // LLVM:     [[DTOR_ENTRY]]:
 // LLVM:       br label %[[DTOR_BODY:.*]]
 //
-//            --- partial dtor loop condition (back-edge) ---
-// LLVM:     [[DTOR_LOOP_COND:.*]]:
-// LLVM:       %[[DTOR_CUR:.*]] = load ptr, ptr %[[ITER]]
-// LLVM:       %[[DTOR_CONT:.*]] = icmp ne ptr %[[DTOR_CUR]], %[[BEGIN]]
-// LLVM:       br i1 %[[DTOR_CONT]], label %[[DTOR_BODY]], label %[[DTOR_DONE:.*]]
-//
-//            --- partial dtor loop body ---
+//            --- partial dtor loop body and condition (back-edge) ---
 // LLVM:     [[DTOR_BODY]]:
 // LLVM:       %[[DCUR:.*]] = load ptr, ptr %[[ITER]]
 // LLVM:       %[[PREV:.*]] = getelementptr %struct.S, ptr %[[DCUR]], i64 -1
 // LLVM:       store ptr %[[PREV]], ptr %[[ITER]]
 // LLVM:       call void @_ZN1SD1Ev(ptr{{.*}} %[[PREV]])
-// LLVM:       br label %[[DTOR_LOOP_COND]]
+// LLVM:       %[[DTOR_CUR:.*]] = load ptr, ptr %[[ITER]]
+// LLVM:       %[[DTOR_CONT:.*]] = icmp ne ptr %[[DTOR_CUR]], %[[BEGIN]]
+// LLVM:       br i1 %[[DTOR_CONT]], label %[[DTOR_BODY]], label %[[DTOR_DONE:.*]]
 //
 // LLVM:     [[DTOR_DONE]]:
 // LLVM:       br label %[[EH_RESUME]]
@@ -281,16 +272,7 @@ void test_variable_size_partial_array_cleanup(int n) {
 //            --- ctor init ---
 // LLVM:     [[CTOR_SETUP]]:
 // LLVM:       store ptr %[[BEGIN]], ptr %[[CTOR_ITER:.*]]
-// LLVM:       br label %[[CTOR_ENTRY:.*]]
-//
-// LLVM:     [[CTOR_ENTRY]]:
 // LLVM:       br label %[[CTOR_BODY:.*]]
-//
-//            --- ctor loop condition (back-edge) ---
-// LLVM:     [[CTOR_LOOP_COND:.*]]:
-// LLVM:       %[[COND_CUR:.*]] = load ptr, ptr %[[CTOR_ITER]]
-// LLVM:       %[[CTOR_DONE:.*]] = icmp ne ptr %[[COND_CUR]], %[[END]]
-// LLVM:       br i1 %[[CTOR_DONE]], label %[[CTOR_BODY]], label %[[CTOR_JOIN:.*]]
 //
 //            --- ctor loop body ---
 // LLVM:     [[CTOR_BODY]]:
@@ -298,10 +280,17 @@ void test_variable_size_partial_array_cleanup(int n) {
 // LLVM:       invoke void @_ZN1SC1Ev(ptr{{.*}} %[[CUR]])
 // LLVM:         to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
 //
+//            --- ctor loop condition (back-edge) ---
 // LLVM:     [[CTOR_CONT]]:
 // LLVM:       %[[NEXT:.*]] = getelementptr %struct.S, ptr %[[CUR]], i64 1
 // LLVM:       store ptr %[[NEXT]], ptr %[[CTOR_ITER]]
-// LLVM:       br label %[[CTOR_LOOP_COND]]
+// LLVM:       %[[COND_CUR:.*]] = load ptr, ptr %[[CTOR_ITER]]
+// LLVM:       %[[CTOR_DONE:.*]] = icmp ne ptr %[[COND_CUR]], %[[END]]
+// LLVM:       br i1 %[[CTOR_DONE]], label %[[CTOR_BODY]], label %[[CTOR_JOIN:.*]]
+//
+//            --- ctor done join ---
+// LLVM:     [[CTOR_JOIN]]:
+// LLVM:       br label %[[AFTER_CTOR]]
 //
 //            --- landing pad + cleanup guard ---
 // LLVM:     [[LPAD]]:
@@ -315,29 +304,21 @@ void test_variable_size_partial_array_cleanup(int n) {
 // LLVM:     [[PDTOR_ENTRY]]:
 // LLVM:       br label %[[PDTOR_BODY:.*]]
 //
-//            --- partial dtor loop condition (back-edge) ---
-// LLVM:     [[PDTOR_LOOP_COND:.*]]:
-// LLVM:       %[[PDTOR_CUR:.*]] = load ptr, ptr %[[CTOR_ITER]]
-// LLVM:       %[[PDTOR_CONT:.*]] = icmp ne ptr %[[PDTOR_CUR]], %[[BEGIN]]
-// LLVM:       br i1 %[[PDTOR_CONT]], label %[[PDTOR_BODY]], label %[[PDTOR_DONE:.*]]
-//
-//            --- partial dtor loop body ---
+//            --- partial dtor loop body and condition (back-edge) ---
 // LLVM:     [[PDTOR_BODY]]:
 // LLVM:       %[[PDCUR:.*]] = load ptr, ptr %[[CTOR_ITER]]
 // LLVM:       %[[PPREV:.*]] = getelementptr %struct.S, ptr %[[PDCUR]], i64 -1
 // LLVM:       store ptr %[[PPREV]], ptr %[[CTOR_ITER]]
 // LLVM:       call void @_ZN1SD1Ev(ptr{{.*}} %[[PPREV]])
-// LLVM:       br label %[[PDTOR_LOOP_COND]]
+// LLVM:       %[[PDTOR_CUR:.*]] = load ptr, ptr %[[CTOR_ITER]]
+// LLVM:       %[[PDTOR_CONT:.*]] = icmp ne ptr %[[PDTOR_CUR]], %[[BEGIN]]
+// LLVM:       br i1 %[[PDTOR_CONT]], label %[[PDTOR_BODY]], label %[[PDTOR_DONE:.*]]
 //
 // LLVM:     [[PDTOR_DONE]]:
 // LLVM:       br label %[[EH_RESUME]]
 //
 // LLVM:     [[EH_RESUME]]:
 // LLVM:       resume { ptr, i32 }
-//
-//            --- ctor done join ---
-// LLVM:     [[CTOR_JOIN]]:
-// LLVM:       br label %[[AFTER_CTOR]]
 //
 //            --- normal dtor setup ---
 // LLVM:     [[AFTER_CTOR]]:
@@ -349,19 +330,15 @@ void test_variable_size_partial_array_cleanup(int n) {
 // LLVM:       store ptr %[[LAST]], ptr %[[DTOR_ITER:.*]]
 // LLVM:       br label %[[NDTOR_BODY:.*]]
 //
-//            --- normal dtor loop condition (back-edge) ---
-// LLVM:     [[NDTOR_LOOP_COND:.*]]:
-// LLVM:       %[[NDCUR_CHECK:.*]] = load ptr, ptr %[[DTOR_ITER]]
-// LLVM:       %[[NDTOR_CONT:.*]] = icmp ne ptr %[[NDCUR_CHECK]], %[[BEGIN]]
-// LLVM:       br i1 %[[NDTOR_CONT]], label %[[NDTOR_BODY]], label %[[NDTOR_EXIT:.*]]
-//
-//            --- normal dtor loop body ---
+//            --- normal dtor loop body and condition (back-edge) ---
 // LLVM:     [[NDTOR_BODY]]:
 // LLVM:       %[[NDCUR:.*]] = load ptr, ptr %[[DTOR_ITER]]
 // LLVM:       %[[NDPREV:.*]] = getelementptr %struct.S, ptr %[[NDCUR]], i64 -1
 // LLVM:       store ptr %[[NDPREV]], ptr %[[DTOR_ITER]]
 // LLVM:       call void @_ZN1SD1Ev(ptr{{.*}} %[[NDPREV]])
-// LLVM:       br label %[[NDTOR_LOOP_COND]]
+// LLVM:       %[[NDCUR_CHECK:.*]] = load ptr, ptr %[[DTOR_ITER]]
+// LLVM:       %[[NDTOR_CONT:.*]] = icmp ne ptr %[[NDCUR_CHECK]], %[[BEGIN]]
+// LLVM:       br i1 %[[NDTOR_CONT]], label %[[NDTOR_BODY]], label %[[NDTOR_EXIT:.*]]
 //
 // LLVM:     [[NDTOR_EXIT]]:
 // LLVM:       br label %[[NDTOR_DONE]]
@@ -744,17 +721,14 @@ void test_init_list_partial_array_cleanup() {
 // LLVM:       store ptr %[[PAD_CUR]], ptr %[[DTOR_ITER:.*]]
 // LLVM:       br label %[[DTOR_BODY:.*]]
 //
-// LLVM:     [[DTOR_LOOP_COND:.*]]:
-// LLVM:       %[[DTOR_CUR:.*]] = load ptr, ptr %[[DTOR_ITER]]
-// LLVM:       %[[DTOR_CONT:.*]] = icmp ne ptr %[[DTOR_CUR]], %[[BEGIN]]
-// LLVM:       br i1 %[[DTOR_CONT]], label %[[DTOR_BODY]], label %[[DTOR_DONE:.*]]
-//
 // LLVM:     [[DTOR_BODY]]:
 // LLVM:       %[[DCUR:.*]] = load ptr, ptr %[[DTOR_ITER]]
 // LLVM:       %[[PREV:.*]] = getelementptr %struct.S, ptr %[[DCUR]], i64 -1
 // LLVM:       store ptr %[[PREV]], ptr %[[DTOR_ITER]]
 // LLVM:       call void @_ZN1SD1Ev(ptr {{.*}} %[[PREV]])
-// LLVM:       br label %[[DTOR_LOOP_COND]]
+// LLVM:       %[[DTOR_CUR:.*]] = load ptr, ptr %[[DTOR_ITER]]
+// LLVM:       %[[DTOR_CONT:.*]] = icmp ne ptr %[[DTOR_CUR]], %[[BEGIN]]
+// LLVM:       br i1 %[[DTOR_CONT]], label %[[DTOR_BODY]], label %[[DTOR_DONE:.*]]
 //
 // LLVM:     [[DTOR_DONE]]:
 // LLVM:       br label %[[EH_RESUME]]
@@ -1004,7 +978,15 @@ void test_multi_dim_init_list_partial_array_cleanup() {
 // LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW0_ELT1]])
 // LLVM:        to label %{{.*}} unwind label %[[ROW0_LPAD]]
 //
-//            --- row 0 EH cleanup runs before row 1 is initialized ---
+//            --- row 1: element 0 ---
+// LLVM:      %[[ROW1_BEGIN:.*]] = getelementptr [2 x %struct.S], ptr %[[ROW0_BEGIN]], i64 1
+// LLVM:      store ptr %[[ROW1_BEGIN]], ptr %[[OUTER_END_A]]
+// LLVM:      %[[ROW1_ELT0:.*]] = getelementptr %struct.S, ptr %[[ROW1_BEGIN]], i32 0
+// LLVM:      store ptr %[[ROW1_ELT0]], ptr %[[ROW1_END_A:.*]]
+// LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW1_ELT0]])
+// LLVM:        to label %{{.*}} unwind label %[[ROW1_LPAD:.*]]
+//
+//            --- row 0 EH cleanup ---
 // LLVM:      [[ROW0_LPAD]]:
 // LLVM:        landingpad { ptr, i32 }
 // LLVM:          cleanup
@@ -1022,18 +1004,17 @@ void test_multi_dim_init_list_partial_array_cleanup() {
 // LLVM:        store ptr %[[ROW0_DPREV]], ptr %[[ROW0_ITER]]
 // LLVM:        call void @_ZN1SD1Ev(ptr {{.*}} %[[ROW0_DPREV]])
 //
-//            --- row 1: element 0, element 1 ---
-// LLVM:      %[[ROW1_BEGIN:.*]] = getelementptr [2 x %struct.S], ptr %[[ROW0_BEGIN]], i64 1
-// LLVM:      store ptr %[[ROW1_BEGIN]], ptr %[[OUTER_END_A]]
-// LLVM:      %[[ROW1_ELT0:.*]] = getelementptr %struct.S, ptr %[[ROW1_BEGIN]], i32 0
-// LLVM:      store ptr %[[ROW1_ELT0]], ptr %[[ROW1_END_A:.*]]
-// LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW1_ELT0]])
-// LLVM:        to label %{{.*}} unwind label %[[ROW1_LPAD:.*]]
-//
+//            --- row 1: element 1 ---
 // LLVM:      %[[ROW1_ELT1:.*]] = getelementptr %struct.S, ptr %[[ROW1_ELT0]], i64 1
 // LLVM:      store ptr %[[ROW1_ELT1]], ptr %[[ROW1_END_A]]
 // LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW1_ELT1]])
 // LLVM:        to label %{{.*}} unwind label %[[ROW1_LPAD]]
+//
+//            --- normal (non-EH) cleanup: destroys all 4 elements ---
+// LLVM:      %[[FLAT_BEGIN:.*]] = getelementptr %struct.S, ptr %[[ARR]], i32 0
+// LLVM:      %[[FLAT_END:.*]] = getelementptr %struct.S, ptr %[[FLAT_BEGIN]], i64 4
+// LLVM:      store ptr %[[FLAT_END]], ptr %[[NORM_ITER:.*]]
+// LLVM:      br label %[[NORM_BODY:.*]]
 //
 //            --- row 1 EH cleanup ---
 // LLVM:      [[ROW1_LPAD]]:
@@ -1069,12 +1050,7 @@ void test_multi_dim_init_list_partial_array_cleanup() {
 // LLVM:        call void @_ZN1SD1Ev(ptr {{.*}} %[[OUTER_DPREV]])
 // LLVM:        resume { ptr, i32 }
 //
-//            --- normal (non-EH) cleanup: destroys all 4 elements ---
-// LLVM:      %[[FLAT_BEGIN:.*]] = getelementptr %struct.S, ptr %[[ARR]], i32 0
-// LLVM:      %[[FLAT_END:.*]] = getelementptr %struct.S, ptr %[[FLAT_BEGIN]], i64 4
-// LLVM:      store ptr %[[FLAT_END]], ptr %[[NORM_ITER:.*]]
-// LLVM:      br label %[[NORM_BODY:.*]]
-//
+//            --- normal (non-EH) cleanup loop ---
 // LLVM:      [[NORM_BODY]]:
 // LLVM:        %[[NORM_CUR:.*]] = load ptr, ptr %[[NORM_ITER]]
 // LLVM:        %[[NORM_PREV:.*]] = getelementptr %struct.S, ptr %[[NORM_CUR]], i64 -1
@@ -1272,25 +1248,18 @@ void Temp2InArray() {
 // LLVM: define {{.*}}@_Z12Temp2InArrayv()
 // LLVM: %[[TMP:.*]] = alloca %struct.Temp2
 // LLVM: %[[ARR_IDX:.*]] = alloca ptr
-// LLVM: br label %[[EMPTY:.*]]
-// LLVM: [[EMPTY]]:
 // LLVM: br label %[[CONSTRUCT_TEMP:.*]]
 // LLVM: [[CONSTRUCT_TEMP]]:
 // LLVM: invoke void @_ZN5Temp2C1Ev(ptr {{.*}}%[[TMP]])
-// LLVM-NEXT:        to label %[[EMPTY2:.*]] unwind label %[[EXCEPT_TEMP:.*]]
-// LLVM: [[EMPTY2]]:
-// LLVM: br label %[[CONSTRUCT_CT:.*]]
+// LLVM-NEXT:        to label %[[CONSTRUCT_CT:.*]] unwind label %[[EXCEPT_TEMP:.*]]
 // LLVM: [[CONSTRUCT_CT]]:
 // LLVM: invoke void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}} %{{.*}}, ptr nofreeobj noundef align 1 dereferenceable(1) %[[TMP]])
-// LLVM-NEXT:         to label %[[EMPTY3:.*]] unwind label %[[EXCEPT:.*]]
-// LLVM: [[EMPTY3]]:
-// LLVM: br label %[[DTOR_TEMP:.*]]
+// LLVM-NEXT:         to label %[[DTOR_TEMP:.*]] unwind label %[[EXCEPT:.*]]
 // LLVM: [[DTOR_TEMP]]:
 // LLVM: call void @_ZN5Temp2D1Ev(ptr {{.*}} %[[TMP]])
 
 // LLVM: [[EXCEPT]]:
-// LLVM: br label %[[DO_DTOR:.*]]
-// LLVM: [[DO_DTOR]]:
+// LLVM: landingpad { ptr, i32 }
 // LLVM: call void @_ZN5Temp2D1Ev(ptr {{.*}}%[[TMP]])
 
 // LLVM: [[EXCEPT_TEMP]]:
@@ -1387,17 +1356,14 @@ void test_partial_cleanup_covers_init_only() {
 // LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}})
 // LLVM:           to label %[[CONT2:.*]] unwind label %[[INIT_LPAD]]
 // LLVM:       [[CONT2]]:
-// LLVM:         br label %[[SIDE:.*]]
-// LLVM-NOT:     @_Z11side_effectv()
+// LLVM:         invoke void @_Z11side_effectv()
+// LLVM:           to label %{{.*}} unwind label %[[FULL_LPAD:.*]]
 // LLVM:       [[INIT_LPAD]]:
 // LLVM:         landingpad { ptr, i32 }
 // LLVM:           cleanup
 // LLVM:         icmp ne ptr %{{.*}}, %{{.*}}
 // LLVM:         call void @_ZN3AggD1Ev(ptr {{.*}})
 // LLVM:         resume { ptr, i32 }
-// LLVM:       [[SIDE]]:
-// LLVM:         invoke void @_Z11side_effectv()
-// LLVM:           to label %{{.*}} unwind label %[[FULL_LPAD:.*]]
 // LLVM:         call void @_ZN3AggD1Ev(ptr {{.*}})
 // LLVM:       [[FULL_LPAD]]:
 // LLVM:         landingpad { ptr, i32 }

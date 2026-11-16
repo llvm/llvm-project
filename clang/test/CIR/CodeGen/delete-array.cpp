@@ -246,16 +246,14 @@ void test_delete_array_destructed(Destructed *ptr) {
 // LLVM: [[DESTROY_ELEMENTS:.*]]:
 // LLVM:   store ptr %[[ARR_END]], ptr %[[ARR_IDX:.*]]
 // LLVM:   br label %[[DELETE_ELEMENT:.*]]
-// LLVM: [[LOOP_CONDITION:.*]]
-// LLVM:   %[[ARR_CUR:.*]] = load ptr, ptr %[[ARR_IDX]]
-// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[ARR_CUR]], %[[PTR]]
-// LLVM:   br i1 %[[CMP]], label %[[DELETE_ELEMENT:.*]], label %[[LOOP_END:.*]]
 // LLVM: [[DELETE_ELEMENT]]:
 // LLVM:   %[[ELEM:.*]] = load ptr, ptr %[[ARR_IDX]]
 // LLVM:   %[[PREV:.*]] = getelementptr %struct.Destructed, ptr %[[ELEM]], i64 -1
 // LLVM:   store ptr %[[PREV]], ptr %[[ARR_IDX]]
 // LLVM:   call void @_ZN10DestructedD1Ev(ptr %[[PREV]])
-// LLVM:   br label %[[LOOP_CONDITION]]
+// LLVM:   %[[ARR_CUR:.*]] = load ptr, ptr %[[ARR_IDX]]
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[ARR_CUR]], %[[PTR]]
+// LLVM:   br i1 %[[CMP]], label %[[DELETE_ELEMENT]], label %[[LOOP_END:.*]]
 // LLVM: [[LOOP_END]]:
 // LLVM:   br label %[[CALL_DELETE]]
 // LLVM: [[CALL_DELETE]]:

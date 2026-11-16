@@ -73,16 +73,14 @@ struct ZeroInit {
 // LLVM:   store ptr %[[ARR_BEGIN]], ptr %[[ITER]]
 // LLVM:   %[[ARR_END:.*]] = getelementptr i32, ptr %[[ARR_BEGIN]], i64 4
 // LLVM:   br label %[[LOOP_BODY:.*]]
-// LLVM: [[LOOP_COND:.*]]:
-// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[ITER]]
-// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR]], %[[ARR_END]]
-// LLVM:   br i1 %[[CMP]], label %[[LOOP_BODY]], label %[[LOOP_END:.*]]
 // LLVM: [[LOOP_BODY]]:
 // LLVM:   %[[CUR:.*]] = load ptr, ptr %[[ITER]]
 // LLVM:   store i32 0, ptr %[[CUR]]
 // LLVM:   %[[NEXT:.*]] = getelementptr i32, ptr %[[CUR]], i64 1
 // LLVM:   store ptr %[[NEXT]], ptr %[[ITER]]
-// LLVM:   br label %[[LOOP_COND]]
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[ITER]]
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR]], %[[ARR_END]]
+// LLVM:   br i1 %[[CMP]], label %[[LOOP_BODY]], label %[[LOOP_END:.*]]
 // LLVM: [[LOOP_END]]:
 // LLVM:   %[[C:.*]] = getelementptr inbounds nuw %struct.ZeroInit, ptr %[[THIS]], i32 0, i32 3
 // LLVM:   store { float, float } zeroinitializer, ptr %[[C]]
@@ -191,16 +189,14 @@ struct ValueInit {
 // LLVM:   store ptr %[[ARR_2]], ptr %[[ITER]]
 // LLVM:   %[[ARR_END:.*]] = getelementptr i32, ptr %[[ARR_BEGIN]], i64 4
 // LLVM:   br label %[[LOOP_BODY:.*]]
-// LLVM: [[LOOP_COND:.*]]:
-// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[ITER]]
-// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR]], %[[ARR_END]]
-// LLVM:   br i1 %[[CMP]], label %[[LOOP_BODY]], label %[[LOOP_END:.*]]
 // LLVM: [[LOOP_BODY]]:
 // LLVM:   %[[CUR:.*]] = load ptr, ptr %[[ITER]]
 // LLVM:   store i32 0, ptr %[[CUR]]
 // LLVM:   %[[NEXT:.*]] = getelementptr i32, ptr %[[CUR]], i64 1
 // LLVM:   store ptr %[[NEXT]], ptr %[[ITER]]
-// LLVM:   br label %[[LOOP_COND]]
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[ITER]]
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR]], %[[ARR_END]]
+// LLVM:   br i1 %[[CMP]], label %[[LOOP_BODY]], label %[[LOOP_END:.*]]
 // LLVM: [[LOOP_END]]:
 // LLVM:   %[[C:.*]] = getelementptr inbounds nuw %struct.ValueInit, ptr %[[THIS]], i32 0, i32 3
 // LLVM:   store { float, float } { float 6.000000e+00, float 7.000000e+00 }, ptr %[[C]]

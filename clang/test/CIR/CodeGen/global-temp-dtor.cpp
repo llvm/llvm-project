@@ -183,12 +183,11 @@ thread_local const NonTrivialArr &thread_arr_ref = NonTrivialArr{};
 // Static, array.  The two pipelines build the construction loop differently.
 
 // LLVM-LABEL: define internal void @__cxx_global_var_init.2()
-// LLVMCIR:       [[LOOP_CONDITION_BLOCK:.*]]:
-// LLVMCIR:         %[[DONE:.*]] = icmp ne ptr
-// LLVMCIR:         br i1 %[[DONE]], label %[[LOOP_BODY_BLOCK:.*]], label %[[LOOP_EXIT_BLOCK:.*]]
+// LLVMCIR:         br label %[[LOOP_BODY_BLOCK:.*]]
 // LLVMCIR:       [[LOOP_BODY_BLOCK]]:
 // LLVMCIR:         call void @_ZN10NonTrivialC1Ev
-// LLVMCIR:         br label %[[LOOP_CONDITION_BLOCK]]
+// LLVMCIR:         %[[DONE:.*]] = icmp ne ptr
+// LLVMCIR:         br i1 %[[DONE]], label %[[LOOP_BODY_BLOCK]], label %[[LOOP_EXIT_BLOCK:.*]]
 // OGCG:          br label %[[LOOP_BODY_BLOCK:.*]]
 // OGCG:        [[LOOP_BODY_BLOCK]]:
 // OGCG:          call void @_ZN10NonTrivialC1Ev
@@ -208,12 +207,11 @@ thread_local const NonTrivialArr &thread_arr_ref = NonTrivialArr{};
 
 // LLVM-LABEL: define internal void @__cxx_global_var_init.3()
 // LLVMCIR:         %[[THREAD_ARR_REF:.*]] = call ptr @_ZTW14thread_arr_ref()
-// LLVMCIR:       [[LOOP_CONDITION_BLOCK:.*]]:
-// LLVMCIR:         %[[DONE:.*]] = icmp ne ptr
-// LLVMCIR:         br i1 %[[DONE]], label %[[LOOP_BODY_BLOCK:.*]], label %[[LOOP_EXIT_BLOCK:.*]]
+// LLVMCIR:         br label %[[LOOP_BODY_BLOCK:.*]]
 // LLVMCIR:       [[LOOP_BODY_BLOCK]]:
 // LLVMCIR:         call void @_ZN10NonTrivialC1Ev
-// LLVMCIR:         br label %[[LOOP_CONDITION_BLOCK]]
+// LLVMCIR:         %[[DONE:.*]] = icmp ne ptr
+// LLVMCIR:         br i1 %[[DONE]], label %[[LOOP_BODY_BLOCK]], label %[[LOOP_EXIT_BLOCK:.*]]
 // OGCG:          br label %[[LOOP_BODY_BLOCK:.*]]
 // OGCG:        [[LOOP_BODY_BLOCK]]:
 // OGCG:          call void @_ZN10NonTrivialC1Ev

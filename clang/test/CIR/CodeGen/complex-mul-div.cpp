@@ -168,8 +168,6 @@ void foo() {
 // LLVM-FULL:  br label %[[PHI_BRANCH:]]
 // LLVM-FULL: [[PHI_BRANCH:]]:
 // LLVM-FULL:  %[[RESULT:.*]] = phi { float, float } [ %[[COMPLEX]], %[[ELSE_LABEL]] ], [ %[[LIBC_COMPLEX]], %[[THEN_LABEL]] ]
-// LLVM-FULL:  br label %[[END_LABEL:.*]]
-// LLVM-FULL: [[END_LABEL]]:
 // LLVM-FULL:  store { float, float } %[[RESULT]], ptr %[[C_ADDR]], align 4
 
 // OGCG-FULL: %[[A_ADDR:.*]] = alloca { float, float }, align 4
@@ -494,8 +492,6 @@ void foo3() {
 // LLVM-IMPROVED:  br label %[[PHI_RESULT]]
 // LLVM-IMPROVED: [[PHI_RESULT]]:
 // LLVM-IMPROVED:  %[[RESULT:.*]] = phi { float, float } [ %[[ELSE_RESULT]], %[[ABS_BR_LT_ABS_BI]] ], [ %[[THEN_RESULT]], %[[ABS_BR_GT_ABS_BI]] ]
-// LLVM-IMPROVED:  br label %[[STORE_RESULT:.*]]
-// LLVM-IMPROVED: [[STORE_RESULT]]:
 // LLVM-IMPROVED:  store { float, float } %[[RESULT]], ptr %[[C_ADDR]], align 4
 
 // OGCG-IMPROVED: %[[A_ADDR:.*]] = alloca { float, float }, align 4
@@ -995,8 +991,6 @@ void foo6() {
 // LLVM-IMPROVED:  br label %[[PHI_RESULT]]
 // LLVM-IMPROVED: [[PHI_RESULT]]:
 // LLVM-IMPROVED:  %[[RESULT:.*]] = phi { float, float } [ %[[ELSE_RESULT]], %[[ABS_BR_LT_ABS_BI]] ], [ %[[THEN_RESULT]], %[[ABS_BR_GT_ABS_BI]] ]
-// LLVM-IMPROVED:  br label %[[STORE_RESULT:.*]]
-// LLVM-IMPROVED: [[STORE_RESULT]]:
 // LLVM-IMPROVED:  store { float, float } %[[RESULT]], ptr %[[C_ADDR]], align 4
 
 // OGCG-IMPROVED: %[[A_ADDR:.*]] = alloca float, align 4

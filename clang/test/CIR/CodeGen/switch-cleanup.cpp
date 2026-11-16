@@ -178,6 +178,8 @@ void cleanup_in_while_in_switch(int x) {
 // LLVM:           i32 0, label %[[CASE_ZERO:.*]]
 // LLVM:         ]
 // LLVM:       [[DEAD_BLOCK:.*]]:
+// LLVMCIR:      br label %[[DEAD_SCOPE:.*]]
+// LLVMCIR:    [[DEAD_SCOPE]]:
 // LLVM:         br label %[[WHILE_COND:.*]]
 // LLVM:       [[WHILE_COND]]:
 // LLVM:         icmp
@@ -190,6 +192,6 @@ void cleanup_in_while_in_switch(int x) {
 // LLVM:         call void @_ZN9BitVectorD1Ev
 // LLVM:         br label %[[WHILE_COND]]
 // LLVM:       [[WHILE_END]]:
-// LLVM:         br label %[[EPILOG:.*]]
-// LLVM:       [[EPILOG]]:
+// OGCG:         br label %[[EPILOG:.*]]
+// OGCG:       [[EPILOG]]:
 // LLVM:         ret void

@@ -207,9 +207,6 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // LLVM:   %[[CMP_COPY:.*]] = alloca %"class.std::__1::strong_ordering"
   // LLVM:   %[[CMP_TEMP:.*]] = alloca %"class.std::__1::strong_ordering"
   // LLVM:   %[[LHS_LOAD:.*]] = load ptr, ptr %[[LHS_ALLOCA]]
-  // LLVM:   br label %[[ENTRY_CONT:.*]]
-  //
-  // LLVM: [[ENTRY_CONT]]:
   // LLVM:   %[[RHS_LOAD:.*]] = load ptr, ptr %[[RHS_ALLOCA]]
   // LLVM:   %[[EQ_RES:.*]] = call noundef zeroext i1 @_ZNK6MembereqERKS_(ptr {{.*}}%[[LHS_LOAD]], ptr {{.*}}%[[RHS_LOAD]])
   // LLVM:   br i1 %[[EQ_RES]], label %[[EQ_TRUE:.*]], label %[[EQ_FALSE:.*]]
@@ -229,16 +226,10 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   //
   // LLVM: [[AFTER_LT]]:
   // LLVM:   %[[LT_RES_PHI:.*]] = phi ptr [ @_ZNSt3__115strong_ordering7greaterE, %[[LT_FALSE]] ], [ @_ZNSt3__115strong_ordering4lessE, %[[LT_TRUE]] ]
-  // LLVM:   br label %[[LT_CONT:.*]]
-  //
-  // LLVM: [[LT_CONT]]:
   // LLVM:   br label %[[AFTER_CMPS]]
   //
   // LLVM: [[AFTER_CMPS]]:
-  // LLVM:   %[[CMP_RES:.*]] = phi ptr [ %[[LT_RES_PHI]], %[[LT_CONT]] ], [ @_ZNSt3__115strong_ordering5equalE, %[[EQ_TRUE]] ]
-  // LLVM:   br label %[[COPY_BLOCK:.*]]
-  //
-  // LLVM: [[COPY_BLOCK]]:
+  // LLVM:   %[[CMP_RES:.*]] = phi ptr [ %[[LT_RES_PHI]], %[[AFTER_LT]] ], [ @_ZNSt3__115strong_ordering5equalE, %[[EQ_TRUE]] ]
   // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[CMP_COPY]], ptr align 1 %[[CMP_RES]], i64 1, i1 false)
   // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[CMP_TEMP]], ptr align 1 %[[CMP_COPY]], i64 1, i1 false)
   // LLVM-NEXT:   %[[CMP_I8:.*]] = load i8, ptr %[[CMP_TEMP]], align 1

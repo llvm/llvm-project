@@ -129,7 +129,6 @@ module {
     cir.return
   }
   // CHECK: llvm.func @shouldLowerMultiBlockCase
-  // CHECK: ^bb1:  // pred: ^bb0
   // CHECK:   llvm.switch {{.*}} : i32, ^[[DEFAULT_BB:.+]] [
   // CHECK:     3: ^[[DIRECTLY_RET_BB:.+]]
   // CHECK:   ]

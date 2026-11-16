@@ -164,11 +164,6 @@ struct HasMultiDimArray {
 // LLVM: %[[END_ITR:.*]] = getelementptr %struct.NonTrivial, ptr %[[THIS_ARR_DECAY]], i64 3
 // LLVM: br label %[[BODY:.*]]
 
-// LLVM: [[COND_BLOCK:.*]]:
-// LLVM: %[[LOAD_ITR:.*]] = load ptr, ptr %[[ITR_ALLOCA]]
-// LLVM: %[[COND:.*]] = icmp ne ptr %[[LOAD_ITR]], %[[END_ITR]]
-// LLVM: br i1 %[[COND]], label %[[BODY]], label %[[ENDBLOCK:.*]]
-
 // LLVM: [[BODY]]:
 // LLVM: %[[LOAD_ITR:.*]] = load ptr, ptr %[[ITR_ALLOCA]]
 // LLVM: %[[ITR_PTR:.*]] = ptrtoint ptr %[[LOAD_ITR]] to i64
@@ -179,7 +174,9 @@ struct HasMultiDimArray {
 // LLVM: call void @_ZN10NonTrivialC1ERKS_(ptr {{.*}}%[[LOAD_ITR]], ptr {{.*}}%[[RHS_ELT]])
 // LLVM: %[[NEXT_ITR:.*]] = getelementptr %struct.NonTrivial, ptr %[[LOAD_ITR]], i64 1
 // LLVM: store ptr %[[NEXT_ITR]], ptr %[[ITR_ALLOCA]]
-// LLVM: br label %[[COND_BLOCK]]
+// LLVM: %[[COND_ITR:.*]] = load ptr, ptr %[[ITR_ALLOCA]]
+// LLVM: %[[COND:.*]] = icmp ne ptr %[[COND_ITR]], %[[END_ITR]]
+// LLVM: br i1 %[[COND]], label %[[BODY]], label %[[ENDBLOCK:.*]]
 
 // LLVM: [[ENDBLOCK]]: 
 // LLVM: ret void
@@ -199,11 +196,6 @@ struct HasMultiDimArray {
 // LLVM: %[[END_ITR1:.*]] = getelementptr [3 x [4 x %struct.NonTrivial]], ptr %[[THIS_ARR_DECAY]], i64 2
 // LLVM: br label %[[WHILE1_BODY:.*]]
 
-// LLVM: [[WHILE1_COND:.*]]:
-// LLVM: %[[ITR1_LOAD:.*]] = load ptr, ptr %[[ITR1_ALLOCA]]
-// LLVM: %[[COND1:.*]] = icmp ne ptr %[[ITR1_LOAD]], %[[END_ITR1]]
-// LLVM: br i1 %[[COND1]], label %[[WHILE1_BODY]], label %[[END_BLOCK:.*]]
-
 // LLVM: [[WHILE1_BODY]]:
 // LLVM: %[[ITR1_LOAD:.*]] = load ptr, ptr %[[ITR1_ALLOCA]]
 // LLVM: %[[ITR1_PTR:.*]] = ptrtoint ptr %[[ITR1_LOAD]] to i64
@@ -215,11 +207,6 @@ struct HasMultiDimArray {
 // LLVM: store ptr %[[ARR1_DECAY]], ptr %[[ITR2_ALLOCA]]
 // LLVM: %[[END_ITR2:.*]] = getelementptr [4 x %struct.NonTrivial], ptr %[[ARR1_DECAY]], i64 3
 // LLVM: br label %[[WHILE2_BODY:.*]]
-
-// LLVM: [[WHILE2_COND:.*]]:
-// LLVM: %[[ITR2_LOAD:.*]] = load ptr, ptr %[[ITR2_ALLOCA]]
-// LLVM: %[[COND2:.*]] = icmp ne ptr %[[ITR2_LOAD]], %[[END_ITR2]]
-// LLVM: br i1 %[[COND2]], label %[[WHILE2_BODY]], label %[[WHILE1_BODY_REST:.*]]
 
 // LLVM: [[WHILE2_BODY]]:
 // LLVM: %[[ITR2_LOAD:.*]] = load ptr, ptr %[[ITR2_ALLOCA]]
@@ -233,11 +220,6 @@ struct HasMultiDimArray {
 // LLVM: %[[END_ITR3:.*]] = getelementptr %struct.NonTrivial, ptr %[[ARR2_DECAY]], i64 4
 // LLVM: br label %[[WHILE3_BODY:.*]]
 
-// LLVM: [[WHILE3_COND:.*]]:
-// LLVM: %[[ITR3_LOAD:.*]] = load ptr, ptr %[[ITR3_ALLOCA]]
-// LLVM: %[[COND3:.*]] = icmp ne ptr %[[ITR3_LOAD]], %[[END_ITR3]]
-// LLVM: br i1 %[[COND3]], label %[[WHILE3_BODY:.*]], label %[[WHILE2_BODY_REST:.*]]
-
 // LLVM: [[WHILE3_BODY]]:
 // LLVM: %[[ITR3_LOAD:.*]] = load ptr, ptr %[[ITR3_ALLOCA]]
 // LLVM: %[[ITR3_PTR:.*]] = ptrtoint ptr %[[ITR3_LOAD]] to i64
@@ -248,17 +230,23 @@ struct HasMultiDimArray {
 // LLVM: call void @_ZN10NonTrivialC1ERKS_(ptr{{.*}} %[[ITR3_LOAD]], ptr{{.*}} %[[RHS_ELT3]])
 // LLVM: %[[NEXT_ITR3:.*]] = getelementptr %struct.NonTrivial, ptr %[[ITR3_LOAD]], i64 1
 // LLVM: store ptr %[[NEXT_ITR3]], ptr %[[ITR3_ALLOCA]]
-// LLVM: br label %[[WHILE3_COND]]
+// LLVM: %[[COND3_ITR:.*]] = load ptr, ptr %[[ITR3_ALLOCA]]
+// LLVM: %[[COND3:.*]] = icmp ne ptr %[[COND3_ITR]], %[[END_ITR3]]
+// LLVM: br i1 %[[COND3]], label %[[WHILE3_BODY]], label %[[WHILE2_BODY_REST:.*]]
 
 // LLVM: [[WHILE2_BODY_REST]]:
 // LLVM: %[[NEXT_ITR2:.*]] = getelementptr [4 x %struct.NonTrivial], ptr %[[ITR2_LOAD]], i64 1
 // LLVM: store ptr %[[NEXT_ITR2]], ptr %[[ITR2_ALLOCA]]
-// LLVM: br label %[[WHILE2_COND]]
+// LLVM: %[[COND2_ITR:.*]] = load ptr, ptr %[[ITR2_ALLOCA]]
+// LLVM: %[[COND2:.*]] = icmp ne ptr %[[COND2_ITR]], %[[END_ITR2]]
+// LLVM: br i1 %[[COND2]], label %[[WHILE2_BODY]], label %[[WHILE1_BODY_REST:.*]]
 
 // LLVM: [[WHILE1_BODY_REST]]:
 // LLVM: %[[NEXT_ITR1:.*]] = getelementptr [3 x [4 x %struct.NonTrivial]], ptr %[[ITR1_LOAD]], i64 1
 // LLVM: store ptr %[[NEXT_ITR1]], ptr %[[ITR1_ALLOCA]]
-// LLVM: br label %[[WHILE1_COND]]
+// LLVM: %[[COND1_ITR:.*]] = load ptr, ptr %[[ITR1_ALLOCA]]
+// LLVM: %[[COND1:.*]] = icmp ne ptr %[[COND1_ITR]], %[[END_ITR1]]
+// LLVM: br i1 %[[COND1]], label %[[WHILE1_BODY]], label %[[END_BLOCK:.*]]
 
 // LLVM: [[END_BLOCK]]:
 // LLVM:   ret void

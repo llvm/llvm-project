@@ -454,8 +454,6 @@ void foo7() {
 // LLVM:  br label %[[PHI_BRANCH:]]
 // LLVM: [[PHI_BRANCH:]]:
 // LLVM:  %[[RESULT:.*]] = phi { float, float } [ %[[COMPLEX]], %[[ELSE_LABEL]] ], [ %[[LIBC_COMPLEX]], %[[THEN_LABEL]] ]
-// LLVM:  br label %[[END_LABEL:.*]]
-// LLVM: [[END_LABEL]]:
 // LLVM:  store { float, float } %[[RESULT]], ptr %[[B_ADDR]], align 4
 
 // OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4

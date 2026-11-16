@@ -68,34 +68,26 @@ void test_virt_base_initializer() {
 // LLVM:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV11VirtDerived, i64 24), ptr %[[THIS]]
 // LLVM:   invoke void @_Z8mayThrowv()
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
-// LLVM:   [[INVOKE_CONT:.*]]:
-// LLVM:     br label %[[EXIT:.*]]
-// LLVM:   [[LPAD:.*]]:
+// LLVM:   [[INVOKE_CONT]]:
+// LLVM:     ret void
+// LLVM:   [[LPAD]]:
 // LLVM:     %[[EXN:.*]] = landingpad { ptr, i32 }
 // LLVM:       cleanup
-// LLVM:       br label %[[EH_CLEANUP:.*]]
-// LLVM:   [[EH_CLEANUP:.*]]:
 // LLVM:     call void @_ZN4BaseD2Ev(ptr {{.*}} %[[THIS]])
 // LLVM:     resume { ptr, i32 } %{{.*}}
-// LLVM:   [[EXIT:.*]]:
-// LLVM:     ret void
 
 // LLVM: define {{.*}} void @_ZN7DerivedC2Ev
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %{{.*}}
 // LLVM:   call void @_ZN4BaseC2Ei(ptr {{.*}} %[[THIS]], i32 {{.*}} 0)
 // LLVM:   invoke void @_Z8mayThrowv()
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
-// LLVM:   [[INVOKE_CONT:.*]]:
-// LLVM:     br label %[[EXIT:.*]]
-// LLVM:   [[LPAD:.*]]:
+// LLVM:   [[INVOKE_CONT]]:
+// LLVM:     ret void
+// LLVM:   [[LPAD]]:
 // LLVM:     %[[EXN:.*]] = landingpad { ptr, i32 }
 // LLVM:       cleanup
-// LLVM:       br label %[[EH_CLEANUP:.*]]
-// LLVM:   [[EH_CLEANUP:.*]]:
 // LLVM:     call void @_ZN4BaseD2Ev(ptr {{.*}} %[[THIS]])
-// LLVM:     resume { ptr, i32 } %{{.*}}        
-// LLVM:   [[EXIT:.*]]:
-// LLVM:     ret void
+// LLVM:     resume { ptr, i32 } %{{.*}}
 
 // OGCG: define {{.*}} void @_ZN11VirtDerivedC1Ev
 // OGCG:   %[[THIS:.*]] = load ptr, ptr %{{.*}}

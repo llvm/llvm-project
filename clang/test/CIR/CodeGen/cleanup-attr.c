@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,LLVMCIR
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 
@@ -26,11 +26,7 @@ void simple(void) {
 
 // LLVM: define dso_local void @simple()
 // LLVM: %[[X:.*]] = alloca i32
-// LLVMCIR: br label %[[DO_INC:.*]]
-// LLVMCIR: [[DO_INC]]:
 // LLVM: add nsw i32
-// LLVMCIR: br label %[[CLEANUP:.*]]
-// LLVMCIR: [[CLEANUP]]:
 // LLVM: call void @cl(ptr noundef %[[X]])
 
 // The cleanup function takes a different pointer type than the variable, and

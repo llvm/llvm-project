@@ -62,16 +62,14 @@ ArrayDtor arrDtor[16];
 // LLVM:   %[[CUR_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[END]], ptr %[[CUR_ADDR]]
 // LLVM:   br label %[[LOOP_BODY:.*]]
-// LLVM: [[LOOP_COND:.*]]:
-// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[CUR_ADDR]]
-// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR]], %[[BEGIN]]
-// LLVM:   br i1 %[[CMP]], label %[[LOOP_BODY]], label %[[LOOP_END:.*]]
 // LLVM: [[LOOP_BODY]]:
 // LLVM:   %[[CUR:.*]] = load ptr, ptr %[[CUR_ADDR]]
 // LLVM:   %[[PREV:.*]] = getelementptr %struct.ArrayDtor, ptr %[[CUR]], i64 -1
 // LLVM:   store ptr %[[PREV]], ptr %[[CUR_ADDR]]
 // LLVM:   call void @_ZN9ArrayDtorD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[PREV]])
-// LLVM:   br label %[[LOOP_COND]]
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[CUR_ADDR]]
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR]], %[[BEGIN]]
+// LLVM:   br i1 %[[CMP]], label %[[LOOP_BODY]], label %[[LOOP_END:.*]]
 // LLVM: [[LOOP_END]]:
 // LLVM:   ret void
 // LLVM: }

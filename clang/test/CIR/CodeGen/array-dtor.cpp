@@ -50,16 +50,14 @@ void test_cleanup_array() {
 // LLVM:   %[[END:.*]] = getelementptr %struct.S, ptr %[[START]], i64 42
 // LLVM:   store ptr %[[END]], ptr %[[ITER]]
 // LLVM:   br label %[[LOOP:.*]]
-// LLVM: [[COND:.*]]:
-// LLVM:   %[[CURRENT_CHECK:.*]] = load ptr, ptr %[[ITER]]
-// LLVM:   %[[DONE:.*]] = icmp ne ptr %[[CURRENT_CHECK]], %[[START]]
-// LLVM:   br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
 // LLVM: [[LOOP]]:
 // LLVM:   %[[CURRENT:.*]] = load ptr, ptr %[[ITER]]
 // LLVM:   %[[PREV:.*]] = getelementptr %struct.S, ptr %[[CURRENT]], i64 -1
 // LLVM:   store ptr %[[PREV]], ptr %[[ITER]]
 // LLVM:   call void @_ZN1SD1Ev(ptr{{.*}} %[[PREV]])
-// LLVM:   br label %[[COND]]
+// LLVM:   %[[CURRENT_CHECK:.*]] = load ptr, ptr %[[ITER]]
+// LLVM:   %[[DONE:.*]] = icmp ne ptr %[[CURRENT_CHECK]], %[[START]]
+// LLVM:   br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
 // LLVM: [[EXIT]]:
 // LLVM:   ret void
 
@@ -144,16 +142,14 @@ void multi_dimensional() {
 // LLVM:       %[[END:.*]] = getelementptr %struct.S, ptr %[[START]], i64 15
 // LLVM:       store ptr %[[END]], ptr %[[ITER]]
 // LLVM:       br label %[[LOOP:.*]]
-// LLVM: [[COND:.*]]:
-// LLVM:       %[[CURRENT_CHECK:.*]] = load ptr, ptr %[[ITER]]
-// LLVM:       %[[DONE:.*]] = icmp ne ptr %[[CURRENT_CHECK]], %[[START]]
-// LLVM:       br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
 // LLVM: [[LOOP]]:
 // LLVM:       %[[CUR:.*]] = load ptr, ptr %[[ITER]]
 // LLVM:       %[[PREV:.*]] = getelementptr %struct.S, ptr %[[CUR]], i64 -1
 // LLVM:       store ptr %[[PREV]], ptr %[[ITER]]
 // LLVM:       call void @_ZN1SD1Ev(ptr{{.*}} %[[PREV]])
-// LLVM:       br label %[[COND]]
+// LLVM:       %[[CURRENT_CHECK:.*]] = load ptr, ptr %[[ITER]]
+// LLVM:       %[[DONE:.*]] = icmp ne ptr %[[CURRENT_CHECK]], %[[START]]
+// LLVM:       br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
 // LLVM: [[EXIT]]:
 // LLVM:       ret void
 

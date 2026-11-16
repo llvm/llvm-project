@@ -121,18 +121,10 @@ void test_delete_array_throwing_dtor(ThrowingDtor *ptr) {
 // LLVM:   %[[NOT_EMPTY:.*]] = icmp ne ptr %[[ARR_END]], %[[PTR]]
 // LLVM:   br i1 %[[NOT_EMPTY]], label %[[DESTROY:[^,]+]], label %[[CALL_DELETE_NORMAL:[^ ]+]]
 //
-// Body loop entry: seed __array_idx with arrayEnd and fall through into the
-// body. (FlattenCFG emits an empty trampoline block between the entry
-// store and the body, which we skip with `{{.*}}`.)
+// Body loop entry: seed __array_idx with arrayEnd and branch into the body.
 // LLVM: [[DESTROY]]:
 // LLVM:   store ptr %[[ARR_END]], ptr %[[ARR_IDX]]
-// LLVM:   br label %{{.*}}
-//
-// Body do-while condition block: load __array_idx, compare to begin, branch
-// back to the body or out to the body-loop exit.
-// LLVM:   %[[BODY_CUR:.*]] = load ptr, ptr %[[ARR_IDX]]
-// LLVM:   %[[BODY_CMP:.*]] = icmp ne ptr %[[BODY_CUR]], %[[PTR]]
-// LLVM:   br i1 %[[BODY_CMP]], label %[[BODY:[^,]+]], label %[[BODY_EXIT:[^ ]+]]
+// LLVM:   br label %[[BODY:.*]]
 //
 // Body do-while body: load current, compute prev = current - 1, store prev
 // back to __array_idx, invoke dtor(prev). On unwind, go to LPAD.
@@ -141,33 +133,26 @@ void test_delete_array_throwing_dtor(ThrowingDtor *ptr) {
 // LLVM:   %[[BODY_PREV:.*]] = getelementptr %struct.ThrowingDtor, ptr %[[BODY_LOAD]], i64 -1
 // LLVM:   store ptr %[[BODY_PREV]], ptr %[[ARR_IDX]]
 // LLVM:   invoke void @_ZN12ThrowingDtorD1Ev(ptr %[[BODY_PREV]])
-// LLVM:           to label %{{.*}} unwind label %[[LPAD:[^ ]+]]
+// LLVM:           to label %[[BODY_COND:[^ ]+]] unwind label %[[LPAD:[^ ]+]]
 //
-// Cleanup landing pad: cleanup landingpad, save exn/sel, then check whether
-// any elements remain to destroy. (FlattenCFG emits a trampoline block
-// from the landingpad to the phi-of-exn/sel and the empty-check branch.)
+// Body do-while condition block: load __array_idx, compare to begin, branch
+// back to the body or out to the body-loop exit.
+// LLVM: [[BODY_COND]]:
+// LLVM:   %[[BODY_CUR:.*]] = load ptr, ptr %[[ARR_IDX]]
+// LLVM:   %[[BODY_CMP:.*]] = icmp ne ptr %[[BODY_CUR]], %[[PTR]]
+// LLVM:   br i1 %[[BODY_CMP]], label %[[BODY]], label %[[BODY_EXIT:[^ ]+]]
+//
+// Cleanup landing pad: cleanup landingpad, save exn/sel, load __array_idx,
+// check for empty, and branch into the cleanup loop or to the EH-side delete.
 // LLVM: [[LPAD]]:
 // LLVM:   %[[LPAD_VAL:.*]] = landingpad { ptr, i32 }
 // LLVM:           cleanup
 // LLVM:   %[[LPAD_EXN:.*]] = extractvalue { ptr, i32 } %[[LPAD_VAL]], 0
 // LLVM:   %[[LPAD_SEL:.*]] = extractvalue { ptr, i32 } %[[LPAD_VAL]], 1
-// LLVM:   br label %{{.*}}
-//
-// LPAD continuation: phi the exn/sel forward, load __array_idx, check for
-// empty, and branch into the cleanup loop or to the EH-side delete.
-// LLVM:   phi ptr [ %[[LPAD_EXN]], %{{.*}} ]
-// LLVM:   phi i32 [ %[[LPAD_SEL]], %{{.*}} ]
 // LLVM:   %[[CL_INIT_CUR:.*]] = load ptr, ptr %[[ARR_IDX]]
 // LLVM:   %[[CL_NEMPTY:.*]] = icmp ne ptr %[[CL_INIT_CUR]], %[[PTR]]
 // LLVM:   br i1 %[[CL_NEMPTY]], label %{{.*}}, label %{{.*}}
-//
-// Cleanup do-while condition block: load __array_idx (which the body
-// already pointed at the element that threw, so the cleanup picks up at
-// prev = element-that-threw - 1), compare to begin, branch into the
-// cleanup body or out to the EH-side delete.
-// LLVM:   %[[CL_CUR:.*]] = load ptr, ptr %[[ARR_IDX]]
-// LLVM:   %[[CL_CMP:.*]] = icmp ne ptr %[[CL_CUR]], %[[PTR]]
-// LLVM:   br i1 %[[CL_CMP]], label %[[CL_BODY:[^,]+]], label %{{.*}}
+// LLVM:   br label %[[CL_BODY:.*]]
 //
 // Cleanup do-while body: load current, decrement, store back, invoke
 // dtor(prev). On a *second* throw, unwind to terminate.lpad.
@@ -176,7 +161,26 @@ void test_delete_array_throwing_dtor(ThrowingDtor *ptr) {
 // LLVM:   %[[CL_PREV:.*]] = getelementptr %struct.ThrowingDtor, ptr %[[CL_LOAD]], i64 -1
 // LLVM:   store ptr %[[CL_PREV]], ptr %[[ARR_IDX]]
 // LLVM:   invoke void @_ZN12ThrowingDtorD1Ev(ptr %[[CL_PREV]])
-// LLVM:           to label %{{.*}} unwind label %[[TERMINATE_LPAD:[^ ]+]]
+// LLVM:           to label %[[CL_COND:[^ ]+]] unwind label %[[TERMINATE_LPAD:[^ ]+]]
+//
+// Cleanup do-while condition block: load __array_idx (which the body
+// already pointed at the element that threw, so the cleanup picks up at
+// prev = element-that-threw - 1), compare to begin, branch back into the
+// cleanup body or out to the EH-side delete.
+// LLVM: [[CL_COND]]:
+// LLVM:   %[[CL_CUR:.*]] = load ptr, ptr %[[ARR_IDX]]
+// LLVM:   %[[CL_CMP:.*]] = icmp ne ptr %[[CL_CUR]], %[[PTR]]
+// LLVM:   br i1 %[[CL_CMP]], label %[[CL_BODY]], label %{{.*}}
+//
+// EH-side delete + resume: total size is computed, `_ZdaPvm` is called, and
+// the original exception is resumed. Mirrors OGCG's `arraydestroy.done6` ->
+// `eh.resume` chain.
+// LLVM:   %[[EH_ARRAY_SIZE:.*]] = mul i64 4, %[[NUM_ELEM]]
+// LLVM:   %[[EH_TOTAL_SIZE:.*]] = add i64 %[[EH_ARRAY_SIZE]], 8
+// LLVM:   call void @_ZdaPvm(ptr %[[ALLOC_PTR]], i64 %[[EH_TOTAL_SIZE]])
+// LLVM:   %[[RESUME_VAL:.*]] = insertvalue { ptr, i32 } poison, ptr %[[LPAD_EXN]], 0
+// LLVM:   %[[RESUME_VAL2:.*]] = insertvalue { ptr, i32 } %[[RESUME_VAL]], i32 %[[LPAD_SEL]], 1
+// LLVM:   resume { ptr, i32 } %[[RESUME_VAL2]]
 //
 // Terminate landing pad: catch-all + `__clang_call_terminate`.
 // LLVM: [[TERMINATE_LPAD]]:
@@ -191,19 +195,6 @@ void test_delete_array_throwing_dtor(ThrowingDtor *ptr) {
 // LLVM:   %[[NORMAL_ARRAY_SIZE:.*]] = mul i64 4, %[[NUM_ELEM]]
 // LLVM:   %[[NORMAL_TOTAL_SIZE:.*]] = add i64 %[[NORMAL_ARRAY_SIZE]], 8
 // LLVM:   call void @_ZdaPvm(ptr %[[ALLOC_PTR]], i64 %[[NORMAL_TOTAL_SIZE]])
-//
-// EH-side delete + resume: the exn/sel are PHI'd one more time as
-// FlattenCFG joins the cleanup-loop exit blocks; then total size is
-// computed, `_ZdaPvm` is called, and the original exception is resumed.
-// Mirrors OGCG's `arraydestroy.done6` -> `eh.resume` chain.
-// LLVM:   %[[RESUME_EXN:.*]] = phi ptr [ %{{.*}}, %{{.*}} ]
-// LLVM:   %[[RESUME_SEL:.*]] = phi i32 [ %{{.*}}, %{{.*}} ]
-// LLVM:   %[[EH_ARRAY_SIZE:.*]] = mul i64 4, %[[NUM_ELEM]]
-// LLVM:   %[[EH_TOTAL_SIZE:.*]] = add i64 %[[EH_ARRAY_SIZE]], 8
-// LLVM:   call void @_ZdaPvm(ptr %[[ALLOC_PTR]], i64 %[[EH_TOTAL_SIZE]])
-// LLVM:   %[[RESUME_VAL:.*]] = insertvalue { ptr, i32 } poison, ptr %[[RESUME_EXN]], 0
-// LLVM:   %[[RESUME_VAL2:.*]] = insertvalue { ptr, i32 } %[[RESUME_VAL]], i32 %[[RESUME_SEL]], 1
-// LLVM:   resume { ptr, i32 } %[[RESUME_VAL2]]
 
 // OGCG: define {{.*}} void @_Z31test_delete_array_throwing_dtorP12ThrowingDtor(ptr {{.*}})
 //

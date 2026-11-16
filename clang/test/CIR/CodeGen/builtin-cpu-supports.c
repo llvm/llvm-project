@@ -47,11 +47,6 @@ extern void a(const char *);
 // LLVM-NEXT:    [[RETVAL:%.*]] = alloca i32
 // LLVM-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // LLVM-NEXT:    call void @__cpu_indicator_init()
-//
-// CIR leaves an extra branch/newline/label here.
-// LLVMCIR-NEXT:     br label %[[BRANCH:.*]]
-// LLVMCIR:          [[BRANCH]]:
-//
 // LLVM-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 12), align 4
 // LLVM-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 256
 // LLVM-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 256
@@ -62,10 +57,8 @@ extern void a(const char *);
 //
 // LLVM:       [[IF_THEN]]:
 // LLVM-NEXT:    call void @a(ptr noundef @.str)
-// CIR has a meaningless set of empty blocks here.
 // LLVM:         br label %[[IF_END]]
 // LLVM:       [[IF_END]]:
-// CIR has more meaningless empty blocks here.
 // LLVM:         [[TMP4:%.*]] = load i32, ptr @__cpu_features2, align 4
 // LLVM-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 1
 // LLVM-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 1

@@ -189,8 +189,6 @@ int rethrow_from_block(int a, int b) {
 // LLVM: %[[B_ADDR:.*]] = alloca i32, align 4
 // LLVM: store i32 %{{.*}}, ptr %[[A_ADDR]], align 4
 // LLVM: store i32 %{{.*}}, ptr %[[B_ADDR]], align 4
-// LLVM: br label %[[CHECK_COND:.*]]
-// LLVM: [[CHECK_COND]]:
 // LLVM:  %[[TMP_B:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // LLVM:  %[[IS_B_ZERO:.*]] = icmp eq i32 %[[TMP_B]], 0
 // LLVM:  br i1 %[[IS_B_ZERO]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]

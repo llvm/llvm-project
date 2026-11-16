@@ -351,6 +351,8 @@ int test_return_ternary(bool c) {
 // LLVM:         br i1 %{{.*}}, label %[[DTOR_A:.*]], label %[[SKIP_DTOR_A:.*]]
 // LLVM:       [[DTOR_A]]:
 // LLVM:         call void @_ZN1AD1Ev({{.*}} %[[TMPA]])
+// LLVM:         %[[RET:.*]] = load i32, ptr %[[RETVAL]]
+// LLVM:         ret i32 %[[RET]]
 // EH cleanup: same active-flag checks, then resume.
 // LLVM:       [[LPAD]]:
 // LLVM:         landingpad { ptr, i32 }
@@ -366,8 +368,6 @@ int test_return_ternary(bool c) {
 // LLVM:         call void @_ZN1AD1Ev({{.*}} %[[TMPA]])
 // LLVM:       [[EH_SKIP_DTOR_A]]:
 // LLVM:         resume { ptr, i32 }
-// LLVM:         %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:         ret i32 %[[RET]]
 
 // OGCG-LABEL: define dso_local noundef i32 @_Z19test_return_ternaryb(
 // OGCG-SAME: personality ptr @__gxx_personality_v0
@@ -460,14 +460,14 @@ int test_false_positive_conditional(bool c) {
 // LLVM:         store i32 %[[SEL]], ptr %[[RETVAL]]
 // Normal path: unconditional destructor.
 // LLVM:         call void @_ZN1SD1Ev({{.*}} %[[TMP]])
+// LLVM:         %[[RET:.*]] = load i32, ptr %[[RETVAL]]
+// LLVM:         ret i32 %[[RET]]
 // EH path: landingpad + unconditional destructor + resume.
 // LLVM:       [[LPAD]]:
 // LLVM:         landingpad { ptr, i32 }
 // LLVM-NEXT:            cleanup
 // LLVM:         call void @_ZN1SD1Ev({{.*}} %[[TMP]])
 // LLVM:         resume { ptr, i32 }
-// LLVM:         %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:         ret i32 %[[RET]]
 
 // OGCG-LABEL: define dso_local noundef i32 @_Z31test_false_positive_conditionalb(
 // OGCG-SAME: personality ptr @__gxx_personality_v0
@@ -582,15 +582,15 @@ void test_nested_ewc(bool c1, bool c2) {
 // LLVM-NEXT:            to label %[[COPY_CONT:.*]] unwind label %[[LPAD_S:.*]]
 // LLVM:       [[COPY_CONT]]:
 // LLVM:         call void @_ZN1TD1Ev({{.*}} %[[S]])
+// Outer ternary: operator bool() is invoke (ref.tmp cleanup is active).
+// LLVM:         %[[BOOL:.*]] = invoke {{.*}} i1 @_ZN1TcvbEv({{.*}} %[[REF_TMP]])
+// LLVM-NEXT:            to label %[[BOOL_CONT:.*]] unwind label %[[LPAD_REF:.*]]
 // EH cleanup for s: appears here in block order, before outer ternary.
 // LLVM:       [[LPAD_S]]:
 // LLVM:         landingpad { ptr, i32 }
 // LLVM-NEXT:            cleanup
 // LLVM:         call void @_ZN1TD1Ev({{.*}} %[[S]])
 // LLVM:         resume { ptr, i32 }
-// Outer ternary: operator bool() is invoke (ref.tmp cleanup is active).
-// LLVM:         %[[BOOL:.*]] = invoke {{.*}} i1 @_ZN1TcvbEv({{.*}} %[[REF_TMP]])
-// LLVM-NEXT:            to label %[[BOOL_CONT:.*]] unwind label %[[LPAD_REF:.*]]
 // LLVM:       [[BOOL_CONT]]:
 // LLVM:         br i1 %[[BOOL]], label %[[TRUE:.*]], label %[[FALSE:.*]]
 // LLVM:       [[TRUE]]:
@@ -606,14 +606,14 @@ void test_nested_ewc(bool c1, bool c2) {
 // LLVM-NEXT:            to label %{{.*}} unwind label %[[LPAD_REF]]
 // Normal cleanup: destroy ref.tmp.
 // LLVM:         call void @_ZN1TD1Ev({{.*}} %[[REF_TMP]])
+// Result destructor on normal path.
+// LLVM:         call void @_ZN1TD1Ev({{.*}} %[[RESULT]])
 // EH cleanup for ref.tmp: landingpad + destroy ref.tmp + resume.
 // LLVM:       [[LPAD_REF]]:
 // LLVM:         landingpad { ptr, i32 }
 // LLVM-NEXT:            cleanup
 // LLVM:         call void @_ZN1TD1Ev({{.*}} %[[REF_TMP]])
 // LLVM:         resume { ptr, i32 }
-// Result destructor on normal path.
-// LLVM:         call void @_ZN1TD1Ev({{.*}} %[[RESULT]])
 
 // OGCG-LABEL: define dso_local void @_Z15test_nested_ewcbb(
 // OGCG-SAME: personality ptr @__gxx_personality_v0
@@ -728,6 +728,8 @@ void test_flag_cleared_before_cond_cleanup() {
 // LLVM:   br i1 %[[BOOL]], label %[[DTOR:.*]], label %{{.*}}
 // LLVM: [[DTOR]]:
 // LLVM:   call void @_ZN7PayloadD1Ev(ptr {{.*}} %[[AGG_TMP]])
+// Then Guard on the normal path.
+// LLVM:   call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
 // Unwinding out of an arm reads the same flag.
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:   %[[EH_BYTE:.*]] = load i8, ptr %[[ACTIVE]]
@@ -735,8 +737,7 @@ void test_flag_cleared_before_cond_cleanup() {
 // LLVM:   br i1 %[[EH_BOOL]], label %[[EH_DTOR:.*]], label %{{.*}}
 // LLVM: [[EH_DTOR]]:
 // LLVM:   call void @_ZN7PayloadD1Ev(ptr {{.*}} %[[AGG_TMP]])
-// Then Guard, on the normal path and again from its own landingpad.
-// LLVM:   call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
+// Guard is destroyed again from its own landingpad.
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:   call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   resume { ptr, i32 }

@@ -46,27 +46,19 @@ void force_default_ctor() { HasDtor x; }
 // LLVM:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // LLVM:   call void @_ZN7HasDtorC1Ei(ptr{{.*}} %[[THIS]], i32{{.*}} 0)
-// LLVM:   br label %[[CLEANUP_SCOPE:.*]]
-// LLVM: [[CLEANUP_SCOPE]]:
 // LLVM:   invoke void @_Z8mayThrowv()
 // LLVM:     to label %[[INVOKE_CONT:.*]] unwind label %[[INVOKE_UNWIND:.*]]
 // LLVM: [[INVOKE_CONT]]:
-// LLVM:   br label %[[EXIT_CLEANUP_SCOPE:.*]]
+// LLVM:   ret void
 // LLVM: [[INVOKE_UNWIND]]:
 // LLVM:   %[[LANDING_PAD:.*]] = landingpad { ptr, i32 }
 // LLVM:     cleanup
 // LLVM:   %[[EXN_PTR:.*]] = extractvalue { ptr, i32 } %[[LANDING_PAD]], 0
 // LLVM:   %[[EXN_SEL:.*]] = extractvalue { ptr, i32 } %[[LANDING_PAD]], 1
-// LLVM:   br label %[[EH_CLEANUP:.*]]
-// LLVM: [[EH_CLEANUP]]:
-// LLVM:   %[[EXN_PTR_PHI:.*]] = phi ptr [ %[[EXN_PTR]], %[[INVOKE_UNWIND]] ]
-// LLVM:   %[[EXN_SEL_PHI:.*]] = phi i32 [ %[[EXN_SEL]], %[[INVOKE_UNWIND]] ]
 // LLVM:   call void @_ZN7HasDtorD1Ev(ptr{{.*}} %[[THIS]])
-// LLVM:   %[[EXN_PARTIAL:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_PTR_PHI]], 0
-// LLVM:   %[[EXN:.*]] = insertvalue { ptr, i32 } %[[EXN_PARTIAL]], i32 %[[EXN_SEL_PHI]], 1
+// LLVM:   %[[EXN_PARTIAL:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_PTR]], 0
+// LLVM:   %[[EXN:.*]] = insertvalue { ptr, i32 } %[[EXN_PARTIAL]], i32 %[[EXN_SEL]], 1
 // LLVM:   resume { ptr, i32 } %[[EXN]]
-// LLVM: [[EXIT_CLEANUP_SCOPE]]:
-// LLVM:   ret void
 // LLVM: }
 
 // OGCG: define {{.*}} void @_ZN7HasDtorC1Ev(ptr {{.*}} %[[ARG0:.*]])

@@ -63,8 +63,6 @@ int test_scoped() {
 // LLVM:   %[[Y_ADDR:.*]] = alloca ptr
 // LLVM:   %[[TEMP_VALUE1:.*]] = call noundef i32 @_Z8make_intv()
 // LLVM:   store i32 %[[TEMP_VALUE1]], ptr %[[X]]
-// LLVM:   br label %[[SCOPE_LABEL:.*]]
-// LLVM: [[SCOPE_LABEL]]:
 // LLVM:   %[[TEMP_VALUE2:.*]] = call noundef i32 @_Z8make_intv()
 // LLVM:   store i32 %[[TEMP_VALUE2]], ptr %[[TEMP_SLOT]]
 // LLVM:   store ptr %[[TEMP_SLOT]], ptr %[[Y_ADDR]]

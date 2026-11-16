@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -cir-fold-empty-branches -o %t.cir
+// RUN: cir-opt %s -cir-merge-blocks -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
 !s32i = !cir.int<s, 32>
@@ -39,11 +39,25 @@ module {
 
   // CHECK-LABEL: cir.func @forward_operands
   // CHECK-SAME:      (%[[COND:.*]]: !cir.bool, %[[A:.*]]: !s32i, %[[B:.*]]: !s32i)
-  // CHECK-NEXT:    cir.brcond %[[COND]] ^[[THEN:bb[0-9]+]](%[[A]] : !s32i), ^[[ELSE:bb[0-9]+]]
-  // CHECK-NEXT:  ^[[THEN]](%[[V:.*]]: !s32i):
-  // CHECK-NEXT:    cir.return %[[V]] : !s32i
+  // CHECK-NEXT:    cir.brcond %[[COND]] ^[[THEN:bb[0-9]+]], ^[[ELSE:bb[0-9]+]]
+  // CHECK-NEXT:  ^[[THEN]]:
+  // CHECK-NEXT:    cir.return %[[A]] : !s32i
   // CHECK-NEXT:  ^[[ELSE]]:
   // CHECK-NEXT:    cir.return %[[B]] : !s32i
+  // CHECK-NEXT:  }
+
+  cir.func @keep_unused_values(%arg0: !s32i) {
+    %0 = cir.add %arg0, %arg0 : !s32i
+    cir.br ^bb1
+  ^bb1:
+    %1 = cir.const #cir.int<2> : !s32i
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @keep_unused_values
+  // CHECK-NEXT:    cir.add
+  // CHECK-NEXT:    cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT:    cir.return
   // CHECK-NEXT:  }
 
   cir.func @keep_shared_destination(%arg0: !cir.bool) {
@@ -66,7 +80,7 @@ module {
   // CHECK-NEXT:    cir.return
   // CHECK-NEXT:  }
 
-  cir.func @unreachable_empty_block() {
+  cir.func @keep_unreachable_block() {
     cir.return
   ^bb1:
     cir.br ^bb2
@@ -74,25 +88,25 @@ module {
     cir.return
   }
 
-  // CHECK-LABEL: cir.func @unreachable_empty_block
+  // CHECK-LABEL: cir.func @keep_unreachable_block
   // CHECK-NEXT:    cir.return
-  // CHECK-NEXT:  ^bb1:
-  // CHECK-NEXT:    cir.return
-  // CHECK-NEXT:  }
-
-  cir.func @keep_entry_block() {
-    cir.br ^bb1
-  ^bb1:
-    cir.return
-  }
-
-  // CHECK-LABEL: cir.func @keep_entry_block
+  // CHECK-NEXT:  ^[[DEAD:bb[0-9]+]]:
   // CHECK-NEXT:    cir.br ^[[RET:bb[0-9]+]]
   // CHECK-NEXT:  ^[[RET]]:
   // CHECK-NEXT:    cir.return
   // CHECK-NEXT:  }
 
-  cir.func @keep_non_empty_block(%arg0: !cir.bool, %arg1: !s32i) -> !s32i {
+  cir.func @merge_entry_block() {
+    cir.br ^bb1
+  ^bb1:
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @merge_entry_block
+  // CHECK-NEXT:    cir.return
+  // CHECK-NEXT:  }
+
+  cir.func @merge_non_empty_block(%arg0: !cir.bool, %arg1: !s32i) -> !s32i {
     cir.brcond %arg0 ^bb1, ^bb3
   ^bb1:
     %0 = cir.add %arg1, %arg1 : !s32i
@@ -103,18 +117,16 @@ module {
     cir.return %arg1 : !s32i
   }
 
-  // CHECK-LABEL: cir.func @keep_non_empty_block
+  // CHECK-LABEL: cir.func @merge_non_empty_block
   // CHECK-NEXT:    cir.brcond %{{.*}} ^[[THEN:bb[0-9]+]], ^[[ELSE:bb[0-9]+]]
   // CHECK-NEXT:  ^[[THEN]]:
   // CHECK-NEXT:    %[[SUM:.*]] = cir.add
-  // CHECK-NEXT:    cir.br ^[[RET:bb[0-9]+]]
-  // CHECK-NEXT:  ^[[RET]]:
   // CHECK-NEXT:    cir.return %[[SUM]] : !s32i
   // CHECK-NEXT:  ^[[ELSE]]:
   // CHECK-NEXT:    cir.return
   // CHECK-NEXT:  }
 
-  cir.func @keep_block_with_arguments(%arg0: !cir.bool, %arg1: !s32i) {
+  cir.func @merge_block_with_arguments(%arg0: !cir.bool, %arg1: !s32i) {
     cir.brcond %arg0 ^bb1(%arg1 : !s32i), ^bb3
   ^bb1(%0: !s32i):
     cir.br ^bb2
@@ -124,11 +136,9 @@ module {
     cir.return
   }
 
-  // CHECK-LABEL: cir.func @keep_block_with_arguments
+  // CHECK-LABEL: cir.func @merge_block_with_arguments
   // CHECK-NEXT:    cir.brcond %{{.*}} ^[[THEN:bb[0-9]+]](%{{.*}} : !s32i), ^[[ELSE:bb[0-9]+]]
   // CHECK-NEXT:  ^[[THEN]](%{{.*}}: !s32i):
-  // CHECK-NEXT:    cir.br ^[[RET:bb[0-9]+]]
-  // CHECK-NEXT:  ^[[RET]]:
   // CHECK-NEXT:    cir.return
   // CHECK-NEXT:  ^[[ELSE]]:
   // CHECK-NEXT:    cir.return

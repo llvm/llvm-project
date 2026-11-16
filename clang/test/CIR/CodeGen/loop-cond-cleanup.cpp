@@ -36,12 +36,12 @@ void while_cond_cleanup(int n) {
 // LLVM:           to label %[[CONT:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[CONT]]:
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// LLVM:   br i1
 // LLVM: [[UNWIND]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:          cleanup
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 // LLVM:   resume { ptr, i32 }
-// LLVM:   br i1
 // LLVM:   ret void
 
 // OGCG-LABEL: define dso_local void @_Z18while_cond_cleanupi(i32 %n) {{.*}} personality ptr @__gxx_personality_v0 {
@@ -80,17 +80,20 @@ void do_while_cond_cleanup(int n) {
 
 // LLVM-LABEL: define dso_local void @_Z21do_while_cond_cleanupi(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   %[[TMP:.*]] = alloca %struct.S
-// LLVM:   call void @_Z5makeSv(ptr {{.*}} sret(%struct.S) {{.*}} %{{.*}})
-// LLVM:   invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[TMP]])
-// LLVM:           to label %[[CONT:.*]] unwind label %[[UNWIND:.*]]
-// LLVM: [[CONT]]:
+// LLVM:   br label %[[BODY:.*]]
+// LLVM: [[CONT:.*]]:
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
-// LLVM: [[UNWIND]]:
+// LLVM:   br i1 %{{.*}}, label %[[BODY]], label %[[EXIT:.*]]
+// LLVM: [[UNWIND:.*]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:          cleanup
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 // LLVM:   resume { ptr, i32 }
-// LLVM:   br i1
+// LLVM: [[BODY]]:
+// LLVM:   call void @_Z5makeSv(ptr {{.*}} sret(%struct.S) {{.*}} %{{.*}})
+// LLVM:   invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[TMP]])
+// LLVM:           to label %[[CONT]] unwind label %[[UNWIND]]
+// LLVM: [[EXIT]]:
 // LLVM:   ret void
 
 // OGCG-LABEL: define dso_local void @_Z21do_while_cond_cleanupi(i32 %n) {{.*}} personality ptr @__gxx_personality_v0 {
@@ -129,12 +132,12 @@ void for_cond_cleanup(int n) {
 // LLVM:           to label %[[CONT:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[CONT]]:
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// LLVM:   br i1
 // LLVM: [[UNWIND]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:          cleanup
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 // LLVM:   resume { ptr, i32 }
-// LLVM:   br i1
 // LLVM:   ret void
 
 // OGCG-LABEL: define dso_local void @_Z16for_cond_cleanupi(i32 %n) {{.*}} personality ptr @__gxx_personality_v0 {
@@ -220,12 +223,12 @@ void range_for_cond_cleanup() {
 // LLVM:           to label %[[CONT:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[CONT]]:
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// LLVM:   br i1
 // LLVM: [[UNWIND]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:          cleanup
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 // LLVM:   resume { ptr, i32 }
-// LLVM:   br i1
 // LLVM:   ret void
 
 // OGCG-LABEL: define dso_local void @_Z22range_for_cond_cleanupv() {{.*}} personality ptr @__gxx_personality_v0 {
@@ -268,7 +271,6 @@ void while_body_temp_ref() {
 // LLVM:   %[[REF_TMP:.*]] = alloca %struct.S
 // LLVM:   %[[OP:.*]] = alloca ptr
 // LLVM:   %[[SPILL:.*]] = alloca ptr
-// LLVM:   br label %{{.*}}
 // LLVM:   br label %[[LOOP_COND:.*]]
 // LLVM: [[LOOP_COND]]:
 // LLVM:   br i1 false, label %[[BODY:.*]], label %[[AFTER:.*]]
@@ -332,7 +334,6 @@ void for_body_temp_ref() {
 // LLVM:   %[[REF_TMP:.*]] = alloca %struct.S
 // LLVM:   %[[OP:.*]] = alloca ptr
 // LLVM:   %[[SPILL:.*]] = alloca ptr
-// LLVM:   br label %{{.*}}
 // LLVM:   store i32 0, ptr %[[I]]
 // LLVM:   br label %[[LOOP_COND:.*]]
 // LLVM: [[LOOP_COND]]:
@@ -410,10 +411,7 @@ void do_body_temp_ref() {
 // LLVM:   %[[REF_TMP:.*]] = alloca %struct.S
 // LLVM:   %[[OP:.*]] = alloca ptr
 // LLVM:   %[[SPILL:.*]] = alloca ptr
-// LLVM:   br label %{{.*}}
 // LLVM:   br label %[[BODY:.*]]
-// LLVM: [[LOOP_COND:.*]]:
-// LLVM:   br i1 false, label %[[BODY]], label %[[AFTER:.*]]
 // LLVM: [[BODY]]:
 // LLVM:   br i1 true, label %[[TRUE:.*]], label %[[FALSE:.*]]
 // LLVM: [[TRUE]]:
@@ -424,7 +422,7 @@ void do_body_temp_ref() {
 // LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
 // LLVM:   store ptr %[[RELOAD]], ptr %[[OP]]
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
-// LLVM:   br label %[[LOOP_COND]]
+// LLVM:   br i1 false, label %[[BODY]], label %[[AFTER:.*]]
 // LLVM: [[AFTER]]:
 // LLVM:   ret void
 
