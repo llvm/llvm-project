@@ -813,6 +813,19 @@ public:
   }
 
   cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                     mlir::Type resultTy,
+                                     llvm::ArrayRef<int64_t> mask) {
+    cir::ConstantOp poison =
+        getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
+    auto maskAttrs = llvm::to_vector_of<mlir::Attribute>(
+        llvm::map_range(mask, [&](int32_t idx) {
+          return cir::IntAttr::get(getSInt32Ty(), idx);
+        }));
+    return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, poison,
+                                     getArrayAttr(maskAttrs));
+  }
+
+  cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
                                      mlir::Value vec2,
                                      llvm::ArrayRef<int64_t> mask) {
     auto maskAttrs = llvm::to_vector_of<mlir::Attribute>(
