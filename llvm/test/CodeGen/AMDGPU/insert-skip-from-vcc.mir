@@ -593,14 +593,18 @@ body:             |
 ...
 
 ---
-# The scan for the S_MOV defining the mask register must skip over a BUNDLE
-# that sits directly before the S_AND.
+# Backward scan from S_AND must skip the preceding BUNDLE and fold
+# S_MOV -1 into S_CBRANCH_EXECZ.
 # GCN-LABEL: name: and_execz_mov_vccz_after_bundle
-# GCN: bb.2:
-# GCN-NOT: S_MOV_
-# GCN: BUNDLE
-# GCN: }
-# GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
+# GCN:       bb.2:
+# GCN-NEXT:    successors: %bb.1(0x80000000)
+# GCN-NEXT:  {{  $}}
+# GCN-NEXT:    BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $exec {
+# GCN-NEXT:      $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+# GCN-NEXT:      $vgpr1 = V_MOV_B32_e32 1, implicit $exec
+# GCN-NEXT:    }
+# GCN-NEXT:    S_CBRANCH_EXECZ %bb.1, implicit $exec
+# GCN-NEXT:    S_ENDPGM 0
 name:            and_execz_mov_vccz_after_bundle
 body:             |
   bb.0:
