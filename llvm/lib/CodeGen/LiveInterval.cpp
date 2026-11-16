@@ -542,6 +542,52 @@ LiveRange::iterator LiveRange::addSegment(Segment S) {
   return CalcLiveRangeUtilVector(this).addSegment(S);
 }
 
+/// Merge \p NewSegs into the segments [Begin, Mid), filling
+/// [Begin, Mid + NewSegs.size()) from the back. Both are sorted by start.
+/// Returns the position of the first new segment.
+static LiveRange::iterator mergeBackward(LiveRange::iterator Begin,
+                                         LiveRange::iterator Mid,
+                                         ArrayRef<LiveRange::Segment> NewSegs) {
+  LiveRange::iterator Out = Mid + NewSegs.size();
+  for (size_t N = NewSegs.size(); N != 0;) {
+    if (Mid != Begin && NewSegs[N - 1].start < Mid[-1].start)
+      *--Out = *--Mid;
+    else
+      *--Out = NewSegs[--N];
+  }
+
+  return Out;
+}
+
+void LiveRange::addSegments(ArrayRef<Segment> NewSegs) {
+  if (NewSegs.empty())
+    return;
+
+  if (segmentSet != nullptr) {
+    for (const Segment &S : NewSegs)
+      addSegmentToSet(S);
+    return;
+  }
+
+  size_t NumOld = segments.size();
+  segments.resize(NumOld + NewSegs.size());
+  iterator First = mergeBackward(begin(), begin() + NumOld, NewSegs);
+
+  // Only segments from the first new one onward can need joining.
+  iterator Out = First == begin() ? First : std::prev(First);
+  for (iterator I = std::next(Out), E = end(); I != E; ++I) {
+    if (Out->valno == I->valno && Out->end >= I->start) {
+      Out->end = std::max(Out->end, I->end);
+      continue;
+    }
+
+    assert(Out->end <= I->start &&
+           "Overlapping segments with different values");
+    *++Out = *I;
+  }
+  segments.erase(std::next(Out), end());
+}
+
 LiveRange::iterator LiveRange::mergeAdjacentSegments(iterator I) {
   assert(segmentSet == nullptr && "Cannot merge with active segment set");
   assert(I != end() && "Cannot merge end iterator");
@@ -1278,26 +1324,10 @@ void LiveRangeUpdater::add(LiveRange::Segment Seg) {
 // Merge as many spilled segments as possible into the gap between WriteI
 // and ReadI. Advance WriteI to reflect the inserted instructions.
 void LiveRangeUpdater::mergeSpills() {
-  // Perform a backwards merge of Spills and [SpillI;WriteI).
-  size_t GapSize = ReadI - WriteI;
-  size_t NumMoved = std::min(Spills.size(), GapSize);
-  LiveRange::iterator Src = WriteI;
-  LiveRange::iterator Dst = Src + NumMoved;
-  LiveRange::iterator SpillSrc = Spills.end();
-  LiveRange::iterator B = LR->begin();
-
-  // This is the new WriteI position after merging spills.
-  WriteI = Dst;
-
-  // Now merge Src and Spills backwards.
-  while (Src != Dst) {
-    if (Src != B && Src[-1].start > SpillSrc[-1].start)
-      *--Dst = *--Src;
-    else
-      *--Dst = *--SpillSrc;
-  }
-  assert(NumMoved == size_t(Spills.end() - SpillSrc));
-  Spills.erase(SpillSrc, Spills.end());
+  size_t NumMoved = std::min(Spills.size(), size_t(ReadI - WriteI));
+  mergeBackward(LR->begin(), WriteI, ArrayRef(Spills).take_back(NumMoved));
+  WriteI += NumMoved;
+  Spills.truncate(Spills.size() - NumMoved);
 }
 
 void LiveRangeUpdater::flush() {
