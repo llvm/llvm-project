@@ -795,11 +795,10 @@ CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
   return (*bit_size_or_err + 7) / 8;
 }
 
-std::optional<uint64_t>
-CompilerType::GetByteStride(ExecutionContextScope *exe_scope) const {
+std::optional<uint64_t> CompilerType::GetByteStride() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetByteStride(m_type, exe_scope);
+      return type_system_sp->GetByteStride(m_type);
   return {};
 }
 

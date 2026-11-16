@@ -152,7 +152,7 @@ uint64_t SBType::GetByteStride() {
     return 0;
 
   return m_opaque_sp->GetCompilerType(/*prefer_dynamic=*/false)
-      .GetByteStride(nullptr)
+      .GetByteStride()
       .value_or(0);
 }
 

@@ -4899,11 +4899,10 @@ TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
 }
 
 std::optional<uint64_t>
-TypeSystemClang::GetByteStride(lldb::opaque_compiler_type_t type,
-                               ExecutionContextScope *exe_scope) {
+TypeSystemClang::GetByteStride(lldb::opaque_compiler_type_t type) {
   // In C/C++/Objective-C, sizeof already includes any tail padding, so the
   // stride is the same as the size.
-  return llvm::expectedToOptional(GetByteSize(type, exe_scope));
+  return llvm::expectedToOptional(GetByteSize(type, nullptr));
 }
 
 std::optional<size_t>
