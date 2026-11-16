@@ -1451,13 +1451,6 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   if (forOps.size() < sizes.size())
     sizes = sizes.take_front(forOps.size());
 
-  // Tiling more than one loop reorders the iterations, which can change the
-  // result of iter_args. Skip the transformation in that case.
-  if (forOps.size() > 1 && llvm::any_of(forOps, [](scf::ForOp op) {
-        return !op.getInitArgs().empty();
-      }))
-    return {};
-
   // Compute the tile sizes such that i-th outer loop executes size[i]
   // iterations.  Given that the loop current executes
   //   numIterations = ceildiv((upperBound - lowerBound), step)

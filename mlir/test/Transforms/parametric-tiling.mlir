@@ -131,15 +131,13 @@ func.func @triangular(%arg0: memref<?x?xf32>) {
 // Verify that iter_args are threaded through the new inner loop.
 
 // COMMON-LABEL: func.func @loop_with_iter_args(
-// COMMON:         %[[r:.*]] = scf.for %[[i:.*]] = {{.*}} iter_args(%[[sum:.*]] = %{{.*}}) -> (f32) {
-// COMMON:           %[[inner:.*]] = scf.for %[[ii:.*]] = %[[i]] to {{.*}} iter_args(%[[s:.*]] = %[[sum]]) -> (f32) {
-// COMMON-NEXT:        %[[e:.*]] = memref.load %{{.*}}[%[[ii]]]
-// COMMON-NEXT:        %[[new:.*]] = arith.addf %[[s]], %[[e]]
-// COMMON-NEXT:        scf.yield %[[new]]
-// COMMON-NEXT:      }
-// COMMON-NEXT:      scf.yield %[[inner]]
-// COMMON-NEXT:    }
-// COMMON-NEXT:    return %[[r]]
+// COMMON:         %[[r:.*]] = scf.for %[[i:.*]] = {{.*}} iter_args(%[[sum:.*]] = %{{.*}}) -> (f32)
+// COMMON:           %[[inner:.*]] = scf.for %[[ii:.*]] = %[[i]] to {{.*}} iter_args(%[[s:.*]] = %[[sum]]) -> (f32)
+// COMMON:             %[[e:.*]] = memref.load %{{.*}}[%[[ii]]]
+// COMMON:             %[[new:.*]] = arith.addf %[[s]], %[[e]]
+// COMMON:             scf.yield %[[new]]
+// COMMON:           scf.yield %[[inner]]
+// COMMON:         return %[[r]]
 func.func @loop_with_iter_args(%buffer: memref<1024xf32>, %lb: index,
                                %ub: index, %step: index) -> f32 {
   %initial_sum = arith.constant 0.0 : f32
@@ -159,11 +157,11 @@ func.func @loop_with_iter_args(%buffer: memref<1024xf32>, %lb: index,
 
 // COMMON-LABEL: func.func @loop_with_unsigned_cmp(
 // COMMON-SAME:    %{{[^:]*}}: memref<1024xf32>, %[[lb:[^:]*]]: index, %[[ub:[^:]*]]: index, %[[step:[^:]*]]: index
-// COMMON:         scf.for unsigned %[[i:.*]] = %[[lb]] to %[[ub]] step %[[tile:.*]] {
-// COMMON-NEXT:      %[[stepped:.*]] = arith.addi %[[i]], %[[tile]]
-// COMMON-NEXT:      %[[strip_ub:.*]] = arith.minui %[[ub]], %[[stepped]]
-// COMMON-NEXT:      scf.for unsigned %[[ii:.*]] = %[[i]] to %[[strip_ub]] step %[[step]] {
-// COMMON-NEXT:        memref.load %{{.*}}[%[[ii]]]
+// COMMON:         scf.for unsigned %[[i:.*]] = %[[lb]] to %[[ub]] step %[[tile:[^ ]*]]
+// COMMON:           %[[stepped:.*]] = arith.addi %[[i]], %[[tile]]
+// COMMON:           %[[strip_ub:.*]] = arith.minui %[[ub]], %[[stepped]]
+// COMMON:           scf.for unsigned %[[ii:.*]] = %[[i]] to %[[strip_ub]] step %[[step]]
+// COMMON:             memref.load %{{.*}}[%[[ii]]]
 func.func @loop_with_unsigned_cmp(%buffer: memref<1024xf32>, %lb: index,
                                   %ub: index, %step: index) {
   scf.for unsigned %iv = %lb to %ub step %step {
@@ -179,17 +177,17 @@ func.func @loop_with_unsigned_cmp(%buffer: memref<1024xf32>, %lb: index,
 
 // COMMON-LABEL: func.func @mixed_signedness(
 // COMMON-SAME:    %{{[^:]*}}: memref<?x?xf32>, %[[n:[^:]*]]: index, %[[m:[^:]*]]: index
-// COMMON:         scf.for unsigned %[[i:.*]] = %c0 to %[[n]] step %[[tile:.*]] {
-// TILE_74-NEXT:     scf.for %[[j:.*]] = %c0 to %[[m]] step %[[tile2:.*]] {
-// COMMON-NEXT:        %[[stepped:.*]] = arith.addi %[[i]], %[[tile]]
-// COMMON-NEXT:        %[[strip_ub:.*]] = arith.minui %[[n]], %[[stepped]]
-// TILE_74-NEXT:       %[[stepped2:.*]] = arith.addi %[[j]], %[[tile2]]
-// TILE_74-NEXT:       %[[strip_ub2:.*]] = arith.minsi %[[m]], %[[stepped2]]
-// COMMON-NEXT:        scf.for unsigned %[[ii:.*]] = %[[i]] to %[[strip_ub]] step %c1 {
-// TILE_7-NEXT:          scf.for %[[j:.*]] = %c0 to %[[m]] step %c1 {
-// TILE_74-NEXT:         scf.for %[[jj:.*]] = %[[j]] to %[[strip_ub2]] step %c1 {
-// TILE_7-NEXT:            memref.load %{{.*}}[%[[ii]], %[[j]]]
-// TILE_74-NEXT:           memref.load %{{.*}}[%[[ii]], %[[jj]]]
+// COMMON:         scf.for unsigned %[[i:.*]] = {{.*}} to %[[n]] step %[[tile:[^ ]*]]
+// TILE_74:          scf.for %[[j:.*]] = {{.*}} to %[[m]] step %[[tile2:[^ ]*]]
+// COMMON:             %[[stepped:.*]] = arith.addi %[[i]], %[[tile]]
+// COMMON:             %[[strip_ub:.*]] = arith.minui %[[n]], %[[stepped]]
+// TILE_74:            %[[stepped2:.*]] = arith.addi %[[j]], %[[tile2]]
+// TILE_74:            %[[strip_ub2:.*]] = arith.minsi %[[m]], %[[stepped2]]
+// COMMON:             scf.for unsigned %[[ii:.*]] = %[[i]] to %[[strip_ub]]
+// TILE_7:               scf.for %[[j:.*]] = {{.*}} to %[[m]]
+// TILE_74:              scf.for %[[jj:.*]] = %[[j]] to %[[strip_ub2]]
+// TILE_7:                 memref.load %{{.*}}[%[[ii]], %[[j]]]
+// TILE_74:                memref.load %{{.*}}[%[[ii]], %[[jj]]]
 func.func @mixed_signedness(%arg0: memref<?x?xf32>, %n: index, %m: index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -201,17 +199,28 @@ func.func @mixed_signedness(%arg0: memref<?x?xf32>, %n: index, %m: index) {
   return
 }
 
-// Verify that a nest with iter_args is only tiled when a single loop is
-// strip-mined, since tiling more loops reorders the iterations.
+// Verify that iter_args are threaded through every loop of a tiled nest.
 
 // COMMON-LABEL: func.func @nest_with_iter_args(
-// TILE_7:         scf.for %[[i:.*]] = {{.*}} iter_args(%[[a:.*]] = %{{.*}}) -> (f32) {
-// TILE_7:           scf.for %[[ii:.*]] = %[[i]] to {{.*}} iter_args(%[[a2:.*]] = %[[a]]) -> (f32) {
-// TILE_7-NEXT:        scf.for %[[j:.*]] = {{.*}} iter_args(%[[b:.*]] = %[[a2]]) -> (f32) {
-// TILE_7-NEXT:          memref.load %{{.*}}[%[[ii]], %[[j]]]
-// TILE_74:        scf.for %[[i:.*]] = %c0 to %{{.*}} step %c1 iter_args
-// TILE_74-NEXT:     scf.for %[[j:.*]] = %c0 to %{{.*}} step %c1 iter_args
-// TILE_74-NEXT:       memref.load %{{.*}}[%[[i]], %[[j]]]
+// COMMON-SAME:    %[[init:[^:]*]]: f32
+// TILE_7:         %[[r:.*]] = scf.for %[[i:.*]] = {{.*}} iter_args(%[[a:.*]] = %[[init]]) -> (f32)
+// TILE_7:           %[[r2:.*]] = scf.for %[[ii:.*]] = %[[i]] to {{.*}} iter_args(%[[a2:.*]] = %[[a]]) -> (f32)
+// TILE_7:             %[[r3:.*]] = scf.for %[[j:.*]] = {{.*}} iter_args(%[[b:.*]] = %[[a2]]) -> (f32)
+// TILE_7:               memref.load %{{.*}}[%[[ii]], %[[j]]]
+// TILE_7:               arith.addf %[[b]]
+// TILE_7:             scf.yield %[[r3]]
+// TILE_7:           scf.yield %[[r2]]
+// TILE_7:         return %[[r]]
+// TILE_74:        %[[r:.*]] = scf.for %[[i:.*]] = {{.*}} iter_args(%[[a:.*]] = %[[init]]) -> (f32)
+// TILE_74:          %[[r2:.*]] = scf.for %[[j:.*]] = {{.*}} iter_args(%[[b:.*]] = %[[a]]) -> (f32)
+// TILE_74:            %[[r3:.*]] = scf.for %[[ii:.*]] = %[[i]] to {{.*}} iter_args(%[[a2:.*]] = %[[b]]) -> (f32)
+// TILE_74:              %[[r4:.*]] = scf.for %[[jj:.*]] = %[[j]] to {{.*}} iter_args(%[[b2:.*]] = %[[a2]]) -> (f32)
+// TILE_74:                memref.load %{{.*}}[%[[ii]], %[[jj]]]
+// TILE_74:                arith.addf %[[b2]]
+// TILE_74:              scf.yield %[[r4]]
+// TILE_74:            scf.yield %[[r3]]
+// TILE_74:          scf.yield %[[r2]]
+// TILE_74:        return %[[r]]
 func.func @nest_with_iter_args(%buffer: memref<?x?xf32>, %n: index, %m: index,
                                %init: f32) -> f32 {
   %c0 = arith.constant 0 : index
