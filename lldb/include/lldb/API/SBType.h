@@ -153,10 +153,7 @@ public:
   uint64_t GetByteAlign();
 
   /// Return the distance in bytes between consecutive elements of this type
-  /// when stored in contiguous storage, such as an array. For C-family
-  /// languages this equals the byte size. Ohter languages can have a stride
-  /// larger than the size (e.g. Swift). Returns 0 if the stride cannot be
-  /// determined.
+  /// when stored in contiguous storage, such as an array.
   uint64_t GetByteStride();
 
   bool IsPointerType();
