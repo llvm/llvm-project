@@ -6106,8 +6106,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     }
     EVT EltVT = VT.getVectorElementType();
     unsigned EltSize = EltVT.getScalarSizeInBits();
-    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
-        Alignment != Align(1))
+    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64)
       return LT.first;
     // FIXME: v3i8 lowering currently is very inefficient, due to automatic
     // widening to v4i8, which produces suboptimal results.
@@ -6124,7 +6123,11 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
       TypeWorklist.push_back({Remainder, 0});
       while (!TypeWorklist.empty()) {
         auto [CurrNumElements, Offset] = TypeWorklist.pop_back_val();
-        if (isPowerOf2_32(CurrNumElements)) {
+        // Loads with sufficient alignment are widened to the next power of two,
+        // so only a single load is needed.
+        if (isPowerOf2_32(CurrNumElements) ||
+            (Opcode == Instruction::Load &&
+             Alignment >= PowerOf2Ceil(CurrNumElements) * EltSize / 8)) {
           // 1 per load/store + possible lane insert.
           Cost += 1 + (Offset == 0 ? 0 : 1);
           continue;
@@ -6515,20 +6518,22 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
 
     // Try to find an unroll count that maximizes the use of the instruction
     // window, i.e. trying to fetch as many instructions per cycle as possible.
-    unsigned MaxInstsPerLine = 16;
-    unsigned UC = 1;
+    constexpr unsigned MaxInstsPerLine = 16;
+    constexpr unsigned MaxLines = 3;
+    constexpr unsigned MaxSizeWithUC = MaxInstsPerLine * MaxLines;
+    constexpr unsigned MaxUC = 8;
+
     unsigned BestUC = 1;
-    unsigned SizeWithBestUC = BestUC * Size;
-    while (UC <= 8) {
+    unsigned BestLineRemainder = Size % MaxInstsPerLine;
+    for (unsigned UC = 2; UC <= MaxUC; ++UC) {
       unsigned SizeWithUC = UC * Size;
-      if (SizeWithUC > 48)
+      if (SizeWithUC > MaxSizeWithUC)
         break;
-      if ((SizeWithUC % MaxInstsPerLine) == 0 ||
-          (SizeWithBestUC % MaxInstsPerLine) < (SizeWithUC % MaxInstsPerLine)) {
+      unsigned LineRemainder = SizeWithUC % MaxInstsPerLine;
+      if (LineRemainder == 0 || BestLineRemainder < LineRemainder) {
         BestUC = UC;
-        SizeWithBestUC = BestUC * Size;
+        BestLineRemainder = LineRemainder;
       }
-      UC++;
     }
 
     if (BestUC == 1)
@@ -7179,9 +7184,12 @@ AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index,
         getCastInstrCost(Instruction::Trunc, LegalVTy, PromotedVTy,
                          TTI::CastContextHint::None, CostKind);
   }
+
   const auto *Entry =
       CostTableLookup(ShuffleTbl, TTI::SK_Splice, PromotedVT.getSimpleVT());
-  assert(Entry && "Illegal Type for Splice");
+  if (!Entry)
+    return InstructionCost::getInvalid();
+
   LegalizationCost += Entry->Cost;
   return LegalizationCost * LT.first;
 }

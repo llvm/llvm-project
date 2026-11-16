@@ -4,7 +4,6 @@
 ...
 ---
 name:            freeze_register
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -24,7 +23,6 @@ body:             |
 ...
 ---
 name:            freeze_constant
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -43,7 +41,6 @@ body:             |
 ...
 ---
 name:            freeze_fconstant
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -61,7 +58,6 @@ body:             |
 ...
 ---
 name:            freeze_undef
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -80,7 +76,6 @@ body:             |
 ...
 ---
 name:            freeze_freeze
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -100,7 +95,6 @@ body:             |
 ...
 ---
 name:            freeze_buildvector
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -121,7 +115,6 @@ body:             |
 ...
 ---
 name:            freeze_buildvector_const
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -142,7 +135,6 @@ body:             |
 ...
 ---
 name:            freeze_disjoint_or_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -164,7 +156,6 @@ body:             |
 ...
 ---
 name:            freeze_or_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -186,7 +177,6 @@ body:             |
 ...
 ---
 name:            freeze_nneg_zext_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -209,7 +199,6 @@ body:             |
 ...
 ---
 name:            freeze_zext_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -232,7 +221,6 @@ body:             |
 ...
 ---
 name:            freeze_udiv_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -255,7 +243,6 @@ body:             |
 ...
 ---
 name:            freeze_exact_udiv_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -278,7 +265,6 @@ body:             |
 ...
 ---
 name:            freeze_mul_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -301,7 +287,6 @@ body:             |
 ...
 ---
 name:            freeze_nsw_mul_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -324,13 +309,12 @@ body:             |
 ...
 ---
 name:            freeze_trunc_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $w0
+    liveins: $q0, $w0
 
     ; CHECK-LABEL: name: freeze_trunc_fold_barrier
-    ; CHECK: liveins: $w0
+    ; CHECK: liveins: $q0, $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %cst:_(i64) = G_CONSTANT i64 9
     ; CHECK-NEXT: %c:_(i64) = G_CONSTANT_FOLD_BARRIER %cst
@@ -347,13 +331,12 @@ body:             |
 ...
 ---
 name:            freeze_nuw_trunc_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $w0
+    liveins: $q0, $w0
 
     ; CHECK-LABEL: name: freeze_nuw_trunc_fold_barrier
-    ; CHECK: liveins: $w0
+    ; CHECK: liveins: $q0, $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %cst:_(i64) = G_CONSTANT i64 9
     ; CHECK-NEXT: %c:_(i64) = G_CONSTANT_FOLD_BARRIER %cst
@@ -370,7 +353,6 @@ body:             |
 ...
 ---
 name:            freeze_add_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -393,7 +375,6 @@ body:             |
 ...
 ---
 name:            freeze_nuw_add_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -416,7 +397,6 @@ body:             |
 ...
 ---
 name:            freeze_xor_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -437,7 +417,6 @@ body:             |
 ...
 ---
 name:            freeze_fptosi_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -461,7 +440,6 @@ body:             |
 ...
 ---
 name:            freeze_fptoui_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -485,7 +463,6 @@ body:             |
 ...
 ---
 name:            freeze_shl_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -509,7 +486,6 @@ body:             |
 ...
 ---
 name:            freeze_ashr_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -533,7 +509,6 @@ body:             |
 ...
 ---
 name:            freeze_lshr_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -557,7 +532,6 @@ body:             |
 ...
 ---
 name:            freeze_ctlz_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -580,7 +554,6 @@ body:             |
 ...
 ---
 name:            freeze_cttz_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -603,7 +576,6 @@ body:             |
 ...
 ---
 name:            freeze_abs_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -626,7 +598,6 @@ body:             |
 ...
 ---
 name:            freeze_bswap_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -649,7 +620,6 @@ body:             |
 ...
 ---
 name:            freeze_bitreverse_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -672,7 +642,6 @@ body:             |
 ...
 ---
 name:            freeze_icmp_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -699,7 +668,6 @@ body:             |
 ...
 ---
 name:            freeze_fcmp_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -726,7 +694,6 @@ body:             |
 ...
 ---
 name:            freeze_fshl_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -750,7 +717,6 @@ body:             |
 ...
 ---
 name:            freeze_fshr_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -774,7 +740,6 @@ body:             |
 ...
 ---
 name:            freeze_smax_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -799,7 +764,6 @@ body:             |
 ...
 ---
 name:            freeze_smin_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -824,7 +788,6 @@ body:             |
 ...
 ---
 name:            freeze_umax_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -849,7 +812,6 @@ body:             |
 ...
 ---
 name:            freeze_umin_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -874,7 +836,6 @@ body:             |
 ...
 ---
 name:            freeze_ptrmask_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -900,7 +861,6 @@ body:             |
 ...
 ---
 name:            freeze_saddo_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -925,7 +885,6 @@ body:             |
 ...
 ---
 name:            freeze_ssubo_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -950,7 +909,6 @@ body:             |
 ...
 ---
 name:            freeze_uaddo_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -975,7 +933,6 @@ body:             |
 ...
 ---
 name:            freeze_usubo_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1000,7 +957,6 @@ body:             |
 ...
 ---
 name:            freeze_smulo_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1025,7 +981,6 @@ body:             |
 ...
 ---
 name:            freeze_umulo_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1050,7 +1005,6 @@ body:             |
 ...
 ---
 name:            freeze_saddsat_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1075,7 +1029,6 @@ body:             |
 ...
 ---
 name:            freeze_uaddsat_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1100,7 +1053,6 @@ body:             |
 ...
 ---
 name:            freeze_ssubsat_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1125,7 +1077,6 @@ body:             |
 ...
 ---
 name:            freeze_usubsat_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1150,7 +1101,6 @@ body:             |
 ...
 ---
 name:            freeze_sshlsat_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1176,7 +1126,6 @@ body:             |
 ...
 ---
 name:            freeze_ushlsat_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1202,7 +1151,6 @@ body:             |
 ...
 ---
 name:            freeze_fneg_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1226,7 +1174,6 @@ body:             |
 ...
 ---
 name:            freeze_frem_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1251,7 +1198,6 @@ body:             |
 ...
 ---
 name:            freeze_fdiv_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1276,7 +1222,6 @@ body:             |
 ...
 ---
 name:            freeze_fmul_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1301,7 +1246,6 @@ body:             |
 ...
 ---
 name:            freeze_fsub_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1326,7 +1270,6 @@ body:             |
 ...
 ---
 name:            freeze_fadd_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1351,7 +1294,6 @@ body:             |
 ...
 ---
 name:            freeze_urem_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1376,7 +1318,6 @@ body:             |
 ...
 ---
 name:            freeze_srem_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1401,7 +1342,6 @@ body:             |
 ...
 ---
 name:            freeze_ptradd_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1428,7 +1368,6 @@ body:             |
 ---
 # select (false, x, y) -> y
 name:            freeze_select_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -1447,12 +1386,11 @@ body:             |
 ...
 ---
 name:            freeze_extract_and_shuffle_vector_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $q1, $x0, $x1
     ; CHECK-LABEL: name: freeze_extract_and_shuffle_vector_fold_barrier
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $q1, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg1:_(<4 x i32>) = COPY $q0
     ; CHECK-NEXT: %idx:_(i64) = G_CONSTANT i64 0
@@ -1474,12 +1412,11 @@ body:             |
 ...
 ---
 name:            freeze_insert_and_shuffle_vector_fold_barrier
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $q1, $x0, $x1
     ; CHECK-LABEL: name: freeze_insert_and_shuffle_vector_fold_barrier
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $q1, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %elt:_(i32) = COPY $w0
     ; CHECK-NEXT: %arg1:_(<4 x i32>) = COPY $q0
@@ -1504,7 +1441,6 @@ body:             |
 ...
 ---
 name:            ubfx_does_not_generate_poison
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -1528,7 +1464,6 @@ body:             |
 ...
 ---
 name:            sbfx_does_not_generate_poison
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
