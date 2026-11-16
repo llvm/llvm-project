@@ -1409,7 +1409,7 @@ bool AMDGPUCodeGenPrepareImpl::shouldKeepMulForMad64(
     const BinaryOperator &I) const {
   if (I.getOpcode() != Instruction::Mul || !I.getType()->isIntegerTy(64))
     return false;
-  if (ST.getGeneration() < AMDGPUSubtarget::GFX9 || UA.isUniformAtDef(&I))
+  if (AMDGPU::isNotGFX9Plus(ST) || UA.isUniformAtDef(&I))
     return false;
   // Only the SelectionDAG add combine fuses the mul into the mad.
   if (getCGPassBuilderOption(TM).EnableGlobalISelOption ==
