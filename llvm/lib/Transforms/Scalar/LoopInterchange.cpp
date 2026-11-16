@@ -484,10 +484,10 @@ private:
   bool tightlyNested(Loop *Outer, Loop *Inner);
   bool containsUnsafeInstructions(BasicBlock *BB, Instruction *Skip);
 
-  /// Collect into \p AddressInsts the instructions computing \p MemRef that
+  /// Collect into \p AddressInsts the instructions computing \p V that
   /// do not already dominate the header of \p InnerL.
   /// Return false if any of them cannot be hoisted out.
-  bool collectAddressInstsToHoist(Value *MemRef, Loop *InnerL,
+  bool collectAddressInstsToHoist(Value *V, Loop *InnerL,
                                   SmallVectorImpl<Instruction *> &AddressInsts,
                                   SmallPtrSetImpl<Instruction *> &Visited);
 
@@ -845,14 +845,14 @@ struct LoopInterchange {
 } // end anonymous namespace
 
 bool LoopInterchangeLegality::collectAddressInstsToHoist(
-    Value *MemRef, Loop *InnerL, SmallVectorImpl<Instruction *> &AddressInsts,
+    Value *V, Loop *InnerL, SmallVectorImpl<Instruction *> &AddressInsts,
     SmallPtrSetImpl<Instruction *> &Visited) {
-  auto *I = dyn_cast<Instruction>(MemRef);
+  auto *I = dyn_cast<Instruction>(V);
   if (!I || DT->dominates(I, InnerL->getHeader()) || !Visited.insert(I).second)
     return true;
   if (Visited.size() > Opts.loop_interchange_max_address_insts_to_hoist ||
-      InnerL->contains(I) || I->mayHaveSideEffects() ||
-      I->mayReadFromMemory() || !isSafeToSpeculativelyExecute(I))
+      InnerL->contains(I) || I->mayReadFromMemory() ||
+      !isSafeToSpeculativelyExecute(I))
     return false;
 
   for (Value *Op : I->operands())
@@ -2214,13 +2214,11 @@ void LoopInterchangeTransform::reduction2Memory() {
   LoopInterchangeLegality::InnerReduction SR = InnerReductions[0];
 
   // Make the store address available inside the inner loop.
-  if (!SR.AddressInstsToHoist.empty()) {
-    BasicBlock::iterator InsertPt =
-        InnerLoop->getLoopPreheader()->getTerminator()->getIterator();
-    for (Instruction *I : SR.AddressInstsToHoist) {
-      LLVM_DEBUG(dbgs() << "Hoisting address computation: " << *I << "\n");
-      I->moveBefore(InsertPt);
-    }
+  BasicBlock::iterator InsertPt =
+      InnerLoop->getLoopPreheader()->getTerminator()->getIterator();
+  for (Instruction *I : SR.AddressInstsToHoist) {
+    LLVM_DEBUG(dbgs() << "Hoisting address computation: " << *I << "\n");
+    I->moveBefore(InsertPt);
   }
 
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();

@@ -317,8 +317,7 @@ exit:
 }
 
 ; 6. The store address cannot be computed before the inner loop: it depends on
-;    a value the inner loop produces, so it is not the same address for every
-;    iteration that has to accumulate into it.
+;    a value the inner loop produces, so it can not be moved to it's preheader.
 ; for (int i = 0; i < 100; i++) {
 ;   r = 0;
 ;   for (j = 0; j < 100; j++)
