@@ -286,6 +286,17 @@ public:
                        lldb_private::RegisterContext *regctx,
                        bool &behaves_like_zeroth_frame);
 
+  /// Returns whether the frame identified by \p lhs is younger than the frame
+  /// identified by \p rhs, if a language runtime of \p process can order
+  /// them. For example, a runtime whose unwind plans produce call frame
+  /// addresses that aren't stack addresses knows how those frames relate.
+  ///
+  /// \return
+  ///     True if \p lhs is younger than \p rhs, false if it isn't, or
+  ///     std::nullopt if no language runtime has an opinion.
+  static std::optional<bool>
+  IsFrameYoungerThan(Process &process, const StackID &lhs, const StackID &rhs);
+
   /// Language runtime plugins can use this API to report
   /// language-specific runtime information about this compile unit,
   /// such as additional language version details or feature flags.
@@ -300,6 +311,14 @@ protected:
                        lldb_private::RegisterContext *regctx,
                        bool &behaves_like_zeroth_frame) {
     return lldb::UnwindPlanSP();
+  }
+
+  // The static IsFrameYoungerThan method above is only implemented in the base
+  // class; subclasses may override this protected member if they can order
+  // frames that StackID::IsYoungerThan() can't.
+  virtual std::optional<bool> IsFrameYoungerThan(const StackID &lhs,
+                                                 const StackID &rhs) {
+    return std::nullopt;
   }
 
   LanguageRuntime(Process *process);

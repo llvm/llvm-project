@@ -47,6 +47,7 @@ public:
     m_cfa = LLDB_INVALID_ADDRESS;
     m_symbol_scope = nullptr;
     m_tail_call_depth = 0;
+    m_cfa_on_stack = eLazyBoolCalculate;
   }
 
   bool IsValid() const {
@@ -55,10 +56,17 @@ public:
 
   void Dump(Stream *s);
 
+  /// Returns whether the call frame address is a stack address, as opposed to,
+  /// for example, a heap address. If \p process can't tell, the call frame
+  /// address counts as a stack address.
+  bool IsCFAOnStack(Process &process) const;
+
   /// Returns true if this StackID corresponds to a frame younger (i.e. higher
   /// on the call stack) than `other`, and false otherwise (including when the
   /// frames are not comparable, in some cases where this can be detected).
-  bool IsYoungerThan(const StackID &other) const;
+  /// The language runtimes of \p process get the first say, see
+  /// LanguageRuntime::IsFrameYoungerThan().
+  bool IsYoungerThan(const StackID &other, Process &process) const;
 
 protected:
   friend class StackFrame;
@@ -91,6 +99,9 @@ protected:
   /// that replaced it, its position in the chain of tail calls after that
   /// frame (1, 2, ...). 0 for every other frame.
   uint32_t m_tail_call_depth = 0;
+
+  /// The cached result of IsCFAOnStack().
+  mutable LazyBool m_cfa_on_stack = eLazyBoolCalculate;
 };
 
 bool operator==(const StackID &lhs, const StackID &rhs);

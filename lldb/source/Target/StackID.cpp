@@ -10,6 +10,8 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/LanguageRuntime.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Stream.h"
 
@@ -32,12 +34,13 @@ void StackID::SetPC(lldb::addr_t pc, Process *process) {
 void StackID::SetCFA(lldb::addr_t cfa, Process *process) {
   m_cfa_with_metadata = cfa;
   m_cfa = process ? process->FixDataAddress(cfa) : cfa;
+  m_cfa_on_stack = eLazyBoolCalculate;
 }
 
 void StackID::Dump(Stream *s) {
   s->Printf("StackID (pc = 0x%16.16" PRIx64 ", cfa = 0x%16.16" PRIx64
-            ", symbol_scope = %p",
-            m_pc, m_cfa, static_cast<void *>(m_symbol_scope));
+            ", cfa_on_stack = %d, symbol_scope = %p",
+            m_pc, m_cfa, m_cfa_on_stack, static_cast<void *>(m_symbol_scope));
   if (m_tail_call_depth)
     s->Printf(", tail_call_depth = %u", m_tail_call_depth);
   if (m_symbol_scope) {
@@ -74,7 +77,23 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
   return !(lhs == rhs);
 }
 
-bool StackID::IsYoungerThan(const StackID &other) const {
+bool StackID::IsCFAOnStack(Process &process) const {
+  if (m_cfa_on_stack == eLazyBoolCalculate) {
+    m_cfa_on_stack = eLazyBoolYes;
+    MemoryRegionInfo mem_info;
+    if (m_cfa != LLDB_INVALID_ADDRESS &&
+        process.GetMemoryRegionInfo(m_cfa, mem_info).Success() &&
+        mem_info.IsStackMemory() == eLazyBoolNo)
+      m_cfa_on_stack = eLazyBoolNo;
+  }
+  return m_cfa_on_stack == eLazyBoolYes;
+}
+
+bool StackID::IsYoungerThan(const StackID &other, Process &process) const {
+  if (std::optional<bool> younger =
+          LanguageRuntime::IsFrameYoungerThan(process, *this, other))
+    return *younger;
+
   const lldb::addr_t lhs_cfa = GetCallFrameAddressWithoutMetadata();
   const lldb::addr_t rhs_cfa = other.GetCallFrameAddressWithoutMetadata();
 

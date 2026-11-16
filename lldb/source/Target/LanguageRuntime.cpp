@@ -264,6 +264,15 @@ LanguageRuntime::GetRuntimeUnwindPlan(Thread &thread, RegisterContext *regctx,
   return UnwindPlanSP();
 }
 
+std::optional<bool> LanguageRuntime::IsFrameYoungerThan(Process &process,
+                                                        const StackID &lhs,
+                                                        const StackID &rhs) {
+  for (LanguageRuntime *runtime : process.GetLanguageRuntimes())
+    if (std::optional<bool> younger = runtime->IsFrameYoungerThan(lhs, rhs))
+      return younger;
+  return std::nullopt;
+}
+
 StructuredData::ObjectSP
 LanguageRuntime::GetLanguageSpecificData(SymbolContext sc) {
   return {};
