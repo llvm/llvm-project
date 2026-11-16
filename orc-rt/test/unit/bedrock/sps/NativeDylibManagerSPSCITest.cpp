@@ -13,8 +13,8 @@
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
 #include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/bedrock/Session.h"
+#include "orc-rt/support/sps/SPSRemoteSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSSymbolLookupResult.h"
-#include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "BedrockTestUtils.h"
@@ -70,7 +70,7 @@ protected:
 
   template <typename OnCompleteFn>
   void spsLookup(OnCompleteFn &&OnComplete, void *Handle,
-                 SymbolLookupSet Symbols) {
+                 RemoteSymbolLookupSet Symbols) {
     using SPSSig = SPSExpected<SPSSequence<SPSOptional<SPSExecutorAddr>>>(
         SPSExecutorAddr, SPSExecutorAddr, SPSSymbolLookupSet);
     SPSWrapperFunction<SPSSig>::call(

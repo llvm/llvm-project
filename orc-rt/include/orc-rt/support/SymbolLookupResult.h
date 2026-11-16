@@ -20,8 +20,8 @@
 
 namespace orc_rt {
 
-/// The result of looking up a SymbolLookupSet: one entry per element of the
-/// set, in the same order.
+/// The result of looking up a RemoteSymbolLookupSet: one entry per element of
+/// the set, in the same order.
 ///
 /// An empty optional indicates that a required symbol was not found. A missing
 /// weakly referenced symbol is reported as a present optional holding a null
