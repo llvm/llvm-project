@@ -3798,6 +3798,9 @@ libc_support_library(
 libc_support_library(
     name = "__support_printf_core_printf_config",
     hdrs = ["src/__support/printf_core/printf_config.h"],
+    deps = [
+        ":__support_macros_properties_types",
+    ],
 )
 
 libc_support_library(
