@@ -3,12 +3,17 @@
 
 # readability-redundant-control-flow
 
-This check looks for procedures (functions returning no value) with `return`
-statements at the end of the function. Such `return` statements are
-redundant.
+This check looks for procedures (functions returning no value) with
+`return` statements at the end of the function. Such `return` statements
+are redundant.
 
 Loop statements (`for`, `while`, `do while`) are checked for redundant
 `continue` statements at the end of the loop body.
+
+The check also follows nested blocks and the branches of a final `if`
+statement. It preserves exits that skip subsequent statements, returns
+inside loops, and return expressions with side effects. For an unbraced
+branch or loop body, removing the keyword leaves a null statement.
 
 Examples:
 

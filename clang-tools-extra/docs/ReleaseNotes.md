@@ -455,6 +455,11 @@ infrastructure are described first, followed by tool-specific sections.
   written to, such as the `expected` parameter of
   `atomic_compare_exchange_strong()`.
 
+- Improved {doc}`readability-redundant-control-flow
+  <clang-tidy/checks/readability/redundant-control-flow>` to detect
+  redundant `return` and `continue` statements in nested blocks and final
+  `if` branches.
+
 - Improved {doc}`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check:
 
