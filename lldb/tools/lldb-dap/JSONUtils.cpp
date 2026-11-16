@@ -306,10 +306,6 @@ VariableDescription::VariableDescription(
         os_display_value << " " << display_summary;
     } else if (has_summary) {
       os_display_value << display_summary;
-
-    } else if (!type_name.empty()) {
-      // As last resort, we print its type if available.
-      os_display_value << type_name;
     }
   }
 
