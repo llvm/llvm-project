@@ -166,7 +166,8 @@ body:             |
 ...
 
 # The same, but $agpr5 is live too: the joined register can use neither the
-# AGPRs of %1 nor those of %2. It gets another free AGPR.
+# AGPRs of %1 nor those of %2. It gets the AGPRs of the MFMA result, which are
+# free for it and do not raise the number of AGPRs the function uses.
 ---
 name:            partial_copy_other_agpr
 tracksRegLiveness: true
@@ -201,6 +202,51 @@ body:             |
     GLOBAL_STORE_DWORDX4_SADDR %0, %4, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     GLOBAL_STORE_DWORD_SADDR %0, %7, undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s32), addrspace 1)
     S_ENDPGM 0, implicit $agpr1, implicit $agpr2, implicit $agpr5
+
+...
+
+# %2 is a copy of %1. $agpr2_agpr3 is live where %1 is defined, and
+# $agpr0_agpr1 where %2 is read: the joined register can use neither the AGPRs
+# of %1 nor those of %2. Every other free AGPR would raise the number of AGPRs
+# the function uses, which can lower occupancy, so the copy stays.
+---
+name:            no_new_agpr_for_join
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: no_new_agpr_for_join
+    ; CHECK: renamable $vgpr4 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: S_NOP 0, implicit-def $agpr2_agpr3
+    ; CHECK-NEXT: renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, renamable $vgpr4, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: S_NOP 0, implicit $agpr2_agpr3
+    ; CHECK-NEXT: renamable $agpr2_agpr3 = COPY killed renamable $agpr0_agpr1
+    ; CHECK-NEXT: S_NOP 0, implicit-def $agpr0_agpr1
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX2_SADDR renamable $vgpr4, killed renamable $agpr2_agpr3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    ; CHECK-NEXT: S_NOP 0, implicit $agpr0_agpr1
+    ; CHECK-NEXT: renamable $vgpr0_vgpr1_vgpr2_vgpr3 = IMPLICIT_DEF
+    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3 = COPY killed renamable $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: renamable $vgpr6_vgpr7_vgpr8_vgpr9 = IMPLICIT_DEF
+    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_16X16X32_F16_e64 killed $vgpr6_vgpr7_vgpr8_vgpr9, $vgpr6_vgpr7_vgpr8_vgpr9, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr4, killed renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    S_NOP 0, implicit-def $agpr2_agpr3
+    %1:areg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, %0, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    S_NOP 0, implicit killed $agpr2_agpr3
+    %2:areg_64_align2 = COPY %1
+    S_NOP 0, implicit-def $agpr0_agpr1
+    GLOBAL_STORE_DWORDX2_SADDR %0, %2, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    S_NOP 0, implicit killed $agpr0_agpr1
+    %3:vreg_128_align2 = IMPLICIT_DEF
+    %4:areg_128_align2 = COPY %3
+    %5:vreg_128_align2 = COPY %4
+    %6:av_128_align2 = IMPLICIT_DEF
+    %7:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %6, %6, %5, 0, 0, 0, implicit $mode, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %0, %7, undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
 
 ...
 

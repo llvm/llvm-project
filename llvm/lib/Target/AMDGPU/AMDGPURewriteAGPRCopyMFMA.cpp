@@ -144,13 +144,19 @@ public:
   /// Erase \p Copy and remove it from the slot indexes.
   void eraseCopy(MachineInstr &Copy) const;
 
-  /// Join \p Dst into \p Src if \p Dst is defined by copies of \p Src and the
-  /// two only overlap where they hold the same value. \returns true on
-  /// success; \p Dst then has no defs or uses left.
-  bool tryJoinCopyPair(Register Dst, Register Src) const;
+  /// \returns the number of AGPRs the function uses: one more than the index
+  /// of the highest AGPR that is assigned or used as a physical register.
+  unsigned getNumUsedAGPRs() const;
 
-  /// Join \p Reg with one of its AGPR copy partners. \returns true on success.
-  bool joinWithCopyPartner(Register Reg) const;
+  /// Join \p Dst into \p Src if \p Dst is defined by copies of \p Src and the
+  /// two only overlap where they hold the same value. The joined register only
+  /// gets an AGPR below \p NumUsedAGPRs. \returns true on success; \p Dst then
+  /// has no defs or uses left.
+  bool tryJoinCopyPair(Register Dst, Register Src, unsigned NumUsedAGPRs) const;
+
+  /// Join \p Reg with one of its AGPR copy partners, in an AGPR below
+  /// \p NumUsedAGPRs. \returns true on success.
+  bool joinWithCopyPartner(Register Reg, unsigned NumUsedAGPRs) const;
 
   /// Join the copy-related registers assigned to AGPRs until nothing more
   /// joins.
@@ -417,8 +423,18 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eraseCopy(MachineInstr &Copy) const {
   Copy.eraseFromParent();
 }
 
-bool AMDGPURewriteAGPRCopyMFMAImpl::tryJoinCopyPair(Register Dst,
-                                                    Register Src) const {
+unsigned AMDGPURewriteAGPRCopyMFMAImpl::getNumUsedAGPRs() const {
+  for (unsigned I = AMDGPU::AGPR_32RegClass.getNumRegs(); I != 0; --I) {
+    MCRegister Reg = AMDGPU::AGPR_32RegClass.getRegister(I - 1);
+    if (LRM.isPhysRegUsed(Reg) ||
+        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
+      return TRI.getHWRegIndex(Reg) + 1;
+  }
+  return 0;
+}
+
+bool AMDGPURewriteAGPRCopyMFMAImpl::tryJoinCopyPair(
+    Register Dst, Register Src, unsigned NumUsedAGPRs) const {
   // Only join registers that ended up in AGPRs; VGPR copies are the
   // coalescer's business.
   MCRegister DstPhys = getAssignedAGPR(Dst), SrcPhys = getAssignedAGPR(Src);
@@ -474,8 +490,10 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryJoinCopyPair(Register Dst,
 
   LiveInterval &Joined = RenameAndRecomputeSrc(Src, Dst, JoinedRC);
   // Prefer Src's register, which the copies read from, then Dst's. Else take
-  // any free register of the class, but not a callee-saved one the function
-  // does not use yet, which would need a save and restore.
+  // another free AGPR, but not one at or above NumUsedAGPRs: AGPRs share the
+  // register file with VGPRs, so raising the AGPR count can lower occupancy,
+  // which costs more than the copies. Also skip a callee-saved register the
+  // function does not use yet, which would need a save and restore.
   auto IsFree = [&](MCRegister Cand) {
     return JoinedRC->contains(Cand) &&
            LRM.checkInterference(Joined, Cand) == LiveRegMatrix::IK_Free;
@@ -486,8 +504,11 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryJoinCopyPair(Register Dst,
   } else if (IsFree(DstPhys)) {
     Target = DstPhys;
   } else {
-    for (MCRegister Cand : RegClassInfo.getOrder(JoinedRC)) {
-      if ((!RegClassInfo.getLastCalleeSavedAlias(Cand) ||
+    unsigned Width = divideCeil(TRI.getRegSizeInBits(*JoinedRC), 32);
+    for (MCRegister Cand :
+         RegClassInfo.getOrder(TRI.getEquivalentAGPRClass(JoinedRC))) {
+      if (TRI.getHWRegIndex(Cand) + Width <= NumUsedAGPRs &&
+          (!RegClassInfo.getLastCalleeSavedAlias(Cand) ||
            LRM.isPhysRegUsed(Cand)) &&
           IsFree(Cand)) {
         Target = Cand;
@@ -523,7 +544,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryJoinCopyPair(Register Dst,
   return true;
 }
 
-bool AMDGPURewriteAGPRCopyMFMAImpl::joinWithCopyPartner(Register Reg) const {
+bool AMDGPURewriteAGPRCopyMFMAImpl::joinWithCopyPartner(
+    Register Reg, unsigned NumUsedAGPRs) const {
   // Collect the pairs first: trying a join rewrites the use lists.
   SmallSetVector<std::pair<Register, Register>, 4> Pairs;
   for (MachineInstr &MI : MRI.reg_nodbg_instructions(Reg)) {
@@ -533,20 +555,22 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::joinWithCopyPartner(Register Reg) const {
   }
 
   return any_of(Pairs, [&](std::pair<Register, Register> Pair) {
-    return tryJoinCopyPair(Pair.first, Pair.second);
+    return tryJoinCopyPair(Pair.first, Pair.second, NumUsedAGPRs);
   });
 }
 
 void AMDGPURewriteAGPRCopyMFMAImpl::joinAllCopyPartners() const {
   // A join fails if no AGPR is free for the joined live range. Another join
-  // can free one, so retry until nothing more joins.
+  // can free one, so retry until nothing more joins. No join takes an AGPR at
+  // or above the count taken here, so the joins never raise it.
+  const unsigned NumUsedAGPRs = getNumUsedAGPRs();
   bool Joined = true;
   while (Joined) {
     Joined = false;
     for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
       Register VReg = Register::index2VirtReg(I);
       if (getAssignedAGPR(VReg))
-        Joined |= joinWithCopyPartner(VReg);
+        Joined |= joinWithCopyPartner(VReg, NumUsedAGPRs);
     }
   }
 }
