@@ -30,7 +30,7 @@ $ scan-build -sarif -o reports make
 ## Unity builds
 
 In a unity build (also called a jumbo build or unified-sources build), a source
-file includes other source files. By default, the analyzer may not treat
+file includes other source files. By default, the analyzer never treats
 functions in those included files as analysis entry points. Set
 `unitybuild-file-extensions` to a semicolon-separated list of extensions to
 analyze functions in matching included files as entry points, even when the
@@ -41,9 +41,7 @@ $ clang --analyze -Xclang -analyzer-config -Xclang 'unitybuild-file-extensions=.
 ```
 
 Include the leading dot in each extension and quote the value so the shell does
-not interpret the semicolons as command separators. The option does not make
-functions in included headers entry points unless you explicitly list their
-extensions.
+not interpret the semicolons as command separators.
 
 ## Comparison of CodeChecker and scan-build
 
