@@ -70,9 +70,11 @@ static std::unique_ptr<llvm::Module>
 lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
                      bool EnableOpenMP,
                      llvm::StringRef mlirSaveTempsOutFile = {},
-                     llvm::vfs::FileSystem *fs = nullptr) {
+                     llvm::vfs::FileSystem *fs = nullptr,
+                     bool runLLVMSimplifyCFG = false) {
   return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx, EnableOpenMP,
-                                              mlirSaveTempsOutFile, fs);
+                                              mlirSaveTempsOutFile, fs,
+                                              runLLVMSimplifyCFG);
 }
 
 // Print \p MLIRModule the way -emit-cir does, so that CIR emitted from source
@@ -177,7 +179,8 @@ static void emitCIRModuleOutput(
 
     std::unique_ptr<llvm::Module> LLVMModule =
         lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, EnableOpenMP,
-                             mlirSaveTempsOutFile, &CI.getVirtualFileSystem());
+                             mlirSaveTempsOutFile, &CI.getVirtualFileSystem(),
+                             CGO.OptimizationLevel > 0);
     if (!LLVMModule) {
       // Lowering errors are already routed through the MLIR diagnostic
       // handler. Only emit the generic error if nothing was reported.
