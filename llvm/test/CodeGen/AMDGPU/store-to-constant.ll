@@ -313,17 +313,17 @@ define amdgpu_kernel void @store_as6_v4i64(<4 x i64> %value) {
 ; CHECK-LABEL: store_as6_v4i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0x1010
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0x1000
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    s_mov_b32 s9, 0
+; CHECK-NEXT:    s_movk_i32 s8, 0x1010
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
-; CHECK-NEXT:    v_pk_mov_b32 v[6:7], s[6:7], s[6:7] op_sel:[0,1]
-; CHECK-NEXT:    v_pk_mov_b32 v[10:11], s[2:3], s[2:3] op_sel:[0,1]
-; CHECK-NEXT:    v_pk_mov_b32 v[8:9], s[0:1], s[0:1] op_sel:[0,1]
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
-; CHECK-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[4:5], s[4:5] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[4:5], s[6:7], s[6:7] op_sel:[0,1]
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9]
+; CHECK-NEXT:    s_movk_i32 s8, 0x1000
+; CHECK-NEXT:    v_pk_mov_b32 v[4:5], s[2:3], s[2:3] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[0:1], s[0:1] op_sel:[0,1]
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9]
 ; CHECK-NEXT:    s_endpgm
   store <4 x i64> %value, ptr addrspace(6) inttoptr (i32 4096 to ptr addrspace(6)), align 32
   ret void
