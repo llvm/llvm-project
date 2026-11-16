@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include <type_traits>
 using namespace clang;
 using namespace clang::CIRGen;
 
@@ -92,9 +93,14 @@ emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s,
   // hasCancel() reports a nested cancel/cancellation point directive in the
   // body, not a clause on `parallel`, so it can't be an emitParallelClauses()
   // NYI check.
-  if (s.hasCancel()) {
-    cgm.errorNYI(s.getBeginLoc(), "OpenMP Parallel with Cancel");
-    return mlir::failure();
+  // OMPParallelMasterDirective does not expose a cancellation flag.
+  if constexpr (!std::is_same_v<DirectiveTy, OMPParallelMasterDirective>) {
+    if (s.hasCancel()) {
+      cgm.errorNYI(s.getBeginLoc(),
+                   "OpenMP 'cancel' or 'cancellation point' inside a parallel "
+                   "region");
+      return mlir::failure();
+    }
   }
   // Only set for reduction(task: ...), already rejected as NYI above.
   assert(!s.getTaskReductionRefExpr() &&
