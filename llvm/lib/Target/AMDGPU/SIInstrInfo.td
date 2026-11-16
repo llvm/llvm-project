@@ -372,6 +372,12 @@ def AMDGPUcvt_pk_fp8_f32_e5m3 : SDNode<"AMDGPUISD::CVT_PK_FP8_F32_E5M3",
 def AMDGPUcvt_pk_bf8_f32 : SDNode<"AMDGPUISD::CVT_PK_BF8_F32",
   SDTypeProfile<1, 4, [SDTCisVT<0, i32>, SDTCisVT<1, f32>, SDTCisVT<2, f32>,
                        SDTCisVT<3, i32>, SDTCisVT<4, i1>]>>;
+def AMDGPUcvt_pk_fp8_f32_sat : SDNode<"AMDGPUISD::CVT_PK_FP8_F32_SAT",
+  SDTypeProfile<1, 4, [SDTCisVT<0, i32>, SDTCisVT<1, f32>, SDTCisVT<2, f32>,
+                       SDTCisVT<3, i32>, SDTCisVT<4, i1>]>>;
+def AMDGPUcvt_pk_bf8_f32_sat : SDNode<"AMDGPUISD::CVT_PK_BF8_F32_SAT",
+  SDTypeProfile<1, 4, [SDTCisVT<0, i32>, SDTCisVT<1, f32>, SDTCisVT<2, f32>,
+                       SDTCisVT<3, i32>, SDTCisVT<4, i1>]>>;
 def AMDGPUcvt_pk_fp8_f16 : SDNode<"AMDGPUISD::CVT_PK_FP8_F16",
   SDTypeProfile<1, 1, [SDTCisVT<0, i16>, SDTCisVT<1, v2f16>]>>;
 def AMDGPUcvt_pk_bf8_f16 : SDNode<"AMDGPUISD::CVT_PK_BF8_F16",

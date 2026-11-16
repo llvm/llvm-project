@@ -954,6 +954,13 @@ defm OCPFP8ConversionInsts : AMDGPUSubtargetFeature<"ocp-fp8-conversion-insts",
   "Has OCP fp8 (E4M3FN, E5M2) conversion instructions"
 >;
 
+defm FP8ConversionFP16Ovfl : AMDGPUSubtargetFeature<"fp8-conversion-fp16-ovfl",
+  "Conversions from f32 to OCP fp8 saturate while MODE.FP16_OVFL is set",
+  /*GenPredicate=*/0,
+  /*GenAssemblerPredicate=*/0,
+  [FeatureOCPFP8ConversionInsts]
+>;
+
 defm FP8F16ConversionInsts : AMDGPUSubtargetFeature<"fp8-f16-conversion-insts",
   "Has fp8 and bf8 conversion to f16 instructions"
 >;
@@ -2189,6 +2196,7 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureFP8ConversionInsts,
    FeatureCvtFP8SDWASrcSel,
    FeatureOCPFP8ConversionInsts,
+   FeatureFP8ConversionFP16Ovfl,
    FeatureGFX950Insts,
    FeaturePrngInst,
    FeatureBF16ConversionInsts,

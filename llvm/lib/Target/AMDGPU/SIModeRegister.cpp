@@ -8,8 +8,8 @@
 /// \file
 /// This pass inserts changes to the Mode register settings as required.
 /// Note that currently it only deals with the Double Precision Floating Point
-/// rounding mode setting, but is intended to be generic enough to be easily
-/// expanded.
+/// rounding mode setting and FP16_OVFL, but is intended to be generic enough to
+/// be easily expanded.
 ///
 //===----------------------------------------------------------------------===//
 //
@@ -72,8 +72,6 @@ struct Status {
   bool isCompatible(Status &S) {
     return ((Mask & S.Mask) == S.Mask) && ((Mode & S.Mask) == S.Mode);
   }
-
-  bool isCombinable(Status &S) { return !(Mask & S.Mask) || isCompatible(S); }
 };
 
 class BlockData {
@@ -127,10 +125,11 @@ public:
 
   bool Changed = false;
 
-  // Set during Phase 1. A restore at a boundary would undo an explicit request,
-  // so the mixed case is not handled.
-  bool AnyNonDefaultMode = false;
-  bool AnyWritesRoundMode = false;
+  // Set during Phase 1: the mode bits some instruction needs a non-default
+  // value for, and those the program writes itself. A restore at a boundary
+  // would undo an explicit request, so only the rest of the former is restored.
+  unsigned NonDefaultMask = 0;
+  unsigned ExplicitMask = 0;
 
   bool run(MachineFunction &MF);
 
@@ -141,6 +140,8 @@ public:
   void processBlockPhase3(MachineBasicBlock &MBB, const SIInstrInfo *TII);
 
   Status getInstructionMode(MachineInstr &MI, const SIInstrInfo *TII);
+
+  Status getFP16OvflMode(const MachineInstr &MI) const;
 
   void insertSetreg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                     const SIInstrInfo *TII, Status InstrMode);
@@ -185,16 +186,37 @@ static bool isFPTruncRoundPseudo(const MachineInstr &MI) {
   }
 }
 
-// The opcodes for which getInstructionMode below returns a non-default Status.
-static bool mayNeedNonDefaultMode(const MachineInstr &MI) {
+// The conversions that saturate, which the HW does while FP16_OVFL is set.
+static bool isSaturatingCvt(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_CVT_PK_FP8_F32_sat_e64:
+  case AMDGPU::V_CVT_PK_BF8_F32_sat_e64:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// The mode bits for which getInstructionMode or getFP16OvflMode below returns a
+// non-default value.
+static unsigned getNonDefaultModeMask(const MachineInstr &MI) {
+  if (isSaturatingCvt(MI))
+    return AMDGPU::Hwreg::FP16_OVFL_MASK;
+
   switch (MI.getOpcode()) {
   case AMDGPU::V_INTERP_P1LL_F16:
   case AMDGPU::V_INTERP_P1LV_F16:
   case AMDGPU::V_INTERP_P2_F16:
-    return true;
+    return FP_ROUND_MODE_DP(0x3);
   default:
-    return isFPTruncRoundPseudo(MI);
+    return isFPTruncRoundPseudo(MI) ? FP_ROUND_MODE_DP(0x3) : 0;
   }
+}
+
+// Whether MI depends on a mode register value it does not write itself.
+static bool readsMode(const MachineInstr &MI) {
+  return is_contained(MI.getDesc().implicit_uses(), AMDGPU::MODE) &&
+         !SIInstrInfo::modifiesModeRegister(MI);
 }
 
 // Returns the {offset, mask} of the mode field an explicit setreg writes.
@@ -281,6 +303,23 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
   return Status();
 }
 
+// Determine the FP16_OVFL setting required for this instruction. It is only
+// managed in functions with a saturating conversion, where everything else
+// that depends on the mode needs the default:
+//   s_setreg_imm32_b32 hwreg(HW_REG_MODE, 23, 1), 1
+//   v_cvt_pk_fp8_f32 v0, v1, v2   ; saturating
+//   s_setreg_imm32_b32 hwreg(HW_REG_MODE, 23, 1), 0
+//   v_add_f32 v1, v1, v2
+Status SIModeRegister::getFP16OvflMode(const MachineInstr &MI) const {
+  using namespace AMDGPU::Hwreg;
+  if (isSaturatingCvt(MI))
+    return Status(FP16_OVFL_MASK, FP16_OVFL_MASK);
+  if (!(DefaultStatus.Mask & FP16_OVFL_MASK))
+    return Status();
+
+  return readsMode(MI) ? Status(FP16_OVFL_MASK, 0) : Status();
+}
+
 // Insert a setreg instruction to update the Mode register.
 // It is possible (though unlikely) for an instruction to require a change to
 // the value of disjoint parts of the Mode register when we don't know the
@@ -333,17 +372,26 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
   // initial requirements.
   bool RequirePending = true;
   Status IPChange;
+  // The mode bits something since InsertionPoint depends on. A setreg at
+  // InsertionPoint must not change them:
+  //   v_cvt_f32_f64 v0, v[0:1]     ; InsertionPoint, needs FP16_OVFL = 0
+  //   v_cvt_pk_fp8_f32 v1, v2, v3  ; saturating, needs FP16_OVFL = 1
+  unsigned IPFixedMask = 0;
   for (MachineInstr &MI : MBB) {
     // getInstructionMode rewrites the pseudos, so classify MI before the call.
-    AnyNonDefaultMode |= mayNeedNonDefaultMode(MI);
-    AnyWritesRoundMode |= MI.getOpcode() == AMDGPU::S_ROUND_MODE;
-    Status InstrMode = getInstructionMode(MI, TII);
+    NonDefaultMask |= getNonDefaultModeMask(MI);
+    if (MI.getOpcode() == AMDGPU::S_ROUND_MODE)
+      ExplicitMask |= FP_ROUND_MODE_DP(0x3);
+    Status InstrMode = getInstructionMode(MI, TII).merge(getFP16OvflMode(MI));
     if (auto Field = getModeSetregField(MI, TII)) {
       // We preserve any explicit mode register setreg instruction we encounter,
       // as we assume it has been inserted by a higher authority (this is
       // likely to be a very rare occurrence).
       auto [Offset, Mask] = *Field;
-      AnyWritesRoundMode |= (Mask & FP_ROUND_MODE_DP(0x3)) != 0;
+      ExplicitMask |= Mask;
+      // The rounding mode is one value, so a partial write claims all of it.
+      if (Mask & FP_ROUND_MODE_DP(0x3))
+        ExplicitMask |= FP_ROUND_MODE_DP(0x3);
 
       // If an InsertionPoint is set we will insert a setreg there.
       if (InsertionPoint) {
@@ -371,6 +419,8 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
       // record the site here. Change is unaffected: Phase 3 pairs any restore
       // it inserts with a re-set after the call.
       NewInfo->BoundarySites.emplace_back(&MI, NewInfo->Change);
+      // The site depends on the whole mode.
+      IPFixedMask = ~0u;
     } else if (!NewInfo->Change.isCompatible(InstrMode)) {
       // This instruction uses the Mode register and its requirements aren't
       // compatible with the current mode.
@@ -378,7 +428,7 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
         // If the required mode change cannot be included in the current
         // InsertionPoint changes, we need a setreg and start a new
         // InsertionPoint.
-        if (!IPChange.delta(NewInfo->Change).isCombinable(InstrMode)) {
+        if (NewInfo->Change.delta(InstrMode).Mask & IPFixedMask) {
           if (RequirePending) {
             // This is the first insertionPoint in the block so we will defer
             // the insertion of the setreg to Phase 3 where we know whether or
@@ -393,6 +443,7 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
           }
           // Set the new InsertionPoint
           InsertionPoint = &MI;
+          IPFixedMask = 0;
         }
         NewInfo->Change = NewInfo->Change.merge(InstrMode);
       } else {
@@ -400,9 +451,11 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
         // the block or we have previously seen an explicit setreg.
         InsertionPoint = &MI;
         IPChange = NewInfo->Change;
+        IPFixedMask = 0;
         NewInfo->Change = NewInfo->Change.merge(InstrMode);
       }
     }
+    IPFixedMask |= InstrMode.Mask;
   }
   if (RequirePending) {
     // If we haven't yet set the initial requirements for the block we set them
@@ -498,17 +551,20 @@ void SIModeRegister::processBlockPhase3(MachineBasicBlock &MBB,
   }
 
   // Restore the default at the sites recorded in Phase 1.
-  if (!AnyNonDefaultMode || AnyWritesRoundMode)
+  unsigned RestoreMask = NonDefaultMask & ~ExplicitMask;
+  if (!RestoreMask)
     return;
+  Status Default(RestoreMask, DefaultStatus.Mode);
   for (auto &[MI, ChangeAtSite] : BlockInfo[ThisBlock]->BoundarySites) {
-    Status AtSite = BlockInfo[ThisBlock]->Pred.merge(ChangeAtSite);
-    if (AtSite.isCompatible(DefaultStatus))
+    Status ModeAtSite = BlockInfo[ThisBlock]->Pred.merge(ChangeAtSite);
+    Status AtSite(ModeAtSite.Mask & RestoreMask, ModeAtSite.Mode);
+    if (AtSite.isCompatible(Default))
       continue;
-    insertSetreg(MBB, MI, TII, AtSite.delta(DefaultStatus));
+    insertSetreg(MBB, MI, TII, AtSite.delta(Default));
     // Phase 1 modelled the site as mode preserving, so put the mode back.
     if (!MI->isTerminator()) {
       insertSetreg(MBB, std::next(MI->getIterator()), TII,
-                   DefaultStatus.delta(AtSite));
+                   Default.delta(AtSite));
     }
   }
 }
@@ -538,6 +594,15 @@ bool SIModeRegister::run(MachineFunction &MF) {
   BlockInfo.resize(MF.getNumBlockIDs());
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
+
+  // FP16_OVFL is left to the program unless a conversion needs it set.
+  auto HasSaturatingCvt = [](const MachineBasicBlock &MBB) {
+    return any_of(MBB, isSaturatingCvt);
+  };
+  if (ST.hasFP8ConversionFP16Ovfl() && any_of(MF, HasSaturatingCvt)) {
+    DefaultStatus =
+        DefaultStatus.merge(Status(AMDGPU::Hwreg::FP16_OVFL_MASK, 0));
+  }
 
   // Processing is performed in a number of phases
 

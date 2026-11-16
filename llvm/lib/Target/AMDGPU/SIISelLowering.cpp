@@ -11242,9 +11242,15 @@ SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8, bool IsE5M3,
     return DAG.getNode(ISD::BITCAST, SL, ResVT, Bytes);
   }
 
-  unsigned Opc = IsBF8    ? AMDGPUISD::CVT_PK_BF8_F32
-                 : IsE5M3 ? AMDGPUISD::CVT_PK_FP8_F32_E5M3
-                          : AMDGPUISD::CVT_PK_FP8_F32;
+  // The E5M3 conversion always clamps, it has no separate saturating form.
+  const bool IsSat = !IsE5M3 && Op.getConstantOperandVal(3) != 0;
+  unsigned Opc;
+  if (IsSat)
+    Opc = IsBF8 ? AMDGPUISD::CVT_PK_BF8_F32_SAT : AMDGPUISD::CVT_PK_FP8_F32_SAT;
+  else
+    Opc = IsBF8    ? AMDGPUISD::CVT_PK_BF8_F32
+          : IsE5M3 ? AMDGPUISD::CVT_PK_FP8_F32_E5M3
+                   : AMDGPUISD::CVT_PK_FP8_F32;
   SDValue PoisonI32 = DAG.getPOISON(MVT::i32);
   SDValue WordSel = DAG.getTargetConstant(0, SL, MVT::i1);
 
@@ -11279,16 +11285,25 @@ SITargetLowering::LowerCONVERT_TO_ARBITRARY_FP(SDValue Op,
   if (!IsSupported)
     return SDValue();
 
-  // The HW conversions only support nearest-even. The OCP conversions do not
-  // saturate. The unsigned E5M3 conversion always clamps out-of-range inputs,
-  // which also refines the non-saturating form where those inputs are poison.
+  // The HW conversions only support nearest-even. The unsigned E5M3 conversion
+  // always clamps out-of-range inputs, which also refines the non-saturating
+  // form where those inputs are poison.
   if (static_cast<RoundingMode>(Op.getConstantOperandVal(2)) !=
       RoundingMode::NearestTiesToEven)
     return SDValue();
-  if (!IsE5M3 && Op.getConstantOperandVal(3) != 0)
-    return SDValue();
 
   EVT SrcEltVT = Op.getOperand(0).getValueType().getScalarType();
+
+  // The OCP conversions from f32 saturate only while MODE.FP16_OVFL is set,
+  // which SIModeRegister arranges. It does not manage the mode of strictfp
+  // functions.
+  if (!IsE5M3 && Op.getConstantOperandVal(3) != 0) {
+    const Function &F = DAG.getMachineFunction().getFunction();
+    if (!Subtarget->hasFP8ConversionFP16Ovfl() || SrcEltVT != MVT::f32 ||
+        F.hasFnAttribute(Attribute::StrictFP))
+      return SDValue();
+  }
+
   // The f32 form is built here rather than by a tablegen pattern because the
   // HW result is i32 while the node result is i16 after the i8 promotion.
   if (SrcEltVT == MVT::f32)

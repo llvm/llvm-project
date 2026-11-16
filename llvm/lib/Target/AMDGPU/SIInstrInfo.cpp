@@ -7034,7 +7034,9 @@ bool SIInstrInfo::isNeverCoissue(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
   case AMDGPU::V_CVT_PK_BF8_F32_e64:
+  case AMDGPU::V_CVT_PK_BF8_F32_sat_e64:
   case AMDGPU::V_CVT_PK_FP8_F32_e64:
+  case AMDGPU::V_CVT_PK_FP8_F32_sat_e64:
   case AMDGPU::V_MQSAD_PK_U16_U8_e64:
   case AMDGPU::V_MQSAD_U32_U8_e64:
   case AMDGPU::V_PK_ADD_F16:

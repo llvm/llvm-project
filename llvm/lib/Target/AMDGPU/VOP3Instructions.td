@@ -841,6 +841,14 @@ let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
                                                         VOP3_CVT_PK_F8_F32_Profile_t16<>,
                                                         VOP3_CVT_PK_F8_F32_Profile_fake16<>>;
 
+    // Variants that saturate, which the HW does while MODE.FP16_OVFL is set.
+    // SIModeRegister sets it.
+    let True16Predicate = NotHasTrue16BitInsts in {
+      let OtherPredicates = [HasFP8ConversionInsts, NotHasFP8E5M3Insts] in
+        def V_CVT_PK_FP8_F32_sat_e64 : VOP3InstBase<"v_cvt_pk_fp8_f32", VOP3_CVT_PK_F8_F32_Profile<>>;
+      def V_CVT_PK_BF8_F32_sat_e64 : VOP3InstBase<"v_cvt_pk_bf8_f32", VOP3_CVT_PK_F8_F32_Profile<>>;
+    }
+
     let SubtargetPredicate = HasCvtFP8ByteSel in {
       let OtherPredicates = [HasFP8ConversionInsts, NotHasFP8E5M3Insts] in
         defm V_CVT_SR_FP8_F32_gfx12 : VOP3Inst<"v_cvt_sr_fp8_f32_gfx12", VOP3_CVT_SR_F8_ByteSel_Profile<f32>>;
@@ -925,9 +933,12 @@ class Cvt_SR_F8_ByteSel_E5M3_Pat<SDPatternOperator node, VOP3_Pseudo inst,
 let OtherPredicates = [HasFP8ConversionInsts] in {
 foreach Index = [0, -1] in {
 let True16Predicate = NotHasTrue16BitInsts in {
-  let OtherPredicates = [HasFP8ConversionInsts, NotHasFP8E5M3Insts] in
+  let OtherPredicates = [HasFP8ConversionInsts, NotHasFP8E5M3Insts] in {
     def : Cvt_PK_F8_F32_Pat<cvt_pk_fp8_f32, Index, V_CVT_PK_FP8_F32_e64>;
+    def : Cvt_PK_F8_F32_Pat<AMDGPUcvt_pk_fp8_f32_sat, Index, V_CVT_PK_FP8_F32_sat_e64>;
+  }
   def : Cvt_PK_F8_F32_Pat<cvt_pk_bf8_f32, Index, V_CVT_PK_BF8_F32_e64>;
+  def : Cvt_PK_F8_F32_Pat<AMDGPUcvt_pk_bf8_f32_sat, Index, V_CVT_PK_BF8_F32_sat_e64>;
 }
 let True16Predicate = UseFakeTrue16Insts in {
   def : Cvt_PK_F8_F32_Pat<cvt_pk_fp8_f32, Index, V_CVT_PK_FP8_F32_fake16_e64>;

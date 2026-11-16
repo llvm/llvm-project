@@ -459,70 +459,16 @@ define <4 x i8> @to_bf8_v4f32(<4 x float> %x) {
   ret <4 x i8> %r
 }
 
-; Saturation is not implemented by the HW conversion, so it uses the generic
+; Only GFX950 has a saturating HW conversion, the rest use the generic
 ; expansion.
 define i8 @to_fp8_f32_saturate(float %x) {
 ; GFX950-LABEL: to_fp8_f32_saturate:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
-; GFX950-NEXT:    v_sub_u32_e32 v2, 15, v1
-; GFX950-NEXT:    v_frexp_mant_f32_e32 v3, v0
-; GFX950-NEXT:    v_min_u32_e32 v2, 31, v2
-; GFX950-NEXT:    v_and_b32_e32 v4, 0x7fffff, v3
-; GFX950-NEXT:    v_or_b32_e32 v5, 0x800000, v4
-; GFX950-NEXT:    v_sub_u32_e64 v7, v2, 1 clamp
-; GFX950-NEXT:    v_lshrrev_b32_e32 v8, v7, v5
-; GFX950-NEXT:    v_bfe_u32 v7, v5, 0, v7
-; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
-; GFX950-NEXT:    v_bfe_u32 v6, v5, v2, 1
-; GFX950-NEXT:    s_movk_i32 s0, 0x80
-; GFX950-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
-; GFX950-NEXT:    v_bitop3_b32 v6, v8, v7, v6 bitop3:0xe0
-; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
-; GFX950-NEXT:    v_lshrrev_b32_e32 v2, v2, v5
-; GFX950-NEXT:    v_and_b32_e32 v7, 0x7ffff, v3
-; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
-; GFX950-NEXT:    v_add_u32_e32 v2, v2, v6
-; GFX950-NEXT:    v_cmp_lt_i32_e32 vcc, 7, v2
-; GFX950-NEXT:    v_and_b32_sdwa v6, v0, s0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
-; GFX950-NEXT:    v_bfe_u32 v4, v4, 20, 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v5, 0, 8, vcc
-; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
-; GFX950-NEXT:    v_or3_b32 v2, v6, v5, v2
-; GFX950-NEXT:    v_lshrrev_b32_e32 v5, 19, v3
-; GFX950-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
-; GFX950-NEXT:    v_bitop3_b32 v4, v5, v7, v4 bitop3:0xe0
-; GFX950-NEXT:    v_bfe_u32 v3, v3, 20, 3
-; GFX950-NEXT:    v_add_u32_e32 v3, v3, v4
-; GFX950-NEXT:    v_cmp_lt_i32_e32 vcc, 7, v3
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
-; GFX950-NEXT:    v_addc_co_u32_e32 v1, vcc, 6, v1, vcc
-; GFX950-NEXT:    v_lshlrev_b32_e32 v4, 3, v1
-; GFX950-NEXT:    v_or3_b32 v4, v6, v4, v3
-; GFX950-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v1
-; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 15, v1
+; GFX950-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 23, 1), 1
+; GFX950-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v0
 ; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
-; GFX950-NEXT:    v_cmp_lt_i32_e32 vcc, 6, v3
-; GFX950-NEXT:    s_and_b64 s[0:1], s[0:1], vcc
-; GFX950-NEXT:    v_cmp_lt_i32_e32 vcc, 15, v1
-; GFX950-NEXT:    v_or_b32_e32 v1, 0x7e, v6
-; GFX950-NEXT:    s_or_b64 vcc, vcc, s[0:1]
-; GFX950-NEXT:    v_cndmask_b32_e32 v2, v2, v1, vcc
-; GFX950-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
-; GFX950-NEXT:    s_movk_i32 s0, 0x204
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_cndmask_b32_e32 v2, v2, v6, vcc
-; GFX950-NEXT:    v_cmp_class_f32_e64 vcc, v0, s0
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
-; GFX950-NEXT:    v_mov_b32_e32 v2, 0x7f
-; GFX950-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX950-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 23, 1), 0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-LABEL: to_fp8_f32_saturate:

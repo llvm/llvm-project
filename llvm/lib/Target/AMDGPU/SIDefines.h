@@ -822,6 +822,8 @@ enum ModeRegisterMasks : uint32_t {
   EXCP_EN_INEXACT_MASK = 1 << 17,
   EXCP_EN_INT_DIV0_MASK = 1 << 18,
 
+  FP16_OVFL_MASK = 1 << 23,
+
   GPR_IDX_EN_MASK = 1 << 27,
   VSKIP_MASK = 1 << 28,
   CSP_MASK = 0x7u << 29, // Bits 29..31
