@@ -143,16 +143,6 @@ BB:
 }
 
 
-define void @f_undef_intrinsic(<8 x i64> %a, ptr %dst) {
-; CHECK-LABEL: f_undef_intrinsic:
-; CHECK:       // %bb.0: // %BB
-; CHECK-NEXT:    ret
-BB:
-  %S = call <16 x i64> @llvm.vector.interleave2.v16i64(<8 x i64> poison, <8 x i64> poison)
-  store <16 x i64> %S, ptr %dst, align 64
-  ret void
-}
-
 
 define void @f_poison_intrinsic(<8 x i64> %a, ptr %dst) {
 ; CHECK-LABEL: f_poison_intrinsic:
