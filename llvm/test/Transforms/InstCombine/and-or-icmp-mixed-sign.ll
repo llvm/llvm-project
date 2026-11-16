@@ -10,8 +10,8 @@ declare void @use(i1)
 define i1 @and_ult_sge(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @and_ult_sge(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SGE:%.*]] = icmp sge i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[ULT:%.*]] = icmp sgt i8 [[X]], -1
+; CHECK-NEXT:    [[SGE:%.*]] = icmp slt i8 [[Y]], 0
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[ULT]], [[SGE]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -24,8 +24,8 @@ define i1 @and_ult_sge(i8 %x, i8 %y) {
 define i1 @and_sge_ult_commuted(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @and_sge_ult_commuted(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SGE:%.*]] = icmp sge i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[SGE:%.*]] = icmp sgt i8 [[X]], -1
+; CHECK-NEXT:    [[ULT:%.*]] = icmp slt i8 [[Y]], 0
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[SGE]], [[ULT]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -38,8 +38,8 @@ define i1 @and_sge_ult_commuted(i8 %x, i8 %y) {
 define i1 @and_ugt_sle(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @and_ugt_sle(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SLE:%.*]] = icmp sle i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[UGT:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[SLE:%.*]] = icmp sgt i8 [[Y]], -1
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[UGT]], [[SLE]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -52,8 +52,8 @@ define i1 @and_ugt_sle(i8 %x, i8 %y) {
 define i1 @and_ult_sgt_swapped_operands(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @and_ult_sgt_swapped_operands(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[ULT:%.*]] = icmp sgt i8 [[X]], -1
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i8 [[Y]], 0
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[ULT]], [[SLT]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -66,8 +66,8 @@ define i1 @and_ult_sgt_swapped_operands(i8 %x, i8 %y) {
 define i1 @or_uge_slt(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @or_uge_slt(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[UGE:%.*]] = icmp uge i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[UGE:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[SLT:%.*]] = icmp sgt i8 [[Y]], -1
 ; CHECK-NEXT:    [[R:%.*]] = or i1 [[UGE]], [[SLT]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -80,8 +80,8 @@ define i1 @or_uge_slt(i8 %x, i8 %y) {
 define i1 @or_ule_sgt(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @or_ule_sgt(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[ULE:%.*]] = icmp sgt i8 [[X]], -1
+; CHECK-NEXT:    [[SGT:%.*]] = icmp slt i8 [[Y]], 0
 ; CHECK-NEXT:    [[R:%.*]] = or i1 [[ULE]], [[SGT]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -94,8 +94,8 @@ define i1 @or_ule_sgt(i8 %x, i8 %y) {
 define <2 x i1> @and_ult_sge_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i1> @and_ult_sge_vec(
 ; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[ULT:%.*]] = icmp ult <2 x i8> [[X]], [[Y]]
-; CHECK-NEXT:    [[SGE:%.*]] = icmp sge <2 x i8> [[X]], [[Y]]
+; CHECK-NEXT:    [[ULT:%.*]] = icmp sgt <2 x i8> [[X]], splat (i8 -1)
+; CHECK-NEXT:    [[SGE:%.*]] = icmp slt <2 x i8> [[Y]], zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[ULT]], [[SGE]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -108,8 +108,8 @@ define <2 x i1> @and_ult_sge_vec(<2 x i8> %x, <2 x i8> %y) {
 define i1 @and_ult_sge_logical(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @and_ult_sge_logical(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SGE:%.*]] = icmp sge i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[ULT:%.*]] = icmp sgt i8 [[X]], -1
+; CHECK-NEXT:    [[SGE:%.*]] = icmp slt i8 [[Y]], 0
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[ULT]], [[SGE]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -122,8 +122,8 @@ define i1 @and_ult_sge_logical(i8 %x, i8 %y) {
 define i1 @or_uge_slt_logical(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @or_uge_slt_logical(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[UGE:%.*]] = icmp uge i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[UGE:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[SLT:%.*]] = icmp sgt i8 [[Y]], -1
 ; CHECK-NEXT:    [[R:%.*]] = or i1 [[UGE]], [[SLT]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
