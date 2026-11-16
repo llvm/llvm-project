@@ -34,10 +34,10 @@ body:             |
   bb.0.entry:
     ; GCN-LABEL: name: test_no_fold_fi_scratch_load_vgpr_scale_offset
     ; GCN: renamable $vgpr0 = V_MOV_B32_e32 $sgpr32, implicit $exec
-    ; GCN-NEXT: renamable $vgpr0 = SCRATCH_LOAD_DWORD killed renamable $vgpr0, 4, 2048, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
+    ; GCN-NEXT: renamable $vgpr0 = SCRATCH_LOAD_DWORD killed renamable $vgpr0, 4, 512, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit killed renamable $vgpr0
     %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    %1:vgpr_32 = SCRATCH_LOAD_DWORD %0:vgpr_32, 4, 2048, implicit $exec, implicit $flat_scr :: (load 4 from %stack.0, addrspace 5)
+    %1:vgpr_32 = SCRATCH_LOAD_DWORD %0:vgpr_32, 4, 512, implicit $exec, implicit $flat_scr :: (load 4 from %stack.0, addrspace 5)
     S_ENDPGM 0, implicit %1
 
 ...

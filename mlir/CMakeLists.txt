@@ -151,7 +151,15 @@ set(MLIR_ENABLE_NVPTXCOMPILER 0 CACHE BOOL
     "Statically link the nvptxlibrary instead of calling ptxas as a subprocess \
     for compiling PTX to cubin")
 
-set(MLIR_ENABLE_PDL_IN_PATTERNMATCH 1 CACHE BOOL "Enable PDL in PatternMatch")
+# Avoid pulling PDL into builds that only use MLIR as a dependency.
+if("mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  set(MLIR_ENABLE_PDL_IN_PATTERNMATCH_default 0)
+else()
+  set(MLIR_ENABLE_PDL_IN_PATTERNMATCH_default 1)
+endif()
+set(MLIR_ENABLE_PDL_IN_PATTERNMATCH
+    ${MLIR_ENABLE_PDL_IN_PATTERNMATCH_default} CACHE BOOL
+    "Enable PDL in PatternMatch")
 
 option(MLIR_INCLUDE_TESTS
        "Generate build targets for the MLIR unit tests."
@@ -168,7 +176,15 @@ set(MLIR_INSTALL_AGGREGATE_OBJECTS 1 CACHE BOOL
 
 set(MLIR_BUILD_MLIR_C_DYLIB 0 CACHE BOOL "Builds libMLIR-C shared library.")
 
-set(MLIR_LINK_MLIR_DYLIB ${LLVM_LINK_LLVM_DYLIB} CACHE BOOL
+if(LLVM_LINK_LLVM_DYLIB AND NOT MSVC)
+  # We can't rely on default visibility with MSVC. libMLIR should have its own
+  # annotation (MLIR_ABI) and have its API properly annotated for exports on
+  # Windows too. See https://github.com/llvm/llvm-project/issues/238872
+  set(MLIR_LINK_MLIR_DYLIB_DEFAULT 1)
+else()
+  set(MLIR_LINK_MLIR_DYLIB_DEFAULT 0)
+endif()
+set(MLIR_LINK_MLIR_DYLIB ${MLIR_LINK_MLIR_DYLIB_DEFAULT} CACHE BOOL
     "Link tools against libMLIR.so")
 
 configure_file(

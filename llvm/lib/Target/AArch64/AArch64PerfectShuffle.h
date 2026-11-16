@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64PERFECTSHUFFLE_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64PERFECTSHUFFLE_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -258,6 +259,78 @@ inline bool isREVMask(ArrayRef<int> M, unsigned EltSize, unsigned NumElts,
     if (M[i] < 0)
       continue; // ignore UNDEF indices
     if ((unsigned)M[i] != (i - i % BlockElts) + (BlockElts - 1 - i % BlockElts))
+      return false;
+  }
+
+  return true;
+}
+
+/// Check if an EXT instruction can handle the shuffle mask when the
+/// vector sources of the shuffle are different.
+inline bool isEXTMask(ArrayRef<int> M, unsigned NumElts, bool &ReverseEXT,
+                      unsigned &Imm) {
+  // Look for the first non-undef element.
+  const int *FirstRealElt = find_if(M, [](int Elt) { return Elt >= 0; });
+  if (FirstRealElt == M.end())
+    return false;
+
+  // Benefit from APInt to handle overflow when calculating expected element.
+  unsigned MaskBits = APInt(32, NumElts * 2).logBase2();
+  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1, /*isSigned=*/false,
+                            /*implicitTrunc=*/true);
+  // The following shuffle indices must be the successive elements after the
+  // first real element.
+  if (std::any_of(FirstRealElt + 1, M.end(),
+                  [&](int Elt) { return Elt != ExpectedElt++ && Elt >= 0; }))
+    return false;
+
+  // The index of an EXT is the first element if it is not UNDEF.
+  // Watch out for the beginning UNDEFs. The EXT index should be the expected
+  // value of the first element.  E.g.
+  // <-1, -1, 3, ...> is treated as <1, 2, 3, ...>.
+  // <-1, -1, 0, 1, ...> is treated as <2*NumElts-2, 2*NumElts-1, 0, 1, ...>.
+  // ExpectedElt is the last mask index plus 1.
+  Imm = ExpectedElt.getZExtValue();
+
+  // There are two difference cases requiring to reverse input vectors.
+  // For example, for vector <4 x i32> we have the following cases,
+  // Case 1: shufflevector(<4 x i32>, <4 x i32>, <-1, -1, -1, 0>)
+  // Case 2: shufflevector(<4 x i32>, <4 x i32>, <-1, -1, 7, 0>)
+  // For both cases, we finally use mask <5, 6, 7, 0>, which requires
+  // to reverse two input vectors.
+  ReverseEXT = false;
+  if (Imm < NumElts)
+    ReverseEXT = true;
+  else
+    Imm -= NumElts;
+
+  return true;
+}
+
+/// check if an EXT instruction can handle the shuffle mask when the
+/// vector sources of the shuffle are the same. i.e <2,3,0,1>
+inline bool isSingletonEXTMask(ArrayRef<int> M, unsigned NumElts,
+                               unsigned &Imm) {
+  // Assume that the first shuffle index is not UNDEF.  Fail if it is.
+  if (M[0] < 0)
+    return false;
+
+  Imm = M[0];
+
+  // If this is a VEXT shuffle, the immediate value is the index of the first
+  // element.  The other shuffle indices must be the successive elements after
+  // the first one.
+  unsigned ExpectedElt = Imm;
+  for (unsigned I = 1; I < NumElts; ++I) {
+    // Increment the expected index.  If it wraps around, just follow it
+    // back to index zero and keep going.
+    ++ExpectedElt;
+    if (ExpectedElt == NumElts)
+      ExpectedElt = 0;
+
+    if (M[I] < 0)
+      continue; // Ignore UNDEF indices.
+    if (ExpectedElt != static_cast<unsigned>(M[I]))
       return false;
   }
 

@@ -11,6 +11,7 @@ set(CLANG_LIBS_TO_LINK
 else()
 set(LLVM_COMPONENTS_TO_LINK
   ${LLVM_TARGETS_TO_BUILD}
+  BitWriter
   Core
   MC
   OrcJIT
@@ -38,7 +39,9 @@ set(CLANG_REPL_TEST_SOURCES
 )
 
 if(NOT EMSCRIPTEN)
-  list(APPEND CLANG_REPL_TEST_SOURCES DeviceOffloadTest.cpp)
+  list(APPEND CLANG_REPL_TEST_SOURCES
+    DeviceOffloadTest.cpp
+    )
 endif()
 
 if(TARGET compiler-rt AND LLVM_ON_UNIX)

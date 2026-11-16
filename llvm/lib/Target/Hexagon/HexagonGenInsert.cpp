@@ -1405,9 +1405,6 @@ bool HexagonGenInsert::generateInserts() {
         .addReg(IF.InsR, {}, InsS)
         .addImm(Wdh)
         .addImm(Off);
-
-    MRI->clearKillFlags(IF.SrcR);
-    MRI->clearKillFlags(IF.InsR);
   }
 
   for (const auto &I : IFMap) {

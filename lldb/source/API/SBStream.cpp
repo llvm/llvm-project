@@ -194,3 +194,14 @@ void SBStream::Clear() {
       static_cast<StreamString *>(m_opaque_up.get())->Clear();
   }
 }
+
+/// Exists so friend classes can use the StringString's data without
+/// putting it in the ConstString pool.
+/// The return value only lives as long as the this SBStream class.
+const char *SBStream::GetString() const {
+  if (m_is_file || m_opaque_up == nullptr)
+    return nullptr;
+
+  const auto *stream_raw = static_cast<StreamString *>(m_opaque_up.get());
+  return stream_raw->GetString().data();
+}

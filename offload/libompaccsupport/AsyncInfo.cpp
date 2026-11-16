@@ -16,6 +16,23 @@
 
 using namespace llvm::omp::target::debug;
 
+AsyncInfoTy::AsyncInfoTy(DeviceTy &Device, SyncTy SyncType)
+    : Device(Device), SyncType(SyncType) {
+  if (auto Res = olCreateQueue(Device.Context, Device.DeviceHandle, &Queue)) {
+    REPORT() << "Failed to create queue for device " << Device.DeviceID << ": "
+             << Res->Details;
+    Queue = nullptr;
+  }
+}
+
+AsyncInfoTy::~AsyncInfoTy() {
+  synchronize();
+  if (Queue) {
+    if (auto Res = olDestroyQueue(Queue))
+      REPORT() << "Failed to destroy queue " << Queue << ": " << Res->Details;
+  }
+}
+
 int AsyncInfoTy::synchronize() {
   int Result = OFFLOAD_SUCCESS;
   if (!isQueueEmpty()) {
@@ -23,9 +40,6 @@ int AsyncInfoTy::synchronize() {
     case SyncTy::BLOCKING:
       // If we have a queue we need to synchronize it now.
       Result = Device.synchronize(*this);
-      assert(AsyncInfo.Queue == nullptr &&
-             "The device plugin should have nulled the queue to indicate there "
-             "are no outstanding actions!");
       break;
     case SyncTy::NON_BLOCKING:
       Result = Device.queryAsync(*this);
@@ -66,4 +80,13 @@ int32_t AsyncInfoTy::runPostProcessing() {
   return OFFLOAD_SUCCESS;
 }
 
-bool AsyncInfoTy::isQueueEmpty() const { return AsyncInfo.Queue == nullptr; }
+bool AsyncInfoTy::isQueueEmpty() const {
+  if (!Queue)
+    return true;
+  bool IsComplete;
+  if (auto Res = olQueryQueue(Queue, &IsComplete)) {
+    REPORT() << "Failed to query queue " << Queue << ": " << Res->Details;
+    return false;
+  }
+  return IsComplete;
+}

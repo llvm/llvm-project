@@ -13,7 +13,7 @@ define void @foo(ptr %p) {
 ;CHECK: IR Dump {{.*}}
 ;CHECK: # Machine code for function foo{{.*}}
 ;CHECK: {{[0-9]+}}B  bb.0 (%ir-block.0)
-;CHECK: {{[0-9]+}}B	 %0:gr64 = COPY killed $r{{di|cx}}
+;CHECK: {{[0-9]+}}B	 %0:gr64 = COPY $r{{di|cx}}
 ;CHECK: {{^}}        PSEUDO_PROBE 5116412291814990879
 ;CHECK: {{[0-9]+}}B	 MOV32mi
 ;CHECK: {{[0-9]+}}B	 RET 0

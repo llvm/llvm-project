@@ -335,11 +335,13 @@ void SUnit::biasCriticalPath() {
     std::swap(*Preds.begin(), *BestI);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 raw_ostream &llvm::operator<<(raw_ostream &OS, const SUnit &SU) {
   assert(!SU.isBoundaryNode() &&
          "use ScheduleDAG::dumpNodeName for boundary nodes");
   return OS << "SU(" << SU.NodeNum << ")";
 }
+#endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SUnit::dumpAttributes() const {

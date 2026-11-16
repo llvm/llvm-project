@@ -30,6 +30,7 @@
 ...
 ---
 name: testBuildPairF64
+tracksRegLiveness: false
 # CHECK-LABEL: name: testBuildPairF64
 # CHECK: bb.0
 # CHECK-NEXT: successors
@@ -39,14 +40,15 @@ name: testBuildPairF64
 # CHECK-NEXT: BuildPairF64
 body: |
   bb.0:
-    $d0 = BuildPairF64 $zero, $zero
+    $d0 = BuildPairF64 $r0, $r0
   bb.1:
-    JAL @foo, implicit-def $ra
+    JAL @foo, implicit-def $r31
   bb.2:
     RetRA
 ...
 ---
 name: testBuildPairF64_64
+tracksRegLiveness: false
 # CHECK-LABEL: name: testBuildPairF64_64
 # CHECK: bb.0
 # CHECK-NEXT: successors
@@ -55,46 +57,49 @@ name: testBuildPairF64_64
 # CHECK-NEXT: BuildPairF64_64
 body: |
   bb.0:
-    $d0_64 = BuildPairF64_64 $zero, $zero
+    $d0_64 = BuildPairF64_64 $r0, $r0
   bb.1:
-    JAL @foo, implicit-def $ra
+    JAL @foo, implicit-def $r31
   bb.2:
     RetRA
 ...
 ---
 name: testBuildPairF64implicitSp
+tracksRegLiveness: false
 # CHECK-LABEL: name: testBuildPairF64implicitSp
 # CHECK: bb.0
 # CHECK-NEXT: successors
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{[[:space:]]$}}
-# CHECK-NEXT: $sp = ADDiu $sp, -{{[0-9]+}}
+# CHECK-NEXT: $r29 = ADDiu $r29, -{{[0-9]+}}
 body: |
   bb.0:
-    $d0 = BuildPairF64 $zero, $zero, implicit $sp
+    $d0 = BuildPairF64 $r0, $r0, implicit $r29
   bb.1:
-    JAL @foo, implicit-def $ra
+    JAL @foo, implicit-def $r31
   bb.2:
     RetRA
 ...
 ---
 name: testBuildPairF64_64implicitSp
+tracksRegLiveness: false
 # CHECK-LABEL: name: testBuildPairF64_64implicitSp
 # CHECK: bb.0
 # CHECK-NEXT: successors
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{[[:space:]]$}}
-# CHECK-NEXT: $sp = ADDiu $sp, -{{[0-9]+}}
+# CHECK-NEXT: $r29 = ADDiu $r29, -{{[0-9]+}}
 body: |
   bb.0:
-    $d0_64 = BuildPairF64_64 $zero, $zero, implicit $sp
+    $d0_64 = BuildPairF64_64 $r0, $r0, implicit $r29
   bb.1:
-    JAL @foo, implicit-def $ra
+    JAL @foo, implicit-def $r31
   bb.2:
     RetRA
 ...
 ---
 name: testExtractElementF64
+tracksRegLiveness: false
 # CHECK-LABEL: name: testExtractElementF64
 # CHECK: bb.0
 # CHECK-NEXT: successors
@@ -103,14 +108,15 @@ name: testExtractElementF64
 # CHECK-NEXT: ExtractElementF64
 body: |
   bb.0:
-    $at = ExtractElementF64 $d6, 1
+    $r1 = ExtractElementF64 $d6, 1
   bb.1:
-    JAL @foo, implicit-def $ra
+    JAL @foo, implicit-def $r31
   bb.2:
     RetRA
 ...
 ---
 name: testExtractElementF64_64
+tracksRegLiveness: false
 # CHECK-LABEL: name: testExtractElementF64_64
 # CHECK: bb.0
 # CHECK-NEXT: successors
@@ -119,41 +125,43 @@ name: testExtractElementF64_64
 # CHECK-NEXT: ExtractElementF64_64
 body: |
   bb.0:
-    $at = ExtractElementF64_64 $d12_64, 1
+    $r1 = ExtractElementF64_64 $d12_64, 1
   bb.1:
-    JAL @foo, implicit-def $ra
+    JAL @foo, implicit-def $r31
   bb.2:
     RetRA
 ...
 ---
 name: testExtractElementF64implicitSp
+tracksRegLiveness: false
 # CHECK-LABEL: name: testExtractElementF64implicitSp
 # CHECK: bb.0
 # CHECK-NEXT: successors
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{[[:space:]]$}}
-# CHECK-NEXT: $sp = ADDiu $sp, -{{[0-9]+}}
+# CHECK-NEXT: $r29 = ADDiu $r29, -{{[0-9]+}}
 body: |
   bb.0:
-    $at = ExtractElementF64 $d6, 1, implicit $sp
+    $r1 = ExtractElementF64 $d6, 1, implicit $r29
   bb.1:
-    JAL @foo, implicit-def $ra
+    JAL @foo, implicit-def $r31
   bb.2:
     RetRA
 ...
 ---
 name: testExtractElementF64_64implicitSp
+tracksRegLiveness: false
 # CHECK-LABEL: name: testExtractElementF64_64implicitSp
 # CHECK: bb.0
 # CHECK-NEXT: successors
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{[[:space:]]$}}
-# CHECK-NEXT: $sp = ADDiu $sp, -{{[0-9]+}}
+# CHECK-NEXT: $r29 = ADDiu $r29, -{{[0-9]+}}
 body: |
   bb.0:
-    $at = ExtractElementF64_64 $d12_64, 1, implicit $sp
+    $r1 = ExtractElementF64_64 $d12_64, 1, implicit $r29
   bb.1:
-    JAL @foo, implicit-def $ra
+    JAL @foo, implicit-def $r31
   bb.2:
     RetRA
 ...

@@ -19,7 +19,7 @@ define amdgpu_kernel void @promote_async_load_offset_negative(ptr addrspace(1) %
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
 ; GFX1250-NEXT:    s_mov_b64 s[2:3], 0xffffffffffffff00
-; GFX1250-NEXT:    v_add_nc_u32_e64 v4, 0xfffffe00, 0
+; GFX1250-NEXT:    v_add_nc_u32_e64 v4, 0, 0xfffffe00
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v0, 0x100, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -68,7 +68,7 @@ define amdgpu_kernel void @promote_async_load_offset_positive(ptr addrspace(1) %
 ; GFX1250-NEXT:    s_mov_b32 s2, 0x3ff
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
-; GFX1250-NEXT:    v_add_nc_u32_e64 v4, 0xffffff00, 0
+; GFX1250-NEXT:    v_add_nc_u32_e64 v4, 0, 0xffffff00
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], s[0:1], v[0:1]
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -119,7 +119,7 @@ define amdgpu_kernel void @promote_async_store_offset_negative(ptr addrspace(1) 
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
 ; GFX1250-NEXT:    s_mov_b64 s[2:3], 0xffffffffffffff00
-; GFX1250-NEXT:    v_add_nc_u32_e64 v4, 0xfffffe00, 0
+; GFX1250-NEXT:    v_add_nc_u32_e64 v4, 0, 0xfffffe00
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v0, 0x100, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)

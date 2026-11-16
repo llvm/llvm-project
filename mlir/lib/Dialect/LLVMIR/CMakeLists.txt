@@ -10,7 +10,7 @@ set(LLVM_TARGET_DEFINITIONS IR/LLVMOps.cpp)
 foreach(index RANGE 7)
   set(LLVM_SHARDED_SRC LLVMOps.${index}.cpp)
   list(APPEND LLVM_SHARDED_SRCS ${LLVM_SHARDED_SRC})
-  tablegen(MLIR_SRC_SHARDER ${LLVM_SHARDED_SRC}
+  mlir_src_sharder(${LLVM_SHARDED_SRC}
     -op-shard-index=${index})
 endforeach()
 add_public_tablegen_target(MLIRLLVMOpsShardGen)
@@ -67,12 +67,13 @@ set(LLVM_TARGET_DEFINITIONS IR/NVVMOps.cpp)
 foreach(index RANGE 7)
   set(NVVM_SHARDED_SRC NVVMOps.${index}.cpp)
   list(APPEND NVVM_SHARDED_SRCS ${NVVM_SHARDED_SRC})
-  tablegen(MLIR_SRC_SHARDER ${NVVM_SHARDED_SRC}
+  mlir_src_sharder(${NVVM_SHARDED_SRC}
     -op-shard-index=${index})
 endforeach()
 add_public_tablegen_target(MLIRNVVMOpsShardGen)
 
 add_mlir_dialect_library(MLIRNVVMDialect
+  IR/NVVMAttributes.cpp
   IR/NVVMDialect.cpp
   IR/BasicPtxBuilderInterface.cpp
   IR/NVVMRequiresSMTraits.cpp
@@ -80,6 +81,13 @@ add_mlir_dialect_library(MLIRNVVMDialect
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
+
+  # Cache the operation declarations shared by all source shards. Keep this
+  # specialized PCH local rather than making downstream libraries reuse it.
+  DISABLE_PCH_REUSE
+  PRECOMPILE_HEADERS
+  [["mlir/Dialect/LLVMIR/pch.h"]]
+  [["mlir/Dialect/LLVMIR/NVVMDialect.h"]]
 
   DEPENDS
   MLIRGPUCompilationAttrInterfacesIncGen
@@ -99,7 +107,6 @@ add_mlir_dialect_library(MLIRNVVMDialect
   MLIRIR
   MLIRLLVMDialect
   MLIRGPUDialect
-  MLIROpenMPDialect
   MLIRSideEffectInterfaces
   MLIRInferIntRangeInterface
   )
@@ -108,7 +115,7 @@ set(LLVM_TARGET_DEFINITIONS IR/ROCDLOps.cpp)
 foreach(index RANGE 7)
   set(ROCDL_SHARDED_SRC ROCDLOps.${index}.cpp)
   list(APPEND ROCDL_SHARDED_SRCS ${ROCDL_SHARDED_SRC})
-  tablegen(MLIR_SRC_SHARDER ${ROCDL_SHARDED_SRC}
+  mlir_src_sharder(${ROCDL_SHARDED_SRC}
     -op-shard-index=${index})
 endforeach()
 add_public_tablegen_target(MLIRROCDLOpsShardGen)
@@ -120,6 +127,13 @@ add_mlir_dialect_library(MLIRROCDLDialect
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
+
+  # Cache the operation declarations shared by all source shards. Keep this
+  # specialized PCH local rather than making downstream libraries reuse it.
+  DISABLE_PCH_REUSE
+  PRECOMPILE_HEADERS
+  [["mlir/Dialect/LLVMIR/pch.h"]]
+  [["mlir/Dialect/LLVMIR/ROCDLDialect.h"]]
 
   DEPENDS
   MLIRGPUCompilationAttrInterfacesIncGen
@@ -181,6 +195,5 @@ add_mlir_dialect_library(MLIRXeVMDialect
   MLIRDialectUtils
   MLIRIR
   MLIRLLVMDialect
-  MLIROpenMPDialect
   MLIRSideEffectInterfaces
 )

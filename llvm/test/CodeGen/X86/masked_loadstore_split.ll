@@ -8,9 +8,9 @@ define void @split_masked_store(ptr %0) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[V_SET0_:%[0-9]+]]:vr128 = V_SET0
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:vr256 = SUBREG_TO_REG killed [[V_SET0_]], %subreg.sub_xmm
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:vr256 = SUBREG_TO_REG [[V_SET0_]], %subreg.sub_xmm
   ; CHECK-NEXT:   [[VMOVAPSYrm:%[0-9]+]]:vr256 = VMOVAPSYrm $rip, 1, $noreg, %const.0, $noreg :: (load (s256) from constant-pool)
-  ; CHECK-NEXT:   VMASKMOVPDYmr [[COPY]], 1, $noreg, 32, $noreg, killed [[VMOVAPSYrm]], [[SUBREG_TO_REG]] :: (store unknown-size into %ir.0 + 32, align 8)
+  ; CHECK-NEXT:   VMASKMOVPDYmr [[COPY]], 1, $noreg, 32, $noreg, [[VMOVAPSYrm]], [[SUBREG_TO_REG]] :: (store unknown-size into %ir.0 + 32, align 8)
   ; CHECK-NEXT:   VMOVUPDYmr [[COPY]], 1, $noreg, 0, $noreg, [[SUBREG_TO_REG]] :: (store (s256) into %ir.0, align 8)
   ; CHECK-NEXT:   RET 0
 entry:
@@ -25,7 +25,7 @@ define <8 x double> @split_masked_load(ptr %0) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[VMOVAPSYrm:%[0-9]+]]:vr256 = VMOVAPSYrm $rip, 1, $noreg, %const.0, $noreg :: (load (s256) from constant-pool)
-  ; CHECK-NEXT:   [[VMASKMOVPDYrm:%[0-9]+]]:vr256 = VMASKMOVPDYrm killed [[VMOVAPSYrm]], [[COPY]], 1, $noreg, 32, $noreg :: (load unknown-size from %ir.0 + 32, align 8)
+  ; CHECK-NEXT:   [[VMASKMOVPDYrm:%[0-9]+]]:vr256 = VMASKMOVPDYrm [[VMOVAPSYrm]], [[COPY]], 1, $noreg, 32, $noreg :: (load unknown-size from %ir.0 + 32, align 8)
   ; CHECK-NEXT:   [[VMOVUPDYrm:%[0-9]+]]:vr256 = VMOVUPDYrm [[COPY]], 1, $noreg, 0, $noreg :: (load (s256) from %ir.0, align 8)
   ; CHECK-NEXT:   $ymm0 = COPY [[VMOVUPDYrm]]
   ; CHECK-NEXT:   $ymm1 = COPY [[VMASKMOVPDYrm]]

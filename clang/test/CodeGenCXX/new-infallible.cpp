@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-linux-gnu -fnew-infallible -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -triple x86_64-linux-gnu -fnew-infallible -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-linux-gnu -fno-new-infallible -fnew-infallible -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -triple x86_64-linux-gnu -fno-new-infallible -fnew-infallible -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-linux-gnu -fno-new-infallible -o - %s | FileCheck %s --check-prefix=NO-NEW-INFALLIBLE
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -triple x86_64-linux-gnu -fno-new-infallible -o - %s | FileCheck %s --check-prefix=NO-NEW-INFALLIBLE %}
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-linux-gnu -fnew-infallible -fno-new-infallible -o - %s | FileCheck %s --check-prefix=NO-NEW-INFALLIBLE
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -triple x86_64-linux-gnu -fnew-infallible -fno-new-infallible -o - %s | FileCheck %s --check-prefix=NO-NEW-INFALLIBLE %}
 
 // CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef 4)
 

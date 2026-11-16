@@ -17,24 +17,18 @@
 # CHECK: S_NOP 0, implicit %4.sub1
 # CHECK: S_NOP 0, implicit undef %5.sub0
 name: test0
-registers:
-  - { id: 0, class: sreg_32_xm0 }
-  - { id: 1, class: sreg_32_xm0 }
-  - { id: 2, class: sreg_32_xm0 }
-  - { id: 3, class: sgpr_128 }
-  - { id: 4, class: sreg_64 }
-  - { id: 5, class: sreg_64 }
+tracksRegLiveness: false
 body: |
   bb.0:
-    S_NOP 0, implicit-def %0
-    S_NOP 0, implicit-def %1
-    S_NOP 0, implicit-def %2
-    %3 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub3
+    S_NOP 0, implicit-def %0:sreg_32_xm0
+    S_NOP 0, implicit-def %1:sreg_32_xm0
+    S_NOP 0, implicit-def %2:sreg_32_xm0
+    %3:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub3
     S_NOP 0, implicit %3.sub0
     S_NOP 0, implicit %3.sub1
     S_NOP 0, implicit %3.sub2
-    %4 = COPY %3.sub0_sub1
-    %5 = COPY %3.sub2_sub3
+    %4:sreg_64 = COPY %3.sub0_sub1
+    %5:sreg_64 = COPY %3.sub2_sub3
     S_NOP 0, implicit %4.sub0
     S_NOP 0, implicit %4.sub1
     S_NOP 0, implicit %5.sub0
@@ -71,26 +65,15 @@ body: |
 # CHECK: %9:sreg_32_xm0 = EXTRACT_SUBREG undef %8, %subreg.sub1
 # CHECK: S_NOP 0, implicit undef %9
 
-# CHECK: %10:sgpr_128 = EXTRACT_SUBREG undef %0, %subreg.sub2_sub3
+# CHECK: %10:sreg_64 = EXTRACT_SUBREG undef %0, %subreg.sub2_sub3
 # CHECK: S_NOP 0, implicit undef %10
 name: test1
-registers:
-  - { id: 0, class: sgpr_128 }
-  - { id: 1, class: sgpr_128 }
-  - { id: 2, class: sreg_64 }
-  - { id: 3, class: sreg_32_xm0 }
-  - { id: 4, class: sgpr_128 }
-  - { id: 5, class: sreg_64 }
-  - { id: 6, class: sreg_32_xm0 }
-  - { id: 7, class: sreg_32_xm0 }
-  - { id: 8, class: sreg_64 }
-  - { id: 9, class: sreg_32_xm0 }
-  - { id: 10, class: sgpr_128 }
+tracksRegLiveness: false
 body: |
   bb.0:
-    %0 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr0, %subreg.sub2
-    %1 = INSERT_SUBREG %0, $sgpr1, %subreg.sub3
-    %2 = INSERT_SUBREG %0.sub2_sub3, $sgpr42, %subreg.sub0
+    %0:sgpr_128 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr0, %subreg.sub2
+    %1:sgpr_128 = INSERT_SUBREG %0, $sgpr1, %subreg.sub3
+    %2:sreg_64 = INSERT_SUBREG %0.sub2_sub3, $sgpr42, %subreg.sub0
     S_NOP 0, implicit %1.sub0
     S_NOP 0, implicit %1.sub1
     S_NOP 0, implicit %1.sub2
@@ -98,25 +81,25 @@ body: |
     S_NOP 0, implicit %2.sub0
     S_NOP 0, implicit %2.sub1
 
-    %3 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %0, %3, %subreg.sub0
+    %3:sreg_32_xm0 = IMPLICIT_DEF
+    %4:sgpr_128 = INSERT_SUBREG %0, %3, %subreg.sub0
     S_NOP 0, implicit %4.sub0
     S_NOP 0, implicit %4.sub1
     S_NOP 0, implicit %4.sub2
     S_NOP 0, implicit %4.sub3
 
-    %5 = EXTRACT_SUBREG %0, %subreg.sub0_sub1
-    %6 = EXTRACT_SUBREG %5, %subreg.sub0
-    %7 = EXTRACT_SUBREG %5, %subreg.sub1
+    %5:sreg_64 = EXTRACT_SUBREG %0, %subreg.sub0_sub1
+    %6:sreg_32_xm0 = EXTRACT_SUBREG %5, %subreg.sub0
+    %7:sreg_32_xm0 = EXTRACT_SUBREG %5, %subreg.sub1
     S_NOP 0, implicit %5
     S_NOP 0, implicit %6
     S_NOP 0, implicit %7
 
-    %8 = IMPLICIT_DEF
-    %9 = EXTRACT_SUBREG %8, %subreg.sub1
+    %8:sreg_64 = IMPLICIT_DEF
+    %9:sreg_32_xm0 = EXTRACT_SUBREG %8, %subreg.sub1
     S_NOP 0, implicit %9
 
-    %10 = EXTRACT_SUBREG undef %0, %subreg.sub2_sub3
+    %10:sreg_64 = EXTRACT_SUBREG undef %0, %subreg.sub2_sub3
     S_NOP 0, implicit %10
 ...
 ---
@@ -152,52 +135,35 @@ body: |
 # CHECK: S_NOP 0, implicit %16.sub1
 
 name: test2
-registers:
-  - { id: 0, class: sreg_32_xm0 }
-  - { id: 1, class: sreg_32_xm0 }
-  - { id: 2, class: sreg_64 }
-  - { id: 3, class: sgpr_128 }
-  - { id: 4, class: sreg_32_xm0 }
-  - { id: 5, class: sreg_32_xm0 }
-  - { id: 6, class: sreg_64 }
-  - { id: 7, class: sgpr_128 }
-  - { id: 8, class: sreg_64 }
-  - { id: 9, class: sgpr_128 }
-  - { id: 10, class: sgpr_128 }
-  - { id: 11, class: sreg_64 }
-  - { id: 12, class: sgpr_128 }
-  - { id: 13, class: sreg_64 }
-  - { id: 14, class: sreg_64 }
-  - { id: 15, class: sgpr_128 }
-  - { id: 16, class: sreg_64 }
+tracksRegLiveness: false
 body: |
   bb.0:
-    S_NOP 0, implicit-def %0
-    S_NOP 0, implicit-def %1
-    S_NOP 0, implicit-def %2
-    %3 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2_sub3
+    S_NOP 0, implicit-def %0:sreg_32_xm0
+    S_NOP 0, implicit-def %1:sreg_32_xm0
+    S_NOP 0, implicit-def %2:sreg_64
+    %3:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2_sub3
     S_NOP 0, implicit %3.sub1
     S_NOP 0, implicit %3.sub3
 
-    S_NOP 0, implicit-def %4
-    S_NOP 0, implicit-def %5
-    %6 = REG_SEQUENCE %4, %subreg.sub0, undef %5, %subreg.sub1
+    S_NOP 0, implicit-def %4:sreg_32_xm0
+    S_NOP 0, implicit-def %5:sreg_32_xm0
+    %6:sreg_64 = REG_SEQUENCE %4, %subreg.sub0, undef %5, %subreg.sub1
     S_NOP 0, implicit %6
 
-    S_NOP 0, implicit-def %7
-    S_NOP 0, implicit-def %8
-    %9 = INSERT_SUBREG %7, %8, %subreg.sub2_sub3
+    S_NOP 0, implicit-def %7:sgpr_128
+    S_NOP 0, implicit-def %8:sreg_64
+    %9:sgpr_128 = INSERT_SUBREG %7, %8, %subreg.sub2_sub3
     S_NOP 0, implicit %9.sub2
 
-    S_NOP 0, implicit-def %10
-    S_NOP 0, implicit-def %11
-    %12 = INSERT_SUBREG %10, %11, %subreg.sub0_sub1
+    S_NOP 0, implicit-def %10:sgpr_128
+    S_NOP 0, implicit-def %11:sreg_64
+    %12:sgpr_128 = INSERT_SUBREG %10, %11, %subreg.sub0_sub1
     S_NOP 0, implicit %12.sub3
 
-    S_NOP 0, implicit-def %13
-    S_NOP 0, implicit-def %14
-    %15 = REG_SEQUENCE %13, %subreg.sub0_sub1, %14, %subreg.sub2_sub3
-    %16 = EXTRACT_SUBREG %15, %subreg.sub0_sub1
+    S_NOP 0, implicit-def %13:sreg_64
+    S_NOP 0, implicit-def %14:sreg_64
+    %15:sgpr_128 = REG_SEQUENCE %13, %subreg.sub0_sub1, %14, %subreg.sub2_sub3
+    %16:sreg_64 = EXTRACT_SUBREG %15, %subreg.sub0_sub1
     S_NOP 0, implicit %16.sub1
 ...
 ---
@@ -210,15 +176,12 @@ body: |
 # CHECK: S_NOP 0, implicit %1
 name: test3
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_64 }
-  - { id: 1, class: sreg_64 }
 body: |
   bb.0:
-    S_NOP 0, implicit-def %0
+    S_NOP 0, implicit-def %0:sreg_64
     $vcc = COPY %0
 
-    %1 = COPY $vcc
+    %1:sreg_64 = COPY $vcc
     S_NOP 0, implicit %1
 ...
 ---
@@ -230,15 +193,12 @@ body: |
 # CHECK: S_NOP 0, implicit undef %1
 name: test4
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_64 }
-  - { id: 1, class: sreg_64 }
 body: |
   bb.0:
-    S_NOP 0, implicit-def %0
+    S_NOP 0, implicit-def %0:sreg_64
     KILL %0
 
-    %1 = IMPLICIT_DEF
+    %1:sreg_64 = IMPLICIT_DEF
     S_NOP 0, implicit %1
 ...
 ---
@@ -250,13 +210,10 @@ body: |
 # CHECK: S_NOP 0, implicit %1.sub1
 name: test5
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_32_xm0 }
-  - { id: 1, class: sreg_64 }
 body: |
   bb.0:
-    S_NOP 0, implicit-def %0
-    %1 = REG_SEQUENCE %0, %subreg.sub0, %0, %subreg.sub1
+    S_NOP 0, implicit-def %0:sreg_32_xm0
+    %1:sreg_64 = REG_SEQUENCE %0, %subreg.sub0, %0, %subreg.sub1
     S_NOP 0, implicit %1.sub1
 ...
 ---
@@ -276,26 +233,19 @@ body: |
 # CHECK:   S_NOP 0, implicit undef %4.sub3
 name: loop0
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_32_xm0 }
-  - { id: 1, class: sreg_32_xm0 }
-  - { id: 2, class: sreg_32_xm0 }
-  - { id: 3, class: sgpr_128 }
-  - { id: 4, class: sgpr_128 }
-  - { id: 5, class: sgpr_128 }
 body: |
   bb.0:
-    S_NOP 0, implicit-def %0
-    S_NOP 0, implicit-def %1
-    S_NOP 0, implicit-def %2
-    %3 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2
+    S_NOP 0, implicit-def %0:sreg_32_xm0
+    S_NOP 0, implicit-def %1:sreg_32_xm0
+    S_NOP 0, implicit-def %2:sreg_32_xm0
+    %3:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2
     S_BRANCH %bb.1
 
   bb.1:
-    %4 = PHI %3, %bb.0, %5, %bb.1
+    %4:sgpr_128 = PHI %3, %bb.0, %5, %bb.1
 
     ; let's swiffle some lanes around for fun...
-    %5 = REG_SEQUENCE %4.sub0, %subreg.sub0, %4.sub2, %subreg.sub1, %4.sub1, %subreg.sub2, %4.sub3, %subreg.sub3
+    %5:sgpr_128 = REG_SEQUENCE %4.sub0, %subreg.sub0, %4.sub2, %subreg.sub1, %4.sub1, %subreg.sub2, %4.sub3, %subreg.sub3
 
     S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
     S_BRANCH %bb.2
@@ -327,28 +277,20 @@ body: |
 # CHECK:   S_NOP 0, implicit %6.sub3
 name: loop1
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_32_xm0 }
-  - { id: 1, class: sreg_32_xm0 }
-  - { id: 2, class: sreg_32_xm0 }
-  - { id: 3, class: sreg_32_xm0 }
-  - { id: 4, class: sgpr_128 }
-  - { id: 5, class: sgpr_128 }
-  - { id: 6, class: sgpr_128 }
 body: |
   bb.0:
-    S_NOP 0, implicit-def %0
-    S_NOP 0, implicit-def %1
-    S_NOP 0, implicit-def dead %2
-    S_NOP 0, implicit-def %3
-    %4 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
+    S_NOP 0, implicit-def %0:sreg_32_xm0
+    S_NOP 0, implicit-def %1:sreg_32_xm0
+    S_NOP 0, implicit-def dead %2:sreg_32_xm0
+    S_NOP 0, implicit-def %3:sreg_32_xm0
+    %4:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
     S_BRANCH %bb.1
 
   bb.1:
-    %5 = PHI %4, %bb.0, %6, %bb.1
+    %5:sgpr_128 = PHI %4, %bb.0, %6, %bb.1
 
     ; rotate lanes, but skip sub2 lane...
-    %6 = REG_SEQUENCE %5.sub1, %subreg.sub0, %5.sub3, %subreg.sub1, %5.sub2, %subreg.sub2, %5.sub0, %subreg.sub3
+    %6:sgpr_128 = REG_SEQUENCE %5.sub1, %subreg.sub0, %5.sub3, %subreg.sub1, %5.sub2, %subreg.sub2, %5.sub0, %subreg.sub3
 
     S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
     S_BRANCH %bb.2
@@ -376,22 +318,17 @@ body: |
 # CHECK:   S_NOP 0, implicit %2.sub3
 name: loop2
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_32_xm0 }
-  - { id: 1, class: sgpr_128 }
-  - { id: 2, class: sgpr_128 }
-  - { id: 3, class: sgpr_128 }
 body: |
   bb.0:
-    S_NOP 0, implicit-def %0
-    %1 = REG_SEQUENCE %0, %subreg.sub0
+    S_NOP 0, implicit-def %0:sreg_32_xm0
+    %1:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0
     S_BRANCH %bb.1
 
   bb.1:
-    %2 = PHI %1, %bb.0, %3, %bb.1
+    %2:sgpr_128 = PHI %1, %bb.0, %3, %bb.1
 
     ; rotate subreg lanes, skipping sub1
-    %3 = REG_SEQUENCE %2.sub3, %subreg.sub0, %2.sub1, %subreg.sub1, %2.sub0, %subreg.sub2, %2.sub2, %subreg.sub3
+    %3:sgpr_128 = REG_SEQUENCE %2.sub3, %subreg.sub0, %2.sub1, %subreg.sub1, %2.sub0, %subreg.sub2, %2.sub2, %subreg.sub3
 
     S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
     S_BRANCH %bb.2
@@ -420,22 +357,21 @@ body: |
 ...
 ---
 # Check that an undefined subregister use inside a BUNDLE is marked undef while
-# a defined subregister use is unchanged, and that existing kill flags are
-# preserved.
+# a defined subregister use is unchanged.
 # CHECK-LABEL: name: bundle_subregs
 # CHECK: %0:sreg_64 = REG_SEQUENCE $sgpr0, %subreg.sub0
-# CHECK: BUNDLE implicit killed %0.sub0, implicit killed undef %0.sub1 {
-# CHECK-NEXT: S_NOP 0, implicit killed %0.sub0
-# CHECK-NEXT: S_NOP 0, implicit killed undef %0.sub1
+# CHECK: BUNDLE implicit %0.sub0, implicit undef %0.sub1 {
+# CHECK-NEXT: S_NOP 0, implicit %0.sub0
+# CHECK-NEXT: S_NOP 0, implicit undef %0.sub1
 name: bundle_subregs
 tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
     %0:sreg_64 = REG_SEQUENCE $sgpr0, %subreg.sub0
-    BUNDLE implicit killed %0.sub0, implicit killed %0.sub1 {
-      S_NOP 0, implicit killed %0.sub0
-      S_NOP 0, implicit killed %0.sub1
+    BUNDLE implicit %0.sub0, implicit %0.sub1 {
+      S_NOP 0, implicit %0.sub0
+      S_NOP 0, implicit %0.sub1
     }
 ...
 ---

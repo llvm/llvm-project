@@ -10,7 +10,7 @@
 ## a ".p2align 4" (R_LARCH_ALIGN) absorbs some shrinks but not others, so the
 ## target address jitters between passes.
 ##
-## The layout is deliberately fragile: the .space size below was found by
+## The layout is deliberately fragile: the gap size below was found by
 ## searching a model of lld's relaxation loop. Do not "round" it. The base
 ## address is pinned with -Ttext, and the final addresses are checked below so
 ## that a change in the .text.a/.text.b gap (which decides whether the call
@@ -18,8 +18,12 @@
 ## no longer exercising the bug.
 
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 -mattr=+relax %s -o %t.o
-# RUN: ld.lld -e _start -Ttext=0x10000 %t.o -o %t
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: echo 'SECTIONS { \
+# RUN:   .text 0x10000 : { *(.text.a) . = ALIGN(16); *(.text.b) } \
+# RUN:   . += 2097120; \
+# RUN:   .text2 : SUBALIGN(4) { *(.text.c) } }' > %t.lds
+# RUN: ld.lld -T %t.lds %t.o -o %t
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYM
 
 ## The two short-range sites in .text.a are always relaxed.
@@ -40,19 +44,20 @@ _start:
   la.pcrel $t1, t_e
 .globl t_e
 t_e:
-  la.pcrel $t2, t_c            # forward, crosses the 2MiB filler
+  la.pcrel $t2, t_c            # forward, crosses the 2MiB gap
 .globl t_d
 t_d:
 
 .section .text.b,"ax"
   .space 8
   la.pcrel $t3, t_a
-  la.pcrel $t4, t_d            # backward, crosses the 2MiB filler
-  .space 2097120    # 2MiB - 32: puts the sites right at the isInt<22> limit
+  la.pcrel $t4, t_d            # backward, crosses the 2MiB gap
+
+.section .text.c,"ax"
   la.pcrel $t5, _start         # backward, near the limit
 .globl t_c
 t_c:
-  .p2align 4        # R_LARCH_ALIGN; also makes .text.b 16-byte aligned
+  .p2align 4        # R_LARCH_ALIGN
   la.pcrel $t6, t_d
 .globl t_a
 t_a:
