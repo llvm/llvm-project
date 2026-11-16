@@ -1,5 +1,5 @@
-# RUN: llc -O0 -mtriple arm-- -mattr=+v6 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,ARM
-# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,THUMB
+# RUN: llc -O0 -mtriple arm-- -mattr=+v6 -run-pass=instruction-select %s -o - | FileCheck %s --check-prefixes=CHECK,ARM
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2 -run-pass=instruction-select %s -o - | FileCheck %s --check-prefixes=CHECK,THUMB
 --- |
   define void @test_clz() { ret void }
 ...

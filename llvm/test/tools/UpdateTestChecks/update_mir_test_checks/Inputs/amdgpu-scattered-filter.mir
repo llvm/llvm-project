@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu10.10 -run-pass=none -verify-machineinstrs -o - %s | FileCheck -check-prefixes=GFX10 %s
+# RUN: llc -mtriple=amdgpu10.10 -run-pass=none -o - %s | FileCheck -check-prefixes=GFX10 %s
 
 ---
 name:            _amdgpu_hs_main

@@ -95,6 +95,7 @@ template <typename T> void COFFDumper::dumpOptionalHeader(T OptionalHeader) {
 
 void COFFDumper::dumpHeader() {
   YAMLObj.Header.Machine = Obj.getMachine();
+  YAMLObj.Header.TimeDateStamp = Obj.getTimeDateStamp();
   YAMLObj.Header.Characteristics = Obj.getCharacteristics();
 }
 

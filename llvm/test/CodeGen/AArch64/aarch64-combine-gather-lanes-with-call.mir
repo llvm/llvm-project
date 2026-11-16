@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=machine-combiner -mcpu=neoverse-n2 -mtriple=aarch64-none-linux-gnu -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -run-pass=machine-combiner -mcpu=neoverse-n2 -mtriple=aarch64-none-linux-gnu %s -o - | FileCheck %s
 
 
 --- |

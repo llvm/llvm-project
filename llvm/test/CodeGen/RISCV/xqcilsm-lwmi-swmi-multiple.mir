@@ -26,6 +26,7 @@
 ...
 ---
 name:            lwmi
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -48,6 +49,7 @@ body:             |
 ...
 ---
 name:            lwmi_x0
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -65,6 +67,7 @@ body:             |
 ...
 ---
 name:            lwmi_nonconsecutive
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -84,6 +87,7 @@ body:             |
 ...
 ---
 name:            lwmi_misaligned
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -101,6 +105,7 @@ body:             |
 ...
 ---
 name:            swmi
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -117,6 +122,7 @@ body:             |
 ...
 ---
 name:            swmi_x0
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -134,6 +140,7 @@ body:             |
 ...
 ---
 name:            swmi_nonconsecutive
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -155,6 +162,7 @@ body:             |
 ...
 ---
 name:            swmi_misaligned
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -174,6 +182,7 @@ body:             |
 ...
 ---
 name:            setwmi
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -190,6 +199,7 @@ body:             |
 ...
 ---
 name:            setwmi_no_pair_move_insn_back
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x1, $x2

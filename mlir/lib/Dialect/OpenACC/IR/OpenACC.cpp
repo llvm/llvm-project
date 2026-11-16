@@ -1367,11 +1367,25 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
     IntegerAttr constAttr;
     if (!matchPattern(ifCond, m_Constant(&constAttr)))
       return failure();
-    if (constAttr.getInt())
+    if (constAttr.getInt()) {
       rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
-    else
-      replaceOpWithRegion(rewriter, op, op.getRegion());
+      return success();
+    }
 
+    // With a constant false condition the construct has no effect, so it is
+    // replaced by its body. An empty region has no body, so the op is simply
+    // erased.
+    Region &region = op.getRegion();
+    if (region.empty()) {
+      if (op->getNumResults() != 0)
+        return rewriter.notifyMatchFailure(op, "empty region with results");
+      rewriter.eraseOp(op);
+      return success();
+    }
+    if (!region.hasOneBlock())
+      return rewriter.notifyMatchFailure(op, "expected single-block region");
+
+    replaceOpWithRegion(rewriter, op, region);
     return success();
   }
 };

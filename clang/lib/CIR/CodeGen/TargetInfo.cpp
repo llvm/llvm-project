@@ -174,7 +174,7 @@ clang::CIRGen::createX8664TargetCIRGenInfo(CIRGenTypes &cgt) {
   return std::make_unique<X8664TargetCIRGenInfo>(cgt);
 }
 
-ABIInfo::~ABIInfo() noexcept = default;
+ABIInfo::~ABIInfo() = default;
 
 bool TargetCIRGenInfo::isNoProtoCallVariadic(
     const FunctionNoProtoType *fnType) const {

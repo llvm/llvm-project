@@ -29,7 +29,7 @@
 #include <optional>
 #include <vector>
 
-namespace orc_rt {
+namespace orc_rt::sys::darwin {
 
 /// Standalone MachO unwind-info registration via libunwind's
 /// unw_find_dynamic_unwind_sections mechanism.
@@ -127,6 +127,6 @@ private:
   static void deregisterWithLibunwind();
 };
 
-} // namespace orc_rt
+} // namespace orc_rt::sys::darwin
 
 #endif // ORC_RT_INTERNAL_BEDROCK_SYS_DARWIN_STANDALONEMACHOUNWINDINFOREGISTRAR_H

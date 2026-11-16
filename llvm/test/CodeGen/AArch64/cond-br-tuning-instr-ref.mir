@@ -44,6 +44,7 @@
   !13 = !DILocation(line: 321, column: 21, scope: !10)
   !14 = !DILocation(line: 0, scope: !10)
 name:            _ZN4llvmlsERNS_11raw_ostreamERKNS_5ErrorE
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %1:gpr64 = COPY $x0

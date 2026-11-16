@@ -535,7 +535,7 @@ void HardwareUnitInfo::finalizeCycles() {
 
   // We estimate the amount of cycles it takes to free up a slot in the buffer
   // as the average cycles per SU.
-  BufferCycles = TotalCycles / AllSUs.size();
+  BufferCycles = static_cast<unsigned>(TotalCycles / AllSUs.size());
   // A single-entry buffer does not reduce TotalCycles.
   if (BufferSize == 1)
     return;

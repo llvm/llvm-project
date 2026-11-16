@@ -1,0 +1,49 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//llvm:lit_test.bzl", "lit_test")
+
+licenses(["notice"])
+
+# Tests that read another test file through %S.
+_EXTRA_DATA = {
+    "DWARF/x86/inline-function-address-shared.test": [
+        "DWARF/x86/inline-function-address.ll",
+    ],
+}
+
+# Most tests here build an inferior with %clang or %build, which the bazel
+# setup doesn't support yet, or run lldb itself through %lldb, which sources
+# the lit-lldb-init-quiet file CMake writes into the test execution root. These
+# are the ones that only need lldb-test and the LLVM tools.
+[
+    lit_test(
+        name = "%s.test" % src,
+        srcs = [src],
+        data = glob(["**/lit.local.cfg"]) + _EXTRA_DATA.get(src, []) + [
+            "//lldb/test/Shell:lit_data",
+        ],
+    )
+    for src in [
+        "DWARF/debug-types-mangled-name.ll",
+        "DWARF/incomplete-member-beyond-parent-bounds.yaml",
+        "DWARF/member-beyond-parent-bounds.yaml",
+        "DWARF/member-on-parent-bounds.yaml",
+        "DWARF/union-types-no-member-location.yaml",
+        "DWARF/x86/array-sizes.s",
+        "DWARF/x86/childless-compile-unit.s",
+        "DWARF/x86/compilercontext.ll",
+        "DWARF/x86/debug-types-line-tables.s",
+        "DWARF/x86/dwarf5_locations.s",
+        "DWARF/x86/find-inline-method.s",
+        "DWARF/x86/inline-function-address.ll",
+        "DWARF/x86/inline-function-address-shared.test",
+        "DWARF/x86/static_scope.s",
+        "DWARF/zero-sized-member-in-parent-bounds.yaml",
+        "NativePDB/invalid-field-list-reference.yaml",
+        "NativePDB/invalid-inlinee-not-in-ipi.yaml",
+        "NativePDB/invalid-type-refs.yaml",
+        "NativePDB/missing-type.s",
+    ]
+]

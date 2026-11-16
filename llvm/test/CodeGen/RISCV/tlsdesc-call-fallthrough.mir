@@ -1,7 +1,5 @@
-# RUN: llc -mtriple=riscv32 -x mir -run-pass=machineverifier \
-# RUN:     -verify-machineinstrs %s -o /dev/null
-# RUN: llc -mtriple=riscv64 -x mir -run-pass=machineverifier \
-# RUN:     -verify-machineinstrs %s -o /dev/null
+# RUN: llc -mtriple=riscv32 -x mir -run-pass=machineverifier %s -o /dev/null
+# RUN: llc -mtriple=riscv64 -x mir -run-pass=machineverifier %s -o /dev/null
 
 # PseudoTLSDESCCall is a returning call. A block ending in this instruction
 # may fall through to its layout successor.

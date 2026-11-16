@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/LibraryOptionsContext.h"
+#include "llvm-c/Core.h"
+#include "llvm-c/Support.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
@@ -32,4 +35,24 @@ TEST(LibraryOptionsContextTest, IR) {
       cl::parseCommandLineOptions(C2.getLibraryOptions(), Args, "", &nulls()));
   EXPECT_EQ(printRet(C1), "  ret void");
   EXPECT_NE(printRet(C2).find("ret void ; 0x"), std::string::npos);
+}
+
+TEST(LibraryOptionsContextTest, CAPI) {
+  const char *Args[] = {"prog", "-print-inst-addrs"};
+  LLVMParseCommandLineOptions(std::size(Args), Args, "");
+  LLVMContextRef C = LLVMContextCreate();
+  EXPECT_NE(printRet(*unwrap(C)).find("ret void ; 0x"), std::string::npos);
+  LLVMContextDispose(C);
+  LLVMContext CXX;
+  EXPECT_EQ(printRet(CXX), "  ret void");
+
+  cl::getCAPILibraryOptions() = cl::LibraryOptionsContext();
+  cl::ResetAllOptionOccurrences();
+
+  const char *Bad[] = {"prog", "-print-inst-addrs=x"};
+  LLVMParseCommandLineOptions(std::size(Bad), Bad, "");
+  C = LLVMContextCreate();
+  EXPECT_EQ(printRet(*unwrap(C)), "  ret void");
+  LLVMContextDispose(C);
+  cl::ResetAllOptionOccurrences();
 }

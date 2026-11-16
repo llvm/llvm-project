@@ -179,6 +179,8 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
   // Adjust the static SPIR-V grid values based on the device's reported limits.
   if (uint32_t MaxGroupSize = std::min(getMaxGroupSizeX(), getMaxGroupSize()))
     GridValues.GV_Max_WG_Size = MaxGroupSize;
+  if (uint32_t MaxGroupCount = getMaxGroupCountX())
+    GridValues.GV_Max_Teams = MaxGroupCount;
   if (uint32_t SIMDWidth = getSIMDWidth())
     GridValues.GV_Warp_Size = SIMDWidth;
 
@@ -351,7 +353,8 @@ Error L0DeviceTy::free(void *TgtPtr, TargetAllocTy Kind) {
 }
 
 Error L0DeviceTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                                 AsyncInfoWrapperTy &AsyncInfoWrapper) {
+                                 AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                 GenericProfilerTy *ProfilerPtr) {
   if (Size == 0)
     return Plugin::success();
 
@@ -372,7 +375,8 @@ Error L0DeviceTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
 
 Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                                    int64_t Size,
-                                   AsyncInfoWrapperTy &AsyncInfoWrapper) {
+                                   AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                   GenericProfilerTy *ProfilerPtr) {
   if (Size == 0)
     return Plugin::success();
 
@@ -409,7 +413,8 @@ Error L0DeviceTy::enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
 
 Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                                    void *DstPtr, int64_t Size,
-                                   AsyncInfoWrapperTy &AsyncInfoWrapper) {
+                                   AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                   GenericProfilerTy *ProfilerPtr) {
   if (auto Err =
           enqueueMemCopy(DstPtr, SrcPtr, Size,
                          static_cast<__tgt_async_info *>(AsyncInfoWrapper)))
@@ -441,8 +446,8 @@ const char *L0DeviceTy::getArchCStr() const {
 Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   InfoTreeNode Info;
   Info.add("Device Number", getDeviceId());
-  Info.add("Device Name", getNameCStr(), "", DeviceInfo::NAME);
-  Info.add("Product Name", getArchCStr(), "", DeviceInfo::PRODUCT_NAME);
+  Info.add("Device Name", getArchCStr(), "", DeviceInfo::NAME);
+  Info.add("Product Name", getNameCStr(), "", DeviceInfo::PRODUCT_NAME);
   Info.add("Device Type", "GPU", "", DeviceInfo::TYPE);
   Info.add("Vendor", "Intel", "", DeviceInfo::VENDOR);
   Info.add("Vendor ID", getVendorId(), "", DeviceInfo::VENDOR_ID);
@@ -970,7 +975,8 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
   auto Err =
       L0Kernel.launchImpl(*this, NumBlocksAndThreads, NumBlocksAndThreads, 0,
-                          LaunchArgs, AsyncInfoWrapper);
+                          LaunchArgs, AsyncInfoWrapper,
+                          /*ProfilerPtr=*/nullptr);
 
   AsyncInfoWrapper.finalize(Err);
   return CleanupBufferAndErr(std::move(Err));

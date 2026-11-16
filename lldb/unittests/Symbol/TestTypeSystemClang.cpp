@@ -1554,3 +1554,45 @@ TEST_F(TestTypeSystemClang, TestIsMemberDataPointerType) {
   EXPECT_FALSE(int_type.IsMemberDataPointerType());
   EXPECT_FALSE(int_type.IsMemberFunctionPointerType());
 }
+
+TEST_F(TestTypeSystemClang, TestAddressSpaceModifier) {
+  CompilerType invalid_type;
+  EXPECT_EQ(invalid_type.GetTargetAddressSpace(), std::nullopt);
+  EXPECT_FALSE(invalid_type.AddAddressSpaceModifier(3).IsValid());
+
+  CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
+  ASSERT_TRUE(int_type.IsValid());
+  EXPECT_EQ(int_type.GetTargetAddressSpace(), std::nullopt);
+
+  // Address space 0 is the default address space (no qualifier added).
+  CompilerType zero_as_type = int_type.AddAddressSpaceModifier(
+      static_cast<uint32_t>(clang::LangAS::Default));
+  EXPECT_EQ(zero_as_type.GetTargetAddressSpace(), std::nullopt);
+
+  // Qualifying with a non-zero target address space records it on the type.
+  CompilerType as3_int = int_type.AddAddressSpaceModifier(
+      static_cast<uint32_t>(clang::getLangASFromTargetAS(3)));
+  ASSERT_TRUE(as3_int.IsValid());
+  EXPECT_EQ(as3_int.GetTargetAddressSpace(), std::optional<uint32_t>(3U));
+
+  // Re-qualifying an already address-space-qualified type preserves the
+  // existing address space.
+  CompilerType re_qualified = as3_int.AddAddressSpaceModifier(
+      static_cast<uint32_t>(clang::getLangASFromTargetAS(5)));
+  EXPECT_EQ(re_qualified.GetTargetAddressSpace(), std::optional<uint32_t>(3U));
+
+  // A pointer to an address-space-qualified type carries the qualifier on
+  // the pointee, while the pointer itself lives in the default space.
+  CompilerType ptr_to_as3_int = as3_int.GetPointerType();
+  ASSERT_TRUE(ptr_to_as3_int.IsPointerType());
+  EXPECT_EQ(ptr_to_as3_int.GetTargetAddressSpace(), std::nullopt);
+  EXPECT_EQ(ptr_to_as3_int.GetPointeeType().GetTargetAddressSpace(),
+            std::optional<uint32_t>(3U));
+
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
+  // Out-of-range address space asserts.
+  EXPECT_DEATH(
+      int_type.AddAddressSpaceModifier(std::numeric_limits<uint32_t>::max()),
+      "address_space <= clang::Qualifiers::MaxAddressSpace");
+#endif
+}

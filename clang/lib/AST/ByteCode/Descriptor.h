@@ -158,7 +158,6 @@ public:
   const bool IsVolatile = false;
   /// Flag indicating if the block is an array.
   const bool IsArray = false;
-  bool IsConstexprUnknown = false;
 
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;

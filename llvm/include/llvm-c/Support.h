@@ -41,6 +41,10 @@ LLVM_C_ABI LLVMBool LLVMLoadLibraryPermanently(const char *Filename);
  * cannot rely on any particular set of command line arguments being interpreted
  * the same way across LLVM versions.
  *
+ * Library options, which passes read from their LLVMContext, apply to contexts
+ * that the C API creates afterwards, including the global context, which is
+ * created on first use.
+ *
  * @see llvm::cl::ParseCommandLineOptions()
  */
 LLVM_C_ABI void LLVMParseCommandLineOptions(int argc, const char *const *argv,

@@ -128,7 +128,7 @@ body:             |
     ; CHECK-LATE: rlwinm.
     %5:crrc = COPY killed $cr0
     %6:gprc = ISEL %4, %2, %5.sub_eq
-    %7:g8rc = EXTSW_32_64 killed %6
+    %7:g8rc = EXTSW_32_64 %6
     $x3 = COPY %7
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -188,7 +188,7 @@ body:             |
     ; CHECK-LATE: andi. {{[0-9]+}}, [[IMM]], 0
     %5:crrc = COPY killed $cr0
     %6:gprc = ISEL %3, %2, %5.sub_eq
-    %7:g8rc = EXTSW_32_64 killed %6
+    %7:g8rc = EXTSW_32_64 %6
     $x3 = COPY %7
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -248,7 +248,7 @@ body:             |
     ; CHECK-LATE: rlwinm.
     %5:crrc = COPY killed $cr0
     %6:gprc = ISEL %3, %2, %5.sub_eq
-    %7:g8rc = EXTSW_32_64 killed %6
+    %7:g8rc = EXTSW_32_64 %6
     $x3 = COPY %7
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 

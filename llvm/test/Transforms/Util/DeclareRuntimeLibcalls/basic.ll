@@ -11,13 +11,13 @@ define float @sinf(float %x) {
   ret float %x
 }
 
-; CHECK: declare void @_Unwind_Resume(...)
+; CHECK: declare void @_Unwind_Resume(ptr)
 
 ; CHECK: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
 ; CHECK: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
 ; CHECK: declare ptr @__memset_chk(ptr, i32, i64, i64)
 
-; CHECK: declare void @__umodti3(...)
+; CHECK: declare i128 @__umodti3(i128, i128)
 
 ; CHECK: declare float @acosf(float)
 
@@ -47,9 +47,9 @@ define float @sinf(float %x) {
 ; CHECK: declare float @remquof(float, float, ptr)
 ; CHECK: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)
 
-; CHECK: declare double @scalbln(double, i32)
-; CHECK: declare float @scalblnf(float, i32)
-; CHECK: declare x86_fp80 @scalblnl(x86_fp80, i32)
+; CHECK: declare double @scalbln(double, i64)
+; CHECK: declare float @scalblnf(float, i64)
+; CHECK: declare x86_fp80 @scalblnl(x86_fp80, i64)
 
 ; CHECK: declare double @scalbn(double, i32)
 ; CHECK: declare float @scalbnf(float, i32)

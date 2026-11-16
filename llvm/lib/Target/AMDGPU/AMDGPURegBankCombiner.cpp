@@ -96,8 +96,9 @@ public:
   void applyCanonicalizeZextShiftAmt(MachineInstr &MI, MachineInstr &Ext) const;
 
   bool combineD16Load(MachineInstr &MI) const;
-  bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
-                    MachineInstr *SmallLoad, Register ToOverwriteD16) const;
+  void applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
+                    MachineInstr *SmallLoad, Register ToOverwriteD16,
+                    MachineInstr &InsertPt) const;
 
   bool matchMinMaxToMinMax3(MachineInstr &MI,
                             MinMaxToMinMax3MatchInfo &MatchInfo) const;
@@ -430,18 +431,30 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
   const int64_t CleanLo16 = 0xFFFFFFFFFFFF0000;
   const int64_t CleanHi16 = 0x000000000000FFFF;
 
+  auto TryApplyD16Load = [&](unsigned D16Opc, GAnyLoad *SmallLoad) {
+    MachineInstr *DstDef = MRI.getVRegDef(Dst);
+    MachineInstr *InsertPt = SmallLoad;
+    if (SmallLoad->isSimple() && isObviouslySafeToFold(*SmallLoad, MI))
+      InsertPt = &MI;
+    else if (!Helper.dominates(*DstDef, *SmallLoad))
+      return false;
+
+    applyD16Load(D16Opc, MI, SmallLoad, Dst, *InsertPt);
+    return true;
+  };
+
   // Load lo
   if (mi_match(MI.getOperand(1).getReg(), MRI,
-               m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
-                            m_Copy(m_SpecificICst(CleanLo16))),
-                     m_MInstr(Load)))) {
-
+               m_OneNonDBGUse(m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
+                                           m_Copy(m_SpecificICst(CleanLo16))),
+                                    m_OneNonDBGUse(m_MInstr(Load)))))) {
     if (mi_match(Load, MRI, m_GZExtLoad(ZextLoad, m_MMO(MMO)))) {
       unsigned LoadSize = MMO->getSizeInBits().getValue();
       if (LoadSize == 8)
-        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_U8, MI, ZextLoad, Dst);
+        return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_U8, ZextLoad);
       if (LoadSize == 16)
-        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO, MI, ZextLoad, Dst);
+        return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO, ZextLoad);
+
       return false;
     }
 
@@ -450,31 +463,33 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
     // true16: zext (sextload i8 -> s16) -> s32
     if (mi_match(
             Load, MRI,
-            m_any_of(m_GAnd(m_GSExtLoad(SextLoad, m_MMO(MMO)),
+            m_any_of(m_GAnd(m_OneNonDBGUse(m_GSExtLoad(SextLoad, m_MMO(MMO))),
                             m_Copy(m_SpecificICst(CleanHi16))),
                      m_GZExt(m_all_of(m_SpecificType(LLT::scalar(16)),
-                                      m_GSExtLoad(SextLoad, m_MMO(MMO))))))) {
-      if (MMO->getSizeInBits().getValue() != 8)
-        return false;
-
-      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_I8, MI, SextLoad, Dst);
+                                      m_OneNonDBGUse(m_GSExtLoad(
+                                          SextLoad, m_MMO(MMO)))))))) {
+      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      if (LoadSize == 8)
+        return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_I8, SextLoad);
     }
 
     return false;
   }
 
   // Load hi
-  if (mi_match(MI.getOperand(1).getReg(), MRI,
-               m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
-                            m_Copy(m_SpecificICst(CleanHi16))),
-                     m_GShl(m_MInstr(Load), m_Copy(m_SpecificICst(16)))))) {
-
+  if (mi_match(
+          MI.getOperand(1).getReg(), MRI,
+          m_OneNonDBGUse(m_GOr(
+              m_GAnd(m_GBitcast(m_Reg(Dst)), m_Copy(m_SpecificICst(CleanHi16))),
+              m_OneNonDBGUse(m_GShl(m_OneNonDBGUse(m_MInstr(Load)),
+                                    m_Copy(m_SpecificICst(16)))))))) {
     if (mi_match(Load, MRI, m_GZExtLoad(ZextLoad, m_MMO(MMO)))) {
       unsigned LoadSize = MMO->getSizeInBits().getValue();
       if (LoadSize == 8)
-        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_U8, MI, ZextLoad, Dst);
+        return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_U8, ZextLoad);
       if (LoadSize == 16)
-        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI, MI, ZextLoad, Dst);
+        return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI, ZextLoad);
+
       return false;
     }
 
@@ -483,14 +498,14 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
     // true16: zext (sextload i8 -> s16) -> s32
     if (mi_match(
             Load, MRI,
-            m_any_of(m_GAnd(m_GSExtLoad(SextLoad, m_MMO(MMO)),
+            m_any_of(m_GAnd(m_OneNonDBGUse(m_GSExtLoad(SextLoad, m_MMO(MMO))),
                             m_Copy(m_SpecificICst(CleanHi16))),
                      m_GZExt(m_all_of(m_SpecificType(LLT::scalar(16)),
-                                      m_GSExtLoad(SextLoad, m_MMO(MMO))))))) {
-      if (MMO->getSizeInBits().getValue() != 8)
-        return false;
-
-      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_I8, MI, SextLoad, Dst);
+                                      m_OneNonDBGUse(m_GSExtLoad(
+                                          SextLoad, m_MMO(MMO)))))))) {
+      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      if (LoadSize == 8)
+        return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_I8, SextLoad);
     }
 
     return false;
@@ -571,9 +586,11 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
   return true;
 }
 
-bool AMDGPURegBankCombinerImpl::applyD16Load(
-    unsigned D16Opc, MachineInstr &DstMI, MachineInstr *SmallLoad,
-    Register SrcReg32ToOverwriteD16) const {
+void AMDGPURegBankCombinerImpl::applyD16Load(unsigned D16Opc,
+                                             MachineInstr &DstMI,
+                                             MachineInstr *SmallLoad,
+                                             Register SrcReg32ToOverwriteD16,
+                                             MachineInstr &InsertPt) const {
   Register DstReg = DstMI.getOperand(0).getReg();
   LLT SrcTy = MRI.getType(SrcReg32ToOverwriteD16);
 
@@ -583,6 +600,8 @@ bool AMDGPURegBankCombinerImpl::applyD16Load(
           ? DstReg
           : MRI.createVirtualRegister({MRI.getRegBank(DstReg), SrcTy});
 
+  B.setInstrAndDebugLoc(InsertPt);
+  B.setDebugLoc(SmallLoad->getDebugLoc());
   B.buildInstr(D16Opc, {D16Dst},
                {SmallLoad->getOperand(1).getReg(), SrcReg32ToOverwriteD16})
       .setMemRefs(SmallLoad->memoperands());
@@ -590,8 +609,12 @@ bool AMDGPURegBankCombinerImpl::applyD16Load(
   if (D16Dst != DstReg)
     B.buildBitcast(DstReg, D16Dst);
 
-  DstMI.eraseFromParent();
-  return true;
+  // Recursive cleanup may erase SmallLoad.
+  Register LoadDst = SmallLoad->getOperand(0).getReg();
+  eraseInstr(DstMI, MRI);
+  // Volatile and ordered atomic loads are not trivially dead.
+  if (MachineInstr *OldLoad = MRI.getVRegDef(LoadDst))
+    eraseInstr(*OldLoad, MRI);
 }
 
 SIModeRegisterDefaults AMDGPURegBankCombinerImpl::getMode() const {

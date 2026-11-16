@@ -33,9 +33,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -94,6 +96,10 @@ void LLVMDisposeMessage(char *Message) {
 
 static LLVMContext &getGlobalContext() {
   static LLVMContext GlobalContext;
+  [[maybe_unused]] static bool Seeded = [] {
+    GlobalContext.getLibraryOptions().assign(cl::getCAPILibraryOptions());
+    return true;
+  }();
   return GlobalContext;
 }
 
@@ -102,7 +108,9 @@ LLVMContextRef llvm::getGlobalContextForCAPI() {
 }
 
 LLVMContextRef LLVMContextCreate() {
-  return wrap(new LLVMContext());
+  auto *C = new LLVMContext();
+  C->getLibraryOptions().assign(cl::getCAPILibraryOptions());
+  return wrap(C);
 }
 
 LLVMContextRef LLVMGetGlobalContext() { return getGlobalContextForCAPI(); }

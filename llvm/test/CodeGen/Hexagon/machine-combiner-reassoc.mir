@@ -31,7 +31,7 @@ body: |
     ; ENABLED-NEXT: [[COPY:%[0-9]+]]:intregs = COPY $r0
     ; ENABLED-NEXT: [[L2_loadri_io:%[0-9]+]]:intregs = L2_loadri_io [[COPY]], 0
     ; ENABLED-NEXT: [[L2_loadri_io1:%[0-9]+]]:intregs = L2_loadri_io [[COPY]], 4
-    ; ENABLED-NEXT: [[F2_sfadd:%[0-9]+]]:intregs = nnan ninf nsz arcp contract afn reassoc F2_sfadd killed [[L2_loadri_io1]], killed [[L2_loadri_io]], implicit $usr
+    ; ENABLED-NEXT: [[F2_sfadd:%[0-9]+]]:intregs = nnan ninf nsz arcp contract afn reassoc F2_sfadd [[L2_loadri_io1]], [[L2_loadri_io]], implicit $usr
     ; ENABLED-NEXT: [[L2_loadri_io2:%[0-9]+]]:intregs = L2_loadri_io [[COPY]], 8
     ; ENABLED-NEXT: [[L2_loadri_io3:%[0-9]+]]:intregs = L2_loadri_io [[COPY]], 12
     ; ENABLED-NEXT: [[F2_sfadd1:%[0-9]+]]:intregs = nnan ninf nsz arcp contract afn reassoc F2_sfadd [[L2_loadri_io2]], [[L2_loadri_io3]], implicit $usr
@@ -45,7 +45,7 @@ body: |
     ; DISABLED-NEXT: [[COPY:%[0-9]+]]:intregs = COPY $r0
     ; DISABLED-NEXT: [[L2_loadri_io:%[0-9]+]]:intregs = L2_loadri_io [[COPY]], 0
     ; DISABLED-NEXT: [[L2_loadri_io1:%[0-9]+]]:intregs = L2_loadri_io [[COPY]], 4
-    ; DISABLED-NEXT: [[F2_sfadd:%[0-9]+]]:intregs = nnan ninf nsz arcp contract afn reassoc F2_sfadd killed [[L2_loadri_io1]], killed [[L2_loadri_io]], implicit $usr
+    ; DISABLED-NEXT: [[F2_sfadd:%[0-9]+]]:intregs = nnan ninf nsz arcp contract afn reassoc F2_sfadd [[L2_loadri_io1]], [[L2_loadri_io]], implicit $usr
     ; DISABLED-NEXT: [[L2_loadri_io2:%[0-9]+]]:intregs = L2_loadri_io [[COPY]], 8
     ; DISABLED-NEXT: [[L2_loadri_io3:%[0-9]+]]:intregs = L2_loadri_io [[COPY]], 12
     ; DISABLED-NEXT: [[F2_sfadd1:%[0-9]+]]:intregs = nnan ninf nsz arcp contract afn reassoc F2_sfadd [[L2_loadri_io2]], [[L2_loadri_io3]], implicit $usr
@@ -55,11 +55,11 @@ body: |
     %0:intregs = COPY $r0
     %1:intregs = L2_loadri_io %0:intregs, 0
     %2:intregs = L2_loadri_io %0:intregs, 4
-    %3:intregs = nnan ninf nsz arcp contract afn reassoc F2_sfadd killed %2:intregs, killed %1:intregs, implicit $usr
+    %3:intregs = nnan ninf nsz arcp contract afn reassoc F2_sfadd %2:intregs, %1:intregs, implicit $usr
     %4:intregs = L2_loadri_io %0:intregs, 8
-    %5:intregs = nnan ninf nsz arcp contract afn reassoc F2_sfadd killed %3:intregs, killed %4:intregs, implicit $usr
+    %5:intregs = nnan ninf nsz arcp contract afn reassoc F2_sfadd %3:intregs, %4:intregs, implicit $usr
     %6:intregs = L2_loadri_io %0:intregs, 12
-    %7:intregs = nnan ninf nsz arcp contract afn reassoc F2_sfadd killed %5:intregs, killed %6:intregs, implicit $usr
+    %7:intregs = nnan ninf nsz arcp contract afn reassoc F2_sfadd %5:intregs, %6:intregs, implicit $usr
     $r0 = COPY %7:intregs
     PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 ...

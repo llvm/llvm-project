@@ -118,9 +118,8 @@ public:
   }
 
   // Specialization for character designators
-  template <int KIND>
   static std::optional<TypeAndShape> Characterize(
-      const Designator<Type<TypeCategory::Character, KIND>> &x,
+      const Designator<Type<TypeCategory::Character>> &x,
       FoldingContext &context, bool invariantOnly = true) {
     const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)};
     if (symbol && !symbol->owner().IsDerivedType()) { // Whole variable

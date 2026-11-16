@@ -120,6 +120,7 @@ public:
   /// @}
 };
 
+struct AnalysisOptions;
 template <typename T> class ArrayRef;
 class DemandedBits;
 template <typename InstTy> class InterleaveGroup;
@@ -688,11 +689,9 @@ private:
 /// between the member and the group in a map.
 class InterleavedAccessInfo {
 public:
-  InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
-                        DominatorTree *DT, LoopInfo *LI,
-                        const LoopAccessInfo *LAI, bool OptForSize)
-      : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI), OptForSize(OptForSize) {
-  }
+  LLVM_ABI InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
+                                 DominatorTree *DT, LoopInfo *LI,
+                                 const LoopAccessInfo *LAI, bool OptForSize);
 
   ~InterleavedAccessInfo() { invalidateGroups(); }
 
@@ -754,6 +753,8 @@ public:
   bool hasGroups() const { return !InterleaveGroups.empty(); }
 
 private:
+  const AnalysisOptions &Opts;
+
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks.
   /// Simplifies SCEV expressions in the context of existing SCEV assumptions.
   /// The interleaved access analysis can also add new predicates (for example
@@ -841,7 +842,7 @@ private:
       SmallVectorImpl<const SCEVPredicate *> *Predicates);
 
   /// Returns true if \p Stride is allowed in an interleaved group.
-  LLVM_ABI static bool isStrided(int Stride);
+  LLVM_ABI bool isStrided(int Stride) const;
 
   /// Returns true if \p BB is a predicated block.
   bool isPredicated(BasicBlock *BB) const {

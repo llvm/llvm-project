@@ -49,6 +49,7 @@
   !30 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
   !31 = !DILocation(line: 0, scope: !20)
 name:            g
+tracksRegLiveness: false
 callSites:
   - { bb: '%bb.0', offset: 13, fwdArgRegs:
       - { arg: 1, reg: '$rsi' } }

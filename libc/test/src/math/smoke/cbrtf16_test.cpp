@@ -31,3 +31,11 @@ TEST_F(LlvmLibcCbrtf16Test, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(40.0f, LIBC_NAMESPACE::cbrtf16(0x1.f4p15));
   EXPECT_FP_EQ_ALL_ROUNDING(-40.0f, LIBC_NAMESPACE::cbrtf16(-0x1.f4p15));
 }
+
+TEST_F(LlvmLibcCbrtf16Test, SignalingNaNValue) {
+  float16 result = zero;
+  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(
+      aNaN, result = LIBC_NAMESPACE::cbrtf16(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+  EXPECT_FALSE(FPBits(result).is_signaling_nan());
+}

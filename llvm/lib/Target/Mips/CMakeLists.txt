@@ -2,30 +2,30 @@ add_llvm_component_group(Mips HAS_JIT)
 
 set(LLVM_TARGET_DEFINITIONS Mips.td)
 
-tablegen(LLVM MipsGenAsmMatcher.inc -gen-asm-matcher)
-tablegen(LLVM MipsGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM MipsGenCallingConv.inc -gen-callingconv)
-tablegen(LLVM MipsGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM MipsGenDisassemblerTables.inc -gen-disassembler
+llvm_tablegen(MipsGenAsmMatcher.inc -gen-asm-matcher)
+llvm_tablegen(MipsGenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(MipsGenCallingConv.inc -gen-callingconv)
+llvm_tablegen(MipsGenDAGISel.inc -gen-dag-isel)
+llvm_tablegen(MipsGenDisassemblerTables.inc -gen-disassembler
               -ignore-non-decodable-operands)
-tablegen(LLVM MipsGenFastISel.inc -gen-fast-isel)
-tablegen(LLVM MipsGenGlobalISel.inc -gen-global-isel)
-tablegen(LLVM MipsGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(MipsGenFastISel.inc -gen-fast-isel)
+llvm_tablegen(MipsGenGlobalISel.inc -gen-global-isel)
+llvm_tablegen(MipsGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="MipsPostLegalizerCombiner")
-tablegen(LLVM MipsGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM MipsGenMCCodeEmitter.inc -gen-emitter)
-tablegen(LLVM MipsGenMCPseudoLowering.inc -gen-pseudo-lowering)
-tablegen(LLVM MipsGenRegisterBank.inc -gen-register-bank)
-tablegen(LLVM MipsGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM MipsGenSDNodeInfo.inc -gen-sd-node-info)
-tablegen(LLVM MipsGenSubtargetInfo.inc -gen-subtarget)
-tablegen(LLVM MipsGenExegesis.inc -gen-exegesis)
+llvm_tablegen(MipsGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(MipsGenMCCodeEmitter.inc -gen-emitter)
+llvm_tablegen(MipsGenMCPseudoLowering.inc -gen-pseudo-lowering)
+llvm_tablegen(MipsGenRegisterBank.inc -gen-register-bank)
+llvm_tablegen(MipsGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(MipsGenSDNodeInfo.inc -gen-sd-node-info)
+llvm_tablegen(MipsGenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(MipsGenExegesis.inc -gen-exegesis)
 
 set(LLVM_TARGET_DEFINITIONS MipsOptions.td)
-tablegen(LLVM MipsOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(MipsOptions.inc -gen-opt-parser-defs)
 
 set(LLVM_TARGET_DEFINITIONS MCTargetDesc/MipsMCOptions.td)
-tablegen(LLVM MipsMCOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(MipsMCOptions.inc -gen-opt-parser-defs)
 
 add_public_tablegen_target(MipsCommonTableGen)
 

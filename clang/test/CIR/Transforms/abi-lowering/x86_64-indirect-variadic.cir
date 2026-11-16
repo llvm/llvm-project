@@ -84,12 +84,12 @@ module attributes {
     cir.return
   }
 
-  // CHECK-LABEL: cir.func {{.*}}@indirect_narrow(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !s8i {llvm.signext})
+  // CHECK-LABEL: cir.func {{.*}}@indirect_narrow(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !s8i {llvm.noundef, llvm.signext})
   // CHECK-NOT: cir.cast bitcast %arg0
-  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %arg2) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s8i {llvm.signext}) -> !s32i
+  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %arg2) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s8i {llvm.noundef, llvm.signext}) -> !s32i
 
   // LLVM-LABEL: define void @indirect_narrow(
-  // LLVM:   call i32 (ptr, ...) %{{[^,)]+}}(ptr %{{[^,)]+}}, i8 signext %{{[^,)]+}})
+  // LLVM:   call i32 (ptr, ...) %{{[^,)]+}}(ptr %{{[^,)]+}}, i8 noundef signext %{{[^,)]+}})
 
   // An empty record at the ellipsis is dropped, and the argument behind it
   // still stays out of the callee pointer's function type.

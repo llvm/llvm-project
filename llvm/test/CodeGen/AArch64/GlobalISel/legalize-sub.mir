@@ -3,6 +3,7 @@
 
 ---
 name:            test_scalar_sub_big
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_sub_big
@@ -28,6 +29,7 @@ body:             |
 ...
 ---
 name:            test_scalar_sub_big_nonpow2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_sub_big_nonpow2
@@ -56,6 +58,7 @@ body:             |
 ...
 ---
 name:            test_scalar_sub_small
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_sub_small
@@ -77,6 +80,7 @@ body:             |
 ...
 ---
 name:            test_vector_sub_v16s16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_sub_v16s16
@@ -97,6 +101,7 @@ body:             |
 ...
 ---
 name:            test_vector_sub_v32s8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_sub_v32s8

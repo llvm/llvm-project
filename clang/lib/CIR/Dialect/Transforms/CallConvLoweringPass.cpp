@@ -88,6 +88,11 @@ static bool recordCanPassInRegs(ModuleOp modOp, cir::RecordType recTy) {
   return layout.getArgPassingKind() == cir::ArgPassingKind::CanPassInRegs;
 }
 
+static bool recordIsTransparentUnion(ModuleOp modOp, cir::RecordType recTy) {
+  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
+  return layout && layout.getTransparentUnion();
+}
+
 /// Whether the classifier could give this type the SSEUP class, looking
 /// through arrays and records at the types they hold.
 static bool mayReachSseUp(mlir::Type ty, const DataLayout &dl) {
@@ -425,6 +430,8 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         llvm::abi::RecordFlags flags = llvm::abi::RecordFlags::None;
         if (recordCanPassInRegs(modOp, recTy))
           flags = flags | llvm::abi::RecordFlags::CanPassInRegisters;
+        if (recordIsTransparentUnion(modOp, recTy))
+          flags = flags | llvm::abi::RecordFlags::IsTransparent;
         llvm::TypeSize sizeBits = llvm::TypeSize::getFixed(
             dl.getTypeSizeInBits(type).getFixedValue());
         llvm::Align align = recordDeclaredAlign(modOp, recTy, dl);
@@ -580,8 +587,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 ///
 /// Extend: bool or a sub-register integer needs a signext/zeroext attribute.
 /// The x86_64 classifier (llvm/lib/ABI/Targets/X86.cpp) only returns Extend
-/// for an integer or bool operand, so any other origTy is asserted rather
-/// than silently handled.
+/// for an integer or bool operand, or for a transparent union whose first
+/// member is one, so any other origTy is asserted rather than silently
+/// handled.
 ///
 /// Indirect: an aggregate that does not fit in registers, or a scalar too
 /// wide to fit (a `_BitInt` over 128 bits), is passed via a pointer (sret
@@ -674,8 +682,9 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   if (info.isExtend()) {
     if (isa_and_present<cir::BoolType>(origTy))
       return ArgClassification::getExtend(nullptr, info.isSignExt());
-    assert((!origTy || isa<cir::IntType>(origTy)) &&
-           "the x86_64 classifier only returns Extend for integers and bool");
+    assert((!origTy || isa<cir::IntType, cir::RecordType>(origTy)) &&
+           "the x86_64 classifier only returns Extend for integers, bool, and "
+           "transparent unions");
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
     return ArgClassification::getExtend(extendedTy, info.isSignExt());
   }
@@ -776,6 +785,11 @@ std::optional<FunctionClassification> CIRABIClassifierCommon::classifySignature(
       nyiCoercion(origArg);
       return std::nullopt;
     }
+    // The classifier passes a transparent union as its first member, and
+    // names no coerce type when it passes that member as its own type.
+    auto recTy = dyn_cast_if_present<cir::RecordType>(origArg);
+    if (ac->isPassThrough() && recTy && recordIsTransparentUnion(modOp, recTy))
+      ac->coercedType = recTy.getMembers().front();
     ac->neededIntRegs = argInfo.getNeededIntRegs();
     ac->neededSseRegs = argInfo.getNeededSseRegs();
     fc.argInfos.push_back(*ac);
@@ -1026,8 +1040,15 @@ void CallConvLoweringPass::runOnOperation() {
     return;
   }
 
+  // A module without #cir.lowering_options gets the CodeGenOptions
+  // default, which marks arguments noundef.
+  auto loweringOpts = moduleOp->getAttrOfType<cir::LoweringOptionsAttr>(
+      cir::CIRDialect::getLoweringOptionsAttrName());
+  bool enableNoundefAttrs =
+      !loweringOpts || loweringOpts.getEnableNoundefAttrs();
+
   DataLayout dl(moduleOp);
-  CIRABIRewriteContext rewriteCtx(moduleOp, dl);
+  CIRABIRewriteContext rewriteCtx(moduleOp, dl, enableNoundefAttrs);
   // A non-byval indirect parameter's slot outlives the rewrite that retypes
   // the parameter, so that a call forwarding the parameter can still recognize
   // it.  Draining on scope exit collapses those slots whichever way this

@@ -2269,7 +2269,8 @@ public:
   void enableDebugInfo() { DisableDebugInfo = false; }
 
   bool shouldUseFusedARCCalls() {
-    return CGM.getCodeGenOpts().OptimizationLevel == 0;
+    return CGM.getCodeGenOpts().OptimizationLevel == 0 &&
+           !SanOpts.has(SanitizerKind::Thread);
   }
 
   const LangOptions &getLangOpts() const { return CGM.getLangOpts(); }
@@ -4777,9 +4778,6 @@ public:
   /// Create the discriminator from the storage address and the entity hash.
   llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
                                                  llvm::Value *Discriminator);
-  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
-                                        llvm::Value *StorageAddress,
-                                        llvm::ConstantInt *Discriminator);
   CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
                                         llvm::Value *StorageAddress,
                                         GlobalDecl SchemaDecl,

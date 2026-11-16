@@ -90,7 +90,7 @@ public:
                            base_exponent + 1};
     T x = NormalFloat(Sign::POS, 0, MANTISSA);
     for (int32_t exp : exp_array) {
-      ASSERT_FP_EQ(func(x, -exp), x > 0 ? zero : neg_zero);
+      ASSERT_FP_EQ(func(x, -exp), x > T(0) ? zero : neg_zero);
     }
   }
 
@@ -103,7 +103,7 @@ public:
                            base_exponent + 1};
     T x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS, MANTISSA);
     for (int32_t exp : exp_array) {
-      ASSERT_FP_EQ(func(x, -exp), x > 0 ? zero : neg_zero);
+      ASSERT_FP_EQ(func(x, -exp), x > T(0) ? zero : neg_zero);
     }
   }
 
@@ -136,8 +136,8 @@ public:
     // Normal which trigger mantissa overflow.
     T x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS + 1,
                       StorageType(2) * NormalFloat::ONE - StorageType(1));
-    ASSERT_FP_EQ(func(x, -1), T(x / 2));
-    ASSERT_FP_EQ(func(-x, -1), -T(x / 2));
+    ASSERT_FP_EQ(func(x, -1), x / T(2));
+    ASSERT_FP_EQ(func(-x, -1), -(x / T(2)));
 
     // Start with a normal number high exponent but pass a very low number for
     // exp. The result should be a subnormal number.

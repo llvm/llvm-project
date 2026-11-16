@@ -123,6 +123,24 @@ define void @factor2_v4f16(ptr %src) {
   ret void
 }
 
+define void @factor2_v2i32(ptr %src) {
+; CHECK-LABEL: factor2_v2i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    @ fake_use: $q0
+; CHECK-NEXT:    vmov.f32 s4, s1
+; CHECK-NEXT:    vmov.f32 s6, s3
+; CHECK-NEXT:    @ fake_use: $q1
+; CHECK-NEXT:    bx lr
+  %load = load <4 x i32>, ptr %src
+  %deinterleave = call { <2 x i32>, <2 x i32> } @llvm.vector.deinterleave2.v4i32(<4 x i32> %load)
+  %v0 = extractvalue { <2 x i32>, <2 x i32> } %deinterleave, 0
+  %v1 = extractvalue { <2 x i32>, <2 x i32> } %deinterleave, 1
+  call void (...) @llvm.fake.use(<2 x i32> %v0)
+  call void (...) @llvm.fake.use(<2 x i32> %v1)
+  ret void
+}
+
 define void @factor2_v2f32(ptr %src) {
 ; CHECK-LABEL: factor2_v2f32:
 ; CHECK:       @ %bb.0:

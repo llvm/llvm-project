@@ -90,6 +90,10 @@ public:
   explicit SourceMgrDiagnosticVerifier(ArrayRef<StringRef> prefixes = {
                                            "expected"});
 
+  SourceMgrDiagnosticVerifier(const SourceMgrDiagnosticVerifier &) = delete;
+  SourceMgrDiagnosticVerifier &
+  operator=(const SourceMgrDiagnosticVerifier &) = delete;
+
   /// Computes and caches the list of expected diagnostics for \p buf, if not
   /// already cached. Returns the (mutable) cached list.
   MutableArrayRef<ExpectedDiag> computeExpectedDiags(raw_ostream &os,

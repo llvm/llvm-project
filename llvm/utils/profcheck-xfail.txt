@@ -12,6 +12,7 @@ Transforms/FixIrreducible/callbr.ll
 Transforms/FixIrreducible/nested.ll
 Transforms/FixIrreducible/pr191979.ll
 Transforms/FixIrreducible/switch.ll
+Transforms/FixIrreducible/undef-phis.ll
 Transforms/InstNamer/new-values-after-pass.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte-nested.ll

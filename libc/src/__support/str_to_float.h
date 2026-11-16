@@ -30,6 +30,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math_extras.h"
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
@@ -353,18 +354,26 @@ LIBC_INLINE FloatConvertReturn<T> simple_decimal_conversion(
     return output;
   }
 
+  // exp10_to_exp2 is only valid for inputs below 646 456 636, but
+  // HighPrecisionDecimal clamps the decimal point to 1 << 30. Decimal points at
+  // or beyond that limit are far outside the range of any float type, so they
+  // are handled explicitly instead of letting exp10_to_exp2 wrap around.
+  constexpr int32_t EXP10_TO_EXP2_LIMIT = 646456636;
+
   // If the exponent is too large and can't be represented in this size of
   // float, return inf.
   if (hpd.get_decimal_point() > 0 &&
-      exp10_to_exp2(hpd.get_decimal_point() - 1) > FPBits::EXP_BIAS) {
+      (hpd.get_decimal_point() - 1 >= EXP10_TO_EXP2_LIMIT ||
+       exp10_to_exp2(hpd.get_decimal_point() - 1) > FPBits::EXP_BIAS)) {
     output.num = {0, fputil::FPBits<T>::MAX_BIASED_EXPONENT};
     output.error = ERANGE;
     return output;
   }
   // If the exponent is too small even for a subnormal, return 0.
   if (hpd.get_decimal_point() < 0 &&
-      exp10_to_exp2(-hpd.get_decimal_point()) >
-          (FPBits::EXP_BIAS + static_cast<int32_t>(FPBits::FRACTION_LEN))) {
+      (-hpd.get_decimal_point() >= EXP10_TO_EXP2_LIMIT ||
+       exp10_to_exp2(-hpd.get_decimal_point()) >
+           (FPBits::EXP_BIAS + static_cast<int32_t>(FPBits::FRACTION_LEN)))) {
     output.num = {0, 0};
     output.error = ERANGE;
     return output;
@@ -378,7 +387,13 @@ LIBC_INLINE FloatConvertReturn<T> simple_decimal_conversion(
     } else {
       shift_amount = POWERS_OF_TWO[hpd.get_decimal_point()];
     }
-    exp_2 += shift_amount;
+    // The bounds checks above keep exp_2 small, but stay well defined if they
+    // are ever loosened.
+    if (LIBC_UNLIKELY(add_overflow(exp_2, shift_amount, exp_2))) {
+      output.num = {0, FPBits::MAX_BIASED_EXPONENT};
+      output.error = ERANGE;
+      return output;
+    }
     hpd.shift(-shift_amount);
   }
 
@@ -394,7 +409,11 @@ LIBC_INLINE FloatConvertReturn<T> simple_decimal_conversion(
     } else { // This handles the case of the number being between .1 and .5
       shift_amount = 1;
     }
-    exp_2 -= shift_amount;
+    if (LIBC_UNLIKELY(sub_overflow(exp_2, shift_amount, exp_2))) {
+      output.num = {0, 0};
+      output.error = ERANGE;
+      return output;
+    }
     hpd.shift(shift_amount);
   }
 

@@ -9,9 +9,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip -O3 -emit-llvm -o - %s | FileCheck %s --check-prefix=OPT
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx906 -aux-triple x86_64-unknown-linux-gnu \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   -fcuda-is-device -x hip -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx906 -aux-triple x86_64-unknown-linux-gnu \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   -fcuda-is-device -x hip -O3 -emit-llvm -o - %s | FileCheck %s --check-prefix=OPT
 
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)

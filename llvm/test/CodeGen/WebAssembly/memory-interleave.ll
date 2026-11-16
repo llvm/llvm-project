@@ -1291,10 +1291,9 @@ define hidden void @four_bytes_into_four_ints_same_op(ptr noalias nocapture noun
 ; CHECK: i32x4.sub
 ; CHECK: i8x16.shuffle  12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK: i8x16.shuffle  2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i16x8.extend_low_i8x16_u
 ; CHECK: i8x16.shuffle  2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i16x8.extend_low_i8x16_u
-; CHECK: i32x4.extmul_low_i16x8_u
+; CHECK: i16x8.extmul_low_i8x16_u
+; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: v128.and
 ; CHECK: i8x16.shuffle  3, 7, 11, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extend_low_i8x16_u

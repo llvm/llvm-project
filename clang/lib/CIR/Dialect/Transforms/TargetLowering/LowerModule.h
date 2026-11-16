@@ -40,7 +40,7 @@ public:
   ~LowerModule() = default;
 
   // The lowering-relevant LangOptions, populated by createLowerModule() from
-  // the module's #cir.lowering_lang_options attribute when present (so a
+  // the module's #cir.lowering_options attribute when present (so a
   // reloaded .cir lowers the same way without a live clang::LangOptions),
   // otherwise left at their defaults.
   const clang::LangOptions &getLangOpts() const { return langOpts; }

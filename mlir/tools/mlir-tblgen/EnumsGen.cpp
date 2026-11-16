@@ -107,10 +107,12 @@ struct FieldParser<std::optional<{0}>, std::optional<{0}>> {{
 
   std::string isKeyValueCompositional;
   if (enumInfo.isNewStyleBitEnum()) {
-    StringRef separator = enumInfo.getDef().getValueAsString("separator");
     isKeyValueCompositional =
         formatv("\n  static constexpr bool isKeyValueCompositional = {0};\n",
-                separator.trim() == "," ? "false" : "true");
+                enumInfo.getBitEnumSeparatorKind() ==
+                        EnumInfo::BitEnumSeparatorKind::Comma
+                    ? "false"
+                    : "true");
   }
   os << formatv(fieldParserDecls, qualName, isKeyValueCompositional);
 }
@@ -226,14 +228,10 @@ FieldParser<std::optional<{0}>, std::optional<{0}>>::parse(AsmParser &parser) {{
 )";
 
   if (enumInfo.isNewStyleBitEnum()) {
-    StringRef separator = enumInfo.getDef().getValueAsString("separator");
-    StringRef parseSeparatorFn =
-        llvm::StringSwitch<StringRef>(separator.trim())
-            .Case("|", "parseOptionalVerticalBar")
-            .Case(",", "parseOptionalComma")
-            .Default("error, enum separator must be '|' or ','");
+    StringRef parseSeparatorFn = enumInfo.getBitEnumSeparatorParser();
     os << formatv(fieldParserDefsUnquotedBitEnum, qualName, cppNamespace,
-                  enumInfo.getSummary(), casesList, separator, parseSeparatorFn,
+                  enumInfo.getSummary(), casesList,
+                  enumInfo.getBitEnumSeparator(), parseSeparatorFn,
                   casesInitList);
   } else {
     os << formatv(fieldParserDefs, qualName, cppNamespace,
@@ -468,7 +466,7 @@ static void emitSymToStrFnForBitEnum(const Record &enumDef, raw_ostream &os) {
   StringRef enumName = enumInfo.getEnumClassName();
   StringRef symToStrFnName = enumInfo.getSymbolToStringFnName();
   StringRef symToStrFnRetType = enumInfo.getSymbolToStringFnRetType();
-  StringRef separator = enumDef.getValueAsString("separator");
+  StringRef separator = enumInfo.getBitEnumSeparator();
   auto enumerants = enumInfo.getAllCases();
   auto allBitsUnsetCase = getAllBitsUnsetCase(enumerants);
 
@@ -562,8 +560,7 @@ static void emitStrToSymFnForBitEnum(const Record &enumDef, raw_ostream &os) {
   StringRef enumName = enumInfo.getEnumClassName();
   std::string underlyingType = std::string(enumInfo.getUnderlyingType());
   StringRef strToSymFnName = enumInfo.getStringToSymbolFnName();
-  StringRef separator = enumDef.getValueAsString("separator");
-  StringRef separatorTrimmed = separator.trim();
+  StringRef separatorTrimmed = enumInfo.getBitEnumSeparator().trim();
   auto enumerants = enumInfo.getAllCases();
   auto allBitsUnsetCase = getAllBitsUnsetCase(enumerants);
 
