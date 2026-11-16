@@ -10914,13 +10914,26 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     SetCandidateCallInfo(MachineOutlinerTailCall, NumBytesForCall);
   }
 
-  else if (LastInstrOpcode == AArch64::BL ||
-           ((LastInstrOpcode == AArch64::BLR ||
-             LastInstrOpcode == AArch64::BLRNoIP) &&
-            !HasBTI)) {
+  else if (LastInstrOpcode == AArch64::BL || LastInstrOpcode == AArch64::BLR ||
+           LastInstrOpcode == AArch64::BLRNoIP) {
     // FIXME: Do we need to check if the code after this uses the value of LR?
     FrameID = MachineOutlinerThunk;
     NumBytesToCreateFrame = NumBytesToCheckLRInTCEpilogue;
+    if (HasBTI && (LastInstrOpcode == AArch64::BLR ||
+                   LastInstrOpcode == AArch64::BLRNoIP)) {
+      Register CallReg = RepeatedSequenceLocs[0].back().getOperand(0).getReg();
+      bool HasPAuthLR =
+          any_of(RepeatedSequenceLocs, [](outliner::Candidate &C) {
+            return C.getMF()
+                ->getInfo<AArch64FunctionInfo>()
+                ->branchProtectionPAuthLR();
+          });
+      bool NeedsMov =
+          HasPAuthLR ? (CallReg != AArch64::X17)
+                     : (CallReg != AArch64::X16 && CallReg != AArch64::X17);
+      if (NeedsMov)
+        NumBytesToCreateFrame += 4;
+    }
     SetCandidateCallInfo(MachineOutlinerThunk, 4);
   }
 
@@ -11153,6 +11166,12 @@ void AArch64InstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(CFn.getFnAttribute("sign-return-address"));
   if (CFn.hasFnAttribute("sign-return-address-key"))
     F.addFnAttr(CFn.getFnAttribute("sign-return-address-key"));
+  if (llvm::any_of(Candidates, [](const outliner::Candidate &C) {
+        return C.getMF()
+            ->getInfo<AArch64FunctionInfo>()
+            ->branchTargetEnforcement();
+      }))
+    F.addFnAttr("branch-target-enforcement");
   // The "sign-return-address-harden" attribute is not included because no
   // candidate is supposed to have hardening enabled.
   assert(llvm::none_of(Candidates, [](const outliner::Candidate &C) {
@@ -11521,24 +11540,58 @@ void AArch64InstrInfo::buildOutlinedFrame(
 
   AArch64FunctionInfo *FI = MF.getInfo<AArch64FunctionInfo>();
 
-  if (OF.FrameConstructionID == MachineOutlinerTailCall)
+  MachineBasicBlock::iterator TCStart = MBB.end();
+  if (OF.FrameConstructionID == MachineOutlinerTailCall) {
     FI->setOutliningStyle("Tail Call");
-  else if (OF.FrameConstructionID == MachineOutlinerThunk) {
+    TCStart = std::prev(MBB.end());
+  } else if (OF.FrameConstructionID == MachineOutlinerThunk) {
     // For thunk outlining, rewrite the last instruction from a call to a
     // tail-call.
     MachineInstr *Call = &*--MBB.instr_end();
-    unsigned TailOpcode;
+    MachineBasicBlock::iterator CallIt = Call->getIterator();
     if (Call->getOpcode() == AArch64::BL) {
-      TailOpcode = AArch64::TCRETURNdi;
+      TCStart = BuildMI(MBB, CallIt, DebugLoc(), get(AArch64::TCRETURNdi))
+                    .add(Call->getOperand(0))
+                    .addImm(0)
+                    .getInstr()
+                    ->getIterator();
     } else {
       assert(Call->getOpcode() == AArch64::BLR ||
              Call->getOpcode() == AArch64::BLRNoIP);
-      TailOpcode = AArch64::TCRETURNriALL;
+      Register CallReg = Call->getOperand(0).getReg();
+      bool HasBTI = FI->branchTargetEnforcement();
+      if (HasBTI) {
+        bool HasPAuthLR = FI->branchProtectionPAuthLR();
+        Register TargetReg = HasPAuthLR ? AArch64::X17 : AArch64::X16;
+        unsigned TailOpcode =
+            HasPAuthLR ? AArch64::TCRETURNrix17 : AArch64::TCRETURNrix16x17;
+        if (CallReg == AArch64::X16 || CallReg == AArch64::X17) {
+          if (!HasPAuthLR || CallReg == AArch64::X17)
+            TargetReg = CallReg;
+        }
+
+        if (TargetReg != CallReg) {
+          TCStart =
+              BuildMI(MBB, CallIt, DebugLoc(), get(AArch64::ORRXrs), TargetReg)
+                  .addReg(AArch64::XZR)
+                  .addReg(CallReg)
+                  .addImm(0)
+                  .getInstr()
+                  ->getIterator();
+        }
+        MachineInstr *TC = BuildMI(MBB, CallIt, DebugLoc(), get(TailOpcode))
+                               .addReg(TargetReg)
+                               .addImm(0);
+        if (TargetReg == CallReg)
+          TCStart = TC->getIterator();
+      } else {
+        TCStart = BuildMI(MBB, CallIt, DebugLoc(), get(AArch64::TCRETURNriALL))
+                      .add(Call->getOperand(0))
+                      .addImm(0)
+                      .getInstr()
+                      ->getIterator();
+      }
     }
-    MachineInstr *TC = BuildMI(MF, DebugLoc(), get(TailOpcode))
-                           .add(Call->getOperand(0))
-                           .addImm(0);
-    MBB.insert(MBB.end(), TC);
     Call->eraseFromParent();
 
     FI->setOutliningStyle("Thunk");
@@ -11572,7 +11625,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
 
     if (OF.FrameConstructionID == MachineOutlinerTailCall ||
         OF.FrameConstructionID == MachineOutlinerThunk)
-      Et = std::prev(MBB.end());
+      Et = TCStart;
 
     // There is a call in the range, so we must save LR. Save it as part of a
     // frame record when that gives us a smaller compact unwind encoding.
