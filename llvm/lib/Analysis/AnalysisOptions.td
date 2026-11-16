@@ -290,7 +290,7 @@ defm : BoolField<"print-instruction-comments", "false",
   "Prints comments for instruction based on inline cost analysis">;
 defm : ValueField<"recursive-inline-max-stacksize", "size_t", "1024",
   "Do not inline recursive functions with a stack size that exceeds the specified limit">;
-defm : ValueField<"inline-jump-threading-discount", "int", "5",
+defm : ValueField<"inline-jump-threading-discount", "int", "15",
   "The inline cost discount applied when the callee can be jump threaded into the caller">;
 
 // InlineOrder.cpp
