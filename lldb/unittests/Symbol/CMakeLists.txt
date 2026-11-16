@@ -45,6 +45,7 @@ add_lldb_unittest(SymbolTests
     lldbPluginObjectFileMachO
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFileSymtab
+    lldbPluginSymbolLocatorDefault
     lldbPluginTypeSystemClang
     lldbPluginTypeSystemFortran
     lldbPluginSymbolLocatorSymStore
