@@ -188,7 +188,6 @@ define void @hoisted_call_capture(ptr %ptr, i64 %n) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    [[Q:%.*]] = call ptr @opaque(ptr [[A]])
-; CHECK-NEXT:    [[V_1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
@@ -197,6 +196,7 @@ define void @hoisted_call_capture(ptr %ptr, i64 %n) {
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[V]])
 ; CHECK-NEXT:    store i32 1, ptr [[Q]], align 4
+; CHECK-NEXT:    [[V_1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[V_1]])
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
@@ -235,7 +235,6 @@ define void @hoisted_store_capture(ptr noalias %p, ptr %ptr, i64 %n) {
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    store ptr [[A]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[Q:%.*]] = load ptr, ptr [[P]], align 8
-; CHECK-NEXT:    [[V_1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
@@ -244,6 +243,7 @@ define void @hoisted_store_capture(ptr noalias %p, ptr %ptr, i64 %n) {
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[V]])
 ; CHECK-NEXT:    store i32 1, ptr [[Q]], align 4
+; CHECK-NEXT:    [[V_1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[V_1]])
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]

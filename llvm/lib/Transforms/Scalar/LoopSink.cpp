@@ -239,6 +239,8 @@ sinkInstruction(const ScalarOptions &Opts, Loop &L, Instruction &I,
   }
 
   BasicBlock *MoveBB = *SortedBBsToSinkInto.begin();
+  // I is moved rather than erased, drop it if it is a cached earliest escape.
+  Deps.EEA.removeInstruction(&I);
   // FIXME: Optimize the efficiency for cloned value replacement. The current
   //        implementation is O(SortedBBsToSinkInto.size() * I.num_uses()).
   for (BasicBlock *N : ArrayRef(SortedBBsToSinkInto).drop_front(1)) {

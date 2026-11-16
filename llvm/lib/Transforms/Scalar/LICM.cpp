@@ -1174,15 +1174,22 @@ static Instruction *cloneInstructionInExitBlock(
   return New;
 }
 
-static void eraseInstruction(Instruction &I, const LICMDependencies &Deps) {
+static void removeInstructionFromDeps(Instruction &I,
+                                      const LICMDependencies &Deps) {
   Deps.MSSAU.removeMemoryAccess(&I);
   Deps.SafetyInfo.removeInstruction(&I);
   Deps.EEA.removeInstruction(&I);
+}
+
+static void eraseInstruction(Instruction &I, const LICMDependencies &Deps) {
+  removeInstructionFromDeps(I, Deps);
   I.eraseFromParent();
 }
 
 static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
                                   const LICMDependencies &Deps) {
+  // Moving a capture may invalidate the cached earliest escapes.
+  Deps.EEA.insertPotentialCapture(&I);
   Deps.SafetyInfo.removeInstruction(&I);
   Deps.SafetyInfo.insertInstructionTo(&I, Dest->getParent());
   I.moveBefore(*Dest->getParent(), Dest);
@@ -1578,8 +1585,7 @@ public:
   }
 
   void instructionDeleted(Instruction *I) const override {
-    Deps.SafetyInfo.removeInstruction(I);
-    Deps.MSSAU.removeMemoryAccess(I);
+    removeInstructionFromDeps(*I, Deps);
   }
 
   bool shouldDelete(Instruction *I) const override {

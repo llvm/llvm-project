@@ -443,9 +443,10 @@ define i32 @t7(i32, i32) #0 !prof !0 {
 
 ; CHECK-LABEL: @sink_earliest_capture(
 ; CHECK: entry:
-; CHECK-NOT: %r0 = call i32 @w(ptr %a)
-; CHECK: cold:
 ; CHECK: %r0 = call i32 @w(ptr %a)
+; CHECK: cold:
+; CHECK-NOT: %r0 = call i32 @w(ptr %a)
+; CHECK: %x = call ptr @opaque(ptr %a)
 define i32 @sink_earliest_capture(ptr noalias %p, i32 %n) !prof !0 {
 entry:
   %a = alloca i32, align 4
