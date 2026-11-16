@@ -98,12 +98,12 @@ StringRef mlir::NVVM::getCUDAToolkitPath() {
 SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, NVVMTargetAttr target,
     const gpu::TargetOptions &targetOptions)
-    : ModuleToObject(module, target.getTriple(), target.getChip(),
-                     target.getFeatures(), target.getO(),
-                     targetOptions.getInitialLlvmIRCallback(),
-                     targetOptions.getLinkedLlvmIRCallback(),
-                     targetOptions.getOptimizedLlvmIRCallback(),
-                     targetOptions.getISACallback()),
+    : ModuleToObject(
+          module, target.getTriple(), target.getChip(), target.getFeatures(),
+          target.getO(), targetOptions.getInitialLlvmIRCallback(),
+          targetOptions.getLinkedLlvmIRCallback(),
+          targetOptions.getOptimizedLlvmIRCallback(),
+          targetOptions.getISACallback(), targetOptions.getLibraryOptions()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
       librariesToLink(targetOptions.getLibrariesToLink()) {
 

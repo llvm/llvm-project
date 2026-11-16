@@ -259,12 +259,12 @@ static void addTrivialDefaultFunctionAttributes(
 
     // TODO(cir): a number of other attribute 1-offs based on codegen/lang opts
     // should be done here: less-recise-fpmad null-pointer-is-valid
-    // no-trapping-math
     // various inf/nan/nsz/etc work here.
     //
-    // TODO(cir): set stack-protector buffer size attribute (sorted oddly in
-    // classic compiler inside of the above region, but should be done on its
-    // own).
+    // no-trapping-math and stack-protector-buffer-size are TU-wide, so they
+    // live in #cir.lowering_options and LowerToLLVM adds them to every
+    // function not marked as a runtime function.
+
     // TODO(cir): other attributes here:
     // reciprocal estimates, prefer-vector-width, stackrealign, backchain,
     // split-stack, speculative-load-hardening.
@@ -370,7 +370,8 @@ void CIRGenModule::constructAttributeList(
   addAttributesFromFunctionProtoType(getBuilder(), attrs,
                                      calleeInfo.getCalleeFunctionProtoType());
 
-  const Decl *targetDecl = calleeInfo.getCalleeDecl().getDecl();
+  GlobalDecl targetGlobalDecl = calleeInfo.getCalleeDecl();
+  const Decl *targetDecl = targetGlobalDecl.getDecl();
 
   // TODO(cir): OMP Assume Attributes should be here.
 
@@ -549,8 +550,7 @@ void CIRGenModule::constructAttributeList(
       addUnitAttr(cir::CIRDialect::getReturnsTwiceAttrName());
 
     llvm::StringMap<std::string> cpuAndFeatures;
-    if (getCPUAndFeaturesAttributes(calleeInfo.getCalleeDecl(),
-                                    cpuAndFeatures)) {
+    if (getCPUAndFeaturesAttributes(targetGlobalDecl, cpuAndFeatures)) {
       for (const auto &[key, val] : cpuAndFeatures)
         attrs.set(key, builder.getStringAttr(val));
     }
@@ -563,8 +563,8 @@ void CIRGenModule::constructAttributeList(
   // TODO(cir): Add loader-replaceable attribute here.
 
   constructFunctionReturnAttributes(info, targetDecl, isThunk, retAttrs);
-  constructFunctionArgumentAttributes(info, targetDecl, isThunk, attrOnCallSite,
-                                      argAttrs);
+  constructFunctionArgumentAttributes(info, targetGlobalDecl, isThunk,
+                                      attrOnCallSite, argAttrs);
 }
 
 bool CIRGenModule::hasStrictReturn(QualType retTy, const Decl *targetDecl) {
@@ -711,9 +711,10 @@ void CIRGenModule::constructFunctionReturnAttributes(
 }
 
 void CIRGenModule::constructFunctionArgumentAttributes(
-    const CIRGenFunctionInfo &info, const Decl *targetDecl, bool isThunk,
+    const CIRGenFunctionInfo &info, GlobalDecl calleeDecl, bool isThunk,
     bool attrOnCallSite, llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs) {
   assert(!cir::MissingFeatures::abiArgInfo());
+  const Decl *targetDecl = calleeDecl.getDecl();
   // TODO(cir): classic codegen does a lot of work here based on the ABIArgInfo
   // to set things based on calling convention.
 
@@ -745,11 +746,28 @@ void CIRGenModule::constructFunctionArgumentAttributes(
           builder.getI64IntegerAttr(
               getNaturalPointeeTypeAlignment(thisPtrTy).getQuantity()));
 
-      // TODO(cir): the classic codegen has a recently-added bunch of logic for
-      // 'dead_on_return' as an attribute. This both doesn't exist in the LLVM
-      // dialect, and is 'too new' at the time of writing this to be considered
-      // stable enough here.  For now, we'll leave this as a TODO so that when
-      // we come back, it is hopefully a more stabilized implementation.
+      // Do not annotate vector deleting destructors with dead_on_return as the
+      // this pointer in that case points to an array which we cannot
+      // statically know the size of. Also do not mark deleting destructors
+      // dead_on_return as then we might delete stores inside of a user-defined
+      // operator delete implementation if it gets inlined, which would be
+      // incorrect as the object's lifetime has already ended and the operator
+      // delete implementation is allowed to manipulate the underlying storage.
+      const auto *dd = dyn_cast_if_present<CXXDestructorDecl>(targetDecl);
+      if (dd && codeGenOpts.StrictLifetimes &&
+          calleeDecl.getDtorType() != CXXDtorType::Dtor_VectorDeleting &&
+          calleeDecl.getDtorType() != CXXDtorType::Dtor_Deleting) {
+        const CXXRecordDecl *classDecl = dd->getParent();
+        uint64_t dataSize = astContext.getASTRecordLayout(classDecl)
+                                .getDataSize()
+                                .getQuantity();
+        // We cannot add dead_on_return if we have virtual base classes because
+        // they will generally still be live after the base object destructor.
+
+        if (classDecl->getNumVBases() == 0 && dataSize != 0)
+          argAttrs[0].set(mlir::LLVM::LLVMDialect::getDeadOnReturnAttrName(),
+                          builder.getI64IntegerAttr(dataSize));
+      }
     }
   }
 

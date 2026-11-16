@@ -64,12 +64,10 @@ static bool eraseProxyRegs(MachineFunction &MF) {
     MI->eraseFromParent();
   }
 
-  // Now go replace the registers and remove kill flags conservatively.
+  // Now go replace the registers.
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (auto [From, To] : RAUWBatch) {
+  for (auto [From, To] : RAUWBatch)
     MRI.replaceRegWith(From, To);
-    MRI.clearKillFlags(To);
-  }
 
   return true;
 }

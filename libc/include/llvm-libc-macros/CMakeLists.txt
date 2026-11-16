@@ -326,6 +326,8 @@ add_macro_header(
   sys_shm_macros
   HDR
     sys-shm-macros.h
+  DEPENDS
+    .stdint_macros
 )
 
 add_macro_header(

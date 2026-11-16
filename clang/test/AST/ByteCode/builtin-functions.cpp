@@ -138,6 +138,11 @@ namespace strcmp {
                                         // ref-note {{declared here}}
   static_assert(__builtin_strcmp(missingInit, "bar") == 0, ""); // both-error {{not an integral constant expression}} \
                                                                 // ref-note {{initializer of 'missingInit' is unknown}}
+#ifdef __SIZEOF_INT128__
+  const unsigned __int128 foo128[] = {};
+  constexpr int bar128 = __builtin_strlen((char *)foo128); // both-error {{must be initialized by a constant expression}} \
+                                                           // both-note {{cast that performs the conversions of a reinterpret_cast}}
+#endif
 }
 
 namespace WcsCmp {

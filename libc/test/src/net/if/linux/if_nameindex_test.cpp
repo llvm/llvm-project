@@ -220,12 +220,13 @@ static size_t build_ifinfomsg_packet(uint8_t *buf, unsigned int index,
   return total_len;
 }
 
-static size_t build_nlmsg_done_packet(uint8_t *buf) {
+static size_t build_nlmsg_done_packet(uint8_t *buf, int errcode = 0) {
   size_t total_len = NLMSG_LENGTH(sizeof(int));
   LIBC_NAMESPACE::inline_memset(buf, 0, total_len);
   struct nlmsghdr *nh = reinterpret_cast<struct nlmsghdr *>(buf);
   nh->nlmsg_len = static_cast<uint32_t>(total_len);
   nh->nlmsg_type = NLMSG_DONE;
+  *reinterpret_cast<int *>(NLMSG_DATA(nh)) = errcode;
   return total_len;
 }
 
@@ -347,12 +348,77 @@ TEST_F(LlvmLibcIfNameIndexSocketTest, MultipleInterfaces) {
   LIBC_NAMESPACE::if_freenameindex(list);
 }
 
+TEST_F(LlvmLibcIfNameIndexSocketTest, MultipleRecvCalls) {
+  uint8_t pkt_buf[2048];
+  size_t len1 = build_ifinfomsg_packet(pkt_buf, 1, AttrName{"lo"});
+  size_t len2 = build_ifinfomsg_packet(pkt_buf + len1, 2, AttrName{"eth0"});
+  size_t len3 =
+      build_ifinfomsg_packet(pkt_buf + len1 + len2, 3, AttrName{"wlan0"});
+  size_t len4 = build_nlmsg_done_packet(pkt_buf + len1 + len2 + len3);
+
+  // Two interfaces in the first datagram, one in the second, and NLMSG_DONE in
+  // a datagram of its own (which is what the kernel usually does).
+  policy_data.recv_results.push_back(span<const uint8_t>(pkt_buf, len1 + len2));
+  policy_data.recv_results.push_back(
+      span<const uint8_t>(pkt_buf + len1 + len2, len3));
+  policy_data.recv_results.push_back(
+      span<const uint8_t>(pkt_buf + len1 + len2 + len3, len4));
+
+  auto res = LIBC_NAMESPACE::net::if_nameindex<Policy>();
+  ASSERT_TRUE(res.has_value());
+  struct if_nameindex *list = res.value();
+  ASSERT_NE(list, static_cast<struct if_nameindex *>(nullptr));
+
+  ASSERT_EQ(list[0].if_index, 1u);
+  ASSERT_STREQ(list[0].if_name, "lo");
+  ASSERT_EQ(list[1].if_index, 2u);
+  ASSERT_STREQ(list[1].if_name, "eth0");
+  ASSERT_EQ(list[2].if_index, 3u);
+  ASSERT_STREQ(list[2].if_name, "wlan0");
+  ASSERT_EQ(list[3].if_index, 0u);
+  ASSERT_EQ(list[3].if_name, static_cast<char *>(nullptr));
+
+  validate_dump_request();
+
+  ASSERT_EQ(policy_data.recv_calls.size(), size_t(3));
+  for (size_t i = 0; i < policy_data.recv_calls.size(); ++i)
+    ASSERT_EQ(get<0>(policy_data.recv_calls[i]), FAKE_SOCKET);
+
+  LIBC_NAMESPACE::if_freenameindex(list);
+}
+
 TEST_F(LlvmLibcIfNameIndexSocketTest, RecvFailure) {
   policy_data.recv_results.push_back(Error(ETIMEDOUT));
 
   auto res = LIBC_NAMESPACE::net::if_nameindex<Policy>();
   ASSERT_FALSE(res.has_value());
   ASSERT_EQ(res.error(), ETIMEDOUT);
+  validate_dump_request();
+}
+
+TEST_F(LlvmLibcIfNameIndexSocketTest, SecondRecvFailure) {
+  uint8_t pkt_buf[1024];
+  size_t len = build_ifinfomsg_packet(pkt_buf, 1, AttrName{"lo"});
+
+  policy_data.recv_results.push_back(span<const uint8_t>(pkt_buf, len));
+  policy_data.recv_results.push_back(Error(ENOMEM));
+
+  auto res = LIBC_NAMESPACE::net::if_nameindex<Policy>();
+  ASSERT_FALSE(res.has_value());
+  ASSERT_EQ(res.error(), ENOMEM);
+  validate_dump_request();
+}
+
+TEST_F(LlvmLibcIfNameIndexSocketTest, ZeroLengthRecv) {
+  uint8_t pkt_buf[1024];
+  size_t len = build_ifinfomsg_packet(pkt_buf, 1, AttrName{"lo"});
+
+  policy_data.recv_results.push_back(span<const uint8_t>(pkt_buf, len));
+  policy_data.recv_results.push_back(span<const uint8_t>());
+
+  auto res = LIBC_NAMESPACE::net::if_nameindex<Policy>();
+  ASSERT_FALSE(res.has_value());
+  ASSERT_EQ(res.error(), EIO);
   validate_dump_request();
 }
 
@@ -377,6 +443,32 @@ TEST_F(LlvmLibcIfNameIndexSocketTest, TruncatedNetlinkErrorPacket) {
   auto res = LIBC_NAMESPACE::net::if_nameindex<Policy>();
   ASSERT_FALSE(res.has_value());
   ASSERT_EQ(res.error(), EINVAL);
+  validate_dump_request();
+}
+
+TEST_F(LlvmLibcIfNameIndexSocketTest, NetlinkDoneWithError) {
+  uint8_t pkt_buf[1024];
+  size_t len1 = build_ifinfomsg_packet(pkt_buf, 1, AttrName{"lo"});
+  size_t len2 = build_nlmsg_done_packet(pkt_buf + len1, -EMSGSIZE);
+
+  policy_data.recv_results.push_back(span<const uint8_t>(pkt_buf, len1));
+  policy_data.recv_results.push_back(span<const uint8_t>(pkt_buf + len1, len2));
+
+  auto res = LIBC_NAMESPACE::net::if_nameindex<Policy>();
+  ASSERT_FALSE(res.has_value());
+  ASSERT_EQ(res.error(), EMSGSIZE);
+  validate_dump_request();
+}
+
+TEST_F(LlvmLibcIfNameIndexSocketTest, TruncatedNetlinkDonePacket) {
+  uint8_t pkt_buf[128];
+  size_t len = build_generic_nlmsg_packet(pkt_buf, NLMSG_DONE);
+
+  policy_data.recv_results.push_back(span<const uint8_t>(pkt_buf, len));
+
+  auto res = LIBC_NAMESPACE::net::if_nameindex<Policy>();
+  ASSERT_FALSE(res.has_value());
+  ASSERT_EQ(res.error(), EIO);
   validate_dump_request();
 }
 
@@ -409,14 +501,26 @@ TEST_F(LlvmLibcIfNameIndexSocketTest, TruncatedNetlinkHeaderPacket) {
       span<const uint8_t>(pkt_buf, sizeof(pkt_buf)));
 
   auto res = LIBC_NAMESPACE::net::if_nameindex<Policy>();
-  ASSERT_TRUE(res.has_value());
-  struct if_nameindex *list = res.value();
-  ASSERT_NE(list, static_cast<struct if_nameindex *>(nullptr));
-  ASSERT_EQ(list[0].if_index, 0u);
-  ASSERT_EQ(list[0].if_name, static_cast<char *>(nullptr));
-
+  ASSERT_FALSE(res.has_value());
+  ASSERT_EQ(res.error(), EIO);
   validate_dump_request();
-  LIBC_NAMESPACE::if_freenameindex(list);
+  ASSERT_EQ(policy_data.recv_calls.size(), size_t(1));
+}
+
+TEST_F(LlvmLibcIfNameIndexSocketTest, TruncatedDatagram) {
+  uint8_t pkt_buf[1024];
+  size_t len1 = build_ifinfomsg_packet(pkt_buf, 1, AttrName{"lo"});
+  size_t len2 = build_ifinfomsg_packet(pkt_buf + len1, 2, AttrName{"eth0"});
+
+  // Cut off the end of the second message.
+  policy_data.recv_results.push_back(
+      span<const uint8_t>(pkt_buf, len1 + len2 - 4));
+
+  auto res = LIBC_NAMESPACE::net::if_nameindex<Policy>();
+  ASSERT_FALSE(res.has_value());
+  ASSERT_EQ(res.error(), EIO);
+  validate_dump_request();
+  ASSERT_EQ(policy_data.recv_calls.size(), size_t(1));
 }
 
 TEST_F(LlvmLibcIfNameIndexSocketTest, CloseFailure) {
@@ -430,6 +534,7 @@ TEST_F(LlvmLibcIfNameIndexSocketTest, CloseFailure) {
   ASSERT_FALSE(res.has_value());
   ASSERT_EQ(res.error(), EIO);
   validate_dump_request();
+  ASSERT_EQ(policy_data.recv_calls.size(), size_t(1));
 }
 
 TEST_F(LlvmLibcIfNameIndexSocketTest, NetlinkAckPacket) {

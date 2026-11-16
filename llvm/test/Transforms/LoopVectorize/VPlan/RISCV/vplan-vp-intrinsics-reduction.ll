@@ -91,8 +91,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[VP7]]>
 ; IF-EVL-OUTLOOP-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx>, ir<1>
 ; IF-EVL-OUTLOOP-NEXT:      WIDEN ir<%0> = vp.load vp<[[VP8]]>, vp<%evl>
-; IF-EVL-OUTLOOP-NEXT:      WIDEN ir<%add> = add ir<%0>, ir<%rdx>
-; IF-EVL-OUTLOOP-NEXT:      WIDEN-INTRINSIC vp<[[VP9]]> = call llvm.vp.merge(ir<true>, ir<%add>, ir<%rdx>, vp<%evl>)
+; IF-EVL-OUTLOOP-NEXT:      EXPRESSION vp<[[VP9]]> = vp.merge ir<true>, add (ir<%0>, ir<%rdx>), ir<%rdx>, vp<%evl>
 ; IF-EVL-OUTLOOP-NEXT:      EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = zext vp<%evl> to i64
 ; IF-EVL-OUTLOOP-NEXT:      EMIT vp<%current.iteration.next> = add vp<[[VP10]]>, vp<[[VP5]]>
 ; IF-EVL-OUTLOOP-NEXT:      EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<[[VP10]]>

@@ -37,37 +37,39 @@ template <bool COPY_VALUES> class DescriptorStorage final {
   Terminator terminator_;
 
   // return true on overflow
-  static bool checkedMultiply(size_type x, size_type y, size_type &res);
+  RT_API_ATTRS static bool checkedMultiply(
+      size_type x, size_type y, size_type &res);
 
-  void resize(size_type newCapacity);
+  RT_API_ATTRS void resize(size_type newCapacity);
 
-  Descriptor *cloneDescriptor(const Descriptor &source);
+  RT_API_ATTRS Descriptor *cloneDescriptor(const Descriptor &source);
 
 public:
-  DescriptorStorage(const char *sourceFile, int line);
-  ~DescriptorStorage();
+  RT_API_ATTRS DescriptorStorage(const char *sourceFile, int line);
+  RT_API_ATTRS ~DescriptorStorage();
 
   // `new` but using the runtime allocation API
-  static inline DescriptorStorage *allocate(const char *sourceFile, int line) {
+  RT_API_ATTRS static inline DescriptorStorage *allocate(
+      const char *sourceFile, int line) {
     Terminator term{sourceFile, line};
     void *ptr = AllocateMemoryOrCrash(term, sizeof(DescriptorStorage));
     return new (ptr) DescriptorStorage{sourceFile, line};
   }
 
   // `delete` but using the runtime allocation API
-  static inline void destroy(DescriptorStorage *instance) {
+  RT_API_ATTRS static inline void destroy(DescriptorStorage *instance) {
     instance->~DescriptorStorage();
     FreeMemory(instance);
   }
 
   // clones a descriptor into this storage
-  void push(const Descriptor &source);
+  RT_API_ATTRS void push(const Descriptor &source);
 
   // out must be big enough to hold a descriptor of the right rank and addendum
-  void pop(Descriptor &out);
+  RT_API_ATTRS void pop(Descriptor &out);
 
   // out must be big enough to hold a descriptor of the right rank and addendum
-  void at(size_type i, Descriptor &out);
+  RT_API_ATTRS void at(size_type i, Descriptor &out);
 };
 
 using ValueStack = DescriptorStorage</*COPY_VALUES=*/true>;
@@ -75,7 +77,7 @@ using DescriptorStack = DescriptorStorage</*COPY_VALUES=*/false>;
 } // namespace
 
 template <bool COPY_VALUES>
-bool DescriptorStorage<COPY_VALUES>::checkedMultiply(
+RT_API_ATTRS bool DescriptorStorage<COPY_VALUES>::checkedMultiply(
     size_type x, size_type y, size_type &res) {
   // TODO: c++20 [[unlikely]]
   if (x > UINT64_MAX / y) {
@@ -86,7 +88,8 @@ bool DescriptorStorage<COPY_VALUES>::checkedMultiply(
 }
 
 template <bool COPY_VALUES>
-void DescriptorStorage<COPY_VALUES>::resize(size_type newCapacity) {
+RT_API_ATTRS void DescriptorStorage<COPY_VALUES>::resize(
+    size_type newCapacity) {
   if (newCapacity <= capacity_) {
     return;
   }
@@ -108,7 +111,7 @@ void DescriptorStorage<COPY_VALUES>::resize(size_type newCapacity) {
 }
 
 template <bool COPY_VALUES>
-Descriptor *DescriptorStorage<COPY_VALUES>::cloneDescriptor(
+RT_API_ATTRS Descriptor *DescriptorStorage<COPY_VALUES>::cloneDescriptor(
     const Descriptor &source) {
   const std::size_t bytes = source.SizeInBytes();
   void *memory = AllocateMemoryOrCrash(terminator_, bytes);
@@ -117,14 +120,14 @@ Descriptor *DescriptorStorage<COPY_VALUES>::cloneDescriptor(
 }
 
 template <bool COPY_VALUES>
-DescriptorStorage<COPY_VALUES>::DescriptorStorage(
+RT_API_ATTRS DescriptorStorage<COPY_VALUES>::DescriptorStorage(
     const char *sourceFile, int line)
     : terminator_{sourceFile, line} {
   resize(INITIAL_ALLOC);
 }
 
 template <bool COPY_VALUES>
-DescriptorStorage<COPY_VALUES>::~DescriptorStorage() {
+RT_API_ATTRS DescriptorStorage<COPY_VALUES>::~DescriptorStorage() {
   for (size_type i = 0; i < size_; ++i) {
     Descriptor *element = data_[i];
     if constexpr (COPY_VALUES) {
@@ -136,7 +139,8 @@ DescriptorStorage<COPY_VALUES>::~DescriptorStorage() {
 }
 
 template <bool COPY_VALUES>
-void DescriptorStorage<COPY_VALUES>::push(const Descriptor &source) {
+RT_API_ATTRS void DescriptorStorage<COPY_VALUES>::push(
+    const Descriptor &source) {
   if (size_ == capacity_) {
     size_type newSize;
     if (checkedMultiply(capacity_, 2, newSize)) {
@@ -158,7 +162,7 @@ void DescriptorStorage<COPY_VALUES>::push(const Descriptor &source) {
 }
 
 template <bool COPY_VALUES>
-void DescriptorStorage<COPY_VALUES>::pop(Descriptor &out) {
+RT_API_ATTRS void DescriptorStorage<COPY_VALUES>::pop(Descriptor &out) {
   if (size_ == 0) {
     terminator_.Crash("temporary-stack: pop empty storage");
   }
@@ -169,7 +173,8 @@ void DescriptorStorage<COPY_VALUES>::pop(Descriptor &out) {
 }
 
 template <bool COPY_VALUES>
-void DescriptorStorage<COPY_VALUES>::at(size_type i, Descriptor &out) {
+RT_API_ATTRS void DescriptorStorage<COPY_VALUES>::at(
+    size_type i, Descriptor &out) {
   if (i >= size_) {
     terminator_.Crash("temporary-stack: out of bounds access");
   }
@@ -177,10 +182,11 @@ void DescriptorStorage<COPY_VALUES>::at(size_type i, Descriptor &out) {
   out = *ptr; // Descriptor::operator= handles the different sizes
 }
 
-inline static ValueStack *getValueStorage(void *opaquePtr) {
+RT_API_ATTRS inline static ValueStack *getValueStorage(void *opaquePtr) {
   return static_cast<ValueStack *>(opaquePtr);
 }
-inline static DescriptorStack *getDescriptorStorage(void *opaquePtr) {
+RT_API_ATTRS inline static DescriptorStack *getDescriptorStorage(
+    void *opaquePtr) {
   return static_cast<DescriptorStack *>(opaquePtr);
 }
 
@@ -189,43 +195,43 @@ RT_OFFLOAD_API_GROUP_END
 namespace Fortran::runtime {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
-void *RTNAME(CreateValueStack)(const char *sourceFile, int line) {
+void *RTDEF(CreateValueStack)(const char *sourceFile, int line) {
   return ValueStack::allocate(sourceFile, line);
 }
 
-void RTNAME(PushValue)(void *opaquePtr, const Descriptor &value) {
+void RTDEF(PushValue)(void *opaquePtr, const Descriptor &value) {
   getValueStorage(opaquePtr)->push(value);
 }
 
-void RTNAME(PopValue)(void *opaquePtr, Descriptor &value) {
+void RTDEF(PopValue)(void *opaquePtr, Descriptor &value) {
   getValueStorage(opaquePtr)->pop(value);
 }
 
-void RTNAME(ValueAt)(void *opaquePtr, uint64_t i, Descriptor &value) {
+void RTDEF(ValueAt)(void *opaquePtr, uint64_t i, Descriptor &value) {
   getValueStorage(opaquePtr)->at(i, value);
 }
 
-void RTNAME(DestroyValueStack)(void *opaquePtr) {
+void RTDEF(DestroyValueStack)(void *opaquePtr) {
   ValueStack::destroy(getValueStorage(opaquePtr));
 }
 
-void *RTNAME(CreateDescriptorStack)(const char *sourceFile, int line) {
+void *RTDEF(CreateDescriptorStack)(const char *sourceFile, int line) {
   return DescriptorStack::allocate(sourceFile, line);
 }
 
-void RTNAME(PushDescriptor)(void *opaquePtr, const Descriptor &value) {
+void RTDEF(PushDescriptor)(void *opaquePtr, const Descriptor &value) {
   getDescriptorStorage(opaquePtr)->push(value);
 }
 
-void RTNAME(PopDescriptor)(void *opaquePtr, Descriptor &value) {
+void RTDEF(PopDescriptor)(void *opaquePtr, Descriptor &value) {
   getDescriptorStorage(opaquePtr)->pop(value);
 }
 
-void RTNAME(DescriptorAt)(void *opaquePtr, uint64_t i, Descriptor &value) {
+void RTDEF(DescriptorAt)(void *opaquePtr, uint64_t i, Descriptor &value) {
   getValueStorage(opaquePtr)->at(i, value);
 }
 
-void RTNAME(DestroyDescriptorStack)(void *opaquePtr) {
+void RTDEF(DestroyDescriptorStack)(void *opaquePtr) {
   DescriptorStack::destroy(getDescriptorStorage(opaquePtr));
 }
 RT_EXT_API_GROUP_END

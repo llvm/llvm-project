@@ -468,6 +468,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPTargetParallelGenericLoopDirective(
         cast<OMPTargetParallelGenericLoopDirective>(*S));
     break;
+  case Stmt::OMPTargetGenericLoopDirectiveClass:
+    EmitOMPTargetSimdDirective(cast<OMPTargetGenericLoopDirective>(*S));
+    break;
   case Stmt::OMPParallelMaskedDirectiveClass:
     EmitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*S));
     break;
@@ -2807,6 +2810,10 @@ void AsmConstraintsInfo::EmitAsmStmt() {
       CBRRegResults;
 
   if (IsGCCAsmGoto) {
+    if (CGF.HaveInsertPoint() && !CGF.Bypasses.isAlwaysBypassed()) {
+      CGF.emitBypassedVarInitsForSource(&S);
+      CGF.BypassingForwardJumps.push_back({Builder.GetInsertBlock(), &S});
+    }
     CBR = Builder.CreateCallBr(IA, DefaultDest, IndirectDests, Args);
     CGF.EmitBlock(DefaultDest);
     UpdateAsmCallInst(*CBR, HasSideEffect,
@@ -3348,9 +3355,15 @@ void AsmConstraintsInfo::EmitAsmStores(
       Builder.CreateCall(FnAssume, IsBooleanValue);
     }
 
+    // ResultTypeRequiresCast elements correspond to the first
+    // ResultTypeRequiresCast.size() elements of RegResults.
+    const bool RequiresCast =
+        i < ResultTypeRequiresCast.size() && ResultTypeRequiresCast[i];
+
     // If the result type of the LLVM IR asm doesn't match the result type of
-    // the expression, do the conversion.
-    if (ResultRegTypes[i] != TruncTy) {
+    // the expression, do the conversion. An output returned as an integer is
+    // converted where it's stored below.
+    if (ResultRegTypes[i] != TruncTy && !RequiresCast) {
       // Truncate the integer result to the right size, note that TruncTy can be
       // a pointer.
       if (TruncTy->isFloatingPointTy())
@@ -3376,14 +3389,13 @@ void AsmConstraintsInfo::EmitAsmStores(
     ApplyAtomGroup Grp(CGF.getDebugInfo());
     LValue Dest = ResultRegDests[i];
 
-    // ResultTypeRequiresCast elements correspond to the first
-    // ResultTypeRequiresCast.size() elements of RegResults.
-    if (i < ResultTypeRequiresCast.size() && ResultTypeRequiresCast[i]) {
+    if (RequiresCast) {
       unsigned Size = getContext().getTypeSize(ResultRegQualTys[i]);
       Address A = Dest.getAddress().withElementType(ResultRegTypes[i]);
 
       if (getTargetHooks().isScalarizableAsmOperand(CGF, TruncTy)) {
-        llvm::StoreInst *S = Builder.CreateStore(Tmp, A);
+        llvm::StoreInst *S =
+            Builder.CreateStore(Tmp, A, Dest.isVolatileQualified());
         CGF.addInstToCurrentSourceAtom(S, S->getValueOperand());
         continue;
       }
@@ -3396,11 +3408,24 @@ void AsmConstraintsInfo::EmitAsmStores(
         return;
       }
 
+      // The output's type may not be an integer: an output tied to a larger
+      // input has the input's type (e.g., a pointer), and a mask register
+      // output ("k" on X86) is a vector of i1. Convert it to an integer of the
+      // same size, then store only the destination's bits.
+      llvm::Type *IntTy = llvm::IntegerType::get(CTX, Size);
+      uint64_t TmpSize = CGM.getDataLayout().getTypeSizeInBits(Tmp->getType());
+      Tmp = Builder.CreateBitOrPointerCast(
+          Tmp, llvm::IntegerType::get(CTX, (unsigned)TmpSize));
+      Tmp = Builder.CreateTrunc(Tmp, IntTy);
+
       // The store writes all of the destination's members at once, so it must
       // be allowed to alias an access to any of them. A TBAA access type must
-      // be a scalar, so use may-alias (char), which aliases any access.
-      Dest = CGF.MakeAddrLValue(A, Ty, Dest.getBaseInfo(),
-                                TBAAAccessInfo::getMayAliasInfo());
+      // be a scalar, so use may-alias (char), which aliases any access. Keep
+      // the destination's qualifiers, such as volatile.
+      Dest = CGF.MakeAddrLValue(
+          Dest.getAddress().withElementType(IntTy),
+          getContext().getQualifiedType(Ty, Dest.getQuals()),
+          Dest.getBaseInfo(), TBAAAccessInfo::getMayAliasInfo());
     }
 
     CGF.EmitStoreThroughLValue(RValue::get(Tmp), Dest);

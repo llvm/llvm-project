@@ -43,6 +43,7 @@
   !96 = !{null}
   !97 = !DISubroutineType(types: !96)
 name:            backtrace_user
+tracksRegLiveness: false
 registers:
   - {id: 0, class: rgpr, }
   - {id: 1, class: gpr, }
@@ -60,3 +61,4 @@ body:             |
     %2:gpr = t2LDRi12 %15, 8, 14 /* CC::al */, $noreg, debug-location !95 :: (load (s32) from %ir.btc_user_copy_context, align 8)
     %31:rgpr = t2ANDrr %16, %0, 14 /* CC::al */, $noreg, def $cpsr
     DBG_VALUE %2, $noreg, !60, !DIExpression(), debug-location !95
+...

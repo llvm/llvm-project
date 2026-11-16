@@ -59,8 +59,7 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// nullopt otherwise.
   std::optional<Type *> canVectorize(BndlRef<Instruction *> Bndl);
 
-  /// Builds a single vector load out of \p Loads. \returns the new load,
-  /// or nullptr if \p Loads are not a vectorizable.
+  /// Builds a single vector load out of \p Loads. \returns the new load.
   LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
   /// Reinterprets \p C as type \p DestTy without changing its bits, e.g.,

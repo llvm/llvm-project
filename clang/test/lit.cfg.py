@@ -195,6 +195,34 @@ def have_host_jit_feature_support(feature_name):
     return "true" in run_clang_repl("--host-supports-" + feature_name)
 
 
+def have_host_clang_repl_thread_local():
+    clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
+
+    if not clang_repl_exe:
+        return False
+
+    testcode = b"\n".join(
+        [
+            b'extern "C" int puts(const char *s);',
+            b"thread_local int tl = 42;",
+            b'puts(tl == 42 ? "success" : "failure");',
+            b"%quit",
+        ]
+    )
+    try:
+        clang_repl_cmd = subprocess.run(
+            [clang_repl_exe],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            input=testcode,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+    return clang_repl_cmd.returncode == 0 and b"success" in clang_repl_cmd.stdout
+
+
 skip_clang_repl_checks = lit.util.pythonize_bool(
     lit_config.params.get(
         "clang_skip_clang_repl_checks",
@@ -204,6 +232,9 @@ skip_clang_repl_checks = lit.util.pythonize_bool(
 
 if not skip_clang_repl_checks and have_host_jit_feature_support("jit"):
     config.available_features.add("host-supports-jit")
+
+    if have_host_clang_repl_thread_local():
+        config.available_features.add("jit-thread-local")
 
     hosttriple = run_clang_repl("--host-jit-triple")
     config.available_features.add("host-jit-triple=" + hosttriple.strip())
@@ -260,6 +291,19 @@ config.substitutions.append(
         % (
             config.python_executable,
             os.path.join(config.clang_src_dir, "utils", "hmaptool", "hmaptool"),
+        ),
+    )
+)
+
+config.substitutions.append(
+    (
+        "%clang_format_diff",
+        '"%s" %s'
+        % (
+            config.python_executable,
+            os.path.join(
+                config.clang_src_dir, "tools", "clang-format", "clang-format-diff.py"
+            ),
         ),
     )
 )
@@ -349,6 +393,11 @@ if os.path.exists("/dev/fd/0") and sys.platform not in ["cygwin"]:
 # Set on native MS environment.
 if re.match(r".*-(windows-msvc)$", config.target_triple):
     config.available_features.add("ms-sdk")
+
+# Targets whose object file format (XCOFF on AIX, GOFF on z/OS) does not yet
+# support wrapping a serialized module in the "__clangast" section.
+if not re.match(r".*-(aix|zos)", config.target_triple):
+    config.available_features.add("object-wrapped-module")
 
 # [PR8833] LLP64-incompatible tests
 if not re.match(
