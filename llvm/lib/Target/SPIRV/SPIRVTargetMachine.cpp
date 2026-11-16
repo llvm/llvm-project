@@ -106,7 +106,12 @@ namespace {
 class SPIRVPassConfig : public TargetPassConfig {
 public:
   SPIRVPassConfig(SPIRVTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM), TM(TM) {}
+      : TargetPassConfig(TM, PM), TM(TM) {
+    // Logical SPIR-V cannot express the pointer induction variables that loop
+    // strength reduction creates.
+    if (TM.getSubtargetImpl()->isLogicalSPIRV())
+      EnableLoopStrengthReduce = false;
+  }
 
   void addMachineSSAOptimization() override;
   void addIRPasses() override;

@@ -11,8 +11,8 @@ define amdgpu_kernel void @_start() {
 ; CHECK-LABEL: _start:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
-; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:  .LBB0_1: ; %dynamic-memcpy-expansion-main-body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_getpc_b64 s[2:3]

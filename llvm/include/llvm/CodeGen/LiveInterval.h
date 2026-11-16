@@ -490,6 +490,10 @@ namespace llvm {
     /// may have grown since it was inserted).
     LLVM_ABI iterator addSegment(Segment S);
 
+    /// Add \p NewSegs, sorted by start, in one pass. Gives the same result as
+    /// calling addSegment() for each.
+    LLVM_ABI void addSegments(ArrayRef<Segment> NewSegs);
+
     /// Merge the segment pointed to by @p I with its immediate neighbors when
     /// they use the same value number and touch it. @p I must be a valid
     /// iterator into this live range. Returns an iterator to the merged

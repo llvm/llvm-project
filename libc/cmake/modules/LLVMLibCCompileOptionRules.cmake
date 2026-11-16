@@ -321,6 +321,12 @@ function(_get_common_compile_options_impl output_var)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       # Silence this warning because _Complex is a part of C99.
       list(APPEND compile_options "-fext-numeric-literals")
+      if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "11.0.0")
+        # AllocChecker's operator new overloads inline malloc/aligned_alloc
+        # while C++ forbids marking replaceable operator delete inline, causing
+        # GCC to report false-positive -Wmismatched-new-delete diagnostics.
+        list(APPEND compile_options "-Wno-mismatched-new-delete")
+      endif()
     else()
       list(APPEND compile_options "-Wno-c99-extensions")
       list(APPEND compile_options "-Wno-gnu-imaginary-constant")

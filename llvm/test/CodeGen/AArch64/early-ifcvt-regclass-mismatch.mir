@@ -56,36 +56,6 @@ regBankSelected: true
 selected:        true
 failedISel:      false
 hasWinCFI:       false
-registers:
-  - { id: 0, class: gpr32, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: gpr64, preferred-register: '' }
-  - { id: 5, class: fpr, preferred-register: '' }
-  - { id: 6, class: _, preferred-register: '' }
-  - { id: 7, class: gpr64, preferred-register: '' }
-  - { id: 8, class: gpr64common, preferred-register: '' }
-  - { id: 9, class: gpr64, preferred-register: '' }
-  - { id: 10, class: fpr64, preferred-register: '' }
-  - { id: 11, class: fpr64, preferred-register: '' }
-  - { id: 12, class: fpr, preferred-register: '' }
-  - { id: 13, class: fpr64, preferred-register: '' }
-  - { id: 14, class: fpr, preferred-register: '' }
-  - { id: 15, class: gpr32, preferred-register: '' }
-  - { id: 16, class: _, preferred-register: '' }
-  - { id: 17, class: gpr32, preferred-register: '' }
-  - { id: 18, class: gpr32, preferred-register: '' }
-  - { id: 19, class: gpr32, preferred-register: '' }
-  - { id: 20, class: gpr, preferred-register: '' }
-  - { id: 21, class: fpr64, preferred-register: '' }
-  - { id: 22, class: fpr64, preferred-register: '' }
-  - { id: 23, class: fpr64, preferred-register: '' }
-  - { id: 24, class: fpr64, preferred-register: '' }
-  - { id: 25, class: fpr64, preferred-register: '' }
-  - { id: 26, class: fpr64, preferred-register: '' }
-  - { id: 27, class: fpr64, preferred-register: '' }
-  - { id: 28, class: gpr64, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false

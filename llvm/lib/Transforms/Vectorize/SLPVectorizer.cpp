@@ -226,7 +226,6 @@ public:
         TTI(Tti), TLI(TLi), LI(Li), DT(Dt), AC(AC), DB(DB), DL(DL), ORE(ORE),
         CostKind(getSLPCostKind(Func)),
         Builder(Se->getModule(), TargetFolder(*DL)) {
-    Builder.disableGEPCanonicalization();
     CodeMetrics::collectEphemeralValues(F, AC, EphValues);
     // Use the vector register size specified by the target unless overridden
     // by a command-line option.
@@ -1090,7 +1089,12 @@ public:
             return LookAheadHeuristics::ScoreConsecutiveExtracts;
           if (isUndefVector(EV2).all() && EV2->getType() == EV1->getType())
             return LookAheadHeuristics::ScoreConsecutiveExtracts;
-          if (EV2 == EV1) {
+          if (EV2 == EV1 && isa<FixedVectorType>(EV1->getType())) {
+            // Out-of-range indices produce poison, which is as profitable as
+            // undefs.
+            unsigned NumElts = getNumElements(EV1->getType());
+            if (Ex1Idx->uge(NumElts) || Ex2Idx->uge(NumElts))
+              return LookAheadHeuristics::ScoreConsecutiveExtracts;
             int Idx1 = Ex1Idx->getZExtValue();
             int Idx2 = Ex2Idx->getZExtValue();
             int Dist = Idx2 - Idx1;
@@ -2221,6 +2225,9 @@ public:
       eraseInstruction(VI);
       SE->forgetValue(VI);
     }
+    // The code emitted in place of the erased scalars may invalidate the cached
+    // analyses results.
+    Cache.clear();
   }
 
   /// Checks if the instruction was already analyzed for being possible
@@ -4652,13 +4659,15 @@ private:
           // instruction. It may happen, if the chain of same copyable elements
           // appears in the tree. With the self-operand modeling (op(V, V)) the
           // user node may have the value on an operand column without copyable
-          // data, so its copyable data releases the instruction's schedule
-          // data directly and must stay a counted user.
+          // data in some lane, so its copyable data releases the instruction's
+          // schedule data directly and must stay a counted user.
           if (In == I) {
             unsigned NumCols = 0;
             for (unsigned OpIdx : seq<unsigned>(EI.UserTE->getNumOperands()))
-              NumCols += EI.UserTE->getOperand(OpIdx)[Lane] == I &&
-                         !getScheduleCopyableData({EI.UserTE, OpIdx}, I);
+              for (auto [OpV, V] :
+                   zip(EI.UserTE->getOperand(OpIdx), EI.UserTE->Scalars))
+                NumCols += OpV == I && V == I &&
+                           !getScheduleCopyableData({EI.UserTE, OpIdx}, I);
             if (NumCols == 0) {
               EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
               if (ScheduleCopyableData *UserCD =
@@ -5020,9 +5029,6 @@ private:
                       Bundle->getTreeEntry()->isExpandedOperand(In, OpIdx),
                       /*CopyableDepsOnly=*/CopyableDepsOnly);
                 }
-              // If parent node is schedulable, it will be handled correctly.
-              if (Bundle->getTreeEntry()->isCopyableElement(In))
-                break;
             }
           }
           // A copyable element absorbed into its user modeling (e.g. a
@@ -9921,7 +9927,8 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
   if (VL.size() == SmallVecWidth &&
       NumUniqueScalarValues == SmallVecUniqueThreshold && !BuildGatherOnly &&
       !(S && (S.getOpcode() == Instruction::Load ||
-              S.getOpcode() == Instruction::PHI))) {
+              S.getOpcode() == Instruction::PHI ||
+              S.getOpcode() == Instruction::Freeze))) {
     // Keep originals with identity reuse - no packing, no extra shuffle.
     ReuseShuffleIndices.clear();
     return true;
@@ -10150,7 +10157,9 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
   const auto [PackProfitable, UseOriginal] = EstimatePackPlusShuffleVsInserts();
 
   if (PackProfitable) {
-    if (UseOriginal) {
+    // The lanes of the vector freeze are frozen independently, the repeated
+    // freezes are packed to stay the same value.
+    if (UseOriginal && (!S || S.getOpcode() != Instruction::Freeze)) {
       // Prefer original scalars - avoid shuffling.
       ReuseShuffleIndices.clear();
     } else {
@@ -17651,9 +17660,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               TTI::getCastContextHint(I), CostKind, I);
           continue;
         }
+        // An interchangeable lane, like add %x, 0 in the shl node, is costed as
+        // its own scalar instruction.
         assert(is_contained(
                    {Instruction::And, Instruction::LShr, Instruction::Shl},
-                   I->getOpcode()) &&
+                   TE->getMatchingMainOpOrAltOp(I)->getOpcode()) &&
                "Expected and/shift in the bit pack.");
         ScalarCost += TTI.getArithmeticInstrCost(
             I->getOpcode(), I->getType(), CostKind,
@@ -20545,6 +20556,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           if (PHI->getIncomingValue(Idx) != EU.Scalar)
             continue;
           BasicBlock *InBB = PHI->getIncomingBlock(Idx);
+          // An extract on an edge from an unreachable block never executes.
+          if (!DT->isReachableFromEntry(InBB))
+            continue;
           UseBlock =
               UseBlock ? DT->findNearestCommonDominator(UseBlock, InBB) : InBB;
         }
@@ -21604,8 +21618,13 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         const TreeEntry *VTE = *It;
         if (none_of(TE->CombinedEntriesWithIndices,
                     [&](const auto &P) { return P.first == VTE->Idx; })) {
-          Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
-          if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
+          // The emitted split node goes after the vectors of its operands,
+          // which may follow its last instruction. Check the vector instead.
+          auto *LastBundleInst =
+              dyn_cast_if_present<Instruction>(VTE->VectorizedValue);
+          if (!LastBundleInst)
+            LastBundleInst = &getLastInstructionInBundle(VTE);
+          if (LastBundleInst == TEInsertPt || !CheckOrdering(LastBundleInst))
             continue;
         }
         // The node is reused - exit.
@@ -23331,14 +23350,14 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   auto FindReusedSplat = [&](MutableArrayRef<int> Mask, unsigned InputVF,
                              unsigned I, unsigned SliceSize,
                              bool IsNotPoisonous) {
+    TreeEntry *UserTE = E->UserTreeIndex.UserTE;
+    if (!UserTE || UserTE->getNumOperands() != 2)
+      return false;
     if (!isSplat(E->Scalars) || none_of(E->Scalars, [](Value *V) {
           return isa<UndefValue>(V) && !isa<PoisonValue>(V);
         }))
       return false;
-    TreeEntry *UserTE = E->UserTreeIndex.UserTE;
     unsigned EdgeIdx = E->UserTreeIndex.EdgeIdx;
-    if (UserTE->getNumOperands() != 2)
-      return false;
     if (!IsNotPoisonous) {
       auto *It = find_if(ArrayRef(VectorizableTree).drop_front(UserTE->Idx + 1),
                          [=](const std::unique_ptr<TreeEntry> &TE) {
@@ -27029,7 +27048,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
             auto *ScalarTy = FTy->getElementType();
             auto Key = std::make_pair(Vec, ScalarTy);
             auto VecIt = VectorCasts.find(Key);
-            if (VecIt == VectorCasts.end()) {
+            if (VecIt == VectorCasts.end() ||
+                !DT->dominates(VecIt->second, VU)) {
               IRBuilderBase::InsertPointGuard Guard(Builder);
               if (auto *IVec = dyn_cast<PHINode>(Vec)) {
                 if (IVec->getParent()->isLandingPad())
@@ -27039,7 +27059,12 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                   Builder.SetInsertPoint(
                       IVec->getParent()->getFirstNonPHIOrLifetime());
               } else if (auto *IVec = dyn_cast<Instruction>(Vec)) {
-                Builder.SetInsertPoint(IVec->getNextNode());
+                // The result of callbr is available in several successors and
+                // has no single dominating insertion point, so emit the cast
+                // in the block of the vectorized scalars.
+                Builder.SetInsertPoint(
+                    IVec->getInsertionPointAfterDef().value_or(
+                        E->getMainOp()->getParent()->getFirstInsertionPt()));
               }
               Vec = Builder.CreateIntCast(
                   Vec,
@@ -27047,7 +27072,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                       ScalarTy,
                       cast<FixedVectorType>(Vec->getType())->getNumElements()),
                   BWIt->second.second);
-              VectorCasts.try_emplace(Key, Vec);
+              VectorCasts.insert_or_assign(Key, Vec);
             } else {
               Vec = VecIt->second;
             }
@@ -27441,9 +27466,6 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // NOTE: removeInstructionAndOperands only marks the instruction for deletion
   // - instructions are not deleted until later.
   removeInstructionsAndOperands(ArrayRef(RemovedInsts), VectorValuesAndScales);
-  // The emitted vectorized code and the erased scalars may invalidate the
-  // cached analyses results.
-  Cache.clear();
 
   // The new vector code may capture pointers that were previously not captured
   // (e.g. the pointer operands of a masked gather), so the capture results
@@ -29815,10 +29837,43 @@ void BoUpSLP::computeMinimumValueSizes() {
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         *VectorizableTree[NodeIdx], IsTopRoot, IsProfitableToDemoteRoot, Limit,
         IsTruncRoot, IsSignedCmp);
+    auto IsDemotedUser = [&](const Instruction *UI) {
+      return isVectorized(UI) &&
+             all_of(getTreeEntries(UI), [&](const TreeEntry *TE) {
+               return MinBWs.contains(TE) || is_contained(ToDemote, TE->Idx);
+             });
+    };
+    // The extension, demoted below its source width, becomes a truncation of
+    // the source, which the vectorized users in the original type extend back.
+    // Keep such extensions in the original type.
+    if (MaxBitWidth != 0) {
+      SmallVector<unsigned> WideExts(
+          make_filter_range(ToDemote, [&](unsigned Idx) {
+            const TreeEntry &TE = *VectorizableTree[Idx];
+            Value *Src;
+            if (TE.State != TreeEntry::Vectorize || TE.isAltShuffle() ||
+                !match(TE.getMainOp(), m_ZExtOrSExt(m_Value(Src))) ||
+                Src->getType()->getScalarSizeInBits() <= MaxBitWidth)
+              return false;
+            return any_of(TE.Scalars, [&](Value *V) {
+              return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
+                       auto *UI = cast<Instruction>(U);
+                       return !isa<CmpInst>(UI) &&
+                              (!isa<CastInst>(UI) ||
+                               (UI->getType()->isIntOrIntVectorTy() &&
+                                UI->getType()->getScalarSizeInBits() >
+                                    MaxBitWidth)) &&
+                              isVectorized(UI) && !IsDemotedUser(UI);
+                     });
+            });
+          }));
+      erase_if(ToDemote,
+               [&](unsigned Idx) { return is_contained(WideExts, Idx); });
+    }
     // The extension of a demoted scalar, which does not fit into the demoted
     // type, restores only its demanded bits. Keep the original bitwidth if the
-    // scalar users may depend on the other bits via poison-generating
-    // annotations or there are too many users to check.
+    // users, not demoted with the scalar, may depend on the other bits via
+    // poison-generating annotations or there are too many users to check.
     auto HasUnsafeScalarUsers = [&](Value *V) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I)
@@ -29837,9 +29892,9 @@ void BoUpSLP::computeMinimumValueSizes() {
           if (++NumUsers > UsesLimit)
             return true;
           auto *UI = cast<Instruction>(U);
-          if (isVectorized(UI) || UserIgnoreSet.contains(UI) ||
+          if (UserIgnoreSet.contains(UI) ||
               !UI->getType()->isIntOrIntVectorTy() ||
-              !Visited.insert(UI).second)
+              !Visited.insert(UI).second || IsDemotedUser(UI))
             continue;
           if (UI->hasPoisonGeneratingAnnotations())
             return true;
@@ -33839,7 +33894,10 @@ public:
           VectorizedRoot = Builder.CreateFreeze(VectorizedRoot);
 
         // Emit code to correctly handle reused reduced values, if required.
-        if (OptReusedScalars && !SameScaleFactor) {
+        // The roots, reduced in-tree, produce the scalar result of the or
+        // reduction, which is not affected by the reused values.
+        if (OptReusedScalars && !SameScaleFactor && !V.isReducedBitcastRoot() &&
+            !V.isReducedCmpBitcastRoot()) {
           // The reuse counters are stored in the deduplicated candidates
           // order, but the emitted reduction vector lane order is defined by
           // the root node, which may be reordered, split or have copyable
