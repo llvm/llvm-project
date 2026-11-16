@@ -19947,6 +19947,9 @@ static SDValue combineAddMulParts(SDNode *N, SelectionDAG &DAG,
     if (AccId == Intrinsic::not_intrinsic)
       continue;
 
+    if (Mul.getOperand(1).getValueType().getScalarSizeInBits() == 8)
+      continue;
+
     SDLoc DL(N);
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
                        DAG.getTargetConstant(AccId, DL, Subtarget.getXLenVT()),
