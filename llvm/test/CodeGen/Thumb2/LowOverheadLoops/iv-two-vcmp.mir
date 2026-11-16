@@ -60,7 +60,6 @@
 ---
 name:            test
 alignment:       16
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }

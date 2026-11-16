@@ -138,7 +138,7 @@ void test_destructor() {
 
 // CIRRET-LABEL: cir.func {{.*}} @_Z15test_destructorv()
 // CIRRET:         cir.call @_ZN1EC1Ev({{.*}}) : ({{.*}}) -> (!cir.ptr<!rec_E> {llvm.noundef})
-// CIRRET:         %[[FN:.*]] = cir.load {{.*}} : {{.*}}, !cir.ptr<!cir.func<(!cir.ptr<!rec_E>) -> !cir.ptr<!rec_E>>>
+// CIRRET:         %[[FN:.*]] = cir.vtable.get_virtual_fn {{.*}} : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!rec_E>) -> !cir.ptr<!rec_E>>>
 // CIRRET:         cir.call %[[FN]]({{.*}}) nothrow : ({{.*}}) -> (!cir.ptr<!rec_E> {llvm.noundef})
 // CIRRET:         cir.call @_ZN1ED1Ev({{.*}}) nothrow : ({{.*}}) -> (!cir.ptr<!rec_E> {llvm.noundef})
 // CIRRET:       cir.func private unnamed_addr @_ZN1EC1Ev({{.*}}llvm.returned{{.*}}) -> (!cir.ptr<!rec_E> {llvm.noundef})

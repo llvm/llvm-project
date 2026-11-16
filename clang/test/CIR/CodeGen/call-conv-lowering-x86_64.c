@@ -29,14 +29,27 @@ typedef union { char c[32]; } __attribute__((aligned(32))) UBigOverAligned;
 // Narrow signed integer sign-extended in a register.
 signed char ext_schar(signed char c) { return c; }
 
-// CIR: cir.func {{.*}}@ext_schar(%arg0: !s8i {{.*}}llvm.signext{{.*}}) -> !s8i
-// LLVM: define dso_local i8 @ext_schar(i8 noundef signext %{{.+}})
+// CIR: cir.func {{.*}}@ext_schar(%arg0: !s8i {llvm.noundef}{{.*}}) -> !s8i
+// LLVM: define dso_local i8 @ext_schar(i8 noundef %{{.+}})
 
 // Narrow unsigned integer zero-extended in a register.
 unsigned char ext_uchar(unsigned char c) { return c; }
 
-// CIR: cir.func {{.*}}@ext_uchar(%arg0: !u8i {{.*}}llvm.zeroext{{.*}}) -> !u8i
-// LLVM: define dso_local i8 @ext_uchar(i8 noundef zeroext %{{.+}})
+// CIR: cir.func {{.*}}@ext_uchar(%arg0: !u8i {llvm.noundef}{{.*}}) -> !u8i
+// LLVM: define dso_local i8 @ext_uchar(i8 noundef %{{.+}})
+
+// The caller extends a narrow integer argument, but the callee does not get to
+// assume that it did, so only the call site carries signext/zeroext.
+int call_ext(signed char c, unsigned char uc) {
+  return ext_schar(c) + ext_uchar(uc);
+}
+
+// CIR-LABEL: cir.func {{.*}}@call_ext(%arg0: !s8i {llvm.noundef}{{.*}}, %arg1: !u8i {llvm.noundef}{{.*}}) -> !s32i
+// CIR: cir.call @ext_schar(%{{.+}}) : (!s8i {llvm.noundef, llvm.signext}) -> !s8i
+// CIR: cir.call @ext_uchar(%{{.+}}) : (!u8i {llvm.noundef, llvm.zeroext}) -> !u8i
+// LLVM-LABEL: define dso_local i32 @call_ext(i8 noundef %{{.+}}, i8 noundef %{{.+}})
+// LLVM: call i8 @ext_schar(i8 noundef signext %{{.+}})
+// LLVM: call i8 @ext_uchar(i8 noundef zeroext %{{.+}})
 
 // Floating-point scalar passed/returned in an SSE register.
 double sse_double(double d) { return d; }
@@ -166,7 +179,7 @@ UBytes12 ret_union_bytes(char c) {
   return u;
 }
 
-// CIR: cir.func {{.*}}@ret_union_bytes(%arg0: !s8i {llvm.noundef, llvm.signext}{{.*}}) -> ![[I64I32]]
+// CIR: cir.func {{.*}}@ret_union_bytes(%arg0: !s8i {llvm.noundef}{{.*}}) -> ![[I64I32]]
 // CIR:   %[[SLOT:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<![[I64I32]]>
 // CIR:   %[[U:.+]] = cir.alloca "__retval" align(4) : !cir.ptr<!rec_UBytes12>
 // CIR:   %[[SLOT_U:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[I64I32]]> -> !cir.ptr<!rec_UBytes12>
@@ -174,7 +187,7 @@ UBytes12 ret_union_bytes(char c) {
 // CIR-NEXT:   %[[RET:.+]] = cir.load align(8) %[[SLOT]] : !cir.ptr<![[I64I32]]>, ![[I64I32]]
 // CIR-NEXT:   cir.return %[[RET]] : ![[I64I32]]
 
-// LLVM: define dso_local { i64, i32 } @ret_union_bytes(i8 noundef signext %{{.+}})
+// LLVM: define dso_local { i64, i32 } @ret_union_bytes(i8 noundef %{{.+}})
 // LLVM:   getelementptr inbounds nuw %struct.CharIntInt, ptr %[[U:.+]], i32 0, i32 0
 // LLVM:   %[[B1:.+]] = getelementptr inbounds nuw %struct.TwoChars, ptr %[[U]], i32 0, i32 1
 // LLVM-NEXT:   store i8 %{{.+}}, ptr %[[B1]], align 1

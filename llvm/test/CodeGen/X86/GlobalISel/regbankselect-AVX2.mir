@@ -23,7 +23,7 @@
     store <8 x i32> %val, ptr %p1, align 1
     ret void
   }
-
+...
 ---
 name:            test_mul_vec256
 alignment:       16

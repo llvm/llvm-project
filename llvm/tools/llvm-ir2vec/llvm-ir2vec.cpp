@@ -401,7 +401,6 @@ int main(int argc, char **argv) {
     InitializeAllTargetMCs();
     InitializeAllAsmParsers();
     InitializeAllAsmPrinters();
-    static codegen::RegisterCodeGenFlags CGF;
 
     if (Error Err = mir2vec::processModule(LibraryOptions, InputFilename, OS)) {
       handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EIB) {
