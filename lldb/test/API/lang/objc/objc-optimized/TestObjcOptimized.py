@@ -17,7 +17,7 @@ from lldbsuite.test import lldbutil
 # test failure: objc_optimized does not work for "-C clang -A i386"
 
 
-@skipUnlessDarwin
+@requireDarwin
 class ObjcOptimizedTestCase(TestBase):
     myclass = "MyClass"
     mymethod = "description"

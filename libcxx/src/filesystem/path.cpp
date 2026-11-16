@@ -417,7 +417,7 @@ path::iterator& path::iterator::__decrement() {
   return *this;
 }
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 ////////////////////////////////////////////////////////////////////////////
 // Windows path conversions
 size_t __wide_to_char(const wstring& str, char* out, size_t outlen) {

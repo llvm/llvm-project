@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-unknown-unknown -run-pass=prologepilog -pass-remarks-output=%t -pass-remarks-analysis=prologepilog -o /dev/null %s 2>&1
+# RUN: llc -mtriple=aarch64-unknown-unknown -run-pass=prolog-epilog -pass-remarks-output=%t -pass-remarks-analysis=prolog-epilog -o /dev/null %s 2>&1
 # RUN: cat %t | FileCheck %s
 ...
 ---
@@ -6,7 +6,7 @@ name:            fun0
 stack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 4 }
 # CHECK-LABEL: --- !Analysis
-# CHECK-NEXT: Pass:            prologepilog
+# CHECK-NEXT: Pass:            prolog-epilog
 # CHECK-NEXT: Name:            StackSize
 # CHECK:      Function:        fun0
 # CHECK-NEXT: Args:
@@ -26,7 +26,7 @@ name:            fun1
 stack:
   - { id: 0, type: default, offset: 0, size: 19, alignment: 4 }
 # CHECK-LABEL: --- !Analysis
-# CHECK-NEXT: Pass:            prologepilog
+# CHECK-NEXT: Pass:            prolog-epilog
 # CHECK-NEXT: Name:            StackSize
 # CHECK:      Function:        fun1
 # CHECK-NEXT: Args:
@@ -46,7 +46,7 @@ name:            fun2
 stack:
   - { id: 0, type: default, offset: 0, size: 1024, alignment: 4 }
 # CHECK-LABEL: --- !Analysis
-# CHECK: Pass:            prologepilog
+# CHECK: Pass:            prolog-epilog
 # CHECK-NEXT: Name:            StackSize
 # CHECK:      Function:        fun2
 # CHECK-NEXT: Args:

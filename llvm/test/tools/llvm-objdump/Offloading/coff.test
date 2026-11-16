@@ -20,14 +20,14 @@ symbols:
 # CHECK-NEXT:OFFLOADING IMAGE [0]:
 # CHECK-NEXT:kind            llvm ir
 # CHECK-NEXT:arch            gfx908
-# CHECK-NEXT:triple          amdgcn-amd-amdhsa
+# CHECK-NEXT:triple          amdgpu9.08-amd-amdhsa
 # CHECK-NEXT:producer        openmp
 # CHECK-NEXT:image size      0 bytes
 # CHECK-EMPTY:
 # CHECK-NEXT:OFFLOADING IMAGE [1]:
 # CHECK-NEXT:kind            llvm ir
 # CHECK-NEXT:arch            gfx90a
-# CHECK-NEXT:triple          amdgcn-amd-amdhsa
+# CHECK-NEXT:triple          amdgpu9.0a-amd-amdhsa
 # CHECK-NEXT:producer        openmp
 # CHECK-NEXT:image size      0 bytes
 # CHECK-EMPTY:

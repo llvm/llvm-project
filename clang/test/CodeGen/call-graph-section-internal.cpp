@@ -1,9 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -fexperimental-call-graph-section -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
 
-// Check that we do not generate callee_type metadata for indirect calls
+// Check that we generate callee_type metadata for indirect calls
 // to functions with internal linkage (e.g., types in anonymous namespaces),
-// as their callgraph metadata identifiers are distinct MDNodes instead of 
-// generalized strings, which would fail the LLVM Verifier.
+// using the generalized type metadata form.
 
 namespace {
 class a;
@@ -32,6 +31,8 @@ void test() {
 // CHECK-LABEL: define {{.*}} void @{{.*}}1a1dEv
 // CHECK:   %[[VFN:.*]] = getelementptr inbounds ptr, ptr %{{.*}}, i{{[0-9]+}} 0
 // CHECK:   %[[FP:.*]] = load ptr, ptr %[[VFN]], align {{[0-9]+}}
-// CHECK:   call void %[[FP]]({{.*}})
-// CHECK-NOT: !callee_type
+// CHECK:   call void %[[FP]]({{.*}}), !callee_type [[HEX_TYPE:![0-9]+]]
 // CHECK:   ret void
+
+// CHECK: [[HEX_TYPE]] = !{[[HEX_TYPE_INNER:![0-9]+]]}
+// CHECK: [[HEX_TYPE_INNER]] = !{!"_ZTSFvN12_GLOBAL__N_11aEE"}

@@ -1,4 +1,4 @@
-; RUN: llc -stop-after=livedebugvars < %s | FileCheck %s
+; RUN: llc -stop-before=aarch64-asm-printer < %s | FileCheck %s
 ; ModuleID = 'debug_value-i8.bc'
 source_filename = "debug_value.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

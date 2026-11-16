@@ -1,4 +1,4 @@
-add_custom_target(libc-strings-tests)
+add_libc_testsuite(libc-strings-tests)
 
 add_libc_test(
   bcopy_test
@@ -8,8 +8,7 @@ add_libc_test(
     bcopy_test.cpp
   DEPENDS
     libc.src.strings.bcopy
-  LINK_LIBRARIES
-    LibcMemoryHelpers
+    libc.test.UnitTest.MemoryMatcher
 )
 
 add_libc_test(

@@ -1,0 +1,51 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+// Round-trip coverage for cir.clear_padding and #cir.offset_pair.
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+
+!rec_S = !cir.struct<"S" {data !s8i, data !s32i}>
+
+module {
+
+cir.func @no_padding(%arg0 : !cir.ptr<!s32i>) {
+  cir.clear_padding(align(4) %arg0, []) : <!s32i> -> ()
+  cir.return
+}
+// CHECK-LABEL: cir.func{{.*}} @no_padding
+// CHECK: cir.clear_padding(align(4) %{{.+}}, []) : <!s32i> -> ()
+
+cir.func @single_interval(%arg0 : !cir.ptr<!rec_S>) {
+  cir.clear_padding(align(4) %arg0, [#cir.offset_pair<8, 32>]) : <!rec_S> -> ()
+  cir.return
+}
+// CHECK-LABEL: cir.func{{.*}} @single_interval
+// CHECK: cir.clear_padding(align(4) %{{.+}}, [#cir.offset_pair<8, 32>]) : <!rec_S> -> ()
+
+cir.func @multiple_intervals(%arg0 : !cir.ptr<!rec_S>) {
+  cir.clear_padding(align(16) %arg0,
+      [#cir.offset_pair<8, 32>, #cir.offset_pair<96, 128>,
+       #cir.offset_pair<160, 256>]) : <!rec_S> -> ()
+  cir.return
+}
+// CHECK-LABEL: cir.func{{.*}} @multiple_intervals
+// CHECK: cir.clear_padding(align(16) %{{.+}}, [#cir.offset_pair<8, 32>, #cir.offset_pair<96, 128>, #cir.offset_pair<160, 256>]) : <!rec_S> -> ()
+
+cir.func @sub_byte_intervals(%arg0 : !cir.ptr<!u8i>) {
+  cir.clear_padding(align(1) %arg0,
+      [#cir.offset_pair<3, 5>, #cir.offset_pair<11, 21>]) : <!u8i> -> ()
+  cir.return
+}
+// CHECK-LABEL: cir.func{{.*}} @sub_byte_intervals
+// CHECK: cir.clear_padding(align(1) %{{.+}}, [#cir.offset_pair<3, 5>, #cir.offset_pair<11, 21>]) : <!u8i> -> ()
+
+cir.func @over_aligned(%arg0 : !cir.ptr<!rec_S>) {
+  cir.clear_padding(align(32) %arg0, [#cir.offset_pair<240, 512>]) : <!rec_S> -> ()
+  cir.return
+}
+// CHECK-LABEL: cir.func{{.*}} @over_aligned
+// CHECK: cir.clear_padding(align(32) %{{.+}}, [#cir.offset_pair<240, 512>]) : <!rec_S> -> ()
+
+}

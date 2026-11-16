@@ -52,6 +52,11 @@ constexpr typedef int Bar; // expected-error {{typedef cannot be constexpr}}
 void f3(constexpr register int P1) { // expected-error {{function parameter cannot be constexpr}}
   constexpr register int V9 = 0;
   constexpr register auto V10 = 0.0;
+  // FIXME: The constexpr diagnostic calls a later _Thread_local "previous".
+  // Prefer "'_Thread_local' used with 'constexpr'".
+  constexpr register _Thread_local int V10a = 0;
+  // expected-error@-1 {{previous 'register' declaration specifier}}
+  // expected-error@-2 {{previous '_Thread_local' declaration specifier}}
 }
 
 constexpr thread_local int V11 = 38; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
@@ -347,6 +352,10 @@ void f7(int n, int array[n]) {
 #define DBL_SNAN __builtin_nans("1")
 #define LD_SNAN __builtin_nansl("1")
 #define INF __builtin_inf()
+#define WIDE_NAN __builtin_nanf(L"1")
+#define UTF32_NAN __builtin_nanf(U"1")
+#define UTF16_NAN __builtin_nanf(u"1")
+#define UTF8_NAN __builtin_nanf(u8"1")
 void infsNaNs() {
   // Inf and quiet NaN is always fine, signaling NaN must have the same type.
   constexpr float fl0 = INF;
@@ -357,6 +366,18 @@ void infsNaNs() {
   constexpr float fl6 = LD_NAN;
   constexpr float fl7 = DBL_SNAN; // expected-error {{constexpr initializer evaluates to nan which is not exactly representable in type 'const float'}}
   constexpr float fl8 = LD_SNAN; // expected-error {{constexpr initializer evaluates to nan which is not exactly representable in type 'const float'}}
+  constexpr float fl9 = WIDE_NAN; // expected-error {{incompatible pointer types passing 'int[2]' to parameter of type 'const char *'}} \
+                                  // expected-error {{constexpr variable 'fl9' must be initialized by a constant expression}} \
+                                  // expected-note 0+ {{this conversion is not allowed in a constant expression}}
+  constexpr float fl10 = UTF32_NAN; // expected-error {{incompatible pointer types passing 'unsigned int[2]' to parameter of type 'const char *'}} \
+                                    // expected-error {{constexpr variable 'fl10' must be initialized by a constant expression}} \
+                                  // expected-note 0+ {{this conversion is not allowed in a constant expression}}
+  constexpr float fl11 = UTF16_NAN;  // expected-error {{incompatible pointer types passing 'unsigned short[2]' to parameter of type 'const char *'}} \
+                                   // expected-error {{constexpr variable 'fl11' must be initialized by a constant expression}} \
+                                  // expected-note 0+ {{this conversion is not allowed in a constant expression}}
+  constexpr float fl12 = UTF8_NAN; // expected-warning {{passing 'unsigned char[2]' to parameter of type 'const char *' converts between pointers to integer types where one is of the unique plain 'char' type and the other is not}} \
+                                  // expected-error {{constexpr variable 'fl12' must be initialized by a constant expression}} \
+                                  // expected-note 0+ {{this conversion is not allowed in a constant expression}}
 
   constexpr double db0 = FLT_NAN;
   constexpr double db2 = DBL_NAN;
@@ -454,3 +475,6 @@ struct S2 {
 const struct S2 s2[2] = {{{"foo"}, 1}, [0].L[2] = 'x'}; // expected-warning {{initializer partially overrides prior initialization of this subobject}} \
                                                         // expected-note {{previous initialization is here}}
 static_assert(s2[0].L[2] == 'x');// expected-warning {{folding it to a constant is a GNU extension}}
+
+x y; // expected-error{{unknown type name 'x'}}
+constexpr int *p = (int*){y};

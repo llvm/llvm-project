@@ -11,6 +11,8 @@
 // template <class T> constexpr T* __to_address(T* p) noexcept;
 // template <class Ptr> constexpr auto __to_address(const Ptr& p) noexcept;
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <memory>
 
 #include <array>
@@ -35,8 +37,8 @@ void test_container_iterators(C c)
 void test_valarray_iterators()
 {
     std::valarray<int> v(100);
-    int *p = std::__to_address(std::begin(v));
-    int *q = std::__to_address(std::end(v));
+    int* p = std::__to_address(v.begin());
+    int* q = std::__to_address(v.end());
     assert(q - p == 100);
 }
 

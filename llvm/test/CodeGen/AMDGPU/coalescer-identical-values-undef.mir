@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx600 -run-pass=register-coalescer -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00--amdpal -run-pass=register-coalescer -o - %s | FileCheck %s
 
 # Check that this doesn't crash. Check for some legitimate output.
 # CHECK: S_CBRANCH_SCC1
@@ -24,6 +24,6 @@ body: |
     %3:sgpr_128 = COPY %1
 
   bb.2:
-    $sgpr1 = COPY %3
+    $sgpr1 = COPY %3.sub0
     $sgpr2 = COPY %0.sub2
 ...

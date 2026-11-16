@@ -46,7 +46,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(*std::next(m.begin()) == 2);
     assert(*std::next(m.begin(), 2) == 3);
   }
-#if TEST_STD_VER > 11
+#if TEST_STD_VER >= 11
   {
     typedef int V;
     V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};

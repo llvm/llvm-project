@@ -836,7 +836,7 @@ getRelocationResolver(const ObjectFile &Obj) {
         return {supportsSystemZ, resolveSystemZ};
       case Triple::sparcv9:
         return {supportsSparc64, resolveSparc64};
-      case Triple::amdgcn:
+      case Triple::amdgpu:
         return {supportsAmdgpu, resolveAmdgpu};
       case Triple::riscv64:
       case Triple::riscv64be:

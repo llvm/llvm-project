@@ -148,6 +148,24 @@ entry:
   ret <4 x float> %select
 }
 
+define internal float @faceforward_instcombine_float_shared_dot_store(float %a, float %b, float %c, ptr %out) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#float_32]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg3:]] = OpFunctionParameter %[[#]]
+  ; CHECK: %[[#dot:]] = OpFMul %[[#float_32]] %[[#arg1]] %[[#arg2]]
+  ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext_glsl]] FaceForward %[[#arg0]] %[[#arg1]] %[[#arg2]]
+  ; CHECK: OpStore %[[#arg3]] %[[#dot]]
+  %fmul = fmul float %b, %c
+  %fcmp = fcmp olt float %fmul, 0.000000e+00
+  %fneg = fneg float %a
+  %select = select i1 %fcmp, float %a, float %fneg
+  store float %fmul, ptr %out, align 4
+  ret float %select
+}
+
 ; The other functions are the test, but a entry point is required to have a valid SPIR-V module.
 define void @main() #1 {
 entry:

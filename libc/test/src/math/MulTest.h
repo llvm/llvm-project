@@ -87,9 +87,11 @@ public:
   }
 };
 
-#define LIST_MUL_TESTS(OutType, InType, func)                                  \
-  using LlvmLibcMulTest = MulTest<OutType, InType>;                            \
-  TEST_F(LlvmLibcMulTest, SubnormalRange) { test_subnormal_range(&func); }     \
-  TEST_F(LlvmLibcMulTest, NormalRange) { test_normal_range(&func); }
+#define LIST_MUL_TESTS(Name, OutType, InType, func)                            \
+  using LlvmLibc##Name##Test = MulTest<OutType, InType>;                       \
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) {                               \
+    test_subnormal_range(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_MULTEST_H

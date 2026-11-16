@@ -43,7 +43,7 @@ defm num_threads :
 defm segment_size :
   Eq<"segment-size",
      "Specify the size in bytes of the size the final GSYM file should be segmented into. This allows GSYM files to be split across multiple files">;
-def quiet : FF<"quiet", "Do not output warnings about the debug information">;
+def quiet : FF<"quiet", "Do not output warnings or errors about the debug information. The aggregated counts are still printed">;
 defm address : Eq<"address", "Lookup an address in a GSYM file">;
 def addresses_from_stdin :
   FF<"addresses-from-stdin",
@@ -67,3 +67,11 @@ def benchmark_reader_all :
   Flag<["--"], "benchmark-reader">,
   HelpText<"Benchmark reader by looking up every address">,
   Flags<[HelpHidden]>;
+def statistics_EQ :
+  Joined<["--"], "statistics=">,
+  HelpText<"Print the size of each section in the input GSYM file(s).\nFormat: text (default), json, or pretty-json">;
+def statistics :
+  Flag<["--"], "statistics">,
+  Alias<statistics_EQ>,
+  AliasArgs<["text"]>,
+  HelpText<"Alias for --statistics=text">;

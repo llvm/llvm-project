@@ -26,6 +26,8 @@
 
 namespace clang::ssaf {
 
+class StaticLibraryCreateCLI;
+
 /// Represents a translation unit summary in its serialized encoding.
 ///
 /// TUSummaryEncoding holds entity summary data in a format-specific encoding
@@ -36,6 +38,7 @@ class TUSummaryEncoding {
   friend class EntityLinker;
   friend class SerializationFormat;
   friend class StaticLibrary;
+  friend class StaticLibraryCreateCLI;
   friend class TestFixture;
 
   // Target triple of the translation unit.

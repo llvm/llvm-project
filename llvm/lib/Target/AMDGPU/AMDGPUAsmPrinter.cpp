@@ -32,7 +32,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "Utils/SIDefinesUtils.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinterAnalysis.h"
@@ -95,6 +94,8 @@ LLVMInitializeAMDGPUAsmPrinter() {
                                      llvm::createR600AsmPrinterPass);
   TargetRegistry::RegisterAsmPrinter(getTheGCNTarget(),
                                      createAMDGPUAsmPrinterPass);
+  TargetRegistry::RegisterAsmPrinter(getTheGCNLegacyTarget(),
+                                     createAMDGPUAsmPrinterPass);
 }
 
 namespace {
@@ -117,6 +118,9 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer)) {
   assert(OutStreamer && "AsmPrinter constructed without streamer");
+  // AMDGPU describes a pointer's address space with its own attribute rather
+  // than DW_AT_address_class.
+  TypeAddressSpaceAttribute = dwarf::DW_AT_LLVM_address_space;
   GetResourceUsage = [this](MachineFunction &MF)
       -> const AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo * {
     if (auto *ResourceUsageW =
@@ -156,7 +160,7 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
   if (TT.getOS() != Triple::AMDHSA && TT.getOS() != Triple::AMDPAL)
     return;
 
-  getTargetStreamer()->EmitDirectiveAMDGCNTarget();
+  getTargetStreamer()->emitDirectiveAMDGCNTargetOnce();
 
   if (TT.getOS() == Triple::AMDHSA) {
     getTargetStreamer()->EmitDirectiveAMDHSACodeObjectVersion(
@@ -202,30 +206,6 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   // emitFunctionBodyStart?
   if (!getTargetStreamer()->getTargetID())
     initializeTargetID(*F.getParent());
-
-  const auto &FunctionTargetID = STM.getTargetID();
-  // Make sure function's xnack settings are compatible with module's
-  // xnack settings.
-  if (FunctionTargetID.isXnackSupported() &&
-      FunctionTargetID.getXnackSetting() != AMDGPU::TargetIDSetting::Any &&
-      FunctionTargetID.getXnackSetting() !=
-          getTargetStreamer()->getTargetID()->getXnackSetting()) {
-    OutContext.reportError(
-        {}, "xnack setting of '" + Twine(MF->getName()) +
-                "' function does not match module xnack setting");
-    return;
-  }
-  // Make sure function's sramecc settings are compatible with module's
-  // sramecc settings.
-  if (FunctionTargetID.isSramEccSupported() &&
-      FunctionTargetID.getSramEccSetting() != AMDGPU::TargetIDSetting::Any &&
-      FunctionTargetID.getSramEccSetting() !=
-          getTargetStreamer()->getTargetID()->getSramEccSetting()) {
-    OutContext.reportError(
-        {}, "sramecc setting of '" + Twine(MF->getName()) +
-                "' function does not match module sramecc setting");
-    return;
-  }
 
   if (!MFI.isEntryFunction())
     return;
@@ -408,19 +388,43 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 bool AMDGPUAsmPrinter::doInitialization(Module &M) {
-  const llvm::Triple &TT = M.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
+  if (TT.getSubArch() == Triple::NoSubArch) {
+    Triple::SubArchType SubArch =
+        AMDGPU::getSubArch(AMDGPU::parseArchAMDGCN(getGlobalSTI()->getCPU()));
+    if (SubArch != Triple::NoSubArch) {
+      Triple Fixed(TT);
+      Fixed.setArch(Triple::amdgpu, SubArch);
+      M.getContext().diagnose(DiagnosticInfoGeneric(
+          "codegen with no subarch in the target triple is deprecated and will "
+          "become an error; use the target triple '" +
+              Fixed.str() + "' instead",
+          DS_Warning));
+    } else {
+      M.getContext().diagnose(DiagnosticInfoGeneric(
+          "codegen with no subarch in the target triple is deprecated and will "
+          "become an error",
+          DS_Warning));
+    }
+  }
+
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
   if (TT.getOS() == Triple::AMDHSA) {
+    const AMDGPUOptions &CLOpts =
+        static_cast<const AMDGPUTargetMachine &>(TM).getCLOpts();
     switch (CodeObjectVersion) {
     case AMDGPU::AMDHSA_COV4:
-      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV4>();
+      HSAMetadataStream =
+          std::make_unique<HSAMD::MetadataStreamerMsgPackV4>(CLOpts);
       break;
     case AMDGPU::AMDHSA_COV5:
-      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV5>();
+      HSAMetadataStream =
+          std::make_unique<HSAMD::MetadataStreamerMsgPackV5>(CLOpts);
       break;
     case AMDGPU::AMDHSA_COV6:
-      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV6>();
+      HSAMetadataStream =
+          std::make_unique<HSAMD::MetadataStreamerMsgPackV6>(CLOpts);
       break;
     default:
       reportFatalUsageError("unsupported code object version");
@@ -441,15 +445,16 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
                                     const MCExpr *NumVGPRs,
                                     unsigned DynamicVGPRBlockSize,
                                     const GCNSubtarget &STM, MCContext &Ctx) {
-  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(STM);
+  unsigned MaxWaves = STM.getMaxWavesPerEU();
   unsigned Granule = IsaInfo::getVGPRAllocGranule(STM, DynamicVGPRBlockSize);
-  unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(STM);
+  unsigned TargetTotalNumVGPRs = STM.getTotalNumVGPRs();
 
   // Bake the per-function SGPR budget into the operands so the late-evaluated
   // MCExpr stays arithmetic. The trap reservation in particular is implicit on
   // amdhsa and lives on STM, not on the assembler's MCSubtargetInfo.
-  unsigned SGPRTotal = IsaInfo::getTotalNumSGPRs(STM);
-  unsigned SGPRGranule = IsaInfo::getSGPRAllocGranule(STM);
+  AMDGPU::GPUKind Kind = STM.getTargetID().getGPUKind();
+  unsigned SGPRTotal = AMDGPU::getTotalNumSGPRs(Kind);
+  unsigned SGPRGranule = AMDGPU::getSGPRAllocGranule(Kind);
   unsigned SGPRTrapReserve = STM.hasTrapHandler() ? IsaInfo::TRAP_NUM_SGPRS : 0;
 
   auto CreateExpr = [&Ctx](unsigned Value) {
@@ -560,7 +565,8 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
       const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
       unsigned MaxWaves = MFI.getMaxWavesPerEU();
       uint64_t TotalNumVgpr =
-          getTotalNumVGPRs(STM.hasGFX90AInsts(), NumAgpr, NumVgpr);
+          getTotalNumVGPRs(STM.hasGFX90AInsts(), static_cast<uint32_t>(NumAgpr),
+                           static_cast<uint32_t>(NumVgpr));
       uint64_t NumVGPRsForWavesPerEU =
           std::max({TotalNumVgpr, (uint64_t)1,
                     (uint64_t)STM.getMinNumVGPRs(
@@ -597,7 +603,7 @@ static void appendTypeEncoding(std::string &Enc, Type *Ty, const DataLayout &DL,
     Enc += 'v';
     return;
   }
-  unsigned Bits = DL.getTypeSizeInBits(Ty);
+  uint64_t Bits = DL.getTypeSizeInBits(Ty);
   // Zero-sized non-void types (e.g. `{}` or `[0 x i8]`) consume no ABI
   // registers. For returns, emit the same no-result marker as void so the
   // parameter encoding still has an explicit return-type prefix.
@@ -1203,31 +1209,40 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
 
 // TODO: Fold this into emitFunctionBodyStart.
 void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
-  // In the beginning all features are either 'Any' or 'NotSupported',
-  // depending on global target features. This will cover empty modules.
-  getTargetStreamer()->initializeTargetID(*getGlobalSTI(),
-                                          getGlobalSTI()->getFeatureString());
+  getTargetStreamer()->initializeTargetID(*getGlobalSTI());
 
-  // If module is empty, we are done.
-  if (M.empty())
-    return;
+  auto &TSTargetID = getTargetStreamer()->getTargetID();
 
-  // If module is not empty, need to find first 'Off' or 'On' feature
-  // setting per feature from functions in module.
-  for (auto &F : M) {
-    auto &TSTargetID = getTargetStreamer()->getTargetID();
-    if ((!TSTargetID->isXnackSupported() || TSTargetID->isXnackOnOrOff()) &&
-        (!TSTargetID->isSramEccSupported() || TSTargetID->isSramEccOnOrOff()))
-      break;
+  // Error if -mattr specified xnack or sramecc.
+  // TODO: Remove this when subtarget features removed.
+  StringRef FeatureString = getGlobalSTI()->getFeatureString();
+  if (FeatureString.contains("xnack")) {
+    M.getContext().diagnose(DiagnosticInfoGeneric(
+        "xnack/sramecc should be specified via module flags. "
+        "Use module flag 'amdgpu.xnack' instead of subtarget feature",
+        DS_Error));
+  }
+  if (FeatureString.contains("sramecc")) {
+    M.getContext().diagnose(DiagnosticInfoGeneric(
+        "xnack/sramecc should be specified via module flags. "
+        "Use module flag 'amdgpu.sramecc' instead of subtarget feature",
+        DS_Error));
+  }
 
-    const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
-    const AMDGPU::TargetID &STMTargetID = STM.getTargetID();
-    if (TSTargetID->isXnackSupported())
-      if (TSTargetID->getXnackSetting() == AMDGPU::TargetIDSetting::Any)
-        TSTargetID->setXnackSetting(STMTargetID.getXnackSetting());
-    if (TSTargetID->isSramEccSupported())
-      if (TSTargetID->getSramEccSetting() == AMDGPU::TargetIDSetting::Any)
-        TSTargetID->setSramEccSetting(STMTargetID.getSramEccSetting());
+  // Apply xnack/sramecc settings from module flags.
+  const auto &GCNTM = static_cast<const GCNTargetMachine &>(TM);
+  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureXNACKOnOffModes)) {
+    AMDGPU::TargetIDSetting Setting =
+        GCNTM.getTargetIDSettingFromModuleFlag(M, "amdgpu.xnack");
+    if (Setting != AMDGPU::TargetIDSetting::Any)
+      TSTargetID->setXnackSetting(Setting);
+  }
+
+  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSRAMECCOnOffModes)) {
+    AMDGPU::TargetIDSetting Setting =
+        GCNTM.getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
+    if (Setting != AMDGPU::TargetIDSetting::Any)
+      TSTargetID->setSramEccSetting(Setting);
   }
 }
 
@@ -1247,6 +1262,14 @@ static const MCExpr *computeAccumOffset(const MCExpr *NumVGPR, MCContext &Ctx) {
       Ctx);
 
   return MCBinaryExpr::createSub(DivCeil, ConstOne, Ctx);
+}
+
+static unsigned getLDSEncodingGranule(const GCNSubtarget &ST) {
+  unsigned Granule =
+      AMDGPU::getLDSEncodingGranule(ST.getTargetID().getGPUKind());
+  // The legacy generic targets have no encoding granularity feature. Preserve
+  // the default used for code generation when no GPU is specified.
+  return Granule ? Granule : 256;
 }
 
 void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
@@ -1280,7 +1303,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
 
   ProgInfo.AccumOffset = computeAccumOffset(ProgInfo.NumArchVGPR, Ctx);
-  ProgInfo.TgSplit = STM.isTgSplitEnabled();
+  ProgInfo.TgSplit =
+      STM.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(MF.getFunction());
   ProgInfo.NumSGPR = GetSymRefExpr(RIK::RIK_NumSGPR);
   ProgInfo.ScratchSize = GetSymRefExpr(RIK::RIK_PrivateSegSize);
   ProgInfo.VCCUsed = GetSymRefExpr(RIK::RIK_UsesVCC);
@@ -1339,7 +1363,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   if (WaveDispatchNumVGPR) {
     ProgInfo.NumArchVGPR = AMDGPUMCExpr::createMax(
-        {ProgInfo.NumVGPR, CreateExpr(WaveDispatchNumVGPR)}, Ctx);
+        {ProgInfo.NumArchVGPR, CreateExpr(WaveDispatchNumVGPR)}, Ctx);
 
     ProgInfo.NumVGPR = AMDGPUMCExpr::createTotalNumVGPR(
         ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
@@ -1395,6 +1419,24 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
         MF.getFunction(), "local memory", MFI->getLDSSize(),
         STM.getAddressableLocalMemorySize(), DS_Error));
   }
+
+  // When dynamic VGPRs are enabled, entry functions are launched with a single
+  // VGPR block. The register allocator enforces this constraint, but we also
+  // need to catch explicit physical registers in inline asm and wave dispatch
+  // VGPR arguments.
+  if (MFI->isDynamicVGPREnabled() &&
+      AMDGPU::isEntryFunctionCC(F.getCallingConv())) {
+    unsigned BlockSize = MFI->getDynamicVGPRBlockSize();
+    uint64_t NumVgpr;
+    if (TryGetMCExprValue(ProgInfo.NumVGPRsForWavesPerEU, NumVgpr) &&
+        NumVgpr > BlockSize) {
+      LLVMContext &Ctx = F.getContext();
+      Ctx.diagnose(DiagnosticInfoResourceLimit(
+          F, "dynamic VGPR entry point vector registers", NumVgpr, BlockSize,
+          DS_Warning, DK_ResourceLimit));
+    }
+  }
+
   // The MCExpr equivalent of getNumSGPRBlocks/getNumVGPRBlocks:
   // (alignTo(max(1u, NumGPR), GPREncodingGranule) / GPREncodingGranule) - 1
   auto GetNumGPRBlocks = [&CreateExpr, &Ctx](const MCExpr *NumGPR,
@@ -1429,29 +1471,14 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   // Make clamp modifier on NaN input returns 0.
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
-
-  unsigned LDSAlignShift = 8;
-  switch (getLdsDwGranularity(STM)) {
-  case 512:
-  case 320:
-    LDSAlignShift = 11;
-    break;
-  case 128:
-    LDSAlignShift = 9;
-    break;
-  case 64:
-    LDSAlignShift = 8;
-    break;
-  default:
-    llvm_unreachable("invald LDS block size");
-  }
-
   ProgInfo.SGPRSpill = MFI->getNumSpilledSGPRs();
   ProgInfo.VGPRSpill = MFI->getNumSpilledVGPRs();
 
   ProgInfo.LDSSize = MFI->getLDSSize();
+
+  unsigned LDSGranularityBytes = getLDSEncodingGranule(STM);
   ProgInfo.LDSBlocks =
-      alignTo(ProgInfo.LDSSize, 1ULL << LDSAlignShift) >> LDSAlignShift;
+      alignTo(ProgInfo.LDSSize, LDSGranularityBytes) / LDSGranularityBytes;
 
   // The MCExpr equivalent of divideCeil.
   auto DivideCeil = [&Ctx](const MCExpr *Numerator, const MCExpr *Denominator) {
@@ -1471,7 +1498,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                               CreateExpr(STM.getWavefrontSize()), Ctx),
       CreateExpr(1ULL << ScratchAlignShift));
 
-  if (STM.supportsWGP()) {
+  if (STM.hasSupportsWGP()) {
     ProgInfo.WgpMode = STM.isCuModeEnabled() ? 0 : 1;
   }
 
@@ -1528,7 +1555,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT, Ctx);
 
   ProgInfo.Occupancy = createOccupancy(
-      STM.computeOccupancy(F, ProgInfo.LDSSize).second,
+      STM.getOccupancyWithWorkGroupSizes(MF).second,
       ProgInfo.NumSGPRsForWavesPerEU, ProgInfo.NumVGPRsForWavesPerEU,
       MFI->getDynamicVGPRBlockSize(), STM, Ctx);
 
@@ -1688,8 +1715,7 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
 
   MD->updateHwStageMaximum(
       CC, ".lds_size",
-      (unsigned)(CurrentProgramInfo.LdsSize * getLdsDwGranularity(ST) *
-                 sizeof(uint32_t)));
+      (unsigned)(CurrentProgramInfo.LdsSize * getLDSEncodingGranule(ST)));
 }
 
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type
@@ -1893,7 +1919,8 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
   // kernarg_segment_alignment is specified as log of the alignment.
   // The minimum alignment is 16.
   // FIXME: The metadata treats the minimum as 4?
-  Out.kernarg_segment_alignment = Log2(std::max(Align(16), MaxKernArgAlign));
+  Out.kernarg_segment_alignment =
+      static_cast<uint8_t>(Log2(std::max(Align(16), MaxKernArgAlign)));
 }
 
 bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -1935,6 +1962,16 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     return false;
   }
   return true;
+}
+
+bool AMDGPUAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
+                                             unsigned OpNo,
+                                             const char *ExtraCode,
+                                             raw_ostream &OS) {
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  AMDGPUInstPrinter::printRegOperand(MO.getReg(), OS,
+                                     *MF->getSubtarget().getRegisterInfo());
+  return false;
 }
 
 void AMDGPUAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {

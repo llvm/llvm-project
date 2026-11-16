@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -amdgpu-function-calls < %s | FileCheck -check-prefix=CALLS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 < %s | FileCheck -check-prefix=CALLS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -amdgpu-function-calls=0 < %s | FileCheck -check-prefix=NOCALLS %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -amdgpu-function-calls < %s | FileCheck -check-prefix=CALLS %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck -check-prefix=CALLS %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -amdgpu-function-calls=0 < %s | FileCheck -check-prefix=NOCALLS %s
 ; RUN: llc -mtriple=r600-mesa-mesa3d < %s | FileCheck -check-prefix=NOCALLS %s
 ; RUN: llc -mtriple=r600-mesa-mesa3d -amdgpu-function-calls=0 < %s | FileCheck -check-prefix=NOCALLS %s
 

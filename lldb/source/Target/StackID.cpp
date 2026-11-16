@@ -38,6 +38,8 @@ void StackID::Dump(Stream *s) {
   s->Printf("StackID (pc = 0x%16.16" PRIx64 ", cfa = 0x%16.16" PRIx64
             ", symbol_scope = %p",
             m_pc, m_cfa, static_cast<void *>(m_symbol_scope));
+  if (m_tail_call_depth)
+    s->Printf(", tail_call_depth = %u", m_tail_call_depth);
   if (m_symbol_scope) {
     SymbolContext sc;
 
@@ -55,6 +57,9 @@ bool lldb_private::operator==(const StackID &lhs, const StackID &rhs) {
       rhs.GetCallFrameAddressWithoutMetadata())
     return false;
 
+  if (lhs.GetTailCallDepth() != rhs.GetTailCallDepth())
+    return false;
+
   SymbolContextScope *lhs_scope = lhs.GetSymbolContextScope();
   SymbolContextScope *rhs_scope = rhs.GetSymbolContextScope();
 
@@ -69,9 +74,9 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
   return !(lhs == rhs);
 }
 
-bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
-  const lldb::addr_t lhs_cfa = lhs.GetCallFrameAddressWithoutMetadata();
-  const lldb::addr_t rhs_cfa = rhs.GetCallFrameAddressWithoutMetadata();
+bool StackID::IsYoungerThan(const StackID &other) const {
+  const lldb::addr_t lhs_cfa = GetCallFrameAddressWithoutMetadata();
+  const lldb::addr_t rhs_cfa = other.GetCallFrameAddressWithoutMetadata();
 
   // FIXME: We are assuming that the stacks grow downward in memory.  That's not
   // necessary, but true on
@@ -85,8 +90,12 @@ bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
   if (lhs_cfa != rhs_cfa)
     return lhs_cfa < rhs_cfa;
 
-  SymbolContextScope *lhs_scope = lhs.GetSymbolContextScope();
-  SymbolContextScope *rhs_scope = rhs.GetSymbolContextScope();
+  // Tail call frames share the CFA of the younger frames that replaced them.
+  if (m_tail_call_depth != other.m_tail_call_depth)
+    return m_tail_call_depth < other.m_tail_call_depth;
+
+  SymbolContextScope *lhs_scope = GetSymbolContextScope();
+  SymbolContextScope *rhs_scope = other.GetSymbolContextScope();
 
   if (lhs_scope != nullptr && rhs_scope != nullptr) {
     // Same exact scope, lhs is not less than (younger than rhs)

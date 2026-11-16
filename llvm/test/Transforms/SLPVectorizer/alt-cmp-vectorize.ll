@@ -5,8 +5,8 @@ define i32 @alt_cmp(i16 %call46) {
 ; CHECK-LABEL: @alt_cmp(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL47:%.*]] = tail call i16 null(i16 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 0, i16 poison, i16 0, i16 0>, i16 [[CALL46:%.*]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> <i16 0, i16 poison, i16 0, i16 0>, i16 [[CALL47]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 0, i16 poison, i16 0, i16 0>, i16 [[CALL46:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> <i16 0, i16 poison, i16 0, i16 0>, i16 [[CALL47]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i16> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt <4 x i16> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>

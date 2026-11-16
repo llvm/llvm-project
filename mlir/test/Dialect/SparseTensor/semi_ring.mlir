@@ -24,7 +24,7 @@ module {
   // CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 0 : index
   // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 1 : index
   // CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 2.000000e+00 : f64
-  // CHECK-DAG:     %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+  // CHECK-DAG:     %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] level = 1 : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
   // CHECK-DAG:     %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xf64>
   // CHECK:         scf.for %[[VAL_7:.*]] = %[[VAL_2]] to %[[VAL_1]] step %[[VAL_3]] {
   // CHECK:           %[[VAL_8:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_7]]] : memref<?xindex>

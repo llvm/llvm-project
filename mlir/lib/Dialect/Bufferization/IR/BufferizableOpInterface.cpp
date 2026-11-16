@@ -161,8 +161,6 @@ Operation *bufferization::getOwnerOfValue(Value value) {
   return llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
 }
 
-// TODO: Properly support with options, for now it is hardcoded to builtin
-// Tensor/MemRef types based approach
 /// Create an AllocTensorOp for the given shaped value. If `copy` is set, the
 /// shaped value is copied. Otherwise, a tensor with undefined contents is
 /// allocated.
@@ -170,10 +168,8 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
     OpBuilder &b, Location loc, Value shapedValue,
     const BufferizationOptions &options, const BufferizationState &state,
     bool copy) {
-  Value tensor;
-  if (llvm::isa<RankedTensorType>(shapedValue.getType())) {
-    tensor = shapedValue;
-  } else if (llvm::isa<MemRefType>(shapedValue.getType())) {
+  Value tensor = shapedValue;
+  if (llvm::isa<MemRefType>(shapedValue.getType())) {
     tensor = ToTensorOp::create(
         b, loc, memref::getTensorTypeFromMemRefType(shapedValue.getType()),
         shapedValue);
@@ -181,12 +177,13 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
              llvm::isa<UnrankedMemRefType>(shapedValue.getType())) {
     return getOwnerOfValue(shapedValue)
         ->emitError("copying of unranked tensors is not implemented");
-  } else {
-    llvm_unreachable("expected RankedTensorType or MemRefType");
   }
-  RankedTensorType tensorType = llvm::cast<RankedTensorType>(tensor.getType());
+  auto tensorType = llvm::cast<TensorLikeType>(tensor.getType());
   SmallVector<Value> dynamicSizes;
-  if (!copy) {
+  // Only a ranked tensor result takes sizes; any other result has the shape of
+  // its buffer type.
+  auto rankedTensorType = dyn_cast<RankedTensorType>(tensorType);
+  if (!copy && rankedTensorType) {
     // Compute the dynamic part of the shape.
     // First try to query the shape via ReifyRankedShapedTypeOpInterface.
     bool reifiedShapes = false;
@@ -198,7 +195,7 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
         reifiedShapes = true;
         auto &shape =
             resultDims[llvm::cast<OpResult>(shapedValue).getResultNumber()];
-        for (const auto &dim : enumerate(tensorType.getShape())) {
+        for (const auto &dim : enumerate(rankedTensorType.getShape())) {
           if (ShapedType::isDynamic(dim.value())) {
             dynamicSizes.push_back(
                 getValueOrCreateConstantIndexOp(b, loc, shape[dim.index()]));
@@ -219,11 +216,13 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   // Add 'memory_space' attribute. Not needed if 'copy' operand is specified.
   if (copy)
     return allocTensorOp.getResult();
-  auto copyBufferType =
-      detail::asMemRefType(getBufferType(tensor, options, state));
+  auto copyBufferType = getBufferType(tensor, options, state);
   if (failed(copyBufferType))
     return failure();
-  std::optional<Attribute> memorySpace = copyBufferType->getMemorySpace();
+  // A buffer that is not a memref has no memory space to inherit.
+  std::optional<Attribute> memorySpace;
+  if (auto copyMemRefType = dyn_cast<BaseMemRefType>(*copyBufferType))
+    memorySpace = copyMemRefType.getMemorySpace();
   if (!memorySpace)
     memorySpace =
         options.defaultMemorySpaceFn(cast<TensorLikeType>(tensorType));
@@ -232,8 +231,6 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   return allocTensorOp.getResult();
 }
 
-// TODO: Properly support with options, for now it is hardcoded to builtin
-// Tensor/MemRef types based approach
 LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
     RewriterBase &rewriter, const AnalysisState &analysisState,
     const BufferizationState &bufferizationState) {
@@ -247,7 +244,7 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
   // Find all out-of-place OpOperands.
   for (OpOperand &opOperand : op->getOpOperands()) {
     Type operandType = opOperand.get().getType();
-    if (!llvm::isa<TensorType>(operandType))
+    if (!llvm::isa<TensorLikeType>(operandType))
       continue;
     if (analysisState.isInPlace(opOperand))
       continue;
@@ -358,6 +355,34 @@ BaseMemRefType getMemRefTypeWithFullyDynamicLayout(ArrayRef<int64_t> shape,
   return MemRefType::get(shape, elementType, stridedLayout, memorySpace);
 }
 
+/// Create a memref allocation with the given type and dynamic extents.
+FailureOr<Value> defaultCreateAlloc(OpBuilder &b, Location loc, MemRefType type,
+                                    ValueRange dynShape,
+                                    unsigned int bufferAlignment) {
+  // Default buffer allocation via AllocOp.
+  if (bufferAlignment != 0)
+    return memref::AllocOp::create(b, loc, type, dynShape,
+                                   b.getI64IntegerAttr(bufferAlignment))
+        .getResult();
+  return memref::AllocOp::create(b, loc, type, dynShape).getResult();
+}
+
+/// Create a memory copy between two memref buffers.
+LogicalResult defaultCreateMemCpy(OpBuilder &b, Location loc, Value from,
+                                  Value to) {
+  memref::CopyOp::create(b, loc, from, to);
+  return success();
+}
+
+FailureOr<Value> defaultCreateCast(OpBuilder &b, Location loc, Type dest,
+                                   Value value) {
+  assert(isa<BaseMemRefType>(dest) && "expected BaseMemRefType");
+  assert(isa<BaseMemRefType>(value.getType()) && "expected BaseMemRefType");
+  assert(memref::CastOp::areCastCompatible(value.getType(), dest) &&
+         "cast incompatible");
+  return memref::CastOp::create(b, loc, dest, value).getResult();
+}
+
 /// Default function arg type converter: Use a fully dynamic layout map.
 BufferLikeType
 defaultFunctionArgTypeConverter(TensorLikeType type, Attribute memorySpace,
@@ -405,7 +430,9 @@ defaultReconcileBufferTypeMismatch(BufferLikeType x, BufferLikeType y,
 
 // Default constructor for BufferizationOptions.
 BufferizationOptions::BufferizationOptions()
-    : functionArgTypeConverterFn(defaultFunctionArgTypeConverter),
+    : allocationFn(defaultCreateAlloc), memCpyFn(defaultCreateMemCpy),
+      castFn(defaultCreateCast),
+      functionArgTypeConverterFn(defaultFunctionArgTypeConverter),
       unknownTypeConverterFn(defaultUnknownTypeConverter),
       reconcileBufferTypeMismatchFn(defaultReconcileBufferTypeMismatch) {}
 
@@ -809,48 +836,6 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
   }
 
   rewriter.replaceOp(op, replacements);
-}
-
-//===----------------------------------------------------------------------===//
-// Bufferization-specific scoped alloc insertion support.
-//===----------------------------------------------------------------------===//
-
-/// Create a memref allocation with the given type and dynamic extents.
-FailureOr<Value> BufferizationOptions::createAlloc(OpBuilder &b, Location loc,
-                                                   MemRefType type,
-                                                   ValueRange dynShape) const {
-  if (allocationFn)
-    return (*allocationFn)(b, loc, type, dynShape, bufferAlignment);
-
-  // Default bufferallocation via AllocOp.
-  if (bufferAlignment != 0)
-    return memref::AllocOp::create(b, loc, type, dynShape,
-                                   b.getI64IntegerAttr(bufferAlignment))
-        .getResult();
-  return memref::AllocOp::create(b, loc, type, dynShape).getResult();
-}
-
-/// Create a memory copy between two memref buffers.
-LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
-                                                 Value from, Value to) const {
-  if (memCpyFn)
-    return (*memCpyFn)(b, loc, from, to);
-
-  memref::CopyOp::create(b, loc, from, to);
-  return success();
-}
-
-FailureOr<Value> BufferizationOptions::createCast(OpBuilder &b, Location loc,
-                                                  Type dest,
-                                                  Value value) const {
-  if (castFn)
-    return (*castFn)(b, loc, dest, value);
-
-  assert(isa<BaseMemRefType>(dest) && "expected BaseMemRefType");
-  assert(isa<BaseMemRefType>(value.getType()) && "expected BaseMemRefType");
-  assert(memref::CastOp::areCastCompatible(value.getType(), dest) &&
-         "cast incompatible");
-  return memref::CastOp::create(b, loc, dest, value).getResult();
 }
 
 //===----------------------------------------------------------------------===//

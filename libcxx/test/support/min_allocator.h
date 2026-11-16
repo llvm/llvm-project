@@ -29,14 +29,20 @@ public:
   bare_allocator() TEST_NOEXCEPT {}
 
   template <class U>
-  bare_allocator(bare_allocator<U>) TEST_NOEXCEPT {}
+  explicit bare_allocator(bare_allocator<U>) TEST_NOEXCEPT {}
 
   T* allocate(std::size_t n) { return static_cast<T*>(::operator new(n * sizeof(T))); }
 
   void deallocate(T* p, std::size_t) { return ::operator delete(static_cast<void*>(p)); }
 
-  friend bool operator==(bare_allocator, bare_allocator) { return true; }
-  friend bool operator!=(bare_allocator x, bare_allocator y) { return !(x == y); }
+  template <class U>
+  friend bool operator==(bare_allocator, bare_allocator<U>) {
+    return true;
+  }
+  template <class U>
+  friend bool operator!=(bare_allocator x, bare_allocator<U> y) {
+    return !(x == y);
+  }
 };
 
 template <class T>
@@ -59,14 +65,20 @@ public:
   typedef T value_type;
 
   template <class U>
-  TEST_CONSTEXPR_CXX20 no_default_allocator(no_default_allocator<U>) TEST_NOEXCEPT {}
+  TEST_CONSTEXPR_CXX20 explicit no_default_allocator(no_default_allocator<U>) TEST_NOEXCEPT {}
 
   TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) { return static_cast<T*>(std::allocator<T>().allocate(n)); }
 
   TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p, n); }
 
-  friend TEST_CONSTEXPR bool operator==(no_default_allocator, no_default_allocator) { return true; }
-  friend TEST_CONSTEXPR bool operator!=(no_default_allocator x, no_default_allocator y) { return !(x == y); }
+  template <class U>
+  friend TEST_CONSTEXPR bool operator==(no_default_allocator, no_default_allocator<U>) {
+    return true;
+  }
+  template <class U>
+  friend TEST_CONSTEXPR bool operator!=(no_default_allocator x, no_default_allocator<U> y) {
+    return !(x == y);
+  }
 };
 
 struct malloc_allocator_base {
@@ -102,7 +114,7 @@ public:
   malloc_allocator() TEST_NOEXCEPT { assert(!disable_default_constructor); }
 
   template <class U>
-  malloc_allocator(malloc_allocator<U>) TEST_NOEXCEPT {}
+  explicit malloc_allocator(malloc_allocator<U>) TEST_NOEXCEPT {}
 
   T* allocate(std::size_t n) {
     const std::size_t nbytes = n * sizeof(T);
@@ -118,8 +130,14 @@ public:
     std::free(static_cast<void*>(p));
   }
 
-  friend bool operator==(malloc_allocator, malloc_allocator) { return true; }
-  friend bool operator!=(malloc_allocator x, malloc_allocator y) { return !(x == y); }
+  template <class U>
+  friend bool operator==(malloc_allocator, malloc_allocator<U>) {
+    return true;
+  }
+  template <class U>
+  friend bool operator!=(malloc_allocator x, malloc_allocator<U> y) {
+    return !(x == y);
+  }
 };
 
 template <class T>
@@ -128,6 +146,10 @@ struct cpp03_allocator : bare_allocator<T> {
   typedef value_type* pointer;
 
   static bool construct_called;
+
+  cpp03_allocator() TEST_NOEXCEPT {}
+  template <class U>
+  explicit cpp03_allocator(const cpp03_allocator<U>&) TEST_NOEXCEPT {}
 
   // Returned value is not used but it's not prohibited.
   pointer construct(pointer p, const value_type& val) {
@@ -147,6 +169,10 @@ struct cpp03_overload_allocator : bare_allocator<T> {
   typedef value_type* pointer;
 
   static bool construct_called;
+
+  cpp03_overload_allocator() TEST_NOEXCEPT {}
+  template <class U>
+  explicit cpp03_overload_allocator(const cpp03_overload_allocator<U>&) TEST_NOEXCEPT {}
 
   void construct(pointer p, const value_type& val) { construct(p, val, std::is_class<T>()); }
   void construct(pointer p, const value_type& val, std::true_type) {
@@ -395,8 +421,14 @@ public:
 
   TEST_CONSTEXPR_CXX20 void deallocate(pointer p, std::size_t n) { std::allocator<T>().deallocate(p.ptr_, n); }
 
-  TEST_CONSTEXPR_CXX20 friend bool operator==(min_allocator, min_allocator) { return true; }
-  TEST_CONSTEXPR_CXX20 friend bool operator!=(min_allocator x, min_allocator y) { return !(x == y); }
+  template <class U>
+  TEST_CONSTEXPR_CXX20 friend bool operator==(min_allocator, min_allocator<U>) {
+    return true;
+  }
+  template <class U>
+  TEST_CONSTEXPR_CXX20 friend bool operator!=(min_allocator x, min_allocator<U> y) {
+    return !(x == y);
+  }
 };
 
 template <class T>
@@ -410,14 +442,20 @@ public:
   TEST_CONSTEXPR_CXX20 complete_type_allocator() TEST_NOEXCEPT {}
 
   template <class U>
-  TEST_CONSTEXPR_CXX20 complete_type_allocator(complete_type_allocator<U>) TEST_NOEXCEPT {}
+  TEST_CONSTEXPR_CXX20 explicit complete_type_allocator(complete_type_allocator<U>) TEST_NOEXCEPT {}
 
   TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) { return static_cast<T*>(std::allocator<T>().allocate(n)); }
 
   TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p, n); }
 
-  TEST_CONSTEXPR_CXX20 friend bool operator==(complete_type_allocator, complete_type_allocator) { return true; }
-  TEST_CONSTEXPR_CXX20 friend bool operator!=(complete_type_allocator, complete_type_allocator) { return false; }
+  template <class U>
+  TEST_CONSTEXPR_CXX20 friend bool operator==(complete_type_allocator, complete_type_allocator<U>) {
+    return true;
+  }
+  template <class U>
+  TEST_CONSTEXPR_CXX20 friend bool operator!=(complete_type_allocator, complete_type_allocator<U>) {
+    return false;
+  }
 };
 
 template <class T>
@@ -435,8 +473,14 @@ public:
 
   TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p, n); }
 
-  TEST_CONSTEXPR_CXX20 friend bool operator==(explicit_allocator, explicit_allocator) { return true; }
-  TEST_CONSTEXPR_CXX20 friend bool operator!=(explicit_allocator x, explicit_allocator y) { return !(x == y); }
+  template <class U>
+  TEST_CONSTEXPR_CXX20 friend bool operator==(explicit_allocator, explicit_allocator<U>) {
+    return true;
+  }
+  template <class U>
+  TEST_CONSTEXPR_CXX20 friend bool operator!=(explicit_allocator x, explicit_allocator<U> y) {
+    return !(x == y);
+  }
 };
 
 template <class T>
@@ -454,8 +498,14 @@ public:
 
   TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p - 1, n + 1); }
 
-  TEST_CONSTEXPR_CXX20 friend bool operator==(unaligned_allocator, unaligned_allocator) { return true; }
-  TEST_CONSTEXPR_CXX20 friend bool operator!=(unaligned_allocator x, unaligned_allocator y) { return !(x == y); }
+  template <class U>
+  TEST_CONSTEXPR_CXX20 friend bool operator==(unaligned_allocator, unaligned_allocator<U>) {
+    return true;
+  }
+  template <class U>
+  TEST_CONSTEXPR_CXX20 friend bool operator!=(unaligned_allocator x, unaligned_allocator<U> y) {
+    return !(x == y);
+  }
 };
 
 template <class T>
@@ -466,7 +516,7 @@ public:
   TEST_CONSTEXPR_CXX20 safe_allocator() TEST_NOEXCEPT {}
 
   template <class U>
-  TEST_CONSTEXPR_CXX20 safe_allocator(safe_allocator<U>) TEST_NOEXCEPT {}
+  TEST_CONSTEXPR_CXX20 explicit safe_allocator(safe_allocator<U>) TEST_NOEXCEPT {}
 
   TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) {
     T* memory = std::allocator<T>().allocate(n);
@@ -482,8 +532,14 @@ public:
     std::allocator<T>().deallocate(p, n);
   }
 
-  TEST_CONSTEXPR_CXX20 friend bool operator==(safe_allocator, safe_allocator) { return true; }
-  TEST_CONSTEXPR_CXX20 friend bool operator!=(safe_allocator x, safe_allocator y) { return !(x == y); }
+  template <class U>
+  TEST_CONSTEXPR_CXX20 friend bool operator==(safe_allocator, safe_allocator<U>) {
+    return true;
+  }
+  template <class U>
+  TEST_CONSTEXPR_CXX20 friend bool operator!=(safe_allocator x, safe_allocator<U> y) {
+    return !(x == y);
+  }
 };
 
 template <std::size_t MaxSize, class T>
@@ -499,7 +555,7 @@ struct tiny_size_allocator {
   tiny_size_allocator() = default;
 
   template <class U>
-  TEST_CONSTEXPR_CXX20 tiny_size_allocator(tiny_size_allocator<MaxSize, U>) {}
+  TEST_CONSTEXPR_CXX20 explicit tiny_size_allocator(tiny_size_allocator<MaxSize, U>) {}
 
   TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) {
     assert(n <= MaxSize);
@@ -510,8 +566,14 @@ struct tiny_size_allocator {
 
   TEST_CONSTEXPR_CXX20 size_type max_size() const { return MaxSize; }
 
-  friend bool operator==(tiny_size_allocator, tiny_size_allocator) { return true; }
-  friend bool operator!=(tiny_size_allocator, tiny_size_allocator) { return false; }
+  template <class U>
+  friend TEST_CONSTEXPR_CXX20 bool operator==(tiny_size_allocator, tiny_size_allocator<MaxSize, U>) {
+    return true;
+  }
+  template <class U>
+  friend TEST_CONSTEXPR_CXX20 bool operator!=(tiny_size_allocator, tiny_size_allocator<MaxSize, U>) {
+    return false;
+  }
 };
 
 #endif // MIN_ALLOCATOR_H

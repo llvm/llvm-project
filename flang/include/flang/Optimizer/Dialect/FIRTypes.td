@@ -15,6 +15,7 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 
 //===----------------------------------------------------------------------===//
@@ -24,6 +25,7 @@ include "flang/Optimizer/Dialect/FIRDialect.td"
 class FIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
                string baseCppClass = "::mlir::Type">
     : TypeDef<FIROpsDialect, name, traits, baseCppClass> {
+  let cppIncludes = ["flang/Optimizer/Dialect/FIRType.h"];
   let mnemonic = typeMnemonic;
 }
 
@@ -316,7 +318,9 @@ def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
   }];
 }
 
-def fir_RecordType : FIR_Type<"Record", "type", [MemRefElementTypeInterface]> {
+def fir_RecordType : FIR_Type<"Record", "type",
+    [DeclareTypeInterfaceMethods<OpAsmTypeInterface, ["getAlias"]>,
+     MemRefElementTypeInterface]> {
   let summary = "FIR derived type";
 
   let description = [{

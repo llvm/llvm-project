@@ -16,8 +16,6 @@ subroutine ivdep_test1
      !CHECK: %[[VAL_13:.*]] = add nuw nsw i64 %[[VAL_12]], 0
      !CHECK: %[[VAL_14:.*]] = getelementptr nusw nuw i32, ptr {{.*}}, i64 %[[VAL_13]]
      !CHECK: store i32 %[[VAL_8]], ptr %[[VAL_14]], align 4, !llvm.access.group [[DISTRINCT]]
-     !CHECK: %[[VAL_15:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT]]
-     !CHECK: %[[VAL_16:.*]] = add nsw i32 %[[VAL_15]], 1
      !CHECK: %[[VAL_17:.*]] = sub i64 {{.*}}, 1
      !CHECK: br label {{.*}}, !llvm.loop ![[ANNOTATION:.*]]
   end do
@@ -54,8 +52,6 @@ subroutine ivdep_test2
      !CHECK: %[[VAL_28:.*]] = add nuw nsw i64 %[[VAL_27]], 0
      !CHECK: %[[VAL_29:.*]] = getelementptr nusw nuw i32, ptr {{.*}}, i64 %[[VAL_28]]
      !CHECK: store i32 %[[VAL_24]], ptr %[[VAL_29]], align 4, !llvm.access.group [[DISTRINCT1]]
-     !CHECK: %[[VAL_30:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT1]] 
-     !CHECK: %[[VAL_31:.*]] = add nsw i32 %[[VAL_30]], 1
      !CHECK: %[[VAL_32:.*]] = sub i64 {{.*}}, 1
      !CHECK: br label {{.*}}, !llvm.loop ![[ANNOTATION1:.*]]
   end do
@@ -93,8 +89,6 @@ subroutine ivdep_test3
      !CHECK: %[[VAL_29:.*]] = getelementptr nusw nuw i32, ptr {{.*}}, i64 %[[VAL_28]]
      !CHECK: store i32 %[[VAL_24]], ptr %[[VAL_29]], align 4, !llvm.access.group [[DISTRINCT2]]
      !CHECK: call void @_QFivdep_test3Pfoo(), !llvm.access.group [[DISTRINCT2]]
-     !CHECK: %[[VAL_30:.*]] = load i32, ptr {{.*}}, align 4, !llvm.access.group [[DISTRINCT2]] 
-     !CHECK: %[[VAL_31:.*]] = add nsw i32 %[[VAL_30]], 1
      !CHECK: %[[VAL_32:.*]] = sub i64 {{.*}}, 1
      !CHECK: br label {{.*}}, !llvm.loop ![[ANNOTATION2:.*]]
   end do
@@ -126,5 +120,5 @@ end subroutine ivdep_test4
 ! CHECK: ![[PARALLEL_ACCESSES2]] = !{!"llvm.loop.parallel_accesses", [[DISTRINCT2]]}
 ! CHECK: [[DISTRINCT3:.*]] = distinct !{}
 ! CHECK: ![[ANNOTATION3]] = distinct !{![[ANNOTATION3]], ![[VECTORIZE:.*]], ![[PARALLEL_ACCESSES3:.*]]}
-! CHECK: ![[VECTORIZE]] = !{!"llvm.loop.vectorize.enable", i1 true}
+! CHECK: ![[VECTORIZE]] = !{!"llvm.loop.vectorize.enable"}
 ! CHECK: ![[PARALLEL_ACCESSES3]] = !{!"llvm.loop.parallel_accesses", [[DISTRINCT3]]}

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -amdgpu-function-calls -amdgpu-stress-function-calls -amdgpu-enable-lower-module-lds=false < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -amdgpu-stress-function-calls -amdgpu-enable-lower-module-lds=false < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -amdgpu-enable-lower-module-lds=false < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -amdgpu-function-calls -amdgpu-stress-function-calls -amdgpu-enable-lower-module-lds=false < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -amdgpu-stress-function-calls -amdgpu-enable-lower-module-lds=false < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -amdgpu-enable-lower-module-lds=false < %s | FileCheck -check-prefix=GCN %s
 
 @lds0 = addrspace(3) global i32 poison, align 4
 

@@ -13,10 +13,10 @@
 ; RUN:   -mcpu=future -ppc-asm-full-reg-names \
 ; RUN:   -ppc-vsr-nums-as-vr -O0 < %s | FileCheck %s --check-prefix=CHECK-O0-BE
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-aix- \
-; RUN:   -mcpu=future -vec-extabi \
+; RUN:   -mcpu=future -target-abi=vec-extabi \
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-AIX64
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc-aix- \
-; RUN:   -mcpu=future -vec-extabi \
+; RUN:   -mcpu=future -target-abi=vec-extabi \
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-AIX32
 
 ; TODO: This test is missing some of the tests from mma-intrinsics.ll because

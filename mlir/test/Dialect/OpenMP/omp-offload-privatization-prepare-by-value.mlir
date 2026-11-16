@@ -42,8 +42,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %1 = llvm.alloca %0 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %2 = llvm.mlir.constant(1 : i64) : i64
     %3 = llvm.alloca %2 x !llvm.struct<(ptr, i64)> : (i64) -> !llvm.ptr
-    %4 = llvm.mlir.constant(1 : index) : i64
-    %5 = llvm.mlir.constant(0 : index) : i64
+    %4 = llvm.mlir.constant(1 : i64) : i64
+    %5 = llvm.mlir.constant(0 : i64) : i64
     %6 = llvm.mlir.constant(0 : i32) : i32
     %7 = llvm.mlir.constant(1 : i64) : i64
     %8 = llvm.mlir.constant(1 : i64) : i64
@@ -62,7 +62,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %20 = llvm.extractvalue %19[0] : !llvm.struct<(ptr, i64)>
     %21 = llvm.extractvalue %19[1] : !llvm.struct<(ptr, i64)>
     %22 = llvm.sub %21, %4 : i64
-    %23 = omp.map.bounds lower_bound(%5 : i64) upper_bound(%22 : i64) extent(%21 : i64) stride(%4 : i64) start_idx(%5 : i64) {stride_in_bytes = true}
+    %23 = omp.map.bounds lower_bound(%5 : i64) upper_bound(%22 : i64) extent(%21 : i64) stride(%4 : i64) start_idx(%5 : i64) stride_in_bytes(true)
     %24 = llvm.getelementptr %3[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64)>
     %25 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%24 : !llvm.ptr, i8) bounds(%23) -> !llvm.ptr
     %26 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(to) capture(ByRef) members(%25 : [0] : !llvm.ptr) -> !llvm.ptr
@@ -81,8 +81,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: %[[VAL_3:.*]] = llvm.mlir.constant(16 : i64) : i64
 // CHECK: %[[HEAP0:.*]] = llvm.call @malloc(%[[VAL_3]]) : (i64) -> !llvm.ptr
 // CHECK: %[[VAL_5:.*]] = llvm.alloca %[[VAL_2]] x !llvm.struct<(ptr, i64)> : (i64) -> !llvm.ptr
-// CHECK: %[[VAL_6:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[VAL_7:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK: %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[VAL_7:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK: %[[VAL_8:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK: %[[VAL_9:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK: %[[VAL_10:.*]] = llvm.mlir.constant(1 : i64) : i64
@@ -101,7 +101,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: %[[VAL_22:.*]] = llvm.extractvalue %[[VAL_21]][0] : !llvm.struct<(ptr, i64)>
 // CHECK: %[[VAL_23:.*]] = llvm.extractvalue %[[VAL_21]][1] : !llvm.struct<(ptr, i64)>
 // CHECK: %[[VAL_24:.*]] = llvm.sub %[[VAL_23]], %[[VAL_6]] : i64
-// CHECK: %[[VAL_25:.*]] = omp.map.bounds lower_bound(%[[VAL_7]] : i64) upper_bound(%[[VAL_24]] : i64) extent(%[[VAL_23]] : i64) stride(%[[VAL_6]] : i64) start_idx(%[[VAL_7]] : i64) {stride_in_bytes = true}
+// CHECK: %[[VAL_25:.*]] = omp.map.bounds lower_bound(%[[VAL_7]] : i64) upper_bound(%[[VAL_24]] : i64) extent(%[[VAL_23]] : i64) stride(%[[VAL_6]] : i64) start_idx(%[[VAL_7]] : i64) stride_in_bytes(true)
 // CHECK: %[[VAL_26:.*]] = llvm.load %[[VAL_5]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
 // CHECK: %[[VAL_27:.*]] = llvm.load %[[HEAP0]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
 // CHECK: %[[VAL_28:.*]] = llvm.call @boxchar_firstprivate_init(%[[VAL_26]], %[[VAL_27]]) : (!llvm.struct<(ptr, i64)>, !llvm.struct<(ptr, i64)>) -> !llvm.struct<(ptr, i64)>

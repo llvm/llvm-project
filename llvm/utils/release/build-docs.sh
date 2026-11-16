@@ -141,12 +141,6 @@ else
    echo "Doxygen: disabled"
 fi
 
-# This is just to ensure we're using the right compiler
-# When running this locally, the script otherwise might
-# prefer GCC.
-export CC=clang
-export CXX=clang++
-
 cmake -G Ninja $srcdir -B $builddir \
                -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;polly;flang${extra_man_page_projects}" \
                -DCMAKE_BUILD_TYPE=Release \

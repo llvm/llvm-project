@@ -86,14 +86,14 @@ protected:
         UnnamedAddrVal(unsigned(UnnamedAddr::None)),
         DllStorageClass(DefaultStorageClass), ThreadLocal(NotThreadLocal),
         HasLLVMReservedName(false), IsDSOLocal(false), HasPartition(false),
-        HasSanitizerMetadata(false) {
+        HasSanitizerMetadata(false), MayHaveConstantUsers(false) {
     setLinkage(Linkage);
     setName(Name);
   }
 
   Type *ValueType;
 
-  static const unsigned GlobalValueSubClassDataBits = 15;
+  static const unsigned GlobalValueSubClassDataBits = 14;
 
   // All bitfields use unsigned as the underlying type so that MSVC will pack
   // them.
@@ -124,8 +124,16 @@ protected:
   unsigned HasSanitizerMetadata : 1;
 
 private:
+  /// Optimization hint for removeDeadConstantUsers. This bit is set to true
+  /// when non-GlobalValue Constants set this GlobalValue as an operand, and it
+  /// is cleared by removeDeadConstantUsers when no such Constant users remain.
+  /// While it is false, removeDeadConstantUsers does not need to walk the use
+  /// list (O(uses)), which is often long and cold for Functions with many
+  /// callers.
+  unsigned MayHaveConstantUsers : 1;
+
   // Give subclasses access to what otherwise would be wasted padding.
-  // (15 + 4 + 2 + 2 + 2 + 3 + 1 + 1 + 1 + 1) == 32.
+  // (14 + 4 + 2 + 2 + 2 + 3 + 1 + 1 + 1 + 1 + 1) == 32.
   unsigned SubClassData : GlobalValueSubClassDataBits;
 
   friend class Constant;
@@ -359,6 +367,14 @@ public:
   };
 
   bool hasSanitizerMetadata() const { return HasSanitizerMetadata; }
+
+  /// Return true if a constant other than a GlobalValue may use this global,
+  /// that is, if removeDeadConstantUsers may have something to remove.
+  bool mayHaveConstantUsers() const { return MayHaveConstantUsers; }
+
+  /// Record that a constant other than a GlobalValue now uses this global.
+  void setMayHaveConstantUsers() { MayHaveConstantUsers = true; }
+
   LLVM_ABI const SanitizerMetadata &getSanitizerMetadata() const;
   // Note: Not byref as it's a POD and otherwise it's too easy to call
   // G.setSanitizerMetadata(G2.getSanitizerMetadata()), and the argument becomes
@@ -561,6 +577,23 @@ public:
 
   bool isWeakForLinker() const { return isWeakForLinker(getLinkage()); }
 
+  /// Assign a stable name to this GlobalValue if it is unnamed. setName will
+  /// make the name unique (e.g. __llvm_unnamed.1) if it is already taken.
+  void nameUnnamed() {
+    if (!hasName())
+      setName("__llvm_unnamed");
+  }
+
+  /// Promote this GlobalValue to external linkage with hidden visibility if
+  /// it has local linkage, and name it if it is unnamed.
+  void externalize() {
+    if (hasLocalLinkage()) {
+      setLinkage(ExternalLinkage);
+      setVisibility(HiddenVisibility);
+    }
+    nameUnnamed();
+  }
+
 protected:
   /// Copy all additional attributes (those not needed to create a GlobalValue)
   /// from the GlobalValue Src to this one.
@@ -597,17 +630,57 @@ private:
   /// used as the key for a global lookup (e.g. profile or ThinLTO).
   LLVM_ABI std::string getGlobalIdentifier() const;
 
+  /// Assign a GUID to this value based on its current name and linkage.
+  /// This GUID will remain the same even if those change. This method is
+  /// idempotent -- if a GUID has already been assigned, calling it again
+  /// will do nothing.
+  ///
+  /// This is private (exposed only to \c AssignGUIDPass), as users don't need
+  /// to call it. GUIDs are assigned only by \c AssignGUIDPass. The pass
+  /// pipeline should be set up such that GUIDs are always available when
+  /// needed. If not, the GUID assignment pass should be moved (or run again)
+  /// such that they are.
+  void assignGUID();
+
+  // assignGUID needs to be accessible from AssignGUIDPass, which is called
+  // early in the pipeline to make GUIDs available to later passes. But we'd
+  // rather not expose it publicly, as no-one else should call it.
+  friend class AssignGUIDPass;
+
+  MDNode *getGUIDMetadata() const;
+
 public:
   /// Return a 64-bit global unique ID constructed from the name of a global
   /// symbol. Since this call doesn't supply the linkage or defining filename,
   /// the GUID computation will assume that the global has external linkage.
   LLVM_ABI static GUID getGUIDAssumingExternalLinkage(StringRef GlobalName);
 
-  /// Return a 64-bit global unique ID constructed from global value name
-  /// (i.e. returned by getGlobalIdentifier()).
-  GUID getGUID() const {
-    return getGUIDAssumingExternalLinkage(getGlobalIdentifier());
-  }
+  /// Recompute and assign a GUID to this value, replacing the existing GUID.
+  LLVM_ABI void reassignGUID();
+
+  /// Return a 64-bit global unique ID for this value. It is based on the
+  /// "original" name and linkage of this value (i.e. whenever its GUID was
+  /// assigned). This might not match the current name and linkage.
+  ///
+  /// The \c AssignGUIDPass must be run before this is called, otherwise
+  /// GUIDs won't be available. This pass can be run multiple times as it does
+  /// nothing if GUID metadata is already present.
+  LLVM_ABI GUID getGUID() const;
+
+  /// Return the GUID for this value if it has been assigned, nullopt
+  /// otherwise. This should only need to be used in some exceptional
+  /// situations. If possible whatever code needs access to a GUID should
+  /// be set up to run after AssignGUIDPass, in which case it will always
+  /// be available.
+  LLVM_ABI std::optional<GUID> getGUIDIfAssigned() const;
+
+  /// Return the GUID for this value if it has been assigned, otherwise fall
+  /// back to computing it based on its current name and linkage.
+  ///
+  /// This is to be used in situations where we need a GUID but can't guarantee
+  /// that it's been computed. Notably, if we're reading from bitcode files
+  /// that might pre-date the storage of GUIDs in metadata.
+  LLVM_ABI GUID getGUIDOrFallback() const;
 
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.

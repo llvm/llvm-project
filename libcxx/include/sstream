@@ -320,6 +320,7 @@ typedef basic_stringstream<wchar_t> wstringstream;
 #  if _LIBCPP_HAS_LOCALIZATION
 
 #    include <__fwd/sstream.h>
+#    include <__locale_dir/locale.h>
 #    include <__ostream/basic_ostream.h>
 #    include <__type_traits/is_convertible.h>
 #    include <__utility/swap.h>
@@ -1296,10 +1297,6 @@ _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <ostream>
-#    include <type_traits>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_SSTREAM

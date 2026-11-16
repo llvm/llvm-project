@@ -11,10 +11,40 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
+import lldbflakes
+
 import posixpath
 
 def _get_lldb_init_path(config):
     return os.path.join(config.test_exec_root, "lit-lldb-init-quiet")
+
+
+def _write_if_changed(path, content):
+    try:
+        with open(path) as f:
+            if f.read() == content:
+                return
+    except OSError:
+        pass
+    with open(path, "w") as f:
+        f.write(content)
+
+
+def _write_lldb_init_files(config):
+    """Write the init files that %lldb sources into the test execution root."""
+    with open(os.path.join(config.test_source_root, "lit-lldb-init.in")) as f:
+        init = f.read()
+    # The site config appends "lldb-shell" to LLDB_TEST_MODULE_CACHE_LLDB, but
+    # the init file uses the directory itself.
+    init = init.replace(
+        "@LLDB_TEST_MODULE_CACHE_LLDB@", os.path.dirname(config.lldb_module_cache)
+    )
+    os.makedirs(config.test_exec_root, exist_ok=True)
+    _write_if_changed(os.path.join(config.test_exec_root, "lit-lldb-init"), init)
+    _write_if_changed(
+        _get_lldb_init_path(config),
+        "command source -C --silent-run true lit-lldb-init\n",
+    )
 
 
 def _disallow(config, execName):
@@ -49,19 +79,12 @@ def get_lldb_args(config, suffix=""):
 
 
 class ShTestLldb(ShTest):
-    def __init__(
-        self, execute_external=False, extra_substitutions=[], preamble_commands=[]
-    ):
-        super().__init__(execute_external, extra_substitutions, preamble_commands)
+    def __init__(self, extra_substitutions=[], preamble_commands=[]):
+        super().__init__(
+            extra_substitutions=extra_substitutions, preamble_commands=preamble_commands
+        )
 
     def execute(self, test, litConfig):
-        exec_path = test.getExecPath()
-        if platform.system() == "Windows" and len(exec_path) > 256:
-            litConfig.warning(
-                "Test path exceeds 256 characters (Windows MAX_PATH limit): "
-                + exec_path
-            )
-
         # Run each Shell test in a separate directory (on remote).
 
         # Find directory change command in %lldb substitution.
@@ -91,7 +114,9 @@ class ShTestLldb(ShTest):
                         cmd.replace(args_def, args_unique),
                     )
                 break
-        return super().execute(test, litConfig)
+        return lldbflakes.execute_with_reruns(
+            lambda: ShTest.execute(self, test, litConfig)
+        )
 
 
 def use_lldb_substitutions(config):
@@ -124,6 +149,7 @@ def use_lldb_substitutions(config):
     if config.cmake_sysroot:
         build_script_args.append("--sysroot={0}".format(config.cmake_sysroot))
 
+    _write_lldb_init_files(config)
     lldb_init = _get_lldb_init_path(config)
     launcher = getattr(config, "lldb_launcher", None)
 
@@ -167,18 +193,9 @@ def use_lldb_substitutions(config):
             extra_args=["platform"],
             unresolved="ignore",
         ),
-        ToolSubst(
-            "%lldb-rpc-gen",
-            command=FindTool("lldb-rpc-gen"),
-            # We need the LLDB build directory root to pass into the tool, not the test build root.
-            extra_args=[
-                "-p " + config.lldb_build_directory + "/..",
-                '--extra-arg="-resource-dir=' + config.clang_resource_dir + '"',
-            ],
-            unresolved="ignore",
-        ),
         "lldb-test",
         "lldb-dap",
+        "lldb-mcp",
         ToolSubst(
             "%build", command="'" + sys.executable + "'", extra_args=build_script_args
         ),

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64 -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=prolog-epilog %s -o - | FileCheck %s
 # RUN: llc -mtriple=aarch64 -passes='prolog-epilog' %s -o - | FileCheck %s
 --- |
   define i32 @_Z4funcv() {
@@ -20,7 +20,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true

@@ -1,11 +1,8 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %flang_fc1 -fdebug-unparse-no-sema %openmp_flags %s | FileCheck --ignore-case %s
 ! RUN: %flang_fc1 -fdebug-dump-parse-tree %openmp_flags %s | FileCheck --check-prefix="PARSE-TREE" %s
 ! Checks the parsing of Openmp 5.0 Target Device constructs
 !
 PROGRAM main
-  USE OMP_LIB
   IMPLICIT NONE
   INTEGER :: X, Y
   INTEGER :: M = 1

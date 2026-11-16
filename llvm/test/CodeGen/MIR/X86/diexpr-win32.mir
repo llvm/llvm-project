@@ -1,4 +1,4 @@
-# RUN: llc -start-after=prologepilog -filetype=obj -O0 %s -o - -experimental-debug-variable-locations=true | llvm-readobj --codeview - | FileCheck %s
+# RUN: llc -start-after=prolog-epilog -filetype=obj -O0 %s -o - -experimental-debug-variable-locations=true | llvm-readobj --codeview - | FileCheck %s
 
 # Offsets are now CFA, or VFRAME, relative. Both the NRVO sret pointer and the
 # string* parameter are on the stack, NRVO at offset 4 (after RA), and Str at
@@ -159,7 +159,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
 liveins:
 frameInfo:
@@ -217,7 +216,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
 liveins:
 frameInfo:

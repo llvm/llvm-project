@@ -195,7 +195,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD wchar_t* wmemchr(wchar_t
 }
 #      endif
 
-#      if defined(__cplusplus) && (defined(_LIBCPP_MSVCRT_LIKE) || defined(__MVS__))
+#      if defined(__cplusplus) && (defined(_WIN32) || defined(__MVS__))
 extern "C" {
 size_t mbsnrtowcs(
     wchar_t* __restrict __dst, const char** __restrict __src, size_t __nmc, size_t __len, mbstate_t* __restrict __ps);

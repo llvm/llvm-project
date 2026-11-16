@@ -25,6 +25,26 @@ def int_wasm_memory_grow :
   DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty, LLVMMatchType<0>], []>;
 
 //===----------------------------------------------------------------------===//
+// Bulk memory intrinsics
+//===----------------------------------------------------------------------===//
+
+def int_wasm_memory_copy :
+  DefaultAttrsIntrinsic<[],
+                        [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty,
+                         llvm_anyint_ty],
+                        [IntrArgMemOnly, NoCapture<ArgIndex<2>>,
+                         NoCapture<ArgIndex<3>>, WriteOnly<ArgIndex<2>>,
+                         ReadOnly<ArgIndex<3>>, ImmArg<ArgIndex<0>>,
+                         ImmArg<ArgIndex<1>>]>;
+
+def int_wasm_memory_fill :
+  DefaultAttrsIntrinsic<[],
+                        [llvm_i32_ty, llvm_ptr_ty, llvm_i32_ty,
+                         llvm_anyint_ty],
+                        [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<1>>,
+                         WriteOnly<ArgIndex<1>>, ImmArg<ArgIndex<0>>]>;
+
+//===----------------------------------------------------------------------===//
 // ref.null intrinsics
 //===----------------------------------------------------------------------===//
 def int_wasm_ref_null_extern :

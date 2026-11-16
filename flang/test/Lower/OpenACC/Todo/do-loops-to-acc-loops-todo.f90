@@ -1,29 +1,9 @@
 ! RUN: split-file %s %t
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/do_loop_with_stop.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK1
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/do_loop_with_cycle_goto.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK2
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/nested_goto_loop.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK3
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/nested_loop_with_inner_goto.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK4
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_lt.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK7
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_gt.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK8
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_nested.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK6
-
-//--- do_loop_with_stop.f90
-
-subroutine do_loop_with_stop()
-  integer :: i
-  integer, parameter :: n = 10
-  real, dimension(n) :: a, b
-
-  !$acc kernels
-  do i = 1, n
-    a(i) = b(i) + 1.0
-    if (i == 5) stop
-  end do
-  !$acc end kernels
-
-! CHECK1: not yet implemented: unstructured do loop in acc kernels
-
-end subroutine
 
 //--- do_loop_with_cycle_goto.f90
 
@@ -33,6 +13,8 @@ subroutine do_loop_with_cycle_goto()
   real, dimension(n) :: a, b
 
   ! Do loop with cycle and goto - unstructured control flow is not converted.
+  ! The loop is directly attached to the `acc kernels` directive, so it is not
+  ! wrapped in an scf.execute_region either.
   !$acc kernels
   do i = 1, n
     if (i == 3) cycle
@@ -66,30 +48,6 @@ subroutine nested_goto_loop()
   !$acc end kernels
 
 ! CHECK3: not yet implemented: unstructured do loop in acc kernels
-
-end subroutine
-
-//--- nested_loop_with_inner_goto.f90
-
-subroutine nested_loop_with_inner_goto()
-  integer :: ii = 0, jj = 0
-  integer, parameter :: nn = 3
-  real, dimension(nn, nn) :: aa
-
-  aa = -1
-
-  ! Nested loop with goto from inner loop - unstructured control flow is not converted.
-  !$acc kernels
-  do ii = 1, nn
-    do jj = 1, nn
-      if (jj > 1) goto 300
-      aa(jj, ii) = 1337
-    end do
-    300 continue
-  end do
-  !$acc end kernels
-
-! CHECK4: not yet implemented: unstructured do loop in acc kernels
 
 end subroutine
 

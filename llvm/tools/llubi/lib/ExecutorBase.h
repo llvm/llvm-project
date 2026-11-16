@@ -130,11 +130,12 @@ class DiagnosticReporter {
   ExecutorBase &Executor;
   std::string Buf;
   raw_string_ostream OS;
+  AnyValuePrinter Printer;
   DiagnosticKind Kind;
 
 public:
   DiagnosticReporter(ExecutorBase &E, DiagnosticKind K)
-      : Executor(E), OS(Buf), Kind(K) {}
+      : Executor(E), OS(Buf), Printer(E.Ctx, OS), Kind(K) {}
 
   DiagnosticReporter(const DiagnosticReporter &) = delete;
   DiagnosticReporter(DiagnosticReporter &&) noexcept = delete;
@@ -154,7 +155,7 @@ public:
   }
 
   template <typename T> DiagnosticReporter &operator<<(const T &Val) {
-    OS << Val;
+    Printer << Val;
     return *this;
   }
 };

@@ -53,6 +53,13 @@ static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
   return parseAssemblyString(ModuleStr, Err, Context);
 }
 
+static BasicBlock *getBlockByName(Function *F, StringRef Name) {
+  for (auto &BB : *F)
+    if (BB.getName() == Name)
+      return &BB;
+  return nullptr;
+}
+
 // This tests that for a loop with a single latch, we get the loop id from
 // its only latch, even in case the loop may not be in a simplified form.
 TEST(LoopInfoTest, LoopWithSingleLatch) {
@@ -72,7 +79,7 @@ TEST(LoopInfoTest, LoopWithSingleLatch) {
       "  ret void\n"
       "}\n"
       "!0 = distinct !{!0, !1}\n"
-      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+      "!1 = !{!\"llvm.loop.distribute.enable\"}\n";
 
   // Parse the module.
   LLVMContext Context;
@@ -122,7 +129,7 @@ TEST(LoopInfoTest, LoopWithMultipleLatches) {
       "  ret void\n"
       "}\n"
       "!0 = distinct !{!0, !1}\n"
-      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+      "!1 = !{!\"llvm.loop.distribute.enable\"}\n";
 
   // Parse the module.
   LLVMContext Context;
@@ -1397,7 +1404,7 @@ TEST(LoopInfoTest, LoopUniqueExitBlocks) {
       "  ret void\n"
       "}\n"
       "!0 = distinct !{!0, !1}\n"
-      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+      "!1 = !{!\"llvm.loop.distribute.enable\"}\n";
 
   // Parse the module.
   LLVMContext Context;
@@ -1440,7 +1447,7 @@ TEST(LoopInfoTest, LoopNonLatchUniqueExitBlocks) {
       "  ret void\n"
       "}\n"
       "!0 = distinct !{!0, !1}\n"
-      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+      "!1 = !{!\"llvm.loop.distribute.enable\"}\n";
 
   // Parse the module.
   LLVMContext Context;
@@ -1645,4 +1652,138 @@ TEST(LoopInfoTest, TokenLCSSA) {
     EXPECT_FALSE(
         InnerLoop->isRecursivelyLCSSAForm(DT, LI, /*IgnoreTokens*/ false));
   });
+}
+
+TEST(LoopInfoTest, UnreachableBlock) {
+  const char *ModuleStr = "define void @irreducible_loop(i1 %c1, i1 %c2) {\n"
+                          "dummy:\n"
+                          "  br label %entry\n"
+                          "entry:\n"
+                          "  br i1 %c1, label %loop1, label %side_entry\n"
+                          "dead_block:\n"
+                          "  br label %latch1\n"
+                          "loop1:\n"
+                          "  br i1 %c2, label %body1, label %mid\n"
+                          "body1:\n"
+                          "  br label %latch1\n"
+                          "latch1:\n"
+                          "  br label %loop1\n"
+                          "mid:\n"
+                          "  br label %latch2\n"
+                          "latch2:\n"
+                          "  br label %loop1\n"
+                          "side_entry:\n"
+                          "  br label %mid\n"
+                          "}\n";
+
+  LLVMContext Context;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(ModuleStr, Err, Context);
+  ASSERT_TRUE(M);
+  Function *F = M->getFunction("irreducible_loop");
+  ASSERT_TRUE(F);
+
+  // Delete 'dummy' block so that block 0 is deleted and no block in the CFG has
+  // index 0.
+  BasicBlock *Dummy = &F->getEntryBlock();
+  Dummy->eraseFromParent();
+
+  DominatorTree DT(*F);
+  // This used to hang infinitely in analyze() due to an unvisited block
+  // reaching a latch.
+  LoopInfo LI(DT);
+
+  // Basic verification that a loop was found.
+  EXPECT_FALSE(LI.empty());
+}
+
+// An outer loop whose body is a self loop.
+const char NestedLoopsIR[] = R"(
+define void @test(i1 %c) {
+entry:
+  br label %outer
+outer:
+  br label %inner
+inner:
+  br i1 %c, label %inner, label %outer.latch
+outer.latch:
+  br i1 %c, label %outer, label %exit
+exit:
+  ret void
+}
+)";
+
+/// Retarget \p BB's first successor to \p To and rebuild \p DT.
+static void redirect(DominatorTree &DT, BasicBlock *BB, BasicBlock *To) {
+  BB->getTerminator()->setSuccessor(0, To);
+  DT.recalculate(*BB->getParent());
+}
+
+TEST(LoopInfoTest, Recompute) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, NestedLoopsIR);
+  Function *F = M->getFunction("test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  BasicBlock *Outer = getBlockByName(F, "outer");
+  BasicBlock *Inner = getBlockByName(F, "inner");
+  BasicBlock *Latch = getBlockByName(F, "outer.latch");
+  Loop *OuterL = LI.getLoopFor(Outer);
+  Loop *InnerL = LI.getLoopFor(Inner);
+  ASSERT_NE(OuterL, nullptr);
+  ASSERT_NE(InnerL, nullptr);
+
+  // An unchanged CFG rebuilds the same forest in the same objects.
+  EXPECT_TRUE(LI.recompute(DT).empty());
+  EXPECT_EQ(LI.getLoopFor(Outer), OuterL);
+  EXPECT_EQ(LI.getLoopFor(Inner), InnerL);
+  EXPECT_EQ(InnerL->getParentLoop(), OuterL);
+  EXPECT_EQ(OuterL->getNumBlocks(), 3u);
+  LI.verify();
+
+  // Without its backedge the inner loop is gone and the outer absorbs it.
+  redirect(DT, Inner, Latch);
+  auto Removed = LI.recompute(DT);
+  EXPECT_EQ(LI.getLoopFor(Inner), OuterL);
+  EXPECT_TRUE(OuterL->getSubLoops().empty());
+  ASSERT_EQ(Removed.size(), 1u);
+  EXPECT_EQ(Removed[0], std::make_pair(InnerL, Inner));
+  LI.verify();
+  LI.destroy(InnerL);
+
+  // Dropping the last backedge leaves no loops.
+  redirect(DT, Latch, getBlockByName(F, "exit"));
+  Removed = LI.recompute(DT);
+  EXPECT_TRUE(LI.empty());
+  ASSERT_EQ(Removed.size(), 1u);
+  EXPECT_EQ(Removed[0], std::make_pair(OuterL, Outer));
+  LI.verify();
+  LI.destroy(OuterL);
+}
+
+TEST(LoopInfoTest, RecomputeHoistsChild) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, NestedLoopsIR);
+  Function *F = M->getFunction("test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  BasicBlock *Outer = getBlockByName(F, "outer");
+  BasicBlock *Inner = getBlockByName(F, "inner");
+  Loop *OuterL = LI.getLoopFor(Outer);
+  Loop *InnerL = LI.getLoopFor(Inner);
+  ASSERT_NE(OuterL, nullptr);
+  ASSERT_NE(InnerL, nullptr);
+
+  // Losing the outer backedge leaves the inner loop top-level, still itself.
+  redirect(DT, getBlockByName(F, "outer.latch"), getBlockByName(F, "exit"));
+  auto Removed = LI.recompute(DT);
+  EXPECT_EQ(LI.getLoopFor(Inner), InnerL);
+  EXPECT_EQ(InnerL->getParentLoop(), nullptr);
+  EXPECT_EQ(LI.getLoopFor(Outer), nullptr);
+  ASSERT_EQ(Removed.size(), 1u);
+  EXPECT_EQ(Removed[0], std::make_pair(OuterL, Outer));
+  LI.verify();
+  LI.destroy(OuterL);
 }

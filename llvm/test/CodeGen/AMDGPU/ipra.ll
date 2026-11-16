@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-ipra < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -enable-ipra < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck -check-prefix=GCN %s
 
 ; Kernels are not called, so there is no call preserved mask.
 ; GCN-LABEL: {{^}}kernel:

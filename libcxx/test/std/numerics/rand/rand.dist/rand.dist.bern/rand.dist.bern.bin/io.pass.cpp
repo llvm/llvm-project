@@ -23,6 +23,9 @@
 // operator>>(basic_istream<charT, traits>& is,
 //            binomial_distribution& x);
 
+// missing lgamma_r
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <random>
 #include <sstream>
 #include <cassert>

@@ -931,7 +931,7 @@ protected:
       if (var_sp->GetScope() == eValueTypeVariableLocal)
         watch_sp->SetupVariableWatchpointDisabler(m_exe_ctx.GetFrameSP());
     }
-    output_stream.Printf("Watchpoint created: ");
+    output_stream.PutCString("Watchpoint created: ");
     watch_sp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
     output_stream.EOL();
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1105,7 +1105,7 @@ protected:
     if (watch_sp) {
       watch_sp->SetWatchSpec(std::string(expr));
       Stream &output_stream = result.GetOutputStream();
-      output_stream.Printf("Watchpoint created: ");
+      output_stream.PutCString("Watchpoint created: ");
       watch_sp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
       output_stream.EOL();
       result.SetStatus(eReturnStatusSuccessFinishResult);

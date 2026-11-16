@@ -163,8 +163,7 @@ def BufferDeallocationSimplificationPass
     some memref isn't deallocated twice (double free).
   }];
 
-  let dependentDialects = ["mlir::bufferization::BufferizationDialect",
-                           "mlir::arith::ArithDialect",
+  let dependentDialects = ["mlir::arith::ArithDialect",
                            "mlir::memref::MemRefDialect"];
 }
 
@@ -194,16 +193,28 @@ def StaticMemoryPlannerAnalysisPass
     For each `memref.alloc` the pass checks a conservative eligibility
     envelope:
     - Static memref shape.
-    - Unique same-block `memref.dealloc`.
-    - Allocations in nested blocks are ignored for now.
+    - Integer or floating-point element type.
+    - Identity layout.
+    - The allocation lives directly in the function's entry block
+      (allocations nested in a region are skipped for now).
+    - Every `memref.dealloc` that may free the buffer is anchored in the entry
+      block. Deallocs reached indirectly through `arith.select`, `scf.if`
+      results, `cf` branches, or view ops are handled via the shared
+      `BufferViewFlowAnalysis`; a dealloc nested inside an entry-block op
+      (e.g. an `scf.if` body) is accepted and bounds the lifetime
+      conservatively.
 
-    Eligible allocations are packed into a single arena. Currently, we use a
-    trivial sequential allocation strategy with alignment padding. But the
-    interface will also allow any packing algorithm to be plugged in as long as
-    it respects the interface. The arena is an i8 byte buffer
-    (`memref<Nxi8>`) that can hold allocations of different element types.
-    Each original allocation is replaced with a `memref.view` operation that
-    creates a typed view into the arena at the computed offset.
+    If a dealloc may also free an ineligible allocation, all candidates that
+    share that dealloc are skipped to preserve the ineligible allocation's
+    release. This exclusion propagates through other shared deallocs until
+    the remaining candidates can be rewritten together safely. Independent
+    eligible allocations can still be planned.
+
+    Eligible allocations are packed into a single arena using a configurable
+    planning algorithm (see the `algorithm` option). The arena is an i8 byte
+    buffer (`memref<Nxi8>`) that can hold allocations of different element
+    types. Each original allocation is replaced with a `memref.view` operation
+    that creates a typed view into the arena at the computed offset.
 
     Ineligible allocations are skipped and retain their original
     alloc/dealloc operations. Skip reasons are reported via op remarks.
@@ -234,25 +245,30 @@ def StaticMemoryPlannerAnalysisPass
     ```
   }];
 
-  let options = [Option<
-      "arenaMode", "arena-mode", "std::string",
+  let options = [
+    Option<"arenaMode", "arena-mode", "std::string",
       /*default=*/"\"allocate\"",
       "Arena allocation mode: 'allocate' creates arena via AllocOp, "
-      "'arg' extracts arena from function arguments">];
+      "'arg' extracts arena from function arguments">,
+    Option<"algorithm", "algorithm",
+      "::mlir::bufferization::MemoryPlannerAlgorithm",
+      /*default=*/"::mlir::bufferization::MemoryPlannerAlgorithm::Trivial",
+      "Memory planning algorithm to use.",
+      [{::llvm::cl::values(
+        clEnumValN(::mlir::bufferization::MemoryPlannerAlgorithm::Trivial,
+                   "trivial",
+                   "Sequential packing without lifetime overlap"),
+        clEnumValN(::mlir::bufferization::MemoryPlannerAlgorithm::BestFit,
+                   "best-fit",
+                   "Best-fit packing with lifetime-aware gap reuse")
+      )}]>,
+  ];
 
   let statistics =
       [Statistic<"numEligible", "num-eligible",
                  "Number of alloc/dealloc pairs eligible for static planning">,
-       Statistic<"numSkipDynamic", "num-skipped-dynamic",
-                 "Number of allocations skipped: dynamic shape">,
-       Statistic<
-           "numSkipNested", "num-skipped-nested",
-           "Number of allocations skipped: nested in loop or conditional">,
-       Statistic<"numSkipNoDealloc", "num-skipped-no-dealloc",
-                 "Number of allocations skipped: no unique same-block dealloc">,
-       Statistic<
-           "numSkipEscaping", "num-skipped-escaping",
-           "Number of allocations skipped: cross-block alias or escaping use">,
+       Statistic<"numSkipped", "num-skipped",
+                 "Number of allocations skipped">,
   ];
 }
 
@@ -289,6 +305,16 @@ def BufferLoopHoistingPass : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
   let description = [{
     This pass implements an approach to aggressively move allocations upwards
     out of loop nests. It does not move allocations into common dominators.
+
+    Allocations directly in the `before` region of `scf.while` may also be
+    hoisted when their buffers are forwarded through loop results. They must
+    advertise `HoistingKind::Loop` through `AllocationOpInterface`.
+    This extension requires a loop strictly inside the transformation target.
+    Its parent must stop further loop hoisting: it must either be a non-loop
+    operation or have the `HasParallelRegion` trait. No alias may be carried
+    back to `before`, and all alias uses, including uses of loop results, must
+    permit reusing the allocation across iterations. Stack allocations remain
+    within their original automatic allocation scope.
   }];
 }
 
@@ -500,9 +526,9 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
        Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
               "bool", /*default=*/"0",
               "Bufferize function boundaries (experimental).">,
-       Option<"checkParallelRegions", "check-parallel-regions", "bool",
+       Option<"mayHaveParallelRegions", "may-have-parallel-regions", "bool",
               /*default=*/"true",
-              "Account for parallel regions in RaW analysis.">,
+              "Whether the IR may contain parallel regions.">,
        Option<"copyBeforeWrite", "copy-before-write", "bool",
               /*default=*/"false",
               "Skip the analysis. Make a buffer copy on every write.">,

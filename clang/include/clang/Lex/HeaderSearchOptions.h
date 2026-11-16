@@ -151,6 +151,13 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModuleFileHomeIsCwd : 1;
 
+  /// Serialize precompiled header input paths relative to the current working
+  /// directory. Relative paths resolve against the consumer's working
+  /// directory; unlike relocatable PCHs, no base directory is stored or
+  /// re-rooted at load.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned PCHBaseDirIsCwd : 1;
+
   /// Also search for prebuilt implicit modules in the prebuilt module cache
   /// path.
   LLVM_PREFERRED_TYPE(bool)
@@ -180,9 +187,12 @@ public:
   /// loading.
   uint64_t BuildSessionTimestamp = 0;
 
-  /// The set of macro names that should be ignored for the purposes
-  /// of computing the module hash.
+  /// The set of macro names that should be ignored by implicitly-built modules.
   llvm::SmallSetVector<llvm::CachedHashString, 16> ModulesIgnoreMacros;
+
+  /// The set of header search paths that should be ignored by implicitly-built
+  /// modules.
+  llvm::SmallSetVector<llvm::CachedHashString, 16> ModulesIgnoreSearchPaths;
 
   /// The set of user-provided virtual filesystem overlay files.
   std::vector<std::string> VFSOverlayFiles;
@@ -221,6 +231,11 @@ public:
   /// loaded (even despite the build session saying that is not necessary).
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesForceValidateUserHeaders : 1;
+
+  /// Whether to treat an implicitly built module as out of date when a
+  /// directory it depends on the listing of changed after it was built.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModulesValidateDirectoryDependencies : 1;
 
   // Whether the content of input files should be hashed and used to
   // validate consistency.
@@ -291,12 +306,14 @@ public:
   HeaderSearchOptions(StringRef _Sysroot = "/")
       : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(false),
         ImplicitModuleMaps(false), ModuleMapFileHomeIsCwd(false),
-        ModuleFileHomeIsCwd(false), EnablePrebuiltImplicitModules(false),
-        UseBuiltinIncludes(true), UseStandardSystemIncludes(true),
-        UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
+        ModuleFileHomeIsCwd(false), PCHBaseDirIsCwd(false),
+        EnablePrebuiltImplicitModules(false), UseBuiltinIncludes(true),
+        UseStandardSystemIncludes(true), UseStandardCXXIncludes(true),
+        UseLibcxx(false), Verbose(false),
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
         ModulesForceValidateUserHeaders(true),
+        ModulesValidateDirectoryDependencies(false),
         ValidateASTInputFilesContent(false),
         ForceCheckCXX20ModulesInputFiles(false), UseDebugInfo(false),
         ModulesValidateDiagnosticOptions(true),
@@ -306,7 +323,7 @@ public:
         ModulesPruneNonAffectingModuleMaps(true), ModulesHashContent(false),
         ModulesSerializeOnlyPreprocessor(false),
         ModulesStrictContextHash(false), ModulesIncludeVFSUsage(false),
-        AllowModuleMapSubdirectorySearch(true), LazyLoadModuleMaps(false) {}
+        AllowModuleMapSubdirectorySearch(false), LazyLoadModuleMaps(false) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.
   void AddPath(StringRef Path, frontend::IncludeDirGroup Group,

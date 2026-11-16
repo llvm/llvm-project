@@ -201,6 +201,13 @@ public:
       else
         m_bp_opts.GetCondition().SetLanguage(language);
     } break;
+    case 'Z': {
+      auto condition_mode =
+          static_cast<BreakpointConditionMode>(OptionArgParser::ToOptionEnum(
+              option_arg, GetDefinitions()[option_idx].enum_values,
+              lldb::eBreakpointConditionModeDefault, error));
+      m_bp_opts.GetCondition().SetMode(condition_mode);
+    } break;
     default:
       llvm_unreachable("Unimplemented option");
     }
@@ -2950,7 +2957,7 @@ protected:
 
     Status error;
     for (auto &entry : command.entries()) {
-      ConstString name(entry.c_str());
+      llvm::StringRef name(entry.ref());
       BreakpointName *bp_name = target->FindBreakpointName(name, true, error);
       if (!bp_name)
         continue;
@@ -3163,7 +3170,7 @@ protected:
         // First print out the options for the name:
         Status error;
         BreakpointName *bp_name =
-            target->FindBreakpointName(ConstString(name), false, error);
+            target->FindBreakpointName(name, false, error);
         if (bp_name) {
           StreamString s;
           result.AppendMessageWithFormatv("Name: {0}", name);

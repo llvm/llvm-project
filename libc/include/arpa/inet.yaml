@@ -38,3 +38,26 @@ functions:
     arguments:
       - type: const char *
       - type: struct in_addr *
+  - name: inet_ntoa
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: struct in_addr
+  - name: inet_ntop
+    standards:
+      - posix
+    return_type: const char *
+    arguments:
+      - type: int
+      - type: const void *__restrict
+      - type: char *__restrict
+      - type: socklen_t
+  - name: inet_pton
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: const char *__restrict
+      - type: void *__restrict

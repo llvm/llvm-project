@@ -11,6 +11,7 @@
 #include "CodeComplete.h"
 #include "CodeCompletionStrings.h"
 #include "ExpectedTypes.h"
+#include "FindSymbols.h"
 #include "SourceCode.h"
 #include "URI.h"
 #include "clang-include-cleaner/Analysis.h"
@@ -523,13 +524,12 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
 
   // We want most things but not "local" symbols such as symbols inside
   // FunctionDecl, BlockDecl, ObjCMethodDecl and OMPDeclareReductionDecl.
-  // FIXME: Need a matcher for ExportDecl in order to include symbols declared
-  // within an export.
-  const auto *DeclCtx = ND.getDeclContext();
+  // Transparent contexts (export, extern "C", unscoped enums) are skipped, as
+  // their declarations belong to the enclosing context.
+  const auto *DeclCtx = ND.getNonTransparentDeclContext();
   switch (DeclCtx->getDeclKind()) {
   case Decl::TranslationUnit:
   case Decl::Namespace:
-  case Decl::LinkageSpec:
   case Decl::Enum:
   case Decl::ObjCProtocol:
   case Decl::ObjCInterface:
@@ -1088,6 +1088,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   if (ND.getAvailability() == AR_Deprecated)
     S.Flags |= Symbol::Deprecated;
 
+  S.Tags = computeSymbolTags(ND);
+
   // Add completion info.
   // FIXME: we may want to choose a different redecl, or combine from several.
   assert(ASTCtx && PP && "ASTContext and Preprocessor must be set.");
@@ -1178,7 +1180,7 @@ void SymbolCollector::addDefinition(const NamedDecl &ND, const Symbol &DeclSym,
       S.Flags |= Symbol::HasDocComment;
     S.Documentation = Documentation;
   }
-
+  S.Tags |= computeSymbolTags(ND);
   Symbols.insert(S);
 }
 

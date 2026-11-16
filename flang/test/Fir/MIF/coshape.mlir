@@ -28,19 +28,19 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %9 = fir.coordinate_of %0, %c1_4 : (!fir.ref<!fir.array<2xi64>>, index) -> !fir.ref<i64>
     fir.store %c3_i64_3 to %9 : !fir.ref<i64>
     %10 = fir.embox %0 : (!fir.ref<!fir.array<2xi64>>) -> !fir.box<!fir.array<2xi64>>
-    mif.alloc_coarray %3 lcobounds %7 ucobounds %10 {uniq_name = "_QFEa"} : (!fir.ref<i32>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>) -> ()
-    %11:2 = hlfir.declare %3 {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    mif.alloc_coarray %3 lcobounds %7 ucobounds %10 uniq_name("_QFEa") : (!fir.ref<i32>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>) -> ()
+    %11:2 = hlfir.declare %3 uniq_name("_QFEa") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %c3 = arith.constant 3 : index
     %12 = fir.alloca !fir.array<3xi32> {bindc_name = "res", uniq_name = "_QFEres"}
     %13 = fir.shape %c3 : (index) -> !fir.shape<1>
-    %14:2 = hlfir.declare %12(%13) {uniq_name = "_QFEres"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
+    %14:2 = hlfir.declare %12(%13) uniq_name("_QFEres") : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
     %c3_5 = arith.constant 3 : index
     %15 = fir.alloca !fir.array<3xi64> {bindc_name = "res2", uniq_name = "_QFEres2"}
     %16 = fir.shape %c3_5 : (index) -> !fir.shape<1>
-    %17:2 = hlfir.declare %15(%16) {uniq_name = "_QFEres2"} : (!fir.ref<!fir.array<3xi64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi64>>, !fir.ref<!fir.array<3xi64>>)
+    %17:2 = hlfir.declare %15(%16) uniq_name("_QFEres2") : (!fir.ref<!fir.array<3xi64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi64>>, !fir.ref<!fir.array<3xi64>>)
     %18 = fir.embox %11#0 : (!fir.ref<i32>) -> !fir.box<i32, corank:3>
     %19 = mif.coshape coarray %18 : (!fir.box<i32, corank:3>) -> !fir.box<!fir.array<?xi64>>
-    %20:2 = hlfir.declare %19 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
+    %20:2 = hlfir.declare %19 uniq_name(".tmp.intrinsic_result") : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
     %false = arith.constant false
     %21 = hlfir.as_expr %20#0 move %false : (!fir.box<!fir.array<?xi64>>, i1) -> !hlfir.expr<?xi64>
     %c0_6 = arith.constant 0 : index
@@ -57,7 +57,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     hlfir.destroy %21 : !hlfir.expr<?xi64>
     %25 = fir.embox %11#0 : (!fir.ref<i32>) -> !fir.box<i32, corank:3>
     %26 = mif.coshape coarray %25 : (!fir.box<i32, corank:3>) -> !fir.box<!fir.array<?xi64>>
-    %27:2 = hlfir.declare %26 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
+    %27:2 = hlfir.declare %26 uniq_name(".tmp.intrinsic_result") : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
     %false_7 = arith.constant false
     %28 = hlfir.as_expr %27#0 move %false_7 : (!fir.box<!fir.array<?xi64>>, i1) -> !hlfir.expr<?xi64>
     %c0_8 = arith.constant 0 : index
@@ -73,8 +73,62 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     hlfir.destroy %28 : !hlfir.expr<?xi64>
     return
   }
+
+  // Test that MIFCoshapeOpConversion emits an element-wise i64→i32 conversion
+  // loop when the declared element type differs from the i64 written by
+  // prif_coshape. Models `integer :: c[5,*]` (corank:2, default kind = i32).
+  func.func @test_coshape_i32() {
+    %c1_i64 = arith.constant 1 : i64
+    %c5_i64 = arith.constant 5 : i64
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %lc = fir.alloca !fir.array<2xi64>
+    %uc = fir.alloca !fir.array<1xi64>
+    %lc0 = fir.coordinate_of %lc, %c0 : (!fir.ref<!fir.array<2xi64>>, index) -> !fir.ref<i64>
+    fir.store %c1_i64 to %lc0 : !fir.ref<i64>
+    %lc1 = fir.coordinate_of %lc, %c1 : (!fir.ref<!fir.array<2xi64>>, index) -> !fir.ref<i64>
+    fir.store %c1_i64 to %lc1 : !fir.ref<i64>
+    %uc0 = fir.coordinate_of %uc, %c0 : (!fir.ref<!fir.array<1xi64>>, index) -> !fir.ref<i64>
+    fir.store %c5_i64 to %uc0 : !fir.ref<i64>
+    %lb = fir.embox %lc : (!fir.ref<!fir.array<2xi64>>) -> !fir.box<!fir.array<2xi64>>
+    %ub = fir.embox %uc : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
+    %c_ref = fir.address_of(@_QFEc) : !fir.ref<i32>
+    mif.alloc_coarray %c_ref lcobounds %lb ucobounds %ub uniq_name("_QFEc") : (!fir.ref<i32>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>) -> ()
+    %c_decl:2 = hlfir.declare %c_ref uniq_name("_QFEc") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %cobox = fir.embox %c_decl#0 : (!fir.ref<i32>) -> !fir.box<i32, corank:2>
+    %res = mif.coshape coarray %cobox : (!fir.box<i32, corank:2>) -> !fir.box<!fir.array<?xi32>>
+    return
+  }
 }
 
 // CHECK-LABEL: func.func @_QQmain
 // CHECK: fir.call @_QMprifPprif_coshape
 // CHECK: fir.call @_QMprifPprif_coshape
+
+// CHECK-LABEL: func.func @test_coshape_i32
+// i32 and i64 scratch buffers are hoisted to the function entry block.
+// CHECK-DAG:     %[[I32BUF:.*]] = fir.alloca !fir.array<2xi32>
+// CHECK-DAG:     %[[I64BUF:.*]] = fir.alloca !fir.array<2xi64>
+// prif_coshape writes i64 values into the i64 buffer.
+// CHECK:         fir.call @_QMprifPprif_coshape
+// After the call, `result` is converted to a dynamic-extent i64 box and
+// then its base pointer is extracted for the per-element copy loop.
+// CHECK:         %[[I64BOX:.*]] = fir.convert {{.*}} : (!fir.box<!fir.array<2xi64>>) -> !fir.box<!fir.array<?xi64>>
+// CHECK:         %[[I64BUFREF:.*]] = fir.box_addr %[[I64BOX]] : (!fir.box<!fir.array<?xi64>>) -> !fir.ref<!fir.array<?xi64>>
+// Loop iteration 0: load i64, truncate to i32, store into i32 buffer.
+// CHECK:         %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         %[[SRC0:.*]] = fir.coordinate_of %[[I64BUFREF]], %[[C0]] : (!fir.ref<!fir.array<?xi64>>, index) -> !fir.ref<i64>
+// CHECK:         %[[VAL0:.*]] = fir.load %[[SRC0]] : !fir.ref<i64>
+// CHECK:         %[[CONV0:.*]] = fir.convert %[[VAL0]] : (i64) -> i32
+// CHECK:         %[[DST0:.*]] = fir.coordinate_of %[[I32BUF]], %[[C0]] : (!fir.ref<!fir.array<2xi32>>, index) -> !fir.ref<i32>
+// CHECK:         fir.store %[[CONV0]] to %[[DST0]] : !fir.ref<i32>
+// Loop iteration 1: same pattern for the second codimension.
+// CHECK:         %[[C1:.*]] = arith.constant 1 : index
+// CHECK:         %[[SRC1:.*]] = fir.coordinate_of %[[I64BUFREF]], %[[C1]] : (!fir.ref<!fir.array<?xi64>>, index) -> !fir.ref<i64>
+// CHECK:         %[[VAL1:.*]] = fir.load %[[SRC1]] : !fir.ref<i64>
+// CHECK:         %[[CONV1:.*]] = fir.convert %[[VAL1]] : (i64) -> i32
+// CHECK:         %[[DST1:.*]] = fir.coordinate_of %[[I32BUF]], %[[C1]] : (!fir.ref<!fir.array<2xi32>>, index) -> !fir.ref<i32>
+// CHECK:         fir.store %[[CONV1]] to %[[DST1]] : !fir.ref<i32>
+// The i32 buffer is boxed and widened to a dynamic-extent result.
+// CHECK:         %[[BOX_I32:.*]] = fir.embox %[[I32BUF]] : (!fir.ref<!fir.array<2xi32>>) -> !fir.box<!fir.array<2xi32>>
+// CHECK:         fir.convert %[[BOX_I32]] : (!fir.box<!fir.array<2xi32>>) -> !fir.box<!fir.array<?xi32>>

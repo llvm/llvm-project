@@ -17,8 +17,8 @@ void vla_type_with_element_type_of_size_1() {
 // CIR: %[[TMP_N:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!u64i>, !u64i
 // CIR: cir.store {{.*}} %[[TMP_N]], %[[SIZE_ADDR]] : !u64i, !cir.ptr<!u64i>
 
-// LLVM: %[[N_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[SIZE_ADDR:.*]] = alloca i64, i64 1, align 8
+// LLVM: %[[N_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[SIZE_ADDR:.*]] = alloca i64, align 8
 // LLVM: store i64 10, ptr %[[N_ADDR]], align 8
 // LLVM: %[[TMP_N:.*]] = load i64, ptr %[[N_ADDR]], align 8
 // LLVM: store i64 %[[TMP_N]], ptr %[[SIZE_ADDR]], align 8
@@ -43,8 +43,8 @@ void vla_type_with_element_type_int() {
 // CIR: %[[SIZE:.*]] = cir.mul nuw %[[CONST_4]], %[[TMP_N]] : !u64i
 // CIR: cir.store {{.*}} %[[SIZE]], %[[SIZE_ADDR]] : !u64i, !cir.ptr<!u64i>
 
-// LLVM: %[[N_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[SIZE_ADDR:.*]] = alloca i64, i64 1, align 8
+// LLVM: %[[N_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[SIZE_ADDR:.*]] = alloca i64, align 8
 // LLVM: store i64 10, ptr %[[N_ADDR]], align 8
 // LLVM: %[[TMP_N:.*]] = load i64, ptr %[[N_ADDR]], align 8
 // LLVM: %[[SIZE:.*]] = mul nuw i64 4, %[[TMP_N]]
@@ -81,9 +81,9 @@ void vla_expr_element_type_of_size_1() {
 // CIR:   cir.yield
 // CIR: }
 
-// LLVM: %[[N_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[SAVED_STACK_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM: %[[SIZE_ADDR:.*]] = alloca i64, i64 1, align 8
+// LLVM: %[[N_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[SAVED_STACK_ADDR:.*]] = alloca ptr, align 8
+// LLVM: %[[SIZE_ADDR:.*]] = alloca i64, align 8
 // LLVM: store i64 10, ptr %[[N_ADDR]], align 8
 // LLVM: %[[TMP_N:.*]] = load i64, ptr %[[N_ADDR]], align 8
 // LLVM: %[[STACK_SAVE:.*]] = call ptr @llvm.stacksave.p0()
@@ -135,9 +135,9 @@ void vla_expr_element_type_int() {
 // CIR:   cir.yield
 // CIR: }
 
-// LLVM: %[[N_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[SAVED_STACK_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM: %[[SIZE_ADDR:.*]] = alloca i64, i64 1, align 8
+// LLVM: %[[N_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[SAVED_STACK_ADDR:.*]] = alloca ptr, align 8
+// LLVM: %[[SIZE_ADDR:.*]] = alloca i64, align 8
 // LLVM: store i64 10, ptr %[[N_ADDR]], align 8
 // LLVM: %[[TMP_N:.*]] = load i64, ptr %[[N_ADDR]], align 8
 // LLVM: %[[STACK_SAVE:.*]] = call ptr @llvm.stacksave.p0()

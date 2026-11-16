@@ -10,13 +10,13 @@
 
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialectDecl.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
@@ -30,6 +30,100 @@ using namespace mlir;
 
 #define DEBUG_TYPE "memref-transforms"
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+
+namespace mlir::transform {
+namespace {
+ParseResult parseLLVMTypeConverterOptions(OpAsmParser &parser,
+                                          BoolAttr &useAlignedAlloc,
+                                          IntegerAttr &indexBitwidth,
+                                          BoolAttr &useGenericFunctions,
+                                          BoolAttr &useBarePtrCallConv,
+                                          StringAttr &dataLayout) {
+  bool seenUseAlignedAlloc = false;
+  bool seenIndexBitwidth = false;
+  bool seenUseGenericFunctions = false;
+  bool seenUseBarePtrCallConv = false;
+  bool seenDataLayout = false;
+
+  auto parseDuplicate = [&](StringRef name, bool &seen) -> ParseResult {
+    if (seen)
+      return parser.emitError(parser.getCurrentLocation())
+             << "duplicate '" << name << "' option";
+    seen = true;
+    return ParseResult::success();
+  };
+
+  while (true) {
+    if (succeeded(parser.parseOptionalKeyword("use_aligned_alloc"))) {
+      if (failed(parseDuplicate("use_aligned_alloc", seenUseAlignedAlloc)) ||
+          parser.parseEqual() ||
+          parser.parseAttribute(useAlignedAlloc,
+                                parser.getBuilder().getI1Type()))
+        return failure();
+      continue;
+    }
+    if (succeeded(parser.parseOptionalKeyword("index_bitwidth"))) {
+      if (failed(parseDuplicate("index_bitwidth", seenIndexBitwidth)) ||
+          parser.parseEqual() ||
+          parser.parseAttribute(indexBitwidth,
+                                parser.getBuilder().getI64Type()))
+        return failure();
+      continue;
+    }
+    if (succeeded(parser.parseOptionalKeyword("use_generic_functions"))) {
+      if (failed(parseDuplicate("use_generic_functions",
+                                seenUseGenericFunctions)) ||
+          parser.parseEqual() ||
+          parser.parseAttribute(useGenericFunctions,
+                                parser.getBuilder().getI1Type()))
+        return failure();
+      continue;
+    }
+    if (succeeded(parser.parseOptionalKeyword("use_bare_ptr_call_conv"))) {
+      if (failed(parseDuplicate("use_bare_ptr_call_conv",
+                                seenUseBarePtrCallConv)) ||
+          parser.parseEqual() ||
+          parser.parseAttribute(useBarePtrCallConv,
+                                parser.getBuilder().getI1Type()))
+        return failure();
+      continue;
+    }
+    if (succeeded(parser.parseOptionalKeyword("data_layout"))) {
+      if (failed(parseDuplicate("data_layout", seenDataLayout)) ||
+          parser.parseEqual() || parser.parseAttribute(dataLayout))
+        return failure();
+      continue;
+    }
+    break;
+  }
+  return success();
+}
+
+void printLLVMTypeConverterOptions(OpAsmPrinter &printer, Operation *,
+                                   BoolAttr useAlignedAlloc,
+                                   IntegerAttr indexBitwidth,
+                                   BoolAttr useGenericFunctions,
+                                   BoolAttr useBarePtrCallConv,
+                                   StringAttr dataLayout) {
+  bool needsSpace = false;
+  auto printOption = [&](StringRef name, Attribute value) {
+    if (!value)
+      return;
+    if (needsSpace)
+      printer << ' ';
+    printer << name << " = ";
+    printer.printAttributeWithoutType(value);
+    needsSpace = true;
+  };
+
+  printOption("use_aligned_alloc", useAlignedAlloc);
+  printOption("index_bitwidth", indexBitwidth);
+  printOption("use_generic_functions", useGenericFunctions);
+  printOption("use_bare_ptr_call_conv", useBarePtrCallConv);
+  printOption("data_layout", dataLayout);
+}
+} // namespace
+} // namespace mlir::transform
 
 //===----------------------------------------------------------------------===//
 // Apply...ConversionPatternsOp
@@ -126,6 +220,101 @@ void transform::ApplyResolveRankedShapedTypeResultDimsPatternsOp::
 }
 
 //===----------------------------------------------------------------------===//
+// Alloc and alloca to global utilities
+//===----------------------------------------------------------------------===//
+
+/// Checks whether an allocation operation can be converted to a
+/// `memref.global`.
+template <typename AllocLikeOp>
+static DiagnosedSilenceableFailure
+checkAllocToGlobalPreconditions(AllocLikeOp allocLikeOp) {
+  MemRefType memrefType = allocLikeOp.getType();
+  if (!memrefType.hasStaticShape()) {
+    return emitSilenceableFailure(allocLikeOp)
+           << "conversion to a global op requires statically shaped memrefs, "
+              "but got "
+           << memrefType;
+  }
+
+  if (!allocLikeOp.getSymbolOperands().empty()) {
+    return emitSilenceableFailure(allocLikeOp)
+           << "conversion to a global op does not support symbol operands, but "
+              "got "
+           << memrefType;
+  }
+
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  if (failed(memrefType.getStridesAndOffset(strides, offset))) {
+    return emitSilenceableFailure(allocLikeOp)
+           << "conversion to a global op requires strided layout, but got "
+           << memrefType;
+  }
+  if (!ShapedType::isStatic(offset) || !ShapedType::isStaticShape(strides)) {
+    return emitSilenceableFailure(allocLikeOp)
+           << "conversion to a global op does not support dynamic offset or "
+              "strides, but got "
+           << memrefType;
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+/// Converts an allocation operation (`memref.alloca` or `memref.alloc`) to a
+/// `memref.global` operation in the nearest symbol table, and replaces the
+/// allocation with a `memref.get_global` operation. Any `memref.dealloc`
+/// operations referencing the allocation are erased.
+template <typename AllocLikeOp>
+static DiagnosedSilenceableFailure
+allocLikeToGlobal(transform::TransformRewriter &rewriter,
+                  AllocLikeOp allocLikeOp, StringRef globalName,
+                  memref::GlobalOp &globalOp,
+                  memref::GetGlobalOp &getGlobalOp) {
+  if (DiagnosedSilenceableFailure failure =
+          checkAllocToGlobalPreconditions(allocLikeOp);
+      !failure.succeeded())
+    return failure;
+
+  MLIRContext *ctx = rewriter.getContext();
+  Location loc = allocLikeOp->getLoc();
+
+  // Find nearest symbol table.
+  Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(allocLikeOp);
+  assert(symbolTableOp && "expected payload to be in symbol table");
+  SymbolTable symbolTable(symbolTableOp);
+
+  // Insert a `memref.global` into the symbol table.
+  Type resultType = allocLikeOp.getResult().getType();
+  OpBuilder builder(rewriter.getContext());
+  // TODO: Add a better builder for this.
+  globalOp = memref::GlobalOp::create(
+      builder, loc, StringAttr::get(ctx, globalName),
+      StringAttr::get(ctx, "private"), TypeAttr::get(resultType), Attribute{},
+      UnitAttr{}, allocLikeOp.getAlignmentAttr());
+  symbolTable.insert(globalOp);
+
+  // Remove any `memref.dealloc` operations referencing this allocation.
+  // We assume that the allocation does not escape the current container
+  // (e.g., via return or interprocedural function calls) and is not passed
+  // through control-flow or alias operations (e.g., `scf.if`, `cf.cond_br`,
+  // `select`, `memref.subview`), so any deallocation is a direct user of the
+  // allocation. Indirect deallocations are not removed and must be handled
+  // separately.
+  for (Operation *user : llvm::make_early_inc_range(allocLikeOp->getUsers())) {
+    if (auto dealloc = dyn_cast<memref::DeallocOp>(user))
+      rewriter.eraseOp(dealloc);
+  }
+
+  // Replace the allocation with a `memref.get_global` accessing the
+  // global symbol inserted above.
+  rewriter.setInsertionPoint(allocLikeOp);
+  getGlobalOp = rewriter.replaceOpWithNewOp<memref::GetGlobalOp>(
+      allocLikeOp, globalOp.getType(), globalOp.getName());
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // AllocaToGlobalOp
 //===----------------------------------------------------------------------===//
 
@@ -141,32 +330,12 @@ transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
   // Transform `memref.alloca`s.
   for (auto *op : allocaOps) {
     auto alloca = cast<memref::AllocaOp>(op);
-    MLIRContext *ctx = rewriter.getContext();
-    Location loc = alloca->getLoc();
-
     memref::GlobalOp globalOp;
-    {
-      // Find nearest symbol table.
-      Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(op);
-      assert(symbolTableOp && "expected alloca payload to be in symbol table");
-      SymbolTable symbolTable(symbolTableOp);
-
-      // Insert a `memref.global` into the symbol table.
-      Type resultType = alloca.getResult().getType();
-      OpBuilder builder(rewriter.getContext());
-      // TODO: Add a better builder for this.
-      globalOp = memref::GlobalOp::create(
-          builder, loc, StringAttr::get(ctx, "alloca"),
-          StringAttr::get(ctx, "private"), TypeAttr::get(resultType),
-          Attribute{}, UnitAttr{}, IntegerAttr{});
-      symbolTable.insert(globalOp);
-    }
-
-    // Replace the `memref.alloca` with a `memref.get_global` accessing the
-    // global symbol inserted above.
-    rewriter.setInsertionPoint(alloca);
-    auto getGlobalOp = rewriter.replaceOpWithNewOp<memref::GetGlobalOp>(
-        alloca, globalOp.getType(), globalOp.getName());
+    memref::GetGlobalOp getGlobalOp;
+    DiagnosedSilenceableFailure diag =
+        allocLikeToGlobal(rewriter, alloca, "alloca", globalOp, getGlobalOp);
+    if (!diag.succeeded())
+      return diag;
 
     globalOps.push_back(globalOp);
     getGlobalOps.push_back(getGlobalOp);
@@ -183,6 +352,47 @@ void transform::MemRefAllocaToGlobalOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   producesHandle(getOperation()->getOpResults(), effects);
   consumesHandle(getAllocaMutable(), effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// AllocToGlobalOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MemRefAllocToGlobalOp::apply(transform::TransformRewriter &rewriter,
+                                        transform::TransformResults &results,
+                                        transform::TransformState &state) {
+  auto allocOps = state.getPayloadOps(getAlloc());
+
+  SmallVector<memref::GlobalOp> globalOps;
+  SmallVector<memref::GetGlobalOp> getGlobalOps;
+
+  // Transform `memref.alloc`s.
+  for (auto *op : allocOps) {
+    auto alloc = cast<memref::AllocOp>(op);
+    memref::GlobalOp globalOp;
+    memref::GetGlobalOp getGlobalOp;
+    DiagnosedSilenceableFailure diag =
+        allocLikeToGlobal(rewriter, alloc, "alloc", globalOp, getGlobalOp);
+    if (!diag.succeeded())
+      return diag;
+
+    globalOps.push_back(globalOp);
+    getGlobalOps.push_back(getGlobalOp);
+  }
+
+  // Assemble results.
+  results.set(cast<OpResult>(getGlobal()), globalOps);
+  results.set(cast<OpResult>(getGetGlobal()), getGlobalOps);
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::MemRefAllocToGlobalOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getAllocMutable(), effects);
   modifiesPayload(effects);
 }
 

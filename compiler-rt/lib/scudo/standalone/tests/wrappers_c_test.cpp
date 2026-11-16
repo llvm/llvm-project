@@ -23,37 +23,48 @@
 #endif
 
 #if SCUDO_FUCHSIA
+// Enable all checks that can cause aborts.
+#define VERIFY_FREE_SIZED_DEATH 1
+#define VERIFY_FREE_SIZED_TYPE_DEATH 1
+#define VERIFY_FREE_ALIGNED_SIZED_DEATH 1
+#define VERIFY_FREE_ALIGNED_SIZED_TYPE_DEATH 1
+
 // Fuchsia only has valloc
 #define HAVE_VALLOC 1
-
-#define VERIFY_FREE_SIZED_DEATH 1
-#define VERIFY_FREE_ALIGNED_SIZED_DEATH 1
 #elif SCUDO_ANDROID
 // Android only has pvalloc/valloc on 32 bit
 #if !defined(__LP64__)
 #define HAVE_PVALLOC 1
 #define HAVE_VALLOC 1
 #endif // !defined(__LP64__)
-
-// Disable all size/aligned checks since they are disabled on Android.
-#define VERIFY_FREE_SIZED_DEATH 0
-#define VERIFY_FREE_ALIGNED_SIZED_DEATH 0
 #else
 // All others assumed to support both functions.
 #define HAVE_PVALLOC 1
 #define HAVE_VALLOC 1
-
-// Assume all others will not die on these calls.
-#define VERIFY_FREE_SIZED_DEATH 0
-#define VERIFY_FREE_ALIGNED_SIZED_DEATH 0
 #endif
 
 // GWP-Asan doesn't do these checks.
 #if defined(GWP_ASAN_HOOKS)
 #undef VERIFY_FREE_SIZED_DEATH
+#undef VERIFY_FREE_SIZED_TYPE_DEATH
 #undef VERIFY_FREE_ALIGNED_SIZED_DEATH
+#undef VERIFY_FREE_ALIGNED_SIZED_TYPE_DEATH
+#endif
+
+#ifndef VERIFY_FREE_SIZED_DEATH
 #define VERIFY_FREE_SIZED_DEATH 0
+#endif
+
+#ifndef VERIFY_FREE_SIZED_TYPE_DEATH
+#define VERIFY_FREE_SIZED_TYPE_DEATH 0
+#endif
+
+#ifndef VERIFY_FREE_ALIGNED_SIZED_DEATH
 #define VERIFY_FREE_ALIGNED_SIZED_DEATH 0
+#endif
+
+#ifndef VERIFY_FREE_ALIGNED_SIZED_TYPE_DEATH
+#define VERIFY_FREE_ALIGNED_SIZED_TYPE_DEATH 0
 #endif
 
 extern "C" {
@@ -188,7 +199,7 @@ TEST_F(ScudoWrappersCDeathTest, Malloc) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wfree-nonheap-object"
 #endif
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       free(reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(P) | 1U)), "");
 #if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
 #pragma GCC diagnostic pop
@@ -202,7 +213,7 @@ TEST_F(ScudoWrappersCDeathTest, Malloc) {
   // allocations before creating a new process. There is a possibility
   // that the previously freed P is reused, therefore, in the new
   // process doing free(P) is not a double free.
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       {
         // Note: volatile here prevents the calls from being optimized out.
         void *volatile Ptr = malloc(Size);
@@ -374,7 +385,7 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   verifyReallocHookPtrs(OldP, P, Size / 2U);
   free(P);
 
-  EXPECT_DEATH(P = realloc(P, Size), "");
+  SCUDO_EXPECT_DEATH(P = realloc(P, Size), "");
 
   errno = 0;
   EXPECT_EQ(realloc(nullptr, SIZE_MAX), nullptr);
@@ -424,9 +435,9 @@ TEST_F(ScudoWrappersCTest, MallocFreeSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_SIZED_DEATH) {
-    EXPECT_DEATH(free_sized(P, Size - 1), "");
-    EXPECT_DEATH(free_sized(P, Size + 1), "");
+  if constexpr (VERIFY_FREE_SIZED_DEATH) {
+    SCUDO_EXPECT_DEATH(free_sized(P, Size - 1), "");
+    SCUDO_EXPECT_DEATH(free_sized(P, Size + 1), "");
 
     // An update to this warning in Clang now triggers in this line, but it's ok
     // because the check is expecting a bad pointer and should fail.
@@ -434,10 +445,10 @@ TEST_F(ScudoWrappersCTest, MallocFreeSized) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wfree-nonheap-object"
 #endif
-    EXPECT_DEATH(free_sized(reinterpret_cast<void *>(
-                                reinterpret_cast<uintptr_t>(P) | 1U),
-                            Size),
-                 "");
+    SCUDO_EXPECT_DEATH(free_sized(reinterpret_cast<void *>(
+                                      reinterpret_cast<uintptr_t>(P) | 1U),
+                                  Size),
+                       "");
 #if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
 #pragma GCC diagnostic pop
 #endif
@@ -446,8 +457,8 @@ TEST_F(ScudoWrappersCTest, MallocFreeSized) {
   free_sized(P, Size);
   verifyDeallocHookPtr(P);
 
-  if (VERIFY_FREE_SIZED_DEATH)
-    EXPECT_DEATH(free_sized(P, Size), "");
+  if constexpr (VERIFY_FREE_SIZED_DEATH)
+    SCUDO_EXPECT_DEATH(free_sized(P, Size), "");
 }
 
 TEST_F(ScudoWrappersCTest, AlignedAllocFreeAlignedSized) {
@@ -460,11 +471,12 @@ TEST_F(ScudoWrappersCTest, AlignedAllocFreeAlignedSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_ALIGNED_SIZED_DEATH) {
-    EXPECT_DEATH(free_aligned_sized(P, Alignment, Size - 1), "");
-    EXPECT_DEATH(free_aligned_sized(P, Alignment, Size + 1), "");
-    EXPECT_DEATH(
-        free_aligned_sized(P, size_t{1} << (sizeof(size_t) * 8 - 1), Size), "");
+  if constexpr (VERIFY_FREE_ALIGNED_SIZED_DEATH) {
+    // Verify abort on incorrect size.
+    SCUDO_EXPECT_DEATH(free_aligned_sized(P, Alignment, Size - 1), "");
+    SCUDO_EXPECT_DEATH(free_aligned_sized(P, Alignment, Size + 1), "");
+    // Verify abort on unaligned value.
+    SCUDO_EXPECT_DEATH(free_aligned_sized(P, 3, Size), "");
 
     // An update to this warning in Clang now triggers in this line, but it's ok
     // because the check is expecting a bad pointer and should fail.
@@ -472,10 +484,12 @@ TEST_F(ScudoWrappersCTest, AlignedAllocFreeAlignedSized) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wfree-nonheap-object"
 #endif
-    EXPECT_DEATH(free_aligned_sized(reinterpret_cast<void *>(
-                                        reinterpret_cast<uintptr_t>(P) | 1U),
-                                    Alignment, Size),
-                 "");
+    // Verify abort on bad pointer.
+    SCUDO_EXPECT_DEATH(
+        free_aligned_sized(
+            reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(P) | 1U),
+            Alignment, Size),
+        "");
 #if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
 #pragma GCC diagnostic pop
 #endif
@@ -483,7 +497,7 @@ TEST_F(ScudoWrappersCTest, AlignedAllocFreeAlignedSized) {
 
   free_aligned_sized(P, Alignment, Size);
   verifyDeallocHookPtr(P);
-  EXPECT_DEATH(free_aligned_sized(P, Alignment, Size), "");
+  SCUDO_EXPECT_DEATH(free_aligned_sized(P, Alignment, Size), "");
 }
 
 TEST_F(ScudoWrappersCDeathTest, MallocFreeAlignedSized) {
@@ -494,9 +508,9 @@ TEST_F(ScudoWrappersCDeathTest, MallocFreeAlignedSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_ALIGNED_SIZED_DEATH) {
-    EXPECT_DEATH(free_aligned_sized(P, 8, Size), "");
-    EXPECT_DEATH(free_aligned_sized(P, alignof(std::max_align_t), Size), "");
+  if constexpr (VERIFY_FREE_ALIGNED_SIZED_TYPE_DEATH) {
+    // Verify abort on type mismatch (unaligned alloc/aligned free).
+    SCUDO_EXPECT_DEATH(free_aligned_sized(P, 8, Size), "");
   }
 
   free_sized(P, Size);
@@ -513,8 +527,10 @@ TEST_F(ScudoWrappersCDeathTest, AlignedAllocFreeSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_SIZED_DEATH)
-    EXPECT_DEATH(free_sized(P, Size), "");
+  if constexpr (VERIFY_FREE_SIZED_TYPE_DEATH) {
+    // Verify abort on type mismatch (aligned alloc/unaligned free).
+    SCUDO_EXPECT_DEATH(free_sized(P, Size), "");
+  }
 
   free_aligned_sized(P, Alignment, Size);
   verifyDeallocHookPtr(P);
@@ -531,8 +547,10 @@ TEST_F(ScudoWrappersCDeathTest, PosixMemalignFreeSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_SIZED_DEATH)
-    EXPECT_DEATH(free_sized(P, Size), "");
+  if constexpr (VERIFY_FREE_SIZED_TYPE_DEATH) {
+    // Verify abort on type mismatch (aligned alloc/unaligned free).
+    SCUDO_EXPECT_DEATH(free_sized(P, Size), "");
+  }
 
   free(P);
   verifyDeallocHookPtr(P);
@@ -548,8 +566,10 @@ TEST_F(ScudoWrappersCDeathTest, MemalignFreeSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_SIZED_DEATH)
-    EXPECT_DEATH(free_sized(P, Size), "");
+  if constexpr (VERIFY_FREE_SIZED_TYPE_DEATH) {
+    // Verify abort on type mismatch (aligned alloc/unaligned free).
+    SCUDO_EXPECT_DEATH(free_sized(P, Size), "");
+  }
 
   free(P);
   verifyDeallocHookPtr(P);
@@ -564,8 +584,10 @@ TEST_F(ScudoWrappersCDeathTest, PvallocFreeSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_SIZED_DEATH)
-    EXPECT_DEATH(free_sized(P, Size), "");
+  if constexpr (VERIFY_FREE_SIZED_TYPE_DEATH) {
+    // Verify abort on type mismatch (aligned alloc/unaligned free).
+    SCUDO_EXPECT_DEATH(free_sized(P, Size), "");
+  }
 
   free(P);
   verifyDeallocHookPtr(P);
@@ -581,8 +603,10 @@ TEST_F(ScudoWrappersCDeathTest, VallocFreeSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_SIZED_DEATH)
-    EXPECT_DEATH(free_sized(P, Size), "");
+  if constexpr (VERIFY_FREE_SIZED_TYPE_DEATH) {
+    // Verify abort on type mismatch (aligned alloc/unaligned free).
+    SCUDO_EXPECT_DEATH(free_sized(P, Size), "");
+  }
 
   free(P);
   verifyDeallocHookPtr(P);
@@ -607,6 +631,7 @@ TEST_F(ScudoWrappersCTest, MallOpt) {
     EXPECT_EQ(mallopt(M_CACHE_COUNT_MAX, 100), 1);
     EXPECT_EQ(mallopt(M_CACHE_SIZE_MAX, 1024 * 1024 * 2), 1);
     EXPECT_EQ(mallopt(M_TSDS_COUNT_MAX, 10), 1);
+    EXPECT_EQ(mallopt(M_CACHE_RESIDENT_BYTES_MAX, 1024 * 1024 * 14), 1);
   }
 }
 #endif
@@ -756,7 +781,7 @@ TEST_F(ScudoWrappersCTest, MallocIterateBoundary) {
 #if !SCUDO_FUCHSIA
 TEST_F(ScudoWrappersCDeathTest, MallocDisableDeadlock) {
   // We expect heap operations within a disable/enable scope to deadlock.
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       {
         void *P = malloc(Size);
         EXPECT_NE(P, nullptr);
@@ -812,7 +837,7 @@ TEST_F(ScudoWrappersCDeathTest, Fork) {
   free(P);
 
   // fork should stall if the allocator has been disabled.
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       {
         malloc_disable();
         alarm(1);

@@ -11,6 +11,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/float80.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
@@ -320,6 +321,13 @@ MPFRNumber MPFRNumber::frexp(int &exp) {
 MPFRNumber MPFRNumber::hypot(const MPFRNumber &b) {
   MPFRNumber result(*this);
   mpfr_hypot(result.value, value, b.value, mpfr_rounding);
+  return result;
+}
+
+MPFRNumber MPFRNumber::lgamma() const {
+  MPFRNumber result(*this);
+  int signp;
+  mpfr_lgamma(result.value, &signp, value, mpfr_rounding);
   return result;
 }
 
@@ -638,6 +646,12 @@ template <> float128 MPFRNumber::as<float128>() const {
   return mpfr_get_float128(value, mpfr_rounding);
 }
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+template <> float80 MPFRNumber::as<float80>() const {
+  return fputil::cast<float80>(mpfr_get_ld(value, mpfr_rounding));
+}
+#endif
 
 template <> bfloat16 MPFRNumber::as<bfloat16>() const {
   return fputil::cast<bfloat16>(mpfr_get_flt(value, mpfr_rounding));

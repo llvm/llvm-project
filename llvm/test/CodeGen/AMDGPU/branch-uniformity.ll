@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck %s
 
 ; The branch instruction in LOOP49 has a uniform condition, but PHI instructions
 ; introduced by the structurizecfg pass previously caused a false divergence

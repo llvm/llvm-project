@@ -1,6 +1,6 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
 
 declare float @llvm.amdgcn.div.fixup.f32(float, float, float) nounwind readnone
 declare double @llvm.amdgcn.div.fixup.f64(double, double, double) nounwind readnone

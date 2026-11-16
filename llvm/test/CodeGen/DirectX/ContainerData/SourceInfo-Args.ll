@@ -1,4 +1,5 @@
-; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
+; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj --dx-pdb-path=%t.pdb -o /dev/null
+; RUN: llvm-pdbutil pdb2yaml --dxcontainer %t.pdb | FileCheck %s --check-prefix=DXC
 
 ; DXC:      - Name:            SRCI
 ; DXC:        SourceInfo:

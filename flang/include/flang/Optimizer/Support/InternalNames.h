@@ -12,7 +12,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
-#include <optional>
 
 namespace fir {
 
@@ -195,6 +194,15 @@ struct NameUniquer {
   /// Returns true if the passed name denotes a special symbol (e.g. global
   /// symbol generated for derived type description).
   static bool isSpecialSymbol(llvm::StringRef name);
+
+  /// Returns true if the passed name denotes a compiler generated name.
+  /// If \p excludeStringLiterals is true, string literals are excluded from the
+  /// check.
+  /// If \p excludeArrayLiterals is true, array literals are excluded from the
+  /// check.
+  static bool isCompilerGenerated(llvm::StringRef name,
+                                  bool excludeStringLiterals = true,
+                                  bool excludeArrayLiterals = true);
 
 private:
   static std::string intAsString(std::int64_t i);

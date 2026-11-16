@@ -193,7 +193,6 @@ define <4 x float> @add_v4f32_0uu3(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %r
 }
 
-; FIXME: Use lower xmm only
 define <8 x float> @add_v8f32_0uu3uuuu(<8 x float> %a, <8 x float> %b) {
 ; SSE-LABEL: add_v8f32_0uu3uuuu:
 ; SSE:       # %bb.0:
@@ -202,7 +201,7 @@ define <8 x float> @add_v8f32_0uu3uuuu(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX-LABEL: add_v8f32_0uu3uuuu:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 poison, i32 poison, i32 10, i32 poison, i32 poison, i32 poison, i32 poison>
   %y = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 1, i32 poison, i32 poison, i32 11, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -236,7 +235,6 @@ define <8 x float> @add_v8f32_0uuuuu6u(<8 x float> %a, <8 x float> %b) {
   ret <8 x float> %r
 }
 
-; FIXME: Use lower xmm only
 define <8 x float> @add_v8f32_01uuuuuu(<8 x float> %a, <8 x float> %b) {
 ; SSE-LABEL: add_v8f32_01uuuuuu:
 ; SSE:       # %bb.0:
@@ -245,7 +243,7 @@ define <8 x float> @add_v8f32_01uuuuuu(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX-LABEL: add_v8f32_01uuuuuu:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %y = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 1, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>

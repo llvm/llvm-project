@@ -19,7 +19,7 @@ define void @hoist_invariant_load_noalias_due_to_memchecks(ptr %dst, ptr %invari
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i64 0
@@ -68,7 +68,7 @@ define void @dont_hoist_variant_address(ptr %dst, ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -126,7 +126,7 @@ define void @dont_hoist_predicated_load(ptr %dst, ptr %invariant_ptr, ptr %cond_
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -137,9 +137,9 @@ define void @dont_hoist_predicated_load(ptr %dst, ptr %invariant_ptr, ptr %cond_
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14:![0-9]+]]
+; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14:![0-9]+]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
-; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP9]], align 4, !alias.scope [[META16:![0-9]+]], !noalias [[META18:![0-9]+]]
+; CHECK-NEXT:    store i32 [[TMP23]], ptr [[TMP9]], align 4, !alias.scope [[META16:![0-9]+]], !noalias [[META18:![0-9]+]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP1]], i64 1
@@ -209,25 +209,23 @@ define void @load_store_noalias_via_tbaa(ptr %p, ptr %q, ptr %n) {
 ; CHECK-LABEL: define void @load_store_noalias_via_tbaa(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P6:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[N5:%.*]] = ptrtoint ptr [[N]] to i64
-; CHECK-NEXT:    [[P2:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[N1:%.*]] = ptrtoint ptr [[N]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[N5]], 3074457345618258603
+; CHECK-NEXT:    [[P6:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[N5:%.*]] = ptrtoaddr ptr [[N]] to i64
+; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 [[N5]], 3074457345618258603
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[P6]], 3074457345618258603
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP17]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[N1]] to i2
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[P2]] to i2
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[N5]] to i2
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[P6]] to i2
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i2 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i2 [[TMP7]] to i64
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP8]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N1]], 3074457345618258603
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[P2]], 3074457345618258603
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N5]], 3074457345618258603
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[P6]], 3074457345618258603
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 4
@@ -247,7 +245,7 @@ define void @load_store_noalias_via_tbaa(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP4]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i64 [[N_VEC]], 12
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP18]]
@@ -277,10 +275,10 @@ define void @load_store_noalias_via_tbaa(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    [[TMP29:%.*]] = load float, ptr [[TMP25]], align 4, !tbaa [[FLOAT_TBAA27]], !alias.scope [[META31]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = load float, ptr [[TMP26]], align 4, !tbaa [[FLOAT_TBAA27]], !alias.scope [[META31]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = load float, ptr [[TMP27]], align 4, !tbaa [[FLOAT_TBAA27]], !alias.scope [[META31]]
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x float> poison, float [[TMP28]], i32 0
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x float> [[TMP32]], float [[TMP29]], i32 1
-; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <4 x float> [[TMP33]], float [[TMP30]], i32 2
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x float> [[TMP34]], float [[TMP31]], i32 3
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x float> poison, float [[TMP28]], i64 0
+; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x float> [[TMP32]], float [[TMP29]], i64 1
+; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <4 x float> [[TMP33]], float [[TMP30]], i64 2
+; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x float> [[TMP34]], float [[TMP31]], i64 3
 ; CHECK-NEXT:    [[TMP36:%.*]] = fadd <4 x float> [[BROADCAST_SPLAT]], [[TMP35]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x float> [[TMP36]], i64 3
 ; CHECK-NEXT:    store float [[TMP37]], ptr [[P]], align 4, !tbaa [[FLOAT_TBAA27]], !alias.scope [[META33:![0-9]+]], !noalias [[META28]]

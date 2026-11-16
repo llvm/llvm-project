@@ -187,7 +187,7 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !15 = distinct !{!15, !16, !17, !18}
 !16 = !{!"llvm.loop.mustprogress"}
 !17 = !{!"llvm.loop.parallel_accesses", !12}
-!18 = !{!"llvm.loop.vectorize.enable", i1 true}
+!18 = !{!"llvm.loop.vectorize.enable"}
 
 ;.
 ; CHECK: [[INT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}

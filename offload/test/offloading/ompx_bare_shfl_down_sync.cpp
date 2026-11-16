@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <limits>
+#include <omp.h>
 #include <ompx.h>
 #include <type_traits>
 

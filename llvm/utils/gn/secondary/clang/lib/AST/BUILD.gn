@@ -49,6 +49,7 @@ static_library("AST") {
     "//clang/include/clang/AST:StmtNodes",
     "//clang/include/clang/AST:TypeNodes",
   ]
+  include_dirs = [ "." ]
   sources = [
     "APValue.cpp",
     "ASTConcept.cpp",
@@ -64,6 +65,7 @@ static_library("AST") {
     "AttrImpl.cpp",
     "Availability.cpp",
     "ByteCode/BitcastBuffer.cpp",
+    "ByteCode/Block.cpp",
     "ByteCode/ByteCodeEmitter.cpp",
     "ByteCode/Compiler.cpp",
     "ByteCode/Context.cpp",
@@ -76,9 +78,9 @@ static_library("AST") {
     "ByteCode/Function.cpp",
     "ByteCode/InitMap.cpp",
     "ByteCode/Interp.cpp",
-    "ByteCode/InterpBlock.cpp",
     "ByteCode/InterpBuiltin.cpp",
     "ByteCode/InterpBuiltinBitCast.cpp",
+    "ByteCode/InterpBuiltinObjectSize.cpp",
     "ByteCode/InterpFrame.cpp",
     "ByteCode/InterpShared.cpp",
     "ByteCode/InterpStack.cpp",
@@ -121,6 +123,7 @@ static_library("AST") {
     "ExternalASTMerger.cpp",
     "ExternalASTSource.cpp",
     "FormatString.cpp",
+    "GlobalDecl.cpp",
     "HLSLResource.cpp",
     "InferAlloc.cpp",
     "InheritViz.cpp",

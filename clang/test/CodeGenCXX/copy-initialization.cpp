@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s %}
 
 struct Foo {
   Foo();
@@ -12,7 +13,7 @@ struct Bar {
 
 void f(Foo);
 
-// CHECK-LABEL: define{{.*}} void @_Z1g3Foo(ptr noundef align 1 dead_on_return %foo)
+// CHECK-LABEL: define{{.*}} void @_Z1g3Foo(ptr nofreeobj noundef align 1 dead_on_return dereferenceable(1) %{{.*}})
 void g(Foo foo) {
   // CHECK: call void @_ZN3BarC1Ev
   // CHECK: @_ZNK3BarcvRK3FooEv

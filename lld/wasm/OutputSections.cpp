@@ -104,13 +104,11 @@ void DataSection::finalizeContents() {
   });
 #ifndef NDEBUG
   unsigned activeCount = llvm::count_if(segments, [](OutputSegment *segment) {
-    return segment->requiredInBinary() &&
-           (segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0;
+    return segment->requiredInBinary() && segment->isActive();
   });
 #endif
 
-  assert((ctx.arg.sharedMemory || !ctx.isPic || ctx.arg.extendedConst ||
-          activeCount <= 1) &&
+  assert((!ctx.isPic || ctx.arg.extendedConst || activeCount <= 1) &&
          "output segments should have been combined by now");
 
   writeUleb128(os, segmentCount, "data segment count");
@@ -124,7 +122,7 @@ void DataSection::finalizeContents() {
     writeUleb128(os, segment->initFlags, "init flags");
     if (segment->initFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX)
       writeUleb128(os, 0, "memory index");
-    if ((segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
+    if (segment->isActive()) {
       if (ctx.isPic && ctx.arg.extendedConst) {
         writeU8(os, WASM_OPCODE_GLOBAL_GET, "global get");
         writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(),

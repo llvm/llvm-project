@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace object {
@@ -44,7 +45,7 @@ public:
   virtual ~BuildIDFetcher() = default;
 
   /// Returns the path to the debug file with the given build ID.
-  virtual std::optional<std::string> fetch(BuildIDRef BuildID) const;
+  virtual Expected<std::string> fetch(BuildIDRef BuildID) const;
 
 private:
   const std::vector<std::string> DebugFileDirectories;

@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -301,13 +302,15 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   Target &target = GetBreakpoint()->GetTarget();
   RealpathPrefixes realpath_prefixes = target.GetSourceRealpathPrefixes();
 
-  const size_t num_comp_units = context.module_sp->GetNumCompileUnits();
-  for (size_t i = 0; i < num_comp_units; i++) {
-    CompUnitSP cu_sp(context.module_sp->GetCompileUnitAtIndex(i));
-    if (cu_sp) {
-      if (filter.CompUnitPasses(*cu_sp))
+  if (const auto sym_file = context.module_sp->GetSymbolFileLocked()) {
+    const size_t num_comp_units = sym_file->GetNumCompileUnits();
+    for (size_t i = 0; i < num_comp_units; i++) {
+
+      if (const auto cu_sp = sym_file->GetCompileUnitAtIndex(i);
+          cu_sp && filter.CompUnitPasses(*cu_sp)) {
         cu_sp->ResolveSymbolContext(m_location_spec, eSymbolContextEverything,
                                     sc_list, &realpath_prefixes);
+      }
     }
   }
 

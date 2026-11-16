@@ -1,14 +1,14 @@
 
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=HSA %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global | FileCheck --check-prefix=HSA-CI %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo | FileCheck --check-prefix=HSA %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-flat-for-global | FileCheck --check-prefix=HSA-VI %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -filetype=obj | llvm-readobj -S --sd --syms - | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri --amdhsa-code-object-version=4 | llvm-readobj -S --sd --syms - | FileCheck %s --check-prefix=ELF
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W32 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W64 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W32 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W64 %s
+; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa | FileCheck --check-prefix=HSA %s
+; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa -mattr=-flat-for-global | FileCheck --check-prefix=HSA-CI %s
+; RUN: llc < %s -mtriple=amdgpu8.01--amdhsa | FileCheck --check-prefix=HSA %s
+; RUN: llc < %s -mtriple=amdgpu8.01--amdhsa -mattr=-flat-for-global | FileCheck --check-prefix=HSA-VI %s
+; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa -filetype=obj | llvm-readobj -S --sd --syms - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa | llvm-mc -filetype=obj -triple amdgpu7.00--amdhsa -mcpu=gfx700 --amdhsa-code-object-version=4 | llvm-readobj -S --sd --syms - | FileCheck %s --check-prefix=ELF
+; RUN: llc < %s -mtriple=amdgpu10.10--amdhsa -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W32 %s
+; RUN: llc < %s -mtriple=amdgpu10.10--amdhsa -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W64 %s
+; RUN: llc < %s -mtriple=amdgpu11.00--amdhsa -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W32 %s
+; RUN: llc < %s -mtriple=amdgpu11.00--amdhsa -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W64 %s
 
 ; The SHT_NOTE section contains the output from the .hsa_code_object_*
 ; directives.
@@ -26,7 +26,7 @@
 ; ELF: SHF_ALLOC (0x2)
 ; ELF: ]
 ; ELF: SectionData (
-; ELF:   0000: 07000000 B0020000 20000000 414D4447
+; ELF:   0000: 07000000 B4020000 20000000 414D4447
 ; ELF:   0010: 50550000 83AE616D 64687361 2E6B6572
 ; ELF:   0020: 6E656C73 928DA52E 61726773 9185AE2E
 ; ELF:   0030: 61646472 6573735F 73706163 65A6676C
@@ -66,11 +66,11 @@
 ; ELF:   0250: 6770725F 636F756E 7402B12E 76677072
 ; ELF:   0260: 5F737069 6C6C5F63 6F756E74 00AF2E77
 ; ELF:   0270: 61766566 726F6E74 5F73697A 6540AD61
-; ELF:   0280: 6D646873 612E7461 72676574 D924616D
-; ELF:   0290: 6467636E 2D756E6B 6E6F776E 2D616D64
-; ELF:   02A0: 6873612D 756E6B6E 6F776E2D 67667837
-; ELF:   02B0: 3030AE61 6D646873 612E7665 7273696F
-; ELF:   02C0: 6E920101
+; ELF:   0280: 6D646873 612E7461 72676574 D928616D
+; ELF:   0290: 64677075 372E3030 2D756E6B 6E6F776E
+; ELF:   02A0: 2D616D64 6873612D 756E6B6E 6F776E2D
+; ELF:   02B0: 67667837 3030AE61 6D646873 612E7665
+; ELF:   02C0: 7273696F 6E920101
 ; ELF: )
 
 ; ELF: Symbol {
@@ -80,8 +80,8 @@
 
 ; HSA-NOT: .AMDGPU.config
 ; HSA: .text
-; HSA-CI: .amdgcn_target "amdgcn-unknown-amdhsa-unknown-gfx700"
-; HSA-VI: .amdgcn_target "amdgcn-unknown-amdhsa-unknown-gfx801"
+; HSA-CI: .amdgcn_target "amdgpu7.00-unknown-amdhsa-unknown-gfx700"
+; HSA-VI: .amdgcn_target "amdgpu8.01-unknown-amdhsa-unknown-gfx801"
 
 ; HSA-LABEL: {{^}}simple:
 

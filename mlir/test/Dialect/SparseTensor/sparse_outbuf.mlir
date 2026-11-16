@@ -16,8 +16,8 @@
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<10xi32, #{{.*}}> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<10xi32, #{{.*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] level = 0 : tensor<10xi32, #{{.*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.coordinates %[[VAL_0]] level = 0 : tensor<10xi32, #{{.*}}> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10xi32, #{{.*}}> to memref<?xi32>
 // CHECK-DAG:       %[[VAL_8:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<10xf32> to memref<10xf32>
 // CHECK-DAG:       linalg.fill ins(%[[VAL_3]] : f32) outs(%[[VAL_8]] : memref<10xf32>)
@@ -50,8 +50,8 @@ func.func @allout_inplace(%arga: tensor<10xi32, #SV>,
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = tensor.empty() : tensor<10xf32>
-// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<10xi32, #{{.*}}> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<10xi32, #{{.*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] level = 0 : tensor<10xi32, #{{.*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.coordinates %[[VAL_0]] level = 0 : tensor<10xi32, #{{.*}}> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10xi32, #{{.*}}> to memref<?xi32>
 // CHECK-DAG:       %[[VAL_8:.*]] = bufferization.to_buffer %[[VAL_4]] : tensor<10xf32> to memref<10xf32>
 // CHECK-DAG:       linalg.fill ins(%[[VAL_2]] : f32) outs(%[[VAL_8]] : memref<10xf32>)
@@ -83,8 +83,8 @@ func.func @allout_materialize(%arga: tensor<10xi32, #SV>) -> tensor<10xf32> {
 // CHECK-SAME:      %[[VAL_1:.*]]: tensor<10xf32>) -> tensor<10xf32> {
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<10xf32, #{{.*}}> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<10xf32, #{{.*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_0]] level = 0 : tensor<10xf32, #{{.*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.coordinates %[[VAL_0]] level = 0 : tensor<10xf32, #{{.*}}> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10xf32, #{{.*}}> to memref<?xf32>
 // CHECK-DAG:       %[[VAL_7:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<10xf32> to memref<10xf32>
 // CHECK-DAG:       %[[VAL_8:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_2]]] : memref<?xindex>

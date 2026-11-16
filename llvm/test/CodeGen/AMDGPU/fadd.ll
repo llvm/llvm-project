@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck %s -check-prefix=SI -check-prefix=FUNC
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck %s -check-prefix=SI -check-prefix=FUNC
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck %s -check-prefix=SI -check-prefix=FUNC
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck %s -check-prefix=SI -check-prefix=FUNC
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
 
 ; FUNC-LABEL: {{^}}fadd_f32:

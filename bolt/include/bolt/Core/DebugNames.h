@@ -107,15 +107,19 @@ private:
   struct HashData {
     uint64_t StrOffset;
     uint32_t HashValue;
-    uint32_t EntryOffset;
+    uint64_t EntryOffset;
     std::vector<BOLTDWARF5AccelTableData *> Values;
+    /// Points at the name this entry was keyed by. Invalid before finalize()
+    const std::string *Name = nullptr;
+    /// New name (not in .debug_str). StrOffset is invalid before finalize()
+    bool NeedsStrOffset = false;
   };
   using HashList = std::vector<HashData *>;
   using BucketList = std::vector<HashList>;
   /// Contains all the offsets of CUs.
-  SmallVector<uint32_t, 1> CUList;
+  SmallVector<uint64_t, 1> CUList;
   /// Contains all the offsets of local TUs.
-  SmallVector<uint32_t, 1> LocalTUList;
+  SmallVector<uint64_t, 1> LocalTUList;
   /// Contains all the type hashes for split dwarf TUs.
   SmallVector<uint64_t, 1> ForeignTUList;
   using StringEntries =
@@ -131,6 +135,7 @@ private:
   uint32_t BucketCount = 0;
   uint32_t UniqueHashCount = 0;
   uint32_t AbbrevTableSize = 0;
+  dwarf::DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
   uint32_t CUIndexEncodingSize = 4;
   uint32_t TUIndexEncodingSize = 4;
   uint32_t AugmentationStringSize = 0;
@@ -169,6 +174,8 @@ private:
   getSecondIndexForEntry(const BOLTDWARF5AccelTableData &Value) const;
   /// Uniquify Entries.
   void finalize();
+  /// Append the new names that are not already in .debug_str
+  void assignStrOffsets();
   /// Computes bucket count.
   void computeBucketCount();
   /// Populate Abbreviations Map.

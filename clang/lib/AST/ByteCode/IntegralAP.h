@@ -145,7 +145,6 @@ public:
     if (Bits == 0)
       Bits = bitWidth();
 
-    APInt V = getValue();
     if constexpr (Signed)
       return APSInt(getValue().sext(Bits), !Signed);
     else
@@ -178,6 +177,7 @@ public:
   bool isMinusOne() const { return Signed && getValue().isAllOnes(); }
 
   unsigned countLeadingZeros() const { return getValue().countl_zero(); }
+  unsigned getActiveBits() const { return getValue().getActiveBits(); }
 
   void print(llvm::raw_ostream &OS) const { getValue().print(OS, Signed); }
   std::string toDiagnosticString(const ASTContext &Ctx) const {

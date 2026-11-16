@@ -6,7 +6,7 @@ inputs:
   team-slug:
     description: >-
       The team name (in slug form) that the github actor must be a member of.
-    requried: true
+    required: true
   LLVM_TOKEN_GENERATOR_CLIENT_ID:
     description: >-
       Client ID for our GitHub App we use for generating access tokens.
@@ -20,9 +20,9 @@ runs:
   using: "composite"
   steps:
     - id: app-token
-      uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
+      uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
       with:
-        app-id: ${{ inputs.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+        client-id: ${{ inputs.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
         private-key: ${{ inputs.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
         owner: ${{ github.repository_owner }}
         permission-members: read

@@ -21,7 +21,6 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 
 namespace mlir {
 class Location;
@@ -145,6 +144,19 @@ hlfir::Entity genVectorSubscriptedDesignatorFirstElementAddress(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
     Fortran::lower::StatementContext &stmtCtx);
+
+/// Address the ordinal component of a scalar or array variable of an F2023
+/// enumeration type.
+hlfir::Entity genEnumerationOrdinalDesignator(mlir::Location loc,
+                                              fir::FirOpBuilder &builder,
+                                              hlfir::Entity enumVar);
+
+/// Create a scalar temporary of enumeration type recTy holding ordinal.
+hlfir::EntityWithAttributes genEnumerationTemp(mlir::Location loc,
+                                               fir::FirOpBuilder &builder,
+                                               fir::RecordType recTy,
+                                               mlir::Value ordinal,
+                                               llvm::StringRef name);
 
 } // namespace Fortran::lower
 

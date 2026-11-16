@@ -16,7 +16,7 @@ class DataFormatterOSTypeTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.mm", "// Set break point at this line.")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_ostype_with_run_command(self):
         """Test the formatters we use for OSType."""
         self.build()

@@ -27,4 +27,4 @@ int takeCallbackAddress() {
     return 0;
 }
 
-// CHECK: [[F_CALLBACK]]   = !{!"_ZTSFviE.generalized"}
+// CHECK: [[F_CALLBACK]]   = !{!"_ZTSFviE"}

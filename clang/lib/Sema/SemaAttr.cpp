@@ -929,12 +929,42 @@ void Sema::ActOnPragmaMSSection(SourceLocation PragmaLocation,
 }
 
 void Sema::ActOnPragmaMSInitSeg(SourceLocation PragmaLocation,
-                                StringLiteral *SegmentName) {
+                                StringLiteral *SegmentName,
+                                IdentifierLoc *Func) {
   // There's no stack to maintain, so we just have a current section.  When we
   // see the default section, reset our current section back to null so we stop
   // tacking on unnecessary attributes.
-  CurInitSeg = SegmentName->getString() == ".CRT$XCU" ? nullptr : SegmentName;
-  CurInitSegLoc = PragmaLocation;
+  CurInitSeg.Segment =
+      SegmentName->getString() == ".CRT$XCU" ? nullptr : SegmentName;
+  CurInitSeg.PragmaLocation = PragmaLocation;
+  CurInitSeg.Func = nullptr;
+
+  if (Func) {
+    DeclarationNameInfo NameInfo(Func->getIdentifierInfo(), Func->getLoc());
+    LookupResult R(*this, NameInfo, LookupOrdinaryName);
+    LookupName(R, TUScope);
+
+    FunctionDecl *FD = R.getAsSingle<FunctionDecl>();
+    if (!FD) {
+      Diag(Func->getLoc(), diag::err_undeclared_var_use)
+          << Func->getIdentifierInfo();
+      return;
+    }
+
+    // the required type is: int __cdecl myexit (void (__cdecl *pf)(void))
+    QualType FnTy = FD->getType();
+    const auto *Proto = FnTy->getAs<FunctionProtoType>();
+    bool Valid = Proto && Proto->getReturnType()->isIntegerType() &&
+                 Proto->getNumParams() == 1 &&
+                 Proto->getParamType(0)->isFunctionPointerType();
+    if (!Valid) {
+      Diag(Func->getLoc(), diag::err_pragma_init_seg_bad_func_type)
+          << FD->getDeclName();
+      return;
+    }
+
+    CurInitSeg.Func = FD;
+  }
 }
 
 void Sema::ActOnPragmaMSAllocText(
@@ -1074,7 +1104,7 @@ void Sema::ActOnPragmaAttributeAttribute(
     //    variable(is_parameter).
     //  - a sub-rule and a sibling that's negated. E.g.
     //    variable(is_thread_local) and variable(unless(is_parameter))
-    llvm::SmallDenseMap<int, std::pair<int, SourceRange>, 2>
+    llvm::SmallDenseMap<int, attr::ParsedSubjectMatchRuleSet::value_type, 2>
         RulesToFirstSpecifiedNegatedSubRule;
     for (const auto &Rule : Rules) {
       attr::SubjectMatchRule MatchRule = attr::SubjectMatchRule(Rule.first);
@@ -1620,8 +1650,12 @@ void Sema::PopPragmaVisibility(bool IsNamespaceEnd, SourceLocation EndLoc) {
     FreeVisContext();
 }
 
-template <typename Ty>
-static bool checkCommonAttributeFeatures(Sema &S, const Ty *Node,
+// 'Subject' is the entity the attribute appertains to: a Decl, a Stmt, or a
+// QualType. Attr.td subject lists currently only accept declarations and
+// statements, so the appertainment and mutual exclusion checks for a QualType
+// are stubs that always succeed.
+template <typename SubjectTy>
+static bool checkCommonAttributeFeatures(Sema &S, SubjectTy Subject,
                                          const ParsedAttr &A,
                                          bool SkipArgCountCheck) {
   // Several attributes carry different semantics than the parsing requires, so
@@ -1636,11 +1670,11 @@ static bool checkCommonAttributeFeatures(Sema &S, const Ty *Node,
   if (!A.diagnoseLangOpts(S))
     return true;
   // Check whether the attribute appertains to the given subject.
-  if (!A.diagnoseAppertainsTo(S, Node))
+  if (!A.diagnoseAppertainsTo(S, Subject))
     return true;
   // Check whether the attribute is mutually exclusive with other attributes
   // that have already been applied to the declaration.
-  if (!A.diagnoseMutualExclusion(S, Node))
+  if (!A.diagnoseMutualExclusion(S, Subject))
     return true;
   // Check whether the attribute exists in the target architecture.
   if (S.CheckAttrTarget(A))
@@ -1675,4 +1709,8 @@ bool Sema::checkCommonAttributeFeatures(const Decl *D, const ParsedAttr &A,
 bool Sema::checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
                                         bool SkipArgCountCheck) {
   return ::checkCommonAttributeFeatures(*this, S, A, SkipArgCountCheck);
+}
+bool Sema::checkCommonAttributeFeatures(QualType T, const ParsedAttr &A,
+                                        bool SkipArgCountCheck) {
+  return ::checkCommonAttributeFeatures(*this, T, A, SkipArgCountCheck);
 }

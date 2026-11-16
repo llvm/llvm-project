@@ -15,14 +15,14 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any, Callable, Generic, Optional, Type, TypeVar
 
-from .dap_types import (
+from .types import (
     AnyResponse,
     ArgsProtocol,
     Capabilities,
     CapabilitiesEvent,
     ContinueArgs,
     DAPError,
-    DisconnectArgs,
+    EmptyBodyResponse,
     ErrorResponse,
     Event,
     ExitedEvent,
@@ -41,6 +41,7 @@ from .dap_types import (
     ReverseResponse,
     RunInTerminalRequest,
     RunInTerminalResponse,
+    StartDebuggingRequest,
     StepInArgs,
     StepOutArgs,
     TerminateArgs,
@@ -94,6 +95,9 @@ class PendingResponse(Generic[AnyResponse]):
         self._timeout = timeout
         self._command = command
         self._on_resolve = on_resolve
+
+    def done(self) -> bool:
+        return self._future.done()
 
     def result(self, msg: Optional[str] = None) -> AnyResponse:
         response = self.result_or_error()
@@ -285,8 +289,6 @@ class Session:
             if raw_capabilities := message.get("body"):
                 init_capabilities = dict_to_message(Capabilities, raw_capabilities)
                 self._state.update_capabilities(init_capabilities)
-        if command == DisconnectArgs.command_:
-            self._connection.stop()
 
     def _on_protocol_event(self, message: RawMessage) -> None:
         self._logger.debug("<-- %s", json.dumps(message))
@@ -322,6 +324,10 @@ class Session:
             terminal_request = dict_to_message(RunInTerminalRequest, request)
             self._reverse_requests.append(terminal_request)
             self._handle_run_in_terminal(terminal_request)
+        elif request_type == "startDebugging":
+            start_request = dict_to_message(StartDebuggingRequest, request)
+            self._reverse_requests.append(start_request)
+            self._handle_start_debugging(start_request)
         else:
             raise NotImplementedError(
                 f"no reverse request handler for '{request_type}'"
@@ -386,6 +392,16 @@ class Session:
 
         self._send_response(response)
 
+    def _handle_start_debugging(self, request: StartDebuggingRequest):
+        resp = EmptyBodyResponse(
+            type=MessageType.RESPONSE,
+            seq=self._next_sequence(),
+            command=request.command,
+            request_seq=request.seq,
+            success=True,
+        )
+        self._send_response(resp)
+
     def ensure_initialized(self):
         if self._state.is_initialized:
             return
@@ -448,7 +464,7 @@ class Session:
 
     def verify_reverse_process_exited(self, exit_code: Optional[int] = None):
         if process := self._reverse_process:
-            proc_exit_code = process.poll()
+            proc_exit_code = process.wait(timeout=1.0)
             if proc_exit_code is None:
                 raise DAPError(
                     f"process is still running, "

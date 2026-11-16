@@ -13,6 +13,19 @@
 // RUN: not %clang     -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json --ssaf-compilation-unit-id=test-cu --ssaf-extract-summaries=extractor1,extractor2 2>&1 | %{filecheck}=NO-EXTRACTORS-WITH-NAME
 // RUN: not %clang_cc1 -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json --ssaf-compilation-unit-id=test-cu --ssaf-extract-summaries=extractor1,extractor2 2>&1 | %{filecheck}=NO-EXTRACTORS-WITH-NAME
 
+// Verify --ssaf-include-local-entities is accepted alongside summary extraction
+// in both the driver and CC1, and that without --ssaf-tu-summary-file= the
+// flag is silently ignored (same shape as --ssaf-list-extractors).
+// RUN: rm -rf %t.localents && mkdir %t.localents
+// RUN: %clang     -fsyntax-only %s --ssaf-include-local-entities
+// RUN: %clang_cc1 -fsyntax-only %s --ssaf-include-local-entities
+// RUN: %clang     -fsyntax-only %s --ssaf-tu-summary-file=%t.localents/a.ssaf.json --ssaf-compilation-unit-id=test-cu --ssaf-extract-summaries=CallGraph --ssaf-include-local-entities
+// RUN: %clang_cc1 -fsyntax-only %s --ssaf-tu-summary-file=%t.localents/b.ssaf.json --ssaf-compilation-unit-id=test-cu --ssaf-extract-summaries=CallGraph --ssaf-include-local-entities
+
+// Verify the driver forwards the flag to CC1.
+// RUN: %clang -### -fsyntax-only %s --ssaf-include-local-entities --ssaf-tu-summary-file=%t.localents/c.ssaf.json --ssaf-compilation-unit-id=test-cu --ssaf-extract-summaries=CallGraph 2>&1 | FileCheck %s --check-prefix=DRIVER-FORWARDS-FLAG
+// DRIVER-FORWARDS-FLAG: "-cc1"{{.+}}"--ssaf-include-local-entities"
+
 void empty() {}
 
 // NOT-MATCHING-THE-PATTERN: error: failed to parse the value of '--ssaf-tu-summary-file=foobar' the value must follow the '<path>.<format>' pattern [-Wscalable-static-analysis-framework]

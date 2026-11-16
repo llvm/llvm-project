@@ -40,4 +40,4 @@ endif()
 add_lit_testsuite(check-rtsan "Running the Rtsan tests"
   ${RTSAN_TESTSUITES}
   DEPENDS ${RTSAN_TEST_DEPS})
-set_target_properties(check-rtsan PROPERTIES FOLDER "Compiler-RT Misc")
+set_target_properties(check-rtsan PROPERTIES FOLDER "compiler-rt Misc")

@@ -19,7 +19,7 @@
 #include "src/sys/mman/pkey_set.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/LibcTest.h"
+#include "test/UnitTest/Test.h"
 #include "test/UnitTest/TestLogger.h"
 
 #include <linux/param.h> // For EXEC_PAGESIZE.
@@ -73,7 +73,13 @@ public:
 };
 
 bool protection_keys_supported() {
-  static bool supported = []() {
+  static bool checked = false;
+  static bool supported;
+  if (checked)
+    return supported;
+
+  checked = true;
+  supported = []() {
     PKeyGuard pkey(LIBC_NAMESPACE::pkey_alloc(0, 0));
     int err = libc_errno;
     libc_errno = 0;

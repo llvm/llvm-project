@@ -12,7 +12,7 @@ from lldbsuite.test.concurrent_base import ConcurrentEventsBase
 from lldbsuite.test.lldbtest import TestBase
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 @skipIfWindows
 class ConcurrentBatchedBreakpointStepOver(ConcurrentEventsBase):
     @skipIf(triple="^mips")

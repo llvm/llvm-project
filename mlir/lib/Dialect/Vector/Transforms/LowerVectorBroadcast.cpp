@@ -73,6 +73,10 @@ public:
     //   %x = [%b,%b,%b,%b] : n-D
     if (srcRank < dstRank) {
       // Duplication.
+      if (dstType.getScalableDims()[0])
+        return rewriter.notifyMatchFailure(
+            op, "Vector broadcasting over a scalable dimension is not "
+                "currently supported");
       VectorType resType = VectorType::Builder(dstType).dropDim(0);
       Value bcst =
           vector::BroadcastOp::create(rewriter, loc, resType, op.getSource());
@@ -117,11 +121,10 @@ public:
         VectorType::get(dstType.getShape().drop_front(), eltType,
                         dstType.getScalableDims().drop_front());
 
-    // For "stretch not at start" with a scalable outer dimension we would need
-    // to emit an scf.for loop, which is not yet supported.  Check before
-    // creating any IR so that returning failure() does not violate the pattern
-    // API contract.
-    if (m != 0 && dstType.getScalableDims()[0]) {
+    // For a scalable outer dimension we would need to emit an scf.for loop,
+    // which is not yet supported. Check before creating any IR so that
+    // returning failure() does not violate the pattern API contract.
+    if (dstType.getScalableDims()[0]) {
       // TODO: For scalable vectors we should emit an scf.for loop.
       return failure();
     }

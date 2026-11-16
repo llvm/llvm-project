@@ -450,8 +450,7 @@ define <vscale x 2 x half> @icmp_select_nxv2f16(<vscale x 2 x half> %a, <vscale 
 ; CHECK-LABEL: icmp_select_nxv2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -464,8 +463,7 @@ define <vscale x 2 x float> @icmp_select_nxv2f32(<vscale x 2 x float> %a, <vscal
 ; CHECK-LABEL: icmp_select_nxv2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -478,8 +476,7 @@ define <vscale x 2 x double> @icmp_select_nxv2f64(<vscale x 2 x double> %a, <vsc
 ; CHECK-LABEL: icmp_select_nxv2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -492,8 +489,7 @@ define <vscale x 2 x bfloat> @icmp_select_nxv2bf16(<vscale x 2 x bfloat> %a, <vs
 ; CHECK-LABEL: icmp_select_nxv2bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -506,8 +502,7 @@ define <vscale x 4 x half> @icmp_select_nxv4f16(<vscale x 4 x half> %a, <vscale 
 ; CHECK-LABEL: icmp_select_nxv4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -520,8 +515,7 @@ define <vscale x 4 x float> @icmp_select_nxv4f32(<vscale x 4 x float> %a, <vscal
 ; CHECK-LABEL: icmp_select_nxv4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -534,8 +528,7 @@ define <vscale x 4 x bfloat> @icmp_select_nxv4bf16(<vscale x 4 x bfloat> %a, <vs
 ; CHECK-LABEL: icmp_select_nxv4bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -548,8 +541,7 @@ define <vscale x 8 x half> @icmp_select_nxv8f16(<vscale x 8 x half> %a, <vscale 
 ; CHECK-LABEL: icmp_select_nxv8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -562,8 +554,7 @@ define <vscale x 8 x bfloat> @icmp_select_nxv8bf16(<vscale x 8 x bfloat> %a, <vs
 ; CHECK-LABEL: icmp_select_nxv8bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -576,8 +567,7 @@ define <vscale x 1 x i64> @icmp_select_nxv1i64(<vscale x 1 x i64> %a, <vscale x 
 ; CHECK-LABEL: icmp_select_nxv1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -590,8 +580,7 @@ define <vscale x 2 x i64> @icmp_select_nxv2i64(<vscale x 2 x i64> %a, <vscale x 
 ; CHECK-LABEL: icmp_select_nxv2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -604,8 +593,7 @@ define <vscale x 1 x i32> @icmp_select_nxv1i32(<vscale x 1 x i32> %a, <vscale x 
 ; CHECK-LABEL: icmp_select_nxv1i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -618,8 +606,7 @@ define <vscale x 4 x i32> @icmp_select_nxv4i32(<vscale x 4 x i32> %a, <vscale x 
 ; CHECK-LABEL: icmp_select_nxv4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -632,8 +619,7 @@ define <vscale x 1 x i16> @icmp_select_nxv1i16(<vscale x 1 x i16> %a, <vscale x 
 ; CHECK-LABEL: icmp_select_nxv1i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -646,8 +632,7 @@ define <vscale x 8 x i16> @icmp_select_nxv8i16(<vscale x 8 x i16> %a, <vscale x 
 ; CHECK-LABEL: icmp_select_nxv8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -660,8 +645,7 @@ define  <vscale x 1 x i8> @icmp_select_nxv1i8(<vscale x 1 x i8> %a, <vscale x 1 
 ; CHECK-LABEL: icmp_select_nxv1i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    sel z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    ret
@@ -674,8 +658,7 @@ define  <vscale x 16 x i8> @icmp_select_nxv16i8(<vscale x 16 x i8> %a, <vscale x
 ; CHECK-LABEL: icmp_select_nxv16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    sel z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    ret
@@ -688,8 +671,7 @@ define <vscale x 1 x i1> @icmp_select_nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x
 ; CHECK-LABEL: icmp_select_nxv1i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p2.d, xzr, x8
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    sel p0.b, p2, p0.b, p1.b
@@ -703,8 +685,7 @@ define <vscale x 2 x i1> @icmp_select_nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x
 ; CHECK-LABEL: icmp_select_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p2.d, xzr, x8
 ; CHECK-NEXT:    sel p0.b, p2, p0.b, p1.b
 ; CHECK-NEXT:    ret
@@ -716,8 +697,7 @@ define <vscale x 4 x i1> @icmp_select_nxv4i1(<vscale x 4 x i1> %a, <vscale x 4 x
 ; CHECK-LABEL: icmp_select_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p2.s, xzr, x8
 ; CHECK-NEXT:    sel p0.b, p2, p0.b, p1.b
 ; CHECK-NEXT:    ret
@@ -729,8 +709,7 @@ define <vscale x 8 x i1> @icmp_select_nxv8i1(<vscale x 8 x i1> %a, <vscale x 8 x
 ; CHECK-LABEL: icmp_select_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p2.h, xzr, x8
 ; CHECK-NEXT:    sel p0.b, p2, p0.b, p1.b
 ; CHECK-NEXT:    ret
@@ -742,8 +721,7 @@ define <vscale x 16 x i1> @icmp_select_nxv16i1(<vscale x 16 x i1> %a, <vscale x 
 ; CHECK-LABEL: icmp_select_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    csetm x8, eq
 ; CHECK-NEXT:    whilelo p2.b, xzr, x8
 ; CHECK-NEXT:    sel p0.b, p2, p0.b, p1.b
 ; CHECK-NEXT:    ret

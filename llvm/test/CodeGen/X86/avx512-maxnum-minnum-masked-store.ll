@@ -27,8 +27,8 @@ define void @maxnum_v4f32_masked_store(<4 x float> %a, ptr %ptr) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovups (%rdi), %xmm1
 ; AVX512F-NEXT:    vmaxps %xmm0, %xmm1, %xmm1
-; AVX512F-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vcmpordps %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vmovups %zmm1, (%rdi) {%k1}
@@ -61,8 +61,8 @@ define void @maxnum_v2f64_masked_store(<2 x double> %a, ptr %ptr) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovupd (%rdi), %xmm1
 ; AVX512F-NEXT:    vmaxpd %xmm0, %xmm1, %xmm1
-; AVX512F-NEXT:    vcmpunordpd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vcmpordpd %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
 ; AVX512F-NEXT:    vmovupd %zmm1, (%rdi) {%k1}
@@ -95,8 +95,8 @@ define void @minnum_v4f32_masked_store(<4 x float> %a, ptr %ptr) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovups (%rdi), %xmm1
 ; AVX512F-NEXT:    vminps %xmm0, %xmm1, %xmm1
-; AVX512F-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vcmpordps %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vmovups %zmm1, (%rdi) {%k1}
@@ -129,8 +129,8 @@ define void @minnum_v2f64_masked_store(<2 x double> %a, ptr %ptr) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovupd (%rdi), %xmm1
 ; AVX512F-NEXT:    vminpd %xmm0, %xmm1, %xmm1
-; AVX512F-NEXT:    vcmpunordpd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vcmpordpd %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
 ; AVX512F-NEXT:    vmovupd %zmm1, (%rdi) {%k1}

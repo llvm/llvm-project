@@ -1,10 +1,10 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefixes=VI,GFX89
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefixes=GFX9,GFX89
+// RUN: not llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck %s --check-prefixes=VI,GFX89
+// RUN: not llvm-mc -triple=amdgpu9.00 -show-encoding %s | FileCheck %s --check-prefixes=GFX9,GFX89
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOSI,NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOCI,NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOVI,NOGFX89 --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGFX9,NOGFX89 --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu6.00 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOSI,NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu7.04 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOCI,NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu8.02 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOVI,NOGFX89 --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu9.00 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGFX9,NOGFX89 --implicit-check-not=error:
 
 //---------------------------------------------------------------------------//
 // Check SDWA operands
@@ -120,7 +120,7 @@ v_cmp_class_f32_sdwa vcc, -v1, sext(v2) src0_sel:BYTE_2 src1_sel:WORD_0
 //===----------------------------------------------------------------------===//
 
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: sdwa variant of this instruction is not supported
-// GFX89: v_nop ; encoding: [0xf9,0x00,0x00,0x7e,0x00,0x00,0x00,0x00]
+// GFX89: v_nop_sdwa ; encoding: [0xf9,0x00,0x00,0x7e,0x00,0x00,0x00,0x00]
 v_nop_sdwa
 
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: not a valid operand.

@@ -89,7 +89,7 @@ bool DAPTestBase::GetDebuggerSupportsTarget(StringRef platform) {
 }
 
 void DAPTestBase::CreateDebugger() {
-  dap->debugger = lldb::SBDebugger::Create();
+  dap->debugger = lldb::SBDebugger::Create(/*source_init_files=*/false);
   ASSERT_TRUE(dap->debugger);
   dap->target = dap->debugger.GetDummyTarget();
 

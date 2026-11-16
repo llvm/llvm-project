@@ -5,56 +5,47 @@ define i64 @Foo(ptr align 8 dereferenceable(344) %0, i64 %1) {
 ; CHECK-LABEL: define i64 @Foo(
 ; CHECK-SAME: ptr align 8 dereferenceable(344) [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 104
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i64 112
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i64 24
-; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i64> [[TMP12]], i64 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> poison, i64 0, i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[TMP1]], i32 1
-; CHECK-NEXT:    br label %[[BB16:.*]]
-; CHECK:       [[BB16]]:
-; CHECK-NEXT:    [[TMP17:%.*]] = phi <2 x i64> [ [[TMP11]], [[TMP2:%.*]] ], [ zeroinitializer, %[[TMP25:.*]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = phi <2 x i64> [ [[TMP13]], [[TMP2]] ], [ [[TMP29:%.*]], %[[TMP25]] ]
-; CHECK-NEXT:    switch i32 0, label %[[BB19:.*]] [
-; CHECK-NEXT:      i32 0, label %[[TMP25]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> poison, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> poison, <4 x i32> <i32 poison, i32 0, i32 poison, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> poison, <4 x i32> <i32 1, i32 poison, i32 0, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> [[TMP8]], <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0>, i64 [[TMP1]], i64 5
+; CHECK-NEXT:    br label %[[DOTCONT174:.*]]
+; CHECK:       [[DOTCONT174]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i64> [ [[TMP9]], [[TMP2:%.*]] ], [ [[TMP22:%.*]], %[[TMP26:.*]] ]
+; CHECK-NEXT:    switch i32 0, label %[[_CONT174:.*]] [
+; CHECK-NEXT:      i32 0, label %[[TMP26]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[BB19]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x i64> [[TMP18]], <2 x i64> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i64> [[TMP20]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i64> [[TMP21]], i64 0, i32 2
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <4 x i64> [[TMP22]], <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <2 x i64> [[TMP14]], <2 x i64> [[TMP18]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    br label %[[TMP25]]
-; CHECK:       [[TMP25]]:
-; CHECK-NEXT:    [[TMP26:%.*]] = phi <2 x i64> [ [[TMP17]], %[[BB19]] ], [ zeroinitializer, %[[BB16]] ]
-; CHECK-NEXT:    [[TMP27:%.*]] = phi <4 x i64> [ [[TMP23]], %[[BB19]] ], [ zeroinitializer, %[[BB16]] ]
-; CHECK-NEXT:    [[TMP28:%.*]] = phi <2 x i64> [ [[TMP24]], %[[BB19]] ], [ [[TMP15]], %[[BB16]] ]
-; CHECK-NEXT:    [[TMP29]] = shufflevector <2 x i64> [[TMP18]], <2 x i64> <i64 0, i64 poison>, <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:    br i1 false, label %[[DOTLOOPEXIT206:.*]], label %[[BB16]]
-; CHECK:       [[_LOOPEXIT206:.*:]]
-; CHECK-NEXT:    switch i32 0, label %[[BB32:.*]] [
-; CHECK-NEXT:      i32 0, [[DOTCONT174:label %.*]]
-; CHECK-NEXT:      i32 1, label %[[BB30:.*]]
+; CHECK:       [[_CONT174]]:
+; CHECK-NEXT:    [[TMP14:%.*]] = call <2 x i64> @llvm.umin.v2i64(<2 x i64> zeroinitializer, <2 x i64> <i64 0, i64 -1>)
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i64> [[TMP14]], <2 x i64> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <8 x i64> [[TMP15]], <8 x i64> poison, <8 x i32> <i32 poison, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 5, i32 poison>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <8 x i64> [[TMP16]], <8 x i64> poison, <8 x i32> <i32 poison, i32 1, i32 1, i32 poison, i32 poison, i32 poison, i32 6, i32 6>
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x i64> [[TMP12]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <8 x i64> [[TMP18]], <8 x i64> [[TMP17]], <8 x i32> <i32 0, i32 9, i32 10, i32 1, i32 2, i32 3, i32 14, i32 15>
+; CHECK-NEXT:    br label %[[TMP26]]
+; CHECK:       [[TMP26]]:
+; CHECK-NEXT:    [[TMP21:%.*]] = phi <8 x i64> [ [[TMP19]], %[[_CONT174]] ], [ [[TMP10]], %[[DOTCONT174]] ]
+; CHECK-NEXT:    [[TMP22]] = shufflevector <4 x i64> [[TMP12]], <4 x i64> <i64 poison, i64 0, i64 0, i64 0>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    br i1 false, label %[[DOTLOOPEXIT206:.*]], label %[[DOTCONT174]]
+; CHECK:       [[DOTLOOPEXIT206]]:
+; CHECK-NEXT:    switch i32 0, label %[[BB33:.*]] [
+; CHECK-NEXT:      i32 0, label %[[DOTCONT175:.*]]
+; CHECK-NEXT:      i32 1, label %[[BB31:.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[BB30]]:
-; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <4 x i64> [[TMP27]], <4 x i64> <i64 0, i64 0, i64 poison, i64 0>, <4 x i32> <i32 4, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    br [[DOTCONT174]]
-; CHECK:       [[BB32]]:
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i64> [[TMP27]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <4 x i64> [[TMP33]], i64 0, i32 2
-; CHECK-NEXT:    [[TMP35:%.*]] = shufflevector <4 x i64> [[TMP34]], <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <2 x i64> [[TMP28]], i64 0, i32 0
-; CHECK-NEXT:    br [[DOTCONT174]]
-; CHECK:       [[_CONT174:.*:]]
-; CHECK-NEXT:    [[TMP37:%.*]] = phi <2 x i64> [ [[TMP26]], %[[BB32]] ], [ zeroinitializer, %[[BB30]] ], [ [[TMP26]], %[[DOTLOOPEXIT206]] ]
-; CHECK-NEXT:    [[TMP38:%.*]] = phi <4 x i64> [ [[TMP35]], %[[BB32]] ], [ [[TMP31]], %[[BB30]] ], [ [[TMP27]], %[[DOTLOOPEXIT206]] ]
-; CHECK-NEXT:    [[TMP39:%.*]] = phi <2 x i64> [ [[TMP36]], %[[BB32]] ], [ zeroinitializer, %[[BB30]] ], [ [[TMP28]], %[[DOTLOOPEXIT206]] ]
+; CHECK:       [[BB31]]:
+; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <8 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0>, <8 x i64> [[TMP21]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 14, i32 7>
+; CHECK-NEXT:    br label %[[DOTCONT175]]
+; CHECK:       [[BB33]]:
+; CHECK-NEXT:    [[TMP31:%.*]] = call <2 x i64> @llvm.umin.v2i64(<2 x i64> zeroinitializer, <2 x i64> <i64 0, i64 -1>)
+; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <2 x i64> [[TMP31]], <2 x i64> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <8 x i64> [[TMP21]], <8 x i64> [[TMP27]], <8 x i32> <i32 0, i32 8, i32 2, i32 3, i32 4, i32 5, i32 13, i32 7>
+; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <8 x i64> [[TMP28]], <8 x i64> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 3, i32 4, i32 5, i32 6, i32 6>
+; CHECK-NEXT:    br label %[[DOTCONT175]]
+; CHECK:       [[DOTCONT175]]:
+; CHECK-NEXT:    [[TMP30:%.*]] = phi <8 x i64> [ [[TMP29]], %[[BB33]] ], [ [[TMP24]], %[[BB31]] ], [ [[TMP21]], %[[DOTLOOPEXIT206]] ]
 ; CHECK-NEXT:    ret i64 0
 ;
   %3 = getelementptr i8, ptr %0, i64 104

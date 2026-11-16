@@ -485,11 +485,6 @@ void NamespaceInfo::merge(NamespaceInfo &&Other) {
 RecordInfo::RecordInfo(SymbolID USR, StringRef Name, StringRef Path)
     : SymbolInfo(InfoType::IT_record, USR, Name, Path) {}
 
-// FIXME: This constructor is currently unsafe for cross-arena copies of
-// populated records. Because a default copy of ScopeChildren will shallow-copy
-// the intrusive pointers, leading to a use-after-free when the TransientArena
-// is reset. Subsequent patches will address this by deep-copying children
-// individually via reduceChildren.
 RecordInfo::RecordInfo(const RecordInfo &Other, llvm::BumpPtrAllocator &Arena)
     : SymbolInfo(Other, Arena), TagType(Other.TagType),
       IsTypeDef(Other.IsTypeDef) {

@@ -19,9 +19,9 @@ and how bufferizations of character and array expressions should be done.
 This document proposes the addition of two concepts and a set of related
 operations in a new dialect HLFIR to allow a simpler lowering to a higher-level
 FIR representation that would later be lowered to the current FIR representation
-via MLIR translation passes.  As a result of these additions, it is likely that
-the fir.array_load/fir.array_merge_store and related array operations could be
-removed from FIR since array assignment analysis could directly happen on the
+via MLIR translation passes.  As a result of these additions, the
+fir.array_load/fir.array_merge_store and related array operations have been
+removed from FIR since array assignment analysis directly happens on the
 higher-level FIR representation.
 
 
@@ -110,8 +110,8 @@ The hlfir.declare operation and restrained memory types will allow:
   assignments or transformational intrinsics).
 - Generating debug information for the variables based on the hlfir.declare
   operation.
-- Generic Fortran aliasing analysis (currently implemented only around array
-  assignments with the fir.array_load concept).
+- Generic Fortran aliasing analysis (previously implemented only around array
+  assignments with the since-removed fir.array_load concept).
 
 The hlfir.declare will have a sibling fir.declare operation in FIR that will
 allow keeping variable information until debug info is generated. The main
@@ -501,7 +501,8 @@ The attributes can be:
 -   temporary_lhs: mark that the left hand side of the assignment is
     a compiler generated temporary.
 
-This will replace the current array_load/array_access/array_merge semantics.
+This replaced the legacy array_load/array_access/array_merge semantics, whose
+operations have since been removed from FIR.
 Instead, a more generic alias analysis will be performed on the LHS and RHS to
 detect aliasing, and a temporary inserted if needed. The alias analysis will
 look at all the memory references in the RHS operand tree and base overlap
@@ -1249,9 +1250,9 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array
 
 Step 6: lower hlfir.designate/hlfir.assign in a translation pass:
 
-At this point, the representation is similar to the current representation after
-the array value copy pass, and the existing FIR flow is used (lowering
-fir.do_loop to cfg and doing codegen to LLVM).
+At this point, the representation is similar to what the legacy lowering
+produced after its array value copy pass (both since removed), and the existing
+FIR flow is used (lowering fir.do_loop to cfg and doing codegen to LLVM).
 
 ### Example 3: assignments with vector subscript
 

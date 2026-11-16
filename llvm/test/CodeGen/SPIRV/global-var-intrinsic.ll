@@ -6,9 +6,12 @@
 ; clang -S -emit-llvm --target=spir example.cpp
 
 ; Test passes if use of "-verify-machineinstrs" doesn't lead to crash.
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
 ; CHECK: OpFunction
+
+; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; CHECK-ERROR: Function used as a data pointer requires SPV_INTEL_function_pointers extension
 
 @ptr_0 = dso_local global ptr null, align 4
 @ptr_1 = dso_local global ptr null, align 4

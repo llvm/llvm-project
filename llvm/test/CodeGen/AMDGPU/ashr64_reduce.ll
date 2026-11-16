@@ -7,7 +7,7 @@
 ;;
 ;;   DST = [ashr i32 HI(X), (Y & 0x1F), ashr i32 HI(X), 31]
 
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdpal < %s | FileCheck %s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Test range with metadata

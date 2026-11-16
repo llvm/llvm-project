@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/OffloadBundler.h"
-#include "clang/Basic/Cuda.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/TargetID.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
@@ -83,17 +83,14 @@ OffloadTargetInfo::OffloadTargetInfo(const StringRef Target,
   StringRef TargetIdWithFeature =
       Components.size() == 6 ? Components.back() : "";
   StringRef TargetId = TargetIdWithFeature.split(':').first;
-  if (!TargetId.empty() &&
-      clang::StringToOffloadArch(TargetId) != clang::OffloadArch::Unknown)
+  if (!TargetId.empty() && !clang::StringToOffloadArch(TargetId).isUnknown())
     this->TargetID = TargetIdWithFeature;
   else
     this->TargetID = "";
 
   this->OffloadKind = Components.front();
   ArrayRef<StringRef> TripleSlice{&Components[1], /*length=*/4};
-  llvm::Triple T = llvm::Triple(llvm::join(TripleSlice, "-"));
-  this->Triple = llvm::Triple(T.getArchName(), T.getVendorName(), T.getOSName(),
-                              T.getEnvironmentName());
+  this->Triple = llvm::Triple(llvm::join(TripleSlice, "-"));
 }
 
 bool OffloadTargetInfo::hasHostKind() const {
@@ -358,8 +355,10 @@ public:
   ~BinaryFileHandler() final {}
 
   Error ReadHeader(StringRef FC) final {
-    // Initialize the current bundle with the end of the container.
+    // Ensure iterators indicate an empty bundle range in case header parsing
+    // exits early.
     CurBundleInfo = BundlesInfo.end();
+    NextBundleInfo = BundlesInfo.end();
 
     // Check if buffer is smaller than magic string.
     size_t ReadChars = sizeof(OFFLOAD_BUNDLER_MAGIC_STR) - 1;
@@ -913,32 +912,19 @@ CreateFileHandler(MemoryBuffer &FirstInput,
                   const OffloadBundlerConfig &BundlerConfig) {
   std::string FilesType = BundlerConfig.FilesType;
 
-  if (FilesType == "i")
-    return std::make_unique<TextFileHandler>(/*Comment=*/"//");
-  if (FilesType == "ii")
-    return std::make_unique<TextFileHandler>(/*Comment=*/"//");
-  if (FilesType == "cui")
-    return std::make_unique<TextFileHandler>(/*Comment=*/"//");
-  if (FilesType == "hipi")
+  if (FilesType == "i" || FilesType == "ii" || FilesType == "cui" ||
+      FilesType == "hipi")
     return std::make_unique<TextFileHandler>(/*Comment=*/"//");
   // TODO: `.d` should be eventually removed once `-M` and its variants are
   // handled properly in offload compilation.
-  if (FilesType == "d")
+  if (FilesType == "d" || FilesType == "s")
     return std::make_unique<TextFileHandler>(/*Comment=*/"#");
   if (FilesType == "ll")
     return std::make_unique<TextFileHandler>(/*Comment=*/";");
-  if (FilesType == "bc")
+  if (FilesType == "bc" || FilesType == "gch" || FilesType == "ast")
     return std::make_unique<BinaryFileHandler>(BundlerConfig);
-  if (FilesType == "s")
-    return std::make_unique<TextFileHandler>(/*Comment=*/"#");
-  if (FilesType == "o")
+  if (FilesType == "o" || FilesType == "a")
     return CreateObjectFileHandler(FirstInput, BundlerConfig);
-  if (FilesType == "a")
-    return CreateObjectFileHandler(FirstInput, BundlerConfig);
-  if (FilesType == "gch")
-    return std::make_unique<BinaryFileHandler>(BundlerConfig);
-  if (FilesType == "ast")
-    return std::make_unique<BinaryFileHandler>(BundlerConfig);
 
   return createStringError(errc::invalid_argument,
                            "'" + FilesType + "': invalid file type specified");
@@ -1002,6 +988,18 @@ OffloadBundlerConfig::OffloadBundlerConfig()
   }
 }
 
+// Returns the on-disk size recorded in the compressed offload bundle header at
+// the start of \p Blob, or std::nullopt if the header carries no size field.
+static std::optional<size_t> getCompressedBundleSize(StringRef Blob) {
+  Expected<CompressedOffloadBundle::CompressedBundleHeader> HeaderOrErr =
+      CompressedOffloadBundle::CompressedBundleHeader::tryParse(Blob);
+  if (!HeaderOrErr) {
+    consumeError(HeaderOrErr.takeError());
+    return std::nullopt;
+  }
+  return HeaderOrErr->FileSize;
+}
+
 // List bundle IDs. Return true if an error was found.
 Error OffloadBundler::ListBundleIDsInFile(
     StringRef InputFileName, const OffloadBundlerConfig &BundlerConfig) {
@@ -1023,15 +1021,25 @@ Error OffloadBundler::ListBundleIDsInFile(
         (**Contents).getBuffer().drop_front(Offset), "",
         /*RequiresNullTerminator=*/false);
 
+    size_t CurBundleEnd = StringRef::npos;
     if (identify_magic((*Buffer).getBuffer()) ==
         file_magic::offload_bundle_compressed) {
-      NextBundleStart = (*Buffer).getBuffer().find("CCOB", 4);
+      // Locate this bundle's end and the next bundle from the header size.
+      if (std::optional<size_t> Size =
+              getCompressedBundleSize((*Buffer).getBuffer())) {
+        CurBundleEnd = *Size;
+        NextBundleStart = (*Buffer).getBuffer().find("CCOB", *Size);
+      } else {
+        // Legacy bundle without a recorded size: fall back to magic scanning.
+        NextBundleStart = (*Buffer).getBuffer().find("CCOB", 4);
+        CurBundleEnd = NextBundleStart;
+      }
     } else
       NextBundleStart = StringRef::npos;
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
         MemoryBuffer::getMemBuffer(
-            (*Buffer).getBuffer().take_front(NextBundleStart),
+            (*Buffer).getBuffer().take_front(CurBundleEnd),
             InputFileName, // FileName,
             false);
     if (std::error_code EC = CodeOrErr.getError())
@@ -1273,19 +1281,30 @@ Error OffloadBundler::UnbundleFiles() {
         (**CodeOrErr).getBuffer().drop_front(Offset), "",
         /*RequiresNullTerminator=*/false);
 
+    size_t CurBundleEnd = StringRef::npos;
     if (identify_magic((*Buffer).getBuffer()) ==
         file_magic::offload_bundle_compressed) {
-      NextBundleStart = (*Buffer).getBuffer().find("CCOB", 4);
+      // Locate this bundle's end and the next bundle from the header size.
+      if (std::optional<size_t> Size =
+              getCompressedBundleSize((*Buffer).getBuffer())) {
+        CurBundleEnd = *Size;
+        NextBundleStart = (*Buffer).getBuffer().find("CCOB", *Size);
+      } else {
+        // Legacy bundle without a recorded size: fall back to magic scanning.
+        NextBundleStart = (*Buffer).getBuffer().find("CCOB", 4);
+        CurBundleEnd = NextBundleStart;
+      }
     } else if (identify_magic((*Buffer).getBuffer()) ==
                file_magic::offload_bundle) {
       NextBundleStart = (*Buffer).getBuffer().find(
           OFFLOAD_BUNDLER_MAGIC_STR, sizeof(OFFLOAD_BUNDLER_MAGIC_STR));
+      CurBundleEnd = NextBundleStart;
     } else
       NextBundleStart = StringRef::npos;
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> BlobOrErr =
         MemoryBuffer::getMemBuffer(
-            (*Buffer).getBuffer().take_front(NextBundleStart),
+            (*Buffer).getBuffer().take_front(CurBundleEnd),
             BundlerConfig.InputFileNames.front(),
             /*RequiresNullTerminator=*/false);
     if (std::error_code EC = BlobOrErr.getError())

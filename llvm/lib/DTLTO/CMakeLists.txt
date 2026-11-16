@@ -3,6 +3,9 @@ add_llvm_component_library(LLVMDTLTO
   DTLTO.cpp
   DTLTODistributionDriver.cpp
 
+  LINK_LIBS
+  ${LLVM_PTHREAD_LIB}
+
   LINK_COMPONENTS
   BinaryFormat
   Core

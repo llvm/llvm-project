@@ -81,6 +81,7 @@ class TestCase(TestBase):
             return debug_stats["commands"]
         return None
 
+    @skipIfWasm  # no expression evaluation
     def test_expressions_frame_var_counts(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -171,7 +172,9 @@ class TestCase(TestBase):
             "totalSymbolTableParseTime",
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
+            "totalSymbolTablesParsedFromObjectFile",
             "totalSymbolTablesSavedToCache",
+            "totalSymbolTablesSymbolFileAddedSymbols",
             "totalSymbolTableSymbolCount",
             "totalSymbolTablesLoaded",
             "totalDebugInfoByteSize",
@@ -286,7 +289,9 @@ class TestCase(TestBase):
             "totalSymbolTableParseTime",
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
+            "totalSymbolTablesParsedFromObjectFile",
             "totalSymbolTablesSavedToCache",
+            "totalSymbolTablesSymbolFileAddedSymbols",
             "totalDebugInfoByteSize",
             "totalDebugInfoIndexTime",
             "totalDebugInfoIndexLoadedFromCache",
@@ -327,7 +332,9 @@ class TestCase(TestBase):
             "totalSymbolTableParseTime",
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
+            "totalSymbolTablesParsedFromObjectFile",
             "totalSymbolTablesSavedToCache",
+            "totalSymbolTablesSymbolFileAddedSymbols",
             "totalDebugInfoParseTime",
             "totalDebugInfoIndexTime",
             "totalDebugInfoIndexLoadedFromCache",
@@ -348,6 +355,8 @@ class TestCase(TestBase):
         strings = memory["strings"]
         strings_keys = [
             "bytesTotal",
+            "bytesUsed",
+            "bytesUnused",
         ]
         self.verify_keys(strings, '"strings"', strings_keys, None)
 
@@ -380,7 +389,9 @@ class TestCase(TestBase):
             "totalSymbolTableParseTime",
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
+            "totalSymbolTablesParsedFromObjectFile",
             "totalSymbolTablesSavedToCache",
+            "totalSymbolTablesSymbolFileAddedSymbols",
             "totalDebugInfoParseTime",
             "totalDebugInfoIndexTime",
             "totalDebugInfoIndexLoadedFromCache",
@@ -407,8 +418,10 @@ class TestCase(TestBase):
             "path",
             "symbolTableIndexTime",
             "symbolTableLoadedFromCache",
+            "symbolTableParsedFromObjectFile",
             "symbolTableParseTime",
             "symbolTableSavedToCache",
+            "symbolTableSymbolFileAddedSymbols",
             "dwoFileCount",
             "loadedDwoFileCount",
             "dwoErrorCount",
@@ -494,7 +507,9 @@ class TestCase(TestBase):
             "totalSymbolTableParseTime",
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
+            "totalSymbolTablesParsedFromObjectFile",
             "totalSymbolTablesSavedToCache",
+            "totalSymbolTablesSymbolFileAddedSymbols",
             "totalDebugInfoParseTime",
             "totalDebugInfoIndexTime",
             "totalDebugInfoIndexLoadedFromCache",
@@ -754,7 +769,7 @@ class TestCase(TestBase):
         self.assertIn("dwoErrorCount", debug_stats["modules"][0])
         self.assertEqual(debug_stats["modules"][0]["dwoErrorCount"], 1)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @no_debug_info_test
     def test_dsym_binary_has_symfile_in_stats(self):
         """
@@ -798,7 +813,7 @@ class TestCase(TestBase):
         # statistics.
         self.assertNotIn("symbolFileModuleIdentifiers", exe_stats)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @no_debug_info_test
     def test_no_dsym_binary_has_symfile_identifiers_in_stats(self):
         """
@@ -857,7 +872,7 @@ class TestCase(TestBase):
             # Make sure each .o file has some debug info bytes.
             self.assertGreater(o_module["debugInfoByteSize"], 0)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @no_debug_info_test
     def test_had_frame_variable_errors(self):
         """
@@ -1268,7 +1283,6 @@ class TestCase(TestBase):
                 f"The order of options '{options[0]}' and '{options[1]}' should not matter",
             )
 
-    @skipIfWindows
     def test_summary_statistics_providers(self):
         """
         Test summary timing statistics is included in statistics dump when
@@ -1308,7 +1322,6 @@ class TestCase(TestBase):
         self.assertIn("'totalTime':", summary_provider_str)
         self.assertIn("'type': 'python'", summary_provider_str)
 
-    @skipIfWindows
     def test_summary_statistics_providers_vec(self):
         """
         Test summary timing statistics is included in statistics dump when
@@ -1334,7 +1347,6 @@ class TestCase(TestBase):
         if "c++" in summary_provider_str:
             self.assertIn("std::vector", summary_provider_str)
 
-    @skipIfWindows
     def test_multiple_targets(self):
         """
         Test statistics dump only reports the stats from current target and

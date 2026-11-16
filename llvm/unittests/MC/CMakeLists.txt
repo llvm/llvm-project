@@ -6,6 +6,7 @@ endforeach()
 
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
+  BinaryFormat
   DebugInfoDWARF
   MC
   MCDisassembler
@@ -19,7 +20,9 @@ add_llvm_unittest(MCTests
   DwarfDebugFrameCIE.cpp
   DwarfLineTables.cpp
   DwarfLineTableHeaders.cpp
+  DXContainerWriterTest.cpp
   MCInstPrinter.cpp
+  MCPseudoProbeTest.cpp
   StringTableBuilderTest.cpp
   TargetRegistry.cpp
   MCDisassemblerTest.cpp

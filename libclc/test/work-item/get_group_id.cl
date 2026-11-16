@@ -3,7 +3,7 @@
 
 // RUN: %clang --target=%target -mcpu=%cpu %libclc_lib -cl-std=CL3.0 -O2 -fno-discard-value-names -emit-llvm -S -o - %s | FileCheck %s --check-prefix=%check_prefix
 
-// AMDGCN-LABEL: define hidden range(i64 0, 4294967296) i64 @test(
+// AMDGCN-LABEL: define hidden noundef range(i64 0, 4294967296) i64 @test(
 // AMDGCN-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.workgroup.id.x()

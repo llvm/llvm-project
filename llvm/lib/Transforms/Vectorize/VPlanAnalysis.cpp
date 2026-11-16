@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanAnalysis.h"
+#include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
+#include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 
 using namespace llvm;
@@ -26,12 +30,11 @@ void llvm::collectEphemeralRecipesForVPlan(
   SmallVector<VPRecipeBase *> Worklist;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
-    for (VPRecipeBase &R : *VPBB) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || !match(RepR, m_Intrinsic<Intrinsic::assume>()))
+    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB)) {
+      if (!match(&RepR, m_Intrinsic<Intrinsic::assume>()))
         continue;
-      Worklist.push_back(RepR);
-      EphRecipes.insert(RepR);
+      Worklist.push_back(&RepR);
+      EphRecipes.insert(&RepR);
     }
   }
 
@@ -54,9 +57,6 @@ void llvm::collectEphemeralRecipesForVPlan(
     }
   }
 }
-
-template void DomTreeBuilder::Calculate<DominatorTreeBase<VPBlockBase, false>>(
-    DominatorTreeBase<VPBlockBase, false> &DT);
 
 bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
                                         const VPRecipeBase *B) const {
@@ -106,9 +106,12 @@ VPRegisterUsage::spillCost(const TargetTransformInfo &TTI,
   return Cost;
 }
 
-SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
-    VPlan &Plan, ArrayRef<ElementCount> VFs, const TargetTransformInfo &TTI,
-    const SmallPtrSetImpl<const Value *> &ValuesToIgnore) {
+SmallVector<VPRegisterUsage, 8>
+llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
+                                    const TargetTransformInfo &TTI) {
+  DenseSet<VPRecipeBase *> EphemeralRecipes;
+  collectEphemeralRecipesForVPlan(Plan, EphemeralRecipes);
+
   // Each 'key' in the map opens a new interval. The values
   // of the map are the index of the 'last seen' usage of the
   // VPValue that is the key.
@@ -163,11 +166,10 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
     if (VPBB == LoopRegion->getExiting()) {
       // VPWidenIntOrFpInductionRecipes are used implicitly at the end of the
       // exiting block, where their increment will get materialized eventually.
-      for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
-        if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-          EndPoint[WideIV] = Idx2Recipe.size();
-          Ends.insert(WideIV);
-        }
+      for (auto &WideIV : make_isa_range<VPWidenIntOrFpInductionRecipe>(
+               LoopRegion->getEntryBasicBlock()->phis())) {
+        EndPoint[&WideIV] = Idx2Recipe.size();
+        Ends.insert(&WideIV);
       }
     }
   }
@@ -220,12 +222,10 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         !R->mayHaveSideEffects())
       continue;
 
-    // Skip recipes for ignored values.
-    // TODO: Should mark recipes for ephemeral values that cannot be removed
-    // explictly in VPlan.
-    if (isa<VPSingleDefRecipe>(R) &&
-        ValuesToIgnore.contains(
-            cast<VPSingleDefRecipe>(R)->getUnderlyingValue()))
+    // Skip recipes for ephemeral values, i.e. those only feeding assumes. They
+    // are removed before code generation and must not contribute to the
+    // register pressure of the plan.
+    if (EphemeralRecipes.contains(R))
       continue;
 
     // For each VF find the maximum usage of registers.
@@ -248,8 +248,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
             match(VPV, m_ExtractLastPart(m_VPValue())))
           continue;
 
-        if (VFs[J].isScalar() ||
-            isa<VPRegionValue, VPReplicateRecipe, VPDerivedIVRecipe,
+        if (VFs[J].isScalar() || VPV == CanIV ||
+            isa<VPReplicateRecipe, VPDerivedIVRecipe,
                 VPCurrentIterationPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
             (isa<VPInstruction>(VPV) && vputils::onlyScalarValuesUsed(VPV)) ||
             (isa<VPReductionPHIRecipe>(VPV) &&
@@ -339,4 +339,96 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   }
 
   return RUs;
+}
+
+//===----------------------------------------------------------------------===//
+// Outer-loop memory safety analysis.
+//===----------------------------------------------------------------------===//
+
+/// Returns the live-in IR value \p Ptr is based on, looking through GEPs, or
+/// nullptr if there is none.
+static const Value *getBaseObject(VPValue *Ptr) {
+  while (auto *VPI = dyn_cast<VPInstruction>(Ptr)) {
+    if (VPI->getOpcode() != Instruction::GetElementPtr)
+      break;
+    Ptr = VPI->getOperand(0);
+  }
+  auto *IRV = dyn_cast<VPIRValue>(Ptr);
+  return IRV ? IRV->getValue() : nullptr;
+}
+
+/// Returns true if \p ObjA and \p ObjB are known and \p AA proves they don't
+/// alias.
+static bool provablyDistinctObjects(AAResults &AA, const Value *ObjA,
+                                    const Value *ObjB) {
+  return ObjA && ObjB && AA.isNoAlias(ObjA, ObjB);
+}
+
+/// Returns true if a store of \p StoredTy to \p Addr in \p VPBB writes
+/// different locations on each iteration of \p OuterLoop.
+static bool writesDisjointLocationsPerIteration(VPValue *Addr, Type *StoredTy,
+                                                VPBasicBlock *VPBB,
+                                                VPBasicBlock *Latch,
+                                                const VPDominatorTree &VPDT,
+                                                PredicatedScalarEvolution &PSE,
+                                                const Loop *OuterLoop) {
+  // The address cannot repeat if it is an nusw GEP on a live-in base executed
+  // in every iteration, with a single index that does not wrap.
+  auto *GEP = dyn_cast<VPInstruction>(Addr);
+  if (!GEP || GEP->getOpcode() != Instruction::GetElementPtr ||
+      GEP->getNumOperands() != 2 || !isa<VPIRValue>(GEP->getOperand(0)) ||
+      !GEP->getGEPNoWrapFlags().hasNoUnsignedSignedWrap() ||
+      !VPDT.dominates(VPBB, Latch))
+    return false;
+  auto *Idx = dyn_cast<SCEVAddRecExpr>(
+      vputils::getSCEVExprForVPValue(GEP->getOperand(1), PSE, OuterLoop));
+  if (!Idx || !Idx->hasNoUnsignedWrap())
+    return false;
+
+  if (hasIrregularType(StoredTy, Latch->getPlan()->getDataLayout()))
+    return false;
+
+  // Stride != 0 ensures no write-after-write.
+  std::optional<int64_t> Stride =
+      vputils::getConstantStride(Addr, StoredTy, PSE, OuterLoop);
+  return Stride && *Stride != 0;
+}
+
+bool llvm::proveOuterLoopMemorySafety(VPlan &Plan,
+                                      PredicatedScalarEvolution &PSE,
+                                      AAResults &AA,
+                                      const VPDominatorTree &VPDT,
+                                      const Loop *OuterLoop) {
+  SmallVector<const Value *> LoadObjects;
+  SmallVector<const Value *> StoreObjects;
+  auto [Header, Latch] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
+  for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(Header)) {
+    for (VPRecipeBase &R : *VPBB) {
+      if (!R.mayReadOrWriteMemory())
+        continue;
+      VPValue *Addr, *StoredVal;
+      if (match(&R, m_VPInstruction<Instruction::Load>(m_VPValue(Addr)))) {
+        LoadObjects.push_back(getBaseObject(Addr));
+        continue;
+      }
+      // Bail out on any other memory accesses or write-after-write conflict in
+      // the outer loop.
+      if (!match(&R, m_VPInstruction<Instruction::Store>(m_VPValue(StoredVal),
+                                                         m_VPValue(Addr))) ||
+          !writesDisjointLocationsPerIteration(Addr, StoredVal->getScalarType(),
+                                               VPBB, Latch, VPDT, PSE,
+                                               OuterLoop))
+        return false;
+      StoreObjects.push_back(getBaseObject(Addr));
+    }
+  }
+
+  // Stores must access objects not accessed by any other load or store in the
+  // nest.
+  for (auto [I, StoreObj] : enumerate(StoreObjects))
+    for (const Value *Obj : concat<const Value *const>(
+             ArrayRef(StoreObjects).drop_front(I + 1), LoadObjects))
+      if (!provablyDistinctObjects(AA, StoreObj, Obj))
+        return false;
+  return true;
 }

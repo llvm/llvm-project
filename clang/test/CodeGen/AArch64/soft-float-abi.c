@@ -24,7 +24,7 @@ long double test4(long double a) { return a; }
 struct A {
   float x;
 };
-// SOFT: define dso_local i32 @test10(i64 %a.coerce)
+// SOFT: define dso_local i32 @test10(i32 %a.coerce)
 // HARD: define dso_local %struct.A @test10([1 x float] alignstack(8) %a.coerce)
 struct A test10(struct A a) { return a; }
 

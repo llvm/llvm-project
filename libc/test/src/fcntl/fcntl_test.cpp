@@ -17,8 +17,6 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/stat.h> // For S_IRWXU
-
 using LlvmLibcFcntlTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcFcntlTest, FcntlDupfd) {

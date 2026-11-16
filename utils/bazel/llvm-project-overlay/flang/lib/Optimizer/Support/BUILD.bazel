@@ -52,7 +52,6 @@ cc_library(
         "//mlir:IR",
         "//mlir:LLVMDialect",
         "//mlir:LLVMToLLVMIRTranslation",
-        "//mlir:OpenACCToLLVMIRTranslation",
         "//mlir:OpenACCTransforms",
         "//mlir:OpenMPToLLVMIRTranslation",
         "//mlir:OpenMPTransforms",

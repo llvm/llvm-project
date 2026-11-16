@@ -252,15 +252,15 @@ void foo() {
 // CHECK:0x00000064: "u"
 // CHECK:0x00000066: "AnonC"
 // CHECK:0x0000006c: "(anonymous namespace)"
-// CHECK:0x00000082: "llvm DWARFLinkerParallel library version "
-// CHECK:0x000000ac: "__artificial_type_unit"
-// CHECK:0x000000c3: ""
-// CHECK:0x000000c4: "AliasForS"
-// CHECK:0x000000ce: "C"
-// CHECK:0x000000d0: "N"
-// CHECK:0x000000d2: "Nested"
-// CHECK:0x000000d9: "S"
-// CHECK:0x000000db: "U"
+// CHECK:0x00000082: "llvm DWARFLinkerParallel library version
+// CHECK: "__artificial_type_unit"
+// CHECK: ""
+// CHECK: "AliasForS"
+// CHECK: "C"
+// CHECK: "N"
+// CHECK: "Nested"
+// CHECK: "S"
+// CHECK: "U"
 
 
 // CHECK:.apple_names

@@ -1,4 +1,4 @@
-# RUN: llc -emit-call-site-info -run-pass=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc -emit-call-site-info -run-pass=live-debug-values -o - %s | FileCheck %s
 
 ## Compiled from source:
 ## __attribute__((noinline))

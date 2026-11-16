@@ -14,13 +14,14 @@
 #ifndef MLIR_DIALECT_AFFINE_IR_AFFINEOPS_H
 #define MLIR_DIALECT_AFFINE_IR_AFFINEOPS_H
 
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithAttributes.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/IR/OpDefinition.h"
+
 namespace mlir {
 namespace affine {
 
@@ -157,8 +158,6 @@ void fullyComposeAffineMapAndOperands(AffineMap *map,
 
 } // namespace affine
 } // namespace mlir
-
-#include "mlir/Dialect/Affine/IR/AffineOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Affine/IR/AffineOps.h.inc"

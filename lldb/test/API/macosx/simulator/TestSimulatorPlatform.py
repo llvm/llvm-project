@@ -76,6 +76,7 @@ class TestSimulatorPlatformLaunching(TestBase):
                 expected_platform, self.trace
             )
             _, matched_strings = lldbutil.launch_exe_in_apple_simulator(
+                self,
                 device_udid,
                 self.getBuildArtifact("a.out"),
                 exe_args=[],
@@ -98,7 +99,7 @@ class TestSimulatorPlatformLaunching(TestBase):
             )
 
     @skipIfAsan
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfDarwinEmbedded
     @apple_simulator_test("iphone")
     @skipIf(archs=["x86_64"])
@@ -113,7 +114,7 @@ class TestSimulatorPlatformLaunching(TestBase):
         )
 
     @skipIfAsan
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfDarwinEmbedded
     @apple_simulator_test("appletv")
     @skipIf(archs=["x86_64"])

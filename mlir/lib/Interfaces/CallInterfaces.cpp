@@ -187,6 +187,10 @@ Operation *
 call_interface_impl::resolveCallable(CallOpInterface call,
                                      SymbolTableCollection *symbolTable) {
   CallInterfaceCallable callable = call.getCallableForCallee();
+  // Operations may not have a callee at all, e.g., when the callee is stored in
+  // an optional attribute that is missing in invalid IR.
+  if (!callable)
+    return nullptr;
   if (auto symbolVal = dyn_cast<Value>(callable))
     return symbolVal.getDefiningOp();
 
@@ -195,6 +199,70 @@ call_interface_impl::resolveCallable(CallOpInterface call,
   if (symbolTable)
     return symbolTable->lookupNearestSymbolFrom(call.getOperation(), symbolRef);
   return SymbolTable::lookupNearestSymbolFrom(call.getOperation(), symbolRef);
+}
+
+LogicalResult call_interface_impl::verifyCallOpInterface(
+    CallOpInterface call, TypeRange argumentTypes, TypeRange resultTypes) {
+  Operation *op = call.getOperation();
+
+  // The forwarded operands are in a 1:1 relationship with the arguments of the
+  // callee.
+  OperandRange argOperands = call.getArgOperands();
+  if (argOperands.size() != argumentTypes.size())
+    return op->emitOpError("incorrect number of operands for callee: expected ")
+           << argumentTypes.size() << ", but got " << argOperands.size();
+  for (unsigned i = 0, e = argOperands.size(); i != e; ++i) {
+    Type operandType = argOperands[i].getType();
+    if (operandType != argumentTypes[i])
+      return op->emitOpError("operand type mismatch: expected operand type ")
+             << argumentTypes[i] << ", but provided " << operandType
+             << " for operand number " << i;
+  }
+
+  // The forwarded results are in a 1:1 relationship with the results of the
+  // callee.
+  ResultRange forwardedResults = call.getForwardedResults();
+  if (forwardedResults.size() != resultTypes.size())
+    return op->emitOpError("incorrect number of results for callee: expected ")
+           << resultTypes.size() << ", but got " << forwardedResults.size();
+  for (unsigned i = 0, e = forwardedResults.size(); i != e; ++i) {
+    if (forwardedResults[i].getType() == resultTypes[i])
+      continue;
+    InFlightDiagnostic diag = op->emitOpError("result type mismatch at index ")
+                              << i;
+    diag.attachNote() << "    op result types: " << forwardedResults.getTypes();
+    diag.attachNote() << "callee result types: " << resultTypes;
+    return diag;
+  }
+
+  return success();
+}
+
+LogicalResult
+call_interface_impl::verifyCallOpInterface(CallOpInterface call,
+                                           CallableOpInterface callable) {
+  return verifyCallOpInterface(call, callable.getArgumentTypes(),
+                               callable.getResultTypes());
+}
+
+/// Verify `call` against `resolved`, the operation its callee resolved to.
+/// Nothing is verified if the callee did not resolve to a callable operation.
+static LogicalResult verifyResolvedCallee(CallOpInterface call,
+                                          Operation *resolved) {
+  auto callable = dyn_cast_if_present<CallableOpInterface>(resolved);
+  if (!callable)
+    return success();
+  return call_interface_impl::verifyCallOpInterface(call, callable);
+}
+
+LogicalResult
+call_interface_impl::verifyCallOpInterface(CallOpInterface call,
+                                           SymbolTableCollection &symbolTable) {
+  return verifyResolvedCallee(call, call.resolveCallableInTable(&symbolTable));
+}
+
+LogicalResult call_interface_impl::verifyCallOpInterface(CallOpInterface call) {
+  return verifyResolvedCallee(call, call.resolveCallable());
 }
 
 //===----------------------------------------------------------------------===//

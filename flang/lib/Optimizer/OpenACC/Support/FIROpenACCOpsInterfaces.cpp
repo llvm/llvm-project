@@ -18,7 +18,6 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SmallSet.h"
 
 namespace fir::acc {
@@ -122,15 +121,36 @@ bool GlobalVariableModel::isConstant(mlir::Operation *op) const {
   return globalOp.getConstant().has_value();
 }
 
+bool GlobalVariableModel::hasInitializer(mlir::Operation *op) const {
+  auto globalOp = mlir::cast<fir::GlobalOp>(op);
+  return globalOp.getInitVal().has_value() || globalOp.hasInitializationBody();
+}
+
 mlir::Region *GlobalVariableModel::getInitRegion(mlir::Operation *op) const {
   auto globalOp = mlir::cast<fir::GlobalOp>(op);
   return globalOp.hasInitializationBody() ? &globalOp.getRegion() : nullptr;
 }
 
-bool GlobalVariableModel::isDeviceData(mlir::Operation *op) const {
+bool GlobalVariableModel::isDeviceAccessible(mlir::Operation *op) const {
   if (auto dataAttr = cuf::getDataAttr(op))
     return cuf::isDeviceDataAttribute(dataAttr.getValue());
   return false;
+}
+
+bool GlobalVariableModel::isInDeviceMemory(mlir::Operation *op) const {
+  // A global is in device memory when it carries a device-data attribute that
+  // denotes physically device-resident storage. Storage that is device-
+  // accessible but physically shared with the host (and so may migrate on
+  // demand) is accessible but not guaranteed to be in device memory.
+  if (auto dataAttr = cuf::getDataAttr(op))
+    return cuf::isDeviceDataAttribute(dataAttr.getValue()) &&
+           !cuf::isManagedOrUnifiedDataAttribute(dataAttr.getValue());
+  return false;
+}
+
+bool GlobalVariableModel::isCompilerGenerated(mlir::Operation *op) const {
+  auto globalOp = mlir::cast<fir::GlobalOp>(op);
+  return fir::NameUniquer::isCompilerGenerated(globalOp.getSymName());
 }
 
 bool OutlineRematerializationModel<
@@ -142,6 +162,26 @@ bool OutlineRematerializationModel<
   // that addresses stay live-in instead of the scalar values.
   return fir::ConvertOp::isPointerCompatible(inTy) &&
          fir::ConvertOp::isIntegerCompatible(outTy);
+}
+
+template <>
+void OutlineIdentityOperandDeclareModel<
+    fir::DeclareOp>::dropOutlinedIdentityOperands(mlir::Operation *op) const {
+  auto declareOp = mlir::cast<fir::DeclareOp>(op);
+  if (declareOp.getDummyScope()) {
+    declareOp.getDummyScopeMutable().clear();
+    declareOp->removeAttr(declareOp.getDummyArgNoAttrName());
+  }
+}
+
+template <>
+void OutlineIdentityOperandDeclareModel<
+    hlfir::DeclareOp>::dropOutlinedIdentityOperands(mlir::Operation *op) const {
+  auto declareOp = mlir::cast<hlfir::DeclareOp>(op);
+  if (declareOp.getDummyScope()) {
+    declareOp.getDummyScopeMutable().clear();
+    declareOp->removeAttr(declareOp.getDummyArgNoAttrName());
+  }
 }
 
 // Helper to recursively process address-of operations in derived type
@@ -217,6 +257,15 @@ void IndirectGlobalAccessModel<fir::EmboxOp>::getReferencedSymbols(
   auto emboxOp = mlir::cast<fir::EmboxOp>(op);
   collectReferencedSymbolsForType(emboxOp.getMemref().getType(), op, symbols,
                                   symbolTable);
+}
+
+template <>
+void IndirectGlobalAccessModel<fir::CreateBoxOp>::getReferencedSymbols(
+    mlir::Operation *op, llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+    mlir::SymbolTable *symbolTable) const {
+  auto createBoxOp = mlir::cast<fir::CreateBoxOp>(op);
+  collectReferencedSymbolsForType(createBoxOp.getMemref().getType(), op,
+                                  symbols, symbolTable);
 }
 
 template <>

@@ -66,20 +66,13 @@
 // RUN:   -fuse-ld=lld -flto -O3 -### 2>&1 | FileCheck --check-prefix=O3 %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/basic_cross_linux_tree %s \
 // RUN:   -fuse-ld=lld -flto -Ofast -### 2>&1 | FileCheck --check-prefix=O3 %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto -O4 -### 2>&1 | FileCheck --check-prefix=O3 %s
 
 // O1: -plugin-opt=O1
 // O2: -plugin-opt=O2
 // O3: -plugin-opt=O3
 
-// -flto passes along an explicit debugger tuning argument.
-// RUN: %clang --target=x86_64-unknown-linux -### %s -flto -glldb 2> %t
-// RUN: FileCheck -check-prefix=CHECK-TUNING-LLDB < %t %s
-// RUN: %clang --target=x86_64-unknown-linux -### %s -flto -g 2> %t
-// RUN: FileCheck -check-prefix=CHECK-NO-TUNING < %t %s
-//
-// CHECK-TUNING-LLDB:   "-plugin-opt=-debugger-tune=lldb"
-// CHECK-NO-TUNING-NOT: "-plugin-opt=-debugger-tune
-//
 // -flto=auto and -flto=jobserver pass along -flto=full
 // RUN: %clang --target=x86_64-unknown-linux -### %s -flto=auto 2>&1 | FileCheck --check-prefix=FLTO-AUTO %s
 // RUN: %clang --target=x86_64-unknown-linux -### %s -flto=jobserver 2>&1 | FileCheck --check-prefix=FLTO-JOBSERVER %s
@@ -117,16 +110,24 @@
 // CHECK-GISEL:         "-plugin-opt=-global-isel=1"
 // CHECK-DISABLE-GISEL: "-plugin-opt=-global-isel=0"
 
+// RUN: %clang --target=x86_64-unknown-linux-gnu -### %s -flto -fno-vectorize 2> %t
+// RUN: FileCheck --check-prefix=CHECK-NO-VECTORIZE < %t %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -### %s -flto -fvectorize 2> %t
+// RUN: FileCheck --check-prefix=CHECK-VECTORIZE < %t %s
+//
+// CHECK-NO-VECTORIZE: "-plugin-opt=-vectorize-loops=0"
+// CHECK-VECTORIZE:    "-plugin-opt=-vectorize-loops=1"
+
 // RUN: %clang --target=x86_64-unknown-linux-gnu -### %s -flto -fno-slp-vectorize 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NO-SLP < %t %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -### %s -flto -fslp-vectorize 2> %t
 // RUN: FileCheck --check-prefix=CHECK-SLP < %t %s
-
+//
 // CHECK-NO-SLP: "-plugin-opt=-vectorize-slp=0"
 // CHECK-SLP:    "-plugin-opt=-vectorize-slp=1"
 
 // -flto passes -time-passes when -ftime-report is passed
 // RUN: %clang --target=x86_64-unknown-linux-gnu -### %s -flto -ftime-report 2> %t
 // RUN: FileCheck --check-prefix=CHECK-TIME-REPORT < %t %s
-
+//
 // CHECK-TIME-REPORT: "-plugin-opt=-time-passes"

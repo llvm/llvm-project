@@ -23,6 +23,13 @@ ActualArgument::ActualArgument(common::CopyableIndirection<Expr<SomeType>> &&v)
     : u_{std::move(v)} {}
 ActualArgument::ActualArgument(AssumedType x) : u_{x} {}
 ActualArgument::ActualArgument(common::Label x) : u_{x} {}
+ActualArgument::ActualArgument(ConditionalArg &&x) : u_{std::move(x)} {}
+
+ActualArgument::ConditionalArg::ConditionalArg(
+    Expr<Type<TypeCategory::Logical>> &&condition, Consequent &&consequent,
+    ConditionalArgPartOrConsequent &&tail)
+    : condition_{std::move(condition)}, consequent_{std::move(consequent)},
+      tail_{std::move(tail)} {}
 ActualArgument::~ActualArgument() {}
 
 ActualArgument::AssumedType::AssumedType(const Symbol &symbol)
@@ -41,19 +48,30 @@ ActualArgument &ActualArgument::operator=(Expr<SomeType> &&expr) {
 std::optional<DynamicType> ActualArgument::GetType() const {
   if (const Expr<SomeType> *expr{UnwrapExpr()}) {
     return expr->GetType();
-  } else if (std::holds_alternative<AssumedType>(u_)) {
-    return DynamicType::AssumedType();
-  } else {
-    return std::nullopt;
   }
+  if (std::holds_alternative<AssumedType>(u_)) {
+    return DynamicType::AssumedType();
+  }
+  if (const auto *condArg{std::get_if<ConditionalArg>(&u_)}) {
+    if (const auto *expr{condArg->FirstNonNilConsequent()}) {
+      return expr->GetType();
+    }
+  }
+  return std::nullopt;
 }
 
 int ActualArgument::Rank() const {
   if (const Expr<SomeType> *expr{UnwrapExpr()}) {
     return expr->Rank();
-  } else {
-    return std::get<AssumedType>(u_).Rank();
   }
+  if (const auto *condArg{std::get_if<ConditionalArg>(&u_)}) {
+    if (const auto *expr{condArg->FirstNonNilConsequent()}) {
+      return expr->Rank();
+    }
+    // all-.NIL. error caught earlier by F2023 C1540 check
+    DIE("all-.NIL. conditional arg should have been rejected");
+  }
+  return std::get<AssumedType>(u_).Rank();
 }
 
 bool ActualArgument::operator==(const ActualArgument &that) const {
@@ -62,6 +80,35 @@ bool ActualArgument::operator==(const ActualArgument &that) const {
 
 void ActualArgument::Parenthesize() {
   u_ = evaluate::Parenthesize(std::move(DEREF(UnwrapExpr())));
+}
+
+bool ActualArgument::ConditionalArg::operator==(
+    const ConditionalArg &that) const {
+  return condition_ == that.condition_ && consequent_ == that.consequent_ &&
+      tail_ == that.tail_;
+}
+
+const Expr<SomeType> *
+ActualArgument::ConditionalArg::FirstNonNilConsequent() const {
+  if (consequent_) {
+    return &consequent_->value();
+  }
+  return VisitTail(
+      [](const ConditionalArg &inner) -> const Expr<SomeType> * {
+        return inner.FirstNonNilConsequent();
+      },
+      [](const Consequent &cons) -> const Expr<SomeType> * {
+        return cons ? &cons->value() : nullptr;
+      });
+}
+
+bool ActualArgument::ConditionalArg::HasNilConsequent() const {
+  if (!consequent_) {
+    return true;
+  }
+  return VisitTail(
+      [](const ConditionalArg &inner) { return inner.HasNilConsequent(); },
+      [](const Consequent &cons) { return !cons.has_value(); });
 }
 
 SpecificIntrinsic::SpecificIntrinsic(
@@ -217,10 +264,10 @@ std::optional<Expr<SubscriptInteger>> ProcedureRef::LEN() const {
     if (intrinsic->name == "repeat") {
       // LEN(REPEAT(ch,n)) == LEN(ch) * n
       CHECK(arguments_.size() == 2);
-      const auto *stringArg{
-          UnwrapExpr<Expr<SomeCharacter>>(arguments_[0].value())};
+      const auto *stringArg{UnwrapExpr<Expr<Type<TypeCategory::Character>>>(
+          arguments_[0].value())};
       const auto *nCopiesArg{
-          UnwrapExpr<Expr<SomeInteger>>(arguments_[1].value())};
+          UnwrapExpr<Expr<Type<TypeCategory::Integer>>>(arguments_[1].value())};
       CHECK(stringArg && nCopiesArg);
       if (auto stringLen{stringArg->LEN()}) {
         auto converted{ConvertTo(*stringLen, common::Clone(*nCopiesArg))};

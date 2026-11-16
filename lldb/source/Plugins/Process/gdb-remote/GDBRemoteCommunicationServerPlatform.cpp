@@ -29,7 +29,6 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Target/Platform.h"
-#include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -48,7 +47,8 @@ using namespace lldb_private;
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
     FileSpec debugserver_path, const Socket::SocketProtocol socket_protocol,
     uint16_t gdbserver_port)
-    : m_debugserver_path(std::move(debugserver_path)),
+    : GDBRemoteCommunicationServerCommon("lldb-platform.server"),
+      m_debugserver_path(std::move(debugserver_path)),
       m_socket_protocol(socket_protocol), m_gdbserver_port(gdbserver_port) {
 
   RegisterMemberFunctionHandler(
@@ -75,9 +75,6 @@ GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_QSetWorkingDir,
       &GDBRemoteCommunicationServerPlatform::Handle_QSetWorkingDir);
-  RegisterMemberFunctionHandler(
-      StringExtractorGDBRemote::eServerPacketType_jSignalsInfo,
-      &GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo);
 
   RegisterPacketHandler(StringExtractorGDBRemote::eServerPacketType_interrupt,
                         [](StringExtractorGDBRemote packet, Status &error,
@@ -164,7 +161,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
     if (name == "port") {
       // Make the Optional valid so we can use its value
       port = 0;
-      value.getAsInteger(0, *port);
+      value.getAsInteger(BASE_10, *port);
     }
   }
 
@@ -390,34 +387,6 @@ GDBRemoteCommunicationServerPlatform::Handle_qC(
     m_process_launch_info.Clear();
   }
 
-  return SendPacketNoLock(response.GetString());
-}
-
-GDBRemoteCommunication::PacketResult
-GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo(
-    StringExtractorGDBRemote &packet) {
-  StructuredData::Array signal_array;
-
-  lldb::UnixSignalsSP signals = UnixSignals::CreateForHost();
-  for (auto signo = signals->GetFirstSignalNumber();
-       signo != LLDB_INVALID_SIGNAL_NUMBER;
-       signo = signals->GetNextSignalNumber(signo)) {
-    auto dictionary = std::make_shared<StructuredData::Dictionary>();
-
-    dictionary->AddIntegerItem("signo", signo);
-    dictionary->AddStringItem("name", signals->GetSignalAsStringRef(signo));
-
-    bool suppress, stop, notify;
-    signals->GetSignalInfo(signo, suppress, stop, notify);
-    dictionary->AddBooleanItem("suppress", suppress);
-    dictionary->AddBooleanItem("stop", stop);
-    dictionary->AddBooleanItem("notify", notify);
-
-    signal_array.Push(dictionary);
-  }
-
-  StreamString response;
-  signal_array.Dump(response);
   return SendPacketNoLock(response.GetString());
 }
 

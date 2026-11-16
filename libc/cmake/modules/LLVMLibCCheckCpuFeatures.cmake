@@ -11,6 +11,9 @@ if(LIBC_TARGET_ARCHITECTURE_IS_X86_64)
 elseif(LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
   set(ALL_CPU_FEATURES FullFP16 MOPS SVE SVE2)
   set(_libc_native_default -mcpu=native)
+elseif(LIBC_TARGET_ARCHITECTURE_IS_ARM)
+  set(ALL_CPU_FEATURES MVE MVE_FP)
+  set(_libc_native_default "")
 else()
   set(_libc_native_default "")
 endif()
@@ -28,7 +31,7 @@ endif()
 # treats -march=native as a literal string and will silently serve object
 # files compiled for a different CPU model.
 set(LIBC_COMPILE_OPTIONS_NATIVE "${_libc_native_default}" CACHE STRING
-    "Compile options for host-native builds.  Set to empty to disable -march=native.")
+  "Compile options for host-native builds.  Set to empty to disable -march=native.")
 
 # Making sure ALL_CPU_FEATURES is sorted.
 list(SORT ALL_CPU_FEATURES)

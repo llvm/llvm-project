@@ -21,7 +21,6 @@
 ---
 name:            store_v2p0
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -44,7 +43,6 @@ body:             |
 ---
 name:            load_v2p0
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -67,7 +65,6 @@ body:             |
 ---
 name:            load_v2p1
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):

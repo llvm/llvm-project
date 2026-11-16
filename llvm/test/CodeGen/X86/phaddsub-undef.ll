@@ -10,32 +10,16 @@
 
 ; Verify that we correctly fold horizontal binop even in the presence of UNDEF/POISON.
 
-; FIXME: Use lower xmm only
 define <8 x i32> @add_v8i32_0uu3uuuu(<8 x i32> %a, <8 x i32> %b) {
 ; SSE-LABEL: add_v8i32_0uu3uuuu:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    phaddd %xmm2, %xmm0
-; SSE-NEXT:    phaddd %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: add_v8i32_0uu3uuuu:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vphaddd %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: add_v8i32_0uu3uuuu:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: add_v8i32_0uu3uuuu:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: add_v8i32_0uu3uuuu:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %x = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 poison, i32 poison, i32 10, i32 poison, i32 poison, i32 poison, i32 poison>
   %y = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 1, i32 poison, i32 poison, i32 11, i32 poison, i32 poison, i32 poison, i32 poison>
   %h = add <8 x i32> %x, %y
@@ -107,31 +91,16 @@ define <8 x i32> @add_v8i32_uuuu4uu7(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %h
 }
 
-; FIXME: Use lower xmm only
 define <8 x i32> @add_v8i32_01uuuuuu(<8 x i32> %a, <8 x i32> %b) {
 ; SSE-LABEL: add_v8i32_01uuuuuu:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    phaddd %xmm0, %xmm0
-; SSE-NEXT:    phaddd %xmm1, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: add_v8i32_01uuuuuu:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: add_v8i32_01uuuuuu:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: add_v8i32_01uuuuuu:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: add_v8i32_01uuuuuu:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %x = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 1, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %y = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %h = add <8 x i32> %x, %y

@@ -486,21 +486,24 @@ func.func @arith_maxui() -> index {
 
 // -----
 
-func.func @arith_maxui_unknown_sign(%a: index) -> index {
+func.func @arith_maxui_unknown_operand(%a: index) -> index {
   %c4 = arith.constant 4 : index
   %0 = arith.maxui %a, %c4 : index
+  // The unsigned maximum may be negative in signed interpretation.
   // expected-error @below{{could not reify bound}}
-  %1 = "test.reify_bound"(%0) {type = "LB"} : (index) -> (index)
+  %1 = "test.reify_bound"(%0) {type = "LB", constant} : (index) -> (index)
   return %1 : index
 }
 
 // -----
 
+// CHECK-LABEL: func @arith_minui_wraparound(
+//       CHECK:   %[[ub:.*]] = arith.constant 11 : index
+//       CHECK:   return %[[ub]]
 func.func @arith_minui_wraparound() -> index {
   %c255 = arith.constant 0xFF : i8
   %c10 = arith.constant 10 : i8
   %0 = arith.minui %c255, %c10 : i8
-  // expected-error @below{{could not reify bound}}
   %1 = "test.reify_bound"(%0) {type = "UB", allow_integer_type} : (i8) -> (index)
   return %1 : index
 }
@@ -511,6 +514,7 @@ func.func @arith_maxui_wraparound() -> index {
   %c255 = arith.constant 0xFF : i8
   %c10 = arith.constant 10 : i8
   %0 = arith.maxui %c255, %c10 : i8
+  // The unsigned maximum may be negative in signed interpretation.
   // expected-error @below{{could not reify bound}}
   %1 = "test.reify_bound"(%0) {type = "LB", allow_integer_type} : (i8) -> (index)
   return %1 : index
@@ -547,12 +551,15 @@ func.func @arith_minui_nonneg_symbolic(%a: index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @arith_minui_negative_symbolic(
+//  CHECK-SAME:     %[[a:.*]]: index
+//       CHECK:   %[[ub:.*]] = arith.constant 5 : index
+//       CHECK:   return %[[ub]]
 func.func @arith_minui_negative_symbolic(%a: index) -> index {
   %cm1 = arith.constant -1 : index
   %c4 = arith.constant 4 : index
   %neg = arith.minsi %a, %cm1 : index
   %0 = arith.minui %neg, %c4 : index
-  // expected-error @below{{could not reify bound}}
   %1 = "test.reify_bound"(%0) {type = "UB", constant} : (index) -> (index)
   return %1 : index
 }
@@ -579,6 +586,31 @@ func.func @arith_maxui_negative_symbolic(%a: index) -> index {
   %c4 = arith.constant 4 : index
   %neg = arith.minsi %a, %cm1 : index
   %0 = arith.maxui %neg, %c4 : index
+  // The unsigned maximum may be negative in signed interpretation.
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {type = "LB", constant} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @arith_maxui_negative_positive() -> index {
+  %cm2 = arith.constant -2 : index
+  %c1 = arith.constant 1 : index
+  %0 = arith.maxui %cm2, %c1 : index
+  // maxui(-2, 1) is -2 in signed interpretation, so 1 is not a lower bound.
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {type = "LB", constant} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @arith_maxui_positive_negative() -> index {
+  %c1 = arith.constant 1 : index
+  %cm2 = arith.constant -2 : index
+  %0 = arith.maxui %c1, %cm2 : index
+  // Check the same case with the operands reversed.
   // expected-error @below{{could not reify bound}}
   %1 = "test.reify_bound"(%0) {type = "LB", constant} : (index) -> (index)
   return %1 : index

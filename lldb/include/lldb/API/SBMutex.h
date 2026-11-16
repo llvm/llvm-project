@@ -11,7 +11,7 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/lldb-forward.h"
-#include <mutex>
+#include <memory>
 
 namespace lldb {
 
@@ -41,7 +41,8 @@ private:
   SBMutex(lldb::TargetSP target_sp);
   friend class SBTarget;
 
-  std::shared_ptr<std::recursive_mutex> m_opaque_sp;
+  class MutexVariant;
+  std::shared_ptr<MutexVariant> m_opaque_sp;
 };
 
 } // namespace lldb

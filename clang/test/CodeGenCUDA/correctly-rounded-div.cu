@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple -amdgcn-amd-amdhsa \
-// RUN:  -target-cpu gfx906 -fcuda-is-device -x hip \
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple amdgpu9.06-amd-amdhsa \
+// RUN:  -fcuda-is-device -x hip \
 // RUN:  | FileCheck --check-prefixes=COMMON,CRDIV %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple -amdgcn-amd-amdhsa \
-// RUN:  -target-cpu gfx906 -fcuda-is-device -x hip \
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple amdgpu9.06-amd-amdhsa \
+// RUN:  -fcuda-is-device -x hip \
 // RUN:  -fno-hip-fp32-correctly-rounded-divide-sqrt \
 // RUN:  | FileCheck --check-prefixes=COMMON,NCRDIV %s
 

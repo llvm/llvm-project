@@ -382,18 +382,34 @@ define i128 @load_atomic_i128_aligned_acquire_const(ptr readonly %ptr) {
 }
 
 define i128 @load_atomic_i128_aligned_seq_cst(ptr %ptr) {
-; CHECK-LABEL: load_atomic_i128_aligned_seq_cst:
-; CHECK:    ldp x0, x1, [x0, #64]
-; CHECK:    dmb ish
+; GISEL-LABEL: load_atomic_i128_aligned_seq_cst:
+; GISEL:    add x8, x0, #64
+; GISEL:    ldar x8, [x8]
+; GISEL:    ldp x0, x1, [x0, #64]
+; GISEL:    dmb ish
+;
+; SDAG-LABEL: load_atomic_i128_aligned_seq_cst:
+; SDAG:    add x8, x0, #64
+; SDAG:    ldar xzr, [x8]
+; SDAG:    ldp x0, x1, [x0, #64]
+; SDAG:    dmb ish
     %gep = getelementptr inbounds i128, ptr %ptr, i32 4
     %r = load atomic i128, ptr %gep seq_cst, align 16
     ret i128 %r
 }
 
 define i128 @load_atomic_i128_aligned_seq_cst_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_i128_aligned_seq_cst_const:
-; CHECK:    ldp x0, x1, [x0, #64]
-; CHECK:    dmb ish
+; GISEL-LABEL: load_atomic_i128_aligned_seq_cst_const:
+; GISEL:    add x8, x0, #64
+; GISEL:    ldar x8, [x8]
+; GISEL:    ldp x0, x1, [x0, #64]
+; GISEL:    dmb ish
+;
+; SDAG-LABEL: load_atomic_i128_aligned_seq_cst_const:
+; SDAG:    add x8, x0, #64
+; SDAG:    ldar xzr, [x8]
+; SDAG:    ldp x0, x1, [x0, #64]
+; SDAG:    dmb ish
     %gep = getelementptr inbounds i128, ptr %ptr, i32 4
     %r = load atomic i128, ptr %gep seq_cst, align 16
     ret i128 %r

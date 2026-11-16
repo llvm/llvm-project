@@ -79,7 +79,7 @@ removeFieldInitialized(const FieldDecl *M,
 static void
 removeFieldsInitializedInBody(const Stmt &Stmt, ASTContext &Context,
                               SmallPtrSetImpl<const FieldDecl *> &FieldDecls) {
-  auto Matches =
+  const auto Matches =
       match(findAll(binaryOperator(
                 hasOperatorName("="),
                 hasLHS(memberExpr(member(fieldDecl().bind("fieldDecl")))))),
@@ -321,7 +321,7 @@ void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
           .bind("record"),
       this);
 
-  auto HasDefaultConstructor = hasInitializer(
+  const auto HasDefaultConstructor = hasInitializer(
       cxxConstructExpr(unless(requiresZeroInitialization()),
                        hasDeclaration(cxxConstructorDecl(
                            isDefaultConstructor(), unless(isUserProvided())))));
@@ -432,6 +432,16 @@ static StringRef getInitializer(QualType QT, bool UseAssignment) {
   }
 }
 
+static bool isStdArray(QualType QT) {
+  const auto *RT = QT->getAs<RecordType>();
+  if (!RT)
+    return false;
+  const auto *RD = RT->getDecl();
+  if (!RD || !RD->getIdentifier())
+    return false;
+  return RD->getName() == "array" && RD->isInStdNamespace();
+}
+
 static void
 computeFieldsToInit(const ASTContext &Context, const RecordDecl &Record,
                     bool IgnoreArrays,
@@ -440,7 +450,8 @@ computeFieldsToInit(const ASTContext &Context, const RecordDecl &Record,
   forEachFieldWithFilter(
       Record, Record.fields(), AnyMemberHasInitPerUnion,
       [&](const FieldDecl *F) {
-        if (IgnoreArrays && F->getType()->isArrayType())
+        if (IgnoreArrays &&
+            (F->getType()->isArrayType() || isStdArray(F->getType())))
           return;
         if (F->hasInClassInitializer() && F->getParent()->isUnion()) {
           AnyMemberHasInitPerUnion = true;

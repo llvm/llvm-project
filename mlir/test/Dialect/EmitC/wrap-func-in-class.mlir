@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -wrap-emitc-func-in-class -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -wrap-emitc-func-in-class=func-name=execute -split-input-file | FileCheck %s --check-prefixes=EXECUTE
+// RUN: mlir-opt %s -wrap-emitc-func-in-class=class-name-format=Custom_{} -split-input-file | FileCheck %s --check-prefixes=CLASS-NAME-FORMAT
 
 emitc.func @foo(%arg0 : !emitc.array<1xf32>) {
   emitc.call_opaque "bar" (%arg0) : (!emitc.array<1xf32>) -> ()
@@ -17,6 +18,8 @@ emitc.func @foo(%arg0 : !emitc.array<1xf32>) {
 
 // EXECUTE-NOT: operator
 // EXECUTE: execute()
+
+// CLASS-NAME-FORMAT: emitc.class @Custom_foo {
 
 // -----
 
@@ -59,6 +62,8 @@ module attributes { } {
 // EXECUTE-NOT: operator
 // EXECUTE: execute()
 
+// CLASS-NAME-FORMAT: emitc.class @Custom_model {
+
 // -----
 // Tests that GlobalOps are moved into the ClassOp wrapper correctly as fields
 
@@ -80,6 +85,8 @@ module attributes { } {
 
 // EXECUTE-NOT: operator
 // EXECUTE: execute()
+
+// CLASS-NAME-FORMAT: emitc.class @Custom_foo {
 
 // -----
 // Tests that only GlobalOps that are used within a function are moved into the
@@ -107,6 +114,8 @@ module attributes { } {
 
 // EXECUTE-NOT: operator
 // EXECUTE: execute()
+
+// CLASS-NAME-FORMAT: emitc.class @Custom_foo {
 
 // -----
 // Tests that when multiple functions use different globals, only the used globals
@@ -147,6 +156,9 @@ module attributes { } {
 // EXECUTE-NOT: operator
 // EXECUTE: execute()
 
+// CLASS-NAME-FORMAT: emitc.class @Custom_foo {
+// CLASS-NAME-FORMAT: emitc.class @Custom_bar {
+
 // -----
 // Tests that when multiple functions use the same global, the global is moved
 // into each ClassOp wrapper as a field and erased from the module.
@@ -183,6 +195,9 @@ module attributes { } {
 // EXECUTE-NOT: operator
 // EXECUTE: execute()
 
+// CLASS-NAME-FORMAT: emitc.class @Custom_foo {
+// CLASS-NAME-FORMAT: emitc.class @Custom_bar {
+
 // -----
 // Tests that multiple uses of the same global in a function result in a single field.
 
@@ -208,3 +223,5 @@ module attributes { } {
 
 // EXECUTE-NOT: operator
 // EXECUTE: execute()
+
+// CLASS-NAME-FORMAT: emitc.class @Custom_foo {

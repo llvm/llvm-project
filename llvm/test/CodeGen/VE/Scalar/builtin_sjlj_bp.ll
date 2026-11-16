@@ -7,7 +7,7 @@ declare i32 @llvm.eh.sjlj.setjmp(ptr) nounwind
 ; Function Attrs: noinline nounwind optnone
 define i32 @t_setjmp(i64 %n, ptr byval(%Foo) nocapture readnone align 8 %f) {
 ; CHECK-LABEL: t_setjmp:
-; CHECK:       .LBB{{[0-9]+}}_5:
+; CHECK:       .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s19, 56(, %s9) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s20, 64(, %s9) # 8-byte Folded Spill

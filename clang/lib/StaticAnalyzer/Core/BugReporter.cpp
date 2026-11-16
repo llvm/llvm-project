@@ -620,17 +620,14 @@ PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
 PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
     llvm::raw_string_ostream &os, const PathDiagnosticConstruct &C) const {
   // Slow, but probably doesn't matter.
-  if (os.str().empty())
-    os << ' ';
-
+  os << (os.str().empty() ? "Execution " : "execution ");
   const PathDiagnosticLocation &Loc = ExecutionContinues(C);
 
-  if (Loc.asStmt())
-    os << "Execution continues on line "
-       << getSourceManager().getExpansionLineNumber(Loc.asLocation())
-       << '.';
-  else {
-    os << "Execution jumps to the end of the ";
+  if (Loc.asStmt()) {
+    os << "continues on line "
+       << getSourceManager().getExpansionLineNumber(Loc.asLocation());
+  } else {
+    os << "jumps to the end of the ";
     const Decl *D = C.getCurrStackFrame()->getDecl();
     if (isa<ObjCMethodDecl>(D))
       os << "method";
@@ -640,7 +637,6 @@ PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
       assert(isa<BlockDecl>(D));
       os << "anonymous block";
     }
-    os << '.';
   }
 
   return Loc;
@@ -785,9 +781,9 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForSwitchOP(
 
     switch (S->getStmtClass()) {
     default:
-      os << "No cases match in the switch statement. "
-        "Control jumps to line "
-        << End.asLocation().getExpansionLineNumber();
+      os << "No cases match in the switch statement; "
+            "control jumps to line "
+         << End.asLocation().getExpansionLineNumber();
       break;
     case Stmt::DefaultStmtClass:
       os << "Control jumps to the 'default' case at line "
@@ -821,7 +817,7 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForSwitchOP(
     }
     }
   } else {
-    os << "'Default' branch taken. ";
+    os << "'Default' branch taken; ";
     End = ExecutionContinues(os, C);
   }
   return std::make_shared<PathDiagnosticControlFlowPiece>(Start, End, sbuf);
@@ -956,7 +952,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
       std::string sbuf;
       llvm::raw_string_ostream os(sbuf);
 
-      os << "Loop condition is true. ";
+      os << "Loop condition is true; ";
       PathDiagnosticLocation End = ExecutionContinues(os, C);
 
       if (const Stmt *S = End.asStmt())
@@ -972,7 +968,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
 
       C.getActivePath().push_front(
           std::make_shared<PathDiagnosticControlFlowPiece>(
-              Start, End, "Loop condition is false.  Exiting loop"));
+              Start, End, "Loop condition is false; exiting loop"));
     }
     break;
 
@@ -982,7 +978,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
       std::string sbuf;
       llvm::raw_string_ostream os(sbuf);
 
-      os << "Loop condition is false. ";
+      os << "Loop condition is false; ";
       PathDiagnosticLocation End = ExecutionContinues(os, C);
       if (const Stmt *S = End.asStmt())
         End = getEnclosingStmtLocation(S, C.getCurrStackFrame());
@@ -996,7 +992,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
 
       C.getActivePath().push_front(
           std::make_shared<PathDiagnosticControlFlowPiece>(
-              Start, End, "Loop condition is true.  Entering loop body"));
+              Start, End, "Loop condition is true; entering loop body"));
     }
 
     break;
@@ -2188,8 +2184,8 @@ void PathSensitiveBugReport::addVisitor(
   llvm::FoldingSetNodeID ID;
   visitor->Profile(ID);
 
-  void *InsertPos = nullptr;
-  if (CallbacksSet.FindNodeOrInsertPos(ID, InsertPos)) {
+  llvm::FoldingSetInsertToken InsertToken;
+  if (CallbacksSet.lookup(ID, InsertToken)) {
     return;
   }
 
@@ -2850,9 +2846,9 @@ generateVisitorsDiagnostics(PathSensitiveBugReport *R,
     if (!Pred) {
       PathDiagnosticPieceRef LastPiece;
       for (auto &V : visitors) {
-        V->finalizeVisitor(BRC, ErrorNode, *R);
+        V->finalizeVisitor(ErrorNode, BRC, *R);
 
-        if (auto Piece = V->getEndPath(BRC, ErrorNode, *R)) {
+        if (auto Piece = V->getEndPath(ErrorNode, BRC, *R)) {
           assert(!LastPiece &&
                  "There can only be one final piece in a diagnostic.");
           assert(Piece->getKind() == PathDiagnosticPiece::Kind::Event &&
@@ -2985,12 +2981,12 @@ void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   R->Profile(ID);
 
   // Lookup the equivance class.  If there isn't one, create it.
-  void *InsertPos;
-  BugReportEquivClass* EQ = EQClasses.FindNodeOrInsertPos(ID, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  BugReportEquivClass *EQ = EQClasses.lookup(ID, InsertToken);
 
   if (!EQ) {
     EQ = new BugReportEquivClass(std::move(R));
-    EQClasses.InsertNode(EQ, InsertPos);
+    EQClasses.insert(EQ, InsertToken);
     EQClassesVector.push_back(EQ);
   } else
     EQ->AddReport(std::move(R));

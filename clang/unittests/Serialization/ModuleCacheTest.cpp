@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Serialization/ModuleCache.h"
+#include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -15,6 +17,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -30,7 +33,7 @@ class ModuleCacheTest : public ::testing::Test {
     ASSERT_FALSE(sys::fs::createUniqueDirectory("modulecache-test", TestDir));
 
     ModuleCachePath = SmallString<256>(TestDir);
-    sys::path::append(ModuleCachePath, "mcp");
+    sys::path::append(ModuleCachePath, ModuleCacheDir);
     ASSERT_FALSE(sys::fs::create_directories(ModuleCachePath));
   }
 
@@ -39,6 +42,7 @@ class ModuleCacheTest : public ::testing::Test {
 public:
   SmallString<256> TestDir;
   SmallString<256> ModuleCachePath;
+  static constexpr StringRef ModuleCacheDir = "mcp";
 
   void addFile(StringRef Path, StringRef Contents) {
     ASSERT_FALSE(sys::path::is_absolute(Path));
@@ -198,6 +202,145 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   SyntaxOnlyAction Action2;
   ASSERT_FALSE(Instance2.ExecuteAction(Action2));
   ASSERT_TRUE(Diags->hasErrorOccurred());
+}
+
+struct CapturedDiag {
+  unsigned ID;
+  std::string Message;
+};
+
+class CapturedDiagConsumer : public DiagnosticConsumer {
+  std::vector<CapturedDiag> &Diags;
+
+public:
+  CapturedDiagConsumer(std::vector<CapturedDiag> &D) : Diags(D) {}
+  void HandleDiagnostic(DiagnosticsEngine::Level Level,
+                        const Diagnostic &Info) override {
+    DiagnosticConsumer::HandleDiagnostic(Level, Info);
+    SmallString<128> Msg;
+    Info.FormatDiagnostic(Msg);
+    Diags.push_back({Info.getID(), std::string(Msg)});
+  }
+};
+
+TEST_F(ModuleCacheTest, RebuildFinalizedModuleAfterInputChange) {
+  addFile("test.m", R"cpp(
+          @import M;
+      )cpp");
+  addFile("frameworks/M.framework/Headers/m.h", R"cpp(
+          void foo(void);
+      )cpp");
+  addFile("frameworks/M.framework/Modules/module.modulemap", R"cpp(
+          framework module M [system] {
+            header "m.h"
+            export *
+          }
+      )cpp");
+
+  SmallString<256> MCPArg("-fmodules-cache-path=");
+  MCPArg.append(ModuleCachePath);
+  CreateInvocationOptions CIOpts;
+  CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+  DiagnosticOptions DiagOpts;
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
+  CIOpts.Diags = Diags;
+
+  const char *Args[] = {"clang",        "-fmodules",          "-Fframeworks",
+                        MCPArg.c_str(), "-working-directory", TestDir.c_str(),
+                        "test.m"};
+
+  // Run 1: builds, loads, and finalizes M in the shared in-memory cache.
+  std::shared_ptr<CompilerInvocation> Invocation =
+      createInvocationAndEnableFree(Args, CIOpts);
+  ASSERT_TRUE(Invocation);
+  CompilerInstance Instance(std::move(Invocation));
+  Instance.setVirtualFileSystem(CIOpts.VFS);
+  Instance.setDiagnostics(Diags);
+  SyntaxOnlyAction Action;
+  ASSERT_TRUE(Instance.ExecuteAction(Action));
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
+  // Grow m.h so its recorded size no longer matches, marking M out of date on
+  // the next load. Because M is finalized in the shared cache, it can be
+  // neither dropped nor rebuilt.
+  addFile("frameworks/M.framework/Headers/m.h", R"cpp(
+          void foo(void);
+          void bar(void);
+          void baz(void);
+      )cpp");
+
+  std::vector<CapturedDiag> Captured;
+  Diags->setClient(new CapturedDiagConsumer(Captured),
+                   /*ShouldOwnClient=*/true);
+
+  // Run 2 shares the module cache (and thus the finalized M).
+  std::shared_ptr<CompilerInvocation> Invocation2 =
+      createInvocationAndEnableFree(Args, CIOpts);
+  ASSERT_TRUE(Invocation2);
+  CompilerInstance Instance2(std::move(Invocation2),
+                             Instance.getPCHContainerOperations(),
+                             Instance.getModuleCachePtr());
+  Instance2.setVirtualFileSystem(CIOpts.VFS);
+  Instance2.setDiagnostics(Diags);
+  SyntaxOnlyAction Action2;
+  ASSERT_FALSE(Instance2.ExecuteAction(Action2));
+  ASSERT_TRUE(Diags->hasErrorOccurred());
+
+  ASSERT_EQ(Captured.size(), 4u);
+  EXPECT_EQ(Captured[0].ID, (unsigned)diag::err_fe_ast_file_modified);
+  EXPECT_NE(Captured[0].Message.find("m.h"), std::string::npos);
+  EXPECT_EQ(Captured[1].ID, (unsigned)diag::note_fe_ast_file_modified);
+  EXPECT_EQ(Captured[2].ID,
+            (unsigned)diag::note_fe_ast_file_modified_finalized);
+  EXPECT_NE(Captured[2].Message.find("'M'"), std::string::npos);
+  EXPECT_EQ(Captured[3].ID,
+            (unsigned)diag::note_ast_file_input_files_validation_status);
+}
+
+// Test that even for a small file not mmapped, the access time is still updated
+// upon read. Accurate atime is necessary for clang's pruning logic.
+#ifndef _WIN32
+TEST_F(ModuleCacheTest, ReadRefreshesAccessTime) {
+  SmallString<256> RelPath(ModuleCacheDir);
+  sys::path::append(RelPath, "Small.pcm");
+  addFile(RelPath, "not really a module file");
+  SmallString<256> Path(TestDir);
+  sys::path::append(Path, RelPath);
+
+  using namespace std::chrono;
+  sys::TimePoint<> Now = time_point_cast<seconds>(system_clock::now());
+  sys::TimePoint<> OldModTime = Now - hours(24 * 10);
+  sys::TimePoint<> OldAccessTime = Now - hours(2);
+  ASSERT_FALSE(sys::fs::setLastAccessAndModificationTime(Path, OldAccessTime,
+                                                         OldModTime));
+
+  off_t Size;
+  time_t ModTime;
+  Expected<std::unique_ptr<MemoryBuffer>> Buf = readImpl(Path, Size, ModTime);
+  ASSERT_TRUE(static_cast<bool>(Buf));
+  EXPECT_EQ(Size, 24);
+  EXPECT_EQ(ModTime, sys::toTimeT(OldModTime));
+
+  sys::fs::file_status Status;
+  ASSERT_FALSE(sys::fs::status(Path, Status));
+  EXPECT_GE(Status.getLastAccessedTime(), Now);
+  EXPECT_EQ(Status.getLastModificationTime(), OldModTime);
+}
+#endif
+
+// Test that the reported size covers the entire written contents, even if the
+// stream hasn't flushed them to the file on its own.
+TEST_F(ModuleCacheTest, WriteReportsFullSize) {
+  SmallString<256> Path(ModuleCachePath);
+  sys::path::append(Path, "M.pcm");
+
+  StringRef Contents = "contents\n";
+  off_t Size;
+  time_t ModTime;
+  ASSERT_EQ(writeImpl(Path, MemoryBufferRef(Contents, Path), Size, ModTime),
+            std::error_code{});
+  EXPECT_EQ(Size, off_t(Contents.size()));
 }
 
 } // anonymous namespace

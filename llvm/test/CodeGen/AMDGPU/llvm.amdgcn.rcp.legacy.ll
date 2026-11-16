@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=GCN %s
-; RUN: not llc -mtriple=amdgcn -mcpu=fiji < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: not llc -mtriple=amdgpu8.03 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 ; ERROR: error: <unknown>:0:0: in function rcp_legacy_f32 void (ptr addrspace(1), float): intrinsic not supported on subtarget
 

@@ -49,7 +49,7 @@ define <8 x i1> @test4(<4 x float> %0, <4 x float> %1) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0:%.*]], <4 x float> [[TMP1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.is.fpclass.v8f32(<8 x float> [[TMP2]], i32 3)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.is.fpclass.v8f32(<8 x float> [[TMP2]], /* (nan) */ i32 3)
 ; CHECK-NEXT:    ret <8 x i1> [[TMP3]]
 ;
 entry:
@@ -63,7 +63,7 @@ define <2 x i1> @test4b(<4 x float> %0, <4 x float> %1) {
 ; CHECK-LABEL: @test4b(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0:%.*]], <4 x float> [[TMP1:%.*]], <2 x i32> <i32 0, i32 4>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[TMP2]], i32 3)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[TMP2]], /* (nan) */ i32 3)
 ; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
 ;
 entry:
@@ -73,17 +73,17 @@ entry:
   ret <2 x i1> %4
 }
 
-define <8 x float> @test5(<4 x float> %0, i32 %1, <4 x float> %2, <4 x i32> %3) {
+define <8 x float> @test5(<4 x float> %0, i32 %1, <4 x float> %2, i32 %3) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP0:%.*]], i32 [[TMP1:%.*]])
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.powi.v4f32.v4i32(<4 x float> [[TMP2:%.*]], <4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP2:%.*]], i32 [[TMP3:%.*]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <8 x float> [[TMP6]]
 ;
 entry:
   %4 = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> %0, i32 %1)
-  %5 = call <4 x float> @llvm.powi.v4f32.v4i32(<4 x float> %2, <4 x i32> %3)
+  %5 = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> %2, i32 %3)
   %6 = shufflevector <4 x float> %4, <4 x float> %5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x float> %6
 }
@@ -106,4 +106,3 @@ declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
 declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
 declare <4 x i1> @llvm.is.fpclass.v4f32(<4 x float>, i32)
 declare <4 x float> @llvm.powi.v4f32.i32(<4 x float>, i32)
-declare <4 x float> @llvm.powi.v4f32.v4i32(<4 x float>, <4 x i32>)

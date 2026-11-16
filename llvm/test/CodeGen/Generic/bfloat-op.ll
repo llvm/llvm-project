@@ -6,7 +6,7 @@
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=aarch64-pc-windows-msvc         | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=aarch64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=arm64ec-pc-windows-msvc         | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,CHECK-FMA %}
-; RUN: %if amdgpu-registered-target      %{ llc %s -o - -mtriple=amdgcn-amd-amdhsa               | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if amdgpu-registered-target      %{ llc %s -o - -mtriple=amdgpu7.00-amd-amdhsa               | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if arc-registered-target         %{ llc %s -o - -mtriple=arc-elf                         | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,BAD-FMA %}
 ; RUN: %if arm-registered-target         %{ llc %s -o - -mtriple=arm-unknown-linux-gnueabi       | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,BAD-FMA %}
 ; RUN: %if arm-registered-target         %{ llc %s -o - -mtriple=thumbv7em-none-eabi             | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,BAD-FMA %}
@@ -33,8 +33,8 @@
 ; FIXME: ve crashes
 ; FIXME: wasm crashes
 ; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=i686-unknown-linux-gnu          | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-pc-windows-msvc          | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-unknown-linux-gnu        | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,BAD-FMA %}
+; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-pc-windows-msvc          | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-unknown-linux-gnu        | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if xcore-registered-target       %{ llc %s -o - -mtriple=xcore-unknown-unknown           | FileCheck %s --check-prefixes=ALL,CHECK-COPYSIGN,BAD-FMA %}
 ; RUN: %if xtensa-registered-target      %{ llc %s -o - -mtriple=xtensa-none-elf                 | FileCheck %s --check-prefixes=ALL,BAD-COPYSIGN,CHECK-FMA %}
 

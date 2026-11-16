@@ -15,13 +15,16 @@ int b1 = 100;
 // LLVM-DAG: @a1 = global ptr @b1
 
 struct E2 {};
+// CIR-DAG: !rec_E2 = !cir.struct<"E2" {}>
+// LLVMCIR-DAG: %struct.E2 = type {}
 struct B2 { struct E2 e; int x; int y; };
 extern struct B2 b2;
 int *a2 = &b2.y;
 struct B2 b2 = { {}, 10, 20 };
-// CIR-DAG: cir.global external @b2 = #cir.const_record<{#cir.int<10> : !s32i, #cir.int<20> : !s32i}> : !rec_B2
-// CIR-DAG: cir.global external @a2 = #cir.global_view<@b2, [1 : i32]> : !cir.ptr<!s32i>
-// LLVM-DAG: @b2 = global %struct.B2 { i32 10, i32 20 }
+// CIR-DAG: cir.global external @b2 = #cir.const_record<{#cir.zero : !rec_E2, #cir.int<10> : !s32i, #cir.int<20> : !s32i}> : !rec_B2
+// CIR-DAG: cir.global external @a2 = #cir.global_view<@b2, [2 : i32]> : !cir.ptr<!s32i>
+// LLVMCIR-DAG: @b2 = global %struct.B2 { %struct.E2 zeroinitializer, i32 10, i32 20 }
+// OGCG-DAG: @b2 = global %struct.B2 { i32 10, i32 20 }
 // LLVM-DAG: @a2 = global ptr getelementptr {{.*}}(i8, ptr @b2, i64 4)
 
 struct E3 {};
@@ -35,9 +38,9 @@ struct B3 {
 extern struct B3 b3;
 int *a3 = &b3.inner.v;
 struct B3 b3 = { .x = 7, .self = (int *)&b3 };
-// CIR-DAG: cir.global external @b3 = #cir.const_record<{#cir.int<7> : !s32i, #cir.zero : !rec_In3, #cir.global_view<@b3> : !cir.ptr<!s32i>}> : !rec_B3
-// CIR-DAG: cir.global external @a3 = #cir.global_view<@b3, [1 : i32, 1 : i32]> : !cir.ptr<!s32i>
-// LLVMCIR-DAG: @b3 = global %struct.B3 { i32 7, %struct.In3 zeroinitializer, ptr @b3 }
+// CIR-DAG: cir.global external @b3 = #cir.const_record<{#cir.zero : !rec_E3, #cir.int<7> : !s32i, #cir.zero : !rec_In3, #cir.global_view<@b3> : !cir.ptr<!s32i>}> : !rec_B3
+// CIR-DAG: cir.global external @a3 = #cir.global_view<@b3, [2 : i32, 1 : i32]> : !cir.ptr<!s32i>
+// LLVMCIR-DAG: @b3 = global %struct.B3 { %struct.E3 zeroinitializer, i32 7, %struct.In3 zeroinitializer, ptr @b3 }
 // OGCG-DAG:    @b3 = global { i32, %struct.In3, [4 x i8], ptr } { i32 7, %struct.In3 zeroinitializer, [4 x i8] zeroinitializer, ptr @b3 }
 // LLVM-DAG: @a3 = global ptr getelementptr {{.*}}(i8, ptr @b3, i64 8)
 
@@ -53,9 +56,9 @@ extern struct B4 b4_fwd;
 struct A4 { int *target; };
 struct A4 a4 = { .target = &b4_fwd.inner.q };
 struct B4 b4_fwd = { .x = 11, .self = (int *)&b4_fwd };
-// CIR-DAG: cir.global external @b4_fwd = #cir.const_record<{#cir.int<11> : !s32i, #cir.zero : !rec_In4, #cir.global_view<@b4_fwd> : !cir.ptr<!s32i>}> : !rec_B4
-// CIR-DAG: cir.global external @a4 = #cir.const_record<{#cir.global_view<@b4_fwd, [1 : i32, 1 : i32]> : !cir.ptr<!s32i>}> : !rec_A4
-// LLVMCIR-DAG: @b4_fwd = global %struct.B4 { i32 11, %struct.In4 zeroinitializer, ptr @b4_fwd }
+// CIR-DAG: cir.global external @b4_fwd = #cir.const_record<{#cir.zero : !rec_E4, #cir.int<11> : !s32i, #cir.zero : !rec_In4, #cir.global_view<@b4_fwd> : !cir.ptr<!s32i>}> : !rec_B4
+// CIR-DAG: cir.global external @a4 = #cir.const_record<{#cir.global_view<@b4_fwd, [2 : i32, 1 : i32]> : !cir.ptr<!s32i>}> : !rec_A4
+// LLVMCIR-DAG: @b4_fwd = global %struct.B4 { %struct.E4 zeroinitializer, i32 11, %struct.In4 zeroinitializer, ptr @b4_fwd }
 // OGCG-DAG:    @b4_fwd = global { i32, %struct.In4, [4 x i8], ptr } { i32 11, %struct.In4 zeroinitializer, [4 x i8] zeroinitializer, ptr @b4_fwd }
 // LLVM-DAG: @a4 = global %struct.A4 { ptr getelementptr {{.*}}(i8, ptr @b4_fwd, i64 8) }
 

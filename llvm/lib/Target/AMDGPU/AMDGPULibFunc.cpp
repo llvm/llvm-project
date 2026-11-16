@@ -12,6 +12,7 @@
 
 #include "AMDGPULibFunc.h"
 #include "AMDGPU.h"
+#include "AMDGPUSubtarget.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -19,16 +20,10 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-static cl::opt<bool> EnableOCLManglingMismatchWA(
-    "amdgpu-enable-ocl-mangling-mismatch-workaround", cl::init(true),
-    cl::ReallyHidden,
-    cl::desc("Enable the workaround for OCL name mangling mismatch."));
 
 namespace {
 
@@ -65,7 +60,6 @@ struct ManglingRule {
    unsigned char Param[5];
 
    int maxLeadIndex() const { return (std::max)(Lead[0], Lead[1]); }
-   int getNumLeads() const { return (Lead[0] ? 1 : 0) + (Lead[1] ? 1 : 0); }
 
    unsigned getNumArgs() const;
 
@@ -105,7 +99,6 @@ public:
         Index + 1 + static_cast<unsigned>(AMDGPULibFunc::EI_LAST_MANGLED));
   }
   static unsigned getNumArgs(ID Id) { return Table[toIndex(Id)].NumArgs; }
-  static StringRef getName(ID Id) { return Table[toIndex(Id)].Name; }
 };
 
 unsigned ManglingRule::getNumArgs() const {
@@ -544,15 +537,14 @@ AMDGPUMangledLibFunc::AMDGPUMangledLibFunc(EFuncId id, FunctionType *FT,
 ///////////////////////////////////////////////////////////////////////////////
 // Demangling
 
-static int parseVecSize(StringRef& mangledName) {
-  size_t const Len = eatNumber(mangledName);
+static unsigned char parseVecSize(StringRef &mangledName) {
+  int const Len = eatNumber(mangledName);
   switch (Len) {
   case 2: case 3: case 4: case 8: case 16:
-    return Len;
+    return static_cast<unsigned char>(Len);
   default:
-    break;
+    return 1;
   }
-  return 1;
 }
 
 static AMDGPULibFunc::ENamePrefix parseNamePrefix(StringRef& mangledName) {
@@ -710,13 +702,6 @@ bool AMDGPULibFunc::parse(StringRef FuncName, AMDGPULibFunc &F) {
   return false;
 }
 
-StringRef AMDGPUMangledLibFunc::getUnmangledName(StringRef mangledName) {
-  StringRef S = mangledName;
-  if (eatTerm(S, "_Z"))
-    return eatLengthPrefixedName(S);
-  return StringRef();
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // Mangling
 
@@ -737,7 +722,9 @@ void AMDGPUMangledLibFunc::writeName(Stream &OS) const {
   }
 }
 
-std::string AMDGPUMangledLibFunc::mangle() const { return mangleNameItanium(); }
+std::string AMDGPUMangledLibFunc::mangle(const AMDGPUOptions &CLOpts) const {
+  return mangleNameItanium(CLOpts);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Itanium Mangling
@@ -797,6 +784,7 @@ namespace {
 class ItaniumMangler {
   SmallVector<AMDGPULibFunc::Param, 10> Str; // list of accumulated substitutions
   bool  UseAddrSpace;
+  bool OCLManglingMismatchWA;
 
   int findSubst(const AMDGPULibFunc::Param& P) const {
     for(unsigned I = 0; I < Str.size(); ++I) {
@@ -823,8 +811,9 @@ class ItaniumMangler {
   }
 
 public:
-  ItaniumMangler(bool useAddrSpace)
-    : UseAddrSpace(useAddrSpace) {}
+  ItaniumMangler(bool useAddrSpace, bool OCLManglingMismatchWA)
+      : UseAddrSpace(useAddrSpace),
+        OCLManglingMismatchWA(OCLManglingMismatchWA) {}
 
   template <typename Stream>
   void operator()(Stream& os, AMDGPULibFunc::Param p) {
@@ -849,7 +838,7 @@ public:
       unsigned AS = UseAddrSpace
                         ? AMDGPULibFuncBase::getAddrSpaceFromEPtrKind(p.PtrKind)
                         : 0;
-      if (EnableOCLManglingMismatchWA || AS != 0)
+      if (OCLManglingMismatchWA || AS != 0)
         os << "U3AS" << AS;
       Ptr = p;
       p.PtrKind = 0;
@@ -869,7 +858,8 @@ public:
 };
 } // namespace
 
-std::string AMDGPUMangledLibFunc::mangleNameItanium() const {
+std::string
+AMDGPUMangledLibFunc::mangleNameItanium(const AMDGPUOptions &CLOpts) const {
   SmallString<128> Buf;
   raw_svector_ostream S(Buf);
   SmallString<128> NameBuf;
@@ -878,7 +868,7 @@ std::string AMDGPUMangledLibFunc::mangleNameItanium() const {
   const StringRef& NameStr = Name.str();
   S << "_Z" << static_cast<int>(NameStr.size()) << NameStr;
 
-  ItaniumMangler Mangler(true);
+  ItaniumMangler Mangler(true, CLOpts.enable_ocl_mangling_mismatch_workaround);
   ParamIterator I(Leads, manglingRules[FuncId]);
   Param P;
   while ((P = I.getNextParam()).ArgType != 0)
@@ -893,7 +883,7 @@ AMDGPULibFuncBase::Param AMDGPULibFuncBase::Param::getFromTy(Type *Ty,
                                                              bool Signed) {
   Param P;
   if (FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty)) {
-    P.VectorSize = VT->getNumElements();
+    P.VectorSize = static_cast<unsigned char>(VT->getNumElements());
     Ty = VT->getElementType();
   }
 
@@ -1071,7 +1061,8 @@ bool AMDGPULibFunc::isCompatibleSignature(const Module &M,
 }
 
 Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
-  std::string FuncName = fInfo.mangle();
+  std::string FuncName =
+      fInfo.mangle(M->getContext().getLibraryOptions().get<AMDGPUOptions>());
   Function *F = dyn_cast_or_null<Function>(
     M->getValueSymbolTable().lookup(FuncName));
   if (!F || F->isDeclaration())
@@ -1103,7 +1094,8 @@ Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
 
 FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
                                                   const AMDGPULibFunc &fInfo) {
-  std::string const FuncName = fInfo.mangle();
+  std::string const FuncName =
+      fInfo.mangle(M->getContext().getLibraryOptions().get<AMDGPUOptions>());
   Function *F = dyn_cast_or_null<Function>(
     M->getValueSymbolTable().lookup(FuncName));
 

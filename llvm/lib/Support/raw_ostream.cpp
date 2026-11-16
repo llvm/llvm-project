@@ -993,12 +993,20 @@ void buffer_ostream::anchor() {}
 
 void buffer_unique_ostream::anchor() {}
 
+static bool isNullDeviceName(StringRef OutputFileName) {
+#ifdef _WIN32
+  if (OutputFileName.equals_insensitive("NUL"))
+    return true;
+#endif
+  return OutputFileName == "/dev/null";
+}
+
 Error llvm::writeToOutput(StringRef OutputFileName,
                           std::function<Error(raw_ostream &)> Write) {
   if (OutputFileName == "-")
     return Write(outs());
 
-  if (OutputFileName == "/dev/null") {
+  if (isNullDeviceName(OutputFileName)) {
     raw_null_ostream Out;
     return Write(Out);
   }
@@ -1009,14 +1017,17 @@ Error llvm::writeToOutput(StringRef OutputFileName,
   if (!Temp)
     return createFileError(OutputFileName, Temp.takeError());
 
-  raw_fd_ostream Out(Temp->FD, false);
-
 #if defined(__MVS__)
+  // The file tag needs to be set before any output can be written to the file.
+  // Do this before creating the raw_fd_ostream to ensure the correct
+  // sequence.
   if (auto EC = llvm::copyFileTagAttributes(OutputFileName.str(), Temp->FD)) {
     if (EC != std::errc::no_such_file_or_directory)
       return createFileError(OutputFileName, EC);
   }
 #endif
+
+  raw_fd_ostream Out(Temp->FD, false);
 
   if (Error E = Write(Out)) {
     if (Error DiscardError = Temp->discard())

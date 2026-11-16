@@ -113,17 +113,6 @@ protected:
   std::error_code
   visitSourceRangeRecord(const serialized_diags::Location &Start,
                          const serialized_diags::Location &End) override;
-
-private:
-  std::error_code adjustSourceLocFilename(RecordData &Record,
-                                          unsigned int offset);
-
-  void adjustAbbrevID(RecordData &Record, AbbrevLookup &Lookup,
-                      unsigned NewAbbrev);
-
-  void writeRecordWithAbbrev(unsigned ID, RecordData &Record);
-
-  void writeRecordWithBlob(unsigned ID, RecordData &Record, StringRef Blob);
 };
 
 class SDiagsWriter : public DiagnosticConsumer {
@@ -500,7 +489,7 @@ void SDiagsWriter::EmitBlockInfoBlock() {
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(RECORD_FIXIT));
   AddRangeLocationAbbrev(*Abbrev);
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 16)); // Text size.
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 16));   // Text size.
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));      // FixIt text.
   Abbrevs.set(RECORD_FIXIT, Stream.EmitBlockInfoAbbrev(BLOCK_DIAG,
                                                        Abbrev));

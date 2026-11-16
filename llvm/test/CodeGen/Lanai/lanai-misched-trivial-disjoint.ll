@@ -1,6 +1,5 @@
 ; REQUIRES: asserts
 ; RUN: llc %s -mtriple=lanai-unknown-unknown -debug-only=machine-scheduler -o /dev/null 2>&1 | FileCheck %s
-; RUN: llc %s -enable-new-pm -mtriple=lanai-unknown-unknown -debug-only=machine-scheduler -o /dev/null 2>&1 | FileCheck %s
 
 ; Make sure there are no control dependencies between memory operations that
 ; are trivially disjoint.

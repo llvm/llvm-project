@@ -13,6 +13,7 @@
 
 #include "R600Subtarget.h"
 #include "AMDGPUSelectionDAGInfo.h"
+#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 
 using namespace llvm;
@@ -24,13 +25,15 @@ using namespace llvm;
 #include "R600GenSubtargetInfo.inc"
 
 R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                             const TargetMachine &TM)
-    : R600GenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS), AMDGPUSubtarget(TT),
-      InstrInfo(*this),
+                             const AMDGPUTargetMachine &TM)
+    : R600GenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
+      AMDGPUSubtarget(TT, TM.getCLOpts()), InstrInfo(*this),
       FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
       TLInfo(TM, initializeSubtargetDependencies(TT, GPU, FS)),
       InstrItins(getInstrItineraryForCPU(GPU)) {
   LocalMemorySize = AddressableLocalMemorySize;
+  // R600 has no MaxWavesPerEU subtarget feature.
+  MaxWavesPerEU = 10;
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 }
 

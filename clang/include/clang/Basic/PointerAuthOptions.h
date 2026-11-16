@@ -27,10 +27,6 @@ namespace clang {
 /// is ptrauth_string_discriminator("block_descriptor")
 constexpr uint16_t BlockDescriptorConstantDiscriminator = 0xC0BB;
 
-/// Constant discriminator to be used with function pointers in .init_array and
-/// .fini_array. The value is ptrauth_string_discriminator("init_fini")
-constexpr uint16_t InitFiniPointerConstantDiscriminator = 0xD9D4;
-
 /// Constant discriminator to be used with method list pointers. The value is
 /// ptrauth_string_discriminator("method_list_t")
 constexpr uint16_t MethodListPointerConstantDiscriminator = 0xC310;
@@ -57,6 +53,10 @@ constexpr unsigned PointerAuthKeyNone = -1;
 /// The value is ptrauth_string_discriminator("_ZTVSt9type_info"), i.e.,
 /// the vtable type discriminator for classes derived from std::type_info.
 constexpr uint16_t StdTypeInfoVTablePointerConstantDiscrimination = 0xB1EA;
+
+// Type discriminator suffix to be added to a mangled v-table identifier to
+// ensure that VTT vtable pointer entries get distinct type discriminators.
+constexpr llvm::StringLiteral VTTVTablePointerDiscriminatorSuffix = "_VTT";
 
 class PointerAuthSchema {
 public:
@@ -223,9 +223,6 @@ struct PointerAuthOptions {
 
   /// The ABI for C++ member function pointers.
   PointerAuthSchema CXXMemberFunctionPointers;
-
-  /// The ABI for function addresses in .init_array and .fini_array
-  PointerAuthSchema InitFiniPointers;
 
   /// The ABI for block invocation function pointers.
   PointerAuthSchema BlockInvocationFunctionPointers;

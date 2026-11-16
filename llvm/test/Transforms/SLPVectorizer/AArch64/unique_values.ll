@@ -7,15 +7,19 @@ target triple = "aarch64-unknown-unknown"
 define void @foo(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 12
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr i8, ptr [[A]], i64 12
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv i32 [[TMP0]], 3
+; CHECK-NEXT:    [[ADD_1:%.*]] = udiv i32 [[TMP1]], 8
 ; CHECK-NEXT:    [[ADD_3:%.*]] = udiv i32 [[TMP2]], 2
-; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr i8, ptr [[A1:%.*]], i64 8
+; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr i8, ptr [[A1:%.*]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr i8, ptr [[A1]], i64 8
 ; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr i8, ptr [[A1]], i64 12
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv <2 x i32> [[TMP1]], <i32 3, i32 8>
-; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[A1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP4]], i32 0
+; CHECK-NEXT:    store i32 [[TMP3]], ptr [[A1]], align 4
+; CHECK-NEXT:    store i32 [[ADD_1]], ptr [[ARRAYIDX2_1]], align 4
 ; CHECK-NEXT:    store i32 [[TMP3]], ptr [[ARRAYIDX2_2]], align 4
 ; CHECK-NEXT:    store i32 [[ADD_3]], ptr [[ARRAYIDX2_3]], align 4
 ; CHECK-NEXT:    ret void

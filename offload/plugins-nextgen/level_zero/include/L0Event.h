@@ -19,6 +19,7 @@
 
 #include "L0Defs.h"
 #include "L0Trace.h"
+#include "PluginInterface.h"
 
 namespace llvm::omp::target::plugin {
 

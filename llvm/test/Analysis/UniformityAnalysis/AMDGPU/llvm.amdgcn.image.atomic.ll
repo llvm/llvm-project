@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-mesa-mesa3d -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-mesa-mesa3d -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.image.atomic.swap.1d.i32.i32.v8i32(
 define float @image_atomic_swap(<8 x i32> inreg %rsrc, i32 inreg %addr, i32 inreg %data) #0 {

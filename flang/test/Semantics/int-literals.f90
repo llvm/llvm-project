@@ -35,11 +35,23 @@ complex, parameter :: badj4dext = 2147483648
 !WARNING: Integer literal is too large for default INTEGER(KIND=4); assuming INTEGER(KIND=8) [-Wbig-int-literals]
 complex, parameter :: badz4dext = (+2147483648, 0)
 
+! In an expression, -2147483648 is unary minus applied to a literal that is
+! out of range by itself.  The negation is folded into the literal, which
+! keeps its kind, with a portability warning.
+!WARNING: negated maximum INTEGER(KIND=4) literal [-Wbig-int-literals]
+complex, parameter :: negj4d = -2147483648
+!WARNING: negated maximum INTEGER(KIND=4) literal [-Wbig-int-literals]
+complex, parameter :: negj4 = -2147483648_4
+!WARNING: negated maximum INTEGER(KIND=4) literal [-Wbig-int-literals]
+complex, parameter :: negj4n = 1 + (-2147483648)
+
 complex, parameter :: okj8 = 9223372036854775807_8, okz8 = (+9223372036854775807_8, -9223372036854775808_8)
 !ERROR: Integer literal is too large for INTEGER(KIND=8)
 complex, parameter :: badj8 = 9223372036854775808_8
 !ERROR: Integer literal is too large for INTEGER(KIND=8)
 complex, parameter :: badz8 = (+9223372036854775808_8, 0)
+!WARNING: negated maximum INTEGER(KIND=8) literal [-Wbig-int-literals]
+complex, parameter :: negj8 = -9223372036854775808_8
 complex, parameter :: okj8a = 9223372036854775808_16
 complex, parameter :: okz8a = (+9223372036854775808_16, 0)
 

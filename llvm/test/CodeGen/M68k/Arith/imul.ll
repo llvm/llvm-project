@@ -186,7 +186,7 @@ define i64 @mul3_64(i64 %A) {
 ; CHECK-NEXT:    move.l (24,%sp), %d0
 ; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    move.l #3, (12,%sp)
-; CHECK-NEXT:    move.l #0, (8,%sp)
+; CHECK-NEXT:    clr.l (8,%sp)
 ; CHECK-NEXT:    jsr __muldi3
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
@@ -205,7 +205,7 @@ define i64 @mul40_64(i64 %A) {
 ; CHECK-NEXT:    move.l (24,%sp), %d0
 ; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    move.l #40, (12,%sp)
-; CHECK-NEXT:    move.l #0, (8,%sp)
+; CHECK-NEXT:    clr.l (8,%sp)
 ; CHECK-NEXT:    jsr __muldi3
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts

@@ -1083,6 +1083,26 @@ namespace Revive {
   static_assert(h() == 20); // both-error {{not an integral constant expression}} \
                             // both-note {{in call to}}
 }
+
+namespace GH197403 {
+  struct Inner {
+    constexpr ~Inner() noexcept {}
+  };
+  struct Outer {
+    Inner inner;
+  };
+  template<typename T>
+  struct BugTrigger {
+    union { T value; int dummy; };
+    constexpr BugTrigger() : value{} {}
+    constexpr ~BugTrigger() noexcept { value.~T(); }
+  };
+  consteval int test() {
+    BugTrigger<Outer> bt;
+    return 0;
+  }
+  static_assert(test() == 0);
+}
 #endif
 
 namespace TrivialDtorInEvaluateDtor{
