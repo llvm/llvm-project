@@ -54,6 +54,7 @@ MACHINE_FUNCTION_PASS("x86-flags-copy-lowering", X86FlagsCopyLoweringPass())
 MACHINE_FUNCTION_PASS("x86-fp-stackifier", X86FPStackifierPass())
 MACHINE_FUNCTION_PASS("x86-global-base-reg", X86GlobalBaseRegPass())
 MACHINE_FUNCTION_PASS("x86-indirect-branch-tracking", X86IndirectBranchTrackingPass())
+MACHINE_FUNCTION_PASS("x86-indirect-thunks", X86IndirectThunksPass())
 MACHINE_FUNCTION_PASS("x86-insert-vzeroupper", X86InsertVZeroUpperPass())
 MACHINE_FUNCTION_PASS("x86-insert-x87-wait", X86InsertX87WaitPass())
 MACHINE_FUNCTION_PASS("x86-isel", X86ISelDAGToDAGPass(*this))
@@ -73,11 +74,3 @@ MACHINE_FUNCTION_PASS("x86-suppress-apx-for-relocation", X86SuppressAPXForReloca
 MACHINE_FUNCTION_PASS("x86-tile-config", X86TileConfigPass())
 MACHINE_FUNCTION_PASS("x86-wineh-unwindv2", X86WinEHUnwindV2Pass())
 #undef MACHINE_FUNCTION_PASS
-
-#ifndef DUMMY_MACHINE_FUNCTION_PASS
-#define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)
-#endif
-DUMMY_MACHINE_FUNCTION_PASS("x86-execution-domain-fix", X86ExecutionDomainFix())
-DUMMY_MACHINE_FUNCTION_PASS("x86-indirect-thunks", X86IndirectThunks())
-DUMMY_MACHINE_FUNCTION_PASS("x86-pad-short-functions", X86PadShortFunctionsPass())
-#undef DUMMY_MACHINE_FUNCTION_PASS

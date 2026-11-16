@@ -1892,6 +1892,10 @@ mlir::Value hlfir::ElementalOp::getElementEntity() {
   return mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getElementValue();
 }
 
+mlir::Region *hlfir::ElementalOp::getElementCleanup() {
+  return &mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getCleanup();
+}
+
 llvm::LogicalResult hlfir::ElementalOp::verify() {
   mlir::Value mold = getMold();
   hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(getType());
@@ -1943,6 +1947,29 @@ llvm::LogicalResult hlfir::DestroyOp::verify() {
   return mlir::success();
 }
 
+/// Erase a character expression whose only uses are hlfir.destroy, together
+/// with these hlfir.destroy. Only the character operations creating their own
+/// result storage are considered, since other expression producers may reuse
+/// storage that the hlfir.destroy releases.
+llvm::LogicalResult
+hlfir::DestroyOp::canonicalize(DestroyOp destroy,
+                               mlir::PatternRewriter &rewriter) {
+  mlir::Value expr = destroy.getExpr();
+  mlir::Operation *producer = expr.getDefiningOp();
+  if (!mlir::isa_and_nonnull<hlfir::ConcatOp, hlfir::CharTrimOp,
+                             hlfir::SetLengthOp, hlfir::CharExtremumOp>(
+          producer) ||
+      !mlir::wouldOpBeTriviallyDead(producer) ||
+      !llvm::all_of(expr.getUsers(), [](mlir::Operation *user) {
+        return mlir::isa<hlfir::DestroyOp>(user);
+      }))
+    return mlir::failure();
+  for (mlir::Operation *user : llvm::make_early_inc_range(expr.getUsers()))
+    rewriter.eraseOp(user);
+  rewriter.eraseOp(producer);
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // CopyInOp
 //===----------------------------------------------------------------------===//
@@ -1952,7 +1979,15 @@ void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::Value temp_box, mlir::Value var_is_present) {
   return build(builder, odsState,
                {var.getType(), builder.getI1Type(), builder.getI1Type()}, var,
-               temp_box, var_is_present);
+               temp_box, var_is_present, /*alignment=*/mlir::IntegerAttr{});
+}
+
+llvm::LogicalResult hlfir::CopyInOp::verify() {
+  if (std::optional<std::int64_t> alignment = getAlignment()) {
+    if (*alignment <= 0 || (*alignment & (*alignment - 1)) != 0)
+      return emitOpError("alignment must be a positive power of two");
+  }
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

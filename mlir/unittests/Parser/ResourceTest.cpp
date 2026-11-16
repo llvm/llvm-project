@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../test/lib/Dialect/Test/TestAttributes.h"
-#include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "TestAttributes.h"
+#include "TestDialect.h"
 #include "mlir/Parser/Parser.h"
 
 #include "gmock/gmock.h"

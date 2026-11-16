@@ -1726,25 +1726,32 @@ bool SemaARM::areCompatibleSveTypes(QualType FirstType, QualType SecondType) {
   }
 
   auto IsValidCast = [&](QualType FirstType, QualType SecondType) {
-    if (const auto *BT = FirstType->getAs<BuiltinType>()) {
-      if (const auto *VT = SecondType->getAs<VectorType>()) {
-        // Predicates have the same representation as uint8 so we also have to
-        // check the kind to make these types incompatible.
-        ASTContext &Context = getASTContext();
-        if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
-          return BT->getKind() == BuiltinType::SveBool;
-        else if (VT->getVectorKind() == VectorKind::SveFixedLengthData)
-          return VT->getElementType().getCanonicalType() ==
-                     FirstType->getSveEltType(Context) &&
-                 BT->getKind() != BuiltinType::SveBool;
-        else if (VT->getVectorKind() == VectorKind::Generic)
-          return Context.getTypeSize(SecondType) ==
-                     getSVETypeSize(Context, BT, IsStreaming) &&
-                 Context.hasSameType(
-                     VT->getElementType(),
-                     Context.getBuiltinVectorTypeInfo(BT).ElementType);
-      }
-    }
+    const auto *BT = FirstType->getAs<BuiltinType>();
+    if (!BT || !BT->isSveVLSBuiltinType())
+      return false;
+
+    const auto *VT = SecondType->getAs<VectorType>();
+    if (!VT)
+      return false;
+
+    // Predicates have the same representation as uint8 so we also have to
+    // check the kind to make these types incompatible.
+    if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
+      return BT->getKind() == BuiltinType::SveBool;
+
+    ASTContext &Context = getASTContext();
+    if (VT->getVectorKind() == VectorKind::SveFixedLengthData)
+      return VT->getElementType().getCanonicalType() ==
+                 FirstType->getSveEltType(Context) &&
+             BT->getKind() != BuiltinType::SveBool;
+
+    if (VT->getVectorKind() == VectorKind::Generic)
+      return Context.getTypeSize(SecondType) ==
+                 getSVETypeSize(Context, BT, IsStreaming) &&
+             Context.hasSameType(
+                 VT->getElementType(),
+                 Context.getBuiltinVectorTypeInfo(BT).ElementType);
+
     return false;
   };
 
@@ -1772,7 +1779,7 @@ bool SemaARM::areLaxCompatibleSveTypes(QualType FirstType,
 
   auto IsLaxCompatible = [&](QualType FirstType, QualType SecondType) {
     const auto *BT = FirstType->getAs<BuiltinType>();
-    if (!BT)
+    if (!BT || !BT->isSveVLSBuiltinType())
       return false;
 
     const auto *VecTy = SecondType->getAs<VectorType>();

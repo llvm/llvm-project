@@ -928,11 +928,10 @@ bool PPCTargetInfo::validateCpuIs(StringRef CPUName) const {
                 AIXID)                                                         \
   .Case(NAME, {Linux_SUPPORT_METHOD, AIX_SUPPORT_METHOD})
 
-  std::pair<unsigned, unsigned> SuppportMethod =
+  std::pair<unsigned, unsigned> SupportMethod =
       llvm::StringSwitch<std::pair<unsigned, unsigned>>(CPUName)
 #include "llvm/TargetParser/PPCTargetParser.def"
           .Default({BUILTIN_PPC_UNSUPPORTED, BUILTIN_PPC_UNSUPPORTED});
-  return Triple.isOSLinux()
-             ? (SuppportMethod.first != BUILTIN_PPC_UNSUPPORTED)
-             : (SuppportMethod.second != BUILTIN_PPC_UNSUPPORTED);
+  return Triple.isOSLinux() ? (SupportMethod.first != BUILTIN_PPC_UNSUPPORTED)
+                            : (SupportMethod.second != BUILTIN_PPC_UNSUPPORTED);
 }

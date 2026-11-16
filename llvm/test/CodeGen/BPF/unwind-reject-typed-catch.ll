@@ -1,4 +1,5 @@
 ; RUN: not llc -mtriple=bpfel -mcpu=v4 -filetype=asm -o - %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=bpfel -mcpu=v4 -filetype=obj -o /dev/null %s 2>&1 | FileCheck %s
 
 ; BPF does not support type-specific exception catches.
 ; Verify that a catch clause with a non-null type info is rejected.

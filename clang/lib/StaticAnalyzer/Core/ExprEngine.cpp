@@ -1952,6 +1952,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
     case Stmt::OMPParallelGenericLoopDirectiveClass:
     case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
+    case Stmt::OMPTargetGenericLoopDirectiveClass:
     case Stmt::CapturedStmtClass:
     case Stmt::SYCLKernelCallStmtClass:
     case Stmt::UnresolvedSYCLKernelCallStmtClass:
@@ -2044,6 +2045,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::ArrayInitIndexExprClass:
     case Stmt::ExtVectorElementExprClass:
     case Stmt::MatrixElementExprClass:
+    case Stmt::MatrixSingleSubscriptExprClass:
+    case Stmt::MatrixSubscriptExprClass:
     case Stmt::ImaginaryLiteralClass:
     case Stmt::ObjCAtCatchStmtClass:
     case Stmt::ObjCAtFinallyStmtClass:
@@ -2163,15 +2166,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
     case Stmt::ArraySubscriptExprClass:
       VisitArraySubscriptExpr(cast<ArraySubscriptExpr>(S), Pred, Dst);
-      break;
-
-    case Stmt::MatrixSingleSubscriptExprClass:
-      llvm_unreachable(
-          "Support for MatrixSingleSubscriptExprClass is not implemented.");
-      break;
-
-    case Stmt::MatrixSubscriptExprClass:
-      llvm_unreachable("Support for MatrixSubscriptExpr is not implemented.");
       break;
 
     case Stmt::GCCAsmStmtClass:

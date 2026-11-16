@@ -1537,9 +1537,9 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       break;
     }
     default:
-      reportGISelFailure(MF, MORE, DEBUG_TYPE,
-                         "AMDGPU RegBankLegalize: Ext32To64, unsuported opcode",
-                         MI);
+      reportGISelFailure(
+          MF, MORE, DEBUG_TYPE,
+          "AMDGPU RegBankLegalize: Ext32To64, unsupported opcode", MI);
       return false;
     }
 
@@ -1642,9 +1642,9 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       else if (Size / 128 == 4)
         splitLoad(MI, {B128, B128, B128, B128});
       else {
-        reportGISelFailure(MF, MORE, DEBUG_TYPE,
-                           "AMDGPU RegBankLegalize: SplitLoad, unsuported type",
-                           MI);
+        reportGISelFailure(
+            MF, MORE, DEBUG_TYPE,
+            "AMDGPU RegBankLegalize: SplitLoad, unsupported type", MI);
         return false;
       }
     }
@@ -1657,7 +1657,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       splitLoad(MI, {V4S16, V2S16}, V2S16);
     else {
       reportGISelFailure(MF, MORE, DEBUG_TYPE,
-                         "AMDGPU RegBankLegalize: SplitLoad, unsuported type",
+                         "AMDGPU RegBankLegalize: SplitLoad, unsupported type",
                          MI);
       return false;
     }
@@ -1728,7 +1728,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       widenLoad(MI, V8S16, V2S16);
     else {
       reportGISelFailure(MF, MORE, DEBUG_TYPE,
-                         "AMDGPU RegBankLegalize: WidenLoad, unsuported type",
+                         "AMDGPU RegBankLegalize: WidenLoad, unsupported type",
                          MI);
       return false;
     }

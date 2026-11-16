@@ -198,6 +198,20 @@ gpu.module @test_module_5 {
     func.return
   }
 
+  // CHECK-LABEL: func @gpu_sync_cluster()
+  func.func @gpu_sync_cluster() {
+    // CHECK: nvvm.cluster.arrive aligned
+    // CHECK-NEXT: nvvm.cluster.wait aligned
+    gpu.barrier scope <cluster>
+    // CHECK-NEXT: nvvm.cluster.arrive.relaxed aligned
+    // CHECK-NEXT: nvvm.cluster.wait aligned
+    gpu.barrier memfence [] scope <cluster>
+    // CHECK-NEXT: nvvm.cluster.arrive aligned
+    // CHECK-NEXT: nvvm.cluster.wait aligned
+    gpu.barrier memfence [#gpu.address_space<workgroup>] scope <cluster>
+    func.return
+  }
+
   // CHECK-LABEL: func @gpu_named_barriers
   // CHECK-SAME: (%[[MEMBER_COUNT:.*]]: i32)
   func.func @gpu_named_barriers(%member_count : i32) {

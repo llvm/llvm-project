@@ -12,7 +12,6 @@
 #include "DWARFLinkerCompileUnit.h"
 #include "DWARFLinkerGlobalData.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
@@ -131,7 +130,7 @@ protected:
   void addValueName(UnitEntryPairTy InputUnitEntryPair, dwarf::Attribute Attr);
 
   /// Buffer keeping bult name.
-  SmallString<1000> SyntheticName;
+  TypeKey SyntheticName;
 
   /// Digests of the contents of unnamed types, by DIE.
   DenseMap<const DWARFDebugInfoEntry *, std::string> ContentsDigests;

@@ -58,7 +58,7 @@ void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
 }
 
 void NativeDylibManager::lookup(OnLookupCompleteFn &&OnLookupComplete,
-                                void *Handle, SymbolLookupSet Symbols) {
+                                void *Handle, RemoteSymbolLookupSet Symbols) {
   auto Addrs = sys::lookupLibrarySymbols(Handle, Symbols);
 
   // Convert weak-missing entries (empty optional from lookupLibrarySymbols)

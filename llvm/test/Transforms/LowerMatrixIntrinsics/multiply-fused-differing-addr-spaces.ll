@@ -8,12 +8,12 @@ define void @multiply_diff_addr_spaces(ptr addrspace(1) %A, ptr addrspace(1) %B,
 ; CHECK-LABEL: define void @multiply_diff_addr_spaces(
 ; CHECK-SAME: ptr addrspace(1) [[A:%.*]], ptr addrspace(1) [[B:%.*]], ptr addrspace(2) [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca [4 x float], align 4, addrspace(1)
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca [4 x float], align 4, addrspace(1)
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca [4 x float], align 8, addrspace(1)
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca [4 x float], align 8, addrspace(1)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p1(ptr addrspace(1) [[TMP1]])
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[TMP1]], ptr addrspace(1) align 8 [[A]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 8 [[TMP1]], ptr addrspace(1) align 8 [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p1(ptr addrspace(1) [[TMP0]])
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[TMP0]], ptr addrspace(1) align 8 [[B]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 8 [[TMP0]], ptr addrspace(1) align 8 [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP1]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr addrspace(1) [[TMP2]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP2]], i64 2
@@ -96,12 +96,12 @@ define void @multiply_all_diff_addr_spaces(ptr addrspace(1) %A, ptr addrspace(3)
 ; CHECK-LABEL: define void @multiply_all_diff_addr_spaces(
 ; CHECK-SAME: ptr addrspace(1) [[A:%.*]], ptr addrspace(3) [[B:%.*]], ptr addrspace(2) [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca [4 x float], align 4, addrspace(3)
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca [4 x float], align 4, addrspace(1)
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca [4 x float], align 8, addrspace(3)
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca [4 x float], align 8, addrspace(1)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p1(ptr addrspace(1) [[TMP0]])
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[TMP0]], ptr addrspace(1) align 8 [[A]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 8 [[TMP0]], ptr addrspace(1) align 8 [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p3(ptr addrspace(3) [[TMP1]])
-; CHECK-NEXT:    call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) align 4 [[TMP1]], ptr addrspace(3) align 8 [[B]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) align 8 [[TMP1]], ptr addrspace(3) align 8 [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP0]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr addrspace(1) [[TMP2]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP2]], i64 2
@@ -186,8 +186,8 @@ define void @multiply_first_load_same_addr_space(ptr addrspace(1) %A, ptr addrsp
 ; CHECK-LABEL: define void @multiply_first_load_same_addr_space(
 ; CHECK-SAME: ptr addrspace(1) [[A:%.*]], ptr addrspace(2) [[B:%.*]], ptr addrspace(1) [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = alloca [4 x float], align 4, addrspace(2)
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x float], align 4, addrspace(1)
+; CHECK-NEXT:    [[TMP4:%.*]] = alloca [4 x float], align 8, addrspace(2)
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x float], align 8, addrspace(1)
 ; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[C]], i64 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr addrspace(1) [[A]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[ALIAS_CONT:.*]], label %[[NO_ALIAS:.*]]
@@ -197,12 +197,12 @@ define void @multiply_first_load_same_addr_space(ptr addrspace(1) %A, ptr addrsp
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr addrspace(1) [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[COPY:.*]], label %[[NO_ALIAS]]
 ; CHECK:       [[COPY]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[TMP2]], ptr addrspace(1) align 8 [[A]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 8 [[TMP2]], ptr addrspace(1) align 8 [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    br label %[[NO_ALIAS]]
 ; CHECK:       [[NO_ALIAS]]:
 ; CHECK-NEXT:    [[TMP36:%.*]] = phi ptr addrspace(1) [ [[A]], %[[ENTRY]] ], [ [[A]], %[[ALIAS_CONT]] ], [ [[TMP2]], %[[COPY]] ]
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p2(ptr addrspace(2) [[TMP4]])
-; CHECK-NEXT:    call void @llvm.memcpy.p2.p2.i64(ptr addrspace(2) align 4 [[TMP4]], ptr addrspace(2) align 8 [[B]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p2.p2.i64(ptr addrspace(2) align 8 [[TMP4]], ptr addrspace(2) align 8 [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP36]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr addrspace(1) [[TMP5]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP5]], i64 2
@@ -287,10 +287,10 @@ define void @multiply_second_load_same_addr_space(ptr addrspace(2) %A, ptr addrs
 ; CHECK-LABEL: define void @multiply_second_load_same_addr_space(
 ; CHECK-SAME: ptr addrspace(2) [[A:%.*]], ptr addrspace(1) [[B:%.*]], ptr addrspace(1) [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = alloca [4 x float], align 4, addrspace(1)
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca [4 x float], align 4, addrspace(2)
+; CHECK-NEXT:    [[TMP3:%.*]] = alloca [4 x float], align 8, addrspace(1)
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca [4 x float], align 8, addrspace(2)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p2(ptr addrspace(2) [[TMP0]])
-; CHECK-NEXT:    call void @llvm.memcpy.p2.p2.i64(ptr addrspace(2) align 4 [[TMP0]], ptr addrspace(2) align 8 [[A]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p2.p2.i64(ptr addrspace(2) align 8 [[TMP0]], ptr addrspace(2) align 8 [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[C]], i64 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr addrspace(1) [[B]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[ALIAS_CONT:.*]], label %[[NO_ALIAS:.*]]
@@ -300,7 +300,7 @@ define void @multiply_second_load_same_addr_space(ptr addrspace(2) %A, ptr addrs
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr addrspace(1) [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[COPY:.*]], label %[[NO_ALIAS]]
 ; CHECK:       [[COPY]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[TMP3]], ptr addrspace(1) align 8 [[B]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 8 [[TMP3]], ptr addrspace(1) align 8 [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    br label %[[NO_ALIAS]]
 ; CHECK:       [[NO_ALIAS]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi ptr addrspace(1) [ [[B]], %[[ENTRY]] ], [ [[B]], %[[ALIAS_CONT]] ], [ [[TMP3]], %[[COPY]] ]

@@ -6,18 +6,23 @@
 
 // RUN: %clang_cc1 -triple amdgpu12.5-amd-amdhsa \
 // RUN:   -mxnack -emit-llvm -o - %s | FileCheck %s --check-prefix=XNACK-ON
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu12.5-amd-amdhsa   -mxnack -emit-llvm -o - %s | FileCheck %s --check-prefix=XNACK-ON %}
 
 // RUN: %clang_cc1 -triple amdgpu12.5-amd-amdhsa \
 // RUN:   -mno-xnack -emit-llvm -o - %s | FileCheck %s --check-prefix=XNACK-OFF
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu12.5-amd-amdhsa   -mno-xnack -emit-llvm -o - %s | FileCheck %s --check-prefix=XNACK-OFF %}
 
 // RUN: %clang_cc1 -triple amdgpu12.5-amd-amdhsa \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=NO-FLAGS
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu12.5-amd-amdhsa   -emit-llvm -o - %s | FileCheck %s --check-prefix=NO-FLAGS %}
 
 // RUN: %clang_cc1 -triple amdgpu12.50-amd-amdhsa \
 // RUN:   -mxnack -emit-llvm -o - %s | FileCheck %s --check-prefix=XNACK-ON
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu12.50-amd-amdhsa   -mxnack -emit-llvm -o - %s | FileCheck %s --check-prefix=XNACK-ON %}
 
 // RUN: %clang_cc1 -triple amdgpu12.50-amd-amdhsa \
 // RUN:   -mno-xnack -emit-llvm -o - %s | FileCheck %s --check-prefix=XNACK-OFF
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu12.50-amd-amdhsa   -mno-xnack -emit-llvm -o - %s | FileCheck %s --check-prefix=XNACK-OFF %}
 
 // Module flags are emitted regardless of target support
 // XNACK-ON-DAG: !{i32 1, !"amdgpu.xnack", i32 1}

@@ -9,7 +9,6 @@ add_libc_test(
   DEPENDS
     libc.include.sys_personality
     libc.src.sys.personality.personality
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

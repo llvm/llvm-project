@@ -16,7 +16,8 @@
 
 // SUBARCH-TRIPLE-NOT: "-cc1"
 // SUBARCH-TRIPLE: "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
-// SUBARCH-TRIPLE-NEXT: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"
+// SUBARCH-TRIPLE-NOT: "-cc1"
+// SUBARCH-TRIPLE: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"
 // SUBARCH-TRIPLE-NOT: "-cc1"
 // SUBARCH-TRIPLE: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // SUBARCH-TRIPLE-NOT: "-cc1"

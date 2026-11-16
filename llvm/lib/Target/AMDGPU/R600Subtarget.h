@@ -25,6 +25,8 @@
 
 namespace llvm {
 
+class AMDGPUTargetMachine;
+
 class R600Subtarget final : public R600GenSubtargetInfo,
                             public AMDGPUSubtarget {
 
@@ -43,7 +45,7 @@ private:
 
 public:
   R600Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
-                const TargetMachine &TM);
+                const AMDGPUTargetMachine &TM);
 
   ~R600Subtarget() override;
 
