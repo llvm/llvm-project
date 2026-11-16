@@ -246,7 +246,7 @@ infrastructure are described first, followed by tool-specific sections.
 
     - Added support for long conjuction and disjunction chain.
 
-    - Added support for logical not operator for inner if condition.
+    - Added support for logical `not` operator for inner if condition.
 
     - Fixed incorrect fix on side effect on right-hand side of conjunction (`||`) operator.
 
