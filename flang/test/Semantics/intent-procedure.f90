@@ -19,3 +19,12 @@ subroutine test(in_proc, out_proc, inout_proc, ptr)
   intent(out) :: out_proc
   intent(inout) :: inout_proc
 end subroutine
+
+subroutine intent_first(f)
+  intent(in) :: f
+  interface
+    !ERROR: A dummy procedure without the POINTER attribute may not have an INTENT attribute
+    subroutine f()
+    end subroutine
+  end interface
+end subroutine
