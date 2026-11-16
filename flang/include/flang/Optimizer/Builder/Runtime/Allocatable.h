@@ -51,5 +51,11 @@ void genAllocatableAllocate(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Value desc, mlir::Value hasStat = {},
                             mlir::Value errMsg = {});
 
+/// Generate runtime call to deallocate the allocated allocatable entity
+/// described by \p desc without finalizing it. The storage is released with
+/// the allocator recorded in the descriptor.
+void genAllocatableDeallocateNoFinal(fir::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Value desc);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_ALLOCATABLE_H

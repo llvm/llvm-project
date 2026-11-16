@@ -126,13 +126,13 @@ ScriptedSyntheticChildrenPythonInterface::GetSyntheticValue() {
                        LLVM_PRETTY_FUNCTION);
 }
 
-ConstString ScriptedSyntheticChildrenPythonInterface::GetSyntheticTypeName() {
+std::string ScriptedSyntheticChildrenPythonInterface::GetSyntheticTypeName() {
   StructuredData::ObjectSP obj =
       LogAndDefault(Dispatch("get_type_name"), LLVM_PRETTY_FUNCTION);
   if (!obj)
     return {};
 
-  return ConstString(obj->GetStringValue());
+  return obj->GetStringValue().str();
 }
 
 void ScriptedSyntheticChildrenPythonInterface::Initialize() {

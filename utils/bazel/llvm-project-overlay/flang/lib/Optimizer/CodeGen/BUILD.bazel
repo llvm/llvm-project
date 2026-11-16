@@ -49,6 +49,7 @@ cc_library(
         "//flang/lib/Optimizer/OpenACC/Support:FIROpenACCSupport",
         "//flang/lib/Optimizer/OpenMP/Support:FIROpenMPSupport",
         "//flang/lib/Optimizer/Support:FIRSupport",
+        "//llvm:BinaryFormat",
         "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:TargetParser",

@@ -227,6 +227,10 @@ def warn_fixit_no_changes : Note<
 def err_relocatable_without_isysroot : Error<
     "must specify system root with -isysroot when building a relocatable "
     "PCH file">;
+def err_pch_base_dir_is_cwd_relocatable : Error<
+    "-fpch-base-dir-is-cwd cannot be used with -relocatable-pch when building "
+    "a PCH file; the two options select different base directories for input "
+    "paths">;
 
 def warn_unknown_diag_option : Warning<
     "unknown %select{warning|remark}0 option '%1'%select{|; did you mean '%3'?}2">,
@@ -512,6 +516,9 @@ def warn_hlsl_signature_packing_ignored : Warning<
 def warn_hlsl_failed_to_embed_source
     : Warning<"failed to embed source for '%0' into dx.source.contents">,
       InGroup<HLSLDXCCompat>;
+def warn_hlsl_bool_from_mem
+    : Warning<"-load-bool-from-mem=%0 ignored for HLSL (always nonzero)">,
+      InGroup<OptionIgnored>, DefaultWarn;
 
 def err_data_layout_mismatch : Error<"backend data layout '%0' does not match "
                                      "expected target description '%1'">;

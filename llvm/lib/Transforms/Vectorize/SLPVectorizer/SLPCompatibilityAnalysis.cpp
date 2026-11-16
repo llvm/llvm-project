@@ -19,6 +19,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -1137,4 +1138,84 @@ SmallVector<SmallVector<Value *>> scanAltAssociativeOperands(
       SubLanes.set(Lane);
   return Columns;
 }
+
+std::pair<Instruction *, Instruction *>
+getMainAltOpsNoStateVL(ArrayRef<Value *> VL) {
+  Instruction *MainOp = nullptr;
+  Instruction *AltOp = nullptr;
+  for (Value *V :
+       make_filter_range(VL, [](Value *V) { return !isa<PoisonValue>(V); })) {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return {};
+    if (!MainOp) {
+      MainOp = I;
+      continue;
+    }
+    if (MainOp->getOpcode() == I->getOpcode()) {
+      if (I->getParent() != MainOp->getParent())
+        return {};
+      continue;
+    }
+    if (!AltOp) {
+      AltOp = I;
+      continue;
+    }
+    if (AltOp->getOpcode() == I->getOpcode()) {
+      if (I->getParent() != AltOp->getParent())
+        return {};
+      continue;
+    }
+    return {};
+  }
+  if (!AltOp)
+    return {};
+  assert(MainOp && AltOp && MainOp->getOpcode() != AltOp->getOpcode() &&
+         "Expected different main and alt instructions.");
+  return std::make_pair(MainOp, AltOp);
+}
+
+bool checkEVsForVecCalls(ArrayRef<Value *> VL, const InstructionsState &S,
+                         const TargetLibraryInfo &TLI,
+                         SmallVectorImpl<unsigned> &Indices,
+                         SmallVectorImpl<Value *> &Calls) {
+  assert(S && S.getOpcode() == Instruction::ExtractValue &&
+         "Expected extractvalue instruction state.");
+  if (!all_of(VL, IsaPred<ExtractValueInst>))
+    return false;
+  auto *VL0 = cast<ExtractValueInst>(S.getMainOp());
+  ArrayRef<unsigned> VL0Indices = VL0->getIndices();
+  SmallVector<Value *> Aggregates;
+  for (Value *V : VL) {
+    if (V == VL0) {
+      Aggregates.push_back(VL0->getAggregateOperand());
+      continue;
+    }
+    auto *IV = cast<ExtractValueInst>(V);
+    if (IV->getIndices() != VL0Indices ||
+        isa<ScalableVectorType>(IV->getType()))
+      return false;
+    Value *Agg = IV->getAggregateOperand();
+    Aggregates.push_back(Agg);
+  }
+  const InstructionsState AggState = getSameOpcode(Aggregates, TLI);
+  if (AggState && AggState.getOpcode() == Instruction::Call &&
+      !AggState.isAltShuffle() &&
+      isa<StructType>(AggState.getMainOp()->getType()) &&
+      allSameBlock(Aggregates)) {
+    // The struct-returning call may have non-bundle users too. The external
+    // extraction code rebuilds scalars by extractvalue + extractelement,
+    // which only works when every user of the call is an ExtractValueInst.
+    // Bail out if any aggregate has a different kind of user.
+    for (Value *Agg : Aggregates) {
+      if (!all_of(Agg->users(), IsaPred<ExtractValueInst>))
+        return false;
+    }
+    Indices.assign(VL0Indices.begin(), VL0Indices.end());
+    Calls.swap(Aggregates);
+    return true;
+  }
+  return false;
+}
+
 } // namespace llvm::slpvectorizer

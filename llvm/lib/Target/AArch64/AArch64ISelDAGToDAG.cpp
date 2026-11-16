@@ -667,7 +667,7 @@ static std::optional<APInt> DecodeNEONSplat(SDValue N,
     if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(0)))
       return Const->getAPIntValue().trunc(SplatWidth);
   APInt SplatVal;
-  if (ISD::isConstantSplatVector(N.getNode(), SplatVal))
+  if (ISD::isConstantSplatVector(N, SplatVal))
     return SplatVal.trunc(SplatWidth);
   // TODO: Recognize more splat-like NEON operations. See ConstantBuildVector
   // in AArch64ISelLowering.
@@ -1045,8 +1045,7 @@ bool AArch64DAGToDAGISel::SelectShiftedRegisterFromAnd(SDValue N, SDValue &Reg,
   unsigned NewShiftOp;
   if (LHSOpcode == ISD::SHL) {
     // LowZBits <= ShiftAmtC will fall into isBitfieldPositioningOp
-    // BitWidth != LowZBits + MaskLen doesn't match the pattern
-    if (LowZBits <= ShiftAmtC || (BitWidth != LowZBits + MaskLen))
+    if (LowZBits <= ShiftAmtC)
       return false;
 
     NewShiftC = LowZBits - ShiftAmtC;
@@ -1064,10 +1063,6 @@ bool AArch64DAGToDAGISel::SelectShiftedRegisterFromAnd(SDValue N, SDValue &Reg,
     if (LHSOpcode == ISD::SRA && (BitWidth != (LowZBits + MaskLen)))
       return false;
 
-    // SRL high bits can be 0 or 1
-    if (LHSOpcode == ISD::SRL && (BitWidth > (NewShiftC + MaskLen)))
-      return false;
-
     if (LHSOpcode == ISD::SRL)
       NewShiftOp = VT == MVT::i64 ? AArch64::UBFMXri : AArch64::UBFMWri;
     else
@@ -1076,9 +1071,13 @@ bool AArch64DAGToDAGISel::SelectShiftedRegisterFromAnd(SDValue N, SDValue &Reg,
 
   assert(NewShiftC < BitWidth && "Invalid shift amount");
   SDValue NewShiftAmt = CurDAG->getTargetConstant(NewShiftC, DL, VT);
-  SDValue BitWidthMinus1 = CurDAG->getTargetConstant(BitWidth - 1, DL, VT);
+  // If the mask doesn't extend to the MSB, extract only the masked field.
+  unsigned MSB = BitWidth - 1;
+  if (LowZBits + MaskLen < BitWidth)
+    MSB = std::min<uint64_t>(NewShiftC + MaskLen, BitWidth) - 1;
+  SDValue MSBC = CurDAG->getTargetConstant(MSB, DL, VT);
   Reg = SDValue(CurDAG->getMachineNode(NewShiftOp, DL, VT, LHS->getOperand(0),
-                                       NewShiftAmt, BitWidthMinus1),
+                                       NewShiftAmt, MSBC),
                 0);
   unsigned ShVal = AArch64_AM::getShifterImm(AArch64_AM::LSL, LowZBits);
   Shift = CurDAG->getTargetConstant(ShVal, DL, MVT::i32);
@@ -2837,6 +2836,10 @@ void AArch64DAGToDAGISel::SelectLoadLane(SDNode *N, unsigned NumVecs,
     ReplaceUses(SDValue(N, i), NV);
   }
 
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
+
   ReplaceUses(SDValue(N, NumVecs), SDValue(Ld, 1));
   CurDAG->RemoveDeadNode(N);
 }
@@ -2889,6 +2892,10 @@ void AArch64DAGToDAGISel::SelectPostLoadLane(SDNode *N, unsigned NumVecs,
       ReplaceUses(SDValue(N, i), NV);
     }
   }
+
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
 
   // Update the Chain
   ReplaceUses(SDValue(N, NumVecs + 1), SDValue(Ld, 2));
@@ -4966,8 +4973,8 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
     }
 
     APInt ShlAmt, ShrAmt;
-    if (!ISD::isConstantSplatVector(N0.getOperand(2).getNode(), ShlAmt) ||
-        !ISD::isConstantSplatVector(N1.getOperand(2).getNode(), ShrAmt))
+    if (!ISD::isConstantSplatVector(N0.getOperand(2), ShlAmt) ||
+        !ISD::isConstantSplatVector(N1.getOperand(2), ShrAmt))
       return false;
 
     if (ShlAmt + ShrAmt != VT.getScalarSizeInBits())

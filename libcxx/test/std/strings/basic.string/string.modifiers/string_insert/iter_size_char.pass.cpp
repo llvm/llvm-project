@@ -112,5 +112,16 @@ int main(int, char**) {
   static_assert(test());
 #endif
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  { // Append with invalid parameters
+    std::string str = "Banane";
+    try {
+      str.insert(str.begin(), std::string::npos, 'a');
+      assert(false);
+    } catch (const std::length_error&) {
+    }
+  }
+#endif
+
   return 0;
 }

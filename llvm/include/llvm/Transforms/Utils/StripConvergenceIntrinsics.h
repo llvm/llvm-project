@@ -19,7 +19,7 @@
 namespace llvm {
 
 class StripConvergenceIntrinsicsPass
-    : public OptionalPassInfoMixin<StripConvergenceIntrinsicsPass> {
+    : public RequiredPassInfoMixin<StripConvergenceIntrinsicsPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };

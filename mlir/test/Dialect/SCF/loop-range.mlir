@@ -291,3 +291,51 @@ func.func @no_fold_self_mul() {
 // CHECK:       scf.for %[[I:.*]] = %[[C0]] to %[[C8]] step %[[C1]] {
 // CHECK:         %[[R:.*]] = arith.muli %[[I]], %[[I]] : index
 // CHECK:         "test.sink"(%[[R]])
+
+// Folding the outer loop exposes the inner loop's addition for folding in the
+// same pass invocation.
+func.func @fold_nested_loops(%out: memref<10xi32>, %v: i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  scf.for %i = %c0 to %c4 step %c1 {
+    scf.for %j = %c0 to %c4 step %c1 {
+      %scaled = arith.muli %i, %c2 : index
+      %idx = arith.addi %j, %scaled : index
+      memref.store %v, %out[%idx] : memref<10xi32>
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @fold_nested_loops
+// CHECK: scf.for %[[OUTER:.*]] =
+// CHECK: scf.for %[[INNER:.*]] =
+// CHECK-NOT: arith.addi
+// CHECK: memref.store %{{.*}}, %{{.*}}{{\[}}%[[INNER]]]
+
+// Each fold exposes a folding opportunity in the next nested loop.
+func.func @fold_three_nested_loops() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  scf.for %i = %c0 to %c4 step %c1 {
+    scf.for %j = %c0 to %c4 step %c1 {
+      scf.for %k = %c0 to %c4 step %c1 {
+        %scaled = arith.muli %i, %c2 : index
+        %middle = arith.addi %j, %scaled : index
+        %inner = arith.addi %k, %middle : index
+        "test.sink"(%inner) : (index) -> ()
+      }
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @fold_three_nested_loops
+// CHECK: scf.for %[[OUTER:.*]] =
+// CHECK: scf.for %[[MIDDLE:.*]] =
+// CHECK: scf.for %[[INNER:.*]] =
+// CHECK-NEXT: "test.sink"(%[[INNER]])

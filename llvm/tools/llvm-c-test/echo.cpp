@@ -15,9 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c-test.h"
-#include "llvm-c/DebugInfo.h"
 #include "llvm-c/ErrorHandling.h"
-#include "llvm-c/Target.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"

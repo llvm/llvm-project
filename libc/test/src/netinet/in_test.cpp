@@ -11,11 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/arpa/inet/htonl.h"
-#include "src/arpa/inet/htons.h"
-#include "src/string/memcmp.h"
-#include "test/UnitTest/Test.h"
-
 #include "hdr/netinet_in_macros.h"
 #include "hdr/types/struct_group_req.h"
 #include "hdr/types/struct_group_source_req.h"
@@ -27,23 +22,25 @@
 #include "hdr/types/struct_ip_opts.h"
 #include "hdr/types/struct_ipv6_mreq.h"
 #include "hdr/types/struct_sockaddr_in6.h"
+#include "src/__support/net/byte_order.h"
 #include "src/netinet/in6addr_any.h"
 #include "src/netinet/in6addr_loopback.h"
+#include "src/string/memcmp.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcNetinetInTest, In6AddrLayout) {
   EXPECT_EQ(sizeof(struct in6_addr), static_cast<size_t>(16));
 
   struct in6_addr addr = {};
 
-  // Using parenthesis to suppress htons-as-a-macro in overlay mode.
-  addr.s6_addr16[0] = (LIBC_NAMESPACE::htons)(0x1122);
-  addr.s6_addr16[1] = (LIBC_NAMESPACE::htons)(0x3344);
-  addr.s6_addr16[2] = (LIBC_NAMESPACE::htons)(0x5566);
-  addr.s6_addr16[3] = (LIBC_NAMESPACE::htons)(0x7788);
-  addr.s6_addr16[4] = (LIBC_NAMESPACE::htons)(0x99aa);
-  addr.s6_addr16[5] = (LIBC_NAMESPACE::htons)(0xbbcc);
-  addr.s6_addr16[6] = (LIBC_NAMESPACE::htons)(0xddee);
-  addr.s6_addr16[7] = (LIBC_NAMESPACE::htons)(0xff00);
+  addr.s6_addr16[0] = LIBC_NAMESPACE::net::hton<uint16_t>(0x1122);
+  addr.s6_addr16[1] = LIBC_NAMESPACE::net::hton<uint16_t>(0x3344);
+  addr.s6_addr16[2] = LIBC_NAMESPACE::net::hton<uint16_t>(0x5566);
+  addr.s6_addr16[3] = LIBC_NAMESPACE::net::hton<uint16_t>(0x7788);
+  addr.s6_addr16[4] = LIBC_NAMESPACE::net::hton<uint16_t>(0x99aa);
+  addr.s6_addr16[5] = LIBC_NAMESPACE::net::hton<uint16_t>(0xbbcc);
+  addr.s6_addr16[6] = LIBC_NAMESPACE::net::hton<uint16_t>(0xddee);
+  addr.s6_addr16[7] = LIBC_NAMESPACE::net::hton<uint16_t>(0xff00);
 
   EXPECT_EQ(
       LIBC_NAMESPACE::memcmp(
@@ -52,10 +49,10 @@ TEST(LlvmLibcNetinetInTest, In6AddrLayout) {
           16),
       0);
 
-  addr.s6_addr32[0] = (LIBC_NAMESPACE::htonl)(0x12345678);
-  addr.s6_addr32[1] = (LIBC_NAMESPACE::htonl)(0x9abcdef0);
-  addr.s6_addr32[2] = (LIBC_NAMESPACE::htonl)(0x12345678);
-  addr.s6_addr32[3] = (LIBC_NAMESPACE::htonl)(0x9abcdef0);
+  addr.s6_addr32[0] = LIBC_NAMESPACE::net::hton<uint32_t>(0x12345678);
+  addr.s6_addr32[1] = LIBC_NAMESPACE::net::hton<uint32_t>(0x9abcdef0);
+  addr.s6_addr32[2] = LIBC_NAMESPACE::net::hton<uint32_t>(0x12345678);
+  addr.s6_addr32[3] = LIBC_NAMESPACE::net::hton<uint32_t>(0x9abcdef0);
 
   EXPECT_EQ(
       LIBC_NAMESPACE::memcmp(

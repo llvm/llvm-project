@@ -54,13 +54,6 @@ isOutlined:      false
 debugInstrRef:   true
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 1, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 2, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 3, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 4, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 5, class: gr32, preferred-register: '', flags: [  ] }
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }
   - { reg: '$esi', virtual-reg: '%1' }
@@ -118,14 +111,14 @@ body:             |
     successors: %bb.3(0x80000000)
   
     %4:gr32 = MOV32rm %stack.2.b.addr, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.b.addr)
-    MOV32mr %stack.0.retval, 1, $noreg, 0, $noreg, killed %4 :: (store (s32) into %ir.retval)
+    MOV32mr %stack.0.retval, 1, $noreg, 0, $noreg, %4 :: (store (s32) into %ir.retval)
     JMP_1 %bb.3
   
   bb.2.if.else:
     successors: %bb.3(0x80000000)
   
     %3:gr32 = MOV32rm %stack.1.a.addr, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.a.addr)
-    MOV32mr %stack.0.retval, 1, $noreg, 0, $noreg, killed %3 :: (store (s32) into %ir.retval)
+    MOV32mr %stack.0.retval, 1, $noreg, 0, $noreg, %3 :: (store (s32) into %ir.retval)
   
   bb.3.return:
     %5:gr32 = MOV32rm %stack.0.retval, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.retval)
