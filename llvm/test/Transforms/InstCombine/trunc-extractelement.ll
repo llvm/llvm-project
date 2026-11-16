@@ -199,17 +199,14 @@ define i4 @shrinkExtractElt_i56_to_i4_2(<4 x i56> %x) {
   ret i4 %t
 }
 
-; Also fold the trunc of a scalable vector element into a bitcast.
+; Do not create a bitcast between scalable vectors with a non-power-of-2
+; element size. Such bitcasts may not be legalizable by the backend, e.g.
+; <vscale x 4 x i56> to <vscale x 56 x i4> on RISC-V.
 define i4 @shrinkExtractElt_i56_to_i4_2_scalable(<vscale x 4 x i56> %x) {
-; LE-LABEL: @shrinkExtractElt_i56_to_i4_2_scalable(
-; LE-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i56> [[X:%.*]] to <vscale x 56 x i4>
-; LE-NEXT:    [[T:%.*]] = extractelement <vscale x 56 x i4> [[TMP1]], i64 28
-; LE-NEXT:    ret i4 [[T]]
-;
-; BE-LABEL: @shrinkExtractElt_i56_to_i4_2_scalable(
-; BE-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i56> [[X:%.*]] to <vscale x 56 x i4>
-; BE-NEXT:    [[T:%.*]] = extractelement <vscale x 56 x i4> [[TMP1]], i64 41
-; BE-NEXT:    ret i4 [[T]]
+; ANY-LABEL: @shrinkExtractElt_i56_to_i4_2_scalable(
+; ANY-NEXT:    [[E:%.*]] = extractelement <vscale x 4 x i56> [[X:%.*]], i64 2
+; ANY-NEXT:    [[T:%.*]] = trunc i56 [[E]] to i4
+; ANY-NEXT:    ret i4 [[T]]
 ;
   %e = extractelement <vscale x 4 x i56> %x, i16 2
   %t = trunc i56 %e to i4

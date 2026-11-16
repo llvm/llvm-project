@@ -786,6 +786,13 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
   auto *VecOpTy = cast<VectorType>(VecOp->getType());
   auto VecElts = VecOpTy->getElementCount();
 
+  // Do not create bitcasts between scalable vectors with non-power-of-2
+  // element sizes, like <vscale x 4 x i56> to <vscale x 56 x i4>. Such
+  // bitcasts may not be legalizable by the backend, and keeping the trunc is
+  // cheaper than materializing the wider vector.
+  if (VecElts.isScalable() && !isPowerOf2_64(SrcBits))
+    return nullptr;
+
   uint64_t BitCastNumElts = VecElts.getKnownMinValue() * TruncRatio;
   // Computed in 64-bit above to avoid a 32-bit overflow. Bail out if the
   // element count exceeds IntegerType::MAX_INT_BITS, as we cannot create a
