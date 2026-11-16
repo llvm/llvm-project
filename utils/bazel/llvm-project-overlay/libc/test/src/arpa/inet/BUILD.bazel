@@ -14,9 +14,9 @@ libc_test(
     name = "htonl_test",
     srcs = ["htonl_test.cpp"],
     deps = [
-        "//libc:__support_common",
         "//libc:htonl",
         "//libc:ntohl",
+        "//libc/src/__support:common",
     ],
 )
 
@@ -24,9 +24,9 @@ libc_test(
     name = "htons_test",
     srcs = ["htons_test.cpp"],
     deps = [
-        "//libc:__support_common",
         "//libc:htons",
         "//libc:ntohs",
+        "//libc/src/__support:common",
     ],
 )
 
@@ -34,9 +34,9 @@ libc_test(
     name = "inet_addr_test",
     srcs = ["inet_addr_test.cpp"],
     deps = [
-        "//libc:__support_common",
         "//libc:htonl",
         "//libc:inet_addr",
+        "//libc/src/__support:common",
     ],
 )
 
@@ -44,9 +44,9 @@ libc_test(
     name = "inet_aton_test",
     srcs = ["inet_aton_test.cpp"],
     deps = [
-        "//libc:__support_common",
         "//libc:htonl",
         "//libc:inet_aton",
+        "//libc/src/__support:common",
     ],
 )
 
@@ -54,9 +54,9 @@ libc_test(
     name = "inet_ntoa_test",
     srcs = ["inet_ntoa_test.cpp"],
     deps = [
-        "//libc:__support_common",
         "//libc:inet_ntoa",
         "//libc:types_struct_in_addr",
+        "//libc/src/__support:common",
     ],
 )
 
@@ -64,12 +64,12 @@ libc_test(
     name = "inet_ntop_test",
     srcs = ["inet_ntop_test.cpp"],
     deps = [
-        "//libc:__support_common",
         "//libc:hdr_errno_macros",
         "//libc:hdr_sys_socket_macros",
         "//libc:inet_ntop",
         "//libc:types_struct_in6_addr",
         "//libc:types_struct_in_addr",
+        "//libc/src/__support:common",
     ],
 )
 
@@ -77,13 +77,13 @@ libc_test(
     name = "inet_pton_test",
     srcs = ["inet_pton_test.cpp"],
     deps = [
-        "//libc:__support_common",
         "//libc:hdr_errno_macros",
         "//libc:hdr_sys_socket_macros",
         "//libc:inet_pton",
         "//libc:string_memory_utils",
         "//libc:types_struct_in6_addr",
         "//libc:types_struct_in_addr",
+        "//libc/src/__support:common",
     ],
 )
 
@@ -91,9 +91,9 @@ libc_test(
     name = "ntohl_test",
     srcs = ["ntohl_test.cpp"],
     deps = [
-        "//libc:__support_common",
         "//libc:htonl",
         "//libc:ntohl",
+        "//libc/src/__support:common",
     ],
 )
 
@@ -101,8 +101,8 @@ libc_test(
     name = "ntohs_test",
     srcs = ["ntohs_test.cpp"],
     deps = [
-        "//libc:__support_common",
         "//libc:htons",
         "//libc:ntohs",
+        "//libc/src/__support:common",
     ],
 )

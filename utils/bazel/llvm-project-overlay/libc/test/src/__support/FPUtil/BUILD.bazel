@@ -14,12 +14,12 @@ libc_test(
     name = "fpbits_test",
     srcs = ["fpbits_test.cpp"],
     deps = [
-        "//libc:__support_big_int",
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_fputil_fpbits_str",
-        "//libc:__support_integer_literals",
-        "//libc:__support_macros_properties_types",
-        "//libc:__support_sign",
+        "//libc/src/__support:big_int",
+        "//libc/src/__support:integer_literals",
+        "//libc/src/__support:sign",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fpbits_str",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -27,16 +27,16 @@ libc_test(
     name = "except_value_utils_test",
     srcs = ["except_value_utils_test.cpp"],
     deps = [
-        "//libc:__support_fputil_bfloat16",
-        "//libc:__support_fputil_except_value_utils",
-        "//libc:__support_fputil_fenv_impl",
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_macros_attributes",
-        "//libc:__support_macros_properties_types",
-        "//libc:__support_sign",
         "//libc:hdr_errno_macros",
         "//libc:hdr_fenv_macros",
         "//libc:hdr_math_macros",
+        "//libc/src/__support:sign",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros/properties:types",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -45,10 +45,10 @@ libc_test(
     name = "fp_bitwise_test",
     srcs = ["fp_bitwise_test.cpp"],
     deps = [
-        "//libc:__support_fputil_bfloat16",
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_fputil_fp_bitwise",
-        "//libc:__support_macros_properties_types",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fp_bitwise",
+        "//libc/src/__support/macros/properties:types",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -58,7 +58,7 @@ libc_test(
     srcs = ["bfloat16_test.cpp"],
     overlay_build_only = True,  # Depends on mpfr
     deps = [
-        "//libc:__support_fputil_bfloat16",
+        "//libc/src/__support/FPUtil:bfloat16",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mp_common",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
@@ -71,10 +71,10 @@ libc_test(
     copts = ["-frounding-math"],
     overlay_build_only = True,  # Depends on mpfr
     deps = [
-        "//libc:__support_big_int",
-        "//libc:__support_fputil_dyadic_float",
-        "//libc:__support_macros_properties_types",
-        "//libc:__support_uint128",
+        "//libc/src/__support:big_int",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/macros/properties:types",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
     ],
@@ -85,9 +85,9 @@ libc_test(
     srcs = ["rounding_mode_test.cpp"],
     overlay_build_only = True,  # Depends on mpfr
     deps = [
-        "//libc:__support_fputil_rounding_mode",
-        "//libc:__support_uint128",
         "//libc:hdr_fenv_macros",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/FPUtil:rounding_mode",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
     ],
 )
@@ -96,10 +96,10 @@ libc_test(
     name = "comparison_operations_test",
     srcs = ["comparison_operations_test.cpp"],
     deps = [
-        "//libc:__support_fputil_bfloat16",
-        "//libc:__support_fputil_comparison_operations",
-        "//libc:__support_fputil_rounding_mode",
-        "//libc:__support_macros_properties_types",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:comparison_operations",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros/properties:types",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -108,11 +108,11 @@ libc_test(
     name = "is_integer_test",
     srcs = ["is_integer_test.cpp"],
     deps = [
-        "//libc:__support_fputil_bfloat16",
-        "//libc:__support_fputil_float128",
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_fputil_is_integer",
-        "//libc:__support_macros_properties_types",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:is_integer",
+        "//libc/src/__support/macros/properties:types",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )

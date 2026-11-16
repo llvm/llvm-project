@@ -13,69 +13,69 @@ licenses(["notice"])
 libc_test(
     name = "atomic_test",
     srcs = ["atomic_test.cpp"],
-    deps = ["//libc:__support_cpp_atomic"],
+    deps = ["//libc/src/__support/CPP:atomic"],
 )
 
 libc_test(
     name = "bitset_test",
     srcs = ["bitset_test.cpp"],
-    deps = ["//libc:__support_cpp_bitset"],
+    deps = ["//libc/src/__support/CPP:bitset"],
 )
 
 libc_test(
     name = "bit_test",
     srcs = ["bit_test.cpp"],
     deps = [
-        "//libc:__support_big_int",
-        "//libc:__support_cpp_bit",
-        "//libc:__support_macros_properties_types",
+        "//libc/src/__support:big_int",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
 libc_test(
     name = "cstddef_test",
     srcs = ["cstddef_test.cpp"],
-    deps = ["//libc:__support_cpp_cstddef"],
+    deps = ["//libc/src/__support/CPP:cstddef"],
 )
 
 libc_test(
     name = "functional_test",
     srcs = ["functional_test.cpp"],
     deps = [
-        "//libc:__support_cpp_functional",
-        "//libc:__support_cpp_nullptr_t",
-        "//libc:__support_cpp_type_traits",
+        "//libc/src/__support/CPP:functional",
+        "//libc/src/__support/CPP:nullptr_t",
+        "//libc/src/__support/CPP:type_traits",
     ],
 )
 
 libc_test(
     name = "integer_sequence_test",
     srcs = ["integer_sequence_test.cpp"],
-    deps = ["//libc:__support_cpp_utility"],
+    deps = ["//libc/src/__support/CPP:utility"],
 )
 
 libc_test(
     name = "limits_test",
     srcs = ["limits_test.cpp"],
     deps = [
-        "//libc:__support_big_int",
-        "//libc:__support_cpp_limits",
-        "//libc:__support_macros_properties_types",
+        "//libc/src/__support:big_int",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
 libc_test(
     name = "optional_test",
     srcs = ["optional_test.cpp"],
-    deps = ["//libc:__support_cpp_optional"],
+    deps = ["//libc/src/__support/CPP:optional"],
 )
 
 libc_test(
     name = "span_test",
     srcs = ["span_test.cpp"],
     deps = [
-        "//libc:__support_cpp_array",
-        "//libc:__support_cpp_span",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/CPP:span",
     ],
 )
 
@@ -83,24 +83,24 @@ libc_test(
     name = "stringstream_test",
     srcs = ["stringstream_test.cpp"],
     deps = [
-        "//libc:__support_cpp_span",
-        "//libc:__support_cpp_stringstream",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/CPP:stringstream",
     ],
 )
 
 libc_test(
     name = "string_test",
     srcs = ["string_test.cpp"],
-    deps = ["//libc:__support_cpp_string"],
+    deps = ["//libc/src/__support/CPP:string"],
 )
 
 libc_test(
     name = "stringview_test",
     srcs = ["stringview_test.cpp"],
     deps = [
-        "//libc:__support_cpp_string_view",
-        "//libc:__support_cpp_type_traits",
         "//libc:string_memory_utils",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/CPP:type_traits",
     ],
 )
 
@@ -108,7 +108,7 @@ libc_test(
     name = "type_traits_test",
     srcs = ["type_traits_test.cpp"],
     deps = [
-        "//libc:__support_cpp_type_traits",
         "//libc:llvm_libc_macros_stdfix_macros",
+        "//libc/src/__support/CPP:type_traits",
     ],
 )
