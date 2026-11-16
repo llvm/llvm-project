@@ -16,6 +16,7 @@
 #include "IPOOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1114,21 +1115,15 @@ static bool addAccessAttrs(Argument *A, ArgAccessProperties Props) {
 static bool canExitWithoutWrites(const BasicBlock &EntryBB,
                                  const ArgumentUsesSummary &ArgumentUses) {
   const auto &UsesPerBlock = ArgumentUses.UsesPerBlock;
-  SmallPtrSet<const BasicBlock *, 16> Visited;
-  SmallVector<const BasicBlock *, 16> Worklist;
-  Visited.insert(&EntryBB);
-  Worklist.push_back(&EntryBB);
-  while (!Worklist.empty()) {
-    const BasicBlock *BB = Worklist.pop_back_val();
-    auto UPB = UsesPerBlock.find(BB);
-    if (UPB != UsesPerBlock.end() && UPB->second.HasWrites)
+  for (auto It = df_begin(&EntryBB), End = df_end(&EntryBB); It != End;) {
+    auto UPB = UsesPerBlock.find(*It);
+    if (UPB != UsesPerBlock.end() && UPB->second.HasWrites) {
+      It.skipChildren();
       continue;
-    if (succ_empty(BB))
-      return true;
-    for (const BasicBlock *Succ : successors(BB)) {
-      if (Visited.insert(Succ).second)
-        Worklist.push_back(Succ);
     }
+    if (succ_empty(*It))
+      return true;
+    ++It;
   }
   return false;
 }
