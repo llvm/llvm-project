@@ -114,7 +114,7 @@ class IssueSubscriber:
                     
                     For contributors:
                     * Check that the issue has a real-world motivation. If it does *not* have one, do *not* create a PR without prior explicit approval from InstCombine maintainers.
-                    * Follow the [InstCombine contributor guide](http://llvm.org/docs/InstCombineContributorGuide.html).
+                    * Follow the [InstCombine contributor guide](https://llvm.org/docs/InstCombineContributorGuide.html).
                 """
                 )
                 self.issue.create_comment(comment)
