@@ -2063,13 +2063,13 @@ def CIR_IndirectGotoOp : CIR_Op<"indirect_goto", [Terminator]> {
 
 // The LabelOp has AlwaysSpeculatable trait in order to not to be swept
 // by canonicalizer
-def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
+def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable, LabelLike]> {
   let description = [{
-    An identifier which may be referred by cir.goto operation
+    An identifier which may be referred by cir.goto operation. It must be the
+    first operation of a block that is not the entry block of its region.
   }];
   let arguments = (ins StrAttr:$label);
   let assemblyFormat = [{ $label attr-dict }];
-  let hasVerifier = 1;
 
   let customLLVMLoweringConstructorDecl =
     LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;

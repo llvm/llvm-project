@@ -4,6 +4,8 @@
 
 module  {
   cir.func @label() {
+    cir.goto "label"
+  ^bb1:  // no predecessors
     cir.label "label"
     cir.return
   }
@@ -18,6 +20,8 @@ module  {
 }
 
 // CHECK:       cir.func @label
+// CHECK-NEXT:    cir.goto "label"
+// CHECK-NEXT:  ^bb1:  // no predecessors
 // CHECK-NEXT:    cir.label "label"
 
 // CHECK:       cir.func @label2

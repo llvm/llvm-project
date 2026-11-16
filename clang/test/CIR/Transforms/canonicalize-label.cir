@@ -1,0 +1,82 @@
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // cir.goto is not a CFG edge until the goto solver runs, so here the block
+  // that the label starts has no predecessors. The canonicalizer still
+  // simplifies it.
+  cir.func @label_block(%arg0: !s32i) -> !s32i {
+    cir.goto "out"
+  ^bb1:
+    cir.label "out"
+    cir.scope {
+    }
+    cir.br ^bb2
+  ^bb2:
+    cir.return %arg0 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @label_block(%[[ARG0:.*]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   cir.goto "out"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.label "out"
+  // CHECK-NEXT:   cir.return %[[ARG0]] : !s32i
+  // CHECK-NEXT: }
+
+  // The canonicalizer also simplifies the blocks that the label block reaches.
+  cir.func @label_successor(%arg0: !cir.bool) {
+    cir.goto "out"
+  ^bb1:
+    cir.label "out"
+    cir.brcond %arg0 ^bb2, ^bb3
+  ^bb2:
+    cir.scope {
+    }
+    cir.return
+  ^bb3:
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @label_successor(%[[ARG0:.*]]: !cir.bool) {
+  // CHECK-NEXT:   cir.goto "out"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.label "out"
+  // CHECK-NEXT:   cir.brcond %[[ARG0]] ^bb2, ^bb3
+  // CHECK-NEXT: ^bb2:
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: ^bb3:
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // A goto to a label inside a scope enters the outer block at that scope.
+  // The canonicalizer simplifies the scope and the operations after it, but
+  // not the constant before it, which no jump reaches. It keeps the label at
+  // the start of its block.
+  cir.func @label_in_scope(%arg0: !s32i) -> !s32i {
+    cir.goto "in"
+  ^bb1:
+    %0 = cir.const #cir.int<7> : !s32i
+    cir.scope {
+      cir.br ^bb2
+    ^bb2:
+      cir.label "in"
+      cir.scope {
+      }
+      cir.yield
+    }
+    cir.br ^bb3
+  ^bb3:
+    cir.return %arg0 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @label_in_scope(%[[ARG0:.*]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   cir.goto "in"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.const #cir.int<7> : !s32i
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.br ^[[LABEL:bb[0-9]+]]
+  // CHECK-NEXT:   ^[[LABEL]]:
+  // CHECK-NEXT:     cir.label "in"
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return %[[ARG0]] : !s32i
+  // CHECK-NEXT: }
+}

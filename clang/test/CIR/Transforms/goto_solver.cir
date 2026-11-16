@@ -51,6 +51,8 @@ cir.func @b(){
 // CHECK-NOT: cir.label "label2"
 
 cir.func @c() {
+  cir.br ^bb1
+^bb1:
   cir.label "label1"
   %0 = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
   %1 = cir.block_address <@c, "label1"> : !cir.ptr<!void>

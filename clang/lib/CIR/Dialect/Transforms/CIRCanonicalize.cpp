@@ -84,6 +84,11 @@ void CIRCanonicalizePass::runOnOperation() {
   // the common ancestor the driver would otherwise search for.
   GreedyRewriteConfig config;
   config.setScope(&getOperation()->getRegion(0));
+  // Until the goto solver runs, no CFG edge leads from a cir.goto to its
+  // cir.label, so the code after a label can look unreachable. Rewrite it
+  // too. That code must satisfy dominance once the solver adds the edges,
+  // but DominanceInfo does not see them, so patterns must not query it.
+  config.enableRewritingAfterLabels();
   if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
     signalPassFailure();
 }

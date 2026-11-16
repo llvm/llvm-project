@@ -3,9 +3,21 @@
 !s32i = !cir.int<s, 32>
 
 module  {
-  // expected-error@+3 {{must be the first operation in a block}}
   cir.func @error(){
+    cir.br ^bb1
+  ^bb1:
     %0 = cir.const #cir.int<0> : !s32i
+    // expected-error@+1 {{must be the first operation in the parent block}}
+    cir.label "label"
+    cir.return
+  }
+}
+
+// -----
+
+module  {
+  cir.func @label_in_entry_block() {
+    // expected-error@+1 {{must not be in an entry block}}
     cir.label "label"
     cir.return
   }
