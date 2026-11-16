@@ -389,6 +389,7 @@ define <1 x i64> @reduce_add_v4i32_sext_ret_v1i64(<4 x i32> %x) {
 ; CHECK-SD-LABEL: reduce_add_v4i32_sext_ret_v1i64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    saddlv d0, v0.4s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: reduce_add_v4i32_sext_ret_v1i64:
@@ -407,6 +408,7 @@ define <2 x i64> @reduce_add_v4i32_sext_ret_v2i64(<4 x i32> %x) {
 ; CHECK-SD-LABEL: reduce_add_v4i32_sext_ret_v2i64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    saddlv d0, v0.4s
+; CHECK-SD-NEXT:    mov v0.d[1], xzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: reduce_add_v4i32_sext_ret_v2i64:
