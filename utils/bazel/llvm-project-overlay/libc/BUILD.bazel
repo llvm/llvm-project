@@ -1417,6 +1417,7 @@ alias(
         "cosf",
         "cosf16",
         "cosh",
+        "coshbf16",
         "coshf",
         "coshf16",
         "cospif",
