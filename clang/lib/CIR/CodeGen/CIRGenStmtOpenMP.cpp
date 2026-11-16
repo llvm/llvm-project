@@ -204,12 +204,10 @@ CIRGenFunction::emitOMPSingleDirective(const OMPSingleDirective &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPSingleDirective");
   return mlir::failure();
 }
-mlir::LogicalResult
-CIRGenFunction::emitOMPMasterDirective(const OMPMasterDirective &s) {
-  mlir::Location begin = getLoc(s.getBeginLoc());
-  mlir::Location end = getLoc(s.getEndLoc());
-
-  CIRGenBuilderTy &builder = getBuilder();
+static mlir::LogicalResult emitMasterOp(CIRGenFunction &cgf,
+                                        mlir::Location begin,
+                                        mlir::Location end, const Stmt *body) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
 
   auto masterOp = mlir::omp::MasterOp::create(builder, begin);
 
@@ -217,11 +215,16 @@ CIRGenFunction::emitOMPMasterDirective(const OMPMasterDirective &s) {
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(&block);
 
-  CIRGenFunction::LexicalScope ls{*this, begin, builder.getInsertionBlock()};
-  const Stmt *innerStmt = s.getAssociatedStmt();
-  mlir::LogicalResult res = emitStmt(innerStmt, /*useCurrentScope=*/true);
+  CIRGenFunction::LexicalScope ls{cgf, begin, builder.getInsertionBlock()};
+  mlir::LogicalResult res = cgf.emitStmt(body, /*useCurrentScope=*/true);
   mlir::omp::TerminatorOp::create(builder, end);
   return res;
+}
+
+mlir::LogicalResult
+CIRGenFunction::emitOMPMasterDirective(const OMPMasterDirective &s) {
+  return emitMasterOp(*this, getLoc(s.getBeginLoc()), getLoc(s.getEndLoc()),
+                      s.getAssociatedStmt());
 }
 
 mlir::LogicalResult
@@ -243,9 +246,36 @@ mlir::LogicalResult CIRGenFunction::emitOMPParallelForSimdDirective(
 }
 mlir::LogicalResult CIRGenFunction::emitOMPParallelMasterDirective(
     const OMPParallelMasterDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(),
-                             "OpenMP OMPParallelMasterDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator parallelItem = queue.begin();
+  assert(parallelItem != queue.end() &&
+         parallelItem->id == llvm::omp::OMPD_parallel &&
+         "expected 'parallel' to be the outermost leaf");
+
+  omp::ConstructQueue::const_iterator masterItem = std::next(parallelItem);
+  assert(masterItem != queue.end() &&
+         masterItem->id == llvm::omp::OMPD_master &&
+         omp::isLastItemInQueue(masterItem, queue) &&
+         "expected 'master' to be the innermost leaf");
+
+  if (mlir::failed(checkSynthesizedClauses(*this, s, parallelItem)))
+    return mlir::failure();
+
+  mlir::omp::ParallelOperands clauseOps;
+  if (mlir::failed(emitParallelClauses(*this, getCIRGenModule(), builder, begin,
+                                       parallelItem->clauses, clauseOps)))
+    return mlir::failure();
+
+  return emitParallelOp(
+      *this, s, queue, parallelItem, begin, end, clauseOps,
+      [&]() -> mlir::LogicalResult {
+        const CapturedStmt *cs = s.getCapturedStmt(llvm::omp::OMPD_parallel);
+        return emitMasterOp(*this, begin, end, cs->getCapturedStmt());
+      });
 }
 mlir::LogicalResult CIRGenFunction::emitOMPParallelSectionsDirective(
     const OMPParallelSectionsDirective &s) {
