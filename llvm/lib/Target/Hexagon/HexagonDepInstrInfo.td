@@ -30556,30 +30556,6 @@ let isPseudo = 1;
 let isCodeGenOnly = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
-def V6_v10mpyubs10 : HInst<
-(outs HvxWR:$Vdd32),
-(ins HvxWR:$Vuu32, HvxWR:$Vvv32, u1_0Imm:$Ii),
-"$Vdd32.w = v10mpy($Vuu32.ub,$Vvv32.b,#$Ii)",
-tc_f175e046, TypeCVI_VX>, Requires<[UseHVXV69]> {
-let hasNewValue = 1;
-let opNewValue = 0;
-let isCVI = 1;
-let isPseudo = 1;
-let DecoderNamespace = "EXT_mmvec";
-}
-def V6_v10mpyubs10_vxx : HInst<
-(outs HvxWR:$Vxx32),
-(ins HvxWR:$Vxx32in, HvxWR:$Vuu32, HvxWR:$Vvv32, u1_0Imm:$Ii),
-"$Vxx32.w += v10mpy($Vuu32.ub,$Vvv32.b,#$Ii)",
-tc_4942646a, TypeCVI_VX>, Requires<[UseHVXV69]> {
-let hasNewValue = 1;
-let opNewValue = 0;
-let isAccumulator = 1;
-let isCVI = 1;
-let isPseudo = 1;
-let DecoderNamespace = "EXT_mmvec";
-let Constraints = "$Vxx32 = $Vxx32in";
-}
 def V6_v6mpyhubs10 : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32, u2_0Imm:$Ii),
