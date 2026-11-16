@@ -495,10 +495,9 @@ define fp128 @constant(fp128 %x) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    lui a2, %hi(.LCPI10_0)
-; RV64-NEXT:    addi a3, a2, %lo(.LCPI10_0)
-; RV64-NEXT:    ld a2, 0(a3)
-; RV64-NEXT:    ld a3, 8(a3)
+; RV64-NEXT:    lui a3, 32767
+; RV64-NEXT:    slli a3, a3, 36
+; RV64-NEXT:    li a2, 0
 ; RV64-NEXT:    call __addtf3
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16

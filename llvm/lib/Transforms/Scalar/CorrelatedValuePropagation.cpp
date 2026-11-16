@@ -25,6 +25,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -352,12 +353,13 @@ bool CVPImpl::processICmp(ICmpInst *Cmp) {
     return false;
 
   bool Changed = false;
-
+  SmallVector<DbgVariableRecord *, 2> DebugUsers;
   ConstantRange CR1 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
-                                                 /*UndefAllowed=*/false),
+                                                 /*UndefAllowed=*/false,
+                                                 &DebugUsers),
                 CR2 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
-                                                 /*UndefAllowed=*/false);
-
+                                                 /*UndefAllowed=*/false,
+                                                 &DebugUsers);
   if (Cmp->isSigned()) {
     ICmpInst::Predicate UnsignedPred =
         ConstantRange::getEquivalentPredWithFlippedSignedness(
@@ -365,6 +367,11 @@ bool CVPImpl::processICmp(ICmpInst *Cmp) {
 
     if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
       return false;
+
+    // Since the instruction changed, all debug users of
+    // this value must be poisoned
+    for (auto *Record : DebugUsers)
+      Record->setKillLocation();
 
     ++NumSICmps;
     Cmp->setPredicate(UnsignedPred);
@@ -678,6 +685,7 @@ bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
                                                                RRange)) {
     ++NumSMinMax;
     IRBuilder<> B(MM);
+    salvageDebugInfo(*MM);
     MM->replaceAllUsesWith(B.CreateBinaryIntrinsic(
         MM->getIntrinsicID() == Intrinsic::smin ? Intrinsic::umin
                                                 : Intrinsic::umax,
@@ -725,6 +733,7 @@ bool CVPImpl::processSaturatingInst(SaturatingInst *SI) {
   BinOp->setDebugLoc(SI->getDebugLoc());
   setDeducedOverflowingFlags(BinOp, Opcode, NSW, NUW);
 
+  salvageDebugInfo(*SI);
   SI->replaceAllUsesWith(BinOp);
   SI->eraseFromParent();
   ++NumSaturating;
@@ -887,6 +896,7 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
   // X u/ Y -> 0  iff X u< Y
   // X u% Y -> X  iff X u< Y
   if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
+    salvageDebugInfo(*Instr);
     Instr->replaceAllUsesWith(IsRem ? X : Constant::getNullValue(Ty));
     Instr->eraseFromParent();
     ++NumUDivURemsNarrowedExpanded;
@@ -1012,6 +1022,7 @@ bool CVPImpl::processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
   assert(SDI->getOpcode() == Instruction::SRem);
 
   if (LCR.abs().icmp(CmpInst::ICMP_ULT, RCR.abs())) {
+    salvageDebugInfo(*SDI);
     SDI->replaceAllUsesWith(SDI->getOperand(0));
     SDI->eraseFromParent();
     return true;
@@ -1223,6 +1234,7 @@ bool CVPImpl::processSIToFP(SIToFPInst *SIToFP) {
   UIToFP->takeName(SIToFP);
   UIToFP->setDebugLoc(SIToFP->getDebugLoc());
   UIToFP->setNonNeg();
+  salvageDebugInfo(*SIToFP);
   SIToFP->replaceAllUsesWith(UIToFP);
   SIToFP->eraseFromParent();
 

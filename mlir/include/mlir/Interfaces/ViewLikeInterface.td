@@ -22,6 +22,7 @@ def ViewLikeOpInterface : OpInterface<"ViewLikeOpInterface"> {
     another view of buffer.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ViewLikeInterface.h"];
 
   let methods = [
     InterfaceMethod<
@@ -74,6 +75,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
   }];
 
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ViewLikeInterface.h"];
 
   let methods = [
     StaticInterfaceMethod<
@@ -424,6 +426,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
 // and return the same operands with additional non-aliasing guarantees.
 // If the access to the results of this operation aliases at runtime, the
 // behavior of such access is undefined.
-def DistinctObjectsTrait : NativeOpTrait<"DistinctObjectsTrait">;
+def DistinctObjectsTrait : NativeOpTrait<"DistinctObjectsTrait"> {
+  let cppIncludes = ["mlir/Interfaces/ViewLikeInterface.h"];
+}
 
 #endif // MLIR_INTERFACES_VIEWLIKEINTERFACE

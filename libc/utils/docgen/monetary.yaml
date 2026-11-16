@@ -1,0 +1,13 @@
+posix: posix-2024
+functions:
+  strfmon:
+    in-latest-posix: ''
+  strfmon_l:
+    in-latest-posix: ''
+types:
+  locale_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
+  ssize_t:
+    in-latest-posix: ''

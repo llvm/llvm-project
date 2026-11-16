@@ -1,5 +1,5 @@
 ;; Tests that we can debug-print DbgVariableRecords that have no markers attached.
-; RUN: opt -passes="instcombine" -debug %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt -passes="instcombine" -debug %s -disable-output 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK: CLONE:   #dbg_value(

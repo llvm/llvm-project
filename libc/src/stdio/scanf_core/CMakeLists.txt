@@ -8,7 +8,6 @@ if(scanf_config_copts)
   list(PREPEND scanf_config_copts "COMPILE_OPTIONS")
 endif()
 
-
 list(APPEND file_deps libc.hdr.types.FILE)
 if(LIBC_TARGET_OS_IS_GPU)
   list(APPEND file_deps
