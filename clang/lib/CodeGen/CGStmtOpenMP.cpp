@@ -4341,9 +4341,12 @@ static bool hasInscanReduction(const OMPExecutableDirective &S) {
 /// size num_iters = <num_iters>;
 /// <type> buffer[num_iters];
 /// \endcode
+/// With \p SharedTemps only the sizes of the arrays are emitted and the arrays
+/// are returned in it, the caller allocates them.
 static void emitScanBasedDirectiveDecls(
     CodeGenFunction &CGF, const OMPLoopDirective &S,
-    llvm::function_ref<llvm::Value *(CodeGenFunction &)> NumIteratorsGen) {
+    llvm::function_ref<llvm::Value *(CodeGenFunction &)> NumIteratorsGen,
+    SmallVectorImpl<const VarDecl *> *SharedTemps = nullptr) {
   llvm::Value *OMPScanNumIterations = CGF.Builder.CreateIntCast(
       NumIteratorsGen(CGF), CGF.SizeTy, /*isSigned=*/false);
   SmallVector<const Expr *, 4> Shareds;
@@ -4374,14 +4377,21 @@ static void emitScanBasedDirectiveDecls(
         RedCG.emitSharedOrigLValue(CGF, Count);
         RedCG.emitAggregateType(CGF, Count);
       }
+      const auto *TempVD = cast<VarDecl>(cast<DeclRefExpr>(*ITA)->getDecl());
       CodeGenFunction::OpaqueValueMapping DimMapping(
           CGF,
           cast<OpaqueValueExpr>(
-              cast<VariableArrayType>((*ITA)->getType()->getAsArrayTypeUnsafe())
+              cast<VariableArrayType>(TempVD->getType()->getAsArrayTypeUnsafe())
                   ->getSizeExpr()),
           RValue::get(OMPScanNumIterations));
-      // Emit temp buffer.
-      CGF.EmitVarDecl(*cast<VarDecl>(cast<DeclRefExpr>(*ITA)->getDecl()));
+      // Emit temp buffer. Team-shared buffers are allocated by the caller, only
+      // their sizes are emitted here.
+      if (SharedTemps) {
+        CGF.EmitVariablyModifiedType(TempVD->getType());
+        SharedTemps->push_back(TempVD);
+      } else {
+        CGF.EmitVarDecl(*TempVD);
+      }
       ++ITA;
       ++Count;
     }
@@ -4409,49 +4419,12 @@ static Address emitScanBasedDirectiveSharedDecls(
     llvm::function_ref<llvm::Value *(CodeGenFunction &)> NumIteratorsGen,
     CodeGenFunction::OMPPrivateScope &TempsScope) {
   CGOpenMPRuntime &RT = CGF.CGM.getOpenMPRuntime();
-  llvm::Value *OMPScanNumIterations = CGF.Builder.CreateIntCast(
-      NumIteratorsGen(CGF), CGF.SizeTy, /*isSigned=*/false);
-  SmallVector<const Expr *, 4> Shareds;
-  SmallVector<const Expr *, 4> Privates;
-  SmallVector<const Expr *, 4> ReductionOps;
-  SmallVector<const Expr *, 4> CopyArrayTemps;
-  for (const auto *C : S.getClausesOfKind<OMPReductionClause>()) {
-    assert(C->getModifier() == OMPC_REDUCTION_inscan &&
-           "Only inscan reductions are expected.");
-    Shareds.append(C->varlist_begin(), C->varlist_end());
-    Privates.append(C->privates().begin(), C->privates().end());
-    ReductionOps.append(C->reduction_ops().begin(), C->reduction_ops().end());
-    CopyArrayTemps.append(C->copy_array_temps().begin(),
-                          C->copy_array_temps().end());
-  }
   SmallVector<const VarDecl *, 4> TempVDs;
+  emitScanBasedDirectiveDecls(CGF, S, NumIteratorsGen, &TempVDs);
   SmallVector<Address, 4> TempPtrAddrs;
-  {
-    ReductionCodeGen RedCG(Shareds, Shareds, Privates, ReductionOps);
-    unsigned Count = 0;
-    auto *ITA = CopyArrayTemps.begin();
-    for (const Expr *IRef : Privates) {
-      const auto *PrivateVD = cast<VarDecl>(cast<DeclRefExpr>(IRef)->getDecl());
-      if (PrivateVD->getType()->isVariablyModifiedType()) {
-        RedCG.emitSharedOrigLValue(CGF, Count);
-        RedCG.emitAggregateType(CGF, Count);
-      }
-      const auto *TempVD = cast<VarDecl>(cast<DeclRefExpr>(*ITA)->getDecl());
-      CodeGenFunction::OpaqueValueMapping DimMapping(
-          CGF,
-          cast<OpaqueValueExpr>(
-              cast<VariableArrayType>(TempVD->getType()->getAsArrayTypeUnsafe())
-                  ->getSizeExpr()),
-          RValue::get(OMPScanNumIterations));
-      CGF.EmitVariablyModifiedType(TempVD->getType());
-      TempVDs.push_back(TempVD);
-      TempPtrAddrs.push_back(
-          CGF.CreateMemTemp(CGF.getContext().getPointerType(TempVD->getType()),
-                            TempVD->getName() + ".buf.addr"));
-      ++ITA;
-      ++Count;
-    }
-  }
+  for (const VarDecl *TempVD : TempVDs)
+    TempPtrAddrs.push_back(CGF.CreateMemTemp(CGF.getContext().VoidPtrTy,
+                                             TempVD->getName() + ".buf.addr"));
   Address DidIt = CGF.CreateMemTempWithoutCast(
       CGF.getContext().getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1),
       ".omp.scan.did_it");
@@ -4491,16 +4464,20 @@ static Address emitScanBasedDirectiveSharedDecls(
   return DidIt;
 }
 
-/// Releases the temp arrays allocated by emitScanBasedDirectiveSharedDecls;
-/// must follow the barrier at the end of the directive.
+/// Releases the temp arrays allocated by emitScanBasedDirectiveSharedDecls.
 /// The code is the following:
 /// \code
+/// __kmpc_barrier();
 /// if (did_it)
 ///   __kmpc_free(buffer);
 /// \endcode
 static void emitScanBasedDirectiveSharedDeclsFree(CodeGenFunction &CGF,
                                                   const OMPLoopDirective &S,
                                                   Address DidIt) {
+  // Required even with 'nowait' and emitted outside the cancellation region of
+  // the loop, so no thread frees the arrays while the team still uses them.
+  CGF.CGM.getOpenMPRuntime().emitBarrierCall(CGF, S.getBeginLoc(), OMPD_for,
+                                             /*EmitChecks=*/false);
   llvm::BasicBlock *ThenBB = CGF.createBasicBlock("omp.scan.free");
   llvm::BasicBlock *ExitBB = CGF.createBasicBlock("omp.scan.free.exit");
   llvm::Value *DidItVal =
@@ -4753,31 +4730,36 @@ static bool emitWorksharingDirective(CodeGenFunction &CGF,
     // EmitOMPParallelForDirective); otherwise they are allocated once per team
     // here and released after the barrier at the end of the directive.
     bool IsStandalone = !isOpenMPParallelDirective(EKind);
+    // No team-shared buffers on the device: its runtime has no
+    // __kmpc_copyprivate, __kmpc_aligned_alloc or __kmpc_free. Lift once
+    // CGOpenMPRuntimeGPU implements them.
+    if (IsStandalone && CGF.CGM.getLangOpts().OpenMPIsTargetDevice) {
+      CGF.CGM.ErrorUnsupported(
+          &S, "'inscan' reduction on a worksharing loop in a target region");
+      return false;
+    }
     const auto &&NumIteratorsGen = [&S](CodeGenFunction &CGF) {
       CodeGenFunction::OMPLocalDeclMapRAII Scope(CGF);
       OMPLoopScope LoopScope(CGF, S);
       return CGF.EmitScalarExpr(S.getNumIterations());
     };
     const auto &&FirstGen = [&S, HasCancel, EKind](CodeGenFunction &CGF) {
-      CodeGenFunction::OMPCancelStackRAII CancelRegion(CGF, EKind, HasCancel);
-      (void)CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
-                                       emitForLoopBounds,
-                                       emitDispatchForLoopBounds);
-      // Emit an implicit barrier at the end.
-      CGF.CGM.getOpenMPRuntime().emitBarrierCall(CGF, S.getBeginLoc(),
-                                                 OMPD_for);
+      {
+        CodeGenFunction::OMPCancelStackRAII CancelRegion(CGF, EKind, HasCancel);
+        (void)CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
+                                         emitForLoopBounds,
+                                         emitDispatchForLoopBounds);
+      }
+      // Emit an implicit barrier at the end, reached by cancelled threads too.
+      CGF.CGM.getOpenMPRuntime().emitBarrierCall(CGF, S.getBeginLoc(), OMPD_for,
+                                                 /*EmitChecks=*/false);
     };
-    const auto &&SecondGen = [&S, HasCancel, EKind, IsStandalone,
+    const auto &&SecondGen = [&S, HasCancel, EKind,
                               &HasLastprivates](CodeGenFunction &CGF) {
       CodeGenFunction::OMPCancelStackRAII CancelRegion(CGF, EKind, HasCancel);
       HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
                                                    emitForLoopBounds,
                                                    emitDispatchForLoopBounds);
-      // Emit an implicit barrier at the end, required even with 'nowait': the
-      // shared temp arrays are released after it.
-      if (IsStandalone)
-        CGF.CGM.getOpenMPRuntime().emitBarrierCall(CGF, S.getBeginLoc(),
-                                                   OMPD_for);
     };
     if (IsStandalone) {
       CodeGenFunction::OMPPrivateScope TempsScope(CGF);
