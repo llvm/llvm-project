@@ -5,6 +5,8 @@ declare ptr @get_ptr()
 declare void @capture(ptr)
 declare void @may_throw()
 declare i32 @__gxx_personality_v0(...)
+declare ptr @opaque(ptr) memory(none) nounwind willreturn
+declare void @use(i32) memory(inaccessiblemem: write) nounwind willreturn
 
 define void @captured_after_loop(i64 %n) {
 ; CHECK-LABEL: define void @captured_after_loop(
@@ -171,6 +173,100 @@ loop:
   %g = getelementptr inbounds i32, ptr %q, i64 %i
   store i32 %v, ptr %g
   call void @capture(ptr %a)
+  %i.next = add nuw nsw i64 %i, 1
+  %c = icmp eq i64 %i.next, %n
+  br i1 %c, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @hoisted_call_capture(ptr %ptr, i64 %n) {
+; CHECK-LABEL: define void @hoisted_call_capture(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    [[Q:%.*]] = call ptr @opaque(ptr [[A]])
+; CHECK-NEXT:    [[V_1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds ptr, ptr [[PTR]], i64 [[I]]
+; CHECK-NEXT:    store ptr [[A]], ptr [[G]], align 8
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    call void @use(i32 [[V]])
+; CHECK-NEXT:    store i32 1, ptr [[Q]], align 4
+; CHECK-NEXT:    call void @use(i32 [[V_1]])
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca i32
+  store i32 0, ptr %a
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %g = getelementptr inbounds ptr, ptr %ptr, i64 %i
+  store ptr %a, ptr %g
+  %v = load i32, ptr %a
+  call void @use(i32 %v)
+  %q = call ptr @opaque(ptr %a)
+  store i32 1, ptr %q
+  %v.1 = load i32, ptr %a
+  call void @use(i32 %v.1)
+  %i.next = add nuw nsw i64 %i, 1
+  %c = icmp eq i64 %i.next, %n
+  br i1 %c, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @hoisted_store_capture(ptr noalias %p, ptr %ptr, i64 %n) {
+; CHECK-LABEL: define void @hoisted_store_capture(
+; CHECK-SAME: ptr noalias [[P:%.*]], ptr [[PTR:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    store ptr [[A]], ptr [[P]], align 8
+; CHECK-NEXT:    [[Q:%.*]] = load ptr, ptr [[P]], align 8
+; CHECK-NEXT:    [[V_1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds ptr, ptr [[PTR]], i64 [[I]]
+; CHECK-NEXT:    store ptr [[A]], ptr [[G]], align 8
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    call void @use(i32 [[V]])
+; CHECK-NEXT:    store i32 1, ptr [[Q]], align 4
+; CHECK-NEXT:    call void @use(i32 [[V_1]])
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca i32
+  store i32 0, ptr %a
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %g = getelementptr inbounds ptr, ptr %ptr, i64 %i
+  store ptr %a, ptr %g
+  %v = load i32, ptr %a
+  call void @use(i32 %v)
+  store ptr %a, ptr %p
+  %q = load ptr, ptr %p
+  store i32 1, ptr %q
+  %v.1 = load i32, ptr %a
+  call void @use(i32 %v.1)
   %i.next = add nuw nsw i64 %i, 1
   %c = icmp eq i64 %i.next, %n
   br i1 %c, label %exit, label %loop
