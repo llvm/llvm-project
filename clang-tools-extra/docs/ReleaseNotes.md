@@ -244,7 +244,7 @@ infrastructure are described first, followed by tool-specific sections.
     - Fixed false negatives when a nested `if` checks the second operand
       of an outer `&&` condition, as in `if (x && y) { if (y) ... }`.
 
-    - Added support for long conjuction and disjunction chain.
+    - Added support for long conjunction and disjunction chains.
 
     - Added support for logical `not` operator for inner if condition.
 
