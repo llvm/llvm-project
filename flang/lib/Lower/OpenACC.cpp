@@ -2217,13 +2217,14 @@ void AccDataMap::remapDataOperandSymbols(
       if (Fortran::semantics::IsOptional(symbol)) {
         // An absent OPTIONAL is a null descriptor: fir.box_addr must not
         // read it.
+        mlir::Value box = value;
         mlir::Value isPresent =
-            fir::IsPresentOp::create(builder, loc, builder.getI1Type(), value);
+            fir::IsPresentOp::create(builder, loc, builder.getI1Type(), box);
         rawValue =
             builder.genIfOp(loc, {hostType}, isPresent, /*withElseRegion=*/true)
                 .genThen([&]() {
                   mlir::Value addr =
-                      fir::BoxAddrOp::create(builder, loc, hostType, value);
+                      fir::BoxAddrOp::create(builder, loc, hostType, box);
                   fir::ResultOp::create(builder, loc, addr);
                 })
                 .genElse([&]() {
