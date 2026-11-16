@@ -129,6 +129,24 @@ spirv.func @cooperative_matrix_load_missing_attr(%ptr : !spirv.ptr<i32, StorageB
 
 // -----
 
+spirv.func @cooperative_matrix_load_missing_stride_row_major(%ptr : !spirv.ptr<i32, StorageBuffer>) "None" {
+  // expected-error @+1 {{op Stride is required for 'RowMajor'}}
+  %0 = spirv.KHR.CooperativeMatrixLoad %ptr, <RowMajor> :
+    !spirv.ptr<i32, StorageBuffer> -> !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @cooperative_matrix_load_missing_stride_column_major(%ptr : !spirv.ptr<i32, StorageBuffer>) "None" {
+  // expected-error @+1 {{op Stride is required for 'ColumnMajor'}}
+  %0 = spirv.KHR.CooperativeMatrixLoad %ptr, <ColumnMajor> :
+    !spirv.ptr<i32, StorageBuffer> -> !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>
+  spirv.Return
+}
+
+// -----
+
 spirv.func @cooperative_matrix_load_bad_operad(%ptr : !spirv.ptr<i32, StorageBuffer>, %stride : i32) "None" {
   // expected-error @+1 {{op not compatible with memory operand 'MakePointerAvailable'}}
   %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, <ColumnMajor>, <MakePointerAvailable> :
@@ -160,6 +178,26 @@ spirv.func @cooperative_matrix_store_missing_attr(%ptr : !spirv.ptr<i32, Storage
                                                   %m : !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>) "None" {
   // expected-error @+1 {{expected ','}}
   spirv.KHR.CooperativeMatrixStore %ptr, %m, %stride :
+    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @cooperative_matrix_store_missing_stride_row_major(%ptr : !spirv.ptr<i32, StorageBuffer>,
+                                                              %m : !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>) "None" {
+  // expected-error @+1 {{op Stride is required for 'RowMajor'}}
+  spirv.KHR.CooperativeMatrixStore %ptr, %m, <RowMajor> :
+    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @cooperative_matrix_store_missing_stride_column_major(%ptr : !spirv.ptr<i32, StorageBuffer>,
+                                                                  %m : !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>) "None" {
+  // expected-error @+1 {{op Stride is required for 'ColumnMajor'}}
+  spirv.KHR.CooperativeMatrixStore %ptr, %m, <ColumnMajor> :
     !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>
   spirv.Return
 }
