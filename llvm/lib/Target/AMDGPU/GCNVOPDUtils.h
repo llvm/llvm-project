@@ -21,6 +21,7 @@
 
 namespace llvm {
 
+class MachineFunction;
 class MachineInstr;
 class SIInstrInfo;
 class MCRegisterClass;
@@ -62,11 +63,19 @@ struct VOPDMatchInfo {
 /// Check whether FirstMI and SecondMI can be
 /// combined into a VOPD instruction.  Returns the match info (X/Y assignment
 /// and encoding variant) on success, or std::nullopt if they cannot be paired.
+/// \p NumVGPRs is getNumVGPRsForVOPDPairing() for the function.
 std::optional<VOPDMatchInfo> tryMatchVOPDPair(const SIInstrInfo &TII,
                                               MachineInstr &FirstMI,
-                                              MachineInstr &SecondMI);
+                                              MachineInstr &SecondMI,
+                                              unsigned NumVGPRs);
 
-std::unique_ptr<ScheduleDAGMutation> createVOPDPairingMutation();
+/// \returns the VGPR count \p MF reports where the VOPD3 OPY source hazard
+/// needs it, and 0 on subtargets without that hazard. It walks the whole
+/// function, so compute it once per function, not per query.
+unsigned getNumVGPRsForVOPDPairing(const MachineFunction &MF);
+
+std::unique_ptr<ScheduleDAGMutation>
+createVOPDPairingMutation(const MachineFunction &MF);
 
 } // namespace llvm
 

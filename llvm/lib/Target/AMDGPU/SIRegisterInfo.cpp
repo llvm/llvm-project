@@ -4639,28 +4639,31 @@ unsigned SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
 }
 
 unsigned SIRegisterInfo::getNumReportedVGPRs(const MachineFunction &MF) const {
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
   const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   // A tail call isn't considered a call for MachineFrameInfo's purposes.
-  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
-    return getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass,
-                              /*IncludeCalls=*/false);
-  }
-
-  auto IsCounted = [](const MachineInstr &MI) {
-    return !MI.isCall() && !MI.isMetaInstruction();
-  };
-  ArrayRef<MCPhysReg> Registers =
-      AMDGPU::VGPR_32RegClass.getRegisters().take_front(
-          ST.getAddressableNumArchVGPRs());
-  for (MCPhysReg Reg : reverse(Registers)) {
-    for (MCRegAliasIterator AI(Reg, this, /*IncludeSelf=*/true); AI.isValid();
-         ++AI) {
-      if (any_of(MRI.reg_nodbg_instructions(*AI), IsCounted))
-        return getHWRegIndex(Reg) + 1;
+  bool HasCalls = FrameInfo.hasCalls() || FrameInfo.hasTailCall();
+  unsigned NumVGPRs = 0;
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI :
+         instructionsWithoutDebug(MBB.instr_begin(), MBB.instr_end())) {
+      // A BUNDLE only repeats the operands of the instructions inside it.
+      if (MI.isBundle())
+        continue;
+      if (HasCalls && (MI.isCall() || MI.isMetaInstruction()))
+        continue;
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg())
+          continue;
+        const TargetRegisterClass *RC = getPhysRegBaseClass(MO.getReg());
+        if (!RC || !isVGPRClass(RC))
+          continue;
+        unsigned Width =
+            static_cast<unsigned>(divideCeil(getRegSizeInBits(*RC), 32));
+        NumVGPRs = std::max(NumVGPRs, getHWRegIndex(MO.getReg()) + Width);
+      }
     }
   }
-  return 0;
+  return NumVGPRs;
 }
 
 SmallVector<StringLiteral>
