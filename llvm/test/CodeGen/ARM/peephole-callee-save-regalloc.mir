@@ -16,13 +16,6 @@
 ---
 name:            foo
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: gpr}
-  - { id: 1, class: gpr }
-  - { id: 2, class: rgpr }
-  - { id: 3, class: gpr }
-  - { id: 4, class: rgpr }
-  - { id: 5, class: tcgpr }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -31,13 +24,13 @@ liveins:
 body:             |
   bb.0 (%ir-block.0):
     liveins: $r0, $r1, $r2, $r3
-    %0 = COPY $r0
-    %1 = COPY $r1
-    %2 = COPY $r2
-    %3 = COPY $r3
+    %0:gpr = COPY $r0
+    %1:gpr = COPY $r1
+    %2:rgpr = COPY $r2
+    %3:gpr = COPY $r3
 
-    %4 = t2MOVi32imm 270337
-    %5 = t2ADDrr %2, %4, 14, $noreg, $noreg
+    %4:rgpr = t2MOVi32imm 270337
+    %5:tcgpr = t2ADDrr %2, %4, 14, $noreg, $noreg
     $r0 = COPY %0
     $r1 = COPY %1
     $r2 = COPY %2

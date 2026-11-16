@@ -3091,6 +3091,54 @@ performVectorNonNegToFPCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue DoubleVectorWidth(SDValue In, unsigned RequiredNumElems,
+                                 SelectionDAG &DAG) {
+  SDLoc DL(In);
+  LLVMContext &Ctx = *DAG.getContext();
+  EVT InVT = In.getValueType();
+  unsigned NumElems = InVT.getVectorNumElements() * 2;
+  EVT OutVT = EVT::getVectorVT(Ctx, InVT.getVectorElementType(), NumElems);
+  SDValue Concat =
+      DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, In, DAG.getPOISON(InVT));
+  if (NumElems < RequiredNumElems) {
+    return DoubleVectorWidth(Concat, RequiredNumElems, DAG);
+  }
+  return Concat;
+}
+
+static SDValue ExtendLowAndHigh(SDValue Input, bool IsSext, EVT SrcVT,
+                                EVT ResVT, SelectionDAG &DAG) {
+  SDLoc DL(Input.getNode());
+  unsigned LowOp =
+      IsSext ? WebAssemblyISD::EXTEND_LOW_S : WebAssemblyISD::EXTEND_LOW_U;
+  unsigned HighOp =
+      IsSext ? WebAssemblyISD::EXTEND_HIGH_S : WebAssemblyISD::EXTEND_HIGH_U;
+
+  if (SrcVT == MVT::v8i8) {
+    assert(ResVT == MVT::v8i32);
+    // extend_low and then extend_low and extend_high.
+    SDValue LowHalf =
+        DAG.getNode(LowOp, DL, MVT::v8i16, DoubleVectorWidth(Input, 16, DAG));
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT,
+                       {
+                           DAG.getNode(LowOp, DL, MVT::v4i32, LowHalf),
+                           DAG.getNode(HighOp, DL, MVT::v4i32, LowHalf),
+                       });
+  } else {
+    assert(ResVT == MVT::v16i32);
+    assert(SrcVT == MVT::v16i8);
+    SDValue LowHalf = DAG.getNode(LowOp, DL, MVT::v8i16, Input);
+    SDValue HighHalf = DAG.getNode(HighOp, DL, MVT::v8i16, Input);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT,
+                       {
+                           DAG.getNode(LowOp, DL, MVT::v4i32, LowHalf),
+                           DAG.getNode(HighOp, DL, MVT::v4i32, LowHalf),
+                           DAG.getNode(LowOp, DL, MVT::v4i32, HighHalf),
+                           DAG.getNode(HighOp, DL, MVT::v4i32, HighHalf),
+                       });
+  }
+}
+
 static SDValue
 performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   auto &DAG = DCI.DAG;
@@ -3098,26 +3146,15 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
          N->getOpcode() == ISD::ZERO_EXTEND);
 
   EVT ResVT = N->getValueType(0);
+  EVT SrcVT = N->getOperand(0)->getValueType(0);
   bool IsSext = N->getOpcode() == ISD::SIGN_EXTEND;
   SDLoc DL(N);
 
-  if (ResVT == MVT::v16i32 && N->getOperand(0)->getValueType(0) == MVT::v16i8) {
+  if ((ResVT == MVT::v16i32 && SrcVT == MVT::v16i8) ||
+      (ResVT == MVT::v8i32 && SrcVT == MVT::v8i8)) {
     // Use a tree of extend low/high to split and extend the input in two
     // layers to avoid doing several shuffles and even more extends.
-    unsigned LowOp =
-        IsSext ? WebAssemblyISD::EXTEND_LOW_S : WebAssemblyISD::EXTEND_LOW_U;
-    unsigned HighOp =
-        IsSext ? WebAssemblyISD::EXTEND_HIGH_S : WebAssemblyISD::EXTEND_HIGH_U;
-    SDValue Input = N->getOperand(0);
-    SDValue LowHalf = DAG.getNode(LowOp, DL, MVT::v8i16, Input);
-    SDValue HighHalf = DAG.getNode(HighOp, DL, MVT::v8i16, Input);
-    SDValue Subvectors[] = {
-        DAG.getNode(LowOp, DL, MVT::v4i32, LowHalf),
-        DAG.getNode(HighOp, DL, MVT::v4i32, LowHalf),
-        DAG.getNode(LowOp, DL, MVT::v4i32, HighHalf),
-        DAG.getNode(HighOp, DL, MVT::v4i32, HighHalf),
-    };
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Subvectors);
+    return ExtendLowAndHigh(N->getOperand(0), IsSext, SrcVT, ResVT, DAG);
   }
 
   // Combine ({s,z}ext (extract_subvector src, i)) into a widening operation if
@@ -3334,6 +3371,9 @@ static SDValue truncateVectorWithNARROW(EVT DstVT, SDValue In, const SDLoc &DL,
                                         SelectionDAG &DAG) {
   EVT SrcVT = In.getValueType();
 
+  if (In.isUndef())
+    return DAG.getUNDEF(DstVT);
+
   // No truncation required, we might get here due to recursive calls.
   if (SrcVT == DstVT)
     return In;
@@ -3346,32 +3386,73 @@ static SDValue truncateVectorWithNARROW(EVT DstVT, SDValue In, const SDLoc &DL,
   assert(SrcSizeInBits > DstVT.getSizeInBits() && "Illegal truncation");
 
   LLVMContext &Ctx = *DAG.getContext();
-  EVT PackedSVT = EVT::getIntegerVT(Ctx, SrcVT.getScalarSizeInBits() / 2);
 
+  if (SrcVT == MVT::v8i16 && DstVT == MVT::v8i8) {
+    // Use a narrow to avoid a shuffle, which can also prevent other shuffles
+    // degrading to extract/replace_lane.
+    SDValue Poison = DAG.getPOISON(SrcVT);
+    SDValue Res =
+        DAG.getNode(WebAssemblyISD::NARROW_U, DL, MVT::v16i8, In, Poison);
+    return extractSubVector(Res, 0, DAG, DL, 64);
+  }
+
+  if (SrcVT == MVT::v4i32 && DstVT == MVT::v4i8) {
+    SDValue Poison = DAG.getPOISON(SrcVT);
+    SDValue Narrow =
+        DAG.getNode(WebAssemblyISD::NARROW_U, DL, MVT::v8i16, In, Poison);
+    SDValue Extract = extractSubVector(Narrow, 0, DAG, DL, 64);
+    return truncateVectorWithNARROW(DstVT, Extract, DL, DAG);
+  }
+
+  if (SrcVT == MVT::v4i32 && DstVT == MVT::v4i16) {
+    SDValue Poison = DAG.getPOISON(SrcVT);
+    SDValue Narrow =
+        DAG.getNode(WebAssemblyISD::NARROW_U, DL, MVT::v8i16, In, Poison);
+    return extractSubVector(Narrow, 0, DAG, DL, 64);
+  }
+
+  if (SrcVT == MVT::v4i16 && DstVT == MVT::v4i8) {
+    In = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i16,
+                     {In, DAG.getPOISON(SrcVT)});
+    SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, MVT::v16i8, In,
+                              DAG.getPOISON(MVT::v8i16));
+    return extractSubVector(Res, 0, DAG, DL, 32);
+  }
+
+  unsigned SubSizeInBits = SrcSizeInBits / 2;
   // Narrow to the largest type possible:
   // vXi64/vXi32 -> i16x8.narrow_i32x4_u and vXi16 -> i8x16.narrow_i16x8_u.
-  EVT InVT = MVT::i16, OutVT = MVT::i8;
-  if (SrcVT.getScalarSizeInBits() > 16) {
-    InVT = MVT::i32;
-    OutVT = MVT::i16;
-  }
-  unsigned SubSizeInBits = SrcSizeInBits / 2;
-  InVT = EVT::getVectorVT(Ctx, InVT, SubSizeInBits / InVT.getSizeInBits());
+  EVT OutVT = SrcVT.getScalarSizeInBits() > 16 ? MVT::i16 : MVT::i8;
   OutVT = EVT::getVectorVT(Ctx, OutVT, SubSizeInBits / OutVT.getSizeInBits());
+  EVT InVT =
+      OutVT.widenIntegerVectorElementType(Ctx).getHalfNumVectorElementsVT(Ctx);
 
   // Split lower/upper subvectors.
   SDValue Lo = extractSubVector(In, 0, DAG, DL, SubSizeInBits);
   SDValue Hi = extractSubVector(In, NumElems / 2, DAG, DL, SubSizeInBits);
 
-  // 256bit -> 128bit truncate - Narrow lower/upper 128-bit subvectors.
-  if (SrcVT.is256BitVector() && DstVT.is128BitVector()) {
-    Lo = DAG.getBitcast(InVT, Lo);
-    Hi = DAG.getBitcast(InVT, Hi);
-    SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, OutVT, Lo, Hi);
-    return DAG.getBitcast(DstVT, Res);
+  if (SrcVT.is256BitVector()) {
+    if (DstVT.is128BitVector()) {
+      // 256bit -> 128bit truncate - Narrow lower/upper 128-bit subvectors.
+      Lo = DAG.getBitcast(InVT, Lo);
+      Hi = DAG.getBitcast(InVT, Hi);
+      SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, OutVT, Lo, Hi);
+      return DAG.getBitcast(DstVT, Res);
+    }
+    if (DstVT.is64BitVector() || DstVT.is32BitVector()) {
+      Lo = DAG.getBitcast(InVT, Lo);
+      Hi = DAG.getBitcast(InVT, Hi);
+      SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, OutVT, Lo, Hi);
+      if (OutVT.getVectorNumElements() > DstVT.getVectorNumElements()) {
+        assert(InVT.getVectorNumElements() == DstVT.getVectorNumElements());
+        Res = DAG.getBitcast(InVT, Res);
+      }
+      return truncateVectorWithNARROW(DstVT, Res, DL, DAG);
+    }
   }
 
   // Recursively narrow lower/upper subvectors, concat result and narrow again.
+  EVT PackedSVT = EVT::getIntegerVT(Ctx, SrcVT.getScalarSizeInBits() / 2);
   EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems / 2);
   Lo = truncateVectorWithNARROW(PackedVT, Lo, DL, DAG);
   Hi = truncateVectorWithNARROW(PackedVT, Hi, DL, DAG);
@@ -3394,11 +3475,8 @@ static SDValue performTruncateCombine(SDNode *N,
   if (!OutVT.isVector())
     return SDValue();
 
-  EVT OutSVT = OutVT.getVectorElementType();
-  EVT InSVT = InVT.getVectorElementType();
-  // Currently only cover truncate to v16i8 or v8i16.
-  if (!((InSVT == MVT::i16 || InSVT == MVT::i32 || InSVT == MVT::i64) &&
-        (OutSVT == MVT::i8 || OutSVT == MVT::i16) && OutVT.is128BitVector()))
+  if (OutVT != MVT::v16i16 && OutVT != MVT::v16i8 && OutVT != MVT::v8i16 &&
+      OutVT != MVT::v8i8 && OutVT != MVT::v4i16 && OutVT != MVT::v4i8)
     return SDValue();
 
   SDLoc DL(N);
@@ -3771,21 +3849,6 @@ static SDValue performSETCCCombine(SDNode *N,
   return SDValue();
 }
 
-SDValue DoubleVectorWidth(SDValue In, unsigned RequiredNumElems,
-                          SelectionDAG &DAG) {
-  SDLoc DL(In);
-  LLVMContext &Ctx = *DAG.getContext();
-  EVT InVT = In.getValueType();
-  unsigned NumElems = InVT.getVectorNumElements() * 2;
-  EVT OutVT = EVT::getVectorVT(Ctx, InVT.getVectorElementType(), NumElems);
-  SDValue Concat =
-      DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, In, DAG.getPOISON(InVT));
-  if (NumElems < RequiredNumElems) {
-    return DoubleVectorWidth(Concat, RequiredNumElems, DAG);
-  }
-  return Concat;
-}
-
 static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   if (VT != MVT::v4i32 && VT != MVT::v8i32 && VT != MVT::v16i32)
@@ -4074,6 +4137,14 @@ static SDValue performMinMaxF128Combine(SDNode *N, SelectionDAG &DAG) {
   }
 }
 
+static SDValue performNarrowCombine(SDNode *N) {
+  if (N->getOperand(0).getOpcode() == WebAssemblyISD::EXTEND_LOW_U &&
+      N->getOperand(1).getOpcode() == WebAssemblyISD::EXTEND_HIGH_U &&
+      N->getOperand(0)->getOperand(0) == N->getOperand(1)->getOperand(0))
+    return N->getOperand(0)->getOperand(0);
+  return SDValue();
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -4119,5 +4190,7 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
     return performMinMaxF128Combine(N, DCI.DAG);
+  case WebAssemblyISD::NARROW_U:
+    return performNarrowCombine(N);
   }
 }

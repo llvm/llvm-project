@@ -1704,6 +1704,11 @@ defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
   /*GenPredicate=*/1
 >;
 
+defm McastFullMaskBug : AMDGPUGenericAnySubtargetFeature<"mcast-full-mask-bug",
+  "Multicast loads with all 16 workgroup mask bits set may never complete",
+  /*GenPredicate=*/0
+>;
+
 defm WaveMatchInsts : AMDGPUSubtargetFeature<"wave-match-insts",
   "Has v_wave_match_b32 instruction"
 >;
@@ -2627,6 +2632,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
+   FeatureMcastFullMaskBug,
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
@@ -2666,6 +2672,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNoSleepForever,
    FeatureNoMTypeNC,
+   FeatureMcastFullMaskBug,
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
@@ -2735,6 +2742,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureUnusableSAddPCI64,
+   FeatureMcastFullMaskBug,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -2867,7 +2875,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSRAMECCOnOffModes,
-  FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
+  FeatureSGPRInitBug, FeatureMcastFullMaskBug, FeatureApertureRegs,
+  FeatureGetDoorbellID,
   FeatureAGPRAlloc, Feature1536VGPRs, FeatureVGPRMSBs,
   FeatureHalfAddressablePhysicalLocalMemory, FeatureBackOffBarrier,
   FeatureLDSAllocGranularity256,
