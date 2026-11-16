@@ -45,7 +45,7 @@ replacements, although clang-tidy can optionally format all fixes.
 
 ```{warning}
 Initializing expressions are assumed to be valid initializers for
-an enum.  C requires that enum values fit into an `int`, but
+an `enum`. C requires that `enum` values fit into an `int`, but
 this may not be the case for some accepted constant expressions.
 For instance `1 << 40` will not fit into an `int` when the size of
 an `int` is 32 bits.
