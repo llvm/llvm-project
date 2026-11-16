@@ -809,6 +809,8 @@ libc_math_function(
     name = "dmulf128",
     additional_deps = [
         "//libc/src/__support/math:dmulf128",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
     ],
 )
 

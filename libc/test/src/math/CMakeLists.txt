@@ -3692,6 +3692,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  dmulf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-tests
+  SRCS
+    dmulf128_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.math.dmulf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
+add_fp_unittest(
   f16mul_test
   NEED_MPFR
   SUITE
