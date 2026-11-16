@@ -13,15 +13,12 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -90,51 +87,6 @@ FullSourceLoc ConvertBackendLocation(const llvm::SMDiagnostic &D,
   return FullSourceLoc(NewLoc, CSM);
 }
 
-/// File paths in debug info have -fdebug-prefix-map substitutions
-/// applied. If \p DebugPath does not name a file in this compilation as is,
-/// undo each substitution and return the resulting file, unless several
-/// distinct files qualify.
-OptionalFileEntryRef lookupDebugFile(const SourceManager &SM,
-                                     const CodeGenOptions &CGOpts,
-                                     StringRef DebugPath) {
-  // A file of the same name outside this compilation is not the one the debug
-  // info refers to.
-  auto LookupInCompilation = [&](StringRef Path) -> OptionalFileEntryRef {
-    auto FE = SM.getFileManager().getOptionalFileRef(Path);
-    if (FE && SM.translateFile(*FE).isValid())
-      return FE;
-    return std::nullopt;
-  };
-  if (auto FE = LookupInCompilation(DebugPath))
-    return FE;
-  auto NormalizeSeparators = [](StringRef P) {
-    SmallString<256> N(P);
-    llvm::sys::path::remove_dots(N);
-    return N;
-  };
-  SmallString<256> NormalizedDebugPath = NormalizeSeparators(DebugPath);
-  OptionalFileEntryRef Result;
-  for (const auto &[From, To] : llvm::reverse(CGOpts.DebugPrefixMap)) {
-    SmallString<256> Path(DebugPath);
-    if (!llvm::sys::path::replace_path_prefix(Path, To, From))
-      continue;
-    // A later entry with an overlapping prefix may take precedence over this
-    // one, so the candidate must map forward to DebugPath again.
-    if (NormalizeSeparators(CGOpts.remapDebugPathPrefix(Path)) !=
-        NormalizedDebugPath)
-      continue;
-    auto FE = LookupInCompilation(Path);
-    if (!FE)
-      continue;
-    // Several prefixes can map to the same replacement. If they lead to
-    // different files, the debug info does not say which one is meant.
-    if (Result && *Result != *FE)
-      return std::nullopt;
-    Result = FE;
-  }
-  return Result;
-}
-
 } // namespace
 
 #define ComputeDiagID(Severity, GroupName, DiagID)                             \
@@ -195,6 +147,21 @@ BackendDiagnosticConsumer::getFunctionSourceLocation(const Function &F) const {
   return std::nullopt;
 }
 
+OptionalFileEntryRef
+BackendDiagnosticConsumer::getSourceFile(const llvm::DIFile *File,
+                                         ArrayRef<StringRef> Names) const {
+  auto It = DIFileSources.find(File);
+  // A DIFile shared by several files identifies none of them, and looking up
+  // its name could find the wrong one.
+  if (It != DIFileSources.end())
+    return It->second;
+  FileManager &FileMgr = SM->getFileManager();
+  for (StringRef Name : Names)
+    if (auto FE = FileMgr.getOptionalFileRef(Name))
+      return FE;
+  return std::nullopt;
+}
+
 const FullSourceLoc BackendDiagnosticConsumer::getBestLocationFromDebugLoc(
     const llvm::DiagnosticInfoWithLocationBase &D, bool &BadDebugInfo,
     StringRef &Filename, unsigned &Line, unsigned &Column) const {
@@ -204,9 +171,8 @@ const FullSourceLoc BackendDiagnosticConsumer::getBestLocationFromDebugLoc(
   if (D.isLocationAvailable()) {
     D.getLocation(Filename, Line, Column);
     if (Line > 0) {
-      auto FE = lookupDebugFile(SourceMgr, CodeGenOpts, Filename);
-      if (!FE)
-        FE = lookupDebugFile(SourceMgr, CodeGenOpts, D.getAbsolutePath());
+      auto FE = getSourceFile(D.getLocation().getFile(),
+                              {Filename, D.getAbsolutePath()});
       if (FE) {
         // If -gcolumn-info was not used, Column will be 0. This upsets the
         // source manager, so pass 1 if Column is not set.
@@ -552,7 +518,7 @@ void BackendDiagnosticConsumer::DontCallDiagHandler(
     for (const auto &[I, Info] : llvm::enumerate(D.getDebugInlineChain())) {
       SourceLocation Loc;
       if (Info.Line > 0)
-        if (auto FE = lookupDebugFile(SrcMgr, CodeGenOpts, Info.Filename))
+        if (auto FE = getSourceFile(Info.File, Info.Filename))
           Loc = SrcMgr.translateFileLineCol(*FE, Info.Line,
                                             Info.Column ? Info.Column : 1);
       EmitNote(Loc, Info.FuncName, I == 0);
