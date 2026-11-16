@@ -76,13 +76,13 @@ func.func @fold_arith_extsi_into_contract(
 // The contraction requires lhs and rhs to have the same element type, so the
 // extensions are only folded when they start from the same one.
 
-// CHECK-LABEL: func.func @no_fold_arith_extf_from_different_types
+// CHECK-LABEL: func.func @negative_fold_arith_extf_from_different_types
 //  CHECK-SAME: (%[[ARG0:.*]]: vector<64x64xf16>, %[[ARG1:.*]]: vector<64x64xbf16>, %[[ARG2:.*]]: vector<64x64xf32>)
 //       CHECK:   %[[LHS:.*]] = arith.extf %[[ARG0]] : vector<64x64xf16> to vector<64x64xf32>
 //       CHECK:   %[[RHS:.*]] = arith.extf %[[ARG1]] : vector<64x64xbf16> to vector<64x64xf32>
 //       CHECK:   vector.contract
 //  CHECK-SAME:   %[[LHS]], %[[RHS]], %[[ARG2]] : vector<64x64xf32>, vector<64x64xf32> into vector<64x64xf32>
-func.func @no_fold_arith_extf_from_different_types(
+func.func @negative_fold_arith_extf_from_different_types(
   %arg0: vector<64x64xf16>,
   %arg1: vector<64x64xbf16>,
   %arg2: vector<64x64xf32>) -> vector<64x64xf32> {
@@ -98,13 +98,13 @@ func.func @no_fold_arith_extf_from_different_types(
 
 // -----
 
-// CHECK-LABEL: func.func @no_fold_arith_extsi_from_different_types
+// CHECK-LABEL: func.func @negative_fold_arith_extsi_from_different_types
 //  CHECK-SAME: (%[[ARG0:.*]]: vector<64x64xi8>, %[[ARG1:.*]]: vector<64x64xi16>, %[[ARG2:.*]]: vector<64x64xi32>)
 //       CHECK:   %[[LHS:.*]] = arith.extsi %[[ARG0]] : vector<64x64xi8> to vector<64x64xi32>
 //       CHECK:   %[[RHS:.*]] = arith.extsi %[[ARG1]] : vector<64x64xi16> to vector<64x64xi32>
 //       CHECK:   vector.contract
 //  CHECK-SAME:   %[[LHS]], %[[RHS]], %[[ARG2]] : vector<64x64xi32>, vector<64x64xi32> into vector<64x64xi32>
-func.func @no_fold_arith_extsi_from_different_types(
+func.func @negative_fold_arith_extsi_from_different_types(
   %arg0: vector<64x64xi8>,
   %arg1: vector<64x64xi16>,
   %arg2: vector<64x64xi32>) -> vector<64x64xi32> {
