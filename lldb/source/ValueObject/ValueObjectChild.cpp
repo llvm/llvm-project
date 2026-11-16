@@ -113,9 +113,15 @@ bool ValueObjectChild::UpdateValue() {
       m_value.SetValueType(parent->GetValue().GetValueType());
 
       Flags parent_type_flags(parent_type.GetTypeInfo());
+      // If instances of both the parent's type and the base class are pointers,
+      // as with a Swift class and its Swift base class, the base class child's
+      // value is the parent's pointer. An Objective-C base class of a Swift
+      // class is instead stored at the address that the pointer points to.
       const bool is_instance_ptr_base =
-          ((m_is_base_class) &&
-           (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
+          m_is_base_class &&
+          parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer) &&
+          Flags(GetCompilerType().GetTypeInfo())
+              .AnySet(lldb::eTypeInstanceIsPointer);
 
       if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress()) {
         m_value.GetScalar() = parent->GetPointerValue().address;
