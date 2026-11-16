@@ -37,35 +37,34 @@
 ; ASM-LABEL: loop_csr: # @loop_csr
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] 0
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] 0
+; ASM:         xorl    %esi, %esi
 ; ASM: # %bb.2:                                 # %for.body.preheader
 ; ASM:         xorl    %edi, %edi
-; ASM:         xorl    %esi, %esi
 ; ASM: [[oy_ox_start:\.Ltmp[0-9]+]]:
 ; ASM:         .p2align        4
 ; ASM: .LBB0_3:                                # %for.body
-; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] $edi
-; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] $esi
+; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] $esi
+; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] $edi
 ; ASM:        .cv_loc 0 1 13 11               # t.c:13:11
-; ASM:        movl    %edi, %ecx
+; ASM:        movl    %esi, %ecx
 ; ASM:        callq   g
-; ASM:        movl    %eax, %edi
+; ASM:        movl    %eax, %esi
 ; ASM: [[ox_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] $edi
+; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] $esi
 ; ASM:         .cv_loc 0 1 14 11               # t.c:14:11
-; ASM:         movl    %esi, %ecx
+; ASM:         movl    %edi, %ecx
 ; ASM:         callq   g
-; ASM:         movl    %eax, %esi
+; ASM:         movl    %eax, %edi
 ; ASM: [[oy_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] $esi
+; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] $edi
 ; ASM:         cmpl    n(%rip), %eax
 ; ASM:         jl      .LBB0_3
 ; ASM: [[loopskip_start:\.Ltmp[0-9]+]]:
 ; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] 0
-; ASM:         xorl    %esi, %esi
 ; ASM:         xorl    %edi, %edi
 ; ASM: [[oy_end:\.Ltmp[0-9]+]]:
-; ASM:         addl    %edi, %esi
-; ASM:         movl    %esi, %eax
+; ASM:         addl    %esi, %edi
+; ASM:         movl    %edi, %eax
 
 ; XXX FIXME: the debug value line after loopskip_start should be repeated
 ; because both fields of 'o' are zero flowing into this block. However, it

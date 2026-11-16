@@ -1371,23 +1371,23 @@ define i32 @irreducibleCFG() #4 {
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    jmp LBB16_1
 ; ENABLE-NEXT:  LBB16_2: ## %split
-; ENABLE-NEXT:    movq _irreducibleCFGb@GOTPCREL(%rip), %rax
-; ENABLE-NEXT:    cmpl $0, (%rax)
+; ENABLE-NEXT:    movq _irreducibleCFGb@GOTPCREL(%rip), %rcx
+; ENABLE-NEXT:    xorl %eax, %eax
+; ENABLE-NEXT:    cmpl $0, (%rcx)
 ; ENABLE-NEXT:    je LBB16_4
 ; ENABLE-NEXT:  ## %bb.3: ## %for.body4.i
 ; ENABLE-NEXT:    movq _irreducibleCFGa@GOTPCREL(%rip), %rax
 ; ENABLE-NEXT:    movl (%rax), %edi
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    callq _something
-; ENABLE-NEXT:  LBB16_4: ## %for.inc
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    .p2align 4
-; ENABLE-NEXT:  LBB16_5: ## %for.inc
+; ENABLE-NEXT:  LBB16_4: ## %for.inc
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    incl %eax
 ; ENABLE-NEXT:    cmpl $7, %eax
-; ENABLE-NEXT:    jl LBB16_5
-; ENABLE-NEXT:  ## %bb.6: ## %fn1.exit
+; ENABLE-NEXT:    jl LBB16_4
+; ENABLE-NEXT:  ## %bb.5: ## %fn1.exit
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    popq %rbp
 ; ENABLE-NEXT:    retq
@@ -1407,23 +1407,23 @@ define i32 @irreducibleCFG() #4 {
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    jmp LBB16_1
 ; DISABLE-NEXT:  LBB16_2: ## %split
-; DISABLE-NEXT:    movq _irreducibleCFGb@GOTPCREL(%rip), %rax
-; DISABLE-NEXT:    cmpl $0, (%rax)
+; DISABLE-NEXT:    movq _irreducibleCFGb@GOTPCREL(%rip), %rcx
+; DISABLE-NEXT:    xorl %eax, %eax
+; DISABLE-NEXT:    cmpl $0, (%rcx)
 ; DISABLE-NEXT:    je LBB16_4
 ; DISABLE-NEXT:  ## %bb.3: ## %for.body4.i
 ; DISABLE-NEXT:    movq _irreducibleCFGa@GOTPCREL(%rip), %rax
 ; DISABLE-NEXT:    movl (%rax), %edi
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    callq _something
-; DISABLE-NEXT:  LBB16_4: ## %for.inc
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    .p2align 4
-; DISABLE-NEXT:  LBB16_5: ## %for.inc
+; DISABLE-NEXT:  LBB16_4: ## %for.inc
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    incl %eax
 ; DISABLE-NEXT:    cmpl $7, %eax
-; DISABLE-NEXT:    jl LBB16_5
-; DISABLE-NEXT:  ## %bb.6: ## %fn1.exit
+; DISABLE-NEXT:    jl LBB16_4
+; DISABLE-NEXT:  ## %bb.5: ## %fn1.exit
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    popq %rbp
 ; DISABLE-NEXT:    retq

@@ -736,6 +736,13 @@ static bool regIsPICBase(Register BaseReg, const MachineRegisterInfo &MRI) {
   return isPICBase;
 }
 
+bool X86InstrInfo::isProfitableToCSEAcrossPHI(const MachineInstr &MI) const {
+  // A trivially rematerializable def (e.g. MOV32r0, which lowers to xorl) can
+  // be re-emitted by the allocator rather than spilled, so reusing it across a
+  // PHI cannot force a spill.
+  return isTriviallyReMaterializable(MI);
+}
+
 bool X86InstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
