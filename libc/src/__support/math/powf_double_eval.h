@@ -19,6 +19,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
@@ -212,7 +213,7 @@ check_exact_boundary(float x, float y, uint64_t sign,
     int unbiased_exp = exact_exp + l - 1;
 
     if (LIBC_UNLIKELY(unbiased_exp > 127))
-      return powf_internal::set_overflow(out_sign);
+      return fputil::set_overflow<float>(out_sign);
 
     // Below the minimum subnormal float (2^-149).
     if (LIBC_UNLIKELY(unbiased_exp < -149)) {
@@ -463,7 +464,7 @@ LIBC_INLINE float powf(float x, float y) {
     double r_dd = powf_accurate(x, y, e_x, sign);
     res = static_cast<float>(r_dd);
     if (LIBC_UNLIKELY(FloatBits(res).is_inf()))
-      return powf_internal::set_overflow(out_sign);
+      return fputil::set_overflow<float>(out_sign);
     return res;
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   }
@@ -471,10 +472,10 @@ LIBC_INLINE float powf(float x, float y) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Exceptional path: k > 128 (overflow), k < -155 (underflow), or denormal.
   if (k > 128)
-    return powf_internal::set_overflow(out_sign);
+    return fputil::set_overflow<float>(out_sign);
 
   if (k < -155)
-    return powf_internal::set_underflow(out_sign);
+    return fputil::set_underflow<float>(out_sign);
 
   // Denormal and underflow path for -155 <= k <= -126:
 #ifndef LIBC_MATH_HAS_SMALL_TABLES
@@ -516,7 +517,7 @@ LIBC_INLINE float powf(float x, float y) {
 
   if (LIBC_LIKELY(u_hi == u_lo)) {
     if (LIBC_UNLIKELY(u_hi == denorm_bias))
-      return powf_internal::set_underflow(out_sign);
+      return fputil::set_underflow<float>(out_sign);
 
     float res = static_cast<float>(u_hi - denorm_bias);
     if (LIBC_UNLIKELY(FloatBits(res).is_normal())) {
@@ -546,8 +547,8 @@ LIBC_INLINE float powf(float x, float y) {
   return res;
 #else  // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (k > 128)
-    return powf_internal::set_overflow(out_sign);
-  return powf_internal::set_underflow(out_sign);
+    return fputil::set_overflow<float>(out_sign);
+  return fputil::set_underflow<float>(out_sign);
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 }
 

@@ -11,7 +11,7 @@ module attributes {
 
   // A non-bitint integer of intermediate width (65..127) is rejected: only
   // widths up to 64 and exactly 128 are accepted.
-  cir.func @take_i96(%arg0: !i96) {
+  cir.func @take_i96(%arg0: !i96) requires_call_conv_lowering {
     cir.return
   }
 

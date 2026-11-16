@@ -52,7 +52,7 @@ define i32 @test_spill(
   ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm10]], 1, $noreg, 68, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep16, addrspace 1)
   ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm11]], 1, $noreg, 72, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep17, addrspace 1)
   ; CHECK-VREG-NEXT:   $eax = COPY [[MOV32rm]]
-  ; CHECK-VREG-NEXT:   RET 0, killed $eax
+  ; CHECK-VREG-NEXT:   RET 0, $eax
   ;
   ; CHECK-PREG-LABEL: name: test_spill
   ; CHECK-PREG: bb.0 (%ir-block.0):

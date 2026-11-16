@@ -6,7 +6,6 @@
 # alignment padding area is between the CSR area and the SP, so the SP
 # cannot be used to reference the CSR area.
 name:            test
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    64
 # CHECK:      stack:

@@ -106,10 +106,15 @@ ParseResult parseSwitchOpCases(
   SmallVector<APInt> values;
   unsigned bitWidth = selectorType.getIntOrFloatBitWidth();
   while (succeeded(parser.parseOptionalComma())) {
-    int64_t value = 0;
+    SMLoc valueLoc = parser.getCurrentLocation();
+    APInt value;
     if (failed(parser.parseInteger(value)))
       return failure();
-    values.push_back(APInt(bitWidth, value, /*isSigned=*/true));
+    if (value.isNegative() ? !value.isSignedIntN(bitWidth)
+                           : !value.isIntN(bitWidth))
+      return parser.emitError(valueLoc)
+             << "literal is out of range for " << selectorType;
+    values.push_back(value.sextOrTrunc(bitWidth));
 
     Block *target;
     SmallVector<OpAsmParser::UnresolvedOperand> operands;
@@ -152,7 +157,7 @@ void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type selectorType,
     p << ',';
     p.printNewline();
     p << "  ";
-    p << literal.getLimitedValue();
+    p << literal;
     p << ": ";
     p.printSuccessorAndUseList(targets[index], targetOperands[index]);
   }

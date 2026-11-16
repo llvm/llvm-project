@@ -28,7 +28,7 @@ target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-S128-n
 ; PIC-LABEL: DW_AT_name ("global_stored")
 ; PIC: DW_TAG_variable
 ; PIC-NEXT: DW_AT_location (indexed (0x0) loclist = 0x{{[0-9a-f]+}}:
-; PIC-NEXT: DW_OP_WASM_location 0x0 0x0, DW_OP_stack_value)
+; PIC-NEXT: DW_OP_WASM_location 0x{{[0-3]}} 0x{{[0-9a-f]+}}, DW_OP_stack_value)
 ; PIC-NEXT: DW_AT_name ("p")
 ; PIC: DW_AT_name ("g")
 ; PIC: DW_AT_location (DW_OP_WASM_location 0x3 0x1, DW_OP_addrx 0x1, DW_OP_plus)

@@ -62,7 +62,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
 frameInfo:
@@ -87,7 +86,6 @@ body: |
 ...
 ---
 name:            test_typed_immediates
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
 frameInfo:
@@ -111,7 +109,6 @@ body: |
 ...
 ---
 name:            test_mir_created
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
 frameInfo:

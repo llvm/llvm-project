@@ -18,6 +18,7 @@
 #include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <optional>
 
 using namespace llvm;
@@ -107,6 +108,16 @@ Expected<LLVMRemarkFileHandle> llvm::setupLLVMOptimizationRemarks(
   Expected<remarks::Format> Format = remarks::parseFormat(RemarksFormat);
   if (Error E = Format.takeError())
     return make_error<LLVMRemarkSetupFormatError>(std::move(E));
+
+  // Resolve the filename up front, so that the path recorded in the remarks
+  // section always denotes the file that gets created below.
+  SmallString<128> AbsRemarksFilename(RemarksFilename);
+  if (RemarksFilename != "-") {
+    if (std::error_code EC =
+            Context.getVirtualFileSystem().makeAbsolute(AbsRemarksFilename))
+      return make_error<LLVMRemarkSetupFileError>(errorCodeToError(EC));
+    RemarksFilename = AbsRemarksFilename;
+  }
 
   std::error_code EC;
   auto Flags = *Format == remarks::Format::YAML ? sys::fs::OF_TextWithCRLF

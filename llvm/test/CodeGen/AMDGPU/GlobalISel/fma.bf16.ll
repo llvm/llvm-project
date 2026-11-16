@@ -430,7 +430,7 @@ define amdgpu_ps <2 x bfloat> @fma_v2bf16_vll(<2 x bfloat> %a) {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 0x43484000
-; GFX1250-NEXT:    v_pk_fma_bf16 v0, 0x42c83f80, v0, v1
+; GFX1250-NEXT:    v_pk_fma_bf16 v0, v0, 0x42c83f80, v1
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 1.0, bfloat 100.0>, <2 x bfloat> <bfloat 2.0, bfloat 200.0>)
   ret <2 x bfloat> %result

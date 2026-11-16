@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -target-cpu z13 -triple s390x-linux-gnu \
 // RUN: -fzvector -flax-vector-conversions=none -std=c++11 \
 // RUN: -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -target-cpu z13 -triple s390x-linux-gnu -fzvector -flax-vector-conversions=none -std=c++11 -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s %}
 
 bool gb;
 

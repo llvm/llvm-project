@@ -6,6 +6,7 @@
 # RUN: cmp %t %t.copy
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x00000007

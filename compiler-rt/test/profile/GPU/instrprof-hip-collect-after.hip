@@ -1,10 +1,8 @@
-// Explicit-collect idempotency: a program that calls
-// __llvm_profile_hip_collect_device_data() itself *after* a launch (e.g. a
-// periodic profile dump) and then also exits normally must not double-count the
-// device counters. The explicit drain and the atexit drain write the same
-// arch-named device profraw, so the merged profile must reflect a single launch
-// (function count 64, even-branch 32), not two. Complements device-early-collect
-// (which covers a collect *before* the first launch).
+// Explicit-collect idempotency: a program that collects after a launch and
+// then exits normally must not double-count the device counters. The HSA pass
+// drains the resident image once, so the merged profile reflects one launch
+// (function count 64, even-branch 32). Complements device-early-collect, which
+// calls the collector before the first launch.
 //
 // REQUIRES: hip, amdgpu
 // RUN: rm -rf %t.dir && mkdir -p %t.dir
@@ -18,8 +16,7 @@
 // RUN: llvm-profdata show --all-functions --counts %t.dir/a.profdata \
 // RUN:   | FileCheck %s
 //
-// A single launch of 64 threads, drained twice (explicit + atexit), must still
-// merge to exactly one launch's worth of counts.
+// An explicit collection followed by normal exit records one launch.
 // CHECK: _Z8classifyPii:
 // CHECK: Function count: 64
 // CHECK: Block counts: [0, 32]

@@ -19,12 +19,15 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <memory>
 #include <optional>
 
 namespace llvm {
 
 class MipsTargetMachine : public CodeGenTargetMachineImpl {
+  const MipsOptions &CLOpts;
+  const MipsMCOptions &MCCLOpts;
   bool isLittle;
   bool IsJIT;
   // Used to initialize module-wide object-file policy.
@@ -32,6 +35,22 @@ class MipsTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
   mutable StringMap<std::unique_ptr<MipsSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, FS, Mips16, NoMips16, MicroMips, NoMicroMips, SoftFloat;
+    StringRef ABIName = StringRef();
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && FS == RHS.FS && Mips16 == RHS.Mips16 &&
+             NoMips16 == RHS.NoMips16 && MicroMips == RHS.MicroMips &&
+             NoMicroMips == RHS.NoMicroMips && SoftFloat == RHS.SoftFloat &&
+             ABIName == RHS.ABIName;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<MipsSubtarget, SubtargetAttrs> LastSubtarget;
 
 public:
   MipsTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -43,6 +62,8 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
+  const MipsOptions &getCLOpts() const { return CLOpts; }
+  const MipsMCOptions &getMCCLOpts() const { return MCCLOpts; }
   const MipsSubtarget *getSubtargetImpl(const Function &F) const override;
 
   // Pass Pipeline Configuration
@@ -67,6 +88,14 @@ public:
 
   bool isLittleEndian() const { return isLittle; }
   bool isJIT() const { return IsJIT; }
+
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
 };
 
 /// Mips32/64 big endian target machine.

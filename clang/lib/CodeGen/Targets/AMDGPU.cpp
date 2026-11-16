@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
@@ -151,7 +152,7 @@ ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
         return ABIArgInfo::getIgnore();
 
       // Lower single-element structs to just return a regular value.
-      if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
+      if (const Type *SeltTy = isSingleElementRecord(RetTy, getContext()))
         return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
       if (const auto *RD = RetTy->getAsRecordDecl();
@@ -187,7 +188,7 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
 
   // TODO: Can we omit empty structs?
 
-  if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
+  if (const Type *SeltTy = isSingleElementRecord(Ty, getContext()))
     Ty = QualType(SeltTy, 0);
 
   llvm::Type *OrigLTy = CGT.ConvertType(Ty);
@@ -242,7 +243,7 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     // Lower single-element structs to just pass a regular value. TODO: We
     // could do reasonable-size multiple-element structs too, using getExpand(),
     // though watch out for things like bitfields.
-    if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
+    if (const Type *SeltTy = isSingleElementRecord(Ty, getContext()))
       return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
     if (const auto *RD = Ty->getAsRecordDecl();
@@ -323,20 +324,6 @@ public:
   bool shouldEmitDWARFBitFieldSeparators() const override;
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
 };
-}
-
-static bool requiresAMDGPUProtectedVisibility(const Decl *D,
-                                              llvm::GlobalValue *GV) {
-  if (GV->getVisibility() != llvm::GlobalValue::HiddenVisibility)
-    return false;
-
-  return !D->hasAttr<OMPDeclareTargetDeclAttr>() &&
-         (D->hasAttr<DeviceKernelAttr>() ||
-          (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
-          (isa<VarDecl>(D) &&
-           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
-            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinSurfaceType() ||
-            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType())));
 }
 
 void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
@@ -454,7 +441,8 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (requiresAMDGPUProtectedVisibility(D, GV)) {
+  if (CodeGenUtils::requiresAMDGPUProtectedVisibility(
+          D, GV->getVisibility() == llvm::GlobalValue::HiddenVisibility)) {
     GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
     GV->setDSOLocal(true);
   }
@@ -581,10 +569,8 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
     RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
   if (!AO.getOption(clang::AtomicOptionKind::RemoteMemory))
     RMW->setMetadata("amdgpu.no.remote.memory", Empty);
-  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
-      RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
-      RMW->getType()->isFloatTy())
-    RMW->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode, Empty);
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode))
+    addAtomicIgnoreDenormalModeMetadata(CGF, *RMW);
 }
 
 bool AMDGPUTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {

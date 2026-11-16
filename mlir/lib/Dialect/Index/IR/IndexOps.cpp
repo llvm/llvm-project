@@ -684,9 +684,11 @@ OpFoldResult CmpOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-/// Canonicalize
-/// `x - y cmp 0` to `x cmp y`. or `x - y cmp 0` to `x cmp y`.
-/// `0 cmp x - y` to `y cmp x`. or `0 cmp x - y` to `y cmp x`.
+/// Canonicalize `(x - y) == 0` to `x == y` and `(x - y) != 0` to `x != y`.
+/// Likewise, canonicalize `0 == (x - y)` and `0 != (x - y)`.
+///
+/// Ordered comparisons cannot be canonicalized this way because subtraction
+/// may wrap at the target index bitwidth.
 LogicalResult CmpOp::canonicalize(CmpOp op, PatternRewriter &rewriter) {
   IntegerAttr cmpRhs;
   IntegerAttr cmpLhs;
@@ -698,11 +700,18 @@ LogicalResult CmpOp::canonicalize(CmpOp op, PatternRewriter &rewriter) {
   if (!rhsIsZero && !lhsIsZero)
     return rewriter.notifyMatchFailure(op.getLoc(),
                                        "cmp is not comparing something with 0");
+
   SubOp subOp = rhsIsZero ? op.getLhs().getDefiningOp<index::SubOp>()
                           : op.getRhs().getDefiningOp<index::SubOp>();
   if (!subOp)
     return rewriter.notifyMatchFailure(
         op.getLoc(), "non-zero operand is not a result of subtraction");
+
+  if (op.getPred() != IndexCmpPredicate::EQ &&
+      op.getPred() != IndexCmpPredicate::NE)
+    return rewriter.notifyMatchFailure(
+        op.getLoc(),
+        "only eq and ne comparisons can be canonicalized through subtraction");
 
   index::CmpOp newCmp;
   if (rhsIsZero)
@@ -711,6 +720,7 @@ LogicalResult CmpOp::canonicalize(CmpOp op, PatternRewriter &rewriter) {
   else
     newCmp = index::CmpOp::create(rewriter, op.getLoc(), op.getPred(),
                                   subOp.getRhs(), subOp.getLhs());
+
   rewriter.replaceOp(op, newCmp);
   return success();
 }

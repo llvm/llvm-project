@@ -23,7 +23,7 @@ mlir::Type Fortran::lower::gatherDeviceComponentCoordinatesAndType(
     llvm::SmallVector<mlir::Value> &coordinates) {
   unsigned fieldIdx = recTy.getFieldIndex(sym.name().ToString());
   mlir::Type fieldTy;
-  if (fieldIdx != std::numeric_limits<unsigned>::max()) {
+  if (fieldIdx != common::numeric_limits<unsigned>::max()) {
     // Field found in the base record type.
     auto fieldName = recTy.getTypeList()[fieldIdx].first;
     fieldTy = recTy.getTypeList()[fieldIdx].second;
@@ -38,7 +38,7 @@ mlir::Type Fortran::lower::gatherDeviceComponentCoordinatesAndType(
     for (auto component : recTy.getTypeList()) {
       if (auto childRecTy = mlir::dyn_cast<fir::RecordType>(component.second)) {
         fieldIdx = childRecTy.getFieldIndex(sym.name().ToString());
-        if (fieldIdx != std::numeric_limits<unsigned>::max()) {
+        if (fieldIdx != common::numeric_limits<unsigned>::max()) {
           mlir::Value parentFieldIndex = fir::FieldIndexOp::create(
               builder, loc, fir::FieldType::get(childRecTy.getContext()),
               component.first, recTy,

@@ -1,3 +1,32 @@
+posix: posix-2024
+types:
+  gid_t:
+    in-latest-posix: ''
+  intptr_t:
+    in-latest-posix: ''
+  off_t:
+    in-latest-posix: ''
+  pid_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
+  ssize_t:
+    in-latest-posix: ''
+  uid_t:
+    in-latest-posix: ''
+  useconds_t:
+    removed-in-posix-2008: ''
+objects:
+  environ:
+    in-latest-posix: ''
+  optarg:
+    in-latest-posix: ''
+  opterr:
+    in-latest-posix: ''
+  optind:
+    in-latest-posix: ''
+  optopt:
+    in-latest-posix: ''
 macros:
   _POSIX_VERSION:
     in-latest-posix: ""
@@ -502,6 +531,14 @@ macros:
   POSIX_CLOSE_RESTART:
     in-latest-posix: ""
 
+  CLOSE_RANGE_CLOEXEC:
+    extension: linux
+  CLOSE_RANGE_UNSHARE:
+    extension: linux
+  SEEK_CUR:
+    in-latest-posix: ''
+  _SC_PHYS_PAGES:
+    extension: gnu
 functions:
   access:
     in-latest-posix: ""
@@ -541,6 +578,8 @@ functions:
     in-latest-posix: ""
   execvp:
     in-latest-posix: ""
+  execvpe:
+    c-definition: ''
   faccessat:
     in-latest-posix: ""
   fchdir:
@@ -687,3 +726,13 @@ functions:
     in-latest-posix: ""
   write:
     in-latest-posix: ""
+  close_range:
+    extension: linux
+  copy_file_range:
+    extension: linux
+  gettid:
+    extension: linux
+  syncfs:
+    extension: linux
+  usleep:
+    removed-in-posix-2008: ''
