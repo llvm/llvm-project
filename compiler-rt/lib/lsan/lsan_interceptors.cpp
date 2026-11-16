@@ -13,6 +13,7 @@
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_atomic.h"
@@ -256,11 +257,14 @@ INTERCEPTOR(int, mprobe, void *ptr) {
   void *res = lsan_malloc(size, stack);\
   if (!nothrow && UNLIKELY(!res)) ReportOutOfMemory(size, &stack);\
   return res;
-#define OPERATOR_NEW_BODY_ALIGN(nothrow)\
-  ENSURE_LSAN_INITED;\
-  GET_STACK_TRACE_MALLOC;\
-  void *res = lsan_memalign((uptr)align, size, stack);\
-  if (!nothrow && UNLIKELY(!res)) ReportOutOfMemory(size, &stack);\
+#define OPERATOR_NEW_BODY_ALIGN(nothrow)                   \
+  ENSURE_LSAN_INITED;                                      \
+  GET_STACK_TRACE_MALLOC;                                  \
+  if (UNLIKELY(!CheckAlignedNewAlignment((uptr)align)))    \
+    ReportInvalidAllocationAlignment((uptr)align, &stack); \
+  void* res = lsan_memalign((uptr)align, size, stack);     \
+  if (!nothrow && UNLIKELY(!res))                          \
+    ReportOutOfMemory(size, &stack);                       \
   return res;
 
 #define OPERATOR_DELETE_BODY\

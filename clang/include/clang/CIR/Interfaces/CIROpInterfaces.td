@@ -73,6 +73,17 @@ let cppNamespace = "::cir" in {
                       /*defaultImplementation=*/[{
                         return $_op.getInlineKindAttrName();
                       }]>,
+      InterfaceMethod<"Return the calling convention of the call site",
+                      "cir::CallingConv", "getCallingConv", (ins), [{}],
+                      /*defaultImplementation=*/[{
+                        return $_op.getCallingConv();
+                      }]>,
+      InterfaceMethod<"Set the calling convention of the call site",
+                      "void", "setCallingConv",
+                      (ins "cir::CallingConv":$callingConv), [{}],
+                      /*defaultImplementation=*/[{
+                        $_op.setCallingConv(callingConv);
+                      }]>,
     ];
   }
 
@@ -184,6 +195,12 @@ let cppNamespace = "::cir" in {
       "void", "setDSOLocal", (ins "bool":$val), [{}],
       /*defaultImplementation=*/[{
         $_op.setDsoLocal(val);
+      }]
+      >,
+      InterfaceMethod<"",
+      "cir::VisibilityKind", "getGlobalVisibility", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return $_op.getGlobalVisibility();
       }]
       >,
       InterfaceMethod<"",

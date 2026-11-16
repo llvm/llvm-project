@@ -449,7 +449,8 @@ void Operator::populateTypeInferenceInfo(
 
   // This vector represents the type inference graph, with one node for each
   // operation result. The nth element is the node for the nth result.
-  SmallVector<ResultTypeInference> inference(getNumResults(), {});
+  SmallVector<ResultTypeInference> inference(getNumResults(),
+                                             llvm::for_overwrite);
 
   // For all results whose types are buildable, initialize their type inference
   // nodes with an edge to themselves. Mark those nodes are fully-inferred.

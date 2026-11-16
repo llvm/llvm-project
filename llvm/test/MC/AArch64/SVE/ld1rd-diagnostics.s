@@ -4,27 +4,27 @@
 // Invalid immediate (multiple of 4 in range [0, 252]).
 
 ld1rd z0.d, p1/z, [x0, #-8]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 504].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 504].
 // CHECK-NEXT: ld1rd z0.d, p1/z, [x0, #-8]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1rd z0.d, p1/z, [x0, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 504].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 504].
 // CHECK-NEXT: ld1rd z0.d, p1/z, [x0, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1rd z0.d, p1/z, [x0, #505]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 504].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 504].
 // CHECK-NEXT: ld1rd z0.d, p1/z, [x0, #505]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1rd z0.d, p1/z, [x0, #512]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 504].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 504].
 // CHECK-NEXT: ld1rd z0.d, p1/z, [x0, #512]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1rd z0.d, p1/z, [x0, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 504].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 504].
 // CHECK-NEXT: ld1rd z0.d, p1/z, [x0, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

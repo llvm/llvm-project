@@ -76,10 +76,12 @@
 #endif
 
 // - SANITIZER_APPLE: all Apple code
-//   - TARGET_OS_OSX: macOS
+//   - SANITIZER_OSX: macOS
 //   - SANITIZER_IOS: devices (iOS and iOS-like)
+//     - SANITIZER_IPHONEOS: iOS only
 //     - SANITIZER_WATCHOS
 //     - SANITIZER_TVOS
+//     - SANITIZER_VISIONOS
 //   - SANITIZER_IOSSIM: simulators (iOS and iOS-like)
 //   - SANITIZER_DRIVERKIT
 #if defined(__APPLE__)
@@ -95,6 +97,11 @@
 #  else
 #    define SANITIZER_IOS 0
 #  endif
+#  if TARGET_OS_IOS
+#    define SANITIZER_IPHONEOS 1
+#  else
+#    define SANITIZER_IPHONEOS 0
+#  endif
 #  if TARGET_OS_WATCH
 #    define SANITIZER_WATCHOS 1
 #  else
@@ -104,6 +111,11 @@
 #    define SANITIZER_TVOS 1
 #  else
 #    define SANITIZER_TVOS 0
+#  endif
+#  if TARGET_OS_VISION
+#    define SANITIZER_VISIONOS 1
+#  else
+#    define SANITIZER_VISIONOS 0
 #  endif
 #  if TARGET_OS_SIMULATOR
 #    define SANITIZER_IOSSIM 1
@@ -115,14 +127,20 @@
 #  else
 #    define SANITIZER_DRIVERKIT 0
 #  endif
+#  define SANITIZER_IOSDEVICE (SANITIZER_IOS && !SANITIZER_IOSSIM)
+#  define SANITIZER_EMBEDDED_VM_LAYOUT SANITIZER_IOSDEVICE
 #else
 #  define SANITIZER_APPLE 0
 #  define SANITIZER_OSX 0
 #  define SANITIZER_IOS 0
+#  define SANITIZER_IPHONEOS 0
 #  define SANITIZER_WATCHOS 0
 #  define SANITIZER_TVOS 0
+#  define SANITIZER_VISIONOS 0
 #  define SANITIZER_IOSSIM 0
 #  define SANITIZER_DRIVERKIT 0
+#  define SANITIZER_IOSDEVICE 0
+#  define SANITIZER_EMBEDDED_VM_LAYOUT 0
 #endif
 
 #if defined(_WIN32)
@@ -387,9 +405,9 @@
 #      define SANITIZER_MMAP_RANGE_SIZE \
         FIRST_32_SECOND_64(1ULL << 32, 1ULL << 47)
 #    else
-// Darwin iOS/ARM64 has a 36-bit VMA, 64GiB VM
+// Darwin iOS/ARM64 has a 39-bit VMA, 512GiB VM
 #      define SANITIZER_MMAP_RANGE_SIZE \
-        FIRST_32_SECOND_64(1ULL << 32, 1ULL << 36)
+        FIRST_32_SECOND_64(1ULL << 32, 1ULL << 39)
 #    endif
 #  else
 #    define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 48)

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -passes=no-op-machine-function -o - %s | FileCheck %s
 
 ---
 name:            single_anti_hint

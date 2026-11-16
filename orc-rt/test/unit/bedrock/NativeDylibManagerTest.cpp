@@ -54,8 +54,9 @@ static Expected<void *> syncLoad(NativeDylibManager &NDM, std::string Path) {
 }
 
 // Helper: synchronously run lookup and return results.
-static Expected<SymbolLookupResult>
-syncLookup(NativeDylibManager &NDM, void *Handle, SymbolLookupSet Symbols) {
+static Expected<SymbolLookupResult> syncLookup(NativeDylibManager &NDM,
+                                               void *Handle,
+                                               RemoteSymbolLookupSet Symbols) {
   std::optional<Expected<SymbolLookupResult>> Result;
   NDM.lookup([&](Expected<SymbolLookupResult> R) { Result = std::move(R); },
              Handle, std::move(Symbols));
@@ -123,7 +124,7 @@ TEST(NativeDylibManagerTest, LookupSingleSymbol) {
   EXPECT_NE(*(*Result)[0], nullptr);
 
   // Verify the symbol points to the right function.
-  auto *Func = reinterpret_cast<int (*)()>(*(*Result)[0]);
+  auto *Func = reinterpret_cast<int (*)()>(const_cast<void *>(*(*Result)[0]));
   EXPECT_EQ(Func(), 42);
 }
 
@@ -146,8 +147,8 @@ TEST(NativeDylibManagerTest, LookupMultipleSymbols) {
   EXPECT_NE(*(*Result)[0], nullptr);
   EXPECT_NE(*(*Result)[1], nullptr);
 
-  auto *Func1 = reinterpret_cast<int (*)()>(*(*Result)[0]);
-  auto *Func2 = reinterpret_cast<int (*)()>(*(*Result)[1]);
+  auto *Func1 = reinterpret_cast<int (*)()>(const_cast<void *>(*(*Result)[0]));
+  auto *Func2 = reinterpret_cast<int (*)()>(const_cast<void *>(*(*Result)[1]));
   EXPECT_EQ(Func1(), 42);
   EXPECT_EQ(Func2(), 7);
 }
