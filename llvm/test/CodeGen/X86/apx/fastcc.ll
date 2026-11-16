@@ -690,7 +690,6 @@ define fastcc i16 @arg13_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ;
 ; WINEGPR-LABEL: arg13_i16:
 ; WINEGPR:       # %bb.0:
-; WINEGPR-NEXT:    # kill: def $r24w killed $r24w def $r24d
 ; WINEGPR-NEXT:    # kill: def $r23w killed $r23w def $r23
 ; WINEGPR-NEXT:    # kill: def $r22w killed $r22w def $r22
 ; WINEGPR-NEXT:    # kill: def $r21w killed $r21w def $r21
@@ -706,7 +705,6 @@ define fastcc i16 @arg13_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ; WINEGPR-NEXT:    leal (%r22,%r23), %r10d
 ; WINEGPR-NEXT:    addl %r20d, %r10d
 ; WINEGPR-NEXT:    addl %r21d, %r10d
-; WINEGPR-NEXT:    addl %r24d, %r10d
 ; WINEGPR-NEXT:    leal (%r18,%r19), %r11d
 ; WINEGPR-NEXT:    addl %r16d, %r11d
 ; WINEGPR-NEXT:    addl %r17d, %r11d
@@ -715,6 +713,7 @@ define fastcc i16 @arg13_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ; WINEGPR-NEXT:    addl %ecx, %eax
 ; WINEGPR-NEXT:    addl %r11d, %eax
 ; WINEGPR-NEXT:    addl %r10d, %eax
+; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
 ; WINEGPR-NEXT:    # kill: def $ax killed $ax killed $eax
 ; WINEGPR-NEXT:    retq
   %a1 = add i16 %a, %b
@@ -825,8 +824,6 @@ define fastcc i32 @arg14_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ;
 ; WINEGPR-LABEL: arg14_i32:
 ; WINEGPR:       # %bb.0:
-; WINEGPR-NEXT:    # kill: def $r25d killed $r25d def $r25
-; WINEGPR-NEXT:    # kill: def $r24d killed $r24d def $r24
 ; WINEGPR-NEXT:    # kill: def $r23d killed $r23d def $r23
 ; WINEGPR-NEXT:    # kill: def $r22d killed $r22d def $r22
 ; WINEGPR-NEXT:    # kill: def $r21d killed $r21d def $r21
@@ -839,18 +836,19 @@ define fastcc i32 @arg14_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ; WINEGPR-NEXT:    # kill: def $r8d killed $r8d def $r8
 ; WINEGPR-NEXT:    # kill: def $edx killed $edx def $rdx
 ; WINEGPR-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; WINEGPR-NEXT:    leal (%rcx,%rdx), %eax
-; WINEGPR-NEXT:    leal (%r8,%r9), %ecx
-; WINEGPR-NEXT:    addl %eax, %ecx
-; WINEGPR-NEXT:    leal (%r18,%r19), %edx
-; WINEGPR-NEXT:    addl %r16d, %edx
-; WINEGPR-NEXT:    addl %r17d, %edx
+; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; WINEGPR-NEXT:    addl %edx, %ecx
+; WINEGPR-NEXT:    leal (%r8,%r9), %edx
 ; WINEGPR-NEXT:    addl %ecx, %edx
-; WINEGPR-NEXT:    leal (%r22,%r23), %eax
-; WINEGPR-NEXT:    addl %r20d, %eax
-; WINEGPR-NEXT:    addl %r21d, %eax
-; WINEGPR-NEXT:    addl %r24d, %eax
-; WINEGPR-NEXT:    addl %r25d, %eax
+; WINEGPR-NEXT:    leal (%r18,%r19), %r8d
+; WINEGPR-NEXT:    addl %r16d, %r8d
+; WINEGPR-NEXT:    addl %r17d, %r8d
+; WINEGPR-NEXT:    addl %edx, %r8d
+; WINEGPR-NEXT:    leal (%r22,%r23), %edx
+; WINEGPR-NEXT:    addl %r20d, %edx
+; WINEGPR-NEXT:    addl %r21d, %edx
+; WINEGPR-NEXT:    addl %r8d, %edx
+; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %eax
 ; WINEGPR-NEXT:    addl %edx, %eax
 ; WINEGPR-NEXT:    retq
   %a1 = add i32 %a, %b
@@ -909,7 +907,7 @@ define fastcc i64 @arg15_i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64
 ; EGPR-NEXT:    addq %r22, %rax
 ; EGPR-NEXT:    addq %r23, %rax
 ; EGPR-NEXT:    addq %rdx, %rax
-; EGPR-NEXT:    addq %r24, %rax
+; EGPR-NEXT:    addq {{[0-9]+}}(%rsp), %rax
 ; EGPR-NEXT:    retq
 ;
 ; WIN64-LABEL: arg15_i64:
@@ -941,20 +939,21 @@ define fastcc i64 @arg15_i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64
 ;
 ; WINEGPR-LABEL: arg15_i64:
 ; WINEGPR:       # %bb.0:
-; WINEGPR-NEXT:    leaq (%rcx,%rdx), %rax
-; WINEGPR-NEXT:    leaq (%r8,%r9), %rcx
-; WINEGPR-NEXT:    addq %rax, %rcx
-; WINEGPR-NEXT:    leaq (%r18,%r19), %rdx
-; WINEGPR-NEXT:    addq %r16, %rdx
-; WINEGPR-NEXT:    addq %r17, %rdx
+; WINEGPR-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; WINEGPR-NEXT:    addq %rdx, %rcx
+; WINEGPR-NEXT:    leaq (%r8,%r9), %rdx
 ; WINEGPR-NEXT:    addq %rcx, %rdx
-; WINEGPR-NEXT:    leaq (%r22,%r23), %rax
-; WINEGPR-NEXT:    addq %r20, %rax
-; WINEGPR-NEXT:    addq %r21, %rax
-; WINEGPR-NEXT:    addq %r24, %rax
-; WINEGPR-NEXT:    addq %r25, %rax
+; WINEGPR-NEXT:    leaq (%r18,%r19), %r8
+; WINEGPR-NEXT:    addq %r16, %r8
+; WINEGPR-NEXT:    addq %r17, %r8
+; WINEGPR-NEXT:    addq %rdx, %r8
+; WINEGPR-NEXT:    leaq (%r22,%r23), %rdx
+; WINEGPR-NEXT:    addq %r20, %rdx
+; WINEGPR-NEXT:    addq %r21, %rdx
+; WINEGPR-NEXT:    addq %r8, %rdx
+; WINEGPR-NEXT:    addq {{[0-9]+}}(%rsp), %rax
 ; WINEGPR-NEXT:    addq %rdx, %rax
-; WINEGPR-NEXT:    addq %r26, %rax
+; WINEGPR-NEXT:    addq {{[0-9]+}}(%rsp), %rax
 ; WINEGPR-NEXT:    retq
   %a1 = add i64 %a, %b
   %a2 = add i64 %c, %d
@@ -1010,8 +1009,6 @@ define fastcc i32 @arg16_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ;
 ; EGPR-LABEL: arg16_i32:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    # kill: def $r25d killed $r25d def $r25
-; EGPR-NEXT:    # kill: def $r24d killed $r24d def $r24
 ; EGPR-NEXT:    # kill: def $r23d killed $r23d def $r23
 ; EGPR-NEXT:    # kill: def $r22d killed $r22d def $r22
 ; EGPR-NEXT:    # kill: def $r21d killed $r21d def $r21
@@ -1026,21 +1023,22 @@ define fastcc i32 @arg16_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ; EGPR-NEXT:    # kill: def $edx killed $edx def $rdx
 ; EGPR-NEXT:    # kill: def $esi killed $esi def $rsi
 ; EGPR-NEXT:    # kill: def $edi killed $edi def $rdi
-; EGPR-NEXT:    leal (%rdx,%rcx), %ecx
-; EGPR-NEXT:    addl %edi, %ecx
+; EGPR-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; EGPR-NEXT:    addl %edi, %esi
+; EGPR-NEXT:    addl %edx, %ecx
 ; EGPR-NEXT:    addl %esi, %ecx
-; EGPR-NEXT:    leal (%r16,%r17), %edx
-; EGPR-NEXT:    addl %r8d, %edx
-; EGPR-NEXT:    addl %r9d, %edx
-; EGPR-NEXT:    addl %ecx, %edx
-; EGPR-NEXT:    leal (%r20,%r21), %ecx
-; EGPR-NEXT:    addl %r18d, %ecx
-; EGPR-NEXT:    addl %r19d, %ecx
-; EGPR-NEXT:    leal (%r24,%r25), %eax
+; EGPR-NEXT:    leal (%r16,%r17), %esi
+; EGPR-NEXT:    addl %r8d, %esi
+; EGPR-NEXT:    addl %r9d, %esi
+; EGPR-NEXT:    addl %ecx, %esi
+; EGPR-NEXT:    leal (%r20,%r21), %edx
+; EGPR-NEXT:    addl %r18d, %edx
+; EGPR-NEXT:    addl %r19d, %edx
+; EGPR-NEXT:    addl {{[0-9]+}}(%rsp), %eax
 ; EGPR-NEXT:    addl %r22d, %eax
 ; EGPR-NEXT:    addl %r23d, %eax
-; EGPR-NEXT:    addl %ecx, %eax
 ; EGPR-NEXT:    addl %edx, %eax
+; EGPR-NEXT:    addl %esi, %eax
 ; EGPR-NEXT:    retq
 ;
 ; WIN64-LABEL: arg16_i32:
@@ -1080,10 +1078,6 @@ define fastcc i32 @arg16_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ;
 ; WINEGPR-LABEL: arg16_i32:
 ; WINEGPR:       # %bb.0:
-; WINEGPR-NEXT:    # kill: def $r27d killed $r27d def $r27
-; WINEGPR-NEXT:    # kill: def $r26d killed $r26d def $r26
-; WINEGPR-NEXT:    # kill: def $r25d killed $r25d def $r25
-; WINEGPR-NEXT:    # kill: def $r24d killed $r24d def $r24
 ; WINEGPR-NEXT:    # kill: def $r23d killed $r23d def $r23
 ; WINEGPR-NEXT:    # kill: def $r22d killed $r22d def $r22
 ; WINEGPR-NEXT:    # kill: def $r21d killed $r21d def $r21
@@ -1096,21 +1090,23 @@ define fastcc i32 @arg16_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ; WINEGPR-NEXT:    # kill: def $r8d killed $r8d def $r8
 ; WINEGPR-NEXT:    # kill: def $edx killed $edx def $rdx
 ; WINEGPR-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; WINEGPR-NEXT:    leal (%rcx,%rdx), %eax
-; WINEGPR-NEXT:    leal (%r8,%r9), %ecx
-; WINEGPR-NEXT:    addl %eax, %ecx
-; WINEGPR-NEXT:    leal (%r18,%r19), %edx
-; WINEGPR-NEXT:    addl %r16d, %edx
-; WINEGPR-NEXT:    addl %r17d, %edx
+; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
+; WINEGPR-NEXT:    addl %edx, %ecx
+; WINEGPR-NEXT:    leal (%r8,%r9), %edx
 ; WINEGPR-NEXT:    addl %ecx, %edx
-; WINEGPR-NEXT:    leal (%r22,%r23), %ecx
-; WINEGPR-NEXT:    addl %r20d, %ecx
-; WINEGPR-NEXT:    addl %r21d, %ecx
-; WINEGPR-NEXT:    leal (%r26,%r27), %eax
-; WINEGPR-NEXT:    addl %r24d, %eax
-; WINEGPR-NEXT:    addl %r25d, %eax
-; WINEGPR-NEXT:    addl %ecx, %eax
+; WINEGPR-NEXT:    leal (%r18,%r19), %r8d
+; WINEGPR-NEXT:    addl %r16d, %r8d
+; WINEGPR-NEXT:    addl %r17d, %r8d
+; WINEGPR-NEXT:    addl %edx, %r8d
+; WINEGPR-NEXT:    leal (%r22,%r23), %edx
+; WINEGPR-NEXT:    addl %r20d, %edx
+; WINEGPR-NEXT:    addl %r21d, %edx
+; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r10d
+; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %eax
+; WINEGPR-NEXT:    addl %r10d, %eax
 ; WINEGPR-NEXT:    addl %edx, %eax
+; WINEGPR-NEXT:    addl %r8d, %eax
 ; WINEGPR-NEXT:    retq
   %a1 = add i32 %a, %b
   %a2 = add i32 %c, %d
@@ -1169,8 +1165,6 @@ define fastcc i16 @arg17_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ;
 ; EGPR-LABEL: arg17_i16:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    # kill: def $r25d killed $r25d def $r25
-; EGPR-NEXT:    # kill: def $r24d killed $r24d def $r24
 ; EGPR-NEXT:    # kill: def $r23d killed $r23d def $r23
 ; EGPR-NEXT:    # kill: def $r22d killed $r22d def $r22
 ; EGPR-NEXT:    # kill: def $r21d killed $r21d def $r21
@@ -1185,22 +1179,23 @@ define fastcc i16 @arg17_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ; EGPR-NEXT:    # kill: def $edx killed $edx def $rdx
 ; EGPR-NEXT:    # kill: def $esi killed $esi def $rsi
 ; EGPR-NEXT:    # kill: def $edi killed $edi def $rdi
-; EGPR-NEXT:    leal (%rdx,%rcx), %ecx
-; EGPR-NEXT:    addl %edi, %ecx
+; EGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; EGPR-NEXT:    addl %edi, %esi
+; EGPR-NEXT:    addl %edx, %ecx
 ; EGPR-NEXT:    addl %esi, %ecx
-; EGPR-NEXT:    leal (%r16,%r17), %edx
-; EGPR-NEXT:    addl %r8d, %edx
-; EGPR-NEXT:    addl %r9d, %edx
-; EGPR-NEXT:    addl %ecx, %edx
-; EGPR-NEXT:    leal (%r20,%r21), %ecx
-; EGPR-NEXT:    addl %r18d, %ecx
-; EGPR-NEXT:    addl %r19d, %ecx
-; EGPR-NEXT:    leal (%r24,%r25), %eax
+; EGPR-NEXT:    leal (%r16,%r17), %esi
+; EGPR-NEXT:    addl %r8d, %esi
+; EGPR-NEXT:    addl %r9d, %esi
+; EGPR-NEXT:    addl %ecx, %esi
+; EGPR-NEXT:    leal (%r20,%r21), %edx
+; EGPR-NEXT:    addl %r18d, %edx
+; EGPR-NEXT:    addl %r19d, %edx
+; EGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
 ; EGPR-NEXT:    addl %r22d, %eax
 ; EGPR-NEXT:    addl %r23d, %eax
-; EGPR-NEXT:    addl %ecx, %eax
 ; EGPR-NEXT:    addl %edx, %eax
-; EGPR-NEXT:    addl %r26d, %eax
+; EGPR-NEXT:    addl %esi, %eax
+; EGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
 ; EGPR-NEXT:    # kill: def $ax killed $ax killed $eax
 ; EGPR-NEXT:    retq
 ;
@@ -1237,10 +1232,6 @@ define fastcc i16 @arg17_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ;
 ; WINEGPR-LABEL: arg17_i16:
 ; WINEGPR:       # %bb.0:
-; WINEGPR-NEXT:    # kill: def $r27w killed $r27w def $r27
-; WINEGPR-NEXT:    # kill: def $r26w killed $r26w def $r26
-; WINEGPR-NEXT:    # kill: def $r25w killed $r25w def $r25
-; WINEGPR-NEXT:    # kill: def $r24w killed $r24w def $r24
 ; WINEGPR-NEXT:    # kill: def $r23w killed $r23w def $r23
 ; WINEGPR-NEXT:    # kill: def $r22w killed $r22w def $r22
 ; WINEGPR-NEXT:    # kill: def $r21w killed $r21w def $r21
@@ -1253,21 +1244,23 @@ define fastcc i16 @arg17_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ; WINEGPR-NEXT:    # kill: def $r8w killed $r8w def $r8
 ; WINEGPR-NEXT:    # kill: def $dx killed $dx def $rdx
 ; WINEGPR-NEXT:    # kill: def $cx killed $cx def $rcx
-; WINEGPR-NEXT:    leal (%r26,%r27), %eax
-; WINEGPR-NEXT:    addl %r24d, %eax
-; WINEGPR-NEXT:    addl %r25d, %eax
 ; WINEGPR-NEXT:    leal (%r22,%r23), %r10d
 ; WINEGPR-NEXT:    addl %r20d, %r10d
 ; WINEGPR-NEXT:    addl %r21d, %r10d
-; WINEGPR-NEXT:    addl %eax, %r10d
-; WINEGPR-NEXT:    leal (%r18,%r19), %r11d
-; WINEGPR-NEXT:    addl %r16d, %r11d
-; WINEGPR-NEXT:    addl %r17d, %r11d
-; WINEGPR-NEXT:    leal (%r8,%r9), %eax
+; WINEGPR-NEXT:    leal (%r18,%r19), %eax
+; WINEGPR-NEXT:    addl %r16d, %eax
+; WINEGPR-NEXT:    addl %r17d, %eax
+; WINEGPR-NEXT:    addl %r9d, %r8d
 ; WINEGPR-NEXT:    addl %edx, %ecx
+; WINEGPR-NEXT:    addl %ecx, %r8d
+; WINEGPR-NEXT:    addl %eax, %r8d
+; WINEGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; WINEGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %cx
+; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
 ; WINEGPR-NEXT:    addl %ecx, %eax
-; WINEGPR-NEXT:    addl %r11d, %eax
 ; WINEGPR-NEXT:    addl %r10d, %eax
+; WINEGPR-NEXT:    addl %r8d, %eax
 ; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
 ; WINEGPR-NEXT:    # kill: def $ax killed $ax killed $eax
 ; WINEGPR-NEXT:    retq
@@ -1332,10 +1325,6 @@ define fastcc i8 @arg18_i8(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f, i8 %g, i8 %
 ;
 ; EGPR-LABEL: arg18_i8:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    # kill: def $r27d killed $r27d def $r27
-; EGPR-NEXT:    # kill: def $r26d killed $r26d def $r26
-; EGPR-NEXT:    # kill: def $r25d killed $r25d def $r25
-; EGPR-NEXT:    # kill: def $r24d killed $r24d def $r24
 ; EGPR-NEXT:    # kill: def $r23d killed $r23d def $r23
 ; EGPR-NEXT:    # kill: def $r22d killed $r22d def $r22
 ; EGPR-NEXT:    # kill: def $r21d killed $r21d def $r21
@@ -1350,24 +1339,25 @@ define fastcc i8 @arg18_i8(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f, i8 %g, i8 %
 ; EGPR-NEXT:    # kill: def $edx killed $edx def $rdx
 ; EGPR-NEXT:    # kill: def $esi killed $esi def $rsi
 ; EGPR-NEXT:    # kill: def $edi killed $edi def $rdi
-; EGPR-NEXT:    leal (%rdi,%rsi), %eax
+; EGPR-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; EGPR-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
+; EGPR-NEXT:    addl %edi, %esi
 ; EGPR-NEXT:    addl %edx, %ecx
-; EGPR-NEXT:    addb %al, %cl
-; EGPR-NEXT:    leal (%r8,%r9), %eax
-; EGPR-NEXT:    leal (%r16,%r17), %edx
-; EGPR-NEXT:    addb %al, %dl
-; EGPR-NEXT:    addb %cl, %dl
-; EGPR-NEXT:    leal (%r18,%r19), %eax
-; EGPR-NEXT:    leal (%r20,%r21), %ecx
-; EGPR-NEXT:    addb %al, %cl
-; EGPR-NEXT:    leal (%r22,%r23), %eax
-; EGPR-NEXT:    leal (%r24,%r25), %esi
-; EGPR-NEXT:    addb %al, %sil
-; EGPR-NEXT:    addb %cl, %sil
+; EGPR-NEXT:    addb %sil, %cl
+; EGPR-NEXT:    leal (%r8,%r9), %edx
+; EGPR-NEXT:    leal (%r16,%r17), %esi
 ; EGPR-NEXT:    addb %dl, %sil
-; EGPR-NEXT:    leal (%r26,%r27), %eax
+; EGPR-NEXT:    addb %cl, %sil
+; EGPR-NEXT:    leal (%r18,%r19), %ecx
+; EGPR-NEXT:    leal (%r20,%r21), %edx
+; EGPR-NEXT:    addb %cl, %dl
+; EGPR-NEXT:    leal (%r22,%r23), %ecx
+; EGPR-NEXT:    addb {{[0-9]+}}(%rsp), %r10b
+; EGPR-NEXT:    addb %cl, %r10b
+; EGPR-NEXT:    addb %dl, %r10b
+; EGPR-NEXT:    addb {{[0-9]+}}(%rsp), %al
 ; EGPR-NEXT:    addb %sil, %al
-; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    addb %r10b, %al
 ; EGPR-NEXT:    retq
 ;
 ; WIN64-LABEL: arg18_i8:
@@ -1412,10 +1402,6 @@ define fastcc i8 @arg18_i8(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f, i8 %g, i8 %
 ;
 ; WINEGPR-LABEL: arg18_i8:
 ; WINEGPR:       # %bb.0:
-; WINEGPR-NEXT:    # kill: def $r27b killed $r27b def $r27
-; WINEGPR-NEXT:    # kill: def $r26b killed $r26b def $r26
-; WINEGPR-NEXT:    # kill: def $r25b killed $r25b def $r25
-; WINEGPR-NEXT:    # kill: def $r24b killed $r24b def $r24
 ; WINEGPR-NEXT:    # kill: def $r23b killed $r23b def $r23
 ; WINEGPR-NEXT:    # kill: def $r22b killed $r22b def $r22
 ; WINEGPR-NEXT:    # kill: def $r21b killed $r21b def $r21
@@ -1429,6 +1415,8 @@ define fastcc i8 @arg18_i8(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f, i8 %g, i8 %
 ; WINEGPR-NEXT:    # kill: def $dl killed $dl def $rdx
 ; WINEGPR-NEXT:    # kill: def $cl killed $cl def $rcx
 ; WINEGPR-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; WINEGPR-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
+; WINEGPR-NEXT:    movzbl {{[0-9]+}}(%rsp), %r11d
 ; WINEGPR-NEXT:    addl %edx, %ecx
 ; WINEGPR-NEXT:    leal (%r8,%r9), %edx
 ; WINEGPR-NEXT:    addb %cl, %dl
@@ -1439,13 +1427,13 @@ define fastcc i8 @arg18_i8(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f, i8 %g, i8 %
 ; WINEGPR-NEXT:    leal (%r20,%r21), %ecx
 ; WINEGPR-NEXT:    leal (%r22,%r23), %edx
 ; WINEGPR-NEXT:    addb %cl, %dl
-; WINEGPR-NEXT:    leal (%r24,%r25), %ecx
-; WINEGPR-NEXT:    leal (%r26,%r27), %r9d
-; WINEGPR-NEXT:    addb %cl, %r9b
-; WINEGPR-NEXT:    addb %dl, %r9b
-; WINEGPR-NEXT:    addb %r8b, %r9b
+; WINEGPR-NEXT:    addb {{[0-9]+}}(%rsp), %r11b
+; WINEGPR-NEXT:    addb {{[0-9]+}}(%rsp), %r10b
+; WINEGPR-NEXT:    addb %r11b, %r10b
+; WINEGPR-NEXT:    addb %dl, %r10b
 ; WINEGPR-NEXT:    addb {{[0-9]+}}(%rsp), %al
-; WINEGPR-NEXT:    addb %r9b, %al
+; WINEGPR-NEXT:    addb %r8b, %al
+; WINEGPR-NEXT:    addb %r10b, %al
 ; WINEGPR-NEXT:    retq
   %a1 = add i8 %a, %b
   %a2 = add i8 %c, %d
@@ -1511,10 +1499,6 @@ define fastcc i16 @arg19_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ;
 ; EGPR-LABEL: arg19_i16:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    # kill: def $r27d killed $r27d def $r27
-; EGPR-NEXT:    # kill: def $r26d killed $r26d def $r26
-; EGPR-NEXT:    # kill: def $r25d killed $r25d def $r25
-; EGPR-NEXT:    # kill: def $r24d killed $r24d def $r24
 ; EGPR-NEXT:    # kill: def $r23d killed $r23d def $r23
 ; EGPR-NEXT:    # kill: def $r22d killed $r22d def $r22
 ; EGPR-NEXT:    # kill: def $r21d killed $r21d def $r21
@@ -1529,24 +1513,26 @@ define fastcc i16 @arg19_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ; EGPR-NEXT:    # kill: def $edx killed $edx def $rdx
 ; EGPR-NEXT:    # kill: def $esi killed $esi def $rsi
 ; EGPR-NEXT:    # kill: def $edi killed $edi def $rdi
-; EGPR-NEXT:    leal (%rdx,%rcx), %ecx
-; EGPR-NEXT:    addl %edi, %ecx
+; EGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; EGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %r10d
+; EGPR-NEXT:    addl %edi, %esi
+; EGPR-NEXT:    addl %edx, %ecx
 ; EGPR-NEXT:    addl %esi, %ecx
-; EGPR-NEXT:    leal (%r16,%r17), %edx
-; EGPR-NEXT:    addl %r8d, %edx
-; EGPR-NEXT:    addl %r9d, %edx
-; EGPR-NEXT:    addl %ecx, %edx
-; EGPR-NEXT:    leal (%r20,%r21), %ecx
-; EGPR-NEXT:    addl %r18d, %ecx
-; EGPR-NEXT:    addl %r19d, %ecx
-; EGPR-NEXT:    leal (%r24,%r25), %esi
-; EGPR-NEXT:    addl %r22d, %esi
-; EGPR-NEXT:    addl %r23d, %esi
+; EGPR-NEXT:    leal (%r16,%r17), %esi
+; EGPR-NEXT:    addl %r8d, %esi
+; EGPR-NEXT:    addl %r9d, %esi
 ; EGPR-NEXT:    addl %ecx, %esi
-; EGPR-NEXT:    addl %edx, %esi
-; EGPR-NEXT:    leal (%r26,%r27), %eax
-; EGPR-NEXT:    addl %r28d, %eax
+; EGPR-NEXT:    leal (%r20,%r21), %edx
+; EGPR-NEXT:    addl %r18d, %edx
+; EGPR-NEXT:    addl %r19d, %edx
+; EGPR-NEXT:    addw {{[0-9]+}}(%rsp), %r10w
+; EGPR-NEXT:    addl %r22d, %r10d
+; EGPR-NEXT:    addl %r23d, %r10d
+; EGPR-NEXT:    addl %edx, %r10d
+; EGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
 ; EGPR-NEXT:    addl %esi, %eax
+; EGPR-NEXT:    addl %r10d, %eax
+; EGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
 ; EGPR-NEXT:    # kill: def $ax killed $ax killed $eax
 ; EGPR-NEXT:    retq
 ;
@@ -1588,10 +1574,6 @@ define fastcc i16 @arg19_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ;
 ; WINEGPR-LABEL: arg19_i16:
 ; WINEGPR:       # %bb.0:
-; WINEGPR-NEXT:    # kill: def $r27w killed $r27w def $r27
-; WINEGPR-NEXT:    # kill: def $r26w killed $r26w def $r26
-; WINEGPR-NEXT:    # kill: def $r25w killed $r25w def $r25
-; WINEGPR-NEXT:    # kill: def $r24w killed $r24w def $r24
 ; WINEGPR-NEXT:    # kill: def $r23w killed $r23w def $r23
 ; WINEGPR-NEXT:    # kill: def $r22w killed $r22w def $r22
 ; WINEGPR-NEXT:    # kill: def $r21w killed $r21w def $r21
@@ -1604,13 +1586,9 @@ define fastcc i16 @arg19_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ; WINEGPR-NEXT:    # kill: def $r8w killed $r8w def $r8
 ; WINEGPR-NEXT:    # kill: def $dx killed $dx def $rdx
 ; WINEGPR-NEXT:    # kill: def $cx killed $cx def $rcx
-; WINEGPR-NEXT:    leal (%r26,%r27), %eax
-; WINEGPR-NEXT:    addl %r24d, %eax
-; WINEGPR-NEXT:    addl %r25d, %eax
 ; WINEGPR-NEXT:    leal (%r22,%r23), %r10d
 ; WINEGPR-NEXT:    addl %r20d, %r10d
 ; WINEGPR-NEXT:    addl %r21d, %r10d
-; WINEGPR-NEXT:    addl %eax, %r10d
 ; WINEGPR-NEXT:    leal (%r18,%r19), %eax
 ; WINEGPR-NEXT:    addl %r16d, %eax
 ; WINEGPR-NEXT:    addl %r17d, %eax
@@ -1618,10 +1596,16 @@ define fastcc i16 @arg19_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ; WINEGPR-NEXT:    addl %edx, %ecx
 ; WINEGPR-NEXT:    addl %ecx, %r8d
 ; WINEGPR-NEXT:    addl %eax, %r8d
-; WINEGPR-NEXT:    addl %r10d, %r8d
 ; WINEGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; WINEGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; WINEGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %edx
+; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %dx
+; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %cx
+; WINEGPR-NEXT:    addl %edx, %ecx
+; WINEGPR-NEXT:    addl %r10d, %ecx
 ; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
 ; WINEGPR-NEXT:    addl %r8d, %eax
+; WINEGPR-NEXT:    addl %ecx, %eax
 ; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
 ; WINEGPR-NEXT:    # kill: def $ax killed $ax killed $eax
 ; WINEGPR-NEXT:    retq
@@ -1694,12 +1678,6 @@ define fastcc i32 @arg20_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ;
 ; EGPR-LABEL: arg20_i32:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    # kill: def $r29d killed $r29d def $r29
-; EGPR-NEXT:    # kill: def $r28d killed $r28d def $r28
-; EGPR-NEXT:    # kill: def $r27d killed $r27d def $r27
-; EGPR-NEXT:    # kill: def $r26d killed $r26d def $r26
-; EGPR-NEXT:    # kill: def $r25d killed $r25d def $r25
-; EGPR-NEXT:    # kill: def $r24d killed $r24d def $r24
 ; EGPR-NEXT:    # kill: def $r23d killed $r23d def $r23
 ; EGPR-NEXT:    # kill: def $r22d killed $r22d def $r22
 ; EGPR-NEXT:    # kill: def $r21d killed $r21d def $r21
@@ -1714,26 +1692,29 @@ define fastcc i32 @arg20_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ; EGPR-NEXT:    # kill: def $edx killed $edx def $rdx
 ; EGPR-NEXT:    # kill: def $esi killed $esi def $rsi
 ; EGPR-NEXT:    # kill: def $edi killed $edi def $rdi
-; EGPR-NEXT:    leal (%rdx,%rcx), %ecx
-; EGPR-NEXT:    addl %edi, %ecx
+; EGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
+; EGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r11d
+; EGPR-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; EGPR-NEXT:    addl %edi, %esi
+; EGPR-NEXT:    addl %edx, %ecx
 ; EGPR-NEXT:    addl %esi, %ecx
-; EGPR-NEXT:    leal (%r16,%r17), %edx
-; EGPR-NEXT:    addl %r8d, %edx
-; EGPR-NEXT:    addl %r9d, %edx
-; EGPR-NEXT:    addl %ecx, %edx
-; EGPR-NEXT:    leal (%r20,%r21), %ecx
-; EGPR-NEXT:    addl %r18d, %ecx
-; EGPR-NEXT:    addl %r19d, %ecx
-; EGPR-NEXT:    leal (%r24,%r25), %eax
+; EGPR-NEXT:    leal (%r16,%r17), %esi
+; EGPR-NEXT:    addl %r8d, %esi
+; EGPR-NEXT:    addl %r9d, %esi
+; EGPR-NEXT:    addl %ecx, %esi
+; EGPR-NEXT:    leal (%r20,%r21), %edx
+; EGPR-NEXT:    addl %r18d, %edx
+; EGPR-NEXT:    addl %r19d, %edx
+; EGPR-NEXT:    addl {{[0-9]+}}(%rsp), %eax
 ; EGPR-NEXT:    addl %r22d, %eax
 ; EGPR-NEXT:    addl %r23d, %eax
-; EGPR-NEXT:    addl %ecx, %eax
-; EGPR-NEXT:    leal (%r28,%r29), %esi
-; EGPR-NEXT:    addl %r26d, %esi
-; EGPR-NEXT:    addl %r27d, %esi
-; EGPR-NEXT:    addl %eax, %esi
 ; EGPR-NEXT:    addl %edx, %eax
+; EGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r11d
+; EGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r10d
+; EGPR-NEXT:    addl %r11d, %r10d
+; EGPR-NEXT:    addl %eax, %r10d
 ; EGPR-NEXT:    addl %esi, %eax
+; EGPR-NEXT:    addl %r10d, %eax
 ; EGPR-NEXT:    retq
 ;
 ; WIN64-LABEL: arg20_i32:
@@ -1784,10 +1765,6 @@ define fastcc i32 @arg20_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ;
 ; WINEGPR-LABEL: arg20_i32:
 ; WINEGPR:       # %bb.0:
-; WINEGPR-NEXT:    # kill: def $r27d killed $r27d def $r27
-; WINEGPR-NEXT:    # kill: def $r26d killed $r26d def $r26
-; WINEGPR-NEXT:    # kill: def $r25d killed $r25d def $r25
-; WINEGPR-NEXT:    # kill: def $r24d killed $r24d def $r24
 ; WINEGPR-NEXT:    # kill: def $r23d killed $r23d def $r23
 ; WINEGPR-NEXT:    # kill: def $r22d killed $r22d def $r22
 ; WINEGPR-NEXT:    # kill: def $r21d killed $r21d def $r21
@@ -1802,25 +1779,27 @@ define fastcc i32 @arg20_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ; WINEGPR-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
 ; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r11d
-; WINEGPR-NEXT:    leal (%rcx,%rdx), %eax
-; WINEGPR-NEXT:    leal (%r8,%r9), %ecx
-; WINEGPR-NEXT:    addl %eax, %ecx
-; WINEGPR-NEXT:    leal (%r18,%r19), %edx
-; WINEGPR-NEXT:    addl %r16d, %edx
-; WINEGPR-NEXT:    addl %r17d, %edx
+; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r24d
+; WINEGPR-NEXT:    addl %edx, %ecx
+; WINEGPR-NEXT:    leal (%r8,%r9), %edx
 ; WINEGPR-NEXT:    addl %ecx, %edx
-; WINEGPR-NEXT:    leal (%r22,%r23), %ecx
-; WINEGPR-NEXT:    addl %r20d, %ecx
-; WINEGPR-NEXT:    addl %r21d, %ecx
-; WINEGPR-NEXT:    leal (%r26,%r27), %eax
+; WINEGPR-NEXT:    leal (%r18,%r19), %r8d
+; WINEGPR-NEXT:    addl %r16d, %r8d
+; WINEGPR-NEXT:    addl %r17d, %r8d
+; WINEGPR-NEXT:    addl %edx, %r8d
+; WINEGPR-NEXT:    leal (%r22,%r23), %edx
+; WINEGPR-NEXT:    addl %r20d, %edx
+; WINEGPR-NEXT:    addl %r21d, %edx
+; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r24d
+; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %eax
 ; WINEGPR-NEXT:    addl %r24d, %eax
-; WINEGPR-NEXT:    addl %r25d, %eax
-; WINEGPR-NEXT:    addl %ecx, %eax
+; WINEGPR-NEXT:    addl %edx, %eax
 ; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r11d
 ; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r10d
 ; WINEGPR-NEXT:    addl %r11d, %r10d
 ; WINEGPR-NEXT:    addl %eax, %r10d
-; WINEGPR-NEXT:    addl %edx, %eax
+; WINEGPR-NEXT:    addl %r8d, %eax
 ; WINEGPR-NEXT:    addl %r10d, %eax
 ; WINEGPR-NEXT:    retq
   %a1 = add i32 %a, %b
@@ -1889,27 +1868,30 @@ define fastcc i64 @arg21_i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64
 ;
 ; EGPR-LABEL: arg21_i64:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    leaq (%rdx,%rcx), %rcx
-; EGPR-NEXT:    addq %rdi, %rcx
+; EGPR-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; EGPR-NEXT:    movq {{[0-9]+}}(%rsp), %r11
+; EGPR-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; EGPR-NEXT:    addq %rdi, %rsi
+; EGPR-NEXT:    addq %rdx, %rcx
 ; EGPR-NEXT:    addq %rsi, %rcx
-; EGPR-NEXT:    leaq (%r16,%r17), %rdx
-; EGPR-NEXT:    addq %r8, %rdx
-; EGPR-NEXT:    addq %r9, %rdx
-; EGPR-NEXT:    addq %rcx, %rdx
-; EGPR-NEXT:    leaq (%r20,%r21), %rcx
-; EGPR-NEXT:    addq %r18, %rcx
-; EGPR-NEXT:    addq %r19, %rcx
-; EGPR-NEXT:    leaq (%r24,%r25), %rax
+; EGPR-NEXT:    leaq (%r16,%r17), %rsi
+; EGPR-NEXT:    addq %r8, %rsi
+; EGPR-NEXT:    addq %r9, %rsi
+; EGPR-NEXT:    addq %rcx, %rsi
+; EGPR-NEXT:    leaq (%r20,%r21), %rdx
+; EGPR-NEXT:    addq %r18, %rdx
+; EGPR-NEXT:    addq %r19, %rdx
+; EGPR-NEXT:    addq {{[0-9]+}}(%rsp), %rax
 ; EGPR-NEXT:    addq %r22, %rax
 ; EGPR-NEXT:    addq %r23, %rax
-; EGPR-NEXT:    addq %rcx, %rax
-; EGPR-NEXT:    leaq (%r28,%r29), %rsi
-; EGPR-NEXT:    addq %r26, %rsi
-; EGPR-NEXT:    addq %r27, %rsi
-; EGPR-NEXT:    addq %rax, %rsi
 ; EGPR-NEXT:    addq %rdx, %rax
+; EGPR-NEXT:    addq {{[0-9]+}}(%rsp), %r11
+; EGPR-NEXT:    addq {{[0-9]+}}(%rsp), %r10
+; EGPR-NEXT:    addq %r11, %r10
+; EGPR-NEXT:    addq %rax, %r10
 ; EGPR-NEXT:    addq %rsi, %rax
-; EGPR-NEXT:    addq %r30, %rax
+; EGPR-NEXT:    addq %r10, %rax
+; EGPR-NEXT:    addq {{[0-9]+}}(%rsp), %rax
 ; EGPR-NEXT:    retq
 ;
 ; WIN64-LABEL: arg21_i64:
@@ -1959,25 +1941,27 @@ define fastcc i64 @arg21_i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64
 ; WINEGPR:       # %bb.0:
 ; WINEGPR-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; WINEGPR-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; WINEGPR-NEXT:    leaq (%rcx,%rdx), %rax
-; WINEGPR-NEXT:    leaq (%r8,%r9), %rcx
-; WINEGPR-NEXT:    addq %rax, %rcx
-; WINEGPR-NEXT:    leaq (%r18,%r19), %rdx
-; WINEGPR-NEXT:    addq %r16, %rdx
-; WINEGPR-NEXT:    addq %r17, %rdx
+; WINEGPR-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; WINEGPR-NEXT:    movq {{[0-9]+}}(%rsp), %r24
+; WINEGPR-NEXT:    addq %rdx, %rcx
+; WINEGPR-NEXT:    leaq (%r8,%r9), %rdx
 ; WINEGPR-NEXT:    addq %rcx, %rdx
-; WINEGPR-NEXT:    leaq (%r22,%r23), %rcx
-; WINEGPR-NEXT:    addq %r20, %rcx
-; WINEGPR-NEXT:    addq %r21, %rcx
-; WINEGPR-NEXT:    leaq (%r26,%r27), %rax
+; WINEGPR-NEXT:    leaq (%r18,%r19), %r8
+; WINEGPR-NEXT:    addq %r16, %r8
+; WINEGPR-NEXT:    addq %r17, %r8
+; WINEGPR-NEXT:    addq %rdx, %r8
+; WINEGPR-NEXT:    leaq (%r22,%r23), %rdx
+; WINEGPR-NEXT:    addq %r20, %rdx
+; WINEGPR-NEXT:    addq %r21, %rdx
+; WINEGPR-NEXT:    addq {{[0-9]+}}(%rsp), %r24
+; WINEGPR-NEXT:    addq {{[0-9]+}}(%rsp), %rax
 ; WINEGPR-NEXT:    addq %r24, %rax
-; WINEGPR-NEXT:    addq %r25, %rax
-; WINEGPR-NEXT:    addq %rcx, %rax
+; WINEGPR-NEXT:    addq %rdx, %rax
 ; WINEGPR-NEXT:    addq {{[0-9]+}}(%rsp), %r11
 ; WINEGPR-NEXT:    addq {{[0-9]+}}(%rsp), %r10
 ; WINEGPR-NEXT:    addq %r11, %r10
 ; WINEGPR-NEXT:    addq %rax, %r10
-; WINEGPR-NEXT:    addq %rdx, %rax
+; WINEGPR-NEXT:    addq %r8, %rax
 ; WINEGPR-NEXT:    addq %r10, %rax
 ; WINEGPR-NEXT:    addq {{[0-9]+}}(%rsp), %rax
 ; WINEGPR-NEXT:    retq
@@ -2058,14 +2042,6 @@ define fastcc i32 @arg22_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ;
 ; EGPR-LABEL: arg22_i32:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    # kill: def $r31d killed $r31d def $r31
-; EGPR-NEXT:    # kill: def $r30d killed $r30d def $r30
-; EGPR-NEXT:    # kill: def $r29d killed $r29d def $r29
-; EGPR-NEXT:    # kill: def $r28d killed $r28d def $r28
-; EGPR-NEXT:    # kill: def $r27d killed $r27d def $r27
-; EGPR-NEXT:    # kill: def $r26d killed $r26d def $r26
-; EGPR-NEXT:    # kill: def $r25d killed $r25d def $r25
-; EGPR-NEXT:    # kill: def $r24d killed $r24d def $r24
 ; EGPR-NEXT:    # kill: def $r23d killed $r23d def $r23
 ; EGPR-NEXT:    # kill: def $r22d killed $r22d def $r22
 ; EGPR-NEXT:    # kill: def $r21d killed $r21d def $r21
@@ -2080,28 +2056,32 @@ define fastcc i32 @arg22_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ; EGPR-NEXT:    # kill: def $edx killed $edx def $rdx
 ; EGPR-NEXT:    # kill: def $esi killed $esi def $rsi
 ; EGPR-NEXT:    # kill: def $edi killed $edi def $rdi
-; EGPR-NEXT:    leal (%rdx,%rcx), %ecx
-; EGPR-NEXT:    addl %edi, %ecx
+; EGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
+; EGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r11d
+; EGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r24d
+; EGPR-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; EGPR-NEXT:    addl %edi, %esi
+; EGPR-NEXT:    addl %edx, %ecx
 ; EGPR-NEXT:    addl %esi, %ecx
-; EGPR-NEXT:    leal (%r16,%r17), %edx
-; EGPR-NEXT:    addl %r8d, %edx
-; EGPR-NEXT:    addl %r9d, %edx
-; EGPR-NEXT:    addl %ecx, %edx
-; EGPR-NEXT:    leal (%r20,%r21), %ecx
-; EGPR-NEXT:    addl %r18d, %ecx
-; EGPR-NEXT:    addl %r19d, %ecx
-; EGPR-NEXT:    leal (%r24,%r25), %eax
+; EGPR-NEXT:    leal (%r16,%r17), %esi
+; EGPR-NEXT:    addl %r8d, %esi
+; EGPR-NEXT:    addl %r9d, %esi
+; EGPR-NEXT:    addl %ecx, %esi
+; EGPR-NEXT:    leal (%r20,%r21), %edx
+; EGPR-NEXT:    addl %r18d, %edx
+; EGPR-NEXT:    addl %r19d, %edx
+; EGPR-NEXT:    addl {{[0-9]+}}(%rsp), %eax
 ; EGPR-NEXT:    addl %r22d, %eax
 ; EGPR-NEXT:    addl %r23d, %eax
-; EGPR-NEXT:    addl %ecx, %eax
-; EGPR-NEXT:    leal (%r28,%r29), %esi
-; EGPR-NEXT:    addl %r26d, %esi
-; EGPR-NEXT:    addl %r27d, %esi
-; EGPR-NEXT:    addl %eax, %esi
 ; EGPR-NEXT:    addl %edx, %eax
+; EGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r24d
+; EGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r11d
+; EGPR-NEXT:    addl %r24d, %r11d
+; EGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r10d
+; EGPR-NEXT:    addl %eax, %r11d
 ; EGPR-NEXT:    addl %esi, %eax
-; EGPR-NEXT:    addl %r30d, %eax
-; EGPR-NEXT:    addl %r31d, %eax
+; EGPR-NEXT:    addl %r11d, %eax
+; EGPR-NEXT:    addl %r10d, %eax
 ; EGPR-NEXT:    retq
 ;
 ; WIN64-LABEL: arg22_i32:
@@ -2157,10 +2137,6 @@ define fastcc i32 @arg22_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ;
 ; WINEGPR-LABEL: arg22_i32:
 ; WINEGPR:       # %bb.0:
-; WINEGPR-NEXT:    # kill: def $r27d killed $r27d def $r27
-; WINEGPR-NEXT:    # kill: def $r26d killed $r26d def $r26
-; WINEGPR-NEXT:    # kill: def $r25d killed $r25d def $r25
-; WINEGPR-NEXT:    # kill: def $r24d killed $r24d def $r24
 ; WINEGPR-NEXT:    # kill: def $r23d killed $r23d def $r23
 ; WINEGPR-NEXT:    # kill: def $r22d killed $r22d def $r22
 ; WINEGPR-NEXT:    # kill: def $r21d killed $r21d def $r21
@@ -2175,29 +2151,31 @@ define fastcc i32 @arg22_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ; WINEGPR-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
 ; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r11d
-; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r28d
-; WINEGPR-NEXT:    leal (%rcx,%rdx), %eax
-; WINEGPR-NEXT:    leal (%r8,%r9), %ecx
-; WINEGPR-NEXT:    addl %eax, %ecx
-; WINEGPR-NEXT:    leal (%r18,%r19), %edx
-; WINEGPR-NEXT:    addl %r16d, %edx
-; WINEGPR-NEXT:    addl %r17d, %edx
+; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r24d
+; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r25d
+; WINEGPR-NEXT:    addl %edx, %ecx
+; WINEGPR-NEXT:    leal (%r8,%r9), %edx
 ; WINEGPR-NEXT:    addl %ecx, %edx
-; WINEGPR-NEXT:    leal (%r22,%r23), %ecx
-; WINEGPR-NEXT:    addl %r20d, %ecx
-; WINEGPR-NEXT:    addl %r21d, %ecx
-; WINEGPR-NEXT:    leal (%r26,%r27), %eax
-; WINEGPR-NEXT:    addl %r24d, %eax
+; WINEGPR-NEXT:    leal (%r18,%r19), %r8d
+; WINEGPR-NEXT:    addl %r16d, %r8d
+; WINEGPR-NEXT:    addl %r17d, %r8d
+; WINEGPR-NEXT:    addl %edx, %r8d
+; WINEGPR-NEXT:    leal (%r22,%r23), %edx
+; WINEGPR-NEXT:    addl %r20d, %edx
+; WINEGPR-NEXT:    addl %r21d, %edx
+; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r25d
+; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %eax
 ; WINEGPR-NEXT:    addl %r25d, %eax
-; WINEGPR-NEXT:    addl %ecx, %eax
-; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r28d
+; WINEGPR-NEXT:    addl %edx, %eax
+; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r24d
 ; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r11d
-; WINEGPR-NEXT:    addl %r28d, %r11d
+; WINEGPR-NEXT:    addl %r24d, %r11d
 ; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r10d
 ; WINEGPR-NEXT:    addl %eax, %r11d
-; WINEGPR-NEXT:    addl %edx, %eax
-; WINEGPR-NEXT:    addl %r10d, %eax
+; WINEGPR-NEXT:    addl %r8d, %eax
 ; WINEGPR-NEXT:    addl %r11d, %eax
+; WINEGPR-NEXT:    addl %r10d, %eax
 ; WINEGPR-NEXT:    retq
   %a1 = add i32 %a, %b
   %a2 = add i32 %c, %d
@@ -2279,14 +2257,6 @@ define fastcc i16 @arg23_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ;
 ; EGPR-LABEL: arg23_i16:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    # kill: def $r31d killed $r31d def $r31
-; EGPR-NEXT:    # kill: def $r30d killed $r30d def $r30
-; EGPR-NEXT:    # kill: def $r29d killed $r29d def $r29
-; EGPR-NEXT:    # kill: def $r28d killed $r28d def $r28
-; EGPR-NEXT:    # kill: def $r27d killed $r27d def $r27
-; EGPR-NEXT:    # kill: def $r26d killed $r26d def $r26
-; EGPR-NEXT:    # kill: def $r25d killed $r25d def $r25
-; EGPR-NEXT:    # kill: def $r24d killed $r24d def $r24
 ; EGPR-NEXT:    # kill: def $r23d killed $r23d def $r23
 ; EGPR-NEXT:    # kill: def $r22d killed $r22d def $r22
 ; EGPR-NEXT:    # kill: def $r21d killed $r21d def $r21
@@ -2301,28 +2271,32 @@ define fastcc i16 @arg23_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ; EGPR-NEXT:    # kill: def $edx killed $edx def $rdx
 ; EGPR-NEXT:    # kill: def $esi killed $esi def $rsi
 ; EGPR-NEXT:    # kill: def $edi killed $edi def $rdi
-; EGPR-NEXT:    leal (%rdx,%rcx), %ecx
-; EGPR-NEXT:    addl %edi, %ecx
+; EGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %r10d
+; EGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %r11d
+; EGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %r24d
+; EGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; EGPR-NEXT:    addl %edi, %esi
+; EGPR-NEXT:    addl %edx, %ecx
 ; EGPR-NEXT:    addl %esi, %ecx
-; EGPR-NEXT:    leal (%r16,%r17), %edx
-; EGPR-NEXT:    addl %r8d, %edx
-; EGPR-NEXT:    addl %r9d, %edx
-; EGPR-NEXT:    addl %ecx, %edx
-; EGPR-NEXT:    leal (%r20,%r21), %ecx
-; EGPR-NEXT:    addl %r18d, %ecx
-; EGPR-NEXT:    addl %r19d, %ecx
-; EGPR-NEXT:    leal (%r24,%r25), %eax
+; EGPR-NEXT:    leal (%r16,%r17), %esi
+; EGPR-NEXT:    addl %r8d, %esi
+; EGPR-NEXT:    addl %r9d, %esi
+; EGPR-NEXT:    addl %ecx, %esi
+; EGPR-NEXT:    leal (%r20,%r21), %edx
+; EGPR-NEXT:    addl %r18d, %edx
+; EGPR-NEXT:    addl %r19d, %edx
+; EGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
 ; EGPR-NEXT:    addl %r22d, %eax
 ; EGPR-NEXT:    addl %r23d, %eax
-; EGPR-NEXT:    addl %ecx, %eax
-; EGPR-NEXT:    leal (%r28,%r29), %esi
-; EGPR-NEXT:    addl %r26d, %esi
-; EGPR-NEXT:    addl %r27d, %esi
-; EGPR-NEXT:    addl %eax, %esi
 ; EGPR-NEXT:    addl %edx, %eax
+; EGPR-NEXT:    addw {{[0-9]+}}(%rsp), %r24w
+; EGPR-NEXT:    addw {{[0-9]+}}(%rsp), %r11w
+; EGPR-NEXT:    addl %r24d, %r11d
+; EGPR-NEXT:    addw {{[0-9]+}}(%rsp), %r10w
+; EGPR-NEXT:    addl %eax, %r11d
 ; EGPR-NEXT:    addl %esi, %eax
-; EGPR-NEXT:    addl %r30d, %eax
-; EGPR-NEXT:    addl %r31d, %eax
+; EGPR-NEXT:    addl %r11d, %eax
+; EGPR-NEXT:    addl %r10d, %eax
 ; EGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
 ; EGPR-NEXT:    # kill: def $ax killed $ax killed $eax
 ; EGPR-NEXT:    retq
@@ -2376,10 +2350,6 @@ define fastcc i16 @arg23_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ;
 ; WINEGPR-LABEL: arg23_i16:
 ; WINEGPR:       # %bb.0:
-; WINEGPR-NEXT:    # kill: def $r27w killed $r27w def $r27
-; WINEGPR-NEXT:    # kill: def $r26w killed $r26w def $r26
-; WINEGPR-NEXT:    # kill: def $r25w killed $r25w def $r25
-; WINEGPR-NEXT:    # kill: def $r24w killed $r24w def $r24
 ; WINEGPR-NEXT:    # kill: def $r23w killed $r23w def $r23
 ; WINEGPR-NEXT:    # kill: def $r22w killed $r22w def $r22
 ; WINEGPR-NEXT:    # kill: def $r21w killed $r21w def $r21
@@ -2392,31 +2362,33 @@ define fastcc i16 @arg23_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16
 ; WINEGPR-NEXT:    # kill: def $r8w killed $r8w def $r8
 ; WINEGPR-NEXT:    # kill: def $dx killed $dx def $rdx
 ; WINEGPR-NEXT:    # kill: def $cx killed $cx def $rcx
-; WINEGPR-NEXT:    leal (%r26,%r27), %eax
-; WINEGPR-NEXT:    addl %r24d, %eax
-; WINEGPR-NEXT:    addl %r25d, %eax
 ; WINEGPR-NEXT:    leal (%r22,%r23), %r10d
 ; WINEGPR-NEXT:    addl %r20d, %r10d
 ; WINEGPR-NEXT:    addl %r21d, %r10d
-; WINEGPR-NEXT:    addl %eax, %r10d
-; WINEGPR-NEXT:    leal (%r18,%r19), %r11d
-; WINEGPR-NEXT:    addl %r16d, %r11d
-; WINEGPR-NEXT:    addl %r17d, %r11d
-; WINEGPR-NEXT:    leal (%r8,%r9), %eax
+; WINEGPR-NEXT:    leal (%r18,%r19), %eax
+; WINEGPR-NEXT:    addl %r16d, %eax
+; WINEGPR-NEXT:    addl %r17d, %eax
+; WINEGPR-NEXT:    addl %r9d, %r8d
 ; WINEGPR-NEXT:    addl %edx, %ecx
-; WINEGPR-NEXT:    addl %ecx, %eax
-; WINEGPR-NEXT:    addl %r11d, %eax
+; WINEGPR-NEXT:    addl %ecx, %r8d
+; WINEGPR-NEXT:    addl %eax, %r8d
 ; WINEGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
 ; WINEGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %edx
-; WINEGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %r8d
-; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %r8w
-; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %dx
-; WINEGPR-NEXT:    addl %r8d, %edx
-; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %cx
-; WINEGPR-NEXT:    addl %r10d, %edx
+; WINEGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %r9d
+; WINEGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
+; WINEGPR-NEXT:    movzwl {{[0-9]+}}(%rsp), %r11d
+; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %r11w
+; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
+; WINEGPR-NEXT:    addl %r11d, %eax
 ; WINEGPR-NEXT:    addl %r10d, %eax
-; WINEGPR-NEXT:    addl %ecx, %eax
+; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %r9w
+; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %dx
+; WINEGPR-NEXT:    addl %r9d, %edx
+; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %cx
+; WINEGPR-NEXT:    addl %eax, %edx
+; WINEGPR-NEXT:    addl %r8d, %eax
 ; WINEGPR-NEXT:    addl %edx, %eax
+; WINEGPR-NEXT:    addl %ecx, %eax
 ; WINEGPR-NEXT:    addw {{[0-9]+}}(%rsp), %ax
 ; WINEGPR-NEXT:    # kill: def $ax killed $ax killed $eax
 ; WINEGPR-NEXT:    retq
