@@ -1756,19 +1756,19 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     default:
       llvm_unreachable("unexpected builtin ID");
     case RISCV::BI__builtin_riscv_mhacc_h0_i32:
-      ID = Intrinsic::riscv_mhacc_h0;
+      ID = Intrinsic::riscv_mhacc_h0_i32;
       break;
     case RISCV::BI__builtin_riscv_mhacc_h1_i32:
-      ID = Intrinsic::riscv_mhacc_h1;
+      ID = Intrinsic::riscv_mhacc_h1_i32;
       break;
     case RISCV::BI__builtin_riscv_mhaccsu_h0_i32:
-      ID = Intrinsic::riscv_mhaccsu_h0;
+      ID = Intrinsic::riscv_mhaccsu_h0_i32;
       break;
     case RISCV::BI__builtin_riscv_mhaccsu_h1_i32:
-      ID = Intrinsic::riscv_mhaccsu_h1;
+      ID = Intrinsic::riscv_mhaccsu_h1_i32;
       break;
     }
-    IntrinsicTypes = {ResultType, Ops[2]->getType()};
+    IntrinsicTypes = {Ops[2]->getType()};
     break;
   }
 

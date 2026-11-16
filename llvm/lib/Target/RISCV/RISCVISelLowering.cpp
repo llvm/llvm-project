@@ -12598,16 +12598,16 @@ static unsigned getRVPMulHighAccumulateHalfOpcode(unsigned IntNo) {
     llvm_unreachable("Unexpected RISC-V multiply high accumulate half "
                      "intrinsic");
   case Intrinsic::riscv_pmhacc_half_0:
-  case Intrinsic::riscv_mhacc_h0:
+  case Intrinsic::riscv_mhacc_h0_i32:
     return RISCVISD::MHACC_HALF_0;
   case Intrinsic::riscv_pmhacc_half_1:
-  case Intrinsic::riscv_mhacc_h1:
+  case Intrinsic::riscv_mhacc_h1_i32:
     return RISCVISD::MHACC_HALF_1;
   case Intrinsic::riscv_pmhaccsu_half_0:
-  case Intrinsic::riscv_mhaccsu_h0:
+  case Intrinsic::riscv_mhaccsu_h0_i32:
     return RISCVISD::MHACCSU_HALF_0;
   case Intrinsic::riscv_pmhaccsu_half_1:
-  case Intrinsic::riscv_mhaccsu_h1:
+  case Intrinsic::riscv_mhaccsu_h1_i32:
     return RISCVISD::MHACCSU_HALF_1;
   }
 }
@@ -13603,10 +13603,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(MulOpc, DL, VT, Rd, Rs1, Rs2);
   }
-  case Intrinsic::riscv_mhacc_h0:
-  case Intrinsic::riscv_mhacc_h1:
-  case Intrinsic::riscv_mhaccsu_h0:
-  case Intrinsic::riscv_mhaccsu_h1: {
+  case Intrinsic::riscv_mhacc_h0_i32:
+  case Intrinsic::riscv_mhacc_h1_i32:
+  case Intrinsic::riscv_mhaccsu_h0_i32:
+  case Intrinsic::riscv_mhaccsu_h1_i32: {
     // The scalar mhacc.h0/h1 forms exist only on RV32; RV64 goes via
     // ReplaceNodeResults using the packed pmhacc.w.h0/h1 form.
     EVT VT = Op.getValueType();
@@ -18181,10 +18181,10 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
-    case Intrinsic::riscv_mhacc_h0:
-    case Intrinsic::riscv_mhacc_h1:
-    case Intrinsic::riscv_mhaccsu_h0:
-    case Intrinsic::riscv_mhaccsu_h1: {
+    case Intrinsic::riscv_mhacc_h0_i32:
+    case Intrinsic::riscv_mhacc_h1_i32:
+    case Intrinsic::riscv_mhaccsu_h0_i32:
+    case Intrinsic::riscv_mhaccsu_h1_i32: {
       // The scalar mhacc.h0/h1 forms exist only on RV32; RV64 has to build
       // the packed word form here and extract the low word.
       MVT VT = N->getSimpleValueType(0);
