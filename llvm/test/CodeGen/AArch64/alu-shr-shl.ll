@@ -49,6 +49,18 @@ define i32 @add_sbfiz(i32 %a, i32 %b) {
   ret i32 %add
 }
 
+define i32 @add_ubfiz(i32 %a, i32 %b) {
+; CHECK-LABEL: add_ubfiz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfiz w8, w0, #3, #3
+; CHECK-NEXT:    add w0, w1, w8
+; CHECK-NEXT:    ret
+  %shl = shl i32 %a, 29
+  %shr = lshr i32 %shl, 26
+  %add = add i32 %b, %shr
+  ret i32 %add
+}
+
 define i32 @sub_shl_multiuse(i32 %a, i32 %b, ptr %p) {
 ; CHECK-LABEL: sub_shl_multiuse:
 ; CHECK:       // %bb.0:

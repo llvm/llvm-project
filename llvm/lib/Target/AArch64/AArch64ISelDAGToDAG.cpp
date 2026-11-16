@@ -1178,6 +1178,10 @@ bool AArch64DAGToDAGISel::isWorthFoldingALU(SDValue V, bool LSL) const {
   return false;
 }
 
+static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
+                                       unsigned &Immr, unsigned &Imms,
+                                       bool BiggerPattern);
+
 /// SelectShiftedRegister - Select a "shifted register" operand.  If the value
 /// is not shifted, set the Shift operand to default of "LSL 0".  The logical
 /// instructions allow the shifted register to be rotated, but the arithmetic
@@ -1196,14 +1200,14 @@ bool AArch64DAGToDAGISel::SelectShiftedRegister(SDValue N, bool AllowROR,
 
   // Don't match if the SRA/SRL can be folded with an SHL to form a SBFM/UBFM.
   if (N.getOpcode() == ISD::SRA || N.getOpcode() == ISD::SRL) {
-    EVT VT = N.getValueType();
     SDValue Inner = N.getOperand(0);
     uint64_t ShrImm = 0;
-    uint64_t ShlImm = 0;
-    if (isIntImmediate(N.getOperand(1), ShrImm) && ShrImm > 0 &&
-        ShrImm < VT.getSizeInBits() &&
-        isOpcWithIntImmediate(Inner.getNode(), ISD::SHL, ShlImm) &&
-        ShlImm < VT.getSizeInBits() && Inner.hasOneUse())
+    unsigned Opc, Immr, Imms;
+    SDValue Opd0;
+    if (Inner.getOpcode() == ISD::SHL && Inner.hasOneUse() &&
+        isIntImmediate(N.getOperand(1), ShrImm) && ShrImm > 0 &&
+        ShrImm < N.getValueSizeInBits() &&
+        isBitfieldExtractOpFromShr(N.getNode(), Opc, Opd0, Immr, Imms, false))
       return false;
   }
 
