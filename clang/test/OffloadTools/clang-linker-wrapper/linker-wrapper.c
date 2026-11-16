@@ -455,6 +455,17 @@ __attribute__((visibility("protected"), used)) int x;
 // RELOCATABLE-LINK-CUDA: /usr/bin/ld.lld{{.*}}-r
 // RELOCATABLE-LINK-CUDA: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
 
+// RUN: llvm-offload-binary -o %t.out \
+// RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=generic
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld.lld -r %t.o \
+// RUN:   -o a.out 2>&1 | FileCheck %s --check-prefix=RELOCATABLE-LINK-SYCL
+
+// RELOCATABLE-LINK-SYCL: clang{{.*}} -o {{.*}}.img -dumpdir a.out.spirv64..img. --target=spirv64-unknown-unknown {{.*}} --sycl-link
+// RELOCATABLE-LINK-SYCL: /usr/bin/ld.lld{{.*}}-r
+// RELOCATABLE-LINK-SYCL: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
+
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld --override=image=openmp=%t.o %t.o -o a.out 2>&1 \
