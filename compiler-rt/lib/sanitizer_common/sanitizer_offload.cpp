@@ -775,17 +775,19 @@ bool Offload::PublishDeviceBytes(uptr Addr, const void* Src, uptr Bytes,
     Die();
   }
 
-  // Publish the metadata writes to the device, copying the data to each XCC if
-  // present.
+  // Publish a WRITE_DATA into the indirect buffer to update the metadata. If
+  // the machine has multiple XCCs we need to send the write to each one.
   const u32 Xcds = Target->XCCs ? Target->XCCs : 1;
+  const u32 Pred = Xcds > 1 ? kPredDwords : 0;
   for (uptr Off = 0; Off < Bytes;) {
     const uptr Step = Min(Bytes - Off, kWriteChunkBytes);
     const void* Part = Src ? static_cast<const u8*>(Src) + Off : nullptr;
     for (u32 Xcc = 0; Xcc < Xcds; ++Xcc) {
       u32* Out = static_cast<u32*>(Ib);
-      u32 At = kPredDwords;
+      u32 At = Pred;
       At += EmitWriteData(Out + At, Addr + Off, Part, Step);
-      EmitPredExec(Out, At - kPredDwords, Xcc);
+      if (Pred)
+        EmitPredExec(Out, At - Pred, Xcc);
       CHECK_LE(At, kIbDwords);
       SubmitIb(*Target, At);
       Await(*Target);
