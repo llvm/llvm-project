@@ -1371,8 +1371,8 @@ define void @foo(ptr %ptr0) {
   auto *BB = &*F->begin();
   auto It = BB->begin();
   [[maybe_unused]] auto *Gep = &*It++;
-  [[maybe_unused]] auto *L0 = &*It++;
-  [[maybe_unused]] auto *L1 = &*It++;
+  auto *L0 = &*It++;
+  auto *L1 = &*It++;
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
