@@ -198,6 +198,13 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "coshbf16",
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "coshf",
     deps = [
         "//libc/src/__support/CPP:array",
