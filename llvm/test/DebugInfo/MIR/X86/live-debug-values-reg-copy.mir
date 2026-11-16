@@ -111,7 +111,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 debugInstrRef: true
-registers:
 liveins:
   - { reg: '$edi', virtual-reg: '' }
   - { reg: '$r8d', virtual-reg: '' }
