@@ -4372,14 +4372,11 @@ bool ScalarEvolution::checkValidity(const SCEV *S) const {
 }
 
 bool ScalarEvolution::containsAddRecurrence(const SCEV *S) {
-  HasRecMapType::iterator I = HasRecMap.find(S);
-  if (I != HasRecMap.end())
-    return I->second;
-
-  bool FoundAddRec =
-      SCEVExprContains(S, [](const SCEV *S) { return isa<SCEVAddRecExpr>(S); });
-  HasRecMap.insert({S, FoundAddRec});
-  return FoundAddRec;
+  auto [I, Inserted] = HasRecMap.try_emplace(S);
+  if (Inserted)
+    I->second = SCEVExprContains(
+        S, [](const SCEV *S) { return isa<SCEVAddRecExpr>(S); });
+  return I->second;
 }
 
 /// Return the ValueOffsetPair set for \p S. \p S can be represented
@@ -14569,10 +14566,11 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   }
 
   auto FoldUser = FoldCacheUser.find(S);
-  if (FoldUser != FoldCacheUser.end())
+  if (FoldUser != FoldCacheUser.end()) {
     for (auto &KV : FoldUser->second)
       FoldCache.erase(KV);
-  FoldCacheUser.erase(S);
+    FoldCacheUser.erase(FoldUser);
+  }
 }
 
 void
@@ -16119,10 +16117,14 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     SmallPtrSet<const SCEV *, 16> ToRewrite(llvm::from_range, ExprsToRewrite);
     std::function<const SCEV *(const SCEV *)> Lookup = [&](const SCEV *Expr) {
       if (Depth < MaxDepth && ToRewrite.erase(Expr)) {
-        const SCEV *RewriteTo = Guards.RewriteMap[Expr];
-        Guards.RewriteMap.erase(Expr);
+        auto It = Guards.RewriteMap.find(Expr);
+        assert(It != Guards.RewriteMap.end() && "Expected rewrite entry");
+        const SCEV *RewriteTo = It->second;
+        Guards.RewriteMap.erase(It);
         SaveAndRestore Nest(Depth, Depth + 1);
-        Guards.RewriteMap[Expr] = Guards.rewrite(RewriteTo, Lookup);
+        const SCEV *Rewritten = Guards.rewrite(RewriteTo, Lookup);
+        Guards.RewriteMap[Expr] = Rewritten;
+        return Rewritten;
       }
       return Guards.RewriteMap.lookup(Expr);
     };
