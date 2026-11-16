@@ -1,4 +1,4 @@
-! REQUIRES: flang-supports-f128-math
+! REQUIRES: flang-frontend-supports-f128
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s --check-prefixes="CHECK,CHECK-FAST"
 ! RUN: %flang_fc1 -emit-hlfir -mllvm --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CHECK,CHECK-PRECISE"
 

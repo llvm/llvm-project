@@ -9,10 +9,10 @@
 #ifndef FORTRAN_TOOLS_TARGET_SETUP_H
 #define FORTRAN_TOOLS_TARGET_SETUP_H
 
-#include "flang/Common/float128.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -61,40 +61,33 @@ namespace Fortran::tools {
     break;
   }
 
-  // Check for kind=16 support. See flang/runtime/Float128Math/math-entries.h.
-  // TODO: Take this from TargetInfo::getLongDoubleFormat for cross compilation.
-#ifdef FLANG_RUNTIME_F128_MATH_LIB
-  constexpr bool f128Support = true; // use libquadmath wrappers
-#elif HAS_LDBL128
-  constexpr bool f128Support = true; // use libm wrappers
-#else
-  constexpr bool f128Support = false;
-#endif
-
-  bool f128BESupport = false;
+  bool supportsF128 = false;
   llvm::LLVMContext ctx;
   std::unique_ptr<llvm::Module> dummyModule =
-      std::make_unique<llvm::Module>("quad-test", ctx);
+      std::make_unique<llvm::Module>("f128-support", ctx);
   dummyModule->setTargetTriple(targetMachine.getTargetTriple());
   dummyModule->setDataLayout(targetMachine.createDataLayout());
 
   llvm::FunctionType *dummyFTy =
       llvm::FunctionType::get(llvm::Type::getVoidTy(ctx), false);
   llvm::Function *dummyF = llvm::Function::Create(dummyFTy,
-      llvm::GlobalValue::ExternalLinkage, "quad-test", dummyModule.get());
+      llvm::GlobalValue::ExternalLinkage, "f128-support", dummyModule.get());
 
-  const llvm::TargetLowering *dummyTLI =
-      targetMachine.getSubtargetImpl(*dummyF)->getTargetLowering();
-
-  if (dummyTLI) {
-    llvm::EVT fp128EVT = llvm::EVT::getEVT(llvm::Type::getFP128Ty(ctx));
-
-    // Query for fp128 backend support. Based on this, determine whether
-    // compilation is possible on the frontend.
-    f128BESupport = dummyTLI->isTypeLegal(fp128EVT);
+  // TargetLowering is a per-function interface, so a dummy function is needed
+  // to query whether the backend can lower f128 for this target.
+  if (const llvm::TargetSubtargetInfo *subtarget =
+          targetMachine.getSubtargetImpl(*dummyF)) {
+    if (const llvm::TargetLowering *targetLowering =
+            subtarget->getTargetLowering()) {
+      supportsF128 = targetLowering->isTypeLegal(llvm::MVT::f128) ||
+          (targetLowering->getLibcallName(llvm::RTLIB::ADD_F128) &&
+              targetLowering->getLibcallName(llvm::RTLIB::SUB_F128) &&
+              targetLowering->getLibcallName(llvm::RTLIB::MUL_F128) &&
+              targetLowering->getLibcallName(llvm::RTLIB::DIV_F128));
+    }
   }
 
-  if (!f128Support && !f128BESupport) {
+  if (!supportsF128) {
     targetCharacteristics.DisableType(Fortran::common::TypeCategory::Real, 16);
     targetCharacteristics.DisableType(
         Fortran::common::TypeCategory::Complex, 16);

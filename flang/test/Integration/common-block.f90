@@ -6,7 +6,7 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
-! REQUIRES: flang-supports-f128-math
+! REQUIRES: flang-frontend-supports-f128
 ! RUN: bbc %s -o - | tco | FileCheck %s
 ! RUN: %flang -emit-llvm -S -mmlir -disable-external-name-interop %s -o - | FileCheck %s
 
