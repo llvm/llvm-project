@@ -779,6 +779,8 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
       }
     }
   } else if (type_flags & eTypeIsStructUnion || type_flags & eTypeIsClass ||
+             (type_flags & eTypeIsSwift &&
+              (type_flags & eTypeIsEnumeration || type_flags & eTypeIsTuple)) ||
              (type_flags & eTypeIsVector && *byte_size > 16)) {
     DataExtractor data;
 

@@ -741,7 +741,9 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
         }
       }
     }
-  } else if (type_flags & eTypeIsStructUnion || type_flags & eTypeIsClass) {
+  } else if (type_flags & eTypeIsStructUnion || type_flags & eTypeIsClass ||
+             (type_flags & eTypeIsSwift &&
+              (type_flags & eTypeIsEnumeration || type_flags & eTypeIsTuple))) {
     DataExtractor data;
 
     uint32_t NGRN = 0; // Search ABI docs for NGRN
