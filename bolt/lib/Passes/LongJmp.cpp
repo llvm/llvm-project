@@ -553,9 +553,8 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
       return Error::success();
 
     LLVM_DEBUG(dbgs() << "Relaxing stub to short jump. Offset = "
-                      << Twine::utohexstr(Offset)
-                      << " RealTargetSym = " << RealTargetSym->getName()
-                      << "\n");
+                      << Twine::utohexstr(Offset) << " RealTargetSym = "
+                      << RealTargetSym->getName() << "\n");
     relaxStubToShortJmp(StubBB, RealTargetSym);
     StubBits[&StubBB] = RangeShortJmp;
     Modified = true;
@@ -570,8 +569,7 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
 
   LLVM_DEBUG(dbgs() << "Relaxing stub to long jump. PageOffset = "
                     << Twine::utohexstr(PageOffset)
-                    << " RealTargetSym = " << RealTargetSym->getName()
-                    << "\n");
+                    << " RealTargetSym = " << RealTargetSym->getName() << "\n");
   relaxStubToLongJmp(StubBB, RealTargetSym);
   StubBits[&StubBB] = static_cast<int>(BC.AsmInfo->getCodePointerSize() * 8);
   Modified = true;
