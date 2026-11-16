@@ -87,7 +87,7 @@ static void ascendingSortByVersion(std::vector<const Record *> &Recs) {
 /// Take a `int_{intrinsic_name}` and return just the intrinsic_name part if
 /// available. Otherwise return the empty string.
 static StringRef GetIntrinsicName(const RecordVal *RV) {
-  if (RV && RV->getValue()) {
+  if (RV) {
     if (const DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
       auto *IntrinsicDef = DI->getDef();
       auto DefName = IntrinsicDef->getName();
@@ -357,7 +357,7 @@ static void emitDXILOpParamTypes(const RecordKeeper &Records, raw_ostream &OS) {
 static void emitDXILAttributes(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef DXIL_ATTRIBUTE\n";
   for (const Record *Attr : Records.getAllDerivedDefinitions("DXILAttribute"))
-    OS << "DXIL_ATTRIBUTE(" << Attr->getName() << ")\n";
+    OS << "DXIL_ATTRIBUTE(" << Attr->getValueAsString("Name") << ")\n";
   OS << "#undef DXIL_ATTRIBUTE\n";
   OS << "#endif\n\n";
 }

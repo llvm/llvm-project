@@ -36,14 +36,12 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
+#include "clang/CodeGenUtils/CallUtils.h"
 #include "clang/CodeGenUtils/StmtUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-
-namespace {
-class ScalarExprEmitter;
-} // namespace
 
 namespace mlir {
 namespace acc {
@@ -65,7 +63,6 @@ public:
   CIRGenModule &cgm;
 
 private:
-  friend class ::ScalarExprEmitter;
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
@@ -86,15 +83,18 @@ private:
     bool savedIsFPConstrained;
     LangOptions::FPExceptionModeKind savedExcept;
     llvm::RoundingMode savedRounding;
+    cir::FastMathFlags savedFastMathFlags;
 
     explicit ConstrainedFPRAII(CIRGenBuilderTy &builder)
         : builder(builder), savedIsFPConstrained(builder.getIsFPConstrained()),
           savedExcept(builder.getDefaultConstrainedExcept()),
-          savedRounding(builder.getDefaultConstrainedRounding()) {}
+          savedRounding(builder.getDefaultConstrainedRounding()),
+          savedFastMathFlags(builder.getFastMathFlags()) {}
     ~ConstrainedFPRAII() {
       builder.setIsFPConstrained(savedIsFPConstrained);
       builder.setDefaultConstrainedExcept(savedExcept);
       builder.setDefaultConstrainedRounding(savedRounding);
+      builder.setFastMathFlags(savedFastMathFlags);
     }
   } constrainedFPState{builder};
 
@@ -129,6 +129,8 @@ public:
 
   typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
 
+  class CapturedCleanups;
+
   /// A cleanup whose destructor call is not emitted where the cleanup is
   /// registered. Used by the lifetime-extended cleanup stack, whose entries
   /// are later promoted onto the EH scope stack, and by the deferred
@@ -148,6 +150,9 @@ public:
     QualType type;
     Destroyer *destroyer;
     Address activeFlag = Address::invalid();
+    /// If set, the cleanup is captured by this owner instead of opening a
+    /// cir.cleanup.scope when it is pushed onto the EH stack.
+    CapturedCleanups *capturedBy = nullptr;
   };
 
   llvm::SmallVector<PendingCleanupEntry> lifetimeExtendedCleanupStack;
@@ -199,6 +204,19 @@ public:
   /// cleanup scope only while this is set, since a FullExprCleanupScope is
   /// what closes those scopes.
   cir::CleanupScopeOp currentFullExprCleanupScope = nullptr;
+
+  /// Set by emitLoopConditionVariable while it emits the initializer of a loop
+  /// condition variable that lifetime-extends temporaries with a destructor.
+  /// The cleanups of the temporaries that \c extendingDecl extends are
+  /// captured by \c cleanups for the loop's cleanup region and guarded by
+  /// \c activeFlag, instead of opening cir.cleanup.scope operations around the
+  /// cir.condition.
+  struct LifetimeExtensionCapture {
+    const clang::ValueDecl *extendingDecl;
+    CapturedCleanups *cleanups;
+    Address activeFlag;
+  };
+  const LifetimeExtensionCapture *lifetimeExtensionCapture = nullptr;
 
   /// A cleanup that was pushed to the EH stack but whose deactivation is
   /// deferred until the enclosing CleanupDeactivationScope exits. Used to
@@ -331,8 +349,11 @@ public:
     clang::FPOptions oldFPFeatures;
     LangOptions::FPExceptionModeKind oldExcept;
     llvm::RoundingMode oldRounding;
+    std::optional<cir::FastMathFlags> oldFastMathFlags;
   };
   clang::FPOptions curFPFeatures;
+
+  void setFastMathFlags(FPOptions fpFeatures);
 
   /// Convert the active Clang floating-point options to CIR fast-math flags.
   cir::FastMathFlags getCurrentFastMathFlags() const;
@@ -687,6 +708,8 @@ public:
     PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
   };
 
+  using EvaluationOrder = CodeGenUtils::EvaluationOrder;
+
   bool isLValueSuitableForInlineAtomic(LValue lv);
 
   RValue emitAtomicLoad(LValue lvalue, SourceLocation loc,
@@ -800,11 +823,12 @@ public:
     }
 
     bool isReference() const { return valueAndIsReference.getInt(); }
-    LValue getReferenceLValue(CIRGenFunction &cgf, Expr *refExpr) const {
+    LValue getReferenceLValue(CIRGenFunction &cgf, const Expr *refExpr) const {
       assert(isReference());
-      cgf.cgm.errorNYI(refExpr->getSourceRange(),
-                       "ConstantEmission::getReferenceLValue");
-      return {};
+      mlir::Value addr = cgf.getBuilder().getConstant(
+          cgf.getLoc(refExpr->getSourceRange()),
+          mlir::cast<mlir::TypedAttr>(valueAndIsReference.getPointer()));
+      return cgf.makeNaturalAlignAddrLValue(addr, refExpr->getType());
     }
 
     mlir::TypedAttr getValue() const {
@@ -1193,8 +1217,9 @@ public:
   clang::QualType buildFunctionArgList(clang::GlobalDecl gd,
                                        FunctionArgList &args);
 
-  /// Emit the function prologue: declare function arguments in the symbol
-  /// table.
+  /// Emit the function prologue: initialize the return value of an
+  /// implicit-return-zero function and declare function arguments in the
+  /// symbol table.
   void emitFunctionProlog(const FunctionArgList &args, mlir::Block *entryBB,
                           const FunctionDecl *fd, SourceLocation bodyBeginLoc);
 
@@ -1337,6 +1362,12 @@ public:
     EHScopeStack::stable_iterator cleanupStackDepth, oldCleanupStackDepth;
     size_t lifetimeExtendedCleanupStackSize;
     CleanupDeactivationScope deactivateCleanups;
+    bool deferLifetimeExtended = false;
+
+    size_t oldLifetimeExtendedSize() const {
+      return deferLifetimeExtended ? cgf.lifetimeExtendedCleanupStack.size()
+                                   : lifetimeExtendedCleanupStackSize;
+    }
 
   protected:
     bool performCleanup;
@@ -1417,8 +1448,7 @@ public:
       // pop cir.cleanup.scope ops); they already dominate the post-scope
       // insertion point on their own.
       if (didSpillAny) {
-        cgf.popCleanupBlocks(cleanupStackDepth,
-                             lifetimeExtendedCleanupStackSize);
+        cgf.popCleanupBlocks(cleanupStackDepth, oldLifetimeExtendedSize());
 
         // Reload the spilled values now that all cleanup popping (and
         // promotion of any lifetime-extended cleanups onto the EH stack) is
@@ -1429,8 +1459,8 @@ public:
           *valPtr = cgf.builder.createLoad(valPtr->getLoc(), addr);
         }
       } else {
-        cgf.popCleanupBlocks(cleanupStackDepth,
-                             lifetimeExtendedCleanupStackSize, valuesToReload);
+        cgf.popCleanupBlocks(cleanupStackDepth, oldLifetimeExtendedSize(),
+                             valuesToReload);
       }
 
       performCleanup = false;
@@ -1455,7 +1485,7 @@ public:
       assert(performCleanup && "Already forced cleanup");
       assert(deactivateCleanups.deactivated &&
              "forceCleanupExceptLifetimeExtended() must be called first");
-      cgf.popCleanupBlocks(cleanupStackDepth, lifetimeExtendedCleanupStackSize);
+      cgf.popCleanupBlocks(cleanupStackDepth, oldLifetimeExtendedSize());
       performCleanup = false;
       cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }
@@ -1465,24 +1495,42 @@ public:
     bool hasPendingCleanups() const {
       return cgf.ehStack.stable_begin() != cleanupStackDepth;
     }
+
+    /// Leave the cleanups of lifetime-extended temporaries created in this
+    /// scope to the enclosing scope instead of pushing them onto the EH stack
+    /// when this scope ends. This is for a scope that ends in the body of a
+    /// loop, such as the construction of an array element: the cleanup scope
+    /// of such a temporary ends with that of the variable that extends its
+    /// lifetime, after the loop.
+    void deferLifetimeExtendedCleanups() { deferLifetimeExtended = true; }
   };
 
   // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
   EHScopeStack::stable_iterator currentCleanupStackDepth = ehStack.stable_end();
+
+  class ConditionalEvaluation;
 
   class FullExprCleanupScope {
     CIRGenFunction &cgf;
     RunCleanupsScope cleanups;
     cir::CleanupScopeOp scope;
     cir::CleanupScopeOp oldFullExprCleanupScope;
+    ConditionalEvaluation *oldOutermostConditional;
+    ConditionalEvaluation *oldHiddenOutermostConditional;
     size_t deferredCleanupStackSize;
     size_t conditionalScopeDepth;
     bool exited = false;
 
   public:
-    FullExprCleanupScope(CIRGenFunction &cgf, const Expr *subExpr);
+    /// \p s is the AST root for one cleanup boundary: a full-expression, an
+    /// asm statement, or the construction of one array element.
+    FullExprCleanupScope(CIRGenFunction &cgf, const Stmt *s);
 
     void exit(ArrayRef<mlir::Value *> valuesToReload = {});
+
+    void deferLifetimeExtendedCleanups() {
+      cleanups.deferLifetimeExtendedCleanups();
+    }
 
     ~FullExprCleanupScope() {
       if (!exited)
@@ -1493,6 +1541,11 @@ public:
     FullExprCleanupScope(const FullExprCleanupScope &) = delete;
     void operator=(const FullExprCleanupScope &) = delete;
   };
+
+  /// Whether the resume expression of \p s contains a construct that defers
+  /// cleanups to the end of the enclosing full-expression: a temporary with a
+  /// destructor, other than the result of await_resume(), or a conditional.
+  static bool resumeExprDefersCleanups(const CoroutineSuspendExpr &s);
 
   /// Captures cleanups for variables whose lifetime ends in a region owned by
   /// an enclosing op rather than at the end of a cir.cleanup.scope, so that
@@ -1563,9 +1616,9 @@ public:
 
     // On a coroutine body, the OnFallthrough sub stmt holds the handler
     // (CoreturnStmt) for control flow falling off the body. Keep track
-    // of emitted co_return in this scope and allow OnFallthrough to be
-    // skipeed.
-    bool hasCoreturnStmt = false;
+    // of a co_return emitted in this scope and not followed by a label, and
+    // allow OnFallthrough to be skipped.
+    bool hasCoreturnSinceLastLabel = false;
 
     // Only Regular is used at the moment. Support for other kinds will be
     // added as the relevant statements/expressions are upstreamed.
@@ -1617,8 +1670,16 @@ public:
     // ---
     // Coroutine tracking
     // ---
-    bool hasCoreturn() const { return hasCoreturnStmt; }
-    void setCoreturn() { hasCoreturnStmt = true; }
+    bool hasCoreturn() const { return hasCoreturnSinceLastLabel; }
+    // Record an emitted co_return for fallthrough tracking.
+    // A later label clears this state.
+    void markCoreturnEmitted() { hasCoreturnSinceLastLabel = true; }
+    // A goto can reach a label after a co_return, and the code after it, so
+    // the end of this scope and of the enclosing ones may be reachable again.
+    void clearCoreturnInEnclosingScopes() {
+      for (LexicalScope *s = this; s; s = s->parentScope)
+        s->hasCoreturnSinceLastLabel = false;
+    }
 
     // ---
     // Kind
@@ -1730,7 +1791,8 @@ public:
 
   void pushLifetimeExtendedDestroy(CleanupKind kind, Address addr,
                                    QualType type, Destroyer *destroyer,
-                                   bool useEHCleanupForArray);
+                                   bool useEHCleanupForArray,
+                                   const clang::ValueDecl *extendingDecl);
 
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 
@@ -1854,6 +1916,8 @@ public:
 
   LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
 
+  LValue emitMatrixSubscriptExpr(const MatrixSubscriptExpr *e);
+
   Address emitArrayToPointerDecay(const Expr *e,
                                   LValueBaseInfo *baseInfo = nullptr);
 
@@ -1907,8 +1971,17 @@ public:
 
   /// Emit a loop's condition-variable declaration. This needs special handling
   /// so that we can manage per-iteration cleanups for the loop condition.
+  /// \p extendedTemporaries are the types of the temporaries with a destructor
+  /// that its initializer lifetime-extends (see
+  /// getLifetimeExtendedTemporariesWithDestructor).
   void emitLoopConditionVariable(const clang::VarDecl &d,
-                                 CapturedCleanups &condCleanup);
+                                 CapturedCleanups &condCleanup,
+                                 llvm::ArrayRef<QualType> extendedTemporaries);
+
+  /// The types of the temporaries with a destructor that the initializer of
+  /// the variable \p d, which has automatic storage duration, lifetime-extends.
+  static llvm::SmallVector<QualType, 2>
+  getLifetimeExtendedTemporariesWithDestructor(const clang::VarDecl &d);
 
   /// Emit the initializer for an allocated variable.  If this call is not
   /// associated with the call to emitAutoVarAlloca (as the address of the
@@ -2009,7 +2082,8 @@ public:
   void emitCallArgs(
       CallArgList &args, PrototypeWrapper prototype,
       llvm::iterator_range<clang::CallExpr::const_arg_iterator> argRange,
-      AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0);
+      AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0,
+      EvaluationOrder order = EvaluationOrder::Default);
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   LValue emitCallExprLValue(const clang::CallExpr *e);
@@ -2194,7 +2268,8 @@ public:
   void emitDeleteCall(const FunctionDecl *deleteFD, mlir::Value ptr,
                       QualType deleteTy);
 
-  mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
+  mlir::LogicalResult emitDoStmt(const clang::DoStmt &s,
+                                 llvm::ArrayRef<const Attr *> attrs = {});
 
   mlir::Value emitCXXTypeidExpr(const CXXTypeidExpr *e);
   mlir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
@@ -2256,7 +2331,8 @@ public:
   mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
                                      bool useCurrentScope);
 
-  mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
+  mlir::LogicalResult emitForStmt(const clang::ForStmt &s,
+                                  llvm::ArrayRef<const Attr *> attrs = {});
 
   void emitForwardingCallToLambda(const CXXMethodDecl *lambdaCallOperator,
                                   CallArgList &callArgs);
@@ -2264,10 +2340,12 @@ public:
   RValue emitCoawaitExpr(const CoawaitExpr &e,
                          AggValueSlot aggSlot = AggValueSlot::ignored(),
                          bool ignoreResult = false);
+  LValue emitCoawaitLValue(const CoawaitExpr *e);
 
   RValue emitCoyieldExpr(const CoyieldExpr &e,
                          AggValueSlot aggSlot = AggValueSlot::ignored(),
                          bool ignoreResult = false);
+  LValue emitCoyieldLValue(const CoyieldExpr *e);
   /// Emit the computation of the specified expression of complex type,
   /// returning the result.
   mlir::Value emitComplexExpr(const Expr *e);
@@ -2380,9 +2458,20 @@ public:
   LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
 
+  /// Annotate the address of `field`; accesses must use the result.
+  Address emitFieldAnnotations(const clang::FieldDecl *field, Address addr);
+
+  /// Annotate the storage of `d` at `addr`.
+  void emitVarAnnotations(const clang::VarDecl *d, mlir::Value addr);
+
   LValue emitLValueForLambdaField(const FieldDecl *field);
   LValue emitLValueForLambdaField(const FieldDecl *field,
                                   mlir::Value thisValue);
+
+  void emitLambdaVLACapture(const VariableArrayType *vat, LValue lv) {
+    mlir::Value size = vlaSizeMap[vat->getSizeExpr()];
+    emitStoreThroughLValue(RValue::get(size), lv);
+  }
 
   /// Like emitLValueForField, excpet that if the Field is a reference, this
   /// will return the address of the reference and not the address of the value
@@ -2393,6 +2482,7 @@ public:
 
   LValue emitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
 
+  LValue emitMatrixElementExpr(const MatrixElementExpr *e);
   LValue emitMemberExpr(const MemberExpr *e);
 
   /// Emit a musttail call for a thunk with a potentially different ABI.
@@ -2407,8 +2497,8 @@ public:
   std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
 
-  /// Emit a device-side printf call for NVPTX targets.
-  mlir::Value emitNVPTXDevicePrintfCallExpr(const CallExpr *expr);
+  /// Emit a device-side printf call for GPU targets.
+  mlir::Value emitDevicePrintfCallExpr(const CallExpr *expr);
 
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 
@@ -2539,7 +2629,13 @@ public:
 
   void emitVariablyModifiedType(QualType ty);
 
-  mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
+  mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s,
+                                    llvm::ArrayRef<const Attr *> attrs = {});
+
+  /// Build the hints that get attached to a loop, or a null attribute
+  /// if there is nothing to say about it.
+  cir::LoopHintAttr getLoopHints(llvm::ArrayRef<const Attr *> attrs,
+                                 bool mustProgress);
 
   std::optional<mlir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
@@ -2553,6 +2649,8 @@ public:
   mlir::Value emitX86CpuSupports(mlir::Location loc,
                                  std::array<uint32_t, 4> FeatureMask);
   mlir::Value emitX86CpuInit(mlir::Location loc);
+  using MSVCIntrin = CodeGenUtils::MSVCIntrin;
+  mlir::Value emitX86MSVCIntrin(MSVCIntrin builtinID, const CallExpr *E);
   std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
                                                 const CallExpr *expr);
 
@@ -2658,6 +2756,13 @@ public:
   // we know if a temporary should be destroyed conditionally.
   ConditionalEvaluation *outermostConditional = nullptr;
 
+  // The outermost conditional that a FullExprCleanupScope in a conditional
+  // branch hides from isInConditionalBranch(), if any. The cleanups of that
+  // full-expression run at its end, so they are not conditional, but a
+  // temporary whose lifetime is extended beyond it is still created
+  // conditionally.
+  ConditionalEvaluation *hiddenOutermostConditional = nullptr;
+
   /// An RAII object to record that we're evaluating a statement
   /// expression.
   class StmtExprEvaluation {
@@ -2667,15 +2772,19 @@ public:
     /// statement expression aren't conditional just because the
     /// StmtExpr is.
     ConditionalEvaluation *savedOutermostConditional;
+    ConditionalEvaluation *savedHiddenOutermostConditional;
 
   public:
     StmtExprEvaluation(CIRGenFunction &cgf)
-        : cgf(cgf), savedOutermostConditional(cgf.outermostConditional) {
+        : cgf(cgf), savedOutermostConditional(cgf.outermostConditional),
+          savedHiddenOutermostConditional(cgf.hiddenOutermostConditional) {
       cgf.outermostConditional = nullptr;
+      cgf.hiddenOutermostConditional = nullptr;
     }
 
     ~StmtExprEvaluation() {
       cgf.outermostConditional = savedOutermostConditional;
+      cgf.hiddenOutermostConditional = savedHiddenOutermostConditional;
     }
   };
 
@@ -2857,6 +2966,8 @@ public:
   emitOMPDistributeSimdDirective(const OMPDistributeSimdDirective &s);
   mlir::LogicalResult emitOMPTargetParallelGenericLoopDirective(
       const OMPTargetParallelGenericLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetGenericLoopDirective(const OMPTargetGenericLoopDirective &s);
   mlir::LogicalResult emitOMPTargetParallelForSimdDirective(
       const OMPTargetParallelForSimdDirective &s);
   mlir::LogicalResult

@@ -17,6 +17,7 @@
 
 #include <ctime>
 #include <memory>
+#include <optional>
 #include <sys/types.h>
 #include <system_error>
 
@@ -72,6 +73,13 @@ public:
   /// Updates the timestamp denoting the last time inputs of the module file
   /// were validated.
   virtual void updateModuleTimestamp(StringRef ModuleFilename) = 0;
+
+  /// Whether the build system reported that \p Directory changed before the
+  /// build session started, or std::nullopt if this cache can't tell and the
+  /// file system has to be checked instead.
+  virtual std::optional<bool> isDirectoryInvalidated(StringRef Directory) {
+    return std::nullopt;
+  }
 
   /// Prune module files that haven't been accessed in a long time.
   virtual void maybePrune(StringRef Path, time_t PruneInterval,

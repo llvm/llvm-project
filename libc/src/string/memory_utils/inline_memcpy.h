@@ -44,7 +44,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-[[gnu::flatten]] LIBC_INLINE void
+LIBC_FLATTEN LIBC_INLINE void
 inline_memcpy(void *__restrict dst, const void *__restrict src, size_t count) {
   LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY(reinterpret_cast<Ptr>(dst),
                                       reinterpret_cast<CPtr>(src), count);

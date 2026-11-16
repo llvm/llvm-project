@@ -20,7 +20,9 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace llvm;
 
@@ -68,6 +70,15 @@ public:
     } else if (attribute.getName() == cir::CIRDialect::getSrcLocAttrName()) {
       if (mlir::failed(amendSrcLoc(instructions, attribute, moduleTranslation)))
         return mlir::failure();
+    } else if (attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName() ||
+               attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName() ||
+               attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName() ||
+               attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName()) {
+      amendAMDGPUAtomicMetadata(instructions, attribute, moduleTranslation);
     }
     return mlir::success();
   }
@@ -91,6 +102,44 @@ private:
     for (llvm::Instruction *inst : instructions)
       inst->setMetadata("srcloc", node);
     return mlir::success();
+  }
+
+  /// Attach the AMDGPU atomic metadata that lets the backend select a native
+  /// atomic instruction instead of expanding to a cmpxchg loop.
+  void amendAMDGPUAtomicMetadata(
+      llvm::ArrayRef<llvm::Instruction *> instructions,
+      mlir::NamedAttribute attribute,
+      mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    if (attribute.getName() ==
+        cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName()) {
+      llvm::MDBuilder mdHelper(moduleTranslation.getLLVMContext());
+      llvm::MDNode *asRange = mdHelper.createRange(
+          llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS),
+          llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
+      for (llvm::Instruction *inst : instructions)
+        inst->setMetadata(llvm::LLVMContext::MD_noalias_addrspace, asRange);
+      return;
+    }
+    llvm::MDNode *empty =
+        llvm::MDNode::get(moduleTranslation.getLLVMContext(), {});
+    // !atomic.ignore.denormal.mode is a fixed metadata kind so it has to be
+    // attached via its enum rather than by name.
+    if (attribute.getName() ==
+        cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName()) {
+      for (llvm::Instruction *inst : instructions)
+        inst->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
+                          empty);
+      return;
+    }
+    llvm::StringRef mdName;
+    if (attribute.getName() ==
+        cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName())
+      mdName = "amdgpu.no.fine.grained.memory";
+    else if (attribute.getName() ==
+             cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName())
+      mdName = "amdgpu.no.remote.memory";
+    for (llvm::Instruction *inst : instructions)
+      inst->setMetadata(mdName, empty);
   }
 
   mlir::LogicalResult amendRISCVNontemporalDomain(

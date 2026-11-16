@@ -13,6 +13,23 @@ public:
 
   constexpr NullableValue(bsl::nullopt_t) noexcept;
 
+  /// Mock of `bdlb::NullableValue::EnableType`.
+  struct EnableType {};
+
+  template <typename OTHER>
+  using IfConstructsFrom = typename bsl::enable_if<
+      BloombergLP::bslstl::Optional_ConstructsFromType<T, OTHER>::value &&
+          BloombergLP::bslstl::Optional_IsNotDerivedFromOptional<T,
+                                                                 OTHER>::value,
+      EnableType>::type;
+
+  template <typename OTHER>
+  NullableValue(OTHER &&value, IfConstructsFrom<OTHER> = EnableType());
+
+  template <typename OTHER>
+  NullableValue(OTHER &&value, const bsl::allocator &allocator,
+                IfConstructsFrom<OTHER> = EnableType());
+
   NullableValue(const NullableValue &) = default;
 
   NullableValue(NullableValue &&) = default;

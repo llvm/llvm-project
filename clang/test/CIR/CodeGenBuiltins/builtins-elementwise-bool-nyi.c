@@ -1,6 +1,4 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports vector types.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering %s -verify -emit-cir -o -
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir %s -verify -emit-cir -o -
 
 typedef _Bool vbool4 __attribute__((ext_vector_type(4)));
 

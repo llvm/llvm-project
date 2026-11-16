@@ -12,7 +12,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/Module.h"
 
 using namespace llvm;
 

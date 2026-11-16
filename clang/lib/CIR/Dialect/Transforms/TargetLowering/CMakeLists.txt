@@ -11,6 +11,7 @@ add_clang_library(MLIRCIRTargetLowering
 
   DEPENDS
   clangBasic
+  mlir-headers
 
   LINK_COMPONENTS
   TargetParser

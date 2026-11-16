@@ -1,10 +1,10 @@
-; RUN: llc -O0 -dwarf-version=5 -debugger-tune=lldb -filetype=obj < %s \
+; RUN: sed 's/TUNE_PLACEHOLDER/lldb/' %s | llc -O0 -dwarf-version=5 -filetype=obj \
 ; RUN:  | llvm-dwarfdump - | FileCheck --implicit-check-not=DW_OP_entry_value %s
-; RUN: llc -O0 -dwarf-version=5 -debugger-tune=gdb -filetype=obj < %s \
+; RUN: sed 's/TUNE_PLACEHOLDER/gdb/' %s | llc -O0 -dwarf-version=5 -filetype=obj \
 ; RUN:  | llvm-dwarfdump - | FileCheck --implicit-check-not=DW_OP_entry_value %s
-; RUN: llc -force-instr-ref-livedebugvalues=1 -O0 -dwarf-version=5 -debugger-tune=lldb -filetype=obj < %s \
+; RUN: sed 's/TUNE_PLACEHOLDER/lldb/' %s | llc -force-instr-ref-livedebugvalues=1 -O0 -dwarf-version=5 -filetype=obj \
 ; RUN:  | llvm-dwarfdump - | FileCheck --implicit-check-not=DW_OP_entry_value %s
-; RUN: llc -force-instr-ref-livedebugvalues=1 -O0 -dwarf-version=5 -debugger-tune=gdb -filetype=obj < %s \
+; RUN: sed 's/TUNE_PLACEHOLDER/gdb/' %s | llc -force-instr-ref-livedebugvalues=1 -O0 -dwarf-version=5 -filetype=obj \
 ; RUN:  | llvm-dwarfdump - | FileCheck --implicit-check-not=DW_OP_entry_value %s
 
 ; The call-site-params are created iff corresponding DISubprogram contains
@@ -67,7 +67,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare dso_local void @fn2(i32)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
+!llvm.module.flags = !{!3, !4, !5, !20}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -90,3 +90,4 @@ declare dso_local void @fn2(i32)
 !17 = !DILocation(line: 7, column: 7, scope: !18)
 !18 = distinct !DILexicalBlock(scope: !7, file: !1, line: 7, column: 7)
 !19 = !DILocalVariable(name: "a", scope: !7, file: !1, line: 11, type: !10)
+!20 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}

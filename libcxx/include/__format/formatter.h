@@ -45,7 +45,7 @@ template <class _Tp>
 constexpr bool enable_nonlocking_formatter_optimization = false;
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr void __set_debug_format(_Tp& __formatter) {
+constexpr void __set_debug_format(_Tp& __formatter) {
   if constexpr (requires { __formatter.set_debug_format(); })
     __formatter.set_debug_format();
 }
