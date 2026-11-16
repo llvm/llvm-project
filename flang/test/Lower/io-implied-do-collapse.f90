@@ -78,9 +78,17 @@ end subroutine
 subroutine read_whole(a, n)
   integer :: n
   real :: a(n)
-  ! CHECK: %[[SEC:.*]] = hlfir.designate %{{.*}} (%{{.*}}:%{{.*}}:%{{.*}})  shape %{{.*}} : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+  ! CHECK: fir.call @_FortranAioBeginUnformattedInput
+  ! CHECK: %[[LB:.*]] = fir.convert %{{.*}} : (i64) -> index
+  ! CHECK: %[[UB:.*]] = fir.convert %{{.*}} : (i64) -> index
+  ! CHECK: fir.if
+  ! CHECK:   %[[UB8:.*]] = fir.convert %[[UB]] : (index) -> i64
+  ! CHECK:   %[[SUB:.*]] = fir.convert %[[UB8]] : (i64) -> index
+  ! CHECK: %[[SEC:.*]] = hlfir.designate %{{.*}} (%{{.*}}:%[[SUB]]:%{{.*}})  shape %{{.*}} : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
   ! CHECK: %[[BOX:.*]] = fir.convert %[[SEC]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
   ! CHECK: fir.call @_FortranAioInputDescriptor(%{{.*}}, %[[BOX]])
+  ! CHECK: }
+  ! CHECK: arith.addi %[[LB]], %{{.*}} : index
   ! CHECK-NOT: fir.call @_FortranAioInputReal
   ! CHECK-NOT: fir.do_loop
   read(10) (a(i), i=1,n)
@@ -210,18 +218,39 @@ subroutine write_bounds_once(a, n)
   use simple_mod
   integer :: n
   real :: a(n)
-  ! CHECK-COUNT-3: fir.call @_QMsimple_modPsimple_bound(
+  ! CHECK: fir.call @_FortranAioBeginUnformattedOutput
+  ! CHECK: fir.call @_QMsimple_modPsimple_bound(
+  ! CHECK: %[[LB:.*]] = fir.convert %{{.*}} : (i64) -> index
+  ! CHECK: fir.call @_QMsimple_modPsimple_bound(
+  ! CHECK: %[[UB:.*]] = fir.convert %{{.*}} : (i64) -> index
+  ! CHECK: fir.call @_QMsimple_modPsimple_bound(
+  ! CHECK: %[[ST:.*]] = fir.convert %{{.*}} : (i64) -> index
   ! CHECK-NOT: fir.call @_QMsimple_modPsimple_bound(
-  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  ! CHECK: %[[TRIP:.*]] = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
+  ! CHECK: fir.if
+  ! CHECK-NOT: fir.call @_QMsimple_modPsimple_bound(
+  ! CHECK:   %[[LB8:.*]] = fir.convert %[[LB]] : (index) -> i64
+  ! CHECK:   %[[UB8:.*]] = fir.convert %[[UB]] : (index) -> i64
+  ! CHECK:   %[[SLB:.*]] = fir.convert %[[LB8]] : (i64) -> index
+  ! CHECK:   %[[SUB:.*]] = fir.convert %[[UB8]] : (i64) -> index
+  ! CHECK:   %[[ST8:.*]] = fir.convert %[[ST]] : (index) -> i64
+  ! CHECK:   %[[SST:.*]] = fir.convert %[[ST8]] : (i64) -> index
+  ! CHECK:   hlfir.designate %{{.*}} (%[[SLB]]:%[[SUB]]:%[[SST]])
+  ! CHECK:   fir.call @_FortranAioOutputDescriptor
+  ! CHECK: }
+  ! CHECK: %[[TS:.*]] = arith.muli %[[TRIP]], %[[ST]] : index
+  ! CHECK: arith.addi %[[LB]], %[[TS]] : index
   ! CHECK-NOT: fir.call @_QMsimple_modPsimple_bound(
   ! CHECK: fir.call @_FortranAioEndIoStatement
   write(10) (a(i), i=simple_bound(1),simple_bound(n),simple_bound(2))
 end subroutine
 
-! An integer(8) bound needs no conversion, so it can be the very variable that a
-! retained subscript uses as a variable (ALLOCATED, ASSOCIATED, LOC, or a
-! by-reference actual argument). Only the section's triplet takes the bound's
-! lowered value; every other reference keeps the variable itself.
+! Defensive tests: each non-constant bound reaches the section's triplet only
+! through a placeholder binding, so a retained subscript that uses the bound's
+! variable as a variable (ALLOCATED, ASSOCIATED, LOC, or a by-reference actual
+! argument) keeps referencing the variable itself. An integer(8) bound needs no
+! conversion, which is what would make a substitution of its lowered value
+! possible if the section were built from the lowered bounds directly.
 ! CHECK-LABEL: func @_QPwrite_bound_var_allocated(
 subroutine write_bound_var_allocated(a, al, n)
   integer(8), allocatable :: al

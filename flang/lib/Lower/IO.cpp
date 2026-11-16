@@ -699,9 +699,8 @@ struct NonSimpleCallFinder
 };
 } // namespace
 
-// A bound or retained subscript is evaluated once for the collapsed section
-// rather than once per source-loop iteration, so it must not depend on the loop
-// variable, hide a non-SIMPLE call that could read it, or read a volatile.
+// A retained subscript is evaluated once rather than per iteration, so it must
+// not reference the loop variable, a volatile, or a non-SIMPLE function.
 template <typename A>
 static bool
 ioExprUnsafeForSingleEvaluation(const A &expr,
@@ -798,7 +797,8 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
   if (!lowerExpr || !upperExpr || (control.Step() && !stepExpr))
     return std::nullopt;
 
-  // Bounds are lowered once, like the source loop; this check is conservative.
+  // Not needed for correctness, as the source loop also evaluates bounds once
+  // (F2023 11.1.7.4.1); kept conservatively to limit which loops collapse.
   for (const Fortran::lower::SomeExpr *bound : {lowerExpr, upperExpr, stepExpr})
     if (bound && ioExprUnsafeForSingleEvaluation(*bound, *loopSym))
       return std::nullopt;
