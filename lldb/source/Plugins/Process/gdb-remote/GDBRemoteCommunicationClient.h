@@ -97,8 +97,9 @@ public:
   ///     A list of program arguments. The first entry is the program being run.
   ///
   /// \returns
-  ///     The server's launch response. For vRun this can be the process's
-  ///     initial stop reply rather than an OK packet.
+  ///     The server's initial stop reply if "vRun" was used, or "OK" from
+  ///     "qLaunchSuccess" if the "A" packet was used. Returns an llvm::Error if
+  ///     launching fails with either packet.
   llvm::Expected<StringExtractorGDBRemote> LaunchProcess(const Args &args);
 
   /// Sends a "QEnvironment:NAME=VALUE" packet that will build up the

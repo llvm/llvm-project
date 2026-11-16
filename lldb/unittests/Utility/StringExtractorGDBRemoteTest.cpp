@@ -202,7 +202,7 @@ TEST(StringExtractorGDBRemoteTest, IsStopReply) {
   EXPECT_TRUE(StringExtractorGDBRemote("O6869").IsStopReply(
       StringExtractorGDBRemote::Output));
   EXPECT_TRUE(StringExtractorGDBRemote("N").IsStopReply(
-      StringExtractorGDBRemote::NoResumed));
+      StringExtractorGDBRemote::NoResumedThreads));
   EXPECT_TRUE(StringExtractorGDBRemote("F0").IsStopReply(
       StringExtractorGDBRemote::Syscall));
   EXPECT_FALSE(StringExtractorGDBRemote("T05").IsStopReply(
@@ -213,4 +213,18 @@ TEST(StringExtractorGDBRemoteTest, IsStopReply) {
   EXPECT_FALSE(StringExtractorGDBRemote("E01").IsStopReply());
   EXPECT_FALSE(StringExtractorGDBRemote("Qfoo").IsStopReply());
   EXPECT_FALSE(StringExtractorGDBRemote("").IsStopReply());
+}
+
+TEST(StringExtractorGDBRemoteTest, IsValidStopReply) {
+  for (const char *packet : {"T05", "S05", "W00", "w00", "X09"}) {
+    SCOPED_TRACE(packet);
+    EXPECT_TRUE(StringExtractorGDBRemote(packet).IsStopReply(
+        StringExtractorGDBRemote::ValidStop));
+  }
+
+  for (const char *packet : {"O6869", "N", "F0", "OK", "E01", "Qfoo", ""}) {
+    SCOPED_TRACE(packet);
+    EXPECT_FALSE(StringExtractorGDBRemote(packet).IsStopReply(
+        StringExtractorGDBRemote::ValidStop));
+  }
 }

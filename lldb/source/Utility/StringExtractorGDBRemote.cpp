@@ -513,7 +513,7 @@ bool StringExtractorGDBRemote::IsStopReply(uint32_t mask) const {
     return true;
   if (mask & Output && first_char == 'O')
     return true;
-  if (mask & NoResumed && first_char == 'N')
+  if (mask & NoResumedThreads && first_char == 'N')
     return true;
   if (mask & Syscall && first_char == 'F')
     return true;

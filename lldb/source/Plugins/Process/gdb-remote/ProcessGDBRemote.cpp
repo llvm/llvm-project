@@ -934,7 +934,7 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       return error;
     }
 
-    if (response.IsStopReply(StringExtractorGDBRemote::Signal) ||
+    if (response.IsStopReply(StringExtractorGDBRemote::ValidStop) ||
         m_gdb_comm.GetStopReply(response)) {
       SetLastStopPacket(response);
 
@@ -948,7 +948,11 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
           GetTarget().MergeArchitecture(host_arch);
       }
 
-      SetPrivateState(SetThreadStopInfo(response));
+      StateType state = SetThreadStopInfo(response);
+      if (state == eStateExited)
+        SetExitStatusFromStopReply(response);
+      else
+        SetPrivateState(state);
 
       if (!disable_stdio) {
         if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd) {
@@ -2899,6 +2903,24 @@ void ProcessGDBRemote::SetLastStopPacket(
   m_last_stop_packet = response;
 }
 
+void ProcessGDBRemote::SetExitStatusFromStopReply(
+    StringExtractorGDBRemote &response) {
+  response.SetFilePos(1);
+  int exit_status = response.GetHexU8();
+  std::string desc_string;
+  if (response.GetBytesLeft() > 0 && response.GetChar('-') == ';') {
+    llvm::StringRef desc_str;
+    llvm::StringRef desc_token;
+    while (response.GetNameColonValue(desc_token, desc_str)) {
+      if (desc_token != "description")
+        continue;
+      StringExtractor extractor(desc_str);
+      extractor.GetHexByteString(desc_string);
+    }
+  }
+  SetExitStatus(exit_status, desc_string);
+}
+
 void ProcessGDBRemote::SetUnixSignals(const UnixSignalsSP &signals_sp) {
   Process::SetUnixSignals(std::make_shared<GDBRemoteSignals>(signals_sp));
 }
@@ -4246,21 +4268,7 @@ thread_result_t ProcessGDBRemote::AsyncThread() {
             case eStateExited: {
               SetLastStopPacket(response);
               ClearThreadIDList();
-              response.SetFilePos(1);
-
-              int exit_status = response.GetHexU8();
-              std::string desc_string;
-              if (response.GetBytesLeft() > 0 && response.GetChar('-') == ';') {
-                llvm::StringRef desc_str;
-                llvm::StringRef desc_token;
-                while (response.GetNameColonValue(desc_token, desc_str)) {
-                  if (desc_token != "description")
-                    continue;
-                  StringExtractor extractor(desc_str);
-                  extractor.GetHexByteString(desc_string);
-                }
-              }
-              SetExitStatus(exit_status, desc_string.c_str());
+              SetExitStatusFromStopReply(response);
               done = true;
               break;
             }
