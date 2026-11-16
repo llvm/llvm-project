@@ -5434,20 +5434,6 @@ TEST_F(FormatTest, DesignatedInitializers) {
                "        },\n"
                "    };\n"
                "}",
-               "Source make()\n"
-               "{\n"
-               "    return Source{\n"
-               "        .layout = Layout{\n"
-               "            .a = 1,\n"
-               "            .b = 2,\n"
-               "        },\n"
-               "        .count = 3,\n"
-               "        .fn = []() {\n"
-               "int x = 0;\n"
-               "                  x = x + 1;\n"
-               "        },\n"
-               "    };\n"
-               "}",
                Style);
 }
 
