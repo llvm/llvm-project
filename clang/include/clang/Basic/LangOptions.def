@@ -245,6 +245,7 @@ LANGOPT(OpenMPForceUSM     , 1, 0, NotCompatible, "Enable OpenMP unified shared 
 LANGOPT(OpenMPTargetAtomicReduction , 1, 0, NotCompatible, "Use atomic operations for OpenMP GPU cross-team reductions where supported.")
 LANGOPT(OpenMPMetadirectiveRuntimeSelection , 1, 0, NotCompatible, "Enable runtime selection of metadirective variants with non-constant user conditions.")
 LANGOPT(NoGPULib  , 1, 0, NotCompatible, "Indicate a build without the standard GPU libraries.")
+LANGOPT(GPULibc   , 1, 0, NotCompatible, "Use the LLVM C library for GPUs.")
 
 LANGOPT(HLSL, 1, 0, NotCompatible, "HLSL")
 ENUM_LANGOPT(HLSLVersion, HLSLLangStd, 16, HLSL_Unset, NotCompatible, "HLSL Version")
