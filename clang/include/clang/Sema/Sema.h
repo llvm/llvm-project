@@ -14043,14 +14043,6 @@ public:
                   const MultiLevelTemplateArgumentList &TemplateArgs,
                   SourceLocation Loc, DeclarationName Entity);
 
-  /// A form of SubstType intended specifically for instantiating the
-  /// type of a FunctionDecl.  Its purpose is solely to force the
-  /// instantiation of default-argument expressions and to avoid
-  /// instantiating an exception-specification.
-  TypeSourceInfo *SubstFunctionDeclType(
-      TypeSourceInfo *T, const MultiLevelTemplateArgumentList &TemplateArgs,
-      SourceLocation Loc, DeclarationName Entity, CXXRecordDecl *ThisContext,
-      Qualifiers ThisTypeQuals, bool EvaluateConstraints = true);
   void SubstExceptionSpec(FunctionDecl *New, const FunctionProtoType *Proto,
                           const MultiLevelTemplateArgumentList &Args);
   bool SubstExceptionSpec(SourceLocation Loc,
@@ -14069,6 +14061,20 @@ public:
         : TmplAttr(A), Scope(S), NewDecl(D) {}
   };
   typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
+
+  /// A form of SubstType intended specifically for instantiating the
+  /// type of a FunctionDecl.  Its purpose is solely to force the
+  /// instantiation of default-argument expressions and to avoid
+  /// instantiating an exception-specification.
+  ///
+  /// If \p ParamAttrs is not null, the late-parsed attributes of the parameters
+  /// of \p Fn are deferred to it, to be instantiated later.
+  TypeSourceInfo *SubstFunctionDeclType(
+      TypeSourceInfo *T, const MultiLevelTemplateArgumentList &TemplateArgs,
+      SourceLocation Loc, DeclarationName Entity, CXXRecordDecl *ThisContext,
+      Qualifiers ThisTypeQuals, bool EvaluateConstraints = true,
+      const FunctionDecl *Fn = nullptr,
+      LateInstantiatedAttrVec *ParamAttrs = nullptr);
 
   /// Substitute into a function parameter. If \p LateAttrs is given, its
   /// late-parsed attributes are deferred there, since they may name a

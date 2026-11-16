@@ -1338,6 +1338,12 @@ namespace {
     // populated with the late-parsed attributes, and the scope that maps them.
     Sema::LateInstantiatedAttrVec *LateParmAttrs = nullptr;
     LocalInstantiationScope *LateParmAttrScope = nullptr;
+    // If set, the function whose type is substituted, and the late-parsed
+    // attributes of its parameters, deferred until it is declared with scopes
+    // that extend the one the substitution started in.
+    const FunctionDecl *FunctionOfParmAttrs = nullptr;
+    Sema::LateInstantiatedAttrVec *FunctionParmAttrs = nullptr;
+    LocalInstantiationScope *FunctionParmAttrScope = nullptr;
 
     bool instantiateMissingDeclsToScopeForConcepts(Decl *D);
 
@@ -1354,6 +1360,13 @@ namespace {
               SemaRef.isSFINAEContext()) &&
              "Cannot perform an instantiation without some context on the "
              "instantiation stack");
+    }
+
+    void deferFunctionParmAttrs(const FunctionDecl *Fn,
+                                Sema::LateInstantiatedAttrVec *Attrs) {
+      FunctionOfParmAttrs = Fn;
+      FunctionParmAttrs = Attrs;
+      FunctionParmAttrScope = SemaRef.CurrentInstantiationScope;
     }
 
     void setEvaluateConstraints(bool B) {
@@ -2572,18 +2585,19 @@ bool TemplateInstantiator::TransformFunctionTypeParams(
       }));
   if (Failed)
     return true;
-  // An attribute on a parameter of a non-static member function names a member
-  // through 'this', unqualified as in the parser, which has not yet seen the
-  // function's cv-qualifiers; see Parser::ParseAttributeArgsCommon.
-  CXXRecordDecl *ThisContext = nullptr;
+  // The parser parses the late-parsed attributes of a function's parameters in
+  // the function's scope, once it is declared; see
+  // Parser::ParseFunctionDeclarator. Defer them likewise, if asked to.
   const auto *It = llvm::find_if(Params, [](ParmVarDecl *P) { return P; });
-  if (!LateAttrs.empty() && It != Params.end())
-    if (auto *MD = dyn_cast<CXXMethodDecl>((*It)->getDeclContext());
-        MD && MD->isImplicitObjectMemberFunction() &&
-        !MD->getParent()->isLambda())
-      ThisContext = dyn_cast_or_null<CXXRecordDecl>(
-          SemaRef.FindInstantiatedDecl(Loc, MD->getParent(), TemplateArgs));
-  Sema::CXXThisScopeRAII ThisScope(SemaRef, ThisContext, Qualifiers());
+  if (FunctionParmAttrs && It != Params.end() &&
+      (*It)->getDeclContext() == FunctionOfParmAttrs) {
+    // The prototype's scope ends with its substitution, so keep a copy.
+    for (const Sema::LateInstantiatedAttribute &LA : LateAttrs)
+      FunctionParmAttrs->push_back(Sema::LateInstantiatedAttribute(
+          LA.TmplAttr, LA.Scope->cloneScopes(FunctionParmAttrScope),
+          LA.NewDecl));
+    return false;
+  }
   SemaRef.InstantiateLateAttrs(TemplateArgs, LateAttrs, Scope);
   return false;
 }
@@ -3054,12 +3068,14 @@ static bool NeedsInstantiationAsFunctionType(TypeSourceInfo *T) {
 TypeSourceInfo *Sema::SubstFunctionDeclType(
     TypeSourceInfo *T, const MultiLevelTemplateArgumentList &Args,
     SourceLocation Loc, DeclarationName Entity, CXXRecordDecl *ThisContext,
-    Qualifiers ThisTypeQuals, bool EvaluateConstraints) {
+    Qualifiers ThisTypeQuals, bool EvaluateConstraints, const FunctionDecl *Fn,
+    LateInstantiatedAttrVec *ParamAttrs) {
   if (!NeedsInstantiationAsFunctionType(T))
     return T;
 
   TemplateInstantiator Instantiator(*this, Args, Loc, Entity);
   Instantiator.setEvaluateConstraints(EvaluateConstraints);
+  Instantiator.deferFunctionParmAttrs(Fn, ParamAttrs);
 
   TypeLocBuilder TLB;
 
