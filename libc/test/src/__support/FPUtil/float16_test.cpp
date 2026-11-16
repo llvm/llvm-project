@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/float16.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -72,6 +73,15 @@ TEST_F(LlvmLibcFloat16ConversionTest, FromInteger) {
     Float16 libc_f16{i};
     EXPECT_FP_EQ_ALL_ROUNDING(mpfr_f16, libc_f16);
   }
+}
+
+TEST_F(LlvmLibcFloat16ConversionTest, FromIntegerMinValue) {
+  EXPECT_FP_EQ(Float16(-32768.0f),
+               Float16(LIBC_NAMESPACE::cpp::numeric_limits<int16_t>::min()));
+  EXPECT_FP_EQ(neg_inf,
+               Float16(LIBC_NAMESPACE::cpp::numeric_limits<int32_t>::min()));
+  EXPECT_FP_EQ(neg_inf,
+               Float16(LIBC_NAMESPACE::cpp::numeric_limits<int64_t>::min()));
 }
 
 TEST_F(LlvmLibcFloat16ConversionTest, CompoundAssignmentOperators) {
