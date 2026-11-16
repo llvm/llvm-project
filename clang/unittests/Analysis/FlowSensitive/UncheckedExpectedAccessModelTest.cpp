@@ -63,9 +63,8 @@ protected:
   // - Given "// [[unsafe:error]]" annotations on a line, we expect a diagnostic
   //   for an unchecked error access on that line.
   void ExpectDiagnosticsFor(std::string SourceCode) {
-    // Run in C++17 and C++20 mode to cover differences in the AST between modes
-    // (e.g. C++20 can contain `CXXRewrittenBinaryOperator`).
-    for (const char *CxxMode : {"-std=c++17", "-std=c++20"})
+    // `tl::expected` is usable since C++17, and `std::expected` since C++23.
+    for (const char *CxxMode : {"-std=c++17", "-std=c++20", "-std=c++23"})
       ExpectDiagnosticsFor(SourceCode, CxxMode);
   }
 
@@ -165,6 +164,21 @@ TEST_P(UncheckedExpectedAccessTest, NonTrackedExpectedType) {
       e.value();
       e.error();
     }
+    }
+  )");
+}
+
+// Classes derived from an expected are deliberately not analyzed.
+TEST_P(UncheckedExpectedAccessTest, DerivedClassIsNotAnalyzed) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    struct Derived : $ns::expected<int, int> {};
+
+    void target(Derived d) {
+      d.value();
+      *d;
+      d.error();
     }
   )");
 }

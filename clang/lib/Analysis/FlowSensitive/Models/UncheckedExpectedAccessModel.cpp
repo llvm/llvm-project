@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file defines a dataflow analysis that detects unsafe accesses to the
-//  values of `std::expected` objects.
+//  values of `std::expected` and `tl::expected` objects.
 //
 //===----------------------------------------------------------------------===//
 
@@ -44,7 +44,8 @@ static llvm::StringRef getExpectedTypeName(const CXXRecordDecl &RD) {
                                                : "tl::expected";
 }
 
-// Classes derived from `std::expected` are deliberately not supported.
+// Classes derived from `std::expected` or `tl::expected` are deliberately not
+// supported.
 static bool isExpectedType(QualType Ty) {
   const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
   return RD != nullptr && isExpectedClass(*RD);
@@ -74,7 +75,8 @@ StorageLocation &locForHasValue(const RecordStorageLocation &ExpectedLoc) {
 
 /// Returns the symbolic value that represents the "has_value" property of the
 /// expected at `ExpectedLoc`. Returns null if `ExpectedLoc` is null or is not
-/// the location of a `std::expected` object (e.g. of a derived class object).
+/// the location of a `std::expected` or `tl::expected` object (e.g. of a
+/// derived class object).
 BoolValue *getHasValue(Environment &Env, RecordStorageLocation *ExpectedLoc) {
   if (ExpectedLoc == nullptr || !isExpectedType(ExpectedLoc->getType()))
     return nullptr;
