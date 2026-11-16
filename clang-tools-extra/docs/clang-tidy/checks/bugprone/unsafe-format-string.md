@@ -109,3 +109,6 @@ void test() {
   myscanf("%s", buffer); // warning
 }
 ```
+## References
+
+This check partially covers the SEI Cert Rule [Guarantee that storage for strings has sufficient space for character data and the null terminator](https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/characters-and-strings-str/str31-c/).
