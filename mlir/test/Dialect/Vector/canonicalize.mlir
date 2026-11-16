@@ -1899,6 +1899,35 @@ func.func @contractions(%a: vector<2x3xf32>, %b: vector<3x4xf32>, %c: vector<2x4
 
 // -----
 
+// The first input and the accumulator use the same zero value. Only the
+// accumulator is replaced.
+
+#contraction_accesses1 = [
+  affine_map<(i, j, k) -> (i, k)>,
+  affine_map<(i, j, k) -> (k, j)>,
+  affine_map<(i, j, k) -> (i, j)>
+]
+
+// CHECK-LABEL: func @contraction_zero_lhs_and_acc
+//  CHECK-SAME:   %[[B:[0-9a-zA-Z]+]]: vector<2x2xi8>
+//  CHECK-SAME:   %[[C:[0-9a-zA-Z]+]]: vector<2x2xi8>
+//       CHECK:   %[[ZERO:.*]] = arith.constant dense<0> : vector<2x2xi8>
+//   CHECK-NOT:   arith.addi
+//       CHECK:   %[[D:.*]] = vector.contract {{.*}} %[[ZERO]], %[[B]], %[[C]]
+//   CHECK-NOT:   arith.addi
+//       CHECK:   return %[[D]]
+func.func @contraction_zero_lhs_and_acc(%b: vector<2x2xi8>, %c: vector<2x2xi8>)
+  -> vector<2x2xi8>
+{
+  %zero = arith.constant dense<0>: vector<2x2xi8>
+  %0 = vector.contract {indexing_maps = #contraction_accesses1, iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+    %zero, %b, %zero : vector<2x2xi8>, vector<2x2xi8> into vector<2x2xi8>
+  %1 = arith.addi %0, %c: vector<2x2xi8>
+  return %1: vector<2x2xi8>
+}
+
+// -----
+
 // CHECK-LABEL: func @transfer_folding_1
 //  CHECK-SAME:   %[[T0:[0-9a-zA-Z]+]]: tensor<2x3x4xf32>
 //  CHECK-SAME:   %[[T1:[0-9a-zA-Z]+]]: tensor<2x3x4xf32>

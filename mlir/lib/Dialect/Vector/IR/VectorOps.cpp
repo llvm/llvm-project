@@ -1405,10 +1405,13 @@ struct CanonicalizeContractAdd : public OpRewritePattern<AddOpType> {
               contractionOp.getAcc().getDefiningOp())) {
         if (maybeZero.getValue() ==
             rewriter.getZeroAttr(contractionOp.getAcc().getType())) {
-          IRMapping bvm;
-          bvm.map(contractionOp.getAcc(), otherOperand);
+          // Replace only the accumulator. An input may use the same zero
+          // value.
           auto newContraction =
-              cast<vector::ContractionOp>(rewriter.clone(*contractionOp, bvm));
+              cast<vector::ContractionOp>(rewriter.clone(*contractionOp));
+          rewriter.modifyOpInPlace(newContraction, [&]() {
+            newContraction.getAccMutable().set(otherOperand);
+          });
           rewriter.replaceOp(addOp, newContraction.getResult());
           return newContraction;
         }
