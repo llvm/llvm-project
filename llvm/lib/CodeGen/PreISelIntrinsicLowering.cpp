@@ -348,7 +348,7 @@ bool PreISelIntrinsicLowering::shouldExpandBoundedMemSet(
   uint64_t MinStoreLen = uint64_t(1)
                          << std::min(Known.countMinTrailingZeros(), 63u);
   if (CR.getUnsignedMax().ult(MinStoreLen))
-    CR = ConstantRange(APInt::getZero(CR.getBitWidth()));
+    return false;
 
   OutRange = CR;
   OutKnown = Known;
@@ -362,9 +362,6 @@ bool PreISelIntrinsicLowering::tryExpandBoundedMemSet(
   if (!shouldExpandBoundedMemSet(MemSet, TTI, LenRange, LenKnown))
     return false;
 
-  if (LenRange.getUnsignedMax().isZero())
-    return false;
-
   expandBoundedMemSet(MemSet, LenRange.getUnsignedMin().getZExtValue(),
                       LenRange.getUnsignedMax().getZExtValue(), LenKnown);
   return true;
@@ -375,9 +372,6 @@ bool PreISelIntrinsicLowering::tryExpandBoundedMemSetPattern(
   ConstantRange CountRange(/*BitWidth=*/1, /*isFullSet=*/true);
   KnownBits CountKnown;
   if (!shouldExpandBoundedMemSet(MemSet, TTI, CountRange, CountKnown))
-    return false;
-
-  if (CountRange.getUnsignedMax().isZero())
     return false;
 
   expandBoundedMemSetPattern(MemSet, CountRange.getUnsignedMin().getZExtValue(),
