@@ -79,6 +79,7 @@ _add_capi_test_executable(mlir-capi-pdl-test
     MLIRCAPIIR
     MLIRCAPIRegisterEverything
     MLIRCAPIPDL
+    MLIRCAPITransforms
 )
 
 _add_capi_test_executable(mlir-capi-sparse-tensor-test

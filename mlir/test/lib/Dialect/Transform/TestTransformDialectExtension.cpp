@@ -976,7 +976,7 @@ public:
     auto verboseConstraint = [](PatternRewriter &rewriter, PDLResultList &,
                                 ArrayRef<PDLValue> pdlValues) {
       for (const PDLValue &pdlValue : pdlValues) {
-        if (Operation *op = pdlValue.dyn_cast<Operation *>()) {
+        if (Operation *op = dyn_cast_if_present<Operation *>(pdlValue)) {
           op->emitWarning() << "from PDL constraint";
         }
       }
