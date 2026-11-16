@@ -1009,88 +1009,66 @@ KnownBits KnownBits::usub_sat(const KnownBits &LHS, const KnownBits &RHS) {
   return computeForSatAddSub(/*Add*/ false, /*Signed*/ false, LHS, RHS);
 }
 
-static KnownBits computeForSatShl(bool Signed, const KnownBits &LHS,
-                                  const KnownBits &RHS) {
+KnownBits KnownBits::sshl_sat(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned BitWidth = LHS.getBitWidth();
   KnownBits Known(BitWidth);
   unsigned MinShiftAmount = RHS.getMinValue().getLimitedValue(BitWidth);
-  if (LHS.isUnknown()) {
-    if (MinShiftAmount == BitWidth)
-      // Always poison.
-      Known.setAllZero();
+  if (MinShiftAmount == BitWidth) {
+    // Always poison.
+    Known.setAllZero();
+    return Known;
+  }
+  if (LHS.isUnknown())
+    return Known;
+
+  if (MinShiftAmount >=
+      std::max(LHS.countMaxLeadingZeros(), LHS.countMaxLeadingOnes())) {
+    if (LHS.isNonNegative())
+      return KnownBits::makeConstant(APInt::getSignedMaxValue(BitWidth));
+    if (LHS.isNegative())
+      return KnownBits::makeConstant(APInt::getSignedMinValue(BitWidth));
     return Known;
   }
 
-  APInt MinLHS, MaxLHS;
-  if (Signed) {
-    MinLHS = LHS.getSignedMinValue();
-    MaxLHS = LHS.getSignedMaxValue();
-  }
-  auto ShiftByConst = [&](unsigned ShiftAmt) {
-    KnownBits Res(BitWidth);
-    Res.setAllConflict();
-    if (!Signed) {
-      if (ShiftAmt <= LHS.countMaxLeadingZeros()) {
-        KnownBits Shifted = LHS;
-        Shifted <<= ShiftAmt;
-        Shifted.Zero.setLowBits(ShiftAmt);
-        Res = Res.intersectWith(Shifted);
-      }
-      if (ShiftAmt > LHS.countMinLeadingZeros())
-        Res = Res.intersectWith(
-            KnownBits::makeConstant(APInt::getMaxValue(BitWidth)));
-      return Res;
-    }
-    if (ShiftAmt < LHS.countMaxLeadingZeros()) {
-      KnownBits Pos = LHS;
-      Pos <<= ShiftAmt;
-      Pos.Zero.setLowBits(ShiftAmt);
-      Pos.makeNonNegative();
-      Res = Res.intersectWith(Pos);
-    }
-    if (ShiftAmt < LHS.countMaxLeadingOnes()) {
-      KnownBits Neg = LHS;
-      Neg <<= ShiftAmt;
-      Neg.Zero.setLowBits(ShiftAmt);
-      Neg.makeNegative();
-      Res = Res.intersectWith(Neg);
-    }
-    if (MaxLHS.isNonNegative() && ShiftAmt >= MaxLHS.countl_zero())
-      Res = Res.intersectWith(
-          KnownBits::makeConstant(APInt::getSignedMaxValue(BitWidth)));
-    if (MinLHS.isNegative() && ShiftAmt >= MinLHS.countl_one())
-      Res = Res.intersectWith(
-          KnownBits::makeConstant(APInt::getSignedMinValue(BitWidth)));
-    return Res;
-  };
-
-  APInt MaxValue = RHS.getMaxValue();
-  unsigned MaxShiftAmount = getMaxShiftAmount(MaxValue, BitWidth);
-  unsigned ShiftAmtZeroMask = RHS.Zero.zextOrTrunc(32).getZExtValue();
-  unsigned ShiftAmtOneMask = RHS.One.zextOrTrunc(32).getZExtValue();
   Known.setAllConflict();
-  for (unsigned ShiftAmt = MinShiftAmount; ShiftAmt <= MaxShiftAmount;
-       ++ShiftAmt) {
-    if ((ShiftAmtZeroMask & ShiftAmt) != 0 ||
-        (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
-      continue;
-    Known = Known.intersectWith(ShiftByConst(ShiftAmt));
-    if (Known.isUnknown())
-      break;
-  }
+  unsigned MaxShiftAmount = getMaxShiftAmount(RHS.getMaxValue(), BitWidth);
+  APInt MaxLHS = LHS.getSignedMaxValue();
+  if (MaxLHS.isNonNegative() && MaxShiftAmount >= MaxLHS.countl_zero())
+    Known = KnownBits::makeConstant(APInt::getSignedMaxValue(BitWidth));
+  APInt MinLHS = LHS.getSignedMinValue();
+  if (MinLHS.isNegative() && MaxShiftAmount >= MinLHS.countl_one())
+    Known = Known.intersectWith(
+        KnownBits::makeConstant(APInt::getSignedMinValue(BitWidth)));
+  if (Known.isUnknown())
+    return Known;
 
-  // All shift amounts may result in poison.
-  if (Known.hasConflict())
-    Known.setAllZero();
-  return Known;
-}
-
-KnownBits KnownBits::sshl_sat(const KnownBits &LHS, const KnownBits &RHS) {
-  return computeForSatShl(/*Signed=*/true, LHS, RHS);
+  return Known.intersectWith(
+      KnownBits::shl(LHS, RHS, /*NUW=*/false, /*NSW=*/true));
 }
 
 KnownBits KnownBits::ushl_sat(const KnownBits &LHS, const KnownBits &RHS) {
-  return computeForSatShl(/*Signed=*/false, LHS, RHS);
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits Known(BitWidth);
+  unsigned MinShiftAmount = RHS.getMinValue().getLimitedValue(BitWidth);
+  if (MinShiftAmount == BitWidth) {
+    // Always poison.
+    Known.setAllZero();
+    return Known;
+  }
+  if (LHS.isUnknown())
+    return Known;
+
+  if (MinShiftAmount > LHS.countMaxLeadingZeros()) {
+    Known.setAllOnes();
+    return Known;
+  }
+
+  Known.setAllConflict();
+  unsigned MaxShiftAmount = getMaxShiftAmount(RHS.getMaxValue(), BitWidth);
+  if (MaxShiftAmount > LHS.countMinLeadingZeros())
+    Known.setAllOnes();
+
+  return Known.intersectWith(KnownBits::shl(LHS, RHS, /*NUW=*/true));
 }
 
 static KnownBits avgComputeU(KnownBits LHS, KnownBits RHS, bool IsCeil) {
