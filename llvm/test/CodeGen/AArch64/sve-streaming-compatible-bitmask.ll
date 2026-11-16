@@ -3,7 +3,7 @@
 ; The bitmask includes all 16 lanes. A byte reduction drops bits 8 through 15.
 define i16 @pack_mask(ptr %address) #0 {
 ; CHECK-LABEL: pack_mask:
-; CHECK: uaddv {{d[0-9]+}}, {{p[0-9]+}}, {{z[0-9]+}}.h
+; CHECK-COUNT-2: uaddv {{d[0-9]+}}, {{p[0-9]+}}, {{z[0-9]+}}.b
   %v = load <16 x i8>, ptr %address, align 1
   %mask = icmp slt <16 x i8> %v, zeroinitializer
   %packed = bitcast <16 x i1> %mask to i16

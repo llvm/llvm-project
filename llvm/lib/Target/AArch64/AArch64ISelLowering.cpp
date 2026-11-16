@@ -27843,23 +27843,18 @@ static SDValue vectorToScalarBitmask(SDValue ComparisonResult,
   }
 
   bool HasNEON = DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable();
-  // The generic reduction needs to represent each lane's distinct bit.
-  // Without NEON's byte-packing path, use i16 lanes for the 16-bit mask.
-  if (!HasNEON && VecVT == MVT::v16i8)
-    VecVT = MVT::v16i16;
 
   // Ensure that all elements' bits are either 0s or 1s.
   ComparisonResult = DAG.getSExtOrTrunc(ComparisonResult, DL, VecVT);
 
   bool IsLE = DAG.getDataLayout().isLittleEndian();
   SmallVector<SDValue, 16> MaskConstants;
-  if (HasNEON && VecVT == MVT::v16i8) {
+  if (VecVT == MVT::v16i8) {
     // v16i8 is a special case: we have 16 entries but only 8 positional bits
     // per i16 of bitmask. ANDing with a mask whose two 8-byte halves both
     // hold the powers-of-two 1,2,...,128 leaves at most one bit set per byte
     // lane within each 8-byte group, so pairwise addition equals OR and
-    // cannot carry. Three levels of ADDP then losslessly pack the 16
-    // per-lane bits into the low i16 of the result vector.
+    // cannot carry.
     for (unsigned Half = 0; Half < 2; ++Half) {
       for (unsigned I = 0; I < 8; ++I) {
         // On big-endian targets, the lane order in sub-byte vector elements
@@ -27872,6 +27867,24 @@ static SDValue vectorToScalarBitmask(SDValue ComparisonResult,
     SDValue RepresentativeBits =
         DAG.getNode(ISD::AND, DL, VecVT, ComparisonResult, Mask);
 
+    if (!HasNEON) {
+      // Reduce each group of eight byte lanes before combining the two masks.
+      // Widening the entire vector would require a 256-bit intermediate.
+      auto ReduceHalf = [&](unsigned Index) {
+        SDValue Half = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8,
+                                   RepresentativeBits,
+                                   DAG.getVectorIdxConstant(Index, DL));
+        SDValue Byte = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i8, Half);
+        return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Byte);
+      };
+      SDValue Low = ReduceHalf(IsLE ? 0 : 8);
+      SDValue High = ReduceHalf(IsLE ? 8 : 0);
+      High = DAG.getNode(ISD::SHL, DL, MVT::i16, High,
+                         DAG.getConstant(8, DL, MVT::i32));
+      return DAG.getNode(ISD::OR, DL, MVT::i16, Low, High);
+    }
+
+    // Three levels of ADDP pack the 16 bits into the low i16 on NEON.
     SDValue V = RepresentativeBits;
     V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
     V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
