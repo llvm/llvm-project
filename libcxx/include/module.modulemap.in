@@ -1877,6 +1877,10 @@ module std {
       export *
     }
     module put_character_sequence { header "__ostream/put_character_sequence.h" }
+    module syncbuf_base {
+      header "__ostream/syncbuf_base.h"
+      export std.streambuf // base class
+    }
 
     header "ostream"
     export *

@@ -20,7 +20,7 @@
 "`P0122R7 <https://wg21.link/P0122R7>`__","<span>","2018-03 (Jacksonville)","|Complete|","7","`#104017 <https://github.com/llvm/llvm-project/issues/104017>`__",""
 "`P0355R7 <https://wg21.link/P0355R7>`__","Extending chrono to Calendars and Time Zones","2018-03 (Jacksonville)","|Partial|","","`#99982 <https://github.com/llvm/llvm-project/issues/99982>`__","See the `Github issue <https://github.com/llvm/llvm-project/issues/99982>`__ for detailed status"
 "`P0551R3 <https://wg21.link/P0551R3>`__","Thou Shalt Not Specialize ``std``\  Function Templates!","2018-03 (Jacksonville)","|Complete|","11","`#104018 <https://github.com/llvm/llvm-project/issues/104018>`__",""
-"`P0753R2 <https://wg21.link/P0753R2>`__","Manipulators for C++ Synchronized Buffered Ostream","2018-03 (Jacksonville)","","","`#99983 <https://github.com/llvm/llvm-project/issues/99983>`__",""
+"`P0753R2 <https://wg21.link/P0753R2>`__","Manipulators for C++ Synchronized Buffered Ostream","2018-03 (Jacksonville)","|Complete|","24","`#99983 <https://github.com/llvm/llvm-project/issues/99983>`__",""
 "`P0754R2 <https://wg21.link/P0754R2>`__","<version>","2018-03 (Jacksonville)","|Complete|","7","`#104021 <https://github.com/llvm/llvm-project/issues/104021>`__",""
 "`P0809R0 <https://wg21.link/P0809R0>`__","Comparing Unordered Containers","2018-03 (Jacksonville)","|Nothing To Do|","","`#104022 <https://github.com/llvm/llvm-project/issues/104022>`__",""
 "`P0858R0 <https://wg21.link/P0858R0>`__","Constexpr iterator requirements","2018-03 (Jacksonville)","|Complete|","12","`#104024 <https://github.com/llvm/llvm-project/issues/104024>`__",""
