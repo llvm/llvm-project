@@ -5507,10 +5507,9 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32, ptr addr
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v2, s4, s2, v24
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GFX11-NEXT:    s_clause 0x8
 ; GFX11-NEXT:    global_load_b128 v[28:31], v24, s[2:3] offset:112

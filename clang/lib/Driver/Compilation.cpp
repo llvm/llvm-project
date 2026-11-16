@@ -39,10 +39,9 @@ using namespace llvm::opt;
 
 Compilation::Compilation(const Driver &D, const ToolChain &_DefaultToolChain,
                          InputArgList *_Args, DerivedArgList *_TranslatedArgs,
-                         bool ContainsError, bool CC1MainIsReusable)
+                         bool ContainsError)
     : TheDriver(D), DefaultToolChain(_DefaultToolChain), Args(_Args),
-      TranslatedArgs(_TranslatedArgs), CC1MainIsReusable(CC1MainIsReusable),
-      ContainsError(ContainsError) {
+      TranslatedArgs(_TranslatedArgs), ContainsError(ContainsError) {
   // The offloading host toolchain is the default toolchain.
   OrderedOffloadingToolchains.insert(
       std::make_pair(Action::OFK_Host, &DefaultToolChain));
@@ -407,8 +406,6 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
       if (TheDriver.IsCLMode())
         return;
     }
-    if (Job.InProcess && !CC1Command::canRunAgain())
-      return;
   }
 }
 

@@ -106,6 +106,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getRuntimeFuncAttrName() { return "runtime_func"; }
     static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
     static llvm::StringRef getUniformWorkGroupSizeAttrName() { return "uniform_work_group_size"; }
+    static llvm::StringRef getMaxWorkGroupSizeAttrName() { return "cir.max_work_group_size"; }
     static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
     static llvm::StringRef getArgAttrsAttrName() { return "arg_attrs"; }
     static llvm::StringRef getRecordLayoutsAttrName() { return "cir.record_layouts"; }
@@ -147,7 +148,6 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getAMDGPURawAtomicAttrName() { return "cir.amdgpu_raw_atomic"; }
     static llvm::StringRef getAMDGPUNoPrivateAddrSpaceAttrName() { return "cir.amdgpu_no_private_addrspace"; }
     static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
-    static llvm::StringRef getMaxWorkGroupSizeAttrName() { return "cir.max_work_group_size"; }
     static llvm::StringRef getOpenCLVersionAttrName() { return "cir.cl.version"; }
     static llvm::StringRef getOpenCLCXXVersionAttrName() { return "cir.cl.cxx.version"; }
     static llvm::StringRef getOpenCLSPIRVersionAttrName() { return "cir.cl.spir.version"; }

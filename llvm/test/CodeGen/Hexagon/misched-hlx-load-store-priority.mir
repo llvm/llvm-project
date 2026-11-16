@@ -1,0 +1,48 @@
+# RUN: llc -march=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN:   -run-pass=machine-scheduler -verify-machineinstrs %s -o - \
+# RUN:   | FileCheck %s
+
+# Keep the uses of an HLX load adjacent to the load, and keep an HLX store
+# adjacent to the instruction defining its stored value.
+
+# CHECK-LABEL: name: hlx_load_store_priority
+# CHECK: %[[LOAD:[0-9]+]]:hlxlr = LX_L16b_pseudo
+# CHECK-NEXT: %[[ABS:[0-9]+]]:hlxlr = LX_abs_uh_sat %[[LOAD]]
+# CHECK-NEXT: %[[MAX:[0-9]+]]:hlxlr = LX_max_h %[[LOAD]], $l0
+# CHECK: %[[VALUE:[0-9]+]]:hlxlr = LX_add_h %[[ABS]], %[[MAX]]
+# CHECK-NEXT: LX_S16b_pseudo %{{[0-9]+}}, %[[VALUE]]
+
+--- |
+  define void @hlx_load_store_priority(ptr %in, ptr %out) {
+    ret void
+  }
+...
+---
+name:            hlx_load_store_priority
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+  - { reg: '$r1' }
+  - { reg: '$l0' }
+registers:
+  - { id: 0, class: hlxlr }
+  - { id: 1, class: hlxlr }
+  - { id: 2, class: hlxlr }
+  - { id: 4, class: hlxlr }
+  - { id: 5, class: intregs }
+  - { id: 6, class: intregs }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $l0
+
+    %5:intregs = COPY $r0
+    %6:intregs = COPY $r1
+    %0:hlxlr = LX_L16b_pseudo %5
+    %1:hlxlr = LX_abs_uh_sat %0
+    %5:intregs = A2_addi %5, 4
+    %2:hlxlr = LX_max_h %0, $l0
+    %4:hlxlr = LX_add_h %1, %2
+    %5:intregs = A2_addi %5, 4
+    LX_S16b_pseudo %6, %4
+    PS_jmpret $r31, implicit-def dead $pc
+...

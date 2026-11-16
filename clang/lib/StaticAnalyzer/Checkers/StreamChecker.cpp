@@ -581,10 +581,10 @@ private:
                          ProgramStateRef State) const;
 
   /// Emit resource leak warnings for the given symbols.
-  /// Createn a non-fatal error node for these, and returns it (if any warnings
-  /// were generated). Return value is non-null.
+  /// Returns either the non-fatal error node (where the warnings are emitted),
+  /// or 'C.getPredecessor()' when 'LeakedSyms' is empty or node creation fails.
   ExplodedNode *reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
-                            CheckerContext &C, ExplodedNode *Pred) const;
+                            CheckerContext &C) const;
 
   /// Find the description data of the function called by a call event.
   /// Returns nullptr if no function is recognized.
@@ -2014,10 +2014,12 @@ void StreamChecker::reportFEofWarning(SymbolRef StreamSym, CheckerContext &C,
 
 ExplodedNode *
 StreamChecker::reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
-                           CheckerContext &C, ExplodedNode *Pred) const {
-  ExplodedNode *Err = C.generateNonFatalErrorNode(C.getState(), Pred);
+                           CheckerContext &C) const {
+  if (LeakedSyms.empty())
+    return C.getPredecessor();
+  ExplodedNode *Err = C.generateNonFatalErrorNode();
   if (!Err)
-    return Pred;
+    return C.getPredecessor();
 
   for (SymbolRef LeakSym : LeakedSyms) {
     // Resource leaks can result in multiple warning that describe the same kind
@@ -2069,11 +2071,7 @@ void StreamChecker::checkDeadSymbols(SymbolReaper &SymReaper,
     State = State->remove<StreamMap>(Sym);
   }
 
-  ExplodedNode *N = C.getPredecessor();
-  if (!LeakedSyms.empty())
-    N = reportLeaks(LeakedSyms, C, N);
-
-  C.addTransition(State, N);
+  C.addTransition(State, reportLeaks(LeakedSyms, C));
 }
 
 ProgramStateRef StreamChecker::checkPointerEscape(

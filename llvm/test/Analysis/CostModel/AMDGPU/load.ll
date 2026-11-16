@@ -2,7 +2,10 @@
 ; RUN: opt -passes="print<cost-model>" -disable-output -mtriple=amdgpu8.03-unknown-amdhsa < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GFX8
 ; RUN: opt -passes="print<cost-model>" -disable-output -mtriple=amdgpu9.0a-unknown-amdhsa < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GFX90A,GFX90A-UNALIGNED
 ; RUN: opt -passes="print<cost-model>" -disable-output -mtriple=amdgpu9.0a-unknown-amdhsa -mattr=-unaligned-access-mode < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GFX90A,GFX90A-NOUNALIGNED
+; RUN: opt -passes="print<cost-model>" -disable-output -mtriple=amdgpu10.10-unknown-amdhsa < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GFX10,GFX10-WGP
+; RUN: opt -passes="print<cost-model>" -disable-output -mtriple=amdgpu10.10-unknown-amdhsa -mattr=+cumode < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GFX10,GFX10-CU
 ; RUN: opt -passes="print<cost-model>" -disable-output -mtriple=amdgpu12.01-unknown-amdhsa < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GFX12
+; RUN: opt -passes="print<cost-model>" -disable-output -mtriple=amdgpu12.50-unknown-amdhsa < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GFX12
 
 
 @g = external addrspace(4) constant [64 x i32], align 64
@@ -68,6 +71,21 @@ define void @loads_i8(i32 %arg) {
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = load <3 x i8>, ptr poison, align 4
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = load <4 x i8>, ptr poison, align 4
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-LABEL: 'loads_i8'
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i8, ptr poison, align 1
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <2 x i8>, ptr poison, align 2
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <3 x i8>, ptr poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <4 x i8>, ptr poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load i8, ptr poison, align 1
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <2 x i8>, ptr poison, align 1
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = load <3 x i8>, ptr poison, align 1
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <4 x i8>, ptr poison, align 1
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load i8, ptr poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <2 x i8>, ptr poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = load <3 x i8>, ptr poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = load <4 x i8>, ptr poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX12-LABEL: 'loads_i8'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i8, ptr poison, align 1
@@ -159,6 +177,44 @@ define void @loads_i16(i32 %arg) {
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = load <3 x i16>, ptr poison, align 8
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = load <4 x i16>, ptr poison, align 8
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-WGP-LABEL: 'loads_i16'
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i16, ptr poison, align 2
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <2 x i16>, ptr poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <3 x i16>, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <4 x i16>, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load i16, ptr poison, align 1
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <2 x i16>, ptr poison, align 1
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = load <3 x i16>, ptr poison, align 1
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %8 = load <4 x i16>, ptr poison, align 1
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load i16, ptr poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <2 x i16>, ptr poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load <3 x i16>, ptr poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %12 = load <4 x i16>, ptr poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = load i16, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = load <2 x i16>, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = load <3 x i16>, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = load <4 x i16>, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-CU-LABEL: 'loads_i16'
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i16, ptr poison, align 2
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <2 x i16>, ptr poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <3 x i16>, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <4 x i16>, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load i16, ptr poison, align 1
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <2 x i16>, ptr poison, align 1
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = load <3 x i16>, ptr poison, align 1
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <4 x i16>, ptr poison, align 1
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load i16, ptr poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <2 x i16>, ptr poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load <3 x i16>, ptr poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = load <4 x i16>, ptr poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = load i16, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = load <2 x i16>, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = load <3 x i16>, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = load <4 x i16>, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX12-LABEL: 'loads_i16'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i16, ptr poison, align 2
@@ -271,6 +327,52 @@ define void @loads_i32(i32 %arg) {
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = load <3 x i32>, ptr poison, align 16
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %20 = load <4 x i32>, ptr poison, align 16
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-WGP-LABEL: 'loads_i32'
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i32, ptr poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <2 x i32>, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <3 x i32>, ptr poison, align 16
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <4 x i32>, ptr poison, align 16
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load i32, ptr poison, align 1
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = load <2 x i32>, ptr poison, align 1
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %7 = load <3 x i32>, ptr poison, align 1
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %8 = load <4 x i32>, ptr poison, align 1
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load i32, ptr poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %10 = load <2 x i32>, ptr poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %11 = load <3 x i32>, ptr poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %12 = load <4 x i32>, ptr poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = load i32, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = load <2 x i32>, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %15 = load <3 x i32>, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %16 = load <4 x i32>, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = load i32, ptr poison, align 16
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = load <2 x i32>, ptr poison, align 16
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = load <3 x i32>, ptr poison, align 16
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %20 = load <4 x i32>, ptr poison, align 16
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-CU-LABEL: 'loads_i32'
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i32, ptr poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <2 x i32>, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <3 x i32>, ptr poison, align 16
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <4 x i32>, ptr poison, align 16
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load i32, ptr poison, align 1
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <2 x i32>, ptr poison, align 1
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <3 x i32>, ptr poison, align 1
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <4 x i32>, ptr poison, align 1
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load i32, ptr poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <2 x i32>, ptr poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = load <3 x i32>, ptr poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = load <4 x i32>, ptr poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = load i32, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = load <2 x i32>, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = load <3 x i32>, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = load <4 x i32>, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = load i32, ptr poison, align 16
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = load <2 x i32>, ptr poison, align 16
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = load <3 x i32>, ptr poison, align 16
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %20 = load <4 x i32>, ptr poison, align 16
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX12-LABEL: 'loads_i32'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i32, ptr poison, align 4
@@ -576,6 +678,45 @@ define void @loads_addrspace_5(i32 %arg) {
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %36 = load <128 x i32>, ptr addrspace(5) poison, align 512
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
+; GFX10-LABEL: 'loads_addrspace_5'
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <1 x i1>, ptr addrspace(5) poison, align 1
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <1 x i8>, ptr addrspace(5) poison, align 1
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <1 x i16>, ptr addrspace(5) poison, align 2
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <1 x i32>, ptr addrspace(5) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load <2 x i1>, ptr addrspace(5) poison, align 1
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <2 x i8>, ptr addrspace(5) poison, align 2
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <2 x i16>, ptr addrspace(5) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %8 = load <2 x i32>, ptr addrspace(5) poison, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <3 x i1>, ptr addrspace(5) poison, align 1
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <3 x i8>, ptr addrspace(5) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load <3 x i16>, ptr addrspace(5) poison, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %12 = load <3 x i32>, ptr addrspace(5) poison, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = load <4 x i1>, ptr addrspace(5) poison, align 1
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = load <4 x i8>, ptr addrspace(5) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %15 = load <4 x i16>, ptr addrspace(5) poison, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %16 = load <4 x i32>, ptr addrspace(5) poison, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = load <8 x i1>, ptr addrspace(5) poison, align 1
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = load <8 x i8>, ptr addrspace(5) poison, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %19 = load <8 x i16>, ptr addrspace(5) poison, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %20 = load <8 x i32>, ptr addrspace(5) poison, align 32
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %21 = load <16 x i1>, ptr addrspace(5) poison, align 2
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %22 = load <16 x i8>, ptr addrspace(5) poison, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %23 = load <16 x i16>, ptr addrspace(5) poison, align 32
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %24 = load <16 x i32>, ptr addrspace(5) poison, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %25 = load <32 x i1>, ptr addrspace(5) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %26 = load <32 x i8>, ptr addrspace(5) poison, align 32
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %27 = load <32 x i16>, ptr addrspace(5) poison, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %28 = load <32 x i32>, ptr addrspace(5) poison, align 128
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %29 = load <64 x i1>, ptr addrspace(5) poison, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %30 = load <64 x i8>, ptr addrspace(5) poison, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %31 = load <64 x i16>, ptr addrspace(5) poison, align 128
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %32 = load <64 x i32>, ptr addrspace(5) poison, align 256
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %33 = load <128 x i1>, ptr addrspace(5) poison, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %34 = load <128 x i8>, ptr addrspace(5) poison, align 128
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %35 = load <128 x i16>, ptr addrspace(5) poison, align 256
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %36 = load <128 x i32>, ptr addrspace(5) poison, align 512
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
 ; GFX12-LABEL: 'loads_addrspace_5'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <1 x i1>, ptr addrspace(5) poison, align 1
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <1 x i8>, ptr addrspace(5) poison, align 1
@@ -662,6 +803,123 @@ define void @loads_addrspace_5(i32 %arg) {
   ret void
 }
 
+define void @loads_addrspace_7(i32 %arg) {
+; CHECK-LABEL: 'loads_addrspace_7'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i32, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load i64, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = load <2 x i32>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <2 x i32>, ptr addrspace(7) poison, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %5 = load <3 x i32>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = load <3 x i32>, ptr addrspace(7) poison, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <3 x i32>, ptr addrspace(7) poison, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %8 = load <4 x i32>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %9 = load <4 x i32>, ptr addrspace(7) poison, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <4 x i32>, ptr addrspace(7) poison, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load <2 x i64>, ptr addrspace(7) poison, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %12 = load <8 x i32>, ptr addrspace(7) poison, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %13 = load <4 x i8>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %14 = load <2 x i16>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %15 = load <8 x half>, ptr addrspace(7) poison, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %16 = load <4 x i24>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %17 = load <3 x i12>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+  load i32, ptr addrspace(7) poison, align 4
+  load i64, ptr addrspace(7) poison, align 4
+  load <2 x i32>, ptr addrspace(7) poison, align 4
+  load <2 x i32>, ptr addrspace(7) poison, align 8
+  load <3 x i32>, ptr addrspace(7) poison, align 4
+  load <3 x i32>, ptr addrspace(7) poison, align 8
+  load <3 x i32>, ptr addrspace(7) poison, align 16
+  load <4 x i32>, ptr addrspace(7) poison, align 4
+  load <4 x i32>, ptr addrspace(7) poison, align 8
+  load <4 x i32>, ptr addrspace(7) poison, align 16
+  load <2 x i64>, ptr addrspace(7) poison, align 8
+  load <8 x i32>, ptr addrspace(7) poison, align 32
+  load <4 x i8>, ptr addrspace(7) poison, align 4
+  load <2 x i16>, ptr addrspace(7) poison, align 4
+  load <8 x half>, ptr addrspace(7) poison, align 16
+  load <4 x i24>, ptr addrspace(7) poison, align 4
+  load <3 x i12>, ptr addrspace(7) poison, align 4
+  ret void
+}
+
+define void @loads_addrspace_7_known_bounds(ptr addrspace(1) %base, ptr addrspace(8) %rsrc, i32 %off) {
+; CHECK-LABEL: 'loads_addrspace_7_known_bounds'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %buf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %base, i16 0, i64 1024, i32 159744)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <4 x i32>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <16 x i8>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <8 x i16>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tail = getelementptr i8, ptr addrspace(7) %p, i32 1012
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %4 = load <16 x i8>, ptr addrspace(7) %tail, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %end = getelementptr i8, ptr addrspace(7) %p, i32 1024
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load <16 x i8>, ptr addrspace(7) %end, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %q = addrspacecast ptr addrspace(8) %rsrc to ptr addrspace(7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <4 x i32>, ptr addrspace(7) %q, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %7 = load <16 x i8>, ptr addrspace(7) %q, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ubuf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %base, i16 0, i64 -1, i32 159744)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %u = addrspacecast ptr addrspace(8) %ubuf to ptr addrspace(7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %u.var = getelementptr i8, ptr addrspace(7) %u, i32 %off
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <16 x i8>, ptr addrspace(7) %u.var, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %u.var2 = getelementptr i8, ptr addrspace(7) %u, i32 %off
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = load <4 x i32>, ptr addrspace(7) %u.var2, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %p.var = getelementptr i8, ptr addrspace(7) %p, i32 %off
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %10 = load <16 x i8>, ptr addrspace(7) %p.var, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %direct = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1.i64(ptr addrspace(1) %base, i16 0, i64 1024, i32 159744)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = load <16 x i8>, ptr addrspace(7) %direct, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+  %buf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %base, i16 0, i64 1024, i32 159744)
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  load <4 x i32>, ptr addrspace(7) %p, align 4
+  load <16 x i8>, ptr addrspace(7) %p, align 4
+  load <8 x i16>, ptr addrspace(7) %p, align 4
+  %tail = getelementptr i8, ptr addrspace(7) %p, i32 1012
+  load <16 x i8>, ptr addrspace(7) %tail, align 4
+  %end = getelementptr i8, ptr addrspace(7) %p, i32 1024
+  load <16 x i8>, ptr addrspace(7) %end, align 4
+  %q = addrspacecast ptr addrspace(8) %rsrc to ptr addrspace(7)
+  load <4 x i32>, ptr addrspace(7) %q, align 4
+  load <16 x i8>, ptr addrspace(7) %q, align 4
+  %ubuf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %base, i16 0, i64 -1, i32 159744)
+  %u = addrspacecast ptr addrspace(8) %ubuf to ptr addrspace(7)
+  %u.var = getelementptr i8, ptr addrspace(7) %u, i32 %off
+  load <16 x i8>, ptr addrspace(7) %u.var, align 4
+  %u.var2 = getelementptr i8, ptr addrspace(7) %u, i32 %off
+  load <4 x i32>, ptr addrspace(7) %u.var2, align 4
+  %p.var = getelementptr i8, ptr addrspace(7) %p, i32 %off
+  load <16 x i8>, ptr addrspace(7) %p.var, align 4
+  %direct = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1.i64(ptr addrspace(1) %base, i16 0, i64 1024, i32 159744)
+  load <16 x i8>, ptr addrspace(7) %direct, align 4
+  ret void
+}
+
+define void @loads_addrspace_7_unknown_offset(ptr addrspace(7) %p) {
+; CHECK-LABEL: 'loads_addrspace_7_unknown_offset'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <4 x i32>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = load <2 x i64>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = load <2 x i64>, ptr addrspace(7) %p, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %4 = load <3 x i32>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %5 = load <8 x i32>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %6 = load <3 x double>, ptr addrspace(7) %p, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %7 = load <8 x i16>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %8 = load <16 x i8>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <4 x i32>, ptr addrspace(7) %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+  load <4 x i32>, ptr addrspace(7) %p, align 4
+  load <2 x i64>, ptr addrspace(7) %p, align 4
+  load <2 x i64>, ptr addrspace(7) %p, align 8
+  load <3 x i32>, ptr addrspace(7) %p, align 4
+  load <8 x i32>, ptr addrspace(7) %p, align 4
+  load <3 x double>, ptr addrspace(7) %p, align 8
+  load <8 x i16>, ptr addrspace(7) %p, align 4
+  load <16 x i8>, ptr addrspace(7) %p, align 4
+  load <4 x i32>, ptr addrspace(7) %p, align 16
+  ret void
+}
+
 define void @loads_underaligned(i32 %arg) {
 ; GFX8-LABEL: 'loads_underaligned'
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %1 = load <3 x i32>, ptr addrspace(3) poison, align 1
@@ -675,6 +933,11 @@ define void @loads_underaligned(i32 %arg) {
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <4 x i32>, ptr addrspace(1) poison, align 2
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %10 = load i32, ptr poison, align 2
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %11 = load <4 x i32>, ptr poison, align 2
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %12 = load <2 x i64>, ptr addrspace(3) poison, align 2
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %13 = load i64, ptr poison, align 4
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %14 = load <3 x i32>, ptr poison, align 8
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %15 = load <4 x i32>, ptr poison, align 4
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %16 = load <4 x i32>, ptr poison, align 8
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX90A-UNALIGNED-LABEL: 'loads_underaligned'
@@ -689,6 +952,11 @@ define void @loads_underaligned(i32 %arg) {
 ; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <4 x i32>, ptr addrspace(1) poison, align 2
 ; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load i32, ptr poison, align 2
 ; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = load <4 x i32>, ptr poison, align 2
+; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = load <2 x i64>, ptr addrspace(3) poison, align 2
+; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = load i64, ptr poison, align 4
+; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = load <3 x i32>, ptr poison, align 8
+; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = load <4 x i32>, ptr poison, align 4
+; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = load <4 x i32>, ptr poison, align 8
 ; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX90A-NOUNALIGNED-LABEL: 'loads_underaligned'
@@ -703,7 +971,50 @@ define void @loads_underaligned(i32 %arg) {
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %9 = load <4 x i32>, ptr addrspace(1) poison, align 2
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %10 = load i32, ptr poison, align 2
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %11 = load <4 x i32>, ptr poison, align 2
+; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %12 = load <2 x i64>, ptr addrspace(3) poison, align 2
+; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = load i64, ptr poison, align 4
+; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = load <3 x i32>, ptr poison, align 8
+; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = load <4 x i32>, ptr poison, align 4
+; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = load <4 x i32>, ptr poison, align 8
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-WGP-LABEL: 'loads_underaligned'
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = load <3 x i32>, ptr addrspace(3) poison, align 1
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <3 x i32>, ptr addrspace(3) poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = load <3 x i32>, ptr addrspace(3) poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = load <4 x i32>, ptr addrspace(3) poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %5 = load <4 x i32>, ptr addrspace(5) poison, align 1
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load i32, ptr addrspace(1) poison, align 1
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load i32, ptr addrspace(1) poison, align 2
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <4 x i32>, ptr addrspace(1) poison, align 1
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <4 x i32>, ptr addrspace(1) poison, align 2
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load i32, ptr poison, align 2
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = load <4 x i32>, ptr poison, align 2
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %12 = load <2 x i64>, ptr addrspace(3) poison, align 2
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %13 = load i64, ptr poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %14 = load <3 x i32>, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %15 = load <4 x i32>, ptr poison, align 4
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %16 = load <4 x i32>, ptr poison, align 8
+; GFX10-WGP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-CU-LABEL: 'loads_underaligned'
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <3 x i32>, ptr addrspace(3) poison, align 1
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <3 x i32>, ptr addrspace(3) poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = load <3 x i32>, ptr addrspace(3) poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = load <4 x i32>, ptr addrspace(3) poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %5 = load <4 x i32>, ptr addrspace(5) poison, align 1
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load i32, ptr addrspace(1) poison, align 1
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load i32, ptr addrspace(1) poison, align 2
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <4 x i32>, ptr addrspace(1) poison, align 1
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <4 x i32>, ptr addrspace(1) poison, align 2
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load i32, ptr poison, align 2
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = load <4 x i32>, ptr poison, align 2
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = load <2 x i64>, ptr addrspace(3) poison, align 2
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = load i64, ptr poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = load <3 x i32>, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = load <4 x i32>, ptr poison, align 4
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = load <4 x i32>, ptr poison, align 8
+; GFX10-CU-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX12-LABEL: 'loads_underaligned'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <3 x i32>, ptr addrspace(3) poison, align 1
@@ -717,6 +1028,11 @@ define void @loads_underaligned(i32 %arg) {
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <4 x i32>, ptr addrspace(1) poison, align 2
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load i32, ptr poison, align 2
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = load <4 x i32>, ptr poison, align 2
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = load <2 x i64>, ptr addrspace(3) poison, align 2
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = load i64, ptr poison, align 4
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = load <3 x i32>, ptr poison, align 8
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = load <4 x i32>, ptr poison, align 4
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = load <4 x i32>, ptr poison, align 8
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
   load <3 x i32>, ptr addrspace(3) poison, align 1
@@ -730,6 +1046,11 @@ define void @loads_underaligned(i32 %arg) {
   load <4 x i32>, ptr addrspace(1) poison, align 2
   load i32, ptr poison, align 2
   load <4 x i32>, ptr poison, align 2
+  load <2 x i64>, ptr addrspace(3) poison, align 2
+  load i64, ptr poison, align 4
+  load <3 x i32>, ptr poison, align 8
+  load <4 x i32>, ptr poison, align 4
+  load <4 x i32>, ptr poison, align 8
   ret void
 }
 
@@ -751,6 +1072,15 @@ define void @loads_overaligned(i32 %arg) {
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %5 = load <7 x i16>, ptr addrspace(5) poison, align 16
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <7 x i8>, ptr poison, align 8
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-LABEL: 'loads_overaligned'
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <7 x i8>, ptr addrspace(1) poison, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <7 x i16>, ptr addrspace(1) poison, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <5 x i16>, ptr addrspace(3) poison, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = load <7 x i8>, ptr addrspace(5) poison, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %5 = load <7 x i16>, ptr addrspace(5) poison, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <7 x i8>, ptr poison, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX12-LABEL: 'loads_overaligned'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <7 x i8>, ptr addrspace(1) poison, align 8
@@ -809,6 +1139,19 @@ define void @loads_widened_tail(i32 %arg) {
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = load <13 x i8>, ptr addrspace(5) poison, align 4
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = load <7 x i16>, ptr addrspace(5) poison, align 8
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-LABEL: 'loads_widened_tail'
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = load <5 x i8>, ptr addrspace(1) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <6 x i8>, ptr addrspace(1) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <7 x i8>, ptr addrspace(1) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %4 = load <7 x i8>, ptr addrspace(1) poison, align 2
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = load <7 x i16>, ptr addrspace(1) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <7 x i16>, ptr addrspace(1) poison, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <7 x i8>, ptr addrspace(3) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %8 = load <7 x i8>, ptr poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = load <13 x i8>, ptr addrspace(5) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = load <7 x i16>, ptr addrspace(5) poison, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX12-LABEL: 'loads_widened_tail'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = load <5 x i8>, ptr addrspace(1) poison, align 4
@@ -881,6 +1224,21 @@ define void @loads_odd_widths(i32 %arg) {
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load <4 x i24>, ptr addrspace(3) poison, align 4
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %12 = load <2 x i96>, ptr addrspace(5) poison, align 16
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-LABEL: 'loads_odd_widths'
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = load i24, ptr addrspace(1) poison, align 1
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load i48, ptr addrspace(1) poison, align 2
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = load i24, ptr addrspace(1) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = load i48, ptr addrspace(1) poison, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = load i80, ptr addrspace(1) poison, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = load i112, ptr addrspace(1) poison, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = load <3 x i12>, ptr addrspace(1) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <4 x i24>, ptr addrspace(1) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %9 = load <3 x i24>, ptr addrspace(1) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <2 x i48>, ptr addrspace(1) poison, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load <4 x i24>, ptr addrspace(3) poison, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %12 = load <2 x i96>, ptr addrspace(5) poison, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX12-LABEL: 'loads_odd_widths'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = load i24, ptr addrspace(1) poison, align 1
@@ -967,6 +1325,24 @@ define amdgpu_kernel void @loads_addrspace_4_kernarg(ptr addrspace(4) %p, ptr ad
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = load <16 x i32>, ptr addrspace(4) %gep.id, align 64
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
+; GFX10-LABEL: 'loads_addrspace_4_kernarg'
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <3 x i16>, ptr addrspace(4) %p, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <3 x i32>, ptr addrspace(4) %p, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <3 x i32>, ptr addrspace(4) %p, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <16 x i32>, ptr addrspace(4) %p, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = load <32 x i32>, ptr addrspace(4) %p, align 128
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %6 = load <16 x i32>, ptr addrspace(4) %p, align 2
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep = getelementptr inbounds i8, ptr addrspace(4) %p, i64 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <16 x i32>, ptr addrspace(4) %gep, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.raw = getelementptr i8, ptr addrspace(4) %p, i64 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <16 x i32>, ptr addrspace(4) %gep.raw, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <16 x i32>, ptr addrspace(6) %q, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <16 x i32>, ptr addrspace(4) @g, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %id = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %gep.id = getelementptr inbounds <16 x i32>, ptr addrspace(4) %p, i32 %id
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = load <16 x i32>, ptr addrspace(4) %gep.id, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
 ; GFX12-LABEL: 'loads_addrspace_4_kernarg'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <3 x i16>, ptr addrspace(4) %p, align 8
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <3 x i32>, ptr addrspace(4) %p, align 4
@@ -1019,6 +1395,14 @@ define amdgpu_kernel void @loads_addrspace_4_widened(ptr addrspace(4) %p) {
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <7 x i64>, ptr addrspace(4) %p, align 64
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load i96, ptr addrspace(4) %p, align 8
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-LABEL: 'loads_addrspace_4_widened'
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %1 = load <7 x i32>, ptr addrspace(4) %p, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <7 x i32>, ptr addrspace(4) %p, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %3 = load <7 x i64>, ptr addrspace(4) %p, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <7 x i64>, ptr addrspace(4) %p, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load i96, ptr addrspace(4) %p, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX12-LABEL: 'loads_addrspace_4_widened'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = load <7 x i32>, ptr addrspace(4) %p, align 4
@@ -1155,6 +1539,28 @@ define amdgpu_kernel void @loads_addrspace_4_illegal_types(ptr addrspace(4) %p) 
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = load i248, ptr addrspace(4) %p, align 16
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %19 = load i416, ptr addrspace(4) %p, align 32
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-LABEL: 'loads_addrspace_4_illegal_types'
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <15 x i32>, ptr addrspace(4) %p, align 4
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <15 x i32>, ptr addrspace(4) %p, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = load <31 x i32>, ptr addrspace(4) %p, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %4 = load <62 x i32>, ptr addrspace(4) %p, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = load <7 x i64>, ptr addrspace(4) %p, align 32
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = load <60 x i8>, ptr addrspace(4) %p, align 32
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = load <9 x i8>, ptr addrspace(4) %p, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <11 x i8>, ptr addrspace(4) %p, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <5 x i16>, ptr addrspace(4) %p, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %10 = load <31 x i16>, ptr addrspace(4) %p, align 32
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load i56, ptr addrspace(4) %p, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %12 = load i80, ptr addrspace(4) %p, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %13 = load i80, ptr addrspace(4) %p, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %14 = load i88, ptr addrspace(4) %p, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %15 = load i120, ptr addrspace(4) %p, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %16 = load i136, ptr addrspace(4) %p, align 32
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %17 = load i184, ptr addrspace(4) %p, align 8
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = load i248, ptr addrspace(4) %p, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %19 = load i416, ptr addrspace(4) %p, align 32
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX12-LABEL: 'loads_addrspace_4_illegal_types'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %1 = load <15 x i32>, ptr addrspace(4) %p, align 4

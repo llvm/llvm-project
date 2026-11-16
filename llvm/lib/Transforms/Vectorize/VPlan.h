@@ -1477,7 +1477,12 @@ private:
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
-    if (Opcode == VPInstruction::MaskedCond)
+    assert(Opcode != VPInstruction::MaskedCond &&
+           "Should be expanded in VPlanPredicator");
+
+    // These VPInstruction can be (optionally) masked.
+    if (Opcode == VPInstruction::WideVectorLoad ||
+        Opcode == VPInstruction::WideVectorStore)
       return false;
 
     // For now only VPInstructions with underlying values use masks.
@@ -1488,6 +1493,12 @@ private:
     return Instruction::isCast(Opcode) || Opcode == Instruction::PHI ||
            Opcode == Instruction::GetElementPtr ||
            Opcode == Instruction::ExtractValue;
+  }
+
+  /// Returns true if this is an abstract instruction that can't be executed.
+  bool isAbstract() const {
+    return isMasked() && Opcode != VPInstruction::WideVectorLoad &&
+           Opcode != VPInstruction::WideVectorStore;
   }
 
 public:
