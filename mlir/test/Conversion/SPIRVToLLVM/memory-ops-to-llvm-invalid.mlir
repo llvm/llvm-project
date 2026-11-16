@@ -38,3 +38,24 @@ spirv.func @copy_memory_unsupported_source_mask(%arg0: !spirv.ptr<f32, StorageBu
   spirv.CopyMemory "StorageBuffer" %arg0, "StorageBuffer" %arg1 ["Aligned", 4], ["NonPrivatePointer|MakePointerVisible"] : f32
   spirv.Return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.Load and spirv.Store
+//===----------------------------------------------------------------------===//
+
+// Memory-model flags have no llvm.load counterpart, even next to supported ones.
+spirv.func @load_non_private_pointer(%arg0: !spirv.ptr<f32, StorageBuffer>) "None" {
+  // expected-error@+1 {{failed to legalize operation 'spirv.Load' that was explicitly marked illegal}}
+  %0 = spirv.Load "StorageBuffer" %arg0 ["Aligned|NonPrivatePointer", 4] : f32
+  spirv.Return
+}
+
+// -----
+
+spirv.func @store_non_private_pointer(%arg0: !spirv.ptr<f32, StorageBuffer>, %arg1: f32) "None" {
+  // expected-error@+1 {{failed to legalize operation 'spirv.Store' that was explicitly marked illegal}}
+  spirv.Store "StorageBuffer" %arg0, %arg1 ["Volatile|NonPrivatePointer"] : f32
+  spirv.Return
+}
