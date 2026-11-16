@@ -39,7 +39,6 @@ void SystemZHLASMAsmStreamer::EmitEOL() {
     char C = Chunk.back();
     bool IsValid = isAlnum(C) || C == '_' || C == '$' || C == '@' || C == '#';
     FOS << Chunk.drop_back() << (IsValid ? C : 'X');
-    return !IsValid;
   };
 
   StringRef Remaining(Str);
@@ -51,22 +50,19 @@ void SystemZHLASMAsmStreamer::EmitEOL() {
       continue;
     }
 
-    bool RepeatX = EmitContinued(S.take_front(ContIndicatorColumn));
+    EmitContinued(S.take_front(ContIndicatorColumn));
     FOS << '\n';
 
     size_t Emitted = ContIndicatorColumn - 1;
     while (Emitted < S.size()) {
-      size_t Avail = ContLen - (RepeatX ? 1 : 0);
-      StringRef Chunk = S.substr(Emitted, Avail);
+      StringRef Chunk = S.substr(Emitted, ContLen);
       FOS.PadToColumn(ContStartColumn);
-      if (RepeatX)
-        FOS << 'X';
-      if (Chunk.size() < Avail)
+      if (Chunk.size() < ContLen)
         FOS << Chunk;
       else
-        RepeatX = EmitContinued(Chunk);
+        EmitContinued(Chunk);
       FOS << '\n';
-      Emitted += Avail - 1;
+      Emitted += ContLen - 1;
     }
   }
   Str.clear();

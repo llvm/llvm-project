@@ -18,12 +18,12 @@
 ; CHECK:         b 2(7)
 ; CHECK:      ext CSECT
 ; CHECK-NEXT: C_WSA64 CATTR ALIGN(2),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(extX
-; CHECK-NEXT:                X)
+; CHECK-NEXT:                )
 ; CHECK:      loc XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 ; CHECK-NEXT: loc DS 0H
 ; CHECK:      tbl CSECT
 ; CHECK-NEXT: C_WSA64 CATTR ALIGN(3),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(tblX
-; CHECK-NEXT:                X)
+; CHECK-NEXT:                )
 @ext = constant [2 x i32] [i32 3, i32 4], align 4
 @loc = internal constant [2 x i32] [i32 5, i32 6], align 4
 @tbl = internal constant [1 x ptr] [ptr @f], align 8
