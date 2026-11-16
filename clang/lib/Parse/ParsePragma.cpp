@@ -1487,14 +1487,9 @@ void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
         return;
       }
 
-#if 0 // TODO:
-      ExprResult StringResult = (SaveAndRestore<ConversionAction>(
-                                     ParserConversionAction, ToSystemCharset),
-                                 ParseStringLiteralExpression());
-#else
-      // TODO: The string literal needs to be converted into ebcdic.
-      ExprResult StringResult = ParseUnevaluatedStringLiteralExpression();
-#endif
+      ExprResult StringResult = ParseStringLiteralExpression(
+          /*AllowUserDefinedLiteral=*/false,
+          /*Unevaluated=*/false, CA_ToLiteralEncodingForAsm);
       if (StringResult.isInvalid())
         return; // Already diagnosed.
       MappedName = cast<StringLiteral>(StringResult.get());

@@ -18,8 +18,10 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/Lookup.h"
 #include "llvm/Support/ConvertEBCDIC.h"
+#include "llvm/Support/TextEncoding.h"
 
 #include <optional>
 using namespace clang;
@@ -1464,11 +1466,17 @@ void Sema::ActOnPragmaMap(IdentifierInfo *IdentId, SourceLocation NameLoc,
                           Scope *curScope, const StringRef MappedName) {
   assert(!MappedName.empty());
 
-  // All identifiers must be in UTF-8.
-  // TODO Is this the right place for the conversion?.
+  // All identifiers must be in UTF-8. On z/OS the mapped name was parsed with
+  // CA_ToLiteralEncodingForAsm, so it is in IBM-1047 and must be converted back.
   llvm::SmallString<16> MappedNameUTF;
-  // SDP llvm::ConverterEBCDIC::convertToUTF8(MappedName, MappedNameUTF);
-  MappedNameUTF = MappedName;
+  if (llvm::TextEncodingConverter *Conv =
+          PP.getTextEncoding().getzOSFromAsmLiteralEncodingConverter()) {
+    [[maybe_unused]] std::error_code EC =
+        Conv->convert(MappedName, MappedNameUTF);
+    assert(!EC && "This conversion should always succeed");
+  } else {
+    MappedNameUTF = MappedName;
+  }
 
   AttributeCommonInfo AttrInfo(IdentId, NameLoc,
                                AttributeCommonInfo::Form::Pragma());

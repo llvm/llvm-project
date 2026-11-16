@@ -162,34 +162,26 @@ void func3(double) { }
 // CHECK:       call void @f6()
 // CHECK:       call void @_Z2f5v()
 
+// The mapped name is the symbol name; the source name is in "zos-ppa1-name".
 // CHECK-LABEL: _Z9call_funcv
 // CHECK:       call void @FUNC
+// CHECK:       define{{.*}} void @FUNC({{.*}}) #[[FUNC:[0-9]+]]
 
 // CHECK-LABEL: _Z10call_func1v
 // CHECK:       call void @_Z5func1i
+// CHECK:       define{{.*}} void @FUNC1({{.*}}) #[[FUNC1:[0-9]+]]
 
 // CHECK-LABEL: _Z10call_func2v
 // CHECK:       call void @_Z5func2i
 // CHECK:       call void @FUNC2
+// CHECK:       define{{.*}} void @FUNC2({{.*}}) #[[FUNC2:[0-9]+]]
 
 // CHECK-LABEL: _Z10call_func3v
 // CHECK:       call void @_Z5func3i
+// CHECK:       define{{.*}} void @FUNC3({{.*}}) #[[FUNC3:[0-9]+]]
 
-// CHECK:       !zos_mapped_names = !{![[n1:[0-9]+]], ![[n2:[0-9]+]], ![[n3:[0-9]+]], ![[n4:[0-9]+]], ![[n5:[0-9]+]], ![[n6:[0-9]+]], ![[n7:[0-9]+]], ![[n8:[0-9]+]], ![[n9:[0-9]+]], ![[n10:[0-9]+]], ![[n11:[0-9]+]], ![[n12:[0-9]+]], ![[n13:[0-9]+]], ![[n14:[0-9]+]], ![[n15:[0-9]+]], ![[n16:[0-9]+]], ![[n17:[0-9]+]]}
-// CHECK: ![[n1]] = !{!"v0", !"v0"}
-// CHECK-NEXT: ![[n2]] = !{!"V1", !"v1"}
-// CHECK-NEXT: ![[n3]] = !{!"F0", !"gf0"}
-// CHECK-NEXT: ![[n4]] = !{!"F1", !"gf1"}
-// CHECK-NEXT: ![[n5]] = !{!"F2I", !"gf2"}
-// CHECK-NEXT: ![[n6]] = !{!"F3ID", !"f3"}
-// CHECK-NEXT: ![[n7]] = !{!"E0", !"e0"}
-// CHECK-NEXT: ![[n8]] = !{!"E1", !"e1"}
-// CHECK-NEXT: ![[n9]] = !{!"SIN", !"__builtin_sin"}
-// CHECK-NEXT: ![[n10]] = !{!"N0F0", !"f0"}
-// CHECK-NEXT: ![[n11]] = !{!"N0F1", !"f1"}
-// CHECK-NEXT: ![[n12]] = !{!"N0F2", !"f2"}
-// CHECK-NEXT: ![[n13]] = !{!"N0F5", !"f5"}
-// CHECK-NEXT: ![[n14]] = !{!"FUNC", !"func"}
-// CHECK-NEXT: ![[n15]] = !{!"FUNC1", !"func1"}
-// CHECK-NEXT: ![[n16]] = !{!"FUNC2", !"func2"}
-// CHECK-NEXT: ![[n17]] = !{!"FUNC3", !"func3"}
+// The attribute groups are printed after all the functions.
+// CHECK-DAG:   attributes #[[FUNC]] = {{{.*}}"zos-ppa1-name"="func"{{.*}}}
+// CHECK-DAG:   attributes #[[FUNC1]] = {{{.*}}"zos-ppa1-name"="func1"{{.*}}}
+// CHECK-DAG:   attributes #[[FUNC2]] = {{{.*}}"zos-ppa1-name"="func2"{{.*}}}
+// CHECK-DAG:   attributes #[[FUNC3]] = {{{.*}}"zos-ppa1-name"="func3"{{.*}}}

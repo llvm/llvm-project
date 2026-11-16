@@ -41,6 +41,11 @@ double __builtin_sin(double);
 double t1(double var) {
   return __builtin_sin(0.0) + __builtin_sin(var);
 }
+
+// Testing that the source name is kept for a mapped function definition.
+#pragma map(f4, "F4")
+void f4(void) {}
+
 // CHECK:       @E0 = external local_unnamed_addr global i32, align 4
 // CHECK-NEXT:  @E1 = external local_unnamed_addr global i32, align 4
 // CHECK:       @V0 = local_unnamed_addr global i32 0, align 4
@@ -55,11 +60,6 @@ double t1(double var) {
 // CHECK:       %call1 = tail call double @SIN(double noundef %var)
 // CHECK-NEXT:  %add = fadd double %call, %call1
 // CHECK:       declare double @SIN(double noundef) {{.*}}
-// CHECK:       !zos_mapped_names = !{![[n1:[0-9]+]], ![[n2:[0-9]+]], ![[n3:[0-9]+]], ![[n4:[0-9]+]], ![[n5:[0-9]+]], ![[n6:[0-9]+]], ![[n7:[0-9]+]]}
-// CHECK:       ![[n1]] = !{!"F0", !"f0"}
-// CHECK-NEXT:  ![[n2]] = !{!"F1", !"f1"}
-// CHECK-NEXT:  ![[n3]] = !{!"E0", !"e0"}
-// CHECK-NEXT:  ![[n4]] = !{!"E1", !"e1"}
-// CHECK-NEXT:  ![[n5]] = !{!"SIN", !"__builtin_sin"}
-// CHECK-NEXT:  ![[n6]] = !{!"V0", !"v0"}
-// CHECK-NEXT:  ![[n7]] = !{!"V1", !"v1"}
+// The mapped name is the symbol name; the source name is in "zos-ppa1-name".
+// CHECK:       define{{.*}} void @F4(){{.*}} #[[F4:[0-9]+]]
+// CHECK:       attributes #[[F4]] = {{{.*}}"zos-ppa1-name"="f4"{{.*}}}
