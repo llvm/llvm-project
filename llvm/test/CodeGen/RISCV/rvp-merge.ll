@@ -128,3 +128,176 @@ define i32 @no_merge_multi_use(i32 %a, i32 %b, ptr %p) {
   %r = or i32 %x, %y
   ret i32 %r
 }
+
+; A merge with a 32-bit half mask is ppaireo.w.
+define i64 @merge_hi_mask(i64 %a, i64 %b) {
+; RV32-LABEL: merge_hi_mask:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_hi_mask:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaireo.w a0, a0, a1
+; RV64-NEXT:    ret
+  %x = and i64 %a, 4294967295
+  %y = and i64 %b, -4294967296
+  %r = or i64 %x, %y
+  ret i64 %r
+}
+
+define i64 @merge_lo_mask(i64 %a, i64 %b) {
+; RV32-LABEL: merge_lo_mask:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_lo_mask:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaireo.w a0, a1, a0
+; RV64-NEXT:    ret
+  %x = and i64 %a, -4294967296
+  %y = and i64 %b, 4294967295
+  %r = or i64 %x, %y
+  ret i64 %r
+}
+
+; Alternating 16/8-bit masks are ppaireo.h/ppaireo.b.
+define i32 @merge_h_odd(i32 %a, i32 %b) {
+; RV32-LABEL: merge_h_odd:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaireo.h a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_h_odd:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a2, 16
+; RV64-NEXT:    addi a2, a2, -1
+; RV64-NEXT:    mvmn a0, a1, a2
+; RV64-NEXT:    ret
+  %x = and i32 %a, 65535
+  %y = and i32 %b, -65536
+  %r = or i32 %x, %y
+  ret i32 %r
+}
+
+define i32 @merge_h_even(i32 %a, i32 %b) {
+; RV32-LABEL: merge_h_even:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaireo.h a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_h_even:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a2, 1048560
+; RV64-NEXT:    mvmn a0, a1, a2
+; RV64-NEXT:    ret
+  %x = and i32 %a, -65536
+  %y = and i32 %b, 65535
+  %r = or i32 %x, %y
+  ret i32 %r
+}
+
+define i32 @merge_b_odd(i32 %a, i32 %b) {
+; RV32-LABEL: merge_b_odd:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaireo.b a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_b_odd:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a2, 4080
+; RV64-NEXT:    addi a2, a2, 255
+; RV64-NEXT:    mvmn a0, a1, a2
+; RV64-NEXT:    ret
+  %x = and i32 %a, 16711935
+  %y = and i32 %b, -16711936
+  %r = or i32 %x, %y
+  ret i32 %r
+}
+
+define i32 @merge_b_even(i32 %a, i32 %b) {
+; RV32-LABEL: merge_b_even:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaireo.b a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_b_even:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a2, 1044496
+; RV64-NEXT:    addi a2, a2, -256
+; RV64-NEXT:    mvmn a0, a1, a2
+; RV64-NEXT:    ret
+  %x = and i32 %a, -16711936
+  %y = and i32 %b, 16711935
+  %r = or i32 %x, %y
+  ret i32 %r
+}
+
+define i64 @merge_h_odd_i64(i64 %a, i64 %b) {
+; RV32-LABEL: merge_h_odd_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaireo.h a0, a0, a2
+; RV32-NEXT:    ppaireo.h a1, a1, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_h_odd_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaireo.h a0, a0, a1
+; RV64-NEXT:    ret
+  %x = and i64 %a, 281470681808895
+  %y = and i64 %b, -281470681808896
+  %r = or i64 %x, %y
+  ret i64 %r
+}
+
+define i64 @merge_h_even_i64(i64 %a, i64 %b) {
+; RV32-LABEL: merge_h_even_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaireo.h a0, a2, a0
+; RV32-NEXT:    ppaireo.h a1, a3, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_h_even_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaireo.h a0, a1, a0
+; RV64-NEXT:    ret
+  %x = and i64 %a, -281470681808896
+  %y = and i64 %b, 281470681808895
+  %r = or i64 %x, %y
+  ret i64 %r
+}
+
+define i64 @merge_b_odd_i64(i64 %a, i64 %b) {
+; RV32-LABEL: merge_b_odd_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaireo.b a0, a0, a2
+; RV32-NEXT:    ppaireo.b a1, a1, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_b_odd_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaireo.b a0, a0, a1
+; RV64-NEXT:    ret
+  %x = and i64 %a, 71777214294589695
+  %y = and i64 %b, -71777214294589696
+  %r = or i64 %x, %y
+  ret i64 %r
+}
+
+define i64 @merge_b_even_i64(i64 %a, i64 %b) {
+; RV32-LABEL: merge_b_even_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaireo.b a0, a2, a0
+; RV32-NEXT:    ppaireo.b a1, a3, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_b_even_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaireo.b a0, a1, a0
+; RV64-NEXT:    ret
+  %x = and i64 %a, -71777214294589696
+  %y = and i64 %b, 71777214294589695
+  %r = or i64 %x, %y
+  ret i64 %r
+}
