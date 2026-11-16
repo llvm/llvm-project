@@ -168,6 +168,8 @@ examples:
  * For folds that interact with the bitwidth in some non-trivial way, check an illegal type like i13. Also confirm that the transform is correct for i1.
  * For folds that involve phis, you may want to check that the case of multiple incoming values from one block is handled correctly.
  * For VectorCombine, add RUN lines for the relevant CPU configurations (for example, `-mcpu=x86-64`, `-mcpu=x86-64-v2`, `-mcpu=x86-64-v3`, and `-mcpu=x86-64-v4`).
+ * For folds that unblock transformations in another pass, such as vectorizations, you may need to add some PhaseOrdering tests under
+  `llvm/test/Transforms/PhaseOrdering`, and specify a sequence of passes (or use the default pipeline like `default<O3>`) to run.
 
 ## Proofs
 
@@ -342,6 +344,9 @@ work on.
 The fact that another compiler performs an optimization is not a sufficient
 reason to implement it. Evidence of real-world usefulness is still required.
 
+Don't arbitrarily fix FIXMEs/TODOs from the code and tests. However,
+if your patch happens to touch these pieces, please update the comments.
+
 #### Fuzzer-generated missed optimization reports
 
 In particular, fixes for fuzzer-generated missed optimization reports will
@@ -350,26 +355,27 @@ likely be rejected if there is no evidence of real-world usefulness.
 The following conditions can be used as oracles for such reports. Any oracle
 not listed below requires prior approval from an InstCombine maintainer:
 
-1. The operation is commutative or associative, but reordering its operands does
-   not enable an optimization.
+1. The operation is commutative, but reordering its operands does not enable an
+   optimization.
 2. Adding a new poison-generating or UB-implying annotation does not enable an
    optimization. There are two exceptions:
     * `nsz` widens the range of the result, so failing to optimize in this case
       is expected.
     * Adding a poison-generating flag may prevent optimizations that rely on
-      `isGuaranteedNotToBePoison` queries. In such cases, the maintainers should
-      still be consulted.
+      `isGuaranteedNotToBePoison` queries. For example, inferring `nsw/nuw` for an
+      `add` subexpression may result in a `logical-and` user failing to be canonicalized
+      into a `bitwise-and`. In such cases, the maintainers should still be consulted.
 
 ### Choosing the pattern to optimize
 
 Start from IR that has gone through the full optimization pipeline and choose
-the pattern from that IR. Do not discuss patterns that have not been
-canonicalized at all, especially loads and stores that SROA would have
+the pattern from that IR. Do not propose optimizations for patterns that have
+not been canonicalized at all, especially loads and stores that SROA would have
 eliminated. Such patterns rarely survive until InstCombine runs, so folds for
 them provide little real-world benefit.
 
-The piece you choose to optimize should be the most critical one, and it should
-be atomic. If the optimization you have in mind consists of multiple patterns,
+The pattern you choose to optimize should be the most critical one, and it should
+be self-contained. If the optimization you have in mind consists of multiple patterns,
 split it into multiple PRs, one per pattern. After the rewrite, the IR should
 either already be in the expected optimized form or be transformable into that
 form by existing optimizations.
@@ -400,7 +406,7 @@ InstCombine is a target-independent canonicalization pass. This means that it
 tries to bring IR into a "canonical form" that other optimizations (both inside
 and outside of InstCombine) can rely on. For this reason, the chosen canonical
 form needs to be the same for all targets, and not depend on target-specific
-cost modelling.
+cost-modelling.
 
 In many cases, "canonicalization" and "optimization" coincide. For example, if
 we convert `x * 2` into `x << 1`, this both makes the IR more canonical
@@ -456,7 +462,7 @@ list of canonicalizations that are implemented in InstCombine:
 ### VectorCombine
 
 VectorCombine is a cost-driven pass and, unlike InstCombine, may use
-target-specific cost modelling. Every fold must compare the cost of the
+target-specific cost-modelling. Every fold must compare the cost of the
 original sequence against that of the transformed sequence using
 `TargetTransformInfo` (TTI) cost APIs such as `getInstructionCost()` and
 `getMemoryOpCost()`.
