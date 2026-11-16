@@ -7480,9 +7480,11 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // Min/max of the same operation with common operand:
     // m(m(X, Y), X) --> m(X, Y) (4 commuted variants), also through nested m,
     // e.g. m(m(m(X, Y), Z), X) --> m(m(X, Y), Z).
-    if (Value *V = foldMinimumMaximumSharedOp(IID, Op0, Op1, RecursionLimit, FMF))
+    if (Value *V =
+            foldMinimumMaximumSharedOp(IID, Op0, Op1, RecursionLimit, FMF))
       return V;
-    if (Value *V = foldMinimumMaximumSharedOp(IID, Op1, Op0, RecursionLimit, FMF))
+    if (Value *V =
+            foldMinimumMaximumSharedOp(IID, Op1, Op0, RecursionLimit, FMF))
       return V;
 
     break;
