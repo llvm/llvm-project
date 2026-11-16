@@ -350,6 +350,24 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
    !SI_NOT_AIX)
 #define SANITIZER_INTERCEPT_WCTOMB \
   (SI_FREEBSD || SI_NETBSD || SI_MAC || SI_LINUX_NOT_ANDROID || SI_SOLARIS)
+#define SANITIZER_INTERCEPT_MBRTOC8 (SI_GLIBC && __GLIBC_PREREQ(2, 36))
+#define SANITIZER_INTERCEPT_C8RTOMB (SI_GLIBC && __GLIBC_PREREQ(2, 36))
+#define SANITIZER_INTERCEPT_MBRTOC16                                 \
+  (SI_FREEBSD ||                                                     \
+   (SI_LINUX_NOT_ANDROID && (!SI_GLIBC || __GLIBC_PREREQ(2, 16))) || \
+   SI_SOLARIS)
+#define SANITIZER_INTERCEPT_C16RTOMB                                 \
+  (SI_FREEBSD ||                                                     \
+   (SI_LINUX_NOT_ANDROID && (!SI_GLIBC || __GLIBC_PREREQ(2, 16))) || \
+   SI_SOLARIS)
+#define SANITIZER_INTERCEPT_MBRTOC32                                 \
+  (SI_FREEBSD ||                                                     \
+   (SI_LINUX_NOT_ANDROID && (!SI_GLIBC || __GLIBC_PREREQ(2, 16))) || \
+   SI_SOLARIS)
+#define SANITIZER_INTERCEPT_C32RTOMB                                 \
+  (SI_FREEBSD ||                                                     \
+   (SI_LINUX_NOT_ANDROID && (!SI_GLIBC || __GLIBC_PREREQ(2, 16))) || \
+   SI_SOLARIS)
 #define SANITIZER_INTERCEPT_TCGETATTR SI_LINUX_NOT_ANDROID || SI_SOLARIS
 #define SANITIZER_INTERCEPT_REALPATH SI_POSIX
 #define SANITIZER_INTERCEPT_CANONICALIZE_FILE_NAME (SI_GLIBC || SI_SOLARIS)

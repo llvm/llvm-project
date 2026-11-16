@@ -748,6 +748,7 @@ if config.target_os == "Linux" and not config.android:
             (2, 30),
             (2, 33),
             (2, 34),
+            (2, 36),
             (2, 37),
             (2, 38),
             (2, 40),
