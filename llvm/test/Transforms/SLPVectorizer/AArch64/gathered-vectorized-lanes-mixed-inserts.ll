@@ -9,7 +9,7 @@
 ; COST-NEXT: Pass:            slp-vectorizer
 ; COST-NEXT: Name:            StoresVectorized
 ; COST-NEXT: Function:        mixed_insert_costs
-; COST:        - Cost:            '-3'
+; COST:        - Cost:            '-5'
 
 define void @mixed_insert_costs(ptr noalias %p, ptr noalias %out, double %x0, double %x1, double %x2) {
 ; CHECK-LABEL: define void @mixed_insert_costs(

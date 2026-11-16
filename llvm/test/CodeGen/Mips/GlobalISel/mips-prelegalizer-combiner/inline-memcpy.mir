@@ -22,11 +22,6 @@
 ---
 name:            test_memcpy_inline
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 liveins:
   - { reg: '$r4' }
   - { reg: '$r5' }

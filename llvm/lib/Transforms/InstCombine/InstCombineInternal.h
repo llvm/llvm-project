@@ -743,10 +743,8 @@ public:
   Instruction *foldSelectICmp(CmpPredicate Pred, SelectInst *SI, Value *RHS,
                               const ICmpInst &I);
   bool foldAllocaCmp(AllocaInst *Alloca);
-  Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI,
-                                            GetElementPtrInst *GEP,
-                                            CmpPredicate Pred, Constant *RHSC,
-                                            Instruction &CtxI,
+  Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI, CmpPredicate Pred,
+                                            Constant *RHSC, Instruction &CtxI,
                                             ConstantInt *AndCst = nullptr);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);

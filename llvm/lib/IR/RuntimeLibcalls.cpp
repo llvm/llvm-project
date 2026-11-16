@@ -505,9 +505,10 @@ FunctionCallee RuntimeLibcallsInfo::getOrInsertLibcallDecl(
     Module &M, RTLIB::LibcallImpl LibcallImpl) const {
   assert(!isVariable(LibcallImpl) && "not a function declaration");
 
-  const DataLayout &DL = M.getDataLayout();
-  auto [FuncTy, FuncAttrs] =
-      getFunctionTy(M.getContext(), M.getTargetTriple(), DL, LibcallImpl);
+  FunctionType *FuncTy;
+  AttributeList FuncAttrs;
+  std::tie(FuncTy, FuncAttrs) = getFunctionTy(
+      M.getContext(), M.getTargetTriple(), M.getDataLayout(), LibcallImpl);
 
   // TODO: Every libcall should have a known signature.
   if (!FuncTy) {
@@ -515,15 +516,11 @@ FunctionCallee RuntimeLibcallsInfo::getOrInsertLibcallDecl(
                                /*IsVarArg=*/true);
   }
 
-  StringRef Name = getLibcallImplName(LibcallImpl);
-  if (GlobalValue *GV = M.getNamedValue(Name))
-    return {FuncTy, GV};
-
-  Function *F = Function::Create(FuncTy, GlobalValue::ExternalLinkage,
-                                 DL.getProgramAddressSpace(), Name, &M);
-  F->setAttributes(FuncAttrs);
-  F->setCallingConv(getLibcallImplCallingConv(LibcallImpl));
-  return {FuncTy, F};
+  return M.getOrInsertFunction(
+      getLibcallImplName(LibcallImpl), FuncTy, [&](Function &F) {
+        F.setAttributes(FuncAttrs);
+        F.setCallingConv(getLibcallImplCallingConv(LibcallImpl));
+      });
 }
 
 GlobalValue *RuntimeLibcallsInfo::getOrInsertImplGlobal(
