@@ -310,13 +310,10 @@ commodity machines.
 
 ### Build options
 
-One may provide optional CMake variables to customize the build. Available options:
-
-* `-DFLANG_RUNTIME_F128_MATH_LIB=libquadmath`: enables build of
-  `flang_rt.quadmath` library that provides `REAL(16)` math APIs
-  for intrinsics such as `SIN`, `COS`, etc. GCC `libquadmath`'s header file
-  `quadmath.h` must be available to the build compiler.
-  [More details](Real16MathSupport.md).
+Flang-RT's `REAL(16)` math provider can be selected with the
+`FLANG_RUNTIME_F128_MATH_LIB` CMake variable. See
+[Flang support for REAL(16)](Real16MathSupport.md) for the available providers
+and their linking requirements.
 
 ## Supported C++ compilers
 
@@ -487,4 +484,3 @@ It will generate html in
 ```bash
    $BROWSER <build-dir>/tools/flang/docs/html/
 ```
-

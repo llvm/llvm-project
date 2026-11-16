@@ -960,20 +960,13 @@ prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
 
 // Generate a call to the Fortran runtime library providing
 // support for 128-bit float math.
-// On 'HAS_LDBL128' targets the implementation
-// is provided by flang_rt, otherwise, it is done via the
-// libflang_rt.quadmath library. In the latter case the compiler
-// has to be built with FLANG_RUNTIME_F128_MATH_LIB to guarantee
-// proper linking actions in the driver.
+// The implementation is provided by flang_rt or libflang_rt.quadmath,
+// depending on the target.
 static mlir::Value genLibF128Call(fir::FirOpBuilder &builder,
                                   mlir::Location loc,
                                   const MathOperation &mathOp,
                                   mlir::FunctionType libFuncType,
                                   llvm::ArrayRef<mlir::Value> args) {
-  // TODO: if we knew that the C 'long double' does not have 113-bit mantissa
-  // on the target, we could have asserted that FLANG_RUNTIME_F128_MATH_LIB
-  // must be specified. For now just always generate the call even
-  // if it will be unresolved.
   return genLibCall(builder, loc, mathOp, libFuncType, args);
 }
 
