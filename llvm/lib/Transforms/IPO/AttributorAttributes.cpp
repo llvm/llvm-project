@@ -625,6 +625,9 @@ static void followUsesInContext(AAType &AA, Attributor &A,
 template <class AAType, typename StateType = typename AAType::StateType>
 static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
                              Instruction &CtxI) {
+  if (!A.canUseBodyFor(AA.getIRPosition()))
+    return;
+
   const Value &Val = AA.getIRPosition().getAssociatedValue();
   if (isa<ConstantData>(Val))
     return;
@@ -2397,6 +2400,9 @@ bool AANonNull::isImpliedByIR(Attributor &A, const IRPosition &IRP,
     AttrKinds.push_back(Attribute::Dereferenceable);
   if (A.hasAttr(IRP, AttrKinds, IgnoreSubsumingPositions, Attribute::NonNull))
     return true;
+
+  if (!A.canUseBodyFor(IRP))
+    return false;
 
   DominatorTree *DT = nullptr;
   AssumptionCache *AC = nullptr;
