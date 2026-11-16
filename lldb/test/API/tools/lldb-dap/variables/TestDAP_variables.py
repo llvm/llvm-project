@@ -149,19 +149,20 @@ class TestDAP_variables(DAPTestCaseBase):
 
         # Test evaluate.
         if enableAutoVariableSummaries:
-            pt_summary = "{x:11, y:22, buffer:{...}}"
-            buf_summary = "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"
+            pt_match = r"^\{x:11, y:22, buffer:\{\.\.\.\}\}"
+            buf_match = r"^\{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, \.\.\.\}"
         else:
-            pt_summary = "PointType"
-            buf_summary = "int[16]"
+            # Verify that without a summary the value is empty.
+            pt_match = "^$"
+            buf_match = "^$"
 
         expressions = {
             "pt.x": ExpectEval(type="int", result="11", has_var_ref=False),
             "pt.buffer[2]": ExpectEval(type="int", result="2", has_var_ref=False),
-            "pt": ExpectEval(type="PointType", startswith=pt_summary, has_var_ref=True),
+            "pt": ExpectEval(type="PointType", matches=pt_match, has_var_ref=True),
             "pt.buffer": ExpectEval(
                 type="int[16]",
-                startswith=buf_summary,
+                matches=buf_match,
                 has_var_ref=True,
             ),
             "argv": ExpectEval(type="const char **", startswith="0x", has_var_ref=True),
@@ -349,9 +350,9 @@ class TestDAP_variables(DAPTestCaseBase):
 
         expandable_name = "pt"
         if enableAutoVariableSummaries:
-            pt_summary = "{x:11, y:22, buffer:{...}}"
+            pt_match = r"^\{x:11, y:22, buffer:\{\.\.\.\}\}"
         else:
-            pt_summary = "PointType"
+            pt_match = "^$"
         repl_result = """(PointType) $0 = {
   x = 11
   y = 22
@@ -390,21 +391,21 @@ class TestDAP_variables(DAPTestCaseBase):
             ),
             "hover": ExpectEval(
                 type="PointType",
-                startswith=pt_summary,
+                matches=pt_match,
                 has_var_ref=True,
                 has_indexed_variables=False,
                 children=expandable_children,
             ),
             "watch": ExpectEval(
                 type="PointType",
-                startswith=pt_summary,
+                matches=pt_match,
                 has_var_ref=True,
                 has_indexed_variables=False,
                 children=expandable_children,
             ),
             "variables": ExpectEval(
                 type="PointType",
-                startswith=pt_summary,
+                matches=pt_match,
                 has_var_ref=True,
                 has_indexed_variables=False,
                 children=expandable_children,
@@ -439,7 +440,7 @@ class TestDAP_variables(DAPTestCaseBase):
         if enableAutoVariableSummaries:
             my_var_value = '{name:"hello world!", x:42, y:7}'
         else:
-            my_var_value = "(unnamed struct)"
+            my_var_value = ""
         session.verify_variable(
             frame.locals["my_var"].variable,
             ExpectVar(
@@ -458,7 +459,7 @@ class TestDAP_variables(DAPTestCaseBase):
             home_var.variable,
             ExpectVar(
                 type="MySock",
-                value="MySock",
+                value="",
                 evaluate_name="home",
                 read_only=True,
             ),
@@ -468,7 +469,7 @@ class TestDAP_variables(DAPTestCaseBase):
         if enableAutoVariableSummaries:
             anon_value_re = r"{ipv4:.*, ipv6:.*}"
         else:
-            anon_value_re = r"MySock::\(anonymous union\)"
+            anon_value_re = r"^$"
         session.verify_variable(
             anon_var.variable,
             ExpectVar(
@@ -501,7 +502,7 @@ class TestDAP_variables(DAPTestCaseBase):
         if enableAutoVariableSummaries:
             e_value = "{lo:10, hi:11}"
         else:
-            e_value = "example"
+            e_value = ""
         e_var = frame.locals["e"]
         session.verify_variable(
             e_var.variable,
