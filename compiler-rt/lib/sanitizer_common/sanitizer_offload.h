@@ -136,6 +136,7 @@ class Offload {
     hsa_agent_t Agent;
     u32 Lanes;
     u32 MaxWaves;
+    u32 XCCs;
     hsa_queue_t* Queue;
     hsa_signal_t Signal;
   };

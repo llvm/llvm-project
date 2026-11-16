@@ -182,6 +182,7 @@ static_assert(offsetof(hsa_amd_memory_access_desc_t, agent_handle) == 8,
 typedef enum {
   HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT = 0xA002,
   HSA_AMD_AGENT_INFO_MAX_WAVES_PER_CU = 0xA00A,
+  HSA_AMD_AGENT_INFO_NUM_XCC = 0xA111,
 } hsa_amd_agent_info_t;
 
 typedef enum {
