@@ -220,8 +220,8 @@ bool YAMLProfileReader::parseFunctionProfile(
 
     BinaryBasicBlock &BB = *Order[YamlBB.Index];
 
-    // Basic samples profile (without LBR) does not have branches information
-    // and needs a special processing.
+    // A basic sample profile (without brstack) does not have branch information
+    // and so needs special processing.
     if (YamlBP.Header.Flags & BinaryFunction::PF_BASIC) {
       if (!YamlBB.EventCount) {
         BB.setExecutionCount(0);
