@@ -867,7 +867,8 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
 def CIR_LoadOp : CIR_Op<"load", [
   TypesMatchWith<"type of 'result' matches pointee type of 'addr'",
     "addr", "result", "mlir::cast<cir::PointerType>($_self).getPointee()">,
-  DeclareOpInterfaceMethods<PromotableMemOpInterface>
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
 ]> {
   let summary = "Load value from memory adddress";
   let description = [{
@@ -905,8 +906,7 @@ def CIR_LoadOp : CIR_Op<"load", [
     ```
   }];
 
-  let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr,
+  let arguments = (ins Arg<CIR_PointerType, "the address to load from">:$addr,
                        UnitAttr:$isDeref,
                        UnitAttr:$is_volatile,
                        UnitAttr:$is_nontemporal,
@@ -4052,7 +4052,9 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
 // GetBitfieldOp
 //===----------------------------------------------------------------------===//
 
-def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
+def CIR_GetBitfieldOp : CIR_Op<"get_bitfield", [
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+]> {
   let summary = "Get the information for a bitfield member";
   let description = [{
     The `cir.get_bitfield` operation provides a load-like access to
@@ -4101,7 +4103,7 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
     }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
+    Arg<CIR_PointerType, "the address to load from">:$addr,
     CIR_BitfieldInfoAttr:$bitfield_info,
     DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
@@ -6047,6 +6049,15 @@ def CIR_AsmFlavor : CIR_I32Enum<"AsmFlavor", "ATT or Intel",
 
 def CIR_AsmFlavorAttr : CIR_EnumAttr<CIR_AsmFlavor, "asm_flavor">;
 
+def CIR_EmptyDictAttr : Attr<CPred<
+  "::llvm::isa<::mlir::DictionaryAttr>($_self) && "
+  "::llvm::cast<::mlir::DictionaryAttr>($_self).empty()">,
+  "empty dictionary">;
+
+def CIR_AsmOperandAttrArray : CIR_TypedArrayAttrBase<
+  AnyAttrOf<[UnitAttr, CIR_EmptyDictAttr]>,
+  "array of unit attributes or empty dictionaries">;
+
 def CIR_InlineAsmOp : CIR_Op<"asm",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
@@ -6060,9 +6071,9 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
     - the output variable index referenced by the input operands.
     - the index of early-clobber operand
 
-    Operand attributes are a storage, where each element corresponds to the
-    operand with the same index. The first index relates to the operation
-    result (if any).
+    `operand_attrs` has one entry per operand, in operand order: a unit
+    attribute marks a memory operand (printed as `maybe_memory`) and an empty
+    dictionary marks any other operand.
     The operands themselves are stored as VariadicOfVariadic in the following
     order: output, input and then in/out operands. When several output operands
     are present, the result type may be represented as an anonymous record type.
@@ -6112,7 +6123,8 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
   let arguments =
       (ins VariadicOfVariadic<AnyType, "operands_segments">:$asm_operands,
           StrAttr:$asm_string, StrAttr:$constraints, UnitAttr:$side_effects,
-          UnitAttr:$convergent, CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
+          UnitAttr:$convergent, CIR_AsmFlavorAttr:$asm_flavor,
+          CIR_AsmOperandAttrArray:$operand_attrs,
           DenseI32ArrayAttr:$operands_segments);
 
   let builders = [OpBuilder<(ins
@@ -6121,7 +6133,19 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
       "bool":$sideEffects, "bool":$convergent, "AsmFlavor":$asmFlavor,
       "llvm::ArrayRef<mlir::Attribute>":$operandAttrs)>];
 
+  let extraClassDeclaration = [{
+    /// Returns true if the asm operand at `index`, counted over all asm
+    /// operands, is a memory operand: the address of an lvalue that the asm
+    /// reads or writes, from a constraint such as "=*m". It is printed as
+    /// `maybe_memory`.
+    bool isMemoryOperand(unsigned index) {
+      assert(index < getOperandAttrs().size() && "operand index out of range");
+      return mlir::isa<mlir::UnitAttr>(getOperandAttrs()[index]);
+    }
+  }];
+
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7093,6 +7117,7 @@ def CIR_MatrixInsertOp : CIR_Op<"matrix.insert", [
 
 def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
   DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
 ]> {
   let summary = "Matrix column major load";
   let description = [{
@@ -7120,7 +7145,7 @@ def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
   }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$value,
+    Arg<CIR_PointerType, "the address to load from">:$value,
     CIR_IntType:$stride,
     UnitAttr:$is_volatile
   );
