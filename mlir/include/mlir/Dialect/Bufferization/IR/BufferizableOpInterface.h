@@ -261,7 +261,8 @@ struct BufferizationOptions {
   /// Cast function: Convert a buffer value to a new value with the specified
   /// type. This method is typically used when a simple cast-like operation is
   /// sufficient to convert the buffer value, for example, when layout maps
-  /// between buffer value and resulting type do not match.
+  /// between buffer value and resulting type do not match. Returns failure if
+  /// the value cannot be cast to that type.
   using CastFn =
       std::function<FailureOr<Value>(OpBuilder &, Location, Type, Value)>;
   /// Initializer function for analysis state.
@@ -631,6 +632,12 @@ allocateTensorForShapedValue(OpBuilder &b, Location loc, Value shapedValue,
 FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
                            const BufferizationOptions &options,
                            const BufferizationState &state);
+
+/// Cast `buffer` to `type` with the options' cast function. Returns `buffer`
+/// itself if it already has that type. Reports an error at `loc` and returns
+/// failure if the cast is refused.
+FailureOr<Value> castBuffer(OpBuilder &b, Location loc, Value buffer, Type type,
+                            const BufferizationOptions &options);
 
 /// Return the buffer type for a given Value (tensor) after bufferization
 /// without bufferizing any IR.

@@ -53,3 +53,27 @@ func.func @inconsistent_memory_space_scf_for(%lb: index, %ub: index, %step: inde
   }
   return %2 : tensor<10xf32>
 }
+
+// -----
+
+// The two branches' buffers have layouts the default cast cannot cast to the
+// type they are reconciled to: the yield is not bufferized.
+
+func.func @if_cast_refused(
+    %c: i1,
+    // expected-error @+1 {{cannot cast a buffer of type 'memref<4xf32, affine_map<(d0) -> (d0 floordiv 2)>>' to 'memref<4xf32, strided<[?], offset: ?>>'}}
+    %a: memref<4xf32, affine_map<(d0) -> (d0 floordiv 2)>>,
+    %b: memref<4xf32>) -> f32 {
+  %ta = bufferization.to_tensor %a restrict
+    : memref<4xf32, affine_map<(d0) -> (d0 floordiv 2)>> to tensor<4xf32>
+  %tb = bufferization.to_tensor %b restrict : memref<4xf32> to tensor<4xf32>
+  %s = scf.if %c -> (tensor<4xf32>) {
+    // expected-error @+1 {{failed to bufferize op}}
+    scf.yield %ta : tensor<4xf32>
+  } else {
+    scf.yield %tb : tensor<4xf32>
+  }
+  %c0 = arith.constant 0 : index
+  %e = tensor.extract %s[%c0] : tensor<4xf32>
+  return %e : f32
+}

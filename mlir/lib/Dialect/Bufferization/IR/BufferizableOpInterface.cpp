@@ -374,12 +374,13 @@ LogicalResult defaultCreateMemCpy(OpBuilder &b, Location loc, Value from,
   return success();
 }
 
+/// Create a `memref.cast` between two cast-compatible memrefs; refuse any
+/// other pair.
 FailureOr<Value> defaultCreateCast(OpBuilder &b, Location loc, Type dest,
                                    Value value) {
-  assert(isa<BaseMemRefType>(dest) && "expected BaseMemRefType");
-  assert(isa<BaseMemRefType>(value.getType()) && "expected BaseMemRefType");
-  assert(memref::CastOp::areCastCompatible(value.getType(), dest) &&
-         "cast incompatible");
+  if (!isa<BaseMemRefType>(dest) || !isa<BaseMemRefType>(value.getType()) ||
+      !memref::CastOp::areCastCompatible(value.getType(), dest))
+    return failure();
   return memref::CastOp::create(b, loc, dest, value).getResult();
 }
 
@@ -767,6 +768,18 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
   return bufferization::ToBufferOp::create(rewriter, value.getLoc(),
                                            *bufferType, value)
       .getResult();
+}
+
+FailureOr<Value>
+bufferization::castBuffer(OpBuilder &b, Location loc, Value buffer, Type type,
+                          const BufferizationOptions &options) {
+  if (buffer.getType() == type)
+    return buffer;
+  FailureOr<Value> casted = options.castFn(b, loc, type, buffer);
+  if (failed(casted))
+    return emitError(loc) << "cannot cast a buffer of type " << buffer.getType()
+                          << " to " << type;
+  return casted;
 }
 
 /// Return the buffer type for a given Value (tensor) after bufferization.
