@@ -514,7 +514,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GEPOperator, Value)
 
 class PtrToIntOperator
     : public ConcreteOperator<Operator, Instruction::PtrToInt> {
-  friend class PtrToInt;
   friend class ConstantExpr;
 
 public:
@@ -551,7 +550,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PtrToIntOperator, Value)
 
 class PtrToAddrOperator
     : public ConcreteOperator<Operator, Instruction::PtrToAddr> {
-  friend class PtrToAddr;
   friend class ConstantExpr;
 
 public:

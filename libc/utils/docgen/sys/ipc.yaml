@@ -1,3 +1,15 @@
+posix: posix-2024
+types:
+  gid_t:
+    in-latest-posix: ''
+  key_t:
+    in-latest-posix: ''
+  mode_t:
+    in-latest-posix: ''
+  struct ipc_perm:
+    in-latest-posix: ''
+  uid_t:
+    in-latest-posix: ''
 functions:
   ftok:
     in-latest-posix: ''
@@ -17,3 +29,5 @@ macros:
     in-latest-posix: ''
   IPC_STAT:
     in-latest-posix: ''
+  IPC_INFO:
+    extension: linux

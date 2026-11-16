@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements support for context disambiguation of allocation calls for profile
-// guided heap optimization using memprof metadata. See implementation file for
-// details.
+// Implements support for context disambiguation of allocation calls for
+// profile-guided memory optimization (MemPGO) using memprof metadata. See
+// implementation file for details.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_IPO_MEMPROF_CONTEXT_DISAMBIGUATION_H
 #define LLVM_TRANSFORMS_IPO_MEMPROF_CONTEXT_DISAMBIGUATION_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -27,6 +30,13 @@ class GlobalValueSummary;
 class LLVMContext;
 class Module;
 class OptimizationRemarkEmitter;
+
+inline constexpr StringLiteral MemProfCloneSuffix = ".memprof.";
+
+/// Returns true if \p GV is a MemProf context-disambiguated clone.
+inline bool isMemProfClone(const GlobalValue &GV) {
+  return GV.getName().contains(MemProfCloneSuffix);
+}
 
 class MemProfContextDisambiguation
     : public OptionalPassInfoMixin<MemProfContextDisambiguation> {
@@ -49,24 +59,31 @@ class MemProfContextDisambiguation
     std::vector<InstrProfValueData> CandidateProfileData;
     uint32_t NumCandidates;
     uint64_t TotalCount;
-    size_t CallsiteInfoStartIndex;
+    // The number of clones recorded for the call.
+    unsigned NumClones;
+    // The CallsiteInfo summary record for each profiled target in
+    // CandidateProfileData (in the same order), or null if there is none, in
+    // which case all clones of the call should call the original target.
+    SmallVector<const CallsiteInfo *> Callsites;
   };
 
   // Record information needed for ICP of an indirect call, depending on its
-  // profile information and the clone information recorded in the corresponding
-  // CallsiteInfo records. The SI iterator point to the current iteration point
-  // through AllCallsites in this function, and will be updated in this method
-  // as we iterate through profiled targets. The number of clones recorded for
-  // this indirect call is returned. The necessary information is recorded in
-  // the ICallAnalysisInfo list for later ICP.
-  unsigned recordICPInfo(CallBase *CB, ArrayRef<CallsiteInfo> AllCallsites,
-                         ArrayRef<CallsiteInfo>::iterator &SI,
-                         SmallVector<ICallAnalysisData> &ICallAnalysisInfo);
+  // profile information and the clone information recorded in the
+  // CallsiteInfo records for its profiled targets. GetCallsite is invoked once
+  // for each profiled target, in order, and returns the corresponding record
+  // (or null if there is none). The number of clones recorded for this
+  // indirect call is returned (0 if there are no records). The necessary
+  // information is recorded in the ICallAnalysisInfo list for later ICP if any
+  // clone of the call should call a cloned target.
+  unsigned
+  recordICPInfo(CallBase *CB,
+                function_ref<const CallsiteInfo *(const InstrProfValueData &)>
+                    GetCallsite,
+                SmallVector<ICallAnalysisData> &ICallAnalysisInfo);
 
   // Actually performs any needed ICP in the function, using the information
   // recorded in the ICallAnalysisInfo list.
-  void performICP(Module &M, ArrayRef<CallsiteInfo> AllCallsites,
-                  ArrayRef<std::unique_ptr<ValueToValueMapTy>> VMaps,
+  void performICP(Module &M, ArrayRef<std::unique_ptr<ValueToValueMapTy>> VMaps,
                   ArrayRef<ICallAnalysisData> ICallAnalysisInfo,
                   OptimizationRemarkEmitter &ORE);
 
@@ -85,6 +102,11 @@ class MemProfContextDisambiguation
   // the ThinLTO backend during applyImport.
   std::unique_ptr<InstrProfSymtab> Symtab;
   std::unique_ptr<ICallPromotionAnalysis> ICallAnalysis;
+  // Maps the aliasee GUID of each imported copy of an alias to that copy. Used
+  // by performICP to promote to an alias copy when the profiled target is its
+  // aliasee, which is not in the module. Lazily built on first use.
+  std::optional<DenseMap<GlobalValue::GUID, Function *>>
+      AliaseeGUIDToImportedAlias;
 
 public:
   LLVM_ABI

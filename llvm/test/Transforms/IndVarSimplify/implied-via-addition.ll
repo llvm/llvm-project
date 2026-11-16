@@ -22,13 +22,13 @@ define void @test_01(i8 %t) {
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  entry:
+entry:
   %st = sext i8 %t to i16
   %cmp1 = icmp slt i16 %st, 42
   call void(i1, ...) @llvm.experimental.guard(i1 %cmp1) [ "deopt"() ]
   br label %loop
 
-  loop:
+loop:
   %idx = phi i8 [ %t, %entry ], [ %idx.inc, %loop ]
   %idx.inc = add i8 %idx, 1
   %c = icmp slt i8 %idx, 42
@@ -36,7 +36,7 @@ define void @test_01(i8 %t) {
   %be = icmp slt i8 %idx.inc, 42
   br i1 %be, label %loop, label %exit
 
-  exit:
+exit:
   ret void
 }
 
@@ -58,14 +58,14 @@ define void @test_02(i8 %t) {
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  entry:
+entry:
   %t.ptr = inttoptr i8 %t to ptr
   %p.42 = inttoptr i8 42 to ptr
   %cmp1 = icmp slt ptr %t.ptr, %p.42
   call void(i1, ...) @llvm.experimental.guard(i1 %cmp1) [ "deopt"() ]
   br label %loop
 
-  loop:
+loop:
   %idx = phi ptr [ %t.ptr, %entry ], [ %snext, %loop ]
   %snext = getelementptr inbounds i8, ptr %idx, i64 1
   %c = icmp slt ptr %idx, %p.42
@@ -73,6 +73,46 @@ define void @test_02(i8 %t) {
   %be = icmp slt ptr %snext, %p.42
   br i1 %be, label %loop, label %exit
 
-  exit:
+exit:
+  ret void
+}
+
+define void @three_ops_add_with_negative_operand(ptr %base, i64 range(i64 -2, 0) %a, i64 range(i64 1, 4) %b, i64 range(i64 0, 4) %c, i64 %p, i64 %q) {
+; CHECK-LABEL: define void @three_ops_add_with_negative_operand(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 range(i64 -2, 0) [[A:%.*]], i64 range(i64 1, 4) [[B:%.*]], i64 range(i64 0, 4) [[C:%.*]], i64 [[P:%.*]], i64 [[Q:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[G:%.*]] = icmp slt i64 [[P]], [[Q]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[G]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x [4 x i16]], ptr [[BASE]], i64 [[A]], i64 [[B]], i64 [[C]]
+; CHECK-NEXT:    store i16 0, ptr [[GEP]], align 2
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp samesign ult i64 [[IV_NEXT]], 4
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %g = icmp slt i64 %p, %q
+  call void @llvm.assume(i1 %g)
+  %gep = getelementptr inbounds [4 x [4 x i16]], ptr %base, i64 %a, i64 %b, i64 %c
+  store i16 0, ptr %gep
+  %gep.int = ptrtoint ptr %gep to i64
+  %base.int = ptrtoint ptr %base to i64
+  %d = sub i64 %gep.int, %base.int
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %cmp = icmp slt i64 %iv, %d
+  call void @use(i1 %cmp)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp slt i64 %iv.next, 4
+  br i1 %ec, label %loop, label %exit
+
+exit:
   ret void
 }

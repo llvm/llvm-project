@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATIONDIALECT_H
 #define MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATIONDIALECT_H
 
-#include "mlir/IR/Dialect.h"
-
 #include "mlir/Dialect/Bufferization/IR/BufferizationOpsDialect.h.inc"
 
 #endif // MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATIONDIALECT_H

@@ -48,6 +48,7 @@ cc_library(
         ":LanguageCPlusPlusProperties",
         ":PluginHighlighterClang",
         ":PluginObjectFilePDB",
+        ":PluginObjectFilePECOFF",
         ":PluginProcessUtility",
         ":SymbolFileDWARFProperties",
         ":SymbolFilePDBProperties",
@@ -95,6 +96,7 @@ cc_library(
     hdrs = glob(["Highlighter/Default/*.h"]),
     includes = [".."],
     deps = [
+        "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Utility",
     ],
@@ -108,6 +110,7 @@ cc_library(
     deps = [
         "//clang:basic",
         "//clang:lex",
+        "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Utility",
@@ -140,6 +143,7 @@ cc_library(
     srcs = glob(["Protocol/MCP/*.cpp"]),
     hdrs = glob(["Protocol/MCP/*.h"]),
     deps = [
+        "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:ProtocolMCP",
@@ -156,6 +160,22 @@ alias(
 alias(
     name = "PluginTypeSystemFortran",
     actual = ":PluginsClang",
+)
+
+cc_library(
+    name = "PluginTypeSystemClike",
+    srcs = glob(["TypeSystem/Clike/*.cpp"]),
+    hdrs = glob(["TypeSystem/Clike/*.h"]),
+    includes = [".."],
+    deps = [
+        "//clang:basic",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Symbol",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
 )
 
 alias(
@@ -257,10 +277,39 @@ alias(
     actual = ":PluginsClang",
 )
 
+# Compiled by //lldb:CoreLibraries.
+exports_files([
+    "Process/Utility/FreeBSDSignals.cpp",
+    "Process/Utility/FreeBSDSignals.h",
+    "Process/Utility/LinuxSignals.cpp",
+    "Process/Utility/LinuxSignals.h",
+    "Process/Utility/NetBSDSignals.cpp",
+    "Process/Utility/NetBSDSignals.h",
+    "Process/Utility/OpenBSDSignals.cpp",
+    "Process/Utility/OpenBSDSignals.h",
+])
+
 cc_library(
     name = "PluginProcessUtility",
-    srcs = glob(["Process/Utility/*.cpp"]),
-    hdrs = glob(["Process/Utility/*.h"]),
+    srcs = glob(
+        ["Process/Utility/*.cpp"],
+        # Compiled by //lldb:CoreLibraries, which constructs them.
+        exclude = [
+            "Process/Utility/FreeBSDSignals.cpp",
+            "Process/Utility/LinuxSignals.cpp",
+            "Process/Utility/NetBSDSignals.cpp",
+            "Process/Utility/OpenBSDSignals.cpp",
+        ],
+    ),
+    hdrs = glob(
+        ["Process/Utility/*.h"],
+        exclude = [
+            "Process/Utility/FreeBSDSignals.h",
+            "Process/Utility/LinuxSignals.h",
+            "Process/Utility/NetBSDSignals.h",
+            "Process/Utility/OpenBSDSignals.h",
+        ],
+    ),
     includes = [".."],
     deps = [
         "//lldb:Core",
@@ -605,6 +654,76 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "PluginPlatformAIX",
+    srcs = glob(["Platform/AIX/*.cpp"]),
+    hdrs = glob(["Platform/AIX/*.h"]),
+    includes = [".."],
+    local_defines = ["_ALL_SOURCE"],
+    deps = [
+        ":PluginPlatformPOSIX",
+        ":PluginsClang",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Target",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginPlatformFreeBSD",
+    srcs = glob(["Platform/FreeBSD/*.cpp"]),
+    hdrs = glob(["Platform/FreeBSD/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginPlatformPOSIX",
+        ":PluginsClang",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "PluginPlatformNetBSD",
+    srcs = glob(["Platform/NetBSD/*.cpp"]),
+    hdrs = glob(["Platform/NetBSD/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginPlatformPOSIX",
+        ":PluginsClang",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Target",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginPlatformOpenBSD",
+    srcs = glob(["Platform/OpenBSD/*.cpp"]),
+    hdrs = glob(["Platform/OpenBSD/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginPlatformPOSIX",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Target",
+        "//lldb:Utility",
+    ],
+)
+
 gentbl_cc_library(
     name = "PlatformAndroidProperties",
     strip_include_prefix = "Platform/Android",
@@ -793,6 +912,36 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "PluginRustLanguage",
+    srcs = glob(["Language/Rust/*.cpp"]),
+    hdrs = glob(["Language/Rust/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Demangle",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginDLanguage",
+    srcs = glob(["Language/D/*.cpp"]),
+    hdrs = glob(["Language/D/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Demangle",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "LanguageCPlusPlusProperties",
     strip_include_prefix = "Language/CPlusPlus",
@@ -883,6 +1032,24 @@ cc_library(
         "//lldb:Target",
         "//lldb:Utility",
         "//llvm:Core",
+        "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "PluginABILoongArch",
+    srcs = glob(["ABI/LoongArch/*.cpp"]),
+    hdrs = glob(["ABI/LoongArch/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessUtility",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Core",
+        "//llvm:Support",
         "//llvm:TargetParser",
     ],
 )
@@ -1020,6 +1187,23 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "PluginDynamicLoaderAcceleratorGDBRemote",
+    srcs = glob(["DynamicLoader/AcceleratorGDBRemote/*.cpp"]),
+    hdrs = glob(["DynamicLoader/AcceleratorGDBRemote/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessGDBRemote",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
 alias(
     name = "PluginDynamicLoaderPosixDYLD",
     actual = ":PluginProcessElfCore",
@@ -1122,6 +1306,26 @@ gentbl_cc_library(
 alias(
     name = "PluginDynamicLoaderDarwinKernel",
     actual = ":PluginPlatformMacOSX",
+)
+
+cc_library(
+    name = "PluginDynamicLoaderFreeBSDKernel",
+    srcs = glob(["DynamicLoader/FreeBSD-Kernel/*.cpp"]),
+    hdrs = glob(["DynamicLoader/FreeBSD-Kernel/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginObjectFileELF",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:BinaryFormat",
+        "//llvm:Support",
+    ],
 )
 
 cc_library(
@@ -1827,6 +2031,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginProcessUtility",
+        ":PluginRegisterDarwin",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
@@ -2003,6 +2208,33 @@ cc_library(
     deps = [
         ":PluginProcessPOSIX",
         ":PluginProcessUtility",
+        ":PluginRegisterNative",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Register",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)
+
+# lldb/unittests/Process/Linux includes these headers without the
+# Plugins/Process/Linux/ prefix, which CMake allows through
+# target_include_directories().
+cc_library(
+    name = "PluginProcessLinuxPrivateHeaders",
+    hdrs = glob(["Process/Linux/*.h"]),
+    includes = ["Process/Linux"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":PluginProcessLinux",
+        ":PluginProcessPOSIX",
+        ":PluginProcessUtility",
+        ":PluginRegisterNative",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
@@ -2086,6 +2318,7 @@ cc_library(
         ":PluginObjectFileELF",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
+        ":PluginRegisterCore",
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Headers",
@@ -2126,6 +2359,7 @@ cc_library(
         ":PluginDynamicLoaderDarwinKernel",
         ":PluginDynamicLoaderStatic",
         ":PluginProcessUtility",
+        ":PluginRegisterDarwin",
         ":ProcessKDPProperties",
         "//lldb:Breakpoint",
         "//lldb:Core",
@@ -2196,6 +2430,54 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginRegisterNative",
+    srcs = glob(["Register/Native/*.cpp"]),
+    hdrs = glob(["Register/Native/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Register",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "PluginRegisterCore",
+    srcs = glob(["Register/Core/*.cpp"]),
+    hdrs = glob(["Register/Core/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Register",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginRegisterDarwin",
+    srcs = glob(["Register/Darwin/*.cpp"]),
+    hdrs = glob(["Register/Darwin/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessUtility",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Register",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PluginProcessWindowsCommon",
     srcs = glob(["Process/Windows/Common/*.cpp"]),
     hdrs = glob([
@@ -2210,6 +2492,7 @@ cc_library(
     }),
     deps = [
         ":PluginDynamicLoaderWindowsDYLD",
+        ":PluginRegisterNative",
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Headers",

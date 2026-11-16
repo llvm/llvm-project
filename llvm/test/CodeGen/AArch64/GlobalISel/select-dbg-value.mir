@@ -15,6 +15,8 @@
     ret void
   }
 
+  define void @test_dbg_value_copy() { ret void }
+
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
   !llvm.dbg.cu = !{!0}
@@ -69,4 +71,25 @@ body: |
     %0:gpr(i32) = COPY $w0
     %1:gpr(i64) = G_ZEXT %0:gpr(i32)
     DBG_VALUE %1(i64), $noreg, !7, !DIExpression(), debug-location !9
+...
+
+# The DBG_VALUE must not constrain %1. Otherwise %1 gets gpr64 and the
+# redundant COPY from %0, which gets gpr64all, is kept.
+---
+name:            test_dbg_value_copy
+legalized:       true
+regBankSelected: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_dbg_value_copy
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
+    ; CHECK-NEXT: DBG_VALUE [[COPY]], $noreg, !7, !DIExpression(), debug-location !9
+    ; CHECK-NEXT: $x0 = COPY [[COPY]]
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(p0) = COPY %0(p0)
+    DBG_VALUE %1(p0), $noreg, !7, !DIExpression(), debug-location !9
+    $x0 = COPY %1(p0)
 ...
