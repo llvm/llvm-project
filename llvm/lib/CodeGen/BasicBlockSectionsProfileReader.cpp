@@ -293,9 +293,8 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
         // function with the same GUID.
         if (FuncGUID)
           return HasLocalLinkage && GUIDIt->second == *FuncGUID;
-        // Otherwise, only match local-linkage functions if the profile does not
-        // specify function GUIDs. Otherwise, this profile belongs to a function
-        // with non-local linkage.
+        // No GUID means either it's not a local-linkage function, or the
+        // profile does not contain GUIDs at all.
         return !HasLocalLinkage || !HasFuncGUIDs;
       });
       // We won't need DIFilename and FuncGUID anymore. Clean them up to avoid
