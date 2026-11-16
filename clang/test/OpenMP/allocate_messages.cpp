@@ -163,6 +163,9 @@ void gh140336(int i) {
 #pragma omp allocate(k)
 label2:
   k = 4;
+}
+
+void gh140336_indirect() {
   void *p = &&label3;
   {
     int l; // expected-note {{jump exits scope of variable with '#pragma omp allocate'}}

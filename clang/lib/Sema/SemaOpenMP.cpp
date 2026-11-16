@@ -3767,6 +3767,9 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPAllocateDirective(
     Vars.push_back(RefExpr);
     applyOMPAllocateAttribute(SemaRef, VD, AllocatorKind, Allocator, Alignment,
                               DE->getSourceRange());
+    // A jump over the allocation must be diagnosed, as for cleanup variables.
+    if (VD->hasLocalStorage())
+      SemaRef.setFunctionHasBranchProtectedScope();
   }
   if (Vars.empty())
     return nullptr;
