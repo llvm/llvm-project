@@ -20818,10 +20818,9 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
 }
 
 /// Before operation legalization, fold (sint_to_fp x) -> (select x, -1.0, 0.0)
-/// and (uint_to_fp x) -> (select x, 1.0, 0.0) for an i1 or i1 vector x if the
-/// target prefers the select. Both results are exact, so no conversion or
-/// rounding is needed. After type legalization, this also catches the i1
-/// conversions created by splitting vectors.
+/// and (uint_to_fp x) -> (select x, 1.0, 0.0) for an i1 or i1 vector x if i1 is
+/// a legal type that the target does not want as the operand of the
+/// conversion. Both results are exact, so no conversion or rounding is needed.
 static SDValue foldBoolToFPWithSelect(SDNode *N, const SDLoc &DL,
                                       SelectionDAG &DAG,
                                       const TargetLowering &TLI,
@@ -20829,8 +20828,13 @@ static SDValue foldBoolToFPWithSelect(SDNode *N, const SDLoc &DL,
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   unsigned Opcode = N->getOpcode();
-  if (LegalOperations || N0.getValueType().getScalarType() != MVT::i1 ||
-      !TLI.shouldConvertBoolToFPWithSelect(VT))
+  if (LegalOperations || N0.getValueType().getScalarType() != MVT::i1)
+    return SDValue();
+
+  // If i1 is not legal, type legalization promotes the operand and the target
+  // converts from the wider type. isTypeDesirableForOp is also false then, so
+  // check the legality separately.
+  if (!TLI.isTypeLegal(MVT::i1) || TLI.isTypeDesirableForOp(N, MVT::i1))
     return SDValue();
 
   // Leave (int_to_fp (fp_to_int x)) round trips to foldFPToIntToFP, which can
