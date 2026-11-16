@@ -26,10 +26,13 @@ namespace lld {
 llvm::TargetOptions
 getTargetOptions(const llvm::cl::LibraryOptionsContext &libraryOptions);
 llvm::ArrayRef<const llvm::cl::LibraryOptions *> getToolOptions();
-std::optional<llvm::Reloc::Model> getRelocModelFromCMModel();
-std::optional<llvm::CodeModel::Model> getCodeModelFromCMModel();
-std::string getCPUStr();
-std::vector<std::string> getMAttrs();
+std::optional<llvm::Reloc::Model>
+getRelocModelFromCMModel(const llvm::cl::LibraryOptionsContext &libraryOptions);
+std::optional<llvm::CodeModel::Model>
+getCodeModelFromCMModel(const llvm::cl::LibraryOptionsContext &libraryOptions);
+std::string getCPUStr(const llvm::cl::LibraryOptionsContext &libraryOptions);
+std::vector<std::string>
+getMAttrs(const llvm::cl::LibraryOptionsContext &libraryOptions);
 }
 
 #endif

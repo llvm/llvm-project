@@ -888,14 +888,14 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
   Conf.Options.MCOptions.X86RelaxRelocations = false;
 
   // Toggle function/data sections.
-  if (!codegen::getExplicitFunctionSections())
+  if (!codegen::getExplicitFunctionSections(LibraryOptions))
     Conf.Options.FunctionSections = SplitSections;
-  if (!codegen::getExplicitDataSections())
+  if (!codegen::getExplicitDataSections(LibraryOptions))
     Conf.Options.DataSections = SplitSections;
 
-  Conf.MAttrs = codegen::getMAttrs();
+  Conf.MAttrs = codegen::getMAttrs(LibraryOptions);
   Conf.RelocModel = RelocationModel;
-  Conf.CodeModel = codegen::getExplicitCodeModel();
+  Conf.CodeModel = codegen::getExplicitCodeModel(LibraryOptions);
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::getLevel(options::OptLevel);
   assert(CGOptLevelOrNone && "Invalid optimization level");

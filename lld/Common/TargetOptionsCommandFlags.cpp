@@ -21,14 +21,22 @@ llvm::ArrayRef<const llvm::cl::LibraryOptions *> lld::getToolOptions() {
   return llvm::codegen::getToolOptions();
 }
 
-std::optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel() {
-  return llvm::codegen::getExplicitRelocModel();
+std::optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel(
+    const llvm::cl::LibraryOptionsContext &libraryOptions) {
+  return llvm::codegen::getExplicitRelocModel(libraryOptions);
 }
 
-std::optional<llvm::CodeModel::Model> lld::getCodeModelFromCMModel() {
-  return llvm::codegen::getExplicitCodeModel();
+std::optional<llvm::CodeModel::Model> lld::getCodeModelFromCMModel(
+    const llvm::cl::LibraryOptionsContext &libraryOptions) {
+  return llvm::codegen::getExplicitCodeModel(libraryOptions);
 }
 
-std::string lld::getCPUStr() { return llvm::codegen::getCPUStr(); }
+std::string
+lld::getCPUStr(const llvm::cl::LibraryOptionsContext &libraryOptions) {
+  return llvm::codegen::getCPUStr(libraryOptions);
+}
 
-std::vector<std::string> lld::getMAttrs() { return llvm::codegen::getMAttrs(); }
+std::vector<std::string>
+lld::getMAttrs(const llvm::cl::LibraryOptionsContext &libraryOptions) {
+  return llvm::codegen::getMAttrs(libraryOptions);
+}

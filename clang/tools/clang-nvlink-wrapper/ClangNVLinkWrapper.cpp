@@ -406,7 +406,7 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
       Args.hasArg(OPT_opt_remarks_with_hotness) || RemarksWithHotness;
   Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
 
-  Conf.MAttrs = llvm::codegen::getMAttrs();
+  Conf.MAttrs = llvm::codegen::getMAttrs(LibraryOptions);
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::parseLevel(Args.getLastArgValue(OPT_O, "2")[0]);
   assert(CGOptLevelOrNone && "Invalid optimization level");

@@ -96,7 +96,8 @@ int llvm::compileModuleWithNewPM(
   raw_pwrite_stream *OS = &Out->os();
 
   std::unique_ptr<buffer_ostream> BOS;
-  if (codegen::getFileType() != CodeGenFileType::AssemblyFile &&
+  if (codegen::getFileType(Context.getLibraryOptions()) !=
+          CodeGenFileType::AssemblyFile &&
       !Out->os().supportsSeeking()) {
     BOS = std::make_unique<buffer_ostream>(Out->os());
     OS = BOS.get();

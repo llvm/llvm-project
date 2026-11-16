@@ -108,7 +108,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
 
   SmallString<4096> OutBuffer;
   raw_svector_ostream OutStream(OutBuffer);
-  if (Error Err = runCodeGenPipeline(*Target, *M, OutStream, nullptr,
+  if (Error Err = runCodeGenPipeline(*Target, *M, OutStream, nullptr, nullptr,
                                      CodeGenFileType::ObjectFile)) {
     ErrMsg = toString(std::move(Err));
     return false;

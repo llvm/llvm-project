@@ -47,9 +47,9 @@ static lto::Config createConfig() {
   for (StringRef pluginFn : config->passPlugins)
     c.PassPluginFilenames.push_back(std::string(pluginFn));
   c.OptPipeline = std::string(config->ltoNewPmPasses);
-  c.CodeModel = getCodeModelFromCMModel();
-  c.CPU = getCPUStr();
-  c.MAttrs = getMAttrs();
+  c.CodeModel = getCodeModelFromCMModel(config->libraryOptions);
+  c.CPU = getCPUStr(config->libraryOptions);
+  c.MAttrs = getMAttrs(config->libraryOptions);
   c.DiagHandler = diagnosticHandler;
 
   c.AlwaysEmitRegularLTOObj = !config->ltoObjPath.empty();
