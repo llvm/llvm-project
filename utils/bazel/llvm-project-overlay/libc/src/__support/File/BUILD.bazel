@@ -34,7 +34,6 @@ libc_support_library(
     ],
     deps = [
         ":file_io_result",
-        "//libc:llvm_libc_types_off_t",
         "//libc/hdr:errno_macros",
         "//libc/hdr:stdint_proxy",
         "//libc/hdr:stdio_macros",
@@ -48,6 +47,7 @@ libc_support_library(
         "//libc/hdr/types:off_t",
         "//libc/hdr/types:wchar_t",
         "//libc/hdr/types:wint_t",
+        "//libc/include:llvm_libc_types_off_t",
         "//libc/src/__support:alloc_checker",
         "//libc/src/__support:error_or",
         "//libc/src/__support/CPP:new",
