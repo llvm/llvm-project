@@ -20,6 +20,7 @@
 #include "orc-rt/bedrock/TaskGroup.h"
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/LockedAccess.h"
+#include "orc-rt/support/SymbolLookupResult.h"
 #include "orc-rt/support/SymbolLookupSet.h"
 #include "orc-rt/support/WrapperFunction.h"
 #include "orc-rt/support/move_only_function.h"

@@ -16,6 +16,7 @@
 #include "orc-rt/bedrock/BootstrapInfo.h"
 #include "orc-rt/bedrock/Service.h"
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
+#include "orc-rt/support/SymbolLookupResult.h"
 #include "orc-rt/support/SymbolLookupSet.h"
 
 namespace orc_rt {
