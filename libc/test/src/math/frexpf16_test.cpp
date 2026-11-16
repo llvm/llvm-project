@@ -15,4 +15,4 @@
 
 #include "src/math/frexpf16.h"
 
-LIST_FREXP_TESTS(float16, LIBC_NAMESPACE::frexpf16)
+LIST_FREXP_TESTS(Frexpf16, float16, LIBC_NAMESPACE::frexpf16)

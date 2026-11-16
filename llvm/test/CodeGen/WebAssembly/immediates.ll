@@ -105,7 +105,7 @@ define float @two_f32() {
 ; CHECK-NEXT: f32.const $push[[NUM:[0-9]+]]=, nan{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define float @nan_f32() {
-  ret float 0x7FF8000000000000
+  ret float +qnan
 }
 
 ; CHECK-LABEL: negnan_f32:
@@ -113,7 +113,7 @@ define float @nan_f32() {
 ; CHECK-NEXT: f32.const $push[[NUM:[0-9]+]]=, -nan{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define float @negnan_f32() {
-  ret float 0xFFF8000000000000
+  ret float -qnan
 }
 
 ; CHECK-LABEL: inf_f32:
@@ -185,7 +185,7 @@ define double @two_f64() {
 ; CHECK-NEXT: f64.const $push[[NUM:[0-9]+]]=, nan{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define double @nan_f64() {
-  ret double 0x7FF8000000000000
+  ret double +qnan
 }
 
 ; CHECK-LABEL: negnan_f64:
@@ -193,7 +193,7 @@ define double @nan_f64() {
 ; CHECK-NEXT: f64.const $push[[NUM:[0-9]+]]=, -nan{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define double @negnan_f64() {
-  ret double 0xFFF8000000000000
+  ret double -qnan
 }
 
 ; CHECK-LABEL: inf_f64:

@@ -57,7 +57,7 @@ cl::opt<bool> AlignBlocks("align-blocks", cl::desc("align basic blocks"),
 cl::opt<unsigned> AlignBlocksMinSize(
     "align-blocks-min-size",
     cl::desc("minimal size of the basic block that should be aligned"),
-    cl::init(0), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<unsigned> AlignBlocksThreshold(
     "align-blocks-threshold",
@@ -76,7 +76,7 @@ cl::opt<unsigned> AlignFunctionsMaxBytes(
 cl::opt<unsigned>
     BlockAlignment("block-alignment",
                    cl::desc("boundary to use for alignment of basic blocks"),
-                   cl::init(16), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+                   cl::init(16), cl::cat(BoltOptCategory));
 
 cl::opt<bool>
     PreserveBlocksAlignment("preserve-blocks-alignment",
@@ -102,7 +102,7 @@ AggregateOnly("aggregate-only",
 cl::opt<unsigned>
     BucketsPerLine("line-size",
                    cl::desc("number of entries per line (default 256)"),
-                   cl::init(256), cl::Optional, cl::cat(HeatmapCategory));
+                   cl::init(256), cl::cat(HeatmapCategory));
 
 cl::opt<bool>
     CompactCodeModel("compact-code-model",
@@ -119,14 +119,13 @@ cl::opt<bool>
 EnableBAT("enable-bat",
   cl::desc("write BOLT Address Translation tables"),
   cl::init(false),
-  cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
 cl::opt<bool> EqualizeBBCounts(
     "equalize-bb-counts",
     cl::desc("use same count for BBs that should have equivalent count (used "
              "in non-LBR and shrink wrapping)"),
-    cl::ZeroOrMore, cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
 
 llvm::cl::opt<bool> ForcePatch(
     "force-patch",
@@ -142,7 +141,6 @@ ExecutionCountThreshold("execution-count-threshold",
   cl::desc("perform profiling accuracy-sensitive optimizations only if "
            "function execution count >= the threshold (default: 0)"),
   cl::init(0),
-  cl::ZeroOrMore,
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
@@ -238,22 +236,22 @@ cl::opt<int> HeatmapCdfPct(
 cl::opt<unsigned long long> HeatmapMaxAddress(
     "max-address", cl::init(0xffffffff),
     cl::desc("maximum address considered valid for heatmap (default 4GB)"),
-    cl::Optional, cl::cat(HeatmapCategory));
+    cl::cat(HeatmapCategory));
 
 cl::opt<unsigned long long> HeatmapMinAddress(
     "min-address", cl::init(0x0),
     cl::desc("minimum address considered valid for heatmap (default 0)"),
-    cl::Optional, cl::cat(HeatmapCategory));
+    cl::cat(HeatmapCategory));
 
 cl::opt<bool> HeatmapPrintMappings(
     "print-mappings", cl::init(false),
     cl::desc("print mappings in the legend, between characters/blocks and text "
              "sections (default false)"),
-    cl::Optional, cl::cat(HeatmapCategory));
+    cl::cat(HeatmapCategory));
 
 cl::opt<std::string> HeatmapOutput("heatmap",
                                    cl::desc("print heatmap to a given file"),
-                                   cl::Optional, cl::cat(HeatmapCategory));
+                                   cl::cat(HeatmapCategory));
 
 cl::opt<bool> HotData("hot-data",
                       cl::desc("hot data symbols support (relocation mode)"),
@@ -271,7 +269,7 @@ cl::opt<bool> HotText(
         "Generate hot text symbols. Apply this option to a precompiled binary "
         "that manually calls into hugify, such that at runtime hugify call "
         "will put hot code into 2M pages. This requires relocation."),
-    cl::ZeroOrMore, cl::cat(BoltCategory));
+    cl::cat(BoltCategory));
 
 cl::opt<bool> Hugify(
     "hugify",
@@ -297,7 +295,6 @@ cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
 cl::opt<std::string>
 OutputFilename("o",
   cl::desc("<output file>"),
-  cl::Optional,
   cl::cat(BoltOutputCategory));
 
 cl::list<std::string> PerfData("perfdata", cl::CommaSeparated,
@@ -338,7 +335,7 @@ cl::opt<ProfileFormatKind> ProfileFormat(
                clEnumValN(PF_PreAgg, "preagg", "pre-aggregated profile format"),
                clEnumValN(PF_PerfScript, "perfscript",
                           "perfscript profile format")),
-    cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+    cl::Hidden, cl::cat(BoltCategory));
 
 cl::list<std::string> ReorderData(
     "reorder-data", cl::CommaSeparated, cl::desc("list of sections to reorder"),
@@ -350,7 +347,7 @@ cl::opt<std::string> SaveProfile("w",
 
 cl::opt<bool> ShowDensity("show-density",
                           cl::desc("show profile density details"),
-                          cl::Optional, cl::cat(AggregatorCategory));
+                          cl::cat(AggregatorCategory));
 
 cl::opt<bool> SplitEH("split-eh", cl::desc("split C++ exception handling code"),
                       cl::Hidden, cl::cat(BoltOptCategory));
@@ -381,7 +378,7 @@ cl::opt<bool> UpdateDebugSections(
 
 cl::opt<unsigned>
     Verbosity("v", cl::desc("set verbosity level for diagnostic output"),
-              cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
+              cl::init(0), cl::cat(BoltCategory),
               cl::sub(cl::SubCommand::getAll()));
 
 cl::opt<bool> FixBranchesWithLiveness(

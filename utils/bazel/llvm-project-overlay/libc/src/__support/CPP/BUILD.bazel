@@ -1,0 +1,310 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "algorithm",
+    hdrs = ["algorithm.h"],
+    deps = [
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "iterator",
+    hdrs = ["iterator.h"],
+    deps = [
+        ":type_traits",
+        "//libc/hdr/types:size_t",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "array",
+    hdrs = ["array.h"],
+    deps = [
+        ":iterator",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bit",
+    hdrs = ["bit.h"],
+    deps = [
+        ":limits",
+        ":type_traits",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:sanitizer",
+        "//libc/src/__support/macros/properties:compiler",
+    ],
+)
+
+libc_support_library(
+    name = "bitset",
+    hdrs = ["bitset.h"],
+    deps = [
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nullptr_t",
+    hdrs = ["cstddef/nullptr_t.h"],
+    deps = [
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "cstddef",
+    hdrs = ["cstddef.h"],
+    deps = [
+        ":nullptr_t",
+        ":type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "expected",
+    hdrs = ["expected.h"],
+    deps = [
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "functional",
+    hdrs = ["functional.h"],
+    deps = [
+        ":type_traits",
+        ":utility",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "tuple",
+    hdrs = ["tuple.h"],
+    deps = [
+        ":type_traits",
+        ":utility",
+    ],
+)
+
+libc_support_library(
+    name = "limits",
+    hdrs = ["limits.h"],
+    deps = [
+        ":type_traits",
+        "//libc/hdr:limits_macros",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "mutex",
+    hdrs = ["mutex.h"],
+    deps = [
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "new",
+    srcs = ["new.cpp"],
+    hdrs = ["new.h"],
+    deps = [
+        "//libc/hdr/func:aligned_alloc",
+        "//libc/hdr/func:free",
+        "//libc/hdr/func:malloc",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:macro_utils",
+        "//libc/src/__support/macros:sanitizer",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:os",
+    ],
+)
+
+libc_support_library(
+    name = "optional",
+    hdrs = ["optional.h"],
+    deps = [
+        ":type_traits",
+        ":utility",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "scope",
+    hdrs = ["scope.h"],
+    deps = [
+        ":type_traits",
+        ":utility",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "simd",
+    hdrs = ["simd.h"],
+    deps = [
+        ":algorithm",
+        ":bit",
+        ":limits",
+        ":tuple",
+        ":type_traits",
+        ":utility",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "span",
+    hdrs = ["span.h"],
+    deps = [
+        ":array",
+        ":limits",
+        ":type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "string_view",
+    hdrs = ["string_view.h"],
+    deps = [
+        ":limits",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "stringstream",
+    hdrs = ["stringstream.h"],
+    deps = [
+        ":span",
+        ":string_view",
+        ":type_traits",
+        "//libc/src/__support:integer_to_string",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "string",
+    hdrs = ["string.h"],
+    deps = [
+        ":algorithm",
+        ":string_view",
+        "//libc/hdr:stdint_proxy",
+        "//libc/hdr/func:free",
+        "//libc/hdr/func:malloc",
+        "//libc/hdr/func:realloc",
+        "//libc/src/__support:common",
+        "//libc/src/__support:integer_to_string",
+        "//libc/src/__support:libc_assert",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string:utils",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_support_library(
+    name = "type_traits",
+    hdrs = glob(["type_traits/*.h"]) + [
+        "type_traits.h",
+        "utility/declval.h",
+        "utility/forward.h",
+    ],
+    deps = [
+        ":nullptr_t",
+        "//libc:llvm_libc_macros_stdfix_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:complex_types",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "utility",
+    hdrs = glob(["utility/*.h"]) + [
+        "utility.h",
+    ],
+    deps = [
+        ":type_traits",
+        "//libc/hdr/types:size_t",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "unique_ptr",
+    hdrs = ["unique_ptr.h"],
+    deps = [
+        ":new",
+        ":nullptr_t",
+        ":type_traits",
+        ":utility",
+        "//libc/hdr/types:size_t",
+        "//libc/src/__support:libc_assert",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "atomic",
+    hdrs = ["atomic.h"],
+    deps = [
+        ":type_traits",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:architectures",
+    ],
+)

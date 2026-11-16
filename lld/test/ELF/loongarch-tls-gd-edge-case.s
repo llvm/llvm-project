@@ -9,10 +9,10 @@
 # RUN: ld.lld %t.la64.o -shared -o %t.la64
 
 # RUN: llvm-readelf -Wr %t.la32 | FileCheck --check-prefix=LA32-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.la32 | FileCheck --check-prefix=LA32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.la32 | FileCheck --check-prefix=LA32 %s
 
 # RUN: llvm-readelf -Wr %t.la64 | FileCheck --check-prefix=LA64-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.la64 | FileCheck --check-prefix=LA64 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.la64 | FileCheck --check-prefix=LA64 %s
 
 # LA32-REL-NOT:  R_LARCH_32
 # LA32-REL:      0002023c  00000206 R_LARCH_TLS_DTPMOD32   00000000   y + 0

@@ -1,0 +1,32 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+module {
+  cir.func @fshl_float(%a : !cir.float, %b : !cir.float, %c : !cir.float) {
+    // expected-error@+1 {{'cir.fshl' op operand #0 must be integer or vector of integer type, but got '!cir.float'}}
+    %0 = cir.fshl %a, %b, %c : !cir.float
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+module {
+  cir.func @fshl_mixed_signedness(%a : !s32i, %b : !s32i, %c : !u32i) {
+    // expected-error@+1 {{'cir.fshl' op requires the same type for all operands and results}}
+    %0 = "cir.fshl"(%a, %b, %c) : (!s32i, !s32i, !u32i) -> !s32i
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  cir.func @fshr_float(%a : !cir.float, %b : !cir.float, %c : !cir.float) {
+    // expected-error@+1 {{'cir.fshr' op operand #0 must be integer or vector of integer type, but got '!cir.float'}}
+    %0 = cir.fshr %a, %b, %c : !cir.float
+    cir.return
+  }
+}

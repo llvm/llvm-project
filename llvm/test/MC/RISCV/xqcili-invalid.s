@@ -5,7 +5,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:9: error: register must be a GPR
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension)
 qc.e.li 9, 33554432
 
 # CHECK-PLUS: :[[@LINE+2]]:11: error: too few operands for instruction

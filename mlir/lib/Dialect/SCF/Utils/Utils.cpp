@@ -513,6 +513,15 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     auto upperBound = forOp.getUpperBound();
     Value diff =
         arith::SubIOp::create(boundsBuilder, loc, upperBound, lowerBound);
+    Value zero = arith::ConstantOp::create(
+        boundsBuilder, loc, boundsBuilder.getZeroAttr(diff.getType()));
+    Value nonEmpty = arith::CmpIOp::create(boundsBuilder, loc,
+                                           forOp.getUnsignedCmp()
+                                               ? arith::CmpIPredicate::ult
+                                               : arith::CmpIPredicate::slt,
+                                           lowerBound, upperBound);
+    diff = arith::SelectOp::create(boundsBuilder, loc, nonEmpty, diff, zero);
+
     Value tripCount = ceilDivPositive(boundsBuilder, loc, diff, step);
     Value unrollFactorCst = arith::ConstantOp::create(
         boundsBuilder, loc,
@@ -522,11 +531,11 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     // Compute tripCountEvenMultiple = tripCount - (tripCount % unrollFactor)
     Value tripCountEvenMultiple =
         arith::SubIOp::create(boundsBuilder, loc, tripCount, tripCountRem);
-    // Compute upperBoundUnrolled = lowerBound + tripCountEvenMultiple * step
+    // Compute upperBoundUnrolled = UpperBound + tripCountEvenMultiple * step
     upperBoundUnrolled = arith::AddIOp::create(
         boundsBuilder, loc, lowerBound,
         arith::MulIOp::create(boundsBuilder, loc, tripCountEvenMultiple, step));
-    // Scale 'step' by 'unrollFactor'.
+    // Compute stepUnrolled = step * unrollFactor
     stepUnrolled =
         arith::MulIOp::create(boundsBuilder, loc, step, unrollFactorCst);
   }
@@ -1375,20 +1384,6 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
   }
 
   return innerLoops;
-}
-
-// Stripmines a `forOp` by `factor` and sinks it under a single `target`.
-// Returns the new for operation, nested immediately under `target`.
-template <typename SizeType>
-static scf::ForOp stripmineSink(scf::ForOp forOp, SizeType factor,
-                                scf::ForOp target) {
-  // TODO: Use cheap structural assertions that targets are nested under
-  // forOp and that targets are not nested under each other when DominanceInfo
-  // exposes the capability. It seems overkill to construct a whole function
-  // dominance tree at this point.
-  auto res = stripmineSink(forOp, factor, ArrayRef<scf::ForOp>(target));
-  assert(res.size() == 1 && "Expected 1 inner forOp");
-  return res[0];
 }
 
 SmallVector<Loops, 8> mlir::tile(ArrayRef<scf::ForOp> forOps,

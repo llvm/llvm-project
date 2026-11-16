@@ -26,7 +26,7 @@ A *deact_simple() { return new A(makeB()); }
 // CIR:   %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
-// CIR:   %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
+// CIR:   %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[TRUE:.*]] = cir.const #true
 // CIR:     cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -49,7 +49,7 @@ A *deact_simple() { return new A(makeB()); }
 // LLVM-LABEL: define dso_local ptr @_Z12deact_simplev() {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   %[[TMP:.*]] = alloca %struct.B
 // LLVM:   %[[ACTIVE:.*]] = alloca i8
-// LLVM:   %[[PTR:.*]] = call nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW:.*]]
+// LLVM:   %[[PTR:.*]] = call noalias nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW:.*]]
 // LLVM:   store i8 1, ptr %[[ACTIVE]]
 // LLVM:   invoke void @_Z5makeBv(ptr dead_on_unwind writable sret(%struct.B) align 4 %[[TMP]])
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[UNWIND_OUTER:.*]]
@@ -106,7 +106,7 @@ A *deact_if(bool cond) {
 // CIR-LABEL: cir.func {{.*}} @_Z8deact_ifb
 // CIR:   cir.if {{.*}} {
 // CIR:     %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
-// CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
+// CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:     cir.cleanup.scope {
 // CIR:       %[[TRUE:.*]] = cir.const #true
 // CIR:       cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -124,7 +124,7 @@ A *deact_if(bool cond) {
 // LLVM-LABEL: define dso_local ptr @_Z8deact_ifb(i1 zeroext %0) {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   br i1 %{{.*}}, label %[[THEN:.*]], label %[[END:.*]]
 // LLVM: [[THEN]]:
-// LLVM:   %[[PTR:.*]] = call nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
+// LLVM:   %[[PTR:.*]] = call noalias nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
 // LLVM:   store i8 1, ptr %[[ACTIVE:.*]]
 // LLVM:   invoke void @_ZN1AC1Ei(ptr {{.*}} %[[PTR]], i32 {{.*}})
 // LLVM:           to label %[[CONT:.*]] unwind label %[[UNWIND_INNER:.*]]
@@ -162,7 +162,7 @@ A *deact_ternary(bool cond) { return (new A(makeB()), cond) ? nullptr : nullptr;
 
 // CIR-LABEL: cir.func {{.*}} @_Z13deact_ternaryb
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
-// CIR:   %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
+// CIR:   %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[TRUE:.*]] = cir.const #true
 // CIR:     cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -177,7 +177,7 @@ A *deact_ternary(bool cond) { return (new A(makeB()), cond) ? nullptr : nullptr;
 // CIR:   }
 
 // LLVM-LABEL: define dso_local ptr @_Z13deact_ternaryb(i1 zeroext %0) {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:   %[[PTR:.*]] = call nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
+// LLVM:   %[[PTR:.*]] = call noalias nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
 // LLVM:   store i8 1, ptr %[[ACTIVE:.*]]
 // LLVM:   invoke void @_ZN1AC1Ei(ptr {{.*}} %[[PTR]], i32 {{.*}})
 // LLVM:           to label %[[CONT:.*]] unwind label %[[UNWIND_INNER:.*]]
@@ -219,7 +219,7 @@ A *deact_while_cond(int n) {
 // CIR-LABEL: cir.func {{.*}} @_Z16deact_while_condi
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   cir.while {
-// CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
+// CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:     cir.cleanup.scope {
 // CIR:       %[[TRUE:.*]] = cir.const #true
 // CIR:       cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -240,7 +240,7 @@ A *deact_while_cond(int n) {
 // LLVM:   %[[ACTIVE:.*]] = alloca i8
 // LLVM:   br label %[[WHILE_COND:.*]]
 // LLVM: [[WHILE_COND]]:
-// LLVM:   %[[PTR:.*]] = call nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
+// LLVM:   %[[PTR:.*]] = call noalias nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
 // LLVM:   store i8 1, ptr %[[ACTIVE]]
 // LLVM:   invoke void @_Z5makeBv(ptr dead_on_unwind writable sret(%struct.B) align 4 %[[TMP]])
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[UNWIND_OUTER:.*]]
@@ -299,7 +299,7 @@ A *deact_switch(int kind) {
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   cir.switch({{.*}}) {
 // CIR:     cir.case(equal, [#cir.int<1> : !s32i]) {
-// CIR:       %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
+// CIR:       %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:       cir.cleanup.scope {
 // CIR:         %[[TRUE:.*]] = cir.const #true
 // CIR:         cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -320,7 +320,7 @@ A *deact_switch(int kind) {
 // LLVM:     i32 1, label %[[CASE1:.*]]
 // LLVM:   ]
 // LLVM: [[CASE1]]:
-// LLVM:   %[[PTR:.*]] = call nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
+// LLVM:   %[[PTR:.*]] = call noalias nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
 // LLVM:   store i8 1, ptr %[[ACTIVE:.*]]
 // LLVM:   invoke void @_ZN1AC1Ei(ptr {{.*}} %[[PTR]], i32 {{.*}})
 // LLVM:           to label %[[CONT:.*]] unwind label %[[UNWIND_INNER:.*]]
@@ -358,7 +358,7 @@ A *deact_switch(int kind) {
 // OGCG: [[DO_DELETE]]:
 // OGCG:   call void @_ZdlPv(ptr %[[PTR]])
 
-// LLVM-DAG: attributes #[[ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}}
+// LLVM-DAG: attributes #[[ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}memory(inaccessiblemem: readwrite, errnomem: write){{.*}}}
 // LLVM-DAG: attributes #[[ATTR_BUILTIN_DEL]] = {{{.*}}builtin{{.*}}}
 // LLVM-DAG: attributes #[[ATTR_NOUNWIND]] = {{{.*}}nounwind{{.*}}}
 // OGCG-DAG: attributes #[[OGCG_ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}}

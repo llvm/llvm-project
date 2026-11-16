@@ -16,8 +16,13 @@ add_mlir_dialect_library(MLIRBufferizationDialect
   MLIRAllocationOpInterfaceIncGen
   MLIRBufferizationOpsIncGen
   MLIRBufferizationEnumsIncGen
+  MLIRBufferDeallocationOpInterfaceIncGen
+  MLIRBufferizableOpInterfaceIncGen
+  MLIRBufferViewFlowOpInterfaceIncGen
+  MLIRBufferizationTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRAffineDialect
   MLIRArithDialect
   MLIRDestinationStyleOpInterface
@@ -25,7 +30,6 @@ add_mlir_dialect_library(MLIRBufferizationDialect
   MLIRFuncDialect
   MLIRFunctionInterfaces
   MLIRIR
-  MLIRSparseTensorDialect
   MLIRSubsetOpInterface
   MLIRTensorDialect
   MLIRMemRefDialect

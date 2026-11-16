@@ -37,7 +37,7 @@ body:             |
   ; CHECK: bb.2:
   ; CHECK:   ADJCALLSTACKUP
   ; CHECK:   $sgpr16 = COPY [[LANE]]
-  ; CHECK:   SI_CALL_ISEL [[DEST]], 0, csr_amdgpu_gfx90ainsts, implicit killed $sgpr16
+  ; CHECK:   SI_CALL_ISEL [[DEST]], 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
   ; CHECK:   ADJCALLSTACKDOWN
   ; CHECK:   SI_WATERFALL_LOOP %bb.1
   bb.0:
@@ -48,7 +48,7 @@ body:             |
 
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     $sgpr16 = COPY %0
-    SI_CALL_ISEL killed %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
+    SI_CALL_ISEL %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     S_ENDPGM 0
 ...
@@ -84,7 +84,37 @@ body:             |
 
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     $sgpr16 = COPY %0
-    SI_CALL_ISEL killed %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
+    SI_CALL_ISEL %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+    S_ENDPGM 0
+...
+
+# A debug instruction that reads the argument register is not a reader of the
+# copy, so the copy goes as it does without one.
+
+---
+name:            waterfall_si_call_inreg_dbg_value
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  ; CHECK-LABEL: name: waterfall_si_call_inreg_dbg_value
+  ; CHECK: bb.1:
+  ; CHECK:   [[LANE:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32
+  ; CHECK: bb.2:
+  ; CHECK:   ADJCALLSTACKUP
+  ; CHECK-NEXT:   DBG_VALUE $sgpr16, $noreg
+  ; CHECK-NEXT:   $sgpr16 = COPY [[LANE]]
+  ; CHECK-NEXT:   SI_CALL_ISEL
+  bb.0:
+    liveins: $vgpr0, $sgpr4_sgpr5
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:sreg_64_xexec = COPY $sgpr4_sgpr5
+
+    ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+    $sgpr16 = COPY %0
+    DBG_VALUE $sgpr16, $noreg
+    SI_CALL_ISEL %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     S_ENDPGM 0
 ...

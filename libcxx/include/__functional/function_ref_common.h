@@ -40,10 +40,10 @@ union __function_ref_storage {
   void* __obj_ptr_;
   void (*__fn_ptr_)();
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __function_ref_storage() noexcept : __obj_ptr_(nullptr) {}
+  constexpr explicit __function_ref_storage() noexcept : __obj_ptr_(nullptr) {}
 
   template <class _Tp>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __function_ref_storage(_Tp* __ptr) noexcept {
+  constexpr explicit __function_ref_storage(_Tp* __ptr) noexcept {
     if constexpr (is_object_v<_Tp>) {
       __obj_ptr_ = const_cast<remove_cv_t<_Tp>*>(__ptr);
     } else {
@@ -53,7 +53,7 @@ union __function_ref_storage {
   }
 
   template <class _Tp>
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __get(__function_ref_storage __storage) {
+  static constexpr auto __get(__function_ref_storage __storage) {
     if constexpr (is_object_v<_Tp>) {
       return static_cast<_Tp*>(__storage.__obj_ptr_);
     } else {

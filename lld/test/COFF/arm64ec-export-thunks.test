@@ -72,7 +72,7 @@ RUN: llvm-readobj --sections exports.dll | FileCheck --check-prefix=A64XRM %s
 A64XRM:      Name: .a64xrm (2E 61 36 34 78 72 6D 00)
 A64XRM-NEXT: VirtualSize: 0x18
 A64XRM-NEXT: VirtualAddress: 0x6000
-A64XRM-NEXT: RawDataSize: 512
+A64XRM-NEXT: RawDataSize: 0x200
 A64XRM-NEXT: PointerToRawData:
 A64XRM-NEXT: PointerToRelocations: 0x0
 A64XRM-NEXT: PointerToLineNumbers: 0x0

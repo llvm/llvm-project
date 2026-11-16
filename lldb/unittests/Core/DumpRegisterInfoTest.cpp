@@ -147,3 +147,22 @@ TEST(DoDumpRegisterInfoTest, VectorElements) {
                               "\n"
                               "  Vector elements: 4");
 }
+
+TEST(DoDumpRegisterInfoTest, UnionMembers) {
+  StreamString strm;
+  RegisterTypeBuiltin float_type("ieee_single", lldb::eEncodingIEEE754,
+                                 lldb::eFormatFloat, 4);
+  RegisterTypeBuiltin pointer_type("data_ptr", lldb::eEncodingUint,
+                                   lldb::eFormatAddressInfo, std::nullopt);
+  RegisterTypeUnion union_type(
+      "views", {RegisterTypeUnion::Field("f32", &float_type),
+                RegisterTypeUnion::Field("pointer", &pointer_type)});
+
+  DoDumpRegisterInfo(strm, "u0", nullptr, 8, {}, {}, {}, &union_type, 100);
+  ASSERT_EQ(strm.GetString(), "       Name: u0\n"
+                              "       Size: 8 bytes (64 bits)\n"
+                              "\n"
+                              "  Union members:\n"
+                              "    f32 (ieee_single, 4 bytes)\n"
+                              "    pointer (data_ptr)");
+}

@@ -390,18 +390,18 @@ declare ptr @customalloc_zeroed(i64, i64) allockind("alloc,zeroed") "alloc-famil
 
 ; This should create a customalloc_zeroed_custom_cc call and eliminate the memset while
 ; respecting the custom calling convention of the zeroed variant.
-define cc99 ptr @customalloc_memset_custom_cc(i64 %size, i64 %align) {
+define cc1000 ptr @customalloc_memset_custom_cc(i64 %size, i64 %align) {
 ; CHECK-LABEL: @customalloc_memset_custom_cc(
-; CHECK-NEXT:    [[CUSTOMALLOC_ZEROED_CUSTOM_CC:%.*]] = call cc99 ptr @customalloc_zeroed_custom_cc(i64 [[SIZE:%.*]], i64 [[ALIGN:%.*]])
+; CHECK-NEXT:    [[CUSTOMALLOC_ZEROED_CUSTOM_CC:%.*]] = call cc1000 ptr @customalloc_zeroed_custom_cc(i64 [[SIZE:%.*]], i64 [[ALIGN:%.*]])
 ; CHECK-NEXT:    ret ptr [[CUSTOMALLOC_ZEROED_CUSTOM_CC]]
 ;
-  %call = call cc99 ptr @customalloc_custom_cc(i64 %size, i64 %align)
+  %call = call cc1000 ptr @customalloc_custom_cc(i64 %size, i64 %align)
   call void @llvm.memset.p0.i64(ptr %call, i8 0, i64 %size, i1 false)
   ret ptr %call
 }
 
-declare cc99 ptr @customalloc_custom_cc(i64, i64) allockind("alloc") "alloc-family"="customalloc_custom_cc" "alloc-variant-zeroed"="customalloc_zeroed_custom_cc"
-declare cc99 ptr @customalloc_zeroed_custom_cc(i64, i64) allockind("alloc,zeroed") "alloc-family"="customalloc_custom_cc"
+declare cc1000 ptr @customalloc_custom_cc(i64, i64) allockind("alloc") "alloc-family"="customalloc_custom_cc" "alloc-variant-zeroed"="customalloc_zeroed_custom_cc"
+declare cc1000 ptr @customalloc_zeroed_custom_cc(i64, i64) allockind("alloc,zeroed") "alloc-family"="customalloc_custom_cc"
 
 ; This should not create recursive call to calloc.
 define ptr @calloc(i64 %nmemb, i64 %size) inaccessiblememonly {
@@ -1232,5 +1232,31 @@ then:
   br label %end
 
 end:
+  ret void
+}
+
+declare ptr @opaque(ptr returned) memory(none) nounwind willreturn
+
+; The pointer operands differ, but they still refer to the same memory location.
+define void @noop_store_ptrs_mustalias(ptr %p) {
+; CHECK-LABEL: @noop_store_ptrs_mustalias(
+; CHECK-NEXT:    ret void
+;
+  %val = load i32, ptr %p
+  %q = call ptr @opaque(ptr %p)
+  store i32 %val, ptr %q
+  ret void
+}
+
+define void @noop_store_ptrs_partialalias(ptr %p) {
+; CHECK-LABEL: @noop_store_ptrs_partialalias(
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 2
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %q = getelementptr i8, ptr %p, i64 2
+  %val = load i32, ptr %q
+  store i32 %val, ptr %p
   ret void
 }

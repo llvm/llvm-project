@@ -28,11 +28,19 @@
    This wraps __has_builtin rather than supplying a fallback definition for it.
    __has_builtin is a reserved identifier, and defining one from a public header
    can collide with the compiler's own definition or with other libraries that
-   the client also includes. */
+   the client also includes */
 #if defined(__has_builtin)
 #define ORC_RT_HAS_BUILTIN(X) __has_builtin(X)
 #else
 #define ORC_RT_HAS_BUILTIN(X) 0
+#endif
+
+/* MSVC diagnoses uses of unavailable __has_attribute expressions, so wrap it
+   in the same way as __has_builtin. */
+#if defined(__has_attribute)
+#define ORC_RT_HAS_ATTRIBUTE(X) __has_attribute(X)
+#else
+#define ORC_RT_HAS_ATTRIBUTE(X) 0
 #endif
 
 /* Helper to promote strict prototype warnings to errors */
@@ -63,14 +71,22 @@
    runtime's binary interface: exported from the runtime when it is built as a
    shared library, and imported by consumers of that library.
 
-   TODO: Add the Windows __declspec(dllexport) / __declspec(dllimport) and
-   static-build cases once there is a shared-library build to exercise them. */
-#if defined(__has_attribute) && __has_attribute(visibility)
+TODO: Add the Windows __declspec(dllexport) / __declspec(dllimport) and
+static-build cases once there is a shared-library build to exercise them. */
+#if ORC_RT_HAS_ATTRIBUTE(visibility)
 #define ORC_RT_C_EXPORT __attribute__((visibility("default")))
+#else
+#define ORC_RT_C_EXPORT
 #endif
 
-#if !defined(ORC_RT_C_EXPORT)
-#define ORC_RT_C_EXPORT
+/* ORC_RT_MAYBE_UNUSED indicates that a symbol may not be used, and that the
+   compiler should not issue unused-symbol warnings for it. */
+#if defined(__cplusplus)
+#define ORC_RT_MAYBE_UNUSED [[maybe_unused]]
+#elif ORC_RT_HAS_ATTRIBUTE(unused)
+#define ORC_RT_MAYBE_UNUSED __attribute__((unused))
+#else
+#define ORC_RT_MAYBE_UNUSED
 #endif
 
 /* ORC_RT_C_NOTHROW indicates that a function won't throw a C++ exception. */

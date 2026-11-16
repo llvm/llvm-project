@@ -27,6 +27,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Alignment.h"
 
+#include <cassert>
+
 namespace mlir {
 namespace abi {
 
@@ -46,6 +48,10 @@ enum class ArgKind : uint8_t {
   /// Pass indirectly via a pointer (sret for returns, byval for args).
   Indirect,
 
+  /// Pass a pointer to the caller's object with no copy implied (byref).  The
+  /// callee must not write through it.  Arguments only.
+  IndirectAliased,
+
   /// Ignore (void return, empty struct).
   Ignore,
 
@@ -62,7 +68,7 @@ struct ArgClassification {
   /// use the original type.
   Type coercedType = nullptr;
 
-  /// For Indirect: alignment of the pointed-to object.
+  /// For Indirect and IndirectAliased: alignment of the pointed-to object.
   llvm::Align indirectAlign = llvm::Align(1);
 
   /// For Extend: whether to sign-extend (true) or zero-extend (false).
@@ -75,11 +81,34 @@ struct ArgClassification {
   /// For Indirect: whether the callee gets ownership (byval).
   bool byVal = false;
 
+  /// For Indirect and IndirectAliased: target address space of the pointer
+  /// passed in place of the value.  Zero is the default address space.
+  unsigned indirectAddrSpace = 0;
+
+  /// For Direct with coercion: the byte offset within the original aggregate
+  /// at which the coerced value lives.  Non-zero when the low eightbyte is
+  /// NO_CLASS and the value is carried in a later eightbyte (x86-64 SysV).
+  unsigned directOffset = 0;
+
+  /// For Direct: the alignment of the argument's stack slot when the value
+  /// is passed in memory, if the ABI sets one apart from the type's.
+  llvm::MaybeAlign directAlign;
+
+  /// How many integer and vector argument registers the value occupies.  Both
+  /// zero means it travels in memory, which is also what a target whose
+  /// classifier does not record the demand reports.
+  unsigned neededIntRegs = 0;
+  unsigned neededSseRegs = 0;
+
   /// Whether the value is passed as-is, so a rewriter can leave it alone.
-  /// Only an uncoerced Direct qualifies.  Extend counts as needing a rewrite
-  /// even though it only adds an attribute, because the attribute changes
-  /// observable behavior.
-  bool isPassThrough() const { return kind == ArgKind::Direct && !coercedType; }
+  /// Only an uncoerced Direct with no stack-slot alignment qualifies.
+  /// Extend counts as needing a rewrite even though it only adds an
+  /// attribute, because the attribute changes observable behavior, and a
+  /// Direct with a stack-slot alignment does too because it needs
+  /// llvm.alignstack.
+  bool isPassThrough() const {
+    return kind == ArgKind::Direct && !coercedType && !directAlign;
+  }
 
   /// Whether two classifications describe the same wire format.  Every field
   /// participates, so a field added above must be added here as well.
@@ -87,13 +116,29 @@ struct ArgClassification {
     return kind == other.kind && coercedType == other.coercedType &&
            indirectAlign == other.indirectAlign &&
            signExtend == other.signExtend && canFlatten == other.canFlatten &&
-           byVal == other.byVal;
+           byVal == other.byVal &&
+           indirectAddrSpace == other.indirectAddrSpace &&
+           directOffset == other.directOffset &&
+           directAlign == other.directAlign &&
+           neededIntRegs == other.neededIntRegs &&
+           neededSseRegs == other.neededSseRegs;
   }
 
-  static ArgClassification getDirect(Type coerced = nullptr) {
+  static ArgClassification getDirect() {
+    return getDirect(/*coerced=*/nullptr, /*offset=*/0);
+  }
+
+  static ArgClassification getDirect(Type coerced, unsigned offset,
+                                     llvm::MaybeAlign align = std::nullopt) {
+    // isPassThrough ignores directOffset, so an offset with no coerced
+    // type to read at it would be silently ignored.
+    assert((!offset || coerced) &&
+           "a direct offset needs a coerced type to read at it");
     ArgClassification c;
     c.kind = ArgKind::Direct;
     c.coercedType = coerced;
+    c.directOffset = offset;
+    c.directAlign = align;
     return c;
   }
 
@@ -103,11 +148,22 @@ struct ArgClassification {
     return c;
   }
 
-  static ArgClassification getIndirect(llvm::Align align, bool byVal = true) {
+  static ArgClassification getIndirect(llvm::Align align, bool byVal,
+                                       unsigned addrSpace) {
     ArgClassification c;
     c.kind = ArgKind::Indirect;
     c.indirectAlign = align;
     c.byVal = byVal;
+    c.indirectAddrSpace = addrSpace;
+    return c;
+  }
+
+  static ArgClassification getIndirectAliased(llvm::Align align,
+                                              unsigned addrSpace) {
+    ArgClassification c;
+    c.kind = ArgKind::IndirectAliased;
+    c.indirectAlign = align;
+    c.indirectAddrSpace = addrSpace;
     return c;
   }
 
@@ -189,6 +245,34 @@ public:
   virtual LogicalResult rewriteCallSite(Operation *callOp,
                                         const FunctionClassification &fc,
                                         OpBuilder &builder) = 0;
+
+  /// Rewrite a single "fetch the next vararg" operation (e.g. C `va_arg`) to
+  /// match how \p ac says the fetched type is passed at the ABI level.
+  ///
+  /// \p ac classifies only the one type being fetched, in isolation, with the
+  /// whole register budget available.  A vararg fetch advances a runtime
+  /// cursor (the platform va_list) through registers and then memory, so
+  /// whether a given fetch lands in a register depends on how much of the
+  /// budget earlier variadic arguments already consumed at run time, not on
+  /// the fetch's static position.
+  ///
+  /// An implementation may erase \p vaArgOp and replace its result, so a
+  /// caller walking the IR must collect the fetches before rewriting any of
+  /// them.
+  ///
+  /// The default implementation reports failure, so a dialect that has not
+  /// implemented vararg fetches does not need to override this.  An overrider
+  /// that fails is responsible for emitting its own diagnostic.
+  ///
+  /// \param vaArgOp  The fetch to rewrite.  May be erased.
+  /// \param ac       The ABI classification of the fetched type.
+  /// \param builder  The OpBuilder to use for modifications.
+  /// \returns success() if the operation was rewritten.
+  virtual LogicalResult rewriteVAArg(Operation *vaArgOp,
+                                     const ArgClassification &ac,
+                                     OpBuilder &builder) {
+    return failure();
+  }
 
   /// Return the dialect namespace this context handles (e.g. "cir").
   virtual StringRef getDialectNamespace() const = 0;

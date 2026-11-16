@@ -76,16 +76,15 @@ exit:
 
 ; In the function below one of the accesses is done as i19 type, which has a
 ; different store size than the i32 type, even though their alloc sizes are
-; equivalent. This is a negative test to ensure that they are not analyzed as
-; in the tests above.
+; equivalent. Both accesses fit within the common 8-byte stride, so the
+; zero-distance dependence is forward despite the different store sizes.
 
 define void @backdep_type_store_size_equivalence(ptr nocapture %vec, i64 %n) {
 ; CHECK-LABEL: 'backdep_type_store_size_equivalence'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %ld.f32 = load float, ptr %gep.iv, align 8 ->
 ; CHECK-NEXT:            store i19 %indvars.iv.i19, ptr %gep.iv, align 8
 ; CHECK-EMPTY:

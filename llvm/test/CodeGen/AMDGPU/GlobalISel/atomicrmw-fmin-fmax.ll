@@ -121,13 +121,13 @@ define void @atomicrmw_fmax_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; GFX10-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[COPY1]], [[COPY7]], implicit $exec
   ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[V_CMP_NE_U32_e64_]]
-  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.4
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2.Flow:
   ; GFX10-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.3
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.3.atomicrmw.private:
@@ -139,16 +139,16 @@ define void @atomicrmw_fmax_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], [[COPY9]], implicit $exec
   ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX10-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY10]], 0, [[COPY]], [[V_CMP_NE_U64_e64_]], implicit $exec
-  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (load (s32) from %ir.7, align 8, addrspace 5)
-  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (load (s32) from %ir.7 + 4, basealign 8, addrspace 5)
+  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (load (i32) from %ir.7, align 8, addrspace 5)
+  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (load (i32) from %ir.7 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[BUFFER_LOAD_DWORD_OFFEN]], %subreg.sub0, [[BUFFER_LOAD_DWORD_OFFEN1]], %subreg.sub1
   ; GFX10-NEXT:   [[V_MAX_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE2]], 0, [[REG_SEQUENCE2]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[V_MAX_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE1]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[V_MAX_F64_e64_2:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[V_MAX_F64_e64_]], 0, [[V_MAX_F64_e64_1]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[V_MAX_F64_e64_2]].sub0
   ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[V_MAX_F64_e64_2]].sub1
-  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY11]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.7, align 8, addrspace 5)
-  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY12]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (store (s32) into %ir.7 + 4, basealign 8, addrspace 5)
+  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY11]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (i32) into %ir.7, align 8, addrspace 5)
+  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY12]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (store (i32) into %ir.7 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   S_BRANCH %bb.5
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.4.atomicrmw.global:
@@ -158,7 +158,7 @@ define void @atomicrmw_fmax_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   S_BRANCH %bb.2
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.5.atomicrmw.phi:
-  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   SI_RETURN
   %old = atomicrmw fmax ptr %ptr, double %val seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -183,14 +183,14 @@ define double @atomicrmw_fmax_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; GFX10-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[COPY1]], [[COPY7]], implicit $exec
   ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[V_CMP_NE_U32_e64_]]
-  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.4
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2.Flow:
   ; GFX10-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[PHI:%[0-9]+]]:vreg_64 = PHI %19, %bb.4, [[DEF]], %bb.1
-  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.3
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.3.atomicrmw.private:
@@ -202,16 +202,16 @@ define double @atomicrmw_fmax_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], [[COPY9]], implicit $exec
   ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX10-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY10]], 0, [[COPY]], [[V_CMP_NE_U64_e64_]], implicit $exec
-  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (load (s32) from %ir.8, align 8, addrspace 5)
-  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (load (s32) from %ir.8 + 4, basealign 8, addrspace 5)
+  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (load (i32) from %ir.8, align 8, addrspace 5)
+  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (load (i32) from %ir.8 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[BUFFER_LOAD_DWORD_OFFEN]], %subreg.sub0, [[BUFFER_LOAD_DWORD_OFFEN1]], %subreg.sub1
   ; GFX10-NEXT:   [[V_MAX_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE2]], 0, [[REG_SEQUENCE2]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[V_MAX_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE1]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[V_MAX_F64_e64_2:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[V_MAX_F64_e64_]], 0, [[V_MAX_F64_e64_1]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[V_MAX_F64_e64_2]].sub0
   ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[V_MAX_F64_e64_2]].sub1
-  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY11]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.8, align 8, addrspace 5)
-  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY12]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (store (s32) into %ir.8 + 4, basealign 8, addrspace 5)
+  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY11]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (i32) into %ir.8, align 8, addrspace 5)
+  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY12]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (store (i32) into %ir.8 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   S_BRANCH %bb.5
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.4.atomicrmw.global:
@@ -224,7 +224,7 @@ define double @atomicrmw_fmax_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   successors: %bb.6(0x80000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:vreg_64 = PHI [[PHI]], %bb.2, [[REG_SEQUENCE2]], %bb.3
-  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.6.atomicrmw.end:
   ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[PHI1]].sub0
@@ -417,13 +417,13 @@ define void @atomicrmw_fmin_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; GFX10-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[COPY1]], [[COPY7]], implicit $exec
   ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[V_CMP_NE_U32_e64_]]
-  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.4
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2.Flow:
   ; GFX10-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.3
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.3.atomicrmw.private:
@@ -435,16 +435,16 @@ define void @atomicrmw_fmin_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], [[COPY9]], implicit $exec
   ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX10-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY10]], 0, [[COPY]], [[V_CMP_NE_U64_e64_]], implicit $exec
-  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (load (s32) from %ir.7, align 8, addrspace 5)
-  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (load (s32) from %ir.7 + 4, basealign 8, addrspace 5)
+  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (load (i32) from %ir.7, align 8, addrspace 5)
+  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (load (i32) from %ir.7 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[BUFFER_LOAD_DWORD_OFFEN]], %subreg.sub0, [[BUFFER_LOAD_DWORD_OFFEN1]], %subreg.sub1
   ; GFX10-NEXT:   [[V_MAX_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE2]], 0, [[REG_SEQUENCE2]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[V_MAX_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE1]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[V_MIN_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[V_MAX_F64_e64_]], 0, [[V_MAX_F64_e64_1]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[V_MIN_F64_e64_]].sub0
   ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[V_MIN_F64_e64_]].sub1
-  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY11]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.7, align 8, addrspace 5)
-  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY12]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (store (s32) into %ir.7 + 4, basealign 8, addrspace 5)
+  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY11]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (i32) into %ir.7, align 8, addrspace 5)
+  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY12]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (store (i32) into %ir.7 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   S_BRANCH %bb.5
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.4.atomicrmw.global:
@@ -454,7 +454,7 @@ define void @atomicrmw_fmin_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   S_BRANCH %bb.2
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.5.atomicrmw.phi:
-  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   SI_RETURN
   %old = atomicrmw fmin ptr %ptr, double %val seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -479,14 +479,14 @@ define double @atomicrmw_fmin_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; GFX10-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[COPY1]], [[COPY7]], implicit $exec
   ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[V_CMP_NE_U32_e64_]]
-  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.4
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2.Flow:
   ; GFX10-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[PHI:%[0-9]+]]:vreg_64 = PHI %19, %bb.4, [[DEF]], %bb.1
-  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.3
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.3.atomicrmw.private:
@@ -498,16 +498,16 @@ define double @atomicrmw_fmin_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], [[COPY9]], implicit $exec
   ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX10-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY10]], 0, [[COPY]], [[V_CMP_NE_U64_e64_]], implicit $exec
-  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (load (s32) from %ir.8, align 8, addrspace 5)
-  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (load (s32) from %ir.8 + 4, basealign 8, addrspace 5)
+  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (load (i32) from %ir.8, align 8, addrspace 5)
+  ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (load (i32) from %ir.8 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[BUFFER_LOAD_DWORD_OFFEN]], %subreg.sub0, [[BUFFER_LOAD_DWORD_OFFEN1]], %subreg.sub1
   ; GFX10-NEXT:   [[V_MAX_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE2]], 0, [[REG_SEQUENCE2]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[V_MAX_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE1]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[V_MIN_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[V_MAX_F64_e64_]], 0, [[V_MAX_F64_e64_1]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[V_MIN_F64_e64_]].sub0
   ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[V_MIN_F64_e64_]].sub1
-  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY11]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.8, align 8, addrspace 5)
-  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY12]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (store (s32) into %ir.8 + 4, basealign 8, addrspace 5)
+  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY11]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (i32) into %ir.8, align 8, addrspace 5)
+  ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY12]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (store (i32) into %ir.8 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   S_BRANCH %bb.5
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.4.atomicrmw.global:
@@ -520,7 +520,7 @@ define double @atomicrmw_fmin_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   successors: %bb.6(0x80000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:vreg_64 = PHI [[PHI]], %bb.2, [[REG_SEQUENCE2]], %bb.3
-  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.6.atomicrmw.end:
   ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[PHI1]].sub0

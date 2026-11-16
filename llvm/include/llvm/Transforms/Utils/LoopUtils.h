@@ -40,10 +40,13 @@ class PredIteratorCache;
 class ScalarEvolution;
 class SCEV;
 class SCEVExpander;
+class SCEVAddRecExpr;
 class TargetLibraryInfo;
 class LPPassManager;
 class Instruction;
 struct RuntimeCheckingPtrGroup;
+class ConditionalInductionDescriptor;
+
 typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>
     RuntimePointerCheck;
@@ -143,48 +146,54 @@ protected:
   bool IsSink;
 };
 
+/// Dependencies required to check legality of sinking and hoisting.
+struct SinkAndHoistDependencies {
+  AAResults &AA;
+  DominatorTree &DT;
+  MemorySSAUpdater &MSSAU;
+  OptimizationRemarkEmitter *ORE;
+};
+
+/// Dependencies required by LICM transforms.
+struct LICMDependencies : SinkAndHoistDependencies {
+  AssumptionCache &AC;
+  LoopInfo &LI;
+  TargetLibraryInfo &TLI;
+  TargetTransformInfo &TTI;
+  ScalarEvolution *SE;
+  ICFLoopSafetyInfo &SafetyInfo;
+};
+
 /// Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in
 /// reverse depth first order w.r.t the DominatorTree. This allows us to visit
 /// uses before definitions, allowing us to sink a loop body in one pass without
-/// iteration. Takes DomTreeNode, AAResults, LoopInfo, DominatorTree,
-/// TargetLibraryInfo, Loop, AliasSet information for all
-/// instructions of the loop and loop safety information as
-/// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
-/// \p CurLoop is a loop to do sinking on. \p OutermostLoop is used only when
-/// this function is called by \p sinkRegionForLoopNest.
-LLVM_ABI bool sinkRegion(DomTreeNode *, AAResults *, LoopInfo *,
-                         DominatorTree *, TargetLibraryInfo *,
-                         TargetTransformInfo *, Loop *CurLoop,
-                         MemorySSAUpdater &, ICFLoopSafetyInfo *,
-                         SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *,
+/// iteration. Takes DomTreeNode, LICMDependencies, Loop and AliasSet
+/// information for all instructions of the loop as arguments. Diagnostics is
+/// emitted via LICMDependencies::ORE. It returns changed status. \p CurLoop is
+/// a loop to do sinking on. \p OutermostLoop is used only when this function is
+/// called by \p sinkRegionForLoopNest.
+LLVM_ABI bool sinkRegion(DomTreeNode *, const LICMDependencies &, Loop *CurLoop,
+                         SinkAndHoistLICMFlags &,
                          Loop *OutermostLoop = nullptr);
 
 /// Call sinkRegion on loops contained within the specified loop
 /// in order from innermost to outermost.
-LLVM_ABI bool sinkRegionForLoopNest(DomTreeNode *, AAResults *, LoopInfo *,
-                                    DominatorTree *, TargetLibraryInfo *,
-                                    TargetTransformInfo *, Loop *,
-                                    MemorySSAUpdater &, ICFLoopSafetyInfo *,
-                                    SinkAndHoistLICMFlags &,
-                                    OptimizationRemarkEmitter *);
+LLVM_ABI bool sinkRegionForLoopNest(DomTreeNode *, const LICMDependencies &,
+                                    Loop *, SinkAndHoistLICMFlags &);
 
 /// Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth
 /// first order w.r.t the DominatorTree.  This allows us to visit definitions
 /// before uses, allowing us to hoist a loop body in one pass without iteration.
-/// Takes DomTreeNode, AAResults, LoopInfo, DominatorTree,
-/// TargetLibraryInfo, Loop, AliasSet information for all
-/// instructions of the loop and loop safety information as arguments.
-/// Diagnostics is emitted via \p ORE. It returns changed status.
+/// Takes DomTreeNode, LICMDependencies, Loop and AliasSet information for all
+/// instructions of the loop as arguments.
+/// Diagnostics is emitted via LICMDependencies::ORE. It returns changed status.
 /// \p AllowSpeculation is whether values should be hoisted even if they are not
 /// guaranteed to execute in the loop, but are safe to speculatively execute.
-LLVM_ABI bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *,
-                          DominatorTree *, AssumptionCache *,
-                          TargetLibraryInfo *, Loop *, MemorySSAUpdater &,
-                          ScalarEvolution *, ICFLoopSafetyInfo *,
-                          SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *,
-                          bool, bool AllowSpeculation);
+LLVM_ABI bool hoistRegion(DomTreeNode *, const LICMDependencies &, Loop *,
+                          SinkAndHoistLICMFlags &, bool LoopNestMode,
+                          bool AllowSpeculation);
 
 /// Return true if the induction variable \p IV in a Loop whose latch is
 /// \p LatchBlock would become dead if the exit test \p Cond were removed.
@@ -216,17 +225,15 @@ LLVM_ABI void breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
 /// the stores in the loop, looking for stores to Must pointers which are
 /// loop invariant. It takes a set of must-alias values, Loop exit blocks
 /// vector, loop exit blocks insertion point vector, PredIteratorCache,
-/// LoopInfo, DominatorTree, Loop, AliasSet information for all instructions
-/// of the loop and loop safety information as arguments.
-/// Diagnostics is emitted via \p ORE. It returns changed status.
+/// LICMDependencies, Loop and AliasSet information for all instructions
+/// of the loop as arguments.
+/// Diagnostics is emitted via LICMDependencies::ORE. It returns changed status.
 /// \p AllowSpeculation is whether values should be hoisted even if they are not
 /// guaranteed to execute in the loop, but are safe to speculatively execute.
 LLVM_ABI bool promoteLoopAccessesToScalars(
     const SmallSetVector<Value *, 8> &, SmallVectorImpl<BasicBlock *> &,
     SmallVectorImpl<BasicBlock::iterator> &, SmallVectorImpl<MemoryAccess *> &,
-    PredIteratorCache &, LoopInfo *, DominatorTree *, AssumptionCache *AC,
-    const TargetLibraryInfo *, TargetTransformInfo *, Loop *,
-    MemorySSAUpdater &, ICFLoopSafetyInfo *, OptimizationRemarkEmitter *,
+    PredIteratorCache &, const LICMDependencies &, Loop *,
     bool AllowSpeculation, bool HasReadsOutsideSet);
 
 /// Does a BFS from a given node to all of its children inside a given loop.
@@ -458,25 +465,22 @@ LLVM_ABI void getLoopAnalysisUsage(AnalysisUsage &AU);
 /// target executes at most once per execution of the loop body.  This is used
 /// to assess the legality of duplicating atomic loads.  Generally, this is
 /// true when moving out of loop and not true when moving into loops.
-/// If \p ORE is set use it to emit optimization remarks.
-LLVM_ABI bool canSinkOrHoistInst(Instruction &I, AAResults *AA,
-                                 DominatorTree *DT, Loop *CurLoop,
-                                 MemorySSAUpdater &MSSAU,
-                                 bool TargetExecutesOncePerLoop,
-                                 SinkAndHoistLICMFlags &LICMFlags,
-                                 OptimizationRemarkEmitter *ORE = nullptr);
+/// If SinkAndHoistDependencies::ORE is set use it to emit optimization
+/// remarks.
+LLVM_ABI bool canSinkOrHoistInst(Instruction &I,
+                                 const SinkAndHoistDependencies &Deps,
+                                 Loop *CurLoop, bool TargetExecutesOncePerLoop,
+                                 SinkAndHoistLICMFlags &LICMFlags);
 
 /// Returns true if it is legal to hoist \p LI out of \p CurLoop. This is the
 /// load-specific subset of \c canSinkOrHoistInst: it rejects volatile or
 /// ordered loads, allows constant-memory / invariant.load / invariant.start-
-/// dominated loads unconditionally, and otherwise queries \p MSSA for an
+/// dominated loads unconditionally, and otherwise queries MemorySSA for an
 /// in-loop clobber. \p TargetExecutesOncePerLoop has the same meaning as in
 /// \c canSinkOrHoistInst (set to true when hoisting to the preheader).
-LLVM_ABI bool canHoistLoad(LoadInst &LI, AAResults *AA, DominatorTree *DT,
-                           Loop *CurLoop, MemorySSA &MSSA,
-                           bool TargetExecutesOncePerLoop,
-                           SinkAndHoistLICMFlags &LICMFlags,
-                           OptimizationRemarkEmitter *ORE = nullptr);
+LLVM_ABI bool canHoistLoad(LoadInst &LI, const SinkAndHoistDependencies &Deps,
+                           Loop *CurLoop, bool TargetExecutesOncePerLoop,
+                           SinkAndHoistLICMFlags &LICMFlags);
 
 /// Returns the llvm.vector.reduce intrinsic that corresponds to the recurrence
 /// kind.
@@ -549,11 +553,6 @@ LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
 LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
                                       RecurKind RdxKind, Value *Mask,
                                       Value *EVL);
-
-/// Create a reduction of the given vector \p Src for a reduction of kind
-/// RecurKind::AnyOf. The start value of the reduction is \p InitVal.
-LLVM_ABI Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
-                                     Value *InitVal, PHINode *OrigPhi);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// kind \p RdxKind.
@@ -662,6 +661,21 @@ LLVM_ABI void appendLoopsToWorklist(LoopInfo &,
 LLVM_ABI Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM, LoopInfo *LI,
                          LPPassManager *LPM);
 
+/// SCEV bounds of a pointer group: the first accessed byte, the last accessed
+/// byte plus one, and a stride that must be checked to be non-negative, if any.
+struct RuntimeCheckBounds {
+  const SCEV *Low;
+  const SCEV *High;
+  const SCEV *StrideToCheck;
+};
+
+/// Return the bounds of \p CG in \p TheLoop. If \p HoistRuntimeChecks is true,
+/// bounds varying in the parent loop of \p TheLoop may be widened to cover the
+/// whole parent loop, so that checks using them can be hoisted out of it.
+LLVM_ABI RuntimeCheckBounds
+getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG, const Loop *TheLoop,
+                      ScalarEvolution &SE, bool HoistRuntimeChecks);
+
 /// Add code that checks at runtime if the accessed arrays in \p PointerChecks
 /// overlap. Returns the final comparator value or NULL if no check is needed.
 LLVM_ABI Value *
@@ -706,6 +720,24 @@ struct IVConditionInfo {
 LLVM_ABI std::optional<IVConditionInfo>
 hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
                       const MemorySSA &MSSA, AAResults &AA);
+
+/// Collect pointer values used by loads and stores whose addresses are derived
+/// from the conditional induction described by \p CondID. Add each pointer and
+/// an approximate SCEV expression for it to \p CompressedPtrs. The expression
+/// assumes that the conditional induction is incremented on every iteration.
+///
+/// Except for its backedge update, every value derived from \p CondID must be
+/// used only to compute an in-loop load/store address. The following
+/// restrictions also apply:
+/// - A value derived from \p CondID cannot be stored.
+/// - The allocation size of each access type must equal its type size. For
+///   example, types smaller than a byte, such as `i4`, are not supported.
+/// - The step of each pointer add recurrence must equal the access type's
+///   allocation size.
+/// Return true otherwise.
+LLVM_ABI bool collectCompressedPtrs(
+    DenseMap<Value *, const SCEVAddRecExpr *> &CompressedPtrs, const Loop &L,
+    const ConditionalInductionDescriptor &CondID, ScalarEvolution &SE);
 
 } // end namespace llvm
 

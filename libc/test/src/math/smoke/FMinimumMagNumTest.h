@@ -92,12 +92,12 @@ public:
   }
 };
 
-#define LIST_FMINIMUM_MAG_NUM_TESTS(T, func)                                   \
-  using LlvmLibcFMinimumMagNumTest = FMinimumMagNumTest<T>;                    \
-  TEST_F(LlvmLibcFMinimumMagNumTest, NaN) { testNaN(&func); }                  \
-  TEST_F(LlvmLibcFMinimumMagNumTest, InfArg) { testInfArg(&func); }            \
-  TEST_F(LlvmLibcFMinimumMagNumTest, NegInfArg) { testNegInfArg(&func); }      \
-  TEST_F(LlvmLibcFMinimumMagNumTest, BothZero) { testBothZero(&func); }        \
-  TEST_F(LlvmLibcFMinimumMagNumTest, Range) { testRange(&func); }
+#define LIST_FMINIMUM_MAG_NUM_TESTS(Name, T, func)                             \
+  using LlvmLibc##Name##Test = FMinimumMagNumTest<T>;                          \
+  TEST_F(LlvmLibc##Name##Test, NaN) { testNaN(&func); }                        \
+  TEST_F(LlvmLibc##Name##Test, InfArg) { testInfArg(&func); }                  \
+  TEST_F(LlvmLibc##Name##Test, NegInfArg) { testNegInfArg(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, BothZero) { testBothZero(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMMAG_NUMTEST_H

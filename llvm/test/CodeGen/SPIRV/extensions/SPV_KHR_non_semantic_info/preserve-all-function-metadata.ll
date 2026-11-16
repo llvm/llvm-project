@@ -1,10 +1,12 @@
-; Adapted from the SPIRV-LLVM-Translator --spirv-preserve-auxdata forward-path
-; tests. Numeric metadata operands become OpConstants; string metadata operands
-; become OpStrings.
+; Function metadata is emitted as NonSemantic.AuxData records. Numeric operands
+; become OpConstants; string operands become OpStrings.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
-; RUN:   %s -o - | FileCheck %s
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown \
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#Import:]] = OpExtInstImport "NonSemantic.AuxData"
 
@@ -21,8 +23,8 @@
 ; CHECK-DAG: %[[#Const:]] = OpConstant %[[#I32]] 5
 
 ; Numeric metadata operand is emitted as an OpConstant id.
-; CHECK-DAG: %[[#]] = OpExtInst %[[#VoidT]] %[[#Import]] {{.+}} %[[#Fcn0]] %[[#MDNameVal]] %[[#Const]]
-; CHECK-DAG: %[[#]] = OpExtInst %[[#VoidT]] %[[#Import]] {{.+}} %[[#Fcn1]] %[[#MDName]] %[[#MDValue]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#VoidT]] %[[#Import]] {{.+}} %[[#Fcn0]] %[[#MDNameVal]] %[[#Const]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#VoidT]] %[[#Import]] {{.+}} %[[#Fcn1]] %[[#MDName]] %[[#MDValue]]
 
 target triple = "spir64-unknown-unknown"
 

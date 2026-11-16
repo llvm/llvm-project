@@ -6,11 +6,7 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 typedef float float4 __attribute__((ext_vector_type(4)));
-
-// TODO: the bool4 (ext_vector_type _Bool) case from the classic CodeGen test is
-// omitted here: CIR does not yet implement storing ext-vector-bool types
-// (emitStoreOfScalar ExtVectorBoolType is NYI). The cir.freeze lowering itself
-// works for <N x !cir.bool>; only the surrounding store is unsupported.
+typedef _Bool bool4 __attribute__((ext_vector_type(4)));
 
 int clang_nondet_i(int x) {
   return __builtin_nondeterministic_value(x);
@@ -66,3 +62,15 @@ void clang_nondet_fv(void) {
 
 // LLVM-LABEL: @clang_nondet_fv
 // LLVM: %[[RES:.*]] = freeze <4 x float> poison
+
+void clang_nondet_bv(void) {
+  bool4 x = __builtin_nondeterministic_value(x);
+}
+
+// CIR-LABEL: cir.func {{.*}}@clang_nondet_bv
+// CIR: %[[POISON:.*]] = cir.const #cir.poison : !cir.vector<4 x !cir.bool>
+// CIR: %[[RES:.*]] = cir.freeze %[[POISON]] : !cir.vector<4 x !cir.bool>
+// CIR: cir.store{{.*}} %[[RES]], {{.*}} : !cir.vector<4 x !cir.bool>, !cir.ptr<!cir.vector<4 x !cir.bool>>
+
+// LLVM-LABEL: @clang_nondet_bv
+// LLVM: %[[RES:.*]] = freeze <4 x i1> poison

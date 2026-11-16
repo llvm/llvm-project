@@ -166,6 +166,9 @@ def : SysReg<"scause", 0x142>;
 def : SysReg<"stval", 0x143>;
 def : DeprecatedSysRegName<"sbadaddr", 0x143>;
 def : SysReg<"sip", 0x144>;
+def : SysReg<"sistatus", 0x146>;
+def : SysReg<"sithreshold", 0x147>;
+def : SysReg<"stopsi", 0x148>;
 def : SysReg<"sspcs", 0x149>;
 def : SysReg<"siph", 0x154, RV32Only=true>;
 def : SysReg<"stopei", 0x15C>;
@@ -381,6 +384,9 @@ def : SysReg<"mcause", 0x342>;
 def : SysReg<"mtval", 0x343>;
 def : DeprecatedSysRegName<"mbadaddr", 0x343>;
 def : SysReg<"mip", 0x344>;
+def : SysReg<"mistatus", 0x346>;
+def : SysReg<"mithreshold", 0x347>;
+def : SysReg<"mtopsi", 0x348>;
 def : SysReg<"mspcs", 0x349>;
 def : SysReg<"mtinst", 0x34A>;
 def : SysReg<"mtval2", 0x34B>;
@@ -567,6 +573,12 @@ foreach i = 0 - 3 in {
   def : SysReg<"qc.mwpendaddr" # i,   !add(0x7D4, i), RV32Only=true>;
 }
 } // FeatureVendorXqciint
+
+// Xqccmi
+let FeaturesRequired = [{ {RISCV::FeatureVendorXqccmi} }] in {
+def : SysReg<"qc.itba", 0x800, RV32Only=true>;
+def : SysReg<"qc.itdec", 0x801, RV32Only=true>;
+}
 
 // XAIFET
 let FeaturesRequired = [{ {RISCV::FeatureVendorXAIFET} }] in {

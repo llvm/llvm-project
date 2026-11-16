@@ -28,22 +28,24 @@ inline void clear_icache(void *Addr, size_t Size);
 
 } // namespace orc_rt::sys
 
-// Definition of the above: the default is here, and a system that can do better
-// than the compiler builtin gets a header of its own, selected below.
+// Definition of the above.
+
 #if defined(__APPLE__)
 
-#include "orc-rt-internal/support/sys/darwin/CacheControl.h"
+// Use libSystem's implementation, which knows the cache geometry of the running
+// CPU. Preferred over __builtin___clear_cache on Darwin.
+extern "C" void sys_icache_invalidate(const void *Addr, size_t Size);
+inline void orc_rt::sys::clear_icache(void *Addr, size_t Size) {
+  sys_icache_invalidate(Addr, Size);
+}
 
 #elif ORC_RT_HAS_BUILTIN(__builtin___clear_cache) || defined(__GNUC__)
 
-namespace orc_rt::sys {
-
-inline void clear_icache(void *Addr, size_t Size) {
+// For systems supporting __builtin___clear_cache, use that.
+inline void orc_rt::sys::clear_icache(void *Addr, size_t Size) {
   char *Start = static_cast<char *>(Addr);
   __builtin___clear_cache(Start, Start + Size);
 }
-
-} // namespace orc_rt::sys
 
 #else
 

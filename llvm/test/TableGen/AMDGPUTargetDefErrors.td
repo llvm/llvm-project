@@ -23,11 +23,8 @@
 // Verify the validation performed by the -gen-amdgpu-target-def backend.
 
 //--- bad-alias.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
-class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
@@ -39,11 +36,8 @@ def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
 def : ProcessorAlias<"foo", "gfx-missing">;
 
 //--- dup-processor.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
-class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
@@ -55,11 +49,8 @@ def DupA : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
 def DupB : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
 
 //--- alias-shadows-processor.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
-class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
@@ -71,11 +62,8 @@ def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
 def : ProcessorAlias<"gfx900", "gfx900">;
 
 //--- bad-isa-version.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
-class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
@@ -86,11 +74,8 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0]>;
 
 //--- oversized-major.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
-class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
@@ -101,11 +86,8 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[256, 0, 0]>;
 
 //--- oversized-minor.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
-class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
@@ -115,11 +97,8 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 256, 0]>;
 
 //--- oversized-stepping.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
-class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
@@ -130,11 +109,8 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 256]>;
 
 //--- negative-component.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
-class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
@@ -144,11 +120,8 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, -1]>;
 
 //--- bad-stepping.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
-class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
@@ -159,11 +132,8 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 16]>;
 
 //--- generic-feature-superset.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
-class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
@@ -171,7 +141,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 
 def FeatureFoo : SubtargetFeature<"foo", "HasFoo", "true", "Foo">;
 
-// The generic check only considers frontend-visible features.
+// Ordinary frontend-visible features require support from every covered GPU.
 def AMDGPUFrontendVisibleFeatures {
   list<SubtargetFeature> Features = [FeatureFoo];
 }

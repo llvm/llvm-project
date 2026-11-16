@@ -116,10 +116,10 @@ void UseToUnderlyingCheck::check(const MatchFinder::MatchResult &Result) {
   if (!IsPrecise && ImpreciseCasts == ImpreciseCastsKind::Ignore)
     return;
 
-  auto Diag = diag(Cast->getBeginLoc(),
-                   "use '%0' to convert a scoped enumeration to its "
-                   "underlying type")
-              << ReplacementFunction;
+  const auto Diag = diag(Cast->getBeginLoc(),
+                         "use '%0' to convert a scoped enumeration to its "
+                         "underlying type")
+                    << ReplacementFunction;
 
   if (!IsPrecise && ImpreciseCasts == ImpreciseCastsKind::Warn)
     return;

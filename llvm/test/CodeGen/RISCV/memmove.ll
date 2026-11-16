@@ -853,3 +853,77 @@ entry:
   tail call void @llvm.memmove.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 7, i1 true)
   ret void
 }
+
+define void @memmove_i32_var(ptr %dest, ptr %src, i32 %n) nounwind {
+; RV32-BOTH-LABEL: memmove_i32_var:
+; RV32-BOTH:       # %bb.0: # %entry
+; RV32-BOTH-NEXT:    addi sp, sp, -16
+; RV32-BOTH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-BOTH-NEXT:    call memmove
+; RV32-BOTH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-BOTH-NEXT:    addi sp, sp, 16
+; RV32-BOTH-NEXT:    ret
+;
+; RV64-BOTH-LABEL: memmove_i32_var:
+; RV64-BOTH:       # %bb.0: # %entry
+; RV64-BOTH-NEXT:    addi sp, sp, -16
+; RV64-BOTH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-BOTH-NEXT:    slli a2, a2, 32
+; RV64-BOTH-NEXT:    srli a2, a2, 32
+; RV64-BOTH-NEXT:    call memmove
+; RV64-BOTH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-BOTH-NEXT:    addi sp, sp, 16
+; RV64-BOTH-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i32(ptr %dest, ptr %src, i32 %n, i1 false)
+  ret void
+}
+
+define void @memmove_i32_2147483648(ptr %dest, ptr %src) nounwind {
+; RV32-BOTH-LABEL: memmove_i32_2147483648:
+; RV32-BOTH:       # %bb.0: # %entry
+; RV32-BOTH-NEXT:    addi sp, sp, -16
+; RV32-BOTH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-BOTH-NEXT:    lui a2, 524288
+; RV32-BOTH-NEXT:    call memmove
+; RV32-BOTH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-BOTH-NEXT:    addi sp, sp, 16
+; RV32-BOTH-NEXT:    ret
+;
+; RV64-BOTH-LABEL: memmove_i32_2147483648:
+; RV64-BOTH:       # %bb.0: # %entry
+; RV64-BOTH-NEXT:    addi sp, sp, -16
+; RV64-BOTH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-BOTH-NEXT:    li a2, 1
+; RV64-BOTH-NEXT:    slli a2, a2, 31
+; RV64-BOTH-NEXT:    call memmove
+; RV64-BOTH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-BOTH-NEXT:    addi sp, sp, 16
+; RV64-BOTH-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i32(ptr %dest, ptr %src, i32 -2147483648, i1 false)
+  ret void
+}
+
+define void @memmove_i64_var(ptr %dest, ptr %src, i64 %n) nounwind {
+; RV32-BOTH-LABEL: memmove_i64_var:
+; RV32-BOTH:       # %bb.0: # %entry
+; RV32-BOTH-NEXT:    addi sp, sp, -16
+; RV32-BOTH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-BOTH-NEXT:    call memmove
+; RV32-BOTH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-BOTH-NEXT:    addi sp, sp, 16
+; RV32-BOTH-NEXT:    ret
+;
+; RV64-BOTH-LABEL: memmove_i64_var:
+; RV64-BOTH:       # %bb.0: # %entry
+; RV64-BOTH-NEXT:    addi sp, sp, -16
+; RV64-BOTH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-BOTH-NEXT:    call memmove
+; RV64-BOTH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-BOTH-NEXT:    addi sp, sp, 16
+; RV64-BOTH-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr %dest, ptr %src, i64 %n, i1 false)
+  ret void
+}

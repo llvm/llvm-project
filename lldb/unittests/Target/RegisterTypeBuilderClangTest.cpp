@@ -231,4 +231,281 @@ TEST_F(RegisterTypeBuilderClangTest, RejectsSizeMismatch) {
   EXPECT_FALSE(builder.GetRegisterType(MakeRegisterInfo(pointer, 4)));
 }
 
+TEST_F(RegisterTypeBuilderClangTest, BuildsPowerOfTwoVector) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin element_type("ieee_single", eEncodingIEEE754,
+                                   eFormatFloat, 4);
+  RegisterTypeVector vector_type("v4f", &element_type, 4);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type =
+      builder.GetRegisterType(MakeRegisterInfo(vector_type, 16));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
+  EXPECT_TRUE(type.IsVectorType());
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 4u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, PreservesThreeLaneVectorLayout) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin element_type("ieee_single", eEncodingIEEE754,
+                                   eFormatFloat, 4);
+  RegisterTypeVector vector_type("v3f", &element_type, 3);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type =
+      builder.GetRegisterType(MakeRegisterInfo(vector_type, 12));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 12u);
+  EXPECT_TRUE(type.IsArrayType());
+  EXPECT_FALSE(type.IsVectorType());
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 3u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsNestedVectors) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin element_type("ieee_single", eEncodingIEEE754,
+                                   eFormatFloat, 4);
+  RegisterTypeVector inner_type("v2f", &element_type, 2);
+  RegisterTypeVector outer_type("v2v2f", &inner_type, 2);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type = builder.GetRegisterType(MakeRegisterInfo(outer_type, 16));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
+  EXPECT_TRUE(type.IsArrayType());
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 2u);
+
+  CompilerType inner = type.GetArrayElementType(nullptr);
+  ASSERT_TRUE(inner);
+  EXPECT_TRUE(inner.IsVectorType());
+  EXPECT_EQ(llvm::expectedToOptional(inner.GetNumChildren(true, nullptr)), 2u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsTargetSizedPointerVector) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin pointer_type("data_ptr", eEncodingUint,
+                                   eFormatAddressInfo, std::nullopt);
+  RegisterTypeVector vector_type("v2p", &pointer_type, 2);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type =
+      builder.GetRegisterType(MakeRegisterInfo(vector_type, 16));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
+  EXPECT_TRUE(type.IsArrayType());
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 2u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsBoolVectorAsArray) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin element_type("bool", eEncodingUint, eFormatBoolean, 1);
+  RegisterTypeVector vector_type("v4b", &element_type, 4);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type = builder.GetRegisterType(MakeRegisterInfo(vector_type, 4));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 4u);
+  EXPECT_TRUE(type.IsArrayType());
+  EXPECT_FALSE(type.IsVectorType());
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 4u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsSingleUint128Vector) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin element_type("uint128", eEncodingUint, eFormatHex, 16);
+  RegisterTypeVector vector_type("v1u128", &element_type, 1);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type =
+      builder.GetRegisterType(MakeRegisterInfo(vector_type, 16));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
+  EXPECT_TRUE(type.IsVectorType());
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 1u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, RejectsVectorSizeMismatch) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin float_type("ieee_single", eEncodingIEEE754, eFormatFloat,
+                                 4);
+  RegisterTypeVector float_vector("v4f", &float_type, 4);
+  RegisterTypeBuiltin pointer_type("data_ptr", eEncodingUint,
+                                   eFormatAddressInfo, std::nullopt);
+  RegisterTypeVector pointer_vector("v2p", &pointer_type, 2);
+  RegisterTypeBuilderClang builder(target);
+
+  EXPECT_FALSE(builder.GetRegisterType(MakeRegisterInfo(float_vector, 12)));
+  EXPECT_FALSE(builder.GetRegisterType(MakeRegisterInfo(float_vector, 20)));
+  EXPECT_FALSE(builder.GetRegisterType(MakeRegisterInfo(pointer_vector, 0)));
+  EXPECT_FALSE(builder.GetRegisterType(MakeRegisterInfo(pointer_vector, 15)));
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsPackedUnion) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin float_type("ieee_single", eEncodingIEEE754, eFormatFloat,
+                                 4);
+  RegisterTypeBuiltin double_type("ieee_double", eEncodingIEEE754, eFormatFloat,
+                                  8);
+  RegisterTypeUnion union_type("views",
+                               {RegisterTypeUnion::Field("f32", &float_type),
+                                RegisterTypeUnion::Field("f64", &double_type)});
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type = builder.GetRegisterType(MakeRegisterInfo(union_type, 8));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(type.GetTypeClass(), eTypeClassUnion);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 8u);
+  EXPECT_EQ(type.GetNumFields(), 2u);
+  EXPECT_EQ(type, builder.GetRegisterType(MakeRegisterInfo(union_type, 8)));
+  for (size_t index = 0; index < 2; ++index) {
+    std::string name;
+    uint64_t bit_offset = UINT64_MAX;
+    ASSERT_TRUE(
+        type.GetFieldAtIndex(index, name, &bit_offset, nullptr, nullptr));
+    EXPECT_EQ(bit_offset, 0u);
+  }
+}
+
+TEST_F(RegisterTypeBuilderClangTest, AllowsUnionSmallerThanRegister) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin uint32_type("uint32", eEncodingUint, eFormatHex, 4);
+  RegisterTypeUnion union_type(
+      "small", {RegisterTypeUnion::Field("value", &uint32_type)});
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type = builder.GetRegisterType(MakeRegisterInfo(union_type, 16));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 4u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsOddSizedUnion) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin byte_type("uint8", eEncodingUint, eFormatHex, 1);
+  RegisterTypeVector bytes_type("v3u8", &byte_type, 3);
+  RegisterTypeBuiltin uint16_type("uint16", eEncodingUint, eFormatHex, 2);
+  RegisterTypeUnion union_type(
+      "odd", {RegisterTypeUnion::Field("bytes", &bytes_type),
+              RegisterTypeUnion::Field("word", &uint16_type)});
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type = builder.GetRegisterType(MakeRegisterInfo(union_type, 3));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 3u);
+  EXPECT_EQ(type.GetNumFields(), 2u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsNestedUnionAndVectorMembers) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin float_type("ieee_single", eEncodingIEEE754, eFormatFloat,
+                                 4);
+  RegisterTypeVector vector_type("v4f", &float_type, 4);
+  RegisterTypeUnion inner_type(
+      "inner", {RegisterTypeUnion::Field("scalar", &float_type),
+                RegisterTypeUnion::Field("lanes", &vector_type)});
+  RegisterTypeUnion outer_type("outer",
+                               {RegisterTypeUnion::Field("view", &inner_type),
+                                RegisterTypeUnion::Field("raw", &vector_type)});
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type = builder.GetRegisterType(MakeRegisterInfo(outer_type, 16));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
+  EXPECT_EQ(type.GetNumFields(), 2u);
+  std::string name;
+  CompilerType inner = type.GetFieldAtIndex(0, name, nullptr, nullptr, nullptr);
+  ASSERT_TRUE(inner);
+  EXPECT_EQ(name, "view");
+  EXPECT_EQ(inner.GetNumFields(), 2u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsVectorOfUnions) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin float_type("ieee_single", eEncodingIEEE754, eFormatFloat,
+                                 4);
+  RegisterTypeBuiltin uint32_type("uint32", eEncodingUint, eFormatHex, 4);
+  RegisterTypeUnion element_type(
+      "views", {RegisterTypeUnion::Field("f32", &float_type),
+                RegisterTypeUnion::Field("u32", &uint32_type)});
+  RegisterTypeVector vector_type("v4views", &element_type, 4);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type =
+      builder.GetRegisterType(MakeRegisterInfo(vector_type, 16));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
+  EXPECT_TRUE(type.IsArrayType());
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 4u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsVectorOfTargetSizedUnions) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  lldb::TypeSystemClangSP type_system =
+      ScratchTypeSystemClang::GetForTarget(target);
+  ASSERT_TRUE(type_system);
+  std::optional<uint64_t> pointer_size = llvm::expectedToOptional(
+      type_system->GetType(type_system->getASTContext().VoidPtrTy)
+          .GetByteSize(nullptr));
+  ASSERT_TRUE(pointer_size);
+
+  RegisterTypeBuiltin pointer_type("data_ptr", eEncodingUint,
+                                   eFormatAddressInfo, std::nullopt);
+  RegisterTypeUnion element_type(
+      "pointer_view", {RegisterTypeUnion::Field("pointer", &pointer_type)});
+  RegisterTypeVector vector_type("pointer_views", &element_type, 2);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type = builder.GetRegisterType(
+      MakeRegisterInfo(vector_type, static_cast<uint32_t>(*pointer_size * 2)));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)),
+            *pointer_size * 2);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 2u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsTargetSizedUnionMember) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  lldb::TypeSystemClangSP type_system =
+      ScratchTypeSystemClang::GetForTarget(target);
+  ASSERT_TRUE(type_system);
+  std::optional<uint64_t> pointer_size = llvm::expectedToOptional(
+      type_system->GetType(type_system->getASTContext().VoidPtrTy)
+          .GetByteSize(nullptr));
+  ASSERT_TRUE(pointer_size);
+
+  RegisterTypeBuiltin pointer_type("data_ptr", eEncodingUint,
+                                   eFormatAddressInfo, std::nullopt);
+  RegisterTypeUnion union_type(
+      "pointer_view", {RegisterTypeUnion::Field("pointer", &pointer_type)});
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type = builder.GetRegisterType(
+      MakeRegisterInfo(union_type, static_cast<uint32_t>(*pointer_size)));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), pointer_size);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, RejectsOversizedUnion) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin uint64_type("uint64", eEncodingUint, eFormatHex, 8);
+  RegisterTypeUnion union_type(
+      "wide", {RegisterTypeUnion::Field("value", &uint64_type)});
+  RegisterTypeBuilderClang builder(target);
+
+  EXPECT_FALSE(builder.GetRegisterType(MakeRegisterInfo(union_type, 4)));
+}
+
 } // namespace
