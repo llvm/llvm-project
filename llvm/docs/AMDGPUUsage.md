@@ -16715,7 +16715,7 @@ within a map that has been added by the same *vendor-name*.
   - Amount of stack size used by the shader itself, not including the stack used by any of its callees.
 * - ".backend_stack_size"
   - integer
-  - Amount of stack size used by the shader, including the stack used by its known callees.
+  - Amount of stack size in bytes used by the shader, including the stack used by its known callees.
     Chain callees are excluded, since they reuse the caller's stack frame.
     Indirect calls and recursion do not contribute.
 * - ".shader_subtype"
