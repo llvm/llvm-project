@@ -265,3 +265,4 @@ body:             |
     %rev:fpr(<16 x i8>) = G_BITCAST %rev2
     $q0 = COPY %rev(<16 x i8>)
     RET_ReallyLR implicit $q0
+...

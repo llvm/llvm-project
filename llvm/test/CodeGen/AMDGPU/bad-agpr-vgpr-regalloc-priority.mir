@@ -13,10 +13,6 @@ registers:
   - { id: 5, class: areg_128, preferred-register: '%6' }
   - { id: 6, class: vreg_128, preferred-register: '%5' }
   - { id: 7, class: areg_128, preferred-register: '%4' }
-  - { id: 8, class: vgpr_32 }
-  - { id: 9, class: vgpr_32 }
-  - { id: 10, class: vgpr_32 }
-  - { id: 11, class: areg_128 }
 liveins:
   - { reg: '$sgpr4_sgpr5', virtual-reg: '%0' }
 frameInfo:

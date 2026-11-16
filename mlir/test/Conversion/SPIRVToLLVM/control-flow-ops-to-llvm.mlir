@@ -125,6 +125,30 @@ spirv.module Logical GLSL450 {
     }
     spirv.Return
   }
+
+  // CHECK-LABEL: @loop_with_yielding_value
+  spirv.func @loop_with_yielding_value(%init : i32) -> i32 "None" {
+    // CHECK:   llvm.br ^[[HEADER:.*]](%{{.*}} : i32)
+    // CHECK: ^[[HEADER]](%[[I:.*]]: i32):
+    // CHECK:   llvm.cond_br %{{.*}}, ^[[BODY:.*]], ^[[MERGE:.*]](%[[I]] : i32)
+    // CHECK: ^[[MERGE]](%[[V:.*]]: i32):
+    // CHECK:   llvm.br ^[[END:.*]](%[[V]] : i32)
+    // CHECK: ^[[END]](%[[RES:.*]]: i32):
+    // CHECK:   llvm.return %[[RES]] : i32
+    %0 = spirv.mlir.loop -> i32 {
+      spirv.Branch ^header(%init : i32)
+    ^header(%i : i32):
+      %cond = spirv.Constant true
+      spirv.BranchConditional %cond, ^body, ^merge(%i : i32)
+    ^body:
+      spirv.Branch ^continue
+    ^continue:
+      spirv.Branch ^header(%i : i32)
+    ^merge(%v : i32):
+      spirv.mlir.merge %v : i32
+    }
+    spirv.ReturnValue %0 : i32
+  }
 }
 
 // -----
