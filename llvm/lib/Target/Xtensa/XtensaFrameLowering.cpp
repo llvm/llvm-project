@@ -39,6 +39,20 @@ bool XtensaFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return MF.disableFramePointerElim() || MFI.hasVarSizedObjects();
 }
 
+// Return the size of the frame that emitPrologue() allocates given the stack
+// size that PEI computed. Round up to 16 bytes for both ABIs. Add 32 bytes and
+// realignment in windowed.
+static uint64_t getFrameSize(const MachineFunction &MF, uint64_t StackSize) {
+  uint64_t FrameSize = alignTo(StackSize, 16);
+  if (MF.getSubtarget<XtensaSubtarget>().isWindowedABI()) {
+    FrameSize += 32;
+    uint64_t MaxAlignment = MF.getFrameInfo().getMaxAlign().value();
+    if (MaxAlignment > 32)
+      FrameSize += MaxAlignment;
+  }
+  return FrameSize;
+}
+
 void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   assert(&MBB == &MF.front() && "Shrink-wrapping not yet implemented");
@@ -51,18 +65,11 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
   XtensaMachineFunctionInfo *XtensaFI = MF.getInfo<XtensaMachineFunctionInfo>();
 
   // First, compute final stack size.
-  uint64_t StackSize = MFI.getStackSize();
-  uint64_t PrevStackSize = StackSize;
-
-  // Round up StackSize to 16*N
-  StackSize += (16 - StackSize) & 0xf;
+  uint64_t PrevStackSize = MFI.getStackSize();
+  uint64_t StackSize = getFrameSize(MF, PrevStackSize);
 
   if (STI.isWindowedABI()) {
-    StackSize += 32;
     uint64_t MaxAlignment = MFI.getMaxAlign().value();
-    if (MaxAlignment > 32)
-      StackSize += MaxAlignment;
-
     if (StackSize <= 32760) {
       BuildMI(MBB, MBBI, DL, TII.get(Xtensa::ENTRY))
           .addReg(SP)
