@@ -1,0 +1,92 @@
+# REQUIRES: x86-registered-target
+
+# RUN: split-file %s %t
+
+# Only port 0 mismatches.
+# RUN: sed -e 's/PORT0/1.25/g' -e 's/PORT1/0.25/g' -e 's/UOPS/1/g' %t/benchmark.yaml > %t/port.yaml
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%t/port.yaml -analysis-numpoints=1 -analysis-inconsistency-epsilon=0.125 -analysis-inconsistencies-output-file=- | FileCheck %s --check-prefixes=CSS,PORT
+
+# The epsilon boundary matches; the uop count does not.
+# RUN: sed -e 's/PORT0/0.375/g' -e 's/PORT1/0.25/g' -e 's/UOPS/2/g' %t/benchmark.yaml > %t/uops.yaml
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%t/uops.yaml -analysis-numpoints=1 -analysis-inconsistency-epsilon=0.125 -analysis-inconsistencies-output-file=- | FileCheck %s --check-prefix=UOPS
+
+# Each measurement matches, but the combined distance exceeds epsilon.
+# RUN: sed -e 's/PORT0/0.34375/g' -e 's/PORT1/0.34375/g' -e 's/UOPS/1/g' %t/benchmark.yaml > %t/combined.yaml
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%t/combined.yaml -analysis-numpoints=1 -analysis-inconsistency-epsilon=0.125 -analysis-inconsistencies-output-file=- | FileCheck %s --check-prefix=COMBINED
+
+# Omit matching clusters, including the epsilon boundary.
+# RUN: sed -e 's/PORT0/0.25/g' -e 's/PORT1/0.25/g' -e 's/UOPS/1/g' %t/benchmark.yaml > %t/match.yaml
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%t/match.yaml -analysis-numpoints=1 -analysis-inconsistency-epsilon=0.125 -analysis-inconsistencies-output-file=- | FileCheck %s --check-prefix=MATCH
+# RUN: sed -e 's/PORT0/0.375/g' -e 's/PORT1/0.25/g' -e 's/UOPS/1/g' %t/benchmark.yaml > %t/boundary.yaml
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%t/boundary.yaml -analysis-numpoints=1 -analysis-inconsistency-epsilon=0.125 -analysis-inconsistencies-output-file=- | FileCheck %s --check-prefix=MATCH
+
+# Keep the combined-distance explanation on its own row.
+# RUN: sed "s/config: ''/config: 'all-match'/" %t/match.yaml > %t/mixed.yaml
+# RUN: sed "s/config: ''/config: 'single-mismatch'/" %t/port.yaml >> %t/mixed.yaml
+# RUN: sed "s/config: ''/config: 'combined-mismatch'/" %t/combined.yaml >> %t/mixed.yaml
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%t/mixed.yaml -analysis-numpoints=1 -analysis-clustering-epsilon=0.01 -analysis-inconsistency-epsilon=0.125 -analysis-inconsistencies-output-file=- | FileCheck %s --check-prefix=MIXED
+
+# Cell colors override row colors.
+# CSS: tr.bad-cluster td.cluster-id,
+# CSS-NEXT: tr.bad-cluster td.measurement {
+# CSS-NEXT: color: #922
+# CSS: tr td.measurement.good-measurement {
+# CSS-NEXT: color: #292
+# CSS: tr td.measurement.bad-measurement {
+# CSS-NEXT: color: #922
+
+# PORT: <table class="sched-class-clusters">
+# PORT-SAME: <th>HWPort0</th><th>HWPort1</th><th>HWPort2</th><th>NumMicroOps</th>
+# PORT-SAME: <tr class="bad-cluster"><td class="cluster-id">0</td>
+# PORT-SAME: <td class="measurement bad-measurement">1.25<br><span class="minmax">[1.25;1.25]</span></td>
+# PORT-SAME: <td class="measurement good-measurement">0.25<br><span class="minmax">[0.25;0.25]</span></td>
+# PORT-SAME: <td class="measurement good-measurement">0.00<br><span class="minmax">[0.00;0.00]</span></td>
+# PORT-SAME: <td class="measurement good-measurement">1.00<br><span class="minmax">[1.00;1.00]</span></td></tr></table>
+# PORT-NOT: Combined distance exceeds epsilon
+
+# UOPS: <table class="sched-class-clusters">
+# UOPS-SAME: <tr class="bad-cluster"><td class="cluster-id">0</td>
+# UOPS-SAME: <td class="measurement good-measurement">0.38<br><span class="minmax">[0.38;0.38]</span></td>
+# UOPS-SAME: <td class="measurement good-measurement">0.25<br><span class="minmax">[0.25;0.25]</span></td>
+# UOPS-SAME: <td class="measurement good-measurement">0.00<br><span class="minmax">[0.00;0.00]</span></td>
+# UOPS-SAME: <td class="measurement bad-measurement">2.00<br><span class="minmax">[2.00;2.00]</span></td></tr></table>
+# UOPS-NOT: Combined distance exceeds epsilon
+
+# COMBINED: <table class="sched-class-clusters">
+# COMBINED-SAME: <tr class="bad-cluster"><td class="cluster-id">0<br><small>Combined distance exceeds epsilon</small></td>
+# COMBINED-SAME: <td class="measurement good-measurement">0.34<br><span class="minmax">[0.34;0.34]</span></td>
+# COMBINED-SAME: <td class="measurement good-measurement">0.34<br><span class="minmax">[0.34;0.34]</span></td>
+# COMBINED-SAME: <td class="measurement good-measurement">0.00<br><span class="minmax">[0.00;0.00]</span></td>
+# COMBINED-SAME: <td class="measurement good-measurement">1.00<br><span class="minmax">[1.00;1.00]</span></td></tr></table>
+# COMBINED-NOT: <p>A cluster can be inconsistent
+
+# MATCH: <body>
+# MATCH-NOT: <div class="inconsistency">
+# MATCH: </body>
+
+# MIXED: <tr class="good-cluster"><td class="cluster-id">0</td>
+# MIXED-SAME: >all-match</span>
+# MIXED-SAME: <tr class="bad-cluster"><td class="cluster-id">1</td>
+# MIXED-SAME: >single-mismatch</span>
+# MIXED-SAME: <tr class="bad-cluster"><td class="cluster-id">2<br><small>Combined distance exceeds epsilon</small></td>
+# MIXED-SAME: >combined-mismatch</span>
+
+#--- benchmark.yaml
+# Haswell ADD64rr: ports 0/1/5/6 = 0.25, port 2 = 0, uops = 1.
+---
+mode: uops
+key:
+  instructions:
+    - 'ADD64rr RAX RAX RBX'
+  config: ''
+  register_initial_values: []
+cpu_name: haswell
+llvm_triple: x86_64-unknown-linux-gnu
+min_instructions: 10000
+measurements:
+  - { key: HWPort0, value: PORT0, per_snippet_value: PORT0 }
+  - { key: HWPort1, value: PORT1, per_snippet_value: PORT1 }
+  - { key: HWPort2, value: 0, per_snippet_value: 0 }
+  - { key: NumMicroOps, value: UOPS, per_snippet_value: UOPS }
+error: ''
+...
