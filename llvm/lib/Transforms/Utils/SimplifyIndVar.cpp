@@ -63,8 +63,6 @@ namespace {
     SCEVExpander     &Rewriter;
     SmallVectorImpl<WeakTrackingVH> &DeadInsts;
 
-    bool HoistInvariantCmps;
-
     bool Changed = false;
     bool RunUnswitching = false;
 
@@ -72,10 +70,9 @@ namespace {
     SimplifyIndvar(Loop *Loop, ScalarEvolution *SE, DominatorTree *DT,
                    LoopInfo *LI, const TargetTransformInfo *TTI,
                    SCEVExpander &Rewriter,
-                   SmallVectorImpl<WeakTrackingVH> &Dead,
-                   bool HoistInvariantCmps)
+                   SmallVectorImpl<WeakTrackingVH> &Dead)
         : L(Loop), LI(LI), SE(SE), DT(DT), TTI(TTI), Rewriter(Rewriter),
-          DeadInsts(Dead), HoistInvariantCmps(HoistInvariantCmps) {
+          DeadInsts(Dead) {
       assert(LI && "IV simplification requires LoopInfo");
     }
 
@@ -250,13 +247,11 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   const SCEV *InvariantLHS = LIP->LHS;
   const SCEV *InvariantRHS = LIP->RHS;
 
-  // Do not generate something ridiculous. If the compare gets hoisted, expand
-  // its operands in the preheader of the outermost loop it is invariant in, as
-  // parent loops get unswitched as well.
-  Instruction *PHTerm = HoistInvariantCmps
-                            ? findOutermostInvariantInsertPt(
-                                  L, {InvariantLHS, InvariantRHS}, Rewriter)
-                            : Preheader->getTerminator();
+  // Do not generate something ridiculous. Expand the operands in the preheader
+  // of the outermost loop the compare is invariant in, as parent loops get
+  // unswitched as well.
+  Instruction *PHTerm =
+      findOutermostInvariantInsertPt(L, {InvariantLHS, InvariantRHS}, Rewriter);
   if (Rewriter.isHighCostExpansion({InvariantLHS, InvariantRHS}, L,
                                    2 * SCEVCheapExpansionBudget, TTI, PHTerm) ||
       !Rewriter.isSafeToExpandAt(InvariantLHS, PHTerm) ||
@@ -267,15 +262,10 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   auto *NewRHS =
       Rewriter.expandCodeFor(InvariantRHS, IVOperand->getType(), PHTerm);
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified comparison: " << *ICmp << '\n');
-  // Hoist the now loop-invariant compare to the preheader, so the extra
-  // SimpleLoopUnswitch run after IndVars sees a loop-invariant condition.
-  IRBuilder<> Builder(HoistInvariantCmps ? PHTerm : ICmp);
+  IRBuilder<> Builder(PHTerm);
+  Builder.SetCurrentDebugLocation(DebugLoc::getDropped());
   Value *NewICmp = Builder.CreateICmp(InvariantPredicate, NewLHS, NewRHS, "",
                                       ICmp->hasSameSign());
-  if (auto *NewI = dyn_cast<Instruction>(NewICmp); NewI && HoistInvariantCmps) {
-    NewI->setDebugLoc(ICmp->getDebugLoc());
-    NewI->updateLocationAfterHoist();
-  }
   NewICmp->takeName(ICmp);
   ICmp->replaceAllUsesWith(NewICmp);
   DeadInsts.emplace_back(ICmp);
@@ -1090,10 +1080,9 @@ std::pair<bool, bool> simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE,
                                         DominatorTree *DT, LoopInfo *LI,
                                         const TargetTransformInfo *TTI,
                                         SmallVectorImpl<WeakTrackingVH> &Dead,
-                                        SCEVExpander &Rewriter, IVVisitor *V,
-                                        bool HoistInvariantCmps) {
+                                        SCEVExpander &Rewriter, IVVisitor *V) {
   SimplifyIndvar SIV(LI->getLoopFor(CurrIV->getParent()), SE, DT, LI, TTI,
-                     Rewriter, Dead, HoistInvariantCmps);
+                     Rewriter, Dead);
   SIV.simplifyUsers(CurrIV, V);
   return {SIV.hasChanged(), SIV.runUnswitching()};
 }

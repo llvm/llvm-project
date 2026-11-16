@@ -2120,7 +2120,7 @@ bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
 
     if ((N001C + OpSizeInBits) == InnerShiftSize)
       return true;
-    if (MRI.hasOneUse(N0) && MRI.hasOneUse(InnerShift)) {
+    if (MRI.hasOneNonDBGUse(N0) && MRI.hasOneNonDBGUse(InnerShift)) {
       MatchInfo.Mask = true;
       MatchInfo.MaskVal = APInt(N1C.getBitWidth(), OpSizeInBits) - N1C;
       return true;
@@ -2961,8 +2961,9 @@ bool CombinerHelper::matchCombineInsertVecElts(
   unsigned NumElts = DstTy.getNumElements();
   // If this MI is part of a sequence of insert_vec_elts, then
   // don't do the combine in the middle of the sequence.
-  if (MRI.hasOneUse(DstReg) && MRI.use_instr_begin(DstReg)->getOpcode() ==
-                                   TargetOpcode::G_INSERT_VECTOR_ELT)
+  if (MRI.hasOneNonDBGUse(DstReg) &&
+      MRI.use_nodbg_instructions(DstReg).begin()->getOpcode() ==
+          TargetOpcode::G_INSERT_VECTOR_ELT)
     return false;
   MachineInstr *CurrInst = &MI;
   MachineInstr *TmpInst;
@@ -7227,16 +7228,19 @@ bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) const {
       !mi_match(RHS, MRI, m_MInstr(RHSDef)))
     return false;
 
-  if (!getIConstantVRegVal(LHS, MRI)) {
-    // Skip commuting if LHS is not a constant. But, LHS may be a
-    // G_CONSTANT_FOLD_BARRIER. If so we commute as long as we don't already
-    // have a constant on the RHS.
+  if (!isConstantOrConstantVector(*LHSDef, MRI, /*AllowFP=*/false,
+                                  /*AllowOpaqueConstants=*/false)) {
+    // Skip commuting if LHS is not a constant or a vector of constants. But,
+    // LHS may be a G_CONSTANT_FOLD_BARRIER. If so we commute as long as we
+    // don't already have a constant on the RHS.
     if (LHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER)
       return false;
   }
-  // Commute as long as RHS is not a constant or G_CONSTANT_FOLD_BARRIER.
+  // Commute as long as RHS is not a constant, a vector of constants or
+  // G_CONSTANT_FOLD_BARRIER.
   return RHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER &&
-         !getIConstantVRegVal(RHS, MRI);
+         !isConstantOrConstantVector(*RHSDef, MRI, /*AllowFP=*/false,
+                                     /*AllowOpaqueConstants=*/false);
 }
 
 bool CombinerHelper::matchCommuteFPConstantToRHS(MachineInstr &MI) const {
@@ -8415,6 +8419,15 @@ static void commuteMask(MutableArrayRef<int> Mask, const unsigned NumElems) {
     else
       Mask[I] = Idx - NumElems;
   }
+}
+
+bool CombinerHelper::isZeroOrOneVector(Register Reg) const {
+  if (!MRI.getType(Reg).isFixedVector())
+    return false;
+  return matchUnaryPredicate(MRI, Reg, [](const Constant *C) {
+    auto *CI = dyn_cast_or_null<ConstantInt>(C);
+    return CI && (CI->isZero() || CI->isOne());
+  });
 }
 
 bool CombinerHelper::matchShuffleDisjointMask(MachineInstr &MI,

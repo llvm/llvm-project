@@ -2518,6 +2518,13 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
       (Op == ISD::SINT_TO_FP || Op == ISD::UINT_TO_FP))
     return false;
 
+  // The DAGCombiner replaces a conversion from i1 with a select of the two
+  // exact results. The select avoids an f32 conversion plus rounding for
+  // f16/bf16, a 64-bit conversion for f64 and a missing libcall for f128, and
+  // is the same single v_cndmask for f32.
+  if (VT == MVT::i1 && (Op == ISD::SINT_TO_FP || Op == ISD::UINT_TO_FP))
+    return false;
+
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
 
@@ -3815,7 +3822,10 @@ SDValue SITargetLowering::LowerFormalArguments(
       llvm_unreachable("Unexpected register class in LowerFormalArguments!");
 
     Reg = MF.addLiveIn(Reg, RC);
-    SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
+    bool CopyAsI32 =
+        VT.getSizeInBits() == 16 &&
+        (RC == &AMDGPU::SGPR_32RegClass || !Subtarget->useRealTrue16Insts());
+    SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, CopyAsI32 ? MVT::i32 : VT);
     if (Arg.Flags.isInReg() && RC == &AMDGPU::VGPR_32RegClass) {
       // FIXME: Need to forward the chains created by `CopyFromReg`s, make sure
       // they will read physical regs before any side effect instructions.
@@ -3824,6 +3834,9 @@ SDValue SITargetLowering::LowerFormalArguments(
       Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
                         ReadFirstLane, Val);
     }
+
+    if (CopyAsI32)
+      Val = DAG.getBitcast(VT, DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Val));
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
@@ -5954,7 +5967,7 @@ getDPPOpcForWaveReduction(unsigned Opc, const GCNSubtarget &ST) {
   unsigned ClampOpc = Opc;
   if (Opc == AMDGPU::V_SUB_F32_e64)
     ClampOpc = AMDGPU::V_ADD_F32_e64;
-  if (!ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/true)) {
+  if (!ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/false)) {
     if (Opc == AMDGPU::S_SUB_I32)
       ClampOpc = AMDGPU::S_ADD_I32;
     if (Opc == AMDGPU::S_ADD_U64_PSEUDO || Opc == AMDGPU::S_SUB_U64_PSEUDO)
@@ -6373,7 +6386,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                 LaneValueReg)
             .addReg(SrcReg)
             .addReg(FF1Reg);
-        if (ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/true)) {
+        if (ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/false)) {
           // Get the Lane Value in VGPR to avoid the Constant Bus Restriction
           Register LaneValVgpr = MRI.createVirtualRegister(SrcRegClass);
           Register VgprResultReg = MRI.createVirtualRegister(SrcRegClass);
@@ -6397,7 +6410,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
           OpInstr.addImm(0); // omod
         if (TII->isSALU(Opc))
           OpInstr.setOperandDead(3); // Dead scc
-        if (ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/true)) {
+        if (ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/false)) {
           BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                   DstReg)
               .addReg(OpDstReg);
@@ -20326,15 +20339,27 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'v':
     case 'a':
       return C_RegisterClass;
+    case 'm':
+      return C_Memory;
     }
   } else if (Constraint.size() == 2) {
     if (Constraint == "VA")
       return C_RegisterClass;
+    if (Constraint == "RF")
+      return C_Memory;
   }
   if (isImmConstraint(Constraint)) {
     return C_Other;
   }
   return TargetLowering::getConstraintType(Constraint);
+}
+
+InlineAsm::ConstraintCode
+SITargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
+  if (ConstraintCode == "RF")
+    return InlineAsm::ConstraintCode::RF;
+
+  return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
 }
 
 static uint64_t clearUnusedBits(uint64_t Val, unsigned Size) {

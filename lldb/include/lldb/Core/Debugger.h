@@ -24,6 +24,7 @@
 #include "lldb/Core/Statusline.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/Telemetry.h"
+#include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/StreamFile.h"
@@ -49,6 +50,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -622,6 +624,19 @@ public:
               std::optional<lldb::user_id_t> debugger_id = std::nullopt,
               std::once_flag *once = nullptr);
 
+  /// Report an error that may be a bug in LLDB.
+  ///
+  /// Like ReportError, but each debugger follows the error with a note
+  /// suggesting the 'bugreport' command, see ShouldSuggestBugReport.
+  static void
+  ReportInternalError(std::string message,
+                      std::optional<lldb::user_id_t> debugger_id = std::nullopt,
+                      std::once_flag *once = nullptr);
+
+  /// Returns true the first time this debugger sees \p failure while
+  /// diagnostics.suggest-bugreport is on.
+  bool ShouldSuggestBugReport(llvm::StringRef failure);
+
   /// Report info events.
   ///
   /// Unlike warning and error events, info events are not broadcast but are
@@ -734,7 +749,8 @@ protected:
 
   static void ReportDiagnosticImpl(lldb::Severity severity, std::string message,
                                    std::optional<lldb::user_id_t> debugger_id,
-                                   std::once_flag *once);
+                                   std::once_flag *once,
+                                   bool internal_error = false);
 
   void HandleDestroyCallback();
 
@@ -829,6 +845,9 @@ protected:
   std::optional<Statusline> m_statusline;
   /// Raised by FlushStatusLine to request a flush at the next redraw.
   std::atomic<bool> m_flush_statusline = false;
+
+  /// Hashes of the failures this debugger already suggested 'bugreport' for.
+  ThreadSafeDenseSet<llvm::stable_hash> m_suggested_bugreports;
 
   llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;
   std::shared_ptr<CallbackLogHandler> m_callback_handler_sp;

@@ -144,8 +144,6 @@ exit.1:
   ret i8 1
 }
 
-; The compare made invariant in the inner loop is also invariant in the outer
-; loop and is hoisted to the outer preheader.
 define i8 @cmp_invariant_in_outer_loop(ptr %p, i64 %n, i64 %m, i64 %start) {
 ; CHECK-LABEL: define i8 @cmp_invariant_in_outer_loop(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i64 [[M:%.*]], i64 [[START:%.*]]) {

@@ -2829,9 +2829,15 @@ def CIR_LoweringOptionsAttr
 //===----------------------------------------------------------------------===//
 
 def CIR_AnnotationAttr : CIR_Attr<"Annotation", "annotation"> {
-  let summary = "Annotation attribute for global variables and functions";
+  let summary = "A C/C++ `annotate` attribute";
   let description = [{
-    Represents a C/C++ `__attribute__((annotate(...)))` in CIR.
+    Represents a C/C++ `__attribute__((annotate(...)))` in CIR. Global
+    variables and functions carry these in their `annotations` attribute; local
+    variables, parameters, record fields, and `__builtin_annotation` use them
+    through the `cir.var_annotation`, `cir.ptr_annotation`, and
+    `cir.annotation` operations. The source file and line of an annotation are
+    taken from the location of the operation that carries it, and its strings
+    are emitted as globals in the `llvm.metadata` section.
 
     Example C code:
     ```c
