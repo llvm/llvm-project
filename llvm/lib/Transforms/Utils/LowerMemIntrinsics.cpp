@@ -1624,11 +1624,10 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
   assert(!MemSet->isVolatile() && "Cannot split a volatile memset");
 
   // Known bits make the length a multiple of MinStoreSize, so no smaller store
-  // is needed, and a length below it can only be zero.
+  // is needed.
   uint64_t MinStoreSize = uint64_t(1)
                           << std::min(LenKnown.countMinTrailingZeros(), 63u);
-  if (MaxLen < MinStoreSize)
-    return;
+  assert(MaxLen >= MinStoreSize && "Length is known to be zero");
 
   Value *Dst = MemSet->getRawDest();
   Value *Len = MemSet->getLength();
@@ -1732,11 +1731,10 @@ void llvm::expandBoundedMemSetPattern(MemSetPatternInst *MemSet,
   assert(!MemSet->isVolatile() && "Cannot split a volatile memset.pattern");
 
   // Known bits make the count a multiple of MinStoreCount, so no smaller store
-  // is needed, and a count below it can only be zero.
+  // is needed.
   uint64_t MinStoreCount = uint64_t(1)
                            << std::min(CountKnown.countMinTrailingZeros(), 63u);
-  if (MaxCount < MinStoreCount)
-    return;
+  assert(MaxCount >= MinStoreCount && "Count is known to be zero");
 
   Value *Dst = MemSet->getRawDest();
   Value *Count = MemSet->getLength();

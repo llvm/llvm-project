@@ -92,7 +92,11 @@ struct PreISelIntrinsicLowering {
 
   static bool shouldExpandMemIntrinsicWithSize(Value *Size,
                                                const TargetTransformInfo &TTI);
-  bool tryExpandBoundedMemSet(MemSetInst *Memset,
+  bool shouldExpandBoundedMemSet(MemSetBase<MemIntrinsic> *MemSet,
+                                 const TargetTransformInfo &TTI,
+                                 ConstantRange &OutRange,
+                                 KnownBits &OutKnown) const;
+  bool tryExpandBoundedMemSet(MemSetInst *MemSet,
                               const TargetTransformInfo &TTI) const;
   bool tryExpandBoundedMemSetPattern(MemSetPatternInst *MemSet,
                                      const TargetTransformInfo &TTI) const;
@@ -296,58 +300,18 @@ static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
   return Lowering.getMemcpyImpl() != RTLIB::Unsupported;
 }
 
-// Expand a memset whose length is not constant but is known to be small, which
-// is faster than calling the library.
-bool PreISelIntrinsicLowering::tryExpandBoundedMemSet(
-    MemSetInst *Memset, const TargetTransformInfo &TTI) const {
+// Decide whether to expand a memset or memset.pattern whose length is not
+// constant but is known to be small, which is faster than calling the library.
+bool PreISelIntrinsicLowering::shouldExpandBoundedMemSet(
+    MemSetBase<MemIntrinsic> *MemSet, const TargetTransformInfo &TTI,
+    ConstantRange &OutRange, KnownBits &OutKnown) const {
   // This pass runs even at -O0, so skip if e.g. llc -O0 is used.
   if (TM.getOptLevel() == CodeGenOptLevel::None)
     return false;
 
-  Value *Len = Memset->getLength();
-  Function *F = Memset->getFunction();
-  if (isa<Constant>(Len) || Memset->isVolatile() || F->hasOptNone() ||
-      F->hasMinSize())
-    return false;
-  uint64_t Threshold = BoundedMemSetInlineSizeOpt.getNumOccurrences()
-                           ? BoundedMemSetInlineSizeOpt
-                           : TTI.getMaxBoundedMemSetInlineSize();
-  if (!Threshold)
-    return false;
-
-  // Bounds from (1) assumptions, e.g. __builtin_assume(len <= 32)
-  // and (2) known bits and ranges on instructions themselves, and...
-  SimplifyQuery SQ(Memset->getDataLayout(), Memset);
-  SQ.AC = &LookupAC(*F);
-  KnownBits Known = computeKnownBits(Len, SQ);
-  ConstantRange CR = computeConstantRangeIncludingKnownBits(
-      {Len, Known}, /*ForSigned=*/false, SQ);
-
-  // ... (3) range attr on the memset.
-  Attribute RangeAttr = Memset->getParamAttr(
-      Memset->getLengthUse().getOperandNo(), Attribute::Range);
-  if (RangeAttr.isValid())
-    CR = CR.intersectWith(RangeAttr.getRange());
-
-  if (CR.isEmptySet() || CR.getUnsignedMax().ugt(Threshold))
-    return false;
-
-  expandBoundedMemSet(Memset, CR.getUnsignedMin().getZExtValue(),
-                      CR.getUnsignedMax().getZExtValue(), Known);
-  return true;
-}
-
-// Expand a memset.pattern whose count is not constant but is known to be small,
-// which is faster than calling the library.
-bool PreISelIntrinsicLowering::tryExpandBoundedMemSetPattern(
-    MemSetPatternInst *MemSet, const TargetTransformInfo &TTI) const {
-  // This pass runs even at -O0, so skip if e.g. llc -O0 is used.
-  if (TM.getOptLevel() == CodeGenOptLevel::None)
-    return false;
-
-  Value *Count = MemSet->getLength();
+  Value *Len = MemSet->getLength();
   Function *F = MemSet->getFunction();
-  if (isa<Constant>(Count) || MemSet->isVolatile() || F->hasOptNone() ||
+  if (isa<Constant>(Len) || MemSet->isVolatile() || F->hasOptNone() ||
       F->hasMinSize())
     return false;
 
@@ -359,28 +323,66 @@ bool PreISelIntrinsicLowering::tryExpandBoundedMemSetPattern(
     return false;
 
   const DataLayout &DL = MemSet->getDataLayout();
-  uint64_t PatternSize = DL.getTypeAllocSize(MemSet->getValue()->getType());
-  uint64_t MaxCount = Threshold / PatternSize;
+  uint64_t ValueSize = DL.getTypeAllocSize(MemSet->getValue()->getType());
+  uint64_t MaxLen = Threshold / ValueSize;
 
-  // Bounds from (1) assumptions, e.g. __builtin_assume(count <= 8)
+  // Bounds from (1) assumptions, e.g. __builtin_assume(len <= 32)
   // and (2) known bits and ranges on instructions themselves, and...
   SimplifyQuery SQ(DL, MemSet);
   SQ.AC = &LookupAC(*F);
-  KnownBits Known = computeKnownBits(Count, SQ);
+  KnownBits Known = computeKnownBits(Len, SQ);
   ConstantRange CR = computeConstantRangeIncludingKnownBits(
-      {Count, Known}, /*ForSigned=*/false, SQ);
+      {Len, Known}, /*ForSigned=*/false, SQ);
 
-  // ... (3) range attr on the memset.pattern.
+  // ... (3) range attr on the memset.
   Attribute RangeAttr = MemSet->getParamAttr(
       MemSet->getLengthUse().getOperandNo(), Attribute::Range);
   if (RangeAttr.isValid())
     CR = CR.intersectWith(RangeAttr.getRange());
 
-  if (CR.isEmptySet() || CR.getUnsignedMax().ugt(MaxCount))
+  if (CR.isEmptySet() || CR.getUnsignedMax().ugt(MaxLen))
     return false;
 
-  expandBoundedMemSetPattern(MemSet, CR.getUnsignedMin().getZExtValue(),
-                             CR.getUnsignedMax().getZExtValue(), Known);
+  // Known bits make the length a multiple of a power of two, so a length below
+  // it can only be zero.
+  uint64_t MinStoreLen = uint64_t(1)
+                         << std::min(Known.countMinTrailingZeros(), 63u);
+  if (CR.getUnsignedMax().ult(MinStoreLen))
+    CR = ConstantRange(APInt::getZero(CR.getBitWidth()));
+
+  OutRange = CR;
+  OutKnown = Known;
+  return true;
+}
+
+bool PreISelIntrinsicLowering::tryExpandBoundedMemSet(
+    MemSetInst *MemSet, const TargetTransformInfo &TTI) const {
+  ConstantRange LenRange(/*BitWidth=*/1, /*isFullSet=*/true);
+  KnownBits LenKnown;
+  if (!shouldExpandBoundedMemSet(MemSet, TTI, LenRange, LenKnown))
+    return false;
+
+  if (LenRange.getUnsignedMax().isZero())
+    return false;
+
+  expandBoundedMemSet(MemSet, LenRange.getUnsignedMin().getZExtValue(),
+                      LenRange.getUnsignedMax().getZExtValue(), LenKnown);
+  return true;
+}
+
+bool PreISelIntrinsicLowering::tryExpandBoundedMemSetPattern(
+    MemSetPatternInst *MemSet, const TargetTransformInfo &TTI) const {
+  ConstantRange CountRange(/*BitWidth=*/1, /*isFullSet=*/true);
+  KnownBits CountKnown;
+  if (!shouldExpandBoundedMemSet(MemSet, TTI, CountRange, CountKnown))
+    return false;
+
+  if (CountRange.getUnsignedMax().isZero())
+    return false;
+
+  expandBoundedMemSetPattern(MemSet, CountRange.getUnsignedMin().getZExtValue(),
+                             CountRange.getUnsignedMax().getZExtValue(),
+                             CountKnown);
   return true;
 }
 
