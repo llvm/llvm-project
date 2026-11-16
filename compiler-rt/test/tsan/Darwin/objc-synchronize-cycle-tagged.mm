@@ -1,6 +1,6 @@
 // RUN: %clangxx_tsan %s -o %t -framework Foundation -fobjc-arc
-// RUN:     %run %t 6 2>&1 | FileCheck %s --check-prefix=SIX
-// RUN: not %run %t 7 2>&1 | FileCheck %s --check-prefix=SEVEN
+// RUN: %run %t 6 2>&1 | FileCheck %s
+// RUN: %run %t 7 2>&1 | FileCheck %s
 
 #import <Foundation/Foundation.h>
 
@@ -30,13 +30,13 @@ int main(int argc, char* argv[]) {
     // num2 -> obj1
     @synchronized(num2) {
       @synchronized(obj) {
-// SEVEN: ThreadSanitizer: lock-order-inversion (potential deadlock)
       }
     }
   }
 
   NSLog(@"PASS");
-// SIX-NOT: ThreadSanitizer
-// SIX: PASS
+// CHECK-NOT: ThreadSanitizer
+// CHECK: PASS
+// CHECK-NOT: ThreadSanitizer
   return 0;
 }

@@ -104,7 +104,6 @@ void DD::MutexBeforeLock(DDCallback *cb,
     DDMutex *m, bool wlock) {
   DDLogicalThread *lt = cb->lt;
   if (lt->dd.empty()) return;  // This will be the first lock held by lt.
-  if (dd.hasAllEdges(&lt->dd, m->id)) return;  // We already have all edges.
   SpinMutexLock lk(&mtx);
   MutexEnsureID(lt, m);
   if (dd.isHeld(&lt->dd, m->id))
@@ -121,31 +120,28 @@ void DD::ReportDeadlock(DDCallback *cb, DDMutex *m) {
   uptr path[20];
   uptr len = dd.findPathToLock(&lt->dd, m->id, path, ARRAY_SIZE(path));
   if (len == 0U) {
-    // A cycle of 20+ locks? Well, that's a bit odd...
     Printf("WARNING: too long mutex cycle found\n");
     return;
   }
   CHECK_EQ(m->id, path[0]);
+  const DeadlockDetector<DDBV>::Edge* cycle[ARRAY_SIZE(path)];
+  len = dd.findGuardedCycle(&lt->dd, m->id, cb->UniqueTid(), cycle,
+                            ARRAY_SIZE(cycle));
+  if (!len)
+    return;
   lt->report_pending = true;
   len = Min<uptr>(len, DDReport::kMaxLoopSize);
   DDReport *rep = &lt->rep;
   rep->n = len;
   for (uptr i = 0; i < len; i++) {
-    uptr from = path[i];
-    uptr to = path[(i + 1) % len];
-    DDMutex *m0 = (DDMutex*)dd.getData(from);
-    DDMutex *m1 = (DDMutex*)dd.getData(to);
-
-    u32 stk_from = 0, stk_to = 0;
-    int unique_tid = 0;
-    dd.findEdge(from, to, &stk_from, &stk_to, &unique_tid);
-    // Printf("Edge: %zd=>%zd: %u/%u T%d\n", from, to, stk_from, stk_to,
-    //    unique_tid);
-    rep->loop[i].thr_ctx = unique_tid;
+    const auto& edge = *cycle[i];
+    DDMutex* m0 = (DDMutex*)dd.getData(edge.from);
+    DDMutex* m1 = (DDMutex*)dd.getData(edge.to);
+    rep->loop[i].thr_ctx = edge.unique_tid < 0 ? 0 : edge.unique_tid;
     rep->loop[i].mtx_ctx0 = m0->ctx;
     rep->loop[i].mtx_ctx1 = m1->ctx;
-    rep->loop[i].stk[0] = stk_to;
-    rep->loop[i].stk[1] = stk_from;
+    rep->loop[i].stk[0] = edge.stk_to;
+    rep->loop[i].stk[1] = edge.stk_from;
   }
 }
 
@@ -155,9 +151,7 @@ void DD::MutexAfterLock(DDCallback *cb, DDMutex *m, bool wlock, bool trylock) {
   if (flags.second_deadlock_stack)
     stk = cb->Unwind();
   // Printf("T%p MutexLock:   %zx stk %u\n", lt, m->id, stk);
-  if (dd.onFirstLock(&lt->dd, m->id, stk))
-    return;
-  if (dd.onLockFast(&lt->dd, m->id, stk))
+  if (dd.onFirstLock(&lt->dd, m->id, stk, wlock))
     return;
 
   SpinMutexLock lk(&mtx);
@@ -166,7 +160,7 @@ void DD::MutexAfterLock(DDCallback *cb, DDMutex *m, bool wlock, bool trylock) {
     CHECK(!dd.isHeld(&lt->dd, m->id));
   if (!trylock)
     dd.addEdges(&lt->dd, m->id, stk ? stk : cb->Unwind(), cb->UniqueTid());
-  dd.onLockAfter(&lt->dd, m->id, stk);
+  dd.onLockAfter(&lt->dd, m->id, stk, wlock);
 }
 
 void DD::MutexBeforeUnlock(DDCallback *cb, DDMutex *m, bool wlock) {

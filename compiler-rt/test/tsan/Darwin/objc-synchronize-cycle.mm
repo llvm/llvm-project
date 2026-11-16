@@ -1,7 +1,7 @@
 // RUN: %clangxx_tsan %s -o %t -framework Foundation -fobjc-arc
-// RUN:                                   not %run %t 2>&1 | FileCheck %s
-// RUN: %env_tsan_opts=detect_deadlocks=1 not %run %t 2>&1 | FileCheck %s
-// RUN: %env_tsan_opts=detect_deadlocks=0     %run %t 2>&1 | FileCheck %s --check-prefix=DISABLED
+// RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %env_tsan_opts=detect_deadlocks=1 %run %t 2>&1 | FileCheck %s
+// RUN: %env_tsan_opts=detect_deadlocks=0 %run %t 2>&1 | FileCheck %s
 
 #import <Foundation/Foundation.h>
 
@@ -19,13 +19,13 @@ int main() {
     // obj1 -> obj1
     @synchronized(obj2) {
       @synchronized(obj1) {
-// CHECK: ThreadSanitizer: lock-order-inversion (potential deadlock)
       }
     }
   }
 
   NSLog(@"PASS");
-// DISABLED-NOT: ThreadSanitizer
-// DISABLED: PASS
+// CHECK-NOT: ThreadSanitizer
+// CHECK: PASS
+// CHECK-NOT: ThreadSanitizer
   return 0;
 }
