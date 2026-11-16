@@ -182,6 +182,40 @@ define i11 @shrinkExtractElt_i33_to_11_2(<3 x i33> %x) {
   ret i11 %t
 }
 
+; Crazy types are ok for fixed vectors.
+define i4 @shrinkExtractElt_i56_to_i4_2(<4 x i56> %x) {
+; LE-LABEL: @shrinkExtractElt_i56_to_i4_2(
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i56> [[X:%.*]] to <56 x i4>
+; LE-NEXT:    [[T:%.*]] = extractelement <56 x i4> [[TMP1]], i64 28
+; LE-NEXT:    ret i4 [[T]]
+;
+; BE-LABEL: @shrinkExtractElt_i56_to_i4_2(
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i56> [[X:%.*]] to <56 x i4>
+; BE-NEXT:    [[T:%.*]] = extractelement <56 x i4> [[TMP1]], i64 41
+; BE-NEXT:    ret i4 [[T]]
+;
+  %e = extractelement <4 x i56> %x, i16 2
+  %t = trunc i56 %e to i4
+  ret i4 %t
+}
+
+; Also fold the trunc of a scalable vector element into a bitcast.
+define i4 @shrinkExtractElt_i56_to_i4_2_scalable(<vscale x 4 x i56> %x) {
+; LE-LABEL: @shrinkExtractElt_i56_to_i4_2_scalable(
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i56> [[X:%.*]] to <vscale x 56 x i4>
+; LE-NEXT:    [[T:%.*]] = extractelement <vscale x 56 x i4> [[TMP1]], i64 28
+; LE-NEXT:    ret i4 [[T]]
+;
+; BE-LABEL: @shrinkExtractElt_i56_to_i4_2_scalable(
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i56> [[X:%.*]] to <vscale x 56 x i4>
+; BE-NEXT:    [[T:%.*]] = extractelement <vscale x 56 x i4> [[TMP1]], i64 41
+; BE-NEXT:    ret i4 [[T]]
+;
+  %e = extractelement <vscale x 4 x i56> %x, i16 2
+  %t = trunc i56 %e to i4
+  ret i4 %t
+}
+
 ; Do not optimize if it would result in an invalid bitcast instruction.
 define i13 @shrinkExtractElt_i67_to_i13_2(<3 x i67> %x) {
 ; ANY-LABEL: @shrinkExtractElt_i67_to_i13_2(
