@@ -20,10 +20,10 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: ori_ori
-    ; CHECK: [[PCALAU12I:%[0-9]+]]:gpr = PCALAU12I target-flags(loongarch-pcrel-hi) @g + 1
-    ; CHECK-NEXT: [[ADDI_D:%[0-9]+]]:gpr = ADDI_D $r0, target-flags(loongarch-pcrel-lo) @g + 1
-    ; CHECK-NEXT: [[LU32I_D:%[0-9]+]]:gpr = LU32I_D [[ADDI_D]], target-flags(loongarch-pcrel64-lo) @g + 1
-    ; CHECK-NEXT: [[LU52I_D:%[0-9]+]]:gpr = LU52I_D [[LU32I_D]], target-flags(loongarch-pcrel64-hi) @g + 1
+    ; CHECK: [[PCALAU12I:%[0-9]+]]:gpr = PCALAU12I target-flags(loongarch-pcrel-hi) @g + 257
+    ; CHECK-NEXT: [[ADDI_D:%[0-9]+]]:gpr = ADDI_D $r0, target-flags(loongarch-pcrel-lo) @g + 257
+    ; CHECK-NEXT: [[LU32I_D:%[0-9]+]]:gpr = LU32I_D [[ADDI_D]], target-flags(loongarch-pcrel64-lo) @g + 257
+    ; CHECK-NEXT: [[LU52I_D:%[0-9]+]]:gpr = LU52I_D [[LU32I_D]], target-flags(loongarch-pcrel64-hi) @g + 257
     ; CHECK-NEXT: [[ADD_D:%[0-9]+]]:gpr = ADD_D [[LU52I_D]], [[PCALAU12I]]
     ; CHECK-NEXT: $r4 = COPY [[ADD_D]]
     ; CHECK-NEXT: PseudoRET implicit $r4
@@ -44,10 +44,10 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: ori_ori_overlap
-    ; CHECK: [[PCALAU12I:%[0-9]+]]:gpr = PCALAU12I target-flags(loongarch-pcrel-hi) @g + 305418255
-    ; CHECK-NEXT: [[ADDI_D:%[0-9]+]]:gpr = ADDI_D $r0, target-flags(loongarch-pcrel-lo) @g + 305418255
-    ; CHECK-NEXT: [[LU32I_D:%[0-9]+]]:gpr = LU32I_D [[ADDI_D]], target-flags(loongarch-pcrel64-lo) @g + 305418255
-    ; CHECK-NEXT: [[LU52I_D:%[0-9]+]]:gpr = LU52I_D [[LU32I_D]], target-flags(loongarch-pcrel64-hi) @g + 305418255
+    ; CHECK: [[PCALAU12I:%[0-9]+]]:gpr = PCALAU12I target-flags(loongarch-pcrel-hi) @g + 305419903
+    ; CHECK-NEXT: [[ADDI_D:%[0-9]+]]:gpr = ADDI_D $r0, target-flags(loongarch-pcrel-lo) @g + 305419903
+    ; CHECK-NEXT: [[LU32I_D:%[0-9]+]]:gpr = LU32I_D [[ADDI_D]], target-flags(loongarch-pcrel64-lo) @g + 305419903
+    ; CHECK-NEXT: [[LU52I_D:%[0-9]+]]:gpr = LU52I_D [[LU32I_D]], target-flags(loongarch-pcrel64-hi) @g + 305419903
     ; CHECK-NEXT: [[ADD_D:%[0-9]+]]:gpr = ADD_D [[LU52I_D]], [[PCALAU12I]]
     ; CHECK-NEXT: $r4 = COPY [[ADD_D]]
     ; CHECK-NEXT: PseudoRET implicit $r4
@@ -69,10 +69,10 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: ori_slli_ori
-    ; CHECK: [[PCALAU12I:%[0-9]+]]:gpr = PCALAU12I target-flags(loongarch-pcrel-hi) @g + 41200
-    ; CHECK-NEXT: [[ADDI_D:%[0-9]+]]:gpr = ADDI_D $r0, target-flags(loongarch-pcrel-lo) @g + 41200
-    ; CHECK-NEXT: [[LU32I_D:%[0-9]+]]:gpr = LU32I_D [[ADDI_D]], target-flags(loongarch-pcrel64-lo) @g + 41200
-    ; CHECK-NEXT: [[LU52I_D:%[0-9]+]]:gpr = LU52I_D [[LU32I_D]], target-flags(loongarch-pcrel64-hi) @g + 41200
+    ; CHECK: [[PCALAU12I:%[0-9]+]]:gpr = PCALAU12I target-flags(loongarch-pcrel-hi) @g + 44016
+    ; CHECK-NEXT: [[ADDI_D:%[0-9]+]]:gpr = ADDI_D $r0, target-flags(loongarch-pcrel-lo) @g + 44016
+    ; CHECK-NEXT: [[LU32I_D:%[0-9]+]]:gpr = LU32I_D [[ADDI_D]], target-flags(loongarch-pcrel64-lo) @g + 44016
+    ; CHECK-NEXT: [[LU52I_D:%[0-9]+]]:gpr = LU52I_D [[LU32I_D]], target-flags(loongarch-pcrel64-hi) @g + 44016
     ; CHECK-NEXT: [[ADD_D:%[0-9]+]]:gpr = ADD_D [[LU52I_D]], [[PCALAU12I]]
     ; CHECK-NEXT: $r4 = COPY [[ADD_D]]
     ; CHECK-NEXT: PseudoRET implicit $r4
