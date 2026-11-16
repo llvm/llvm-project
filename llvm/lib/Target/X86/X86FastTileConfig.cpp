@@ -133,7 +133,7 @@ bool X86FastTileConfigImpl::configBasicBlock(MachineBasicBlock &MBB) {
       // been initialized to zero in pre config.
       // ACE Palette 2 uses fixed tile dimensions (16x64), so skip writing
       // shapes - bytes 1-63 must remain zero for ACE.
-      if (ST->hasACEV1()) {
+      if (X86FI->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA) {
         ShapeInfos.clear();
         Change = true;
         continue;

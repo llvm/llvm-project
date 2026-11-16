@@ -5740,6 +5740,72 @@ let TargetPrefix = "x86" in {
 // ACE - AMD AI Compute Extensions
 
 let TargetPrefix = "x86" in {
+  def int_x86_acev1_tilemovrowextract : ClangBuiltin<"__builtin_ia32_acev1_tilemovrowextract">,
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>]>;
+
+  def int_x86_acev1_tilemovrowextract_internal :
+              ClangBuiltin<"__builtin_ia32_acev1_tilemovrowextract_internal">,
+              Intrinsic<[llvm_v16i32_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
+                        []>;
+
+  // ACE - spellings of AMX-shared instructions; the palette follows the
+  // opcode.
+  def int_x86_acev1_tilezero : ClangBuiltin<"__builtin_ia32_acev1_tilezero">,
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>]>;
+  def int_x86_acev1_tilezero_internal :
+              ClangBuiltin<"__builtin_ia32_acev1_tilezero_internal">,
+              Intrinsic<[llvm_x86amx_ty], [llvm_i16_ty, llvm_i16_ty], []>;
+  def int_x86_acev1_tcvtrowd2ps : ClangBuiltin<"__builtin_ia32_acev1_tcvtrowd2ps">,
+      DefaultAttrsIntrinsic<[llvm_v16f32_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>]>;
+  def int_x86_acev1_tcvtrowd2ps_internal :
+              ClangBuiltin<"__builtin_ia32_acev1_tcvtrowd2ps_internal">,
+              Intrinsic<[llvm_v16f32_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
+                        []>;
+  def int_x86_acev1_tcvtrowps2bf16h : ClangBuiltin<"__builtin_ia32_acev1_tcvtrowps2bf16h">,
+      DefaultAttrsIntrinsic<[llvm_v32bf16_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>]>;
+  def int_x86_acev1_tcvtrowps2bf16h_internal :
+              ClangBuiltin<"__builtin_ia32_acev1_tcvtrowps2bf16h_internal">,
+              Intrinsic<[llvm_v32bf16_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
+                        []>;
+  def int_x86_acev1_tcvtrowps2bf16l : ClangBuiltin<"__builtin_ia32_acev1_tcvtrowps2bf16l">,
+      DefaultAttrsIntrinsic<[llvm_v32bf16_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>]>;
+  def int_x86_acev1_tcvtrowps2bf16l_internal :
+              ClangBuiltin<"__builtin_ia32_acev1_tcvtrowps2bf16l_internal">,
+              Intrinsic<[llvm_v32bf16_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
+                        []>;
+  def int_x86_acev1_tcvtrowps2phh : ClangBuiltin<"__builtin_ia32_acev1_tcvtrowps2phh">,
+      DefaultAttrsIntrinsic<[llvm_v32f16_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>]>;
+  def int_x86_acev1_tcvtrowps2phh_internal :
+              ClangBuiltin<"__builtin_ia32_acev1_tcvtrowps2phh_internal">,
+              Intrinsic<[llvm_v32f16_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
+                        []>;
+  def int_x86_acev1_tcvtrowps2phl : ClangBuiltin<"__builtin_ia32_acev1_tcvtrowps2phl">,
+      DefaultAttrsIntrinsic<[llvm_v32f16_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>]>;
+  def int_x86_acev1_tcvtrowps2phl_internal :
+              ClangBuiltin<"__builtin_ia32_acev1_tcvtrowps2phl_internal">,
+              Intrinsic<[llvm_v32f16_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
+                        []>;
+
   // ACE - block scale register
   def int_x86_acev1_bsr0init : ClangBuiltin<"__builtin_ia32_bsr0init">,
               Intrinsic<[], [], []>;

@@ -134,6 +134,18 @@ class X86PreTileConfigImpl {
     case X86::PTCVTROWPS2PHLrtiV:
     case X86::PTILEMOVROWrteV:
     case X86::PTILEMOVROWrtiV:
+    case X86::ACE_PTCVTROWD2PSrteV:
+    case X86::ACE_PTCVTROWD2PSrtiV:
+    case X86::ACE_PTCVTROWPS2BF16HrteV:
+    case X86::ACE_PTCVTROWPS2BF16HrtiV:
+    case X86::ACE_PTCVTROWPS2BF16LrteV:
+    case X86::ACE_PTCVTROWPS2BF16LrtiV:
+    case X86::ACE_PTCVTROWPS2PHHrteV:
+    case X86::ACE_PTCVTROWPS2PHHrtiV:
+    case X86::ACE_PTCVTROWPS2PHLrteV:
+    case X86::ACE_PTCVTROWPS2PHLrtiV:
+    case X86::ACE_PTILEMOVROWrteV:
+    case X86::ACE_PTILEMOVROWrtiV:
       return true;
     }
 
@@ -454,7 +466,8 @@ bool X86PreTileConfigImpl::runOnMachineFunction(MachineFunction &MF) {
   }
   // Fill in the palette first.
   // Use Palette 2 for ACE v1, Palette 1 for AMX.
-  int PaletteId = ST.hasACEV1() ? 2 : 1;
+  int PaletteId =
+      X86FI->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA ? 2 : 1;
   addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOV8mi)), SS)
       .addImm(PaletteId);
 

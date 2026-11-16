@@ -791,6 +791,7 @@ bool X86InstrInfo::isReMaterializableImpl(
   case X86::MOV64ri32:
   case X86::MOV8ri:
   case X86::PTILEZEROV:
+  case X86::ACE_PTILEZEROV:
     return true;
 
   case X86::MOV8rm:

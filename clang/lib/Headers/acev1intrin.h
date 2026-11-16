@@ -76,7 +76,7 @@ _tile_ace_release(void) {
 ///
 /// \param tile
 ///    Destination tile register ID (0-7).
-#define _tile_ace_zero(tile) __builtin_ia32_tilezero((tile))
+#define _tile_ace_zero(tile) __builtin_ia32_acev1_tilezero((tile))
 
 /// Move a 64-byte ZMM vector to a tile column. The 16 doublewords from
 /// the ZMM are written as a vertical column in the tile at the specified
@@ -409,7 +409,8 @@ _bsr0_extractl(void) {
 ///    Row index selecting the tile row to read.
 /// \returns
 ///    ZMM vector (__m512) holding the converted FP32 elements.
-#define _tile_cvtrow_epi32_ps(tsrc, row) _tile_cvtrowd2ps((tsrc), (row))
+#define _tile_ace_cvtrow_epi32_ps(tsrc, row)                                   \
+  __builtin_ia32_acev1_tcvtrowd2ps((tsrc), (row))
 
 /// Read a row from a tile register and convert its FP32 elements to BF16,
 /// placing the results in the high half of each destination dword.
@@ -424,7 +425,8 @@ _bsr0_extractl(void) {
 ///    Row index selecting the tile row to read.
 /// \returns
 ///    ZMM vector (__m512bh) holding the converted BF16 elements.
-#define _tile_cvtrowh_ps_pbh(tsrc, row) _tile_cvtrowps2bf16h((tsrc), (row))
+#define _tile_ace_cvtrowh_ps_pbh(tsrc, row)                                    \
+  __builtin_ia32_acev1_tcvtrowps2bf16h((tsrc), (row))
 
 /// Read a row from a tile register and convert its FP32 elements to BF16,
 /// placing the results in the low half of each destination dword.
@@ -439,7 +441,8 @@ _bsr0_extractl(void) {
 ///    Row index selecting the tile row to read.
 /// \returns
 ///    ZMM vector (__m512bh) holding the converted BF16 elements.
-#define _tile_cvtrowl_ps_pbh(tsrc, row) _tile_cvtrowps2bf16l((tsrc), (row))
+#define _tile_ace_cvtrowl_ps_pbh(tsrc, row)                                    \
+  __builtin_ia32_acev1_tcvtrowps2bf16l((tsrc), (row))
 
 /// Read a row from a tile register and convert its FP32 elements to FP16,
 /// placing the results in the high half of each destination dword.
@@ -454,7 +457,8 @@ _bsr0_extractl(void) {
 ///    Row index selecting the tile row to read.
 /// \returns
 ///    ZMM vector (__m512h) holding the converted FP16 elements.
-#define _tile_cvtrowh_ps_ph(tsrc, row) _tile_cvtrowps2phh((tsrc), (row))
+#define _tile_ace_cvtrowh_ps_ph(tsrc, row)                                     \
+  __builtin_ia32_acev1_tcvtrowps2phh((tsrc), (row))
 
 /// Read a row from a tile register and convert its FP32 elements to FP16,
 /// placing the results in the low half of each destination dword.
@@ -469,7 +473,8 @@ _bsr0_extractl(void) {
 ///    Row index selecting the tile row to read.
 /// \returns
 ///    ZMM vector (__m512h) holding the converted FP16 elements.
-#define _tile_cvtrowl_ps_ph(tsrc, row) _tile_cvtrowps2phl((tsrc), (row))
+#define _tile_ace_cvtrowl_ps_ph(tsrc, row)                                     \
+  __builtin_ia32_acev1_tcvtrowps2phl((tsrc), (row))
 
 /// Extract one row of a tile register into a ZMM destination.
 ///
@@ -483,7 +488,8 @@ _bsr0_extractl(void) {
 ///    Row index selecting the tile row to read.
 /// \returns
 ///    ZMM vector (__m512i) holding the extracted row.
-#define _tile_extractrow(tsrc, row) _tile_movrow((tsrc), (row))
+#define _tile_ace_extractrow(tsrc, row)                                        \
+  ((__m512i)__builtin_ia32_acev1_tilemovrowextract((tsrc), (row)))
 
 /// ACE tile type with fixed dimensions (16 rows x 64 bytes = 1024 bytes).
 /// ACE Palette 2 uses fixed tile dimensions, unlike AMX Palette 1.
@@ -516,7 +522,7 @@ __ace_init_config(__ace_tile_config *cfg) {
 ///    Pointer to __acetile variable to be zeroed.
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_zero(__acetile *dst) {
-  *dst = __builtin_ia32_tilezero_internal(16, 64);
+  *dst = __builtin_ia32_acev1_tilezero_internal(16, 64);
 }
 
 /// Compute 4-way outer product of unsigned x unsigned bytes to INT32.
@@ -778,7 +784,8 @@ static __inline__ void __tile_ace_setrow(__acetile *dst, __m512i src,
 ///    ZMM vector (__m512i) containing the 64-byte row.
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ __m512i __tile_ace_getrow(__acetile *src, unsigned int idx) {
-  return (__m512i)__builtin_ia32_tilemovrow_internal(16, 64, *src, idx);
+  return (__m512i)__builtin_ia32_acev1_tilemovrowextract_internal(
+      16, 64, *src, idx);
 }
 
 /// Read a row from an ACE tile and convert INT32 elements to FP32.
@@ -798,7 +805,7 @@ static __inline__ __m512i __tile_ace_getrow(__acetile *src, unsigned int idx) {
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ __m512 __tile_ace_cvtrowd2ps(__acetile *src,
                                                unsigned int idx) {
-  return __builtin_ia32_tcvtrowd2ps_internal(16, 64, *src, idx);
+  return __builtin_ia32_acev1_tcvtrowd2ps_internal(16, 64, *src, idx);
 }
 
 /// Read a row from an ACE tile and convert FP32 elements to BF16 (high).
@@ -818,7 +825,7 @@ static __inline__ __m512 __tile_ace_cvtrowd2ps(__acetile *src,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ __m512bh __tile_ace_cvtrowps2bf16h(__acetile *src,
                                                      unsigned int idx) {
-  return __builtin_ia32_tcvtrowps2bf16h_internal(16, 64, *src, idx);
+  return __builtin_ia32_acev1_tcvtrowps2bf16h_internal(16, 64, *src, idx);
 }
 
 /// Read a row from an ACE tile and convert FP32 elements to BF16 (low).
@@ -838,7 +845,7 @@ static __inline__ __m512bh __tile_ace_cvtrowps2bf16h(__acetile *src,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ __m512bh __tile_ace_cvtrowps2bf16l(__acetile *src,
                                                      unsigned int idx) {
-  return __builtin_ia32_tcvtrowps2bf16l_internal(16, 64, *src, idx);
+  return __builtin_ia32_acev1_tcvtrowps2bf16l_internal(16, 64, *src, idx);
 }
 
 /// Read a row from an ACE tile and convert FP32 elements to FP16 (high).
@@ -858,7 +865,7 @@ static __inline__ __m512bh __tile_ace_cvtrowps2bf16l(__acetile *src,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ __m512h __tile_ace_cvtrowps2phh(__acetile *src,
                                                   unsigned int idx) {
-  return __builtin_ia32_tcvtrowps2phh_internal(16, 64, *src, idx);
+  return __builtin_ia32_acev1_tcvtrowps2phh_internal(16, 64, *src, idx);
 }
 
 /// Read a row from an ACE tile and convert FP32 elements to FP16 (low).
@@ -878,7 +885,7 @@ static __inline__ __m512h __tile_ace_cvtrowps2phh(__acetile *src,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ __m512h __tile_ace_cvtrowps2phl(__acetile *src,
                                                   unsigned int idx) {
-  return __builtin_ia32_tcvtrowps2phl_internal(16, 64, *src, idx);
+  return __builtin_ia32_acev1_tcvtrowps2phl_internal(16, 64, *src, idx);
 }
 
 // clang-format on

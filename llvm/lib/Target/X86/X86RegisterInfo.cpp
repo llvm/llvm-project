@@ -1143,6 +1143,7 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PTDPBUSDV:
   case X86::PTDPBUUDV:
   case X86::PTILEZEROV:
+  case X86::ACE_PTILEZEROV:
   case X86::PTDPBF16PSV:
   case X86::PTDPFP16PSV:
   case X86::PTCMMIMFP16PSV:

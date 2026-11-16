@@ -336,6 +336,82 @@ define void @test_tilemovrowinsert_reg(<16 x i32> %src, i32 %idx) {
   ret void
 }
 
+; Test TILEMOVROW reading a row out of a tile. One intrinsic covers both row
+; index forms, so a constant index picks up the immediate encoding.
+define <16 x i32> @test_tilemovrowextract(i32 %idx) {
+; CHECK-LABEL: test_tilemovrowextract:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tilemovrow %edi, %tmm2, %zmm0 # encoding: [0x62,0xf2,0x45,0x48,0x4a,0xc2]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.acev1.tilemovrowextract(i8 2, i32 %idx)
+  ret <16 x i32> %res
+}
+
+define <16 x i32> @test_tilemovrowextract_imm() {
+; CHECK-LABEL: test_tilemovrowextract_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tilemovrow $5, %tmm2, %zmm0 # encoding: [0x62,0xf3,0x7d,0x48,0x07,0xc2,0x05]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.acev1.tilemovrowextract(i8 2, i32 5)
+  ret <16 x i32> %res
+}
+
+; Test TCVTROWD2PS reading a row and converting int32 to FP32. The ACE spelling
+; selects its own pseudo, so the palette follows from the opcode.
+define <16 x float> @test_acev1_tcvtrowd2ps(i32 %idx) {
+; CHECK-LABEL: test_acev1_tcvtrowd2ps:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tcvtrowd2ps %edi, %tmm2, %zmm0 # encoding: [0x62,0xf2,0x46,0x48,0x4a,0xc2]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %res = call <16 x float> @llvm.x86.acev1.tcvtrowd2ps(i8 2, i32 %idx)
+  ret <16 x float> %res
+}
+
+; The other shared row reads follow the same path: an ACE-spelled intrinsic
+; selecting the shared instruction through an ACE-only pattern.
+define <32 x bfloat> @test_acev1_tcvtrowps2bf16h(i32 %idx) {
+; CHECK-LABEL: test_acev1_tcvtrowps2bf16h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tcvtrowps2bf16h %edi, %tmm1, %zmm0 # encoding: [0x62,0xf2,0x47,0x48,0x6d,0xc1]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %res = call <32 x bfloat> @llvm.x86.acev1.tcvtrowps2bf16h(i8 1, i32 %idx)
+  ret <32 x bfloat> %res
+}
+
+; The other shared row reads follow the same path: an ACE-spelled intrinsic
+; selecting the shared instruction through an ACE-only pattern.
+define <32 x bfloat> @test_acev1_tcvtrowps2bf16l(i32 %idx) {
+; CHECK-LABEL: test_acev1_tcvtrowps2bf16l:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tcvtrowps2bf16l %edi, %tmm2, %zmm0 # encoding: [0x62,0xf2,0x46,0x48,0x6d,0xc2]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %res = call <32 x bfloat> @llvm.x86.acev1.tcvtrowps2bf16l(i8 2, i32 %idx)
+  ret <32 x bfloat> %res
+}
+
+; The other shared row reads follow the same path: an ACE-spelled intrinsic
+; selecting the shared instruction through an ACE-only pattern.
+define <32 x half> @test_acev1_tcvtrowps2phh(i32 %idx) {
+; CHECK-LABEL: test_acev1_tcvtrowps2phh:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tcvtrowps2phh %edi, %tmm3, %zmm0 # encoding: [0x62,0xf2,0x44,0x48,0x6d,0xc3]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %res = call <32 x half> @llvm.x86.acev1.tcvtrowps2phh(i8 3, i32 %idx)
+  ret <32 x half> %res
+}
+
+; The other shared row reads follow the same path: an ACE-spelled intrinsic
+; selecting the shared instruction through an ACE-only pattern.
+define <32 x half> @test_acev1_tcvtrowps2phl(i32 %idx) {
+; CHECK-LABEL: test_acev1_tcvtrowps2phl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tcvtrowps2phl %edi, %tmm4, %zmm0 # encoding: [0x62,0xf2,0x45,0x48,0x6d,0xc4]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %res = call <32 x half> @llvm.x86.acev1.tcvtrowps2phl(i8 4, i32 %idx)
+  ret <32 x half> %res
+}
+
+
 ; Intrinsic declarations
 declare void @llvm.x86.acev1.bsr0init()
 declare void @llvm.x86.acev1.bsr0movf(<64 x i8>, <64 x i8>)
@@ -345,6 +421,12 @@ declare void @llvm.x86.acev1.bsr0movlinsert(<64 x i8>)
 declare <64 x i8> @llvm.x86.acev1.bsr0movlextract()
 declare void @llvm.x86.acev1.tilemovcolinsert(i8, <16 x i32>, i32)
 declare void @llvm.x86.acev1.tilemovrowinsert(i8, <16 x i32>, i32)
+declare <16 x i32> @llvm.x86.acev1.tilemovrowextract(i8, i32)
+declare <16 x float> @llvm.x86.acev1.tcvtrowd2ps(i8, i32)
+declare <32 x bfloat> @llvm.x86.acev1.tcvtrowps2bf16h(i8, i32)
+declare <32 x bfloat> @llvm.x86.acev1.tcvtrowps2bf16l(i8, i32)
+declare <32 x half> @llvm.x86.acev1.tcvtrowps2phh(i8, i32)
+declare <32 x half> @llvm.x86.acev1.tcvtrowps2phl(i8, i32)
 declare void @llvm.x86.acev1.top2bf16ps(i8, <32 x bfloat>, <32 x bfloat>)
 declare void @llvm.x86.acev1.top4buud(i8, <64 x i8>, <64 x i8>)
 declare void @llvm.x86.acev1.top4busd(i8, <64 x i8>, <64 x i8>)

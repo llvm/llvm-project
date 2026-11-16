@@ -399,6 +399,28 @@ let Features = "acev1", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
   def tilemovcolinsert : X86Builtin<"void(_Constant unsigned char, _Vector<16, int>, unsigned int)">;
   // ACE tilemovrow writes to the tile, whereas AMX tilemovrow reads from it.
   def tilemovrowinsert : X86Builtin<"void(_Constant unsigned char, _Vector<16, int>, unsigned int)">;
+  def acev1_tilemovrowextract : X86Builtin<"_Vector<16, int>(_Constant unsigned char, unsigned int)">;
+}
+
+// Shared instructions - user-facing (immediate tile ID).
+let Features = "acev1", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
+  def acev1_tilezero : X86Builtin<"void(_Constant unsigned char)">;
+  def acev1_tcvtrowd2ps : X86Builtin<"_Vector<16, float>(_Constant unsigned char, unsigned int)">;
+  def acev1_tcvtrowps2bf16h : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, unsigned int)">;
+  def acev1_tcvtrowps2bf16l : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, unsigned int)">;
+  def acev1_tcvtrowps2phh : X86Builtin<"_Vector<32, _Float16>(_Constant unsigned char, unsigned int)">;
+  def acev1_tcvtrowps2phl : X86Builtin<"_Vector<32, _Float16>(_Constant unsigned char, unsigned int)">;
+}
+
+// Shared instructions - internal (for IR-level operations).
+let Features = "acev1", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
+  def acev1_tilezero_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short)">;
+  def acev1_tilemovrowextract_internal : X86Builtin<"_Vector<16, int>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
+  def acev1_tcvtrowd2ps_internal : X86Builtin<"_Vector<16, float>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
+  def acev1_tcvtrowps2bf16h_internal : X86Builtin<"_Vector<32, __bf16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
+  def acev1_tcvtrowps2bf16l_internal : X86Builtin<"_Vector<32, __bf16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
+  def acev1_tcvtrowps2phh_internal : X86Builtin<"_Vector<32, _Float16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
+  def acev1_tcvtrowps2phl_internal : X86Builtin<"_Vector<32, _Float16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
 }
 
 // Tile movement internal (for IR-level operations).

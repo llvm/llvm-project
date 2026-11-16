@@ -333,6 +333,102 @@ let isPseudo = true, hasNoSchedulingInfo = 1, usesCustomInserter = 1 in {
                                      TILE:$src1, VR512:$src2, VR512:$src3))]>;
 }
 
+// ACE twin of the AMX tile-zero RA pseudo, so the ACE model reaches MIR.
+let isPseudo = true, isReMaterializable = 1, isAsCheapAsAMove = 1,
+    canFoldAsLoad = 1, hasNoSchedulingInfo = 1, usesCustomInserter = 1 in
+def ACE_PTILEZEROV : PseudoI<(outs TILE:$dst), (ins GR16:$src1, GR16:$src2),
+                             [(set TILE:$dst, (int_x86_acev1_tilezero_internal
+                               GR16:$src1, GR16:$src2))]>;
+
+// ACE twins of the AMX row-read RA pseudos, so the ACE model reaches MIR.
+let isPseudo = true, hasNoSchedulingInfo = 1, SchedRW = [WriteSystem],
+    usesCustomInserter = 1 in {
+  def ACE_PTCVTROWD2PSrtiV : PseudoI<(outs VR512:$dst),
+                                     (ins GR16:$src1, GR16:$src2, TILE:$src3,
+                                          i32u6imm:$src4),
+                                     [(set VR512:$dst,
+                                       (int_x86_acev1_tcvtrowd2ps_internal
+                                        GR16:$src1, GR16:$src2, TILE:$src3,
+                                        imm:$src4))]>;
+  def ACE_PTCVTROWD2PSrteV : PseudoI<(outs VR512:$dst),
+                                     (ins GR16:$src1, GR16:$src2, TILE:$src3,
+                                          GR32:$src4),
+                                     [(set VR512:$dst,
+                                       (int_x86_acev1_tcvtrowd2ps_internal
+                                        GR16:$src1, GR16:$src2, TILE:$src3,
+                                        GR32:$src4))]>;
+  def ACE_PTCVTROWPS2BF16HrtiV : PseudoI<(outs VR512:$dst),
+                                         (ins GR16:$src1, GR16:$src2, TILE:$src3,
+                                              i32u6imm:$src4),
+                                         [(set VR512:$dst,
+                                           (int_x86_acev1_tcvtrowps2bf16h_internal
+                                            GR16:$src1, GR16:$src2, TILE:$src3,
+                                            imm:$src4))]>;
+  def ACE_PTCVTROWPS2BF16HrteV : PseudoI<(outs VR512:$dst),
+                                         (ins GR16:$src1, GR16:$src2, TILE:$src3,
+                                              GR32:$src4),
+                                         [(set VR512:$dst,
+                                           (int_x86_acev1_tcvtrowps2bf16h_internal
+                                            GR16:$src1, GR16:$src2, TILE:$src3,
+                                            GR32:$src4))]>;
+  def ACE_PTCVTROWPS2BF16LrtiV : PseudoI<(outs VR512:$dst),
+                                         (ins GR16:$src1, GR16:$src2, TILE:$src3,
+                                              i32u6imm:$src4),
+                                         [(set VR512:$dst,
+                                           (int_x86_acev1_tcvtrowps2bf16l_internal
+                                            GR16:$src1, GR16:$src2, TILE:$src3,
+                                            imm:$src4))]>;
+  def ACE_PTCVTROWPS2BF16LrteV : PseudoI<(outs VR512:$dst),
+                                         (ins GR16:$src1, GR16:$src2, TILE:$src3,
+                                              GR32:$src4),
+                                         [(set VR512:$dst,
+                                           (int_x86_acev1_tcvtrowps2bf16l_internal
+                                            GR16:$src1, GR16:$src2, TILE:$src3,
+                                            GR32:$src4))]>;
+  def ACE_PTCVTROWPS2PHHrtiV : PseudoI<(outs VR512:$dst),
+                                       (ins GR16:$src1, GR16:$src2, TILE:$src3,
+                                            i32u6imm:$src4),
+                                       [(set VR512:$dst,
+                                         (int_x86_acev1_tcvtrowps2phh_internal
+                                          GR16:$src1, GR16:$src2, TILE:$src3,
+                                          imm:$src4))]>;
+  def ACE_PTCVTROWPS2PHHrteV : PseudoI<(outs VR512:$dst),
+                                       (ins GR16:$src1, GR16:$src2, TILE:$src3,
+                                            GR32:$src4),
+                                       [(set VR512:$dst,
+                                         (int_x86_acev1_tcvtrowps2phh_internal
+                                          GR16:$src1, GR16:$src2, TILE:$src3,
+                                          GR32:$src4))]>;
+  def ACE_PTCVTROWPS2PHLrtiV : PseudoI<(outs VR512:$dst),
+                                       (ins GR16:$src1, GR16:$src2, TILE:$src3,
+                                            i32u6imm:$src4),
+                                       [(set VR512:$dst,
+                                         (int_x86_acev1_tcvtrowps2phl_internal
+                                          GR16:$src1, GR16:$src2, TILE:$src3,
+                                          imm:$src4))]>;
+  def ACE_PTCVTROWPS2PHLrteV : PseudoI<(outs VR512:$dst),
+                                       (ins GR16:$src1, GR16:$src2, TILE:$src3,
+                                            GR32:$src4),
+                                       [(set VR512:$dst,
+                                         (int_x86_acev1_tcvtrowps2phl_internal
+                                          GR16:$src1, GR16:$src2, TILE:$src3,
+                                          GR32:$src4))]>;
+  def ACE_PTILEMOVROWrtiV : PseudoI<(outs VR512:$dst),
+                                    (ins GR16:$src1, GR16:$src2, TILE:$src3,
+                                         i32u6imm:$src4),
+                                    [(set VR512:$dst,
+                                      (int_x86_acev1_tilemovrowextract_internal
+                                       GR16:$src1, GR16:$src2, TILE:$src3,
+                                       imm:$src4))]>;
+  def ACE_PTILEMOVROWrteV : PseudoI<(outs VR512:$dst),
+                                    (ins GR16:$src1, GR16:$src2, TILE:$src3,
+                                         GR32:$src4),
+                                    [(set VR512:$dst,
+                                      (int_x86_acev1_tilemovrowextract_internal
+                                       GR16:$src1, GR16:$src2, TILE:$src3,
+                                       GR32:$src4))]>;
+}
+
 // Pseudo instructions for tile spill and reload (register allocation)
 let isPseudo = true, hasNoSchedulingInfo = 1 in {
   let mayStore = 1 in
@@ -343,3 +439,39 @@ let isPseudo = true, hasNoSchedulingInfo = 1 in {
 }
 
 } // end HasACEV1, In64BitMode
+
+// ACE twins of the user-facing DirectReg pseudos (immediate tile IDs).
+// They expand like the AMX pseudos; the opcode is what records the ACE model.
+class ACERowReadPseudo<Intrinsic intr>
+    : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, GR32:$src2),
+              [(set VR512:$dst, (intr timm:$src1, GR32:$src2))]>;
+
+// One ACE intrinsic covers both row index forms, so a constant index matches
+// the immediate encoding here and anything else falls back to the register one.
+class ACERowReadPseudoI<Intrinsic intr>
+    : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
+              [(set VR512:$dst, (intr timm:$src1, imm:$src2))]>;
+
+let Predicates = [HasACEV1, In64BitMode], SchedRW = [WriteSystem],
+    usesCustomInserter = 1 in {
+  def ACE_PTILEZERO : PseudoI<(outs), (ins u8imm:$src),
+                              [(int_x86_acev1_tilezero timm:$src)]>;
+
+  def ACE_PTCVTROWD2PSrte : ACERowReadPseudo<int_x86_acev1_tcvtrowd2ps>;
+  def ACE_PTCVTROWPS2BF16Hrte
+      : ACERowReadPseudo<int_x86_acev1_tcvtrowps2bf16h>;
+  def ACE_PTCVTROWPS2BF16Lrte
+      : ACERowReadPseudo<int_x86_acev1_tcvtrowps2bf16l>;
+  def ACE_PTCVTROWPS2PHHrte : ACERowReadPseudo<int_x86_acev1_tcvtrowps2phh>;
+  def ACE_PTCVTROWPS2PHLrte : ACERowReadPseudo<int_x86_acev1_tcvtrowps2phl>;
+  def ACE_PTILEMOVROWrte : ACERowReadPseudo<int_x86_acev1_tilemovrowextract>;
+
+  def ACE_PTCVTROWD2PSrti : ACERowReadPseudoI<int_x86_acev1_tcvtrowd2ps>;
+  def ACE_PTCVTROWPS2BF16Hrti
+      : ACERowReadPseudoI<int_x86_acev1_tcvtrowps2bf16h>;
+  def ACE_PTCVTROWPS2BF16Lrti
+      : ACERowReadPseudoI<int_x86_acev1_tcvtrowps2bf16l>;
+  def ACE_PTCVTROWPS2PHHrti : ACERowReadPseudoI<int_x86_acev1_tcvtrowps2phh>;
+  def ACE_PTCVTROWPS2PHLrti : ACERowReadPseudoI<int_x86_acev1_tcvtrowps2phl>;
+  def ACE_PTILEMOVROWrti : ACERowReadPseudoI<int_x86_acev1_tilemovrowextract>;
+}

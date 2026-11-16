@@ -42,7 +42,7 @@ void test_acev1_tile_config(void *data) {
   // CHECK: call void @llvm.x86.ldtilecfg(ptr %{{.*}})
   // CHECK: call void @llvm.x86.sttilecfg(ptr %{{.*}})
   // CHECK: call void @llvm.x86.tilerelease()
-  // CHECK: call void @llvm.x86.tilezero(i8 0)
+  // CHECK: call void @llvm.x86.acev1.tilezero(i8 0)
   _tile_ace_loadconfig(data);
   _tile_ace_storeconfig(data);
   _tile_ace_release();
@@ -57,6 +57,25 @@ void test_acev1_tile_movement(__m512i src) {
   // CHECK: call void @llvm.x86.acev1.tilemovcolinsert(i8 1, <16 x i32> %{{.*}}, i32 3)
   _tile_insertrow(0, src, 5);
   _tile_insertcol(1, src, 3);
+}
+
+// The read direction is shared with AMX, so only TILEMOVROW has a separate ACE
+// name; the converting reads still lower to the AMX-spelled intrinsics.
+void test_acev1_row_reads(__m512 *ps, __m512bh *pbh, __m512h *ph,
+                          __m512i *pi) {
+  // CHECK-LABEL: @test_acev1_row_reads
+  // CHECK: call <16 x float> @llvm.x86.acev1.tcvtrowd2ps(i8 0, i32 1)
+  // CHECK: call <32 x bfloat> @llvm.x86.acev1.tcvtrowps2bf16h(i8 1, i32 2)
+  // CHECK: call <32 x bfloat> @llvm.x86.acev1.tcvtrowps2bf16l(i8 2, i32 3)
+  // CHECK: call <32 x half> @llvm.x86.acev1.tcvtrowps2phh(i8 3, i32 4)
+  // CHECK: call <32 x half> @llvm.x86.acev1.tcvtrowps2phl(i8 4, i32 5)
+  // CHECK: call <16 x i32> @llvm.x86.acev1.tilemovrowextract(i8 5, i32 6)
+  ps[0] = _tile_ace_cvtrow_epi32_ps(0, 1);
+  pbh[0] = _tile_ace_cvtrowh_ps_pbh(1, 2);
+  pbh[1] = _tile_ace_cvtrowl_ps_pbh(2, 3);
+  ph[0] = _tile_ace_cvtrowh_ps_ph(3, 4);
+  ph[1] = _tile_ace_cvtrowl_ps_ph(4, 5);
+  pi[0] = _tile_ace_extractrow(5, 6);
 }
 
 void test_acev1_bsr(void) {

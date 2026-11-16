@@ -554,6 +554,14 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_tcvtrowps2phl:
   case X86::BI__builtin_ia32_tcvtrowd2ps:
   case X86::BI__builtin_ia32_tilemovrow:
+  // ACE spellings of the same instructions; the tile ID rule is unchanged.
+  case X86::BI__builtin_ia32_acev1_tilezero:
+  case X86::BI__builtin_ia32_acev1_tcvtrowps2bf16h:
+  case X86::BI__builtin_ia32_acev1_tcvtrowps2bf16l:
+  case X86::BI__builtin_ia32_acev1_tcvtrowps2phh:
+  case X86::BI__builtin_ia32_acev1_tcvtrowps2phl:
+  case X86::BI__builtin_ia32_acev1_tcvtrowd2ps:
+  case X86::BI__builtin_ia32_acev1_tilemovrowextract:
   // The ACE tile inserts and outer products name only the destination tile;
   // their remaining sources are ZMM values or a row/column index, so neither
   // the range nor the duplicate rule applies there.
