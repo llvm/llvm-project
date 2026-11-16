@@ -8427,7 +8427,7 @@ static SDValue lowerCONVERT_FROM_ARBITRARY_FP(SDValue Op, SelectionDAG &DAG,
                                               const RISCVSubtarget &Subtarget);
 
 static SDValue lowerZfhminFMA(SDValue Op, SelectionDAG &DAG,
-                             const RISCVSubtarget &Subtarget) {
+                              const RISCVSubtarget &Subtarget) {
   SDLoc DL(Op);
   MVT XLenVT = Subtarget.getXLenVT();
   SDValue LHS = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op.getOperand(0));
@@ -8436,9 +8436,8 @@ static SDValue lowerZfhminFMA(SDValue Op, SelectionDAG &DAG,
 
   auto roundFMA = [&](RISCVFPRndMode::RoundingMode RM) {
     SDValue Mode = DAG.getTargetConstant(RM, DL, XLenVT);
-    return SDValue(DAG.getMachineNode(RISCV::FMADD_S, DL, MVT::f32,
-                                      {LHS, RHS, Addend, Mode}),
-                   0);
+    return DAG.getNode(RISCVISD::FMA_ROUND, DL, MVT::f32, LHS, RHS, Addend,
+                       Mode);
   };
   SDValue Down = roundFMA(RISCVFPRndMode::RDN);
   SDValue Up = roundFMA(RISCVFPRndMode::RUP);
@@ -8447,9 +8446,9 @@ static SDValue lowerZfhminFMA(SDValue Op, SelectionDAG &DAG,
   // the odd significand so rounding to f16 cannot introduce a false tie.
   // Exact results agree except for the sign of zero on exact cancellation.
   // In that case the low bit is zero and Up supplies the round-to-nearest sign.
-  SDValue Bits = Subtarget.is64Bit()
-                     ? DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenVT, Down)
-                     : DAG.getBitcast(XLenVT, Down);
+  SDValue Bits = Subtarget.is64Bit() ? DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64,
+                                                   DL, XLenVT, Down)
+                                     : DAG.getBitcast(XLenVT, Down);
   SDValue LowBit =
       DAG.getNode(ISD::AND, DL, XLenVT, Bits, DAG.getConstant(1, DL, XLenVT));
   SDValue IsOdd = DAG.getSetCC(DL, XLenVT, LowBit,

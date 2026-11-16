@@ -26,6 +26,15 @@ def SDT_RISCVFCVT_X
     : SDTypeProfile<1, 2, [SDTCisVT<0, XLenVT>, SDTCisFP<1>,
                            SDTCisVT<2, XLenVT>]>;
 
+def SDT_RISCVFMARound
+    : SDTypeProfile<1, 4, [SDTCisVT<0, f32>, SDTCisSameAs<0, 1>,
+                           SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>,
+                           SDTCisVT<4, XLenVT>]>;
+
+// Non-strict fused operation with a target rounding-mode constant.
+def riscv_fma_round : RVSDNode<"FMA_ROUND", SDT_RISCVFMARound,
+                              [SDNPCommutative]>;
+
 def SDT_RISCVFROUND
     : SDTypeProfile<1, 3, [SDTCisFP<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
                            SDTCisVT<3, XLenVT>]>;
@@ -620,6 +629,19 @@ def : Pat<(any_fma (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3),
 // fnmadd: -rs1 * rs2 - rs3
 def : Pat<(any_fma (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3)),
           (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, FRM_DYN)>;
+
+// Match the same operand negations with an explicit rounding mode.
+def : Pat<(riscv_fma_round FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, timm:$frm),
+          (FMADD_S $rs1, $rs2, $rs3, timm:$frm)>;
+def : Pat<(riscv_fma_round FPR32:$rs1, FPR32:$rs2, (fneg FPR32:$rs3),
+                          timm:$frm),
+          (FMSUB_S $rs1, $rs2, $rs3, timm:$frm)>;
+def : Pat<(riscv_fma_round (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3,
+                          timm:$frm),
+          (FNMSUB_S $rs1, $rs2, $rs3, timm:$frm)>;
+def : Pat<(riscv_fma_round (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3),
+                          timm:$frm),
+          (FNMADD_S $rs1, $rs2, $rs3, timm:$frm)>;
 
 // fnmadd: -(rs1 * rs2 + rs3) (the nsz flag on the FMA)
 def : Pat<(fneg (any_fma_nsz FPR32:$rs1, FPR32:$rs2, FPR32:$rs3)),

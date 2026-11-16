@@ -1773,11 +1773,10 @@ define half @fma_f16(half %a, half %b, half %c) nounwind {
 ; RV32IFZFHMIN-NEXT:    fcvt.s.h fa2, fa0
 ; RV32IFZFHMIN-NEXT:    fmadd.s fa5, fa2, fa3, fa4, rdn
 ; RV32IFZFHMIN-NEXT:    fmv.x.w a0, fa5
-; RV32IFZFHMIN-NEXT:    fmadd.s fa4, fa2, fa3, fa4, rup
 ; RV32IFZFHMIN-NEXT:    andi a0, a0, 1
 ; RV32IFZFHMIN-NEXT:    bnez a0, .LBB12_2
 ; RV32IFZFHMIN-NEXT:  # %bb.1:
-; RV32IFZFHMIN-NEXT:    fmv.s fa5, fa4
+; RV32IFZFHMIN-NEXT:    fmadd.s fa5, fa2, fa3, fa4, rup
 ; RV32IFZFHMIN-NEXT:  .LBB12_2:
 ; RV32IFZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV32IFZFHMIN-NEXT:    ret
@@ -1789,11 +1788,10 @@ define half @fma_f16(half %a, half %b, half %c) nounwind {
 ; RV64IFZFHMIN-NEXT:    fcvt.s.h fa2, fa0
 ; RV64IFZFHMIN-NEXT:    fmadd.s fa5, fa2, fa3, fa4, rdn
 ; RV64IFZFHMIN-NEXT:    fmv.x.w a0, fa5
-; RV64IFZFHMIN-NEXT:    fmadd.s fa4, fa2, fa3, fa4, rup
 ; RV64IFZFHMIN-NEXT:    andi a0, a0, 1
 ; RV64IFZFHMIN-NEXT:    bnez a0, .LBB12_2
 ; RV64IFZFHMIN-NEXT:  # %bb.1:
-; RV64IFZFHMIN-NEXT:    fmv.s fa5, fa4
+; RV64IFZFHMIN-NEXT:    fmadd.s fa5, fa2, fa3, fa4, rup
 ; RV64IFZFHMIN-NEXT:  .LBB12_2:
 ; RV64IFZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IFZFHMIN-NEXT:    ret

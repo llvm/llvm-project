@@ -261,15 +261,13 @@ define half @fma_neg_addend(half %x, half %y) nounwind {
 ; ZFHMIN:       # %bb.0:
 ; ZFHMIN-NEXT:    fcvt.s.h fa4, fa1
 ; ZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; ZFHMIN-NEXT:    fli.s fa5, 0.5
-; ZFHMIN-NEXT:    fneg.s fa2, fa5
-; ZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa2, rdn
+; ZFHMIN-NEXT:    fli.s fa2, 0.5
+; ZFHMIN-NEXT:    fmsub.s fa5, fa3, fa4, fa2, rdn
 ; ZFHMIN-NEXT:    fmv.x.w a0, fa5
-; ZFHMIN-NEXT:    fmadd.s fa4, fa3, fa4, fa2, rup
 ; ZFHMIN-NEXT:    andi a0, a0, 1
 ; ZFHMIN-NEXT:    bnez a0, .LBB14_2
 ; ZFHMIN-NEXT:  # %bb.1:
-; ZFHMIN-NEXT:    fmv.s fa5, fa4
+; ZFHMIN-NEXT:    fmsub.s fa5, fa3, fa4, fa2, rup
 ; ZFHMIN-NEXT:  .LBB14_2:
 ; ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZFHMIN-NEXT:    ret
@@ -288,15 +286,13 @@ define half @fma_neg_multiplicand(half %x, half %y) nounwind {
 ; ZFHMIN:       # %bb.0:
 ; ZFHMIN-NEXT:    fcvt.s.h fa4, fa1
 ; ZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; ZFHMIN-NEXT:    fli.s fa5, 0.125
-; ZFHMIN-NEXT:    fneg.s fa2, fa5
-; ZFHMIN-NEXT:    fmadd.s fa5, fa3, fa2, fa4, rdn
+; ZFHMIN-NEXT:    fli.s fa2, 0.125
+; ZFHMIN-NEXT:    fnmsub.s fa5, fa2, fa3, fa4, rdn
 ; ZFHMIN-NEXT:    fmv.x.w a0, fa5
-; ZFHMIN-NEXT:    fmadd.s fa4, fa3, fa2, fa4, rup
 ; ZFHMIN-NEXT:    andi a0, a0, 1
 ; ZFHMIN-NEXT:    bnez a0, .LBB15_2
 ; ZFHMIN-NEXT:  # %bb.1:
-; ZFHMIN-NEXT:    fmv.s fa5, fa4
+; ZFHMIN-NEXT:    fnmsub.s fa5, fa2, fa3, fa4, rup
 ; ZFHMIN-NEXT:  .LBB15_2:
 ; ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZFHMIN-NEXT:    ret
@@ -314,18 +310,15 @@ define half @fma_neg_addend_multiplicand(half %x) nounwind {
 ;
 ; ZFHMIN-LABEL: fma_neg_addend_multiplicand:
 ; ZFHMIN:       # %bb.0:
-; ZFHMIN-NEXT:    fli.s fa5, 0.25
 ; ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
-; ZFHMIN-NEXT:    fneg.s fa3, fa5
-; ZFHMIN-NEXT:    fli.s fa5, 0.5
-; ZFHMIN-NEXT:    fneg.s fa2, fa5
-; ZFHMIN-NEXT:    fmadd.s fa5, fa4, fa2, fa3, rdn
+; ZFHMIN-NEXT:    fli.s fa3, 0.25
+; ZFHMIN-NEXT:    fli.s fa2, 0.5
+; ZFHMIN-NEXT:    fnmadd.s fa5, fa2, fa4, fa3, rdn
 ; ZFHMIN-NEXT:    fmv.x.w a0, fa5
-; ZFHMIN-NEXT:    fmadd.s fa4, fa4, fa2, fa3, rup
 ; ZFHMIN-NEXT:    andi a0, a0, 1
 ; ZFHMIN-NEXT:    bnez a0, .LBB16_2
 ; ZFHMIN-NEXT:  # %bb.1:
-; ZFHMIN-NEXT:    fmv.s fa5, fa4
+; ZFHMIN-NEXT:    fnmadd.s fa5, fa2, fa4, fa3, rup
 ; ZFHMIN-NEXT:  .LBB16_2:
 ; ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZFHMIN-NEXT:    ret
