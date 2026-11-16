@@ -21,7 +21,7 @@ define void @i32_count_0_8(ptr %p, i64 %n) {
 ; EXPAND:       [[MEMSET_PATTERN_STORE4]]:
 ; EXPAND-NEXT:    store <4 x i32> splat (i32 7), ptr [[P]], align 4
 ; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[N]], 4
-; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[TAIL_OFF]]
 ; EXPAND-NEXT:    store <4 x i32> splat (i32 7), ptr [[TAIL]], align 4
 ; EXPAND-NEXT:    br label %[[BB3:.*]]
 ; EXPAND:       [[MEMSET_PATTERN_LT4]]:
@@ -30,7 +30,7 @@ define void @i32_count_0_8(ptr %p, i64 %n) {
 ; EXPAND:       [[MEMSET_PATTERN_STORE2]]:
 ; EXPAND-NEXT:    store <2 x i32> splat (i32 7), ptr [[P]], align 4
 ; EXPAND-NEXT:    [[TAIL_OFF1:%.*]] = sub i64 [[N]], 2
-; EXPAND-NEXT:    [[TAIL2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[TAIL_OFF1]]
+; EXPAND-NEXT:    [[TAIL2:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[TAIL_OFF1]]
 ; EXPAND-NEXT:    store <2 x i32> splat (i32 7), ptr [[TAIL2]], align 4
 ; EXPAND-NEXT:    br label %[[BB2:.*]]
 ; EXPAND:       [[MEMSET_PATTERN_LT2]]:
@@ -54,7 +54,7 @@ define void @i32_count_0_8(ptr %p, i64 %n) {
 ; CALL-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]]
 ; CALL:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; CALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[LOOP_INDEX]]
+; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[LOOP_INDEX]]
 ; CALL-NEXT:    store i32 7, ptr [[TMP2]], align 4
 ; CALL-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; CALL-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
@@ -77,7 +77,7 @@ define void @float_count_min_4(ptr %p, i64 %n) {
 ; EXPAND:       [[MEMSET_PATTERN_LT8]]:
 ; EXPAND-NEXT:    store <4 x float> splat (float 1.000000e+00), ptr [[P]], align 4
 ; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[N]], 4
-; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds float, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[TAIL_OFF]]
 ; EXPAND-NEXT:    store <4 x float> splat (float 1.000000e+00), ptr [[TAIL]], align 4
 ; EXPAND-NEXT:    br label %[[MEMSET_PATTERN_DONE]]
 ; EXPAND:       [[MEMSET_PATTERN_DONE]]:
@@ -89,7 +89,7 @@ define void @float_count_min_4(ptr %p, i64 %n) {
 ; CALL-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]]
 ; CALL:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; CALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 [[LOOP_INDEX]]
+; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[LOOP_INDEX]]
 ; CALL-NEXT:    store float 1.000000e+00, ptr [[TMP2]], align 4
 ; CALL-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; CALL-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
@@ -119,7 +119,7 @@ define void @float_variable(ptr %p, float %v, i64 %n) {
 ; EXPAND-NEXT:    [[PATTERN_SPLAT_SPLAT2:%.*]] = shufflevector <2 x float> [[PATTERN_SPLAT_SPLATINSERT1]], <2 x float> poison, <2 x i32> zeroinitializer
 ; EXPAND-NEXT:    store <2 x float> [[PATTERN_SPLAT_SPLAT2]], ptr [[P]], align 4
 ; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[N]], 2
-; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds float, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[TAIL_OFF]]
 ; EXPAND-NEXT:    store <2 x float> [[PATTERN_SPLAT_SPLAT2]], ptr [[TAIL]], align 4
 ; EXPAND-NEXT:    br label %[[BB2:.*]]
 ; EXPAND:       [[MEMSET_PATTERN_LT2]]:
@@ -141,7 +141,7 @@ define void @float_variable(ptr %p, float %v, i64 %n) {
 ; CALL-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]]
 ; CALL:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; CALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 [[LOOP_INDEX]]
+; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[LOOP_INDEX]]
 ; CALL-NEXT:    store float [[V]], ptr [[TMP2]], align 4
 ; CALL-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; CALL-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
@@ -163,7 +163,7 @@ define void @i64_known_bits(ptr %p, i64 %x) {
 ; EXPAND:       [[MEMSET_PATTERN_STORE4]]:
 ; EXPAND-NEXT:    store <4 x i64> splat (i64 -1), ptr [[P]], align 16
 ; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[N]], 4
-; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TAIL_OFF]]
 ; EXPAND-NEXT:    store <4 x i64> splat (i64 -1), ptr [[TAIL]], align 16
 ; EXPAND-NEXT:    br label %[[MEMSET_PATTERN_DONE:.*]]
 ; EXPAND:       [[MEMSET_PATTERN_LT4]]:
@@ -184,7 +184,7 @@ define void @i64_known_bits(ptr %p, i64 %x) {
 ; CALL-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]]
 ; CALL:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; CALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[LOOP_INDEX]]
+; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[LOOP_INDEX]]
 ; CALL-NEXT:    store i64 -1, ptr [[TMP2]], align 8
 ; CALL-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; CALL-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
@@ -211,7 +211,8 @@ define void @i128_count_0_4(ptr %p, i32 %n) {
 ; EXPAND:       [[MEMSET_PATTERN_STORE2]]:
 ; EXPAND-NEXT:    store <2 x i128> splat (i128 1), ptr [[P]], align 16
 ; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i32 [[N]], 2
-; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds i128, ptr [[P]], i32 [[TAIL_OFF]]
+; EXPAND-NEXT:    [[TMP1:%.*]] = sext i32 [[TAIL_OFF]] to i64
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds [16 x i8], ptr [[P]], i64 [[TMP1]]
 ; EXPAND-NEXT:    store <2 x i128> splat (i128 1), ptr [[TAIL]], align 16
 ; EXPAND-NEXT:    br label %[[BB2:.*]]
 ; EXPAND:       [[MEMSET_PATTERN_LT2]]:
@@ -233,7 +234,8 @@ define void @i128_count_0_4(ptr %p, i32 %n) {
 ; CALL-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]]
 ; CALL:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; CALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i128, ptr [[P]], i32 [[LOOP_INDEX]]
+; CALL-NEXT:    [[TMP5:%.*]] = sext i32 [[LOOP_INDEX]] to i64
+; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [16 x i8], ptr [[P]], i64 [[TMP5]]
 ; CALL-NEXT:    store i128 1, ptr [[TMP2]], align 16
 ; CALL-NEXT:    [[TMP3]] = add i32 [[LOOP_INDEX]], 1
 ; CALL-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], [[N]]
@@ -270,7 +272,7 @@ define void @v2i16_count_0_2(ptr %p, i64 %n) {
 ; CALL-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]]
 ; CALL:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; CALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <2 x i16>, ptr [[P]], i64 [[LOOP_INDEX]]
+; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[LOOP_INDEX]]
 ; CALL-NEXT:    store <2 x i16> <i16 1, i16 2>, ptr [[TMP2]], align 4
 ; CALL-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; CALL-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
@@ -309,7 +311,7 @@ define void @ptr_pattern(ptr %p, ptr %v, i64 %n) {
 ; CALL-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]]
 ; CALL:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; CALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[P]], i64 [[LOOP_INDEX]]
+; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[LOOP_INDEX]]
 ; CALL-NEXT:    store ptr [[V]], ptr [[TMP2]], align 8
 ; CALL-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; CALL-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
@@ -338,7 +340,7 @@ define void @assume(ptr %p, i64 %n) {
 ; EXPAND:       [[MEMSET_PATTERN_STORE2]]:
 ; EXPAND-NEXT:    store <2 x i32> splat (i32 7), ptr [[P]], align 4
 ; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[N]], 2
-; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[TAIL_OFF]]
 ; EXPAND-NEXT:    store <2 x i32> splat (i32 7), ptr [[TAIL]], align 4
 ; EXPAND-NEXT:    br label %[[BB2:.*]]
 ; EXPAND:       [[MEMSET_PATTERN_LT2]]:
@@ -362,7 +364,7 @@ define void @assume(ptr %p, i64 %n) {
 ; CALL-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]]
 ; CALL:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; CALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[LOOP_INDEX]]
+; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[LOOP_INDEX]]
 ; CALL-NEXT:    store i32 7, ptr [[TMP2]], align 4
 ; CALL-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; CALL-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
@@ -384,7 +386,7 @@ define void @i32_over_threshold(ptr %p, i64 %n) {
 ; COMMON-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]]
 ; COMMON:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; COMMON-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[LOOP_INDEX]]
+; COMMON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[LOOP_INDEX]]
 ; COMMON-NEXT:    store i32 7, ptr [[TMP2]], align 4
 ; COMMON-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; COMMON-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
@@ -403,7 +405,7 @@ define void @volatile(ptr %p, i64 %n) {
 ; COMMON-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]]
 ; COMMON:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; COMMON-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[LOOP_INDEX]]
+; COMMON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[LOOP_INDEX]]
 ; COMMON-NEXT:    store volatile i32 7, ptr [[TMP2]], align 4
 ; COMMON-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; COMMON-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
@@ -422,7 +424,7 @@ define void @minsize(ptr %p, i64 %n) minsize {
 ; COMMON-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]]
 ; COMMON:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; COMMON-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[LOOP_INDEX]]
+; COMMON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[LOOP_INDEX]]
 ; COMMON-NEXT:    store i32 7, ptr [[TMP2]], align 4
 ; COMMON-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; COMMON-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
@@ -444,7 +446,7 @@ define void @profiled(ptr %p, i64 %n) !prof !0 {
 ; EXPAND:       [[MEMSET_PATTERN_STORE2]]:
 ; EXPAND-NEXT:    store <2 x i32> splat (i32 7), ptr [[P]], align 4
 ; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[N]], 2
-; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[TAIL_OFF]]
 ; EXPAND-NEXT:    store <2 x i32> splat (i32 7), ptr [[TAIL]], align 4
 ; EXPAND-NEXT:    br label %[[MEMSET_PATTERN_DONE:.*]]
 ; EXPAND:       [[MEMSET_PATTERN_LT2]]:
@@ -464,7 +466,7 @@ define void @profiled(ptr %p, i64 %n) !prof !0 {
 ; CALL-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]], !prof [[PROF1:![0-9]+]]
 ; CALL:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; CALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[LOOP_INDEX]]
+; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[LOOP_INDEX]]
 ; CALL-NEXT:    store i32 7, ptr [[TMP2]], align 4
 ; CALL-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; CALL-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
@@ -486,7 +488,7 @@ define void @profiled2(ptr %p, i64 %n) !prof !0 {
 ; EXPAND:       [[MEMSET_PATTERN_STORE2]]:
 ; EXPAND-NEXT:    store <2 x i32> splat (i32 7), ptr [[P]], align 4
 ; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[N]], 2
-; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[TAIL_OFF]]
 ; EXPAND-NEXT:    store <2 x i32> splat (i32 7), ptr [[TAIL]], align 4
 ; EXPAND-NEXT:    br label %[[MEMSET_PATTERN_DONE:.*]]
 ; EXPAND:       [[MEMSET_PATTERN_LT2]]:
@@ -506,7 +508,7 @@ define void @profiled2(ptr %p, i64 %n) !prof !0 {
 ; CALL-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]], !prof [[PROF2:![0-9]+]]
 ; CALL:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
 ; CALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[LOOP_INDEX]]
+; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[LOOP_INDEX]]
 ; CALL-NEXT:    store i32 7, ptr [[TMP2]], align 4
 ; CALL-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
 ; CALL-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
