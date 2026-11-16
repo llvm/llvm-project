@@ -1248,7 +1248,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // tokens and store them for late parsing at the end of the translation unit.
   if (getLangOpts().DelayedTemplateParsing && Tok.isNot(tok::equal) &&
       TemplateInfo.Kind == ParsedTemplateKind::Template &&
-      LateParsedAttrs->empty() && Actions.canDelayFunctionBody(D)) {
+      Actions.canDelayFunctionBody(D)) {
     MultiTemplateParamsArg TemplateParameterLists(*TemplateInfo.TemplateParams);
 
     ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
@@ -1260,6 +1260,18 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                         TemplateParameterLists);
     D.complete(DP);
     D.getMutableDeclSpec().abort();
+
+    // Only the body is delayed; the late-parsed attributes describe the
+    // declaration, so parse them now in the scope of its parameters.
+    if (LateParsedAttrs && !LateParsedAttrs->empty()) {
+      bool InFunction = DP && DP->getAsFunction();
+      if (InFunction)
+        Actions.ActOnReenterFunctionContext(getCurScope(), DP);
+      ParseLexedAttributeList(*LateParsedAttrs, DP, /*EnterScope=*/false,
+                              /*OnDefinition=*/true);
+      if (InFunction)
+        Actions.ActOnExitFunctionContext();
+    }
 
     if (SkipFunctionBodies && (!DP || Actions.canSkipFunctionBody(DP)) &&
         trySkippingFunctionBody()) {
@@ -1364,6 +1376,12 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     // and PopExpressionEvaluationContext().
     if (!isLambdaCallOperator(dyn_cast_if_present<FunctionDecl>(Res)))
       Actions.PopExpressionEvaluationContext();
+    // The late-parsed attributes are skipped along with the body.
+    if (LateParsedAttrs) {
+      for (LateParsedAttribute *LA : *LateParsedAttrs)
+        delete LA;
+      LateParsedAttrs->clear();
+    }
     return Res;
   }
 
@@ -1374,14 +1392,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // safe because we're always the sole owner.
   D.getMutableDeclSpec().abort();
 
-  if (BodyKind != Sema::FnBodyKind::Other) {
-    Actions.SetFunctionBodyKind(Res, KWLoc, BodyKind, DeletedMessage,
-                                getCurScope());
-    Stmt *GeneratedBody = Res ? Res->getBody() : nullptr;
-    Actions.ActOnFinishFunctionBody(Res, GeneratedBody, false);
-    return Res;
-  }
-
   // With abbreviated function templates - we need to explicitly add depth to
   // account for the implicit template parameter list induced by the template.
   if (const auto *Template = dyn_cast_if_present<FunctionTemplateDecl>(Res);
@@ -1391,10 +1401,19 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     // parameter list was specified.
     CurTemplateDepthTracker.addDepth(1);
 
-  // Late attributes are parsed in the same scope as the function body.
+  // Late attributes are parsed in the same scope as the function body, even if
+  // it is defaulted or deleted.
   if (LateParsedAttrs)
     ParseLexedAttributeList(*LateParsedAttrs, Res, /*EnterScope=*/false,
                             /*OnDefinition=*/true);
+
+  if (BodyKind != Sema::FnBodyKind::Other) {
+    Actions.SetFunctionBodyKind(Res, KWLoc, BodyKind, DeletedMessage,
+                                getCurScope());
+    Stmt *GeneratedBody = Res ? Res->getBody() : nullptr;
+    Actions.ActOnFinishFunctionBody(Res, GeneratedBody, false);
+    return Res;
+  }
 
   if (SkipFunctionBodies && (!Res || Actions.canSkipFunctionBody(Res)) &&
       trySkippingFunctionBody()) {

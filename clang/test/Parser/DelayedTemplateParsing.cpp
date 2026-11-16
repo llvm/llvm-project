@@ -203,4 +203,11 @@ namespace LateParsedAttrs {
   void g() {
     f<int>(1); // expected-error {{foo}}
   }
+  // Only the body is delayed; the attributes are parsed with the declaration.
+  template <class>
+  void unused(int a) __attribute__((__diagnose_if__(a > 0, "foo", "error"))) {
+    undeclared_in_unused_body();
+  }
+  template <class>
+  void bad(int a) __attribute__((__diagnose_if__(nope > 0, "foo", "error"))) {} // expected-error {{use of undeclared identifier 'nope'}}
 } // namespace LateParsedAttrs
