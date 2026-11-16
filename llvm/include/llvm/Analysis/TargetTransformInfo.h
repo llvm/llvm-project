@@ -205,6 +205,9 @@ enum class VectorInstrContext : uint8_t {
   HasScalarUser, ///< The value being inserted also has a scalar user that stays
                  ///< scalar, besides the operation folded into the vector code
                  ///< (InsertElement only).
+  SplatDefined,  ///< The inserted value is defined into one lane of a splat and
+                 ///< the other lanes broadcast it, so it needs no move into a
+                 ///< pair (InsertElement only).
 };
 
 class IntrinsicCostAttributes {

@@ -1305,18 +1305,27 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     // Packed f32 pair formation for v_pk_*_f32. A constant-index insert writes
     // one subregister. A loaded lane lands in place, and arguments and
     // constants are already in a register, so both are free. A computed value
-    // whose only user is the operation being vectorized is defined straight
-    // into its lane. If it also has a scalar user, its users split between
-    // packed and scalar code: lanes have to move between pairs, and the
-    // producer cannot contract into an FMA on either side, so charge a
-    // v_mov_b32. The vectorizer reports this with HasScalarUser, where users
-    // folded into the vector code do not count. Only throughput sees the move;
-    // size-based users such as the inliner and the unroller keep inserts free.
+    // with one user is defined straight into its lane. A second user needs it
+    // in another lane or in a scalar register, which costs a v_mov_b32. A splat
+    // defines the value into one lane and broadcasts it, so SplatDefined stays
+    // free even when several lanes read it. A scalar user that stays scalar
+    // splits the value between packed and scalar code, so HasScalarUser charges
+    // the move for a splat as well, and the producer cannot contract into an
+    // FMA on either side. Only throughput sees the move; size-based users such
+    // as the inliner and the unroller keep inserts free.
     auto *VecTy = dyn_cast<FixedVectorType>(ValTy);
+    const auto *InsertedInst = dyn_cast_or_null<Instruction>(Op1);
+    // One user is the operation the value is defined into. Another user needs
+    // the value in a different lane or a scalar register.
+    const bool ComputedLane =
+        VIC != TTI::VectorInstrContext::SplatDefined && InsertedInst &&
+        !isa<LoadInst, InsertElementInst>(InsertedInst) &&
+        count_if(InsertedInst->users(),
+                 [](const User *U) { return !isa<InsertElementInst>(U); }) > 1;
     if (Opcode == Instruction::InsertElement && EltSize == 32 &&
         CostKind == TTI::TCK_RecipThroughput && ST->hasAnyPackedFP32Ops() &&
         VecTy && VecTy->getElementType()->isFloatTy() &&
-        VIC == TTI::VectorInstrContext::HasScalarUser)
+        (VIC == TTI::VectorInstrContext::HasScalarUser || ComputedLane))
       return getFullRateInstrCost();
 
     // Extracts are just reads of a subregister, so are free. Inserts are

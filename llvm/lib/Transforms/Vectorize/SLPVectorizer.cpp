@@ -15327,6 +15327,18 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       // the broadcast.
       const auto *It = find_if_not(VL, IsaPred<UndefValue>);
       assert(It != VL.end() && "Expected at least one non-undef value.");
+      // The value is defined into one lane and the other lanes broadcast it.
+      // SplatDefined tells the target not to charge a move for that computed
+      // value. A scalar user that stays scalar is still HasScalarUser.
+      auto SplatInsertContext = [&](Value *V) {
+        TTI::VectorInstrContext Ctx =
+            ContextHint == TTI::VectorInstrContext::None
+                ? R.getScalarUserContext(V)
+                : ContextHint;
+        return Ctx == TTI::VectorInstrContext::None
+                   ? TTI::VectorInstrContext::SplatDefined
+                   : Ctx;
+      };
       // Add broadcast for non-identity shuffle only.
       bool NeedShuffle =
           count(VL, *It) > 1 &&
@@ -15339,24 +15351,19 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
               std::distance(VL.begin(), It) * getNumElements(ScalarTy),
               cast<FixedVectorType>(ScalarTy));
         }
-        return TTI.getVectorInstrCost(
-            Instruction::InsertElement, VecTy, CostKind,
-            std::distance(VL.begin(), It), PoisonValue::get(VecTy), *It,
-            ContextHint == TTI::VectorInstrContext::None
-                ? R.getScalarUserContext(*It)
-                : ContextHint);
+        return TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
+                                      CostKind, std::distance(VL.begin(), It),
+                                      PoisonValue::get(VecTy), *It,
+                                      SplatInsertContext(*It));
       }
 
       SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
       transform(VL, ShuffleMask.begin(), [](Value *V) {
         return isa<PoisonValue>(V) ? PoisonMaskElem : 0;
       });
-      InstructionCost InsertCost =
-          TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
-                                 PoisonValue::get(VecTy), *It,
-                                 ContextHint == TTI::VectorInstrContext::None
-                                     ? R.getScalarUserContext(*It)
-                                     : ContextHint);
+      InstructionCost InsertCost = TTI.getVectorInstrCost(
+          Instruction::InsertElement, VecTy, CostKind, 0,
+          PoisonValue::get(VecTy), *It, SplatInsertContext(*It));
       return InsertCost + getShuffleCost(TTI, TargetTransformInfo::SK_Broadcast,
                                          VecTy, CostKind, ShuffleMask,
                                          /*Index=*/0, /*SubTp=*/nullptr,
