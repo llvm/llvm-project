@@ -367,6 +367,8 @@ vector         | `spirv.CompositeInsert`  | `llvm.insertelement`
 non-vector     | `spirv.CompositeExtract` | `llvm.extractvalue`
 non-vector     | `spirv.CompositeInsert`  | `llvm.insertvalue`
 
+`spirv.CopyObject` is replaced with its converted operand.
+
 ### `spirv.EntryPoint` and `spirv.ExecutionMode`
 
 First of all, it is important to note that there is no direct representation of
