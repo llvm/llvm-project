@@ -5658,11 +5658,37 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
   // Generator of the canonical loop body.
   SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
   SmallVector<llvm::OpenMPIRBuilder::InsertPointTy> bodyInsertPoints;
+  std::optional<LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame>>
+      allocFrame;
+
+  bool parentIsDistribute =
+      llvm::isa_and_present<omp::DistributeOp>(loopOp->getParentOp());
+
   auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip,
                      llvm::Value *iv) -> llvm::Error {
     // Make sure further conversions know about the induction variable.
     moduleTranslation.mapValue(
         loopOp.getRegion().front().getArgument(loopInfos.size()), iv);
+
+    // For the outermost loop when parent is distribute, set up allocation frame
+    // so nested parallel regions don't end up using allocate frame of the
+    // distribute operation.
+    bool isOutermostLoop = loopInfos.empty();
+    bool needsAllocationFrame = isOutermostLoop && parentIsDistribute;
+
+    if (needsAllocationFrame) {
+      // Use the loop body entry for allocations and deallocations.
+      // Add new block at the end of the loop body for the deallocations.
+      SmallVector<llvm::BasicBlock *> deallocBlocks;
+      llvm::BasicBlock *allocBlock = ip.getNodeParent();
+      deallocBlocks.push_back(allocBlock->splitBasicBlock(
+          allocBlock->getTerminator(), "omp.loop_nest.dealloc"));
+      llvm::OpenMPIRBuilder::InsertPointTy allocaIP(
+          allocBlock->getFirstInsertionPt());
+      allocFrame.emplace(moduleTranslation, allocaIP.getNodeParent(), deallocBlocks);
+      // The insertion point should point to the loop body block.
+      ip = allocBlock->getTerminator()->getIterator();
+    }
 
     // Capture the body insertion point for use in nested loops. BodyIP of the
     // CanonicalLoopInfo always points to the beginning of the entry block of
