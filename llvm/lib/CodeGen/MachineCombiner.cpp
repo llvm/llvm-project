@@ -87,7 +87,8 @@ private:
   bool preservesResourceLen(MachineBasicBlock *MBB,
                             MachineTraceMetrics::Trace BlockTrace,
                             SmallVectorImpl<MachineInstr *> &InsInstrs,
-                            SmallVectorImpl<MachineInstr *> &DelInstrs);
+                            SmallVectorImpl<MachineInstr *> &DelInstrs,
+                            unsigned Pattern);
   void instr2instrSC(SmallVectorImpl<MachineInstr *> &Instrs,
                      SmallVectorImpl<const MCSchedClassDesc *> &InstrsSC);
   std::pair<unsigned, unsigned>
@@ -410,7 +411,7 @@ void MachineCombinerImpl::instr2instrSC(
 bool MachineCombinerImpl::preservesResourceLen(
     MachineBasicBlock *MBB, MachineTraceMetrics::Trace BlockTrace,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
-    SmallVectorImpl<MachineInstr *> &DelInstrs) {
+    SmallVectorImpl<MachineInstr *> &DelInstrs, unsigned Pattern) {
   if (!TSchedModel.hasInstrSchedModel())
     return true;
 
@@ -435,18 +436,22 @@ bool MachineCombinerImpl::preservesResourceLen(
   unsigned ResLenAfterCombine =
       BlockTrace.getResourceLength(MBBarr, MSCInsArr, MSCDelArr);
 
+  // Compare in signed arithmetic: a negative limit means the pattern must
+  // strictly reduce the resource length by at least that many cycles.
+  int Limit = TII->getExtendResourceLenLimit(Pattern);
+  bool Accept = static_cast<int>(ResLenAfterCombine) <=
+                static_cast<int>(ResLenBeforeCombine) + Limit;
+
   LLVM_DEBUG(dbgs() << "\t\tResource length before replacement: "
-                    << ResLenBeforeCombine
-                    << " and after: " << ResLenAfterCombine << "\n");
+                    << ResLenBeforeCombine << " and after: "
+                    << ResLenAfterCombine << " (limit " << Limit << ")\n");
   LLVM_DEBUG(
-      ResLenAfterCombine <=
-              ResLenBeforeCombine + TII->getExtendResourceLenLimit()
+      Accept
           ? dbgs() << "\t\t  As result it IMPROVES/PRESERVES Resource Length\n"
           : dbgs() << "\t\t  As result it DOES NOT improve/preserve Resource "
                       "Length\n");
 
-  return ResLenAfterCombine <=
-         ResLenBeforeCombine + TII->getExtendResourceLenLimit();
+  return Accept;
 }
 
 /// Inserts InsInstrs and deletes DelInstrs. Incrementally updates instruction
@@ -657,7 +662,7 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
         if (improvesCriticalPathLen(MBB, &MI, BlockTrace, InsInstrs, DelInstrs,
                                     InstrIdxForVirtReg, P,
                                     !IncrementalUpdate) &&
-            preservesResourceLen(MBB, BlockTrace, InsInstrs, DelInstrs)) {
+            preservesResourceLen(MBB, BlockTrace, InsInstrs, DelInstrs, P)) {
           if (MBB->sizeWithoutDebugLargerThan(
                   Opts.machine_combiner_inc_threshold)) {
             // Use incremental depth updates for basic blocks above treshold
