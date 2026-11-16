@@ -80,6 +80,8 @@ class WebAssemblyAsmTypeCheck final {
   bool getGlobal(SMLoc ErrorLoc, const MCOperand &GlobalOp,
                  wasm::ValType &Type);
   bool getTable(SMLoc ErrorLoc, const MCOperand &TableOp, wasm::ValType &Type);
+  bool getFunctionTableIndexType(SMLoc ErrorLoc, const MCOperand &TableOp,
+                                 wasm::ValType &Type);
   bool getSignature(SMLoc ErrorLoc, const MCOperand &SigOp,
                     wasm::WasmSymbolType Type, const wasm::WasmSignature *&Sig);
   bool checkTryTable(SMLoc ErrorLoc, const MCInst &Inst);
