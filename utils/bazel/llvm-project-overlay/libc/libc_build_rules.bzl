@@ -43,8 +43,8 @@ def libc_common_deps():
             # This is too broad. Really, we should have every public header
             # accessible as a distinct cc_library target. However, the glob
             # here is convenient for keeping Bazel rules in sync with CMake.
-            Label(":public_headers"),
-            Label(":public_headers_deps"),
+            "//libc/include:public_headers",
+            "//libc/include:public_headers_deps",
         ],
         "//conditions:default": [],
     }) + select({
@@ -372,11 +372,11 @@ def libc_header_info(
         proxy = False,
         other_srcs = []):
     return struct(
-        target_name = "include_{}_h".format(name.replace("/", "_")),
+        target_name = "{}_h".format(name.replace("/", "_")),
         staging_path = "staging/include/{}.h".format(name),
-        yaml_template = "include/{}.yaml".format(name),
+        yaml_template = "{}.yaml".format(name),
         proxy = proxy,
-        other_srcs = other_srcs + (["include/{}.h.def".format(name)] if has_def_template else []),
+        other_srcs = other_srcs + (["{}.h.def".format(name)] if has_def_template else []),
     )
 
 def libc_math_function(
