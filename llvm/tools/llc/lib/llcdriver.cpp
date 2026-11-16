@@ -64,7 +64,6 @@
 #include <optional>
 using namespace llvm;
 
-static codegen::RegisterCodeGenFlags CGF;
 static codegen::RegisterMTuneFlag MTF;
 static codegen::RegisterSaveStatsFlag SSF;
 

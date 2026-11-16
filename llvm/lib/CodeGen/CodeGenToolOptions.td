@@ -20,6 +20,12 @@ defm : ValueField<"basic-block-sections", "StringRef", "\"none\"",
   "Emit basic blocks into separate sections">;
 defm : BoolField<"call-graph-section", "false",
   "Emit a call graph section">;
+defm : OptionalEnumField<"code-model", "CodeModel::Model",
+  "tiny,small,kernel,medium,large",
+  ["CodeModel::Tiny", "CodeModel::Small", "CodeModel::Kernel", "CodeModel::Medium", "CodeModel::Large"],
+  "Choose code model">;
+defm : OptionalBoolField<"data-sections",
+  "Emit data into separate sections">;
 defm : BoolField<"debug-entry-values", "false",
   "Enable debug info for the debug entry values">;
 // FIXME: Doesn't have way to specify separate input and output modes.
@@ -35,6 +41,8 @@ defm : OptionalBoolField<"disable-tail-calls",
   "Never emit tail calls">;
 defm : BoolField<"emit-call-site-info", "false",
   "Emit call site debug information, if debug information is enabled">;
+defm : OptionalBoolField<"emulated-tls",
+  "Use emulated TLS model">;
 defm : BoolField<"enable-jmc-instrument", "false",
   "Instrument functions with a call to __CheckForDebuggerJustMyCode">;
 defm : OptionalBoolField<"enable-tlsdesc",
@@ -43,20 +51,44 @@ defm : EnumField<"exception-model", "ExceptionHandling", "ExceptionHandling::Def
   "default,none,dwarf,sjlj,arm,wineh,wasm,emscripten",
   ["ExceptionHandling::Default", "ExceptionHandling::None", "ExceptionHandling::DwarfCFI", "ExceptionHandling::SjLj", "ExceptionHandling::ARM", "ExceptionHandling::WinEH", "ExceptionHandling::Wasm", "ExceptionHandling::Emscripten"],
   "Exception model">;
+defm : OptionalEnumField<"filetype", "CodeGenFileType",
+  "asm,obj,null",
+  ["CodeGenFileType::AssemblyFile", "CodeGenFileType::ObjectFile", "CodeGenFileType::Null"],
+  "Choose a file type (not all types are supported by all targets)">;
+defm : EnumField<"float-abi", "FloatABI::ABIType", "FloatABI::Default",
+  "default,soft,hard",
+  ["FloatABI::Default", "FloatABI::Soft", "FloatABI::Hard"],
+  "Choose float ABI type">;
 defm : BoolField<"force-dwarf-frame-section", "false",
   "Always emit a debug frame section">;
 defm : OptionalEnumField<"frame-pointer", "FramePointerKind",
   "all,non-leaf,non-leaf-no-reserve,reserved,none",
   ["FramePointerKind::All", "FramePointerKind::NonLeaf", "FramePointerKind::NonLeafNoReserve", "FramePointerKind::Reserved", "FramePointerKind::None"],
   "Specify frame pointer elimination optimization">;
+defm : OptionalBoolField<"function-sections",
+  "Emit functions into separate sections">;
 defm : BoolField<"ignore-xcoff-visibility", "false",
   "Not emit the visibility attribute for asm in AIX OS or give all symbols 'unspecified' visibility in XCOFF object file">;
+defm : OptionalValueField<"large-data-threshold", "uint64_t",
+  "Choose large data threshold for x86_64 medium code model">;
+defm : ValueField<"march", "StringRef", "",
+  "Architecture to generate code for (see --version)">;
+let MetaVarName = "<a1,+a2,-a3,...>" in
+defm : ListField<"mattr", "StringRef",
+  "Target specific attributes (-mattr=help for details)">;
+let MetaVarName = "<cpu-name>" in
+defm : ValueField<"mcpu", "StringRef", "",
+  "Target a specific cpu type (-mcpu=help for details)">;
 defm : BoolField<"mxcoff-roptr", "false",
   "When set to true, const objects with relocatable address values are put into the RO data section">;
 defm : BoolField<"nozero-initialized-in-bss", "false",
   "Don't place zero-initialized symbols into bss section">;
 defm : BoolField<"partition-static-data-sections", "false",
   "Partition data sections using profile information">;
+defm : OptionalEnumField<"relocation-model", "Reloc::Model",
+  "static,pic,dynamic-no-pic,ropi,rwpi,ropi-rwpi",
+  ["Reloc::Static", "Reloc::PIC_", "Reloc::DynamicNoPIC", "Reloc::ROPI", "Reloc::RWPI", "Reloc::ROPI_RWPI"],
+  "Choose relocation model">;
 defm : BoolField<"separate-named-sections", "false",
   "Use separate unique sections for named sections">;
 defm : BoolField<"stack-size-section", "false",

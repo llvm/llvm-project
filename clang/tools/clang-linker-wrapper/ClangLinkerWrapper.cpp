@@ -127,9 +127,6 @@ static std::mutex TempFilesMutex;
 /// Temporary files created by the linker wrapper.
 static std::list<SmallString<128>> TempFiles;
 
-/// Codegen flags for LTO backend.
-static codegen::RegisterCodeGenFlags CodeGenFlags;
-
 /// Whether or not to look through symlinks when resolving binaries.
 static bool CanonicalPrefixes = true;
 
