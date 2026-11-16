@@ -11816,7 +11816,7 @@ static Expr *getDirectCallExpr(Expr *E) {
   E = E->IgnoreParenCasts()->IgnoreImplicit();
   // A call replaced by a declare variant keeps the original call.
   if (auto *POE = dyn_cast<PseudoObjectExpr>(E))
-    E = POE->getSyntacticForm()->IgnoreParenCasts()->IgnoreImplicit();
+    E = POE->getSyntacticForm()->IgnoreImpCasts();
   if (auto *CE = dyn_cast<CallExpr>(E))
     if (CE->getDirectCallee())
       return E;
