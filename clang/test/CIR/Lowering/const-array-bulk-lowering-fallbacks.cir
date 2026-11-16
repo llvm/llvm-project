@@ -10,7 +10,11 @@
 !rec_entry = !cir.struct<{data !u16i, data !s32i}>
 !rec_iptr = !cir.struct<{data !cir.ptr<!s8i>}>
 !rec_bitint = !cir.struct<{data !bi33, data !s32i}>
+!rec_bool = !cir.struct<{data !cir.bool}>
+!rec_bool_array = !cir.struct<{data !cir.array<!cir.bool x 3>}>
 !rec_poison = !cir.struct<{data !s32i}>
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global external @tz_arr =
@@ -71,6 +75,41 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
          #cir.int<69> : !s8i, #cir.int<78> : !s8i]> : !cir.array<!s8i x 4>,
       #cir.zero : !cir.array<!s8i x 2>
   }> : !rec_data
+
+  cir.global external @bool_matrix = #cir.const_array<[
+      #cir.const_array<[#true, #false]> : !cir.array<!cir.bool x 2>,
+      #cir.const_array<[#false, #true]> : !cir.array<!cir.bool x 2>
+  ]> : !cir.array<!cir.array<!cir.bool x 2> x 2>
+
+  cir.global external @bool_record_array = #cir.const_array<[
+      #cir.const_record<{#true}> : !rec_bool,
+      #cir.const_record<{#false}> : !rec_bool
+  ]> : !cir.array<!rec_bool x 2>
+
+  cir.func @bool_array(%arg0: !cir.ptr<!cir.array<!cir.bool x 3>>) {
+    %0 = cir.const #cir.const_array<[#true, #false, #true]> :
+        !cir.array<!cir.bool x 3>
+    cir.store %0, %arg0 : !cir.array<!cir.bool x 3>,
+        !cir.ptr<!cir.array<!cir.bool x 3>>
+    cir.return
+  }
+
+  cir.func @bool_array_trailing_zeros(
+      %arg0: !cir.ptr<!cir.array<!cir.bool x 3>>) {
+    %0 = cir.const #cir.const_array<[#true], trailing_zeros> :
+        !cir.array<!cir.bool x 3>
+    cir.store %0, %arg0 : !cir.array<!cir.bool x 3>,
+        !cir.ptr<!cir.array<!cir.bool x 3>>
+    cir.return
+  }
+
+  cir.func @record_with_bool_array(%arg0: !cir.ptr<!rec_bool_array>) {
+    %0 = cir.const #cir.const_record<{
+        #cir.const_array<[#true, #true, #true]> : !cir.array<!cir.bool x 3>
+    }> : !rec_bool_array
+    cir.store %0, %arg0 : !rec_bool_array, !cir.ptr<!rec_bool_array>
+    cir.return
+  }
 }
 
 // CHECK-LABEL: llvm.mlir.global external @tz_arr(
@@ -116,3 +155,27 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 // CHECK-SAME:    : !llvm.struct<(array<4 x i8>, array<2 x i8>)>
 // CHECK-NOT:   llvm.insertvalue
 // CHECK-NOT:   llvm.return
+
+// CHECK-LABEL: llvm.mlir.global external @bool_matrix(
+// CHECK-SAME: dense<{{\[\[}}1, 0], [0, 1]]> : tensor<2x2xi8>)
+// CHECK-SAME: : !llvm.array<2 x array<2 x i8>>
+
+// CHECK-LABEL: llvm.mlir.global external @bool_record_array(
+// CHECK-SAME: {{\[\[}}1 : i8], [0 : i8]])
+// CHECK-SAME: : !llvm.array<2 x struct<(i8)>>
+
+// CHECK-LABEL: llvm.func @bool_array
+// CHECK: %[[INIT:.+]] = llvm.mlir.constant(
+// CHECK-SAME: dense<[1, 0, 1]> : tensor<3xi8>) : !llvm.array<3 x i8>
+// CHECK: llvm.store %[[INIT]], %{{.+}} : !llvm.array<3 x i8>, !llvm.ptr
+
+// CHECK-LABEL: llvm.func @bool_array_trailing_zeros
+// CHECK: %[[INIT:.+]] = llvm.mlir.constant(
+// CHECK-SAME: dense<[1, 0, 0]> : tensor<3xi8>) : !llvm.array<3 x i8>
+// CHECK: llvm.store %[[INIT]], %{{.+}} : !llvm.array<3 x i8>, !llvm.ptr
+
+// CHECK-LABEL: llvm.func @record_with_bool_array
+// CHECK: %[[INIT:.+]] = llvm.mlir.constant(
+// CHECK-SAME: dense<1> : tensor<3xi8>) : !llvm.array<3 x i8>
+// CHECK: llvm.insertvalue %[[INIT]], %{{.+}}[0]
+// CHECK-SAME: : !llvm.struct<(array<3 x i8>)>
