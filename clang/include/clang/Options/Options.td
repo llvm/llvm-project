@@ -5924,8 +5924,10 @@ def mzilsd_word_align : Flag<["-"], "mzilsd-word-align">, Group<m_Group>,
   HelpText<"Allow Zilsd/Zclsd memory accesses to be 4-byte aligned (RISC-V only)">;
 def mzilsd_strict_align : Flag<["-"], "mzilsd-strict-align">, Group<m_Group>,
   HelpText<"Force all Zilsd/Zclsd memory accesses to be 8-byte aligned (RISC-V only)">;
-defm fix_sifive_mal_9174 : BoolOptionWithoutMarshalling<"m", "fix-sifive-mal-9174",
-  PosFlag<SetFalse, [], [], "Workaround SiFive erratum MAL-9174 by forcing vector indexed loads to have non-">,
+defm fix_sifive_mal_9174_mal_9191 : BoolOptionWithoutMarshalling<"m", "fix-sifive-mal-9174-mal-9191",
+  PosFlag<SetFalse, [], [],
+          "Workaround SiFive erratum MAL-9174 or MAL-9191 by forcing vector "
+          "indexed loads to have non-">,
   NegFlag<SetTrue, [], [], "Allow vector indexed loads to have ">,
   BothFlags<[], [], "overlapping source and destination register groups (RISC-V only)">>,
   Group<m_Group>;
