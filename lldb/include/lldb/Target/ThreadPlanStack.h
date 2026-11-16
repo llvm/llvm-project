@@ -71,7 +71,7 @@ public:
   lldb::ThreadPlanSP GetPlanByIndex(uint32_t plan_idx,
                                     bool skip_private = true) const;
 
-  ThreadPlanReturnValue GetReturnValueObject() const;
+  ThreadPlanReturnValue GetReturnValue() const;
 
   lldb::ExpressionVariableSP GetExpressionVariable() const;
 

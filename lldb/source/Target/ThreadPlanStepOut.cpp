@@ -550,7 +550,7 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
 }
 
 void ThreadPlanStepOut::CalculateReturnValue() {
-  if (m_return_valobj_sp)
+  if (!std::holds_alternative<std::monostate>(m_return_value))
     return;
 
   if (!m_calculate_return_value)
@@ -559,8 +559,7 @@ void ThreadPlanStepOut::CalculateReturnValue() {
   if (std::optional<ValueObjectSP> error_sp =
           m_thrown_error_location.GetThrownError(
               GetThread().GetStackFrameAtIndex(0))) {
-    m_return_valobj_sp = *error_sp;
-    m_return_value_is_thrown_error = true;
+    m_return_value = ThrownError{*error_sp};
     return;
   }
 
@@ -571,8 +570,9 @@ void ThreadPlanStepOut::CalculateReturnValue() {
     if (return_compiler_type) {
       lldb::ABISP abi_sp = m_process.GetABI();
       if (abi_sp)
-        m_return_valobj_sp =
-            abi_sp->GetReturnValueObject(GetThread(), return_compiler_type);
+        if (ValueObjectSP valobj_sp =
+                abi_sp->GetReturnValueObject(GetThread(), return_compiler_type))
+          m_return_value = ReturnedValue{valobj_sp};
     }
   }
 }

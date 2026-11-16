@@ -193,8 +193,7 @@ public:
 
   static lldb::StopInfoSP CreateStopReasonVForkDone(Thread &thread);
 
-  static ThreadPlanReturnValue
-  GetReturnValueObject(lldb::StopInfoSP &stop_info_sp);
+  static ThreadPlanReturnValue GetReturnValue(lldb::StopInfoSP &stop_info_sp);
 
   static lldb::ExpressionVariableSP
   GetExpressionVariable(lldb::StopInfoSP &stop_info_sp);

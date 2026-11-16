@@ -1068,7 +1068,7 @@ public:
   /// \return
   ///     The return value, which is empty if there is none, or the error the
   ///     function threw.
-  ThreadPlanReturnValue GetReturnValueObject() const;
+  ThreadPlanReturnValue GetReturnValue() const;
 
   /// Gets the outer-most expression variable from the completed plans
   ///

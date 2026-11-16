@@ -1497,7 +1497,7 @@ public:
     return m_description.c_str();
   }
 
-  ThreadPlanReturnValue GetReturnValueObject() { return m_return_value; }
+  ThreadPlanReturnValue GetReturnValue() { return m_return_value; }
 
   ExpressionVariableSP GetExpressionVariable() {
     return m_expression_variable_sp;
@@ -1795,12 +1795,12 @@ StopInfoSP StopInfo::CreateStopReasonVForkDone(Thread &thread) {
   return std::make_shared<StopInfoVForkDone>(thread);
 }
 
-ThreadPlanReturnValue StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp) {
+ThreadPlanReturnValue StopInfo::GetReturnValue(StopInfoSP &stop_info_sp) {
   if (stop_info_sp &&
       stop_info_sp->GetStopReason() == eStopReasonPlanComplete) {
     StopInfoThreadPlan *plan_stop_info =
         static_cast<StopInfoThreadPlan *>(stop_info_sp.get());
-    return plan_stop_info->GetReturnValueObject();
+    return plan_stop_info->GetReturnValue();
   } else
     return {};
 }

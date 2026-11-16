@@ -47,13 +47,7 @@ public:
   void DidPush() override;
   bool IsPlanStale() override;
 
-  lldb::ValueObjectSP GetReturnValueObject() override {
-    return m_return_valobj_sp;
-  }
-
-  bool IsReturnValueThrownError() override {
-    return m_return_value_is_thrown_error;
-  }
+  ThreadPlanReturnValue GetReturnValue() override { return m_return_value; }
 
 protected:
   void SetFlagsToDefault() override {
@@ -85,8 +79,7 @@ private:
                                                  // to.
   Function *m_immediate_step_from_function;
   std::vector<lldb::StackFrameSP> m_stepped_past_frames;
-  lldb::ValueObjectSP m_return_valobj_sp;
-  bool m_return_value_is_thrown_error = false;
+  ThreadPlanReturnValue m_return_value;
   bool m_calculate_return_value;
   LanguageRuntime::ThrownErrorLocation m_thrown_error_location;
   StreamString m_constructor_errors;
