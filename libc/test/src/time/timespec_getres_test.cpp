@@ -45,4 +45,3 @@ TEST(LlvmLibcTimespecGetRes, InvalidBase) {
   result = LIBC_NAMESPACE::timespec_getres(&ts, 0);
   ASSERT_EQ(result, 0);
 }
-

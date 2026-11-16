@@ -48,4 +48,3 @@ LLVM_LIBC_FUNCTION(int, timespec_getres, (timespec * ts, int base)) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
-

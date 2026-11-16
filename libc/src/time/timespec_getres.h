@@ -24,4 +24,3 @@ int timespec_getres(struct timespec *ts, int base);
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_TIME_TIMESPEC_GETRES_H
-
