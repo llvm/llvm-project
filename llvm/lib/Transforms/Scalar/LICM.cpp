@@ -117,15 +117,13 @@ STATISTIC(NumBOAssociationsHoisted, "Number of invariant BinaryOp expressions "
                                     "reassociated and hoisted out of the loop");
 
 unsigned
-llvm::getLicmMssaOptCap(const cl::LibraryOptionsContext *LibraryOptions) {
-  return cl::LibraryOptionsContext::get<ScalarOptions>(LibraryOptions)
-      .licm_mssa_optimization_cap;
+llvm::getLicmMssaOptCap(const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<ScalarOptions>().licm_mssa_optimization_cap;
 }
 
 unsigned llvm::getLicmMssaNoAccForPromotionCap(
-    const cl::LibraryOptionsContext *LibraryOptions) {
-  return cl::LibraryOptionsContext::get<ScalarOptions>(LibraryOptions)
-      .licm_mssa_max_acc_promotion;
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<ScalarOptions>().licm_mssa_max_acc_promotion;
 }
 
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
@@ -2357,6 +2355,7 @@ static bool hoistGEP(Instruction &I, Loop &L, const LICMDependencies &Deps) {
 
   BasicBlock *Preheader = L.getLoopPreheader();
   IRBuilder<> Builder(Preheader->getTerminator());
+  Builder.disableGEPCanonicalization();
   Value *NewSrc = Builder.CreateGEP(GEP->getSourceElementType(), SrcPtr,
                                     SmallVector<Value *>(GEP->indices()),
                                     "invariant.gep", IsInBounds);

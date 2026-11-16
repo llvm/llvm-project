@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN: llc -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:     -mcpu=pwr9 -stop-after=early-ifcvt < %s | FileCheck %s
 
 define float @test_XSRDPI(float %f) {

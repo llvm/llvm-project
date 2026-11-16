@@ -201,7 +201,8 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
   registerMLIRContextCLOptions();
   registerTranslationCLOptions();
   registerDefaultTimingManagerCLOptions();
-  llvm::cl::ParseCommandLineOptions(argc, argv, toolName);
+  llvm::cl::parseCommandLineOptions(getTranslationLibraryOptions(),
+                                    ArrayRef(argv, argc), toolName);
 
   // Initialize the timing manager.
   DefaultTimingManager tm;

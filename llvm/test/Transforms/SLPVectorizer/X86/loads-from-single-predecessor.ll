@@ -335,6 +335,43 @@ exit:
   ret void
 }
 
+; The metadata missing in the predecessor load is dropped from the wide load.
+define void @metadata_missing_in_predecessor(ptr noalias %dst, ptr noalias %src, i1 %c) {
+; CHECK-LABEL: define void @metadata_missing_in_predecessor(
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC]], align 4, !invariant.load [[META3:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[DST]], align 4
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l0 = load i32, ptr %src, align 4, !invariant.load !6
+  br i1 %c, label %bb, label %exit
+
+bb:
+  %src1 = getelementptr inbounds i32, ptr %src, i64 1
+  %l1 = load i32, ptr %src1, align 4, !tbaa !0, !invariant.load !6
+  %src2 = getelementptr inbounds i32, ptr %src, i64 2
+  %l2 = load i32, ptr %src2, align 4, !tbaa !0, !invariant.load !6
+  %src3 = getelementptr inbounds i32, ptr %src, i64 3
+  %l3 = load i32, ptr %src3, align 4, !tbaa !0, !invariant.load !6
+  %dst1 = getelementptr inbounds i32, ptr %dst, i64 1
+  %dst2 = getelementptr inbounds i32, ptr %dst, i64 2
+  %dst3 = getelementptr inbounds i32, ptr %dst, i64 3
+  store i32 %l0, ptr %dst, align 4
+  store i32 %l1, ptr %dst1, align 4
+  store i32 %l2, ptr %dst2, align 4
+  store i32 %l3, ptr %dst3, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
 ; The strided operands are gathered from the single wide load, which covers
 ; the predecessor load too.
 define void @gathered_loads(ptr noalias %dst, ptr noalias %src, i1 %c) {
@@ -530,14 +567,74 @@ exit:
   ret i32 0
 }
 
+; The pointers of the jumbled loads are vectorized, the first load is not the
+; main op of the node.
+define i64 @jumbled_vectorized_ptrs(ptr %b, ptr noalias %dst, i1 %c) {
+; CHECK-LABEL: define i64 @jumbled_vectorized_ptrs(
+; CHECK-SAME: ptr [[B:%.*]], ptr noalias [[DST:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> poison, ptr [[B]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x ptr> [[TMP0]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, <4 x ptr> [[TMP1]], <4 x i64> <i64 16, i64 8, i64 24, i64 32>
+; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 8
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 24
+; CHECK-NEXT:    [[L2:%.*]] = load i64, ptr [[G2]], align 8
+; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint <4 x ptr> [[TMP2]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr [[G0]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <4 x i32> <i32 1, i32 0, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[TMP5]], [[TMP3]]
+; CHECK-NEXT:    store <4 x i64> [[TMP6]], ptr [[DST]], align 8
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[L2]], %[[ENTRY]] ], [ 0, %[[BB]] ]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+entry:
+  %g0 = getelementptr inbounds i8, ptr %b, i64 8
+  %g1 = getelementptr inbounds i8, ptr %b, i64 16
+  %g2 = getelementptr inbounds i8, ptr %b, i64 24
+  %g3 = getelementptr inbounds i8, ptr %b, i64 32
+  %l2 = load i64, ptr %g2, align 8
+  br i1 %c, label %bb, label %exit
+
+bb:
+  %l1 = load i64, ptr %g1, align 8
+  %l0 = load i64, ptr %g0, align 8
+  %l3 = load i64, ptr %g3, align 8
+  %p1 = ptrtoint ptr %g1 to i64
+  %p0 = ptrtoint ptr %g0 to i64
+  %p2 = ptrtoint ptr %g2 to i64
+  %p3 = ptrtoint ptr %g3 to i64
+  %s1 = add i64 %l1, %p1
+  %s0 = add i64 %l0, %p0
+  %s2 = add i64 %l2, %p2
+  %s3 = add i64 %l3, %p3
+  %d1 = getelementptr inbounds i64, ptr %dst, i64 1
+  %d2 = getelementptr inbounds i64, ptr %dst, i64 2
+  %d3 = getelementptr inbounds i64, ptr %dst, i64 3
+  store i64 %s1, ptr %dst, align 8
+  store i64 %s0, ptr %d1, align 8
+  store i64 %s2, ptr %d2, align 8
+  store i64 %s3, ptr %d3, align 8
+  br label %exit
+
+exit:
+  %r = phi i64 [ %l2, %entry ], [ 0, %bb ]
+  ret i64 %r
+}
+
 !0 = !{!1, !1, i64 0}
 !1 = !{!"int", !2, i64 0}
 !2 = !{!"omnipotent char", !4, i64 0}
 !3 = !{!5, !5, i64 0}
 !4 = !{!"Simple C++ TBAA"}
 !5 = !{!"float", !2, i64 0}
+!6 = !{}
 ;.
 ; CHECK: [[CHAR_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"omnipotent char", [[META2:![0-9]+]], i64 0}
 ; CHECK: [[META2]] = !{!"Simple C++ TBAA"}
+; CHECK: [[META3]] = !{}
 ;.

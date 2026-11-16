@@ -196,9 +196,6 @@ bool OptimizePHIs::OptimizeBB(MachineBasicBlock &MBB) {
       MRI->replaceRegWith(OldReg, SingleValReg);
       MI->eraseFromParent();
 
-      // The kill flags on OldReg and SingleValReg may no longer be correct.
-      MRI->clearKillFlags(SingleValReg);
-
       ++NumPHICycles;
       Changed = true;
       continue;

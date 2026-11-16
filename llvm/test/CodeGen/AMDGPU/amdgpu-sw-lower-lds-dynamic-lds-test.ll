@@ -26,7 +26,7 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i64 8), align 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds ptr addrspace(4), ptr addrspace(4) [[TMP20]], i64 15
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP20]], i64 120
 ; CHECK-NEXT:    store i32 [[TMP24]], ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i64 12), align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr addrspace(4) [[TMP18]], align 4
 ; CHECK-NEXT:    store i32 [[TMP13]], ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i64 16), align 4
@@ -53,7 +53,8 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.k0, i32 [[TMP10]]
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.k0.dynlds) ]
 ; CHECK-NEXT:    [[TMP45:%.*]] = ptrtoint ptr addrspace(3) [[TMP11]] to i32
-; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP28]], i32 [[TMP45]]
+; CHECK-NEXT:    [[TMP29:%.*]] = sext i32 [[TMP45]] to i64
+; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP28]], i64 [[TMP29]]
 ; CHECK-NEXT:    store i8 7, ptr addrspace(1) [[TMP46]], align 4
 ; CHECK-NEXT:    br label [[CONDFREE1:%.*]]
 ; CHECK:       CondFree:
