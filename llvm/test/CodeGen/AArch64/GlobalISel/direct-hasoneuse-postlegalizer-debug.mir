@@ -3,6 +3,7 @@
 # RUN:   -run-pass=aarch64-postlegalizer-combiner \
 # RUN:   -aarch64postlegalizercombiner-only-enable-rule=trunc_or_to_addhn,subaddmulreassoc \
 # RUN:   %s -o - | FileCheck %s
+# REQUIRES: asserts
 
 ---
 name: trunc_or_to_addhn_debug_use
