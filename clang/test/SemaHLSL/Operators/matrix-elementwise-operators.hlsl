@@ -12,6 +12,16 @@ float2x3 test_mul(float2x3 a, float2x3 b) {
   return a * b;
 }
 
+// CHECK-LABEL: FunctionDecl {{.*}} test_mul_assign 'float2x3 (float2x3, float2x3)'
+// CHECK: CompoundAssignOperator {{.*}} 'float2x3':'matrix<float, 2, 3>' lvalue '*=' ComputeLHSTy='float2x3':'matrix<float, 2, 3>' ComputeResultTy='float2x3':'matrix<float, 2, 3>'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'a' 'float2x3':'matrix<float, 2, 3>'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2x3':'matrix<float, 2, 3>' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'b' 'float2x3':'matrix<float, 2, 3>'
+float2x3 test_mul_assign(float2x3 a, float2x3 b) {
+  a *= b;
+  return a;
+}
+
 // CHECK-LABEL: FunctionDecl {{.*}} test_div 'float2x3 (float2x3, float2x3)'
 // CHECK: BinaryOperator {{.*}} 'float2x3':'matrix<float, 2, 3>' '/'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2x3':'matrix<float, 2, 3>' <LValueToRValue>
@@ -20,6 +30,16 @@ float2x3 test_mul(float2x3 a, float2x3 b) {
 // CHECK-NEXT: DeclRefExpr {{.*}} 'b' 'float2x3':'matrix<float, 2, 3>'
 float2x3 test_div(float2x3 a, float2x3 b) {
   return a / b;
+}
+
+// CHECK-LABEL: FunctionDecl {{.*}} test_div_assign 'float2x3 (float2x3, float2x3)'
+// CHECK: CompoundAssignOperator {{.*}} 'float2x3':'matrix<float, 2, 3>' lvalue '/=' ComputeLHSTy='float2x3':'matrix<float, 2, 3>' ComputeResultTy='float2x3':'matrix<float, 2, 3>'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'a' 'float2x3':'matrix<float, 2, 3>'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2x3':'matrix<float, 2, 3>' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'b' 'float2x3':'matrix<float, 2, 3>'
+float2x3 test_div_assign(float2x3 a, float2x3 b) {
+  a /= b;
+  return a;
 }
 
 // CHECK-LABEL: FunctionDecl {{.*}} test_neg 'float2x3 (float2x3)'
