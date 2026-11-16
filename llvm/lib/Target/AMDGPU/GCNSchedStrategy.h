@@ -459,8 +459,12 @@ public:
   // The region number this stage is currently working on
   unsigned getRegionIdx() { return RegionIdx; }
 
-  // Returns true if the new schedule may result in more spilling.
-  bool mayCauseSpilling(unsigned WavesAfter);
+  // Returns true if the new schedule may result in more spilling. If
+  // \p UseLatencyOnTie is set and neither pressure is less than the other,
+  // returns true unless the new schedule has a better latency metric. Stages
+  // whose old schedule is just the input order set it, since that order was
+  // never selected for latency.
+  bool mayCauseSpilling(unsigned WavesAfter, bool UseLatencyOnTie = false);
 
   /// Sets the schedule of region \p RegionIdx to \p MIOrder. The MIs in \p
   /// MIOrder must be exactly the same as the ones currently existing inside the
