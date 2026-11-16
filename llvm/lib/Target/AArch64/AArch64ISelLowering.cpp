@@ -5829,6 +5829,12 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
   if (ArgVT == MVT::f16 || ArgVT == MVT::bf16)
     return Op;
 
+  // Without NEON there are no legal vector types for the lowering below, and
+  // type legalization would turn it back into this bitcast forever. Let it
+  // expand through the stack instead.
+  if (!isTypeLegal(MVT::v8i16))
+    return SDValue();
+
   SDValue Src = Op.getOperand(0);
   SDLoc DL(Op);
   if (ArgVT.isVector() && ArgVT.getSizeInBits() == 16) {
@@ -5837,15 +5843,6 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
   }
 
   assert(ArgVT == MVT::i16);
-
-  // Without NEON there are no legal vector types for the lowering below, and
-  // type legalization would turn it back into this bitcast forever. Use the
-  // h subregister of an f32 instead.
-  if (!isTypeLegal(MVT::v8i16)) {
-    Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Src);
-    Op = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Op);
-    return DAG.getTargetExtractSubreg(AArch64::hsub, DL, OpVT, Op);
-  }
 
   // If the input from a vector, extract directly from it.
   if (Src.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {

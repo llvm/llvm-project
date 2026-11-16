@@ -10,8 +10,11 @@
 define half @bitcast_i16_half(i16 %x) {
 ; NONEON-LABEL: bitcast_i16_half:
 ; NONEON:       // %bb.0:
-; NONEON-NEXT:    fmov s0, w0
-; NONEON-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; NONEON-NEXT:    sub sp, sp, #16
+; NONEON-NEXT:    .cfi_def_cfa_offset 16
+; NONEON-NEXT:    strh w0, [sp, #12]
+; NONEON-NEXT:    ldr h0, [sp, #12]
+; NONEON-NEXT:    add sp, sp, #16
 ; NONEON-NEXT:    ret
 ;
 ; NEON-LABEL: bitcast_i16_half:
@@ -26,8 +29,11 @@ define half @bitcast_i16_half(i16 %x) {
 define bfloat @bitcast_i16_bfloat(i16 %x) {
 ; NONEON-LABEL: bitcast_i16_bfloat:
 ; NONEON:       // %bb.0:
-; NONEON-NEXT:    fmov s0, w0
-; NONEON-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; NONEON-NEXT:    sub sp, sp, #16
+; NONEON-NEXT:    .cfi_def_cfa_offset 16
+; NONEON-NEXT:    strh w0, [sp, #12]
+; NONEON-NEXT:    ldr h0, [sp, #12]
+; NONEON-NEXT:    add sp, sp, #16
 ; NONEON-NEXT:    ret
 ;
 ; NEON-LABEL: bitcast_i16_bfloat:
@@ -42,9 +48,12 @@ define bfloat @bitcast_i16_bfloat(i16 %x) {
 define half @bitcast_v2i8_half(<2 x i8> %x) {
 ; NONEON-LABEL: bitcast_v2i8_half:
 ; NONEON:       // %bb.0:
+; NONEON-NEXT:    sub sp, sp, #16
+; NONEON-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NEXT:    bfi w0, w1, #8, #24
-; NONEON-NEXT:    fmov s0, w0
-; NONEON-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; NONEON-NEXT:    strh w0, [sp, #12]
+; NONEON-NEXT:    ldr h0, [sp, #12]
+; NONEON-NEXT:    add sp, sp, #16
 ; NONEON-NEXT:    ret
 ;
 ; NEON-LABEL: bitcast_v2i8_half:
