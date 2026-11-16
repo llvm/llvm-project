@@ -80,7 +80,7 @@ define half @f(float %fx, half %y, half %z, ptr %p) {
 ; CHECK-NEXT:    ret
   %x = fptrunc float %fx to half
   ; Fast-math user of x
- %cmp = fcmp nnan olt half %x, %y
+  %cmp = fcmp nnan olt half %x, %y
   %mul = fmul nnan half %x, %y
   %sel = select i1 %cmp, half %mul, half %y
   store half %sel, ptr %p
