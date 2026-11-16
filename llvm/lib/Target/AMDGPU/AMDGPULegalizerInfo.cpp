@@ -5641,12 +5641,12 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
       return true;
     }
 
-    // -1 / x -> RCP( FNEG(x) )
+    // -1 / x -> FNEG( RCP(x) )
     if (CLHS->isMinusOne()) {
-      auto FNeg = B.buildFNeg(ResTy, RHS, Flags);
-      B.buildIntrinsic(Intrinsic::amdgcn_rcp, Res)
-          .addUse(FNeg.getReg(0))
-          .setMIFlags(Flags);
+      auto RCP = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {ResTy})
+                     .addUse(RHS)
+                     .setMIFlags(Flags);
+      B.buildFNeg(Res, RCP, Flags);
 
       MI.eraseFromParent();
       return true;

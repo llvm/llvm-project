@@ -13630,9 +13630,9 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
 
     // Same as for 1.0, but expand the sign out of the constant.
     if (CLHS->isMinusOne()) {
-      // -1.0 / x -> rcp (fneg x)
-      SDValue FNegRHS = DAG.getNode(ISD::FNEG, SL, VT, RHS);
-      return DAG.getNode(AMDGPUISD::RCP, SL, VT, FNegRHS);
+      // -1.0 / x -> fneg (rcp x)
+      SDValue Rcp = DAG.getNode(AMDGPUISD::RCP, SL, VT, RHS);
+      return DAG.getNode(ISD::FNEG, SL, VT, Rcp);
     }
   }
 
