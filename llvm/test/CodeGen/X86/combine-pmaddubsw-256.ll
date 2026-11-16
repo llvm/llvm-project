@@ -31,18 +31,12 @@ define <16 x i16> @combine_pmaddubsw_add_u8_s6(<32 x i8> %a0, <32 x i8> %a1) {
 define <16 x i16> @combine_pmaddubsw_add_u8_s6_commuted(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX2-LABEL: combine_pmaddubsw_add_u8_s6_commuted:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14,17,16,19,18,21,20,23,22,25,24,27,26,29,28,31,30]
-; AVX2-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX2-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_pmaddubsw_add_u8_s6_commuted:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14,17,16,19,18,21,20,23,22,25,24,27,26,29,28,31,30]
-; AVX512-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
-; AVX512-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; AVX512-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq

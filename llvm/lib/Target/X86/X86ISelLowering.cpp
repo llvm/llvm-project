@@ -60931,16 +60931,39 @@ static SDValue getPackedPMADD(SelectionDAG &DAG, SDValue N0, SDValue N1,
     return DAG.MaskedVectorIsZero(N.getOperand(0), DemandedHiElts) &&
            DAG.MaskedVectorIsZero(N.getOperand(1), DemandedHiElts);
   };
+
+  EVT VT = N0.getValueType();
+  MVT OpVT = N0.getOperand(0).getSimpleValueType();
+  unsigned EltBits = OpVT.getScalarSizeInBits();
+
+  // Return true if an input of N was shifted down by EltBits within wider
+  // elements, so that shifting it back up as Hi recreates the shifted value.
+  auto HasShiftedDownInput = [&](SDValue N) {
+    return any_of(N->ops(), [&](SDValue Op) {
+      Op = peekThroughBitcasts(Op);
+      if (Op.getScalarValueSizeInBits() < 2 * EltBits)
+        return false;
+      if (Op.getOpcode() == X86ISD::VSRLI)
+        return Op.getConstantOperandVal(1) == EltBits;
+      APInt ShAmt;
+      return Op.getOpcode() == ISD::SRL &&
+             ISD::isConstantSplatVector(Op.getOperand(1), ShAmt) &&
+             ShAmt == EltBits;
+    });
+  };
+
   if (!HiEltsZero(N0)) {
     if (!HiEltsZero(N1))
       return SDValue();
     std::swap(N0, N1);
+  } else if (HiEltsZero(N1) && HasShiftedDownInput(N0) &&
+             !HasShiftedDownInput(N1)) {
+    // Both PMADDs can be Lo. Use the shifted down one as Hi so that the
+    // packing can fold back to the unshifted inputs.
+    std::swap(N0, N1);
   }
 
-  EVT VT = N0.getValueType();
-  MVT OpVT = N0.getOperand(0).getSimpleValueType();
-  SDValue ShAmt =
-      DAG.getShiftAmountConstant(OpVT.getScalarSizeInBits(), VT, DL);
+  SDValue ShAmt = DAG.getShiftAmountConstant(EltBits, VT, DL);
   auto Pack = [&](SDValue Lo, SDValue Hi) {
     Hi = DAG.getNode(ISD::SHL, DL, VT, DAG.getBitcast(VT, Hi), ShAmt);
     return DAG.getBitcast(

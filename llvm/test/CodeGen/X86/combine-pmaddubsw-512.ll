@@ -24,9 +24,6 @@ define <32 x i16> @combine_pmaddubsw_add_u8_s6(<64 x i8> %a0, <64 x i8> %a1) {
 define <32 x i16> @combine_pmaddubsw_add_u8_s6_commuted(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512-LABEL: combine_pmaddubsw_add_u8_s6_commuted:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14,17,16,19,18,21,20,23,22,25,24,27,26,29,28,31,30,33,32,35,34,37,36,39,38,41,40,43,42,45,44,47,46,49,48,51,50,53,52,55,54,57,56,59,58,61,60,63,62]
-; AVX512-NEXT:    vpshufb %zmm2, %zmm0, %zmm0
-; AVX512-NEXT:    vpshufb %zmm2, %zmm1, %zmm1
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
 ; AVX512-NEXT:    vpmaddubsw %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq

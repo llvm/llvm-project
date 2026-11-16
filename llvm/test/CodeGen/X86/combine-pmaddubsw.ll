@@ -198,18 +198,12 @@ define <8 x i16> @combine_pmaddubsw_add_u8_s6(<16 x i8> %a0, <16 x i8> %a1) {
 define <8 x i16> @combine_pmaddubsw_add_u8_s6_commuted(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-LABEL: combine_pmaddubsw_add_u8_s6_commuted:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; SSE-NEXT:    pshufb %xmm2, %xmm0
-; SSE-NEXT:    pshufb %xmm2, %xmm1
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    pmaddubsw %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_pmaddubsw_add_u8_s6_commuted:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; AVX-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
