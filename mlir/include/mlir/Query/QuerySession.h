@@ -15,8 +15,6 @@
 #include "llvm/Support/SourceMgr.h"
 
 namespace mlir::query {
-
-class Registry;
 // Represents the state for a particular mlir-query session.
 class QuerySession {
 public:
@@ -39,7 +37,6 @@ private:
   unsigned bufferId;
   const matcher::Registry &matcherRegistry;
 };
-
 } // namespace mlir::query
 
 #endif // MLIR_TOOLS_MLIRQUERY_QUERYSESSION_H
