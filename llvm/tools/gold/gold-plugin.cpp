@@ -56,8 +56,6 @@
 using namespace llvm;
 using namespace lto;
 
-static codegen::RegisterCodeGenFlags CodeGenFlags;
-
 // FIXME: Remove when binutils 2.31 (containing gold 1.16) is the minimum
 // required version.
 typedef enum ld_plugin_status (*ld_plugin_get_wrap_symbols)(

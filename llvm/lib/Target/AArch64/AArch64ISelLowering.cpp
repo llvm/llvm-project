@@ -75,6 +75,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
@@ -14511,6 +14512,10 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
     case 'r':
       if (VT.isScalableVector())
         return std::make_pair(0U, nullptr);
+      // MVT::Other has no size, e.g. an aggregate operand that could not be
+      // converted to an integer type.
+      if (VT == MVT::Other)
+        break;
       if (Subtarget->hasLS64() && VT.getSizeInBits() == 512)
         return std::make_pair(0U, &AArch64::GPR64x8ClassRegClass);
       if (VT.getFixedSizeInBits() == 64)
@@ -14544,6 +14549,8 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
         break;
       if (VT.isScalableVector())
         return std::make_pair(0U, &AArch64::ZPR_4bRegClass);
+      if (VT == MVT::Other)
+        break;
       if (VT.getSizeInBits() == 128)
         return std::make_pair(0U, &AArch64::FPR128_loRegClass);
       break;
@@ -34808,11 +34815,11 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   // The !mem.cache_hint metadata is not supported by GISel and will be dropped.
   // TODO: Remove this and handle atomic hints in GISel once supported.
   if (auto *Store = dyn_cast<StoreInst>(&Inst)) {
-    if (Store->isAtomic() && getMemCacheHintMetadata(*Store, 1))
+    if (Store->isAtomic() && getMemCacheHint(*Store, 1))
       return true;
   }
   if (auto *RMW = dyn_cast<AtomicRMWInst>(&Inst))
-    if (getMemCacheHintMetadata(*RMW))
+    if (getMemCacheHint(*RMW))
       return true;
 
   return false;

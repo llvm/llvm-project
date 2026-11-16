@@ -40,6 +40,19 @@ spirv.func @composite_insert_vector(%arg0: vector<3xf32>, %arg1: f32) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.CopyObject
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @copy_object
+// CHECK-SAME: (%[[ARG:.*]]: !llvm.ptr)
+spirv.func @copy_object(%arg0: !spirv.ptr<f32, Function>) "None" {
+  // CHECK-NEXT: llvm.load %[[ARG]] : !llvm.ptr -> f32
+  %0 = spirv.CopyObject %arg0 : !spirv.ptr<f32, Function>
+  %1 = spirv.Load "Function" %0 : f32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.Select
 //===----------------------------------------------------------------------===//
 
