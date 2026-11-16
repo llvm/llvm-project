@@ -1256,7 +1256,6 @@ define amdgpu_kernel void @fma_swap_src1_src2_vgpr(ptr addrspace(1) %out, ptr ad
 ; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v4
@@ -1265,12 +1264,13 @@ define amdgpu_kernel void @fma_swap_src1_src2_vgpr(ptr addrspace(1) %out, ptr ad
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0x8000, v2
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v6, vcc, 0x10000, v2
 ; GFX950-GISEL-NEXT:    global_load_dwordx2 v[8:9], v[0:1], off
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0x10000, v2
-; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[10:11], v[0:1], off
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[10:11], v[6:7], off
 ; GFX950-GISEL-NEXT:    global_load_dwordx2 v[2:3], v4, s[2:3]
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v9
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v8

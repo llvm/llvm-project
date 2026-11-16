@@ -13,11 +13,11 @@ define void @flat_load_RF(ptr %in) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
+; VI-NEXT:    flat_load_dword v4, v[0:1]
+; VI-NEXT:    flat_load_dword v5, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    flat_load_dword v0, v[4:5]
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -32,11 +32,11 @@ define void @flat_load_RF_as1(ptr %in) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
+; VI-NEXT:    flat_load_dword v4, v[0:1]
+; VI-NEXT:    flat_load_dword v5, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    flat_load_dword v0, v[4:5]
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -51,11 +51,11 @@ define void @flat_load_RF_as4(ptr %in) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
+; VI-NEXT:    flat_load_dword v4, v[0:1]
+; VI-NEXT:    flat_load_dword v5, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    flat_load_dword v0, v[4:5]
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -71,11 +71,11 @@ define void @flat_load_m_constraint(ptr %in) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
+; VI-NEXT:    flat_load_dword v4, v[0:1]
+; VI-NEXT:    flat_load_dword v5, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    flat_load_dword v0, v[4:5]
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -90,11 +90,11 @@ define void @flat_load_m_constraint_as1(ptr %in) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
+; VI-NEXT:    flat_load_dword v4, v[0:1]
+; VI-NEXT:    flat_load_dword v5, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    flat_load_dword v0, v[4:5]
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -109,11 +109,11 @@ define void @flat_load_m_constraint_as4(ptr %in) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
+; VI-NEXT:    flat_load_dword v4, v[0:1]
+; VI-NEXT:    flat_load_dword v5, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    flat_load_dword v0, v[4:5]
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -130,12 +130,12 @@ define void @flat_store_RF(ptr %in, ptr %in2) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[4:5]
+; VI-NEXT:    flat_load_dword v6, v[0:1]
+; VI-NEXT:    flat_load_dword v7, v[4:5]
 ; VI-NEXT:    flat_load_dword v2, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    flat_store_dword v[6:7], v2
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %addr = load ptr, ptr %in
@@ -150,12 +150,12 @@ define void @flat_store_RF_as1(ptr %in, ptr %in2) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[4:5]
+; VI-NEXT:    flat_load_dword v6, v[0:1]
+; VI-NEXT:    flat_load_dword v7, v[4:5]
 ; VI-NEXT:    flat_load_dword v2, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    flat_store_dword v[6:7], v2
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %addr = load ptr addrspace(1), ptr %in
@@ -170,12 +170,12 @@ define void @flat_store_RF_as4(ptr %in, ptr %in2) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[4:5]
+; VI-NEXT:    flat_load_dword v6, v[0:1]
+; VI-NEXT:    flat_load_dword v7, v[4:5]
 ; VI-NEXT:    flat_load_dword v2, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    flat_store_dword v[6:7], v2
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %addr = load ptr addrspace(4), ptr %in
@@ -190,12 +190,12 @@ define void @flat_store_m_constraint(ptr %in, ptr %in2) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[4:5]
+; VI-NEXT:    flat_load_dword v6, v[0:1]
+; VI-NEXT:    flat_load_dword v7, v[4:5]
 ; VI-NEXT:    flat_load_dword v2, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    flat_store_dword v[6:7], v2
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %addr = load ptr, ptr %in
@@ -210,12 +210,12 @@ define void @flat_store_m_constraint_as1(ptr %in, ptr %in2) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[4:5]
+; VI-NEXT:    flat_load_dword v6, v[0:1]
+; VI-NEXT:    flat_load_dword v7, v[4:5]
 ; VI-NEXT:    flat_load_dword v2, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    flat_store_dword v[6:7], v2
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %addr = load ptr addrspace(1), ptr %in
@@ -230,12 +230,12 @@ define void @flat_store_m_constraint_as4(ptr %in, ptr %in2) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[4:5]
+; VI-NEXT:    flat_load_dword v6, v[0:1]
+; VI-NEXT:    flat_load_dword v7, v[4:5]
 ; VI-NEXT:    flat_load_dword v2, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    flat_store_dword v[6:7], v2
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %addr = load ptr addrspace(4), ptr %in
