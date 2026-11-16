@@ -49,10 +49,10 @@ vunzipe.v   v4, v4
 # CHECK-ASM: encoding: [0x57,0xa2,0x47,0x4a]
 vunzipo.v   v4, v4
 
-# CHECK-ASM-AND-OBJ: vunzipe.v   v0, v0
-# CHECK-ASM: encoding: [0x57,0xa0,0x05,0x4a]
-vunzipe.v   v0, v0
+# CHECK-ASM-AND-OBJ: vunzipe.v   v1, v1, v0.t
+# CHECK-ASM: encoding: [0xd7,0xa0,0x15,0x48]
+vunzipe.v   v1, v1, v0.t
 
-# CHECK-ASM-AND-OBJ: vunzipo.v   v0, v0
-# CHECK-ASM: encoding: [0x57,0xa0,0x07,0x4a]
-vunzipo.v   v0, v0
+# CHECK-ASM-AND-OBJ: vunzipo.v   v1, v1, v0.t
+# CHECK-ASM: encoding: [0xd7,0xa0,0x17,0x48]
+vunzipo.v   v1, v1, v0.t

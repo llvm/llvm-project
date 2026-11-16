@@ -10,6 +10,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -79,14 +80,19 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
       unsigned NumBundles = Assume->getNumOperandBundles();
       for (unsigned I = 0; I != NumBundles; ++I) {
         auto IsDead = [&](OperandBundleUse Bundle) {
+          switch (getBundleAttrFromOBU(Bundle)) {
           // "ignore" operand bundles are always dead.
-          if (Bundle.getTagName() == "ignore")
+          case BundleAttr::Ignore:
             return true;
 
           // "dereferenceable" operand bundles are only dropped if requested
           // (e.g., after loop vectorization has run).
-          if (Bundle.getTagName() == "dereferenceable")
+          case BundleAttr::Dereferenceable:
             return DropDereferenceable;
+
+          default:
+            break;
+          }
 
           // Bundles without arguments do not affect any specific values.
           // Always keep them for now.

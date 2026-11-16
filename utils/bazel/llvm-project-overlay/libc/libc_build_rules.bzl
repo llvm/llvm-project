@@ -6,6 +6,7 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load(":libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 load(":libc_namespace.bzl", "LIBC_NAMESPACE")
@@ -115,7 +116,7 @@ def _libc_library(
         copts = libc_common_copts() + copts,
         local_defines = LIBC_CONFIGURE_OPTIONS,
         deps = deps + libc_common_deps(),
-        linkstatic = 1,
+        linkstatic = True,
         target_compatible_with = target_compatible_with,
         **kwargs
     )
@@ -340,18 +341,12 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = [], proxy = Fal
     """Generates a libc header file from YAML template.
 
     Args:
-      name: Name of the genrule target.
+      name: Name of the target.
       hdr: Path of the header file to generate.
       yaml_template: Path of the YAML template file.
       other_srcs: Other files required to generate the header, if any.
       proxy: Whether this is a proxy header with slightly different generation results.
     """
-    hdrgen = "//libc:hdrgen"
-    cmd = "$(location {hdrgen}) $(location {yaml}) -o $@".format(
-        hdrgen = hdrgen,
-        yaml = yaml_template,
-    ) + (" --proxy" if proxy else "")
-
     if not hdr.startswith("staging/"):
         fail(
             "Generated headers should be placed in a 'staging/' directory " +
@@ -359,12 +354,16 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = [], proxy = Fal
             "when bootstrapping builds.",
         )
 
-    native.genrule(
+    run_binary(
         name = name,
-        outs = [hdr],
         srcs = [yaml_template] + other_srcs,
-        cmd = cmd,
-        tools = [hdrgen],
+        outs = [hdr],
+        args = [
+            "$(execpath %s)" % yaml_template,
+            "-o",
+            "$(execpath %s)" % hdr,
+        ] + (["--proxy"] if proxy else []),
+        tool = "//libc:hdrgen",
     )
 
 def libc_header_info(
@@ -394,24 +393,24 @@ def libc_math_function(
 
     #TODO(michaelrj): Fix the floating point dependencies
     OLD_FPUTIL_DEPS = [
-        ":__support_fputil_basic_operations",
-        ":__support_fputil_division_and_remainder_operations",
-        ":__support_fputil_fenv_impl",
-        ":__support_fputil_fp_bits",
-        ":__support_fputil_hypot",
-        ":__support_fputil_manipulation_functions",
-        ":__support_fputil_nearest_integer_operations",
-        ":__support_fputil_normal_float",
-        ":__support_math_extras",
-        ":__support_fputil_except_value_utils",
+        "//libc/src/__support:math_extras",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:hypot",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/FPUtil:normal_float",
     ]
     libc_function(
         name = name,
-        srcs = ["src/math/generic/" + name + ".cpp"],
-        hdrs = ["src/math/" + name + ".h"],
+        srcs = ["//libc/src/math:generic/{}.cpp".format(name)],
+        hdrs = ["//libc/src/math:{}.h".format(name)],
         deps = [
-            ":__support_common",
-            ":__support_macros_config",
-            ":__support_macros_properties_types",
+            "//libc/src/__support:common",
+            "//libc/src/__support/macros:config",
+            "//libc/src/__support/macros/properties:types",
         ] + OLD_FPUTIL_DEPS + additional_deps,
     )

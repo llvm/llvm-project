@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=jump-table-to-switch -pass-remarks=jump-table-to-switch -S -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=jump-table-to-switch -pass-remarks=jump-table-to-switch -S -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: remark: /tmp/tmp.cc:2:20: expanded indirect call into switch
 

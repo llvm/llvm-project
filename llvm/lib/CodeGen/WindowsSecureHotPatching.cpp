@@ -566,17 +566,13 @@ bool WindowsSecureHotPatching::runOnFunction(
   // to move them to the start of entry BB.
 
   auto &EntryBlock = F.getEntryBlock();
-  IRBuilder<> IRBuilderAtEntry(&EntryBlock, EntryBlock.begin());
+  IRBuilder<> IRBuilderAtEntry(EntryBlock.begin());
 
   for (auto &[GV, LoadValue] : GVLoadMap) {
     assert(LoadValue == nullptr);
     GlobalVariable *RefGV = getOrCreateRefVariable(F, RefMapping, GV);
     LoadValue = IRBuilderAtEntry.CreateLoad(RefGV->getValueType(), RefGV);
   }
-
-  const DISubprogram *Subprogram = F.getSubprogram();
-  DICompileUnit *Unit = Subprogram != nullptr ? Subprogram->getUnit() : nullptr;
-  DIBuilder DebugInfo{*F.getParent(), true, Unit};
 
   // Go back to the instructions and rewrite their uses of GlobalVariable.
   // Because a ConstantExpr can be a tree, it may reference more than one

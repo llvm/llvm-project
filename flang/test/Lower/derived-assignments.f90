@@ -12,9 +12,9 @@ subroutine test1
 end subroutine test1
 ! CHECK-LABEL:   func.func @_QPtest1() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.type<_QFtest1Tt
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest1Et1"} : (!fir.ref<!fir.type<_QFtest1Tt
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFtest1Et1") : (!fir.ref<!fir.type<_QFtest1Tt
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.type<_QFtest1Tt
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFtest1Et2"} : (!fir.ref<!fir.type<_QFtest1Tt
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFtest1Et2") : (!fir.ref<!fir.type<_QFtest1Tt
 ! CHECK:           hlfir.assign %[[VAL_3]]#0 to %[[VAL_1]]#0 : !fir.ref<!fir.type<_QFtest1Tt
 ! CHECK:           return
 ! CHECK:         }
@@ -35,9 +35,9 @@ contains
   end subroutine test2
 ! CHECK-LABEL:   func.func @_QMm2Ptest2() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.type<_QMm2Tt
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QMm2Ftest2Et1"} : (!fir.ref<!fir.type<_QMm2Tt
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QMm2Ftest2Et1") : (!fir.ref<!fir.type<_QMm2Tt
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.type<_QMm2Tt
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QMm2Ftest2Et2"} : (!fir.ref<!fir.type<_QMm2Tt
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QMm2Ftest2Et2") : (!fir.ref<!fir.type<_QMm2Tt
 ! CHECK:           hlfir.region_assign {
 ! CHECK:             hlfir.yield %[[VAL_3]]#0 : !fir.ref<!fir.type<_QMm2Tt
 ! CHECK:           } to {
@@ -57,8 +57,8 @@ contains
   end subroutine t_to_t
 ! CHECK-LABEL:   func.func @_QMm2Pt_to_t(
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare {{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QMm2Ft_to_tEa1"} : (!fir.ref<!fir.type<_QMm2Tt
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMm2Ft_to_tEb1"} : (!fir.ref<!fir.type<_QMm2Tt
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare {{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QMm2Ft_to_tEa1") fortran_attrs<intent_out> : (!fir.ref<!fir.type<_QMm2Tt
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QMm2Ft_to_tEb1") fortran_attrs<intent_in> : (!fir.ref<!fir.type<_QMm2Tt
 ! CHECK:           %[[VAL_5:.*]] = hlfir.designate %[[VAL_4]]#0{"b"}   : (!fir.ref<!fir.type<_QMm2Tt
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_7:.*]] = hlfir.designate %[[VAL_3]]#0{"a"}   : (!fir.ref<!fir.type<_QMm2Tt
@@ -81,9 +81,9 @@ subroutine test3
 end subroutine test3
 ! CHECK-LABEL:   func.func @_QPtest3() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.type<_QFtest3Tt
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest3Et1"} : (!fir.ref<!fir.type<_QFtest3Tt
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFtest3Et1") : (!fir.ref<!fir.type<_QFtest3Tt
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.type<_QFtest3Tt
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFtest3Et2"} : (!fir.ref<!fir.type<_QFtest3Tt
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFtest3Et2") : (!fir.ref<!fir.type<_QFtest3Tt
 ! CHECK:           hlfir.assign %[[VAL_3]]#0 to %[[VAL_1]]#0 : !fir.ref<!fir.type<_QFtest3Tt
 ! CHECK:           return
 ! CHECK:         }
@@ -99,8 +99,8 @@ subroutine test_array_comp(t1, t2)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_array_comp(
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFtest_array_compEt1"} : (!fir.ref<!fir.type<_QFtest_array_compTt
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFtest_array_compEt2"} : (!fir.ref<!fir.type<_QFtest_array_compTt
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QFtest_array_compEt1") : (!fir.ref<!fir.type<_QFtest_array_compTt
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QFtest_array_compEt2") : (!fir.ref<!fir.type<_QFtest_array_compTt
 ! CHECK:           hlfir.assign %[[VAL_4]]#0 to %[[VAL_3]]#0 : !fir.ref<!fir.type<_QFtest_array_compTt
 ! CHECK:           return
 ! CHECK:         }
@@ -116,8 +116,8 @@ subroutine test_ptr_comp(t1, t2)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_ptr_comp(
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFtest_ptr_compEt1"} : (!fir.ref<!fir.type<_QFtest_ptr_compTt
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFtest_ptr_compEt2"} : (!fir.ref<!fir.type<_QFtest_ptr_compTt
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QFtest_ptr_compEt1") : (!fir.ref<!fir.type<_QFtest_ptr_compTt
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QFtest_ptr_compEt2") : (!fir.ref<!fir.type<_QFtest_ptr_compTt
 ! CHECK:           hlfir.assign %[[VAL_4]]#0 to %[[VAL_3]]#0 : !fir.ref<!fir.type<_QFtest_ptr_compTt
 ! CHECK:           return
 ! CHECK:         }
@@ -134,8 +134,8 @@ subroutine test_box_assign(t1, t2)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_box_assign(
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_box_assignEt1"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_box_assignEt2"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QFtest_box_assignEt1") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QFtest_box_assignEt2") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt
 ! CHECK:           %[[VAL_6:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt
@@ -156,8 +156,8 @@ subroutine test_alloc_comp(t1, t2)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_alloc_comp(
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFtest_alloc_compEt1"} : (!fir.ref<!fir.type<_QFtest_alloc_compTt
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFtest_alloc_compEt2"} : (!fir.ref<!fir.type<_QFtest_alloc_compTt
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QFtest_alloc_compEt1") : (!fir.ref<!fir.type<_QFtest_alloc_compTt
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QFtest_alloc_compEt2") : (!fir.ref<!fir.type<_QFtest_alloc_compTt
 ! CHECK:           hlfir.assign %[[VAL_4]]#0 to %[[VAL_3]]#0 : !fir.ref<!fir.type<_QFtest_alloc_compTt
 ! CHECK:           return
 ! CHECK:         }
@@ -192,8 +192,8 @@ contains
   end subroutine
 ! CHECK-LABEL:   func.func @_QMcomponent_with_user_def_assignPtest(
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QMcomponent_with_user_def_assignFtestEt1"} : (!fir.ref<!fir.type<_QMcomponent_with_user_def_assignTt
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QMcomponent_with_user_def_assignFtestEt2"} : (!fir.ref<!fir.type<_QMcomponent_with_user_def_assignTt
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QMcomponent_with_user_def_assignFtestEt1") : (!fir.ref<!fir.type<_QMcomponent_with_user_def_assignTt
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QMcomponent_with_user_def_assignFtestEt2") : (!fir.ref<!fir.type<_QMcomponent_with_user_def_assignTt
 ! CHECK:           hlfir.assign %[[VAL_4]]#0 to %[[VAL_3]]#0 : !fir.ref<!fir.type<_QMcomponent_with_user_def_assignTt
 ! CHECK:           return
 ! CHECK:         }

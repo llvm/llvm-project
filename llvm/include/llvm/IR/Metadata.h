@@ -397,18 +397,8 @@ public:
   using OwnerTy = MetadataTracking::OwnerTy;
 
 private:
-  struct UseEntry {
-    void *Ref = nullptr;
-    OwnerTy Owner = nullptr;
-  };
-
-  static constexpr unsigned IndexThreshold = 32;
-  // Tracked uses of this. Dropping one moves the last entry into its slot, so
-  // the order is deterministic but not the order they were added in.
-  SmallVector<UseEntry, 4> UseMap;
-  // Lazily allocated map from Ref to its index in UseMap for large use lists.
-  using IndexMapTy = DenseMap<void *, unsigned>;
-  std::unique_ptr<IndexMapTy> IndexMap;
+  uint64_t NextIndex = 0;
+  SmallDenseMap<void *, std::pair<OwnerTy, uint64_t>, 4> UseMap;
 
 protected:
   ~ReplaceableUses() {
@@ -439,7 +429,6 @@ public:
   unsigned getNumUses() const { return UseMap.size(); }
 
 private:
-  UseEntry *findRef(void *Ref);
   void addRef(void *Ref, OwnerTy Owner);
   void dropRef(void *Ref);
   void moveRef(void *Ref, void *New, const Metadata &MD);
@@ -1607,6 +1596,36 @@ TempMDTuple MDNode::getTemporary(LLVMContext &Context,
 void TempMDNodeDeleter::operator()(MDNode *Node) const {
   MDNode::deleteTemporary(Node);
 }
+
+/// Wrapper around alias scope domain metedata to allow accessing their fields,
+/// including surfacing the optional `i1 disjoint` parameter, hiding the details
+/// of the metadata encoding.
+class AliasScopeDomainNode {
+  const MDNode *Node = nullptr;
+
+public:
+  AliasScopeDomainNode() = default;
+  explicit AliasScopeDomainNode(const MDNode *N) : Node(N) {}
+
+  /// Get the MDNode for this AliasScopeDomainNode.
+  const MDNode *getNode() const { return Node; }
+
+  /// Get the optional human-readable description of this domain or the empty
+  /// string otherwise.
+  StringRef getDescription() const {
+    if (Node->getNumOperands() > 2)
+      if (MDString *N = dyn_cast_or_null<MDString>(Node->getOperand(2)))
+        return N->getString();
+    return StringRef();
+  }
+
+  /// Return true if this domain has disjoint scopes.
+  bool hasDisjointScopes() const {
+    const Constant *Disjoint =
+        mdconst::dyn_extract_or_null<Constant>(Node->getOperand(1));
+    return Disjoint && Disjoint->isOneValue();
+  }
+};
 
 /// This is a simple wrapper around an MDNode which provides a higher-level
 /// interface by hiding the details of how alias analysis information is encoded

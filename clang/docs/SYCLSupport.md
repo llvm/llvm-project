@@ -106,3 +106,20 @@ space attributes for pointers:
 ```C++
 //TODO: add support for __attribute__((opencl_global_host)) and __attribute__((opencl_global_device)).
 ```
+
+## Relocatable linking
+
+With `-r`, clang links the SYCL device code embedded in the input object files
+and merges those object files into one. That object file also contains the code
+that registers the device code with the SYCL runtime, so any host linker can
+link it later, also from a static library.
+
+```console
+clang++ -fsycl -c a.cpp b.cpp
+clang++ -fsycl -r a.o b.o -o ab.o
+clang++ -c main.cpp
+clang++ main.o ab.o -L<libsycl dir> -lLLVMSYCL -o app
+```
+
+Without `-fsycl`, use `--offload-link -r`. Relocatable linking is not
+supported for Windows (COFF) targets. See {doc}`OffloadingDesign` for details.

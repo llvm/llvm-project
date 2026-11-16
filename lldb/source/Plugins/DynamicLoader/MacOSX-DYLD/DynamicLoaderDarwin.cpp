@@ -626,7 +626,8 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromPreloadedModules(
       target.GetImages().AppendIfNeeded(exe_module_sp);
       UpdateImageLoadAddress(exe_module_sp.get(), images[exe_idx].first);
       if (exe_module_sp.get() != target.GetExecutableModulePointer())
-        target.SetExecutableModule(exe_module_sp, eLoadDependentsNo);
+        target.RebuildModuleListWithExecutable(exe_module_sp,
+                                               eLoadDependentsNo);
 
       // Update the target executable's arch if necessary.
       auto exe_triple = exe_module_sp->GetArchitecture().GetTriple();
@@ -773,7 +774,7 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
           if (commpage_section) {
             ModuleSpec module_spec(objfile->GetFileSpec(),
                                    image_info.GetArchitecture());
-            module_spec.GetObjectName() = ConstString(commpage_sect_name);
+            module_spec.SetObjectName(commpage_sect_name.str());
             ModuleSP commpage_image_module_sp(
                 target_images.FindFirstModule(module_spec));
             if (!commpage_image_module_sp) {

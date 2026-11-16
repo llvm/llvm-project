@@ -147,7 +147,7 @@ public:
   }
 
   void test_inexact_results(DivFunc func) {
-    func(InType(1.0), InType(3.0));
+    [[maybe_unused]] volatile OutType res = func(InType(1.0), InType(3.0));
     EXPECT_FP_EXCEPTION(FE_INEXACT);
   }
 };

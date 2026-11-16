@@ -5,7 +5,8 @@
 
 ; CHECK: .func trap_wrapper
 ; CHECK-NEXT: ()
-; CHECK-NEXT: .noreturn;
+; CHECK-NEXT: .noreturn
+; CHECK-NEXT: ;
 
 declare void @trap_wrapper() #0
 
@@ -33,9 +34,12 @@ define ptx_kernel void @ignore_kernel_noreturn() #0 {
 
 ; CHECK-LABEL: .entry callprototype_noreturn(
 ; CHECK: {{[$]}}L__prototype_{{[0-9]+}}:
-; CHECK-NEXT: _ (.param .b32 _) .noreturn;
+; CHECK-NEXT: _ (.param .b32 _)
+; CHECK-NEXT: .noreturn
+; CHECK-NEXT: ;
 ; CHECK: {{[$]}}L__prototype_{{[0-9]+}}:
-; CHECK-NEXT: .callprototype (.param .b32 _) _ (.param .b32 _);
+; CHECK-NEXT: .callprototype (.param .b32 _) _ (.param .b32 _)
+; CHECK-NEXT: ;
 
 define ptx_kernel void @callprototype_noreturn(i32) {
   %fn = load ptr, ptr addrspace(1) @function_pointer

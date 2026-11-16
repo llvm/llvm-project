@@ -87,6 +87,10 @@ public:
   /// Get the C++ code to convert from the storage type to the parameter type.
   StringRef getConvertFromStorage() const;
 
+  /// Get the C++ headers declaring the C++ type of this parameter. Only
+  /// parameters that are attribute or type constraints specify headers.
+  std::vector<StringRef> getCppIncludes() const;
+
   /// Get an optional C++ parameter parser.
   std::optional<StringRef> getParser() const;
 

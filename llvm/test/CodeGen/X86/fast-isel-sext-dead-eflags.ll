@@ -8,7 +8,7 @@ define i32 @sext_i1_to_i32(i1 %x) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-  ; CHECK-NEXT:   [[AND8ri:%[0-9]+]]:gr8 = AND8ri [[COPY1]], 1, implicit-def $eflags
+  ; CHECK-NEXT:   [[AND8ri:%[0-9]+]]:gr8 = AND8ri [[COPY1]], 1, implicit-def dead $eflags
   ; CHECK-NEXT:   [[NEG8r:%[0-9]+]]:gr8 = NEG8r [[AND8ri]], implicit-def dead $eflags
   ; CHECK-NEXT:   [[MOVSX32rr8_:%[0-9]+]]:gr32 = MOVSX32rr8 [[NEG8r]]
   ; CHECK-NEXT:   $eax = COPY [[MOVSX32rr8_]]

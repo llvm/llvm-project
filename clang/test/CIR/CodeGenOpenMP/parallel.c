@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -fopenmp -triple x86_64-linux-gnu -emit-cir -fclangir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -triple x86_64-linux-gnu -emit-cir -fclangir %s -o - | FileCheck %s
 
 void before(int);
 void during(int);
@@ -36,10 +36,7 @@ void parallel_with_operations() {
   int a, b;
   // CHECK-NEXT: cir.alloca "a"
   // CHECK-NEXT: cir.alloca "b"
-  // TODO(OMP): At the moment this results in 3 NYI diagnostics, 1 each for the
-  // clauses + 1 for the CapturedStmt. When those are implemented, the check
-  // lines will need updating.
-#pragma omp parallel shared(a) firstprivate(b)
+#pragma omp parallel
   {
    a = a + 1;
    b = b + 1;
@@ -98,9 +95,7 @@ void if_parallel() {
 
   #pragma omp parallel if (1)
   {}
-  // CHECK: %[[ONE_CONST:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[ONE_BOOL:.*]] = cir.cast int_to_bool %[[ONE_CONST]]
-  // CHECK-NEXT: %[[ONE_U1:.*]] = cir.cast bool_to_int %[[ONE_BOOL]]
+  // CHECK: %[[ONE_U1:.*]] = cir.const #cir.int<1> : !cir.int<u, 1>
   // CHECK-NEXT: %[[ONE_I1:.*]] = cir.builtin_int_cast %[[ONE_U1]]
   // CHECK-NEXT: omp.parallel if(%[[ONE_I1]]) {
   // CHECK-NEXT: omp.terminator

@@ -104,11 +104,11 @@ class PPCBoolRetToInt : public FunctionPass {
       return Q;
     }
 
-    IRBuilder IRB(V->getContext());
+    IRBuilder IRB(*Func->getParent());
     if (auto *I = dyn_cast<Instruction>(V))
       IRB.SetInsertPoint(I->getNextNode());
     else
-      IRB.SetInsertPoint(&Func->getEntryBlock(), Func->getEntryBlock().begin());
+      IRB.SetInsertPoint(Func->getEntryBlock().begin());
     return IRB.CreateZExt(V, IntTy);
   }
 

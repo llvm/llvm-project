@@ -1,0 +1,67 @@
+! RUN: bbc -emit-hlfir -fcuda -fopenacc %s -o - | FileCheck %s
+
+! A host call site must not resolve to a device-only specific, even when
+! managed actuals score the DEVICE dummies as a closer match.
+
+module m
+  interface sg
+    module procedure s_host
+    module procedure s_dev
+  end interface
+  real(8), managed, allocatable :: a(:), y(:)
+  type t
+  contains
+    procedure, nopass :: tb_host => s_host
+    procedure, nopass :: tb_dev => s_dev
+    generic :: tsg => tb_host, tb_dev
+  end type
+contains
+  subroutine s_host(x, y)
+    real(8), intent(in) :: x
+    real(8), intent(out) :: y
+    y = 2.0d0*x
+  end subroutine
+
+  attributes(device) subroutine s_dev(x, y)
+    real(8), device :: x
+    real(8), device :: y
+    y = x*x
+  end subroutine
+
+  subroutine acc_caller(i)
+    !$acc routine seq nohost
+    integer :: i
+    call sg(a(i), y(i))
+  end subroutine
+
+  subroutine tb_caller(i)
+    integer :: i
+    type(t) :: obj
+    call obj%tsg(a(i), y(i))
+  end subroutine
+
+  subroutine host_caller(i)
+    integer :: i
+    call sg(a(i), y(i))
+  end subroutine
+
+  subroutine intrinsic_caller(i)
+    use cudadevice, only: atomicadd
+    integer :: i, r
+    r = atomicadd(i, 1)
+  end subroutine
+end module
+
+! CHECK-LABEL: func.func @_QMmPacc_caller
+! CHECK: fir.call @_QMmPs_dev
+
+! CHECK-LABEL: func.func @_QMmPtb_caller
+! CHECK: fir.call @_QMmPs_host
+
+! CHECK-LABEL: func.func @_QMmPhost_caller
+! CHECK: fir.call @_QMmPs_host
+
+! A device-only specific of an intrinsic module is still accepted when no
+! host-callable specific matches.
+! CHECK-LABEL: func.func @_QMmPintrinsic_caller
+! CHECK: llvm.atomicrmw add

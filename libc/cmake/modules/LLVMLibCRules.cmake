@@ -1,3 +1,4 @@
+include(LibcParseArguments)
 include(LLVMLibCCompileOptionRules)
 include(LLVMLibCTargetNameUtils)
 include(LLVMLibCFlagRules)

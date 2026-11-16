@@ -27,6 +27,12 @@ def AccDeviceTypeOption : Option<"deviceType", "device-type",
        clEnumValN(mlir::acc::DeviceType::Radeon, "radeon", "radeon"))
     }]>;
 
+// Runtime `acc_device_t` values for which `acc.on_device` is true on the
+// target device. These values are the integers carried by `acc.on_device`.
+def AccTheDeviceTypesOption : ListOption<"theDeviceTypes", "the-device-types",
+    "int64_t",
+    "Runtime acc_device_t values for which acc.on_device is true on the target">;
+
 //===----------------------------------------------------------------------===//
 // Pass definitions
 //===----------------------------------------------------------------------===//
@@ -144,7 +150,7 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
        implicit routine operations for function calls within these routines,
        while avoiding infinite recursion through proper tracking.
   }];
-  let options = [ AccDeviceTypeOption ];
+  let options = [ AccDeviceTypeOption, AccTheDeviceTypesOption ];
 }
 
 def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mlir::ModuleOp"> {
@@ -262,30 +268,33 @@ def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
     have tile clauses. The pass transforms loops with `tile(size1, size2, ...)`
     clauses into tiled loop nests.
 
-    For a 2-level nested loop with tile(T1, T2), the transformation produces:
-    - Outer tile loops that iterate over tiles
-    - Inner element loops that iterate within each tile
+    The transformation produces two loops, each carrying all the induction
+    variables of the original loop:
+    - A tile group loop that iterates over tiles
+    - An element group loop that iterates within each tile
+
+    The tile clause lists its sizes innermost loop first (OpenACC 3.4,
+    section 2.9.8). In the example below, 32 tiles the `j` loop and 4 tiles
+    the `i` loop.
 
     Example transformation:
     ```
     // Before:
-    #pragma acc loop tile(32, 32)
+    #pragma acc loop tile(32, 4)
     for (i = 0; i < N; i++)
       for (j = 0; j < M; j++)
         A[i][j] = ...
 
     // After:
-    for (i = 0; i < N; i += 32)           // tile loop 1
-      for (j = 0; j < M; j += 32)         // tile loop 2
-        for (ii = i; ii < min(N, i+32); ii++)    // element loop 1
-          for (jj = j; jj < min(M, j+32); jj++)  // element loop 2
-            A[ii][jj] = ...
+    for (i = 0; i < N; i += 4, j = 0; j < M; j += 32)       // tile group
+      for (ii = i; ii < min(N, i+4); ii++,
+           jj = j; jj < min(M, j+32); jj++)                 // element group
+        A[ii][jj] = ...
     ```
 
     The pass handles:
     - Constant tile sizes
     - Wildcard tile sizes ('*') which use a default tile size
-    - Collapsed loops with tile counts exceeding collapse count
     - Proper handling of loop attributes (gang, worker, vector)
   }];
   let dependentDialects = ["mlir::arith::ArithDialect"];
@@ -317,10 +326,9 @@ def ACCSpecializeForDevice : Pass<"acc-specialize-for-device", "mlir::func::Func
     - Runtime ops (erased): acc.init, acc.shutdown, acc.set, acc.wait
                   (folded if known): acc.on_device
   }];
-  let options = [
-    ListOption<"theDeviceTypes", "the-device-types", "int64_t",
-               "List of integers which represent the device we are specializing for">
-  ];
+  let options = [ AccTheDeviceTypesOption ];
+  // Multi-block regions are unwrapped into scf.execute_region.
+  let dependentDialects = ["mlir::scf::SCFDialect"];
 }
 
 def ACCSpecializeForHost : Pass<"acc-specialize-for-host", "mlir::func::FuncOp"> {

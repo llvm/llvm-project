@@ -9,9 +9,6 @@
 #ifndef MLIR_DIALECT_LLVMIR_ROCDLDIALECTDECL_H
 #define MLIR_DIALECT_LLVMIR_ROCDLDIALECTDECL_H
 
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/Operation.h"
-
 #include "mlir/Dialect/LLVMIR/ROCDLOpsDialect.h.inc"
 
 #endif // MLIR_DIALECT_LLVMIR_ROCDLDIALECTDECL_H

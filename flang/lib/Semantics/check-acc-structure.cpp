@@ -318,7 +318,7 @@ void AccStructureChecker::CheckLoopLevelClauseValue(
           &context_.FindScope(GetContext().clauseSource))) {
     context_.Say(GetContext().clauseSource,
         "'%s(value)' not allowed in subprogram compiled with ROUTINE directive"_err_en_US,
-        clauseName.str());
+        clauseName);
     return;
   }
 
@@ -333,7 +333,7 @@ void AccStructureChecker::CheckLoopLevelClauseValue(
     }
   }
   context_.Say(GetContext().clauseSource,
-      "'%s(value)' not allowed in %s directive"_err_en_US, clauseName.str(),
+      "'%s(value)' not allowed in %s directive"_err_en_US, clauseName,
       parser::ToUpperCaseLetters(getDirectiveName(dir).str()));
 }
 
@@ -1102,6 +1102,10 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
             [&](const parser::Designator &designator) {
               if (const auto *name =
                       parser::GetDesignatorNameIfDataRef(designator)) {
+                if (!name->symbol) {
+                  // Name resolution has already reported the unresolved name.
+                  return;
+                }
                 if (declareSymbols.contains(&name->symbol->GetUltimate())) {
                   if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
                     context_.Warn(common::UsageWarning::OpenAccUsage,

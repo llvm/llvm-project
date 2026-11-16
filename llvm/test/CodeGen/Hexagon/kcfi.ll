@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=hexagon -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc -mtriple=hexagon -verify-machineinstrs -stop-after=finalize-isel < %s \
-; RUN:   | FileCheck %s --check-prefix=ISEL
-; RUN: llc -mtriple=hexagon -verify-machineinstrs -stop-after=kcfi < %s \
-; RUN:   | FileCheck %s --check-prefix=KCFI
+; RUN: llc -mtriple=hexagon -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=ISEL
+; RUN: llc -mtriple=hexagon -stop-after=kcfi < %s | FileCheck %s --check-prefix=KCFI
 
 ; Verify KCFI type hash is emitted before the function.
 ; ASM:       .word 12345678

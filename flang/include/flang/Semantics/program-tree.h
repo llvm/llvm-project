@@ -35,6 +35,8 @@ public:
       std::list<common::Reference<const parser::GenericSpec>>;
 
   // Build the ProgramTree rooted at one of these program units.
+  // The ProgramUnit overload requires a scope-bearing unit. Its caller must
+  // handle compiler directives, OpenACC ROUTINE, and ErrorRecovery separately.
   static ProgramTree &Build(const parser::ProgramUnit &, SemanticsContext &);
   static std::optional<ProgramTree> Build(
       const parser::MainProgram &, SemanticsContext &);

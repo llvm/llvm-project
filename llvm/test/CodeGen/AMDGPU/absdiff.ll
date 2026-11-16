@@ -2,18 +2,17 @@
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdpal < %s | FileCheck %s
 
 
-define amdgpu_gs float @absdiff_valu_input_regression() {
+define amdgpu_gs float @absdiff_valu_input_regression(i32 inreg %start) {
 ; CHECK-LABEL: absdiff_valu_input_regression:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:  .LBB0_1: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_mov_b32 s0, s1
-; CHECK-NEXT:    s_or_b32 s1, s1, 1
-; CHECK-NEXT:    s_cmp_gt_i32 s0, 0
+; CHECK-NEXT:    s_mov_b32 s1, s0
+; CHECK-NEXT:    s_or_b32 s0, s0, 1
+; CHECK-NEXT:    s_cmp_gt_i32 s1, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb11
-; CHECK-NEXT:    v_med3_i32 v0, s0, 0, 1
+; CHECK-NEXT:    v_med3_i32 v0, s1, 0, 1
 ; CHECK-NEXT:    v_sub_u32_e32 v0, 0, v0
 ; CHECK-NEXT:    v_sub_u32_e32 v1, 0, v0
 ; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
@@ -22,7 +21,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb
-  %i = phi i32 [ 0, %bb ], [ %i9, %bb1 ]
+  %i = phi i32 [ %start, %bb ], [ %i9, %bb1 ]
   %i2 = phi i32 [ 0, %bb ], [ %i5, %bb1 ]
   %i3 = or i32 %i2, 1
   %i4 = or i32 %i3, 0

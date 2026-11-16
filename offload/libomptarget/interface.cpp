@@ -14,8 +14,8 @@
 #include "OpenMP/OMPT/Interface.h"
 #include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OffloadRTL.h"
 #include "OpenMP/omp.h"
-#include "PluginManager.h"
 #include "omptarget.h"
 #include "private.h"
 
@@ -37,6 +37,7 @@
 using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
+using namespace llvm::omp::target::helpers;
 
 // If offload is enabled, ensure that device DeviceID has been initialized.
 //
@@ -186,8 +187,10 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
     if (StateInfo && !StateInfo->AttachEntries.empty())
       Rc = processAttachEntries(*DeviceOrErr, *StateInfo, AsyncInfo);
 
-    if (Rc == OFFLOAD_SUCCESS)
+    if (Rc == OFFLOAD_SUCCESS) {
+      printSyncInfo(Loc, DeviceId, AsyncInfo);
       Rc = AsyncInfo.synchronize();
+    }
   }
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
@@ -439,8 +442,10 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
   { // required to show synchronization
     TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: synchronize", "", Loc);
-    if (Rc == OFFLOAD_SUCCESS)
+    if (Rc == OFFLOAD_SUCCESS) {
+      printSyncInfo(Loc, DeviceId, AsyncInfo);
       Rc = AsyncInfo.synchronize();
+    }
 
     handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
     assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
@@ -592,12 +597,10 @@ EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
 }
 
 EXTERN int __tgt_print_device_info(int64_t DeviceId) {
-  assert(PM && "Runtime not initialized");
-  auto DeviceOrErr = PM->getDevice(DeviceId);
-  if (!DeviceOrErr)
-    FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
-
-  return DeviceOrErr->printDeviceInfo();
+  MESSAGE("The %s function is deprecated and no longer prints any "
+          "information. Use olGetDeviceInfo instead",
+          __PRETTY_FUNCTION__);
+  return false;
 }
 
 EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
@@ -646,12 +649,21 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
 
 EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
                                                              unsigned)) {
-  if (!PM)
+  if (!PM || !PM->isLibOffloadInitialized())
     return;
 
-  for (auto &Plugin : PM->plugins())
-    if (Plugin.is_initialized() && Plugin.getNumDevices() > 0)
-      Plugin.getRPCServer().registerCallback(Callback);
+  if (auto Err = iteratePlatforms(
+          [](ol_platform_handle_t Platform, void *Data) {
+            bool Active = false;
+            if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE,
+                                  sizeof(Active), &Active) == OL_SUCCESS &&
+                Active)
+              olPlatformRegisterRPCCallback(
+                  Platform, reinterpret_cast<ol_platform_rpc_cb_t>(Data));
+            return true;
+          },
+          reinterpret_cast<void *>(Callback)))
+    REPORT() << "Failed to iterate platforms: " << toString(std::move(Err));
 }
 
 EXTERN void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr) {

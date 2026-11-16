@@ -2,14 +2,17 @@
 // RUN:   -finline-functions -emit-llvm -disable-llvm-passes -o - \
 // RUN: | FileCheck -allow-deprecated-dag-overlap %s \
 // RUN:   --check-prefix=CHECK --check-prefix=SUITABLE
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -std=c++11 -triple=x86_64-linux -O2   -finline-functions -emit-llvm -disable-llvm-passes -o - | FileCheck -allow-deprecated-dag-overlap %s   --check-prefix=CHECK --check-prefix=SUITABLE %}
 // RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-linux -O2 \
 // RUN:   -finline-hint-functions -emit-llvm -disable-llvm-passes -o - \
 // RUN: | FileCheck -allow-deprecated-dag-overlap %s \
 // RUN:   --check-prefix=CHECK --check-prefix=HINTED
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -std=c++11 -triple=x86_64-linux -O2   -finline-hint-functions -emit-llvm -disable-llvm-passes -o - | FileCheck -allow-deprecated-dag-overlap %s   --check-prefix=CHECK --check-prefix=HINTED %}
 // RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-linux -O2 \
 // RUN:   -fno-inline -emit-llvm -disable-llvm-passes -o - \
 // RUN: | FileCheck -allow-deprecated-dag-overlap %s \
 // RUN:   --check-prefix=CHECK --check-prefix=NOINLINE
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -std=c++11 -triple=x86_64-linux -O2   -fno-inline -emit-llvm -disable-llvm-passes -o - | FileCheck -allow-deprecated-dag-overlap %s   --check-prefix=CHECK --check-prefix=NOINLINE %}
 
 struct A {
   inline void int_run(int);

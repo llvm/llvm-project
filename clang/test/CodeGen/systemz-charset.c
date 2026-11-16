@@ -61,7 +61,7 @@ const char *Unicode = "ÿ";
 #define HELLO_WORLD HELLO WORLD
 const char* hello_macro = HELLO;
 //CHECK: c"\C8\85\93\93\96@\00"
-//CHECK-UTF8 = c"Hello\00"
+//CHECK-UTF8: c"Hello \00"
 
 const char* preprocessor_concatenation = HELLO_WORLD;
 //CHECK: c"\C8\85\93\93\96@\E6\96\99\93\84Z\00"

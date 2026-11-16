@@ -218,14 +218,28 @@ template <typename SubPattern_t> struct Splat_match {
       auto *Splat = C->getSplatValue();
       return Splat ? SubPattern.match(Splat) : false;
     }
-    // TODO: Extend to other cases (e.g. shufflevectors).
-    return false;
+
+    auto *Shuffle = dyn_cast<ShuffleVectorInst>(V);
+    if (!Shuffle || !Shuffle->isZeroEltSplat())
+      return false;
+
+    // Look for an insertelement.
+    auto *Insert = dyn_cast<InsertElementInst>(Shuffle->getOperand(0));
+    if (!Insert)
+      return false;
+
+    Value *SplatElt = Insert->getOperand(1);
+    ConstantInt *Idx = dyn_cast<ConstantInt>(Insert->getOperand(2));
+    if (!Idx || !Idx->isZero())
+      return false;
+
+    return SubPattern.match(SplatElt);
   }
 };
 
-/// Match a constant splat. TODO: Extend this to non-constant splats.
-template <typename T>
-inline Splat_match<T> m_ConstantSplat(const T &SubPattern) {
+/// Match a vector splat. May be a constant splat or a shufflevector of the
+/// first element.
+template <typename T> inline Splat_match<T> m_Splat(const T &SubPattern) {
   return SubPattern;
 }
 
@@ -582,16 +596,18 @@ inline cst_pred_ty<is_non_zero_int> m_NonZeroInt() {
   return cst_pred_ty<is_non_zero_int>();
 }
 
-struct is_zero {
+template <bool AllowPoison> struct is_zero {
   template <typename ITy> bool match(ITy *V) const {
     auto *C = dyn_cast<Constant>(V);
     // FIXME: this should be able to do something for scalable vectors
-    return C && (C->isNullValue() || cst_pred_ty<is_zero_int>().match(C));
+    return C && (C->isNullValue() ||
+                 cst_pred_ty<is_zero_int, AllowPoison>().match(C));
   }
 };
 /// Match any null constant or a vector with all elements equal to 0.
 /// For vectors, this includes constants with undefined elements.
-inline is_zero m_Zero() { return is_zero(); }
+inline is_zero<true> m_Zero() { return is_zero<true>(); }
+inline is_zero<false> m_ZeroForbidPoison() { return is_zero<false>(); }
 
 inline auto m_ZeroOrPoison() { return m_CombineOr(m_Zero(), m_Poison()); }
 
@@ -1223,7 +1239,7 @@ inline BinaryOp_match<LHS, RHS, Instruction::FSub> m_FSub(const LHS &L,
   return BinaryOp_match<LHS, RHS, Instruction::FSub>(L, R);
 }
 
-template <typename Op_t> struct FNeg_match {
+template <typename Op_t, bool AllowFSubNegZero = false> struct FNeg_match {
   Op_t X;
 
   FNeg_match(const Op_t &Op) : X(Op) {}
@@ -1235,30 +1251,37 @@ template <typename Op_t> struct FNeg_match {
     if (FPMO->getOpcode() == Instruction::FNeg)
       return X.match(FPMO->getOperand(0));
 
-    if (FPMO->getOpcode() == Instruction::FSub) {
-      if (FPMO->hasNoSignedZeros()) {
-        // With 'nsz', any zero goes.
-        if (!cstfp_pred_ty<is_any_zero_fp>().match(FPMO->getOperand(0)))
-          return false;
-      } else {
-        // Without 'nsz', we need fsub -0.0, X exactly.
-        if (!cstfp_pred_ty<is_neg_zero_fp>().match(FPMO->getOperand(0)))
-          return false;
-      }
+    if constexpr (AllowFSubNegZero) {
+      if (FPMO->getOpcode() == Instruction::FSub) {
+        if (FPMO->hasNoSignedZeros()) {
+          // With 'nsz', any zero goes.
+          if (!cstfp_pred_ty<is_any_zero_fp>().match(FPMO->getOperand(0)))
+            return false;
+        } else {
+          // Without 'nsz', we need fsub -0.0, X exactly.
+          if (!cstfp_pred_ty<is_neg_zero_fp>().match(FPMO->getOperand(0)))
+            return false;
+        }
 
-      return X.match(FPMO->getOperand(1));
+        return X.match(FPMO->getOperand(1));
+      }
     }
 
     return false;
   }
 };
 
-/// Match 'fneg X' as 'fsub -0.0, X'.
-template <typename OpTy> inline FNeg_match<OpTy> m_FNeg(const OpTy &X) {
-  return FNeg_match<OpTy>(X);
+/// Match fneg X only
+template <typename OpTy> inline FNeg_match<OpTy, false> m_FNeg(const OpTy &X) {
+  return FNeg_match<OpTy, false>(X);
 }
 
-/// Match 'fneg X' as 'fsub +-0.0, X'.
+/// Match fneg X or fsub -0.0, X.
+template <typename OpTy>
+inline FNeg_match<OpTy, true> m_FNegOrFSubNegZero(const OpTy &X) {
+  return FNeg_match<OpTy, true>(X);
+}
+
 template <typename RHS>
 inline BinaryOp_match<cstfp_pred_ty<is_any_zero_fp>, RHS, Instruction::FSub>
 m_FNegNSZ(const RHS &X) {
@@ -1988,6 +2011,21 @@ m_ExtractElt(const Val_t &Val, const Idx_t &Idx) {
   return TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>(Val, Idx);
 }
 
+/// Matches BitInsertInst.
+template <typename Base_t, typename Val_t, typename Off_t>
+inline ThreeOps_match<Base_t, Val_t, Off_t, Instruction::BitInsert>
+m_BitInsert(const Base_t &Base, const Val_t &Val, const Off_t &Off) {
+  return ThreeOps_match<Base_t, Val_t, Off_t, Instruction::BitInsert>(Base, Val,
+                                                                      Off);
+}
+
+/// Matches BitExtractInst.
+template <typename Src_t, typename Off_t>
+inline TwoOps_match<Src_t, Off_t, Instruction::BitExtract>
+m_BitExtract(const Src_t &Src, const Off_t &Off) {
+  return TwoOps_match<Src_t, Off_t, Instruction::BitExtract>(Src, Off);
+}
+
 /// Matches shuffle.
 template <typename T0, typename T1, typename T2> struct Shuffle_match {
   T0 Op1;
@@ -2045,17 +2083,22 @@ struct m_SplatOrPoisonMask {
 };
 
 template <typename PointerOpTy, typename OffsetOpTy> struct PtrAdd_match {
+  const DataLayout &DL;
   PointerOpTy PointerOp;
   OffsetOpTy OffsetOp;
 
-  PtrAdd_match(const PointerOpTy &PointerOp, const OffsetOpTy &OffsetOp)
-      : PointerOp(PointerOp), OffsetOp(OffsetOp) {}
+  PtrAdd_match(const DataLayout &DL, const PointerOpTy &PointerOp,
+               const OffsetOpTy &OffsetOp)
+      : DL(DL), PointerOp(PointerOp), OffsetOp(OffsetOp) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
     auto *GEP = dyn_cast<GEPOperator>(V);
-    return GEP && GEP->getSourceElementType()->isIntegerTy(8) &&
-           PointerOp.match(GEP->getPointerOperand()) &&
-           OffsetOp.match(GEP->idx_begin()->get());
+    if (!GEP || !GEP->getSourceElementType()->isIntegerTy(8))
+      return false;
+    Value *Idx = *GEP->idx_begin();
+    unsigned IdxWidth = DL.getIndexTypeSizeInBits(GEP->getType());
+    return Idx->getType()->isIntOrIntVectorTy(IdxWidth) &&
+           PointerOp.match(GEP->getPointerOperand()) && OffsetOp.match(Idx);
   }
 };
 
@@ -2108,11 +2151,12 @@ inline auto m_GEP(const OperandTypes &...Ops) {
   return AnyOps_match<Instruction::GetElementPtr, OperandTypes...>(Ops...);
 }
 
-/// Matches GEP with i8 source element type
+/// Matches GEP with i8 source element type and canonical index type.
 template <typename PointerOpTy, typename OffsetOpTy>
 inline PtrAdd_match<PointerOpTy, OffsetOpTy>
-m_PtrAdd(const PointerOpTy &PointerOp, const OffsetOpTy &OffsetOp) {
-  return PtrAdd_match<PointerOpTy, OffsetOpTy>(PointerOp, OffsetOp);
+m_PtrAdd(const DataLayout &DL, const PointerOpTy &PointerOp,
+         const OffsetOpTy &OffsetOp) {
+  return PtrAdd_match<PointerOpTy, OffsetOpTy>(DL, PointerOp, OffsetOp);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2993,6 +3037,12 @@ template <typename LHS, typename RHS>
 inline CmpClass_match<LHS, RHS, ICmpInst, true> m_c_ICmp(const LHS &L,
                                                          const RHS &R) {
   return CmpClass_match<LHS, RHS, ICmpInst, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline CmpClass_match<LHS, RHS, CmpInst, true> m_c_Cmp(const LHS &L,
+                                                       const RHS &R) {
+  return CmpClass_match<LHS, RHS, CmpInst, true>(L, R);
 }
 
 /// Matches a specific opcode with LHS and RHS in either order.

@@ -2,10 +2,10 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.decorators import requireSocketPermission
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import DAPError
-from lldbsuite.test.tools.lldb_dap.utils import DebugAdapter
+from lldbsuite.test.tools.lldb_dap.utils import *
 
 
 class TestDAP_launch_termination(DAPTestCaseBase):
@@ -18,8 +18,7 @@ class TestDAP_launch_termination(DAPTestCaseBase):
     @requireSocketPermission
     def test_termination_socket(self):
         adapter = self.create_server_debug_adapter(
-            connection="listen://localhost:0",
-            connection_timeout=1,
+            DebugAdapterOptions(connection="listen://localhost:0", connection_timeout=1)
         )
         self.do_test_termination(adapter)
 

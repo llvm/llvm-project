@@ -43,10 +43,12 @@
 // compares the address of `__impl_ref<f>::__impl_` with the address of `f` loaded from
 // GOT: if `f` was overridden by the user in another TU, the addresses will be different.
 //
-// When pointer authentication is used, the above mechanism doesn't work (yet) so we use
-// a different strategy placing `f`'s definition (in the libc++ built library) inside
-// a special section, which we do using the `__section__` attribute via the
-// OVERRIDABLE_FUNCTION macro. Then, when comes the time to check whether the function has
+// When pointer authentication is used, the above mechanism doesn't work. It also doesn't work
+// with recent Mach-O linkers, which bind references to a weak definition directly (instead of
+// through a weak-def-coalesced GOT entry) when that definition has a local alias at the same
+// address. In both cases, we use a different strategy, placing `f`'s definition (in the libc++
+// built library) inside a special section, which we do using the `__section__` attribute via
+// the OVERRIDABLE_FUNCTION macro. Then, when comes the time to check whether the function has
 // been overridden, we take the address of the function and we check whether it falls inside
 // the special section we created. This can be done by finding pointers to the start and
 // the end of the section, and then checking whether `f` falls within those bounds.
@@ -63,7 +65,7 @@
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 
-#  if !__has_feature(ptrauth_calls)
+#  if !__has_feature(ptrauth_calls) && !defined(_LIBCPP_OBJECT_FORMAT_MACHO)
 
 #    define OVERRIDABLE_FUNCTION [[gnu::weak]]
 
@@ -112,7 +114,7 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#  else // __has_feature(ptrauth_calls)
+#  else // __has_feature(ptrauth_calls) || defined(_LIBCPP_OBJECT_FORMAT_MACHO)
 
 #    include <cstdint>
 #    include <ptrauth.h>
@@ -152,7 +154,7 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
 }
 _LIBCPP_END_NAMESPACE_STD
 
-#  endif // __has_feature(ptrauth_calls)
+#  endif // __has_feature(ptrauth_calls) || defined(_LIBCPP_OBJECT_FORMAT_MACHO)
 
 #else // defined(_LIBCPP_OBJECT_FORMAT_MACHO) || (defined(_LIBCPP_OBJECT_FORMAT_ELF) && !defined(__NVPTX__))
 

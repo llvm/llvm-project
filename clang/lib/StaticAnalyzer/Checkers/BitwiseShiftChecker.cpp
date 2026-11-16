@@ -331,7 +331,7 @@ const NoteTag *BitwiseShiftValidator::createNoteTag() const {
 std::unique_ptr<PathSensitiveBugReport>
 BitwiseShiftValidator::createBugReport(StringRef ShortMsg, StringRef Msg) const {
   ProgramStateRef State = Ctx.getState();
-  if (ExplodedNode *ErrNode = Ctx.generateErrorNode(State)) {
+  if (ExplodedNode *ErrNode = Ctx.addSink(State)) {
     auto BR =
         std::make_unique<PathSensitiveBugReport>(BT, ShortMsg, Msg, ErrNode);
     bugreporter::trackExpressionValue(ErrNode, Op->getLHS(), *BR);

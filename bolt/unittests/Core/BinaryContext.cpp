@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -53,7 +54,6 @@ protected:
 
   void initializeBOLT() {
     const Triple TheTriple = GetParam();
-    Relocation::Arch = TheTriple.getArch();
     // Minimal test ELFs have no RISC-V attributes. RISC-V needs an empty
     // feature set for +relax, while other targets reject a non-null one.
     SubtargetFeatures Features;
@@ -62,12 +62,15 @@ protected:
         ObjFile->getFileName(), TheTriple.isRISCV() ? &Features : nullptr, true,
         DWARFContext::create(*ObjFile), {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
+    BC->initializeRelocationHandler(
+        createRelocationHandler(TheTriple.getArch()));
   }
 
   char ElfBuf[sizeof(typename ELF64LE::Ehdr)] = {};
   std::unique_ptr<ObjectFile> ObjFile;
   std::unique_ptr<BinaryContext> BC;
 };
+
 } // namespace
 
 #ifdef X86_AVAILABLE
@@ -93,7 +96,7 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
-  // This test checks that encodeValueAArch64 used by flushPendingRelocations
+  // This test checks that AArch64 encodeValue used by flushPendingRelocations
   // returns correctly encoded values for CALL26 relocation for both backward
   // and forward branches.
   //
@@ -140,7 +143,7 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
-  // This test checks that encodeValueAArch64 used by flushPendingRelocations
+  // This test checks that AArch64 encodeValue used by flushPendingRelocations
   // returns correctly encoded values for R_AARCH64_JUMP26 relocation for both
   // backward and forward branches.
   //

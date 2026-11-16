@@ -24,6 +24,13 @@ def optimize_args_EQ : CommaJoined<["-", "--"], "optimize-args=">, HelpText<"Whi
 def eager_load_pcm : F<"eager-load-pcm", "Load PCM files eagerly (instead of lazily on import)">;
 def cache_negative_stats : F<"cache-negative-stats", "Cache stat failures">;
 
+defm invalidated_path
+    : Eq<"invalidated-path",
+         "Treat the given path as changed since the last scan, so that cached "
+         "modules reporting it in 'directory-deps' are rebuilt. Relative paths "
+         "are resolved against the current directory. May be given more than "
+         "once">;
+
 def j : Arg<"j", "Number of worker threads to use (default: use all concurrent threads)">;
 
 defm compilation_database : Eq<"compilation-database", "Compilation database">;

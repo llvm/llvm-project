@@ -258,3 +258,36 @@ module {
     return
   }
 }
+
+// -----
+
+// There is no atomic on i1; and/or/xor are applied to the byte it occupies.
+
+// CHECK-LABEL: llvm.func @convert_update_i1
+// CHECK: %[[OR:.*]] = llvm.zext %{{.*}} : i1 to i8
+// CHECK: llvm.atomicrmw _or %{{.*}}, %[[OR]] monotonic : !llvm.ptr, i8
+// CHECK: %[[AND:.*]] = llvm.zext %{{.*}} : i1 to i8
+// CHECK: llvm.atomicrmw _and %{{.*}}, %[[AND]] monotonic : !llvm.ptr, i8
+// CHECK: %[[XOR:.*]] = llvm.zext %{{.*}} : i1 to i8
+// CHECK: llvm.atomicrmw _xor %{{.*}}, %[[XOR]] monotonic : !llvm.ptr, i8
+
+module {
+  func.func @convert_update_i1(%x: memref<i1>, %val: i1) {
+    acc.atomic.update %x : memref<i1> {
+    ^bb0(%arg: i1):
+      %0 = arith.ori %arg, %val : i1
+      acc.yield %0 : i1
+    }
+    acc.atomic.update %x : memref<i1> {
+    ^bb0(%arg: i1):
+      %0 = arith.andi %arg, %val : i1
+      acc.yield %0 : i1
+    }
+    acc.atomic.update %x : memref<i1> {
+    ^bb0(%arg: i1):
+      %0 = arith.xori %arg, %val : i1
+      acc.yield %0 : i1
+    }
+    return
+  }
+}

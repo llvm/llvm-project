@@ -10304,7 +10304,7 @@ int bar(int n){
 // CHECK17-NEXT:    [[ADD11:%.*]] = fadd double [[CONV10]], 1.000000e+00
 // CHECK17-NEXT:    [[CONV12:%.*]] = fptrunc double [[ADD11]] to float
 // CHECK17-NEXT:    store float [[CONV12]], ptr [[ARRAYIDX9]], align 4, !llvm.access.group [[ACC_GRP34]]
-// CHECK17-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [5 x [10 x double]], ptr [[TMP3]], i64 0, i64 1
+// CHECK17-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr [5 x [10 x double]], ptr [[TMP3]], i64 0, i64 1
 // CHECK17-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds [10 x double], ptr [[ARRAYIDX13]], i64 0, i64 2
 // CHECK17-NEXT:    [[TMP19:%.*]] = load double, ptr [[ARRAYIDX14]], align 8, !llvm.access.group [[ACC_GRP34]]
 // CHECK17-NEXT:    [[ADD15:%.*]] = fadd double [[TMP19]], 1.000000e+00
@@ -11243,7 +11243,7 @@ int bar(int n){
 // CHECK19-NEXT:    [[ADD11:%.*]] = fadd double [[CONV10]], 1.000000e+00
 // CHECK19-NEXT:    [[CONV12:%.*]] = fptrunc double [[ADD11]] to float
 // CHECK19-NEXT:    store float [[CONV12]], ptr [[ARRAYIDX9]], align 4, !llvm.access.group [[ACC_GRP33]]
-// CHECK19-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [5 x [10 x double]], ptr [[TMP3]], i32 0, i32 1
+// CHECK19-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr [5 x [10 x double]], ptr [[TMP3]], i32 0, i32 1
 // CHECK19-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds [10 x double], ptr [[ARRAYIDX13]], i32 0, i32 2
 // CHECK19-NEXT:    [[TMP19:%.*]] = load double, ptr [[ARRAYIDX14]], align 8, !llvm.access.group [[ACC_GRP33]]
 // CHECK19-NEXT:    [[ADD15:%.*]] = fadd double [[TMP19]], 1.000000e+00
@@ -12182,7 +12182,7 @@ int bar(int n){
 // CHECK21-NEXT:    [[ADD11:%.*]] = fadd double [[CONV10]], 1.000000e+00
 // CHECK21-NEXT:    [[CONV12:%.*]] = fptrunc double [[ADD11]] to float
 // CHECK21-NEXT:    store float [[CONV12]], ptr [[ARRAYIDX9]], align 4, !llvm.access.group [[ACC_GRP34]]
-// CHECK21-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [5 x [10 x double]], ptr [[TMP3]], i64 0, i64 1
+// CHECK21-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr [5 x [10 x double]], ptr [[TMP3]], i64 0, i64 1
 // CHECK21-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds [10 x double], ptr [[ARRAYIDX13]], i64 0, i64 2
 // CHECK21-NEXT:    [[TMP19:%.*]] = load double, ptr [[ARRAYIDX14]], align 8, !llvm.access.group [[ACC_GRP34]]
 // CHECK21-NEXT:    [[ADD15:%.*]] = fadd double [[TMP19]], 1.000000e+00
@@ -13178,7 +13178,7 @@ int bar(int n){
 // CHECK23-NEXT:    [[ADD11:%.*]] = fadd double [[CONV10]], 1.000000e+00
 // CHECK23-NEXT:    [[CONV12:%.*]] = fptrunc double [[ADD11]] to float
 // CHECK23-NEXT:    store float [[CONV12]], ptr [[ARRAYIDX9]], align 4, !llvm.access.group [[ACC_GRP33]]
-// CHECK23-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [5 x [10 x double]], ptr [[TMP3]], i32 0, i32 1
+// CHECK23-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr [5 x [10 x double]], ptr [[TMP3]], i32 0, i32 1
 // CHECK23-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds [10 x double], ptr [[ARRAYIDX13]], i32 0, i32 2
 // CHECK23-NEXT:    [[TMP19:%.*]] = load double, ptr [[ARRAYIDX14]], align 8, !llvm.access.group [[ACC_GRP33]]
 // CHECK23-NEXT:    [[ADD15:%.*]] = fadd double [[TMP19]], 1.000000e+00
