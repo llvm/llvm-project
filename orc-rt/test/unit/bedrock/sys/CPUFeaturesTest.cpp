@@ -25,3 +25,15 @@ TEST(CPUFeaturesTest, DetectDoesNotCrash) {
 TEST(CPUFeaturesTest, CachedResultIsIdempotent) {
   EXPECT_EQ(sys::detectTargetCPUFeatures(), sys::detectTargetCPUFeatures());
 }
+
+// A temporary test to tide us over until the next branch lands.
+// We we enable regression testing for EPI.
+#if defined(_WIN32) && defined(_M_X64)
+TEST(CPUFeaturesTest, DetectsBaselineX86Features) {
+  auto Features = sys::detectTargetCPUFeatures();
+
+  EXPECT_NE(std::find(Features.begin(), Features.end(), "sse"), Features.end());
+  EXPECT_NE(std::find(Features.begin(), Features.end(), "sse2"),
+            Features.end());
+}
+#endif

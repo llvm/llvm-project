@@ -775,7 +775,8 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
       return Err;
     Current += sizeof(uint32_t);
 
-    size_t BindingDataSize = Resources.Stride * ResourceCount;
+    size_t BindingDataSize =
+        static_cast<size_t>(Resources.Stride) * ResourceCount;
     Resources.Data = Data.substr(Current - Data.begin(), BindingDataSize);
 
     if (Resources.Data.size() < BindingDataSize)
@@ -790,10 +791,10 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
   if (PSVVersion == 0)
     return Error::success();
 
-  // String table starts at a 4-byte offset.
-  Current = reinterpret_cast<const char *>(
-      alignTo<dxbc::DXCONTAINER_STRUCT_ALIGNMENT>(
-          reinterpret_cast<uintptr_t>(Current)));
+  // Align within the part: legacy signatures can leave the PSV part itself
+  // at an unaligned file offset.
+  Current = Data.begin() +
+            alignTo<dxbc::DXCONTAINER_STRUCT_ALIGNMENT>(Current - Data.begin());
 
   uint32_t StringTableSize = 0;
   if (Error Err = readInteger(Data, Current, StringTableSize))

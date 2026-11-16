@@ -35,7 +35,7 @@ end subroutine
 ! Outer parallel; the reduction struct is a per-thread alloca created inside it
 ! (before the inner parallel), so each outer thread has its own copy.
 ! CHECK:         omp.parallel {
-! CHECK:           %[[S:.*]] = fir.alloca !fir.type<_lp_cond_t{{.*}}> {pinned}
+! CHECK:           %[[S:.*]] = fir.alloca !fir.type<_lp_cond_t{{.*}}> <{pinned}>
 ! CHECK:           omp.parallel {
 ! The inner worksharing loop reduces into that per-outer-thread struct.
 ! CHECK:             omp.wsloop

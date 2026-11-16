@@ -524,7 +524,7 @@ for.body:
   br i1 %cond, label %if.then, label %for.inc
 
 if.then:
-  %inc = getelementptr inbounds i8, ptr %conditional, i32 4
+  %inc = getelementptr inbounds i8, ptr %conditional, i64 4
   br label %for.inc
 
 for.inc:
@@ -637,7 +637,7 @@ for.body:
   br i1 %cond, label %if.then, label %for.inc
 
 if.then:
-  %dec = getelementptr nusw i8, ptr %conditional, i32 -4
+  %dec = getelementptr nusw i8, ptr %conditional, i64 -4
   br label %for.inc
 
 for.inc:
@@ -678,6 +678,6 @@ for.end:
         EXPECT_EQ(Desc.getStepSCEV(), StepSCEV);
 
         // Check we don't add `nuw` when we have a negative GEP step.
-        EXPECT_EQ(Desc.getSCEVNoWrapFlags(), SCEV::FlagAnyWrap);
+        EXPECT_EQ(Desc.getSCEVNoWrapFlags(), SCEV::FlagNone);
       });
 }

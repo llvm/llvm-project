@@ -14,11 +14,16 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 bool canTryToConstantAddTwoShiftAmounts(Value *Sh0, Value *ShAmt0, Value *Sh1,
                                         Value *ShAmt1) {
@@ -575,7 +580,7 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
 static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
                                     ShiftSemantics Semantics,
                                     Instruction *InnerShift,
-                                    InstCombinerImpl &IC, Instruction *CxtI) {
+                                    InstCombinerImpl &IC, Instruction *CtxI) {
   assert(InnerShift->isLogicalShift() && "Unexpected instruction type");
 
   // We need constant scalar or constant splat shifts.
@@ -612,7 +617,7 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
     unsigned MaskShift =
         IsInnerShl ? TypeWidth - InnerShAmt : InnerShAmt - OuterShAmt;
     APInt Mask = APInt::getLowBitsSet(TypeWidth, OuterShAmt) << MaskShift;
-    if (IC.MaskedValueIsZero(InnerShift->getOperand(0), Mask, CxtI))
+    if (IC.MaskedValueIsZero(InnerShift->getOperand(0), Mask, CtxI))
       return true;
   }
 
@@ -633,7 +638,7 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
 bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
                                           bool IsLeftShift,
                                           ShiftSemantics Semantics,
-                                          Instruction *CxtI) {
+                                          Instruction *CtxI) {
   // We can always evaluate immediate constants shifted left. For right shifts,
   // the constant must be a multiple of 2^NumBits to avoid losing information.
   if (match(V, m_ImmConstant())) {
@@ -666,7 +671,7 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
   case Instruction::Shl:
   case Instruction::LShr:
     return canEvaluateShiftedShift(NumBits, IsLeftShift, Semantics, I, *this,
-                                   CxtI);
+                                   CtxI);
 
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);
@@ -923,6 +928,25 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
     return CastInst::Create(ExtOpcode, Cmp, Ty);
   }
 
+  // (ext(A) * ext(B)) >> (Width / 2)  -->  ext([su]mulh(A, B))
+  // A and B must be equally extended to double their original width.
+  // The result is sign/zero-extended for an arithmetic/logical shift.
+  Value *A, *B;
+  Instruction *ExtA, *ExtB;
+  if (!IsLeftShift && match(C1, m_SpecificIntAllowPoison(TypeBits / 2)) &&
+      match(Op0,
+            m_OneUse(m_Mul(m_Instruction(ExtA, m_ZExtOrSExt(m_Value(A))),
+                           m_Instruction(ExtB, m_ZExtOrSExt(m_Value(B)))))) &&
+      ExtA->getOpcode() == ExtB->getOpcode() && A->getType() == B->getType() &&
+      TypeBits == 2 * A->getType()->getScalarSizeInBits()) {
+    auto IID = ExtA->getOpcode() == Instruction::SExt ? Intrinsic::smulh
+                                                      : Intrinsic::umulh;
+    Value *MulHigh = Builder.CreateBinaryIntrinsic(IID, A, B);
+    auto ExtOp = I.getOpcode() == Instruction::LShr ? Instruction::ZExt
+                                                    : Instruction::SExt;
+    return CastInst::Create(ExtOp, MulHigh, Ty);
+  }
+
   const APInt *Op1C;
   if (!match(C1, m_APInt(Op1C)))
     return nullptr;
@@ -994,7 +1018,9 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), FalseVal, C1);
       Value *NewOp = Builder.CreateBinOp(TBO->getOpcode(), NewShift, NewRHS);
-      return SelectInst::Create(Cond, NewOp, NewShift);
+      return SelectInst::Create(
+          Cond, NewOp, NewShift, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op0));
     }
   }
 
@@ -1011,7 +1037,9 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), TrueVal, C1);
       Value *NewOp = Builder.CreateBinOp(FBO->getOpcode(), NewShift, NewRHS);
-      return SelectInst::Create(Cond, NewShift, NewOp);
+      return SelectInst::Create(
+          Cond, NewShift, NewOp, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op0));
     }
   }
 
@@ -1132,7 +1160,7 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
     if (!I.hasNoSignedWrap()) {
       if (MaxCnt < KnownAmt.countMinSignBits() ||
           MaxCnt <
-              ComputeNumSignBits(I.getOperand(0), Q.DL, Q.AC, Q.CxtI, Q.DT)) {
+              ComputeNumSignBits(I.getOperand(0), Q.DL, Q.AC, Q.CtxI, Q.DT)) {
         I.setHasNoSignedWrap();
         Changed = true;
       }
@@ -1573,7 +1601,9 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       if (SrcTyBitWidth == 1) {
         auto *NewC = ConstantInt::get(
             Ty, APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
-        return SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
+        auto *SI = SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
+        setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+        return SI;
       }
 
       if ((!Ty->isIntegerTy() || shouldChangeType(Ty, X->getType())) &&
@@ -1709,18 +1739,6 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
           return BinaryOperator::CreateShl(NewZExt, ShiftDiff);
         }
       }
-    }
-
-    // Reduce add-carry of bools to logic:
-    // ((zext BoolX) + (zext BoolY)) >> 1 --> zext (BoolX && BoolY)
-    Value *BoolX, *BoolY;
-    if (ShAmtC == 1 && match(Op0, m_Add(m_Value(X), m_Value(Y))) &&
-        match(X, m_ZExt(m_Value(BoolX))) && match(Y, m_ZExt(m_Value(BoolY))) &&
-        BoolX->getType()->isIntOrIntVectorTy(1) &&
-        BoolY->getType()->isIntOrIntVectorTy(1) &&
-        (X->hasOneUse() || Y->hasOneUse() || Op0->hasOneUse())) {
-      Value *And = Builder.CreateAnd(BoolX, BoolY);
-      return new ZExtInst(And, Ty);
     }
   }
 

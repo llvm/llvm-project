@@ -282,3 +282,17 @@ func.func @compute_construct(%arg0: memref<f32>) {
   }
   return
 }
+
+// A synthetic clause exists only for the implementation's own bookkeeping, so
+// it is not reported even though it has a variable name. Here it would
+// otherwise duplicate the report of the copy clause it was created to support.
+func.func @synthetic_clause(%arg0: memref<f32>, %arg1: memref<f32>) {
+  // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=synthetic_clause | Remark="Generating copy(a) [if not already present]"
+  %copy = acc.copyin varPtr(%arg0 : memref<f32>) dataClause(acc_copy) name("a") -> memref<f32>
+  %base = acc.present varPtr(%arg1 : memref<f32>) implicit(true) synthetic name("a") -> memref<f32>
+  acc.data dataOperands(%copy, %base : memref<f32>, memref<f32>) {
+    acc.terminator
+  }
+  return
+}
+// CHECK-NOT: Remark="Generating implicit present(a)"

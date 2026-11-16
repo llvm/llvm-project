@@ -55,12 +55,24 @@ typedef struct hsa_signal_s {
 typedef struct hsa_loaded_code_object_s {
   uint64_t handle;
 } hsa_loaded_code_object_t;
+typedef struct hsa_code_object_reader_s {
+  uint64_t handle;
+} hsa_code_object_reader_t;
+
+// POSIX file descriptor, or a Win32 HANDLE stored as void* so windows.h stays
+// out of this mirror.
+#if defined(_WIN32) || defined(_WIN64)
+typedef void* hsa_file_t;
+#else
+typedef int hsa_file_t;
+#endif
 
 typedef int64_t hsa_signal_value_t;
 
 typedef enum {
   HSA_STATUS_SUCCESS = 0,
-  HSA_STATUS_ERROR = 0x1001,
+  HSA_STATUS_INFO_BREAK = 0x1,
+  HSA_STATUS_ERROR = 0x1000,
 } hsa_status_t;
 
 typedef enum {
@@ -69,6 +81,7 @@ typedef enum {
 } hsa_device_type_t;
 
 typedef enum {
+  HSA_AGENT_INFO_NAME = 0,
   HSA_AGENT_INFO_WAVEFRONT_SIZE = 6,
   HSA_AGENT_INFO_DEVICE = 17,
 } hsa_agent_info_t;
@@ -78,10 +91,12 @@ typedef enum { HSA_AMD_SEGMENT_GLOBAL = 0 } hsa_amd_segment_t;
 typedef enum {
   HSA_AMD_MEMORY_POOL_INFO_SEGMENT = 0,
   HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS = 1,
+  HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED = 5,
 } hsa_amd_memory_pool_info_t;
 
 typedef enum {
   HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED = 2,
+  HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED = 4,
 } hsa_amd_memory_pool_global_flag_t;
 
 typedef enum {
@@ -98,6 +113,13 @@ typedef enum {
 } hsa_wait_state_t;
 
 typedef enum {
+  HSA_SYMBOL_KIND_VARIABLE = 0,
+} hsa_symbol_kind_t;
+
+typedef enum {
+  HSA_EXECUTABLE_SYMBOL_INFO_TYPE = 0,
+  HSA_EXECUTABLE_SYMBOL_INFO_NAME_LENGTH = 1,
+  HSA_EXECUTABLE_SYMBOL_INFO_NAME = 2,
   HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS = 21,
 } hsa_executable_symbol_info_t;
 
@@ -123,11 +145,27 @@ typedef enum {
   HSA_VEN_AMD_LOADER_CODE_OBJECT_STORAGE_TYPE_MEMORY = 2,
 } hsa_ven_amd_loader_code_object_storage_type_t;
 
-// Version 1.01 of HSA_EXTENSION_AMD_LOADER. Slot order is the extension ABI.
+// hsa_ven_amd_loader_segment_descriptor_t. storage type is uint32_t so the
+// mirror does not depend on the compiler's enum width.
+struct hsa_ven_amd_loader_segment_descriptor_t {
+  hsa_agent_t agent;
+  hsa_executable_t executable;
+  uint32_t code_object_storage_type;
+  const void* code_object_storage_base;
+  size_t code_object_storage_size;
+  size_t code_object_storage_offset;
+  const void* segment_base;
+  size_t segment_size;
+};
+static_assert(sizeof(hsa_ven_amd_loader_segment_descriptor_t) == 64,
+              "layout drift");
+
+// Version 1.04 of HSA_EXTENSION_AMD_LOADER. Slot order is the extension ABI.
 struct LoaderApi {
   hsa_status_t (*QueryHostAddress)(const void*, const void**);
-  void* UnusedQuerySegmentDescriptors;
-  void* UnusedQueryExecutable;
+  hsa_status_t (*QuerySegmentDescriptors)(
+      hsa_ven_amd_loader_segment_descriptor_t*, size_t*);
+  hsa_status_t (*QueryExecutable)(const void*, hsa_executable_t*);
   hsa_status_t (*IterateLoadedCodeObjects)(
       hsa_executable_t,
       hsa_status_t (*)(hsa_executable_t, hsa_loaded_code_object_t, void*),
@@ -135,8 +173,18 @@ struct LoaderApi {
   hsa_status_t (*GetCodeObjectInfo)(
       hsa_loaded_code_object_t, hsa_ven_amd_loader_loaded_code_object_info_t,
       void*);
+  hsa_status_t (*CreateCodeObjectReaderFromFile)(hsa_file_t, size_t, size_t,
+                                                 hsa_code_object_reader_t*);
+  hsa_status_t (*IterateExecutables)(hsa_status_t (*)(hsa_executable_t, void*),
+                                     void*);
+  hsa_status_t (*CodeObjectReaderGetLoadSize)(hsa_code_object_reader_t,
+                                              size_t*);
+  hsa_status_t (*LoadAgentCodeObjectAtAddress)(hsa_executable_t, hsa_agent_t,
+                                               hsa_code_object_reader_t,
+                                               const char*, void*, size_t,
+                                               hsa_loaded_code_object_t*);
 };
-static_assert(sizeof(LoaderApi) == 5 * sizeof(void*), "layout drift");
+static_assert(sizeof(LoaderApi) == 9 * sizeof(void*), "layout drift");
 
 hsa_status_t hsa_init(void);
 hsa_status_t hsa_shut_down(void);
@@ -154,6 +202,11 @@ hsa_status_t hsa_executable_get_symbol_by_name(hsa_executable_t executable,
 hsa_status_t hsa_executable_symbol_get_info(
     hsa_executable_symbol_t symbol, hsa_executable_symbol_info_t attribute,
     void* value);
+hsa_status_t hsa_executable_iterate_agent_symbols(
+    hsa_executable_t executable, hsa_agent_t agent,
+    hsa_status_t (*callback)(hsa_executable_t, hsa_agent_t,
+                             hsa_executable_symbol_t, void*),
+    void* data);
 hsa_status_t hsa_amd_memory_pool_allocate(hsa_amd_memory_pool_t memory_pool,
                                           size_t size, uint32_t flags,
                                           void** ptr);

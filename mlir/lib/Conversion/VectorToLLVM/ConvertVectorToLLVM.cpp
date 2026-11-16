@@ -8,7 +8,7 @@
 
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 
-#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ArithAttrToLLVM/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/PrintCallHelper.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -726,6 +726,14 @@ template <>
 struct VectorToScalarMapper<LLVM::vector_reduce_fmin> {
   using Type = LLVM::MinNumOp;
 };
+template <>
+struct VectorToScalarMapper<LLVM::vector_reduce_fmaximumnum> {
+  using Type = LLVM::MaximumNumOp;
+};
+template <>
+struct VectorToScalarMapper<LLVM::vector_reduce_fminimumnum> {
+  using Type = LLVM::MinimumNumOp;
+};
 } // namespace
 
 template <class LLVMRedIntrinOp>
@@ -741,6 +749,62 @@ static Value createFPReductionComparisonOpLowering(
   }
 
   return result;
+}
+
+/// Mask neutral classes for overloading.
+class MaskNeutralFMaximumNum {};
+class MaskNeutralFMinimumNum {};
+
+/// Get the mask neutral value for a `fmaximumnum` reduction. `maximumnum`
+/// ignores NaN operands, making a quiet NaN the identity element. When `nnan`
+/// promises no NaN reaches the reduction, fall back to the smallest
+/// representable value, which `ninf` further constrains to be finite.
+static llvm::APFloat getMaskNeutralValue(MaskNeutralFMaximumNum,
+                                         const llvm::fltSemantics &semantics,
+                                         bool noNaNs, bool noInfs) {
+  if (!noNaNs)
+    return llvm::APFloat::getQNaN(semantics);
+  if (noInfs)
+    return llvm::APFloat::getLargest(semantics, /*Negative=*/true);
+  return llvm::APFloat::getInf(semantics, /*Negative=*/true);
+}
+
+/// Get the mask neutral value for a `fminimumnum` reduction. See the
+/// `fmaximumnum` overload above for the rationale.
+static llvm::APFloat getMaskNeutralValue(MaskNeutralFMinimumNum,
+                                         const llvm::fltSemantics &semantics,
+                                         bool noNaNs, bool noInfs) {
+  if (!noNaNs)
+    return llvm::APFloat::getQNaN(semantics);
+  if (noInfs)
+    return llvm::APFloat::getLargest(semantics);
+  return llvm::APFloat::getInf(semantics);
+}
+
+/// Lowers masked `fmaximumnum` and `fminimumnum` reductions using the
+/// non-masked intrinsics, since LLVM has no predicated counterpart for them.
+/// Inactive lanes are replaced by a mask neutral value before reducing.
+/// TODO: Switch to `lowerPredicatedReductionWithStartValue` once
+/// `llvm.vp.reduce.fmaximumnum`/`fminimumnum` are added to LLVM IR.
+template <class LLVMRedIntrinOp, class MaskNeutral>
+static Value
+lowerMaskedReductionWithRegular(ConversionPatternRewriter &rewriter,
+                                Location loc, Type llvmType,
+                                Value vectorOperand, Value accumulator,
+                                Value mask, LLVM::FastmathFlagsAttr fmf) {
+  const auto &floatSemantics = cast<FloatType>(llvmType).getFloatSemantics();
+  auto value = getMaskNeutralValue(
+      MaskNeutral{}, floatSemantics,
+      LLVM::bitEnumContainsAny(fmf.getValue(), LLVM::FastmathFlags::nnan),
+      LLVM::bitEnumContainsAny(fmf.getValue(), LLVM::FastmathFlags::ninf));
+  Type vectorType = vectorOperand.getType();
+  auto denseValue = DenseElementsAttr::get(cast<ShapedType>(vectorType), value);
+  const Value vectorMaskNeutral =
+      LLVM::ConstantOp::create(rewriter, loc, vectorType, denseValue);
+  const Value selectedVectorByMask = LLVM::SelectOp::create(
+      rewriter, loc, mask, vectorOperand, vectorMaskNeutral);
+  return createFPReductionComparisonOpLowering<LLVMRedIntrinOp>(
+      rewriter, loc, llvmType, selectedVectorByMask, accumulator, fmf);
 }
 
 template <class LLVMRedIntrinOp, class ReductionNeutral>
@@ -797,7 +861,7 @@ public:
   matchAndRewrite(vector::ReductionOp reductionOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto kind = reductionOp.getKind();
-    Type eltType = reductionOp.getDest().getType();
+    Type eltType = reductionOp.getResult().getType();
     Type llvmType = typeConverter->convertType(eltType);
     Value operand = adaptor.getVector();
     Value acc = adaptor.getAcc();
@@ -879,29 +943,46 @@ public:
 
     // Floating-point reductions: add/mul/min/max
     Value result;
-    if (kind == vector::CombiningKind::ADD) {
+    switch (kind) {
+    case vector::CombiningKind::ADD:
       result = lowerReductionWithStartValue<LLVM::vector_reduce_fadd,
                                             ReductionNeutralZero>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MUL) {
+      break;
+    case vector::CombiningKind::MUL:
       result = lowerReductionWithStartValue<LLVM::vector_reduce_fmul,
                                             ReductionNeutralFPOne>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MINIMUMF) {
+      break;
+    case vector::CombiningKind::MINIMUMF:
       result =
           createFPReductionComparisonOpLowering<LLVM::vector_reduce_fminimum>(
               rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MAXIMUMF) {
+      break;
+    case vector::CombiningKind::MAXIMUMF:
       result =
           createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmaximum>(
               rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MINNUMF) {
+      break;
+    case vector::CombiningKind::MINNUMF:
       result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmin>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MAXNUMF) {
+      break;
+    case vector::CombiningKind::MAXNUMF:
       result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmax>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else {
+      break;
+    case vector::CombiningKind::MAXIMUMNUMF:
+      result = createFPReductionComparisonOpLowering<
+          LLVM::vector_reduce_fmaximumnum>(rewriter, loc, llvmType, operand,
+                                           acc, fmf);
+      break;
+    case vector::CombiningKind::MINIMUMNUMF:
+      result = createFPReductionComparisonOpLowering<
+          LLVM::vector_reduce_fminimumnum>(rewriter, loc, llvmType, operand,
+                                           acc, fmf);
+      break;
+    default:
       return failure();
     }
 
@@ -956,7 +1037,7 @@ public:
       ConversionPatternRewriter &rewriter) const override {
     auto reductionOp = cast<ReductionOp>(maskableOp.getOperation());
     auto kind = reductionOp.getKind();
-    Type eltType = reductionOp.getDest().getType();
+    Type eltType = reductionOp.getResult().getType();
     Type llvmType = typeConverter->convertType(eltType);
     Value operand = reductionOp.getVector();
     Value acc = reductionOp.getAcc();
@@ -1051,6 +1132,16 @@ public:
                     LLVM::VPReduceFMinimumOp, ReductionNeutralFPPosInf>(
                     rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
+    case CombiningKind::MAXIMUMNUMF:
+      result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fmaximumnum,
+                                               MaskNeutralFMaximumNum>(
+          rewriter, loc, llvmType, operand, acc, maskOp.getMask(), fmf);
+      break;
+    case CombiningKind::MINIMUMNUMF:
+      result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fminimumnum,
+                                               MaskNeutralFMinimumNum>(
+          rewriter, loc, llvmType, operand, acc, maskOp.getMask(), fmf);
+      break;
     }
 
     // Replace `vector.mask` operation altogether.
@@ -1108,6 +1199,11 @@ public:
     Value insert = LLVM::PoisonOp::create(rewriter, loc, llvmType);
     int64_t insPos = 0;
     for (int64_t extPos : mask) {
+      // The result starts as poison, so a poison index needs no insertion.
+      if (extPos == vector::ShuffleOp::kPoisonIndex) {
+        ++insPos;
+        continue;
+      }
       Value value = adaptor.getV1();
       if (extPos >= v1Dim) {
         extPos -= v1Dim;
@@ -2094,10 +2190,12 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
 
   Type opResType = op.getType();
   VectorType vecType = dyn_cast<VectorType>(opResType);
-  if (vecType && vecType.isScalable()) {
-    // Note - this is sufficient to reject all cases with scalable vectors.
+  if (vecType && vecType.isScalable())
     return failure();
-  }
+  // The result type only reflects the M and N dims, so a scalable K
+  // (reduction) dim would slip through the check above.
+  if (op.getLhsType().isScalable() || op.getRhsType().isScalable())
+    return failure();
 
   Type elementType = op.getLhsType().getElementType();
   if (!elementType.isIntOrFloat())

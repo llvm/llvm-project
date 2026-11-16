@@ -8,6 +8,7 @@ from lldbsuite.test import lldbutil
 
 
 class TemplateSpecializationTypeTestCase(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_template_specialization_cast_children(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

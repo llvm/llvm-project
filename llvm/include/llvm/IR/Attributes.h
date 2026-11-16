@@ -27,6 +27,7 @@
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
+#include <climits>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -122,14 +123,14 @@ public:
   ///                      an exception might pass by.
   /// uwtable + nounwind = Needs an entry because the ABI says so.
 
-  enum AttrKind {
+  enum AttrKind : unsigned {
     // IR-Level Attributes
-    None,                  ///< No attributes have been set
-    #define GET_ATTR_ENUM
+    None, ///< No attributes have been set
+#define GET_ATTR_ENUM
     #include "llvm/IR/Attributes.inc"
-    EndAttrKinds,          ///< Sentinel value useful for loops
-    EmptyKey,              ///< Use as Empty key for DenseMap of AttrKind
-    TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
+    EndAttrKinds, ///< Sentinel value useful for loops
+    EmptyKey,     ///< Use as Empty key for DenseMap of AttrKind
+    TombstoneKey, ///< Use as Tombstone key for DenseMap of AttrKind
   };
 
   static const unsigned NumEnumAttrKinds = LastEnumAttr - FirstEnumAttr + 1;
@@ -234,10 +235,6 @@ public:
   LLVM_ABI static Attribute::AttrKind getAttrKindFromName(StringRef AttrName);
 
   LLVM_ABI static StringRef getNameFromAttrKind(Attribute::AttrKind AttrKind);
-
-  /// Return true if the provided string matches the IR name of an attribute.
-  /// example: "noalias" return true but not "NoAlias"
-  LLVM_ABI static bool isExistingAttribute(StringRef Name);
 
   //===--------------------------------------------------------------------===//
   // Attribute Accessors
@@ -401,6 +398,47 @@ inline Attribute unwrap(LLVMAttributeRef Attr) {
   return Attribute::fromRawPointer(Attr);
 }
 
+/// A bitset with a bit for each enum attribute kind.
+class AttributeBitSet {
+  uint8_t AvailableAttrs[16] = {};
+  static_assert(Attribute::EndAttrKinds <= sizeof(AvailableAttrs) * CHAR_BIT,
+                "Too many attributes");
+
+public:
+  bool hasAttribute(Attribute::AttrKind Kind) const {
+    return AvailableAttrs[Kind / 8] & (1 << (Kind % 8));
+  }
+
+  void addAttribute(Attribute::AttrKind Kind) {
+    AvailableAttrs[Kind / 8] |= 1 << (Kind % 8);
+  }
+};
+
+/// The enum attributes available in an AttributeSetNode, so that AttributeSet
+/// can query them inline.
+class AttributeSetNodeBase {
+protected:
+  AttributeBitSet AvailableAttrs;
+
+public:
+  bool hasAttribute(Attribute::AttrKind Kind) const {
+    return AvailableAttrs.hasAttribute(Kind);
+  }
+};
+
+/// The enum function attributes available in an AttributeListImpl, so that
+/// AttributeList can query them inline.
+class AttributeListImplBase {
+protected:
+  AttributeBitSet AvailableFunctionAttrs;
+
+public:
+  /// Return true if the function has an enum attribute of the given kind.
+  bool hasFnAttribute(Attribute::AttrKind Kind) const {
+    return AvailableFunctionAttrs.hasAttribute(Kind);
+  }
+};
+
 //===----------------------------------------------------------------------===//
 /// \class
 /// This class holds the attributes for a particular argument, parameter,
@@ -416,10 +454,13 @@ class AttributeSet {
   // removeAttribute for enum attrs.
 
   /// Private implementation pointer.
-  AttributeSetNode *SetNode = nullptr;
+  AttributeSetNodeBase *SetNode = nullptr;
 
 private:
-  explicit AttributeSet(AttributeSetNode *ASN) : SetNode(ASN) {}
+  LLVM_ABI explicit AttributeSet(AttributeSetNode *ASN);
+
+  /// Return the implementation of this set.
+  AttributeSetNode *getNode() const;
 
 public:
   /// AttributeSet is a trivially copyable value type.
@@ -453,6 +494,13 @@ public:
   LLVM_ABI AttributeSet addAttributes(LLVMContext &C,
                                       const AttrBuilder &B) const;
 
+  /// Add attributes to the attribute set, replacing attributes of the same
+  /// kind. \p Attrs must be sorted like an attribute set, with at most one
+  /// attribute of each kind. Returns a new set because attribute sets are
+  /// immutable.
+  [[nodiscard]] LLVM_ABI AttributeSet
+  addSortedAttributes(LLVMContext &C, ArrayRef<Attribute> Attrs) const;
+
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
   [[nodiscard]] LLVM_ABI AttributeSet
@@ -481,7 +529,9 @@ public:
   bool hasAttributes() const { return SetNode != nullptr; }
 
   /// Return true if the attribute exists in this set.
-  LLVM_ABI bool hasAttribute(Attribute::AttrKind Kind) const;
+  bool hasAttribute(Attribute::AttrKind Kind) const {
+    return SetNode && SetNode->hasAttribute(Kind);
+  }
 
   /// Return true if the attribute exists in this set.
   LLVM_ABI bool hasAttribute(StringRef Kind) const;
@@ -573,7 +623,10 @@ private:
 
   /// The attributes that we are managing. This can be null to represent
   /// the empty attributes list.
-  AttributeListImpl *pImpl = nullptr;
+  AttributeListImplBase *pImpl = nullptr;
+
+  /// Return the implementation of this list.
+  AttributeListImpl *getListImpl() const;
 
 public:
   /// Create an AttributeList with the specified parameters in it.
@@ -589,7 +642,7 @@ public:
                                     ArrayRef<AttributeSet> ArgAttrs);
 
 private:
-  explicit AttributeList(AttributeListImpl *LI) : pImpl(LI) {}
+  LLVM_ABI explicit AttributeList(AttributeListImpl *LI);
 
   static AttributeList getImpl(LLVMContext &C, ArrayRef<AttributeSet> AttrSets);
 
@@ -643,6 +696,12 @@ public:
   [[nodiscard]] LLVM_ABI AttributeList addAttributesAtIndex(
       LLVMContext &C, unsigned Index, const AttrBuilder &B) const;
 
+  /// Add attributes to the attribute set at the given index, as
+  /// AttributeSet::addAttributes does. Returns a new list because attribute
+  /// lists are immutable.
+  [[nodiscard]] LLVM_ABI AttributeList addSortedAttributesAtIndex(
+      LLVMContext &C, unsigned Index, ArrayRef<Attribute> Attrs) const;
+
   /// Add a function attribute to the list. Returns a new list because
   /// attribute lists are immutable.
   [[nodiscard]] AttributeList addFnAttribute(LLVMContext &C,
@@ -693,6 +752,15 @@ public:
     return addAttributesAtIndex(C, ReturnIndex, B);
   }
 
+  /// Add a return value attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  [[nodiscard]] AttributeList
+  maybeAddRetAttribute(LLVMContext &C, Attribute::AttrKind Kind) const {
+    if (Kind != Attribute::AttrKind::None)
+      return addAttributeAtIndex(C, ReturnIndex, Kind);
+    return *this;
+  }
+
   /// Add an argument attribute to the list. Returns a new list because
   /// attribute lists are immutable.
   [[nodiscard]] AttributeList
@@ -719,6 +787,16 @@ public:
   [[nodiscard]] AttributeList addParamAttributes(LLVMContext &C, unsigned ArgNo,
                                                  const AttrBuilder &B) const {
     return addAttributesAtIndex(C, ArgNo + FirstArgIndex, B);
+  }
+
+  /// Add an argument attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  [[nodiscard]] AttributeList
+  maybeAddParamAttribute(LLVMContext &C, unsigned ArgNo,
+                         Attribute::AttrKind Kind) const {
+    if (Kind != Attribute::AttrKind::None)
+      return addParamAttribute(C, ArgNo, Kind);
+    return *this;
   }
 
   /// Remove the specified attribute at the specified index from this
@@ -925,7 +1003,9 @@ public:
   bool hasRetAttrs() const { return hasAttributesAtIndex(ReturnIndex); }
 
   /// Return true if the attribute exists for the function.
-  LLVM_ABI bool hasFnAttr(Attribute::AttrKind Kind) const;
+  bool hasFnAttr(Attribute::AttrKind Kind) const {
+    return pImpl && pImpl->hasFnAttribute(Kind);
+  }
 
   /// Return true if the attribute exists for the function.
   LLVM_ABI bool hasFnAttr(StringRef Kind) const;
@@ -1401,6 +1481,10 @@ LLVM_ABI AttributeMask typeIncompatible(Type *Ty, AttributeSet AS,
 /// include attributes like nocapture, which constrain the function
 /// implementation rather than the passed value.
 LLVM_ABI AttributeMask getUBImplyingAttributes();
+
+/// Get param/return attributes which make an invalid value poison, e.g.,
+/// nonnull, where null becomes poison.
+LLVM_ABI AttributeMask getPoisonGeneratingAttributes();
 
 /// \returns Return true if the two functions have compatible target-independent
 /// attributes for inlining purposes.

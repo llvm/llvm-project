@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 define void @f() #0 {
   ret void
@@ -12,11 +12,17 @@ define void @h() #2 {
   ret void
 }
 
+define void @i() #3 {
+  ret void
+}
+
 attributes #0 = {
 ; CHECK:  invalid value for 'sign-return-address' attribute: non-loaf
   "sign-return-address"="non-loaf"
 ; CHECK: invalid value for 'sign-return-address-key' attribute: bad-mkey
   "sign-return-address-key"="bad-mkey"
+; CHECK: invalid value for 'sign-return-address-harden' attribute: hello
+  "sign-return-address-harden"="hello"
 ; CHECK:   invalid value for 'branch-target-enforcement' attribute: yes-please
   "branch-target-enforcement"="yes-please" }
 
@@ -37,3 +43,8 @@ attributes #2 = {
 ; CHECK:  'sign-return-address-key' present without `sign-return-address`
   "sign-return-address-key"="a_key"
   }
+
+attributes #3 = {
+; CHECK: 'sign-return-address-harden' present without 'sign-return-address' or 'ptrauth-returns'
+  "sign-return-address-harden"="load-return-address"
+}

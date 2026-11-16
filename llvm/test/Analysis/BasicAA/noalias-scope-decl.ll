@@ -27,4 +27,4 @@ attributes #0 = { nounwind }
 
 !0 = !{ !1 }
 !1 = distinct !{ !1, !2, !"test1: var" }
-!2 = distinct !{ !2, !"test1" }
+!2 = distinct !{!2, i1 false, !"test1"}

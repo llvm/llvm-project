@@ -65,7 +65,6 @@ extern cl::opt<bool> HexagonDisableDuplex;
 extern const InstrStage HexagonStages[];
 
 MCInstrInfo *createHexagonMCInstrInfo();
-MCRegisterInfo *createHexagonMCRegisterInfo(StringRef TT);
 
 namespace Hexagon_MC {
   StringRef selectHexagonCPU(StringRef CPU);

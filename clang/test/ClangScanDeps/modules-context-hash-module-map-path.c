@@ -1,21 +1,22 @@
 // Ensure the path to the modulemap input is included in the context hash
 // irrespective of other TU command-line arguments, as it effects the canonical
-// module build command. In this test we use the difference in spelling between
-// module.modulemap and module.map, but it also applies to situations such as
-// differences in case-insensitive paths if they are not canonicalized away.
+// module build command. In this test we use the difference in case of a path.
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
+// RUN: sed "s|DIR|%/t|g" %t/overlay.json.template > %t/overlay.json
 
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -j 1 \
-// RUN:   -format experimental-full > %t/deps.json
+// RUN: clang-scan-deps -format experimental-full -- \
+// RUN:   %clang -I %t/dir -I %t/Dir -c %t/tu0.c -ivfsoverlay %t/overlay.json \
+// RUN:     -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
+// RUN:   > %t/deps.json
 
-// RUN: mv %t/module.modulemap %t/module.map
-// RUN: echo 'AFTER_MOVE' >> %t/deps.json
+// RUN: echo 'DIFFERENT_PATH' >> %t/deps.json
 
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -j 1 \
-// RUN:   -format experimental-full >> %t/deps.json
+// RUN: clang-scan-deps -format experimental-full -- \
+// RUN:   %clang -I %t/dir -I %t/Dir -c %t/tu1.c -ivfsoverlay %t/overlay.json \
+// RUN:     -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
+// RUN:   >> %t/deps.json
 
 // RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 
@@ -23,7 +24,7 @@
 // CHECK-NEXT:   "modules": [
 // CHECK:          {
 // CHECK:            "command-line": [
-// CHECK:              "{{.*}}module.modulemap"
+// CHECK:              "{{.*}}Dir/module.modulemap"
 // CHECK:            ]
 // CHECK:            "context-hash": "[[HASH1:.*]]"
 // CHECK:            "name": "Mod"
@@ -37,13 +38,13 @@
 // CHECK-NEXT:            "module-name": "Mod"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ]
-// CHECK-LABEL: AFTER_MOVE
+// CHECK-LABEL: DIFFERENT_PATH
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK:          {
 // CHECK-NOT: [[HASH1]]
 // CHECK:            "command-line": [
-// CHECK:              "{{.*}}module.map"
+// CHECK:              "{{.*}}dir/module.modulemap"
 // CHECK:            ]
 // CHECK-NOT: [[HASH1]]
 // CHECK:            "name": "Mod"
@@ -59,19 +60,54 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ]
 
-//--- cdb.json.template
-[
-  {
-    "directory": "DIR",
-    "command": "clang -fsyntax-only DIR/tu.c -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache",
-    "file": "DIR/tu.c"
-  }
-]
+// This overlay is used just to force the filesystem to be case sensitive to
+// simulate case insensitive access via diffierent capitalizations.
+//--- overlay.json.template
 
-//--- module.modulemap
+{
+  "version": 0,
+  "case-sensitive": true,
+  "roots": [
+  {
+     "contents": [
+     {
+        "external-contents": "DIR/m.m",
+        "name": "module.modulemap",
+        "type": "file"
+     },
+     {
+        "external-contents": "DIR/Mod.h",
+        "name": "Mod.h",
+        "type": "file"
+     }],
+     "name": "DIR/Dir",
+     "type": "directory"
+  },
+  {
+     "contents": [
+     {
+        "external-contents": "DIR/m.m",
+        "name": "module.modulemap",
+        "type": "file"
+     },
+     {
+        "external-contents": "DIR/Mod.h",
+        "name": "Mod.h",
+        "type": "file"
+     }],
+     "name": "DIR/dir",
+     "type": "directory"
+  }
+  ]
+}
+
+//--- m.m
 module Mod { header "Mod.h" }
 
 //--- Mod.h
 
-//--- tu.c
-#include "Mod.h"
+//--- tu0.c
+#include "Dir/Mod.h"
+
+//--- tu1.c
+#include "dir/Mod.h"

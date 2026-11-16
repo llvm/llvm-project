@@ -43,7 +43,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -52,20 +51,6 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
-enum class SPIRVFPContractMode { On, Off, Fast };
-
-static cl::opt<SPIRVFPContractMode> SPIRVFPContract(
-    "spirv-fp-contract",
-    cl::desc("Override FP contraction policy for SPIR-V kernel entry points"),
-    cl::values(
-        clEnumValN(SPIRVFPContractMode::On, "on",
-                   "Follow IR metadata (default)"),
-        clEnumValN(SPIRVFPContractMode::Off, "off",
-                   "Force ContractionOff on all kernel entry points"),
-        clEnumValN(SPIRVFPContractMode::Fast, "fast",
-                   "Suppress ContractionOff on all kernel entry points")),
-    cl::init(SPIRVFPContractMode::On));
-
 class SPIRVAsmPrinter : public AsmPrinter {
   unsigned NLabels = 0;
   SmallPtrSet<const MachineBasicBlock *, 8> LabeledMBB;
@@ -74,7 +59,11 @@ public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer), ID), ModuleSectionsEmitted(false),
-        ST(nullptr), TII(nullptr), MAI(nullptr) {}
+        ST(nullptr), TII(nullptr), MAI(nullptr) {
+    GetMAI = [this] {
+      return &getAnalysis<SPIRVModuleAnalysisWrapperPass>().MAI;
+    };
+  }
   static char ID;
   bool ModuleSectionsEmitted;
   const SPIRVSubtarget *ST;
@@ -129,6 +118,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   SPIRV::ModuleAnalysisInfo *MAI;
+  std::function<SPIRV::ModuleAnalysisInfo *()> GetMAI;
 
   // Non-owning pointer to the NSDI handler registered via addAsmPrinterHandler.
   // The handler's lifetime is managed by AsmPrinter (the base class of this
@@ -143,8 +133,8 @@ protected:
 } // namespace
 
 void SPIRVAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<SPIRVModuleAnalysis>();
-  AU.addPreserved<SPIRVModuleAnalysis>();
+  AU.addRequired<SPIRVModuleAnalysisWrapperPass>();
+  AU.addPreserved<SPIRVModuleAnalysisWrapperPass>();
   AsmPrinter::getAnalysisUsage(AU);
 }
 
@@ -668,10 +658,11 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     }
     // --spirv-fp-contract=off forces to emit ContractionOff for this kernel
     // entry point, --spirv-fp-contract=fast suppresses it.
+    SPIRVFPContractMode FPContract = ST->getCLOpts().fp_contract;
     bool EmitContractionOff =
         ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
-        SPIRVFPContract != SPIRVFPContractMode::Fast &&
-        (SPIRVFPContract == SPIRVFPContractMode::Off ||
+        FPContract != SPIRVFPContractMode::Fast &&
+        (FPContract == SPIRVFPContractMode::Off ||
          !M.getNamedMetadata("opencl.enable.FP_CONTRACT"));
     if (EmitContractionOff) {
       if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
@@ -890,14 +881,12 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // Get the global subtarget to output module-level info.
   ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
   TII = ST->getInstrInfo();
-  MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
+  MAI = GetMAI();
   assert(ST && TII && MAI && M && "Module analysis is required");
 
-  if (!AuxDataHandler) {
-    auto Handler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
-    if (Handler->hasWork())
-      AuxDataHandler = std::move(Handler);
-  }
+  if (!AuxDataHandler &&
+      spirvPreserveAuxData(ST->getCLOpts(), M->getTargetTriple()))
+    AuxDataHandler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
 
   // Let the NSDI handler add its extension and ext inst import entry to MAI
   // before the module header sections are emitted.
@@ -924,6 +913,13 @@ void SPIRVAsmPrinter::outputModuleSections() {
   outputDebugSourceAndStrings(*M);
   // 7b. Debug: all OpName and all OpMemberName.
   outputModuleSection(SPIRV::MB_DebugNames);
+  for (const auto &[Reg, Name] : MAI->MBBNames) {
+    MCInst Inst;
+    Inst.setOpcode(SPIRV::OpName);
+    Inst.addOperand(MCOperand::createReg(Reg));
+    addStringImm(Name, Inst);
+    outputMCInst(Inst);
+  }
   // 7c. Debug: all OpModuleProcessed instructions.
   outputModuleSection(SPIRV::MB_DebugModuleProcessed);
   // xxx. SPV_INTEL_memory_access_aliasing instructions go before 8.
@@ -998,6 +994,10 @@ SPIRVAsmPrinterPass::run(MachineFunction &MF,
           .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
           ->getPrinter());
   setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.GetMAI = [&MFAM, &MF] {
+    return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+        .getCachedResult<SPIRVModuleAnalysis>(*MF.getFunction().getParent());
+  };
   AsmPrinter.runOnMachineFunction(MF);
   return PreservedAnalyses::all();
 }
@@ -1007,6 +1007,9 @@ PreservedAnalyses SPIRVAsmPrinterEndPass::run(Module &M,
   SPIRVAsmPrinter &AsmPrinter = static_cast<SPIRVAsmPrinter &>(
       MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
   setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.GetMAI = [&MAM, &M] {
+    return MAM.getCachedResult<SPIRVModuleAnalysis>(M);
+  };
   AsmPrinter.doFinalization(M);
   return PreservedAnalyses::all();
 }

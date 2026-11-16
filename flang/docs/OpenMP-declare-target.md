@@ -9,11 +9,6 @@
 
 # OpenMP Declare Target
 
-```{contents}
----
-local:
----
-```
 
 ## Introduction to Declare Target
 

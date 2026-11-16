@@ -23,6 +23,7 @@
 
 namespace llvm {
 
+struct AMDGPUOptions;
 class AMDGPUTargetMachine;
 class AMDGPUTargetStreamer;
 class Argument;
@@ -55,7 +56,7 @@ public:
 
 protected:
   virtual void emitVersion() = 0;
-  virtual void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
+  virtual void emitHiddenKernelArgs(const MachineFunction &MF, uint64_t &Offset,
                                     msgpack::ArrayDocNode Args) = 0;
   virtual void emitKernelAttrs(const AMDGPUTargetMachine &TM,
                                const MachineFunction &MF,
@@ -65,6 +66,8 @@ protected:
 class LLVM_EXTERNAL_VISIBILITY MetadataStreamerMsgPackV4
     : public MetadataStreamer {
 protected:
+  const AMDGPUOptions &CLOpts;
+
   std::unique_ptr<DelayedMCExprs> DelayedExprs =
       std::make_unique<DelayedMCExprs>();
 
@@ -104,30 +107,27 @@ protected:
 
   void emitKernelArgs(const MachineFunction &MF, msgpack::MapDocNode Kern);
 
-  void emitKernelArg(const Argument &Arg, unsigned &Offset,
+  void emitKernelArg(const Argument &Arg, uint64_t &Offset,
                      msgpack::ArrayDocNode Args);
 
   void emitKernelArg(const DataLayout &DL, Type *Ty, Align Alignment,
-                     StringRef ValueKind, unsigned &Offset,
+                     StringRef ValueKind, uint64_t &Offset,
                      msgpack::ArrayDocNode Args,
                      MaybeAlign PointeeAlign = std::nullopt,
                      StringRef Name = "", StringRef TypeName = "",
                      StringRef BaseTypeName = "", StringRef ActAccQual = "",
                      StringRef AccQual = "", StringRef TypeQual = "");
 
-  void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
+  void emitHiddenKernelArgs(const MachineFunction &MF, uint64_t &Offset,
                             msgpack::ArrayDocNode Args) override;
 
   msgpack::DocNode &getRootMetadata(StringRef Key) {
     return HSAMetadataDoc->getRoot().getMap(/*Convert=*/true)[Key];
   }
 
-  msgpack::DocNode &getHSAMetadataRoot() {
-    return HSAMetadataDoc->getRoot();
-  }
-
 public:
-  MetadataStreamerMsgPackV4() = default;
+  explicit MetadataStreamerMsgPackV4(const AMDGPUOptions &CLOpts)
+      : CLOpts(CLOpts) {}
   ~MetadataStreamerMsgPackV4() override = default;
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
@@ -143,13 +143,13 @@ public:
 class MetadataStreamerMsgPackV5 : public MetadataStreamerMsgPackV4 {
 protected:
   void emitVersion() override;
-  void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
+  void emitHiddenKernelArgs(const MachineFunction &MF, uint64_t &Offset,
                             msgpack::ArrayDocNode Args) override;
   void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
                        msgpack::MapDocNode Kern) override;
 
 public:
-  MetadataStreamerMsgPackV5() = default;
+  using MetadataStreamerMsgPackV4::MetadataStreamerMsgPackV4;
   ~MetadataStreamerMsgPackV5() override = default;
 };
 
@@ -158,7 +158,7 @@ protected:
   void emitVersion() override;
 
 public:
-  MetadataStreamerMsgPackV6() = default;
+  using MetadataStreamerMsgPackV5::MetadataStreamerMsgPackV5;
   ~MetadataStreamerMsgPackV6() override = default;
 
   void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,

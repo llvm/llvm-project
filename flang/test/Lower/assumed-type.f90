@@ -22,7 +22,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMassumed_type_testPcall_assumed() {
-! CHECK: %[[I:.*]] = fir.alloca i32 {bindc_name = "i", fir.target, uniq_name = "_QMassumed_type_testFcall_assumedEi"}
+! CHECK: %[[I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QMassumed_type_testFcall_assumedEi"}> {fir.target}
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[I]] {{.*}}
 ! CHECK: %[[CONV:.*]] = fir.convert %[[DECL]]#0 : (!fir.ref<i32>) -> !fir.ref<none>
 ! CHECK: fir.call @_QPassumed(%[[CONV]]) {{.*}}: (!fir.ref<none>) -> ()
@@ -33,7 +33,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMassumed_type_testPcall_assumed_r() {
-! CHECK: %[[I:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "i", fir.target, uniq_name = "_QMassumed_type_testFcall_assumed_rEi"}
+! CHECK: %[[I:.*]] = fir.alloca !fir.array<10xi32> <{bindc_name = "i", uniq_name = "_QMassumed_type_testFcall_assumed_rEi"}> {fir.target}
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[I]]{{.*}}
 ! CHECK: %[[CONV:.*]] = fir.convert %[[DECL]]#0 : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xnone>>
 ! CHECK: fir.call @_QPassumed_r(%[[CONV]]) {{.*}} : (!fir.ref<!fir.array<?xnone>>) -> ()

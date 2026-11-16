@@ -62,8 +62,7 @@ class GCNMinRegScheduler {
   int getReadySuccessors(const SUnit *SU) const;
   int getNotReadySuccessors(const SUnit *SU) const;
 
-  template <typename Calc>
-  unsigned findMax(unsigned Num, Calc C);
+  template <typename Calc> size_t findMax(size_t Num, Calc C);
 
   Candidate* pickCandidate();
 
@@ -101,17 +100,17 @@ int GCNMinRegScheduler::getReadySuccessors(const SUnit *SU) const {
 }
 
 int GCNMinRegScheduler::getNotReadySuccessors(const SUnit *SU) const {
-  return SU->Succs.size() - getReadySuccessors(SU);
+  return static_cast<int>(SU->Succs.size()) - getReadySuccessors(SU);
 }
 
 template <typename Calc>
-unsigned GCNMinRegScheduler::findMax(unsigned Num, Calc C) {
+size_t GCNMinRegScheduler::findMax(size_t Num, Calc C) {
   assert(!RQ.empty() && Num <= RQ.size());
 
   using T = decltype(C(*RQ.begin())) ;
 
   T Max = std::numeric_limits<T>::min();
-  unsigned NumMax = 0;
+  size_t NumMax = 0;
   for (auto I = RQ.begin(); Num; --Num) {
     T Cur = C(*I);
     if (Cur >= Max) {
@@ -132,7 +131,7 @@ unsigned GCNMinRegScheduler::findMax(unsigned Num, Calc C) {
 
 GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
   do {
-    unsigned Num = RQ.size();
+    size_t Num = RQ.size();
     if (Num == 1) break;
 
     LLVM_DEBUG(dbgs() << "\nSelecting max priority candidates among " << Num
@@ -145,8 +144,8 @@ GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
     Num = findMax(Num, [=](const Candidate &C) {
       const auto *SU = C.SU;
       int Res = getNotReadySuccessors(SU);
-      LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ") would left non-ready "
-                        << Res << " successors, metric = " << -Res << '\n');
+      LLVM_DEBUG(dbgs() << *SU << " would left non-ready " << Res
+                        << " successors, metric = " << -Res << '\n');
       return -Res;
     });
     if (Num == 1) break;
@@ -156,7 +155,7 @@ GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
     Num = findMax(Num, [=](const Candidate &C) {
       const auto *SU = C.SU;
       auto Res = getReadySuccessors(SU);
-      LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ") would make ready " << Res
+      LLVM_DEBUG(dbgs() << *SU << " would make ready " << Res
                         << " successors, metric = " << Res << '\n');
       return Res;
     });
@@ -198,13 +197,13 @@ void GCNMinRegScheduler::bumpPredsPriority(const SUnit *SchedSU, int Priority) {
         Worklist.push_back(P.getSUnit());
     }
   }
-  LLVM_DEBUG(dbgs() << "Make the predecessors of SU(" << SchedSU->NodeNum
-                    << ")'s non-ready successors of " << Priority
+  LLVM_DEBUG(dbgs() << "Make the predecessors of " << *SchedSU
+                    << "'s non-ready successors of " << Priority
                     << " priority in ready queue: ");
   for (auto &C : RQ) {
     if (Set.count(C.SU)) {
       C.Priority = Priority;
-      LLVM_DEBUG(dbgs() << " SU(" << C.SU->NodeNum << ')');
+      LLVM_DEBUG(dbgs() << ' ' << *C.SU);
     }
   }
   LLVM_DEBUG(dbgs() << '\n');
@@ -241,9 +240,8 @@ GCNMinRegScheduler::schedule(ArrayRef<const SUnit*> TopRoots,
     LLVM_DEBUG(dbgs() << "\n=== Picking candidate, Step = " << StepNo
                       << "\n"
                          "Ready queue:";
-               for (auto &C
-                    : RQ) dbgs()
-               << ' ' << C.SU->NodeNum << "(P" << C.Priority << ')';
+               for (auto &C : RQ) dbgs()
+               << ' ' << *C.SU << "(P" << C.Priority << ')';
                dbgs() << '\n';);
 
     auto *C = pickCandidate();

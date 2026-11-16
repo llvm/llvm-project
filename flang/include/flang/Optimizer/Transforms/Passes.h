@@ -13,7 +13,9 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include <memory>
+#include <utility>
 
 namespace mlir {
 class IRMapping;
@@ -63,6 +65,15 @@ createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
 std::unique_ptr<mlir::Pass> createVScaleAttrPass();
 std::unique_ptr<mlir::Pass>
 createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
+
+/// Collect canonicalization patterns from loaded dialects and registered ops.
+/// When includeCFPatterns is false, omit both dialect-wide and operation-level
+/// registrations from the ControlFlow dialect to preserve statement-entry
+/// branches after CFG lowering. Other dialects' patterns and folding hooks may
+/// still modify control flow. shouldCollect can exclude additional operations.
+void populateCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, bool includeCFPatterns,
+    llvm::function_ref<bool(mlir::RegisteredOperationName)> shouldCollect = {});
 
 void populateFIRToSCFRewrites(mlir::RewritePatternSet &patterns,
                               bool parallelUnordered = false,

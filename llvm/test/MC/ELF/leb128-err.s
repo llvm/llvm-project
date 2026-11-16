@@ -23,3 +23,8 @@ w1:
 .section .nonalloc_y; ny:
 # CHECK: :[[#@LINE+1]]:12: error: .sleb128 expression is not absolute
 .sleb128 nx-ny
+
+## We also report errors from non-LEB128 fragments.
+.data
+# CHECK: :[[#@LINE+1]]:8: error: expected assembly-time absolute expression
+.space extern

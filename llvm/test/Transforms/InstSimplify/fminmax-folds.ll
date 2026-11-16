@@ -887,6 +887,138 @@ define void @minmax_minmax_xy_maxmin_yx(double %x, double %y, ptr %minnum_res, p
 }
 
 ;###############################################################
+;#   Nested calls:  M(M(M(x, y), z), x) -> M(M(x, y), z)      #
+;###############################################################
+define void @minmax_minmax_minmax_xy_z_x(float %x, float %y, float %z, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
+; CHECK-LABEL: @minmax_minmax_minmax_xy_z_x(
+; CHECK-NEXT:    [[MINNUM_XYZ:%.*]] = call float @llvm.minnum.f32(float [[MINNUM_XY:%.*]], float [[Z:%.*]])
+; CHECK-NEXT:    [[MINNUM_NESTED:%.*]] = call float @llvm.minnum.f32(float [[MINNUM_XYZ]], float [[X:%.*]])
+; CHECK-NEXT:    store float [[MINNUM_NESTED]], ptr [[MINNUM_RES:%.*]], align 4
+; CHECK-NEXT:    [[MAXNUM_XYZ:%.*]] = call float @llvm.maxnum.f32(float [[MINNUM_XY]], float [[Z]])
+; CHECK-NEXT:    [[MAXNUM_NESTED:%.*]] = call float @llvm.maxnum.f32(float [[MAXNUM_XYZ]], float [[X]])
+; CHECK-NEXT:    store float [[MAXNUM_NESTED]], ptr [[MAXNUM_RES:%.*]], align 4
+; CHECK-NEXT:    [[MINIMUM_XYZ:%.*]] = call float @llvm.minimum.f32(float [[MINNUM_XY]], float [[Z]])
+; CHECK-NEXT:    [[MINIMUM_NESTED:%.*]] = call float @llvm.minimum.f32(float [[MINIMUM_XYZ]], float [[X]])
+; CHECK-NEXT:    store float [[MINIMUM_NESTED]], ptr [[MINIMUM_RES:%.*]], align 4
+; CHECK-NEXT:    [[MAXIMUM_XYZ:%.*]] = call float @llvm.maximum.f32(float [[MINNUM_XY]], float [[Z]])
+; CHECK-NEXT:    [[MAXIMUM_NESTED:%.*]] = call float @llvm.maximum.f32(float [[MAXIMUM_XYZ]], float [[X]])
+; CHECK-NEXT:    store float [[MAXIMUM_NESTED]], ptr [[MAXIMUM_RES:%.*]], align 4
+; CHECK-NEXT:    [[MINIMUMNUM_XYZ:%.*]] = call float @llvm.minimumnum.f32(float [[MINNUM_XY]], float [[Z]])
+; CHECK-NEXT:    [[MINIMUMNUM_NESTED:%.*]] = call float @llvm.minimumnum.f32(float [[MINIMUMNUM_XYZ]], float [[X]])
+; CHECK-NEXT:    store float [[MINIMUMNUM_NESTED]], ptr [[MINIMUMNUM_RES:%.*]], align 4
+; CHECK-NEXT:    [[MAXIMUMNUM_XYZ:%.*]] = call float @llvm.maximumnum.f32(float [[MINNUM_XY]], float [[Z]])
+; CHECK-NEXT:    [[MAXIMUMNUM_NESTED:%.*]] = call float @llvm.maximumnum.f32(float [[MAXIMUMNUM_XYZ]], float [[X]])
+; CHECK-NEXT:    store float [[MAXIMUMNUM_NESTED]], ptr [[MAXIMUMNUM_RES:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %minnum_xy = call float @llvm.minnum.f32(float %x, float %y)
+  %minnum_xyz = call float @llvm.minnum.f32(float %minnum_xy, float %z)
+  %minnum_nested = call float @llvm.minnum.f32(float %minnum_xyz, float %x)
+  store float %minnum_nested, ptr %minnum_res
+
+  %maxnum_xy = call float @llvm.maxnum.f32(float %x, float %y)
+  %maxnum_xyz = call float @llvm.maxnum.f32(float %maxnum_xy, float %z)
+  %maxnum_nested = call float @llvm.maxnum.f32(float %maxnum_xyz, float %x)
+  store float %maxnum_nested, ptr %maxnum_res
+
+  %minimum_xy = call float @llvm.minimum.f32(float %x, float %y)
+  %minimum_xyz = call float @llvm.minimum.f32(float %minimum_xy, float %z)
+  %minimum_nested = call float @llvm.minimum.f32(float %minimum_xyz, float %x)
+  store float %minimum_nested, ptr %minimum_res
+
+  %maximum_xy = call float @llvm.maximum.f32(float %x, float %y)
+  %maximum_xyz = call float @llvm.maximum.f32(float %maximum_xy, float %z)
+  %maximum_nested = call float @llvm.maximum.f32(float %maximum_xyz, float %x)
+  store float %maximum_nested, ptr %maximum_res
+
+  %minimumnum_xy = call float @llvm.minimumnum.f32(float %x, float %y)
+  %minimumnum_xyz = call float @llvm.minimumnum.f32(float %minimumnum_xy, float %z)
+  %minimumnum_nested = call float @llvm.minimumnum.f32(float %minimumnum_xyz, float %x)
+  store float %minimumnum_nested, ptr %minimumnum_res
+
+  %maximumnum_xy = call float @llvm.maximumnum.f32(float %x, float %y)
+  %maximumnum_xyz = call float @llvm.maximumnum.f32(float %maximumnum_xy, float %z)
+  %maximumnum_nested = call float @llvm.maximumnum.f32(float %maximumnum_xyz, float %x)
+  store float %maximumnum_nested, ptr %maximumnum_res
+  ret void
+}
+
+define <2 x float> @minimum_x_minimum_z_minimum_yx_v2f32(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: @minimum_x_minimum_z_minimum_yx_v2f32(
+; CHECK-NEXT:    [[ZYX:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[Z:%.*]], <2 x float> [[YX:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[X:%.*]], <2 x float> [[ZYX]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %yx = call <2 x float> @llvm.minimum.v2f32(<2 x float> %y, <2 x float> %x)
+  %zyx = call <2 x float> @llvm.minimum.v2f32(<2 x float> %z, <2 x float> %yx)
+  %r = call <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> %zyx)
+  ret <2 x float> %r
+}
+
+define double @minimumnum_minimumnum_xy_z_maximumnum_yx(double %x, double %y, double %z) {
+; CHECK-LABEL: @minimumnum_minimumnum_xy_z_maximumnum_yx(
+; CHECK-NEXT:    [[XYZ:%.*]] = call double @llvm.minimumnum.f64(double [[XY:%.*]], double [[Z:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.minimumnum.f64(double [[XYZ]], double [[YX:%.*]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %xy = call double @llvm.minimumnum.f64(double %x, double %y)
+  %xyz = call double @llvm.minimumnum.f64(double %xy, double %z)
+  %yx = call double @llvm.maximumnum.f64(double %y, double %x)
+  %r = call double @llvm.minimumnum.f64(double %xyz, double %yx)
+  ret double %r
+}
+
+define float @maximumnum_shared_op_depth4(float %x, float %a, float %b, float %c, float %d) {
+; CHECK-LABEL: @maximumnum_shared_op_depth4(
+; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.maximumnum.f32(float [[M1:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximumnum.f32(float [[M2]], float [[C:%.*]])
+; CHECK-NEXT:    [[M4:%.*]] = call float @llvm.maximumnum.f32(float [[M3]], float [[D:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[M4]], float [[X:%.*]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m1 = call float @llvm.maximumnum.f32(float %x, float %a)
+  %m2 = call float @llvm.maximumnum.f32(float %m1, float %b)
+  %m3 = call float @llvm.maximumnum.f32(float %m2, float %c)
+  %m4 = call float @llvm.maximumnum.f32(float %m3, float %d)
+  %r = call float @llvm.maximumnum.f32(float %m4, float %x)
+  ret float %r
+}
+
+; Negative test: shared operand is beyond the recursion limit
+define float @maximumnum_shared_op_depth5(float %x, float %a, float %b, float %c, float %d, float %e) {
+; CHECK-LABEL: @maximumnum_shared_op_depth5(
+; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float [[A:%.*]])
+; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.maximumnum.f32(float [[M1]], float [[B:%.*]])
+; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximumnum.f32(float [[M2]], float [[C:%.*]])
+; CHECK-NEXT:    [[M4:%.*]] = call float @llvm.maximumnum.f32(float [[M3]], float [[D:%.*]])
+; CHECK-NEXT:    [[M5:%.*]] = call float @llvm.maximumnum.f32(float [[M4]], float [[E:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[M5]], float [[X]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m1 = call float @llvm.maximumnum.f32(float %x, float %a)
+  %m2 = call float @llvm.maximumnum.f32(float %m1, float %b)
+  %m3 = call float @llvm.maximumnum.f32(float %m2, float %c)
+  %m4 = call float @llvm.maximumnum.f32(float %m3, float %d)
+  %m5 = call float @llvm.maximumnum.f32(float %m4, float %e)
+  %r = call float @llvm.maximumnum.f32(float %m5, float %x)
+  ret float %r
+}
+
+; Negative test: inner call is the inverse intrinsic
+define half @maxnum_maxnum_minnum_xy_z_x(half %x, half %y, half %z) {
+; CHECK-LABEL: @maxnum_maxnum_minnum_xy_z_x(
+; CHECK-NEXT:    [[XY:%.*]] = call half @llvm.minnum.f16(half [[X:%.*]], half [[Y:%.*]])
+; CHECK-NEXT:    [[XYZ:%.*]] = call half @llvm.maxnum.f16(half [[XY]], half [[Z:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call half @llvm.maxnum.f16(half [[XYZ]], half [[X]])
+; CHECK-NEXT:    ret half [[R]]
+;
+  %xy = call half @llvm.minnum.f16(half %x, half %y)
+  %xyz = call half @llvm.maxnum.f16(half %xy, half %z)
+  %r = call half @llvm.maxnum.f16(half %xyz, half %x)
+  ret half %r
+}
+
+;###############################################################
 ;#            Constant Expression Vector Tests                 #
 ;###############################################################
 ; Test that minmax intrinsics with constant expression vectors don't crash

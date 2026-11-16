@@ -14,10 +14,13 @@
 
 #include "gtest/gtest.h"
 
+#include "ErrorMatchers.h"
+
 #include <optional>
 #include <utility>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 // Proxy.h only forward-declares Session and never touches it. We mock it below
 // so that we don't need to link against bedrock.
@@ -66,7 +69,7 @@ TEST(ProxyTest, DispatchReportsVoidResult) {
   bool Completed = false;
   P(
       [&](Error Err) {
-        cantFail(std::move(Err));
+        EXPECT_THAT_ERROR(std::move(Err), Succeeded());
         Completed = true;
       },
       S);
@@ -80,7 +83,12 @@ TEST(ProxyTest, DispatchForwardsArgsAndResult) {
   Proxy<int(int)> P(addOneDispatch, &Tag);
 
   std::optional<int> Result;
-  P([&](Expected<int> R) { Result = cantFail(std::move(R)); }, S, 42);
+  P(
+      [&](Expected<int> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = *R;
+      },
+      S, 42);
   ASSERT_TRUE(Result.has_value());
   EXPECT_EQ(*Result, 43);
 }
@@ -92,7 +100,12 @@ TEST(ProxyTest, DispatchForwardsCalleeTag) {
   Proxy<const void *()> P(returnTagDispatch, &Tag);
 
   std::optional<const void *> Result;
-  P([&](Expected<const void *> R) { Result = cantFail(std::move(R)); }, S);
+  P(
+      [&](Expected<const void *> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = *R;
+      },
+      S);
   ASSERT_TRUE(Result.has_value());
   EXPECT_EQ(*Result, &Tag);
 }

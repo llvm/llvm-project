@@ -257,7 +257,7 @@ define void @byteBufferLoadFloat() {
 ; CHECK-LABEL: define void @byteBufferLoadFloat(
 ; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
 ; CHECK: load i8, ptr addrspace(11)
-; CHECK: bitcast i32 {{.*}} to float
+; CHECK: call float @llvm.spv.bitcast.f32.i32(i32 {{.*}})
 ; CHECK: store float {{.*}}, ptr addrspace(10) @outF
 entry:
   %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)

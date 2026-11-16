@@ -32,8 +32,8 @@ body:             |
     ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](i32), [[UV1]](i32)
     ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[MV]](s64)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
@@ -222,8 +222,8 @@ body:             |
     ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[TRUNC]](i32), [[C]](i32)
     ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[MV]](s64)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
@@ -264,8 +264,8 @@ body:             |
     ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](i32), [[UV1]](i32)
     ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[MV]](s64)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
@@ -318,4 +318,36 @@ body: |
     %2:_(s128) = G_CONSTANT i128 -4294967296
     %3:_(s128) = G_OR %0, %2
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
+...
+---
+name: test_and_both_constants
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; Both operands constant: bail out of the s32-mask narrow so
+    ; constant_fold_binop can produce a single G_CONSTANT.
+    ; CHECK-LABEL: name: test_and_both_constants
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 591751049
+    ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[C]](s64)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
+    %0:_(s64) = G_CONSTANT i64 4886718345
+    %1:_(s64) = G_CONSTANT i64 4294967295
+    %2:_(s64) = G_AND %0, %1
+    $sgpr0_sgpr1 = COPY %2(s64)
+    SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
+...
+---
+name: test_or_both_constants
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_or_both_constants
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -4294967286
+    ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[C]](s64)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
+    %0:_(s64) = G_CONSTANT i64 10
+    %1:_(s64) = G_CONSTANT i64 -4294967296
+    %2:_(s64) = G_OR %0, %1
+    $sgpr0_sgpr1 = COPY %2(s64)
+    SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
 ...

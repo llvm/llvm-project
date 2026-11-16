@@ -1,10 +1,10 @@
 # RUN: llc %s -o - -experimental-debug-variable-locations \
 # RUN:     -mtriple=x86_64-unknown-unknown \
-# RUN:     -run-pass=livedebugvalues -livedebugvalues-max-stack-slots=0  | \
+# RUN:     -run-pass=live-debug-values -livedebugvalues-max-stack-slots=0  | \
 # RUN: FileCheck %s --implicit-check-not=DBG_VALUE
 # RUN: llc %s -o - -experimental-debug-variable-locations \
 # RUN:     -mtriple=x86_64-unknown-unknown \
-# RUN:     -run-pass=livedebugvalues -livedebugvalues-max-stack-slots=100  | \
+# RUN:     -run-pass=live-debug-values -livedebugvalues-max-stack-slots=100  | \
 # RUN: FileCheck %s --check-prefixes=NOLIMIT --implicit-check-not=DBG_VALUE
 #
 # Test that spills of live values to the stack are NOT tracked by

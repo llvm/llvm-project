@@ -32,7 +32,6 @@ extern cl::opt<bool> WasmUseLegacyEH;  // Legacy Wasm EH
 class WebAssemblyTargetMachine final : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<WebAssemblySubtarget>> SubtargetMap;
-  bool UsesMultivalueABI = false;
 
 public:
   WebAssemblyTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -43,8 +42,8 @@ public:
 
   ~WebAssemblyTargetMachine() override;
 
-  const WebAssemblySubtarget *getSubtargetImpl(StringRef CPU,
-                                               StringRef FS) const;
+  const WebAssemblySubtarget *getSubtargetImpl(StringRef CPU, StringRef FS,
+                                               StringRef ABIName) const;
   const WebAssemblySubtarget *
   getSubtargetImpl(const Function &F) const override;
 
@@ -70,8 +69,6 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
-
-  bool usesMultivalueABI() const { return UsesMultivalueABI; }
 
   void registerPassBuilderCallbacks(PassBuilder &PbB) override;
 

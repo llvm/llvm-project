@@ -9,6 +9,7 @@
 #include "llvm/Support/Allocator.h"
 #include "gtest/gtest.h"
 #include <cstdlib>
+#include <utility>
 
 using namespace llvm;
 
@@ -28,6 +29,7 @@ TEST(AllocatorTest, Basics) {
   EXPECT_EQ(2, b[9]);
   EXPECT_EQ(3, *c);
   EXPECT_EQ(1U, Alloc.GetNumSlabs());
+  EXPECT_EQ(4096U, Alloc.getTotalMemory());
 
   BumpPtrAllocator Alloc2 = std::move(Alloc);
   EXPECT_EQ(0U, Alloc.GetNumSlabs());
@@ -109,6 +111,9 @@ TEST(AllocatorTest, TestPlacementNew) {
   struct S48 {
     uint64_t X[6];
   };
+  struct alignas(64) S64 {
+    uint64_t X[8];
+  };
   BumpPtrAllocator Alloc;
   Alloc.setRedZoneSize(0);
   auto *A0 = new (Alloc) S24;
@@ -116,10 +121,15 @@ TEST(AllocatorTest, TestPlacementNew) {
   EXPECT_EQ(uintptr_t(A0) + sizeof(S24), uintptr_t(A1));
   auto *B0 = new (Alloc) S32;
   auto *B1 = new (Alloc) S32;
+  EXPECT_EQ(uintptr_t(B0) % alignof(S32), 0u);
   EXPECT_EQ(uintptr_t(B0) + sizeof(S32), uintptr_t(B1));
   auto *C0 = new (Alloc) S48;
   auto *C1 = new (Alloc) S48;
   EXPECT_EQ(uintptr_t(C0) + sizeof(S48), uintptr_t(C1));
+  auto *D0 = new (Alloc) S64;
+  auto *D1 = new (Alloc) S64;
+  EXPECT_EQ(uintptr_t(D0) % alignof(S64), 0u);
+  EXPECT_EQ(uintptr_t(D0) + sizeof(S64), uintptr_t(D1));
 }
 
 // Test zero-sized allocations.
@@ -177,6 +187,29 @@ TEST(AllocatorTest, TestAlignmentPastSlab) {
   Alloc.Allocate(1024, 8192);
 
   EXPECT_EQ(2U, Alloc.GetNumSlabs());
+}
+
+// Check the default growth policy and that Reset retains only the first slab.
+TEST(AllocatorTest, TestDefaultSlabGrowthDelay) {
+  BumpPtrAllocator Alloc;
+  Alloc.setRedZoneSize(0);
+
+  for (size_t I = 0; I < 8; ++I)
+    Alloc.Allocate(4096, 1);
+  EXPECT_EQ(8U, Alloc.GetNumSlabs());
+  EXPECT_EQ(8U * 4096, Alloc.getTotalMemory());
+
+  Alloc.Allocate(4096, 1);
+  EXPECT_EQ(9U, Alloc.GetNumSlabs());
+  EXPECT_EQ(10U * 4096, Alloc.getTotalMemory());
+  Alloc.Allocate(4096, 1);
+  EXPECT_EQ(9U, Alloc.GetNumSlabs());
+
+  Alloc.Reset();
+  EXPECT_EQ(1U, Alloc.GetNumSlabs());
+  EXPECT_EQ(4096U, Alloc.getTotalMemory());
+  Alloc.Allocate(4096, 1);
+  EXPECT_EQ(1U, Alloc.GetNumSlabs());
 }
 
 // Test allocating with a decreased growth delay.
@@ -315,6 +348,27 @@ TEST(AllocatorTest, TestOverAlignedSpecific) {
     }
   }
   EXPECT_EQ(4u, NumDtorCalls);
+}
+
+TEST(AllocatorTest, TestSpecificMoveAssignment) {
+  struct S {
+    unsigned &Calls;
+    ~S() { ++Calls; }
+  };
+  unsigned OldDtorCalls = 0;
+  unsigned NewDtorCalls = 0;
+  {
+    SpecificBumpPtrAllocator<S> Alloc;
+    SpecificBumpPtrAllocator<S> Other;
+    new (Alloc.Allocate()) S{OldDtorCalls};
+    new (Other.Allocate()) S{NewDtorCalls};
+
+    Alloc = std::move(Other);
+    EXPECT_EQ(1u, OldDtorCalls);
+    EXPECT_EQ(0u, NewDtorCalls);
+  }
+  EXPECT_EQ(1u, OldDtorCalls);
+  EXPECT_EQ(1u, NewDtorCalls);
 }
 
 }  // anonymous namespace

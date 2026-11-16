@@ -712,7 +712,7 @@ protected:
 
         if (item_byte_size == read) {
           result.AppendWarningWithFormatv(
-              "unable to find a NULL terminated string at {0:x}"
+              "unable to find a null-terminated string at {0:x}"
               ". Consider increasing the maximum read length",
               data_addr);
           --read;

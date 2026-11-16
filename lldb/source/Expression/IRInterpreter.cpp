@@ -83,6 +83,9 @@ static bool CanIgnoreCall(const CallInst *call) {
       break;
     case llvm::Intrinsic::dbg_declare:
     case llvm::Intrinsic::dbg_value:
+    case llvm::Intrinsic::ptrauth_auth:
+    case llvm::Intrinsic::ptrauth_blend:
+    case llvm::Intrinsic::ptrauth_strip:
       return true;
     }
   }
@@ -1453,6 +1456,55 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     case Instruction::Call: {
       const CallInst *call_inst = cast<CallInst>(inst);
 
+      if (auto *fn = call_inst->getCalledFunction()) {
+        if (fn->isIntrinsic() &&
+            ((fn->getIntrinsicID() == llvm::Intrinsic::ptrauth_auth &&
+              call_inst->arg_size() == 3) ||
+             (fn->getIntrinsicID() == llvm::Intrinsic::ptrauth_strip &&
+              call_inst->arg_size() == 2)) &&
+            exe_ctx.GetProcessPtr()) {
+          llvm::Value *auth_ptr = call_inst->getArgOperand(0);
+          // Extract the argument's value.
+          lldb_private::Scalar auth_ptr_val;
+          if (!frame.EvaluateValue(auth_ptr_val, auth_ptr, module)) {
+            error = lldb_private::Status::FromErrorString(
+                "unable to evaluate argument 0");
+            return false;
+          }
+
+          if (lldb::ABISP abi_sp = exe_ctx.GetProcessPtr()->GetABI()) {
+            auto stripped_ptr = lldb_private::Scalar(
+                abi_sp->FixCodeAddress(auth_ptr_val.ULongLong()));
+            frame.AssignValue(call_inst, stripped_ptr, module);
+          }
+        }
+
+        if (fn->isIntrinsic() &&
+            fn->getIntrinsicID() == llvm::Intrinsic::ptrauth_blend) {
+          llvm::Value *addr = call_inst->getArgOperand(0);
+          llvm::Value *lobits = call_inst->getArgOperand(1);
+
+          // Extract the address.
+          lldb_private::Scalar addr_val;
+          if (!frame.EvaluateValue(addr_val, addr, module)) {
+            error = lldb_private::Status::FromErrorStringWithFormat(
+                "unable to evaluate argument %d", 0);
+            return false;
+          }
+
+          // Extract the low bits to blend in.
+          lldb_private::Scalar lobits_val;
+          if (!frame.EvaluateValue(lobits_val, lobits, module)) {
+            error = lldb_private::Status::FromErrorStringWithFormat(
+                "unable to evaluate argument %d", 1);
+            return false;
+          }
+
+          lldb_private::Scalar blend_val = addr_val | (lobits_val << 48);
+          frame.AssignValue(call_inst, blend_val, module);
+        }
+      }
+
       if (CanIgnoreCall(call_inst))
         break;
 
@@ -1610,13 +1662,17 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
           // Integer or pointer return type
           if (returnType->isIntegerTy() || returnType->isPointerTy()) {
         // Get the encapsulated return value
-        lldb::ValueObjectSP retVal = call_plan_sp.get()->GetReturnValueObject();
+        lldb_private::ThreadPlanReturnValue return_value =
+            call_plan_sp->GetReturnValue();
+        auto *returned =
+            std::get_if<lldb_private::ReturnedValue>(&return_value);
 
         lldb_private::Scalar returnVal = -1;
-        lldb_private::ValueObject *vobj = retVal.get();
+        lldb_private::ValueObject *vobj =
+            returned ? returned->valobj_sp.get() : nullptr;
 
         // Check if the return value is valid
-        if (vobj == nullptr || !retVal) {
+        if (vobj == nullptr) {
           error = lldb_private::Status::FromErrorString(
               "unable to get the return value");
           return false;

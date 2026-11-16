@@ -582,8 +582,8 @@ define float @ull2f_strict(i32 %x) {
 ; CHECK-LABEL: ull2f_strict:
 ; CHECK:     # %bb.0:
 ; CHECK-NEXT:	adds.l %s11, -16, %s11
-; CHECK-NEXT:		brge.l.t %s11, %s8, .LBB58_2
-; CHECK-NEXT:	# %bb.1:
+; CHECK-NEXT:		brge.l.t %s11, %s8, .LBB58_1
+; CHECK-NEXT:	# %bb.2:
 ; CHECK-NEXT:		ld %s61, 24(, %s14)
 ; CHECK-NEXT:		or %s62, 0, %s0
 ; CHECK-NEXT:		lea %s63, 315
@@ -592,7 +592,7 @@ define float @ull2f_strict(i32 %x) {
 ; CHECK-NEXT:		shm.l %s11, 16(%s61)
 ; CHECK-NEXT:		monc
 ; CHECK-NEXT:		or %s0, 0, %s62
-; CHECK-NEXT:	.LBB58_2:
+; CHECK-NEXT:	.LBB58_1:
 ; CHECK-NEXT:		lea %s1, 1127219200
 ; CHECK-NEXT:		stl %s1, 12(, %s11)
 ; CHECK-NEXT:		stl %s0, 8(, %s11)
@@ -1411,7 +1411,7 @@ define i128 @ui1282i128(i128 returned %0) {
 ; Function Attrs: norecurse nounwind readnone
 define float @i1282f(i128) {
 ; CHECK-LABEL: i1282f:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, __floattisf@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __floattisf@hi(, %s2)
@@ -1424,7 +1424,7 @@ define float @i1282f(i128) {
 ; Function Attrs: norecurse nounwind readnone
 define float @ui1282f(i128) {
 ; CHECK-LABEL: ui1282f:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, __floatuntisf@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __floatuntisf@hi(, %s2)
@@ -1437,7 +1437,7 @@ define float @ui1282f(i128) {
 ; Function Attrs: norecurse nounwind readnone
 define double @i1282d(i128) {
 ; CHECK-LABEL: i1282d:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, __floattidf@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __floattidf@hi(, %s2)
@@ -1450,7 +1450,7 @@ define double @i1282d(i128) {
 ; Function Attrs: norecurse nounwind readnone
 define double @ui1282d(i128) {
 ; CHECK-LABEL: ui1282d:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, __floatuntidf@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __floatuntidf@hi(, %s2)
@@ -1463,7 +1463,7 @@ define double @ui1282d(i128) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @d2i128(double) {
 ; CHECK-LABEL: d2i128:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s1, __fixdfti@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __fixdfti@hi(, %s1)
@@ -1476,7 +1476,7 @@ define i128 @d2i128(double) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @d2ui128(double) {
 ; CHECK-LABEL: d2ui128:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s1, __fixunsdfti@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __fixunsdfti@hi(, %s1)
@@ -1489,7 +1489,7 @@ define i128 @d2ui128(double) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @f2i128(float) {
 ; CHECK-LABEL: f2i128:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s1, __fixsfti@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __fixsfti@hi(, %s1)
@@ -1502,7 +1502,7 @@ define i128 @f2i128(float) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @f2ui128(float) {
 ; CHECK-LABEL: f2ui128:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s1, __fixunssfti@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __fixunssfti@hi(, %s1)

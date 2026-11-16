@@ -29,6 +29,8 @@ constexpr unsigned DS = 16;
 /// than the generic CandReason enum for debugging purposes.
 enum class AMDGPUSchedReason : uint8_t {
   None,
+  Stall,
+  MemoryPipeline,
   CritResourceBalance, // tryCriticalResource chose based on resource pressure
   CritResourceDep,     // tryCriticalResourceDependency chose based on enabling
   NUM_REASONS
@@ -38,6 +40,10 @@ inline StringRef getReasonName(AMDGPUSchedReason R) {
   switch (R) {
   case AMDGPUSchedReason::None:
     return "None";
+  case AMDGPUSchedReason::Stall:
+    return "Stall";
+  case AMDGPUSchedReason::MemoryPipeline:
+    return "MemoryPipeline";
   case AMDGPUSchedReason::CritResourceBalance:
     return "CritResource";
   case AMDGPUSchedReason::CritResourceDep:
@@ -104,7 +110,7 @@ private:
 public:
   HardwareUnitInfo() {}
 
-  unsigned size() { return AllSUs.size(); }
+  size_t size() { return AllSUs.size(); }
 
   unsigned getTotalCycles() { return TotalCycles; }
 
@@ -137,6 +143,15 @@ public:
 
     return BufferCycles +
            ScheduledSUs[ScheduledSUs.size() - BufferSize]->TopReadyCycle;
+  }
+
+  /// \returns the most recently scheduled SU for this HardwareUnit.
+  SUnit *getLastScheduledSU() {
+    size_t ScheduledCount = ScheduledSUs.size();
+    if (!ScheduledCount)
+      return nullptr;
+
+    return ScheduledSUs[ScheduledCount - 1];
   }
 
   /// \returns the SUnit with higher priority or nullptr if they are the same.
@@ -198,11 +213,24 @@ public:
 /// tryCandidate to decide which instruction to schedule next.
 class CandidateHeuristics {
 protected:
+  struct StallCosts {
+    unsigned Ready = 0;
+    unsigned Structural = 0;
+    unsigned Latency = 0;
+    unsigned Carried = 0;
+    unsigned Buffer = 0;
+    unsigned Fence = 0;
+    unsigned Effective = 0;
+  };
+
   ScheduleDAGMI *DAG;
   const SIInstrInfo *SII;
   const SIRegisterInfo *SRI;
   const TargetSchedModel *SchedModel;
+  const MachineLoopInfo *MLI;
   SmallVector<HardwareUnitInfo, 8> HWUInfo;
+
+  AMDGPU::CarriedLatency RegionCarriedLatency = AMDGPU::CarriedLatency::Off;
   DenseMap<MachineInstr *, unsigned> CarriedLatencies;
 
   /// Walk over the region and collect characteristics for the various
@@ -215,9 +243,6 @@ protected:
                                 const MachineInstr *MI);
 
   /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
-  /// SU.
-  unsigned getHWUICyclesForSU(SUnit *SU);
-  /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
   /// MI.
   unsigned getHWUICyclesForMI(MachineInstr *MI);
 
@@ -228,11 +253,13 @@ protected:
   /// carried load latency to avoid long stalls.
   unsigned getCarriedLatency(SUnit *SU);
 
+  StallCosts getStallCosts(SUnit *SU, SchedBoundary &Zone);
+
 public:
   CandidateHeuristics() = default;
 
   void initialize(ScheduleDAGMI *DAG, const TargetSchedModel *SchedModel,
-                  const TargetRegisterInfo *TRI);
+                  const TargetRegisterInfo *TRI, const MachineLoopInfo *MLI);
 
   /// Update the state to reflect that \p SU is going to be scheduled.
   void updateForScheduling(SUnit *SU);
@@ -248,8 +275,20 @@ public:
 
   unsigned getStructuralStallCycles(SchedBoundary &Zone, SUnit *SU);
 
-  bool tryEffectiveStall(GenericSchedulerBase::SchedCandidate &Cand,
-                         GenericSchedulerBase::SchedCandidate &TryCand,
+  bool tryEffectiveStall(GenericSchedulerBase::SchedCandidate &TryCand,
+                         GenericSchedulerBase::SchedCandidate &Cand,
+                         SchedBoundary &Zone);
+
+  /// Prioritize instructions involved the memory pipeline. Currently we don't
+  /// have any modelling of pipelined loads, so we control the layout of the
+  /// pipeline per iteration by giving the user some control over the stalls
+  /// (e.g. between s_barrier_signal and s_barrier_wait) and scheduling the
+  /// pipeline instructions as soon as they are ready.
+  ///
+  /// TODO -- add better modelling and heuristics for pipelining based
+  /// scheduling.
+  bool tryMemoryPipeline(GenericSchedulerBase::SchedCandidate &TryCand,
+                         GenericSchedulerBase::SchedCandidate &Cand,
                          SchedBoundary &Zone);
 
   /// Check for critical resource consumption. Prefer the candidate that uses

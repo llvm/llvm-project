@@ -200,20 +200,14 @@ cir.func @test_musttail_in_eh_cleanup(%arg0: !s32i) -> !s32i {
   cir.unreachable
 }
 
+// A lifetime marker alone does not require an unwind edge for Other.
 // CHECK-LABEL: cir.func @test_musttail_in_eh_cleanup
 // CHECK:         %[[LOCAL:.*]] = cir.alloca "local"
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 // CHECK:       ^[[BODY]]:
-// CHECK:         cir.try_call @Other(%{{.*}}) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
-// CHECK:       ^[[NORMAL]]:
+// CHECK:         %[[OTHER:.*]] = cir.call @Other(%{{.*}})
+// CHECK:         cir.store %[[OTHER]], %[[LOCAL]]
 // CHECK:         %[[TAIL_ARG:.*]] = cir.load %[[LOCAL]]
 // CHECK-NEXT:    %[[TAIL_RET:.*]] = cir.call @Bar(%[[TAIL_ARG]]) musttail
 // CHECK-NEXT:    cir.return %[[TAIL_RET]] : !s32i
-// CHECK:       ^[[UNWIND]]:
-// CHECK:         %[[TOKEN:.*]] = cir.eh.initiate cleanup : !cir.eh_token
-// CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[TOKEN]] : !cir.eh_token)
-// CHECK:       ^[[EH_CLEANUP]](%[[EH_TOKEN:.*]]: !cir.eh_token):
-// CHECK:         cir.begin_cleanup %[[EH_TOKEN]]
-// CHECK:         cir.lifetime.end %[[LOCAL]]
-// CHECK:         cir.end_cleanup
-// CHECK:         cir.resume %[[EH_TOKEN]]
+// CHECK-NOT:     cir.eh.initiate

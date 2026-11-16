@@ -30,10 +30,6 @@ namespace object {
 /// be called from deriving classes to change values as that record specifies.
 class Record {
 public:
-  LLVM_ABI static Error getContinuousData(const uint8_t *Record,
-                                          uint16_t DataLength, int DataIndex,
-                                          SmallString<256> &CompleteData);
-
   static bool isContinued(const uint8_t *Record) {
     uint8_t IsContinued;
     getBits(Record, 1, 7, 1, IsContinued);
@@ -79,9 +75,6 @@ public:
   /// \brief Maximum length of data; any more must go in continuation.
   static const uint8_t TXTMaxDataLength = 56;
 
-  LLVM_ABI static Error getData(const uint8_t *Record,
-                                SmallString<256> &CompleteData);
-
   static void getElementEsdId(const uint8_t *Record, uint32_t &EsdId) {
     get<uint32_t>(Record, 4, EsdId);
   }
@@ -97,9 +90,6 @@ public:
 
 class HDRRecord : public Record {
 public:
-  LLVM_ABI static Error getData(const uint8_t *Record,
-                                SmallString<256> &CompleteData);
-
   static uint16_t getPropertyModuleLength(const uint8_t *Record) {
     uint16_t Length;
     get<uint16_t>(Record, 52, Length);
@@ -121,9 +111,6 @@ public:
   static const uint16_t MaxNameLength = 32 * 1024;
 
 public:
-  LLVM_ABI static Error getData(const uint8_t *Record,
-                                SmallString<256> &CompleteData);
-
   // ESD Get routines.
   static void getSymbolType(const uint8_t *Record,
                             GOFF::ESDSymbolType &SymbolType) {
@@ -292,9 +279,6 @@ public:
 
 class RLDRecord : public Record {
 public:
-  LLVM_ABI static Error getData(const uint8_t *Record,
-                                SmallString<256> &CompleteData);
-
   static void getDataLength(const uint8_t *Record, uint16_t &Length) {
     get<uint16_t>(Record, 4, Length);
   }
@@ -302,9 +286,6 @@ public:
 
 class ENDRecord : public Record {
 public:
-  LLVM_ABI static Error getData(const uint8_t *Record,
-                                SmallString<256> &CompleteData);
-
   static uint16_t getNameLength(const uint8_t *Record) {
     uint16_t Length;
     get<uint16_t>(Record, 24, Length);

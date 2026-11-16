@@ -367,15 +367,6 @@ def parse_args():
         type=_positive_int,
     )
     execution_group.add_argument(
-        "--rerun-failed-serially",
-        dest="rerunFailedSerially",
-        metavar="REGEX",
-        type=_regex,
-        help="After the test run, rerun the tests whose failure output matches "
-        "REGEX with a single worker. Tests that pass the second time are "
-        "reported as flaky",
-    )
-    execution_group.add_argument(
         "--max-failures",
         help="Stop execution after the given number of failures.",
         type=_positive_int,
@@ -655,19 +646,13 @@ def _float(arg, kind, pred):
     return f
 
 
-def _regex(arg, flags=0):
-    import re
-
-    try:
-        return re.compile(arg, flags)
-    except re.error as reason:
-        raise _error("invalid regular expression: '{}', {}", arg, reason)
-
-
 def _case_insensitive_regex(arg):
     import re
 
-    return _regex(arg, re.IGNORECASE)
+    try:
+        return re.compile(arg, re.IGNORECASE)
+    except re.error as reason:
+        raise _error("invalid regular expression: '{}', {}", arg, reason)
 
 
 def _semicolon_list(arg):

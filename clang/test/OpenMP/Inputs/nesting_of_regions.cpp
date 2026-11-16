@@ -231,7 +231,7 @@ void foo() {
 // SIMD DIRECTIVE
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp for // omp45-error {{OpenMP constructs may not be nested inside a simd region}} omp50-error {{OpenMP constructs may not be nested inside a simd region except for ordered simd, simd, scan, or atomic directive}} omp51-error {{OpenMP constructs may not be nested inside a simd region except for ordered simd, simd, scan, or atomic directive}}
+#pragma omp for // omp45-error {{OpenMP constructs may not be nested inside a simd region}} omp50-error {{OpenMP constructs may not be nested inside a simd region except for ordered simd, simd, scan, atomic, or loop directive}} omp51-error {{OpenMP constructs may not be nested inside a simd region except for ordered simd, simd, scan, atomic, or loop directive}}
     for (int i = 0; i < 10; ++i)
       ;
   }
@@ -6062,6 +6062,34 @@ void foo() {
   for (int i = 0; i < 10; ++i) {
 #pragma omp cancel parallel // expected-error {{region cannot be closely nested inside 'parallel master taskloop' region}}
 #pragma omp cancellation point parallel // expected-error {{region cannot be closely nested inside 'parallel master taskloop' region}}
+  }
+#pragma omp masked taskloop
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel taskgroup // omp45-error {{region cannot be closely nested inside 'masked taskloop' region}}
+#pragma omp cancellation point taskgroup // omp45-error {{region cannot be closely nested inside 'masked taskloop' region}}
+  }
+#pragma omp masked taskloop
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel parallel // expected-error {{region cannot be closely nested inside 'masked taskloop' region}}
+#pragma omp cancellation point parallel // expected-error {{region cannot be closely nested inside 'masked taskloop' region}}
+  }
+#pragma omp masked taskloop simd
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel taskgroup // omp45-error {{OpenMP constructs may not be nested inside a simd region}} omp50-error {{OpenMP constructs may not be nested inside a simd region except for ordered simd, simd, scan, atomic, or loop directive}} omp51-error {{OpenMP constructs may not be nested inside a simd region except for ordered simd, simd, scan, atomic, or loop directive}}
+  }
+#pragma omp parallel masked taskloop
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel taskgroup // omp45-error {{region cannot be closely nested inside 'parallel masked taskloop' region}}
+#pragma omp cancellation point taskgroup // omp45-error {{region cannot be closely nested inside 'parallel masked taskloop' region}}
+  }
+#pragma omp parallel masked taskloop
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel parallel // expected-error {{region cannot be closely nested inside 'parallel masked taskloop' region}}
+#pragma omp cancellation point parallel // expected-error {{region cannot be closely nested inside 'parallel masked taskloop' region}}
+  }
+#pragma omp parallel masked taskloop simd
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel taskgroup // omp45-error {{OpenMP constructs may not be nested inside a simd region}} omp50-error {{OpenMP constructs may not be nested inside a simd region except for ordered simd, simd, scan, atomic, or loop directive}} omp51-error {{OpenMP constructs may not be nested inside a simd region except for ordered simd, simd, scan, atomic, or loop directive}}
   }
 
 // DISTRIBUTE DIRECTIVE

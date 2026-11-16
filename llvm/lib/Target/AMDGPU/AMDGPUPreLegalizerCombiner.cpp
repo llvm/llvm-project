@@ -312,7 +312,8 @@ llvm::createAMDGPUPreLegalizeCombinerLegacyPass(bool IsOptLevelNone) {
 PreservedAnalyses
 AMDGPUPreLegalizerCombinerPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
-  bool IsOptLevelNone = MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
+  bool IsOptLevelNone = MF.getTarget().getOptLevel() == CodeGenOptLevel::None ||
+                        shouldSkipOptimizationForOptBisect(MF.getFunction());
 
   if (!runCombiner(
           MF, [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); },

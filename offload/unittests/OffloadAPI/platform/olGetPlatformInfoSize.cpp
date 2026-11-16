@@ -32,6 +32,13 @@ TEST_P(olGetPlatformInfoSizeTest, SuccessBackend) {
   ASSERT_EQ(Size, sizeof(ol_platform_backend_t));
 }
 
+TEST_P(olGetPlatformInfoSizeTest, SuccessActive) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(
+      olGetPlatformInfoSize(Platform, OL_PLATFORM_INFO_ACTIVE, &Size));
+  ASSERT_EQ(Size, sizeof(bool));
+}
+
 TEST_P(olGetPlatformInfoSizeTest, InvalidNullHandle) {
   size_t Size = 0;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,

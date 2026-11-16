@@ -7,10 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUWaitcntUtils.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/IR/Function.h"
 
 namespace llvm::AMDGPU {
+
+bool isExpertSchedulingMode(const GCNSubtarget &ST, const Function &F) {
+  return ST.hasExpertSchedulingMode() &&
+         valueOr(ST.getCLOpts().expert_scheduling_mode,
+                 F.getFnAttribute("amdgpu-expert-scheduling-mode")
+                     .getValueAsBool());
+}
 
 iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
   return enum_seq(LOAD_CNT, MaxCounter);

@@ -1381,25 +1381,24 @@ DEF_TRAVERSE_TYPELOC(DependentAddressSpaceType, {
 // FIXME: order? why not size expr first?
 // FIXME: base VectorTypeLoc is unfinished
 DEF_TRAVERSE_TYPELOC(DependentSizedExtVectorType, {
-  if (TL.getTypePtr()->getSizeExpr())
-    TRY_TO(TraverseStmt(TL.getTypePtr()->getSizeExpr()));
+  TRY_TO(TraverseStmt(TL.getSizeExpr()));
   TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
 })
 
 // FIXME: VectorTypeLoc is unfinished
 DEF_TRAVERSE_TYPELOC(VectorType, {
+  TRY_TO(TraverseStmt(TL.getSizeExpr()));
   TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
 })
 
 DEF_TRAVERSE_TYPELOC(DependentVectorType, {
-  if (TL.getTypePtr()->getSizeExpr())
-    TRY_TO(TraverseStmt(TL.getTypePtr()->getSizeExpr()));
+  TRY_TO(TraverseStmt(TL.getSizeExpr()));
   TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
 })
 
-// FIXME: size and attributes
 // FIXME: base VectorTypeLoc is unfinished
 DEF_TRAVERSE_TYPELOC(ExtVectorType, {
+  TRY_TO(TraverseStmt(TL.getSizeExpr()));
   TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
 })
 
@@ -1469,7 +1468,7 @@ DEF_TRAVERSE_TYPELOC(DecltypeType, {
 })
 
 DEF_TRAVERSE_TYPELOC(PackIndexingType, {
-  TRY_TO(TraverseType(TL.getPattern()));
+  TRY_TO(TraverseTypeLoc(TL.getPatternLoc()));
   TRY_TO(TraverseStmt(TL.getTypePtr()->getIndexExpr()));
 })
 
@@ -3247,6 +3246,9 @@ DEF_TRAVERSE_STMT(OMPFuseDirective,
 DEF_TRAVERSE_STMT(OMPInterchangeDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPFlattenDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPSplitDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -3453,6 +3455,9 @@ DEF_TRAVERSE_STMT(OMPParallelGenericLoopDirective,
 DEF_TRAVERSE_STMT(OMPTargetParallelGenericLoopDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPTargetGenericLoopDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPAssumeDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -3587,6 +3592,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPLoopRangeClause(
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPPartialClause(OMPPartialClause *C) {
   TRY_TO(TraverseStmt(C->getFactor()));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPDepthClause(OMPDepthClause *C) {
+  TRY_TO(TraverseStmt(C->getDepth()));
   return true;
 }
 

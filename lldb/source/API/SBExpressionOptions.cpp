@@ -12,6 +12,7 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -27,8 +28,8 @@ SBExpressionOptions::SBExpressionOptions(const SBExpressionOptions &rhs) {
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-const SBExpressionOptions &SBExpressionOptions::
-operator=(const SBExpressionOptions &rhs) {
+const SBExpressionOptions &
+SBExpressionOptions::operator=(const SBExpressionOptions &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
@@ -210,7 +211,7 @@ void SBExpressionOptions::SetSuppressPersistentResult(bool b) {
 const char *SBExpressionOptions::GetPrefix() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return ConstString(m_opaque_up->GetPrefix()).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_up->GetPrefix());
 }
 
 void SBExpressionOptions::SetPrefix(const char *prefix) {

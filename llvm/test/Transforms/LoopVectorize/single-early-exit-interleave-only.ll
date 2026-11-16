@@ -32,10 +32,10 @@ define i8 @iv_used_in_exit_with_math(i8 noundef %g) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[RETURN:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
-; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i1 [[TMP8]], false
+; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i1 [[TMP13]], false
 ; CHECK-NEXT:    [[TMP33:%.*]] = zext i1 [[TMP32]] to i64
 ; CHECK-NEXT:    [[TMP34:%.*]] = add i64 1, [[TMP33]]
-; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i1 [[TMP7]], false
+; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i1 [[TMP12]], false
 ; CHECK-NEXT:    [[TMP14:%.*]] = zext i1 [[TMP35]] to i64
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 0, [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ne i64 [[TMP14]], 1
@@ -99,10 +99,10 @@ define i32 @iv_used_in_exit_with_loads(ptr align 4 dereferenceable(128) %src) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[RETURN:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i1 [[TMP8]], false
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i1 [[TMP13]], false
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext i1 [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = add i64 1, [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i1 [[TMP7]], false
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i1 [[TMP12]], false
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext i1 [[TMP23]] to i64
 ; CHECK-NEXT:    [[TMP25:%.*]] = add i64 0, [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp ne i64 [[TMP24]], 1

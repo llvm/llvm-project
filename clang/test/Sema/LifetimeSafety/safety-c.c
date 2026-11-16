@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -Wno-varargs -Wno-non-pod-varargs -verify -fexperimental-lifetime-safety-c %s
-// RUN: %clang_cc1 -fsyntax-only -Werror=lifetime-safety -Wno-dangling -Wno-varargs -Wno-non-pod-varargs %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -Wno-varargs -Wno-non-pod-varargs -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Werror=lifetime-safety -Wno-dangling -Wno-varargs -Wno-non-pod-varargs -fno-lifetime-safety-c %s
 
 int *identity(int *p __attribute__((lifetimebound))) { return p; }
 

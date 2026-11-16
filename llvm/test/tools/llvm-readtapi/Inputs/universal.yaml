@@ -15,6 +15,7 @@ FatArchs:
     align:           14
 Slices:
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACE
       cputype:         0x0000000C
@@ -182,6 +183,7 @@ Slices:
         - _foo
         - ''
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x0100000C

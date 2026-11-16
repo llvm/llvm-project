@@ -11,8 +11,8 @@
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     0.50                        bfcvt	h0, s0
-# CHECK-NEXT:  1      4     0.50                        bfcvtn	v0.4h, v0.4s
-# CHECK-NEXT:  1      4     0.50                        bfcvtn2	v0.8h, v0.4s
+# CHECK-NEXT:  1      4     1.00                        bfcvtn	v0.4h, v0.4s
+# CHECK-NEXT:  1      4     1.00                        bfcvtn2	v0.8h, v0.4s
 # CHECK-NEXT:  1      4     0.25                        bfdot	v0.2s, v24.4h, v14.2h[2]
 # CHECK-NEXT:  1      4     0.25                        bfdot	v0.2s, v0.4h, v0.4h
 # CHECK-NEXT:  1      4     0.25                        bfdot	v0.4s, v0.8h, v0.8h
@@ -44,13 +44,13 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     3.50   2.00   3.50   2.00
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.50   2.00   4.50   2.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     bfcvt	h0, s0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     bfcvtn	v0.4h, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     bfcvtn2	v0.8h, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     bfcvtn	v0.4h, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     bfcvtn2	v0.8h, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bfdot	v0.2s, v24.4h, v14.2h[2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bfdot	v0.2s, v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bfdot	v0.4s, v0.8h, v0.8h

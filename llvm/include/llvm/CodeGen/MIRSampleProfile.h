@@ -52,7 +52,6 @@ public:
   StringRef getPassName() const override { return "SampleFDO loader in MIR"; }
 
 private:
-  void init(MachineFunction &MF);
   bool runOnMachineFunction(MachineFunction &) override;
   bool doInitialization(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
