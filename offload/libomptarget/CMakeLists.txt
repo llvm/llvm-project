@@ -28,7 +28,7 @@ target_link_libraries(omptarget PRIVATE omp ${llvm_libs})
 target_include_directories(omptarget PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${LIBOMPACCSUPPORT_INCLUDE_DIR}
-  ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
+  ${LIBOMPTARGET_INCLUDE_DIR}
 )
 
 if(LLVM_HAVE_LINK_VERSION_SCRIPT)
