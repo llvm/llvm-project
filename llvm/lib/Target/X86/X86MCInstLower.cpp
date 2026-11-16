@@ -914,14 +914,23 @@ void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
 }
 
 void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
+  const MachineFunction &MF = *MI.getMF();
   // KCFI_CMP is KCFI_CHECK without the trap: it's followed by the branch to
   // its KCFI_TRAP, which falls through to the call.
   bool IsCmp = MI.getOpcode() == X86::KCFI_CMP;
   if (IsCmp) {
-    MachineBasicBlock::const_instr_iterator Next =
-        next_nodbg(MI.getIterator(), MI.getParent()->instr_end());
-    assert(Next != MI.getParent()->instr_end() && Next->isConditionalBranch() &&
+#ifndef NDEBUG
+    // The branch to the trap is the first terminator after KCFI_CMP. Other
+    // instructions (e.g. an LFENCE from SESES) may be in between, as long as
+    // they don't clobber EFLAGS.
+    const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+    auto It = std::next(MI.getIterator()), End = MI.getParent()->instr_end();
+    for (; It != End && !It->isTerminator(); ++It)
+      assert(!It->modifiesRegister(X86::EFLAGS, TRI) &&
+             "EFLAGS clobbered between KCFI_CMP and its branch");
+    assert(It != End && It->isConditionalBranch() &&
            "KCFI_CMP not followed by a conditional branch");
+#endif
   } else {
     assert(std::next(MI.getIterator())->isCall() &&
            "KCFI_CHECK not followed by a call instruction");
@@ -931,7 +940,6 @@ void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   // returns a 1-byte X86::NOOP, which means the offset is the same in
   // bytes.  This assumes that patchable-function-prefix is the same for all
   // functions.
-  const MachineFunction &MF = *MI.getMF();
   int64_t PrefixNops = MF.getFunction().getFnAttributeAsParsedInteger(
       "patchable-function-prefix");
 

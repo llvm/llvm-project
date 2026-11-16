@@ -294,6 +294,48 @@ hot:
   ret void
 }
 
+;; When BranchFolder tail-merges two cold split call blocks, all predecessors
+;; end with KCFI_CMP, so the merged call block must still stay out of the cold
+;; section.
+define void @f10_tailmerge(ptr noundef %x, i1 %c1, i1 %c2, i1 %c3) !prof !17 {
+; SPLIT-LABEL: f10_tailmerge:
+; SPLIT:         cmp w16, w17
+; SPLIT-NEXT:    b.eq [[CALL:\.LBB[0-9_]+]]
+; SPLIT:         brk #0x8220
+; SPLIT:         cmp w16, w17
+; SPLIT-NEXT:    b.ne [[TRAP2:\.LBB[0-9_]+]]
+; SPLIT-NEXT:  [[CALL]]:
+; SPLIT-NEXT:    blr x0
+; SPLIT:       [[TRAP2]]:
+; SPLIT-NEXT:    brk #0x8220
+; SPLIT:         .section .text.split.f10_tailmerge,"ax",@progbits
+; SPLIT-NEXT:  f10_tailmerge.cold:
+; SPLIT:         bl cleanup
+; SPLIT-NOT:     blr
+; SPLIT-NOT:     brk
+; SPLIT:         .size f10_tailmerge.cold
+entry:
+  br i1 %c1, label %cold1, label %check2, !prof !18
+check2:
+  br i1 %c2, label %cold2, label %check3, !prof !18
+check3:
+  br i1 %c3, label %cold3, label %hot, !prof !18
+cold1:
+  call void %x() [ "kcfi"(i32 12345678) ]
+  call void @cleanup()
+  ret void
+cold2:
+  call void %x() [ "kcfi"(i32 87654321) ]
+  call void @cleanup()
+  ret void
+cold3:
+  call void @cleanup()
+  call void @cleanup()
+  ret void
+hot:
+  ret void
+}
+
 ;; KCFI_CMP and KCFI_TRAP are never outlined by the machine outliner, preserving
 ;; patchable-function-prefix offsets, X16/X17/NZCV liveness, and distinct trap
 ;; sites.
@@ -329,15 +371,23 @@ define void @f12(ptr noundef %x, ptr %p) minsize "patchable-function-prefix"="2"
   ret void
 }
 
-;; Functions with callee-pop stack arguments fall back to inline KCFI checks.
-define tailcc void @f13(ptr noundef %x, i64, i64, i64, i64, i64, i64, i64, i64) {
+;; Functions with callee-pop stack arguments fall back to inline KCFI checks,
+;; and PAC-RET epilogue lowering unwraps the bundled tail call.
+define tailcc void @f13(ptr noundef %x, i64, i64, i64, i64, i64, i64, i64, i64) #2 {
 ; ASM-LABEL: f13:
-; ASM:         ldur w16, [x0, #-4]
-; ASM:         cmp w16, w17
+; ASM:         hint #29
+; ASM-NEXT:    ldur w16, [x17, #-4]
+; ASM:         cmp w16, w9
 ; ASM-NEXT:    b.eq [[PASS:\.Ltmp[0-9]+]]
-; ASM-NEXT:    brk #0x8220
+; ASM-NEXT:    brk #0x8131
 ; ASM-NEXT:  [[PASS]]:
-; ASM-NEXT:    br x0
+; ASM-NEXT:    br x17
+
+; MIR-LABEL: name: f13
+; MIR:       BUNDLE{{.*}} {
+; MIR-NEXT:    KCFI_CHECK $x17, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
+; MIR-NEXT:    TCRETURNrix17 internal killed $x17, 0, csr_aarch64_aapcs, implicit $sp
+; MIR-NEXT:  }
   call void @cleanup()
   tail call tailcc void %x(ptr %x, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0) [ "kcfi"(i32 12345678) ]
   ret void

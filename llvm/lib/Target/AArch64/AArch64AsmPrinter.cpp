@@ -698,24 +698,35 @@ void AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
 
 void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   Register AddrReg = MI.getOperand(0).getReg();
+  // Pick intra-procedure-call temporary registers via getKCFICheckRegs so
+  // EmitKCFIOutOfLineTrap and LowerKCFI_CHECK agree on the trap registers.
+  AArch64::KCFICheckRegs Regs = AArch64::getKCFICheckRegs(AddrReg);
+
   // KCFI_CMP is KCFI_CHECK without the trap: it's followed by the branch to
   // its KCFI_TRAP, which falls through to the call.
   bool IsCmp = MI.getOpcode() == AArch64::KCFI_CMP;
   if (IsCmp) {
-    MachineBasicBlock::const_instr_iterator Next =
-        next_nodbg(MI.getIterator(), MI.getParent()->instr_end());
-    assert(Next != MI.getParent()->instr_end() && Next->isConditionalBranch() &&
+#ifndef NDEBUG
+    // The branch to the trap is the first terminator after KCFI_CMP. Other
+    // instructions (e.g. pseudo probes) may be in between, as long as they
+    // don't clobber NZCV or the registers reported by KCFI_TRAP.
+    const TargetRegisterInfo *TRI =
+        MI.getMF()->getSubtarget().getRegisterInfo();
+    auto It = std::next(MI.getIterator()), End = MI.getParent()->instr_end();
+    for (; It != End && !It->isTerminator(); ++It)
+      assert(!It->modifiesRegister(AArch64::NZCV, TRI) &&
+             !It->modifiesRegister(Regs.AddrReg, TRI) &&
+             !It->modifiesRegister(Regs.ExpectedTypeReg, TRI) &&
+             "KCFI_CMP state clobbered before its branch");
+    assert(It != End && It->isConditionalBranch() &&
            "KCFI_CMP not followed by a conditional branch");
+#endif
   } else {
     assert(std::next(MI.getIterator())->isCall() &&
            "KCFI_CHECK not followed by a call instruction");
     assert(std::next(MI.getIterator())->getOperand(0).getReg() == AddrReg &&
            "KCFI_CHECK call target doesn't match call operand");
   }
-
-  // Pick intra-procedure-call temporary registers via getKCFICheckRegs so
-  // EmitKCFIOutOfLineTrap and LowerKCFI_CHECK agree on the trap registers.
-  AArch64::KCFICheckRegs Regs = AArch64::getKCFICheckRegs(AddrReg);
   if (AddrReg == AArch64::XZR) {
     // Checking XZR makes no sense. Instead of emitting a load, zero
     // Regs.AddrReg so the trap below still encodes a valid GPR.

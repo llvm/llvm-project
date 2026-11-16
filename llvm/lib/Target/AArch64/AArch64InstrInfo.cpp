@@ -11937,10 +11937,16 @@ bool AArch64InstrInfo::isMBBSafeToSplitToCold(
   // Keep KCFI checks, split call blocks, and trap blocks together out of cold
   // sections so cold splitting never separates KCFI_CMP from its trap or
   // fallthrough call (avoiding cross-section veneers/spills of X16/X17).
+  // BranchFolder can tail-merge identical split call blocks from multiple
+  // checks, so check all predecessors rather than assuming a single one.
+  // TODO: Revisit so cold checks/traps/call blocks can move to the cold
+  // section together without cross-section folding or relaxation issues.
   MachineBasicBlock::const_iterator LastI = MBB.getLastNonDebugInstr();
   if ((LastI != MBB.end() && LastI->getOpcode() == AArch64::KCFI_TRAP) ||
       endsWithKCFICmp(MBB) ||
-      (MBB.pred_size() == 1 && endsWithKCFICmp(**MBB.pred_begin())))
+      llvm::any_of(MBB.predecessors(), [](const MachineBasicBlock *Pred) {
+        return endsWithKCFICmp(*Pred);
+      }))
     return false;
 
   // Because jump tables are label-relative instead of table-relative, they all

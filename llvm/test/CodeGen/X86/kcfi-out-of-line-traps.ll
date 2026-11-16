@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefix=MIR
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi -enable-new-pm < %s | FileCheck %s --check-prefix=MIR
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -function-splitting=all < %s | FileCheck %s --check-prefix=SPLIT
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -x86-seses-enable-without-lvi-cfi -verify-machineinstrs < %s | FileCheck %s --check-prefix=SESES
 
 ;; With the kcfi-out-of-line-traps module flag, a KCFI check ends in a branch
 ;; that's taken if the check fails, to a block that only has the trap, and the
@@ -16,6 +17,17 @@ define void @f1(ptr noundef %x) {
 ; ASM-NEXT:  # %bb.{{[0-9]+}}:
 ; ASM-NEXT:    callq *%rdi
 ; ASM:         retq
+
+;; SESES puts an LFENCE between KCFI_CMP and its branch, which is fine since it
+;; doesn't clobber EFLAGS.
+; SESES-LABEL: f1:
+; SESES:         addl -4(%rdi), %r10d
+; SESES-NEXT:    lfence
+; SESES-NEXT:    jne [[SESES_TRAP:.LBB[0-9_]+]]
+; SESES-NEXT:  # %bb.{{[0-9]+}}:
+; SESES-NEXT:    callq *%rdi
+; SESES:       [[SESES_TRAP]]:
+; SESES:         ud2
 ;; The trap is laid out with the cold blocks, and has the right CFA.
 ; ASM-NEXT:  [[TRAP]]:
 ; ASM-NEXT:    .cfi_def_cfa_offset 16
